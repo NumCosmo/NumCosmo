@@ -34,7 +34,6 @@ from typer.testing import CliRunner
 pytest.importorskip("astropy")
 pytest.importorskip("getdist")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app

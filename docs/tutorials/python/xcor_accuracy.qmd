@@ -13,29 +13,32 @@ format-links: [ipynb]
 
 ## Purpose {#sec-purpose}
 
-The non-Limber angular power spectrum is
+[[numcosmo|NcXcor]] computes the non-Limber angular power spectrum of two kernels $X$
+and $Y$ as
+$$
+C_\ell^{XY} = \frac{2}{\pi} \int \mathrm{d}k\, k^2\, W^X_\ell(k)\, W^Y_\ell(k),
+$$
+where $W_\ell(k)$ is the window of one kernel: the radial integral $I_\ell(k)$ of
+[UltraLevin](../../theory/ncm/specfunc/sbessel_projection.qmd) Eq. (2) times a smooth
+prefactor that the kernel supplies. [[numcosmo|NcXcorKernel]] evaluates $W_\ell(k)$ at a
+finite set of wavenumbers and represents it over a range of $k$ by a *closure*, a set of
+Chebyshev panels. The outer integral of two closures is exact, so the accuracy of
+$C_\ell$ is the accuracy of the closures.
 
-$$ C_\ell^{AB} = \frac{2}{\pi} \int \mathrm{d}k\, k^2\, W^A_\ell(k)\, W^B_\ell(k), $$
-
-where each *closure* is the radial integral
-
-$$ W_\ell(k) = \int \mathrm{d}\chi\, K(k, \chi)\, j_\ell(k\chi),
-   \qquad K(k,\chi) \propto \chi^2\, W\!\left(z(\chi)\right)
-   \sqrt{P\!\left(k, z(\chi)\right)}. $$
-
-The power spectrum factor $\sqrt{P}$ is part of $K$; the outer integrand is
-$k^2 W^A W^B$.
-
-NumCosmo evaluates $W_\ell(k)$ once per knot of a spline and integrates that
-spline. Two tolerances control the fit, and they behave very differently. This
-tutorial is about choosing them.
-
-The required $C_\ell$ accuracy depends on its use in the analysis, so the
-tolerances remain configurable.
+Three properties of the kernel set that accuracy: `NcXcorKernel:reltol` and
+`NcXcorKernel:peak-epsilon` control the fit of the closure, and
+`NcXcorKernel:adaptive-epsilon` controls the range of $k$ it covers. This tutorial
+measures what each one controls, what it costs, and how to read the error estimate that
+comes with $C_\ell$. Every number below is computed by the cells of this page.
 
 ```{python}
+#| code-fold: true
+import gzip
+import json
+
 import numpy as np
 import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
@@ -44,33 +47,59 @@ Ncm.cfg_init()
 
 cosmology = Cosmology.default()
 cosmo, dist, ps = cosmology.cosmo, cosmology.dist, cosmology.ps_ml
+RH = cosmo.RH_Mpc()
 
 LMIN, LMAX = 2, 9
 NELL = LMAX - LMIN + 1
+
+
+def sci(x, digits=1):
+    """x as a power of ten for the prose, e.g. $4 \\times 10^{-6}$."""
+    mantissa, exponent = f"{x:.{digits}e}".split("e")
+    mantissa = mantissa.rstrip("0").rstrip(".")
+
+    return f"${mantissa} \\times 10^{{{int(exponent)}}}$"
+
+# The settings compared on this page: (reltol, peak-epsilon).
+SETTINGS = {
+    "NcXcorKernel default": (1.0e-4, 1.0e-4),
+    "NcXcorSSCSij default": (1.0e-6, 1.0e-5),
+    "validation": (1.0e-8, 1.0e-6),
+}
 ```
 
 ## The two tolerances {#sec-tolerances}
 
-A closure is accepted when
+A closure is built panel by panel. On each panel the block of multipoles is expanded on a
+Chebyshev--Lobatto grid, and the order is doubled, from 9 to at most 33 nodes, until the
+$\ell^1$ change of the coefficients between two consecutive levels, the new top
+coefficients included, is at most
+$$
+\max\left( \mathrm{reltol}\, V,\; a \right), \qquad
+a \equiv \text{peak-epsilon} \times \min_\ell \max_k \vert W_\ell(k) \vert,
+$$
+for every multipole of the block, with $V$ the largest $\vert W_\ell \vert$ on the
+panel's nodes at the finer level. This is Eq. (8) of
+[UltraLevin](../../theory/ncm/specfunc/sbessel_projection.qmd#the-forcing-on-a-panel)
+with these two terms. A panel that does not converge at 33 nodes is bisected.
 
-$$ \Vert f - \tilde f \Vert_2 \le \mathrm{reltol} \cdot \Vert f \Vert_2
-   + a \cdot \Vert f \Vert_2^{\mathrm{max}} $$
+Which of the two terms is larger depends on the panel. The relative term
+$\mathrm{reltol}\,V$ is the larger only on panels where
+$V > (\text{peak-epsilon}/\mathrm{reltol}) \min_\ell \max_k \vert W_\ell \vert$. Since $V$
+is at most the largest peak of the block, with peak-epsilon at least reltol this happens
+only near a peak that exceeds the block's smallest peak by the factor
+peak-epsilon/reltol. On every other panel the threshold is $a$, and the closure is
+accepted with an error of order $a$ in $W_\ell$, independent of the value of $W_\ell$
+there.
 
-with $a$ the `peak-epsilon` property. Three consequences follow, and each one
-is easy to get wrong:
-
-The two terms are added, not maxed. The second is an unconditional floor
-measured against the closure's own peak, so `reltol` only bites where the
-closure is within a few orders of that peak --- it is, in effect, the tolerance
-*around the peak*. Far out in the tail, the floor is what governs.
-
-That makes `peak-epsilon` the lever and `reltol` nearly free. Below we
-tighten each in turn and count knots, since one knot is one radial solve and
-therefore the unit of cost.
+The cost of a closure is the number of wavenumbers at which $W_\ell(k)$ is evaluated,
+one Levin solve each, which is the number of Chebyshev nodes summed over the panels.
+The cell below builds the closure of one cluster top-hat bin, $0.1 < z < 0.2$, for
+multipoles 2 to 9, at four settings.
 
 ```{python}
 def make_kernel(z_lower, z_upper, reltol, peak_epsilon):
-    """One cluster top-hat bin, at a chosen accuracy."""
+    """One cluster top-hat bin at the given closure tolerances."""
     kernel = Nc.XcorKernelClusterTophat(
         dist=dist,
         powspec=ps,
@@ -80,254 +109,522 @@ def make_kernel(z_lower, z_upper, reltol, peak_epsilon):
         peak_epsilon=peak_epsilon,
         integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
     )
-    # The Limber approximation is meaningless at the low multipoles that
-    # dominate here, and makes the cross spectrum of two disjoint bins vanish.
+    # Non-Limber at every multipole: at these multipoles the Limber approximation is
+    # not accurate, and it gives zero for the cross spectrum of two disjoint bins.
     kernel.set_l_limber(-1)
     kernel.prepare(cosmo)
 
     return kernel
 
 
-def knot_count(kernel):
-    """How many radial solves this closure cost."""
-    integrand = kernel.get_eval_vectorized_full(
-        cosmo,
-        LMIN,
-        LMAX,
-        Ncm.SBesselIntegratorLevin.new(LMIN, LMAX),
-        Nc.XcorKernelClosure.SPLINE,
+def closure_cost(kernel):
+    """The panels and the Chebyshev nodes of the kernel's closure for LMIN..LMAX."""
+    closure = kernel.get_eval_vectorized_full(
+        cosmo, LMIN, LMAX, Ncm.SBesselIntegratorLevin.new(LMIN, LMAX)
     )
+    panels = closure.peek_panels()
+    n_panels = panels.get_n_panels()
+    nodes = sum(panels.get_panel(i)[0].ncols() for i in range(n_panels))
 
-    return len(np.array(integrand.peek_knots().dup_array()))
+    return n_panels, nodes
 
 
-print(f"{'reltol':>8} {'peak-epsilon':>14} {'knots':>7}")
-for reltol, peak_epsilon in [
-    (1.0e-6, 1.0e-5),
-    (1.0e-8, 1.0e-5),  # reltol tightened 100x, floor unchanged
-    (1.0e-6, 1.0e-6),  # floor tightened 10x instead
-]:
-    n = knot_count(make_kernel(0.1, 0.2, reltol, peak_epsilon))
-    print(f"{reltol:>8.0e} {peak_epsilon:>14.0e} {n:>7}")
+cost_settings = {
+    "NcXcorKernel default": (1.0e-4, 1.0e-4),
+    "NcXcorSSCSij default": (1.0e-6, 1.0e-5),
+    "reltol 100 times smaller": (1.0e-8, 1.0e-5),
+    "peak-epsilon 10 times smaller": (1.0e-6, 1.0e-6),
+}
+
+cost = {}
+print(f"{'setting':<30} {'reltol':>8} {'peak-epsilon':>13} {'panels':>7} {'nodes':>6}")
+for name, (reltol, peak_epsilon) in cost_settings.items():
+    cost[name] = closure_cost(make_kernel(0.1, 0.2, reltol, peak_epsilon))
+    print(f"{name:<30} {reltol:>8.0e} {peak_epsilon:>13.0e} {cost[name][0]:>7} {cost[name][1]:>6}")
 ```
 
-Tightening `reltol` a hundredfold barely moves the cost; tightening the floor
-tenfold moves it a great deal. The knot count scales as
-$a^{-1/4}$ --- textbook cubic-spline convergence, since halving the error four
-times over needs twice the knots.
+```{python}
+#| echo: false
+# The claims of the paragraph below, checked so that a change breaks the render.
+assert cost["NcXcorSSCSij default"] == cost["reltol 100 times smaller"]
+assert cost["peak-epsilon 10 times smaller"][1] > cost["NcXcorSSCSij default"][1]
 
-::: {.callout-warning}
-## Do not set the two equal, and do not go below $10^{-10}$
+display(Markdown(rf"""
+At peak-epsilon $10^{{-5}}$, reltol $10^{{-6}}$ and $10^{{-8}}$ give the same
+{cost['NcXcorSSCSij default'][0]} panels and {cost['NcXcorSSCSij default'][1]} nodes. A
+peak-epsilon 10 times smaller increases the nodes from {cost['NcXcorSSCSij default'][1]}
+to {cost['peak-epsilon 10 times smaller'][1]}. On this kernel the cost of a closure is set
+by peak-epsilon.
+"""))
+```
 
-Equal values are the one setting that starves the $p$-adaptive cubature of
-Clenshaw--Curtis levels: refinement then stops exactly at the level the outer
-rule is trying to resolve. [[numcosmo|NcXcorSSCSij]] offsets them deliberately, upwards.
+::: {.callout-important}
+## Two limits on the tolerances
 
-Below $a \simeq 10^{-10}$ the refinement starts resolving the radial
-integrator's own numerical noise rather than the function, and the knot count
-explodes. That is a real out-of-memory risk, not a slow run.
+`NcXcorKernel:peak-epsilon` sets a tolerance on $W_\ell(k)$. Where the threshold is $a$,
+the error of the integrand $k^2 W^X_\ell W^Y_\ell$ is of order
+$a\,(\vert W^X_\ell \vert + \vert W^Y_\ell \vert)$, and of order $a^2$ in the tails of
+both windows, where both are of order $a$. [[numcosmo|nc_xcor_kernel_set_peak_epsilon]]
+warns below $10^{-6}$, where $a^2$ is below $10^{-12}$ of the square of the smallest
+peak.
+
+A closure is not more accurate than the values it interpolates. Building a closure
+aborts when the larger of reltol and peak-epsilon is below the relative tolerance of the
+integrator that evaluates $W_\ell(k)$, `NcmSBesselIntegratorLevin:cheb-reltol`, which is
+$10^{-8}$ by default.
 :::
 
-## Asking what the error is {#sec-error}
+## The range of k {#sec-range}
 
-`compute_full` fills an optional second vector with a per-multipole error
-estimate. It is worth being precise about what that number is, because it is
-not what most people expect.
+The range of $k$ of a closure is found by sampling. Starting from seeds near the peaks of
+$W_\ell(k)$, each end of the range is extended step by step until
+`NcXcorKernel:adaptive-boundary-tries` consecutive values of $k$ satisfy
+$\Vert W(k) \Vert_2 < \epsilon_{\rm dom}\, W_{\rm ref}$, where $\Vert W(k) \Vert_2$ is the norm over
+the multipoles of the block, $W_{\rm ref}$ its largest value over the $k$ already evaluated,
+and $\epsilon_{\rm dom}$ is `NcXcorKernel:adaptive-epsilon`, $10^{-5}$ by default. The closure is
+zero beyond the range. What the range leaves out is part of neither $C_\ell$ nor its
+error estimate; [Certified values](#sec-certified) measures its size.
 
-The outer quadrature contributes nothing: on the merged knots of a pair of
-closures the integrand $k^2 W^A W^B$ is a degree-8 polynomial per panel, and
-the default `KERNEL_EXACT` method integrates it exactly. So the entire error is
-the closures' *fit*, propagated through how much the pair cancels.
+## The error estimate {#sec-error}
+
+[[numcosmo|nc_xcor_compute_full]] fills a second vector with an error estimate for each
+multipole. With `NC_XCOR_METHOD_KERNEL_EXACT` the outer integral is exact on the two
+closures: on each interval of the common refinement of their panels both are
+polynomials.
+The quadrature therefore contributes no error, and the estimate is the closures' fit
+error propagated through the pair,
+$$
+\sigma_\ell = \frac{2}{\pi} \int \mathrm{d}k\, k^2 \left( \vert W^X_\ell \vert\,
+\delta W^Y_\ell + \vert W^Y_\ell \vert\, \delta W^X_\ell \right),
+$$
+where $\delta W$ on a panel is the sum of the absolute values of the coefficients above
+the order of the level below, a bound on the difference between the two expansions the
+acceptance test compared. The cell below computes three spectra of cluster top-hat bins
+at the [[numcosmo|NcXcorSSCSij]] defaults: the auto spectrum of $0.1 < z < 0.2$, its
+cross spectrum with the adjacent bin $0.3 < z < 0.4$, and its cross spectrum with the
+separated bin $0.6 < z < 0.7$.
 
 ```{python}
 xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
 xcor.prepare(cosmo)
 
-RELTOL, PEAK_EPSILON = 1.0e-6, 1.0e-5  # the NcXcorSSCSij defaults
+RELTOL, PEAK_EPSILON = SETTINGS["NcXcorSSCSij default"]
 bins = {
     "0.1 < z < 0.2": make_kernel(0.1, 0.2, RELTOL, PEAK_EPSILON),
     "0.3 < z < 0.4": make_kernel(0.3, 0.4, RELTOL, PEAK_EPSILON),
     "0.6 < z < 0.7": make_kernel(0.6, 0.7, RELTOL, PEAK_EPSILON),
 }
-names = list(bins)
 
 
-def spectrum(kernel_a, kernel_b=None):
-    """Return (C_ell, error estimate) over LMIN..LMAX."""
+def spectrum(kernel_x, kernel_y=None):
+    """C_ell and its error estimate for LMIN..LMAX; kernel_y None is the auto spectrum."""
     cl, cl_err = Ncm.Vector.new(NELL), Ncm.Vector.new(NELL)
-    xcor.compute_full(kernel_a, kernel_b, cosmo, LMIN, LMAX, cl, cl_err)
+    xcor.compute_full(kernel_x, kernel_y, cosmo, LMIN, LMAX, cl, cl_err)
 
     return np.array(cl.dup_array()), np.array(cl_err.dup_array())
 
 
-auto, auto_err = spectrum(bins[names[0]])
-adjacent, adjacent_err = spectrum(bins[names[0]], bins[names[1]])
-separated, separated_err = spectrum(bins[names[0]], bins[names[2]])
+auto, auto_err = spectrum(bins["0.1 < z < 0.2"])
+adjacent, adjacent_err = spectrum(bins["0.1 < z < 0.2"], bins["0.3 < z < 0.4"])
+separated, separated_err = spectrum(bins["0.1 < z < 0.2"], bins["0.6 < z < 0.7"])
+auto_far, _ = spectrum(bins["0.6 < z < 0.7"])
+auto_mid, _ = spectrum(bins["0.3 < z < 0.4"])
 
-print(f"{'pair':<24} {'|C_l|':>11} {'estimate':>11} {'relative':>10}")
-for label, cl, err in [
-    ("auto, bin 0", auto, auto_err),
-    ("cross, adjacent bins", adjacent, adjacent_err),
-    ("cross, separated bins", separated, separated_err),
-]:
-    worst = np.abs(err / cl).max()
-    print(f"{label:<24} {np.abs(cl).max():>11.3e} {np.abs(err).max():>11.3e} {worst:>10.1e}")
+pairs = {
+    "auto, 0.1 < z < 0.2": (auto, auto_err, auto),
+    "cross, adjacent bins": (adjacent, adjacent_err, auto_mid),
+    "cross, separated bins": (separated, separated_err, auto_far),
+}
+
+rel_err = {label: np.abs(err / cl).max() for label, (cl, err, _) in pairs.items()}
+abs_err = {label: np.abs(err).max() for label, (_, err, _) in pairs.items()}
+print(f"{'pair':<24} {'max |C_l|':>11} {'max sigma_l':>12} {'max sigma_l/|C_l|':>18}")
+for label, (cl, err, _) in pairs.items():
+    print(
+        f"{label:<24} {np.abs(cl).max():>11.3e} {np.abs(err).max():>12.3e} "
+        f"{rel_err[label]:>18.1e}"
+    )
 ```
 
-The auto spectrum is reported at roughly the tolerance the closures were built
-to. The cross spectra are not --- and the separated pair comes back with a
-relative estimate far above one, meaning the estimate cannot vouch for a single
-digit of it.
+```{python}
+#| echo: false
+# The claims of the paragraph below and of the figure caption that follows.
+assert 1.0e-6 < rel_err["auto, 0.1 < z < 0.2"] < 1.0e-5
+assert max(abs_err.values()) < 10.0 * min(abs_err.values())
+assert rel_err["cross, separated bins"] > 1.0
+assert np.abs(auto).max() > 1.0e3 * np.abs(separated).max()
 
-## Why cancellation, not the quadrature {#sec-cancellation}
+display(Markdown(rf"""
+The estimate is {sci(rel_err['auto, 0.1 < z < 0.2'])} of the auto spectrum, between the
+two tolerances the closures were built with, $10^{{-6}}$ and $10^{{-5}}$. The relative
+estimate of the adjacent cross spectrum is {sci(rel_err['cross, adjacent bins'])}, and
+that of the separated cross spectrum is {sci(rel_err['cross, separated bins'])}. The three
+estimates are of the same order in absolute value; what differs is the size of $C_\ell$.
+"""))
+```
 
-An auto spectrum integrates $k^2 W^2$, which is positive: nothing cancels, so a
-fit error of $\epsilon$ gives a $C_\ell$ error of $\epsilon$. A cross spectrum
-of two separated bins is built from one closure's tail against the other's, with
-the product changing sign. The integral of the absolute integrand can then be
-thousands of times the integral itself, and the fit error is amplified by
-exactly that ratio.
+Two properties of $\sigma_\ell$ follow from its construction. It integrates absolute
+values, so the cancellation of errors in the integral does not reduce it. The outer
+integral runs over the intersection of the two closures' ranges of $k$, so $\sigma_\ell$
+does not include what lies outside that intersection.
+
+## Cancellation {#sec-cancellation}
+
+The integrand of an auto spectrum, $k^2 W_\ell^2$, is nonnegative. The integrand of the
+cross spectrum of two separated bins is the product of the tails of the two windows, and
+it changes sign, so the integral of its absolute value exceeds $\vert C_\ell \vert$.
+$\sigma_\ell$ is an integral of absolute values, so its ratio to $\vert C_\ell \vert$
+grows by the ratio of the two integrals.
 
 ```{python}
+#| label: fig-xcor-accuracy-cancellation
+#| fig-cap: >
+#|   |C_l| of the three spectra of the previous cell, with the error estimate sigma_l as
+#|   the error bar. The three estimates are of the same order; the separated cross
+#|   spectrum is more than three orders of magnitude below the auto spectrum, and its
+#|   error bar exceeds its value.
+#| code-fold: true
 fig, ax = plt.subplots(figsize=(7.0, 4.2))
 ells = np.arange(LMIN, LMAX + 1)
 
-for label, cl, err, color in [
-    ("auto, bin 0", auto, auto_err, "#1b4965"),
-    ("cross, adjacent", adjacent, adjacent_err, "#5fa8d3"),
-    ("cross, separated", separated, separated_err, "#bc4749"),
-]:
-    ax.errorbar(ells, np.abs(cl), yerr=np.abs(err), label=label,
-                color=color, marker="o", capsize=3, lw=1.6)
+for label, (cl, err, _), color in zip(pairs, pairs.values(), ["C0", "C1", "C3"]):
+    ax.errorbar(ells, np.abs(cl), yerr=np.abs(err), label=label, color=color,
+                marker="o", capsize=3, lw=1.6)
 
 ax.set_yscale("log")
 ax.set_xlabel(r"$\ell$")
-ax.set_ylabel(r"$|C_\ell|$, with the reported estimate")
-ax.set_title("The estimate grows with the pair's cancellation, not with $\\ell$")
+ax.set_ylabel(r"$|C_\ell|$ and $\sigma_\ell$")
 ax.legend(frameon=False)
 fig.tight_layout()
 plt.show()
 ```
 
-## The rule that matters {#sec-rule}
+## The scale of a cross spectrum {#sec-diagonal}
 
-A relative error is meaningless on its own. The separated-bin cross spectrum is
-a small number, and what it contributes to anything built from these spectra is
-its error *times its amplitude*.
+An error on $C_\ell^{XY}$ is measured against $\sqrt{C_\ell^{XX} C_\ell^{YY}}$, the
+diagonal. Let the error of each closure be at most $\epsilon$ relative to its window in
+the norm $\left(\int \mathrm{d}k\, k^2 W_\ell^2\right)^{1/2}$. The Cauchy--Schwarz
+inequality then bounds the error of $C_\ell^{XY}$ by
+$2\epsilon \sqrt{C_\ell^{XX} C_\ell^{YY}}$ to first order in $\epsilon$, whatever the
+cancellation in $C_\ell^{XY}$ itself.
 
 ```{python}
-diagonal = np.abs(auto).max()
-
-print(f"{'pair':<24} {'|C_l|/diagonal':>15} {'error/diagonal':>16}")
-for label, cl, err in [
-    ("auto, bin 0", auto, auto_err),
-    ("cross, adjacent bins", adjacent, adjacent_err),
-    ("cross, separated bins", separated, separated_err),
-]:
-    print(f"{label:<24} {np.abs(cl).max() / diagonal:>15.2e} "
-          f"{np.abs(err).max() / diagonal:>16.2e}")
+diag_cl, diag_err = {}, {}
+print(f"{'pair':<24} {'max |C_l|/diag':>15} {'max sigma_l/diag':>17}")
+for label, (cl, err, auto_y) in pairs.items():
+    diagonal = np.sqrt(np.abs(auto * auto_y))
+    diag_cl[label] = np.abs(cl / diagonal).max()
+    diag_err[label] = np.abs(err / diagonal).max()
+    print(f"{label:<24} {diag_cl[label]:>15.2e} {diag_err[label]:>17.2e}")
 ```
 
-Read the last column rather than the relative error. The separated pair's
-estimate, measured against the diagonal, is *smaller* than the diagonal's own ---
-the worst-conditioned spectrum here contributes less absolute uncertainty than
-the best-conditioned one, because it is orders of magnitude smaller to begin
-with. For a cluster covariance these are off-diagonal terms that have been
-measured as irrelevant; a large estimate on one is not a problem to fix.
+```{python}
+#| echo: false
+display(Markdown(rf"""
+Measured against the diagonal, the estimates of the three pairs lie between
+{sci(min(diag_err.values()))} and {sci(max(diag_err.values()))}. The separated cross
+spectrum is {sci(diag_cl['cross, separated bins'])} of the diagonal, so its estimate
+relative to $\vert C_\ell \vert$ is larger than relative to the diagonal by the inverse
+of that fraction, about {sci(1.0 / diag_cl['cross, separated bins'])}.
+The closures of the three pairs are built at the same tolerances.
+"""))
+```
 
-::: {.callout-important}
-## Read an estimate against the amplitude its term carries
+## Two references {#sec-references}
 
-Never against itself. A large estimate on a term that is $10^{-4}$ of the
-diagonal is telling you the term is badly conditioned, not that your result is
-wrong. A small estimate on the diagonal is the statement worth having.
-:::
+The deviation from a reference measures the error. This section uses two references: a closure built at a tighter setting, and
+values certified in arbitrary-precision arithmetic.
 
-Two further limits matter. The estimate bounds the *criterion* the
-refinement was asked for, not the fit it achieved, and the refinement routinely
-beats its own threshold --- so it is a ceiling, typically by one to three orders,
-and loosest where the answer is healthiest. And it cannot see domain
-truncation: the outer integral runs over the intersection of the two closures'
-fitted $k$ ranges, and what that intersection discards is invisible to it.
+### A tighter closure {#sec-self-reference}
 
-## Kernel shape sets the cost {#sec-shape}
-
-Not every kernel is equally hard. A cluster top-hat has a sharp edge in
-$\chi$, which gives $W_\ell(k)$ a $1/k$ tail rather than an exponential one.
-Nothing is integrated across that edge --- it is declared through the component's
-limits --- but the tail keeps far more of $k$-space above the closure's floor.
+The cell below takes the validation setting, reltol $10^{-8}$ and peak-epsilon
+$10^{-6}$, as the reference, and measures the auto spectrum and the separated cross
+spectrum of the previous sections at the two looser settings, over the diagonal.
 
 ```{python}
-RH = cosmo.RH_Mpc()
+def pair_spectra(reltol, peak_epsilon):
+    """The auto spectrum of 0.1 < z < 0.2 and its cross with 0.6 < z < 0.7."""
+    near = make_kernel(0.1, 0.2, reltol, peak_epsilon)
+    far = make_kernel(0.6, 0.7, reltol, peak_epsilon)
+
+    return spectrum(near)[0], spectrum(near, far)[0], spectrum(far)[0]
+
+
+ref_auto, ref_separated, ref_far = pair_spectra(*SETTINGS["validation"])
+ref_diagonal = np.sqrt(np.abs(ref_auto * ref_far))
+
+dev = {}
+print(f"{'setting':<22} {'auto':>10} {'separated':>10}")
+for name in ("NcXcorKernel default", "NcXcorSSCSij default"):
+    cl_auto, cl_separated, _ = pair_spectra(*SETTINGS[name])
+    dev[name] = (
+        np.abs(cl_auto - ref_auto).max() / np.abs(ref_auto).max(),
+        np.abs(cl_separated - ref_separated).max() / ref_diagonal.max(),
+    )
+    print(f"{name:<22} {dev[name][0]:>10.1e} {dev[name][1]:>10.1e}")
+```
+
+```{python}
+#| echo: false
+display(Markdown(rf"""
+At the defaults of [[numcosmo|NcXcorKernel]] the deviations are {sci(dev['NcXcorKernel default'][0])}
+of the auto spectrum and {sci(dev['NcXcorKernel default'][1])} of the diagonal. At the
+defaults of [[numcosmo|NcXcorSSCSij]] the auto spectrum agrees with the reference to
+{sci(dev['NcXcorSSCSij default'][0])} and the separated cross spectrum to
+{sci(dev['NcXcorSSCSij default'][1])} of the diagonal. At this setting the estimates of
+the previous section exceed these deviations by a factor of
+{diag_err['cross, separated bins'] / dev['NcXcorSSCSij default'][1]:.0f} for the separated
+cross spectrum and {sci(rel_err['auto, 0.1 < z < 0.2'] / dev['NcXcorSSCSij default'][0])}
+for the auto spectrum.
+"""))
+```
+
+A tighter closure as reference does not show an error the two settings share; the
+certified values below do.
+
+### Certified values {#sec-certified}
+
+The table `data/truth_tables/xcor/xcor_kquad.json.gz` holds $C_\ell$ for analytic
+windows computed in arbitrary-precision ball arithmetic, with the
+[[numcosmo-math|NcmPowspecAnalytic]] BBKS spectrum. Each value is certified on an
+interval $[k_{\rm lo}, k_{\rm hi}]$ stored with it, and the comparison is made on that
+interval: the power spectrum's `kmin` and `kmax` are set to it, and the radial kernels
+take them as their range of $k$. Two cases of the table are used here: A2, the auto
+spectrum of a top-hat from 500 to 2500 Mpc, and X14, the cross spectrum of two top-hats
+from 780 to 1410 Mpc and from 3514 to 4086 Mpc. X14 is a separated pair, and its windows
+have hard edges.
+
+```{python}
+TABLE = Ncm.cfg_get_data_filename("truth_tables/xcor/xcor_kquad.json.gz", True)
+with gzip.open(TABLE, "rt") as handle:
+    certified = json.load(handle)["cases"]
+
+cosmo_bbks = Nc.HICosmoDEXcdm.new()
+dist_bbks = Nc.Distance.new(5.0)
+dist_bbks.prepare(cosmo_bbks)
+
+CASES = {
+    "A2": ((500.0, 2500.0), (500.0, 2500.0)),
+    "X14": ((780.0, 1410.0), (3514.0, 4086.0)),
+}
+
+
+def certified_interval_cl(entry, window_x, window_y, reltol, peak_epsilon, adaptive_epsilon=None):
+    """The library's C_ell of two top-hats on the entry's certified interval."""
+    ps_bbks = Ncm.PowspecAnalytic.new(
+        Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.LCDM
+    )
+    ps_bbks.set_kmin(entry["k_lo"])
+    ps_bbks.set_kmax(entry["k_hi"])
+
+    def tophat(window):
+        kernel = Nc.XcorKernelAnalyticTophat.new_full(
+            dist_bbks, ps_bbks, *window, Ncm.SBesselIntegratorLevin.new(0, 8)
+        )
+        kernel.set_reltol(reltol)
+        kernel.set_peak_epsilon(peak_epsilon)
+        if adaptive_epsilon is not None:
+            kernel.set_adaptive_epsilon(adaptive_epsilon)
+        kernel.set_l_limber(-1)
+        kernel.prepare(cosmo_bbks)
+
+        return kernel
+
+    kernel_x = tophat(window_x)
+    kernel_y = kernel_x if window_y == window_x else tophat(window_y)
+    xcor_bbks = Nc.Xcor.new(dist_bbks, ps_bbks, Nc.XcorMethod.KERNEL_EXACT)
+    xcor_bbks.prepare(cosmo_bbks)
+    cl = Ncm.Vector.new(1)
+    xcor_bbks.compute(kernel_x, kernel_y, cosmo_bbks, entry["ell"], entry["ell"], cl)
+
+    return cl.get(0)
+
+
+# (reltol, peak-epsilon, adaptive-epsilon); None keeps the default adaptive-epsilon.
+CERTIFIED_SETTINGS = {
+    name: (reltol, peak_epsilon, None) for name, (reltol, peak_epsilon) in SETTINGS.items()
+}
+CERTIFIED_SETTINGS["validation, adaptive-epsilon 1e-9"] = (1.0e-8, 1.0e-6, 1.0e-9)
+DIAGONAL_SETTING = CERTIFIED_SETTINGS["validation, adaptive-epsilon 1e-9"]
+
+certified_deviation = {}
+for case, (window_x, window_y) in CASES.items():
+    entries = [e for e in certified.values() if e["case"] == case]
+    for name, setting in CERTIFIED_SETTINGS.items():
+        worst = (0.0, 0)
+        for entry in entries:
+            diagonal = np.sqrt(abs(
+                certified_interval_cl(entry, window_x, window_x, *DIAGONAL_SETTING)
+                * certified_interval_cl(entry, window_y, window_y, *DIAGONAL_SETTING)
+            ))
+            got = certified_interval_cl(entry, window_x, window_y, *setting)
+            worst = max(worst, (abs(got - float(entry["value"])) / diagonal, entry["ell"]))
+        certified_deviation[case, name] = worst
+
+ells_of = {c: sorted(e["ell"] for e in certified.values() if e["case"] == c) for c in CASES}
+print(f"multipoles: A2 {ells_of['A2']}, X14 {ells_of['X14']}")
+print(f"{'setting':<34} {'peak-epsilon':>13} {'A2 (ell)':>15} {'X14 (ell)':>15}")
+for name, (_, peak_epsilon, _) in CERTIFIED_SETTINGS.items():
+    (dev_a2, ell_a2), (dev_x14, ell_x14) = (
+        certified_deviation["A2", name], certified_deviation["X14", name]
+    )
+    print(
+        f"{name:<34} {peak_epsilon:>13.0e} {f'{dev_a2:.1e} ({ell_a2})':>15} "
+        f"{f'{dev_x14:.1e} ({ell_x14})':>15}"
+    )
+```
+
+The closure's range of $k$ for A2 at $\ell = 5$, against the certified interval:
+
+```{python}
+entry = certified["A2_l5"]
+closure_range = {}
+for label, adaptive_epsilon in (("default", None), ("1e-9", 1.0e-9)):
+    ps_bbks = Ncm.PowspecAnalytic.new(
+        Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.LCDM
+    )
+    ps_bbks.set_kmin(entry["k_lo"])
+    ps_bbks.set_kmax(entry["k_hi"])
+    kernel = Nc.XcorKernelAnalyticTophat.new_full(
+        dist_bbks, ps_bbks, 500.0, 2500.0, Ncm.SBesselIntegratorLevin.new(0, 8)
+    )
+    kernel.set_reltol(1.0e-8)
+    kernel.set_peak_epsilon(1.0e-6)
+    if adaptive_epsilon is not None:
+        kernel.set_adaptive_epsilon(adaptive_epsilon)
+    kernel.set_l_limber(-1)
+    kernel.prepare(cosmo_bbks)
+    closure = kernel.get_eval_vectorized_full(
+        cosmo_bbks, 5, 5, Ncm.SBesselIntegratorLevin.new(5, 5)
+    )
+    k_min, k_max = closure.get_range()
+    rh = cosmo_bbks.RH_Mpc()
+    closure_range[label] = (k_min / rh, k_max / rh)
+    print(
+        f"adaptive-epsilon {label:>7}: closure [{k_min / rh:.3g}, {k_max / rh:.3g}] 1/Mpc, "
+        f"certified [{entry['k_lo']:.3g}, {entry['k_hi']:.3g}] 1/Mpc"
+    )
+```
+
+The first table gives the worst deviation over each case's multipoles, over the
+diagonal, and the multipole where it occurs. At every setting both cases deviate by less
+than peak-epsilon.
+
+```{python}
+#| echo: false
+_a2_ssc = certified_deviation['A2', 'NcXcorSSCSij default']
+_a2_val = certified_deviation['A2', 'validation']
+_a2_dom = certified_deviation['A2', 'validation, adaptive-epsilon 1e-9']
+_x14_val = certified_deviation['X14', 'validation']
+_x14_dom = certified_deviation['X14', 'validation, adaptive-epsilon 1e-9']
+
+# The claims of the paragraph above, of the paragraphs below and of the summary.
+for (_case, _name), (_dev, _) in certified_deviation.items():
+    assert _dev < CERTIFIED_SETTINGS[_name][1], (_case, _name)
+assert _a2_val[0] > 0.5 * _a2_ssc[0]
+assert closure_range["default"][1] < entry["k_hi"]
+assert closure_range["1e-9"][1] >= entry["k_hi"] * (1.0 - 1.0e-9)
+assert _a2_dom[0] < _a2_val[0]
+assert _x14_val[0] < _x14_dom[0] < CERTIFIED_SETTINGS['validation'][1]
+
+_ratio = max(
+    certified_deviation['X14', n][0] / certified_deviation['A2', n][0]
+    for n in CERTIFIED_SETTINGS
+)
+display(Markdown(rf"""
+At the same setting the separated pair X14, with its hard edges, deviates by at most
+{_ratio:.1f} times the deviation of the auto spectrum A2.
+
+A2 deviates by {sci(_a2_ssc[0])} at the [[numcosmo|NcXcorSSCSij]] setting ($\ell = {_a2_ssc[1]}$)
+and by {sci(_a2_val[0])} at the validation setting ($\ell = {_a2_val[1]}$), so this part
+of its deviation does not decrease with peak-epsilon. It is the range of $k$: at
+$\ell = 5$ the closure ends at {closure_range['default'][1]:.2f} $\mathrm{{Mpc^{{-1}}}}$
+with the default adaptive-epsilon, while the certified interval extends to
+{entry['k_hi']:.2f} $\mathrm{{Mpc^{{-1}}}}$. With adaptive-epsilon $10^{{-9}}$ the closure
+covers the interval, and the worst deviation of A2 falls to {sci(_a2_dom[0])}, the last
+row of the table. In the same row X14 deviates by {sci(_x14_dom[0])}, more than with the
+default adaptive-epsilon and less than peak-epsilon.
+"""))
+```
+
+## Kernel shape and cost {#sec-shape}
+
+The cost of a closure depends on the window as well as on the tolerances. A window with a
+step at its edges, such as a top-hat, has a $W_\ell(k)$ that decays as a power of $k$ and
+oscillates with a period set by the position of the edges. A smooth window has a
+$W_\ell(k)$ that decays faster. The cell below builds three windows on the shell
+$0.1 < z < 0.2$ at the defaults of [[numcosmo|NcXcorKernel]]: the cluster top-hat, a
+top-hat whose edges are smoothed over a third of its half-width, and a Gaussian of
+standard deviation half the half-width.
+
+```{python}
 chi_lower = dist.comoving(cosmo, 0.1) * RH
 chi_upper = dist.comoving(cosmo, 0.2) * RH
-mid, half = 0.5 * (chi_lower + chi_upper), 0.5 * (chi_upper - chi_lower)
+chi_mid, chi_half = 0.5 * (chi_lower + chi_upper), 0.5 * (chi_upper - chi_lower)
 
-# The same comoving shell, with edges of differing sharpness.
 shapes = {
-    "top-hat (sharp edge)": bins[names[0]],
+    "top-hat": make_kernel(0.1, 0.2, *SETTINGS["NcXcorKernel default"]),
     "smoothed top-hat": Nc.XcorKernelAnalyticTophatSmooth.new_full(
-        dist, ps, chi_lower, chi_upper, half / 3.0, 6.0,
+        dist, ps, chi_lower, chi_upper, chi_half / 3.0, 6.0,
         Ncm.SBesselIntegratorLevin.new(0, 8),
     ),
     "Gaussian": Nc.XcorKernelAnalyticGauss.new_full(
-        dist, ps, mid, half / 2.0, 4.0, Ncm.SBesselIntegratorLevin.new(0, 8),
+        dist, ps, chi_mid, chi_half / 2.0, 4.0, Ncm.SBesselIntegratorLevin.new(0, 8)
     ),
 }
 
-print(f"{'kernel':<22} {'knots':>7} {'k range':>22}")
-for label, kernel in shapes.items():
-    if label != "top-hat (sharp edge)":
+shape_cost, shape_k_max = {}, {}
+print(f"{'window':<18} {'panels':>7} {'nodes':>6} {'k range [1/Mpc]':>22}")
+for name, kernel in shapes.items():
+    if name != "top-hat":
         kernel.set_l_limber(-1)
         kernel.prepare(cosmo)
 
-    integrand = kernel.get_eval_vectorized_full(
-        cosmo,
-        LMIN,
-        LMAX,
-        Ncm.SBesselIntegratorLevin.new(LMIN, LMAX),
-        Nc.XcorKernelClosure.SPLINE,
+    closure = kernel.get_eval_vectorized_full(
+        cosmo, LMIN, LMAX, Ncm.SBesselIntegratorLevin.new(LMIN, LMAX)
     )
-    k = np.array(integrand.peek_knots().dup_array())
-    print(f"{label:<22} {len(k):>7} {f'{k[0]:.3g} to {k[-1]:.3g}':>22}")
+    k_min, k_max = closure.get_range()
+    n_panels, nodes = closure_cost(kernel)
+    shape_cost[name] = nodes
+    shape_k_max[name] = k_max / RH
+    print(f"{name:<18} {n_panels:>7} {nodes:>6} {f'{k_min / RH:.2e} to {k_max / RH:.2e}':>22}")
 ```
 
-The range spans an additional decade of $k$, with a denser grid within each
-decade. That is
-intrinsic to the shape, so a top-hat's cost and accuracy should not be read as
-typical of a galaxy or lensing kernel.
+```{python}
+#| echo: false
+# The claims of the paragraph below.
+assert 0.5 < shape_k_max["smoothed top-hat"] / shape_k_max["top-hat"] < 2.0
+assert shape_k_max["Gaussian"] < 0.2 * shape_k_max["top-hat"]
+assert shape_cost["top-hat"] > max(shape_cost["smoothed top-hat"], shape_cost["Gaussian"])
 
-## A ladder to start from {#sec-presets}
-
-These are measured on the top-hat bins above, so treat them as an upper bound
-on what a smoother kernel will cost.
-
-| setting | `reltol` | `peak-epsilon` | knots | diagonal accuracy |
-|---|---|---|---|---|
-| [[numcosmo\|NcXcorKernel]] default | $10^{-4}$ | $10^{-4}$ | 541 | $1.3 \times 10^{-4}$ |
-| [[numcosmo\|NcXcorSSCSij]] default | $10^{-6}$ | $10^{-5}$ | 1241 | $5.8 \times 10^{-6}$ |
-| validation | $10^{-8}$ | $10^{-7}$ | 4363 | $3.7 \times 10^{-9}$ |
-
-Each rung costs two to three times the knots and buys one to three orders.
-
-::: {.callout-note}
-## Accuracy is not monotonic in the tolerance
-
-Loosening the floor to $10^{-3}$ at `reltol` $10^{-4}$ gives 295 knots and a
-diagonal accurate to $7.8 \times 10^{-5}$ --- *fewer* knots and a *better* answer
-than the default's 541 and $1.3 \times 10^{-4}$. The floor does not only set how
-many knots there are, it changes where they land. Verify a setting on your own
-configuration rather than assuming a tighter one is safer.
-:::
+display(Markdown(rf"""
+The top-hat costs {shape_cost['top-hat']} nodes,
+{shape_cost['top-hat'] / shape_cost['smoothed top-hat']:.1f} times the smoothed top-hat on
+a similar range of $k$ and {shape_cost['top-hat'] / shape_cost['Gaussian']:.1f} times the
+Gaussian, whose range ends an order of magnitude lower. The costs measured above on a
+top-hat are therefore larger than those of a smooth window.
+"""))
+```
 
 ## Summary {#sec-summary}
 
-- `peak-epsilon` is the lever; `reltol` is close to free. Keep them offset, and
-  keep the floor above $10^{-10}$.
-- With `KERNEL_EXACT` the quadrature contributes no error at all. What
-  `compute_full` reports is the closure fit, amplified by the pair's
-  cancellation.
-- Weigh that estimate against the amplitude its term carries. A badly
-  conditioned off-diagonal is usually not a problem.
-- Treat the estimate as a ceiling and as a conditioning flag, not as a
-  measurement of the error.
+- A panel of a closure is accepted when its coefficients change by at most
+  $\max(\mathrm{reltol}\,V, a)$, with $a$ = peak-epsilon times the block's smallest
+  peak. With peak-epsilon at least reltol, the relative term is the larger only near a
+  peak that exceeds the block's smallest peak by the factor peak-epsilon/reltol.
+- On the cluster top-hat of this page the cost of a closure is set by peak-epsilon.
+  [[numcosmo|nc_xcor_kernel_set_peak_epsilon]] warns below $10^{-6}$, and the
+  construction aborts when the larger of the two is below the integrator's
+  `cheb-reltol`.
+- `NcXcorKernel:adaptive-epsilon` ends the range of $k$. What lies beyond it is part of
+  neither $C_\ell$ nor its error estimate; what the default leaves out of A2 is measured
+  in [Certified values](#sec-certified).
+- With `NC_XCOR_METHOD_KERNEL_EXACT` the quadrature contributes no error.
+  [[numcosmo|nc_xcor_compute_full]] reports the closures' fit error propagated through
+  the pair. It integrates absolute values, and it exceeds the deviation from a tighter
+  closure by the factors of [A tighter closure](#sec-self-reference).
+- An error on a cross spectrum is measured against $\sqrt{C_\ell^{XX} C_\ell^{YY}}$;
+  the estimates of the three pairs of this page against that scale are in
+  [The scale of a cross spectrum](#sec-diagonal).
+- Against certified values, every setting on this page deviates by less than its
+  peak-epsilon times the diagonal.

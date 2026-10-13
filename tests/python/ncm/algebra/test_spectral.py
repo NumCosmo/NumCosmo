@@ -79,7 +79,7 @@ def test_batch_from_python_callback() -> None:
     assert coeffs.ncols() == (1 << k) + 1
 
     k, coeffs = spectral.compute_chebyshev_coeffs_batch_adaptive_cap(
-        batch, 2, -1.0, 1.0, 2, 10, 1.0e-12, 0.0, False, None
+        batch, 2, -1.0, 1.0, 2, 10, 1.0e-12, 0.0, False, None, None, None, None
     )
     assert k > 0
     assert coeffs.ncols() == (1 << k) + 1
@@ -94,7 +94,7 @@ def test_arrays_returned_by_conversions() -> None:
     assert len(Ncm.Spectral.chebT_to_gegenbauer_alpha2(c)) == 4
     assert len(Ncm.Spectral.chebT_deriv_to_gegenbauer_alpha2(c)) == 3
     assert len(Ncm.Spectral.chebT_deriv2_to_gegenbauer_alpha2(c)) == 2
-    assert len(Ncm.Spectral.gegenbauer_alpha2_xmul(c, 1.0, 0.0)) == 5
+    assert len(Ncm.Spectral.gegenbauer_alpha2_mul_affine(c, 1.0, 0.0)) == 5
 
     norm, rebased = spectral.chebyshev_rebase(c, 0, -1.0, 1.0, 0.0, 1.0)
     assert len(rebased) == 4

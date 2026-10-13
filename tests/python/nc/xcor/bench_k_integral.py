@@ -34,15 +34,14 @@ Usage::
     python3 tests/python/nc/xcor/bench_k_integral.py --baseline sweep.json
 
 Every row carries the settings it was taken at. Threads are the caller's
-business, but a method comparison belongs at ``OMP_NUM_THREADS=1``: the ell
-block is where the OpenMP team lives, so a thread count silently changes what
-is being compared.
+business, but a timing belongs at ``OMP_NUM_THREADS=1``: the ell block is where
+the OpenMP team lives, so a thread count silently changes what is measured.
 
 Timing is reported in three numbers per block, never collapsed into one:
 
 ``build``
     both closures for the block, built through a *fresh* Levin integrator. A
-    property of the closure, not of the method -- all three methods pay it.
+    property of the closure, not of the quadrature.
     Timing a rebuild through an integrator that has already served this kernel
     reads 1.7x cheap, because it carries warm per-ell Bessel caches.
 ``compute``
@@ -50,16 +49,7 @@ Timing is reported in three numbers per block, never collapsed into one:
     kernel, which this harness has already driven.
 ``quad``
     the outer quadrature alone, through ``Nc.Xcor.integrate_block()`` on the
-    closures this harness already holds. Not defined for ``gsl``, which fits a
-    closure per multipole and so has no block to be handed; that is what
-    ``gsl_block`` is for.
-``delta``
-    ``compute`` minus the cheapest method's ``compute`` on the same pair,
-    closure and block. Everything but the quadrature is common to the methods,
-    so this is the part that is the method's, without the subtraction of two
-    differently-warmed quantities that a ``compute - build`` would be. Where
-    ``quad`` is defined it is the better number; ``delta`` stays the only one
-    available for ``gsl``.
+    closures this harness already holds.
 """
 
 from __future__ import annotations
@@ -84,40 +74,13 @@ except ImportError:  # running from the repository root
     import cases_k_integral as cases  # type: ignore[no-redef]
 
 
-METHODS: typing.Final[dict[str, Nc.XcorMethod]] = {
-    "exact": Nc.XcorMethod.KERNEL_EXACT,
-    "cubature": Nc.XcorMethod.KERNEL_CUBATURE,
-    "gsl": Nc.XcorMethod.KERNEL_GSL,
-    "gsl_block": Nc.XcorMethod.KERNEL_GSL_BLOCK,
-}
-
-# KERNEL_GSL calls nc_xcor_kernel_get_eval once per multipole; every other
-# method calls ..._get_eval_vectorized_full once per block. Each is measured
-# against a reference built on the closure it actually integrates, or the row
-# reports a closure difference under a method's name. gsl_block runs the same
-# qagp as gsl over the block closure, which is what makes it comparable to
-# exact and cubature at all.
-PER_MULTIPOLE: typing.Final[frozenset[str]] = frozenset({"gsl"})
-
-CLOSURES: typing.Final[dict[str, Nc.XcorKernelClosure]] = {
-    "spline": Nc.XcorKernelClosure.SPLINE,
-    "chebyshev": Nc.XcorKernelClosure.CHEBYSHEV,
-}
-
-
 def _closure_size(integrand: Nc.XcorKernelIntegrand) -> int:
-    """Knots for a spline closure, coefficients summed over panels otherwise."""
-    n_panels = integrand.get_n_panels()
-
-    if n_panels == 0:
-        knots = integrand.peek_knots()
-
-        return 0 if knots is None else knots.len()
-
+    """The coefficients of the closure, summed over its panels."""
+    panels = integrand.peek_panels()
     total = 0
 
-    for i in range(n_panels):
-        coeffs, _, _ = integrand.peek_panel(i)
+    for i in range(panels.get_n_panels()):
+        coeffs, _, _ = panels.get_panel(i)
         total += Ncm.Matrix.ncols(coeffs)
 
     return total
@@ -126,11 +89,10 @@ def _closure_size(integrand: Nc.XcorKernelIntegrand) -> int:
 def sweep_case(
     pair: cases.PairSpec,
     settings: cases.Settings,
-    method_names: list[str],
     block_starts: list[int],
     repeats: int,
 ) -> list[dict]:
-    """Every method on one pair, against the reference on frozen closures."""
+    """KERNEL_EXACT on one pair, against the reference on frozen closures."""
     cosmo, dist, ps = cases.make_cosmo_bits()
     RH = Nc.HICosmo.RH_Mpc(cosmo)
     rows: list[dict] = []
@@ -158,19 +120,6 @@ def sweep_case(
         reference = cases.reference_cl(RH, integrand_a, integrand_b)
         cancellation = cases.cancellation_ratio(integrand_a, integrand_b)
 
-        references = {"block": reference.cl}
-
-        if PER_MULTIPOLE.intersection(method_names):
-            references["per_multipole"] = cases.per_multipole_reference(
-                RH,
-                kernel_a,
-                None if pair.isauto else kernel_b,
-                cosmo,
-                lmin,
-                lmax,
-                settings,
-            )
-
         common = {
             "case": pair.case,
             "regime": pair.regime,
@@ -179,14 +128,13 @@ def sweep_case(
             "isauto": pair.isauto,
             "lmin": lmin,
             "lmax": lmax,
-            "closure": settings.closure.value_nick,
             "reltol": settings.reltol,
             "peak_epsilon": settings.peak_epsilon,
             "l_limber": settings.l_limber,
             "ell_batch_size": settings.ell_batch_size,
             "size_a": _closure_size(integrand_a),
             "size_b": None if integrand_b is None else _closure_size(integrand_b),
-            "n_panels_a": integrand_a.get_n_panels(),
+            "n_panels_a": integrand_a.peek_panels().get_n_panels(),
             "build_time": build_time,
             "reference_cells": reference.n_cells,
             "reference_max_order": reference.max_order,
@@ -195,140 +143,112 @@ def sweep_case(
             "k_max": reference.k_max,
         }
 
-        compute_times: dict[str, float] = {}
+        xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
+        xcor.set_ell_batch_size(settings.ell_batch_size)
+        xcor.set_reltol(settings.reltol)
+        xcor.prepare(cosmo)
 
-        for method_name in method_names:
-            xcor = Nc.Xcor.new(dist, ps, METHODS[method_name])
-            xcor.set_closure_type(settings.closure)
-            xcor.set_ell_batch_size(settings.ell_batch_size)
-            xcor.set_reltol(settings.reltol)
-            xcor.prepare(cosmo)
+        vp = Ncm.Vector.new(len(ells))
+        timings = []
 
-            vp = Ncm.Vector.new(len(ells))
-            timings = []
+        for _ in range(repeats):
+            start = time.perf_counter()
+            xcor.compute(kernel_a, kernel_b, cosmo, lmin, lmax, vp)
+            timings.append(time.perf_counter() - start)
 
-            for _ in range(repeats):
-                start = time.perf_counter()
-                xcor.compute(kernel_a, kernel_b, cosmo, lmin, lmax, vp)
-                timings.append(time.perf_counter() - start)
+        # The quadrature on its own, over the closures already built above.
+        vp_quad = Ncm.Vector.new(len(ells))
+        quad_timings = []
 
-            # The quadrature on its own, over the closures already built above.
-            # Only the block methods can be driven this way; gsl fits per
-            # multipole and has nothing to be handed.
-            quad_time = None
-
-            if method_name not in PER_MULTIPOLE:
-                vp_quad = Ncm.Vector.new(len(ells))
-                quad_timings = []
-
-                for _ in range(repeats):
-                    start = time.perf_counter()
-                    xcor.integrate_block(
-                        integrand_a,
-                        integrand_b,
-                        lmin,
-                        lmax,
-                        pair.isauto,
-                        METHODS[method_name],
-                        vp_quad,
-                        None,
-                    )
-                    quad_timings.append(time.perf_counter() - start)
-
-                quad_time = float(np.median(quad_timings))
-
-                # Same closures, same method: any difference here is the
-                # entry point disagreeing with itself, not a tolerance.
-                drift = np.abs(
-                    np.array(vp_quad.dup_array()) - np.array(vp.dup_array())
-                ).max()
-
-                if drift > 0.0:
-                    print(
-                        f"  ! {pair.case} {method_name}: integrate_block "
-                        f"differs from compute by {drift:.3e}",
-                        flush=True,
-                    )
-
-            got = np.array(vp.dup_array())
-            reference_kind = (
-                "per_multipole" if method_name in PER_MULTIPOLE else "block"
+        for _ in range(repeats):
+            start = time.perf_counter()
+            xcor.integrate_block(
+                integrand_a,
+                integrand_b,
+                lmin,
+                lmax,
+                pair.isauto,
+                Nc.XcorMethod.KERNEL_EXACT,
+                vp_quad,
+                None,
             )
-            truth = references[reference_kind]
-            scale = np.abs(truth).max()
-            relative = np.where(
-                np.abs(truth) > 0.0,
-                np.abs(got / np.where(truth == 0.0, 1.0, truth) - 1.0),
-                np.abs(got),
+            quad_timings.append(time.perf_counter() - start)
+
+        quad_time = float(np.median(quad_timings))
+
+        # Same closures, same method: any difference here is the entry point
+        # disagreeing with itself, not a tolerance.
+        drift = np.abs(np.array(vp_quad.dup_array()) - np.array(vp.dup_array())).max()
+
+        if drift > 0.0:
+            print(
+                f"  ! {pair.case}: integrate_block differs from compute by "
+                f"{drift:.3e}",
+                flush=True,
             )
-            compute_time = float(np.median(timings))
-            compute_times[method_name] = compute_time
 
-            for index, ell in enumerate(ells):
-                rows.append(
-                    {
-                        **common,
-                        "method": method_name,
-                        "reference_kind": reference_kind,
-                        "ell": ell,
-                        "cl": float(got[index]),
-                        "cl_reference": float(truth[index]),
-                        "cl_block_reference": float(reference.cl[index]),
-                        # Against the block's own peak, not against a value
-                        # five orders below it: a relative tolerance on the
-                        # smallest entry of a cancelling pair is a much harder
-                        # request than the same number on an auto spectrum.
-                        "rel_err": float(relative[index]),
-                        "peak_err": (
-                            float(abs(got[index] - truth[index]) / scale)
-                            if scale > 0.0
-                            else 0.0
-                        ),
-                        "cancellation": float(cancellation[index]),
-                        "conditioned_err": (
-                            float(relative[index] / cancellation[index])
-                            if np.isfinite(cancellation[index])
-                            else float("nan")
-                        ),
-                        "compute_time": compute_time,
-                        "quad_time": quad_time,
-                    }
-                )
+        got = np.array(vp.dup_array())
+        truth = reference.cl
+        scale = np.abs(truth).max()
+        relative = np.where(
+            np.abs(truth) > 0.0,
+            np.abs(got / np.where(truth == 0.0, 1.0, truth) - 1.0),
+            np.abs(got),
+        )
+        compute_time = float(np.median(timings))
 
-        cheapest = min(compute_times.values())
-
-        for row in rows[-len(ells) * len(method_names) :]:
-            row["compute_delta"] = row["compute_time"] - cheapest
+        for index, ell in enumerate(ells):
+            rows.append(
+                {
+                    **common,
+                    "ell": ell,
+                    "cl": float(got[index]),
+                    "cl_reference": float(truth[index]),
+                    # Against the block's own peak, not against a value five
+                    # orders below it: a relative tolerance on the smallest
+                    # entry of a cancelling pair is a much harder request than
+                    # the same number on an auto spectrum.
+                    "rel_err": float(relative[index]),
+                    "peak_err": (
+                        float(abs(got[index] - truth[index]) / scale)
+                        if scale > 0.0
+                        else 0.0
+                    ),
+                    "cancellation": float(cancellation[index]),
+                    "conditioned_err": (
+                        float(relative[index] / cancellation[index])
+                        if np.isfinite(cancellation[index])
+                        else float("nan")
+                    ),
+                    "compute_time": compute_time,
+                    "quad_time": quad_time,
+                }
+            )
 
     return rows
 
 
 def summarize(rows: list[dict]) -> str:
-    """Worst relative error and median cost per (case, closure, method)."""
-    keys = sorted({(r["case"], r["closure"], r["method"]) for r in rows})
+    """Worst relative error and median cost per case."""
+    keys = sorted({r["case"] for r in rows})
     lines = [
-        f"{'case':5s} {'closure':10s} {'method':9s} "
+        f"{'case':5s} "
         f"{'worst rel':>10s} {'worst peak':>10s} {'max C':>9s} "
-        f"{'build s':>9s} {'quad s':>9s} {'delta s':>9s}"
+        f"{'build s':>9s} {'quad s':>9s} {'compute s':>9s}"
     ]
 
-    for case, closure, method in keys:
-        selected = [
-            r
-            for r in rows
-            if r["case"] == case and r["closure"] == closure and r["method"] == method
-        ]
+    for case in keys:
+        selected = [r for r in rows if r["case"] == case]
         worst_rel = max(r["rel_err"] for r in selected)
         worst_peak = max(r["peak_err"] for r in selected)
         max_c = max(r["cancellation"] for r in selected)
         build = float(np.median([r["build_time"] for r in selected]))
-        delta = float(np.median([r["compute_delta"] for r in selected]))
-        quads = [r["quad_time"] for r in selected if r["quad_time"] is not None]
-        quad = f"{float(np.median(quads)):9.3f}" if quads else f"{'--':>9s}"
+        quad = float(np.median([r["quad_time"] for r in selected]))
+        compute = float(np.median([r["compute_time"] for r in selected]))
         lines.append(
-            f"{case:5s} {closure:10s} {method:9s} "
+            f"{case:5s} "
             f"{worst_rel:10.2e} {worst_peak:10.2e} {max_c:9.2e} "
-            f"{build:9.3f} {quad} {delta:9.3f}"
+            f"{build:9.3f} {quad:9.3f} {compute:9.3f}"
         )
 
     return "\n".join(lines)
@@ -338,7 +258,7 @@ def diff_against(rows: list[dict], baseline: list[dict]) -> str:
     """What moved since a baseline sweep, keyed by everything but the numbers."""
 
     def key(row: dict) -> tuple:
-        return (row["case"], row["closure"], row["method"], row["ell"])
+        return (row["case"], row["ell"])
 
     old = {key(r): r for r in baseline}
     lines = ["moved rows (rel_err ratio, compute time ratio):"]
@@ -371,12 +291,6 @@ def main() -> None:
     parser.add_argument(
         "--cases", nargs="*", default=None, help="case ids, default all of them"
     )
-    parser.add_argument(
-        "--methods", nargs="*", default=list(METHODS), choices=list(METHODS)
-    )
-    parser.add_argument(
-        "--closures", nargs="*", default=list(CLOSURES), choices=list(CLOSURES)
-    )
     parser.add_argument("--ells", nargs="*", type=int, default=cases.ELLS)
     parser.add_argument("--reltol", type=float, default=1.0e-4)
     parser.add_argument("--peak-epsilon", type=float, default=1.0e-4)
@@ -393,23 +307,19 @@ def main() -> None:
     )
     rows: list[dict] = []
 
-    for closure_name in args.closures:
-        settings = cases.Settings(
-            reltol=args.reltol,
-            peak_epsilon=args.peak_epsilon,
-            ell_batch_size=args.ell_batch_size,
-            closure=CLOSURES[closure_name],
-        )
+    settings = cases.Settings(
+        reltol=args.reltol,
+        peak_epsilon=args.peak_epsilon,
+        ell_batch_size=args.ell_batch_size,
+    )
 
-        for pair in selected:
-            start = time.perf_counter()
-            rows.extend(
-                sweep_case(pair, settings, args.methods, args.ells, args.repeats)
-            )
-            print(
-                f"{pair.case} {closure_name}: {time.perf_counter() - start:.1f} s",
-                flush=True,
-            )
+    for pair in selected:
+        start = time.perf_counter()
+        rows.extend(sweep_case(pair, settings, args.ells, args.repeats))
+        print(
+            f"{pair.case}: {time.perf_counter() - start:.1f} s",
+            flush=True,
+        )
 
     print()
     print(summarize(rows))

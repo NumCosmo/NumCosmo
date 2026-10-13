@@ -39,7 +39,7 @@ import numpy as np
 from rich.console import Console
 from rich.table import Table
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 
 def _make_ascaso_model(

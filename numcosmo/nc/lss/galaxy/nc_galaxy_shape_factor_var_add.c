@@ -187,7 +187,7 @@ _nc_galaxy_shape_factor_var_add_chi2 (NcGalaxyShapeFactorVarAddPrivate * const s
 
   /* The two components are reduced separately (chi2_1 + chi2_2, not
    * (e1^2 + e2^2)/var) to keep this specific floating-point evaluation
-   * order, matching the frozen golden-fixture values in the parity
+   * order, matching the truth-table values in the parity
    * tests. */
   *total_var = gsl_pow_2 (sigma) + gsl_pow_2 (data->std_noise);
   *chi2      = gsl_pow_2 (creal (e_s)) / *total_var + gsl_pow_2 (cimag (e_s)) / *total_var;

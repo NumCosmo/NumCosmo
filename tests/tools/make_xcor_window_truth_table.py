@@ -35,9 +35,11 @@ and, with it, the output file: ``d = 1`` and ``d = 2`` write
 :math:`k\\chi`; :math:`d = 2` is the weight a redshift-space distortion term
 carries, so those two tables are what certifies the RSD path. This is the offline half of the
 check: it needs FLINT, runs in minutes, and is re-run only when a window's
-closed form or the case list changes. The test that consumes the table
-(``tests/python/nc/xcor/test_xcor_window_truth_table.py``) needs neither FLINT
-nor this script.
+closed form or the case list changes. The tests that consume the table
+(``tests/c/nc/xcor/test_nc_xcor_window_levin.c`` and ``_dense.c``, through the
+``.bin`` that ``make_xcor_window_bin.py`` writes, and
+``tests/python/nc/xcor/test_xcor_window_truth_table.py`` for the radii) need
+neither FLINT nor this script.
 
 **Why the k grid is per-multipole.** :math:`I_\\ell(k)` peaks near
 :math:`k\\chi \\simeq \\ell`, so a k grid shared across multipoles samples the
@@ -131,6 +133,7 @@ def default_output(bessel_deriv: int) -> pathlib.Path:
         return OUTPUT
 
     return TABLE_DIR / f"xcor_window_ilk_d{bessel_deriv}.json.gz"
+
 
 # The generator's arguments and the library's constructor arguments for each
 # case. `ctor` is written into the table so the test builds its kernel from
@@ -468,9 +471,7 @@ def one_cell(
     grid = [xnu for xnu in x_nu_grid if xnu >= 0.8 or ell <= POWER_LAW_ELL_MAX]
     ks = [xnu * (ell + 0.5) / chi_ref for xnu in grid]
     t0 = time.monotonic()
-    _, vals, rads = run_tool(
-        exe, shape, ell, ks, target_rel, bessel_deriv=bessel_deriv
-    )
+    _, vals, rads = run_tool(exe, shape, ell, ks, target_rel, bessel_deriv=bessel_deriv)
     elapsed = time.monotonic() - t0
     # One line per cell: the only way to judge how long a run has left, since the
     # cost per multipole grows steeply and unevenly across shapes.
@@ -705,9 +706,7 @@ def main() -> int:
                 cells[f"{shape}|{ell}"] = future.result()
                 write_partial(output, cells)
 
-                payload = assemble(
-                    cells, ells, targets, x_nu_grid, args.bessel_deriv
-                )
+                payload = assemble(cells, ells, targets, x_nu_grid, args.bessel_deriv)
 
                 # The table is rewritten whenever a shape becomes complete, so a
                 # run that is stopped early still leaves a usable, rectangular

@@ -60,13 +60,13 @@ class PySLineData(Ncm.Data):
     #
     # Implements the virtual method get_length.
     #
-    def do_get_length(self) -> int:  # pylint: disable-msg=arguments-differ
+    def do_get_length(self) -> int:
         return self.len
 
     #
     # Implements the virtual method get_dof.
     #
-    def do_get_dof(self) -> int:  # pylint: disable-msg=arguments-differ
+    def do_get_dof(self) -> int:
         return self.dof
 
     #
@@ -76,7 +76,7 @@ class PySLineData(Ncm.Data):
     # involves the decomposition of a constant matrix, it can be done
     # during `begin' once and then used afterwards.
     #
-    def do_begin(self):  # pylint: disable-msg=arguments-differ
+    def do_begin(self):
         return
 
     #
@@ -84,7 +84,7 @@ class PySLineData(Ncm.Data):
     # This method should do all the necessary calculations using mset
     # to be able to calculate the likelihood afterwards.
     #
-    def do_prepare(self, mset):  # pylint: disable-msg=arguments-differ
+    def do_prepare(self, mset):
         self.dof = self.len - mset.fparams_len()
 
     #
@@ -93,7 +93,7 @@ class PySLineData(Ncm.Data):
     # It is necessary to the MC analysis but can be skipped if
     # doing only MCMC.
     #
-    def do_resample(self, mset, rng):  # pylint: disable-msg=arguments-differ
+    def do_resample(self, mset, rng):
         mid = mset.get_id_by_ns("NcPySLineModel")
         slm = mset.peek(mid)
         assert isinstance(slm, PySLineModel)
@@ -116,7 +116,7 @@ class PySLineData(Ncm.Data):
     # This method should calculate the value of the likelihood for
     # the model set `mset'.
     #
-    def do_m2lnL_val(self, mset):  # pylint: disable-msg=arguments-differ
+    def do_m2lnL_val(self, mset):
         mid = mset.get_id_by_ns("NcPySLineModel")
         slm = mset.peek(mid)
         assert isinstance(slm, PySLineModel)

@@ -2476,7 +2476,7 @@ _ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data)
 }
 
 static void
-_ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
+_ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
 {
   NcmFitPrivate * const self  = ncm_fit_get_instance_private (fit);
   const guint free_params_len = ncm_mset_fparams_len (self->mset);
@@ -2484,8 +2484,6 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   GArray *errors_a            = NULL;
   NcmVector *x                = NULL;
   GArray *H_a                 = NULL;
-  gdouble worst_relerror      = 0.0;
-  guint i;
 
   g_array_set_size (x_a, free_params_len);
   x = ncm_vector_new_array (x_a);
@@ -2493,83 +2491,44 @@ _ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     _ncm_fit_message (fit, "# Computing Hessian matrix using numerical differentiation.\n");
-    _ncm_fit_message (fit, "#  - relative tolerance: %.2e\n", reltol);
-
     self->start_update (fit, "Computing Hessian matrix: ");
   }
 
   ncm_mset_fparams_get_vector (self->mset, x);
   H_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_a);
 
-  for (i = 0; i < H_a->len; i++)
-  {
-    const gdouble abs_error = g_array_index (errors_a, gdouble, i);
-    const gdouble rel_error =  g_array_index (H_a, gdouble, i) != 0.0 ? fabs (abs_error / g_array_index (H_a, gdouble, i)) : abs_error;
-
-    worst_relerror = GSL_MAX (worst_relerror, rel_error);
-  }
-
-  if (worst_relerror > reltol)
-  {
-    const gdouble old_h_ini = ncm_diff_get_ini_h (self->diff);
-
-    if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
-    {
-      self->end_update (fit, "");
-      _ncm_fit_message (fit, "#  - worst relative error: %.2e\n", worst_relerror);
-      _ncm_fit_message (fit, "#  - relative tolerance not reached, trying again with larger initial step.\n");
-      self->start_update (fit, "Computing Hessian matrix: ");
-    }
-
-
-    /* Trying again with larger initial step. */
-    {
-      GArray *H_try_a            = NULL;
-      GArray *errors_try_a       = NULL;
-      gdouble worst_relerror_try = 0.0;
-
-      ncm_diff_set_ini_h (self->diff, 2.0 * old_h_ini);
-      H_try_a = ncm_diff_rf_Hessian_N_to_1 (self->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, &errors_try_a);
-      ncm_diff_set_ini_h (self->diff, old_h_ini);
-
-      for (i = 0; i < H_try_a->len; i++)
-      {
-        const gdouble abs_error = g_array_index (errors_try_a, gdouble, i);
-        const gdouble rel_error =  g_array_index (H_try_a, gdouble, i) != 0.0 ? fabs (abs_error / g_array_index (H_try_a, gdouble, i)) : abs_error;
-
-        if (!gsl_finite (abs_error) || !gsl_finite (rel_error))
-        {
-          worst_relerror_try = GSL_POSINF;
-          break;
-        }
-
-        worst_relerror_try = GSL_MAX (worst_relerror_try, rel_error);
-      }
-
-      if (worst_relerror_try < worst_relerror)
-      {
-        g_array_unref (H_a);
-        g_clear_pointer (&errors_a, g_array_unref);
-
-        H_a            = H_try_a;
-        errors_a       = errors_try_a;
-        worst_relerror = worst_relerror_try;
-      }
-      else
-      {
-        _ncm_fit_message (fit, "#  - worst relative error not improved: (%.2e > %.2e)\n", worst_relerror_try, worst_relerror);
-
-        g_array_unref (H_try_a);
-        g_array_unref (errors_try_a);
-      }
-    }
-
-    if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
-      _ncm_fit_message (fit, "#  - worst relative error: %.2e\n", worst_relerror);
-  }
-
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    /*
+     * The error of entry ij relative to sqrt (|H_ii|) sqrt (|H_jj|): a zero
+     * off-diagonal entry is not a large error. Entries in a row or column
+     * with a zero diagonal have no such scale and are counted apart.
+     */
+    gdouble worst_error = 0.0;
+    guint n_unscaled    = 0;
+    guint i, j;
+
+    for (i = 0; i < free_params_len; i++)
+    {
+      for (j = 0; j < free_params_len; j++)
+      {
+        const gdouble Hii = fabs (g_array_index (H_a, gdouble, i * free_params_len + i));
+        const gdouble Hjj = fabs (g_array_index (H_a, gdouble, j * free_params_len + j));
+        const gdouble err = g_array_index (errors_a, gdouble, i * free_params_len + j);
+
+        if ((Hii > 0.0) && (Hjj > 0.0))
+          worst_error = GSL_MAX (worst_error, err / (sqrt (Hii) * sqrt (Hjj)));
+        else
+          n_unscaled++;
+      }
+    }
+
     self->end_update (fit, "");
+    _ncm_fit_message (fit, "#  - worst error relative to sqrt (|H_ii H_jj|): %.2e\n", worst_error);
+
+    if (n_unscaled > 0)
+      _ncm_fit_message (fit, "#  - %u entries with a zero diagonal are not included\n", n_unscaled);
+  }
 
   ncm_matrix_set_from_array (H, H_a);
   ncm_fit_params_set_vector (fit, x);
@@ -2669,7 +2628,7 @@ ncm_fit_obs_fisher (NcmFit *fit)
   _ncm_fit_reset_on_new_dims (fit);
   hessian = ncm_fit_state_peek_hessian (self->fstate);
 
-  _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
+  _ncm_fit_numdiff_m2lnL_hessian (fit, hessian);
   ncm_matrix_scale (hessian, 0.5);
 
   _ncm_fit_fisher_to_covar (fit, hessian, FALSE);
@@ -2840,7 +2799,7 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
   if (ncm_mset_fparam_len (self->mset) == 0)
     g_error ("ncm_fit_numdiff_m2lnL_lndet_covar: mset object has 0 free parameters");
 
-  _ncm_fit_numdiff_m2lnL_hessian (fit, hessian, self->params_reltol);
+  _ncm_fit_numdiff_m2lnL_hessian (fit, hessian);
   ncm_matrix_scale (hessian, 0.5);
 
   ncm_matrix_memcpy (covar, hessian);

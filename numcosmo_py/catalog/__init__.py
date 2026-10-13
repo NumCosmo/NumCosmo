@@ -5,6 +5,24 @@ This subpackage groups catalog-level utilities: matching objects in the sky
 clusters and galaxy members (:mod:`~numcosmo_py.catalog.mock`).
 """
 
+from .confusion import (
+    CatalogType,
+    calculate_catalog_metrics,
+    calculate_split_metrics,
+    get_ratios,
+)
+from .mock import (
+    CompletenessModel,
+    ConstantCompleteness,
+    ConstantPurity,
+    MockGenerator,
+    PurityModel,
+    identity_scaling_relation,
+)
+from .pipeline import (
+    MockCatalogs,
+    MockPipeline,
+)
 from .sky_match import (
     BestCandidates,
     Coordinates,
@@ -17,52 +35,34 @@ from .sky_match import (
     SkyMatchIDResult,
     SkyMatchResult,
 )
-from .mock import (
-    CompletenessModel,
-    ConstantCompleteness,
-    ConstantPurity,
-    MockGenerator,
-    PurityModel,
-    identity_scaling_relation,
-)
-from .confusion import (
-    CatalogType,
-    calculate_catalog_metrics,
-    calculate_split_metrics,
-    get_ratios,
-)
 from .table import (
     catalog_from_table,
     catalog_to_table,
 )
-from .pipeline import (
-    MockCatalogs,
-    MockPipeline,
-)
 
 __all__ = [
     "BestCandidates",
+    "CatalogType",
+    "CompletenessModel",
+    "ConstantCompleteness",
+    "ConstantPurity",
     "Coordinates",
     "DistanceMethod",
     "IDs",
     "Mask",
+    "MockCatalogs",
+    "MockGenerator",
+    "MockPipeline",
+    "PurityModel",
     "SelectionCriteria",
     "SharedFractionMethod",
     "SkyMatch",
     "SkyMatchIDResult",
     "SkyMatchResult",
-    "CompletenessModel",
-    "ConstantCompleteness",
-    "ConstantPurity",
-    "MockGenerator",
-    "PurityModel",
-    "identity_scaling_relation",
-    "CatalogType",
     "calculate_catalog_metrics",
     "calculate_split_metrics",
-    "get_ratios",
     "catalog_from_table",
     "catalog_to_table",
-    "MockCatalogs",
-    "MockPipeline",
+    "get_ratios",
+    "identity_scaling_relation",
 ]

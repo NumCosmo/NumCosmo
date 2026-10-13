@@ -23,17 +23,15 @@
 
 """NumCosmo's plotting tools."""
 
-import shutil
 import math
+import shutil
+
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-
-from matplotlib.patches import Ellipse
-from matplotlib import transforms
-import matplotlib.pyplot as plt
+from matplotlib import cm, ticker, transforms
 from matplotlib.colors import LogNorm
-from matplotlib import cm
-import matplotlib.ticker as ticker
+from matplotlib.patches import Ellipse
 
 from numcosmo_py import Nc
 
@@ -224,7 +222,7 @@ def plot_m2lnp(
         exp_z,
         interpolation="bicubic",
         origin="lower",
-        cmap=cm.gray_r,  # type: ignore # pylint:disable-msg=no-member
+        cmap=cm.gray_r,  # type: ignore
         norm=LogNorm(vmin=vmin, vmax=vmax),
         extent=(x[0], x[-1], y[0], y[-1]),
         aspect="auto",

@@ -202,7 +202,7 @@ def test_generate_native_invalid_data_type(monkeypatch, synthetic_blocks):
 
 def test_generate_native_without_local_data(monkeypatch):
     """Building from a local clik tree that is absent fails with a clear message."""
-    import numcosmo_py.experiments.planck_lite as pl  # pylint: disable=C0415
+    import numcosmo_py.experiments.planck_lite as pl
 
     monkeypatch.setattr(pl, "find_baseline_file", lambda relpath: None)
 

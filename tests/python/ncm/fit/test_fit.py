@@ -93,7 +93,7 @@ def test_fit_obs_fisher_log(capfd, fit: Ncm.Fit):
 
     assert re.search(r"Computing Hessian matrix using numerical differentiation", out)
     assert re.search(r"Computing Hessian matrix", out)
-    assert re.search(r"trying", out)
+    assert re.search(r"worst error relative to sqrt", out)
 
 
 def test_fit_obs_set_logger(capsys, fit: Ncm.Fit):

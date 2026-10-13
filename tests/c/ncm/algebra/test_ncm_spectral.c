@@ -190,32 +190,32 @@ _cheb_mode (gpointer user_data, gdouble x)
 {
   const guint m = GPOINTER_TO_UINT (user_data);
 
-  return _T (m, CLAMP (ncm_spectral_x_to_t (0.5, 3.0, x), -1.0, 1.0));
+  return _T (m, CLAMP (ncm_spectral_x_to_s (0.5, 3.0, x), -1.0, 1.0));
 }
 
 static void
-test_ncm_spectral_max_order (void)
+test_ncm_spectral_max_level (void)
 {
   NcmSpectral *spectral = ncm_spectral_new ();
   NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmSpectral *dup;
-  guint max_order;
+  guint max_level;
 
-  g_assert_cmpuint (ncm_spectral_get_max_order (spectral), ==, 16);
+  g_assert_cmpuint (ncm_spectral_get_max_level (spectral), ==, 16);
 
-  ncm_spectral_set_max_order (spectral, 7);
-  g_object_get (spectral, "max-order", &max_order, NULL);
-  g_assert_cmpuint (max_order, ==, 7);
+  ncm_spectral_set_max_level (spectral, 7);
+  g_object_get (spectral, "max-level", &max_level, NULL);
+  g_assert_cmpuint (max_level, ==, 7);
 
   dup = NCM_SPECTRAL (ncm_serialize_dup_obj (ser, G_OBJECT (spectral)));
-  g_assert_cmpuint (ncm_spectral_get_max_order (dup), ==, 7);
+  g_assert_cmpuint (ncm_spectral_get_max_level (dup), ==, 7);
 
   ncm_spectral_clear (&dup);
   ncm_serialize_free (ser);
   ncm_spectral_free (spectral);
 
-  spectral = ncm_spectral_new_with_max_order (9);
-  g_assert_cmpuint (ncm_spectral_get_max_order (spectral), ==, 9);
+  spectral = ncm_spectral_new_with_max_level (9);
+  g_assert_cmpuint (ncm_spectral_get_max_level (spectral), ==, 9);
   g_assert_true (ncm_spectral_ref (spectral) == spectral);
   ncm_spectral_free (spectral);
   ncm_spectral_clear (&spectral);
@@ -228,13 +228,13 @@ test_ncm_spectral_x_t (void)
   const gdouble a = -0.7, b = 4.2;
   gdouble x;
 
-  _assert_small (fabs (ncm_spectral_x_to_t (a, b, a) + 1.0), 1.0e-15);
-  _assert_small (fabs (ncm_spectral_x_to_t (a, b, b) - 1.0), 1.0e-15);
-  _assert_small (fabs (ncm_spectral_t_to_x (a, b, -1.0) - a), 1.0e-15);
-  _assert_small (fabs (ncm_spectral_t_to_x (a, b, 1.0) - b), 1.0e-15);
+  _assert_small (fabs (ncm_spectral_x_to_s (a, b, a) + 1.0), 1.0e-15);
+  _assert_small (fabs (ncm_spectral_x_to_s (a, b, b) - 1.0), 1.0e-15);
+  _assert_small (fabs (ncm_spectral_s_to_x (a, b, -1.0) - a), 1.0e-15);
+  _assert_small (fabs (ncm_spectral_s_to_x (a, b, 1.0) - b), 1.0e-15);
 
   for (x = a; x <= b; x += 0.37)
-    _assert_small (fabs (ncm_spectral_t_to_x (a, b, ncm_spectral_x_to_t (a, b, x)) - x), 1.0e-15);
+    _assert_small (fabs (ncm_spectral_s_to_x (a, b, ncm_spectral_x_to_s (a, b, x)) - x), 1.0e-15);
 }
 
 /* On N Lobatto nodes, T_m for m < N is reproduced exactly: its coefficients are delta_{mk} */
@@ -378,12 +378,12 @@ test_ncm_spectral_adaptive_try (void)
   ncm_spectral_free (spectral);
 }
 
-/* With k_min equal to the cap there is no doubling: the level-k_min coefficients come back,
+/* With level_min equal to the cap there is no doubling: the level_min coefficients come back,
  * also into a reused array, and the tolerance is reported as not met */
 static void
 test_ncm_spectral_adaptive_single_level (void)
 {
-  NcmSpectral *spectral = ncm_spectral_new_with_max_order (4);
+  NcmSpectral *spectral = ncm_spectral_new_with_max_level (4);
   GArray *coeffs        = NULL;
   GArray *fixed         = NULL;
   gboolean converged    = TRUE;
@@ -417,9 +417,9 @@ test_ncm_spectral_adaptive_single_level (void)
 static void
 test_ncm_spectral_invalid_arguments (void)
 {
-  g_test_trap_subprocess ("/ncm/spectral/invalid/max_order/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/spectral/invalid/max_level/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*max_order <= *");
+  g_test_trap_assert_stderr ("*max_level <= *");
 
   g_test_trap_subprocess ("/ncm/spectral/invalid/order/subprocess", 0, 0);
   g_test_trap_assert_failed ();
@@ -427,17 +427,17 @@ test_ncm_spectral_invalid_arguments (void)
 }
 
 static void
-test_ncm_spectral_invalid_max_order_subprocess (void)
+test_ncm_spectral_invalid_max_level_subprocess (void)
 {
-  NcmSpectral *spectral = ncm_spectral_new_with_max_order (4);
+  NcmSpectral *spectral = ncm_spectral_new_with_max_level (4);
 
-  ncm_spectral_set_max_order (spectral, 31);
+  ncm_spectral_set_max_level (spectral, 31);
 }
 
 static void
 test_ncm_spectral_invalid_order_subprocess (void)
 {
-  NcmSpectral *spectral = ncm_spectral_new_with_max_order (4);
+  NcmSpectral *spectral = ncm_spectral_new_with_max_level (4);
   GArray *coeffs        = NULL;
 
   ncm_spectral_compute_chebyshev_coeffs (spectral, _exp, -1.0, 1.0, 1, &coeffs, NULL);
@@ -454,7 +454,7 @@ test_ncm_spectral_adaptive_fatal (void)
 static void
 test_ncm_spectral_adaptive_fatal_subprocess (void)
 {
-  NcmSpectral *spectral = ncm_spectral_new_with_max_order (5);
+  NcmSpectral *spectral = ncm_spectral_new_with_max_level (5);
   GArray *coeffs        = NULL;
 
   ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, _sin_hard, -1.0, 1.0, 2, 1.0e-12, &coeffs, NULL);
@@ -462,20 +462,20 @@ test_ncm_spectral_adaptive_fatal_subprocess (void)
 
 /* Batch: exp(x), cos(5x), 1/(1+x^2) on [-1, 2] */
 static void
-_batch3 (gpointer user_data, gdouble x, NcmVector *y)
+_batch3 (gpointer user_data, gdouble x, NcmVector *fval)
 {
-  Counted *c = user_data;
+  Counted *counted = user_data;
 
-  c->calls++;
-  ncm_vector_set (y, 0, exp (x));
-  ncm_vector_set (y, 1, cos (5.0 * x));
+  counted->calls++;
+  ncm_vector_set (fval, 0, exp (x));
+  ncm_vector_set (fval, 1, cos (5.0 * x));
 
-  if (ncm_vector_len (y) > 2)
-    ncm_vector_set (y, 2, 1.0 / (1.0 + x * x));
+  if (ncm_vector_len (fval) > 2)
+    ncm_vector_set (fval, 2, 1.0 / (1.0 + x * x));
 }
 
 static gdouble
-_batch3_comp (gpointer user_data, gdouble x)
+_batch3_entry (gpointer user_data, gdouble x)
 {
   switch (GPOINTER_TO_UINT (user_data))
   {
@@ -491,10 +491,10 @@ _batch3_comp (gpointer user_data, gdouble x)
 }
 
 static void
-_batch_hard (gpointer user_data, gdouble x, NcmVector *y)
+_batch_hard (gpointer user_data, gdouble x, NcmVector *fval)
 {
-  ncm_vector_set (y, 0, exp (x));
-  ncm_vector_set (y, 1, sin (60.0 * x));
+  ncm_vector_set (fval, 0, exp (x));
+  ncm_vector_set (fval, 1, sin (60.0 * x));
 }
 
 static void
@@ -503,30 +503,30 @@ test_ncm_spectral_batch (void)
   NcmSpectral *spectral = ncm_spectral_new ();
   NcmMatrix *coeffs     = NULL;
   GArray *fixed         = NULL;
-  const guint n_comps[] = {3, 2};
+  const guint fdims[]   = {3, 2};
   guint i;
 
-  for (i = 0; i < G_N_ELEMENTS (n_comps); i++)
+  for (i = 0; i < G_N_ELEMENTS (fdims); i++)
   {
-    const guint n_comp = n_comps[i];
-    Counted counted    = {0};
-    guint k, N, c, j;
+    const guint fdim = fdims[i];
+    Counted counted  = {0};
+    guint k, N, r, j;
 
-    k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch3, n_comp, -1.0, 2.0, 3, 1.0e-12, 0.0, &coeffs, &counted);
+    k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch3, fdim, -1.0, 2.0, 3, 1.0e-12, 0.0, &coeffs, &counted);
     N = (1 << k) + 1;
 
     g_assert_cmpuint (counted.calls, ==, N);
-    g_assert_cmpuint (ncm_matrix_nrows (coeffs), ==, n_comp);
+    g_assert_cmpuint (ncm_matrix_nrows (coeffs), ==, fdim);
     g_assert_cmpuint (ncm_matrix_ncols (coeffs), ==, N);
 
-    for (c = 0; c < n_comp; c++)
+    for (r = 0; r < fdim; r++)
     {
       gdouble err = 0.0;
 
-      ncm_spectral_compute_chebyshev_coeffs (spectral, _batch3_comp, -1.0, 2.0, N, &fixed, GUINT_TO_POINTER (c));
+      ncm_spectral_compute_chebyshev_coeffs (spectral, _batch3_entry, -1.0, 2.0, N, &fixed, GUINT_TO_POINTER (r));
 
       for (j = 0; j < N; j++)
-        err = MAX (err, fabs (ncm_matrix_get (coeffs, c, j) - g_array_index (fixed, gdouble, j)));
+        err = MAX (err, fabs (ncm_matrix_get (coeffs, r, j) - g_array_index (fixed, gdouble, j)));
 
       _assert_small (err, 1.0e-15);
     }
@@ -537,26 +537,26 @@ test_ncm_spectral_batch (void)
   ncm_spectral_free (spectral);
 }
 
-/* 1 + 2x, a Gaussian and a component six orders below them */
+/* 1 + 2x, a Gaussian and an entry six orders below them */
 static void
-_batch_scales (gpointer user_data, gdouble x, NcmVector *y)
+_batch_scales (gpointer user_data, gdouble x, NcmVector *fval)
 {
-  ncm_vector_set (y, 0, 1.0 + 2.0 * x);
-  ncm_vector_set (y, 1, exp (-(x - 2.0) * (x - 2.0)));
-  ncm_vector_set (y, 2, 1.0e-6 * cos (30.0 * x));
+  ncm_vector_set (fval, 0, 1.0 + 2.0 * x);
+  ncm_vector_set (fval, 1, exp (-(x - 2.0) * (x - 2.0)));
+  ncm_vector_set (fval, 2, 1.0e-6 * cos (30.0 * x));
 }
 
-/* Convergence is per component: the small one is resolved relative to its own size */
+/* Convergence is per entry: the small one is resolved relative to its own size */
 static void
-test_ncm_spectral_batch_small_component (void)
+test_ncm_spectral_batch_small_entry (void)
 {
   NcmSpectral *spectral = ncm_spectral_new ();
   NcmMatrix *coeffs     = NULL;
-  NcmVector *y          = ncm_vector_new (3);
+  NcmVector *fval       = ncm_vector_new (3);
   const gdouble a       = 0.3, b = 4.7;
   gdouble err[3] = {0.0, 0.0, 0.0};
   gdouble high   = 0.0;
-  guint k, N, c, i;
+  guint k, N, r, i;
 
   k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch_scales, 3, a, b, 3, 1.0e-12, 0.0, &coeffs, NULL);
   N = (1 << k) + 1;
@@ -566,12 +566,12 @@ test_ncm_spectral_batch_small_component (void)
     const gdouble x = a + (b - a) * i / 200.0;
     GArray *row     = _array_new (N);
 
-    _batch_scales (NULL, x, y);
+    _batch_scales (NULL, x, fval);
 
-    for (c = 0; c < 3; c++)
+    for (r = 0; r < 3; r++)
     {
-      memcpy (row->data, ncm_matrix_ptr (coeffs, c, 0), N * sizeof (gdouble));
-      err[c] = MAX (err[c], fabs (ncm_spectral_chebyshev_eval_x (row, a, b, x) - ncm_vector_get (y, c)));
+      memcpy (row->data, ncm_matrix_ptr (coeffs, r, 0), N * sizeof (gdouble));
+      err[r] = MAX (err[r], fabs (ncm_spectral_chebyshev_eval_x (row, a, b, x) - ncm_vector_get (fval, r)));
     }
 
     g_array_unref (row);
@@ -585,7 +585,7 @@ test_ncm_spectral_batch_small_component (void)
   _assert_small (err[2] / 1.0e-6, 2.0e-13);
   _assert_small (high, 5.0e-15);
 
-  ncm_vector_free (y);
+  ncm_vector_free (fval);
   ncm_matrix_free (coeffs);
   ncm_spectral_free (spectral);
 }
@@ -600,13 +600,159 @@ test_ncm_spectral_batch_cap (void)
 
   ncm_matrix_set_all (coeffs, 7.0);
 
-  k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch_hard, 2, -1.0, 1.0, 2, 4, 1.0e-10, 0.0, FALSE, &coeffs, NULL);
+  k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch_hard, 2, -1.0, 1.0, 2, 4, 1.0e-10, 0.0, FALSE, NULL, NULL, NULL, &coeffs, NULL);
 
   g_assert_cmpuint (k, ==, 0);
   g_assert_true (coeffs == orig);
   g_assert_cmpfloat (ncm_matrix_get (coeffs, 1, 2), ==, 7.0);
 
   ncm_matrix_free (coeffs);
+  ncm_spectral_free (spectral);
+}
+
+/* The end nodes of every level are a and b: given F there, the expansion is the same to
+ * the bit, two calls of F cheaper, and ends holds F at a, the midpoint and b. */
+
+/* Without a result matrix the coefficients stay in the scratch space, the same as copied
+ * out; after an expansion that did not converge there are none */
+static void
+test_ncm_spectral_batch_peek (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  const gdouble *c;
+  guint k, k_peek, N, tda, r, i;
+
+  k      = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, -1.0, 2.0, 3, 8, 1.0e-12, 0.0, TRUE, NULL, NULL, NULL, &coeffs, &(Counted) {0});
+  k_peek = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, -1.0, 2.0, 3, 8, 1.0e-12, 0.0, TRUE, NULL, NULL, NULL, NULL, &(Counted) {0});
+  c      = ncm_spectral_peek_batch_coeffs (spectral, &tda);
+  N      = (1 << k) + 1;
+
+  g_assert_cmpuint (k_peek, ==, k);
+  g_assert_nonnull (c);
+
+  for (r = 0; r < 3; r++)
+    for (i = 0; i < N; i++)
+      g_assert_cmpfloat (c[r * tda + i], ==, ncm_matrix_get (coeffs, r, i));
+
+  k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch_hard, 2, -1.0, 1.0, 2, 4, 1.0e-10, 0.0, FALSE, NULL, NULL, NULL, NULL, NULL);
+  g_assert_cmpuint (k, ==, 0);
+  g_assert_null (ncm_spectral_peek_batch_coeffs (spectral, &tda));
+
+  ncm_matrix_free (coeffs);
+  ncm_spectral_free (spectral);
+}
+
+static void
+test_ncm_spectral_batch_known_ends (void)
+{
+  const gdouble a       = -1.0;
+  const gdouble b       = 2.0;
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs0    = NULL;
+  NcmMatrix *coeffs1    = NULL;
+  NcmMatrix *ends       = ncm_matrix_new (3, 3);
+  NcmVector *f_a        = ncm_vector_new (3);
+  NcmVector *f_b        = ncm_vector_new (3);
+  NcmVector *f_mid      = ncm_vector_new (3);
+  Counted c0            = {0};
+  Counted c1            = {0};
+  Counted cx            = {0};
+  guint k0, k1, i, j;
+
+  _batch3 (&cx, a, f_a);
+  _batch3 (&cx, b, f_b);
+  _batch3 (&cx, 0.5 * (a + b), f_mid);
+
+  k0 = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, a, b, 2, 10, 1.0e-10, 0.0, TRUE, NULL, NULL, NULL, &coeffs0, &c0);
+  k1 = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, a, b, 2, 10, 1.0e-10, 0.0, TRUE, f_a, f_b, ends, &coeffs1, &c1);
+
+  g_assert_cmpuint (k1, ==, k0);
+  g_assert_cmpuint (c1.calls + 2, ==, c0.calls);
+
+  for (i = 0; i < 3; i++)
+  {
+    for (j = 0; j < ncm_matrix_ncols (coeffs0); j++)
+      g_assert_cmpfloat (ncm_matrix_get (coeffs1, i, j), ==, ncm_matrix_get (coeffs0, i, j));
+
+    g_assert_cmpfloat (ncm_matrix_get (ends, 0, i), ==, ncm_vector_get (f_a, i));
+    g_assert_cmpfloat (ncm_matrix_get (ends, 2, i), ==, ncm_vector_get (f_b, i));
+    ncm_assert_cmpdouble_e (ncm_matrix_get (ends, 1, i), ==, ncm_vector_get (f_mid, i), 1.0e-14, 1.0e-15);
+  }
+
+  ncm_matrix_free (coeffs0);
+  ncm_matrix_free (coeffs1);
+  ncm_matrix_free (ends);
+  ncm_vector_free (f_a);
+  ncm_vector_free (f_b);
+  ncm_vector_free (f_mid);
+  ncm_spectral_free (spectral);
+}
+
+/* ends is filled when the expansion fails too, which is when a splitter needs it; on
+ * level 0 the midpoint is not a node and costs one more call of F. */
+static void
+test_ncm_spectral_batch_ends_on_failure (void)
+{
+  const gdouble a       = -1.0;
+  const gdouble b       = 2.0;
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  NcmMatrix *ends       = ncm_matrix_new (3, 3);
+  NcmVector *f          = ncm_vector_new (3);
+  const gdouble x[3]    = {a, 0.5 * (a + b), b};
+  guint level, r, i;
+
+  for (level = 0; level <= 2; level += 2)
+  {
+    Counted calls = {0};
+    Counted cx    = {0};
+    guint k;
+
+    ncm_matrix_set_all (ends, GSL_NAN);
+
+    /* level_cap == level_min: one level, no doubling, so no convergence either */
+    k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, a, b, level, level, 1.0e-10, 0.0, FALSE, NULL, NULL, ends, &coeffs, &calls);
+
+    g_assert_cmpuint (k, ==, 0);
+    g_assert_null (coeffs);
+    g_assert_cmpuint (calls.calls, ==, (1u << level) + 1u + ((level == 0) ? 1u : 0u));
+
+    for (r = 0; r < 3; r++)
+    {
+      _batch3 (&cx, x[r], f);
+
+      for (i = 0; i < 3; i++)
+        ncm_assert_cmpdouble_e (ncm_matrix_get (ends, r, i), ==, ncm_vector_get (f, i), 1.0e-14, 1.0e-15);
+    }
+  }
+
+  ncm_matrix_free (ends);
+  ncm_vector_free (f);
+  ncm_spectral_free (spectral);
+}
+
+/* Below four intervals the coefficients have no two bands to extrapolate from, so the
+ * last doubling the cap allows is always tried: every node of the next level is
+ * evaluated, even though it cannot converge at these tolerances. */
+static void
+test_ncm_spectral_batch_no_prediction_below_four (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  guint level_min;
+
+  for (level_min = 0; level_min <= 1; level_min++)
+  {
+    Counted calls = {0};
+    guint k;
+
+    k = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _batch3, 3, -1.0, 2.0, level_min, level_min + 1, 1.0e-10, 0.0, FALSE, NULL, NULL, NULL, &coeffs, &calls);
+
+    g_assert_cmpuint (k, ==, 0);
+    g_assert_cmpuint (calls.calls, ==, (1u << (level_min + 1)) + 1u);
+  }
+
   ncm_spectral_free (spectral);
 }
 
@@ -621,10 +767,63 @@ test_ncm_spectral_batch_fatal (void)
 static void
 test_ncm_spectral_batch_fatal_subprocess (void)
 {
-  NcmSpectral *spectral = ncm_spectral_new_with_max_order (5);
+  NcmSpectral *spectral = ncm_spectral_new_with_max_level (5);
   NcmMatrix *coeffs     = NULL;
 
   ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch_hard, 2, -1.0, 1.0, 2, 1.0e-12, 0.0, &coeffs, NULL);
+}
+
+/* Every expansion path gives the same coefficients after the buffers, plans and node
+ * tables are released and recreated. */
+static void
+test_ncm_spectral_free_buffers (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  GArray *fixed_a       = NULL;
+  GArray *fixed_b       = NULL;
+  GArray *adapt_a       = NULL;
+  GArray *adapt_b       = NULL;
+  NcmMatrix *batch_a    = NULL;
+  NcmMatrix *batch_b    = NULL;
+  Counted counted_a     = {0};
+  Counted counted_b     = {0};
+  guint k_a, k_b, i, r;
+
+  ncm_spectral_compute_chebyshev_coeffs (spectral, _exp, 0.5, 2.0, 24, &fixed_a, NULL);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, _exp, -1.0, 1.0, 2, 1.0e-12, &adapt_a, NULL);
+  k_a = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch3, 3, -1.0, 2.0, 3, 1.0e-12, 0.0, &batch_a, &counted_a);
+
+  ncm_spectral_free_buffers (spectral);
+
+  ncm_spectral_compute_chebyshev_coeffs (spectral, _exp, 0.5, 2.0, 24, &fixed_b, NULL);
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, _exp, -1.0, 1.0, 2, 1.0e-12, &adapt_b, NULL);
+  k_b = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive (spectral, _batch3, 3, -1.0, 2.0, 3, 1.0e-12, 0.0, &batch_b, &counted_b);
+
+  g_assert_cmpuint (fixed_a->len, ==, fixed_b->len);
+  g_assert_cmpuint (adapt_a->len, ==, adapt_b->len);
+  g_assert_cmpuint (k_a, ==, k_b);
+
+  for (i = 0; i < fixed_a->len; i++)
+    g_assert_cmpfloat (g_array_index (fixed_a, gdouble, i), ==, g_array_index (fixed_b, gdouble, i));
+
+  for (i = 0; i < adapt_a->len; i++)
+    g_assert_cmpfloat (g_array_index (adapt_a, gdouble, i), ==, g_array_index (adapt_b, gdouble, i));
+
+  for (r = 0; r < 3; r++)
+    for (i = 0; i < ncm_matrix_ncols (batch_a); i++)
+      g_assert_cmpfloat (ncm_matrix_get (batch_a, r, i), ==, ncm_matrix_get (batch_b, r, i));
+
+  /* Releasing twice, and releasing an instance that never expanded, is allowed */
+  ncm_spectral_free_buffers (spectral);
+  ncm_spectral_free_buffers (spectral);
+
+  g_array_unref (fixed_a);
+  g_array_unref (fixed_b);
+  g_array_unref (adapt_a);
+  g_array_unref (adapt_b);
+  ncm_matrix_free (batch_a);
+  ncm_matrix_free (batch_b);
+  ncm_spectral_free (spectral);
 }
 
 static void
@@ -638,9 +837,9 @@ test_ncm_spectral_eval_deriv (void)
   for (i = 0; i < G_N_ELEMENTS (test_t); i++)
   {
     const gdouble t     = test_t[i];
-    const gdouble x     = ncm_spectral_t_to_x (a, b, t);
-    const gdouble f_x   = ncm_spectral_chebyshev_eval (c, ncm_spectral_x_to_t (a, b, x));
-    const gdouble df_dx = ncm_spectral_chebyshev_deriv (c, ncm_spectral_x_to_t (a, b, x)) * 2.0 / (b - a);
+    const gdouble x     = ncm_spectral_s_to_x (a, b, t);
+    const gdouble f_x   = ncm_spectral_chebyshev_eval (c, ncm_spectral_x_to_s (a, b, x));
+    const gdouble df_dx = ncm_spectral_chebyshev_deriv (c, ncm_spectral_x_to_s (a, b, x)) * 2.0 / (b - a);
 
     err_f   = MAX (err_f, fabs (ncm_spectral_chebyshev_eval (c, t) - _sum (c, _T, t)));
     err_df  = MAX (err_df, fabs (ncm_spectral_chebyshev_deriv (c, t) - _sum (c, _dT, t)));
@@ -653,7 +852,7 @@ test_ncm_spectral_eval_deriv (void)
   _assert_small (err_df, 5.0e-13);
 
   /* The same computation on both sides, so the two agree to rounding; exactly on x86-64,
-   * within 1.02e-15 on macOS arm64, where the compiler may fuse x_to_t differently. */
+   * within 1.02e-15 on macOS arm64, where the compiler may fuse x_to_s differently. */
   _assert_small (err_x, 8.0 * GSL_DBL_EPSILON * scale_x);
 
   g_array_set_size (c, 1);
@@ -698,12 +897,12 @@ test_ncm_spectral_gegenbauer_eval (void)
   for (i = 0; i < G_N_ELEMENTS (test_t); i++)
   {
     const gdouble t = test_t[i];
-    const gdouble x = ncm_spectral_t_to_x (1.0, 3.0, t);
+    const gdouble x = ncm_spectral_s_to_x (1.0, 3.0, t);
 
     err1  = MAX (err1, fabs (ncm_spectral_gegenbauer_alpha1_eval (c, t) - _gegen_sum (c, 1.0, t)));
     err2  = MAX (err2, fabs (ncm_spectral_gegenbauer_alpha2_eval (c, t) - _gegen_sum (c, 2.0, t)));
-    err_x = MAX (err_x, fabs (ncm_spectral_gegenbauer_alpha1_eval_x (c, 1.0, 3.0, x) - ncm_spectral_gegenbauer_alpha1_eval (c, ncm_spectral_x_to_t (1.0, 3.0, x))));
-    err_x = MAX (err_x, fabs (ncm_spectral_gegenbauer_alpha2_eval_x (c, 1.0, 3.0, x) - ncm_spectral_gegenbauer_alpha2_eval (c, ncm_spectral_x_to_t (1.0, 3.0, x))));
+    err_x = MAX (err_x, fabs (ncm_spectral_gegenbauer_alpha1_eval_x (c, 1.0, 3.0, x) - ncm_spectral_gegenbauer_alpha1_eval (c, ncm_spectral_x_to_s (1.0, 3.0, x))));
+    err_x = MAX (err_x, fabs (ncm_spectral_gegenbauer_alpha2_eval_x (c, 1.0, 3.0, x) - ncm_spectral_gegenbauer_alpha2_eval (c, ncm_spectral_x_to_s (1.0, 3.0, x))));
   }
 
   _assert_small (err1, 1.0e-14);
@@ -726,7 +925,7 @@ test_ncm_spectral_gegenbauer_conversions (void)
   ncm_spectral_chebT_to_gegenbauer_alpha2 (c, &g2);
   ncm_spectral_chebT_deriv_to_gegenbauer_alpha2 (c, &gd);
   ncm_spectral_chebT_deriv2_to_gegenbauer_alpha2 (c, &gd2);
-  ncm_spectral_gegenbauer_alpha2_xmul (g2, 0.7, -0.4, &gx);
+  ncm_spectral_gegenbauer_alpha2_mul_affine (g2, 0.7, -0.4, &gx);
 
   g_assert_cmpuint (g1->len, ==, 20);
   g_assert_cmpuint (g2->len, ==, 20);
@@ -813,14 +1012,14 @@ static void
 test_ncm_spectral_operators (void)
 {
   const _OpMatrix mats[] = {
-    ncm_spectral_get_proj_matrix, ncm_spectral_get_x_matrix, ncm_spectral_get_x2_matrix,
-    ncm_spectral_get_d_matrix, ncm_spectral_get_x_d_matrix, ncm_spectral_get_d2_matrix,
-    ncm_spectral_get_x_d2_matrix, ncm_spectral_get_x2_d2_matrix
+    ncm_spectral_get_proj_matrix, ncm_spectral_get_s_matrix, ncm_spectral_get_s2_matrix,
+    ncm_spectral_get_d_matrix, ncm_spectral_get_s_d_matrix, ncm_spectral_get_d2_matrix,
+    ncm_spectral_get_s_d2_matrix, ncm_spectral_get_s2_d2_matrix
   };
   const _OpRow rows[] = {
-    ncm_spectral_compute_proj_row, ncm_spectral_compute_x_row, ncm_spectral_compute_x2_row,
-    _d_row, ncm_spectral_compute_x_d_row, ncm_spectral_compute_d2_row,
-    ncm_spectral_compute_x_d2_row, ncm_spectral_compute_x2_d2_row
+    ncm_spectral_compute_proj_row, ncm_spectral_compute_s_row, ncm_spectral_compute_s2_row,
+    _d_row, ncm_spectral_compute_s_d_row, ncm_spectral_compute_d2_row,
+    ncm_spectral_compute_s_d2_row, ncm_spectral_compute_s2_d2_row
   };
   const gdouble tols[] = {1.0e-14, 1.0e-14, 1.0e-14, 2.0e-13, 2.0e-13, 3.0e-12, 3.0e-12, 3.0e-12};
   const guint N        = 24;
@@ -912,9 +1111,9 @@ test_ncm_spectral_rebase (void)
     for (i = 0; i <= 50; i++)
     {
       const gdouble x = 0.5 + 4.5 * i / 50.0;
-      const gdouble f = _sum (c, _T_any, ncm_spectral_x_to_t (-1.0, 3.0, x));
+      const gdouble f = _sum (c, _T_any, ncm_spectral_x_to_s (-1.0, 3.0, x));
 
-      err  = MAX (err, fabs (_sum (r, _T_any, ncm_spectral_x_to_t (0.5, 5.0, x)) - f));
+      err  = MAX (err, fabs (_sum (r, _T_any, ncm_spectral_x_to_s (0.5, 5.0, x)) - f));
       fmax = MAX (fmax, fabs (f));
     }
 
@@ -931,6 +1130,42 @@ test_ncm_spectral_rebase (void)
     const gdouble norm_in = ncm_spectral_chebyshev_rebase (spectral, c, 0, -1.0, 3.0, -1.0, 3.0, &r);
 
     g_assert_cmpfloat (ncm_spectral_chebyshev_rebase (spectral, c, 0, -1.0, 3.0, -1.0, 30.0, &r), >, 100.0 * norm_in);
+  }
+
+  /* The rows variant equals the scalar rebase on every row */
+  {
+    const guint n_rows = 4;
+    const guint ncol   = c->len;
+    NcmMatrix *cm      = ncm_matrix_new (n_rows, ncol);
+    NcmMatrix *rm      = ncm_matrix_new (n_rows, ncol);
+    gdouble norm_rows, norm_max = 0.0;
+    guint row;
+
+    for (row = 0; row < n_rows; row++)
+      for (i = 0; i < ncol; i++)
+        ncm_matrix_set (cm, row, i, g_array_index (c, gdouble, i) * (row + 1.0) * ((i % 3 == row % 3) ? -1.0 : 1.0));
+
+    norm_rows = ncm_spectral_chebyshev_rebase_rows (spectral, cm, -1.0, 3.0, 0.5, 5.0, rm);
+
+    for (row = 0; row < n_rows; row++)
+    {
+      GArray *crow = _array_new (ncol);
+
+      for (i = 0; i < ncol; i++)
+        g_array_index (crow, gdouble, i) = ncm_matrix_get (cm, row, i);
+
+      norm_max = MAX (norm_max, ncm_spectral_chebyshev_rebase (spectral, crow, 0, -1.0, 3.0, 0.5, 5.0, &r));
+
+      for (i = 0; i < ncol; i++)
+        g_assert_cmpfloat (ncm_matrix_get (rm, row, i), ==, g_array_index (r, gdouble, i));
+
+      g_array_unref (crow);
+    }
+
+    g_assert_cmpfloat (norm_rows, ==, norm_max);
+
+    ncm_matrix_free (cm);
+    ncm_matrix_free (rm);
   }
 
   /* len keeps the leading coefficients */
@@ -971,7 +1206,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add_func ("/ncm/spectral/max_order", &test_ncm_spectral_max_order);
+  g_test_add_func ("/ncm/spectral/max_level", &test_ncm_spectral_max_level);
   g_test_add_func ("/ncm/spectral/x_t", &test_ncm_spectral_x_t);
   g_test_add_func ("/ncm/spectral/fixed/modes", &test_ncm_spectral_fixed_modes);
   g_test_add_func ("/ncm/spectral/fixed/exp", &test_ncm_spectral_fixed_exp);
@@ -982,10 +1217,15 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/adaptive/fatal", &test_ncm_spectral_adaptive_fatal);
   g_test_add_func ("/ncm/spectral/adaptive/fatal/subprocess", &test_ncm_spectral_adaptive_fatal_subprocess);
   g_test_add_func ("/ncm/spectral/batch", &test_ncm_spectral_batch);
-  g_test_add_func ("/ncm/spectral/batch/small_component", &test_ncm_spectral_batch_small_component);
+  g_test_add_func ("/ncm/spectral/batch/small_entry", &test_ncm_spectral_batch_small_entry);
   g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
+  g_test_add_func ("/ncm/spectral/batch/peek", &test_ncm_spectral_batch_peek);
+  g_test_add_func ("/ncm/spectral/batch/known_ends", &test_ncm_spectral_batch_known_ends);
+  g_test_add_func ("/ncm/spectral/batch/ends_on_failure", &test_ncm_spectral_batch_ends_on_failure);
+  g_test_add_func ("/ncm/spectral/batch/no_prediction_below_four", &test_ncm_spectral_batch_no_prediction_below_four);
   g_test_add_func ("/ncm/spectral/batch/fatal", &test_ncm_spectral_batch_fatal);
   g_test_add_func ("/ncm/spectral/batch/fatal/subprocess", &test_ncm_spectral_batch_fatal_subprocess);
+  g_test_add_func ("/ncm/spectral/free_buffers", &test_ncm_spectral_free_buffers);
   g_test_add_func ("/ncm/spectral/eval_deriv", &test_ncm_spectral_eval_deriv);
   g_test_add_func ("/ncm/spectral/integrate", &test_ncm_spectral_integrate);
   g_test_add_func ("/ncm/spectral/gegenbauer/eval", &test_ncm_spectral_gegenbauer_eval);
@@ -993,7 +1233,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/operators", &test_ncm_spectral_operators);
   g_test_add_func ("/ncm/spectral/rebase", &test_ncm_spectral_rebase);
   g_test_add_func ("/ncm/spectral/invalid/arguments", &test_ncm_spectral_invalid_arguments);
-  g_test_add_func ("/ncm/spectral/invalid/max_order/subprocess", &test_ncm_spectral_invalid_max_order_subprocess);
+  g_test_add_func ("/ncm/spectral/invalid/max_level/subprocess", &test_ncm_spectral_invalid_max_level_subprocess);
   g_test_add_func ("/ncm/spectral/invalid/order/subprocess", &test_ncm_spectral_invalid_order_subprocess);
 
   g_test_run ();

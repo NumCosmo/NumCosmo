@@ -31,7 +31,7 @@
  * This is a different approximation from the rest of #NcXcor, not a different
  * quadrature of the same integral: it integrates over z with k fixed at
  * (l + 1/2) / chi(z), so it shares no closure, no knot set and no code with
- * the kernel-space methods in nc_xcor_kquad.c.
+ * the kernel-space method in nc_xcor_kquad.c.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -89,7 +89,7 @@ nc_xcor_auto_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints
     const gdouble chi_z     = nc_distance_comoving (xcor_int_arg->dist, xcor_int_arg->cosmo, z); /* in units of Hubble radius */
     const gdouble chi_z_Mpc = chi_z * xcor_int_arg->RH;                                          /* in Mpc */
     const gdouble E_z       = nc_hicosmo_E (xcor_int_arg->cosmo, z);
-    const NcXcorKinetic xck = { chi_z, E_z };
+    const NcXcorKinetic xck = { chi_z, E_z, z };
 
     for (j = 0; j < fdim; j++)
     {
@@ -117,7 +117,7 @@ nc_xcor_cross_integ (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoint
     const gdouble chi_z     = nc_distance_comoving (xcor_arg->dist, xcor_arg->cosmo, z); /* in units of Hubble radius */
     const gdouble chi_z_Mpc = chi_z * xcor_arg->RH;                                      /* in Mpc */
     const gdouble E_z       = nc_hicosmo_E (xcor_arg->cosmo, z);
-    const NcXcorKinetic xck = { chi_z, E_z };
+    const NcXcorKinetic xck = { chi_z, E_z, z };
 
     for (j = 0; j < fdim; j++)
     {
@@ -153,7 +153,7 @@ _xcor_limber_z_gsl_cross_int (gdouble z, gpointer ptr)
   const gdouble chi_z      = nc_distance_comoving (xclki->dist, xclki->cosmo, z); /* in units of Hubble radius */
   const gdouble chi_z_Mpc  = chi_z * xclki->RH;                                   /* in Mpc */
   const gdouble E_z        = nc_hicosmo_E (xclki->cosmo, z);
-  const NcXcorKinetic xck  = { chi_z, E_z };
+  const NcXcorKinetic xck  = { chi_z, E_z, z };
   const gdouble k          = (xclki->l + 0.5) / (chi_z_Mpc); /* in Mpc-1 */
   const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
 
@@ -170,7 +170,7 @@ _xcor_limber_z_gsl_auto_int (gdouble z, gpointer ptr)
   const gdouble chi_z      = nc_distance_comoving (xclki->dist, xclki->cosmo, z); /* in units of Hubble radius */
   const gdouble chi_z_Mpc  = chi_z * xclki->RH;                                   /* in Mpc */
   const gdouble E_z        = nc_hicosmo_E (xclki->cosmo, z);
-  const NcXcorKinetic xck  = { chi_z, E_z };
+  const NcXcorKinetic xck  = { chi_z, E_z, z };
   const gdouble k          = (xclki->l + 0.5) / (chi_z_Mpc); /* in Mpc-1 */
   const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
   const gdouble k1z        = nc_xcor_kernel_eval_limber_z (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);

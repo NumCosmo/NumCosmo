@@ -30,7 +30,7 @@ import pytest
 
 from numpy.testing import assert_allclose
 import numpy as np
-from scipy.special import hankel1e  # pylint: disable=no-name-in-module
+from scipy.special import hankel1e
 
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import duplicate_via_serialization

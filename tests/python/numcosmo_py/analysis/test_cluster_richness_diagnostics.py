@@ -21,14 +21,13 @@
 
 from typing import Any
 import numpy as np
-from numpy.random import RandomState  # pylint: disable=no-name-in-module
+from numpy.random import RandomState
 import pytest
 import matplotlib
 import matplotlib.pyplot as plt
 
 # Use non-interactive backend for testing
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 matplotlib.use("Agg")
 
 from numcosmo_py import Ncm

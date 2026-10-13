@@ -661,7 +661,7 @@ test_tps_eval_hand_computed (void)
   ncm_laurent_series_tps_unref (tps);
 }
 
-/* Golden reference: sympy.series((2+0.5*g-0.3*g**2+0.1*g**3)**Rational(27,10), g, 0, 4),
+/* Reference: sympy.series((2+0.5*g-0.3*g**2+0.1*g**3)**Rational(27,10), g, 0, 4),
  * i.e. a real (non-integer) exponent, exactly the case
  * ncm_laurent_series_tps_pow() exists for (NcGalaxyShapePopBeta's own
  * rho2^(alpha-1) composition). Every coefficient here is a plain real

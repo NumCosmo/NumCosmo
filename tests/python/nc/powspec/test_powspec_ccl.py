@@ -32,7 +32,6 @@ from numpy.testing import assert_allclose
 pytest.importorskip("getdist")
 pytest.importorskip("pyccl")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 import pyccl
 

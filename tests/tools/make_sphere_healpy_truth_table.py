@@ -154,7 +154,7 @@ def _transforms(rng: np.random.Generator) -> Ncm.ObjDictStr:
 
 
 def _header_fixtures(output_dir: Path) -> None:
-    from astropy.io import fits  # pylint: disable=import-outside-toplevel
+    from astropy.io import fits
 
     cases = {
         "fits_noorder.fits": (192, {}),

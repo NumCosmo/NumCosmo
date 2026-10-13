@@ -29,7 +29,7 @@
  * fixed seed, so no sample data is stored in the repository -- a curated set
  * of galaxies spanning the hard integrand cases (sources in front of /
  * straddling / behind the reduced-shear kink at the lens redshift z_cl),
- * recomputes a self-converged FIXED_NODES-320x7 golden reference (already
+ * recomputes a self-converged FIXED_NODES-320x7 reference (already
  * shown to have full parity with LNINT/CUBATURE for the same integrand
  * family -- see the nc-data-cluster-wl-factor-integ-parity work), and
  * validates the cheaper production configuration (FIXED_NODES-20x5, LNINT,
@@ -40,10 +40,10 @@
  * Laplace, FixedQuad) and a non-Gaussian population (Beta); this file gives
  * each of them its own self-contained correctness net. The matrix below is
  * deliberately curated, not a full cross-product: each shape scheme is
- * exercised against the golden reference at least once, VarAdd+Gauss is
+ * exercised against the reference at least once, VarAdd+Gauss is
  * kept as the cheap "does the wiring still work" baseline, and
  * SeriesLensed/Beta and Quad/Beta each get one spline-straddle (hardest
- * integrand) case. A final, non-golden test cross-checks SeriesLensed
+ * integrand) case. A final test cross-checks SeriesLensed
  * against Quad directly on the identical generated galaxy set: two
  * independently-coded exact schemes for the same physical marginal integral
  * must agree with each other.
@@ -66,8 +66,8 @@
 
 #define TRUTH_NROWS (14)
 #define TRUTH_Z_CL (0.5)
-#define TRUTH_GOLDEN_NODES (320)
-#define TRUTH_GOLDEN_RULE (7)
+#define TRUTH_REF_NODES (320)
+#define TRUTH_REF_RULE (7)
 #define TRUTH_PROD_NODES (20)
 #define TRUTH_PROD_RULE (5)
 #define TRUTH_PREC (1.0e-6)
@@ -75,22 +75,22 @@
 
 /* NcGalaxyShapeFactorQuad's *default* reltol (1e-7) is appropriate for
  * production single-galaxy work but pathologically expensive to call
- * O(golden-nodes x nrows) times in a truth table: measured at ~70ms per
+ * O(reference-nodes x nrows) times in a truth table: measured at ~70ms per
  * eval_marginal() call (vs ~1us for SeriesLensed/VarAdd on the same input),
  * driven entirely by the 2D disc cubature's own adaptive refinement, not by
  * anything z-integration-related. Loosening to 1e-5 (measured ~1.6ms/call,
  * a ~45x speedup) changes eval_marginal()'s own output at the ~1e-5 relative
  * level -- negligible next to this file's ~1e-6/1e-5 z-integration
  * tolerances -- while keeping the Quad-specific configs' total runtime
- * reasonable. Quad configs also use fewer rows and a smaller golden node
+ * reasonable. Quad configs also use fewer rows and a smaller reference node
  * count than the other shape schemes (see TRUTH_QUAD_NROWS below): the
  * z-integrand's smoothness is governed by the redshift scheme, not the
  * shape scheme, and that has already been validated at full resolution by
  * the (near-free) VarAdd/SeriesLensed configs above. */
 #define TRUTH_QUAD_RELTOL (1.0e-5)
 #define TRUTH_QUAD_NROWS (5)
-#define TRUTH_QUAD_GOLDEN_NODES (60)
-#define TRUTH_QUAD_GOLDEN_RULE (5)
+#define TRUTH_QUAD_REF_NODES (60)
+#define TRUTH_QUAD_REF_RULE (5)
 
 /* pz spline centres placed around z_cl so the photo-z bump straddles the kink
  * (see test_nc_data_cluster_wl_truth.c's identical STRADDLE_ZAVG). */
@@ -107,15 +107,15 @@ typedef struct _TruthCfg
   const gchar *coord;
   guint seed;
   guint nrows;
-  guint golden_nodes;
-  guint golden_rule;
+  guint ref_nodes;
+  guint ref_rule;
 } TruthCfg;
 
 typedef struct _TestNcDataClusterWLFactorTruth
 {
   NcmMSet *mset;
   NcDataClusterWLFactor *dcwlf;
-  NcmVector *golden;
+  NcmVector *ref;
   const gchar *redshift;
   const gchar *shape;
   guint nrows;
@@ -133,24 +133,24 @@ main (gint argc, gchar *argv[])
     /* Cheap baseline: mirrors legacy's own gauss_global+gauss combo, checks
      * the orchestrator wiring (prepare/cache cascade, obs plumbing) is
      * unchanged for the closed-form approximation. */
-    { "var_add",       "gauss", "composed", "trace_det", "celestial", 2001, TRUTH_NROWS, TRUTH_GOLDEN_NODES, TRUTH_GOLDEN_RULE },
-    { "var_add",       "gauss", "spline",   "trace",     "cartesian", 2002, TRUTH_NROWS, TRUTH_GOLDEN_NODES, TRUTH_GOLDEN_RULE },
+    { "var_add",       "gauss", "composed", "trace_det", "celestial", 2001, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
+    { "var_add",       "gauss", "spline",   "trace",     "cartesian", 2002, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
 
     /* SeriesLensed: exact truncated-series marginalization, both populations
      * it supports, one of each redshift scheme (Beta paired with the harder
      * Spline straddle case). Its own eval_marginal() is ~us-scale (a closed-
      * form Taylor-series evaluation), so it affords the same full resolution
      * as VarAdd. */
-    { "series_lensed", "gauss", "composed", "trace_det", "celestial", 2003, TRUTH_NROWS, TRUTH_GOLDEN_NODES, TRUTH_GOLDEN_RULE },
-    { "series_lensed", "beta",  "spline",   "trace_det", "cartesian", 2004, TRUTH_NROWS, TRUTH_GOLDEN_NODES, TRUTH_GOLDEN_RULE },
+    { "series_lensed", "gauss", "composed", "trace_det", "celestial", 2003, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
+    { "series_lensed", "beta",  "spline",   "trace_det", "cartesian", 2004, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
 
     /* Quad: exact 2D disc quadrature, same shape-scheme-coverage rationale,
      * but its own eval_marginal() is orders of magnitude more expensive (see
-     * TRUTH_QUAD_RELTOL's comment) -- fewer rows, a smaller golden node
+     * TRUTH_QUAD_RELTOL's comment) -- fewer rows, a smaller reference node
      * count, and a loosened internal reltol keep this file's total runtime
      * reasonable. */
-    { "quad",          "gauss", "spline",   "trace",     "celestial", 2005, TRUTH_QUAD_NROWS, TRUTH_QUAD_GOLDEN_NODES, TRUTH_QUAD_GOLDEN_RULE },
-    { "quad",          "beta",  "composed", "trace_det", "cartesian", 2006, TRUTH_QUAD_NROWS, TRUTH_QUAD_GOLDEN_NODES, TRUTH_QUAD_GOLDEN_RULE },
+    { "quad",          "gauss", "spline",   "trace",     "celestial", 2005, TRUTH_QUAD_NROWS, TRUTH_QUAD_REF_NODES, TRUTH_QUAD_REF_RULE },
+    { "quad",          "beta",  "composed", "trace_det", "cartesian", 2006, TRUTH_QUAD_NROWS, TRUTH_QUAD_REF_NODES, TRUTH_QUAD_REF_RULE },
   };
   guint i;
 
@@ -293,7 +293,7 @@ _truth_gen_shape (NcGalaxyShapeFactor *s_dist, NcmMSet *mset, NcGalaxyShapeFacto
 }
 
 /* Regenerate the curated sample for one configuration (deterministic in @seed)
- * and recompute the FIXED-320x7 golden reference. Leaves dcwlf at the
+ * and recompute the FIXED-320x7 reference. Leaves dcwlf at the
  * production fixed-node configuration. */
 static void
 test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata)
@@ -413,7 +413,7 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
   nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs);
   nc_data_cluster_wl_factor_set_prec (test->dcwlf, TRUTH_PREC);
 
-  test->golden = _truth_eval (test->dcwlf, test->mset, cfg->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, cfg->golden_nodes, cfg->golden_rule);
+  test->ref = _truth_eval (test->dcwlf, test->mset, cfg->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, cfg->ref_nodes, cfg->ref_rule);
 
   nc_hicosmo_free (cosmo);
   nc_distance_free (dist);
@@ -441,19 +441,19 @@ static void
 test_nc_data_cluster_wl_factor_truth_free (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata)
 {
   ncm_mset_clear (&test->mset);
-  ncm_vector_clear (&test->golden);
+  ncm_vector_clear (&test->ref);
   NCM_TEST_FREE (nc_data_cluster_wl_factor_free, test->dcwlf);
 }
 
-/* Per-galaxy comparison of @v against the golden -2lnP vector: fail (reporting
+/* Per-galaxy comparison of @v against the reference -2lnP vector: fail (reporting
  * the closest-to-tolerance galaxy) if any galaxy exceeds reltol*max(|.|) + abstol.
  * Reports max|abs| separately, since the worst-excess galaxy (abstol-bound, near
  * zero -2lnP) is usually not the largest-error one. Verbatim from
  * test_nc_data_cluster_wl_truth.c's _truth_cmp. */
 static void
-_truth_cmp (const gchar *label, NcmVector *v, NcmVector *golden, gdouble reltol, gdouble abstol)
+_truth_cmp (const gchar *label, NcmVector *v, NcmVector *ref, gdouble reltol, gdouble abstol)
 {
-  const guint len      = ncm_vector_len (golden);
+  const guint len      = ncm_vector_len (ref);
   gdouble worst_excess = -G_MAXDOUBLE;
   gdouble max_abs      = 0.0;
   guint worst_i        = 0;
@@ -462,7 +462,7 @@ _truth_cmp (const gchar *label, NcmVector *v, NcmVector *golden, gdouble reltol,
   for (i = 0; i < len; i++)
   {
     const gdouble ai     = ncm_vector_get (v, i);
-    const gdouble bi     = ncm_vector_get (golden, i);
+    const gdouble bi     = ncm_vector_get (ref, i);
     const gdouble mean   = GSL_MAX (fabs (ai), fabs (bi));
     const gdouble adiff  = fabs (ai - bi);
     const gdouble excess = adiff - (reltol * mean + abstol);
@@ -480,14 +480,14 @@ _truth_cmp (const gchar *label, NcmVector *v, NcmVector *golden, gdouble reltol,
 
   {
     const gdouble ai  = ncm_vector_get (v, worst_i);
-    const gdouble bi  = ncm_vector_get (golden, worst_i);
+    const gdouble bi  = ncm_vector_get (ref, worst_i);
     const gdouble rel = (fabs (bi) > 0.0) ? fabs (ai - bi) / fabs (bi) : 0.0;
 
-    g_test_message ("%s: max|abs|=%.3e; closest-to-tol at %u: % .17g vs golden % .17g (abs %.3e, rel %.3e; reltol %.3e abstol %.3e)",
+    g_test_message ("%s: max|abs|=%.3e; closest-to-tol at %u: % .17g vs reference % .17g (abs %.3e, rel %.3e; reltol %.3e abstol %.3e)",
                     label, max_abs, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
 
     if (worst_excess > 0.0)
-      g_error ("%s disagrees with golden at galaxy %u: % .17g vs % .17g (abs %.3e, rel %.3e exceeds reltol %.3e abstol %.3e)",
+      g_error ("%s disagrees with the reference at galaxy %u: % .17g vs % .17g (abs %.3e, rel %.3e exceeds reltol %.3e abstol %.3e)",
                label, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
   }
 }
@@ -495,7 +495,7 @@ _truth_cmp (const gchar *label, NcmVector *v, NcmVector *golden, gdouble reltol,
 static void
 test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata)
 {
-  /* Per-redshift-scheme tolerance vs the golden reference over this frozen
+  /* Per-redshift-scheme tolerance vs the reference over this frozen
    * sample: Composed's joint density (population x Gaussian photo-z kernel)
    * is smooth in z, reaching ~1e-6; Spline's cubic pz (only C2 at its knots,
    * deliberately straddling z_cl for several galaxies) is the harder case,
@@ -504,7 +504,7 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
    * catch dropping the z_cl split or the effective support, or a node-count
    * regression, for ANY of the shape schemes exercised across the matrix.
    * Quad's own marginal is only accurate to TRUTH_QUAD_RELTOL (see its
-   * comment) and golden/production evaluate it at different z-nodes, so
+   * comment) and reference/production evaluate it at different z-nodes, so
    * their residual disagreement floor is set by that, not by the
    * z-integration itself -- the abstol is widened accordingly for it. */
   const gboolean is_spline = (g_strcmp0 (test->redshift, "spline") == 0);
@@ -515,16 +515,16 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   NcmVector *vC            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vA            = _truth_eval_auto (test->dcwlf, test->mset, test->nrows);
 
-  _truth_cmp ("FIXED vs golden", vF, test->golden, 1.0e-6, abstol);
-  _truth_cmp ("LNINT vs golden", vL, test->golden, 1.0e-6, abstol);
-  _truth_cmp ("CUBATURE vs golden", vC, test->golden, 1.0e-6, abstol);
+  _truth_cmp ("FIXED vs reference", vF, test->ref, 1.0e-6, abstol);
+  _truth_cmp ("LNINT vs reference", vL, test->ref, 1.0e-6, abstol);
+  _truth_cmp ("CUBATURE vs reference", vC, test->ref, 1.0e-6, abstol);
 
   /* Auto-nodes targets node-reltol per galaxy (1e-4 by default, and the
    * calibration may stop short of it), so it is held to a bar set by that
    * tolerance, not by the 1e-6 the three pinned arms above meet. It is here
    * to prove the calibrated configuration integrates the right thing at all,
    * not to re-prove convergence. */
-  _truth_cmp ("AUTO_NODES vs golden", vA, test->golden, 5.0e-2, GSL_MAX (abstol, 1.0e-3));
+  _truth_cmp ("AUTO_NODES vs reference", vA, test->ref, 5.0e-2, GSL_MAX (abstol, 1.0e-3));
 
   ncm_vector_free (vF);
   ncm_vector_free (vL);
@@ -534,12 +534,12 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
 
 /* Direct shape-scheme-vs-shape-scheme cross-check: SeriesLensed (truncated
  * g-series) and Quad (2D disc cubature) are two independently-coded *exact*
- * marginalization schemes -- unlike the golden-vs-production tests above
+ * marginalization schemes -- unlike the reference-vs-production tests above
  * (which only probe the z-integration's own convergence for a FIXED shape
  * scheme), this probes the shape marginalization itself, by feeding the
  * IDENTICAL generated galaxy set (same ra/dec/z/epsilon_obs/std_noise/c/m,
  * same Gauss population) through both and comparing -2lnP_gal directly. No
- * golden reference is needed: the two schemes' own physical answer must
+ * reference is needed: the two schemes' own physical answer must
  * agree with each other. Both are configured with LNINT at a tight
  * precision, so any disagreement beyond adaptive-quadrature-level tolerance
  * reflects a real discrepancy between the two marginalization

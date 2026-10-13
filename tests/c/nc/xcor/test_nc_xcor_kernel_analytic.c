@@ -43,6 +43,10 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_sf_bessel.h>
+
+#include "test_nc_xcor_closure_check.h"
 
 /* Comoving distances (Mpc) the windows are placed at: well inside the distance object's
  * z <= 6 range for this cosmology, and narrow enough that a support grid is cheap. */
@@ -641,6 +645,232 @@ test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpoi
   ncm_sbessel_integrator_free (sbi);
 }
 
+/* The non-Limber Chebyshev closure of the window matches W_ell(k) computed directly, in
+ * two multipole blocks, within what the closure was asked for */
+static void
+test_nc_xcor_kernel_analytic_closure (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  const gint lmins[2]              = {2, 50};
+  NcmSBesselIntegrator *kernel_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
+  guint b;
+
+  g_object_set (test->xclk, "integrator", kernel_sbi, NULL);
+  nc_xcor_kernel_set_l_limber (test->xclk, -1);
+  ncm_sbessel_integrator_free (kernel_sbi);
+
+  for (b = 0; b < 2; b++)
+  {
+    NcmSBesselIntegrator *sbi      = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (lmins[b], lmins[b] + 7));
+    NcXcorKernelIntegrand *closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, lmins[b], lmins[b] + 7,
+                                                                              sbi);
+    const TestNcXcorClosureCheck check = test_nc_xcor_closure_check (test->xclk, test->cosmo, closure, lmins[b]);
+
+    g_test_message ("ell %d-%d: worst %.3g of the bound at ell %d, k %.4g, over %u points",
+                    lmins[b], lmins[b] + 7, check.worst, check.at_ell, check.at_k, check.n_points);
+    g_assert_cmpfloat (check.worst, <, 1.0);
+
+    nc_xcor_kernel_integrand_unref (closure);
+    ncm_sbessel_integrator_free (sbi);
+  }
+}
+
+/* The closure of one multipole of the window at the given tolerances, non-Limber */
+static NcXcorKernelIntegrand *
+_closure_at (TestNcXcorKernelAnalytic *test, gint ell, gdouble adaptive_epsilon, gdouble tol)
+{
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (ell, ell));
+  NcXcorKernelIntegrand *closure;
+
+  g_object_set (test->xclk, "integrator", sbi, NULL);
+  nc_xcor_kernel_set_l_limber (test->xclk, -1);
+  nc_xcor_kernel_set_adaptive_epsilon (test->xclk, adaptive_epsilon);
+  nc_xcor_kernel_set_reltol (test->xclk, tol);
+  nc_xcor_kernel_set_peak_epsilon (test->xclk, tol);
+
+  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi);
+  ncm_sbessel_integrator_free (sbi);
+
+  return closure;
+}
+
+/* A tiny adaptive-epsilon makes the domain of the disjoint window five decades wide. A
+ * first Chebyshev grid spread over all of it would start past the peak, and both levels
+ * of the doubling test would see a small smooth function and agree; the initial grid of
+ * min-panels-per-efold puts panels on the peak's scale. The direct comparison samples
+ * every panel and a grid over the whole domain, which a missed peak cannot avoid. */
+static void
+test_nc_xcor_kernel_analytic_narrow_peak (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  NcXcorKernelIntegrand *closure     = _closure_at (test, 10, 1.0e-11, 1.0e-6);
+  const TestNcXcorClosureCheck check = test_nc_xcor_closure_check (test->xclk, test->cosmo, closure, 10);
+
+  g_test_message ("worst %.3g of the bound at k %.4g, over %u points", check.worst, check.at_k, check.n_points);
+  g_assert_cmpfloat (check.worst, <, 1.0);
+
+  nc_xcor_kernel_integrand_unref (closure);
+}
+
+/* The direct comparison fails on a closure that is not the kernel's: the closure of
+ * ell = 10 held against W_11(k) is far outside its bound */
+static void
+test_nc_xcor_kernel_analytic_closure_check_control (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  NcXcorKernelIntegrand *closure     = _closure_at (test, 10, nc_xcor_kernel_get_adaptive_epsilon (test->xclk), 1.0e-4);
+  const TestNcXcorClosureCheck check = test_nc_xcor_closure_check (test->xclk, test->cosmo, closure, 11);
+
+  g_assert_cmpfloat (check.worst, >, 100.0);
+
+  nc_xcor_kernel_integrand_unref (closure);
+}
+
+/* The Gaussian window in closed form, normalized to one over its support, in Mpc^-1 */
+static gdouble
+_window_gauss (gdouble chi)
+{
+  const gdouble chi_min = MAX (0.0, TEST_CHI_MEAN - TEST_N_SIGMA * TEST_CHI_SIGMA);
+  const gdouble chi_max = TEST_CHI_MEAN + TEST_N_SIGMA * TEST_CHI_SIGMA;
+  const gdouble s2      = M_SQRT2 * TEST_CHI_SIGMA;
+  const gdouble norm    = 0.5 * sqrt (2.0 * M_PI) * TEST_CHI_SIGMA * (erf ((chi_max - TEST_CHI_MEAN) / s2) - erf ((chi_min - TEST_CHI_MEAN) / s2));
+
+  if ((chi < chi_min) || (chi > chi_max))
+    return 0.0;
+
+  return exp (-0.5 * gsl_pow_2 ((chi - TEST_CHI_MEAN) / TEST_CHI_SIGMA)) / norm;
+}
+
+/* The top-hat window in closed form, normalized to one over its support, in Mpc^-1 */
+static gdouble
+_window_tophat (gdouble chi)
+{
+  if ((chi < TEST_CHI_LOWER) || (chi > TEST_CHI_UPPER))
+    return 0.0;
+
+  return 1.0 / (TEST_CHI_UPPER - TEST_CHI_LOWER);
+}
+
+#define TEST_CL_N_K 8192
+#define TEST_CL_GL_ORDER 12
+#define TEST_CL_PER_LOBE 2
+
+/*
+ * C_ell of a window from its definition, (2 / pi) int dk k^2 P(k, z = 0) [int dchi W(chi)
+ * j_ell(k chi)]^2, in Mpc throughout. The radial integral is taken by Gauss-Legendre on
+ * panels a fraction of a half-oscillation wide, the outer one by a log-k trapezoid over
+ * the range the kernel's closure reports. Only that range and P(k) come from the library:
+ * the window and the quadrature are written here.
+ */
+static gdouble
+_cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*window) (gdouble), gint ell)
+{
+  NcXcorKernelIntegrand *closure    = nc_xcor_kernel_get_eval (xclk, cosmo, ell);
+  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (TEST_CL_GL_ORDER);
+  const gdouble RH                  = nc_hicosmo_RH_Mpc (cosmo);
+  gdouble chi_min, chi_max, k_min, k_max, lnk_lo, lnk_hi, dlnk;
+  gdouble sum = 0.0;
+  guint i;
+
+  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (xclk), &chi_min, &chi_max);
+  nc_xcor_kernel_integrand_get_range (closure, &k_min, &k_max);
+
+  lnk_lo = log (k_min / RH);
+  lnk_hi = log (k_max / RH);
+  dlnk   = (lnk_hi - lnk_lo) / (TEST_CL_N_K - 1.0);
+
+  for (i = 0; i < TEST_CL_N_K; i++)
+  {
+    const gdouble k       = exp (lnk_lo + dlnk * i);
+    const gdouble pk      = ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k);
+    const guint n_panel   = MAX (16, TEST_CL_PER_LOBE * (guint) floor ((chi_max - chi_min) * k / M_PI) + 1);
+    const gdouble trapeze = ((i == 0) || (i == TEST_CL_N_K - 1)) ? 0.5 : 1.0;
+    gdouble radial        = 0.0;
+    guint p, q;
+
+    for (p = 0; p < n_panel; p++)
+    {
+      const gdouble lo = chi_min + (chi_max - chi_min) * p / (gdouble) n_panel;
+      const gdouble hi = chi_min + (chi_max - chi_min) * (p + 1) / (gdouble) n_panel;
+
+      for (q = 0; q < TEST_CL_GL_ORDER; q++)
+      {
+        gdouble chi, w;
+
+        gsl_integration_glfixed_point (lo, hi, q, &chi, &w, gl);
+        radial += w * window (chi) * gsl_sf_bessel_jl (ell, k * chi);
+      }
+    }
+
+    sum += trapeze * dlnk * gsl_pow_3 (k) * pk * gsl_pow_2 (radial);
+  }
+
+  gsl_integration_glfixed_table_free (gl);
+  nc_xcor_kernel_integrand_unref (closure);
+
+  return 2.0 / M_PI * sum;
+}
+
+/* One (window, multipole) checked against the definition, with the deviation it is held to */
+typedef struct _TestClDefinition
+{
+  const gchar *name;
+
+  gdouble (*window) (gdouble);
+
+  gint ell;
+  gdouble rtol;
+} TestClDefinition;
+
+/* Held an order above the deviation measured at the library's default tolerances,
+ * 8.1e-10 for the Gaussian at ell 8 and 3.5e-6 for the top-hat at ell 2. The top-hat's
+ * transform oscillates over the whole k range, and the log-k trapezoid of the
+ * definition needs TEST_CL_N_K = 8192 to resolve it: at 512 and 2048 points the
+ * deviation is 7.9e-5 and 5.0e-6, the reference's own error. */
+static const TestClDefinition test_cl_definitions[] = {
+  {"gauss",  &_window_gauss,  8, 1.0e-8},
+  {"tophat", &_window_tophat, 2, 3.0e-5},
+};
+
+/*
+ * The non-Limber C_ell of the solver is the integral the window's closed form defines:
+ * the right-hand side is written from that form, which pins the unit convention, the
+ * Mpc-normalized window, the R_H factor and the 2 / pi.
+ */
+static void
+test_nc_xcor_kernel_analytic_cl_definition (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  const TestKernel *tk             = pdata;
+  const TestClDefinition *tcd      = NULL;
+  NcmSBesselIntegrator *kernel_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
+  NcXcorSolver *solver             = nc_xcor_solver_new ();
+  NcXcor *xc                       = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_KERNEL_EXACT);
+  gdouble got, expected;
+  guint id, i;
+
+  for (i = 0; i < G_N_ELEMENTS (test_cl_definitions); i++)
+    if (g_strcmp0 (test_cl_definitions[i].name, tk->name) == 0)
+      tcd = &test_cl_definitions[i];
+
+  g_assert_nonnull (tcd);
+
+  g_object_set (test->xclk, "integrator", kernel_sbi, NULL);
+  nc_xcor_kernel_set_l_limber (test->xclk, -1);
+  ncm_sbessel_integrator_free (kernel_sbi);
+
+  id = nc_xcor_solver_register_kernel (solver, test->xclk);
+  nc_xcor_solver_request_cl (solver, id, id, tcd->ell, tcd->ell);
+  nc_xcor_solver_plan_blocks (solver, 64);
+  nc_xcor_solver_solve (solver, xc, test->cosmo);
+  got = ncm_vector_get (nc_xcor_solver_get_result (solver, 0), 0);
+
+  expected = _cl_definition (test->xclk, test->cosmo, test->ps, tcd->window, tcd->ell);
+
+  g_test_message ("%s ell = %d: solver %.10e, definition %.10e, relative deviation %.3e",
+                  tk->name, tcd->ell, got, expected, fabs (got / expected - 1.0));
+  ncm_assert_cmpdouble_e (got, ==, expected, tcd->rtol, 0.0);
+
+  nc_xcor_free (xc);
+  nc_xcor_solver_free (solver);
+}
+
 typedef struct _TestCheck
 {
   const gchar *name;
@@ -658,6 +888,7 @@ static const TestCheck test_checks[] = {
   {"z_range",   &test_nc_xcor_kernel_analytic_z_range},
   {"limber",    &test_nc_xcor_kernel_analytic_limber},
   {"serialize", &test_nc_xcor_kernel_analytic_serialize},
+  {"closure",   &test_nc_xcor_kernel_analytic_closure},
 };
 
 gint
@@ -685,6 +916,38 @@ main (gint argc, gchar *argv[])
 
       g_free (path);
     }
+  }
+
+  for (i = 0; i < TEST_N_KERNELS; i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_cl_definitions); j++)
+    {
+      if (g_strcmp0 (test_kernels[i].name, test_cl_definitions[j].name) == 0)
+      {
+        gchar *path = g_strdup_printf ("/nc/xcor/kernel/analytic/%s/cl_definition", test_kernels[i].name);
+
+        g_test_add (path, TestNcXcorKernelAnalytic, &test_kernels[i],
+                    &test_nc_xcor_kernel_analytic_new,
+                    &test_nc_xcor_kernel_analytic_cl_definition,
+                    &test_nc_xcor_kernel_analytic_free);
+        g_free (path);
+      }
+    }
+  }
+
+  for (i = 0; i < TEST_N_KERNELS; i++)
+  {
+    if (g_strcmp0 (test_kernels[i].name, "multi_disjoint") != 0)
+      continue;
+
+    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/narrow_peak", TestNcXcorKernelAnalytic, &test_kernels[i],
+                &test_nc_xcor_kernel_analytic_new,
+                &test_nc_xcor_kernel_analytic_narrow_peak,
+                &test_nc_xcor_kernel_analytic_free);
+    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/closure_check_control", TestNcXcorKernelAnalytic, &test_kernels[i],
+                &test_nc_xcor_kernel_analytic_new,
+                &test_nc_xcor_kernel_analytic_closure_check_control,
+                &test_nc_xcor_kernel_analytic_free);
   }
 
   g_test_run ();

@@ -276,7 +276,6 @@ def test_kernel_serialization_preserves_properties(
     assert kernel.get_reltol() == kernel_dup.get_reltol()
     assert kernel.get_peak_epsilon() == kernel_dup.get_peak_epsilon()
     assert kernel.get_max_border_expansions() == kernel_dup.get_max_border_expansions()
-    assert kernel.get_max_iter() == kernel_dup.get_max_iter()
     assert kernel.get_expansion_factor() == kernel_dup.get_expansion_factor()
 
     # Test redshift range

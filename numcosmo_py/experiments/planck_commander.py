@@ -33,7 +33,7 @@ import os
 import numpy as np
 from astropy.io import fits
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 COMMANDER_RELPATH = os.path.join(
     "baseline", "plc_3.0", "low_l", "commander", "commander_dx12_v3_2_29.clik"

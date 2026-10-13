@@ -293,6 +293,129 @@ test_ncm_function_sample_set_adaptive_midpoint_precision (void)
   ncm_function_sample_set_free (fss);
 }
 
+typedef gdouble (*TestEval) (const gdouble x);
+
+static gdouble
+_test_line_eval (const gdouble x)
+{
+  return 2.0 * x + 1.0;
+}
+
+static gdouble
+_test_lorentzian_eval (const gdouble x)
+{
+  return 1.0 / (1.0 + x * x);
+}
+
+/*
+ * A Gaussian at 3.5, seen by the first midpoint test of [3, 4], and a pair of opposite
+ * Gaussians at 4.25 and 4.75, which vanish to rounding at 4, 4.5 and 5, the knots and
+ * midpoint the first test of [4, 5] uses.
+ */
+#define TEST_HIDDEN_SIGMA 0.03
+
+static gdouble
+_test_hidden_pair_eval (const gdouble x)
+{
+  const gdouble g0 = exp (-0.5 * gsl_pow_2 ((x - 3.5) / TEST_HIDDEN_SIGMA));
+  const gdouble g1 = exp (-0.5 * gsl_pow_2 ((x - 4.25) / TEST_HIDDEN_SIGMA));
+  const gdouble g2 = exp (-0.5 * gsl_pow_2 ((x - 4.75) / TEST_HIDDEN_SIGMA));
+
+  return g0 + g1 - g2;
+}
+
+static void
+_test_closure_f (const gdouble x, NcmVector *y, gpointer user_data)
+{
+  TestEval eval = (TestEval) user_data;
+
+  ncm_vector_set (y, 0, eval (x));
+}
+
+/*
+ * Refines from seeds 0, 1, ..., 10, reports the closure, and returns the largest
+ * |spline - F| / (reltol |F| + abstol) on a grid over the seed range.
+ */
+static gdouble
+_test_closure (TestEval eval, const gdouble reltol, const gdouble abstol, guint *rounds, guint *flagged, guint *failed, guint *nsamples)
+{
+  const guint n_grid        = 20001;
+  NcmFunctionSampleSet *fss = ncm_function_sample_set_new (1);
+  NcmSpline *s              = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmVector *y              = ncm_vector_new (1);
+  gdouble max_ratio         = 0.0;
+  NcmSplineVec *sv;
+  guint i;
+
+  for (i = 0; i <= 10; i++)
+    ncm_function_sample_set_add_func (fss, i, &_test_closure_f, eval);
+
+  ncm_function_sample_set_mark_all_old (fss);
+  ncm_function_sample_set_adaptive_midpoint_full (fss, &_test_closure_f, reltol, abstol, 1000, 1, s, eval,
+                                                  rounds, flagged, failed);
+  g_assert_true (ncm_function_sample_set_all_intervals_ok (fss, 1));
+  *nsamples = ncm_function_sample_set_get_nsamples (fss);
+
+  sv = ncm_function_sample_set_to_spline_vec (fss, s);
+
+  for (i = 0; i < n_grid; i++)
+  {
+    const gdouble x  = 10.0 * i / (n_grid - 1.0);
+    const gdouble fx = eval (x);
+
+    ncm_spline_vec_eval (sv, x, y);
+    max_ratio = GSL_MAX (max_ratio, fabs (ncm_vector_get (y, 0) - fx) / (reltol * fabs (fx) + abstol));
+  }
+
+  ncm_spline_vec_free (sv);
+  ncm_vector_free (y);
+  ncm_spline_free (s);
+  ncm_function_sample_set_free (fss);
+
+  return max_ratio;
+}
+
+static void
+test_ncm_function_sample_set_adaptive_midpoint_closure_none (void)
+{
+  /* A cubic spline reproduces a line: every first-round midpoint passes, the set stays
+   * uniform, and the closure round flags nothing. */
+  guint rounds, flagged, failed, nsamples;
+
+  g_assert_cmpfloat (_test_closure (&_test_line_eval, 1.0e-8, 0.0, &rounds, &flagged, &failed, &nsamples), <, 1.0);
+  g_assert_cmpuint (rounds, ==, 1);
+  g_assert_cmpuint (flagged, ==, 0);
+  g_assert_cmpuint (failed, ==, 0);
+  g_assert_cmpuint (nsamples, ==, 21);
+}
+
+static void
+test_ncm_function_sample_set_adaptive_midpoint_closure_pass (void)
+{
+  /* A smooth function with a varying scale: the settled set has level boundaries, so
+   * the closure round flags intervals, and every flagged interval passes. */
+  guint rounds, flagged, failed, nsamples;
+
+  g_assert_cmpfloat (_test_closure (&_test_lorentzian_eval, 1.0e-6, 0.0, &rounds, &flagged, &failed, &nsamples), <, 1.0);
+  g_assert_cmpuint (rounds, ==, 1);
+  g_assert_cmpuint (flagged, >=, 1);
+  g_assert_cmpuint (failed, ==, 0);
+}
+
+static void
+test_ncm_function_sample_set_adaptive_midpoint_closure_fail (void)
+{
+  /* The midpoint test at 4.5 accepts [4, 4.5] and [4.5, 5] with the pair inside them;
+   * the closure flags [4, 4.5] against its refined left neighbor, its midpoint fails,
+   * the failure flags [4.5, 5], and both are resolved to the requested tolerance. */
+  guint rounds, flagged, failed, nsamples;
+
+  g_assert_cmpfloat (_test_closure (&_test_hidden_pair_eval, 1.0e-6, 1.0e-8, &rounds, &flagged, &failed, &nsamples), <, 1.0);
+  g_assert_cmpuint (rounds, >=, 2);
+  g_assert_cmpuint (failed, >=, 1);
+  g_assert_cmpuint (flagged, >=, failed);
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -310,6 +433,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/function_sample_set/expand_domain/empty/subprocess", &test_ncm_function_sample_set_expand_domain_empty_subprocess);
   g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/message", &test_ncm_function_sample_set_adaptive_midpoint_message);
   g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/precision", &test_ncm_function_sample_set_adaptive_midpoint_precision);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/none", &test_ncm_function_sample_set_adaptive_midpoint_closure_none);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/pass", &test_ncm_function_sample_set_adaptive_midpoint_closure_pass);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/fail", &test_ncm_function_sample_set_adaptive_midpoint_closure_fail);
 
   g_test_run ();
 }

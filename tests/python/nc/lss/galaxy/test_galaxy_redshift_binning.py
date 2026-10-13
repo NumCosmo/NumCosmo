@@ -38,7 +38,7 @@ runtime -- legacy is slated for deletion in a follow-up PR. Each frozen
 assertion keeps the tolerance (``rtol``/``atol``) that the original live
 comparison used. The ``_DNDZ_FROZEN``/``_PZP_FROZEN`` sequences are stored
 as ``Ncm.Matrix`` binfiles (``data/truth_tables/``) rather than inline
-literals; see ``_load_dndz_golden``/``_load_pzp_golden``.
+literals; see ``_load_dndz_truth_table``/``_load_pzp_truth_table``.
 """
 
 import pytest
@@ -83,19 +83,19 @@ def test_dndz_normalized(variant, bin_sigma0, zp_min, zp_max):
 
 # Frozen legacy eval_pz_given_zp output, keyed by (variant, bin_sigma0,
 # zp_min, zp_max), sampled on a 400-point z-grid (see module docstring).
-_DNDZ_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_binning_dndz_parity.bin"
+_DNDZ_TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_redshift_binning_dndz_parity.bin"
 
 
-def _load_dndz_golden() -> np.ndarray:
+def _load_dndz_truth_table() -> np.ndarray:
     """Load the frozen dn/dz sequences as a (len(_CASES), 400) array."""
-    path = Ncm.cfg_get_data_filename(_DNDZ_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_DNDZ_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(len(_CASES), 400)
 
 
-_DNDZ_FROZEN = _load_dndz_golden()
+_DNDZ_FROZEN = _load_dndz_truth_table()
 
 
 @pytest.mark.parametrize("variant,bin_sigma0,zp_min,zp_max", _CASES)
@@ -139,19 +139,19 @@ def test_dndz_window_is_an_argument():
 
 # Frozen legacy eval_pzp output, keyed by (variant, bin_sigma0, zp_min,
 # zp_max), sampled on a 400-point zp-grid (see module docstring).
-_PZP_GOLDEN_FILE = "truth_tables/wl/nc_galaxy_redshift_binning_pzp_parity.bin"
+_PZP_TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_redshift_binning_pzp_parity.bin"
 
 
-def _load_pzp_golden() -> np.ndarray:
+def _load_pzp_truth_table() -> np.ndarray:
     """Load the frozen eval_pzp sequences as a (len(_CASES), 400) array."""
-    path = Ncm.cfg_get_data_filename(_PZP_GOLDEN_FILE, True)
+    path = Ncm.cfg_get_data_filename(_PZP_TRUTH_TABLE_FILE, True)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
     matrix = ser.from_binfile(path)
     assert isinstance(matrix, Ncm.Matrix)
     return np.array(matrix.dup_array()).reshape(len(_CASES), 400)
 
 
-_PZP_FROZEN = _load_pzp_golden()
+_PZP_FROZEN = _load_pzp_truth_table()
 
 
 @pytest.mark.parametrize("variant,bin_sigma0,zp_min,zp_max", _CASES)

@@ -112,18 +112,30 @@ WINDOWS: typing.Final[dict[str, Window]] = {
     # --- Gaussians, across the SRD's range of centres and widths -------------
     "gauss_mid": Window("gauss", (1500.0, 300.0, 4.0), "baseline"),
     "gauss_near": Window("gauss", (1095.0, 182.0, 4.0), "SRD Y10 lens, low end"),
-    "gauss_far": Window("gauss", (3800.0, 165.0, 4.0), "SRD Y10 lens, high end; sigma/chi = 0.043"),
+    "gauss_far": Window(
+        "gauss", (3800.0, 165.0, 4.0), "SRD Y10 lens, high end; sigma/chi = 0.043"
+    ),
     "gauss_broad": Window("gauss", (4520.0, 715.0, 4.0), "source-bin width, distant"),
     "gauss_over": Window("gauss", (1800.0, 300.0, 4.0), "overlaps gauss_mid"),
-    "gauss_low": Window("gauss", (600.0, 100.0, 4.0), "near bin, for far-separated pairs"),
-    "gauss_high": Window("gauss", (3500.0, 150.0, 4.0), "far bin, for far-separated pairs"),
+    "gauss_low": Window(
+        "gauss", (600.0, 100.0, 4.0), "near bin, for far-separated pairs"
+    ),
+    "gauss_high": Window(
+        "gauss", (3500.0, 150.0, 4.0), "far bin, for far-separated pairs"
+    ),
     "gauss_thin": Window("gauss", (1500.0, 50.0, 4.0), "thin bin"),
     "gauss_thin_shift": Window("gauss", (1650.0, 50.0, 4.0), "thin bin, displaced"),
     # --- Top-hats, paired with the Gaussians at equal variance ---------------
     "tophat_mid": Window("tophat", (500.0, 2500.0), "hard edges, wide"),
-    "tophat_near": Window("tophat", (780.0, 1410.0), "pairs gauss_near at equal variance"),
-    "tophat_far": Window("tophat", (3514.0, 4086.0), "pairs gauss_far at equal variance"),
-    "tophat_broad": Window("tophat", (3282.0, 5758.0), "pairs gauss_broad at equal variance"),
+    "tophat_near": Window(
+        "tophat", (780.0, 1410.0), "pairs gauss_near at equal variance"
+    ),
+    "tophat_far": Window(
+        "tophat", (3514.0, 4086.0), "pairs gauss_far at equal variance"
+    ),
+    "tophat_broad": Window(
+        "tophat", (3282.0, 5758.0), "pairs gauss_broad at equal variance"
+    ),
     "shell_narrow": Window("tophat", (1000.0, 1056.0), "narrow hard shell"),
     "shell_wide": Window("tophat", (1100.0, 1500.0), "wide hard shell"),
     # --- The remaining forms -------------------------------------------------
@@ -135,20 +147,30 @@ WINDOWS: typing.Final[dict[str, Window]] = {
         "power_exp", (1200.0, 2.0, 1.5, 50.0, 4000.0), "skewed and broad"
     ),
     "power_exp_skew_far": Window(
-        "power_exp", (2400.0, 6.0, 2.0, 3500.0, 7200.0), "skewed at high chi, source-bin shape"
+        "power_exp",
+        (2400.0, 6.0, 2.0, 3500.0, 7200.0),
+        "skewed at high chi, source-bin shape",
     ),
     "power_exp_isw": Window(
-        "power_exp", (2500.0, 1.0, 1.5, 50.0, 8000.0), "broad and low-weighted, ISW range"
+        "power_exp",
+        (2500.0, 1.0, 1.5, 50.0, 8000.0),
+        "broad and low-weighted, ISW range",
     ),
     "lensing_gal": Window("lensing", (50.0, 2000.0, 3000.0), "galaxy sources"),
     "lensing_cmb": Window(
-        "lensing", (50.0, 13900.0, 14146.0), "sources at last scattering; support to 14 Gpc"
+        "lensing",
+        (50.0, 13900.0, 14146.0),
+        "sources at last scattering; support to 14 Gpc",
     ),
     "multi_mid": Window(
-        "multi", ((1000.0, 1600.0), (300.0, 300.0), (1.0, 0.6), 4.0), "overlapping bumps"
+        "multi",
+        ((1000.0, 1600.0), (300.0, 300.0), (1.0, 0.6), 4.0),
+        "overlapping bumps",
     ),
     "multi_disjoint": Window(
-        "multi", ((600.0, 2600.0), (100.0, 150.0), (1.0, 1.0), 4.0), "disconnected support"
+        "multi",
+        ((600.0, 2600.0), (100.0, 150.0), (1.0, 1.0), 4.0),
+        "disconnected support",
     ),
 }
 
@@ -277,3 +299,40 @@ def arb_args(name: str, side: str | None = None) -> list[str]:
         out.append(f"{prefix}{flag}={value}")
 
     return out
+
+
+def make_kernel(shape, dist, ps, sbi, ctor):
+    """Build one analytic kernel from the constructor arguments in the table.
+
+    numcosmo_py is imported here and not at module level: the Arb generators in
+    tests/tools import this module for the vocabulary alone.
+    """
+    from numcosmo_py import Nc, Ncm  # noqa: PLC0415
+
+    match shape:
+        case "gauss":
+            return Nc.XcorKernelAnalyticGauss.new_full(dist, ps, *ctor, sbi)
+        case "tophat":
+            return Nc.XcorKernelAnalyticTophat.new_full(dist, ps, *ctor, sbi)
+        case "tophat_smooth":
+            return Nc.XcorKernelAnalyticTophatSmooth.new_full(dist, ps, *ctor, sbi)
+        case "student_t":
+            return Nc.XcorKernelAnalyticStudentT.new_full(dist, ps, *ctor, sbi)
+        case "power_exp":
+            return Nc.XcorKernelAnalyticPowerExp.new_full(dist, ps, *ctor, sbi)
+        case "lensing":
+            return Nc.XcorKernelAnalyticLensing.new_full(dist, ps, *ctor, sbi)
+        case "multi":
+            mu, sigma, weight, n_sigma = ctor
+
+            return Nc.XcorKernelAnalyticMulti.new_full(
+                dist,
+                ps,
+                Ncm.Vector.new_array(mu),
+                Ncm.Vector.new_array(sigma),
+                Ncm.Vector.new_array(weight),
+                n_sigma,
+                sbi,
+            )
+        case _:
+            raise ValueError(f"truth table names an unknown shape {shape!r}")

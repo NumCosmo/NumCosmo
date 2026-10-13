@@ -1861,6 +1861,15 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
   ncm_spline_vec_free (sv_old);
 }
 
+/* Relative margin of the closure's width comparison: bisection leaves exact factors of two. */
+#define NCM_FUNCTION_SAMPLE_SET_CLOSURE_MARGIN (1.0e-8)
+#define _SP_X(node) (((NcmFunctionSamplePoint *) (node)->data)->x)
+
+static guint _ncm_function_sample_set_flag_wide (NcmFunctionSampleSet *fss);
+static guint _ncm_function_sample_set_close_flagged (NcmFunctionSampleSet *fss, const gint min_pass_threshold);
+static void _ncm_function_sample_set_flag_same_width_left (GList *node, const gdouble h);
+static void _ncm_function_sample_set_flag_same_width_right (GList *node, const gdouble h);
+
 /**
  * ncm_function_sample_set_adaptive_midpoint:
  * @fss: a #NcmFunctionSampleSet
@@ -1881,6 +1890,22 @@ ncm_function_sample_set_refine (NcmFunctionSampleSet *fss, const gdouble reltol,
  * interval reaches @min_pass_threshold, or after @max_iter iterations with a message
  * if some interval has not. An interval too short to split at machine precision is
  * marked as passed, and the number of such intervals is reported in a message.
+ *
+ * A midpoint can pass by coincidence where the spline is still wrong, and the two
+ * intervals it accepts are then left wider than the mesh around them once that mesh has
+ * settled. So the settled mesh is closed: every interval wider than the mean of its two
+ * neighbors (a border interval, than its one neighbor), by more than one part in $10^8$
+ * (bisection leaves exact factors of two), receives its midpoint, tested once as above
+ * whatever @min_pass_threshold; the intervals that fail are refined again, and the closure
+ * repeats until a closure round flags nothing or every flagged interval passes. A flagged
+ * interval that fails also flags every adjacent interval of the same width, on both sides:
+ * bisection locks onto an oscillation below the tolerance, and such a run of intervals,
+ * each one period wide, passes every midpoint test at the same phase while the width
+ * comparison sees only the two ends of the run. The closure removes errors from an
+ * adaptive mesh and discovers no feature: a feature the starting samples and their
+ * midpoints carry no evidence of is found by no test on those samples. The closure is the
+ * one of #NcmSplineFunc, described in
+ * <a href="../../theory/ncm/spline/spline_func.html">AutoKnots: Adaptive Knot Placement</a>.
  */
 void
 ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
@@ -1892,7 +1917,45 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
                                            NcmSpline                *base_spline,
                                            gpointer                 user_data)
 {
+  ncm_function_sample_set_adaptive_midpoint_full (fss, f, reltol, abstol, max_iter, min_pass_threshold,
+                                                  base_spline, user_data, NULL, NULL, NULL);
+}
+
+/**
+ * ncm_function_sample_set_adaptive_midpoint_full:
+ * @fss: a #NcmFunctionSampleSet
+ * @f: (scope call): function used to evaluate new midpoints
+ * @reltol: relative tolerance for refinement test
+ * @abstol: absolute tolerance for refinement test
+ * @max_iter: maximum number of refinement iterations
+ * @min_pass_threshold: minimum interval_ok threshold to consider interval passed
+ * @base_spline: base spline used for refinement tests
+ * @user_data: user data passed to @f
+ * @closure_rounds: (out) (optional): number of closure rounds
+ * @closure_flagged: (out) (optional): number of intervals the closure rounds flagged
+ * @closure_failed: (out) (optional): number of flagged intervals that failed
+ *
+ * Same as ncm_function_sample_set_adaptive_midpoint(), reporting the closure of the
+ * settled set. A closure that flagged nothing counts one round with nothing flagged; one
+ * whose flagged intervals all passed counts their number with nothing failed.
+ */
+void
+ncm_function_sample_set_adaptive_midpoint_full (NcmFunctionSampleSet     *fss,
+                                                NcmFunctionSampleSetFunc f,
+                                                const gdouble            reltol,
+                                                const gdouble            abstol,
+                                                const guint              max_iter,
+                                                const gint               min_pass_threshold,
+                                                NcmSpline                *base_spline,
+                                                gpointer                 user_data,
+                                                guint                    *closure_rounds,
+                                                guint                    *closure_flagged,
+                                                guint                    *closure_failed)
+{
   guint n_at_precision = 0;
+  guint n_rounds       = 0;
+  guint n_flagged      = 0;
+  guint n_failed       = 0;
   guint iteration;
 
   /* The Cubic not-a-knot spline requires at least 6 samples.
@@ -1944,8 +2007,18 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
 
   for (iteration = 0; iteration < max_iter; iteration++)
   {
+    guint closing = 0; /* intervals this round tests as flagged, zero for an ordinary round */
+
     if (ncm_function_sample_set_all_intervals_ok (fss, min_pass_threshold))
-      break;
+    {
+      closing = _ncm_function_sample_set_flag_wide (fss);
+
+      if (closing == 0)
+      {
+        n_rounds++;
+        break;
+      }
+    }
 
     {
       NcmFunctionSampleSetIter it_s;
@@ -1986,6 +2059,18 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
 
       ncm_function_sample_set_refine (fss, reltol, abstol, base_spline);
     }
+
+    if (closing > 0)
+    {
+      const guint failed = _ncm_function_sample_set_close_flagged (fss, min_pass_threshold);
+
+      n_rounds++;
+      n_flagged += closing;
+      n_failed  += failed;
+
+      if (failed == 0)
+        break;
+    }
   }
 
   if (!ncm_function_sample_set_all_intervals_ok (fss, min_pass_threshold))
@@ -1996,6 +2081,141 @@ ncm_function_sample_set_adaptive_midpoint (NcmFunctionSampleSet     *fss,
     g_message ("# ncm_function_sample_set_adaptive_midpoint: %u interval(s) reached machine precision "
                "without passing and were marked as passed (%u knots)\n",
                n_at_precision, ncm_function_sample_set_get_nsamples (fss));
+
+  if (closure_rounds != NULL)
+    *closure_rounds = n_rounds;
+
+  if (closure_flagged != NULL)
+    *closure_flagged = n_flagged;
+
+  if (closure_failed != NULL)
+    *closure_failed = n_failed;
+}
+
+/*
+ * Flags, on a settled set, every interval wider than the mean of its two neighbors by
+ * more than NCM_FUNCTION_SAMPLE_SET_CLOSURE_MARGIN, a border interval than its one
+ * neighbor, setting its interval_ok to zero, and returns how many it flagged.
+ */
+static guint
+_ncm_function_sample_set_flag_wide (NcmFunctionSampleSet *fss)
+{
+  guint n_flagged = 0;
+  GList *w;
+
+  for (w = fss->samples; (w != NULL) && (w->next != NULL); w = w->next)
+  {
+    NcmFunctionSamplePoint *sp = (NcmFunctionSamplePoint *) w->data;
+    const gdouble h            = _SP_X (w->next) - _SP_X (w);
+    gdouble h_mean             = 0.0;
+
+    if ((w->prev != NULL) && (w->next->next != NULL))
+      h_mean = 0.5 * ((_SP_X (w) - _SP_X (w->prev)) + (_SP_X (w->next->next) - _SP_X (w->next)));
+    else if (w->prev != NULL)
+      h_mean = _SP_X (w) - _SP_X (w->prev);
+    else if (w->next->next != NULL)
+      h_mean = _SP_X (w->next->next) - _SP_X (w->next);
+    else
+      continue;
+
+    if (h > h_mean * (1.0 + NCM_FUNCTION_SAMPLE_SET_CLOSURE_MARGIN))
+    {
+      sp->interval_ok = 0;
+      n_flagged++;
+    }
+  }
+
+  return n_flagged;
+}
+
+/*
+ * Ends a closure round. Every other interval had passed, so a split flagged interval
+ * that passed has both halves at interval_ok >= 1, set here to @min_pass_threshold,
+ * and one that failed has both at zero; the run of equal width on each side of a
+ * failed one is flagged too. Returns how many flagged intervals failed.
+ */
+static guint
+_ncm_function_sample_set_close_flagged (NcmFunctionSampleSet *fss, const gint min_pass_threshold)
+{
+  GPtrArray *failed = g_ptr_array_new ();
+  guint n_failed;
+  GList *w;
+  guint i;
+
+  for (w = fss->samples; (w != NULL) && (w->next != NULL); w = w->next)
+  {
+    NcmFunctionSamplePoint *sp = (NcmFunctionSamplePoint *) w->data;
+
+    if (sp->interval_ok >= min_pass_threshold)
+      continue;
+
+    if (sp->interval_ok > 0)
+    {
+      sp->interval_ok = min_pass_threshold;
+      continue;
+    }
+
+    /* the left half of a failed interval, the right half is the next */
+    g_assert (w->next->next != NULL);
+    g_ptr_array_add (failed, w);
+    w = w->next;
+  }
+
+  /* flagged after the scan, which reads a zero as a failed half */
+  for (i = 0; i < failed->len; i++)
+  {
+    GList *w0       = g_ptr_array_index (failed, i);
+    GList *w1       = w0->next->next;
+    const gdouble h = _SP_X (w1) - _SP_X (w0);
+
+    _ncm_function_sample_set_flag_same_width_left (w0, h);
+    _ncm_function_sample_set_flag_same_width_right (w1, h);
+  }
+
+  n_failed = failed->len;
+  g_ptr_array_unref (failed);
+
+  return n_failed;
+}
+
+/*
+ * Flags, walking left from the interval that ends at @node, every interval of width @h
+ * within NCM_FUNCTION_SAMPLE_SET_CLOSURE_MARGIN, and stops at the first of another width.
+ */
+static void
+_ncm_function_sample_set_flag_same_width_left (GList *node, const gdouble h)
+{
+  GList *w;
+
+  for (w = node; (w != NULL) && (w->prev != NULL); w = w->prev)
+  {
+    const gdouble h_i = _SP_X (w) - _SP_X (w->prev);
+
+    if (fabs (h_i - h) < NCM_FUNCTION_SAMPLE_SET_CLOSURE_MARGIN * h)
+      ((NcmFunctionSamplePoint *) w->prev->data)->interval_ok = 0;
+    else
+      break;
+  }
+}
+
+/*
+ * Flags, walking right from the interval that starts at @node, every interval of width
+ * @h within NCM_FUNCTION_SAMPLE_SET_CLOSURE_MARGIN, and stops at the first of another width.
+ */
+static void
+_ncm_function_sample_set_flag_same_width_right (GList *node, const gdouble h)
+{
+  GList *w;
+
+  for (w = node; (w != NULL) && (w->next != NULL); w = w->next)
+  {
+    const gdouble h_i = _SP_X (w->next) - _SP_X (w);
+
+    if (fabs (h_i - h) < NCM_FUNCTION_SAMPLE_SET_CLOSURE_MARGIN * h)
+      ((NcmFunctionSamplePoint *) w->data)->interval_ok = 0;
+    else
+      break;
+  }
 }
 
 /**

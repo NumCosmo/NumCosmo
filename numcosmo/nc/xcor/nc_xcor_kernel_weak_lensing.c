@@ -121,6 +121,9 @@ typedef struct _WeakLensingComponentData
         ((WeakLensingComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
 
 static gdouble _wl_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _wl_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _wl_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+static void _wl_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 static gdouble _wl_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _wl_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _wl_component_data_clear (WeakLensingComponentData *data);
@@ -130,6 +133,9 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_WEAK_LENSING,
                                       NcXcorKernelComponentWeakLensing,
                                       nc_xcor_kernel_component_weak_lensing,
                                       _wl_component_eval_kernel,
+                                      _wl_component_eval_window,
+                                      _wl_component_eval_kfactor,
+                                      _wl_component_eval_kfactor_vec,
                                       _wl_component_eval_prefactor,
                                       _wl_component_get_limits,
                                       WeakLensingComponentData,
@@ -413,6 +419,39 @@ _wl_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoubl
 }
 
 static gdouble
+_wl_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  WeakLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_WEAK_LENSING_GET_DATA (comp);
+
+  return (1.0 + xck->z) / xck->chi_z * nc_xcor_lensing_efficiency_eval (data->lens_eff, xck->z);
+}
+
+static gdouble
+_wl_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  WeakLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_WEAK_LENSING_GET_DATA (comp);
+  const gdouble powspec          = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), xck->z, k / nc_hicosmo_RH_Mpc (cosmo));
+
+  return sqrt (powspec) / gsl_pow_2 (k);
+}
+
+static void
+_wl_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out)
+{
+  WeakLensingComponentData *data = _NC_XCOR_KERNEL_COMPONENT_WEAK_LENSING_GET_DATA (comp);
+  const gdouble RH_Mpc           = nc_hicosmo_RH_Mpc (cosmo);
+  const guint len                = ncm_vector_len (k);
+  guint i;
+
+  ncm_vector_scale (k, 1.0 / RH_Mpc);
+  ncm_powspec_eval_vec (data->ps, NCM_MODEL (cosmo), xck->z, k, out);
+  ncm_vector_scale (k, RH_Mpc);
+
+  for (i = 0; i < len; i++)
+    ncm_vector_set (out, i, sqrt (ncm_vector_get (out, i)) / gsl_pow_2 (ncm_vector_get (k, i)));
+}
+
+static gdouble
 _wl_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
 {
   const gdouble cosmo_factor = 1.5 * nc_hicosmo_Omega_m0 (cosmo);
@@ -507,7 +546,7 @@ _nc_xcor_kernel_weak_lensing_get_z_range (NcXcorKernel *xclk, gdouble *zmin, gdo
 
   *zmin = 0.0;
   *zmax = xclkg->dn_dz_zmax;
-  *zmid = ncm_vector_get (ncm_spline_get_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_get_yv (xclkg->dn_dz))) / 2.0;
+  *zmid = ncm_vector_get (ncm_spline_peek_xv (xclkg->dn_dz), ncm_vector_get_max_index (ncm_spline_peek_yv (xclkg->dn_dz))) / 2.0;
 }
 
 static GPtrArray *

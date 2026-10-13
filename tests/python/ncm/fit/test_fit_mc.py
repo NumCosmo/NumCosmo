@@ -182,7 +182,7 @@ class MVNDMean(Ncm.MSetFunc1):
         super().__init__(dimension=1, nvariables=0, index=index)
         self.set_meta(f"mvnd_mean_{index}", f"\\mu_{index}", "Test", "MVND mean", 0, 1)
 
-    def do_eval1(self, mset: Ncm.MSet, _):  # pylint: disable-msg=arguments-differ
+    def do_eval1(self, mset: Ncm.MSet, _):
         """Compute the MVND mean."""
         mvnd = mset.peek(Ncm.ModelMVND.id())
         assert mvnd is not None

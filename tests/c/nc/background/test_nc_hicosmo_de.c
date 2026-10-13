@@ -41,6 +41,7 @@ void test_nc_hicosmo_de_omega_x2omega_k (TestNcHICosmoDE *test, gconstpointer pd
 void test_nc_hicosmo_de_xcdm_new_full (void);
 void test_nc_hicosmo_bbn_construct_fixed (void);
 void test_nc_hicosmo_bbn_construct_fixed_subprocess (void);
+void test_nc_hicosmo_late_attach (void);
 void test_nc_hicosmo_lcdm_new_full (void);
 void test_nc_hicosmo_de_cpl_new_full (void);
 void test_nc_hicosmo_de_jbp_new_full (void);
@@ -62,6 +63,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hicosmo_de/xcdm/new_full", &test_nc_hicosmo_de_xcdm_new_full);
   g_test_add_func ("/nc/hicosmo_de/bbn/construct_fixed", &test_nc_hicosmo_bbn_construct_fixed);
   g_test_add_func ("/nc/hicosmo_de/bbn/construct_fixed/subprocess", &test_nc_hicosmo_bbn_construct_fixed_subprocess);
+  g_test_add_func ("/nc/hicosmo_de/late_attach", &test_nc_hicosmo_late_attach);
   g_test_add_func ("/nc/hicosmo_de/lcdm/new_full", &test_nc_hicosmo_lcdm_new_full);
   g_test_add_func ("/nc/hicosmo_de/cpl/new_full", &test_nc_hicosmo_de_cpl_new_full);
   g_test_add_func ("/nc/hicosmo_de/jbp/new_full", &test_nc_hicosmo_de_jbp_new_full);
@@ -173,6 +175,27 @@ test_nc_hicosmo_bbn_construct_fixed (void)
   g_test_trap_subprocess ("/nc/hicosmo_de/bbn/construct_fixed/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*construction-fixed*");
+}
+
+void
+test_nc_hicosmo_late_attach (void)
+{
+  NcHICosmoDEXcdm *cosmo = nc_hicosmo_de_xcdm_new_full (NULL, NULL, NULL);
+  NcHIReion *reion       = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim         = NC_HIPRIM (nc_hiprim_power_law_new ());
+
+  /* Deprecated 0.27 path: attaching after construction fills an empty slot. */
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
+
+  g_assert_true (nc_hicosmo_peek_prim (NC_HICOSMO (cosmo)) == prim);
+  g_assert_true (nc_hicosmo_peek_reion (NC_HICOSMO (cosmo)) == reion);
+  g_assert_true (ncm_model_peek_host (NCM_MODEL (prim)) == NCM_MODEL (cosmo));
+  g_assert_true (ncm_model_peek_host (NCM_MODEL (reion)) == NCM_MODEL (cosmo));
+
+  nc_hicosmo_free (NC_HICOSMO (cosmo));
+  nc_hireion_free (reion);
+  nc_hiprim_free (prim);
 }
 
 void

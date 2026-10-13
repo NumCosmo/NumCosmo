@@ -28,8 +28,8 @@ The outer integral is
     C_ell^AB = 2 / (pi RH^3) * INT dkappa kappa^2 W1_ell(kappa) W2_ell(kappa)
 
 in the internal variable kappa = k RH, over the intersection of the two
-closures' fitted ranges. The three kernel-space methods differ only in how they
-evaluate that integral from the same two closures.
+closures' fitted ranges. KERNEL_EXACT and the reference of this module evaluate
+that integral from the same two closures.
 
 This module is the single source of truth for what is measured: the kernels,
 the pairs, the multipoles, the tolerance settings, and the reference. It is
@@ -49,7 +49,7 @@ The reference (``reference_cl``) is deliberately *not* independent of the
 closures: it is handed the same frozen ``NcXcorKernelIntegrand`` objects the
 methods are handed, so what it measures is the outer quadrature alone. The
 closures' own error against certified Arb values is measured separately, in
-``test_xcor_window_truth_table.py``.
+``tests/c/nc/xcor/test_nc_xcor_window_dense.c``.
 """
 
 from __future__ import annotations
@@ -70,26 +70,22 @@ ELLS: typing.Final[list[int]] = [2, 3, 4, 6, 10, 20, 50, 100, 200]
 # worst -- which is NOT the high end. Measured worst deviation of the block's
 # peak, over the case matrix:
 #
-#   exact/chebyshev  2.3e-08 at l=6     gsl/chebyshev   1.6e-03 at l=10
-#   exact/spline     8.1e-12 at l=6     gsl_block/spl   3.6e-11 at l=4
+#   exact/chebyshev  2.3e-08 at l=6
 #
-# against 4.7e-10, 1.7e-04, 5.3e-13 and 8.6e-12 at l=200. The error peaks
+# against 4.7e-10 at l=200. The error peaks
 # around l = 4-10 and falls away by l = 50, so a ladder of [2, 20, 200] tested
 # the easy end hard and the hard end not at all. l = 2 stays for the
 # cancellation reason above; 6 and 10 are the peak; 50 keeps a high-l point
 # without paying for l = 200, whose Levin operator is the most expensive of the
-# ladder (its closure is the *smallest* -- 159 knots against 263 at l = 2 --
-# so the cost is the operator, not the fit).
+# ladder.
 #
 # Knowingly not covered: cubature/chebyshev is worst at l = 20 (4.1e-05 against
-# 1.1e-05 here), and gsl_block/chebyshev at l = 200 (4.6e-04 against 3.2e-04).
-# Both are within a factor of four of a point that is covered.
+# 1.1e-05 here), within a factor of four of a point that is covered.
 ELLS_SUITE: typing.Final[list[int]] = [2, 6, 10, 50]
 
-# Gauss-Legendre orders the reference escalates through, per cell. A spline
-# cell is a cubic and a k^2-weighted product of two is degree 8, so it is exact
-# at the first order; a Chebyshev cell carries up to 129 coefficients, so the
-# escalation is what the top of this list is for.
+# Gauss-Legendre orders the reference escalates through, per cell. A Chebyshev
+# cell carries up to 129 coefficients, so the escalation is what the top of this
+# list is for.
 _GL_ORDERS: typing.Final[tuple[int, ...]] = (8, 16, 32, 64, 128, 264)
 
 # The order of the first pass, which exists only to learn the block's peak.
@@ -114,15 +110,14 @@ class Settings:
     into 19.9 s, so these are recorded in every row the bench driver emits.
 
     ``l_limber = -1`` is not a detail: at the library default of 0 every
-    multipole takes Limber, Limber keeps the spline closure whatever
-    ``closure`` says, and a Chebyshev sweep silently measures splines.
+    multipole takes Limber and a sweep meant for the non-Limber closures
+    measures the Limber ones.
     """
 
     reltol: float = 1.0e-4
     peak_epsilon: float = 1.0e-4
     l_limber: int = -1
     ell_batch_size: int = 8
-    closure: Nc.XcorKernelClosure = Nc.XcorKernelClosure.SPLINE
 
     def replace(self, **kwargs: typing.Any) -> "Settings":
         """A copy with some fields changed."""
@@ -333,11 +328,8 @@ KERNELS: typing.Final[dict[str, KernelSpec]] = {
             "tophat",
             {"chi-lower": 500.0, "chi-upper": 2500.0},
         ),
-        # The regime the Chebyshev closure exists for. On a shell this narrow
-        # the adaptive spline closure's accuracy is capped by peak-epsilon at
-        # the library's own documented floor, where it sits at ~2e-5 while the
-        # spectral closure reaches machine zero. No case built from wide bins
-        # reaches it.
+        # The narrowest hard shell: the closure has to resolve a 56 Mpc window
+        # over the whole k range, which no case built from wide bins reaches.
         KernelSpec(
             "shell_narrow",
             _tophat(1000.0, 1056.0),
@@ -707,9 +699,7 @@ PAIRS: typing.Final[list[PairSpec]] = [
     PairSpec(
         "R7", "power_exp_rsd", "gauss_high", "j_ell'' x j_ell, skewed x narrow (X8)"
     ),
-    PairSpec(
-        "R8", "lensing_rsd", "gauss_mid", "j_ell'' x j_ell, broad x narrow (X6)"
-    ),
+    PairSpec("R8", "lensing_rsd", "gauss_mid", "j_ell'' x j_ell, broad x narrow (X6)"),
     PairSpec(
         "R9",
         "multi_disjoint_rsd",
@@ -730,8 +720,7 @@ PAIRS: typing.Final[list[PairSpec]] = [
     ),
     # Tail x tail, from the survey rather than constructed: bins 0 and 9 of the
     # Y10 lens sample have disjoint supports, so their spectrum lives entirely in
-    # the product of two exponential tails -- the regime where the spline closure
-    # returns the wrong sign at loose tolerance (section 14). X3 probes the same
+    # the product of two exponential tails, the regime of section 14. X3 probes the same
     # corner with chosen parameters; these say it is not a corner case.
     # The separation ladder: one pair per rung, the ratio of the two turning
     # points being 1.4, 2.3 and 3.5. Only the separation differs, so a method's
@@ -829,56 +818,25 @@ def build_integrand(
     settings: Settings,
     sbi: Ncm.SBesselIntegrator | None = None,
 ) -> Nc.XcorKernelIntegrand:
-    """Freeze one closure for an ell block, and check it is the one asked for.
-
-    A Chebyshev closure carries panels and a spline closure carries knots, so
-    the two are told apart by what came back rather than by what was requested
-    -- which is the only way to catch the silent fallback to splines when the
-    block is taken under Limber.
-    """
-    integrand = kernel.get_eval_vectorized_full(
+    """Freeze one closure for an ell block."""
+    return kernel.get_eval_vectorized_full(
         cosmo,
         lmin,
         lmax,
         sbi if sbi is not None else Ncm.SBesselIntegratorLevin.new(lmin, lmax),
-        settings.closure,
     )
-
-    wanted_panels = settings.closure == Nc.XcorKernelClosure.CHEBYSHEV
-    got_panels = integrand.get_n_panels() > 0
-
-    if wanted_panels != got_panels:
-        raise AssertionError(
-            f"asked for a {settings.closure.value_nick} closure and got "
-            f"{'panels' if got_panels else 'knots'}; l_limber is "
-            f"{kernel.get_l_limber()} and multipoles taken under Limber keep "
-            f"the spline closure"
-        )
-
-    return integrand
 
 
 def breakpoints(integrand: Nc.XcorKernelIntegrand) -> np.ndarray:
-    """Where the closure stops being one polynomial: panel edges, or knots."""
-    n_panels = integrand.get_n_panels()
+    """Where the closure stops being one polynomial: its panel edges."""
+    panels = integrand.peek_panels()
+    edges = []
 
-    if n_panels > 0:
-        edges = []
+    for i in range(panels.get_n_panels()):
+        _, a, b = panels.get_panel(i)
+        edges.extend((a, b))
 
-        for i in range(n_panels):
-            _, a, b = integrand.peek_panel(i)
-            edges.extend((a, b))
-
-        return np.unique(np.array(edges))
-
-    knots = integrand.peek_knots()
-
-    if knots is None:
-        a, b = integrand.get_range()
-
-        return np.array([a, b])
-
-    return np.unique(np.array(knots.dup_array()))
+    return np.unique(np.array(edges))
 
 
 def _neumaier_sum(terms: list[np.ndarray]) -> np.ndarray:
@@ -904,7 +862,7 @@ def _neumaier_sum(terms: list[np.ndarray]) -> np.ndarray:
 
 def _cell_values(
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     a: float,
     b: float,
     order: int,
@@ -926,7 +884,7 @@ def _cell_values(
 
 def _cell_integral(
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     a: float,
     b: float,
     atol: float,
@@ -972,7 +930,7 @@ class Reference:
 def reference_cl(
     RH: float,
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     rtol: float = 1.0e-14,
 ) -> Reference:
     """The outer integral over frozen closures, to the accuracy doubles allow.
@@ -1044,42 +1002,9 @@ def reference_cl(
     )
 
 
-def per_multipole_reference(
-    RH: float,
-    kernel_a: Nc.XcorKernelRadial,
-    kernel_b: typing.Optional[Nc.XcorKernelRadial],
-    cosmo: Nc.HICosmo,
-    lmin: int,
-    lmax: int,
-    settings: Settings,
-) -> np.ndarray:
-    """The same integral, from one closure per multipole.
-
-    This is what ``NC_XCOR_METHOD_KERNEL_GSL`` integrates: it calls
-    ``nc_xcor_kernel_get_eval`` per multipole rather than
-    ``..._get_eval_vectorized_full`` per block, so a block-closure reference
-    would charge it for a closure it never built. On a strongly cancelling pair
-    the two closures do not agree at the library's default tolerances -- see
-    ``test_k_integral.py`` -- so which one the reference is built on is the
-    difference between measuring a quadrature and measuring that disagreement.
-    """
-    values = []
-
-    for ell in range(lmin, lmax + 1):
-        integrand_a = build_integrand(kernel_a, cosmo, ell, ell, settings)
-        integrand_b = (
-            None
-            if kernel_b is None
-            else build_integrand(kernel_b, cosmo, ell, ell, settings)
-        )
-        values.append(reference_cl(RH, integrand_a, integrand_b).cl[0])
-
-    return np.array(values)
-
-
 def cancellation_ratio(
     integrand1: Nc.XcorKernelIntegrand,
-    integrand2: typing.Optional[Nc.XcorKernelIntegrand],
+    integrand2: Nc.XcorKernelIntegrand | None,
     n_samples: int = 20000,
 ) -> np.ndarray:
     """INT |kappa^2 W1 W2| / |INT kappa^2 W1 W2|, per multipole.

@@ -386,8 +386,8 @@ test_ncm_integral_fixed_calibrate_relerr_unconverged (void)
   if (g_test_subprocess ())
   {
     guint n_nodes = 0, rule_n = 0;
-    gdouble relerr           = GSL_NAN;
-    NcmIntegralFixed *intf   = _calib_unconverged (&relerr, &n_nodes, &rule_n);
+    gdouble relerr         = GSL_NAN;
+    NcmIntegralFixed *intf = _calib_unconverged (&relerr, &n_nodes, &rule_n);
 
     /* A usable fallback rule is still returned, within the node budget. */
     g_assert_nonnull (intf);

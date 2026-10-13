@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
+#include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 
 G_BEGIN_DECLS
@@ -50,6 +51,48 @@ G_DECLARE_DERIVABLE_TYPE (NcXcorKernelComponent, nc_xcor_kernel_component, NC, X
  * Returns: the value of K(k, chi)
  */
 typedef gdouble (*NcXcorKernelComponentEvalKernel) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+
+typedef struct _NcXcorKinetic NcXcorKinetic;
+
+/**
+ * NcXcorKernelComponentEvalWindow:
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @xck: a #NcXcorKinetic
+ *
+ * Evaluates the factor of $K(k, \chi)$ that depends on the line-of-sight point
+ * alone, see nc_xcor_kernel_component_eval_window().
+ *
+ * Returns: the window factor at @xck
+ */
+typedef gdouble (*NcXcorKernelComponentEvalWindow) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+
+/**
+ * NcXcorKernelComponentEvalKFactor:
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @xck: a #NcXcorKinetic
+ * @k: wave number
+ *
+ * Evaluates the remaining factor of $K(k, \chi)$, see
+ * nc_xcor_kernel_component_eval_kfactor().
+ *
+ * Returns: the wave number factor at @xck and @k
+ */
+typedef gdouble (*NcXcorKernelComponentEvalKFactor) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+
+/**
+ * NcXcorKernelComponentEvalKFactorVec:
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @xck: a #NcXcorKinetic
+ * @k: wave numbers
+ * @out: output, the same length as @k
+ *
+ * Evaluates the wave number factor at one point for a vector of wave numbers,
+ * see nc_xcor_kernel_component_eval_kfactor_vec().
+ */
+typedef void (*NcXcorKernelComponentEvalKFactorVec) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 
 /**
  * NcXcorKernelComponentEvalPrefactor:
@@ -85,9 +128,12 @@ struct _NcXcorKernelComponentClass
   NcXcorKernelComponentEvalKernel eval_kernel;
   NcXcorKernelComponentEvalPrefactor eval_prefactor;
   NcXcorKernelComponentGetLimits get_limits;
+  NcXcorKernelComponentEvalWindow eval_window;
+  NcXcorKernelComponentEvalKFactor eval_kfactor;
+  NcXcorKernelComponentEvalKFactorVec eval_kfactor_vec;
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[15];
+  gpointer padding[12];
 };
 
 NcXcorKernelComponent *nc_xcor_kernel_component_ref (NcXcorKernelComponent *comp);
@@ -116,6 +162,9 @@ gdouble nc_xcor_kernel_component_eval_KL_max (NcXcorKernelComponent *comp, gdoub
 gdouble nc_xcor_kernel_component_eval_k_epsilon (NcXcorKernelComponent *comp, gdouble x);
 
 gdouble nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+gdouble nc_xcor_kernel_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+gdouble nc_xcor_kernel_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+void nc_xcor_kernel_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 gdouble nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 
@@ -135,30 +184,33 @@ void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo
  *
  * A convenience macro to define a subclass of #NcXcorKernelComponent with a custom user data type.
  */
-#define NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_eval_kernel, method_eval_prefactor, method_get_limits, user_data, user_data_free) \
-        G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcXcorKernelComponent)                                                                                  \
-        struct _ ## ModuleObjName { NcXcorKernelComponent parent_instance; user_data data; };                                                                                           \
-        G_DEFINE_TYPE (ModuleObjName, module_obj_name, NC_TYPE_XCOR_KERNEL_COMPONENT)                                                                                                   \
-        static void                                                                                                                                                                     \
-        module_obj_name ## _init (ModuleObjName * comp)                                                                                                                                 \
-        {                                                                                                                                                                               \
-        }                                                                                                                                                                               \
-        static void                                                                                                                                                                     \
-        module_obj_name ## _finalize (GObject * object)                                                                                                                                 \
-        {                                                                                                                                                                               \
-          ModuleObjName *comp = MODULE ## _ ## OBJ_NAME (object);                                                                                                                       \
-          user_data_free (&comp->data);                                                                                                                                                 \
-          G_OBJECT_CLASS (module_obj_name ## _parent_class)->finalize (object);                                                                                                         \
-        }                                                                                                                                                                               \
-        static void module_obj_name ## _class_init (ModuleObjName ## Class * klass)                                                                                                     \
-        {                                                                                                                                                                               \
-          NcXcorKernelComponentClass *comp_class = NC_XCOR_KERNEL_COMPONENT_CLASS (klass);                                                                                              \
-          GObjectClass *gobject_class            = G_OBJECT_CLASS (klass);                                                                                                              \
-          gobject_class->finalize    = &module_obj_name ## _finalize;                                                                                                                   \
-          comp_class->eval_kernel    = &method_eval_kernel;                                                                                                                             \
-          comp_class->eval_prefactor = &method_eval_prefactor;                                                                                                                          \
-          comp_class->get_limits     = &method_get_limits;                                                                                                                              \
-        }                                                                                                                                                                               \
+#define NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE(MODULE, OBJ_NAME, ModuleObjName, module_obj_name, method_eval_kernel, method_eval_window, method_eval_kfactor, method_eval_kfactor_vec, method_eval_prefactor, method_get_limits, user_data, user_data_free) \
+        G_DECLARE_FINAL_TYPE (ModuleObjName, module_obj_name, MODULE, OBJ_NAME, NcXcorKernelComponent)                                                                                                                                                    \
+        struct _ ## ModuleObjName { NcXcorKernelComponent parent_instance; user_data data; };                                                                                                                                                             \
+        G_DEFINE_TYPE (ModuleObjName, module_obj_name, NC_TYPE_XCOR_KERNEL_COMPONENT)                                                                                                                                                                     \
+        static void                                                                                                                                                                                                                                       \
+        module_obj_name ## _init (ModuleObjName * comp)                                                                                                                                                                                                   \
+        {                                                                                                                                                                                                                                                 \
+        }                                                                                                                                                                                                                                                 \
+        static void                                                                                                                                                                                                                                       \
+        module_obj_name ## _finalize (GObject * object)                                                                                                                                                                                                   \
+        {                                                                                                                                                                                                                                                 \
+          ModuleObjName *comp = MODULE ## _ ## OBJ_NAME (object);                                                                                                                                                                                         \
+          user_data_free (&comp->data);                                                                                                                                                                                                                   \
+          G_OBJECT_CLASS (module_obj_name ## _parent_class)->finalize (object);                                                                                                                                                                           \
+        }                                                                                                                                                                                                                                                 \
+        static void module_obj_name ## _class_init (ModuleObjName ## Class * klass)                                                                                                                                                                       \
+        {                                                                                                                                                                                                                                                 \
+          NcXcorKernelComponentClass *comp_class = NC_XCOR_KERNEL_COMPONENT_CLASS (klass);                                                                                                                                                                \
+          GObjectClass *gobject_class            = G_OBJECT_CLASS (klass);                                                                                                                                                                                \
+          gobject_class->finalize      = &module_obj_name ## _finalize;                                                                                                                                                                                   \
+          comp_class->eval_kernel      = &method_eval_kernel;                                                                                                                                                                                             \
+          comp_class->eval_window      = &method_eval_window;                                                                                                                                                                                             \
+          comp_class->eval_kfactor     = &method_eval_kfactor;                                                                                                                                                                                            \
+          comp_class->eval_kfactor_vec = method_eval_kfactor_vec;                                                                                                                                                                                         \
+          comp_class->eval_prefactor   = &method_eval_prefactor;                                                                                                                                                                                          \
+          comp_class->get_limits       = &method_get_limits;                                                                                                                                                                                              \
+        }                                                                                                                                                                                                                                                 \
 
 G_END_DECLS
 

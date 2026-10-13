@@ -123,3 +123,4 @@ test_nc_transfer_func_eval (void)
 
   g_assert_true (isfinite (tot));
 }
+

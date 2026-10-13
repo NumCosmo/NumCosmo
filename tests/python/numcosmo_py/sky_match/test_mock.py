@@ -25,7 +25,6 @@ import numpy as np
 
 pytest.importorskip("astropy")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 from astropy.table import Table
 

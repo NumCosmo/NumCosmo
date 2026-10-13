@@ -30,15 +30,12 @@ that do not involve perturbations.
 
 from enum import StrEnum, auto
 
-from numcosmo_py import Nc
-from numcosmo_py import Ncm
-from numcosmo_py import GEnum
+from numcosmo_py import GEnum, Nc, Ncm
 
 
 class SNIaID(GEnum):
     """Possible SNIa data sets ids."""
 
-    # pylint: disable=no-member
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
     SIMPLE_UNION2_1 = Nc.DataSNIAId.SIMPLE_UNION2_1
     COV_DES_Y5_STAT_SYS = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS

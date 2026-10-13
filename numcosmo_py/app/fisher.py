@@ -25,7 +25,7 @@
 
 import dataclasses
 from pathlib import Path
-from typing import Optional, Annotated, cast
+from typing import Annotated, cast
 
 import typer
 
@@ -92,7 +92,7 @@ class RunFisherBias(RunCommonOptions):
     """Computes the Fisher matrix of the model to the data and the bias."""
 
     theory_vector: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             help="Path to the theory vector file to compute the bias relative to."
         ),

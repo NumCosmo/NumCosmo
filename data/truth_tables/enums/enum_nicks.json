@@ -3231,14 +3231,6 @@
     "nick": "roff",
     "type": "Nc.WLSurfaceMassDensityParams"
   },
-  "NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV": {
-    "nick": "chebyshev",
-    "type": "Nc.XcorKernelClosure"
-  },
-  "NC_XCOR_KERNEL_CLOSURE_SPLINE": {
-    "nick": "spline",
-    "type": "Nc.XcorKernelClosure"
-  },
   "NC_XCOR_KERNEL_CMB_ISW_SOURCE_THIN_SCREEN": {
     "nick": "thin-screen",
     "type": "Nc.XcorKernelCMBISWSource"
@@ -3319,20 +3311,8 @@
     "nick": "len",
     "type": "Nc.XcorKernelWeakLensingVParams"
   },
-  "NC_XCOR_METHOD_KERNEL_CUBATURE": {
-    "nick": "kernel-cubature",
-    "type": "Nc.XcorMethod"
-  },
   "NC_XCOR_METHOD_KERNEL_EXACT": {
     "nick": "kernel-exact",
-    "type": "Nc.XcorMethod"
-  },
-  "NC_XCOR_METHOD_KERNEL_GSL": {
-    "nick": "kernel-gsl",
-    "type": "Nc.XcorMethod"
-  },
-  "NC_XCOR_METHOD_KERNEL_GSL_BLOCK": {
-    "nick": "kernel-gsl-block",
     "type": "Nc.XcorMethod"
   },
   "NC_XCOR_METHOD_LIMBER_Z_CUBATURE": {

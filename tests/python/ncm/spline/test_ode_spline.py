@@ -96,7 +96,7 @@ def test_ode_spline_copy_props() -> None:
 
     os = Ncm.OdeSpline.new(s, f.rhs)
     for prop in os0.list_properties():
-        if prop.name in ("dydx", "yf"):
+        if prop.name in ("dydx", "d2ydx2", "yf"):
             continue
         os.set_property(prop.name, os0.get_property(prop.name))
 

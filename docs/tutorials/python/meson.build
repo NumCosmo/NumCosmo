@@ -6,6 +6,7 @@ src_site_tutorials_python_files = files(
     'halo_catalog_mock.qmd',
     'sky_match.qmd',
     'sky_match_id.qmd',
+    'spectral_operators.qmd',
     'xcor_accuracy.qmd',
 )
 

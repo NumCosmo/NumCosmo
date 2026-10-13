@@ -43,36 +43,36 @@ Maintainers rebuild the release artifacts with :func:`build_release` and upload
 them to the ``RELEASE_TAG`` GitHub release.
 """
 
-from typing import Callable
 import os
 import urllib.request
+from collections.abc import Callable
 from enum import StrEnum
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH, build_commander
+from numcosmo_py.experiments.planck_lensing import (
+    LENSING_FULL_RELPATH,
+    LENSING_MARGED_RELPATH,
+    build_lensing,
+)
 from numcosmo_py.experiments.planck_lite import (
-    find_baseline_file,
     PLIK_LITE_TT_RELPATH,
     PLIK_LITE_TTTEEE_RELPATH,
     build_plik_lite,
     build_plik_lite_tt,
+    find_baseline_file,
 )
 from numcosmo_py.experiments.planck_simall import (
-    SIMALL_EE_RELPATH,
     SIMALL_BB_RELPATH,
+    SIMALL_EE_RELPATH,
     SIMALL_EEBB_RELPATH,
     build_simall,
 )
-from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH, build_commander
 from numcosmo_py.experiments.planck_smica import (
     PLIK_TT_RELPATH,
     PLIK_TTTEEE_RELPATH,
     build_smica_tt,
     build_smica_ttteee,
-)
-from numcosmo_py.experiments.planck_lensing import (
-    LENSING_FULL_RELPATH,
-    LENSING_MARGED_RELPATH,
-    build_lensing,
 )
 
 # The shared NumCosmo data-asset release, the same one the SNIa covariances, the
@@ -148,7 +148,7 @@ def _ensure_downloaded(rid: PlanckReleaseId, cache_dir: str | None = None) -> st
             print(f"# Downloading file [{url}]...", flush=True)
             urllib.request.urlretrieve(url, tmp)  # nosec B310 - fixed https host
             os.replace(tmp, path)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception as exc:
             if os.path.exists(tmp):
                 os.remove(tmp)
             raise RuntimeError(

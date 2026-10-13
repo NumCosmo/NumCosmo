@@ -59,7 +59,7 @@
 #include "ncm/integration/ncm_integrate.h"
 #include "ncm/core/ncm_c.h"
 #include "ncm/core/ncm_cfg.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_hermite.h"
 #include "ncm/model/ncm_mset_func_list.h"
 
 typedef struct _ComovingDistanceArgument
@@ -155,6 +155,7 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
 }
 
 static gdouble _dcddz (gdouble y, gdouble x, gpointer userdata);
+static gdouble _d2cddz2 (gdouble y, gdouble x, gpointer userdata);
 
 static void
 _nc_distance_constructed (GObject *object)
@@ -163,11 +164,9 @@ _nc_distance_constructed (GObject *object)
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
   {
     NcDistance *dist = NC_DISTANCE (object);
-    NcmSpline *s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
 
-    dist->comoving_distance_spline = ncm_ode_spline_new_full (s, _dcddz, 0.0, 0.0, dist->zf);
+    dist->comoving_distance_spline = ncm_ode_spline_new_hermite (_dcddz, _d2cddz2, 0.0, 0.0, dist->zf);
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
-    ncm_spline_free (s);
   }
 }
 
@@ -397,20 +396,33 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
   }
 
+  /* The inverse on the same knots: dz/dxi = E and d^2z/dxi^2 = (dE^2/dz) / 2 */
   if (dist->cpu_inv_comoving)
   {
     NcmSpline *s      = ncm_ode_spline_peek_spline (dist->comoving_distance_spline);
     NcmVector *z_vec  = ncm_spline_get_xv (s);
     NcmVector *xi_vec = ncm_spline_get_yv (s);
+    const guint len   = ncm_vector_len (z_vec);
+    NcmVector *d1_vec = ncm_vector_new (len);
+    NcmVector *d2_vec = ncm_vector_new (len);
+    guint i;
+
+    for (i = 0; i < len; i++)
+    {
+      const gdouble z = ncm_vector_get (z_vec, i);
+
+      ncm_vector_set (d1_vec, i, nc_hicosmo_E (cosmo, z));
+      ncm_vector_set (d2_vec, i, 0.5 * nc_hicosmo_dE2_dz (cosmo, z));
+    }
 
     ncm_spline_clear (&dist->inv_comoving_dist);
-    dist->inv_comoving_dist = ncm_spline_copy_empty (s);
-
-    ncm_spline_set (dist->inv_comoving_dist, xi_vec, z_vec, TRUE);
-    dist->max_comoving = ncm_vector_get (xi_vec, ncm_vector_len (xi_vec) - 1);
+    dist->inv_comoving_dist = NCM_SPLINE (ncm_spline_hermite_new_full (xi_vec, z_vec, d1_vec, d2_vec, TRUE));
+    dist->max_comoving      = ncm_vector_get (xi_vec, len - 1);
 
     ncm_vector_free (z_vec);
     ncm_vector_free (xi_vec);
+    ncm_vector_free (d1_vec);
+    ncm_vector_free (d2_vec);
   }
 
   if (dist->recomb != NULL)
@@ -522,6 +534,17 @@ _dcddz (gdouble cd, const gdouble z, gpointer userdata)
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
 
   return 1.0 / sqrt (E2);
+}
+
+/* d^2 D_c / dz^2 = -(dE^2/dz) / (2 E^3) */
+static gdouble
+_d2cddz2 (gdouble cd, const gdouble z, gpointer userdata)
+{
+  NcHICosmo *cosmo    = NC_HICOSMO (userdata);
+  const gdouble E2    = nc_hicosmo_E2 (cosmo, z);
+  const gdouble dE2dz = nc_hicosmo_dE2_dz (cosmo, z);
+
+  return -dE2dz / (2.0 * E2 * sqrt (E2));
 }
 
 static gdouble

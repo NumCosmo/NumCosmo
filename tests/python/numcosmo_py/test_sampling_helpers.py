@@ -186,7 +186,7 @@ def test_gauss_constraint_data_object_verbose(capsys):
 
 def test_register_firecrown_without_firecrown(monkeypatch):
     """A missing connector is not an error, and the streams are left as they were."""
-    import builtins  # pylint: disable=import-outside-toplevel
+    import builtins
 
     real_import = builtins.__import__
 

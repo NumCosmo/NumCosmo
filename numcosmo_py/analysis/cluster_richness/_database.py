@@ -33,10 +33,10 @@ from pathlib import Path
 from numcosmo_py import Nc
 
 from ._parameters import (
+    CutAnalysisResult,
+    model_from_yaml,
     model_params_to_dict,
     model_to_yaml,
-    model_from_yaml,
-    CutAnalysisResult,
 )
 
 

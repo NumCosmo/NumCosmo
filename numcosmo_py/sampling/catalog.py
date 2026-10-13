@@ -23,14 +23,13 @@
 
 """A simplified interface for the sampling catalogs."""
 
-from typing import Optional
 import numpy as np
-
 from getdist import MCSamples
 
 from numcosmo_py import Ncm
-from .model import build_mset
+
 from ..plotting import mcat_to_catalog_data
+from .model import build_mset
 
 
 class Catalog:
@@ -38,10 +37,10 @@ class Catalog:
 
     def __init__(
         self,
-        mcat: Optional[Ncm.MSetCatalog] = None,
-        ndim: Optional[int] = None,
-        nwalkers: Optional[int] = None,
-        run_type: Optional[str] = None,
+        mcat: Ncm.MSetCatalog | None = None,
+        ndim: int | None = None,
+        nwalkers: int | None = None,
+        run_type: str | None = None,
         weighted: bool = False,
     ):
         """Initialize the catalog."""
@@ -109,7 +108,7 @@ class Catalog:
         points: np.ndarray,
         m2lnp: np.ndarray,
         interweaved: bool = True,
-        weights: Optional[np.ndarray] = None,
+        weights: np.ndarray | None = None,
     ):
         """Append parameter points with their ``-2 ln p`` values and weights."""
         if self._catalog.weighted() and weights is None:
@@ -178,7 +177,7 @@ class Catalog:
         mcat.log_full_covar()
         mcat.log_current_stats()
 
-    def trim(self, nsteps: int, thin: Optional[int] = None):
+    def trim(self, nsteps: int, thin: int | None = None):
         """Trim the catalog to remove the first `nsteps` steps.
 
         Optionally, thin the catalog by a factor of `thin`.

@@ -488,7 +488,7 @@ test_nc_galaxy_wl_obs_coord (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_bad_set_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmRNG *rng   = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   GError *error = NULL;
 
   nc_galaxy_wl_obs_set (test->obs, "pz", ncm_rng_uniform_gen (rng, 0, 99), 0, &error);
@@ -500,7 +500,7 @@ test_nc_galaxy_wl_obs_bad_set_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_bad_set (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmRNG *rng   = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   GError *error = NULL;
 
   nc_galaxy_wl_obs_set (test->obs, "a", ncm_rng_uniform_gen (rng, 0, 99), 0, &error);
@@ -512,7 +512,7 @@ test_nc_galaxy_wl_obs_bad_set (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmRNG *rng   = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   GError *error = NULL;
 
   g_assert_true (isnan (nc_galaxy_wl_obs_get (test->obs, "pz", ncm_rng_uniform_gen (rng, 0, 99), &error)));
@@ -520,3 +520,4 @@ test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 
   ncm_rng_free (rng);
 }
+

@@ -33,7 +33,7 @@ import os
 import numpy as np
 from astropy.io import fits
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 SIMALL_EE_RELPATH = os.path.join(
     "baseline",

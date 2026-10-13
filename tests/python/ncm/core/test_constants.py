@@ -34,7 +34,6 @@ from scipy.constants import physical_constants
 
 pytest.importorskip("astropy")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 from astropy import units as u
 
@@ -113,12 +112,10 @@ def test_constants_scipy():
 
 def test_constants_derived():
     """Test constants from ncm_c.h."""
-    assert_allclose(Ncm.C.year(), u.year.to(u.s))  # pylint: disable=no-member
-    assert_allclose(Ncm.C.lightyear(), u.lyr.to(u.m))  # pylint: disable=no-member
-    assert_allclose(Ncm.C.lightyear_pc(), u.lyr.to(u.pc))  # pylint: disable=no-member
-    assert_allclose(
-        Ncm.C.Glightyear_Mpc(), 1.0e9 * u.lyr.to(u.Mpc)  # pylint: disable=no-member
-    )
+    assert_allclose(Ncm.C.year(), u.year.to(u.s))
+    assert_allclose(Ncm.C.lightyear(), u.lyr.to(u.m))
+    assert_allclose(Ncm.C.lightyear_pc(), u.lyr.to(u.pc))
+    assert_allclose(Ncm.C.Glightyear_Mpc(), 1.0e9 * u.lyr.to(u.Mpc))
     assert_allclose(Ncm.C.hc(), constants.h * constants.c)
     assert_allclose(Ncm.C.fine_struct_square(), constants.alpha**2)
     assert_allclose(Ncm.C.electric_constant(), constants.epsilon_0)
@@ -195,14 +192,14 @@ def test_constants_mass_ratio():
 def test_constants_distances():
     """Test constants from ncm_c.h."""
     assert_allclose(Ncm.C.au(), constants.au)
-    assert_allclose(Ncm.C.pc(), u.pc.to(u.m))  # pylint: disable=no-member
-    assert_allclose(Ncm.C.kpc(), u.kpc.to(u.m))  # pylint: disable=no-member
-    assert_allclose(Ncm.C.Mpc(), u.Mpc.to(u.m))  # pylint: disable=no-member
+    assert_allclose(Ncm.C.pc(), u.pc.to(u.m))
+    assert_allclose(Ncm.C.kpc(), u.kpc.to(u.m))
+    assert_allclose(Ncm.C.Mpc(), u.Mpc.to(u.m))
     assert_allclose(
         Ncm.C.G_mass_solar(),
-        constants.G * u.M_sun.to(u.kg),  # pylint: disable=no-member
+        constants.G * u.M_sun.to(u.kg),
     )
-    assert_allclose(Ncm.C.mass_solar(), u.M_sun.to(u.kg))  # pylint: disable=no-member
+    assert_allclose(Ncm.C.mass_solar(), u.M_sun.to(u.kg))
 
 
 def test_constants_HI_ion_wn():

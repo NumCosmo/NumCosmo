@@ -25,10 +25,10 @@
 
 from numcosmo_py import Ncm
 from numcosmo_py.sampling.esmcmc import (
-    create_esmcmc,
-    WalkerTypes,
-    InterpolationMethod,
     InterpolationKernel,
+    InterpolationMethod,
+    WalkerTypes,
+    create_esmcmc,
 )
 
 

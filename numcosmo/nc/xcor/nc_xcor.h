@@ -50,54 +50,31 @@ G_DECLARE_FINAL_TYPE (NcXcor, nc_xcor, NC, XCOR, GObject)
  * NcXcorMethod:
  * @NC_XCOR_METHOD_LIMBER_Z_GSL: Use GSL numerical integration
  * @NC_XCOR_METHOD_LIMBER_Z_CUBATURE: Use cubature numerical integration
- * @NC_XCOR_METHOD_KERNEL_GSL: Use GSL numerical integration over kernel variables
- * @NC_XCOR_METHOD_KERNEL_CUBATURE: Use cubature numerical integration over kernel variables
  * @NC_XCOR_METHOD_KERNEL_EXACT: Integrate the kernel closures exactly, on the
- *   union of their own knots
- * @NC_XCOR_METHOD_KERNEL_GSL_BLOCK: As %NC_XCOR_METHOD_KERNEL_GSL, but on the
- *   block closure the other kernel-space methods use
+ *   union of their own breakpoints
  *
  * Methods to compute integrals.
  *
- * %NC_XCOR_METHOD_KERNEL_GSL and %NC_XCOR_METHOD_KERNEL_GSL_BLOCK run the same
- * quadrature -- QUADPACK's qagp, broken on the closures' own knots -- over two
- * different integrands, and they are separate methods because the integrands
- * differ. The first fits a closure to one multipole at a time; the second
- * shares one closure across a whole #NcXcor:ell-batch-size block, fitted to an
- * $L^2$ norm over the block, which is what %NC_XCOR_METHOD_KERNEL_CUBATURE and
- * %NC_XCOR_METHOD_KERNEL_EXACT integrate. On a far-separated pair of top-hat
- * bins the two closures give $-1.05 \times 10^{-8}$ against $3.51 \times
- * 10^{-8}$ at the library's default tolerances, and agree from $10^{-6}$ down.
- * Use the block form to compare quadratures on one integrand, and the
- * per-multipole form as the independent check that does not share a closure
- * with anything.
+ * The kernel-space method shares one closure across a whole
+ * #NcXcor:ell-batch-size block, fitted to an $L^2$ norm over the block. With
+ * #NcXcor:ell-batch-size 1 each multipole gets its own closure, the
+ * independent check that does not share a closure with anything.
  *
  * %NC_XCOR_METHOD_KERNEL_EXACT needs no tolerance and cannot fail to converge.
  * The name is meant literally rather than as "fixed-order": on the closures it
  * is handed, the quadrature carries no error at all, and refining its panels
- * changes nothing beyond rounding.
- * It uses the same per-kernel closures as %NC_XCOR_METHOD_KERNEL_CUBATURE and
- * differs only in the outer quadrature: each kernel's $W(k)$ is a cubic spline,
- * so on the common refinement of a pair's two knot sets the outer integrand
- * $k^2 W_i W_j$ is a degree-8 polynomial on every panel, and a 5-node
- * Gauss-Legendre rule integrates it exactly. The adaptive alternatives target a
- * tolerance the integrand may not be able to support, and abort when they
- * cannot reach it.
- *
- * Measured over 28 pairs of 7 top-hat bins it is also slightly faster than
- * %NC_XCOR_METHOD_KERNEL_CUBATURE (1.05x at $\ell = 0$, 1.18x over
- * $\ell = 0\dots26$), since the exact rule replaces adaptive refinement on
- * splines that have already been built.
- *
+ * changes nothing beyond rounding. On the common refinement of a pair's
+ * breakpoints each closure is a single polynomial per cell, a cubic for a
+ * spline closure and a Chebyshev panel otherwise, so the outer integrand
+ * $k^2 W_i W_j$ is integrated in closed form: by a 5-node Gauss-Legendre rule
+ * on a pair of splines, and by a bilinear form in the coefficients when either
+ * closure has panels.
  */
 typedef enum _NcXcorMethod /*< prefix=NC_XCOR_METHOD >*/
 {
-  NC_XCOR_METHOD_LIMBER_Z_GSL = 0,
-  NC_XCOR_METHOD_LIMBER_Z_CUBATURE,
-  NC_XCOR_METHOD_KERNEL_GSL,
-  NC_XCOR_METHOD_KERNEL_CUBATURE,
-  NC_XCOR_METHOD_KERNEL_EXACT,
-  NC_XCOR_METHOD_KERNEL_GSL_BLOCK,
+  NC_XCOR_METHOD_LIMBER_Z_GSL      = 0,
+  NC_XCOR_METHOD_LIMBER_Z_CUBATURE = 1,
+  NC_XCOR_METHOD_KERNEL_EXACT      = 3,
 } NcXcorMethod;
 
 #define NC_XCOR_PRECISION (1.0e-6)
@@ -111,8 +88,6 @@ void nc_xcor_clear (NcXcor **xc);
 
 NcXcorMethod nc_xcor_get_meth (NcXcor *xc);
 
-void nc_xcor_set_closure_type (NcXcor *xc, NcXcorKernelClosure closure_type);
-NcXcorKernelClosure nc_xcor_get_closure_type (NcXcor *xc);
 
 void nc_xcor_set_reltol (NcXcor *xc, const gdouble reltol);
 gdouble nc_xcor_get_reltol (NcXcor *xc);

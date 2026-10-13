@@ -39,7 +39,7 @@ Ncm.cfg_init()
 class DataDist2dTest(Ncm.DataDist2d):
     """Test class for NcmDataDist2D."""
 
-    def do_dist2d_m2lnL_val(  # pylint: disable=arguments-differ
+    def do_dist2d_m2lnL_val(
         self,
         _: Ncm.MSet,
         x: float,
@@ -48,7 +48,7 @@ class DataDist2dTest(Ncm.DataDist2d):
         """Test function for NcmDataDist2D.do_m2lnL_val."""
         return -2.0 * norm.logpdf(x) + -2.0 * norm.logpdf(y)
 
-    def do_inv_pdf(  # pylint: disable=arguments-differ
+    def do_inv_pdf(
         self,
         _: Ncm.MSet,
         u: float,

@@ -132,9 +132,6 @@ test_nc_xcor_basic (TestNcXcor *test, gconstpointer pdata)
   nc_xcor_set_ell_batch_size (test->xc, 4);
   g_assert_cmpuint (nc_xcor_get_ell_batch_size (test->xc), ==, 4);
 
-  nc_xcor_set_closure_type (test->xc, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
-  g_assert_cmpuint (nc_xcor_get_closure_type (test->xc), ==, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
-
   nc_xcor_clear (&xc2);
   g_assert_true (xc2 == NULL);
 }
@@ -165,8 +162,9 @@ test_nc_xcor_compute_full (TestNcXcor *test, gconstpointer pdata)
   NcmVector *cl_plain  = ncm_vector_new (TEST_NELL);
   guint i;
 
+  /* Zero, not NaN, so that a method without an estimate has to say so itself. */
   ncm_vector_set_all (cl, GSL_NAN);
-  ncm_vector_set_all (cl_err, GSL_NAN);
+  ncm_vector_set_all (cl_err, 0.0);
 
   nc_xcor_compute_full (test->xc, test->k1, test->k2, test->cosmo, TEST_LMIN, TEST_LMAX, cl, cl_err);
   nc_xcor_compute (test->xc, test->k1, test->k2, test->cosmo, TEST_LMIN, TEST_LMAX, cl_plain);
@@ -182,6 +180,11 @@ test_nc_xcor_compute_full (TestNcXcor *test, gconstpointer pdata)
     {
       g_assert_true (gsl_finite (ncm_vector_get (cl_err, i)));
       g_assert_cmpfloat (ncm_vector_get (cl_err, i), >=, 0.0);
+    }
+    else
+    {
+      /* A method with no estimate reports NaN, never a zero error. */
+      g_assert_true (gsl_isnan (ncm_vector_get (cl_err, i)));
     }
   }
 
@@ -220,7 +223,7 @@ test_nc_xcor_auto (TestNcXcor *test, gconstpointer pdata)
  * 0 for both here, so the whole band is zero.
  *
  * The check is worth stating precisely because the non-Limber methods disagree: there
- * the same pair correlates, which is what tests/python/nc/xcor/test_disjoint_bins.py is
+ * the same pair correlates, which is what tests/c/nc/xcor/test_nc_xcor_disjoint.c is
  * about. */
 static void
 test_nc_xcor_disjoint (TestNcXcor *test, gconstpointer pdata)
@@ -265,19 +268,16 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
   NcDistance *dist     = NULL;
   NcmPowspec *ps       = NULL;
   NcXcorMethod meth;
-  NcXcorKernelClosure closure;
   gdouble reltol;
   guint batch;
 
   nc_xcor_set_reltol (test->xc, 1.0e-7);
   nc_xcor_set_ell_batch_size (test->xc, 8);
-  nc_xcor_set_closure_type (test->xc, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
 
   g_object_get (test->xc,
                 "distance", &dist,
                 "power-spec", &ps,
                 "meth", &meth,
-                "closure-type", &closure,
                 "reltol", &reltol,
                 "ell-batch-size", &batch,
                 NULL);
@@ -285,7 +285,6 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
   g_assert_true (dist == test->dist);
   g_assert_true (ps == test->ps);
   g_assert_cmpuint (meth, ==, tm->meth);
-  g_assert_cmpuint (closure, ==, NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV);
   ncm_assert_cmpdouble_e (reltol, ==, 1.0e-7, 1.0e-15, 0.0);
   g_assert_cmpuint (batch, ==, 8);
 

@@ -50,6 +50,9 @@
 #include <numcosmo/ncm/algebra/ncm_poly_roots.h>
 #include <numcosmo/ncm/algebra/ncm_laurent_series.h>
 #include <numcosmo/ncm/algebra/ncm_spectral.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_panels.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_panels_builder.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_panels_product.h>
 #include <numcosmo/ncm/core/ncm_serialize.h>
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/integration/ncm_integral1d.h>
@@ -78,6 +81,7 @@
 #include <numcosmo/ncm/spline/ncm_spline_cubic.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_d2.h>
+#include <numcosmo/ncm/spline/ncm_spline_hermite.h>
 #include <numcosmo/ncm/spline/ncm_spline_vec.h>
 #include <numcosmo/ncm/stats/ncm_function_sample_set.h>
 #include <numcosmo/ncm/spline/ncm_spline2d.h>

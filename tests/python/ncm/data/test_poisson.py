@@ -40,9 +40,7 @@ class DataPoissonTest(Ncm.DataPoisson):
         super().__init__(n_bins=n_bins, init=True)
         self.n_bins = n_bins
 
-    def do_mean_func(  # pylint: disable=arguments-differ
-        self, mset: Ncm.MSet, n: int
-    ) -> float:
+    def do_mean_func(self, mset: Ncm.MSet, n: int) -> float:
         """Do mean function."""
         mvnd = mset.peek(Ncm.ModelMVND.id())
         assert mvnd is not None

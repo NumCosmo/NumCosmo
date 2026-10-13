@@ -84,14 +84,15 @@ def _table(bits, chi, W, kind=None, order=8, normalize=True, with_sbi=True):
 
 
 def _cls(bits, kernel, ells=ELLS):
+    """C_ell on a block of four multipoles from each of @ells, as the library builds them."""
     cosmo, dist, ps = bits
     xc = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
     xc.prepare(cosmo)
     out = []
     for ell in ells:
-        v = Ncm.Vector.new(1)
-        xc.compute(kernel, kernel, cosmo, ell, ell, v)
-        out.append(v.get(0))
+        v = Ncm.Vector.new(4)
+        xc.compute(kernel, kernel, cosmo, ell, ell + 3, v)
+        out.extend(v.dup_array())
     return np.array(out)
 
 

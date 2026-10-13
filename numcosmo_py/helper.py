@@ -1,11 +1,12 @@
 """Helper functions for numcosmo_py."""
 
-from typing import Iterable, Sequence, Type, TypeVar, cast
+from collections.abc import Iterable, Sequence
+from typing import TypeVar, cast
+
 import numpy as np
 import numpy.typing as npt
 
-
-from . import Ncm, GObject
+from . import GObject, Ncm
 
 # Type variable for generic object duplication
 T = TypeVar("T")
@@ -59,7 +60,7 @@ def duplicate_via_serialization(obj: T, ser: Ncm.Serialize | None = None) -> T:
     return cast(T, ser.dup_obj(obj))
 
 
-def enum_values(enum_type: Type[E]) -> list[E]:
+def enum_values(enum_type: type[E]) -> list[E]:
     """List all values of a GEnum type, sorted by numerical value.
 
     PyGObject only exposes GEnum types as Python enums (and thus as iterables)
@@ -79,16 +80,16 @@ def enum_values(enum_type: Type[E]) -> list[E]:
         return sorted(cast(Iterable[E], enum_type), key=int)
 
     # PyGObject < 3.52: not iterable, but maps values to instances.
-    values = cast(dict[int, E], getattr(enum_type, "__enum_values__"))
+    values = cast(dict[int, E], enum_type.__enum_values__)
     return [values[key] for key in sorted(values)]
 
 
-def register_model_class(mb: Ncm.ModelBuilder) -> Type:
+def register_model_class(mb: Ncm.ModelBuilder) -> type:
     """Register a model class."""
-    NcmTypeModelGeneric = mb.create()  # pylint:disable=invalid-name
+    NcmTypeModelGeneric = mb.create()
     # We need to create a new instance to register the type
     GObject.new(NcmTypeModelGeneric)
-    NcmModelGeneric = NcmTypeModelGeneric.pytype  # pylint:disable=invalid-name
+    NcmModelGeneric = NcmTypeModelGeneric.pytype
     GObject.type_register(NcmModelGeneric)
 
     return NcmModelGeneric

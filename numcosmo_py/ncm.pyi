@@ -10,6 +10,7 @@ T = typing.TypeVar("T")
 
 BOOTSTRAP_RNG_NAME: str = r"bootstrap"
 CFG_DATA_DIR_ENV: str = r"NUMCOSMO_DATA_DIR"
+CFG_HOME_ENV: str = r"NUMCOSMO_HOME"
 COMPLEX_ZERO: float = 0.0
 DATA_RESAMPLE_RNG_NAME: str = r"data_resample"
 DEFAULT_PRECISION: float = 0.0
@@ -69,7 +70,9 @@ MSET_CATALOG_SAMPLER_OPTS_LABEL: str = r"SAMPOPT"
 MSET_CATALOG_WEIGHTED_LABEL: str = r"WEIGHTED"
 MSET_INIT_MARRAY: int = 32
 MSET_MAX_STACKSIZE: int = 1000
+ODE_SPLINE_CUBIC_MAX_ORDER: int = 3
 ODE_SPLINE_DEFAULT_ABSTOL: float = 0.0
+ODE_SPLINE_HERMITE_MAX_ORDER: int = 7
 ODE_SPLINE_MIN_STEP: float = 0.0
 POWSPEC_CORR3D_DEFAULT_SIZE: int = 100
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
@@ -143,6 +146,7 @@ def cfg_enum_get_value(
 ) -> typing.Optional[GObject.EnumValue]: ...
 def cfg_enum_print_all(enum_type: typing.Type[typing.Any], header: str) -> None: ...
 def cfg_error_quark() -> int: ...
+def cfg_fullpath_base_is_legacy() -> bool: ...
 def cfg_get_commit_hash() -> str: ...
 def cfg_get_data_directory() -> str: ...
 def cfg_get_data_filename(filename: str, must_exist: bool) -> typing.Optional[str]: ...
@@ -2403,44 +2407,65 @@ class Diff(GObject.Object):
 
     Properties from NcmDiff:
       max-order -> guint: max-order
-        Maximum order
+        Maximum extrapolation order
       richardson-step -> gdouble: richardson-step
-        Richardson extrapolation step
-      round-off-pad -> gdouble: round-off-pad
-        Round off padding
-      terr-pad -> gdouble: terr-pad
-        Truncation error padding
+        Ratio between consecutive steps
+      func-precision -> gdouble: func-precision
+        Relative precision of the values of f
+      trunc-change-ratio -> gdouble: trunc-change-ratio
+        Largest ratio of a row's truncation error to its change from the previous row
       ini-h -> gdouble: ini-h
-        Initial h
+        Initial step relative to |x|
+      dual-series -> gboolean: dual-series
+        Use two extrapolation series
+      spectral-window -> gdouble: spectral-window
+        Largest spectral window half-width in units of max (1, |x|)
+      domain-warnings -> gboolean: domain-warnings
+        Warn when a central difference falls back to a one-sided one at an edge of the domain
+      func-abs-precision -> gdouble: func-abs-precision
+        Absolute precision of the values of f
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        domain_warnings: bool
+        dual_series: bool
+        func_abs_precision: float
+        func_precision: float
         ini_h: float
         max_order: int
         richardson_step: float
-        round_off_pad: float
-        terr_pad: float
+        spectral_window: float
+        trunc_change_ratio: float
 
     props: Props = ...
     def __init__(
         self,
+        domain_warnings: bool = ...,
+        dual_series: bool = ...,
+        func_abs_precision: float = ...,
+        func_precision: float = ...,
         ini_h: float = ...,
         max_order: int = ...,
         richardson_step: float = ...,
-        round_off_pad: float = ...,
-        terr_pad: float = ...,
+        spectral_window: float = ...,
+        trunc_change_ratio: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(diff: Diff) -> None: ...
+    def clear_domain(self) -> None: ...
     def free(self) -> None: ...
+    def get_domain_warnings(self) -> bool: ...
+    def get_dual_series(self) -> bool: ...
+    def get_func_abs_precision(self) -> float: ...
+    def get_func_precision(self) -> float: ...
     def get_ini_h(self) -> float: ...
     def get_max_order(self) -> int: ...
     def get_richardson_step(self) -> float: ...
-    def get_round_off_pad(self) -> float: ...
-    def get_trunc_error_pad(self) -> float: ...
+    def get_spectral_window(self) -> float: ...
+    def get_trunc_change_ratio(self) -> float: ...
     def log_backward_tables(self) -> None: ...
     def log_central_tables(self) -> None: ...
     def log_forward_tables(self) -> None: ...
@@ -2510,11 +2535,56 @@ class Diff(GObject.Object):
         f: typing.Callable[..., None],
         *user_data: typing.Any,
     ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_1_to_1(
+        self, x: float, f: typing.Callable[..., float], *user_data: typing.Any
+    ) -> typing.Tuple[float, float]: ...
+    def sc_d1_1_to_M(
+        self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_N_to_1(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        f: typing.Callable[..., float],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d1_N_to_M(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        dim: int,
+        f: typing.Callable[..., None],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_1_to_1(
+        self, x: float, f: typing.Callable[..., float], *user_data: typing.Any
+    ) -> typing.Tuple[float, float]: ...
+    def sc_d2_1_to_M(
+        self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_N_to_1(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        f: typing.Callable[..., float],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def sc_d2_N_to_M(
+        self,
+        x_a: typing.Sequence[float] | npt.NDArray[np.float64],
+        dim: int,
+        f: typing.Callable[..., None],
+        *user_data: typing.Any,
+    ) -> typing.Tuple[list[float], list[float]]: ...
+    def set_domain(
+        self, lb: typing.Optional[Vector] = None, ub: typing.Optional[Vector] = None
+    ) -> None: ...
+    def set_domain_warnings(self, domain_warnings: bool) -> None: ...
+    def set_dual_series(self, dual_series: bool) -> None: ...
+    def set_func_abs_precision(self, func_abs_prec: float) -> None: ...
+    def set_func_precision(self, func_prec: float) -> None: ...
     def set_ini_h(self, ini_h: float) -> None: ...
     def set_max_order(self, maxorder: int) -> None: ...
     def set_richardson_step(self, rs: float) -> None: ...
-    def set_round_off_pad(self, roff_pad: float) -> None: ...
-    def set_trunc_error_pad(self, terr_pad: float) -> None: ...
+    def set_spectral_window(self, spectral_window: float) -> None: ...
+    def set_trunc_change_ratio(self, trunc_ratio: float) -> None: ...
 
 class DiffClass(GObject.GPointer):
     r"""
@@ -4785,6 +4855,16 @@ class FunctionSampleSet(GObject.Object):
         base_spline: Spline,
         *user_data: typing.Any,
     ) -> None: ...
+    def adaptive_midpoint_full(
+        self,
+        f: typing.Callable[..., None],
+        reltol: float,
+        abstol: float,
+        max_iter: int,
+        min_pass_threshold: int,
+        base_spline: Spline,
+        *user_data: typing.Any,
+    ) -> typing.Tuple[int, int, int]: ...
     def add(self, x: float, y: Vector) -> None: ...
     def add_func(
         self, x: float, f: typing.Callable[..., None], *user_data: typing.Any
@@ -7145,7 +7225,10 @@ class Model(GObject.Object):
     def add_params(
         self, sparam_len: int, vparam_len: int, nonparam_prop_len: int
     ) -> None: ...
-    def add_submodel(self, submodel: Model) -> None: ...
+    def add_removed_param(self, name: str) -> None: ...
+    def add_submodel(
+        self, submodel: gi.repository.NumCosmoMath.Model
+    ) -> None: ...  # FIXME Function
     def add_submodels(self, submodel_slot_len: int) -> None: ...
     def check_impl_flag(self, impl: int) -> bool: ...
     def check_impl_opt(self, opt: int) -> bool: ...
@@ -7415,9 +7498,11 @@ class ModelClass(GObject.GPointer):
     submodel_slot_len: int = ...
     parent_submodel_slot_len: int = ...
     submodel_slot: list[None] = ...
+    removed_param: list[None] = ...
     def add_params(
         self, sparam_len: int, vparam_len: int, nonparam_prop_len: int
     ) -> None: ...
+    def add_removed_param(self, name: str) -> None: ...
     def add_submodels(self, submodel_slot_len: int) -> None: ...
     def check_params_info(self) -> None: ...
     def set_name_nick(self, name: str, nick: str) -> None: ...
@@ -7929,6 +8014,7 @@ class OdeSpline(GObject.Object):
         OdeSpline(**properties)
         new(s:NumCosmoMath.Spline, dydx:NumCosmoMath.OdeSplineDydx) -> NumCosmoMath.OdeSpline
         new_full(s:NumCosmoMath.Spline, dydx:NumCosmoMath.OdeSplineDydx, yi:float, xi:float, xf:float) -> NumCosmoMath.OdeSpline
+        new_hermite(dydx:NumCosmoMath.OdeSplineDydx, d2ydx2:NumCosmoMath.OdeSplineD2ydx2=None, yi:float, xi:float, xf:float) -> NumCosmoMath.OdeSpline
 
     Object NcmOdeSpline
 
@@ -7957,6 +8043,10 @@ class OdeSpline(GObject.Object):
         Integration initial step size
       min-subdivisions -> guint: min-subdivisions
         Minimum number of integration subdivisions
+      d2ydx2 -> gpointer: d2ydx2
+        Pointer to the d2ydx2 function
+      max-order -> guint: max-order
+        Maximum order of the Adams method, 0 for the spline's default
 
     Signals from GObject:
       notify (GParam)
@@ -7965,8 +8055,10 @@ class OdeSpline(GObject.Object):
     class Props:
         abstol: float
         auto_abstol: bool
+        d2ydx2: None
         dydx: None
         ini_step: float
+        max_order: int
         min_subdivisions: int
         reltol: float
         spline: Spline
@@ -7981,8 +8073,10 @@ class OdeSpline(GObject.Object):
         self,
         abstol: float = ...,
         auto_abstol: bool = ...,
+        d2ydx2: None = ...,
         dydx: None = ...,
         ini_step: float = ...,
+        max_order: int = ...,
         min_subdivisions: int = ...,
         reltol: float = ...,
         spline: Spline = ...,
@@ -7997,6 +8091,7 @@ class OdeSpline(GObject.Object):
     def clear(os: OdeSpline) -> None: ...
     def free(self) -> None: ...
     def get_ini_step(self) -> float: ...
+    def get_max_order(self) -> int: ...
     def get_min_subdivisions(self) -> int: ...
     def get_yf_attained(self) -> float: ...
     @classmethod
@@ -8012,11 +8107,21 @@ class OdeSpline(GObject.Object):
         xi: float,
         xf: float,
     ) -> OdeSpline: ...
+    @classmethod
+    def new_hermite(
+        cls,
+        dydx: typing.Callable[[float, float, None], float],
+        d2ydx2: typing.Optional[typing.Callable[[float, float, None], float]],
+        yi: float,
+        xi: float,
+        xf: float,
+    ) -> OdeSpline: ...
     def peek_spline(self) -> Spline: ...
     def prepare(self, userdata: None) -> None: ...
     def set_abstol(self, abstol: float) -> None: ...
     def set_ini_step(self, ini_step: float) -> None: ...
     def set_interval(self, yi: float, xi: float, xf: float) -> None: ...
+    def set_max_order(self, max_order: int) -> None: ...
     def set_min_subdivisions(self, min_subdivisions: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_xf(self, xf: float) -> None: ...
@@ -10479,23 +10584,23 @@ class Spectral(GObject.Object):
 
         Spectral(**properties)
         new() -> NumCosmoMath.Spectral
-        new_with_max_order(max_order:int) -> NumCosmoMath.Spectral
+        new_with_max_level(max_level:int) -> NumCosmoMath.Spectral
 
     Object NcmSpectral
 
     Properties from NcmSpectral:
-      max-order -> guint: max-order
-        Maximum refinement order
+      max-level -> guint: max-level
+        Maximum refinement level
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        max_order: int
+        max_level: int
 
     props: Props = ...
-    def __init__(self, max_order: int = ...) -> None: ...
+    def __init__(self, max_level: int = ...) -> None: ...
     @staticmethod
     def chebT_deriv2_to_gegenbauer_alpha2(
         c: typing.Sequence[float] | npt.NDArray[np.float64],
@@ -10514,29 +10619,29 @@ class Spectral(GObject.Object):
     ) -> list[float]: ...
     @staticmethod
     def chebyshev_deriv(
-        a: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def chebyshev_deriv_x(
-        a: typing.Sequence[float] | npt.NDArray[np.float64],
-        a_v: float,
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
     def chebyshev_eval(
-        a: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def chebyshev_eval_x(
-        a: typing.Sequence[float] | npt.NDArray[np.float64],
-        a_v: float,
+        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
     def chebyshev_integrate(
-        a: typing.Sequence[float] | npt.NDArray[np.float64], a_v: float, b: float
+        c: typing.Sequence[float] | npt.NDArray[np.float64], a: float, b: float
     ) -> float: ...
     def chebyshev_rebase(
         self,
@@ -10547,6 +10652,15 @@ class Spectral(GObject.Object):
         a_out: float,
         b_out: float,
     ) -> typing.Tuple[float, list[float]]: ...
+    def chebyshev_rebase_rows(
+        self,
+        c: Matrix,
+        a_in: float,
+        b_in: float,
+        a_out: float,
+        b_out: float,
+        rebased: Matrix,
+    ) -> float: ...
     @staticmethod
     def clear(spectral: Spectral) -> None: ...
     def compute_chebyshev_coeffs(
@@ -10562,7 +10676,7 @@ class Spectral(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
-        k_min: int,
+        level_min: int,
         tol: float,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, list[float]]: ...
@@ -10571,7 +10685,7 @@ class Spectral(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
-        k_min: int,
+        level_min: int,
         reltol: float,
         abstol: float,
         *user_data: typing.Any,
@@ -10581,8 +10695,8 @@ class Spectral(GObject.Object):
         F: typing.Callable[..., float],
         a: float,
         b: float,
-        k_min: int,
-        k_cap: int,
+        level_min: int,
+        level_cap: int,
         reltol: float,
         abstol: float,
         *user_data: typing.Any,
@@ -10590,10 +10704,10 @@ class Spectral(GObject.Object):
     def compute_chebyshev_coeffs_batch_adaptive(
         self,
         F: typing.Callable[..., None],
-        n_comp: int,
+        fdim: int,
         a: float,
         b: float,
-        k_min: int,
+        level_min: int,
         reltol: float,
         abstol: float,
         *user_data: typing.Any,
@@ -10601,14 +10715,17 @@ class Spectral(GObject.Object):
     def compute_chebyshev_coeffs_batch_adaptive_cap(
         self,
         F: typing.Callable[..., None],
-        n_comp: int,
+        fdim: int,
         a: float,
         b: float,
-        k_min: int,
-        k_cap: int,
+        level_min: int,
+        level_cap: int,
         reltol: float,
         abstol: float,
         fatal: bool,
+        f_a: typing.Optional[Vector] = None,
+        f_b: typing.Optional[Vector] = None,
+        ends: typing.Optional[Matrix] = None,
         *user_data: typing.Any,
     ) -> typing.Tuple[int, Matrix]: ...
     @staticmethod
@@ -10620,73 +10737,74 @@ class Spectral(GObject.Object):
         row_data: float, k: int, offset: int, coeff: float
     ) -> None: ...
     @staticmethod
-    def compute_x2_d2_row(
+    def compute_s2_d2_row(
         row_data: float, k: int, offset: int, coeff: float
     ) -> None: ...
     @staticmethod
-    def compute_x2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
+    def compute_s2_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
-    def compute_x_d2_row(
+    def compute_s_d2_row(
         row_data: float, k: int, offset: int, coeff: float
     ) -> None: ...
     @staticmethod
-    def compute_x_d_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
+    def compute_s_d_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     @staticmethod
-    def compute_x_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
+    def compute_s_row(row_data: float, k: int, offset: int, coeff: float) -> None: ...
     def free(self) -> None: ...
+    def free_buffers(self) -> None: ...
     @staticmethod
     def gegenbauer_alpha1_eval(
-        c: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        g: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def gegenbauer_alpha1_eval_x(
-        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        g: typing.Sequence[float] | npt.NDArray[np.float64],
         a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
     def gegenbauer_alpha2_eval(
-        c: typing.Sequence[float] | npt.NDArray[np.float64], t: float
+        g: typing.Sequence[float] | npt.NDArray[np.float64], s: float
     ) -> float: ...
     @staticmethod
     def gegenbauer_alpha2_eval_x(
-        c: typing.Sequence[float] | npt.NDArray[np.float64],
+        g: typing.Sequence[float] | npt.NDArray[np.float64],
         a: float,
         b: float,
         x: float,
     ) -> float: ...
     @staticmethod
-    def gegenbauer_alpha2_xmul(
+    def gegenbauer_alpha2_mul_affine(
         g: typing.Sequence[float] | npt.NDArray[np.float64], alpha: float, beta: float
     ) -> list[float]: ...
     @staticmethod
     def get_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
     def get_d_matrix(N: int) -> Matrix: ...
-    def get_max_order(self) -> int: ...
+    def get_max_level(self) -> int: ...
     @staticmethod
     def get_proj_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x2_d2_matrix(N: int) -> Matrix: ...
+    def get_s2_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x2_matrix(N: int) -> Matrix: ...
+    def get_s2_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x_d2_matrix(N: int) -> Matrix: ...
+    def get_s_d2_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x_d_matrix(N: int) -> Matrix: ...
+    def get_s_d_matrix(N: int) -> Matrix: ...
     @staticmethod
-    def get_x_matrix(N: int) -> Matrix: ...
+    def get_s_matrix(N: int) -> Matrix: ...
     @classmethod
     def new(cls) -> Spectral: ...
     @classmethod
-    def new_with_max_order(cls, max_order: int) -> Spectral: ...
+    def new_with_max_level(cls, max_level: int) -> Spectral: ...
     def ref(self) -> Spectral: ...
-    def set_max_order(self, max_order: int) -> None: ...
     @staticmethod
-    def t_to_x(a: float, b: float, t: float) -> float: ...
+    def s_to_x(a: float, b: float, s: float) -> float: ...
+    def set_max_level(self, max_level: int) -> None: ...
     @staticmethod
-    def x_to_t(a: float, b: float, x: float) -> float: ...
+    def x_to_s(a: float, b: float, x: float) -> float: ...
 
 class SpectralClass(GObject.GPointer):
     r"""
@@ -10695,6 +10813,194 @@ class SpectralClass(GObject.GPointer):
     ::
 
         SpectralClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SpectralPanels(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanels(**properties)
+        new(fdim:int) -> NumCosmoMath.SpectralPanels
+
+    Object NcmSpectralPanels
+
+    Properties from NcmSpectralPanels:
+      fdim -> guint: fdim
+        Dimension of the values
+      panels -> GVariant: panels
+        Panel edges and coefficients
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        fdim: int
+        panels: GLib.Variant
+
+    props: Props = ...
+    def __init__(self, fdim: int = ..., panels: GLib.Variant = ...) -> None: ...
+    def append(self, a: float, b: float, coeffs: Matrix) -> None: ...
+    @staticmethod
+    def clear(sp: SpectralPanels) -> None: ...
+    def eval(self, x: float, fval: Vector) -> None: ...
+    def eval_row(self, r: int, x: float) -> float: ...
+    def eval_row_on(self, i: int, r: int, x: float) -> float: ...
+    def find_panel(self, x: float) -> int: ...
+    def free(self) -> None: ...
+    def get_fdim(self) -> int: ...
+    def get_n_panels(self) -> int: ...
+    def get_panel(self, i: int) -> typing.Tuple[Matrix, float, float]: ...
+    def get_range(self) -> typing.Tuple[float, float]: ...
+    @classmethod
+    def new(cls, fdim: int) -> SpectralPanels: ...
+    def ref(self) -> SpectralPanels: ...
+    def reset(self) -> None: ...
+    def restrict(
+        self, spectral: Spectral, a: float, b: float
+    ) -> typing.Tuple[bool, Matrix]: ...
+
+class SpectralPanelsBuilder(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsBuilder(**properties)
+        new() -> NumCosmoMath.SpectralPanelsBuilder
+
+    Object NcmSpectralPanelsBuilder
+
+    Properties from NcmSpectralPanelsBuilder:
+      level-min -> guint: level-min
+        Starting level of a panel
+      level-cap -> guint: level-cap
+        Highest level of a panel
+      min-panels-per-efold -> gdouble: min-panels-per-efold
+        Minimum panels per e-fold
+      min-panel-fraction -> gdouble: min-panel-fraction
+        Minimum panel width fraction
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        level_cap: int
+        level_min: int
+        min_panel_fraction: float
+        min_panels_per_efold: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        level_cap: int = ...,
+        level_min: int = ...,
+        min_panel_fraction: float = ...,
+        min_panels_per_efold: float = ...,
+    ) -> None: ...
+    def build(
+        self,
+        F: typing.Callable[..., None],
+        a: float,
+        b: float,
+        breakpoints: typing.Optional[Vector],
+        f_minus: typing.Optional[Matrix],
+        f_plus: typing.Optional[Matrix],
+        reltol: float,
+        abstol: float,
+        sp: SpectralPanels,
+        *user_data: typing.Any,
+    ) -> None: ...
+    @staticmethod
+    def clear(builder: SpectralPanelsBuilder) -> None: ...
+    def free(self) -> None: ...
+    def get_level_cap(self) -> int: ...
+    def get_level_min(self) -> int: ...
+    def get_min_panel_fraction(self) -> float: ...
+    def get_min_panels_per_efold(self) -> float: ...
+    @classmethod
+    def new(cls) -> SpectralPanelsBuilder: ...
+    def ref(self) -> SpectralPanelsBuilder: ...
+    def set_level_cap(self, level_cap: int) -> None: ...
+    def set_level_min(self, level_min: int) -> None: ...
+    def set_min_panel_fraction(self, min_panel_fraction: float) -> None: ...
+    def set_min_panels_per_efold(self, min_panels_per_efold: float) -> None: ...
+
+class SpectralPanelsBuilderClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsBuilderClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SpectralPanelsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SpectralPanelsProduct(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsProduct(**properties)
+        new(p:int) -> NumCosmoMath.SpectralPanelsProduct
+
+    Object NcmSpectralPanelsProduct
+
+    Properties from NcmSpectralPanelsProduct:
+      p -> guint: p
+        Power of k
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        p: int
+
+    props: Props = ...
+    def __init__(self, p: int = ...) -> None: ...
+    @staticmethod
+    def clear(prod: SpectralPanelsProduct) -> None: ...
+    def free(self) -> None: ...
+    def get_p(self) -> int: ...
+    def integrate(
+        self,
+        P: SpectralPanels,
+        s1: typing.Optional[Vector],
+        Q: SpectralPanels,
+        s2: typing.Optional[Vector],
+        result: Vector,
+        err: typing.Optional[Vector] = None,
+    ) -> None: ...
+    @classmethod
+    def new(cls, p: int) -> SpectralPanelsProduct: ...
+    def ref(self) -> SpectralPanelsProduct: ...
+
+class SpectralPanelsProductClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPanelsProductClass()
     """
 
     parent_class: GObject.ObjectClass = ...
@@ -11642,6 +11948,73 @@ class SplineGslClass(GObject.GPointer):
     ::
 
         SplineGslClass()
+    """
+
+    parent_class: SplineClass = ...
+
+class SplineHermite(Spline):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineHermite(**properties)
+        new() -> NumCosmoMath.SplineHermite
+        new_full(xv:NumCosmoMath.Vector, yv:NumCosmoMath.Vector, d1v:NumCosmoMath.Vector, d2v:NumCosmoMath.Vector, init:bool) -> NumCosmoMath.SplineHermite
+
+    Object NcmSplineHermite
+
+    Properties from NcmSplineHermite:
+      d1 -> NcmVector: d1
+        First derivatives at the knots
+      d2 -> NcmVector: d2
+        Second derivatives at the knots
+
+    Properties from NcmSpline:
+      length -> guint: length
+        Spline length
+      x -> NcmVector: x
+        Spline knots
+      y -> NcmVector: y
+        Spline values
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        d1: Vector
+        d2: Vector
+        length: int
+        x: Vector
+        y: Vector
+
+    props: Props = ...
+    def __init__(
+        self,
+        d1: Vector = ...,
+        d2: Vector = ...,
+        length: int = ...,
+        x: Vector = ...,
+        y: Vector = ...,
+    ) -> None: ...
+    @classmethod
+    def new(cls) -> SplineHermite: ...
+    @classmethod
+    def new_full(
+        cls, xv: Vector, yv: Vector, d1v: Vector, d2v: Vector, init: bool
+    ) -> SplineHermite: ...
+    def peek_d1v(self) -> typing.Optional[Vector]: ...
+    def peek_d2v(self) -> typing.Optional[Vector]: ...
+    def set_derivs(self, d1v: Vector, d2v: Vector, init: bool) -> None: ...
+
+class SplineHermiteClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SplineHermiteClass()
     """
 
     parent_class: SplineClass = ...

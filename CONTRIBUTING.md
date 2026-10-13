@@ -258,8 +258,10 @@ ago.
 All C files, including headers, must be formatted with uncrustify using the
 provided configuration `numcosmo_uncrustify.cfg`. Formatting is checked in CI.
 
-Python code is checked with the configured `flake8`, `pylint`, and `mypy`
-settings (see `.flake8`, `.pylintrc`, `.mypy.ini`).
+Python code is formatted with `black` and checked with `ruff` and `mypy`, both
+configured in `pyproject.toml`. CI also regenerates the stubs `numcosmo_py/nc.pyi`
+and `numcosmo_py/ncm.pyi` and fails if they differ from the committed ones; after
+changing the C API, build and run `numcosmo_py/update_pyi.sh`, then commit the stubs.
 
 ## CI conda environment
 
@@ -289,7 +291,7 @@ to the data-file cache.
 
 ### Changing dependencies
 
-Editing `environment.yml` invalidates every lock, and the `check-conda-locks`
+Editing `environment.yml` invalidates every lock, and the `lint`
 job fails until they are regenerated:
 
 ```bash
@@ -331,13 +333,14 @@ environment.yml` still solves normally (see [docs/install.qmd](docs/install.qmd)
 Several data sets are not in the repository: the Planck baseline (`plc_3.0`),
 the SNIa covariance catalogs, the curated weak-lensing catalogs and the native
 Planck likelihood objects. NumCosmo downloads each one from a tagged GitHub
-release the first time it is asked for and keeps it in `~/.numcosmo`. That is
-about 470 MB, and without a cache every CI job fetches its share of it on every
-run.
+release the first time it is asked for and keeps it in the NumCosmo user data
+directory (see `ncm_cfg_init`). That is about 470 MB, and without a cache
+every CI job fetches its share of it on every run.
 
-`.github/actions/data-cache` restores that directory — only the downloaded
-files, never the FFTW wisdom and FFTLog tables the library writes alongside
-them. Two things make an entry stale, and nothing else does:
+`.github/actions/data-cache` pins that directory for the job by exporting
+`NUMCOSMO_HOME=$HOME/.local/share/numcosmo`, and restores only the downloaded
+files into it, never the FFTW wisdom and FFTLog tables the library writes
+alongside them. Two things make an entry stale, and nothing else does:
 
 - The release tag. The key embeds the `datafile-release-vX.Y.Z` tag read
   back out of the sources that name it, so bumping the tag there is enough.

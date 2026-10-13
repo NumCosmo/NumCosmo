@@ -66,22 +66,19 @@ typedef struct _TestNcXcorKernelIntegrand
 typedef struct _TestCase
 {
   const gchar *name;
-  NcXcorKernelClosure closure;
   gboolean non_limber;
   gboolean multi_comp;
 } TestCase;
 
 static const TestCase test_cases[] = {
-  {"limber/spline",         NC_XCOR_KERNEL_CLOSURE_SPLINE,    FALSE, FALSE},
-  {"limber/chebyshev",      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, FALSE, FALSE},
-  {"non_limber/spline",     NC_XCOR_KERNEL_CLOSURE_SPLINE,    TRUE,  FALSE},
-  {"non_limber/chebyshev",  NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, TRUE,  FALSE},
+  {"limber",     FALSE, FALSE},
+  {"non_limber", TRUE,  FALSE},
 
   /* Two disjoint bumps: the only case where the per-component accessors have more than
    * one component to split, and where the panel edges have to be merged across them.
    * This is also the case that lands the last point of the sampling grid on a k range
    * degenerate to within rounding -- see NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH. */
-  {"multi/chebyshev",      NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV, TRUE,  TRUE },
+  {"multi",      TRUE,  TRUE },
 };
 
 static NcXcorKernel *
@@ -142,13 +139,12 @@ test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointe
                                                                           TEST_CHI_UPPER,
                                                                           test->sbi));
 
-  /* Cap the adaptive apparatus rather than let it converge: one border expansion, few
-   * iterations, loose tolerances, a low panel order. Each branch is still entered. */
+  /* Cap the adaptive apparatus rather than let it converge: one border expansion,
+   * loose tolerances, a low panel order. Each branch is still entered. */
   nc_xcor_kernel_set_max_border_expansions (test->xclk, 1);
-  nc_xcor_kernel_set_max_iter (test->xclk, 4);
   nc_xcor_kernel_set_reltol (test->xclk, 1.0e-3);
   nc_xcor_kernel_set_peak_epsilon (test->xclk, 1.0e-4);
-  nc_xcor_kernel_set_panel_order_cap (test->xclk, 12);
+  ncm_spectral_panels_builder_set_level_cap (nc_xcor_kernel_peek_panels_builder (test->xclk), 12);
   nc_xcor_kernel_set_lmax (test->xclk, 16);
 
   /* The threshold is "use Limber for l >= this": 0 means always, -1 means never. Both
@@ -172,8 +168,7 @@ test_nc_xcor_kernel_integrand_free (TestNcXcorKernelIntegrand *test, gconstpoint
 static void
 test_nc_xcor_kernel_integrand_eval (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   const guint len              = nc_xcor_kernel_integrand_get_len (integ);
   gdouble k_min, k_max;
   gdouble *W = g_new0 (gdouble, len);
@@ -214,8 +209,7 @@ test_nc_xcor_kernel_integrand_eval (TestNcXcorKernelIntegrand *test, gconstpoint
 static void
 test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   const guint len              = nc_xcor_kernel_integrand_get_len (integ);
   gdouble *W                   = g_new0 (gdouble, len);
   gdouble *Wc                  = g_new0 (gdouble, len);
@@ -255,135 +249,60 @@ test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpoin
   nc_xcor_kernel_integrand_unref (integ);
 }
 
-/* Every accessor beyond eval/get_range is optional -- an integrand that does not offer
- * one answers 0 or FALSE rather than failing. What is not optional is that an integrator
- * can reach the representation by *some* route, and that whichever routes are offered
- * describe the same thing. */
+/* A closure carries panels. They hold one row per multipole and span the
+ * closure's range in its variable x = k / scale, converted with the scale of the first and
+ * the last multipole. */
 static void
 test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
-  NcmMatrix *coeffs            = NULL;
-  NcmVector *knots             = nc_xcor_kernel_integrand_peek_knots (integ);
-  gdouble k_min, k_max, s_min, s_max;
-  guint n_panels, i;
-  gboolean has_spectral;
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
+  NcmSpectralPanels *sp        = nc_xcor_kernel_integrand_peek_panels (integ);
 
-  nc_xcor_kernel_integrand_get_range (integ, &k_min, &k_max);
-  n_panels     = nc_xcor_kernel_integrand_get_n_panels (integ);
-  has_spectral = nc_xcor_kernel_integrand_peek_spectral (integ, &coeffs, &s_min, &s_max);
+  g_assert_nonnull (sp);
 
-  g_assert_true (n_panels > 0 || has_spectral || knots != NULL);
-
-  /* The panels tile the range in order and without gaps: the block integrators walk them
-   * assuming exactly that, and a gap is silently lost integrand. */
-  if (n_panels > 0)
   {
-    gdouble prev_b = k_min;
+    const guint len = nc_xcor_kernel_integrand_get_len (integ);
+    gdouble k_min, k_max, x_min, x_max;
 
-    for (i = 0; i < n_panels; i++)
-    {
-      gdouble a, b;
+    nc_xcor_kernel_integrand_get_range (integ, &k_min, &k_max);
+    ncm_spectral_panels_get_range (sp, &x_min, &x_max);
 
-      coeffs = NULL;
-      nc_xcor_kernel_integrand_peek_panel (integ, i, &coeffs, &a, &b);
-
-      g_assert_nonnull (coeffs);
-      g_assert_cmpuint (ncm_matrix_nrows (coeffs), >, 0);
-      g_assert_cmpfloat (a, <, b);
-      ncm_assert_cmpdouble_e (a, ==, prev_b, 1.0e-12, 0.0);
-
-      prev_b = b;
-    }
-
-    ncm_assert_cmpdouble_e (prev_b, ==, k_max, 1.0e-12, 0.0);
-  }
-
-  if (knots != NULL)
-    g_assert_cmpuint (ncm_vector_len (knots), >, 1);
-
-  /* Restricting to a sub-interval yields a series over it, when the representation
-   * supports being restricted at all. */
-  coeffs = NULL;
-
-  if (nc_xcor_kernel_integrand_restrict (integ,
-                                         k_min + 0.25 * (k_max - k_min),
-                                         k_min + 0.75 * (k_max - k_min),
-                                         &coeffs))
-  {
-    g_assert_nonnull (coeffs);
-    g_assert_cmpuint (ncm_matrix_nrows (coeffs), >, 0);
-  }
-
-  nc_xcor_kernel_integrand_unref (integ);
-}
-
-/* The single-series spectral form exists exactly when the Chebyshev representation did
- * not have to split, so it is one panel spanning the whole range. */
-static void
-test_nc_xcor_kernel_integrand_spectral (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
-{
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
-  NcmMatrix *coeffs            = NULL;
-  gdouble k_min, k_max;
-
-  if (nc_xcor_kernel_integrand_peek_spectral (integ, &coeffs, &k_min, &k_max))
-  {
-    g_assert_nonnull (coeffs);
-    g_assert_cmpuint (ncm_matrix_nrows (coeffs), >, 0);
-    g_assert_cmpuint (ncm_matrix_ncols (coeffs), >, 0);
-    g_assert_cmpfloat (k_min, <, k_max);
-    g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_panels (integ), ==, 1);
-  }
-  else
-  {
-    g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_panels (integ), !=, 1);
+    g_assert_cmpuint (ncm_spectral_panels_get_fdim (sp), ==, len);
+    g_assert_cmpuint (ncm_spectral_panels_get_n_panels (sp), >, 0);
+    ncm_assert_cmpdouble_e (x_min, ==, k_min / nc_xcor_kernel_integrand_get_scale (integ, 0), 1.0e-12, 0.0);
+    ncm_assert_cmpdouble_e (x_max, ==, k_max / nc_xcor_kernel_integrand_get_scale (integ, len - 1), 1.0e-12, 0.0);
   }
 
   nc_xcor_kernel_integrand_unref (integ);
 }
 
 static void
-test_nc_xcor_kernel_integrand_tolerances (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
+test_nc_xcor_kernel_integrand_ref_clear (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
-  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+  NcXcorKernelIntegrand *integ = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   NcXcorKernelIntegrand *ref   = nc_xcor_kernel_integrand_ref (integ);
-  NcmMatrix *residuals         = ncm_matrix_new (2, 3);
 
-  nc_xcor_kernel_integrand_set_tolerances (integ, 1.0e-7, 1.0e-5);
-  ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_reltol (integ), ==, 1.0e-7, 1.0e-15, 0.0);
-  ncm_assert_cmpdouble_e (nc_xcor_kernel_integrand_get_peak_epsilon (integ), ==, 1.0e-5, 1.0e-15, 0.0);
-
-  ncm_matrix_set_all (residuals, 1.0e-9);
-  nc_xcor_kernel_integrand_set_residuals (integ, residuals);
-  g_assert_true (nc_xcor_kernel_integrand_peek_residuals (integ) == residuals);
+  g_assert_true (ref == integ);
 
   nc_xcor_kernel_integrand_clear (&ref);
   g_assert_true (ref == NULL);
 
-  ncm_matrix_free (residuals);
   nc_xcor_kernel_integrand_unref (integ);
 }
 
 /* The vectorized form builds one representation for a whole multipole block, with one
  * entry per multipole rather than per component.
  *
- * Only the shape is checked, not agreement with the single-l form. The fixture caps
- * max_iter at 4, so neither fit is converged -- the sampler says as much -- and two
- * unconverged fits of the same function are not approximations of it that can be
- * required to agree: on the two-bump kernel they differ by more than 100% at the same k.
- * Agreement between the block and single-l paths is a statement about accuracy and needs
- * converged fits, so it is checked in tests/python/nc/xcor at real tolerances. */
+ * Only the shape is checked, not agreement with the single-l form. The fixture caps the
+ * adaptive apparatus, and agreement between the block and single-l paths is a statement
+ * about accuracy that needs converged fits, so it is checked in tests/python/nc/xcor at
+ * real tolerances. */
 static void
 test_nc_xcor_kernel_integrand_vectorized (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const TestCase *tc           = pdata;
   NcXcorKernelIntegrand *block = nc_xcor_kernel_get_eval_vectorized (test->xclk, test->cosmo,
-                                                                     TEST_ELL, TEST_ELL + 1, tc->closure);
-  NcXcorKernelIntegrand *one = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL, tc->closure);
+                                                                     TEST_ELL, TEST_ELL + 1);
+  NcXcorKernelIntegrand *one = nc_xcor_kernel_get_eval (test->xclk, test->cosmo, TEST_ELL);
   const guint block_len      = nc_xcor_kernel_integrand_get_len (block);
   gdouble *Wb                = g_new0 (gdouble, block_len);
   gdouble k_min, k_max, b_min, b_max;
@@ -419,8 +338,7 @@ static const TestCheck test_checks[] = {
   {"eval",       &test_nc_xcor_kernel_integrand_eval      },
   {"comps",      &test_nc_xcor_kernel_integrand_comps     },
   {"panels",     &test_nc_xcor_kernel_integrand_panels    },
-  {"spectral",   &test_nc_xcor_kernel_integrand_spectral  },
-  {"tolerances", &test_nc_xcor_kernel_integrand_tolerances},
+  {"ref_clear",  &test_nc_xcor_kernel_integrand_ref_clear },
   {"vectorized", &test_nc_xcor_kernel_integrand_vectorized},
 };
 
@@ -453,3 +371,4 @@ main (gint argc, gchar *argv[])
 
   g_test_run ();
 }
+

@@ -66,11 +66,13 @@ import time
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "python" / "nc" / "xcor"))
 
-import windows as W  # noqa: E402  pylint: disable=wrong-import-position
+import windows as W  # noqa: E402
 
-import make_xcor_window_truth_table as base  # noqa: E402  pylint: disable=wrong-import-position
+import make_xcor_window_truth_table as base  # noqa: E402
 
-OUTPUT = HERE.parent.parent / "data" / "truth_tables" / "xcor" / "xcor_pair_grid.json.gz"
+OUTPUT = (
+    HERE.parent.parent / "data" / "truth_tables" / "xcor" / "xcor_pair_grid.json.gz"
+)
 
 CONVENTION = (
     "value[case][i_ell][i_k] = int W(chi) j_ell^(d)(kvals[i_ell][i_k] chi) dchi, "

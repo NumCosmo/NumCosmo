@@ -29,12 +29,20 @@
  * Spline of the solution of a first-order ODE.
  *
  * Integrates $\mathrm{d}y/\mathrm{d}x = f(y, x)$ from $y(x_i) = y_i$ toward increasing $x$
- * with CVODE (Adams method, order at most 3) and sets #NcmOdeSpline:spline to the steps
- * taken, prepared; a step closer than %NCM_ODE_SPLINE_MIN_STEP, relative to $|x|$, to the
- * previous knot is not kept, except the last one at #NcmOdeSpline:xf, which replaces it.
- * The integration stops at #NcmOdeSpline:xf or, when
- * #NcmOdeSpline:yf is finite, where $y$ reaches #NcmOdeSpline:yf or stops changing between
- * steps. A CVODE failure aborts.
+ * with CVODE (Adams method, order at most #NcmOdeSpline:max-order) and sets
+ * #NcmOdeSpline:spline to the steps taken, prepared; a step closer than
+ * %NCM_ODE_SPLINE_MIN_STEP, relative to $|x|$, to the previous knot is not kept, except the
+ * last one at #NcmOdeSpline:xf, which replaces it. The integration stops at
+ * #NcmOdeSpline:xf or, when #NcmOdeSpline:yf is finite, where $y$ reaches
+ * #NcmOdeSpline:yf or stops changing between steps. A CVODE failure aborts.
+ *
+ * When #NcmOdeSpline:spline is a #NcmSplineHermite the knots also receive $y' = f$ and
+ * $y''$, from #NcmOdeSpline:d2ydx2 when set and otherwise from CVODE's interpolating
+ * polynomial (CVodeGetDky()), with the forward difference of $y'$ at the first steps,
+ * where that polynomial has order one. The quintic then needs the step spacing of an ODE
+ * order of 5 to 7; a higher #NcmOdeSpline:max-order makes the interpolation error exceed
+ * the integration error, measured in
+ * <a href="../../theory/ncm/spline/hermite.html">Quintic Hermite interpolation</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -43,6 +51,7 @@
 #include "build_cfg.h"
 
 #include "ncm/spline/ncm_ode_spline.h"
+#include "ncm/spline/ncm_spline_hermite.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvode/cvode.h>
@@ -64,8 +73,11 @@ typedef struct _NcmOdeSplinePrivate
   SUNContext sunctx;
   SUNNonlinearSolver NLS;
   N_Vector y;
+  N_Vector dky;
   GArray *y_array;
   GArray *x_array;
+  GArray *d1_array;
+  GArray *d2_array;
   gdouble xi;
   gdouble xf;
   gdouble yi;
@@ -74,7 +86,10 @@ typedef struct _NcmOdeSplinePrivate
   gdouble reltol;
   gdouble abstol;
   NcmOdeSplineDydx dydx;
+  NcmOdeSplineD2ydx2 d2ydx2;
   gboolean cvode_init;
+  gboolean hermite;
+  guint max_order;
   gboolean stop_hnil;
   gboolean auto_abstol;
   gdouble ini_step;
@@ -97,6 +112,8 @@ enum
   PROP_AUTO_ABSTOL,
   PROP_INI_STEP,
   PROP_MIN_SUBDIVISIONS,
+  PROP_D2YDX2,
+  PROP_MAX_ORDER,
 };
 
 struct _NcmOdeSpline
@@ -124,9 +141,12 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   self->cvode            = CVodeCreate (CV_ADAMS, self->sunctx);
   self->cvode_init       = FALSE;
   self->y                = N_VNew_Serial (1, self->sunctx);
+  self->dky              = N_VNew_Serial (1, self->sunctx);
   self->NLS              = NULL;
   self->y_array          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   self->x_array          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  self->d1_array         = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  self->d2_array         = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   self->xi               = GSL_NAN;
   self->xf               = GSL_NAN;
   self->yi               = GSL_NAN;
@@ -135,6 +155,9 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   self->reltol           = 0.0;
   self->abstol           = 0.0;
   self->dydx             = NULL;
+  self->d2ydx2           = NULL;
+  self->hermite          = FALSE;
+  self->max_order        = 0;
   self->stop_hnil        = FALSE;
   self->auto_abstol      = FALSE;
   self->ini_step         = 0.0;
@@ -191,6 +214,12 @@ _ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_MIN_SUBDIVISIONS:
       ncm_ode_spline_set_min_subdivisions (os, g_value_get_uint (value));
       break;
+    case PROP_D2YDX2:
+      self->d2ydx2 = (NcmOdeSplineD2ydx2) g_value_get_pointer (value);
+      break;
+    case PROP_MAX_ORDER:
+      ncm_ode_spline_set_max_order (os, g_value_get_uint (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -243,6 +272,12 @@ _ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_MIN_SUBDIVISIONS:
       g_value_set_uint (value, ncm_ode_spline_get_min_subdivisions (os));
       break;
+    case PROP_D2YDX2:
+      g_value_set_pointer (value, self->d2ydx2);
+      break;
+    case PROP_MAX_ORDER:
+      g_value_set_uint (value, ncm_ode_spline_get_max_order (os));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -258,6 +293,8 @@ _ncm_ode_spline_dispose (GObject *object)
   ncm_spline_clear (&self->spline);
   g_clear_pointer (&self->x_array, g_array_unref);
   g_clear_pointer (&self->y_array, g_array_unref);
+  g_clear_pointer (&self->d1_array, g_array_unref);
+  g_clear_pointer (&self->d2_array, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_ode_spline_parent_class)->dispose (object);
@@ -279,6 +316,12 @@ _ncm_ode_spline_finalize (GObject *object)
   {
     N_VDestroy (self->y);
     self->y = NULL;
+  }
+
+  if (self->dky != NULL)
+  {
+    N_VDestroy (self->dky);
+    self->dky = NULL;
   }
 
   if (self->NLS != NULL)
@@ -460,6 +503,34 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                       "Minimum number of integration subdivisions",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmOdeSpline:d2ydx2:
+   *
+   * The second derivative of the solution along the ODE, a #NcmOdeSplineD2ydx2, used
+   * at the knots of a #NcmSplineHermite; %NULL takes it from CVODE.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_D2YDX2,
+                                   g_param_spec_pointer ("d2ydx2",
+                                                         NULL,
+                                                         "Pointer to the d2ydx2 function",
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmOdeSpline:max-order:
+   *
+   * The largest order of the Adams method, up to 12. Zero selects
+   * %NCM_ODE_SPLINE_HERMITE_MAX_ORDER for a #NcmSplineHermite and
+   * %NCM_ODE_SPLINE_CUBIC_MAX_ORDER otherwise.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MAX_ORDER,
+                                   g_param_spec_uint ("max-order",
+                                                      NULL,
+                                                      "Maximum order of the Adams method, 0 for the spline's default",
+                                                      0, 12, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static gint
@@ -519,6 +590,37 @@ ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdoubl
   return os;
 }
 
+/**
+ * ncm_ode_spline_new_hermite:
+ * @dydx: (scope notified): the right-hand side
+ * @d2ydx2: (scope notified) (nullable): the second derivative along the ODE
+ * @yi: the initial value
+ * @xi: the initial point
+ * @xf: the final point
+ *
+ * Creates a #NcmOdeSpline on [@xi, @xf] with $y(x_i) = y_i$ whose spline is a new
+ * #NcmSplineHermite; see #NcmOdeSpline for how the knots' derivatives are set.
+ *
+ * Returns: (transfer full): a new #NcmOdeSpline.
+ */
+NcmOdeSpline *
+ncm_ode_spline_new_hermite (NcmOdeSplineDydx dydx, NcmOdeSplineD2ydx2 d2ydx2, gdouble yi, gdouble xi, gdouble xf)
+{
+  NcmSplineHermite *sh = ncm_spline_hermite_new ();
+  NcmOdeSpline *os     = g_object_new (NCM_TYPE_ODE_SPLINE,
+                                       "xi", xi,
+                                       "xf", xf,
+                                       "yi", yi,
+                                       "dydx", dydx,
+                                       "d2ydx2", d2ydx2,
+                                       "spline", sh,
+                                       NULL);
+
+  ncm_spline_free (NCM_SPLINE (sh));
+
+  return os;
+}
+
 static gint
 _ncm_ode_spline_yf_root (sunrealtype lambda, N_Vector y, sunrealtype *gout, gpointer user_data)
 {
@@ -553,6 +655,109 @@ _ncm_ode_spline_step_stalls (NcmOdeSplinePrivate * const self, const gdouble x, 
   *x_last = x;
 
   return FALSE;
+}
+
+/*
+ * Records the current CVODE state as a knot, appended or replacing the last one. With a
+ * Hermite spline it also records y' = f and y'': from the d2ydx2 callback, else from
+ * CVodeGetDky where the current order is at least 2, else NaN for
+ * _ncm_ode_spline_fill_d2 (). The first knot has no CVODE polynomial, so @first skips Dky.
+ */
+static void
+_ncm_ode_spline_record (NcmOdeSplinePrivate * const self, const gdouble x, const gboolean replace, const gboolean first, gpointer userdata)
+{
+  const gdouble y = NV_Ith_S (self->y, 0);
+
+  if (replace)
+  {
+    g_array_index (self->x_array, gdouble, self->x_array->len - 1) = x;
+    g_array_index (self->y_array, gdouble, self->y_array->len - 1) = y;
+  }
+  else
+  {
+    g_array_append_val (self->x_array, x);
+    g_array_append_val (self->y_array, y);
+  }
+
+  if (self->hermite)
+  {
+    const gdouble d1 = self->dydx (y, x, userdata);
+    gdouble d2       = GSL_NAN;
+
+    if (self->d2ydx2 != NULL)
+    {
+      d2 = self->d2ydx2 (y, x, userdata);
+    }
+    else if (!first)
+    {
+      gint q;
+
+      CVodeGetLastOrder (self->cvode, &q);
+
+      if (q >= 2)
+      {
+        gint flag = CVodeGetDky (self->cvode, x, 2, self->dky);
+
+        _NCM_ODE_SPLINE_CHECK (&flag, "CVodeGetDky", 1);
+        d2 = NV_Ith_S (self->dky, 0);
+      }
+    }
+
+    if (replace)
+    {
+      g_array_index (self->d1_array, gdouble, self->d1_array->len - 1) = d1;
+      g_array_index (self->d2_array, gdouble, self->d2_array->len - 1) = d2;
+    }
+    else
+    {
+      g_array_append_val (self->d1_array, d1);
+      g_array_append_val (self->d2_array, d2);
+    }
+  }
+}
+
+/* Fills the knots without y'' from CVODE with the difference quotient of y' to the next knot, or the previous one at the end */
+static void
+_ncm_ode_spline_fill_d2 (NcmOdeSplinePrivate * const self)
+{
+  const guint n = self->x_array->len;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    if (!gsl_finite (g_array_index (self->d2_array, gdouble, i)))
+    {
+      const guint j     = (i + 1 < n) ? i + 1 : i - 1;
+      const gdouble dd1 = g_array_index (self->d1_array, gdouble, j) - g_array_index (self->d1_array, gdouble, i);
+      const gdouble dx  = g_array_index (self->x_array, gdouble, j) - g_array_index (self->x_array, gdouble, i);
+
+      g_array_index (self->d2_array, gdouble, i) = dd1 / dx;
+    }
+  }
+}
+
+/* Sets the spline to the recorded knots and prepares it */
+static void
+_ncm_ode_spline_set_spline (NcmOdeSplinePrivate * const self)
+{
+  if (self->hermite)
+  {
+    NcmVector *d1v = ncm_vector_new_array (self->d1_array);
+    NcmVector *d2v = ncm_vector_new_array (self->d2_array);
+
+    if (self->d2ydx2 == NULL)
+      _ncm_ode_spline_fill_d2 (self);
+
+    ncm_spline_set_array (self->spline, self->x_array, self->y_array, FALSE);
+    ncm_spline_hermite_set_derivs (NCM_SPLINE_HERMITE (self->spline), d1v, d2v, TRUE);
+
+    ncm_vector_free (d1v);
+    ncm_vector_free (d2v);
+  }
+  else
+  {
+    ncm_spline_set_array (self->spline, self->x_array, self->y_array, TRUE);
+  }
 }
 
 /**
@@ -599,11 +804,12 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
     _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetNonlinearSolver", 1);
   }
 
+  self->hermite = NCM_IS_SPLINE_HERMITE (self->spline);
+
   g_array_set_size (self->x_array, 0);
   g_array_set_size (self->y_array, 0);
-
-  g_array_append_val (self->x_array, self->xi);
-  g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
+  g_array_set_size (self->d1_array, 0);
+  g_array_set_size (self->d2_array, 0);
 
   flag = CVodeSStolerances (self->cvode, self->reltol, self->abstol);
   _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSStolerances", 1);
@@ -618,8 +824,12 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
     _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetMaxStep", 1);
   }
 
-  flag = CVodeSetMaxOrd (self->cvode, 3); /* Cubic splines */
-  _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetMaxOrd", 1);
+  {
+    const gint max_order = (self->max_order > 0) ? self->max_order : (self->hermite ? NCM_ODE_SPLINE_HERMITE_MAX_ORDER : NCM_ODE_SPLINE_CUBIC_MAX_ORDER);
+
+    flag = CVodeSetMaxOrd (self->cvode, max_order);
+    _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetMaxOrd", 1);
+  }
 
   flag = CVodeSetUserData (self->cvode, &f_data);
   _NCM_ODE_SPLINE_CHECK (&flag, "CVodeSetUserData", 1);
@@ -638,6 +848,8 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
              x0,
              NV_Ith_S (self->y, 0),
              self->dydx (NV_Ith_S (self->y, 0), x0, f_data.userdata));
+
+  _ncm_ode_spline_record (self, self->xi, FALSE, TRUE, f_data.userdata);
 
   if (!gsl_finite (self->yf))
   {
@@ -660,15 +872,13 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 
       if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
       {
-        g_array_append_val (self->x_array, x);
-        g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
+        _ncm_ode_spline_record (self, x, FALSE, FALSE, f_data.userdata);
         x0 = x;
       }
       else if ((x == self->xf) && (self->x_array->len > 1))
       {
         /* The spline ends at xf: the last step replaces the knot too close to it */
-        g_array_index (self->x_array, gdouble, self->x_array->len - 1) = x;
-        g_array_index (self->y_array, gdouble, self->y_array->len - 1) = NV_Ith_S (self->y, 0);
+        _ncm_ode_spline_record (self, x, TRUE, FALSE, f_data.userdata);
       }
 
       if (x == self->xf)
@@ -694,8 +904,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 
       if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
       {
-        g_array_append_val (self->x_array, x);
-        g_array_append_val (self->y_array, NV_Ith_S (self->y, 0));
+        _ncm_ode_spline_record (self, x, FALSE, FALSE, f_data.userdata);
         x0 = x;
       }
 
@@ -712,7 +921,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
     self->yf_attained = last_y;
   }
 
-  ncm_spline_set_array (self->spline, self->x_array, self->y_array, TRUE);
+  _ncm_ode_spline_set_spline (self);
 }
 
 /**
@@ -931,6 +1140,39 @@ ncm_ode_spline_get_min_subdivisions (NcmOdeSpline *os)
   NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
 
   return self->min_subdivisions;
+}
+
+/**
+ * ncm_ode_spline_set_max_order:
+ * @os: a #NcmOdeSpline
+ * @max_order: the largest order of the Adams method, or zero for the spline's default
+ *
+ * Sets #NcmOdeSpline:max-order; aborts above 12.
+ */
+void
+ncm_ode_spline_set_max_order (NcmOdeSpline *os, guint max_order)
+{
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  g_assert_cmpuint (max_order, <=, 12);
+
+  self->max_order = max_order;
+}
+
+/**
+ * ncm_ode_spline_get_max_order:
+ * @os: a #NcmOdeSpline
+ *
+ * Gets #NcmOdeSpline:max-order.
+ *
+ * Returns: the largest order of the Adams method, zero for the spline's default.
+ */
+guint
+ncm_ode_spline_get_max_order (NcmOdeSpline *os)
+{
+  NcmOdeSplinePrivate * const self = ncm_ode_spline_get_instance_private (os);
+
+  return self->max_order;
 }
 
 /**

@@ -1,0 +1,213 @@
+---
+title: "Quintic Hermite Interpolation"
+---
+
+This page describes the interpolant of [[numcosmo-math|NcmSplineHermite]]: the quintic
+through the values and the first two derivatives at the knots, as
+[[numcosmo-math|NcmOdeSpline]], [[numcosmo|NcDistance]] and [[numcosmo|NcGrowthFunc]] use
+it, and the measurements behind the ODE order they pair it with.
+
+```{python}
+#| echo: false
+import math
+
+import matplotlib.pyplot as plt
+import numpy as np
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+```
+
+## The interpolant
+
+Let the knots be $x_0 < x_1 < \dots < x_{n-1}$ with the values $y_i$, the first derivatives
+$y'_i$ and the second derivatives $y''_i$ given at each of them, $h_i \equiv x_{i+1} - x_i$
+and $\Delta x \equiv x - x_i$. On $[x_i, x_{i+1}]$ the interpolant is the quintic
+$$
+s(x) = y_i + y'_i\,\Delta x + \tfrac{1}{2} y''_i\,\Delta x^2 + c_{3,i}\,\Delta x^3 +
+c_{4,i}\,\Delta x^4 + c_{5,i}\,\Delta x^5,
+$$
+whose three free coefficients are fixed by $s(x_{i+1}) = y_{i+1}$, $s'(x_{i+1}) =
+y'_{i+1}$ and $s''(x_{i+1}) = y''_{i+1}$. With
+$$
+A_i \equiv \frac{y_{i+1} - y_i - h_i y'_i - \tfrac{1}{2} h_i^2 y''_i}{h_i^3}, \qquad
+B_i \equiv \frac{y'_{i+1} - y'_i - h_i y''_i}{h_i^2}, \qquad
+C_i \equiv \frac{y''_{i+1} - y''_i}{h_i},
+$$
+they are
+$$
+c_{3,i} = 10 A_i - 4 B_i + \tfrac{1}{2} C_i, \qquad
+c_{4,i} = \frac{-15 A_i + 7 B_i - C_i}{h_i}, \qquad
+c_{5,i} = \frac{6 A_i - 3 B_i + \tfrac{1}{2} C_i}{h_i^2}.
+$$
+`ncm_spline_prepare()` computes $c_{3,i}$, $c_{4,i}$ and $c_{5,i}$ for every interval and
+nothing else: the interpolant is local, no linear system is solved, and preparation costs
+$O(n)$. Evaluation, the derivatives and the integral follow from the polynomial on the
+interval found by the knot search of [[numcosmo-math|NcmSpline]]. The derivative vectors
+are data, not derived quantities, so they are properties of the object and serialize with
+the knots and values.
+
+## Smoothness
+
+$s$, $s'$ and $s''$ are continuous at every knot by construction, so $s \in C^2$, and the
+third derivative jumps. The size of the jump is what a method applied downstream sees. A
+cubic spline through the same knots is also $C^2$, with a third derivative constant on each
+interval, and its jump at a knot is of order $h\,f^{(4)}$; the quintic's is of order
+$h^3 f^{(6)}$. The two scalings are measured below on $\sin x$ with uniform knots, the
+third derivative at each side of a knot taken from $s''$ by a one-sided difference.
+
+```{python}
+#| echo: false
+def hermite_sin(n):
+    x = np.linspace(0.0, 2.0 * math.pi, n)
+    return Ncm.SplineHermite.new_full(
+        Ncm.Vector.new_array(x),
+        Ncm.Vector.new_array(np.sin(x)),
+        Ncm.Vector.new_array(np.cos(x)),
+        Ncm.Vector.new_array(-np.sin(x)),
+        True,
+    )
+
+
+def cubic_sin(n):
+    x = np.linspace(0.0, 2.0 * math.pi, n)
+    s = Ncm.SplineCubicNotaknot.new()
+    s.set(Ncm.Vector.new_array(x), Ncm.Vector.new_array(np.sin(x)), True)
+    return s
+
+
+def max_d3_jump(s):
+    x = s.peek_xv().dup_array()
+    jump = 0.0
+    for k in range(1, len(x) - 1):
+        delta = 1.0e-4 * (x[k] - x[k - 1])
+        left = (s.eval_deriv2(x[k]) - s.eval_deriv2(x[k] - delta)) / delta
+        right = (s.eval_deriv2(x[k] + delta) - s.eval_deriv2(x[k])) / delta
+        jump = max(jump, abs(right - left))
+    return jump
+
+
+rows = []
+for n in (11, 21, 41):
+    rows.append((n, max_d3_jump(cubic_sin(n)), max_d3_jump(hermite_sin(n))))
+```
+
+```{python}
+#| echo: false
+#| output: asis
+# The whole table from one cell: a header written outside it is a separate block.
+print("| knots | cubic not-a-knot | quintic Hermite |")
+print("|------:|-----------------:|----------------:|")
+for n, jc, jh in rows:
+    print(f"| {n} | {jc:.2e} | {jh:.2e} |")
+```
+
+Halving $h$ divides the cubic's jump by about 2 and the quintic's by about 8.
+
+A smooth function of the spline keeps this. For $g \in C^\infty$,
+$$
+(g \circ s)''' = g'''(s)\,s'^3 + 3 g''(s)\,s'\,s'' + g'(s)\,s''',
+$$
+and only $s'''$ jumps, so $g \circ s$ is $C^2$ with a third-derivative jump of
+$g'(s)\,[s''']$: the same class and the same scaling, multiplied by $g'$.
+
+## Error
+
+For $f \in C^6$ the interpolation error on $[x_i, x_{i+1}]$ is
+$$
+f(x) - s(x) = \frac{f^{(6)}(\xi)}{6!}\,(x - x_i)^3 (x - x_{i+1})^3, \qquad
+\xi \in [x_i, x_{i+1}],
+$$
+largest at the midpoint, where $|(x - x_i)^3 (x - x_{i+1})^3| = h_i^6 / 64$, so
+$$
+|f(x) - s(x)| \le \frac{h_i^6}{46080} \max |f^{(6)}|.
+$$
+
+```{python}
+#| echo: false
+def midpoint_error(s):
+    x = np.array(s.peek_xv().dup_array())
+    xm = 0.5 * (x[:-1] + x[1:])
+    return max(abs(s.eval(v) - math.sin(v)) for v in xm)
+
+
+err_rows = []
+for n in (11, 21, 41):
+    h = 2.0 * math.pi / (n - 1)
+    err_rows.append((n, h**6 / 46080.0, midpoint_error(hermite_sin(n))))
+```
+
+```{python}
+#| echo: false
+#| output: asis
+print("| knots | bound | measured on $\\sin x$ |")
+print("|------:|------:|---------------------:|")
+for n, bound, err in err_rows:
+    print(f"| {n} | {bound:.2e} | {err:.2e} |")
+```
+
+## Knots from an ODE solver
+
+[[numcosmo-math|NcmOdeSpline]] takes its knots from the steps of CVODE's Adams method.
+At a step $y$ is the solver's state, $y' = f(y, x)$ is the right-hand side, and $y''$ comes
+from the `d2ydx2` callback when the caller has it in closed form, as
+[[numcosmo|NcDistance]] does with $\mathrm{d}^2 D_c/\mathrm{d}z^2 = -(\mathrm{d}E^2/\mathrm{d}z) / (2 E^3)$, and otherwise from CVODE's interpolating polynomial through
+`CVodeGetDky()`, which is not available at the first steps, where the order is one; those
+knots take the difference quotient of $y'$ to the next knot. [[numcosmo|NcGrowthFunc]]
+integrates $(D, \mathrm{d}D/\mathrm{d}a)$, so $y'$ is in the state and $y''$ is the
+right-hand side.
+
+The step size the solver chooses matches its own order, and the quintic needs the spacing
+of an order 5 to 7 method: above that the interpolation error between the knots exceeds the
+integration error at the knots. Measured on the comoving distance of
+[[numcosmo|NcHICosmoDECpl]] with its default parameters on $z \in [0, 10^{10}]$ at relative
+tolerance $2.2 \times 10^{-16}$, the largest relative error at the knots and at the interval
+midpoints below $z = 10$:
+
+| Adams max order | knots | at the knots | at the midpoints |
+|----------------:|------:|-------------:|-----------------:|
+| 3 (cubic spline) | 78823 | 1.8e-12 | 4.6e-13 |
+| 5 | 7451 | 9.1e-14 | 1.5e-14 |
+| 7 | 2796 | 8.1e-15 | 9.0e-15 |
+| 8 | 2132 | 5.6e-15 | 5.6e-14 |
+| 12 | 1306 | 6.0e-15 | 1.4e-13 |
+
+Order 7 is the default of `NcmOdeSpline:max-order` with a [[numcosmo-math|NcmSplineHermite]].
+
+The figure shows what the smoothness buys downstream, on the comoving distance spline
+of [[numcosmo|NcDistance]]: the Chebyshev coefficients of the quintic on one panel of
+$z$, against those of a cubic not-a-knot spline through the same knots. The cubic's
+coefficients stop falling at the size of its third-derivative jumps; the quintic's fall to
+roundoff.
+
+```{python}
+#| label: fig-cheb
+#| fig-cap: "Chebyshev coefficients, relative to the largest, of the comoving distance on $z \\in [1, 1.5]$ for the quintic Hermite spline of NcDistance and for a cubic not-a-knot spline through the same knots. A method resolving the panel to $10^{-13}$ needs the degree where the curve crosses that level."
+#| code-fold: true
+cosmo = Nc.HICosmoDECpl()
+dist = Nc.Distance.new(1.0e10)
+dist.prepare(cosmo)
+quintic = dist.comoving_distance_spline.peek_spline()
+cubic = Ncm.SplineCubicNotaknot.new()
+cubic.set(quintic.peek_xv(), quintic.peek_yv(), True)
+
+a, b = 1.0, 1.5
+N = 128
+j = np.arange(N + 1)
+z = 0.5 * (a + b) + 0.5 * (b - a) * np.cos(math.pi * j / N)
+weights = np.where((j == 0) | (j == N), 0.5, 1.0)
+k = np.arange(N + 1)
+cos_jk = np.cos(math.pi * np.outer(j, k) / N)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+for s, name in ((cubic, "cubic not-a-knot"), (quintic, "quintic Hermite")):
+    f = np.array([s.eval(v) for v in z])
+    c = 2.0 / N * (weights * f) @ cos_jk
+    c = np.abs(c) / np.abs(c).max()
+    ax.semilogy(k[:64], c[:64], label=name)
+ax.axhline(1.0e-13, color="gray", linestyle=":")
+ax.set_xlabel("Chebyshev degree $k$")
+ax.set_ylabel("$|c_k| / \\max |c_k|$")
+ax.legend()
+plt.show()
+```

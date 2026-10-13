@@ -80,6 +80,7 @@ void ncm_cfg_register_obj (GType obj);
 guint ncm_cfg_mpi_nslaves (void);
 gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
 const gchar *ncm_cfg_get_fullpath_base (void);
+gboolean ncm_cfg_fullpath_base_is_legacy (void);
 
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries);
@@ -147,6 +148,14 @@ const gchar *ncm_cfg_get_commit_hash (void);
  * see ncm_cfg_get_data_filename().
  */
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
+
+/**
+ * NCM_CFG_HOME_ENV:
+ *
+ * Name of the environment variable that sets the NumCosmo user data directory, see
+ * ncm_cfg_init().
+ */
+#define NCM_CFG_HOME_ENV "NUMCOSMO_HOME"
 
 /**
  * NCM_CHECK_PREPARED:

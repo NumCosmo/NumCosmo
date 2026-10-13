@@ -53,7 +53,8 @@ We use a homogeneous and isotropic dark-energy model with a constant equation of
 parameterization with `omega_x2omega_k()` and fix `Omegak = 0.0`; flatness is then enforced as a
 constraint and the dark-energy density is derived from the closure relation. A reionization model and a
 power-law primordial power spectrum are built first and passed to the constructor: submodels are
-construction-fixed and cannot be attached afterwards. We set the primordial amplitude and spectral
+construction-fixed and cannot be attached afterwards (a deprecated late attachment exists only for 0.27
+compatibility; it is dropped in 1.0 and should not be used). We set the primordial amplitude and spectral
 index explicitly: the amplitude fixes the normalization of the matter power spectrum, and through it
 the overall scale of the mass function.
 

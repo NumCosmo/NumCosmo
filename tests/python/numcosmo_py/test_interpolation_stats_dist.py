@@ -62,7 +62,7 @@ def test_create_stats_dist_kernel_and_method(method, kernel):
     )
 
     if method == InterpolationMethod.KDE:
-        assert type(sdist) is Ncm.StatsDistKDE  # pylint: disable=unidiomatic-typecheck
+        assert type(sdist) is Ncm.StatsDistKDE
     else:
         assert isinstance(sdist, Ncm.StatsDistVKDE)
         assert sdist.get_local_frac() == local_fraction

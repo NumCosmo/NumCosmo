@@ -100,7 +100,6 @@ def test_matches_clik_reference():
     reimplementation reproduces the full R_q assembly (CMB + 10 foreground/
     calibration components) to machine precision.
     """
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 
@@ -155,7 +154,6 @@ def test_ttteee_matches_clik_reference():
     components (CMB TT/EE/TE, pwfe galactic dust, EE end-to-end noise, the
     icalTP two-term calibration mixing and totcalP). Machine precision.
     """
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 

@@ -68,7 +68,6 @@ def _blit_draw(_self, artists, bg_cache):
 
 
 # MONKEY PATCH!!
-# pylint: disable-next=protected-access
 matplotlib.animation.Animation._blit_draw = _blit_draw  # type: ignore
 
 #
@@ -280,7 +279,6 @@ def test_qm() -> None:
                     kk = kk + 1
 
             kk_min = min(kk_min, kk)
-            # pylint: disable=nested-min-max
             psi_max = max(max(psi[:, 0]), psi_max)
             psi_max = max(max(psi[:, 1]), psi_max)
             psi_max = max(np.sqrt(rho), psi_max)

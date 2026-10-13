@@ -30,7 +30,6 @@ from numpy.testing import assert_allclose
 
 pytest.importorskip("getdist")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 from numcosmo_py import Ncm
 from numcosmo_py.plotting import mcat_to_catalog_data

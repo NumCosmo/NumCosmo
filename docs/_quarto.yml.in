@@ -30,6 +30,9 @@ project:
     - theory/ncm/stats/stats_dist.qmd
     - theory/ncm/stats/autocorrelation.qmd
     - theory/ncm/core/poisson_lognormal.qmd
+    - theory/ncm/integration/diff.qmd
+    - theory/ncm/spline/spline_func.qmd
+    - theory/ncm/spline/hermite.qmd
     - benchmarks/ccl_background.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
@@ -44,6 +47,7 @@ project:
     - tutorials/python/halo_catalog_mock.qmd
     - tutorials/python/sky_match.qmd
     - tutorials/python/sky_match_id.qmd
+    - tutorials/python/spectral_operators.qmd
     - tutorials/python/xcor_accuracy.qmd
     - examples/data_analysis/inspect_data_objects.qmd
     - examples/data_analysis/snia.qmd
@@ -127,6 +131,8 @@ website:
                 text: "Sky Match"
               - href: tutorials/python/sky_match_id.qmd
                 text: "Sky Match by Membership"
+              - href: tutorials/python/spectral_operators.qmd
+                text: "Spectral Operator Matrices"
               - href: tutorials/python/xcor_accuracy.qmd
                 text: "Angular Power Spectrum Accuracy"
       - section: theory/index.qmd
@@ -168,6 +174,12 @@ website:
                 text: "FFTLog"
               - href: theory/ncm/algebra/spectral.qmd
                 text: "Spectral Methods"
+              - href: theory/ncm/integration/diff.qmd
+                text: "Numerical Differentiation"
+              - href: theory/ncm/spline/spline_func.qmd
+                text: "AutoKnots: Adaptive Knot Placement"
+              - href: theory/ncm/spline/hermite.qmd
+                text: "Quintic Hermite Interpolation"
               - href: theory/ncm/specfunc/sbessel_ode_solver.qmd
                 text: "Ultraspherical Spectral Solver"
               - href: theory/ncm/specfunc/sbessel_projection.qmd

@@ -23,25 +23,11 @@
 
 r"""Super-sample covariance $S_{ij}$ matrices computed with NumCosmo only.
 
-This module replaces the `PySSC` code path used so far in `numcosmo_py`: it
-needs neither `scipy` nor `healpy`, and it uses the non-Limber `NcXcorSolver`
-tier (the "UltraLevin" spherical-Bessel machinery) for every radial integral.
-
-The two quantities `PySSC` provides are:
-
-*Full sky* --- with $C^{ij}_\ell$ the angular power spectrum of the
-volume-averaged matter density contrast over redshift bins $i$ and $j$,
-
-$$S_{ij} = \frac{C^{ij}_0}{4\pi} .$$
-
-*Partial sky* --- with $C^{\rm mask}_\ell$ the angular power spectrum of the
-survey mask and $f_{\rm sky} = \sqrt{C^{\rm mask}_0 / 4\pi}$,
-
-$$S_{ij} = \frac{1}{(4\pi f_{\rm sky})^2}
-    \sum_{\ell=0}^{\ell_{\rm max}} (2\ell+1) C^{\rm mask}_\ell C^{ij}_\ell .$$
-
-Both reduce to the same $C^{ij}_\ell$ engine, which here is
-#NcXcorKernelClusterTophat plus #NcXcorSolver in its non-Limber mode.
+This module computes the $S_{ij}$ matrices of `PySSC` without `scipy` or `healpy`: every
+radial integral uses the non-Limber #NcXcorSolver (UltraLevin), with
+#NcXcorKernelClusterTophat kernels. The full-sky and partial-sky estimators, and how
+$S_{ij}$ enters the cluster number-count likelihood, are on the Super-Sample Covariance
+theory page (`docs/theory/nc/xcor/ssc.qmd`).
 
 Long partial-sky runs report progress through the `progress` callback of
 :meth:`SijCalculator.compute_cl`, which is called once per solved multipole chunk.
@@ -49,97 +35,20 @@ Long partial-sky runs report progress through the `progress` callback of
 Precision
 ---------
 
-The off-diagonal $S_{ij}$ of well-separated bins is a small residual of a large
-cancellation: $|S_{06}|$ is four orders of magnitude below $S_{00}$ for J-PAS
-bins. Its accuracy is set by `peak_epsilon`, the absolute floor of the adaptive
-refinement building the $U_i(k)$ spline --- **not** by `reltol`, which is
-inactive while `peak_epsilon` binds. #NcXcorKernel defaults to
-`peak_epsilon = 1e-4`, and at that value tightening `reltol` changes nothing at
-all. Measured against a converged independent quadrature, for seven J-PAS bins:
+`DEFAULT_PEAK_EPSILON = 1e-5` stays equal to `NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON`
+(`nc_xcor_ssc_sij.c`), which #NcXcorSSCSij sets on the kernels it builds, so a fixed
+and a varying $S_{ij}$ differ only in whether $S_{ij}$ follows the cosmology. The
+accuracy at this setting is measured in the angular power spectrum accuracy tutorial
+(`docs/tutorials/python/xcor_accuracy.qmd`).
 
-=====================  =========  =========  =========  =========  =======
-`peak_epsilon`        $S_{00}$   $S_{01}$   $S_{04}$   $S_{06}$   time
-=====================  =========  =========  =========  =========  =======
-`1e-4` (NcXcorKernel)     -0.07%     -0.59%     -19.6%     -59.1%   0.04 s
-`1e-6` (used here)        0.006%    -0.014%      0.28%      -5.2%   0.13 s
-`1e-8`                    0.001%    -0.003%      0.02%     -0.06%   0.36 s
-=====================  =========  =========  =========  =========  =======
-
-Read that table for what it is: a *relative* error on elements that are
-themselves four orders of magnitude below $S_{00}$. It is the wrong quantity to
-tune against, because those elements contribute to the covariance in absolute
-terms, not relative ones, and `-59.1%` of a negligible number is still
-negligible. The quantity that matters is what reaches the parameter
-uncertainties. Measured on a cap footprint, $z \in [0.1, 0.8]$, seven bins,
-18000 deg$^2$, against the `1e-8` result:
-
-=====================  ============  ===============  ==================
-`peak_epsilon`        max |dS/S|    max |dS|/S_{00}  max |dsigma/sigma|
-=====================  ============  ===============  ==================
-`1e-4` (NcXcorKernel)      1.4e-02          3.0e-04              0.028%
-`1e-5` (used here)         1.7e-03          1.2e-04              0.009%
-`1e-6`                     8.7e-05          1.4e-06              0.0001%
-=====================  ============  ===============  ==================
-
-`sigma` is the Fisher uncertainty on $(\Omega_c, w, \ln 10^{10}A_s)$ for the
-full forecast likelihood, measured against `1e-7`. Every setting in the table
-is converged for anything the forecast reports: the effects it studies are
-5--50%, so even `1e-4` has three orders of magnitude of margin. Do not tighten
-this chasing the off-diagonal percentages in the first table.
-
-What does move with `peak_epsilon` is cost, and it matters in one place. With
-a frozen $S_{ij}$ the matrix is built once per experiment and the choice is
-irrelevant (a second either way). With `--vary-fitting-sij` it is rebuilt at
-every likelihood step, so it sits directly on the chain's critical path. One
-rebuild, cap, 18000 deg$^2$, seven bins:
-
-=====================  ==========  ====================
-`peak_epsilon`        S rebuild   relative to `1e-6`
-=====================  ==========  ====================
-`1e-4`                    0.28 s   3.8x faster
-`1e-5` (used here)        0.51 s   2.1x faster
-`1e-6`                    1.06 s   ---
-`1e-7`                    2.03 s   1.9x slower
-=====================  ==========  ====================
-
-Hence `1e-5`: accurate to `0.009%` on the reported uncertainties, and twice as
-cheap as `1e-6` in the varying case. The accuracy that `1e-6` and below buy is
-real but unusable, and in the varying case it is paid for on every step.
-
-There is a floor under all of this, and `1e-6` is it. `peak_epsilon` is a
-fraction of the peak of `W(k)`, but the quantity integrated is `k^2 W_i W_j`,
-so it enters *squared*: `1e-6` here is `1e-12` on the integrand, already past
-what the outer integral carries, and `1e-8` would be `1e-16`, below double
-precision. Below `1e-6` there is nothing left to buy at any price --
-`nc_xcor_kernel_set_peak_epsilon` warns there, see
-`NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON`. The `1e-7` and `1e-8` columns in the
-tables above are measurements of that, not options.
-
-Quadrature
-----------
-
-Both this module and `NcXcorSSCSij`, the varying path, integrate over $k$ with
-`KERNEL_EXACT`: GL(5) on each panel of the kernels' Chebyshev closures, with no
-outer tolerance and no adaptive refinement. The panel edges are integration
-limits, which matters because the slope of $W(k)$ is continuous across an edge
-only to the closure's accuracy, set by `peak_epsilon`. `KERNEL_CUBATURE`
-integrates over the whole range as if $W$ were smooth; on well-separated bins,
-whose cross integral cancels to $10^{-7}$ of $\int |k^3 W_i W_j|$, it must
-resolve those breaks and its p-adaptive rule fails.
-
-`DEFAULT_PEAK_EPSILON = 1e-5` stays equal to
-`NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON` (`nc_xcor_ssc_sij.c`), which the varying
-path pushes onto the kernels it builds: `create_ssc_sij_calculator()` promises
-that a fixed and a varying run differ only in whether $S_{ij}$ follows the
-cosmology, and comment 15 of the covariance paper is that comparison. Changing
-one alone breaks it.
-
-`adaptive_epsilon` was verified not to bind at any of these settings, and
-`reltol` is inert while `peak_epsilon` binds.
+Both this module and #NcXcorSSCSij integrate over $k$ with `KERNEL_EXACT`: the kernels'
+Chebyshev closures are integrated exactly on the common refinement of their panels,
+with no tolerance.
 """
 
-from typing import Callable, Sequence
+import itertools
 import time
+from collections.abc import Callable, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -156,23 +65,21 @@ __all__ = [
 #: Signature of the progress callback: (done, total, elapsed seconds, message).
 ProgressCallback = Callable[[int, int, float, str], None]
 
-#: Default multipole block size handed to `NcXcorSolver.plan_blocks()`. Eight is
-#: the empirical sweet spot measured in `dev-notes/xcor_ultralevin_batching_plan.md`
-#: section 1.3, not `ell_cache_max`.
+#: Default multipole block size handed to `NcXcorSolver.plan_blocks()`. Eight is the
+#: fastest block size measured in `dev-notes/xcor_ultralevin_batching_plan.md`
+#: section 1.3.
 DEFAULT_BLOCK_SIZE = 8
 
-#: Relative tolerance of the `U_i(k)` closures. Not the knob that limits accuracy
-#: (see `DEFAULT_PEAK_EPSILON`).
+#: `NcXcorKernel:reltol` of the kernel closures. At `DEFAULT_PEAK_EPSILON` the
+#: closures are set by peak-epsilon.
 DEFAULT_RELTOL = 1.0e-6
 
-#: Absolute floor for the adaptive refinement of the `U_i(k)` closures. One order
-#: tighter than #NcXcorKernel's own `1e-4` default, and the knob that limits
-#: off-diagonal accuracy -- see the module docstring. Not tighter, because that
-#: costs ~2x per rebuild when `--vary-fitting-sij` puts S on the likelihood's
-#: critical path, for accuracy already far below anything a forecast reports.
+#: `NcXcorKernel:peak-epsilon` of the kernel closures, one order tighter than
+#: #NcXcorKernel's `1e-4` default. With `DEFAULT_RELTOL` it is the larger term of the
+#: closure test, so it sets the accuracy of the off-diagonal `S_ij`.
 #:
 #: Must be kept equal to `NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON`
-#: (`nc_xcor_ssc_sij.c`), which is what the varying path actually uses.
+#: (`nc_xcor_ssc_sij.c`), which the varying path uses.
 DEFAULT_PEAK_EPSILON = 1.0e-5
 
 
@@ -197,7 +104,7 @@ def print_progress(done: int, total: int, elapsed: float, message: str) -> None:
 
 def _nside_from_npix(npix: int) -> int:
     """Recover a HEALPix `nside` from a map length, validating it."""
-    nside = int(round(np.sqrt(npix / 12.0)))
+    nside = int(np.rint(np.sqrt(npix / 12.0)))
 
     if nside < 1 or 12 * nside * nside != npix:
         raise ValueError(f"{npix} is not a valid HEALPix map length.")
@@ -292,13 +199,14 @@ class SijCalculator:
     r"""Computes SSC $S_{ij}$ matrices for a set of top-hat redshift bins.
 
     Each bin becomes an #NcXcorKernelClusterTophat, whose radial window is
-    normalized to unit integral in comoving distance, so $C^{ij}_\ell$ is the
-    angular power spectrum of the volume-averaged density contrast --- exactly
-    the quantity `PySSC` builds from tabulated kernels with `convention=0`.
+    $\chi^2/\Delta V$, a top-hat in comoving volume with unit integral over $\chi$, so
+    $C^{ij}_\ell$ is the angular power spectrum of the volume-averaged density
+    contrast, the quantity `PySSC` builds from tabulated kernels with
+    `convention=0`.
 
-    Every kernel is put in permanent non-Limber mode (`l_limber = -1`): the
-    Limber approximation is meaningless at the low multipoles that dominate
-    $S_{ij}$, and it makes the cross spectrum of two disjoint bins vanish.
+    Every kernel is set to `l_limber = -1`, non-Limber at every multipole: the
+    Limber approximation does not apply at the low multipoles that dominate
+    $S_{ij}$, and it gives zero for the cross spectrum of two disjoint bins.
     """
 
     def __init__(
@@ -317,12 +225,11 @@ class SijCalculator:
             Eisenstein--Hu transfer function over `k` in `[1e-6, 1e3]` 1/Mpc.
         :param dist: Distance object; defaults to `Nc.Distance.new(3.0)`.
         :param block_size: Multipole block size for #NcXcorSolver.
-        :param reltol: Relative tolerance of the kernel closures. Cannot go
-            below the integrator's `cheb-reltol` (`1e-8` by default), which
-            caps the achievable precision.
-        :param peak_epsilon: Absolute floor for the adaptive refinement of the
-            `U_i(k)` spline. **This, not `reltol`, is what limits the accuracy
-            of the off-diagonal `S_ij`** --- see the module docstring.
+        :param reltol: `NcXcorKernel:reltol` of the kernel closures.
+        :param peak_epsilon: `NcXcorKernel:peak-epsilon` of the kernel closures;
+            at the defaults it sets the accuracy of the off-diagonal `S_ij`. The
+            closure construction aborts when the larger of the two is below the
+            integrator's `cheb-reltol` (`1e-8` by default).
         """
         z_edges = np.asarray(z_edges, dtype=np.float64)
 
@@ -356,7 +263,7 @@ class SijCalculator:
                 z_upper=float(z_upper),
                 integrator=Ncm.SBesselIntegratorLevin.new(0, block_size),
             )
-            for z_lower, z_upper in zip(z_edges[:-1], z_edges[1:])
+            for z_lower, z_upper in itertools.pairwise(z_edges)
         ]
 
         for kernel in self.kernels:

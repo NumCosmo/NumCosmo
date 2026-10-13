@@ -337,7 +337,11 @@ test_ncm_mpi_slave_abort (gconstpointer pdata)
   g_assert_true (g_spawn_sync (NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL, NULL, NULL, NULL, &err, &wait_status, &error));
   g_assert_no_error (error);
 
+#if GLIB_CHECK_VERSION (2, 70, 0)
   g_assert_false (g_spawn_check_wait_status (wait_status, NULL));
+#else
+  g_assert_false (g_spawn_check_exit_status (wait_status, NULL));
+#endif /* GLIB_CHECK_VERSION(2,70,0) */
   g_assert_nonnull (strstr (err, ac->message));
 
   g_free (err);

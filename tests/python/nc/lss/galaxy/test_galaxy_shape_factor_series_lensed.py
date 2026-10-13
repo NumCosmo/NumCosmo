@@ -230,13 +230,13 @@ def test_marginal_matches_quad_general_complex_g(ellip_conv):
 @pytest.mark.parametrize("ellip_conv", _CONVS)
 def test_marginal_matches_quad_small_std_noise_stress_case(ellip_conv):
     """THE HEADLINE CASE this class exists for: small std_noise (0.005)
-    combined with moderate g -- the exact regime that made the noise-side
-    scheme's expansion (once shipped as NcGalaxyShapeFactorSeries, removed
-once this class superseded it) grow combinatorially (up to ~850%+
-    error at higher truncation order) since its coefficients scale like
-    1/std_noise^2. This class' coefficients scale with 1/sigma_pop^2
-    instead, so accuracy here should be unaffected by how small std_noise
-    is -- confirmed at the default order (4) matching Quad tightly."""
+        combined with moderate g -- the exact regime that made the noise-side
+        scheme's expansion (once shipped as NcGalaxyShapeFactorSeries, removed
+    once this class superseded it) grow combinatorially (up to ~850%+
+        error at higher truncation order) since its coefficients scale like
+        1/std_noise^2. This class' coefficients scale with 1/sigma_pop^2
+        instead, so accuracy here should be unaffected by how small std_noise
+        is -- confirmed at the default order (4) matching Quad tightly."""
     pop = Nc.GalaxyShapePopGauss.new()
     pop["sigma"] = 0.28
     std_noise = 0.005

@@ -26,7 +26,7 @@
 
 Covers registration/request bookkeeping (dev-notes/xcor_ultralevin_batching_plan.md
 sec 5.1), the ell-block planner (sec 5), and solve() (sec 5-6): the
-per-block shared-closure KERNEL_CUBATURE path and the direct-delegation
+per-block shared-closure kernel-space path and the direct-delegation
 fallback for every other method.
 """
 
@@ -184,9 +184,9 @@ def test_plan_blocks_l_limber_forces_split(kernel_tsz: Nc.XcorKernel) -> None:
         kernel_tsz.set_l_limber(original_l_limber)
 
 
-def test_plan_blocks_capped_by_ell_cache_max(kernel_tsz: Nc.XcorKernel) -> None:
-    """Block size is capped by the smallest registered integrator's
-    ell_cache_max, even when a larger default_block_size is requested."""
+def test_plan_blocks_ignores_kernel_integrator(kernel_tsz: Nc.XcorKernel) -> None:
+    """Block size is set by the solver alone. A registered kernel's integrator
+    does not cap it: its ell_cache_max is an absolute multipole, not a width."""
     small_integrator = Ncm.SBesselIntegratorLevin.new_full(
         0, 5, 1.0e-4, 1.0e6, 21, 5, 1.0e-13, 2, 1.0e-8
     )
@@ -205,9 +205,8 @@ def test_plan_blocks_capped_by_ell_cache_max(kernel_tsz: Nc.XcorKernel) -> None:
 
     solver.plan_blocks(8)
 
-    ell_cache_max = small_integrator.get_ell_cache_max()
-    for lmin, lmax in [solver.get_block(i) for i in range(solver.get_n_blocks())]:
-        assert lmax - lmin + 1 <= ell_cache_max
+    blocks = [solver.get_block(i) for i in range(solver.get_n_blocks())]
+    assert blocks == [(0, 7), (8, 15), (16, 20)]
 
 
 def test_plan_blocks_replaces_previous_plan(kernel_tsz: Nc.XcorKernel) -> None:
@@ -225,13 +224,13 @@ def test_plan_blocks_replaces_previous_plan(kernel_tsz: Nc.XcorKernel) -> None:
     assert n_blocks_second > n_blocks_first
 
 
-def test_solve_kernel_cubature_matches_compute(
+def test_solve_kernel_exact_matches_compute(
     cosmology: Cosmology,
     kernel_tsz: Nc.XcorKernel,
     kernel_cmb_lens: Nc.XcorKernel,
     kernel_gal_bin0: Nc.XcorKernel,
 ) -> None:
-    """solve()'s KERNEL_CUBATURE shared-closure path matches nc_xcor_compute().
+    """solve()'s KERNEL_EXACT shared-closure path matches nc_xcor_compute().
 
     Three kernels, three requests all in one 8-ell block: an auto (A), a
     cross reusing A (A-B), and a cross reusing B (B-C) -- exercises the
@@ -250,7 +249,7 @@ def test_solve_kernel_cubature_matches_compute(
             k.set_l_limber(0)  # tier 2: kernel-Limber
             k.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
@@ -300,7 +299,7 @@ def test_solve_spans_multiple_blocks(
         kernel_tsz.set_l_limber(0)
         kernel_tsz.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
@@ -326,7 +325,7 @@ def test_solve_fallback_method_matches_compute(
     kernel_tsz: Nc.XcorKernel,
     kernel_cmb_lens: Nc.XcorKernel,
 ) -> None:
-    """Methods other than KERNEL_CUBATURE delegate directly to nc_xcor_compute(),
+    """The redshift-space Limber methods delegate directly to nc_xcor_compute(),
     with no block-shared closure caching."""
     lmin, lmax = 20, 27
 
@@ -338,7 +337,9 @@ def test_solve_fallback_method_matches_compute(
         kernel_tsz.prepare(cosmology.cosmo)
         kernel_cmb_lens.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_GSL)
+        xc = Nc.Xcor.new(
+            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE
+        )
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
@@ -385,7 +386,7 @@ def test_solve_block_parallel_stress(
             k.set_l_limber(0)  # tier 2: kernel-Limber, cheap enough for 15 blocks
             k.prepare(cosmology.cosmo)
 
-        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+        xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
@@ -475,7 +476,7 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
     kernel.set_l_limber(-1)  # tier 3: true non-Limber
     kernel.prepare(cosmology.cosmo)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     # The integrator above is deliberately loose to keep this test quick; the
     # outer integral cannot ask for more precision than that closure carries.
     xc.props.reltol = 1.0e-2
@@ -527,7 +528,7 @@ def test_peek_block_integrator_before_and_after_solve(cosmology: Cosmology) -> N
     lmin, lmax = 2, 17
     kernel = _tier3_wl_kernel(cosmology, lmin, lmax)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.props.reltol = 1.0e-2
     xc.prepare(cosmology.cosmo)
 
@@ -573,7 +574,7 @@ def test_set_integrator_overrides_and_resets_the_cache(cosmology: Cosmology) -> 
     lmin, lmax = 2, 17
     kernel = _tier3_wl_kernel(cosmology, lmin, lmax)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.props.reltol = 1.0e-2
     xc.prepare(cosmology.cosmo)
 
@@ -656,7 +657,7 @@ def test_solve_accepts_a_kernel_without_a_levin_integrator(
     kernel.set_l_limber(0)  # tier 2: kernel-Limber, no Levin closure involved
     kernel.prepare(cosmology.cosmo)
 
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.prepare(cosmology.cosmo)
 
     solver = Nc.XcorSolver.new()
@@ -720,7 +721,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
     cosmo = cosmology.cosmo
     z_bins = [(0.1, 0.2), (0.3, 0.4)]
 
-    def solve(closure_type):
+    def solve():
         solver = Nc.XcorSolver.new()
         ids = []
 
@@ -746,7 +747,6 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
         solver.set_integrator(Ncm.SBesselIntegratorLevin.new(0, 8))
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
         solver.solve(xcor, cosmo)
 
@@ -755,7 +755,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
             for r in range(solver.get_n_requests())
         ]
 
-    def compute_directly(closure_type):
+    def compute_directly():
         kernels = []
 
         for z_lower, z_upper in z_bins:
@@ -773,7 +773,6 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
             kernels.append(kernel)
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
-        xcor.set_closure_type(closure_type)
         xcor.prepare(cosmo)
 
         out = []
@@ -791,22 +790,15 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 out.append(np.array(vp.dup_array()))
         return out
 
-    for closure_type in (
-        Nc.XcorKernelClosure.CHEBYSHEV,
-        Nc.XcorKernelClosure.SPLINE,
-    ):
-        through_solver = solve(closure_type)
-        direct = compute_directly(closure_type)
+    through_solver = solve()
+    direct = compute_directly()
 
-        assert len(through_solver) == 3
+    assert len(through_solver) == 3
 
-        # The two entry points must reach the same integrator. Asserting the two
-        # *representations* agree instead would be asserting the wrong thing:
-        # on the cross request at l ~ 17 the spline is several hundred percent
-        # out, which is the error this representation exists to remove.
-        for got, expected in zip(through_solver, direct):
-            assert np.all(np.isfinite(got))
-            assert_allclose(got, expected, rtol=1.0e-10)
+    # The two entry points must reach the same integrator.
+    for got, expected in zip(through_solver, direct):
+        assert np.all(np.isfinite(got))
+        assert_allclose(got, expected, rtol=1.0e-10)
 
 
 def test_replan_with_the_same_blocks_keeps_the_integrators(
@@ -819,7 +811,7 @@ def test_replan_with_the_same_blocks_keeps_the_integrators(
     them.
     """
     kernel = _tier3_wl_kernel(cosmology, 2, 17)
-    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_CUBATURE)
+    xc = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
     xc.props.reltol = 1.0e-2
     xc.prepare(cosmology.cosmo)
 

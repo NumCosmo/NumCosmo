@@ -33,7 +33,7 @@ from __future__ import annotations
 import ast
 import math
 import operator
-from typing import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Mapping
 
 import numpy as np
 

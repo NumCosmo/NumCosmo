@@ -34,7 +34,7 @@ import os
 
 import numpy as np
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
 
 LENSING_FULL_RELPATH = os.path.join(
     "baseline",
@@ -62,7 +62,7 @@ def _read_cldf_int(node_path: str, key: str) -> int:
 
 def _read_cldf_array(node_path: str, key: str) -> np.ndarray:
     """Read a cldf array node (FITS payload) as a flat float64 array."""
-    from astropy.io import fits  # pylint: disable=import-outside-toplevel
+    from astropy.io import fits
 
     with fits.open(os.path.join(node_path, key)) as h:
         hdu0 = next(iter(h))

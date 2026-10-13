@@ -34,11 +34,73 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 
 typedef struct _TesNcmCfg
 {
   guint place_holder;
 } TesNcmCfg;
+
+static gchar *test_ncm_cfg_executable;
+
+static gboolean
+_test_ncm_cfg_check_wait_status (gint status, GError **error)
+{
+#if GLIB_CHECK_VERSION (2, 70, 0)
+
+  return g_spawn_check_wait_status (status, error);
+
+#else
+
+  return g_spawn_check_exit_status (status, error);
+
+#endif /* GLIB_CHECK_VERSION(2,70,0) */
+}
+
+static void
+_test_ncm_cfg_spawn (const gchar *test_path, gchar **envp, gboolean should_pass, const gchar *expected_output)
+{
+  gchar *argv[] = {test_ncm_cfg_executable, "-p", (gchar *) test_path, NULL};
+  /* GLib reports setenv()/unsetenv() after threads exist only as GLib debug messages. */
+  gchar **child_envp = g_environ_setenv (g_strdupv (envp), "G_MESSAGES_DEBUG", "GLib", TRUE);
+  gchar *output      = NULL;
+  gchar *errors      = NULL;
+  gint status;
+  GError *error = NULL;
+  gboolean spawned;
+
+  spawned = g_spawn_sync (NULL, argv, child_envp, 0, NULL, NULL, &output, &errors, &status, &error);
+  g_strfreev (child_envp);
+  g_assert_no_error (error);
+
+  if (!spawned)
+  {
+    g_clear_error (&error);
+
+    return;
+  }
+
+  if (should_pass)
+  {
+    g_assert_true (_test_ncm_cfg_check_wait_status (status, &error));
+    g_assert_no_error (error);
+    g_assert_null (strstr (output, "setenv()/putenv() are not thread-safe"));
+    g_assert_null (strstr (output, "unsetenv() is not thread-safe"));
+    g_assert_null (strstr (errors, "setenv()/putenv() are not thread-safe"));
+    g_assert_null (strstr (errors, "unsetenv() is not thread-safe"));
+  }
+  else
+  {
+    g_assert_false (_test_ncm_cfg_check_wait_status (status, &error));
+    g_clear_error (&error);
+  }
+
+  if (expected_output != NULL)
+    g_assert_true (strstr (output, expected_output) != NULL || strstr (errors, expected_output) != NULL);
+
+  g_free (output);
+  g_free (errors);
+}
 
 void test_ncm_cfg_new (TesNcmCfg *test, gconstpointer pdata);
 void test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata);
@@ -143,10 +205,12 @@ test_ncm_cfg_fftw_plan_begin_end (void)
 static void
 test_ncm_cfg_fftw_timelimit_default (void)
 {
-  g_unsetenv ("NCM_FFTW_PLANNER");
-  g_unsetenv ("NCM_FFTW_PLANNER_TIMELIMIT");
-  g_test_trap_subprocess ("/ncm/cfg/fftw_timelimit_default/subprocess", 0, 0);
-  g_test_trap_assert_passed ();
+  gchar **envp = g_get_environ ();
+
+  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER");
+  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER_TIMELIMIT");
+  _test_ncm_cfg_spawn ("/ncm/cfg/fftw_timelimit_default/subprocess", envp, TRUE, NULL);
+  g_strfreev (envp);
 }
 
 static void
@@ -160,29 +224,13 @@ static void
 test_ncm_cfg_omp_thread_limit (void)
 {
 #ifdef _OPENMP
-  gchar *nthreads = g_strdup (g_getenv ("OMP_NUM_THREADS"));
-  gchar *limit    = g_strdup (g_getenv ("OMP_THREAD_LIMIT"));
+  gchar **envp = g_get_environ ();
 
-  g_setenv ("OMP_NUM_THREADS", "2", TRUE);
-  g_setenv ("OMP_THREAD_LIMIT", "1", TRUE);
-  g_test_trap_subprocess ("/ncm/cfg/omp_thread_limit/subprocess", 0, 0);
-
-  /* Later subprocess tests inherit the environment. */
-  if (nthreads != NULL)
-    g_setenv ("OMP_NUM_THREADS", nthreads, TRUE);
-  else
-    g_unsetenv ("OMP_NUM_THREADS");
-
-  if (limit != NULL)
-    g_setenv ("OMP_THREAD_LIMIT", limit, TRUE);
-  else
-    g_unsetenv ("OMP_THREAD_LIMIT");
-
-  g_free (nthreads);
-  g_free (limit);
-
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)*");
+  envp = g_environ_setenv (envp, "OMP_NUM_THREADS", "2", TRUE);
+  envp = g_environ_setenv (envp, "OMP_THREAD_LIMIT", "1", TRUE);
+  _test_ncm_cfg_spawn ("/ncm/cfg/omp_thread_limit/subprocess", envp, FALSE,
+                       "OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)");
+  g_strfreev (envp);
 #else
   g_test_skip ("built without OpenMP");
 #endif /* _OPENMP */
@@ -191,6 +239,181 @@ test_ncm_cfg_omp_thread_limit (void)
 static void
 test_ncm_cfg_omp_thread_limit_subprocess (void)
 {
+}
+
+typedef enum
+{
+  TEST_NCM_CFG_PATH_DEFAULT,
+  TEST_NCM_CFG_PATH_XDG,
+  TEST_NCM_CFG_PATH_XDG_RELATIVE,
+  TEST_NCM_CFG_PATH_LEGACY,
+  TEST_NCM_CFG_PATH_OVERRIDE,
+  TEST_NCM_CFG_PATH_OVERRIDE_EMPTY,
+  TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE,
+} TestNcmCfgPath;
+
+static void
+_test_ncm_cfg_path (TestNcmCfgPath mode, const gchar *test_path)
+{
+  if (g_getenv ("NCM_TEST_CFG_CHILD") != NULL)
+  {
+    const gchar *expected;
+    gchar *path;
+    gchar *expected_path;
+    GError *error = NULL;
+
+    ncm_cfg_init ();
+
+    expected = g_getenv ("NCM_TEST_CFG_EXPECTED");
+    g_assert_nonnull (expected);
+    g_assert_cmpstr (ncm_cfg_get_fullpath_base (), ==, expected);
+    g_assert_true (g_file_test (expected, G_FILE_TEST_IS_DIR));
+    g_assert_cmpint (ncm_cfg_fullpath_base_is_legacy (), ==, g_getenv ("NCM_TEST_CFG_LEGACY") != NULL);
+
+    path          = ncm_cfg_get_fullpath ("test_%d.txt", 3);
+    expected_path = g_build_filename (expected, "test_3.txt", NULL);
+    g_assert_cmpstr (path, ==, expected_path);
+    g_assert_false (ncm_cfg_exists ("test_%d.txt", 3));
+    g_assert_true (g_file_set_contents (path, "test", -1, &error));
+    g_assert_no_error (error);
+    g_assert_true (ncm_cfg_exists ("test_%d.txt", 3));
+    g_assert_cmpint (g_remove (path), ==, 0);
+
+    g_free (expected_path);
+    g_free (path);
+  }
+  else
+  {
+    /* Directories the case must create, relative to the temporary HOME, innermost first. */
+    const gchar *xdg_default[] = {".local/share/numcosmo", ".local/share", ".local", NULL};
+    const gchar *xdg_set[]     = {"xdg/numcosmo", "xdg", NULL};
+    const gchar *legacy[]      = {".numcosmo", NULL};
+    const gchar *override[]    = {"custom/data", "custom", NULL};
+    const gchar *none[]        = {NULL};
+    const gchar **created      = none;
+    gchar *tmp_dir             = g_dir_make_tmp ("test_ncm_cfg_path_XXXXXX", NULL);
+    gchar *xdg_dir;
+    gchar *expected = NULL;
+    gchar **envp    = g_get_environ ();
+    guint i;
+
+    g_assert_nonnull (tmp_dir);
+    xdg_dir = g_build_filename (tmp_dir, "xdg", NULL);
+    envp    = g_environ_setenv (envp, "HOME", tmp_dir, TRUE);
+    envp    = g_environ_unsetenv (envp, "XDG_DATA_HOME");
+    envp    = g_environ_unsetenv (envp, "NUMCOSMO_HOME");
+    envp    = g_environ_setenv (envp, "NCM_TEST_CFG_CHILD", "1", TRUE);
+
+    switch (mode)
+    {
+      case TEST_NCM_CFG_PATH_DEFAULT:
+        expected = g_build_filename (tmp_dir, ".local", "share", "numcosmo", NULL);
+        created  = xdg_default;
+        break;
+      case TEST_NCM_CFG_PATH_XDG:
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+        expected = g_build_filename (xdg_dir, "numcosmo", NULL);
+        created  = xdg_set;
+        break;
+      case TEST_NCM_CFG_PATH_XDG_RELATIVE:
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", "relative/xdg", TRUE);
+        expected = g_build_filename (tmp_dir, ".local", "share", "numcosmo", NULL);
+        created  = xdg_default;
+        break;
+      case TEST_NCM_CFG_PATH_LEGACY:
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+        envp     = g_environ_setenv (envp, "NCM_TEST_CFG_LEGACY", "1", TRUE);
+        expected = g_build_filename (tmp_dir, ".numcosmo", NULL);
+        created  = legacy;
+        g_assert_cmpint (g_mkdir (expected, 0755), ==, 0);
+        break;
+      case TEST_NCM_CFG_PATH_OVERRIDE:
+        expected = g_build_filename (tmp_dir, "custom", "data", NULL);
+        envp     = g_environ_setenv (envp, "XDG_DATA_HOME", xdg_dir, TRUE);
+        envp     = g_environ_setenv (envp, "NUMCOSMO_HOME", expected, TRUE);
+        created  = override;
+        break;
+      case TEST_NCM_CFG_PATH_OVERRIDE_EMPTY:
+        envp     = g_environ_setenv (envp, "NUMCOSMO_HOME", "", TRUE);
+        expected = g_build_filename (tmp_dir, ".local", "share", "numcosmo", NULL);
+        created  = xdg_default;
+        break;
+      case TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE:
+        envp = g_environ_setenv (envp, "NUMCOSMO_HOME", "relative/numcosmo", TRUE);
+        break;
+      default:                   /* LCOV_EXCL_LINE */
+        g_assert_not_reached (); /* LCOV_EXCL_LINE */
+        break;                   /* LCOV_EXCL_LINE */
+    }
+
+    if (expected != NULL)
+    {
+      envp = g_environ_setenv (envp, "NCM_TEST_CFG_EXPECTED", expected, TRUE);
+      _test_ncm_cfg_spawn (test_path, envp, TRUE, NULL);
+    }
+    else
+    {
+      _test_ncm_cfg_spawn (test_path, envp, FALSE, "NUMCOSMO_HOME must be an absolute path");
+    }
+
+    /* Removing exactly these, then HOME itself, fails if anything else was created. */
+    for (i = 0; created[i] != NULL; i++)
+    {
+      gchar *dir = g_build_filename (tmp_dir, created[i], NULL);
+
+      g_assert_cmpint (g_rmdir (dir), ==, 0);
+      g_free (dir);
+    }
+
+    g_assert_cmpint (g_rmdir (tmp_dir), ==, 0);
+
+    g_strfreev (envp);
+    g_free (expected);
+    g_free (tmp_dir);
+    g_free (xdg_dir);
+  }
+}
+
+static void
+test_ncm_cfg_path_default (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_DEFAULT, "/ncm/cfg/path/default");
+}
+
+static void
+test_ncm_cfg_path_xdg (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_XDG, "/ncm/cfg/path/xdg");
+}
+
+static void
+test_ncm_cfg_path_xdg_relative (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_XDG_RELATIVE, "/ncm/cfg/path/xdg_relative");
+}
+
+static void
+test_ncm_cfg_path_legacy (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_LEGACY, "/ncm/cfg/path/legacy");
+}
+
+static void
+test_ncm_cfg_path_override (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE, "/ncm/cfg/path/override");
+}
+
+static void
+test_ncm_cfg_path_override_empty (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE_EMPTY, "/ncm/cfg/path/override_empty");
+}
+
+static void
+test_ncm_cfg_path_override_relative (void)
+{
+  _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE, "/ncm/cfg/path/override_relative");
 }
 
 static gpointer
@@ -240,9 +463,15 @@ test_ncm_cfg_fftw_plan_destroy (void)
 gint
 main (gint argc, gchar *argv[])
 {
+  test_ncm_cfg_executable = g_find_program_in_path (argv[0]);
+  g_assert_nonnull (test_ncm_cfg_executable);
   g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
+
+  if (g_getenv ("NCM_TEST_CFG_CHILD") == NULL)
+  {
+    ncm_cfg_init_full_ptr (&argc, &argv);
+    ncm_cfg_enable_gsl_err_handler ();
+  }
 
   g_test_set_nonfatal_assertions ();
 
@@ -280,6 +509,13 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/cfg/fftw_timelimit_default/subprocess", &test_ncm_cfg_fftw_timelimit_default_subprocess);
   g_test_add_func ("/ncm/cfg/omp_thread_limit", &test_ncm_cfg_omp_thread_limit);
   g_test_add_func ("/ncm/cfg/omp_thread_limit/subprocess", &test_ncm_cfg_omp_thread_limit_subprocess);
+  g_test_add_func ("/ncm/cfg/path/default", &test_ncm_cfg_path_default);
+  g_test_add_func ("/ncm/cfg/path/xdg", &test_ncm_cfg_path_xdg);
+  g_test_add_func ("/ncm/cfg/path/xdg_relative", &test_ncm_cfg_path_xdg_relative);
+  g_test_add_func ("/ncm/cfg/path/legacy", &test_ncm_cfg_path_legacy);
+  g_test_add_func ("/ncm/cfg/path/override", &test_ncm_cfg_path_override);
+  g_test_add_func ("/ncm/cfg/path/override_empty", &test_ncm_cfg_path_override_empty);
+  g_test_add_func ("/ncm/cfg/path/override_relative", &test_ncm_cfg_path_override_relative);
   g_test_add_func ("/ncm/cfg/enum_print_all_gaps", &test_ncm_cfg_enum_print_all_gaps);
   g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
   g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);
@@ -300,7 +536,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_cfg_invalid,
               &test_ncm_cfg_free);
 
-  g_test_run ();
+  return g_test_run ();
 }
 
 void
@@ -329,8 +565,11 @@ test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata)
   {
     gchar *full_path = ncm_cfg_get_fullpath ("test_full_path_%d.txt", 1);
 
-    g_assert_true (g_str_has_suffix (full_path, ".numcosmo/test_full_path_1.txt"));
+    gchar *expected = g_build_filename (ncm_cfg_get_fullpath_base (), "test_full_path_1.txt", NULL);
 
+    g_assert_cmpstr (full_path, ==, expected);
+
+    g_free (expected);
     g_free (full_path);
   }
 
@@ -578,7 +817,7 @@ test_ncm_cfg_paths (void)
   gchar *path       = ncm_cfg_get_fullpath ("sub_%d.txt", 3);
   gchar *expected   = g_build_filename (base, "sub_3.txt", NULL);
 
-  g_assert_true (g_str_has_suffix (base, ".numcosmo"));
+  g_assert_true (g_file_test (base, G_FILE_TEST_IS_DIR));
   g_assert_cmpstr (path, ==, expected);
   g_assert_false (ncm_cfg_exists ("test_ncm_cfg_file_that_does_not_exist_%d", 17));
 

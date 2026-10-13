@@ -26,7 +26,7 @@
 
 import os
 import math
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 from pathlib import Path
 
 from cosmosis.runtime.config import Inifile
@@ -126,9 +126,9 @@ def convert_single_model(
         if p.section == sampling_parameters_section:
             model_builder.add_sparam_obj(convert_parameter(p, required_parameters))
 
-    FirecrownModel = model_builder.create()  # pylint: disable=invalid-name
+    FirecrownModel = model_builder.create()
     GObject.new(FirecrownModel)
-    NcmFirecrownModel = FirecrownModel.pytype  # pylint: disable=invalid-name
+    NcmFirecrownModel = FirecrownModel.pytype
     GObject.type_register(NcmFirecrownModel)
 
     model: Ncm.Model = NcmFirecrownModel()
@@ -396,7 +396,7 @@ def convert_cosmology(
 
 def convert_likelihoods(
     inifile: Path,
-    mapping: Optional[MappingNumCosmo] = None,
+    mapping: MappingNumCosmo | None = None,
     mute_cosmosis: bool = False,
 ) -> Tuple[Ncm.ObjDictStr, Ncm.MSet, Ncm.Likelihood]:
     """Convert the likelihoods.

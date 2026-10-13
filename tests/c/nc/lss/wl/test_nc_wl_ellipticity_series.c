@@ -64,7 +64,7 @@ static const gdouble test_gs[]     = { 0.0, 0.02, -0.03, 0.05 };
 void test_nc_wl_ellipticity_series_trace_matches_closed_form (void);
 void test_nc_wl_ellipticity_series_trace_det_matches_closed_form (void);
 void test_nc_wl_ellipticity_series_abs_sq_matches_chi_squared (void);
-void test_nc_wl_ellipticity_series_trace_matches_python_golden_value (void);
+void test_nc_wl_ellipticity_series_trace_matches_python_reference_value (void);
 void test_nc_wl_ellipticity_series_eval_is_reusable (void);
 
 gint
@@ -80,8 +80,8 @@ main (gint argc, gchar *argv[])
                    &test_nc_wl_ellipticity_series_trace_det_matches_closed_form);
   g_test_add_func ("/nc/wl_ellipticity_series/abs_sq_matches_chi_squared",
                    &test_nc_wl_ellipticity_series_abs_sq_matches_chi_squared);
-  g_test_add_func ("/nc/wl_ellipticity_series/trace/matches_python_golden_value",
-                   &test_nc_wl_ellipticity_series_trace_matches_python_golden_value);
+  g_test_add_func ("/nc/wl_ellipticity_series/trace/matches_python_reference_value",
+                   &test_nc_wl_ellipticity_series_trace_matches_python_reference_value);
   g_test_add_func ("/nc/wl_ellipticity_series/eval_is_reusable",
                    &test_nc_wl_ellipticity_series_eval_is_reusable);
 
@@ -189,13 +189,13 @@ test_nc_wl_ellipticity_series_abs_sq_matches_chi_squared (void)
   nc_wl_ellipticity_series_trace_det_free (tdet);
 }
 
-/* Cross-language regression: the exact same golden value
+/* Cross-language regression: the exact same reference value
  * test_chi_taylor_matches_python_reference() (test_ncm_laurent_series.c)
  * checks against its own hand-rolled recursion -- checked here directly
  * against the real, shipped object instead. rho=0.25, theta=0.7, g=0.09,
  * N=12: chi_I ~ 0.0131042280+0.1640678007j. */
 void
-test_nc_wl_ellipticity_series_trace_matches_python_golden_value (void)
+test_nc_wl_ellipticity_series_trace_matches_python_reference_value (void)
 {
   NcWLEllipticitySeriesTrace *ser = nc_wl_ellipticity_series_trace_new (12);
   complex double chi;

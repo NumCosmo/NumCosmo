@@ -56,11 +56,15 @@ void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_spline_bspline_basic (void);
+void test_ncm_spline_hermite_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_powspec_analytic_basic (void);
 void test_ncm_pln1d_basic (void);
 void test_ncm_function_cache_basic (void);
 void test_ncm_iset_basic (void);
+void test_ncm_spectral_panels_basic (void);
+void test_ncm_spectral_panels_builder_basic (void);
+void test_ncm_spectral_panels_product_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -151,11 +155,15 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
   g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
+  g_test_add_func ("/ncm/spline_hermite/basic", test_ncm_spline_hermite_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
   g_test_add_func ("/ncm/pln1d/basic", test_ncm_pln1d_basic);
   g_test_add_func ("/ncm/function_cache/basic", test_ncm_function_cache_basic);
   g_test_add_func ("/ncm/iset/basic", test_ncm_iset_basic);
+  g_test_add_func ("/ncm/spectral_panels/basic", test_ncm_spectral_panels_basic);
+  g_test_add_func ("/ncm/spectral_panels_builder/basic", test_ncm_spectral_panels_builder_basic);
+  g_test_add_func ("/ncm/spectral_panels_product/basic", test_ncm_spectral_panels_product_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -651,6 +659,26 @@ test_ncm_spline_bspline_basic (void)
   g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
 
   NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
+}
+
+void
+test_ncm_spline_hermite_basic (void)
+{
+  NcmSplineHermite *sh = ncm_spline_hermite_new ();
+  NcmSplineHermite *sh2;
+
+  g_assert_true (sh != NULL);
+  g_assert_true (NCM_IS_SPLINE_HERMITE (sh));
+  g_assert_null (ncm_spline_hermite_peek_d1v (sh));
+  g_assert_null (ncm_spline_hermite_peek_d2v (sh));
+
+  sh2 = NCM_SPLINE_HERMITE (ncm_spline_ref (NCM_SPLINE (sh)));
+  ncm_spline_clear ((NcmSpline **) &sh2);
+  g_assert_true (sh2 == NULL);
+
+  g_assert_true (NCM_IS_SPLINE_HERMITE (sh));
+
+  NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sh));
 }
 
 void
@@ -1955,5 +1983,56 @@ test_nc_xcor_component_table_basic (void)
   ncm_vector_free (W);
 
   NCM_TEST_FREE (nc_xcor_component_table_free, xcct);
+}
+
+void
+test_ncm_spectral_panels_basic (void)
+{
+  NcmSpectralPanels *sp = ncm_spectral_panels_new (2);
+  NcmSpectralPanels *sp2;
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS (sp));
+
+  sp2 = ncm_spectral_panels_ref (sp);
+  ncm_spectral_panels_clear (&sp2);
+  g_assert_true (sp2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS (sp));
+
+  NCM_TEST_FREE (ncm_spectral_panels_free, sp);
+}
+
+void
+test_ncm_spectral_panels_builder_basic (void)
+{
+  NcmSpectralPanelsBuilder *builder = ncm_spectral_panels_builder_new ();
+  NcmSpectralPanelsBuilder *builder2;
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_BUILDER (builder));
+
+  builder2 = ncm_spectral_panels_builder_ref (builder);
+  ncm_spectral_panels_builder_clear (&builder2);
+  g_assert_true (builder2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_BUILDER (builder));
+
+  NCM_TEST_FREE (ncm_spectral_panels_builder_free, builder);
+}
+
+void
+test_ncm_spectral_panels_product_basic (void)
+{
+  NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (2);
+  NcmSpectralPanelsProduct *prod2;
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_PRODUCT (prod));
+
+  prod2 = ncm_spectral_panels_product_ref (prod);
+  ncm_spectral_panels_product_clear (&prod2);
+  g_assert_true (prod2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_PANELS_PRODUCT (prod));
+
+  NCM_TEST_FREE (ncm_spectral_panels_product_free, prod);
 }
 

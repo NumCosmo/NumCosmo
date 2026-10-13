@@ -16,8 +16,8 @@ warnings.filterwarnings(
 )
 
 from gi.repository import GLib
+
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
 

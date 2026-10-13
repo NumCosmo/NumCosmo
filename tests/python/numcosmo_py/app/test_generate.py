@@ -31,7 +31,6 @@ import pytest
 pytest.importorskip("astropy")
 pytest.importorskip("getdist")
 # flake8: noqa: E402
-# pylint: disable=wrong-import-position
 
 
 from numcosmo_py import Ncm
@@ -63,7 +62,6 @@ def test_generate_jpas_invalid_suffix(tmp_path: Path):
 @pytest.mark.planck_data
 def test_generate_planck_native(tmp_path: Path):
     """Native Planck experiment generates all-native, clik-free serialized blocks."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.experiments.planck_lite import find_baseline_file
     from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH
     from numcosmo_py.experiments.planck18 import Planck18Types
@@ -110,7 +108,6 @@ def test_generate_planck_native(tmp_path: Path):
 @pytest.mark.planck_data
 def test_build_planck_release(tmp_path: Path):
     """The publish command writes serialized native Planck release objects."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.experiments.planck_lite import find_baseline_file
     from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH
 
@@ -364,7 +361,6 @@ def test_generate_dewspline_invalid_suffix(tmp_path: Path):
 # Native Planck: paths that need no local plc_3.0 tree (see fixtures_planck.py).
 def test_generate_planck_from_release_requires_native(tmp_path: Path):
     """--from-release only makes sense together with --native."""
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.experiments.planck18 import Planck18Types
 
     exp_file = tmp_path / "planck.yaml"
@@ -378,7 +374,6 @@ def test_generate_planck_from_release_requires_native(tmp_path: Path):
 
 def test_build_planck_release_without_data(tmp_path: Path, monkeypatch):
     """Rebuilding the release with no clik tree present is an explicit error."""
-    # pylint: disable=import-outside-toplevel
     import numcosmo_py.experiments.planck_native_release as pnr
 
     monkeypatch.setattr(pnr, "find_baseline_file", lambda relpath: None)
@@ -389,7 +384,6 @@ def test_build_planck_release_without_data(tmp_path: Path, monkeypatch):
 
 def test_build_planck_release_writes_available_ids(tmp_path: Path, monkeypatch):
     """The publish command writes the ids whose source data it can find."""
-    # pylint: disable=import-outside-toplevel
     import numcosmo_py.experiments.planck_native_release as pnr
     from numcosmo_py.experiments.planck_commander import COMMANDER_RELPATH
     from python.fixtures_planck import make_commander_cldf
@@ -411,7 +405,6 @@ def test_build_planck_release_writes_available_ids(tmp_path: Path, monkeypatch):
 
 def test_generate_planck_native_from_release(tmp_path: Path, monkeypatch):
     """--native --from-release writes an experiment holding only native blocks."""
-    # pylint: disable=import-outside-toplevel
     import numcosmo_py.experiments.planck_native_release as pnr
     from numcosmo_py.experiments.planck18 import Planck18Types
     from numcosmo_py.experiments.planck_commander import build_commander

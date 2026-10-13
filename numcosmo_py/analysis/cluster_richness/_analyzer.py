@@ -24,7 +24,6 @@ mass-richness relations with progressive richness cuts.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from rich.console import Console
@@ -36,11 +35,11 @@ from numcosmo_py import Nc, Ncm
 from ._parameters import (
     CutAnalysisResult,
     dup_model,
+    get_model_param_names,
     model_params_as_list,
     model_params_from_list,
-    get_model_param_names,
 )
-from ._utils import setup_model_fit_params, PARAM_FORMAT
+from ._utils import PARAM_FORMAT, setup_model_fit_params
 
 
 @dataclass
@@ -121,7 +120,7 @@ class CutAnalyzer:
         base_dir: Path | None = None,
         sample_desc: str = "Sample",
         verbose: bool = True,
-        console: Optional[Console] = None,
+        console: Console | None = None,
     ):
         """Initialize the analyzer.
 

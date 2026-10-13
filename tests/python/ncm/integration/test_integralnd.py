@@ -52,12 +52,10 @@ class IntegralND(Ncm.IntegralND):
         flags=GObject.ParamFlags.READWRITE | GObject.ParamFlags.CONSTRUCT,
     )
 
-    # pylint: disable-next=arguments-differ
     def do_get_dimensions(self) -> tuple[int, int]:
         """Get number of dimensions."""
         return 3, 3
 
-    # pylint: disable-next=arguments-differ
     def do_integrand(
         self,
         x_vec: Ncm.Vector,
@@ -77,12 +75,10 @@ class IntegralND(Ncm.IntegralND):
 class DiscontinuousIntegrand(Ncm.IntegralND):
     """Test class for IntegralND with a discontinuous integrand."""
 
-    # pylint: disable-next=arguments-differ
     def do_get_dimensions(self) -> tuple[int, int]:
         """Get number of dimensions."""
         return 1, 1
 
-    # pylint: disable-next=arguments-differ
     def do_integrand(
         self,
         x_vec: Ncm.Vector,

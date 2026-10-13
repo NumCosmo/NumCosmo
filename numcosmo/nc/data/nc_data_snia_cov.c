@@ -4027,7 +4027,7 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
       if (remote_info == NULL)
         g_error ("nc_data_snia_cov_get_fits: cannot get info for %s: %s."
                  " To use this catalog, download the file from the url and copy "
-                 "to ~/.numcosmo directory.", url_str, error->message);
+                 "to %s directory.", url_str, error->message, ncm_cfg_get_fullpath_base ());
 
       if (g_file_info_get_size (local_info) != g_file_info_get_size (remote_info))
         download = TRUE;
@@ -4047,7 +4047,7 @@ nc_data_snia_cov_get_fits (const gchar *filename, gboolean check_size)
      * half-written FITS ("tried to move past end of file"). */
     if (_nc_data_download_lock (full_filename, full_filename, 900, &lockdir))
     {
-      _nc_data_download_file (url_str, full_filename, filename);
+      _nc_data_download_file (url_str, full_filename, filename, lockdir);
       _nc_data_download_unlock (lockdir);
     }
   }

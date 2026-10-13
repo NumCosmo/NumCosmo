@@ -155,3 +155,4 @@ test_nc_halo_catalog_generator_with_radius (TestNcHaloCatalogGenerator *test, gc
   nc_halo_catalog_generator_set_with_radius (test->gen, FALSE);
   g_assert_false (nc_halo_catalog_generator_get_with_radius (test->gen));
 }
+

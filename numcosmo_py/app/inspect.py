@@ -23,9 +23,10 @@ from __future__ import annotations
 
 import dataclasses
 import math
+from collections.abc import Callable
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated, Callable
+from typing import Annotated
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -34,7 +35,8 @@ import typer
 from matplotlib.patches import Circle
 from rich.table import Table
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Nc, Ncm
+
 from .loading import LoadExperiment
 
 

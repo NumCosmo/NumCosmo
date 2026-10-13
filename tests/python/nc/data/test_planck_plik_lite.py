@@ -106,7 +106,6 @@ def test_matches_clik_reference():
     first block). Only one clik plik_lite can be built per process (the Fortran
     ``plik_cmbonly`` keeps global module state), so a single superset case is used.
     """
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import (
         mset_set_parameters,

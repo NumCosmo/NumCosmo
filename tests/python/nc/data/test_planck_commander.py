@@ -75,7 +75,6 @@ def test_matches_clik_reference():
     The native Gaussianized-Blackwell-Rao assembly (spline transform, Gaussian
     in x-space, spline Jacobian and offset) reproduces clik to ~1e-7.
     """
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 
@@ -114,7 +113,6 @@ def test_clik_pi_compat_matches_clik():
     the same value by different floating-point routes, so the last bits are a
     property of the build, not of the code.
     """
-    # pylint: disable=import-outside-toplevel
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
     from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 

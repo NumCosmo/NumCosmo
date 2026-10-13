@@ -76,8 +76,8 @@ typedef struct _NcmModelPrivate
   gboolean constructed;
 
   /* Weak reference to the host this model is a submodel of, set once by
-   * _ncm_model_add_submodel(); submodels are fixed at construction and never
-   * replaced or detached, so it changes only when the host is freed. */
+   * _ncm_model_add_submodel(); submodels are never replaced or detached, so it
+   * changes only when the host is freed. */
   GWeakRef host_wr;
 } NcmModelPrivate;
 
@@ -100,6 +100,8 @@ G_DEFINE_QUARK (ncm-model-error, ncm_model_error)
 /* *INDENT-ON* */
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmModel, ncm_model, G_TYPE_OBJECT)
+
+static gboolean _ncm_model_class_param_was_removed (NcmModelClass *model_class, const gchar *name);
 
 typedef struct _NcmModelSubmodelSlot
 {
@@ -214,12 +216,22 @@ _ncm_model_set_sparams_from_dict (NcmModel *model, NcmObjDictInt *modified_spara
 
     while (g_hash_table_iter_next (&iter, (gpointer *) &key, (gpointer *) &value))
     {
-      const guint n = *key;
+      const gchar *name = ncm_sparam_name (value);
+      gpointer n_ptr;
+      guint n;
       NcmSParam *current_sp;
 
-      if (n >= self->total_len)
-        g_error ("_ncm_model_set_sparams_from_dict: parameter %u is out of range (0-%u)", n, self->total_len - 1);
+      /* Placed by name: removing a parameter shifts the index of every later one. */
+      if (!g_hash_table_lookup_extended (self->sparams_name_id, name, NULL, &n_ptr))
+      {
+        if (_ncm_model_class_param_was_removed (NCM_MODEL_GET_CLASS (model), name))
+          continue;
 
+        g_error ("_ncm_model_set_sparams_from_dict: model `%s' has no parameter `%s'.",
+                 G_OBJECT_TYPE_NAME (model), name);
+      }
+
+      n          = GPOINTER_TO_UINT (n_ptr);
       current_sp = g_ptr_array_index (self->sparams, n);
       g_assert_nonnull (current_sp);
 
@@ -420,6 +432,7 @@ _ncm_model_valid (NcmModel *model)
 }
 
 static void _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel);
+static gboolean _ncm_model_class_has_slot_for (NcmModelClass *model_class, GType submodel_type);
 
 static void
 ncm_model_class_init (NcmModelClass *klass)
@@ -451,6 +464,7 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->submodel_slot_len        = 0;
   klass->parent_submodel_slot_len = 0;
   klass->submodel_slot            = NULL;
+  klass->removed_param            = NULL;
 
   /**
    * NcmModel:name:
@@ -534,7 +548,9 @@ ncm_model_class_init (NcmModelClass *klass)
    * NcmModel:sparam-array:
    *
    * The parameter descriptions that differ from the class ones, #NcmSParam keyed by
-   * parameter index.
+   * parameter index. Each one is placed by its parameter name: a description of a
+   * parameter declared with ncm_model_class_add_removed_param() is skipped, and one of
+   * any other unknown parameter aborts.
    */
   g_object_class_install_property (object_class,
                                    PROP_SPARAM_ARRAY,
@@ -1126,6 +1142,52 @@ ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id
                                    g_param_spec_object (name, NULL, symbol,
                                                         submodel_type,
                                                         G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+}
+
+/**
+ * ncm_model_class_add_removed_param:
+ * @model_class: a #NcmModelClass
+ * @name: name of a parameter the class no longer has
+ *
+ * Declares @name as removed from the class: a stored description of it in
+ * #NcmModel:sparam-array is skipped. Subclasses inherit the declaration.
+ */
+void
+ncm_model_class_add_removed_param (NcmModelClass *model_class, const gchar *name)
+{
+  NcmModelClass *parent = g_type_class_peek_parent (model_class);
+
+  /* A subclass inherits its parent's pointer; it gets an array of its own. */
+  if ((model_class->removed_param == NULL) ||
+      (NCM_IS_MODEL_CLASS (parent) && (model_class->removed_param == parent->removed_param)))
+    model_class->removed_param = g_ptr_array_new_with_free_func (g_free);
+
+  g_ptr_array_add (model_class->removed_param, g_strdup (name));
+}
+
+static gboolean
+_ncm_model_class_param_was_removed (NcmModelClass *model_class, const gchar *name)
+{
+  gpointer klass = model_class;
+
+  while (NCM_IS_MODEL_CLASS (klass))
+  {
+    GPtrArray *removed = NCM_MODEL_CLASS (klass)->removed_param;
+    guint i;
+
+    if (removed != NULL)
+    {
+      for (i = 0; i < removed->len; i++)
+      {
+        if (g_strcmp0 (g_ptr_array_index (removed, i), name) == 0)
+          return TRUE;
+      }
+    }
+
+    klass = g_type_class_peek_parent (klass);
+  }
+
+  return FALSE;
 }
 
 /**
@@ -3550,10 +3612,12 @@ ncm_model_main_model (NcmModel *model)
  * @model: a #NcmModel
  * @submodel: a #NcmModel
  *
- * Attaches @submodel to @model. Only valid while @model is being constructed (through
- * its submodel slot properties); aborts afterwards, when @submodel already belongs to
- * another host, and when @model already has a submodel with the model id of @submodel.
- * An override must chain up.
+ * Attaches @submodel to @model. Submodels are construction-fixed: they are given while
+ * @model is being constructed, through its submodel slot properties. Attaching after
+ * construction is deprecated, kept only for 0.27 compatibility and dropped in 1.0; do
+ * not use it. Aborts when @submodel already belongs to another host, when @model
+ * already has a submodel with the model id of @submodel, and, on the deprecated path,
+ * when @model's class declares no slot for @submodel's type. An override must chain up.
  */
 void
 ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
@@ -3574,10 +3638,9 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   g_assert (is_submodel);
   g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
 
-  if (self->constructed)
-    g_error ("_ncm_model_add_submodel: submodels are construction-fixed -- `%s' must receive its `%s' "
-             "as a construction property (e.g. `g_object_new()`/constructor kwarg), "
-             "not attached after construction.",
+  /* Deprecated post-construction attach, 0.27 compatibility, dropped in 1.0. */
+  if (self->constructed && !_ncm_model_class_has_slot_for (NCM_MODEL_GET_CLASS (model), G_OBJECT_TYPE (submodel)))
+    g_error ("_ncm_model_add_submodel: `%s' declares no submodel slot for `%s'.",
              G_OBJECT_TYPE_NAME (model), G_OBJECT_TYPE_NAME (submodel));
 
   {
@@ -3605,6 +3668,25 @@ _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
   }
 
   g_weak_ref_set (&submodel_self->host_wr, model);
+}
+
+static gboolean
+_ncm_model_class_has_slot_for (NcmModelClass *model_class, GType submodel_type)
+{
+  guint i;
+
+  if (model_class->submodel_slot == NULL)
+    return FALSE;
+
+  for (i = 0; i < model_class->submodel_slot_len; i++)
+  {
+    NcmModelSubmodelSlot *slot = g_ptr_array_index (model_class->submodel_slot, i);
+
+    if ((slot != NULL) && g_type_is_a (submodel_type, slot->submodel_type))
+      return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**

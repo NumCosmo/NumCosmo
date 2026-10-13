@@ -164,8 +164,6 @@ typedef struct _NcmSplineFuncTestPrivate
 
   gdouble rel_error;
   gdouble scale;
-  guint refine;
-  gdouble refine_ns;
 
   guint npar;
   NcmVector *x_spl;
@@ -205,8 +203,6 @@ enum
   PROP_XF,
   PROP_REL_ERROR,
   PROP_SCALE,
-  PROP_REFINE,
-  PROP_REFINE_NS,
   PROP_SIZE,
 };
 
@@ -240,8 +236,6 @@ ncm_spline_func_test_init (NcmSplineFuncTest *sft)
 
   self->rel_error = 0.0;
   self->scale     = 0.0;
-  self->refine    = 0;
-  self->refine_ns = 0.0;
 
   self->npar         = 0;
   self->x_spl        = NULL;
@@ -304,12 +298,6 @@ _ncm_spline_func_test_set_property (GObject *object, guint prop_id, const GValue
     case PROP_SCALE:
       ncm_spline_func_test_set_scale (sft, g_value_get_double (value));
       break;
-    case PROP_REFINE:
-      ncm_spline_func_test_set_refine (sft, g_value_get_uint (value));
-      break;
-    case PROP_REFINE_NS:
-      ncm_spline_func_test_set_refine_ns (sft, g_value_get_double (value));
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -349,12 +337,6 @@ _ncm_spline_func_test_get_property (GObject *object, guint prop_id, GValue *valu
       break;
     case PROP_SCALE:
       g_value_set_double (value, ncm_spline_func_test_get_scale (sft));
-      break;
-    case PROP_REFINE:
-      g_value_set_uint (value, ncm_spline_func_test_get_refine (sft));
-      break;
-    case PROP_REFINE_NS:
-      g_value_set_double (value, ncm_spline_func_test_get_refine_ns (sft));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -536,34 +518,6 @@ ncm_spline_func_test_class_init (NcmSplineFuncTestClass *klass)
                                                         NULL,
                                                         "Scale",
                                                         0.0, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-/**
- * NcmSplineFuncTest:refine:
- * The number of times to refine the grid.
- *
- */
-  g_object_class_install_property (object_class,
-                                   PROP_REFINE,
-                                   g_param_spec_uint ("refine",
-                                                      NULL,
-                                                      "Number of refinements",
-                                                      0, G_MAXUINT32, 1,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmSplineFuncTest:refine-ns:
-   *
-   * The number of standard deviations necessary to mark an interval to be refined in
-   * the grid.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_REFINE_NS,
-                                   g_param_spec_double ("refine-ns",
-                                                        NULL,
-                                                        "Number of refinements",
-                                                        0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -819,67 +773,6 @@ ncm_spline_func_test_set_scale (NcmSplineFuncTest *sft, const gdouble scale)
   NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
 
   self->scale = scale;
-}
-
-/**
- * ncm_spline_func_test_set_refine:
- * @sft: a #NcmSplineFuncTest
- * @refine: number of refinements
- *
- * Sets the number of times to refine the grid.
- *
- */
-void
-ncm_spline_func_test_set_refine (NcmSplineFuncTest *sft, const guint refine)
-{
-  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
-
-  self->refine = refine;
-}
-
-/**
- * ncm_spline_func_test_get_refine:
- * @sft: a #NcmSplineFuncTest
- *
- * Returns: the number of refinements.
- */
-guint
-ncm_spline_func_test_get_refine (NcmSplineFuncTest *sft)
-{
-  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
-
-  return self->refine;
-}
-
-/**
- * ncm_spline_func_test_set_refine_ns:
- * @sft: a #NcmSplineFuncTest
- * @refine_ns: number of standard deviations necessary to mark an interval to be refined in the grid
- *
- * Sets the number of standard deviations necessary to mark an interval to be refined in
- * the grid.
- *
- */
-void
-ncm_spline_func_test_set_refine_ns (NcmSplineFuncTest *sft, const gdouble refine_ns)
-{
-  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
-
-  self->refine_ns = refine_ns;
-}
-
-/**
- * ncm_spline_func_test_get_refine_ns:
- * @sft: a #NcmSplineFuncTest
- *
- * Returns: the number of standard deviations necessary to mark an interval to be refined in the grid.
- */
-gdouble
-ncm_spline_func_test_get_refine_ns (NcmSplineFuncTest *sft)
-{
-  NcmSplineFuncTestPrivate * const self = ncm_spline_func_test_get_instance_private (sft);
-
-  return self->refine_ns;
 }
 
 /**
@@ -1840,7 +1733,7 @@ _ncm_spline_func_test_prepare_to_loop (NcmSplineFuncTestPrivate *self)
   if (self->F_prepare != NULL)
     self->F_prepare (self->F.params);
 
-  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 0, self->rel_error, self->scale, self->refine, self->refine_ns);
+  ncm_spline_set_func_scale (self->ncm, self->ftype, &self->F, self->xi, self->xf, 0, self->rel_error, self->scale);
 
   self->len = ncm_spline_get_len (self->ncm);
 
