@@ -389,7 +389,7 @@ static void
 test_ncm_spectral_panels_product_narrow (void)
 {
   const gdouble nu               = 100.5;
-  const gdouble ends[]           = {0.123, 0.3, 0.31, 0.29, 0.7, 0.0453, 0.77, 0.191, 0.333, 0.271};
+  const gdouble ends[]           = {0.123, 0.3, 0.31, 0.29, 0.191, 0.333, 0.271};
   NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (0);
   NcmMatrix *one                 = ncm_matrix_new (1, 1);
   NcmVector *s                   = ncm_vector_new (1);
@@ -406,9 +406,6 @@ test_ncm_spectral_panels_product_narrow (void)
     const gdouble b         = ends[i];
     const gdouble w         = 1.0e-5 * b;
     NcmSpectralPanels *sp_k = ncm_spectral_panels_new (1);
-
-    if (!((b > 0.1) && (b < 0.5)))
-      continue;
 
     ncm_spectral_panels_append (sp_k, 0.1, b - w, one);
     ncm_spectral_panels_append (sp_k, b - w, b, one);
