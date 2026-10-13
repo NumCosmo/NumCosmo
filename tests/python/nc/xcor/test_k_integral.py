@@ -91,6 +91,16 @@ TOLERANCE = {
 # rather than discriminating between methods.
 REFERENCE_FLOOR = 1.0e-7
 
+# The pairs and multipoles the quadrature is checked on; bench_k_integral.py runs
+# the whole case matrix. One pair stands for each kind of integrand the outer
+# quadrature meets: Gaussian and top-hat autos, an overlapping and a far-separated
+# cross, the RSD weight, a lensing kernel, a disconnected support, and X9, the only
+# non-separable kernel, whose closure is built differently. The multipoles are the
+# low end, l = 6, where every method and the reference are worst (the l = 4-10
+# region a [2, 20, 200] ladder missed), and l = 50 above it.
+CHECKED_CASES = ("A1", "A2", "X1", "X10", "R2", "X6", "A5", "X9")
+CHECKED_ELLS = (2, 6, 50)
+
 
 class Frozen:
     """Hold two prepared kernels, their closures for one block, and the references."""
@@ -222,9 +232,9 @@ def fixture_frozen() -> Callable[[str, int], Frozen]:
     return get
 
 
-@pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
+@pytest.mark.parametrize("case", CHECKED_CASES)
 @FROZEN_GROUP
-@pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
+@pytest.mark.parametrize("lmin", CHECKED_ELLS)
 def test_reference_is_a_reference(frozen, case: str, lmin: int) -> None:
     """Check that the reference converges before any method is compared to it.
 
@@ -242,12 +252,12 @@ def test_reference_is_a_reference(frozen, case: str, lmin: int) -> None:
 # Parameter order is cache order. pytest exhausts the top decorator fastest and
 # the bottom one slowest, and the frozen fixture keeps eight keys: with `method`
 # innermost the methods of one (case, lmin) run back to back on one
-# build. With `case` innermost the 35 cases stream through the cache for each
-# method in turn and every key is rebuilt once per method.
+# build. With `case` innermost the cases stream through the cache for each method
+# in turn and every key is rebuilt once per method.
 @pytest.mark.parametrize("method", sorted(METHODS))
-@pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
+@pytest.mark.parametrize("case", CHECKED_CASES)
 @FROZEN_GROUP
-@pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
+@pytest.mark.parametrize("lmin", CHECKED_ELLS)
 def test_method_matches_reference(frozen, case: str, method: str, lmin: int) -> None:
     """Check every kernel-space method against the quadrature's own reference."""
     state = frozen(case, lmin)
@@ -262,9 +272,9 @@ def test_method_matches_reference(frozen, case: str, method: str, lmin: int) -> 
 
 
 @pytest.mark.parametrize("method", sorted(METHODS))
-@pytest.mark.parametrize("case", [pair.case for pair in cases.PAIRS])
+@pytest.mark.parametrize("case", CHECKED_CASES)
 @FROZEN_GROUP
-@pytest.mark.parametrize("lmin", cases.ELLS_SUITE)
+@pytest.mark.parametrize("lmin", CHECKED_ELLS)
 def test_block_entry_point_matches_compute(
     frozen, case: str, method: str, lmin: int
 ) -> None:
