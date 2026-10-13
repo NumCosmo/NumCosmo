@@ -241,9 +241,9 @@ def _sum_balls(chunks: list[dict]) -> tuple[decimal.Decimal, float]:
     return total, radius
 
 
-def merge_subparts(index: int, subparts: list[dict]) -> dict:
+def merge_subparts(index: int | str, subparts: list[dict]) -> dict:
     """Part @index of an entry from the certified sub-parts it was re-split into."""
-    subparts = sorted(subparts, key=lambda c: int(str(c["index"]).split(".")[1]))
+    subparts = sorted(subparts, key=lambda c: int(str(c["index"]).split(".")[-1]))
     total, radius = _sum_balls(subparts)
 
     return {
@@ -391,6 +391,15 @@ def main() -> None:
             "timed out) as this many sub-parts of its own interval"
         ),
     )
+    parser.add_argument(
+        "--resplit-sub",
+        type=int,
+        default=1,
+        help=(
+            "with --resplit, certify each sub-part still missing as this many pieces "
+            "of its own interval"
+        ),
+    )
     args = parser.parse_args()
 
     pairs = (
@@ -513,7 +522,9 @@ def run_chunked(args, tasks: list, entries: dict, failed: list[str]) -> None:
 
     Finished parts are kept beside --out, so a rerun with --resume certifies only the
     parts still missing. With --resplit M a missing part is certified as M sub-parts of its
-    own interval instead, labelled "<part>.<sub>", and summed into the part once all are in.
+    own interval instead, labelled "<part>.<sub>", and summed into the part once all are in;
+    with --resplit-sub N a missing sub-part is certified as N pieces "<part>.<sub>.<piece>",
+    summed into the sub-part the same way.
     """
     parts_path = args.out.parent / (args.out.name + ".chunks.json")
     parts: dict[str, dict] = {}
@@ -541,10 +552,28 @@ def run_chunked(args, tasks: list, entries: dict, failed: list[str]) -> None:
                 continue
 
             for j in range(args.resplit):
-                if f"{i}.{j}" not in parts[key]:
-                    lo = edges[i] + (edges[i + 1] - edges[i]) * j / args.resplit
-                    hi = edges[i] + (edges[i + 1] - edges[i]) * (j + 1) / args.resplit
+                if f"{i}.{j}" in parts[key]:
+                    continue
+
+                lo = edges[i] + (edges[i + 1] - edges[i]) * j / args.resplit
+                hi = edges[i] + (edges[i + 1] - edges[i]) * (j + 1) / args.resplit
+
+                if args.resplit_sub <= 1:
                     jobs.append((pair, ell, lo, hi, scale, f"{i}.{j}"))
+                    continue
+
+                for m in range(args.resplit_sub):
+                    if f"{i}.{j}.{m}" not in parts[key]:
+                        jobs.append(
+                            (
+                                pair,
+                                ell,
+                                lo + (hi - lo) * m / args.resplit_sub,
+                                lo + (hi - lo) * (m + 1) / args.resplit_sub,
+                                scale,
+                                f"{i}.{j}.{m}",
+                            )
+                        )
 
     print(f"{len(jobs)} parts to certify", flush=True)
 
@@ -585,8 +614,27 @@ def run_chunked(args, tasks: list, entries: dict, failed: list[str]) -> None:
                 flush=True,
             )
 
-            # A re-split part is whole once all its sub-parts are in.
-            if isinstance(chunk["index"], str):
+            # A re-split sub-part is whole once all its pieces are in, and a re-split
+            # part once all its sub-parts are.
+            if isinstance(chunk["index"], str) and chunk["index"].count(".") == 2:
+                sub = chunk["index"].rsplit(".", 1)[0]
+                pieces = [
+                    parts[key][f"{sub}.{m}"]
+                    for m in range(args.resplit_sub)
+                    if f"{sub}.{m}" in parts[key]
+                ]
+
+                if len(pieces) == args.resplit_sub:
+                    parts[key][sub] = merge_subparts(sub, pieces)
+                    for m in range(args.resplit_sub):
+                        del parts[key][f"{sub}.{m}"]
+                    print(
+                        f"  {key:12s} part {sub:>5s} ok  in {args.resplit_sub} pieces",
+                        flush=True,
+                    )
+                    chunk = parts[key][sub]
+
+            if isinstance(chunk["index"], str) and chunk["index"].count(".") == 1:
                 i = int(chunk["index"].split(".")[0])
                 subs = [
                     parts[key][f"{i}.{j}"]
