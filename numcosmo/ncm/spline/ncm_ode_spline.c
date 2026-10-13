@@ -696,7 +696,7 @@ _ncm_ode_spline_record (NcmOdeSplinePrivate * const self, const gdouble x, const
 
       if (q >= 2)
       {
-        const gint flag = CVodeGetDky (self->cvode, x, 2, self->dky);
+        gint flag = CVodeGetDky (self->cvode, x, 2, self->dky);
 
         _NCM_ODE_SPLINE_CHECK (&flag, "CVodeGetDky", 1);
         d2 = NV_Ith_S (self->dky, 0);
