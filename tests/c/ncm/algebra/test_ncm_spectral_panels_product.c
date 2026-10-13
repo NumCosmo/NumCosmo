@@ -378,6 +378,58 @@ test_ncm_spectral_panels_product_disjoint (void)
   ncm_spectral_panels_free (sp_P);
 }
 
+/*
+ * Integrates two constant sides, one in k with a panel of relative width 1e-5 ending at
+ * b, the other in u = k / nu, so that b is mapped to u and back. The round trip can
+ * differ from b by one unit in the last place, and the cell must still be found inside
+ * the panel ending at b. Both sides are 1 on [0.1, 0.5] in k, so the integral is 0.4 for
+ * every end.
+ */
+static void
+test_ncm_spectral_panels_product_narrow (void)
+{
+  const gdouble nu               = 100.5;
+  const gdouble ends[]           = {0.123, 0.3, 0.31, 0.29, 0.7, 0.0453, 0.77, 0.191, 0.333, 0.271};
+  NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (0);
+  NcmMatrix *one                 = ncm_matrix_new (1, 1);
+  NcmVector *s                   = ncm_vector_new (1);
+  NcmVector *result              = ncm_vector_new (1);
+  NcmSpectralPanels *sp_u        = ncm_spectral_panels_new (1);
+  guint i;
+
+  ncm_matrix_set (one, 0, 0, 1.0);
+  ncm_vector_set (s, 0, nu);
+  ncm_spectral_panels_append (sp_u, 0.1 / nu, 0.5 / nu, one);
+
+  for (i = 0; i < G_N_ELEMENTS (ends); i++)
+  {
+    const gdouble b         = ends[i];
+    const gdouble w         = 1.0e-5 * b;
+    NcmSpectralPanels *sp_k = ncm_spectral_panels_new (1);
+
+    if (!((b > 0.1) && (b < 0.5)))
+      continue;
+
+    ncm_spectral_panels_append (sp_k, 0.1, b - w, one);
+    ncm_spectral_panels_append (sp_k, b - w, b, one);
+    ncm_spectral_panels_append (sp_k, b, 0.5, one);
+
+    ncm_spectral_panels_product_integrate (prod, sp_u, s, sp_k, NULL, result, NULL);
+    ncm_assert_cmpdouble_e (ncm_vector_get (result, 0), ==, 0.4, 1.0e-13, 0.0);
+
+    ncm_spectral_panels_product_integrate (prod, sp_k, NULL, sp_u, s, result, NULL);
+    ncm_assert_cmpdouble_e (ncm_vector_get (result, 0), ==, 0.4, 1.0e-13, 0.0);
+
+    ncm_spectral_panels_free (sp_k);
+  }
+
+  ncm_spectral_panels_free (sp_u);
+  ncm_vector_free (result);
+  ncm_vector_free (s);
+  ncm_matrix_free (one);
+  ncm_spectral_panels_product_free (prod);
+}
+
 typedef struct _ThreadProduct
 {
   NcmSpectralPanelsProduct *prod;
@@ -491,6 +543,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels_product/mixed", &test_ncm_spectral_panels_product_mixed);
   g_test_add_func ("/ncm/spectral_panels_product/large_tables", &test_ncm_spectral_panels_product_large_tables);
   g_test_add_func ("/ncm/spectral_panels_product/disjoint", &test_ncm_spectral_panels_product_disjoint);
+  g_test_add_func ("/ncm/spectral_panels_product/narrow", &test_ncm_spectral_panels_product_narrow);
   g_test_add_func ("/ncm/spectral_panels_product/threads", &test_ncm_spectral_panels_product_threads);
   g_test_add_func ("/ncm/spectral_panels_product/fdim", &test_ncm_spectral_panels_product_fdim);
   g_test_add_func ("/ncm/spectral_panels_product/fdim/subprocess", &test_ncm_spectral_panels_product_fdim_subprocess);

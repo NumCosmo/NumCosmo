@@ -46,6 +46,8 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral_panels.h"
+#include <math.h>
+#include <float.h>
 #include <string.h>
 
 enum
@@ -603,7 +605,8 @@ _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
  *
  * Computes the Chebyshev coefficients of every entry of $F$ on [@a, @b], which must lie
  * inside one panel. An end that edges computed in another variable put a rounding outside
- * the panel, within $10^{-12}$ of its width, is clamped to the edge. The restriction of a
+ * the panel, within $10^{-12}$ of its width or four units in the last place of the larger
+ * edge, is clamped to the edge. The restriction of a
  * polynomial to a subinterval is a polynomial of the same degree, so the coefficients follow
  * exactly from those of the panel by ncm_spectral_chebyshev_rebase_rows_data(), with the
  * scratch space of @spectral; when [@a, @b] is the panel they are its own. A matrix of the
@@ -620,7 +623,7 @@ ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdou
   guint N;
   const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &pa, &pb, &N);
 
-  const gdouble slack = 1.0e-12 * (pb - pa);
+  const gdouble slack = MAX (1.0e-12 * (pb - pa), 4.0 * DBL_EPSILON * MAX (fabs (pa), fabs (pb)));
 
   g_assert_cmpfloat (a, <, b);
 
