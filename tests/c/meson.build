@@ -782,18 +782,18 @@ xcor_tests = [
         'name': 'nc_xcor_ssc_sij',
         'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
     },
-    # One binary per table and Bessel-derivative order. The timeouts follow the
+    # One binary per table and Bessel-derivative order. The timeout follows the
     # -O0 coverage build, which runs these 7 to 10 times slower than the Optimized
     # build: sparse_d1 (ell 1000) takes 539 s there, under the lane's multiplier of 3.
     {
         'name': 'nc_xcor_window_dense_d0',
         'sources': ['nc/xcor/test_nc_xcor_window_dense_d0.c', 'nc/xcor/test_nc_xcor_window_common.c'],
-        'timeout': 180,
+        'timeout': 360,
     },
     {
         'name': 'nc_xcor_window_dense_d1',
         'sources': ['nc/xcor/test_nc_xcor_window_dense_d1.c', 'nc/xcor/test_nc_xcor_window_common.c'],
-        'timeout': 180,
+        'timeout': 360,
     },
     {
         'name': 'nc_xcor_window_dense_d2',
