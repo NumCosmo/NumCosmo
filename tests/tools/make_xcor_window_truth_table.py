@@ -35,9 +35,11 @@ and, with it, the output file: ``d = 1`` and ``d = 2`` write
 :math:`k\\chi`; :math:`d = 2` is the weight a redshift-space distortion term
 carries, so those two tables are what certifies the RSD path. This is the offline half of the
 check: it needs FLINT, runs in minutes, and is re-run only when a window's
-closed form or the case list changes. The test that consumes the table
-(``tests/python/nc/xcor/test_xcor_window_truth_table.py``) needs neither FLINT
-nor this script.
+closed form or the case list changes. The tests that consume the table
+(``tests/c/nc/xcor/test_nc_xcor_window_levin.c`` and ``_dense.c``, through the
+``.bin`` that ``make_xcor_window_bin.py`` writes, and
+``tests/python/nc/xcor/test_xcor_window_truth_table.py`` for the radii) need
+neither FLINT nor this script.
 
 **Why the k grid is per-multipole.** :math:`I_\\ell(k)` peaks near
 :math:`k\\chi \\simeq \\ell`, so a k grid shared across multipoles samples the

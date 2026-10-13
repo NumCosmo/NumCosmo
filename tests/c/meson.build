@@ -803,6 +803,11 @@ xcor_tests = [
         'timeout': 180,
     },
     {
+        'name': 'nc_xcor_window_levin',
+        'sources': ['nc/xcor/test_nc_xcor_window_levin.c'],
+        'timeout': 180,
+    },
+    {
         'name': 'nc_xcor_window_sparse_d0',
         'sources': ['nc/xcor/test_nc_xcor_window_dense.c'],
         'args': ['-p', '/nc/xcor/window_sparse/d0'],

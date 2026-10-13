@@ -49,7 +49,7 @@ The reference (``reference_cl``) is deliberately *not* independent of the
 closures: it is handed the same frozen ``NcXcorKernelIntegrand`` objects the
 methods are handed, so what it measures is the outer quadrature alone. The
 closures' own error against certified Arb values is measured separately, in
-``test_xcor_window_truth_table.py``.
+``tests/c/nc/xcor/test_nc_xcor_window_dense.c``.
 """
 
 from __future__ import annotations
