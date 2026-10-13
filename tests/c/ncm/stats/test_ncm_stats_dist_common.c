@@ -2646,6 +2646,7 @@ test_ncm_stats_dist_cv_auto_kernel (TestNcmStatsDist *test, gconstpointer pdata)
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
   NcmStatsDistKDECovType cov_type = GPOINTER_TO_INT (pdata);
   NcmVector *m2lnp_v              = ncm_vector_new (test->np);
+  FILE *devnull                   = fopen ("/dev/null", "w");
   gulong N                        = 0;
   guint i;
 
@@ -2666,10 +2667,14 @@ test_ncm_stats_dist_cv_auto_kernel (TestNcmStatsDist *test, gconstpointer pdata)
 
   /* With auto-kernel the bandwidth and the kernel tail index are fitted together, one
    * objective per cross-validation. Both objectives must leave a usable estimator and
-   * report what they chose; print-fit is where that report comes out. The fit tunes the
-   * Student-t kernel in place, so it is only run for those constructors. */
+   * report what they chose; print-fit is where that report comes out, on the log
+   * stream, which is sent to /dev/null here so the report stays out of the test output.
+   * The fit tunes the Student-t kernel in place, so it is only run for those
+   * constructors. */
   ncm_stats_dist_set_auto_kernel (test->sd, TRUE);
   ncm_stats_dist_set_print_fit (test->sd, TRUE);
+  g_assert_nonnull (devnull);
+  ncm_cfg_set_logstream (devnull);
   g_assert_true (ncm_stats_dist_get_auto_kernel (test->sd));
   g_assert_true (ncm_stats_dist_get_print_fit (test->sd));
 
@@ -2696,6 +2701,8 @@ test_ncm_stats_dist_cv_auto_kernel (TestNcmStatsDist *test, gconstpointer pdata)
   }
 
   ncm_stats_dist_set_print_fit (test->sd, FALSE);
+  ncm_cfg_set_logstream (stdout);
+  fclose (devnull);
 
   /* Leave-one-out estimates its objective by Monte Carlo over antithetic pairs, which is
    * the one place the wide defensive component is drawn from outside ncm_stats_dist_sample ().

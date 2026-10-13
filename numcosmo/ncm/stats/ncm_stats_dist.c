@@ -1402,12 +1402,12 @@ _ncm_stats_dist_fit_run (NcmStatsDist *sd, NcmStatsDistObjective objective, cons
   if (self->print_fit)
   {
     if (n == 2)
-      printf ("# center shrinkage: %s, over-smooth: % 22.15g, nu: % 22.15g, objective = % 22.15g, "
-              "neval = %u, nlopt status (%d)\n",
-              self->shrink.on ? "on" : "off", self->over_smooth, exp (p[1]), minf, fit.neval, ret);
+      ncm_message ("# center shrinkage: %s, over-smooth: % 22.15g, nu: % 22.15g, objective = % 22.15g, "
+                   "neval = %u, nlopt status (%d)\n",
+                   self->shrink.on ? "on" : "off", self->over_smooth, exp (p[1]), minf, fit.neval, ret);
     else
-      printf ("# over-smooth: % 22.15g, objective = % 22.15g, neval = %u, nlopt status (%d)\n",
-              self->over_smooth, minf, fit.neval, ret);
+      ncm_message ("# over-smooth: % 22.15g, objective = % 22.15g, neval = %u, nlopt status (%d)\n",
+                   self->over_smooth, minf, fit.neval, ret);
   }
 
   nlopt_destroy (opt);
@@ -1450,7 +1450,7 @@ _ncm_stats_dist_fit_scan (NcmStatsDistFit *fit, const guint n, gdouble *p, const
              (n == 2) ? ", at the starting nu" : "", self->n_kernels);
 
   if (self->print_fit)
-    printf ("# linear search: over-smooth % 22.15g, objective = % 22.15g\n", exp (x_best), best);
+    ncm_message ("# linear search: over-smooth % 22.15g, objective = % 22.15g\n", exp (x_best), best);
 
   p[0] = x_best;
 }
