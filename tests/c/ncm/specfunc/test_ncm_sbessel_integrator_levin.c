@@ -34,6 +34,21 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+void test_ncm_sbessel_integrator_levin_arb_constant (void);
+void test_ncm_sbessel_integrator_levin_arb_linear (void);
+void test_ncm_sbessel_integrator_levin_arb_quadratic (void);
+void test_ncm_sbessel_integrator_levin_arb_rational (void);
+void test_ncm_sbessel_integrator_levin_arb_moving_edge (void);
+void test_ncm_sbessel_integrator_levin_arb_accepted_edge (void);
+void test_ncm_sbessel_integrator_levin_arb_rejected_edge (void);
+void test_ncm_sbessel_integrator_levin_arb_set_reltol (void);
+void test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol (void);
+void test_ncm_sbessel_integrator_levin_arb_ell_zero (void);
+void test_ncm_sbessel_integrator_levin_arb_k_scaling (void);
+void test_ncm_sbessel_integrator_levin_arb_narrow (void);
+void test_ncm_sbessel_integrator_levin_arb_high_ell (void);
+void test_ncm_sbessel_integrator_levin_arb_oscillatory (void);
+void test_ncm_sbessel_integrator_levin_arb_evanescent (void);
 void test_ncm_sbessel_integrator_levin_ell_range_consistency (void);
 void test_ncm_sbessel_integrator_levin_zero_bessel_batch (void);
 void test_ncm_sbessel_integrator_levin_ell_range_caching (void);
@@ -81,6 +96,22 @@ main (gint argc, gchar *argv[])
 
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
+
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/constant", test_ncm_sbessel_integrator_levin_arb_constant);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/linear", test_ncm_sbessel_integrator_levin_arb_linear);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/quadratic", test_ncm_sbessel_integrator_levin_arb_quadratic);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/rational", test_ncm_sbessel_integrator_levin_arb_rational);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/moving_edge", test_ncm_sbessel_integrator_levin_arb_moving_edge);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/accepted_edge", test_ncm_sbessel_integrator_levin_arb_accepted_edge);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/rejected_edge", test_ncm_sbessel_integrator_levin_arb_rejected_edge);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/set_reltol", test_ncm_sbessel_integrator_levin_arb_set_reltol);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/repeated_set_reltol", test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/ell_zero", test_ncm_sbessel_integrator_levin_arb_ell_zero);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/k_scaling", test_ncm_sbessel_integrator_levin_arb_k_scaling);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/narrow", test_ncm_sbessel_integrator_levin_arb_narrow);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/high_ell", test_ncm_sbessel_integrator_levin_arb_high_ell);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/oscillatory", test_ncm_sbessel_integrator_levin_arb_oscillatory);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/evanescent", test_ncm_sbessel_integrator_levin_arb_evanescent);
 
   g_test_add_func ("/ncm/sbessel_integrator_levin/ell_range_consistency", test_ncm_sbessel_integrator_levin_ell_range_consistency);
   g_test_add_func ("/ncm/sbessel_integrator_levin/zero_bessel_batch", test_ncm_sbessel_integrator_levin_zero_bessel_batch);
@@ -159,7 +190,6 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-/* |actual - desired| <= atol + rtol |desired|, the numpy assert_allclose criterion */
 static gdouble
 _test_absmax (NcmVector *v)
 {
@@ -170,6 +200,7 @@ _test_absmax (NcmVector *v)
   return absmax;
 }
 
+/* |actual - desired| <= atol + rtol |desired|, the numpy assert_allclose criterion */
 static void
 _test_assert_close (gdouble actual, gdouble desired, gdouble rtol, gdouble atol)
 {
@@ -215,6 +246,456 @@ _test_gauss (gpointer user_data, gdouble x, gdouble k)
   const gdouble z    = (x - g->center) / g->sigma;
 
   return g->amplitude * exp (-0.5 * z * z);
+}
+
+/*
+ * Certified integrals I = int_a^b f(x) j_ell^(d)(k x) dx, from
+ * tests/tools/make_sbessel_levin_arb_cases.py (nc_xcor_kernel_analytic_arb, relative
+ * radius 1e-25, rounded to double). f is written here exactly as the tool writes it:
+ * TOPHAT 1; POWER x^n, n = p1; COS cos (p1 x); EXP exp (-x / p1); RATIONAL
+ * x^2 / (1 + ((x - p1) / p2)^2)^3; GAUSS exp (-((x - p1) / p2)^2 / 2). The rows of one
+ * case are contiguous, multipoles in increasing order.
+ */
+typedef enum _TestArbShape
+{
+  TEST_ARB_TOPHAT,
+  TEST_ARB_POWER,
+  TEST_ARB_COS,
+  TEST_ARB_EXP,
+  TEST_ARB_RATIONAL,
+  TEST_ARB_GAUSS,
+} TestArbShape;
+
+typedef struct _TestArbCell
+{
+  const gchar *name;
+  TestArbShape shape;
+  gdouble a;
+  gdouble b;
+  gdouble p1;
+  gdouble p2;
+  guint deriv;
+  guint ell;
+  gdouble k;
+  gdouble value;
+} TestArbCell;
+
+static const TestArbCell test_arb_cells[] = {
+  /* BEGIN make_sbessel_levin_arb_cases.py */
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 0, 1.0, 0.6021586306762569},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 1, 1.0, 0.7958237222715151},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 5, 1.0, 0.48260284581290397},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 10, 1.0, 0.34015366131471403},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 20, 1.0, 0.07200515204667218},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, 0, 1.0, 0.13222024405474772},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, 1, 1.0, 0.5306843647565257},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, 5, 1.0, 1.9425860132872468},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, 10, 1.0, 3.1777343624297174},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, 20, 1.0, 1.330664477477039},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, 0, 1.0, -7.549864664479969},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, 1, 1.0, -17.152993541635162},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, 5, 1.0, -3.7098496929237466},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, 10, 1.0, 25.794284875856388},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, 0, 1.0, -12.391811110003745},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, 1, 1.0, 3.2008147246960106},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, 5, 1.0, -15.439707699282732},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, 10, 1.0, 29.801551483932744},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, 20, 1.0, 0.08489097486799253},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, 200, 20.0, 0.4148178074571125},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 0, 1.0, 0.009119978431775066},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 1, 1.0, -0.16417347888847092},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 2, 1.0, -0.10432400526491802},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 3, 1.0, 0.08752243602152396},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 4, 1.0, 0.2555904588029378},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 5, 1.0, 0.34648365298352607},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 6, 1.0, 0.3706808798675939},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, 7, 1.0, 0.35429189497075153},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 0, 1.0, 0.11132862017108842},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 1, 1.0, 0.0514075231243722},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 2, 1.0, -0.09750506779987338},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 3, 1.0, -0.12946822430690377},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 4, 1.0, -0.016869271809440943},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 5, 1.0, 0.13936825342229892},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 6, 1.0, 0.24850488506975554},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, 7, 1.0, 0.29197853219169384},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 0, 1.0, -0.0879525949168579},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 1, 1.0, -0.009908381689475356},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 2, 1.0, 0.08859703860058944},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 3, 1.0, 0.05261904530206776},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 4, 1.0, -0.06015245320021174},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 5, 1.0, -0.10923788735438252},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 6, 1.0, -0.052066984908389374},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, 7, 1.0, 0.05042494149045293},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 0, 1.0, -0.0395063336597935},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 1, 1.0, -0.06053206247432944},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 2, 1.0, 0.023646311006344813},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 3, 1.0, 0.07428521787473621},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 4, 1.0, 0.0238668133674281},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 5, 1.0, -0.06022051335629506},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 6, 1.0, -0.08985303866903385},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, 7, 1.0, -0.04413403157505907},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 0, 1.0, 0.6593299064355118},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 1, 1.0, 0.38682227139505565},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 2, 1.0, 0.12832130915740367},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 3, 1.0, 0.030526685853749243},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 4, 1.0, 0.0057388279129687095},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 5, 1.0, 0.0008982701648965717},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 6, 1.0, 0.00012090747281368287},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, 7, 1.0, 1.4304072407906955e-05},
+  {"rejected_edge", TEST_ARB_COS, 1.0, 2.0, 500.0, 0.0, 0, 0, 1.0, 0.0015370690742047299},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 0, 1.0, 0.007750496513501052},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 1, 1.0, -0.004589534901865097},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 2, 1.0, -0.007890476440616185},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 3, 1.0, 0.004197348115723649},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 4, 1.0, 0.008189812011263732},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 5, 1.0, -0.0034639808864253},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 6, 1.0, -0.008579950301882813},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, 7, 1.0, 0.0023527834949275653},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, 0, 1.0, 0.07102420363141924},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, 1, 1.0, -0.04201163150805379},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, 2, 1.0, -0.08221534646397724},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, 3, 1.0, 0.013426384614975292},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, 4, 1.0, 0.09328165963961846},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, 5, 1.0, 0.048487996142564084},
+  {"ell_zero", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, 0, 1.0, 0.712264523851691},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, 5, 0.1, 0.0001557694944990179},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, 5, 1.0, 0.6484700039890495},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, 5, 10.0, -0.01113331884326862},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, 5, 100.0, -4.653748260250706e-05},
+  {"narrow", TEST_ARB_POWER, 5.0, 5.001, 1.0, 0.0, 0, 5, 1.0, 0.0005342563413119415},
+  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 100, 100.0, 0.0008907936235087944},
+  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 200, 200.0, 0.0003121418486470063},
+  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 300, 300.0, 0.00016794746443265403},
+  {"oscillatory", TEST_ARB_EXP, 1.0, 100.0, 100.0, 0.0, 0, 10, 500.0, 3.2810031358293054e-06},
+  {"evanescent", TEST_ARB_GAUSS, 1.0, 8.0, 4.0, 1.2, 2, 30, 0.5, 8.723201535126188e-26},
+  /* END make_sbessel_levin_arb_cases.py */
+};
+
+/* The first row of case @name and, in @n, how many rows it has */
+static const TestArbCell *
+_test_arb_case (const gchar *name, guint *n)
+{
+  const TestArbCell *first = NULL;
+  guint i;
+
+  *n = 0;
+
+  for (i = 0; i < G_N_ELEMENTS (test_arb_cells); i++)
+  {
+    if (strcmp (test_arb_cells[i].name, name) == 0)
+    {
+      if (first == NULL)
+        first = &test_arb_cells[i];
+
+      (*n)++;
+    }
+  }
+
+  g_assert_nonnull (first);
+
+  return first;
+}
+
+static gdouble
+_test_arb_f (const TestArbCell *c, gdouble x)
+{
+  switch (c->shape)
+  {
+    case TEST_ARB_TOPHAT:
+      return 1.0;
+
+    case TEST_ARB_POWER:
+      return gsl_pow_int (x, (gint) c->p1);
+
+    case TEST_ARB_COS:
+      return cos (c->p1 * x);
+
+    case TEST_ARB_EXP:
+      return exp (-x / c->p1);
+
+    case TEST_ARB_RATIONAL:
+      return x * x / gsl_pow_3 (1.0 + gsl_pow_2 ((x - c->p1) / c->p2));
+
+    case TEST_ARB_GAUSS:
+      return exp (-0.5 * gsl_pow_2 ((x - c->p1) / c->p2));
+
+    default:
+      g_assert_not_reached ();
+
+      return 0.0;
+  }
+}
+
+/* The integrand of one case, counting its calls and the range of x it was evaluated at */
+typedef struct _TestArbEval
+{
+  const TestArbCell *cell;
+  guint calls;
+  gdouble x_min;
+  gdouble x_max;
+} TestArbEval;
+
+static TestArbEval
+_test_arb_eval_new (const TestArbCell *cell)
+{
+  TestArbEval ev = {cell, 0, GSL_POSINF, GSL_NEGINF};
+
+  return ev;
+}
+
+static gdouble
+_test_arb_integrand (gpointer user_data, gdouble x, gdouble k)
+{
+  TestArbEval *ev = (TestArbEval *) user_data;
+
+  ev->calls++;
+  ev->x_min = GSL_MIN (ev->x_min, x);
+  ev->x_max = GSL_MAX (ev->x_max, x);
+
+  return _test_arb_f (ev->cell, x);
+}
+
+/*
+ * Each row of case @name with a fresh single-multipole integrator at the defaults,
+ * held to |I - I_arb| <= atol + rtol |I_arb|. The default reltol is 1e-13 and
+ * cheb-reltol 1e-8, so rtol 1e-8 is the tolerance the integrator is asked for.
+ */
+static void
+_test_arb_check_singles (const gchar *name, gdouble rtol, gdouble atol)
+{
+  guint n, i;
+  const TestArbCell *c = _test_arb_case (name, &n);
+
+  for (i = 0; i < n; i++)
+  {
+    NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (c[i].ell, c[i].ell));
+    TestArbEval ev            = _test_arb_eval_new (&c[i]);
+    NcmVector *res            = ncm_vector_new (1);
+
+    ncm_sbessel_integrator_integrate_deriv (sbi, &_test_arb_integrand, c[i].a, c[i].b, c[i].k, c[i].deriv, res, &ev);
+    _test_assert_close (ncm_vector_get (res, 0), c[i].value, rtol, atol);
+
+    ncm_vector_free (res);
+    ncm_sbessel_integrator_free (sbi);
+  }
+}
+
+void
+test_ncm_sbessel_integrator_levin_arb_constant (void)
+{
+  _test_arb_check_singles ("constant", 1.0e-8, 1.0e-20);
+}
+
+void
+test_ncm_sbessel_integrator_levin_arb_linear (void)
+{
+  _test_arb_check_singles ("linear", 1.0e-8, 1.0e-20);
+}
+
+void
+test_ncm_sbessel_integrator_levin_arb_quadratic (void)
+{
+  _test_arb_check_singles ("quadratic", 1.0e-8, 1.0e-20);
+}
+
+void
+test_ncm_sbessel_integrator_levin_arb_rational (void)
+{
+  _test_arb_check_singles ("rational", 1.0e-8, 1.0e-20);
+}
+
+/*
+ * Moving edge cells are reused without sampling outside [a, b]: four ranges of
+ * exp (-x / s) on one integrator with 9 knots on [1, 1e4], ell 0..7.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_moving_edge (void)
+{
+  const gchar *cases[]             = {"moving_edge_0", "moving_edge_1", "moving_edge_2", "moving_edge_3"};
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-9, 2, 1.0e-10);
+  NcmVector *res                   = ncm_vector_new (8);
+  guint i, j, n;
+
+  for (i = 0; i < G_N_ELEMENTS (cases); i++)
+  {
+    const TestArbCell *c = _test_arb_case (cases[i], &n);
+    TestArbEval ev       = _test_arb_eval_new (c);
+
+    g_assert_cmpuint (n, ==, 8);
+    ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
+
+    g_assert_cmpfloat (ev.x_min, >=, nextafter (c->a, GSL_NEGINF));
+    g_assert_cmpfloat (ev.x_max, <=, nextafter (c->b, GSL_POSINF));
+
+    for (j = 0; j < n; j++)
+      _test_assert_close (ncm_vector_get (res, c[j].ell), c[j].value, 1.0e-8, 1.0e-13);
+  }
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/*
+ * A smooth edge is fitted once: the first knot is the left end of [1, 2], leaving one
+ * right edge, so the kernel is called for one fit of 9 nodes plus the 5 probes that
+ * decide whether the edge is a dead-junction cell.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_accepted_edge (void)
+{
+  guint n, j;
+  const TestArbCell *c             = _test_arb_case ("accepted_edge", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11);
+  NcmVector *res                   = ncm_vector_new (8);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 8);
+  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
+
+  g_assert_cmpuint (ev.calls, ==, 9 + 5);
+
+  for (j = 0; j < n; j++)
+    _test_assert_close (ncm_vector_get (res, c[j].ell), c[j].value, 1.0e-9, 1.0e-14);
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/* A rejected extrapolation reuses the fit of 1025 nodes: only the 5 dead-junction probes are added */
+void
+test_ncm_sbessel_integrator_levin_arb_rejected_edge (void)
+{
+  guint n;
+  const TestArbCell *c             = _test_arb_case ("rejected_edge", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11);
+  NcmVector *res                   = ncm_vector_new (8);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 1);
+  g_assert_cmpuint (c->ell, ==, 0);
+  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
+
+  g_assert_cmpuint (ev.calls, ==, 1025 + 5);
+  _test_assert_close (ncm_vector_get (res, 0), c->value, 1.0e-8, 1.0e-13);
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/* The largest |I - I_arb| over the rows of one block, divided by the largest |I_arb| */
+static gdouble
+_test_arb_block_error (const TestArbCell *c, guint n, NcmVector *res)
+{
+  gdouble err = 0.0, peak = 0.0;
+  guint j;
+
+  for (j = 0; j < n; j++)
+  {
+    err  = GSL_MAX (err, fabs (ncm_vector_get (res, c[j].ell) - c[j].value));
+    peak = GSL_MAX (peak, fabs (c[j].value));
+  }
+
+  return err / peak;
+}
+
+/*
+ * A reltol set after construction reaches the operators, which are built with the
+ * multipole range and must be replaced. On exp (-x / 1000) over [100, 1e4], ell 0..7,
+ * reltol 1e-4 leaves the result at about 1e-6 of the peak; after set_reltol (1e-11) it
+ * is about 1e-12. cheb-reltol is 1e-12 throughout, so reltol is the setting that limits
+ * the result.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_set_reltol (void)
+{
+  guint n;
+  const TestArbCell *c             = _test_arb_case ("set_reltol", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0e-4, 1.0e6, 21, 1200, 1.0e-4, 2, 1.0e-12);
+  NcmVector *res                   = ncm_vector_new (8);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+  gdouble loose, tight;
+
+  g_assert_cmpuint (n, ==, 8);
+  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
+  loose = _test_arb_block_error (c, n, res);
+
+  ncm_sbessel_integrator_levin_set_reltol (sbilv, 1.0e-11);
+  g_assert_cmpfloat (ncm_sbessel_integrator_levin_get_reltol (sbilv), ==, 1.0e-11);
+
+  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
+  tight = _test_arb_block_error (c, n, res);
+
+  g_assert_cmpfloat (tight, <, loose);
+  g_assert_cmpfloat (tight, <, 1.0e-9);
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/* Rebuilding the operators eight times in a row keeps the result right */
+void
+test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol (void)
+{
+  guint n, i, j;
+  const TestArbCell *c             = _test_arb_case ("repeated_set_reltol", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (0, 5);
+  NcmVector *res                   = ncm_vector_new (6);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 6);
+
+  for (i = 0; i < 8; i++)
+  {
+    ncm_sbessel_integrator_levin_set_reltol (sbilv, 1.0e-9 * (1.0 + 0.1 * i));
+    ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
+
+    for (j = 0; j < n; j++)
+      _test_assert_close (ncm_vector_get (res, c[j].ell), c[j].value, 1.0e-7, 1.0e-14);
+  }
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+void
+test_ncm_sbessel_integrator_levin_arb_ell_zero (void)
+{
+  _test_arb_check_singles ("ell_zero", 1.0e-8, 1.0e-20);
+}
+
+/* ell 5 at k = 0.1, 1, 10 and 100 */
+void
+test_ncm_sbessel_integrator_levin_arb_k_scaling (void)
+{
+  _test_arb_check_singles ("k_scaling", 1.0e-8, 1.0e-20);
+}
+
+/* x on [5, 5.001] */
+void
+test_ncm_sbessel_integrator_levin_arb_narrow (void)
+{
+  _test_arb_check_singles ("narrow", 1.0e-8, 1.0e-15);
+}
+
+/* 1 on [1, 20] at ell = k = 100, 200 and 300 */
+void
+test_ncm_sbessel_integrator_levin_arb_high_ell (void)
+{
+  _test_arb_check_singles ("high_ell", 1.0e-8, 1.0e-15);
+}
+
+/* exp (-x / 100) on [1, 100] at ell 10, k 500 */
+void
+test_ncm_sbessel_integrator_levin_arb_oscillatory (void)
+{
+  _test_arb_check_singles ("oscillatory", 1.0e-8, 1.0e-15);
+}
+
+/* The order 2 integral at ell 30, k 0.5, where it is 8.7e-26: relative, not absolute, precision */
+void
+test_ncm_sbessel_integrator_levin_arb_evanescent (void)
+{
+  _test_arb_check_singles ("evanescent", 1.0e-9, 0.0);
 }
 
 /* integrate over a block agrees with integrate_ell for each multipole */
