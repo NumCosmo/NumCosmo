@@ -1138,7 +1138,7 @@ def compare_galaxy_number_count_kernel(
     sigma: float = 0.1,
     z_len: int = 1000,
     bias: float = 3.0,
-    mbias: float = 1.234,
+    mbias: float = Nc.XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS,
 ):
     """Compare galaxy count kernel from CCL and NumCosmo."""
     cosmo = cosmology.cosmo
@@ -1193,7 +1193,7 @@ def compare_galaxy_number_count_auto(
     sigma: float = 0.1,
     z_len: int = 1000,
     bias: float = 3.0,
-    mbias: float = 1.234,
+    mbias: float = Nc.XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS,
 ):
     """Compare galaxy count kernel from CCL and NumCosmo."""
     dndz = prepare_dndz(mu, sigma, z_len)

@@ -45,6 +45,12 @@
  * (implemented as a #NcmSpline), $ b(z)$ is the large-scale clustering bias and $s$ is
  * the magnification bias. $b(z)$ can be a single number or a #NcmSpline.
  *
+ * The magnification term carries the factor $5s - 2$, the convention of CCL ($1 - 2.5s$)
+ * and CosmoSIS ($2(\alpha - 1)$, $\alpha = 2.5s$). The default
+ * %NC_XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS, $s = 0.6$, gives the term unit weight; $s = 0.4$
+ * makes it vanish while it is still computed, so a kernel without magnification should be
+ * built with domagbias %FALSE instead.
+ *
  *
  */
 
@@ -599,7 +605,9 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
 
 /*
  * Implementation of the lensing efficiency source function, which is the integrand of
- * the g(z) function in the magnification bias term.
+ * the g(z) function in the magnification bias term. The weight 5s - 2 is written as
+ * 5(s - 0.4) so that it is exactly zero at s = 0.4: a compiler that fuses 5s - 2 into a
+ * multiply-add (clang on arm64) gives 5 x 0.4 - 2 = 1.1e-16 instead.
  */
 
 static gdouble
@@ -609,7 +617,7 @@ _nc_xcor_kernel_gal_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdo
   NcXcorKernelGal *xclkg           = data_obj->data;
   const gdouble mag_bias           = MAG_BIAS;
 
-  return (5.0 * mag_bias - 2.0) * _nc_xcor_kernel_gal_dndz (xclkg, z);
+  return 5.0 * (mag_bias - 0.4) * _nc_xcor_kernel_gal_dndz (xclkg, z);
 }
 
 static void

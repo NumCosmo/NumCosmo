@@ -203,8 +203,8 @@ def test_xcor_kernel_methods(
         k2.props.integrator = original_integrator[k2_name]
 
 
-# Measured 3.1e-10 of the block's peak on the tier-2 pair and 2.0e-11 on the
-# tier-3 one, at the fixtures' defaults; an order of headroom.
+# Measured 2.5e-10 of the block's peak on the tier-2 pair (magnification bias 0.6) and
+# 1.8e-11 on the tier-3 one, at adaptive-epsilon 1e-8; an order of headroom.
 SINGLE_VS_BLOCK_TOL = 1.0e-8
 
 
@@ -230,6 +230,11 @@ def test_single_ell_closures_match_block(
     them. The two build different fits of the same W_ell(k), so they agree to the
     closures' own accuracy, not exactly; the deviation is taken over the block's
     peak.
+
+    The domain is held fixed far out (adaptive-epsilon 1e-8): at the default 1e-5 the
+    magnification term's long tail in u is cut at different places for blocks of
+    different widths (9.7e-6 of peak on the tier-2 pair), which is the stopping rule's
+    defect, parked in NumCosmoDevNotes deferred_work.md, not the fits this test compares.
     """
     k1 = cast(Nc.XcorKernel, request.getfixturevalue(k1_name))
     k2 = cast(Nc.XcorKernel, request.getfixturevalue(k2_name))
@@ -238,12 +243,18 @@ def test_single_ell_closures_match_block(
 
     original_l_limber = {k1_name: k1.get_l_limber(), k2_name: k2.get_l_limber()}
     original_integrator = {k1_name: k1.peek_integrator(), k2_name: k2.peek_integrator()}
+    original_adaptive_epsilon = {
+        k1_name: k1.get_adaptive_epsilon(),
+        k2_name: k2.get_adaptive_epsilon(),
+    }
 
     try:
         k1.props.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
         k2.props.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
         k1.set_l_limber(l_limber)
         k2.set_l_limber(l_limber)
+        k1.set_adaptive_epsilon(1.0e-8)
+        k2.set_adaptive_epsilon(1.0e-8)
         k1.prepare(cosmology.cosmo)
         k2.prepare(cosmology.cosmo)
 
@@ -269,6 +280,8 @@ def test_single_ell_closures_match_block(
         k2.set_l_limber(original_l_limber[k2_name])
         k1.props.integrator = original_integrator[k1_name]
         k2.props.integrator = original_integrator[k2_name]
+        k1.set_adaptive_epsilon(original_adaptive_epsilon[k1_name])
+        k2.set_adaptive_epsilon(original_adaptive_epsilon[k2_name])
 
 
 # Kernel-Level Integrator Tests

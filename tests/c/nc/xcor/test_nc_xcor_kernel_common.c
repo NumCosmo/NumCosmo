@@ -882,6 +882,72 @@ test_nc_xcor_kernel_dndz_untouched (void)
   nc_hicosmo_free (cosmo);
 }
 
+/* At s = 0.4 the magnification weight 5s - 2 is zero (exactly, in doubles): a galaxy
+ * kernel with magnification on is then the kernel without it, though the magnification
+ * component is still built and evaluated. */
+static void
+test_nc_xcor_kernel_gal_magbias_null (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmSpline *dndz      = _dndz_new ();
+  NcXcorKernelGal *on  = nc_xcor_kernel_gal_new (dist, ps, 1, 1.234, dndz, TRUE);
+  NcXcorKernelGal *off = nc_xcor_kernel_gal_new (dist, ps, 1, 1.234, dndz, FALSE);
+  GPtrArray *comps;
+  guint i, j;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  ncm_model_orig_vparam_set (NCM_MODEL (on), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
+  ncm_model_orig_vparam_set (NCM_MODEL (off), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
+  ncm_model_orig_param_set (NCM_MODEL (on), NC_XCOR_KERNEL_GAL_MAG_BIAS, 0.4);
+
+  nc_xcor_kernel_prepare (NC_XCOR_KERNEL (on), cosmo);
+  nc_xcor_kernel_prepare (NC_XCOR_KERNEL (off), cosmo);
+
+  comps = nc_xcor_kernel_get_component_list (NC_XCOR_KERNEL (on));
+  g_assert_cmpuint (comps->len, ==, 2);
+  g_ptr_array_unref (comps);
+
+  for (j = 0; j < 6; j++)
+  {
+    const gdouble z    = 0.1 + 0.3 * j;
+    const gint ells[3] = {2, 10, 200};
+
+    for (i = 0; i < 3; i++)
+      g_assert_cmpfloat (nc_xcor_kernel_eval_limber_z_full (NC_XCOR_KERNEL (on), cosmo, z, dist, ells[i]), ==,
+                         nc_xcor_kernel_eval_limber_z_full (NC_XCOR_KERNEL (off), cosmo, z, dist, ells[i]));
+  }
+
+  /* And the term is there at any other s, or the equality above would prove nothing. */
+  {
+    gboolean differs = FALSE;
+
+    ncm_model_orig_param_set (NCM_MODEL (on), NC_XCOR_KERNEL_GAL_MAG_BIAS, 0.6);
+    nc_xcor_kernel_prepare_if_needed (NC_XCOR_KERNEL (on), cosmo);
+
+    for (j = 0; j < 6; j++)
+    {
+      const gdouble z = 0.1 + 0.3 * j;
+
+      differs = differs || (nc_xcor_kernel_eval_limber_z_full (NC_XCOR_KERNEL (on), cosmo, z, dist, 10) !=
+                            nc_xcor_kernel_eval_limber_z_full (NC_XCOR_KERNEL (off), cosmo, z, dist, 10));
+    }
+
+    g_assert_true (differs);
+  }
+
+  nc_xcor_kernel_free (NC_XCOR_KERNEL (on));
+  nc_xcor_kernel_free (NC_XCOR_KERNEL (off));
+  ncm_spline_free (dndz);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
 /* The _new() helpers leave the integrator unset, which pins the kernel to the Limber
  * tier -- nc_xcor_kernel_set_l_limber() refuses to move it off. The property form is how
  * a caller opts in, and it is the only path to the non-Limber knobs. */
@@ -1456,6 +1522,7 @@ test_nc_xcor_kernel_main (gint argc, gchar *argv[], const gchar *kernel)
 
   g_test_add_func ("/nc/xcor/kernel/integrator", &test_nc_xcor_kernel_integrator);
   g_test_add_func ("/nc/xcor/kernel/dndz_untouched", &test_nc_xcor_kernel_dndz_untouched);
+  g_test_add_func ("/nc/xcor/kernel/gal/magbias_null", &test_nc_xcor_kernel_gal_magbias_null);
   g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
   g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);
