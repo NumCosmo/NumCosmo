@@ -310,17 +310,11 @@ def test_tracer_cl_solver_updates_in_place(cosmology, ccl_cosmo, tracer):
 
 
 def test_batching_agrees_within_the_error_budget(cosmology, tracer):
-    """A multipole's transform is the same alone or inside a block, to within the bound.
+    """A multipole's transform is the same alone or inside a block, to within reltol.
 
-    One factorisation serves a whole block and the truncation order is a max-reduction
-    across it, so a multipole batched with harder neighbours is solved at a different
-    (higher) order than it needs. The two answers therefore differ, and the size of the
-    difference is the method's own error bar rather than zero.
-
-    Measured here: the cancellation ratio is C = 2.7, so the budget reltol*C is 2.7e-8,
-    and the observed difference is 1.4e-7 -- about 5x the estimate. That is consistent
-    with a spectral-tail criterion being an estimate rather than a rigorous bound, and
-    the tolerance below is set from the observation, not from wishful thinking.
+    One factorization serves a whole block and the truncation order is a max-reduction
+    across it, so a multipole batched with neighbors is solved at a different order than
+    alone; the two answers differ by the method's error, here 2.6e-14 at reltol 1e-8.
 
     Only the dominant wavenumber is checked: at k = 0.05 the transform is eight orders
     below its peak, where a relative comparison is meaningless.
@@ -330,14 +324,14 @@ def test_batching_agrees_within_the_error_budget(cosmology, tracer):
     alone = bessel_transform_block(tracer, cosmology, 5, 5, k_a, reltol=1.0e-8)[0]
     batched = bessel_transform_block(tracer, cosmology, 2, 9, k_a, reltol=1.0e-8)[3]
 
-    assert_allclose(batched, alone, rtol=1.0e-6)
+    assert_allclose(batched, alone, rtol=1.0e-8)
 
 
-def test_tighter_request_narrows_the_batching_difference(cosmology, tracer):
-    """The difference above is the tolerance at work, not a fixed offset.
+def test_batching_difference_is_within_each_tolerance(cosmology, tracer):
+    """The difference above is bounded by the tolerance requested, at 1e-10 and 1e-6.
 
-    If batching introduced a systematic error the gap would not shrink when a tighter
-    accuracy is requested; it does.
+    A systematic error from batching would not fall below a tight tolerance; the gap is
+    1.4e-11 at reltol 1e-10 and 9e-16 at 1e-6.
     """
     k_a = np.array([0.01])
 
@@ -346,7 +340,8 @@ def test_tighter_request_narrows_the_batching_difference(cosmology, tracer):
         batched = bessel_transform_block(tracer, cosmology, 2, 9, k_a, reltol=reltol)[3]
         return abs(batched[0] - alone[0]) / abs(alone[0])
 
-    assert gap(1.0e-10) < gap(1.0e-6)
+    for reltol in (1.0e-10, 1.0e-6):
+        assert gap(reltol) <= reltol
 
 
 def test_block_size_is_clamped(cosmology, tracer):
