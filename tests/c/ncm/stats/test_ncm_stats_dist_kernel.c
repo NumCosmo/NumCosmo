@@ -62,15 +62,31 @@ struct _TestNcmStatsDistKernelBare
 
 G_DEFINE_TYPE (TestNcmStatsDistKernelBare, test_ncm_stats_dist_kernel_bare, NCM_TYPE_STATS_DIST_KERNEL)
 
-static void
-test_ncm_stats_dist_kernel_bare_init (TestNcmStatsDistKernelBare *bare)
+typedef struct _TestNcmStatsDistKernelFunc
 {
-}
+  const gchar *name;
 
-static void
-test_ncm_stats_dist_kernel_bare_class_init (TestNcmStatsDistKernelBareClass *klass)
+  void (*test_func) (TestNcmStatsDistKernel *test, gconstpointer pdata);
+} TestNcmStatsDistKernelFunc;
+
+#define TEST_NCM_STATS_DIST_KERNEL_CONSTRUCTORS_LEN 2
+#define TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN 5
+
+/* Radial integrals of the unnormalized kernel g(s) = Kbar(s), s = r^2, at unit scale.
+ * The derivatives are the closed forms of the two kernel shapes. */
+typedef enum _TestRadial
 {
-}
+  TEST_RADIAL_NORM,
+  TEST_RADIAL_MOM2,
+  TEST_RADIAL_RK,
+  TEST_RADIAL_RLAP,
+} TestRadial;
+
+typedef struct _TestRadialArg
+{
+  TestNcmStatsDistKernel *test;
+  TestRadial which;
+} TestRadialArg;
 
 static void test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer pdata);
 static void test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointer pdata);
@@ -87,16 +103,6 @@ static void test_ncm_stats_dist_kernel_st_nu_default (void);
 static void test_ncm_stats_dist_kernel_traps (void);
 static void test_ncm_stats_dist_kernel_unimplemented_subprocess (void);
 
-typedef struct _TestNcmStatsDistKernelFunc
-{
-  const gchar *name;
-
-  void (*test_func) (TestNcmStatsDistKernel *test, gconstpointer pdata);
-} TestNcmStatsDistKernelFunc;
-
-#define TEST_NCM_STATS_DIST_KERNEL_CONSTRUCTORS_LEN 2
-#define TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN 5
-
 static TestNcmStatsDistKernelFunc constructors[TEST_NCM_STATS_DIST_KERNEL_CONSTRUCTORS_LEN] = {
   {"gauss", &test_ncm_stats_dist_kernel_new_gauss},
   {"st",    &test_ncm_stats_dist_kernel_new_st}
@@ -108,6 +114,11 @@ static TestNcmStatsDistKernelFunc tests[TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN] = 
   {"norm",   &test_ncm_stats_dist_kernel_norm},
   {"sum",    &test_ncm_stats_dist_kernel_sum},
   {"sample", &test_ncm_stats_dist_kernel_sample},
+};
+
+static const gchar *unimplemented[] = {
+  "get_rot_bandwidth", "get_var_factor", "get_lnnorm", "eval_unnorm",
+  "eval_unnorm_vec", "eval_gamma_lambda", "sample"
 };
 
 gint
@@ -138,6 +149,16 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/stats/dist/kernel/unimplemented/subprocess", &test_ncm_stats_dist_kernel_unimplemented_subprocess);
 
   g_test_run ();
+}
+
+static void
+test_ncm_stats_dist_kernel_bare_init (TestNcmStatsDistKernelBare *bare)
+{
+}
+
+static void
+test_ncm_stats_dist_kernel_bare_class_init (TestNcmStatsDistKernelBareClass *klass)
+{
 }
 
 static void
@@ -189,22 +210,6 @@ test_ncm_stats_dist_kernel_dim (TestNcmStatsDistKernel *test, gconstpointer pdat
 {
   g_assert_true (test->dim == ncm_stats_dist_kernel_get_dim (test->kernel));
 }
-
-/* Radial integrals of the unnormalized kernel g(s) = Kbar(s), s = r^2, at unit scale.
- * The derivatives are the closed forms of the two kernel shapes. */
-typedef enum _TestRadial
-{
-  TEST_RADIAL_NORM,
-  TEST_RADIAL_MOM2,
-  TEST_RADIAL_RK,
-  TEST_RADIAL_RLAP,
-} TestRadial;
-
-typedef struct _TestRadialArg
-{
-  TestNcmStatsDistKernel *test;
-  TestRadial which;
-} TestRadialArg;
 
 static gdouble
 _test_radial_integrand (gdouble r, gpointer userdata)
@@ -662,11 +667,6 @@ test_ncm_stats_dist_kernel_st_nu_default (void)
 
   ncm_stats_dist_kernel_st_free (sdk_st);
 }
-
-static const gchar *unimplemented[] = {
-  "get_rot_bandwidth", "get_var_factor", "get_lnnorm", "eval_unnorm",
-  "eval_unnorm_vec", "eval_gamma_lambda", "sample"
-};
 
 static void
 test_ncm_stats_dist_kernel_traps (void)
