@@ -15,7 +15,6 @@ adding a subdirectory here needs no build-system change.
 
 | directory | contents | consumed by |
 |---|---|---|
-| `sbessel/` | `gauss_jl_100.json.gz` only (no consumer, below); the 501 x 101 tables `gauss_jl_500.bin` and `rational_jl_500.bin` of `int f(x) j_l(k x) dx` are in the data-file release | `tests/c/ncm/specfunc/test_ncm_sbessel_integrator_levin.c` (release files) |
 | `halo/` | Castro multiplicity function and halo bias, against the CCToolkit implementation | `tests/python/nc/lss/halo/test_{bias_castro,multiplicity_func_castro_cctoolkit}.py` |
 | `cluster/` | a seeded cluster-count resample (`ncount_resample_seed0.bin`), a snapshot of our own output | `tests/python/nc/data/test_ncount_resample_truth_table.py`, `tests/python/nc/lss/halo/test_halo_catalog_generator.py` |
 | `planck/` | $-2\ln L$ of the seven native Planck likelihoods at a fixed fiducial cosmology: `m2lnl_baseline.bin` from the `plc_3.0` data with CLASS in the loop, a snapshot of our own output checked against clik when written; `m2lnl_synthetic.bin` from the synthetic cldf trees and stored spectra | `tests/python/nc/data/test_planck_truth_table.py`, `test_planck_synthetic_truth_table.py` |
@@ -52,9 +51,12 @@ any table added here.**
 
 ## Provenance, and how to regenerate
 
-The `sbessel/` tables were produced in Mathematica; that notebook is not in the
-repository, which makes them the least reproducible thing in this directory.
-They have since been verified against certified Arb ball arithmetic (agreeing to
+The sbessel tables `gauss_jl_500.bin` and `rational_jl_500.bin` (`int f(x) j_l(k x) dx`
+for a Gaussian and a rational `f` on a 501 x 101 grid in `l` and `k`) are files of the
+data-file release, read by `tests/c/ncm/specfunc/test_ncm_sbessel_integrator_levin.c`
+through `nc_data_download_release_file`. They were produced in Mathematica; that
+notebook is not in the repository, which makes them the least reproducible of these
+tables. They have since been verified against certified Arb ball arithmetic (agreeing to
 8 digits across `l` in [0, 500] and `k` in [0.1, 5623], down to values of
 1e-17), and rescaled by `1/k` to match the documented `dx` measure. The
 `gauss_jl_500` and `rational_jl_500` JSON files are kept outside the repository; the
@@ -75,9 +77,6 @@ resumable and write a `.partial.json` checkpoint beside their output; the
 cluster campaign that ran them is kept outside this repository, and the $C_\ell$
 table records the wall time of each entry in its `seconds` field, 56 core-hours in
 total.
-
-`gauss_jl_100.json.gz` currently has **no consumer**. It is kept only because
-deleting data is not free to undo; delete it once you are sure.
 
 ## Adding a table
 
