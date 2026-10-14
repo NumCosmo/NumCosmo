@@ -45,6 +45,12 @@
  * (implemented as a #NcmSpline), $ b(z)$ is the large-scale clustering bias and $s$ is
  * the magnification bias. $b(z)$ can be a single number or a #NcmSpline.
  *
+ * The magnification term carries the factor $5s - 2$, the convention of CCL ($1 - 2.5s$)
+ * and CosmoSIS ($2(\alpha - 1)$, $\alpha = 2.5s$). The default
+ * %NC_XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS, $s = 0.6$, gives the term unit weight; $s = 0.4$
+ * makes it vanish while it is still computed, so a kernel without magnification should be
+ * built with domagbias %FALSE instead.
+ *
  *
  */
 
