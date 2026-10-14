@@ -285,6 +285,14 @@ math_tests = [
         'sources': ['ncm/specfunc/test_ncm_sbessel_integrator.c'],
     },
     {
+        'name': 'ncm_sbessel_integrator_levin',
+        'sources': ['ncm/specfunc/test_ncm_sbessel_integrator_levin.c'],
+    },
+    {
+        'name': 'ncm_sbessel_ode_solver',
+        'sources': ['ncm/specfunc/test_ncm_sbessel_ode_solver.c'],
+    },
+    {
         'name': 'ncm_mpsf_sbessel',
         'sources': ['ncm/specfunc/test_ncm_mpsf_sbessel.c'],
     },

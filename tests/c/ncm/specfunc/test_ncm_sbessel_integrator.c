@@ -150,9 +150,9 @@ typedef struct _TestTruth
 } TestTruth;
 
 /*
- * Entries of the Arb truth tables data/truth_tables/sbessel/gauss_jl_500.json.gz (Gaussian,
- * center 0.5, std 0.05, on [0.1, 0.9]) and rational_jl_500.json.gz (center 1.5, std 0.05,
- * on [0.01, 6.5]), with k b / nu between 0.05 and 1.45. Relative error measured at most
+ * Entries of the truth tables gauss_jl_500.bin (Gaussian, center 0.5, std 0.05, on
+ * [0.1, 0.9]) and rational_jl_500.bin (center 1.5, std 0.05, on [0.01, 6.5]) of the
+ * data-file release, with k b / nu between 0.05 and 1.45. Relative error measured at most
  * 2.4e-14.
  */
 void

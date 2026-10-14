@@ -272,7 +272,6 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
     integrator = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
     integrator.set_reltol(1.0e-2)
     integrator.set_cheb_reltol(1.0e-2)
-    integrator.set_max_order(64)
 
     mu, sigma, z_len = 0.5, 0.08, 1000
     z_a = np.linspace(max(mu - 8 * sigma, 0.0), mu + 8 * sigma, z_len)
@@ -319,7 +318,6 @@ def _tier3_wl_kernel(cosmology: Cosmology, lmin: int, lmax: int) -> Nc.XcorKerne
     integrator = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
     integrator.set_reltol(1.0e-2)
     integrator.set_cheb_reltol(1.0e-2)
-    integrator.set_max_order(64)
 
     mu, sigma, z_len = 0.5, 0.08, 1000
     z_a = np.linspace(max(mu - 8 * sigma, 0.0), mu + 8 * sigma, z_len)
@@ -405,7 +403,6 @@ def test_set_integrator_overrides_and_resets_the_cache(cosmology: Cosmology) -> 
     proto = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
     proto.set_reltol(1.0e-2)
     proto.set_cheb_reltol(1.0e-2)
-    proto.set_max_order(64)
     solver.set_integrator(proto)
 
     solver.solve(xc, cosmology.cosmo)
