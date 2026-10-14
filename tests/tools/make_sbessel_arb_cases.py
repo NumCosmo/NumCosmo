@@ -194,6 +194,14 @@ LEVIN_CASES = [
     ("evanescent", "gauss", 1.0, 8.0, 4.0, 1.2, 2, [(30, [0.5])]),
 ]
 
+
+def _ode_bump(name: str, a: float, b: float, width: float) -> tuple:
+    """A Gaussian, width ``width`` times the half-width, centred on [a, b], ell 20."""
+    m, h = 0.5 * (a + b), 0.5 * (b - a)
+
+    return (name, "gauss", a, b, m, width * h, 0, [(20, [1.0])])
+
+
 # int_1^20 j_l(x) / x dx and int_1^20 j_l(x) dx, ell 0..20: the Green identity of the
 # ODE solver for the forcings 1 and x; then int_1^20 g(x) j_l(x) / x dx for the forcings
 # g = x^2, x^3, exp (x), sin (x), cos (x), exp (-x^2) and 1 / (1 + x^2)
@@ -280,6 +288,14 @@ ODE_CASES = [
         0,
         [(ell, [1.0]) for ell in (0, 5, 10)],
     ),
+    # int_a^b F j_20 dx, F a Gaussian centred on the panel: width 0.35 h on the narrow
+    # tau panel [100, 10^2.5], 0.25 h on the panels [1e3, 1e3 + span] of the derivative
+    # error bound (h the half-width)
+    _ode_bump("tau_narrow", 100.0, 10.0**2.5, 0.35),
+    *[
+        _ode_bump(f"deriv_bound_{int(span)}", 1.0e3, 1.0e3 + span, 0.25)
+        for span in (30.0, 60.0, 100.0, 150.0, 250.0, 3000.0)
+    ],
 ]
 
 TABLES = {"levin": LEVIN_CASES, "ode": ODE_CASES}

@@ -87,6 +87,22 @@ void test_ncm_sbessel_ode_solver_rotations_leading_zeros (void);
 void test_ncm_sbessel_ode_solver_rotations_convergence (void);
 void test_ncm_sbessel_ode_solver_rotations_batched_sequence (void);
 void test_ncm_sbessel_ode_solver_rotations_high_ell (void);
+void test_ncm_sbessel_ode_solver_tau_deep_panel (void);
+void test_ncm_sbessel_ode_solver_tau_narrow_panel (void);
+void test_ncm_sbessel_ode_solver_tau_batched (void);
+void test_ncm_sbessel_ode_solver_tau_shallow_panel (void);
+void test_ncm_sbessel_ode_solver_tau_last_max_coeff (void);
+void test_ncm_sbessel_ode_solver_tau_last_max_coeff_reconfigure (void);
+void test_ncm_sbessel_ode_solver_tau_pinned (void);
+void test_ncm_sbessel_ode_solver_tau_propagation (void);
+void test_ncm_sbessel_ode_solver_floor_default (void);
+void test_ncm_sbessel_ode_solver_floor_working_order (void);
+void test_ncm_sbessel_ode_solver_floor_deriv_error (void);
+void test_ncm_sbessel_ode_solver_floor_deriv_error_per_ell (void);
+void test_ncm_sbessel_ode_solver_floor_matrix_constraint (void);
+void test_ncm_sbessel_ode_solver_floor_matrix_band (void);
+void test_ncm_sbessel_ode_solver_deriv_bound_never_below (void);
+void test_ncm_sbessel_ode_solver_deriv_bound_separates (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -141,6 +157,22 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_ode_solver/rotations/convergence", test_ncm_sbessel_ode_solver_rotations_convergence);
   g_test_add_func ("/ncm/sbessel_ode_solver/rotations/batched_sequence", test_ncm_sbessel_ode_solver_rotations_batched_sequence);
   g_test_add_func ("/ncm/sbessel_ode_solver/rotations/high_ell", test_ncm_sbessel_ode_solver_rotations_high_ell);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/deep_panel", test_ncm_sbessel_ode_solver_tau_deep_panel);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/narrow_panel", test_ncm_sbessel_ode_solver_tau_narrow_panel);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/batched", test_ncm_sbessel_ode_solver_tau_batched);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/shallow_panel", test_ncm_sbessel_ode_solver_tau_shallow_panel);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/last_max_coeff", test_ncm_sbessel_ode_solver_tau_last_max_coeff);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/last_max_coeff_reconfigure", test_ncm_sbessel_ode_solver_tau_last_max_coeff_reconfigure);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/pinned", test_ncm_sbessel_ode_solver_tau_pinned);
+  g_test_add_func ("/ncm/sbessel_ode_solver/tau/propagation", test_ncm_sbessel_ode_solver_tau_propagation);
+  g_test_add_func ("/ncm/sbessel_ode_solver/floor/default", test_ncm_sbessel_ode_solver_floor_default);
+  g_test_add_func ("/ncm/sbessel_ode_solver/floor/working_order", test_ncm_sbessel_ode_solver_floor_working_order);
+  g_test_add_func ("/ncm/sbessel_ode_solver/floor/deriv_error", test_ncm_sbessel_ode_solver_floor_deriv_error);
+  g_test_add_func ("/ncm/sbessel_ode_solver/floor/deriv_error_per_ell", test_ncm_sbessel_ode_solver_floor_deriv_error_per_ell);
+  g_test_add_func ("/ncm/sbessel_ode_solver/floor/matrix_constraint", test_ncm_sbessel_ode_solver_floor_matrix_constraint);
+  g_test_add_func ("/ncm/sbessel_ode_solver/floor/matrix_band", test_ncm_sbessel_ode_solver_floor_matrix_band);
+  g_test_add_func ("/ncm/sbessel_ode_solver/deriv_bound/never_below", test_ncm_sbessel_ode_solver_deriv_bound_never_below);
+  g_test_add_func ("/ncm/sbessel_ode_solver/deriv_bound/separates", test_ncm_sbessel_ode_solver_deriv_bound_separates);
 
   g_test_run ();
 }
@@ -1354,6 +1386,13 @@ static const TestArbCell test_arb_cells[] = {
   {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 0, 1.0, 0.17909599346737495},
   {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 5, 1.0, 0.0037861935193706244},
   {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 10, 1.0, 0.0003449988561628076},
+  {"tau_narrow", TEST_ARB_GAUSS, 100.0, 316.22776601683796, 208.11388300841898, 37.83985905294664, 0, FALSE, 20, 1.0, 3.470494682971913e-05},
+  {"deriv_bound_30", TEST_ARB_GAUSS, 1000.0, 1030.0, 1015.0, 3.75, 0, FALSE, 20, 1.0, -3.8384799978730775e-06},
+  {"deriv_bound_60", TEST_ARB_GAUSS, 1000.0, 1060.0, 1030.0, 7.5, 0, FALSE, 20, 1.0, 1.2305957763076221e-07},
+  {"deriv_bound_100", TEST_ARB_GAUSS, 1000.0, 1100.0, 1050.0, 12.5, 0, FALSE, 20, 1.0, -2.530161116525624e-07},
+  {"deriv_bound_150", TEST_ARB_GAUSS, 1000.0, 1150.0, 1075.0, 18.75, 0, FALSE, 20, 1.0, -2.2501000047625404e-07},
+  {"deriv_bound_250", TEST_ARB_GAUSS, 1000.0, 1250.0, 1125.0, 31.25, 0, FALSE, 20, 1.0, -1.675615103467387e-07},
+  {"deriv_bound_3000", TEST_ARB_GAUSS, 1000.0, 4000.0, 2500.0, 375.0, 0, FALSE, 20, 1.0, 1.824908439349761e-07},
   /* END make_sbessel_arb_cases.py ode */
 };
 
@@ -2462,5 +2501,654 @@ test_ncm_sbessel_ode_solver_rotations_high_ell (void)
   g_array_unref (rhs2);
   ncm_sbessel_ode_operator_unref (op);
   ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * The tau constraint against Dirichlet data, ell 20, solver tolerance 1e-12. The forcing
+ * is x F (x) with F a Gaussian centred on the panel [a, b] of width 0.35 h (h the
+ * half-width), expanded to Chebyshev order 96 and converted to C^(2). The boundary
+ * functional W(b) - W(a), W = x j_l u' - (x j_l)' u, is invariant under adding
+ * homogeneous solutions, so both constraints give the same panel integral int F j_l dx.
+ */
+#define TEST_TAU_ELL 20
+#define TEST_TAU_A 1.0e4
+#define TEST_TAU_B 31622.776601683792 /* 10^4.5 */
+
+typedef struct _TestBump
+{
+  gdouble a;
+  gdouble b;
+  gdouble center;
+  gdouble width;
+} TestBump;
+
+static gdouble
+_test_bump_x_cheb (gpointer user_data, gdouble t)
+{
+  const TestBump *p = (const TestBump *) user_data;
+  const gdouble x   = 0.5 * (p->a + p->b) + 0.5 * (p->b - p->a) * t;
+
+  return x * exp (-0.5 * gsl_pow_2 ((x - p->center) / p->width));
+}
+
+/* x F (x) on [a, b], F the Gaussian (center, width), at Chebyshev order 96 */
+static GArray *
+_test_tau_rhs (const TestBump *p)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  GArray *cheb          = NULL;
+  GArray *gegen         = NULL;
+  GArray *rhs;
+
+  ncm_spectral_compute_chebyshev_coeffs (spectral, &_test_bump_x_cheb, -1.0, 1.0, 96, &cheb, (gpointer) p);
+  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb, &gegen);
+  rhs = _test_rhs_new (gegen->len + 2, (const gdouble *) gegen->data, gegen->len);
+
+  g_array_unref (cheb);
+  g_array_unref (gegen);
+  ncm_spectral_free (spectral);
+
+  return rhs;
+}
+
+static TestBump
+_test_tau_bump (gdouble a, gdouble b)
+{
+  TestBump p = {a, b, 0.5 * (a + b), 0.35 * 0.5 * (b - a)};
+
+  return p;
+}
+
+/* j_l'(x), as scipy's spherical_jn(derivative=True) computes it */
+static gdouble
+_test_jl_deriv (guint ell, gdouble x)
+{
+  if (ell == 0)
+    return -ncm_sf_sbessel (1, x);
+
+  return ncm_sf_sbessel (ell - 1, x) - (ell + 1.0) / x * ncm_sf_sbessel (ell, x);
+}
+
+/* W(b) - W(a), W = x j_l u' - (j_l + x j_l') u, for the Chebyshev series @u on [a, b] */
+static gdouble
+_test_boundary_functional (GArray *u, gdouble a, gdouble b, guint ell)
+{
+  const gdouble h = 0.5 * (b - a);
+  gdouble w[2];
+  guint i;
+
+  for (i = 0; i < 2; i++)
+  {
+    const gdouble t  = (i == 0) ? -1.0 : 1.0;
+    const gdouble x  = (i == 0) ? a : b;
+    const gdouble jl = ncm_sf_sbessel (ell, x);
+
+    w[i] = x * jl * ncm_spectral_chebyshev_deriv (u, t) / h - (jl + x * _test_jl_deriv (ell, x)) * ncm_spectral_chebyshev_eval (u, t);
+  }
+
+  return w[1] - w[0];
+}
+
+/* A solver at tolerance 1e-12 with the given default constraint */
+static NcmSBesselOdeSolver *
+_test_tau_solver (NcmSBesselOdeConstraint constraint)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+
+  ncm_sbessel_ode_solver_set_tolerance (solver, 1.0e-12);
+  ncm_sbessel_ode_solver_set_default_constraint (solver, constraint);
+
+  return solver;
+}
+
+/* Solves the bump on [a, b] for ell_min..ell_max; returns the operator */
+static NcmSBesselOdeOperator *
+_test_tau_solve (const TestBump *p, gint ell_min, gint ell_max, NcmSBesselOdeConstraint constraint, GArray **u, gsize *len)
+{
+  NcmSBesselOdeSolver *solver = _test_tau_solver (constraint);
+  GArray *rhs                 = _test_tau_rhs (p);
+  NcmSBesselOdeOperator *op   = _test_solve (solver, p->a, p->b, ell_min, ell_max, rhs, u, len);
+
+  g_array_unref (rhs);
+  ncm_sbessel_ode_solver_free (solver);
+
+  return op;
+}
+
+/*
+ * Deep oscillatory panel [1e4, 10^4.5]: the same integral to 1e-9 with far fewer
+ * columns, at most twice the forcing order and under 1/20 of Dirichlet's; the
+ * operators report their constraint and column floor.
+ */
+void
+test_ncm_sbessel_ode_solver_tau_deep_panel (void)
+{
+  const TestBump p = _test_tau_bump (TEST_TAU_A, TEST_TAU_B);
+  GArray *rhs      = _test_tau_rhs (&p);
+  GArray *u_d      = NULL;
+  GArray *u_t      = NULL;
+  gsize n_d, n_t;
+  NcmSBesselOdeOperator *op_d = _test_tau_solve (&p, TEST_TAU_ELL, TEST_TAU_ELL, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, &u_d, &n_d);
+  NcmSBesselOdeOperator *op_t = _test_tau_solve (&p, TEST_TAU_ELL, TEST_TAU_ELL, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u_t, &n_t);
+  const guint n_forcing       = rhs->len - 2;
+
+  _test_assert_close (_test_boundary_functional (u_t, p.a, p.b, TEST_TAU_ELL), _test_boundary_functional (u_d, p.a, p.b, TEST_TAU_ELL), 1.0e-9, 0.0);
+  g_assert_cmpuint (n_t, <=, 2 * n_forcing);
+  g_assert_cmpuint (20 * n_t, <, n_d);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op_t), ==, 0);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op_d), >, 0);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_constraint (op_d), ==, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_constraint (op_t), ==, NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+
+  g_array_unref (rhs);
+  g_array_unref (u_d);
+  g_array_unref (u_t);
+  ncm_sbessel_ode_operator_unref (op_d);
+  ncm_sbessel_ode_operator_unref (op_t);
+  ncm_mpsf_sbessel_free_cache ();
+}
+
+/* Narrow panel [100, 10^2.5]: the tau solve's integral against the certified tau_narrow cell, rtol 1e-9 */
+void
+test_ncm_sbessel_ode_solver_tau_narrow_panel (void)
+{
+  const TestArbCell *c = test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), "tau_narrow", TEST_TAU_ELL);
+  const TestBump p     = {c->a, c->b, c->p1, c->p2};
+  GArray *u            = NULL;
+  gsize n;
+  NcmSBesselOdeOperator *op = _test_tau_solve (&p, TEST_TAU_ELL, TEST_TAU_ELL, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u, &n);
+
+  _test_assert_close (_test_boundary_functional (u, p.a, p.b, TEST_TAU_ELL), c->value, 1.0e-9, 0.0);
+
+  g_array_unref (u);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_mpsf_sbessel_free_cache ();
+}
+
+/* A tau block of ell 20..27 against single solves: rtol 1e-9, atol 1e-13 max |single| */
+void
+test_ncm_sbessel_ode_solver_tau_batched (void)
+{
+  const TestBump p = _test_tau_bump (TEST_TAU_A, TEST_TAU_B);
+  GArray *u_b      = NULL;
+  gsize n_b;
+  NcmSBesselOdeOperator *op = _test_tau_solve (&p, TEST_TAU_ELL, TEST_TAU_ELL + 7, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u_b, &n_b);
+  guint l, j;
+
+  for (l = 0; l < 8; l++)
+  {
+    GArray *u_s = NULL;
+    gsize n_s;
+    NcmSBesselOdeOperator *sop = _test_tau_solve (&p, TEST_TAU_ELL + l, TEST_TAU_ELL + l, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u_s, &n_s);
+    const gdouble scale        = _test_absmax (u_s);
+
+    for (j = 0; j < n_b; j++)
+    {
+      const gdouble s = (j < n_s) ? g_array_index (u_s, gdouble, j) : 0.0;
+
+      _test_assert_close (g_array_index (u_b, gdouble, l * n_b + j), s, 1.0e-9, 1.0e-13 * scale);
+    }
+
+    g_array_unref (u_s);
+    ncm_sbessel_ode_operator_unref (sop);
+  }
+
+  g_array_unref (u_b);
+  ncm_sbessel_ode_operator_unref (op);
+}
+
+/* max |a_j| of the tau solution over that of the Dirichlet one, at ell 2 on [a, b] */
+static gdouble
+_test_tau_contamination (gdouble a, gdouble b)
+{
+  const TestBump p = _test_tau_bump (a, b);
+  GArray *u_d      = NULL;
+  GArray *u_t      = NULL;
+  gsize n;
+  NcmSBesselOdeOperator *op_d = _test_tau_solve (&p, 2, 2, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, &u_d, &n);
+  NcmSBesselOdeOperator *op_t = _test_tau_solve (&p, 2, 2, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u_t, &n);
+  const gdouble ratio         = _test_absmax (u_t) / _test_absmax (u_d);
+
+  g_array_unref (u_d);
+  g_array_unref (u_t);
+  ncm_sbessel_ode_operator_unref (op_d);
+  ncm_sbessel_ode_operator_unref (op_t);
+
+  return ratio;
+}
+
+/*
+ * On [3.162, 10] at ell 2 the panel holds about 4 oscillations against a working order
+ * of about 32, so the tau solve admits homogeneous content (coefficient ratio above
+ * 1e6); on [100, 10^2.5] it does not (below 10).
+ */
+void
+test_ncm_sbessel_ode_solver_tau_shallow_panel (void)
+{
+  g_assert_cmpfloat (_test_tau_contamination (3.162, 10.0), >, 1.0e6);
+  g_assert_cmpfloat (_test_tau_contamination (100.0, 316.22776601683796), <, 10.0);
+}
+
+/* get_last_max_coeff is the solution's own max |a_j|, for one multipole and a block of 8 */
+void
+test_ncm_sbessel_ode_solver_tau_last_max_coeff (void)
+{
+  const guint n_ell_a[] = {1, 8};
+  const TestBump p      = _test_tau_bump (TEST_TAU_A, TEST_TAU_B);
+  guint c, l;
+
+  for (c = 0; c < G_N_ELEMENTS (n_ell_a); c++)
+  {
+    GArray *u = NULL;
+    gsize n;
+    NcmSBesselOdeOperator *op = _test_tau_solve (&p, TEST_TAU_ELL, TEST_TAU_ELL + n_ell_a[c] - 1, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u, &n);
+
+    for (l = 0; l < n_ell_a[c]; l++)
+      g_assert_cmpfloat (ncm_sbessel_ode_operator_get_last_max_coeff (op, l), ==, _test_row_absmax (u, n, l));
+
+    g_array_unref (u);
+    ncm_sbessel_ode_operator_unref (op);
+  }
+}
+
+/* The same after a scalar solve and a reconfigure to a block of 8 (storage sized for one multipole first) */
+void
+test_ncm_sbessel_ode_solver_tau_last_max_coeff_reconfigure (void)
+{
+  const TestBump p            = _test_tau_bump (TEST_TAU_A, TEST_TAU_B);
+  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+  GArray *rhs                 = _test_tau_rhs (&p);
+  GArray *u                   = NULL;
+  gsize n;
+  NcmSBesselOdeOperator *op = _test_solve (solver, p.a, p.b, TEST_TAU_ELL, TEST_TAU_ELL, rhs, &u, &n);
+  guint l;
+
+  ncm_sbessel_ode_solver_reconfigure_operator (solver, op, p.a, p.b, TEST_TAU_ELL, TEST_TAU_ELL + 7);
+  ncm_sbessel_ode_operator_solve (op, rhs, &u, &n);
+
+  for (l = 0; l < 8; l++)
+    g_assert_cmpfloat (ncm_sbessel_ode_operator_get_last_max_coeff (op, l), ==, _test_row_absmax (u, n, l));
+
+  g_array_unref (u);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * Pinning coefficients 120 and 144 selects another member with the same integral (rtol
+ * 1e-9) at exactly 145 columns; returning to Dirichlet restores its column floor.
+ */
+void
+test_ncm_sbessel_ode_solver_tau_pinned (void)
+{
+  const TestBump p            = _test_tau_bump (TEST_TAU_A, TEST_TAU_B);
+  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  GArray *rhs                 = _test_tau_rhs (&p);
+  GArray *u_d                 = NULL;
+  GArray *u_p                 = NULL;
+  gsize n_d, n_p;
+  NcmSBesselOdeOperator *op = _test_solve (solver, p.a, p.b, TEST_TAU_ELL, TEST_TAU_ELL, rhs, &u_d, &n_d);
+  const glong floor_cols    = ncm_sbessel_ode_operator_get_min_cols (op);
+  glong pin1, pin2;
+
+  ncm_sbessel_ode_operator_set_pinned_constraint (op, 120, 144);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_constraint (op), ==, NCM_SBESSEL_ODE_CONSTRAINT_PINNED);
+  ncm_sbessel_ode_operator_get_pins (op, &pin1, &pin2);
+  g_assert_cmpint (pin1, ==, 120);
+  g_assert_cmpint (pin2, ==, 144);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op), ==, 145);
+
+  ncm_sbessel_ode_operator_solve (op, rhs, &u_p, &n_p);
+  g_assert_cmpuint (n_p, ==, 145);
+  _test_assert_close (_test_boundary_functional (u_p, p.a, p.b, TEST_TAU_ELL), _test_boundary_functional (u_d, p.a, p.b, TEST_TAU_ELL), 1.0e-9, 0.0);
+
+  ncm_sbessel_ode_operator_set_constraint (op, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_constraint (op), ==, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op), ==, floor_cols);
+
+  g_array_unref (u_d);
+  g_array_unref (u_p);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+  ncm_mpsf_sbessel_free_cache ();
+}
+
+/* The solver default is Dirichlet; operators inherit the solver's constraint; per-operator setters override it */
+void
+test_ncm_sbessel_ode_solver_tau_propagation (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op;
+
+  g_assert_cmpint (ncm_sbessel_ode_solver_get_default_constraint (solver), ==, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+
+  ncm_sbessel_ode_solver_set_default_constraint (solver, NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+  op = ncm_sbessel_ode_solver_create_operator (solver, TEST_TAU_A, TEST_TAU_B, TEST_TAU_ELL, TEST_TAU_ELL);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_constraint (op), ==, NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op), ==, 0);
+
+  ncm_sbessel_ode_operator_set_constraint (op, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_constraint (op), ==, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op), >, 0);
+
+  ncm_sbessel_ode_operator_set_min_cols (op, 7);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op), ==, 7);
+  ncm_sbessel_ode_operator_set_min_cols (op, -1);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_min_cols (op), >, 7);
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * The tau working order and the roundoff bound it implies, on [1e4, 10^4.5] at ell 20:
+ * the forcing is x F (x), F a Gaussian of width 0.25 h, expanded adaptively in x
+ * (level 3, tolerance 1e-13) and converted to C^(2).
+ */
+typedef struct _TestXBump
+{
+  gdouble center;
+  gdouble width;
+} TestXBump;
+
+static gdouble
+_test_xbump (gpointer user_data, gdouble x)
+{
+  const TestXBump *p = (const TestXBump *) user_data;
+
+  return x * exp (-0.5 * gsl_pow_2 ((x - p->center) / p->width));
+}
+
+/* The right-hand side and, in *n_forcing, the number of Chebyshev coefficients of x F */
+static GArray *
+_test_floor_rhs (gdouble a, gdouble b, gdouble center, gdouble width, guint *n_forcing)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
+  TestXBump p                 = {center, width};
+  GArray *cheb                = NULL;
+  GArray *gegen               = NULL;
+  GArray *rhs;
+
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, &_test_xbump, a, b, 3, 1.0e-13, &cheb, &p);
+  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb, &gegen);
+  g_assert_cmpuint (gegen->len, ==, cheb->len);
+  rhs        = _test_rhs_new (gegen->len + 2, (const gdouble *) gegen->data, gegen->len);
+  *n_forcing = cheb->len;
+
+  g_array_unref (cheb);
+  g_array_unref (gegen);
+  ncm_sbessel_ode_solver_free (solver);
+
+  return rhs;
+}
+
+static GArray *
+_test_floor_rhs_default (guint *n_forcing)
+{
+  return _test_floor_rhs (TEST_TAU_A, TEST_TAU_B, 0.5 * (TEST_TAU_A + TEST_TAU_B), 0.25 * 0.5 * (TEST_TAU_B - TEST_TAU_A), n_forcing);
+}
+
+/* The floor factor ships above one and reads back */
+void
+test_ncm_sbessel_ode_solver_floor_default (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+
+  g_assert_cmpfloat (ncm_sbessel_ode_solver_get_tau_floor_factor (solver), >, 1.0);
+  ncm_sbessel_ode_solver_set_tau_floor_factor (solver, 1.4);
+  g_assert_cmpfloat (ncm_sbessel_ode_solver_get_tau_floor_factor (solver), ==, 1.4);
+
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* The tau solve keeps ceil (factor n_forcing) columns, factor 1.1, 1.5 and 2.0, as get_tau_constraint_order reports */
+void
+test_ncm_sbessel_ode_solver_floor_working_order (void)
+{
+  const gdouble factor_a[] = {1.1, 1.5, 2.0};
+  guint n_forcing, i;
+  GArray *rhs = _test_floor_rhs_default (&n_forcing);
+
+  for (i = 0; i < G_N_ELEMENTS (factor_a); i++)
+  {
+    NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+    NcmSBesselOdeOperator *op;
+    GArray *u = NULL;
+    gsize n;
+
+    ncm_sbessel_ode_solver_set_tau_floor_factor (solver, factor_a[i]);
+    op = _test_solve (solver, TEST_TAU_A, TEST_TAU_B, TEST_TAU_ELL, TEST_TAU_ELL, rhs, &u, &n);
+
+    g_assert_cmpuint (n, ==, (gsize) ceil (factor_a[i] * n_forcing));
+    g_assert_cmpint (ncm_sbessel_ode_operator_get_tau_constraint_order (op, rhs->len), ==, (glong) n);
+
+    g_array_unref (u);
+    ncm_sbessel_ode_operator_unref (op);
+    ncm_sbessel_ode_solver_free (solver);
+  }
+
+  g_array_unref (rhs);
+}
+
+/* sum_j j^2 |a_j| / h of row l of a solution */
+static gdouble
+_test_weighted_sum (GArray *u, gsize n, guint l, gdouble h)
+{
+  gdouble s = 0.0;
+  guint j;
+
+  for (j = 0; j < n; j++)
+    s += (gdouble) j * j * fabs (g_array_index (u, gdouble, l * n + j));
+
+  return s / h;
+}
+
+/* get_last_deriv_error is sum_j j^2 |a_j| / h after solve, solve_values and solve_endpoints, Dirichlet and tau */
+void
+test_ncm_sbessel_ode_solver_floor_deriv_error (void)
+{
+  const NcmSBesselOdeConstraint cons[] = {NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, NCM_SBESSEL_ODE_CONSTRAINT_TAU};
+  const gdouble h                      = 0.5 * (TEST_TAU_B - TEST_TAU_A);
+  guint n_forcing, i;
+  GArray *rhs = _test_floor_rhs_default (&n_forcing);
+
+  for (i = 0; i < G_N_ELEMENTS (cons); i++)
+  {
+    NcmSBesselOdeSolver *solver = _test_tau_solver (cons[i]);
+    GArray *u                   = NULL;
+    GArray *values              = NULL;
+    GArray *endpoints           = NULL;
+    gsize n;
+    NcmSBesselOdeOperator *op = _test_solve (solver, TEST_TAU_A, TEST_TAU_B, TEST_TAU_ELL, TEST_TAU_ELL, rhs, &u, &n);
+    const gdouble expected    = _test_weighted_sum (u, n, 0, h);
+
+    _test_assert_close (ncm_sbessel_ode_operator_get_last_deriv_error (op, 0), expected, 1.0e-13, 0.0);
+
+    ncm_sbessel_ode_operator_solve_values (op, rhs, TEST_TAU_A, TEST_TAU_B, &values);
+    _test_assert_close (ncm_sbessel_ode_operator_get_last_deriv_error (op, 0), expected, 1.0e-13, 0.0);
+
+    ncm_sbessel_ode_operator_solve_endpoints (op, rhs, &endpoints);
+    _test_assert_close (ncm_sbessel_ode_operator_get_last_deriv_error (op, 0), g_array_index (endpoints, gdouble, 2), 1.0e-13, 0.0);
+
+    g_array_unref (u);
+    g_array_unref (values);
+    g_array_unref (endpoints);
+    ncm_sbessel_ode_operator_unref (op);
+    ncm_sbessel_ode_solver_free (solver);
+  }
+
+  g_array_unref (rhs);
+}
+
+/* Each member of a tau block of 1, 4 and 8 multipoles reports its own bound */
+void
+test_ncm_sbessel_ode_solver_floor_deriv_error_per_ell (void)
+{
+  const guint n_ell_a[] = {1, 4, 8};
+  const gdouble h       = 0.5 * (TEST_TAU_B - TEST_TAU_A);
+  guint n_forcing, c, l;
+  GArray *rhs = _test_floor_rhs_default (&n_forcing);
+
+  for (c = 0; c < G_N_ELEMENTS (n_ell_a); c++)
+  {
+    NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+    GArray *u                   = NULL;
+    gsize n;
+    NcmSBesselOdeOperator *op = _test_solve (solver, TEST_TAU_A, TEST_TAU_B, TEST_TAU_ELL, TEST_TAU_ELL + n_ell_a[c] - 1, rhs, &u, &n);
+
+    for (l = 0; l < n_ell_a[c]; l++)
+      _test_assert_close (ncm_sbessel_ode_operator_get_last_deriv_error (op, l), _test_weighted_sum (u, n, l, h), 1.0e-13, 0.0);
+
+    g_array_unref (u);
+    ncm_sbessel_ode_operator_unref (op);
+    ncm_sbessel_ode_solver_free (solver);
+  }
+
+  g_array_unref (rhs);
+}
+
+/* The number of nonzero entries of row @i */
+static guint
+_test_row_nonzeros (NcmMatrix *m, guint i)
+{
+  guint count = 0;
+  guint j;
+
+  for (j = 0; j < ncm_matrix_ncols (m); j++)
+    count += (ncm_matrix_get (m, i, j) != 0.0) ? 1 : 0;
+
+  return count;
+}
+
+/* The 40-row dense matrix carries the operator's constraint rows: Dirichlet full, pinned one entry each, tau none */
+void
+test_ncm_sbessel_ode_solver_floor_matrix_constraint (void)
+{
+  const guint nrows                    = 40;
+  NcmSBesselOdeSolver *solver          = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  NcmSBesselOdeOperator *op            = ncm_sbessel_ode_solver_create_operator (solver, TEST_TAU_A, TEST_TAU_B, TEST_TAU_ELL, TEST_TAU_ELL);
+  const NcmSBesselOdeConstraint cons[] = {NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, NCM_SBESSEL_ODE_CONSTRAINT_PINNED, NCM_SBESSEL_ODE_CONSTRAINT_TAU};
+  const guint expected[]               = {nrows, 1, 0};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (cons); i++)
+  {
+    NcmMatrix *m;
+
+    if (cons[i] == NCM_SBESSEL_ODE_CONSTRAINT_PINNED)
+      ncm_sbessel_ode_operator_set_pinned_constraint (op, 10, 20);
+    else
+      ncm_sbessel_ode_operator_set_constraint (op, cons[i]);
+
+    m = ncm_sbessel_ode_operator_get_matrix (op, nrows);
+    g_assert_cmpuint (_test_row_nonzeros (m, 0), ==, expected[i]);
+    g_assert_cmpuint (_test_row_nonzeros (m, 1), ==, expected[i]);
+    ncm_matrix_free (m);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* Below the two constraint rows the Dirichlet and tau matrices are bitwise equal */
+void
+test_ncm_sbessel_ode_solver_floor_matrix_band (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_TAU_A, TEST_TAU_B, TEST_TAU_ELL, TEST_TAU_ELL);
+  NcmMatrix *m_d, *m_t;
+  guint i, j;
+
+  ncm_sbessel_ode_operator_set_constraint (op, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  m_d = ncm_sbessel_ode_operator_get_matrix (op, 40);
+  ncm_sbessel_ode_operator_set_constraint (op, NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+  m_t = ncm_sbessel_ode_operator_get_matrix (op, 40);
+
+  for (i = 2; i < 40; i++)
+    for (j = 0; j < 40; j++)
+      g_assert_cmpfloat (ncm_matrix_get (m_t, i, j), ==, ncm_matrix_get (m_d, i, j));
+
+  ncm_matrix_free (m_d);
+  ncm_matrix_free (m_t);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * The derivative-error bound: under the tau constraint the reported
+ * get_last_deriv_error, scaled as eps deriv_error max (|x j_l|) / |I|, is never below
+ * the realized relative error of the panel integral when that error exceeds 1e-9. The
+ * panels [1e3, 1e3 + span] hold a Gaussian of width 0.25 h at ell 20; the integrals are
+ * the certified deriv_bound_<span> cells.
+ */
+static void
+_test_deriv_bound_solve (const TestArbCell *c, gdouble *value, gdouble *deriv_error)
+{
+  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+  guint n_forcing;
+  GArray *rhs = _test_floor_rhs (c->a, c->b, c->p1, c->p2, &n_forcing);
+  GArray *u   = NULL;
+  gsize n;
+  NcmSBesselOdeOperator *op = _test_solve (solver, c->a, c->b, TEST_TAU_ELL, TEST_TAU_ELL, rhs, &u, &n);
+
+  *value       = _test_boundary_functional (u, c->a, c->b, TEST_TAU_ELL);
+  *deriv_error = ncm_sbessel_ode_operator_get_last_deriv_error (op, 0);
+
+  g_array_unref (u);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+static const TestArbCell *
+_test_deriv_bound_cell (guint span)
+{
+  gchar *name          = g_strdup_printf ("deriv_bound_%u", span);
+  const TestArbCell *c = test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, TEST_TAU_ELL);
+
+  g_free (name);
+
+  return c;
+}
+
+/* Spans 30, 60, 100, 150, 250 (the constraint fails) and 3000 (sound) */
+void
+test_ncm_sbessel_ode_solver_deriv_bound_never_below (void)
+{
+  const guint span_a[] = {30, 60, 100, 150, 250, 3000};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (span_a); i++)
+  {
+    const TestArbCell *c    = _test_deriv_bound_cell (span_a[i]);
+    const gdouble amplitude = GSL_MAX (fabs (c->a * ncm_sf_sbessel (TEST_TAU_ELL, c->a)), fabs (c->b * ncm_sf_sbessel (TEST_TAU_ELL, c->b)));
+    gdouble value, deriv_error, predicted, realized;
+
+    _test_deriv_bound_solve (c, &value, &deriv_error);
+    predicted = GSL_DBL_EPSILON * deriv_error * amplitude / fabs (c->value);
+    realized  = fabs (value - c->value) / fabs (c->value);
+
+    if (realized > 1.0e-9)
+      g_assert_cmpfloat (predicted, >=, realized);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+}
+
+/* A contaminated panel (span 30) reports a bound more than 1e6 times that of a sound one (span 3000) */
+void
+test_ncm_sbessel_ode_solver_deriv_bound_separates (void)
+{
+  gdouble value, deriv_sound, deriv_broken;
+
+  _test_deriv_bound_solve (_test_deriv_bound_cell (3000), &value, &deriv_sound);
+  _test_deriv_bound_solve (_test_deriv_bound_cell (30), &value, &deriv_broken);
+
+  g_assert_cmpfloat (deriv_broken, >, 1.0e6 * deriv_sound);
+
+  ncm_mpsf_sbessel_free_cache ();
 }
 
