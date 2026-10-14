@@ -41,7 +41,9 @@
 #include <math.h>
 
 #define TEST_NKNOTS 200
+
 #define TEST_NEVAL 20000
+
 #define TEST_NTHREADS 8
 
 typedef struct _TestBSplineThreads
@@ -53,6 +55,92 @@ typedef struct _TestBSplineThreads
   gdouble *ref_deriv2;
   gdouble *ref_dnmax;
 } TestBSplineThreads;
+
+typedef struct _BSplineWorker
+{
+  TestBSplineThreads *test;
+  glong n_bad;
+  gboolean with_derivs;
+} BSplineWorker;
+
+static void test_ncm_spline_bspline_threads_new (TestBSplineThreads *test, gconstpointer pdata);
+static void test_ncm_spline_bspline_threads_free (TestBSplineThreads *test, gconstpointer pdata);
+static void test_ncm_spline_bspline_threads_eval (TestBSplineThreads *test, gconstpointer pdata);
+static void test_ncm_spline_bspline_threads_eval_derivs (TestBSplineThreads *test, gconstpointer pdata);
+
+int
+main (int argc, char *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/spline_bspline/threads/eval", TestBSplineThreads, NULL,
+              &test_ncm_spline_bspline_threads_new,
+              &test_ncm_spline_bspline_threads_eval,
+              &test_ncm_spline_bspline_threads_free);
+
+  g_test_add ("/ncm/spline_bspline/threads/eval_derivs", TestBSplineThreads, NULL,
+              &test_ncm_spline_bspline_threads_new,
+              &test_ncm_spline_bspline_threads_eval_derivs,
+              &test_ncm_spline_bspline_threads_free);
+
+  g_test_run ();
+
+  return 0;
+}
+
+static gpointer
+_bspline_worker (gpointer data)
+{
+  BSplineWorker *worker    = (BSplineWorker *) data;
+  TestBSplineThreads *test = worker->test;
+  guint j;
+
+  for (j = 0; j < TEST_NEVAL; j++)
+  {
+    const gdouble x = test->x_eval[j];
+
+    if (ncm_spline_eval (test->s, x) != test->ref_eval[j])
+      worker->n_bad++;
+
+    if (worker->with_derivs)
+    {
+      if (ncm_spline_eval_deriv (test->s, x) != test->ref_deriv[j])
+        worker->n_bad++;
+
+      if (ncm_spline_eval_deriv2 (test->s, x) != test->ref_deriv2[j])
+        worker->n_bad++;
+
+      if (ncm_spline_eval_deriv_nmax (test->s, x) != test->ref_dnmax[j])
+        worker->n_bad++;
+    }
+  }
+
+  return NULL;
+}
+
+static void
+_test_ncm_spline_bspline_threads_run (TestBSplineThreads *test, gboolean with_derivs)
+{
+  GThread *threads[TEST_NTHREADS];
+  BSplineWorker workers[TEST_NTHREADS];
+  guint i;
+
+  for (i = 0; i < TEST_NTHREADS; i++)
+  {
+    workers[i].test        = test;
+    workers[i].n_bad       = 0;
+    workers[i].with_derivs = with_derivs;
+    threads[i]             = g_thread_new ("bspline-eval", _bspline_worker, &workers[i]);
+  }
+
+  for (i = 0; i < TEST_NTHREADS; i++)
+  {
+    g_thread_join (threads[i]);
+    g_assert_cmpint (workers[i].n_bad, ==, 0);
+  }
+}
 
 static void
 test_ncm_spline_bspline_threads_new (TestBSplineThreads *test, gconstpointer pdata)
@@ -111,65 +199,6 @@ test_ncm_spline_bspline_threads_free (TestBSplineThreads *test, gconstpointer pd
   g_free (test->ref_dnmax);
 }
 
-typedef struct _BSplineWorker
-{
-  TestBSplineThreads *test;
-  glong n_bad;
-  gboolean with_derivs;
-} BSplineWorker;
-
-static gpointer
-_bspline_worker (gpointer data)
-{
-  BSplineWorker *worker    = (BSplineWorker *) data;
-  TestBSplineThreads *test = worker->test;
-  guint j;
-
-  for (j = 0; j < TEST_NEVAL; j++)
-  {
-    const gdouble x = test->x_eval[j];
-
-    if (ncm_spline_eval (test->s, x) != test->ref_eval[j])
-      worker->n_bad++;
-
-    if (worker->with_derivs)
-    {
-      if (ncm_spline_eval_deriv (test->s, x) != test->ref_deriv[j])
-        worker->n_bad++;
-
-      if (ncm_spline_eval_deriv2 (test->s, x) != test->ref_deriv2[j])
-        worker->n_bad++;
-
-      if (ncm_spline_eval_deriv_nmax (test->s, x) != test->ref_dnmax[j])
-        worker->n_bad++;
-    }
-  }
-
-  return NULL;
-}
-
-static void
-_test_ncm_spline_bspline_threads_run (TestBSplineThreads *test, gboolean with_derivs)
-{
-  GThread *threads[TEST_NTHREADS];
-  BSplineWorker workers[TEST_NTHREADS];
-  guint i;
-
-  for (i = 0; i < TEST_NTHREADS; i++)
-  {
-    workers[i].test        = test;
-    workers[i].n_bad       = 0;
-    workers[i].with_derivs = with_derivs;
-    threads[i]             = g_thread_new ("bspline-eval", _bspline_worker, &workers[i]);
-  }
-
-  for (i = 0; i < TEST_NTHREADS; i++)
-  {
-    g_thread_join (threads[i]);
-    g_assert_cmpint (workers[i].n_bad, ==, 0);
-  }
-}
-
 static void
 test_ncm_spline_bspline_threads_eval (TestBSplineThreads *test, gconstpointer pdata)
 {
@@ -180,27 +209,5 @@ static void
 test_ncm_spline_bspline_threads_eval_derivs (TestBSplineThreads *test, gconstpointer pdata)
 {
   _test_ncm_spline_bspline_threads_run (test, TRUE);
-}
-
-int
-main (int argc, char *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/spline_bspline/threads/eval", TestBSplineThreads, NULL,
-              &test_ncm_spline_bspline_threads_new,
-              &test_ncm_spline_bspline_threads_eval,
-              &test_ncm_spline_bspline_threads_free);
-
-  g_test_add ("/ncm/spline_bspline/threads/eval_derivs", TestBSplineThreads, NULL,
-              &test_ncm_spline_bspline_threads_new,
-              &test_ncm_spline_bspline_threads_eval_derivs,
-              &test_ncm_spline_bspline_threads_free);
-
-  g_test_run ();
-
-  return 0;
 }
 

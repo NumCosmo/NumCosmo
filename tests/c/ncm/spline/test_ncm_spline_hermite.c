@@ -32,8 +32,65 @@
 #include <glib.h>
 #include <glib-object.h>
 
+typedef struct
+{
+  gdouble (*f) (gdouble x);
+  gdouble (*d1) (gdouble x);
+  gdouble (*d2) (gdouble x);
+} TestFunc;
+
+static void test_ncm_spline_hermite_exact (void);
+static void test_ncm_spline_hermite_convergence (void);
+static void test_ncm_spline_hermite_knots (void);
+static void test_ncm_spline_hermite_integ (void);
+static void test_ncm_spline_hermite_serialize (void);
+static void test_ncm_spline_hermite_copy_empty_reset (void);
+static void test_ncm_spline_hermite_prepare_no_derivs_subprocess (void);
+static void test_ncm_spline_hermite_prepare_no_derivs (void);
+static void test_ncm_spline_hermite_derivs_no_knots_subprocess (void);
+static void test_ncm_spline_hermite_derivs_no_knots (void);
+static void test_ncm_spline_hermite_derivs_length_d1_subprocess (void);
+static void test_ncm_spline_hermite_derivs_length_d2_subprocess (void);
+static void test_ncm_spline_hermite_derivs_length_d1 (void);
+static void test_ncm_spline_hermite_derivs_length_d2 (void);
+static gdouble _poly (const gdouble x);
+static gdouble _poly_d1 (const gdouble x);
+static gdouble _poly_d2 (const gdouble x);
+static gdouble _sin_d2 (const gdouble x);
+
 /* A quintic, reproduced exactly on any knots */
 static const gdouble _poly_c[6] = {1.0, 0.5, -2.0, 0.3, -0.7, 0.2};
+
+static const TestFunc _poly_func = {_poly, _poly_d1, _poly_d2};
+
+static const TestFunc _sin_func = {sin, cos, _sin_d2};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/spline_hermite/exact", &test_ncm_spline_hermite_exact);
+  g_test_add_func ("/ncm/spline_hermite/convergence", &test_ncm_spline_hermite_convergence);
+  g_test_add_func ("/ncm/spline_hermite/knots", &test_ncm_spline_hermite_knots);
+  g_test_add_func ("/ncm/spline_hermite/integ", &test_ncm_spline_hermite_integ);
+  g_test_add_func ("/ncm/spline_hermite/serialize", &test_ncm_spline_hermite_serialize);
+  g_test_add_func ("/ncm/spline_hermite/copy_empty_reset", &test_ncm_spline_hermite_copy_empty_reset);
+  g_test_add_func ("/ncm/spline_hermite/prepare_no_derivs", &test_ncm_spline_hermite_prepare_no_derivs);
+  g_test_add_func ("/ncm/spline_hermite/prepare_no_derivs/subprocess", &test_ncm_spline_hermite_prepare_no_derivs_subprocess);
+  g_test_add_func ("/ncm/spline_hermite/derivs_no_knots", &test_ncm_spline_hermite_derivs_no_knots);
+  g_test_add_func ("/ncm/spline_hermite/derivs_no_knots/subprocess", &test_ncm_spline_hermite_derivs_no_knots_subprocess);
+  g_test_add_func ("/ncm/spline_hermite/derivs_length_d1", &test_ncm_spline_hermite_derivs_length_d1);
+  g_test_add_func ("/ncm/spline_hermite/derivs_length_d1/subprocess", &test_ncm_spline_hermite_derivs_length_d1_subprocess);
+  g_test_add_func ("/ncm/spline_hermite/derivs_length_d2", &test_ncm_spline_hermite_derivs_length_d2);
+  g_test_add_func ("/ncm/spline_hermite/derivs_length_d2/subprocess", &test_ncm_spline_hermite_derivs_length_d2_subprocess);
+
+  g_test_run ();
+
+  return 0;
+}
 
 static gdouble
 _poly (const gdouble x)
@@ -59,21 +116,11 @@ _poly_integ (const gdouble x)
   return x * (_poly_c[0] + x * (_poly_c[1] / 2.0 + x * (_poly_c[2] / 3.0 + x * (_poly_c[3] / 4.0 + x * (_poly_c[4] / 5.0 + x * _poly_c[5] / 6.0)))));
 }
 
-typedef struct
-{
-  gdouble (*f) (gdouble x);
-  gdouble (*d1) (gdouble x);
-  gdouble (*d2) (gdouble x);
-} TestFunc;
-
 static gdouble
 _sin_d2 (const gdouble x)
 {
   return -sin (x);
 }
-
-static const TestFunc _poly_func = {_poly, _poly_d1, _poly_d2};
-static const TestFunc _sin_func  = {sin, cos, _sin_d2};
 
 /* Knots x_i = xf (i / (n - 1))^p, uniform for p = 1 */
 static NcmSplineHermite *
@@ -377,32 +424,5 @@ test_ncm_spline_hermite_derivs_length_d2 (void)
   g_test_trap_subprocess ("/ncm/spline_hermite/derivs_length_d2/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*d2 has length 3, the spline has 21 knots*");
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/spline_hermite/exact", &test_ncm_spline_hermite_exact);
-  g_test_add_func ("/ncm/spline_hermite/convergence", &test_ncm_spline_hermite_convergence);
-  g_test_add_func ("/ncm/spline_hermite/knots", &test_ncm_spline_hermite_knots);
-  g_test_add_func ("/ncm/spline_hermite/integ", &test_ncm_spline_hermite_integ);
-  g_test_add_func ("/ncm/spline_hermite/serialize", &test_ncm_spline_hermite_serialize);
-  g_test_add_func ("/ncm/spline_hermite/copy_empty_reset", &test_ncm_spline_hermite_copy_empty_reset);
-  g_test_add_func ("/ncm/spline_hermite/prepare_no_derivs", &test_ncm_spline_hermite_prepare_no_derivs);
-  g_test_add_func ("/ncm/spline_hermite/prepare_no_derivs/subprocess", &test_ncm_spline_hermite_prepare_no_derivs_subprocess);
-  g_test_add_func ("/ncm/spline_hermite/derivs_no_knots", &test_ncm_spline_hermite_derivs_no_knots);
-  g_test_add_func ("/ncm/spline_hermite/derivs_no_knots/subprocess", &test_ncm_spline_hermite_derivs_no_knots_subprocess);
-  g_test_add_func ("/ncm/spline_hermite/derivs_length_d1", &test_ncm_spline_hermite_derivs_length_d1);
-  g_test_add_func ("/ncm/spline_hermite/derivs_length_d1/subprocess", &test_ncm_spline_hermite_derivs_length_d1_subprocess);
-  g_test_add_func ("/ncm/spline_hermite/derivs_length_d2", &test_ncm_spline_hermite_derivs_length_d2);
-  g_test_add_func ("/ncm/spline_hermite/derivs_length_d2/subprocess", &test_ncm_spline_hermite_derivs_length_d2_subprocess);
-
-  g_test_run ();
-
-  return 0;
 }
 
