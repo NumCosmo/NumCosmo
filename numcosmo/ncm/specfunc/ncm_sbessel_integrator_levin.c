@@ -508,9 +508,10 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
    * NcmSBesselIntegratorLevin:reltol:
    *
    * Relative tolerance of the ODE solve, on the endpoint derivatives the boundary term
-   * reads; the measured errors are a fifth of it or less. The result stays within the
-   * looser of this and #NcmSBesselIntegratorLevin:cheb-reltol. Below about $10^{-12}$
-   * the roundoff of the coefficients stops the solve before the tolerance does.
+   * reads. Against every certified reference the error stays within it, at 0.6 times it
+   * in the worst case, relative to the peak over $k$. The result stays within the looser
+   * of this and #NcmSBesselIntegratorLevin:cheb-reltol. Below about $10^{-12}$ the
+   * roundoff of the coefficients stops the solve before the tolerance does.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,

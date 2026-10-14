@@ -39,17 +39,17 @@
  * remaining ones are the $C^{(2)}$ ultraspherical coefficients of $x F(x)$. Every caller
  * in the library passes zero for the first two.
  *
- * Truncation stops when the transformed solution coefficient $c^n$, weighted by $n^2$,
+ * Truncation stops when the transformed solution coefficient $c^n$, weighted by $10 n^2$,
  * falls below the tolerance times the largest coefficient seen, or when $c^n$ itself
  * reaches the roundoff level, a tenth of the double precision epsilon of that largest
- * coefficient. The weight is the endpoint derivative of $T_n$, so the test measures
+ * coefficient. The $n^2$ is the endpoint derivative of $T_n$, so the test measures
  * the error of the endpoint derivatives the Levin boundary term reads, not only of the
- * coefficients; it is an estimate, not a rigorous bound. In a batch, every multipole
- * must satisfy the criterion.
+ * coefficients; the 10 is how much stopping at column $n$ moves the coefficients kept
+ * below it, measured at 8-10 times $n^2 |c^n|$. It is an estimate, not a rigorous
+ * bound. In a batch, every multipole must satisfy the criterion.
  *
  * The criterion is tuned so that both $u$ and $u'$ come out accurate, since the Levin
- * boundary terms read the endpoint derivatives and, under constraints other than
- * Dirichlet data, the endpoint values as well. A caller that needs $u$ alone would be
+ * boundary terms read the endpoint values and derivatives. A caller that needs $u$ alone would be
  * served by the unweighted test, which stops earlier; no such mode exists, and one can
  * be added if a use for it appears.
  *
@@ -98,11 +98,17 @@
 
 /*
  * A column is quiet when the derivative tail it estimates, j^2 rho_j (the endpoint
- * derivative of T_j is j^2), is below the tolerance times rho_max, or when rho_j itself
- * is at the roundoff level of the coefficients, below which a further column carries
- * no information whatever the tolerance asks.
+ * derivative of T_j is j^2), times COEFF_SHIFT_FACTOR is below the tolerance times
+ * rho_max, or when rho_j itself is at the roundoff level of the coefficients, below
+ * which a further column carries no information whatever the tolerance asks.
+ *
+ * Stopping at column N changes the coefficients kept below it as well as dropping the
+ * tail, and the endpoint derivatives move by about ten times N^2 |c^N| (measured on a
+ * rational and a Gaussian panel, 8-10x), so the factor makes the derivatives, not the
+ * last column, meet the tolerance.
  */
 #define COEFF_ROUNDOFF_FLOOR (0.1 * DBL_EPSILON)
+#define COEFF_SHIFT_FACTOR (10.0)
 
 /*
  * Minimum number of spectral columns for the panel [@a, @b] at multipole @ell_min.
@@ -1560,9 +1566,9 @@ _ncm_sbessel_apply_givens (const NcmSBesselOdeOperator *op, glong pivot_col, Ncm
  * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
  * @quiet_cols: (inout): count of consecutive columns with small coefficients
  *
- * Checks convergence on the coefficient-to-diagonal ratio $\rho_n$: column @col is quiet
- * when $n^2 \rho_n$ is below the tolerance times the largest ratio, or $\rho_n$ is below
- * COEFF_ROUNDOFF_FLOOR times it.
+ * Checks convergence on the coefficient-to-diagonal ratio $\rho_n$: column @col is
+ * quiet when COEFF_SHIFT_FACTOR times $n^2 \rho_n$ is below the tolerance times the
+ * largest ratio, or $\rho_n$ is below COEFF_ROUNDOFF_FLOOR times it.
  *
  * Returns: TRUE if converged, FALSE otherwise
  */
@@ -1583,7 +1589,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
   }
   else
   {
-    if ((col2 * Acol < op->tolerance * (*max_c_A)) || (Acol < COEFF_ROUNDOFF_FLOOR * (*max_c_A)))
+    if ((COEFF_SHIFT_FACTOR * col2 * Acol < op->tolerance * (*max_c_A)) || (Acol < COEFF_ROUNDOFF_FLOOR * (*max_c_A)))
       (*quiet_cols)++;
     else
       *quiet_cols = 0;
@@ -1659,7 +1665,7 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
       quiet_cols[l_idx] = 0;
     }
     else if ((max_c_A[l_idx] > 0.0) &&
-             ((col2 * Acol < op->tolerance * max_c_A[l_idx]) || (Acol < COEFF_ROUNDOFF_FLOOR * max_c_A[l_idx])))
+             ((COEFF_SHIFT_FACTOR * col2 * Acol < op->tolerance * max_c_A[l_idx]) || (Acol < COEFF_ROUNDOFF_FLOOR * max_c_A[l_idx])))
     {
       quiet_cols[l_idx]++;
     }

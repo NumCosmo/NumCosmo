@@ -244,7 +244,7 @@ The stopping test uses that ratio. Let $\rho_j \equiv |\tilde r^j /
 R^j{}_j|$ and $\rho_{\max}$ its running maximum. With $\epsilon_{\rm ODE}$ the tolerance the operator
 was created with and $\epsilon$ the double precision epsilon, column $j$ is quiet when
 $$
-j^2 \rho_j < \epsilon_{\rm ODE}\, \rho_{\max}
+10\, j^2 \rho_j < \epsilon_{\rm ODE}\, \rho_{\max}
 \qquad\text{or}\qquad
 \rho_j < \frac{\epsilon}{10}\, \rho_{\max},
 $$
@@ -252,7 +252,12 @@ and the factorization stops at the first column that ends five consecutive quiet
 once $j + 1$ has reached the floor the constraint sets. The weight $j^2$ is
 $|T_j'(\pm1)|$: the boundary term reads the endpoint derivatives below, where coefficient
 $j$ enters with $j^2$, so the first condition asks for the derivatives, not the
-coefficients, to be resolved to $\epsilon_{\rm ODE}$. The second stops the solve where
+coefficients, to be resolved to $\epsilon_{\rm ODE}$. The factor 10 is the rest of the
+truncation error: stopping at column $N$ also moves the coefficients kept below it, and
+the endpoint derivatives shift by 8 to 10 times $N^2 |c^N|$ on the panels measured. With
+it, the Levin integrals of every certified reference stay within $0.6\,\epsilon_{\rm
+ODE}$ of their peak for $\epsilon_{\rm ODE}$ from $10^{-4}$ to $10^{-10}$; a factor 3
+leaves $3\,\epsilon_{\rm ODE}$. The second stops the solve where
 the coefficients reach roundoff, past which a further column carries no information;
 with the default $\epsilon_{\rm ODE} = \epsilon/10$ it is the only one that acts.
 The test is tuned for $u$ and $u'$ together, which is what the Levin boundary terms read;
@@ -304,7 +309,7 @@ multipole.
 #|   tolerances return the same coefficients to within 1e-9 and differ only in where
 #|   the factorization stops, so the curve is drawn once and each tolerance is marked
 #|   by its stopping column. The floor N_min of Eq. (3) is 138 here, and the loosest
-#|   tolerance stops four columns past it, at 142.
+#|   tolerance stops seven columns past it, at 145.
 #| code-fold: true
 fig, ax = plt.subplots(figsize=(6, 3.4))
 nmin = int(np.ceil(2.0 / np.pi * (b - max(a, np.sqrt(ell * (ell + 1))))))
@@ -371,7 +376,7 @@ for c in range(A_anim.shape[1]):
     rho_max = max(rho_max, rc)
     rho.append(rc)
     if stop_anim is None:
-        quiet = c * c * rc < 1.0e-12 * rho_max or rc < 0.1 * np.finfo(float).eps * rho_max
+        quiet = 10.0 * c * c * rc < 1.0e-12 * rho_max or rc < 0.1 * np.finfo(float).eps * rho_max
         below = below + 1 if quiet else 0
         if below >= 5 and c + 1 >= nmin:
             stop_anim = c + 1
@@ -397,8 +402,8 @@ def draw_state(ax_m, ax_r, c):
     ax_m.grid(False)
     cols = np.arange(1, c + 2)
     ax_r.semilogy(cols, rho[:c + 1], "o-", ms=2, color="C0", label="ratio")
-    ax_r.semilogy(cols, (cols - 1) ** 2 * rho[:c + 1], "o-", ms=2, color="C1", label="ratio x n^2")
-    ax_r.axhline(1.0e-12, color="C3", ls="--", label="tolerance (ratio x n^2)")
+    ax_r.semilogy(cols, 10.0 * (cols - 1) ** 2 * rho[:c + 1], "o-", ms=2, color="C1", label="ratio x 10 n^2")
+    ax_r.axhline(1.0e-12, color="C3", ls="--", label="tolerance (ratio x 10 n^2)")
     ax_r.axhline(0.1 * np.finfo(float).eps, color="0.5", ls="--", label="roundoff (ratio)")
     ax_r.axvline(nmin, color="k", ls=":", label=f"floor N_min = {nmin}")
     if c + 1 >= stop_anim:
