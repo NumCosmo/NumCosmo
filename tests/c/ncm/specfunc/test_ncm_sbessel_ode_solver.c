@@ -79,6 +79,14 @@ void test_ncm_sbessel_ode_solver_memory_batched (void);
 void test_ncm_sbessel_ode_solver_memory_endpoints (void);
 void test_ncm_sbessel_ode_solver_memory_reset (void);
 void test_ncm_sbessel_ode_solver_memory_stress (void);
+void test_ncm_sbessel_ode_solver_rotations_identical (void);
+void test_ncm_sbessel_ode_solver_rotations_extend (void);
+void test_ncm_sbessel_ode_solver_rotations_sequence (void);
+void test_ncm_sbessel_ode_solver_rotations_batched_extend (void);
+void test_ncm_sbessel_ode_solver_rotations_leading_zeros (void);
+void test_ncm_sbessel_ode_solver_rotations_convergence (void);
+void test_ncm_sbessel_ode_solver_rotations_batched_sequence (void);
+void test_ncm_sbessel_ode_solver_rotations_high_ell (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -125,6 +133,14 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_ode_solver/memory/endpoints", test_ncm_sbessel_ode_solver_memory_endpoints);
   g_test_add_func ("/ncm/sbessel_ode_solver/memory/reset", test_ncm_sbessel_ode_solver_memory_reset);
   g_test_add_func ("/ncm/sbessel_ode_solver/memory/stress", test_ncm_sbessel_ode_solver_memory_stress);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/identical", test_ncm_sbessel_ode_solver_rotations_identical);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/extend", test_ncm_sbessel_ode_solver_rotations_extend);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/sequence", test_ncm_sbessel_ode_solver_rotations_sequence);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/batched_extend", test_ncm_sbessel_ode_solver_rotations_batched_extend);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/leading_zeros", test_ncm_sbessel_ode_solver_rotations_leading_zeros);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/convergence", test_ncm_sbessel_ode_solver_rotations_convergence);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/batched_sequence", test_ncm_sbessel_ode_solver_rotations_batched_sequence);
+  g_test_add_func ("/ncm/sbessel_ode_solver/rotations/high_ell", test_ncm_sbessel_ode_solver_rotations_high_ell);
 
   g_test_run ();
 }
@@ -2016,5 +2032,435 @@ test_ncm_sbessel_ode_solver_memory_stress (void)
     values[i] = 1.0 / (i + 1.0);
 
   _test_memory_sequence (0, 0, orders, values, G_N_ELEMENTS (orders), 64);
+}
+
+/*
+ * Stored rotations: a solve on an operator that already holds a factorization reuses
+ * its rotations and extends them when the new right-hand side needs more columns. The
+ * result must equal a solve on a new operator: same solution length and coefficients to
+ * |reused - new| <= rtol |new| + rtol max |new| per multipole.
+ */
+typedef struct _TestCoeff
+{
+  guint k;
+  gdouble value;
+} TestCoeff;
+
+/* A right-hand side of length n with zero endpoint data and the listed coefficients */
+static GArray *
+_test_rhs_sparse (guint n, const TestCoeff *c, guint n_c)
+{
+  GArray *rhs = _test_rhs_new (n, NULL, 0);
+  guint i;
+
+  for (i = 0; i < n_c; i++)
+    g_array_index (rhs, gdouble, c[i].k) = c[i].value;
+
+  return rhs;
+}
+
+static void
+_test_assert_same (GArray *x, gsize x_len, GArray *y, gsize y_len, guint n_ell, gdouble rtol)
+{
+  guint l, j;
+
+  g_assert_cmpuint (x_len, ==, y_len);
+
+  for (l = 0; l < n_ell; l++)
+  {
+    gdouble scale = 0.0;
+
+    for (j = 0; j < y_len; j++)
+      scale = GSL_MAX (scale, fabs (g_array_index (y, gdouble, l * y_len + j)));
+
+    for (j = 0; j < y_len; j++)
+      _test_assert_close (g_array_index (x, gdouble, l * x_len + j), g_array_index (y, gdouble, l * y_len + j), rtol, rtol * scale);
+  }
+}
+
+/* The largest |coefficient| of row l */
+static gdouble
+_test_row_absmax (GArray *sol, gsize len, guint l)
+{
+  GArray *row         = _test_row (sol, len, l);
+  const gdouble scale = _test_absmax (row);
+
+  g_array_unref (row);
+
+  return scale;
+}
+
+/*
+ * Solves @rhs on @op and on a new operator over the same interval and multipoles,
+ * checks the agreement to @rtol and returns the reused solution; *n_cols_new receives
+ * the new operator's n_cols.
+ */
+static GArray *
+_test_reused_vs_new (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, GArray *rhs, gdouble rtol, gsize *len, glong *n_cols_new)
+{
+  GArray *sol   = NULL;
+  GArray *fresh = NULL;
+  gsize fresh_len;
+  gdouble a, b;
+  gint ell_min, ell_max;
+  NcmSBesselOdeOperator *fop;
+
+  ncm_sbessel_ode_operator_get_interval (op, &a, &b);
+  ncm_sbessel_ode_operator_get_ell_range (op, &ell_min, &ell_max);
+
+  ncm_sbessel_ode_operator_solve (op, rhs, &sol, len);
+  fop = _test_solve (solver, a, b, ell_min, ell_max, rhs, &fresh, &fresh_len);
+
+  _test_assert_same (sol, *len, fresh, fresh_len, ell_max - ell_min + 1, rtol);
+
+  if (n_cols_new != NULL)
+    *n_cols_new = ncm_sbessel_ode_operator_get_n_cols (fop);
+
+  g_array_unref (fresh);
+  ncm_sbessel_ode_operator_unref (fop);
+
+  return sol;
+}
+
+/* The same right-hand side twice on [1, 10], ell 5: same length, n_cols and coefficients to 1e-15 */
+void
+test_ncm_sbessel_ode_solver_rotations_identical (void)
+{
+  const TestCoeff c[] = {
+    {
+      10, 1.0
+    }, {
+      15, 0.5
+    }, {
+      20, 0.25
+    }
+  };
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 10.0, 5, 5);
+  GArray *rhs                 = _test_rhs_sparse (50, c, G_N_ELEMENTS (c));
+  GArray *sol1                = NULL;
+  GArray *sol2                = NULL;
+  gsize len1, len2;
+  glong n_cols1;
+  guint j;
+
+  ncm_sbessel_ode_operator_solve (op, rhs, &sol1, &len1);
+  n_cols1 = ncm_sbessel_ode_operator_get_n_cols (op);
+  ncm_sbessel_ode_operator_solve (op, rhs, &sol2, &len2);
+
+  g_assert_cmpuint (len1, ==, len2);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), ==, n_cols1);
+
+  for (j = 0; j < len1; j++)
+    _test_assert_close (g_array_index (sol2, gdouble, j), g_array_index (sol1, gdouble, j), 1.0e-15, 1.0e-15);
+
+  g_array_unref (sol1);
+  g_array_unref (sol2);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* A short then a longer right-hand side on [1, 10], ell 10: the extension converges at the new operator's column */
+void
+test_ncm_sbessel_ode_solver_rotations_extend (void)
+{
+  const TestCoeff c1[] = {
+    {
+      10, 1.0
+    }
+  };
+  const TestCoeff c2[] = {
+    {
+      10, 1.0
+    }, {
+      15, 0.5
+    }, {
+      50, 0.1
+    }, {
+      60, 0.05
+    }
+  };
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 10.0, 10, 10);
+  GArray *rhs1                = _test_rhs_sparse (40, c1, G_N_ELEMENTS (c1));
+  GArray *rhs2                = _test_rhs_sparse (80, c2, G_N_ELEMENTS (c2));
+  GArray *sol                 = NULL;
+  gsize len;
+  glong n_cols_new;
+
+  ncm_sbessel_ode_operator_solve (op, rhs1, &sol, &len);
+  g_array_unref (sol);
+
+  sol = _test_reused_vs_new (solver, op, rhs2, 1.0e-12, &len, &n_cols_new);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), ==, n_cols_new);
+  g_assert_cmpfloat (_test_absmax (sol), >, 1.0e-10);
+
+  g_array_unref (sol);
+  g_array_unref (rhs1);
+  g_array_unref (rhs2);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* Five single-coefficient right-hand sides in sequence on [1, 10], ell 8; consecutive solutions differ by more than 1e-8 */
+void
+test_ncm_sbessel_ode_solver_rotations_sequence (void)
+{
+  const guint lens[]  = {50, 50, 50, 60, 45};
+  const TestCoeff c[] = {
+    {
+      10, 1.0
+    }, {
+      20, 0.8
+    }, {
+      15, 1.5
+    }, {
+      25, 1.2
+    }, {
+      12, 0.9
+    }
+  };
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 10.0, 8, 8);
+  GArray *prev                = NULL;
+  gsize prev_len              = 0;
+  guint i, j;
+
+  for (i = 0; i < G_N_ELEMENTS (c); i++)
+  {
+    GArray *rhs = _test_rhs_sparse (lens[i], &c[i], 1);
+    gsize len;
+    GArray *sol = _test_reused_vs_new (solver, op, rhs, 1.0e-12, &len, NULL);
+
+    if (prev != NULL)
+    {
+      gdouble diff = 0.0;
+
+      for (j = 0; j < GSL_MIN (len, prev_len); j++)
+        diff = GSL_MAX (diff, fabs (g_array_index (sol, gdouble, j) - g_array_index (prev, gdouble, j)));
+
+      g_assert_cmpfloat (diff, >, 1.0e-8);
+      g_array_unref (prev);
+    }
+
+    prev     = sol;
+    prev_len = len;
+    g_array_unref (rhs);
+  }
+
+  g_array_unref (prev);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* The extension in a batch of ell 5..8 on [1, 10]; every multipole non-zero */
+void
+test_ncm_sbessel_ode_solver_rotations_batched_extend (void)
+{
+  const TestCoeff c1[] = {
+    {
+      12, 1.0
+    }, {
+      15, 0.3
+    }
+  };
+  const TestCoeff c2[] = {
+    {
+      12, 1.0
+    }, {
+      15, 0.3
+    }, {
+      35, 0.15
+    }, {
+      50, 0.08
+    }
+  };
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 10.0, 5, 8);
+  GArray *rhs1                = _test_rhs_sparse (40, c1, G_N_ELEMENTS (c1));
+  GArray *rhs2                = _test_rhs_sparse (70, c2, G_N_ELEMENTS (c2));
+  GArray *sol                 = NULL;
+  gsize len;
+  glong n_cols_new;
+  guint l;
+
+  ncm_sbessel_ode_operator_solve (op, rhs1, &sol, &len);
+  g_array_unref (sol);
+
+  sol = _test_reused_vs_new (solver, op, rhs2, 1.0e-12, &len, &n_cols_new);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), ==, n_cols_new);
+
+  for (l = 0; l < 4; l++)
+    g_assert_cmpfloat (_test_row_absmax (sol, len, l), >, 1.0e-10);
+
+  g_array_unref (sol);
+  g_array_unref (rhs1);
+  g_array_unref (rhs2);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* rhs[15] then only rhs[40] (leading zeros past the stored rotations) on [1, 10], ell 5: non-zero and equal to new */
+void
+test_ncm_sbessel_ode_solver_rotations_leading_zeros (void)
+{
+  const TestCoeff c1[] = {
+    {
+      15, 1.0
+    }
+  };
+  const TestCoeff c2[] = {
+    {
+      40, 0.5
+    }
+  };
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 10.0, 5, 5);
+  GArray *rhs1                = _test_rhs_sparse (50, c1, G_N_ELEMENTS (c1));
+  GArray *rhs2                = _test_rhs_sparse (60, c2, G_N_ELEMENTS (c2));
+  GArray *sol                 = NULL;
+  gsize len;
+
+  ncm_sbessel_ode_operator_solve (op, rhs1, &sol, &len);
+  g_array_unref (sol);
+
+  sol = _test_reused_vs_new (solver, op, rhs2, 1.0e-12, &len, NULL);
+  g_assert_cmpfloat (_test_absmax (sol), >, 1.0e-10);
+
+  g_array_unref (sol);
+  g_array_unref (rhs1);
+  g_array_unref (rhs2);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * A slightly longer second right-hand side on [1, 15], ell 12: the solution (length
+ * included) equals the new operator's. get_n_cols counts the stored columns, which the
+ * reused operator keeps from the first solve, so it is at least the new operator's.
+ */
+void
+test_ncm_sbessel_ode_solver_rotations_convergence (void)
+{
+  const TestCoeff c1[] = {
+    {
+      18, 1.0
+    }, {
+      22, 0.1
+    }
+  };
+  const TestCoeff c2[] = {
+    {
+      18, 1.0
+    }, {
+      22, 0.1
+    }, {
+      35, 0.02
+    }
+  };
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 15.0, 12, 12);
+  GArray *rhs1                = _test_rhs_sparse (60, c1, G_N_ELEMENTS (c1));
+  GArray *rhs2                = _test_rhs_sparse (70, c2, G_N_ELEMENTS (c2));
+  GArray *sol                 = NULL;
+  gsize len;
+  glong n_cols_new;
+
+  ncm_sbessel_ode_operator_solve (op, rhs1, &sol, &len);
+  g_array_unref (sol);
+
+  sol = _test_reused_vs_new (solver, op, rhs2, 1.0e-12, &len, &n_cols_new);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), >=, n_cols_new);
+
+  g_array_unref (sol);
+  g_array_unref (rhs1);
+  g_array_unref (rhs2);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* Four right-hand sides of length 40, 50, 65 and 75 through one batch of ell 3..6 on [1, 12]; n_cols never decreases */
+void
+test_ncm_sbessel_ode_solver_rotations_batched_sequence (void)
+{
+  const guint lens[]          = {40, 50, 65, 75};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 12.0, 3, 6);
+  glong prev_n_cols           = 0;
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (lens); i++)
+  {
+    const TestCoeff c[] = {
+      {
+        15, 1.0
+      }, {
+        20, 0.4
+      }, {
+        35, 0.15
+      }, {
+        55, 0.05
+      }
+    };
+    const guint n_c = (lens[i] > 60) ? 4 : ((lens[i] > 40) ? 3 : 2);
+    GArray *rhs     = _test_rhs_sparse (lens[i], c, n_c);
+    gsize len;
+    GArray *sol = _test_reused_vs_new (solver, op, rhs, 1.0e-12, &len, NULL);
+
+    g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), >=, prev_n_cols);
+    prev_n_cols = ncm_sbessel_ode_operator_get_n_cols (op);
+
+    g_array_unref (sol);
+    g_array_unref (rhs);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* ell 50 on [1, 20], 80 then 150 coefficients: equal to new to 1e-11, at least 20 columns added */
+void
+test_ncm_sbessel_ode_solver_rotations_high_ell (void)
+{
+  const TestCoeff c1[] = {
+    {
+      25, 1.0
+    }, {
+      30, 0.2
+    }
+  };
+  const TestCoeff c2[] = {
+    {
+      25, 1.0
+    }, {
+      30, 0.2
+    }, {
+      60, 0.1
+    }, {
+      90, 0.05
+    }
+  };
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, 1.0, 20.0, 50, 50);
+  GArray *rhs1                = _test_rhs_sparse (80, c1, G_N_ELEMENTS (c1));
+  GArray *rhs2                = _test_rhs_sparse (150, c2, G_N_ELEMENTS (c2));
+  GArray *sol                 = NULL;
+  gsize len;
+  glong n_cols_short, n_cols_new;
+
+  ncm_sbessel_ode_operator_solve (op, rhs1, &sol, &len);
+  n_cols_short = ncm_sbessel_ode_operator_get_n_cols (op);
+  g_array_unref (sol);
+
+  sol = _test_reused_vs_new (solver, op, rhs2, 1.0e-11, &len, &n_cols_new);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), ==, n_cols_new);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op) - n_cols_short, >=, 20);
+
+  g_array_unref (sol);
+  g_array_unref (rhs1);
+  g_array_unref (rhs2);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
 }
 
