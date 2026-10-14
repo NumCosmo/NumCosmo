@@ -68,6 +68,17 @@ void test_ncm_sbessel_ode_solver_green_endpoints (void);
 void test_ncm_sbessel_ode_solver_green_endpoints_batched (void);
 void test_ncm_sbessel_ode_solver_forcing (void);
 void test_ncm_sbessel_ode_solver_forcing_batched (void);
+void test_ncm_sbessel_ode_solver_memory_accessors (void);
+void test_ncm_sbessel_ode_solver_memory_grow (void);
+void test_ncm_sbessel_ode_solver_memory_shrink (void);
+void test_ncm_sbessel_ode_solver_memory_identical (void);
+void test_ncm_sbessel_ode_solver_memory_same_length (void);
+void test_ncm_sbessel_ode_solver_memory_increasing (void);
+void test_ncm_sbessel_ode_solver_memory_varying (void);
+void test_ncm_sbessel_ode_solver_memory_batched (void);
+void test_ncm_sbessel_ode_solver_memory_endpoints (void);
+void test_ncm_sbessel_ode_solver_memory_reset (void);
+void test_ncm_sbessel_ode_solver_memory_stress (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -103,6 +114,17 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_ode_solver/green/endpoints_batched", test_ncm_sbessel_ode_solver_green_endpoints_batched);
   g_test_add_func ("/ncm/sbessel_ode_solver/forcing", test_ncm_sbessel_ode_solver_forcing);
   g_test_add_func ("/ncm/sbessel_ode_solver/forcing/batched", test_ncm_sbessel_ode_solver_forcing_batched);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/accessors", test_ncm_sbessel_ode_solver_memory_accessors);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/grow", test_ncm_sbessel_ode_solver_memory_grow);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/shrink", test_ncm_sbessel_ode_solver_memory_shrink);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/identical", test_ncm_sbessel_ode_solver_memory_identical);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/same_length", test_ncm_sbessel_ode_solver_memory_same_length);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/increasing", test_ncm_sbessel_ode_solver_memory_increasing);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/varying", test_ncm_sbessel_ode_solver_memory_varying);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/batched", test_ncm_sbessel_ode_solver_memory_batched);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/endpoints", test_ncm_sbessel_ode_solver_memory_endpoints);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/reset", test_ncm_sbessel_ode_solver_memory_reset);
+  g_test_add_func ("/ncm/sbessel_ode_solver/memory/stress", test_ncm_sbessel_ode_solver_memory_stress);
 
   g_test_run ();
 }
@@ -1633,5 +1655,366 @@ test_ncm_sbessel_ode_solver_forcing_batched (void)
 
   ncm_mpsf_sbessel_free_cache ();
   ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * Memory and reuse of one operator across solves of different right-hand sides. Every
+ * solve on the reused operator is also done on a new operator and the two agree to
+ * |reused - new| <= 1e-12 |new| + 1e-12 max |new| (the shorter zero-padded); the stored
+ * capacity (get_operator_size) never decreases and n_cols is positive after a solve.
+ */
+static GArray *
+_test_rhs_unit (guint order, guint min_len, gdouble value)
+{
+  GArray *rhs = _test_rhs_new (GSL_MAX (min_len, order + 4), NULL, 0);
+
+  g_array_index (rhs, gdouble, order) = value;
+
+  return rhs;
+}
+
+static void
+_test_assert_same_padded (GArray *x, gsize x_len, GArray *y, gsize y_len, guint n_ell)
+{
+  const gsize len = GSL_MAX (x_len, y_len);
+  guint l, j;
+
+  for (l = 0; l < n_ell; l++)
+  {
+    gdouble scale = 0.0;
+
+    for (j = 0; j < y_len; j++)
+      scale = GSL_MAX (scale, fabs (g_array_index (y, gdouble, l * y_len + j)));
+
+    for (j = 0; j < len; j++)
+    {
+      const gdouble xv = (j < x_len) ? g_array_index (x, gdouble, l * x_len + j) : 0.0;
+      const gdouble yv = (j < y_len) ? g_array_index (y, gdouble, l * y_len + j) : 0.0;
+
+      g_assert_true (gsl_finite (xv));
+      _test_assert_close (xv, yv, 1.0e-12, 1.0e-12 * scale);
+    }
+  }
+}
+
+/*
+ * Solves @rhs on @op, checks the invariants (capacity >= *capacity, n_cols > 0, a
+ * non-empty finite solution) and the agreement with a new operator; updates *capacity
+ * and returns the solution (*len per multipole).
+ */
+static GArray *
+_test_memory_solve (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, GArray *rhs, gsize *capacity, gsize *len)
+{
+  GArray *sol   = NULL;
+  GArray *fresh = NULL;
+  gsize fresh_len;
+  gint ell_min, ell_max;
+  NcmSBesselOdeOperator *fop;
+
+  ncm_sbessel_ode_operator_get_ell_range (op, &ell_min, &ell_max);
+  ncm_sbessel_ode_operator_solve (op, rhs, &sol, len);
+
+  g_assert_cmpuint (ncm_sbessel_ode_operator_get_operator_size (op), >=, *capacity);
+  *capacity = ncm_sbessel_ode_operator_get_operator_size (op);
+  g_assert_cmpuint (*capacity, >, 0);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), >, 0);
+  g_assert_cmpuint (*len, >, 0);
+
+  fop = _test_solve (solver, TEST_A, TEST_B, ell_min, ell_max, rhs, &fresh, &fresh_len);
+  _test_assert_same_padded (sol, *len, fresh, fresh_len, ell_max - ell_min + 1);
+
+  g_array_unref (fresh);
+  ncm_sbessel_ode_operator_unref (fop);
+
+  return sol;
+}
+
+/* Runs @n right-hand sides rhs[orders[i]] = values[i] (length at least @min_len) through one operator */
+static void
+_test_memory_sequence (gint ell_min, gint ell_max, const guint *orders, const gdouble *values, guint n, guint min_len)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, ell_min, ell_max);
+  gsize capacity              = 0;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    GArray *rhs = _test_rhs_unit (orders[i], min_len, (values != NULL) ? values[i] : 1.0);
+    gsize len;
+    GArray *sol = _test_memory_solve (solver, op, rhs, &capacity, &len);
+
+    g_array_unref (sol);
+    g_array_unref (rhs);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* Nothing is stored before the first solve; ell 0..2 */
+void
+test_ncm_sbessel_ode_solver_memory_accessors (void)
+{
+  const guint orders[]        = {2};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 2);
+
+  g_assert_cmpuint (ncm_sbessel_ode_operator_get_operator_size (op), ==, 0);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), ==, 0);
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+
+  _test_memory_sequence (0, 2, orders, NULL, 1, 64);
+}
+
+/* rhs[2] (length 32) then rhs[50] (length 128), ell 0 */
+void
+test_ncm_sbessel_ode_solver_memory_grow (void)
+{
+  const guint orders[]        = {2, 50};
+  const guint lens[]          = {32, 128};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 0);
+  gsize capacity              = 0;
+  guint i;
+
+  for (i = 0; i < 2; i++)
+  {
+    GArray *rhs = _test_rhs_unit (orders[i], lens[i], 1.0);
+    gsize len;
+    GArray *sol = _test_memory_solve (solver, op, rhs, &capacity, &len);
+
+    g_array_unref (sol);
+    g_array_unref (rhs);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* rhs[60] (length 128) then rhs[2] (length 32), ell 0 */
+void
+test_ncm_sbessel_ode_solver_memory_shrink (void)
+{
+  const guint orders[]        = {60, 2};
+  const guint lens[]          = {128, 32};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 0);
+  gsize capacity              = 0;
+  guint i;
+
+  for (i = 0; i < 2; i++)
+  {
+    GArray *rhs = _test_rhs_unit (orders[i], lens[i], 1.0);
+    gsize len;
+    GArray *sol = _test_memory_solve (solver, op, rhs, &capacity, &len);
+
+    g_array_unref (sol);
+    g_array_unref (rhs);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* The same right-hand side twice: capacity and n_cols unchanged, the solutions equal to 1e-14 */
+void
+test_ncm_sbessel_ode_solver_memory_identical (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 0);
+  GArray *rhs                 = _test_rhs_unit (2, 64, 1.0);
+  gsize capacity              = 0;
+  gsize len1, len2, capacity1;
+  glong n_cols1;
+  GArray *sol1, *sol2;
+  guint j;
+
+  sol1      = _test_memory_solve (solver, op, rhs, &capacity, &len1);
+  capacity1 = capacity;
+  n_cols1   = ncm_sbessel_ode_operator_get_n_cols (op);
+  sol2      = _test_memory_solve (solver, op, rhs, &capacity, &len2);
+
+  g_assert_cmpuint (capacity, ==, capacity1);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), ==, n_cols1);
+  g_assert_cmpuint (len1, ==, len2);
+
+  for (j = 0; j < len1; j++)
+    _test_assert_close (g_array_index (sol2, gdouble, j), g_array_index (sol1, gdouble, j), 1.0e-14, 0.0);
+
+  g_array_unref (sol1);
+  g_array_unref (sol2);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* rhs[2] then rhs[30], both of length 64, ell 0 */
+void
+test_ncm_sbessel_ode_solver_memory_same_length (void)
+{
+  const guint orders[] = {2, 30};
+
+  _test_memory_sequence (0, 0, orders, NULL, 2, 64);
+}
+
+/* Pairs (2, 10), (2, 30), (10, 30), (30, 50) at ell 5; the two solutions differ (numpy allclose defaults) */
+void
+test_ncm_sbessel_ode_solver_memory_increasing (void)
+{
+  const guint pairs[][2] = {
+    {
+      2, 10
+    }, {
+      2, 30
+    }, {
+      10, 30
+    }, {
+      30, 50
+    }
+  };
+  guint p;
+
+  for (p = 0; p < G_N_ELEMENTS (pairs); p++)
+  {
+    NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+    NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 5, 5);
+    GArray *rhs1                = _test_rhs_unit (pairs[p][0], 64, 1.0);
+    GArray *rhs2                = _test_rhs_unit (pairs[p][1], 64, 1.0);
+    gsize capacity              = 0;
+    gsize len1, len2;
+    GArray *sol1    = _test_memory_solve (solver, op, rhs1, &capacity, &len1);
+    GArray *sol2    = _test_memory_solve (solver, op, rhs2, &capacity, &len2);
+    gboolean differ = FALSE;
+    guint j;
+
+    for (j = 0; j < GSL_MIN (len1, len2); j++)
+      differ = differ || (fabs (g_array_index (sol1, gdouble, j) - g_array_index (sol2, gdouble, j)) > 1.0e-8 + 1.0e-5 * fabs (g_array_index (sol2, gdouble, j)));
+
+    g_assert_true (differ);
+
+    g_array_unref (sol1);
+    g_array_unref (sol2);
+    g_array_unref (rhs1);
+    g_array_unref (rhs2);
+    ncm_sbessel_ode_operator_unref (op);
+    ncm_sbessel_ode_solver_free (solver);
+  }
+}
+
+/* Order sequences (2, 10, 2), (2, 30, 10), (30, 10, 5), (5, 30, 5, 30), ell 0 */
+void
+test_ncm_sbessel_ode_solver_memory_varying (void)
+{
+  const guint s1[] = {2, 10, 2};
+  const guint s2[] = {2, 30, 10};
+  const guint s3[] = {30, 10, 5};
+  const guint s4[] = {5, 30, 5, 30};
+
+  _test_memory_sequence (0, 0, s1, NULL, G_N_ELEMENTS (s1), 64);
+  _test_memory_sequence (0, 0, s2, NULL, G_N_ELEMENTS (s2), 64);
+  _test_memory_sequence (0, 0, s3, NULL, G_N_ELEMENTS (s3), 64);
+  _test_memory_sequence (0, 0, s4, NULL, G_N_ELEMENTS (s4), 64);
+}
+
+/* rhs[2] (length 64) then rhs[40] (length 128), batch ell 0..4 */
+void
+test_ncm_sbessel_ode_solver_memory_batched (void)
+{
+  const guint orders[]        = {2, 40};
+  const guint lens[]          = {64, 128};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 4);
+  gsize capacity              = 0;
+  guint i;
+
+  for (i = 0; i < 2; i++)
+  {
+    GArray *rhs = _test_rhs_unit (orders[i], lens[i], 1.0);
+    gsize len;
+    GArray *sol = _test_memory_solve (solver, op, rhs, &capacity, &len);
+
+    g_array_unref (sol);
+    g_array_unref (rhs);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* solve_endpoints with rhs[2] (length 32) then rhs[40] (length 128), ell 0: derivatives equal to a new operator's */
+void
+test_ncm_sbessel_ode_solver_memory_endpoints (void)
+{
+  const guint orders[]        = {2, 40};
+  const guint lens[]          = {32, 128};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 0);
+  gsize capacity              = 0;
+  guint i, j;
+
+  for (i = 0; i < 2; i++)
+  {
+    GArray *rhs                = _test_rhs_unit (orders[i], lens[i], 1.0);
+    NcmSBesselOdeOperator *fop = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 0);
+    GArray *e                  = NULL;
+    GArray *fe                 = NULL;
+    gdouble scale;
+
+    ncm_sbessel_ode_operator_solve_endpoints (op, rhs, &e);
+    g_assert_cmpuint (ncm_sbessel_ode_operator_get_operator_size (op), >=, capacity);
+    capacity = ncm_sbessel_ode_operator_get_operator_size (op);
+    g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), >, 0);
+
+    ncm_sbessel_ode_operator_solve_endpoints (fop, rhs, &fe);
+    scale = GSL_MAX (fabs (g_array_index (fe, gdouble, 0)), fabs (g_array_index (fe, gdouble, 1)));
+
+    for (j = 0; j < 2; j++)
+      _test_assert_close (g_array_index (e, gdouble, j), g_array_index (fe, gdouble, j), 1.0e-12, 1.0e-12 * scale);
+
+    g_array_unref (e);
+    g_array_unref (fe);
+    g_array_unref (rhs);
+    ncm_sbessel_ode_operator_unref (fop);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* reconfigure_operator (to ell 1) drops the stored factorization */
+void
+test_ncm_sbessel_ode_solver_memory_reset (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 0, 0);
+  GArray *rhs                 = _test_rhs_unit (2, 64, 1.0);
+  gsize capacity              = 0;
+  gsize len;
+  GArray *sol = _test_memory_solve (solver, op, rhs, &capacity, &len);
+
+  ncm_sbessel_ode_solver_reconfigure_operator (solver, op, TEST_A, TEST_B, 1, 1);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), ==, 0);
+
+  g_array_unref (sol);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* Twenty solves, rhs[order_i] = 1 / (i + 1), the orders the Python test drew with numpy seed 21 */
+void
+test_ncm_sbessel_ode_solver_memory_stress (void)
+{
+  const guint orders[] = {5, 2, 20, 2, 2, 2, 15, 20, 10, 5, 10, 2, 400, 20, 300, 300, 5, 300, 400, 10};
+  gdouble values[G_N_ELEMENTS (orders)];
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (orders); i++)
+    values[i] = 1.0 / (i + 1.0);
+
+  _test_memory_sequence (0, 0, orders, values, G_N_ELEMENTS (orders), 64);
 }
 
