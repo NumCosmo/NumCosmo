@@ -56,7 +56,7 @@ def test_de_cont_serialize():
     de_cont.set_tf(1.0e10)
     de_cont.set_k(1.0)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     de_cont2 = duplicate_via_serialization(de_cont, ser)
     assert de_cont2 is not None
     assert de_cont2 is not de_cont

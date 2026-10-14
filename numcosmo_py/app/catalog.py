@@ -1271,7 +1271,7 @@ class GetBestFit(LoadCatalog):
         if self.output is None:
             raise typer.BadParameter("Output file not defined.")
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         output_dict = Ncm.ObjDictStr.new()
         output_dict.add("model-set", self.mset)
         ser.dict_str_to_yaml_file(output_dict, self.output.absolute().as_posix())

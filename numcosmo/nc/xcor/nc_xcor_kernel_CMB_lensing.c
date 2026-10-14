@@ -374,15 +374,20 @@ _nc_xcor_kernel_cmb_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo,
   NcDistance *dist              = nc_xcor_kernel_peek_dist (xclk);
   const gdouble dt              = nc_distance_transverse (dist, cosmo, z);
 
+  /* chi^2 / d_t is written as chi (chi / d_t): at z = 0 both distances vanish and the
+   * ratio's limit is exactly 1 for any curvature, d_t = sinn (sqrt|Omega_k| chi) /
+   * sqrt|Omega_k|, so the window there is its limit 0 rather than 0 / 0. */
+  const gdouble chi_dt = (dt > 0.0) ? xck->chi_z / dt : 1.0;
+
   if (xclkl->source != NC_XCOR_KERNEL_CMB_LENSING_SOURCE_THIN_SCREEN)
   {
-    return xck->chi_z * xck->chi_z * (1.0 + z) * nc_xcor_lensing_efficiency_eval (xclkl->lens_eff, z) / dt;
+    return xck->chi_z * chi_dt * (1.0 + z) * nc_xcor_lensing_efficiency_eval (xclkl->lens_eff, z);
   }
   else
   {
     const gdouble dt_z_zlss = nc_distance_transverse_z1_z2 (dist, cosmo, z, xclkl->z_lss);
 
-    return xck->chi_z * xck->chi_z * (1.0 + z) * dt_z_zlss / (xclkl->dt_lss * dt);
+    return xck->chi_z * chi_dt * (1.0 + z) * dt_z_zlss / xclkl->dt_lss;
   }
 }
 

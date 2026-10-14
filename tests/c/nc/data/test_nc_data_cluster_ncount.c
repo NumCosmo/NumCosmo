@@ -294,7 +294,7 @@ test_nc_data_cluster_ncount_bin (TestNcDataClusterNCount *test, gconstpointer pd
 void
 test_nc_data_cluster_ncount_serialize (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (test->ncdata));
 
   nc_data_cluster_ncount_free (test->ncdata);

@@ -145,7 +145,7 @@ _test_ells (NcmObjDictStr *table, const gchar *shape)
 static void
 _test_block (NcXcorKernel *proto, NcHICosmo *cosmo, const TestCase *tc, const TestSetting *ts, gint lmin, gint lmax)
 {
-  NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcXcorKernel *xclk        = NC_XCOR_KERNEL (ncm_serialize_dup_obj (ser, G_OBJECT (proto)));
   NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (lmin, lmax));
   const gdouble RH          = nc_hicosmo_RH_Mpc (cosmo);
@@ -338,12 +338,14 @@ test_nc_xcor_window (gconstpointer pdata)
  * @exclude: (nullable): a table whose multipoles are left out
  * @closure_peak: whether a multipole's scale is the closure's own peak
  * @d: Bessel-derivative order
+ * @forms: which kernels to register
  * @prefix: test-path prefix
  *
- * Registers a test per kernel of order @d in @table, at @prefix/d@d/shape.
+ * Registers a test per kernel of order @d in @table selected by @forms, at
+ * @prefix/d@d/shape.
  */
 void
-test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, guint d, const gchar *prefix)
+test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, guint d, TestNcXcorWindowForms forms, const gchar *prefix)
 {
   GStrv all_keys  = ncm_obj_dict_str_keys (table);
   GPtrArray *keys = g_ptr_array_new ();
@@ -360,8 +362,10 @@ test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboo
 
     if (g_str_has_prefix (key, "kernel/"))
     {
-      gchar **parts = g_strsplit (key, "/", 3);
-      TestCase *tc  = g_new0 (TestCase, 1);
+      gchar **parts       = g_strsplit (key, "/", 3);
+      TestCase *tc        = g_new0 (TestCase, 1);
+      gboolean power_exp  = NC_IS_XCOR_KERNEL_ANALYTIC_POWER_EXP (ncm_obj_dict_str_peek (table, key));
+      gboolean registered = TRUE;
       gchar *path;
 
       tc->shape        = g_strdup (parts[1]);
@@ -371,7 +375,19 @@ test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboo
       tc->closure_peak = closure_peak;
       path             = g_strdup_printf ("%s/d%u/%s", prefix, tc->d, tc->shape);
 
-      if (tc->d == d)
+      switch (forms)
+      {
+        case TEST_NC_XCOR_WINDOW_FORMS_POWER_EXP:
+          registered = power_exp;
+          break;
+        case TEST_NC_XCOR_WINDOW_FORMS_OTHER:
+          registered = !power_exp;
+          break;
+        default:
+          break;
+      }
+
+      if ((tc->d == d) && registered)
         g_test_add_data_func_full (path, tc, &test_nc_xcor_window, &_test_case_free);
       else
         _test_case_free (tc);
@@ -389,7 +405,7 @@ test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboo
 static NcmObjDictStr *
 _test_table (const gchar *filename)
 {
-  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmObjDictStr *table = ncm_serialize_dict_str_from_binfile (ser, filename);
 
   ncm_serialize_free (ser);

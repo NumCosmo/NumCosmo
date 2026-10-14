@@ -171,7 +171,7 @@ def test_serialization(Pk: Ncm.Spline) -> None:
     ps = Nc.PowspecMLSpline.new(Pk)
     assert ps is not None
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     ps_dup = duplicate_via_serialization(ps, ser)
 

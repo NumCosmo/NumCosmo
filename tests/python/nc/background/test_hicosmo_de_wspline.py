@@ -219,7 +219,7 @@ def test_wspline_wlp_mset_func_serializes(cosmo_w: Nc.HICosmoDEWSpline) -> None:
     mset = Ncm.MSet.new_array([cosmo_w])
     direct = func.eval1(mset, 4.0)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     reloaded = ser.from_yaml(ser.to_yaml(func))
     assert_allclose(reloaded.eval1(mset, 4.0), direct)
 
@@ -273,7 +273,7 @@ def test_wspline_knots_uniform_is_evenly_spaced() -> None:
 def test_wspline_knots_survive_serialization() -> None:
     """The knot-placement choice round-trips through serialization."""
     uni = Nc.HICosmoDEWSpline(zf=2.0, w_length=8, knots=Nc.HICosmoSplineKnots.UNIFORM)
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dup = ser.dup_obj(uni)
     assert dup.props.knots.value_nick == "uniform"
     assert_allclose(dup.get_alpha().dup_array(), uni.get_alpha().dup_array())

@@ -467,7 +467,7 @@ _nc_xcor_solver_prepare_block_integrators (NcXcorSolver *solver)
     }
 
     if (ser == NULL)
-      ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+      ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
 
     sbi = NCM_SBESSEL_INTEGRATOR (ncm_serialize_dup_obj (ser, G_OBJECT (proto)));
     ncm_serialize_reset (ser, TRUE);

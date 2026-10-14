@@ -55,87 +55,30 @@ from decimal import Decimal, getcontext
 
 import numpy as np
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import Ncm
+from numcosmo_py.certified.xcor import windows as W
 
 getcontext().prec = 45
 
 HERE = pathlib.Path(__file__).resolve().parent
 SOURCE = HERE / "nc_xcor_kernel_analytic_arb.c"
 
-# One representative parameter set per shape: the arguments the Arb generator
-# takes, and the constructor arguments the library takes. They are written out
-# separately on purpose -- a shared helper that derived one from the other
-# would hide exactly the convention mismatch this script exists to catch.
-CASES = {
-    "gauss": {
-        "arb": ["--chi-mean=1500", "--chi-sigma=300", "--n-sigma=4"],
-        "make": lambda d, ps, sbi: Nc.XcorKernelAnalyticGauss.new_full(
-            d, ps, 1500.0, 300.0, 4.0, sbi
-        ),
-    },
-    "tophat": {
-        "arb": ["--chi-lower=500", "--chi-upper=2500"],
-        "make": lambda d, ps, sbi: Nc.XcorKernelAnalyticTophat.new_full(
-            d, ps, 500.0, 2500.0, sbi
-        ),
-    },
-    "tophat_smooth": {
-        "arb": [
-            "--chi-lower=1000",
-            "--chi-upper=2000",
-            "--chi-sigma=150",
-            "--n-sigma=6",
-        ],
-        "make": lambda d, ps, sbi: Nc.XcorKernelAnalyticTophatSmooth.new_full(
-            d, ps, 1000.0, 2000.0, 150.0, 6.0, sbi
-        ),
-    },
-    "student_t": {
-        "arb": ["--chi-mean=1500", "--chi-scale=200", "--nu=2", "--n-scale=6"],
-        "make": lambda d, ps, sbi: Nc.XcorKernelAnalyticStudentT.new_full(
-            d, ps, 1500.0, 200.0, 2.0, 6.0, sbi
-        ),
-    },
-    "power_exp": {
-        "arb": [
-            "--chi-scale=1200",
-            "--alpha=2",
-            "--beta=1.5",
-            "--chi-lower=50",
-            "--chi-upper=4000",
-        ],
-        "make": lambda d, ps, sbi: Nc.XcorKernelAnalyticPowerExp.new_full(
-            d, ps, 1200.0, 2.0, 1.5, 50.0, 4000.0, sbi
-        ),
-    },
-    "lensing": {
-        "arb": [
-            "--chi-lower=50",
-            "--chi-source-lower=2000",
-            "--chi-source-upper=3000",
-        ],
-        "make": lambda d, ps, sbi: Nc.XcorKernelAnalyticLensing.new_full(
-            d, ps, 50.0, 2000.0, 3000.0, sbi
-        ),
-    },
-    "multi": {
-        "arb": [
-            "--mu=1000,1600",
-            "--sigma=300,300",
-            "--weight=1,0.6",
-            "--n-sigma=4",
-        ],
-        "make": lambda d, ps, sbi: Nc.XcorKernelAnalyticMulti.new_full(
-            d,
-            ps,
-            Ncm.Vector.new_array([1000.0, 1600.0]),
-            Ncm.Vector.new_array([300.0, 300.0]),
-            Ncm.Vector.new_array([1.0, 0.6]),
-            4.0,
-            sbi,
-        ),
-    },
+# One representative window per closed form, from the vocabulary: the Arb generator's
+# options and the library kernel both come from its parameters, each by its own name.
+CASES: dict[str, str] = {
+    "gauss": "gauss_mid",
+    "tophat": "tophat_mid",
+    "tophat_smooth": "tophat_smooth_mid",
+    "student_t": "student_t_mid",
+    "power_exp": "power_exp_mid",
+    "lensing": "lensing_gal",
+    "multi": "multi_mid",
 }
+
+
+def _arb_args(shape: str) -> list[str]:
+    """The generator's window options for a shape, without its --shape."""
+    return W.arb_args(CASES[shape])[1:]
 
 
 def build_tool(workdir: pathlib.Path) -> pathlib.Path:
@@ -168,7 +111,7 @@ def build_tool(workdir: pathlib.Path) -> pathlib.Path:
 def run_tool(exe: pathlib.Path, shape: str, ell: int, ks) -> tuple:
     """Return (support, norm, {k: (value, radius)}) for one shape and ell."""
     out = subprocess.run(
-        [str(exe), f"--shape={shape}", f"--ell={ell}", *CASES[shape]["arb"]],
+        [str(exe), f"--shape={shape}", f"--ell={ell}", *_arb_args(shape)],
         input=" ".join(repr(float(k)) for k in ks),
         capture_output=True,
         text=True,
@@ -192,7 +135,7 @@ def run_tool(exe: pathlib.Path, shape: str, ell: int, ks) -> tuple:
 def run_window(exe: pathlib.Path, shape: str, chis) -> dict:
     """Return {chi: certified W(chi)} for one shape."""
     out = subprocess.run(
-        [str(exe), f"--shape={shape}", "--window", *CASES[shape]["arb"]],
+        [str(exe), f"--shape={shape}", "--window", *_arb_args(shape)],
         input=" ".join(repr(float(c)) for c in chis),
         capture_output=True,
         text=True,
@@ -239,7 +182,7 @@ def main() -> int:
 
         for shape in shapes:
             sbi = Ncm.SBesselIntegratorLevin.new(0, 8)
-            kern = CASES[shape]["make"](dist, ps, sbi)
+            kern = W.build_kernel(CASES[shape], dist, ps, sbi)
             kern.set_l_limber(-1)
             kern.prepare(cosmo)
 

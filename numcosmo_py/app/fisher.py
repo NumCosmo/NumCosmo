@@ -121,7 +121,7 @@ class RunFisherBias(RunCommonOptions):
             else:
                 raise RuntimeError("No theory vector file given.")
         else:
-            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
             theory_vector_dict = ser.dict_str_from_yaml_file(
                 self.theory_vector.absolute().as_posix()
             )

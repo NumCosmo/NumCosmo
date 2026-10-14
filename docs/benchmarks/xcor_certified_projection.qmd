@@ -76,6 +76,7 @@ import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
 
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.certified.xcor import windows as W
 
 Ncm.cfg_init()
 
@@ -117,20 +118,20 @@ TABLES = {
     2: "truth_tables/xcor/xcor_window_ilk_d2.json.gz",
 }
 
-# The closed forms, by the name the table records. Several cases are the same form
-# at different centres and widths -- the LSST-SRD locations and their paired
-# top-hats -- so the case key names the case and `shape` names the form.
+# The closed forms' display names, by the name the table records. Several cases are
+# the same form at different centres and widths -- the LSST-SRD locations and their
+# paired top-hats -- so the case key names the case and `shape` names the form.
 FORMS = {
-    "gauss": (Nc.XcorKernelAnalyticGauss, "Gaussian"),
-    "tophat": (Nc.XcorKernelAnalyticTophat, "Top-hat"),
-    "tophat_smooth": (Nc.XcorKernelAnalyticTophatSmooth, "Smoothed top-hat"),
-    "student_t": (Nc.XcorKernelAnalyticStudentT, "Student-t"),
-    "power_exp": (Nc.XcorKernelAnalyticPowerExp, "Power-exponential"),
-    "lensing": (Nc.XcorKernelAnalyticLensing, "Lensing"),
-    "multi": (Nc.XcorKernelAnalyticMulti, "Multi-bump"),
+    "gauss": "Gaussian",
+    "tophat": "Top-hat",
+    "tophat_smooth": "Smoothed top-hat",
+    "student_t": "Student-t",
+    "power_exp": "Power-exponential",
+    "lensing": "Lensing",
+    "multi": "Multi-bump",
 }
 
-# Keyed by case, in the shared vocabulary of tests/python/nc/xcor/windows.py.
+# Keyed by case, in the shared vocabulary of numcosmo_py.certified.xcor.windows.
 LABELS = {
     "gauss_mid": "Gaussian, $\\chi_0 = 1500$",
     "gauss_near": "Gaussian, SRD Y10 lens 0",
@@ -199,26 +200,6 @@ def load_table(deriv):
         return json.load(handle)
 
 
-def make_kernel(form, ctor, dist, ps, sbi, deriv=0):
-    """Build one analytic window from the constructor arguments in the table."""
-    cls, _ = FORMS[form]
-
-    if form == "multi":
-        chi_mean, chi_sigma, weight, n_sigma = ctor
-        return cls(
-            dist=dist,
-            powspec=ps,
-            integrator=sbi,
-            bessel_deriv=deriv,
-            chi_mean=Ncm.Vector.new_array(chi_mean),
-            chi_sigma=Ncm.Vector.new_array(chi_sigma),
-            weight=Ncm.Vector.new_array(weight),
-            n_sigma=n_sigma,
-        )
-
-    return cls.new_full(dist, ps, *ctor, sbi)
-
-
 cosmo = Nc.HICosmoDEXcdm.new()
 # Out to last scattering, not to z = 5. The CMB windows are the reason:
 # lensing_cmb's support ends at 14146 Mpc, which is chi(z = 1100), and a distance
@@ -238,13 +219,11 @@ CASES = sorted(table0["shapes"])
 def build(case, table, deriv=0):
     """The kernel for one case of a table, prepared and non-Limber."""
     entry = table["shapes"][case]
-    kernel = make_kernel(
-        form_of(entry, case),
-        entry["ctor"],
+    kernel = W.build_kernel(
+        W.table_window(form_of(entry, case), entry["ctor"], deriv),
         dist,
         ps,
         Ncm.SBesselIntegratorLevin.new(0, 8),
-        deriv=deriv,
     )
     kernel.set_l_limber(-1)
     kernel.prepare_if_needed(cosmo)
@@ -357,7 +336,7 @@ for idx, form in enumerate(order):
     ax.text(
         0.04,
         0.94,
-        FORMS[form][1],
+        FORMS[form],
         transform=ax.transAxes,
         ha="left",
         va="top",
@@ -1059,13 +1038,11 @@ def tail_panels(grid, axes):
         entry = grid["cases"][case]
         chi_0 = entry["ctor"][0]
         tag = rf"$\chi_0 = {chi_0 / 1000.0:.1f}$ Gpc, $z = {chi_to_z(chi_0):.2f}$"
-        kernel = make_kernel(
-            entry["form"],
-            entry["ctor"],
+        kernel = W.build_kernel(
+            W.table_window(entry["form"], entry["ctor"], entry["deriv"]),
             dist,
             ps,
             Ncm.SBesselIntegratorLevin.new(0, 8),
-            deriv=entry["deriv"],
         )
         kernel.set_l_limber(-1)
         kernel.prepare_if_needed(cosmo)
@@ -1236,13 +1213,11 @@ def pair_kernels(grid):
 
     for case in grid["pair"]:
         entry = grid["cases"][case]
-        kernel = make_kernel(
-            entry["form"],
-            entry["ctor"],
+        kernel = W.build_kernel(
+            W.table_window(entry["form"], entry["ctor"], entry["deriv"]),
             dist,
             ps,
             Ncm.SBesselIntegratorLevin.new(0, 8),
-            deriv=entry["deriv"],
         )
         kernel.set_l_limber(-1)
         # A far-separated pair is the regime where the closure *fit* dominates,

@@ -29,11 +29,27 @@
 
 G_BEGIN_DECLS
 
+/**
+ * TestNcXcorWindowForms:
+ * @TEST_NC_XCOR_WINDOW_FORMS_ALL: every kernel of the table
+ * @TEST_NC_XCOR_WINDOW_FORMS_POWER_EXP: the power-exponential kernels only
+ * @TEST_NC_XCOR_WINDOW_FORMS_OTHER: every kernel but the power-exponential ones
+ *
+ * Which kernels a test binary registers. The power-exponential windows cost about half
+ * of the d = 1 and d = 2 checks, so those orders run them in a binary of their own.
+ */
+typedef enum _TestNcXcorWindowForms
+{
+  TEST_NC_XCOR_WINDOW_FORMS_ALL,
+  TEST_NC_XCOR_WINDOW_FORMS_POWER_EXP,
+  TEST_NC_XCOR_WINDOW_FORMS_OTHER,
+} TestNcXcorWindowForms;
+
 NcmObjDictStr *test_nc_xcor_window_dense_table (void);
 
 NcmObjDictStr *test_nc_xcor_window_sparse_table (void);
 
-void test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, guint d, const gchar *prefix);
+void test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, guint d, TestNcXcorWindowForms forms, const gchar *prefix);
 
 G_END_DECLS
 

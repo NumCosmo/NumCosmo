@@ -223,7 +223,7 @@ test_nc_xcor_window_levin (gconstpointer pdata)
   const TestCase *tc         = pdata;
   const gdouble atol_frac    = (tc->d == 0) ? TEST_ATOL_FRAC : TEST_DERIV_ATOL_FRAC;
   gchar *kkey                = g_strdup_printf ("kernel/%s/d0", tc->shape);
-  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcXcorKernel *proto        = NC_XCOR_KERNEL (ncm_obj_dict_str_peek (test_table, kkey));
   NcXcorKernel *xclk         = NC_XCOR_KERNEL (ncm_serialize_dup_obj (ser, G_OBJECT (proto)));
   NcXcorKernelRadial *kernel = NC_XCOR_KERNEL_RADIAL (xclk);
@@ -328,7 +328,7 @@ main (gint argc, gchar *argv[])
   g_test_set_nonfatal_assertions ();
 
   filename   = ncm_cfg_get_data_filename (TEST_SPARSE_FILE, TRUE);
-  ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   test_table = ncm_serialize_dict_str_from_binfile (ser, filename);
   all_keys   = ncm_obj_dict_str_keys (test_table);
   shapes     = g_ptr_array_new ();

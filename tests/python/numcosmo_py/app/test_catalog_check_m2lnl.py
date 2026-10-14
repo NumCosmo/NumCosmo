@@ -56,7 +56,7 @@ def fixture_mcmc_catalog(tmp_path: Path) -> Tuple[Path, Path]:
     likelihood = Ncm.Likelihood.new(dset=Ncm.Dataset.new_array([data_mvnd]))
 
     experiment = tmp_path / "simple_experiment.yaml"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     experiment_dict = Ncm.ObjDictStr.new()
     experiment_dict.add("model-set", mset)
@@ -245,7 +245,7 @@ def test_check_m2lnl_incompatible_fparams_raises(mcmc_catalog, tmp_path: Path):
     likelihood = Ncm.Likelihood.new(dset=Ncm.Dataset.new_array([data_mvnd]))
 
     other_experiment = tmp_path / "other_experiment.yaml"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     experiment_dict = Ncm.ObjDictStr.new()
     experiment_dict.add("model-set", mset)
     experiment_dict.add("likelihood", likelihood)

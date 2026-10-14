@@ -394,7 +394,7 @@ def test_multi_component_kernel_survives_serialization(bits):
             _component(chi, 0.3 * W, kind=Nc.XcorKernelTableKind.SHEAR),
         ],
     )
-    copy = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).dup_obj(tab)
+    copy = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).dup_obj(tab)
     copy.set_l_limber(-1)
     copy.prepare(cosmo)
 

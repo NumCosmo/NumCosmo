@@ -94,7 +94,7 @@ ncm_fit_mcmc_init (NcmFitMCMC *mcmc)
   mcmc->mtype         = NCM_FIT_RUN_MSGS_NONE;
   mcmc->tkern         = NULL;
   mcmc->nt            = ncm_timer_new ();
-  mcmc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  mcmc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   mcmc->theta         = NULL;
   mcmc->thetastar     = NULL;
   mcmc->n             = 0;

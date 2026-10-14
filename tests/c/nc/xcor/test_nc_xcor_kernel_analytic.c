@@ -25,10 +25,10 @@
 /*
  * The seven analytic windows are library objects, not test scaffolding: they are
  * installed, registered and serializable, and every kernel-space check in the suite is
- * built on one. What is checked here is that contract -- construction, properties,
- * component supports, the window vanishing outside its own support, serialization -- not
- * whether the closed forms are right, which is what tests/python/nc/xcor covers against
- * certified values.
+ * built on one. What is checked here is that contract -- construction, properties and
+ * getters, component supports, the window alive inside and vanishing outside its own
+ * support, serialization -- not whether the closed forms are right, which the
+ * certified-window tests (test_nc_xcor_window_common.c) check against Arb values.
  *
  * The cosmology is NcHICosmoDEXcdm with an analytic power spectrum, so nothing here runs
  * CLASS or any transfer function.
@@ -296,19 +296,46 @@ _build_multi_full_sbi (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *s
   return xclk;
 }
 
+/* The bumps of a multimodal window, as _build_multi_full () was given them */
 static void
-_getters_multi (NcXcorKernel *xclk)
+_getters_multi_bumps (NcXcorKernel *xclk, gdouble mean0, gdouble mean1, gdouble sigma0, gdouble sigma1)
 {
   NcXcorKernelAnalyticMulti *k = NC_XCOR_KERNEL_ANALYTIC_MULTI (xclk);
+  NcmVector *chi_mean          = nc_xcor_kernel_analytic_multi_peek_chi_mean (k);
+  NcmVector *chi_sigma         = nc_xcor_kernel_analytic_multi_peek_chi_sigma (k);
+  NcmVector *weight            = nc_xcor_kernel_analytic_multi_peek_weight (k);
 
   g_assert_cmpuint (nc_xcor_kernel_analytic_multi_get_n_bumps (k), ==, 2);
   ncm_assert_cmpdouble_e (nc_xcor_kernel_analytic_multi_get_n_sigma (k), ==, TEST_N_SIGMA, 1.0e-15, 0.0);
 
   /* Bump count and vector length are set independently; a mismatch would index past the
    * end of these on the first evaluation. */
-  g_assert_cmpuint (ncm_vector_len (nc_xcor_kernel_analytic_multi_peek_chi_mean (k)), ==, 2);
-  g_assert_cmpuint (ncm_vector_len (nc_xcor_kernel_analytic_multi_peek_chi_sigma (k)), ==, 2);
-  g_assert_cmpuint (ncm_vector_len (nc_xcor_kernel_analytic_multi_peek_weight (k)), ==, 2);
+  g_assert_cmpuint (ncm_vector_len (chi_mean), ==, 2);
+  g_assert_cmpuint (ncm_vector_len (chi_sigma), ==, 2);
+  g_assert_cmpuint (ncm_vector_len (weight), ==, 2);
+
+  ncm_assert_cmpdouble_e (ncm_vector_get (chi_mean, 0), ==, mean0, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_get (chi_mean, 1), ==, mean1, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_get (chi_sigma, 0), ==, sigma0, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_get (chi_sigma, 1), ==, sigma1, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_get (weight, 0), ==, 1.0, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_get (weight, 1), ==, 0.6, 1.0e-15, 0.0);
+}
+
+static void
+_getters_multi (NcXcorKernel *xclk)
+{
+  _getters_multi_bumps (xclk, 1000.0, 1600.0, 300.0, 300.0);
+
+  /* The two bumps overlap and share one component, so the bump count is not the
+   * component count. */
+  g_assert_cmpuint (nc_xcor_kernel_radial_get_n_comps (NC_XCOR_KERNEL_RADIAL (xclk)), ==, 1);
+}
+
+static void
+_getters_multi_disjoint (NcXcorKernel *xclk)
+{
+  _getters_multi_bumps (xclk, 600.0, 2600.0, 100.0, 150.0);
 }
 
 /* Uncrustify reflows nested array-in-struct initializers into something unreadable, so
@@ -364,17 +391,17 @@ static const TestProp _props_multi[] = {
 };
 
 static const TestKernel test_kernels[] = {
-  {"gauss",          &_build_gauss,          &_build_gauss_full,         &_getters_gauss,         1, _props_gauss},
-  {"tophat",         &_build_tophat,         &_build_tophat_full,        &_getters_tophat,        1, _props_tophat},
-  {"tophat_smooth",  &_build_tophat_smooth,  &_build_tophat_smooth_full, &_getters_tophat_smooth, 1, _props_tophat_smooth},
-  {"student_t",      &_build_student_t,      &_build_student_t_full,     &_getters_student_t,     1, _props_student_t},
-  {"power_exp",      &_build_power_exp,      &_build_power_exp_full,     &_getters_power_exp,     1, _props_power_exp},
+  {"gauss",          &_build_gauss,          &_build_gauss_full,         &_getters_gauss,          1, _props_gauss},
+  {"tophat",         &_build_tophat,         &_build_tophat_full,        &_getters_tophat,         1, _props_tophat},
+  {"tophat_smooth",  &_build_tophat_smooth,  &_build_tophat_smooth_full, &_getters_tophat_smooth,  1, _props_tophat_smooth},
+  {"student_t",      &_build_student_t,      &_build_student_t_full,     &_getters_student_t,      1, _props_student_t},
+  {"power_exp",      &_build_power_exp,      &_build_power_exp_full,     &_getters_power_exp,      1, _props_power_exp},
 
   /* Two components, one per branch of the lensing shape: they meet at the source-bin
    * edge with a kink no single Chebyshev panel fits. */
-  {"lensing",        &_build_lensing,        &_build_lensing_full,       &_getters_lensing,       2, _props_lensing},
-  {"multi",          &_build_multi,          &_build_multi_full_sbi,     &_getters_multi,         1, _props_multi},
-  {"multi_disjoint", &_build_multi_disjoint, NULL,                       &_getters_multi,         2, _props_multi},
+  {"lensing",        &_build_lensing,        &_build_lensing_full,       &_getters_lensing,        2, _props_lensing},
+  {"multi",          &_build_multi,          &_build_multi_full_sbi,     &_getters_multi,          1, _props_multi},
+  {"multi_disjoint", &_build_multi_disjoint, NULL,                       &_getters_multi_disjoint, 2, _props_multi},
 };
 
 #define TEST_N_KERNELS (G_N_ELEMENTS (test_kernels))
@@ -510,6 +537,33 @@ test_nc_xcor_kernel_analytic_window (TestNcXcorKernelAnalytic *test, gconstpoint
    * nothing downstream. */
   g_assert_cmpfloat (mass, >, 0.0);
 
+  /* The window is alive right up to its edges, and at the middle of the support unless
+   * that falls in a gap between components. The lensing efficiency of a source bin is
+   * the exception at the far edge: geometrically zero there, since nothing behind the
+   * bin is lensed. */
+  {
+    const gdouble chi_mid = 0.5 * (chi_min + chi_max);
+    gboolean in_comp      = FALSE;
+
+    for (i = 0; i < tk->n_comps; i++)
+    {
+      gdouble lo, hi;
+
+      nc_xcor_kernel_radial_get_comp_support (radial, i, &lo, &hi);
+      in_comp = in_comp || ((chi_mid >= lo) && (chi_mid <= hi));
+    }
+
+    g_assert_cmpfloat (nc_xcor_kernel_radial_eval_W (radial, chi_min), >, 0.0);
+
+    if (in_comp)
+      g_assert_cmpfloat (nc_xcor_kernel_radial_eval_W (radial, chi_mid), >, 0.0);
+
+    if (NC_IS_XCOR_KERNEL_ANALYTIC_LENSING (test->xclk))
+      g_assert_cmpfloat (nc_xcor_kernel_radial_eval_W (radial, chi_max), ==, 0.0);
+    else
+      g_assert_cmpfloat (nc_xcor_kernel_radial_eval_W (radial, chi_max), >, 0.0);
+  }
+
   /* Outside its own support a component must be exactly zero: the integrators clamp to
    * these bounds and never sample beyond them, so a non-zero tail there is silently
    * dropped mass rather than an approximation error. */
@@ -562,7 +616,7 @@ static void
 test_nc_xcor_kernel_analytic_serialize (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
 {
   const TestKernel *tk       = pdata;
-  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcXcorKernel *dup          = NC_XCOR_KERNEL (ncm_serialize_dup_obj (ser, G_OBJECT (test->xclk)));
   NcXcorKernelRadial *radial = NC_XCOR_KERNEL_RADIAL (test->xclk);
   NcXcorKernelRadial *rdup   = NC_XCOR_KERNEL_RADIAL (dup);
@@ -585,6 +639,14 @@ test_nc_xcor_kernel_analytic_serialize (TestNcXcorKernelAnalytic *test, gconstpo
   nc_xcor_kernel_prepare (dup, test->cosmo);
 
   nc_xcor_kernel_radial_get_support (radial, &chi_min, &chi_max);
+
+  {
+    gdouble dup_min, dup_max;
+
+    nc_xcor_kernel_radial_get_support (rdup, &dup_min, &dup_max);
+    g_assert_cmpfloat (dup_min, ==, chi_min);
+    g_assert_cmpfloat (dup_max, ==, chi_max);
+  }
 
   for (i = 0; i <= TEST_GRID; i++)
   {
@@ -627,10 +689,19 @@ test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpoi
 
   full = tk->build_full (test->dist, test->ps, sbi);
 
+  g_assert_null (nc_xcor_kernel_peek_integrator (test->xclk));
   g_assert_true (nc_xcor_kernel_peek_integrator (full) == sbi);
   nc_xcor_kernel_prepare (full, test->cosmo);
 
   nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (test->xclk), &chi_min, &chi_max);
+
+  {
+    gdouble full_min, full_max;
+
+    nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (full), &full_min, &full_max);
+    g_assert_cmpfloat (full_min, ==, chi_min);
+    g_assert_cmpfloat (full_max, ==, chi_max);
+  }
 
   for (i = 0; i <= TEST_GRID; i++)
   {

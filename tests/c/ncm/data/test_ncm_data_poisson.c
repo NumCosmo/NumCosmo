@@ -230,7 +230,7 @@ test_ncm_data_poisson_m2lnL (TestNcmDataPoisson *test, gconstpointer pdata)
 void
 test_ncm_data_poisson_serialize (TestNcmDataPoisson *test, gconstpointer pdata)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmDataPoisson *dup;
   NcmVector *edges;
   gdouble m2lnL, m2lnL_dup;

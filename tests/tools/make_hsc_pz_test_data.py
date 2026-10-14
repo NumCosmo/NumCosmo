@@ -54,7 +54,7 @@ def main() -> None:
             f"peaks {[int(peaks[i]) for i in chosen]}"
         )
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     ser.dict_str_to_binfile(ods, OUT)
     print(f"{ods.len()} P(z) written to {os.path.normpath(OUT)}")
 

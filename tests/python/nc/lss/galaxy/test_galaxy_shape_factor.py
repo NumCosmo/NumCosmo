@@ -84,7 +84,7 @@ def test_serialize_deserialize():
     abstract)."""
     gsf = Nc.GalaxyShapeFactorVarAdd.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     gsf2 = duplicate_via_serialization(gsf, ser)
 
     assert isinstance(gsf2, Nc.GalaxyShapeFactorVarAdd)

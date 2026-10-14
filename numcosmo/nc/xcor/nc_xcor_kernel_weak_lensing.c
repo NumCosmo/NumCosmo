@@ -494,18 +494,14 @@ _nc_xcor_kernel_component_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, Nc
  * Kernel implementation.
  */
 
-static gdouble
-_nc_xcor_kernel_weak_lensing_eval_radial_weight (NcXcorKernel *xclk, NcHICosmo *cosmo, const gdouble z, const gdouble chi, const gdouble E)
-{
-  NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
-
-  return (1.0 + z) / chi * nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z);
-}
-
+/* chi^2 times the radial weight (1 + z) g(z) / chi, with chi cancelled: written as the
+ * product, chi = 0 at z = 0 gives 0 * inf instead of the limit 0. */
 static gdouble
 _nc_xcor_kernel_weak_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-  return gsl_pow_2 (xck->chi_z) * _nc_xcor_kernel_weak_lensing_eval_radial_weight (xclk, cosmo, z, xck->chi_z, xck->E_z);
+  NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
+
+  return xck->chi_z * (1.0 + z) * nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z);
 }
 
 static gdouble

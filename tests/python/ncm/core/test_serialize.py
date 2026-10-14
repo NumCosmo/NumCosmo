@@ -206,8 +206,8 @@ GObject.type_register(GTestC)
 
 @pytest.fixture(
     name="ser_opt",
-    params=[Ncm.SerializeOpt.NONE, Ncm.SerializeOpt.CLEAN_DUP],
-    ids=["NONE", "CLEAN_DUP"],
+    params=[Ncm.SerializeOpt.NONE, Ncm.SerializeOpt.KEEP_SHARED],
+    ids=["NONE", "KEEP_SHARED"],
 )
 def fixture_ser_opt(request):
     """Fixture for serialization options."""
@@ -458,7 +458,7 @@ def test_serialize_B_cmp_objs_clean_dup(dup_mode, a1, a2, a3) -> None:
 
     b = GTestB(B_string="test", As=a1, Aa=oa, Aods=ods, Aodi=odi)  # type: ignore
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     if dup_mode == "variant":
         b_dup = duplicate_via_serialization(b, ser)
@@ -677,7 +677,7 @@ def test_serialize_C_cmp_objs_clean_dup(dup_mode, a1, a2, a3) -> None:
 
     c = GTestC(Ca=b_oa, Cods=b_ods, Codi=b_odi)  # type: ignore
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     if dup_mode == "variant":
         c_dup = duplicate_via_serialization(c, ser)

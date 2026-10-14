@@ -109,7 +109,7 @@ ncm_mpi_slave_serve_job (void)
 {
 #ifdef HAVE_MPI
   NcmMPISlave slave = {
-    ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP),
+    ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED),
     NULL, NULL, NULL,
     0, 0, 0, 0,
     MPI_DATATYPE_NULL, MPI_DATATYPE_NULL,

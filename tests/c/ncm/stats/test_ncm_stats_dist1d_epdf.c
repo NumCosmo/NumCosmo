@@ -489,7 +489,7 @@ static void
 test_ncm_stats_dist1d_epdf_serialize (TestNcmStatsDist1dEPDF *test, gconstpointer pdata)
 {
   NcmStatsDist1d *sd1     = NCM_STATS_DIST1D (test->sd1);
-  NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmStatsDist1d *sd1_dup = NCM_STATS_DIST1D (ncm_serialize_dup_obj (ser, G_OBJECT (sd1)));
   NcmRNG *rng             = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   const guint ntest       = 100000;

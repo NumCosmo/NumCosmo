@@ -189,7 +189,7 @@ def test_data_cluster_mass_rich_count_apply_cut(
 
 def test_serialize_deserialize(cluster_mass_rich_count: Nc.DataClusterMassRichCount):
     """Test serialize and deserialize."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dmrc2 = duplicate_via_serialization(cluster_mass_rich_count, ser)
     assert isinstance(dmrc2, Nc.DataClusterMassRichCount)
 

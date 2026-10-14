@@ -518,7 +518,7 @@ void
 test_ncm_obj_array_to_from_keyfile (TestNcmObjArray *test, gconstpointer pdata)
 {
   NcmObjArray *oa   = test->oa;
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_obj_array_saved_XXXXXX", NULL);
   gchar *filename   = g_strdup_printf ("%s/test_ncm_obj_array_saved.oa", tmp_dir);
 
@@ -559,7 +559,7 @@ void
 test_ncm_obj_array_to_from_yaml (TestNcmObjArray *test, gconstpointer pdata)
 {
   NcmObjArray *oa   = test->oa;
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *yaml_str;
 
   test_ncm_obj_array_add (test, pdata);
@@ -595,7 +595,7 @@ void
 test_ncm_obj_array_to_from_yaml_file (TestNcmObjArray *test, gconstpointer pdata)
 {
   NcmObjArray *oa   = test->oa;
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_obj_array_saved_XXXXXX", NULL);
   gchar *filename   = g_strdup_printf ("%s/test_ncm_obj_array_saved.yaml", tmp_dir);
 
@@ -749,7 +749,7 @@ void
 test_ncm_obj_dict_str_to_from_yaml (TestNcmObjDictStr *test, gconstpointer pdata)
 {
   NcmObjDictStr *ods = test->ods;
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *yaml_str;
 
   test_ncm_obj_dict_str_add (test, pdata);
@@ -792,7 +792,7 @@ void
 test_ncm_obj_dict_str_to_from_yaml_file (TestNcmObjDictStr *test, gconstpointer pdata)
 {
   NcmObjDictStr *ods = test->ods;
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *tmp_dir     = g_dir_make_tmp ("test_ncm_obj_dict_str_saved_XXXXXX", NULL);
   gchar *filename    = g_strdup_printf ("%s/test_ncm_obj_dict_str_saved.yaml", tmp_dir);
 
@@ -943,7 +943,7 @@ void
 test_ncm_obj_dict_int_to_from_yaml (TestNcmObjDictInt *test, gconstpointer pdata)
 {
   NcmObjDictInt *odi = test->odi;
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *yaml_str;
 
   test_ncm_obj_dict_int_add (test, pdata);
@@ -986,7 +986,7 @@ void
 test_ncm_obj_dict_int_to_from_yaml_file (TestNcmObjDictInt *test, gconstpointer pdata)
 {
   NcmObjDictInt *odi = test->odi;
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *tmp_dir     = g_dir_make_tmp ("test_ncm_obj_dict_int_saved_XXXXXX", NULL);
   gchar *filename    = g_strdup_printf ("%s/test_ncm_obj_dict_int_saved.yaml", tmp_dir);
 
@@ -1531,7 +1531,7 @@ test_ncm_var_dict_object_array (TestNcmVarDict *test, gconstpointer pdata)
 NcmVarDict *
 _test_ncm_var_dict_to_from_variant (NcmVarDict *vd)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GVariant *v       = ncm_serialize_var_dict_to_variant (ser, vd);
   NcmVarDict *vd0   = ncm_serialize_var_dict_from_variant (ser, v);
 
@@ -1549,7 +1549,7 @@ _test_ncm_var_dict_to_from_variant (NcmVarDict *vd)
 NcmVarDict *
 _test_ncm_var_dict_to_from_yaml (NcmVarDict *vd)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gchar *yaml_str   = ncm_serialize_var_dict_to_yaml (ser, vd);
   NcmVarDict *vd0   = ncm_serialize_var_dict_from_yaml (ser, yaml_str);
 
@@ -1567,7 +1567,7 @@ _test_ncm_var_dict_to_from_yaml (NcmVarDict *vd)
 NcmVarDict *
 _test_ncm_var_dict_to_from_variant_binfile (NcmVarDict *vd)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmVarDict *vd0   = NULL;
   gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
   gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
@@ -1592,7 +1592,7 @@ _test_ncm_var_dict_to_from_variant_binfile (NcmVarDict *vd)
 NcmVarDict *
 _test_ncm_var_dict_to_from_variant_file (NcmVarDict *vd)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmVarDict *vd0   = NULL;
   gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
   gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
@@ -1617,7 +1617,7 @@ _test_ncm_var_dict_to_from_variant_file (NcmVarDict *vd)
 NcmVarDict *
 _test_ncm_var_dict_to_from_yaml_file (NcmVarDict *vd)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmVarDict *vd0   = NULL;
   gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
   gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);

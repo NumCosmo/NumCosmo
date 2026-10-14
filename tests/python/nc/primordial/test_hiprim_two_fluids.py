@@ -186,7 +186,7 @@ def test_set_lnk_lnw_spline_serialize(two_fluids):
         rtol=1.0e-8,
     )
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     two_fluids2 = duplicate_via_serialization(two_fluids, ser)
 
     assert two_fluids2.peek_lnk_lnw_spline() is not None
@@ -266,7 +266,7 @@ def test_Pk0_spline_serialize(two_fluids):
 
     two_fluids.set_Pk0_spline(Pk0_spline)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     two_fluids2 = duplicate_via_serialization(two_fluids, ser)
 
     assert two_fluids2.peek_Pk0_spline() is not None
@@ -343,7 +343,7 @@ def test_full_serialization_with_Pk0(two_fluids):
     two_fluids.set_Pk0_spline(Pk0_spline)
 
     # Serialize and deserialize
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     two_fluids2 = duplicate_via_serialization(two_fluids, ser)
 
     # Check both splines are preserved

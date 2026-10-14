@@ -449,7 +449,7 @@ static void
 test_ncm_stats_dist1d_hsc_pz (void)
 {
   gchar *path        = ncm_cfg_get_data_filename ("hsc_pdr1_pz_multipeak.bin", TRUE);
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmObjDictStr *ods = ncm_serialize_dict_str_from_binfile (ser, path);
   GStrv keys         = ncm_obj_dict_str_keys (ods);
   gdouble max_err    = 0.0;

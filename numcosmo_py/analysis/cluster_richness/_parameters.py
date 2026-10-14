@@ -42,7 +42,7 @@ def dup_model(model: _T) -> _T:
     :param model: A NumCosmo model instance to duplicate
     :return: A duplicate of the model with the same type
     """
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     return ser.dup_obj(model)  # type: ignore[return-value]
 
 
@@ -54,7 +54,7 @@ def model_to_yaml(model: Ncm.Model) -> str:
     :param model: A NumCosmo model instance to serialize
     :return: YAML string representation of the model
     """
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     return ser.to_yaml(model)
 
 
@@ -66,7 +66,7 @@ def model_from_yaml(yaml_str: str) -> Nc.ClusterMassRichness:
     :param yaml_str: YAML string representation of the model
     :return: Deserialized NcClusterMassRichness model
     """
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     return ser.from_yaml(yaml_str)  # type: ignore[return-value]
 
 
@@ -78,7 +78,7 @@ class CutAnalysisResult:
     and best-fit model from different estimation methods.
 
     The model instances can be duplicated using Ncm.Serialize when needed:
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         model_copy = ser.dup_obj(model)
 
     Parameters can be accessed via dictionary-like interface:

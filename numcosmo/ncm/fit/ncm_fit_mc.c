@@ -109,7 +109,7 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->rtype         = NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN;
   mc->bf            = NULL;
   mc->nt            = ncm_timer_new ();
-  mc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  mc->ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   mc->use_threads   = FALSE;
   mc->n             = 0;
   mc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */

@@ -148,7 +148,7 @@ def _build_real_wl_obs(tmp_path: Path, filename: str, with_meta: bool) -> Path:
         obs.set_meta(meta)
 
     obs_file = tmp_path / filename
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     ser.to_binfile(obs, obs_file.absolute().as_posix())
 
     return obs_file
@@ -445,7 +445,7 @@ def test_cluster_wl_app_generate_redshift(experiment_file, redshift_dist):
         dataset_file.exists()
     ), f"Dataset file {dataset_file} does not exist:\n {result.output}"
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = ser.from_binfile(dataset_file.as_posix())
     cluster_data = dataset.get_data(0)
     obs = cluster_data.peek_obs()
@@ -514,7 +514,7 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))
@@ -708,7 +708,7 @@ def test_cluster_wl_load_app_missing_ra_dec_columns(experiment_file, tmp_path: P
     obs.set("z", 0, 0.8)
 
     no_ra_dec_file = tmp_path / "no_ra_dec.gvar"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     ser.to_binfile(obs, no_ra_dec_file.as_posix())
 
     result = runner.invoke(
@@ -752,7 +752,7 @@ def test_cluster_wl_app_generate_pop_gauss_local(experiment_file):
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
     obs = cluster_data.peek_obs()
@@ -795,7 +795,7 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
     assert functions_file.exists(), f"Functions file {functions_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     # Dataset must be read first with the same NcmSerialize instance --
     # shared object aliases span both files.
     ser.from_binfile(dataset_file.as_posix())
@@ -837,7 +837,7 @@ def test_cluster_wl_app_generate_pop_beta_fixed_no_mfuncs(experiment_file):
     functions_file = experiment_file.with_suffix(".functions.yaml")
     assert functions_file.exists(), f"Functions file {functions_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mfunc_oa = cast(Ncm.ObjArray, ser.array_from_yaml_file(functions_file.as_posix()))
     assert mfunc_oa.len() == 0
 
@@ -860,7 +860,7 @@ def test_cluster_wl_app_generate_fixed_quad_marginal_spline(experiment_file):
     assert result.exit_code == 0, result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
     factor = cast(Nc.GalaxyShapeFactorFixedQuad, cluster_data.props.shape_factor)
@@ -904,7 +904,7 @@ def test_cluster_wl_app_generate_halo_profile(experiment_file: Path, halo_profil
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset: Ncm.MSet = cast(Ncm.MSet, experiment.get("model-set"))
@@ -966,7 +966,7 @@ def test_cluster_wl_app_halo_mass_summary(experiment_file, halo_mass_summary):
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))
@@ -1032,7 +1032,7 @@ def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))
@@ -1084,7 +1084,7 @@ def test_cluster_wl_app_radius(experiment_file, radius):
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))
@@ -1166,7 +1166,7 @@ def test_cluster_wl_app_galaxy_density(experiment_file, halo_position):
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = ser.from_binfile(dataset_file.as_posix())
     cluster_data = dataset.get_data(0)
     obs = cluster_data.peek_obs()
@@ -1285,7 +1285,7 @@ def test_cluster_wl_app_fit_parameters(experiment_file, fit_parameters):
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     _ = ser.from_binfile(dataset_file.as_posix())
     experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
     mset = cast(Ncm.MSet, experiment.get("model-set"))
@@ -1344,7 +1344,7 @@ def test_cluster_wl_load_app_data_file(experiment_file, real_wl_obs_file_with_me
     ), f"Experiment file {experiment_file} does not exist."
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
 
@@ -1373,7 +1373,7 @@ def test_cluster_wl_load_app_fixed_quad_marginal_spline(
     assert result.exit_code == 0, result.output
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
     factor = cast(Nc.GalaxyShapeFactorFixedQuad, cluster_data.props.shape_factor)
@@ -1476,7 +1476,7 @@ def test_cluster_wl_load_app_catalog(experiment_file):
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
 
@@ -1518,7 +1518,7 @@ def test_cluster_wl_load_app_data_file_wrong_type(experiment_file, tmp_path: Pat
     must fail with a clear error (LoadClusterWL._load_obs's isinstance
     check), not silently misinterpret it as a NcGalaxyWLObs."""
     wrong_type_file = tmp_path / "not_a_wl_obs.gvar"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     ser.to_binfile(Nc.HICosmoDEXcdm.new(), wrong_type_file.as_posix())
 
     result = runner.invoke(

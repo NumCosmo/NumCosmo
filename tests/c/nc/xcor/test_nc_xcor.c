@@ -290,6 +290,20 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
 
   nc_distance_free (dist);
   ncm_powspec_free (ps);
+
+  /* Set through the properties too: serialization writes them that way. */
+  {
+    const NcXcorMethod other = (tm->meth == NC_XCOR_METHOD_LIMBER_Z_GSL) ? NC_XCOR_METHOD_LIMBER_Z_CUBATURE : NC_XCOR_METHOD_LIMBER_Z_GSL;
+
+    g_object_set (test->xc, "reltol", 2.0e-7, "meth", other, NULL);
+    ncm_assert_cmpdouble_e (nc_xcor_get_reltol (test->xc), ==, 2.0e-7, 1.0e-15, 0.0);
+    g_object_get (test->xc, "meth", &meth, NULL);
+    g_assert_cmpuint (meth, ==, other);
+
+    g_object_set (test->xc, "meth", tm->meth, NULL);
+    g_object_get (test->xc, "meth", &meth, NULL);
+    g_assert_cmpuint (meth, ==, tm->meth);
+  }
 }
 
 typedef struct _TestCheck

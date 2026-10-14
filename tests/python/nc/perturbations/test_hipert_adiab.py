@@ -626,7 +626,7 @@ def test_evolution_qgw_duplicate(adiab_qgw: AdiabQGW) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, qgw = adiab_qgw
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     adiab_dup = duplicate_via_serialization(adiab, ser)
     qgw_dup = duplicate_via_serialization(qgw, ser)
 
@@ -637,7 +637,7 @@ def test_evolution_vexp_duplicate(adiab_vexp: AdiabVexp) -> None:
     """Test initial conditions of NcHIPertAdiab."""
     adiab, vexp = adiab_vexp
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     adiab_dup = duplicate_via_serialization(adiab, ser)
     vexp_dup = duplicate_via_serialization(vexp, ser)
 

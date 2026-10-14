@@ -344,7 +344,7 @@ NcGalaxyWLObs *
 nc_galaxy_wl_obs_new_from_catalog_id (NcGalaxyWLObsCatalogId id)
 {
   gchar *full_filename = nc_galaxy_wl_obs_catalog_id_get_filename (id);
-  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GObject *obj         = ncm_serialize_from_binfile (ser, full_filename);
 
   g_free (full_filename);

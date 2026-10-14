@@ -812,7 +812,7 @@ def test_mset_save_no_comments(tmp_path):
     )
 
     tmp_file = tmp_path / "simple_keyfile.ini"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mset.save(ser, tmp_file.as_posix(), False)
 
     assert tmp_file.exists()
@@ -830,7 +830,7 @@ def test_mset_save_with_comments(tmp_path):
     )
 
     tmp_file = tmp_path / "simple_keyfile.ini"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mset.save(ser, tmp_file.as_posix(), True)
 
     assert tmp_file.exists()
@@ -846,7 +846,7 @@ def test_mset_load_empty(tmp_path):
     tmp_file = tmp_path / "simple_keyfile.ini"
     keyfile.save_to_file(tmp_file.as_posix())
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mset = Ncm.MSet.load(tmp_file.as_posix(), ser)
 
     assert mset is not None
@@ -863,7 +863,7 @@ def test_mset_load_not_found():
             re.DOTALL,
         ),
     ):
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         _ = Ncm.MSet.load("file_not_found.ini", ser)
 
 
@@ -871,7 +871,7 @@ def _save_lcdm_mset(tmp_path, name="cosmo.mset"):
     """Save an mset holding a plain NcHICosmoLCDM (carries its default NcBBN)."""
     mset = Ncm.MSet.new_array([Nc.HICosmoLCDM.new()])
     tmp_file = tmp_path / name
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mset.save(ser, tmp_file.as_posix(), False)
     return tmp_file
 
@@ -897,7 +897,7 @@ def test_mset_load_duplicate_submodel_group(tmp_path):
         match=r"^ncm-mset-error: ncm_mset_load: submodel `NcBBN' appears more than once",
     ):
         _ = Ncm.MSet.load(
-            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         )
 
 
@@ -915,7 +915,7 @@ def test_mset_load_submodel_without_main_model(tmp_path):
         ),
     ):
         _ = Ncm.MSet.load(
-            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         )
 
 
@@ -934,7 +934,7 @@ def test_mset_load_submodel_array_rejected(tmp_path):
         ),
     ):
         _ = Ncm.MSet.load(
-            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         )
 
 
@@ -951,7 +951,7 @@ def test_mset_load_group_missing_type_key(tmp_path, group):
         match=r"^ncm-mset-error: ncm_mset_load: Every group must contain a key with same name",
     ):
         _ = Ncm.MSet.load(
-            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         )
 
 
@@ -963,7 +963,7 @@ def test_mset_load_stackpos_qualified_submodel_group(tmp_path):
     tmp_file.write_text(header + "".join(groups.values()))
 
     mset = Ncm.MSet.load(
-        tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        tmp_file.as_posix(), Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     )
     cosmo = mset.peek(Nc.HICosmo.id())
     assert type(cosmo.peek_bbn()).__name__ == "BBNParthenope"
