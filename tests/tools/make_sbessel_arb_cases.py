@@ -61,6 +61,8 @@ import pathlib
 import subprocess
 import sys
 
+import mpmath
+
 TOOL = "nc_xcor_kernel_analytic_arb"
 
 # name, shape, a, b, p1, p2, deriv, [(ell, [k, ...]), ...]
@@ -195,11 +197,35 @@ LEVIN_CASES = [
 ]
 
 
-def _ode_bump(name: str, a: float, b: float, width: float) -> tuple:
-    """A Gaussian, width ``width`` times the half-width, centred on [a, b], ell 20."""
+def _ode_bump(name: str, a: float, b: float, width: float, ell: int = 20) -> tuple:
+    """A Gaussian, width ``width`` times the half-width, centred on [a, b]."""
     m, h = 0.5 * (a + b), 0.5 * (b - a)
 
-    return (name, "gauss", a, b, m, width * h, 0, [(20, [1.0])])
+    return (name, "gauss", a, b, m, width * h, 0, [(ell, [1.0])])
+
+
+def _conjugate_span() -> float:
+    """The root s in [7.9 pi, 8.1 pi] of j_2(200) y_2(200 + s) - j_2(200 + s) y_2(200).
+
+    Computed with mpmath at 30 digits and rounded to double: the two-point Dirichlet
+    problem at ell 2 on [200, 200 + s] has no unique solution.
+    """
+    mpmath.mp.dps = 30
+
+    def jl(x):
+        return mpmath.sqrt(mpmath.pi / (2 * x)) * mpmath.besselj(2.5, x)
+
+    def yl(x):
+        return mpmath.sqrt(mpmath.pi / (2 * x)) * mpmath.bessely(2.5, x)
+
+    a = mpmath.mpf(200)
+    root = mpmath.findroot(
+        lambda s: jl(a) * yl(a + s) - jl(a + s) * yl(a),
+        (7.9 * mpmath.pi, 8.1 * mpmath.pi),
+        solver="anderson",
+    )
+
+    return float(root)
 
 
 # int_1^20 j_l(x) / x dx and int_1^20 j_l(x) dx, ell 0..20: the Green identity of the
@@ -296,6 +322,11 @@ ODE_CASES = [
         _ode_bump(f"deriv_bound_{int(span)}", 1.0e3, 1.0e3 + span, 0.25)
         for span in (30.0, 60.0, 100.0, 150.0, 250.0, 3000.0)
     ],
+    # int_a^b F j_2 dx on [200, 200 + s] with s the conjugate span (the Dirichlet
+    # boundary matrix is singular there) and on [200, 200 + s + 0.01], F a Gaussian of
+    # width 0.35 h
+    _ode_bump("conjugate", 200.0, 200.0 + _conjugate_span(), 0.35, ell=2),
+    _ode_bump("conjugate_away", 200.0, 200.0 + _conjugate_span() + 1.0e-2, 0.35, ell=2),
 ]
 
 TABLES = {"levin": LEVIN_CASES, "ode": ODE_CASES}

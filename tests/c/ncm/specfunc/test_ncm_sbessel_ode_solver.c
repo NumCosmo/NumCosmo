@@ -103,6 +103,9 @@ void test_ncm_sbessel_ode_solver_floor_matrix_constraint (void);
 void test_ncm_sbessel_ode_solver_floor_matrix_band (void);
 void test_ncm_sbessel_ode_solver_deriv_bound_never_below (void);
 void test_ncm_sbessel_ode_solver_deriv_bound_separates (void);
+void test_ncm_sbessel_ode_solver_conjugate_dirichlet_fails (void);
+void test_ncm_sbessel_ode_solver_conjugate_pinned (void);
+void test_ncm_sbessel_ode_solver_conjugate_away (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -173,6 +176,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_ode_solver/floor/matrix_band", test_ncm_sbessel_ode_solver_floor_matrix_band);
   g_test_add_func ("/ncm/sbessel_ode_solver/deriv_bound/never_below", test_ncm_sbessel_ode_solver_deriv_bound_never_below);
   g_test_add_func ("/ncm/sbessel_ode_solver/deriv_bound/separates", test_ncm_sbessel_ode_solver_deriv_bound_separates);
+  g_test_add_func ("/ncm/sbessel_ode_solver/conjugate/dirichlet_fails", test_ncm_sbessel_ode_solver_conjugate_dirichlet_fails);
+  g_test_add_func ("/ncm/sbessel_ode_solver/conjugate/pinned", test_ncm_sbessel_ode_solver_conjugate_pinned);
+  g_test_add_func ("/ncm/sbessel_ode_solver/conjugate/away", test_ncm_sbessel_ode_solver_conjugate_away);
 
   g_test_run ();
 }
@@ -1393,6 +1399,8 @@ static const TestArbCell test_arb_cells[] = {
   {"deriv_bound_150", TEST_ARB_GAUSS, 1000.0, 1150.0, 1075.0, 18.75, 0, FALSE, 20, 1.0, -2.2501000047625404e-07},
   {"deriv_bound_250", TEST_ARB_GAUSS, 1000.0, 1250.0, 1125.0, 31.25, 0, FALSE, 20, 1.0, -1.675615103467387e-07},
   {"deriv_bound_3000", TEST_ARB_GAUSS, 1000.0, 4000.0, 2500.0, 375.0, 0, FALSE, 20, 1.0, 1.824908439349761e-07},
+  {"conjugate", TEST_ARB_GAUSS, 200.0, 225.13441585600583, 212.56720792800292, 4.39852277480102, 0, FALSE, 2, 1.0, -6.780495041869413e-05},
+  {"conjugate_away", TEST_ARB_GAUSS, 200.0, 225.14441585600582, 212.5722079280029, 4.400272774801018, 0, FALSE, 2, 1.0, -6.719000261353115e-05},
   /* END make_sbessel_arb_cases.py ode */
 };
 
@@ -3148,6 +3156,91 @@ test_ncm_sbessel_ode_solver_deriv_bound_separates (void)
   _test_deriv_bound_solve (_test_deriv_bound_cell (30), &value, &deriv_broken);
 
   g_assert_cmpfloat (deriv_broken, >, 1.0e6 * deriv_sound);
+
+  ncm_mpsf_sbessel_free_cache ();
+}
+
+/*
+ * Conjugate points: on [200, 200 + s], s the root of j_2(a) y_2(b) - j_2(b) y_2(a)
+ * (certified row "conjugate"), the two-point Dirichlet problem at ell 2 has no unique
+ * solution, and its error grows as the machine epsilon times the boundary condition
+ * number. The pinned constraint imposes no endpoint condition, so it has no such
+ * determinant. Solver tolerance 1e-12; the forcing is x F (x), F the row's Gaussian.
+ */
+static gdouble
+_test_conjugate_integral (const TestArbCell *c, NcmSBesselOdeConstraint constraint, glong pin1, glong pin2)
+{
+  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, c->a, c->b, c->ell, c->ell);
+  guint n_forcing;
+  GArray *rhs = _test_floor_rhs (c->a, c->b, c->p1, c->p2, &n_forcing);
+  GArray *u   = NULL;
+  gsize n;
+  gdouble value;
+
+  if (constraint == NCM_SBESSEL_ODE_CONSTRAINT_PINNED)
+    ncm_sbessel_ode_operator_set_pinned_constraint (op, pin1, pin2);
+  else
+    ncm_sbessel_ode_operator_set_constraint (op, constraint);
+
+  ncm_sbessel_ode_operator_solve (op, rhs, &u, &n);
+  value = _test_boundary_functional (u, c->a, c->b, c->ell);
+
+  g_array_unref (u);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+
+  return value;
+}
+
+static const TestArbCell *
+_test_conjugate_cell (const gchar *name)
+{
+  return test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, 2);
+}
+
+/* Dirichlet on the conjugate span is wrong by more than 1e-6 */
+void
+test_ncm_sbessel_ode_solver_conjugate_dirichlet_fails (void)
+{
+  const TestArbCell *c = _test_conjugate_cell ("conjugate");
+  const gdouble value  = _test_conjugate_integral (c, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, 0, 0);
+
+  g_assert_cmpfloat (fabs (value - c->value) / fabs (c->value), >, 1.0e-6);
+
+  ncm_mpsf_sbessel_free_cache ();
+}
+
+/* Pinned at (0, 1), (2, 3) and (10, 11) on the same span: the certified value to 1e-9 */
+void
+test_ncm_sbessel_ode_solver_conjugate_pinned (void)
+{
+  const glong pins[][2] = {
+    {
+      0, 1
+    }, {
+      2, 3
+    }, {
+      10, 11
+    }
+  };
+  const TestArbCell *c = _test_conjugate_cell ("conjugate");
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (pins); i++)
+    _test_assert_close (_test_conjugate_integral (c, NCM_SBESSEL_ODE_CONSTRAINT_PINNED, pins[i][0], pins[i][1]), c->value, 1.0e-9, 0.0);
+
+  ncm_mpsf_sbessel_free_cache ();
+}
+
+/* Dirichlet on [200, 200 + s + 0.01], off the conjugate span: the certified value to 1e-9 */
+void
+test_ncm_sbessel_ode_solver_conjugate_away (void)
+{
+  const TestArbCell *c = _test_conjugate_cell ("conjugate_away");
+
+  _test_assert_close (_test_conjugate_integral (c, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, 0, 0), c->value, 1.0e-9, 0.0);
 
   ncm_mpsf_sbessel_free_cache ();
 }
