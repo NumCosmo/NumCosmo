@@ -34,11 +34,43 @@
 #include <glib-object.h>
 #include <string.h>
 
+static void test_ncm_lapack_dsyevd (void);
+static void test_ncm_lapack_dgeev (void);
+static void test_ncm_lapack_dgesv (void);
+static void test_ncm_lapack_dsytrf_dsytrs (void);
+static void test_ncm_lapack_dptsv (void);
+static void test_ncm_lapack_dgeqrf (void);
+static void test_ncm_lapack_dgels (void);
+static void test_ncm_lapack_ws (void);
+
 /* A symmetric positive definite 3x3 matrix, row-major */
 static const gdouble A_spd[9] = {4.0, 1.0, 0.5, 1.0, 3.0, 0.2, 0.5, 0.2, 2.0};
 
 /* A general 3x3 matrix, row-major */
 static const gdouble A_gen[9] = {2.0, 1.0, 0.0, -1.0, 3.0, 1.0, 0.5, 0.0, 1.0};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/lapack/ws", &test_ncm_lapack_ws);
+#ifdef HAVE_LAPACK
+  g_test_add_func ("/ncm/lapack/dsyevd", &test_ncm_lapack_dsyevd);
+  g_test_add_func ("/ncm/lapack/dgeev", &test_ncm_lapack_dgeev);
+  g_test_add_func ("/ncm/lapack/dgesv", &test_ncm_lapack_dgesv);
+  g_test_add_func ("/ncm/lapack/dsytrf_dsytrs", &test_ncm_lapack_dsytrf_dsytrs);
+  g_test_add_func ("/ncm/lapack/dptsv", &test_ncm_lapack_dptsv);
+  g_test_add_func ("/ncm/lapack/dgeqrf", &test_ncm_lapack_dgeqrf);
+  g_test_add_func ("/ncm/lapack/dgels", &test_ncm_lapack_dgels);
+#endif /* HAVE_LAPACK */
+
+  g_test_run ();
+}
 
 static void
 _test_lapack_matvec (const gdouble *A, const gdouble *x, gdouble *y, gboolean trans)
@@ -245,28 +277,5 @@ test_ncm_lapack_ws (void)
   ncm_lapack_ws_free (ws);
   ncm_lapack_ws_clear (&ws2);
   g_assert_null (ws2);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/lapack/ws", &test_ncm_lapack_ws);
-#ifdef HAVE_LAPACK
-  g_test_add_func ("/ncm/lapack/dsyevd", &test_ncm_lapack_dsyevd);
-  g_test_add_func ("/ncm/lapack/dgeev", &test_ncm_lapack_dgeev);
-  g_test_add_func ("/ncm/lapack/dgesv", &test_ncm_lapack_dgesv);
-  g_test_add_func ("/ncm/lapack/dsytrf_dsytrs", &test_ncm_lapack_dsytrf_dsytrs);
-  g_test_add_func ("/ncm/lapack/dptsv", &test_ncm_lapack_dptsv);
-  g_test_add_func ("/ncm/lapack/dgeqrf", &test_ncm_lapack_dgeqrf);
-  g_test_add_func ("/ncm/lapack/dgels", &test_ncm_lapack_dgels);
-#endif /* HAVE_LAPACK */
-
-  g_test_run ();
 }
 
