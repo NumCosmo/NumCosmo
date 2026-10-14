@@ -49,6 +49,7 @@ void test_ncm_sbessel_integrator_levin_arb_narrow (void);
 void test_ncm_sbessel_integrator_levin_arb_high_ell (void);
 void test_ncm_sbessel_integrator_levin_arb_oscillatory (void);
 void test_ncm_sbessel_integrator_levin_arb_evanescent (void);
+void test_ncm_sbessel_integrator_levin_truth (gconstpointer data);
 void test_ncm_sbessel_integrator_levin_ell_range_consistency (void);
 void test_ncm_sbessel_integrator_levin_zero_bessel_batch (void);
 void test_ncm_sbessel_integrator_levin_ell_range_caching (void);
@@ -85,9 +86,10 @@ void test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_zero (void);
 void test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_negative (void);
 void test_ncm_sbessel_integrator_levin_invalid_deriv (void);
 
-static const guint test_block_sizes[]  = {1, 4, 8, 16};
-static const gdouble test_tau_widths[] = {30.0, 100.0};
-static const guint test_turning_ells[] = {500, 1000};
+static const gchar *test_truth_tables[] = {"gauss", "rational"};
+static const guint test_block_sizes[]   = {1, 4, 8, 16};
+static const gdouble test_tau_widths[]  = {30.0, 100.0};
+static const guint test_turning_ells[]  = {500, 1000};
 
 gint
 main (gint argc, gchar *argv[])
@@ -112,6 +114,14 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/high_ell", test_ncm_sbessel_integrator_levin_arb_high_ell);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/oscillatory", test_ncm_sbessel_integrator_levin_arb_oscillatory);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/evanescent", test_ncm_sbessel_integrator_levin_arb_evanescent);
+
+  for (i = 0; i < G_N_ELEMENTS (test_truth_tables); i++)
+  {
+    gchar *path = g_strdup_printf ("/ncm/sbessel_integrator_levin/truth/%s", test_truth_tables[i]);
+
+    g_test_add_data_func (path, test_truth_tables[i], test_ncm_sbessel_integrator_levin_truth);
+    g_free (path);
+  }
 
   g_test_add_func ("/ncm/sbessel_integrator_levin/ell_range_consistency", test_ncm_sbessel_integrator_levin_ell_range_consistency);
   g_test_add_func ("/ncm/sbessel_integrator_levin/zero_bessel_batch", test_ncm_sbessel_integrator_levin_zero_bessel_batch);
@@ -696,6 +706,94 @@ void
 test_ncm_sbessel_integrator_levin_arb_evanescent (void)
 {
   _test_arb_check_singles ("evanescent", 1.0e-9, 0.0);
+}
+
+/*
+ * The 501 x 101 truth tables <name>_jl_500.bin of the data-file release (from
+ * tests/tools/make_sbessel_jl_bin.py), table[l][i] = int_a^b f(x) j_l(kvals[i] x) dx
+ * with f the Gaussian or rational shape of ncm_sbessel_integrator_integrate_gaussian()
+ * and _rational(), computed in blocks of 8 multipoles. Every cell is held to
+ * |I - I_table| <= 1e-8 times the largest |table| of its multipole, the default
+ * cheb-reltol: relative error is not usable near the zeros of j_l.
+ */
+void
+test_ncm_sbessel_integrator_levin_truth (gconstpointer data)
+{
+  const gchar *name         = (const gchar *) data;
+  gchar *basename           = g_strdup_printf ("%s_jl_500.bin", name);
+  gchar *filename           = nc_data_download_release_file (basename);
+  NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVarDict *vd            = ncm_serialize_var_dict_from_variant_file (ser, filename, TRUE);
+  const gboolean rational   = (strcmp (name, "rational") == 0);
+  const guint block         = 8;
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, block - 1));
+  gdouble center, std, lb, ub;
+  GArray *kvals, *lvals;
+  NcmMatrix *table;
+  NcmVector *peak;
+  guint ell_min, n_ell, n_k, ell0;
+
+  g_assert_true (ncm_var_dict_get_double (vd, "center", &center));
+  g_assert_true (ncm_var_dict_get_double (vd, "std", &std));
+  g_assert_true (ncm_var_dict_get_double (vd, "lower-bound", &lb));
+  g_assert_true (ncm_var_dict_get_double (vd, "upper-bound", &ub));
+  g_assert_true (ncm_var_dict_get_double_array (vd, "kvals", &kvals));
+  g_assert_true (ncm_var_dict_get_int_array (vd, "lvals", &lvals));
+  g_assert_true (ncm_var_dict_get_object (vd, "table", ser, (GObject **) &table));
+
+  ell_min = g_array_index (lvals, gint, 0);
+  n_ell   = lvals->len;
+  n_k     = kvals->len;
+  g_assert_cmpuint (ncm_matrix_nrows (table), ==, n_ell);
+  g_assert_cmpuint (ncm_matrix_ncols (table), ==, n_k);
+
+  peak = ncm_vector_new (n_ell);
+
+  for (ell0 = 0; ell0 < n_ell; ell0++)
+  {
+    NcmVector *row = ncm_matrix_get_row (table, ell0);
+
+    ncm_vector_set (peak, ell0, _test_absmax (row));
+    g_assert_cmpfloat (ncm_vector_get (peak, ell0), >, 0.0);
+    ncm_vector_free (row);
+  }
+
+  for (ell0 = 0; ell0 < n_ell; ell0 += block)
+  {
+    const guint ell1 = GSL_MIN (ell0 + block, n_ell) - 1;
+    NcmVector *res   = ncm_vector_new (ell1 - ell0 + 1);
+    guint i, j;
+
+    ncm_sbessel_integrator_set_ell_range (sbi, ell_min + ell0, ell_min + ell1);
+
+    for (i = 0; i < n_k; i++)
+    {
+      const gdouble k = g_array_index (kvals, gdouble, i);
+
+      if (rational)
+        ncm_sbessel_integrator_integrate_rational (sbi, center, std, lb, ub, k, res);
+      else
+        ncm_sbessel_integrator_integrate_gaussian (sbi, center, std, lb, ub, k, res);
+
+      for (j = ell0; j <= ell1; j++)
+      {
+        g_assert_true (gsl_finite (ncm_vector_get (res, j - ell0)));
+        g_assert_cmpfloat (fabs (ncm_vector_get (res, j - ell0) - ncm_matrix_get (table, j, i)), <=, 1.0e-8 * ncm_vector_get (peak, j));
+      }
+    }
+
+    ncm_vector_free (res);
+  }
+
+  g_array_unref (kvals);
+  g_array_unref (lvals);
+  ncm_vector_free (peak);
+  ncm_matrix_free (table);
+  ncm_var_dict_unref (vd);
+  ncm_serialize_free (ser);
+  ncm_sbessel_integrator_free (sbi);
+  g_free (filename);
+  g_free (basename);
 }
 
 /* integrate over a block agrees with integrate_ell for each multipole */

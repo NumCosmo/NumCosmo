@@ -82,6 +82,10 @@ def main() -> int:
     # Dense certified windows of the closure tests (tests/c/nc/xcor), one file.
     print(f"# {Nc.data_download_release_file('xcor_window_ilk_dense.bin')}", flush=True)
 
+    # sbessel truth tables of the Levin tests (tests/c/ncm/specfunc).
+    for name in ("gauss_jl_500.bin", "rational_jl_500.bin"):
+        print(f"# {Nc.data_download_release_file(name)}", flush=True)
+
     return 0
 
 
