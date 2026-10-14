@@ -35,8 +35,8 @@
 /*
  * A minimal concrete NcmMSetFunc: it returns the sum of its arguments.
  */
-
 #define TEST_TYPE_MSET_FUNC_SUM (test_mset_func_sum_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestMSetFuncSum, test_mset_func_sum, TEST, MSET_FUNC_SUM, NcmMSetFunc)
 
 struct _TestMSetFuncSum
@@ -46,47 +46,12 @@ struct _TestMSetFuncSum
 
 G_DEFINE_TYPE (TestMSetFuncSum, test_mset_func_sum, NCM_TYPE_MSET_FUNC)
 
-static void
-test_mset_func_sum_init (TestMSetFuncSum *fs)
-{
-}
-
-static void
-_test_mset_func_sum_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
-{
-  const guint nvar = ncm_mset_func_get_nvar (func);
-  guint i;
-
-  res[0] = 0.0;
-
-  for (i = 0; i < nvar; i++)
-    res[0] += x[i];
-}
-
-static void
-test_mset_func_sum_class_init (TestMSetFuncSumClass *klass)
-{
-  NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
-
-  func_class->eval = &_test_mset_func_sum_eval;
-}
-
-static NcmMSetFunc *
-test_mset_func_sum_new (const guint nvar)
-{
-  NcmMSetFunc *func = g_object_new (TEST_TYPE_MSET_FUNC_SUM, NULL);
-
-  ncm_mset_func_set_meta (func, "f", "f", "Test", "Sum of the arguments", nvar, 1);
-
-  return func;
-}
-
 /*
  * A concrete NcmMSetFunc of the free parameters and its arguments:
  * f = prod_j x_j sum_i (i + 1) p_i^2.
  */
-
 #define TEST_TYPE_MSET_FUNC_FPARAMS (test_mset_func_fparams_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestMSetFuncFParams, test_mset_func_fparams, TEST, MSET_FUNC_FPARAMS, NcmMSetFunc)
 
 struct _TestMSetFuncFParams
@@ -96,108 +61,17 @@ struct _TestMSetFuncFParams
 
 G_DEFINE_TYPE (TestMSetFuncFParams, test_mset_func_fparams, NCM_TYPE_MSET_FUNC)
 
-static void
-test_mset_func_fparams_init (TestMSetFuncFParams *fp)
-{
-}
-
-/* The value of the function, shared by the model evaluation and the direct NcmDiff call. */
-static gdouble
-_test_fparams_value (NcmVector *p, const gdouble *x, const guint nvar)
-{
-  gdouble res = 0.0;
-  guint i;
-
-  for (i = 0; i < ncm_vector_len (p); i++)
-  {
-    const gdouble p_i = ncm_vector_get (p, i);
-
-    res += (i + 1.0) * p_i * p_i;
-  }
-
-  for (i = 0; i < nvar; i++)
-    res *= x[i];
-
-  return res;
-}
-
-static void
-_test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
-{
-  NcmVector *p = ncm_vector_new (ncm_mset_fparam_len (mset));
-
-  ncm_mset_fparams_get_vector (mset, p);
-  res[0] = _test_fparams_value (p, x, ncm_mset_func_get_nvar (func));
-
-  ncm_vector_free (p);
-}
-
 typedef struct _TestFParamsArg
 {
   const gdouble *x;
   guint nvar;
 } TestFParamsArg;
 
-static gdouble
-_test_fparams_diff_f (NcmVector *p, gpointer user_data)
-{
-  TestFParamsArg *arg = user_data;
-
-  return _test_fparams_value (p, arg->x, arg->nvar);
-}
-
-/*
- * numdiff_fparams is NcmDiff over the free parameters: it must return exactly what a
- * default NcmDiff gives for the same function, and the error of that result against the
- * exact gradient must be within NcmDiff's own estimate. The accuracy of NcmDiff itself
- * depends on the platform and is tested with NcmDiff.
- */
-static void
-_test_numdiff_check (NcmVector *grad, const gdouble *p, const guint len, const gdouble *x, const guint nvar)
-{
-  NcmDiff *diff      = ncm_diff_new ();
-  GArray *p_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  TestFParamsArg arg = {x, nvar};
-  GArray *Eerr       = NULL;
-  GArray *direct;
-  gdouble scale = 1.0;
-  guint i;
-
-  g_array_append_vals (p_a, p, len);
-  direct = ncm_diff_rf_d1_N_to_1 (diff, p_a, _test_fparams_diff_f, &arg, &Eerr);
-
-  for (i = 0; i < nvar; i++)
-    scale *= x[i];
-
-  g_assert_cmpuint (ncm_vector_len (grad), ==, len);
-
-  for (i = 0; i < len; i++)
-  {
-    const gdouble exact = scale * 2.0 * (i + 1.0) * p[i];
-
-    g_assert_cmpfloat (ncm_vector_get (grad, i), ==, g_array_index (direct, gdouble, i));
-    g_assert_cmpfloat (fabs (g_array_index (direct, gdouble, i) - exact), <=, g_array_index (Eerr, gdouble, i));
-  }
-
-  g_array_unref (direct);
-  g_array_unref (Eerr);
-  g_array_unref (p_a);
-  ncm_diff_free (diff);
-}
-
-static void
-test_mset_func_fparams_class_init (TestMSetFuncFParamsClass *klass)
-{
-  NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
-
-  func_class->eval = &_test_mset_func_fparams_eval;
-}
-
 /*
  * A concrete NcmMSetFunc1: its values are sum_j x_j + k for k = 0, ..., dim - 1.
  */
-
 #define TEST_TYPE_MSET_FUNC1_SUM (test_mset_func1_sum_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, TEST, MSET_FUNC1_SUM, NcmMSetFunc1)
 
 struct _TestMSetFunc1Sum
@@ -208,91 +82,13 @@ struct _TestMSetFunc1Sum
 
 G_DEFINE_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, NCM_TYPE_MSET_FUNC1)
 
-static void
-test_mset_func1_sum_init (TestMSetFunc1Sum *f1s)
+typedef struct _TestUNameCase
 {
-  f1s->nret = 0;
-}
-
-static GArray *
-_test_mset_func1_sum_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x)
-{
-  TestMSetFunc1Sum *f1s = TEST_MSET_FUNC1_SUM (f1);
-  GArray *res           = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), f1s->nret);
-  gdouble sum           = 0.0;
-  guint i;
-
-  for (i = 0; i < x->len; i++)
-    sum += g_array_index (x, gdouble, i);
-
-  for (i = 0; i < f1s->nret; i++)
-  {
-    const gdouble v = sum + i;
-
-    g_array_append_val (res, v);
-  }
-
-  return res;
-}
-
-static void
-test_mset_func1_sum_class_init (TestMSetFunc1SumClass *klass)
-{
-  NcmMSetFunc1Class *func1_class = NCM_MSET_FUNC1_CLASS (klass);
-
-  func1_class->eval1 = &_test_mset_func1_sum_eval1;
-}
-
-static NcmMSetFunc *
-test_mset_func1_sum_new (const guint nvar, const guint dim, const guint nret)
-{
-  TestMSetFunc1Sum *f1s = g_object_new (TEST_TYPE_MSET_FUNC1_SUM, NULL);
-  NcmMSetFunc *func     = NCM_MSET_FUNC (f1s);
-
-  f1s->nret = nret;
-  ncm_mset_func_set_meta (func, "f", "f", "Test", "Shifted sums of the arguments", nvar, dim);
-
-  return func;
-}
-
-/*
- * Functions registered in NcmMSetFuncList for the tests.
- */
-
-static void
-_test_flist_plus_one (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
-{
-  res[0] = x[0] + 1.0;
-}
-
-static void
-_test_flist_const (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
-{
-  res[0] = 2.0;
-}
-
-static void
-_test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
-{
-  res[0] = ncm_vector_len (NCM_VECTOR (ncm_mset_func_list_peek_obj (flist)));
-}
-
-static void
-test_flist_register (void)
-{
-  static gsize registered = 0;
-
-  if (g_once_init_enter (&registered))
-  {
-    ncm_mset_func_list_register ("plus_one", "f_1", "TestFList", "x + 1", G_TYPE_NONE, _test_flist_plus_one, 1, 1);
-    ncm_mset_func_list_register ("twice", "t_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
-
-    g_once_init_leave (&registered, 1);
-  }
-}
+  guint len;
+  gdouble x[2];
+  const gchar *uname;
+  const gchar *usymbol;
+} TestUNameCase;
 
 void test_ncm_mset_func_unames (void);
 void test_ncm_mset_func_numdiff_fparams (void);
@@ -370,13 +166,216 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-typedef struct _TestUNameCase
+static void
+test_mset_func_sum_init (TestMSetFuncSum *fs)
 {
-  guint len;
-  gdouble x[2];
-  const gchar *uname;
-  const gchar *usymbol;
-} TestUNameCase;
+}
+
+static void
+_test_mset_func_sum_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  const guint nvar = ncm_mset_func_get_nvar (func);
+  guint i;
+
+  res[0] = 0.0;
+
+  for (i = 0; i < nvar; i++)
+    res[0] += x[i];
+}
+
+static void
+test_mset_func_sum_class_init (TestMSetFuncSumClass *klass)
+{
+  NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
+
+  func_class->eval = &_test_mset_func_sum_eval;
+}
+
+static NcmMSetFunc *
+test_mset_func_sum_new (const guint nvar)
+{
+  NcmMSetFunc *func = g_object_new (TEST_TYPE_MSET_FUNC_SUM, NULL);
+
+  ncm_mset_func_set_meta (func, "f", "f", "Test", "Sum of the arguments", nvar, 1);
+
+  return func;
+}
+
+static void
+test_mset_func_fparams_init (TestMSetFuncFParams *fp)
+{
+}
+
+/* The value of the function, shared by the model evaluation and the direct NcmDiff call. */
+static gdouble
+_test_fparams_value (NcmVector *p, const gdouble *x, const guint nvar)
+{
+  gdouble res = 0.0;
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (p); i++)
+  {
+    const gdouble p_i = ncm_vector_get (p, i);
+
+    res += (i + 1.0) * p_i * p_i;
+  }
+
+  for (i = 0; i < nvar; i++)
+    res *= x[i];
+
+  return res;
+}
+
+static void
+_test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcmVector *p = ncm_vector_new (ncm_mset_fparam_len (mset));
+
+  ncm_mset_fparams_get_vector (mset, p);
+  res[0] = _test_fparams_value (p, x, ncm_mset_func_get_nvar (func));
+
+  ncm_vector_free (p);
+}
+
+static gdouble
+_test_fparams_diff_f (NcmVector *p, gpointer user_data)
+{
+  TestFParamsArg *arg = user_data;
+
+  return _test_fparams_value (p, arg->x, arg->nvar);
+}
+
+/*
+ * numdiff_fparams is NcmDiff over the free parameters: it must return exactly what a
+ * default NcmDiff gives for the same function, and the error of that result against the
+ * exact gradient must be within NcmDiff's own estimate. The accuracy of NcmDiff itself
+ * depends on the platform and is tested with NcmDiff.
+ */
+static void
+_test_numdiff_check (NcmVector *grad, const gdouble *p, const guint len, const gdouble *x, const guint nvar)
+{
+  NcmDiff *diff      = ncm_diff_new ();
+  GArray *p_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  TestFParamsArg arg = {x, nvar};
+  GArray *Eerr       = NULL;
+  GArray *direct;
+  gdouble scale = 1.0;
+  guint i;
+
+  g_array_append_vals (p_a, p, len);
+  direct = ncm_diff_rf_d1_N_to_1 (diff, p_a, _test_fparams_diff_f, &arg, &Eerr);
+
+  for (i = 0; i < nvar; i++)
+    scale *= x[i];
+
+  g_assert_cmpuint (ncm_vector_len (grad), ==, len);
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble exact = scale * 2.0 * (i + 1.0) * p[i];
+
+    g_assert_cmpfloat (ncm_vector_get (grad, i), ==, g_array_index (direct, gdouble, i));
+    g_assert_cmpfloat (fabs (g_array_index (direct, gdouble, i) - exact), <=, g_array_index (Eerr, gdouble, i));
+  }
+
+  g_array_unref (direct);
+  g_array_unref (Eerr);
+  g_array_unref (p_a);
+  ncm_diff_free (diff);
+}
+
+static void
+test_mset_func_fparams_class_init (TestMSetFuncFParamsClass *klass)
+{
+  NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
+
+  func_class->eval = &_test_mset_func_fparams_eval;
+}
+
+static void
+test_mset_func1_sum_init (TestMSetFunc1Sum *f1s)
+{
+  f1s->nret = 0;
+}
+
+static GArray *
+_test_mset_func1_sum_eval1 (NcmMSetFunc1 *f1, NcmMSet *mset, GArray *x)
+{
+  TestMSetFunc1Sum *f1s = TEST_MSET_FUNC1_SUM (f1);
+  GArray *res           = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), f1s->nret);
+  gdouble sum           = 0.0;
+  guint i;
+
+  for (i = 0; i < x->len; i++)
+    sum += g_array_index (x, gdouble, i);
+
+  for (i = 0; i < f1s->nret; i++)
+  {
+    const gdouble v = sum + i;
+
+    g_array_append_val (res, v);
+  }
+
+  return res;
+}
+
+static void
+test_mset_func1_sum_class_init (TestMSetFunc1SumClass *klass)
+{
+  NcmMSetFunc1Class *func1_class = NCM_MSET_FUNC1_CLASS (klass);
+
+  func1_class->eval1 = &_test_mset_func1_sum_eval1;
+}
+
+static NcmMSetFunc *
+test_mset_func1_sum_new (const guint nvar, const guint dim, const guint nret)
+{
+  TestMSetFunc1Sum *f1s = g_object_new (TEST_TYPE_MSET_FUNC1_SUM, NULL);
+  NcmMSetFunc *func     = NCM_MSET_FUNC (f1s);
+
+  f1s->nret = nret;
+  ncm_mset_func_set_meta (func, "f", "f", "Test", "Shifted sums of the arguments", nvar, dim);
+
+  return func;
+}
+
+/*
+ * Functions registered in NcmMSetFuncList for the tests.
+ */
+static void
+_test_flist_plus_one (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = x[0] + 1.0;
+}
+
+static void
+_test_flist_const (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = 2.0;
+}
+
+static void
+_test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = ncm_vector_len (NCM_VECTOR (ncm_mset_func_list_peek_obj (flist)));
+}
+
+static void
+test_flist_register (void)
+{
+  static gsize registered = 0;
+
+  if (g_once_init_enter (&registered))
+  {
+    ncm_mset_func_list_register ("plus_one", "f_1", "TestFList", "x + 1", G_TYPE_NONE, _test_flist_plus_one, 1, 1);
+    ncm_mset_func_list_register ("twice", "t_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
+
+    g_once_init_leave (&registered, 1);
+  }
+}
 
 void
 test_ncm_mset_func_unames (void)
