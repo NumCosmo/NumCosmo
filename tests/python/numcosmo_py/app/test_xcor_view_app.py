@@ -90,14 +90,11 @@ def test_view_kernel_integrator_precision_options() -> None:
         "1e-2",
         "--integrator-cheb-reltol",
         "1e-2",
-        "--integrator-max-order",
-        "64",
     )
 
     assert result.exit_code == 0, result.output
     assert "reltol=1.0e-02" in result.output
     assert "cheb_reltol=1.0e-02" in result.output
-    assert "max_order=64" in result.output
 
 
 @pytest.mark.parametrize("option", ["--integrator-reltol", "--integrator-cheb-reltol"])
@@ -258,7 +255,7 @@ def test_view_kernel_integrator_reltol_reaches_the_computation(
 
     # 1e-8 rather than something tighter: the Levin RHS Chebyshev fit uses the
     # relative criterion alone, and a request below the integrator's accuracy
-    # floor cannot converge, which is fatal at max-order.
+    # floor cannot converge, which is fatal at the spectral fit's max-level.
     for reltol in ("1e-4", "1e-8"):
         result = _view(
             "--integrator-reltol", reltol, "--integrator-cheb-reltol", reltol

@@ -123,14 +123,12 @@ struct _NcmSBesselIntegratorLevin
 {
   /*< private >*/
   NcmSBesselIntegrator parent_instance;
-  guint max_order;
   gdouble reltol;
   guint cheb_min_order;
   gdouble cheb_reltol;
   NcmSBesselOdeSolver *ode_solver;
   NcmSBesselOdeOperator *ode_operator;
   NcmSFSBesselArray *sba; /* Allocation tracking */
-  guint alloc_max_order;
   guint alloc_ell_min;
   guint alloc_ell_max;
   gboolean constructed;
@@ -193,7 +191,6 @@ struct _NcmSBesselIntegratorLevin
 enum
 {
   PROP_0,
-  PROP_MAX_ORDER,
   PROP_RELTOL,
   PROP_CHEB_MIN_ORDER,
   PROP_CHEB_RELTOL,
@@ -232,7 +229,6 @@ _ncm_sbessel_integrator_levin_jl_row (NcmSBesselIntegratorLevin *sbilv, gint idx
 }
 
 static void _ncm_sbessel_operator_unref_null_ok (gpointer op);
-static void _ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv, guint max_order, guint ell_min, guint ell_max);
 static void _ncm_sbessel_integrator_levin_apply_constraint (NcmSBesselIntegratorLevin *sbilv, NcmSBesselOdeOperator *op, gdouble a, gdouble b, guint ell_max);
 static gboolean _ncm_sbessel_integrator_levin_tau_constraint_order_ok (NcmSBesselIntegratorLevin *sbilv, NcmSBesselOdeOperator *op, gdouble a, gdouble b, guint ell_max);
 static gdouble _ncm_sbessel_integrator_levin_osc (gdouble a, gdouble b, guint ell_max);
@@ -248,7 +244,6 @@ G_DEFINE_TYPE (NcmSBesselIntegratorLevin, ncm_sbessel_integrator_levin, NCM_TYPE
 static void
 ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
-  sbilv->max_order                     = 0;
   sbilv->reltol                        = 0.0;
   sbilv->cheb_min_order                = 0;
   sbilv->cheb_reltol                   = 0.0;
@@ -263,19 +258,18 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->ode_solver                    = ncm_sbessel_ode_solver_new ();
   sbilv->ode_operator                  = ncm_sbessel_ode_solver_create_operator (sbilv->ode_solver, 0.0, 1.0, 2, 2);
   sbilv->sba                           = ncm_sf_sbessel_array_new ();
-  sbilv->alloc_max_order               = 0;
   sbilv->alloc_ell_min                 = -1;
   sbilv->alloc_ell_max                 = -1;
   sbilv->deriv                         = 0;
-  sbilv->cheb_coeffs                   = NULL;
+  sbilv->cheb_coeffs                   = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->edge_cheb_coeffs              = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  sbilv->gegen_coeffs                  = NULL;
+  sbilv->gegen_coeffs                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->deriv_gegen_coeffs            = NULL;
-  sbilv->rhs                           = NULL;
+  sbilv->rhs                           = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->values_result                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->j_array_a                     = NULL;
   sbilv->j_array_b                     = NULL;
-  sbilv->endpoints_result              = NULL;
+  sbilv->endpoints_result              = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->constructed                   = FALSE;
   sbilv->record_panels                 = FALSE;
   sbilv->panel_records                 = g_array_new (FALSE, FALSE, sizeof (NcmSBesselIntegratorLevinPanelRec));
@@ -406,9 +400,6 @@ _ncm_sbessel_integrator_levin_set_property (GObject *object, guint prop_id, cons
 
   switch (prop_id)
   {
-    case PROP_MAX_ORDER:
-      ncm_sbessel_integrator_levin_set_max_order (sbilv, g_value_get_uint (value));
-      break;
     case PROP_RELTOL:
       ncm_sbessel_integrator_levin_set_reltol (sbilv, g_value_get_double (value));
       break;
@@ -460,9 +451,6 @@ _ncm_sbessel_integrator_levin_get_property (GObject *object, guint prop_id, GVal
 
   switch (prop_id)
   {
-    case PROP_MAX_ORDER:
-      g_value_set_uint (value, ncm_sbessel_integrator_levin_get_max_order (sbilv));
-      break;
     case PROP_RELTOL:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_reltol (sbilv));
       break;
@@ -516,20 +504,6 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   object_class->constructed  = &_ncm_sbessel_integrator_levin_constructed;
   object_class->dispose      = &_ncm_sbessel_integrator_levin_dispose;
   object_class->finalize     = &_ncm_sbessel_integrator_levin_finalize;
-
-  /**
-   * NcmSBesselIntegratorLevin:max-order:
-   *
-   * Maximum order of Chebyshev decomposition for the Levin method. Higher order may
-   * give better accuracy but is more expensive. Default is 2^14.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_MAX_ORDER,
-                                   g_param_spec_uint ("max-order",
-                                                      NULL,
-                                                      "Maximum Chebyshev order",
-                                                      2, G_MAXUINT, 1 << 14,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmSBesselIntegratorLevin:reltol:
@@ -744,29 +718,6 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   parent_class->set_ell_range   = &_ncm_sbessel_integrator_levin_set_ell_range;
   parent_class->integrate       = &_ncm_sbessel_integrator_levin_integrate;
   parent_class->integrate_deriv = &_ncm_sbessel_integrator_levin_integrate_deriv;
-}
-
-static void
-_ncm_sbessel_integrator_levin_ensure_prepared (NcmSBesselIntegratorLevin *sbilv, guint max_order, guint ell_min, guint ell_max)
-{
-  if (sbilv->alloc_max_order == max_order)
-    return;
-
-  /* Free existing allocations */
-  g_clear_pointer (&sbilv->cheb_coeffs, g_array_unref);
-  g_clear_pointer (&sbilv->gegen_coeffs, g_array_unref);
-  g_clear_pointer (&sbilv->rhs, g_array_unref);
-  g_clear_pointer (&sbilv->endpoints_result, g_array_unref);
-
-  /* Allocate arrays for spectral coefficients */
-  sbilv->cheb_coeffs  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order);
-  sbilv->gegen_coeffs = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order);
-  sbilv->rhs          = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), max_order + 2);
-
-  /* Allocate result matrix for batched endpoint computation (max block size is 8) */
-  sbilv->endpoints_result = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 8 * 3);
-
-  sbilv->alloc_max_order = max_order;
 }
 
 /**
@@ -2114,8 +2065,6 @@ _ncm_sbessel_integrator_levin_set_ell_range (NcmSBesselIntegrator *sbi, guint el
                "Increase ell_cache_max to enable caching for the requested range.",
                ell_max, sbilv->ell_cache_max);
 
-    _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell_min, ell_max);
-
     if (_ncm_sbessel_integrator_levin_rebuild_working_knots (sbilv, ell_max))
       _ncm_sbessel_integrator_levin_prepare_jl_knots (sbilv);
 
@@ -2292,9 +2241,6 @@ _ncm_sbessel_integrator_levin_integrate_full (NcmSBesselIntegrator *sbi,
 
   if (G_UNLIKELY (sbilv->record_panels))
     g_array_set_size (sbilv->panel_records, 0);
-
-  /* Ensure resources are allocated */
-  _ncm_sbessel_integrator_levin_ensure_prepared (sbilv, sbilv->max_order, ell_min, ell_max);
 
   _ncm_sbessel_integrator_levin_integrate_levin (sbilv, ell_min, ell_max, F, a, b, k, result, user_data);
 }
@@ -2551,33 +2497,6 @@ void
 ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv)
 {
   g_clear_object (sbilv);
-}
-
-/**
- * ncm_sbessel_integrator_levin_set_max_order:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @max_order: maximum order
- *
- * Sets #NcmSBesselIntegratorLevin:max-order.
- */
-void
-ncm_sbessel_integrator_levin_set_max_order (NcmSBesselIntegratorLevin *sbilv, guint max_order)
-{
-  sbilv->max_order = max_order;
-}
-
-/**
- * ncm_sbessel_integrator_levin_get_max_order:
- * @sbilv: a #NcmSBesselIntegratorLevin
- *
- * Gets the maximum order.
- *
- * Returns: the maximum order
- */
-guint
-ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv)
-{
-  return sbilv->max_order;
 }
 
 /**

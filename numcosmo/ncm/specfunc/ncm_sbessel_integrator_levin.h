@@ -48,9 +48,6 @@ NcmSBesselIntegratorLevin *ncm_sbessel_integrator_levin_ref (NcmSBesselIntegrato
 void ncm_sbessel_integrator_levin_free (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv);
 
-void ncm_sbessel_integrator_levin_set_max_order (NcmSBesselIntegratorLevin *sbilv, guint max_order);
-guint ncm_sbessel_integrator_levin_get_max_order (NcmSBesselIntegratorLevin *sbilv);
-
 void ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (NcmSBesselIntegratorLevin *sbilv, gdouble min_osc);
 gdouble ncm_sbessel_integrator_levin_get_tau_constraint_min_osc (NcmSBesselIntegratorLevin *sbilv);
 void ncm_sbessel_integrator_levin_set_tau_constraint (NcmSBesselIntegratorLevin *sbilv, gboolean tau_constraint);

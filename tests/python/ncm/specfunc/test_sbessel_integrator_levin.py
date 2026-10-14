@@ -53,12 +53,10 @@ class TestSBesselIntegratorLevin:
         Compares the result of the integrate_ell method against scipy numerical
         integration.
         """
-        N = 128
         a, b = 1.0, 20.0
 
         # Create integrator
         integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val)
-        integrator.set_max_order(N)
 
         # Define f(x) = 1
         def f_constant(_x: float, _k: float) -> float:
@@ -89,12 +87,10 @@ class TestSBesselIntegratorLevin:
         Compares the result of the integrate_ell method against scipy numerical
         integration.
         """
-        N = 128
         a, b = 1.0, 20.0
 
         # Create integrator
         integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val)
-        integrator.set_max_order(N)
 
         # Define f(x) = x
         def f_linear(x: float, _k: float) -> float:
@@ -125,12 +121,10 @@ class TestSBesselIntegratorLevin:
         Compares the result of the integrate_ell method against scipy numerical
         integration.
         """
-        N = 128
         a, b = 1.0, 20.0
 
         # Create integrator
         integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val)
-        integrator.set_max_order(N)
 
         # Define f(x) = x^2
         def f_quadratic(x: float, _k: float) -> float:
@@ -161,14 +155,12 @@ class TestSBesselIntegratorLevin:
         Compares the result of the integrate_ell method against scipy numerical
         integration.
         """
-        N = 256
         a, b = 1.0, 20.0
         center = 10.5
         std = 3.0
 
         # Create integrator
         integrator = Ncm.SBesselIntegratorLevin.new(l_val, l_val)
-        integrator.set_max_order(N)
 
         # Define rational function f(x) = x^2 / (1 + ((x-center)/std)^2)^3
         def f_rational(x: float, _k: float) -> float:
@@ -200,13 +192,11 @@ class TestSBesselIntegratorLevin:
         Compares integrate (which uses batched solver internally)
         against individual integrate_ell calls for each l.
         """
-        N = 128
         a, b = 1.0, 20.0
         lmin, lmax = 5, 15
 
         # Create integrator
         integrator = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
-        integrator.set_max_order(N)
 
         # Define a test function
         def f_test(x: float, _k: float) -> float:
@@ -559,7 +549,6 @@ class TestSBesselIntegratorLevin:
     def test_ell_zero_special_case(self) -> None:
         """Test ell=0 (monopole) special case where j_0(x) = sin(x)/x."""
         integrator = Ncm.SBesselIntegratorLevin.new(0, 0)
-        integrator.set_max_order(128)
 
         def f_constant(_x: float, _k: float) -> float:
             return 1.0
@@ -585,7 +574,6 @@ class TestSBesselIntegratorLevin:
     def test_k_scaling(self, k_val: float) -> None:
         """Test integrator accuracy with different k scales."""
         integrator = Ncm.SBesselIntegratorLevin.new(5, 5)
-        integrator.set_max_order(256)
 
         def f_constant(_x: float, _k: float) -> float:
             return 1.0
@@ -612,7 +600,6 @@ class TestSBesselIntegratorLevin:
     def test_ell_range_caching(self) -> None:
         """Test that changing ell_range properly updates results."""
         integrator = Ncm.SBesselIntegratorLevin.new(0, 5)
-        integrator.set_max_order(128)
 
         def f_test(x: float, _k: float) -> float:
             return np.exp(-0.1 * x)
@@ -657,7 +644,6 @@ class TestSBesselIntegratorLevin:
 
         # Compute with given block size
         integrator = Ncm.SBesselIntegratorLevin.new(lmin, lmin + block_size - 1)
-        integrator.set_max_order(128)
 
         n_ells = lmax - lmin + 1
         results = np.zeros(n_ells)
@@ -672,7 +658,6 @@ class TestSBesselIntegratorLevin:
 
         # Compare with individual computations (effectively block_size=1)
         integrator_ref = Ncm.SBesselIntegratorLevin.new(lmin, lmin)
-        integrator_ref.set_max_order(128)
 
         results_ref = []
         for ell in range(lmin, lmax + 1):
@@ -689,7 +674,6 @@ class TestSBesselIntegratorLevin:
     def test_narrow_integration_bounds(self) -> None:
         """Test integration over very narrow intervals."""
         integrator = Ncm.SBesselIntegratorLevin.new(5, 5)
-        integrator.set_max_order(128)
 
         def f_test(x: float, _k: float) -> float:
             return x
@@ -717,7 +701,6 @@ class TestSBesselIntegratorLevin:
     def test_high_ell_regime(self, ell_val: int) -> None:
         """Test integrator performance at high ell values."""
         integrator = Ncm.SBesselIntegratorLevin.new(ell_val, ell_val)
-        integrator.set_max_order(512)
 
         def f_simple(_x: float, _k: float) -> float:
             return 1.0
@@ -748,7 +731,6 @@ class TestSBesselIntegratorLevin:
         k = 500.0  # Large k creates rapid oscillations
 
         integrator = Ncm.SBesselIntegratorLevin.new(ell, ell)
-        integrator.set_max_order(1024)
 
         def f_smooth(x: float, _k: float) -> float:
             return np.exp(-0.01 * x)

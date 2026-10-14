@@ -164,17 +164,6 @@ class XcorKernelCommon:
         ),
     ] = None
 
-    integrator_max_order: Annotated[
-        int | None,
-        typer.Option(
-            help=(
-                "NcmSBesselIntegratorLevin maximum spectral order "
-                "(library default: 16384). Leave unset to keep the library "
-                "default."
-            ),
-        ),
-    ] = None
-
     cls_block_size: Annotated[
         int,
         typer.Option(
@@ -308,8 +297,6 @@ class XcorKernelCommon:
                 else defaults.get_cheb_reltol()
             ),
         )
-        if self.integrator_max_order is not None:
-            self.integrator.set_max_order(self.integrator_max_order)
         # A closure cannot be fitted to more precision than the integrator
         # samples, and the library refuses the pairing. The integrator
         # tolerances are the ones this command exposes, so a request to compute
@@ -321,8 +308,7 @@ class XcorKernelCommon:
         print(
             f"  [OK] Levin integrator created "
             f"(reltol={self.integrator.get_reltol():.1e}, "
-            f"cheb_reltol={self.integrator.get_cheb_reltol():.1e}, "
-            f"max_order={self.integrator.get_max_order()})"
+            f"cheb_reltol={self.integrator.get_cheb_reltol():.1e})"
         )
         print()
 
