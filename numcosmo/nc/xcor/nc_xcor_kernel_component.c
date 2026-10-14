@@ -63,6 +63,20 @@
  * tolerances, a cluster top-hat needs 541 k-space knots over 0.061-4800
  * against a Gaussian's 161 over 0.064-480. Each knot is one radial solve.
  *
+ * ## Every feature needs a range that brackets it
+ *
+ * The radial integrand is fitted adaptively on each panel of
+ * $[\chi_\mathrm{min}, \chi_\mathrm{max}]$, and an adaptive fit converges on
+ * what its samples show. A feature much narrower than the range it sits in can
+ * fall between the nodes, and the fit is then accepted without it; no stopping
+ * test can detect a feature it has not sampled. This is part of the contract of
+ * the class, not a tolerance setting: `get_limits` must report a range that
+ * brackets the component closely, and a kernel whose features are far apart, a
+ * bump near $\chi_\mathrm{min}$, a long stretch of zeros and a narrow bump
+ * further out, must be split into one component per feature, each with its own
+ * limits. The tolerances then control how well each feature is resolved, not
+ * whether it is seen.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1004,7 +1018,9 @@ nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo 
  * @k_min: (out): minimum wave number
  * @k_max: (out): maximum wave number
  *
- * Gets the valid integration ranges for this component.
+ * Gets the valid integration ranges for this component. The $\chi$ range must
+ * bracket the component closely; see "Every feature needs a range that brackets
+ * it" in #NcXcorKernelComponent.
  */
 void
 nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)

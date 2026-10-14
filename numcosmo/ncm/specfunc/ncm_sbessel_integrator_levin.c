@@ -509,9 +509,9 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
    * NcmSBesselIntegratorLevin:reltol:
    *
    * Relative tolerance of the ODE solve, on the endpoint derivatives the boundary term
-   * reads. Bounds the result together with #NcmSBesselIntegratorLevin:cheb-reltol; the
-   * looser of the two wins. Below about $10^{-12}$ the roundoff of the coefficients
-   * stops the solve before the tolerance does.
+   * reads; the measured errors are a fifth of it or less. The result stays within the
+   * looser of this and #NcmSBesselIntegratorLevin:cheb-reltol. Below about $10^{-12}$
+   * the roundoff of the coefficients stops the solve before the tolerance does.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -538,9 +538,11 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   /**
    * NcmSBesselIntegratorLevin:cheb-reltol:
    *
-   * Relative tolerance of the integrand's Chebyshev fit, which forms the RHS.
-   * Bounds the result together with #NcmSBesselIntegratorLevin:reltol; the
-   * looser of the two wins.
+   * Relative tolerance of the integrand's Chebyshev fit, which forms the RHS. It
+   * bounds the change between the last two levels of the fit, about the error of
+   * the coarser one; the finer fit used is usually several orders of magnitude
+   * more accurate (ncm_spectral_compute_chebyshev_coeffs_adaptive()). The result
+   * stays within the looser of this and #NcmSBesselIntegratorLevin:reltol.
    */
   g_object_class_install_property (object_class,
                                    PROP_CHEB_RELTOL,

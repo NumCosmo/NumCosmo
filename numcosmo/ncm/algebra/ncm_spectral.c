@@ -1194,6 +1194,13 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
  * change of the interpolant on $[a, b]$. Each doubling evaluates $F$ only at the new nodes.
  * Reaching #NcmSpectral:max-level without converging is an error.
  *
+ * The change measures roughly the error of the level $r - 1$ interpolant; the level-$r$
+ * coefficients returned are usually several orders of magnitude more accurate than @tol,
+ * by a margin set by how fast the coefficients decay. A feature of $F$ narrower than the
+ * spacing of the nodes leaves no trace in the samples, and the expansion converges
+ * without it: no adaptive rule detects what it has not sampled, so $[a, b]$ must be
+ * chosen to bracket the features of $F$.
+ *
  * Returns: the level $r$ reached, with $2^r + 1$ coefficients.
  */
 guint
