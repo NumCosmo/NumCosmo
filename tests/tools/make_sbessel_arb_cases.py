@@ -179,6 +179,18 @@ LEVIN_CASES = [
         0,
         [(ell, [1.0]) for ell in range(6)],
     ),
+    (
+        # the rational truth table's shape at k = 10^0.5: one panel holds the whole
+        # integral and the solution needs some 600 coefficients
+        "reltol_bound",
+        "rational",
+        0.01,
+        6.5,
+        1.5,
+        0.05,
+        0,
+        [(ell, [0.1 * 10.0**1.5]) for ell in range(8)],
+    ),
     ("ell_zero", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(0, [1.0])]),
     ("k_scaling", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(5, [0.1, 1.0, 10.0, 100.0])]),
     ("narrow", "power", 5.0, 5.001, 1.0, 0.0, 0, [(5, [1.0])]),

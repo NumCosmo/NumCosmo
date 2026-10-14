@@ -39,9 +39,19 @@
  * remaining ones are the $C^{(2)}$ ultraspherical coefficients of $x F(x)$. Every caller
  * in the library passes zero for the first two.
  *
- * Truncation stops on the decay of the transformed solution coefficients relative to
- * the largest one seen, which is not a rigorous solution-error bound. In a batch,
- * every multipole must satisfy the criterion.
+ * Truncation stops when the transformed solution coefficient $c^n$, weighted by $n^2$,
+ * falls below the tolerance times the largest coefficient seen, or when $c^n$ itself
+ * reaches the roundoff level, a tenth of the double precision epsilon of that largest
+ * coefficient. The weight is the endpoint derivative of $T_n$, so the test measures
+ * the error of the endpoint derivatives the Levin boundary term reads, not only of the
+ * coefficients; it is an estimate, not a rigorous bound. In a batch, every multipole
+ * must satisfy the criterion.
+ *
+ * The criterion is tuned so that both $u$ and $u'$ come out accurate, since the Levin
+ * boundary terms read the endpoint derivatives and, under constraints other than
+ * Dirichlet data, the endpoint values as well. A caller that needs $u$ alone would be
+ * served by the unweighted test, which stops earlier; no such mode exists, and one can
+ * be added if a use for it appears.
  *
  * A #NcmSBesselOdeOperator stores the factorization for one interval and one multipole
  * range. Repeated solves reuse it and extend it only when the new right-hand side
@@ -85,6 +95,14 @@
 #define UPPER_BANDWIDTH 6
 #define TOTAL_BANDWIDTH (LOWER_BANDWIDTH + UPPER_BANDWIDTH + 1)
 #define ROWS_TO_ROTATE (LOWER_BANDWIDTH + NUMBER_OF_BOUNDARY_CONDITIONS)
+
+/*
+ * A column is quiet when the derivative tail it estimates, j^2 rho_j (the endpoint
+ * derivative of T_j is j^2), is below the tolerance times rho_max, or when rho_j itself
+ * is at the roundoff level of the coefficients, below which a further column carries
+ * no information whatever the tolerance asks.
+ */
+#define COEFF_ROUNDOFF_FLOOR (0.1 * DBL_EPSILON)
 
 /*
  * Minimum number of spectral columns for the panel [@a, @b] at multipole @ell_min.
@@ -170,7 +188,7 @@ struct _NcmSBesselOdeOperator
   gint ell_min;         /* Minimum multipole in batch */
   gint ell_max;         /* Maximum multipole in batch */
   guint n_ell;          /* Number of multipoles in batch: n_ell = ell_max - ell_min + 1 */
-  gdouble tolerance;    /* Relative coefficient-decay tolerance */
+  gdouble tolerance;    /* Relative tolerance on n^2 |c^n| */
   glong solve_min_cols; /* Floor in force for the running solve: min_cols, raised under
                          * the tau constraint to tau_floor_factor times the forcing order.
                          * The tau constraint has no oscillatory floor, and the decay test
@@ -509,9 +527,11 @@ ncm_sbessel_ode_solver_class_init (NcmSBesselOdeSolverClass *klass)
   /**
    * NcmSBesselOdeSolver:tolerance:
    *
-   * Relative coefficient-decay tolerance copied into new operators, by default a tenth
-   * of the double precision epsilon. It measures how fast the Chebyshev coefficients
-   * decay, not how far the solution is from the exact one.
+   * Relative tolerance on $n^2 |c^n|$, the truncation error of the endpoint derivatives,
+   * copied into new operators; by default a tenth of the double precision epsilon, where
+   * the roundoff level of the coefficients stops the solve instead. It estimates the
+   * error from where the expansion stops, not how far the solution is from the exact
+   * one.
    */
   g_object_class_install_property (object_class,
                                    PROP_TOLERANCE,
@@ -787,7 +807,7 @@ ncm_sbessel_ode_operator_clear (NcmSBesselOdeOperator **op)
  * @solver: a #NcmSBesselOdeSolver
  * @tol: convergence tolerance
  *
- * Sets the relative coefficient-decay tolerance copied into subsequently created
+ * Sets the relative tolerance on $n^2 |c^n|$ copied into subsequently created
  * operators. Existing operators retain their current tolerance.
  *
  */
@@ -1540,7 +1560,9 @@ _ncm_sbessel_apply_givens (const NcmSBesselOdeOperator *op, glong pivot_col, Ncm
  * @max_c_A: (inout): maximum coefficient-to-diagonal ratio
  * @quiet_cols: (inout): count of consecutive columns with small coefficients
  *
- * Checks convergence based on coefficient-to-diagonal ratio.
+ * Checks convergence on the coefficient-to-diagonal ratio $\rho_n$: column @col is quiet
+ * when $n^2 \rho_n$ is below the tolerance times the largest ratio, or $\rho_n$ is below
+ * COEFF_ROUNDOFF_FLOOR times it.
  *
  * Returns: TRUE if converged, FALSE otherwise
  */
@@ -1552,6 +1574,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
   const gdouble diag          = row->data[0] + _ncm_sbessel_bc_row (op, row, col);
   const gdouble c_col         = op->c[col];
   const gdouble Acol          = fabs (c_col / diag);
+  const gdouble col2          = (gdouble) col * (gdouble) col;
 
   if (Acol > *max_c_A)
   {
@@ -1560,7 +1583,7 @@ _ncm_sbessel_check_convergence (NcmSBesselOdeOperator *op, glong col,
   }
   else
   {
-    if (Acol / (*max_c_A) < op->tolerance)
+    if ((col2 * Acol < op->tolerance * (*max_c_A)) || (Acol < COEFF_ROUNDOFF_FLOOR * (*max_c_A)))
       (*quiet_cols)++;
     else
       *quiet_cols = 0;
@@ -1607,7 +1630,8 @@ _ncm_sbessel_check_storage (NcmSBesselOdeOperator *op, glong col,
  * @max_c_A: (array length=n_ell) (inout): per-ell maximum coefficient-to-diagonal ratios
  * @quiet_cols: (array length=n_ell) (inout): per-ell counts of consecutive small coefficients
  *
- * Checks convergence independently for every ell value.
+ * Checks convergence independently for every ell value, with the test of
+ * _ncm_sbessel_check_convergence().
  *
  * Returns: TRUE if every ell value has converged, FALSE otherwise
  */
@@ -1615,6 +1639,7 @@ static inline gboolean
 _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, guint n_ell,
                                         gdouble *max_c_A, guint *quiet_cols)
 {
+  const gdouble col2    = (gdouble) col * (gdouble) col;
   guint converged_lanes = 0;
   guint l_idx;
 
@@ -1633,7 +1658,8 @@ _ncm_sbessel_check_convergence_batched (NcmSBesselOdeOperator *op, glong col, gu
       max_c_A[l_idx]    = Acol;
       quiet_cols[l_idx] = 0;
     }
-    else if ((max_c_A[l_idx] > 0.0) && (Acol / max_c_A[l_idx] < op->tolerance))
+    else if ((max_c_A[l_idx] > 0.0) &&
+             ((col2 * Acol < op->tolerance * max_c_A[l_idx]) || (Acol < COEFF_ROUNDOFF_FLOOR * max_c_A[l_idx])))
     {
       quiet_cols[l_idx]++;
     }
@@ -2983,7 +3009,7 @@ ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min
  * ncm_sbessel_ode_operator_get_tolerance:
  * @op: a #NcmSBesselOdeOperator
  *
- * Gets the operator's relative coefficient-decay tolerance.
+ * Gets the operator's relative tolerance on $n^2 |c^n|$.
  *
  * Returns: the convergence tolerance
  */
@@ -3034,7 +3060,7 @@ ncm_sbessel_ode_operator_get_operator_size (NcmSBesselOdeOperator *op)
  * @solution_len: (out): length of solution per ell value
  *
  * Solves the ODE by adaptive QR in ultraspherical coefficient space. The matrix grows
- * until the relative coefficient-decay criterion described by #NcmSBesselOdeSolver is
+ * until the stopping criterion described by #NcmSBesselOdeSolver is
  * met.
  *
  * For operators with a single ell value, the @solution array has length @solution_len.

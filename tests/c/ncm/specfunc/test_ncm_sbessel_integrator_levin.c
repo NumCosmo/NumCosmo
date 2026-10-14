@@ -86,6 +86,7 @@ void test_ncm_sbessel_integrator_levin_arb_accepted_edge (void);
 void test_ncm_sbessel_integrator_levin_arb_rejected_edge (void);
 void test_ncm_sbessel_integrator_levin_arb_set_reltol (void);
 void test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol (void);
+void test_ncm_sbessel_integrator_levin_arb_reltol_bound (void);
 void test_ncm_sbessel_integrator_levin_arb_ell_zero (void);
 void test_ncm_sbessel_integrator_levin_arb_k_scaling (void);
 void test_ncm_sbessel_integrator_levin_arb_narrow (void);
@@ -215,6 +216,14 @@ static const TestArbCell test_arb_cells[] = {
   {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 3, 1.0, 0.013426384614975292},
   {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 4, 1.0, 0.09328165963961846},
   {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 5, 1.0, 0.048487996142564084},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 0, 3.1622776601683795, -0.02781037937210338},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 1, 3.1622776601683795, -0.006774982155242694},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 2, 3.1622776601683795, 0.02355464771983675},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 3, 3.1622776601683795, 0.03163453507264584},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 4, 3.1622776601683795, 0.023120255516737694},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 5, 3.1622776601683795, 0.012192772502424752},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 6, 3.1622776601683795, 0.005113055829241203},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 7, 3.1622776601683795, 0.001792660717226141},
   {"ell_zero", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.712264523851691},
   {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 0.1, 0.0001557694944990179},
   {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.6484700039890495},
@@ -246,6 +255,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/rejected_edge", test_ncm_sbessel_integrator_levin_arb_rejected_edge);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/set_reltol", test_ncm_sbessel_integrator_levin_arb_set_reltol);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/repeated_set_reltol", test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/reltol_bound", test_ncm_sbessel_integrator_levin_arb_reltol_bound);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/ell_zero", test_ncm_sbessel_integrator_levin_arb_ell_zero);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/k_scaling", test_ncm_sbessel_integrator_levin_arb_k_scaling);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/narrow", test_ncm_sbessel_integrator_levin_arb_narrow);
@@ -691,9 +701,9 @@ test_ncm_sbessel_integrator_levin_arb_rejected_edge (void)
 /*
  * A reltol set after construction reaches the operators, which are built with the
  * multipole range and must be replaced. On exp (-x / 1000) over [100, 1e4], ell 0..7,
- * reltol 1e-4 leaves the result at about 1e-6 of the peak; after set_reltol (1e-11) it
- * is about 1e-12. cheb-reltol is 1e-12 throughout, so reltol is the setting that limits
- * the result.
+ * reltol 1e-4 leaves the result at about 4e-8 of the peak; after set_reltol (1e-11) it
+ * is about 2e-15. cheb-reltol is 1e-12 throughout, so reltol is the setting that limits
+ * the result, and each result is held to its reltol.
  */
 void
 test_ncm_sbessel_integrator_levin_arb_set_reltol (void)
@@ -715,8 +725,9 @@ test_ncm_sbessel_integrator_levin_arb_set_reltol (void)
   ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
   tight = _test_arb_block_error (c, n, res);
 
+  g_assert_cmpfloat (loose, <=, 1.0e-4);
   g_assert_cmpfloat (tight, <, loose);
-  g_assert_cmpfloat (tight, <, 1.0e-9);
+  g_assert_cmpfloat (tight, <=, 1.0e-11);
 
   ncm_vector_free (res);
   ncm_sbessel_integrator_levin_free (sbilv);
@@ -741,6 +752,35 @@ test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol (void)
 
     for (j = 0; j < n; j++)
       _test_assert_close (ncm_vector_get (res, c[j].ell), c[j].value, 1.0e-7, 1.0e-14);
+  }
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/*
+ * reltol bounds the result. The rational truth-table shape at k = 10^0.5 puts the whole
+ * integral on one panel, where the solution needs some 600 coefficients; the boundary
+ * term reads the endpoint derivatives, which weight coefficient n by n^2. A stopping
+ * test on the coefficients alone left 3e4 times reltol there, 5e-9 at the default 1e-13.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_reltol_bound (void)
+{
+  const gdouble reltols[] = {1.0e-8, 1.0e-10};
+  guint n, i;
+  const TestArbCell *c             = _test_arb_case ("reltol_bound", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (0, 7);
+  NcmVector *res                   = ncm_vector_new (8);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 8);
+
+  for (i = 0; i < G_N_ELEMENTS (reltols); i++)
+  {
+    ncm_sbessel_integrator_levin_set_reltol (sbilv, reltols[i]);
+    ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, c->k, res, &ev);
+    g_assert_cmpfloat (_test_arb_block_error (c, n, res), <=, reltols[i]);
   }
 
   ncm_vector_free (res);

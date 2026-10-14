@@ -508,8 +508,10 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   /**
    * NcmSBesselIntegratorLevin:reltol:
    *
-   * Relative tolerance of the ODE solve. Bounds the result together with
-   * #NcmSBesselIntegratorLevin:cheb-reltol; the looser of the two wins.
+   * Relative tolerance of the ODE solve, on the endpoint derivatives the boundary term
+   * reads. Bounds the result together with #NcmSBesselIntegratorLevin:cheb-reltol; the
+   * looser of the two wins. Below about $10^{-12}$ the roundoff of the coefficients
+   * stops the solve before the tolerance does.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
