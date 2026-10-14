@@ -35,6 +35,26 @@
 
 #define TEST_DIM 4
 
+static void test_ncm_fit_esmcmc_walker_stretch_single (void);
+static void test_ncm_fit_esmcmc_walker_stretch_multi (void);
+static void test_ncm_fit_esmcmc_walker_walk (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/fit/esmcmc/walker/stretch/single", &test_ncm_fit_esmcmc_walker_stretch_single);
+  g_test_add_func ("/ncm/fit/esmcmc/walker/stretch/multi", &test_ncm_fit_esmcmc_walker_stretch_multi);
+  g_test_add_func ("/ncm/fit/esmcmc/walker/walk", &test_ncm_fit_esmcmc_walker_walk);
+
+  g_test_run ();
+}
+
 /*
  * With flat priors the posterior of the mean of a Gaussian is N(y, C). The ensemble
  * of 100 walkers runs 2000 iterations; the second half, a few thousand effective
@@ -154,21 +174,5 @@ test_ncm_fit_esmcmc_walker_walk (void)
 
   _test_ncm_fit_esmcmc_walker_posterior (NCM_FIT_ESMCMC_WALKER (walk));
   ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (walk));
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/fit/esmcmc/walker/stretch/single", &test_ncm_fit_esmcmc_walker_stretch_single);
-  g_test_add_func ("/ncm/fit/esmcmc/walker/stretch/multi", &test_ncm_fit_esmcmc_walker_stretch_multi);
-  g_test_add_func ("/ncm/fit/esmcmc/walker/walk", &test_ncm_fit_esmcmc_walker_walk);
-
-  g_test_run ();
 }
 

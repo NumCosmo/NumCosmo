@@ -33,6 +33,26 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_fit_covar_indefinite (void);
+static void test_ncm_fit_covar_ls_J_accurate (void);
+static void test_ncm_fit_covar_sub_fit_accurate (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/fit/covar/indefinite", &test_ncm_fit_covar_indefinite);
+  g_test_add_func ("/ncm/fit/covar/ls_J_accurate", &test_ncm_fit_covar_ls_J_accurate);
+  g_test_add_func ("/ncm/fit/covar/sub_fit_accurate", &test_ncm_fit_covar_sub_fit_accurate);
+
+  g_test_run ();
+}
+
 static void
 test_ncm_fit_covar_indefinite (void)
 {
@@ -193,21 +213,5 @@ test_ncm_fit_covar_sub_fit_accurate (void)
   ncm_model_mvnd_free (model);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/fit/covar/indefinite", &test_ncm_fit_covar_indefinite);
-  g_test_add_func ("/ncm/fit/covar/ls_J_accurate", &test_ncm_fit_covar_ls_J_accurate);
-  g_test_add_func ("/ncm/fit/covar/sub_fit_accurate", &test_ncm_fit_covar_sub_fit_accurate);
-
-  g_test_run ();
 }
 

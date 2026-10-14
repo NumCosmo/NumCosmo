@@ -39,6 +39,40 @@ typedef struct _TestNcmPrior
   NcmMSet *mset;
 } TestNcmPrior;
 
+static void test_ncm_prior_new (TestNcmPrior *test, gconstpointer pdata);
+static void test_ncm_prior_free (TestNcmPrior *test, gconstpointer pdata);
+static void test_ncm_prior_gauss (TestNcmPrior *test, gconstpointer pdata);
+static void test_ncm_prior_flat (TestNcmPrior *test, gconstpointer pdata);
+static void test_ncm_prior_gauss_mean_subprocess (void);
+static void test_ncm_prior_flat_mean_subprocess (void);
+static void test_ncm_prior_traps (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/ncm/prior/gauss", TestNcmPrior, NULL, &test_ncm_prior_new, &test_ncm_prior_gauss, &test_ncm_prior_free);
+  g_test_add ("/ncm/prior/flat", TestNcmPrior, NULL, &test_ncm_prior_new, &test_ncm_prior_flat, &test_ncm_prior_free);
+  g_test_add_func ("/ncm/prior/traps", &test_ncm_prior_traps);
+  g_test_add_func ("/ncm/prior/gauss/mean/subprocess", &test_ncm_prior_gauss_mean_subprocess);
+  g_test_add_func ("/ncm/prior/flat/mean/subprocess", &test_ncm_prior_flat_mean_subprocess);
+
+  g_test_run ();
+}
+
+static gdouble
+_test_prior_at (TestNcmPrior *test, NcmPrior *prior, const gdouble x)
+{
+  ncm_model_orig_param_set (test->model, 0, x);
+
+  return ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), test->mset);
+}
+
 static void
 test_ncm_prior_new (TestNcmPrior *test, gconstpointer pdata)
 {
@@ -51,14 +85,6 @@ test_ncm_prior_free (TestNcmPrior *test, gconstpointer pdata)
 {
   ncm_mset_free (test->mset);
   ncm_model_free (test->model);
-}
-
-static gdouble
-_test_prior_at (TestNcmPrior *test, NcmPrior *prior, const gdouble x)
-{
-  ncm_model_orig_param_set (test->model, 0, x);
-
-  return ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), test->mset);
 }
 
 static void
@@ -147,23 +173,5 @@ test_ncm_prior_traps (void)
   g_test_trap_subprocess ("/ncm/prior/flat/mean/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*method mean not implemented by NcmPriorFlat*");
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/ncm/prior/gauss", TestNcmPrior, NULL, &test_ncm_prior_new, &test_ncm_prior_gauss, &test_ncm_prior_free);
-  g_test_add ("/ncm/prior/flat", TestNcmPrior, NULL, &test_ncm_prior_new, &test_ncm_prior_flat, &test_ncm_prior_free);
-  g_test_add_func ("/ncm/prior/traps", &test_ncm_prior_traps);
-  g_test_add_func ("/ncm/prior/gauss/mean/subprocess", &test_ncm_prior_gauss_mean_subprocess);
-  g_test_add_func ("/ncm/prior/flat/mean/subprocess", &test_ncm_prior_flat_mean_subprocess);
-
-  g_test_run ();
 }
 

@@ -40,6 +40,20 @@ typedef struct _TestNcmFitESMCMC
   guint nrun_div;
 } TestNcmFitESMCMC;
 
+typedef struct _TestNcmFitEsmcmcFunc
+{
+  void (*func) (TestNcmFitESMCMC *, gconstpointer);
+
+  const gchar *name;
+  gpointer pdata;
+} TestNcmFitEsmcmcFunc;
+
+#define TEST_NCM_FIT_ESMCMC_NWALKERS 2
+
+#define TEST_NCM_FIT_ESMCMC_TESTS 2
+
+#define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)
+
 void test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata);
 
@@ -50,23 +64,12 @@ void test_ncm_fit_esmcmc_parity_serial_vs_mpi (void);
 void test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi (void);
 void test_ncm_fit_esmcmc_parity_stats_serial_vs_mpi (void);
 
-typedef struct _TestNcmFitEsmcmcFunc
-{
-  void (*func) (TestNcmFitESMCMC *, gconstpointer);
-
-  const gchar *name;
-  gpointer pdata;
-} TestNcmFitEsmcmcFunc;
-
-
-#define TEST_NCM_FIT_ESMCMC_NWALKERS 2
 TestNcmFitEsmcmcFunc walkers[TEST_NCM_FIT_ESMCMC_NWALKERS] =
 {
   {test_ncm_fit_esmcmc_new_stretch, "stretch",          NULL},
   {test_ncm_fit_esmcmc_new_apes,    "apes/vkde/cauchy", NULL},
 };
 
-#define TEST_NCM_FIT_ESMCMC_TESTS 2
 TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
 {
   {test_ncm_fit_esmcmc_run,             "run",             NULL},
@@ -275,17 +278,6 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
 }
 
 void
-test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (ncm_fit_esmcmc_free, test->esmcmc);
-  NCM_TEST_FREE (ncm_fit_free, test->fit);
-  NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
-  NCM_TEST_FREE (ncm_rng_free, test->rng);
-}
-
-#define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)
-
-void
 test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   gint run = 100;
@@ -387,51 +379,6 @@ _test_ncm_fit_esmcmc_parity_run (gboolean use_mpi)
   return mcat;
 }
 
-void
-test_ncm_fit_esmcmc_parity_serial_vs_mpi (void)
-{
-  NcmMSetCatalog *mcat_serial = _test_ncm_fit_esmcmc_parity_run (FALSE);
-  NcmMSetCatalog *mcat_mpi    = _test_ncm_fit_esmcmc_parity_run (TRUE);
-  const guint len             = ncm_mset_catalog_len (mcat_serial);
-  const guint ncols           = ncm_mset_catalog_ncols (mcat_serial);
-  guint i;
-
-  g_assert_cmpuint (len, >, 0);
-  g_assert_cmpuint (len, ==, ncm_mset_catalog_len (mcat_mpi));
-  g_assert_cmpuint (ncols, ==, ncm_mset_catalog_ncols (mcat_mpi));
-
-  for (i = 0; i < len; i++)
-  {
-    NcmVector *row_serial = ncm_mset_catalog_peek_row (mcat_serial, i);
-    NcmVector *row_mpi    = ncm_mset_catalog_peek_row (mcat_mpi, i);
-    guint j;
-
-    for (j = 0; j < ncols; j++)
-      g_assert_cmpfloat (ncm_vector_get (row_serial, j), ==, ncm_vector_get (row_mpi, j));
-  }
-
-  ncm_mset_catalog_clear (&mcat_serial);
-  ncm_mset_catalog_clear (&mcat_mpi);
-}
-
-/* APES with the production configuration, MPI evaluation against serial. The proposal is
- * drawn on the master in both cases and each slave decides acceptance with the jump it
- * received, so the result does not depend on which slave answers first; the two must
- * agree to rounding on the first new ensemble. The threaded arm is checked against the
- * same serial reference in test_ncm_fit_esmcmc (OMP lane); this binary runs with
- * OMP_THREAD_LIMIT=1, where a threaded arm would only repeat the serial one. */
-void
-test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi (void)
-{
-  NcmMSetCatalog *mcat_serial = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, FALSE);
-  NcmMSetCatalog *mcat_mpi    = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, TRUE);
-
-  test_ncm_fit_esmcmc_parity_compare (mcat_serial, mcat_mpi, 1.0e-12, 1.0e-14);
-
-  ncm_mset_catalog_clear (&mcat_serial);
-  ncm_mset_catalog_clear (&mcat_mpi);
-}
-
 /* Keeps the lines of the ensemble diagnostic summary, which depend on the step
  * statistics only, and drops the rest (timings). */
 static void
@@ -518,6 +465,60 @@ _test_ncm_fit_esmcmc_parity_stats_run (gboolean use_mpi, gdouble *offboard_ratio
   ncm_rng_free (rng);
 
   return summary;
+}
+
+void
+test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_fit_esmcmc_free, test->esmcmc);
+  NCM_TEST_FREE (ncm_fit_free, test->fit);
+  NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
+  NCM_TEST_FREE (ncm_rng_free, test->rng);
+}
+
+void
+test_ncm_fit_esmcmc_parity_serial_vs_mpi (void)
+{
+  NcmMSetCatalog *mcat_serial = _test_ncm_fit_esmcmc_parity_run (FALSE);
+  NcmMSetCatalog *mcat_mpi    = _test_ncm_fit_esmcmc_parity_run (TRUE);
+  const guint len             = ncm_mset_catalog_len (mcat_serial);
+  const guint ncols           = ncm_mset_catalog_ncols (mcat_serial);
+  guint i;
+
+  g_assert_cmpuint (len, >, 0);
+  g_assert_cmpuint (len, ==, ncm_mset_catalog_len (mcat_mpi));
+  g_assert_cmpuint (ncols, ==, ncm_mset_catalog_ncols (mcat_mpi));
+
+  for (i = 0; i < len; i++)
+  {
+    NcmVector *row_serial = ncm_mset_catalog_peek_row (mcat_serial, i);
+    NcmVector *row_mpi    = ncm_mset_catalog_peek_row (mcat_mpi, i);
+    guint j;
+
+    for (j = 0; j < ncols; j++)
+      g_assert_cmpfloat (ncm_vector_get (row_serial, j), ==, ncm_vector_get (row_mpi, j));
+  }
+
+  ncm_mset_catalog_clear (&mcat_serial);
+  ncm_mset_catalog_clear (&mcat_mpi);
+}
+
+/* APES with the production configuration, MPI evaluation against serial. The proposal is
+ * drawn on the master in both cases and each slave decides acceptance with the jump it
+ * received, so the result does not depend on which slave answers first; the two must
+ * agree to rounding on the first new ensemble. The threaded arm is checked against the
+ * same serial reference in test_ncm_fit_esmcmc (OMP lane); this binary runs with
+ * OMP_THREAD_LIMIT=1, where a threaded arm would only repeat the serial one. */
+void
+test_ncm_fit_esmcmc_parity_apes_serial_vs_mpi (void)
+{
+  NcmMSetCatalog *mcat_serial = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, FALSE);
+  NcmMSetCatalog *mcat_mpi    = test_ncm_fit_esmcmc_parity_apes_catalog (FALSE, TRUE);
+
+  test_ncm_fit_esmcmc_parity_compare (mcat_serial, mcat_mpi, 1.0e-12, 1.0e-14);
+
+  ncm_mset_catalog_clear (&mcat_serial);
+  ncm_mset_catalog_clear (&mcat_mpi);
 }
 
 /* The step statistics behind the diagnostic summary are those of the proposals that were

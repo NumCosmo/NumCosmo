@@ -45,6 +45,7 @@
 #include <glib-object.h>
 
 #define TEST_TKC_DIM 3
+
 #define TEST_TKC_NROWS 64
 
 typedef struct _TestNcmMSetTransKernCat
@@ -54,6 +55,67 @@ typedef struct _TestNcmMSetTransKernCat
   NcmMSetTransKernCat *tcat;
   NcmRNG *rng;
 } TestNcmMSetTransKernCat;
+
+static void test_ncm_mset_trans_kern_cat_new (TestNcmMSetTransKernCat *test, gconstpointer pdata);
+static void test_ncm_mset_trans_kern_cat_free (TestNcmMSetTransKernCat *test, gconstpointer pdata);
+static void test_ncm_mset_trans_kern_cat_choose (TestNcmMSetTransKernCat *test, gconstpointer pdata);
+static void test_ncm_mset_trans_kern_cat_choose_cut (TestNcmMSetTransKernCat *test, gconstpointer pdata);
+static void test_ncm_mset_trans_kern_cat_rbf_repeated (TestNcmMSetTransKernCat *test, gconstpointer pdata);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/mset/trans_kern/cat/choose", TestNcmMSetTransKernCat, NULL,
+              &test_ncm_mset_trans_kern_cat_new,
+              &test_ncm_mset_trans_kern_cat_choose,
+              &test_ncm_mset_trans_kern_cat_free);
+
+  g_test_add ("/ncm/mset/trans_kern/cat/choose/cut", TestNcmMSetTransKernCat, NULL,
+              &test_ncm_mset_trans_kern_cat_new,
+              &test_ncm_mset_trans_kern_cat_choose_cut,
+              &test_ncm_mset_trans_kern_cat_free);
+
+  g_test_add ("/ncm/mset/trans_kern/cat/rbf/repeated", TestNcmMSetTransKernCat, NULL,
+              &test_ncm_mset_trans_kern_cat_new,
+              &test_ncm_mset_trans_kern_cat_rbf_repeated,
+              &test_ncm_mset_trans_kern_cat_free);
+
+  g_test_run ();
+}
+
+/* Is @thetastar one of the catalog's rows? The sampler picks, it does not interpolate,
+ * so every point it returns has to be a row and not something between them. */
+static gboolean
+_test_tkc_is_catalog_row (TestNcmMSetTransKernCat *test, NcmVector *thetastar)
+{
+  const guint nadd = ncm_mset_catalog_nadd_vals (test->mcat);
+  const guint len  = ncm_vector_len (thetastar);
+  guint i, j;
+
+  for (i = 0; i < ncm_mset_catalog_len (test->mcat); i++)
+  {
+    NcmVector *row = ncm_mset_catalog_peek_row (test->mcat, i);
+    gboolean same  = TRUE;
+
+    for (j = 0; j < len; j++)
+    {
+      if (ncm_vector_get (row, nadd + j) != ncm_vector_get (thetastar, j))
+      {
+        same = FALSE;
+        break;
+      }
+    }
+
+    if (same)
+      return TRUE;
+  }
+
+  return FALSE;
+}
 
 static void
 test_ncm_mset_trans_kern_cat_new (TestNcmMSetTransKernCat *test, gconstpointer pdata)
@@ -117,36 +179,6 @@ test_ncm_mset_trans_kern_cat_free (TestNcmMSetTransKernCat *test, gconstpointer 
   ncm_rng_free (test->rng);
 
   NCM_TEST_FREE (ncm_mset_trans_kern_free, NCM_MSET_TRANS_KERN (test->tcat));
-}
-
-/* Is @thetastar one of the catalog's rows? The sampler picks, it does not interpolate,
- * so every point it returns has to be a row and not something between them. */
-static gboolean
-_test_tkc_is_catalog_row (TestNcmMSetTransKernCat *test, NcmVector *thetastar)
-{
-  const guint nadd = ncm_mset_catalog_nadd_vals (test->mcat);
-  const guint len  = ncm_vector_len (thetastar);
-  guint i, j;
-
-  for (i = 0; i < ncm_mset_catalog_len (test->mcat); i++)
-  {
-    NcmVector *row = ncm_mset_catalog_peek_row (test->mcat, i);
-    gboolean same  = TRUE;
-
-    for (j = 0; j < len; j++)
-    {
-      if (ncm_vector_get (row, nadd + j) != ncm_vector_get (thetastar, j))
-      {
-        same = FALSE;
-        break;
-      }
-    }
-
-    if (same)
-      return TRUE;
-  }
-
-  return FALSE;
 }
 
 static void
@@ -235,30 +267,5 @@ test_ncm_mset_trans_kern_cat_rbf_repeated (TestNcmMSetTransKernCat *test, gconst
   ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (tcat));
   ncm_stats_dist_free (NCM_STATS_DIST (sd));
   ncm_stats_dist_kernel_free (NCM_STATS_DIST_KERNEL (sdk));
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/mset/trans_kern/cat/choose", TestNcmMSetTransKernCat, NULL,
-              &test_ncm_mset_trans_kern_cat_new,
-              &test_ncm_mset_trans_kern_cat_choose,
-              &test_ncm_mset_trans_kern_cat_free);
-
-  g_test_add ("/ncm/mset/trans_kern/cat/choose/cut", TestNcmMSetTransKernCat, NULL,
-              &test_ncm_mset_trans_kern_cat_new,
-              &test_ncm_mset_trans_kern_cat_choose_cut,
-              &test_ncm_mset_trans_kern_cat_free);
-
-  g_test_add ("/ncm/mset/trans_kern/cat/rbf/repeated", TestNcmMSetTransKernCat, NULL,
-              &test_ncm_mset_trans_kern_cat_new,
-              &test_ncm_mset_trans_kern_cat_rbf_repeated,
-              &test_ncm_mset_trans_kern_cat_free);
-
-  g_test_run ();
 }
 
