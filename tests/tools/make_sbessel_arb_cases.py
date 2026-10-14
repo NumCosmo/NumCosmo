@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 #
-# make_sbessel_levin_arb_cases.py
+# make_sbessel_arb_cases.py
 #
 # Wed Oct 14 2026
 # Copyright  2026  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
 #
-# make_sbessel_levin_arb_cases.py
+# make_sbessel_arb_cases.py
 # Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Print the certified table of the C Levin test (test_ncm_sbessel_integrator_levin.c).
+"""Print a certified table of the C sbessel tests (tests/c/ncm/specfunc).
 
 Each row is one integral
 
@@ -39,9 +39,11 @@ written the same way in the tool and in the C test:
 - ``rational``: f = x^2 / (1 + ((x - c) / w)^2)^3, c = p1, w = p2;
 - ``gauss``: f = exp (-((x - c) / w)^2 / 2), c = p1, w = p2.
 
-The output replaces the block between the BEGIN and END markers of the C test:
+Two tables, chosen by the first argument: ``levin`` for
+test_ncm_sbessel_integrator_levin.c and ``ode`` for test_ncm_sbessel_ode_solver.c. The
+output replaces the block between the BEGIN and END markers of that test:
 
-    python3 tests/tools/make_sbessel_levin_arb_cases.py
+    python3 tests/tools/make_sbessel_arb_cases.py levin
 
 The tool is the binary named by XCOR_ARB_TOOL, else the meson-built one in
 NUMCOSMO_BUILD_DIR (set by the build's numcosmo_export.sh).
@@ -57,7 +59,7 @@ import sys
 TOOL = "nc_xcor_kernel_analytic_arb"
 
 # name, shape, a, b, p1, p2, deriv, [(ell, [k, ...]), ...]
-CASES = [
+LEVIN_CASES = [
     (
         "constant",
         "tophat",
@@ -187,6 +189,33 @@ CASES = [
     ("evanescent", "gauss", 1.0, 8.0, 4.0, 1.2, 2, [(30, [0.5])]),
 ]
 
+# int_1^20 j_l(x) / x dx and int_1^20 j_l(x) dx, ell 0..20: the Green identity of the
+# ODE solver for the forcings 1 and x
+ODE_CASES = [
+    (
+        "green_inv_x",
+        "power",
+        1.0,
+        20.0,
+        -1.0,
+        0.0,
+        0,
+        [(ell, [1.0]) for ell in range(21)],
+    ),
+    (
+        "green_one",
+        "tophat",
+        1.0,
+        20.0,
+        0.0,
+        0.0,
+        0,
+        [(ell, [1.0]) for ell in range(21)],
+    ),
+]
+
+TABLES = {"levin": LEVIN_CASES, "ode": ODE_CASES}
+
 C_SHAPE = {
     "tophat": "TEST_ARB_TOPHAT",
     "power": "TEST_ARB_POWER",
@@ -276,11 +305,15 @@ def certify(tool, shape, a, b, p1, p2, deriv, ell, ks) -> list[tuple[float, str]
 
 
 def main() -> None:
-    """Print the C table."""
-    tool = find_tool()
-    print("  /* BEGIN make_sbessel_levin_arb_cases.py */")
+    """Print the C table named by the first argument."""
+    if len(sys.argv) != 2 or sys.argv[1] not in TABLES:
+        sys.exit(f"usage: {sys.argv[0]} {{{'|'.join(TABLES)}}}")
 
-    for name, shape, a, b, p1, p2, deriv, cells in CASES:
+    table = sys.argv[1]
+    tool = find_tool()
+    print(f"  /* BEGIN make_sbessel_arb_cases.py {table} */")
+
+    for name, shape, a, b, p1, p2, deriv, cells in TABLES[table]:
         for ell, ks in cells:
             for k, value in certify(tool, shape, a, b, p1, p2, deriv, ell, ks):
                 print(
@@ -288,7 +321,7 @@ def main() -> None:
                     f"{deriv}, {ell}, {k!r}, {float(value)!r}}},"
                 )
 
-    print("  /* END make_sbessel_levin_arb_cases.py */")
+    print(f"  /* END make_sbessel_arb_cases.py {table} */")
 
 
 if __name__ == "__main__":

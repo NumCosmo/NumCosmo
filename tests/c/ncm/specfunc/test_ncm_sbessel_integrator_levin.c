@@ -34,6 +34,8 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+#include "test_ncm_sbessel_arb_cases.h"
+
 void test_ncm_sbessel_integrator_levin_arb_constant (void);
 void test_ncm_sbessel_integrator_levin_arb_linear (void);
 void test_ncm_sbessel_integrator_levin_arb_quadratic (void);
@@ -258,40 +260,9 @@ _test_gauss (gpointer user_data, gdouble x, gdouble k)
   return g->amplitude * exp (-0.5 * z * z);
 }
 
-/*
- * Certified integrals I = int_a^b f(x) j_ell^(d)(k x) dx, from
- * tests/tools/make_sbessel_levin_arb_cases.py (nc_xcor_kernel_analytic_arb, relative
- * radius 1e-25, rounded to double). f is written here exactly as the tool writes it:
- * TOPHAT 1; POWER x^n, n = p1; COS cos (p1 x); EXP exp (-x / p1); RATIONAL
- * x^2 / (1 + ((x - p1) / p2)^2)^3; GAUSS exp (-((x - p1) / p2)^2 / 2). The rows of one
- * case are contiguous, multipoles in increasing order.
- */
-typedef enum _TestArbShape
-{
-  TEST_ARB_TOPHAT,
-  TEST_ARB_POWER,
-  TEST_ARB_COS,
-  TEST_ARB_EXP,
-  TEST_ARB_RATIONAL,
-  TEST_ARB_GAUSS,
-} TestArbShape;
-
-typedef struct _TestArbCell
-{
-  const gchar *name;
-  TestArbShape shape;
-  gdouble a;
-  gdouble b;
-  gdouble p1;
-  gdouble p2;
-  guint deriv;
-  guint ell;
-  gdouble k;
-  gdouble value;
-} TestArbCell;
-
+/* Certified integrals of make_sbessel_arb_cases.py levin, see test_ncm_sbessel_arb_cases.h */
 static const TestArbCell test_arb_cells[] = {
-  /* BEGIN make_sbessel_levin_arb_cases.py */
+  /* BEGIN make_sbessel_arb_cases.py levin */
   {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 0, 1.0, 0.6021586306762569},
   {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 1, 1.0, 0.7958237222715151},
   {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 5, 1.0, 0.48260284581290397},
@@ -378,62 +349,13 @@ static const TestArbCell test_arb_cells[] = {
   {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 300, 300.0, 0.00016794746443265403},
   {"oscillatory", TEST_ARB_EXP, 1.0, 100.0, 100.0, 0.0, 0, 10, 500.0, 3.2810031358293054e-06},
   {"evanescent", TEST_ARB_GAUSS, 1.0, 8.0, 4.0, 1.2, 2, 30, 0.5, 8.723201535126188e-26},
-  /* END make_sbessel_levin_arb_cases.py */
+  /* END make_sbessel_arb_cases.py levin */
 };
 
-/* The first row of case @name and, in @n, how many rows it has */
 static const TestArbCell *
 _test_arb_case (const gchar *name, guint *n)
 {
-  const TestArbCell *first = NULL;
-  guint i;
-
-  *n = 0;
-
-  for (i = 0; i < G_N_ELEMENTS (test_arb_cells); i++)
-  {
-    if (strcmp (test_arb_cells[i].name, name) == 0)
-    {
-      if (first == NULL)
-        first = &test_arb_cells[i];
-
-      (*n)++;
-    }
-  }
-
-  g_assert_nonnull (first);
-
-  return first;
-}
-
-static gdouble
-_test_arb_f (const TestArbCell *c, gdouble x)
-{
-  switch (c->shape)
-  {
-    case TEST_ARB_TOPHAT:
-      return 1.0;
-
-    case TEST_ARB_POWER:
-      return gsl_pow_int (x, (gint) c->p1);
-
-    case TEST_ARB_COS:
-      return cos (c->p1 * x);
-
-    case TEST_ARB_EXP:
-      return exp (-x / c->p1);
-
-    case TEST_ARB_RATIONAL:
-      return x * x / gsl_pow_3 (1.0 + gsl_pow_2 ((x - c->p1) / c->p2));
-
-    case TEST_ARB_GAUSS:
-      return exp (-0.5 * gsl_pow_2 ((x - c->p1) / c->p2));
-
-    default:
-      g_assert_not_reached ();
-
-      return 0.0;
-  }
+  return test_arb_cells_find (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, n);
 }
 
 /* The integrand of one case, counting its calls and the range of x it was evaluated at */
@@ -462,7 +384,7 @@ _test_arb_integrand (gpointer user_data, gdouble x, gdouble k)
   ev->x_min = GSL_MIN (ev->x_min, x);
   ev->x_max = GSL_MAX (ev->x_max, x);
 
-  return _test_arb_f (ev->cell, x);
+  return test_arb_cell_f (ev->cell, x);
 }
 
 /*

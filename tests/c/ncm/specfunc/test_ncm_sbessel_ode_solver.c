@@ -38,6 +38,8 @@
 #include <numcosmo/numcosmo.h>
 #include <gsl/gsl_linalg.h>
 
+#include "test_ncm_sbessel_arb_cases.h"
+
 void test_ncm_sbessel_ode_solver_solve_values (void);
 void test_ncm_sbessel_ode_solver_batched_convergence (void);
 void test_ncm_sbessel_ode_solver_qr_vs_lu (void);
@@ -58,6 +60,12 @@ void test_ncm_sbessel_ode_solver_reuse (void);
 void test_ncm_sbessel_ode_solver_reuse_correctness (void);
 void test_ncm_sbessel_ode_solver_reuse_endpoints (void);
 void test_ncm_sbessel_ode_solver_optimized_batched (void);
+void test_ncm_sbessel_ode_solver_homogeneous (void);
+void test_ncm_sbessel_ode_solver_green_lu (void);
+void test_ncm_sbessel_ode_solver_green_dense (void);
+void test_ncm_sbessel_ode_solver_green_qr (void);
+void test_ncm_sbessel_ode_solver_green_endpoints (void);
+void test_ncm_sbessel_ode_solver_green_endpoints_batched (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -85,6 +93,12 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_ode_solver/reuse/correctness", test_ncm_sbessel_ode_solver_reuse_correctness);
   g_test_add_func ("/ncm/sbessel_ode_solver/reuse/endpoints", test_ncm_sbessel_ode_solver_reuse_endpoints);
   g_test_add_func ("/ncm/sbessel_ode_solver/optimized_batched", test_ncm_sbessel_ode_solver_optimized_batched);
+  g_test_add_func ("/ncm/sbessel_ode_solver/homogeneous", test_ncm_sbessel_ode_solver_homogeneous);
+  g_test_add_func ("/ncm/sbessel_ode_solver/green/lu", test_ncm_sbessel_ode_solver_green_lu);
+  g_test_add_func ("/ncm/sbessel_ode_solver/green/dense", test_ncm_sbessel_ode_solver_green_dense);
+  g_test_add_func ("/ncm/sbessel_ode_solver/green/qr", test_ncm_sbessel_ode_solver_green_qr);
+  g_test_add_func ("/ncm/sbessel_ode_solver/green/endpoints", test_ncm_sbessel_ode_solver_green_endpoints);
+  g_test_add_func ("/ncm/sbessel_ode_solver/green/endpoints_batched", test_ncm_sbessel_ode_solver_green_endpoints_batched);
 
   g_test_run ();
 }
@@ -1160,6 +1174,296 @@ test_ncm_sbessel_ode_solver_optimized_batched (void)
   g_array_unref (rhs_quad);
   g_array_unref (rhs_exp);
   g_array_unref (rhs_sin);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * With Dirichlet data a j_l(a), b j_l(b) and no forcing, the LU solution of the 128 x 128
+ * operator matrix is u = x j_l(x): checked at seven interior points and at both ends,
+ * ell 0..20, j_l from ncm_sf_sbessel().
+ */
+void
+test_ncm_sbessel_ode_solver_homogeneous (void)
+{
+  const gdouble t_a[]         = {-0.8, -0.5, -0.2, 0.0, 0.2, 0.5, 0.8};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint ell, i;
+
+  for (ell = 0; ell <= 20; ell++)
+  {
+    const gdouble u_a = TEST_A * ncm_sf_sbessel (ell, TEST_A);
+    const gdouble u_b = TEST_B * ncm_sf_sbessel (ell, TEST_B);
+    GArray *rhs       = _test_rhs_new (128, NULL, 0);
+    NcmVector *x;
+    GArray *u;
+
+    g_array_index (rhs, gdouble, 0) = u_a;
+    g_array_index (rhs, gdouble, 1) = u_b;
+    x                               = _test_lu_solve (solver, ell, 128, rhs);
+    u                               = ncm_vector_dup_array (x);
+
+    for (i = 0; i < G_N_ELEMENTS (t_a); i++)
+    {
+      const gdouble xp = TEST_M + TEST_H * t_a[i];
+
+      _test_assert_close (ncm_spectral_chebyshev_eval (u, t_a[i]), xp * ncm_sf_sbessel (ell, xp), 1.0e-10, 1.0e-15);
+    }
+
+    _test_assert_close (ncm_spectral_chebyshev_eval (u, -1.0), u_a, 1.0e-13, 1.0e-13);
+    _test_assert_close (ncm_spectral_chebyshev_eval (u, +1.0), u_b, 1.0e-13, 1.0e-13);
+
+    g_array_unref (rhs);
+    g_array_unref (u);
+    ncm_vector_free (x);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/*
+ * Green's identity: with zero Dirichlet data and forcing g, the solution u satisfies
+ * b j_l(b) u'(b) - a j_l(a) u'(a) = int_a^b g(x) j_l(x) / x dx. The forcing 1 (rhs[2] = 1)
+ * gives int_1^20 j_l / x dx and the forcing x (rhs[2] = m, rhs[3] = h / 4) gives
+ * int_1^20 j_l dx, certified by make_sbessel_arb_cases.py ode.
+ */
+static const TestArbCell test_arb_cells[] = {
+  /* BEGIN make_sbessel_arb_cases.py ode */
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 0, 1.0, 0.5028396202159003},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 1, 1.0, 0.4607245247899321},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 2, 1.0, 0.3020747659379493},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 3, 1.0, 0.19574779143238527},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 4, 1.0, 0.1330169948034595},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 5, 1.0, 0.0956047082381122},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 6, 1.0, 0.07484428607483702},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 7, 1.0, 0.06312019765201392},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 8, 1.0, 0.05352439806530906},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 9, 1.0, 0.04344865430572876},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 10, 1.0, 0.03453229048880144},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 11, 1.0, 0.029113904722431434},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 12, 1.0, 0.027378313816413244},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 13, 1.0, 0.02736466382665843},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 14, 1.0, 0.026730174217619293},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 15, 1.0, 0.02423940889318163},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 16, 1.0, 0.02004830157463489},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 17, 1.0, 0.015109047820065719},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 18, 1.0, 0.01042813195282212},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 19, 1.0, 0.006635382719972067},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 20, 1.0, 0.003917880565087803},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 0, 1.0, 0.6021586306762569},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 1, 1.0, 0.7958237222715151},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 2, 1.0, 0.7800149436935394},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 3, 1.0, 0.7145501074182314},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 4, 1.0, 0.5902195963331576},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 5, 1.0, 0.48260284581290397},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 6, 1.0, 0.4614321942860765},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 7, 1.0, 0.49037287315997735},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 8, 1.0, 0.48537077049413235},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 9, 1.0, 0.41954189395027663},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 10, 1.0, 0.34015366131471403},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 11, 1.0, 0.3056362063145535},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 12, 1.0, 0.3294661473012089},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 13, 1.0, 0.3788216390957776},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 14, 1.0, 0.40937977601856873},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 15, 1.0, 0.39635341321518186},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 16, 1.0, 0.34204189967006177},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 17, 1.0, 0.2652405387477694},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 18, 1.0, 0.1867747740322384},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 19, 1.0, 0.12060034350664904},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 20, 1.0, 0.07200515204667218},
+  /* END make_sbessel_arb_cases.py ode */
+};
+
+typedef enum _TestGreenForcing
+{
+  TEST_GREEN_ONE = 0,
+  TEST_GREEN_X,
+} TestGreenForcing;
+
+static GArray *
+_test_green_rhs (TestGreenForcing forcing)
+{
+  const gdouble f_x[] = {TEST_M, 0.25 * TEST_H};
+
+  return (forcing == TEST_GREEN_ONE) ? _test_rhs_const (128, 1.0) : _test_rhs_new (128, f_x, G_N_ELEMENTS (f_x));
+}
+
+/* The certified int g j_l / x dx of the forcing at ell */
+static gdouble
+_test_green_value (TestGreenForcing forcing, guint ell)
+{
+  guint n;
+  const TestArbCell *c = test_arb_cells_find (test_arb_cells, G_N_ELEMENTS (test_arb_cells),
+                                              (forcing == TEST_GREEN_ONE) ? "green_inv_x" : "green_one", &n);
+
+  g_assert_cmpuint (ell, <, n);
+  g_assert_cmpuint (c[ell].ell, ==, ell);
+
+  return c[ell].value;
+}
+
+/* b j_l(b) u'(b) - a j_l(a) u'(a) held to the certified integral, rtol 1e-8, atol 1e-20 */
+static void
+_test_green_check (TestGreenForcing forcing, guint ell, gdouble du_a, gdouble du_b)
+{
+  const gdouble lhs = TEST_B * ncm_sf_sbessel (ell, TEST_B) * du_b - TEST_A * ncm_sf_sbessel (ell, TEST_A) * du_a;
+
+  _test_assert_close (lhs, _test_green_value (forcing, ell), 1.0e-8, 1.0e-20);
+}
+
+/* u'(a), u'(b) of Chebyshev coefficients on [1, 20] */
+static void
+_test_green_check_coeffs (TestGreenForcing forcing, guint ell, GArray *u)
+{
+  _test_green_check (forcing, ell, ncm_spectral_chebyshev_deriv (u, -1.0) / TEST_H, ncm_spectral_chebyshev_deriv (u, +1.0) / TEST_H);
+}
+
+/* LU solve of the 128 x 128 operator matrix, ell 0..20 */
+void
+test_ncm_sbessel_ode_solver_green_lu (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint f, ell;
+
+  for (f = TEST_GREEN_ONE; f <= TEST_GREEN_X; f++)
+  {
+    GArray *rhs = _test_green_rhs (f);
+
+    for (ell = 0; ell <= 20; ell++)
+    {
+      NcmVector *x = _test_lu_solve (solver, ell, 128, rhs);
+      GArray *u    = ncm_vector_dup_array (x);
+
+      _test_green_check_coeffs (f, ell, u);
+
+      g_array_unref (u);
+      ncm_vector_free (x);
+    }
+
+    g_array_unref (rhs);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+static const guint test_green_ells[] = {0, 1, 5, 10, 20};
+
+/* solve_dense, ell 0, 1, 5, 10, 20 */
+void
+test_ncm_sbessel_ode_solver_green_dense (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint f, i;
+
+  for (f = TEST_GREEN_ONE; f <= TEST_GREEN_X; f++)
+  {
+    GArray *rhs      = _test_green_rhs (f);
+    NcmVector *rhs_v = ncm_vector_new_array (rhs);
+
+    for (i = 0; i < G_N_ELEMENTS (test_green_ells); i++)
+    {
+      NcmVector *x = ncm_sbessel_ode_solver_solve_dense (solver, TEST_A, TEST_B, test_green_ells[i], rhs_v, 128);
+      GArray *u    = ncm_vector_dup_array (x);
+
+      _test_green_check_coeffs (f, test_green_ells[i], u);
+
+      g_array_unref (u);
+      ncm_vector_free (x);
+    }
+
+    ncm_vector_free (rhs_v);
+    g_array_unref (rhs);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* The adaptive QR solve, ell 0, 1, 5, 10, 20 */
+void
+test_ncm_sbessel_ode_solver_green_qr (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint f, i;
+
+  for (f = TEST_GREEN_ONE; f <= TEST_GREEN_X; f++)
+  {
+    GArray *rhs = _test_green_rhs (f);
+
+    for (i = 0; i < G_N_ELEMENTS (test_green_ells); i++)
+    {
+      GArray *u = NULL;
+      gsize len;
+      NcmSBesselOdeOperator *op = _test_solve (solver, TEST_A, TEST_B, test_green_ells[i], test_green_ells[i], rhs, &u, &len);
+
+      _test_green_check_coeffs (f, test_green_ells[i], u);
+
+      g_array_unref (u);
+      ncm_sbessel_ode_operator_unref (op);
+    }
+
+    g_array_unref (rhs);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* solve_endpoints, ell 0, 1, 5, 10, 20 */
+void
+test_ncm_sbessel_ode_solver_green_endpoints (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint f, i;
+
+  for (f = TEST_GREEN_ONE; f <= TEST_GREEN_X; f++)
+  {
+    GArray *rhs = _test_green_rhs (f);
+
+    for (i = 0; i < G_N_ELEMENTS (test_green_ells); i++)
+    {
+      NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, test_green_ells[i], test_green_ells[i]);
+      GArray *e                 = NULL;
+
+      ncm_sbessel_ode_operator_solve_endpoints (op, rhs, &e);
+      _test_green_check (f, test_green_ells[i], g_array_index (e, gdouble, 0), g_array_index (e, gdouble, 1));
+
+      g_array_unref (e);
+      ncm_sbessel_ode_operator_unref (op);
+    }
+
+    g_array_unref (rhs);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* Batched solve_endpoints, ell 5..15 */
+void
+test_ncm_sbessel_ode_solver_green_endpoints_batched (void)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint f, ell;
+
+  for (f = TEST_GREEN_ONE; f <= TEST_GREEN_X; f++)
+  {
+    GArray *rhs               = _test_green_rhs (f);
+    NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, 5, 15);
+    GArray *e                 = NULL;
+
+    ncm_sbessel_ode_operator_solve_endpoints (op, rhs, &e);
+
+    for (ell = 5; ell <= 15; ell++)
+      _test_green_check (f, ell, g_array_index (e, gdouble, 3 * (ell - 5) + 0), g_array_index (e, gdouble, 3 * (ell - 5) + 1));
+
+    g_array_unref (e);
+    g_array_unref (rhs);
+    ncm_sbessel_ode_operator_unref (op);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
   ncm_sbessel_ode_solver_free (solver);
 }
 
