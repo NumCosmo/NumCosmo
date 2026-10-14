@@ -605,7 +605,9 @@ nc_xcor_kernel_gal_class_init (NcXcorKernelGalClass *klass)
 
 /*
  * Implementation of the lensing efficiency source function, which is the integrand of
- * the g(z) function in the magnification bias term.
+ * the g(z) function in the magnification bias term. The weight 5s - 2 is written as
+ * 5(s - 0.4) so that it is exactly zero at s = 0.4: a compiler that fuses 5s - 2 into a
+ * multiply-add (clang on arm64) gives 5 x 0.4 - 2 = 1.1e-16 instead.
  */
 
 static gdouble
@@ -615,7 +617,7 @@ _nc_xcor_kernel_gal_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdo
   NcXcorKernelGal *xclkg           = data_obj->data;
   const gdouble mag_bias           = MAG_BIAS;
 
-  return (5.0 * mag_bias - 2.0) * _nc_xcor_kernel_gal_dndz (xclkg, z);
+  return 5.0 * (mag_bias - 0.4) * _nc_xcor_kernel_gal_dndz (xclkg, z);
 }
 
 static void
