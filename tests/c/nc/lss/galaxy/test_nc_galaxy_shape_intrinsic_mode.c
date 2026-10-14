@@ -67,8 +67,40 @@
  * looser here to absorb compiler/platform variation without becoming a
  * flaky test. */
 #define TEST_N_TRIALS          2000
+
 #define TEST_MAX_REL_LAPLACE   1.0e-3
+
 #define TEST_MAX_NAN_MISMATCH_FRAC 0.01
+
+/* TRACE never finds a meaningfully worse mode than the finite-difference
+ * baseline -- see the file-level comment on this asymmetry. A small
+ * negative tolerance absorbs the two methods occasionally landing on
+ * bit-different but equally-good points. */
+#define TEST_TRACE_MIN_LN_PEAK_SLACK -1.0e-6
+
+static void test_closed_form_matches_finite_difference (void);
+static void test_zero_shear_theta_matches_arg_eps_obs (void);
+static void test_trace_closed_form_never_worse_than_finite_difference (void);
+static void test_trace_zero_shear_theta_matches_arg_eps_obs (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace_det/closed_form_matches_finite_difference",
+                   &test_closed_form_matches_finite_difference);
+  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace_det/zero_shear_theta_matches_arg_eps_obs",
+                   &test_zero_shear_theta_matches_arg_eps_obs);
+  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace/closed_form_never_worse_than_finite_difference",
+                   &test_trace_closed_form_never_worse_than_finite_difference);
+  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace/zero_shear_theta_matches_arg_eps_obs",
+                   &test_trace_zero_shear_theta_matches_arg_eps_obs);
+
+  return g_test_run ();
+}
 
 static gdouble
 test_uniform (GRand *rng, gdouble a, gdouble b)
@@ -163,12 +195,6 @@ test_zero_shear_theta_matches_arg_eps_obs (void)
   nc_galaxy_shape_pop_gauss_free (pop);
 }
 
-/* TRACE never finds a meaningfully worse mode than the finite-difference
- * baseline -- see the file-level comment on this asymmetry. A small
- * negative tolerance absorbs the two methods occasionally landing on
- * bit-different but equally-good points. */
-#define TEST_TRACE_MIN_LN_PEAK_SLACK -1.0e-6
-
 static void
 test_trace_closed_form_never_worse_than_finite_difference (void)
 {
@@ -239,24 +265,5 @@ test_trace_zero_shear_theta_matches_arg_eps_obs (void)
 
   nc_galaxy_shape_pop_data_unref (pop_data);
   nc_galaxy_shape_pop_gauss_free (pop);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace_det/closed_form_matches_finite_difference",
-                   &test_closed_form_matches_finite_difference);
-  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace_det/zero_shear_theta_matches_arg_eps_obs",
-                   &test_zero_shear_theta_matches_arg_eps_obs);
-  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace/closed_form_never_worse_than_finite_difference",
-                   &test_trace_closed_form_never_worse_than_finite_difference);
-  g_test_add_func ("/nc/galaxy_shape_intrinsic_mode/trace/zero_shear_theta_matches_arg_eps_obs",
-                   &test_trace_zero_shear_theta_matches_arg_eps_obs);
-
-  return g_test_run ();
 }
 
