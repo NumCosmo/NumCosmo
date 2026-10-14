@@ -60,7 +60,8 @@ void nc_xcor_solver_get_block (NcXcorSolver *solver, guint block_index, guint *l
 void nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo);
 NcmVector *nc_xcor_solver_get_result (NcXcorSolver *solver, guint request_index);
 
-void nc_xcor_solver_set_integrator (NcXcorSolver *solver, NcmSBesselIntegrator *sbi);
+void nc_xcor_solver_set_reltol (NcXcorSolver *solver, gdouble reltol);
+gdouble nc_xcor_solver_get_reltol (NcXcorSolver *solver);
 NcmSBesselIntegrator *nc_xcor_solver_peek_block_integrator (NcXcorSolver *solver, guint block_index);
 
 G_END_DECLS

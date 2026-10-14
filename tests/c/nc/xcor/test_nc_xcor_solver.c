@@ -71,8 +71,7 @@ static void test_nc_xcor_solver_plan_l_limber_sorted (TestNcXcorSolver *test, gc
 static void test_nc_xcor_solver_plan (TestNcXcorSolver *test, gconstpointer pdata);
 static void test_nc_xcor_solver_plan_l_limber (TestNcXcorSolver *test, gconstpointer pdata);
 static void test_nc_xcor_solver_solve (TestNcXcorSolver *test, gconstpointer pdata);
-static void test_nc_xcor_solver_cache_max_traps (TestNcXcorSolver *test, gconstpointer pdata);
-static void test_nc_xcor_solver_cache_max (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_block_integrators (TestNcXcorSolver *test, gconstpointer pdata);
 
 static const TestCheck test_checks[] = {
   {"register",       &test_nc_xcor_solver_register      },
@@ -84,8 +83,7 @@ static const TestCheck test_checks[] = {
   {"plan/kernel_integrator", &test_nc_xcor_solver_plan_kernel_integrator},
   {"plan/l_limber_sorted", &test_nc_xcor_solver_plan_l_limber_sorted},
   {"solve",          &test_nc_xcor_solver_solve         },
-  {"cache_max/traps", &test_nc_xcor_solver_cache_max_traps},
-  {"cache_max/subprocess", &test_nc_xcor_solver_cache_max},
+  {"block_integrators", &test_nc_xcor_solver_block_integrators},
 };
 
 gint
@@ -501,39 +499,53 @@ test_nc_xcor_solver_solve (TestNcXcorSolver *test, gconstpointer pdata)
   ncm_vector_free (direct);
 }
 
-/* The template's ell-cache-max is an absolute multipole: a block reaching above it
- * must abort before any integration, not be shrunk to fit. */
+/*
+ * The solver builds one #NcmSBesselIntegratorLevin per block at its own reltol, with a
+ * j_ell cache covering the block, and ignores the integrator the kernel carries (reltol
+ * 1e-4, ell-cache-max 5). A new reltol discards the block integrators.
+ */
 static void
-test_nc_xcor_solver_cache_max_traps (TestNcXcorSolver *test, gconstpointer pdata)
+test_nc_xcor_solver_block_integrators (TestNcXcorSolver *test, gconstpointer pdata)
 {
-  g_test_trap_subprocess ("/nc/xcor/solver/cache_max/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*reaches above the integrator's ell-cache-max (5)*");
-}
-
-static void
-test_nc_xcor_solver_cache_max (TestNcXcorSolver *test, gconstpointer pdata)
-{
-  NcmSBesselIntegrator *sbi       = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 32));
   NcmSBesselIntegrator *small_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new_full (0, 5, 1.0e-4, 1.0e6, 21, 5,
-                                                                                                   1.0e-8, 2));
+                                                                                                   1.0e-4, 2));
   NcXcorKernel *nl = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new_full (test->dist, test->ps,
-                                                                             1500.0, 300.0, 4.0, sbi));
+                                                                             1500.0, 300.0, 4.0, small_sbi));
   NcXcor *xc = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_KERNEL_EXACT);
-  guint id;
+  guint id, b;
 
   nc_xcor_kernel_set_l_limber (nl, -1);
   nc_xcor_prepare (xc, test->cosmo);
 
+  g_assert_cmpfloat (nc_xcor_solver_get_reltol (test->solver), ==, NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL);
+  nc_xcor_solver_set_reltol (test->solver, 1.0e-6);
+  g_assert_cmpfloat (nc_xcor_solver_get_reltol (test->solver), ==, 1.0e-6);
+
   id = nc_xcor_solver_register_kernel (test->solver, nl);
   nc_xcor_solver_request_cl (test->solver, id, id, 0, 20);
-  nc_xcor_solver_set_integrator (test->solver, small_sbi);
   nc_xcor_solver_plan_blocks (test->solver, 8);
   nc_xcor_solver_solve (test->solver, xc, test->cosmo);
+
+  for (b = 0; b < nc_xcor_solver_get_n_blocks (test->solver); b++)
+  {
+    NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (nc_xcor_solver_peek_block_integrator (test->solver, b));
+    guint lmin, lmax, ell_min, ell_max;
+
+    nc_xcor_solver_get_block (test->solver, b, &lmin, &lmax);
+    ncm_sbessel_integrator_get_ell_range (NCM_SBESSEL_INTEGRATOR (sbilv), &ell_min, &ell_max);
+
+    g_assert_true (NCM_SBESSEL_INTEGRATOR (sbilv) != small_sbi);
+    g_assert_cmpfloat (ncm_sbessel_integrator_levin_get_reltol (sbilv), ==, 1.0e-6);
+    g_assert_cmpuint (ncm_sbessel_integrator_levin_get_ell_cache_max (sbilv), >=, lmax);
+    g_assert_cmpuint (ell_min, ==, lmin);
+    g_assert_cmpuint (ell_max, ==, lmax);
+  }
+
+  nc_xcor_solver_set_reltol (test->solver, 1.0e-7);
+  g_assert_null (nc_xcor_solver_peek_block_integrator (test->solver, 0));
 
   nc_xcor_free (xc);
   nc_xcor_kernel_free (nl);
   ncm_sbessel_integrator_free (small_sbi);
-  ncm_sbessel_integrator_free (sbi);
 }
 

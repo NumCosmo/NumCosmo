@@ -516,7 +516,7 @@ class TracerClSolver:
         self.ells = np.atleast_1d(np.asarray(ells, dtype=int))
         self.pairs = [(int(a), int(b)) for a, b in pairs]
         self.order = order
-        # One integrator for every kernel and as the solver's template.
+        # One integrator for every kernel; the solver builds its own per block.
         self.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
         self.kernels = [
             tracer_kernel(
@@ -537,7 +537,6 @@ class TracerClSolver:
         for a, b in self.pairs:
             for ell in self.ells:
                 self.solver.request_cl(ids[a], ids[b], int(ell), int(ell))
-        self.solver.set_integrator(self.integrator)
         self.solver.plan_blocks(block_size)
 
         self.xcor = Nc.Xcor.new(

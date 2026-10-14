@@ -111,16 +111,14 @@ _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1
 }
 
 /*
- * Aborts when NcXcor:reltol asks for more precision than the kernel's k-space
- * closure is built to, its Levin integrator's reltol. The exact quadrature
- * carries no tolerance of its own, so this is
- * a guard on the caller's stated intent: a C_ell cannot carry more precision
- * than its integrand.
+ * Aborts when NcXcor:reltol is below the reltol of @sbi, the Levin integrator that builds
+ * the kernel's k-space closure. The exact quadrature carries no tolerance of its own, so
+ * this is a guard on the caller's stated intent: a C_ell cannot carry more precision than
+ * its integrand.
  */
 void
-_nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk)
+_nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk, NcmSBesselIntegrator *sbi)
 {
-  NcmSBesselIntegrator *sbi = nc_xcor_kernel_peek_integrator (xclk);
   gdouble closure_reltol;
 
   if ((sbi == NULL) || !NCM_IS_SBESSEL_INTEGRATOR_LEVIN (sbi))
@@ -171,10 +169,10 @@ _nc_xcor_kernel_space_run (NcXcor *xc, const NcXcorKQuad *kquad, NcXcorKernel *x
   const guint block          = xc->ell_batch_size;
   guint i;
 
-  _nc_xcor_check_kernel_tolerance (xc, xclk1);
+  _nc_xcor_check_kernel_tolerance (xc, xclk1, sbi1);
 
   if (!isauto)
-    _nc_xcor_check_kernel_tolerance (xc, xclk2);
+    _nc_xcor_check_kernel_tolerance (xc, xclk2, sbi2);
 
   /* Either kernel's integrator serves a kernel that carries none of its own. */
   if (sbi1 == NULL)

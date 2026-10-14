@@ -860,8 +860,6 @@ _nc_xcor_ssc_sij_ensure_solver (NcXcorSSCSij *ssc_sij)
       nc_xcor_solver_request_cl (ssc_sij->solver, i, j, 0, lmax);
   }
 
-  nc_xcor_solver_set_integrator (ssc_sij->solver, ssc_sij->sbi);
-
   nc_xcor_solver_plan_blocks (ssc_sij->solver, ssc_sij->block_size);
 }
 

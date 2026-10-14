@@ -47,6 +47,10 @@
  * object exists precisely so bolting registration/request state onto
  * `NcXcor` doesn't change its contract for existing callers of
  * nc_xcor_compute().
+ *
+ * The solver builds the radial integrators itself, one #NcmSBesselIntegratorLevin per
+ * $\ell$-block at #NcXcorSolver:reltol; the kernels' own `integrator` properties are not
+ * used by nc_xcor_solver_solve() and still apply to nc_xcor_compute().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -56,7 +60,6 @@
 
 #include "nc/xcor/nc_xcor_solver.h"
 #include "nc/xcor/nc_xcor_priv.h"
-#include "ncm/core/ncm_serialize.h"
 #include "ncm/specfunc/ncm_sbessel_integrator_levin.h"
 
 typedef struct _NcXcorSolverRequest
@@ -83,11 +86,19 @@ struct _NcXcorSolver
   GPtrArray *results; /* element-type NcmVector*, owned refs, from solve() */
 
   /* One integrator per ell-block, indexed by block, NULL where the block needs
-   * none. Each is pinned to its block's multipole range for its whole life, so
-   * the factorization a #NcmSBesselIntegratorLevin builds for that range stays
-   * valid and is reused on every later solve(). Cleared by plan_blocks(). */
-  NcmSBesselIntegrator *integrator_proto; /* template the per-block ones are copied from, owned */
-  GPtrArray *block_integrators;           /* element-type NcmSBesselIntegrator*, owned refs, may hold NULLs */
+   * none. Each is built for its block's multipole range at reltol, so the
+   * factorization a #NcmSBesselIntegratorLevin builds for that range stays
+   * valid and is reused on every later solve(). Cleared by plan_blocks() when
+   * the blocks change and by set_reltol(). */
+  gdouble reltol;
+  GPtrArray *block_integrators; /* element-type NcmSBesselIntegrator*, owned refs, may hold NULLs */
+};
+
+enum
+{
+  PROP_0,
+  PROP_RELTOL,
+  PROP_LEN,
 };
 
 G_DEFINE_TYPE (NcXcorSolver, nc_xcor_solver, G_TYPE_OBJECT)
@@ -109,8 +120,40 @@ nc_xcor_solver_init (NcXcorSolver *solver)
   solver->blocks   = g_array_new (FALSE, FALSE, sizeof (NcXcorSolverBlock));
   solver->results  = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
 
-  solver->integrator_proto  = NULL;
+  solver->reltol            = 0.0;
   solver->block_integrators = g_ptr_array_new_with_free_func (_nc_xcor_solver_integrator_free0);
+}
+
+static void
+_nc_xcor_solver_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcXcorSolver *solver = NC_XCOR_SOLVER (object);
+
+  switch (prop_id)
+  {
+    case PROP_RELTOL:
+      nc_xcor_solver_set_reltol (solver, g_value_get_double (value));
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_nc_xcor_solver_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcXcorSolver *solver = NC_XCOR_SOLVER (object);
+
+  switch (prop_id)
+  {
+    case PROP_RELTOL:
+      g_value_set_double (value, nc_xcor_solver_get_reltol (solver));
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
 }
 
 static void
@@ -123,7 +166,6 @@ _nc_xcor_solver_dispose (GObject *object)
   g_clear_pointer (&solver->blocks, g_array_unref);
   g_clear_pointer (&solver->results, g_ptr_array_unref);
   g_clear_pointer (&solver->block_integrators, g_ptr_array_unref);
-  ncm_sbessel_integrator_clear (&solver->integrator_proto);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_solver_parent_class)->dispose (object);
@@ -141,8 +183,24 @@ nc_xcor_solver_class_init (NcXcorSolverClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose  = &_nc_xcor_solver_dispose;
-  object_class->finalize = &_nc_xcor_solver_finalize;
+  object_class->set_property = &_nc_xcor_solver_set_property;
+  object_class->get_property = &_nc_xcor_solver_get_property;
+  object_class->dispose      = &_nc_xcor_solver_dispose;
+  object_class->finalize     = &_nc_xcor_solver_finalize;
+
+  /**
+   * NcXcorSolver:reltol:
+   *
+   * Relative tolerance of the #NcmSBesselIntegratorLevin the solver builds for each
+   * $\ell$-block, #NcmSBesselIntegratorLevin:reltol.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RELTOL,
+                                   g_param_spec_double ("reltol",
+                                                        NULL,
+                                                        "Relative tolerance",
+                                                        GSL_DBL_EPSILON, 1.0, NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -356,35 +414,38 @@ nc_xcor_solver_clear_requests (NcXcorSolver *solver)
 }
 
 /**
- * nc_xcor_solver_set_integrator:
+ * nc_xcor_solver_set_reltol:
  * @solver: a #NcXcorSolver
- * @sbi: (nullable): a #NcmSBesselIntegrator to copy per block, or %NULL
+ * @reltol: relative tolerance, in [%GSL_DBL_EPSILON, 1]
  *
- * Sets the integrator @solver copies once per ell-block. Every block gets its
- * own copy of @sbi, pinned to that block's multipole range, so all registered
- * kernels share one integrator per block instead of each carrying its own.
- *
- * Passing %NULL restores the default, which is to copy the integrator of the
- * first registered kernel that has one. Either way the copies, not @sbi
- * itself, are used, and the kernels' own `integrator` properties are ignored
- * during nc_xcor_solver_solve() -- they still apply to nc_xcor_compute().
- *
- * Discards any existing per-block integrators, so the next
- * nc_xcor_solver_solve() rebuilds them.
- *
+ * Sets #NcXcorSolver:reltol. A different value discards the per-block integrators, so
+ * the next nc_xcor_solver_solve() builds them at @reltol.
  */
 void
-nc_xcor_solver_set_integrator (NcXcorSolver *solver, NcmSBesselIntegrator *sbi)
+nc_xcor_solver_set_reltol (NcXcorSolver *solver, gdouble reltol)
 {
   g_return_if_fail (NC_IS_XCOR_SOLVER (solver));
-  g_return_if_fail ((sbi == NULL) || NCM_IS_SBESSEL_INTEGRATOR (sbi));
+  g_return_if_fail ((reltol >= GSL_DBL_EPSILON) && (reltol <= 1.0));
 
-  ncm_sbessel_integrator_clear (&solver->integrator_proto);
+  if (solver->reltol == reltol)
+    return;
 
-  if (sbi != NULL)
-    solver->integrator_proto = ncm_sbessel_integrator_ref (sbi);
-
+  solver->reltol = reltol;
   g_ptr_array_set_size (solver->block_integrators, 0);
+}
+
+/**
+ * nc_xcor_solver_get_reltol:
+ * @solver: a #NcXcorSolver
+ *
+ * Returns: #NcXcorSolver:reltol
+ */
+gdouble
+nc_xcor_solver_get_reltol (NcXcorSolver *solver)
+{
+  g_return_val_if_fail (NC_IS_XCOR_SOLVER (solver), 0.0);
+
+  return solver->reltol;
 }
 
 /*
@@ -413,26 +474,17 @@ _nc_xcor_solver_block_needs_integrator (NcXcorSolver *solver, NcXcorSolverBlock 
 }
 
 /*
- * Fills in any per-block integrator not built yet, each a copy of the template
- * pinned to its block's range. Called serially before the parallel block loop:
- * building one is expensive (knots, the j_ell cache and the panel operators)
- * and happens once per block for the lifetime of @solver, not once per solve().
+ * Builds every per-block integrator not built yet: a #NcmSBesselIntegratorLevin for the
+ * block's multipole range at #NcXcorSolver:reltol, its j_ell cache covering the block, the
+ * other settings at their defaults. Called serially before the parallel block loop:
+ * building one is expensive (knots, the j_ell cache and the panel operators) and happens
+ * once per block for the lifetime of the plan, not once per solve().
  */
 static void
 _nc_xcor_solver_prepare_block_integrators (NcXcorSolver *solver)
 {
-  const guint n_blocks        = solver->blocks->len;
-  NcmSBesselIntegrator *proto = solver->integrator_proto;
-  NcmSerialize *ser           = NULL;
+  const guint n_blocks = solver->blocks->len;
   guint b;
-
-  if (proto == NULL)
-  {
-    guint i;
-
-    for (i = 0; (i < solver->kernels->len) && (proto == NULL); i++)
-      proto = nc_xcor_kernel_peek_integrator (g_ptr_array_index (solver->kernels, i));
-  }
 
   if (solver->block_integrators->len != n_blocks)
     g_ptr_array_set_size (solver->block_integrators, n_blocks);
@@ -440,7 +492,6 @@ _nc_xcor_solver_prepare_block_integrators (NcXcorSolver *solver)
   for (b = 0; b < n_blocks; b++)
   {
     NcXcorSolverBlock *block = &g_array_index (solver->blocks, NcXcorSolverBlock, b);
-    NcmSBesselIntegrator *sbi;
 
     if (g_ptr_array_index (solver->block_integrators, b) != NULL)
       continue;
@@ -448,35 +499,15 @@ _nc_xcor_solver_prepare_block_integrators (NcXcorSolver *solver)
     if (!_nc_xcor_solver_block_needs_integrator (solver, block))
       continue;
 
-    if (proto == NULL)
-      g_error ("_nc_xcor_solver_prepare_block_integrators: block [%u, %u] needs an integrator "
-               "but no registered kernel has one and none was set with "
-               "nc_xcor_solver_set_integrator().", block->lmin, block->lmax);
-
-    /* The template tabulates j_ell only up to its ell-cache-max, an absolute
-     * multipole, so it must cover every block it is copied into. */
-    if (NCM_IS_SBESSEL_INTEGRATOR_LEVIN (proto))
-    {
-      const guint ell_cache_max = ncm_sbessel_integrator_levin_get_ell_cache_max (NCM_SBESSEL_INTEGRATOR_LEVIN (proto));
-
-      if (block->lmax > ell_cache_max)
-        g_error ("_nc_xcor_solver_prepare_block_integrators: block [%u, %u] reaches above "
-                 "the integrator's ell-cache-max (%u). Set an integrator built with "
-                 "ell-cache-max >= %u with nc_xcor_solver_set_integrator().",
-                 block->lmin, block->lmax, ell_cache_max, block->lmax);
-    }
-
-    if (ser == NULL)
-      ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-
-    sbi = NCM_SBESSEL_INTEGRATOR (ncm_serialize_dup_obj (ser, G_OBJECT (proto)));
-    ncm_serialize_reset (ser, TRUE);
-
-    ncm_sbessel_integrator_set_ell_range (sbi, block->lmin, block->lmax);
-    g_ptr_array_index (solver->block_integrators, b) = sbi;
+    g_ptr_array_index (solver->block_integrators, b) =
+      ncm_sbessel_integrator_levin_new_full (block->lmin, block->lmax,
+                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MIN,
+                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MAX,
+                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
+                                             GSL_MAX (NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX, block->lmax),
+                                             solver->reltol,
+                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER);
   }
-
-  ncm_serialize_clear (&ser);
 }
 
 /**
@@ -685,10 +716,10 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
   k2     = g_ptr_array_index (kernels, req->kernel_id_2);
   isauto = (k1 == k2);
 
-  _nc_xcor_check_kernel_tolerance (xc, k1);
+  _nc_xcor_check_kernel_tolerance (xc, k1, sbi);
 
   if (!isauto)
-    _nc_xcor_check_kernel_tolerance (xc, k2);
+    _nc_xcor_check_kernel_tolerance (xc, k2, sbi);
 
   /* No blanket redshift-overlap short-circuit here: this path is
    * kernel-space only, where the two kernels couple through the outer k
