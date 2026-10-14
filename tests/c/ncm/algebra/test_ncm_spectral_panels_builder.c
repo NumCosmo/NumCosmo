@@ -40,6 +40,74 @@ typedef struct _Calls
   guint outside;
 } Calls;
 
+/* Kinks not given as breakpoints, at a point no bisection lands on: exp(x) plus
+ * |x - a| (C^0), or plus (x - a)|x - a| (C^1) and |x - a|^3 (C^2) */
+#define TEST_KINK_A 0.3137
+
+typedef struct _ThreadBuild
+{
+  NcmSpectralPanelsBuilder *builder;
+  NcmSpectralPanels *sp;
+} ThreadBuild;
+
+static void test_ncm_spectral_panels_builder_defaults (void);
+static void test_ncm_spectral_panels_builder_smooth (void);
+static void test_ncm_spectral_panels_builder_bisect (void);
+static void test_ncm_spectral_panels_builder_breakpoints (void);
+static void test_ncm_spectral_panels_builder_known_values (void);
+static void test_ncm_spectral_panels_builder_grid (void);
+static void test_ncm_spectral_panels_builder_reuse (void);
+static void test_ncm_spectral_panels_builder_threads (void);
+static void test_ncm_spectral_panels_builder_undeclared_step (void);
+static void test_ncm_spectral_panels_builder_undeclared_step_subprocess (void);
+static void test_ncm_spectral_panels_builder_undeclared_kinks (void);
+static void test_ncm_spectral_panels_builder_level_cap_raised (void);
+static void test_ncm_spectral_panels_builder_undeclared_kink_floor (void);
+static void test_ncm_spectral_panels_builder_undeclared_kink_floor_subprocess (void);
+static void test_ncm_spectral_panels_builder_levels (void);
+static void test_ncm_spectral_panels_builder_levels_subprocess (void);
+static void test_ncm_spectral_panels_builder_grid_range (void);
+static void test_ncm_spectral_panels_builder_grid_range_subprocess (void);
+static void test_ncm_spectral_panels_builder_breakpoint_order (void);
+static void test_ncm_spectral_panels_builder_breakpoint_order_subprocess (void);
+static void test_ncm_spectral_panels_builder_known_values_pair (void);
+static void test_ncm_spectral_panels_builder_known_values_pair_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/spectral_panels_builder/defaults", &test_ncm_spectral_panels_builder_defaults);
+  g_test_add_func ("/ncm/spectral_panels_builder/smooth", &test_ncm_spectral_panels_builder_smooth);
+  g_test_add_func ("/ncm/spectral_panels_builder/bisect", &test_ncm_spectral_panels_builder_bisect);
+  g_test_add_func ("/ncm/spectral_panels_builder/breakpoints", &test_ncm_spectral_panels_builder_breakpoints);
+  g_test_add_func ("/ncm/spectral_panels_builder/known_values", &test_ncm_spectral_panels_builder_known_values);
+  g_test_add_func ("/ncm/spectral_panels_builder/grid", &test_ncm_spectral_panels_builder_grid);
+  g_test_add_func ("/ncm/spectral_panels_builder/reuse", &test_ncm_spectral_panels_builder_reuse);
+  g_test_add_func ("/ncm/spectral_panels_builder/threads", &test_ncm_spectral_panels_builder_threads);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_step", &test_ncm_spectral_panels_builder_undeclared_step);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_step/subprocess", &test_ncm_spectral_panels_builder_undeclared_step_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kinks", &test_ncm_spectral_panels_builder_undeclared_kinks);
+  g_test_add_func ("/ncm/spectral_panels_builder/level_cap_raised", &test_ncm_spectral_panels_builder_level_cap_raised);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kink_floor", &test_ncm_spectral_panels_builder_undeclared_kink_floor);
+  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kink_floor/subprocess", &test_ncm_spectral_panels_builder_undeclared_kink_floor_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_builder/levels", &test_ncm_spectral_panels_builder_levels);
+  g_test_add_func ("/ncm/spectral_panels_builder/levels/subprocess", &test_ncm_spectral_panels_builder_levels_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_builder/grid_range", &test_ncm_spectral_panels_builder_grid_range);
+  g_test_add_func ("/ncm/spectral_panels_builder/grid_range/subprocess", &test_ncm_spectral_panels_builder_grid_range_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_builder/breakpoint_order", &test_ncm_spectral_panels_builder_breakpoint_order);
+  g_test_add_func ("/ncm/spectral_panels_builder/breakpoint_order/subprocess", &test_ncm_spectral_panels_builder_breakpoint_order_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_builder/known_values_pair", &test_ncm_spectral_panels_builder_known_values_pair);
+  g_test_add_func ("/ncm/spectral_panels_builder/known_values_pair/subprocess", &test_ncm_spectral_panels_builder_known_values_pair_subprocess);
+
+  g_test_run ();
+
+  return 0;
+}
+
 static Calls *
 _calls_new (NcmVector *breakpoints)
 {
@@ -122,10 +190,6 @@ _undeclared_step (gpointer user_data, guint i, gdouble x, NcmVector *fval)
 {
   ncm_vector_set (fval, 0, (x < 0.3) ? 0.0 : 1.0);
 }
-
-/* Kinks not given as breakpoints, at a point no bisection lands on: exp(x) plus
- * |x - a| (C^0), or plus (x - a)|x - a| (C^1) and |x - a|^3 (C^2) */
-#define TEST_KINK_A 0.3137
 
 static void
 _undeclared_kink_c0 (gpointer user_data, guint i, gdouble x, NcmVector *fval)
@@ -240,6 +304,42 @@ _builder_new (gdouble min_panels_per_efold)
   ncm_spectral_panels_builder_set_min_panels_per_efold (builder, min_panels_per_efold);
 
   return builder;
+}
+
+static gpointer
+_thread_build (gpointer data)
+{
+  ThreadBuild *tb = data;
+  guint k;
+
+  for (k = 0; k < 20; k++)
+    ncm_spectral_panels_builder_build (tb->builder, _hard, NULL, -1.0, 1.0, NULL, NULL, NULL, 1.0e-12, 0.0, tb->sp);
+
+  return NULL;
+}
+
+/* The panel holding TEST_KINK_A is the narrowest of @sp */
+static void
+_assert_narrowest_at_kink (NcmSpectralPanels *sp)
+{
+  const guint n_panels = ncm_spectral_panels_get_n_panels (sp);
+  gdouble w_min        = G_MAXDOUBLE;
+  gdouble w_kink       = 0.0;
+  guint i;
+
+  for (i = 0; i < n_panels; i++)
+  {
+    gdouble a, b;
+    guint N;
+
+    ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
+    w_min = MIN (w_min, b - a);
+
+    if ((a <= TEST_KINK_A) && (TEST_KINK_A <= b))
+      w_kink = b - a;
+  }
+
+  g_assert_cmpfloat (w_kink, ==, w_min);
 }
 
 static void
@@ -468,24 +568,6 @@ test_ncm_spectral_panels_builder_reuse (void)
   ncm_spectral_panels_builder_free (builder);
 }
 
-typedef struct _ThreadBuild
-{
-  NcmSpectralPanelsBuilder *builder;
-  NcmSpectralPanels *sp;
-} ThreadBuild;
-
-static gpointer
-_thread_build (gpointer data)
-{
-  ThreadBuild *tb = data;
-  guint k;
-
-  for (k = 0; k < 20; k++)
-    ncm_spectral_panels_builder_build (tb->builder, _hard, NULL, -1.0, 1.0, NULL, NULL, NULL, 1.0e-12, 0.0, tb->sp);
-
-  return NULL;
-}
-
 /* Builds in two threads on one builder give the serial panels */
 static void
 test_ncm_spectral_panels_builder_threads (void)
@@ -533,30 +615,6 @@ test_ncm_spectral_panels_builder_undeclared_step_subprocess (void)
   NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
 
   ncm_spectral_panels_builder_build (builder, _undeclared_step, NULL, 0.1, 1.0, NULL, NULL, NULL, 1.0e-10, 0.0, sp);
-}
-
-/* The panel holding TEST_KINK_A is the narrowest of @sp */
-static void
-_assert_narrowest_at_kink (NcmSpectralPanels *sp)
-{
-  const guint n_panels = ncm_spectral_panels_get_n_panels (sp);
-  gdouble w_min        = G_MAXDOUBLE;
-  gdouble w_kink       = 0.0;
-  guint i;
-
-  for (i = 0; i < n_panels; i++)
-  {
-    gdouble a, b;
-    guint N;
-
-    ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
-    w_min = MIN (w_min, b - a);
-
-    if ((a <= TEST_KINK_A) && (TEST_KINK_A <= b))
-      w_kink = b - a;
-  }
-
-  g_assert_cmpfloat (w_kink, ==, w_min);
 }
 
 /*
@@ -707,40 +765,5 @@ test_ncm_spectral_panels_builder_known_values_pair_subprocess (void)
   NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
 
   ncm_spectral_panels_builder_build (builder, _linear, NULL, 0.0, 1.0, breakpoints, f_minus, NULL, 1.0e-10, 0.0, sp);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/spectral_panels_builder/defaults", &test_ncm_spectral_panels_builder_defaults);
-  g_test_add_func ("/ncm/spectral_panels_builder/smooth", &test_ncm_spectral_panels_builder_smooth);
-  g_test_add_func ("/ncm/spectral_panels_builder/bisect", &test_ncm_spectral_panels_builder_bisect);
-  g_test_add_func ("/ncm/spectral_panels_builder/breakpoints", &test_ncm_spectral_panels_builder_breakpoints);
-  g_test_add_func ("/ncm/spectral_panels_builder/known_values", &test_ncm_spectral_panels_builder_known_values);
-  g_test_add_func ("/ncm/spectral_panels_builder/grid", &test_ncm_spectral_panels_builder_grid);
-  g_test_add_func ("/ncm/spectral_panels_builder/reuse", &test_ncm_spectral_panels_builder_reuse);
-  g_test_add_func ("/ncm/spectral_panels_builder/threads", &test_ncm_spectral_panels_builder_threads);
-  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_step", &test_ncm_spectral_panels_builder_undeclared_step);
-  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_step/subprocess", &test_ncm_spectral_panels_builder_undeclared_step_subprocess);
-  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kinks", &test_ncm_spectral_panels_builder_undeclared_kinks);
-  g_test_add_func ("/ncm/spectral_panels_builder/level_cap_raised", &test_ncm_spectral_panels_builder_level_cap_raised);
-  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kink_floor", &test_ncm_spectral_panels_builder_undeclared_kink_floor);
-  g_test_add_func ("/ncm/spectral_panels_builder/undeclared_kink_floor/subprocess", &test_ncm_spectral_panels_builder_undeclared_kink_floor_subprocess);
-  g_test_add_func ("/ncm/spectral_panels_builder/levels", &test_ncm_spectral_panels_builder_levels);
-  g_test_add_func ("/ncm/spectral_panels_builder/levels/subprocess", &test_ncm_spectral_panels_builder_levels_subprocess);
-  g_test_add_func ("/ncm/spectral_panels_builder/grid_range", &test_ncm_spectral_panels_builder_grid_range);
-  g_test_add_func ("/ncm/spectral_panels_builder/grid_range/subprocess", &test_ncm_spectral_panels_builder_grid_range_subprocess);
-  g_test_add_func ("/ncm/spectral_panels_builder/breakpoint_order", &test_ncm_spectral_panels_builder_breakpoint_order);
-  g_test_add_func ("/ncm/spectral_panels_builder/breakpoint_order/subprocess", &test_ncm_spectral_panels_builder_breakpoint_order_subprocess);
-  g_test_add_func ("/ncm/spectral_panels_builder/known_values_pair", &test_ncm_spectral_panels_builder_known_values_pair);
-  g_test_add_func ("/ncm/spectral_panels_builder/known_values_pair/subprocess", &test_ncm_spectral_panels_builder_known_values_pair_subprocess);
-
-  g_test_run ();
-
-  return 0;
 }
 

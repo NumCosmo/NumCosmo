@@ -35,8 +35,58 @@
 
 /* Three panels with a different number of coefficients each */
 #define TEST_N_PANELS 3
+
+static void test_ncm_spectral_panels_new (void);
+static void test_ncm_spectral_panels_append (void);
+static void test_ncm_spectral_panels_find_panel (void);
+static void test_ncm_spectral_panels_eval (void);
+static void test_ncm_spectral_panels_restrict (void);
+static void test_ncm_spectral_panels_reset (void);
+static void test_ncm_spectral_panels_serialize (void);
+static void test_ncm_spectral_panels_append_rows (void);
+static void test_ncm_spectral_panels_append_rows_subprocess (void);
+static void test_ncm_spectral_panels_append_empty (void);
+static void test_ncm_spectral_panels_append_empty_subprocess (void);
+static void test_ncm_spectral_panels_append_gap (void);
+static void test_ncm_spectral_panels_append_gap_subprocess (void);
+static void test_ncm_spectral_panels_properties_edges (void);
+static void test_ncm_spectral_panels_properties_edges_subprocess (void);
+static void test_ncm_spectral_panels_properties_rows (void);
+static void test_ncm_spectral_panels_properties_rows_subprocess (void);
+
 static const gdouble test_edges[TEST_N_PANELS + 1] = {0.0, 1.0, 2.5, 4.0};
-static const guint test_N[TEST_N_PANELS]           = {4, 9, 5};
+
+static const guint test_N[TEST_N_PANELS] = {4, 9, 5};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/spectral_panels/new", &test_ncm_spectral_panels_new);
+  g_test_add_func ("/ncm/spectral_panels/append", &test_ncm_spectral_panels_append);
+  g_test_add_func ("/ncm/spectral_panels/find_panel", &test_ncm_spectral_panels_find_panel);
+  g_test_add_func ("/ncm/spectral_panels/eval", &test_ncm_spectral_panels_eval);
+  g_test_add_func ("/ncm/spectral_panels/restrict", &test_ncm_spectral_panels_restrict);
+  g_test_add_func ("/ncm/spectral_panels/reset", &test_ncm_spectral_panels_reset);
+  g_test_add_func ("/ncm/spectral_panels/serialize", &test_ncm_spectral_panels_serialize);
+  g_test_add_func ("/ncm/spectral_panels/append/rows", &test_ncm_spectral_panels_append_rows);
+  g_test_add_func ("/ncm/spectral_panels/append/rows/subprocess", &test_ncm_spectral_panels_append_rows_subprocess);
+  g_test_add_func ("/ncm/spectral_panels/append/empty", &test_ncm_spectral_panels_append_empty);
+  g_test_add_func ("/ncm/spectral_panels/append/empty/subprocess", &test_ncm_spectral_panels_append_empty_subprocess);
+  g_test_add_func ("/ncm/spectral_panels/append/gap", &test_ncm_spectral_panels_append_gap);
+  g_test_add_func ("/ncm/spectral_panels/append/gap/subprocess", &test_ncm_spectral_panels_append_gap_subprocess);
+  g_test_add_func ("/ncm/spectral_panels/properties/edges", &test_ncm_spectral_panels_properties_edges);
+  g_test_add_func ("/ncm/spectral_panels/properties/edges/subprocess", &test_ncm_spectral_panels_properties_edges_subprocess);
+  g_test_add_func ("/ncm/spectral_panels/properties/rows", &test_ncm_spectral_panels_properties_rows);
+  g_test_add_func ("/ncm/spectral_panels/properties/rows/subprocess", &test_ncm_spectral_panels_properties_rows_subprocess);
+
+  g_test_run ();
+
+  return 0;
+}
 
 /* Row 0 is x^3, exact on every panel since each has at least four coefficients. Row 1 is
  * i + 1 on panel i, so it jumps at every interior edge. */
@@ -422,35 +472,5 @@ test_ncm_spectral_panels_properties_rows_subprocess (void)
   GVariant *panels = g_variant_ref_sink (g_variant_new_parsed ("([0.0, 1.0], [[1.0, 2.0, 3.0]])"));
 
   g_object_new (NCM_TYPE_SPECTRAL_PANELS, "fdim", 2, "panels", panels, NULL);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/spectral_panels/new", &test_ncm_spectral_panels_new);
-  g_test_add_func ("/ncm/spectral_panels/append", &test_ncm_spectral_panels_append);
-  g_test_add_func ("/ncm/spectral_panels/find_panel", &test_ncm_spectral_panels_find_panel);
-  g_test_add_func ("/ncm/spectral_panels/eval", &test_ncm_spectral_panels_eval);
-  g_test_add_func ("/ncm/spectral_panels/restrict", &test_ncm_spectral_panels_restrict);
-  g_test_add_func ("/ncm/spectral_panels/reset", &test_ncm_spectral_panels_reset);
-  g_test_add_func ("/ncm/spectral_panels/serialize", &test_ncm_spectral_panels_serialize);
-  g_test_add_func ("/ncm/spectral_panels/append/rows", &test_ncm_spectral_panels_append_rows);
-  g_test_add_func ("/ncm/spectral_panels/append/rows/subprocess", &test_ncm_spectral_panels_append_rows_subprocess);
-  g_test_add_func ("/ncm/spectral_panels/append/empty", &test_ncm_spectral_panels_append_empty);
-  g_test_add_func ("/ncm/spectral_panels/append/empty/subprocess", &test_ncm_spectral_panels_append_empty_subprocess);
-  g_test_add_func ("/ncm/spectral_panels/append/gap", &test_ncm_spectral_panels_append_gap);
-  g_test_add_func ("/ncm/spectral_panels/append/gap/subprocess", &test_ncm_spectral_panels_append_gap_subprocess);
-  g_test_add_func ("/ncm/spectral_panels/properties/edges", &test_ncm_spectral_panels_properties_edges);
-  g_test_add_func ("/ncm/spectral_panels/properties/edges/subprocess", &test_ncm_spectral_panels_properties_edges_subprocess);
-  g_test_add_func ("/ncm/spectral_panels/properties/rows", &test_ncm_spectral_panels_properties_rows);
-  g_test_add_func ("/ncm/spectral_panels/properties/rows/subprocess", &test_ncm_spectral_panels_properties_rows_subprocess);
-
-  g_test_run ();
-
-  return 0;
 }
 

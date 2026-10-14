@@ -49,6 +49,29 @@ typedef struct _Side
   gdouble factor[2][2];
 } Side;
 
+typedef struct _ThreadProduct
+{
+  NcmSpectralPanelsProduct *prod;
+  NcmSpectralPanels *sp_P;
+  NcmSpectralPanels *sp_Q;
+  NcmVector *s;
+  NcmVector *result;
+} ThreadProduct;
+
+static void test_ncm_spectral_panels_product_p (void);
+static void test_ncm_spectral_panels_product_cross (void);
+static void test_ncm_spectral_panels_product_auto (void);
+static void test_ncm_spectral_panels_product_scaled (void);
+static void test_ncm_spectral_panels_product_mixed (void);
+static void test_ncm_spectral_panels_product_large_tables (void);
+static void test_ncm_spectral_panels_product_disjoint (void);
+static void test_ncm_spectral_panels_product_narrow (void);
+static void test_ncm_spectral_panels_product_threads (void);
+static void test_ncm_spectral_panels_product_fdim (void);
+static void test_ncm_spectral_panels_product_fdim_subprocess (void);
+static void test_ncm_spectral_panels_product_lengths (void);
+static void test_ncm_spectral_panels_product_lengths_subprocess (void);
+
 static const Side side_P = {
   0.5, 3.0, 1.3, {
     1.0, 0.5
@@ -60,6 +83,7 @@ static const Side side_P = {
     }
   }
 };
+
 static const Side side_Q = {
   0.2, 2.6, 2.1, {
     -2.0, 1.0
@@ -71,6 +95,32 @@ static const Side side_Q = {
     }
   }
 };
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/spectral_panels_product/p", &test_ncm_spectral_panels_product_p);
+  g_test_add_func ("/ncm/spectral_panels_product/cross", &test_ncm_spectral_panels_product_cross);
+  g_test_add_func ("/ncm/spectral_panels_product/auto", &test_ncm_spectral_panels_product_auto);
+  g_test_add_func ("/ncm/spectral_panels_product/scaled", &test_ncm_spectral_panels_product_scaled);
+  g_test_add_func ("/ncm/spectral_panels_product/mixed", &test_ncm_spectral_panels_product_mixed);
+  g_test_add_func ("/ncm/spectral_panels_product/large_tables", &test_ncm_spectral_panels_product_large_tables);
+  g_test_add_func ("/ncm/spectral_panels_product/disjoint", &test_ncm_spectral_panels_product_disjoint);
+  g_test_add_func ("/ncm/spectral_panels_product/narrow", &test_ncm_spectral_panels_product_narrow);
+  g_test_add_func ("/ncm/spectral_panels_product/threads", &test_ncm_spectral_panels_product_threads);
+  g_test_add_func ("/ncm/spectral_panels_product/fdim", &test_ncm_spectral_panels_product_fdim);
+  g_test_add_func ("/ncm/spectral_panels_product/fdim/subprocess", &test_ncm_spectral_panels_product_fdim_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_product/lengths", &test_ncm_spectral_panels_product_lengths);
+  g_test_add_func ("/ncm/spectral_panels_product/lengths/subprocess", &test_ncm_spectral_panels_product_lengths_subprocess);
+
+  g_test_run ();
+
+  return 0;
+}
 
 static void
 _side_F (gpointer user_data, guint i, gdouble x, NcmVector *fval)
@@ -229,6 +279,18 @@ _check_pair (NcmSpectralPanels *sp_P, const Side *P, NcmVector *s1, NcmSpectralP
 
   ncm_vector_free (err);
   ncm_vector_free (result);
+}
+
+static gpointer
+_thread_product (gpointer data)
+{
+  ThreadProduct *tp = data;
+  guint k;
+
+  for (k = 0; k < 50; k++)
+    ncm_spectral_panels_product_integrate (tp->prod, tp->sp_P, tp->s, tp->sp_Q, NULL, tp->result, NULL);
+
+  return NULL;
 }
 
 static void
@@ -427,27 +489,6 @@ test_ncm_spectral_panels_product_narrow (void)
   ncm_spectral_panels_product_free (prod);
 }
 
-typedef struct _ThreadProduct
-{
-  NcmSpectralPanelsProduct *prod;
-  NcmSpectralPanels *sp_P;
-  NcmSpectralPanels *sp_Q;
-  NcmVector *s;
-  NcmVector *result;
-} ThreadProduct;
-
-static gpointer
-_thread_product (gpointer data)
-{
-  ThreadProduct *tp = data;
-  guint k;
-
-  for (k = 0; k < 50; k++)
-    ncm_spectral_panels_product_integrate (tp->prod, tp->sp_P, tp->s, tp->sp_Q, NULL, tp->result, NULL);
-
-  return NULL;
-}
-
 /* Calls in two threads on one object give the serial result */
 static void
 test_ncm_spectral_panels_product_threads (void)
@@ -524,31 +565,5 @@ test_ncm_spectral_panels_product_lengths_subprocess (void)
   NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (2);
 
   ncm_spectral_panels_product_integrate (prod, sp_P, NULL, sp_P, NULL, result, NULL);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/spectral_panels_product/p", &test_ncm_spectral_panels_product_p);
-  g_test_add_func ("/ncm/spectral_panels_product/cross", &test_ncm_spectral_panels_product_cross);
-  g_test_add_func ("/ncm/spectral_panels_product/auto", &test_ncm_spectral_panels_product_auto);
-  g_test_add_func ("/ncm/spectral_panels_product/scaled", &test_ncm_spectral_panels_product_scaled);
-  g_test_add_func ("/ncm/spectral_panels_product/mixed", &test_ncm_spectral_panels_product_mixed);
-  g_test_add_func ("/ncm/spectral_panels_product/large_tables", &test_ncm_spectral_panels_product_large_tables);
-  g_test_add_func ("/ncm/spectral_panels_product/disjoint", &test_ncm_spectral_panels_product_disjoint);
-  g_test_add_func ("/ncm/spectral_panels_product/narrow", &test_ncm_spectral_panels_product_narrow);
-  g_test_add_func ("/ncm/spectral_panels_product/threads", &test_ncm_spectral_panels_product_threads);
-  g_test_add_func ("/ncm/spectral_panels_product/fdim", &test_ncm_spectral_panels_product_fdim);
-  g_test_add_func ("/ncm/spectral_panels_product/fdim/subprocess", &test_ncm_spectral_panels_product_fdim_subprocess);
-  g_test_add_func ("/ncm/spectral_panels_product/lengths", &test_ncm_spectral_panels_product_lengths);
-  g_test_add_func ("/ncm/spectral_panels_product/lengths/subprocess", &test_ncm_spectral_panels_product_lengths_subprocess);
-
-  g_test_run ();
-
-  return 0;
 }
 
