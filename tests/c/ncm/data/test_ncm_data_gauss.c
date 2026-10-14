@@ -36,8 +36,8 @@
  * A NcmDataGauss with a fixed inverse covariance: the mean is mu_1 in every
  * component of the NcmModelMVND mean (mu_0, mu_1).
  */
-
 #define TEST_TYPE_GAUSS (test_gauss_get_type ())
+
 G_DECLARE_DERIVABLE_TYPE (TestGauss, test_gauss, TEST, GAUSS, NcmDataGauss)
 
 struct _TestGaussClass
@@ -46,6 +46,56 @@ struct _TestGaussClass
 };
 
 G_DEFINE_TYPE (TestGauss, test_gauss, NCM_TYPE_DATA_GAUSS)
+
+/*
+ * The same data with the inverse covariance I / s^2, s = mu_0; inv_cov_func returns
+ * TRUE only when s changed.
+ */
+#define TEST_TYPE_GAUSS_COV (test_gauss_cov_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestGaussCov, test_gauss_cov, TEST, GAUSS_COV, TestGauss)
+
+struct _TestGaussCov
+{
+  TestGauss parent_instance;
+  gdouble last_s;
+};
+
+G_DEFINE_TYPE (TestGaussCov, test_gauss_cov, TEST_TYPE_GAUSS)
+
+typedef struct _TestNcmDataGauss
+{
+  NcmMSet *mset;
+  NcmDataGauss *gauss;
+  NcmRNG *rng;
+} TestNcmDataGauss;
+
+void test_ncm_data_gauss_new (TestNcmDataGauss *test, gconstpointer pdata);
+void test_ncm_data_gauss_free (TestNcmDataGauss *test, gconstpointer pdata);
+
+void test_ncm_data_gauss_inv_cov_prop (TestNcmDataGauss *test, gconstpointer pdata);
+void test_ncm_data_gauss_inv_cov_func (TestNcmDataGauss *test, gconstpointer pdata);
+void test_ncm_data_gauss_resize (TestNcmDataGauss *test, gconstpointer pdata);
+void test_ncm_data_gauss_errors (void);
+void test_ncm_data_gauss_not_posdef_subprocess (void);
+void test_ncm_data_gauss_ls_bootstrap_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/data_gauss/inv_cov/prop", TestNcmDataGauss, NULL, &test_ncm_data_gauss_new, &test_ncm_data_gauss_inv_cov_prop, &test_ncm_data_gauss_free);
+  g_test_add ("/ncm/data_gauss/inv_cov/func", TestNcmDataGauss, NULL, &test_ncm_data_gauss_new, &test_ncm_data_gauss_inv_cov_func, &test_ncm_data_gauss_free);
+  g_test_add ("/ncm/data_gauss/resize", TestNcmDataGauss, NULL, &test_ncm_data_gauss_new, &test_ncm_data_gauss_resize, &test_ncm_data_gauss_free);
+  g_test_add_func ("/ncm/data_gauss/errors", &test_ncm_data_gauss_errors);
+  g_test_add_func ("/ncm/data_gauss/errors/not_posdef/subprocess", &test_ncm_data_gauss_not_posdef_subprocess);
+  g_test_add_func ("/ncm/data_gauss/errors/ls_bootstrap/subprocess", &test_ncm_data_gauss_ls_bootstrap_subprocess);
+
+  g_test_run ();
+}
 
 static void
 test_gauss_init (TestGauss *tg)
@@ -66,22 +116,6 @@ test_gauss_class_init (TestGaussClass *klass)
   NCM_DATA_CLASS (klass)->name            = "Test Gaussian data";
   NCM_DATA_GAUSS_CLASS (klass)->mean_func = &_test_gauss_mean_func;
 }
-
-/*
- * The same data with the inverse covariance I / s^2, s = mu_0; inv_cov_func returns
- * TRUE only when s changed.
- */
-
-#define TEST_TYPE_GAUSS_COV (test_gauss_cov_get_type ())
-G_DECLARE_FINAL_TYPE (TestGaussCov, test_gauss_cov, TEST, GAUSS_COV, TestGauss)
-
-struct _TestGaussCov
-{
-  TestGauss parent_instance;
-  gdouble last_s;
-};
-
-G_DEFINE_TYPE (TestGaussCov, test_gauss_cov, TEST_TYPE_GAUSS)
 
 static void
 test_gauss_cov_init (TestGaussCov *tgc)
@@ -111,44 +145,10 @@ test_gauss_cov_class_init (TestGaussCovClass *klass)
   NCM_DATA_GAUSS_CLASS (klass)->inv_cov_func = &_test_gauss_cov_inv_cov_func;
 }
 
-typedef struct _TestNcmDataGauss
-{
-  NcmMSet *mset;
-  NcmDataGauss *gauss;
-  NcmRNG *rng;
-} TestNcmDataGauss;
-
 static void
 test_ncm_data_gauss_set_s (TestNcmDataGauss *test, const gdouble s)
 {
   ncm_model_orig_vparam_set (ncm_mset_peek (test->mset, ncm_model_mvnd_id ()), NCM_MODEL_MVND_MEAN, 0, s);
-}
-
-void test_ncm_data_gauss_new (TestNcmDataGauss *test, gconstpointer pdata);
-void test_ncm_data_gauss_free (TestNcmDataGauss *test, gconstpointer pdata);
-
-void test_ncm_data_gauss_inv_cov_prop (TestNcmDataGauss *test, gconstpointer pdata);
-void test_ncm_data_gauss_inv_cov_func (TestNcmDataGauss *test, gconstpointer pdata);
-void test_ncm_data_gauss_resize (TestNcmDataGauss *test, gconstpointer pdata);
-void test_ncm_data_gauss_errors (void);
-void test_ncm_data_gauss_not_posdef_subprocess (void);
-void test_ncm_data_gauss_ls_bootstrap_subprocess (void);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/data_gauss/inv_cov/prop", TestNcmDataGauss, NULL, &test_ncm_data_gauss_new, &test_ncm_data_gauss_inv_cov_prop, &test_ncm_data_gauss_free);
-  g_test_add ("/ncm/data_gauss/inv_cov/func", TestNcmDataGauss, NULL, &test_ncm_data_gauss_new, &test_ncm_data_gauss_inv_cov_func, &test_ncm_data_gauss_free);
-  g_test_add ("/ncm/data_gauss/resize", TestNcmDataGauss, NULL, &test_ncm_data_gauss_new, &test_ncm_data_gauss_resize, &test_ncm_data_gauss_free);
-  g_test_add_func ("/ncm/data_gauss/errors", &test_ncm_data_gauss_errors);
-  g_test_add_func ("/ncm/data_gauss/errors/not_posdef/subprocess", &test_ncm_data_gauss_not_posdef_subprocess);
-  g_test_add_func ("/ncm/data_gauss/errors/ls_bootstrap/subprocess", &test_ncm_data_gauss_ls_bootstrap_subprocess);
-
-  g_test_run ();
 }
 
 void

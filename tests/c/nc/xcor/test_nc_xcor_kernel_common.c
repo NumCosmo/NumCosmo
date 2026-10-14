@@ -84,6 +84,177 @@ typedef struct _TestKernel
   gboolean own_binary;
 } TestKernel;
 
+/* The crosses the backends are compared on, by the name of the fixture's kernel */
+typedef struct _TestCross
+{
+  const gchar *name;
+
+  NcXcorKernel *(*build_partner) (TestNcXcorKernel *test);
+} TestCross;
+
+typedef NcXcorKernel *(*TestDndzBuild) (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz);
+
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcorKernel *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_kernel_new (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_free (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_basic (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_knobs (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_z_range (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_limber (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_k_range (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_components (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_noise (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_serialize (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_limber_backends (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_limber_backends_cross (TestNcXcorKernel *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_dndz_untouched (void);
+static void test_nc_xcor_kernel_gal_magbias_null (void);
+static void test_nc_xcor_kernel_integrator (void);
+static void test_nc_xcor_kernel_cluster_limber_range_ends (void);
+static void test_nc_xcor_kernel_gal_limber_capped_powspec (void);
+static void test_nc_xcor_kernel_gal_rsd_limber_steps (void);
+static void test_nc_xcor_kernel_gal_rsd_limber_z_st (void);
+static void test_nc_xcor_kernel_gal_rsd_limber_z_trap (void);
+static void test_nc_xcor_kernel_gal_bias (void);
+static void test_nc_xcor_kernel_cluster_tophat_volume_normalized (void);
+static void test_nc_xcor_kernel_table_full (void);
+static void test_nc_xcor_kernel_radial_kdep (void);
+static NcXcorKernel *_build_gal (TestNcXcorKernel *test);
+static NcXcorKernel *_build_gal_magbias (TestNcXcorKernel *test);
+static NcXcorKernel *_build_weak_lensing (TestNcXcorKernel *test);
+static NcXcorKernel *_build_cmb_lensing (TestNcXcorKernel *test);
+static NcXcorKernel *_build_cmb_isw (TestNcXcorKernel *test);
+static NcXcorKernel *_build_tsz (TestNcXcorKernel *test);
+static NcXcorKernel *_build_cluster_tophat (TestNcXcorKernel *test);
+static NcXcorKernel *_build_table (TestNcXcorKernel *test);
+
+static const TestKernel test_kernels[] = {
+  {"gal",            &_build_gal,            TEST_ZMAX,     TRUE,  FALSE},
+  {"gal_magbias",    &_build_gal_magbias,    TEST_ZMAX,     TRUE,  FALSE},
+  {"weak_lensing",   &_build_weak_lensing,   TEST_ZMAX,     TRUE,  FALSE},
+  {"cmb_lensing",    &_build_cmb_lensing,    TEST_ZMAX_LSS, TRUE,  TRUE },
+  {"cmb_isw",        &_build_cmb_isw,        TEST_ZMAX_LSS, TRUE,  TRUE },
+  {"tsz",            &_build_tsz,            TEST_ZMAX,     FALSE, FALSE},
+  {"cluster_tophat", &_build_cluster_tophat, TEST_ZMAX,     FALSE, FALSE},
+  {"table",          &_build_table,          TEST_ZMAX,     FALSE, FALSE},
+};
+
+static const TestCross test_crosses[] = {
+  {"gal",         &_build_weak_lensing},
+  {"cmb_lensing", &_build_cmb_isw     },
+};
+
+static const TestCheck test_checks[] = {
+  {"basic",      &test_nc_xcor_kernel_basic},
+  {"knobs",      &test_nc_xcor_kernel_knobs},
+  {"z_range",    &test_nc_xcor_kernel_z_range},
+  {"limber",     &test_nc_xcor_kernel_limber},
+  {"k_range",    &test_nc_xcor_kernel_k_range},
+  {"components", &test_nc_xcor_kernel_components},
+  {"noise",      &test_nc_xcor_kernel_noise},
+  {"serialize",  &test_nc_xcor_kernel_serialize},
+  {"limber_backends", &test_nc_xcor_kernel_limber_backends},
+};
+
+/**
+ * test_nc_xcor_kernel_main:
+ * @argc: the argument count of main ()
+ * @argv: the arguments of main ()
+ * @kernel: (nullable): the kernel this binary runs, one marked own_binary in test_kernels
+ *
+ * Registers and runs the checks of @kernel, or with %NULL those of every kernel not marked
+ * own_binary together with the kernel-specific tests.
+ *
+ * Returns: the result of g_test_run ()
+ */
+gint
+test_nc_xcor_kernel_main (gint argc, gchar *argv[], const gchar *kernel)
+{
+  gboolean found = (kernel == NULL);
+  guint i, j;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_kernels); i++)
+  {
+    if (kernel == NULL)
+    {
+      if (test_kernels[i].own_binary)
+        continue;
+    }
+    else if (g_strcmp0 (kernel, test_kernels[i].name) != 0)
+    {
+      continue;
+    }
+    else if (!test_kernels[i].own_binary)
+    {
+      g_error ("test_nc_xcor_kernel_main: kernel `%s' is not marked own_binary.", kernel);
+    }
+    else
+    {
+      found = TRUE;
+    }
+
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/kernel/%s/%s", test_kernels[i].name, test_checks[j].name);
+
+      g_test_add (path, TestNcXcorKernel, &test_kernels[i],
+                  &test_nc_xcor_kernel_new,
+                  test_checks[j].func,
+                  &test_nc_xcor_kernel_free);
+
+      g_free (path);
+    }
+
+    for (j = 0; j < G_N_ELEMENTS (test_crosses); j++)
+    {
+      if (g_strcmp0 (test_kernels[i].name, test_crosses[j].name) == 0)
+      {
+        gchar *path = g_strdup_printf ("/nc/xcor/kernel/%s/limber_backends_cross", test_kernels[i].name);
+
+        g_test_add (path, TestNcXcorKernel, &test_kernels[i],
+                    &test_nc_xcor_kernel_new,
+                    &test_nc_xcor_kernel_limber_backends_cross,
+                    &test_nc_xcor_kernel_free);
+
+        g_free (path);
+      }
+    }
+  }
+
+  if (!found)
+    g_error ("test_nc_xcor_kernel_main: no kernel `%s' in the table.", kernel);
+
+  if (kernel != NULL)
+    return g_test_run ();
+
+  g_test_add_func ("/nc/xcor/kernel/integrator", &test_nc_xcor_kernel_integrator);
+  g_test_add_func ("/nc/xcor/kernel/dndz_untouched", &test_nc_xcor_kernel_dndz_untouched);
+  g_test_add_func ("/nc/xcor/kernel/gal/magbias_null", &test_nc_xcor_kernel_gal_magbias_null);
+  g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
+  g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
+  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);
+  g_test_add_func ("/nc/xcor/kernel/gal/limber_capped_powspec", &test_nc_xcor_kernel_gal_limber_capped_powspec);
+  g_test_add_func ("/nc/xcor/kernel/cluster/limber_range_ends", &test_nc_xcor_kernel_cluster_limber_range_ends);
+  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
+  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
+  g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);
+  g_test_add_func ("/nc/xcor/kernel/radial/kdep", &test_nc_xcor_kernel_radial_kdep);
+
+  return g_test_run ();
+}
+
 /* A normalized Gaussian dn/dz on [0, 2]: a photo-z bin's shape without a photo-z model. */
 static NcmSpline *
 _dndz_new (void)
@@ -215,16 +386,159 @@ _build_table (TestNcXcorKernel *test)
   return k;
 }
 
-static const TestKernel test_kernels[] = {
-  {"gal",            &_build_gal,            TEST_ZMAX,     TRUE,  FALSE},
-  {"gal_magbias",    &_build_gal_magbias,    TEST_ZMAX,     TRUE,  FALSE},
-  {"weak_lensing",   &_build_weak_lensing,   TEST_ZMAX,     TRUE,  FALSE},
-  {"cmb_lensing",    &_build_cmb_lensing,    TEST_ZMAX_LSS, TRUE,  TRUE },
-  {"cmb_isw",        &_build_cmb_isw,        TEST_ZMAX_LSS, TRUE,  TRUE },
-  {"tsz",            &_build_tsz,            TEST_ZMAX,     FALSE, FALSE},
-  {"cluster_tophat", &_build_cluster_tophat, TEST_ZMAX,     FALSE, FALSE},
-  {"table",          &_build_table,          TEST_ZMAX,     FALSE, FALSE},
-};
+/* The Limber window of @xclk at eight redshifts from the lower end of its range and the
+ * multipoles in @ells, z outermost */
+static GArray *
+_test_limber_values (TestNcXcorKernel *test, NcXcorKernel *xclk, const gint *ells, guint n_ell)
+{
+  GArray *values = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble zmin, zmax, zmid;
+  guint i, j;
+
+  nc_xcor_kernel_get_z_range (test->xclk, &zmin, &zmax, &zmid);
+
+  for (j = 0; j < 8; j++)
+  {
+    const gdouble z = zmin + (zmax - zmin) * j / 8.0;
+
+    for (i = 0; i < n_ell; i++)
+    {
+      const gdouble W = nc_xcor_kernel_eval_limber_z_full (xclk, test->cosmo, z, test->dist, ells[i]);
+
+      g_array_append_val (values, W);
+    }
+  }
+
+  return values;
+}
+
+static void
+_test_assert_same_values (GArray *a, GArray *b)
+{
+  guint i;
+
+  g_assert_cmpuint (a->len, ==, b->len);
+
+  for (i = 0; i < a->len; i++)
+    g_assert_cmpfloat (g_array_index (b, gdouble, i), ==, g_array_index (a, gdouble, i));
+}
+
+/* The two Limber backends integrate the same z integrand with different quadratures, so
+ * on ell 2 to 100 they agree to 1e-5 with GSL asked for 1e-7. */
+static void
+_test_limber_backends_pair (TestNcXcorKernel *test, NcXcorKernel *k1, NcXcorKernel *k2)
+{
+  const guint lmin  = 2;
+  const guint lmax  = 100;
+  NcmVector *cl_gsl = ncm_vector_new (lmax - lmin + 1);
+  NcmVector *cl_cub = ncm_vector_new (lmax - lmin + 1);
+  NcXcor *xc_gsl    = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_LIMBER_Z_GSL);
+  NcXcor *xc_cub    = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_LIMBER_Z_CUBATURE);
+  guint i;
+
+  nc_xcor_set_reltol (xc_gsl, 1.0e-7);
+  nc_xcor_prepare (xc_gsl, test->cosmo);
+  nc_xcor_prepare (xc_cub, test->cosmo);
+
+  nc_xcor_compute (xc_gsl, k1, k2, test->cosmo, lmin, lmax, cl_gsl);
+  nc_xcor_compute (xc_cub, k1, k2, test->cosmo, lmin, lmax, cl_cub);
+
+  /* A spectrum that is zero everywhere would agree trivially. */
+  {
+    gdouble absmin, absmax;
+
+    ncm_vector_get_absminmax (cl_gsl, &absmin, &absmax);
+    g_assert_cmpfloat (absmax, >, 0.0);
+  }
+
+  for (i = 0; i < lmax - lmin + 1; i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (cl_cub, i), ==, ncm_vector_get (cl_gsl, i), 1.0e-5, 1.0e-50);
+
+  nc_xcor_free (xc_gsl);
+  nc_xcor_free (xc_cub);
+  ncm_vector_free (cl_gsl);
+  ncm_vector_free (cl_cub);
+}
+
+/* A normalized Gaussian dN/dz like _dndz_new (), centred at @mean */
+static NcmSpline *
+_dndz_at_new (gdouble mean)
+{
+  NcmVector *z = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmVector *n = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < TEST_DNDZ_KNOTS; i++)
+  {
+    const gdouble zi = 2.0 * i / (gdouble) (TEST_DNDZ_KNOTS - 1);
+    const gdouble t  = (zi - mean) / TEST_DNDZ_SIGMA;
+
+    ncm_vector_set (z, i, zi);
+    ncm_vector_set (n, i, exp (-0.5 * t * t));
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z, n, TRUE));
+
+  ncm_vector_free (z);
+  ncm_vector_free (n);
+
+  return s;
+}
+
+static NcXcorKernel *
+_dndz_build_weak_lensing (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz)
+{
+  return NC_XCOR_KERNEL (nc_xcor_kernel_weak_lensing_new (dist, ps, dndz, 3.0, 0.3));
+}
+
+static NcXcorKernel *
+_dndz_build_gal (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz)
+{
+  NcXcorKernelGal *g = nc_xcor_kernel_gal_new (dist, ps, 1, 1.234, dndz, TRUE);
+
+  ncm_model_orig_vparam_set (NCM_MODEL (g), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
+
+  return NC_XCOR_KERNEL (g);
+}
+
+/* The Limber window of @xclk at six redshifts and two multipoles */
+static void
+_dndz_values (NcXcorKernel *xclk, NcHICosmo *cosmo, NcDistance *dist, gdouble *out)
+{
+  const gint ells[2] = {10, 200};
+  guint j, i;
+
+  for (j = 0; j < 6; j++)
+    for (i = 0; i < 2; i++)
+      out[2 * j + i] = nc_xcor_kernel_eval_limber_z_full (xclk, cosmo, 0.1 + 0.3 * j, dist, ells[i]);
+}
+
+/* A Gaussian dN/dz truncated on [0.4, 0.9], nonzero at both ends as a photometric bin is. */
+static NcmSpline *
+_dndz_truncated_new (void)
+{
+  NcmVector *z = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmVector *n = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < TEST_DNDZ_KNOTS; i++)
+  {
+    const gdouble zi = 0.4 + 0.5 * i / (gdouble) (TEST_DNDZ_KNOTS - 1);
+    const gdouble t  = (zi - TEST_DNDZ_MEAN) / TEST_DNDZ_SIGMA;
+
+    ncm_vector_set (z, i, zi);
+    ncm_vector_set (n, i, exp (-0.5 * t * t));
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z, n, TRUE));
+
+  ncm_vector_free (z);
+  ncm_vector_free (n);
+
+  return s;
+}
 
 static void
 test_nc_xcor_kernel_new (TestNcXcorKernel *test, gconstpointer pdata)
@@ -599,43 +913,6 @@ test_nc_xcor_kernel_noise (TestNcXcorKernel *test, gconstpointer pdata)
   ncm_vector_free (v2);
 }
 
-/* The Limber window of @xclk at eight redshifts from the lower end of its range and the
- * multipoles in @ells, z outermost */
-static GArray *
-_test_limber_values (TestNcXcorKernel *test, NcXcorKernel *xclk, const gint *ells, guint n_ell)
-{
-  GArray *values = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  gdouble zmin, zmax, zmid;
-  guint i, j;
-
-  nc_xcor_kernel_get_z_range (test->xclk, &zmin, &zmax, &zmid);
-
-  for (j = 0; j < 8; j++)
-  {
-    const gdouble z = zmin + (zmax - zmin) * j / 8.0;
-
-    for (i = 0; i < n_ell; i++)
-    {
-      const gdouble W = nc_xcor_kernel_eval_limber_z_full (xclk, test->cosmo, z, test->dist, ells[i]);
-
-      g_array_append_val (values, W);
-    }
-  }
-
-  return values;
-}
-
-static void
-_test_assert_same_values (GArray *a, GArray *b)
-{
-  guint i;
-
-  g_assert_cmpuint (a->len, ==, b->len);
-
-  for (i = 0; i < a->len; i++)
-    g_assert_cmpfloat (g_array_index (b, gdouble, i), ==, g_array_index (a, gdouble, i));
-}
-
 /* A serialized copy is the same kernel, to the last bit: type, observables, knobs,
  * range, and the Limber window at every redshift and multipole checked; and preparing
  * either of them again changes nothing. */
@@ -685,61 +962,11 @@ test_nc_xcor_kernel_serialize (TestNcXcorKernel *test, gconstpointer pdata)
   ncm_serialize_free (ser);
 }
 
-/* The two Limber backends integrate the same z integrand with different quadratures, so
- * on ell 2 to 100 they agree to 1e-5 with GSL asked for 1e-7. */
-static void
-_test_limber_backends_pair (TestNcXcorKernel *test, NcXcorKernel *k1, NcXcorKernel *k2)
-{
-  const guint lmin  = 2;
-  const guint lmax  = 100;
-  NcmVector *cl_gsl = ncm_vector_new (lmax - lmin + 1);
-  NcmVector *cl_cub = ncm_vector_new (lmax - lmin + 1);
-  NcXcor *xc_gsl    = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_LIMBER_Z_GSL);
-  NcXcor *xc_cub    = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_LIMBER_Z_CUBATURE);
-  guint i;
-
-  nc_xcor_set_reltol (xc_gsl, 1.0e-7);
-  nc_xcor_prepare (xc_gsl, test->cosmo);
-  nc_xcor_prepare (xc_cub, test->cosmo);
-
-  nc_xcor_compute (xc_gsl, k1, k2, test->cosmo, lmin, lmax, cl_gsl);
-  nc_xcor_compute (xc_cub, k1, k2, test->cosmo, lmin, lmax, cl_cub);
-
-  /* A spectrum that is zero everywhere would agree trivially. */
-  {
-    gdouble absmin, absmax;
-
-    ncm_vector_get_absminmax (cl_gsl, &absmin, &absmax);
-    g_assert_cmpfloat (absmax, >, 0.0);
-  }
-
-  for (i = 0; i < lmax - lmin + 1; i++)
-    ncm_assert_cmpdouble_e (ncm_vector_get (cl_cub, i), ==, ncm_vector_get (cl_gsl, i), 1.0e-5, 1.0e-50);
-
-  nc_xcor_free (xc_gsl);
-  nc_xcor_free (xc_cub);
-  ncm_vector_free (cl_gsl);
-  ncm_vector_free (cl_cub);
-}
-
 static void
 test_nc_xcor_kernel_limber_backends (TestNcXcorKernel *test, gconstpointer pdata)
 {
   _test_limber_backends_pair (test, test->xclk, test->xclk);
 }
-
-/* The crosses the backends are compared on, by the name of the fixture's kernel */
-typedef struct _TestCross
-{
-  const gchar *name;
-
-  NcXcorKernel *(*build_partner) (TestNcXcorKernel *test);
-} TestCross;
-
-static const TestCross test_crosses[] = {
-  {"gal",         &_build_weak_lensing},
-  {"cmb_lensing", &_build_cmb_isw     },
-};
 
 static void
 test_nc_xcor_kernel_limber_backends_cross (TestNcXcorKernel *test, gconstpointer pdata)
@@ -762,62 +989,6 @@ test_nc_xcor_kernel_limber_backends_cross (TestNcXcorKernel *test, gconstpointer
   }
 
   g_assert_not_reached ();
-}
-
-/* A normalized Gaussian dN/dz like _dndz_new (), centred at @mean */
-static NcmSpline *
-_dndz_at_new (gdouble mean)
-{
-  NcmVector *z = ncm_vector_new (TEST_DNDZ_KNOTS);
-  NcmVector *n = ncm_vector_new (TEST_DNDZ_KNOTS);
-  NcmSpline *s;
-  guint i;
-
-  for (i = 0; i < TEST_DNDZ_KNOTS; i++)
-  {
-    const gdouble zi = 2.0 * i / (gdouble) (TEST_DNDZ_KNOTS - 1);
-    const gdouble t  = (zi - mean) / TEST_DNDZ_SIGMA;
-
-    ncm_vector_set (z, i, zi);
-    ncm_vector_set (n, i, exp (-0.5 * t * t));
-  }
-
-  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z, n, TRUE));
-
-  ncm_vector_free (z);
-  ncm_vector_free (n);
-
-  return s;
-}
-
-typedef NcXcorKernel *(*TestDndzBuild) (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz);
-
-static NcXcorKernel *
-_dndz_build_weak_lensing (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz)
-{
-  return NC_XCOR_KERNEL (nc_xcor_kernel_weak_lensing_new (dist, ps, dndz, 3.0, 0.3));
-}
-
-static NcXcorKernel *
-_dndz_build_gal (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz)
-{
-  NcXcorKernelGal *g = nc_xcor_kernel_gal_new (dist, ps, 1, 1.234, dndz, TRUE);
-
-  ncm_model_orig_vparam_set (NCM_MODEL (g), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
-
-  return NC_XCOR_KERNEL (g);
-}
-
-/* The Limber window of @xclk at six redshifts and two multipoles */
-static void
-_dndz_values (NcXcorKernel *xclk, NcHICosmo *cosmo, NcDistance *dist, gdouble *out)
-{
-  const gint ells[2] = {10, 200};
-  guint j, i;
-
-  for (j = 0; j < 6; j++)
-    for (i = 0; i < 2; i++)
-      out[2 * j + i] = nc_xcor_kernel_eval_limber_z_full (xclk, cosmo, 0.1 + 0.3 * j, dist, ells[i]);
 }
 
 /* The kernels that normalize a dN/dz do it on a copy: the caller's spline comes out of
@@ -983,32 +1154,6 @@ test_nc_xcor_kernel_integrator (void)
   ncm_powspec_free (ps);
   nc_distance_free (dist);
   nc_hicosmo_free (cosmo);
-}
-
-/* A Gaussian dN/dz truncated on [0.4, 0.9], nonzero at both ends as a photometric bin is. */
-static NcmSpline *
-_dndz_truncated_new (void)
-{
-  NcmVector *z = ncm_vector_new (TEST_DNDZ_KNOTS);
-  NcmVector *n = ncm_vector_new (TEST_DNDZ_KNOTS);
-  NcmSpline *s;
-  guint i;
-
-  for (i = 0; i < TEST_DNDZ_KNOTS; i++)
-  {
-    const gdouble zi = 0.4 + 0.5 * i / (gdouble) (TEST_DNDZ_KNOTS - 1);
-    const gdouble t  = (zi - TEST_DNDZ_MEAN) / TEST_DNDZ_SIGMA;
-
-    ncm_vector_set (z, i, zi);
-    ncm_vector_set (n, i, exp (-0.5 * t * t));
-  }
-
-  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z, n, TRUE));
-
-  ncm_vector_free (z);
-  ncm_vector_free (n);
-
-  return s;
 }
 
 /* A closure in u read at exactly the ends of a multipole's k range gives its value from
@@ -1422,117 +1567,5 @@ test_nc_xcor_kernel_radial_kdep (void)
   ncm_powspec_free (ps);
   nc_distance_free (dist);
   nc_hicosmo_free (cosmo);
-}
-
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcorKernel *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"basic",      &test_nc_xcor_kernel_basic},
-  {"knobs",      &test_nc_xcor_kernel_knobs},
-  {"z_range",    &test_nc_xcor_kernel_z_range},
-  {"limber",     &test_nc_xcor_kernel_limber},
-  {"k_range",    &test_nc_xcor_kernel_k_range},
-  {"components", &test_nc_xcor_kernel_components},
-  {"noise",      &test_nc_xcor_kernel_noise},
-  {"serialize",  &test_nc_xcor_kernel_serialize},
-  {"limber_backends", &test_nc_xcor_kernel_limber_backends},
-};
-
-/**
- * test_nc_xcor_kernel_main:
- * @argc: the argument count of main ()
- * @argv: the arguments of main ()
- * @kernel: (nullable): the kernel this binary runs, one marked own_binary in test_kernels
- *
- * Registers and runs the checks of @kernel, or with %NULL those of every kernel not marked
- * own_binary together with the kernel-specific tests.
- *
- * Returns: the result of g_test_run ()
- */
-gint
-test_nc_xcor_kernel_main (gint argc, gchar *argv[], const gchar *kernel)
-{
-  gboolean found = (kernel == NULL);
-  guint i, j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_kernels); i++)
-  {
-    if (kernel == NULL)
-    {
-      if (test_kernels[i].own_binary)
-        continue;
-    }
-    else if (g_strcmp0 (kernel, test_kernels[i].name) != 0)
-    {
-      continue;
-    }
-    else if (!test_kernels[i].own_binary)
-    {
-      g_error ("test_nc_xcor_kernel_main: kernel `%s' is not marked own_binary.", kernel);
-    }
-    else
-    {
-      found = TRUE;
-    }
-
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/kernel/%s/%s", test_kernels[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcorKernel, &test_kernels[i],
-                  &test_nc_xcor_kernel_new,
-                  test_checks[j].func,
-                  &test_nc_xcor_kernel_free);
-
-      g_free (path);
-    }
-
-    for (j = 0; j < G_N_ELEMENTS (test_crosses); j++)
-    {
-      if (g_strcmp0 (test_kernels[i].name, test_crosses[j].name) == 0)
-      {
-        gchar *path = g_strdup_printf ("/nc/xcor/kernel/%s/limber_backends_cross", test_kernels[i].name);
-
-        g_test_add (path, TestNcXcorKernel, &test_kernels[i],
-                    &test_nc_xcor_kernel_new,
-                    &test_nc_xcor_kernel_limber_backends_cross,
-                    &test_nc_xcor_kernel_free);
-
-        g_free (path);
-      }
-    }
-  }
-
-  if (!found)
-    g_error ("test_nc_xcor_kernel_main: no kernel `%s' in the table.", kernel);
-
-  if (kernel != NULL)
-    return g_test_run ();
-
-  g_test_add_func ("/nc/xcor/kernel/integrator", &test_nc_xcor_kernel_integrator);
-  g_test_add_func ("/nc/xcor/kernel/dndz_untouched", &test_nc_xcor_kernel_dndz_untouched);
-  g_test_add_func ("/nc/xcor/kernel/gal/magbias_null", &test_nc_xcor_kernel_gal_magbias_null);
-  g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
-  g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
-  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);
-  g_test_add_func ("/nc/xcor/kernel/gal/limber_capped_powspec", &test_nc_xcor_kernel_gal_limber_capped_powspec);
-  g_test_add_func ("/nc/xcor/kernel/cluster/limber_range_ends", &test_nc_xcor_kernel_cluster_limber_range_ends);
-  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
-  g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
-  g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);
-  g_test_add_func ("/nc/xcor/kernel/radial/kdep", &test_nc_xcor_kernel_radial_kdep);
-
-  return g_test_run ();
 }
 

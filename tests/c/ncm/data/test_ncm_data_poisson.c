@@ -36,8 +36,8 @@
  * A toy NcmDataPoisson: the mean of bin i is A times its width, with A the
  * NcmModelMVND mean mu_0, so the model reads the bin edges.
  */
-
 #define TEST_TYPE_POISSON (test_poisson_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestPoisson, test_poisson, TEST, POISSON, NcmDataPoisson)
 
 struct _TestPoisson
@@ -46,29 +46,6 @@ struct _TestPoisson
 };
 
 G_DEFINE_TYPE (TestPoisson, test_poisson, NCM_TYPE_DATA_POISSON)
-
-static void
-test_poisson_init (TestPoisson *tp)
-{
-}
-
-static gdouble
-_test_poisson_mean_func (NcmDataPoisson *poisson, NcmMSet *mset, guint n)
-{
-  const gdouble A = ncm_model_orig_vparam_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), NCM_MODEL_MVND_MEAN, 0);
-  gdouble lower, upper;
-
-  ncm_data_poisson_get_bin_range (poisson, n, &lower, &upper);
-
-  return A * (upper - lower);
-}
-
-static void
-test_poisson_class_init (TestPoissonClass *klass)
-{
-  NCM_DATA_CLASS (klass)->name              = "Test Poisson data";
-  NCM_DATA_POISSON_CLASS (klass)->mean_func = &_test_poisson_mean_func;
-}
 
 typedef struct _TestNcmDataPoisson
 {
@@ -100,6 +77,29 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/data_poisson/errors", TestNcmDataPoisson, NULL, &test_ncm_data_poisson_new, &test_ncm_data_poisson_errors, &test_ncm_data_poisson_free);
 
   g_test_run ();
+}
+
+static void
+test_poisson_init (TestPoisson *tp)
+{
+}
+
+static gdouble
+_test_poisson_mean_func (NcmDataPoisson *poisson, NcmMSet *mset, guint n)
+{
+  const gdouble A = ncm_model_orig_vparam_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), NCM_MODEL_MVND_MEAN, 0);
+  gdouble lower, upper;
+
+  ncm_data_poisson_get_bin_range (poisson, n, &lower, &upper);
+
+  return A * (upper - lower);
+}
+
+static void
+test_poisson_class_init (TestPoissonClass *klass)
+{
+  NCM_DATA_CLASS (klass)->name              = "Test Poisson data";
+  NCM_DATA_POISSON_CLASS (klass)->mean_func = &_test_poisson_mean_func;
 }
 
 /* Bins [0, 1], [1, 3], [3, 6], of widths 1, 2 and 3, with counts 1, 2 and 0. */

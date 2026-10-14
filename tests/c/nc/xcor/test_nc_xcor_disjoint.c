@@ -46,11 +46,8 @@
 
 /* Two shells in comoving distance [Mpc], far enough apart that nothing overlaps */
 #define TEST_CHI1_LOWER 200.0
-
 #define TEST_CHI1_UPPER 400.0
-
 #define TEST_CHI2_LOWER 1500.0
-
 #define TEST_CHI2_UPPER 1800.0
 
 typedef struct _TestNcXcorDisjoint
@@ -67,7 +64,6 @@ typedef struct _TestNcXcorDisjoint
  * above the threshold is zero throughout.
  */
 #define TEST_L_LIMBER 6
-
 #define TEST_LMAX 9
 
 typedef struct _TestCheck
@@ -133,6 +129,22 @@ _test_nc_xcor_disjoint_xcor (TestNcXcorDisjoint *test, NcXcorMethod meth)
   nc_xcor_prepare (xc, test->env.cosmo);
 
   return xc;
+}
+
+static void
+test_nc_xcor_disjoint_new (TestNcXcorDisjoint *test, gconstpointer pdata)
+{
+  test_nc_xcor_kquad_env_init (&test->env);
+  test->k1 = NULL;
+  test->k2 = NULL;
+}
+
+static void
+test_nc_xcor_disjoint_free (TestNcXcorDisjoint *test, gconstpointer pdata)
+{
+  nc_xcor_kernel_clear (&test->k1);
+  nc_xcor_kernel_clear (&test->k2);
+  test_nc_xcor_kquad_env_clear (&test->env);
 }
 
 /*
@@ -287,21 +299,5 @@ test_nc_xcor_disjoint_limber_z (TestNcXcorDisjoint *test, gconstpointer pdata)
 
   ncm_vector_free (cross);
   nc_xcor_free (xc);
-}
-
-static void
-test_nc_xcor_disjoint_new (TestNcXcorDisjoint *test, gconstpointer pdata)
-{
-  test_nc_xcor_kquad_env_init (&test->env);
-  test->k1 = NULL;
-  test->k2 = NULL;
-}
-
-static void
-test_nc_xcor_disjoint_free (TestNcXcorDisjoint *test, gconstpointer pdata)
-{
-  nc_xcor_kernel_clear (&test->k1);
-  nc_xcor_kernel_clear (&test->k2);
-  test_nc_xcor_kquad_env_clear (&test->env);
 }
 

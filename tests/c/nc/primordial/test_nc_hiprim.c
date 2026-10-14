@@ -44,11 +44,8 @@
 #include <glib-object.h>
 
 #define TEST_LN10E10ASA 3.1
-
 #define TEST_T_SA_RATIO 0.15
-
 #define TEST_N_SA 0.96
-
 #define TEST_N_T (-0.02)
 
 typedef struct _TestNcHIPrim

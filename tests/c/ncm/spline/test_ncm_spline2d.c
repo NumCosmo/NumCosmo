@@ -42,15 +42,10 @@ typedef struct _TestNcmSpline2d
 } TestNcmSpline2d;
 
 #define _NCM_SPLINE2D_TEST_NKNOTS_X 50
-
 #define _NCM_SPLINE2D_TEST_NKNOTS_Y 25
-
 #define _NCM_SPLINE2D_TEST_XI 10.0
-
 #define _NCM_SPLINE2D_TEST_DX 0.3
-
 #define _NCM_SPLINE2D_TEST_YI 7.0
-
 #define _NCM_SPLINE2D_TEST_DY 0.15
 
 void test_ncm_spline2d_bicubic_notaknot_new_empty (TestNcmSpline2d *test, gconstpointer pdata);

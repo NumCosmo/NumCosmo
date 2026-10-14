@@ -42,9 +42,7 @@
 #include "test_nc_xcor_kquad_common.h"
 
 #define TEST_LMIN 2
-
 #define TEST_LMAX 5
-
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
 typedef struct _TestNcXcorKQuadError

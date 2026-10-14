@@ -37,10 +37,9 @@
  * It counts begin calls and records the free parameters at which the covariance
  * methods are called.
  */
-
 #define TEST_DATA_DIM 2
-
 #define TEST_TYPE_DATA (test_data_get_type ())
+
 G_DECLARE_DERIVABLE_TYPE (TestData, test_data, TEST, DATA, NcmData)
 
 struct _TestDataClass
@@ -56,6 +55,70 @@ typedef struct _TestDataPrivate
 } TestDataPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (TestData, test_data, NCM_TYPE_DATA)
+
+/* The same data without resample. */
+#define TEST_TYPE_DATA_NO_RESAMPLE (test_data_no_resample_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestDataNoResample, test_data_no_resample, TEST, DATA_NO_RESAMPLE, TestData)
+
+struct _TestDataNoResample
+{
+  TestData parent_instance;
+};
+
+G_DEFINE_TYPE (TestDataNoResample, test_data_no_resample, TEST_TYPE_DATA)
+
+typedef struct _TestNcmData
+{
+  NcmMSet *mset;
+  NcmData *data;
+  NcmRNG *rng;
+  gdouble p[TEST_DATA_DIM];
+} TestNcmData;
+
+void test_ncm_data_new (TestNcmData *test, gconstpointer pdata);
+void test_ncm_data_free (TestNcmData *test, gconstpointer pdata);
+
+void test_ncm_data_begin (TestNcmData *test, gconstpointer pdata);
+void test_ncm_data_fisher (TestNcmData *test, gconstpointer pdata);
+void test_ncm_data_fisher_bias (TestNcmData *test, gconstpointer pdata);
+void test_ncm_data_fisher_no_fparams (TestNcmData *test, gconstpointer pdata);
+void test_ncm_data_bootstrap (TestNcmData *test, gconstpointer pdata);
+void test_ncm_data_desc (TestNcmData *test, gconstpointer pdata);
+void test_ncm_data_errors (void);
+void test_ncm_data_prepare_uninit_subprocess (void);
+void test_ncm_data_resample_missing_subprocess (void);
+void test_ncm_data_fisher_bad_size_subprocess (void);
+void test_ncm_data_fisher_bias_bad_f_true_subprocess (void);
+void test_ncm_data_bootstrap_uninit_subprocess (void);
+void test_ncm_data_bootstrap_set_null_subprocess (void);
+void test_ncm_data_bootstrap_set_bad_size_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/data/begin", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_begin, &test_ncm_data_free);
+  g_test_add ("/ncm/data/fisher", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_fisher, &test_ncm_data_free);
+  g_test_add ("/ncm/data/fisher_bias", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_fisher_bias, &test_ncm_data_free);
+  g_test_add ("/ncm/data/fisher_no_fparams", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_fisher_no_fparams, &test_ncm_data_free);
+  g_test_add ("/ncm/data/bootstrap", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_bootstrap, &test_ncm_data_free);
+  g_test_add ("/ncm/data/desc", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_desc, &test_ncm_data_free);
+
+  g_test_add_func ("/ncm/data/errors", &test_ncm_data_errors);
+  g_test_add_func ("/ncm/data/errors/prepare_uninit/subprocess", &test_ncm_data_prepare_uninit_subprocess);
+  g_test_add_func ("/ncm/data/errors/resample_missing/subprocess", &test_ncm_data_resample_missing_subprocess);
+  g_test_add_func ("/ncm/data/errors/fisher_bad_size/subprocess", &test_ncm_data_fisher_bad_size_subprocess);
+  g_test_add_func ("/ncm/data/errors/fisher_bias_bad_f_true/subprocess", &test_ncm_data_fisher_bias_bad_f_true_subprocess);
+  g_test_add_func ("/ncm/data/errors/bootstrap_uninit/subprocess", &test_ncm_data_bootstrap_uninit_subprocess);
+  g_test_add_func ("/ncm/data/errors/bootstrap_set_null/subprocess", &test_ncm_data_bootstrap_set_null_subprocess);
+  g_test_add_func ("/ncm/data/errors/bootstrap_set_bad_size/subprocess", &test_ncm_data_bootstrap_set_bad_size_subprocess);
+
+  g_test_run ();
+}
 
 static void
 test_data_init (TestData *td)
@@ -162,18 +225,6 @@ test_data_class_init (TestDataClass *klass)
   data_class->inv_cov_Uf  = &_test_data_inv_cov_Uf;
 }
 
-/* The same data without resample. */
-
-#define TEST_TYPE_DATA_NO_RESAMPLE (test_data_no_resample_get_type ())
-G_DECLARE_FINAL_TYPE (TestDataNoResample, test_data_no_resample, TEST, DATA_NO_RESAMPLE, TestData)
-
-struct _TestDataNoResample
-{
-  TestData parent_instance;
-};
-
-G_DEFINE_TYPE (TestDataNoResample, test_data_no_resample, TEST_TYPE_DATA)
-
 static void
 test_data_no_resample_init (TestDataNoResample *td)
 {
@@ -183,58 +234,6 @@ static void
 test_data_no_resample_class_init (TestDataNoResampleClass *klass)
 {
   NCM_DATA_CLASS (klass)->resample = NULL;
-}
-
-typedef struct _TestNcmData
-{
-  NcmMSet *mset;
-  NcmData *data;
-  NcmRNG *rng;
-  gdouble p[TEST_DATA_DIM];
-} TestNcmData;
-
-void test_ncm_data_new (TestNcmData *test, gconstpointer pdata);
-void test_ncm_data_free (TestNcmData *test, gconstpointer pdata);
-
-void test_ncm_data_begin (TestNcmData *test, gconstpointer pdata);
-void test_ncm_data_fisher (TestNcmData *test, gconstpointer pdata);
-void test_ncm_data_fisher_bias (TestNcmData *test, gconstpointer pdata);
-void test_ncm_data_fisher_no_fparams (TestNcmData *test, gconstpointer pdata);
-void test_ncm_data_bootstrap (TestNcmData *test, gconstpointer pdata);
-void test_ncm_data_desc (TestNcmData *test, gconstpointer pdata);
-void test_ncm_data_errors (void);
-void test_ncm_data_prepare_uninit_subprocess (void);
-void test_ncm_data_resample_missing_subprocess (void);
-void test_ncm_data_fisher_bad_size_subprocess (void);
-void test_ncm_data_fisher_bias_bad_f_true_subprocess (void);
-void test_ncm_data_bootstrap_uninit_subprocess (void);
-void test_ncm_data_bootstrap_set_null_subprocess (void);
-void test_ncm_data_bootstrap_set_bad_size_subprocess (void);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/data/begin", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_begin, &test_ncm_data_free);
-  g_test_add ("/ncm/data/fisher", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_fisher, &test_ncm_data_free);
-  g_test_add ("/ncm/data/fisher_bias", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_fisher_bias, &test_ncm_data_free);
-  g_test_add ("/ncm/data/fisher_no_fparams", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_fisher_no_fparams, &test_ncm_data_free);
-  g_test_add ("/ncm/data/bootstrap", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_bootstrap, &test_ncm_data_free);
-  g_test_add ("/ncm/data/desc", TestNcmData, NULL, &test_ncm_data_new, &test_ncm_data_desc, &test_ncm_data_free);
-
-  g_test_add_func ("/ncm/data/errors", &test_ncm_data_errors);
-  g_test_add_func ("/ncm/data/errors/prepare_uninit/subprocess", &test_ncm_data_prepare_uninit_subprocess);
-  g_test_add_func ("/ncm/data/errors/resample_missing/subprocess", &test_ncm_data_resample_missing_subprocess);
-  g_test_add_func ("/ncm/data/errors/fisher_bad_size/subprocess", &test_ncm_data_fisher_bad_size_subprocess);
-  g_test_add_func ("/ncm/data/errors/fisher_bias_bad_f_true/subprocess", &test_ncm_data_fisher_bias_bad_f_true_subprocess);
-  g_test_add_func ("/ncm/data/errors/bootstrap_uninit/subprocess", &test_ncm_data_bootstrap_uninit_subprocess);
-  g_test_add_func ("/ncm/data/errors/bootstrap_set_null/subprocess", &test_ncm_data_bootstrap_set_null_subprocess);
-  g_test_add_func ("/ncm/data/errors/bootstrap_set_bad_size/subprocess", &test_ncm_data_bootstrap_set_bad_size_subprocess);
-
-  g_test_run ();
 }
 
 void

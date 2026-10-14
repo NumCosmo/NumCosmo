@@ -41,11 +41,8 @@
 #include "test_ncm_sbessel_arb_cases.h"
 
 #define TEST_A 1.0
-
 #define TEST_B 20.0
-
 #define TEST_H (0.5 * (TEST_B - TEST_A))
-
 #define TEST_M (0.5 * (TEST_A + TEST_B))
 
 typedef gdouble (*TestFx) (gdouble x);
@@ -76,9 +73,7 @@ typedef struct _TestCoeff
  * homogeneous solutions, so both constraints give the same panel integral int F j_l dx.
  */
 #define TEST_TAU_ELL 20
-
 #define TEST_TAU_A 1.0e4
-
 #define TEST_TAU_B 31622.776601683792 /* 10^4.5 */
 
 typedef struct _TestBump

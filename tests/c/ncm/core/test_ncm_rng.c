@@ -36,7 +36,6 @@
 #include <gsl/gsl_rng.h>
 
 #define TEST_RNG_SEED 123456
-
 #define TEST_RNG_NDRAWS 100000
 
 /* Mean of the unit Gaussian restricted to x > 1: 2 phi(1) / erfc(1 / sqrt(2)) */

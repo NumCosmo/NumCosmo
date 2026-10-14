@@ -36,7 +36,6 @@
 #include <mpfr.h>
 
 #define REF_PREC 1024
-
 #define TEST_PREC 256
 
 static void test_ncm_mpsf_sbessel_branches (void);

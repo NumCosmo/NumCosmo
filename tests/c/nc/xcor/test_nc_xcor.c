@@ -45,11 +45,8 @@
 #include <glib-object.h>
 
 #define TEST_ZMAX 6.0
-
 #define TEST_LMIN 2
-
 #define TEST_LMAX 9
-
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
 typedef struct _TestNcXcor
@@ -126,6 +123,52 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/limber/backends_agree", &test_nc_xcor_limber_backends_agree);
 
   g_test_run ();
+}
+
+static void
+test_nc_xcor_new (TestNcXcor *test, gconstpointer pdata)
+{
+  const TestMethod *tm = pdata;
+  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+
+  test->cosmo = cosmo;
+  test->dist  = nc_distance_new (TEST_ZMAX);
+  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+
+  nc_distance_prepare (test->dist, cosmo);
+  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+
+  /* Two overlapping Gaussian windows: overlapping so the cross-spectrum is not
+   * numerically zero, and analytic so nothing here depends on a transfer function. */
+  test->k1 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1500.0, 300.0, 4.0));
+  test->k2 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1700.0, 350.0, 4.0));
+
+  nc_xcor_kernel_prepare (test->k1, cosmo);
+  nc_xcor_kernel_prepare (test->k2, cosmo);
+
+  test->xc = nc_xcor_new (test->dist, test->ps, tm->meth);
+  nc_xcor_prepare (test->xc, cosmo);
+}
+
+static void
+test_nc_xcor_free (TestNcXcor *test, gconstpointer pdata)
+{
+  nc_xcor_kernel_free (test->k1);
+  nc_xcor_kernel_free (test->k2);
+  ncm_powspec_free (test->ps);
+  nc_distance_free (test->dist);
+  nc_hicosmo_free (test->cosmo);
+
+  NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
 
 static void
@@ -316,52 +359,6 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
     g_object_get (test->xc, "meth", &meth, NULL);
     g_assert_cmpuint (meth, ==, tm->meth);
   }
-}
-
-static void
-test_nc_xcor_new (TestNcXcor *test, gconstpointer pdata)
-{
-  const TestMethod *tm = pdata;
-  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
-
-  test->cosmo = cosmo;
-  test->dist  = nc_distance_new (TEST_ZMAX);
-  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
-
-  nc_distance_prepare (test->dist, cosmo);
-  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
-
-  /* Two overlapping Gaussian windows: overlapping so the cross-spectrum is not
-   * numerically zero, and analytic so nothing here depends on a transfer function. */
-  test->k1 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1500.0, 300.0, 4.0));
-  test->k2 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1700.0, 350.0, 4.0));
-
-  nc_xcor_kernel_prepare (test->k1, cosmo);
-  nc_xcor_kernel_prepare (test->k2, cosmo);
-
-  test->xc = nc_xcor_new (test->dist, test->ps, tm->meth);
-  nc_xcor_prepare (test->xc, cosmo);
-}
-
-static void
-test_nc_xcor_free (TestNcXcor *test, gconstpointer pdata)
-{
-  nc_xcor_kernel_free (test->k1);
-  nc_xcor_kernel_free (test->k2);
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
-
-  NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
 
 /* The two Limber backends integrate the same integrand with different quadrature, so

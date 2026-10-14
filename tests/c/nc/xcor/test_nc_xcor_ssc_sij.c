@@ -41,7 +41,6 @@
 #include <glib-object.h>
 
 #define TEST_ZMAX 6.0
-
 #define TEST_NBINS 3
 
 typedef struct _TestNcXcorSSCSij
@@ -104,6 +103,49 @@ main (gint argc, gchar *argv[])
               &test_nc_xcor_ssc_sij_free);
 
   g_test_run ();
+}
+
+static void
+test_nc_xcor_ssc_sij_new (TestNcXcorSSCSij *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcmVector *z_edges = ncm_vector_new (TEST_NBINS + 1);
+  guint i;
+
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+
+  for (i = 0; i <= TEST_NBINS; i++)
+    ncm_vector_set (z_edges, i, 0.2 + 0.3 * i);
+
+  test->cosmo = cosmo;
+  test->dist  = nc_distance_new (TEST_ZMAX);
+  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+
+  nc_distance_prepare (test->dist, cosmo);
+  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+
+  test->ssc = nc_xcor_ssc_sij_new (test->dist, test->ps, z_edges);
+
+  g_assert_true (NC_IS_XCOR_SSC_SIJ (test->ssc));
+
+  ncm_vector_free (z_edges);
+}
+
+static void
+test_nc_xcor_ssc_sij_free (TestNcXcorSSCSij *test, gconstpointer pdata)
+{
+  ncm_powspec_free (test->ps);
+  nc_distance_free (test->dist);
+  nc_hicosmo_free (test->cosmo);
+
+  NCM_TEST_FREE (nc_xcor_ssc_sij_free, test->ssc);
 }
 
 static void
@@ -199,49 +241,6 @@ test_nc_xcor_ssc_sij_traps (TestNcXcorSSCSij *test, gconstpointer pdata)
 
   g_test_trap_subprocess ("/nc/xcor/ssc_sij/invalid/area/fullsky/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-}
-
-static void
-test_nc_xcor_ssc_sij_new (TestNcXcorSSCSij *test, gconstpointer pdata)
-{
-  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcmVector *z_edges = ncm_vector_new (TEST_NBINS + 1);
-  guint i;
-
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
-
-  for (i = 0; i <= TEST_NBINS; i++)
-    ncm_vector_set (z_edges, i, 0.2 + 0.3 * i);
-
-  test->cosmo = cosmo;
-  test->dist  = nc_distance_new (TEST_ZMAX);
-  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
-
-  nc_distance_prepare (test->dist, cosmo);
-  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
-
-  test->ssc = nc_xcor_ssc_sij_new (test->dist, test->ps, z_edges);
-
-  g_assert_true (NC_IS_XCOR_SSC_SIJ (test->ssc));
-
-  ncm_vector_free (z_edges);
-}
-
-static void
-test_nc_xcor_ssc_sij_free (TestNcXcorSSCSij *test, gconstpointer pdata)
-{
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
-
-  NCM_TEST_FREE (nc_xcor_ssc_sij_free, test->ssc);
 }
 
 static void

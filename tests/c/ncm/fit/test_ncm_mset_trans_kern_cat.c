@@ -45,7 +45,6 @@
 #include <glib-object.h>
 
 #define TEST_TKC_DIM 3
-
 #define TEST_TKC_NROWS 64
 
 typedef struct _TestNcmMSetTransKernCat

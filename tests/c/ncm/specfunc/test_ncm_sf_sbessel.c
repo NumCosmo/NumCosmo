@@ -36,9 +36,7 @@ typedef struct _TestNcmSFSBessel
 } TestNcmSFSBessel;
 
 #define NTOT 100
-
 #define XMAX 2.0
-
 #define L 80
 
 void test_ncm_sf_sbessel_new (TestNcmSFSBessel *test, gconstpointer pdata);

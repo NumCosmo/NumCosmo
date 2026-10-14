@@ -49,9 +49,7 @@ typedef struct _TestNcmFitEsmcmcFunc
 } TestNcmFitEsmcmcFunc;
 
 #define TEST_NCM_FIT_ESMCMC_NWALKERS 2
-
 #define TEST_NCM_FIT_ESMCMC_TESTS 2
-
 #define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)
 
 void test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata);

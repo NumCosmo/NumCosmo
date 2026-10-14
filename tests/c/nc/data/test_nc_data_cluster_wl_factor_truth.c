@@ -65,19 +65,12 @@
 #include <glib-object.h>
 
 #define TRUTH_NROWS (14)
-
 #define TRUTH_Z_CL (0.5)
-
 #define TRUTH_REF_NODES (320)
-
 #define TRUTH_REF_RULE (7)
-
 #define TRUTH_PROD_NODES (20)
-
 #define TRUTH_PROD_RULE (5)
-
 #define TRUTH_PREC (1.0e-6)
-
 #define TRUTH_SERIES_ORDER (4)
 
 /* NcGalaxyShapeFactorQuad's *default* reltol (1e-7) is appropriate for
@@ -95,11 +88,8 @@
  * shape scheme, and that has already been validated at full resolution by
  * the (near-free) VarAdd/SeriesLensed configs above. */
 #define TRUTH_QUAD_RELTOL (1.0e-5)
-
 #define TRUTH_QUAD_NROWS (5)
-
 #define TRUTH_QUAD_REF_NODES (60)
-
 #define TRUTH_QUAD_REF_RULE (5)
 
 typedef struct _TruthCfg

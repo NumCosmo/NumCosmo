@@ -161,56 +161,6 @@ test_ncm_stats_dist_kernel_bare_class_init (TestNcmStatsDistKernelBareClass *kla
 {
 }
 
-static void
-test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointer pdata)
-{
-  const guint dim                    = g_test_rand_int_range (1, 4);
-  NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
-
-  test->dim         = dim;
-  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_gauss);
-  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_GAUSS;
-
-  ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
-  ncm_stats_dist_kernel_gauss_free (sdk_gauss);
-  {
-    NcmStatsDistKernelGauss *sdk_gauss0 = ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
-
-    ncm_stats_dist_kernel_gauss_clear (&sdk_gauss0);
-    g_assert_true (sdk_gauss0 == NULL);
-  }
-}
-
-static void
-test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer pdata)
-{
-  const gdouble nu             = g_test_rand_double_range (3.0, 5.0);
-  const guint dim              = g_test_rand_int_range (1, 4);
-  NcmStatsDistKernelST *sdk_st = ncm_stats_dist_kernel_st_new (dim, nu);
-
-  test->dim         = dim;
-  test->nu          = nu;
-  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_ST3;
-  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_st);
-
-  g_assert_cmpfloat (ncm_stats_dist_kernel_st_get_nu (sdk_st), ==, nu);
-
-  ncm_stats_dist_kernel_st_ref (sdk_st);
-  ncm_stats_dist_kernel_st_free (sdk_st);
-  {
-    NcmStatsDistKernelST *sdk_st0 = ncm_stats_dist_kernel_st_ref (sdk_st);
-
-    ncm_stats_dist_kernel_st_clear (&sdk_st0);
-    g_assert_true (sdk_st0 == NULL);
-  }
-}
-
-static void
-test_ncm_stats_dist_kernel_dim (TestNcmStatsDistKernel *test, gconstpointer pdata)
-{
-  g_assert_true (test->dim == ncm_stats_dist_kernel_get_dim (test->kernel));
-}
-
 static gdouble
 _test_radial_integrand (gdouble r, gpointer userdata)
 {
@@ -282,6 +232,85 @@ _test_radial (TestNcmStatsDistKernel *test, TestRadial which)
   return 2.0 * pow (M_PI, 0.5 * test->dim) / tgamma (0.5 * test->dim) * res;
 }
 
+/* A random upper-triangular Cholesky factor, Sigma = U^T U. */
+static NcmMatrix *
+_test_random_cov_decomp (guint dim)
+{
+  NcmMatrix *U = ncm_matrix_new (dim, dim);
+  guint i, j;
+
+  for (i = 0; i < dim; i++)
+  {
+    for (j = 0; j < dim; j++)
+    {
+      if (j < i)
+        ncm_matrix_set (U, i, j, 0.0);
+      else if (j == i)
+        ncm_matrix_set (U, i, j, g_test_rand_double_range (0.5, 2.0));
+      else
+        ncm_matrix_set (U, i, j, g_test_rand_double_range (-1.0, 1.0));
+    }
+  }
+
+  return U;
+}
+
+static void
+test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  const guint dim                    = g_test_rand_int_range (1, 4);
+  NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
+
+  test->dim         = dim;
+  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_gauss);
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_GAUSS;
+
+  ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
+  ncm_stats_dist_kernel_gauss_free (sdk_gauss);
+  {
+    NcmStatsDistKernelGauss *sdk_gauss0 = ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
+
+    ncm_stats_dist_kernel_gauss_clear (&sdk_gauss0);
+    g_assert_true (sdk_gauss0 == NULL);
+  }
+}
+
+static void
+test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  const gdouble nu             = g_test_rand_double_range (3.0, 5.0);
+  const guint dim              = g_test_rand_int_range (1, 4);
+  NcmStatsDistKernelST *sdk_st = ncm_stats_dist_kernel_st_new (dim, nu);
+
+  test->dim         = dim;
+  test->nu          = nu;
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_ST3;
+  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_st);
+
+  g_assert_cmpfloat (ncm_stats_dist_kernel_st_get_nu (sdk_st), ==, nu);
+
+  ncm_stats_dist_kernel_st_ref (sdk_st);
+  ncm_stats_dist_kernel_st_free (sdk_st);
+  {
+    NcmStatsDistKernelST *sdk_st0 = ncm_stats_dist_kernel_st_ref (sdk_st);
+
+    ncm_stats_dist_kernel_st_clear (&sdk_st0);
+    g_assert_true (sdk_st0 == NULL);
+  }
+}
+
+static void
+test_ncm_stats_dist_kernel_free (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_stats_dist_kernel_free, test->kernel);
+}
+
+static void
+test_ncm_stats_dist_kernel_dim (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  g_assert_true (test->dim == ncm_stats_dist_kernel_get_dim (test->kernel));
+}
+
 static void
 test_ncm_stats_dist_kernel_bandwidth (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
@@ -318,29 +347,6 @@ test_ncm_stats_dist_kernel_bandwidth (TestNcmStatsDistKernel *test, gconstpointe
     g_assert_cmpfloat (ncm_stats_dist_kernel_get_var_factor (test->kernel), ==, GSL_POSINF);
     ncm_stats_dist_kernel_st_set_nu (sdk_st, test->nu);
   }
-}
-
-/* A random upper-triangular Cholesky factor, Sigma = U^T U. */
-static NcmMatrix *
-_test_random_cov_decomp (guint dim)
-{
-  NcmMatrix *U = ncm_matrix_new (dim, dim);
-  guint i, j;
-
-  for (i = 0; i < dim; i++)
-  {
-    for (j = 0; j < dim; j++)
-    {
-      if (j < i)
-        ncm_matrix_set (U, i, j, 0.0);
-      else if (j == i)
-        ncm_matrix_set (U, i, j, g_test_rand_double_range (0.5, 2.0));
-      else
-        ncm_matrix_set (U, i, j, g_test_rand_double_range (-1.0, 1.0));
-    }
-  }
-
-  return U;
 }
 
 static void
@@ -649,12 +655,6 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
   ncm_vector_free (y);
   ncm_matrix_free (U);
   ncm_rng_free (rng);
-}
-
-static void
-test_ncm_stats_dist_kernel_free (TestNcmStatsDistKernel *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (ncm_stats_dist_kernel_free, test->kernel);
 }
 
 static void

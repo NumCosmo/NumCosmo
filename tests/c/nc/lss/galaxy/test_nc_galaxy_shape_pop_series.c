@@ -50,6 +50,26 @@
 #define TEST_ORDER 8
 #define TEST_TOL   1.0e-9
 
+void test_nc_galaxy_shape_pop_gauss_series_matches_exact (void);
+void test_nc_galaxy_shape_pop_beta_series_matches_exact (void);
+
+static const gdouble test_gs[] = {0.0, 0.01, -0.015, 0.02};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/nc/galaxy_shape_pop_series/gauss/matches_exact",
+                   &test_nc_galaxy_shape_pop_gauss_series_matches_exact);
+  g_test_add_func ("/nc/galaxy_shape_pop_series/beta/matches_exact",
+                   &test_nc_galaxy_shape_pop_beta_series_matches_exact);
+
+  return g_test_run ();
+}
+
 /* A synthetic x(g) = r0 + r1*g + r2*g^2 (r0>0, higher terms zero): every
  * coefficient a plain real scalar (harmonic 0 only), matching how
  * x(g)=|chi_I(chi_L,g)|^2 always looks in the real pipeline. */
@@ -78,26 +98,6 @@ static gdouble
 _eval_real (NcmLaurentSeriesTPS *tps, gdouble g)
 {
   return creal (ncm_laurent_series_tps_eval (tps, 1.0, g));
-}
-
-static const gdouble test_gs[] = {0.0, 0.01, -0.015, 0.02};
-
-void test_nc_galaxy_shape_pop_gauss_series_matches_exact (void);
-void test_nc_galaxy_shape_pop_beta_series_matches_exact (void);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/nc/galaxy_shape_pop_series/gauss/matches_exact",
-                   &test_nc_galaxy_shape_pop_gauss_series_matches_exact);
-  g_test_add_func ("/nc/galaxy_shape_pop_series/beta/matches_exact",
-                   &test_nc_galaxy_shape_pop_beta_series_matches_exact);
-
-  return g_test_run ();
 }
 
 void

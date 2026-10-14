@@ -36,9 +36,7 @@
 
 /* The Gaussian of the accuracy table in the NcmSplineBSpline docs */
 #define GAUSS_MU 1200.0
-
 #define GAUSS_SIGMA 300.0
-
 #define GAUSS_XF 2400.0
 
 static void test_ncm_spline_bspline_order (void);

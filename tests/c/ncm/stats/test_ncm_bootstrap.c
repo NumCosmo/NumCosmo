@@ -34,7 +34,6 @@
 #include <glib-object.h>
 
 #define TEST_BOOTSTRAP_SEED 123456
-
 #define TEST_BOOTSTRAP_NDRAWS 10000
 
 static void test_ncm_bootstrap_sizes (void);

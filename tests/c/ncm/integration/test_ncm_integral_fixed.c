@@ -51,7 +51,6 @@ typedef struct _GaussArg
  * narrow Gaussian with at most 30 total nodes. Shared by the two tests below so
  * they differ in exactly one thing -- whether @relerr_out is NULL. */
 #define CALIB_UNCONV_RELTOL (1.0e-14)
-
 #define CALIB_UNCONV_MAX_TOT (30)
 
 static void test_ncm_integral_fixed_get_nodes (gconstpointer pdata);

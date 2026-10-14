@@ -33,6 +33,18 @@
 #include <numcosmo/numcosmo.h>
 #include "test_ncm_fit_common.h"
 
+/*
+ * The checks every algorithm runs, in the order they were registered before.
+ * A table rather than a macro: the set is readable here, and greppable by name.
+ */
+typedef struct _TestNcmFitCase
+{
+  const gchar *suffix;
+
+  void (*setup) (TestNcmFit *test, gconstpointer pdata);
+  void (*func) (TestNcmFit *test, gconstpointer pdata);
+} TestNcmFitCase;
+
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_new_empty (TestNcmFit *test, gconstpointer pdata);
@@ -84,6 +96,84 @@ void test_ncm_fit_fisher_obs (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_gauss (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
+
+static const TestNcmFitCase test_ncm_fit_cases[] = {
+  { "/run",                    &test_ncm_fit_new, &test_ncm_fit_run },
+  { "/run/simple",             &test_ncm_fit_new, &test_ncm_fit_run_simple },
+  { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
+  { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
+  { "/gsl_ls_invalid_step",    &test_ncm_fit_new, &test_ncm_fit_gsl_ls_invalid_step },
+  { "/gsl_mm_set_algo",        &test_ncm_fit_new, &test_ncm_fit_gsl_mm_set_algo },
+  { "/gsl_mms_set_algo",       &test_ncm_fit_new, &test_ncm_fit_gsl_mms_set_algo },
+  { "/nlopt_set_algo",         &test_ncm_fit_new, &test_ncm_fit_nlopt_set_algo },
+  { "/covar/not_fit",          &test_ncm_fit_new, &test_ncm_fit_covar_not_fit },
+  { "/sub_fit/none",           &test_ncm_fit_new, &test_ncm_fit_get_sub_fit_none },
+  { "/run/full",               &test_ncm_fit_new, &test_ncm_fit_run_full },
+  { "/set_get",                &test_ncm_fit_new, &test_ncm_fit_set_get },
+  { "/log_info",               &test_ncm_fit_new, &test_ncm_fit_log_info },
+  { "/log_covar",              &test_ncm_fit_new, &test_ncm_fit_log_covar },
+  { "/m2lnL_val",              &test_ncm_fit_new, &test_ncm_fit_m2lnL_val },
+  { "/ls_f_J",                 &test_ncm_fit_new, &test_ncm_fit_ls_f_J },
+  { "/params/set_get",         &test_ncm_fit_new, &test_ncm_fit_params_set_get },
+  { "/run/grad/forward",       &test_ncm_fit_new, &test_ncm_fit_run_grad_forward },
+  { "/run/grad/accurate",      &test_ncm_fit_new, &test_ncm_fit_run_grad_accurate },
+  { "/run/grad/wrong/type",    &test_ncm_fit_new, &test_ncm_fit_run_grad_wrong_type },
+  { "/run/empty",              &test_ncm_fit_new_empty, &test_ncm_fit_run_empty },
+  { "/run/empty/free",         &test_ncm_fit_new_empty, &test_ncm_fit_run_empty_free },
+  { "/run/maxiter",            &test_ncm_fit_new, &test_ncm_fit_run_maxiter },
+  { "/run/empty/restart",      &test_ncm_fit_new_empty, &test_ncm_fit_run_restart },
+  { "/run/restart",            &test_ncm_fit_new, &test_ncm_fit_run_restart },
+  { "/run/restart/simple",     &test_ncm_fit_new, &test_ncm_fit_run_restart_simple },
+  { "/run/restart/save",       &test_ncm_fit_new, &test_ncm_fit_run_restart_save },
+  { "/run/restart/save/file",  &test_ncm_fit_new, &test_ncm_fit_run_restart_save_file },
+  { "/run/likelihood_ratio",   &test_ncm_fit_new, &test_ncm_fit_run_likelihood_ratio },
+  { "/serialize",              &test_ncm_fit_new, &test_ncm_fit_serialize },
+  { "/copy_new",               &test_ncm_fit_new, &test_ncm_fit_copy_new },
+  { "/sub_fit/wrong/fit",      &test_ncm_fit_new, &test_ncm_fit_sub_fit_wrong_fit },
+  { "/sub_fit/wrong/mset",     &test_ncm_fit_new, &test_ncm_fit_sub_fit_wrong_mset },
+  { "/sub_fit/wrong/param",    &test_ncm_fit_new, &test_ncm_fit_sub_fit_wrong_param },
+  { "/sub_fit/run",            &test_ncm_fit_new, &test_ncm_fit_sub_fit_run },
+  { "/sub_fit/set",            &test_ncm_fit_new, &test_ncm_fit_sub_fit_set },
+  { "/sub_fit/save_mset",      &test_ncm_fit_new, &test_ncm_fit_sub_fit_save_mset },
+  { "/constraints/equality",   &test_ncm_fit_new, &test_ncm_fit_equality_constraints },
+  { "/constraints/equality/two", &test_ncm_fit_new, &test_ncm_fit_equality_constraints_two },
+  { "/constraints/inequality", &test_ncm_fit_new, &test_ncm_fit_inequality_constraints },
+  { "/serialize/constraints",  &test_ncm_fit_new, &test_ncm_fit_serialize_constraints },
+  { "/fisher/ls",              &test_ncm_fit_new, &test_ncm_fit_fisher_ls },
+  { "/fisher/obs",             &test_ncm_fit_new, &test_ncm_fit_fisher_obs },
+  { "/fisher/gauss",           &test_ncm_fit_new, &test_ncm_fit_fisher_gauss },
+  { "/fisher_bias/gauss",      &test_ncm_fit_new, &test_ncm_fit_fisher_bias_gauss },
+  { "/traps",                  &test_ncm_fit_new, &test_ncm_fit_traps },
+  { "/invalid/run/subprocess", &test_ncm_fit_new, &test_ncm_fit_invalid_run },
+};
+
+static gdouble _test_ncm_fit_x0_max = 0.0;
+
+gint
+test_ncm_fit_main (gint argc, gchar *argv[], const TestNcmFitAlgo *algo)
+{
+  guint i;
+
+  g_test_init (&argc, &argv, NULL);
+
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_ncm_fit_cases); i++)
+  {
+    gchar *path = g_strdup_printf ("/ncm/fit/%s/%s%s", algo->lib, algo->algo,
+                                   test_ncm_fit_cases[i].suffix);
+
+    g_test_add (path, TestNcmFit, algo,
+                test_ncm_fit_cases[i].setup,
+                test_ncm_fit_cases[i].func,
+                &test_ncm_fit_free);
+
+    g_free (path);
+  }
+
+  return g_test_run ();
+}
 
 /*
  * Build the fit the descriptor names. This was TESTS_NCM_NEW, which emitted one
@@ -157,104 +247,6 @@ test_ncm_fit_traps (TestNcmFit *test, gconstpointer pdata)
   g_test_trap_assert_failed ();
 
   g_free (path);
-}
-
-/*
- * The checks every algorithm runs, in the order they were registered before.
- * A table rather than a macro: the set is readable here, and greppable by name.
- */
-typedef struct _TestNcmFitCase
-{
-  const gchar *suffix;
-
-  void (*setup) (TestNcmFit *test, gconstpointer pdata);
-  void (*func) (TestNcmFit *test, gconstpointer pdata);
-} TestNcmFitCase;
-
-static const TestNcmFitCase test_ncm_fit_cases[] = {
-  { "/run",                    &test_ncm_fit_new, &test_ncm_fit_run },
-  { "/run/simple",             &test_ncm_fit_new, &test_ncm_fit_run_simple },
-  { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
-  { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
-  { "/gsl_ls_invalid_step",    &test_ncm_fit_new, &test_ncm_fit_gsl_ls_invalid_step },
-  { "/gsl_mm_set_algo",        &test_ncm_fit_new, &test_ncm_fit_gsl_mm_set_algo },
-  { "/gsl_mms_set_algo",       &test_ncm_fit_new, &test_ncm_fit_gsl_mms_set_algo },
-  { "/nlopt_set_algo",         &test_ncm_fit_new, &test_ncm_fit_nlopt_set_algo },
-  { "/covar/not_fit",          &test_ncm_fit_new, &test_ncm_fit_covar_not_fit },
-  { "/sub_fit/none",           &test_ncm_fit_new, &test_ncm_fit_get_sub_fit_none },
-  { "/run/full",               &test_ncm_fit_new, &test_ncm_fit_run_full },
-  { "/set_get",                &test_ncm_fit_new, &test_ncm_fit_set_get },
-  { "/log_info",               &test_ncm_fit_new, &test_ncm_fit_log_info },
-  { "/log_covar",              &test_ncm_fit_new, &test_ncm_fit_log_covar },
-  { "/m2lnL_val",              &test_ncm_fit_new, &test_ncm_fit_m2lnL_val },
-  { "/ls_f_J",                 &test_ncm_fit_new, &test_ncm_fit_ls_f_J },
-  { "/params/set_get",         &test_ncm_fit_new, &test_ncm_fit_params_set_get },
-  { "/run/grad/forward",       &test_ncm_fit_new, &test_ncm_fit_run_grad_forward },
-  { "/run/grad/accurate",      &test_ncm_fit_new, &test_ncm_fit_run_grad_accurate },
-  { "/run/grad/wrong/type",    &test_ncm_fit_new, &test_ncm_fit_run_grad_wrong_type },
-  { "/run/empty",              &test_ncm_fit_new_empty, &test_ncm_fit_run_empty },
-  { "/run/empty/free",         &test_ncm_fit_new_empty, &test_ncm_fit_run_empty_free },
-  { "/run/maxiter",            &test_ncm_fit_new, &test_ncm_fit_run_maxiter },
-  { "/run/empty/restart",      &test_ncm_fit_new_empty, &test_ncm_fit_run_restart },
-  { "/run/restart",            &test_ncm_fit_new, &test_ncm_fit_run_restart },
-  { "/run/restart/simple",     &test_ncm_fit_new, &test_ncm_fit_run_restart_simple },
-  { "/run/restart/save",       &test_ncm_fit_new, &test_ncm_fit_run_restart_save },
-  { "/run/restart/save/file",  &test_ncm_fit_new, &test_ncm_fit_run_restart_save_file },
-  { "/run/likelihood_ratio",   &test_ncm_fit_new, &test_ncm_fit_run_likelihood_ratio },
-  { "/serialize",              &test_ncm_fit_new, &test_ncm_fit_serialize },
-  { "/copy_new",               &test_ncm_fit_new, &test_ncm_fit_copy_new },
-  { "/sub_fit/wrong/fit",      &test_ncm_fit_new, &test_ncm_fit_sub_fit_wrong_fit },
-  { "/sub_fit/wrong/mset",     &test_ncm_fit_new, &test_ncm_fit_sub_fit_wrong_mset },
-  { "/sub_fit/wrong/param",    &test_ncm_fit_new, &test_ncm_fit_sub_fit_wrong_param },
-  { "/sub_fit/run",            &test_ncm_fit_new, &test_ncm_fit_sub_fit_run },
-  { "/sub_fit/set",            &test_ncm_fit_new, &test_ncm_fit_sub_fit_set },
-  { "/sub_fit/save_mset",      &test_ncm_fit_new, &test_ncm_fit_sub_fit_save_mset },
-  { "/constraints/equality",   &test_ncm_fit_new, &test_ncm_fit_equality_constraints },
-  { "/constraints/equality/two", &test_ncm_fit_new, &test_ncm_fit_equality_constraints_two },
-  { "/constraints/inequality", &test_ncm_fit_new, &test_ncm_fit_inequality_constraints },
-  { "/serialize/constraints",  &test_ncm_fit_new, &test_ncm_fit_serialize_constraints },
-  { "/fisher/ls",              &test_ncm_fit_new, &test_ncm_fit_fisher_ls },
-  { "/fisher/obs",             &test_ncm_fit_new, &test_ncm_fit_fisher_obs },
-  { "/fisher/gauss",           &test_ncm_fit_new, &test_ncm_fit_fisher_gauss },
-  { "/fisher_bias/gauss",      &test_ncm_fit_new, &test_ncm_fit_fisher_bias_gauss },
-  { "/traps",                  &test_ncm_fit_new, &test_ncm_fit_traps },
-  { "/invalid/run/subprocess", &test_ncm_fit_new, &test_ncm_fit_invalid_run },
-};
-
-gint
-test_ncm_fit_main (gint argc, gchar *argv[], const TestNcmFitAlgo *algo)
-{
-  guint i;
-
-  g_test_init (&argc, &argv, NULL);
-
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_ncm_fit_cases); i++)
-  {
-    gchar *path = g_strdup_printf ("/ncm/fit/%s/%s%s", algo->lib, algo->algo,
-                                   test_ncm_fit_cases[i].suffix);
-
-    g_test_add (path, TestNcmFit, algo,
-                test_ncm_fit_cases[i].setup,
-                test_ncm_fit_cases[i].func,
-                &test_ncm_fit_free);
-
-    g_free (path);
-  }
-
-  return g_test_run ();
-}
-
-void
-test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata)
-{
-  NcmFit *fit = test->fit;
-
-  NCM_TEST_FREE (ncm_fit_free, fit);
-  NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
-  NCM_TEST_FREE (ncm_rng_free, test->rng);
 }
 
 void
@@ -614,8 +606,6 @@ test_ncm_fit_nlopt_set_algo (TestNcmFit *test, gconstpointer pdata)
   g_assert_cmpint (local_algo, ==, NCM_FIT_NLOPT_LN_BOBYQA);
   g_assert_cmpstr (ncm_fit_get_desc (fit), ==, "NLOpt:gn-crs2-lm:ln-bobyqa");
 }
-
-static gdouble _test_ncm_fit_x0_max = 0.0;
 
 static gboolean
 _test_ncm_fit_valid_x0 (NcmModel *model)
@@ -1812,5 +1802,15 @@ test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata)
 {
   /*NcmFit *fit = test->fit;*/
   g_assert_not_reached ();
+}
+
+void
+test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  NCM_TEST_FREE (ncm_fit_free, fit);
+  NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
+  NCM_TEST_FREE (ncm_rng_free, test->rng);
 }
 

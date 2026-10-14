@@ -51,15 +51,10 @@
 /* Comoving distances (Mpc) the windows are placed at: well inside the distance object's
  * z <= 6 range for this cosmology, and narrow enough that a support grid is cheap. */
 #define TEST_CHI_MEAN 1500.0
-
 #define TEST_CHI_SIGMA 300.0
-
 #define TEST_N_SIGMA 4.0
-
 #define TEST_CHI_LOWER 500.0
-
 #define TEST_CHI_UPPER 2500.0
-
 #define TEST_GRID 64
 
 typedef struct _TestNcXcorKernelAnalytic
@@ -100,11 +95,8 @@ typedef struct _TestKernel
 } TestKernel;
 
 #define TEST_N_KERNELS (G_N_ELEMENTS (test_kernels))
-
 #define TEST_CL_N_K 8192
-
 #define TEST_CL_GL_ORDER 12
-
 #define TEST_CL_PER_LOBE 2
 
 /* One (window, multipole) checked against the definition, with the deviation it is held to */
@@ -560,6 +552,195 @@ _getters_multi_disjoint (NcXcorKernel *xclk)
   _getters_multi_bumps (xclk, 600.0, 2600.0, 100.0, 150.0);
 }
 
+/* The closure of one multipole of the window at the given tolerances, non-Limber */
+static NcXcorKernelIntegrand *
+_closure_at (TestNcXcorKernelAnalytic *test, gint ell, gdouble adaptive_epsilon, gdouble tol)
+{
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (ell, ell));
+  NcXcorKernelIntegrand *closure;
+
+  g_object_set (test->xclk, "integrator", sbi, NULL);
+  nc_xcor_kernel_set_l_limber (test->xclk, -1);
+  nc_xcor_kernel_set_adaptive_epsilon (test->xclk, adaptive_epsilon);
+  nc_xcor_kernel_set_reltol (test->xclk, tol);
+  nc_xcor_kernel_set_peak_epsilon (test->xclk, tol);
+
+  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi);
+  ncm_sbessel_integrator_free (sbi);
+
+  return closure;
+}
+
+/* The Gaussian window in closed form, normalized to one over its support, in Mpc^-1 */
+static gdouble
+_window_gauss (gdouble chi)
+{
+  const gdouble chi_min = MAX (0.0, TEST_CHI_MEAN - TEST_N_SIGMA * TEST_CHI_SIGMA);
+  const gdouble chi_max = TEST_CHI_MEAN + TEST_N_SIGMA * TEST_CHI_SIGMA;
+  const gdouble s2      = M_SQRT2 * TEST_CHI_SIGMA;
+  const gdouble norm    = 0.5 * sqrt (2.0 * M_PI) * TEST_CHI_SIGMA * (erf ((chi_max - TEST_CHI_MEAN) / s2) - erf ((chi_min - TEST_CHI_MEAN) / s2));
+
+  if ((chi < chi_min) || (chi > chi_max))
+    return 0.0;
+
+  return exp (-0.5 * gsl_pow_2 ((chi - TEST_CHI_MEAN) / TEST_CHI_SIGMA)) / norm;
+}
+
+/* The top-hat window in closed form, normalized to one over its support, in Mpc^-1 */
+static gdouble
+_window_tophat (gdouble chi)
+{
+  if ((chi < TEST_CHI_LOWER) || (chi > TEST_CHI_UPPER))
+    return 0.0;
+
+  return 1.0 / (TEST_CHI_UPPER - TEST_CHI_LOWER);
+}
+
+/*
+ * C_ell of a window from its definition, (2 / pi) int dk k^2 P(k, z = 0) [int dchi W(chi)
+ * j_ell(k chi)]^2, in Mpc throughout. The radial integral is taken by Gauss-Legendre on
+ * panels a fraction of a half-oscillation wide, the outer one by a log-k trapezoid over
+ * the range the kernel's closure reports. Only that range and P(k) come from the library:
+ * the window and the quadrature are written here.
+ */
+static gdouble
+_cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*window) (gdouble), gint ell)
+{
+  NcXcorKernelIntegrand *closure    = nc_xcor_kernel_get_eval (xclk, cosmo, ell);
+  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (TEST_CL_GL_ORDER);
+  const gdouble RH                  = nc_hicosmo_RH_Mpc (cosmo);
+  gdouble chi_min, chi_max, k_min, k_max, lnk_lo, lnk_hi, dlnk;
+  gdouble sum = 0.0;
+  guint i;
+
+  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (xclk), &chi_min, &chi_max);
+  nc_xcor_kernel_integrand_get_range (closure, &k_min, &k_max);
+
+  lnk_lo = log (k_min / RH);
+  lnk_hi = log (k_max / RH);
+  dlnk   = (lnk_hi - lnk_lo) / (TEST_CL_N_K - 1.0);
+
+  for (i = 0; i < TEST_CL_N_K; i++)
+  {
+    const gdouble k       = exp (lnk_lo + dlnk * i);
+    const gdouble pk      = ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k);
+    const guint n_panel   = MAX (16, TEST_CL_PER_LOBE * (guint) floor ((chi_max - chi_min) * k / M_PI) + 1);
+    const gdouble trapeze = ((i == 0) || (i == TEST_CL_N_K - 1)) ? 0.5 : 1.0;
+    gdouble radial        = 0.0;
+    guint p, q;
+
+    for (p = 0; p < n_panel; p++)
+    {
+      const gdouble lo = chi_min + (chi_max - chi_min) * p / (gdouble) n_panel;
+      const gdouble hi = chi_min + (chi_max - chi_min) * (p + 1) / (gdouble) n_panel;
+
+      for (q = 0; q < TEST_CL_GL_ORDER; q++)
+      {
+        gdouble chi, w;
+
+        gsl_integration_glfixed_point (lo, hi, q, &chi, &w, gl);
+        radial += w * window (chi) * gsl_sf_bessel_jl (ell, k * chi);
+      }
+    }
+
+    sum += trapeze * dlnk * gsl_pow_3 (k) * pk * gsl_pow_2 (radial);
+  }
+
+  gsl_integration_glfixed_table_free (gl);
+  nc_xcor_kernel_integrand_unref (closure);
+
+  return 2.0 / M_PI * sum;
+}
+
+/* _new_full() is _new() plus an explicit sBessel integrator, which is what moves the
+ * kernel off the Limber tier. The window must not depend on that choice. */
+static void
+test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  const TestKernel *tk      = pdata;
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
+  NcXcorKernel *full;
+  gdouble chi_min, chi_max;
+  guint i;
+
+  if (tk->build_full == NULL)
+  {
+    g_test_skip ("no _new_full form for this window");
+    ncm_sbessel_integrator_free (sbi);
+
+    return;
+  }
+
+  full = tk->build_full (test->dist, test->ps, sbi);
+
+  g_assert_null (nc_xcor_kernel_peek_integrator (test->xclk));
+  g_assert_true (nc_xcor_kernel_peek_integrator (full) == sbi);
+  nc_xcor_kernel_prepare (full, test->cosmo);
+
+  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (test->xclk), &chi_min, &chi_max);
+
+  {
+    gdouble full_min, full_max;
+
+    nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (full), &full_min, &full_max);
+    g_assert_cmpfloat (full_min, ==, chi_min);
+    g_assert_cmpfloat (full_max, ==, chi_max);
+  }
+
+  for (i = 0; i <= TEST_GRID; i++)
+  {
+    const gdouble chi = chi_min + (chi_max - chi_min) * i / (gdouble) TEST_GRID;
+
+    ncm_assert_cmpdouble_e (nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (full), chi), ==,
+                            nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (test->xclk), chi),
+                            1.0e-14, 0.0);
+  }
+
+  nc_xcor_kernel_free (full);
+  ncm_sbessel_integrator_free (sbi);
+}
+
+static void
+test_nc_xcor_kernel_analytic_new (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  const TestKernel *tk = pdata;
+  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist     = nc_distance_new (6.0);
+  NcmPowspec *ps       = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                                NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  test->cosmo = cosmo;
+  test->dist  = dist;
+  test->ps    = ps;
+  test->xclk  = tk->build (dist, ps);
+
+  g_assert_true (NC_IS_XCOR_KERNEL (test->xclk));
+  g_assert_true (NC_IS_XCOR_KERNEL_RADIAL (test->xclk));
+
+  nc_xcor_kernel_prepare (test->xclk, cosmo);
+}
+
+static void
+test_nc_xcor_kernel_analytic_free (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  ncm_powspec_free (test->ps);
+  nc_distance_free (test->dist);
+  nc_hicosmo_free (test->cosmo);
+
+  NCM_TEST_FREE (nc_xcor_kernel_free, test->xclk);
+}
+
 static void
 test_nc_xcor_kernel_analytic_basic (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
 {
@@ -781,54 +962,6 @@ test_nc_xcor_kernel_analytic_getters (TestNcXcorKernelAnalytic *test, gconstpoin
   tk->check_getters (test->xclk);
 }
 
-/* _new_full() is _new() plus an explicit sBessel integrator, which is what moves the
- * kernel off the Limber tier. The window must not depend on that choice. */
-static void
-test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
-{
-  const TestKernel *tk      = pdata;
-  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
-  NcXcorKernel *full;
-  gdouble chi_min, chi_max;
-  guint i;
-
-  if (tk->build_full == NULL)
-  {
-    g_test_skip ("no _new_full form for this window");
-    ncm_sbessel_integrator_free (sbi);
-
-    return;
-  }
-
-  full = tk->build_full (test->dist, test->ps, sbi);
-
-  g_assert_null (nc_xcor_kernel_peek_integrator (test->xclk));
-  g_assert_true (nc_xcor_kernel_peek_integrator (full) == sbi);
-  nc_xcor_kernel_prepare (full, test->cosmo);
-
-  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (test->xclk), &chi_min, &chi_max);
-
-  {
-    gdouble full_min, full_max;
-
-    nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (full), &full_min, &full_max);
-    g_assert_cmpfloat (full_min, ==, chi_min);
-    g_assert_cmpfloat (full_max, ==, chi_max);
-  }
-
-  for (i = 0; i <= TEST_GRID; i++)
-  {
-    const gdouble chi = chi_min + (chi_max - chi_min) * i / (gdouble) TEST_GRID;
-
-    ncm_assert_cmpdouble_e (nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (full), chi), ==,
-                            nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (test->xclk), chi),
-                            1.0e-14, 0.0);
-  }
-
-  nc_xcor_kernel_free (full);
-  ncm_sbessel_integrator_free (sbi);
-}
-
 /* The non-Limber Chebyshev closure of the window matches W_ell(k) computed directly, in
  * two multipole blocks, within what the closure was asked for */
 static void
@@ -856,147 +989,6 @@ test_nc_xcor_kernel_analytic_closure (TestNcXcorKernelAnalytic *test, gconstpoin
     nc_xcor_kernel_integrand_unref (closure);
     ncm_sbessel_integrator_free (sbi);
   }
-}
-
-/* The closure of one multipole of the window at the given tolerances, non-Limber */
-static NcXcorKernelIntegrand *
-_closure_at (TestNcXcorKernelAnalytic *test, gint ell, gdouble adaptive_epsilon, gdouble tol)
-{
-  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (ell, ell));
-  NcXcorKernelIntegrand *closure;
-
-  g_object_set (test->xclk, "integrator", sbi, NULL);
-  nc_xcor_kernel_set_l_limber (test->xclk, -1);
-  nc_xcor_kernel_set_adaptive_epsilon (test->xclk, adaptive_epsilon);
-  nc_xcor_kernel_set_reltol (test->xclk, tol);
-  nc_xcor_kernel_set_peak_epsilon (test->xclk, tol);
-
-  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi);
-  ncm_sbessel_integrator_free (sbi);
-
-  return closure;
-}
-
-/* The Gaussian window in closed form, normalized to one over its support, in Mpc^-1 */
-static gdouble
-_window_gauss (gdouble chi)
-{
-  const gdouble chi_min = MAX (0.0, TEST_CHI_MEAN - TEST_N_SIGMA * TEST_CHI_SIGMA);
-  const gdouble chi_max = TEST_CHI_MEAN + TEST_N_SIGMA * TEST_CHI_SIGMA;
-  const gdouble s2      = M_SQRT2 * TEST_CHI_SIGMA;
-  const gdouble norm    = 0.5 * sqrt (2.0 * M_PI) * TEST_CHI_SIGMA * (erf ((chi_max - TEST_CHI_MEAN) / s2) - erf ((chi_min - TEST_CHI_MEAN) / s2));
-
-  if ((chi < chi_min) || (chi > chi_max))
-    return 0.0;
-
-  return exp (-0.5 * gsl_pow_2 ((chi - TEST_CHI_MEAN) / TEST_CHI_SIGMA)) / norm;
-}
-
-/* The top-hat window in closed form, normalized to one over its support, in Mpc^-1 */
-static gdouble
-_window_tophat (gdouble chi)
-{
-  if ((chi < TEST_CHI_LOWER) || (chi > TEST_CHI_UPPER))
-    return 0.0;
-
-  return 1.0 / (TEST_CHI_UPPER - TEST_CHI_LOWER);
-}
-
-/*
- * C_ell of a window from its definition, (2 / pi) int dk k^2 P(k, z = 0) [int dchi W(chi)
- * j_ell(k chi)]^2, in Mpc throughout. The radial integral is taken by Gauss-Legendre on
- * panels a fraction of a half-oscillation wide, the outer one by a log-k trapezoid over
- * the range the kernel's closure reports. Only that range and P(k) come from the library:
- * the window and the quadrature are written here.
- */
-static gdouble
-_cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*window) (gdouble), gint ell)
-{
-  NcXcorKernelIntegrand *closure    = nc_xcor_kernel_get_eval (xclk, cosmo, ell);
-  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (TEST_CL_GL_ORDER);
-  const gdouble RH                  = nc_hicosmo_RH_Mpc (cosmo);
-  gdouble chi_min, chi_max, k_min, k_max, lnk_lo, lnk_hi, dlnk;
-  gdouble sum = 0.0;
-  guint i;
-
-  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (xclk), &chi_min, &chi_max);
-  nc_xcor_kernel_integrand_get_range (closure, &k_min, &k_max);
-
-  lnk_lo = log (k_min / RH);
-  lnk_hi = log (k_max / RH);
-  dlnk   = (lnk_hi - lnk_lo) / (TEST_CL_N_K - 1.0);
-
-  for (i = 0; i < TEST_CL_N_K; i++)
-  {
-    const gdouble k       = exp (lnk_lo + dlnk * i);
-    const gdouble pk      = ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k);
-    const guint n_panel   = MAX (16, TEST_CL_PER_LOBE * (guint) floor ((chi_max - chi_min) * k / M_PI) + 1);
-    const gdouble trapeze = ((i == 0) || (i == TEST_CL_N_K - 1)) ? 0.5 : 1.0;
-    gdouble radial        = 0.0;
-    guint p, q;
-
-    for (p = 0; p < n_panel; p++)
-    {
-      const gdouble lo = chi_min + (chi_max - chi_min) * p / (gdouble) n_panel;
-      const gdouble hi = chi_min + (chi_max - chi_min) * (p + 1) / (gdouble) n_panel;
-
-      for (q = 0; q < TEST_CL_GL_ORDER; q++)
-      {
-        gdouble chi, w;
-
-        gsl_integration_glfixed_point (lo, hi, q, &chi, &w, gl);
-        radial += w * window (chi) * gsl_sf_bessel_jl (ell, k * chi);
-      }
-    }
-
-    sum += trapeze * dlnk * gsl_pow_3 (k) * pk * gsl_pow_2 (radial);
-  }
-
-  gsl_integration_glfixed_table_free (gl);
-  nc_xcor_kernel_integrand_unref (closure);
-
-  return 2.0 / M_PI * sum;
-}
-
-static void
-test_nc_xcor_kernel_analytic_new (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
-{
-  const TestKernel *tk = pdata;
-  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcDistance *dist     = nc_distance_new (6.0);
-  NcmPowspec *ps       = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                                NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
-
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
-
-  nc_distance_prepare (dist, cosmo);
-  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
-
-  test->cosmo = cosmo;
-  test->dist  = dist;
-  test->ps    = ps;
-  test->xclk  = tk->build (dist, ps);
-
-  g_assert_true (NC_IS_XCOR_KERNEL (test->xclk));
-  g_assert_true (NC_IS_XCOR_KERNEL_RADIAL (test->xclk));
-
-  nc_xcor_kernel_prepare (test->xclk, cosmo);
-}
-
-static void
-test_nc_xcor_kernel_analytic_free (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
-{
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
-
-  NCM_TEST_FREE (nc_xcor_kernel_free, test->xclk);
 }
 
 /* A tiny adaptive-epsilon makes the domain of the disjoint window five decades wide. A

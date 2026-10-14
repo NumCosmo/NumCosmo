@@ -58,9 +58,7 @@ typedef struct _TestNcmSplineFunc
 } TestNcmSplineFunc;
 
 #define _NCM_SPLINE_TEST_NKNOTS 1000
-
 #define _NCM_SPLINE_TEST_DX 0.003
-
 #define _TEST_EPSILON (1.00000001)
 
 void test_ncm_spline_cubic_notaknot_new_empty (TestNcmSpline *test, gconstpointer pdata);

@@ -59,13 +59,9 @@ typedef struct _TestArbEval
  * span / width_fraction.
  */
 #define TEST_TAU_A 3162.28
-
 #define TEST_TAU_B 3672.79
-
 #define TEST_TAU_ELL_MIN 200
-
 #define TEST_TAU_ELL_MAX 207
-
 #define TEST_TAU_N_ELL (TEST_TAU_ELL_MAX - TEST_TAU_ELL_MIN + 1)
 
 /*

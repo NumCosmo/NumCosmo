@@ -48,9 +48,7 @@
 #include "test_nc_xcor_kquad_common.h"
 
 #define TEST_LMIN 2
-
 #define TEST_LMAX 5
-
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
 typedef struct _TestNcXcorKQuad
@@ -125,6 +123,36 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/xcor/kquad/methods", &test_nc_xcor_kquad_method_table);
 
   g_test_run ();
+}
+
+static void
+test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
+{
+  const TestMethod *tm = pdata;
+
+  test_nc_xcor_kquad_env_init (&test->env);
+
+  /* Overlapping, so the cross spectrum is not numerically zero. Never Limber: the
+   * kernel-space methods integrate a W_l(k) representation, which is what the
+   * non-Limber builder produces. */
+  test->k1 = test_nc_xcor_kquad_tophat (&test->env, 200.0, 400.0, -1);
+  test->k2 = test_nc_xcor_kquad_tophat (&test->env, 250.0, 450.0, -1);
+
+  test->xc = nc_xcor_new (test->env.dist, test->env.ps, tm->meth);
+  nc_xcor_set_ell_batch_size (test->xc, TEST_NELL);
+  nc_xcor_prepare (test->xc, test->env.cosmo);
+
+  g_assert_true (nc_xcor_method_is_kernel_space (tm->meth));
+}
+
+static void
+test_nc_xcor_kquad_free (TestNcXcorKQuad *test, gconstpointer pdata)
+{
+  nc_xcor_kernel_free (test->k1);
+  nc_xcor_kernel_free (test->k2);
+  test_nc_xcor_kquad_env_clear (&test->env);
+
+  NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
 
 static void
@@ -236,36 +264,6 @@ test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
   ncm_vector_free (direct);
   nc_xcor_kernel_integrand_unref (i1);
   nc_xcor_kernel_integrand_unref (i2);
-}
-
-static void
-test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
-{
-  const TestMethod *tm = pdata;
-
-  test_nc_xcor_kquad_env_init (&test->env);
-
-  /* Overlapping, so the cross spectrum is not numerically zero. Never Limber: the
-   * kernel-space methods integrate a W_l(k) representation, which is what the
-   * non-Limber builder produces. */
-  test->k1 = test_nc_xcor_kquad_tophat (&test->env, 200.0, 400.0, -1);
-  test->k2 = test_nc_xcor_kquad_tophat (&test->env, 250.0, 450.0, -1);
-
-  test->xc = nc_xcor_new (test->env.dist, test->env.ps, tm->meth);
-  nc_xcor_set_ell_batch_size (test->xc, TEST_NELL);
-  nc_xcor_prepare (test->xc, test->env.cosmo);
-
-  g_assert_true (nc_xcor_method_is_kernel_space (tm->meth));
-}
-
-static void
-test_nc_xcor_kquad_free (TestNcXcorKQuad *test, gconstpointer pdata)
-{
-  nc_xcor_kernel_free (test->k1);
-  nc_xcor_kernel_free (test->k2);
-  test_nc_xcor_kquad_env_clear (&test->env);
-
-  NCM_TEST_FREE (nc_xcor_free, test->xc);
 }
 
 /* Every method has to describe itself: the solver picks an integrator by these. */

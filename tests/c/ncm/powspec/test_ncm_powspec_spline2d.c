@@ -38,15 +38,10 @@
  * not-a-knot spline reproduces up to rounding, on z in [0.5, 3] and k in [1e-4, 10].
  */
 #define TEST_ZMIN (0.5)
-
 #define TEST_ZMAX (3.0)
-
 #define TEST_NZ 26
-
 #define TEST_KMIN (1.0e-4)
-
 #define TEST_KMAX (10.0)
-
 #define TEST_NK 60
 
 static void test_ncm_powspec_spline2d_ranges (void);

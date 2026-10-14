@@ -33,7 +33,6 @@
 #include <glib-object.h>
 
 #define _TEST_NCM_VECTOR_STATIC_SIZE 212
-
 #define _TEST_NCM_VECTOR_MIN_SIZE 51
 
 typedef struct _TestNcmVector

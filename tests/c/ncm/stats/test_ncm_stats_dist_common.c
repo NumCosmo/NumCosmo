@@ -55,9 +55,25 @@ typedef struct _TestNcmStatsDist
   gboolean divergence;
 } TestNcmStatsDist;
 
-/* Chosen once by main(): g_test_add()'s tdata already carries the covariance type, and
- * every test in one executable runs in the same mode. */
-static TestNcmStatsDistMode _test_mode = TEST_NCM_STATS_DIST_MECHANICS;
+typedef struct _TestNcmStatsDistFunc
+{
+  const gchar *name;
+
+  void (*test_func) (TestNcmStatsDist *test, gconstpointer pdata);
+} TestNcmStatsDistFunc;
+
+#define TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN 4
+#define TEST_NCM_STATS_DIST_TESTS_LEN 14
+#define TESTMULT 200
+#define NTESTS 500
+#define RELTOL 0.5
+
+/* Mechanics mode sizing. The interpolation fits dominate and their cost grows with the
+ * sample, so this is what makes the difference; the guard the library applies is
+ * n_kernels > dim, which these clear by a wide margin. */
+#define TESTMULT_MECHANICS 80
+#define NTESTS_MECHANICS 20
+#define SAMPLING_NTESTS_MECHANICS 10000
 
 static void test_ncm_stats_dist_new_kde_gauss (TestNcmStatsDist *test, gconstpointer pdata);
 static void test_ncm_stats_dist_new_kde_studentt (TestNcmStatsDist *test, gconstpointer pdata);
@@ -99,15 +115,11 @@ static void test_ncm_stats_dist_kde_cov_fixed_reprepare (void);
 static void test_ncm_stats_dist_print_fit (void);
 static void test_ncm_stats_dist_kde_cov_fixed_nearPD (void);
 
-typedef struct _TestNcmStatsDistFunc
-{
-  const gchar *name;
+static gboolean _test_ncm_stats_dist_is_divergence_check (const gchar *name);
 
-  void (*test_func) (TestNcmStatsDist *test, gconstpointer pdata);
-} TestNcmStatsDistFunc;
-
-#define TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN 4
-#define TEST_NCM_STATS_DIST_TESTS_LEN 14
+/* Chosen once by main(): g_test_add()'s tdata already carries the covariance type, and
+ * every test in one executable runs in the same mode. */
+static TestNcmStatsDistMode _test_mode = TEST_NCM_STATS_DIST_MECHANICS;
 
 static TestNcmStatsDistFunc constructors[TEST_NCM_STATS_DIST_CONSTRUCTORS_LEN] = {
   {"kde/gauss",           &test_ncm_stats_dist_new_kde_gauss, },
@@ -132,17 +144,6 @@ static TestNcmStatsDistFunc tests[TEST_NCM_STATS_DIST_TESTS_LEN] = {
   {"eval_vec",                         &test_ncm_stats_dist_eval_vec},
   {"gauss/cv_auto_kernel",             &test_ncm_stats_dist_cv_auto_kernel},
 };
-
-/* The checks that assert the estimator reproduces its own distribution. In divergence
- * mode only these run; the others carry no statistical claim and would only repeat what
- * the mechanics run already covered. */
-static gboolean
-_test_ncm_stats_dist_is_divergence_check (const gchar *name)
-{
-  return g_str_has_prefix (name, "gauss/dens/") ||
-         (g_strcmp0 (name, "gauss/sampling") == 0) ||
-         (g_strcmp0 (name, "gauss/center_shrink") == 0);
-}
 
 gint
 test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
@@ -242,16 +243,270 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
   return g_test_run ();
 }
 
-#define TESTMULT 200
-#define NTESTS 500
-#define RELTOL 0.5
+/* The checks that assert the estimator reproduces its own distribution. In divergence
+ * mode only these run; the others carry no statistical claim and would only repeat what
+ * the mechanics run already covered. */
+static gboolean
+_test_ncm_stats_dist_is_divergence_check (const gchar *name)
+{
+  return g_str_has_prefix (name, "gauss/dens/") ||
+         (g_strcmp0 (name, "gauss/sampling") == 0) ||
+         (g_strcmp0 (name, "gauss/center_shrink") == 0);
+}
 
-/* Mechanics mode sizing. The interpolation fits dominate and their cost grows with the
- * sample, so this is what makes the difference; the guard the library applies is
- * n_kernels > dim, which these clear by a wide margin. */
-#define TESTMULT_MECHANICS 80
-#define NTESTS_MECHANICS 20
-#define SAMPLING_NTESTS_MECHANICS 10000
+static void
+test_ncm_stats_dist_cmp_dist (TestNcmStatsDist *test, NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, NcmRNG *rng)
+{
+  NcmStatsVec *err_stats = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
+  gulong N               = 0;
+  guint i;
+
+  /* Mechanics: the estimator has to evaluate and sample without producing nonsense. That
+   * it reproduces the distribution it was built from needs the full sample, and is the
+   * divergence mode's claim. */
+  if (!test->divergence)
+  {
+    for (i = 0; i < test->ntests; i++)
+    {
+      NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+
+      g_assert_true (gsl_finite (ncm_stats_dist_eval_m2lnp (test->sd, y)));
+
+      ncm_stats_dist_sample (test->sd, y, rng);
+      g_assert_true (gsl_finite (ncm_stats_dist_eval_m2lnp (test->sd, y)));
+    }
+
+    ncm_stats_vec_free (err_stats);
+
+    return;
+  }
+
+  for (i = 0; i < test->ntests; i++)
+  {
+    NcmVector *y;
+    gdouble m2lnL, m2lnp_s, alpha0, alpha1;
+
+    /* Measuring the Kullback-Leibler divergence */
+
+    y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+    m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
+    alpha0  = 0.25 * (m2lnp_s - m2lnL);
+
+    ncm_stats_dist_sample (test->sd, y, rng);
+    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
+    m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
+    alpha1  = 0.25 * (m2lnL - m2lnp_s);
+
+    ncm_stats_vec_set (err_stats, 0, log1p (tanh (alpha0)));
+    ncm_stats_vec_set (err_stats, 1, log1p (tanh (alpha1)));
+    ncm_stats_vec_update (err_stats);
+  }
+
+  /* Measuring the Jensen-Shannon divergence */
+  {
+    gdouble KL_P_M  = ncm_stats_vec_get_mean (err_stats, 0);
+    gdouble KL_PS_M = ncm_stats_vec_get_mean (err_stats, 1);
+    gdouble JS_P_PS = 0.5 * (KL_P_M + KL_PS_M);
+
+    /* printf ("JS(P||P_s) = % 22.15g\n", JS_P_PS); */
+    g_assert_cmpfloat (JS_P_PS, <, RELTOL);
+  }
+
+  ncm_stats_vec_free (err_stats);
+}
+
+static void
+_test_ncm_stats_dist_split_drop_far_points (const gdouble split_frac)
+{
+  /*
+   * The other branch of the split: at least half the kernel centres are within
+   * NCM_STATS_DIST_M2LNL_RANGE of the best point, so the observations beyond it leave the
+   * sample and everything is built from what remains. Here the far points are the last
+   * tenth, outside the kernel block, and the sample must shrink to the kept nine tenths.
+   * The half is of the kernel centres, not of the sample: with split_frac below 0.5 the
+   * weight fit must still run.
+   */
+  const guint d              = 3;
+  const guint n              = 400;
+  const guint n_far          = 40;
+  const guint n_keep         = n - n_far;
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP));
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260923);
+  NcmVector *m2lnL           = ncm_vector_new (n);
+  GPtrArray *sample          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  guint i, j;
+
+  ncm_stats_dist_set_split_frac (sd, split_frac);
+  ncm_stats_dist_set_over_smooth (sd, 1.0);
+  ncm_stats_dist_set_uniform_weights (sd, FALSE);
+
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *y = ncm_vector_new (d);
+    gdouble chi2 = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble z = ncm_rng_ugaussian_gen (rng);
+
+      ncm_vector_set (y, j, z);
+      chi2 += z * z;
+    }
+
+    ncm_vector_set (m2lnL, i, (i < n_keep) ? chi2 : chi2 + 1.0e3);
+    g_ptr_array_add (sample, y);
+    ncm_stats_dist_add_obs (sd, y);
+  }
+
+  ncm_stats_dist_prepare (sd, m2lnL);
+
+  g_assert_cmpuint (ncm_stats_dist_get_sample_size (sd), ==, n_keep);
+  g_assert_cmpuint (ncm_stats_dist_get_n_kernels (sd), ==, (guint) ceil (split_frac * n_keep));
+  g_assert_cmpuint (ncm_vector_len (ncm_stats_dist_peek_weights (sd)), ==, ncm_stats_dist_get_n_kernels (sd));
+
+  /* The weight fit ran: the weights are not the uniform ones. */
+  {
+    NcmVector *w = ncm_stats_dist_peek_weights (sd);
+
+    g_assert_cmpfloat (ncm_vector_get_max (w), >, 2.0 * ncm_vector_get_min (w));
+  }
+
+  {
+    GPtrArray *kept = ncm_stats_dist_peek_sample_array (sd);
+
+    g_assert_cmpuint (kept->len, ==, n_keep);
+
+    for (i = 0; i < n_keep; i++)
+      for (j = 0; j < d; j++)
+        g_assert_cmpfloat (ncm_vector_get (g_ptr_array_index (kept, i), j), ==, ncm_vector_get (g_ptr_array_index (sample, i), j));
+  }
+
+  for (i = 0; i < n; i += 20)
+  {
+    const gdouble p = ncm_stats_dist_eval (sd, g_ptr_array_index (sample, i));
+
+    g_assert_true (gsl_finite (p));
+    g_assert_cmpfloat (p, >=, 0.0);
+  }
+
+  g_ptr_array_unref (sample);
+  ncm_vector_free (m2lnL);
+  ncm_rng_free (rng);
+  ncm_stats_dist_free (sd);
+  ncm_stats_dist_kernel_free (kernel);
+}
+
+/*
+ * A sample of n points in d dimensions and its -2lnL: standard normal, or Student-t with
+ * nu degrees of freedom when nu > 0.
+ */
+static NcmStatsDist *
+_test_ncm_stats_dist_accept_new (const guint d, const guint n, const gdouble nu, const gdouble over_smooth, NcmVector **m2lnL)
+{
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_ACCEPT));
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260929);
+  NcmVector *y               = ncm_vector_new (d);
+  guint i, j;
+
+  ncm_stats_dist_set_split_frac (sd, 0.8);
+  ncm_stats_dist_set_over_smooth (sd, over_smooth);
+  ncm_stats_dist_set_uniform_weights (sd, TRUE);
+  *m2lnL = ncm_vector_new (n);
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble scale = (nu > 0.0) ? sqrt (nu / ncm_rng_chisq_gen (rng, nu)) : 1.0;
+    gdouble chi2        = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble z = scale * ncm_rng_ugaussian_gen (rng);
+
+      ncm_vector_set (y, j, z);
+      chi2 += z * z;
+    }
+
+    ncm_vector_set (*m2lnL, i, (nu > 0.0) ? (nu + d) * log1p (chi2 / nu) : chi2);
+    ncm_stats_dist_add_obs (sd, y);
+  }
+
+  ncm_vector_free (y);
+  ncm_rng_free (rng);
+  ncm_stats_dist_kernel_free (kernel);
+
+  return sd;
+}
+
+/* A correlated Gaussian sample of n points in d dimensions. */
+static NcmStatsDist *
+_test_ncm_stats_dist_kde_gauss_new (const guint d, const guint n, const NcmStatsDistCV cv, GPtrArray *sample)
+{
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, cv));
+  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260930);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    NcmVector *y = ncm_vector_new (d);
+    gdouble z0   = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble z = ncm_rng_ugaussian_gen (rng);
+
+      ncm_vector_set (y, j, (1.0 + j) * z + 0.5 * z0);
+      z0 = z;
+    }
+
+    ncm_stats_dist_add_obs (sd, y);
+
+    if (sample != NULL)
+      g_ptr_array_add (sample, ncm_vector_dup (y));
+
+    ncm_vector_free (y);
+  }
+
+  ncm_rng_free (rng);
+  ncm_stats_dist_kernel_free (kernel);
+
+  return sd;
+}
+
+/* ln N (x - y; 0, s^2 Sigma) with Sigma = U^T U, through GSL. */
+static gdouble
+_test_gauss_lnpdf (NcmVector *x, NcmVector *y, gsl_matrix *L, const gdouble s, gsl_vector *work, gsl_vector *diff)
+{
+  const guint d    = diff->size;
+  gsl_vector *zero = gsl_vector_calloc (d);
+  gsl_matrix *Ls   = gsl_matrix_alloc (d, d);
+  gdouble res;
+  guint k;
+
+  for (k = 0; k < d; k++)
+    gsl_vector_set (diff, k, ncm_vector_get (x, k) - ncm_vector_get (y, k));
+
+  gsl_matrix_memcpy (Ls, L);
+  gsl_matrix_scale (Ls, s);
+  gsl_ran_multivariate_gaussian_log_pdf (diff, zero, Ls, &res, work);
+
+  gsl_vector_free (zero);
+  gsl_matrix_free (Ls);
+
+  return res;
+}
+
+static void
+_test_ncm_stats_dist_count_fit_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  guint *count = user_data;
+
+  if (g_str_has_prefix (message, "# over-smooth:"))
+    (*count)++;
+}
 
 static void
 test_ncm_stats_dist_new_kde_gauss (TestNcmStatsDist *test, gconstpointer pdata)
@@ -459,6 +714,13 @@ test_ncm_stats_dist_new_vkde_studentt (TestNcmStatsDist *test, gconstpointer pda
 
   ncm_stats_dist_set_over_smooth (test->sd, 1.2);
   ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (sdvkde), cov_type);
+}
+
+static void
+test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_stats_dist_free, test->sd);
+  NCM_TEST_FREE (ncm_stats_dist_kernel_free, test->kernel);
 }
 
 /* Centre shrinkage: with it off the kernel centres are the sample points; with it on
@@ -1245,13 +1507,6 @@ test_ncm_stats_dist_invalid_cv_accept (TestNcmStatsDist *test, gconstpointer pda
 }
 
 static void
-test_ncm_stats_dist_free (TestNcmStatsDist *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (ncm_stats_dist_free, test->sd);
-  NCM_TEST_FREE (ncm_stats_dist_kernel_free, test->kernel);
-}
-
-static void
 test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
 {
   NcmStatsDist *sd = test->sd;
@@ -1330,68 +1585,6 @@ test_ncm_stats_dist_prepare_too_few (TestNcmStatsDist *test, gconstpointer pdata
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*the sample is too small*");
-}
-
-static void
-test_ncm_stats_dist_cmp_dist (TestNcmStatsDist *test, NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset, NcmRNG *rng)
-{
-  NcmStatsVec *err_stats = ncm_stats_vec_new (2, NCM_STATS_VEC_VAR, FALSE);
-  gulong N               = 0;
-  guint i;
-
-  /* Mechanics: the estimator has to evaluate and sample without producing nonsense. That
-   * it reproduces the distribution it was built from needs the full sample, and is the
-   * divergence mode's claim. */
-  if (!test->divergence)
-  {
-    for (i = 0; i < test->ntests; i++)
-    {
-      NcmVector *y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-
-      g_assert_true (gsl_finite (ncm_stats_dist_eval_m2lnp (test->sd, y)));
-
-      ncm_stats_dist_sample (test->sd, y, rng);
-      g_assert_true (gsl_finite (ncm_stats_dist_eval_m2lnp (test->sd, y)));
-    }
-
-    ncm_stats_vec_free (err_stats);
-
-    return;
-  }
-
-  for (i = 0; i < test->ntests; i++)
-  {
-    NcmVector *y;
-    gdouble m2lnL, m2lnp_s, alpha0, alpha1;
-
-    /* Measuring the Kullback-Leibler divergence */
-
-    y = ncm_data_gauss_cov_mvnd_gen (data_mvnd, mset, NULL, NULL, rng, &N);
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-    m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-    alpha0  = 0.25 * (m2lnp_s - m2lnL);
-
-    ncm_stats_dist_sample (test->sd, y, rng);
-    ncm_data_m2lnL_val (NCM_DATA (data_mvnd), mset, &m2lnL);
-    m2lnp_s = ncm_stats_dist_eval_m2lnp (test->sd, y);
-    alpha1  = 0.25 * (m2lnL - m2lnp_s);
-
-    ncm_stats_vec_set (err_stats, 0, log1p (tanh (alpha0)));
-    ncm_stats_vec_set (err_stats, 1, log1p (tanh (alpha1)));
-    ncm_stats_vec_update (err_stats);
-  }
-
-  /* Measuring the Jensen-Shannon divergence */
-  {
-    gdouble KL_P_M  = ncm_stats_vec_get_mean (err_stats, 0);
-    gdouble KL_PS_M = ncm_stats_vec_get_mean (err_stats, 1);
-    gdouble JS_P_PS = 0.5 * (KL_P_M + KL_PS_M);
-
-    /* printf ("JS(P||P_s) = % 22.15g\n", JS_P_PS); */
-    g_assert_cmpfloat (JS_P_PS, <, RELTOL);
-  }
-
-  ncm_stats_vec_free (err_stats);
 }
 
 static void
@@ -2126,88 +2319,6 @@ test_ncm_stats_dist_split_underflowing_m2lnp (void)
 }
 
 static void
-_test_ncm_stats_dist_split_drop_far_points (const gdouble split_frac)
-{
-  /*
-   * The other branch of the split: at least half the kernel centres are within
-   * NCM_STATS_DIST_M2LNL_RANGE of the best point, so the observations beyond it leave the
-   * sample and everything is built from what remains. Here the far points are the last
-   * tenth, outside the kernel block, and the sample must shrink to the kept nine tenths.
-   * The half is of the kernel centres, not of the sample: with split_frac below 0.5 the
-   * weight fit must still run.
-   */
-  const guint d              = 3;
-  const guint n              = 400;
-  const guint n_far          = 40;
-  const guint n_keep         = n - n_far;
-  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
-  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP));
-  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260923);
-  NcmVector *m2lnL           = ncm_vector_new (n);
-  GPtrArray *sample          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
-  guint i, j;
-
-  ncm_stats_dist_set_split_frac (sd, split_frac);
-  ncm_stats_dist_set_over_smooth (sd, 1.0);
-  ncm_stats_dist_set_uniform_weights (sd, FALSE);
-
-  for (i = 0; i < n; i++)
-  {
-    NcmVector *y = ncm_vector_new (d);
-    gdouble chi2 = 0.0;
-
-    for (j = 0; j < d; j++)
-    {
-      const gdouble z = ncm_rng_ugaussian_gen (rng);
-
-      ncm_vector_set (y, j, z);
-      chi2 += z * z;
-    }
-
-    ncm_vector_set (m2lnL, i, (i < n_keep) ? chi2 : chi2 + 1.0e3);
-    g_ptr_array_add (sample, y);
-    ncm_stats_dist_add_obs (sd, y);
-  }
-
-  ncm_stats_dist_prepare (sd, m2lnL);
-
-  g_assert_cmpuint (ncm_stats_dist_get_sample_size (sd), ==, n_keep);
-  g_assert_cmpuint (ncm_stats_dist_get_n_kernels (sd), ==, (guint) ceil (split_frac * n_keep));
-  g_assert_cmpuint (ncm_vector_len (ncm_stats_dist_peek_weights (sd)), ==, ncm_stats_dist_get_n_kernels (sd));
-
-  /* The weight fit ran: the weights are not the uniform ones. */
-  {
-    NcmVector *w = ncm_stats_dist_peek_weights (sd);
-
-    g_assert_cmpfloat (ncm_vector_get_max (w), >, 2.0 * ncm_vector_get_min (w));
-  }
-
-  {
-    GPtrArray *kept = ncm_stats_dist_peek_sample_array (sd);
-
-    g_assert_cmpuint (kept->len, ==, n_keep);
-
-    for (i = 0; i < n_keep; i++)
-      for (j = 0; j < d; j++)
-        g_assert_cmpfloat (ncm_vector_get (g_ptr_array_index (kept, i), j), ==, ncm_vector_get (g_ptr_array_index (sample, i), j));
-  }
-
-  for (i = 0; i < n; i += 20)
-  {
-    const gdouble p = ncm_stats_dist_eval (sd, g_ptr_array_index (sample, i));
-
-    g_assert_true (gsl_finite (p));
-    g_assert_cmpfloat (p, >=, 0.0);
-  }
-
-  g_ptr_array_unref (sample);
-  ncm_vector_free (m2lnL);
-  ncm_rng_free (rng);
-  ncm_stats_dist_free (sd);
-  ncm_stats_dist_kernel_free (kernel);
-}
-
-static void
 test_ncm_stats_dist_split_drop_far_points (void)
 {
   _test_ncm_stats_dist_split_drop_far_points (0.5);
@@ -2249,48 +2360,6 @@ test_ncm_stats_dist_split_too_few_kernels (void)
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*the sample is too small: 3 kernel centers in dimension 3*");
-}
-
-/*
- * A sample of n points in d dimensions and its -2lnL: standard normal, or Student-t with
- * nu degrees of freedom when nu > 0.
- */
-static NcmStatsDist *
-_test_ncm_stats_dist_accept_new (const guint d, const guint n, const gdouble nu, const gdouble over_smooth, NcmVector **m2lnL)
-{
-  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
-  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_ACCEPT));
-  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260929);
-  NcmVector *y               = ncm_vector_new (d);
-  guint i, j;
-
-  ncm_stats_dist_set_split_frac (sd, 0.8);
-  ncm_stats_dist_set_over_smooth (sd, over_smooth);
-  ncm_stats_dist_set_uniform_weights (sd, TRUE);
-  *m2lnL = ncm_vector_new (n);
-
-  for (i = 0; i < n; i++)
-  {
-    const gdouble scale = (nu > 0.0) ? sqrt (nu / ncm_rng_chisq_gen (rng, nu)) : 1.0;
-    gdouble chi2        = 0.0;
-
-    for (j = 0; j < d; j++)
-    {
-      const gdouble z = scale * ncm_rng_ugaussian_gen (rng);
-
-      ncm_vector_set (y, j, z);
-      chi2 += z * z;
-    }
-
-    ncm_vector_set (*m2lnL, i, (nu > 0.0) ? (nu + d) * log1p (chi2 / nu) : chi2);
-    ncm_stats_dist_add_obs (sd, y);
-  }
-
-  ncm_vector_free (y);
-  ncm_rng_free (rng);
-  ncm_stats_dist_kernel_free (kernel);
-
-  return sd;
 }
 
 static void
@@ -2339,65 +2408,6 @@ test_ncm_stats_dist_accept_rejected_everywhere (void)
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*the bandwidth objective is not finite at any of 21 over-smooth values*8 kernel centers*");
-}
-
-/* A correlated Gaussian sample of n points in d dimensions. */
-static NcmStatsDist *
-_test_ncm_stats_dist_kde_gauss_new (const guint d, const guint n, const NcmStatsDistCV cv, GPtrArray *sample)
-{
-  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
-  NcmStatsDist *sd           = NCM_STATS_DIST (ncm_stats_dist_kde_new (kernel, cv));
-  NcmRNG *rng                = ncm_rng_seeded_new (NULL, 20260930);
-  guint i, j;
-
-  for (i = 0; i < n; i++)
-  {
-    NcmVector *y = ncm_vector_new (d);
-    gdouble z0   = 0.0;
-
-    for (j = 0; j < d; j++)
-    {
-      const gdouble z = ncm_rng_ugaussian_gen (rng);
-
-      ncm_vector_set (y, j, (1.0 + j) * z + 0.5 * z0);
-      z0 = z;
-    }
-
-    ncm_stats_dist_add_obs (sd, y);
-
-    if (sample != NULL)
-      g_ptr_array_add (sample, ncm_vector_dup (y));
-
-    ncm_vector_free (y);
-  }
-
-  ncm_rng_free (rng);
-  ncm_stats_dist_kernel_free (kernel);
-
-  return sd;
-}
-
-/* ln N (x - y; 0, s^2 Sigma) with Sigma = U^T U, through GSL. */
-static gdouble
-_test_gauss_lnpdf (NcmVector *x, NcmVector *y, gsl_matrix *L, const gdouble s, gsl_vector *work, gsl_vector *diff)
-{
-  const guint d    = diff->size;
-  gsl_vector *zero = gsl_vector_calloc (d);
-  gsl_matrix *Ls   = gsl_matrix_alloc (d, d);
-  gdouble res;
-  guint k;
-
-  for (k = 0; k < d; k++)
-    gsl_vector_set (diff, k, ncm_vector_get (x, k) - ncm_vector_get (y, k));
-
-  gsl_matrix_memcpy (Ls, L);
-  gsl_matrix_scale (Ls, s);
-  gsl_ran_multivariate_gaussian_log_pdf (diff, zero, Ls, &res, work);
-
-  gsl_vector_free (zero);
-  gsl_matrix_free (Ls);
-
-  return res;
 }
 
 static void
@@ -2490,15 +2500,6 @@ test_ncm_stats_dist_kde_cov_fixed_reprepare (void)
   ncm_matrix_free (U1);
   ncm_matrix_free (F);
   ncm_stats_dist_free (sd);
-}
-
-static void
-_test_ncm_stats_dist_count_fit_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
-{
-  guint *count = user_data;
-
-  if (g_str_has_prefix (message, "# over-smooth:"))
-    (*count)++;
 }
 
 static void

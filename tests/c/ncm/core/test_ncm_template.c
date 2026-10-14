@@ -32,7 +32,6 @@
 #include <glib.h>
 #include <glib-object.h>
 
-
 typedef struct _TestNcmTemplate
 {
   NcmTemplate *template;
@@ -68,6 +67,18 @@ main (gint argc, gchar *argv[])
 }
 
 void
+test_ncm_template_method (TestNcmTemplate *test, gconstpointer pdata)
+{
+  gint arg1          = 1;
+  gint ret1_expected = 1;
+  gint ret1;
+
+  ret1 = ncm_template_method1 (test->template, arg1);
+
+  g_assert_true (ret1 == ret1_expected);
+}
+
+void
 test_ncm_template_new (TestNcmTemplate *test, gconstpointer pdata)
 {
   NcmTemplate *template = ncm_template_new ();
@@ -100,17 +111,5 @@ test_ncm_template_sanity (TestNcmTemplate *test, gconstpointer pdata)
 
     g_assert_true (template == NULL);
   }
-}
-
-void
-test_ncm_template_method (TestNcmTemplate *test, gconstpointer pdata)
-{
-  gint arg1          = 1;
-  gint ret1_expected = 1;
-  gint ret1;
-
-  ret1 = ncm_template_method1 (test->template, arg1);
-
-  g_assert_true (ret1 == ret1_expected);
 }
 

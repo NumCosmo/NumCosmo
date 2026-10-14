@@ -67,9 +67,7 @@
  * looser here to absorb compiler/platform variation without becoming a
  * flaky test. */
 #define TEST_N_TRIALS          2000
-
 #define TEST_MAX_REL_LAPLACE   1.0e-3
-
 #define TEST_MAX_NAN_MISMATCH_FRAC 0.01
 
 /* TRACE never finds a meaningfully worse mode than the finite-difference

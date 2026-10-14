@@ -39,7 +39,6 @@ typedef struct _TestNcmIntegral1d
 } TestNcmIntegral1d;
 
 #define NCM_INTEGRAL1D_TESTCMP_ABS g_assert_cmpfloat (fabs (result), <=, prec)
-
 #define NCM_INTEGRAL1D_TESTCMP(d) ncm_assert_cmpdouble_e (result, ==, (d), prec, 0.0)
 
 void test_ncm_integral1d_new_sinx (TestNcmIntegral1d *test, gconstpointer pdata);

@@ -34,6 +34,12 @@
 #include <fitsio.h>
 #endif /* HAVE_CFITSIO */
 
+#define NTESTS_MIN 5000
+#define NTESTS_MAX 10000
+#define TEST_CAT_NCHAINS 4
+#define TEST_CAT_NROWS_PER_CHAIN 25
+#define TEST_CAT_DIM 3
+
 typedef struct _TestNcmMSetCatalog
 {
   guint dim;
@@ -234,8 +240,396 @@ _test_ncm_mset_catalog_flist_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gd
   res[0] = ncm_mset_fparam_get (mset, 0);
 }
 
-#define NTESTS_MIN 5000
-#define NTESTS_MAX 10000
+/*
+ * Fills the catalog with n rows drawn from the fixture's Gaussian inside the bounds and
+ * returns the log of its mass there, the exact log evidence.
+ */
+static gdouble
+_test_ncm_mset_catalog_fill_gauss (TestNcmMSetCatalog *test, guint n)
+{
+  NcmData *data        = NCM_DATA (test->data_mvnd);
+  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
+  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
+  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
+  gulong N             = 0;
+  gulong Nin           = 0;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    gdouble m2lnL = 0.0;
+    gulong Ni;
+
+    ncm_data_gauss_cov_mvnd_gen (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, test->rng, &Ni);
+    ncm_data_m2lnL_val (data, mset, &m2lnL);
+    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
+  }
+
+  return log (ncm_data_gauss_cov_mvnd_est_ratio (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, &N, &Nin, 1.0e-3, test->rng));
+}
+
+/*
+ * The three estimators on 5000 rows against the exact log evidence, with tolerances
+ * ten times the scatter over 30 catalogs in dimensions 2 to 4. Each reports a finite
+ * error. A different method discards the kept estimate, and the same one keeps it.
+ */
+static void
+_test_ncm_mset_catalog_norma_methods_check (TestNcmMSetCatalog *test, const gdouble lnnorm, const gdouble tol[3])
+{
+  const NcmMSetCatalogPostNormMethod methods[3] = {
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX,
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS,
+    NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID,
+  };
+  gdouble lnnorm_k[3];
+  guint k;
+
+  g_assert_cmpint (ncm_mset_catalog_get_post_lnnorm_method (test->mcat), ==, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX);
+
+  for (k = 0; k < 3; k++)
+  {
+    NcmMSetCatalogPostNormMethod method;
+    gdouble lnnorm_sd = GSL_NAN;
+
+    g_object_set (test->mcat, "post-lnnorm-method", methods[k], NULL);
+    g_object_get (test->mcat, "post-lnnorm-method", &method, NULL);
+    g_assert_cmpint (method, ==, methods[k]);
+
+    lnnorm_k[k] = ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd);
+    ncm_assert_cmpdouble_e (lnnorm_k[k], ==, lnnorm, 0.0, tol[k]);
+    g_assert_true (gsl_finite (lnnorm_sd));
+    g_assert_cmpfloat (lnnorm_sd, >, 0.0);
+  }
+
+  {
+    gdouble lnnorm_sd;
+
+    ncm_mset_catalog_set_post_lnnorm_method (test->mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID);
+    g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, lnnorm_k[2]);
+
+    ncm_mset_catalog_set_post_lnnorm_method (test->mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX);
+    g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), !=, lnnorm_k[2]);
+  }
+}
+
+static gint
+_cmp_double (gconstpointer a, gconstpointer b)
+{
+  const gdouble *da = (const gdouble *) a;
+  const gdouble *db = (const gdouble *) b;
+
+  if (*da < *db)
+    return -1;
+  else if (*da > *db)
+    return 1;
+  else
+    return 0;
+}
+
+/* The autocorrelation accumulator forms unweighted lagged sums, so a weighted catalog has
+ * to refuse rather than report a tau built from them. */
+static NcmMSetCatalog *
+_test_ncm_mset_catalog_weighted_new (void)
+{
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 314159);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  const gchar *names[]     = {"m2lnL", "w", NULL};
+  const gchar *symbols[]   = {"-2\\ln(L)", "w", NULL};
+  NcmMSetCatalog *mcat;
+  NcmVector *row;
+  guint i, p;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new_array (mset, 2, 1, TRUE, (gchar **) names, (gchar **) symbols);
+  row  = ncm_vector_new (ncm_mset_catalog_ncols (mcat));
+
+  for (i = 0; i < 100; i++)
+  {
+    ncm_vector_set (row, 0, ncm_rng_ugaussian_gen (rng));
+    ncm_vector_set (row, 1, 1.0 + 0.1 * fabs (ncm_rng_ugaussian_gen (rng)));
+
+    for (p = 2; p < ncm_mset_catalog_ncols (mcat); p++)
+      ncm_vector_set (row, p, ncm_rng_ugaussian_gen (rng));
+
+    ncm_mset_catalog_add_from_vector (mcat, row);
+  }
+
+  ncm_vector_free (row);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_rng_free (rng);
+
+  return mcat;
+}
+
+/* Adds @nens ensembles of rows drawn uniformly in [0, 1). */
+static void
+_test_ncm_mset_catalog_add_ensembles (TestNcmMSetCatalog *test, guint nens)
+{
+  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
+  NcmVector *row    = ncm_vector_new (ncols);
+  guint i, j;
+
+  for (i = 0; i < nens * ncm_mset_catalog_nchains (test->mcat); i++)
+  {
+    for (j = 0; j < ncols; j++)
+      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
+
+    ncm_mset_catalog_add_from_vector (test->mcat, row);
+  }
+
+  ncm_vector_free (row);
+}
+
+static void
+_test_ncm_mset_catalog_add_uniform_rows (TestNcmMSetCatalog *test, guint n)
+{
+  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
+  NcmVector *row    = ncm_vector_new (ncols);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    for (j = 0; j < ncols; j++)
+      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
+
+    ncm_mset_catalog_add_from_vector (test->mcat, row);
+  }
+
+  ncm_vector_free (row);
+}
+
+/* The first free parameter of every row, sorted. */
+static gdouble *
+_test_ncm_mset_catalog_sorted_p0 (TestNcmMSetCatalog *test)
+{
+  const guint n = ncm_mset_catalog_len (test->mcat);
+  gdouble *p0   = g_new (gdouble, n);
+  guint i;
+
+  for (i = 0; i < n; i++)
+    p0[i] = ncm_vector_get (ncm_mset_catalog_peek_row (test->mcat, i), 1);
+
+  gsl_sort (p0, 1, n);
+
+  return p0;
+}
+
+/* The messages of a call go to a temporary file, out of the TAP stream. */
+static FILE *
+_test_ncm_mset_catalog_log_begin (void)
+{
+  FILE *log = tmpfile ();
+
+  g_assert_nonnull (log);
+  ncm_cfg_set_logstream (log);
+
+  return log;
+}
+
+/* Something was written, and the messages go back to stdout. */
+static void
+_test_ncm_mset_catalog_log_end (FILE *log)
+{
+  fflush (log);
+  g_assert_cmpint (ftell (log), >, 0);
+  ncm_cfg_set_logstream (stdout);
+  fclose (log);
+}
+
+#ifdef HAVE_CFITSIO
+
+/*
+ * Builds a small free-parameter mset, writes a new-style catalog file for it
+ * (mset embedded in HDU0), and returns both. The catalog is not left open.
+ */
+static NcmMSet *
+_test_ncm_mset_catalog_new_file (const gchar *filename)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (3);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetCatalog *mcat;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_run_type (mcat, "test-run");
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  {
+    NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
+    gdouble ax[1] = { 12.3 };
+
+    ncm_mset_fparams_get_vector (mset, x);
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+    ncm_mset_catalog_sync (mcat, TRUE);
+
+    ncm_vector_clear (&x);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  return mset;
+}
+
+/*
+ * Rewrites HDU0 in the pre-vardict format (a bare serialized #NcmMSet
+ * object, format label "gvariant", no functions entry), simulating a
+ * catalog file written before the vardict envelope was introduced, to
+ * check that it is still read correctly.
+ */
+static void
+_test_ncm_mset_catalog_rewrite_hdu0_legacy_object (const gchar *filename, NcmMSet *mset)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (mset));
+  glong naxes[1]    = { (glong) g_variant_get_size (var) };
+  fitsfile *fptr    = NULL;
+  gint hdutype      = 0;
+  gint status       = 0;
+
+  fits_open_file (&fptr, filename, READWRITE, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_movabs_hdu (fptr, 1, &hdutype, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_resize_img (fptr, BYTE_IMG, 1, naxes, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_write_img (fptr, TBYTE, 1, naxes[0], (gpointer) g_variant_get_data (var), &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_update_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, NCM_MSET_CATALOG_MSET_FORMAT_OBJECT,
+                       "Format of the data stored in this HDU.", &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_close_file (fptr, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  g_variant_unref (var);
+  ncm_serialize_free (ser);
+}
+
+/*
+ * Strips the mset embedded by _test_ncm_mset_catalog_new_file() back to an
+ * empty primary HDU, simulating a catalog file written before HDU0 embedding
+ * was introduced.
+ */
+static void
+_test_ncm_mset_catalog_strip_hdu0 (const gchar *filename)
+{
+  fitsfile *fptr = NULL;
+  gint hdutype   = 0;
+  gint status    = 0;
+
+  fits_open_file (&fptr, filename, READWRITE, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_movabs_hdu (fptr, 1, &hdutype, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_resize_img (fptr, 8, 0, NULL, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  fits_close_file (fptr, &status);
+  g_assert_cmpint (status, ==, 0);
+}
+
+/* Counts the HISTORY cards of the table HDU that mention the sampler. */
+static guint
+_test_ncm_mset_catalog_count_sampler_history (const gchar *filename)
+{
+  fitsfile *fptr = NULL;
+  gint status    = 0;
+  gint hdutype   = 0;
+  gint nkeys     = 0;
+  guint count    = 0;
+  gint i;
+
+  fits_open_file (&fptr, filename, READONLY, &status);
+  g_assert_cmpint (status, ==, 0);
+  fits_movabs_hdu (fptr, 2, &hdutype, &status);
+  g_assert_cmpint (status, ==, 0);
+  fits_get_hdrspace (fptr, &nkeys, NULL, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  for (i = 1; i <= nkeys; i++)
+  {
+    gchar card[FLEN_CARD];
+
+    fits_read_record (fptr, i, card, &status);
+    g_assert_cmpint (status, ==, 0);
+
+    if (g_str_has_prefix (card, "HISTORY") && (strstr (card, " sampler: ") != NULL))
+      count++;
+  }
+
+  fits_close_file (fptr, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  return count;
+}
+
+/*
+ * Writes TEST_CAT_NCHAINS chains x nrows_per_chain rows into a new catalog file, setting
+ * the Markovian id when that row is reached; returns the model set (the catalog is closed).
+ */
+static NcmMSet *
+_test_ncm_mset_catalog_new_markovian_file (const gchar *filename, const guint nrows_per_chain, const gint markovian_id)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 2468);
+  NcmMSetCatalog *mcat;
+  NcmVector *x;
+  guint i, j;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, TEST_CAT_NCHAINS, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_run_type (mcat, "markovian-run");
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  /* Fresh catalog: every row is Markovian until told otherwise. */
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 0);
+
+  x = ncm_vector_new (ncm_mset_fparams_len (mset));
+
+  for (i = 0; i < nrows_per_chain * TEST_CAT_NCHAINS; i++)
+  {
+    gdouble ax[1] = { 1.0 + 0.01 * i };
+
+    for (j = 0; j < TEST_CAT_DIM; j++)
+      ncm_vector_set (x, j, ncm_rng_gaussian_gen (rng, 0.0, 1.0));
+
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+
+    if ((gint) i == markovian_id - 1)
+      ncm_mset_catalog_set_markovian_id (mcat, markovian_id);
+  }
+
+  ncm_mset_catalog_sync (mcat, TRUE);
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, markovian_id);
+
+  ncm_vector_clear (&x);
+  ncm_rng_free (rng);
+  ncm_mset_catalog_clear (&mcat);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  return mset;
+}
+
+#endif /* HAVE_CFITSIO */
 
 void
 test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
@@ -463,78 +857,6 @@ test_ncm_mset_catalog_norma (TestNcmMSetCatalog *test, gconstpointer pdata)
     lnnorm_sd = GSL_NAN;
     ncm_assert_cmpdouble_e (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, log (ratio), 0.2, 1.0e-3);
     g_assert_true (lnnorm_sd == lnnorm_sd_first);
-  }
-}
-
-/*
- * Fills the catalog with n rows drawn from the fixture's Gaussian inside the bounds and
- * returns the log of its mass there, the exact log evidence.
- */
-static gdouble
-_test_ncm_mset_catalog_fill_gauss (TestNcmMSetCatalog *test, guint n)
-{
-  NcmData *data        = NCM_DATA (test->data_mvnd);
-  NcmDataGaussCov *cov = NCM_DATA_GAUSS_COV (test->data_mvnd);
-  NcmMSet *mset        = ncm_mset_catalog_peek_mset (test->mcat);
-  NcmVector *y         = ncm_data_gauss_cov_peek_mean (cov);
-  gulong N             = 0;
-  gulong Nin           = 0;
-  guint i;
-
-  for (i = 0; i < n; i++)
-  {
-    gdouble m2lnL = 0.0;
-    gulong Ni;
-
-    ncm_data_gauss_cov_mvnd_gen (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, test->rng, &Ni);
-    ncm_data_m2lnL_val (data, mset, &m2lnL);
-    ncm_mset_catalog_add_from_vector_array (test->mcat, y, &m2lnL);
-  }
-
-  return log (ncm_data_gauss_cov_mvnd_est_ratio (test->data_mvnd, mset, mset, (NcmDataGaussCovMVNDBound) ncm_mset_fparam_valid_bounds, &N, &Nin, 1.0e-3, test->rng));
-}
-
-/*
- * The three estimators on 5000 rows against the exact log evidence, with tolerances
- * ten times the scatter over 30 catalogs in dimensions 2 to 4. Each reports a finite
- * error. A different method discards the kept estimate, and the same one keeps it.
- */
-static void
-_test_ncm_mset_catalog_norma_methods_check (TestNcmMSetCatalog *test, const gdouble lnnorm, const gdouble tol[3])
-{
-  const NcmMSetCatalogPostNormMethod methods[3] = {
-    NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX,
-    NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS,
-    NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID,
-  };
-  gdouble lnnorm_k[3];
-  guint k;
-
-  g_assert_cmpint (ncm_mset_catalog_get_post_lnnorm_method (test->mcat), ==, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX);
-
-  for (k = 0; k < 3; k++)
-  {
-    NcmMSetCatalogPostNormMethod method;
-    gdouble lnnorm_sd = GSL_NAN;
-
-    g_object_set (test->mcat, "post-lnnorm-method", methods[k], NULL);
-    g_object_get (test->mcat, "post-lnnorm-method", &method, NULL);
-    g_assert_cmpint (method, ==, methods[k]);
-
-    lnnorm_k[k] = ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd);
-    ncm_assert_cmpdouble_e (lnnorm_k[k], ==, lnnorm, 0.0, tol[k]);
-    g_assert_true (gsl_finite (lnnorm_sd));
-    g_assert_cmpfloat (lnnorm_sd, >, 0.0);
-  }
-
-  {
-    gdouble lnnorm_sd;
-
-    ncm_mset_catalog_set_post_lnnorm_method (test->mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID);
-    g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), ==, lnnorm_k[2]);
-
-    ncm_mset_catalog_set_post_lnnorm_method (test->mcat, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX);
-    g_assert_cmpfloat (ncm_mset_catalog_get_post_lnnorm (test->mcat, &lnnorm_sd), !=, lnnorm_k[2]);
   }
 }
 
@@ -794,20 +1116,6 @@ test_ncm_mset_catalog_bestfit (TestNcmMSetCatalog *test, gconstpointer pdata)
   ncm_vector_free (min_row);
 }
 
-static gint
-_cmp_double (gconstpointer a, gconstpointer b)
-{
-  const gdouble *da = (const gdouble *) a;
-  const gdouble *db = (const gdouble *) b;
-
-  if (*da < *db)
-    return -1;
-  else if (*da > *db)
-    return 1;
-  else
-    return 0;
-}
-
 void
 test_ncm_mset_catalog_percentile (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
@@ -913,45 +1221,6 @@ test_ncm_mset_catalog_autocorrelation (TestNcmMSetCatalog *test, gconstpointer p
 /* The autocorrelation accumulator the catalog keeps as rows are added, and the quantities
  * built from it: the effective number of chains per iteration, the effective sample size
  * that follows from it, and the conditions attached to each estimate. */
-
-/* The autocorrelation accumulator forms unweighted lagged sums, so a weighted catalog has
- * to refuse rather than report a tau built from them. */
-static NcmMSetCatalog *
-_test_ncm_mset_catalog_weighted_new (void)
-{
-  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 314159);
-  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
-  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
-  const gchar *names[]     = {"m2lnL", "w", NULL};
-  const gchar *symbols[]   = {"-2\\ln(L)", "w", NULL};
-  NcmMSetCatalog *mcat;
-  NcmVector *row;
-  guint i, p;
-
-  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (mset);
-
-  mcat = ncm_mset_catalog_new_array (mset, 2, 1, TRUE, (gchar **) names, (gchar **) symbols);
-  row  = ncm_vector_new (ncm_mset_catalog_ncols (mcat));
-
-  for (i = 0; i < 100; i++)
-  {
-    ncm_vector_set (row, 0, ncm_rng_ugaussian_gen (rng));
-    ncm_vector_set (row, 1, 1.0 + 0.1 * fabs (ncm_rng_ugaussian_gen (rng)));
-
-    for (p = 2; p < ncm_mset_catalog_ncols (mcat); p++)
-      ncm_vector_set (row, p, ncm_rng_ugaussian_gen (rng));
-
-    ncm_mset_catalog_add_from_vector (mcat, row);
-  }
-
-  ncm_vector_free (row);
-  ncm_mset_clear (&mset);
-  ncm_model_mvnd_clear (&model_mvnd);
-  ncm_rng_free (rng);
-
-  return mcat;
-}
 
 void
 test_ncm_mset_catalog_weighted_tau_traps (void)
@@ -1366,106 +1635,6 @@ test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata
 
 #ifdef HAVE_CFITSIO
 
-/*
- * Builds a small free-parameter mset, writes a new-style catalog file for it
- * (mset embedded in HDU0), and returns both. The catalog is not left open.
- */
-static NcmMSet *
-_test_ncm_mset_catalog_new_file (const gchar *filename)
-{
-  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (3);
-  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
-  NcmMSetCatalog *mcat;
-
-  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (mset);
-
-  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
-  ncm_mset_catalog_set_run_type (mcat, "test-run");
-  ncm_mset_catalog_set_file (mcat, filename);
-
-  {
-    NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
-    gdouble ax[1] = { 12.3 };
-
-    ncm_mset_fparams_get_vector (mset, x);
-    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
-    ncm_mset_catalog_sync (mcat, TRUE);
-
-    ncm_vector_clear (&x);
-  }
-
-  ncm_mset_catalog_clear (&mcat);
-  ncm_model_mvnd_clear (&model_mvnd);
-
-  return mset;
-}
-
-/*
- * Rewrites HDU0 in the pre-vardict format (a bare serialized #NcmMSet
- * object, format label "gvariant", no functions entry), simulating a
- * catalog file written before the vardict envelope was introduced, to
- * check that it is still read correctly.
- */
-static void
-_test_ncm_mset_catalog_rewrite_hdu0_legacy_object (const gchar *filename, NcmMSet *mset)
-{
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (mset));
-  glong naxes[1]    = { (glong) g_variant_get_size (var) };
-  fitsfile *fptr    = NULL;
-  gint hdutype      = 0;
-  gint status       = 0;
-
-  fits_open_file (&fptr, filename, READWRITE, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_movabs_hdu (fptr, 1, &hdutype, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_resize_img (fptr, BYTE_IMG, 1, naxes, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_write_img (fptr, TBYTE, 1, naxes[0], (gpointer) g_variant_get_data (var), &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_update_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, NCM_MSET_CATALOG_MSET_FORMAT_OBJECT,
-                       "Format of the data stored in this HDU.", &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_close_file (fptr, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  g_variant_unref (var);
-  ncm_serialize_free (ser);
-}
-
-/*
- * Strips the mset embedded by _test_ncm_mset_catalog_new_file() back to an
- * empty primary HDU, simulating a catalog file written before HDU0 embedding
- * was introduced.
- */
-static void
-_test_ncm_mset_catalog_strip_hdu0 (const gchar *filename)
-{
-  fitsfile *fptr = NULL;
-  gint hdutype   = 0;
-  gint status    = 0;
-
-  fits_open_file (&fptr, filename, READWRITE, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_movabs_hdu (fptr, 1, &hdutype, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_resize_img (fptr, 8, 0, NULL, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  fits_close_file (fptr, &status);
-  g_assert_cmpint (status, ==, 0);
-}
-
 void
 test_ncm_mset_catalog_file_hdu0_roundtrip (void)
 {
@@ -1492,41 +1661,6 @@ test_ncm_mset_catalog_file_hdu0_roundtrip (void)
   g_free (filename);
   g_free (mset_sidecar);
   g_free (tmp_dir);
-}
-
-/* Counts the HISTORY cards of the table HDU that mention the sampler. */
-static guint
-_test_ncm_mset_catalog_count_sampler_history (const gchar *filename)
-{
-  fitsfile *fptr = NULL;
-  gint status    = 0;
-  gint hdutype   = 0;
-  gint nkeys     = 0;
-  guint count    = 0;
-  gint i;
-
-  fits_open_file (&fptr, filename, READONLY, &status);
-  g_assert_cmpint (status, ==, 0);
-  fits_movabs_hdu (fptr, 2, &hdutype, &status);
-  g_assert_cmpint (status, ==, 0);
-  fits_get_hdrspace (fptr, &nkeys, NULL, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  for (i = 1; i <= nkeys; i++)
-  {
-    gchar card[FLEN_CARD];
-
-    fits_read_record (fptr, i, card, &status);
-    g_assert_cmpint (status, ==, 0);
-
-    if (g_str_has_prefix (card, "HISTORY") && (strstr (card, " sampler: ") != NULL))
-      count++;
-  }
-
-  fits_close_file (fptr, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  return count;
 }
 
 /*
@@ -1805,7 +1939,6 @@ test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void)
 
 #endif /* HAVE_CFITSIO */
 
-
 /*
  * A multi-chain catalog written to a file and read back.
  *
@@ -1814,9 +1947,6 @@ test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void)
  * catalog the other file tests use -- the Gelman-Rubin shrink factor returns 1 outright
  * for one chain, and the RNG state is only read back when a file already carries it.
  */
-#define TEST_CAT_NCHAINS 4
-#define TEST_CAT_NROWS_PER_CHAIN 25
-#define TEST_CAT_DIM 3
 
 void
 test_ncm_mset_catalog_file_multichain (void)
@@ -1922,58 +2052,6 @@ test_ncm_mset_catalog_file_multichain (void)
 }
 
 #ifdef HAVE_CFITSIO
-
-/*
- * Writes TEST_CAT_NCHAINS chains x nrows_per_chain rows into a new catalog file, setting
- * the Markovian id when that row is reached; returns the model set (the catalog is closed).
- */
-static NcmMSet *
-_test_ncm_mset_catalog_new_markovian_file (const gchar *filename, const guint nrows_per_chain, const gint markovian_id)
-{
-  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
-  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
-  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 2468);
-  NcmMSetCatalog *mcat;
-  NcmVector *x;
-  guint i, j;
-
-  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (mset);
-
-  mcat = ncm_mset_catalog_new (mset, 1, TEST_CAT_NCHAINS, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
-  ncm_mset_catalog_set_run_type (mcat, "markovian-run");
-  ncm_mset_catalog_set_file (mcat, filename);
-
-  /* Fresh catalog: every row is Markovian until told otherwise. */
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
-  g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 0);
-
-  x = ncm_vector_new (ncm_mset_fparams_len (mset));
-
-  for (i = 0; i < nrows_per_chain * TEST_CAT_NCHAINS; i++)
-  {
-    gdouble ax[1] = { 1.0 + 0.01 * i };
-
-    for (j = 0; j < TEST_CAT_DIM; j++)
-      ncm_vector_set (x, j, ncm_rng_gaussian_gen (rng, 0.0, 1.0));
-
-    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
-
-    if ((gint) i == markovian_id - 1)
-      ncm_mset_catalog_set_markovian_id (mcat, markovian_id);
-  }
-
-  ncm_mset_catalog_sync (mcat, TRUE);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, markovian_id);
-
-  ncm_vector_clear (&x);
-  ncm_rng_free (rng);
-  ncm_mset_catalog_clear (&mcat);
-  ncm_model_mvnd_clear (&model_mvnd);
-
-  return mset;
-}
 
 /* The id survives the file round trip, the file-level peek sees it, the conversion to
  * iterations is exact, and reading with a burn-in shifts it like every other row id. */
@@ -2328,25 +2406,6 @@ test_ncm_mset_catalog_trim_oob_markovian (void)
   g_free (tmp_dir);
 }
 
-/* Adds @nens ensembles of rows drawn uniformly in [0, 1). */
-static void
-_test_ncm_mset_catalog_add_ensembles (TestNcmMSetCatalog *test, guint nens)
-{
-  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
-  NcmVector *row    = ncm_vector_new (ncols);
-  guint i, j;
-
-  for (i = 0; i < nens * ncm_mset_catalog_nchains (test->mcat); i++)
-  {
-    for (j = 0; j < ncols; j++)
-      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
-
-    ncm_mset_catalog_add_from_vector (test->mcat, row);
-  }
-
-  ncm_vector_free (row);
-}
-
 void
 test_ncm_mset_catalog_reset (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
@@ -2392,62 +2451,6 @@ test_ncm_mset_catalog_set_rng_twice (void)
   ncm_rng_free (rng2);
   ncm_mset_free (mset);
   ncm_model_mvnd_free (model);
-}
-
-static void
-_test_ncm_mset_catalog_add_uniform_rows (TestNcmMSetCatalog *test, guint n)
-{
-  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
-  NcmVector *row    = ncm_vector_new (ncols);
-  guint i, j;
-
-  for (i = 0; i < n; i++)
-  {
-    for (j = 0; j < ncols; j++)
-      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
-
-    ncm_mset_catalog_add_from_vector (test->mcat, row);
-  }
-
-  ncm_vector_free (row);
-}
-
-/* The first free parameter of every row, sorted. */
-static gdouble *
-_test_ncm_mset_catalog_sorted_p0 (TestNcmMSetCatalog *test)
-{
-  const guint n = ncm_mset_catalog_len (test->mcat);
-  gdouble *p0   = g_new (gdouble, n);
-  guint i;
-
-  for (i = 0; i < n; i++)
-    p0[i] = ncm_vector_get (ncm_mset_catalog_peek_row (test->mcat, i), 1);
-
-  gsl_sort (p0, 1, n);
-
-  return p0;
-}
-
-/* The messages of a call go to a temporary file, out of the TAP stream. */
-static FILE *
-_test_ncm_mset_catalog_log_begin (void)
-{
-  FILE *log = tmpfile ();
-
-  g_assert_nonnull (log);
-  ncm_cfg_set_logstream (log);
-
-  return log;
-}
-
-/* Something was written, and the messages go back to stdout. */
-static void
-_test_ncm_mset_catalog_log_end (FILE *log)
-{
-  fflush (log);
-  g_assert_cmpint (ftell (log), >, 0);
-  ncm_cfg_set_logstream (stdout);
-  fclose (log);
 }
 
 void

@@ -36,13 +36,9 @@ typedef struct _TestNcmMPSFSTrigInt
 } TestNcmMPSFSTrigInt;
 
 #define NTOT 100
-
 #define XMAX 25.0
-
 #define L 80
-
 #define TRIG_NTHREADS 4
-
 #define TRIG_NX 64
 
 typedef struct _TrigWorker

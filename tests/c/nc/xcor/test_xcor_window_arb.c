@@ -53,7 +53,6 @@
 /* Loose enough that `certified` always reaches it, tight enough that a wrong
  * closed form cannot pass the normalization check below. */
 #define TEST_TARGET 1.0e-12
-
 #define TEST_PREC_MAX 2048
 
 typedef struct

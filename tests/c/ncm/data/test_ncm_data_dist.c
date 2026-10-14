@@ -32,19 +32,8 @@
 #include <glib.h>
 #include <glib-object.h>
 
-/*
- * Toy distributions with the rate lambda = mu_0 of a NcmModelMVND: an exponential,
- * -2 ln p (x) = -2 ln lambda + 2 lambda x, and in two dimensions the product of two.
- * inv_pdf returns the uniform numbers themselves, so a resample lies in [0, 1].
- */
-
-static gdouble
-_test_rate (NcmMSet *mset)
-{
-  return ncm_model_orig_vparam_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), NCM_MODEL_MVND_MEAN, 0);
-}
-
 #define TEST_TYPE_DIST1D (test_dist1d_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestDist1d, test_dist1d, TEST, DIST1D, NcmDataDist1d)
 
 struct _TestDist1d
@@ -53,6 +42,71 @@ struct _TestDist1d
 };
 
 G_DEFINE_TYPE (TestDist1d, test_dist1d, NCM_TYPE_DATA_DIST1D)
+
+#define TEST_TYPE_DIST2D (test_dist2d_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestDist2d, test_dist2d, TEST, DIST2D, NcmDataDist2d)
+
+struct _TestDist2d
+{
+  NcmDataDist2d parent_instance;
+};
+
+G_DEFINE_TYPE (TestDist2d, test_dist2d, NCM_TYPE_DATA_DIST2D)
+
+/* Subclasses that implement nothing. */
+#define TEST_TYPE_DIST1D_EMPTY (test_dist1d_empty_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestDist1dEmpty, test_dist1d_empty, TEST, DIST1D_EMPTY, NcmDataDist1d)
+
+struct _TestDist1dEmpty
+{
+  NcmDataDist1d parent_instance;
+};
+
+G_DEFINE_TYPE (TestDist1dEmpty, test_dist1d_empty, NCM_TYPE_DATA_DIST1D)
+
+#define TEST_TYPE_DIST2D_EMPTY (test_dist2d_empty_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestDist2dEmpty, test_dist2d_empty, TEST, DIST2D_EMPTY, NcmDataDist2d)
+
+struct _TestDist2dEmpty
+{
+  NcmDataDist2d parent_instance;
+};
+
+G_DEFINE_TYPE (TestDist2dEmpty, test_dist2d_empty, NCM_TYPE_DATA_DIST2D)
+
+void test_ncm_data_dist1d (void);
+void test_ncm_data_dist2d (void);
+void test_ncm_data_dist_errors (void);
+void test_ncm_data_dist_errors_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/data_dist/1d", &test_ncm_data_dist1d);
+  g_test_add_func ("/ncm/data_dist/2d", &test_ncm_data_dist2d);
+  g_test_add_func ("/ncm/data_dist/errors", &test_ncm_data_dist_errors);
+  g_test_add_func ("/ncm/data_dist/errors/subprocess", &test_ncm_data_dist_errors_subprocess);
+
+  g_test_run ();
+}
+
+/*
+ * Toy distributions with the rate lambda = mu_0 of a NcmModelMVND: an exponential,
+ * -2 ln p (x) = -2 ln lambda + 2 lambda x, and in two dimensions the product of two.
+ * inv_pdf returns the uniform numbers themselves, so a resample lies in [0, 1].
+ */
+static gdouble
+_test_rate (NcmMSet *mset)
+{
+  return ncm_model_orig_vparam_get (ncm_mset_peek (mset, ncm_model_mvnd_id ()), NCM_MODEL_MVND_MEAN, 0);
+}
 
 static void
 test_dist1d_init (TestDist1d *td)
@@ -79,16 +133,6 @@ test_dist1d_class_init (TestDist1dClass *klass)
   NCM_DATA_DIST1D_CLASS (klass)->dist1d_m2lnL_val = &_test_dist1d_m2lnL_val;
   NCM_DATA_DIST1D_CLASS (klass)->inv_pdf          = &_test_dist1d_inv_pdf;
 }
-
-#define TEST_TYPE_DIST2D (test_dist2d_get_type ())
-G_DECLARE_FINAL_TYPE (TestDist2d, test_dist2d, TEST, DIST2D, NcmDataDist2d)
-
-struct _TestDist2d
-{
-  NcmDataDist2d parent_instance;
-};
-
-G_DEFINE_TYPE (TestDist2d, test_dist2d, NCM_TYPE_DATA_DIST2D)
 
 static void
 test_dist2d_init (TestDist2d *td)
@@ -117,18 +161,6 @@ test_dist2d_class_init (TestDist2dClass *klass)
   NCM_DATA_DIST2D_CLASS (klass)->inv_pdf          = &_test_dist2d_inv_pdf;
 }
 
-/* Subclasses that implement nothing. */
-
-#define TEST_TYPE_DIST1D_EMPTY (test_dist1d_empty_get_type ())
-G_DECLARE_FINAL_TYPE (TestDist1dEmpty, test_dist1d_empty, TEST, DIST1D_EMPTY, NcmDataDist1d)
-
-struct _TestDist1dEmpty
-{
-  NcmDataDist1d parent_instance;
-};
-
-G_DEFINE_TYPE (TestDist1dEmpty, test_dist1d_empty, NCM_TYPE_DATA_DIST1D)
-
 static void
 test_dist1d_empty_init (TestDist1dEmpty *td)
 {
@@ -139,16 +171,6 @@ test_dist1d_empty_class_init (TestDist1dEmptyClass *klass)
 {
 }
 
-#define TEST_TYPE_DIST2D_EMPTY (test_dist2d_empty_get_type ())
-G_DECLARE_FINAL_TYPE (TestDist2dEmpty, test_dist2d_empty, TEST, DIST2D_EMPTY, NcmDataDist2d)
-
-struct _TestDist2dEmpty
-{
-  NcmDataDist2d parent_instance;
-};
-
-G_DEFINE_TYPE (TestDist2dEmpty, test_dist2d_empty, NCM_TYPE_DATA_DIST2D)
-
 static void
 test_dist2d_empty_init (TestDist2dEmpty *td)
 {
@@ -157,26 +179,6 @@ test_dist2d_empty_init (TestDist2dEmpty *td)
 static void
 test_dist2d_empty_class_init (TestDist2dEmptyClass *klass)
 {
-}
-
-void test_ncm_data_dist1d (void);
-void test_ncm_data_dist2d (void);
-void test_ncm_data_dist_errors (void);
-void test_ncm_data_dist_errors_subprocess (void);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/data_dist/1d", &test_ncm_data_dist1d);
-  g_test_add_func ("/ncm/data_dist/2d", &test_ncm_data_dist2d);
-  g_test_add_func ("/ncm/data_dist/errors", &test_ncm_data_dist_errors);
-  g_test_add_func ("/ncm/data_dist/errors/subprocess", &test_ncm_data_dist_errors_subprocess);
-
-  g_test_run ();
 }
 
 static NcmMSet *

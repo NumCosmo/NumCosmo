@@ -41,9 +41,7 @@
 #include <math.h>
 
 #define TEST_NKNOTS 200
-
 #define TEST_NEVAL 20000
-
 #define TEST_NTHREADS 8
 
 typedef struct _TestBSplineThreads

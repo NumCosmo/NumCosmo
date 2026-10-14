@@ -38,13 +38,13 @@
  * requirement in force when it is evaluated. Evaluated after every block has been
  * prepared, every mean is the largest requirement.
  */
-
 typedef struct _TestShared
 {
   guint req;
 } TestShared;
 
 #define TEST_TYPE_BLOCK (test_block_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestBlock, test_block, TEST, BLOCK, NcmData)
 
 struct _TestBlock
@@ -56,6 +56,52 @@ struct _TestBlock
 };
 
 G_DEFINE_TYPE (TestBlock, test_block, NCM_TYPE_DATA)
+
+typedef struct _TestNcmDataset
+{
+  TestShared shared;
+  TestBlock *b1;
+  TestBlock *b2;
+  NcmDataset *dset;
+  NcmMSet *mset;
+} TestNcmDataset;
+
+void test_ncm_dataset_new (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_free (TestNcmDataset *test, gconstpointer pdata);
+
+void test_ncm_dataset_shared_m2lnL (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_shared_mean_vector (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_shared_fisher (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_shared_fisher_bias (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_fisher_inout (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_fisher_no_fparams (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_copy_bootstrap (void);
+void test_ncm_dataset_bootstrap_total_empty (void);
+void test_ncm_dataset_errors (void);
+void test_ncm_dataset_fisher_bad_size_subprocess (void);
+void test_ncm_dataset_no_realization_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/dataset/shared/m2lnL", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_m2lnL, &test_ncm_dataset_free);
+  g_test_add ("/ncm/dataset/shared/mean_vector", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_mean_vector, &test_ncm_dataset_free);
+  g_test_add ("/ncm/dataset/shared/fisher", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_fisher, &test_ncm_dataset_free);
+  g_test_add ("/ncm/dataset/shared/fisher_bias", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_fisher_bias, &test_ncm_dataset_free);
+  g_test_add ("/ncm/dataset/fisher/inout", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_inout, &test_ncm_dataset_free);
+  g_test_add ("/ncm/dataset/fisher/no_fparams", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_no_fparams, &test_ncm_dataset_free);
+  g_test_add_func ("/ncm/dataset/copy/bootstrap", &test_ncm_dataset_copy_bootstrap);
+  g_test_add_func ("/ncm/dataset/bootstrap/total_empty", &test_ncm_dataset_bootstrap_total_empty);
+  g_test_add_func ("/ncm/dataset/errors", &test_ncm_dataset_errors);
+  g_test_add_func ("/ncm/dataset/errors/fisher_bad_size/subprocess", &test_ncm_dataset_fisher_bad_size_subprocess);
+  g_test_add_func ("/ncm/dataset/errors/no_realization/subprocess", &test_ncm_dataset_no_realization_subprocess);
+
+  g_test_run ();
+}
 
 static void
 test_block_init (TestBlock *tb)
@@ -135,52 +181,6 @@ test_block_new (TestShared *shared, const guint req)
   ncm_data_set_init (NCM_DATA (tb), TRUE);
 
   return tb;
-}
-
-typedef struct _TestNcmDataset
-{
-  TestShared shared;
-  TestBlock *b1;
-  TestBlock *b2;
-  NcmDataset *dset;
-  NcmMSet *mset;
-} TestNcmDataset;
-
-void test_ncm_dataset_new (TestNcmDataset *test, gconstpointer pdata);
-void test_ncm_dataset_free (TestNcmDataset *test, gconstpointer pdata);
-
-void test_ncm_dataset_shared_m2lnL (TestNcmDataset *test, gconstpointer pdata);
-void test_ncm_dataset_shared_mean_vector (TestNcmDataset *test, gconstpointer pdata);
-void test_ncm_dataset_shared_fisher (TestNcmDataset *test, gconstpointer pdata);
-void test_ncm_dataset_shared_fisher_bias (TestNcmDataset *test, gconstpointer pdata);
-void test_ncm_dataset_fisher_inout (TestNcmDataset *test, gconstpointer pdata);
-void test_ncm_dataset_fisher_no_fparams (TestNcmDataset *test, gconstpointer pdata);
-void test_ncm_dataset_copy_bootstrap (void);
-void test_ncm_dataset_bootstrap_total_empty (void);
-void test_ncm_dataset_errors (void);
-void test_ncm_dataset_fisher_bad_size_subprocess (void);
-void test_ncm_dataset_no_realization_subprocess (void);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/dataset/shared/m2lnL", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_m2lnL, &test_ncm_dataset_free);
-  g_test_add ("/ncm/dataset/shared/mean_vector", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_mean_vector, &test_ncm_dataset_free);
-  g_test_add ("/ncm/dataset/shared/fisher", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_fisher, &test_ncm_dataset_free);
-  g_test_add ("/ncm/dataset/shared/fisher_bias", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_fisher_bias, &test_ncm_dataset_free);
-  g_test_add ("/ncm/dataset/fisher/inout", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_inout, &test_ncm_dataset_free);
-  g_test_add ("/ncm/dataset/fisher/no_fparams", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_no_fparams, &test_ncm_dataset_free);
-  g_test_add_func ("/ncm/dataset/copy/bootstrap", &test_ncm_dataset_copy_bootstrap);
-  g_test_add_func ("/ncm/dataset/bootstrap/total_empty", &test_ncm_dataset_bootstrap_total_empty);
-  g_test_add_func ("/ncm/dataset/errors", &test_ncm_dataset_errors);
-  g_test_add_func ("/ncm/dataset/errors/fisher_bad_size/subprocess", &test_ncm_dataset_fisher_bad_size_subprocess);
-  g_test_add_func ("/ncm/dataset/errors/no_realization/subprocess", &test_ncm_dataset_no_realization_subprocess);
-
-  g_test_run ();
 }
 
 void

@@ -59,15 +59,10 @@
 #include <string.h>
 
 #define TEST_SPARSE_FILE "truth_tables/xcor/xcor_window_ilk.bin"
-
 #define TEST_RTOL_FACTOR 3.0
-
 #define TEST_ATOL_FRAC 1.0e-11
-
 #define TEST_DERIV_ATOL_FRAC 1.0e-8
-
 #define TEST_TAU_MIN_OSC 200.0
-
 #define TEST_BATCH 8
 
 /* How the integral is taken */

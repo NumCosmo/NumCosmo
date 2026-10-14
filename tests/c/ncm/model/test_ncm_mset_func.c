@@ -123,6 +123,10 @@ void test_ncm_mset_func_list_bad_full_name_subprocess (void);
 void test_ncm_mset_func_list_wrong_obj_subprocess (void);
 void test_ncm_mset_func_list_no_obj_subprocess (void);
 
+static void _test_flist_plus_one (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static void _test_flist_const (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static void _test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -164,6 +168,23 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset_func_list/errors/no_obj/subprocess", &test_ncm_mset_func_list_no_obj_subprocess);
 
   g_test_run ();
+}
+
+static void
+test_flist_register (void)
+{
+  static gsize registered = 0;
+
+  if (g_once_init_enter (&registered))
+  {
+    ncm_mset_func_list_register ("plus_one", "f_1", "TestFList", "x + 1", G_TYPE_NONE, _test_flist_plus_one, 1, 1);
+    ncm_mset_func_list_register ("twice", "t_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
+
+    g_once_init_leave (&registered, 1);
+  }
 }
 
 static void
@@ -358,23 +379,6 @@ static void
 _test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
   res[0] = ncm_vector_len (NCM_VECTOR (ncm_mset_func_list_peek_obj (flist)));
-}
-
-static void
-test_flist_register (void)
-{
-  static gsize registered = 0;
-
-  if (g_once_init_enter (&registered))
-  {
-    ncm_mset_func_list_register ("plus_one", "f_1", "TestFList", "x + 1", G_TYPE_NONE, _test_flist_plus_one, 1, 1);
-    ncm_mset_func_list_register ("twice", "t_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
-
-    g_once_init_leave (&registered, 1);
-  }
 }
 
 void
