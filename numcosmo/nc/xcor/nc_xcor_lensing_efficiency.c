@@ -63,7 +63,7 @@
 #include "build_cfg.h"
 
 #include "ncm/core/ncm_cfg.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
+#include "ncm/spline/ncm_spline_hermite.h"
 #include "nc/xcor/nc_xcor_lensing_efficiency.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -92,7 +92,8 @@ typedef struct _NcXcorLensingEfficiencyPrivate
   /* Distance object (needed for comoving distances) */
   NcDistance *dist;
 
-  /* Output: the g(z) function stored as g(-z) */
+  /* Output: the g(z) function stored as g(-z), a quintic Hermite spline through the ODE
+   * steps with the first and second derivatives the ODE gives at each of them */
   NcmSpline *g_mz;
 
   /* Analytic head: g_mz starts one ODE step inside z_max, so g(z) =
@@ -473,6 +474,33 @@ _lens_eff_ode_J (sunrealtype mz, N_Vector y, N_Vector fy, SUNMatrix J, void *jac
   return 0;
 }
 
+/*
+ * Appends the ODE state at @mz as a node of the Hermite spline of g(-z): g = y_0 and, in mz,
+ * g' = -y_1 / E from the system and g'' its derivative, with dy_1/dmz from the right-hand
+ * side and dE/dmz = -(dE^2/dz) / (2E).
+ */
+static void
+_lens_eff_append_node (lens_eff_int_params *params, const gdouble mz, N_Vector y,
+                       GArray *x_array, GArray *y_array, GArray *d1_array, GArray *d2_array)
+{
+  NcXcorLensingEfficiencyPrivate *self = nc_xcor_lensing_efficiency_get_instance_private (params->lens_eff);
+  NcXcorLensingEfficiencyClass *klass  = NC_XCOR_LENSING_EFFICIENCY_GET_CLASS (params->lens_eff);
+  const gdouble z                      = -mz;
+  const gdouble E                      = nc_hicosmo_E (params->cosmo, z);
+  const gdouble dE2_dz                 = nc_hicosmo_dE2_dz (params->cosmo, z);
+  const gdouble W_src                  = klass->eval_source (params->lens_eff, z);
+  const gdouble dt                     = nc_distance_transverse (self->dist, params->cosmo, z);
+  const gdouble y0                     = NV_Ith_S (y, 0);
+  const gdouble y1                     = NV_Ith_S (y, 1);
+  const gdouble d1                     = -y1 / E;
+  const gdouble d2                     = (W_src / dt + params->Omega_k0 * y0 / E) / E - y1 * dE2_dz / (2.0 * gsl_pow_3 (E));
+
+  g_array_append_val (x_array, mz);
+  g_array_append_val (y_array, y0);
+  g_array_append_val (d1_array, d1);
+  g_array_append_val (d2_array, d2);
+}
+
 /**
  * nc_xcor_lensing_efficiency_prepare:
  * @lens_eff: a #NcXcorLensingEfficiency
@@ -502,25 +530,28 @@ nc_xcor_lensing_efficiency_prepare (NcXcorLensingEfficiency *lens_eff, NcHICosmo
     lens_eff_int_params params = {lens_eff, cosmo, nc_hicosmo_Omega_k0 (cosmo)};
     gdouble mz_ini             = -zmax;
     const gdouble mz_end       = -1.0e-10;
-    GArray *x_array, *y_array;
+    GArray *x_array, *y_array, *d1_array, *d2_array;
     gint flag;
 
     if (self->g_mz != NULL)
     {
-      NcmVector *xv = ncm_spline_peek_xv (self->g_mz);
-      NcmVector *yv = ncm_spline_peek_yv (self->g_mz);
-
-      x_array = ncm_vector_get_array (xv);
-      y_array = ncm_vector_get_array (yv);
+      x_array  = ncm_vector_get_array (ncm_spline_peek_xv (self->g_mz));
+      y_array  = ncm_vector_get_array (ncm_spline_peek_yv (self->g_mz));
+      d1_array = ncm_vector_get_array (ncm_spline_hermite_peek_d1v (NCM_SPLINE_HERMITE (self->g_mz)));
+      d2_array = ncm_vector_get_array (ncm_spline_hermite_peek_d2v (NCM_SPLINE_HERMITE (self->g_mz)));
 
       g_array_set_size (x_array, 0);
       g_array_set_size (y_array, 0);
+      g_array_set_size (d1_array, 0);
+      g_array_set_size (d2_array, 0);
     }
     else
     {
-      self->g_mz = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+      self->g_mz = NCM_SPLINE (ncm_spline_hermite_new ());
       x_array    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
       y_array    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+      d1_array   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+      d2_array   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
     }
 
     {
@@ -585,8 +616,7 @@ nc_xcor_lensing_efficiency_prepare (NcXcorLensingEfficiency *lens_eff, NcHICosmo
 
     flag = CVodeSetMaxStep (self->cvode, 1.0e-1);
 
-    g_array_append_val (x_array, mz_ini);
-    g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
+    _lens_eff_append_node (&params, mz_ini, self->yv, x_array, y_array, d1_array, d2_array);
 
     while (TRUE)
     {
@@ -594,23 +624,29 @@ nc_xcor_lensing_efficiency_prepare (NcXcorLensingEfficiency *lens_eff, NcHICosmo
 
       NCM_CVODE_CHECK (&flag, "CVode", 1, );
 
-      g_array_append_val (x_array, mz_ini);
-      g_array_append_val (y_array, NV_Ith_S (self->yv, 0));
+      _lens_eff_append_node (&params, mz_ini, self->yv, x_array, y_array, d1_array, d2_array);
 
       if (mz_ini == mz_end)
         break;
     }
 
     {
-      NcmVector *xv = ncm_vector_new_array (x_array);
-      NcmVector *yv = ncm_vector_new_array (y_array);
+      NcmVector *xv  = ncm_vector_new_array (x_array);
+      NcmVector *yv  = ncm_vector_new_array (y_array);
+      NcmVector *d1v = ncm_vector_new_array (d1_array);
+      NcmVector *d2v = ncm_vector_new_array (d2_array);
 
-      ncm_spline_set (self->g_mz, xv, yv, TRUE);
+      ncm_spline_set (self->g_mz, xv, yv, FALSE);
+      ncm_spline_hermite_set_derivs (NCM_SPLINE_HERMITE (self->g_mz), d1v, d2v, TRUE);
       ncm_vector_free (xv);
       ncm_vector_free (yv);
+      ncm_vector_free (d1v);
+      ncm_vector_free (d2v);
 
       g_array_unref (x_array);
       g_array_unref (y_array);
+      g_array_unref (d1_array);
+      g_array_unref (d2_array);
     }
   }
 }

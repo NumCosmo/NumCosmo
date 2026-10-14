@@ -256,7 +256,7 @@ class KernelNumberCountsConfig(BaseModel):
     survey: Annotated[str, Field()] = "LSST-Y1"
     bin_idx: Annotated[int, Field(ge=0)] = 0
     bias: Annotated[float, Field(gt=0.0)] = 1.5
-    mag_bias: Annotated[float, Field()] = 0.0
+    mag_bias: Annotated[float, Field()] = Nc.XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS
     domagbias: Annotated[bool, Field()] = True
     dorsd: Annotated[bool, Field()] = False
 
