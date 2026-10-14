@@ -36,6 +36,327 @@
 
 #include "test_ncm_csq1d_bessel.h"
 
+static void test_ncm_csq1d_properties (void);
+static void test_ncm_csq1d_prepare_aborts_subprocess (void);
+static void test_ncm_csq1d_prepare_aborts (void);
+static void test_ncm_csq1d_phase_hankel (void);
+static void test_ncm_csq1d_evolution_hankel (void);
+static void test_ncm_csq1d_adiab_hankel (void);
+static void test_ncm_csq1d_adiab_finders (void);
+static void test_ncm_csq1d_frame_changes (void);
+static void test_ncm_csq1d_frame_adiab_vacuum (void);
+static void test_ncm_csq1d_frame_eval_at (void);
+static void test_ncm_csq1d_prop_hankel (void);
+static void test_ncm_csq1d_nonadiab_vacuum (void);
+static void test_ncm_csq1d_prop_evolution (void);
+static void test_ncm_csq1d_evolution_ad_hoc (void);
+static void test_ncm_csq1d_defaults (void);
+static void test_ncm_csq1d_state_maps (void);
+static void test_ncm_csq1d_state_distance (void);
+static void test_ncm_csq1d_state_distance_exact (void);
+static void test_ncm_csq1d_state_circle (void);
+
+static const gdouble _test_frame_ag[][2] = {
+  {
+    0.1, 0.3
+  }, {
+    -0.4, 1.2
+  }, {
+    1.3, -0.7
+  }, {
+    0.0, 0.0
+  }
+};
+
+/* Points (alpha, gamma) covering the branches of the distance: small, large alpha, large
+ * gamma differences. */
+static const gdouble _test_ag[][2] =
+{
+  {0.0, 0.0}, {0.3, -0.2}, {-0.7, 0.4}, {1.5, 0.1}, {-2.5, -1.3}, {0.05, 3.0}, {4.0, -4.0},
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/csq1d/defaults", &test_ncm_csq1d_defaults);
+  g_test_add_func ("/ncm/csq1d/properties", &test_ncm_csq1d_properties);
+  g_test_add_func ("/ncm/csq1d/phase/hankel", &test_ncm_csq1d_phase_hankel);
+  g_test_add_func ("/ncm/csq1d/evolution/hankel", &test_ncm_csq1d_evolution_hankel);
+  g_test_add_func ("/ncm/csq1d/evolution/ad_hoc", &test_ncm_csq1d_evolution_ad_hoc);
+  g_test_add_func ("/ncm/csq1d/adiab/hankel", &test_ncm_csq1d_adiab_hankel);
+  g_test_add_func ("/ncm/csq1d/adiab/finders", &test_ncm_csq1d_adiab_finders);
+  g_test_add_func ("/ncm/csq1d/frame/changes", &test_ncm_csq1d_frame_changes);
+  g_test_add_func ("/ncm/csq1d/frame/adiab_vacuum", &test_ncm_csq1d_frame_adiab_vacuum);
+  g_test_add_func ("/ncm/csq1d/frame/eval_at", &test_ncm_csq1d_frame_eval_at);
+  g_test_add_func ("/ncm/csq1d/prop/hankel", &test_ncm_csq1d_prop_hankel);
+  g_test_add_func ("/ncm/csq1d/prop/evolution", &test_ncm_csq1d_prop_evolution);
+  g_test_add_func ("/ncm/csq1d/nonadiab/vacuum", &test_ncm_csq1d_nonadiab_vacuum);
+  g_test_add_func ("/ncm/csq1d/prepare/aborts", &test_ncm_csq1d_prepare_aborts);
+  g_test_add_func ("/ncm/csq1d/prepare/aborts/subprocess", &test_ncm_csq1d_prepare_aborts_subprocess);
+  g_test_add_func ("/ncm/csq1d/state/maps", &test_ncm_csq1d_state_maps);
+  g_test_add_func ("/ncm/csq1d/state/distance", &test_ncm_csq1d_state_distance);
+  g_test_add_func ("/ncm/csq1d/state/distance/exact", &test_ncm_csq1d_state_distance_exact);
+  g_test_add_func ("/ncm/csq1d/state/circle", &test_ncm_csq1d_state_circle);
+
+  g_test_run ();
+}
+
+/* The Bessel system prepared at t in [-1e4, -1e-3] with the vacuum set before -10. */
+static TestCSQ1DBessel *
+_test_ncm_csq1d_bessel_prepared_new (NcmCSQ1DInitialStateType ict)
+{
+  TestCSQ1DBessel *b = test_csq1d_bessel_new (2.0, 1.0, TRUE);
+  NcmCSQ1D *csq1d    = NCM_CSQ1D (b);
+
+  ncm_csq1d_set_ti (csq1d, -1.0e4);
+  ncm_csq1d_set_tf (csq1d, -1.0e-3);
+  ncm_csq1d_set_reltol (csq1d, 1.0e-10);
+  ncm_csq1d_set_abstol (csq1d, 0.0);
+  ncm_csq1d_set_save_evol (csq1d, TRUE);
+  ncm_csq1d_set_initial_condition_type (csq1d, ict);
+  ncm_csq1d_set_vacuum_max_time (csq1d, -10.0);
+  ncm_csq1d_set_vacuum_reltol (csq1d, 1.0e-8);
+
+  return b;
+}
+
+static void
+_test_ncm_csq1d_trap_abort (const gchar *which, const gchar *message)
+{
+  g_setenv ("TEST_NCM_CSQ1D_ABORT", which, TRUE);
+  g_test_trap_subprocess ("/ncm/csq1d/prepare/aborts/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr (message);
+  g_unsetenv ("TEST_NCM_CSQ1D_ABORT");
+}
+
+/* The phase of the exact positive-frequency mode, -arg H^(1)_a (-k t), for t < 0. */
+static gdouble
+_test_theta_exact (const gdouble a, const gdouble k, const gdouble t)
+{
+  const gdouble x = -k * t;
+
+  return -atan2 (gsl_sf_bessel_Ynu (a, x), gsl_sf_bessel_Jnu (a, x));
+}
+
+static gdouble
+_test_theta (NcmCSQ1D *csq1d, const gdouble t)
+{
+  return ncm_csq1d_eval_int_nu (csq1d, NULL, t) + ncm_csq1d_eval_delta_theta_at (csq1d, t);
+}
+
+/* Largest error of theta (t2) - theta (t1) against the exact difference, modulo 2 pi. */
+static gdouble
+_test_phase_pair_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k, const gdouble *t1, guint n1, const gdouble *t2, guint n2)
+{
+  gdouble err = 0.0;
+  guint i, j;
+
+  for (i = 0; i < n1; i++)
+  {
+    for (j = 0; j < n2; j++)
+    {
+      const gdouble d = (_test_theta (csq1d, t2[j]) - _test_theta (csq1d, t1[i]))
+                        - (_test_theta_exact (a, k, t2[j]) - _test_theta_exact (a, k, t1[i]));
+
+      err = GSL_MAX (err, fabs (remainder (d, 2.0 * M_PI)));
+    }
+  }
+
+  return err;
+}
+
+/*
+ * The exact state of the Bessel system at t < 0, from the positive-frequency mode
+ * phi = C u^(-a) H^(1)_a (k u), u = -t, normalized by the Wronskian (|C|^2 = pi / 4),
+ * with P_phi = C k u^(1 + a) H^(1)_(a + 1) (k u): J11 = 2 |phi|^2, J22 = 2 |P_phi|^2,
+ * J12 = 2 Re (phi P_phi^*), and alpha = -asinh J12, gamma = ln (J22 / cosh alpha).
+ */
+static void
+_test_bessel_exact_state (const gdouble a, const gdouble k, const gdouble t, NcmCSQ1DState *state)
+{
+  const gdouble u     = -t;
+  const gdouble x     = k * u;
+  const gdouble Ja    = gsl_sf_bessel_Jnu (a, x);
+  const gdouble Ya    = gsl_sf_bessel_Ynu (a, x);
+  const gdouble Ja1   = gsl_sf_bessel_Jnu (a + 1.0, x);
+  const gdouble Ya1   = gsl_sf_bessel_Ynu (a + 1.0, x);
+  const gdouble J12   = 0.5 * M_PI * x * (Ja * Ja1 + Ya * Ya1);
+  const gdouble J22   = 0.5 * M_PI * k * k * pow (u, 2.0 + 2.0 * a) * (Ja1 * Ja1 + Ya1 * Ya1);
+  const gdouble alpha = -asinh (J12);
+
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, alpha, log (J22) - gsl_sf_lncosh (alpha));
+}
+
+/*
+ * Relative error of the complex structure of @s against @r: J11 and J22 relative to
+ * themselves, J12 relative to sqrt (J11 J22) = sqrt (1 + J12^2). In strongly squeezed
+ * states a small relative error is a large hyperbolic distance, so the distance is not
+ * the accuracy measure there.
+ */
+static gdouble
+_test_J_relerr (NcmCSQ1DState *s, NcmCSQ1DState *r)
+{
+  gdouble s11, s12, s22, r11, r12, r22;
+
+  ncm_csq1d_state_get_J (s, &s11, &s12, &s22);
+  ncm_csq1d_state_get_J (r, &r11, &r12, &r22);
+
+  return GSL_MAX (GSL_MAX (fabs (s11 / r11 - 1.0), fabs (s22 / r22 - 1.0)), fabs (s12 - r12) / sqrt (r11 * r22));
+}
+
+/* Largest error of the evolved complex structure over the evolution times. */
+static gdouble
+_test_evolution_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k)
+{
+  NcmCSQ1DState *s_evol  = ncm_csq1d_state_new ();
+  NcmCSQ1DState *s_exact = ncm_csq1d_state_new ();
+  GArray *t_a            = ncm_csq1d_get_time_array (csq1d, NULL);
+  gdouble err            = 0.0;
+  guint i;
+
+  for (i = 0; i < t_a->len; i++)
+  {
+    const gdouble t = g_array_index (t_a, gdouble, i);
+
+    ncm_csq1d_eval_at (csq1d, NULL, t, s_evol);
+    _test_bessel_exact_state (a, k, t, s_exact);
+    err = GSL_MAX (err, _test_J_relerr (s_evol, s_exact));
+  }
+
+  g_array_unref (t_a);
+  ncm_csq1d_state_free (s_evol);
+  ncm_csq1d_state_free (s_exact);
+
+  return err;
+}
+
+/* Error of the adiabatic vacuum at t against the exact state, and its estimate. */
+static gdouble
+_test_adiab_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k, const gdouble t, gdouble *estimate)
+{
+  NcmCSQ1DState *s_ad = ncm_csq1d_state_new ();
+  NcmCSQ1DState *s_ex = ncm_csq1d_state_new ();
+  gdouble ar, gr, err;
+
+  ncm_csq1d_compute_adiab_frame (csq1d, NULL, NCM_CSQ1D_FRAME_ORIG, t, s_ad, &ar, &gr);
+  _test_bessel_exact_state (a, k, t, s_ex);
+  err = _test_J_relerr (s_ad, s_ex);
+
+  if (estimate != NULL)
+    estimate[0] = GSL_MAX (ar, gr);
+
+  ncm_csq1d_state_free (s_ad);
+  ncm_csq1d_state_free (s_ex);
+
+  return err;
+}
+
+/* The largest round-trip change and the largest relative change of distances between the
+ * test points over every pair of @frames at @t. The points are set near the origin of
+ * @frame_ref, where the states of interest are, and carried to each frame. */
+static void
+_test_frames (NcmCSQ1D *csq1d, const NcmCSQ1DFrame *frames, guint nframes, const NcmCSQ1DFrame frame_ref, const gdouble t, gdouble *round_trip, gdouble *isometry)
+{
+  NcmCSQ1DState *s0 = ncm_csq1d_state_new ();
+  NcmCSQ1DState *s1 = ncm_csq1d_state_new ();
+  guint i, j, l;
+
+  round_trip[0] = 0.0;
+  isometry[0]   = 0.0;
+
+  for (i = 0; i < nframes; i++)
+  {
+    for (j = 0; j < nframes; j++)
+    {
+      for (l = 0; l < G_N_ELEMENTS (_test_frame_ag); l++)
+      {
+        gdouble a0, g0, a, g;
+
+        ncm_csq1d_state_set_ag (s0, frame_ref, t, _test_frame_ag[l][0], _test_frame_ag[l][1]);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
+        ncm_csq1d_state_get_ag (s0, &a0, &g0);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[j]);
+        g_assert_cmpint (ncm_csq1d_state_get_frame (s0), ==, frames[j]);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
+        ncm_csq1d_state_get_ag (s0, &a, &g);
+        round_trip[0] = GSL_MAX (round_trip[0], GSL_MAX (fabs (a - a0), fabs (g - g0) / GSL_MAX (1.0, fabs (g0))));
+      }
+
+      {
+        gdouble d;
+
+        ncm_csq1d_state_set_ag (s0, frame_ref, t, _test_frame_ag[0][0], _test_frame_ag[0][1]);
+        ncm_csq1d_state_set_ag (s1, frame_ref, t, _test_frame_ag[2][0], _test_frame_ag[2][1]);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
+        ncm_csq1d_change_frame (csq1d, NULL, s1, frames[i]);
+        d = ncm_csq1d_state_compute_distance (s0, s1);
+        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[j]);
+        ncm_csq1d_change_frame (csq1d, NULL, s1, frames[j]);
+        isometry[0] = GSL_MAX (isometry[0], fabs (ncm_csq1d_state_compute_distance (s0, s1) / d - 1.0));
+      }
+    }
+  }
+
+  ncm_csq1d_state_free (s0);
+  ncm_csq1d_state_free (s1);
+}
+
+/*
+ * The exact state of the Bessel system at t > 0 for the mode of the non-adiabatic tests,
+ * phi = C x^(-a) (J_a - i kappa Y_a) (x), x = k t, kappa = k^(2a), |C|^2 = pi / 4, with
+ * P_phi = -C k t^(1 + 2a) x^(-a) (J_(a+1) - i kappa Y_(a+1)) (x).
+ */
+static void
+_test_bessel_nonadiab_exact_state (const gdouble a, const gdouble k, const gdouble t, NcmCSQ1DState *state)
+{
+  const gdouble x     = k * t;
+  const gdouble kap   = pow (k, 2.0 * a);
+  const gdouble x2a   = pow (x, -2.0 * a);
+  const gdouble Ja    = gsl_sf_bessel_Jnu (a, x);
+  const gdouble Ya    = gsl_sf_bessel_Ynu (a, x);
+  const gdouble Ja1   = gsl_sf_bessel_Jnu (a + 1.0, x);
+  const gdouble Ya1   = gsl_sf_bessel_Ynu (a + 1.0, x);
+  const gdouble J12   = -0.5 * M_PI * k * pow (t, 1.0 + 2.0 * a) * x2a * (Ja * Ja1 + kap * kap * Ya * Ya1);
+  const gdouble J22   = 0.5 * M_PI * k * k * pow (t, 2.0 + 4.0 * a) * x2a * (Ja1 * Ja1 + kap * kap * Ya1 * Ya1);
+  const gdouble alpha = -asinh (J12);
+
+  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, alpha, log (J22) - gsl_sf_lncosh (alpha));
+}
+
+/* The hyperbolic distance from the upper half-plane coordinates. */
+static gdouble
+_test_dist_half_plane (NcmCSQ1DState *s0, NcmCSQ1DState *s1)
+{
+  gdouble x0, lny0, x1, lny1;
+
+  ncm_csq1d_state_get_poincare_half_plane (s0, &x0, &lny0);
+  ncm_csq1d_state_get_poincare_half_plane (s1, &x1, &lny1);
+
+  {
+    const gdouble y0 = exp (lny0);
+    const gdouble y1 = exp (lny1);
+
+    return acosh (1.0 + (gsl_pow_2 (x0 - x1) + gsl_pow_2 (y0 - y1)) / (2.0 * y0 * y1));
+  }
+}
+
+/* The hyperbolic distance from the Poincare disc coordinates. */
+static gdouble
+_test_dist_disc (NcmCSQ1DState *s0, NcmCSQ1DState *s1)
+{
+  gdouble x0, y0, x1, y1;
+
+  ncm_csq1d_state_get_poincare_disc (s0, &x0, &y0);
+  ncm_csq1d_state_get_poincare_disc (s1, &x1, &y1);
+
+  return acosh (1.0 + 2.0 * (gsl_pow_2 (x0 - x1) + gsl_pow_2 (y0 - y1)) / ((1.0 - x0 * x0 - y0 * y0) * (1.0 - x1 * x1 - y1 * y1)));
+}
+
 static void
 test_ncm_csq1d_properties (void)
 {
@@ -107,25 +428,6 @@ test_ncm_csq1d_properties (void)
   ncm_csq1d_free (csq1d);
 }
 
-/* The Bessel system prepared at t in [-1e4, -1e-3] with the vacuum set before -10. */
-static TestCSQ1DBessel *
-_test_ncm_csq1d_bessel_prepared_new (NcmCSQ1DInitialStateType ict)
-{
-  TestCSQ1DBessel *b = test_csq1d_bessel_new (2.0, 1.0, TRUE);
-  NcmCSQ1D *csq1d    = NCM_CSQ1D (b);
-
-  ncm_csq1d_set_ti (csq1d, -1.0e4);
-  ncm_csq1d_set_tf (csq1d, -1.0e-3);
-  ncm_csq1d_set_reltol (csq1d, 1.0e-10);
-  ncm_csq1d_set_abstol (csq1d, 0.0);
-  ncm_csq1d_set_save_evol (csq1d, TRUE);
-  ncm_csq1d_set_initial_condition_type (csq1d, ict);
-  ncm_csq1d_set_vacuum_max_time (csq1d, -10.0);
-  ncm_csq1d_set_vacuum_reltol (csq1d, 1.0e-8);
-
-  return b;
-}
-
 static void
 test_ncm_csq1d_prepare_aborts_subprocess (void)
 {
@@ -183,16 +485,6 @@ test_ncm_csq1d_prepare_aborts_subprocess (void)
 }
 
 static void
-_test_ncm_csq1d_trap_abort (const gchar *which, const gchar *message)
-{
-  g_setenv ("TEST_NCM_CSQ1D_ABORT", which, TRUE);
-  g_test_trap_subprocess ("/ncm/csq1d/prepare/aborts/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr (message);
-  g_unsetenv ("TEST_NCM_CSQ1D_ABORT");
-}
-
-static void
 test_ncm_csq1d_prepare_aborts (void)
 {
   /* The documented refusals of ncm_csq1d_prepare() and ncm_csq1d_set_init_cond_adiab(). */
@@ -204,42 +496,6 @@ test_ncm_csq1d_prepare_aborts (void)
   _test_ncm_csq1d_trap_abort ("nonadiab2_boost", "*beyond double precision*");
   _test_ncm_csq1d_trap_abort ("prop_time", "*does not match the propagator initial time*");
   _test_ncm_csq1d_trap_abort ("prop_frame", "*must be in the non-adiabatic 1 frame*");
-}
-
-/* The phase of the exact positive-frequency mode, -arg H^(1)_a (-k t), for t < 0. */
-static gdouble
-_test_theta_exact (const gdouble a, const gdouble k, const gdouble t)
-{
-  const gdouble x = -k * t;
-
-  return -atan2 (gsl_sf_bessel_Ynu (a, x), gsl_sf_bessel_Jnu (a, x));
-}
-
-static gdouble
-_test_theta (NcmCSQ1D *csq1d, const gdouble t)
-{
-  return ncm_csq1d_eval_int_nu (csq1d, NULL, t) + ncm_csq1d_eval_delta_theta_at (csq1d, t);
-}
-
-/* Largest error of theta (t2) - theta (t1) against the exact difference, modulo 2 pi. */
-static gdouble
-_test_phase_pair_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k, const gdouble *t1, guint n1, const gdouble *t2, guint n2)
-{
-  gdouble err = 0.0;
-  guint i, j;
-
-  for (i = 0; i < n1; i++)
-  {
-    for (j = 0; j < n2; j++)
-    {
-      const gdouble d = (_test_theta (csq1d, t2[j]) - _test_theta (csq1d, t1[i]))
-                        - (_test_theta_exact (a, k, t2[j]) - _test_theta_exact (a, k, t1[i]));
-
-      err = GSL_MAX (err, fabs (remainder (d, 2.0 * M_PI)));
-    }
-  }
-
-  return err;
 }
 
 static void
@@ -330,71 +586,6 @@ test_ncm_csq1d_phase_hankel (void)
   }
 }
 
-/*
- * The exact state of the Bessel system at t < 0, from the positive-frequency mode
- * phi = C u^(-a) H^(1)_a (k u), u = -t, normalized by the Wronskian (|C|^2 = pi / 4),
- * with P_phi = C k u^(1 + a) H^(1)_(a + 1) (k u): J11 = 2 |phi|^2, J22 = 2 |P_phi|^2,
- * J12 = 2 Re (phi P_phi^*), and alpha = -asinh J12, gamma = ln (J22 / cosh alpha).
- */
-static void
-_test_bessel_exact_state (const gdouble a, const gdouble k, const gdouble t, NcmCSQ1DState *state)
-{
-  const gdouble u     = -t;
-  const gdouble x     = k * u;
-  const gdouble Ja    = gsl_sf_bessel_Jnu (a, x);
-  const gdouble Ya    = gsl_sf_bessel_Ynu (a, x);
-  const gdouble Ja1   = gsl_sf_bessel_Jnu (a + 1.0, x);
-  const gdouble Ya1   = gsl_sf_bessel_Ynu (a + 1.0, x);
-  const gdouble J12   = 0.5 * M_PI * x * (Ja * Ja1 + Ya * Ya1);
-  const gdouble J22   = 0.5 * M_PI * k * k * pow (u, 2.0 + 2.0 * a) * (Ja1 * Ja1 + Ya1 * Ya1);
-  const gdouble alpha = -asinh (J12);
-
-  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, alpha, log (J22) - gsl_sf_lncosh (alpha));
-}
-
-/*
- * Relative error of the complex structure of @s against @r: J11 and J22 relative to
- * themselves, J12 relative to sqrt (J11 J22) = sqrt (1 + J12^2). In strongly squeezed
- * states a small relative error is a large hyperbolic distance, so the distance is not
- * the accuracy measure there.
- */
-static gdouble
-_test_J_relerr (NcmCSQ1DState *s, NcmCSQ1DState *r)
-{
-  gdouble s11, s12, s22, r11, r12, r22;
-
-  ncm_csq1d_state_get_J (s, &s11, &s12, &s22);
-  ncm_csq1d_state_get_J (r, &r11, &r12, &r22);
-
-  return GSL_MAX (GSL_MAX (fabs (s11 / r11 - 1.0), fabs (s22 / r22 - 1.0)), fabs (s12 - r12) / sqrt (r11 * r22));
-}
-
-/* Largest error of the evolved complex structure over the evolution times. */
-static gdouble
-_test_evolution_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k)
-{
-  NcmCSQ1DState *s_evol  = ncm_csq1d_state_new ();
-  NcmCSQ1DState *s_exact = ncm_csq1d_state_new ();
-  GArray *t_a            = ncm_csq1d_get_time_array (csq1d, NULL);
-  gdouble err            = 0.0;
-  guint i;
-
-  for (i = 0; i < t_a->len; i++)
-  {
-    const gdouble t = g_array_index (t_a, gdouble, i);
-
-    ncm_csq1d_eval_at (csq1d, NULL, t, s_evol);
-    _test_bessel_exact_state (a, k, t, s_exact);
-    err = GSL_MAX (err, _test_J_relerr (s_evol, s_exact));
-  }
-
-  g_array_unref (t_a);
-  ncm_csq1d_state_free (s_evol);
-  ncm_csq1d_state_free (s_exact);
-
-  return err;
-}
-
 static void
 test_ncm_csq1d_evolution_hankel (void)
 {
@@ -434,27 +625,6 @@ test_ncm_csq1d_evolution_hankel (void)
 
   ncm_csq1d_free (c4);
   ncm_csq1d_free (c2);
-}
-
-/* Error of the adiabatic vacuum at t against the exact state, and its estimate. */
-static gdouble
-_test_adiab_error (NcmCSQ1D *csq1d, const gdouble a, const gdouble k, const gdouble t, gdouble *estimate)
-{
-  NcmCSQ1DState *s_ad = ncm_csq1d_state_new ();
-  NcmCSQ1DState *s_ex = ncm_csq1d_state_new ();
-  gdouble ar, gr, err;
-
-  ncm_csq1d_compute_adiab_frame (csq1d, NULL, NCM_CSQ1D_FRAME_ORIG, t, s_ad, &ar, &gr);
-  _test_bessel_exact_state (a, k, t, s_ex);
-  err = _test_J_relerr (s_ad, s_ex);
-
-  if (estimate != NULL)
-    estimate[0] = GSL_MAX (ar, gr);
-
-  ncm_csq1d_state_free (s_ad);
-  ncm_csq1d_state_free (s_ex);
-
-  return err;
 }
 
 static void
@@ -537,68 +707,6 @@ test_ncm_csq1d_adiab_finders (void)
   ncm_assert_cmpdouble_e (t_Bu, ==, -500.0, 1.0e-14, 0.0);
 
   ncm_csq1d_free (csq1d);
-}
-
-static const gdouble _test_frame_ag[][2] = {
-  {
-    0.1, 0.3
-  }, {
-    -0.4, 1.2
-  }, {
-    1.3, -0.7
-  }, {
-    0.0, 0.0
-  }
-};
-
-/* The largest round-trip change and the largest relative change of distances between the
- * test points over every pair of @frames at @t. The points are set near the origin of
- * @frame_ref, where the states of interest are, and carried to each frame. */
-static void
-_test_frames (NcmCSQ1D *csq1d, const NcmCSQ1DFrame *frames, guint nframes, const NcmCSQ1DFrame frame_ref, const gdouble t, gdouble *round_trip, gdouble *isometry)
-{
-  NcmCSQ1DState *s0 = ncm_csq1d_state_new ();
-  NcmCSQ1DState *s1 = ncm_csq1d_state_new ();
-  guint i, j, l;
-
-  round_trip[0] = 0.0;
-  isometry[0]   = 0.0;
-
-  for (i = 0; i < nframes; i++)
-  {
-    for (j = 0; j < nframes; j++)
-    {
-      for (l = 0; l < G_N_ELEMENTS (_test_frame_ag); l++)
-      {
-        gdouble a0, g0, a, g;
-
-        ncm_csq1d_state_set_ag (s0, frame_ref, t, _test_frame_ag[l][0], _test_frame_ag[l][1]);
-        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
-        ncm_csq1d_state_get_ag (s0, &a0, &g0);
-        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[j]);
-        g_assert_cmpint (ncm_csq1d_state_get_frame (s0), ==, frames[j]);
-        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
-        ncm_csq1d_state_get_ag (s0, &a, &g);
-        round_trip[0] = GSL_MAX (round_trip[0], GSL_MAX (fabs (a - a0), fabs (g - g0) / GSL_MAX (1.0, fabs (g0))));
-      }
-
-      {
-        gdouble d;
-
-        ncm_csq1d_state_set_ag (s0, frame_ref, t, _test_frame_ag[0][0], _test_frame_ag[0][1]);
-        ncm_csq1d_state_set_ag (s1, frame_ref, t, _test_frame_ag[2][0], _test_frame_ag[2][1]);
-        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[i]);
-        ncm_csq1d_change_frame (csq1d, NULL, s1, frames[i]);
-        d = ncm_csq1d_state_compute_distance (s0, s1);
-        ncm_csq1d_change_frame (csq1d, NULL, s0, frames[j]);
-        ncm_csq1d_change_frame (csq1d, NULL, s1, frames[j]);
-        isometry[0] = GSL_MAX (isometry[0], fabs (ncm_csq1d_state_compute_distance (s0, s1) / d - 1.0));
-      }
-    }
-  }
-
-  ncm_csq1d_state_free (s0);
-  ncm_csq1d_state_free (s1);
 }
 
 static void
@@ -722,28 +830,6 @@ test_ncm_csq1d_frame_eval_at (void)
   ncm_csq1d_state_free (s_frame);
   ncm_csq1d_state_free (s_orig);
   ncm_csq1d_free (csq1d);
-}
-
-/*
- * The exact state of the Bessel system at t > 0 for the mode of the non-adiabatic tests,
- * phi = C x^(-a) (J_a - i kappa Y_a) (x), x = k t, kappa = k^(2a), |C|^2 = pi / 4, with
- * P_phi = -C k t^(1 + 2a) x^(-a) (J_(a+1) - i kappa Y_(a+1)) (x).
- */
-static void
-_test_bessel_nonadiab_exact_state (const gdouble a, const gdouble k, const gdouble t, NcmCSQ1DState *state)
-{
-  const gdouble x     = k * t;
-  const gdouble kap   = pow (k, 2.0 * a);
-  const gdouble x2a   = pow (x, -2.0 * a);
-  const gdouble Ja    = gsl_sf_bessel_Jnu (a, x);
-  const gdouble Ya    = gsl_sf_bessel_Ynu (a, x);
-  const gdouble Ja1   = gsl_sf_bessel_Jnu (a + 1.0, x);
-  const gdouble Ya1   = gsl_sf_bessel_Ynu (a + 1.0, x);
-  const gdouble J12   = -0.5 * M_PI * k * pow (t, 1.0 + 2.0 * a) * x2a * (Ja * Ja1 + kap * kap * Ya * Ya1);
-  const gdouble J22   = 0.5 * M_PI * k * k * pow (t, 2.0 + 4.0 * a) * x2a * (Ja1 * Ja1 + kap * kap * Ya1 * Ya1);
-  const gdouble alpha = -asinh (J12);
-
-  ncm_csq1d_state_set_ag (state, NCM_CSQ1D_FRAME_ORIG, t, alpha, log (J22) - gsl_sf_lncosh (alpha));
 }
 
 static void
@@ -977,42 +1063,6 @@ test_ncm_csq1d_defaults (void)
   ncm_csq1d_free (csq1d);
 }
 
-/* Points (alpha, gamma) covering the branches of the distance: small, large alpha, large
- * gamma differences. */
-static const gdouble _test_ag[][2] =
-{
-  {0.0, 0.0}, {0.3, -0.2}, {-0.7, 0.4}, {1.5, 0.1}, {-2.5, -1.3}, {0.05, 3.0}, {4.0, -4.0},
-};
-
-/* The hyperbolic distance from the upper half-plane coordinates. */
-static gdouble
-_test_dist_half_plane (NcmCSQ1DState *s0, NcmCSQ1DState *s1)
-{
-  gdouble x0, lny0, x1, lny1;
-
-  ncm_csq1d_state_get_poincare_half_plane (s0, &x0, &lny0);
-  ncm_csq1d_state_get_poincare_half_plane (s1, &x1, &lny1);
-
-  {
-    const gdouble y0 = exp (lny0);
-    const gdouble y1 = exp (lny1);
-
-    return acosh (1.0 + (gsl_pow_2 (x0 - x1) + gsl_pow_2 (y0 - y1)) / (2.0 * y0 * y1));
-  }
-}
-
-/* The hyperbolic distance from the Poincare disc coordinates. */
-static gdouble
-_test_dist_disc (NcmCSQ1DState *s0, NcmCSQ1DState *s1)
-{
-  gdouble x0, y0, x1, y1;
-
-  ncm_csq1d_state_get_poincare_disc (s0, &x0, &y0);
-  ncm_csq1d_state_get_poincare_disc (s1, &x1, &y1);
-
-  return acosh (1.0 + 2.0 * (gsl_pow_2 (x0 - x1) + gsl_pow_2 (y0 - y1)) / ((1.0 - x0 * x0 - y0 * y0) * (1.0 - x1 * x1 - y1 * y1)));
-}
-
 static void
 test_ncm_csq1d_state_maps (void)
 {
@@ -1195,35 +1245,5 @@ test_ncm_csq1d_state_circle (void)
 
   ncm_csq1d_state_free (s);
   ncm_csq1d_state_free (c);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/csq1d/defaults", &test_ncm_csq1d_defaults);
-  g_test_add_func ("/ncm/csq1d/properties", &test_ncm_csq1d_properties);
-  g_test_add_func ("/ncm/csq1d/phase/hankel", &test_ncm_csq1d_phase_hankel);
-  g_test_add_func ("/ncm/csq1d/evolution/hankel", &test_ncm_csq1d_evolution_hankel);
-  g_test_add_func ("/ncm/csq1d/evolution/ad_hoc", &test_ncm_csq1d_evolution_ad_hoc);
-  g_test_add_func ("/ncm/csq1d/adiab/hankel", &test_ncm_csq1d_adiab_hankel);
-  g_test_add_func ("/ncm/csq1d/adiab/finders", &test_ncm_csq1d_adiab_finders);
-  g_test_add_func ("/ncm/csq1d/frame/changes", &test_ncm_csq1d_frame_changes);
-  g_test_add_func ("/ncm/csq1d/frame/adiab_vacuum", &test_ncm_csq1d_frame_adiab_vacuum);
-  g_test_add_func ("/ncm/csq1d/frame/eval_at", &test_ncm_csq1d_frame_eval_at);
-  g_test_add_func ("/ncm/csq1d/prop/hankel", &test_ncm_csq1d_prop_hankel);
-  g_test_add_func ("/ncm/csq1d/prop/evolution", &test_ncm_csq1d_prop_evolution);
-  g_test_add_func ("/ncm/csq1d/nonadiab/vacuum", &test_ncm_csq1d_nonadiab_vacuum);
-  g_test_add_func ("/ncm/csq1d/prepare/aborts", &test_ncm_csq1d_prepare_aborts);
-  g_test_add_func ("/ncm/csq1d/prepare/aborts/subprocess", &test_ncm_csq1d_prepare_aborts_subprocess);
-  g_test_add_func ("/ncm/csq1d/state/maps", &test_ncm_csq1d_state_maps);
-  g_test_add_func ("/ncm/csq1d/state/distance", &test_ncm_csq1d_state_distance);
-  g_test_add_func ("/ncm/csq1d/state/distance/exact", &test_ncm_csq1d_state_distance_exact);
-  g_test_add_func ("/ncm/csq1d/state/circle", &test_ncm_csq1d_state_circle);
-
-  g_test_run ();
 }
 
