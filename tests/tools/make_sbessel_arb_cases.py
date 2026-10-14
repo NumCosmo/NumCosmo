@@ -179,6 +179,42 @@ LEVIN_CASES = [
         0,
         [(ell, [1.0]) for ell in range(6)],
     ),
+    (
+        # the rational truth table's shape at k = 10^0.5: one panel carries the whole
+        # integral and its solution has about 600 coefficients
+        "reltol_bound",
+        "rational",
+        0.01,
+        6.5,
+        1.5,
+        0.05,
+        0,
+        [(ell, [0.1 * 10.0**1.5]) for ell in range(8)],
+    ),
+    (
+        # a panel past the turning point and too short for pinned data: it has
+        # Dirichlet data, which a truncated solve meets only to its truncation error
+        "short_panel",
+        "tophat",
+        490.7985,
+        499.4845,
+        0.0,
+        0.0,
+        0,
+        [(200, [1.0])],
+    ),
+    (
+        # the upper bound 1e-10 above the knot at x = 100: the piece 1e-8 wide is merged
+        # into the panel below it
+        "thin_piece",
+        "gauss",
+        0.0,
+        100.00000001,
+        60.0,
+        15.0,
+        2,
+        [(2, [1.0])],
+    ),
     ("ell_zero", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(0, [1.0])]),
     ("k_scaling", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(5, [0.1, 1.0, 10.0, 100.0])]),
     ("narrow", "power", 5.0, 5.001, 1.0, 0.0, 0, [(5, [1.0])]),

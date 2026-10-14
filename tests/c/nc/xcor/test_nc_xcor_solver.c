@@ -311,7 +311,7 @@ static void
 test_nc_xcor_solver_plan_kernel_integrator (TestNcXcorSolver *test, gconstpointer pdata)
 {
   NcmSBesselIntegrator *small_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new_full (0, 5, 1.0e-4, 1.0e6, 21, 5,
-                                                                                                   1.0e-13, 2, 1.0e-8));
+                                                                                                   1.0e-8, 2));
   NcXcorKernel *small = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new_full (test->dist, test->ps,
                                                                                 1700.0, 350.0, 4.0, small_sbi));
   const guint by8[] = {0, 7, 8, 15, 16, 20};
@@ -516,7 +516,7 @@ test_nc_xcor_solver_cache_max (TestNcXcorSolver *test, gconstpointer pdata)
 {
   NcmSBesselIntegrator *sbi       = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 32));
   NcmSBesselIntegrator *small_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new_full (0, 5, 1.0e-4, 1.0e6, 21, 5,
-                                                                                                   1.0e-13, 2, 1.0e-8));
+                                                                                                   1.0e-8, 2));
   NcXcorKernel *nl = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new_full (test->dist, test->ps,
                                                                              1500.0, 300.0, 4.0, sbi));
   NcXcor *xc = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_KERNEL_EXACT);

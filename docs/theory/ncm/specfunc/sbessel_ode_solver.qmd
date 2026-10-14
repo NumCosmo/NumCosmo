@@ -242,9 +242,27 @@ there.
 
 The stopping test uses that ratio. Let $\rho_j \equiv |\tilde r^j /
 R^j{}_j|$ and $\rho_{\max}$ its running maximum. With $\epsilon_{\rm ODE}$ the tolerance the operator
-was created with, the factorization stops at the first column such that
-$\rho_j/\rho_{\max} < \epsilon_{\rm ODE}$ for five consecutive columns and $j + 1$ has reached the
-floor the constraint sets. Under Dirichlet data that floor is
+was created with and $\epsilon$ the double precision epsilon, column $j$ is quiet when
+$$
+10\, j^2 \rho_j < \epsilon_{\rm ODE}\, \rho_{\max}
+\qquad\text{or}\qquad
+\rho_j < \frac{\epsilon}{10}\, \rho_{\max},
+$$
+and the factorization stops at the first column that ends five consecutive quiet columns
+once $j + 1$ has reached the floor the constraint sets. The factor $j^2$ is
+$|T_j'(\pm1)|$, the weight of coefficient $j$ in the endpoint derivatives the boundary
+term reads below, so the first condition bounds the truncation error of the derivatives
+rather than of the coefficients. The factor 10 covers the change that truncation at
+column $N$ makes in the coefficients below $N$: on the panels measured, the endpoint
+derivatives change by 8 to 10 times $N^2 |c^N|$. With this factor the Levin integrals of
+every certified reference are within $0.6\,\epsilon_{\rm ODE}$ of their peak for
+$\epsilon_{\rm ODE}$ from $10^{-4}$ to $10^{-10}$, against $3\,\epsilon_{\rm ODE}$ with a
+factor 3. The second condition stops the solve when the coefficients reach roundoff,
+below which a further column adds no information; at the solver's default
+$\epsilon_{\rm ODE} = \epsilon/10$ the first condition implies the second. The test makes
+$u$ and $u'$ accurate together, as the Levin boundary terms require; a solve that needed
+$u$ alone could stop earlier on the unweighted $\rho_j$, and the solver does not provide
+that test. Under Dirichlet data the floor is
 $$
 N_{\min} = \left\lceil \frac{2}{\pi}\,\big(x_b - \max(x_a, \nu)\big) \right\rceil,
 \qquad \nu \equiv \sqrt{\ell(\ell+1)} .
@@ -290,8 +308,8 @@ multipole.
 #|   Chebyshev coefficients of u on the panel [100, 316] for l = 20. The three
 #|   tolerances return the same coefficients to within 1e-9 and differ only in where
 #|   the factorization stops, so the curve is drawn once and each tolerance is marked
-#|   by its stopping column. The floor N_min of Eq. (3) is 138 here, which is where
-#|   the loosest tolerance stops: the floor sets this column, not the decay test.
+#|   by its stopping column. The floor N_min of Eq. (3) is 138 here, and the loosest
+#|   tolerance stops seven columns past it, at 145.
 #| code-fold: true
 fig, ax = plt.subplots(figsize=(6, 3.4))
 nmin = int(np.ceil(2.0 / np.pi * (b - max(a, np.sqrt(ell * (ell + 1))))))
@@ -319,8 +337,8 @@ plt.tight_layout()
 ```
 
 The animation below replays the factorization column by column, on the operator matrix the library returns for the same panel and
-forcing, with the rotation order described above, and tracks the stopping
-ratio beside it; the column it stops at is checked against the library's own
+forcing, with the rotation order described above, and tracks the ratio and its
+$n^2$-weighted form beside it; the column it stops at is checked against the library's own
 solve. The dense fill above the band is the content of the two constraint
 rows, carried along as they are rotated down.
 
@@ -358,7 +376,8 @@ for c in range(A_anim.shape[1]):
     rho_max = max(rho_max, rc)
     rho.append(rc)
     if stop_anim is None:
-        below = below + 1 if rc / rho_max < 1.0e-12 else 0
+        quiet = 10.0 * c * c * rc < 1.0e-12 * rho_max or rc < 0.1 * np.finfo(float).eps * rho_max
+        below = below + 1 if quiet else 0
         if below >= 5 and c + 1 >= nmin:
             stop_anim = c + 1
     snapshots.append(np.abs(W_anim).copy())
@@ -381,15 +400,18 @@ def draw_state(ax_m, ax_r, c):
     ax_m.set_xlabel("coefficient of u")
     ax_m.set_ylabel("row")
     ax_m.grid(False)
-    ax_r.semilogy(np.arange(1, c + 2), rho[:c + 1], "o-", ms=2, color="C0")
-    ax_r.axhline(1.0e-12, color="C3", ls="--", label="tolerance")
+    cols = np.arange(1, c + 2)
+    ax_r.semilogy(cols, rho[:c + 1], "o-", ms=2, color="C0", label="ratio")
+    ax_r.semilogy(cols, 10.0 * (cols - 1) ** 2 * rho[:c + 1], "o-", ms=2, color="C1", label="ratio x 10 n^2")
+    ax_r.axhline(1.0e-12, color="C3", ls="--", label="tolerance (ratio x 10 n^2)")
+    ax_r.axhline(0.1 * np.finfo(float).eps, color="0.5", ls="--", label="roundoff (ratio)")
     ax_r.axvline(nmin, color="k", ls=":", label=f"floor N_min = {nmin}")
     if c + 1 >= stop_anim:
         ax_r.axvline(stop_anim, color="C2", lw=2.0, label=f"stop: N = {stop_anim}")
     ax_r.set_xlim(0, len(snapshots) + 1)
     ax_r.set_ylim(1e-19, 3)
     ax_r.set_xlabel("column")
-    ax_r.set_ylabel("next coefficient / largest")
+    ax_r.set_ylabel("coefficient / largest")
     ax_r.legend(loc="lower left", fontsize=8)
 
 

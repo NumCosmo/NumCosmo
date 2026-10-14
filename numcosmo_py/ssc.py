@@ -229,7 +229,7 @@ class SijCalculator:
         :param peak_epsilon: `NcXcorKernel:peak-epsilon` of the kernel closures;
             at the defaults it sets the accuracy of the off-diagonal `S_ij`. The
             closure construction aborts when the larger of the two is below the
-            integrator's `cheb-reltol` (`1e-8` by default).
+            integrator's `reltol` (`1e-8` by default).
         """
         z_edges = np.asarray(z_edges, dtype=np.float64)
 

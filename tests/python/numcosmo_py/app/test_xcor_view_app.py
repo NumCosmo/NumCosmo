@@ -88,20 +88,16 @@ def test_view_kernel_integrator_precision_options() -> None:
         "-1",
         "--integrator-reltol",
         "1e-2",
-        "--integrator-cheb-reltol",
-        "1e-2",
     )
 
     assert result.exit_code == 0, result.output
     assert "reltol=1.0e-02" in result.output
-    assert "cheb_reltol=1.0e-02" in result.output
 
 
-@pytest.mark.parametrize("option", ["--integrator-reltol", "--integrator-cheb-reltol"])
 @pytest.mark.parametrize("value", ["0", "-1e-8", "2.0"])
-def test_view_kernel_rejects_out_of_range_tolerance(option: str, value: str) -> None:
-    """Neither tolerance is usable outside (0, 1]; the library would abort."""
-    result = _view("--l-limber", "-1", option, value)
+def test_view_kernel_rejects_out_of_range_tolerance(value: str) -> None:
+    """The tolerance is not usable outside (0, 1]; the library would abort."""
+    result = _view("--l-limber", "-1", "--integrator-reltol", value)
 
     assert result.exit_code != 0
     assert "Kernel evaluation complete" not in result.output
@@ -112,8 +108,7 @@ def test_view_kernel_defaults_leave_library_precision_alone() -> None:
     result = _view("--l-limber", "0")
 
     assert result.exit_code == 0, result.output
-    assert "reltol=1.0e-13" in result.output
-    assert "cheb_reltol=1.0e-08" in result.output
+    assert "reltol=1.0e-08" in result.output
 
 
 def test_view_kernel_cls_single() -> None:
@@ -195,9 +190,7 @@ def test_integrator_tolerance_setting() -> None:
     args = (5.0, 1.0, 0.1, 10.0, 50.0, 2)
 
     def build(tol: float) -> float:
-        sbi = Ncm.SBesselIntegratorLevin.new_full(
-            2, 2, 1e-4, 1e6, 21, 1200, tol, 2, tol
-        )
+        sbi = Ncm.SBesselIntegratorLevin.new_full(2, 2, 1e-4, 1e6, 21, 1200, tol, 2)
         return sbi.integrate_gaussian_ell(*args)
 
     # The tolerance reaches the computation if asking for less costs accuracy, which
@@ -222,17 +215,13 @@ def test_integrator_tolerance_setting() -> None:
 
     loose = ladder[1e-4]
 
-    sbi = Ncm.SBesselIntegratorLevin.new_full(2, 2, 1e-4, 1e6, 21, 1200, 1e-3, 2, 1e-3)
+    sbi = Ncm.SBesselIntegratorLevin.new_full(2, 2, 1e-4, 1e6, 21, 1200, 1e-3, 2)
     sbi.set_reltol(1e-4)
-    sbi.set_cheb_reltol(1e-4)
     assert sbi.get_reltol() == 1e-4
-    assert sbi.get_cheb_reltol() == 1e-4
     loose_after = sbi.integrate_gaussian_ell(*args)
 
     sbi.set_reltol(1e-12)
-    sbi.set_cheb_reltol(1e-12)
     assert sbi.get_reltol() == 1e-12
-    assert sbi.get_cheb_reltol() == 1e-12
     tight_after = sbi.integrate_gaussian_ell(*args)
 
     assert abs(loose_after / loose - 1.0) < 1e-11
@@ -257,16 +246,15 @@ def test_view_kernel_integrator_reltol_reaches_the_computation(
     # relative criterion alone, and a request below the integrator's accuracy
     # floor cannot converge, which is fatal at the spectral fit's max-level.
     for reltol in ("1e-4", "1e-8"):
-        result = _view(
-            "--integrator-reltol", reltol, "--integrator-cheb-reltol", reltol
-        )
+        result = _view("--integrator-reltol", reltol)
         assert result.exit_code == 0, result.output
 
     assert len(captured) == 2
     loose, tight = captured[0], captured[1]
     assert loose.shape == tight.shape
 
-    # Built at the requested tolerances the two runs differ by ~5e-5 here. Were
-    # the tolerance applied after construction instead, both runs would compute
-    # at the library default and agree to ~1e-9.
-    assert np.abs(loose / tight - 1.0).max() > 1e-6
+    # The runs differ only through the tolerance, so identical output would mean the
+    # option did not reach the integrator; the loose run stays within its own
+    # tolerance of the tight one (measured 3e-8).
+    diff = np.abs(loose / tight - 1.0).max()
+    assert 0.0 < diff < 1.0e-4

@@ -39,13 +39,11 @@
  * library's own path does.
  *
  * Every point is held to rtol |I| + atol peak, the peak being the multipole's largest
- * certified |I|. The rtol is 3 times #NcmSBesselIntegratorLevin:cheb-reltol, the
- * tolerance of the forcing fit that bounds the integrator's result: the fit's acceptance
- * test bounds the change between two levels, not the error. Measured at d = 0, the worst
- * point is 5.8e-9 relative (tau_batched/rule/tophat_near, ell = 200) on x86-64 and 1.03
- * times 1e-8 on arm64 (macOS CI); the atol is 1e-11. At d = 1, 2: worst 1.7e-10 at
- * d = 1, 2.1e-9 relative and 2.8e-9 of the peak at d = 2 (j_ell'' is reached from
- * neighbouring orders whose leading terms cancel), so the atol is 1e-8.
+ * certified |I|. The rtol is 3 times #NcmSBesselIntegratorLevin:reltol; the atol is
+ * 1e-11 at d = 0 and 1e-8 at d = 1, 2, where j_ell' and j_ell'' are reached from
+ * neighboring orders whose leading terms cancel. On x86-64 at the default reltol 1e-8
+ * the worst point uses 0.22 of this allowance at d = 0 (tophat_broad, ell = 200, 6.6e-9
+ * relative), 0.03 at d = 1 and 0.05 at d = 2.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -354,7 +352,7 @@ test_nc_xcor_window_levin (gconstpointer pdata)
       peak = GSL_MAX (peak, fabs (ncm_matrix_get (table, j, 1 + tc->d)));
 
     sbi  = _test_integrator (tc, ell);
-    rtol = TEST_RTOL_FACTOR * ncm_sbessel_integrator_levin_get_cheb_reltol (NCM_SBESSEL_INTEGRATOR_LEVIN (sbi));
+    rtol = TEST_RTOL_FACTOR * ncm_sbessel_integrator_levin_get_reltol (NCM_SBESSEL_INTEGRATOR_LEVIN (sbi));
 
     for (j = 0; j < n; j++)
     {

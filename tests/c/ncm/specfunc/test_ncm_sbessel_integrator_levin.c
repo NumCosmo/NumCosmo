@@ -86,6 +86,9 @@ void test_ncm_sbessel_integrator_levin_arb_accepted_edge (void);
 void test_ncm_sbessel_integrator_levin_arb_rejected_edge (void);
 void test_ncm_sbessel_integrator_levin_arb_set_reltol (void);
 void test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol (void);
+void test_ncm_sbessel_integrator_levin_arb_reltol_bound (void);
+void test_ncm_sbessel_integrator_levin_arb_short_panel (void);
+void test_ncm_sbessel_integrator_levin_arb_thin_piece (void);
 void test_ncm_sbessel_integrator_levin_arb_ell_zero (void);
 void test_ncm_sbessel_integrator_levin_arb_k_scaling (void);
 void test_ncm_sbessel_integrator_levin_arb_narrow (void);
@@ -125,8 +128,6 @@ void test_ncm_sbessel_integrator_levin_shared_turning_row (void);
 void test_ncm_sbessel_integrator_levin_traps (void);
 void test_ncm_sbessel_integrator_levin_invalid_reltol_zero (void);
 void test_ncm_sbessel_integrator_levin_invalid_reltol_negative (void);
-void test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_zero (void);
-void test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_negative (void);
 void test_ncm_sbessel_integrator_levin_invalid_deriv (void);
 
 static const gchar *test_truth_tables[] = {"gauss", "rational"};
@@ -215,6 +216,16 @@ static const TestArbCell test_arb_cells[] = {
   {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 3, 1.0, 0.013426384614975292},
   {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 4, 1.0, 0.09328165963961846},
   {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 5, 1.0, 0.048487996142564084},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 0, 3.1622776601683795, -0.02781037937210338},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 1, 3.1622776601683795, -0.006774982155242694},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 2, 3.1622776601683795, 0.02355464771983675},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 3, 3.1622776601683795, 0.03163453507264584},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 4, 3.1622776601683795, 0.023120255516737694},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 5, 3.1622776601683795, 0.012192772502424752},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 6, 3.1622776601683795, 0.005113055829241203},
+  {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 7, 3.1622776601683795, 0.001792660717226141},
+  {"short_panel", TEST_ARB_TOPHAT, 490.7985, 499.4845, 0.0, 0.0, 0, FALSE, 200, 1.0, -0.0026296564639413443},
+  {"thin_piece", TEST_ARB_GAUSS, 0.0, 100.00000001, 60.0, 15.0, 2, FALSE, 2, 1.0, -0.00019053790857687266},
   {"ell_zero", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.712264523851691},
   {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 0.1, 0.0001557694944990179},
   {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.6484700039890495},
@@ -246,6 +257,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/rejected_edge", test_ncm_sbessel_integrator_levin_arb_rejected_edge);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/set_reltol", test_ncm_sbessel_integrator_levin_arb_set_reltol);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/repeated_set_reltol", test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/reltol_bound", test_ncm_sbessel_integrator_levin_arb_reltol_bound);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/short_panel", test_ncm_sbessel_integrator_levin_arb_short_panel);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/thin_piece", test_ncm_sbessel_integrator_levin_arb_thin_piece);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/ell_zero", test_ncm_sbessel_integrator_levin_arb_ell_zero);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/k_scaling", test_ncm_sbessel_integrator_levin_arb_k_scaling);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/narrow", test_ncm_sbessel_integrator_levin_arb_narrow);
@@ -331,8 +345,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator_levin/traps", test_ncm_sbessel_integrator_levin_traps);
   g_test_add_func ("/ncm/sbessel_integrator_levin/invalid/reltol_zero/subprocess", test_ncm_sbessel_integrator_levin_invalid_reltol_zero);
   g_test_add_func ("/ncm/sbessel_integrator_levin/invalid/reltol_negative/subprocess", test_ncm_sbessel_integrator_levin_invalid_reltol_negative);
-  g_test_add_func ("/ncm/sbessel_integrator_levin/invalid/cheb_reltol_zero/subprocess", test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_zero);
-  g_test_add_func ("/ncm/sbessel_integrator_levin/invalid/cheb_reltol_negative/subprocess", test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_negative);
   g_test_add_func ("/ncm/sbessel_integrator_levin/invalid/deriv/subprocess", test_ncm_sbessel_integrator_levin_invalid_deriv);
 
   g_test_run ();
@@ -417,8 +429,8 @@ _test_arb_integrand (gpointer user_data, gdouble x, gdouble k)
 
 /*
  * Each row of case @name with a fresh single-multipole integrator at the defaults,
- * held to |I - I_arb| <= atol + rtol |I_arb|. The default reltol is 1e-13 and
- * cheb-reltol 1e-8, so rtol 1e-8 is the tolerance the integrator is asked for.
+ * held to |I - I_arb| <= atol + rtol |I_arb|. The default reltol is 1e-8, the
+ * tolerance the integrator is asked for.
  */
 static void
 _test_arb_check_singles (const gchar *name, gdouble rtol, gdouble atol)
@@ -457,8 +469,8 @@ _test_arb_block_error (const TestArbCell *c, guint n, NcmVector *res)
 }
 
 /*
- * The Gaussian (center 5, sigma 1) on [0.1, 10] at ell 2, k 500, with reltol and
- * cheb-reltol both set to @reltol and every other setting at its default. Each panel
+ * The Gaussian (center 5, sigma 1) on [0.1, 10] at ell 2, k 500, with reltol set to
+ * @reltol and every other setting at its default. Each panel
  * spans many oscillations, where the adaptive QR's decay test can stop at too small
  * an order.
  */
@@ -471,8 +483,7 @@ _test_oscillatory_gaussian (gdouble reltol)
                                                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
                                                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
                                                                             reltol,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
-                                                                            reltol);
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER);
   const gdouble val = ncm_sbessel_integrator_integrate_gaussian_ell (NCM_SBESSEL_INTEGRATOR (sbilv), 5.0, 1.0, 0.1, 10.0, 500.0, 2);
 
   ncm_sbessel_integrator_levin_free (sbilv);
@@ -480,7 +491,7 @@ _test_oscillatory_gaussian (gdouble reltol)
   return val;
 }
 
-/* A recording integrator at ell, reltol and cheb-reltol 1e-12, the rest at the defaults */
+/* A recording integrator at ell and reltol 1e-12, the rest at the defaults */
 static NcmSBesselIntegratorLevin *
 _test_recording_integrator (guint ell)
 {
@@ -490,8 +501,7 @@ _test_recording_integrator (guint ell)
                                                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
                                                                             NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
                                                                             1.0e-12,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
-                                                                            1.0e-12);
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER);
 
   ncm_sbessel_integrator_levin_set_record_panels (sbilv, TRUE);
 
@@ -618,7 +628,7 @@ void
 test_ncm_sbessel_integrator_levin_arb_moving_edge (void)
 {
   const gchar *cases[]             = {"moving_edge_0", "moving_edge_1", "moving_edge_2", "moving_edge_3"};
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-9, 2, 1.0e-10);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2);
   NcmVector *res                   = ncm_vector_new (8);
   guint i, j, n;
 
@@ -651,7 +661,7 @@ test_ncm_sbessel_integrator_levin_arb_accepted_edge (void)
 {
   guint n, j;
   const TestArbCell *c             = _test_arb_case ("accepted_edge", &n);
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-11, 2);
   NcmVector *res                   = ncm_vector_new (8);
   TestArbEval ev                   = _test_arb_eval_new (c);
 
@@ -673,7 +683,7 @@ test_ncm_sbessel_integrator_levin_arb_rejected_edge (void)
 {
   guint n;
   const TestArbCell *c             = _test_arb_case ("rejected_edge", &n);
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-10, 2, 1.0e-11);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0, 1.0e4, 9, 500, 1.0e-11, 2);
   NcmVector *res                   = ncm_vector_new (8);
   TestArbEval ev                   = _test_arb_eval_new (c);
 
@@ -691,16 +701,15 @@ test_ncm_sbessel_integrator_levin_arb_rejected_edge (void)
 /*
  * A reltol set after construction reaches the operators, which are built with the
  * multipole range and must be replaced. On exp (-x / 1000) over [100, 1e4], ell 0..7,
- * reltol 1e-4 leaves the result at about 1e-6 of the peak; after set_reltol (1e-11) it
- * is about 1e-12. cheb-reltol is 1e-12 throughout, so reltol is the setting that limits
- * the result.
+ * the error is 1.9e-9 of the peak at reltol 1e-4 and 2.0e-15 after set_reltol (1e-11);
+ * each result is held to its reltol.
  */
 void
 test_ncm_sbessel_integrator_levin_arb_set_reltol (void)
 {
   guint n;
   const TestArbCell *c             = _test_arb_case ("set_reltol", &n);
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0e-4, 1.0e6, 21, 1200, 1.0e-4, 2, 1.0e-12);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (0, 7, 1.0e-4, 1.0e6, 21, 1200, 1.0e-4, 2);
   NcmVector *res                   = ncm_vector_new (8);
   TestArbEval ev                   = _test_arb_eval_new (c);
   gdouble loose, tight;
@@ -715,8 +724,9 @@ test_ncm_sbessel_integrator_levin_arb_set_reltol (void)
   ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, 1.0, res, &ev);
   tight = _test_arb_block_error (c, n, res);
 
+  g_assert_cmpfloat (loose, <=, 1.0e-4);
   g_assert_cmpfloat (tight, <, loose);
-  g_assert_cmpfloat (tight, <, 1.0e-9);
+  g_assert_cmpfloat (tight, <=, 1.0e-11);
 
   ncm_vector_free (res);
   ncm_sbessel_integrator_levin_free (sbilv);
@@ -742,6 +752,88 @@ test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol (void)
     for (j = 0; j < n; j++)
       _test_assert_close (ncm_vector_get (res, c[j].ell), c[j].value, 1.0e-7, 1.0e-14);
   }
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/*
+ * Holds the result to reltol at 1e-8 and 1e-10 on the rational truth-table shape at
+ * k = 10^0.5, ell 0..7. One panel carries the whole integral and its solution has about
+ * 600 coefficients; the endpoint derivatives weight coefficient n by n^2, so only the
+ * n^2-weighted stopping test of #NcmSBesselOdeSolver meets reltol here.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_reltol_bound (void)
+{
+  const gdouble reltols[] = {1.0e-8, 1.0e-10};
+  guint n, i;
+  const TestArbCell *c             = _test_arb_case ("reltol_bound", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (0, 7);
+  NcmVector *res                   = ncm_vector_new (8);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 8);
+
+  for (i = 0; i < G_N_ELEMENTS (reltols); i++)
+  {
+    ncm_sbessel_integrator_levin_set_reltol (sbilv, reltols[i]);
+    ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, c->k, res, &ev);
+    g_assert_cmpfloat (_test_arb_block_error (c, n, res), <=, reltols[i]);
+  }
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/*
+ * Holds a constant on [490.80, 499.48] at ell 200 to reltol at 1e-6, 1e-5 and 1e-4. The
+ * panel lies past the turning point and is too short for pinned data, so it has
+ * Dirichlet data, and the truncated solve has u(a) and u(b) as large as the u' terms:
+ * the boundary term is exact only with the u terms kept.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_short_panel (void)
+{
+  const gdouble reltols[] = {1.0e-6, 1.0e-5, 1.0e-4};
+  guint n, i;
+  const TestArbCell *c             = _test_arb_case ("short_panel", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (c->ell, c->ell);
+  NcmVector *res                   = ncm_vector_new (1);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 1);
+
+  for (i = 0; i < G_N_ELEMENTS (reltols); i++)
+  {
+    ncm_sbessel_integrator_levin_set_reltol (sbilv, reltols[i]);
+    ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, c->k, res, &ev);
+    _test_assert_close (ncm_vector_get (res, 0), c->value, reltols[i], 0.0);
+  }
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/*
+ * Holds a d2 integral to 1e-10 at reltol 1e-12 with the upper bound 1e-10 above the
+ * knot at x = 100, so the last piece is 1e-8 wide. A Chebyshev fit made on that piece
+ * alone gives F' an error of the samples' roundoff divided by the width, 2.5e-5 of the
+ * integral; the piece is merged into the panel below it.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_thin_piece (void)
+{
+  guint n;
+  const TestArbCell *c             = _test_arb_case ("thin_piece", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (c->ell, c->ell);
+  NcmVector *res                   = ncm_vector_new (1);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 1);
+  ncm_sbessel_integrator_levin_set_reltol (sbilv, 1.0e-12);
+  ncm_sbessel_integrator_integrate_deriv (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, c->k, c->deriv, res, &ev);
+  _test_assert_close (ncm_vector_get (res, 0), c->value, 1.0e-10, 0.0);
 
   ncm_vector_free (res);
   ncm_sbessel_integrator_levin_free (sbilv);
@@ -794,7 +886,7 @@ test_ncm_sbessel_integrator_levin_arb_evanescent (void)
  * with f the Gaussian or rational shape of ncm_sbessel_integrator_integrate_gaussian()
  * and _rational(), computed in blocks of 8 multipoles. Every cell is held to
  * |I - I_table| <= 1e-8 times the largest |table| of its multipole, the default
- * cheb-reltol: relative error is not usable near the zeros of j_l.
+ * reltol: relative error is not usable near the zeros of j_l.
  */
 void
 test_ncm_sbessel_integrator_levin_truth (gconstpointer data)
@@ -1485,14 +1577,6 @@ test_ncm_sbessel_integrator_levin_traps (void)
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*assertion failed*");
 
-  g_test_trap_subprocess ("/ncm/sbessel_integrator_levin/invalid/cheb_reltol_zero/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*assertion failed*");
-
-  g_test_trap_subprocess ("/ncm/sbessel_integrator_levin/invalid/cheb_reltol_negative/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*assertion failed*");
-
   g_test_trap_subprocess ("/ncm/sbessel_integrator_levin/invalid/deriv/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*not supported*");
@@ -1508,18 +1592,6 @@ void
 test_ncm_sbessel_integrator_levin_invalid_reltol_negative (void)
 {
   ncm_sbessel_integrator_levin_set_reltol (ncm_sbessel_integrator_levin_new (0, 3), -1.0e-8);
-}
-
-void
-test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_zero (void)
-{
-  ncm_sbessel_integrator_levin_set_cheb_reltol (ncm_sbessel_integrator_levin_new (0, 3), 0.0);
-}
-
-void
-test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_negative (void)
-{
-  ncm_sbessel_integrator_levin_set_cheb_reltol (ncm_sbessel_integrator_levin_new (0, 3), -1.0e-8);
 }
 
 /* Orders above 2 are not implemented anywhere */
