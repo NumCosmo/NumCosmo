@@ -249,20 +249,20 @@ $$
 \rho_j < \frac{\epsilon}{10}\, \rho_{\max},
 $$
 and the factorization stops at the first column that ends five consecutive quiet columns
-once $j + 1$ has reached the floor the constraint sets. The weight $j^2$ is
-$|T_j'(\pm1)|$: the boundary term reads the endpoint derivatives below, where coefficient
-$j$ enters with $j^2$, so the first condition asks for the derivatives, not the
-coefficients, to be resolved to $\epsilon_{\rm ODE}$. The factor 10 is the rest of the
-truncation error: stopping at column $N$ also moves the coefficients kept below it, and
-the endpoint derivatives shift by 8 to 10 times $N^2 |c^N|$ on the panels measured. With
-it, the Levin integrals of every certified reference stay within $0.6\,\epsilon_{\rm
-ODE}$ of their peak for $\epsilon_{\rm ODE}$ from $10^{-4}$ to $10^{-10}$; a factor 3
-leaves $3\,\epsilon_{\rm ODE}$. The second stops the solve where
-the coefficients reach roundoff, past which a further column carries no information;
-with the default $\epsilon_{\rm ODE} = \epsilon/10$ it is the only one that acts.
-The test is tuned for $u$ and $u'$ together, which is what the Levin boundary terms read;
-a solve that needed $u$ alone would stop earlier on the unweighted $\rho_j$, and the
-solver has no such mode. Under Dirichlet data the floor is
+once $j + 1$ has reached the floor the constraint sets. The factor $j^2$ is
+$|T_j'(\pm1)|$, the weight of coefficient $j$ in the endpoint derivatives the boundary
+term reads below, so the first condition bounds the truncation error of the derivatives
+rather than of the coefficients. The factor 10 covers the change that truncation at
+column $N$ makes in the coefficients below $N$: on the panels measured, the endpoint
+derivatives change by 8 to 10 times $N^2 |c^N|$. With this factor the Levin integrals of
+every certified reference are within $0.6\,\epsilon_{\rm ODE}$ of their peak for
+$\epsilon_{\rm ODE}$ from $10^{-4}$ to $10^{-10}$, against $3\,\epsilon_{\rm ODE}$ with a
+factor 3. The second condition stops the solve when the coefficients reach roundoff,
+below which a further column adds no information; at the solver's default
+$\epsilon_{\rm ODE} = \epsilon/10$ the first condition implies the second. The test makes
+$u$ and $u'$ accurate together, as the Levin boundary terms require; a solve that needed
+$u$ alone could stop earlier on the unweighted $\rho_j$, and the solver does not provide
+that test. Under Dirichlet data the floor is
 $$
 N_{\min} = \left\lceil \frac{2}{\pi}\,\big(x_b - \max(x_a, \nu)\big) \right\rceil,
 \qquad \nu \equiv \sqrt{\ell(\ell+1)} .

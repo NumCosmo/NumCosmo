@@ -53,7 +53,7 @@
  * ## The integration range must bracket the kernel
  *
  * On each panel the forcing $x F(x)$ is replaced by its Chebyshev expansion, grown until
- * the coefficients meet #NcmSBesselIntegratorLevin:cheb-reltol. A feature of $K$ narrower
+ * the coefficients meet #NcmSBesselIntegratorLevin:reltol. A feature of $K$ narrower
  * than the spacing of the Chebyshev nodes leaves no trace in the samples, the expansion
  * converges on what it sees, and the panel is accepted without it, as with any adaptive
  * rule given too wide an interval. A Gaussian of width $\sigma_x = 1$ at $x = 500$
@@ -127,7 +127,6 @@ struct _NcmSBesselIntegratorLevin
   NcmSBesselIntegrator parent_instance;
   gdouble reltol;
   guint cheb_min_order;
-  gdouble cheb_reltol;
   NcmSBesselOdeSolver *ode_solver;
   NcmSBesselOdeOperator *ode_operator;
   NcmSFSBesselArray *sba; /* Allocation tracking */
@@ -194,7 +193,6 @@ enum
   PROP_0,
   PROP_RELTOL,
   PROP_CHEB_MIN_ORDER,
-  PROP_CHEB_RELTOL,
   PROP_X_KNOTS_MIN,
   PROP_X_KNOTS_MAX,
   PROP_N_KNOTS,
@@ -247,7 +245,6 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
 {
   sbilv->reltol                        = 0.0;
   sbilv->cheb_min_order                = 0;
-  sbilv->cheb_reltol                   = 0.0;
   sbilv->tau_constraint_min_osc        = 0.0;
   sbilv->n_constraint_fallbacks        = 0;
   sbilv->n_panel_solves                = 0;
@@ -405,9 +402,6 @@ _ncm_sbessel_integrator_levin_set_property (GObject *object, guint prop_id, cons
     case PROP_CHEB_MIN_ORDER:
       ncm_sbessel_integrator_levin_set_cheb_min_order (sbilv, g_value_get_uint (value));
       break;
-    case PROP_CHEB_RELTOL:
-      ncm_sbessel_integrator_levin_set_cheb_reltol (sbilv, g_value_get_double (value));
-      break;
     case PROP_TAU_CONSTRAINT_MIN_OSC:
       ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (sbilv, g_value_get_double (value));
       break;
@@ -455,9 +449,6 @@ _ncm_sbessel_integrator_levin_get_property (GObject *object, guint prop_id, GVal
       break;
     case PROP_CHEB_MIN_ORDER:
       g_value_set_uint (value, ncm_sbessel_integrator_levin_get_cheb_min_order (sbilv));
-      break;
-    case PROP_CHEB_RELTOL:
-      g_value_set_double (value, ncm_sbessel_integrator_levin_get_cheb_reltol (sbilv));
       break;
     case PROP_TAU_CONSTRAINT_MIN_OSC:
       g_value_set_double (value, ncm_sbessel_integrator_levin_get_tau_constraint_min_osc (sbilv));
@@ -507,17 +498,23 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   /**
    * NcmSBesselIntegratorLevin:reltol:
    *
-   * Relative tolerance of the ODE solve, on the endpoint derivatives the boundary term
-   * reads. Against every certified reference the error stays within it, at 0.6 times it
-   * in the worst case, relative to the peak over $k$. The result stays within the looser
-   * of this and #NcmSBesselIntegratorLevin:cheb-reltol. Below about $10^{-12}$ the
-   * roundoff of the coefficients stops the solve before the tolerance does.
+   * Relative tolerance of the integral, applied both to the Chebyshev fit of the forcing
+   * and to the ODE solve's endpoint values and derivatives. It is relative to the scale of
+   * the panel contributions: against every certified reference the error stays within
+   * 0.6 times it of the peak over $k$ for tolerances from $10^{-4}$ to $10^{-10}$, and
+   * panels that cancel (see "Accuracy and inter-panel cancellation" in the class
+   * description) multiply it relative to the result. Below about $10^{-12}$ the roundoff
+   * of the coefficients stops the solve first. A tolerance the integrand cannot support,
+   * because its evaluation carries interpolation error above it, is not met: the forcing
+   * fit reaches #NcmSpectral:max-level and aborts; on the CMB lensing kernel, whose
+   * NcDistance interpolation is the limit, that happens at $10^{-12}$. The default is
+   * $10^{-8}$.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
                                                         NULL,
-                                                        "ODE solve relative tolerance",
+                                                        "Relative tolerance",
                                                         0.0, 1.0, NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -534,23 +531,6 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
                                                       "Minimum Chebyshev order for RHS",
                                                       1, G_MAXUINT, NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmSBesselIntegratorLevin:cheb-reltol:
-   *
-   * Relative tolerance of the integrand's Chebyshev fit, which forms the RHS. It
-   * bounds the change between the last two levels of the fit, about the error of
-   * the coarser one; the finer fit used is usually several orders of magnitude
-   * more accurate (ncm_spectral_compute_chebyshev_coeffs_adaptive()). The result
-   * stays within the looser of this and #NcmSBesselIntegratorLevin:reltol.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_CHEB_RELTOL,
-                                   g_param_spec_double ("cheb-reltol",
-                                                        NULL,
-                                                        "Integrand Chebyshev fit relative tolerance",
-                                                        0.0, 1.0, NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmSBesselIntegratorLevin:tau-constraint-min-osc:
@@ -1174,7 +1154,7 @@ _ncm_sbessel_integrator_levin_compute_rhs (NcmSBesselIntegratorLevin *sbilv,
   NcmSBesselIntegratorLevinWrapper wrapper = {F, k, user_data};
 
   ncm_spectral_compute_chebyshev_coeffs_adaptive_full (spectral, _ncm_sbessel_integrator_levin_peek_wrapper_func (sbilv),
-                                                       a, b, sbilv->cheb_min_order, sbilv->cheb_reltol, 0.0,
+                                                       a, b, sbilv->cheb_min_order, sbilv->reltol, 0.0,
                                                        &sbilv->cheb_coeffs, &wrapper);
 
   _ncm_sbessel_integrator_levin_build_rhs (sbilv, a, b);
@@ -1413,13 +1393,11 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
   if (sbilv->deriv > 0)
     _ncm_sbessel_integrator_levin_boundary_data (sbilv, a_p, b_p, a_p, b_p, &bd);
 
-  /* Every constraint is read through the general functional W, with the u terms kept,
-   * as the extended cells below are. It is exact for any u that solves the equation,
-   * whatever its end values, while the derivatives-only form b j u'(b) - a j u'(a) holds
-   * only where u(a) = u(b) = 0, and a truncated Dirichlet solve does not meet its data
-   * exactly: on a short panel at reltol 1e-5 the solve stopped at 8 columns with u(a)
-   * as large as the u' terms, and that form lost 1e-2 of the window's peak where W lost
-   * 1e-9. The order check and the guard judge the tau constraint alone. */
+  /* Solves the panel under its constraint and adds W(b) - W(a) for each multipole, with
+   * W = x j u' - (x j)' u as in the extended cells below. W is exact for any u that
+   * solves the equation, so the u terms are kept under every constraint: a truncated
+   * solve meets Dirichlet data only to its truncation error. A tau operator whose order
+   * check or guard fails is solved with Dirichlet data instead. */
   const NcmSBesselOdeConstraint constraint = ncm_sbessel_ode_operator_get_constraint (operator);
   const gboolean is_tau                    = constraint == NCM_SBESSEL_ODE_CONSTRAINT_TAU;
   gboolean tau_held                        = is_tau;
@@ -1694,13 +1672,13 @@ _ncm_sbessel_integrator_levin_truncated_func (gpointer data, gdouble x)
 #define NCM_SBESSEL_LEVIN_EDGE_CACHE_MAX_OSC (200.0)
 
 /*
- * An edge piece narrower than this fraction of its knot is merged into the fixed panel
- * next to it and the two are solved as one moving panel. The derivative weights read F'
- * at the ends of the piece from a Chebyshev fit made on it, and on a width delta that
- * derivative carries the samples' roundoff divided by delta: a piece of 1e-9 of its cell
- * lost 1e-5 of the integral at cheb-reltol 1e-12, one of a few ulps (a bound landing on
- * a knot) 5e-7 at the default. The knots are log-spaced, so a fraction of the knot is a
- * fraction of the cell to within a factor 1.5.
+ * Fraction of its knot below which an edge piece is merged into the adjacent fixed panel,
+ * the two solved as one moving panel. The derivative weights evaluate F' at the ends of a
+ * piece from a Chebyshev fit made on the piece, and on a width delta that derivative has
+ * an error of the samples' roundoff divided by delta: 1e-5 of a d2 integral for a piece
+ * of 1e-9 of its cell at reltol 1e-12, 5e-7 at the default for a piece of a few ulps. The
+ * knots are log-spaced, so a fraction of the knot is a fraction of the cell within a
+ * factor 1.5.
  */
 #define NCM_SBESSEL_LEVIN_THIN_PIECE_FRACTION (1.0e-4)
 
@@ -1729,7 +1707,7 @@ _ncm_sbessel_integrator_levin_prepare_dead_edge_rhs (NcmSBesselIntegratorLevin *
     scale = GSL_MAX (scale, probe);
   }
 
-  dead_level = 1.0e-4 * sbilv->cheb_reltol * scale;
+  dead_level = 1.0e-4 * sbilv->reltol * scale;
 
   if (integral_b < panel_b)
   {
@@ -1763,7 +1741,7 @@ _ncm_sbessel_integrator_levin_prepare_dead_edge_rhs (NcmSBesselIntegratorLevin *
     ncm_spectral_compute_chebyshev_coeffs_adaptive_try (spectral, _ncm_sbessel_integrator_levin_truncated_func,
                                                         panel_a, panel_b,
                                                         sbilv->cheb_min_order, NCM_SBESSEL_LEVIN_DEAD_EDGE_MAX_LEVEL,
-                                                        sbilv->cheb_reltol, 0.0,
+                                                        sbilv->reltol, 0.0,
                                                         &sbilv->cheb_coeffs, &trunc, &converged);
 
     if (!converged)
@@ -1783,7 +1761,7 @@ _ncm_sbessel_integrator_levin_prepare_dead_edge_rhs (NcmSBesselIntegratorLevin *
     {
       const gdouble next = discarded + fabs (g_array_index (sbilv->cheb_coeffs, gdouble, len - 1));
 
-      if (next > 1.0e-4 * sbilv->cheb_reltol * cell_scale)
+      if (next > 1.0e-4 * sbilv->reltol * cell_scale)
         break;
 
       discarded = next;
@@ -1823,7 +1801,7 @@ _ncm_sbessel_integrator_levin_prepare_extended_rhs (NcmSBesselIntegratorLevin *s
    * outside their advertised integration domain. */
   ncm_spectral_compute_chebyshev_coeffs_adaptive_full (spectral, _ncm_sbessel_integrator_levin_peek_wrapper_func (sbilv),
                                                        integral_a, integral_b,
-                                                       sbilv->cheb_min_order, sbilv->cheb_reltol, 0.0,
+                                                       sbilv->cheb_min_order, sbilv->reltol, 0.0,
                                                        &sbilv->edge_cheb_coeffs, &wrapper);
 
   for (i = 0; i < sbilv->edge_cheb_coeffs->len; i++)
@@ -1831,7 +1809,7 @@ _ncm_sbessel_integrator_levin_prepare_extended_rhs (NcmSBesselIntegratorLevin *s
 
   /* Remove only roundoff-level tail coefficients before extrapolation.  Even
    * a 1e-16 coefficient can grow enormously under T_n(alpha s_out + beta). */
-  discard_limit = 1.0e-4 * sbilv->cheb_reltol * reference_scale;
+  discard_limit = 1.0e-4 * sbilv->reltol * reference_scale;
   effective_len = sbilv->edge_cheb_coeffs->len;
 
   while (effective_len > 1)
@@ -2127,8 +2105,8 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
     thin_start = (x_min < first_knot) && (first_knot - x_min < NCM_SBESSEL_LEVIN_THIN_PIECE_FRACTION * first_knot);
     thin_end   = (x_max > last_knot) && (x_max - last_knot < NCM_SBESSEL_LEVIN_THIN_PIECE_FRACTION * last_knot);
 
-    /* A thin piece with no fixed panel of its own to merge into leaves the whole range
-     * to one moving panel. */
+    /* A thin piece with no fixed panel to merge into: the whole range is one moving
+     * panel. */
     if (((thin_start || thin_end) && (n_fixed == 0)) || (thin_start && thin_end && (n_fixed == 1)))
     {
       single_panel = TRUE;
@@ -2454,7 +2432,6 @@ ncm_sbessel_integrator_levin_get_panel_contrib (NcmSBesselIntegratorLevin *sbilv
  * - ell_cache_max = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX
  * - reltol = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL
  * - cheb_min_order = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER
- * - cheb_reltol = %NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL
  *
  * Returns: (transfer full): a new #NcmSBesselIntegratorLevin
  */
@@ -2467,8 +2444,7 @@ ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max)
                                                 NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
                                                 NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
                                                 NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL,
-                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
-                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL);
+                                                NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER);
 }
 
 /**
@@ -2481,7 +2457,6 @@ ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max)
  * @ell_cache_max: #NcmSBesselIntegratorLevin:ell-cache-max
  * @reltol: #NcmSBesselIntegratorLevin:reltol
  * @cheb_min_order: #NcmSBesselIntegratorLevin:cheb-min-order
- * @cheb_reltol: #NcmSBesselIntegratorLevin:cheb-reltol
  *
  * Creates a new #NcmSBesselIntegratorLevin. A zero @x_knots_min, @x_knots_max or @n_knots
  * leaves no panel grid, so every integral is a single panel.
@@ -2489,7 +2464,7 @@ ncm_sbessel_integrator_levin_new (guint ell_min, guint ell_max)
  * Returns: (transfer full): a new #NcmSBesselIntegratorLevin
  */
 NcmSBesselIntegratorLevin *
-ncm_sbessel_integrator_levin_new_full (guint ell_min, guint ell_max, gdouble x_knots_min, gdouble x_knots_max, guint n_knots, guint ell_cache_max, gdouble reltol, guint cheb_min_order, gdouble cheb_reltol)
+ncm_sbessel_integrator_levin_new_full (guint ell_min, guint ell_max, gdouble x_knots_min, gdouble x_knots_max, guint n_knots, guint ell_cache_max, gdouble reltol, guint cheb_min_order)
 {
   NcmDTuple2 ell_range             = NCM_DTUPLE2_STATIC_INIT ((gdouble) ell_min, (gdouble) ell_max);
   NcmSBesselIntegratorLevin *sbilv = g_object_new (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN,
@@ -2500,7 +2475,6 @@ ncm_sbessel_integrator_levin_new_full (guint ell_min, guint ell_max, gdouble x_k
                                                    "ell-cache-max", ell_cache_max,
                                                    "reltol", reltol,
                                                    "cheb-min-order", cheb_min_order,
-                                                   "cheb-reltol", cheb_reltol,
                                                    NULL);
 
   return sbilv;
@@ -2549,17 +2523,13 @@ ncm_sbessel_integrator_levin_clear (NcmSBesselIntegratorLevin **sbilv)
  * @sbilv: a #NcmSBesselIntegratorLevin
  * @reltol: relative tolerance
  *
- * Sets the ODE solve tolerance. An operator's accuracy is fixed when it is
- * built, so this discards every panel operator, cached edge cell and
+ * Sets #NcmSBesselIntegratorLevin:reltol. An operator's accuracy is fixed when it
+ * is built, so this discards every panel operator, cached edge cell and
  * moving-edge temporary and rebuilds them. Setting the current value is a
  * no-op.
  *
  * The rebuild is expensive and invalidates factorizations in use: prefer
  * ncm_sbessel_integrator_levin_new_full() or the `reltol` property.
- *
- * The integrand fit has a separate tolerance,
- * ncm_sbessel_integrator_levin_set_cheb_reltol(). The looser of the two
- * bounds the result.
  */
 
 /*
@@ -3012,9 +2982,9 @@ ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdoub
  * ncm_sbessel_integrator_levin_get_reltol:
  * @sbilv: a #NcmSBesselIntegratorLevin
  *
- * Gets the ODE solve tolerance.
+ * Gets #NcmSBesselIntegratorLevin:reltol.
  *
- * Returns: the ODE solve relative tolerance
+ * Returns: the relative tolerance
  */
 gdouble
 ncm_sbessel_integrator_levin_get_reltol (NcmSBesselIntegratorLevin *sbilv)
@@ -3047,38 +3017,6 @@ guint
 ncm_sbessel_integrator_levin_get_cheb_min_order (NcmSBesselIntegratorLevin *sbilv)
 {
   return sbilv->cheb_min_order;
-}
-
-/**
- * ncm_sbessel_integrator_levin_set_cheb_reltol:
- * @sbilv: a #NcmSBesselIntegratorLevin
- * @cheb_reltol: Chebyshev decomposition relative tolerance
- *
- * Sets the tolerance of the integrand's Chebyshev fit. The fit is redone per
- * panel, so this applies from the next integration and rebuilds nothing,
- * unlike ncm_sbessel_integrator_levin_set_reltol(). The looser of the two
- * bounds the result.
- */
-void
-ncm_sbessel_integrator_levin_set_cheb_reltol (NcmSBesselIntegratorLevin *sbilv, gdouble cheb_reltol)
-{
-  g_assert_cmpfloat (cheb_reltol, >, 0.0);
-
-  sbilv->cheb_reltol = cheb_reltol;
-}
-
-/**
- * ncm_sbessel_integrator_levin_get_cheb_reltol:
- * @sbilv: a #NcmSBesselIntegratorLevin
- *
- * Gets the tolerance of the integrand's Chebyshev fit.
- *
- * Returns: the Chebyshev fit relative tolerance
- */
-gdouble
-ncm_sbessel_integrator_levin_get_cheb_reltol (NcmSBesselIntegratorLevin *sbilv)
-{
-  return sbilv->cheb_reltol;
 }
 
 /**

@@ -154,7 +154,7 @@ def tracer_components(
 def _levin_integrator(
     ell_min: int, ell_max: int, reltol: float
 ) -> Ncm.SBesselIntegratorLevin:
-    """A Levin integrator at the library's knot defaults with both tolerances set."""
+    """A Levin integrator at the library's knot defaults with its tolerance set."""
     proto = Ncm.SBesselIntegratorLevin.new(ell_min, ell_max)
 
     return Ncm.SBesselIntegratorLevin.new_full(
@@ -166,7 +166,6 @@ def _levin_integrator(
         proto.get_ell_cache_max(),
         reltol,
         proto.get_cheb_min_order(),
-        reltol,
     )
 
 

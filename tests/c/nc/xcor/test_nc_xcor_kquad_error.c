@@ -26,7 +26,7 @@
  * The error estimate of NC_XCOR_METHOD_KERNEL_EXACT on an auto spectrum, where the
  * positive integrand leaves nothing to amplify: it must bound the true error, taken
  * against the same kernel at reltol 1e-8, peak-epsilon at its floor of 1e-6 and
- * cheb-reltol 1e-10, and stay far below one, for both closures.
+ * integrator reltol 1e-10, and stay far below one, for both closures.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -79,7 +79,7 @@ test_nc_xcor_kquad_error_new (TestNcXcorKQuadError *test, gconstpointer pdata)
   test_nc_xcor_kquad_env_init (&test->env);
 
   test->sbi_tight = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
-  ncm_sbessel_integrator_levin_set_cheb_reltol (NCM_SBESSEL_INTEGRATOR_LEVIN (test->sbi_tight), 1.0e-10);
+  ncm_sbessel_integrator_levin_set_reltol (NCM_SBESSEL_INTEGRATOR_LEVIN (test->sbi_tight), 1.0e-10);
 
   test->kernel = test_nc_xcor_kquad_tophat_converged (&test->env, test->env.sbi, 200.0, 400.0, -1, 0.0, 0.0);
   test->tight  = test_nc_xcor_kquad_tophat_converged (&test->env, test->sbi_tight, 200.0, 400.0, -1, 1.0e-8, 1.0e-6);

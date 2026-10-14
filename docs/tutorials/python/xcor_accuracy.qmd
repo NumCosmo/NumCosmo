@@ -170,7 +170,7 @@ peak.
 
 A closure is not more accurate than the values it interpolates. Building a closure
 aborts when the larger of reltol and peak-epsilon is below the relative tolerance of the
-integrator that evaluates $W_\ell(k)$, `NcmSBesselIntegratorLevin:cheb-reltol`, which is
+integrator that evaluates $W_\ell(k)$, `NcmSBesselIntegratorLevin:reltol`, which is
 $10^{-8}$ by default.
 :::
 
@@ -615,7 +615,7 @@ top-hat are therefore larger than those of a smooth window.
 - On the cluster top-hat of this page the cost of a closure is set by peak-epsilon.
   [[numcosmo|nc_xcor_kernel_set_peak_epsilon]] warns below $10^{-6}$, and the
   construction aborts when the larger of the two is below the integrator's
-  `cheb-reltol`.
+  `reltol`.
 - `NcXcorKernel:adaptive-epsilon` ends the range of $k$. What lies beyond it is part of
   neither $C_\ell$ nor its error estimate; what the default leaves out of A2 is measured
   in [Certified values](#sec-certified).

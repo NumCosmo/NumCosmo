@@ -65,17 +65,14 @@
  *
  * ## Every feature needs a range that brackets it
  *
- * The radial integrand is fitted adaptively on each panel of
- * $[\chi_\mathrm{min}, \chi_\mathrm{max}]$, and an adaptive fit converges on
- * what its samples show. A feature much narrower than the range it sits in can
- * fall between the nodes, and the fit is then accepted without it; no stopping
- * test can detect a feature it has not sampled. This is part of the contract of
- * the class, not a tolerance setting: `get_limits` must report a range that
- * brackets the component closely, and a kernel whose features are far apart, a
- * bump near $\chi_\mathrm{min}$, a long stretch of zeros and a narrow bump
- * further out, must be split into one component per feature, each with its own
- * limits. The tolerances then control how well each feature is resolved, not
- * whether it is seen.
+ * `get_limits` must report a $\chi$ range that brackets the component closely,
+ * and a kernel whose features are far apart (a bump near $\chi_\mathrm{min}$, a
+ * long stretch of zeros and a narrow bump further out) must be split into one
+ * component per feature, each with its own limits. The radial integrand is fitted
+ * adaptively on each panel from its values at the nodes; a feature much narrower
+ * than its range can fall between the nodes, and the fit is then accepted without
+ * it, since no stopping test detects a feature that is not sampled. With the
+ * ranges set this way, the tolerances control how well each feature is resolved.
  *
  */
 

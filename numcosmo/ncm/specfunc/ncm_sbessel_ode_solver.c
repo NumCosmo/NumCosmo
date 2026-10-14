@@ -39,19 +39,18 @@
  * remaining ones are the $C^{(2)}$ ultraspherical coefficients of $x F(x)$. Every caller
  * in the library passes zero for the first two.
  *
- * Truncation stops when the transformed solution coefficient $c^n$, weighted by $10 n^2$,
- * falls below the tolerance times the largest coefficient seen, or when $c^n$ itself
- * reaches the roundoff level, a tenth of the double precision epsilon of that largest
- * coefficient. The $n^2$ is the endpoint derivative of $T_n$, so the test measures
- * the error of the endpoint derivatives the Levin boundary term reads, not only of the
- * coefficients; the 10 is how much stopping at column $n$ moves the coefficients kept
- * below it, measured at 8-10 times $n^2 |c^n|$. It is an estimate, not a rigorous
- * bound. In a batch, every multipole must satisfy the criterion.
+ * Truncation stops after five consecutive columns $n$ with $10\, n^2 |c^n|$ below the
+ * tolerance times the largest coefficient computed, or with $|c^n|$ below a tenth of the
+ * double precision epsilon times it. The factor $n^2$ is $|T_n'(\pm 1)|$, so the first
+ * condition bounds the truncation error of the endpoint derivatives; the factor 10 covers
+ * the change that truncation at column $n$ makes in the coefficients below $n$, measured
+ * at 8 to 10 times $n^2 |c^n|$. The second condition stops the solve at the roundoff level
+ * of the coefficients. The test is an estimate, not a rigorous bound. In a batch every
+ * multipole must satisfy it.
  *
- * The criterion is tuned so that both $u$ and $u'$ come out accurate, since the Levin
- * boundary terms read the endpoint values and derivatives. A caller that needs $u$ alone would be
- * served by the unweighted test, which stops earlier; no such mode exists, and one can
- * be added if a use for it appears.
+ * The test makes both $u$ and $u'$ accurate, since the Levin boundary terms read the
+ * endpoint values and derivatives. A caller that needs only $u$ could use the unweighted
+ * test, which stops at fewer columns; the solver does not provide it.
  *
  * A #NcmSBesselOdeOperator stores the factorization for one interval and one multipole
  * range. Repeated solves reuse it and extend it only when the new right-hand side
@@ -97,15 +96,13 @@
 #define ROWS_TO_ROTATE (LOWER_BANDWIDTH + NUMBER_OF_BOUNDARY_CONDITIONS)
 
 /*
- * A column is quiet when the derivative tail it estimates, j^2 rho_j (the endpoint
- * derivative of T_j is j^2), times COEFF_SHIFT_FACTOR is below the tolerance times
- * rho_max, or when rho_j itself is at the roundoff level of the coefficients, below
- * which a further column carries no information whatever the tolerance asks.
- *
- * Stopping at column N changes the coefficients kept below it as well as dropping the
- * tail, and the endpoint derivatives move by about ten times N^2 |c^N| (measured on a
- * rational and a Gaussian panel, 8-10x), so the factor makes the derivatives, not the
- * last column, meet the tolerance.
+ * Constants of the stopping test. Column j is quiet when
+ * COEFF_SHIFT_FACTOR j^2 rho_j < tolerance rho_max or rho_j < COEFF_ROUNDOFF_FLOOR rho_max,
+ * with rho_j the coefficient-to-diagonal ratio of column j and rho_max its running maximum.
+ * j^2 is |T_j'(+-1)|. Truncation at column N also changes the coefficients below N, and
+ * the endpoint derivatives then change by 8 to 10 times N^2 |c^N| (rational and Gaussian
+ * panels); COEFF_SHIFT_FACTOR covers that change. A coefficient below
+ * COEFF_ROUNDOFF_FLOOR rho_max is at the roundoff level of the solve.
  */
 #define COEFF_ROUNDOFF_FLOOR (0.1 * DBL_EPSILON)
 #define COEFF_SHIFT_FACTOR (10.0)
@@ -533,11 +530,12 @@ ncm_sbessel_ode_solver_class_init (NcmSBesselOdeSolverClass *klass)
   /**
    * NcmSBesselOdeSolver:tolerance:
    *
-   * Relative tolerance on $n^2 |c^n|$, the truncation error of the endpoint derivatives,
-   * copied into new operators; by default a tenth of the double precision epsilon, where
-   * the roundoff level of the coefficients stops the solve instead. It estimates the
-   * error from where the expansion stops, not how far the solution is from the exact
-   * one.
+   * Relative tolerance of the stopping test on $10\, n^2 |c^n|$, the truncation error of
+   * the endpoint derivatives, copied into new operators. At the default, a tenth of the
+   * double precision epsilon, the derivative condition of the test implies its roundoff
+   * condition (see #NcmSBesselOdeSolver). The
+   * test estimates the truncation error; it is not a bound on the distance to the exact
+   * solution.
    */
   g_object_class_install_property (object_class,
                                    PROP_TOLERANCE,
@@ -813,9 +811,8 @@ ncm_sbessel_ode_operator_clear (NcmSBesselOdeOperator **op)
  * @solver: a #NcmSBesselOdeSolver
  * @tol: convergence tolerance
  *
- * Sets the relative tolerance on $n^2 |c^n|$ copied into subsequently created
+ * Sets #NcmSBesselOdeSolver:tolerance, copied into subsequently created
  * operators. Existing operators retain their current tolerance.
- *
  */
 void
 ncm_sbessel_ode_solver_set_tolerance (NcmSBesselOdeSolver *solver, gdouble tol)
@@ -3015,7 +3012,7 @@ ncm_sbessel_ode_operator_get_ell_range (NcmSBesselOdeOperator *op, gint *ell_min
  * ncm_sbessel_ode_operator_get_tolerance:
  * @op: a #NcmSBesselOdeOperator
  *
- * Gets the operator's relative tolerance on $n^2 |c^n|$.
+ * Gets the tolerance of the operator's stopping test.
  *
  * Returns: the convergence tolerance
  */

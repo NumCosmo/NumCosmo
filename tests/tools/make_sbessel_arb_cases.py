@@ -180,8 +180,8 @@ LEVIN_CASES = [
         [(ell, [1.0]) for ell in range(6)],
     ),
     (
-        # the rational truth table's shape at k = 10^0.5: one panel holds the whole
-        # integral and the solution needs some 600 coefficients
+        # the rational truth table's shape at k = 10^0.5: one panel carries the whole
+        # integral and its solution has about 600 coefficients
         "reltol_bound",
         "rational",
         0.01,
@@ -192,8 +192,8 @@ LEVIN_CASES = [
         [(ell, [0.1 * 10.0**1.5]) for ell in range(8)],
     ),
     (
-        # a short panel past the turning point, below the pinned constraint's reach: it
-        # keeps Dirichlet data, which a truncated solve does not meet exactly
+        # a panel past the turning point and too short for pinned data: it has
+        # Dirichlet data, which a truncated solve meets only to its truncation error
         "short_panel",
         "tophat",
         490.7985,
@@ -204,8 +204,8 @@ LEVIN_CASES = [
         [(200, [1.0])],
     ),
     (
-        # the upper bound 1e-10 above the knot at x = 100: the thin piece is merged into
-        # the panel below it, where a fit of its own would differentiate roundoff
+        # the upper bound 1e-10 above the knot at x = 100: the piece 1e-8 wide is merged
+        # into the panel below it
         "thin_piece",
         "gauss",
         0.0,
