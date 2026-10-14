@@ -86,12 +86,14 @@ typedef enum
   SHAPE_LENSING,
   SHAPE_MULTI,
   SHAPE_RATIONAL,
+  SHAPE_POWER,
+  SHAPE_COS,
   SHAPE_LEN
 } Shape;
 
 static const char *shape_names[SHAPE_LEN] = {
   "gauss", "tophat", "tophat_smooth", "student_t", "power_exp", "lensing", "multi",
-  "rational"
+  "rational", "power", "cos"
 };
 
 typedef struct
@@ -103,8 +105,8 @@ typedef struct
   /* gauss / student_t / multi */
   double chi_mean, chi_sigma, n_sigma;
 
-  /* tophat / tophat_smooth / power_exp / rational, and gauss / student_t when
-   * explicit_support is set */
+  /* tophat / tophat_smooth / power_exp / rational / power / cos, and gauss /
+   * student_t when explicit_support is set */
   double chi_lower, chi_upper;
 
   /* 1: gauss and student_t take their support from chi_lower, chi_upper rather
@@ -115,6 +117,10 @@ typedef struct
   double chi_scale, nu, n_scale;
   /* power_exp */
   double alpha, beta;
+  /* power: chi^power_n */
+  long power_n;
+  /* cos: cos (omega chi) */
+  double omega;
   /* lensing */
   double chi_source_lower, chi_source_upper;
 
@@ -280,6 +286,18 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
       acb_pow_si (u, u, 3, prec);
       acb_sqr (v, chi, prec);
       acb_div (out, v, u, prec);
+      break;
+
+    case SHAPE_POWER:
+      /* chi^n, integer n, so no branch cut */
+      acb_pow_si (out, chi, p->power_n, prec);
+      break;
+
+    case SHAPE_COS:
+      /* cos (omega chi) */
+      acb_set_d (t, p->omega);
+      acb_mul (u, chi, t, prec);
+      acb_cos (out, u, prec);
       break;
 
     case SHAPE_POWER_EXP:
@@ -762,6 +780,8 @@ shape_support (Par *p)
 
     case SHAPE_POWER_EXP:
     case SHAPE_RATIONAL:
+    case SHAPE_POWER:
+    case SHAPE_COS:
       p->chi_min = p->chi_lower;
       p->chi_max = p->chi_upper;
       break;
