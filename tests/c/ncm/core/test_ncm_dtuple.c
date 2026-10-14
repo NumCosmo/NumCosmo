@@ -39,25 +39,10 @@ typedef struct _TestNcmDTuple2
   NcmDTuple2 *dt2;
 } TestNcmDTuple2;
 
-void test_ncm_dtuple2_new (TestNcmDTuple2 *test, gconstpointer pdata);
-void test_ncm_dtuple2_free (TestNcmDTuple2 *test, gconstpointer pdata);
-
-void test_ncm_dtuple2_copy (TestNcmDTuple2 *test, gconstpointer pdata);
-void test_ncm_dtuple2_static (TestNcmDTuple2 *test, gconstpointer pdata);
-void test_ncm_dtuple2_serialize (TestNcmDTuple2 *test, gconstpointer pdata);
-
 typedef struct _TestNcmDTuple3
 {
   NcmDTuple3 *dt3;
 } TestNcmDTuple3;
-
-void test_ncm_dtuple3_new (TestNcmDTuple3 *test, gconstpointer pdata);
-void test_ncm_dtuple3_free (TestNcmDTuple3 *test, gconstpointer pdata);
-
-void test_ncm_dtuple3_copy (TestNcmDTuple3 *test, gconstpointer pdata);
-void test_ncm_dtuple3_static (TestNcmDTuple3 *test, gconstpointer pdata);
-void test_ncm_dtuple3_serialize (TestNcmDTuple3 *test, gconstpointer pdata);
-
 
 G_DECLARE_FINAL_TYPE (NcmObjectWithTuples, ncm_object_with_tuples, NCM, OBJECT_WITH_TUPLES, GObject)
 
@@ -78,6 +63,85 @@ enum
 };
 
 G_DEFINE_TYPE (NcmObjectWithTuples, ncm_object_with_tuples, G_TYPE_OBJECT)
+
+typedef struct _TestNcmObjectWithTuples
+{
+  NcmObjectWithTuples *obj;
+} TestNcmObjectWithTuples;
+
+void test_ncm_dtuple2_new (TestNcmDTuple2 *test, gconstpointer pdata);
+void test_ncm_dtuple2_free (TestNcmDTuple2 *test, gconstpointer pdata);
+
+void test_ncm_dtuple2_copy (TestNcmDTuple2 *test, gconstpointer pdata);
+void test_ncm_dtuple2_static (TestNcmDTuple2 *test, gconstpointer pdata);
+void test_ncm_dtuple2_serialize (TestNcmDTuple2 *test, gconstpointer pdata);
+
+void test_ncm_dtuple3_new (TestNcmDTuple3 *test, gconstpointer pdata);
+void test_ncm_dtuple3_free (TestNcmDTuple3 *test, gconstpointer pdata);
+
+void test_ncm_dtuple3_copy (TestNcmDTuple3 *test, gconstpointer pdata);
+void test_ncm_dtuple3_static (TestNcmDTuple3 *test, gconstpointer pdata);
+void test_ncm_dtuple3_serialize (TestNcmDTuple3 *test, gconstpointer pdata);
+
+void test_ncm_object_with_tuples_new (TestNcmObjectWithTuples *test, gconstpointer pdata);
+void test_ncm_object_with_tuples_free (TestNcmObjectWithTuples *test, gconstpointer pdata);
+
+void test_ncm_object_with_tuples_serialize (TestNcmObjectWithTuples *test, gconstpointer pdata);
+void test_ncm_object_with_tuples_from_string (TestNcmObjectWithTuples *test, gconstpointer pdata);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/ncm/dtuple2/copy", TestNcmDTuple2, NULL,
+              &test_ncm_dtuple2_new,
+              &test_ncm_dtuple2_copy,
+              &test_ncm_dtuple2_free);
+
+  g_test_add ("/ncm/dtuple2/static", TestNcmDTuple2, NULL,
+              &test_ncm_dtuple2_new,
+              &test_ncm_dtuple2_static,
+              &test_ncm_dtuple2_free);
+
+  g_test_add ("/ncm/dtuple2/serialize", TestNcmDTuple2, NULL,
+              &test_ncm_dtuple2_new,
+              &test_ncm_dtuple2_serialize,
+              &test_ncm_dtuple2_free);
+
+  g_test_add ("/ncm/dtuple3/copy", TestNcmDTuple3, NULL,
+              &test_ncm_dtuple3_new,
+              &test_ncm_dtuple3_copy,
+              &test_ncm_dtuple3_free);
+
+  g_test_add ("/ncm/dtuple3/static", TestNcmDTuple3, NULL,
+              &test_ncm_dtuple3_new,
+              &test_ncm_dtuple3_static,
+              &test_ncm_dtuple3_free);
+
+  g_test_add ("/ncm/dtuple3/serialize", TestNcmDTuple3, NULL,
+              &test_ncm_dtuple3_new,
+              &test_ncm_dtuple3_serialize,
+              &test_ncm_dtuple3_free);
+
+  g_test_add ("/ncm/object_with_tuples/serialize", TestNcmObjectWithTuples, NULL,
+              &test_ncm_object_with_tuples_new,
+              &test_ncm_object_with_tuples_serialize,
+              &test_ncm_object_with_tuples_free);
+
+  g_test_add ("/ncm/object_with_tuples/from_string", TestNcmObjectWithTuples, NULL,
+              &test_ncm_object_with_tuples_new,
+              &test_ncm_object_with_tuples_from_string,
+              &test_ncm_object_with_tuples_free);
+
+  g_test_run ();
+
+  return 0;
+}
 
 static void
 ncm_object_with_tuples_init (NcmObjectWithTuples *self)
@@ -164,72 +228,6 @@ ncm_object_with_tuples_class_init (NcmObjectWithTuplesClass *klass)
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-typedef struct _TestNcmObjectWithTuples
-{
-  NcmObjectWithTuples *obj;
-} TestNcmObjectWithTuples;
-
-
-void test_ncm_object_with_tuples_new (TestNcmObjectWithTuples *test, gconstpointer pdata);
-void test_ncm_object_with_tuples_free (TestNcmObjectWithTuples *test, gconstpointer pdata);
-
-void test_ncm_object_with_tuples_serialize (TestNcmObjectWithTuples *test, gconstpointer pdata);
-void test_ncm_object_with_tuples_from_string (TestNcmObjectWithTuples *test, gconstpointer pdata);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/ncm/dtuple2/copy", TestNcmDTuple2, NULL,
-              &test_ncm_dtuple2_new,
-              &test_ncm_dtuple2_copy,
-              &test_ncm_dtuple2_free);
-
-  g_test_add ("/ncm/dtuple2/static", TestNcmDTuple2, NULL,
-              &test_ncm_dtuple2_new,
-              &test_ncm_dtuple2_static,
-              &test_ncm_dtuple2_free);
-
-  g_test_add ("/ncm/dtuple2/serialize", TestNcmDTuple2, NULL,
-              &test_ncm_dtuple2_new,
-              &test_ncm_dtuple2_serialize,
-              &test_ncm_dtuple2_free);
-
-  g_test_add ("/ncm/dtuple3/copy", TestNcmDTuple3, NULL,
-              &test_ncm_dtuple3_new,
-              &test_ncm_dtuple3_copy,
-              &test_ncm_dtuple3_free);
-
-  g_test_add ("/ncm/dtuple3/static", TestNcmDTuple3, NULL,
-              &test_ncm_dtuple3_new,
-              &test_ncm_dtuple3_static,
-              &test_ncm_dtuple3_free);
-
-  g_test_add ("/ncm/dtuple3/serialize", TestNcmDTuple3, NULL,
-              &test_ncm_dtuple3_new,
-              &test_ncm_dtuple3_serialize,
-              &test_ncm_dtuple3_free);
-
-  g_test_add ("/ncm/object_with_tuples/serialize", TestNcmObjectWithTuples, NULL,
-              &test_ncm_object_with_tuples_new,
-              &test_ncm_object_with_tuples_serialize,
-              &test_ncm_object_with_tuples_free);
-
-  g_test_add ("/ncm/object_with_tuples/from_string", TestNcmObjectWithTuples, NULL,
-              &test_ncm_object_with_tuples_new,
-              &test_ncm_object_with_tuples_from_string,
-              &test_ncm_object_with_tuples_free);
-
-  g_test_run ();
-
-  return 0;
-}
-
 void
 test_ncm_dtuple2_new (TestNcmDTuple2 *test, gconstpointer pdata)
 {
@@ -246,6 +244,58 @@ void
 test_ncm_dtuple2_free (TestNcmDTuple2 *test, gconstpointer pdata)
 {
   ncm_dtuple2_free (test->dt2);
+}
+
+void
+test_ncm_dtuple3_new (TestNcmDTuple3 *test, gconstpointer pdata)
+{
+  const gdouble elem0 = g_test_rand_double ();
+  const gdouble elem1 = g_test_rand_double ();
+  const gdouble elem2 = g_test_rand_double ();
+
+  test->dt3 = ncm_dtuple3_new (elem0, elem1, elem2);
+
+  g_assert_cmpfloat (test->dt3->elements[0], ==, elem0);
+  g_assert_cmpfloat (test->dt3->elements[1], ==, elem1);
+  g_assert_cmpfloat (test->dt3->elements[2], ==, elem2);
+}
+
+void
+test_ncm_dtuple3_free (TestNcmDTuple3 *test, gconstpointer pdata)
+{
+  ncm_dtuple3_free (test->dt3);
+}
+
+void
+test_ncm_object_with_tuples_new (TestNcmObjectWithTuples *test, gconstpointer pdata)
+{
+  const gdouble elem0 = g_test_rand_double ();
+  const gdouble elem1 = g_test_rand_double ();
+  const gdouble elem2 = g_test_rand_double ();
+  const gdouble elem3 = g_test_rand_double ();
+  const gdouble elem4 = g_test_rand_double ();
+  NcmDTuple2 *dt2     = ncm_dtuple2_new (elem0, elem1);
+  NcmDTuple3 *dt3     = ncm_dtuple3_new (elem2, elem3, elem4);
+
+  test->obj = g_object_new (ncm_object_with_tuples_get_type (),
+                            "dt2", dt2,
+                            "dt3", dt3,
+                            NULL);
+
+  g_assert_cmpfloat (test->obj->dt2->elements[0], ==, elem0);
+  g_assert_cmpfloat (test->obj->dt2->elements[1], ==, elem1);
+  g_assert_cmpfloat (test->obj->dt3->elements[0], ==, elem2);
+  g_assert_cmpfloat (test->obj->dt3->elements[1], ==, elem3);
+  g_assert_cmpfloat (test->obj->dt3->elements[2], ==, elem4);
+
+  ncm_dtuple2_free (dt2);
+  ncm_dtuple3_free (dt3);
+}
+
+void
+test_ncm_object_with_tuples_free (TestNcmObjectWithTuples *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (g_object_unref, test->obj);
 }
 
 void
@@ -283,26 +333,6 @@ test_ncm_dtuple2_serialize (TestNcmDTuple2 *test, gconstpointer pdata)
 }
 
 void
-test_ncm_dtuple3_new (TestNcmDTuple3 *test, gconstpointer pdata)
-{
-  const gdouble elem0 = g_test_rand_double ();
-  const gdouble elem1 = g_test_rand_double ();
-  const gdouble elem2 = g_test_rand_double ();
-
-  test->dt3 = ncm_dtuple3_new (elem0, elem1, elem2);
-
-  g_assert_cmpfloat (test->dt3->elements[0], ==, elem0);
-  g_assert_cmpfloat (test->dt3->elements[1], ==, elem1);
-  g_assert_cmpfloat (test->dt3->elements[2], ==, elem2);
-}
-
-void
-test_ncm_dtuple3_free (TestNcmDTuple3 *test, gconstpointer pdata)
-{
-  ncm_dtuple3_free (test->dt3);
-}
-
-void
 test_ncm_dtuple3_copy (TestNcmDTuple3 *test, gconstpointer pdata)
 {
   NcmDTuple3 *dt3_copy = ncm_dtuple3_copy (test->dt3);
@@ -337,38 +367,6 @@ test_ncm_dtuple3_serialize (TestNcmDTuple3 *test, gconstpointer pdata)
 
   ncm_dtuple3_free (dt3);
   g_variant_unref (var);
-}
-
-void
-test_ncm_object_with_tuples_new (TestNcmObjectWithTuples *test, gconstpointer pdata)
-{
-  const gdouble elem0 = g_test_rand_double ();
-  const gdouble elem1 = g_test_rand_double ();
-  const gdouble elem2 = g_test_rand_double ();
-  const gdouble elem3 = g_test_rand_double ();
-  const gdouble elem4 = g_test_rand_double ();
-  NcmDTuple2 *dt2     = ncm_dtuple2_new (elem0, elem1);
-  NcmDTuple3 *dt3     = ncm_dtuple3_new (elem2, elem3, elem4);
-
-  test->obj = g_object_new (ncm_object_with_tuples_get_type (),
-                            "dt2", dt2,
-                            "dt3", dt3,
-                            NULL);
-
-  g_assert_cmpfloat (test->obj->dt2->elements[0], ==, elem0);
-  g_assert_cmpfloat (test->obj->dt2->elements[1], ==, elem1);
-  g_assert_cmpfloat (test->obj->dt3->elements[0], ==, elem2);
-  g_assert_cmpfloat (test->obj->dt3->elements[1], ==, elem3);
-  g_assert_cmpfloat (test->obj->dt3->elements[2], ==, elem4);
-
-  ncm_dtuple2_free (dt2);
-  ncm_dtuple3_free (dt3);
-}
-
-void
-test_ncm_object_with_tuples_free (TestNcmObjectWithTuples *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (g_object_unref, test->obj);
 }
 
 void
