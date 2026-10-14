@@ -35,6 +35,36 @@
 
 #define TEST_PL_AMPLITUDE (1.0e-9)
 
+static void test_ncm_powspec_filter_power_law (void);
+static void test_ncm_powspec_filter_gauss_closed_form (void);
+static void test_ncm_powspec_filter_arb (void);
+static void test_ncm_powspec_filter_eval_forms (void);
+static void test_ncm_powspec_filter_nderivs (void);
+static void test_ncm_powspec_filter_settings (void);
+static void test_ncm_powspec_filter_r_range (void);
+static void test_ncm_powspec_filter_zi (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/powspec_filter/power_law", &test_ncm_powspec_filter_power_law);
+  g_test_add_func ("/ncm/powspec_filter/gauss_closed_form", &test_ncm_powspec_filter_gauss_closed_form);
+  g_test_add_func ("/ncm/powspec_filter/arb", &test_ncm_powspec_filter_arb);
+  g_test_add_func ("/ncm/powspec_filter/eval_forms", &test_ncm_powspec_filter_eval_forms);
+  g_test_add_func ("/ncm/powspec_filter/nderivs", &test_ncm_powspec_filter_nderivs);
+  g_test_add_func ("/ncm/powspec_filter/settings", &test_ncm_powspec_filter_settings);
+  g_test_add_func ("/ncm/powspec_filter/r_range", &test_ncm_powspec_filter_r_range);
+  g_test_add_func ("/ncm/powspec_filter/zi", &test_ncm_powspec_filter_zi);
+
+  g_test_run ();
+}
+
 /*
  * A tabulated power law P = A k^n on k in [1e-6, 1e3] and z in [z0, z0 + 1], which
  * NcmPowspecSpline2d continues exactly past the table. For it
@@ -399,26 +429,5 @@ test_ncm_powspec_filter_zi (void)
 
   ncm_powspec_filter_free (psf);
   ncm_powspec_free (ps);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/powspec_filter/power_law", &test_ncm_powspec_filter_power_law);
-  g_test_add_func ("/ncm/powspec_filter/gauss_closed_form", &test_ncm_powspec_filter_gauss_closed_form);
-  g_test_add_func ("/ncm/powspec_filter/arb", &test_ncm_powspec_filter_arb);
-  g_test_add_func ("/ncm/powspec_filter/eval_forms", &test_ncm_powspec_filter_eval_forms);
-  g_test_add_func ("/ncm/powspec_filter/nderivs", &test_ncm_powspec_filter_nderivs);
-  g_test_add_func ("/ncm/powspec_filter/settings", &test_ncm_powspec_filter_settings);
-  g_test_add_func ("/ncm/powspec_filter/r_range", &test_ncm_powspec_filter_r_range);
-  g_test_add_func ("/ncm/powspec_filter/zi", &test_ncm_powspec_filter_zi);
-
-  g_test_run ();
 }
 

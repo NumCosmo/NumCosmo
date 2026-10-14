@@ -33,6 +33,30 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_powspec_integrals (void);
+static void test_ncm_powspec_default_deriv (void);
+static void test_ncm_powspec_default_spline_2d (void);
+static void test_ncm_powspec_default_eval_vec (void);
+static void test_ncm_powspec_range (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/powspec/integrals", &test_ncm_powspec_integrals);
+  g_test_add_func ("/ncm/powspec/default/deriv", &test_ncm_powspec_default_deriv);
+  g_test_add_func ("/ncm/powspec/default/spline_2d", &test_ncm_powspec_default_spline_2d);
+  g_test_add_func ("/ncm/powspec/default/eval_vec", &test_ncm_powspec_default_eval_vec);
+  g_test_add_func ("/ncm/powspec/range", &test_ncm_powspec_range);
+
+  g_test_run ();
+}
+
 /* NcmPowspecAnalytic at its defaults: BBKS shape, LCDM growth. */
 static NcmPowspec *
 _test_powspec_new (void)
@@ -254,23 +278,5 @@ test_ncm_powspec_range (void)
   g_assert_nonnull (ncm_powspec_peek_model_ctrl (ps));
 
   ncm_powspec_free (ps);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/powspec/integrals", &test_ncm_powspec_integrals);
-  g_test_add_func ("/ncm/powspec/default/deriv", &test_ncm_powspec_default_deriv);
-  g_test_add_func ("/ncm/powspec/default/spline_2d", &test_ncm_powspec_default_spline_2d);
-  g_test_add_func ("/ncm/powspec/default/eval_vec", &test_ncm_powspec_default_eval_vec);
-  g_test_add_func ("/ncm/powspec/range", &test_ncm_powspec_range);
-
-  g_test_run ();
 }
 
