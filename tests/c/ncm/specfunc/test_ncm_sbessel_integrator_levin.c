@@ -88,6 +88,7 @@ void test_ncm_sbessel_integrator_levin_arb_set_reltol (void);
 void test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol (void);
 void test_ncm_sbessel_integrator_levin_arb_reltol_bound (void);
 void test_ncm_sbessel_integrator_levin_arb_short_panel (void);
+void test_ncm_sbessel_integrator_levin_arb_thin_piece (void);
 void test_ncm_sbessel_integrator_levin_arb_ell_zero (void);
 void test_ncm_sbessel_integrator_levin_arb_k_scaling (void);
 void test_ncm_sbessel_integrator_levin_arb_narrow (void);
@@ -226,6 +227,7 @@ static const TestArbCell test_arb_cells[] = {
   {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 6, 3.1622776601683795, 0.005113055829241203},
   {"reltol_bound", TEST_ARB_RATIONAL, 0.01, 6.5, 1.5, 0.05, 0, FALSE, 7, 3.1622776601683795, 0.001792660717226141},
   {"short_panel", TEST_ARB_TOPHAT, 490.7985, 499.4845, 0.0, 0.0, 0, FALSE, 200, 1.0, -0.0026296564639413443},
+  {"thin_piece", TEST_ARB_GAUSS, 0.0, 100.00000001, 60.0, 15.0, 2, FALSE, 2, 1.0, -0.00019053790857687266},
   {"ell_zero", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.712264523851691},
   {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 0.1, 0.0001557694944990179},
   {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.6484700039890495},
@@ -259,6 +261,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/repeated_set_reltol", test_ncm_sbessel_integrator_levin_arb_repeated_set_reltol);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/reltol_bound", test_ncm_sbessel_integrator_levin_arb_reltol_bound);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/short_panel", test_ncm_sbessel_integrator_levin_arb_short_panel);
+  g_test_add_func ("/ncm/sbessel_integrator_levin/arb/thin_piece", test_ncm_sbessel_integrator_levin_arb_thin_piece);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/ell_zero", test_ncm_sbessel_integrator_levin_arb_ell_zero);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/k_scaling", test_ncm_sbessel_integrator_levin_arb_k_scaling);
   g_test_add_func ("/ncm/sbessel_integrator_levin/arb/narrow", test_ncm_sbessel_integrator_levin_arb_narrow);
@@ -814,6 +817,29 @@ test_ncm_sbessel_integrator_levin_arb_short_panel (void)
     ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, c->k, res, &ev);
     _test_assert_close (ncm_vector_get (res, 0), c->value, reltols[i], 0.0);
   }
+
+  ncm_vector_free (res);
+  ncm_sbessel_integrator_levin_free (sbilv);
+}
+
+/*
+ * The upper bound 1e-10 above the knot at x = 100 leaves a piece 1e-8 wide. Fitted on its
+ * own, that piece hands the d2 boundary term an F' made of roundoff divided by its width:
+ * 2.5e-5 of the integral at cheb-reltol 1e-12. Merged into the panel below it, 2e-13.
+ */
+void
+test_ncm_sbessel_integrator_levin_arb_thin_piece (void)
+{
+  guint n;
+  const TestArbCell *c             = _test_arb_case ("thin_piece", &n);
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (c->ell, c->ell);
+  NcmVector *res                   = ncm_vector_new (1);
+  TestArbEval ev                   = _test_arb_eval_new (c);
+
+  g_assert_cmpuint (n, ==, 1);
+  ncm_sbessel_integrator_levin_set_cheb_reltol (sbilv, 1.0e-12);
+  ncm_sbessel_integrator_integrate_deriv (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_arb_integrand, c->a, c->b, c->k, c->deriv, res, &ev);
+  _test_assert_close (ncm_vector_get (res, 0), c->value, 1.0e-10, 0.0);
 
   ncm_vector_free (res);
   ncm_sbessel_integrator_levin_free (sbilv);

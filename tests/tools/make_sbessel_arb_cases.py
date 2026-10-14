@@ -203,6 +203,18 @@ LEVIN_CASES = [
         0,
         [(200, [1.0])],
     ),
+    (
+        # the upper bound 1e-10 above the knot at x = 100: the thin piece is merged into
+        # the panel below it, where a fit of its own would differentiate roundoff
+        "thin_piece",
+        "gauss",
+        0.0,
+        100.00000001,
+        60.0,
+        15.0,
+        2,
+        [(2, [1.0])],
+    ),
     ("ell_zero", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(0, [1.0])]),
     ("k_scaling", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(5, [0.1, 1.0, 10.0, 100.0])]),
     ("narrow", "power", 5.0, 5.001, 1.0, 0.0, 0, [(5, [1.0])]),

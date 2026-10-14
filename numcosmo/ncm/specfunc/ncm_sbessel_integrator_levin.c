@@ -1693,6 +1693,17 @@ _ncm_sbessel_integrator_levin_truncated_func (gpointer data, gdouble x)
  * served by the moving operator unless the tau constraint applies. */
 #define NCM_SBESSEL_LEVIN_EDGE_CACHE_MAX_OSC (200.0)
 
+/*
+ * An edge piece narrower than this fraction of its knot is merged into the fixed panel
+ * next to it and the two are solved as one moving panel. The derivative weights read F'
+ * at the ends of the piece from a Chebyshev fit made on it, and on a width delta that
+ * derivative carries the samples' roundoff divided by delta: a piece of 1e-9 of its cell
+ * lost 1e-5 of the integral at cheb-reltol 1e-12, one of a few ulps (a bound landing on
+ * a knot) 5e-7 at the default. The knots are log-spaced, so a fraction of the knot is a
+ * fraction of the cell to within a factor 1.5.
+ */
+#define NCM_SBESSEL_LEVIN_THIN_PIECE_FRACTION (1.0e-4)
+
 static gboolean
 _ncm_sbessel_integrator_levin_prepare_dead_edge_rhs (NcmSBesselIntegratorLevin *sbilv,
                                                      NcmSpectral *spectral,
@@ -2081,7 +2092,8 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
    * boundary terms use j_{ell-1}, so the panel-skip gate must match
    * _ncm_sbessel_integrator_levin_panel_is_null and look one order down. */
   const guint ell_gate = ((sbilv->deriv > 0) && (ell_min > 0)) ? ell_min - 1 : ell_min;
-  gdouble first_knot, last_knot;
+  gboolean single_panel, merge_start = FALSE, merge_end = FALSE;
+  gdouble first_knot = 0.0, last_knot = 0.0;
   guint i;
 
   g_assert_cmpuint (ncm_vector_stride (result), ==, 1);
@@ -2103,15 +2115,48 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
     }
   }
 
-  /* Use knots-based paneling if configured, otherwise single panel mode */
-  if ((sbilv->knots->len > 1) && (first_knot_idx != -1) && (last_knot_idx != -1))
+  single_panel = !((sbilv->knots->len > 1) && (first_knot_idx != -1) && (last_knot_idx != -1));
+
+  if (!single_panel)
   {
+    const gint n_fixed = last_knot_idx - first_knot_idx;
+    gboolean thin_start, thin_end;
+
     first_knot = g_array_index (sbilv->knots, gdouble, first_knot_idx);
     last_knot  = g_array_index (sbilv->knots, gdouble, last_knot_idx);
+    thin_start = (x_min < first_knot) && (first_knot - x_min < NCM_SBESSEL_LEVIN_THIN_PIECE_FRACTION * first_knot);
+    thin_end   = (x_max > last_knot) && (x_max - last_knot < NCM_SBESSEL_LEVIN_THIN_PIECE_FRACTION * last_knot);
 
-    /* Handle edge panel at the start [x_min, first_knot > x_min] if needed */
-    if (x_min < first_knot)
+    /* A thin piece with no fixed panel of its own to merge into leaves the whole range
+     * to one moving panel. */
+    if (((thin_start || thin_end) && (n_fixed == 0)) || (thin_start && thin_end && (n_fixed == 1)))
     {
+      single_panel = TRUE;
+    }
+    else
+    {
+      merge_start = thin_start;
+      merge_end   = thin_end;
+    }
+  }
+
+  if (!single_panel)
+  {
+    const gint loop_first = merge_start ? first_knot_idx + 1 : first_knot_idx;
+    const gint loop_last  = merge_end ? last_knot_idx - 1 : last_knot_idx;
+
+    if (merge_start)
+    {
+      const gdouble b_p = g_array_index (sbilv->knots, gdouble, loop_first);
+
+      if (ell_gate <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, b_p))
+        _ncm_sbessel_integrator_levin_integrate_panel (sbilv, -1, loop_first,
+                                                       x_min, b_p, spectral, F, k,
+                                                       ell_min, ell_max, result_data, user_data, FALSE);
+    }
+    else if (x_min < first_knot)
+    {
+      /* Edge panel at the start [x_min, first_knot > x_min] */
       const gdouble a_p = x_min;
       const gdouble b_p = g_array_index (sbilv->knots, gdouble, first_knot_idx);
 
@@ -2145,7 +2190,7 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
       }
     }
 
-    for (i = first_knot_idx; i < (guint) last_knot_idx; i++)
+    for (i = loop_first; i < (guint) loop_last; i++)
     {
       const gdouble a_p = g_array_index (sbilv->knots, gdouble, i);
       const gdouble b_p = g_array_index (sbilv->knots, gdouble, i + 1);
@@ -2156,7 +2201,16 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
                                                        ell_min, ell_max, result_data, user_data, FALSE);
     }
 
-    if (x_max > last_knot)
+    if (merge_end)
+    {
+      const gdouble a_p = g_array_index (sbilv->knots, gdouble, loop_last);
+
+      if (ell_gate <= ncm_sf_sbessel_array_eval_ell_cutoff (sbilv->sba, x_max))
+        _ncm_sbessel_integrator_levin_integrate_panel (sbilv, loop_last, -1,
+                                                       a_p, x_max, spectral, F, k,
+                                                       ell_min, ell_max, result_data, user_data, FALSE);
+    }
+    else if (x_max > last_knot)
     {
       const gdouble a_p = g_array_index (sbilv->knots, gdouble, last_knot_idx);
       const gdouble b_p = x_max;
@@ -2193,8 +2247,9 @@ _ncm_sbessel_integrator_levin_integrate_levin (NcmSBesselIntegratorLevin *sbilv,
   }
   else
   {
-    /* No knot inside [x_min, x_max], or no grid at all: one panel over the whole range, on
-     * ode_operator reconfigured for it at every call. */
+    /* No knot inside [x_min, x_max], no grid at all, or a thin piece with nothing to merge
+     * into: one panel over the whole range, on ode_operator reconfigured for it at every
+     * call. */
     const gdouble *j_a_p, *j_b_p;
     NcmSBesselOdeOperator *op;
 
