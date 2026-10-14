@@ -39,6 +39,48 @@
 #define GAUSS_SIGMA 300.0
 #define GAUSS_XF 2400.0
 
+static void test_ncm_spline_bspline_order (void);
+static void test_ncm_spline_bspline_interpolates (void);
+static void test_ncm_spline_bspline_accuracy (void);
+static void test_ncm_spline_bspline_deriv_integ (void);
+static void test_ncm_spline_bspline_integ_extrap (void);
+static void test_ncm_spline_bspline_deriv_nmax (void);
+static void test_ncm_spline_bspline_reprepare (void);
+static void test_ncm_spline_bspline_serialize (void);
+static void test_ncm_spline_bspline_copy_empty (void);
+static void test_ncm_spline_bspline_tol (void);
+static void test_ncm_spline_bspline_tol_unreachable (void);
+static void test_ncm_spline_bspline_tol_unreachable_subprocess (void);
+static void test_ncm_spline_bspline_min_size (void);
+static void test_ncm_spline_bspline_min_size_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/spline_bspline/order", &test_ncm_spline_bspline_order);
+  g_test_add_func ("/ncm/spline_bspline/interpolates", &test_ncm_spline_bspline_interpolates);
+  g_test_add_func ("/ncm/spline_bspline/accuracy", &test_ncm_spline_bspline_accuracy);
+  g_test_add_func ("/ncm/spline_bspline/deriv_integ", &test_ncm_spline_bspline_deriv_integ);
+  g_test_add_func ("/ncm/spline_bspline/integ_extrap", &test_ncm_spline_bspline_integ_extrap);
+  g_test_add_func ("/ncm/spline_bspline/deriv_nmax", &test_ncm_spline_bspline_deriv_nmax);
+  g_test_add_func ("/ncm/spline_bspline/reprepare", &test_ncm_spline_bspline_reprepare);
+  g_test_add_func ("/ncm/spline_bspline/serialize", &test_ncm_spline_bspline_serialize);
+  g_test_add_func ("/ncm/spline_bspline/copy_empty", &test_ncm_spline_bspline_copy_empty);
+  g_test_add_func ("/ncm/spline_bspline/tol", &test_ncm_spline_bspline_tol);
+  g_test_add_func ("/ncm/spline_bspline/tol_unreachable", &test_ncm_spline_bspline_tol_unreachable);
+  g_test_add_func ("/ncm/spline_bspline/tol_unreachable/subprocess", &test_ncm_spline_bspline_tol_unreachable_subprocess);
+  g_test_add_func ("/ncm/spline_bspline/min_size", &test_ncm_spline_bspline_min_size);
+  g_test_add_func ("/ncm/spline_bspline/min_size/subprocess", &test_ncm_spline_bspline_min_size_subprocess);
+
+  g_test_run ();
+}
+
 static gdouble
 _gauss (const gdouble x)
 {
@@ -456,32 +498,5 @@ test_ncm_spline_bspline_min_size_subprocess (void)
   NcmSpline *s = NCM_SPLINE (ncm_spline_bspline_new (8));
 
   _fill_gauss (s, 5, TRUE);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/spline_bspline/order", &test_ncm_spline_bspline_order);
-  g_test_add_func ("/ncm/spline_bspline/interpolates", &test_ncm_spline_bspline_interpolates);
-  g_test_add_func ("/ncm/spline_bspline/accuracy", &test_ncm_spline_bspline_accuracy);
-  g_test_add_func ("/ncm/spline_bspline/deriv_integ", &test_ncm_spline_bspline_deriv_integ);
-  g_test_add_func ("/ncm/spline_bspline/integ_extrap", &test_ncm_spline_bspline_integ_extrap);
-  g_test_add_func ("/ncm/spline_bspline/deriv_nmax", &test_ncm_spline_bspline_deriv_nmax);
-  g_test_add_func ("/ncm/spline_bspline/reprepare", &test_ncm_spline_bspline_reprepare);
-  g_test_add_func ("/ncm/spline_bspline/serialize", &test_ncm_spline_bspline_serialize);
-  g_test_add_func ("/ncm/spline_bspline/copy_empty", &test_ncm_spline_bspline_copy_empty);
-  g_test_add_func ("/ncm/spline_bspline/tol", &test_ncm_spline_bspline_tol);
-  g_test_add_func ("/ncm/spline_bspline/tol_unreachable", &test_ncm_spline_bspline_tol_unreachable);
-  g_test_add_func ("/ncm/spline_bspline/tol_unreachable/subprocess", &test_ncm_spline_bspline_tol_unreachable_subprocess);
-  g_test_add_func ("/ncm/spline_bspline/min_size", &test_ncm_spline_bspline_min_size);
-  g_test_add_func ("/ncm/spline_bspline/min_size/subprocess", &test_ncm_spline_bspline_min_size_subprocess);
-
-  g_test_run ();
 }
 

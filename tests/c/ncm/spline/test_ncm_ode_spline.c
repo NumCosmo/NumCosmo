@@ -37,12 +37,161 @@ typedef struct _TestNcmOdeSpline
   gdouble alpha;
 } TestNcmOdeSpline;
 
+void test_ncm_ode_spline_new (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_free (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_min_subdivisions_default (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_min_subdivisions_set_get (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_min_subdivisions_effect (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_min_subdivisions_prop (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_values (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_yf (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_yf_negative (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_ends_at_xf (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_hermite_d2ydx2 (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_hermite_dky (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_hermite_yf_and_xf (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_hermite_replace_last (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_max_order (TestNcmOdeSpline *test, gconstpointer pdata);
+void test_ncm_ode_spline_failure (void);
+void test_ncm_ode_spline_failure_subprocess (void);
+void test_ncm_ode_spline_stall_stops (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/ode_spline/values", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_values,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/yf", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_yf,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/yf_negative", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_yf_negative,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/ends_at_xf", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_ends_at_xf,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/d2ydx2", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_d2ydx2,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/dky", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_dky,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/yf_and_xf", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_yf_and_xf,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/hermite/replace_last", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_hermite_replace_last,
+              &test_ncm_ode_spline_free);
+  g_test_add ("/ncm/ode_spline/max_order", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_max_order,
+              &test_ncm_ode_spline_free);
+  g_test_add_func ("/ncm/ode_spline/failure", &test_ncm_ode_spline_failure);
+  g_test_add_func ("/ncm/ode_spline/failure/subprocess", &test_ncm_ode_spline_failure_subprocess);
+  g_test_add_func ("/ncm/ode_spline/stall_stops", &test_ncm_ode_spline_stall_stops);
+  g_test_add ("/ncm/ode_spline/min_subdivisions/default", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_min_subdivisions_default,
+              &test_ncm_ode_spline_free);
+
+  g_test_add ("/ncm/ode_spline/min_subdivisions/set_get", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_min_subdivisions_set_get,
+              &test_ncm_ode_spline_free);
+
+  g_test_add ("/ncm/ode_spline/min_subdivisions/effect", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_min_subdivisions_effect,
+              &test_ncm_ode_spline_free);
+
+  g_test_add ("/ncm/ode_spline/min_subdivisions/prop", TestNcmOdeSpline, NULL,
+              &test_ncm_ode_spline_new,
+              &test_ncm_ode_spline_min_subdivisions_prop,
+              &test_ncm_ode_spline_free);
+
+  g_test_run ();
+
+  return 0;
+}
+
 static gdouble
 _test_ode_dydx (gdouble y, gdouble x, gpointer userdata)
 {
   TestNcmOdeSpline *test = (TestNcmOdeSpline *) userdata;
 
   return test->alpha * y;
+}
+
+static gdouble
+_test_ode_d2ydx2 (gdouble y, gdouble x, gpointer userdata)
+{
+  TestNcmOdeSpline *test = (TestNcmOdeSpline *) userdata;
+
+  return test->alpha * test->alpha * y;
+}
+
+/* With a NcmSplineHermite the knots carry y' and y'': from the callback, or from CVODE
+ * with the difference quotient at the first knots. Measured at reltol 1e-10: 198 knots
+ * against 2782 with the cubic, both sources of y'' give exp (alpha x) to 6.0e-10 (the
+ * cubic to 4.8e-8), and CVODE's y'' is within 9.9e-5 of the exact one; the bounds are 10
+ * times these. */
+static void
+_test_ode_spline_hermite (TestNcmOdeSpline *test, NcmOdeSplineD2ydx2 d2ydx2, const gdouble d2_bound)
+{
+  NcmOdeSpline *os = ncm_ode_spline_new_hermite (_test_ode_dydx, d2ydx2, 1.0, 0.0, 5.0);
+  NcmSpline *ss    = ncm_ode_spline_peek_spline (os);
+  NcmVector *xv, *d1v, *d2v;
+  guint i;
+
+  test->alpha = 2.5;
+  ncm_ode_spline_set_reltol (os, 1.0e-10);
+  ncm_ode_spline_prepare (os, test);
+
+  g_assert_true (NCM_IS_SPLINE_HERMITE (ss));
+  xv  = ncm_spline_peek_xv (ss);
+  d1v = ncm_spline_hermite_peek_d1v (NCM_SPLINE_HERMITE (ss));
+  d2v = ncm_spline_hermite_peek_d2v (NCM_SPLINE_HERMITE (ss));
+  g_assert_cmpuint (ncm_vector_len (d1v), ==, ncm_vector_len (xv));
+  g_assert_cmpuint (ncm_vector_len (d2v), ==, ncm_vector_len (xv));
+
+  for (i = 0; i < ncm_vector_len (xv); i++)
+  {
+    const gdouble y = ncm_spline_eval (ss, ncm_vector_get (xv, i));
+
+    g_assert_cmpfloat (ncm_vector_get (d1v, i), ==, test->alpha * y);
+    g_assert_true (gsl_finite (ncm_vector_get (d2v, i)));
+    ncm_assert_cmpdouble_e (ncm_vector_get (d2v, i), ==, test->alpha * test->alpha * y, d2_bound, 0.0);
+  }
+
+  for (i = 0; i <= 1000; i++)
+  {
+    const gdouble x = 5.0 * i / 1000.0;
+
+    ncm_assert_cmpdouble_e (ncm_spline_eval (ss, x), ==, exp (test->alpha * x), 6.0e-9, 0.0);
+  }
+
+  g_assert_cmpuint (ncm_vector_len (xv), <, 400);
+
+  ncm_ode_spline_free (os);
+}
+
+static gdouble
+_test_ode_dydx_blowup (gdouble y, gdouble x, gpointer userdata)
+{
+  return (x < 1.0) ? y : GSL_NAN;
 }
 
 void
@@ -213,59 +362,6 @@ test_ncm_ode_spline_ends_at_xf (TestNcmOdeSpline *test, gconstpointer pdata)
   g_assert_cmpfloat (ncm_vector_get (xv, ncm_vector_len (xv) - 1), ==, 5.0);
 }
 
-static gdouble
-_test_ode_d2ydx2 (gdouble y, gdouble x, gpointer userdata)
-{
-  TestNcmOdeSpline *test = (TestNcmOdeSpline *) userdata;
-
-  return test->alpha * test->alpha * y;
-}
-
-/* With a NcmSplineHermite the knots carry y' and y'': from the callback, or from CVODE
- * with the difference quotient at the first knots. Measured at reltol 1e-10: 198 knots
- * against 2782 with the cubic, both sources of y'' give exp (alpha x) to 6.0e-10 (the
- * cubic to 4.8e-8), and CVODE's y'' is within 9.9e-5 of the exact one; the bounds are 10
- * times these. */
-static void
-_test_ode_spline_hermite (TestNcmOdeSpline *test, NcmOdeSplineD2ydx2 d2ydx2, const gdouble d2_bound)
-{
-  NcmOdeSpline *os = ncm_ode_spline_new_hermite (_test_ode_dydx, d2ydx2, 1.0, 0.0, 5.0);
-  NcmSpline *ss    = ncm_ode_spline_peek_spline (os);
-  NcmVector *xv, *d1v, *d2v;
-  guint i;
-
-  test->alpha = 2.5;
-  ncm_ode_spline_set_reltol (os, 1.0e-10);
-  ncm_ode_spline_prepare (os, test);
-
-  g_assert_true (NCM_IS_SPLINE_HERMITE (ss));
-  xv  = ncm_spline_peek_xv (ss);
-  d1v = ncm_spline_hermite_peek_d1v (NCM_SPLINE_HERMITE (ss));
-  d2v = ncm_spline_hermite_peek_d2v (NCM_SPLINE_HERMITE (ss));
-  g_assert_cmpuint (ncm_vector_len (d1v), ==, ncm_vector_len (xv));
-  g_assert_cmpuint (ncm_vector_len (d2v), ==, ncm_vector_len (xv));
-
-  for (i = 0; i < ncm_vector_len (xv); i++)
-  {
-    const gdouble y = ncm_spline_eval (ss, ncm_vector_get (xv, i));
-
-    g_assert_cmpfloat (ncm_vector_get (d1v, i), ==, test->alpha * y);
-    g_assert_true (gsl_finite (ncm_vector_get (d2v, i)));
-    ncm_assert_cmpdouble_e (ncm_vector_get (d2v, i), ==, test->alpha * test->alpha * y, d2_bound, 0.0);
-  }
-
-  for (i = 0; i <= 1000; i++)
-  {
-    const gdouble x = 5.0 * i / 1000.0;
-
-    ncm_assert_cmpdouble_e (ncm_spline_eval (ss, x), ==, exp (test->alpha * x), 6.0e-9, 0.0);
-  }
-
-  g_assert_cmpuint (ncm_vector_len (xv), <, 400);
-
-  ncm_ode_spline_free (os);
-}
-
 void
 test_ncm_ode_spline_hermite_d2ydx2 (TestNcmOdeSpline *test, gconstpointer pdata)
 {
@@ -378,12 +474,6 @@ test_ncm_ode_spline_max_order (TestNcmOdeSpline *test, gconstpointer pdata)
   ncm_ode_spline_free (osh);
 }
 
-static gdouble
-_test_ode_dydx_blowup (gdouble y, gdouble x, gpointer userdata)
-{
-  return (x < 1.0) ? y : GSL_NAN;
-}
-
 /* A non-finite right-hand side stalls CVODE at x = 1, which aborts. */
 void
 test_ncm_ode_spline_failure (void)
@@ -423,76 +513,5 @@ test_ncm_ode_spline_stall_stops (void)
 
   ncm_ode_spline_free (os);
   ncm_spline_free (s);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/ode_spline/values", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_values,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/yf", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_yf,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/yf_negative", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_yf_negative,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/ends_at_xf", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_ends_at_xf,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/hermite/d2ydx2", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_hermite_d2ydx2,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/hermite/dky", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_hermite_dky,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/hermite/yf_and_xf", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_hermite_yf_and_xf,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/hermite/replace_last", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_hermite_replace_last,
-              &test_ncm_ode_spline_free);
-  g_test_add ("/ncm/ode_spline/max_order", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_max_order,
-              &test_ncm_ode_spline_free);
-  g_test_add_func ("/ncm/ode_spline/failure", &test_ncm_ode_spline_failure);
-  g_test_add_func ("/ncm/ode_spline/failure/subprocess", &test_ncm_ode_spline_failure_subprocess);
-  g_test_add_func ("/ncm/ode_spline/stall_stops", &test_ncm_ode_spline_stall_stops);
-  g_test_add ("/ncm/ode_spline/min_subdivisions/default", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_min_subdivisions_default,
-              &test_ncm_ode_spline_free);
-
-  g_test_add ("/ncm/ode_spline/min_subdivisions/set_get", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_min_subdivisions_set_get,
-              &test_ncm_ode_spline_free);
-
-  g_test_add ("/ncm/ode_spline/min_subdivisions/effect", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_min_subdivisions_effect,
-              &test_ncm_ode_spline_free);
-
-  g_test_add ("/ncm/ode_spline/min_subdivisions/prop", TestNcmOdeSpline, NULL,
-              &test_ncm_ode_spline_new,
-              &test_ncm_ode_spline_min_subdivisions_prop,
-              &test_ncm_ode_spline_free);
-
-  g_test_run ();
-
-  return 0;
 }
 

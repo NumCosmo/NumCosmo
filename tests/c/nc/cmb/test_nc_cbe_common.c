@@ -39,6 +39,8 @@
 
 #include "test_nc_cbe_common.h"
 
+#define TEST_NC_CBE_MODEL_LEN 8
+
 static void test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_xcdm_new (TestNcCBE *test, gconstpointer pdata);
 static void test_nc_cbe_mnu_lcdm_new (TestNcCBE *test, gconstpointer pdata);
@@ -51,7 +53,10 @@ static void test_nc_cbe_flat_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 
 static void test_nc_cbe_pad_new (TestNcCBE *test, gconstpointer pdata);
 
-#define TEST_NC_CBE_MODEL_LEN 8
+void test_nc_cbe_free (TestNcCBE *test, gconstpointer pdata);
+void test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata);
+void test_nc_cbe_traps (TestNcCBE *test, gconstpointer pdata);
+
 static const TestNcCBEFunc models[TEST_NC_CBE_MODEL_LEN] =
 {
   { test_nc_cbe_lcdm_new,          "lcdm",          NULL },
@@ -102,28 +107,6 @@ test_nc_cbe_main (gint argc, gchar *argv[], const TestNcCBEFunc *tests,
   }
 
   return g_test_run ();
-}
-
-void
-test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
-{
-  NcCBE *cbe       = nc_cbe_new ();
-  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
-  NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
-
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.0, NULL);
-
-  test->cbe    = cbe;
-  test->cosmo  = cosmo;
-  test->ntests = 1000;
-
-  g_assert_true (cbe != NULL);
-  g_assert_true (NC_IS_CBE (cbe));
-
-  g_assert_true (NC_IS_HICOSMO (cosmo));
-  g_assert_true (NC_IS_HIREION (reion));
-  g_assert_true (NC_IS_HIPRIM  (prim));
 }
 
 void
@@ -340,39 +323,6 @@ test_nc_cbe_flat_mnu_xcdm_new (TestNcCBE *test, gconstpointer pdata)
 }
 
 void
-test_nc_cbe_pad_new (TestNcCBE *test, gconstpointer pdata)
-{
-  NcCBE *cbe       = nc_cbe_new ();
-  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
-  NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
-  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEPad", reion, prim);
-
-  g_assert_true (cosmo != NULL);
-  g_assert_true (NC_IS_HICOSMO (cosmo));
-
-  test->cbe    = cbe;
-  test->cosmo  = cosmo;
-  test->ntests = 1000;
-
-  g_assert_true (cbe != NULL);
-  g_assert_true (NC_IS_CBE (cbe));
-
-  g_assert_true (NC_IS_HICOSMO (cosmo));
-  g_assert_true (NC_IS_HIREION (reion));
-  g_assert_true (NC_IS_HIPRIM  (prim));
-}
-
-void
-test_nc_cbe_free (TestNcCBE *test, gconstpointer pdata)
-{
-  NcCBE *cbe       = test->cbe;
-  NcHICosmo *cosmo = test->cosmo;
-
-  NCM_TEST_FREE (nc_cbe_free, cbe);
-  NCM_TEST_FREE (nc_hicosmo_free, cosmo);
-}
-
-void
 test_nc_cbe_sanity (TestNcCBE *test, gconstpointer pdata)
 {
   nc_cbe_ref (test->cbe);
@@ -386,23 +336,6 @@ test_nc_cbe_sanity (TestNcCBE *test, gconstpointer pdata)
   }
 
   g_assert_true (NC_IS_CBE (test->cbe));
-}
-
-void
-test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata)
-{
-  NcCBE *cbe       = test->cbe;
-  NcHICosmo *cosmo = test->cosmo;
-
-  /*guint ntests     = test->ntests;*/
-
-  nc_cbe_prepare (cbe, cosmo);
-  {
-    const gdouble err = nc_cbe_compare_bg (cbe, cosmo, FALSE);
-
-    g_assert_cmpfloat (err, <, 1.0e-4);
-    nc_cbe_compare_bg (cbe, cosmo, FALSE);
-  }
 }
 
 void
@@ -520,6 +453,78 @@ test_nc_cbe_Cls (TestNcCBE *test, gconstpointer pdata)
   ncm_vector_free (EE);
   ncm_vector_free (BB);
   ncm_vector_free (TE);
+}
+
+void
+test_nc_cbe_lcdm_new (TestNcCBE *test, gconstpointer pdata)
+{
+  NcCBE *cbe       = nc_cbe_new ();
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "w", -1.0, NULL);
+
+  test->cbe    = cbe;
+  test->cosmo  = cosmo;
+  test->ntests = 1000;
+
+  g_assert_true (cbe != NULL);
+  g_assert_true (NC_IS_CBE (cbe));
+
+  g_assert_true (NC_IS_HICOSMO (cosmo));
+  g_assert_true (NC_IS_HIREION (reion));
+  g_assert_true (NC_IS_HIPRIM  (prim));
+}
+
+void
+test_nc_cbe_pad_new (TestNcCBE *test, gconstpointer pdata)
+{
+  NcCBE *cbe       = nc_cbe_new ();
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim  *prim  = NC_HIPRIM  (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = _test_nc_cbe_cosmo_new ("NcHICosmoDEPad", reion, prim);
+
+  g_assert_true (cosmo != NULL);
+  g_assert_true (NC_IS_HICOSMO (cosmo));
+
+  test->cbe    = cbe;
+  test->cosmo  = cosmo;
+  test->ntests = 1000;
+
+  g_assert_true (cbe != NULL);
+  g_assert_true (NC_IS_CBE (cbe));
+
+  g_assert_true (NC_IS_HICOSMO (cosmo));
+  g_assert_true (NC_IS_HIREION (reion));
+  g_assert_true (NC_IS_HIPRIM  (prim));
+}
+
+void
+test_nc_cbe_free (TestNcCBE *test, gconstpointer pdata)
+{
+  NcCBE *cbe       = test->cbe;
+  NcHICosmo *cosmo = test->cosmo;
+
+  NCM_TEST_FREE (nc_cbe_free, cbe);
+  NCM_TEST_FREE (nc_hicosmo_free, cosmo);
+}
+
+void
+test_nc_cbe_compare_bg (TestNcCBE *test, gconstpointer pdata)
+{
+  NcCBE *cbe       = test->cbe;
+  NcHICosmo *cosmo = test->cosmo;
+
+  /*guint ntests     = test->ntests;*/
+
+  nc_cbe_prepare (cbe, cosmo);
+  {
+    const gdouble err = nc_cbe_compare_bg (cbe, cosmo, FALSE);
+
+    g_assert_cmpfloat (err, <, 1.0e-4);
+    nc_cbe_compare_bg (cbe, cosmo, FALSE);
+  }
 }
 
 void

@@ -35,6 +35,28 @@
 
 #include <gsl/gsl_sf_erf.h>
 
+static void test_ncm_c_math (void);
+static void test_ncm_c_angles (void);
+static void test_ncm_c_derived (void);
+static void test_ncm_c_H_bind (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/c/math", &test_ncm_c_math);
+  g_test_add_func ("/ncm/c/angles", &test_ncm_c_angles);
+  g_test_add_func ("/ncm/c/derived", &test_ncm_c_derived);
+  g_test_add_func ("/ncm/c/H_bind", &test_ncm_c_H_bind);
+
+  g_test_run ();
+}
+
 static void
 test_ncm_c_math (void)
 {
@@ -144,22 +166,5 @@ test_ncm_c_H_bind (void)
 
     ncm_assert_cmpdouble_e (ncm_c_H_bind (levels[i][0], levels[i][1]), ==, E_nist, levels[i][3], 0.0);
   }
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/c/math", &test_ncm_c_math);
-  g_test_add_func ("/ncm/c/angles", &test_ncm_c_angles);
-  g_test_add_func ("/ncm/c/derived", &test_ncm_c_derived);
-  g_test_add_func ("/ncm/c/H_bind", &test_ncm_c_H_bind);
-
-  g_test_run ();
 }
 

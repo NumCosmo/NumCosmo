@@ -41,23 +41,6 @@
 #include <glib.h>
 #include <glib-object.h>
 
-/* nc_wl_ellipticity_series.c's own series objects work in the formal
- * variable w; theta -> w=exp(i*theta) is this test's own physics-specific
- * reading of that variable, so it stays local to this file rather than
- * living inside ncm_laurent_series_tps_eval() itself. */
-static complex double
-_tps_eval (NcmLaurentSeriesTPS *tps, gdouble theta, gdouble g)
-{
-  return ncm_laurent_series_tps_eval (tps, cexp (I * theta), g);
-}
-
-/* A spread of (rho,theta) shear-map points and small real g values well
- * inside the truncation radius (order below is high enough that the
- * truncation error at these g is far below the tolerance). */
-static const gdouble test_rhos[]   = { 0.05, 0.25, 0.60, 0.85 };
-static const gdouble test_thetas[] = { 0.0, 0.7, 2.1, -1.3 };
-static const gdouble test_gs[]     = { 0.0, 0.02, -0.03, 0.05 };
-
 #define TEST_ORDER 10
 #define TEST_TOL   1.0e-9
 
@@ -66,6 +49,15 @@ void test_nc_wl_ellipticity_series_trace_det_matches_closed_form (void);
 void test_nc_wl_ellipticity_series_abs_sq_matches_chi_squared (void);
 void test_nc_wl_ellipticity_series_trace_matches_python_reference_value (void);
 void test_nc_wl_ellipticity_series_eval_is_reusable (void);
+
+/* A spread of (rho,theta) shear-map points and small real g values well
+ * inside the truncation radius (order below is high enough that the
+ * truncation error at these g is far below the tolerance). */
+static const gdouble test_rhos[] = { 0.05, 0.25, 0.60, 0.85 };
+
+static const gdouble test_thetas[] = { 0.0, 0.7, 2.1, -1.3 };
+
+static const gdouble test_gs[] = { 0.0, 0.02, -0.03, 0.05 };
 
 gint
 main (gint argc, gchar *argv[])
@@ -86,6 +78,16 @@ main (gint argc, gchar *argv[])
                    &test_nc_wl_ellipticity_series_eval_is_reusable);
 
   return g_test_run ();
+}
+
+/* nc_wl_ellipticity_series.c's own series objects work in the formal
+ * variable w; theta -> w=exp(i*theta) is this test's own physics-specific
+ * reading of that variable, so it stays local to this file rather than
+ * living inside ncm_laurent_series_tps_eval() itself. */
+static complex double
+_tps_eval (NcmLaurentSeriesTPS *tps, gdouble theta, gdouble g)
+{
+  return ncm_laurent_series_tps_eval (tps, cexp (I * theta), g);
 }
 
 void

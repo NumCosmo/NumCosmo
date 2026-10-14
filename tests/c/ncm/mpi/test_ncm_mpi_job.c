@@ -35,6 +35,57 @@
 
 typedef void (*TestNcmMPIJobRunArray) (NcmMPIJob *mpi_job, GPtrArray *input_array, GPtrArray *ret_array);
 
+static void test_ncm_mpi_job_feval_run_array (void);
+static void test_ncm_mpi_job_feval_run_array_async (void);
+static void test_ncm_mpi_job_mcmc_run_array (void);
+static void test_ncm_mpi_job_mcmc_run_array_async (void);
+static void test_ncm_mpi_job_fit_run_array (void);
+static void test_ncm_mpi_job_fit_run_array_async (void);
+static void test_ncm_mpi_job_run_array (void);
+static void test_ncm_mpi_job_run_array_async (void);
+static void test_ncm_mpi_job_shape_run_array (void);
+static void test_ncm_mpi_job_shape_run_array_async (void);
+static void test_ncm_mpi_job_float_input (void);
+static void test_ncm_mpi_job_empty (void);
+static void test_ncm_mpi_job_single_input (void);
+static void test_ncm_mpi_job_sequence (void);
+static void test_ncm_mpi_job_async_refill (void);
+static void _test_ncm_mpi_job_flist_p0_2p1 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+
+static void (*_test_ncm_mpi_job_shape_run) (NcmMPIJob *mpi_job, gpointer input, gpointer ret) = NULL;
+
+gint
+main (gint argc, gchar *argv[])
+{
+  /* The workers enter their loop inside ncm_cfg_init and deserialize the jobs they are
+   * sent, so the test job type must exist before it. */
+  g_type_ensure (TEST_TYPE_MPI_JOB_SHAPE);
+  ncm_mset_func_list_register ("p0_2p1", "p_0 + 2p_1", "TestNcmMPIJob", "First plus twice the second free parameter",
+                               G_TYPE_NONE, _test_ncm_mpi_job_flist_p0_2p1, 0, 1);
+
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/mpi/job/run_array", &test_ncm_mpi_job_run_array);
+  g_test_add_func ("/ncm/mpi/job/run_array_async", &test_ncm_mpi_job_run_array_async);
+  g_test_add_func ("/ncm/mpi/job/shape/run_array", &test_ncm_mpi_job_shape_run_array);
+  g_test_add_func ("/ncm/mpi/job/shape/run_array_async", &test_ncm_mpi_job_shape_run_array_async);
+  g_test_add_func ("/ncm/mpi/job/float_input", &test_ncm_mpi_job_float_input);
+  g_test_add_func ("/ncm/mpi/job/empty", &test_ncm_mpi_job_empty);
+  g_test_add_func ("/ncm/mpi/job/single_input", &test_ncm_mpi_job_single_input);
+  g_test_add_func ("/ncm/mpi/job/sequence", &test_ncm_mpi_job_sequence);
+  g_test_add_func ("/ncm/mpi/job/async_refill", &test_ncm_mpi_job_async_refill);
+  g_test_add_func ("/ncm/mpi/job/fit/run_array", &test_ncm_mpi_job_fit_run_array);
+  g_test_add_func ("/ncm/mpi/job/fit/run_array_async", &test_ncm_mpi_job_fit_run_array_async);
+  g_test_add_func ("/ncm/mpi/job/feval/run_array", &test_ncm_mpi_job_feval_run_array);
+  g_test_add_func ("/ncm/mpi/job/feval/run_array_async", &test_ncm_mpi_job_feval_run_array_async);
+  g_test_add_func ("/ncm/mpi/job/mcmc/run_array", &test_ncm_mpi_job_mcmc_run_array);
+  g_test_add_func ("/ncm/mpi/job/mcmc/run_array_async", &test_ncm_mpi_job_mcmc_run_array_async);
+
+  g_test_run ();
+}
+
 /*
  * NcmMPIJobTest returns the entry of its vector at the index it receives. Each output
  * must be the entry at the index of its own input, whichever rank ran it.
@@ -279,18 +330,6 @@ _test_ncm_mpi_job_run_feval_job (TestNcmMPIJobRunArray run_array)
   ncm_rng_free (rng);
 }
 
-static void
-test_ncm_mpi_job_feval_run_array (void)
-{
-  _test_ncm_mpi_job_run_feval_job (&ncm_mpi_job_run_array);
-}
-
-static void
-test_ncm_mpi_job_feval_run_array_async (void)
-{
-  _test_ncm_mpi_job_run_feval_job (&ncm_mpi_job_run_array_async);
-}
-
 /*
  * NcmMPIJobMCMC accepts a finite -2 ln L* when the deviate u is below
  * min[1, exp((m2lnL_cur - m2lnL*) / 2 + ln q)], or always when u is negative; the
@@ -392,6 +431,25 @@ _test_ncm_mpi_job_run_mcmc_job (TestNcmMPIJobRunArray run_array)
 }
 
 static void
+_test_ncm_mpi_job_slow_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
+{
+  g_usleep (20000);
+  _test_ncm_mpi_job_shape_run (mpi_job, input, ret);
+}
+
+static void
+test_ncm_mpi_job_feval_run_array (void)
+{
+  _test_ncm_mpi_job_run_feval_job (&ncm_mpi_job_run_array);
+}
+
+static void
+test_ncm_mpi_job_feval_run_array_async (void)
+{
+  _test_ncm_mpi_job_run_feval_job (&ncm_mpi_job_run_array_async);
+}
+
+static void
 test_ncm_mpi_job_mcmc_run_array (void)
 {
   _test_ncm_mpi_job_run_mcmc_job (&ncm_mpi_job_run_array);
@@ -472,15 +530,6 @@ test_ncm_mpi_job_sequence (void)
   _test_ncm_mpi_job_run_shape_job (&ncm_mpi_job_run_array, 1, 11, 20);
 }
 
-static void (*_test_ncm_mpi_job_shape_run) (NcmMPIJob *mpi_job, gpointer input, gpointer ret) = NULL;
-
-static void
-_test_ncm_mpi_job_slow_run (NcmMPIJob *mpi_job, gpointer input, gpointer ret)
-{
-  g_usleep (20000);
-  _test_ncm_mpi_job_shape_run (mpi_job, input, ret);
-}
-
 static void
 test_ncm_mpi_job_async_refill (void)
 {
@@ -498,37 +547,5 @@ test_ncm_mpi_job_async_refill (void)
 
   klass->run = _test_ncm_mpi_job_shape_run;
   g_type_class_unref (klass);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  /* The workers enter their loop inside ncm_cfg_init and deserialize the jobs they are
-   * sent, so the test job type must exist before it. */
-  g_type_ensure (TEST_TYPE_MPI_JOB_SHAPE);
-  ncm_mset_func_list_register ("p0_2p1", "p_0 + 2p_1", "TestNcmMPIJob", "First plus twice the second free parameter",
-                               G_TYPE_NONE, _test_ncm_mpi_job_flist_p0_2p1, 0, 1);
-
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/mpi/job/run_array", &test_ncm_mpi_job_run_array);
-  g_test_add_func ("/ncm/mpi/job/run_array_async", &test_ncm_mpi_job_run_array_async);
-  g_test_add_func ("/ncm/mpi/job/shape/run_array", &test_ncm_mpi_job_shape_run_array);
-  g_test_add_func ("/ncm/mpi/job/shape/run_array_async", &test_ncm_mpi_job_shape_run_array_async);
-  g_test_add_func ("/ncm/mpi/job/float_input", &test_ncm_mpi_job_float_input);
-  g_test_add_func ("/ncm/mpi/job/empty", &test_ncm_mpi_job_empty);
-  g_test_add_func ("/ncm/mpi/job/single_input", &test_ncm_mpi_job_single_input);
-  g_test_add_func ("/ncm/mpi/job/sequence", &test_ncm_mpi_job_sequence);
-  g_test_add_func ("/ncm/mpi/job/async_refill", &test_ncm_mpi_job_async_refill);
-  g_test_add_func ("/ncm/mpi/job/fit/run_array", &test_ncm_mpi_job_fit_run_array);
-  g_test_add_func ("/ncm/mpi/job/fit/run_array_async", &test_ncm_mpi_job_fit_run_array_async);
-  g_test_add_func ("/ncm/mpi/job/feval/run_array", &test_ncm_mpi_job_feval_run_array);
-  g_test_add_func ("/ncm/mpi/job/feval/run_array_async", &test_ncm_mpi_job_feval_run_array_async);
-  g_test_add_func ("/ncm/mpi/job/mcmc/run_array", &test_ncm_mpi_job_mcmc_run_array);
-  g_test_add_func ("/ncm/mpi/job/mcmc/run_array_async", &test_ncm_mpi_job_mcmc_run_array_async);
-
-  g_test_run ();
 }
 

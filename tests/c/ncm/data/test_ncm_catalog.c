@@ -138,6 +138,14 @@ _test_ncm_catalog_assert_column_not_found_error (GError **error, const gchar *co
   g_free (expected_message);
 }
 
+static void
+_test_ncm_catalog_assert_row_error (GError **error)
+{
+  g_assert_error (*error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE);
+  g_assert_cmpstr ((*error)->message, ==, "Row 4 of column 'z' requested, but the catalog has 4 rows.");
+  g_clear_error (error);
+}
+
 void
 test_ncm_catalog_new (TestNcmCatalog *test, gconstpointer pdata)
 {
@@ -356,14 +364,6 @@ test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata)
 
   g_assert_cmpint (ncm_catalog_get_col_type (test->catalog, "missing", &error), ==, NCM_CATALOG_COL_TYPE_INVALID);
   _test_ncm_catalog_assert_column_not_found_error (&error, "missing");
-}
-
-static void
-_test_ncm_catalog_assert_row_error (GError **error)
-{
-  g_assert_error (*error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE);
-  g_assert_cmpstr ((*error)->message, ==, "Row 4 of column 'z' requested, but the catalog has 4 rows.");
-  g_clear_error (error);
 }
 
 void

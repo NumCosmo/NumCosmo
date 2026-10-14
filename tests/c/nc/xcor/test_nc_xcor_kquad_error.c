@@ -54,6 +54,25 @@ typedef struct _TestNcXcorKQuadError
   NcXcor *xc;
 } TestNcXcorKQuadError;
 
+static void test_nc_xcor_kquad_error_new (TestNcXcorKQuadError *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_error_free (TestNcXcorKQuadError *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_error_bounds_truth (TestNcXcorKQuadError *test, gconstpointer pdata);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/nc/xcor/kquad/error/bounds_truth", TestNcXcorKQuadError, NULL,
+              &test_nc_xcor_kquad_error_new, &test_nc_xcor_kquad_error_bounds_truth, &test_nc_xcor_kquad_error_free);
+
+  g_test_run ();
+}
+
 static void
 test_nc_xcor_kquad_error_new (TestNcXcorKQuadError *test, gconstpointer pdata)
 {
@@ -107,20 +126,5 @@ test_nc_xcor_kquad_error_bounds_truth (TestNcXcorKQuadError *test, gconstpointer
   ncm_vector_free (cl);
   ncm_vector_free (cl_err);
   ncm_vector_free (truth);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/nc/xcor/kquad/error/bounds_truth", TestNcXcorKQuadError, NULL,
-              &test_nc_xcor_kquad_error_new, &test_nc_xcor_kquad_error_bounds_truth, &test_nc_xcor_kquad_error_free);
-
-  g_test_run ();
 }
 

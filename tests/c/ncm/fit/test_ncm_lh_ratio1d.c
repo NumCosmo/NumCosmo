@@ -41,6 +41,49 @@ typedef struct _TestNcmLHRatio1d
   NcmFit *fit;
 } TestNcmLHRatio1d;
 
+static void test_ncm_lh_ratio1d_new (TestNcmLHRatio1d *test, gconstpointer pdata);
+static void test_ncm_lh_ratio1d_free (TestNcmLHRatio1d *test, gconstpointer pdata);
+static void test_ncm_lh_ratio1d_bounds (TestNcmLHRatio1d *test, gconstpointer pdata);
+static void test_ncm_lh_ratio1d_upper_bound (TestNcmLHRatio1d *test, gconstpointer pdata);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/ncm/lh_ratio1d/bounds", TestNcmLHRatio1d, NULL,
+              &test_ncm_lh_ratio1d_new,
+              &test_ncm_lh_ratio1d_bounds,
+              &test_ncm_lh_ratio1d_free);
+  g_test_add ("/ncm/lh_ratio1d/upper_bound", TestNcmLHRatio1d, NULL,
+              &test_ncm_lh_ratio1d_new,
+              &test_ncm_lh_ratio1d_upper_bound,
+              &test_ncm_lh_ratio1d_free);
+
+  g_test_run ();
+}
+
+/*
+ * The profile of -2 ln L over the other parameter is (theta_i - y_i)^2 / C_ii, so the
+ * bounds at confidence level cl are the offsets -/+ sqrt (chi2_1 (cl) C_ii).
+ */
+static void
+_test_ncm_lh_ratio1d_assert_bounds (NcmLHRatio1d *lhr1d, TestNcmLHRatio1d *test, guint i, gdouble clevel)
+{
+  NcmMatrix *C        = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
+  const gdouble delta = sqrt (gsl_cdf_chisq_Qinv (1.0 - clevel, 1.0) * ncm_matrix_get (C, i, i));
+  gdouble lb, ub;
+
+  ncm_lh_ratio1d_find_bounds (lhr1d, clevel, NCM_FIT_RUN_MSGS_NONE, &lb, &ub);
+
+  ncm_assert_cmpdouble_e (lb, ==, -delta, 1.0e-8, 0.0);
+  ncm_assert_cmpdouble_e (ub, ==, delta, 1.0e-8, 0.0);
+}
+
 static void
 test_ncm_lh_ratio1d_new (TestNcmLHRatio1d *test, gconstpointer pdata)
 {
@@ -73,23 +116,6 @@ test_ncm_lh_ratio1d_free (TestNcmLHRatio1d *test, gconstpointer pdata)
   ncm_fit_free (test->fit);
   ncm_model_mvnd_free (test->model);
   ncm_data_gauss_cov_mvnd_free (test->data_mvnd);
-}
-
-/*
- * The profile of -2 ln L over the other parameter is (theta_i - y_i)^2 / C_ii, so the
- * bounds at confidence level cl are the offsets -/+ sqrt (chi2_1 (cl) C_ii).
- */
-static void
-_test_ncm_lh_ratio1d_assert_bounds (NcmLHRatio1d *lhr1d, TestNcmLHRatio1d *test, guint i, gdouble clevel)
-{
-  NcmMatrix *C        = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
-  const gdouble delta = sqrt (gsl_cdf_chisq_Qinv (1.0 - clevel, 1.0) * ncm_matrix_get (C, i, i));
-  gdouble lb, ub;
-
-  ncm_lh_ratio1d_find_bounds (lhr1d, clevel, NCM_FIT_RUN_MSGS_NONE, &lb, &ub);
-
-  ncm_assert_cmpdouble_e (lb, ==, -delta, 1.0e-8, 0.0);
-  ncm_assert_cmpdouble_e (ub, ==, delta, 1.0e-8, 0.0);
 }
 
 static void
@@ -133,26 +159,5 @@ test_ncm_lh_ratio1d_upper_bound (TestNcmLHRatio1d *test, gconstpointer pdata)
 
   ncm_lh_ratio1d_free (lhr1d);
   ncm_mset_pindex_free (pi0);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/ncm/lh_ratio1d/bounds", TestNcmLHRatio1d, NULL,
-              &test_ncm_lh_ratio1d_new,
-              &test_ncm_lh_ratio1d_bounds,
-              &test_ncm_lh_ratio1d_free);
-  g_test_add ("/ncm/lh_ratio1d/upper_bound", TestNcmLHRatio1d, NULL,
-              &test_ncm_lh_ratio1d_new,
-              &test_ncm_lh_ratio1d_upper_bound,
-              &test_ncm_lh_ratio1d_free);
-
-  g_test_run ();
 }
 

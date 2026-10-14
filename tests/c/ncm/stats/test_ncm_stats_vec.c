@@ -51,26 +51,6 @@ typedef struct _TestNcmStatsVec
   guint ntests;
 } TestNcmStatsVec;
 
-void test_ncm_stats_vec_mean_new (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_var_new (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_cov_new (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_free (TestNcmStatsVec *test, gconstpointer pdata);
-
-void test_ncm_stats_vec_diag_heidel (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_diag_max_ess (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_diag_visual (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_diag_discriminates (void);
-void test_ncm_stats_vec_diag_saved (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_diag_const_break (TestNcmStatsVec *test, gconstpointer pdata);
-
-void test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata);
-void test_ncm_stats_vec_invalid_get_var (TestNcmStatsVec *test, gconstpointer pdata);
-
 /*
  * Curated chains for the convergence diagnostics. Generated from a fixed seed, since
  * these read given data and no sampler has to run to test them.
@@ -102,73 +82,25 @@ typedef struct _TestSeriesCase
   gint bindex_min; /* smallest acceptable stationarity index */
 } TestSeriesCase;
 
-static const TestSeriesCase test_series_cases[] = {
-  {"white",      TEST_SERIES_WHITE,      0  },
-  {"ar1",        TEST_SERIES_AR1,        0  },
-  {"burnin",     TEST_SERIES_BURNIN,     100},
-  {"late_shift", TEST_SERIES_LATE_SHIFT, 0  },
-};
+void test_ncm_stats_vec_mean_new (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_var_new (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_cov_new (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_cov_robust_test (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_free (TestNcmStatsVec *test, gconstpointer pdata);
 
-static void
-test_ncm_stats_vec_diag_new (TestNcmStatsVec *test, gconstpointer pdata)
-{
-  const TestSeriesCase *tc    = pdata;
-  NcmRNG *rng                 = ncm_rng_seeded_new (NULL, 1234567890);
-  NcmVector *row              = ncm_vector_new (TEST_DIAG_LEN);
-  gdouble prev[TEST_DIAG_LEN] = { 0.0, 0.0 };
-  guint i, p;
+void test_ncm_stats_vec_diag_heidel (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_max_ess (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_visual (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_discriminates (void);
+void test_ncm_stats_vec_diag_saved (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_diag_const_break (TestNcmStatsVec *test, gconstpointer pdata);
 
-  /* save_x: the diagnostics re-read the rows, not just the accumulated moments. COV
-   * rather than VAR because the correlation accessor requires it, and it is a superset. */
-  test->svec   = ncm_stats_vec_new (TEST_DIAG_LEN, NCM_STATS_VEC_COV, TRUE);
-  test->ntests = TEST_DIAG_NITEMS;
-
-  for (i = 0; i < TEST_DIAG_NITEMS; i++)
-  {
-    for (p = 0; p < TEST_DIAG_LEN; p++)
-    {
-      const gdouble eps = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
-      gdouble x;
-
-      switch (tc->series)
-      {
-        case TEST_SERIES_WHITE:
-          x = eps;
-          break;
-        case TEST_SERIES_AR1:
-          x       = 0.8 * prev[p] + eps;
-          prev[p] = x;
-          break;
-        case TEST_SERIES_BURNIN:
-          x = (i < TEST_DIAG_BURNIN) ? (20.0 + eps) : eps;
-          break;
-        case TEST_SERIES_LATE_SHIFT:
-          /* The diagnostic can only discard a prefix, so a break in the last quarter
-           * survives every starting index it is allowed to try. A slow linear drift
-           * does not work here: it inflates the spectral density at zero that the
-           * statistic is divided by, and the test reports the chain stationary from
-           * partway in. */
-          x = (i < 3 * TEST_DIAG_NITEMS / 4) ? eps : (20.0 + eps);
-          break;
-        default:
-          g_assert_not_reached ();
-      }
-
-      ncm_vector_set (row, p, x);
-    }
-
-    ncm_stats_vec_append (test->svec, row, TRUE);
-  }
-
-  ncm_vector_free (row);
-  ncm_rng_free (rng);
-}
-
-static void
-test_ncm_stats_vec_diag_free (TestNcmStatsVec *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (ncm_stats_vec_free, test->svec);
-}
+void test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_invalid_get_var (TestNcmStatsVec *test, gconstpointer pdata);
 
 static void test_ncm_stats_vec_reset_mean (void);
 static void test_ncm_stats_vec_strided (void);
@@ -176,6 +108,16 @@ static void test_ncm_stats_vec_quantile_replay (void);
 static void test_ncm_stats_vec_bad_length_subprocess (void);
 static void test_ncm_stats_vec_cov_matrix_var_subprocess (void);
 static void test_ncm_stats_vec_input_traps (void);
+
+static void test_ncm_stats_vec_diag_new (TestNcmStatsVec *test, gconstpointer pdata);
+static void test_ncm_stats_vec_diag_free (TestNcmStatsVec *test, gconstpointer pdata);
+
+static const TestSeriesCase test_series_cases[] = {
+  {"white",      TEST_SERIES_WHITE,      0  },
+  {"ar1",        TEST_SERIES_AR1,        0  },
+  {"burnin",     TEST_SERIES_BURNIN,     100},
+  {"late_shift", TEST_SERIES_LATE_SHIFT, 0  },
+};
 
 gint
 main (gint argc, gchar *argv[])
@@ -269,6 +211,67 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_free);
 
   g_test_run ();
+}
+
+static void
+test_ncm_stats_vec_diag_new (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  const TestSeriesCase *tc    = pdata;
+  NcmRNG *rng                 = ncm_rng_seeded_new (NULL, 1234567890);
+  NcmVector *row              = ncm_vector_new (TEST_DIAG_LEN);
+  gdouble prev[TEST_DIAG_LEN] = { 0.0, 0.0 };
+  guint i, p;
+
+  /* save_x: the diagnostics re-read the rows, not just the accumulated moments. COV
+   * rather than VAR because the correlation accessor requires it, and it is a superset. */
+  test->svec   = ncm_stats_vec_new (TEST_DIAG_LEN, NCM_STATS_VEC_COV, TRUE);
+  test->ntests = TEST_DIAG_NITEMS;
+
+  for (i = 0; i < TEST_DIAG_NITEMS; i++)
+  {
+    for (p = 0; p < TEST_DIAG_LEN; p++)
+    {
+      const gdouble eps = ncm_rng_gaussian_gen (rng, 0.0, 1.0);
+      gdouble x;
+
+      switch (tc->series)
+      {
+        case TEST_SERIES_WHITE:
+          x = eps;
+          break;
+        case TEST_SERIES_AR1:
+          x       = 0.8 * prev[p] + eps;
+          prev[p] = x;
+          break;
+        case TEST_SERIES_BURNIN:
+          x = (i < TEST_DIAG_BURNIN) ? (20.0 + eps) : eps;
+          break;
+        case TEST_SERIES_LATE_SHIFT:
+          /* The diagnostic can only discard a prefix, so a break in the last quarter
+           * survives every starting index it is allowed to try. A slow linear drift
+           * does not work here: it inflates the spectral density at zero that the
+           * statistic is divided by, and the test reports the chain stationary from
+           * partway in. */
+          x = (i < 3 * TEST_DIAG_NITEMS / 4) ? eps : (20.0 + eps);
+          break;
+        default:
+          g_assert_not_reached ();
+      }
+
+      ncm_vector_set (row, p, x);
+    }
+
+    ncm_stats_vec_append (test->svec, row, TRUE);
+  }
+
+  ncm_vector_free (row);
+  ncm_rng_free (rng);
+}
+
+static void
+test_ncm_stats_vec_diag_free (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_stats_vec_free, test->svec);
 }
 
 void

@@ -47,6 +47,30 @@ typedef struct _Problem
   NcmVector *f;
 } Problem;
 
+static void test_ncm_nnls_properties (void);
+static void test_ncm_nnls_solve_kkt (void);
+static void test_ncm_nnls_solve_exact (void);
+static void test_ncm_nnls_solve_LH (void);
+static void test_ncm_nnls_solve_lowrankqp (void);
+static void test_ncm_nnls_solve_simplex (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/nnls/properties", &test_ncm_nnls_properties);
+  g_test_add_func ("/ncm/nnls/solve/kkt", &test_ncm_nnls_solve_kkt);
+  g_test_add_func ("/ncm/nnls/solve/exact", &test_ncm_nnls_solve_exact);
+  g_test_add_func ("/ncm/nnls/solve/LH", &test_ncm_nnls_solve_LH);
+  g_test_add_func ("/ncm/nnls/solve/lowrankqp", &test_ncm_nnls_solve_lowrankqp);
+  g_test_add_func ("/ncm/nnls/solve/simplex", &test_ncm_nnls_solve_simplex);
+
+  g_test_run ();
+}
+
 /* A Gaussian, x_true >= 0 with every other entry zero, f = A x_true + noise */
 static Problem
 _problem_new (NcmRNG *rng, guint m, guint n, gdouble noise)
@@ -104,6 +128,46 @@ _kkt_violation (Problem *p, NcmVector *x, gdouble *rnorm)
   ncm_vector_free (g);
 
   return viol;
+}
+
+/* KKT of min |A x - f| with x >= 0 and sum x fixed: g = A^T (A x - f) equals mu on the
+ * positive entries and is at least mu on the others. Returns the violation relative to
+ * |A^T f| and sets mu and sum x. */
+static gdouble
+_simplex_kkt_violation (Problem *p, NcmVector *x, gdouble *mu, gdouble *sum)
+{
+  const guint n = ncm_matrix_ncols (p->A);
+  NcmVector *r  = ncm_vector_dup (p->f);
+  NcmVector *g  = ncm_vector_new (n);
+  NcmVector *b  = ncm_vector_new (n);
+  gdouble g_min = GSL_POSINF, g_max_pos = GSL_NEGINF, scale;
+  guint j;
+
+  ncm_matrix_update_vector (p->A, 'N', -1.0, x, 1.0, r);
+  ncm_matrix_update_vector (p->A, 'T', -1.0, r, 0.0, g);
+  ncm_matrix_update_vector (p->A, 'T', 1.0, p->f, 0.0, b);
+  scale = ncm_vector_dnrm2 (b);
+  *sum  = 0.0;
+
+  for (j = 0; j < n; j++)
+  {
+    const gdouble xj = ncm_vector_get (x, j), gj = ncm_vector_get (g, j);
+
+    g_assert_cmpfloat (xj, >=, 0.0);
+    *sum += xj;
+    g_min = MIN (g_min, gj);
+
+    if (xj > 0.0)
+      g_max_pos = MAX (g_max_pos, gj);
+  }
+
+  *mu = g_max_pos;
+
+  ncm_vector_free (r);
+  ncm_vector_free (g);
+  ncm_vector_free (b);
+
+  return (g_max_pos - g_min) / scale;
 }
 
 static void
@@ -297,46 +361,6 @@ test_ncm_nnls_solve_lowrankqp (void)
   ncm_rng_free (rng);
 }
 
-/* KKT of min |A x - f| with x >= 0 and sum x fixed: g = A^T (A x - f) equals mu on the
- * positive entries and is at least mu on the others. Returns the violation relative to
- * |A^T f| and sets mu and sum x. */
-static gdouble
-_simplex_kkt_violation (Problem *p, NcmVector *x, gdouble *mu, gdouble *sum)
-{
-  const guint n = ncm_matrix_ncols (p->A);
-  NcmVector *r  = ncm_vector_dup (p->f);
-  NcmVector *g  = ncm_vector_new (n);
-  NcmVector *b  = ncm_vector_new (n);
-  gdouble g_min = GSL_POSINF, g_max_pos = GSL_NEGINF, scale;
-  guint j;
-
-  ncm_matrix_update_vector (p->A, 'N', -1.0, x, 1.0, r);
-  ncm_matrix_update_vector (p->A, 'T', -1.0, r, 0.0, g);
-  ncm_matrix_update_vector (p->A, 'T', 1.0, p->f, 0.0, b);
-  scale = ncm_vector_dnrm2 (b);
-  *sum  = 0.0;
-
-  for (j = 0; j < n; j++)
-  {
-    const gdouble xj = ncm_vector_get (x, j), gj = ncm_vector_get (g, j);
-
-    g_assert_cmpfloat (xj, >=, 0.0);
-    *sum += xj;
-    g_min = MIN (g_min, gj);
-
-    if (xj > 0.0)
-      g_max_pos = MAX (g_max_pos, gj);
-  }
-
-  *mu = g_max_pos;
-
-  ncm_vector_free (r);
-  ncm_vector_free (g);
-  ncm_vector_free (b);
-
-  return (g_max_pos - g_min) / scale;
-}
-
 /* gsmo: sum x = 1; splx: sum x <= 1, with mu <= 0, and the NNLS solution when that is inside */
 static void
 test_ncm_nnls_solve_simplex (void)
@@ -402,22 +426,5 @@ test_ncm_nnls_solve_simplex (void)
   }
 
   ncm_rng_free (rng);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/nnls/properties", &test_ncm_nnls_properties);
-  g_test_add_func ("/ncm/nnls/solve/kkt", &test_ncm_nnls_solve_kkt);
-  g_test_add_func ("/ncm/nnls/solve/exact", &test_ncm_nnls_solve_exact);
-  g_test_add_func ("/ncm/nnls/solve/LH", &test_ncm_nnls_solve_LH);
-  g_test_add_func ("/ncm/nnls/solve/lowrankqp", &test_ncm_nnls_solve_lowrankqp);
-  g_test_add_func ("/ncm/nnls/solve/simplex", &test_ncm_nnls_solve_simplex);
-
-  g_test_run ();
 }
 

@@ -228,6 +228,64 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
+/* op(A) as a dense matrix: the named triangle of A, the other one zero, transposed on 'T'. */
+static void
+_test_ncm_matrix_triangle_op (NcmMatrix *A, gchar UL, gchar T, NcmMatrix *opA)
+{
+  const guint n = ncm_matrix_nrows (A);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    for (j = 0; j < n; j++)
+    {
+      const gboolean in_tri = (UL == 'U') ? (j >= i) : (j <= i);
+      const gdouble a_ij    = in_tri ? ncm_matrix_get (A, i, j) : 0.0;
+
+      if (T == 'N')
+        ncm_matrix_set (opA, i, j, a_ij);
+      else
+        ncm_matrix_set (opA, j, i, a_ij);
+    }
+  }
+}
+
+/* Both triangles filled, so the one a routine must not read is never zero; the diagonal
+ * dominates, so the solves stay well conditioned. */
+static void
+_test_ncm_matrix_fill_triangular (NcmMatrix *A)
+{
+  const guint n = ncm_matrix_nrows (A);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+    for (j = 0; j < n; j++)
+      ncm_matrix_set (A, i, j, g_test_rand_double_range (-1.0, 1.0) + ((i == j) ? 2.0 * n : 0.0));
+}
+
+/* A symmetric positive definite 3x3 matrix */
+static NcmMatrix *
+_test_matrix_spd (void)
+{
+  NcmMatrix *A = ncm_matrix_new (3, 3);
+
+  ncm_matrix_set_from_data (A, (gdouble[]) {4.0, 1.0, 0.5, 1.0, 3.0, 0.2, 0.5, 0.2, 2.0});
+
+  return A;
+}
+
+static gdouble
+_test_matrix_det3 (NcmMatrix *A)
+{
+#define a(i, j) ncm_matrix_get (A, i, j)
+
+  return a (0, 0) * (a (1, 1) * a (2, 2) - a (1, 2) * a (2, 1))
+         - a (0, 1) * (a (1, 0) * a (2, 2) - a (1, 2) * a (2, 0))
+         + a (0, 2) * (a (1, 0) * a (2, 1) - a (1, 1) * a (2, 0));
+
+#undef a
+}
+
 void
 test_ncm_matrix_new (TestNcmMatrix *test, gconstpointer pdata)
 {
@@ -479,6 +537,15 @@ test_ncm_matrix_new_data_static_tda (TestNcmMatrix *test, gconstpointer pdata)
       ncm_vector_free (v);
     }
   }
+}
+
+void
+test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_matrix_free, test->m);
+
+  if (test->d != NULL)
+    g_free (test->d);
 }
 
 void
@@ -1219,41 +1286,6 @@ test_ncm_matrix_sym_update_vector (TestNcmMatrix *test, gconstpointer pdata)
   }
 }
 
-/* op(A) as a dense matrix: the named triangle of A, the other one zero, transposed on 'T'. */
-static void
-_test_ncm_matrix_triangle_op (NcmMatrix *A, gchar UL, gchar T, NcmMatrix *opA)
-{
-  const guint n = ncm_matrix_nrows (A);
-  guint i, j;
-
-  for (i = 0; i < n; i++)
-  {
-    for (j = 0; j < n; j++)
-    {
-      const gboolean in_tri = (UL == 'U') ? (j >= i) : (j <= i);
-      const gdouble a_ij    = in_tri ? ncm_matrix_get (A, i, j) : 0.0;
-
-      if (T == 'N')
-        ncm_matrix_set (opA, i, j, a_ij);
-      else
-        ncm_matrix_set (opA, j, i, a_ij);
-    }
-  }
-}
-
-/* Both triangles filled, so the one a routine must not read is never zero; the diagonal
- * dominates, so the solves stay well conditioned. */
-static void
-_test_ncm_matrix_fill_triangular (NcmMatrix *A)
-{
-  const guint n = ncm_matrix_nrows (A);
-  guint i, j;
-
-  for (i = 0; i < n; i++)
-    for (j = 0; j < n; j++)
-      ncm_matrix_set (A, i, j, g_test_rand_double_range (-1.0, 1.0) + ((i == j) ? 2.0 * n : 0.0));
-}
-
 void
 test_ncm_matrix_dtrmm_dtrsm (TestNcmMatrix *test, gconstpointer pdata)
 {
@@ -1826,38 +1858,6 @@ test_ncm_matrix_serialization (TestNcmMatrix *test, gconstpointer pdata)
   }
 
   NCM_TEST_FREE (ncm_matrix_free, m_dup);
-}
-
-void
-test_ncm_matrix_free (TestNcmMatrix *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (ncm_matrix_free, test->m);
-
-  if (test->d != NULL)
-    g_free (test->d);
-}
-
-/* A symmetric positive definite 3x3 matrix */
-static NcmMatrix *
-_test_matrix_spd (void)
-{
-  NcmMatrix *A = ncm_matrix_new (3, 3);
-
-  ncm_matrix_set_from_data (A, (gdouble[]) {4.0, 1.0, 0.5, 1.0, 3.0, 0.2, 0.5, 0.2, 2.0});
-
-  return A;
-}
-
-static gdouble
-_test_matrix_det3 (NcmMatrix *A)
-{
-#define a(i, j) ncm_matrix_get (A, i, j)
-
-  return a (0, 0) * (a (1, 1) * a (2, 2) - a (1, 2) * a (2, 1))
-         - a (0, 1) * (a (1, 0) * a (2, 2) - a (1, 2) * a (2, 0))
-         + a (0, 2) * (a (1, 0) * a (2, 1) - a (1, 1) * a (2, 0));
-
-#undef a
 }
 
 void

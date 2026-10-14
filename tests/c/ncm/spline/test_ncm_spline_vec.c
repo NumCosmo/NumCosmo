@@ -44,6 +44,127 @@ typedef struct _TestNcmSplineVec
   gdouble xf;
 } TestNcmSplineVec;
 
+static void test_ncm_spline_vec_setup (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_teardown (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_new (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_new_gpa (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_get_nknots (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_eval (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_deriv (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_integ (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_set (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_free (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_values (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_gpa_equiv (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_bspline (TestNcmSplineVec *test, gconstpointer pdata);
+static void test_ncm_spline_vec_empty (void);
+static void test_ncm_spline_vec_empty_subprocess (void);
+
+int
+main (int argc, char *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/spline_vec/new", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_new,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/new_gpa", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_new_gpa,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/get_nknots", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_get_nknots,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/eval", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_eval,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/deriv", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_deriv,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/integ", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_integ,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/set", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_set,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/free", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_free,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/values", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_values,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/gpa_equiv", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_gpa_equiv,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add ("/ncm/spline_vec/bspline", TestNcmSplineVec, NULL,
+              &test_ncm_spline_vec_setup,
+              &test_ncm_spline_vec_bspline,
+              &test_ncm_spline_vec_teardown);
+
+  g_test_add_func ("/ncm/spline_vec/empty", &test_ncm_spline_vec_empty);
+  g_test_add_func ("/ncm/spline_vec/empty/subprocess", &test_ncm_spline_vec_empty_subprocess);
+
+  g_test_run ();
+
+  return 0;
+}
+
+static void
+test_ncm_spline_vec_setup (TestNcmSplineVec *test, gconstpointer pdata)
+{
+  guint i;
+
+  test->nknots = 100;
+  test->nvec   = 3;
+  test->xi     = 0.0;
+  test->xf     = 10.0;
+
+  test->s_base = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  test->xv     = ncm_vector_new (test->nknots);
+  test->ym     = ncm_matrix_new (test->nvec, test->nknots);
+
+  for (i = 0; i < test->nknots; i++)
+  {
+    const gdouble x = test->xi + (test->xf - test->xi) * i / (test->nknots - 1.0);
+
+    ncm_vector_set (test->xv, i, x);
+
+    /* Initialize y values for each component with different functions */
+    ncm_matrix_set (test->ym, 0, i, x * x);     /* y0 = x^2 */
+    ncm_matrix_set (test->ym, 1, i, x * x * x); /* y1 = x^3 */
+    ncm_matrix_set (test->ym, 2, i, cos (x));   /* y2 = cos(x) */
+  }
+}
+
+static void
+test_ncm_spline_vec_teardown (TestNcmSplineVec *test, gconstpointer pdata)
+{
+  ncm_spline_free (test->s_base);
+  ncm_vector_free (test->xv);
+  ncm_matrix_free (test->ym);
+}
+
 static void
 test_ncm_spline_vec_new (TestNcmSplineVec *test, gconstpointer pdata)
 {
@@ -349,110 +470,5 @@ test_ncm_spline_vec_empty_subprocess (void)
 
   ncm_vector_set_all (xv, 0.0);
   ncm_spline_vec_new_gpa (s, xv, yv, TRUE);
-}
-
-static void
-test_ncm_spline_vec_setup (TestNcmSplineVec *test, gconstpointer pdata)
-{
-  guint i;
-
-  test->nknots = 100;
-  test->nvec   = 3;
-  test->xi     = 0.0;
-  test->xf     = 10.0;
-
-  test->s_base = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  test->xv     = ncm_vector_new (test->nknots);
-  test->ym     = ncm_matrix_new (test->nvec, test->nknots);
-
-  for (i = 0; i < test->nknots; i++)
-  {
-    const gdouble x = test->xi + (test->xf - test->xi) * i / (test->nknots - 1.0);
-
-    ncm_vector_set (test->xv, i, x);
-
-    /* Initialize y values for each component with different functions */
-    ncm_matrix_set (test->ym, 0, i, x * x);     /* y0 = x^2 */
-    ncm_matrix_set (test->ym, 1, i, x * x * x); /* y1 = x^3 */
-    ncm_matrix_set (test->ym, 2, i, cos (x));   /* y2 = cos(x) */
-  }
-}
-
-static void
-test_ncm_spline_vec_teardown (TestNcmSplineVec *test, gconstpointer pdata)
-{
-  ncm_spline_free (test->s_base);
-  ncm_vector_free (test->xv);
-  ncm_matrix_free (test->ym);
-}
-
-int
-main (int argc, char *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/spline_vec/new", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_new,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/new_gpa", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_new_gpa,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/get_nknots", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_get_nknots,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/eval", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_eval,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/deriv", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_deriv,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/integ", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_integ,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/set", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_set,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/free", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_free,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/values", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_values,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/gpa_equiv", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_gpa_equiv,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add ("/ncm/spline_vec/bspline", TestNcmSplineVec, NULL,
-              &test_ncm_spline_vec_setup,
-              &test_ncm_spline_vec_bspline,
-              &test_ncm_spline_vec_teardown);
-
-  g_test_add_func ("/ncm/spline_vec/empty", &test_ncm_spline_vec_empty);
-  g_test_add_func ("/ncm/spline_vec/empty/subprocess", &test_ncm_spline_vec_empty_subprocess);
-
-  g_test_run ();
-
-  return 0;
 }
 

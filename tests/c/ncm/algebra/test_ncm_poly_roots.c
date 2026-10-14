@@ -39,6 +39,42 @@
 #include <glib-object.h>
 #include <gsl/gsl_poly.h>
 
+static void test_known_quadratic (void);
+static void test_known_quadratic_no_real_roots (void);
+static void test_known_cubic (void);
+static void test_known_quartic_all_real (void);
+static void test_known_quartic_two_real_two_complex (void);
+static void test_quartic_or_lower_degeneracy (void);
+static void test_random_cubic_matches_gsl (void);
+static void test_random_quartic_matches_gsl (void);
+static void test_random_cubic_matches_gsl_large (void);
+static void test_random_quartic_matches_gsl_large (void);
+static void test_quadratic_double_root (void);
+static void test_roots_increasing (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/poly_roots/known_quadratic", &test_known_quadratic);
+  g_test_add_func ("/ncm/poly_roots/known_quadratic_no_real_roots", &test_known_quadratic_no_real_roots);
+  g_test_add_func ("/ncm/poly_roots/quadratic_double_root", &test_quadratic_double_root);
+  g_test_add_func ("/ncm/poly_roots/roots_increasing", &test_roots_increasing);
+  g_test_add_func ("/ncm/poly_roots/known_cubic", &test_known_cubic);
+  g_test_add_func ("/ncm/poly_roots/known_quartic_all_real", &test_known_quartic_all_real);
+  g_test_add_func ("/ncm/poly_roots/known_quartic_two_real_two_complex", &test_known_quartic_two_real_two_complex);
+  g_test_add_func ("/ncm/poly_roots/quartic_or_lower_degeneracy", &test_quartic_or_lower_degeneracy);
+  g_test_add_func ("/ncm/poly_roots/random_cubic_matches_gsl", &test_random_cubic_matches_gsl);
+  g_test_add_func ("/ncm/poly_roots/random_quartic_matches_gsl", &test_random_quartic_matches_gsl);
+  g_test_add_func ("/ncm/poly_roots/random_cubic_matches_gsl/large", &test_random_cubic_matches_gsl_large);
+  g_test_add_func ("/ncm/poly_roots/random_quartic_matches_gsl/large", &test_random_quartic_matches_gsl_large);
+
+  return g_test_run ();
+}
+
 static void
 _sort (gdouble *x, gint n)
 {
@@ -358,28 +394,5 @@ test_roots_increasing (void)
 
   for (i = 1; i < n; i++)
     g_assert_cmpfloat (roots[i - 1], <, roots[i]);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/poly_roots/known_quadratic", &test_known_quadratic);
-  g_test_add_func ("/ncm/poly_roots/known_quadratic_no_real_roots", &test_known_quadratic_no_real_roots);
-  g_test_add_func ("/ncm/poly_roots/quadratic_double_root", &test_quadratic_double_root);
-  g_test_add_func ("/ncm/poly_roots/roots_increasing", &test_roots_increasing);
-  g_test_add_func ("/ncm/poly_roots/known_cubic", &test_known_cubic);
-  g_test_add_func ("/ncm/poly_roots/known_quartic_all_real", &test_known_quartic_all_real);
-  g_test_add_func ("/ncm/poly_roots/known_quartic_two_real_two_complex", &test_known_quartic_two_real_two_complex);
-  g_test_add_func ("/ncm/poly_roots/quartic_or_lower_degeneracy", &test_quartic_or_lower_degeneracy);
-  g_test_add_func ("/ncm/poly_roots/random_cubic_matches_gsl", &test_random_cubic_matches_gsl);
-  g_test_add_func ("/ncm/poly_roots/random_quartic_matches_gsl", &test_random_quartic_matches_gsl);
-  g_test_add_func ("/ncm/poly_roots/random_cubic_matches_gsl/large", &test_random_cubic_matches_gsl_large);
-  g_test_add_func ("/ncm/poly_roots/random_quartic_matches_gsl/large", &test_random_quartic_matches_gsl_large);
-
-  return g_test_run ();
 }
 

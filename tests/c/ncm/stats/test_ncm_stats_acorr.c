@@ -37,6 +37,8 @@ typedef struct _TestNcmStatsAcorr
   NcmStatsAcorr *acorr;
 } TestNcmStatsAcorr;
 
+#define TEST_ACORR_PREC (1.0e-9)
+
 void test_ncm_stats_acorr_new (TestNcmStatsAcorr *test, gconstpointer pdata);
 void test_ncm_stats_acorr_free (TestNcmStatsAcorr *test, gconstpointer pdata);
 
@@ -79,7 +81,92 @@ void test_ncm_stats_acorr_invalid_method (TestNcmStatsAcorr *test, gconstpointer
 void test_ncm_stats_acorr_invalid_ar_crit (TestNcmStatsAcorr *test, gconstpointer pdata);
 void test_ncm_stats_acorr_invalid_factor (TestNcmStatsAcorr *test, gconstpointer pdata);
 
-#define TEST_ACORR_PREC (1.0e-9)
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/stats_acorr/basic", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_basic,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/properties", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_properties,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/feed_equivalence", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_feed_equivalence,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/levels", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_levels,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/acf", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_acf,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/mean_error", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_mean_error,
+              &test_ncm_stats_acorr_free);
+
+  g_test_add_func ("/ncm/stats_acorr/estimator/ar1_analytic", &test_ncm_stats_acorr_est_ar1_analytic);
+  g_test_add_func ("/ncm/stats_acorr/estimator/ar2_analytic", &test_ncm_stats_acorr_est_ar2_analytic);
+  g_test_add_func ("/ncm/stats_acorr/estimator/white_analytic", &test_ncm_stats_acorr_est_white_analytic);
+  g_test_add_func ("/ncm/stats_acorr/estimator/degenerate", &test_ncm_stats_acorr_est_degenerate);
+  g_test_add_func ("/ncm/stats_acorr/estimator/not_positive_definite", &test_ncm_stats_acorr_est_not_positive_definite);
+  g_test_add_func ("/ncm/stats_acorr/estimator/ar_criteria", &test_ncm_stats_acorr_est_ar_criteria);
+  g_test_add_func ("/ncm/stats_acorr/ar_fit/coefficients", &test_ncm_stats_acorr_ar_fit_coefficients);
+
+  g_test_add_func ("/ncm/stats_acorr/exact_vs_fft", &test_ncm_stats_acorr_exact_vs_fft);
+  g_test_add_func ("/ncm/stats_acorr/acov_fft/all_lags", &test_ncm_stats_acorr_acov_fft_all_lags);
+  g_test_add_func ("/ncm/stats_acorr/recenter", &test_ncm_stats_acorr_recenter);
+
+  g_test_add_func ("/ncm/stats_acorr/tau/ar1_sampled", &test_ncm_stats_acorr_tau_ar1_sampled);
+  g_test_add_func ("/ncm/stats_acorr/tau/cascade", &test_ncm_stats_acorr_tau_cascade);
+
+  g_test_add_func ("/ncm/stats_acorr/diag/white", &test_ncm_stats_acorr_diag_white);
+  g_test_add_func ("/ncm/stats_acorr/diag/ramp", &test_ncm_stats_acorr_diag_ramp);
+  g_test_add_func ("/ncm/stats_acorr/diag/drift", &test_ncm_stats_acorr_diag_drift);
+  g_test_add_func ("/ncm/stats_acorr/diag/truncated", &test_ncm_stats_acorr_diag_truncated);
+  g_test_add_func ("/ncm/stats_acorr/diag/disagreement", &test_ncm_stats_acorr_diag_disagreement);
+  g_test_add_func ("/ncm/stats_acorr/diag/zero_variance", &test_ncm_stats_acorr_diag_zero_variance);
+  g_test_add_func ("/ncm/stats_acorr/diag/variance_shift", &test_ncm_stats_acorr_diag_variance_shift);
+  g_test_add_func ("/ncm/stats_acorr/diag/empty", &test_ncm_stats_acorr_diag_empty);
+  g_test_add_func ("/ncm/stats_acorr/diag/to_string", &test_ncm_stats_acorr_diag_to_string);
+
+  g_test_add ("/ncm/stats_acorr/traps", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_traps,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/invalid/var/subprocess", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_invalid_var,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/invalid/level/subprocess", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_invalid_level,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/invalid/method/subprocess", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_invalid_method,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/invalid/factor/subprocess", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_invalid_factor,
+              &test_ncm_stats_acorr_free);
+  g_test_add ("/ncm/stats_acorr/invalid/ar_crit/subprocess", TestNcmStatsAcorr, NULL,
+              &test_ncm_stats_acorr_new,
+              &test_ncm_stats_acorr_invalid_ar_crit,
+              &test_ncm_stats_acorr_free);
+
+  g_test_run ();
+
+  return 0;
+}
 
 /* An AR(1) process has C_k = rho^k and an integrated autocorrelation time of
  * (1 + rho) / (1 - rho). Both are exact, so the estimators are checked against a number
@@ -1255,92 +1342,5 @@ void
 test_ncm_stats_acorr_invalid_factor (TestNcmStatsAcorr *test, gconstpointer pdata)
 {
   ncm_stats_acorr_set_reliability_factor (test->acorr, 0.5);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/stats_acorr/basic", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_basic,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/properties", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_properties,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/feed_equivalence", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_feed_equivalence,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/levels", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_levels,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/acf", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_acf,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/mean_error", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_mean_error,
-              &test_ncm_stats_acorr_free);
-
-  g_test_add_func ("/ncm/stats_acorr/estimator/ar1_analytic", &test_ncm_stats_acorr_est_ar1_analytic);
-  g_test_add_func ("/ncm/stats_acorr/estimator/ar2_analytic", &test_ncm_stats_acorr_est_ar2_analytic);
-  g_test_add_func ("/ncm/stats_acorr/estimator/white_analytic", &test_ncm_stats_acorr_est_white_analytic);
-  g_test_add_func ("/ncm/stats_acorr/estimator/degenerate", &test_ncm_stats_acorr_est_degenerate);
-  g_test_add_func ("/ncm/stats_acorr/estimator/not_positive_definite", &test_ncm_stats_acorr_est_not_positive_definite);
-  g_test_add_func ("/ncm/stats_acorr/estimator/ar_criteria", &test_ncm_stats_acorr_est_ar_criteria);
-  g_test_add_func ("/ncm/stats_acorr/ar_fit/coefficients", &test_ncm_stats_acorr_ar_fit_coefficients);
-
-  g_test_add_func ("/ncm/stats_acorr/exact_vs_fft", &test_ncm_stats_acorr_exact_vs_fft);
-  g_test_add_func ("/ncm/stats_acorr/acov_fft/all_lags", &test_ncm_stats_acorr_acov_fft_all_lags);
-  g_test_add_func ("/ncm/stats_acorr/recenter", &test_ncm_stats_acorr_recenter);
-
-  g_test_add_func ("/ncm/stats_acorr/tau/ar1_sampled", &test_ncm_stats_acorr_tau_ar1_sampled);
-  g_test_add_func ("/ncm/stats_acorr/tau/cascade", &test_ncm_stats_acorr_tau_cascade);
-
-  g_test_add_func ("/ncm/stats_acorr/diag/white", &test_ncm_stats_acorr_diag_white);
-  g_test_add_func ("/ncm/stats_acorr/diag/ramp", &test_ncm_stats_acorr_diag_ramp);
-  g_test_add_func ("/ncm/stats_acorr/diag/drift", &test_ncm_stats_acorr_diag_drift);
-  g_test_add_func ("/ncm/stats_acorr/diag/truncated", &test_ncm_stats_acorr_diag_truncated);
-  g_test_add_func ("/ncm/stats_acorr/diag/disagreement", &test_ncm_stats_acorr_diag_disagreement);
-  g_test_add_func ("/ncm/stats_acorr/diag/zero_variance", &test_ncm_stats_acorr_diag_zero_variance);
-  g_test_add_func ("/ncm/stats_acorr/diag/variance_shift", &test_ncm_stats_acorr_diag_variance_shift);
-  g_test_add_func ("/ncm/stats_acorr/diag/empty", &test_ncm_stats_acorr_diag_empty);
-  g_test_add_func ("/ncm/stats_acorr/diag/to_string", &test_ncm_stats_acorr_diag_to_string);
-
-  g_test_add ("/ncm/stats_acorr/traps", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_traps,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/invalid/var/subprocess", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_invalid_var,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/invalid/level/subprocess", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_invalid_level,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/invalid/method/subprocess", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_invalid_method,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/invalid/factor/subprocess", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_invalid_factor,
-              &test_ncm_stats_acorr_free);
-  g_test_add ("/ncm/stats_acorr/invalid/ar_crit/subprocess", TestNcmStatsAcorr, NULL,
-              &test_ncm_stats_acorr_new,
-              &test_ncm_stats_acorr_invalid_ar_crit,
-              &test_ncm_stats_acorr_free);
-
-  g_test_run ();
-
-  return 0;
 }
 

@@ -38,6 +38,8 @@ typedef struct _TestNcmModel
   NcmReparam *reparam;
 } TestNcmModel;
 
+#define TEST_NCM_MODEL_NTYPES 5
+
 void test_ncm_model_new (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_new_modify (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_child_new (TestNcmModel *test, gconstpointer pdata);
@@ -70,8 +72,6 @@ void test_ncm_model_param_desc (void);
 void test_ncm_model_renamed_submodel_param (void);
 void test_ncm_model_vparam_set_vector_len (void);
 void test_ncm_model_vparam_set_vector_len_subprocess (void);
-
-#define TEST_NCM_MODEL_NTYPES 5
 
 gint
 main (gint argc, gchar *argv[])
@@ -319,6 +319,54 @@ void
 test_ncm_model_free (TestNcmModel *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (g_object_unref, test->tm);
+}
+
+/* A NcmModelMVND of dimension 2 under p_n = T p with T = [[1, 0.5], [0, 1]]. */
+static NcmReparam *
+_test_ncm_model_reparam_linear (void)
+{
+  NcmMatrix *T = ncm_matrix_new (2, 2);
+  NcmVector *v = ncm_vector_new (2);
+  NcmReparam *reparam;
+
+  ncm_matrix_set_identity (T);
+  ncm_matrix_set (T, 0, 1, 0.5);
+  ncm_vector_set_zero (v);
+
+  reparam = NCM_REPARAM (ncm_reparam_linear_new (2, T, v));
+
+  ncm_matrix_free (T);
+  ncm_vector_free (v);
+
+  return reparam;
+}
+
+static GValue *
+_test_ncm_model_gvalue_double (const gdouble x)
+{
+  GValue *value = g_new0 (GValue, 1);
+
+  g_value_init (value, G_TYPE_DOUBLE);
+  g_value_set_double (value, x);
+
+  return value;
+}
+
+static void
+_test_ncm_model_gvalue_free (gpointer data)
+{
+  g_value_unset (data);
+  g_free (data);
+}
+
+static void
+_test_ncm_model_vparam_set_vector_len (void)
+{
+  NcmModel *model = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmVector *v    = ncm_vector_new (3);
+
+  ncm_vector_set_zero (v);
+  ncm_model_orig_vparam_set_vector (model, 0, v);
 }
 
 void
@@ -891,26 +939,6 @@ test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata)
   g_assert_cmpuint (vparam_len, ==, test->vparam_len);
 }
 
-/* A NcmModelMVND of dimension 2 under p_n = T p with T = [[1, 0.5], [0, 1]]. */
-static NcmReparam *
-_test_ncm_model_reparam_linear (void)
-{
-  NcmMatrix *T = ncm_matrix_new (2, 2);
-  NcmVector *v = ncm_vector_new (2);
-  NcmReparam *reparam;
-
-  ncm_matrix_set_identity (T);
-  ncm_matrix_set (T, 0, 1, 0.5);
-  ncm_vector_set_zero (v);
-
-  reparam = NCM_REPARAM (ncm_reparam_linear_new (2, T, v));
-
-  ncm_matrix_free (T);
-  ncm_vector_free (v);
-
-  return reparam;
-}
-
 /* The param functions, the finite checks included, read the new parameters. */
 void
 test_ncm_model_reparam_current (void)
@@ -1024,24 +1052,6 @@ test_ncm_model_id_by_type_error (void)
   g_clear_error (&error);
 }
 
-static GValue *
-_test_ncm_model_gvalue_double (const gdouble x)
-{
-  GValue *value = g_new0 (GValue, 1);
-
-  g_value_init (value, G_TYPE_DOUBLE);
-  g_value_set_double (value, x);
-
-  return value;
-}
-
-static void
-_test_ncm_model_gvalue_free (gpointer data)
-{
-  g_value_unset (data);
-  g_free (data);
-}
-
 /* get_desc reports a parameter and set_desc changes it; unknown keys are one error. */
 void
 test_ncm_model_param_desc (void)
@@ -1104,16 +1114,6 @@ test_ncm_model_renamed_submodel_param (void)
   ncm_reparam_free (tau);
   ncm_model_free (cosmo);
   nc_hireion_free (reion);
-}
-
-static void
-_test_ncm_model_vparam_set_vector_len (void)
-{
-  NcmModel *model = NCM_MODEL (ncm_model_mvnd_new (2));
-  NcmVector *v    = ncm_vector_new (3);
-
-  ncm_vector_set_zero (v);
-  ncm_model_orig_vparam_set_vector (model, 0, v);
 }
 
 void

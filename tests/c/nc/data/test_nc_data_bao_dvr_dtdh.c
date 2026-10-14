@@ -86,11 +86,27 @@ test_nc_data_bao_dvr_dtdh_free (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
 }
 
 /* DESI DR1 2024 */
-
 void
 test_nc_data_bao_dvr_dtdh_new_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
 {
   NcDataBaoId id   = NC_DATA_BAO_DVR_DTDH_DESI_DR1_2024;
+  NcDistance *dist = nc_distance_new (3.0);
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_dvr_dtdh_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->dvdtdh = NC_DATA_BAO_DVR_DTDH (data);
+  g_assert_true (NC_IS_DATA_BAO_DVR_DTDH (data));
+
+  nc_distance_free (dist);
+}
+
+/* DESI DR2 2025 */
+void
+test_nc_data_bao_dvr_dtdh_new_desi_dr2_lrg_elg_qso_lya_2025 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
+{
+  NcDataBaoId id   = NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025;
   NcDistance *dist = nc_distance_new (3.0);
   NcmData *data;
 
@@ -174,24 +190,6 @@ test_nc_data_bao_dvr_dtdh_set_sample_desi_dr1_lrg_elg_2024 (TestNcDataBaoDvrDtDh
 
   ncm_matrix_free (cov);
   ncm_vector_free (x);
-}
-
-/* DESI DR2 2025 */
-
-void
-test_nc_data_bao_dvr_dtdh_new_desi_dr2_lrg_elg_qso_lya_2025 (TestNcDataBaoDvrDtDh *test, gconstpointer pdata)
-{
-  NcDataBaoId id   = NC_DATA_BAO_DVR_DTDH_DESI_DR2_2025;
-  NcDistance *dist = nc_distance_new (3.0);
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_dvr_dtdh_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->dvdtdh = NC_DATA_BAO_DVR_DTDH (data);
-  g_assert_true (NC_IS_DATA_BAO_DVR_DTDH (data));
-
-  nc_distance_free (dist);
 }
 
 void

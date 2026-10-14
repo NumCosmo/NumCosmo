@@ -43,7 +43,6 @@
  * path -- exactly the kind of gap this test-double idiom exists for (see
  * e.g. ncm_model_test.c).
  */
-
 #define TEST_TYPE_GALAXY_POSITION_FACTOR_BARE (test_galaxy_position_factor_bare_get_type ())
 
 G_DECLARE_FINAL_TYPE (TestGalaxyPositionFactorBare, test_galaxy_position_factor_bare, TEST, GALAXY_POSITION_FACTOR_BARE, NcGalaxyPositionFactor)
@@ -54,6 +53,22 @@ struct _TestGalaxyPositionFactorBare
 };
 
 G_DEFINE_TYPE (TestGalaxyPositionFactorBare, test_galaxy_position_factor_bare, NC_TYPE_GALAXY_POSITION_FACTOR)
+
+void test_nc_galaxy_position_factor_default_get_desc (void);
+
+int
+main (int argc, char *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/nc/galaxy_position_factor/default_get_desc", test_nc_galaxy_position_factor_default_get_desc);
+
+  g_test_run ();
+}
 
 static void
 test_galaxy_position_factor_bare_init (TestGalaxyPositionFactorBare *self)
@@ -84,22 +99,6 @@ test_galaxy_position_factor_bare_class_init (TestGalaxyPositionFactorBareClass *
   position_factor_class->data_init = &_test_galaxy_position_factor_bare_data_init;
   position_factor_class->gen       = &_test_galaxy_position_factor_bare_gen;
   position_factor_class->integ     = &_test_galaxy_position_factor_bare_integ;
-}
-
-void test_nc_galaxy_position_factor_default_get_desc (void);
-
-int
-main (int argc, char *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/nc/galaxy_position_factor/default_get_desc", test_nc_galaxy_position_factor_default_get_desc);
-
-  g_test_run ();
 }
 
 void

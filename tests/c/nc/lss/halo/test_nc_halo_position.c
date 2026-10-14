@@ -35,7 +35,6 @@
 #include <glib.h>
 #include <glib-object.h>
 
-
 typedef struct _TestNcHaloPosition
 {
   NcHaloPosition *hp;

@@ -42,6 +42,65 @@ typedef struct _TestNcmLHRatio2d
   NcmLHRatio2d *lhr2d;
 } TestNcmLHRatio2d;
 
+static void test_ncm_lh_ratio2d_new (TestNcmLHRatio2d *test, gconstpointer pdata);
+static void test_ncm_lh_ratio2d_free (TestNcmLHRatio2d *test, gconstpointer pdata);
+static void test_ncm_lh_ratio2d_fisher_border (TestNcmLHRatio2d *test, gconstpointer pdata);
+static void test_ncm_lh_ratio2d_conf_region (TestNcmLHRatio2d *test, gconstpointer pdata);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/ncm/lh_ratio2d/fisher_border", TestNcmLHRatio2d, NULL,
+              &test_ncm_lh_ratio2d_new,
+              &test_ncm_lh_ratio2d_fisher_border,
+              &test_ncm_lh_ratio2d_free);
+  g_test_add ("/ncm/lh_ratio2d/conf_region", TestNcmLHRatio2d, NULL,
+              &test_ncm_lh_ratio2d_new,
+              &test_ncm_lh_ratio2d_conf_region,
+              &test_ncm_lh_ratio2d_free);
+
+  g_test_run ();
+}
+
+/*
+ * The profile of -2 ln L over the third parameter is d^T M^-1 d, d the offset from the
+ * best fit and M the leading 2x2 block of the data covariance, so every border point at
+ * confidence level cl has d^T M^-1 d = chi2_2 (cl). Returns the largest relative
+ * deviation.
+ */
+static gdouble
+_test_ncm_lh_ratio2d_border_dev (TestNcmLHRatio2d *test, NcmLHRatio2dRegion *rg)
+{
+  NcmMatrix *C       = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
+  NcmMSet *mset      = ncm_fit_peek_mset (test->fit);
+  const gdouble m00  = ncm_matrix_get (C, 0, 0);
+  const gdouble m01  = ncm_matrix_get (C, 0, 1);
+  const gdouble m11  = ncm_matrix_get (C, 1, 1);
+  const gdouble det  = m00 * m11 - m01 * m01;
+  const gdouble bf0  = ncm_mset_param_get (mset, ncm_model_mvnd_id (), 0);
+  const gdouble bf1  = ncm_mset_param_get (mset, ncm_model_mvnd_id (), 1);
+  const gdouble chi2 = gsl_cdf_chisq_Qinv (1.0 - rg->clevel, 2.0);
+  gdouble dev        = 0.0;
+  guint i;
+
+  for (i = 0; i < rg->np; i++)
+  {
+    const gdouble d0 = ncm_vector_get (rg->p1, i) - bf0;
+    const gdouble d1 = ncm_vector_get (rg->p2, i) - bf1;
+    const gdouble q  = (m11 * d0 * d0 - 2.0 * m01 * d0 * d1 + m00 * d1 * d1) / det;
+
+    dev = GSL_MAX (dev, fabs (q / chi2 - 1.0));
+  }
+
+  return dev;
+}
+
 static void
 test_ncm_lh_ratio2d_new (TestNcmLHRatio2d *test, gconstpointer pdata)
 {
@@ -82,39 +141,6 @@ test_ncm_lh_ratio2d_free (TestNcmLHRatio2d *test, gconstpointer pdata)
   ncm_data_gauss_cov_mvnd_free (test->data_mvnd);
 }
 
-/*
- * The profile of -2 ln L over the third parameter is d^T M^-1 d, d the offset from the
- * best fit and M the leading 2x2 block of the data covariance, so every border point at
- * confidence level cl has d^T M^-1 d = chi2_2 (cl). Returns the largest relative
- * deviation.
- */
-static gdouble
-_test_ncm_lh_ratio2d_border_dev (TestNcmLHRatio2d *test, NcmLHRatio2dRegion *rg)
-{
-  NcmMatrix *C       = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
-  NcmMSet *mset      = ncm_fit_peek_mset (test->fit);
-  const gdouble m00  = ncm_matrix_get (C, 0, 0);
-  const gdouble m01  = ncm_matrix_get (C, 0, 1);
-  const gdouble m11  = ncm_matrix_get (C, 1, 1);
-  const gdouble det  = m00 * m11 - m01 * m01;
-  const gdouble bf0  = ncm_mset_param_get (mset, ncm_model_mvnd_id (), 0);
-  const gdouble bf1  = ncm_mset_param_get (mset, ncm_model_mvnd_id (), 1);
-  const gdouble chi2 = gsl_cdf_chisq_Qinv (1.0 - rg->clevel, 2.0);
-  gdouble dev        = 0.0;
-  guint i;
-
-  for (i = 0; i < rg->np; i++)
-  {
-    const gdouble d0 = ncm_vector_get (rg->p1, i) - bf0;
-    const gdouble d1 = ncm_vector_get (rg->p2, i) - bf1;
-    const gdouble q  = (m11 * d0 * d0 - 2.0 * m01 * d0 * d1 + m00 * d1 * d1) / det;
-
-    dev = GSL_MAX (dev, fabs (q / chi2 - 1.0));
-  }
-
-  return dev;
-}
-
 static void
 test_ncm_lh_ratio2d_fisher_border (TestNcmLHRatio2d *test, gconstpointer pdata)
 {
@@ -139,26 +165,5 @@ test_ncm_lh_ratio2d_conf_region (TestNcmLHRatio2d *test, gconstpointer pdata)
   g_assert_cmpfloat (_test_ncm_lh_ratio2d_border_dev (test, rg), <, 1.0e-8);
 
   ncm_lh_ratio2d_region_free (rg);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/ncm/lh_ratio2d/fisher_border", TestNcmLHRatio2d, NULL,
-              &test_ncm_lh_ratio2d_new,
-              &test_ncm_lh_ratio2d_fisher_border,
-              &test_ncm_lh_ratio2d_free);
-  g_test_add ("/ncm/lh_ratio2d/conf_region", TestNcmLHRatio2d, NULL,
-              &test_ncm_lh_ratio2d_new,
-              &test_ncm_lh_ratio2d_conf_region,
-              &test_ncm_lh_ratio2d_free);
-
-  g_test_run ();
 }
 

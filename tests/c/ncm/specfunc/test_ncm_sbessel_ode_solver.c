@@ -40,6 +40,61 @@
 
 #include "test_ncm_sbessel_arb_cases.h"
 
+#define TEST_A 1.0
+#define TEST_B 20.0
+#define TEST_H (0.5 * (TEST_B - TEST_A))
+#define TEST_M (0.5 * (TEST_A + TEST_B))
+
+typedef gdouble (*TestFx) (gdouble x);
+
+typedef enum _TestGreenForcing
+{
+  TEST_GREEN_ONE = 0,
+  TEST_GREEN_X,
+} TestGreenForcing;
+
+/*
+ * Stored rotations: a solve on an operator that already holds a factorization reuses
+ * its rotations and extends them when the new right-hand side needs more columns. The
+ * result must equal a solve on a new operator: same solution length and coefficients to
+ * |reused - new| <= rtol |new| + rtol max |new| per multipole.
+ */
+typedef struct _TestCoeff
+{
+  guint k;
+  gdouble value;
+} TestCoeff;
+
+/*
+ * The tau constraint against Dirichlet data, ell 20, solver tolerance 1e-12. The forcing
+ * is x F (x) with F a Gaussian centred on the panel [a, b] of width 0.35 h (h the
+ * half-width), expanded to Chebyshev order 96 and converted to C^(2). The boundary
+ * functional W(b) - W(a), W = x j_l u' - (x j_l)' u, is invariant under adding
+ * homogeneous solutions, so both constraints give the same panel integral int F j_l dx.
+ */
+#define TEST_TAU_ELL 20
+#define TEST_TAU_A 1.0e4
+#define TEST_TAU_B 31622.776601683792 /* 10^4.5 */
+
+typedef struct _TestBump
+{
+  gdouble a;
+  gdouble b;
+  gdouble center;
+  gdouble width;
+} TestBump;
+
+/*
+ * The tau working order and the roundoff bound it implies, on [1e4, 10^4.5] at ell 20:
+ * the forcing is x F (x), F a Gaussian of width 0.25 h, expanded adaptively in x
+ * (level 3, tolerance 1e-13) and converted to C^(2).
+ */
+typedef struct _TestXBump
+{
+  gdouble center;
+  gdouble width;
+} TestXBump;
+
 void test_ncm_sbessel_ode_solver_solve_values (void);
 void test_ncm_sbessel_ode_solver_batched_convergence (void);
 void test_ncm_sbessel_ode_solver_qr_vs_lu (void);
@@ -106,6 +161,108 @@ void test_ncm_sbessel_ode_solver_deriv_bound_separates (void);
 void test_ncm_sbessel_ode_solver_conjugate_dirichlet_fails (void);
 void test_ncm_sbessel_ode_solver_conjugate_pinned (void);
 void test_ncm_sbessel_ode_solver_conjugate_away (void);
+
+static const guint test_zero_ells[] = {0, 1, 5, 10, 20};
+
+static const guint test_zero_ns[] = {32, 64, 128};
+
+/*
+ * Green's identity: with zero Dirichlet data and forcing g, the solution u satisfies
+ * b j_l(b) u'(b) - a j_l(a) u'(a) = int_a^b g(x) j_l(x) / x dx. The forcing 1 (rhs[2] = 1)
+ * gives int_1^20 j_l / x dx and the forcing x (rhs[2] = m, rhs[3] = h / 4) gives
+ * int_1^20 j_l dx, certified by make_sbessel_arb_cases.py ode.
+ */
+static const TestArbCell test_arb_cells[] = {
+  /* BEGIN make_sbessel_arb_cases.py ode */
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 0, 1.0, 0.5028396202159003},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 1, 1.0, 0.4607245247899321},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 2, 1.0, 0.3020747659379493},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 3, 1.0, 0.19574779143238527},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 4, 1.0, 0.1330169948034595},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 5, 1.0, 0.0956047082381122},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 6, 1.0, 0.07484428607483702},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 7, 1.0, 0.06312019765201392},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 8, 1.0, 0.05352439806530906},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 9, 1.0, 0.04344865430572876},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 10, 1.0, 0.03453229048880144},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 11, 1.0, 0.029113904722431434},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 12, 1.0, 0.027378313816413244},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 13, 1.0, 0.02736466382665843},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 14, 1.0, 0.026730174217619293},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 15, 1.0, 0.02423940889318163},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 16, 1.0, 0.02004830157463489},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 17, 1.0, 0.015109047820065719},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 18, 1.0, 0.01042813195282212},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 19, 1.0, 0.006635382719972067},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 20, 1.0, 0.003917880565087803},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.6021586306762569},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 1, 1.0, 0.7958237222715151},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 2, 1.0, 0.7800149436935394},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 3, 1.0, 0.7145501074182314},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 4, 1.0, 0.5902195963331576},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.48260284581290397},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 6, 1.0, 0.4614321942860765},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 7, 1.0, 0.49037287315997735},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 8, 1.0, 0.48537077049413235},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 9, 1.0, 0.41954189395027663},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 10, 1.0, 0.34015366131471403},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 11, 1.0, 0.3056362063145535},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 12, 1.0, 0.3294661473012089},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 13, 1.0, 0.3788216390957776},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 14, 1.0, 0.40937977601856873},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 15, 1.0, 0.39635341321518186},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 16, 1.0, 0.34204189967006177},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 17, 1.0, 0.2652405387477694},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 18, 1.0, 0.1867747740322384},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 19, 1.0, 0.12060034350664904},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 20, 1.0, 0.07200515204667218},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 0, 1.0, 0.13222024405474772},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 5, 1.0, 1.9425860132872468},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 10, 1.0, 3.1777343624297174},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 15, 1.0, 6.583316123648764},
+  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 0, 1.0, -7.549864664479969},
+  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 5, 1.0, -3.7098496929237466},
+  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 10, 1.0, 25.794284875856388},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 0, 1.0, 274557.9565997802},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 2, 1.0, -405905.43815627106},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 3, 1.0, 747820.6721892703},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 4, 1.0, 679786.3761393836},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 5, 1.0, -443105.4051754701},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 6, 1.0, -943851.7547431279},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 7, 1.0, -182667.5296970764},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 8, 1.0, 826212.2069565651},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 10, 1.0, 57612.98468184247},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.6479721092843543},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 2, 1.0, 0.006110573663597096},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 3, 1.0, -0.08111944835354816},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 4, 1.0, -0.02449089352950558},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 0.02363007923070094},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 6, 1.0, 0.02066418140989152},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 7, 1.0, -0.0021544967305790973},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 8, 1.0, -0.012897440654211665},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 0.0022078534135041633},
+  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.0320600635222009},
+  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 0.022739400291948583},
+  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 0.008890728940125823},
+  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.08192634928161613},
+  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 4.873451437933564e-05},
+  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 7.802205812987952e-10},
+  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 0, 1.0, 0.17909599346737495},
+  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 5, 1.0, 0.0037861935193706244},
+  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 10, 1.0, 0.0003449988561628076},
+  {"tau_narrow", TEST_ARB_GAUSS, 100.0, 316.22776601683796, 208.11388300841898, 37.83985905294664, 0, FALSE, 20, 1.0, 3.470494682971913e-05},
+  {"deriv_bound_30", TEST_ARB_GAUSS, 1000.0, 1030.0, 1015.0, 3.75, 0, FALSE, 20, 1.0, -3.8384799978730775e-06},
+  {"deriv_bound_60", TEST_ARB_GAUSS, 1000.0, 1060.0, 1030.0, 7.5, 0, FALSE, 20, 1.0, 1.2305957763076221e-07},
+  {"deriv_bound_100", TEST_ARB_GAUSS, 1000.0, 1100.0, 1050.0, 12.5, 0, FALSE, 20, 1.0, -2.530161116525624e-07},
+  {"deriv_bound_150", TEST_ARB_GAUSS, 1000.0, 1150.0, 1075.0, 18.75, 0, FALSE, 20, 1.0, -2.2501000047625404e-07},
+  {"deriv_bound_250", TEST_ARB_GAUSS, 1000.0, 1250.0, 1125.0, 31.25, 0, FALSE, 20, 1.0, -1.675615103467387e-07},
+  {"deriv_bound_3000", TEST_ARB_GAUSS, 1000.0, 4000.0, 2500.0, 375.0, 0, FALSE, 20, 1.0, 1.824908439349761e-07},
+  {"conjugate", TEST_ARB_GAUSS, 200.0, 225.13441585600583, 212.56720792800292, 4.39852277480102, 0, FALSE, 2, 1.0, -6.780495041869413e-05},
+  {"conjugate_away", TEST_ARB_GAUSS, 200.0, 225.14441585600582, 212.5722079280029, 4.400272774801018, 0, FALSE, 2, 1.0, -6.719000261353115e-05},
+  /* END make_sbessel_arb_cases.py ode */
+};
+
+static const guint test_green_ells[] = {0, 1, 5, 10, 20};
 
 gint
 main (gint argc, gchar *argv[])
@@ -183,11 +340,6 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-#define TEST_A 1.0
-#define TEST_B 20.0
-#define TEST_H (0.5 * (TEST_B - TEST_A))
-#define TEST_M (0.5 * (TEST_A + TEST_B))
-
 /* |actual - desired| <= atol + rtol |desired|, the numpy assert_allclose criterion */
 static void
 _test_assert_close (gdouble actual, gdouble desired, gdouble rtol, gdouble atol)
@@ -230,8 +382,6 @@ _test_rhs_decaying (guint n)
 
   return rhs;
 }
-
-typedef gdouble (*TestFx) (gdouble x);
 
 static gdouble
 _test_cheb_func (gpointer user_data, gdouble t)
@@ -310,6 +460,664 @@ _test_values (GArray *c, gdouble a, gdouble b, gdouble x0, gdouble x1, gdouble v
   v[1] = ncm_spectral_chebyshev_deriv_x (c, a, b, x0);
   v[2] = ncm_spectral_chebyshev_eval (c, (2.0 * x1 - a - b) / (b - a));
   v[3] = ncm_spectral_chebyshev_deriv_x (c, a, b, x1);
+}
+
+/* The solution of the n x n operator matrix for @rhs by LU (NcmMatrix has no general LU, so GSL's on its storage) */
+static NcmVector *
+_test_lu_solve (NcmSBesselOdeSolver *solver, guint ell, guint n, GArray *rhs)
+{
+  NcmMatrix *mat     = ncm_sbessel_ode_solver_get_operator_matrix (solver, TEST_A, TEST_B, ell, n);
+  NcmVector *b       = ncm_vector_new_array (rhs);
+  NcmVector *x       = ncm_vector_new (n);
+  gsl_permutation *p = gsl_permutation_alloc (n);
+  gint signum;
+
+  g_assert_cmpuint (ncm_matrix_nrows (mat), ==, n);
+  g_assert_cmpuint (ncm_matrix_ncols (mat), ==, n);
+  g_assert_cmpuint (ncm_vector_len (b), ==, n);
+
+  g_assert_cmpint (gsl_linalg_LU_decomp (ncm_matrix_gsl (mat), p, &signum), ==, GSL_SUCCESS);
+  g_assert_cmpint (gsl_linalg_LU_solve (ncm_matrix_gsl (mat), p, ncm_vector_const_gsl (b), ncm_vector_gsl (x)), ==, GSL_SUCCESS);
+
+  gsl_permutation_free (p);
+  ncm_vector_free (b);
+  ncm_matrix_free (mat);
+
+  return x;
+}
+
+/*
+ * A batched solve against single-multipole solves: the batch is at least as long as
+ * each single solve, and each row agrees with the zero-padded single solution to
+ * |d| <= rtol |s| + atol_factor max |s|.
+ */
+static void
+_test_compare_batched_solve (NcmSBesselOdeSolver *solver, gint ell_min, gint ell_max, GArray *rhs, gdouble rtol, gdouble atol_factor)
+{
+  GArray *sol = NULL;
+  gsize len;
+  NcmSBesselOdeOperator *op = _test_solve (solver, TEST_A, TEST_B, ell_min, ell_max, rhs, &sol, &len);
+  gint ell;
+  guint j;
+
+  for (ell = ell_min; ell <= ell_max; ell++)
+  {
+    GArray *single = NULL;
+    gsize single_len;
+    NcmSBesselOdeOperator *sop = _test_solve (solver, TEST_A, TEST_B, ell, ell, rhs, &single, &single_len);
+    const gdouble scale        = _test_absmax (single);
+
+    g_assert_cmpuint (len, >=, single_len);
+
+    for (j = 0; j < len; j++)
+    {
+      const gdouble s = (j < single_len) ? g_array_index (single, gdouble, j) : 0.0;
+
+      _test_assert_close (g_array_index (sol, gdouble, (ell - ell_min) * len + j), s, rtol, atol_factor * scale);
+    }
+
+    g_array_unref (single);
+    ncm_sbessel_ode_operator_unref (sop);
+  }
+
+  g_array_unref (sol);
+  ncm_sbessel_ode_operator_unref (op);
+}
+
+/*
+ * The same for solve_endpoints: (u'(a), u'(b)) and, when @with_error, the error estimate,
+ * to |d| <= rtol |s| + atol_factor max (|u'(a)|, |u'(b)|).
+ */
+static void
+_test_compare_batched_endpoints (NcmSBesselOdeSolver *solver, gint ell_min, gint ell_max, GArray *rhs, gdouble rtol, gdouble atol_factor, gboolean with_error)
+{
+  NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, ell_min, ell_max);
+  GArray *batched           = NULL;
+  gint ell;
+  guint j;
+
+  ncm_sbessel_ode_operator_solve_endpoints (op, rhs, &batched);
+  g_assert_cmpuint (batched->len, ==, 3 * (ell_max - ell_min + 1));
+
+  for (ell = ell_min; ell <= ell_max; ell++)
+  {
+    NcmSBesselOdeOperator *sop = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, ell, ell);
+    GArray *single             = NULL;
+    gdouble scale;
+
+    ncm_sbessel_ode_operator_solve_endpoints (sop, rhs, &single);
+    scale = GSL_MAX (fabs (g_array_index (single, gdouble, 0)), fabs (g_array_index (single, gdouble, 1)));
+
+    for (j = 0; j < (with_error ? 3 : 2); j++)
+      _test_assert_close (g_array_index (batched, gdouble, 3 * (ell - ell_min) + j), g_array_index (single, gdouble, j), rtol, atol_factor * scale);
+
+    g_array_unref (single);
+    ncm_sbessel_ode_operator_unref (sop);
+  }
+
+  g_array_unref (batched);
+  ncm_sbessel_ode_operator_unref (op);
+}
+
+static gdouble
+_test_exp (gdouble x)
+{
+  return exp (x);
+}
+
+static gdouble
+_test_sin (gdouble x)
+{
+  return sin (x);
+}
+
+static void
+_test_assert_endpoints_finite (GArray *endpoints, guint n_ell)
+{
+  guint l;
+
+  g_assert_cmpuint (endpoints->len, ==, 3 * n_ell);
+
+  for (l = 0; l < n_ell; l++)
+  {
+    g_assert_true (gsl_finite (g_array_index (endpoints, gdouble, 3 * l + 0)));
+    g_assert_true (gsl_finite (g_array_index (endpoints, gdouble, 3 * l + 1)));
+    g_assert_true (gsl_finite (g_array_index (endpoints, gdouble, 3 * l + 2)));
+    g_assert_cmpfloat (g_array_index (endpoints, gdouble, 3 * l + 2), >=, 0.0);
+  }
+}
+
+static void
+_test_assert_accessors (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tol)
+{
+  gdouble a_out, b_out;
+  gint lo, hi;
+
+  ncm_sbessel_ode_operator_get_interval (op, &a_out, &b_out);
+  ncm_sbessel_ode_operator_get_ell_range (op, &lo, &hi);
+
+  _test_assert_close (a_out, a, 1.0e-15, 1.0e-15);
+  _test_assert_close (b_out, b, 1.0e-15, 1.0e-15);
+  g_assert_cmpint (lo, ==, ell_min);
+  g_assert_cmpint (hi, ==, ell_max);
+  _test_assert_close (ncm_sbessel_ode_operator_get_tolerance (op), tol, 1.0e-15, 1.0e-15);
+}
+
+/* At least one entry differs beyond numpy allclose (rtol 1e-10, atol 1e-8); equal lengths required */
+static gboolean
+_test_differ (GArray *x, GArray *y)
+{
+  gboolean differ = FALSE;
+  guint j;
+
+  g_assert_cmpuint (x->len, ==, y->len);
+
+  for (j = 0; j < x->len; j++)
+    differ = differ || (fabs (g_array_index (x, gdouble, j) - g_array_index (y, gdouble, j)) > 1.0e-8 + 1.0e-10 * fabs (g_array_index (y, gdouble, j)));
+
+  return differ;
+}
+
+static GArray *
+_test_green_rhs (TestGreenForcing forcing)
+{
+  const gdouble f_x[] = {TEST_M, 0.25 * TEST_H};
+
+  return (forcing == TEST_GREEN_ONE) ? _test_rhs_const (128, 1.0) : _test_rhs_new (128, f_x, G_N_ELEMENTS (f_x));
+}
+
+/* The certified int g j_l / x dx of the forcing at ell */
+static gdouble
+_test_green_value (TestGreenForcing forcing, guint ell)
+{
+  guint n;
+  const TestArbCell *c = test_arb_cells_find (test_arb_cells, G_N_ELEMENTS (test_arb_cells),
+                                              (forcing == TEST_GREEN_ONE) ? "green_inv_x" : "green_one", &n);
+
+  g_assert_cmpuint (ell, <, n);
+  g_assert_cmpuint (c[ell].ell, ==, ell);
+
+  return c[ell].value;
+}
+
+/* b j_l(b) u'(b) - a j_l(a) u'(a) held to a certified integral, rtol 1e-8, atol 1e-20 */
+static void
+_test_green_assert (guint ell, gdouble du_a, gdouble du_b, gdouble value)
+{
+  const gdouble lhs = TEST_B * ncm_sf_sbessel (ell, TEST_B) * du_b - TEST_A * ncm_sf_sbessel (ell, TEST_A) * du_a;
+
+  _test_assert_close (lhs, value, 1.0e-8, 1.0e-20);
+}
+
+static void
+_test_green_check (TestGreenForcing forcing, guint ell, gdouble du_a, gdouble du_b)
+{
+  _test_green_assert (ell, du_a, du_b, _test_green_value (forcing, ell));
+}
+
+/* u'(a), u'(b) of Chebyshev coefficients on [1, 20] */
+static void
+_test_green_check_coeffs (TestGreenForcing forcing, guint ell, GArray *u)
+{
+  _test_green_check (forcing, ell, ncm_spectral_chebyshev_deriv (u, -1.0) / TEST_H, ncm_spectral_chebyshev_deriv (u, +1.0) / TEST_H);
+}
+
+/* The forcing g (x) of a certified row at x = m + h t: the row's shape without the 1 / x */
+static gdouble
+_test_cheb_cell (gpointer user_data, gdouble t)
+{
+  const TestArbCell *c = (const TestArbCell *) user_data;
+
+  return test_arb_cell_shape (c, TEST_M + TEST_H * t);
+}
+
+/*
+ * Checks one solution for the forcing of row @c: finite, not identically zero, u(a) =
+ * u(b) = 0 to @bc_atol, and Green's identity against the row's certified
+ * int_1^20 g j_l / x dx.
+ */
+static void
+_test_forcing_check (const TestArbCell *c, GArray *u, gdouble bc_atol)
+{
+  guint j;
+  gboolean nonzero = FALSE;
+
+  for (j = 0; j < u->len; j++)
+  {
+    g_assert_true (gsl_finite (g_array_index (u, gdouble, j)));
+    nonzero = nonzero || (fabs (g_array_index (u, gdouble, j)) > 1.0e-10);
+  }
+
+  g_assert_true (nonzero);
+  g_assert_cmpfloat (fabs (ncm_spectral_chebyshev_eval (u, -1.0)), <=, bc_atol);
+  g_assert_cmpfloat (fabs (ncm_spectral_chebyshev_eval (u, +1.0)), <=, bc_atol);
+
+  _test_green_assert (c->ell, ncm_spectral_chebyshev_deriv (u, -1.0) / TEST_H, ncm_spectral_chebyshev_deriv (u, +1.0) / TEST_H, c->value);
+}
+
+/*
+ * Memory and reuse of one operator across solves of different right-hand sides. Every
+ * solve on the reused operator is also done on a new operator and the two agree to
+ * |reused - new| <= 1e-12 |new| + 1e-12 max |new| (the shorter zero-padded); the stored
+ * capacity (get_operator_size) never decreases and n_cols is positive after a solve.
+ */
+static GArray *
+_test_rhs_unit (guint order, guint min_len, gdouble value)
+{
+  GArray *rhs = _test_rhs_new (GSL_MAX (min_len, order + 4), NULL, 0);
+
+  g_array_index (rhs, gdouble, order) = value;
+
+  return rhs;
+}
+
+static void
+_test_assert_same_padded (GArray *x, gsize x_len, GArray *y, gsize y_len, guint n_ell)
+{
+  const gsize len = GSL_MAX (x_len, y_len);
+  guint l, j;
+
+  for (l = 0; l < n_ell; l++)
+  {
+    gdouble scale = 0.0;
+
+    for (j = 0; j < y_len; j++)
+      scale = GSL_MAX (scale, fabs (g_array_index (y, gdouble, l * y_len + j)));
+
+    for (j = 0; j < len; j++)
+    {
+      const gdouble xv = (j < x_len) ? g_array_index (x, gdouble, l * x_len + j) : 0.0;
+      const gdouble yv = (j < y_len) ? g_array_index (y, gdouble, l * y_len + j) : 0.0;
+
+      g_assert_true (gsl_finite (xv));
+      _test_assert_close (xv, yv, 1.0e-12, 1.0e-12 * scale);
+    }
+  }
+}
+
+/*
+ * Solves @rhs on @op, checks the invariants (capacity >= *capacity, n_cols > 0, a
+ * non-empty finite solution) and the agreement with a new operator; updates *capacity
+ * and returns the solution (*len per multipole).
+ */
+static GArray *
+_test_memory_solve (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, GArray *rhs, gsize *capacity, gsize *len)
+{
+  GArray *sol   = NULL;
+  GArray *fresh = NULL;
+  gsize fresh_len;
+  gint ell_min, ell_max;
+  NcmSBesselOdeOperator *fop;
+
+  ncm_sbessel_ode_operator_get_ell_range (op, &ell_min, &ell_max);
+  ncm_sbessel_ode_operator_solve (op, rhs, &sol, len);
+
+  g_assert_cmpuint (ncm_sbessel_ode_operator_get_operator_size (op), >=, *capacity);
+  *capacity = ncm_sbessel_ode_operator_get_operator_size (op);
+  g_assert_cmpuint (*capacity, >, 0);
+  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), >, 0);
+  g_assert_cmpuint (*len, >, 0);
+
+  fop = _test_solve (solver, TEST_A, TEST_B, ell_min, ell_max, rhs, &fresh, &fresh_len);
+  _test_assert_same_padded (sol, *len, fresh, fresh_len, ell_max - ell_min + 1);
+
+  g_array_unref (fresh);
+  ncm_sbessel_ode_operator_unref (fop);
+
+  return sol;
+}
+
+/* Runs @n right-hand sides rhs[orders[i]] = values[i] (length at least @min_len) through one operator */
+static void
+_test_memory_sequence (gint ell_min, gint ell_max, const guint *orders, const gdouble *values, guint n, guint min_len)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, ell_min, ell_max);
+  gsize capacity              = 0;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    GArray *rhs = _test_rhs_unit (orders[i], min_len, (values != NULL) ? values[i] : 1.0);
+    gsize len;
+    GArray *sol = _test_memory_solve (solver, op, rhs, &capacity, &len);
+
+    g_array_unref (sol);
+    g_array_unref (rhs);
+  }
+
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* A right-hand side of length n with zero endpoint data and the listed coefficients */
+static GArray *
+_test_rhs_sparse (guint n, const TestCoeff *c, guint n_c)
+{
+  GArray *rhs = _test_rhs_new (n, NULL, 0);
+  guint i;
+
+  for (i = 0; i < n_c; i++)
+    g_array_index (rhs, gdouble, c[i].k) = c[i].value;
+
+  return rhs;
+}
+
+static void
+_test_assert_same (GArray *x, gsize x_len, GArray *y, gsize y_len, guint n_ell, gdouble rtol)
+{
+  guint l, j;
+
+  g_assert_cmpuint (x_len, ==, y_len);
+
+  for (l = 0; l < n_ell; l++)
+  {
+    gdouble scale = 0.0;
+
+    for (j = 0; j < y_len; j++)
+      scale = GSL_MAX (scale, fabs (g_array_index (y, gdouble, l * y_len + j)));
+
+    for (j = 0; j < y_len; j++)
+      _test_assert_close (g_array_index (x, gdouble, l * x_len + j), g_array_index (y, gdouble, l * y_len + j), rtol, rtol * scale);
+  }
+}
+
+/* The largest |coefficient| of row l */
+static gdouble
+_test_row_absmax (GArray *sol, gsize len, guint l)
+{
+  GArray *row         = _test_row (sol, len, l);
+  const gdouble scale = _test_absmax (row);
+
+  g_array_unref (row);
+
+  return scale;
+}
+
+/*
+ * Solves @rhs on @op and on a new operator over the same interval and multipoles,
+ * checks the agreement to @rtol and returns the reused solution; *n_cols_new receives
+ * the new operator's n_cols.
+ */
+static GArray *
+_test_reused_vs_new (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, GArray *rhs, gdouble rtol, gsize *len, glong *n_cols_new)
+{
+  GArray *sol   = NULL;
+  GArray *fresh = NULL;
+  gsize fresh_len;
+  gdouble a, b;
+  gint ell_min, ell_max;
+  NcmSBesselOdeOperator *fop;
+
+  ncm_sbessel_ode_operator_get_interval (op, &a, &b);
+  ncm_sbessel_ode_operator_get_ell_range (op, &ell_min, &ell_max);
+
+  ncm_sbessel_ode_operator_solve (op, rhs, &sol, len);
+  fop = _test_solve (solver, a, b, ell_min, ell_max, rhs, &fresh, &fresh_len);
+
+  _test_assert_same (sol, *len, fresh, fresh_len, ell_max - ell_min + 1, rtol);
+
+  if (n_cols_new != NULL)
+    *n_cols_new = ncm_sbessel_ode_operator_get_n_cols (fop);
+
+  g_array_unref (fresh);
+  ncm_sbessel_ode_operator_unref (fop);
+
+  return sol;
+}
+
+static gdouble
+_test_bump_x_cheb (gpointer user_data, gdouble t)
+{
+  const TestBump *p = (const TestBump *) user_data;
+  const gdouble x   = 0.5 * (p->a + p->b) + 0.5 * (p->b - p->a) * t;
+
+  return x * exp (-0.5 * gsl_pow_2 ((x - p->center) / p->width));
+}
+
+/* x F (x) on [a, b], F the Gaussian (center, width), at Chebyshev order 96 */
+static GArray *
+_test_tau_rhs (const TestBump *p)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  GArray *cheb          = NULL;
+  GArray *gegen         = NULL;
+  GArray *rhs;
+
+  ncm_spectral_compute_chebyshev_coeffs (spectral, &_test_bump_x_cheb, -1.0, 1.0, 96, &cheb, (gpointer) p);
+  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb, &gegen);
+  rhs = _test_rhs_new (gegen->len + 2, (const gdouble *) gegen->data, gegen->len);
+
+  g_array_unref (cheb);
+  g_array_unref (gegen);
+  ncm_spectral_free (spectral);
+
+  return rhs;
+}
+
+static TestBump
+_test_tau_bump (gdouble a, gdouble b)
+{
+  TestBump p = {a, b, 0.5 * (a + b), 0.35 * 0.5 * (b - a)};
+
+  return p;
+}
+
+/* j_l'(x), as scipy's spherical_jn(derivative=True) computes it */
+static gdouble
+_test_jl_deriv (guint ell, gdouble x)
+{
+  if (ell == 0)
+    return -ncm_sf_sbessel (1, x);
+
+  return ncm_sf_sbessel (ell - 1, x) - (ell + 1.0) / x * ncm_sf_sbessel (ell, x);
+}
+
+/* W(b) - W(a), W = x j_l u' - (j_l + x j_l') u, for the Chebyshev series @u on [a, b] */
+static gdouble
+_test_boundary_functional (GArray *u, gdouble a, gdouble b, guint ell)
+{
+  const gdouble h = 0.5 * (b - a);
+  gdouble w[2];
+  guint i;
+
+  for (i = 0; i < 2; i++)
+  {
+    const gdouble t  = (i == 0) ? -1.0 : 1.0;
+    const gdouble x  = (i == 0) ? a : b;
+    const gdouble jl = ncm_sf_sbessel (ell, x);
+
+    w[i] = x * jl * ncm_spectral_chebyshev_deriv (u, t) / h - (jl + x * _test_jl_deriv (ell, x)) * ncm_spectral_chebyshev_eval (u, t);
+  }
+
+  return w[1] - w[0];
+}
+
+/* A solver at tolerance 1e-12 with the given default constraint */
+static NcmSBesselOdeSolver *
+_test_tau_solver (NcmSBesselOdeConstraint constraint)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+
+  ncm_sbessel_ode_solver_set_tolerance (solver, 1.0e-12);
+  ncm_sbessel_ode_solver_set_default_constraint (solver, constraint);
+
+  return solver;
+}
+
+/* Solves the bump on [a, b] for ell_min..ell_max; returns the operator */
+static NcmSBesselOdeOperator *
+_test_tau_solve (const TestBump *p, gint ell_min, gint ell_max, NcmSBesselOdeConstraint constraint, GArray **u, gsize *len)
+{
+  NcmSBesselOdeSolver *solver = _test_tau_solver (constraint);
+  GArray *rhs                 = _test_tau_rhs (p);
+  NcmSBesselOdeOperator *op   = _test_solve (solver, p->a, p->b, ell_min, ell_max, rhs, u, len);
+
+  g_array_unref (rhs);
+  ncm_sbessel_ode_solver_free (solver);
+
+  return op;
+}
+
+/* max |a_j| of the tau solution over that of the Dirichlet one, at ell 2 on [a, b] */
+static gdouble
+_test_tau_contamination (gdouble a, gdouble b)
+{
+  const TestBump p = _test_tau_bump (a, b);
+  GArray *u_d      = NULL;
+  GArray *u_t      = NULL;
+  gsize n;
+  NcmSBesselOdeOperator *op_d = _test_tau_solve (&p, 2, 2, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, &u_d, &n);
+  NcmSBesselOdeOperator *op_t = _test_tau_solve (&p, 2, 2, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u_t, &n);
+  const gdouble ratio         = _test_absmax (u_t) / _test_absmax (u_d);
+
+  g_array_unref (u_d);
+  g_array_unref (u_t);
+  ncm_sbessel_ode_operator_unref (op_d);
+  ncm_sbessel_ode_operator_unref (op_t);
+
+  return ratio;
+}
+
+static gdouble
+_test_xbump (gpointer user_data, gdouble x)
+{
+  const TestXBump *p = (const TestXBump *) user_data;
+
+  return x * exp (-0.5 * gsl_pow_2 ((x - p->center) / p->width));
+}
+
+/* The right-hand side and, in *n_forcing, the number of Chebyshev coefficients of x F */
+static GArray *
+_test_floor_rhs (gdouble a, gdouble b, gdouble center, gdouble width, guint *n_forcing)
+{
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
+  TestXBump p                 = {center, width};
+  GArray *cheb                = NULL;
+  GArray *gegen               = NULL;
+  GArray *rhs;
+
+  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, &_test_xbump, a, b, 3, 1.0e-13, &cheb, &p);
+  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb, &gegen);
+  g_assert_cmpuint (gegen->len, ==, cheb->len);
+  rhs        = _test_rhs_new (gegen->len + 2, (const gdouble *) gegen->data, gegen->len);
+  *n_forcing = cheb->len;
+
+  g_array_unref (cheb);
+  g_array_unref (gegen);
+  ncm_sbessel_ode_solver_free (solver);
+
+  return rhs;
+}
+
+static GArray *
+_test_floor_rhs_default (guint *n_forcing)
+{
+  return _test_floor_rhs (TEST_TAU_A, TEST_TAU_B, 0.5 * (TEST_TAU_A + TEST_TAU_B), 0.25 * 0.5 * (TEST_TAU_B - TEST_TAU_A), n_forcing);
+}
+
+/* sum_j j^2 |a_j| / h of row l of a solution */
+static gdouble
+_test_weighted_sum (GArray *u, gsize n, guint l, gdouble h)
+{
+  gdouble s = 0.0;
+  guint j;
+
+  for (j = 0; j < n; j++)
+    s += (gdouble) j * j * fabs (g_array_index (u, gdouble, l * n + j));
+
+  return s / h;
+}
+
+/* The number of nonzero entries of row @i */
+static guint
+_test_row_nonzeros (NcmMatrix *m, guint i)
+{
+  guint count = 0;
+  guint j;
+
+  for (j = 0; j < ncm_matrix_ncols (m); j++)
+    count += (ncm_matrix_get (m, i, j) != 0.0) ? 1 : 0;
+
+  return count;
+}
+
+/*
+ * The derivative-error bound: under the tau constraint the reported
+ * get_last_deriv_error, scaled as eps deriv_error max (|x j_l|) / |I|, is never below
+ * the realized relative error of the panel integral when that error exceeds 1e-9. The
+ * panels [1e3, 1e3 + span] hold a Gaussian of width 0.25 h at ell 20; the integrals are
+ * the certified deriv_bound_<span> cells.
+ */
+static void
+_test_deriv_bound_solve (const TestArbCell *c, gdouble *value, gdouble *deriv_error)
+{
+  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_TAU);
+  guint n_forcing;
+  GArray *rhs = _test_floor_rhs (c->a, c->b, c->p1, c->p2, &n_forcing);
+  GArray *u   = NULL;
+  gsize n;
+  NcmSBesselOdeOperator *op = _test_solve (solver, c->a, c->b, TEST_TAU_ELL, TEST_TAU_ELL, rhs, &u, &n);
+
+  *value       = _test_boundary_functional (u, c->a, c->b, TEST_TAU_ELL);
+  *deriv_error = ncm_sbessel_ode_operator_get_last_deriv_error (op, 0);
+
+  g_array_unref (u);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+static const TestArbCell *
+_test_deriv_bound_cell (guint span)
+{
+  gchar *name          = g_strdup_printf ("deriv_bound_%u", span);
+  const TestArbCell *c = test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, TEST_TAU_ELL);
+
+  g_free (name);
+
+  return c;
+}
+
+/*
+ * Conjugate points: on [200, 200 + s], s the root of j_2(a) y_2(b) - j_2(b) y_2(a)
+ * (certified row "conjugate"), the two-point Dirichlet problem at ell 2 has no unique
+ * solution, and its error grows as the machine epsilon times the boundary condition
+ * number. The pinned constraint imposes no endpoint condition, so it has no such
+ * determinant. Solver tolerance 1e-12; the forcing is x F (x), F the row's Gaussian.
+ */
+static gdouble
+_test_conjugate_integral (const TestArbCell *c, NcmSBesselOdeConstraint constraint, glong pin1, glong pin2)
+{
+  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
+  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, c->a, c->b, c->ell, c->ell);
+  guint n_forcing;
+  GArray *rhs = _test_floor_rhs (c->a, c->b, c->p1, c->p2, &n_forcing);
+  GArray *u   = NULL;
+  gsize n;
+  gdouble value;
+
+  if (constraint == NCM_SBESSEL_ODE_CONSTRAINT_PINNED)
+    ncm_sbessel_ode_operator_set_pinned_constraint (op, pin1, pin2);
+  else
+    ncm_sbessel_ode_operator_set_constraint (op, constraint);
+
+  ncm_sbessel_ode_operator_solve (op, rhs, &u, &n);
+  value = _test_boundary_functional (u, c->a, c->b, c->ell);
+
+  g_array_unref (u);
+  g_array_unref (rhs);
+  ncm_sbessel_ode_operator_unref (op);
+  ncm_sbessel_ode_solver_free (solver);
+
+  return value;
+}
+
+static const TestArbCell *
+_test_conjugate_cell (const gchar *name)
+{
+  return test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, 2);
 }
 
 /* solve_values against the Chebyshev evaluation of solve(), and against solve_endpoints at (a, b) */
@@ -455,30 +1263,6 @@ test_ncm_sbessel_ode_solver_batched_convergence (void)
   ncm_sbessel_ode_solver_free (solver);
 }
 
-/* The solution of the n x n operator matrix for @rhs by LU (NcmMatrix has no general LU, so GSL's on its storage) */
-static NcmVector *
-_test_lu_solve (NcmSBesselOdeSolver *solver, guint ell, guint n, GArray *rhs)
-{
-  NcmMatrix *mat     = ncm_sbessel_ode_solver_get_operator_matrix (solver, TEST_A, TEST_B, ell, n);
-  NcmVector *b       = ncm_vector_new_array (rhs);
-  NcmVector *x       = ncm_vector_new (n);
-  gsl_permutation *p = gsl_permutation_alloc (n);
-  gint signum;
-
-  g_assert_cmpuint (ncm_matrix_nrows (mat), ==, n);
-  g_assert_cmpuint (ncm_matrix_ncols (mat), ==, n);
-  g_assert_cmpuint (ncm_vector_len (b), ==, n);
-
-  g_assert_cmpint (gsl_linalg_LU_decomp (ncm_matrix_gsl (mat), p, &signum), ==, GSL_SUCCESS);
-  g_assert_cmpint (gsl_linalg_LU_solve (ncm_matrix_gsl (mat), p, ncm_vector_const_gsl (b), ncm_vector_gsl (x)), ==, GSL_SUCCESS);
-
-  gsl_permutation_free (p);
-  ncm_vector_free (b);
-  ncm_matrix_free (mat);
-
-  return x;
-}
-
 /*
  * The adaptive QR solve against an LU solve of the 2n x 2n operator matrix, ell 0..20 and
  * n = 32, 64, 128: sum (x_LU - x_QR)^2 / sum x_QR^2 < 1e-10 over the common length.
@@ -556,9 +1340,6 @@ test_ncm_sbessel_ode_solver_dense_vs_lu (void)
 
   ncm_sbessel_ode_solver_free (solver);
 }
-
-static const guint test_zero_ells[] = {0, 1, 5, 10, 20};
-static const guint test_zero_ns[]   = {32, 64, 128};
 
 /* A zero right-hand side, endpoint data included, gives a zero solution no longer than the input */
 void
@@ -712,91 +1493,6 @@ test_ncm_sbessel_ode_solver_batched_vs_single (void)
   ncm_sbessel_ode_solver_free (solver);
 }
 
-/*
- * A batched solve against single-multipole solves: the batch is at least as long as
- * each single solve, and each row agrees with the zero-padded single solution to
- * |d| <= rtol |s| + atol_factor max |s|.
- */
-static void
-_test_compare_batched_solve (NcmSBesselOdeSolver *solver, gint ell_min, gint ell_max, GArray *rhs, gdouble rtol, gdouble atol_factor)
-{
-  GArray *sol = NULL;
-  gsize len;
-  NcmSBesselOdeOperator *op = _test_solve (solver, TEST_A, TEST_B, ell_min, ell_max, rhs, &sol, &len);
-  gint ell;
-  guint j;
-
-  for (ell = ell_min; ell <= ell_max; ell++)
-  {
-    GArray *single = NULL;
-    gsize single_len;
-    NcmSBesselOdeOperator *sop = _test_solve (solver, TEST_A, TEST_B, ell, ell, rhs, &single, &single_len);
-    const gdouble scale        = _test_absmax (single);
-
-    g_assert_cmpuint (len, >=, single_len);
-
-    for (j = 0; j < len; j++)
-    {
-      const gdouble s = (j < single_len) ? g_array_index (single, gdouble, j) : 0.0;
-
-      _test_assert_close (g_array_index (sol, gdouble, (ell - ell_min) * len + j), s, rtol, atol_factor * scale);
-    }
-
-    g_array_unref (single);
-    ncm_sbessel_ode_operator_unref (sop);
-  }
-
-  g_array_unref (sol);
-  ncm_sbessel_ode_operator_unref (op);
-}
-
-/*
- * The same for solve_endpoints: (u'(a), u'(b)) and, when @with_error, the error estimate,
- * to |d| <= rtol |s| + atol_factor max (|u'(a)|, |u'(b)|).
- */
-static void
-_test_compare_batched_endpoints (NcmSBesselOdeSolver *solver, gint ell_min, gint ell_max, GArray *rhs, gdouble rtol, gdouble atol_factor, gboolean with_error)
-{
-  NcmSBesselOdeOperator *op = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, ell_min, ell_max);
-  GArray *batched           = NULL;
-  gint ell;
-  guint j;
-
-  ncm_sbessel_ode_operator_solve_endpoints (op, rhs, &batched);
-  g_assert_cmpuint (batched->len, ==, 3 * (ell_max - ell_min + 1));
-
-  for (ell = ell_min; ell <= ell_max; ell++)
-  {
-    NcmSBesselOdeOperator *sop = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, ell, ell);
-    GArray *single             = NULL;
-    gdouble scale;
-
-    ncm_sbessel_ode_operator_solve_endpoints (sop, rhs, &single);
-    scale = GSL_MAX (fabs (g_array_index (single, gdouble, 0)), fabs (g_array_index (single, gdouble, 1)));
-
-    for (j = 0; j < (with_error ? 3 : 2); j++)
-      _test_assert_close (g_array_index (batched, gdouble, 3 * (ell - ell_min) + j), g_array_index (single, gdouble, j), rtol, atol_factor * scale);
-
-    g_array_unref (single);
-    ncm_sbessel_ode_operator_unref (sop);
-  }
-
-  g_array_unref (batched);
-  ncm_sbessel_ode_operator_unref (op);
-}
-
-static gdouble
-_test_exp (gdouble x)
-{
-  return exp (x);
-}
-
-static gdouble
-_test_sin (gdouble x)
-{
-  return sin (x);
-}
-
 /* exp (x) forcing, ell 5..10, n = 128 */
 void
 test_ncm_sbessel_ode_solver_batched_vs_single_exp (void)
@@ -839,22 +1535,6 @@ test_ncm_sbessel_ode_solver_endpoints_vs_full (void)
 
   g_array_unref (rhs);
   ncm_sbessel_ode_solver_free (solver);
-}
-
-static void
-_test_assert_endpoints_finite (GArray *endpoints, guint n_ell)
-{
-  guint l;
-
-  g_assert_cmpuint (endpoints->len, ==, 3 * n_ell);
-
-  for (l = 0; l < n_ell; l++)
-  {
-    g_assert_true (gsl_finite (g_array_index (endpoints, gdouble, 3 * l + 0)));
-    g_assert_true (gsl_finite (g_array_index (endpoints, gdouble, 3 * l + 1)));
-    g_assert_true (gsl_finite (g_array_index (endpoints, gdouble, 3 * l + 2)));
-    g_assert_cmpfloat (g_array_index (endpoints, gdouble, 3 * l + 2), >=, 0.0);
-  }
 }
 
 /*
@@ -958,22 +1638,6 @@ test_ncm_sbessel_ode_solver_endpoints_batched_vs_full (void)
   ncm_sbessel_ode_solver_free (solver);
 }
 
-static void
-_test_assert_accessors (NcmSBesselOdeOperator *op, gdouble a, gdouble b, gint ell_min, gint ell_max, gdouble tol)
-{
-  gdouble a_out, b_out;
-  gint lo, hi;
-
-  ncm_sbessel_ode_operator_get_interval (op, &a_out, &b_out);
-  ncm_sbessel_ode_operator_get_ell_range (op, &lo, &hi);
-
-  _test_assert_close (a_out, a, 1.0e-15, 1.0e-15);
-  _test_assert_close (b_out, b, 1.0e-15, 1.0e-15);
-  g_assert_cmpint (lo, ==, ell_min);
-  g_assert_cmpint (hi, ==, ell_max);
-  _test_assert_close (ncm_sbessel_ode_operator_get_tolerance (op), tol, 1.0e-15, 1.0e-15);
-}
-
 /*
  * The operator reports its interval, multipole range and tolerance (the solver's at
  * creation, default or set), and a solve leaves them unchanged.
@@ -1049,21 +1713,6 @@ test_ncm_sbessel_ode_solver_reconfigure_tolerance (void)
   ncm_sbessel_ode_operator_unref (op);
   ncm_sbessel_ode_operator_unref (fresh);
   ncm_sbessel_ode_solver_free (solver);
-}
-
-/* At least one entry differs beyond numpy allclose (rtol 1e-10, atol 1e-8); equal lengths required */
-static gboolean
-_test_differ (GArray *x, GArray *y)
-{
-  gboolean differ = FALSE;
-  guint j;
-
-  g_assert_cmpuint (x->len, ==, y->len);
-
-  for (j = 0; j < x->len; j++)
-    differ = differ || (fabs (g_array_index (x, gdouble, j) - g_array_index (y, gdouble, j)) > 1.0e-8 + 1.0e-10 * fabs (g_array_index (y, gdouble, j)));
-
-  return differ;
 }
 
 /*
@@ -1308,152 +1957,6 @@ test_ncm_sbessel_ode_solver_homogeneous (void)
   ncm_sbessel_ode_solver_free (solver);
 }
 
-/*
- * Green's identity: with zero Dirichlet data and forcing g, the solution u satisfies
- * b j_l(b) u'(b) - a j_l(a) u'(a) = int_a^b g(x) j_l(x) / x dx. The forcing 1 (rhs[2] = 1)
- * gives int_1^20 j_l / x dx and the forcing x (rhs[2] = m, rhs[3] = h / 4) gives
- * int_1^20 j_l dx, certified by make_sbessel_arb_cases.py ode.
- */
-static const TestArbCell test_arb_cells[] = {
-  /* BEGIN make_sbessel_arb_cases.py ode */
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 0, 1.0, 0.5028396202159003},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 1, 1.0, 0.4607245247899321},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 2, 1.0, 0.3020747659379493},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 3, 1.0, 0.19574779143238527},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 4, 1.0, 0.1330169948034595},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 5, 1.0, 0.0956047082381122},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 6, 1.0, 0.07484428607483702},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 7, 1.0, 0.06312019765201392},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 8, 1.0, 0.05352439806530906},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 9, 1.0, 0.04344865430572876},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 10, 1.0, 0.03453229048880144},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 11, 1.0, 0.029113904722431434},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 12, 1.0, 0.027378313816413244},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 13, 1.0, 0.02736466382665843},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 14, 1.0, 0.026730174217619293},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 15, 1.0, 0.02423940889318163},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 16, 1.0, 0.02004830157463489},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 17, 1.0, 0.015109047820065719},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 18, 1.0, 0.01042813195282212},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 19, 1.0, 0.006635382719972067},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 20, 1.0, 0.003917880565087803},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.6021586306762569},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 1, 1.0, 0.7958237222715151},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 2, 1.0, 0.7800149436935394},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 3, 1.0, 0.7145501074182314},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 4, 1.0, 0.5902195963331576},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.48260284581290397},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 6, 1.0, 0.4614321942860765},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 7, 1.0, 0.49037287315997735},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 8, 1.0, 0.48537077049413235},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 9, 1.0, 0.41954189395027663},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 10, 1.0, 0.34015366131471403},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 11, 1.0, 0.3056362063145535},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 12, 1.0, 0.3294661473012089},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 13, 1.0, 0.3788216390957776},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 14, 1.0, 0.40937977601856873},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 15, 1.0, 0.39635341321518186},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 16, 1.0, 0.34204189967006177},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 17, 1.0, 0.2652405387477694},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 18, 1.0, 0.1867747740322384},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 19, 1.0, 0.12060034350664904},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 20, 1.0, 0.07200515204667218},
-  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 0, 1.0, 0.13222024405474772},
-  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 5, 1.0, 1.9425860132872468},
-  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 10, 1.0, 3.1777343624297174},
-  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 15, 1.0, 6.583316123648764},
-  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 0, 1.0, -7.549864664479969},
-  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 5, 1.0, -3.7098496929237466},
-  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 10, 1.0, 25.794284875856388},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 0, 1.0, 274557.9565997802},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 2, 1.0, -405905.43815627106},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 3, 1.0, 747820.6721892703},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 4, 1.0, 679786.3761393836},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 5, 1.0, -443105.4051754701},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 6, 1.0, -943851.7547431279},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 7, 1.0, -182667.5296970764},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 8, 1.0, 826212.2069565651},
-  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 10, 1.0, 57612.98468184247},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.6479721092843543},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 2, 1.0, 0.006110573663597096},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 3, 1.0, -0.08111944835354816},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 4, 1.0, -0.02449089352950558},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 0.02363007923070094},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 6, 1.0, 0.02066418140989152},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 7, 1.0, -0.0021544967305790973},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 8, 1.0, -0.012897440654211665},
-  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 0.0022078534135041633},
-  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.0320600635222009},
-  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 0.022739400291948583},
-  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 0.008890728940125823},
-  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.08192634928161613},
-  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 4.873451437933564e-05},
-  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 7.802205812987952e-10},
-  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 0, 1.0, 0.17909599346737495},
-  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 5, 1.0, 0.0037861935193706244},
-  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 10, 1.0, 0.0003449988561628076},
-  {"tau_narrow", TEST_ARB_GAUSS, 100.0, 316.22776601683796, 208.11388300841898, 37.83985905294664, 0, FALSE, 20, 1.0, 3.470494682971913e-05},
-  {"deriv_bound_30", TEST_ARB_GAUSS, 1000.0, 1030.0, 1015.0, 3.75, 0, FALSE, 20, 1.0, -3.8384799978730775e-06},
-  {"deriv_bound_60", TEST_ARB_GAUSS, 1000.0, 1060.0, 1030.0, 7.5, 0, FALSE, 20, 1.0, 1.2305957763076221e-07},
-  {"deriv_bound_100", TEST_ARB_GAUSS, 1000.0, 1100.0, 1050.0, 12.5, 0, FALSE, 20, 1.0, -2.530161116525624e-07},
-  {"deriv_bound_150", TEST_ARB_GAUSS, 1000.0, 1150.0, 1075.0, 18.75, 0, FALSE, 20, 1.0, -2.2501000047625404e-07},
-  {"deriv_bound_250", TEST_ARB_GAUSS, 1000.0, 1250.0, 1125.0, 31.25, 0, FALSE, 20, 1.0, -1.675615103467387e-07},
-  {"deriv_bound_3000", TEST_ARB_GAUSS, 1000.0, 4000.0, 2500.0, 375.0, 0, FALSE, 20, 1.0, 1.824908439349761e-07},
-  {"conjugate", TEST_ARB_GAUSS, 200.0, 225.13441585600583, 212.56720792800292, 4.39852277480102, 0, FALSE, 2, 1.0, -6.780495041869413e-05},
-  {"conjugate_away", TEST_ARB_GAUSS, 200.0, 225.14441585600582, 212.5722079280029, 4.400272774801018, 0, FALSE, 2, 1.0, -6.719000261353115e-05},
-  /* END make_sbessel_arb_cases.py ode */
-};
-
-typedef enum _TestGreenForcing
-{
-  TEST_GREEN_ONE = 0,
-  TEST_GREEN_X,
-} TestGreenForcing;
-
-static GArray *
-_test_green_rhs (TestGreenForcing forcing)
-{
-  const gdouble f_x[] = {TEST_M, 0.25 * TEST_H};
-
-  return (forcing == TEST_GREEN_ONE) ? _test_rhs_const (128, 1.0) : _test_rhs_new (128, f_x, G_N_ELEMENTS (f_x));
-}
-
-/* The certified int g j_l / x dx of the forcing at ell */
-static gdouble
-_test_green_value (TestGreenForcing forcing, guint ell)
-{
-  guint n;
-  const TestArbCell *c = test_arb_cells_find (test_arb_cells, G_N_ELEMENTS (test_arb_cells),
-                                              (forcing == TEST_GREEN_ONE) ? "green_inv_x" : "green_one", &n);
-
-  g_assert_cmpuint (ell, <, n);
-  g_assert_cmpuint (c[ell].ell, ==, ell);
-
-  return c[ell].value;
-}
-
-/* b j_l(b) u'(b) - a j_l(a) u'(a) held to a certified integral, rtol 1e-8, atol 1e-20 */
-static void
-_test_green_assert (guint ell, gdouble du_a, gdouble du_b, gdouble value)
-{
-  const gdouble lhs = TEST_B * ncm_sf_sbessel (ell, TEST_B) * du_b - TEST_A * ncm_sf_sbessel (ell, TEST_A) * du_a;
-
-  _test_assert_close (lhs, value, 1.0e-8, 1.0e-20);
-}
-
-static void
-_test_green_check (TestGreenForcing forcing, guint ell, gdouble du_a, gdouble du_b)
-{
-  _test_green_assert (ell, du_a, du_b, _test_green_value (forcing, ell));
-}
-
-/* u'(a), u'(b) of Chebyshev coefficients on [1, 20] */
-static void
-_test_green_check_coeffs (TestGreenForcing forcing, guint ell, GArray *u)
-{
-  _test_green_check (forcing, ell, ncm_spectral_chebyshev_deriv (u, -1.0) / TEST_H, ncm_spectral_chebyshev_deriv (u, +1.0) / TEST_H);
-}
-
 /* LU solve of the 128 x 128 operator matrix, ell 0..20 */
 void
 test_ncm_sbessel_ode_solver_green_lu (void)
@@ -1482,8 +1985,6 @@ test_ncm_sbessel_ode_solver_green_lu (void)
   ncm_mpsf_sbessel_free_cache ();
   ncm_sbessel_ode_solver_free (solver);
 }
-
-static const guint test_green_ells[] = {0, 1, 5, 10, 20};
 
 /* solve_dense, ell 0, 1, 5, 10, 20 */
 void
@@ -1603,39 +2104,6 @@ test_ncm_sbessel_ode_solver_green_endpoints_batched (void)
   ncm_sbessel_ode_solver_free (solver);
 }
 
-/* The forcing g (x) of a certified row at x = m + h t: the row's shape without the 1 / x */
-static gdouble
-_test_cheb_cell (gpointer user_data, gdouble t)
-{
-  const TestArbCell *c = (const TestArbCell *) user_data;
-
-  return test_arb_cell_shape (c, TEST_M + TEST_H * t);
-}
-
-/*
- * Checks one solution for the forcing of row @c: finite, not identically zero, u(a) =
- * u(b) = 0 to @bc_atol, and Green's identity against the row's certified
- * int_1^20 g j_l / x dx.
- */
-static void
-_test_forcing_check (const TestArbCell *c, GArray *u, gdouble bc_atol)
-{
-  guint j;
-  gboolean nonzero = FALSE;
-
-  for (j = 0; j < u->len; j++)
-  {
-    g_assert_true (gsl_finite (g_array_index (u, gdouble, j)));
-    nonzero = nonzero || (fabs (g_array_index (u, gdouble, j)) > 1.0e-10);
-  }
-
-  g_assert_true (nonzero);
-  g_assert_cmpfloat (fabs (ncm_spectral_chebyshev_eval (u, -1.0)), <=, bc_atol);
-  g_assert_cmpfloat (fabs (ncm_spectral_chebyshev_eval (u, +1.0)), <=, bc_atol);
-
-  _test_green_assert (c->ell, ncm_spectral_chebyshev_deriv (u, -1.0) / TEST_H, ncm_spectral_chebyshev_deriv (u, +1.0) / TEST_H, c->value);
-}
-
 /*
  * Each forcing of the certified table (x^2 and x^3 at ell 0, 5, 10 and 15 or 10; exp (x),
  * sin (x), cos (x), exp (-x^2) and 1 / (1 + x^2) at ell 0, 5, 10), expanded with
@@ -1717,101 +2185,6 @@ test_ncm_sbessel_ode_solver_forcing_batched (void)
   }
 
   ncm_mpsf_sbessel_free_cache ();
-  ncm_sbessel_ode_solver_free (solver);
-}
-
-/*
- * Memory and reuse of one operator across solves of different right-hand sides. Every
- * solve on the reused operator is also done on a new operator and the two agree to
- * |reused - new| <= 1e-12 |new| + 1e-12 max |new| (the shorter zero-padded); the stored
- * capacity (get_operator_size) never decreases and n_cols is positive after a solve.
- */
-static GArray *
-_test_rhs_unit (guint order, guint min_len, gdouble value)
-{
-  GArray *rhs = _test_rhs_new (GSL_MAX (min_len, order + 4), NULL, 0);
-
-  g_array_index (rhs, gdouble, order) = value;
-
-  return rhs;
-}
-
-static void
-_test_assert_same_padded (GArray *x, gsize x_len, GArray *y, gsize y_len, guint n_ell)
-{
-  const gsize len = GSL_MAX (x_len, y_len);
-  guint l, j;
-
-  for (l = 0; l < n_ell; l++)
-  {
-    gdouble scale = 0.0;
-
-    for (j = 0; j < y_len; j++)
-      scale = GSL_MAX (scale, fabs (g_array_index (y, gdouble, l * y_len + j)));
-
-    for (j = 0; j < len; j++)
-    {
-      const gdouble xv = (j < x_len) ? g_array_index (x, gdouble, l * x_len + j) : 0.0;
-      const gdouble yv = (j < y_len) ? g_array_index (y, gdouble, l * y_len + j) : 0.0;
-
-      g_assert_true (gsl_finite (xv));
-      _test_assert_close (xv, yv, 1.0e-12, 1.0e-12 * scale);
-    }
-  }
-}
-
-/*
- * Solves @rhs on @op, checks the invariants (capacity >= *capacity, n_cols > 0, a
- * non-empty finite solution) and the agreement with a new operator; updates *capacity
- * and returns the solution (*len per multipole).
- */
-static GArray *
-_test_memory_solve (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, GArray *rhs, gsize *capacity, gsize *len)
-{
-  GArray *sol   = NULL;
-  GArray *fresh = NULL;
-  gsize fresh_len;
-  gint ell_min, ell_max;
-  NcmSBesselOdeOperator *fop;
-
-  ncm_sbessel_ode_operator_get_ell_range (op, &ell_min, &ell_max);
-  ncm_sbessel_ode_operator_solve (op, rhs, &sol, len);
-
-  g_assert_cmpuint (ncm_sbessel_ode_operator_get_operator_size (op), >=, *capacity);
-  *capacity = ncm_sbessel_ode_operator_get_operator_size (op);
-  g_assert_cmpuint (*capacity, >, 0);
-  g_assert_cmpint (ncm_sbessel_ode_operator_get_n_cols (op), >, 0);
-  g_assert_cmpuint (*len, >, 0);
-
-  fop = _test_solve (solver, TEST_A, TEST_B, ell_min, ell_max, rhs, &fresh, &fresh_len);
-  _test_assert_same_padded (sol, *len, fresh, fresh_len, ell_max - ell_min + 1);
-
-  g_array_unref (fresh);
-  ncm_sbessel_ode_operator_unref (fop);
-
-  return sol;
-}
-
-/* Runs @n right-hand sides rhs[orders[i]] = values[i] (length at least @min_len) through one operator */
-static void
-_test_memory_sequence (gint ell_min, gint ell_max, const guint *orders, const gdouble *values, guint n, guint min_len)
-{
-  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
-  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, TEST_A, TEST_B, ell_min, ell_max);
-  gsize capacity              = 0;
-  guint i;
-
-  for (i = 0; i < n; i++)
-  {
-    GArray *rhs = _test_rhs_unit (orders[i], min_len, (values != NULL) ? values[i] : 1.0);
-    gsize len;
-    GArray *sol = _test_memory_solve (solver, op, rhs, &capacity, &len);
-
-    g_array_unref (sol);
-    g_array_unref (rhs);
-  }
-
-  ncm_sbessel_ode_operator_unref (op);
   ncm_sbessel_ode_solver_free (solver);
 }
 
@@ -2079,94 +2452,6 @@ test_ncm_sbessel_ode_solver_memory_stress (void)
     values[i] = 1.0 / (i + 1.0);
 
   _test_memory_sequence (0, 0, orders, values, G_N_ELEMENTS (orders), 64);
-}
-
-/*
- * Stored rotations: a solve on an operator that already holds a factorization reuses
- * its rotations and extends them when the new right-hand side needs more columns. The
- * result must equal a solve on a new operator: same solution length and coefficients to
- * |reused - new| <= rtol |new| + rtol max |new| per multipole.
- */
-typedef struct _TestCoeff
-{
-  guint k;
-  gdouble value;
-} TestCoeff;
-
-/* A right-hand side of length n with zero endpoint data and the listed coefficients */
-static GArray *
-_test_rhs_sparse (guint n, const TestCoeff *c, guint n_c)
-{
-  GArray *rhs = _test_rhs_new (n, NULL, 0);
-  guint i;
-
-  for (i = 0; i < n_c; i++)
-    g_array_index (rhs, gdouble, c[i].k) = c[i].value;
-
-  return rhs;
-}
-
-static void
-_test_assert_same (GArray *x, gsize x_len, GArray *y, gsize y_len, guint n_ell, gdouble rtol)
-{
-  guint l, j;
-
-  g_assert_cmpuint (x_len, ==, y_len);
-
-  for (l = 0; l < n_ell; l++)
-  {
-    gdouble scale = 0.0;
-
-    for (j = 0; j < y_len; j++)
-      scale = GSL_MAX (scale, fabs (g_array_index (y, gdouble, l * y_len + j)));
-
-    for (j = 0; j < y_len; j++)
-      _test_assert_close (g_array_index (x, gdouble, l * x_len + j), g_array_index (y, gdouble, l * y_len + j), rtol, rtol * scale);
-  }
-}
-
-/* The largest |coefficient| of row l */
-static gdouble
-_test_row_absmax (GArray *sol, gsize len, guint l)
-{
-  GArray *row         = _test_row (sol, len, l);
-  const gdouble scale = _test_absmax (row);
-
-  g_array_unref (row);
-
-  return scale;
-}
-
-/*
- * Solves @rhs on @op and on a new operator over the same interval and multipoles,
- * checks the agreement to @rtol and returns the reused solution; *n_cols_new receives
- * the new operator's n_cols.
- */
-static GArray *
-_test_reused_vs_new (NcmSBesselOdeSolver *solver, NcmSBesselOdeOperator *op, GArray *rhs, gdouble rtol, gsize *len, glong *n_cols_new)
-{
-  GArray *sol   = NULL;
-  GArray *fresh = NULL;
-  gsize fresh_len;
-  gdouble a, b;
-  gint ell_min, ell_max;
-  NcmSBesselOdeOperator *fop;
-
-  ncm_sbessel_ode_operator_get_interval (op, &a, &b);
-  ncm_sbessel_ode_operator_get_ell_range (op, &ell_min, &ell_max);
-
-  ncm_sbessel_ode_operator_solve (op, rhs, &sol, len);
-  fop = _test_solve (solver, a, b, ell_min, ell_max, rhs, &fresh, &fresh_len);
-
-  _test_assert_same (sol, *len, fresh, fresh_len, ell_max - ell_min + 1, rtol);
-
-  if (n_cols_new != NULL)
-    *n_cols_new = ncm_sbessel_ode_operator_get_n_cols (fop);
-
-  g_array_unref (fresh);
-  ncm_sbessel_ode_operator_unref (fop);
-
-  return sol;
 }
 
 /* The same right-hand side twice on [1, 10], ell 5: same length, n_cols and coefficients to 1e-15 */
@@ -2512,118 +2797,6 @@ test_ncm_sbessel_ode_solver_rotations_high_ell (void)
 }
 
 /*
- * The tau constraint against Dirichlet data, ell 20, solver tolerance 1e-12. The forcing
- * is x F (x) with F a Gaussian centred on the panel [a, b] of width 0.35 h (h the
- * half-width), expanded to Chebyshev order 96 and converted to C^(2). The boundary
- * functional W(b) - W(a), W = x j_l u' - (x j_l)' u, is invariant under adding
- * homogeneous solutions, so both constraints give the same panel integral int F j_l dx.
- */
-#define TEST_TAU_ELL 20
-#define TEST_TAU_A 1.0e4
-#define TEST_TAU_B 31622.776601683792 /* 10^4.5 */
-
-typedef struct _TestBump
-{
-  gdouble a;
-  gdouble b;
-  gdouble center;
-  gdouble width;
-} TestBump;
-
-static gdouble
-_test_bump_x_cheb (gpointer user_data, gdouble t)
-{
-  const TestBump *p = (const TestBump *) user_data;
-  const gdouble x   = 0.5 * (p->a + p->b) + 0.5 * (p->b - p->a) * t;
-
-  return x * exp (-0.5 * gsl_pow_2 ((x - p->center) / p->width));
-}
-
-/* x F (x) on [a, b], F the Gaussian (center, width), at Chebyshev order 96 */
-static GArray *
-_test_tau_rhs (const TestBump *p)
-{
-  NcmSpectral *spectral = ncm_spectral_new ();
-  GArray *cheb          = NULL;
-  GArray *gegen         = NULL;
-  GArray *rhs;
-
-  ncm_spectral_compute_chebyshev_coeffs (spectral, &_test_bump_x_cheb, -1.0, 1.0, 96, &cheb, (gpointer) p);
-  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb, &gegen);
-  rhs = _test_rhs_new (gegen->len + 2, (const gdouble *) gegen->data, gegen->len);
-
-  g_array_unref (cheb);
-  g_array_unref (gegen);
-  ncm_spectral_free (spectral);
-
-  return rhs;
-}
-
-static TestBump
-_test_tau_bump (gdouble a, gdouble b)
-{
-  TestBump p = {a, b, 0.5 * (a + b), 0.35 * 0.5 * (b - a)};
-
-  return p;
-}
-
-/* j_l'(x), as scipy's spherical_jn(derivative=True) computes it */
-static gdouble
-_test_jl_deriv (guint ell, gdouble x)
-{
-  if (ell == 0)
-    return -ncm_sf_sbessel (1, x);
-
-  return ncm_sf_sbessel (ell - 1, x) - (ell + 1.0) / x * ncm_sf_sbessel (ell, x);
-}
-
-/* W(b) - W(a), W = x j_l u' - (j_l + x j_l') u, for the Chebyshev series @u on [a, b] */
-static gdouble
-_test_boundary_functional (GArray *u, gdouble a, gdouble b, guint ell)
-{
-  const gdouble h = 0.5 * (b - a);
-  gdouble w[2];
-  guint i;
-
-  for (i = 0; i < 2; i++)
-  {
-    const gdouble t  = (i == 0) ? -1.0 : 1.0;
-    const gdouble x  = (i == 0) ? a : b;
-    const gdouble jl = ncm_sf_sbessel (ell, x);
-
-    w[i] = x * jl * ncm_spectral_chebyshev_deriv (u, t) / h - (jl + x * _test_jl_deriv (ell, x)) * ncm_spectral_chebyshev_eval (u, t);
-  }
-
-  return w[1] - w[0];
-}
-
-/* A solver at tolerance 1e-12 with the given default constraint */
-static NcmSBesselOdeSolver *
-_test_tau_solver (NcmSBesselOdeConstraint constraint)
-{
-  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
-
-  ncm_sbessel_ode_solver_set_tolerance (solver, 1.0e-12);
-  ncm_sbessel_ode_solver_set_default_constraint (solver, constraint);
-
-  return solver;
-}
-
-/* Solves the bump on [a, b] for ell_min..ell_max; returns the operator */
-static NcmSBesselOdeOperator *
-_test_tau_solve (const TestBump *p, gint ell_min, gint ell_max, NcmSBesselOdeConstraint constraint, GArray **u, gsize *len)
-{
-  NcmSBesselOdeSolver *solver = _test_tau_solver (constraint);
-  GArray *rhs                 = _test_tau_rhs (p);
-  NcmSBesselOdeOperator *op   = _test_solve (solver, p->a, p->b, ell_min, ell_max, rhs, u, len);
-
-  g_array_unref (rhs);
-  ncm_sbessel_ode_solver_free (solver);
-
-  return op;
-}
-
-/*
  * Deep oscillatory panel [1e4, 10^4.5]: the same integral to 1e-9 with far fewer
  * columns, at most twice the forcing order and under 1/20 of Dirichlet's; the
  * operators report their constraint and column floor.
@@ -2703,26 +2876,6 @@ test_ncm_sbessel_ode_solver_tau_batched (void)
 
   g_array_unref (u_b);
   ncm_sbessel_ode_operator_unref (op);
-}
-
-/* max |a_j| of the tau solution over that of the Dirichlet one, at ell 2 on [a, b] */
-static gdouble
-_test_tau_contamination (gdouble a, gdouble b)
-{
-  const TestBump p = _test_tau_bump (a, b);
-  GArray *u_d      = NULL;
-  GArray *u_t      = NULL;
-  gsize n;
-  NcmSBesselOdeOperator *op_d = _test_tau_solve (&p, 2, 2, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET, &u_d, &n);
-  NcmSBesselOdeOperator *op_t = _test_tau_solve (&p, 2, 2, NCM_SBESSEL_ODE_CONSTRAINT_TAU, &u_t, &n);
-  const gdouble ratio         = _test_absmax (u_t) / _test_absmax (u_d);
-
-  g_array_unref (u_d);
-  g_array_unref (u_t);
-  ncm_sbessel_ode_operator_unref (op_d);
-  ncm_sbessel_ode_operator_unref (op_t);
-
-  return ratio;
 }
 
 /*
@@ -2850,55 +3003,6 @@ test_ncm_sbessel_ode_solver_tau_propagation (void)
   ncm_sbessel_ode_solver_free (solver);
 }
 
-/*
- * The tau working order and the roundoff bound it implies, on [1e4, 10^4.5] at ell 20:
- * the forcing is x F (x), F a Gaussian of width 0.25 h, expanded adaptively in x
- * (level 3, tolerance 1e-13) and converted to C^(2).
- */
-typedef struct _TestXBump
-{
-  gdouble center;
-  gdouble width;
-} TestXBump;
-
-static gdouble
-_test_xbump (gpointer user_data, gdouble x)
-{
-  const TestXBump *p = (const TestXBump *) user_data;
-
-  return x * exp (-0.5 * gsl_pow_2 ((x - p->center) / p->width));
-}
-
-/* The right-hand side and, in *n_forcing, the number of Chebyshev coefficients of x F */
-static GArray *
-_test_floor_rhs (gdouble a, gdouble b, gdouble center, gdouble width, guint *n_forcing)
-{
-  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
-  NcmSpectral *spectral       = ncm_sbessel_ode_solver_peek_spectral (solver);
-  TestXBump p                 = {center, width};
-  GArray *cheb                = NULL;
-  GArray *gegen               = NULL;
-  GArray *rhs;
-
-  ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, &_test_xbump, a, b, 3, 1.0e-13, &cheb, &p);
-  ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb, &gegen);
-  g_assert_cmpuint (gegen->len, ==, cheb->len);
-  rhs        = _test_rhs_new (gegen->len + 2, (const gdouble *) gegen->data, gegen->len);
-  *n_forcing = cheb->len;
-
-  g_array_unref (cheb);
-  g_array_unref (gegen);
-  ncm_sbessel_ode_solver_free (solver);
-
-  return rhs;
-}
-
-static GArray *
-_test_floor_rhs_default (guint *n_forcing)
-{
-  return _test_floor_rhs (TEST_TAU_A, TEST_TAU_B, 0.5 * (TEST_TAU_A + TEST_TAU_B), 0.25 * 0.5 * (TEST_TAU_B - TEST_TAU_A), n_forcing);
-}
-
 /* The floor factor ships above one and reads back */
 void
 test_ncm_sbessel_ode_solver_floor_default (void)
@@ -2939,19 +3043,6 @@ test_ncm_sbessel_ode_solver_floor_working_order (void)
   }
 
   g_array_unref (rhs);
-}
-
-/* sum_j j^2 |a_j| / h of row l of a solution */
-static gdouble
-_test_weighted_sum (GArray *u, gsize n, guint l, gdouble h)
-{
-  gdouble s = 0.0;
-  guint j;
-
-  for (j = 0; j < n; j++)
-    s += (gdouble) j * j * fabs (g_array_index (u, gdouble, l * n + j));
-
-  return s / h;
 }
 
 /* get_last_deriv_error is sum_j j^2 |a_j| / h after solve, solve_values and solve_endpoints, Dirichlet and tau */
@@ -3018,19 +3109,6 @@ test_ncm_sbessel_ode_solver_floor_deriv_error_per_ell (void)
   g_array_unref (rhs);
 }
 
-/* The number of nonzero entries of row @i */
-static guint
-_test_row_nonzeros (NcmMatrix *m, guint i)
-{
-  guint count = 0;
-  guint j;
-
-  for (j = 0; j < ncm_matrix_ncols (m); j++)
-    count += (ncm_matrix_get (m, i, j) != 0.0) ? 1 : 0;
-
-  return count;
-}
-
 /* The 40-row dense matrix carries the operator's constraint rows: Dirichlet full, pinned one entry each, tau none */
 void
 test_ncm_sbessel_ode_solver_floor_matrix_constraint (void)
@@ -3085,43 +3163,6 @@ test_ncm_sbessel_ode_solver_floor_matrix_band (void)
   ncm_sbessel_ode_solver_free (solver);
 }
 
-/*
- * The derivative-error bound: under the tau constraint the reported
- * get_last_deriv_error, scaled as eps deriv_error max (|x j_l|) / |I|, is never below
- * the realized relative error of the panel integral when that error exceeds 1e-9. The
- * panels [1e3, 1e3 + span] hold a Gaussian of width 0.25 h at ell 20; the integrals are
- * the certified deriv_bound_<span> cells.
- */
-static void
-_test_deriv_bound_solve (const TestArbCell *c, gdouble *value, gdouble *deriv_error)
-{
-  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_TAU);
-  guint n_forcing;
-  GArray *rhs = _test_floor_rhs (c->a, c->b, c->p1, c->p2, &n_forcing);
-  GArray *u   = NULL;
-  gsize n;
-  NcmSBesselOdeOperator *op = _test_solve (solver, c->a, c->b, TEST_TAU_ELL, TEST_TAU_ELL, rhs, &u, &n);
-
-  *value       = _test_boundary_functional (u, c->a, c->b, TEST_TAU_ELL);
-  *deriv_error = ncm_sbessel_ode_operator_get_last_deriv_error (op, 0);
-
-  g_array_unref (u);
-  g_array_unref (rhs);
-  ncm_sbessel_ode_operator_unref (op);
-  ncm_sbessel_ode_solver_free (solver);
-}
-
-static const TestArbCell *
-_test_deriv_bound_cell (guint span)
-{
-  gchar *name          = g_strdup_printf ("deriv_bound_%u", span);
-  const TestArbCell *c = test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, TEST_TAU_ELL);
-
-  g_free (name);
-
-  return c;
-}
-
 /* Spans 30, 60, 100, 150, 250 (the constraint fails) and 3000 (sound) */
 void
 test_ncm_sbessel_ode_solver_deriv_bound_never_below (void)
@@ -3158,46 +3199,6 @@ test_ncm_sbessel_ode_solver_deriv_bound_separates (void)
   g_assert_cmpfloat (deriv_broken, >, 1.0e6 * deriv_sound);
 
   ncm_mpsf_sbessel_free_cache ();
-}
-
-/*
- * Conjugate points: on [200, 200 + s], s the root of j_2(a) y_2(b) - j_2(b) y_2(a)
- * (certified row "conjugate"), the two-point Dirichlet problem at ell 2 has no unique
- * solution, and its error grows as the machine epsilon times the boundary condition
- * number. The pinned constraint imposes no endpoint condition, so it has no such
- * determinant. Solver tolerance 1e-12; the forcing is x F (x), F the row's Gaussian.
- */
-static gdouble
-_test_conjugate_integral (const TestArbCell *c, NcmSBesselOdeConstraint constraint, glong pin1, glong pin2)
-{
-  NcmSBesselOdeSolver *solver = _test_tau_solver (NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
-  NcmSBesselOdeOperator *op   = ncm_sbessel_ode_solver_create_operator (solver, c->a, c->b, c->ell, c->ell);
-  guint n_forcing;
-  GArray *rhs = _test_floor_rhs (c->a, c->b, c->p1, c->p2, &n_forcing);
-  GArray *u   = NULL;
-  gsize n;
-  gdouble value;
-
-  if (constraint == NCM_SBESSEL_ODE_CONSTRAINT_PINNED)
-    ncm_sbessel_ode_operator_set_pinned_constraint (op, pin1, pin2);
-  else
-    ncm_sbessel_ode_operator_set_constraint (op, constraint);
-
-  ncm_sbessel_ode_operator_solve (op, rhs, &u, &n);
-  value = _test_boundary_functional (u, c->a, c->b, c->ell);
-
-  g_array_unref (u);
-  g_array_unref (rhs);
-  ncm_sbessel_ode_operator_unref (op);
-  ncm_sbessel_ode_solver_free (solver);
-
-  return value;
-}
-
-static const TestArbCell *
-_test_conjugate_cell (const gchar *name)
-{
-  return test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, 2);
 }
 
 /* Dirichlet on the conjugate span is wrong by more than 1e-6 */

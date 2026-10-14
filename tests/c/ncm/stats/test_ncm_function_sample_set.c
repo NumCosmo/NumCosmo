@@ -33,6 +33,57 @@
 #include <glib.h>
 #include <glib-object.h>
 
+typedef struct _TestMessageCount
+{
+  guint max_iter;
+  guint at_precision;
+} TestMessageCount;
+
+typedef gdouble (*TestEval) (const gdouble x);
+
+/*
+ * A Gaussian at 3.5, seen by the first midpoint test of [3, 4], and a pair of opposite
+ * Gaussians at 4.25 and 4.75, which vanish to rounding at 4, 4.5 and 5, the knots and
+ * midpoint the first test of [4, 5] uses.
+ */
+#define TEST_HIDDEN_SIGMA 0.03
+
+static void test_ncm_function_sample_set_tracking (void);
+static void test_ncm_function_sample_set_expand_domain (void);
+static void test_ncm_function_sample_set_expand_domain_at_limits (void);
+static void test_ncm_function_sample_set_expand_domain_nonpositive_subprocess (void);
+static void test_ncm_function_sample_set_expand_domain_empty_subprocess (void);
+static void test_ncm_function_sample_set_expand_domain_traps (void);
+static void test_ncm_function_sample_set_adaptive_midpoint_message (void);
+static void test_ncm_function_sample_set_adaptive_midpoint_precision (void);
+static void test_ncm_function_sample_set_adaptive_midpoint_closure_none (void);
+static void test_ncm_function_sample_set_adaptive_midpoint_closure_pass (void);
+static void test_ncm_function_sample_set_adaptive_midpoint_closure_fail (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/function_sample_set/tracking", &test_ncm_function_sample_set_tracking);
+  g_test_add_func ("/ncm/function_sample_set/expand_domain", &test_ncm_function_sample_set_expand_domain);
+  g_test_add_func ("/ncm/function_sample_set/expand_domain/at_limits", &test_ncm_function_sample_set_expand_domain_at_limits);
+  g_test_add_func ("/ncm/function_sample_set/expand_domain/traps", &test_ncm_function_sample_set_expand_domain_traps);
+  g_test_add_func ("/ncm/function_sample_set/expand_domain/nonpositive/subprocess", &test_ncm_function_sample_set_expand_domain_nonpositive_subprocess);
+  g_test_add_func ("/ncm/function_sample_set/expand_domain/empty/subprocess", &test_ncm_function_sample_set_expand_domain_empty_subprocess);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/message", &test_ncm_function_sample_set_adaptive_midpoint_message);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/precision", &test_ncm_function_sample_set_adaptive_midpoint_precision);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/none", &test_ncm_function_sample_set_adaptive_midpoint_closure_none);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/pass", &test_ncm_function_sample_set_adaptive_midpoint_closure_pass);
+  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/fail", &test_ncm_function_sample_set_adaptive_midpoint_closure_fail);
+
+  g_test_run ();
+}
+
 /* F (x) = (x^2, exp (-x)) */
 static void
 _test_func (const gdouble x, NcmVector *y, gpointer user_data)
@@ -89,6 +140,99 @@ _test_fss_check_order_and_tracking (NcmFunctionSampleSet *fss)
   g_assert_cmpfloat (ncm_function_sample_set_get_x_max (fss), ==, x_last);
   g_assert_cmpfloat (ncm_function_sample_set_get_absmaxF (fss, 0, NULL), ==, max0);
   g_assert_cmpfloat (ncm_function_sample_set_get_absmaxF (fss, 1, NULL), ==, max1);
+}
+
+static void
+_test_count_messages (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  TestMessageCount *count = user_data;
+
+  if (g_strrstr (message, "Max iterations") != NULL)
+    count->max_iter++;
+
+  if (g_strrstr (message, "reached machine precision") != NULL)
+    count->at_precision++;
+}
+
+/* A unit step at x = 0.5 in the first component. */
+static void
+_test_step (const gdouble x, NcmVector *y, gpointer user_data)
+{
+  ncm_vector_set (y, 0, (x < 0.5) ? 0.0 : 1.0);
+  ncm_vector_set (y, 1, 0.0);
+}
+
+static gdouble
+_test_line_eval (const gdouble x)
+{
+  return 2.0 * x + 1.0;
+}
+
+static gdouble
+_test_lorentzian_eval (const gdouble x)
+{
+  return 1.0 / (1.0 + x * x);
+}
+
+static gdouble
+_test_hidden_pair_eval (const gdouble x)
+{
+  const gdouble g0 = exp (-0.5 * gsl_pow_2 ((x - 3.5) / TEST_HIDDEN_SIGMA));
+  const gdouble g1 = exp (-0.5 * gsl_pow_2 ((x - 4.25) / TEST_HIDDEN_SIGMA));
+  const gdouble g2 = exp (-0.5 * gsl_pow_2 ((x - 4.75) / TEST_HIDDEN_SIGMA));
+
+  return g0 + g1 - g2;
+}
+
+static void
+_test_closure_f (const gdouble x, NcmVector *y, gpointer user_data)
+{
+  TestEval eval = (TestEval) user_data;
+
+  ncm_vector_set (y, 0, eval (x));
+}
+
+/*
+ * Refines from seeds 0, 1, ..., 10, reports the closure, and returns the largest
+ * |spline - F| / (reltol |F| + abstol) on a grid over the seed range.
+ */
+static gdouble
+_test_closure (TestEval eval, const gdouble reltol, const gdouble abstol, guint *rounds, guint *flagged, guint *failed, guint *nsamples)
+{
+  const guint n_grid        = 20001;
+  NcmFunctionSampleSet *fss = ncm_function_sample_set_new (1);
+  NcmSpline *s              = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcmVector *y              = ncm_vector_new (1);
+  gdouble max_ratio         = 0.0;
+  NcmSplineVec *sv;
+  guint i;
+
+  for (i = 0; i <= 10; i++)
+    ncm_function_sample_set_add_func (fss, i, &_test_closure_f, eval);
+
+  ncm_function_sample_set_mark_all_old (fss);
+  ncm_function_sample_set_adaptive_midpoint_full (fss, &_test_closure_f, reltol, abstol, 1000, 1, s, eval,
+                                                  rounds, flagged, failed);
+  g_assert_true (ncm_function_sample_set_all_intervals_ok (fss, 1));
+  *nsamples = ncm_function_sample_set_get_nsamples (fss);
+
+  sv = ncm_function_sample_set_to_spline_vec (fss, s);
+
+  for (i = 0; i < n_grid; i++)
+  {
+    const gdouble x  = 10.0 * i / (n_grid - 1.0);
+    const gdouble fx = eval (x);
+
+    ncm_spline_vec_eval (sv, x, y);
+    max_ratio = GSL_MAX (max_ratio, fabs (ncm_vector_get (y, 0) - fx) / (reltol * fabs (fx) + abstol));
+  }
+
+  ncm_spline_vec_free (sv);
+  ncm_vector_free (y);
+  ncm_spline_free (s);
+  ncm_function_sample_set_free (fss);
+
+  return max_ratio;
 }
 
 static void
@@ -196,24 +340,6 @@ test_ncm_function_sample_set_expand_domain_traps (void)
   g_test_trap_assert_stderr ("*the sample set is empty*");
 }
 
-typedef struct _TestMessageCount
-{
-  guint max_iter;
-  guint at_precision;
-} TestMessageCount;
-
-static void
-_test_count_messages (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
-{
-  TestMessageCount *count = user_data;
-
-  if (g_strrstr (message, "Max iterations") != NULL)
-    count->max_iter++;
-
-  if (g_strrstr (message, "reached machine precision") != NULL)
-    count->at_precision++;
-}
-
 static void
 test_ncm_function_sample_set_adaptive_midpoint_message (void)
 {
@@ -257,14 +383,6 @@ test_ncm_function_sample_set_adaptive_midpoint_message (void)
   ncm_spline_free (s);
 }
 
-/* A unit step at x = 0.5 in the first component. */
-static void
-_test_step (const gdouble x, NcmVector *y, gpointer user_data)
-{
-  ncm_vector_set (y, 0, (x < 0.5) ? 0.0 : 1.0);
-  ncm_vector_set (y, 1, 0.0);
-}
-
 static void
 test_ncm_function_sample_set_adaptive_midpoint_precision (void)
 {
@@ -291,88 +409,6 @@ test_ncm_function_sample_set_adaptive_midpoint_precision (void)
 
   ncm_spline_free (s);
   ncm_function_sample_set_free (fss);
-}
-
-typedef gdouble (*TestEval) (const gdouble x);
-
-static gdouble
-_test_line_eval (const gdouble x)
-{
-  return 2.0 * x + 1.0;
-}
-
-static gdouble
-_test_lorentzian_eval (const gdouble x)
-{
-  return 1.0 / (1.0 + x * x);
-}
-
-/*
- * A Gaussian at 3.5, seen by the first midpoint test of [3, 4], and a pair of opposite
- * Gaussians at 4.25 and 4.75, which vanish to rounding at 4, 4.5 and 5, the knots and
- * midpoint the first test of [4, 5] uses.
- */
-#define TEST_HIDDEN_SIGMA 0.03
-
-static gdouble
-_test_hidden_pair_eval (const gdouble x)
-{
-  const gdouble g0 = exp (-0.5 * gsl_pow_2 ((x - 3.5) / TEST_HIDDEN_SIGMA));
-  const gdouble g1 = exp (-0.5 * gsl_pow_2 ((x - 4.25) / TEST_HIDDEN_SIGMA));
-  const gdouble g2 = exp (-0.5 * gsl_pow_2 ((x - 4.75) / TEST_HIDDEN_SIGMA));
-
-  return g0 + g1 - g2;
-}
-
-static void
-_test_closure_f (const gdouble x, NcmVector *y, gpointer user_data)
-{
-  TestEval eval = (TestEval) user_data;
-
-  ncm_vector_set (y, 0, eval (x));
-}
-
-/*
- * Refines from seeds 0, 1, ..., 10, reports the closure, and returns the largest
- * |spline - F| / (reltol |F| + abstol) on a grid over the seed range.
- */
-static gdouble
-_test_closure (TestEval eval, const gdouble reltol, const gdouble abstol, guint *rounds, guint *flagged, guint *failed, guint *nsamples)
-{
-  const guint n_grid        = 20001;
-  NcmFunctionSampleSet *fss = ncm_function_sample_set_new (1);
-  NcmSpline *s              = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  NcmVector *y              = ncm_vector_new (1);
-  gdouble max_ratio         = 0.0;
-  NcmSplineVec *sv;
-  guint i;
-
-  for (i = 0; i <= 10; i++)
-    ncm_function_sample_set_add_func (fss, i, &_test_closure_f, eval);
-
-  ncm_function_sample_set_mark_all_old (fss);
-  ncm_function_sample_set_adaptive_midpoint_full (fss, &_test_closure_f, reltol, abstol, 1000, 1, s, eval,
-                                                  rounds, flagged, failed);
-  g_assert_true (ncm_function_sample_set_all_intervals_ok (fss, 1));
-  *nsamples = ncm_function_sample_set_get_nsamples (fss);
-
-  sv = ncm_function_sample_set_to_spline_vec (fss, s);
-
-  for (i = 0; i < n_grid; i++)
-  {
-    const gdouble x  = 10.0 * i / (n_grid - 1.0);
-    const gdouble fx = eval (x);
-
-    ncm_spline_vec_eval (sv, x, y);
-    max_ratio = GSL_MAX (max_ratio, fabs (ncm_vector_get (y, 0) - fx) / (reltol * fabs (fx) + abstol));
-  }
-
-  ncm_spline_vec_free (sv);
-  ncm_vector_free (y);
-  ncm_spline_free (s);
-  ncm_function_sample_set_free (fss);
-
-  return max_ratio;
 }
 
 static void
@@ -414,29 +450,5 @@ test_ncm_function_sample_set_adaptive_midpoint_closure_fail (void)
   g_assert_cmpuint (rounds, >=, 2);
   g_assert_cmpuint (failed, >=, 1);
   g_assert_cmpuint (flagged, >=, failed);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/function_sample_set/tracking", &test_ncm_function_sample_set_tracking);
-  g_test_add_func ("/ncm/function_sample_set/expand_domain", &test_ncm_function_sample_set_expand_domain);
-  g_test_add_func ("/ncm/function_sample_set/expand_domain/at_limits", &test_ncm_function_sample_set_expand_domain_at_limits);
-  g_test_add_func ("/ncm/function_sample_set/expand_domain/traps", &test_ncm_function_sample_set_expand_domain_traps);
-  g_test_add_func ("/ncm/function_sample_set/expand_domain/nonpositive/subprocess", &test_ncm_function_sample_set_expand_domain_nonpositive_subprocess);
-  g_test_add_func ("/ncm/function_sample_set/expand_domain/empty/subprocess", &test_ncm_function_sample_set_expand_domain_empty_subprocess);
-  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/message", &test_ncm_function_sample_set_adaptive_midpoint_message);
-  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/precision", &test_ncm_function_sample_set_adaptive_midpoint_precision);
-  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/none", &test_ncm_function_sample_set_adaptive_midpoint_closure_none);
-  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/pass", &test_ncm_function_sample_set_adaptive_midpoint_closure_pass);
-  g_test_add_func ("/ncm/function_sample_set/adaptive_midpoint/closure/fail", &test_ncm_function_sample_set_adaptive_midpoint_closure_fail);
-
-  g_test_run ();
 }
 

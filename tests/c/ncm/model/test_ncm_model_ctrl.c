@@ -105,6 +105,14 @@ main (gint argc, gchar *argv[])
 }
 
 void
+_set_destroyed (gpointer b)
+{
+  gboolean *destroyed = b;
+
+  *destroyed = TRUE;
+}
+
+void
 test_ncm_model_ctrl_new (TestNcmModelCtrl *test, gconstpointer pdata)
 {
   test->ctrl      = ncm_model_ctrl_new (NULL);
@@ -128,14 +136,6 @@ test_ncm_model_ctrl_new (TestNcmModelCtrl *test, gconstpointer pdata)
 
   g_assert_true (test->submodel2 != NULL);
   g_assert_true (NCM_IS_MODEL (test->submodel2));
-}
-
-void
-_set_destroyed (gpointer b)
-{
-  gboolean *destroyed = b;
-
-  *destroyed = TRUE;
 }
 
 void

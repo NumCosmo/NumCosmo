@@ -217,6 +217,44 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
+/* The healpy truth tables, from tests/tools/make_sphere_healpy_truth_table.py. */
+static NcmObjDictStr *
+_test_healpy_table (const gchar *name)
+{
+  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  gchar *file         = g_strdup_printf ("truth_tables/sphere/%s", name);
+  gchar *path         = ncm_cfg_get_data_filename (file, TRUE);
+  NcmObjDictStr *dict = ncm_serialize_dict_str_from_binfile (ser, path);
+
+  g_free (path);
+  g_free (file);
+  ncm_serialize_free (ser);
+
+  return dict;
+}
+
+static NcmMatrix *
+_test_healpy_matrix (NcmObjDictStr *dict, const gchar *format, const gint64 n)
+{
+  gchar *key       = g_strdup_printf (format, n);
+  NcmMatrix *table = NCM_MATRIX (ncm_obj_dict_str_peek (dict, key));
+
+  g_assert_nonnull (table);
+  g_free (key);
+
+  return table;
+}
+
+static void
+_test_load_fixture (const gchar *name)
+{
+  gchar *file        = g_strdup_printf ("truth_tables/sphere/%s", name);
+  gchar *path        = ncm_cfg_get_data_filename (file, TRUE);
+  NcmSphereMap *smap = ncm_sphere_map_new (1);
+
+  ncm_sphere_map_load_fits (smap, path, NULL);
+}
+
 void
 test_ncm_sphere_map_new (TestNcmSphereMap *test, gconstpointer pdata)
 {
@@ -792,34 +830,6 @@ test_ncm_sphere_map_invalid_set_map (TestNcmSphereMap *test, gconstpointer pdata
   ncm_sphere_map_set_map (test->pix, map);
 }
 
-/* The healpy truth tables, from tests/tools/make_sphere_healpy_truth_table.py. */
-static NcmObjDictStr *
-_test_healpy_table (const gchar *name)
-{
-  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  gchar *file         = g_strdup_printf ("truth_tables/sphere/%s", name);
-  gchar *path         = ncm_cfg_get_data_filename (file, TRUE);
-  NcmObjDictStr *dict = ncm_serialize_dict_str_from_binfile (ser, path);
-
-  g_free (path);
-  g_free (file);
-  ncm_serialize_free (ser);
-
-  return dict;
-}
-
-static NcmMatrix *
-_test_healpy_matrix (NcmObjDictStr *dict, const gchar *format, const gint64 n)
-{
-  gchar *key       = g_strdup_printf (format, n);
-  NcmMatrix *table = NCM_MATRIX (ncm_obj_dict_str_peek (dict, key));
-
-  g_assert_nonnull (table);
-  g_free (key);
-
-  return table;
-}
-
 /*
  * RING <-> NESTED and the pixel centres against healpy: every pixel at nside 1, 2, 4 and
  * 8, and 256 seeded pixels at nside 128 and 256. The indices are exact; the centres
@@ -1232,16 +1242,6 @@ test_ncm_sphere_map_fits_noorder_subprocess (void)
 
   ncm_sphere_map_free (smap);
   g_free (path);
-}
-
-static void
-_test_load_fixture (const gchar *name)
-{
-  gchar *file        = g_strdup_printf ("truth_tables/sphere/%s", name);
-  gchar *path        = ncm_cfg_get_data_filename (file, TRUE);
-  NcmSphereMap *smap = ncm_sphere_map_new (1);
-
-  ncm_sphere_map_load_fits (smap, path, NULL);
 }
 
 void

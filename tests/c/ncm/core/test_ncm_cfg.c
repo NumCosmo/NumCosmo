@@ -41,7 +41,135 @@ typedef struct _TesNcmCfg
   guint place_holder;
 } TesNcmCfg;
 
+typedef enum
+{
+  TEST_NCM_CFG_PATH_DEFAULT,
+  TEST_NCM_CFG_PATH_XDG,
+  TEST_NCM_CFG_PATH_XDG_RELATIVE,
+  TEST_NCM_CFG_PATH_LEGACY,
+  TEST_NCM_CFG_PATH_OVERRIDE,
+  TEST_NCM_CFG_PATH_OVERRIDE_EMPTY,
+  TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE,
+} TestNcmCfgPath;
+
+void test_ncm_cfg_new (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata);
+
+void test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_fftw_planner (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_logfile_set_logstream (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_logfile_on_off (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata);
+
+void test_ncm_cfg_traps (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_invalid (TesNcmCfg *test, gconstpointer pdata);
+void test_ncm_cfg_string_ww (void);
+void test_ncm_cfg_command_line (void);
+void test_ncm_cfg_enum (void);
+void test_ncm_cfg_keyfile (void);
+void test_ncm_cfg_paths (void);
+void test_ncm_cfg_data_filename (void);
+void test_ncm_cfg_array_variant (void);
+void test_ncm_cfg_version (void);
+
+static void test_ncm_cfg_error_log_handler (void);
+static void test_ncm_cfg_error_log_handler_subprocess (void);
+static void test_ncm_cfg_enum_print_all_gaps (void);
+static void test_ncm_cfg_enum_print_all_gaps_subprocess (void);
+static void test_ncm_cfg_fftw_plan_begin_end (void);
+static void test_ncm_cfg_fftw_timelimit_default (void);
+static void test_ncm_cfg_fftw_timelimit_default_subprocess (void);
+static void test_ncm_cfg_omp_thread_limit (void);
+static void test_ncm_cfg_omp_thread_limit_subprocess (void);
+static void test_ncm_cfg_path_default (void);
+static void test_ncm_cfg_path_xdg (void);
+static void test_ncm_cfg_path_xdg_relative (void);
+static void test_ncm_cfg_path_legacy (void);
+static void test_ncm_cfg_path_override (void);
+static void test_ncm_cfg_path_override_empty (void);
+static void test_ncm_cfg_path_override_relative (void);
+static void test_ncm_cfg_fftw_plan_destroy (void);
+
 static gchar *test_ncm_cfg_executable;
+
+gint
+main (gint argc, gchar *argv[])
+{
+  test_ncm_cfg_executable = g_find_program_in_path (argv[0]);
+  g_assert_nonnull (test_ncm_cfg_executable);
+  g_test_init (&argc, &argv, NULL);
+
+  if (g_getenv ("NCM_TEST_CFG_CHILD") == NULL)
+  {
+    ncm_cfg_init_full_ptr (&argc, &argv);
+    ncm_cfg_enable_gsl_err_handler ();
+  }
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/ncm/cfg/misc", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_misc,
+              &test_ncm_cfg_free);
+
+  g_test_add ("/ncm/cfg/fftw_planner", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_fftw_planner,
+              &test_ncm_cfg_free);
+
+  g_test_add ("/ncm/cfg/logfile/set_logstream", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_logfile_set_logstream,
+              &test_ncm_cfg_free);
+
+  g_test_add ("/ncm/cfg/logfile/on_off", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_logfile_on_off,
+              &test_ncm_cfg_free);
+
+  g_test_add ("/ncm/cfg/logfile_str/on_off", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_logfile_str_on_off,
+              &test_ncm_cfg_free);
+
+  g_test_add_func ("/ncm/cfg/string_ww", &test_ncm_cfg_string_ww);
+  g_test_add_func ("/ncm/cfg/command_line", &test_ncm_cfg_command_line);
+  g_test_add_func ("/ncm/cfg/enum", &test_ncm_cfg_enum);
+  g_test_add_func ("/ncm/cfg/fftw_plan_begin_end", &test_ncm_cfg_fftw_plan_begin_end);
+  g_test_add_func ("/ncm/cfg/fftw_plan_destroy", &test_ncm_cfg_fftw_plan_destroy);
+  g_test_add_func ("/ncm/cfg/fftw_timelimit_default", &test_ncm_cfg_fftw_timelimit_default);
+  g_test_add_func ("/ncm/cfg/fftw_timelimit_default/subprocess", &test_ncm_cfg_fftw_timelimit_default_subprocess);
+  g_test_add_func ("/ncm/cfg/omp_thread_limit", &test_ncm_cfg_omp_thread_limit);
+  g_test_add_func ("/ncm/cfg/omp_thread_limit/subprocess", &test_ncm_cfg_omp_thread_limit_subprocess);
+  g_test_add_func ("/ncm/cfg/path/default", &test_ncm_cfg_path_default);
+  g_test_add_func ("/ncm/cfg/path/xdg", &test_ncm_cfg_path_xdg);
+  g_test_add_func ("/ncm/cfg/path/xdg_relative", &test_ncm_cfg_path_xdg_relative);
+  g_test_add_func ("/ncm/cfg/path/legacy", &test_ncm_cfg_path_legacy);
+  g_test_add_func ("/ncm/cfg/path/override", &test_ncm_cfg_path_override);
+  g_test_add_func ("/ncm/cfg/path/override_empty", &test_ncm_cfg_path_override_empty);
+  g_test_add_func ("/ncm/cfg/path/override_relative", &test_ncm_cfg_path_override_relative);
+  g_test_add_func ("/ncm/cfg/enum_print_all_gaps", &test_ncm_cfg_enum_print_all_gaps);
+  g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
+  g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);
+  g_test_add_func ("/ncm/cfg/error_log_handler/subprocess", &test_ncm_cfg_error_log_handler_subprocess);
+  g_test_add_func ("/ncm/cfg/keyfile", &test_ncm_cfg_keyfile);
+  g_test_add_func ("/ncm/cfg/paths", &test_ncm_cfg_paths);
+  g_test_add_func ("/ncm/cfg/data_filename", &test_ncm_cfg_data_filename);
+  g_test_add_func ("/ncm/cfg/array_variant", &test_ncm_cfg_array_variant);
+  g_test_add_func ("/ncm/cfg/version", &test_ncm_cfg_version);
+
+  g_test_add ("/ncm/cfg/traps", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_traps,
+              &test_ncm_cfg_free);
+
+  g_test_add ("/ncm/cfg/logfile/subprocess", TesNcmCfg, NULL,
+              &test_ncm_cfg_new,
+              &test_ncm_cfg_invalid,
+              &test_ncm_cfg_free);
+
+  return g_test_run ();
+}
 
 static gboolean
 _test_ncm_cfg_check_wait_status (gint status, GError **error)
@@ -102,155 +230,12 @@ _test_ncm_cfg_spawn (const gchar *test_path, gchar **envp, gboolean should_pass,
   g_free (errors);
 }
 
-void test_ncm_cfg_new (TesNcmCfg *test, gconstpointer pdata);
-void test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata);
-
-void test_ncm_cfg_misc (TesNcmCfg *test, gconstpointer pdata);
-void test_ncm_cfg_fftw_planner (TesNcmCfg *test, gconstpointer pdata);
-void test_ncm_cfg_logfile_set_logstream (TesNcmCfg *test, gconstpointer pdata);
-void test_ncm_cfg_logfile_on_off (TesNcmCfg *test, gconstpointer pdata);
-void test_ncm_cfg_logfile_str_on_off (TesNcmCfg *test, gconstpointer pdata);
-
-void test_ncm_cfg_traps (TesNcmCfg *test, gconstpointer pdata);
-void test_ncm_cfg_invalid (TesNcmCfg *test, gconstpointer pdata);
-void test_ncm_cfg_string_ww (void);
-void test_ncm_cfg_command_line (void);
-void test_ncm_cfg_enum (void);
-void test_ncm_cfg_keyfile (void);
-void test_ncm_cfg_paths (void);
-void test_ncm_cfg_data_filename (void);
-void test_ncm_cfg_array_variant (void);
-void test_ncm_cfg_version (void);
-
 static void
 _test_ncm_cfg_error_logger (const gchar *message)
 {
   printf ("CAUGHT: %s\n", message);
   fflush (stdout);
 }
-
-/* The error logger receives criticals also while ncm_cfg_logfile() is off */
-static void
-test_ncm_cfg_error_log_handler (void)
-{
-  g_test_trap_subprocess ("/ncm/cfg/error_log_handler/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stdout ("*CAUGHT: a critical with the log off*");
-}
-
-static void
-test_ncm_cfg_error_log_handler_subprocess (void)
-{
-  ncm_cfg_set_error_log_handler (&_test_ncm_cfg_error_logger);
-  ncm_cfg_logfile (FALSE);
-  g_log ("NUMCOSMO", G_LOG_LEVEL_CRITICAL, "a critical with the log off");
-}
-
-/* Every member is printed, also values that are negative or after a gap */
-static void
-test_ncm_cfg_enum_print_all_gaps (void)
-{
-  g_test_trap_subprocess ("/ncm/cfg/enum_print_all_gaps/subprocess", 0, 0);
-  g_test_trap_assert_passed ();
-  g_test_trap_assert_stdout ("*TEST_GAP_NEG*TEST_GAP_FIVE*");
-}
-
-static void
-test_ncm_cfg_enum_print_all_gaps_subprocess (void)
-{
-  static const GEnumValue values[] = {
-    {-1, "TEST_GAP_NEG", "neg"},
-    {5, "TEST_GAP_FIVE", "five"},
-    {0, NULL, NULL}
-  };
-  GType type = g_enum_register_static ("TestNcmCfgGapEnum", values);
-
-  ncm_cfg_enum_print_all (type, "Gap enum");
-}
-
-/* A key is new once per process and per planner flag */
-static void
-test_ncm_cfg_fftw_plan_begin_end (void)
-{
-  GError *error = NULL;
-  gboolean first;
-
-  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
-  g_assert_no_error (error);
-
-  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
-  ncm_cfg_fftw_plan_end (first);
-  g_assert_true (first);
-
-  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
-  ncm_cfg_fftw_plan_end (first);
-  g_assert_false (first);
-
-  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 8);
-  ncm_cfg_fftw_plan_end (first);
-  g_assert_true (first);
-
-  ncm_cfg_set_fftw_default_flag_str ("measure", 10.0, &error);
-  g_assert_no_error (error);
-
-  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
-  ncm_cfg_fftw_plan_end (first);
-  g_assert_true (first);
-
-  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
-  g_assert_no_error (error);
-}
-
-/* Without NCM_FFTW_PLANNER_TIMELIMIT the limit in effect, and reported, is 10 s */
-static void
-test_ncm_cfg_fftw_timelimit_default (void)
-{
-  gchar **envp = g_get_environ ();
-
-  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER");
-  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER_TIMELIMIT");
-  _test_ncm_cfg_spawn ("/ncm/cfg/fftw_timelimit_default/subprocess", envp, TRUE, NULL);
-  g_strfreev (envp);
-}
-
-static void
-test_ncm_cfg_fftw_timelimit_default_subprocess (void)
-{
-  g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 10.0);
-}
-
-/* OMP_NUM_THREADS above OMP_THREAD_LIMIT makes ncm_cfg_init() warn; GTest makes the warning fatal */
-static void
-test_ncm_cfg_omp_thread_limit (void)
-{
-#ifdef _OPENMP
-  gchar **envp = g_get_environ ();
-
-  envp = g_environ_setenv (envp, "OMP_NUM_THREADS", "2", TRUE);
-  envp = g_environ_setenv (envp, "OMP_THREAD_LIMIT", "1", TRUE);
-  _test_ncm_cfg_spawn ("/ncm/cfg/omp_thread_limit/subprocess", envp, FALSE,
-                       "OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)");
-  g_strfreev (envp);
-#else
-  g_test_skip ("built without OpenMP");
-#endif /* _OPENMP */
-}
-
-static void
-test_ncm_cfg_omp_thread_limit_subprocess (void)
-{
-}
-
-typedef enum
-{
-  TEST_NCM_CFG_PATH_DEFAULT,
-  TEST_NCM_CFG_PATH_XDG,
-  TEST_NCM_CFG_PATH_XDG_RELATIVE,
-  TEST_NCM_CFG_PATH_LEGACY,
-  TEST_NCM_CFG_PATH_OVERRIDE,
-  TEST_NCM_CFG_PATH_OVERRIDE_EMPTY,
-  TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE,
-} TestNcmCfgPath;
 
 static void
 _test_ncm_cfg_path (TestNcmCfgPath mode, const gchar *test_path)
@@ -374,6 +359,154 @@ _test_ncm_cfg_path (TestNcmCfgPath mode, const gchar *test_path)
   }
 }
 
+static gpointer
+_test_ncm_cfg_fftw_plan_worker (gpointer data)
+{
+  const guint id = GPOINTER_TO_UINT (data);
+  gdouble *in    = fftw_alloc_real (64);
+  gdouble *out   = fftw_alloc_real (64);
+  guint i;
+
+  for (i = 0; i < 50; i++)
+  {
+    const guint n        = 8 + ((id + i) % 7) * 8;
+    const gboolean first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_threads_redft00_%u", n);
+    fftw_plan plan       = fftw_plan_r2r_1d (n, in, out, FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
+
+    ncm_cfg_fftw_plan_end (first);
+    ncm_cfg_fftw_plan_destroy (plan);
+  }
+
+  fftw_free (in);
+  fftw_free (out);
+
+  return NULL;
+}
+
+void
+test_ncm_cfg_new (TesNcmCfg *test, gconstpointer pdata)
+{
+  test->place_holder = 0;
+}
+
+void
+test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata)
+{
+  /* NcmDiff *diff = test->diff; */
+}
+
+/* The error logger receives criticals also while ncm_cfg_logfile() is off */
+static void
+test_ncm_cfg_error_log_handler (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/error_log_handler/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stdout ("*CAUGHT: a critical with the log off*");
+}
+
+static void
+test_ncm_cfg_error_log_handler_subprocess (void)
+{
+  ncm_cfg_set_error_log_handler (&_test_ncm_cfg_error_logger);
+  ncm_cfg_logfile (FALSE);
+  g_log ("NUMCOSMO", G_LOG_LEVEL_CRITICAL, "a critical with the log off");
+}
+
+/* Every member is printed, also values that are negative or after a gap */
+static void
+test_ncm_cfg_enum_print_all_gaps (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/enum_print_all_gaps/subprocess", 0, 0);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*TEST_GAP_NEG*TEST_GAP_FIVE*");
+}
+
+static void
+test_ncm_cfg_enum_print_all_gaps_subprocess (void)
+{
+  static const GEnumValue values[] = {
+    {-1, "TEST_GAP_NEG", "neg"},
+    {5, "TEST_GAP_FIVE", "five"},
+    {0, NULL, NULL}
+  };
+  GType type = g_enum_register_static ("TestNcmCfgGapEnum", values);
+
+  ncm_cfg_enum_print_all (type, "Gap enum");
+}
+
+/* A key is new once per process and per planner flag */
+static void
+test_ncm_cfg_fftw_plan_begin_end (void)
+{
+  GError *error = NULL;
+  gboolean first;
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_false (first);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 8);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  ncm_cfg_set_fftw_default_flag_str ("measure", 10.0, &error);
+  g_assert_no_error (error);
+
+  first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_plan_%d", 7);
+  ncm_cfg_fftw_plan_end (first);
+  g_assert_true (first);
+
+  ncm_cfg_set_fftw_default_flag_str ("estimate", 10.0, &error);
+  g_assert_no_error (error);
+}
+
+/* Without NCM_FFTW_PLANNER_TIMELIMIT the limit in effect, and reported, is 10 s */
+static void
+test_ncm_cfg_fftw_timelimit_default (void)
+{
+  gchar **envp = g_get_environ ();
+
+  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER");
+  envp = g_environ_unsetenv (envp, "NCM_FFTW_PLANNER_TIMELIMIT");
+  _test_ncm_cfg_spawn ("/ncm/cfg/fftw_timelimit_default/subprocess", envp, TRUE, NULL);
+  g_strfreev (envp);
+}
+
+static void
+test_ncm_cfg_fftw_timelimit_default_subprocess (void)
+{
+  g_assert_cmpfloat (ncm_cfg_get_fftw_timelimit (), ==, 10.0);
+}
+
+/* OMP_NUM_THREADS above OMP_THREAD_LIMIT makes ncm_cfg_init() warn; GTest makes the warning fatal */
+static void
+test_ncm_cfg_omp_thread_limit (void)
+{
+#ifdef _OPENMP
+  gchar **envp = g_get_environ ();
+
+  envp = g_environ_setenv (envp, "OMP_NUM_THREADS", "2", TRUE);
+  envp = g_environ_setenv (envp, "OMP_THREAD_LIMIT", "1", TRUE);
+  _test_ncm_cfg_spawn ("/ncm/cfg/omp_thread_limit/subprocess", envp, FALSE,
+                       "OMP_NUM_THREADS (2) exceeds OMP_THREAD_LIMIT (1)");
+  g_strfreev (envp);
+#else
+  g_test_skip ("built without OpenMP");
+#endif /* _OPENMP */
+}
+
+static void
+test_ncm_cfg_omp_thread_limit_subprocess (void)
+{
+}
+
 static void
 test_ncm_cfg_path_default (void)
 {
@@ -416,30 +549,6 @@ test_ncm_cfg_path_override_relative (void)
   _test_ncm_cfg_path (TEST_NCM_CFG_PATH_OVERRIDE_RELATIVE, "/ncm/cfg/path/override_relative");
 }
 
-static gpointer
-_test_ncm_cfg_fftw_plan_worker (gpointer data)
-{
-  const guint id = GPOINTER_TO_UINT (data);
-  gdouble *in    = fftw_alloc_real (64);
-  gdouble *out   = fftw_alloc_real (64);
-  guint i;
-
-  for (i = 0; i < 50; i++)
-  {
-    const guint n        = 8 + ((id + i) % 7) * 8;
-    const gboolean first = ncm_cfg_fftw_plan_begin ("test_ncm_cfg_threads_redft00_%u", n);
-    fftw_plan plan       = fftw_plan_r2r_1d (n, in, out, FFTW_REDFT00, ncm_cfg_get_fftw_default_flag ());
-
-    ncm_cfg_fftw_plan_end (first);
-    ncm_cfg_fftw_plan_destroy (plan);
-  }
-
-  fftw_free (in);
-  fftw_free (out);
-
-  return NULL;
-}
-
 /* Planning and destroying from several threads goes through the planning lock */
 static void
 test_ncm_cfg_fftw_plan_destroy (void)
@@ -458,97 +567,6 @@ test_ncm_cfg_fftw_plan_destroy (void)
 
   for (i = 0; i < G_N_ELEMENTS (threads); i++)
     g_thread_join (threads[i]);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  test_ncm_cfg_executable = g_find_program_in_path (argv[0]);
-  g_assert_nonnull (test_ncm_cfg_executable);
-  g_test_init (&argc, &argv, NULL);
-
-  if (g_getenv ("NCM_TEST_CFG_CHILD") == NULL)
-  {
-    ncm_cfg_init_full_ptr (&argc, &argv);
-    ncm_cfg_enable_gsl_err_handler ();
-  }
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/ncm/cfg/misc", TesNcmCfg, NULL,
-              &test_ncm_cfg_new,
-              &test_ncm_cfg_misc,
-              &test_ncm_cfg_free);
-
-  g_test_add ("/ncm/cfg/fftw_planner", TesNcmCfg, NULL,
-              &test_ncm_cfg_new,
-              &test_ncm_cfg_fftw_planner,
-              &test_ncm_cfg_free);
-
-  g_test_add ("/ncm/cfg/logfile/set_logstream", TesNcmCfg, NULL,
-              &test_ncm_cfg_new,
-              &test_ncm_cfg_logfile_set_logstream,
-              &test_ncm_cfg_free);
-
-  g_test_add ("/ncm/cfg/logfile/on_off", TesNcmCfg, NULL,
-              &test_ncm_cfg_new,
-              &test_ncm_cfg_logfile_on_off,
-              &test_ncm_cfg_free);
-
-  g_test_add ("/ncm/cfg/logfile_str/on_off", TesNcmCfg, NULL,
-              &test_ncm_cfg_new,
-              &test_ncm_cfg_logfile_str_on_off,
-              &test_ncm_cfg_free);
-
-  g_test_add_func ("/ncm/cfg/string_ww", &test_ncm_cfg_string_ww);
-  g_test_add_func ("/ncm/cfg/command_line", &test_ncm_cfg_command_line);
-  g_test_add_func ("/ncm/cfg/enum", &test_ncm_cfg_enum);
-  g_test_add_func ("/ncm/cfg/fftw_plan_begin_end", &test_ncm_cfg_fftw_plan_begin_end);
-  g_test_add_func ("/ncm/cfg/fftw_plan_destroy", &test_ncm_cfg_fftw_plan_destroy);
-  g_test_add_func ("/ncm/cfg/fftw_timelimit_default", &test_ncm_cfg_fftw_timelimit_default);
-  g_test_add_func ("/ncm/cfg/fftw_timelimit_default/subprocess", &test_ncm_cfg_fftw_timelimit_default_subprocess);
-  g_test_add_func ("/ncm/cfg/omp_thread_limit", &test_ncm_cfg_omp_thread_limit);
-  g_test_add_func ("/ncm/cfg/omp_thread_limit/subprocess", &test_ncm_cfg_omp_thread_limit_subprocess);
-  g_test_add_func ("/ncm/cfg/path/default", &test_ncm_cfg_path_default);
-  g_test_add_func ("/ncm/cfg/path/xdg", &test_ncm_cfg_path_xdg);
-  g_test_add_func ("/ncm/cfg/path/xdg_relative", &test_ncm_cfg_path_xdg_relative);
-  g_test_add_func ("/ncm/cfg/path/legacy", &test_ncm_cfg_path_legacy);
-  g_test_add_func ("/ncm/cfg/path/override", &test_ncm_cfg_path_override);
-  g_test_add_func ("/ncm/cfg/path/override_empty", &test_ncm_cfg_path_override_empty);
-  g_test_add_func ("/ncm/cfg/path/override_relative", &test_ncm_cfg_path_override_relative);
-  g_test_add_func ("/ncm/cfg/enum_print_all_gaps", &test_ncm_cfg_enum_print_all_gaps);
-  g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
-  g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);
-  g_test_add_func ("/ncm/cfg/error_log_handler/subprocess", &test_ncm_cfg_error_log_handler_subprocess);
-  g_test_add_func ("/ncm/cfg/keyfile", &test_ncm_cfg_keyfile);
-  g_test_add_func ("/ncm/cfg/paths", &test_ncm_cfg_paths);
-  g_test_add_func ("/ncm/cfg/data_filename", &test_ncm_cfg_data_filename);
-  g_test_add_func ("/ncm/cfg/array_variant", &test_ncm_cfg_array_variant);
-  g_test_add_func ("/ncm/cfg/version", &test_ncm_cfg_version);
-
-  g_test_add ("/ncm/cfg/traps", TesNcmCfg, NULL,
-              &test_ncm_cfg_new,
-              &test_ncm_cfg_traps,
-              &test_ncm_cfg_free);
-
-  g_test_add ("/ncm/cfg/logfile/subprocess", TesNcmCfg, NULL,
-              &test_ncm_cfg_new,
-              &test_ncm_cfg_invalid,
-              &test_ncm_cfg_free);
-
-  return g_test_run ();
-}
-
-void
-test_ncm_cfg_new (TesNcmCfg *test, gconstpointer pdata)
-{
-  test->place_holder = 0;
-}
-
-void
-test_ncm_cfg_free (TesNcmCfg *test, gconstpointer pdata)
-{
-  /* NcmDiff *diff = test->diff; */
 }
 
 void

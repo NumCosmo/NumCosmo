@@ -36,6 +36,47 @@
 
 #include "test_ncm_sbessel_arb_cases.h"
 
+typedef struct _TestGauss
+{
+  gdouble center;
+  gdouble sigma;
+  gdouble amplitude;
+} TestGauss;
+
+/* The integrand of one case, counting its calls and the range of x it was evaluated at */
+typedef struct _TestArbEval
+{
+  const TestArbCell *cell;
+  guint calls;
+  gdouble x_min;
+  gdouble x_max;
+} TestArbEval;
+
+/*
+ * The tau constraint is valid while the working order n satisfies n_F << n < N_min ~
+ * 2 span / pi. These checks use one panel, x in [3162.28, 3672.79] at k = 1, ell
+ * 200..207, and a Gaussian forcing of amplitude 1e-16 centred on it with width
+ * span / width_fraction.
+ */
+#define TEST_TAU_A 3162.28
+#define TEST_TAU_B 3672.79
+#define TEST_TAU_ELL_MIN 200
+#define TEST_TAU_ELL_MAX 207
+#define TEST_TAU_N_ELL (TEST_TAU_ELL_MAX - TEST_TAU_ELL_MIN + 1)
+
+/*
+ * The knot at turning-knot-margin times nu: the tau guard cannot certify a panel that
+ * straddles the turning point, since its bound has min |x^2 - nu^2| in the denominator.
+ * These checks integrate a Gaussian (center 3e4, sigma 6e3) on x in [1e2, 1e5], k = 1,
+ * ell ell..ell + 7.
+ */
+typedef struct _TestTurningRun
+{
+  guint n_tau_solves;
+  guint n_fallbacks;
+  guint n_locked_eligible;
+} TestTurningRun;
+
 void test_ncm_sbessel_integrator_levin_arb_constant (void);
 void test_ncm_sbessel_integrator_levin_arb_linear (void);
 void test_ncm_sbessel_integrator_levin_arb_quadratic (void);
@@ -89,9 +130,104 @@ void test_ncm_sbessel_integrator_levin_invalid_cheb_reltol_negative (void);
 void test_ncm_sbessel_integrator_levin_invalid_deriv (void);
 
 static const gchar *test_truth_tables[] = {"gauss", "rational"};
-static const guint test_block_sizes[]   = {1, 4, 8, 16};
-static const gdouble test_tau_widths[]  = {30.0, 100.0};
-static const guint test_turning_ells[]  = {500, 1000};
+
+static const guint test_block_sizes[] = {1, 4, 8, 16};
+
+static const gdouble test_tau_widths[] = {30.0, 100.0};
+
+static const guint test_turning_ells[] = {500, 1000};
+
+/* Certified integrals of make_sbessel_arb_cases.py levin, see test_ncm_sbessel_arb_cases.h */
+static const TestArbCell test_arb_cells[] = {
+  /* BEGIN make_sbessel_arb_cases.py levin */
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.6021586306762569},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 1, 1.0, 0.7958237222715151},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.48260284581290397},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 10, 1.0, 0.34015366131471403},
+  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 20, 1.0, 0.07200515204667218},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 0, 1.0, 0.13222024405474772},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 1, 1.0, 0.5306843647565257},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 5, 1.0, 1.9425860132872468},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 10, 1.0, 3.1777343624297174},
+  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 20, 1.0, 1.330664477477039},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 0, 1.0, -7.549864664479969},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 1, 1.0, -17.152993541635162},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 5, 1.0, -3.7098496929237466},
+  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 10, 1.0, 25.794284875856388},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 0, 1.0, -12.391811110003745},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 1, 1.0, 3.2008147246960106},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 5, 1.0, -15.439707699282732},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 10, 1.0, 29.801551483932744},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 20, 1.0, 0.08489097486799253},
+  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 200, 20.0, 0.4148178074571125},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, 0.009119978431775066},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, -0.16417347888847092},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, -0.10432400526491802},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, 0.08752243602152396},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, 0.2555904588029378},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, 0.34648365298352607},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, 0.3706808798675939},
+  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, 0.35429189497075153},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, 0.11132862017108842},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, 0.0514075231243722},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, -0.09750506779987338},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, -0.12946822430690377},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, -0.016869271809440943},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, 0.13936825342229892},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, 0.24850488506975554},
+  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, 0.29197853219169384},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, -0.0879525949168579},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, -0.009908381689475356},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, 0.08859703860058944},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, 0.05261904530206776},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, -0.06015245320021174},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, -0.10923788735438252},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, -0.052066984908389374},
+  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, 0.05042494149045293},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, -0.0395063336597935},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, -0.06053206247432944},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, 0.023646311006344813},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, 0.07428521787473621},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, 0.0238668133674281},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, -0.06022051335629506},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, -0.08985303866903385},
+  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, -0.04413403157505907},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.6593299064355118},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 1, 1.0, 0.38682227139505565},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 2, 1.0, 0.12832130915740367},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 3, 1.0, 0.030526685853749243},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 4, 1.0, 0.0057388279129687095},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.0008982701648965717},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 6, 1.0, 0.00012090747281368287},
+  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 7, 1.0, 1.4304072407906955e-05},
+  {"rejected_edge", TEST_ARB_COS, 1.0, 2.0, 500.0, 0.0, 0, FALSE, 0, 1.0, 0.0015370690742047299},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 0, 1.0, 0.007750496513501052},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 1, 1.0, -0.004589534901865097},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 2, 1.0, -0.007890476440616185},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 3, 1.0, 0.004197348115723649},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 4, 1.0, 0.008189812011263732},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 5, 1.0, -0.0034639808864253},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 6, 1.0, -0.008579950301882813},
+  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 7, 1.0, 0.0023527834949275653},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 0, 1.0, 0.07102420363141924},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 1, 1.0, -0.04201163150805379},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 2, 1.0, -0.08221534646397724},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 3, 1.0, 0.013426384614975292},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 4, 1.0, 0.09328165963961846},
+  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 5, 1.0, 0.048487996142564084},
+  {"ell_zero", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.712264523851691},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 0.1, 0.0001557694944990179},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.6484700039890495},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 10.0, -0.01113331884326862},
+  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 100.0, -4.653748260250706e-05},
+  {"narrow", TEST_ARB_POWER, 5.0, 5.001, 1.0, 0.0, 0, FALSE, 5, 1.0, 0.0005342563413119415},
+  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 100, 100.0, 0.0008907936235087944},
+  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 200, 200.0, 0.0003121418486470063},
+  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 300, 300.0, 0.00016794746443265403},
+  {"oscillatory", TEST_ARB_EXP, 1.0, 100.0, 100.0, 0.0, 0, FALSE, 10, 500.0, 3.2810031358293054e-06},
+  {"evanescent", TEST_ARB_GAUSS, 1.0, 8.0, 4.0, 1.2, 2, FALSE, 30, 0.5, 8.723201535126188e-26},
+  /* END make_sbessel_arb_cases.py levin */
+};
 
 gint
 main (gint argc, gchar *argv[])
@@ -244,13 +380,6 @@ _test_one (gpointer user_data, gdouble x, gdouble k)
   return 1.0;
 }
 
-typedef struct _TestGauss
-{
-  gdouble center;
-  gdouble sigma;
-  gdouble amplitude;
-} TestGauss;
-
 static gdouble
 _test_gauss (gpointer user_data, gdouble x, gdouble k)
 {
@@ -260,112 +389,11 @@ _test_gauss (gpointer user_data, gdouble x, gdouble k)
   return g->amplitude * exp (-0.5 * z * z);
 }
 
-/* Certified integrals of make_sbessel_arb_cases.py levin, see test_ncm_sbessel_arb_cases.h */
-static const TestArbCell test_arb_cells[] = {
-  /* BEGIN make_sbessel_arb_cases.py levin */
-  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.6021586306762569},
-  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 1, 1.0, 0.7958237222715151},
-  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.48260284581290397},
-  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 10, 1.0, 0.34015366131471403},
-  {"constant", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 20, 1.0, 0.07200515204667218},
-  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 0, 1.0, 0.13222024405474772},
-  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 1, 1.0, 0.5306843647565257},
-  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 5, 1.0, 1.9425860132872468},
-  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 10, 1.0, 3.1777343624297174},
-  {"linear", TEST_ARB_POWER, 1.0, 20.0, 1.0, 0.0, 0, FALSE, 20, 1.0, 1.330664477477039},
-  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 0, 1.0, -7.549864664479969},
-  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 1, 1.0, -17.152993541635162},
-  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 5, 1.0, -3.7098496929237466},
-  {"quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, FALSE, 10, 1.0, 25.794284875856388},
-  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 0, 1.0, -12.391811110003745},
-  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 1, 1.0, 3.2008147246960106},
-  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 5, 1.0, -15.439707699282732},
-  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 10, 1.0, 29.801551483932744},
-  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 20, 1.0, 0.08489097486799253},
-  {"rational", TEST_ARB_RATIONAL, 1.0, 20.0, 10.5, 3.0, 0, FALSE, 200, 20.0, 0.4148178074571125},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, 0.009119978431775066},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, -0.16417347888847092},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, -0.10432400526491802},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, 0.08752243602152396},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, 0.2555904588029378},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, 0.34648365298352607},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, 0.3706808798675939},
-  {"moving_edge_0", TEST_ARB_EXP, 5.0, 50.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, 0.35429189497075153},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, 0.11132862017108842},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, 0.0514075231243722},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, -0.09750506779987338},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, -0.12946822430690377},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, -0.016869271809440943},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, 0.13936825342229892},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, 0.24850488506975554},
-  {"moving_edge_1", TEST_ARB_EXP, 6.7, 43.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, 0.29197853219169384},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, -0.0879525949168579},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, -0.009908381689475356},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, 0.08859703860058944},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, 0.05261904530206776},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, -0.06015245320021174},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, -0.10923788735438252},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, -0.052066984908389374},
-  {"moving_edge_2", TEST_ARB_EXP, 9.5, 32.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, 0.05042494149045293},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 0, 1.0, -0.0395063336597935},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 1, 1.0, -0.06053206247432944},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 2, 1.0, 0.023646311006344813},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 3, 1.0, 0.07428521787473621},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 4, 1.0, 0.0238668133674281},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 5, 1.0, -0.06022051335629506},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 6, 1.0, -0.08985303866903385},
-  {"moving_edge_3", TEST_ARB_EXP, 10.5, 96.0, 33.333333333333336, 0.0, 0, FALSE, 7, 1.0, -0.04413403157505907},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.6593299064355118},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 1, 1.0, 0.38682227139505565},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 2, 1.0, 0.12832130915740367},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 3, 1.0, 0.030526685853749243},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 4, 1.0, 0.0057388279129687095},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.0008982701648965717},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 6, 1.0, 0.00012090747281368287},
-  {"accepted_edge", TEST_ARB_TOPHAT, 1.0, 2.0, 0.0, 0.0, 0, FALSE, 7, 1.0, 1.4304072407906955e-05},
-  {"rejected_edge", TEST_ARB_COS, 1.0, 2.0, 500.0, 0.0, 0, FALSE, 0, 1.0, 0.0015370690742047299},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 0, 1.0, 0.007750496513501052},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 1, 1.0, -0.004589534901865097},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 2, 1.0, -0.007890476440616185},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 3, 1.0, 0.004197348115723649},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 4, 1.0, 0.008189812011263732},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 5, 1.0, -0.0034639808864253},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 6, 1.0, -0.008579950301882813},
-  {"set_reltol", TEST_ARB_EXP, 100.0, 10000.0, 1000.0, 0.0, 0, FALSE, 7, 1.0, 0.0023527834949275653},
-  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 0, 1.0, 0.07102420363141924},
-  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 1, 1.0, -0.04201163150805379},
-  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 2, 1.0, -0.08221534646397724},
-  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 3, 1.0, 0.013426384614975292},
-  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 4, 1.0, 0.09328165963961846},
-  {"repeated_set_reltol", TEST_ARB_EXP, 12.0, 47.0, 100.0, 0.0, 0, FALSE, 5, 1.0, 0.048487996142564084},
-  {"ell_zero", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.712264523851691},
-  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 0.1, 0.0001557694944990179},
-  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.6484700039890495},
-  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 10.0, -0.01113331884326862},
-  {"k_scaling", TEST_ARB_TOPHAT, 1.0, 10.0, 0.0, 0.0, 0, FALSE, 5, 100.0, -4.653748260250706e-05},
-  {"narrow", TEST_ARB_POWER, 5.0, 5.001, 1.0, 0.0, 0, FALSE, 5, 1.0, 0.0005342563413119415},
-  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 100, 100.0, 0.0008907936235087944},
-  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 200, 200.0, 0.0003121418486470063},
-  {"high_ell", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 300, 300.0, 0.00016794746443265403},
-  {"oscillatory", TEST_ARB_EXP, 1.0, 100.0, 100.0, 0.0, 0, FALSE, 10, 500.0, 3.2810031358293054e-06},
-  {"evanescent", TEST_ARB_GAUSS, 1.0, 8.0, 4.0, 1.2, 2, FALSE, 30, 0.5, 8.723201535126188e-26},
-  /* END make_sbessel_arb_cases.py levin */
-};
-
 static const TestArbCell *
 _test_arb_case (const gchar *name, guint *n)
 {
   return test_arb_cells_find (test_arb_cells, G_N_ELEMENTS (test_arb_cells), name, n);
 }
-
-/* The integrand of one case, counting its calls and the range of x it was evaluated at */
-typedef struct _TestArbEval
-{
-  const TestArbCell *cell;
-  guint calls;
-  gdouble x_min;
-  gdouble x_max;
-} TestArbEval;
 
 static TestArbEval
 _test_arb_eval_new (const TestArbCell *cell)
@@ -410,6 +438,152 @@ _test_arb_check_singles (const gchar *name, gdouble rtol, gdouble atol)
     ncm_vector_free (res);
     ncm_sbessel_integrator_free (sbi);
   }
+}
+
+/* The largest |I - I_arb| over the rows of one block, divided by the largest |I_arb| */
+static gdouble
+_test_arb_block_error (const TestArbCell *c, guint n, NcmVector *res)
+{
+  gdouble err = 0.0, peak = 0.0;
+  guint j;
+
+  for (j = 0; j < n; j++)
+  {
+    err  = GSL_MAX (err, fabs (ncm_vector_get (res, c[j].ell) - c[j].value));
+    peak = GSL_MAX (peak, fabs (c[j].value));
+  }
+
+  return err / peak;
+}
+
+/*
+ * The Gaussian (center 5, sigma 1) on [0.1, 10] at ell 2, k 500, with reltol and
+ * cheb-reltol both set to @reltol and every other setting at its default. Each panel
+ * spans many oscillations, where the adaptive QR's decay test can stop at too small
+ * an order.
+ */
+static gdouble
+_test_oscillatory_gaussian (gdouble reltol)
+{
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (2, 2,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MIN,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MAX,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
+                                                                            reltol,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
+                                                                            reltol);
+  const gdouble val = ncm_sbessel_integrator_integrate_gaussian_ell (NCM_SBESSEL_INTEGRATOR (sbilv), 5.0, 1.0, 0.1, 10.0, 500.0, 2);
+
+  ncm_sbessel_integrator_levin_free (sbilv);
+
+  return val;
+}
+
+/* A recording integrator at ell, reltol and cheb-reltol 1e-12, the rest at the defaults */
+static NcmSBesselIntegratorLevin *
+_test_recording_integrator (guint ell)
+{
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (ell, ell,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MIN,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MAX,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
+                                                                            1.0e-12,
+                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
+                                                                            1.0e-12);
+
+  ncm_sbessel_integrator_levin_set_record_panels (sbilv, TRUE);
+
+  return sbilv;
+}
+
+/* j_l'(x), as scipy's spherical_jn(derivative=True) computes it */
+static gdouble
+_test_jl_deriv (guint ell, gdouble x)
+{
+  if (ell == 0)
+    return -ncm_sf_sbessel (1, x);
+
+  return ncm_sf_sbessel (ell - 1, x) - (ell + 1.0) / x * ncm_sf_sbessel (ell, x);
+}
+
+static gdouble
+_test_gauss_over_y2 (gpointer user_data, gdouble x, gdouble k)
+{
+  return _test_gauss (user_data, x, k) / gsl_pow_2 (k * x);
+}
+
+static gdouble
+_test_gauss_over_y (gpointer user_data, gdouble x, gdouble k)
+{
+  return _test_gauss (user_data, x, k) / (k * x);
+}
+
+static TestGauss
+_test_tau_forcing (gdouble width_fraction)
+{
+  TestGauss g = {0.5 * (TEST_TAU_A + TEST_TAU_B), (TEST_TAU_B - TEST_TAU_A) / width_fraction, 1.0e-16};
+
+  return g;
+}
+
+/* Integrates the tau test panel at the given tau-constraint-min-osc; returns the fallback count */
+static guint
+_test_tau_integrate (TestGauss *g, gdouble min_osc, NcmVector *res)
+{
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (TEST_TAU_ELL_MIN, TEST_TAU_ELL_MAX);
+  guint fallbacks;
+
+  ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (sbilv, min_osc);
+  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_gauss, TEST_TAU_A, TEST_TAU_B, 1.0, res, g);
+  fallbacks = ncm_sbessel_integrator_levin_get_n_constraint_fallbacks (sbilv);
+
+  ncm_sbessel_integrator_levin_free (sbilv);
+
+  return fallbacks;
+}
+
+static TestTurningRun
+_test_turning_run (guint ell, gdouble margin, gdouble min_osc, NcmVector *res)
+{
+  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (ell, ell + 7);
+  TestGauss g                      = {3.0e4, 6.0e3, 1.0};
+  TestTurningRun run;
+
+  ncm_sbessel_integrator_levin_set_turning_knot_margin (sbilv, margin);
+  ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (sbilv, min_osc);
+
+  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_gauss, 1.0e2, 1.0e5, 1.0, res, &g);
+
+  run.n_tau_solves      = ncm_sbessel_integrator_levin_get_n_tau_solves (sbilv);
+  run.n_fallbacks       = ncm_sbessel_integrator_levin_get_n_constraint_fallbacks (sbilv);
+  run.n_locked_eligible = ncm_sbessel_integrator_levin_get_n_locked_eligible_solves (sbilv);
+
+  ncm_sbessel_integrator_levin_free (sbilv);
+
+  return run;
+}
+
+/*
+ * Integrators over one knot grid share their j_l rows, read-only. These checks integrate
+ * a Gaussian (center 3e3, sigma 6e2) on x in [1e2, 1e4], k = 1, over 8 multipoles.
+ */
+static void
+_test_shared_run (NcmSBesselIntegratorLevin *sbilv, NcmVector *res)
+{
+  TestGauss g = {3.0e3, 6.0e2, 1.0};
+
+  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_gauss, 1.0e2, 1.0e4, 1.0, res, &g);
+}
+
+static void
+_test_assert_equal_vectors (NcmVector *a, NcmVector *b)
+{
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (a); i++)
+    g_assert_cmpfloat (ncm_vector_get (a, i), ==, ncm_vector_get (b, i));
 }
 
 void
@@ -512,22 +686,6 @@ test_ncm_sbessel_integrator_levin_arb_rejected_edge (void)
 
   ncm_vector_free (res);
   ncm_sbessel_integrator_levin_free (sbilv);
-}
-
-/* The largest |I - I_arb| over the rows of one block, divided by the largest |I_arb| */
-static gdouble
-_test_arb_block_error (const TestArbCell *c, guint n, NcmVector *res)
-{
-  gdouble err = 0.0, peak = 0.0;
-  guint j;
-
-  for (j = 0; j < n; j++)
-  {
-    err  = GSL_MAX (err, fabs (ncm_vector_get (res, c[j].ell) - c[j].value));
-    peak = GSL_MAX (peak, fabs (c[j].value));
-  }
-
-  return err / peak;
 }
 
 /*
@@ -826,30 +984,6 @@ test_ncm_sbessel_integrator_levin_block_size (gconstpointer data)
   ncm_sbessel_integrator_free (ref);
 }
 
-/*
- * The Gaussian (center 5, sigma 1) on [0.1, 10] at ell 2, k 500, with reltol and
- * cheb-reltol both set to @reltol and every other setting at its default. Each panel
- * spans many oscillations, where the adaptive QR's decay test can stop at too small
- * an order.
- */
-static gdouble
-_test_oscillatory_gaussian (gdouble reltol)
-{
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (2, 2,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MIN,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MAX,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
-                                                                            reltol,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
-                                                                            reltol);
-  const gdouble val = ncm_sbessel_integrator_integrate_gaussian_ell (NCM_SBESSEL_INTEGRATOR (sbilv), 5.0, 1.0, 0.1, 10.0, 500.0, 2);
-
-  ncm_sbessel_integrator_levin_free (sbilv);
-
-  return val;
-}
-
 /* Every request from 1e-4 to 1e-10 is within 1 % of the 1e-12 result */
 void
 test_ncm_sbessel_integrator_levin_loose_tolerances_agree (void)
@@ -879,24 +1013,6 @@ test_ncm_sbessel_integrator_levin_accuracy_monotonic (void)
   g_assert_cmpfloat (err_6, <=, 3.0 * err_4);
   g_assert_cmpfloat (err_8, <=, 3.0 * err_6);
   g_assert_cmpfloat (err_11, <, 1.0e-5);
-}
-
-/* A recording integrator at ell, reltol and cheb-reltol 1e-12, the rest at the defaults */
-static NcmSBesselIntegratorLevin *
-_test_recording_integrator (guint ell)
-{
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new_full (ell, ell,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MIN,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_X_KNOTS_MAX,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX,
-                                                                            1.0e-12,
-                                                                            NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER,
-                                                                            1.0e-12);
-
-  ncm_sbessel_integrator_levin_set_record_panels (sbilv, TRUE);
-
-  return sbilv;
 }
 
 void
@@ -984,16 +1100,6 @@ test_ncm_sbessel_integrator_levin_record_disable (void)
   g_assert_cmpuint (ncm_sbessel_integrator_levin_get_n_panel_records (sbilv), ==, 0);
 
   ncm_sbessel_integrator_levin_free (sbilv);
-}
-
-/* j_l'(x), as scipy's spherical_jn(derivative=True) computes it */
-static gdouble
-_test_jl_deriv (guint ell, gdouble x)
-{
-  if (ell == 0)
-    return -ncm_sf_sbessel (1, x);
-
-  return ncm_sf_sbessel (ell - 1, x) - (ell + 1.0) / x * ncm_sf_sbessel (ell, x);
 }
 
 /*
@@ -1088,18 +1194,6 @@ test_ncm_sbessel_integrator_levin_deriv_zero (void)
   ncm_sbessel_integrator_free (sbi);
 }
 
-static gdouble
-_test_gauss_over_y2 (gpointer user_data, gdouble x, gdouble k)
-{
-  return _test_gauss (user_data, x, k) / gsl_pow_2 (k * x);
-}
-
-static gdouble
-_test_gauss_over_y (gpointer user_data, gdouble x, gdouble k)
-{
-  return _test_gauss (user_data, x, k) / (k * x);
-}
-
 /*
  * j_l''(y) = (l (l - 1) / y^2 - 1) j_l(y) + (2 / y) j_{l+1}(y), so the order 2 integral
  * equals a combination of three order 0 integrals, a separate code path.
@@ -1126,42 +1220,6 @@ test_ncm_sbessel_integrator_levin_deriv_recurrence (void)
 
   ncm_vector_free (res);
   ncm_sbessel_integrator_free (sbi);
-}
-
-/*
- * The tau constraint is valid while the working order n satisfies n_F << n < N_min ~
- * 2 span / pi. These checks use one panel, x in [3162.28, 3672.79] at k = 1, ell
- * 200..207, and a Gaussian forcing of amplitude 1e-16 centred on it with width
- * span / width_fraction.
- */
-#define TEST_TAU_A 3162.28
-#define TEST_TAU_B 3672.79
-#define TEST_TAU_ELL_MIN 200
-#define TEST_TAU_ELL_MAX 207
-#define TEST_TAU_N_ELL (TEST_TAU_ELL_MAX - TEST_TAU_ELL_MIN + 1)
-
-static TestGauss
-_test_tau_forcing (gdouble width_fraction)
-{
-  TestGauss g = {0.5 * (TEST_TAU_A + TEST_TAU_B), (TEST_TAU_B - TEST_TAU_A) / width_fraction, 1.0e-16};
-
-  return g;
-}
-
-/* Integrates the tau test panel at the given tau-constraint-min-osc; returns the fallback count */
-static guint
-_test_tau_integrate (TestGauss *g, gdouble min_osc, NcmVector *res)
-{
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (TEST_TAU_ELL_MIN, TEST_TAU_ELL_MAX);
-  guint fallbacks;
-
-  ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (sbilv, min_osc);
-  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_gauss, TEST_TAU_A, TEST_TAU_B, 1.0, res, g);
-  fallbacks = ncm_sbessel_integrator_levin_get_n_constraint_fallbacks (sbilv);
-
-  ncm_sbessel_integrator_levin_free (sbilv);
-
-  return fallbacks;
 }
 
 /* The test panel holds more oscillations than the default tau-constraint-min-osc */
@@ -1239,40 +1297,6 @@ test_ncm_sbessel_integrator_levin_tau_rule_off (void)
   g_assert_cmpuint (_test_tau_integrate (&g, 0.0, res), ==, 0);
 
   ncm_vector_free (res);
-}
-
-/*
- * The knot at turning-knot-margin times nu: the tau guard cannot certify a panel that
- * straddles the turning point, since its bound has min |x^2 - nu^2| in the denominator.
- * These checks integrate a Gaussian (center 3e4, sigma 6e3) on x in [1e2, 1e5], k = 1,
- * ell ell..ell + 7.
- */
-typedef struct _TestTurningRun
-{
-  guint n_tau_solves;
-  guint n_fallbacks;
-  guint n_locked_eligible;
-} TestTurningRun;
-
-static TestTurningRun
-_test_turning_run (guint ell, gdouble margin, gdouble min_osc, NcmVector *res)
-{
-  NcmSBesselIntegratorLevin *sbilv = ncm_sbessel_integrator_levin_new (ell, ell + 7);
-  TestGauss g                      = {3.0e4, 6.0e3, 1.0};
-  TestTurningRun run;
-
-  ncm_sbessel_integrator_levin_set_turning_knot_margin (sbilv, margin);
-  ncm_sbessel_integrator_levin_set_tau_constraint_min_osc (sbilv, min_osc);
-
-  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_gauss, 1.0e2, 1.0e5, 1.0, res, &g);
-
-  run.n_tau_solves      = ncm_sbessel_integrator_levin_get_n_tau_solves (sbilv);
-  run.n_fallbacks       = ncm_sbessel_integrator_levin_get_n_constraint_fallbacks (sbilv);
-  run.n_locked_eligible = ncm_sbessel_integrator_levin_get_n_locked_eligible_solves (sbilv);
-
-  ncm_sbessel_integrator_levin_free (sbilv);
-
-  return run;
 }
 
 void
@@ -1386,27 +1410,6 @@ test_ncm_sbessel_integrator_levin_turning_rule_off (void)
   g_assert_cmpuint (run.n_tau_solves, ==, 0);
 
   ncm_vector_free (res);
-}
-
-/*
- * Integrators over one knot grid share their j_l rows, read-only. These checks integrate
- * a Gaussian (center 3e3, sigma 6e2) on x in [1e2, 1e4], k = 1, over 8 multipoles.
- */
-static void
-_test_shared_run (NcmSBesselIntegratorLevin *sbilv, NcmVector *res)
-{
-  TestGauss g = {3.0e3, 6.0e2, 1.0};
-
-  ncm_sbessel_integrator_integrate (NCM_SBESSEL_INTEGRATOR (sbilv), &_test_gauss, 1.0e2, 1.0e4, 1.0, res, &g);
-}
-
-static void
-_test_assert_equal_vectors (NcmVector *a, NcmVector *b)
-{
-  guint i;
-
-  for (i = 0; i < ncm_vector_len (a); i++)
-    g_assert_cmpfloat (ncm_vector_get (a, i), ==, ncm_vector_get (b, i));
 }
 
 /* A second integrator on the same grid, another block, leaves the first one's results unchanged */

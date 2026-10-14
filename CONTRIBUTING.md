@@ -55,14 +55,28 @@ Tests follow their sources as a hard invariant: a class in
    test `name` and its `sources`, since each C test is built as its own executable.
    Coverage of a class's ref/free/clear methods goes in the existing
    `tests/c/ncm/core/test_ncm_generic.c` rather than in a new file.
-3. Python tests are collected automatically — the suites run `pytest` over
+3. A C test file follows one layout, top to bottom: the license header and
+   includes; `#define`s, types and static data tables; the prototypes of every
+   fixture and test function; `main`, which only registers the tests; the helper
+   functions; the fixture creators and destructors (the setup/teardown passed to
+   `g_test_add`); then the test implementations. `tests/c/ncm/algebra/test_ncm_vector.c`
+   is the model.
+4. Python tests are collected automatically — the suites run `pytest` over
    `tests/python/`, so a new file needs no `meson.build` entry. Selection between
    lanes is by *marker*, not by path: a file with no marker joins the default lane,
    and one belonging to a dedicated shard (`xcor`, `powspec`, `app`, `omp`,
    `sphere_map`, `acceptance`) must declare a module-level
    `pytestmark = pytest.mark.<name>`.
-4. Run the affected suite with `meson test -v -C build`, or a single file directly
+5. Run the affected suite with `meson test -v -C build`, or a single file directly
    with `python -m pytest tests/python/<path> -q`.
+
+A test is usually easier to develop in Python: the bindings, numpy and an
+interactive session make it quick to probe a case and settle its tolerance. Once
+the test is settled, move it to C when it exercises only the C API: C tests run
+faster, are measured by the C coverage report, and do not depend on the bindings.
+A Python test stays in Python when its subject is Python itself (the bindings,
+`numcosmo_py`) or another code it compares against (CCL, CLASS). Remove the
+Python test only after its C counterpart has every assertion it had.
 
 ## Documentation
 

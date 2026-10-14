@@ -33,6 +33,22 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_fit_mcbs_run (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/fit_mcbs/run", &test_ncm_fit_mcbs_run);
+
+  g_test_run ();
+}
+
 static void
 test_ncm_fit_mcbs_run (void)
 {
@@ -68,19 +84,5 @@ test_ncm_fit_mcbs_run (void)
   ncm_model_mvnd_free (model);
   ncm_data_gauss_cov_mvnd_free (data_mvnd);
   ncm_rng_free (rng);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/fit_mcbs/run", &test_ncm_fit_mcbs_run);
-
-  g_test_run ();
 }
 

@@ -335,6 +335,12 @@ _random_fill (NcmVector *v)
     ncm_vector_set (v, i, g_test_rand_double ());
 }
 
+static NcmVector *
+_test_vector_from (const gdouble *d, guint n)
+{
+  return ncm_vector_new_data_dup ((gdouble *) d, n, 1);
+}
+
 void
 test_ncm_vector_new (TestNcmVector *test, gconstpointer pdata)
 {
@@ -939,12 +945,6 @@ test_ncm_vector_replace_data (TestNcmVector *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_vector_get (test->v, i), ==, 100.0 * i);
     ncm_assert_cmpdouble (orig_d[i], ==, 10.0 * i);
   }
-}
-
-static NcmVector *
-_test_vector_from (const gdouble *d, guint n)
-{
-  return ncm_vector_new_data_dup ((gdouble *) d, n, 1);
 }
 
 void

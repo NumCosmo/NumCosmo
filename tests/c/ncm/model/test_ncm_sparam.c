@@ -157,6 +157,14 @@ test_ncm_sparam_new (TestNcmSparam *test, gconstpointer pdata)
   ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (p), ==, abstol);
 }
 
+void
+test_ncm_sparam_free (TestNcmSparam *test, gconstpointer pdata)
+{
+  NcmSParam *p = test->p;
+
+  NCM_TEST_FREE (ncm_sparam_free, p);
+}
+
 /* The symbol can be set again after construction; take_* replace the strings; a copy
  * carries every property; a new NcmSParam without a scale has scale 1. */
 void
@@ -194,14 +202,6 @@ test_ncm_sparam_strings_copy (TestNcmSparam *test, gconstpointer pdata)
   g_assert_cmpfloat (ncm_sparam_get_scale (d), ==, 1.0);
   g_assert_cmpfloat (ncm_sparam_get_absolute_tolerance (d), ==, 0.0);
   ncm_sparam_free (d);
-}
-
-void
-test_ncm_sparam_free (TestNcmSparam *test, gconstpointer pdata)
-{
-  NcmSParam *p = test->p;
-
-  NCM_TEST_FREE (ncm_sparam_free, p);
 }
 
 void

@@ -95,11 +95,61 @@ test_nc_data_bao_dtr_dhr_free (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
 }
 
 /* SDSS DR12 2016 - DR16 compatible */
-
 void
 test_nc_data_bao_dtr_dhr_new_dr12_2016_dr16compatible (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
 {
   NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_SDSS_DR12_2016_DR16_COMPATIBLE;
+  NcDistance *dist = nc_distance_new (3.0);
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->dtdh = NC_DATA_BAO_DTR_DHR (data);
+  g_assert_true (NC_IS_DATA_BAO_DTR_DHR (data));
+
+  nc_distance_free (dist);
+}
+
+/* SDSS DR16 LRG 2021*/
+void
+test_nc_data_bao_dtr_dhr_new_dr16_lrg_2021 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
+{
+  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_SDSS_DR16_LRG_2021;
+  NcDistance *dist = nc_distance_new (3.0);
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->dtdh = NC_DATA_BAO_DTR_DHR (data);
+  g_assert_true (NC_IS_DATA_BAO_DTR_DHR (data));
+
+  nc_distance_free (dist);
+}
+
+/* SDSS DR16 QSO 2021*/
+void
+test_nc_data_bao_dtr_dhr_new_dr16_qso_2021 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
+{
+  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021;
+  NcDistance *dist = nc_distance_new (2.0);
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->dtdh = NC_DATA_BAO_DTR_DHR (data);
+  g_assert_true (NC_IS_DATA_BAO_DTR_DHR (data));
+
+  nc_distance_free (dist);
+}
+
+/* DESI DR1 - Lyman alpha 2025 */
+void
+test_nc_data_bao_dtr_dhr_new_desi_dr1_lym_2025 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
+{
+  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_DESI_DR1_LYA_2025;
   NcDistance *dist = nc_distance_new (3.0);
   NcmData *data;
 
@@ -164,24 +214,6 @@ test_nc_data_bao_dtr_dhr_set_sample_dr12_2016_dr16compatible (TestNcDataBaoDtrDH
   ncm_vector_free (x);
 }
 
-/* SDSS DR16 LRG 2021*/
-
-void
-test_nc_data_bao_dtr_dhr_new_dr16_lrg_2021 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
-{
-  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_SDSS_DR16_LRG_2021;
-  NcDistance *dist = nc_distance_new (3.0);
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->dtdh = NC_DATA_BAO_DTR_DHR (data);
-  g_assert_true (NC_IS_DATA_BAO_DTR_DHR (data));
-
-  nc_distance_free (dist);
-}
-
 void
 test_nc_data_bao_dtr_dhr_set_sample_dr16_lrg_2021 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
 {
@@ -224,24 +256,6 @@ test_nc_data_bao_dtr_dhr_set_sample_dr16_lrg_2021 (TestNcDataBaoDtrDHr *test, gc
   ncm_vector_free (x);
 }
 
-/* SDSS DR16 QSO 2021*/
-
-void
-test_nc_data_bao_dtr_dhr_new_dr16_qso_2021 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
-{
-  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_SDSS_DR16_QSO_2021;
-  NcDistance *dist = nc_distance_new (2.0);
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->dtdh = NC_DATA_BAO_DTR_DHR (data);
-  g_assert_true (NC_IS_DATA_BAO_DTR_DHR (data));
-
-  nc_distance_free (dist);
-}
-
 void
 test_nc_data_bao_dtr_dhr_set_sample_dr16_qso_2021 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
 {
@@ -282,24 +296,6 @@ test_nc_data_bao_dtr_dhr_set_sample_dr16_qso_2021 (TestNcDataBaoDtrDHr *test, gc
 
   ncm_matrix_free (cov);
   ncm_vector_free (x);
-}
-
-/* DESI DR1 - Lyman alpha 2025 */
-
-void
-test_nc_data_bao_dtr_dhr_new_desi_dr1_lym_2025 (TestNcDataBaoDtrDHr *test, gconstpointer pdata)
-{
-  NcDataBaoId id   = NC_DATA_BAO_DTR_DHR_DESI_DR1_LYA_2025;
-  NcDistance *dist = nc_distance_new (3.0);
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_dtr_dhr_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->dtdh = NC_DATA_BAO_DTR_DHR (data);
-  g_assert_true (NC_IS_DATA_BAO_DTR_DHR (data));
-
-  nc_distance_free (dist);
 }
 
 void

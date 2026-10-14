@@ -60,17 +60,6 @@ main (gint argc, gchar *argv[])
 }
 
 void
-test_ncm_func_eval_new (TestNcmSparam *test, gconstpointer pdata)
-{
-  test->ntests = 10000;
-}
-
-void
-test_ncm_func_eval_free (TestNcmSparam *test, gconstpointer pdata)
-{
-}
-
-void
 test_ncm_func_eval_run_func (glong i, glong f, gpointer data)
 {
   G_LOCK_DEFINE_STATIC (save_data);
@@ -94,14 +83,6 @@ test_ncm_func_eval_run_func (glong i, glong f, gpointer data)
   G_UNLOCK (save_data);
 }
 
-void
-test_ncm_func_eval_run (TestNcmSparam *test, gconstpointer pdata)
-{
-  gdouble res = 0.0;
-
-  ncm_func_eval_threaded_loop_full (test_ncm_func_eval_run_func, 0, test->ntests, &res);
-}
-
 static void
 _test_ncm_func_eval_count (glong i, glong f, gpointer data)
 {
@@ -110,6 +91,25 @@ _test_ncm_func_eval_count (glong i, glong f, gpointer data)
 
   for (k = i; k < f; k++)
     g_atomic_int_inc (&count[k]);
+}
+
+void
+test_ncm_func_eval_new (TestNcmSparam *test, gconstpointer pdata)
+{
+  test->ntests = 10000;
+}
+
+void
+test_ncm_func_eval_free (TestNcmSparam *test, gconstpointer pdata)
+{
+}
+
+void
+test_ncm_func_eval_run (TestNcmSparam *test, gconstpointer pdata)
+{
+  gdouble res = 0.0;
+
+  ncm_func_eval_threaded_loop_full (test_ncm_func_eval_run_func, 0, test->ntests, &res);
 }
 
 /* Every index is visited once, for any pool size, including unlimited and zero, and any length */

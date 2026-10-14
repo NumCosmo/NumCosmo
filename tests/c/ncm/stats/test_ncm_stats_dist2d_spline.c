@@ -33,6 +33,28 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_stats_dist2d_spline_eval (void);
+static void test_ncm_stats_dist2d_spline_unimplemented_subprocess (void);
+static void test_ncm_stats_dist2d_spline_no_m2lnp_subprocess (void);
+static void test_ncm_stats_dist2d_spline_traps (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/stats/dist2d_spline/eval", &test_ncm_stats_dist2d_spline_eval);
+  g_test_add_func ("/ncm/stats/dist2d_spline/traps", &test_ncm_stats_dist2d_spline_traps);
+  g_test_add_func ("/ncm/stats/dist2d_spline/unimplemented/subprocess", &test_ncm_stats_dist2d_spline_unimplemented_subprocess);
+  g_test_add_func ("/ncm/stats/dist2d_spline/no_m2lnp/subprocess", &test_ncm_stats_dist2d_spline_no_m2lnp_subprocess);
+
+  g_test_run ();
+}
+
 /* m2lnp = x^2 + 2 y^2 + x y on [-2, 3] x [-1, 1], which the bicubic spline reproduces */
 static gdouble
 _test_m2lnp (gdouble x, gdouble y)
@@ -155,22 +177,5 @@ test_ncm_stats_dist2d_spline_traps (void)
   g_test_trap_subprocess ("/ncm/stats/dist2d_spline/no_m2lnp/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*no m2lnp spline set*");
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/stats/dist2d_spline/eval", &test_ncm_stats_dist2d_spline_eval);
-  g_test_add_func ("/ncm/stats/dist2d_spline/traps", &test_ncm_stats_dist2d_spline_traps);
-  g_test_add_func ("/ncm/stats/dist2d_spline/unimplemented/subprocess", &test_ncm_stats_dist2d_spline_unimplemented_subprocess);
-  g_test_add_func ("/ncm/stats/dist2d_spline/no_m2lnp/subprocess", &test_ncm_stats_dist2d_spline_no_m2lnp_subprocess);
-
-  g_test_run ();
 }
 

@@ -63,10 +63,66 @@ typedef struct
   void (*setup) (Par *p);
 } ShapeCase;
 
+#define N_SHAPE_CASES (sizeof (shape_cases) / sizeof (shape_cases[0]))
+
+static void test_sph_bessel_closed_form (void);
+static void test_sph_bessel_deriv_matches_differences (void);
+static void test_sph_bessel_deriv_zero_is_the_bessel (void);
+static void test_shape_support_and_window (void);
+static void test_certified_normalization (void);
+static void test_certified_runs_for_derivative_weights (void);
+static void test_kdep_growth_runs (void);
+static void test_parse_list (void);
+static void test_parse_shape_round_trip (void);
+static void setup_gauss (Par *p);
+static void setup_tophat (Par *p);
+static void setup_tophat_smooth (Par *p);
+static void setup_student_t (Par *p);
+static void setup_power_exp (Par *p);
+static void setup_lensing (Par *p);
+static void setup_multi (Par *p);
+
+static const ShapeCase shape_cases[] = {
+  {"gauss",         SHAPE_GAUSS,         setup_gauss        },
+  {"tophat",        SHAPE_TOPHAT,        setup_tophat       },
+  {"tophat_smooth", SHAPE_TOPHAT_SMOOTH, setup_tophat_smooth},
+  {"student_t",     SHAPE_STUDENT_T,     setup_student_t    },
+  {"power_exp",     SHAPE_POWER_EXP,     setup_power_exp    },
+  {"lensing",       SHAPE_LENSING,       setup_lensing      },
+  {"multi",         SHAPE_MULTI,         setup_multi        },
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/nc/xcor/window_arb/sph_bessel/closed_form",
+                   &test_sph_bessel_closed_form);
+  g_test_add_func ("/nc/xcor/window_arb/sph_bessel_deriv/differences",
+                   &test_sph_bessel_deriv_matches_differences);
+  g_test_add_func ("/nc/xcor/window_arb/sph_bessel_deriv/order_zero",
+                   &test_sph_bessel_deriv_zero_is_the_bessel);
+  g_test_add_func ("/nc/xcor/window_arb/shape/support_and_window",
+                   &test_shape_support_and_window);
+  g_test_add_func ("/nc/xcor/window_arb/certified/normalization",
+                   &test_certified_normalization);
+  g_test_add_func ("/nc/xcor/window_arb/certified/derivative_weights",
+                   &test_certified_runs_for_derivative_weights);
+  g_test_add_func ("/nc/xcor/window_arb/kdep_growth/runs",
+                   &test_kdep_growth_runs);
+  g_test_add_func ("/nc/xcor/window_arb/parse_shape/round_trip",
+                   &test_parse_shape_round_trip);
+  g_test_add_func ("/nc/xcor/window_arb/parse_list/values",
+                   &test_parse_list);
+
+  return g_test_run ();
+}
+
 /* One real parameter set per closed form, taken from the cases the committed
  * table certifies, so these exercise the same branches the tables were built
  * from rather than a plausible retyping. */
-
 static void
 setup_gauss (Par *p)
 {
@@ -130,18 +186,6 @@ setup_multi (Par *p)
   p->wt[1]   = 0.6;
   p->n_sigma = 4.0;
 }
-
-static const ShapeCase shape_cases[] = {
-  {"gauss",         SHAPE_GAUSS,         setup_gauss        },
-  {"tophat",        SHAPE_TOPHAT,        setup_tophat       },
-  {"tophat_smooth", SHAPE_TOPHAT_SMOOTH, setup_tophat_smooth},
-  {"student_t",     SHAPE_STUDENT_T,     setup_student_t    },
-  {"power_exp",     SHAPE_POWER_EXP,     setup_power_exp    },
-  {"lensing",       SHAPE_LENSING,       setup_lensing      },
-  {"multi",         SHAPE_MULTI,         setup_multi        },
-};
-
-#define N_SHAPE_CASES (sizeof (shape_cases) / sizeof (shape_cases[0]))
 
 static void
 case_init (Par *p, const ShapeCase *sc)
@@ -482,33 +526,5 @@ test_parse_shape_round_trip (void)
 
   for (s = 0; s < SHAPE_LEN; s++)
     g_assert_cmpint (parse_shape (shape_names[s]), ==, s);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/nc/xcor/window_arb/sph_bessel/closed_form",
-                   &test_sph_bessel_closed_form);
-  g_test_add_func ("/nc/xcor/window_arb/sph_bessel_deriv/differences",
-                   &test_sph_bessel_deriv_matches_differences);
-  g_test_add_func ("/nc/xcor/window_arb/sph_bessel_deriv/order_zero",
-                   &test_sph_bessel_deriv_zero_is_the_bessel);
-  g_test_add_func ("/nc/xcor/window_arb/shape/support_and_window",
-                   &test_shape_support_and_window);
-  g_test_add_func ("/nc/xcor/window_arb/certified/normalization",
-                   &test_certified_normalization);
-  g_test_add_func ("/nc/xcor/window_arb/certified/derivative_weights",
-                   &test_certified_runs_for_derivative_weights);
-  g_test_add_func ("/nc/xcor/window_arb/kdep_growth/runs",
-                   &test_kdep_growth_runs);
-  g_test_add_func ("/nc/xcor/window_arb/parse_shape/round_trip",
-                   &test_parse_shape_round_trip);
-  g_test_add_func ("/nc/xcor/window_arb/parse_list/values",
-                   &test_parse_list);
-
-  return g_test_run ();
 }
 

@@ -41,6 +41,89 @@
 
 #define _assert_small(err, tol) g_assert_cmpfloat ((err), <, (tol))
 
+typedef gdouble (*_Basis) (guint k, gdouble t);
+
+typedef struct _Counted
+{
+  guint calls;
+} Counted;
+
+typedef NcmMatrix *(*_OpMatrix) (guint N);
+
+typedef void (*_OpRow) (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+
+static void test_ncm_spectral_max_level (void);
+static void test_ncm_spectral_x_t (void);
+static void test_ncm_spectral_fixed_modes (void);
+static void test_ncm_spectral_fixed_exp (void);
+static void test_ncm_spectral_adaptive (void);
+static void test_ncm_spectral_adaptive_full (void);
+static void test_ncm_spectral_adaptive_try (void);
+static void test_ncm_spectral_adaptive_single_level (void);
+static void test_ncm_spectral_invalid_arguments (void);
+static void test_ncm_spectral_invalid_max_level_subprocess (void);
+static void test_ncm_spectral_invalid_order_subprocess (void);
+static void test_ncm_spectral_adaptive_fatal (void);
+static void test_ncm_spectral_adaptive_fatal_subprocess (void);
+static void test_ncm_spectral_batch (void);
+static void test_ncm_spectral_batch_small_entry (void);
+static void test_ncm_spectral_batch_cap (void);
+static void test_ncm_spectral_batch_peek (void);
+static void test_ncm_spectral_batch_known_ends (void);
+static void test_ncm_spectral_batch_ends_on_failure (void);
+static void test_ncm_spectral_batch_no_prediction_below_four (void);
+static void test_ncm_spectral_batch_fatal (void);
+static void test_ncm_spectral_batch_fatal_subprocess (void);
+static void test_ncm_spectral_free_buffers (void);
+static void test_ncm_spectral_eval_deriv (void);
+static void test_ncm_spectral_integrate (void);
+static void test_ncm_spectral_gegenbauer_eval (void);
+static void test_ncm_spectral_gegenbauer_conversions (void);
+static void test_ncm_spectral_operators (void);
+static void test_ncm_spectral_rebase (void);
+
+static const gdouble test_t[] = {-1.0, -1.0 + 1.0e-10, -0.95, -0.5, 0.0, 0.3, 0.9, 0.97, 1.0 - 1.0e-10, 1.0};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/spectral/max_level", &test_ncm_spectral_max_level);
+  g_test_add_func ("/ncm/spectral/x_t", &test_ncm_spectral_x_t);
+  g_test_add_func ("/ncm/spectral/fixed/modes", &test_ncm_spectral_fixed_modes);
+  g_test_add_func ("/ncm/spectral/fixed/exp", &test_ncm_spectral_fixed_exp);
+  g_test_add_func ("/ncm/spectral/adaptive", &test_ncm_spectral_adaptive);
+  g_test_add_func ("/ncm/spectral/adaptive/full", &test_ncm_spectral_adaptive_full);
+  g_test_add_func ("/ncm/spectral/adaptive/try", &test_ncm_spectral_adaptive_try);
+  g_test_add_func ("/ncm/spectral/adaptive/single_level", &test_ncm_spectral_adaptive_single_level);
+  g_test_add_func ("/ncm/spectral/adaptive/fatal", &test_ncm_spectral_adaptive_fatal);
+  g_test_add_func ("/ncm/spectral/adaptive/fatal/subprocess", &test_ncm_spectral_adaptive_fatal_subprocess);
+  g_test_add_func ("/ncm/spectral/batch", &test_ncm_spectral_batch);
+  g_test_add_func ("/ncm/spectral/batch/small_entry", &test_ncm_spectral_batch_small_entry);
+  g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
+  g_test_add_func ("/ncm/spectral/batch/peek", &test_ncm_spectral_batch_peek);
+  g_test_add_func ("/ncm/spectral/batch/known_ends", &test_ncm_spectral_batch_known_ends);
+  g_test_add_func ("/ncm/spectral/batch/ends_on_failure", &test_ncm_spectral_batch_ends_on_failure);
+  g_test_add_func ("/ncm/spectral/batch/no_prediction_below_four", &test_ncm_spectral_batch_no_prediction_below_four);
+  g_test_add_func ("/ncm/spectral/batch/fatal", &test_ncm_spectral_batch_fatal);
+  g_test_add_func ("/ncm/spectral/batch/fatal/subprocess", &test_ncm_spectral_batch_fatal_subprocess);
+  g_test_add_func ("/ncm/spectral/free_buffers", &test_ncm_spectral_free_buffers);
+  g_test_add_func ("/ncm/spectral/eval_deriv", &test_ncm_spectral_eval_deriv);
+  g_test_add_func ("/ncm/spectral/integrate", &test_ncm_spectral_integrate);
+  g_test_add_func ("/ncm/spectral/gegenbauer/eval", &test_ncm_spectral_gegenbauer_eval);
+  g_test_add_func ("/ncm/spectral/gegenbauer/conversions", &test_ncm_spectral_gegenbauer_conversions);
+  g_test_add_func ("/ncm/spectral/operators", &test_ncm_spectral_operators);
+  g_test_add_func ("/ncm/spectral/rebase", &test_ncm_spectral_rebase);
+  g_test_add_func ("/ncm/spectral/invalid/arguments", &test_ncm_spectral_invalid_arguments);
+  g_test_add_func ("/ncm/spectral/invalid/max_level/subprocess", &test_ncm_spectral_invalid_max_level_subprocess);
+  g_test_add_func ("/ncm/spectral/invalid/order/subprocess", &test_ncm_spectral_invalid_order_subprocess);
+
+  g_test_run ();
+}
+
 /* T_k at t in [-1, 1] */
 static gdouble
 _T (guint k, gdouble t)
@@ -123,8 +206,6 @@ _pattern_new (guint n)
   return a;
 }
 
-typedef gdouble (*_Basis) (guint k, gdouble t);
-
 static gdouble
 _sum (GArray *c, _Basis basis, gdouble t)
 {
@@ -148,13 +229,6 @@ _gegen_sum (GArray *c, gdouble lambda, gdouble t)
 
   return s;
 }
-
-static const gdouble test_t[] = {-1.0, -1.0 + 1.0e-10, -0.95, -0.5, 0.0, 0.3, 0.9, 0.97, 1.0 - 1.0e-10, 1.0};
-
-typedef struct _Counted
-{
-  guint calls;
-} Counted;
 
 static gdouble
 _gauss (gpointer user_data, gdouble x)
@@ -191,6 +265,89 @@ _cheb_mode (gpointer user_data, gdouble x)
   const guint m = GPOINTER_TO_UINT (user_data);
 
   return _T (m, CLAMP (ncm_spectral_x_to_s (0.5, 3.0, x), -1.0, 1.0));
+}
+
+/* Batch: exp(x), cos(5x), 1/(1+x^2) on [-1, 2] */
+static void
+_batch3 (gpointer user_data, gdouble x, NcmVector *fval)
+{
+  Counted *counted = user_data;
+
+  counted->calls++;
+  ncm_vector_set (fval, 0, exp (x));
+  ncm_vector_set (fval, 1, cos (5.0 * x));
+
+  if (ncm_vector_len (fval) > 2)
+    ncm_vector_set (fval, 2, 1.0 / (1.0 + x * x));
+}
+
+static gdouble
+_batch3_entry (gpointer user_data, gdouble x)
+{
+  switch (GPOINTER_TO_UINT (user_data))
+  {
+    case 0:
+      return exp (x);
+
+    case 1:
+      return cos (5.0 * x);
+
+    default:
+      return 1.0 / (1.0 + x * x);
+  }
+}
+
+static void
+_batch_hard (gpointer user_data, gdouble x, NcmVector *fval)
+{
+  ncm_vector_set (fval, 0, exp (x));
+  ncm_vector_set (fval, 1, sin (60.0 * x));
+}
+
+/* 1 + 2x, a Gaussian and an entry six orders below them */
+static void
+_batch_scales (gpointer user_data, gdouble x, NcmVector *fval)
+{
+  ncm_vector_set (fval, 0, 1.0 + 2.0 * x);
+  ncm_vector_set (fval, 1, exp (-(x - 2.0) * (x - 2.0)));
+  ncm_vector_set (fval, 2, 1.0e-6 * cos (30.0 * x));
+}
+
+static gdouble
+_op_f (guint op, GArray *c, gdouble t)
+{
+  switch (op)
+  {
+    case 0:
+      return _sum (c, _T, t);
+
+    case 1:
+      return t * _sum (c, _T, t);
+
+    case 2:
+      return t * t * _sum (c, _T, t);
+
+    case 3:
+      return _sum (c, _dT, t);
+
+    case 4:
+      return t * _sum (c, _dT, t);
+
+    case 5:
+      return _sum (c, _d2T, t);
+
+    case 6:
+      return t * _sum (c, _d2T, t);
+
+    default:
+      return t * t * _sum (c, _d2T, t);
+  }
+}
+
+static void
+_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+{
+  ncm_spectral_compute_d_row (row_data, offset, coeff);
 }
 
 static void
@@ -460,43 +617,6 @@ test_ncm_spectral_adaptive_fatal_subprocess (void)
   ncm_spectral_compute_chebyshev_coeffs_adaptive (spectral, _sin_hard, -1.0, 1.0, 2, 1.0e-12, &coeffs, NULL);
 }
 
-/* Batch: exp(x), cos(5x), 1/(1+x^2) on [-1, 2] */
-static void
-_batch3 (gpointer user_data, gdouble x, NcmVector *fval)
-{
-  Counted *counted = user_data;
-
-  counted->calls++;
-  ncm_vector_set (fval, 0, exp (x));
-  ncm_vector_set (fval, 1, cos (5.0 * x));
-
-  if (ncm_vector_len (fval) > 2)
-    ncm_vector_set (fval, 2, 1.0 / (1.0 + x * x));
-}
-
-static gdouble
-_batch3_entry (gpointer user_data, gdouble x)
-{
-  switch (GPOINTER_TO_UINT (user_data))
-  {
-    case 0:
-      return exp (x);
-
-    case 1:
-      return cos (5.0 * x);
-
-    default:
-      return 1.0 / (1.0 + x * x);
-  }
-}
-
-static void
-_batch_hard (gpointer user_data, gdouble x, NcmVector *fval)
-{
-  ncm_vector_set (fval, 0, exp (x));
-  ncm_vector_set (fval, 1, sin (60.0 * x));
-}
-
 static void
 test_ncm_spectral_batch (void)
 {
@@ -535,15 +655,6 @@ test_ncm_spectral_batch (void)
   ncm_matrix_free (coeffs);
   g_array_unref (fixed);
   ncm_spectral_free (spectral);
-}
-
-/* 1 + 2x, a Gaussian and an entry six orders below them */
-static void
-_batch_scales (gpointer user_data, gdouble x, NcmVector *fval)
-{
-  ncm_vector_set (fval, 0, 1.0 + 2.0 * x);
-  ncm_vector_set (fval, 1, exp (-(x - 2.0) * (x - 2.0)));
-  ncm_vector_set (fval, 2, 1.0e-6 * cos (30.0 * x));
 }
 
 /* Convergence is per entry: the small one is resolved relative to its own size */
@@ -966,46 +1077,6 @@ test_ncm_spectral_gegenbauer_conversions (void)
   g_array_unref (gx);
 }
 
-typedef NcmMatrix *(*_OpMatrix) (guint N);
-typedef void (*_OpRow) (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
-
-static gdouble
-_op_f (guint op, GArray *c, gdouble t)
-{
-  switch (op)
-  {
-    case 0:
-      return _sum (c, _T, t);
-
-    case 1:
-      return t * _sum (c, _T, t);
-
-    case 2:
-      return t * t * _sum (c, _T, t);
-
-    case 3:
-      return _sum (c, _dT, t);
-
-    case 4:
-      return t * _sum (c, _dT, t);
-
-    case 5:
-      return _sum (c, _d2T, t);
-
-    case 6:
-      return t * _sum (c, _d2T, t);
-
-    default:
-      return t * t * _sum (c, _d2T, t);
-  }
-}
-
-static void
-_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
-{
-  ncm_spectral_compute_d_row (row_data, offset, coeff);
-}
-
 /* Each operator matrix applied to c, evaluated as a C^(2) series, against the operator
  * applied to the T_k sum. c ends 8 below N, so the truncated columns hold nothing. */
 static void
@@ -1197,45 +1268,5 @@ test_ncm_spectral_rebase (void)
   g_array_unref (r);
   g_array_unref (r5);
   ncm_spectral_free (spectral);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/spectral/max_level", &test_ncm_spectral_max_level);
-  g_test_add_func ("/ncm/spectral/x_t", &test_ncm_spectral_x_t);
-  g_test_add_func ("/ncm/spectral/fixed/modes", &test_ncm_spectral_fixed_modes);
-  g_test_add_func ("/ncm/spectral/fixed/exp", &test_ncm_spectral_fixed_exp);
-  g_test_add_func ("/ncm/spectral/adaptive", &test_ncm_spectral_adaptive);
-  g_test_add_func ("/ncm/spectral/adaptive/full", &test_ncm_spectral_adaptive_full);
-  g_test_add_func ("/ncm/spectral/adaptive/try", &test_ncm_spectral_adaptive_try);
-  g_test_add_func ("/ncm/spectral/adaptive/single_level", &test_ncm_spectral_adaptive_single_level);
-  g_test_add_func ("/ncm/spectral/adaptive/fatal", &test_ncm_spectral_adaptive_fatal);
-  g_test_add_func ("/ncm/spectral/adaptive/fatal/subprocess", &test_ncm_spectral_adaptive_fatal_subprocess);
-  g_test_add_func ("/ncm/spectral/batch", &test_ncm_spectral_batch);
-  g_test_add_func ("/ncm/spectral/batch/small_entry", &test_ncm_spectral_batch_small_entry);
-  g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
-  g_test_add_func ("/ncm/spectral/batch/peek", &test_ncm_spectral_batch_peek);
-  g_test_add_func ("/ncm/spectral/batch/known_ends", &test_ncm_spectral_batch_known_ends);
-  g_test_add_func ("/ncm/spectral/batch/ends_on_failure", &test_ncm_spectral_batch_ends_on_failure);
-  g_test_add_func ("/ncm/spectral/batch/no_prediction_below_four", &test_ncm_spectral_batch_no_prediction_below_four);
-  g_test_add_func ("/ncm/spectral/batch/fatal", &test_ncm_spectral_batch_fatal);
-  g_test_add_func ("/ncm/spectral/batch/fatal/subprocess", &test_ncm_spectral_batch_fatal_subprocess);
-  g_test_add_func ("/ncm/spectral/free_buffers", &test_ncm_spectral_free_buffers);
-  g_test_add_func ("/ncm/spectral/eval_deriv", &test_ncm_spectral_eval_deriv);
-  g_test_add_func ("/ncm/spectral/integrate", &test_ncm_spectral_integrate);
-  g_test_add_func ("/ncm/spectral/gegenbauer/eval", &test_ncm_spectral_gegenbauer_eval);
-  g_test_add_func ("/ncm/spectral/gegenbauer/conversions", &test_ncm_spectral_gegenbauer_conversions);
-  g_test_add_func ("/ncm/spectral/operators", &test_ncm_spectral_operators);
-  g_test_add_func ("/ncm/spectral/rebase", &test_ncm_spectral_rebase);
-  g_test_add_func ("/ncm/spectral/invalid/arguments", &test_ncm_spectral_invalid_arguments);
-  g_test_add_func ("/ncm/spectral/invalid/max_level/subprocess", &test_ncm_spectral_invalid_max_level_subprocess);
-  g_test_add_func ("/ncm/spectral/invalid/order/subprocess", &test_ncm_spectral_invalid_order_subprocess);
-
-  g_test_run ();
 }
 

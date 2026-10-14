@@ -100,6 +100,37 @@ main (gint argc, gchar *argv[])
   return 0;
 }
 
+static void
+_test_cartesian (const gdouble r, const gdouble theta, const gdouble phi, gdouble x[3])
+{
+  x[0] = r * sin (theta) * cos (phi);
+  x[1] = r * sin (theta) * sin (phi);
+  x[2] = r * cos (theta);
+}
+
+static gint
+_test_cmp_double (gconstpointer a, gconstpointer b)
+{
+  const gdouble x = *(const gdouble *) a;
+  const gdouble y = *(const gdouble *) b;
+
+  return (x < y) ? -1 : (x > y);
+}
+
+static NcmSphereNN *
+_test_two_points (gboolean build)
+{
+  NcmSphereNN *snn = ncm_sphere_nn_new ();
+
+  ncm_sphere_nn_insert (snn, 1.0, 0.5, 0.5);
+  ncm_sphere_nn_insert (snn, 1.0, 1.5, 2.5);
+
+  if (build)
+    ncm_sphere_nn_rebuild (snn);
+
+  return snn;
+}
+
 /* Points uniform on the sphere with radii in [0.5, 2], from a fixed seed. */
 void
 test_ncm_sphere_nn_new (TestNcmSphereNN *test, gconstpointer pdata)
@@ -136,14 +167,6 @@ test_ncm_sphere_nn_free (TestNcmSphereNN *test, gconstpointer pdata)
   g_array_unref (test->theta);
   g_array_unref (test->phi);
   NCM_TEST_FREE (ncm_sphere_nn_free, test->snn);
-}
-
-static void
-_test_cartesian (const gdouble r, const gdouble theta, const gdouble phi, gdouble x[3])
-{
-  x[0] = r * sin (theta) * cos (phi);
-  x[1] = r * sin (theta) * sin (phi);
-  x[2] = r * cos (theta);
 }
 
 /* The stored point comes back as inserted, up to rounding. */
@@ -189,15 +212,6 @@ test_ncm_sphere_nn_insert_array (TestNcmSphereNN *test, gconstpointer pdata)
   }
 
   ncm_sphere_nn_free (one);
-}
-
-static gint
-_test_cmp_double (gconstpointer a, gconstpointer b)
-{
-  const gdouble x = *(const gdouble *) a;
-  const gdouble y = *(const gdouble *) b;
-
-  return (x < y) ? -1 : (x > y);
 }
 
 /* The k nearest by squared Euclidean distance, against sorting all distances, for
@@ -314,20 +328,6 @@ test_ncm_sphere_nn_rebuild (TestNcmSphereNN *test, gconstpointer pdata)
   idx = ncm_sphere_nn_knn_search (test->snn, r, theta, phi, 1);
   g_assert_cmpint (g_array_index (idx, glong, 0), ==, TEST_NPOINTS);
   g_array_unref (idx);
-}
-
-static NcmSphereNN *
-_test_two_points (gboolean build)
-{
-  NcmSphereNN *snn = ncm_sphere_nn_new ();
-
-  ncm_sphere_nn_insert (snn, 1.0, 0.5, 0.5);
-  ncm_sphere_nn_insert (snn, 1.0, 1.5, 2.5);
-
-  if (build)
-    ncm_sphere_nn_rebuild (snn);
-
-  return snn;
 }
 
 /* Repeated points tie at the same distance: a stored point that was inserted twice has

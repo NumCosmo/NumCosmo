@@ -35,8 +35,8 @@
 /*
  * A minimal concrete NcmMSetFunc: it returns the sum of its arguments.
  */
-
 #define TEST_TYPE_MSET_FUNC_SUM (test_mset_func_sum_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestMSetFuncSum, test_mset_func_sum, TEST, MSET_FUNC_SUM, NcmMSetFunc)
 
 struct _TestMSetFuncSum
@@ -45,6 +45,147 @@ struct _TestMSetFuncSum
 };
 
 G_DEFINE_TYPE (TestMSetFuncSum, test_mset_func_sum, NCM_TYPE_MSET_FUNC)
+
+/*
+ * A concrete NcmMSetFunc of the free parameters and its arguments:
+ * f = prod_j x_j sum_i (i + 1) p_i^2.
+ */
+#define TEST_TYPE_MSET_FUNC_FPARAMS (test_mset_func_fparams_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestMSetFuncFParams, test_mset_func_fparams, TEST, MSET_FUNC_FPARAMS, NcmMSetFunc)
+
+struct _TestMSetFuncFParams
+{
+  NcmMSetFunc parent_instance;
+};
+
+G_DEFINE_TYPE (TestMSetFuncFParams, test_mset_func_fparams, NCM_TYPE_MSET_FUNC)
+
+typedef struct _TestFParamsArg
+{
+  const gdouble *x;
+  guint nvar;
+} TestFParamsArg;
+
+/*
+ * A concrete NcmMSetFunc1: its values are sum_j x_j + k for k = 0, ..., dim - 1.
+ */
+#define TEST_TYPE_MSET_FUNC1_SUM (test_mset_func1_sum_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, TEST, MSET_FUNC1_SUM, NcmMSetFunc1)
+
+struct _TestMSetFunc1Sum
+{
+  NcmMSetFunc1 parent_instance;
+  guint nret;
+};
+
+G_DEFINE_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, NCM_TYPE_MSET_FUNC1)
+
+typedef struct _TestUNameCase
+{
+  guint len;
+  gdouble x[2];
+  const gchar *uname;
+  const gchar *usymbol;
+} TestUNameCase;
+
+void test_ncm_mset_func_unames (void);
+void test_ncm_mset_func_numdiff_fparams (void);
+void test_ncm_mset_func_numdiff_fparams_eval_x (void);
+void test_ncm_mset_func_eval_args (void);
+void test_ncm_mset_func_eval_no_args (void);
+void test_ncm_mset_func_eval_no_args_subprocess (void);
+void test_ncm_mset_func_unames_set_meta (void);
+void test_ncm_mset_func_eval_array (void);
+void test_ncm_mset_func_eval_array_bad_len (void);
+void test_ncm_mset_func_eval_array_bad_len_subprocess (void);
+void test_ncm_mset_func1_eval (void);
+void test_ncm_mset_func1_bad_dim (void);
+void test_ncm_mset_func1_bad_dim_subprocess (void);
+void test_ncm_mset_func_eval_x_prop (void);
+void test_ncm_mset_func_eval_x_bad_len (void);
+void test_ncm_mset_func_eval_x_bad_len_subprocess (void);
+void test_ncm_mset_func_not_scalar (void);
+void test_ncm_mset_func_not_scalar_eval0_subprocess (void);
+void test_ncm_mset_func_not_scalar_eval1_subprocess (void);
+void test_ncm_mset_func_not_scalar_eval_vector_subprocess (void);
+void test_ncm_mset_func_eval_vector_bad_len_subprocess (void);
+void test_ncm_mset_func_list_new (void);
+void test_ncm_mset_func_list_lookup (void);
+void test_ncm_mset_func_list_object (void);
+void test_ncm_mset_func_list_select (void);
+void test_ncm_mset_func_list_errors (void);
+void test_ncm_mset_func_list_ambiguous_subprocess (void);
+void test_ncm_mset_func_list_missing_subprocess (void);
+void test_ncm_mset_func_list_no_full_name_subprocess (void);
+void test_ncm_mset_func_list_bad_full_name_subprocess (void);
+void test_ncm_mset_func_list_wrong_obj_subprocess (void);
+void test_ncm_mset_func_list_no_obj_subprocess (void);
+
+static void _test_flist_plus_one (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static void _test_flist_const (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static void _test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/mset_func/unames", &test_ncm_mset_func_unames);
+  g_test_add_func ("/ncm/mset_func/unames/set_meta", &test_ncm_mset_func_unames_set_meta);
+  g_test_add_func ("/ncm/mset_func/numdiff_fparams", &test_ncm_mset_func_numdiff_fparams);
+  g_test_add_func ("/ncm/mset_func/numdiff_fparams/eval_x", &test_ncm_mset_func_numdiff_fparams_eval_x);
+  g_test_add_func ("/ncm/mset_func/eval/args", &test_ncm_mset_func_eval_args);
+  g_test_add_func ("/ncm/mset_func/eval/no_args", &test_ncm_mset_func_eval_no_args);
+  g_test_add_func ("/ncm/mset_func/eval/no_args/subprocess", &test_ncm_mset_func_eval_no_args_subprocess);
+  g_test_add_func ("/ncm/mset_func/eval_array", &test_ncm_mset_func_eval_array);
+  g_test_add_func ("/ncm/mset_func/eval_array/bad_len", &test_ncm_mset_func_eval_array_bad_len);
+  g_test_add_func ("/ncm/mset_func/eval_array/bad_len/subprocess", &test_ncm_mset_func_eval_array_bad_len_subprocess);
+  g_test_add_func ("/ncm/mset_func1/eval", &test_ncm_mset_func1_eval);
+  g_test_add_func ("/ncm/mset_func1/bad_dim", &test_ncm_mset_func1_bad_dim);
+  g_test_add_func ("/ncm/mset_func1/bad_dim/subprocess", &test_ncm_mset_func1_bad_dim_subprocess);
+  g_test_add_func ("/ncm/mset_func/eval_x/prop", &test_ncm_mset_func_eval_x_prop);
+  g_test_add_func ("/ncm/mset_func/eval_x/bad_len", &test_ncm_mset_func_eval_x_bad_len);
+  g_test_add_func ("/ncm/mset_func/eval_x/bad_len/subprocess", &test_ncm_mset_func_eval_x_bad_len_subprocess);
+  g_test_add_func ("/ncm/mset_func/not_scalar", &test_ncm_mset_func_not_scalar);
+  g_test_add_func ("/ncm/mset_func/not_scalar/eval0/subprocess", &test_ncm_mset_func_not_scalar_eval0_subprocess);
+  g_test_add_func ("/ncm/mset_func/not_scalar/eval1/subprocess", &test_ncm_mset_func_not_scalar_eval1_subprocess);
+  g_test_add_func ("/ncm/mset_func/not_scalar/eval_vector/subprocess", &test_ncm_mset_func_not_scalar_eval_vector_subprocess);
+  g_test_add_func ("/ncm/mset_func/eval_vector/bad_len/subprocess", &test_ncm_mset_func_eval_vector_bad_len_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/new", &test_ncm_mset_func_list_new);
+  g_test_add_func ("/ncm/mset_func_list/lookup", &test_ncm_mset_func_list_lookup);
+  g_test_add_func ("/ncm/mset_func_list/object", &test_ncm_mset_func_list_object);
+  g_test_add_func ("/ncm/mset_func_list/select", &test_ncm_mset_func_list_select);
+  g_test_add_func ("/ncm/mset_func_list/errors", &test_ncm_mset_func_list_errors);
+  g_test_add_func ("/ncm/mset_func_list/errors/ambiguous/subprocess", &test_ncm_mset_func_list_ambiguous_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/missing/subprocess", &test_ncm_mset_func_list_missing_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/no_full_name/subprocess", &test_ncm_mset_func_list_no_full_name_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/bad_full_name/subprocess", &test_ncm_mset_func_list_bad_full_name_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/wrong_obj/subprocess", &test_ncm_mset_func_list_wrong_obj_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/errors/no_obj/subprocess", &test_ncm_mset_func_list_no_obj_subprocess);
+
+  g_test_run ();
+}
+
+static void
+test_flist_register (void)
+{
+  static gsize registered = 0;
+
+  if (g_once_init_enter (&registered))
+  {
+    ncm_mset_func_list_register ("plus_one", "f_1", "TestFList", "x + 1", G_TYPE_NONE, _test_flist_plus_one, 1, 1);
+    ncm_mset_func_list_register ("twice", "t_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
+    ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
+
+    g_once_init_leave (&registered, 1);
+  }
+}
 
 static void
 test_mset_func_sum_init (TestMSetFuncSum *fs)
@@ -81,21 +222,6 @@ test_mset_func_sum_new (const guint nvar)
   return func;
 }
 
-/*
- * A concrete NcmMSetFunc of the free parameters and its arguments:
- * f = prod_j x_j sum_i (i + 1) p_i^2.
- */
-
-#define TEST_TYPE_MSET_FUNC_FPARAMS (test_mset_func_fparams_get_type ())
-G_DECLARE_FINAL_TYPE (TestMSetFuncFParams, test_mset_func_fparams, TEST, MSET_FUNC_FPARAMS, NcmMSetFunc)
-
-struct _TestMSetFuncFParams
-{
-  NcmMSetFunc parent_instance;
-};
-
-G_DEFINE_TYPE (TestMSetFuncFParams, test_mset_func_fparams, NCM_TYPE_MSET_FUNC)
-
 static void
 test_mset_func_fparams_init (TestMSetFuncFParams *fp)
 {
@@ -131,12 +257,6 @@ _test_mset_func_fparams_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x
 
   ncm_vector_free (p);
 }
-
-typedef struct _TestFParamsArg
-{
-  const gdouble *x;
-  guint nvar;
-} TestFParamsArg;
 
 static gdouble
 _test_fparams_diff_f (NcmVector *p, gpointer user_data)
@@ -193,21 +313,6 @@ test_mset_func_fparams_class_init (TestMSetFuncFParamsClass *klass)
   func_class->eval = &_test_mset_func_fparams_eval;
 }
 
-/*
- * A concrete NcmMSetFunc1: its values are sum_j x_j + k for k = 0, ..., dim - 1.
- */
-
-#define TEST_TYPE_MSET_FUNC1_SUM (test_mset_func1_sum_get_type ())
-G_DECLARE_FINAL_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, TEST, MSET_FUNC1_SUM, NcmMSetFunc1)
-
-struct _TestMSetFunc1Sum
-{
-  NcmMSetFunc1 parent_instance;
-  guint nret;
-};
-
-G_DEFINE_TYPE (TestMSetFunc1Sum, test_mset_func1_sum, NCM_TYPE_MSET_FUNC1)
-
 static void
 test_mset_func1_sum_init (TestMSetFunc1Sum *f1s)
 {
@@ -258,7 +363,6 @@ test_mset_func1_sum_new (const guint nvar, const guint dim, const guint nret)
 /*
  * Functions registered in NcmMSetFuncList for the tests.
  */
-
 static void
 _test_flist_plus_one (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
@@ -276,107 +380,6 @@ _test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gd
 {
   res[0] = ncm_vector_len (NCM_VECTOR (ncm_mset_func_list_peek_obj (flist)));
 }
-
-static void
-test_flist_register (void)
-{
-  static gsize registered = 0;
-
-  if (g_once_init_enter (&registered))
-  {
-    ncm_mset_func_list_register ("plus_one", "f_1", "TestFList", "x + 1", G_TYPE_NONE, _test_flist_plus_one, 1, 1);
-    ncm_mset_func_list_register ("twice", "t_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
-    ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
-
-    g_once_init_leave (&registered, 1);
-  }
-}
-
-void test_ncm_mset_func_unames (void);
-void test_ncm_mset_func_numdiff_fparams (void);
-void test_ncm_mset_func_numdiff_fparams_eval_x (void);
-void test_ncm_mset_func_eval_args (void);
-void test_ncm_mset_func_eval_no_args (void);
-void test_ncm_mset_func_eval_no_args_subprocess (void);
-void test_ncm_mset_func_unames_set_meta (void);
-void test_ncm_mset_func_eval_array (void);
-void test_ncm_mset_func_eval_array_bad_len (void);
-void test_ncm_mset_func_eval_array_bad_len_subprocess (void);
-void test_ncm_mset_func1_eval (void);
-void test_ncm_mset_func1_bad_dim (void);
-void test_ncm_mset_func1_bad_dim_subprocess (void);
-void test_ncm_mset_func_eval_x_prop (void);
-void test_ncm_mset_func_eval_x_bad_len (void);
-void test_ncm_mset_func_eval_x_bad_len_subprocess (void);
-void test_ncm_mset_func_not_scalar (void);
-void test_ncm_mset_func_not_scalar_eval0_subprocess (void);
-void test_ncm_mset_func_not_scalar_eval1_subprocess (void);
-void test_ncm_mset_func_not_scalar_eval_vector_subprocess (void);
-void test_ncm_mset_func_eval_vector_bad_len_subprocess (void);
-void test_ncm_mset_func_list_new (void);
-void test_ncm_mset_func_list_lookup (void);
-void test_ncm_mset_func_list_object (void);
-void test_ncm_mset_func_list_select (void);
-void test_ncm_mset_func_list_errors (void);
-void test_ncm_mset_func_list_ambiguous_subprocess (void);
-void test_ncm_mset_func_list_missing_subprocess (void);
-void test_ncm_mset_func_list_no_full_name_subprocess (void);
-void test_ncm_mset_func_list_bad_full_name_subprocess (void);
-void test_ncm_mset_func_list_wrong_obj_subprocess (void);
-void test_ncm_mset_func_list_no_obj_subprocess (void);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/mset_func/unames", &test_ncm_mset_func_unames);
-  g_test_add_func ("/ncm/mset_func/unames/set_meta", &test_ncm_mset_func_unames_set_meta);
-  g_test_add_func ("/ncm/mset_func/numdiff_fparams", &test_ncm_mset_func_numdiff_fparams);
-  g_test_add_func ("/ncm/mset_func/numdiff_fparams/eval_x", &test_ncm_mset_func_numdiff_fparams_eval_x);
-  g_test_add_func ("/ncm/mset_func/eval/args", &test_ncm_mset_func_eval_args);
-  g_test_add_func ("/ncm/mset_func/eval/no_args", &test_ncm_mset_func_eval_no_args);
-  g_test_add_func ("/ncm/mset_func/eval/no_args/subprocess", &test_ncm_mset_func_eval_no_args_subprocess);
-  g_test_add_func ("/ncm/mset_func/eval_array", &test_ncm_mset_func_eval_array);
-  g_test_add_func ("/ncm/mset_func/eval_array/bad_len", &test_ncm_mset_func_eval_array_bad_len);
-  g_test_add_func ("/ncm/mset_func/eval_array/bad_len/subprocess", &test_ncm_mset_func_eval_array_bad_len_subprocess);
-  g_test_add_func ("/ncm/mset_func1/eval", &test_ncm_mset_func1_eval);
-  g_test_add_func ("/ncm/mset_func1/bad_dim", &test_ncm_mset_func1_bad_dim);
-  g_test_add_func ("/ncm/mset_func1/bad_dim/subprocess", &test_ncm_mset_func1_bad_dim_subprocess);
-  g_test_add_func ("/ncm/mset_func/eval_x/prop", &test_ncm_mset_func_eval_x_prop);
-  g_test_add_func ("/ncm/mset_func/eval_x/bad_len", &test_ncm_mset_func_eval_x_bad_len);
-  g_test_add_func ("/ncm/mset_func/eval_x/bad_len/subprocess", &test_ncm_mset_func_eval_x_bad_len_subprocess);
-  g_test_add_func ("/ncm/mset_func/not_scalar", &test_ncm_mset_func_not_scalar);
-  g_test_add_func ("/ncm/mset_func/not_scalar/eval0/subprocess", &test_ncm_mset_func_not_scalar_eval0_subprocess);
-  g_test_add_func ("/ncm/mset_func/not_scalar/eval1/subprocess", &test_ncm_mset_func_not_scalar_eval1_subprocess);
-  g_test_add_func ("/ncm/mset_func/not_scalar/eval_vector/subprocess", &test_ncm_mset_func_not_scalar_eval_vector_subprocess);
-  g_test_add_func ("/ncm/mset_func/eval_vector/bad_len/subprocess", &test_ncm_mset_func_eval_vector_bad_len_subprocess);
-  g_test_add_func ("/ncm/mset_func_list/new", &test_ncm_mset_func_list_new);
-  g_test_add_func ("/ncm/mset_func_list/lookup", &test_ncm_mset_func_list_lookup);
-  g_test_add_func ("/ncm/mset_func_list/object", &test_ncm_mset_func_list_object);
-  g_test_add_func ("/ncm/mset_func_list/select", &test_ncm_mset_func_list_select);
-  g_test_add_func ("/ncm/mset_func_list/errors", &test_ncm_mset_func_list_errors);
-  g_test_add_func ("/ncm/mset_func_list/errors/ambiguous/subprocess", &test_ncm_mset_func_list_ambiguous_subprocess);
-  g_test_add_func ("/ncm/mset_func_list/errors/missing/subprocess", &test_ncm_mset_func_list_missing_subprocess);
-  g_test_add_func ("/ncm/mset_func_list/errors/no_full_name/subprocess", &test_ncm_mset_func_list_no_full_name_subprocess);
-  g_test_add_func ("/ncm/mset_func_list/errors/bad_full_name/subprocess", &test_ncm_mset_func_list_bad_full_name_subprocess);
-  g_test_add_func ("/ncm/mset_func_list/errors/wrong_obj/subprocess", &test_ncm_mset_func_list_wrong_obj_subprocess);
-  g_test_add_func ("/ncm/mset_func_list/errors/no_obj/subprocess", &test_ncm_mset_func_list_no_obj_subprocess);
-
-  g_test_run ();
-}
-
-typedef struct _TestUNameCase
-{
-  guint len;
-  gdouble x[2];
-  const gchar *uname;
-  const gchar *usymbol;
-} TestUNameCase;
 
 void
 test_ncm_mset_func_unames (void)

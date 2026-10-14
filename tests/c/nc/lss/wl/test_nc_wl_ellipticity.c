@@ -34,6 +34,7 @@
 #include <glib-object.h>
 
 typedef complex double (*ShearMap) (complex double g, complex double z);
+
 typedef void (*ShearKernel) (complex double g, complex double z_obs, gdouble *x_i, gdouble *jac);
 
 typedef complex double (*OriginShear) (complex double target);
@@ -49,6 +50,17 @@ typedef struct _TestShearConv
   ShearKernel kernel;
   OriginShear shear_at_origin;
 } TestShearConv;
+
+static void test_nc_wl_ellipticity_round_trip (gconstpointer pdata);
+static void test_nc_wl_ellipticity_lndet_jac (gconstpointer pdata);
+static void test_nc_wl_ellipticity_det_jac_matches_log_form (gconstpointer pdata);
+static void test_nc_wl_ellipticity_kernel_matches_separate (gconstpointer pdata);
+static void test_nc_wl_ellipticity_trace_kernel_prepare_matches_plain (void);
+static void test_nc_wl_ellipticity_trace_kernel_prep_boxed (void);
+static void test_nc_wl_ellipticity_zero_shear (gconstpointer pdata);
+static void test_nc_wl_ellipticity_shear_at_origin_round_trip (gconstpointer pdata);
+static void test_nc_wl_ellipticity_introspectable_wrappers (void);
+static void test_nc_wl_ellipticity_frame_parity (void);
 
 /* The two conventions, addressed uniformly so the algebraic identities can be
  * checked with a single body. */
@@ -98,6 +110,51 @@ static const complex double test_targets[] = {
   0.90757 + 0.28074 * I,
   0.999 * (0.45314 + 0.89032 * I),
 };
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/round_trip",
+                        &test_conv_trace, &test_nc_wl_ellipticity_round_trip);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/lndet_jac",
+                        &test_conv_trace, &test_nc_wl_ellipticity_lndet_jac);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/det_jac_matches_log_form",
+                        &test_conv_trace, &test_nc_wl_ellipticity_det_jac_matches_log_form);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/zero_shear",
+                        &test_conv_trace, &test_nc_wl_ellipticity_zero_shear);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/kernel_matches_separate",
+                        &test_conv_trace, &test_nc_wl_ellipticity_kernel_matches_separate);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace/shear_at_origin_round_trip",
+                        &test_conv_trace, &test_nc_wl_ellipticity_shear_at_origin_round_trip);
+  g_test_add_func ("/nc/wl_ellipticity/trace/kernel_prepare_matches_plain",
+                   &test_nc_wl_ellipticity_trace_kernel_prepare_matches_plain);
+  g_test_add_func ("/nc/wl_ellipticity/trace/kernel_prep_boxed",
+                   &test_nc_wl_ellipticity_trace_kernel_prep_boxed);
+
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/round_trip",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_round_trip);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/lndet_jac",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_lndet_jac);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/det_jac_matches_log_form",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_det_jac_matches_log_form);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/zero_shear",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_zero_shear);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/kernel_matches_separate",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_kernel_matches_separate);
+  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/shear_at_origin_round_trip",
+                        &test_conv_trace_det, &test_nc_wl_ellipticity_shear_at_origin_round_trip);
+
+  g_test_add_func ("/nc/wl_ellipticity/introspectable_wrappers",
+                   &test_nc_wl_ellipticity_introspectable_wrappers);
+  g_test_add_func ("/nc/wl_ellipticity/frame_parity",
+                   &test_nc_wl_ellipticity_frame_parity);
+
+  return g_test_run ();
+}
 
 /* Numerical log|det J| of @map (with @g held fixed) at the point @z0, by central
  * differences on the real and imaginary directions. */
@@ -426,50 +483,5 @@ test_nc_wl_ellipticity_frame_parity (void)
                                             nc_wl_ellipticity_celestial_to_frame (NC_WL_ELLIPTICITY_FRAME_CARTESIAN, e)),
       e, 1.0e-15);
   }
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_data_func ("/nc/wl_ellipticity/trace/round_trip",
-                        &test_conv_trace, &test_nc_wl_ellipticity_round_trip);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace/lndet_jac",
-                        &test_conv_trace, &test_nc_wl_ellipticity_lndet_jac);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace/det_jac_matches_log_form",
-                        &test_conv_trace, &test_nc_wl_ellipticity_det_jac_matches_log_form);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace/zero_shear",
-                        &test_conv_trace, &test_nc_wl_ellipticity_zero_shear);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace/kernel_matches_separate",
-                        &test_conv_trace, &test_nc_wl_ellipticity_kernel_matches_separate);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace/shear_at_origin_round_trip",
-                        &test_conv_trace, &test_nc_wl_ellipticity_shear_at_origin_round_trip);
-  g_test_add_func ("/nc/wl_ellipticity/trace/kernel_prepare_matches_plain",
-                   &test_nc_wl_ellipticity_trace_kernel_prepare_matches_plain);
-  g_test_add_func ("/nc/wl_ellipticity/trace/kernel_prep_boxed",
-                   &test_nc_wl_ellipticity_trace_kernel_prep_boxed);
-
-  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/round_trip",
-                        &test_conv_trace_det, &test_nc_wl_ellipticity_round_trip);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/lndet_jac",
-                        &test_conv_trace_det, &test_nc_wl_ellipticity_lndet_jac);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/det_jac_matches_log_form",
-                        &test_conv_trace_det, &test_nc_wl_ellipticity_det_jac_matches_log_form);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/zero_shear",
-                        &test_conv_trace_det, &test_nc_wl_ellipticity_zero_shear);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/kernel_matches_separate",
-                        &test_conv_trace_det, &test_nc_wl_ellipticity_kernel_matches_separate);
-  g_test_add_data_func ("/nc/wl_ellipticity/trace_det/shear_at_origin_round_trip",
-                        &test_conv_trace_det, &test_nc_wl_ellipticity_shear_at_origin_round_trip);
-
-  g_test_add_func ("/nc/wl_ellipticity/introspectable_wrappers",
-                   &test_nc_wl_ellipticity_introspectable_wrappers);
-  g_test_add_func ("/nc/wl_ellipticity/frame_parity",
-                   &test_nc_wl_ellipticity_frame_parity);
-
-  return g_test_run ();
 }
 

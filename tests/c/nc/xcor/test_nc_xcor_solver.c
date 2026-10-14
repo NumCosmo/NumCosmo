@@ -53,47 +53,63 @@ typedef struct _TestNcXcorSolver
   NcXcorSolver *solver;
 } TestNcXcorSolver;
 
-static void
-test_nc_xcor_solver_new (TestNcXcorSolver *test, gconstpointer pdata)
+typedef struct _TestCheck
 {
-  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  const gchar *name;
 
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+  void (*func) (TestNcXcorSolver *test, gconstpointer pdata);
+} TestCheck;
 
-  test->cosmo = cosmo;
-  test->dist  = nc_distance_new (TEST_ZMAX);
-  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+static void test_nc_xcor_solver_new (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_free (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_register (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_requests (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_plan_tiling (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_plan_union (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_plan_kernel_integrator (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_plan_l_limber_sorted (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_plan (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_plan_l_limber (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_solve (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_cache_max_traps (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_cache_max (TestNcXcorSolver *test, gconstpointer pdata);
 
-  nc_distance_prepare (test->dist, cosmo);
-  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+static const TestCheck test_checks[] = {
+  {"register",       &test_nc_xcor_solver_register      },
+  {"requests",       &test_nc_xcor_solver_requests      },
+  {"plan",           &test_nc_xcor_solver_plan          },
+  {"plan/l_limber",  &test_nc_xcor_solver_plan_l_limber },
+  {"plan/tiling",    &test_nc_xcor_solver_plan_tiling   },
+  {"plan/union",     &test_nc_xcor_solver_plan_union    },
+  {"plan/kernel_integrator", &test_nc_xcor_solver_plan_kernel_integrator},
+  {"plan/l_limber_sorted", &test_nc_xcor_solver_plan_l_limber_sorted},
+  {"solve",          &test_nc_xcor_solver_solve         },
+  {"cache_max/traps", &test_nc_xcor_solver_cache_max_traps},
+  {"cache_max/subprocess", &test_nc_xcor_solver_cache_max},
+};
 
-  test->k1 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1500.0, 300.0, 4.0));
-  test->k2 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1700.0, 350.0, 4.0));
-
-  nc_xcor_kernel_prepare (test->k1, cosmo);
-  nc_xcor_kernel_prepare (test->k2, cosmo);
-
-  test->solver = nc_xcor_solver_new ();
-  g_assert_true (NC_IS_XCOR_SOLVER (test->solver));
-}
-
-static void
-test_nc_xcor_solver_free (TestNcXcorSolver *test, gconstpointer pdata)
+gint
+main (gint argc, gchar *argv[])
 {
-  nc_xcor_kernel_free (test->k1);
-  nc_xcor_kernel_free (test->k2);
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
+  guint j;
 
-  NCM_TEST_FREE (nc_xcor_solver_free, test->solver);
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+  {
+    gchar *path = g_strdup_printf ("/nc/xcor/solver/%s", test_checks[j].name);
+
+    g_test_add (path, TestNcXcorSolver, NULL,
+                &test_nc_xcor_solver_new, test_checks[j].func, &test_nc_xcor_solver_free);
+
+    g_free (path);
+  }
+
+  g_test_run ();
 }
 
 static void
@@ -123,38 +139,6 @@ test_nc_xcor_solver_register (TestNcXcorSolver *test, gconstpointer pdata)
 
   nc_xcor_solver_clear (&solver2);
   g_assert_true (solver2 == NULL);
-}
-
-static void
-test_nc_xcor_solver_requests (TestNcXcorSolver *test, gconstpointer pdata)
-{
-  const guint id1 = nc_xcor_solver_register_kernel (test->solver, test->k1);
-  const guint id2 = nc_xcor_solver_register_kernel (test->solver, test->k2);
-  guint a, b, lmin, lmax;
-
-  nc_xcor_solver_request_cl (test->solver, id1, id2, 2, 12);
-  nc_xcor_solver_request_cl (test->solver, id1, id1, 4, 20);
-
-  g_assert_cmpuint (nc_xcor_solver_get_n_requests (test->solver), ==, 2);
-
-  nc_xcor_solver_get_request (test->solver, 0, &a, &b, &lmin, &lmax);
-  g_assert_cmpuint (a, ==, id1);
-  g_assert_cmpuint (b, ==, id2);
-  g_assert_cmpuint (lmin, ==, 2);
-  g_assert_cmpuint (lmax, ==, 12);
-
-  nc_xcor_solver_get_request (test->solver, 1, &a, &b, &lmin, &lmax);
-  g_assert_cmpuint (a, ==, id1);
-  g_assert_cmpuint (b, ==, id1);
-  g_assert_cmpuint (lmin, ==, 4);
-  g_assert_cmpuint (lmax, ==, 20);
-
-  /* Clearing drops the requests and keeps the kernels: the registration is the expensive
-   * half and a caller reusing a solver for a new set of spectra depends on that. */
-  nc_xcor_solver_clear_requests (test->solver);
-  g_assert_cmpuint (nc_xcor_solver_get_n_requests (test->solver), ==, 0);
-  g_assert_cmpuint (nc_xcor_solver_get_n_kernels (test->solver), ==, 2);
-  g_assert_true (nc_xcor_solver_peek_kernel (test->solver, id1) == test->k1);
 }
 
 /* The blocks of the current plan must be exactly @expected, @n pairs (lmin, lmax) */
@@ -202,6 +186,81 @@ _test_assert_tiling (NcXcorSolver *solver, guint lmin, guint lmax, guint block_s
   }
 
   g_assert_cmpuint (prev_lmax, ==, lmax);
+}
+
+static void
+test_nc_xcor_solver_new (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+
+  test->cosmo = cosmo;
+  test->dist  = nc_distance_new (TEST_ZMAX);
+  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+
+  nc_distance_prepare (test->dist, cosmo);
+  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+
+  test->k1 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1500.0, 300.0, 4.0));
+  test->k2 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1700.0, 350.0, 4.0));
+
+  nc_xcor_kernel_prepare (test->k1, cosmo);
+  nc_xcor_kernel_prepare (test->k2, cosmo);
+
+  test->solver = nc_xcor_solver_new ();
+  g_assert_true (NC_IS_XCOR_SOLVER (test->solver));
+}
+
+static void
+test_nc_xcor_solver_free (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  nc_xcor_kernel_free (test->k1);
+  nc_xcor_kernel_free (test->k2);
+  ncm_powspec_free (test->ps);
+  nc_distance_free (test->dist);
+  nc_hicosmo_free (test->cosmo);
+
+  NCM_TEST_FREE (nc_xcor_solver_free, test->solver);
+}
+
+static void
+test_nc_xcor_solver_requests (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  const guint id1 = nc_xcor_solver_register_kernel (test->solver, test->k1);
+  const guint id2 = nc_xcor_solver_register_kernel (test->solver, test->k2);
+  guint a, b, lmin, lmax;
+
+  nc_xcor_solver_request_cl (test->solver, id1, id2, 2, 12);
+  nc_xcor_solver_request_cl (test->solver, id1, id1, 4, 20);
+
+  g_assert_cmpuint (nc_xcor_solver_get_n_requests (test->solver), ==, 2);
+
+  nc_xcor_solver_get_request (test->solver, 0, &a, &b, &lmin, &lmax);
+  g_assert_cmpuint (a, ==, id1);
+  g_assert_cmpuint (b, ==, id2);
+  g_assert_cmpuint (lmin, ==, 2);
+  g_assert_cmpuint (lmax, ==, 12);
+
+  nc_xcor_solver_get_request (test->solver, 1, &a, &b, &lmin, &lmax);
+  g_assert_cmpuint (a, ==, id1);
+  g_assert_cmpuint (b, ==, id1);
+  g_assert_cmpuint (lmin, ==, 4);
+  g_assert_cmpuint (lmax, ==, 20);
+
+  /* Clearing drops the requests and keeps the kernels: the registration is the expensive
+   * half and a caller reusing a solver for a new set of spectra depends on that. */
+  nc_xcor_solver_clear_requests (test->solver);
+  g_assert_cmpuint (nc_xcor_solver_get_n_requests (test->solver), ==, 0);
+  g_assert_cmpuint (nc_xcor_solver_get_n_kernels (test->solver), ==, 2);
+  g_assert_true (nc_xcor_solver_peek_kernel (test->solver, id1) == test->k1);
 }
 
 /* One request is cut into full blocks from its first multipole; planning again with
@@ -468,50 +527,5 @@ test_nc_xcor_solver_cache_max (TestNcXcorSolver *test, gconstpointer pdata)
   nc_xcor_kernel_free (nl);
   ncm_sbessel_integrator_free (small_sbi);
   ncm_sbessel_integrator_free (sbi);
-}
-
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcorSolver *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"register",       &test_nc_xcor_solver_register      },
-  {"requests",       &test_nc_xcor_solver_requests      },
-  {"plan",           &test_nc_xcor_solver_plan          },
-  {"plan/l_limber",  &test_nc_xcor_solver_plan_l_limber },
-  {"plan/tiling",    &test_nc_xcor_solver_plan_tiling   },
-  {"plan/union",     &test_nc_xcor_solver_plan_union    },
-  {"plan/kernel_integrator", &test_nc_xcor_solver_plan_kernel_integrator},
-  {"plan/l_limber_sorted", &test_nc_xcor_solver_plan_l_limber_sorted},
-  {"solve",          &test_nc_xcor_solver_solve         },
-  {"cache_max/traps", &test_nc_xcor_solver_cache_max_traps},
-  {"cache_max/subprocess", &test_nc_xcor_solver_cache_max},
-};
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-  {
-    gchar *path = g_strdup_printf ("/nc/xcor/solver/%s", test_checks[j].name);
-
-    g_test_add (path, TestNcXcorSolver, NULL,
-                &test_nc_xcor_solver_new, test_checks[j].func, &test_nc_xcor_solver_free);
-
-    g_free (path);
-  }
-
-  g_test_run ();
 }
 

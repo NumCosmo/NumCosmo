@@ -115,6 +115,22 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
+static gboolean
+_test_nc_halo_density_profile_einasto_rng (TestNcHaloDensityProfile *test)
+{
+  NcmModel *model           = NCM_MODEL (test->dp);
+  NcmModel *model2          = NCM_MODEL (test->hms);
+  const gdouble log10MDelta = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_CM_PARAM_LOG10M_DELTA),  ncm_model_param_get_upper_bound (model2, NC_HALO_CM_PARAM_LOG10M_DELTA));
+  const gdouble cDelta      = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_CM_PARAM_C_DELTA),       ncm_model_param_get_upper_bound (model2, NC_HALO_CM_PARAM_C_DELTA));
+  const gdouble alpha       = g_test_rand_double_range (ncm_model_param_get_lower_bound (model, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA), ncm_model_param_get_upper_bound (model, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA));
+
+  ncm_model_param_set_by_name (model2, "log10MDelta", log10MDelta, NULL);
+  ncm_model_param_set_by_name (model2, "cDelta", cDelta, NULL);
+  ncm_model_param_set_by_name (model, "alpha", alpha, NULL);
+
+  return TRUE;
+}
+
 void
 test_nc_halo_density_profile_free (TestNcHaloDensityProfile *test, gconstpointer pdata)
 {
@@ -199,22 +215,6 @@ test_nc_halo_density_profile_hernquist_new (TestNcHaloDensityProfile *test, gcon
   test->rng_params = NULL;
 
   nc_distance_free (dist);
-}
-
-static gboolean
-_test_nc_halo_density_profile_einasto_rng (TestNcHaloDensityProfile *test)
-{
-  NcmModel *model           = NCM_MODEL (test->dp);
-  NcmModel *model2          = NCM_MODEL (test->hms);
-  const gdouble log10MDelta = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_CM_PARAM_LOG10M_DELTA),  ncm_model_param_get_upper_bound (model2, NC_HALO_CM_PARAM_LOG10M_DELTA));
-  const gdouble cDelta      = g_test_rand_double_range (ncm_model_param_get_lower_bound (model2, NC_HALO_CM_PARAM_C_DELTA),       ncm_model_param_get_upper_bound (model2, NC_HALO_CM_PARAM_C_DELTA));
-  const gdouble alpha       = g_test_rand_double_range (ncm_model_param_get_lower_bound (model, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA), ncm_model_param_get_upper_bound (model, NC_HALO_DENSITY_PROFILE_EINASTO_ALPHA));
-
-  ncm_model_param_set_by_name (model2, "log10MDelta", log10MDelta, NULL);
-  ncm_model_param_set_by_name (model2, "cDelta", cDelta, NULL);
-  ncm_model_param_set_by_name (model, "alpha", alpha, NULL);
-
-  return TRUE;
 }
 
 void

@@ -33,6 +33,45 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Counts the evaluations of the wrapped function. */
+typedef struct _TestCountF
+{
+  gsl_function *F;
+  guint n;
+} TestCountF;
+
+static void test_ncm_spline_func_adaptive (void);
+static void test_ncm_spline_func_grid (void);
+static void test_ncm_spline_func_max_nodes (void);
+static void test_ncm_spline_func_max_nodes_subprocess (void);
+static void test_ncm_spline_func_discontinuous (void);
+static void test_ncm_spline_func_discontinuous_subprocess (void);
+static void test_ncm_spline_func_closure_none (void);
+static void test_ncm_spline_func_closure_pass (void);
+static void test_ncm_spline_func_closure_fail (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/spline_func/adaptive", &test_ncm_spline_func_adaptive);
+  g_test_add_func ("/ncm/spline_func/grid", &test_ncm_spline_func_grid);
+  g_test_add_func ("/ncm/spline_func/max_nodes", &test_ncm_spline_func_max_nodes);
+  g_test_add_func ("/ncm/spline_func/max_nodes/subprocess", &test_ncm_spline_func_max_nodes_subprocess);
+  g_test_add_func ("/ncm/spline_func/discontinuous", &test_ncm_spline_func_discontinuous);
+  g_test_add_func ("/ncm/spline_func/discontinuous/subprocess", &test_ncm_spline_func_discontinuous_subprocess);
+  g_test_add_func ("/ncm/spline_func/closure/none", &test_ncm_spline_func_closure_none);
+  g_test_add_func ("/ncm/spline_func/closure/pass", &test_ncm_spline_func_closure_pass);
+  g_test_add_func ("/ncm/spline_func/closure/fail", &test_ncm_spline_func_closure_fail);
+
+  g_test_run ();
+}
+
 static gdouble
 _f (gdouble x, gpointer p)
 {
@@ -59,6 +98,38 @@ _max_rel_err (NcmSpline *s, const gdouble xi, const gdouble xf)
   }
 
   return err;
+}
+
+static gdouble
+_count_f (gdouble x, gpointer p)
+{
+  TestCountF *c = p;
+
+  c->n++;
+
+  return GSL_FN_EVAL (c->F, x);
+}
+
+static gdouble
+_linear (gdouble x, gpointer p)
+{
+  return 2.0 * x + 1.0;
+}
+
+/*
+ * A line, a Gaussian at 0.55 and a pair of opposite Gaussians at 0.65 and 0.75. On [0, 1]
+ * the rounds start from the knots 0, 0.2, ..., 1 and test the midpoints 0.1, 0.3, ..., 0.9:
+ * the Gaussian is below 1e-24 at 0.4 and 0.6 and 1.9e-3 at 0.5, so [0.4, 0.6] alone fails
+ * the first round; the pair is below 1e-17 at 0.6, 0.7 and 0.8, so the test at 0.7 passes
+ * on the line and accepts [0.6, 0.7] and [0.7, 0.8] with the pair inside them. The
+ * refinement around 0.55 reaches 0.6, the closure flags [0.6, 0.7] against that fine
+ * neighbor, and its midpoint 0.65 fails by 1e8 times the tolerance.
+ */
+static gdouble
+_hidden_pair (gdouble x, gpointer p)
+{
+  return 1.0 + x + exp (-gsl_pow_2 ((x - 0.55) / 0.02))
+         + exp (-gsl_pow_2 ((x - 0.65) / 0.008)) - exp (-gsl_pow_2 ((x - 0.75) / 0.008));
 }
 
 /* Every adaptive type reaches the requested relative error away from the knots; the
@@ -159,45 +230,6 @@ test_ncm_spline_func_discontinuous_subprocess (void)
   ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.1, 5.0, 0, 1.0e-6);
 }
 
-/* Counts the evaluations of the wrapped function. */
-typedef struct _TestCountF
-{
-  gsl_function *F;
-  guint n;
-} TestCountF;
-
-static gdouble
-_count_f (gdouble x, gpointer p)
-{
-  TestCountF *c = p;
-
-  c->n++;
-
-  return GSL_FN_EVAL (c->F, x);
-}
-
-static gdouble
-_linear (gdouble x, gpointer p)
-{
-  return 2.0 * x + 1.0;
-}
-
-/*
- * A line, a Gaussian at 0.55 and a pair of opposite Gaussians at 0.65 and 0.75. On [0, 1]
- * the rounds start from the knots 0, 0.2, ..., 1 and test the midpoints 0.1, 0.3, ..., 0.9:
- * the Gaussian is below 1e-24 at 0.4 and 0.6 and 1.9e-3 at 0.5, so [0.4, 0.6] alone fails
- * the first round; the pair is below 1e-17 at 0.6, 0.7 and 0.8, so the test at 0.7 passes
- * on the line and accepts [0.6, 0.7] and [0.7, 0.8] with the pair inside them. The
- * refinement around 0.55 reaches 0.6, the closure flags [0.6, 0.7] against that fine
- * neighbor, and its midpoint 0.65 fails by 1e8 times the tolerance.
- */
-static gdouble
-_hidden_pair (gdouble x, gpointer p)
-{
-  return 1.0 + x + exp (-gsl_pow_2 ((x - 0.55) / 0.02))
-         + exp (-gsl_pow_2 ((x - 0.65) / 0.008)) - exp (-gsl_pow_2 ((x - 0.75) / 0.008));
-}
-
 static void
 test_ncm_spline_func_closure_none (void)
 {
@@ -277,27 +309,5 @@ test_ncm_spline_func_closure_fail (void)
   g_assert_cmpfloat (ratio, <, 1.0);
 
   ncm_spline_free (s);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/spline_func/adaptive", &test_ncm_spline_func_adaptive);
-  g_test_add_func ("/ncm/spline_func/grid", &test_ncm_spline_func_grid);
-  g_test_add_func ("/ncm/spline_func/max_nodes", &test_ncm_spline_func_max_nodes);
-  g_test_add_func ("/ncm/spline_func/max_nodes/subprocess", &test_ncm_spline_func_max_nodes_subprocess);
-  g_test_add_func ("/ncm/spline_func/discontinuous", &test_ncm_spline_func_discontinuous);
-  g_test_add_func ("/ncm/spline_func/discontinuous/subprocess", &test_ncm_spline_func_discontinuous_subprocess);
-  g_test_add_func ("/ncm/spline_func/closure/none", &test_ncm_spline_func_closure_none);
-  g_test_add_func ("/ncm/spline_func/closure/pass", &test_ncm_spline_func_closure_pass);
-  g_test_add_func ("/ncm/spline_func/closure/fail", &test_ncm_spline_func_closure_fail);
-
-  g_test_run ();
 }
 

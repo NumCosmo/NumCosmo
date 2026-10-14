@@ -44,6 +44,40 @@
 #define TEST_KMAX (10.0)
 #define TEST_NK 60
 
+static void test_ncm_powspec_spline2d_ranges (void);
+static void test_ncm_powspec_spline2d_inside (void);
+static void test_ncm_powspec_spline2d_continuation (void);
+static void test_ncm_powspec_spline2d_eval_vec_dup (void);
+static void test_ncm_powspec_spline2d_get_spline_2d (void);
+static void test_ncm_powspec_spline2d_set_same (void);
+static void test_ncm_powspec_spline2d_eval_outside_z (void);
+static void test_ncm_powspec_spline2d_eval_outside_z_subprocess (void);
+static void test_ncm_powspec_spline2d_prepare_outside_z (void);
+static void test_ncm_powspec_spline2d_prepare_outside_z_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/powspec_spline2d/ranges", &test_ncm_powspec_spline2d_ranges);
+  g_test_add_func ("/ncm/powspec_spline2d/inside", &test_ncm_powspec_spline2d_inside);
+  g_test_add_func ("/ncm/powspec_spline2d/continuation", &test_ncm_powspec_spline2d_continuation);
+  g_test_add_func ("/ncm/powspec_spline2d/eval_vec_dup", &test_ncm_powspec_spline2d_eval_vec_dup);
+  g_test_add_func ("/ncm/powspec_spline2d/get_spline_2d", &test_ncm_powspec_spline2d_get_spline_2d);
+  g_test_add_func ("/ncm/powspec_spline2d/set_same", &test_ncm_powspec_spline2d_set_same);
+  g_test_add_func ("/ncm/powspec_spline2d/eval_outside_z", &test_ncm_powspec_spline2d_eval_outside_z);
+  g_test_add_func ("/ncm/powspec_spline2d/eval_outside_z/subprocess", &test_ncm_powspec_spline2d_eval_outside_z_subprocess);
+  g_test_add_func ("/ncm/powspec_spline2d/prepare_outside_z", &test_ncm_powspec_spline2d_prepare_outside_z);
+  g_test_add_func ("/ncm/powspec_spline2d/prepare_outside_z/subprocess", &test_ncm_powspec_spline2d_prepare_outside_z_subprocess);
+
+  g_test_run ();
+}
+
 static gdouble
 _f (const gdouble z, const gdouble y)
 {
@@ -293,28 +327,5 @@ test_ncm_powspec_spline2d_prepare_outside_z_subprocess (void)
 
   ncm_powspec_require_zi (ps, 0.1);
   ncm_powspec_prepare (ps, NULL);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/powspec_spline2d/ranges", &test_ncm_powspec_spline2d_ranges);
-  g_test_add_func ("/ncm/powspec_spline2d/inside", &test_ncm_powspec_spline2d_inside);
-  g_test_add_func ("/ncm/powspec_spline2d/continuation", &test_ncm_powspec_spline2d_continuation);
-  g_test_add_func ("/ncm/powspec_spline2d/eval_vec_dup", &test_ncm_powspec_spline2d_eval_vec_dup);
-  g_test_add_func ("/ncm/powspec_spline2d/get_spline_2d", &test_ncm_powspec_spline2d_get_spline_2d);
-  g_test_add_func ("/ncm/powspec_spline2d/set_same", &test_ncm_powspec_spline2d_set_same);
-  g_test_add_func ("/ncm/powspec_spline2d/eval_outside_z", &test_ncm_powspec_spline2d_eval_outside_z);
-  g_test_add_func ("/ncm/powspec_spline2d/eval_outside_z/subprocess", &test_ncm_powspec_spline2d_eval_outside_z_subprocess);
-  g_test_add_func ("/ncm/powspec_spline2d/prepare_outside_z", &test_ncm_powspec_spline2d_prepare_outside_z);
-  g_test_add_func ("/ncm/powspec_spline2d/prepare_outside_z/subprocess", &test_ncm_powspec_spline2d_prepare_outside_z_subprocess);
-
-  g_test_run ();
 }
 
