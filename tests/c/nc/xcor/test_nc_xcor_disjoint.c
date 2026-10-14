@@ -46,8 +46,11 @@
 
 /* Two shells in comoving distance [Mpc], far enough apart that nothing overlaps */
 #define TEST_CHI1_LOWER 200.0
+
 #define TEST_CHI1_UPPER 400.0
+
 #define TEST_CHI2_LOWER 1500.0
+
 #define TEST_CHI2_UPPER 1800.0
 
 typedef struct _TestNcXcorDisjoint
@@ -57,20 +60,61 @@ typedef struct _TestNcXcorDisjoint
   NcXcorKernel *k2;
 } TestNcXcorDisjoint;
 
-static void
-test_nc_xcor_disjoint_new (TestNcXcorDisjoint *test, gconstpointer pdata)
-{
-  test_nc_xcor_kquad_env_init (&test->env);
-  test->k1 = NULL;
-  test->k2 = NULL;
-}
+/*
+ * l_limber = 6 and a request over ell 0 to 9: the Limber tail is exactly zero, and the
+ * non-Limber head is nonzero and equal to a request that stops short of the threshold,
+ * so the split does not perturb the multipoles below it. A request entirely at or
+ * above the threshold is zero throughout.
+ */
+#define TEST_L_LIMBER 6
 
-static void
-test_nc_xcor_disjoint_free (TestNcXcorDisjoint *test, gconstpointer pdata)
+#define TEST_LMAX 9
+
+typedef struct _TestCheck
 {
-  nc_xcor_kernel_clear (&test->k1);
-  nc_xcor_kernel_clear (&test->k2);
-  test_nc_xcor_kquad_env_clear (&test->env);
+  const gchar *name;
+
+  void (*func) (TestNcXcorDisjoint *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_disjoint_new (TestNcXcorDisjoint *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint_free (TestNcXcorDisjoint *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint_cross_nonzero (TestNcXcorDisjoint *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint_solver (TestNcXcorDisjoint *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint_limber_zero (TestNcXcorDisjoint *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint_split_at_l_limber (TestNcXcorDisjoint *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint_limber_z (TestNcXcorDisjoint *test, gconstpointer pdata);
+
+static const TestCheck test_checks[] = {
+  {"cross_nonzero",     &test_nc_xcor_disjoint_cross_nonzero    },
+  {"solver",            &test_nc_xcor_disjoint_solver           },
+  {"limber_zero",       &test_nc_xcor_disjoint_limber_zero      },
+  {"split_at_l_limber", &test_nc_xcor_disjoint_split_at_l_limber},
+  {"limber_z",          &test_nc_xcor_disjoint_limber_z         },
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint i;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_checks); i++)
+  {
+    gchar *path = g_strdup_printf ("/nc/xcor/disjoint/%s", test_checks[i].name);
+
+    g_test_add (path, TestNcXcorDisjoint, NULL,
+                &test_nc_xcor_disjoint_new, test_checks[i].func, &test_nc_xcor_disjoint_free);
+
+    g_free (path);
+  }
+
+  g_test_run ();
 }
 
 /* The two shells, both in the given tier. */
@@ -187,15 +231,6 @@ test_nc_xcor_disjoint_limber_zero (TestNcXcorDisjoint *test, gconstpointer pdata
   nc_xcor_free (xc);
 }
 
-/*
- * l_limber = 6 and a request over ell 0 to 9: the Limber tail is exactly zero, and the
- * non-Limber head is nonzero and equal to a request that stops short of the threshold,
- * so the split does not perturb the multipoles below it. A request entirely at or
- * above the threshold is zero throughout.
- */
-#define TEST_L_LIMBER 6
-#define TEST_LMAX 9
-
 static void
 test_nc_xcor_disjoint_split_at_l_limber (TestNcXcorDisjoint *test, gconstpointer pdata)
 {
@@ -254,42 +289,19 @@ test_nc_xcor_disjoint_limber_z (TestNcXcorDisjoint *test, gconstpointer pdata)
   nc_xcor_free (xc);
 }
 
-typedef struct _TestCheck
+static void
+test_nc_xcor_disjoint_new (TestNcXcorDisjoint *test, gconstpointer pdata)
 {
-  const gchar *name;
+  test_nc_xcor_kquad_env_init (&test->env);
+  test->k1 = NULL;
+  test->k2 = NULL;
+}
 
-  void (*func) (TestNcXcorDisjoint *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"cross_nonzero",     &test_nc_xcor_disjoint_cross_nonzero    },
-  {"solver",            &test_nc_xcor_disjoint_solver           },
-  {"limber_zero",       &test_nc_xcor_disjoint_limber_zero      },
-  {"split_at_l_limber", &test_nc_xcor_disjoint_split_at_l_limber},
-  {"limber_z",          &test_nc_xcor_disjoint_limber_z         },
-};
-
-gint
-main (gint argc, gchar *argv[])
+static void
+test_nc_xcor_disjoint_free (TestNcXcorDisjoint *test, gconstpointer pdata)
 {
-  guint i;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_checks); i++)
-  {
-    gchar *path = g_strdup_printf ("/nc/xcor/disjoint/%s", test_checks[i].name);
-
-    g_test_add (path, TestNcXcorDisjoint, NULL,
-                &test_nc_xcor_disjoint_new, test_checks[i].func, &test_nc_xcor_disjoint_free);
-
-    g_free (path);
-  }
-
-  g_test_run ();
+  nc_xcor_kernel_clear (&test->k1);
+  nc_xcor_kernel_clear (&test->k2);
+  test_nc_xcor_kquad_env_clear (&test->env);
 }
 

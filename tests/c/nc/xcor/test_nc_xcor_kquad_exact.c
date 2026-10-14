@@ -45,7 +45,9 @@
 #include "test_nc_xcor_kquad_common.h"
 
 #define TEST_LMIN 2
+
 #define TEST_LMAX 5
+
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
 /**
@@ -61,12 +63,6 @@ typedef struct _TestCase
   gint l_limber2;
 } TestCase;
 
-static const TestCase test_cases[] = {
-  {"non_limber", -1, -1},
-  {"limber",      0,  0},
-  {"mixed",      -1,  0},
-};
-
 typedef struct _TestNcXcorKQuadExact
 {
   TestNcXcorKQuadEnv env;
@@ -75,6 +71,77 @@ typedef struct _TestNcXcorKQuadExact
   TestNcXcorKQuadRef *ref;
   NcXcor *xc;
 } TestNcXcorKQuadExact;
+
+static void test_nc_xcor_kquad_exact_new (TestNcXcorKQuadExact *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_exact_free (TestNcXcorKQuadExact *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_exact_auto (TestNcXcorKQuadExact *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_exact_cross (TestNcXcorKQuadExact *test, gconstpointer pdata);
+
+static const TestCase test_cases[] = {
+  {"non_limber", -1, -1},
+  {"limber",      0,  0},
+  {"mixed",      -1,  0},
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint i;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_cases); i++)
+  {
+    gchar *path_auto  = g_strdup_printf ("/nc/xcor/kquad/exact/%s/auto", test_cases[i].name);
+    gchar *path_cross = g_strdup_printf ("/nc/xcor/kquad/exact/%s/cross", test_cases[i].name);
+
+    if (test_cases[i].l_limber1 == test_cases[i].l_limber2)
+      g_test_add (path_auto, TestNcXcorKQuadExact, &test_cases[i],
+                  &test_nc_xcor_kquad_exact_new, &test_nc_xcor_kquad_exact_auto, &test_nc_xcor_kquad_exact_free);
+
+    g_test_add (path_cross, TestNcXcorKQuadExact, &test_cases[i],
+                &test_nc_xcor_kquad_exact_new, &test_nc_xcor_kquad_exact_cross, &test_nc_xcor_kquad_exact_free);
+
+    g_free (path_auto);
+    g_free (path_cross);
+  }
+
+  g_test_run ();
+}
+
+static void
+_test_nc_xcor_kquad_exact_check (TestNcXcorKQuadExact *test, const TestCase *tc, gboolean isauto)
+{
+  NcXcorKernelIntegrand *i2 = isauto ? test->i1 : test->i2;
+  NcmVector *exact          = ncm_vector_new (TEST_NELL);
+  NcmVector *ref            = ncm_vector_new (TEST_NELL);
+  const gdouble RH          = nc_hicosmo_RH_Mpc (test->env.cosmo);
+  gdouble move, peak = 0.0, dev = 0.0;
+  guint i;
+
+  nc_xcor_integrate_block (test->xc, test->i1, i2, TEST_LMIN, TEST_LMAX, isauto,
+                           NC_XCOR_METHOD_KERNEL_EXACT, exact, NULL);
+  move = test_nc_xcor_kquad_ref_eval (test->ref, test->i1, isauto ? NULL : test->i2, RH, ref);
+
+  for (i = 0; i < TEST_NELL; i++)
+    peak = GSL_MAX (peak, fabs (ncm_vector_get (ref, i)));
+
+  for (i = 0; i < TEST_NELL; i++)
+    dev = GSL_MAX (dev, fabs (ncm_vector_get (exact, i) - ncm_vector_get (ref, i)) / peak);
+
+  g_test_message ("peak %.6e, max |exact - ref| / peak %.3e, reference move %.3e", peak, dev, move);
+
+  g_assert_cmpfloat (peak, >, 0.0);
+  g_assert_cmpfloat (move, <, 1.0e-12);
+  g_assert_cmpfloat (dev, <, 1.0e-13);
+
+  ncm_vector_free (exact);
+  ncm_vector_free (ref);
+}
 
 static void
 test_nc_xcor_kquad_exact_new (TestNcXcorKQuadExact *test, gconstpointer pdata)
@@ -112,36 +179,6 @@ test_nc_xcor_kquad_exact_free (TestNcXcorKQuadExact *test, gconstpointer pdata)
 }
 
 static void
-_test_nc_xcor_kquad_exact_check (TestNcXcorKQuadExact *test, const TestCase *tc, gboolean isauto)
-{
-  NcXcorKernelIntegrand *i2 = isauto ? test->i1 : test->i2;
-  NcmVector *exact          = ncm_vector_new (TEST_NELL);
-  NcmVector *ref            = ncm_vector_new (TEST_NELL);
-  const gdouble RH          = nc_hicosmo_RH_Mpc (test->env.cosmo);
-  gdouble move, peak = 0.0, dev = 0.0;
-  guint i;
-
-  nc_xcor_integrate_block (test->xc, test->i1, i2, TEST_LMIN, TEST_LMAX, isauto,
-                           NC_XCOR_METHOD_KERNEL_EXACT, exact, NULL);
-  move = test_nc_xcor_kquad_ref_eval (test->ref, test->i1, isauto ? NULL : test->i2, RH, ref);
-
-  for (i = 0; i < TEST_NELL; i++)
-    peak = GSL_MAX (peak, fabs (ncm_vector_get (ref, i)));
-
-  for (i = 0; i < TEST_NELL; i++)
-    dev = GSL_MAX (dev, fabs (ncm_vector_get (exact, i) - ncm_vector_get (ref, i)) / peak);
-
-  g_test_message ("peak %.6e, max |exact - ref| / peak %.3e, reference move %.3e", peak, dev, move);
-
-  g_assert_cmpfloat (peak, >, 0.0);
-  g_assert_cmpfloat (move, <, 1.0e-12);
-  g_assert_cmpfloat (dev, <, 1.0e-13);
-
-  ncm_vector_free (exact);
-  ncm_vector_free (ref);
-}
-
-static void
 test_nc_xcor_kquad_exact_auto (TestNcXcorKQuadExact *test, gconstpointer pdata)
 {
   _test_nc_xcor_kquad_exact_check (test, pdata, TRUE);
@@ -151,35 +188,5 @@ static void
 test_nc_xcor_kquad_exact_cross (TestNcXcorKQuadExact *test, gconstpointer pdata)
 {
   _test_nc_xcor_kquad_exact_check (test, pdata, FALSE);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint i;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_cases); i++)
-  {
-    gchar *path_auto  = g_strdup_printf ("/nc/xcor/kquad/exact/%s/auto", test_cases[i].name);
-    gchar *path_cross = g_strdup_printf ("/nc/xcor/kquad/exact/%s/cross", test_cases[i].name);
-
-    if (test_cases[i].l_limber1 == test_cases[i].l_limber2)
-      g_test_add (path_auto, TestNcXcorKQuadExact, &test_cases[i],
-                  &test_nc_xcor_kquad_exact_new, &test_nc_xcor_kquad_exact_auto, &test_nc_xcor_kquad_exact_free);
-
-    g_test_add (path_cross, TestNcXcorKQuadExact, &test_cases[i],
-                &test_nc_xcor_kquad_exact_new, &test_nc_xcor_kquad_exact_cross, &test_nc_xcor_kquad_exact_free);
-
-    g_free (path_auto);
-    g_free (path_cross);
-  }
-
-  g_test_run ();
 }
 

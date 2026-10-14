@@ -41,6 +41,7 @@
 #include <glib-object.h>
 
 #define TEST_ZMAX 6.0
+
 #define TEST_NBINS 3
 
 typedef struct _TestNcXcorSSCSij
@@ -51,47 +52,58 @@ typedef struct _TestNcXcorSSCSij
   NcXcorSSCSij *ssc;
 } TestNcXcorSSCSij;
 
-static void
-test_nc_xcor_ssc_sij_new (TestNcXcorSSCSij *test, gconstpointer pdata)
+typedef struct _TestCheck
 {
-  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcmVector *z_edges = ncm_vector_new (TEST_NBINS + 1);
-  guint i;
+  const gchar *name;
 
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+  void (*func) (TestNcXcorSSCSij *test, gconstpointer pdata);
+} TestCheck;
 
-  for (i = 0; i <= TEST_NBINS; i++)
-    ncm_vector_set (z_edges, i, 0.2 + 0.3 * i);
+static void test_nc_xcor_ssc_sij_new (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_free (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_invalid_area_negative (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_invalid_area_fullsky (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_basic (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_knobs (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_footprint (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_traps (TestNcXcorSSCSij *test, gconstpointer pdata);
 
-  test->cosmo = cosmo;
-  test->dist  = nc_distance_new (TEST_ZMAX);
-  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+static const TestCheck test_checks[] = {
+  {"basic",     &test_nc_xcor_ssc_sij_basic    },
+  {"knobs",     &test_nc_xcor_ssc_sij_knobs    },
+  {"footprint", &test_nc_xcor_ssc_sij_footprint},
+  {"traps",     &test_nc_xcor_ssc_sij_traps    },
+};
 
-  nc_distance_prepare (test->dist, cosmo);
-  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
-
-  test->ssc = nc_xcor_ssc_sij_new (test->dist, test->ps, z_edges);
-
-  g_assert_true (NC_IS_XCOR_SSC_SIJ (test->ssc));
-
-  ncm_vector_free (z_edges);
-}
-
-static void
-test_nc_xcor_ssc_sij_free (TestNcXcorSSCSij *test, gconstpointer pdata)
+gint
+main (gint argc, gchar *argv[])
 {
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
+  guint j;
 
-  NCM_TEST_FREE (nc_xcor_ssc_sij_free, test->ssc);
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+  {
+    gchar *path = g_strdup_printf ("/nc/xcor/ssc_sij/%s", test_checks[j].name);
+
+    g_test_add (path, TestNcXcorSSCSij, NULL,
+                &test_nc_xcor_ssc_sij_new, test_checks[j].func, &test_nc_xcor_ssc_sij_free);
+
+    g_free (path);
+  }
+
+  g_test_add ("/nc/xcor/ssc_sij/invalid/area/negative/subprocess", TestNcXcorSSCSij, NULL,
+              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_negative,
+              &test_nc_xcor_ssc_sij_free);
+  g_test_add ("/nc/xcor/ssc_sij/invalid/area/fullsky/subprocess", TestNcXcorSSCSij, NULL,
+              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_fullsky,
+              &test_nc_xcor_ssc_sij_free);
+
+  g_test_run ();
 }
 
 static void
@@ -190,6 +202,49 @@ test_nc_xcor_ssc_sij_traps (TestNcXcorSSCSij *test, gconstpointer pdata)
 }
 
 static void
+test_nc_xcor_ssc_sij_new (TestNcXcorSSCSij *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcmVector *z_edges = ncm_vector_new (TEST_NBINS + 1);
+  guint i;
+
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+
+  for (i = 0; i <= TEST_NBINS; i++)
+    ncm_vector_set (z_edges, i, 0.2 + 0.3 * i);
+
+  test->cosmo = cosmo;
+  test->dist  = nc_distance_new (TEST_ZMAX);
+  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+
+  nc_distance_prepare (test->dist, cosmo);
+  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+
+  test->ssc = nc_xcor_ssc_sij_new (test->dist, test->ps, z_edges);
+
+  g_assert_true (NC_IS_XCOR_SSC_SIJ (test->ssc));
+
+  ncm_vector_free (z_edges);
+}
+
+static void
+test_nc_xcor_ssc_sij_free (TestNcXcorSSCSij *test, gconstpointer pdata)
+{
+  ncm_powspec_free (test->ps);
+  nc_distance_free (test->dist);
+  nc_hicosmo_free (test->cosmo);
+
+  NCM_TEST_FREE (nc_xcor_ssc_sij_free, test->ssc);
+}
+
+static void
 test_nc_xcor_ssc_sij_invalid_area_negative (TestNcXcorSSCSij *test, gconstpointer pdata)
 {
   nc_xcor_ssc_sij_set_area (test->ssc, -1.0);
@@ -199,50 +254,5 @@ static void
 test_nc_xcor_ssc_sij_invalid_area_fullsky (TestNcXcorSSCSij *test, gconstpointer pdata)
 {
   nc_xcor_ssc_sij_set_area (test->ssc, 4.0 * ncm_c_pi () * gsl_pow_2 (180.0 / ncm_c_pi ()));
-}
-
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcorSSCSij *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"basic",     &test_nc_xcor_ssc_sij_basic    },
-  {"knobs",     &test_nc_xcor_ssc_sij_knobs    },
-  {"footprint", &test_nc_xcor_ssc_sij_footprint},
-  {"traps",     &test_nc_xcor_ssc_sij_traps    },
-};
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-  {
-    gchar *path = g_strdup_printf ("/nc/xcor/ssc_sij/%s", test_checks[j].name);
-
-    g_test_add (path, TestNcXcorSSCSij, NULL,
-                &test_nc_xcor_ssc_sij_new, test_checks[j].func, &test_nc_xcor_ssc_sij_free);
-
-    g_free (path);
-  }
-
-  g_test_add ("/nc/xcor/ssc_sij/invalid/area/negative/subprocess", TestNcXcorSSCSij, NULL,
-              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_negative,
-              &test_nc_xcor_ssc_sij_free);
-  g_test_add ("/nc/xcor/ssc_sij/invalid/area/fullsky/subprocess", TestNcXcorSSCSij, NULL,
-              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_fullsky,
-              &test_nc_xcor_ssc_sij_free);
-
-  g_test_run ();
 }
 

@@ -45,8 +45,11 @@
 #include <glib-object.h>
 
 #define TEST_ZMAX 6.0
+
 #define TEST_LMIN 2
+
 #define TEST_LMAX 9
+
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
 typedef struct _TestNcXcor
@@ -65,55 +68,64 @@ typedef struct _TestMethod
   NcXcorMethod meth;
 } TestMethod;
 
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcor *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_new (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_free (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_limber_backends_agree (void);
+static void test_nc_xcor_basic (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_compute (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_compute_full (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_auto (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata);
+
 static const TestMethod test_methods[] = {
   {"limber_z_gsl",      NC_XCOR_METHOD_LIMBER_Z_GSL     },
   {"limber_z_cubature", NC_XCOR_METHOD_LIMBER_Z_CUBATURE},
 };
 
-static void
-test_nc_xcor_new (TestNcXcor *test, gconstpointer pdata)
+static const TestCheck test_checks[] = {
+  {"basic",        &test_nc_xcor_basic       },
+  {"compute",      &test_nc_xcor_compute     },
+  {"compute_full", &test_nc_xcor_compute_full},
+  {"auto",         &test_nc_xcor_auto        },
+  {"disjoint",     &test_nc_xcor_disjoint    },
+  {"properties",   &test_nc_xcor_properties  },
+};
+
+gint
+main (gint argc, gchar *argv[])
 {
-  const TestMethod *tm = pdata;
-  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  guint i, j;
 
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
 
-  test->cosmo = cosmo;
-  test->dist  = nc_distance_new (TEST_ZMAX);
-  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  g_test_set_nonfatal_assertions ();
 
-  nc_distance_prepare (test->dist, cosmo);
-  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/%s/%s", test_methods[i].name, test_checks[j].name);
 
-  /* Two overlapping Gaussian windows: overlapping so the cross-spectrum is not
-   * numerically zero, and analytic so nothing here depends on a transfer function. */
-  test->k1 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1500.0, 300.0, 4.0));
-  test->k2 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1700.0, 350.0, 4.0));
+      g_test_add (path, TestNcXcor, &test_methods[i],
+                  &test_nc_xcor_new, test_checks[j].func, &test_nc_xcor_free);
 
-  nc_xcor_kernel_prepare (test->k1, cosmo);
-  nc_xcor_kernel_prepare (test->k2, cosmo);
+      g_free (path);
+    }
+  }
 
-  test->xc = nc_xcor_new (test->dist, test->ps, tm->meth);
-  nc_xcor_prepare (test->xc, cosmo);
-}
+  g_test_add_func ("/nc/xcor/limber/backends_agree", &test_nc_xcor_limber_backends_agree);
 
-static void
-test_nc_xcor_free (TestNcXcor *test, gconstpointer pdata)
-{
-  nc_xcor_kernel_free (test->k1);
-  nc_xcor_kernel_free (test->k2);
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
-
-  NCM_TEST_FREE (nc_xcor_free, test->xc);
+  g_test_run ();
 }
 
 static void
@@ -306,21 +318,51 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
   }
 }
 
-typedef struct _TestCheck
+static void
+test_nc_xcor_new (TestNcXcor *test, gconstpointer pdata)
 {
-  const gchar *name;
+  const TestMethod *tm = pdata;
+  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
 
-  void (*func) (TestNcXcor *test, gconstpointer pdata);
-} TestCheck;
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
 
-static const TestCheck test_checks[] = {
-  {"basic",        &test_nc_xcor_basic       },
-  {"compute",      &test_nc_xcor_compute     },
-  {"compute_full", &test_nc_xcor_compute_full},
-  {"auto",         &test_nc_xcor_auto        },
-  {"disjoint",     &test_nc_xcor_disjoint    },
-  {"properties",   &test_nc_xcor_properties  },
-};
+  test->cosmo = cosmo;
+  test->dist  = nc_distance_new (TEST_ZMAX);
+  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+
+  nc_distance_prepare (test->dist, cosmo);
+  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+
+  /* Two overlapping Gaussian windows: overlapping so the cross-spectrum is not
+   * numerically zero, and analytic so nothing here depends on a transfer function. */
+  test->k1 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1500.0, 300.0, 4.0));
+  test->k2 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new (test->dist, test->ps, 1700.0, 350.0, 4.0));
+
+  nc_xcor_kernel_prepare (test->k1, cosmo);
+  nc_xcor_kernel_prepare (test->k2, cosmo);
+
+  test->xc = nc_xcor_new (test->dist, test->ps, tm->meth);
+  nc_xcor_prepare (test->xc, cosmo);
+}
+
+static void
+test_nc_xcor_free (TestNcXcor *test, gconstpointer pdata)
+{
+  nc_xcor_kernel_free (test->k1);
+  nc_xcor_kernel_free (test->k2);
+  ncm_powspec_free (test->ps);
+  nc_distance_free (test->dist);
+  nc_hicosmo_free (test->cosmo);
+
+  NCM_TEST_FREE (nc_xcor_free, test->xc);
+}
 
 /* The two Limber backends integrate the same integrand with different quadrature, so
  * they must agree far better than either agrees with the truth. */
@@ -367,34 +409,5 @@ test_nc_xcor_limber_backends_agree (void)
   ncm_powspec_free (ps);
   nc_distance_free (dist);
   nc_hicosmo_free (cosmo);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint i, j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/%s/%s", test_methods[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcor, &test_methods[i],
-                  &test_nc_xcor_new, test_checks[j].func, &test_nc_xcor_free);
-
-      g_free (path);
-    }
-  }
-
-  g_test_add_func ("/nc/xcor/limber/backends_agree", &test_nc_xcor_limber_backends_agree);
-
-  g_test_run ();
 }
 

@@ -49,9 +49,13 @@
  * Levin ODE's cost is linear in the top of x = k chi_max, and these bound it at a few
  * hundred rather than a few hundred thousand. */
 #define TEST_CHI_LOWER 200.0
+
 #define TEST_CHI_UPPER 400.0
+
 #define TEST_KMAX 0.5
+
 #define TEST_ZMAX 6.0
+
 #define TEST_ELL 4
 
 typedef struct _TestNcXcorKernelIntegrand
@@ -70,6 +74,21 @@ typedef struct _TestCase
   gboolean multi_comp;
 } TestCase;
 
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_free (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_eval (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_ref_clear (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_vectorized (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+
 static const TestCase test_cases[] = {
   {"limber",     FALSE, FALSE},
   {"non_limber", TRUE,  FALSE},
@@ -80,6 +99,44 @@ static const TestCase test_cases[] = {
    * degenerate to within rounding -- see NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH. */
   {"multi",      TRUE,  TRUE },
 };
+
+static const TestCheck test_checks[] = {
+  {"eval",       &test_nc_xcor_kernel_integrand_eval      },
+  {"comps",      &test_nc_xcor_kernel_integrand_comps     },
+  {"panels",     &test_nc_xcor_kernel_integrand_panels    },
+  {"ref_clear",  &test_nc_xcor_kernel_integrand_ref_clear },
+  {"vectorized", &test_nc_xcor_kernel_integrand_vectorized},
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint i, j;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_cases); i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/kernel/integrand/%s/%s",
+                                     test_cases[i].name, test_checks[j].name);
+
+      g_test_add (path, TestNcXcorKernelIntegrand, &test_cases[i],
+                  &test_nc_xcor_kernel_integrand_new,
+                  test_checks[j].func,
+                  &test_nc_xcor_kernel_integrand_free);
+
+      g_free (path);
+    }
+  }
+
+  g_test_run ();
+}
 
 static NcXcorKernel *
 _build_multi (TestNcXcorKernelIntegrand *test)
@@ -104,65 +161,6 @@ _build_multi (TestNcXcorKernelIntegrand *test)
   ncm_vector_free (weight);
 
   return xclk;
-}
-
-static void
-test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
-{
-  const TestCase *tc = pdata;
-  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
-  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
-  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
-
-  test->cosmo = cosmo;
-  test->dist  = nc_distance_new (TEST_ZMAX);
-  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
-                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
-  test->sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
-
-  ncm_powspec_set_kmax (test->ps, TEST_KMAX);
-
-  nc_distance_prepare (test->dist, cosmo);
-  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
-
-  if (tc->multi_comp)
-    test->xclk = _build_multi (test);
-  else
-    test->xclk = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_tophat_new_full (test->dist, test->ps,
-                                                                          TEST_CHI_LOWER,
-                                                                          TEST_CHI_UPPER,
-                                                                          test->sbi));
-
-  /* Cap the adaptive apparatus rather than let it converge: one border expansion,
-   * loose tolerances, a low panel order. Each branch is still entered. */
-  nc_xcor_kernel_set_max_border_expansions (test->xclk, 1);
-  nc_xcor_kernel_set_reltol (test->xclk, 1.0e-3);
-  nc_xcor_kernel_set_peak_epsilon (test->xclk, 1.0e-4);
-  ncm_spectral_panels_builder_set_level_cap (nc_xcor_kernel_peek_panels_builder (test->xclk), 12);
-  nc_xcor_kernel_set_lmax (test->xclk, 16);
-
-  /* The threshold is "use Limber for l >= this": 0 means always, -1 means never. Both
-   * settings need an integrator, which _new_full supplied. */
-  nc_xcor_kernel_set_l_limber (test->xclk, tc->non_limber ? -1 : 0);
-
-  nc_xcor_kernel_prepare (test->xclk, cosmo);
-}
-
-static void
-test_nc_xcor_kernel_integrand_free (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
-{
-  ncm_sbessel_integrator_free (test->sbi);
-  ncm_powspec_free (test->ps);
-  nc_distance_free (test->dist);
-  nc_hicosmo_free (test->cosmo);
-
-  NCM_TEST_FREE (nc_xcor_kernel_free, test->xclk);
 }
 
 static void
@@ -327,48 +325,62 @@ test_nc_xcor_kernel_integrand_vectorized (TestNcXcorKernelIntegrand *test, gcons
   nc_xcor_kernel_integrand_unref (one);
 }
 
-typedef struct _TestCheck
+static void
+test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  const gchar *name;
+  const TestCase *tc = pdata;
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
 
-  void (*func) (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
-} TestCheck;
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,      70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.255);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.045);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.0);
+  nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo), NULL);
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "Omegak", 0.0, NULL);
 
-static const TestCheck test_checks[] = {
-  {"eval",       &test_nc_xcor_kernel_integrand_eval      },
-  {"comps",      &test_nc_xcor_kernel_integrand_comps     },
-  {"panels",     &test_nc_xcor_kernel_integrand_panels    },
-  {"ref_clear",  &test_nc_xcor_kernel_integrand_ref_clear },
-  {"vectorized", &test_nc_xcor_kernel_integrand_vectorized},
-};
+  test->cosmo = cosmo;
+  test->dist  = nc_distance_new (TEST_ZMAX);
+  test->ps    = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                       NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  test->sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
 
-gint
-main (gint argc, gchar *argv[])
+  ncm_powspec_set_kmax (test->ps, TEST_KMAX);
+
+  nc_distance_prepare (test->dist, cosmo);
+  ncm_powspec_prepare (test->ps, NCM_MODEL (cosmo));
+
+  if (tc->multi_comp)
+    test->xclk = _build_multi (test);
+  else
+    test->xclk = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_tophat_new_full (test->dist, test->ps,
+                                                                          TEST_CHI_LOWER,
+                                                                          TEST_CHI_UPPER,
+                                                                          test->sbi));
+
+  /* Cap the adaptive apparatus rather than let it converge: one border expansion,
+   * loose tolerances, a low panel order. Each branch is still entered. */
+  nc_xcor_kernel_set_max_border_expansions (test->xclk, 1);
+  nc_xcor_kernel_set_reltol (test->xclk, 1.0e-3);
+  nc_xcor_kernel_set_peak_epsilon (test->xclk, 1.0e-4);
+  ncm_spectral_panels_builder_set_level_cap (nc_xcor_kernel_peek_panels_builder (test->xclk), 12);
+  nc_xcor_kernel_set_lmax (test->xclk, 16);
+
+  /* The threshold is "use Limber for l >= this": 0 means always, -1 means never. Both
+   * settings need an integrator, which _new_full supplied. */
+  nc_xcor_kernel_set_l_limber (test->xclk, tc->non_limber ? -1 : 0);
+
+  nc_xcor_kernel_prepare (test->xclk, cosmo);
+}
+
+static void
+test_nc_xcor_kernel_integrand_free (TestNcXcorKernelIntegrand *test, gconstpointer pdata)
 {
-  guint i, j;
+  ncm_sbessel_integrator_free (test->sbi);
+  ncm_powspec_free (test->ps);
+  nc_distance_free (test->dist);
+  nc_hicosmo_free (test->cosmo);
 
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_cases); i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/kernel/integrand/%s/%s",
-                                     test_cases[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcorKernelIntegrand, &test_cases[i],
-                  &test_nc_xcor_kernel_integrand_new,
-                  test_checks[j].func,
-                  &test_nc_xcor_kernel_integrand_free);
-
-      g_free (path);
-    }
-  }
-
-  g_test_run ();
+  NCM_TEST_FREE (nc_xcor_kernel_free, test->xclk);
 }
 

@@ -48,7 +48,9 @@
 #include "test_nc_xcor_kquad_common.h"
 
 #define TEST_LMIN 2
+
 #define TEST_LMAX 5
+
 #define TEST_NELL (TEST_LMAX - TEST_LMIN + 1)
 
 typedef struct _TestNcXcorKQuad
@@ -70,38 +72,59 @@ typedef struct _TestMethod
   NcXcorMethod meth;
 } TestMethod;
 
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcorKQuad *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_free (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_method_table (void);
+static void test_nc_xcor_kquad_compute (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_auto (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_error (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata);
+
 static const TestMethod test_methods[] = {
   {"kernel_exact", NC_XCOR_METHOD_KERNEL_EXACT},
 };
 
-static void
-test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
+static const TestCheck test_checks[] = {
+  {"compute",         &test_nc_xcor_kquad_compute        },
+  {"auto",            &test_nc_xcor_kquad_auto           },
+  {"error",           &test_nc_xcor_kquad_error          },
+  {"integrate_block", &test_nc_xcor_kquad_integrate_block},
+};
+
+gint
+main (gint argc, gchar *argv[])
 {
-  const TestMethod *tm = pdata;
+  guint i, j;
 
-  test_nc_xcor_kquad_env_init (&test->env);
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
 
-  /* Overlapping, so the cross spectrum is not numerically zero. Never Limber: the
-   * kernel-space methods integrate a W_l(k) representation, which is what the
-   * non-Limber builder produces. */
-  test->k1 = test_nc_xcor_kquad_tophat (&test->env, 200.0, 400.0, -1);
-  test->k2 = test_nc_xcor_kquad_tophat (&test->env, 250.0, 450.0, -1);
+  g_test_set_nonfatal_assertions ();
 
-  test->xc = nc_xcor_new (test->env.dist, test->env.ps, tm->meth);
-  nc_xcor_set_ell_batch_size (test->xc, TEST_NELL);
-  nc_xcor_prepare (test->xc, test->env.cosmo);
+  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/kquad/%s/%s", test_methods[i].name, test_checks[j].name);
 
-  g_assert_true (nc_xcor_method_is_kernel_space (tm->meth));
-}
+      g_test_add (path, TestNcXcorKQuad, &test_methods[i],
+                  &test_nc_xcor_kquad_new, test_checks[j].func, &test_nc_xcor_kquad_free);
 
-static void
-test_nc_xcor_kquad_free (TestNcXcorKQuad *test, gconstpointer pdata)
-{
-  nc_xcor_kernel_free (test->k1);
-  nc_xcor_kernel_free (test->k2);
-  test_nc_xcor_kquad_env_clear (&test->env);
+      g_free (path);
+    }
+  }
 
-  NCM_TEST_FREE (nc_xcor_free, test->xc);
+  g_test_add_func ("/nc/xcor/kquad/methods", &test_nc_xcor_kquad_method_table);
+
+  g_test_run ();
 }
 
 static void
@@ -215,19 +238,35 @@ test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
   nc_xcor_kernel_integrand_unref (i2);
 }
 
-typedef struct _TestCheck
+static void
+test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
 {
-  const gchar *name;
+  const TestMethod *tm = pdata;
 
-  void (*func) (TestNcXcorKQuad *test, gconstpointer pdata);
-} TestCheck;
+  test_nc_xcor_kquad_env_init (&test->env);
 
-static const TestCheck test_checks[] = {
-  {"compute",         &test_nc_xcor_kquad_compute        },
-  {"auto",            &test_nc_xcor_kquad_auto           },
-  {"error",           &test_nc_xcor_kquad_error          },
-  {"integrate_block", &test_nc_xcor_kquad_integrate_block},
-};
+  /* Overlapping, so the cross spectrum is not numerically zero. Never Limber: the
+   * kernel-space methods integrate a W_l(k) representation, which is what the
+   * non-Limber builder produces. */
+  test->k1 = test_nc_xcor_kquad_tophat (&test->env, 200.0, 400.0, -1);
+  test->k2 = test_nc_xcor_kquad_tophat (&test->env, 250.0, 450.0, -1);
+
+  test->xc = nc_xcor_new (test->env.dist, test->env.ps, tm->meth);
+  nc_xcor_set_ell_batch_size (test->xc, TEST_NELL);
+  nc_xcor_prepare (test->xc, test->env.cosmo);
+
+  g_assert_true (nc_xcor_method_is_kernel_space (tm->meth));
+}
+
+static void
+test_nc_xcor_kquad_free (TestNcXcorKQuad *test, gconstpointer pdata)
+{
+  nc_xcor_kernel_free (test->k1);
+  nc_xcor_kernel_free (test->k2);
+  test_nc_xcor_kquad_env_clear (&test->env);
+
+  NCM_TEST_FREE (nc_xcor_free, test->xc);
+}
 
 /* Every method has to describe itself: the solver picks an integrator by these. */
 static void
@@ -262,34 +301,5 @@ test_nc_xcor_kquad_method_table (void)
      * its own to report instead, and the redshift-space tier reports none. */
     g_assert_cmpint (nc_xcor_method_has_error_estimate (all[i]), ==, all[i] == NC_XCOR_METHOD_KERNEL_EXACT);
   }
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint i, j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/kquad/%s/%s", test_methods[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcorKQuad, &test_methods[i],
-                  &test_nc_xcor_kquad_new, test_checks[j].func, &test_nc_xcor_kquad_free);
-
-      g_free (path);
-    }
-  }
-
-  g_test_add_func ("/nc/xcor/kquad/methods", &test_nc_xcor_kquad_method_table);
-
-  g_test_run ();
 }
 
