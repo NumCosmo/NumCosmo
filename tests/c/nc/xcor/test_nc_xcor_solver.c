@@ -460,37 +460,45 @@ test_nc_xcor_solver_plan_l_limber (TestNcXcorSolver *test, gconstpointer pdata)
 static void
 test_nc_xcor_solver_solve (TestNcXcorSolver *test, gconstpointer pdata)
 {
-  const guint lmin  = 2;
-  const guint lmax  = 11;
-  const guint n_l   = lmax - lmin + 1;
-  NcXcor *xc        = nc_xcor_new (test->dist, test->ps, NC_XCOR_METHOD_LIMBER_Z_GSL);
-  NcmVector *direct = ncm_vector_new (n_l);
-  const guint id1   = nc_xcor_solver_register_kernel (test->solver, test->k1);
-  const guint id2   = nc_xcor_solver_register_kernel (test->solver, test->k2);
-  NcmVector *batched;
-  guint i;
-
-  nc_xcor_prepare (xc, test->cosmo);
+  const NcXcorMethod methods[] = {NC_XCOR_METHOD_LIMBER_Z_GSL, NC_XCOR_METHOD_LIMBER_Z_CUBATURE};
+  const guint lmin             = 2;
+  const guint lmax             = 11;
+  const guint n_l              = lmax - lmin + 1;
+  NcmVector *direct            = ncm_vector_new (n_l);
+  const guint id1              = nc_xcor_solver_register_kernel (test->solver, test->k1);
+  const guint id2              = nc_xcor_solver_register_kernel (test->solver, test->k2);
+  guint m, i;
 
   nc_xcor_solver_request_cl (test->solver, id1, id2, lmin, lmax);
   nc_xcor_solver_plan_blocks (test->solver, 4);
-  nc_xcor_solver_solve (test->solver, xc, test->cosmo);
 
-  batched = nc_xcor_solver_get_result (test->solver, 0);
-
-  g_assert_nonnull (batched);
-  g_assert_cmpuint (ncm_vector_len (batched), ==, n_l);
-
-  nc_xcor_compute (xc, test->k1, test->k2, test->cosmo, lmin, lmax, direct);
-
-  for (i = 0; i < n_l; i++)
+  /* The redshift-space Limber methods have no block closure: the solver delegates each
+   * request to nc_xcor_compute () */
+  for (m = 0; m < G_N_ELEMENTS (methods); m++)
   {
-    g_assert_true (gsl_finite (ncm_vector_get (batched, i)));
-    ncm_assert_cmpdouble_e (ncm_vector_get (batched, i), ==, ncm_vector_get (direct, i), 1.0e-9, 0.0);
+    NcXcor *xc = nc_xcor_new (test->dist, test->ps, methods[m]);
+    NcmVector *batched;
+
+    nc_xcor_prepare (xc, test->cosmo);
+    nc_xcor_solver_solve (test->solver, xc, test->cosmo);
+
+    batched = nc_xcor_solver_get_result (test->solver, 0);
+
+    g_assert_nonnull (batched);
+    g_assert_cmpuint (ncm_vector_len (batched), ==, n_l);
+
+    nc_xcor_compute (xc, test->k1, test->k2, test->cosmo, lmin, lmax, direct);
+
+    for (i = 0; i < n_l; i++)
+    {
+      g_assert_true (gsl_finite (ncm_vector_get (batched, i)));
+      ncm_assert_cmpdouble_e (ncm_vector_get (batched, i), ==, ncm_vector_get (direct, i), 1.0e-10, 0.0);
+    }
+
+    nc_xcor_free (xc);
   }
 
   ncm_vector_free (direct);
-  nc_xcor_free (xc);
 }
 
 /* The template's ell-cache-max is an absolute multipole: a block reaching above it

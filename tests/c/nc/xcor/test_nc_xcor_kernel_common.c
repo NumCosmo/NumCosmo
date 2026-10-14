@@ -424,7 +424,8 @@ _test_assert_same_values (GArray *a, GArray *b)
 }
 
 /* The two Limber backends integrate the same z integrand with different quadratures, so
- * on ell 2 to 100 they agree to 1e-5 with GSL asked for 1e-7. */
+ * on ell 2 to 100 they agree to 1e-5 with GSL asked for 1e-7. An auto spectrum (k1 == k2)
+ * integrates W^2 P and is positive at every multipole. */
 static void
 _test_limber_backends_pair (TestNcXcorKernel *test, NcXcorKernel *k1, NcXcorKernel *k2)
 {
@@ -452,7 +453,15 @@ _test_limber_backends_pair (TestNcXcorKernel *test, NcXcorKernel *k1, NcXcorKern
   }
 
   for (i = 0; i < lmax - lmin + 1; i++)
+  {
     ncm_assert_cmpdouble_e (ncm_vector_get (cl_cub, i), ==, ncm_vector_get (cl_gsl, i), 1.0e-5, 1.0e-50);
+
+    if (k1 == k2)
+    {
+      g_assert_cmpfloat (ncm_vector_get (cl_gsl, i), >, 0.0);
+      g_assert_cmpfloat (ncm_vector_get (cl_cub, i), >, 0.0);
+    }
+  }
 
   nc_xcor_free (xc_gsl);
   nc_xcor_free (xc_cub);
@@ -780,6 +789,14 @@ test_nc_xcor_kernel_components (TestNcXcorKernel *test, gconstpointer pdata)
     gdouble xi_min, xi_max, k_min, k_max;
 
     g_assert_true (NC_IS_XCOR_KERNEL_COMPONENT (comp));
+
+    /* The defaults are usable before anything is set */
+    g_assert_true (gsl_finite (nc_xcor_kernel_component_get_epsilon (comp)));
+    g_assert_cmpfloat (nc_xcor_kernel_component_get_epsilon (comp), >, 0.0);
+    g_assert_cmpuint (nc_xcor_kernel_component_get_ny (comp), >, 0);
+    g_assert_cmpuint (nc_xcor_kernel_component_get_max_iter (comp), >, 0);
+    g_assert_true (gsl_finite (nc_xcor_kernel_component_get_tol (comp)));
+    g_assert_cmpfloat (nc_xcor_kernel_component_get_tol (comp), >, 0.0);
 
     nc_xcor_kernel_component_set_epsilon (comp, 1.0e-6);
     nc_xcor_kernel_component_set_ny (comp, 8);

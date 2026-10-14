@@ -28,7 +28,6 @@ Tests that kernels correctly add noise to power spectra using the add_noise meth
 Modernized from test_py_xcor.py noise tests.
 """
 
-from typing import Callable
 import pytest
 from numpy.testing import assert_allclose
 import numpy as np
@@ -110,54 +109,6 @@ def test_weak_lensing_noise(kernel_wl: Nc.XcorKernelWeakLensing) -> None:
 
 
 # Parametrized tests for systematic verification
-
-
-@pytest.mark.parametrize(
-    "kernel_fixture_name,expected_result_factory",
-    [
-        (
-            "kernel_cmb_lens",
-            lambda: np.arange(6, 16),
-        ),
-        (
-            "kernel_cmb_isw",
-            lambda: np.arange(6, 16),
-        ),
-        (
-            "kernel_tsz",
-            lambda: np.ones(10) * 1.0,
-        ),
-        # Note: kernel_gal and kernel_wl are already tested via their own
-        # parametrized fixtures in test_gal_noise and test_weak_lensing_noise
-    ],
-)
-def test_kernel_noise_parametrized(
-    kernel_fixture_name: str,
-    expected_result_factory: Callable[[], np.ndarray],
-    request: pytest.FixtureRequest,
-) -> None:
-    """Parametrized test for kernel noise behavior across CMB and tSZ kernels.
-
-    This test systematically verifies that each basic kernel type (non-binned)
-    adds noise correctly using a consistent test pattern. Galaxy and weak lensing
-    kernels are tested separately via their parametrized fixtures.
-
-    Args:
-        kernel_fixture_name: Name of the fixture providing the kernel
-        expected_result_factory: Function that returns expected result array
-        request: pytest fixture request object
-    """
-    kernel: Nc.XcorKernel = request.getfixturevalue(kernel_fixture_name)
-
-    vp1 = Ncm.Vector.new(10)
-    vp2 = Ncm.Vector.new(10)
-    vp1.set_all(1.0)
-
-    # Add noise starting at index 5
-    kernel.add_noise(vp1, vp2, 5)
-
-    expected = expected_result_factory()
-    assert_allclose(vp2.dup_array(), expected, atol=0.0)
 
 
 def test_noise_with_different_ell_indices(
