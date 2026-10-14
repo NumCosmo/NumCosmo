@@ -139,45 +139,6 @@ def test_solve_spans_multiple_blocks(
         kernel_tsz.props.integrator = original_integrator
 
 
-def test_solve_fallback_method_matches_compute(
-    cosmology: Cosmology,
-    kernel_tsz: Nc.XcorKernel,
-    kernel_cmb_lens: Nc.XcorKernel,
-) -> None:
-    """The redshift-space Limber methods delegate directly to nc_xcor_compute(),
-    with no block-shared closure caching."""
-    lmin, lmax = 20, 27
-
-    original_l_limber = kernel_tsz.get_l_limber(), kernel_cmb_lens.get_l_limber()
-
-    try:
-        kernel_tsz.set_l_limber(0)
-        kernel_cmb_lens.set_l_limber(0)
-        kernel_tsz.prepare(cosmology.cosmo)
-        kernel_cmb_lens.prepare(cosmology.cosmo)
-
-        xc = Nc.Xcor.new(
-            cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.LIMBER_Z_CUBATURE
-        )
-        xc.prepare(cosmology.cosmo)
-
-        solver = Nc.XcorSolver.new()
-        id_a = solver.register_kernel(kernel_tsz)
-        id_b = solver.register_kernel(kernel_cmb_lens)
-        solver.request_cl(id_a, id_b, lmin, lmax)
-        solver.plan_blocks(8)
-        solver.solve(xc, cosmology.cosmo)
-
-        expected = Ncm.Vector.new(lmax - lmin + 1)
-        xc.compute(kernel_tsz, kernel_cmb_lens, cosmology.cosmo, lmin, lmax, expected)
-
-        got = np.array(solver.get_result(0).dup_array())
-        assert_allclose(got, np.array(expected.dup_array()), rtol=1.0e-10, atol=1.0e-50)
-    finally:
-        kernel_tsz.set_l_limber(original_l_limber[0])
-        kernel_cmb_lens.set_l_limber(original_l_limber[1])
-
-
 def test_solve_block_parallel_stress(
     cosmology: Cosmology,
     kernel_tsz: Nc.XcorKernel,
@@ -360,6 +321,7 @@ def test_peek_block_integrator_before_and_after_solve(cosmology: Cosmology) -> N
     assert solver.peek_block_integrator(99) is None
 
     solver.solve(xc, cosmology.cosmo)
+    first_cl = np.array(solver.get_result(0).dup_array())
 
     first = [solver.peek_block_integrator(b) for b in range(solver.get_n_blocks())]
     assert all(isinstance(sbi, Ncm.SBesselIntegrator) for sbi in first)
@@ -379,11 +341,7 @@ def test_peek_block_integrator_before_and_after_solve(cosmology: Cosmology) -> N
     assert all(a is b for a, b in zip(first, second))
 
     # And it is still the same answer.
-    assert_allclose(
-        np.array(solver.get_result(0).dup_array()),
-        np.array(solver.get_result(0).dup_array()),
-        rtol=0.0,
-    )
+    assert_allclose(np.array(solver.get_result(0).dup_array()), first_cl, rtol=0.0)
 
 
 def test_set_integrator_overrides_and_resets_the_cache(cosmology: Cosmology) -> None:

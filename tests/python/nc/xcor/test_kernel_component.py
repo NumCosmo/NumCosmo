@@ -40,62 +40,37 @@ Ncm.cfg_init()
 pytest_plugins = ["python.fixtures_xcor"]
 
 
-def test_any_component_interface(
-    kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
-    cosmology: Cosmology,
-) -> None:
-    """Test that any component satisfies the basic interface."""
-    cosmo = cosmology.cosmo
-    _, _, component = kernel_component
+def test_python_subclass_component_interface(cosmology: Cosmology) -> None:
+    """A component implemented in Python satisfies the NcXcorKernelComponent interface.
 
-    # All components should be instances of NcXcorKernelComponent
+    The C components are checked in tests/c/nc/xcor (test_nc_xcor_kernel_common.c,
+    components); this covers the binding: virtual methods implemented in Python and
+    called through the C API.
+    """
+    # Imported here: at module level it would load the plugin before pytest rewrites it.
+    from python.fixtures_xcor import (  # pylint: disable=import-outside-toplevel
+        NcXcorKernelComponentTest,
+    )
+
+    cosmo = cosmology.cosmo
+    component = NcXcorKernelComponentTest()
     assert isinstance(component, Nc.XcorKernelComponent)
 
-    # Test get_limits
     xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
     assert np.isfinite(xi_min) and xi_min > 0.0
     assert np.isfinite(xi_max) and xi_max > xi_min
     assert np.isfinite(k_min) and k_min > 0.0
     assert np.isfinite(k_max) and k_max > k_min
 
-    # Test eval_kernel at a sample point
-    xi_test = (xi_min + xi_max) / 2.0
-    k_test = np.sqrt(k_min * k_max)  # Geometric mean
-    result = component.eval_kernel(cosmo, xi_test, k_test)
-    assert np.isfinite(result)
+    k_test = np.sqrt(k_min * k_max)
+    assert np.isfinite(component.eval_kernel(cosmo, 0.5 * (xi_min + xi_max), k_test))
+    assert np.isfinite(component.eval_prefactor(cosmo, k_test, 100))
 
-    # Test eval_prefactor
-    prefactor = component.eval_prefactor(cosmo, k_test, 100)
-    assert np.isfinite(prefactor)
+    assert np.isfinite(component.get_epsilon()) and component.get_epsilon() > 0.0
+    assert component.get_ny() > 0
+    assert component.get_max_iter() > 0
+    assert np.isfinite(component.get_tol()) and component.get_tol() > 0.0
 
-    # Test property getters
-    epsilon = component.get_epsilon()
-    assert np.isfinite(epsilon) and epsilon > 0.0
-
-    ny = component.get_ny()
-    assert isinstance(ny, int) and ny > 0
-
-    max_iter = component.get_max_iter()
-    assert isinstance(max_iter, int) and max_iter > 0
-
-    tol = component.get_tol()
-    assert np.isfinite(tol) and tol > 0.0
-
-
-def test_component_creation(
-    kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
-) -> None:
-    """Test that we can create a component."""
-    _, _, component = kernel_component
-    assert component is not None
-    assert isinstance(component, Nc.XcorKernelComponent)
-
-
-def test_component_properties(
-    kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
-) -> None:
-    """Test component property getters and setters."""
-    _, _, component = kernel_component
     component.set_epsilon(1.0e-8)
     assert_allclose(component.get_epsilon(), 1.0e-8, rtol=1e-10)
     component.set_ny(100)
@@ -140,21 +115,6 @@ def test_component_eval_prefactor(
         for ell in ell_array:
             result = component.eval_prefactor(cosmo, k, ell)
             assert np.isfinite(result)
-
-
-def test_component_get_limits(
-    kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
-    cosmology: Cosmology,
-) -> None:
-    """Test get_limits method."""
-    _, _, component = kernel_component
-    cosmo = cosmology.cosmo
-    xi_min, xi_max, k_min, k_max = component.get_limits(cosmo)
-
-    assert np.isfinite(xi_min) and xi_min > 0.0
-    assert np.isfinite(xi_max) and xi_max > xi_min
-    assert np.isfinite(k_min) and k_min > 0.0
-    assert np.isfinite(k_max) and k_max > k_min
 
 
 def test_component_prepare(
@@ -632,7 +592,7 @@ def test_component_k_epsilon_after_k_max(
     component.prepare(cosmo)
 
 
-def test_component_monotonicity(
+def test_component_analysis_is_positive_and_finite(
     kernel_component: tuple[str, Nc.XcorKernel | None, Nc.XcorKernelComponent],
 ) -> None:
     """Test basic properties of k_max, KL_max, and k_epsilon functions.
@@ -831,36 +791,6 @@ def test_multiple_components_galaxy_kernel(
         assert np.isfinite(xi_max) and xi_max > xi_min
         assert np.isfinite(k_min) and k_min > 0.0
         assert np.isfinite(k_max) and k_max > k_min
-
-
-def test_component_properties_via_get_component_list(
-    kernel_tsz: Nc.XcorKerneltSZ, cosmology: Cosmology
-) -> None:
-    """Test component property getters and setters via get_component_list."""
-    cosmo = cosmology.cosmo
-    kernel_tsz.prepare(cosmo)
-
-    comp_list = kernel_tsz.get_component_list()
-    assert comp_list is not None
-    assert len(comp_list) > 0
-
-    component = comp_list[0]
-
-    # Test epsilon property
-    component.set_epsilon(1.0e-7)
-    assert_allclose(component.get_epsilon(), 1.0e-7, rtol=1e-10)
-
-    # Test ny property
-    component.set_ny(150)
-    assert component.get_ny() == 150
-
-    # Test max_iter property
-    component.set_max_iter(2000)
-    assert component.get_max_iter() == 2000
-
-    # Test tol property
-    component.set_tol(1.0e-5)
-    assert_allclose(component.get_tol(), 1.0e-5, rtol=1e-10)
 
 
 def test_component_chebyshev_decomposition(

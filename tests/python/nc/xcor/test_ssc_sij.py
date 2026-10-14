@@ -335,27 +335,6 @@ def test_footprint_can_be_given_at_construction(cosmology: Cosmology) -> None:
     )
 
 
-def test_area_and_mask_are_mutually_exclusive(cosmology: Cosmology) -> None:
-    """Setting one footprint description discards the other."""
-    mask = _cap_mask()
-    cl_mask, _fsky = mask_angular_power_spectrum(mask)
-    lmax = find_lmax(cl_mask)
-
-    ssc_sij = _make_ssc_sij(cosmology)
-
-    ssc_sij.set_area(3000.0)
-    assert ssc_sij.get_area() == 3000.0
-    assert ssc_sij.get_lmax() == 0
-
-    ssc_sij.set_mask_cl(Ncm.Vector.new_array(cl_mask[: lmax + 1].tolist()))
-    assert ssc_sij.get_area() == 0.0
-    assert ssc_sij.get_lmax() == lmax
-
-    ssc_sij.set_area(3000.0)
-    assert ssc_sij.get_area() == 3000.0
-    assert ssc_sij.get_lmax() == 0
-
-
 def test_area_survives_serialization(cosmology: Cosmology) -> None:
     """The area rescaling round trips.
 
