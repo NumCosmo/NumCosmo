@@ -191,6 +191,18 @@ LEVIN_CASES = [
         0,
         [(ell, [0.1 * 10.0**1.5]) for ell in range(8)],
     ),
+    (
+        # a short panel past the turning point, below the pinned constraint's reach: it
+        # keeps Dirichlet data, which a truncated solve does not meet exactly
+        "short_panel",
+        "tophat",
+        490.7985,
+        499.4845,
+        0.0,
+        0.0,
+        0,
+        [(200, [1.0])],
+    ),
     ("ell_zero", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(0, [1.0])]),
     ("k_scaling", "tophat", 1.0, 10.0, 0.0, 0.0, 0, [(5, [0.1, 1.0, 10.0, 100.0])]),
     ("narrow", "power", 5.0, 5.001, 1.0, 0.0, 0, [(5, [1.0])]),

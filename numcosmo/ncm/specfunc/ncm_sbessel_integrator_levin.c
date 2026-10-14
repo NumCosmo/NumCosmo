@@ -40,9 +40,11 @@
  *
  * In practice the equation is solved for $u = x w$, which removes the
  * first-derivative term and gives $x^2 u'' + (x^2 - \ell(\ell+1)) u = x F(x)$, so
- * the forcing handed to #NcmSBesselOdeSolver is the weighted $x F(x)$. Since $w$
- * vanishes at the endpoints, $u'(a) = a w'(a)$ and $u'(b) = b w'(b)$, and the
- * panel contribution evaluated is $b j_\ell(b) u'(b) - a j_\ell(a) u'(a)$.
+ * the forcing handed to #NcmSBesselOdeSolver is the weighted $x F(x)$. The panel
+ * contribution evaluated is the general boundary term
+ * $[x j_\ell u' - (x j_\ell)' u]_a^b$, with the $u$ terms kept: it is exact for any
+ * $u$ that solves the equation, while the Dirichlet data $u(a) = u(b) = 0$ are met only
+ * as well as the truncated expansion allows.
  *
  * See <a href="../../theory/ncm/specfunc/sbessel_projection.html">UltraLevin: Non-Limber
  * Angular Power Spectra</a> for the derivation, the fixed panel grid in $x$,
@@ -142,7 +144,6 @@ struct _NcmSBesselIntegratorLevin
   GArray *values_result;
   gdouble *j_array_a;
   gdouble *j_array_b;
-  GArray *endpoints_result;
   gboolean record_panels; /* Diagnostic panel recording (off by default) */
 
   /* Per-panel constraint rule. A panel whose oscillation count, measured from the
@@ -269,7 +270,6 @@ ncm_sbessel_integrator_levin_init (NcmSBesselIntegratorLevin *sbilv)
   sbilv->values_result                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->j_array_a                     = NULL;
   sbilv->j_array_b                     = NULL;
-  sbilv->endpoints_result              = g_array_new (FALSE, FALSE, sizeof (gdouble));
   sbilv->constructed                   = FALSE;
   sbilv->record_panels                 = FALSE;
   sbilv->panel_records                 = g_array_new (FALSE, FALSE, sizeof (NcmSBesselIntegratorLevinPanelRec));
@@ -310,7 +310,6 @@ _ncm_sbessel_integrator_levin_dispose (GObject *object)
   g_clear_pointer (&sbilv->gegen_coeffs, g_array_unref);
   g_clear_pointer (&sbilv->deriv_gegen_coeffs, g_array_unref);
   g_clear_pointer (&sbilv->rhs, g_array_unref);
-  g_clear_pointer (&sbilv->endpoints_result, g_array_unref);
 
   /* Clear knots-based paneling resources */
   g_clear_pointer (&sbilv->base_knots, g_array_unref);
@@ -1413,21 +1412,24 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
   if (sbilv->deriv > 0)
     _ncm_sbessel_integrator_levin_boundary_data (sbilv, a_p, b_p, a_p, b_p, &bd);
 
-  /* Only Dirichlet data makes u vanish at both ends, so that the u term of W drops and
-   * the derivatives alone are needed. Every other constraint needs the general
-   * functional -- the one the extended cells below use -- with the u term kept. The
-   * order check and the guard judge the tau constraint alone. */
+  /* Every constraint is read through the general functional W, with the u terms kept,
+   * as the extended cells below are. It is exact for any u that solves the equation,
+   * whatever its end values, while the derivatives-only form b j u'(b) - a j u'(a) holds
+   * only where u(a) = u(b) = 0, and a truncated Dirichlet solve does not meet its data
+   * exactly: on a short panel at reltol 1e-5 the solve stopped at 8 columns with u(a)
+   * as large as the u' terms, and that form lost 1e-2 of the window's peak where W lost
+   * 1e-9. The order check and the guard judge the tau constraint alone. */
   const NcmSBesselOdeConstraint constraint = ncm_sbessel_ode_operator_get_constraint (operator);
   const gboolean is_tau                    = constraint == NCM_SBESSEL_ODE_CONSTRAINT_TAU;
-  gboolean use_values                      = constraint != NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET;
+  gboolean tau_held                        = is_tau;
 
   if (is_tau && !_ncm_sbessel_integrator_levin_tau_constraint_order_ok (sbilv, operator, a_p, b_p, ell_max))
   {
     sbilv->n_constraint_fallbacks++;
-    use_values = FALSE;
+    tau_held = FALSE;
   }
 
-  if (use_values)
+  if (!is_tau || tau_held)
   {
     ncm_sbessel_ode_operator_solve_values (operator, sbilv->rhs, a_p, b_p, &sbilv->values_result);
 
@@ -1437,33 +1439,29 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
       /* The tau solve admitted homogeneous content: this panel is not in the regime
        * where that constraint is valid, for this right-hand side. */
       sbilv->n_constraint_fallbacks++;
-      use_values = FALSE;
+      tau_held = FALSE;
     }
   }
 
-  if (!use_values)
+  if (is_tau && !tau_held)
   {
     /* A fallback holds for this right-hand side alone: the operator keeps the constraint
      * the rule gave it, so the choice is a function of the panel, the block and the
      * right-hand side in hand. Recording it instead, as this did before, made the
      * result depend on which k reached the panel first. */
-    if (constraint != NCM_SBESSEL_ODE_CONSTRAINT_TAU)
-    {
-      ncm_sbessel_ode_operator_solve_endpoints (operator, sbilv->rhs, &sbilv->endpoints_result);
-    }
-    else if (panel_idx >= 0)
+    if (panel_idx >= 0)
     {
       NcmSBesselOdeOperator *twin =
         _ncm_sbessel_integrator_levin_dirichlet_twin (sbilv, panel_idx, a_p, b_p, ell_min, ell_max);
 
-      ncm_sbessel_ode_operator_solve_endpoints (twin, sbilv->rhs, &sbilv->endpoints_result);
+      ncm_sbessel_ode_operator_solve_values (twin, sbilv->rhs, a_p, b_p, &sbilv->values_result);
     }
     else
     {
       /* A moving operator is reconfigured on every k in any case, so there is no stored
        * factorization for the flip to discard. */
       ncm_sbessel_ode_operator_set_constraint (operator, NCM_SBESSEL_ODE_CONSTRAINT_DIRICHLET);
-      ncm_sbessel_ode_operator_solve_endpoints (operator, sbilv->rhs, &sbilv->endpoints_result);
+      ncm_sbessel_ode_operator_solve_values (operator, sbilv->rhs, a_p, b_p, &sbilv->values_result);
       ncm_sbessel_ode_operator_set_constraint (operator, NCM_SBESSEL_ODE_CONSTRAINT_TAU);
     }
   }
@@ -1472,7 +1470,7 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
 
   /* A tau operator solved with Dirichlet data is a fallback, counted above; the
    * locked-eligible count is for panels resting on another constraint. */
-  if (use_values && is_tau)
+  if (tau_held)
     sbilv->n_tau_solves++;
   else if (!is_tau &&
            (sbilv->tau_constraint_min_osc > 0.0) &&
@@ -1482,27 +1480,14 @@ _ncm_sbessel_integrator_levin_solve_rhs_and_accumulate (NcmSBesselIntegratorLevi
 
   for (ell = ell_min; ell <= ell_max; ell++)
   {
-    const gint ell_idx  = ell - ell_min;
-    const gdouble j_l_a = j_a_p[ell];
-    const gdouble j_l_b = j_b_p[ell];
-    gdouble contrib;
-
-    if (use_values)
-    {
-      const gdouble *values = &g_array_index (sbilv->values_result, gdouble, 4 * ell_idx);
-      const gdouble xj_p_a  = ncm_sf_sbessel_xjl_deriv_from_array (ell, a_p, j_a_p);
-      const gdouble xj_p_b  = ncm_sf_sbessel_xjl_deriv_from_array (ell, b_p, j_b_p);
-
-      contrib = (b_p * j_l_b * values[3] - xj_p_b * values[2]) -
-                (a_p * j_l_a * values[1] - xj_p_a * values[0]);
-    }
-    else
-    {
-      const gdouble u_prime_a = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 0);
-      const gdouble u_prime_b = g_array_index (sbilv->endpoints_result, gdouble, ell_idx * 3 + 1);
-
-      contrib = b_p * j_l_b * u_prime_b - a_p * j_l_a * u_prime_a;
-    }
+    const gint ell_idx    = ell - ell_min;
+    const gdouble j_l_a   = j_a_p[ell];
+    const gdouble j_l_b   = j_b_p[ell];
+    const gdouble *values = &g_array_index (sbilv->values_result, gdouble, 4 * ell_idx);
+    const gdouble xj_p_a  = ncm_sf_sbessel_xjl_deriv_from_array (ell, a_p, j_a_p);
+    const gdouble xj_p_b  = ncm_sf_sbessel_xjl_deriv_from_array (ell, b_p, j_b_p);
+    gdouble contrib       = (b_p * j_l_b * values[3] - xj_p_b * values[2]) -
+                            (a_p * j_l_a * values[1] - xj_p_a * values[0]);
 
     if (sbilv->deriv > 0)
       contrib += _ncm_sbessel_integrator_levin_boundary_contrib (sbilv, &bd, ell, a_p, b_p, j_a_p, j_b_p);

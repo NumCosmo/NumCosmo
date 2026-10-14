@@ -204,9 +204,13 @@ j_\ell(x_a) u'(x_a)$. The unknown is $u = x\,w$ rather than $w$, the solution
 of the equation with the first-derivative term; Eq. (5) is Eq. (1) of
 [The Ultraspherical Spectral Solver](sbessel_ode_solver.qmd), where that choice
 is justified. The general form (6), with the $u$ term
-kept, is what the code evaluates, because the extended cells of
+kept, is what the code evaluates on every panel, for two reasons. The extended cells of
 [Panels fixed in x](#panels-fixed-in-x) solve on an interval larger than the
-one integrated over.
+one integrated over. And a truncated solve meets its Dirichlet data only as well as its
+truncation allows: a short panel stopped at eight coefficients (reltol $10^{-5}$) had
+$u(x_a)$ as large as the $u'$ terms, the derivatives-only form lost $10^{-2}$ of the
+window's peak, and Eq. (6), exact for any $u$ that solves Eq. (5) whatever its end
+values, lost $10^{-9}$.
 
 ```{python}
 #| label: fig-levin-smooth
