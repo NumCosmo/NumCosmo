@@ -201,11 +201,262 @@ test_nc_data_hubble_free (TestNcDataHubble *test, gconstpointer pdata)
 }
 
 /* Simon 2005 */
-
 void
 test_nc_data_hubble_new_simon2005 (TestNcDataHubble *test, gconstpointer pdata)
 {
   NcDataHubbleId id = NC_DATA_HUBBLE_SIMON2005;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Cabre */
+void
+test_nc_data_hubble_new_cabre (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_CABRE;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Stern 2009 */
+void
+test_nc_data_hubble_new_stern2009 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_STERN2009;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Moresco 2012 BC03 */
+void
+test_nc_data_hubble_new_moresco2012_bc03 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2012_BC03;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Moresco 2012 MASTRO */
+void
+test_nc_data_hubble_new_moresco2012_mastro (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2012_MASTRO;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Moresco 2015 */
+void
+test_nc_data_hubble_new_moresco2015 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2015;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Moresco 2016 BC03 */
+void
+test_nc_data_hubble_new_moresco2016_bc03 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2016_DR9_BC03;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Moresco 2016 Mastro */
+void
+test_nc_data_hubble_new_moresco2016_mastro (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* BUSCA 2013 BAO WMAP */
+void
+test_nc_data_hubble_new_busca2013 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* RIESS 2008 */
+void
+test_nc_data_hubble_new_riess2008 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_RIESS2008_HST;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Zhang 2012 */
+void
+test_nc_data_hubble_new_zhang2012 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_ZHANG2012;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* RIESS 2016 */
+void
+test_nc_data_hubble_new_riess2016 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_RIESS2016_HST_WFC3;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Ratsimbazafy 2017 */
+void
+test_nc_data_hubble_new_ratsimbazafy2017 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_RATSIMBAZAFY2017;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Gomez Valent 2018 */
+void
+test_nc_data_hubble_new_gomez2018 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* RIESS 2018 */
+void
+test_nc_data_hubble_new_riess2018 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_RIESS2018;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Borghi 2022 */
+void
+test_nc_data_hubble_new_borghi2022 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_BORGHI2022;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Jiao 2023 */
+void
+test_nc_data_hubble_new_jiao2023 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_JIAO2023;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Jimenez 2023 */
+void
+test_nc_data_hubble_new_jimenez2023 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_JIMENEZ2023;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Tomasetti 2023 */
+void
+test_nc_data_hubble_new_tomasetti2023 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_TOMASETTI2023;
   NcmData *data;
 
   test->id = id;
@@ -263,21 +514,6 @@ test_nc_data_hubble_set_sample_simon2005 (TestNcDataHubble *test, gconstpointer 
   ncm_vector_free (sigmas);
 }
 
-/* Cabre */
-
-void
-test_nc_data_hubble_new_cabre (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_CABRE;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_cabre (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -313,21 +549,6 @@ test_nc_data_hubble_set_sample_cabre (TestNcDataHubble *test, gconstpointer pdat
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 1), ==, sigma1);
 
   ncm_vector_free (x);
-}
-
-/* Stern 2009 */
-
-void
-test_nc_data_hubble_new_stern2009 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_STERN2009;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
 }
 
 void
@@ -376,21 +597,6 @@ test_nc_data_hubble_set_sample_stern2009 (TestNcDataHubble *test, gconstpointer 
   ncm_vector_free (zs);
   ncm_vector_free (bfs);
   ncm_vector_free (sigmas);
-}
-
-/* Moresco 2012 BC03 */
-
-void
-test_nc_data_hubble_new_moresco2012_bc03 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2012_BC03;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
 }
 
 void
@@ -466,21 +672,6 @@ test_nc_data_hubble_set_sample_moresco2012_bc03 (TestNcDataHubble *test, gconstp
   ncm_vector_free (x);
 }
 
-/* Moresco 2012 MASTRO */
-
-void
-test_nc_data_hubble_new_moresco2012_mastro (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2012_MASTRO;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_moresco2012_mastro (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -554,21 +745,6 @@ test_nc_data_hubble_set_sample_moresco2012_mastro (TestNcDataHubble *test, gcons
   ncm_vector_free (x);
 }
 
-/* Moresco 2015 */
-
-void
-test_nc_data_hubble_new_moresco2015 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2015;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_moresco2015 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -604,21 +780,6 @@ test_nc_data_hubble_set_sample_moresco2015 (TestNcDataHubble *test, gconstpointe
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 1), ==, sigma1);
 
   ncm_vector_free (x);
-}
-
-/* Moresco 2016 BC03 */
-
-void
-test_nc_data_hubble_new_moresco2016_bc03 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2016_DR9_BC03;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
 }
 
 void
@@ -676,21 +837,6 @@ test_nc_data_hubble_set_sample_moresco2016_bc03 (TestNcDataHubble *test, gconstp
   ncm_vector_free (x);
 }
 
-/* Moresco 2016 Mastro */
-
-void
-test_nc_data_hubble_new_moresco2016_mastro (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_moresco2016_mastro (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -746,21 +892,6 @@ test_nc_data_hubble_set_sample_moresco2016_mastro (TestNcDataHubble *test, gcons
   ncm_vector_free (x);
 }
 
-/* BUSCA 2013 BAO WMAP */
-
-void
-test_nc_data_hubble_new_busca2013 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_busca2013 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -788,21 +919,6 @@ test_nc_data_hubble_set_sample_busca2013 (TestNcDataHubble *test, gconstpointer 
   ncm_vector_free (x);
 }
 
-/* RIESS 2008 */
-
-void
-test_nc_data_hubble_new_riess2008 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_RIESS2008_HST;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_riess2008 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -828,21 +944,6 @@ test_nc_data_hubble_set_sample_riess2008 (TestNcDataHubble *test, gconstpointer 
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 0), ==, sigma0);
 
   ncm_vector_free (x);
-}
-
-/* Zhang 2012 */
-
-void
-test_nc_data_hubble_new_zhang2012 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_ZHANG2012;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
 }
 
 void
@@ -894,21 +995,6 @@ test_nc_data_hubble_set_sample_zhang2012 (TestNcDataHubble *test, gconstpointer 
   ncm_vector_free (x);
 }
 
-/* RIESS 2016 */
-
-void
-test_nc_data_hubble_new_riess2016 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_RIESS2016_HST_WFC3;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_riess2016 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -936,21 +1022,6 @@ test_nc_data_hubble_set_sample_riess2016 (TestNcDataHubble *test, gconstpointer 
   ncm_vector_free (x);
 }
 
-/* Ratsimbazafy 2017 */
-
-void
-test_nc_data_hubble_new_ratsimbazafy2017 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_RATSIMBAZAFY2017;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_ratsimbazafy2017 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -976,21 +1047,6 @@ test_nc_data_hubble_set_sample_ratsimbazafy2017 (TestNcDataHubble *test, gconstp
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 0), ==, sigma0);
 
   ncm_vector_free (x);
-}
-
-/* Gomez Valent 2018 */
-
-void
-test_nc_data_hubble_new_gomez2018 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
 }
 
 void
@@ -1041,21 +1097,6 @@ test_nc_data_hubble_set_sample_gomez2018 (TestNcDataHubble *test, gconstpointer 
   ncm_vector_free (sigmas);
 }
 
-/* RIESS 2018 */
-
-void
-test_nc_data_hubble_new_riess2018 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_RIESS2018;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_riess2018 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -1081,21 +1122,6 @@ test_nc_data_hubble_set_sample_riess2018 (TestNcDataHubble *test, gconstpointer 
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 0), ==, sigma0);
 
   ncm_vector_free (x);
-}
-
-/* Borghi 2022 */
-
-void
-test_nc_data_hubble_new_borghi2022 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_BORGHI2022;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
 }
 
 void
@@ -1125,21 +1151,6 @@ test_nc_data_hubble_set_sample_borghi2022 (TestNcDataHubble *test, gconstpointer
   ncm_vector_free (x);
 }
 
-/* Jiao 2023 */
-
-void
-test_nc_data_hubble_new_jiao2023 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_JIAO2023;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_jiao2023 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -1167,21 +1178,6 @@ test_nc_data_hubble_set_sample_jiao2023 (TestNcDataHubble *test, gconstpointer p
   ncm_vector_free (x);
 }
 
-/* Jimenez 2023 */
-
-void
-test_nc_data_hubble_new_jimenez2023 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_JIMENEZ2023;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
-}
-
 void
 test_nc_data_hubble_set_sample_jimenez2023 (TestNcDataHubble *test, gconstpointer pdata)
 {
@@ -1207,21 +1203,6 @@ test_nc_data_hubble_set_sample_jimenez2023 (TestNcDataHubble *test, gconstpointe
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 0), ==, sigma0);
 
   ncm_vector_free (x);
-}
-
-/* Tomasetti 2023 */
-
-void
-test_nc_data_hubble_new_tomasetti2023 (TestNcDataHubble *test, gconstpointer pdata)
-{
-  NcDataHubbleId id = NC_DATA_HUBBLE_TOMASETTI2023;
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
-  g_assert_true (data != NULL);
-  test->hubble = NC_DATA_HUBBLE (data);
-  g_assert_true (NC_IS_DATA_HUBBLE (data));
 }
 
 void
