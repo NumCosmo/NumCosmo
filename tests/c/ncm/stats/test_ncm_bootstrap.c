@@ -34,7 +34,46 @@
 #include <glib-object.h>
 
 #define TEST_BOOTSTRAP_SEED 123456
+
 #define TEST_BOOTSTRAP_NDRAWS 10000
+
+static void test_ncm_bootstrap_sizes (void);
+static void test_ncm_bootstrap_resize (void);
+static void test_ncm_bootstrap_resample (void);
+static void test_ncm_bootstrap_remix (void);
+static void test_ncm_bootstrap_sortncomp (void);
+static void test_ncm_bootstrap_serialize (void);
+static void test_ncm_bootstrap_realization_length_subprocess (void);
+static void test_ncm_bootstrap_realization_index_subprocess (void);
+static void test_ncm_bootstrap_resample_empty_subprocess (void);
+static void test_ncm_bootstrap_remix_too_large_subprocess (void);
+static void test_ncm_bootstrap_sortncomp_no_realization_subprocess (void);
+static void test_ncm_bootstrap_traps (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/bootstrap/sizes", &test_ncm_bootstrap_sizes);
+  g_test_add_func ("/ncm/bootstrap/resize", &test_ncm_bootstrap_resize);
+  g_test_add_func ("/ncm/bootstrap/resample", &test_ncm_bootstrap_resample);
+  g_test_add_func ("/ncm/bootstrap/remix", &test_ncm_bootstrap_remix);
+  g_test_add_func ("/ncm/bootstrap/sortncomp", &test_ncm_bootstrap_sortncomp);
+  g_test_add_func ("/ncm/bootstrap/serialize", &test_ncm_bootstrap_serialize);
+  g_test_add_func ("/ncm/bootstrap/traps", &test_ncm_bootstrap_traps);
+  g_test_add_func ("/ncm/bootstrap/realization_length/subprocess", &test_ncm_bootstrap_realization_length_subprocess);
+  g_test_add_func ("/ncm/bootstrap/realization_index/subprocess", &test_ncm_bootstrap_realization_index_subprocess);
+  g_test_add_func ("/ncm/bootstrap/resample_empty/subprocess", &test_ncm_bootstrap_resample_empty_subprocess);
+  g_test_add_func ("/ncm/bootstrap/remix_too_large/subprocess", &test_ncm_bootstrap_remix_too_large_subprocess);
+  g_test_add_func ("/ncm/bootstrap/sortncomp_no_realization/subprocess", &test_ncm_bootstrap_sortncomp_no_realization_subprocess);
+
+  g_test_run ();
+}
 
 static void
 test_ncm_bootstrap_sizes (void)
@@ -324,30 +363,5 @@ test_ncm_bootstrap_traps (void)
 
   g_test_trap_subprocess ("/ncm/bootstrap/sortncomp_no_realization/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/bootstrap/sizes", &test_ncm_bootstrap_sizes);
-  g_test_add_func ("/ncm/bootstrap/resize", &test_ncm_bootstrap_resize);
-  g_test_add_func ("/ncm/bootstrap/resample", &test_ncm_bootstrap_resample);
-  g_test_add_func ("/ncm/bootstrap/remix", &test_ncm_bootstrap_remix);
-  g_test_add_func ("/ncm/bootstrap/sortncomp", &test_ncm_bootstrap_sortncomp);
-  g_test_add_func ("/ncm/bootstrap/serialize", &test_ncm_bootstrap_serialize);
-  g_test_add_func ("/ncm/bootstrap/traps", &test_ncm_bootstrap_traps);
-  g_test_add_func ("/ncm/bootstrap/realization_length/subprocess", &test_ncm_bootstrap_realization_length_subprocess);
-  g_test_add_func ("/ncm/bootstrap/realization_index/subprocess", &test_ncm_bootstrap_realization_index_subprocess);
-  g_test_add_func ("/ncm/bootstrap/resample_empty/subprocess", &test_ncm_bootstrap_resample_empty_subprocess);
-  g_test_add_func ("/ncm/bootstrap/remix_too_large/subprocess", &test_ncm_bootstrap_remix_too_large_subprocess);
-  g_test_add_func ("/ncm/bootstrap/sortncomp_no_realization/subprocess", &test_ncm_bootstrap_sortncomp_no_realization_subprocess);
-
-  g_test_run ();
 }
 
