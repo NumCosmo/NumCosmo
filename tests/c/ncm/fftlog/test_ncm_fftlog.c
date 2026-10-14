@@ -38,6 +38,7 @@
 
 /* A kernel that declares no bias range: the Gaussian window's coefficients at b = 0. */
 #define TEST_TYPE_NCM_FFTLOG_NO_BIAS (test_ncm_fftlog_no_bias_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestNcmFftlogNoBias, test_ncm_fftlog_no_bias, TEST, NCM_FFTLOG_NO_BIAS, NcmFftlog)
 
 struct _TestNcmFftlogNoBias
@@ -46,43 +47,6 @@ struct _TestNcmFftlogNoBias
 };
 
 G_DEFINE_TYPE (TestNcmFftlogNoBias, test_ncm_fftlog_no_bias, NCM_TYPE_FFTLOG)
-
-static void
-test_ncm_fftlog_no_bias_init (TestNcmFftlogNoBias *fftlog)
-{
-}
-
-static void
-_test_ncm_fftlog_no_bias_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
-{
-  const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
-  complex double *Ym     = (complex double *) Ym_0;
-  gint i;
-
-  for (i = 0; i < ncm_fftlog_get_full_size (fftlog); i++)
-  {
-    const complex double x = 0.5 * (1.0 + twopi_Lt * ncm_fftlog_get_mode_index (fftlog, i) * I);
-    gsl_sf_result rho, theta;
-
-    gsl_sf_lngamma_complex_e (creal (x), cimag (x), &rho, &theta);
-    Ym[i] = 0.5 * cexp (rho.val + I * theta.val);
-  }
-}
-
-static void
-test_ncm_fftlog_no_bias_class_init (TestNcmFftlogNoBiasClass *klass)
-{
-  NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
-
-  fftlog_class->name       = "test_no_bias";
-  fftlog_class->compute_Ym = &_test_ncm_fftlog_no_bias_compute_Ym;
-}
-
-static NcmFftlog *
-test_ncm_fftlog_no_bias_new (void)
-{
-  return g_object_new (TEST_TYPE_NCM_FFTLOG_NO_BIAS, "lnr0", 0.0, "lnk0", 0.0, "Lk", 20.0, "N", 250, NULL);
-}
 
 typedef struct _TestNcmFftlogK
 {
@@ -101,6 +65,23 @@ typedef struct _TestNcmFftlog
   guint ntests;
   TestNcmFftlogK *argK;
 } TestNcmFftlog;
+
+typedef struct _TestCases
+{
+  gchar *name;
+
+  void (*func) (TestNcmFftlog *test, gconstpointer pdata);
+} TestCases;
+
+#define NUMINT_RELTOL1 1.0e-3
+#define NUMINT_RELTOL2 1.0e-8
+#define NTESTS 20
+
+typedef struct _TestNcmFftlogPlaw
+{
+  gdouble lnA;
+  gdouble ns;
+} TestNcmFftlogPlaw;
 
 void test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata);
 void test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata);
@@ -147,13 +128,6 @@ void test_ncm_fftlog_bias_invalid_range (void);
 void test_ncm_fftlog_bias_invalid_unsupported (void);
 void test_ncm_fftlog_bias_invalid_end_slopes (void);
 
-typedef struct _TestCases
-{
-  gchar *name;
-
-  void (*func) (TestNcmFftlog *test, gconstpointer pdata);
-} TestCases;
-
 TestCases tests[] = {
   {"setget", &test_ncm_fftlog_setget},
   {"eval", &test_ncm_fftlog_eval},
@@ -172,9 +146,6 @@ TestCases fixtures[] = {
   {"sbessel_j", &test_ncm_fftlog_sbessel_j_new},
   {"sbessel_j_bias0_5", &test_ncm_fftlog_sbessel_j_bias0_5_new},
 };
-
-#define NUMINT_RELTOL1 1.0e-3
-#define NUMINT_RELTOL2 1.0e-8
 
 gint
 main (gint argc, gchar *argv[])
@@ -264,13 +235,42 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-#define NTESTS 20
-
-typedef struct _TestNcmFftlogPlaw
+static void
+test_ncm_fftlog_no_bias_init (TestNcmFftlogNoBias *fftlog)
 {
-  gdouble lnA;
-  gdouble ns;
-} TestNcmFftlogPlaw;
+}
+
+static void
+_test_ncm_fftlog_no_bias_compute_Ym (NcmFftlog *fftlog, gpointer Ym_0)
+{
+  const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
+  complex double *Ym     = (complex double *) Ym_0;
+  gint i;
+
+  for (i = 0; i < ncm_fftlog_get_full_size (fftlog); i++)
+  {
+    const complex double x = 0.5 * (1.0 + twopi_Lt * ncm_fftlog_get_mode_index (fftlog, i) * I);
+    gsl_sf_result rho, theta;
+
+    gsl_sf_lngamma_complex_e (creal (x), cimag (x), &rho, &theta);
+    Ym[i] = 0.5 * cexp (rho.val + I * theta.val);
+  }
+}
+
+static void
+test_ncm_fftlog_no_bias_class_init (TestNcmFftlogNoBiasClass *klass)
+{
+  NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
+
+  fftlog_class->name       = "test_no_bias";
+  fftlog_class->compute_Ym = &_test_ncm_fftlog_no_bias_compute_Ym;
+}
+
+static NcmFftlog *
+test_ncm_fftlog_no_bias_new (void)
+{
+  return g_object_new (TEST_TYPE_NCM_FFTLOG_NO_BIAS, "lnr0", 0.0, "lnk0", 0.0, "Lk", 20.0, "N", 250, NULL);
+}
 
 static gdouble
 _test_ncm_fftlog_plaw (gdouble k, gpointer user_data)
@@ -308,118 +308,6 @@ _test_ncm_fftlog_sbessel_j (gdouble lnk, gpointer user_data)
   const gdouble k      = exp (lnk);
 
   return GSL_FN_EVAL (&args->Fk, k) * k * ncm_sf_sbessel (args->ell, kr);
-}
-
-void
-test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata)
-{
-  const guint N          = g_test_rand_int_range  (10000, 20000);
-  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (0.0, 0.0, 20.0, N));
-  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
-  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
-  gdouble Lk             = g_test_rand_double_range (log (1.0e+3), log (1.0e+6));
-
-  test->fftlog       = fftlog;
-  test->Fk.function  = &_test_ncm_fftlog_plaw;
-  test->Fk.params    = arg;
-  test->KFk.function = &_test_ncm_fftlog_tophatwin2;
-  test->KFk.params   = argK;
-  test->argK         = argK;
-
-  test->lnk_i = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
-  test->lnk_f = test->lnk_i + Lk;
-
-  test->ntests = NTESTS;
-
-  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
-  arg->ns  = g_test_rand_double_range (0.5, 1.5);
-
-  argK->lnr = 0.0;
-  argK->Fk  = test->Fk;
-
-  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
-  ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
-  ncm_fftlog_set_length (fftlog, Lk);
-
-  g_assert_true (fftlog != NULL);
-  g_assert_true (NCM_IS_FFTLOG (fftlog));
-  g_assert_true (NCM_IS_FFTLOG_TOPHATWIN2 (fftlog));
-}
-
-void
-test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata)
-{
-  const guint N          = g_test_rand_int_range  (1000, 2000);
-  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_gausswin2_new (0.0, 0.0, 20.0, N));
-  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
-  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
-  gdouble Lk             = g_test_rand_double_range (log (1.0e+3), log (1.0e+6));
-
-  test->fftlog       = fftlog;
-  test->Fk.function  = &_test_ncm_fftlog_plaw;
-  test->Fk.params    = arg;
-  test->KFk.function = &_test_ncm_fftlog_gausswin2;
-  test->KFk.params   = argK;
-  test->argK         = argK;
-
-  test->lnk_i = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
-  test->lnk_f = test->lnk_i + Lk;
-
-  test->ntests = NTESTS;
-
-  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
-  arg->ns  = g_test_rand_double_range (0.5, 1.5);
-
-  argK->lnr = 0.0;
-  argK->Fk  = test->Fk;
-
-  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
-  ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
-  ncm_fftlog_set_length (fftlog, Lk);
-
-  g_assert_true (fftlog != NULL);
-  g_assert_true (NCM_IS_FFTLOG (fftlog));
-  g_assert_true (NCM_IS_FFTLOG_GAUSSWIN2 (fftlog));
-}
-
-void
-test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
-{
-  const guint N          = g_test_rand_int_range  (7800, 8000);
-  const guint ell        = g_test_rand_int_range  (0, 5);
-  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
-  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
-  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
-  gdouble Lk             = g_test_rand_double_range (log (9.0e+3), log (1.0e+4));
-
-  test->fftlog       = fftlog;
-  test->Fk.function  = &_test_ncm_fftlog_plaw;
-  test->Fk.params    = arg;
-  test->KFk.function = &_test_ncm_fftlog_sbessel_j;
-  test->KFk.params   = argK;
-  test->argK         = argK;
-
-  test->lnk_i = g_test_rand_double_range (log (1.0e-6), log (4.0e-6));
-  test->lnk_f = test->lnk_i + Lk;
-
-  test->ntests = NTESTS;
-
-  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
-  arg->ns  = g_test_rand_double_range (0.5, 0.6);
-
-  argK->lnr = 0.0;
-  argK->Fk  = test->Fk;
-  argK->ell = ell;
-
-  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
-  ncm_fftlog_set_length (fftlog, Lk);
-
-  ncm_fftlog_sbessel_j_set_best_lnr0 (NCM_FFTLOG_SBESSEL_J (fftlog));
-  ncm_fftlog_sbessel_j_set_best_lnk0 (NCM_FFTLOG_SBESSEL_J (fftlog));
-
-  g_assert_true (fftlog != NULL);
-  g_assert_true (NCM_IS_FFTLOG (fftlog));
-  g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
 }
 
 /* The bias leaves G unchanged, so the reference is the plain j_l integral; b = 1/2 also
@@ -463,17 +351,6 @@ test_ncm_fftlog_sbessel_j_bias0_5_new (TestNcmFftlog *test, gconstpointer pdata)
   g_assert_true (fftlog != NULL);
   g_assert_true (NCM_IS_FFTLOG (fftlog));
   g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
-}
-
-void
-test_ncm_fftlog_free (TestNcmFftlog *test, gconstpointer pdata)
-{
-  NcmFftlog *fftlog = test->fftlog;
-
-  NCM_TEST_FREE (ncm_fftlog_free, fftlog);
-
-  g_free (test->Fk.params);
-  g_free (test->KFk.params);
 }
 
 void
@@ -836,6 +713,233 @@ test_ncm_fftlog_eval_smooth_padding (TestNcmFftlog *test, gconstpointer pdata)
   g_assert_cmpint (len, >, 0);
 }
 
+static gdouble
+_test_gauss_k3 (const gdouble k, gpointer user_data)
+{
+  return gsl_pow_3 (k) * exp (-k * k);
+}
+
+static gdouble
+_test_negative_edge (const gdouble k, gpointer user_data)
+{
+  return -gsl_pow_3 (k) * exp (-k * k);
+}
+
+static gdouble
+_test_sqrt_k (const gdouble k, gpointer user_data)
+{
+  return sqrt (k);
+}
+
+static gdouble
+_test_k3_gauss (const gdouble k, gpointer user_data)
+{
+  return gsl_pow_3 (k) * exp (-k * k);
+}
+
+static gdouble
+_test_power (const gdouble k, gpointer user_data)
+{
+  return pow (k, *(gdouble *) user_data);
+}
+
+static gdouble
+_test_zero (const gdouble k, gpointer user_data)
+{
+  return 0.0;
+}
+
+/*
+ * Gaussian window with F = k^3 exp(-k^2): G(r) = 1 / (2 (1 + r^2)^2), and its first two
+ * ln r derivatives, which carry the bias through the factor -(1 + b + a). Checked over the
+ * central knots with b = 0.5 and 1; measured at most 4.9e-14 of each component's peak.
+ */
+static gdouble
+_test_gauss_k3_gausswin2 (guint nd, const gdouble lnr)
+{
+  const gdouble r2   = exp (2.0 * lnr);
+  const gdouble opr2 = 1.0 + r2;
+
+  switch (nd)
+  {
+    case 0:
+      return 0.5 / gsl_pow_2 (opr2);
+
+    case 1:
+      return -2.0 * r2 / gsl_pow_3 (opr2);
+
+    default:
+      return -4.0 * r2 * (1.0 - 2.0 * r2) / gsl_pow_4 (opr2);
+  }
+}
+
+static gdouble
+_test_gauss_kl2 (const gdouble k, gpointer user_data)
+{
+  const guint ell = GPOINTER_TO_UINT (user_data);
+
+  return gsl_pow_uint (k, ell + 2) * exp (-0.5 * k * k);
+}
+
+static NcmFftlog *
+_test_bias_power_law_fftlog (gboolean tophat, gdouble *s)
+{
+  const gdouble lnk_min = log (1.0e-10);
+  const gdouble lnk_max = log (1.0e3);
+  const gdouble lnk0    = 0.5 * (lnk_min + lnk_max);
+  NcmFftlog *fftlog     = tophat ?
+                          NCM_FFTLOG (ncm_fftlog_tophatwin2_new (-lnk0, lnk0, lnk_max - lnk_min, 100)) :
+                          NCM_FFTLOG (ncm_fftlog_gausswin2_new (-lnk0, lnk0, lnk_max - lnk_min, 100));
+
+  ncm_fftlog_set_padding (fftlog, 1.0);
+  ncm_fftlog_set_nderivs (fftlog, 2);
+  ncm_fftlog_use_smooth_padding (fftlog, TRUE);
+  ncm_fftlog_eval_by_function (fftlog, &_test_power, s);
+
+  return fftlog;
+}
+
+static gdouble
+_test_k3_over_1pk2_2 (const gdouble k, gpointer user_data)
+{
+  return gsl_pow_3 (k) / gsl_pow_2 (1.0 + k * k);
+}
+
+static gdouble
+_test_k_plus_k_m02 (const gdouble k, gpointer user_data)
+{
+  return k + pow (k, -0.2);
+}
+
+static gdouble
+_test_power_m05 (const gdouble k, gpointer user_data)
+{
+  return 1.0 / sqrt (k);
+}
+
+void
+test_ncm_fftlog_tophatwin2_new (TestNcmFftlog *test, gconstpointer pdata)
+{
+  const guint N          = g_test_rand_int_range  (10000, 20000);
+  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (0.0, 0.0, 20.0, N));
+  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
+  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
+  gdouble Lk             = g_test_rand_double_range (log (1.0e+3), log (1.0e+6));
+
+  test->fftlog       = fftlog;
+  test->Fk.function  = &_test_ncm_fftlog_plaw;
+  test->Fk.params    = arg;
+  test->KFk.function = &_test_ncm_fftlog_tophatwin2;
+  test->KFk.params   = argK;
+  test->argK         = argK;
+
+  test->lnk_i = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
+  test->lnk_f = test->lnk_i + Lk;
+
+  test->ntests = NTESTS;
+
+  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
+  arg->ns  = g_test_rand_double_range (0.5, 1.5);
+
+  argK->lnr = 0.0;
+  argK->Fk  = test->Fk;
+
+  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
+  ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
+  ncm_fftlog_set_length (fftlog, Lk);
+
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_TOPHATWIN2 (fftlog));
+}
+
+void
+test_ncm_fftlog_gausswin2_new (TestNcmFftlog *test, gconstpointer pdata)
+{
+  const guint N          = g_test_rand_int_range  (1000, 2000);
+  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_gausswin2_new (0.0, 0.0, 20.0, N));
+  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
+  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
+  gdouble Lk             = g_test_rand_double_range (log (1.0e+3), log (1.0e+6));
+
+  test->fftlog       = fftlog;
+  test->Fk.function  = &_test_ncm_fftlog_plaw;
+  test->Fk.params    = arg;
+  test->KFk.function = &_test_ncm_fftlog_gausswin2;
+  test->KFk.params   = argK;
+  test->argK         = argK;
+
+  test->lnk_i = g_test_rand_double_range (log (1.0e-4), log (1.0e0));
+  test->lnk_f = test->lnk_i + Lk;
+
+  test->ntests = NTESTS;
+
+  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
+  arg->ns  = g_test_rand_double_range (0.5, 1.5);
+
+  argK->lnr = 0.0;
+  argK->Fk  = test->Fk;
+
+  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
+  ncm_fftlog_set_lnr0 (fftlog, -0.5 * (test->lnk_i + test->lnk_f));
+  ncm_fftlog_set_length (fftlog, Lk);
+
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_GAUSSWIN2 (fftlog));
+}
+
+void
+test_ncm_fftlog_sbessel_j_new (TestNcmFftlog *test, gconstpointer pdata)
+{
+  const guint N          = g_test_rand_int_range  (7800, 8000);
+  const guint ell        = g_test_rand_int_range  (0, 5);
+  NcmFftlog *fftlog      = NCM_FFTLOG (ncm_fftlog_sbessel_j_new (ell, 0.0, 0.0, 20.0, N));
+  TestNcmFftlogK *argK   = g_new (TestNcmFftlogK, 1);
+  TestNcmFftlogPlaw *arg = g_new (TestNcmFftlogPlaw, 1);
+  gdouble Lk             = g_test_rand_double_range (log (9.0e+3), log (1.0e+4));
+
+  test->fftlog       = fftlog;
+  test->Fk.function  = &_test_ncm_fftlog_plaw;
+  test->Fk.params    = arg;
+  test->KFk.function = &_test_ncm_fftlog_sbessel_j;
+  test->KFk.params   = argK;
+  test->argK         = argK;
+
+  test->lnk_i = g_test_rand_double_range (log (1.0e-6), log (4.0e-6));
+  test->lnk_f = test->lnk_i + Lk;
+
+  test->ntests = NTESTS;
+
+  arg->lnA = g_test_rand_double_range (log (1.0e-10), log (1.0e+10));
+  arg->ns  = g_test_rand_double_range (0.5, 0.6);
+
+  argK->lnr = 0.0;
+  argK->Fk  = test->Fk;
+  argK->ell = ell;
+
+  ncm_fftlog_set_lnk0 (fftlog, +0.5 * (test->lnk_i + test->lnk_f));
+  ncm_fftlog_set_length (fftlog, Lk);
+
+  ncm_fftlog_sbessel_j_set_best_lnr0 (NCM_FFTLOG_SBESSEL_J (fftlog));
+  ncm_fftlog_sbessel_j_set_best_lnk0 (NCM_FFTLOG_SBESSEL_J (fftlog));
+
+  g_assert_true (fftlog != NULL);
+  g_assert_true (NCM_IS_FFTLOG (fftlog));
+  g_assert_true (NCM_IS_FFTLOG_SBESSEL_J (fftlog));
+}
+
+void
+test_ncm_fftlog_free (TestNcmFftlog *test, gconstpointer pdata)
+{
+  NcmFftlog *fftlog = test->fftlog;
+
+  NCM_TEST_FREE (ncm_fftlog_free, fftlog);
+
+  g_free (test->Fk.params);
+  g_free (test->KFk.params);
+}
+
 void
 test_ncm_fftlog_tophatwin2_traps (TestNcmFftlog *test, gconstpointer pdata)
 {
@@ -872,12 +976,6 @@ void
 test_ncm_fftlog_invalid_length (TestNcmFftlog *test, gconstpointer pdata)
 {
   ncm_fftlog_set_length (test->fftlog, 0.0);
-}
-
-static gdouble
-_test_gauss_k3 (const gdouble k, gpointer user_data)
-{
-  return gsl_pow_3 (k) * exp (-k * k);
 }
 
 /*
@@ -946,12 +1044,6 @@ test_ncm_fftlog_smooth_padding_traps (void)
   g_test_trap_assert_stderr ("*smooth padding needs F > 0*");
 }
 
-static gdouble
-_test_negative_edge (const gdouble k, gpointer user_data)
-{
-  return -gsl_pow_3 (k) * exp (-k * k);
-}
-
 /* The power-law continuation is fitted to log F: F <= 0 at an end used to give NaN. */
 void
 test_ncm_fftlog_invalid_smooth_padding (void)
@@ -960,12 +1052,6 @@ test_ncm_fftlog_invalid_smooth_padding (void)
 
   ncm_fftlog_use_smooth_padding (fftlog, TRUE);
   ncm_fftlog_eval_by_function (fftlog, &_test_negative_edge, NULL);
-}
-
-static gdouble
-_test_sqrt_k (const gdouble k, gpointer user_data)
-{
-  return sqrt (k);
 }
 
 /* For F = k^s the smooth padding continues the table with the exact power law at the
@@ -1012,12 +1098,6 @@ test_ncm_fftlog_smooth_padding_power_law (void)
   }
 }
 
-static gdouble
-_test_k3_gauss (const gdouble k, gpointer user_data)
-{
-  return gsl_pow_3 (k) * exp (-k * k);
-}
-
 /* The knots sit at (i - Nf_2) L / N on both sides of the transform, which cancels in the
  * phase only for an even full size; an odd one used to shift the output by one knot
  * (5e-3 at N = 1000). Compare an odd full size (padding 1.187 gives 2187) with an even
@@ -1054,12 +1134,6 @@ test_ncm_fftlog_odd_full_size (void)
 
   ncm_fftlog_free (odd);
   ncm_fftlog_free (even);
-}
-
-static gdouble
-_test_power (const gdouble k, gpointer user_data)
-{
-  return pow (k, *(gdouble *) user_data);
 }
 
 /*
@@ -1177,12 +1251,6 @@ test_ncm_fftlog_smooth_padding_refine_stable (void)
       ncm_fftlog_free (fftlog[j]);
     }
   }
-}
-
-static gdouble
-_test_zero (const gdouble k, gpointer user_data)
-{
-  return 0.0;
 }
 
 /* An identically zero transform is converged at once: 0/0 used to read as not converged. */
@@ -1333,30 +1401,6 @@ test_ncm_fftlog_bias_tophatwin2_truth (void)
   }
 }
 
-/*
- * Gaussian window with F = k^3 exp(-k^2): G(r) = 1 / (2 (1 + r^2)^2), and its first two
- * ln r derivatives, which carry the bias through the factor -(1 + b + a). Checked over the
- * central knots with b = 0.5 and 1; measured at most 4.9e-14 of each component's peak.
- */
-static gdouble
-_test_gauss_k3_gausswin2 (guint nd, const gdouble lnr)
-{
-  const gdouble r2   = exp (2.0 * lnr);
-  const gdouble opr2 = 1.0 + r2;
-
-  switch (nd)
-  {
-    case 0:
-      return 0.5 / gsl_pow_2 (opr2);
-
-    case 1:
-      return -2.0 * r2 / gsl_pow_3 (opr2);
-
-    default:
-      return -4.0 * r2 * (1.0 - 2.0 * r2) / gsl_pow_4 (opr2);
-  }
-}
-
 void
 test_ncm_fftlog_bias_gausswin2_truth (void)
 {
@@ -1400,14 +1444,6 @@ test_ncm_fftlog_bias_gausswin2_truth (void)
     ncm_vector_free (lnr);
     ncm_fftlog_free (fftlog);
   }
-}
-
-static gdouble
-_test_gauss_kl2 (const gdouble k, gpointer user_data)
-{
-  const guint ell = GPOINTER_TO_UINT (user_data);
-
-  return gsl_pow_uint (k, ell + 2) * exp (-0.5 * k * k);
 }
 
 /*
@@ -1466,24 +1502,6 @@ test_ncm_fftlog_bias_sbessel_j_truth (void)
   }
 }
 
-static NcmFftlog *
-_test_bias_power_law_fftlog (gboolean tophat, gdouble *s)
-{
-  const gdouble lnk_min = log (1.0e-10);
-  const gdouble lnk_max = log (1.0e3);
-  const gdouble lnk0    = 0.5 * (lnk_min + lnk_max);
-  NcmFftlog *fftlog     = tophat ?
-                          NCM_FFTLOG (ncm_fftlog_tophatwin2_new (-lnk0, lnk0, lnk_max - lnk_min, 100)) :
-                          NCM_FFTLOG (ncm_fftlog_gausswin2_new (-lnk0, lnk0, lnk_max - lnk_min, 100));
-
-  ncm_fftlog_set_padding (fftlog, 1.0);
-  ncm_fftlog_set_nderivs (fftlog, 2);
-  ncm_fftlog_use_smooth_padding (fftlog, TRUE);
-  ncm_fftlog_eval_by_function (fftlog, &_test_power, s);
-
-  return fftlog;
-}
-
 /*
  * The case of test_bias_castro.py: F = k^-0.6 over 13 decades. Unbiased, F grows about
  * e^25 across the table and its padding, and the change from N to 1.2N stalls at 6e-5 of
@@ -1503,18 +1521,6 @@ test_ncm_fftlog_bias_power_law_converges (void)
   g_assert_cmpuint (ncm_fftlog_get_size (fftlog), <=, 10000);
 
   ncm_fftlog_free (fftlog);
-}
-
-static gdouble
-_test_k3_over_1pk2_2 (const gdouble k, gpointer user_data)
-{
-  return gsl_pow_3 (k) / gsl_pow_2 (1.0 + k * k);
-}
-
-static gdouble
-_test_k_plus_k_m02 (const gdouble k, gpointer user_data)
-{
-  return k + pow (k, -0.2);
 }
 
 /*
@@ -1658,12 +1664,6 @@ test_ncm_fftlog_bias_invalid_end_slopes (void)
 
   ncm_fftlog_eval_by_function (fftlog, &_test_gauss_k3, NULL);
   ncm_fftlog_get_end_slopes (fftlog, &s_min, &s_max);
-}
-
-static gdouble
-_test_power_m05 (const gdouble k, gpointer user_data)
-{
-  return 1.0 / sqrt (k);
 }
 
 /*
