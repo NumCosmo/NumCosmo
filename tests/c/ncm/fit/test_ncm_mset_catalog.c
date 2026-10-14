@@ -43,6 +43,13 @@ typedef struct _TestNcmMSetCatalog
   guint ntests;
 } TestNcmMSetCatalog;
 
+typedef struct _TestNcmMSetCatalogTests
+{
+  const gchar *name;
+
+  void (*func) (TestNcmMSetCatalog *test, gconstpointer pdata);
+} TestNcmMSetCatalogTests;
+
 void test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_new_2_chains (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_traps (TestNcmMSetCatalog *test, gconstpointer pdata);
@@ -82,6 +89,9 @@ void test_ncm_mset_catalog_heidel_by_chain_fail (TestNcmMSetCatalog *test, gcons
 void test_ncm_mset_catalog_post_lnnorm_degenerate (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_remove_last_ensemble (TestNcmMSetCatalog *test, gconstpointer pdata);
 
+static void _test_ncm_mset_catalog_flist_scaled_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static void _test_ncm_mset_catalog_flist_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+
 #ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
 void test_ncm_mset_catalog_file_sampler_history (void);
@@ -103,31 +113,12 @@ void test_ncm_mset_catalog_file_markovian_id_frozen_needs_more (void);
 
 #endif /* HAVE_CFITSIO */
 
-typedef struct _TestNcmMSetCatalogTests
-{
-  const gchar *name;
-
-  void (*func) (TestNcmMSetCatalog *test, gconstpointer pdata);
-} TestNcmMSetCatalogTests;
-
 TestNcmMSetCatalogTests fixtures[] =
 {
   {"one_chain", test_ncm_mset_catalog_new},
   {"multiple_chain", test_ncm_mset_catalog_new_2_chains},
   {NULL, NULL}
 };
-
-static void
-_test_ncm_mset_catalog_flist_scaled_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
-{
-  res[0] = x[0] * ncm_mset_fparam_get (mset, 0);
-}
-
-static void
-_test_ncm_mset_catalog_flist_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
-{
-  res[0] = ncm_mset_fparam_get (mset, 0);
-}
 
 TestNcmMSetCatalogTests tests[] =
 {
@@ -229,6 +220,18 @@ main (gint argc, gchar *argv[])
 #endif /* HAVE_CFITSIO */
 
   g_test_run ();
+}
+
+static void
+_test_ncm_mset_catalog_flist_scaled_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = x[0] * ncm_mset_fparam_get (mset, 0);
+}
+
+static void
+_test_ncm_mset_catalog_flist_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  res[0] = ncm_mset_fparam_get (mset, 0);
 }
 
 #define NTESTS_MIN 5000
