@@ -47,6 +47,41 @@ G_DEFINE_TYPE (TestPriorConst, test_prior_const, NCM_TYPE_PRIOR)
 
 #define TEST_PRIOR_CONST_VALUE (3.25)
 
+typedef struct _TestNcmLikelihood
+{
+  NcmModel *model;
+  NcmMSet *mset;
+  NcmDataset *dset;
+  NcmLikelihood *lh;
+  NcmPrior *prior_g;
+  NcmPrior *prior_f;
+  guint dim;
+} TestNcmLikelihood;
+
+static void test_ncm_likelihood_new (TestNcmLikelihood *test, gconstpointer pdata);
+static void test_ncm_likelihood_free (TestNcmLikelihood *test, gconstpointer pdata);
+static void test_ncm_likelihood_m2lnL (TestNcmLikelihood *test, gconstpointer pdata);
+static void test_ncm_likelihood_leastsquares (TestNcmLikelihood *test, gconstpointer pdata);
+static void test_ncm_likelihood_leastsquares_m2lnL_prior (TestNcmLikelihood *test, gconstpointer pdata);
+static void test_ncm_likelihood_peek_range (TestNcmLikelihood *test, gconstpointer pdata);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/ncm/likelihood/m2lnL", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_m2lnL, &test_ncm_likelihood_free);
+  g_test_add ("/ncm/likelihood/leastsquares", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_leastsquares, &test_ncm_likelihood_free);
+  g_test_add ("/ncm/likelihood/leastsquares/m2lnL_prior", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_leastsquares_m2lnL_prior, &test_ncm_likelihood_free);
+  g_test_add ("/ncm/likelihood/peek_range", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_peek_range, &test_ncm_likelihood_free);
+
+  g_test_run ();
+}
+
 static void
 test_prior_const_init (TestPriorConst *p)
 {
@@ -64,17 +99,6 @@ test_prior_const_class_init (TestPriorConstClass *klass)
   NCM_PRIOR_CLASS (klass)->is_m2lnL = TRUE;
   NCM_MSET_FUNC_CLASS (klass)->eval = &_test_prior_const_eval;
 }
-
-typedef struct _TestNcmLikelihood
-{
-  NcmModel *model;
-  NcmMSet *mset;
-  NcmDataset *dset;
-  NcmLikelihood *lh;
-  NcmPrior *prior_g;
-  NcmPrior *prior_f;
-  guint dim;
-} TestNcmLikelihood;
 
 static void
 test_ncm_likelihood_new (TestNcmLikelihood *test, gconstpointer pdata)
@@ -212,22 +236,5 @@ test_ncm_likelihood_peek_range (TestNcmLikelihood *test, gconstpointer pdata)
   /* The test runs with nonfatal assertions, so the child reports and returns. */
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_stderr ("*assertion failed (i < lh->priors_m2lnL->len)*");
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/ncm/likelihood/m2lnL", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_m2lnL, &test_ncm_likelihood_free);
-  g_test_add ("/ncm/likelihood/leastsquares", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_leastsquares, &test_ncm_likelihood_free);
-  g_test_add ("/ncm/likelihood/leastsquares/m2lnL_prior", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_leastsquares_m2lnL_prior, &test_ncm_likelihood_free);
-  g_test_add ("/ncm/likelihood/peek_range", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_peek_range, &test_ncm_likelihood_free);
-
-  g_test_run ();
 }
 
