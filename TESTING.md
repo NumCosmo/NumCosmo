@@ -422,13 +422,36 @@ converters, so the ingestion path and the native likelihoods run everywhere. Pre
 synthetic inputs whose expected result has a closed form -- with the real, opaque data
 a test can only check that a number came out.
 
+## 6.2 C test file layout
+
+Every C test file has the same order, so a reader finds things in the same place:
+
+1. License header and includes.
+2. `#define`s, types (fixture structs, case tables' row types, GObject test types) and
+   static data tables.
+3. Prototypes of every fixture and test function (and of a helper used before its
+   definition).
+4. `main` (in a shared unit, the `test_<group>_main` or `test_<group>_register`
+   function), which only registers the tests.
+5. Helper functions.
+6. Fixture creators and destructors (the setup/teardown passed to `g_test_add`).
+7. Test implementations.
+
+No type or data table comes after `main`. `tests/c/ncm/algebra/test_ncm_vector.c` is the
+model.
+
 ## 7. Determinism & truth tables
 
 - Statistical tests pin an explicit seeded RNG (a shared fixture), not the implicit
   global GSL seed. Tolerances are pinned to that seed.
 - Truth tables use NumCosmo serialization into `data/truth_tables/`, loaded via
-  `Ncm.cfg_get_data_filename` and compared with `np.testing.assert_allclose`. No byte-hash
-  snapshots, no large hardcoded value arrays.
+  `Ncm.cfg_get_data_filename` (C: `ncm_cfg_get_data_filename`) and compared with
+  `np.testing.assert_allclose` (C: an explicit tolerance per value). Tables too large
+  for the repository are files of the data-file release, fetched with
+  `nc_data_download_release_file` and listed in `.github/scripts/prefetch_data.py`.
+  No byte-hash snapshots, no large hardcoded value arrays: a small table of certified
+  values may be written into a C test only when a committed generator prints it
+  (`tests/tools/make_sbessel_arb_cases.py`).
 
 ## 8. Adding a test (checklist)
 
@@ -441,3 +464,5 @@ a test can only check that a number came out.
    capability — the directory name alone gates it without selecting it, and the file then
    runs in no lane at all. Verify with `pytest --collect-only -m <cap>`.
 5. Do not add a CI-shard suite. Reuse fixtures from `conftest.py`.
+6. A C test follows the file layout of §6.2. A test developed in Python moves to C
+   once settled if it uses only the C API (CONTRIBUTING.md, "Unit testing").
