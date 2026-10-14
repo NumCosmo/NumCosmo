@@ -35,12 +35,38 @@
 /*
  * NcmObjArray
  */
-
 typedef struct _TestNcmObjArray
 {
   NcmObjArray *oa;
   guint ntests;
 } TestNcmObjArray;
+
+/*
+ * NcmObjDictStr
+ */
+typedef struct _TestNcmObjDictStr
+{
+  NcmObjDictStr *ods;
+  guint ntests;
+} TestNcmObjDictStr;
+
+/*
+ * NcmObjDictInt
+ */
+typedef struct _TestNcmObjDictInt
+{
+  NcmObjDictInt *odi;
+  guint ntests;
+} TestNcmObjDictInt;
+
+/*
+ * NcmVarDict:
+ */
+typedef struct _TestNcmVarDict
+{
+  NcmVarDict *vd;
+  guint ntests;
+} TestNcmVarDict;
 
 void test_ncm_obj_array_new (TestNcmObjArray *test, gconstpointer pdata);
 void test_ncm_obj_array_free (TestNcmObjArray *test, gconstpointer pdata);
@@ -53,16 +79,6 @@ void test_ncm_obj_array_traps (TestNcmObjArray *test, gconstpointer pdata);
 void test_ncm_obj_array_invalid_add (TestNcmObjArray *test, gconstpointer pdata);
 void test_ncm_obj_array_invalid_set (TestNcmObjArray *test, gconstpointer pdata);
 
-/*
- * NcmObjDictStr
- */
-
-typedef struct _TestNcmObjDictStr
-{
-  NcmObjDictStr *ods;
-  guint ntests;
-} TestNcmObjDictStr;
-
 void test_ncm_obj_dict_str_new (TestNcmObjDictStr *test, gconstpointer pdata);
 void test_ncm_obj_dict_str_free (TestNcmObjDictStr *test, gconstpointer pdata);
 void test_ncm_obj_dict_str_add (TestNcmObjDictStr *test, gconstpointer pdata);
@@ -73,17 +89,6 @@ void test_ncm_obj_dict_str_traps (TestNcmObjDictStr *test, gconstpointer pdata);
 void test_ncm_obj_dict_str_invalid_add (TestNcmObjDictStr *test, gconstpointer pdata);
 void test_ncm_obj_dict_str_invalid_set (TestNcmObjDictStr *test, gconstpointer pdata);
 
-
-/*
- * NcmObjDictInt
- */
-
-typedef struct _TestNcmObjDictInt
-{
-  NcmObjDictInt *odi;
-  guint ntests;
-} TestNcmObjDictInt;
-
 void test_ncm_obj_dict_int_new (TestNcmObjDictInt *test, gconstpointer pdata);
 void test_ncm_obj_dict_int_free (TestNcmObjDictInt *test, gconstpointer pdata);
 void test_ncm_obj_dict_int_add (TestNcmObjDictInt *test, gconstpointer pdata);
@@ -93,17 +98,6 @@ void test_ncm_obj_dict_int_to_from_yaml_file (TestNcmObjDictInt *test, gconstpoi
 void test_ncm_obj_dict_int_traps (TestNcmObjDictInt *test, gconstpointer pdata);
 void test_ncm_obj_dict_int_invalid_add (TestNcmObjDictInt *test, gconstpointer pdata);
 void test_ncm_obj_dict_int_invalid_set (TestNcmObjDictInt *test, gconstpointer pdata);
-
-
-/*
- * NcmVarDict:
- */
-
-typedef struct _TestNcmVarDict
-{
-  NcmVarDict *vd;
-  guint ntests;
-} TestNcmVarDict;
 
 void test_ncm_var_dict_new (TestNcmVarDict *test, gconstpointer pdata);
 void test_ncm_var_dict_free (TestNcmVarDict *test, gconstpointer pdata);
@@ -133,107 +127,14 @@ void test_ncm_var_dict_invalid_set (TestNcmVarDict *test, gconstpointer pdata);
 void test_ncm_obj_dict_keys_replace (void);
 void test_ncm_var_dict_keys_replace (void);
 
-/* An integer is read as a double; any other mismatch aborts */
-static void
-test_ncm_var_dict_types (void)
-{
-  const gchar *getters[] = {"string", "int", "double", "boolean", "int_array", "double_array", "boolean_array"};
-  NcmVarDict *vd         = ncm_var_dict_new ();
-  gdouble d              = 0.0;
-  guint i;
-
-  ncm_var_dict_set_int (vd, "n", 7);
-  g_assert_true (ncm_var_dict_get_double (vd, "n", &d));
-  g_assert_cmpfloat (d, ==, 7.0);
-  ncm_var_dict_unref (vd);
-
-  for (i = 0; i < G_N_ELEMENTS (getters); i++)
-  {
-    gchar *path = g_strdup_printf ("/ncm/var_dict/types/%s/subprocess", getters[i]);
-
-    g_test_trap_subprocess (path, 0, 0);
-    g_test_trap_assert_failed ();
-    g_test_trap_assert_stderr ("*has type*");
-    g_free (path);
-  }
-}
-
-/* A dictionary whose "k" holds a type none of the getters above accept for it */
-static NcmVarDict *
-_var_dict_wrong_type (const gchar *getter)
-{
-  NcmVarDict *vd = ncm_var_dict_new ();
-
-  if (g_str_equal (getter, "string"))
-    ncm_var_dict_set_int (vd, "k", 1);
-  else
-    ncm_var_dict_set_string (vd, "k", "x");
-
-  return vd;
-}
-
-static void
-test_ncm_var_dict_types_string_subprocess (void)
-{
-  NcmVarDict *vd = _var_dict_wrong_type ("string");
-  gchar *out     = NULL;
-
-  ncm_var_dict_get_string (vd, "k", &out);
-}
-
-static void
-test_ncm_var_dict_types_int_subprocess (void)
-{
-  NcmVarDict *vd = _var_dict_wrong_type ("int");
-  gint out;
-
-  ncm_var_dict_get_int (vd, "k", &out);
-}
-
-static void
-test_ncm_var_dict_types_double_subprocess (void)
-{
-  NcmVarDict *vd = _var_dict_wrong_type ("double");
-  gdouble out;
-
-  ncm_var_dict_get_double (vd, "k", &out);
-}
-
-static void
-test_ncm_var_dict_types_boolean_subprocess (void)
-{
-  NcmVarDict *vd = _var_dict_wrong_type ("boolean");
-  gboolean out;
-
-  ncm_var_dict_get_boolean (vd, "k", &out);
-}
-
-static void
-test_ncm_var_dict_types_int_array_subprocess (void)
-{
-  NcmVarDict *vd = _var_dict_wrong_type ("int_array");
-  GArray *out    = NULL;
-
-  ncm_var_dict_get_int_array (vd, "k", &out);
-}
-
-static void
-test_ncm_var_dict_types_double_array_subprocess (void)
-{
-  NcmVarDict *vd = _var_dict_wrong_type ("double_array");
-  GArray *out    = NULL;
-
-  ncm_var_dict_get_double_array (vd, "k", &out);
-}
-
-static void
-test_ncm_var_dict_types_boolean_array_subprocess (void)
-{
-  NcmVarDict *vd = _var_dict_wrong_type ("boolean_array");
-  GArray *out    = NULL;
-
-  ncm_var_dict_get_boolean_array (vd, "k", &out);
-}
+static void test_ncm_var_dict_types (void);
+static void test_ncm_var_dict_types_string_subprocess (void);
+static void test_ncm_var_dict_types_int_subprocess (void);
+static void test_ncm_var_dict_types_double_subprocess (void);
+static void test_ncm_var_dict_types_boolean_subprocess (void);
+static void test_ncm_var_dict_types_int_array_subprocess (void);
+static void test_ncm_var_dict_types_double_array_subprocess (void);
+static void test_ncm_var_dict_types_boolean_array_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -457,10 +358,134 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
+/* A dictionary whose "k" holds a type none of the getters above accept for it */
+static NcmVarDict *
+_var_dict_wrong_type (const gchar *getter)
+{
+  NcmVarDict *vd = ncm_var_dict_new ();
+
+  if (g_str_equal (getter, "string"))
+    ncm_var_dict_set_int (vd, "k", 1);
+  else
+    ncm_var_dict_set_string (vd, "k", "x");
+
+  return vd;
+}
+
+NcmVarDict *
+_test_ncm_var_dict_to_from_variant (NcmVarDict *vd)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  GVariant *v       = ncm_serialize_var_dict_to_variant (ser, vd);
+  NcmVarDict *vd0   = ncm_serialize_var_dict_from_variant (ser, v);
+
+  g_assert_nonnull (vd0);
+  g_assert_nonnull (v);
+
+  g_assert_true (vd != vd0);
+
+  g_variant_unref (v);
+  ncm_serialize_clear (&ser);
+
+  return vd0;
+}
+
+NcmVarDict *
+_test_ncm_var_dict_to_from_yaml (NcmVarDict *vd)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  gchar *yaml_str   = ncm_serialize_var_dict_to_yaml (ser, vd);
+  NcmVarDict *vd0   = ncm_serialize_var_dict_from_yaml (ser, yaml_str);
+
+  g_assert_nonnull (vd0);
+  g_assert_nonnull (yaml_str);
+
+  g_assert_true (vd != vd0);
+
+  g_free (yaml_str);
+  ncm_serialize_clear (&ser);
+
+  return vd0;
+}
+
+NcmVarDict *
+_test_ncm_var_dict_to_from_variant_binfile (NcmVarDict *vd)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  NcmVarDict *vd0   = NULL;
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
+
+  ncm_serialize_var_dict_to_variant_file (ser, vd, filename, TRUE);
+  vd0 = ncm_serialize_var_dict_from_variant_file (ser, filename, TRUE);
+
+  g_assert_nonnull (vd0);
+  g_assert_true (vd != vd0);
+
+  ncm_serialize_clear (&ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+
+  return vd0;
+}
+
+NcmVarDict *
+_test_ncm_var_dict_to_from_variant_file (NcmVarDict *vd)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  NcmVarDict *vd0   = NULL;
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
+
+  ncm_serialize_var_dict_to_variant_file (ser, vd, filename, FALSE);
+  vd0 = ncm_serialize_var_dict_from_variant_file (ser, filename, FALSE);
+
+  g_assert_nonnull (vd0);
+  g_assert_true (vd != vd0);
+
+  ncm_serialize_clear (&ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+
+  return vd0;
+}
+
+NcmVarDict *
+_test_ncm_var_dict_to_from_yaml_file (NcmVarDict *vd)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  NcmVarDict *vd0   = NULL;
+  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
+  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
+
+  ncm_serialize_var_dict_to_yaml_file (ser, vd, filename);
+  vd0 = ncm_serialize_var_dict_from_yaml_file (ser, filename);
+
+  g_assert_nonnull (vd0);
+  g_assert_true (vd != vd0);
+
+  ncm_serialize_clear (&ser);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+
+  g_free (filename);
+  g_free (tmp_dir);
+
+  return vd0;
+}
+
 /*
  * NcmObjArray
  */
-
 void
 test_ncm_obj_array_new (TestNcmObjArray *test, gconstpointer pdata)
 {
@@ -478,6 +503,160 @@ test_ncm_obj_array_free (TestNcmObjArray *test, gconstpointer pdata)
   NcmObjArray *oa = test->oa;
 
   ncm_obj_array_unref (oa);
+}
+
+/*
+ * NcmObjDictStr
+ */
+void
+test_ncm_obj_dict_str_new (TestNcmObjDictStr *test, gconstpointer pdata)
+{
+  NcmObjDictStr *ods;
+
+  test->ntests = 1000;
+  ods          = test->ods = ncm_obj_dict_str_new ();
+
+  g_assert_true (ods != NULL);
+}
+
+void
+test_ncm_obj_dict_str_free (TestNcmObjDictStr *test, gconstpointer pdata)
+{
+  NcmObjDictStr *ods = test->ods;
+
+  ncm_obj_dict_str_unref (ods);
+}
+
+/*
+ * NcmObjDictInt
+ */
+void
+test_ncm_obj_dict_int_new (TestNcmObjDictInt *test, gconstpointer pdata)
+{
+  NcmObjDictInt *odi;
+
+  test->ntests = 1000;
+  odi          = test->odi = ncm_obj_dict_int_new ();
+
+  g_assert_true (odi != NULL);
+}
+
+void
+test_ncm_obj_dict_int_free (TestNcmObjDictInt *test, gconstpointer pdata)
+{
+  NcmObjDictInt *odi = test->odi;
+
+  ncm_obj_dict_int_unref (odi);
+}
+
+/*
+ * NcmVarDict
+ */
+void
+test_ncm_var_dict_new (TestNcmVarDict *test, gconstpointer pdata)
+{
+  NcmVarDict *vd;
+
+  test->ntests = 1000;
+  vd           = test->vd = ncm_var_dict_new ();
+
+  g_assert_true (vd != NULL);
+}
+
+void
+test_ncm_var_dict_free (TestNcmVarDict *test, gconstpointer pdata)
+{
+  NcmVarDict *vd = test->vd;
+
+  ncm_var_dict_unref (vd);
+}
+
+/* An integer is read as a double; any other mismatch aborts */
+static void
+test_ncm_var_dict_types (void)
+{
+  const gchar *getters[] = {"string", "int", "double", "boolean", "int_array", "double_array", "boolean_array"};
+  NcmVarDict *vd         = ncm_var_dict_new ();
+  gdouble d              = 0.0;
+  guint i;
+
+  ncm_var_dict_set_int (vd, "n", 7);
+  g_assert_true (ncm_var_dict_get_double (vd, "n", &d));
+  g_assert_cmpfloat (d, ==, 7.0);
+  ncm_var_dict_unref (vd);
+
+  for (i = 0; i < G_N_ELEMENTS (getters); i++)
+  {
+    gchar *path = g_strdup_printf ("/ncm/var_dict/types/%s/subprocess", getters[i]);
+
+    g_test_trap_subprocess (path, 0, 0);
+    g_test_trap_assert_failed ();
+    g_test_trap_assert_stderr ("*has type*");
+    g_free (path);
+  }
+}
+
+static void
+test_ncm_var_dict_types_string_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("string");
+  gchar *out     = NULL;
+
+  ncm_var_dict_get_string (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_int_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("int");
+  gint out;
+
+  ncm_var_dict_get_int (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_double_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("double");
+  gdouble out;
+
+  ncm_var_dict_get_double (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_boolean_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("boolean");
+  gboolean out;
+
+  ncm_var_dict_get_boolean (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_int_array_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("int_array");
+  GArray *out    = NULL;
+
+  ncm_var_dict_get_int_array (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_double_array_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("double_array");
+  GArray *out    = NULL;
+
+  ncm_var_dict_get_double_array (vd, "k", &out);
+}
+
+static void
+test_ncm_var_dict_types_boolean_array_subprocess (void)
+{
+  NcmVarDict *vd = _var_dict_wrong_type ("boolean_array");
+  GArray *out    = NULL;
+
+  ncm_var_dict_get_boolean_array (vd, "k", &out);
 }
 
 void
@@ -668,29 +847,6 @@ test_ncm_obj_array_invalid_set (TestNcmObjArray *test, gconstpointer pdata)
   }
 }
 
-/*
- * NcmObjDictStr
- */
-
-void
-test_ncm_obj_dict_str_new (TestNcmObjDictStr *test, gconstpointer pdata)
-{
-  NcmObjDictStr *ods;
-
-  test->ntests = 1000;
-  ods          = test->ods = ncm_obj_dict_str_new ();
-
-  g_assert_true (ods != NULL);
-}
-
-void
-test_ncm_obj_dict_str_free (TestNcmObjDictStr *test, gconstpointer pdata)
-{
-  NcmObjDictStr *ods = test->ods;
-
-  ncm_obj_dict_str_unref (ods);
-}
-
 void
 test_ncm_obj_dict_str_add (TestNcmObjDictStr *test, gconstpointer pdata)
 {
@@ -862,29 +1018,6 @@ test_ncm_obj_dict_str_invalid_set (TestNcmObjDictStr *test, gconstpointer pdata)
   ncm_obj_dict_str_set (ods, NULL, NULL);
 }
 
-/*
- * NcmObjDictInt
- */
-
-void
-test_ncm_obj_dict_int_new (TestNcmObjDictInt *test, gconstpointer pdata)
-{
-  NcmObjDictInt *odi;
-
-  test->ntests = 1000;
-  odi          = test->odi = ncm_obj_dict_int_new ();
-
-  g_assert_true (odi != NULL);
-}
-
-void
-test_ncm_obj_dict_int_free (TestNcmObjDictInt *test, gconstpointer pdata)
-{
-  NcmObjDictInt *odi = test->odi;
-
-  ncm_obj_dict_int_unref (odi);
-}
-
 void
 test_ncm_obj_dict_int_add (TestNcmObjDictInt *test, gconstpointer pdata)
 {
@@ -1054,29 +1187,6 @@ test_ncm_obj_dict_int_invalid_set (TestNcmObjDictInt *test, gconstpointer pdata)
   NcmObjDictInt *odi = test->odi;
 
   ncm_obj_dict_int_set (odi, 0, NULL);
-}
-
-/*
- * NcmVarDict
- */
-
-void
-test_ncm_var_dict_new (TestNcmVarDict *test, gconstpointer pdata)
-{
-  NcmVarDict *vd;
-
-  test->ntests = 1000;
-  vd           = test->vd = ncm_var_dict_new ();
-
-  g_assert_true (vd != NULL);
-}
-
-void
-test_ncm_var_dict_free (TestNcmVarDict *test, gconstpointer pdata)
-{
-  NcmVarDict *vd = test->vd;
-
-  ncm_var_dict_unref (vd);
 }
 
 void
@@ -1526,117 +1636,6 @@ test_ncm_var_dict_object_array (TestNcmVarDict *test, gconstpointer pdata)
     ncm_matrix_free (m);
     ncm_obj_array_unref (oa);
   }
-}
-
-NcmVarDict *
-_test_ncm_var_dict_to_from_variant (NcmVarDict *vd)
-{
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-  GVariant *v       = ncm_serialize_var_dict_to_variant (ser, vd);
-  NcmVarDict *vd0   = ncm_serialize_var_dict_from_variant (ser, v);
-
-  g_assert_nonnull (vd0);
-  g_assert_nonnull (v);
-
-  g_assert_true (vd != vd0);
-
-  g_variant_unref (v);
-  ncm_serialize_clear (&ser);
-
-  return vd0;
-}
-
-NcmVarDict *
-_test_ncm_var_dict_to_from_yaml (NcmVarDict *vd)
-{
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-  gchar *yaml_str   = ncm_serialize_var_dict_to_yaml (ser, vd);
-  NcmVarDict *vd0   = ncm_serialize_var_dict_from_yaml (ser, yaml_str);
-
-  g_assert_nonnull (vd0);
-  g_assert_nonnull (yaml_str);
-
-  g_assert_true (vd != vd0);
-
-  g_free (yaml_str);
-  ncm_serialize_clear (&ser);
-
-  return vd0;
-}
-
-NcmVarDict *
-_test_ncm_var_dict_to_from_variant_binfile (NcmVarDict *vd)
-{
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-  NcmVarDict *vd0   = NULL;
-  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
-  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
-
-  ncm_serialize_var_dict_to_variant_file (ser, vd, filename, TRUE);
-  vd0 = ncm_serialize_var_dict_from_variant_file (ser, filename, TRUE);
-
-  g_assert_nonnull (vd0);
-  g_assert_true (vd != vd0);
-
-  ncm_serialize_clear (&ser);
-
-  g_unlink (filename);
-  g_rmdir (tmp_dir);
-
-  g_free (filename);
-  g_free (tmp_dir);
-
-  return vd0;
-}
-
-NcmVarDict *
-_test_ncm_var_dict_to_from_variant_file (NcmVarDict *vd)
-{
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-  NcmVarDict *vd0   = NULL;
-  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
-  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
-
-  ncm_serialize_var_dict_to_variant_file (ser, vd, filename, FALSE);
-  vd0 = ncm_serialize_var_dict_from_variant_file (ser, filename, FALSE);
-
-  g_assert_nonnull (vd0);
-  g_assert_true (vd != vd0);
-
-  ncm_serialize_clear (&ser);
-
-  g_unlink (filename);
-  g_rmdir (tmp_dir);
-
-  g_free (filename);
-  g_free (tmp_dir);
-
-  return vd0;
-}
-
-NcmVarDict *
-_test_ncm_var_dict_to_from_yaml_file (NcmVarDict *vd)
-{
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-  NcmVarDict *vd0   = NULL;
-  gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_var_dict_saved_XXXXXX", NULL);
-  gchar *filename   = g_strdup_printf ("%s/test_ncm_var_dict_saved.yaml", tmp_dir);
-
-  ncm_serialize_var_dict_to_yaml_file (ser, vd, filename);
-  vd0 = ncm_serialize_var_dict_from_yaml_file (ser, filename);
-
-  g_assert_nonnull (vd0);
-  g_assert_true (vd != vd0);
-
-  ncm_serialize_clear (&ser);
-
-  g_unlink (filename);
-  g_rmdir (tmp_dir);
-
-  g_free (filename);
-  g_free (tmp_dir);
-
-  return vd0;
 }
 
 void

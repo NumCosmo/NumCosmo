@@ -42,6 +42,32 @@ typedef struct _TestPLN1DArgs
   gdouble sigma;
 } TestPLN1DArgs;
 
+static void test_ncm_pln1d_order (void);
+static void test_ncm_pln1d_mode (void);
+static void test_ncm_pln1d_eval_quadrature (void);
+static void test_ncm_pln1d_eval_laplace (void);
+static void test_ncm_pln1d_eval_normalization (void);
+static void test_ncm_pln1d_eval_range_sum (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/pln1d/order", &test_ncm_pln1d_order);
+  g_test_add_func ("/ncm/pln1d/mode", &test_ncm_pln1d_mode);
+  g_test_add_func ("/ncm/pln1d/eval/quadrature", &test_ncm_pln1d_eval_quadrature);
+  g_test_add_func ("/ncm/pln1d/eval/laplace", &test_ncm_pln1d_eval_laplace);
+  g_test_add_func ("/ncm/pln1d/eval/normalization", &test_ncm_pln1d_eval_normalization);
+  g_test_add_func ("/ncm/pln1d/eval/range_sum", &test_ncm_pln1d_eval_range_sum);
+
+  g_test_run ();
+}
+
 /* Integrand of P(R | mu, sigma) in x = ln(lambda) */
 static gdouble
 _test_pln1d_integrand (gdouble x, gpointer userdata)
@@ -64,6 +90,18 @@ _test_pln1d_reference (gdouble R, gdouble mu, gdouble sigma)
   gsl_integration_workspace_free (w);
 
   return result;
+}
+
+static gdouble
+_test_pln1d_sum_eval_p (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma)
+{
+  gdouble sum = 0.0;
+  guint R;
+
+  for (R = R_min; R <= R_max; R++)
+    sum += ncm_pln1d_eval_p (pln, R, mu, sigma);
+
+  return sum;
 }
 
 static void
@@ -175,18 +213,6 @@ test_ncm_pln1d_eval_laplace (void)
   ncm_pln1d_free (pln);
 }
 
-static gdouble
-_test_pln1d_sum_eval_p (NcmPLN1D *pln, guint R_min, guint R_max, gdouble mu, gdouble sigma)
-{
-  gdouble sum = 0.0;
-  guint R;
-
-  for (R = R_min; R <= R_max; R++)
-    sum += ncm_pln1d_eval_p (pln, R, mu, sigma);
-
-  return sum;
-}
-
 static void
 test_ncm_pln1d_eval_normalization (void)
 {
@@ -218,24 +244,5 @@ test_ncm_pln1d_eval_range_sum (void)
   ncm_assert_cmpdouble_e (ncm_pln1d_eval_range_sum (pln, 4, 4, 1.5, 0.3), ==, ncm_pln1d_eval_p (pln, 4.0, 1.5, 0.3), 1.0e-14, 0.0);
 
   ncm_pln1d_free (pln);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/pln1d/order", &test_ncm_pln1d_order);
-  g_test_add_func ("/ncm/pln1d/mode", &test_ncm_pln1d_mode);
-  g_test_add_func ("/ncm/pln1d/eval/quadrature", &test_ncm_pln1d_eval_quadrature);
-  g_test_add_func ("/ncm/pln1d/eval/laplace", &test_ncm_pln1d_eval_laplace);
-  g_test_add_func ("/ncm/pln1d/eval/normalization", &test_ncm_pln1d_eval_normalization);
-  g_test_add_func ("/ncm/pln1d/eval/range_sum", &test_ncm_pln1d_eval_range_sum);
-
-  g_test_run ();
 }
 

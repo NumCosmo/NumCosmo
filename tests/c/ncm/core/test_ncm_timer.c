@@ -33,6 +33,36 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_timer_elapsed (void);
+static void test_ncm_timer_task (void);
+static void test_ncm_timer_task_estimates (void);
+static void test_ncm_timer_task_start_zero_subprocess (void);
+static void test_ncm_timer_start_during_task_subprocess (void);
+static void test_ncm_timer_increment_past_end_subprocess (void);
+static void test_ncm_timer_traps (void);
+static void test_ncm_timer_str_undefined (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/timer/str_undefined", &test_ncm_timer_str_undefined);
+  g_test_add_func ("/ncm/timer/elapsed", &test_ncm_timer_elapsed);
+  g_test_add_func ("/ncm/timer/task", &test_ncm_timer_task);
+  g_test_add_func ("/ncm/timer/task_estimates", &test_ncm_timer_task_estimates);
+  g_test_add_func ("/ncm/timer/traps", &test_ncm_timer_traps);
+  g_test_add_func ("/ncm/timer/task_start_zero/subprocess", &test_ncm_timer_task_start_zero_subprocess);
+  g_test_add_func ("/ncm/timer/start_during_task/subprocess", &test_ncm_timer_start_during_task_subprocess);
+  g_test_add_func ("/ncm/timer/increment_past_end/subprocess", &test_ncm_timer_increment_past_end_subprocess);
+
+  g_test_run ();
+}
+
 static void
 test_ncm_timer_elapsed (void)
 {
@@ -235,26 +265,5 @@ test_ncm_timer_str_undefined (void)
   }
 
   ncm_timer_free (nt);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/timer/str_undefined", &test_ncm_timer_str_undefined);
-  g_test_add_func ("/ncm/timer/elapsed", &test_ncm_timer_elapsed);
-  g_test_add_func ("/ncm/timer/task", &test_ncm_timer_task);
-  g_test_add_func ("/ncm/timer/task_estimates", &test_ncm_timer_task_estimates);
-  g_test_add_func ("/ncm/timer/traps", &test_ncm_timer_traps);
-  g_test_add_func ("/ncm/timer/task_start_zero/subprocess", &test_ncm_timer_task_start_zero_subprocess);
-  g_test_add_func ("/ncm/timer/start_during_task/subprocess", &test_ncm_timer_start_during_task_subprocess);
-  g_test_add_func ("/ncm/timer/increment_past_end/subprocess", &test_ncm_timer_increment_past_end_subprocess);
-
-  g_test_run ();
 }
 

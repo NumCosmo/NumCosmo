@@ -35,6 +35,44 @@
 
 #define TEST_ISET_N 10
 
+static void test_ncm_iset_add_del (void);
+static void test_ncm_iset_copy_complement (void);
+static void test_ncm_iset_subvector (void);
+static void test_ncm_iset_subarray (void);
+static void test_ncm_iset_submatrix (void);
+static void test_ncm_iset_submatrix_cols (void);
+static void test_ncm_iset_vector_max (void);
+static void test_ncm_iset_subset_vec_lt (void);
+static void test_ncm_iset_remove_smallest_subset (void);
+static void test_ncm_iset_add_largest_subset (void);
+static void test_ncm_iset_vector_inv_cmp (void);
+
+static const gint _test_iset_idx[] = {2, 4, 7};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/iset/add_del", &test_ncm_iset_add_del);
+  g_test_add_func ("/ncm/iset/copy_complement", &test_ncm_iset_copy_complement);
+  g_test_add_func ("/ncm/iset/subvector", &test_ncm_iset_subvector);
+  g_test_add_func ("/ncm/iset/subarray", &test_ncm_iset_subarray);
+  g_test_add_func ("/ncm/iset/submatrix", &test_ncm_iset_submatrix);
+  g_test_add_func ("/ncm/iset/submatrix_cols", &test_ncm_iset_submatrix_cols);
+  g_test_add_func ("/ncm/iset/vector_max", &test_ncm_iset_vector_max);
+  g_test_add_func ("/ncm/iset/subset_vec_lt", &test_ncm_iset_subset_vec_lt);
+  g_test_add_func ("/ncm/iset/remove_smallest_subset", &test_ncm_iset_remove_smallest_subset);
+  g_test_add_func ("/ncm/iset/add_largest_subset", &test_ncm_iset_add_largest_subset);
+  g_test_add_func ("/ncm/iset/vector_inv_cmp", &test_ncm_iset_vector_inv_cmp);
+
+  g_test_run ();
+}
+
 /* The set {2, 4, 7}, added out of order */
 static NcmISet *
 _test_iset_new (void)
@@ -47,8 +85,6 @@ _test_iset_new (void)
 
   return iset;
 }
-
-static const gint _test_iset_idx[] = {2, 4, 7};
 
 static void
 _test_iset_assert_equal (NcmISet *iset, const gint *idx, guint len)
@@ -423,29 +459,5 @@ test_ncm_iset_vector_inv_cmp (void)
   ncm_vector_free (u);
   ncm_vector_free (v);
   ncm_iset_free (iset);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/iset/add_del", &test_ncm_iset_add_del);
-  g_test_add_func ("/ncm/iset/copy_complement", &test_ncm_iset_copy_complement);
-  g_test_add_func ("/ncm/iset/subvector", &test_ncm_iset_subvector);
-  g_test_add_func ("/ncm/iset/subarray", &test_ncm_iset_subarray);
-  g_test_add_func ("/ncm/iset/submatrix", &test_ncm_iset_submatrix);
-  g_test_add_func ("/ncm/iset/submatrix_cols", &test_ncm_iset_submatrix_cols);
-  g_test_add_func ("/ncm/iset/vector_max", &test_ncm_iset_vector_max);
-  g_test_add_func ("/ncm/iset/subset_vec_lt", &test_ncm_iset_subset_vec_lt);
-  g_test_add_func ("/ncm/iset/remove_smallest_subset", &test_ncm_iset_remove_smallest_subset);
-  g_test_add_func ("/ncm/iset/add_largest_subset", &test_ncm_iset_add_largest_subset);
-  g_test_add_func ("/ncm/iset/vector_inv_cmp", &test_ncm_iset_vector_inv_cmp);
-
-  g_test_run ();
 }
 

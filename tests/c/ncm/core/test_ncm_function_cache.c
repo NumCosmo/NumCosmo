@@ -33,6 +33,30 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_function_cache_tolerances (void);
+static void test_ncm_function_cache_get (void);
+static void test_ncm_function_cache_insert (void);
+static void test_ncm_function_cache_get_near (void);
+static void test_ncm_function_cache_empty (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/function_cache/tolerances", &test_ncm_function_cache_tolerances);
+  g_test_add_func ("/ncm/function_cache/get", &test_ncm_function_cache_get);
+  g_test_add_func ("/ncm/function_cache/insert", &test_ncm_function_cache_insert);
+  g_test_add_func ("/ncm/function_cache/get_near", &test_ncm_function_cache_get_near);
+  g_test_add_func ("/ncm/function_cache/empty", &test_ncm_function_cache_empty);
+
+  g_test_run ();
+}
+
 static NcmFunctionCache *
 _test_function_cache_new (void)
 {
@@ -186,23 +210,5 @@ test_ncm_function_cache_empty (void)
 
   ncm_function_cache_clear (&cache);
   g_assert_null (cache);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/function_cache/tolerances", &test_ncm_function_cache_tolerances);
-  g_test_add_func ("/ncm/function_cache/get", &test_ncm_function_cache_get);
-  g_test_add_func ("/ncm/function_cache/insert", &test_ncm_function_cache_insert);
-  g_test_add_func ("/ncm/function_cache/get_near", &test_ncm_function_cache_get_near);
-  g_test_add_func ("/ncm/function_cache/empty", &test_ncm_function_cache_empty);
-
-  g_test_run ();
 }
 
