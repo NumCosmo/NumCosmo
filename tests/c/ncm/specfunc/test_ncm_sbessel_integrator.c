@@ -34,6 +34,20 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+typedef struct _TestTruth
+{
+  gboolean rational;
+  guint ell;
+  gdouble k;
+  gdouble value;
+} TestTruth;
+
+typedef struct _TestPower
+{
+  gdouble b;
+  gint ell;
+} TestPower;
+
 void test_ncm_sbessel_integrator_default_range (void);
 void test_ncm_sbessel_integrator_ell_range (void);
 void test_ncm_sbessel_integrator_integrate_ell (void);
@@ -72,6 +86,22 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_integrator/invalid/deriv_gl/subprocess", test_ncm_sbessel_integrator_invalid_deriv_gl);
 
   g_test_run ();
+}
+
+static gdouble
+_test_power (gpointer user_data, gdouble chi, gdouble k)
+{
+  TestPower *p = (TestPower *) user_data;
+
+  return gsl_pow_int (chi / p->b, p->ell + 2);
+}
+
+static gdouble
+_test_gauss (gpointer user_data, gdouble chi, gdouble k)
+{
+  const gdouble z = (chi - 40.0) / 10.0;
+
+  return exp (-0.5 * z * z);
 }
 
 /* Without ell-range at construction the range is [0, 0] */
@@ -141,14 +171,6 @@ test_ncm_sbessel_integrator_integrate_ell (void)
   ncm_sbessel_integrator_free (sbi);
 }
 
-typedef struct _TestTruth
-{
-  gboolean rational;
-  guint ell;
-  gdouble k;
-  gdouble value;
-} TestTruth;
-
 /*
  * Entries of the truth tables gauss_jl_500.bin (Gaussian, center 0.5, std 0.05, on
  * [0.1, 0.9]) and rational_jl_500.bin (center 1.5, std 0.05, on [0.01, 6.5]) of the
@@ -206,20 +228,6 @@ test_ncm_sbessel_integrator_gl_far_bump (void)
   ncm_sbessel_integrator_free (lv);
 }
 
-typedef struct _TestPower
-{
-  gdouble b;
-  gint ell;
-} TestPower;
-
-static gdouble
-_test_power (gpointer user_data, gdouble chi, gdouble k)
-{
-  TestPower *p = (TestPower *) user_data;
-
-  return gsl_pow_int (chi / p->b, p->ell + 2);
-}
-
 /*
  * d/dx [x^(l+2) j_(l+1)(x)] = x^(l+2) j_l(x), so with F = (chi / b)^(l+2) and k = 1 the
  * integral is j_(l+1)(b) - (a / b)^(l+2) j_(l+1)(a), exact, with j_(l+1) from
@@ -259,14 +267,6 @@ test_ncm_sbessel_integrator_gl_identity (void)
 
   ncm_sbessel_integrator_free (sbi);
   ncm_mpsf_sbessel_free_cache ();
-}
-
-static gdouble
-_test_gauss (gpointer user_data, gdouble chi, gdouble k)
-{
-  const gdouble z = (chi - 40.0) / 10.0;
-
-  return exp (-0.5 * z * z);
 }
 
 /* Order zero dispatches to ncm_sbessel_integrator_integrate(), bit for bit */

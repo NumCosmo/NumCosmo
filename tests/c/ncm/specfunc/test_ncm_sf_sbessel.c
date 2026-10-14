@@ -35,6 +35,12 @@ typedef struct _TestNcmSFSBessel
   guint ntests;
 } TestNcmSFSBessel;
 
+#define NTOT 100
+
+#define XMAX 2.0
+
+#define L 80
+
 void test_ncm_sf_sbessel_new (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_free (TestNcmSFSBessel *test, gconstpointer pdata);
 
@@ -51,10 +57,6 @@ void test_ncm_sf_sbessel_array_table (TestNcmSFSBessel *test, gconstpointer pdat
 
 void test_ncm_sf_sbessel_traps (TestNcmSFSBessel *test, gconstpointer pdata);
 void test_ncm_sf_sbessel_invalid_st (TestNcmSFSBessel *test, gconstpointer pdata);
-
-#define NTOT 100
-#define XMAX 2.0
-#define L 80
 
 gint
 main (gint argc, gchar *argv[])
@@ -128,6 +130,29 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
+static gdouble
+_gsl_sf_bessel_jl (const gdouble x, gpointer user_data)
+{
+  guint *j = (guint *) user_data;
+
+
+  return gsl_sf_bessel_jl (j[0], x);
+}
+
+/*
+ * Error of an array value against the multiple precision j_l(x), scaled by the envelope:
+ * |j_l(x)| below the turning point, where it decays monotonically, and the oscillation
+ * amplitude 1/x above it.
+ */
+static gdouble
+_test_array_err (guint l, gdouble x, gdouble jl)
+{
+  const gdouble truth = ncm_sf_sbessel (l, x);
+  const gdouble env   = (fabs (x) < l) ? fabs (truth) : GSL_MAX (fabs (truth), 1.0 / fabs (x));
+
+  return fabs (jl - truth) / env;
+}
+
 void
 test_ncm_sf_sbessel_new (TestNcmSFSBessel *test, gconstpointer pdata)
 {
@@ -160,15 +185,6 @@ test_ncm_sf_sbessel_cmp_gsl (TestNcmSFSBessel *test, gconstpointer pdata)
         g_assert_cmpfloat (fabs (ncm_jl - gsl_jl), <=, 5.0e-12 * env);
     }
   }
-}
-
-static gdouble
-_gsl_sf_bessel_jl (const gdouble x, gpointer user_data)
-{
-  guint *j = (guint *) user_data;
-
-
-  return gsl_sf_bessel_jl (j[0], x);
 }
 
 void
@@ -291,20 +307,6 @@ test_ncm_sf_sbessel_exact_argument (TestNcmSFSBessel *test, gconstpointer pdata)
 
   for (i = 0; i < G_N_ELEMENTS (l_a); i++)
     g_assert_cmpfloat (fabs (ncm_sf_sbessel (l_a[i], x_a[i]) - truth_a[i]), <=, 2.0 * GSL_DBL_EPSILON / x_a[i]);
-}
-
-/*
- * Error of an array value against the multiple precision j_l(x), scaled by the envelope:
- * |j_l(x)| below the turning point, where it decays monotonically, and the oscillation
- * amplitude 1/x above it.
- */
-static gdouble
-_test_array_err (guint l, gdouble x, gdouble jl)
-{
-  const gdouble truth = ncm_sf_sbessel (l, x);
-  const gdouble env   = (fabs (x) < l) ? fabs (truth) : GSL_MAX (fabs (truth), 1.0 / fabs (x));
-
-  return fabs (jl - truth) / env;
 }
 
 void
