@@ -52,8 +52,9 @@
  * normalization; the `rational` shape is chi^2 / (1 + ((chi - mean)/scale)^2)^3
  * on [--chi-lower, --chi-upper], the integrand of
  * ncm_sbessel_integrator_integrate_rational (). The `power` shape is chi^n
- * (--power-n, an integer) and `cos` is cos (omega chi) (--omega), both on
- * [--chi-lower, --chi-upper].
+ * (--power-n, an integer), `cos` and `sin` are cos (omega chi) and sin (omega chi)
+ * (--omega) and `lorentz` is 1 / (1 + ((chi - mean)/scale)^2), all on
+ * [--chi-lower, --chi-upper]. --over-x divides the window by chi.
  *
  * Emits TSV on stdout: shape ell k value radius prec.
  *
@@ -197,6 +198,10 @@ main (int argc, char **argv)
     else if (strcmp (a, "--explicit-support") == 0)
     {
       p.explicit_support = 1;
+    }
+    else if (strcmp (a, "--over-x") == 0)
+    {
+      p.over_x = 1;
     }
     else if (strcmp (a, "--unnormalized") == 0)
     {

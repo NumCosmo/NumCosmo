@@ -36,8 +36,13 @@ written the same way in the tool and in the C test:
 - ``power``: f = x^n, n = p1;
 - ``cos``: f = cos (omega x), omega = p1;
 - ``exp``: f = exp (-x / s), s = p1 (the tool's ``power_exp`` with alpha 0, beta 1);
+- ``exp2``: f = exp (-(x / s)^2), s = p1 (``power_exp`` with alpha 0, beta 2);
+- ``sin``: f = sin (omega x), omega = p1;
+- ``lorentz``: f = 1 / (1 + ((x - c) / w)^2), c = p1, w = p2;
 - ``rational``: f = x^2 / (1 + ((x - c) / w)^2)^3, c = p1, w = p2;
 - ``gauss``: f = exp (-((x - c) / w)^2 / 2), c = p1, w = p2.
+
+A shape name ending in ``/x`` divides f by x (the tool's ``--over-x``).
 
 Two tables, chosen by the first argument: ``levin`` for
 test_ncm_sbessel_integrator_levin.c and ``ode`` for test_ncm_sbessel_ode_solver.c. The
@@ -190,7 +195,9 @@ LEVIN_CASES = [
 ]
 
 # int_1^20 j_l(x) / x dx and int_1^20 j_l(x) dx, ell 0..20: the Green identity of the
-# ODE solver for the forcings 1 and x
+# ODE solver for the forcings 1 and x; then int_1^20 g(x) j_l(x) / x dx for the forcings
+# g = x^2, x^3, exp (x), sin (x), cos (x), exp (-x^2) and 1 / (1 + x^2)
+ODE_GREEN_ELLS = (0, 2, 3, 4, 5, 6, 7, 8, 10)
 ODE_CASES = [
     (
         "green_inv_x",
@@ -212,6 +219,67 @@ ODE_CASES = [
         0,
         [(ell, [1.0]) for ell in range(21)],
     ),
+    (
+        "rhs_quadratic",
+        "power/x",
+        1.0,
+        20.0,
+        2.0,
+        0.0,
+        0,
+        [(ell, [1.0]) for ell in (0, 5, 10, 15)],
+    ),
+    (
+        "rhs_cubic",
+        "power/x",
+        1.0,
+        20.0,
+        3.0,
+        0.0,
+        0,
+        [(ell, [1.0]) for ell in (0, 5, 10)],
+    ),
+    (
+        "rhs_exp",
+        "exp/x",
+        1.0,
+        20.0,
+        -1.0,
+        0.0,
+        0,
+        [(ell, [1.0]) for ell in ODE_GREEN_ELLS],
+    ),
+    (
+        "rhs_sin",
+        "sin/x",
+        1.0,
+        20.0,
+        1.0,
+        0.0,
+        0,
+        [(ell, [1.0]) for ell in ODE_GREEN_ELLS],
+    ),
+    ("rhs_cos", "cos/x", 1.0, 20.0, 1.0, 0.0, 0, [(ell, [1.0]) for ell in (0, 5, 10)]),
+    (
+        "rhs_gauss",
+        "exp2/x",
+        1.0,
+        20.0,
+        1.0,
+        0.0,
+        0,
+        [(ell, [1.0]) for ell in (0, 5, 10)],
+    ),
+    (
+        "rhs_lorentz",
+        "lorentz/x",
+        1.0,
+        20.0,
+        0.0,
+        1.0,
+        0,
+        [(ell, [1.0]) for ell in (0, 5, 10)],
+    ),
 ]
 
 TABLES = {"levin": LEVIN_CASES, "ode": ODE_CASES}
@@ -223,6 +291,9 @@ C_SHAPE = {
     "exp": "TEST_ARB_EXP",
     "rational": "TEST_ARB_RATIONAL",
     "gauss": "TEST_ARB_GAUSS",
+    "exp2": "TEST_ARB_EXP2",
+    "sin": "TEST_ARB_SIN",
+    "lorentz": "TEST_ARB_LORENTZ",
 }
 
 
@@ -252,8 +323,27 @@ def tool_args(shape: str, a: float, b: float, p1: float, p2: float) -> list[str]
         return ["--shape=tophat", *support]
     if shape == "power":
         return ["--shape=power", f"--power-n={int(p1)}", *support]
+    if shape.endswith("/x"):
+        return [*tool_args(shape[:-2], a, b, p1, p2), "--over-x"]
     if shape == "cos":
         return ["--shape=cos", f"--omega={p1!r}", *support]
+    if shape == "sin":
+        return ["--shape=sin", f"--omega={p1!r}", *support]
+    if shape == "exp2":
+        return [
+            "--shape=power_exp",
+            "--alpha=0",
+            "--beta=2",
+            f"--chi-scale={p1!r}",
+            *support,
+        ]
+    if shape == "lorentz":
+        return [
+            "--shape=lorentz",
+            f"--chi-mean={p1!r}",
+            f"--chi-scale={p2!r}",
+            *support,
+        ]
     if shape == "exp":
         return [
             "--shape=power_exp",
@@ -315,10 +405,12 @@ def main() -> None:
 
     for name, shape, a, b, p1, p2, deriv, cells in TABLES[table]:
         for ell, ks in cells:
+            base = shape.removesuffix("/x")
+            over_x = "TRUE" if shape.endswith("/x") else "FALSE"
             for k, value in certify(tool, shape, a, b, p1, p2, deriv, ell, ks):
                 print(
-                    f'  {{"{name}", {C_SHAPE[shape]}, {a!r}, {b!r}, {p1!r}, {p2!r}, '
-                    f"{deriv}, {ell}, {k!r}, {float(value)!r}}},"
+                    f'  {{"{name}", {C_SHAPE[base]}, {a!r}, {b!r}, {p1!r}, {p2!r}, '
+                    f"{deriv}, {over_x}, {ell}, {k!r}, {float(value)!r}}},"
                 )
 
     print(f"  /* END make_sbessel_arb_cases.py {table} */")

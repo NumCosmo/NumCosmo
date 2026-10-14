@@ -66,6 +66,8 @@ void test_ncm_sbessel_ode_solver_green_dense (void);
 void test_ncm_sbessel_ode_solver_green_qr (void);
 void test_ncm_sbessel_ode_solver_green_endpoints (void);
 void test_ncm_sbessel_ode_solver_green_endpoints_batched (void);
+void test_ncm_sbessel_ode_solver_forcing (void);
+void test_ncm_sbessel_ode_solver_forcing_batched (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -99,6 +101,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/sbessel_ode_solver/green/qr", test_ncm_sbessel_ode_solver_green_qr);
   g_test_add_func ("/ncm/sbessel_ode_solver/green/endpoints", test_ncm_sbessel_ode_solver_green_endpoints);
   g_test_add_func ("/ncm/sbessel_ode_solver/green/endpoints_batched", test_ncm_sbessel_ode_solver_green_endpoints_batched);
+  g_test_add_func ("/ncm/sbessel_ode_solver/forcing", test_ncm_sbessel_ode_solver_forcing);
+  g_test_add_func ("/ncm/sbessel_ode_solver/forcing/batched", test_ncm_sbessel_ode_solver_forcing_batched);
 
   g_test_run ();
 }
@@ -161,16 +165,16 @@ _test_cheb_func (gpointer user_data, gdouble t)
   return f (TEST_M + TEST_H * t);
 }
 
-/* f (x) on [1, 20] as Chebyshev coefficients of order n - 2 converted to C^(2), after zero endpoint data */
+/* F (t) on [-1, 1] as Chebyshev coefficients of order n - 2 converted to C^(2), after zero endpoint data */
 static GArray *
-_test_rhs_func (guint n, TestFx f)
+_test_rhs_spectral (guint n, NcmSpectralF F, gpointer user_data)
 {
   NcmSpectral *spectral = ncm_spectral_new ();
   GArray *cheb          = NULL;
   GArray *gegen         = NULL;
   GArray *rhs;
 
-  ncm_spectral_compute_chebyshev_coeffs (spectral, &_test_cheb_func, -1.0, 1.0, n - 2, &cheb, (gpointer) f);
+  ncm_spectral_compute_chebyshev_coeffs (spectral, F, -1.0, 1.0, n - 2, &cheb, user_data);
   ncm_spectral_chebT_to_gegenbauer_alpha2 (cheb, &gegen);
   rhs = _test_rhs_new (n, (const gdouble *) gegen->data, GSL_MIN (gegen->len, n - 2));
 
@@ -179,6 +183,13 @@ _test_rhs_func (guint n, TestFx f)
   ncm_spectral_free (spectral);
 
   return rhs;
+}
+
+/* f (x) on [1, 20] as the forcing */
+static GArray *
+_test_rhs_func (guint n, TestFx f)
+{
+  return _test_rhs_spectral (n, &_test_cheb_func, (gpointer) f);
 }
 
 /* Row @i of a batched solution of length @len per multipole, as a new array */
@@ -1229,48 +1240,82 @@ test_ncm_sbessel_ode_solver_homogeneous (void)
  */
 static const TestArbCell test_arb_cells[] = {
   /* BEGIN make_sbessel_arb_cases.py ode */
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 0, 1.0, 0.5028396202159003},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 1, 1.0, 0.4607245247899321},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 2, 1.0, 0.3020747659379493},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 3, 1.0, 0.19574779143238527},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 4, 1.0, 0.1330169948034595},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 5, 1.0, 0.0956047082381122},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 6, 1.0, 0.07484428607483702},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 7, 1.0, 0.06312019765201392},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 8, 1.0, 0.05352439806530906},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 9, 1.0, 0.04344865430572876},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 10, 1.0, 0.03453229048880144},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 11, 1.0, 0.029113904722431434},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 12, 1.0, 0.027378313816413244},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 13, 1.0, 0.02736466382665843},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 14, 1.0, 0.026730174217619293},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 15, 1.0, 0.02423940889318163},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 16, 1.0, 0.02004830157463489},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 17, 1.0, 0.015109047820065719},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 18, 1.0, 0.01042813195282212},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 19, 1.0, 0.006635382719972067},
-  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, 20, 1.0, 0.003917880565087803},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 0, 1.0, 0.6021586306762569},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 1, 1.0, 0.7958237222715151},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 2, 1.0, 0.7800149436935394},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 3, 1.0, 0.7145501074182314},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 4, 1.0, 0.5902195963331576},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 5, 1.0, 0.48260284581290397},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 6, 1.0, 0.4614321942860765},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 7, 1.0, 0.49037287315997735},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 8, 1.0, 0.48537077049413235},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 9, 1.0, 0.41954189395027663},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 10, 1.0, 0.34015366131471403},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 11, 1.0, 0.3056362063145535},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 12, 1.0, 0.3294661473012089},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 13, 1.0, 0.3788216390957776},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 14, 1.0, 0.40937977601856873},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 15, 1.0, 0.39635341321518186},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 16, 1.0, 0.34204189967006177},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 17, 1.0, 0.2652405387477694},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 18, 1.0, 0.1867747740322384},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 19, 1.0, 0.12060034350664904},
-  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, 20, 1.0, 0.07200515204667218},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 0, 1.0, 0.5028396202159003},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 1, 1.0, 0.4607245247899321},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 2, 1.0, 0.3020747659379493},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 3, 1.0, 0.19574779143238527},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 4, 1.0, 0.1330169948034595},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 5, 1.0, 0.0956047082381122},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 6, 1.0, 0.07484428607483702},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 7, 1.0, 0.06312019765201392},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 8, 1.0, 0.05352439806530906},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 9, 1.0, 0.04344865430572876},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 10, 1.0, 0.03453229048880144},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 11, 1.0, 0.029113904722431434},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 12, 1.0, 0.027378313816413244},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 13, 1.0, 0.02736466382665843},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 14, 1.0, 0.026730174217619293},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 15, 1.0, 0.02423940889318163},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 16, 1.0, 0.02004830157463489},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 17, 1.0, 0.015109047820065719},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 18, 1.0, 0.01042813195282212},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 19, 1.0, 0.006635382719972067},
+  {"green_inv_x", TEST_ARB_POWER, 1.0, 20.0, -1.0, 0.0, 0, FALSE, 20, 1.0, 0.003917880565087803},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 0, 1.0, 0.6021586306762569},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 1, 1.0, 0.7958237222715151},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 2, 1.0, 0.7800149436935394},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 3, 1.0, 0.7145501074182314},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 4, 1.0, 0.5902195963331576},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 5, 1.0, 0.48260284581290397},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 6, 1.0, 0.4614321942860765},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 7, 1.0, 0.49037287315997735},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 8, 1.0, 0.48537077049413235},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 9, 1.0, 0.41954189395027663},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 10, 1.0, 0.34015366131471403},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 11, 1.0, 0.3056362063145535},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 12, 1.0, 0.3294661473012089},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 13, 1.0, 0.3788216390957776},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 14, 1.0, 0.40937977601856873},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 15, 1.0, 0.39635341321518186},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 16, 1.0, 0.34204189967006177},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 17, 1.0, 0.2652405387477694},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 18, 1.0, 0.1867747740322384},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 19, 1.0, 0.12060034350664904},
+  {"green_one", TEST_ARB_TOPHAT, 1.0, 20.0, 0.0, 0.0, 0, FALSE, 20, 1.0, 0.07200515204667218},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 0, 1.0, 0.13222024405474772},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 5, 1.0, 1.9425860132872468},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 10, 1.0, 3.1777343624297174},
+  {"rhs_quadratic", TEST_ARB_POWER, 1.0, 20.0, 2.0, 0.0, 0, TRUE, 15, 1.0, 6.583316123648764},
+  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 0, 1.0, -7.549864664479969},
+  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 5, 1.0, -3.7098496929237466},
+  {"rhs_cubic", TEST_ARB_POWER, 1.0, 20.0, 3.0, 0.0, 0, TRUE, 10, 1.0, 25.794284875856388},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 0, 1.0, 274557.9565997802},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 2, 1.0, -405905.43815627106},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 3, 1.0, 747820.6721892703},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 4, 1.0, 679786.3761393836},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 5, 1.0, -443105.4051754701},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 6, 1.0, -943851.7547431279},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 7, 1.0, -182667.5296970764},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 8, 1.0, 826212.2069565651},
+  {"rhs_exp", TEST_ARB_EXP, 1.0, 20.0, -1.0, 0.0, 0, TRUE, 10, 1.0, 57612.98468184247},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.6479721092843543},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 2, 1.0, 0.006110573663597096},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 3, 1.0, -0.08111944835354816},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 4, 1.0, -0.02449089352950558},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 0.02363007923070094},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 6, 1.0, 0.02066418140989152},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 7, 1.0, -0.0021544967305790973},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 8, 1.0, -0.012897440654211665},
+  {"rhs_sin", TEST_ARB_SIN, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 0.0022078534135041633},
+  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.0320600635222009},
+  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 0.022739400291948583},
+  {"rhs_cos", TEST_ARB_COS, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 0.008890728940125823},
+  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 0, 1.0, 0.08192634928161613},
+  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 5, 1.0, 4.873451437933564e-05},
+  {"rhs_gauss", TEST_ARB_EXP2, 1.0, 20.0, 1.0, 0.0, 0, TRUE, 10, 1.0, 7.802205812987952e-10},
+  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 0, 1.0, 0.17909599346737495},
+  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 5, 1.0, 0.0037861935193706244},
+  {"rhs_lorentz", TEST_ARB_LORENTZ, 1.0, 20.0, 0.0, 1.0, 0, TRUE, 10, 1.0, 0.0003449988561628076},
   /* END make_sbessel_arb_cases.py ode */
 };
 
@@ -1302,13 +1347,19 @@ _test_green_value (TestGreenForcing forcing, guint ell)
   return c[ell].value;
 }
 
-/* b j_l(b) u'(b) - a j_l(a) u'(a) held to the certified integral, rtol 1e-8, atol 1e-20 */
+/* b j_l(b) u'(b) - a j_l(a) u'(a) held to a certified integral, rtol 1e-8, atol 1e-20 */
 static void
-_test_green_check (TestGreenForcing forcing, guint ell, gdouble du_a, gdouble du_b)
+_test_green_assert (guint ell, gdouble du_a, gdouble du_b, gdouble value)
 {
   const gdouble lhs = TEST_B * ncm_sf_sbessel (ell, TEST_B) * du_b - TEST_A * ncm_sf_sbessel (ell, TEST_A) * du_a;
 
-  _test_assert_close (lhs, _test_green_value (forcing, ell), 1.0e-8, 1.0e-20);
+  _test_assert_close (lhs, value, 1.0e-8, 1.0e-20);
+}
+
+static void
+_test_green_check (TestGreenForcing forcing, guint ell, gdouble du_a, gdouble du_b)
+{
+  _test_green_assert (ell, du_a, du_b, _test_green_value (forcing, ell));
 }
 
 /* u'(a), u'(b) of Chebyshev coefficients on [1, 20] */
@@ -1459,6 +1510,123 @@ test_ncm_sbessel_ode_solver_green_endpoints_batched (void)
       _test_green_check (f, ell, g_array_index (e, gdouble, 3 * (ell - 5) + 0), g_array_index (e, gdouble, 3 * (ell - 5) + 1));
 
     g_array_unref (e);
+    g_array_unref (rhs);
+    ncm_sbessel_ode_operator_unref (op);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* The forcing g (x) of a certified row at x = m + h t: the row's shape without the 1 / x */
+static gdouble
+_test_cheb_cell (gpointer user_data, gdouble t)
+{
+  const TestArbCell *c = (const TestArbCell *) user_data;
+
+  return test_arb_cell_shape (c, TEST_M + TEST_H * t);
+}
+
+/*
+ * Checks one solution for the forcing of row @c: finite, not identically zero, u(a) =
+ * u(b) = 0 to @bc_atol, and Green's identity against the row's certified
+ * int_1^20 g j_l / x dx.
+ */
+static void
+_test_forcing_check (const TestArbCell *c, GArray *u, gdouble bc_atol)
+{
+  guint j;
+  gboolean nonzero = FALSE;
+
+  for (j = 0; j < u->len; j++)
+  {
+    g_assert_true (gsl_finite (g_array_index (u, gdouble, j)));
+    nonzero = nonzero || (fabs (g_array_index (u, gdouble, j)) > 1.0e-10);
+  }
+
+  g_assert_true (nonzero);
+  g_assert_cmpfloat (fabs (ncm_spectral_chebyshev_eval (u, -1.0)), <=, bc_atol);
+  g_assert_cmpfloat (fabs (ncm_spectral_chebyshev_eval (u, +1.0)), <=, bc_atol);
+
+  _test_green_assert (c->ell, ncm_spectral_chebyshev_deriv (u, -1.0) / TEST_H, ncm_spectral_chebyshev_deriv (u, +1.0) / TEST_H, c->value);
+}
+
+/*
+ * Each forcing of the certified table (x^2 and x^3 at ell 0, 5, 10 and 15 or 10; exp (x),
+ * sin (x), cos (x), exp (-x^2) and 1 / (1 + x^2) at ell 0, 5, 10), expanded with
+ * ncm_spectral_compute_chebyshev_coeffs() at order 126 and converted to C^(2), solved by
+ * the adaptive QR for one multipole. The boundary tolerance is 1e-10 for the polynomials
+ * and 1e-8 for the others.
+ */
+void
+test_ncm_sbessel_ode_solver_forcing (void)
+{
+  const gchar *cases[]        = {"rhs_quadratic", "rhs_cubic", "rhs_exp", "rhs_sin", "rhs_cos", "rhs_gauss", "rhs_lorentz"};
+  const guint ell_a[]         = {0, 5, 10, 15};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint i, l;
+
+  for (i = 0; i < G_N_ELEMENTS (cases); i++)
+  {
+    const gboolean poly = (i < 2);
+    guint n;
+    const TestArbCell *c0 = test_arb_cells_find (test_arb_cells, G_N_ELEMENTS (test_arb_cells), cases[i], &n);
+    GArray *rhs           = _test_rhs_spectral (128, &_test_cheb_cell, (gpointer) c0);
+
+    for (l = 0; l < G_N_ELEMENTS (ell_a); l++)
+    {
+      const TestArbCell *c;
+      NcmSBesselOdeOperator *op;
+      GArray *u = NULL;
+      gsize len;
+
+      if ((ell_a[l] == 15) && (strcmp (cases[i], "rhs_quadratic") != 0))
+        continue;
+
+      c  = test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), cases[i], ell_a[l]);
+      op = _test_solve (solver, TEST_A, TEST_B, c->ell, c->ell, rhs, &u, &len);
+
+      _test_forcing_check (c, u, poly ? 1.0e-10 : 1.0e-8);
+
+      g_array_unref (u);
+      ncm_sbessel_ode_operator_unref (op);
+    }
+
+    g_array_unref (rhs);
+  }
+
+  ncm_mpsf_sbessel_free_cache ();
+  ncm_sbessel_ode_solver_free (solver);
+}
+
+/* exp (x) and sin (x) through one batch of ell 2..8 */
+void
+test_ncm_sbessel_ode_solver_forcing_batched (void)
+{
+  const gchar *cases[]        = {"rhs_exp", "rhs_sin"};
+  NcmSBesselOdeSolver *solver = ncm_sbessel_ode_solver_new ();
+  guint i, ell;
+
+  for (i = 0; i < G_N_ELEMENTS (cases); i++)
+  {
+    guint n;
+    const TestArbCell *c0 = test_arb_cells_find (test_arb_cells, G_N_ELEMENTS (test_arb_cells), cases[i], &n);
+    GArray *rhs           = _test_rhs_spectral (128, &_test_cheb_cell, (gpointer) c0);
+    GArray *sol           = NULL;
+    gsize len;
+    NcmSBesselOdeOperator *op = _test_solve (solver, TEST_A, TEST_B, 2, 8, rhs, &sol, &len);
+
+    for (ell = 2; ell <= 8; ell++)
+    {
+      const TestArbCell *c = test_arb_cells_find_ell (test_arb_cells, G_N_ELEMENTS (test_arb_cells), cases[i], ell);
+      GArray *u            = _test_row (sol, len, ell - 2);
+
+      _test_forcing_check (c, u, 1.0e-8);
+
+      g_array_unref (u);
+    }
+
+    g_array_unref (sol);
     g_array_unref (rhs);
     ncm_sbessel_ode_operator_unref (op);
   }
