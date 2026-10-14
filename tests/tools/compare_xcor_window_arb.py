@@ -216,7 +216,7 @@ def main() -> int:
             # The window returns a hard zero outside its support, so a node
             # landing a hair outside -- the x = k chi round trip makes that
             # unavoidable at the endpoints -- is a cliff the Chebyshev fit
-            # cannot resolve, and the fit aborts on max-order. The library's own
+            # cannot resolve, and the fit aborts at its max-level. The library's own
             # integration path clamps for exactly this reason
             # (_nc_xcor_kernel_radial_eval_W_comp_clamped), so the comparison
             # clamps too.
