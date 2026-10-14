@@ -49,8 +49,9 @@
  * nc_xcor_compute().
  *
  * The solver builds the radial integrators itself, one #NcmSBesselIntegratorLevin per
- * $\ell$-block at #NcXcorSolver:reltol; the kernels' own `integrator` properties are not
- * used by nc_xcor_solver_solve() and still apply to nc_xcor_compute().
+ * $\ell$-block, and sets every tolerance of the kernel-space solve from
+ * #NcXcorSolver:reltol; the kernels' own `integrator`, `reltol` and `peak-epsilon` are
+ * not used by nc_xcor_solver_solve() and still apply to nc_xcor_compute().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -191,15 +192,30 @@ nc_xcor_solver_class_init (NcXcorSolverClass *klass)
   /**
    * NcXcorSolver:reltol:
    *
-   * Relative tolerance of the #NcmSBesselIntegratorLevin the solver builds for each
-   * $\ell$-block, #NcmSBesselIntegratorLevin:reltol.
+   * Relative tolerance $\tau$ of nc_xcor_solver_solve() in the kernel-space methods: the
+   * #NcmSBesselIntegratorLevin of each $\ell$-block is built at $\tau$, and each kernel's
+   * closure of $W_\ell(k)$ is fitted with reltol $\tau$ and peak-epsilon
+   * $\max(\tau, 10^{-6})$, the floor being %NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON. The
+   * kernels' #NcXcorKernel:reltol and #NcXcorKernel:peak-epsilon, and #NcXcor:reltol, are
+   * not used there; #NcXcorKernel:adaptive-epsilon, which ends the range of $k$ of a
+   * closure, is.
+   *
+   * On five LSST lens bins (15 pairs, magnification and redshift-space distortions,
+   * $\ell$ 2 to 2000, every multipole non-Limber, blocks of 32, 12 threads) a solve takes
+   * 3.2, 7.9, 38 and 46 s at $\tau = 10^{-4}$, $10^{-5}$, $10^{-6}$ and $10^{-8}$, and
+   * $C_\ell$ is within $3.8 \times 10^{-6}$, $1.2 \times 10^{-6}$ and
+   * $10^{-7}$ of $\sqrt{C^{ii}_\ell C^{jj}_\ell}$ of the $10^{-8}$ result at the first
+   * three. Below $10^{-6}$ the peak-epsilon floor and the truncation of the range of $k$
+   * leave a part of order $10^{-6}$ of that scale which depends on the block size; a
+   * tighter $\tau$ then costs little but does not remove it. The default $10^{-4}$ is the
+   * cheapest of these settings.
    */
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
                                                         NULL,
                                                         "Relative tolerance",
-                                                        GSL_DBL_EPSILON, 1.0, NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL,
+                                                        GSL_DBL_EPSILON, 1.0, NC_XCOR_SOLVER_DEFAULT_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -701,8 +717,9 @@ nc_xcor_solver_get_block (NcXcorSolver *solver, guint block_index, guint *lmin, 
  * its thread.
  */
 static void
-_nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable *integrands, NcXcorSolverRequest *req, guint result_index, NcXcorSolverBlock *block, NcHICosmo *cosmo, GPtrArray *results, NcmSBesselIntegrator *sbi)
+_nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable *integrands, NcXcorSolverRequest *req, guint result_index, NcXcorSolverBlock *block, NcHICosmo *cosmo, GPtrArray *results, NcmSBesselIntegrator *sbi, gdouble reltol)
 {
+  const gdouble peak_epsilon = GSL_MAX (reltol, NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON);
   NcXcorKernel *k1, *k2;
   gboolean isauto;
   NcXcorKernelIntegrand *xclki1, *xclki2;
@@ -715,11 +732,6 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
   k1     = g_ptr_array_index (kernels, req->kernel_id_1);
   k2     = g_ptr_array_index (kernels, req->kernel_id_2);
   isauto = (k1 == k2);
-
-  _nc_xcor_check_kernel_tolerance (xc, k1, sbi);
-
-  if (!isauto)
-    _nc_xcor_check_kernel_tolerance (xc, k2, sbi);
 
   /* No blanket redshift-overlap short-circuit here: this path is
    * kernel-space only, where the two kernels couple through the outer k
@@ -741,7 +753,7 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
 
   if (xclki1 == NULL)
   {
-    xclki1 = nc_xcor_kernel_get_eval_vectorized_full (k1, cosmo, block->lmin, block->lmax, sbi);
+    xclki1 = _nc_xcor_kernel_get_eval_vectorized_tol (k1, cosmo, block->lmin, block->lmax, sbi, reltol, peak_epsilon);
     g_hash_table_insert (integrands, k1, xclki1);
   }
 
@@ -755,7 +767,7 @@ _nc_xcor_solver_solve_block_request (NcXcor *xc, GPtrArray *kernels, GHashTable 
 
     if (xclki2 == NULL)
     {
-      xclki2 = nc_xcor_kernel_get_eval_vectorized_full (k2, cosmo, block->lmin, block->lmax, sbi);
+      xclki2 = _nc_xcor_kernel_get_eval_vectorized_tol (k2, cosmo, block->lmin, block->lmax, sbi, reltol, peak_epsilon);
       g_hash_table_insert (integrands, k2, xclki2);
     }
   }
@@ -870,6 +882,7 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
     GPtrArray *kernels    = solver->kernels;
     GPtrArray *results    = solver->results;
     GPtrArray *block_sbis = solver->block_integrators;
+    const gdouble reltol  = solver->reltol;
     guint k;
 
     /* Kernels are shared by every thread from here on, so prepare them, and
@@ -880,7 +893,7 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
 
     _nc_xcor_solver_prepare_block_integrators (solver);
 
-    #pragma omp parallel shared (xc, cosmo, n_blocks, requests, blocks, kernels, results, block_sbis)
+    #pragma omp parallel shared (xc, cosmo, n_blocks, requests, blocks, kernels, results, block_sbis, reltol)
     {
       GHashTable *integrands = g_hash_table_new_full (NULL, NULL, NULL, (GDestroyNotify) nc_xcor_kernel_integrand_unref);
       guint b;
@@ -899,7 +912,7 @@ nc_xcor_solver_solve (NcXcorSolver *solver, NcXcor *xc, NcHICosmo *cosmo)
         {
           NcXcorSolverRequest *req = &g_array_index (requests, NcXcorSolverRequest, r_local);
 
-          _nc_xcor_solver_solve_block_request (xc, kernels, integrands, req, r_local, block, cosmo, results, sbi);
+          _nc_xcor_solver_solve_block_request (xc, kernels, integrands, req, r_local, block, cosmo, results, sbi, reltol);
         }
       }
 

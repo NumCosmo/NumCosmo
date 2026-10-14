@@ -429,6 +429,7 @@ XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL: float = 0.0
 XCOR_PRECISION: float = 1e-06
+XCOR_SOLVER_DEFAULT_RELTOL: float = 0.0
 _lock = ...  # FIXME Constant
 _namespace: str = r"NumCosmo"
 _version: str = r"1.0"
@@ -26012,9 +26013,7 @@ class XcorSSCSij(GObject.Object):
       block-size -> guint: block-size
         Multipole block size for the solver
       reltol -> gdouble: reltol
-        Relative tolerance of the kernel spline and the outer k integral
-      peak-epsilon -> gdouble: peak-epsilon
-        Peak-relative floor of the adaptive refinement of the U_i(k) spline
+        Relative tolerance of the solve
 
     Signals from GObject:
       notify (GParam)
@@ -26026,7 +26025,6 @@ class XcorSSCSij(GObject.Object):
         dist: Distance
         mask_cl: typing.Optional[NumCosmoMath.Vector]
         method: XcorMethod
-        peak_epsilon: float
         powspec: NumCosmoMath.Powspec
         reltol: float
         z_edges: NumCosmoMath.Vector
@@ -26039,7 +26037,6 @@ class XcorSSCSij(GObject.Object):
         dist: Distance = ...,
         mask_cl: typing.Optional[NumCosmoMath.Vector] = ...,
         method: XcorMethod = ...,
-        peak_epsilon: float = ...,
         powspec: NumCosmoMath.Powspec = ...,
         reltol: float = ...,
         z_edges: NumCosmoMath.Vector = ...,
@@ -26054,7 +26051,6 @@ class XcorSSCSij(GObject.Object):
     def get_lmax(self) -> int: ...
     def get_method(self) -> XcorMethod: ...
     def get_nbins(self) -> int: ...
-    def get_peak_epsilon(self) -> float: ...
     def get_reltol(self) -> float: ...
     @staticmethod
     def mask_cl_fullsky() -> NumCosmoMath.Vector: ...
@@ -26073,7 +26069,6 @@ class XcorSSCSij(GObject.Object):
         self, mask_cl: typing.Optional[NumCosmoMath.Vector] = None
     ) -> None: ...
     def set_method(self, method: XcorMethod) -> None: ...
-    def set_peak_epsilon(self, peak_epsilon: float) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
 
 class XcorSSCSijClass(GObject.GPointer):

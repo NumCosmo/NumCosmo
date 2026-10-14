@@ -318,15 +318,20 @@ def test_rsd_through_solver_matches_compute(cosmology, dndz_arrays) -> None:
     lmin, lmax = 2, 9
     kernel = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=lmax)
     kernel.set_l_limber(-1)
+    # The solver's tolerance (1e-4) on both paths: the kernel's integrator and closures
+    # for nc_xcor_compute(), NcXcorSolver:reltol for the solver.
+    kernel.peek_integrator().set_reltol(1.0e-4)
     kernel.prepare(cosmology.cosmo)
 
     xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    xcor.props.reltol = 1.0e-4
     xcor.prepare(cosmology.cosmo)
 
     expected = Ncm.Vector.new(lmax - lmin + 1)
     xcor.compute(kernel, kernel, cosmology.cosmo, lmin, lmax, expected)
 
     solver = Nc.XcorSolver.new()
+    solver.set_reltol(1.0e-4)
     kid = solver.register_kernel(kernel)
     solver.request_cl(kid, kid, lmin, lmax)
     solver.plan_blocks(8)

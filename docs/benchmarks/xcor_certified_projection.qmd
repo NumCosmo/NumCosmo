@@ -1242,6 +1242,8 @@ def ultralevin_cls(grid, ells):
     xcor.prepare(cosmo)
 
     solver = Nc.XcorSolver.new()
+    # The solve's tolerance: closures and integrators, as the kernels above.
+    solver.set_reltol(1.0e-6)
     ids = [solver.register_kernel(kernel) for kernel in kernels]
     for i, j in ((0, 1), (0, 0), (1, 1)):
         solver.request_cl(ids[i], ids[j], LMIN_SOLVE, max(ells))
@@ -1415,6 +1417,7 @@ def warm_solver(grid, block_size):
     xcor.set_reltol(1.0e-6)
     xcor.prepare(cosmo)
     solver = Nc.XcorSolver.new()
+    solver.set_reltol(1.0e-6)
     ids = [solver.register_kernel(kernel) for kernel in kernels]
     solver.request_cl(ids[0], ids[1], TIMING_LMIN, TIMING_LMAX)
     solver.plan_blocks(block_size)

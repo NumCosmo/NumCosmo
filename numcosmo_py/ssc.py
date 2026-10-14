@@ -35,9 +35,9 @@ Long partial-sky runs report progress through the `progress` callback of
 Precision
 ---------
 
-`DEFAULT_PEAK_EPSILON = 1e-5` stays equal to `NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON`
-(`nc_xcor_ssc_sij.c`), which #NcXcorSSCSij sets on the kernels it builds, so a fixed
-and a varying $S_{ij}$ differ only in whether $S_{ij}$ follows the cosmology. The
+`DEFAULT_RELTOL = 1e-6` stays equal to `NC_XCOR_SSC_SIJ_DEFAULT_RELTOL`
+(`nc_xcor_ssc_sij.c`), the `NcXcorSolver:reltol` of both solves, so a fixed and a varying
+$S_{ij}$ differ only in whether $S_{ij}$ follows the cosmology. The
 accuracy at this setting is measured in the angular power spectrum accuracy tutorial
 (`docs/tutorials/python/xcor_accuracy.qmd`).
 
@@ -70,17 +70,10 @@ ProgressCallback = Callable[[int, int, float, str], None]
 #: section 1.3.
 DEFAULT_BLOCK_SIZE = 8
 
-#: `NcXcorKernel:reltol` of the kernel closures. At `DEFAULT_PEAK_EPSILON` the
-#: closures are set by peak-epsilon.
-DEFAULT_RELTOL = 1.0e-6
-
-#: `NcXcorKernel:peak-epsilon` of the kernel closures, one order tighter than
-#: #NcXcorKernel's `1e-4` default. With `DEFAULT_RELTOL` it is the larger term of the
-#: closure test, so it sets the accuracy of the off-diagonal `S_ij`.
-#:
-#: Must be kept equal to `NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON`
+#: `NcXcorSolver:reltol` of the solve: the closures are fitted with reltol 1e-6 and
+#: peak-epsilon 1e-6, the floor. Must be kept equal to `NC_XCOR_SSC_SIJ_DEFAULT_RELTOL`
 #: (`nc_xcor_ssc_sij.c`), which the varying path uses.
-DEFAULT_PEAK_EPSILON = 1.0e-5
+DEFAULT_RELTOL = 1.0e-6
 
 
 def print_progress(done: int, total: int, elapsed: float, message: str) -> None:
@@ -216,7 +209,6 @@ class SijCalculator:
         dist: Nc.Distance | None = None,
         block_size: int = DEFAULT_BLOCK_SIZE,
         reltol: float = DEFAULT_RELTOL,
-        peak_epsilon: float = DEFAULT_PEAK_EPSILON,
     ) -> None:
         """Build the per-bin kernels.
 
@@ -225,11 +217,8 @@ class SijCalculator:
             Eisenstein--Hu transfer function over `k` in `[1e-6, 1e3]` 1/Mpc.
         :param dist: Distance object; defaults to `Nc.Distance.new(3.0)`.
         :param block_size: Multipole block size for #NcXcorSolver.
-        :param reltol: `NcXcorKernel:reltol` of the kernel closures.
-        :param peak_epsilon: `NcXcorKernel:peak-epsilon` of the kernel closures;
-            at the defaults it sets the accuracy of the off-diagonal `S_ij`. The
-            closure construction aborts when the larger of the two is below the
-            integrator's `reltol` (`1e-8` by default).
+        :param reltol: `NcXcorSolver:reltol` of the solve, which sets the closures and the
+            integrators, and `NcXcorKernel:reltol` of the kernels.
         """
         z_edges = np.asarray(z_edges, dtype=np.float64)
 
@@ -252,7 +241,6 @@ class SijCalculator:
         self.powspec = powspec
         self.block_size = block_size
         self.reltol = reltol
-        self.peak_epsilon = peak_epsilon
         self._mask_cache: tuple[tuple, tuple[NDArray[np.float64], float]] | None = None
 
         self.kernels = [
@@ -269,7 +257,6 @@ class SijCalculator:
         for kernel in self.kernels:
             kernel.set_l_limber(-1)
             kernel.set_reltol(reltol)
-            kernel.set_peak_epsilon(peak_epsilon)
 
         self.xcor = Nc.Xcor.new(dist, powspec, Nc.XcorMethod.KERNEL_EXACT)
         self.xcor.set_reltol(reltol)
@@ -337,6 +324,7 @@ class SijCalculator:
 
         for n_done, (chunk_lmin, chunk_lmax) in enumerate(chunks, start=1):
             solver = Nc.XcorSolver.new()
+            solver.set_reltol(self.reltol)
             ids = [solver.register_kernel(kernel) for kernel in self.kernels]
 
             for i, j in pairs:

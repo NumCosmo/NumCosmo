@@ -517,7 +517,7 @@ test_nc_xcor_solver_block_integrators (TestNcXcorSolver *test, gconstpointer pda
   nc_xcor_kernel_set_l_limber (nl, -1);
   nc_xcor_prepare (xc, test->cosmo);
 
-  g_assert_cmpfloat (nc_xcor_solver_get_reltol (test->solver), ==, NCM_SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL);
+  g_assert_cmpfloat (nc_xcor_solver_get_reltol (test->solver), ==, NC_XCOR_SOLVER_DEFAULT_RELTOL);
   nc_xcor_solver_set_reltol (test->solver, 1.0e-6);
   g_assert_cmpfloat (nc_xcor_solver_get_reltol (test->solver), ==, 1.0e-6);
 

@@ -38,7 +38,9 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcXcorSolver, nc_xcor_solver, NC, XCOR_SOLVER, GObject)
 
-NcXcorSolver *nc_xcor_solver_new (void);
+#define NC_XCOR_SOLVER_DEFAULT_RELTOL (1.0e-4)
+
+NcXcorSolver * nc_xcor_solver_new (void);
 NcXcorSolver *nc_xcor_solver_ref (NcXcorSolver *solver);
 void nc_xcor_solver_free (NcXcorSolver *solver);
 void nc_xcor_solver_clear (NcXcorSolver **solver);
