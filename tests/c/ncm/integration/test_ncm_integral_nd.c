@@ -38,6 +38,23 @@ typedef struct _TestNcmIntegralND
   gdouble reltol;
 } TestNcmIntegralND;
 
+struct sin_data
+{
+  gdouble a;
+};
+
+struct x_p_y_data
+{
+  gdouble a;
+};
+
+struct acosx_by_p_cz_data
+{
+  gdouble a;
+  gdouble b;
+  gdouble c;
+};
+
 void test_ncm_integral_nd_new_sinx (TestNcmIntegralND *test, gconstpointer pdata);
 void test_ncm_integral_nd_new_x_p_y (TestNcmIntegralND *test, gconstpointer pdata);
 void test_ncm_integral_nd_new_acosx_by_p_cz (TestNcmIntegralND *test, gconstpointer pdata);
@@ -52,6 +69,21 @@ void test_ncm_integral_nd_traps (TestNcmIntegralND *test, gconstpointer pdata);
 void test_ncm_integral_nd_invalid_test (TestNcmIntegralND *test, gconstpointer pdata);
 void test_ncm_integral_nd_maxeval (void);
 void test_ncm_integral_nd_maxeval_subprocess (void);
+
+static void test_sin (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void test_sin_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+
+static void test_x_p_y (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void test_x_p_y_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+
+static void test_acosx_by_p_cz (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
+static void test_acosx_by_p_cz_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_SIN, NcmTestIntSin, ncm_test_int_sin, test_sin_dim, test_sin, struct sin_data)
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_XPY, NcmTestIntXPY, ncm_test_int_x_p_y, test_x_p_y_dim, test_x_p_y, struct x_p_y_data)
+
+NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_ACOSX_BY_P_CZ, NcmTestIntACosx, ncm_test_int_acosx_by_p_cz, test_acosx_by_p_cz_dim, test_acosx_by_p_cz, struct acosx_by_p_cz_data)
 
 gint
 main (gint argc, gchar *argv[])
@@ -86,40 +118,6 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-struct sin_data
-{
-  gdouble a;
-};
-
-struct x_p_y_data
-{
-  gdouble a;
-};
-
-struct acosx_by_p_cz_data
-{
-  gdouble a;
-  gdouble b;
-  gdouble c;
-};
-
-
-
-static void test_sin (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-static void test_sin_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-
-static void test_x_p_y (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-static void test_x_p_y_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-
-static void test_acosx_by_p_cz (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval);
-static void test_acosx_by_p_cz_dim (NcmIntegralND *intnd, guint *dim, guint *fdim);
-
-NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_SIN, NcmTestIntSin, ncm_test_int_sin, test_sin_dim, test_sin, struct sin_data)
-
-NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_XPY, NcmTestIntXPY, ncm_test_int_x_p_y, test_x_p_y_dim, test_x_p_y, struct x_p_y_data)
-
-NCM_INTEGRAL_ND_DEFINE_TYPE (NCM, TEST_INT_ACOSX_BY_P_CZ, NcmTestIntACosx, ncm_test_int_acosx_by_p_cz, test_acosx_by_p_cz_dim, test_acosx_by_p_cz, struct acosx_by_p_cz_data)
-
 static void
 test_sin (NcmIntegralND *intnd, NcmVector *x, guint dim, guint npoints, guint fdim, NcmVector *fval)
 {
@@ -140,16 +138,6 @@ test_sin_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 {
   *dim  = 1;
   *fdim = 1;
-}
-
-void
-test_ncm_integral_nd_new_sinx (TestNcmIntegralND *test, gconstpointer pdata)
-{
-  NcmTestIntSin *test_int_sin = g_object_new (ncm_test_int_sin_get_type (), NULL);
-
-  test->intnd = NCM_INTEGRAL_ND (test_int_sin);
-
-  test_int_sin->data.a = 3.0;
 }
 
 static void
@@ -200,6 +188,23 @@ test_acosx_by_p_cz_dim (NcmIntegralND *intnd, guint *dim, guint *fdim)
 }
 
 void
+test_ncm_integral_nd_traps (TestNcmIntegralND *test, gconstpointer pdata)
+{
+  g_test_trap_subprocess ("/ncm/integral_nd/invalid/test/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_integral_nd_new_sinx (TestNcmIntegralND *test, gconstpointer pdata)
+{
+  NcmTestIntSin *test_int_sin = g_object_new (ncm_test_int_sin_get_type (), NULL);
+
+  test->intnd = NCM_INTEGRAL_ND (test_int_sin);
+
+  test_int_sin->data.a = 3.0;
+}
+
+void
 test_ncm_integral_nd_new_x_p_y (TestNcmIntegralND *test, gconstpointer pdata)
 {
   NcmTestIntXPY *test_int_x_p_y = g_object_new (ncm_test_int_x_p_y_get_type (), NULL);
@@ -219,6 +224,12 @@ test_ncm_integral_nd_new_acosx_by_p_cz (TestNcmIntegralND *test, gconstpointer p
   test_int_acosx->data.a = 1.0;
   test_int_acosx->data.b = 1.0;
   test_int_acosx->data.c = 1.0;
+}
+
+void
+test_ncm_integral_nd_free (TestNcmIntegralND *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_integral_nd_free, test->intnd);
 }
 
 void
@@ -323,19 +334,6 @@ test_ncm_integral_nd_acosx_by_p_cz_eval (TestNcmIntegralND *test, gconstpointer 
   ncm_vector_free (xi);
   ncm_vector_free (xf);
   ncm_vector_free (res);
-}
-
-void
-test_ncm_integral_nd_free (TestNcmIntegralND *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (ncm_integral_nd_free, test->intnd);
-}
-
-void
-test_ncm_integral_nd_traps (TestNcmIntegralND *test, gconstpointer pdata)
-{
-  g_test_trap_subprocess ("/ncm/integral_nd/invalid/test/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
 }
 
 void
