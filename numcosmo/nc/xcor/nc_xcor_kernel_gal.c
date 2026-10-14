@@ -73,6 +73,7 @@ struct _NcXcorKernelGal
   /*< private >*/
   NcXcorKernel parent_instance;
 
+  NcmSpline *dn_dz_user;
   NcmSpline *dn_dz;
   gdouble dn_dz_zmin;
   gdouble dn_dz_zmax;
@@ -246,6 +247,7 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_MAGBIAS,
 static void
 nc_xcor_kernel_gal_init (NcXcorKernelGal *xclkg)
 {
+  xclkg->dn_dz_user = NULL;
   xclkg->dn_dz      = NULL;
   xclkg->dn_dz_zmin = 0.0;
   xclkg->dn_dz_zmax = 0.0;
@@ -276,9 +278,28 @@ _nc_xcor_kernel_gal_take_dndz (NcXcorKernelGal *xclkg, NcmSpline *dn_dz)
   NcmVector *z_vec      = ncm_spline_peek_xv (dn_dz);
   const guint z_vec_len = ncm_vector_len (z_vec);
 
-  xclkg->dn_dz      = dn_dz;
+  /* The caller's spline is kept as given, for the property and serialization; the
+   * kernel normalizes a copy of its own, so setting the spline leaves the caller's
+   * unchanged and a kernel rebuilt from its serialization normalizes the same values. */
+  ncm_spline_clear (&xclkg->dn_dz_user);
+  ncm_spline_clear (&xclkg->dn_dz);
+
+  xclkg->dn_dz_user = dn_dz;
+  xclkg->dn_dz      = ncm_spline_copy (dn_dz);
   xclkg->dn_dz_zmin = ncm_vector_get (z_vec, 0);
   xclkg->dn_dz_zmax = ncm_vector_get (z_vec, z_vec_len - 1);
+
+  {
+    const gdouble ngal = ncm_spline_eval_integ (xclkg->dn_dz, xclkg->dn_dz_zmin, xclkg->dn_dz_zmax);
+
+    ncm_vector_scale (ncm_spline_peek_yv (xclkg->dn_dz), 1.0 / ngal);
+    ncm_spline_prepare (xclkg->dn_dz);
+
+    xclkg->dn_dz_min = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmin);
+    xclkg->dn_dz_max = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax);
+  }
+
+  nc_xcor_kernel_mark_outdated (NC_XCOR_KERNEL (xclkg));
 }
 
 static void
@@ -333,7 +354,7 @@ _nc_xcor_kernel_gal_get_property (GObject *object, guint prop_id, GValue *value,
       g_value_set_double (value, xclkg->nbarm1);
       break;
     case PROP_DN_DZ:
-      g_value_set_object (value, xclkg->dn_dz);
+      g_value_set_object (value, xclkg->dn_dz_user);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -392,19 +413,6 @@ _nc_xcor_kernel_gal_constructed (GObject *object)
       xclkg->rsd_comp = _nc_xcor_kernel_component_rsd_new (xclkg, dist, ps);
     }
 
-    /* Normalize the redshift distribution */
-    ncm_spline_prepare (xclkg->dn_dz);
-    /* Normalize the redshift distribution */
-    {
-      gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, xclkg->dn_dz_zmin, xclkg->dn_dz_zmax);
-      NcmVector *yv = ncm_spline_peek_yv (xclkg->dn_dz);
-
-      ncm_vector_scale (yv, 1.0 / ngal);
-      ncm_spline_prepare (xclkg->dn_dz);
-
-      xclkg->dn_dz_min = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmin);
-      xclkg->dn_dz_max = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax);
-    }
 
     /* Prepare the bias spline and link it to the bias parameter vector */
     NcmVector *zv, *bv;
@@ -466,6 +474,7 @@ _nc_xcor_kernel_gal_dispose (GObject *object)
   NcXcorKernelGal *xclkg = NC_XCOR_KERNEL_GAL (object);
 
   ncm_spline_clear (&xclkg->bias_spline);
+  ncm_spline_clear (&xclkg->dn_dz_user);
   ncm_spline_clear (&xclkg->dn_dz);
   nc_xcor_lensing_efficiency_clear (&xclkg->lens_eff);
   nc_xcor_kernel_component_clear (&xclkg->clustering_comp);

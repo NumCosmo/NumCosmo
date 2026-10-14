@@ -53,10 +53,6 @@
 #define TEST_ZMAX_LSS 1200.0
 #define TEST_LMAX 64
 
-/* A serialized copy's Limber window against the original's: the weak-lensing copy
- * differs by up to 8.5e-12 (measured), the other kernels by none. */
-#define TEST_SERIALIZE_RELTOL 1.0e-11
-
 typedef struct _TestNcXcorKernel
 {
   NcHICosmo *cosmo;
@@ -630,19 +626,19 @@ _test_limber_values (TestNcXcorKernel *test, NcXcorKernel *xclk, const gint *ell
 }
 
 static void
-_test_assert_same_values (GArray *a, GArray *b, gdouble reltol)
+_test_assert_same_values (GArray *a, GArray *b)
 {
   guint i;
 
   g_assert_cmpuint (a->len, ==, b->len);
 
   for (i = 0; i < a->len; i++)
-    ncm_assert_cmpdouble_e (g_array_index (b, gdouble, i), ==, g_array_index (a, gdouble, i), reltol, 1.0e-20);
+    g_assert_cmpfloat (g_array_index (b, gdouble, i), ==, g_array_index (a, gdouble, i));
 }
 
-/* A serialized copy is the same kernel: type, observables, knobs, range, and the Limber
- * window at every redshift and multipole checked; and preparing either of them again
- * changes nothing. */
+/* A serialized copy is the same kernel, to the last bit: type, observables, knobs,
+ * range, and the Limber window at every redshift and multipole checked; and preparing
+ * either of them again changes nothing. */
 static void
 test_nc_xcor_kernel_serialize (TestNcXcorKernel *test, gconstpointer pdata)
 {
@@ -671,16 +667,16 @@ test_nc_xcor_kernel_serialize (TestNcXcorKernel *test, gconstpointer pdata)
   g_assert_cmpfloat (dmax, ==, zmax);
 
   first = _test_limber_values (test, dup, ells, n_ell);
-  _test_assert_same_values (orig, first, TEST_SERIALIZE_RELTOL);
+  _test_assert_same_values (orig, first);
 
   nc_xcor_kernel_prepare (dup, test->cosmo);
   again = _test_limber_values (test, dup, ells, n_ell);
-  _test_assert_same_values (first, again, 1.0e-15);
+  _test_assert_same_values (first, again);
   g_array_unref (again);
 
   nc_xcor_kernel_prepare (test->xclk, test->cosmo);
   again = _test_limber_values (test, test->xclk, ells, n_ell);
-  _test_assert_same_values (orig, again, 1.0e-15);
+  _test_assert_same_values (orig, again);
 
   g_array_unref (again);
   g_array_unref (first);
@@ -766,6 +762,124 @@ test_nc_xcor_kernel_limber_backends_cross (TestNcXcorKernel *test, gconstpointer
   }
 
   g_assert_not_reached ();
+}
+
+/* A normalized Gaussian dN/dz like _dndz_new (), centred at @mean */
+static NcmSpline *
+_dndz_at_new (gdouble mean)
+{
+  NcmVector *z = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmVector *n = ncm_vector_new (TEST_DNDZ_KNOTS);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < TEST_DNDZ_KNOTS; i++)
+  {
+    const gdouble zi = 2.0 * i / (gdouble) (TEST_DNDZ_KNOTS - 1);
+    const gdouble t  = (zi - mean) / TEST_DNDZ_SIGMA;
+
+    ncm_vector_set (z, i, zi);
+    ncm_vector_set (n, i, exp (-0.5 * t * t));
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (z, n, TRUE));
+
+  ncm_vector_free (z);
+  ncm_vector_free (n);
+
+  return s;
+}
+
+typedef NcXcorKernel *(*TestDndzBuild) (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz);
+
+static NcXcorKernel *
+_dndz_build_weak_lensing (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz)
+{
+  return NC_XCOR_KERNEL (nc_xcor_kernel_weak_lensing_new (dist, ps, dndz, 3.0, 0.3));
+}
+
+static NcXcorKernel *
+_dndz_build_gal (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz)
+{
+  NcXcorKernelGal *g = nc_xcor_kernel_gal_new (dist, ps, 1, 1.234, dndz, TRUE);
+
+  ncm_model_orig_vparam_set (NCM_MODEL (g), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
+
+  return NC_XCOR_KERNEL (g);
+}
+
+/* The Limber window of @xclk at six redshifts and two multipoles */
+static void
+_dndz_values (NcXcorKernel *xclk, NcHICosmo *cosmo, NcDistance *dist, gdouble *out)
+{
+  const gint ells[2] = {10, 200};
+  guint j, i;
+
+  for (j = 0; j < 6; j++)
+    for (i = 0; i < 2; i++)
+      out[2 * j + i] = nc_xcor_kernel_eval_limber_z_full (xclk, cosmo, 0.1 + 0.3 * j, dist, ells[i]);
+}
+
+/* The kernels that normalize a dN/dz do it on a copy: the caller's spline comes out of
+ * construction unchanged, two kernels built on one spline are the same kernel, and a
+ * spline set after construction gives the kernel built with it. */
+static void
+test_nc_xcor_kernel_dndz_untouched (void)
+{
+  const TestDndzBuild builds[2] = {&_dndz_build_weak_lensing, &_dndz_build_gal};
+  NcHICosmo *cosmo              = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist              = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps                = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                                         NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  guint b;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  for (b = 0; b < 2; b++)
+  {
+    NcmSpline *dndz      = _dndz_at_new (TEST_DNDZ_MEAN);
+    NcmSpline *dndz2     = _dndz_at_new (0.8);
+    NcmVector *y_before  = ncm_vector_dup (ncm_spline_peek_yv (dndz));
+    NcXcorKernel *first  = builds[b](dist, ps, dndz);
+    NcXcorKernel *second = builds[b](dist, ps, dndz);
+    NcXcorKernel *moved  = builds[b](dist, ps, dndz2);
+    gdouble v1[12], v2[12];
+    guint i;
+
+    for (i = 0; i < ncm_vector_len (y_before); i++)
+      g_assert_cmpfloat (ncm_vector_get (ncm_spline_peek_yv (dndz), i), ==, ncm_vector_get (y_before, i));
+
+    nc_xcor_kernel_prepare (first, cosmo);
+    nc_xcor_kernel_prepare (second, cosmo);
+    _dndz_values (first, cosmo, dist, v1);
+    _dndz_values (second, cosmo, dist, v2);
+
+    for (i = 0; i < 12; i++)
+      g_assert_cmpfloat (v2[i], ==, v1[i]);
+
+    /* Set after construction: normalized as at construction, and the kernel knows it
+     * has to prepare again. */
+    g_object_set (first, "dndz", dndz2, NULL);
+    nc_xcor_kernel_prepare_if_needed (first, cosmo);
+    nc_xcor_kernel_prepare (moved, cosmo);
+    _dndz_values (first, cosmo, dist, v1);
+    _dndz_values (moved, cosmo, dist, v2);
+
+    for (i = 0; i < 12; i++)
+      g_assert_cmpfloat (v1[i], ==, v2[i]);
+
+    nc_xcor_kernel_free (first);
+    nc_xcor_kernel_free (second);
+    nc_xcor_kernel_free (moved);
+    ncm_vector_free (y_before);
+    ncm_spline_free (dndz);
+    ncm_spline_free (dndz2);
+  }
+
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
 }
 
 /* The _new() helpers leave the integrator unset, which pins the kernel to the Limber
@@ -1341,6 +1455,7 @@ test_nc_xcor_kernel_main (gint argc, gchar *argv[], const gchar *kernel)
     return g_test_run ();
 
   g_test_add_func ("/nc/xcor/kernel/integrator", &test_nc_xcor_kernel_integrator);
+  g_test_add_func ("/nc/xcor/kernel/dndz_untouched", &test_nc_xcor_kernel_dndz_untouched);
   g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
   g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);

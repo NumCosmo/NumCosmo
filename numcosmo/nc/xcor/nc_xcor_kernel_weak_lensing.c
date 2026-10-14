@@ -70,6 +70,7 @@ struct _NcXcorKernelWeakLensing
   NcXcorLensingEfficiency *lens_eff;
 
   /* Redshift */
+  NcmSpline *dn_dz_user;
   NcmSpline *dn_dz;
   gdouble dn_dz_zmin;
   gdouble dn_dz_zmax;
@@ -145,6 +146,7 @@ static void
 nc_xcor_kernel_weak_lensing_init (NcXcorKernelWeakLensing *xclkg)
 {
   xclkg->lens_eff   = NULL;
+  xclkg->dn_dz_user = NULL;
   xclkg->dn_dz      = NULL;
   xclkg->dn_dz_zmin = 0.0;
   xclkg->dn_dz_zmax = 0.0;
@@ -162,9 +164,28 @@ _nc_xcor_kernel_weak_lensing_take_dndz (NcXcorKernelWeakLensing *xclkg, NcmSplin
   NcmVector *z_vec      = ncm_spline_peek_xv (dn_dz);
   const guint z_vec_len = ncm_vector_len (z_vec);
 
-  xclkg->dn_dz      = dn_dz;
+  /* The caller's spline is kept as given, for the property and serialization; the
+   * kernel normalizes a copy of its own, so setting the spline leaves the caller's
+   * unchanged and a kernel rebuilt from its serialization normalizes the same values. */
+  ncm_spline_clear (&xclkg->dn_dz_user);
+  ncm_spline_clear (&xclkg->dn_dz);
+
+  xclkg->dn_dz_user = dn_dz;
+  xclkg->dn_dz      = ncm_spline_copy (dn_dz);
   xclkg->dn_dz_zmin = ncm_vector_get (z_vec, 0);
   xclkg->dn_dz_zmax = ncm_vector_get (z_vec, z_vec_len - 1);
+
+  {
+    const gdouble ngal = ncm_spline_eval_integ (xclkg->dn_dz, xclkg->dn_dz_zmin, xclkg->dn_dz_zmax);
+
+    ncm_vector_scale (ncm_spline_peek_yv (xclkg->dn_dz), 1.0 / ngal);
+    ncm_spline_prepare (xclkg->dn_dz);
+
+    xclkg->dn_dz_min = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmin);
+    xclkg->dn_dz_max = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax);
+  }
+
+  nc_xcor_kernel_mark_outdated (NC_XCOR_KERNEL (xclkg));
 }
 
 static void
@@ -201,7 +222,7 @@ _nc_xcor_kernel_weak_lensing_get_property (GObject *object, guint prop_id, GValu
   switch (prop_id)
   {
     case PROP_DN_DZ:
-      g_value_set_object (value, xclkg->dn_dz);
+      g_value_set_object (value, xclkg->dn_dz_user);
       break;
     case PROP_NBAR:
       g_value_set_double (value, xclkg->nbar);
@@ -227,19 +248,6 @@ _nc_xcor_kernel_weak_lensing_constructed (GObject *object)
   /* Chain up : middle */
   G_OBJECT_CLASS (nc_xcor_kernel_weak_lensing_parent_class)->constructed (object);
   {
-    ncm_spline_prepare (xclkg->dn_dz);
-    /* Normalize the redshift distribution */
-    {
-      gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, xclkg->dn_dz_zmin, xclkg->dn_dz_zmax);
-      NcmVector *yv = ncm_spline_peek_yv (xclkg->dn_dz);
-
-      ncm_vector_scale (yv, 1.0 / ngal);
-      ncm_spline_prepare (xclkg->dn_dz);
-
-      xclkg->dn_dz_min = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmin);
-      xclkg->dn_dz_max = ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax);
-    }
-
     {
       NcDistance *dist                             = nc_xcor_kernel_peek_dist (xclk);
       NcXcorKernelWeakLensingLensEff *lens_eff_obj = g_object_new (
@@ -270,6 +278,7 @@ _nc_xcor_kernel_weak_lensing_dispose (GObject *object)
 {
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (object);
 
+  ncm_spline_clear (&xclkg->dn_dz_user);
   ncm_spline_clear (&xclkg->dn_dz);
   nc_xcor_lensing_efficiency_clear (&xclkg->lens_eff);
   nc_xcor_kernel_component_clear (&xclkg->wl_comp);
