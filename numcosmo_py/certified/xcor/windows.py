@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # windows.py
 #
@@ -65,6 +64,8 @@ track a data release and could not be certified in closed form anyway.
 from __future__ import annotations
 
 import typing
+
+from numcosmo_py import Nc, Ncm
 
 # form -> the parameters that form takes, in constructor order. Documented here
 # so a case's tuple can be read without opening the generator.
@@ -301,38 +302,78 @@ def arb_args(name: str, side: str | None = None) -> list[str]:
     return out
 
 
-def make_kernel(shape, dist, ps, sbi, ctor):
-    """Build one analytic kernel from the constructor arguments in the table.
+# form -> the analytic kernel class implementing it, by its name in Nc.
+FORM_CLASSES: typing.Final[dict[str, str]] = {
+    "gauss": "XcorKernelAnalyticGauss",
+    "tophat": "XcorKernelAnalyticTophat",
+    "tophat_smooth": "XcorKernelAnalyticTophatSmooth",
+    "student_t": "XcorKernelAnalyticStudentT",
+    "power_exp": "XcorKernelAnalyticPowerExp",
+    "lensing": "XcorKernelAnalyticLensing",
+    "multi": "XcorKernelAnalyticMulti",
+}
 
-    numcosmo_py is imported here and not at module level: the Arb generators in
-    tests/tools import this module for the vocabulary alone.
+
+def table_window(form: str, ctor: typing.Sequence, deriv: int = 0) -> Window:
+    """The window a certified table's entry defines, from its form and constructor list.
+
+    :param form: the closed form, a key of :data:`FORM_PARAMS`.
+    :param ctor: the parameters in constructor order, as the table stores them (lists
+        for the arrays of ``multi``).
+    :param deriv: Bessel-derivative order of the weight.
+    :return: the window.
     """
-    from numcosmo_py import Nc, Ncm  # noqa: PLC0415
+    params = tuple(tuple(v) if isinstance(v, list) else v for v in ctor)
 
-    match shape:
-        case "gauss":
-            return Nc.XcorKernelAnalyticGauss.new_full(dist, ps, *ctor, sbi)
-        case "tophat":
-            return Nc.XcorKernelAnalyticTophat.new_full(dist, ps, *ctor, sbi)
-        case "tophat_smooth":
-            return Nc.XcorKernelAnalyticTophatSmooth.new_full(dist, ps, *ctor, sbi)
-        case "student_t":
-            return Nc.XcorKernelAnalyticStudentT.new_full(dist, ps, *ctor, sbi)
-        case "power_exp":
-            return Nc.XcorKernelAnalyticPowerExp.new_full(dist, ps, *ctor, sbi)
-        case "lensing":
-            return Nc.XcorKernelAnalyticLensing.new_full(dist, ps, *ctor, sbi)
-        case "multi":
-            mu, sigma, weight, n_sigma = ctor
+    return Window(form, params, "", deriv)
 
-            return Nc.XcorKernelAnalyticMulti.new_full(
-                dist,
-                ps,
-                Ncm.Vector.new_array(mu),
-                Ncm.Vector.new_array(sigma),
-                Ncm.Vector.new_array(weight),
-                n_sigma,
-                sbi,
+
+def build_kernel(
+    window: str | Window,
+    dist: Nc.Distance,
+    powspec: Ncm.Powspec,
+    integrator: Ncm.SBesselIntegrator | None = None,
+) -> Nc.XcorKernelRadial:
+    """Construct the analytic kernel of a window, not yet prepared.
+
+    Every parameter in :data:`FORM_PARAMS` is a property of the form's kernel under the
+    same name, and every kernel carries ``bessel-deriv`` and ``scale-dependence``, so one
+    keyword construction covers every window, its derivative weights and its
+    scale-dependent variant. The caller sets what it measures at (``l-limber``,
+    ``reltol``, ``peak-epsilon``) and prepares it.
+
+    :param window: a case name, current or historical, or a :class:`Window`.
+    :param dist: the distance object the kernel is constructed with.
+    :param powspec: the power spectrum the kernel is constructed with.
+    :param integrator: the radial integrator; a new ``NcmSBesselIntegratorLevin`` for
+        multipoles 0 to 8 when omitted. Pass one to share it across the kernels of a
+        block; the ODE solver is not reentrant, so a shared integrator must not be used
+        concurrently.
+    :return: the kernel.
+    """
+    spec = get(window) if isinstance(window, str) else window
+    props: dict[str, typing.Any] = dict(zip(FORM_PARAMS[spec.form], spec.params))
+
+    if spec.form == "multi":
+        props = {
+            key: (
+                Ncm.Vector.new_array([float(v) for v in value])
+                if isinstance(value, tuple)
+                else value
             )
-        case _:
-            raise ValueError(f"truth table names an unknown shape {shape!r}")
+            for key, value in props.items()
+        }
+
+    if spec.kdep:
+        props["scale_dependence"] = Nc.XcorKernelRadialKDepGrowth.new(*spec.kdep)
+
+    if integrator is None:
+        integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
+
+    return getattr(Nc, FORM_CLASSES[spec.form])(
+        dist=dist,
+        powspec=powspec,
+        integrator=integrator,
+        bessel_deriv=spec.deriv,
+        **props,
+    )

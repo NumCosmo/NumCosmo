@@ -66,7 +66,7 @@ def test_construct_and_serialize_roundtrip():
     simall = build_simall(_EE)
     assert simall.get_length() == 28
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dset = Ncm.Dataset.new_array([simall])
     simall2 = ser.from_variant(ser.to_variant(dset)).peek_data(0)
 
@@ -199,7 +199,7 @@ def test_synthetic_serialize_roundtrip(tmp_path):
     simall.prepare(mset)
     m2lnl = simall.m2lnL_val(mset)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     simall2 = ser.from_variant(ser.to_variant(simall))
     assert isinstance(simall2, Nc.DataPlanckSimall)
     assert simall2.get_length() == simall.get_length()
@@ -232,7 +232,7 @@ def test_synthetic_new_from_file(tmp_path):
     data = build_simall(clik)
 
     path = str(tmp_path / "simall.obj")
-    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_file(data, path)
+    Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).to_file(data, path)
 
     loaded = Nc.DataPlanckSimall.new_from_file(path)
     assert isinstance(loaded, Nc.DataPlanckSimall)

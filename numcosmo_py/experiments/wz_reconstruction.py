@@ -381,5 +381,5 @@ def save_mset_yaml(mset: Ncm.MSet, path: str | Path) -> None:
 
     Use this to write a fiducial truth mset that ``run mc --fiducial`` reads.
     """
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     ser.to_yaml_file(mset, str(path))

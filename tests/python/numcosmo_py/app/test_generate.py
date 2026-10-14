@@ -83,7 +83,7 @@ def test_generate_planck_native(tmp_path: Path):
 
     # The serialized dataset must hold only native NumCosmo objects (no clik
     # DataPlanckLKL), so it reloads without the clik data or the PLC library.
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dset = ser.from_binfile(str(dset_file.absolute()))
     names = {dset.get_data(i).__class__.__name__ for i in range(dset.get_ndata())}
     assert names == {
@@ -335,7 +335,7 @@ def test_generate_band_nodes(tmp_path: Path, generator, n_base: int):
         include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
         band_nodes=band_nodes,
     )
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     funcs = ser.array_from_yaml_file(
         exp_file.with_suffix(".functions.yaml").absolute().as_posix()
     )
@@ -444,7 +444,7 @@ def test_generate_planck_native_from_release(tmp_path: Path, monkeypatch):
     dset_file = exp_file.with_suffix(".dataset.gvar")
     assert dset_file.exists()
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dset = ser.from_binfile(str(dset_file.absolute()))
     names = {dset.get_data(i).__class__.__name__ for i in range(dset.get_ndata())}
     assert names == {"DataPlanckSimall", "DataPlanckCommander", "DataPlanckSmica"}

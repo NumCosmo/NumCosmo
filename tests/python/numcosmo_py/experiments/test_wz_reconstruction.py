@@ -247,7 +247,7 @@ def test_save_mset_yaml_round_trips(tmp_path) -> None:
     save_mset_yaml(mset, path)
     assert path.exists()
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     reloaded = ser.from_yaml_file(path.absolute().as_posix())
     assert isinstance(reloaded, Ncm.MSet)
     cosmo = reloaded.peek(target.new_cosmo().id())

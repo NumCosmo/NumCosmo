@@ -972,7 +972,7 @@ test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata)
 
   ncm_spline_set (test->s_base, xv, yv, FALSE);
   {
-    NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     NcmSpline *s         = NCM_SPLINE (ncm_serialize_dup_obj (ser, G_OBJECT (test->s_base)));
     NcmVector *s_xv      = ncm_spline_peek_xv (s);
     NcmVector *s_yv      = ncm_spline_peek_yv (s);
@@ -1053,7 +1053,7 @@ test_ncm_spline_set_type_serialize (TestNcmSpline *test, gconstpointer pdata)
   else
   {
     const gsl_interp_type *type = ncm_spline_gsl_get_gsl_type (NCM_SPLINE_GSL (test->s_base));
-    NcmSerialize *ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     NcmSplineGsl *s             = NCM_SPLINE_GSL (ncm_serialize_dup_obj (ser, G_OBJECT (test->s_base)));
 
     g_assert_true (NCM_IS_SPLINE_GSL (s));

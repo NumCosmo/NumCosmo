@@ -36,7 +36,7 @@ def fixture_cluster_pz() -> Nc.ClusterPhotozGauss:
 
 def test_serialization_deserialization(cluster_pz: Nc.ClusterPhotozGauss) -> None:
     """Test serialization and deserialization."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     cluster_pz_dup = duplicate_via_serialization(cluster_pz, ser)
 
     assert cluster_pz_dup is not None

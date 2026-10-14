@@ -739,7 +739,7 @@ def test_serialization_deserialization(cluster_m: Nc.ClusterMassSelection) -> No
     assert isinstance(cluster_m, Nc.ClusterMassSelection)
     cluster_m.set_enable_rejection(True)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     cluster_m_dup_obj = duplicate_via_serialization(cluster_m, ser)
     assert isinstance(cluster_m_dup_obj, Nc.ClusterMassSelection)
     cluster_m_dup: Nc.ClusterMassSelection = cluster_m_dup_obj

@@ -501,7 +501,7 @@ def test_cmr_serialize_duplicate(
     nc_hms["log10MDelta"] = 13.5
 
     # Serialize and duplicate
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     nc_hms_dup = duplicate_via_serialization(nc_hms, ser)
 
     # Verify it's a different object

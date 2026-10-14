@@ -61,7 +61,7 @@ _test_send_cmd (gint cmd)
 static void
 _test_send_job (NcmMPIJob *mpi_job)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GVariant *job_ser = ncm_serialize_to_variant (ser, G_OBJECT (mpi_job));
 
   _test_send_cmd (NCM_MPI_CTRL_SLAVE_INIT);

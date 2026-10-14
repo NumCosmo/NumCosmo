@@ -181,6 +181,6 @@ def test_wspline_weight_function_serializes(wspline_experiment) -> None:
     func = Ncm.MSetFuncList.new("NcHICosmoDEWSpline:wlp_w2", weight)
     direct = func.eval1(mset, 2.0)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     reloaded = ser.from_yaml(ser.to_yaml(func))
     assert_allclose(reloaded.eval1(mset, 2.0), direct)

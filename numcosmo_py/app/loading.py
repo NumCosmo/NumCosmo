@@ -89,7 +89,7 @@ class LoadExperiment(AppLogging):
         """Load the experiment file and prepare the experiment."""
         register_firecrown()
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
         builders_file = self.experiment.with_suffix(".builders.yaml")
         # Builders file is optional.
@@ -200,7 +200,7 @@ class LoadExperiment(AppLogging):
                     f"Starting point file {self.starting_point} not found."
                 )
 
-            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
             starting_dict = ser.dict_str_from_yaml_file(
                 self.starting_point.absolute().as_posix()
             )
@@ -225,7 +225,7 @@ class LoadExperiment(AppLogging):
     def end_experiment(self):
         """End the experiment and writes the output file."""
         if self.output is not None:
-            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
             ser.dict_str_to_yaml_file(
                 self.output_dict, self.output.absolute().as_posix()
             )

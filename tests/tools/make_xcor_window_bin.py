@@ -44,8 +44,7 @@ The orders of a cell share one k grid.
 The output is one NcmObjDictStr holding:
 
 - ``kernel/<shape>/d<d>``: the analytic kernel of each shape, as the Python window tests
-  build it, with #NcXcorKernelRadial:bessel-deriv set to d (construct-only, so set in its
-  serialized form);
+  build it, with #NcXcorKernelRadial:bessel-deriv set to d;
 - ``table/<shape>|<ell>``: an NcmMatrix, one row per k, columns (k, I^(0), I^(1), I^(2)),
   as doubles.
 
@@ -65,13 +64,8 @@ import json
 import pathlib
 import sys
 
-sys.path.insert(
-    0, str(pathlib.Path(__file__).resolve().parents[1] / "python" / "nc" / "xcor")
-)
-
-from numcosmo_py import Nc, Ncm  # noqa: E402
-
-from windows import make_kernel  # noqa: E402
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.certified.xcor.windows import build_kernel, table_window
 
 DERIVS = (0, 1, 2)
 
@@ -131,26 +125,15 @@ def main() -> None:
     )
 
     root = Ncm.ObjDictStr.new()
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     n_shapes = 0
     for shape in sorted({shape for shape, _ in keys}):
         s = shapes[shape]
-        kernel = make_kernel(
-            s["shape"], dist, ps, Ncm.SBesselIntegratorLevin.new(0, 8), s["ctor"]
-        )
-        text = ser.to_string(kernel, True)
-        if text.count("'bessel-deriv': <uint32 0>") != 1:
-            raise ValueError(f"{shape}: no bessel-deriv in the serialized kernel")
         n_shapes += 1
         for d in DERIVS:
-            ser.reset(True)
             root.add(
                 f"kernel/{shape}/d{d}",
-                ser.from_string(
-                    text.replace(
-                        "'bessel-deriv': <uint32 0>", f"'bessel-deriv': <uint32 {d}>"
-                    )
-                ),
+                build_kernel(table_window(s["shape"], s["ctor"], d), dist, ps),
             )
 
     for shape, ell in keys:

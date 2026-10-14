@@ -109,7 +109,7 @@ class RunMC(RunCommonOptions):
             )
 
         if self.fiducial is not None:
-            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
             fiduc = ser.from_yaml_file(self.fiducial.absolute().as_posix())
             if not isinstance(fiduc, Ncm.MSet):
                 raise typer.BadParameter(

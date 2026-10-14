@@ -164,7 +164,7 @@ def test_serialization_deserialization(bias_tinker: Nc.HaloBiasTinker):
         bias_tinker.set_b(b)
         bias_tinker.set_c(c)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         bias_tinker_dup = duplicate_via_serialization(bias_tinker, ser)
 
         assert bias_tinker_dup is not None

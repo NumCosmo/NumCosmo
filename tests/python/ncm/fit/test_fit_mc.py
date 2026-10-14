@@ -108,7 +108,7 @@ def test_fit_mc_run(capfd, mc: Ncm.FitMC, use_threads: bool):
 
 def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
     """Test NcmFitMC serialize and deserialize."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     file = tmp_path / "fit_mc_test.nc"
     mc.set_data_file(file.as_posix())
@@ -136,7 +136,7 @@ def test_use_threads_property_and_getter_round_trip(mc: Ncm.FitMC):
 
 def test_threaded_vs_serial(capfd, mc: Ncm.FitMC):
     """Test NcmFitMC serial vs threaded."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     mc2 = duplicate_via_serialization(mc, ser)
 

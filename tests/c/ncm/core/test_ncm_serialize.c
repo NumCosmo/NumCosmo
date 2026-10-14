@@ -330,7 +330,7 @@ main (gint argc, gchar *argv[])
 void
 test_ncm_serialize_new (TestNcmSerialize *test, gconstpointer pdata)
 {
-  test->ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  test->ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
 }
 
 void
@@ -1019,9 +1019,9 @@ test_ncm_serialize_dup_shared (void)
   g_assert_true (ncm_spline_peek_xv (s) == ncm_spline_peek_yv (s));
   ncm_serialize_free (ser_load);
 
-  /* With NCM_SERIALIZE_OPT_CLEAN_DUP the shared vector stays shared in the copy */
+  /* With NCM_SERIALIZE_OPT_KEEP_SHARED the shared vector stays shared in the copy */
   {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     NcmSpline *dup    = NCM_SPLINE (ncm_serialize_dup_obj (ser, G_OBJECT (s)));
 
     g_assert_true (ncm_spline_peek_xv (dup) == ncm_spline_peek_yv (dup));
@@ -1050,7 +1050,7 @@ test_ncm_serialize_dup_shared (void)
 
   /* An array holding one object twice */
   {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     NcmObjArray *oa   = ncm_obj_array_new ();
     NcmObjArray *dup;
 
@@ -1162,7 +1162,7 @@ test_ncm_serialize_global (void)
 void
 test_ncm_serialize_remove_ser (void)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmVector *v      = ncm_vector_new (3);
   GVariant *var;
 

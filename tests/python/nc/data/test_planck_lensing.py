@@ -92,7 +92,7 @@ def test_construct_and_serialize_roundtrip(flavor):
     lens = build_lensing(_clik(relpath))  # data-only (no Boltzmann)
     assert lens.get_length() == 9
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dset = Ncm.Dataset.new_array([lens])
     lens2 = ser.from_variant(ser.to_variant(dset)).peek_data(0)
 
@@ -278,7 +278,7 @@ def test_synthetic_resample_and_serialize(tmp_path):
     lens.resample(mset, rng)
     assert np.isfinite(lens.m2lnL_val(mset))
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     lens2 = ser.from_variant(ser.to_variant(lens))
     assert isinstance(lens2, Nc.DataPlanckLensing)
 
@@ -297,7 +297,7 @@ def test_synthetic_new_from_file(tmp_path):
     data = build_lensing(clik)
 
     path = str(tmp_path / "lensing.obj")
-    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_file(data, path)
+    Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).to_file(data, path)
 
     loaded = Nc.DataPlanckLensing.new_from_file(path)
     assert isinstance(loaded, Nc.DataPlanckLensing)

@@ -33,7 +33,7 @@ def duplicate_via_serialization(obj: T, ser: Ncm.Serialize | None = None) -> T:
     obj : T
         The object to duplicate via serialization
     ser : Ncm.Serialize | None, optional
-        Serializer to use. If None, creates a new one with CLEAN_DUP option.
+        Serializer to use. If None, creates a new one with KEEP_SHARED option.
         Default is None.
 
     Returns
@@ -52,7 +52,7 @@ def duplicate_via_serialization(obj: T, ser: Ncm.Serialize | None = None) -> T:
     >>> assert kernel_dup is not kernel
     """
     if ser is None:
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     # The cast tells the type checker that dup_obj returns the same type
     # even though the GObject introspection doesn't provide this info

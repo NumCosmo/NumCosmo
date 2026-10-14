@@ -579,6 +579,10 @@
     "nick": "clean-dup",
     "type": "Ncm.SerializeOpt"
   },
+  "NCM_SERIALIZE_OPT_KEEP_SHARED": {
+    "nick": "keep-shared",
+    "type": "Ncm.SerializeOpt"
+  },
   "NCM_SERIALIZE_OPT_NONE": {
     "nick": "none",
     "type": "Ncm.SerializeOpt"

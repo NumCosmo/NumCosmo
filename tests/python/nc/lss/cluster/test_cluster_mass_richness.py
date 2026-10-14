@@ -385,7 +385,7 @@ class TestClusterMassRichnessCommon:
         self, cluster_m: Nc.ClusterMassRichness
     ) -> None:
         """Test serialization and deserialization."""
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         cluster_m_dup = ser.dup_obj(cluster_m)
 
         assert cluster_m_dup is not None

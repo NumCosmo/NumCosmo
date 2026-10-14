@@ -213,7 +213,7 @@ test_ncm_model_builder_recreate (void)
 void
 test_ncm_model_builder_serialize (void)
 {
-  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmModelBuilder *mb = test_builder_new (NCM_TYPE_MODEL_ROSENBROCK, "TestMBSerialize", 0.5, FALSE);
   GType type          = ncm_model_builder_create (mb);
   gchar *mb_ser       = ncm_serialize_to_string (ser, G_OBJECT (mb), TRUE);

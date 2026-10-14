@@ -146,7 +146,7 @@ test_nc_data_snia_cov_v2_ignores_cov_full (void)
 {
   NcDataSNIACov *snia_cov = nc_data_snia_cov_new (FALSE, 2);
   NcmMatrix *cov          = _test_nc_data_snia_cov_lightcurve_cov ();
-  NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GVariant *var, *params, *cov_full_var;
 
   ncm_data_gauss_cov_set_size (NCM_DATA_GAUSS_COV (snia_cov), TEST_NSNIA);

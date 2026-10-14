@@ -120,7 +120,7 @@ def test_compute_full_spectrum(
     s = Ncm.Spline2dBicubic.notaknot_new()
     s.set(lnk_v, lnw_v, zm, True)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     default_calib_file = Ncm.cfg_get_data_filename("hiprim_2f_spline.bin", True)
     s_calib = ser.from_binfile(default_calib_file)
     assert isinstance(s_calib, Ncm.Spline2dBicubic)

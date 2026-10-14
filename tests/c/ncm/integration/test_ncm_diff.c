@@ -310,7 +310,7 @@ test_ncm_diff_property_minima (TestNcmDiff *test, gconstpointer pdata)
 void
 test_ncm_diff_misc (TestNcmDiff *test, gconstpointer pdata)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmDiff *diff     = NULL;
 
   g_assert_true (test->diff != NULL);

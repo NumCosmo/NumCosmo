@@ -243,7 +243,7 @@ test_nc_data_cluster_ncounts_gauss_serialize (TestNcClusterNCountsGauss *test, g
     nc_data_cluster_ncounts_gauss_set_resample_s_matrix (test->ncounts_gauss, test->resample_s_matrix);
   }
   {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (test->ncounts_gauss));
 
     nc_data_cluster_ncounts_gauss_free (test->ncounts_gauss);

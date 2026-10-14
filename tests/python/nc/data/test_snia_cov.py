@@ -195,7 +195,7 @@ def test_resample_type_survives_serialization():
     """
     snia_cov = Nc.DataSNIACov.new(False, 0)
     snia_cov.set_property("resample-type", Nc.DataSNIACovResample.FROM_LIGHTCURVE)
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dup = ser.dup_obj(snia_cov)
     assert dup.get_resample_type() == Nc.DataSNIACovResample.FROM_LIGHTCURVE
 

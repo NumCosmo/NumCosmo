@@ -75,7 +75,7 @@ def test_construct_and_serialize_roundtrip():
     cov = Ncm.DataGaussCov.peek_cov(plik)
 
     dset = Ncm.Dataset.new_array([plik])
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     variant = ser.to_variant(dset)
     ser.clear_instances(False)
     dset2 = ser.from_variant(variant)
@@ -233,7 +233,7 @@ def test_synthetic_serialize_roundtrip(tmp_path):
     plik.prepare(mset)
     m2lnl = plik.m2lnL_val(mset)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     plik2 = ser.from_variant(ser.to_variant(plik))
     assert isinstance(plik2, Nc.DataPlanckPlikLite)
     assert plik2.peek_hipert_boltzmann() is not None

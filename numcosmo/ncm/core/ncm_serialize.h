@@ -43,16 +43,24 @@ G_DECLARE_FINAL_TYPE (NcmSerialize, ncm_serialize, NCM, SERIALIZE, GObject)
  * @NCM_SERIALIZE_OPT_NONE: no option
  * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: add each named object deserialized to the named instances
  * @NCM_SERIALIZE_OPT_AUTONAME_SER: name each newly serialized object `S<n>`
- * @NCM_SERIALIZE_OPT_CLEAN_DUP: both, which keeps shared objects shared in ncm_serialize_dup_obj()
+ * @NCM_SERIALIZE_OPT_KEEP_SHARED: both; a copy keeps the original's shared objects shared
+ * @NCM_SERIALIZE_OPT_CLEAN_DUP: older name of @NCM_SERIALIZE_OPT_KEEP_SHARED
  *
  * Options of #NcmSerialize.
+ *
+ * With #NCM_SERIALIZE_OPT_KEEP_SHARED a copy follows the original's object graph: an object
+ * shared in the original is shared in the copy, while #NCM_SERIALIZE_OPT_NONE rebuilds it
+ * once per reference. The automatic names persist between calls, so a serializer reused
+ * for a second graph shares with it every object the two have in common; call
+ * ncm_serialize_reset() in between for a second graph with objects of its own.
  */
 typedef enum _NcmSerializeOpt /*< prefix=NCM_SERIALIZE_OPT >*/
 {
   NCM_SERIALIZE_OPT_NONE         = 0,
   NCM_SERIALIZE_OPT_AUTOSAVE_SER = 1 << 0,
   NCM_SERIALIZE_OPT_AUTONAME_SER = 1 << 1,
-  NCM_SERIALIZE_OPT_CLEAN_DUP    = NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER,
+  NCM_SERIALIZE_OPT_KEEP_SHARED  = NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER,
+  NCM_SERIALIZE_OPT_CLEAN_DUP    = NCM_SERIALIZE_OPT_KEEP_SHARED,
 } NcmSerializeOpt;
 
 NcmSerialize *ncm_serialize_new (NcmSerializeOpt sopt);

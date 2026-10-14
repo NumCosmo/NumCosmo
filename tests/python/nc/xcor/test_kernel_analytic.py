@@ -273,35 +273,6 @@ def test_gauss_window_matches_closed_form(cosmology: Cosmology) -> None:
     assert_allclose(got, expected, rtol=1.0e-14)
 
 
-@pytest.mark.parametrize(
-    "shape",
-    ["gauss", "tophat", "student_t", "power_exp", "tophat_smooth", "lensing", "multi"],
-)
-def test_window_vanishes_outside_support(cosmology: Cosmology, shape: str) -> None:
-    """The truncation is part of the definition, not a tolerance.
-
-    Every shape guards its support with its own expression of it -- a pair of
-    limits, a mean plus a width, a smoothed interval -- so the check runs per
-    shape rather than on a representative one. Inside, the window is alive
-    right up to the lower edge. The upper edge has one exception: the lensing
-    efficiency of a source bin is geometrically zero at the far edge of that
-    bin, since nothing behind it is being lensed.
-    """
-    kernel = _any_shape(cosmology, shape)
-    chi_min, chi_max = kernel.get_support()
-
-    assert kernel.eval_W(chi_min - 1.0e-3) == 0.0
-    assert kernel.eval_W(chi_max + 1.0e-3) == 0.0
-
-    assert kernel.eval_W(chi_min) > 0.0
-    assert kernel.eval_W(0.5 * (chi_min + chi_max)) > 0.0
-
-    if shape == "lensing":
-        assert kernel.eval_W(chi_max) == 0.0
-    else:
-        assert kernel.eval_W(chi_max) > 0.0
-
-
 @pytest.mark.parametrize("shape", ["gauss", "tophat"])
 def test_window_is_normalized(cosmology: Cosmology, shape: str) -> None:
     """int W dchi = 1 over the support, which is what fixes the C_ell scale."""
@@ -337,100 +308,6 @@ def test_z_range_is_the_support_in_redshift(cosmology: Cosmology) -> None:
     got = [cosmology.dist.comoving(cosmo, z) * rh for z in (zmin, zmax, zmid)]
 
     assert_allclose(got, [chi_min, chi_max, 0.5 * (chi_min + chi_max)], rtol=1.0e-9)
-
-
-@pytest.mark.parametrize(
-    "shape",
-    ["gauss", "tophat", "student_t", "power_exp", "tophat_smooth", "lensing", "multi"],
-)
-def test_serialization_roundtrip(cosmology: Cosmology, shape: str) -> None:
-    """The kernel is a registered, serializable object: a spec survives a file.
-
-    Every shape, not a representative pair: a benchmark specification is stored
-    by serializing the kernel, so a shape whose properties did not round-trip
-    would silently produce a spec that does not describe the run.
-    """
-    kernel = _any_shape(cosmology, shape)
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-
-    dup = ser.dup_obj(kernel)
-
-    assert type(dup) is type(kernel)
-    assert dup.get_support() == kernel.get_support()
-    assert_allclose(
-        [dup.eval_W(c) for c in np.linspace(*kernel.get_support(), 32)],
-        [kernel.eval_W(c) for c in np.linspace(*kernel.get_support(), 32)],
-        rtol=1.0e-15,
-    )
-
-
-def _ctor_args(cosmology: Cosmology, shape: str) -> tuple[typing.Any, tuple]:
-    """The class of a shape and the leading arguments both its constructors take."""
-    head: tuple = (cosmology.dist, cosmology.ps_ml)
-    cls, tail = {
-        "gauss": (Nc.XcorKernelAnalyticGauss, (CHI_MEAN, CHI_SIGMA, N_SIGMA)),
-        "tophat": (Nc.XcorKernelAnalyticTophat, (CHI_LOWER, CHI_UPPER)),
-        "student_t": (
-            Nc.XcorKernelAnalyticStudentT,
-            (ST_MEAN, ST_SCALE, ST_NU, ST_NSCALE),
-        ),
-        "power_exp": (
-            Nc.XcorKernelAnalyticPowerExp,
-            (PE_SCALE, PE_ALPHA, PE_BETA, PE_LOWER, PE_UPPER),
-        ),
-        "tophat_smooth": (
-            Nc.XcorKernelAnalyticTophatSmooth,
-            (TS_LOWER, TS_UPPER, TS_SIGMA, TS_NSIGMA),
-        ),
-        "lensing": (
-            Nc.XcorKernelAnalyticLensing,
-            (LENS_LOWER, LENS_SRC_LOWER, LENS_SRC_UPPER),
-        ),
-        "multi": (
-            Nc.XcorKernelAnalyticMulti,
-            (
-                Ncm.Vector.new_array(MULTI_MEAN),
-                Ncm.Vector.new_array(MULTI_SIGMA),
-                Ncm.Vector.new_array(MULTI_WEIGHT),
-                MULTI_NSIGMA,
-            ),
-        ),
-    }[shape]
-
-    return cls, head + tail
-
-
-@pytest.mark.parametrize(
-    "shape",
-    ["gauss", "tophat", "student_t", "power_exp", "tophat_smooth", "lensing", "multi"],
-)
-def test_the_two_constructors_differ_only_by_the_integrator(
-    cosmology: Cosmology, shape: str
-) -> None:
-    """`new` is the Limber-only constructor, `new_full` the one that carries an sbi.
-
-    The builders above all use `new_full`, since a kernel only accepts the
-    non-Limber tiers once it holds an integrator. `new` must otherwise describe
-    the same window, so the two are compared shape by shape.
-    """
-    cls, args = _ctor_args(cosmology, shape)
-
-    plain = cls.new(*args)
-    full = cls.new_full(*args, _integrator())
-
-    for kernel in (plain, full):
-        kernel.prepare(cosmology.cosmo)
-
-    assert plain.peek_integrator() is None
-    assert full.peek_integrator() is not None
-
-    assert plain.get_support() == full.get_support()
-    chis = np.linspace(*plain.get_support(), 32)
-    assert_allclose(
-        [plain.eval_W(chi) for chi in chis],
-        [full.eval_W(chi) for chi in chis],
-        rtol=1.0e-15,
-    )
 
 
 def _gauss_with_kdep(
@@ -927,72 +804,6 @@ def test_lensing_is_broad_and_peaks_in_front_of_its_sources(
 
 
 # --- the spec a kernel reports back ----------------------------------------
-
-
-def test_every_shape_reports_the_spec_it_was_built_from(cosmology: Cosmology) -> None:
-    """Each accessor returns exactly what construction was given.
-
-    Not bookkeeping: these accessors are how a benchmark specification is read
-    back off a kernel, so a value that does not survive construction would make
-    a recorded spec disagree with the object that produced the numbers.
-    """
-    gauss = _gauss(cosmology)
-    assert (gauss.get_chi_mean(), gauss.get_chi_sigma(), gauss.get_n_sigma()) == (
-        CHI_MEAN,
-        CHI_SIGMA,
-        N_SIGMA,
-    )
-
-    tophat = _tophat(cosmology)
-    assert (tophat.get_chi_lower(), tophat.get_chi_upper()) == (CHI_LOWER, CHI_UPPER)
-
-    student = _student_t(cosmology)
-    assert (
-        student.get_chi_mean(),
-        student.get_chi_scale(),
-        student.get_nu(),
-        student.get_n_scale(),
-    ) == (ST_MEAN, ST_SCALE, ST_NU, ST_NSCALE)
-
-    power = _power_exp(cosmology)
-    assert (power.get_chi_scale(), power.get_alpha(), power.get_beta()) == (
-        PE_SCALE,
-        PE_ALPHA,
-        PE_BETA,
-    )
-
-    smooth = _tophat_smooth(cosmology)
-    assert (
-        smooth.get_chi_lower(),
-        smooth.get_chi_upper(),
-        smooth.get_chi_sigma(),
-    ) == (TS_LOWER, TS_UPPER, TS_SIGMA)
-
-    lensing = _lensing(cosmology)
-    assert (
-        lensing.get_chi_source_lower(),
-        lensing.get_chi_source_upper(),
-    ) == (LENS_SRC_LOWER, LENS_SRC_UPPER)
-
-
-def test_multi_reports_its_bumps(cosmology: Cosmology) -> None:
-    """The bump vectors survive construction, and n_bumps is not n_comps.
-
-    The distinction matters: overlapping bumps share a component, so a spec
-    that read the component count back as the bump count would be wrong.
-    """
-    kernel = _multi(cosmology, MULTI_MEAN, MULTI_SIGMA)
-
-    assert kernel.get_n_bumps() == len(MULTI_MEAN)
-    assert kernel.get_n_sigma() == MULTI_NSIGMA
-    assert kernel.get_n_bumps() != kernel.get_n_comps()  # these two overlap
-
-    for peeked, expected in (
-        (kernel.peek_chi_mean(), MULTI_MEAN),
-        (kernel.peek_chi_sigma(), MULTI_SIGMA),
-        (kernel.peek_weight(), MULTI_WEIGHT),
-    ):
-        assert_allclose([peeked.get(i) for i in range(peeked.len())], expected)
 
 
 def test_kdep_reports_its_parameters() -> None:

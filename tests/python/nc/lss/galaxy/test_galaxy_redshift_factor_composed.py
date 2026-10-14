@@ -87,7 +87,7 @@ def test_serialize_deserialize():
     """A round trip through NcmSerialize preserves the "zp-lim" property."""
     composed = Nc.GalaxyRedshiftFactorComposed.new(0.2, 3.5)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     composed2 = duplicate_via_serialization(composed, ser)
 
     assert isinstance(composed2, Nc.GalaxyRedshiftFactorComposed)

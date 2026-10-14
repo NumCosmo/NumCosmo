@@ -250,7 +250,7 @@ test_nc_cluster_abundance_sanity (TestNcClusterAbundance *test, gconstpointer pd
 void
 test_nc_cluster_abundance_serialize (TestNcClusterAbundance *test, gconstpointer pdata)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GVariant *var     = ncm_serialize_to_variant (ser, G_OBJECT (test->cad));
 
   nc_cluster_abundance_free (test->cad);

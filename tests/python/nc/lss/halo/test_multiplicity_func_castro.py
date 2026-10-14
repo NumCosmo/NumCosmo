@@ -223,7 +223,7 @@ def test_serialization() -> None:
         Nc.MultiplicityFuncCastroModel.C25,
         Nc.MultiplicityFuncCastroHaloFinder.SUBFIND,
     )
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mc_dup = ser.dup_obj(mc)
 
     assert isinstance(mc_dup, Nc.MultiplicityFuncCastro)

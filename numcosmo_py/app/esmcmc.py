@@ -362,7 +362,7 @@ class RunMCMC(RunCommonOptions):
                         "Covariance matrix cannot be found in the product file."
                     )
             else:
-                ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+                ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
                 cov_dict = ser.dict_str_from_yaml_file(
                     self.initial_sampler_covar.absolute().as_posix()
                 )

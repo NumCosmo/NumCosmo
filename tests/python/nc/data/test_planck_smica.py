@@ -81,7 +81,7 @@ def test_construct_and_serialize_roundtrip():
 
     mean = Ncm.DataGauss.peek_mean(smica)
     dset = Ncm.Dataset.new_array([smica])
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     smica2 = ser.from_variant(ser.to_variant(dset)).peek_data(0)
 
     assert isinstance(smica2, Nc.DataPlanckSmica)
@@ -135,7 +135,7 @@ def test_ttteee_construct_and_serialize_roundtrip():
 
     mean = Ncm.DataGauss.peek_mean(smica)
     dset = Ncm.Dataset.new_array([smica])
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     smica2 = ser.from_variant(ser.to_variant(dset)).peek_data(0)
 
     assert isinstance(smica2, Nc.DataPlanckSmica)
@@ -379,7 +379,7 @@ def test_synthetic_ttteee(synthetic_ttteee_clik, synthetic_pb):
     smica.resample(mset, rng)
     assert np.isfinite(smica.m2lnL_val(mset))
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     smica2 = ser.from_variant(ser.to_variant(smica))
     assert isinstance(smica2, Nc.DataPlanckSmica)
     assert smica2.get_length() == smica.get_length()
@@ -394,7 +394,7 @@ def test_synthetic_serialize_roundtrip(synthetic_tt_clik, synthetic_pb):
     smica.prepare(mset)
     m2lnl = smica.m2lnL_val(mset)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     smica2 = ser.from_variant(ser.to_variant(smica))
     assert isinstance(smica2, Nc.DataPlanckSmica)
     assert smica2.peek_hipert_boltzmann() is not None

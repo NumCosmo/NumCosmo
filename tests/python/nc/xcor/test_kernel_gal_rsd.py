@@ -296,7 +296,7 @@ def test_rsd_kernel_survives_serialization(cosmology, dndz_arrays) -> None:
     ells = np.array([2, 5, 10])
     kernel = _nc_gal_kernel(cosmology, dndz_arrays, dorsd=True, lmax=int(ells[-1]))
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     copy = ser.dup_obj(kernel)
 
     assert copy.get_property("dorsd") is True

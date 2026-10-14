@@ -60,7 +60,7 @@ def fixture_mcmc_catalog(tmp_path) -> Path:
     likelihood = Ncm.Likelihood.new(dset=Ncm.Dataset.new_array([data_mvnd]))
 
     experiment = tmp_path / "simple_experiment.yaml"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     experiment_dict = Ncm.ObjDictStr.new()
     experiment_dict.add("model-set", mset)

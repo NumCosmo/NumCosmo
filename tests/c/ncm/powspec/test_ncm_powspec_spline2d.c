@@ -195,7 +195,7 @@ static void
 test_ncm_powspec_spline2d_eval_vec_dup (void)
 {
   NcmPowspec *ps    = _test_powspec_new ();
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmPowspec *dup   = NCM_POWSPEC (ncm_serialize_dup_obj (ser, G_OBJECT (ps)));
   NcmVector *k      = ncm_vector_new (30);
   NcmVector *Pk     = ncm_vector_new (30);

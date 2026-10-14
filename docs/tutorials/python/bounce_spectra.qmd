@@ -2463,7 +2463,7 @@ We can load the calibrated model and verify the expected scaling relationship: $
 
 ```{python}
 # Load the calibration data directly from the binary file
-ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 default_calib_file = Ncm.cfg_get_data_filename("hiprim_2f_var.bin", True)
 calib_dict = ser.dict_str_from_binfile(default_calib_file)
 Pk0 = calib_dict.get("Pk0")

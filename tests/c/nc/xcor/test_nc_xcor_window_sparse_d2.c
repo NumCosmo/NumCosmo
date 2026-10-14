@@ -23,8 +23,9 @@
  */
 
 /*
- * The Chebyshev closures against the sparse certified windows at Bessel-derivative
- * order 2, on the multipoles the dense table lacks; the checks are in
+ * The Chebyshev closures against the sparse certified windows at Bessel-derivative order
+ * 2, on the multipoles the dense table lacks, every form but the power-exponential ones,
+ * which test_nc_xcor_window_sparse_d2_power_exp.c runs; the checks are in
  * test_nc_xcor_window_common.c.
  */
 
@@ -47,7 +48,7 @@ main (gint argc, gchar *argv[])
   dense  = test_nc_xcor_window_dense_table ();
   sparse = test_nc_xcor_window_sparse_table ();
 
-  test_nc_xcor_window_register (sparse, dense, TRUE, 2, "/nc/xcor/window_sparse");
+  test_nc_xcor_window_register (sparse, dense, TRUE, 2, TEST_NC_XCOR_WINDOW_FORMS_OTHER, "/nc/xcor/window_sparse");
 
   g_test_run ();
 

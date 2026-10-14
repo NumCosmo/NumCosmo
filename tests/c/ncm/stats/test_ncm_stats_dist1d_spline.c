@@ -293,7 +293,7 @@ static void
 test_ncm_stats_dist1d_spline_hsc_pz (void)
 {
   gchar *path        = ncm_cfg_get_data_filename ("hsc_pdr1_pz_multipeak.bin", TRUE);
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmObjDictStr *ods = ncm_serialize_dict_str_from_binfile (ser, path);
   GStrv keys         = ncm_obj_dict_str_keys (ods);
   gdouble max_err    = 0.0;
@@ -338,7 +338,7 @@ test_ncm_stats_dist1d_spline_serialize (void)
 {
   NcmSpline *m2lnp          = _test_spline_new (&_test_x2, -5.0, 5.0, TEST_NKNOTS);
   NcmStatsDist1dSpline *sds = ncm_stats_dist1d_spline_new (m2lnp);
-  NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmStatsDist1d *dup       = NCM_STATS_DIST1D (ncm_serialize_dup_obj (ser, G_OBJECT (sds)));
 
   ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (sds));
