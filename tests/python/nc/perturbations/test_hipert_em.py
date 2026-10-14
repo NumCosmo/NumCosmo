@@ -208,7 +208,7 @@ def test_evolution_vexp_duplicate(pem_vexp):
     """Test initial conditions of NcHIPertAdiab."""
     pem, vexp = pem_vexp
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     pem_dup = duplicate_via_serialization(pem, ser)
     vexp_dup = duplicate_via_serialization(vexp, ser)
 

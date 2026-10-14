@@ -23,8 +23,10 @@
  */
 
 /*
- * The Chebyshev closures against the dense certified windows at Bessel-derivative
- * order 1; the checks are in test_nc_xcor_window_common.c.
+ * The Chebyshev closures against the dense certified windows at Bessel-derivative order
+ * 1, every form but the power-exponential ones, which
+ * test_nc_xcor_window_dense_d1_power_exp.c runs; the checks are in
+ * test_nc_xcor_window_common.c.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -45,7 +47,7 @@ main (gint argc, gchar *argv[])
 
   dense = test_nc_xcor_window_dense_table ();
 
-  test_nc_xcor_window_register (dense, NULL, FALSE, 1, "/nc/xcor/window_dense");
+  test_nc_xcor_window_register (dense, NULL, FALSE, 1, TEST_NC_XCOR_WINDOW_FORMS_OTHER, "/nc/xcor/window_dense");
 
   g_test_run ();
 

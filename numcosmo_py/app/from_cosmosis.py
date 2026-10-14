@@ -122,6 +122,6 @@ if COSMOSIS:
         experiment.add("likelihood", likelihood)
         experiment.add("model-set", mset)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         ser.dict_str_to_yaml_file(model_builders, builders_file.absolute().as_posix())
         ser.dict_str_to_yaml_file(experiment, outfile.absolute().as_posix())

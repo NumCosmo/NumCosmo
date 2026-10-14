@@ -170,7 +170,7 @@ def test_serialization_deserialization(bias_despali: Nc.HaloBiasDespali):
     for eo, cmf in [(False, False), (True, False), (False, True), (True, True)]:
         bias_despali.set_eo(eo)
         bias_despali.set_cmf(cmf)
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         bias_despali_dup = duplicate_via_serialization(bias_despali, ser)
         assert bias_despali_dup is not None
         assert isinstance(bias_despali_dup, Nc.HaloBiasDespali)

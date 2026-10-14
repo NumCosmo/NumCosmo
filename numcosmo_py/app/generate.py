@@ -329,7 +329,7 @@ class GeneratePlanck:
             prior = Ncm.PriorGaussFunc.new(func, 0.775, 0.025, 0.0)
             likelihood.priors_add(prior)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
         if self.experiment.suffix != ".yaml":
             raise ValueError(
@@ -584,7 +584,7 @@ class GenerateJpasForecast:
         dataset = likelihood.peek_dataset()
         assert isinstance(dataset, Ncm.Dataset)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
         if self.experiment.suffix != ".yaml":
             raise ValueError(
@@ -783,7 +783,7 @@ class ClusterWL(ABC):
         dataset = likelihood.peek_dataset()
         assert isinstance(dataset, Ncm.Dataset)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
         for param in self.parameter_list:
             pindex = mset.param_get_by_full_name(param)
@@ -1061,7 +1061,7 @@ class LoadClusterWL(ClusterWL):
             obs = Nc.GalaxyWLObs.new_from_catalog_id(self.catalog.genum)
         else:
             assert self.data_file is not None
-            ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+            ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
             obs = cast(
                 Nc.GalaxyWLObs, ser.from_binfile(self.data_file.absolute().as_posix())
             )
@@ -1292,7 +1292,7 @@ class GenerateClusterRichnessCount:
 
         mset.prepare_fparam_map()
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         ser.dict_str_to_yaml_file(exp, self.experiment.absolute().as_posix())
 
     def _load_from_file(self) -> Ncm.ObjDictStr:
@@ -1491,7 +1491,7 @@ class GenerateQSpline:
         experiment.set("likelihood", likelihood)
         experiment.set("model-set", mset)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         ser.to_binfile(
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
@@ -1572,7 +1572,7 @@ class GenerateXCDM:
         experiment.set("likelihood", likelihood)
         experiment.set("model-set", mset)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         ser.to_binfile(
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
@@ -1756,7 +1756,7 @@ class GenerateDEWSpline:
         experiment.set("likelihood", likelihood)
         experiment.set("model-set", mset)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         ser.to_binfile(
             dset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
         )
@@ -1840,5 +1840,5 @@ class GenerateSamplerTest:
         experiment.set("likelihood", Ncm.Likelihood.new(dset))
         experiment.set("model-set", mset)
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())

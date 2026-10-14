@@ -213,7 +213,7 @@ def test_serialize_deserialize():
     dcwlf.set_node_reltol(1.0e-4)
     dcwlf.set_max_total_nodes(100)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dcwlf2 = duplicate_via_serialization(dcwlf, ser)
 
     assert isinstance(dcwlf2, Nc.DataClusterWLFactor)
@@ -245,7 +245,7 @@ def test_register_shared_anchors_obs_across_dups():
     dset = Ncm.Dataset.new()
     dset.append_data(dcwlf)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dset.register_shared(ser)
 
     dup1 = duplicate_via_serialization(dcwlf, ser)
@@ -266,7 +266,7 @@ def test_without_register_shared_obs_is_deep_copied_across_dups():
     dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
     dcwlf.set_obs(obs)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     dup1 = duplicate_via_serialization(dcwlf, ser)
     ser.reset(True)

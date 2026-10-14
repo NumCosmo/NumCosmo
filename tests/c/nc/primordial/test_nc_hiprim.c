@@ -141,7 +141,7 @@ test_nc_hiprim_lnk_range (TestNcHIPrim *test, gconstpointer pdata)
 static void
 test_nc_hiprim_serialize (TestNcHIPrim *test, gconstpointer pdata)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcHIPrim *dup     = NC_HIPRIM (ncm_serialize_dup_obj (ser, G_OBJECT (test->prim)));
   const gdouble lnk = nc_hiprim_get_lnk_pivot (test->prim) + 1.0;
 

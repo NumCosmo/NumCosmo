@@ -68,7 +68,7 @@ def test_alpha_x(qgrw: Nc.HICosmoQGRW, alpha_a: np.ndarray) -> None:
 
 def test_serialize(qgrw: Nc.HICosmoQGRW):
     """Test HICosmoQGRW serialization."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     qgrw2 = duplicate_via_serialization(qgrw, ser)
 

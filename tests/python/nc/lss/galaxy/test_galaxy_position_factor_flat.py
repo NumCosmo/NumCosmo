@@ -166,7 +166,7 @@ def test_serialize_deserialize():
     """A round trip through NcmSerialize preserves the footprint limits."""
     flat = Nc.GalaxyPositionFactorFlat.new(0.0, 30.0, -10.0, 10.0)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     flat2 = duplicate_via_serialization(flat, ser)
 
     assert isinstance(flat2, Nc.GalaxyPositionFactorFlat)

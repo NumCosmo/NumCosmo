@@ -128,7 +128,7 @@ def test_release_url_is_the_shared_datafile_release():
 
 def _write_cached(tmp_path, rid, data):
     """Serialize @data where load_planck_release expects @rid's cache entry."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     ser.to_binfile(data, os.path.join(str(tmp_path), release_filename(rid)))
 
 

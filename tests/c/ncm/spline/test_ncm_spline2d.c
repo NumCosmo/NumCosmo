@@ -539,7 +539,7 @@ test_ncm_spline2d_serialize (TestNcmSpline2d *test, gconstpointer pdata)
   NcmVector *xv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
   NcmVector *yv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
   NcmMatrix *zm     = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X);
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
 
   ncm_vector_set_all (xv, M_PI);
   ncm_vector_set_all (yv, M_PI_2);
@@ -580,7 +580,7 @@ test_ncm_spline2d_serialize_init (TestNcmSpline2d *test, gconstpointer pdata)
   NcmVector *xv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
   NcmVector *yv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
   NcmMatrix *zm     = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X);
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gint i;
 
   for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)
@@ -638,7 +638,7 @@ test_ncm_spline2d_no_stride (TestNcmSpline2d *test, gconstpointer pdata)
   NcmVector *xv     = ncm_vector_new_full (xv_buf, _NCM_SPLINE2D_TEST_NKNOTS_X, 2, NULL, NULL);
   NcmVector *yv     = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
   NcmMatrix *zm     = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X);
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   gint i;
 
   for (i = 0; i < _NCM_SPLINE2D_TEST_NKNOTS_X; i++)

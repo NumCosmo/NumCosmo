@@ -116,7 +116,7 @@ test_ncm_reparam_param_desc (void)
   NcmRNG *rng             = ncm_rng_seeded_new (NULL, 1);
   NcmReparamLinear *relin = _test_reparam_new (rng);
   NcmReparam *reparam     = NCM_REPARAM (relin);
-  NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmReparam *dup;
   NcmSParam *sp;
   guint i;

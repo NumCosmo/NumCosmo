@@ -110,10 +110,16 @@ test_nc_xcor_solver_register (TestNcXcorSolver *test, gconstpointer pdata)
 
   /* The id is the handle every request is written in terms of, so it has to address the
    * kernel it was returned for. */
+  g_assert_cmpuint (id1, ==, 0);
   g_assert_cmpuint (id1, !=, id2);
   g_assert_cmpuint (nc_xcor_solver_get_n_kernels (test->solver), ==, 2);
   g_assert_true (nc_xcor_solver_peek_kernel (test->solver, id1) == test->k1);
   g_assert_true (nc_xcor_solver_peek_kernel (test->solver, id2) == test->k2);
+
+  /* Registration is by identity: the same instance again returns its id and adds no
+   * entry. */
+  g_assert_cmpuint (nc_xcor_solver_register_kernel (test->solver, test->k1), ==, id1);
+  g_assert_cmpuint (nc_xcor_solver_get_n_kernels (test->solver), ==, 2);
 
   nc_xcor_solver_clear (&solver2);
   g_assert_true (solver2 == NULL);
@@ -148,6 +154,164 @@ test_nc_xcor_solver_requests (TestNcXcorSolver *test, gconstpointer pdata)
   nc_xcor_solver_clear_requests (test->solver);
   g_assert_cmpuint (nc_xcor_solver_get_n_requests (test->solver), ==, 0);
   g_assert_cmpuint (nc_xcor_solver_get_n_kernels (test->solver), ==, 2);
+  g_assert_true (nc_xcor_solver_peek_kernel (test->solver, id1) == test->k1);
+}
+
+/* The blocks of the current plan must be exactly @expected, @n pairs (lmin, lmax) */
+static void
+_test_assert_blocks (NcXcorSolver *solver, const guint *expected, guint n)
+{
+  guint i;
+
+  g_assert_cmpuint (nc_xcor_solver_get_n_blocks (solver), ==, n);
+
+  for (i = 0; i < n; i++)
+  {
+    guint lmin, lmax;
+
+    nc_xcor_solver_get_block (solver, i, &lmin, &lmax);
+    g_assert_cmpuint (lmin, ==, expected[2 * i]);
+    g_assert_cmpuint (lmax, ==, expected[2 * i + 1]);
+  }
+}
+
+/* The blocks of the current plan are ascending and contiguous from @lmin to @lmax, none
+ * wider than @block_size */
+static void
+_test_assert_tiling (NcXcorSolver *solver, guint lmin, guint lmax, guint block_size)
+{
+  const guint n_blocks = nc_xcor_solver_get_n_blocks (solver);
+  guint i, prev_lmax = 0;
+
+  g_assert_cmpuint (n_blocks, >, 0);
+
+  for (i = 0; i < n_blocks; i++)
+  {
+    guint bmin, bmax;
+
+    nc_xcor_solver_get_block (solver, i, &bmin, &bmax);
+    g_assert_cmpuint (bmin, <=, bmax);
+    g_assert_cmpuint (bmax - bmin + 1, <=, block_size);
+
+    if (i == 0)
+      g_assert_cmpuint (bmin, ==, lmin);
+    else
+      g_assert_cmpuint (bmin, ==, prev_lmax + 1);
+
+    prev_lmax = bmax;
+  }
+
+  g_assert_cmpuint (prev_lmax, ==, lmax);
+}
+
+/* One request is cut into full blocks from its first multipole; planning again with
+ * another size replaces the plan. */
+static void
+test_nc_xcor_solver_plan_tiling (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  const guint id    = nc_xcor_solver_register_kernel (test->solver, test->k1);
+  const guint by8[] = {0, 7, 8, 15, 16, 20};
+  const guint by4[] = {0, 3, 4, 7, 8, 11, 12, 15, 16, 19, 20, 20};
+
+  nc_xcor_solver_request_cl (test->solver, id, id, 0, 20);
+
+  nc_xcor_solver_plan_blocks (test->solver, 8);
+  _test_assert_blocks (test->solver, by8, G_N_ELEMENTS (by8) / 2);
+
+  nc_xcor_solver_plan_blocks (test->solver, 4);
+  _test_assert_blocks (test->solver, by4, G_N_ELEMENTS (by4) / 2);
+}
+
+/* The blocks cover the whole span of the requests, the gap between disjoint ones
+ * included, and requests given unordered and overlapping. */
+static void
+test_nc_xcor_solver_plan_union (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  const guint id1 = nc_xcor_solver_register_kernel (test->solver, test->k1);
+  const guint id2 = nc_xcor_solver_register_kernel (test->solver, test->k2);
+
+  nc_xcor_solver_request_cl (test->solver, id1, id1, 10, 15);
+  nc_xcor_solver_request_cl (test->solver, id1, id2, 0, 5);
+  nc_xcor_solver_plan_blocks (test->solver, 8);
+  _test_assert_tiling (test->solver, 0, 15, 8);
+
+  /* Not monotonic and overlapping, so the boundary list has to be sorted and
+   * de-duplicated rather than consumed as given. */
+  nc_xcor_solver_clear_requests (test->solver);
+  nc_xcor_solver_request_cl (test->solver, id1, id1, 40, 55);
+  nc_xcor_solver_request_cl (test->solver, id1, id1, 2, 9);
+  nc_xcor_solver_request_cl (test->solver, id1, id1, 20, 31);
+  nc_xcor_solver_request_cl (test->solver, id1, id1, 6, 25);
+  nc_xcor_solver_plan_blocks (test->solver, 8);
+  _test_assert_tiling (test->solver, 2, 55, 8);
+}
+
+/* The block size is the solver's alone: a registered kernel's integrator, whose
+ * ell-cache-max is an absolute multipole and not a width, does not cap it. */
+static void
+test_nc_xcor_solver_plan_kernel_integrator (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  NcmSBesselIntegrator *small_sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new_full (0, 5, 1.0e-4, 1.0e6, 21, 5,
+                                                                                                   1.0e-13, 2, 1.0e-8));
+  NcXcorKernel *small = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new_full (test->dist, test->ps,
+                                                                                1700.0, 350.0, 4.0, small_sbi));
+  const guint by8[] = {0, 7, 8, 15, 16, 20};
+  guint id1, id2;
+
+  id1 = nc_xcor_solver_register_kernel (test->solver, test->k1);
+  id2 = nc_xcor_solver_register_kernel (test->solver, small);
+
+  nc_xcor_solver_request_cl (test->solver, id1, id2, 0, 20);
+  nc_xcor_solver_plan_blocks (test->solver, 8);
+  _test_assert_blocks (test->solver, by8, G_N_ELEMENTS (by8) / 2);
+
+  nc_xcor_kernel_free (small);
+  ncm_sbessel_integrator_free (small_sbi);
+}
+
+/* Several kernels' l_limber thresholds, registered in descending order, each start a
+ * block in ascending order. */
+static void
+test_nc_xcor_solver_plan_l_limber_sorted (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 64));
+  NcXcorKernel *k30         = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new_full (test->dist, test->ps,
+                                                                                      1500.0, 300.0, 4.0, sbi));
+  NcXcorKernel *k11 = NC_XCOR_KERNEL (nc_xcor_kernel_analytic_gauss_new_full (test->dist, test->ps,
+                                                                              1700.0, 350.0, 4.0, sbi));
+  gint start_11 = -1, start_30 = -1;
+  guint id30, id11, i;
+
+  nc_xcor_kernel_set_l_limber (k30, 30);
+  nc_xcor_kernel_set_l_limber (k11, 11);
+
+  id30 = nc_xcor_solver_register_kernel (test->solver, k30);
+  id11 = nc_xcor_solver_register_kernel (test->solver, k11);
+  nc_xcor_solver_request_cl (test->solver, id30, id11, 2, 40);
+
+  /* Large enough that only the thresholds can split. */
+  nc_xcor_solver_plan_blocks (test->solver, 64);
+  _test_assert_tiling (test->solver, 2, 40, 64);
+
+  for (i = 0; i < nc_xcor_solver_get_n_blocks (test->solver); i++)
+  {
+    guint lmin, lmax;
+
+    nc_xcor_solver_get_block (test->solver, i, &lmin, &lmax);
+
+    if (lmin == 11)
+      start_11 = i;
+
+    if (lmin == 30)
+      start_30 = i;
+  }
+
+  g_assert_cmpint (start_11, >=, 0);
+  g_assert_cmpint (start_30, >, start_11);
+
+  nc_xcor_kernel_free (k30);
+  nc_xcor_kernel_free (k11);
+  ncm_sbessel_integrator_free (sbi);
 }
 
 static void
@@ -318,6 +482,10 @@ static const TestCheck test_checks[] = {
   {"requests",       &test_nc_xcor_solver_requests      },
   {"plan",           &test_nc_xcor_solver_plan          },
   {"plan/l_limber",  &test_nc_xcor_solver_plan_l_limber },
+  {"plan/tiling",    &test_nc_xcor_solver_plan_tiling   },
+  {"plan/union",     &test_nc_xcor_solver_plan_union    },
+  {"plan/kernel_integrator", &test_nc_xcor_solver_plan_kernel_integrator},
+  {"plan/l_limber_sorted", &test_nc_xcor_solver_plan_l_limber_sorted},
   {"solve",          &test_nc_xcor_solver_solve         },
   {"cache_max/traps", &test_nc_xcor_solver_cache_max_traps},
   {"cache_max/subprocess", &test_nc_xcor_solver_cache_max},

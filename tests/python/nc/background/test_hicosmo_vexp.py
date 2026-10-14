@@ -225,7 +225,7 @@ def test_serialize(vexp):
     vexp.props.glue_de = True
     vexp.props.xb = 1.0e30
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     vexp2 = duplicate_via_serialization(vexp, ser)
 

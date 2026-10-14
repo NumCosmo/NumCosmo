@@ -115,7 +115,7 @@ def test_default_construction_is_survivable() -> None:
     assert ssc_sij.get_nbins() == 0
     assert ssc_sij.get_lmax() == 0
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     assert isinstance(ser.from_string(ser.to_string(ssc_sij, True)), Nc.XcorSSCSij)
 
@@ -366,7 +366,7 @@ def test_area_survives_serialization(cosmology: Cosmology) -> None:
     ssc_sij = _make_ssc_sij(cosmology)
     ssc_sij.set_area(18000.0)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dup = ser.from_string(ser.to_string(ssc_sij, True))
 
     assert_allclose(dup.get_area(), 18000.0)
@@ -394,7 +394,7 @@ def test_serialization_round_trip(cosmology: Cosmology) -> None:
     ssc_sij.set_peak_epsilon(3.0e-6)
     ssc_sij.set_block_size(4)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dup = ser.from_string(ser.to_string(ssc_sij, True))
 
     assert isinstance(dup, Nc.XcorSSCSij)

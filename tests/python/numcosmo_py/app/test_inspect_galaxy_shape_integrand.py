@@ -90,7 +90,7 @@ def fixture_simple_experiment(tmp_path: Path) -> Path:
     likelihood = Ncm.Likelihood.new(dset=Ncm.Dataset.new_array([data_mvnd]))
 
     exp_file = tmp_path / "simple_experiment.yaml"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     experiment = Ncm.ObjDictStr.new()
     experiment.add("model-set", mset)

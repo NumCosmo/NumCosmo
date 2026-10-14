@@ -114,7 +114,7 @@ def test_qspline_wlp_mset_func_serializes(cosmo_q: Nc.HICosmoQSpline) -> None:
     mset = Ncm.MSet.new_array([cosmo_q])
     direct = func.eval1(mset, 4.0)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     reloaded = ser.from_yaml(ser.to_yaml(func))
     assert_allclose(reloaded.eval1(mset, 4.0), direct)
 
@@ -188,9 +188,9 @@ def test_qspline_band_function_grid(tmp_path: Path) -> None:
     assert_allclose([oa.get(i).eval0(mset) for i in range(oa.len())], direct)
 
     path = tmp_path / "funcs.yaml"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     ser.array_to_yaml_file(oa, path.absolute().as_posix())
-    reloaded = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).array_from_yaml_file(
+    reloaded = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).array_from_yaml_file(
         path.absolute().as_posix()
     )
     assert_allclose(

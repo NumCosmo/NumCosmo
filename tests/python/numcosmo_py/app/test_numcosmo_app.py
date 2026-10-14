@@ -66,7 +66,7 @@ def fixture_simple_experiment(tmp_path) -> Tuple[Path, Ncm.ObjDictStr]:
 
     tmp_file = tmp_path / "simple_experiment.yaml"
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     experiment = Ncm.ObjDictStr.new()
     experiment.add("model-set", mset)
@@ -342,7 +342,7 @@ def test_run_mc_fiducial(simple_experiment, tmp_path):
     fiducial.param_set_all_ftype(Ncm.ParamType.FREE)
     fiducial.fparams_set_array([0.5] * fiducial.fparam_len())
     fiducial_file = tmp_path / "fiducial.mset.yaml"
-    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_yaml_file(
+    Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).to_yaml_file(
         fiducial, fiducial_file.as_posix()
     )
 
@@ -371,7 +371,7 @@ def test_run_mc_fiducial_not_an_mset(simple_experiment, tmp_path):
 
     # A serialized model (not wrapped in an MSet) must be rejected.
     not_mset = tmp_path / "not_mset.yaml"
-    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_yaml_file(
+    Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).to_yaml_file(
         Ncm.ModelMVND.new(2), not_mset.as_posix()
     )
 
@@ -394,7 +394,7 @@ def test_run_theory_vector(simple_experiment):
     if result.exit_code != 0:
         raise result.exception
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
     assert isinstance(output_dict, Ncm.ObjDictStr)
     v1 = output_dict.get("theory-vector")
@@ -429,7 +429,7 @@ def test_run_theory_vector_starting_point(simple_experiment):
     if result.exit_code != 0:
         raise result.exception
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
     assert isinstance(output_dict, Ncm.ObjDictStr)
     v1 = output_dict.get("theory-vector")
@@ -468,7 +468,7 @@ def test_run_fisher_output(simple_experiment, fisher_type):
     if result.exit_code != 0:
         raise result.exception
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
     assert isinstance(output_dict, Ncm.ObjDictStr)
     v1 = output_dict.get("covariance")
@@ -510,7 +510,7 @@ def test_run_fisher_bias(simple_experiment):
     if result.exit_code != 0:
         raise result.exception
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     output_dict = ser.dict_str_from_yaml_file(output.as_posix())
     assert isinstance(output_dict, Ncm.ObjDictStr)
     v1 = output_dict.get("delta-theta")
@@ -1272,7 +1272,7 @@ def test_catalog_dump_mset_round_trips_as_starting_point(simple_experiment, tmp_
     if result.exit_code != 0:
         raise result.exception
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dumped_dict = ser.dict_str_from_yaml_file(dumped.as_posix())
     assert dumped_dict.peek("model-set") is not None
 
@@ -1594,7 +1594,7 @@ def test_generate_sampler_test(tmp_path, target):
     if result.exit_code != 0:
         raise result.exception
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     loaded = ser.dict_str_from_yaml_file(experiment.as_posix())
 
     assert isinstance(loaded.get("likelihood"), Ncm.Likelihood)

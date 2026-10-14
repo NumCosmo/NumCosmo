@@ -748,7 +748,15 @@ xcor_tests = [
     },
     {
         'name': 'nc_xcor_kernel',
-        'sources': ['nc/xcor/test_nc_xcor_kernel.c'],
+        'sources': ['nc/xcor/test_nc_xcor_kernel.c', 'nc/xcor/test_nc_xcor_kernel_common.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_cmb_isw',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_cmb_isw.c', 'nc/xcor/test_nc_xcor_kernel_common.c'],
+    },
+    {
+        'name': 'nc_xcor_kernel_cmb_lensing',
+        'sources': ['nc/xcor/test_nc_xcor_kernel_cmb_lensing.c', 'nc/xcor/test_nc_xcor_kernel_common.c'],
     },
     {
         'name': 'nc_xcor_kquad',
@@ -782,10 +790,13 @@ xcor_tests = [
         'name': 'nc_xcor_ssc_sij',
         'sources': ['nc/xcor/test_nc_xcor_ssc_sij.c'],
     },
-    # One binary per table and Bessel-derivative order. The timeout follows the
-    # -O0 coverage build, which runs these 6.3 to 7.8 times slower than the Optimized
-    # build (measured): sparse_d1 (ell 1000) takes 539 s there, under the lane's
-    # multiplier of 3.
+    # One binary per table and Bessel-derivative order; at orders 1 and 2 the
+    # power-exponential windows, about half the cost, run in a binary of their own. The
+    # timeout follows the -O0 coverage build, which runs these 6.3 to 7.8 times slower
+    # than the Optimized build (measured). There, sparse_d1 took 501 to 663 s before
+    # the split, and one slow runner pushed it past 1080 s (360 s under the lane's
+    # multiplier of 3); the subtest times of a passing run add up to at most 337 s for
+    # any of the split binaries.
     {
         'name': 'nc_xcor_window_dense_d0',
         'sources': ['nc/xcor/test_nc_xcor_window_dense_d0.c', 'nc/xcor/test_nc_xcor_window_common.c'],
@@ -797,8 +808,18 @@ xcor_tests = [
         'timeout': 360,
     },
     {
+        'name': 'nc_xcor_window_dense_d1_power_exp',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense_d1_power_exp.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
         'name': 'nc_xcor_window_dense_d2',
         'sources': ['nc/xcor/test_nc_xcor_window_dense_d2.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
+        'name': 'nc_xcor_window_dense_d2_power_exp',
+        'sources': ['nc/xcor/test_nc_xcor_window_dense_d2_power_exp.c', 'nc/xcor/test_nc_xcor_window_common.c'],
         'timeout': 360,
     },
     {
@@ -817,8 +838,18 @@ xcor_tests = [
         'timeout': 360,
     },
     {
+        'name': 'nc_xcor_window_sparse_d1_power_exp',
+        'sources': ['nc/xcor/test_nc_xcor_window_sparse_d1_power_exp.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
         'name': 'nc_xcor_window_sparse_d2',
         'sources': ['nc/xcor/test_nc_xcor_window_sparse_d2.c', 'nc/xcor/test_nc_xcor_window_common.c'],
+        'timeout': 360,
+    },
+    {
+        'name': 'nc_xcor_window_sparse_d2_power_exp',
+        'sources': ['nc/xcor/test_nc_xcor_window_sparse_d2_power_exp.c', 'nc/xcor/test_nc_xcor_window_common.c'],
         'timeout': 360,
     },
 ]

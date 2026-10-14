@@ -170,7 +170,7 @@ def load_planck_release(
     is needed.
     """
     path = _ensure_downloaded(rid, cache_dir)
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     data = ser.from_binfile(path)
     assert isinstance(
         data,
@@ -200,7 +200,7 @@ def build_release(out_dir: str | None = None) -> list[str]:
         out_dir = Ncm.cfg_get_fullpath_base()
     os.makedirs(out_dir, exist_ok=True)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     written: list[str] = []
 
     for rid, (relpath, builder) in _REGISTRY.items():

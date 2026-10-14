@@ -119,7 +119,7 @@ def test_serialize_deserialize():
     construct state)."""
     gsdrs = Nc.GalaxyRedshiftFactorSpline.new()
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     gsdrs2 = duplicate_via_serialization(gsdrs, ser)
 
     assert isinstance(gsdrs2, Nc.GalaxyRedshiftFactorSpline)

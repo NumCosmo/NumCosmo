@@ -174,7 +174,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->mcat              = NULL;
   self->mtype             = NCM_FIT_RUN_MSGS_NONE;
   self->nt                = ncm_timer_new ();
-  self->ser               = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  self->ser               = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   self->walker            = NULL;
   self->lre_step          = 0.0;
   self->auto_trim         = FALSE;

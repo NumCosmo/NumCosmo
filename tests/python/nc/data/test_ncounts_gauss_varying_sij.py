@@ -232,7 +232,7 @@ def test_round_trips_through_a_serialized_experiment() -> None:
     """
     _, mset, data, likelihood = _build(varying=True)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dset = ser.from_string(ser.to_string(Ncm.Dataset.new_array([data]), True))
     reloaded = dset.peek_data(0)
 
@@ -250,7 +250,7 @@ def test_serialization_keeps_the_calculator() -> None:
     """The data object serializes with its calculator attached."""
     _, _, data, _ = _build(varying=True)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dup = ser.from_string(ser.to_string(data, True))
 
     ssc_sij = dup.get_ssc_sij()

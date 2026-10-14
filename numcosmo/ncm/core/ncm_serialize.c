@@ -40,8 +40,17 @@
  * Deserializing `TypeName[name]` returns the instance of that name when the table has one.
  * With #NCM_SERIALIZE_OPT_AUTONAME_SER each newly serialized object is named `S<n>`, and
  * with #NCM_SERIALIZE_OPT_AUTOSAVE_SER each named object deserialized is added to the
- * table. Together (#NCM_SERIALIZE_OPT_CLEAN_DUP) they make ncm_serialize_dup_obj() keep
- * an object shared by several properties shared in the copy.
+ * table. Together (#NCM_SERIALIZE_OPT_KEEP_SHARED, formerly #NCM_SERIALIZE_OPT_CLEAN_DUP)
+ * they make a copy follow the original's object graph: an object shared by several
+ * properties, or by several elements of an array, is shared in the copy, while
+ * #NCM_SERIALIZE_OPT_NONE writes and rebuilds it once per reference.
+ *
+ * The names and the rebuilt objects stay in the serializer after each call. Serializing an
+ * object it has already named writes a reference, and deserializing that reference returns
+ * the object rebuilt the first time. So with one serializer and no reset, a second
+ * ncm_serialize_dup_obj() of the same object returns the first copy itself, and two graphs
+ * serialized in turn share every object they have in common. Call ncm_serialize_reset()
+ * between graphs that must not share objects.
  *
  * ncm_serialize_global() returns a process-wide serializer without options, and the
  * ncm_serialize_global functions use it.
@@ -3780,9 +3789,11 @@ ncm_serialize_var_dict_to_yaml_file (NcmSerialize *ser, NcmVarDict *vd, const gc
  * @obj: a #GObject
  *
  * Duplicates @obj by serializing and deserializing it with @ser. Named instances of @ser
- * are reused, not copied. With #NCM_SERIALIZE_OPT_CLEAN_DUP an object shared inside
- * @obj stays shared in the copy; the automatic names then remain in @ser, so call
- * ncm_serialize_reset() before using @ser for another copy.
+ * are reused, not copied. With #NCM_SERIALIZE_OPT_KEEP_SHARED an object shared inside
+ * @obj stays shared in the copy; the automatic names then remain in @ser, and a second
+ * call on the same object returns this copy itself rather than a new one. Call
+ * ncm_serialize_reset() before using @ser for a copy that must not share objects with this
+ * one.
  *
  * Returns: (transfer full): the copy.
  */

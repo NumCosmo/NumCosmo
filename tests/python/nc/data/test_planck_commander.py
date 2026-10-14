@@ -58,7 +58,7 @@ def test_construct_and_serialize_roundtrip():
     cmd = build_commander(_CLIK)  # data-only (no Boltzmann)
     assert cmd.get_length() == 28
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dset = Ncm.Dataset.new_array([cmd])
     cmd2 = ser.from_variant(ser.to_variant(dset)).peek_data(0)
 
@@ -227,7 +227,7 @@ def test_synthetic_serialize_roundtrip(tmp_path):
     cmd.prepare(mset)
     m2lnl = cmd.m2lnL_val(mset)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     cmd2 = ser.from_variant(ser.to_variant(cmd))
     assert isinstance(cmd2, Nc.DataPlanckCommander)
 
@@ -246,7 +246,7 @@ def test_synthetic_new_from_file(tmp_path):
     data = build_commander(clik)
 
     path = str(tmp_path / "commander.obj")
-    Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).to_file(data, path)
+    Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).to_file(data, path)
 
     loaded = Nc.DataPlanckCommander.new_from_file(path)
     assert isinstance(loaded, Nc.DataPlanckCommander)

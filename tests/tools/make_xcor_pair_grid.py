@@ -63,12 +63,11 @@ import sys
 import tempfile
 import time
 
+import make_xcor_window_truth_table as base
+
+from numcosmo_py.certified.xcor import windows as W
+
 HERE = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "python" / "nc" / "xcor"))
-
-import windows as W  # noqa: E402
-
-import make_xcor_window_truth_table as base  # noqa: E402
 
 OUTPUT = (
     HERE.parent.parent / "data" / "truth_tables" / "xcor" / "xcor_pair_grid.json.gz"
@@ -130,8 +129,8 @@ def support_of(exe: pathlib.Path, case: str, ell: int, target_rel: float) -> tup
     Deliberately not routed through the truth-table generator's own helper: that
     one resolves a case through its ``CASES`` dict, which is keyed by *its*
     historical names, while everything here speaks the shared vocabulary of
-    ``windows.py``. Reading the support from the tool's own output keeps one
-    naming scheme in play.
+    :mod:`numcosmo_py.certified.xcor.windows`. Reading the support from the tool's
+    own output keeps one naming scheme in play.
     """
     out = base.subprocess.run(
         [

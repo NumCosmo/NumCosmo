@@ -399,7 +399,7 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
 
   {
     NcClusterMass *benson = NC_CLUSTER_MASS (ncm_serialize_global_from_string ("NcClusterMassBenson"));
-    NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     NcmMSet *mset_dup     = ncm_mset_dup (test->mset, ser);
 
     g_assert_true (benson != NULL);
@@ -550,7 +550,7 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
   g_array_append_val (test->ma_destroyed, f);
 
   {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_saved_XXXXXX", NULL);
     gchar *filename   = g_strdup_printf ("%s/test_ncm_mset_saved.mset", tmp_dir);
     NcmMSet *mset_dup = NULL;
@@ -821,7 +821,7 @@ test_ncm_mset_load_unslotted_submodel_group (void)
 
   {
     NcmMSet *mset     = ncm_mset_empty_new ();
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_unslotted_XXXXXX", NULL);
     gchar *filename   = g_build_filename (tmp_dir, "unslotted.mset", NULL);
 
@@ -845,7 +845,7 @@ test_ncm_mset_load_unslotted_submodel_group (void)
     }
 
     {
-      NcmSerialize *ser2 = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+      NcmSerialize *ser2 = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
       NcmMSet *mset2     = ncm_mset_load (filename, ser2, &error);
 
       g_assert_true (mset2 == NULL);
@@ -971,7 +971,7 @@ test_ncm_mset_saveload_submodel_reparam (void)
 
   {
     NcmMSet *mset     = ncm_mset_empty_new ();
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     gchar *tmp_dir    = g_dir_make_tmp ("test_ncm_mset_saved_reparam_XXXXXX", NULL);
     gchar *filename   = g_strdup_printf ("%s/test_ncm_mset_saved_reparam.mset", tmp_dir);
     NcmMSet *mset_dup = NULL;
@@ -1082,7 +1082,7 @@ test_ncm_mset_remove_host (void)
   NcmModel *cosmo      = NCM_MODEL (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
   NcmModel *mvnd       = NCM_MODEL (ncm_model_mvnd_new (2));
   NcmMSet *mset        = ncm_mset_new (cosmo, NULL, mvnd, NULL);
-  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   const guint mvnd_len = ncm_model_len (mvnd);
   NcmMSet *dup;
 
@@ -1437,7 +1437,7 @@ test_ncm_mset_saveload_fmap (void)
   ncm_mset_set_fmap (mset, fmap, TRUE, NULL);
 
   {
-    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
 
     ncm_mset_save (mset, ser_save, filename, TRUE, NULL);
     ncm_serialize_free (ser_save);
@@ -1492,7 +1492,7 @@ test_ncm_mset_load_twice_same_ser (void)
   g_close (fd, NULL);
 
   {
-    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser_save = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
 
     ncm_mset_save (mset, ser_save, filename, FALSE, NULL);
     ncm_serialize_free (ser_save);

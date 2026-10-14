@@ -50,7 +50,7 @@ class InspectExperiment(LoadExperiment):
 
         # Keep dataset loading behavior consistent with the rest of the app while
         # exposing it as an attribute for inspection commands.
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         dataset_file = self.experiment.with_suffix(".dataset.gvar")
         if dataset_file.exists():
             dataset = ser.from_binfile(dataset_file.absolute().as_posix())

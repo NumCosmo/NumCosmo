@@ -342,7 +342,7 @@ nc_hiprim_two_fluids_set_use_default_calib (NcHIPrimTwoFluids *two_fluids, gbool
 
   if (use_default_calib)
   {
-    NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSerialize *ser         = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
     gchar *default_calib_file = ncm_cfg_get_data_filename ("hiprim_2f_var.bin", TRUE);
     NcmObjDictStr *calib_dict = ncm_serialize_dict_str_from_binfile (ser, default_calib_file);
     GObject *normalized_Pk_obj;

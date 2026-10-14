@@ -257,7 +257,7 @@ def test_serialization() -> None:
     cosmo = _make_cosmo()
     bias, _ = _make_bias(-0.5, cosmo)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dup = ser.dup_obj(bias)
 
     assert isinstance(dup, Nc.HaloBiasCastro)

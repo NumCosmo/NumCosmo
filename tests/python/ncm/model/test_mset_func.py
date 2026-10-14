@@ -65,7 +65,7 @@ def test_eval_x_uname_survives_serialization() -> None:
     which previously did not rebuild the unique name, so the column fell back to
     the (non-unique) base name.
     """
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     func = _wz_func(0.42)
     uname = func.peek_uname()
@@ -83,7 +83,7 @@ def test_eval_x_uname_survives_serialization() -> None:
 
 def test_eval_x_grid_unames_unique_after_serialization() -> None:
     """A function sampled over a grid stays column-unique through serialization."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     z_grid = [0.0, 0.25, 0.5, 1.0, 2.33]
     oa = Ncm.ObjArray.new()

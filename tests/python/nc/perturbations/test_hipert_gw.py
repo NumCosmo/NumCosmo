@@ -277,7 +277,7 @@ def test_evolution_vexp_duplicate(pgw_vexp: tuple[Nc.HIPertGW, Nc.HICosmoVexp]) 
     """
     pgw, vexp = pgw_vexp
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     pgw_dup = duplicate_via_serialization(pgw, ser)
     vexp_dup = duplicate_via_serialization(vexp, ser)
     assert isinstance(pgw_dup, Nc.HIPertGW)
@@ -476,7 +476,7 @@ def test_evolution_qgrw_duplicate(pgw_qgrw: tuple[Nc.HIPertGW, Nc.HICosmoQGRW]) 
     """
     pgw, qgrw = pgw_qgrw
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     pgw_dup = duplicate_via_serialization(pgw, ser)
     qgrw_dup = duplicate_via_serialization(qgrw, ser)
     assert isinstance(pgw_dup, Nc.HIPertGW)

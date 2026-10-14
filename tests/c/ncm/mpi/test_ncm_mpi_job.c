@@ -44,7 +44,7 @@ _test_ncm_mpi_job_run_test_job (TestNcmMPIJobRunArray run_array, const guint len
 {
   NcmRNG *rng        = ncm_rng_seeded_new (NULL, 20260930);
   NcmMPIJobTest *mjt = ncm_mpi_job_test_new ();
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GPtrArray *input_a = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   GPtrArray *ret_a   = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   NcmVector *vec     = NULL;
@@ -86,7 +86,7 @@ _test_ncm_mpi_job_run_shape_job_full (TestNcmMPIJobRunArray run_array, const gui
                                      "return-len", return_len,
                                      "float-input", float_input,
                                      NULL);
-  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GPtrArray *input_a = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   GPtrArray *ret_a   = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   guint i, j, k;
@@ -150,7 +150,7 @@ _test_ncm_mpi_job_run_fit_job (TestNcmMPIJobRunArray run_array)
   NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh              = ncm_likelihood_new (dset);
   NcmObjArray *func_oa           = ncm_obj_array_new ();
-  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GPtrArray *input_a             = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   GPtrArray *ret_a               = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   NcmMSetFunc *func;
@@ -223,7 +223,7 @@ _test_ncm_mpi_job_run_feval_job (TestNcmMPIJobRunArray run_array)
   NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh              = ncm_likelihood_new (dset);
   NcmObjArray *func_oa           = ncm_obj_array_new ();
-  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   GPtrArray *input_a             = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   GPtrArray *ret_a               = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   NcmMSetFunc *func;
@@ -308,7 +308,7 @@ _test_ncm_mpi_job_run_mcmc_job (TestNcmMPIJobRunArray run_array)
   NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh              = ncm_likelihood_new (dset);
   NcmObjArray *func_oa           = ncm_obj_array_new ();
-  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   NcmVector *y                   = ncm_data_gauss_cov_peek_mean (NCM_DATA_GAUSS_COV (data_mvnd));
   GPtrArray *input_a             = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
   GPtrArray *ret_a               = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);

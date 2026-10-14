@@ -174,8 +174,8 @@ def test_duplicate_via_serialization_different_serializer_options() -> None:
     vec = Ncm.Vector.new(3)
     vec.set_all(7.0)
 
-    # Test with CLEAN_DUP (default)
-    ser_clean = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    # Test with KEEP_SHARED (default)
+    ser_clean = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     vec_dup_clean = duplicate_via_serialization(vec, ser_clean)
 
     # Test with NONE

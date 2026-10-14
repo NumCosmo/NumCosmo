@@ -465,7 +465,7 @@ def test_compare_mf_dup(
     )
     nc_hmf_orig.prepare(cosmo_nc.cosmo)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     nc_hmf = duplicate_via_serialization(nc_hmf_orig, ser)
     assert isinstance(nc_hmf, Nc.HaloMassFunction)
     nc_hmf.prepare(cosmo_nc.cosmo)
@@ -650,7 +650,7 @@ def test_multiplicity_bhattacharya_dup(
 
     mulf_orig.set_convention(Nc.MultiplicityFuncBhattacharyaConvention.HEITMANN2019)
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mulf = duplicate_via_serialization(mulf_orig, ser)
     assert isinstance(mulf, Nc.MultiplicityFuncBhattacharya)
 

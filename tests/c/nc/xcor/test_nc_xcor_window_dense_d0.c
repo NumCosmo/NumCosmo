@@ -45,7 +45,7 @@ main (gint argc, gchar *argv[])
 
   dense = test_nc_xcor_window_dense_table ();
 
-  test_nc_xcor_window_register (dense, NULL, FALSE, 0, "/nc/xcor/window_dense");
+  test_nc_xcor_window_register (dense, NULL, FALSE, 0, TEST_NC_XCOR_WINDOW_FORMS_ALL, "/nc/xcor/window_dense");
 
   g_test_run ();
 

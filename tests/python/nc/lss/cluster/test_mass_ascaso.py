@@ -71,7 +71,7 @@ def test_cluster_mass_ascaso_mean_std(cluster_m: Nc.ClusterMassAscaso) -> None:
 
 def test_serialization_deserialization(cluster_m: Nc.ClusterMassAscaso) -> None:
     """Test serialization and deserialization."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     cluster_m_dup = duplicate_via_serialization(cluster_m, ser)
 
     assert cluster_m_dup is not None
