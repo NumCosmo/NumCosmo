@@ -41,6 +41,19 @@ typedef struct _TestNcmIntegralFixedConfig
   gdouble xu;
 } TestNcmIntegralFixedConfig;
 
+typedef struct _GaussArg
+{
+  gdouble mu;
+  gdouble sigma;
+} GaussArg;
+
+/* A target no fixed rule can reach inside the node budget: 1e-14 relative on a
+ * narrow Gaussian with at most 30 total nodes. Shared by the two tests below so
+ * they differ in exactly one thing -- whether @relerr_out is NULL. */
+#define CALIB_UNCONV_RELTOL (1.0e-14)
+
+#define CALIB_UNCONV_MAX_TOT (30)
+
 static void test_ncm_integral_fixed_get_nodes (gconstpointer pdata);
 static void test_ncm_integral_fixed_integ_vec_mult (gconstpointer pdata);
 static void test_ncm_integral_fixed_vec_mult_constant (gconstpointer pdata);
@@ -123,6 +136,61 @@ _f_x3 (gdouble x, gpointer userdata)
   NCM_UNUSED (userdata);
 
   return x * x * x;
+}
+
+/* A narrow Gaussian weight F(x): the "spiky P(z)" stand-in. */
+static gdouble
+_f_gauss (gdouble x, gpointer userdata)
+{
+  const GaussArg *a = (const GaussArg *) userdata;
+  const gdouble u   = (x - a->mu) / a->sigma;
+
+  return exp (-0.5 * u * u) / (sqrt (2.0 * M_PI) * a->sigma);
+}
+
+/* A smooth, gently tilted probe G(x): the "shape factor" stand-in. */
+static gdouble
+_g_tilt (gdouble x, gpointer userdata)
+{
+  NCM_UNUSED (userdata);
+
+  return 1.0 + 0.3 * x;
+}
+
+/* High-resolution reference (matches the one calibrate uses internally) and the
+ * pass test for a single config, so the test can independently re-check both
+ * acceptance criteria. */
+static gboolean
+_calib_config_passes (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu,
+                      gulong n_nodes, gulong rule_n, gdouble reltol,
+                      gdouble I_ref, gdouble exact_F)
+{
+  NcmIntegralFixed *t = ncm_integral_fixed_new (n_nodes, rule_n, xl, xu);
+  gdouble I_fg, mass;
+
+  ncm_integral_fixed_calc_nodes (t, F);
+  I_fg = ncm_integral_fixed_integ_mult (t, G);
+  mass = ncm_integral_fixed_nodes_eval (t);
+  ncm_integral_fixed_free (t);
+
+  return (fabs (I_fg - I_ref) / fabs (I_ref) < reltol) &&
+         (fabs (mass - exact_F) / fabs (exact_F) < reltol);
+}
+
+static NcmIntegralFixed *
+_calib_unconverged (gdouble *relerr_out, guint *n_nodes_out, guint *rule_n_out)
+{
+  static GaussArg garg  = { 0.4, 0.25 };
+  const gdouble xl      = -6.0;
+  const gdouble xu      = 6.0;
+  gsl_function F        = {_f_gauss, &garg};
+  gsl_function G        = {_g_tilt, NULL};
+  const gdouble exact_F = 0.5 * (erf ((xu - garg.mu) / (M_SQRT2 * garg.sigma)) -
+                                 erf ((xl - garg.mu) / (M_SQRT2 * garg.sigma)));
+
+  return ncm_integral_fixed_calibrate (&F, &G, xl, xu, CALIB_UNCONV_RELTOL, exact_F,
+                                       CALIB_UNCONV_MAX_TOT, n_nodes_out, rule_n_out,
+                                       relerr_out);
 }
 
 /* Checks that get_nodes returns the same abscissae used by calc_nodes.
@@ -233,51 +301,6 @@ test_ncm_integral_fixed_integ_vec_mult (gconstpointer pdata)
   ncm_vector_free (g_at_nodes);
 }
 
-typedef struct _GaussArg
-{
-  gdouble mu;
-  gdouble sigma;
-} GaussArg;
-
-/* A narrow Gaussian weight F(x): the "spiky P(z)" stand-in. */
-static gdouble
-_f_gauss (gdouble x, gpointer userdata)
-{
-  const GaussArg *a = (const GaussArg *) userdata;
-  const gdouble u   = (x - a->mu) / a->sigma;
-
-  return exp (-0.5 * u * u) / (sqrt (2.0 * M_PI) * a->sigma);
-}
-
-/* A smooth, gently tilted probe G(x): the "shape factor" stand-in. */
-static gdouble
-_g_tilt (gdouble x, gpointer userdata)
-{
-  NCM_UNUSED (userdata);
-
-  return 1.0 + 0.3 * x;
-}
-
-/* High-resolution reference (matches the one calibrate uses internally) and the
- * pass test for a single config, so the test can independently re-check both
- * acceptance criteria. */
-static gboolean
-_calib_config_passes (gsl_function *F, gsl_function *G, gdouble xl, gdouble xu,
-                      gulong n_nodes, gulong rule_n, gdouble reltol,
-                      gdouble I_ref, gdouble exact_F)
-{
-  NcmIntegralFixed *t = ncm_integral_fixed_new (n_nodes, rule_n, xl, xu);
-  gdouble I_fg, mass;
-
-  ncm_integral_fixed_calc_nodes (t, F);
-  I_fg = ncm_integral_fixed_integ_mult (t, G);
-  mass = ncm_integral_fixed_nodes_eval (t);
-  ncm_integral_fixed_free (t);
-
-  return (fabs (I_fg - I_ref) / fabs (I_ref) < reltol) &&
-         (fabs (mass - exact_F) / fabs (exact_F) < reltol);
-}
-
 /* Calibrates a fixed GL rule to integrate F*G of a narrow Gaussian weight times a
  * tilted probe. Checks: (i) the selected config integrates F*G to the target
  * tolerance against an independent ultra-high-res reference; (ii) the missed-mass
@@ -352,28 +375,6 @@ test_ncm_integral_fixed_calibrate (void)
     g_assert_false (_calib_config_passes (&F, &G, xl, xu, n_nodes - 1, rule_n, reltol, I_truth, exact_F));
 
   ncm_integral_fixed_free (intf);
-}
-
-/* A target no fixed rule can reach inside the node budget: 1e-14 relative on a
- * narrow Gaussian with at most 30 total nodes. Shared by the two tests below so
- * they differ in exactly one thing -- whether @relerr_out is NULL. */
-#define CALIB_UNCONV_RELTOL (1.0e-14)
-#define CALIB_UNCONV_MAX_TOT (30)
-
-static NcmIntegralFixed *
-_calib_unconverged (gdouble *relerr_out, guint *n_nodes_out, guint *rule_n_out)
-{
-  static GaussArg garg  = { 0.4, 0.25 };
-  const gdouble xl      = -6.0;
-  const gdouble xu      = 6.0;
-  gsl_function F        = {_f_gauss, &garg};
-  gsl_function G        = {_g_tilt, NULL};
-  const gdouble exact_F = 0.5 * (erf ((xu - garg.mu) / (M_SQRT2 * garg.sigma)) -
-                                 erf ((xl - garg.mu) / (M_SQRT2 * garg.sigma)));
-
-  return ncm_integral_fixed_calibrate (&F, &G, xl, xu, CALIB_UNCONV_RELTOL, exact_F,
-                                       CALIB_UNCONV_MAX_TOT, n_nodes_out, rule_n_out,
-                                       relerr_out);
 }
 
 /* Unconverged, @relerr_out NON-NULL: the caller has taken over reporting, so
