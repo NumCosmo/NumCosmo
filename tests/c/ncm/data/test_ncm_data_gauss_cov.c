@@ -145,6 +145,48 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
+/* Sets the data to the mean plus one in every component, with the identity covariance. */
+static void
+_test_unit_residual (NcmDataGaussCov *gauss)
+{
+  const guint np = ncm_data_gauss_cov_get_size (gauss);
+  NcmVector *y   = ncm_vector_new (np);
+  NcmMatrix *cov = ncm_matrix_new (np, np);
+
+  ncm_data_gauss_cov_test_mean_func (gauss, NULL, y);
+  ncm_vector_add_constant (y, 1.0);
+  ncm_data_gauss_cov_replace_mean (gauss, y);
+
+  ncm_matrix_set_identity (cov);
+  ncm_data_gauss_cov_set_cov (gauss, cov);
+  ncm_data_set_init (NCM_DATA (gauss), TRUE);
+
+  ncm_vector_free (y);
+  ncm_matrix_free (cov);
+}
+
+/* The sum of the squared residuals mean - y, computed here. The residuals are
+ * (m + 1) - m, which is 1 only up to the rounding of m, a cosine; the library sums
+ * the same squares in another order (BLAS), so the two agree to rounding only. */
+static gdouble
+_test_residual_ss (NcmDataGaussCov *gauss)
+{
+  const guint np = ncm_data_gauss_cov_get_size (gauss);
+  NcmVector *mu  = ncm_vector_new (np);
+  NcmVector *y   = ncm_data_gauss_cov_peek_mean (gauss);
+  gdouble ss     = 0.0;
+  guint i;
+
+  ncm_data_gauss_cov_test_mean_func (gauss, NULL, mu);
+
+  for (i = 0; i < np; i++)
+    ss += gsl_pow_2 (ncm_vector_get (mu, i) - ncm_vector_get (y, i));
+
+  ncm_vector_free (mu);
+
+  return ss;
+}
+
 void
 test_ncm_data_gauss_cov_test_new (TestNcmDataGaussCovTest *test, gconstpointer pdata)
 {
@@ -546,48 +588,6 @@ test_ncm_data_gauss_cov_compute_cov (TestNcmDataGaussCovTest *test, gconstpointe
   }
 
   ncm_mset_clear (&mset);
-}
-
-/* Sets the data to the mean plus one in every component, with the identity covariance. */
-static void
-_test_unit_residual (NcmDataGaussCov *gauss)
-{
-  const guint np = ncm_data_gauss_cov_get_size (gauss);
-  NcmVector *y   = ncm_vector_new (np);
-  NcmMatrix *cov = ncm_matrix_new (np, np);
-
-  ncm_data_gauss_cov_test_mean_func (gauss, NULL, y);
-  ncm_vector_add_constant (y, 1.0);
-  ncm_data_gauss_cov_replace_mean (gauss, y);
-
-  ncm_matrix_set_identity (cov);
-  ncm_data_gauss_cov_set_cov (gauss, cov);
-  ncm_data_set_init (NCM_DATA (gauss), TRUE);
-
-  ncm_vector_free (y);
-  ncm_matrix_free (cov);
-}
-
-/* The sum of the squared residuals mean - y, computed here. The residuals are
- * (m + 1) - m, which is 1 only up to the rounding of m, a cosine; the library sums
- * the same squares in another order (BLAS), so the two agree to rounding only. */
-static gdouble
-_test_residual_ss (NcmDataGaussCov *gauss)
-{
-  const guint np = ncm_data_gauss_cov_get_size (gauss);
-  NcmVector *mu  = ncm_vector_new (np);
-  NcmVector *y   = ncm_data_gauss_cov_peek_mean (gauss);
-  gdouble ss     = 0.0;
-  guint i;
-
-  ncm_data_gauss_cov_test_mean_func (gauss, NULL, mu);
-
-  for (i = 0; i < np; i++)
-    ss += gsl_pow_2 (ncm_vector_get (mu, i) - ncm_vector_get (y, i));
-
-  ncm_vector_free (mu);
-
-  return ss;
 }
 
 void
