@@ -50,12 +50,11 @@ typedef struct _TestNcmSFSphericalHarmonics
 #ifndef TEST_TOL
 #define TEST_TOL (1.0e-11)
 #endif
+
 #define TEST_THETA_MIN (0.01)
 
 /* Position of (l, m) in a table ordered by m, then l */
 #define TEST_IDX(lmax, l, m) ((l) + ((1 + 2 * (lmax) - (m)) * (m)) / 2)
-
-static gdouble _test_max_err = 0.0;
 
 static void test_ncm_sf_spherical_harmonics_new (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 static void test_ncm_sf_spherical_harmonics_free (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
@@ -75,6 +74,8 @@ static void test_ncm_sf_spherical_harmonics_lmax (TestNcmSFSphericalHarmonics *t
 
 static void test_ncm_sf_spherical_harmonics_traps (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 static void test_ncm_sf_spherical_harmonics_invalid_test (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
+
+static gdouble _test_max_err = 0.0;
 
 gint
 main (gint argc, gchar *argv[])
@@ -144,22 +145,6 @@ main (gint argc, gchar *argv[])
   g_test_message ("largest peak-scaled error: %.3e", _test_max_err);
 }
 
-static void
-test_ncm_sf_spherical_harmonics_new (TestNcmSFSphericalHarmonics *test, gconstpointer pdata)
-{
-  const guint lmax = g_test_rand_int_range (512, 2048);
-
-  test->spha = ncm_sf_spherical_harmonics_new (lmax);
-}
-
-static void
-test_ncm_sf_spherical_harmonics_free (TestNcmSFSphericalHarmonics *test, gconstpointer pdata)
-{
-  NcmSFSphericalHarmonics *spha = test->spha;
-
-  NCM_TEST_FREE (ncm_sf_spherical_harmonics_free, spha);
-}
-
 static gdouble *
 _test_peaks (const gdouble *Yblm, const guint lmax)
 {
@@ -181,6 +166,60 @@ _test_fails (const gdouble Ygsl, const gdouble Ync, const gdouble peak)
   _test_max_err = GSL_MAX (_test_max_err, err);
 
   return err > TEST_TOL;
+}
+
+/* Walks every (l, m) up to lmax at theta, in the order of the recursion */
+static GArray *
+_test_walk (NcmSFSphericalHarmonics *spha, const gdouble theta)
+{
+  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
+  const gint lmax                 = ncm_sf_spherical_harmonics_get_lmax (spha);
+  GArray *vals                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  ncm_sf_spherical_harmonics_start_rec (spha, sphaY, theta);
+
+  while (TRUE)
+  {
+    while (TRUE)
+    {
+      const gdouble Ylm = ncm_sf_spherical_harmonics_Y_get_lm (sphaY);
+
+      g_array_append_val (vals, Ylm);
+
+      if (ncm_sf_spherical_harmonics_Y_get_l (sphaY) >= lmax)
+        break;
+
+      ncm_sf_spherical_harmonics_Y_next_l (sphaY);
+    }
+
+    if (ncm_sf_spherical_harmonics_Y_get_m (sphaY) >= lmax)
+      break;
+
+    ncm_sf_spherical_harmonics_Y_next_m (sphaY);
+
+    if (ncm_sf_spherical_harmonics_Y_get_l (sphaY) > lmax)
+      break;
+  }
+
+  ncm_sf_spherical_harmonics_Y_free (sphaY);
+
+  return vals;
+}
+
+static void
+test_ncm_sf_spherical_harmonics_new (TestNcmSFSphericalHarmonics *test, gconstpointer pdata)
+{
+  const guint lmax = g_test_rand_int_range (512, 2048);
+
+  test->spha = ncm_sf_spherical_harmonics_new (lmax);
+}
+
+static void
+test_ncm_sf_spherical_harmonics_free (TestNcmSFSphericalHarmonics *test, gconstpointer pdata)
+{
+  NcmSFSphericalHarmonics *spha = test->spha;
+
+  NCM_TEST_FREE (ncm_sf_spherical_harmonics_free, spha);
 }
 
 static void
@@ -892,44 +931,6 @@ test_ncm_sf_spherical_harmonics_poles (TestNcmSFSphericalHarmonics *test, gconst
   g_free (ref);
   ncm_sf_spherical_harmonics_Y_free (sphaY);
   ncm_sf_spherical_harmonics_free (spha);
-}
-
-/* Walks every (l, m) up to lmax at theta, in the order of the recursion */
-static GArray *
-_test_walk (NcmSFSphericalHarmonics *spha, const gdouble theta)
-{
-  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
-  const gint lmax                 = ncm_sf_spherical_harmonics_get_lmax (spha);
-  GArray *vals                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
-
-  ncm_sf_spherical_harmonics_start_rec (spha, sphaY, theta);
-
-  while (TRUE)
-  {
-    while (TRUE)
-    {
-      const gdouble Ylm = ncm_sf_spherical_harmonics_Y_get_lm (sphaY);
-
-      g_array_append_val (vals, Ylm);
-
-      if (ncm_sf_spherical_harmonics_Y_get_l (sphaY) >= lmax)
-        break;
-
-      ncm_sf_spherical_harmonics_Y_next_l (sphaY);
-    }
-
-    if (ncm_sf_spherical_harmonics_Y_get_m (sphaY) >= lmax)
-      break;
-
-    ncm_sf_spherical_harmonics_Y_next_m (sphaY);
-
-    if (ncm_sf_spherical_harmonics_Y_get_l (sphaY) > lmax)
-      break;
-  }
-
-  ncm_sf_spherical_harmonics_Y_free (sphaY);
-
-  return vals;
 }
 
 static void
