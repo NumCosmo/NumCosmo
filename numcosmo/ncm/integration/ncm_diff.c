@@ -153,7 +153,7 @@ ncm_diff_init (NcmDiff *diff)
   self->spectral_window = 0.0;
   self->lb              = NULL;
   self->ub              = NULL;
-  self->domain_warnings = TRUE;
+  self->domain_warnings = FALSE;
 
   self->central_tables  = g_ptr_array_new ();
   self->forward_tables  = g_ptr_array_new ();
