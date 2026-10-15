@@ -2071,17 +2071,53 @@ _ncm_diff_ladder_extrapolate (NcmDiffLadder *ladder, const gdouble trunc_ratio, 
  * not do; lead_share = (rho - 1 / max |lambda|) / (1 - 1 / max |lambda|)
  * places the row between the two, 0 and 1.
  */
+
+/*
+ * The cancellation scales of a row in quadrature, [sum_t (lambda_t k_t)^2]^(1/2), from the
+ * sum of squares @sq and the largest term @max accumulated with the row. With the largest
+ * term inside [2^-500, 2^500] the plain square root is exact to rounding: a term whose square
+ * underflows is below 2^-74 of the largest. Outside it the terms are scaled by the power of
+ * two of the largest term, exactly, and squared again, as hypot does term by term.
+ */
+static gdouble
+_ncm_diff_ladder_quadrature (GArray *scales, NcmDiffTable *dtable, const guint nt, const gdouble sq, const gdouble max)
+{
+  if ((max == 0.0) || ((max > 0x1p-500) && (max < 0x1p500)))
+  {
+    return sqrt (sq);
+  }
+  else
+  {
+    gint e;
+    gdouble scaled_sq = 0.0;
+    guint t;
+
+    frexp (max, &e);
+
+    for (t = 0; t < nt; t++)
+    {
+      const gdouble term = ldexp (ncm_vector_get (dtable->lambda, t) * g_array_index (scales, gdouble, t), -e);
+
+      scaled_sq += term * term;
+    }
+
+    return ldexp (sqrt (scaled_sq), e);
+  }
+}
+
 static void
 _ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint nt)
 {
-  gdouble quot_scale = 0.0;
-  gdouble max_term   = 0.0;
-  gdouble lambda_max = 0.0;
+  gdouble quot_scale   = 0.0;
+  gdouble max_term     = 0.0;
+  gdouble lambda_max   = 0.0;
+  gdouble canc_sq      = 0.0;
+  gdouble canc_abs_sq  = 0.0;
+  gdouble canc_max     = 0.0;
+  gdouble canc_abs_max = 0.0;
   guint t;
 
-  ladder->row          = 0.0;
-  ladder->row_canc     = 0.0;
-  ladder->row_canc_abs = 0.0;
+  ladder->row = 0.0;
 
   for (t = 0; t < nt; t++)
   {
@@ -2091,14 +2127,19 @@ _ncm_diff_ladder_accum (NcmDiffLadder *ladder, NcmDiffTable *dtable, const guint
     const gdouble cabs_t   = g_array_index (ladder->cancs_abs, gdouble, t);
 
     /* fma: one rounding per term. */
-    ladder->row          = fma (lambda_t, quot_t, ladder->row);
-    ladder->row_canc     = hypot (ladder->row_canc, lambda_t * canc_t);
-    ladder->row_canc_abs = hypot (ladder->row_canc_abs, lambda_t * cabs_t);
+    ladder->row  = fma (lambda_t, quot_t, ladder->row);
+    canc_sq     += (lambda_t * canc_t) * (lambda_t * canc_t);
+    canc_abs_sq += (lambda_t * cabs_t) * (lambda_t * cabs_t);
+    canc_max     = GSL_MAX (canc_max, fabs (lambda_t * canc_t));
+    canc_abs_max = GSL_MAX (canc_abs_max, fabs (lambda_t * cabs_t));
 
     quot_scale = GSL_MAX (quot_scale, fabs (quot_t));
     max_term   = GSL_MAX (max_term, fabs (lambda_t * quot_t));
     lambda_max = GSL_MAX (lambda_max, fabs (lambda_t));
   }
+
+  ladder->row_canc     = _ncm_diff_ladder_quadrature (ladder->cancs, dtable, nt, canc_sq, canc_max);
+  ladder->row_canc_abs = _ncm_diff_ladder_quadrature (ladder->cancs_abs, dtable, nt, canc_abs_sq, canc_abs_max);
 
   ladder->quot_scale = quot_scale;
   ladder->max_term   = max_term;
