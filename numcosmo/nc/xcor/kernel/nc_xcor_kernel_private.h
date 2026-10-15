@@ -103,6 +103,7 @@ typedef struct _ComponentParams
 
 #define MAX_ELL_BLOCK NC_XCOR_KERNEL_MAX_ELL_BLOCK
 #define MAX_COMP_BLOCK 6
+#define MAX_LIMBER_TERMS 5 /* the order offsets -2, ..., 2 of the Bessel derivative weights */
 
 
 typedef struct _ComponentState
@@ -117,11 +118,9 @@ typedef struct _ComponentState
   gdouble last_k_right;
   guint left_boundary_found;
   guint right_boundary_found;
-  guint group;                                /* Components truncated together, see _component_states_init_non_limber */
-  gdouble k_min_limber_ell[MAX_ELL_BLOCK];    /* Per-ell minimum k for Limber */
-  gdouble k_max_limber_ell[MAX_ELL_BLOCK];    /* Per-ell maximum k for Limber */
-  gdouble k_min_limber_ell_p1[MAX_ELL_BLOCK]; /* Limber in u, Bessel derivative: the band of the j_{l+1} term, in x = k / (nu + 1) */
-  gdouble k_max_limber_ell_p1[MAX_ELL_BLOCK];
+  guint group;                                               /* Components truncated together, see _component_states_init_non_limber */
+  gdouble k_min_limber_ell[MAX_LIMBER_TERMS][MAX_ELL_BLOCK]; /* Limber: per term and multipole, the band in the term's x, empty when the term does not apply */
+  gdouble k_max_limber_ell[MAX_LIMBER_TERMS][MAX_ELL_BLOCK];
   ComponentParams params;
 } ComponentState;
 
@@ -138,12 +137,13 @@ typedef struct _ComponentStates
   const guint n_l;
   const gdouble epsilon;
   const guint adaptive_boundary_tries;
-  const gboolean is_limber; /* k_min_limber_ell/k_max_limber_ell are set only then */
-  const gboolean in_u;      /* the sampled variable is u = k / nu: k_min_hard, k_max_hard,
-                             * the band arrays and every sample are in u */
-  const guint n_terms;      /* 2 when a Limber block in u has a Bessel derivative component:
-                             * its j_{l+1} terms are the rows [n_l, 2 n_l), sampled in
-                             * x = k / (nu + 1); 1 otherwise */
+  const gboolean is_limber;       /* k_min_limber_ell/k_max_limber_ell are set only then */
+  const gboolean in_u;            /* the sampled variable is u = k / nu: k_min_hard, k_max_hard,
+                                   * the band arrays and every sample are in u */
+  const guint n_terms;            /* Limber: the order offsets of the block, the rows
+                                   * [tau n_l, (tau + 1) n_l) holding the j_{l + t_tau} terms
+                                   * in x = k / (nu + t_tau); 1 otherwise */
+  gint offsets[MAX_LIMBER_TERMS]; /* t_tau, ascending; {0} outside Limber */
 
   /* While a panel is being expanded a component is on or off for the whole
    * panel, decided at interval_mid, the midpoint of the continuous interval
@@ -151,13 +151,10 @@ typedef struct _ComponentStates
   gboolean panel_mode;
   gdouble interval_mid;
 
-  /* Limber only: the block's wave numbers and wave number factors at one node, of the
-   * j_l terms and, with two terms, of the j_{l+1} terms; and with two terms the rows of
-   * both at one node */
+  /* Limber only: the block's wave numbers and wave number factors of one term at one node;
+   * with several terms the rows of all of them at one node */
   NcmVector *k_vec;
   NcmVector *kf_vec;
-  NcmVector *k_vec_p1;
-  NcmVector *kf_vec_p1;
   NcmVector *y_terms;
 } ComponentStates;
 

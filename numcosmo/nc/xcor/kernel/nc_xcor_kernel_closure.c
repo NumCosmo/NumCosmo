@@ -84,8 +84,6 @@ _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states)
 
   ncm_vector_clear (&comp_states->k_vec);
   ncm_vector_clear (&comp_states->kf_vec);
-  ncm_vector_clear (&comp_states->k_vec_p1);
-  ncm_vector_clear (&comp_states->kf_vec_p1);
   ncm_vector_clear (&comp_states->y_terms);
 }
 
@@ -191,8 +189,7 @@ _nc_xcor_kernel_cmp_gdouble (gconstpointer a, gconstpointer b)
  * Collects into cuts the k strictly inside (k_min, k_max) at which the block
  * W_l(k) is discontinuous, sorted ascending with exact duplicates removed:
  * the truncation boundary of every component whose boundary was found, and under
- * Limber the band edges of every component for every multipole of the block, of its
- * j_{l+1} term too when it has a Bessel derivative (see
+ * Limber the band edges of every component for every multipole and term of the block (see
  * _component_states_compute_limber_u()). Each cut becomes a panel edge, with the
  * component or multipole off on the outer side, so that every panel is a
  * smooth function; a polynomial interpolating across a jump does not converge
@@ -222,23 +219,17 @@ _component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdo
      * see _component_states_compute_limber_u(). */
     if (comp_states->is_limber)
     {
-      guint j;
+      guint j, tau;
 
-      for (j = 0; j < comp_states->n_l; j++)
+      for (tau = 0; tau < comp_states->n_terms; tau++)
       {
-        if ((state->k_min_limber_ell[j] > k_min) && (state->k_min_limber_ell[j] < k_max))
-          g_array_append_val (cuts, state->k_min_limber_ell[j]);
-
-        if ((state->k_max_limber_ell[j] > k_min) && (state->k_max_limber_ell[j] < k_max))
-          g_array_append_val (cuts, state->k_max_limber_ell[j]);
-
-        if (nc_xcor_kernel_component_get_bessel_deriv (state->comp) > 0)
+        for (j = 0; j < comp_states->n_l; j++)
         {
-          if ((state->k_min_limber_ell_p1[j] > k_min) && (state->k_min_limber_ell_p1[j] < k_max))
-            g_array_append_val (cuts, state->k_min_limber_ell_p1[j]);
+          if ((state->k_min_limber_ell[tau][j] > k_min) && (state->k_min_limber_ell[tau][j] < k_max))
+            g_array_append_val (cuts, state->k_min_limber_ell[tau][j]);
 
-          if ((state->k_max_limber_ell_p1[j] > k_min) && (state->k_max_limber_ell_p1[j] < k_max))
-            g_array_append_val (cuts, state->k_max_limber_ell_p1[j]);
+          if ((state->k_max_limber_ell[tau][j] > k_min) && (state->k_max_limber_ell[tau][j] < k_max))
+            g_array_append_val (cuts, state->k_max_limber_ell[tau][j]);
         }
       }
     }
@@ -480,64 +471,73 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
     integrand->scaled = comp_states->in_u;
 
     /* The sampled range is in x; each panel row's k range is its scale times
-     * the part of it inside the band, and the block's k range is their union. Row
-     * i + n_l is the j_{l+1} term of multipole i, of the Bessel derivative components,
-     * with scale nu + 1. */
-    for (i = 0; i < comp_states->n_terms * n_l; i++)
+     * the part of it inside the band. Row tau n_l + i is the j_{l + t} term of multipole
+     * i, t = offsets[tau], with scale nu + t; a row whose order l + t is negative is empty
+     * and keeps the scale nu. The block's k range is the sampled range times the smallest
+     * and the largest scale. */
     {
-      NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, i);
-      const gboolean p1             = (i >= n_l);
-      const guint i_l               = p1 ? i - n_l : i;
-      const gdouble x_min           = integrand->k_min;
-      const gdouble x_max           = integrand->k_max;
-      gdouble k_min_i               = x_min;
-      gdouble k_max_i               = x_max;
+      gdouble scale_lo = G_MAXDOUBLE;
+      gdouble scale_hi = 0.0;
 
-      if (comp_states->is_limber)
+      for (i = 0; i < comp_states->n_terms * n_l; i++)
       {
-        gdouble band_min = G_MAXDOUBLE;
-        gdouble band_max = 0.0;
-        guint ci;
+        NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, i);
+        const guint tau               = i / n_l;
+        const guint i_l               = i % n_l;
+        const gint m                  = lmin + (gint) i_l + comp_states->offsets[tau];
+        const gdouble x_min           = integrand->k_min;
+        const gdouble x_max           = integrand->k_max;
+        gdouble k_min_i               = x_min;
+        gdouble k_max_i               = x_max;
+        gdouble scale                 = 1.0;
 
-        for (ci = 0; ci < comp_states->n_comp; ci++)
+        if (comp_states->is_limber)
         {
-          const ComponentState *state = &comp_states->states[ci];
+          gdouble band_min = G_MAXDOUBLE;
+          gdouble band_max = 0.0;
+          guint ci;
 
-          if (!p1)
+          for (ci = 0; ci < comp_states->n_comp; ci++)
           {
-            band_min = GSL_MIN (band_min, state->k_min_limber_ell[i_l]);
-            band_max = GSL_MAX (band_max, state->k_max_limber_ell[i_l]);
+            const ComponentState *state = &comp_states->states[ci];
+
+            band_min = GSL_MIN (band_min, state->k_min_limber_ell[tau][i_l]);
+            band_max = GSL_MAX (band_max, state->k_max_limber_ell[tau][i_l]);
           }
-          else if (nc_xcor_kernel_component_get_bessel_deriv (state->comp) > 0)
+
+          k_min_i = GSL_MAX (k_min_i, band_min);
+          k_max_i = GSL_MIN (k_max_i, band_max);
+
+          /* A band disjoint from the closure's domain leaves nothing to integrate;
+           * report the empty range as the domain's lower edge rather than an
+           * inverted one. */
+          if (k_min_i >= k_max_i)
+            k_min_i = k_max_i = x_min;
+        }
+
+        if (comp_states->in_u)
+        {
+          scale = (m >= 0) ? m + 0.5 : lmin + i_l + 0.5;
+
+          if (m >= 0)
           {
-            band_min = GSL_MIN (band_min, state->k_min_limber_ell_p1[i_l]);
-            band_max = GSL_MAX (band_max, state->k_max_limber_ell_p1[i_l]);
+            scale_lo = GSL_MIN (scale_lo, scale);
+            scale_hi = GSL_MAX (scale_hi, scale);
           }
         }
 
-        k_min_i = GSL_MAX (k_min_i, band_min);
-        k_max_i = GSL_MIN (k_max_i, band_max);
-
-        /* A band disjoint from the closure's domain leaves nothing to integrate;
-         * report the empty range as the domain's lower edge rather than an
-         * inverted one. */
-        if (k_min_i >= k_max_i)
-          k_min_i = k_max_i = x_min;
+        ncm_vector_set (integrand->scales, i, scale);
+        row->x_min = k_min_i;
+        row->x_max = k_max_i;
+        row->k_min = k_min_i * scale;
+        row->k_max = k_max_i * scale;
       }
 
-      const gdouble scale = comp_states->in_u ? (lmin + i_l + (p1 ? 1.5 : 0.5)) : 1.0;
-
-      ncm_vector_set (integrand->scales, i, scale);
-      row->x_min = k_min_i;
-      row->x_max = k_max_i;
-      row->k_min = k_min_i * scale;
-      row->k_max = k_max_i * scale;
-    }
-
-    if (integrand->scaled)
-    {
-      integrand->k_min *= ncm_vector_get (integrand->scales, 0);
-      integrand->k_max *= ncm_vector_get (integrand->scales, comp_states->n_terms * n_l - 1);
+      if (integrand->scaled)
+      {
+        integrand->k_min *= scale_lo;
+        integrand->k_max *= scale_hi;
+      }
     }
 
     return integrand;

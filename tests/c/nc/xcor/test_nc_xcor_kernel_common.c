@@ -1335,40 +1335,66 @@ _limber_peak (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, g
          nc_xcor_kernel_component_eval_kfactor (comp, cosmo, &xck, k) / k;
 }
 
-/* W_l(k) under Limber from the components: the j_l'' weight is
- * -(2 l + 1/4) / nu^2 P_l + 2 / (nu + 1) P_{l+1}, the j_l' weight (l / nu) P_l - P_{l+1} */
+/* The coefficient of j_{l+t} in the Bessel weight of order deriv, from the order
+ * recurrence of DLMF 10.51.1: j_l' = (l j_{l-1} - (l + 1) j_{l+1}) / (2 l + 1), applied
+ * twice for j_l''. Zero for a negative order. */
+static gdouble
+_limber_order_coef (guint deriv, gint l, gint t)
+{
+  const gdouble dl = l;
+
+  if (l + t < 0)
+    return 0.0;
+
+  if (deriv == 0)
+    return (t == 0) ? 1.0 : 0.0;
+
+  if (deriv == 1)
+    return (t == -1) ? dl / (2.0 * dl + 1.0) : ((t == 1) ? -(dl + 1.0) / (2.0 * dl + 1.0) : 0.0);
+
+  switch (t)
+  {
+    case -2:
+      return dl * (dl - 1.0) / ((2.0 * dl - 1.0) * (2.0 * dl + 1.0));
+
+    case 0:
+      return -(2.0 * dl * dl + 2.0 * dl - 1.0) / ((2.0 * dl - 1.0) * (2.0 * dl + 3.0));
+
+    case 2:
+      return (dl + 1.0) * (dl + 2.0) / ((2.0 * dl + 1.0) * (2.0 * dl + 3.0));
+
+    default:
+      return 0.0;
+  }
+}
+
+/* W_l(k) under Limber from the components: each Bessel weight is its combination of the
+ * orders l + t, and each order its peak term P_{l+t} */
 static gdouble
 _limber_direct (GPtrArray *comps, NcHICosmo *cosmo, NcDistance *dist, gint l, gdouble k)
 {
-  const gdouble nu = l + 0.5;
-  gdouble W        = 0.0;
+  gdouble W = 0.0;
   guint i;
 
   for (i = 0; i < comps->len; i++)
   {
     NcXcorKernelComponent *comp = g_ptr_array_index (comps, i);
     const guint deriv           = nc_xcor_kernel_component_get_bessel_deriv (comp);
-    gdouble chi_min, chi_max, k_min, k_max, P_l, val;
+    gdouble chi_min, chi_max, k_min, k_max;
+    gdouble val = 0.0;
+    gint t;
 
     nc_xcor_kernel_component_get_limits (comp, cosmo, &chi_min, &chi_max, &k_min, &k_max);
 
     if ((k < k_min) || (k > k_max))
       continue;
 
-    P_l = _limber_peak (comp, cosmo, dist, nu, k, chi_min, chi_max);
-
-    if (deriv == 0)
+    for (t = -2; t <= 2; t++)
     {
-      val = P_l;
-    }
-    else
-    {
-      const gdouble P_lp1 = _limber_peak (comp, cosmo, dist, nu + 1.0, k, chi_min, chi_max);
+      const gdouble coef = _limber_order_coef (deriv, l, t);
 
-      if (deriv == 1)
-        val = (l / nu) * P_l - P_lp1;
-      else
-        val = -(2.0 * l + 0.25) / (nu * nu) * P_l + 2.0 / (nu + 1.0) * P_lp1;
+      if (coef != 0.0)
+        val += coef * _limber_peak (comp, cosmo, dist, l + t + 0.5, k, chi_min, chi_max);
     }
 
     W += nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, l) * val;
@@ -1377,13 +1403,12 @@ _limber_direct (GPtrArray *comps, NcHICosmo *cosmo, NcDistance *dist, gint l, gd
   return W;
 }
 
-/* Under Limber an RSD component's j_{l+1} term is its own closure term, sampled in
- * x = k / (nu + 1), where it starts at x = 1 / chi_max for every multipole. With a truncated
- * dN/dz the window is nonzero there, a step that is a panel edge of both terms; the closure
- * must build, hold two terms, and their sum must be the Limber W_l(k) of the components
- * across the band, its ends included, within the closure tolerance of each multipole's peak
- * (measured: 1.2e-8 of the peak at the default 1e-4; a 1% change of the j_{l+1} coefficient
- * gives 0.24). */
+/* Under Limber an RSD component's j_l'' weight is the combination of the orders l - 2, l
+ * and l + 2, each a closure term of its own sampled in x = k / (nu + t), starting at
+ * x = 1 / chi_max for every multipole. With a truncated dN/dz the window is nonzero there, a
+ * step that is a panel edge of every term; the closure must build, hold three terms, and
+ * their sum must be the Limber W_l(k) of the components across the band, its ends and steps
+ * included, within the closure tolerance of each multipole's peak. */
 static void
 test_nc_xcor_kernel_gal_rsd_limber_steps (void)
 {
@@ -1422,7 +1447,7 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
   tol   = GSL_MAX (nc_xcor_kernel_get_reltol (NC_XCOR_KERNEL (g)), nc_xcor_kernel_get_peak_epsilon (NC_XCOR_KERNEL (g)));
 
   g_assert_cmpuint (ncm_spectral_panels_get_n_panels (nc_xcor_kernel_integrand_peek_panels (xclki)), >, 0);
-  g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_terms (xclki), ==, 2);
+  g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_terms (xclki), ==, 3);
 
   for (i = 0; i < comps->len; i++)
   {
@@ -1437,8 +1462,8 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
   {
     const gint l       = ls[n];
     const gdouble nu   = l + 0.5;
-    const gdouble k_lo = 0.9 * nu / chi_hi;
-    const gdouble k_hi = 1.1 * (nu + 1.0) / chi_lo;
+    const gdouble k_lo = 0.9 * (nu - 2.0) / chi_hi;
+    const gdouble k_hi = 1.1 * (nu + 2.0) / chi_lo;
     gdouble peak       = 0.0, dev = 0.0;
 
     for (j = 0; j < n_k; j++)
