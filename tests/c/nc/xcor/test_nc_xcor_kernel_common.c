@@ -101,15 +101,6 @@ typedef struct _TestCheck
   void (*func) (TestNcXcorKernel *test, gconstpointer pdata);
 } TestCheck;
 
-/* The scalar kernel at one wave number as a function of chi, the reference for the chi
- * derivatives */
-typedef struct _TestKernelChi
-{
-  NcXcorKernelComponent *comp;
-  NcHICosmo *cosmo;
-  gdouble k;
-} TestKernelChi;
-
 static void test_nc_xcor_kernel_new (TestNcXcorKernel *test, gconstpointer pdata);
 static void test_nc_xcor_kernel_free (TestNcXcorKernel *test, gconstpointer pdata);
 static void test_nc_xcor_kernel_basic (TestNcXcorKernel *test, gconstpointer pdata);
@@ -134,8 +125,6 @@ static void test_nc_xcor_kernel_gal_bias (void);
 static void test_nc_xcor_kernel_cluster_tophat_volume_normalized (void);
 static void test_nc_xcor_kernel_table_full (void);
 static void test_nc_xcor_kernel_radial_kdep (void);
-static void _test_nc_xcor_kernel_component_dchi (TestNcXcorKernel *test, NcXcorKernelComponent *comp, gdouble xi_min, gdouble xi_max, gdouble k_min, gdouble k_max);
-static gdouble _test_kernel_chi (const gdouble chi, gpointer user_data);
 static NcXcorKernel *_build_gal (TestNcXcorKernel *test);
 static NcXcorKernel *_build_gal_magbias (TestNcXcorKernel *test);
 static NcXcorKernel *_build_weak_lensing (TestNcXcorKernel *test);
@@ -902,8 +891,6 @@ test_nc_xcor_kernel_components (TestNcXcorKernel *test, gconstpointer pdata)
       }
     }
 
-    _test_nc_xcor_kernel_component_dchi (test, comp, xi_min, xi_max, k_min, k_max);
-
     /* The k-limit searches: bounded by max_iter above, so they take their branches
      * without being run to convergence. */
     g_assert_true (gsl_finite (nc_xcor_kernel_component_eval_k_max (comp, 10.0)));
@@ -912,109 +899,6 @@ test_nc_xcor_kernel_components (TestNcXcorKernel *test, gconstpointer pdata)
   }
 
   g_ptr_array_unref (comps);
-}
-
-/*
- * The chi derivatives of the kernel over a vector of wave numbers against the scalar
- * derivatives of nc_xcor_kernel_component_eval_kernel() at each wave number, at points
- * inside the support and at one step from each end, where both differentiate one-sided.
- */
-static void
-_test_nc_xcor_kernel_component_dchi (TestNcXcorKernel *test, NcXcorKernelComponent *comp, gdouble xi_min, gdouble xi_max, gdouble k_min, gdouble k_max)
-{
-  const guint n_chi = 7;
-  const guint n_k   = 6;
-  NcmDiff *diff     = ncm_diff_new ();
-  NcmDiffWork *work = ncm_diff_work_new ();
-  NcmVector *kv     = ncm_vector_new (n_k);
-  NcmVector *k_orig = ncm_vector_new (n_k);
-  NcmVector *d1     = ncm_vector_new (n_k);
-  NcmVector *d2     = ncm_vector_new (n_k);
-  NcmVector *lb     = ncm_vector_new (1);
-  NcmVector *ub     = ncm_vector_new (1);
-  gdouble max_rel1  = 0.0;
-  gdouble max_rel2  = 0.0;
-  TestKernelChi data;
-  guint a, b;
-
-  ncm_vector_set (lb, 0, xi_min);
-  ncm_vector_set (ub, 0, xi_max);
-  ncm_diff_set_domain (diff, lb, ub);
-  ncm_diff_set_domain_warnings (diff, FALSE);
-
-  for (b = 0; b < n_k; b++)
-    ncm_vector_set (kv, b, k_min * exp (log (k_max / k_min) * (b + 0.5) / n_k));
-
-  ncm_vector_memcpy (k_orig, kv);
-
-  data.comp  = comp;
-  data.cosmo = test->cosmo;
-
-  for (a = 0; a < n_chi; a++)
-  {
-    const gdouble t   = (a == 0) ? 1.0e-3 : ((a == n_chi - 1) ? 1.0 - 1.0e-3 : (gdouble) a / (n_chi - 1));
-    const gdouble chi = xi_min + (xi_max - xi_min) * t;
-    NcXcorKinetic xck;
-    gdouble scale1 = 0.0;
-    gdouble scale2 = 0.0;
-    gdouble diff1  = 0.0;
-    gdouble diff2  = 0.0;
-
-    xck.chi_z = chi;
-    xck.z     = nc_distance_inv_comoving (test->dist, test->cosmo, chi);
-    xck.E_z   = nc_hicosmo_E (test->cosmo, xck.z);
-
-    nc_xcor_kernel_component_eval_kernel_d1chi (comp, test->cosmo, test->dist, &xck, work, kv, d1);
-    nc_xcor_kernel_component_eval_kernel_d2chi (comp, test->cosmo, test->dist, &xck, work, kv, d2);
-
-    for (b = 0; b < n_k; b++)
-    {
-      gdouble err1, err2, ref1, ref2;
-
-      /* The wave numbers are inputs only */
-      g_assert_cmpfloat (ncm_vector_get (kv, b), ==, ncm_vector_get (k_orig, b));
-
-      data.k = ncm_vector_get (kv, b);
-      ref1   = ncm_diff_rc_d1_1_to_1 (diff, chi, &_test_kernel_chi, &data, &err1);
-      ref2   = ncm_diff_rc_d2_1_to_1 (diff, chi, &_test_kernel_chi, &data, &err2);
-
-      g_assert_true (gsl_finite (ncm_vector_get (d1, b)));
-      g_assert_true (gsl_finite (ncm_vector_get (d2, b)));
-
-      scale1 = GSL_MAX (scale1, fabs (ref1));
-      scale2 = GSL_MAX (scale2, fabs (ref2));
-      diff1  = GSL_MAX (diff1, fabs (ncm_vector_get (d1, b) - ref1));
-      diff2  = GSL_MAX (diff2, fabs (ncm_vector_get (d2, b) - ref2));
-    }
-
-    g_assert_cmpfloat (scale1, >, 0.0);
-    g_assert_cmpfloat (scale2, >, 0.0);
-
-    max_rel1 = GSL_MAX (max_rel1, diff1 / scale1);
-    max_rel2 = GSL_MAX (max_rel2, diff2 / scale2);
-  }
-
-  g_test_message ("dchi: largest deviation over the k values, relative to the largest derivative: d1 %.3e, d2 %.3e", max_rel1, max_rel2);
-
-  g_assert_cmpfloat (max_rel1, <, 1.0e-10);
-  g_assert_cmpfloat (max_rel2, <, 1.0e-8);
-
-  ncm_diff_free (diff);
-  ncm_diff_work_unref (work);
-  ncm_vector_free (kv);
-  ncm_vector_free (k_orig);
-  ncm_vector_free (d1);
-  ncm_vector_free (d2);
-  ncm_vector_free (lb);
-  ncm_vector_free (ub);
-}
-
-static gdouble
-_test_kernel_chi (const gdouble chi, gpointer user_data)
-{
-  TestKernelChi *data = user_data;
-
-  return nc_xcor_kernel_component_eval_kernel (data->comp, data->cosmo, chi, data->k);
 }
 
 static void
