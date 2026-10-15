@@ -38,6 +38,12 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject)
 
+#define NCM_TYPE_DIFF_WORK (ncm_diff_work_get_type ())
+
+typedef struct _NcmDiffWork NcmDiffWork;
+
+GType ncm_diff_work_get_type (void) G_GNUC_CONST;
+
 /**
  * NcmDiffFuncNtoM:
  * @x: function argument, of length $N$
@@ -81,6 +87,10 @@ typedef gdouble (*NcmDiffFuncNto1) (NcmVector *x, gpointer user_data);
 typedef gdouble (*NcmDiffFunc1to1) (const gdouble x, gpointer user_data);
 
 NcmDiff *ncm_diff_new (void);
+NcmDiffWork *ncm_diff_work_new (void);
+NcmDiffWork *ncm_diff_work_ref (NcmDiffWork *work);
+void ncm_diff_work_unref (NcmDiffWork *work);
+void ncm_diff_work_clear (NcmDiffWork **work);
 NcmDiff *ncm_diff_ref (NcmDiff *diff);
 
 void ncm_diff_free (NcmDiff *diff);
@@ -120,6 +130,8 @@ GArray *ncm_diff_rc_d2_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmD
 GArray *ncm_diff_rf_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
 GArray *ncm_diff_rc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
 GArray *ncm_diff_rc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
+void ncm_diff_rc_d1_1_to_M_ws (NcmDiff *diff, NcmDiffWork *work, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, NcmVector *df, NcmVector *err);
+void ncm_diff_rc_d2_1_to_M_ws (NcmDiff *diff, NcmDiffWork *work, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, NcmVector *df, NcmVector *err);
 
 GArray *ncm_diff_rf_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
 GArray *ncm_diff_rc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);

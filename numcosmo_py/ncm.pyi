@@ -202,6 +202,7 @@ def complex_clear(c: Complex) -> None: ...
 def d1exprel(x: float) -> float: ...
 def d2exprel(x: float) -> float: ...
 def d3exprel(x: float) -> float: ...
+def diff_work_clear(work: DiffWork) -> None: ...
 def dtuple2_clear(dt2: DTuple2) -> None: ...
 def dtuple3_clear(dt3: DTuple3) -> None: ...
 def exprel(x: float) -> float: ...
@@ -2476,6 +2477,16 @@ class Diff(GObject.Object):
     def rc_d1_1_to_M(
         self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
     ) -> typing.Tuple[list[float], list[float]]: ...
+    def rc_d1_1_to_M_ws(
+        self,
+        work: DiffWork,
+        x: float,
+        dim: int,
+        f: typing.Callable[..., None],
+        df: Vector,
+        err: typing.Optional[Vector] = None,
+        *user_data: typing.Any,
+    ) -> None: ...
     def rc_d1_N_to_1(
         self,
         x_a: typing.Sequence[float] | npt.NDArray[np.float64],
@@ -2495,6 +2506,16 @@ class Diff(GObject.Object):
     def rc_d2_1_to_M(
         self, x: float, dim: int, f: typing.Callable[..., None], *user_data: typing.Any
     ) -> typing.Tuple[list[float], list[float]]: ...
+    def rc_d2_1_to_M_ws(
+        self,
+        work: DiffWork,
+        x: float,
+        dim: int,
+        f: typing.Callable[..., None],
+        df: Vector,
+        err: typing.Optional[Vector] = None,
+        *user_data: typing.Any,
+    ) -> None: ...
     def rc_d2_N_to_1(
         self,
         x_a: typing.Sequence[float] | npt.NDArray[np.float64],
@@ -2595,6 +2616,22 @@ class DiffClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
+
+class DiffWork(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        new() -> NumCosmoMath.DiffWork
+    """
+
+    @staticmethod
+    def clear(work: DiffWork) -> None: ...
+    @classmethod
+    def new(cls) -> DiffWork: ...
+    def ref(self) -> DiffWork: ...
+    def unref(self) -> None: ...
 
 class Fftlog(GObject.Object):
     r"""
