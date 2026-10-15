@@ -653,6 +653,7 @@ class XcorKernelCommon:
         """
         if self._solver_cache is None:
             solver = Nc.XcorSolver.new()
+            solver.set_reltol(self.integrator.get_reltol())
             ids = [solver.register_kernel(kernel) for _, kernel in self.kernels]
             self._solver_cache = (solver, ids)
         return self._solver_cache

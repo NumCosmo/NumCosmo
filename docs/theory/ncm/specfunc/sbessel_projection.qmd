@@ -358,8 +358,10 @@ $$
 with $V$ the largest absolute value of $x\,F(x)$ on the finer nodes, $\epsilon_F$ the
 relative tolerance `NcmSBesselIntegratorLevin:reltol`, and $\epsilon_{\rm abs}$ an
 absolute tolerance, zero for the forcing. The transform is a type-I DCT and the details are on the
-[Spectral Methods](../algebra/spectral.qmd) page. The same tolerance is the ODE tolerance
-$\epsilon_{\rm ODE}$, so one number, $10^{-8}$ by default, sets both stages. Eq. (8) bounds
+[Spectral Methods](../algebra/spectral.qmd) page. The ODE tolerance is
+$\epsilon_{\rm ODE} = \epsilon_F / 10$, so one number, $10^{-8}$ by default, sets both stages;
+the factor 10 keeps the ODE's error, which changes in steps as $k$ moves, below what a fit of
+the integral in $k$ resolves. Eq. (8) bounds
 the change between the last two levels, about the error of the coarser one, and the finer
 level is used, so the fit's error is in general well below $\epsilon_F$: with
 $\epsilon_F = 10^{-4}$ and $\epsilon_{\rm ODE} = 10^{-13}$, the Gaussian sbessel table is
@@ -814,7 +816,7 @@ print(f"C_2: library {vp.get(0):.15e}   GL(40) on the same cells {ref:.15e}   re
 
 | quantity | how it is set | default |
 |---|---|---|
-| truncation order $N$ of each panel solve | adaptive QR, stopping test with floor $N_{\min}$ | $\epsilon_{\rm ODE} = $ reltol $= 10^{-8}$ |
+| truncation order $N$ of each panel solve | adaptive QR, stopping test with floor $N_{\min}$ | $\epsilon_{\rm ODE} = $ reltol$/10 = 10^{-9}$ |
 | Chebyshev order of the forcing on a panel | level doubling until Eq. (8) | $\epsilon_F = $ reltol $= 10^{-8}$ |
 | panel grid in $x$ | prescribed, two knots per decade on $[10^{-4}, 10^6]$ | 21 knots |
 | partial panels at the ends | smallest sub-cell containing the piece, widths in factors of $\sqrt{2}$; a piece thinner than $10^{-4}$ of its knot is merged into the panel next to it | none |

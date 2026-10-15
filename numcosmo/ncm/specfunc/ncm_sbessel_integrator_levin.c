@@ -498,10 +498,12 @@ ncm_sbessel_integrator_levin_class_init (NcmSBesselIntegratorLevinClass *klass)
   /**
    * NcmSBesselIntegratorLevin:reltol:
    *
-   * Relative tolerance of the integral, applied both to the Chebyshev fit of the forcing
-   * and to the ODE solve's endpoint values and derivatives. It is relative to the scale of
-   * the panel contributions: against every certified reference the error stays within
-   * 0.6 times it of the peak over $k$ for tolerances from $10^{-4}$ to $10^{-10}$, and
+   * Relative tolerance of the integral. The Chebyshev fit of the forcing is made at
+   * reltol and the ODE solve at a tenth of it, since the ODE's error changes in steps as
+   * $k$ moves and a fit of the integral in $k$ does not converge on such steps. The error
+   * is relative to the scale of the panel contributions: against every certified
+   * reference it stays within a quarter of reltol of the peak over $k$ for reltol from
+   * $10^{-4}$ to $10^{-10}$, and
    * panels that cancel (see "Accuracy and inter-panel cancellation" in the class
    * description) multiply it relative to the result. Below about $10^{-12}$ the roundoff
    * of the coefficients stops the solve first. A tolerance the integrand cannot support,
@@ -1260,6 +1262,16 @@ _ncm_sbessel_integrator_levin_get_panel_resources (NcmSBesselIntegratorLevin *sb
 
 /* Largest extension growth an edge cell may show and still be used. */
 #define NCM_SBESSEL_LEVIN_EDGE_GROWTH_MAX 1.0e4
+
+/*
+ * Ratio of the ODE solve's tolerance to #NcmSBesselIntegratorLevin:reltol. The ODE
+ * truncation error changes in steps as k moves the stopping column, and a fit of the
+ * integrals in k (the k-space fits of NcXcorKernel) at the same reltol does not converge
+ * on such steps (LSST lens bins to l 2000 at 1e-6); at reltol/10 it converges, at no
+ * measurable cost. The forcing fit stays at reltol: its error is far below its tolerance
+ * and varies smoothly with k.
+ */
+#define NCM_SBESSEL_LEVIN_ODE_RELTOL_FACTOR (0.1)
 
 /*
  * A panel's contribution to ell's result is
@@ -2945,7 +2957,7 @@ ncm_sbessel_integrator_levin_set_reltol (NcmSBesselIntegratorLevin *sbilv, gdoub
     return;
 
   sbilv->reltol = reltol;
-  ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, reltol);
+  ncm_sbessel_ode_solver_set_tolerance (sbilv->ode_solver, reltol * NCM_SBESSEL_LEVIN_ODE_RELTOL_FACTOR);
 
   if (sbilv->operators == NULL)
   {

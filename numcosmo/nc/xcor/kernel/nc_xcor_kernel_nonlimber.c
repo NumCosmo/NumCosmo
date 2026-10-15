@@ -305,11 +305,10 @@ _component_states_sum_non_limber (ComponentStates *comp_states, gdouble kernel_o
 }
 
 NcXcorKernelIntegrand *
-_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi)
+_nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, gdouble reltol, gdouble peak_epsilon)
 {
-  NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
-  const guint n_l           = lmax - lmin + 1;
-  GPtrArray *comp_list      = _nc_xcor_kernel_validate_component_list (xclk, n_l);
+  const guint n_l      = lmax - lmin + 1;
+  GPtrArray *comp_list = _nc_xcor_kernel_validate_component_list (xclk, n_l);
 
   if (comp_list == NULL)
     return NULL;
@@ -325,7 +324,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
     return NULL;
   }
 
-  _nc_xcor_kernel_check_integrator_tolerance (xclk, sbi);
+  _nc_xcor_kernel_check_integrator_tolerance (xclk, sbi, reltol, peak_epsilon);
   ncm_sbessel_integrator_set_ell_range (sbi, lmin, lmax);
 
   /* Initialize with standard (non-Limber) limits */
@@ -339,7 +338,7 @@ _nc_xcor_kernel_build_non_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo
                                                       &comp_states,
                                                       _component_states_expand_non_limber,
                                                       _component_states_compute_non_limber,
-                                                      self->reltol, self->peak_epsilon);
+                                                      reltol, peak_epsilon);
 
     _nc_xcor_kernel_component_states_clear (&comp_states);
 

@@ -113,10 +113,17 @@ def test_kernel_exact_through_solver(cosmology: Cosmology) -> None:
     kernels = _kernels(cosmology)
     cosmo = cosmology.cosmo
 
+    # The solver fits every closure at its reltol, here the kernels' 1e-4, with an
+    # integrator at the same value; nc_xcor_compute() uses the kernels' own.
+    for kernel in kernels:
+        kernel.peek_integrator().set_reltol(1.0e-4)
+
     fixed = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+    fixed.props.reltol = 1.0e-4
     fixed.prepare(cosmo)
 
     solver = Nc.XcorSolver.new()
+    solver.set_reltol(1.0e-4)
     ids = [solver.register_kernel(k) for k in kernels]
     solver.request_cl(ids[0], ids[0], 0, 3)
     solver.request_cl(ids[0], ids[2], 0, 3)

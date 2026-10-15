@@ -68,6 +68,7 @@
 #include "nc/xcor/nc_xcor.h"
 #include "nc_enum_types.h"
 #include "nc/xcor/kernel/nc_xcor_kernel_private.h"
+#include "nc/xcor/nc_xcor_priv.h"
 
 enum
 {
@@ -856,10 +857,24 @@ nc_xcor_kernel_get_eval_vectorized_full (NcXcorKernel *xclk, NcHICosmo *cosmo, g
 {
   NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
 
+  return _nc_xcor_kernel_get_eval_vectorized_tol (xclk, cosmo, lmin, lmax, sbi, self->reltol, self->peak_epsilon);
+}
+
+/*
+ * nc_xcor_kernel_get_eval_vectorized_full() with the closure fitted to @reltol and
+ * @peak_epsilon instead of #NcXcorKernel:reltol and #NcXcorKernel:peak-epsilon; the
+ * kernel's own properties are left unchanged. #NcXcorSolver uses it to fit every closure
+ * to #NcXcorSolver:reltol.
+ */
+NcXcorKernelIntegrand *
+_nc_xcor_kernel_get_eval_vectorized_tol (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, gdouble reltol, gdouble peak_epsilon)
+{
+  NcXcorKernelPrivate *self = nc_xcor_kernel_get_instance_private (xclk);
+
   if ((self->l_limber == 0) || ((self->l_limber > 0) && (lmin >= self->l_limber)))
-    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax);
+    return _nc_xcor_kernel_build_limber_integrand (xclk, cosmo, lmin, lmax, reltol, peak_epsilon);
   else
-    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi);
+    return _nc_xcor_kernel_build_non_limber_integrand (xclk, cosmo, lmin, lmax, sbi, reltol, peak_epsilon);
 }
 
 /**

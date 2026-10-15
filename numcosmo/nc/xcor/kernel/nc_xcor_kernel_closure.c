@@ -129,10 +129,9 @@ _nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
  * the looser of the two. Other integrators are not checked.
  */
 void
-_nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi)
+_nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi, gdouble reltol, gdouble peak_epsilon)
 {
-  NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
-  const gdouble fit_tol     = GSL_MAX (self->reltol, self->peak_epsilon);
+  const gdouble fit_tol = GSL_MAX (reltol, peak_epsilon);
   gdouble integrator_reltol;
 
   if ((sbi == NULL) || !NCM_IS_SBESSEL_INTEGRATOR_LEVIN (sbi))

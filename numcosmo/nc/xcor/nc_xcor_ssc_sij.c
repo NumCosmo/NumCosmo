@@ -81,18 +81,10 @@
  * dev-notes/xcor_ultralevin_batching_plan.md section 1.3. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE (8)
 
-/* Peak-relative absolute tolerance of the kernel closures, one order tighter than
- * #NcXcorKernel's 1.0e-4 default. With NC_XCOR_SSC_SIJ_DEFAULT_RELTOL below, this
- * is the larger term of the closure test, so it sets the closures and the accuracy
- * of the off-diagonal S_ij, four orders of magnitude below the diagonal for
- * well-separated bins. It is ten times the reltol because S_ij is rebuilt at every
- * likelihood step, and peak-epsilon 1.0e-6 increases the closure nodes of a cluster
- * top-hat by a factor of 1.5.
- *
- * Must be kept equal to DEFAULT_PEAK_EPSILON in numcosmo_py/ssc.py: the frozen and
- * the varying paths differ only in whether S_ij follows the cosmology. */
-#define NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON (1.0e-5)
-
+/* Tolerance of the solve, NcXcorSolver:reltol: the closures are fitted with reltol 1e-6
+ * and peak-epsilon 1e-6, the floor. Must be kept equal to DEFAULT_RELTOL in
+ * numcosmo_py/ssc.py: the frozen and the varying paths differ only in whether S_ij
+ * follows the cosmology. */
 #define NC_XCOR_SSC_SIJ_DEFAULT_RELTOL (1.0e-6)
 
 enum
@@ -106,7 +98,6 @@ enum
   PROP_METHOD,
   PROP_BLOCK_SIZE,
   PROP_RELTOL,
-  PROP_PEAK_EPSILON,
   PROP_SIZE,
 };
 
@@ -124,7 +115,6 @@ struct _NcXcorSSCSij
   NcXcorMethod method;
   guint block_size;
   gdouble reltol;
-  gdouble peak_epsilon;
 
   GPtrArray *kernels; /* element-type NcXcorKernel*, one per bin, owned refs */
   NcXcor *xcor;
@@ -162,10 +152,9 @@ nc_xcor_ssc_sij_init (NcXcorSSCSij *ssc_sij)
   ssc_sij->mask_cl = NULL;
   ssc_sij->area    = 0.0;
 
-  ssc_sij->method       = NC_XCOR_METHOD_KERNEL_EXACT;
-  ssc_sij->block_size   = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
-  ssc_sij->reltol       = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
-  ssc_sij->peak_epsilon = NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON;
+  ssc_sij->method     = NC_XCOR_METHOD_KERNEL_EXACT;
+  ssc_sij->block_size = NC_XCOR_SSC_SIJ_DEFAULT_BLOCK_SIZE;
+  ssc_sij->reltol     = NC_XCOR_SSC_SIJ_DEFAULT_RELTOL;
 
   ssc_sij->kernels     = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_xcor_kernel_free);
   ssc_sij->xcor        = NULL;
@@ -219,9 +208,6 @@ _nc_xcor_ssc_sij_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_RELTOL:
       nc_xcor_ssc_sij_set_reltol (ssc_sij, g_value_get_double (value));
       break;
-    case PROP_PEAK_EPSILON:
-      nc_xcor_ssc_sij_set_peak_epsilon (ssc_sij, g_value_get_double (value));
-      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -260,9 +246,6 @@ _nc_xcor_ssc_sij_get_property (GObject *object, guint prop_id, GValue *value, GP
       break;
     case PROP_RELTOL:
       g_value_set_double (value, ssc_sij->reltol);
-      break;
-    case PROP_PEAK_EPSILON:
-      g_value_set_double (value, ssc_sij->peak_epsilon);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -328,7 +311,6 @@ _nc_xcor_ssc_sij_constructed (GObject *object)
      * S_ij, and makes the cross spectrum of two disjoint bins vanish. */
     nc_xcor_kernel_set_l_limber (kernel, -1);
     nc_xcor_kernel_set_reltol (kernel, ssc_sij->reltol);
-    nc_xcor_kernel_set_peak_epsilon (kernel, ssc_sij->peak_epsilon);
 
     g_ptr_array_add (ssc_sij->kernels, kernel);
   }
@@ -443,15 +425,8 @@ nc_xcor_ssc_sij_class_init (NcXcorSSCSijClass *klass)
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
                                                         NULL,
-                                                        "Relative tolerance of the kernel spline and the outer k integral",
+                                                        "Relative tolerance of the solve",
                                                         GSL_DBL_EPSILON, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_RELTOL,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_PEAK_EPSILON,
-                                   g_param_spec_double ("peak-epsilon",
-                                                        NULL,
-                                                        "Peak-relative floor of the adaptive refinement of the U_i(k) spline",
-                                                        0.0, 1.0, NC_XCOR_SSC_SIJ_DEFAULT_PEAK_EPSILON,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -725,9 +700,11 @@ nc_xcor_ssc_sij_get_block_size (NcXcorSSCSij *ssc_sij)
  * @ssc_sij: a #NcXcorSSCSij
  * @reltol: the relative tolerance
  *
- * Sets #NcXcorKernel:reltol of every kernel and the relative tolerance of the
- * #NcXcor. At the default peak-epsilon the closures are set by peak-epsilon, see
- * nc_xcor_ssc_sij_set_peak_epsilon().
+ * Sets #NcXcorSolver:reltol of the solver that computes the angular spectra, which
+ * sets its closures and integrators, and #NcXcorKernel:reltol of every kernel and the
+ * relative tolerance of the #NcXcor, which apply outside the solver. The accuracy at the
+ * default is on the <a href="../../theory/nc/xcor/ssc.html">Super-sample covariance</a>
+ * page.
  */
 void
 nc_xcor_ssc_sij_set_reltol (NcXcorSSCSij *ssc_sij, gdouble reltol)
@@ -742,6 +719,9 @@ nc_xcor_ssc_sij_set_reltol (NcXcorSSCSij *ssc_sij, gdouble reltol)
   if (ssc_sij->xcor != NULL)
     nc_xcor_set_reltol (ssc_sij->xcor, reltol);
 
+  if (ssc_sij->solver != NULL)
+    nc_xcor_solver_set_reltol (ssc_sij->solver, reltol);
+
   _nc_xcor_ssc_sij_invalidate (ssc_sij);
 }
 
@@ -755,43 +735,6 @@ gdouble
 nc_xcor_ssc_sij_get_reltol (NcXcorSSCSij *ssc_sij)
 {
   return ssc_sij->reltol;
-}
-
-/**
- * nc_xcor_ssc_sij_set_peak_epsilon:
- * @ssc_sij: a #NcXcorSSCSij
- * @peak_epsilon: the peak-relative absolute tolerance
- *
- * Sets #NcXcorKernel:peak-epsilon of every kernel. At the default reltol it is the
- * larger term of the closure test, so it sets the closures and the accuracy of the
- * off-diagonal $S_{ij}$, which are four orders of magnitude below the diagonal for
- * well-separated bins. nc_xcor_kernel_set_peak_epsilon() warns below
- * %NC_XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON. The accuracy at the defaults is on the
- * <a href="../../theory/nc/xcor/ssc.html">Super-sample covariance</a> page.
- */
-void
-nc_xcor_ssc_sij_set_peak_epsilon (NcXcorSSCSij *ssc_sij, gdouble peak_epsilon)
-{
-  guint i;
-
-  ssc_sij->peak_epsilon = peak_epsilon;
-
-  for (i = 0; i < ssc_sij->kernels->len; i++)
-    nc_xcor_kernel_set_peak_epsilon (g_ptr_array_index (ssc_sij->kernels, i), peak_epsilon);
-
-  _nc_xcor_ssc_sij_invalidate (ssc_sij);
-}
-
-/**
- * nc_xcor_ssc_sij_get_peak_epsilon:
- * @ssc_sij: a #NcXcorSSCSij
- *
- * Returns: the absolute floor of the adaptive refinement
- */
-gdouble
-nc_xcor_ssc_sij_get_peak_epsilon (NcXcorSSCSij *ssc_sij)
-{
-  return ssc_sij->peak_epsilon;
 }
 
 /**
@@ -844,6 +787,7 @@ _nc_xcor_ssc_sij_ensure_solver (NcXcorSSCSij *ssc_sij)
     return;
 
   ssc_sij->solver = nc_xcor_solver_new ();
+  nc_xcor_solver_set_reltol (ssc_sij->solver, ssc_sij->reltol);
 
   for (i = 0; i < nbins; i++)
   {
@@ -859,8 +803,6 @@ _nc_xcor_ssc_sij_ensure_solver (NcXcorSSCSij *ssc_sij)
     for (j = i; j < nbins; j++)
       nc_xcor_solver_request_cl (ssc_sij->solver, i, j, 0, lmax);
   }
-
-  nc_xcor_solver_set_integrator (ssc_sij->solver, ssc_sij->sbi);
 
   nc_xcor_solver_plan_blocks (ssc_sij->solver, ssc_sij->block_size);
 }

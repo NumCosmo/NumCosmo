@@ -72,6 +72,9 @@ def test_solve_kernel_exact_matches_compute(
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
+        solver.set_reltol(
+            1.0e-4
+        )  # The kernels' reltol and peak-epsilon (1e-4), so both paths fit the same closures.
         id_a = solver.register_kernel(kernel_tsz)
         id_b = solver.register_kernel(kernel_cmb_lens)
         id_c = solver.register_kernel(kernel_gal_bin0)
@@ -122,6 +125,9 @@ def test_solve_spans_multiple_blocks(
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
+        solver.set_reltol(
+            1.0e-4
+        )  # The kernels' reltol and peak-epsilon (1e-4), so both paths fit the same closures.
         kernel_id = solver.register_kernel(kernel_tsz)
         solver.request_cl(kernel_id, kernel_id, lmin, lmax)
         solver.plan_blocks(8)
@@ -170,6 +176,9 @@ def test_solve_block_parallel_stress(
         xc.prepare(cosmology.cosmo)
 
         solver = Nc.XcorSolver.new()
+        solver.set_reltol(
+            1.0e-4
+        )  # The kernels' reltol and peak-epsilon (1e-4), so both paths fit the same closures.
         id_a = solver.register_kernel(kernel_tsz)
         id_b = solver.register_kernel(kernel_cmb_lens)
         id_c = solver.register_kernel(kernel_gal_bin0)
@@ -261,6 +270,7 @@ def test_solve_tier3_duplicated_kernel_shrinking_last_block(
     xc.prepare(cosmology.cosmo)
 
     solver = Nc.XcorSolver.new()
+    solver.set_reltol(1.0e-2)  # the kernels' closures are fitted to 1e-2
     kernel_id = solver.register_kernel(kernel)
     solver.request_cl(kernel_id, kernel_id, lmin, lmax)
     solver.plan_blocks(8)
@@ -309,6 +319,7 @@ def test_peek_block_integrator_before_and_after_solve(cosmology: Cosmology) -> N
     xc.prepare(cosmology.cosmo)
 
     solver = Nc.XcorSolver.new()
+    solver.set_reltol(1.0e-2)  # the kernels' closures are fitted to 1e-2
     kernel_id = solver.register_kernel(kernel)
     solver.request_cl(kernel_id, kernel_id, lmin, lmax)
     solver.plan_blocks(8)
@@ -342,8 +353,8 @@ def test_peek_block_integrator_before_and_after_solve(cosmology: Cosmology) -> N
     assert_allclose(np.array(solver.get_result(0).dup_array()), first_cl, rtol=0.0)
 
 
-def test_set_integrator_overrides_and_resets_the_cache(cosmology: Cosmology) -> None:
-    """An explicitly set prototype is used, and replacing it drops the cache."""
+def test_set_reltol_reaches_the_block_integrators(cosmology: Cosmology) -> None:
+    """The solver's reltol sets every block integrator; a new value discards them."""
     lmin, lmax = 2, 17
     kernel = _tier3_wl_kernel(cosmology, lmin, lmax)
 
@@ -352,30 +363,23 @@ def test_set_integrator_overrides_and_resets_the_cache(cosmology: Cosmology) -> 
     xc.prepare(cosmology.cosmo)
 
     solver = Nc.XcorSolver.new()
+    assert solver.get_reltol() == pytest.approx(1.0e-4)
+    solver.set_reltol(1.0e-2)
     kernel_id = solver.register_kernel(kernel)
     solver.request_cl(kernel_id, kernel_id, lmin, lmax)
     solver.plan_blocks(8)
 
-    proto = Ncm.SBesselIntegratorLevin.new(lmin, lmax)
-    proto.set_reltol(1.0e-2)
-    solver.set_integrator(proto)
-
     solver.solve(xc, cosmology.cosmo)
     pinned = solver.peek_block_integrator(0)
     assert pinned is not None
-    # A clone of the prototype, not the prototype itself: blocks must not share
-    # one integrator's mutable state.
-    assert pinned is not proto
-    assert pinned.get_reltol() == pytest.approx(proto.get_reltol())
+    assert pinned is not kernel.peek_integrator()
+    assert pinned.get_reltol() == pytest.approx(1.0e-2)
 
-    # Setting a new prototype invalidates every pinned integrator.
-    solver.set_integrator(proto)
+    solver.set_reltol(1.0e-3)
     assert solver.peek_block_integrator(0) is None
 
-    # Clearing it falls back to a registered kernel's own integrator.
-    solver.set_integrator(None)
     solver.solve(xc, cosmology.cosmo)
-    assert solver.peek_block_integrator(0) is not None
+    assert solver.peek_block_integrator(0).get_reltol() == pytest.approx(1.0e-3)
 
 
 def test_solve_accepts_a_kernel_without_a_levin_integrator(
@@ -453,7 +457,8 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
                 solver.request_cl(id_i, id_j, 2, 17)
 
         solver.plan_blocks(8)
-        solver.set_integrator(Ncm.SBesselIntegratorLevin.new(0, 8))
+        # The kernels' tolerances, so both entry points fit the same closures.
+        solver.set_reltol(1.0e-4)
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
         xcor.prepare(cosmo)
@@ -468,12 +473,15 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
         kernels = []
 
         for z_lower, z_upper in z_bins:
+            # The integrator the solver builds at reltol 1e-4.
+            integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
+            integrator.set_reltol(1.0e-4)
             kernel = Nc.XcorKernelClusterTophat(
                 dist=cosmology.dist,
                 powspec=cosmology.ps_ml,
                 z_lower=z_lower,
                 z_upper=z_upper,
-                integrator=Ncm.SBesselIntegratorLevin.new(0, 8),
+                integrator=integrator,
                 reltol=1.0e-4,
                 peak_epsilon=1.0e-4,
             )
@@ -482,6 +490,7 @@ def test_solver_drives_spectral_closures(cosmology: Cosmology) -> None:
             kernels.append(kernel)
 
         xcor = Nc.Xcor.new(cosmology.dist, cosmology.ps_ml, Nc.XcorMethod.KERNEL_EXACT)
+        xcor.props.reltol = 1.0e-4
         xcor.prepare(cosmo)
 
         out = []
@@ -525,6 +534,7 @@ def test_replan_with_the_same_blocks_keeps_the_integrators(
     xc.prepare(cosmology.cosmo)
 
     solver = Nc.XcorSolver.new()
+    solver.set_reltol(1.0e-2)  # the kernels' closures are fitted to 1e-2
     kid = solver.register_kernel(kernel)
     solver.request_cl(kid, kid, 2, 17)
     solver.plan_blocks(8)
