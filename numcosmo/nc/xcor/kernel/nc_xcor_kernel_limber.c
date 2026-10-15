@@ -62,77 +62,102 @@
  * one range per multipole. The per-multipole band arrays hold the band within that
  * range, where the multipole is nonzero, and the block's hard limits are the union
  * over the multipoles, [k_min / nu_max, k_max / nu_min], narrowed to the union of
- * the bands.
+ * the bands. A component with a Bessel derivative also has a j_{l+1} term, sampled in
+ * x = k / (nu + 1), where its band is again [1 / chi_max, 1 / chi_min] and its hard
+ * limits are [k_min / (nu + 1), k_max / (nu + 1)]; the block then has two terms.
  */
 static ComponentStates
 _component_states_init_limber_u (NcXcorKernel *xclk, gint lmin, guint n_l,
                                  GPtrArray *comp_list, NcHICosmo *cosmo)
 {
-  NcXcorKernelPrivate *self   = _nc_xcor_kernel_get_private (xclk);
-  const guint n_comp          = comp_list->len;
-  const gdouble nu_min        = lmin + 0.5;
-  const gdouble nu_max        = lmin + n_l - 1 + 0.5;
-  ComponentStates comp_states = {
-    .xclk                    = xclk,
-    .k_min_hard              = 0.0,
-    .k_max_hard              = G_MAXDOUBLE,
-    .l2_norm                 = 0.0,
-    .n_comp                  = n_comp,
-    .lmin                    = lmin,
-    .n_l                     = n_l,
-    .epsilon                 = self->adaptive_epsilon,
-    .adaptive_boundary_tries = self->adaptive_boundary_tries,
-    .is_limber               = TRUE,
-    .in_u                    = TRUE,
-    .k_vec                   = ncm_vector_new (n_l),
-    .kf_vec                  = ncm_vector_new (n_l)
-  };
-  gdouble u_min_union = G_MAXDOUBLE;
-  gdouble u_max_union = 0.0;
+  NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
+  const guint n_comp        = comp_list->len;
+  const gdouble nu_min      = lmin + 0.5;
+  const gdouble nu_max      = lmin + n_l - 1 + 0.5;
+  gboolean has_deriv        = FALSE;
   guint i, j;
 
   for (i = 0; i < n_comp; i++)
+    has_deriv = has_deriv || (nc_xcor_kernel_component_get_bessel_deriv (g_ptr_array_index (comp_list, i)) > 0);
+
   {
-    ComponentState *state = &comp_states.states[i];
-    gdouble u_band_min, u_band_max;
+    ComponentStates comp_states = {
+      .xclk                    = xclk,
+      .k_min_hard              = 0.0,
+      .k_max_hard              = G_MAXDOUBLE,
+      .l2_norm                 = 0.0,
+      .n_comp                  = n_comp,
+      .lmin                    = lmin,
+      .n_l                     = n_l,
+      .epsilon                 = self->adaptive_epsilon,
+      .adaptive_boundary_tries = self->adaptive_boundary_tries,
+      .is_limber               = TRUE,
+      .in_u                    = TRUE,
+      .n_terms                 = has_deriv ? 2 : 1,
+      .k_vec                   = ncm_vector_new (n_l),
+      .kf_vec                  = ncm_vector_new (n_l),
+      .k_vec_p1                = has_deriv ? ncm_vector_new (n_l) : NULL,
+      .kf_vec_p1               = has_deriv ? ncm_vector_new (n_l) : NULL,
+      .y_terms                 = has_deriv ? ncm_vector_new (2 * n_l) : NULL
+    };
+    gdouble u_min_union = G_MAXDOUBLE;
+    gdouble u_max_union = 0.0;
 
-    _nc_xcor_kernel_component_state_init (state, g_ptr_array_index (comp_list, i), i, cosmo, n_l);
-
-    comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, state->k_min_hard / nu_max);
-    comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, state->k_max_hard / nu_min);
-
-    u_band_min = 1.0 / state->chi_max;
-    u_band_max = 1.0 / state->chi_min;
-
-    for (j = 0; j < n_l; j++)
+    for (i = 0; i < n_comp; i++)
     {
-      const gdouble nu_j = lmin + j + 0.5;
+      ComponentState *state = &comp_states.states[i];
+      const gboolean deriv  = (nc_xcor_kernel_component_get_bessel_deriv (g_ptr_array_index (comp_list, i)) > 0);
+      gdouble u_band_min, u_band_max;
 
-      state->k_min_limber_ell[j] = GSL_MAX (u_band_min, state->k_min_hard / nu_j);
-      state->k_max_limber_ell[j] = GSL_MIN (u_band_max, state->k_max_hard / nu_j);
+      _nc_xcor_kernel_component_state_init (state, g_ptr_array_index (comp_list, i), i, cosmo, n_l);
+
+      comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, state->k_min_hard / (deriv ? nu_max + 1.0 : nu_max));
+      comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, state->k_max_hard / nu_min);
+
+      u_band_min = 1.0 / state->chi_max;
+      u_band_max = 1.0 / state->chi_min;
+
+      for (j = 0; j < n_l; j++)
+      {
+        const gdouble nu_j = lmin + j + 0.5;
+
+        state->k_min_limber_ell[j] = GSL_MAX (u_band_min, state->k_min_hard / nu_j);
+        state->k_max_limber_ell[j] = GSL_MIN (u_band_max, state->k_max_hard / nu_j);
+
+        if (deriv)
+        {
+          state->k_min_limber_ell_p1[j] = GSL_MAX (u_band_min, state->k_min_hard / (nu_j + 1.0));
+          state->k_max_limber_ell_p1[j] = GSL_MIN (u_band_max, state->k_max_hard / (nu_j + 1.0));
+        }
+      }
+
+      u_min_union = GSL_MIN (u_min_union, u_band_min);
+      u_max_union = GSL_MAX (u_max_union, u_band_max);
     }
 
-    u_min_union = GSL_MIN (u_min_union, u_band_min);
-    u_max_union = GSL_MAX (u_max_union, u_band_max);
+    comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, u_min_union);
+    comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, u_max_union);
+
+    g_assert_cmpfloat (comp_states.k_min_hard, <, comp_states.k_max_hard);
+
+    return comp_states;
   }
-
-  comp_states.k_min_hard = GSL_MAX (comp_states.k_min_hard, u_min_union);
-  comp_states.k_max_hard = GSL_MIN (comp_states.k_max_hard, u_max_union);
-
-  g_assert_cmpfloat (comp_states.k_min_hard, <, comp_states.k_max_hard);
-
-  return comp_states;
 }
 
 /*
- * Evaluates the Limber block at u = k / nu: the point chi = 1 / u is shared by
- * every multipole, so each component's window is one evaluation and only the
- * wave number factor at k = nu u is per multipole. Outside its band a
- * component is zero. A derivative component adds the j_{l+1} term at the point
- * chi_p = (1 + 1 / nu) / u, one more window evaluation per multipole, dropped
- * when that point is beyond chi_max. In panel mode both choices are made at the
- * panel midpoint, so a panel ending on one of these steps takes the limit from
- * its own side.
+ * Evaluates the Limber block at x: the point chi = 1 / x is shared by every multipole
+ * and by both terms, so each component's window is one evaluation and only the wave
+ * number factors are per multipole. Rows [0, n_l) are the j_l terms in u = k / nu, at
+ * k = nu x; with two terms, rows [n_l, 2 n_l) are the j_{l+1} terms of the Bessel
+ * derivative components in x = k / (nu + 1), at k = (nu + 1) x. Under Limber
+ *
+ *   int K(chi, k) j_l'(k chi) dchi = (l / nu) P_l(k) - P_{l+1}(k),
+ *   int K(chi, k) j_l''(k chi) dchi = -(2 l + 1/4) / nu^2 P_l(k) + 2 / (nu + 1) P_{l+1}(k),
+ *
+ * with P_m(k) = sqrt(pi / (2 (m + 1/2))) K(chi_m, k) / k the j_m peak term, K the radial
+ * kernel, the window factor times the wave number factor, at chi_m = (m + 1/2) / k. Outside its band a term is zero.
+ * In panel mode the choice is made at the panel midpoint, so a panel ending on a band
+ * edge takes the limit from its own side.
  */
 static void
 _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user_data)
@@ -141,14 +166,15 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
   NcDistance *dist             = nc_xcor_kernel_peek_dist (comp_states->xclk);
   NcHICosmo *cosmo             = comp_states->states[0].params.cosmo;
   const gdouble u_side         = comp_states->panel_mode ? comp_states->interval_mid : u;
-  const gdouble chi            = 1.0 / u;
+  const guint n_l              = comp_states->n_l;
   NcXcorKinetic xck;
   guint ci, i;
 
-  gdouble W[MAX_ELL_BLOCK] = { 0.0 };
+  gdouble W[MAX_ELL_BLOCK]    = { 0.0 };
+  gdouble W_p1[MAX_ELL_BLOCK] = { 0.0 };
 
-  xck.chi_z = chi;
-  xck.z     = nc_distance_inv_comoving (dist, cosmo, chi);
+  xck.chi_z = 1.0 / u;
+  xck.z     = nc_distance_inv_comoving (dist, cosmo, xck.chi_z);
   xck.E_z   = nc_hicosmo_E (cosmo, xck.z);
 
   for (ci = 0; ci < comp_states->n_comp; ci++)
@@ -156,79 +182,104 @@ _component_states_compute_limber_u (const gdouble u, NcmVector *y, gpointer user
     ComponentState *state = &comp_states->states[ci];
     const guint deriv     = nc_xcor_kernel_component_get_bessel_deriv (state->comp);
     gboolean active[MAX_ELL_BLOCK];
-    gint first_active = -1;
+    gboolean active_p1[MAX_ELL_BLOCK];
+    gint first_active    = -1;
+    gint first_active_p1 = -1;
     gdouble window;
 
     /* Each multipole is nonzero within its own range, which differs between multipoles
      * where the component's hard k limits bind */
-    for (i = 0; i < comp_states->n_l; i++)
+    for (i = 0; i < n_l; i++)
     {
       active[i] = (u_side >= state->k_min_limber_ell[i]) && (u_side <= state->k_max_limber_ell[i]);
 
       if (active[i] && (first_active < 0))
         first_active = i;
+
+      active_p1[i] = (deriv > 0) && (u_side >= state->k_min_limber_ell_p1[i]) && (u_side <= state->k_max_limber_ell_p1[i]);
+
+      if (active_p1[i] && (first_active_p1 < 0))
+        first_active_p1 = i;
     }
 
-    if (first_active < 0)
+    if ((first_active < 0) && (first_active_p1 < 0))
       continue;
 
     window = nc_xcor_kernel_component_eval_window (state->comp, cosmo, &xck);
 
-    /* An inactive multipole takes the k of an active one, inside the component's k
-     * range; its value is not used */
-    for (i = 0; i < comp_states->n_l; i++)
-      ncm_vector_set (comp_states->k_vec, i, (comp_states->lmin + (active[i] ? i : (guint) first_active) + 0.5) * u);
-
-    nc_xcor_kernel_component_eval_kfactor_vec (state->comp, cosmo, &xck, comp_states->k_vec, comp_states->kf_vec);
-
-    for (i = 0; i < comp_states->n_l; i++)
+    if (first_active >= 0)
     {
-      const gint l     = comp_states->lmin + i;
-      const gdouble nu = l + 0.5;
-      const gdouble k  = nu * u;
-      gdouble prefactor, peak_l, val;
+      /* An inactive multipole takes the k of an active one, inside the component's k
+       * range; its value is not used */
+      for (i = 0; i < n_l; i++)
+        ncm_vector_set (comp_states->k_vec, i, (comp_states->lmin + (active[i] ? i : (guint) first_active) + 0.5) * u);
 
-      if (!active[i])
-        continue;
+      nc_xcor_kernel_component_eval_kfactor_vec (state->comp, cosmo, &xck, comp_states->k_vec, comp_states->kf_vec);
 
-      prefactor = nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k, l);
-      peak_l    = sqrt (M_PI / (2.0 * nu)) * window * ncm_vector_get (comp_states->kf_vec, i);
-
-      if (deriv == 0)
+      for (i = 0; i < n_l; i++)
       {
-        val = peak_l;
+        const gint l         = comp_states->lmin + i;
+        const gdouble nu     = l + 0.5;
+        const gdouble k      = nu * u;
+        const gdouble peak_l = sqrt (M_PI / (2.0 * nu)) * window * ncm_vector_get (comp_states->kf_vec, i);
+        const gdouble coef   = (deriv == 0) ? 1.0 : ((deriv == 1) ? l / nu : -(2.0 * l + 0.25) / (nu * nu));
+
+        if (active[i])
+          W[i] += nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k, l) * coef * peak_l / k;
       }
-      else
+    }
+
+    if (first_active_p1 >= 0)
+    {
+      for (i = 0; i < n_l; i++)
+        ncm_vector_set (comp_states->k_vec_p1, i, (comp_states->lmin + (active_p1[i] ? i : (guint) first_active_p1) + 1.5) * u);
+
+      nc_xcor_kernel_component_eval_kfactor_vec (state->comp, cosmo, &xck, comp_states->k_vec_p1, comp_states->kf_vec_p1);
+
+      for (i = 0; i < n_l; i++)
       {
-        const gdouble nup   = nu + 1.0;
-        const gdouble chi_p = nup / k;
-        gdouble peak_lp1    = 0.0;
+        const gint l           = comp_states->lmin + i;
+        const gdouble nup      = l + 1.5;
+        const gdouble k        = nup * u;
+        const gdouble peak_lp1 = sqrt (M_PI / (2.0 * nup)) * window * ncm_vector_get (comp_states->kf_vec_p1, i);
+        const gdouble coef     = (deriv == 1) ? -1.0 : 2.0 / nup;
 
-        if (nup / (nu * u_side) <= state->chi_max)
-        {
-          NcXcorKinetic xck_p;
-
-          xck_p.chi_z = chi_p;
-          xck_p.z     = nc_distance_inv_comoving (dist, cosmo, chi_p);
-          xck_p.E_z   = nc_hicosmo_E (cosmo, xck_p.z);
-
-          peak_lp1 = sqrt (M_PI / (2.0 * nup)) *
-                     nc_xcor_kernel_component_eval_window (state->comp, cosmo, &xck_p) *
-                     nc_xcor_kernel_component_eval_kfactor (state->comp, cosmo, &xck_p, k);
-        }
-
-        if (deriv == 1)
-          val = (l / nu) * peak_l - peak_lp1;
-        else
-          val = -(2.0 * l + 0.25) / (nu * nu) * peak_l + (2.0 / nup) * peak_lp1;
+        if (active_p1[i])
+          W_p1[i] += nc_xcor_kernel_component_eval_prefactor (state->comp, cosmo, k, l) * coef * peak_lp1 / k;
       }
-
-      W[i] += prefactor * val / k;
     }
   }
 
-  for (i = 0; i < comp_states->n_l; i++)
+  for (i = 0; i < n_l; i++)
     ncm_vector_set (y, i, W[i]);
+
+  if (comp_states->n_terms == 2)
+    for (i = 0; i < n_l; i++)
+      ncm_vector_set (y, n_l + i, W_p1[i]);
+}
+
+/*
+ * The magnitude of each multipole at x for the domain search, |j_l term| + |j_{l+1}
+ * term| with two terms: the domain ends where both are negligible.
+ */
+static void
+_component_states_expand_limber_u (const gdouble u, NcmVector *y, gpointer user_data)
+{
+  ComponentStates *comp_states = (ComponentStates *) user_data;
+  const guint n_l              = comp_states->n_l;
+  guint i;
+
+  if (comp_states->n_terms == 1)
+  {
+    _component_states_compute_limber_u (u, y, user_data);
+
+    return;
+  }
+
+  _component_states_compute_limber_u (u, comp_states->y_terms, user_data);
+
+  for (i = 0; i < n_l; i++)
+    ncm_vector_set (y, i, fabs (ncm_vector_get (comp_states->y_terms, i)) + fabs (ncm_vector_get (comp_states->y_terms, n_l + i)));
 }
 
 NcXcorKernelIntegrand *
@@ -244,7 +295,9 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
    * [nu / chi_max, nu / chi_min] of each component and is zero outside it. The
    * closure is built in u = k / nu, where the band is the same for every
    * multipole of the block: the band edges are its only cuts, and the point
-   * chi = 1 / u is shared by the block (_component_states_compute_limber_u()). */
+   * chi = 1 / u is shared by the block (_component_states_compute_limber_u()). The
+   * j_{l+1} terms of Bessel derivative components are rows of their own in
+   * x = k / (nu + 1), on the same band and the same point. */
   {
     ComponentStates comp_states      = _component_states_init_limber_u (xclk, lmin, n_l, comp_list, cosmo);
     NcXcorKernelIntegrand *integrand = NULL;
@@ -253,7 +306,7 @@ _nc_xcor_kernel_build_limber_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gi
 
     integrand = _nc_xcor_kernel_build_cheb_integrand (xclk, cosmo, lmin, lmax,
                                                       &comp_states,
-                                                      _component_states_compute_limber_u,
+                                                      _component_states_expand_limber_u,
                                                       _component_states_compute_limber_u,
                                                       reltol, peak_epsilon);
 

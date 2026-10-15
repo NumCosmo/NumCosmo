@@ -71,8 +71,11 @@ def _k2_integrals(
 
     The closure is piecewise polynomial, and NcmSpectralPanelsProduct integrates the
     square of a panel set exactly. Row r lives in x = k / s_r, so the panels are
-    restricted to [k_min / s_r, k_max / s_r] before its product is taken.
+    restricted to [k_min / s_r, k_max / s_r] before its product is taken. A closure of
+    several terms has more panel rows than multipoles, and a multipole's square is not
+    the sum of its rows' squares, so only one-term closures are accepted.
     """
+    assert integrand.get_n_terms() == 1
     sp = integrand.peek_panels()
     n_rows = integrand.get_len()
     scales = Ncm.Vector.new_array([integrand.get_scale(r) for r in range(n_rows)])

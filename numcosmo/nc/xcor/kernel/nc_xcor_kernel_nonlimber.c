@@ -84,7 +84,8 @@ _component_states_init_non_limber (NcXcorKernel *xclk, gint lmin, guint n_l,
     .epsilon                 = self->adaptive_epsilon,
     .adaptive_boundary_tries = self->adaptive_boundary_tries,
     .is_limber               = FALSE,
-    .in_u                    = FALSE
+    .in_u                    = FALSE,
+    .n_terms                 = 1
   };
   guint i;
 

@@ -1314,10 +1314,76 @@ test_nc_xcor_kernel_gal_limber_capped_powspec (void)
   nc_hicosmo_free (cosmo);
 }
 
-/* Under Limber in u an RSD component steps at u = (1 + 1 / nu) / chi_max for each
- * multipole, where its j_{l+1} term stops, and the window is nonzero there when dN/dz is
- * truncated. The Chebyshev closure must take those steps as panel edges: across one, no
- * panel converges, and the splitter ends in a forced expansion that aborts. */
+/* The j_m peak term of a component under Limber, sqrt(pi / (2 (m + 1/2))) K(chi, k) / k
+ * at chi = (m + 1/2) / k, K the window factor times the wave number factor, zero outside
+ * the component's chi range */
+static gdouble
+_limber_peak (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, gdouble m_half,
+              gdouble k, gdouble chi_min, gdouble chi_max)
+{
+  const gdouble chi = m_half / k;
+  NcXcorKinetic xck;
+
+  if ((chi < chi_min) || (chi > chi_max))
+    return 0.0;
+
+  xck.chi_z = chi;
+  xck.z     = nc_distance_inv_comoving (dist, cosmo, chi);
+  xck.E_z   = nc_hicosmo_E (cosmo, xck.z);
+
+  return sqrt (M_PI / (2.0 * m_half)) * nc_xcor_kernel_component_eval_window (comp, cosmo, &xck) *
+         nc_xcor_kernel_component_eval_kfactor (comp, cosmo, &xck, k) / k;
+}
+
+/* W_l(k) under Limber from the components: the j_l'' weight is
+ * -(2 l + 1/4) / nu^2 P_l + 2 / (nu + 1) P_{l+1}, the j_l' weight (l / nu) P_l - P_{l+1} */
+static gdouble
+_limber_direct (GPtrArray *comps, NcHICosmo *cosmo, NcDistance *dist, gint l, gdouble k)
+{
+  const gdouble nu = l + 0.5;
+  gdouble W        = 0.0;
+  guint i;
+
+  for (i = 0; i < comps->len; i++)
+  {
+    NcXcorKernelComponent *comp = g_ptr_array_index (comps, i);
+    const guint deriv           = nc_xcor_kernel_component_get_bessel_deriv (comp);
+    gdouble chi_min, chi_max, k_min, k_max, P_l, val;
+
+    nc_xcor_kernel_component_get_limits (comp, cosmo, &chi_min, &chi_max, &k_min, &k_max);
+
+    if ((k < k_min) || (k > k_max))
+      continue;
+
+    P_l = _limber_peak (comp, cosmo, dist, nu, k, chi_min, chi_max);
+
+    if (deriv == 0)
+    {
+      val = P_l;
+    }
+    else
+    {
+      const gdouble P_lp1 = _limber_peak (comp, cosmo, dist, nu + 1.0, k, chi_min, chi_max);
+
+      if (deriv == 1)
+        val = (l / nu) * P_l - P_lp1;
+      else
+        val = -(2.0 * l + 0.25) / (nu * nu) * P_l + 2.0 / (nu + 1.0) * P_lp1;
+    }
+
+    W += nc_xcor_kernel_component_eval_prefactor (comp, cosmo, k, l) * val;
+  }
+
+  return W;
+}
+
+/* Under Limber an RSD component's j_{l+1} term is its own closure term, sampled in
+ * x = k / (nu + 1), where it starts at x = 1 / chi_max for every multipole. With a truncated
+ * dN/dz the window is nonzero there, a step that is a panel edge of both terms; the closure
+ * must build, hold two terms, and their sum must be the Limber W_l(k) of the components
+ * across the band, its ends included, within the closure tolerance of each multipole's peak
+ * (measured: 1.2e-8 of the peak at the default 1e-4; a 1% change of the j_{l+1} coefficient
+ * gives 0.24). */
 static void
 test_nc_xcor_kernel_gal_rsd_limber_steps (void)
 {
@@ -1335,7 +1401,15 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
                                      "domagbias", FALSE,
                                      "dorsd", TRUE,
                                      NULL);
+  const gint lmin = 2;
+  const gint lmax = 33;
+  const gint ls[] = { 2, 17, 33 };
+  const guint n_k = 400;
+  gdouble W[33 - 2 + 1];
   NcXcorKernelIntegrand *xclki;
+  GPtrArray *comps;
+  gdouble chi_lo = G_MAXDOUBLE, chi_hi = 0.0, tol;
+  guint i, j, n;
 
   ncm_model_orig_vparam_set (NCM_MODEL (g), NC_XCOR_KERNEL_GAL_BIAS, 0, 1.5);
   nc_distance_prepare (dist, cosmo);
@@ -1343,10 +1417,50 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
   nc_xcor_kernel_set_l_limber (NC_XCOR_KERNEL (g), 0);
   nc_xcor_kernel_prepare (NC_XCOR_KERNEL (g), cosmo);
 
-  xclki = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, 2, 33);
+  xclki = nc_xcor_kernel_get_eval_vectorized (NC_XCOR_KERNEL (g), cosmo, lmin, lmax);
+  comps = nc_xcor_kernel_get_component_list (NC_XCOR_KERNEL (g));
+  tol   = GSL_MAX (nc_xcor_kernel_get_reltol (NC_XCOR_KERNEL (g)), nc_xcor_kernel_get_peak_epsilon (NC_XCOR_KERNEL (g)));
 
   g_assert_cmpuint (ncm_spectral_panels_get_n_panels (nc_xcor_kernel_integrand_peek_panels (xclki)), >, 0);
+  g_assert_cmpuint (nc_xcor_kernel_integrand_get_n_terms (xclki), ==, 2);
 
+  for (i = 0; i < comps->len; i++)
+  {
+    gdouble chi_min, chi_max, k_min, k_max;
+
+    nc_xcor_kernel_component_get_limits (g_ptr_array_index (comps, i), cosmo, &chi_min, &chi_max, &k_min, &k_max);
+    chi_lo = GSL_MIN (chi_lo, chi_min);
+    chi_hi = GSL_MAX (chi_hi, chi_max);
+  }
+
+  for (n = 0; n < G_N_ELEMENTS (ls); n++)
+  {
+    const gint l       = ls[n];
+    const gdouble nu   = l + 0.5;
+    const gdouble k_lo = 0.9 * nu / chi_hi;
+    const gdouble k_hi = 1.1 * (nu + 1.0) / chi_lo;
+    gdouble peak       = 0.0, dev = 0.0;
+
+    for (j = 0; j < n_k; j++)
+    {
+      const gdouble k = k_lo * pow (k_hi / k_lo, j / (n_k - 1.0));
+
+      peak = GSL_MAX (peak, fabs (_limber_direct (comps, cosmo, dist, l, k)));
+    }
+
+    for (j = 0; j < n_k; j++)
+    {
+      const gdouble k = k_lo * pow (k_hi / k_lo, j / (n_k - 1.0));
+
+      nc_xcor_kernel_integrand_eval (xclki, k, W);
+      dev = GSL_MAX (dev, fabs (W[l - lmin] - _limber_direct (comps, cosmo, dist, l, k)));
+    }
+
+    g_assert_cmpfloat (peak, >, 0.0);
+    g_assert_cmpfloat (dev, <=, tol * peak);
+  }
+
+  g_ptr_array_unref (comps);
   nc_xcor_kernel_integrand_unref (xclki);
   nc_xcor_kernel_free (NC_XCOR_KERNEL (g));
   ncm_spline_free (dndz);

@@ -10886,6 +10886,9 @@ class SpectralPanels(GObject.Object):
     def restrict(
         self, spectral: Spectral, a: float, b: float
     ) -> typing.Tuple[bool, Matrix]: ...
+    def restrict_rows(
+        self, spectral: Spectral, a: float, b: float, r0: int, n: int
+    ) -> typing.Tuple[bool, Matrix]: ...
 
 class SpectralPanelsBuilder(GObject.Object):
     r"""

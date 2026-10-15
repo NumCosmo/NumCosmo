@@ -305,14 +305,14 @@ _test_ref_cells (TestNcXcorKQuadRef *ref)
 }
 
 /*
- * Appends to edges the abscissas in k between which every component of xclki is a
- * single polynomial: each component's range ends, and its panel edges, which are in
+ * Appends to edges the abscissas in k between which every panel row of xclki is a
+ * single polynomial: each row's range ends, and its panel edges, which are in
  * k / s_i, times its scale s_i.
  */
 static void
 _test_ref_breakpoints (NcXcorKernelIntegrand *xclki, GArray *edges)
 {
-  const guint len       = nc_xcor_kernel_integrand_get_len (xclki);
+  const guint len       = nc_xcor_kernel_integrand_get_len (xclki) * nc_xcor_kernel_integrand_get_n_terms (xclki);
   NcmSpectralPanels *sp = nc_xcor_kernel_integrand_peek_panels (xclki);
   const guint n_panels  = (sp != NULL) ? ncm_spectral_panels_get_n_panels (sp) : 0;
   guint c, i;

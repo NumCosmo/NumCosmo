@@ -604,19 +604,41 @@ _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
  * @coeffs: (out) (transfer full): the coefficients on [@a, @b]
  *
  * Computes the Chebyshev coefficients of every entry of $F$ on [@a, @b], which must lie
- * inside one panel. An end that edges computed in another variable put a rounding outside
- * the panel, within $10^{-12}$ of its width or four units in the last place of the larger
- * edge, is clamped to the edge. The restriction of a
- * polynomial to a subinterval is a polynomial of the same degree, so the coefficients follow
- * exactly from those of the panel by ncm_spectral_chebyshev_rebase_rows_data(), with the
- * scratch space of @spectral; when [@a, @b] is the panel they are its own. A matrix of the
- * right shape in @coeffs is reused, and a new one is allocated otherwise. @a must be below
- * @b.
+ * inside one panel, see ncm_spectral_panels_restrict_rows().
  *
  * Returns: whether [@a, @b] lies inside one panel; when it does not, @coeffs is unchanged.
  */
 gboolean
 ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, NcmMatrix **coeffs)
+{
+  return ncm_spectral_panels_restrict_rows (sp, spectral, a, b, 0, sp->fdim, coeffs);
+}
+
+/**
+ * ncm_spectral_panels_restrict_rows:
+ * @sp: a #NcmSpectralPanels
+ * @spectral: a #NcmSpectral
+ * @a: left end of the subinterval
+ * @b: right end of the subinterval
+ * @r0: the first row
+ * @n: the number of rows
+ * @coeffs: (out) (transfer full): the coefficients on [@a, @b], @n rows
+ *
+ * Computes the Chebyshev coefficients of the entries [@r0, @r0 + @n) of $F$ on [@a, @b],
+ * which must lie inside one panel; row $i$ of @coeffs is entry @r0 + $i$. An end that
+ * edges computed in another variable put a rounding outside the panel, within $10^{-12}$
+ * of its width or four units in the last place of the larger edge, is clamped to the
+ * edge. The restriction of a polynomial to a subinterval is a polynomial of the same
+ * degree, so the coefficients follow exactly from those of the panel by
+ * ncm_spectral_chebyshev_rebase_rows_data(), with the scratch space of @spectral; when
+ * [@a, @b] is the panel they are its own. A matrix of the right shape in @coeffs is
+ * reused, and a new one is allocated otherwise. @a must be below @b, and the rows inside
+ * #NcmSpectralPanels:fdim.
+ *
+ * Returns: whether [@a, @b] lies inside one panel; when it does not, @coeffs is unchanged.
+ */
+gboolean
+ncm_spectral_panels_restrict_rows (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, guint r0, guint n, NcmMatrix **coeffs)
 {
   const guint i = ncm_spectral_panels_find_panel (sp, 0.5 * (a + b));
   gdouble pa, pb;
@@ -627,28 +649,33 @@ ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdou
 
   g_assert_cmpfloat (a, <, b);
 
+  if (r0 + n > sp->fdim)
+    g_error ("ncm_spectral_panels_restrict_rows: rows [%u, %u) are not inside the %u rows of the panel set.",
+             r0, r0 + n, sp->fdim);
+
   if ((a < pa - slack) || (b > pb + slack))
     return FALSE;
 
   a = MAX (a, pa);
   b = MIN (b, pb);
+  c = c + (gsize) r0 * N;
 
-  if ((*coeffs != NULL) && ((ncm_matrix_nrows (*coeffs) != sp->fdim) || (ncm_matrix_ncols (*coeffs) != N)))
+  if ((*coeffs != NULL) && ((ncm_matrix_nrows (*coeffs) != n) || (ncm_matrix_ncols (*coeffs) != N)))
     ncm_matrix_clear (coeffs);
 
   if (*coeffs == NULL)
-    *coeffs = ncm_matrix_new (sp->fdim, N);
+    *coeffs = ncm_matrix_new (n, N);
 
   if ((a == pa) && (b == pb))
   {
     guint r;
 
-    for (r = 0; r < sp->fdim; r++)
+    for (r = 0; r < n; r++)
       memcpy (ncm_matrix_ptr (*coeffs, r, 0), c + (gsize) r * N, sizeof (gdouble) * N);
   }
   else
   {
-    ncm_spectral_chebyshev_rebase_rows_data (spectral, c, sp->fdim, N, N, pa, pb, a, b, *coeffs);
+    ncm_spectral_chebyshev_rebase_rows_data (spectral, c, n, N, N, pa, pb, a, b, *coeffs);
   }
 
   return TRUE;

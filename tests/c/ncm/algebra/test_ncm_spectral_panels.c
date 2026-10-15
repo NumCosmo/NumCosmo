@@ -41,6 +41,7 @@ static void test_ncm_spectral_panels_append (void);
 static void test_ncm_spectral_panels_find_panel (void);
 static void test_ncm_spectral_panels_eval (void);
 static void test_ncm_spectral_panels_restrict (void);
+static void test_ncm_spectral_panels_restrict_rows (void);
 static void test_ncm_spectral_panels_reset (void);
 static void test_ncm_spectral_panels_serialize (void);
 static void test_ncm_spectral_panels_append_rows (void);
@@ -70,6 +71,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels/find_panel", &test_ncm_spectral_panels_find_panel);
   g_test_add_func ("/ncm/spectral_panels/eval", &test_ncm_spectral_panels_eval);
   g_test_add_func ("/ncm/spectral_panels/restrict", &test_ncm_spectral_panels_restrict);
+  g_test_add_func ("/ncm/spectral_panels/restrict_rows", &test_ncm_spectral_panels_restrict_rows);
   g_test_add_func ("/ncm/spectral_panels/reset", &test_ncm_spectral_panels_reset);
   g_test_add_func ("/ncm/spectral_panels/serialize", &test_ncm_spectral_panels_serialize);
   g_test_add_func ("/ncm/spectral_panels/append/rows", &test_ncm_spectral_panels_append_rows);
@@ -326,6 +328,44 @@ test_ncm_spectral_panels_restrict (void)
 
   g_array_unref (row);
   ncm_matrix_free (coeffs);
+  ncm_spectral_free (spectral);
+  ncm_spectral_panels_free (sp);
+}
+
+/* Each row alone is the same row of the whole restriction, on a subinterval and on the whole
+ * panel; a matrix of another row count is replaced */
+static void
+test_ncm_spectral_panels_restrict_rows (void)
+{
+  NcmSpectralPanels *sp    = _panels_new ();
+  NcmSpectral *spectral    = ncm_spectral_new ();
+  NcmMatrix *all           = NULL;
+  NcmMatrix *one           = NULL;
+  const gdouble ends[2][2] = {
+    {1.2, 2.1}, {1.0, 2.5}
+  };
+  guint e, r, n;
+
+  for (e = 0; e < 2; e++)
+  {
+    g_assert_true (ncm_spectral_panels_restrict (sp, spectral, ends[e][0], ends[e][1], &all));
+
+    for (r = 0; r < 2; r++)
+    {
+      g_assert_true (ncm_spectral_panels_restrict_rows (sp, spectral, ends[e][0], ends[e][1], r, 1, &one));
+      g_assert_cmpuint (ncm_matrix_nrows (one), ==, 1);
+      g_assert_cmpuint (ncm_matrix_ncols (one), ==, ncm_matrix_ncols (all));
+
+      for (n = 0; n < ncm_matrix_ncols (all); n++)
+        g_assert_cmpfloat (ncm_matrix_get (one, 0, n), ==, ncm_matrix_get (all, r, n));
+    }
+  }
+
+  g_assert_true (ncm_spectral_panels_restrict_rows (sp, spectral, 1.2, 2.1, 0, 2, &one));
+  g_assert_cmpuint (ncm_matrix_nrows (one), ==, 2);
+
+  ncm_matrix_free (one);
+  ncm_matrix_free (all);
   ncm_spectral_free (spectral);
   ncm_spectral_panels_free (sp);
 }
