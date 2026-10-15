@@ -77,6 +77,13 @@ typedef struct _TestNcmDiffThread
   gboolean all_equal;
 } TestNcmDiffThread;
 
+typedef struct _TestNcmDiffNested
+{
+  NcmDiff *diff;
+  NcmDiffWork *work;
+  NcmVector *df;
+} TestNcmDiffNested;
+
 void test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_free (TestNcmDiff *test, gconstpointer pdata);
 
@@ -148,6 +155,11 @@ void test_ncm_diff_new_single (TestNcmDiff *test, gconstpointer pdata);
 
 void test_ncm_diff_work_ref (void);
 void test_ncm_diff_work_threads (void);
+void test_ncm_diff_work_ws (void);
+void test_ncm_diff_work_ws_length (void);
+void test_ncm_diff_work_ws_length_subprocess (void);
+void test_ncm_diff_work_in_use (void);
+void test_ncm_diff_work_in_use_subprocess (void);
 static void _test_ncm_diff_add (const gchar *path, gconstpointer pdata, void (*test_func) (TestNcmDiff *test, gconstpointer pdata));
 
 gint
@@ -279,6 +291,11 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/diff/work/ref", &test_ncm_diff_work_ref);
   g_test_add_func ("/ncm/diff/work/threads", &test_ncm_diff_work_threads);
+  g_test_add_func ("/ncm/diff/work/ws", &test_ncm_diff_work_ws);
+  g_test_add_func ("/ncm/diff/work/ws/length", &test_ncm_diff_work_ws_length);
+  g_test_add_func ("/ncm/diff/work/ws/length/subprocess", &test_ncm_diff_work_ws_length_subprocess);
+  g_test_add_func ("/ncm/diff/work/in_use", &test_ncm_diff_work_in_use);
+  g_test_add_func ("/ncm/diff/work/in_use/subprocess", &test_ncm_diff_work_in_use_subprocess);
 
   g_test_run ();
 }
@@ -2832,5 +2849,114 @@ test_ncm_diff_work_threads (void)
 
   g_array_unref (expected);
   ncm_diff_free (diff);
+}
+
+/* One workspace reused across dimensions, dual and single series: the _ws calls return
+ * exactly the values and errors of the GArray calls */
+void
+test_ncm_diff_work_ws (void)
+{
+  NcmDiffWork *work  = ncm_diff_work_new ();
+  const guint dims[] = {8, 3, 8};
+  gint dual;
+
+  for (dual = 1; dual >= 0; dual--)
+  {
+    NcmDiff *diff = ncm_diff_new ();
+    guint n, order;
+
+    ncm_diff_set_dual_series (diff, dual);
+
+    for (n = 0; n < G_N_ELEMENTS (dims); n++)
+    {
+      const guint dim  = dims[n];
+      const gdouble x  = 0.3 + 0.2 * n;
+      NcmVector *df    = ncm_vector_new (dim);
+      NcmVector *err   = ncm_vector_new (dim);
+      NcmVector *df_ne = ncm_vector_new (dim);
+
+      for (order = 1; order <= 2; order++)
+      {
+        GArray *Eerr = NULL;
+        GArray *ref  = (order == 1) ? ncm_diff_rc_d1_1_to_M (diff, x, dim, &_test_ncm_diff_thread_f, NULL, &Eerr)
+                                    : ncm_diff_rc_d2_1_to_M (diff, x, dim, &_test_ncm_diff_thread_f, NULL, &Eerr);
+        guint i;
+
+        if (order == 1)
+        {
+          ncm_diff_rc_d1_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df, err);
+          ncm_diff_rc_d1_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df_ne, NULL);
+        }
+        else
+        {
+          ncm_diff_rc_d2_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df, err);
+          ncm_diff_rc_d2_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df_ne, NULL);
+        }
+
+        for (i = 0; i < dim; i++)
+        {
+          g_assert_cmpfloat (ncm_vector_get (df, i), ==, g_array_index (ref, gdouble, i));
+          g_assert_cmpfloat (ncm_vector_get (err, i), ==, g_array_index (Eerr, gdouble, i));
+          g_assert_cmpfloat (ncm_vector_get (df_ne, i), ==, g_array_index (ref, gdouble, i));
+        }
+
+        g_array_unref (ref);
+        g_array_unref (Eerr);
+      }
+
+      ncm_vector_free (df);
+      ncm_vector_free (err);
+      ncm_vector_free (df_ne);
+    }
+
+    ncm_diff_free (diff);
+  }
+
+  ncm_diff_work_unref (work);
+}
+
+void
+test_ncm_diff_work_ws_length (void)
+{
+  g_test_trap_subprocess ("/ncm/diff/work/ws/length/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*output vectors must have dim = 4 entries*");
+}
+
+void
+test_ncm_diff_work_ws_length_subprocess (void)
+{
+  NcmDiff *diff     = ncm_diff_new ();
+  NcmDiffWork *work = ncm_diff_work_new ();
+  NcmVector *df     = ncm_vector_new (3);
+
+  ncm_diff_rc_d1_1_to_M_ws (diff, work, 0.5, 4, &_test_ncm_diff_thread_f, NULL, df, NULL);
+}
+
+/* A function that differentiates with the workspace its own derivative is using */
+static void
+_test_ncm_diff_nested_f (const gdouble x, NcmVector *y, gpointer user_data)
+{
+  TestNcmDiffNested *nd = user_data;
+
+  ncm_diff_rc_d1_1_to_M_ws (nd->diff, nd->work, x, 1, &_test_ncm_diff_thread_f, NULL, nd->df, NULL);
+  ncm_vector_set (y, 0, ncm_vector_get (nd->df, 0));
+}
+
+void
+test_ncm_diff_work_in_use (void)
+{
+  g_test_trap_subprocess ("/ncm/diff/work/in_use/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmDiffWork is in use by another call*");
+}
+
+void
+test_ncm_diff_work_in_use_subprocess (void)
+{
+  TestNcmDiffNested nd = {ncm_diff_new (), ncm_diff_work_new (), ncm_vector_new (1)};
+  NcmVector *df        = ncm_vector_new (1);
+
+  ncm_diff_rc_d1_1_to_M_ws (nd.diff, nd.work, 0.5, 1, &_test_ncm_diff_nested_f, &nd, df, NULL);
 }
 

@@ -130,6 +130,8 @@ GArray *ncm_diff_rc_d2_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmD
 GArray *ncm_diff_rf_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
 GArray *ncm_diff_rc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
 GArray *ncm_diff_rc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, GArray **Eerr);
+void ncm_diff_rc_d1_1_to_M_ws (NcmDiff *diff, NcmDiffWork *work, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, NcmVector *df, NcmVector *err);
+void ncm_diff_rc_d2_1_to_M_ws (NcmDiff *diff, NcmDiffWork *work, const gdouble x, const guint dim, NcmDiffFunc1toM f, gpointer user_data, NcmVector *df, NcmVector *err);
 
 GArray *ncm_diff_rf_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
 GArray *ncm_diff_rc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
