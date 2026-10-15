@@ -1310,6 +1310,185 @@ _ncm_diff_dual_reset (NcmDiffDual *dual)
   dual->converged = FALSE;
 }
 
+/**
+ * NcmDiffWork:
+ *
+ * The working storage of the #NcmDiff derivative calls, kept between calls so that a
+ * repeated call allocates nothing. A workspace serves one call at a time: a call on a
+ * workspace already in use by another aborts. Copying a workspace adds a reference.
+ */
+struct _NcmDiffWork
+{
+  gint ref_count;
+  gint in_use;
+  guint nvar;
+  guint dim;
+  NcmVector *x_v;
+  NcmVector *f_v;
+  NcmVector *yh1_v;
+  NcmVector *yh2_v;
+  NcmVector *quot_t[2];
+  NcmVector *canc_t[2];
+  GArray *duals;
+  guint n_duals;
+};
+
+G_DEFINE_BOXED_TYPE (NcmDiffWork, ncm_diff_work, ncm_diff_work_ref, ncm_diff_work_unref)
+
+/**
+ * ncm_diff_work_new:
+ *
+ * Creates an empty workspace. The derivative calls size it on first use and resize it
+ * when the number of coordinates or components changes.
+ *
+ * Returns: (transfer full): a new #NcmDiffWork
+ */
+NcmDiffWork *
+ncm_diff_work_new (void)
+{
+  NcmDiffWork *work = g_new0 (NcmDiffWork, 1);
+
+  work->ref_count = 1;
+
+  return work;
+}
+
+/**
+ * ncm_diff_work_ref:
+ * @work: a #NcmDiffWork
+ *
+ * Increases the reference count of @work by one atomically.
+ *
+ * Returns: (transfer full): @work
+ */
+NcmDiffWork *
+ncm_diff_work_ref (NcmDiffWork *work)
+{
+  g_atomic_int_inc (&work->ref_count);
+
+  return work;
+}
+
+/**
+ * ncm_diff_work_unref:
+ * @work: a #NcmDiffWork
+ *
+ * Decreases the reference count of @work by one atomically, and frees it when the count
+ * reaches zero.
+ */
+void
+ncm_diff_work_unref (NcmDiffWork *work)
+{
+  if (g_atomic_int_dec_and_test (&work->ref_count))
+  {
+    guint s, i;
+
+    ncm_vector_clear (&work->x_v);
+    ncm_vector_clear (&work->f_v);
+    ncm_vector_clear (&work->yh1_v);
+    ncm_vector_clear (&work->yh2_v);
+
+    for (s = 0; s < 2; s++)
+    {
+      ncm_vector_clear (&work->quot_t[s]);
+      ncm_vector_clear (&work->canc_t[s]);
+    }
+
+    for (i = 0; i < work->n_duals; i++)
+      _ncm_diff_dual_clear (&g_array_index (work->duals, NcmDiffDual, i));
+
+    g_clear_pointer (&work->duals, g_array_unref);
+    g_free (work);
+  }
+}
+
+/**
+ * ncm_diff_work_clear:
+ * @work: a #NcmDiffWork
+ *
+ * If *@work is not %NULL, decreases its reference count and sets the pointer to %NULL.
+ */
+void
+ncm_diff_work_clear (NcmDiffWork **work)
+{
+  g_clear_pointer (work, ncm_diff_work_unref);
+}
+
+/* Marks @work in use by the calling derivative; a second concurrent use aborts. */
+static void
+_ncm_diff_work_enter (NcmDiffWork *work)
+{
+  if (!g_atomic_int_compare_and_exchange (&work->in_use, 0, 1))
+    g_error ("NcmDiff: the NcmDiffWork is in use by another call; a workspace serves one call at a time.");
+}
+
+static void
+_ncm_diff_work_leave (NcmDiffWork *work)
+{
+  g_atomic_int_set (&work->in_use, 0);
+}
+
+/*
+ * Sizes the vectors of one step: the point, of @nvar coordinates, and the function value,
+ * the two side values and the two (quotient, cancellation) pairs, of @dim components. A
+ * vector is rebuilt only when its size changes.
+ */
+static void
+_ncm_diff_work_init_steps (NcmDiffWork *work, const guint nvar, const guint dim)
+{
+  if ((work->x_v == NULL) || (work->nvar != nvar))
+  {
+    ncm_vector_clear (&work->x_v);
+    work->x_v  = ncm_vector_new (nvar);
+    work->nvar = nvar;
+  }
+
+  if ((work->f_v == NULL) || (work->dim != dim))
+  {
+    guint s;
+
+    ncm_vector_clear (&work->f_v);
+    ncm_vector_clear (&work->yh1_v);
+    ncm_vector_clear (&work->yh2_v);
+    work->f_v   = ncm_vector_new (dim);
+    work->yh1_v = ncm_vector_new (dim);
+    work->yh2_v = ncm_vector_new (dim);
+
+    for (s = 0; s < 2; s++)
+    {
+      ncm_vector_clear (&work->quot_t[s]);
+      ncm_vector_clear (&work->canc_t[s]);
+      work->quot_t[s] = ncm_vector_new (dim);
+      work->canc_t[s] = ncm_vector_new (dim);
+    }
+
+    work->dim = dim;
+  }
+}
+
+/*
+ * Makes the first @dim duals of the dual-series driver ready. Duals an earlier call built
+ * beyond @dim are kept; the driver resets every dual it uses before its first step.
+ */
+static void
+_ncm_diff_work_init_dual (NcmDiffWork *work, const guint dim)
+{
+  guint i;
+
+  if (work->duals == NULL)
+    work->duals = g_array_new (FALSE, FALSE, sizeof (NcmDiffDual));
+
+  if (work->n_duals >= dim)
+    return;
+
+  g_array_set_size (work->duals, dim);
+
+  for (i = work->n_duals; i < dim; i++)
+    _ncm_diff_dual_init (&g_array_index (work->duals, NcmDiffDual, i), NULL);
+
+  work->n_duals = dim;
+}
+
 /*
  * The scheme in use along one coordinate: the step function and tables, the
  * sign of the steps (a backward difference is a forward one with negative
@@ -1331,7 +1510,7 @@ typedef struct _NcmDiffScheme
 } NcmDiffScheme;
 
 static GArray *_ncm_diff_by_step_algo_single (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
-static GArray *_ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
+static GArray *_ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffWork *work, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
 
 static GArray *
 ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
@@ -1339,7 +1518,14 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
 
   if (self->dual_series)
-    return _ncm_diff_by_step_algo_dual (diff, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
+  {
+    NcmDiffWork *work = ncm_diff_work_new ();
+    GArray *df        = _ncm_diff_by_step_algo_dual (diff, work, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
+
+    ncm_diff_work_unref (work);
+
+    return df;
+  }
 
   return _ncm_diff_by_step_algo_single (diff, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
 }
@@ -1963,48 +2149,40 @@ static gboolean _ncm_diff_dual_first_uninformative (NcmDiffDual *dual);
 static void _ncm_diff_dual_replay (NcmDiffDual *dual, const gdouble trunc_ratio, const gdouble canc_pad);
 
 static GArray *
-_ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
+_ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffWork *work, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
-  GArray *duals               = g_array_new (FALSE, FALSE, sizeof (NcmDiffDual));
-  NcmVector *x_v              = NULL;
-  NcmVector *f_v              = NULL;
-  NcmVector *yh1_v            = NULL;
-  NcmVector *yh2_v            = NULL;
-  NcmVector *quot_t[2]        = {NULL, NULL};
-  NcmVector *canc_t[2]        = {NULL, NULL};
-  GArray *df                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
   const guint nvar            = x_a->len;
-  NcmMatrix *Eerr_m           = NULL;
-  NcmMatrix *df_m;
+  GArray *df                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *duals;
+  NcmVector *x_v, *f_v, *yh1_v, *yh2_v;
+  NcmVector * const *quot_t;
+  NcmVector * const *canc_t;
   guint a, i, s;
 
+  _ncm_diff_work_enter (work);
+  _ncm_diff_work_init_steps (work, nvar, dim);
+  _ncm_diff_work_init_dual (work, dim);
 
+  duals  = work->duals;
+  x_v    = work->x_v;
+  f_v    = work->f_v;
+  yh1_v  = work->yh1_v;
+  yh2_v  = work->yh2_v;
+  quot_t = work->quot_t;
+  canc_t = work->canc_t;
+
+  /* df and Eerr belong to the caller; row a, column i is entry a dim + i */
   g_array_set_size (df, dim * nvar);
-  df_m = ncm_matrix_new_array (df, dim);
 
   if (Eerr != NULL)
   {
     *Eerr = g_array_new (FALSE, FALSE, sizeof (gdouble));
     g_array_set_size (*Eerr, dim * nvar);
-    Eerr_m = ncm_matrix_new_array (*Eerr, dim);
   }
 
-  g_array_set_size (duals, dim);
-
-  for (i = 0; i < dim; i++)
-    _ncm_diff_dual_init (&g_array_index (duals, NcmDiffDual, i), self->forward_tables);
-
-  x_v   = ncm_vector_new_array (x_a);
-  f_v   = ncm_vector_new (dim);
-  yh1_v = ncm_vector_new (dim);
-  yh2_v = ncm_vector_new (dim);
-
-  for (s = 0; s < 2; s++)
-  {
-    quot_t[s] = ncm_vector_new (dim);
-    canc_t[s] = ncm_vector_new (dim);
-  }
+  for (a = 0; a < nvar; a++)
+    ncm_vector_set (x_v, a, g_array_index (x_a, gdouble, a));
 
   f (x_v, f_v, user_data);
 
@@ -2178,35 +2356,16 @@ _ncm_diff_by_step_algo_dual (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffSt
     {
       const NcmDiffDual *dual = &g_array_index (duals, NcmDiffDual, i);
 
-      ncm_matrix_set (df_m, a, i, dual->cross.df_best);
+      g_array_index (df, gdouble, a * dim + i) = dual->cross.df_best;
 
-      if (Eerr_m != NULL)
-        ncm_matrix_set (Eerr_m, a, i, _ncm_diff_cross_control_err (&dual->cross));
+      if (Eerr != NULL)
+        g_array_index (*Eerr, gdouble, a * dim + i) = _ncm_diff_cross_control_err (&dual->cross);
     }
   }
 
-  {
-    for (i = 0; i < dim; i++)
-      _ncm_diff_dual_clear (&g_array_index (duals, NcmDiffDual, i));
+  _ncm_diff_work_leave (work);
 
-    g_array_unref (duals);
-
-    ncm_vector_clear (&x_v);
-    ncm_vector_clear (&f_v);
-    ncm_vector_clear (&yh1_v);
-    ncm_vector_clear (&yh2_v);
-
-    for (s = 0; s < 2; s++)
-    {
-      ncm_vector_clear (&quot_t[s]);
-      ncm_vector_clear (&canc_t[s]);
-    }
-
-    ncm_matrix_clear (&df_m);
-    ncm_matrix_clear (&Eerr_m);
-
-    return df;
-  }
+  return df;
 }
 
 static gboolean

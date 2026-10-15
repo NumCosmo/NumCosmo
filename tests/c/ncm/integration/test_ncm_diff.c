@@ -138,6 +138,8 @@ void test_ncm_diff_traps (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_invalid_st (TestNcmDiff *test, gconstpointer pdata);
 
 void test_ncm_diff_new_single (TestNcmDiff *test, gconstpointer pdata);
+
+void test_ncm_diff_work_ref (void);
 static void _test_ncm_diff_add (const gchar *path, gconstpointer pdata, void (*test_func) (TestNcmDiff *test, gconstpointer pdata));
 
 gint
@@ -266,6 +268,8 @@ main (gint argc, gchar *argv[])
   _test_ncm_diff_add ("/ncm/diff/traps", NULL, &test_ncm_diff_traps);
 
   _test_ncm_diff_add ("/ncm/diff/invalid/st/subprocess", NULL, &test_ncm_diff_invalid_st);
+
+  g_test_add_func ("/ncm/diff/work/ref", &test_ncm_diff_work_ref);
 
   g_test_run ();
 }
@@ -2744,5 +2748,23 @@ void
 test_ncm_diff_invalid_st (TestNcmDiff *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
+}
+
+/* A copy of a workspace is the same workspace with one more reference; clearing the
+ * last reference frees it and sets the pointer to NULL */
+void
+test_ncm_diff_work_ref (void)
+{
+  NcmDiffWork *work  = ncm_diff_work_new ();
+  NcmDiffWork *work2 = ncm_diff_work_ref (work);
+  NcmDiffWork *work3 = g_boxed_copy (NCM_TYPE_DIFF_WORK, work);
+
+  g_assert_true (work2 == work);
+  g_assert_true (work3 == work);
+
+  g_boxed_free (NCM_TYPE_DIFF_WORK, work3);
+  ncm_diff_work_unref (work2);
+  ncm_diff_work_clear (&work);
+  g_assert_null (work);
 }
 

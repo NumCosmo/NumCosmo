@@ -38,6 +38,12 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmDiff, ncm_diff, NCM, DIFF, GObject)
 
+#define NCM_TYPE_DIFF_WORK (ncm_diff_work_get_type ())
+
+typedef struct _NcmDiffWork NcmDiffWork;
+
+GType ncm_diff_work_get_type (void) G_GNUC_CONST;
+
 /**
  * NcmDiffFuncNtoM:
  * @x: function argument, of length $N$
@@ -81,6 +87,10 @@ typedef gdouble (*NcmDiffFuncNto1) (NcmVector *x, gpointer user_data);
 typedef gdouble (*NcmDiffFunc1to1) (const gdouble x, gpointer user_data);
 
 NcmDiff *ncm_diff_new (void);
+NcmDiffWork *ncm_diff_work_new (void);
+NcmDiffWork *ncm_diff_work_ref (NcmDiffWork *work);
+void ncm_diff_work_unref (NcmDiffWork *work);
+void ncm_diff_work_clear (NcmDiffWork **work);
 NcmDiff *ncm_diff_ref (NcmDiff *diff);
 
 void ncm_diff_free (NcmDiff *diff);
