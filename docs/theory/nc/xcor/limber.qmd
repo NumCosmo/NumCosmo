@@ -1,0 +1,154 @@
+---
+title: Limber Angular Power Spectra
+---
+
+This page describes how [[numcosmo|NcXcorKernel]] computes the window $W_\ell(k)$ under the
+Limber approximation.
+
+The Limber approximation is activated by `NcXcorKernel:l-limber`. Its value
+$\ell_\mathrm{limber}$ divides the multipoles: those with $\ell \ge \ell_\mathrm{limber}$
+take the Limber path, and those below take the non-Limber path of [UltraLevin: Non-Limber
+Angular Power Spectra](../../ncm/specfunc/sbessel_projection.qmd). The value 0 puts every
+multipole on the Limber path, and -1 puts none.
+
+The two paths differ in a single step. In both, each component of a kernel has a radial
+kernel $K(\chi,k)$, its radial integral $I_\ell(k)$ (Eq. (2) of the UltraLevin page) and a
+prefactor $p_\ell(k)$, and its window is $W_\ell(k) = p_\ell(k)\, I_\ell(k)$. The
+non-Limber path computes $I_\ell(k)$ as a Levin integral; the Limber path replaces it by a
+closed form in $K$. After that step the paths are the same: $W_\ell(k)$ is represented over
+$k$ as in [The window over k](../../ncm/specfunc/sbessel_projection.qmd#the-window-over-k),
+and a pair of windows is integrated as in [The outer
+integral](../../ncm/specfunc/sbessel_projection.qmd#the-outer-integral).
+
+The Limber path also requires the radial kernel of each component to be a product of two
+factors,
+$$
+K(\chi,k) = K_\chi(\chi)\, K_k(\chi,k),
+$$
+with $K_\chi$ a function of the distance alone and $K_k$ the factor that depends on the
+wavenumber. For the galaxy clustering component of [[numcosmo|NcXcorKernelGal]], $K_k$ is
+$\sqrt{P(k,z)}$ at the redshift $z$ of $\chi$. The component evaluates $K_\chi$ with
+[[numcosmo|nc_xcor_kernel_component_eval_window]], $K_k$ with
+[[numcosmo|nc_xcor_kernel_component_eval_kfactor]] and $p_\ell$ with
+[[numcosmo|nc_xcor_kernel_component_eval_prefactor]]. The factorization is what lets the
+multipoles of a block share the evaluations at one distance, as described below.
+
+Throughout, $\nu_m \equiv m + 1/2$ and $\nu \equiv \nu_\ell$.
+
+```{python}
+#| code-fold: true
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+plt.rcParams.update({"figure.dpi": 110, "axes.grid": True, "grid.alpha": 0.3})
+
+cosmo = Nc.HICosmoDEXcdm.new()
+dist = Nc.Distance.new(5.0)
+dist.prepare(cosmo)
+ps = Ncm.PowspecAnalytic.new(
+    Ncm.PowspecAnalyticShape.BBKS, Ncm.PowspecAnalyticGrowth.LCDM
+)
+
+
+def gauss_window(l_limber: int, ell: int) -> Nc.XcorKernelIntegrand:
+    """The window of a Gaussian kernel at one multipole, exact or under Limber."""
+    sbi = Ncm.SBesselIntegratorLevin.new(ell, ell)
+    kernel = Nc.XcorKernelAnalyticGauss.new_full(dist, ps, 1500.0, 300.0, 4.0, sbi)
+    kernel.set_l_limber(l_limber)
+    kernel.set_reltol(1.0e-8)
+    kernel.prepare(cosmo)
+
+    return kernel.get_eval_vectorized_full(cosmo, ell, ell, sbi)
+```
+
+## The Limber form of the radial integral
+
+The Limber approximation expands the radial integral in $1/\nu$, assuming that $K$ is
+smooth in $\chi$; the terms beyond the leading one involve derivatives of $K$ in $\chi$
+[@Loverde2008]. The leading term is $K$ at $k\chi = \nu$ times the integral of the weight,
+$$
+\int_0^\infty j_\ell(x)\,\mathrm{d}x = \frac{\sqrt{\pi}}{2}\,
+\frac{\Gamma\big((\ell+1)/2\big)}{\Gamma\big(\ell/2+1\big)}
+\simeq \sqrt{\frac{\pi}{2\nu}},
+$$
+where the last form differs from the Gamma ratio by a relative amount of order $1/\nu^2$
+(0.9% at $\ell = 2$, $6 \times 10^{-6}$ at $\ell = 100$). For the weight $j_m$,
+$$
+\int \mathrm{d}\chi\, K(\chi,k)\, j_m(k\chi) \simeq I^\mathrm{L}_m(k),
+\qquad
+I^\mathrm{L}_m(k) \equiv \sqrt{\frac{\pi}{2\nu_m}}\,\frac{K(\nu_m / k,\, k)}{k},
+$$
+with a relative error of order $1/\nu_m^2$. So $I_\ell(k) \simeq I^\mathrm{L}_\ell(k)$. The
+index $m$ is general because the derivative weights below need $I^\mathrm{L}_{\ell+1}$ as
+well.
+
+$I^\mathrm{L}_m(k)$ is $K$ evaluated at the single distance $\chi_m = \nu_m / k$. Since $K$
+vanishes outside its support $[\chi_\mathrm{min}, \chi_\mathrm{max}]$,
+$I^\mathrm{L}_m(k)$ vanishes outside the band
+$$
+\frac{\nu_m}{\chi_\mathrm{max}} \le k \le \frac{\nu_m}{\chi_\mathrm{min}}.
+$$
+Where $K$ is nonzero at an end of its support, $I^\mathrm{L}_m$ is discontinuous at the
+corresponding end of the band: nonzero on one side, zero on the other.
+
+@fig-limber-exact shows the two windows the library builds for a Gaussian kernel, one from
+the Levin integral of [UltraLevin: Non-Limber Angular Power
+Spectra](../../ncm/specfunc/sbessel_projection.qmd) and one from $I^\mathrm{L}_\ell$.
+Their largest difference, relative to the peak of the window, is proportional to $1/\nu^2$
+for large $\nu$.
+
+```{python}
+#| label: fig-limber-exact
+#| fig-cap: >
+#|   Top: the window W_l(k) of a Gaussian kernel (mean 1500 Mpc, width 300 Mpc, cut at
+#|   4 sigma) at l = 10 and l = 100, from UltraLevin (solid) and from the Limber form
+#|   (dashed, a darker shade drawn over it), each divided by the peak of the UltraLevin
+#|   window; at l = 100 the two coincide to 5.6e-3 of the peak. The k range shown is where
+#|   either window exceeds 1e-3 of its peak. Bottom: the largest
+#|   difference between the two windows over k, divided by that peak and multiplied by
+#|   nu^2. The difference is 1.26 of the peak at l = 2, 5.6e-3 at l = 100 and 6.6e-4 at
+#|   l = 300; times nu^2 it tends to a constant (56 at l = 100, 60 at l = 300).
+#| code-fold: true
+ells = np.array([2, 3, 5, 10, 20, 30, 50, 100, 200, 300])
+shown = {10: ("C0", "#0b3c5d"), 100: ("C1", "#8c3b00")}
+scaled = []
+q_lo, q_hi = np.inf, 0.0
+fig, axs = plt.subplots(2, 1, figsize=(8, 6.0))
+
+for ell in ells:
+    levin = gauss_window(-1, ell)
+    limber = gauss_window(0, ell)
+    k_lo, k_hi = levin.get_range()
+    ks = np.geomspace(k_lo, k_hi, 2000)
+    w_levin = np.array([levin.eval_array(k)[0] for k in ks])
+    w_limber = np.array([limber.eval_array(k)[0] for k in ks])
+    peak = np.abs(w_levin).max()
+    scaled.append(np.abs(w_limber - w_levin).max() / peak * (ell + 0.5) ** 2)
+
+    if ell in shown:
+        color, shade = shown[ell]
+        visible = (np.abs(w_levin) > 1.0e-3 * peak) | (np.abs(w_limber) > 1.0e-3 * peak)
+        q_lo = min(q_lo, ks[visible].min() / (ell + 0.5))
+        q_hi = max(q_hi, ks[visible].max() / (ell + 0.5))
+        axs[0].plot(ks / (ell + 0.5), w_levin / peak, color=color, lw=2.0,
+                    label=rf"$\ell = {ell}$, UltraLevin")
+        axs[0].plot(ks / (ell + 0.5), w_limber / peak, color=shade, lw=1.0, ls="--",
+                    label=rf"$\ell = {ell}$, Limber")
+
+axs[0].set_xscale("log")
+axs[0].set_xlim(q_lo, q_hi)
+axs[0].xaxis.set_major_formatter(FormatStrFormatter("%g"))
+axs[0].xaxis.set_minor_formatter(FormatStrFormatter("%g"))
+axs[0].set_xlabel(r"$k / \nu$  [$R_{H0}^{-1}$]")
+axs[0].set_ylabel(r"$W_\ell(k)$ / peak")
+axs[0].legend(fontsize=8)
+axs[1].plot(ells + 0.5, scaled, "o-", ms=4)
+axs[1].set_xscale("log")
+axs[1].set_xlabel(r"$\nu$")
+axs[1].set_ylabel(r"$\nu^2 \times$ largest difference / peak")
+fig.tight_layout()
+plt.show()
+```

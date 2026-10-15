@@ -33,6 +33,7 @@ classes and methods.
 
 - [The Ultraspherical Spectral Solver](ncm/specfunc/sbessel_ode_solver.qmd) --- the banded discretization of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
 - [UltraLevin: Non-Limber Angular Power Spectra](ncm/specfunc/sbessel_projection.qmd) --- the Levin reduction, fixed panels in x, the window over k and its exact outer integral.
+- [Limber Angular Power Spectra](nc/xcor/limber.qmd) --- the Limber form of the radial integral, the derivative weights, the closure variables $q_t = k/(\nu+t)$ shared by a block and the outer integral of a two-term window.
 
 ## Approximation and Interpolation
 
