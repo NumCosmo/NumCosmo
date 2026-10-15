@@ -42,6 +42,17 @@ struct _TestNcPowspec
 
 typedef void (*TestNcPowspecFunc) (TestNcPowspec *test, gconstpointer pdata);
 
+typedef struct _TestNcPowspecFunc
+{
+  void (*func) (TestNcPowspec *, gconstpointer);
+
+  const gchar *name;
+  gpointer pdata;
+} TestNcPowspecFuncData;
+
+#define TEST_NC_POWSPECS_LEN G_N_ELEMENTS (powspecs)
+#define TEST_NC_POWSPEC_TESTS 3
+
 void test_nc_powspec_ml_transfer_new_EH (TestNcPowspec *test, gconstpointer pdata);
 void test_nc_powspec_ml_transfer_new_BBKS (TestNcPowspec *test, gconstpointer pdata);
 void test_nc_powspec_ml_cbe_new (TestNcPowspec *test, gconstpointer pdata);
@@ -56,14 +67,6 @@ void test_nc_powspec_free (TestNcPowspec *test, gconstpointer pdata);
 void test_nc_powspec_ml_cbe_extrapolation (void);
 void test_nc_powspec_filter_max_z_knots_traps (void);
 void test_nc_powspec_filter_max_z_knots_subprocess (void);
-
-typedef struct _TestNcPowspecFunc
-{
-  void (*func) (TestNcPowspec *, gconstpointer);
-
-  const gchar *name;
-  gpointer pdata;
-} TestNcPowspecFuncData;
 
 /* Built twice from this source (see tests/c/meson.build): with -DPOWSPEC_SPLIT_CBE only the
  * CLASS-backed (cbe) spectra, which are FAST here (the spectrum is splined once, ~4s); with
@@ -85,9 +88,6 @@ TestNcPowspecFuncData powspecs[] =
 #endif
 };
 
-#define TEST_NC_POWSPECS_LEN G_N_ELEMENTS (powspecs)
-
-#define TEST_NC_POWSPEC_TESTS 3
 TestNcPowspecFuncData tests[TEST_NC_POWSPEC_TESTS] =
 {
   {test_nc_powspec_eval,          "eval",          NULL},

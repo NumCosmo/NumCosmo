@@ -46,6 +46,10 @@ void test_nc_transfer_func_eval (void);
 void test_nc_transfer_func_matter_powerspectrum (void);
 void test_nc_transfer_func_free (void);
 
+NcTransferFunc *tf = NULL;
+
+NcHICosmoLCDM *model = NULL;
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -65,9 +69,6 @@ main (gint argc, gchar *argv[])
 
   g_test_run ();
 }
-
-NcTransferFunc *tf   = NULL;
-NcHICosmoLCDM *model = NULL;
 
 void
 test_nc_transfer_func_new_bbks (void)

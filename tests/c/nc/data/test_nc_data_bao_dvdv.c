@@ -80,13 +80,29 @@ test_nc_data_bao_dvdv_free (TestNcDataBaoDVDV *test, gconstpointer pdata)
 }
 
 /* Percival2007 */
-
 void
 test_nc_data_bao_dvdv_new_percival2007 (TestNcDataBaoDVDV *test, gconstpointer pdata)
 {
   NcDataBaoId id   = NC_DATA_BAO_DVDV_PERCIVAL2007;
   NcDistance *dist = nc_distance_new (2.0);
   NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_dvdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->dvdv = NC_DATA_BAO_DVDV (data);
+  g_assert_true (NC_IS_DATA_BAO_DVDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* Percival 2010 */
+void
+test_nc_data_bao_dvdv_new_percival2010 (TestNcDataBaoDVDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_DVDV_PERCIVAL2010;
+  NcDistance *dist = nc_distance_new (2.0);
 
   test->id = id;
   data     = NCM_DATA (nc_data_bao_dvdv_new_from_id (dist, id));
@@ -116,24 +132,6 @@ test_nc_data_bao_dvdv_set_sample_percival2007 (TestNcDataBaoDVDV *test, gconstpo
 
   ncm_assert_cmpdouble (ncm_vector_get (y, 0), ==, bf0);
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 0), ==, sigma);
-}
-
-/* Percival 2010 */
-
-void
-test_nc_data_bao_dvdv_new_percival2010 (TestNcDataBaoDVDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_DVDV_PERCIVAL2010;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_dvdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->dvdv = NC_DATA_BAO_DVDV (data);
-  g_assert_true (NC_IS_DATA_BAO_DVDV (data));
-
-  nc_distance_free (dist);
 }
 
 void

@@ -29,7 +29,6 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-
 G_DECLARE_FINAL_TYPE (NcmObjectTest, ncm_object_test, NCM, OBJECT_TEST, GObject)
 
 struct _NcmObjectTest
@@ -54,121 +53,6 @@ enum
 
 G_DEFINE_TYPE (NcmObjectTest, ncm_object_test, G_TYPE_OBJECT)
 
-static void
-ncm_object_test_init (NcmObjectTest *self)
-{
-  self->dt2 = NULL;
-  self->dt3 = NULL;
-}
-
-static void
-ncm_object_test_finalize (GObject *object)
-{
-  NcmObjectTest *self = NCM_OBJECT_TEST (object);
-
-  ncm_dtuple2_clear (&self->dt2);
-  ncm_dtuple3_clear (&self->dt3);
-  ncm_vector_clear (&self->vector);
-  ncm_matrix_clear (&self->matrix);
-
-  /* Chain up to the parent class */
-  G_OBJECT_CLASS (ncm_object_test_parent_class)->finalize (object);
-}
-
-static void
-ncm_object_test_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec   *pspec)
-{
-  NcmObjectTest *self = NCM_OBJECT_TEST (object);
-
-  switch (prop_id)
-  {
-    case PROP_DT2:
-      ncm_dtuple2_clear (&self->dt2);
-      self->dt2 = g_value_dup_boxed (value);
-      break;
-    case PROP_DT3:
-      ncm_dtuple3_clear (&self->dt3);
-      self->dt3 = g_value_dup_boxed (value);
-      break;
-    case PROP_VECTOR:
-      ncm_vector_clear (&self->vector);
-      self->vector = g_value_dup_object (value);
-      break;
-    case PROP_MATRIX:
-      ncm_matrix_clear (&self->matrix);
-      self->matrix = g_value_dup_object (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-ncm_object_test_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcmObjectTest *self = NCM_OBJECT_TEST (object);
-
-  switch (prop_id)
-  {
-    case PROP_DT2:
-      g_value_set_boxed (value, self->dt2);
-      break;
-    case PROP_DT3:
-      g_value_set_boxed (value, self->dt3);
-      break;
-    case PROP_VECTOR:
-      g_value_set_object (value, self->vector);
-      break;
-    case PROP_MATRIX:
-      g_value_set_object (value, self->matrix);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-ncm_object_test_class_init (NcmObjectTestClass *klass)
-{
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
-  object_class->finalize     = ncm_object_test_finalize;
-  object_class->set_property = ncm_object_test_set_property;
-  object_class->get_property = ncm_object_test_get_property;
-
-  g_object_class_install_property (object_class,
-                                   PROP_DT2,
-                                   g_param_spec_boxed ("dt2",
-                                                       NULL,
-                                                       "dt2",
-                                                       NCM_TYPE_DTUPLE2,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_DT3,
-                                   g_param_spec_boxed ("dt3",
-                                                       NULL,
-                                                       "dt3",
-                                                       NCM_TYPE_DTUPLE3,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_VECTOR,
-                                   g_param_spec_object ("vector",
-                                                        NULL,
-                                                        "vector",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_MATRIX,
-                                   g_param_spec_object ("matrix",
-                                                        NULL,
-                                                        "matrix",
-                                                        NCM_TYPE_MATRIX,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
-
 typedef struct _TestNcmObjectTest
 {
   NcmObjectTest *obj;
@@ -178,6 +62,11 @@ typedef struct _TestNcmSerialize
 {
   NcmSerialize *ser;
 } TestNcmSerialize;
+
+#define TEST_SPLINE_SHARED                                                        \
+        "NcmSplineCubicNotaknot{'length':<6>, "                                   \
+        "'x' : <('NcmVector[V]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>, " \
+        "'y' : <('NcmVector[V]', @a{sv} {})>}"
 
 static void test_ncm_serialize_new (TestNcmSerialize *test, gconstpointer pdata);
 void test_ncm_serialize_new_noclean_dup (TestNcmSerialize *test, gconstpointer pdata);
@@ -198,7 +87,6 @@ static void test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, 
 static void test_ncm_serialize_to_yaml_from_yaml (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, gconstpointer pdata);
-
 
 static void test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pdata);
 
@@ -325,6 +213,121 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/serialize/api/set_taken/subprocess", &test_ncm_serialize_set_taken_subprocess);
 
   g_test_run ();
+}
+
+static void
+ncm_object_test_init (NcmObjectTest *self)
+{
+  self->dt2 = NULL;
+  self->dt3 = NULL;
+}
+
+static void
+ncm_object_test_finalize (GObject *object)
+{
+  NcmObjectTest *self = NCM_OBJECT_TEST (object);
+
+  ncm_dtuple2_clear (&self->dt2);
+  ncm_dtuple3_clear (&self->dt3);
+  ncm_vector_clear (&self->vector);
+  ncm_matrix_clear (&self->matrix);
+
+  /* Chain up to the parent class */
+  G_OBJECT_CLASS (ncm_object_test_parent_class)->finalize (object);
+}
+
+static void
+ncm_object_test_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec   *pspec)
+{
+  NcmObjectTest *self = NCM_OBJECT_TEST (object);
+
+  switch (prop_id)
+  {
+    case PROP_DT2:
+      ncm_dtuple2_clear (&self->dt2);
+      self->dt2 = g_value_dup_boxed (value);
+      break;
+    case PROP_DT3:
+      ncm_dtuple3_clear (&self->dt3);
+      self->dt3 = g_value_dup_boxed (value);
+      break;
+    case PROP_VECTOR:
+      ncm_vector_clear (&self->vector);
+      self->vector = g_value_dup_object (value);
+      break;
+    case PROP_MATRIX:
+      ncm_matrix_clear (&self->matrix);
+      self->matrix = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_object_test_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmObjectTest *self = NCM_OBJECT_TEST (object);
+
+  switch (prop_id)
+  {
+    case PROP_DT2:
+      g_value_set_boxed (value, self->dt2);
+      break;
+    case PROP_DT3:
+      g_value_set_boxed (value, self->dt3);
+      break;
+    case PROP_VECTOR:
+      g_value_set_object (value, self->vector);
+      break;
+    case PROP_MATRIX:
+      g_value_set_object (value, self->matrix);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_object_test_class_init (NcmObjectTestClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->finalize     = ncm_object_test_finalize;
+  object_class->set_property = ncm_object_test_set_property;
+  object_class->get_property = ncm_object_test_get_property;
+
+  g_object_class_install_property (object_class,
+                                   PROP_DT2,
+                                   g_param_spec_boxed ("dt2",
+                                                       NULL,
+                                                       "dt2",
+                                                       NCM_TYPE_DTUPLE2,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DT3,
+                                   g_param_spec_boxed ("dt3",
+                                                       NULL,
+                                                       "dt3",
+                                                       NCM_TYPE_DTUPLE3,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_VECTOR,
+                                   g_param_spec_object ("vector",
+                                                        NULL,
+                                                        "vector",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_MATRIX,
+                                   g_param_spec_object ("matrix",
+                                                        NULL,
+                                                        "matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 void
@@ -875,11 +878,6 @@ test_ncm_serialize_invalid_from_string_wrongorder (TestNcmSerialize *test, gcons
 
   NCM_TEST_FREE (g_object_unref, obj);
 }
-
-#define TEST_SPLINE_SHARED                                                        \
-        "NcmSplineCubicNotaknot{'length':<6>, "                                   \
-        "'x' : <('NcmVector[V]', {'values':<[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]>})>, " \
-        "'y' : <('NcmVector[V]', @a{sv} {})>}"
 
 void
 test_ncm_serialize_instances (void)

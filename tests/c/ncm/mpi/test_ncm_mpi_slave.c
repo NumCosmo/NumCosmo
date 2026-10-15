@@ -50,7 +50,99 @@
 #define TEST_WORKER (1)
 #define TEST_TAG_REPORT (1000)
 
+/* The refusals: each case aborts the worker with the message it is checked against. */
+typedef struct _TestAbortCase
+{
+  const gchar *name;
+  const gchar *message;
+} TestAbortCase;
+
+static void test_ncm_mpi_slave_work (void);
+static void test_ncm_mpi_slave_reinit (void);
+static void test_ncm_mpi_slave_pending (void);
+static void test_ncm_mpi_slave_kill (void);
+static void test_ncm_mpi_slave_abort (gconstpointer pdata);
+static void _test_send_cmd (gint cmd);
+static gint _test_recv_report (void);
+static void _test_abort_case_run (const gchar *name);
+static gint _test_spawn_aborts (gint argc, gchar *argv[]);
+
 static gboolean _test_killed = FALSE;
+
+static const TestAbortCase abort_cases[] =
+{
+  {"init_twice",       "already initialized"},
+  {"work_before_init", "received work"},
+  {"unknown_command",  "unknown MPI message"},
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  const gchar *abort_case = NULL;
+  gint rank               = 0;
+  gint i;
+
+  for (i = 1; i < argc; i++)
+  {
+    if (g_strcmp0 (argv[i], "--spawn-aborts") == 0)
+    {
+      argv[i] = argv[argc - 1];
+      argc--;
+
+      return _test_spawn_aborts (argc, argv);
+    }
+
+    if (g_str_has_prefix (argv[i], "--abort="))
+      abort_case = argv[i] + strlen ("--abort=");
+  }
+
+  MPI_Init (&argc, &argv);
+  MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+
+  ncm_cfg_register_objects ();
+  ncm_cfg_register_obj (TEST_TYPE_MPI_JOB_SHAPE);
+
+  if (rank == TEST_WORKER)
+  {
+    gint more = TRUE;
+
+    while (more)
+    {
+      more = ncm_mpi_slave_serve_job ();
+      MPI_Send (&more, 1, MPI_INT, 0, TEST_TAG_REPORT, MPI_COMM_WORLD);
+    }
+  }
+  else if (rank == 0)
+  {
+    if (abort_case != NULL)
+    {
+      _test_abort_case_run (abort_case);
+    }
+    else
+    {
+      g_test_init (&argc, &argv, NULL);
+
+      g_test_add_func ("/ncm/mpi/slave/work", &test_ncm_mpi_slave_work);
+      g_test_add_func ("/ncm/mpi/slave/reinit", &test_ncm_mpi_slave_reinit);
+      g_test_add_func ("/ncm/mpi/slave/pending", &test_ncm_mpi_slave_pending);
+      g_test_add_func ("/ncm/mpi/slave/kill", &test_ncm_mpi_slave_kill);
+
+      g_test_run ();
+    }
+
+    /* A filtered run may not reach the kill test; the worker still has to stop. */
+    if (!_test_killed)
+    {
+      _test_send_cmd (NCM_MPI_CTRL_SLAVE_KILL);
+      _test_recv_report ();
+    }
+  }
+
+  MPI_Finalize ();
+
+  return 0;
+}
 
 static void
 _test_send_cmd (gint cmd)
@@ -153,6 +245,65 @@ _test_run_shape (guint input_len, guint return_len, guint n)
   g_free (input);
   g_free (ret);
   ncm_mpi_job_free (mpi_job);
+}
+
+static void
+_test_abort_case_run (const gchar *name)
+{
+  NcmMPIJob *mpi_job = _test_shape_new (1, 1);
+  gint i;
+
+  if (g_strcmp0 (name, "init_twice") == 0)
+  {
+    _test_send_job (mpi_job);
+    _test_send_job (mpi_job);
+  }
+  else if (g_strcmp0 (name, "work_before_init") == 0)
+  {
+    _test_send_cmd (NCM_MPI_CTRL_SLAVE_WORK);
+  }
+  else if (g_strcmp0 (name, "unknown_command") == 0)
+  {
+    _test_send_cmd (NCM_MPI_CTRL_SLAVE_LEN + 7);
+  }
+  else
+  {
+    g_error ("unknown abort case `%s'.", name);
+  }
+
+  /* The worker should abort the MPI job; if it has not after ten seconds, stop it and
+   * exit normally, which the driver reports as a failure. */
+  for (i = 0; i < 1000; i++)
+  {
+    gint flag = 0;
+
+    MPI_Iprobe (TEST_WORKER, TEST_TAG_REPORT, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+
+    if (flag)
+      break;
+
+    g_usleep (10000);
+  }
+
+  ncm_mpi_job_free (mpi_job);
+}
+
+static gint
+_test_spawn_aborts (gint argc, gchar *argv[])
+{
+  guint i;
+
+  g_test_init (&argc, &argv, NULL);
+
+  for (i = 0; i < G_N_ELEMENTS (abort_cases); i++)
+  {
+    gchar *path = g_strdup_printf ("/ncm/mpi/slave/abort/%s", abort_cases[i].name);
+
+    g_test_add_data_func (path, &abort_cases[i], &test_ncm_mpi_slave_abort);
+    g_free (path);
+  }
+
+  return g_test_run ();
 }
 
 static void
@@ -264,61 +415,6 @@ test_ncm_mpi_slave_kill (void)
   ncm_mpi_job_free (mpi_job);
 }
 
-/* The refusals: each case aborts the worker with the message it is checked against. */
-typedef struct _TestAbortCase
-{
-  const gchar *name;
-  const gchar *message;
-} TestAbortCase;
-
-static const TestAbortCase abort_cases[] =
-{
-  {"init_twice",       "already initialized"},
-  {"work_before_init", "received work"},
-  {"unknown_command",  "unknown MPI message"},
-};
-
-static void
-_test_abort_case_run (const gchar *name)
-{
-  NcmMPIJob *mpi_job = _test_shape_new (1, 1);
-  gint i;
-
-  if (g_strcmp0 (name, "init_twice") == 0)
-  {
-    _test_send_job (mpi_job);
-    _test_send_job (mpi_job);
-  }
-  else if (g_strcmp0 (name, "work_before_init") == 0)
-  {
-    _test_send_cmd (NCM_MPI_CTRL_SLAVE_WORK);
-  }
-  else if (g_strcmp0 (name, "unknown_command") == 0)
-  {
-    _test_send_cmd (NCM_MPI_CTRL_SLAVE_LEN + 7);
-  }
-  else
-  {
-    g_error ("unknown abort case `%s'.", name);
-  }
-
-  /* The worker should abort the MPI job; if it has not after ten seconds, stop it and
-   * exit normally, which the driver reports as a failure. */
-  for (i = 0; i < 1000; i++)
-  {
-    gint flag = 0;
-
-    MPI_Iprobe (TEST_WORKER, TEST_TAG_REPORT, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
-
-    if (flag)
-      break;
-
-    g_usleep (10000);
-  }
-
-  ncm_mpi_job_free (mpi_job);
-}
-
 static void
 test_ncm_mpi_slave_abort (gconstpointer pdata)
 {
@@ -346,91 +442,5 @@ test_ncm_mpi_slave_abort (gconstpointer pdata)
 
   g_free (err);
   g_free (case_arg);
-}
-
-static gint
-_test_spawn_aborts (gint argc, gchar *argv[])
-{
-  guint i;
-
-  g_test_init (&argc, &argv, NULL);
-
-  for (i = 0; i < G_N_ELEMENTS (abort_cases); i++)
-  {
-    gchar *path = g_strdup_printf ("/ncm/mpi/slave/abort/%s", abort_cases[i].name);
-
-    g_test_add_data_func (path, &abort_cases[i], &test_ncm_mpi_slave_abort);
-    g_free (path);
-  }
-
-  return g_test_run ();
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  const gchar *abort_case = NULL;
-  gint rank               = 0;
-  gint i;
-
-  for (i = 1; i < argc; i++)
-  {
-    if (g_strcmp0 (argv[i], "--spawn-aborts") == 0)
-    {
-      argv[i] = argv[argc - 1];
-      argc--;
-
-      return _test_spawn_aborts (argc, argv);
-    }
-
-    if (g_str_has_prefix (argv[i], "--abort="))
-      abort_case = argv[i] + strlen ("--abort=");
-  }
-
-  MPI_Init (&argc, &argv);
-  MPI_Comm_rank (MPI_COMM_WORLD, &rank);
-
-  ncm_cfg_register_objects ();
-  ncm_cfg_register_obj (TEST_TYPE_MPI_JOB_SHAPE);
-
-  if (rank == TEST_WORKER)
-  {
-    gint more = TRUE;
-
-    while (more)
-    {
-      more = ncm_mpi_slave_serve_job ();
-      MPI_Send (&more, 1, MPI_INT, 0, TEST_TAG_REPORT, MPI_COMM_WORLD);
-    }
-  }
-  else if (rank == 0)
-  {
-    if (abort_case != NULL)
-    {
-      _test_abort_case_run (abort_case);
-    }
-    else
-    {
-      g_test_init (&argc, &argv, NULL);
-
-      g_test_add_func ("/ncm/mpi/slave/work", &test_ncm_mpi_slave_work);
-      g_test_add_func ("/ncm/mpi/slave/reinit", &test_ncm_mpi_slave_reinit);
-      g_test_add_func ("/ncm/mpi/slave/pending", &test_ncm_mpi_slave_pending);
-      g_test_add_func ("/ncm/mpi/slave/kill", &test_ncm_mpi_slave_kill);
-
-      g_test_run ();
-    }
-
-    /* A filtered run may not reach the kill test; the worker still has to stop. */
-    if (!_test_killed)
-    {
-      _test_send_cmd (NCM_MPI_CTRL_SLAVE_KILL);
-      _test_recv_report ();
-    }
-  }
-
-  MPI_Finalize ();
-
-  return 0;
 }
 

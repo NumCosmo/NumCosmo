@@ -41,6 +41,118 @@
 /* Mean of the unit Gaussian restricted to x > 1: 2 phi(1) / erfc(1 / sqrt(2)) */
 #define TEST_RNG_TAIL_MEAN (M_SQRT2 / M_SQRTPI * exp (-0.5) / gsl_sf_erfc (M_SQRT1_2))
 
+typedef gdouble (*TestNcmRNGDraw) (NcmRNG *rng);
+
+static void test_ncm_rng_seed_state (void);
+static void test_ncm_rng_property_order (void);
+static void test_ncm_rng_pool (void);
+static void test_ncm_rng_distributions (void);
+static void test_ncm_rng_uniform_ranges (void);
+static void test_ncm_rng_discrete (void);
+static void test_ncm_rng_sample_choose (void);
+static void test_ncm_rng_multivariate (void);
+static void test_ncm_rng_invalid_algo_subprocess (void);
+static void test_ncm_rng_traps (void);
+static void test_ncm_rng_set_algo (void);
+static void test_ncm_rng_check_seed_width (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/rng/seed_state", &test_ncm_rng_seed_state);
+  g_test_add_func ("/ncm/rng/property_order", &test_ncm_rng_property_order);
+  g_test_add_func ("/ncm/rng/set_algo", &test_ncm_rng_set_algo);
+  g_test_add_func ("/ncm/rng/check_seed_width", &test_ncm_rng_check_seed_width);
+  g_test_add_func ("/ncm/rng/pool", &test_ncm_rng_pool);
+  g_test_add_func ("/ncm/rng/distributions", &test_ncm_rng_distributions);
+  g_test_add_func ("/ncm/rng/uniform_ranges", &test_ncm_rng_uniform_ranges);
+  g_test_add_func ("/ncm/rng/discrete", &test_ncm_rng_discrete);
+  g_test_add_func ("/ncm/rng/sample_choose", &test_ncm_rng_sample_choose);
+  g_test_add_func ("/ncm/rng/multivariate", &test_ncm_rng_multivariate);
+  g_test_add_func ("/ncm/rng/traps", &test_ncm_rng_traps);
+  g_test_add_func ("/ncm/rng/invalid_algo/subprocess", &test_ncm_rng_invalid_algo_subprocess);
+
+  g_test_run ();
+}
+
+static gdouble
+_test_gaussian (NcmRNG *rng)
+{
+  return ncm_rng_gaussian_gen (rng, 1.5, 2.0);
+}
+
+static gdouble
+_test_ugaussian (NcmRNG *rng)
+{
+  return ncm_rng_ugaussian_gen (rng);
+}
+
+static gdouble
+_test_uniform (NcmRNG *rng)
+{
+  return ncm_rng_uniform_gen (rng, -1.0, 3.0);
+}
+
+static gdouble
+_test_exponential (NcmRNG *rng)
+{
+  return ncm_rng_exponential_gen (rng, 2.5);
+}
+
+static gdouble
+_test_laplace (NcmRNG *rng)
+{
+  return ncm_rng_laplace_gen (rng, 1.5);
+}
+
+static gdouble
+_test_exppow (NcmRNG *rng)
+{
+  return ncm_rng_exppow_gen (rng, 1.0, 2.0);
+}
+
+static gdouble
+_test_beta (NcmRNG *rng)
+{
+  return ncm_rng_beta_gen (rng, 2.0, 3.0);
+}
+
+static gdouble
+_test_gamma (NcmRNG *rng)
+{
+  return ncm_rng_gamma_gen (rng, 3.0, 0.5);
+}
+
+static gdouble
+_test_chisq (NcmRNG *rng)
+{
+  return ncm_rng_chisq_gen (rng, 4.0);
+}
+
+static gdouble
+_test_poisson (NcmRNG *rng)
+{
+  return ncm_rng_poisson_gen (rng, 3.5);
+}
+
+static gdouble
+_test_rayleigh (NcmRNG *rng)
+{
+  return ncm_rng_rayleigh_gen (rng, 2.0);
+}
+
+static gdouble
+_test_gaussian_tail (NcmRNG *rng)
+{
+  return ncm_rng_gaussian_tail_gen (rng, 1.0, 1.0);
+}
+
 static void
 test_ncm_rng_seed_state (void)
 {
@@ -181,80 +293,6 @@ test_ncm_rng_pool (void)
   ncm_rng_free (rng_a);
   ncm_rng_free (rng_a2);
   ncm_rng_free (rng_b);
-}
-
-typedef gdouble (*TestNcmRNGDraw) (NcmRNG *rng);
-
-static gdouble
-_test_gaussian (NcmRNG *rng)
-{
-  return ncm_rng_gaussian_gen (rng, 1.5, 2.0);
-}
-
-static gdouble
-_test_ugaussian (NcmRNG *rng)
-{
-  return ncm_rng_ugaussian_gen (rng);
-}
-
-static gdouble
-_test_uniform (NcmRNG *rng)
-{
-  return ncm_rng_uniform_gen (rng, -1.0, 3.0);
-}
-
-static gdouble
-_test_exponential (NcmRNG *rng)
-{
-  return ncm_rng_exponential_gen (rng, 2.5);
-}
-
-static gdouble
-_test_laplace (NcmRNG *rng)
-{
-  return ncm_rng_laplace_gen (rng, 1.5);
-}
-
-static gdouble
-_test_exppow (NcmRNG *rng)
-{
-  return ncm_rng_exppow_gen (rng, 1.0, 2.0);
-}
-
-static gdouble
-_test_beta (NcmRNG *rng)
-{
-  return ncm_rng_beta_gen (rng, 2.0, 3.0);
-}
-
-static gdouble
-_test_gamma (NcmRNG *rng)
-{
-  return ncm_rng_gamma_gen (rng, 3.0, 0.5);
-}
-
-static gdouble
-_test_chisq (NcmRNG *rng)
-{
-  return ncm_rng_chisq_gen (rng, 4.0);
-}
-
-static gdouble
-_test_poisson (NcmRNG *rng)
-{
-  return ncm_rng_poisson_gen (rng, 3.5);
-}
-
-static gdouble
-_test_rayleigh (NcmRNG *rng)
-{
-  return ncm_rng_rayleigh_gen (rng, 2.0);
-}
-
-static gdouble
-_test_gaussian_tail (NcmRNG *rng)
-{
-  return ncm_rng_gaussian_tail_gen (rng, 1.0, 1.0);
 }
 
 static void
@@ -468,30 +506,5 @@ test_ncm_rng_check_seed_width (void)
     g_assert_true (ncm_rng_check_seed (rng, seed + (((gulong) 1) << 32)));
 
   ncm_rng_free (rng);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/rng/seed_state", &test_ncm_rng_seed_state);
-  g_test_add_func ("/ncm/rng/property_order", &test_ncm_rng_property_order);
-  g_test_add_func ("/ncm/rng/set_algo", &test_ncm_rng_set_algo);
-  g_test_add_func ("/ncm/rng/check_seed_width", &test_ncm_rng_check_seed_width);
-  g_test_add_func ("/ncm/rng/pool", &test_ncm_rng_pool);
-  g_test_add_func ("/ncm/rng/distributions", &test_ncm_rng_distributions);
-  g_test_add_func ("/ncm/rng/uniform_ranges", &test_ncm_rng_uniform_ranges);
-  g_test_add_func ("/ncm/rng/discrete", &test_ncm_rng_discrete);
-  g_test_add_func ("/ncm/rng/sample_choose", &test_ncm_rng_sample_choose);
-  g_test_add_func ("/ncm/rng/multivariate", &test_ncm_rng_multivariate);
-  g_test_add_func ("/ncm/rng/traps", &test_ncm_rng_traps);
-  g_test_add_func ("/ncm/rng/invalid_algo/subprocess", &test_ncm_rng_invalid_algo_subprocess);
-
-  g_test_run ();
 }
 

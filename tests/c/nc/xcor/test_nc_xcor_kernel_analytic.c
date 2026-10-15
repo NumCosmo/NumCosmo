@@ -55,7 +55,6 @@
 #define TEST_N_SIGMA 4.0
 #define TEST_CHI_LOWER 500.0
 #define TEST_CHI_UPPER 2500.0
-
 #define TEST_GRID 64
 
 typedef struct _TestNcXcorKernelAnalytic
@@ -94,6 +93,221 @@ typedef struct _TestKernel
   guint n_comps;
   const TestProp *props;
 } TestKernel;
+
+#define TEST_N_KERNELS (G_N_ELEMENTS (test_kernels))
+#define TEST_CL_N_K 8192
+#define TEST_CL_GL_ORDER 12
+#define TEST_CL_PER_LOBE 2
+
+/* One (window, multipole) checked against the definition, with the deviation it is held to */
+typedef struct _TestClDefinition
+{
+  const gchar *name;
+
+  gdouble (*window) (gdouble);
+
+  gint ell;
+  gdouble rtol;
+} TestClDefinition;
+
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_kernel_analytic_new (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_free (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_narrow_peak (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_closure_check_control (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_cl_definition (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static NcXcorKernel *_build_gauss (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_tophat (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_tophat_smooth (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_student_t (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_power_exp (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_lensing (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_multi (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_multi_disjoint (NcDistance *dist, NcmPowspec *ps);
+static NcXcorKernel *_build_gauss_full (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *sbi);
+static void _getters_gauss (NcXcorKernel *xclk);
+static NcXcorKernel *_build_tophat_full (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *sbi);
+static void _getters_tophat (NcXcorKernel *xclk);
+static NcXcorKernel *_build_tophat_smooth_full (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *sbi);
+static void _getters_tophat_smooth (NcXcorKernel *xclk);
+static NcXcorKernel *_build_student_t_full (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *sbi);
+static void _getters_student_t (NcXcorKernel *xclk);
+static NcXcorKernel *_build_power_exp_full (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *sbi);
+static void _getters_power_exp (NcXcorKernel *xclk);
+static NcXcorKernel *_build_lensing_full (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *sbi);
+static void _getters_lensing (NcXcorKernel *xclk);
+static NcXcorKernel *_build_multi_full_sbi (NcDistance *dist, NcmPowspec *ps, NcmSBesselIntegrator *sbi);
+static void _getters_multi (NcXcorKernel *xclk);
+static void _getters_multi_disjoint (NcXcorKernel *xclk);
+static void test_nc_xcor_kernel_analytic_basic (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_props (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_support (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_window (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_z_range (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_limber (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_serialize (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_getters (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_analytic_closure (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
+static gdouble _window_gauss (gdouble chi);
+static gdouble _window_tophat (gdouble chi);
+
+/* Uncrustify reflows nested array-in-struct initializers into something unreadable, so
+ * each window's property list is its own named array and the descriptor points at it. */
+static const TestProp _props_gauss[] = {
+  {"chi-mean",  TEST_CHI_MEAN},
+  {"chi-sigma", TEST_CHI_SIGMA},
+  {"n-sigma",   TEST_N_SIGMA},
+  {NULL,        0.0}
+};
+
+static const TestProp _props_tophat[] = {
+  {"chi-lower", TEST_CHI_LOWER},
+  {"chi-upper", TEST_CHI_UPPER},
+  {NULL,        0.0}
+};
+
+static const TestProp _props_tophat_smooth[] = {
+  {"chi-lower", 1000.0},
+  {"chi-upper", 2000.0},
+  {"chi-sigma", 150.0},
+  {"n-sigma",   6.0},
+  {NULL,        0.0}
+};
+
+static const TestProp _props_student_t[] = {
+  {"chi-mean",  TEST_CHI_MEAN},
+  {"chi-scale", 200.0},
+  {"nu",        2.0},
+  {"n-scale",   6.0},
+  {NULL,        0.0}
+};
+
+static const TestProp _props_power_exp[] = {
+  {"chi-scale", 1200.0},
+  {"alpha",     2.0},
+  {"beta",      1.5},
+  {"chi-lower", 50.0},
+  {"chi-upper", 4000.0},
+  {NULL,        0.0}
+};
+
+static const TestProp _props_lensing[] = {
+  {"chi-lower",        50.0},
+  {"chi-source-lower", 2000.0},
+  {"chi-source-upper", 3000.0},
+  {NULL,               0.0}
+};
+
+static const TestProp _props_multi[] = {
+  {"n-sigma", TEST_N_SIGMA},
+  {NULL,      0.0}
+};
+
+static const TestKernel test_kernels[] = {
+  {"gauss",          &_build_gauss,          &_build_gauss_full,         &_getters_gauss,          1, _props_gauss},
+  {"tophat",         &_build_tophat,         &_build_tophat_full,        &_getters_tophat,         1, _props_tophat},
+  {"tophat_smooth",  &_build_tophat_smooth,  &_build_tophat_smooth_full, &_getters_tophat_smooth,  1, _props_tophat_smooth},
+  {"student_t",      &_build_student_t,      &_build_student_t_full,     &_getters_student_t,      1, _props_student_t},
+  {"power_exp",      &_build_power_exp,      &_build_power_exp_full,     &_getters_power_exp,      1, _props_power_exp},
+
+  /* Two components, one per branch of the lensing shape: they meet at the source-bin
+   * edge with a kink no single Chebyshev panel fits. */
+  {"lensing",        &_build_lensing,        &_build_lensing_full,       &_getters_lensing,        2, _props_lensing},
+  {"multi",          &_build_multi,          &_build_multi_full_sbi,     &_getters_multi,          1, _props_multi},
+  {"multi_disjoint", &_build_multi_disjoint, NULL,                       &_getters_multi_disjoint, 2, _props_multi},
+};
+
+/* Held an order above the deviation measured at the library's default tolerances,
+ * 8.1e-10 for the Gaussian at ell 8 and 3.5e-6 for the top-hat at ell 2. The top-hat's
+ * transform oscillates over the whole k range, and the log-k trapezoid of the
+ * definition needs TEST_CL_N_K = 8192 to resolve it: at 512 and 2048 points the
+ * deviation is 7.9e-5 and 5.0e-6, the reference's own error. */
+static const TestClDefinition test_cl_definitions[] = {
+  {"gauss",  &_window_gauss,  8, 1.0e-8},
+  {"tophat", &_window_tophat, 2, 3.0e-5},
+};
+
+static const TestCheck test_checks[] = {
+  {"basic",     &test_nc_xcor_kernel_analytic_basic},
+  {"props",     &test_nc_xcor_kernel_analytic_props},
+  {"getters",   &test_nc_xcor_kernel_analytic_getters},
+  {"new_full",  &test_nc_xcor_kernel_analytic_new_full},
+  {"support",   &test_nc_xcor_kernel_analytic_support},
+  {"window",    &test_nc_xcor_kernel_analytic_window},
+  {"z_range",   &test_nc_xcor_kernel_analytic_z_range},
+  {"limber",    &test_nc_xcor_kernel_analytic_limber},
+  {"serialize", &test_nc_xcor_kernel_analytic_serialize},
+  {"closure",   &test_nc_xcor_kernel_analytic_closure},
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint i, j;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < TEST_N_KERNELS; i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/kernel/analytic/%s/%s",
+                                     test_kernels[i].name, test_checks[j].name);
+
+      g_test_add (path, TestNcXcorKernelAnalytic, &test_kernels[i],
+                  &test_nc_xcor_kernel_analytic_new,
+                  test_checks[j].func,
+                  &test_nc_xcor_kernel_analytic_free);
+
+      g_free (path);
+    }
+  }
+
+  for (i = 0; i < TEST_N_KERNELS; i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_cl_definitions); j++)
+    {
+      if (g_strcmp0 (test_kernels[i].name, test_cl_definitions[j].name) == 0)
+      {
+        gchar *path = g_strdup_printf ("/nc/xcor/kernel/analytic/%s/cl_definition", test_kernels[i].name);
+
+        g_test_add (path, TestNcXcorKernelAnalytic, &test_kernels[i],
+                    &test_nc_xcor_kernel_analytic_new,
+                    &test_nc_xcor_kernel_analytic_cl_definition,
+                    &test_nc_xcor_kernel_analytic_free);
+        g_free (path);
+      }
+    }
+  }
+
+  for (i = 0; i < TEST_N_KERNELS; i++)
+  {
+    if (g_strcmp0 (test_kernels[i].name, "multi_disjoint") != 0)
+      continue;
+
+    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/narrow_peak", TestNcXcorKernelAnalytic, &test_kernels[i],
+                &test_nc_xcor_kernel_analytic_new,
+                &test_nc_xcor_kernel_analytic_narrow_peak,
+                &test_nc_xcor_kernel_analytic_free);
+    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/closure_check_control", TestNcXcorKernelAnalytic, &test_kernels[i],
+                &test_nc_xcor_kernel_analytic_new,
+                &test_nc_xcor_kernel_analytic_closure_check_control,
+                &test_nc_xcor_kernel_analytic_free);
+  }
+
+  g_test_run ();
+}
 
 static NcXcorKernel *
 _build_gauss (NcDistance *dist, NcmPowspec *ps)
@@ -338,73 +552,153 @@ _getters_multi_disjoint (NcXcorKernel *xclk)
   _getters_multi_bumps (xclk, 600.0, 2600.0, 100.0, 150.0);
 }
 
-/* Uncrustify reflows nested array-in-struct initializers into something unreadable, so
- * each window's property list is its own named array and the descriptor points at it. */
-static const TestProp _props_gauss[] = {
-  {"chi-mean",  TEST_CHI_MEAN},
-  {"chi-sigma", TEST_CHI_SIGMA},
-  {"n-sigma",   TEST_N_SIGMA},
-  {NULL,        0.0}
-};
+/* The closure of one multipole of the window at the given tolerances, non-Limber */
+static NcXcorKernelIntegrand *
+_closure_at (TestNcXcorKernelAnalytic *test, gint ell, gdouble adaptive_epsilon, gdouble tol)
+{
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (ell, ell));
+  NcXcorKernelIntegrand *closure;
 
-static const TestProp _props_tophat[] = {
-  {"chi-lower", TEST_CHI_LOWER},
-  {"chi-upper", TEST_CHI_UPPER},
-  {NULL,        0.0}
-};
+  g_object_set (test->xclk, "integrator", sbi, NULL);
+  nc_xcor_kernel_set_l_limber (test->xclk, -1);
+  nc_xcor_kernel_set_adaptive_epsilon (test->xclk, adaptive_epsilon);
+  nc_xcor_kernel_set_reltol (test->xclk, tol);
+  nc_xcor_kernel_set_peak_epsilon (test->xclk, tol);
 
-static const TestProp _props_tophat_smooth[] = {
-  {"chi-lower", 1000.0},
-  {"chi-upper", 2000.0},
-  {"chi-sigma", 150.0},
-  {"n-sigma",   6.0},
-  {NULL,        0.0}
-};
+  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi);
+  ncm_sbessel_integrator_free (sbi);
 
-static const TestProp _props_student_t[] = {
-  {"chi-mean",  TEST_CHI_MEAN},
-  {"chi-scale", 200.0},
-  {"nu",        2.0},
-  {"n-scale",   6.0},
-  {NULL,        0.0}
-};
+  return closure;
+}
 
-static const TestProp _props_power_exp[] = {
-  {"chi-scale", 1200.0},
-  {"alpha",     2.0},
-  {"beta",      1.5},
-  {"chi-lower", 50.0},
-  {"chi-upper", 4000.0},
-  {NULL,        0.0}
-};
+/* The Gaussian window in closed form, normalized to one over its support, in Mpc^-1 */
+static gdouble
+_window_gauss (gdouble chi)
+{
+  const gdouble chi_min = MAX (0.0, TEST_CHI_MEAN - TEST_N_SIGMA * TEST_CHI_SIGMA);
+  const gdouble chi_max = TEST_CHI_MEAN + TEST_N_SIGMA * TEST_CHI_SIGMA;
+  const gdouble s2      = M_SQRT2 * TEST_CHI_SIGMA;
+  const gdouble norm    = 0.5 * sqrt (2.0 * M_PI) * TEST_CHI_SIGMA * (erf ((chi_max - TEST_CHI_MEAN) / s2) - erf ((chi_min - TEST_CHI_MEAN) / s2));
 
-static const TestProp _props_lensing[] = {
-  {"chi-lower",        50.0},
-  {"chi-source-lower", 2000.0},
-  {"chi-source-upper", 3000.0},
-  {NULL,               0.0}
-};
+  if ((chi < chi_min) || (chi > chi_max))
+    return 0.0;
 
-static const TestProp _props_multi[] = {
-  {"n-sigma", TEST_N_SIGMA},
-  {NULL,      0.0}
-};
+  return exp (-0.5 * gsl_pow_2 ((chi - TEST_CHI_MEAN) / TEST_CHI_SIGMA)) / norm;
+}
 
-static const TestKernel test_kernels[] = {
-  {"gauss",          &_build_gauss,          &_build_gauss_full,         &_getters_gauss,          1, _props_gauss},
-  {"tophat",         &_build_tophat,         &_build_tophat_full,        &_getters_tophat,         1, _props_tophat},
-  {"tophat_smooth",  &_build_tophat_smooth,  &_build_tophat_smooth_full, &_getters_tophat_smooth,  1, _props_tophat_smooth},
-  {"student_t",      &_build_student_t,      &_build_student_t_full,     &_getters_student_t,      1, _props_student_t},
-  {"power_exp",      &_build_power_exp,      &_build_power_exp_full,     &_getters_power_exp,      1, _props_power_exp},
+/* The top-hat window in closed form, normalized to one over its support, in Mpc^-1 */
+static gdouble
+_window_tophat (gdouble chi)
+{
+  if ((chi < TEST_CHI_LOWER) || (chi > TEST_CHI_UPPER))
+    return 0.0;
 
-  /* Two components, one per branch of the lensing shape: they meet at the source-bin
-   * edge with a kink no single Chebyshev panel fits. */
-  {"lensing",        &_build_lensing,        &_build_lensing_full,       &_getters_lensing,        2, _props_lensing},
-  {"multi",          &_build_multi,          &_build_multi_full_sbi,     &_getters_multi,          1, _props_multi},
-  {"multi_disjoint", &_build_multi_disjoint, NULL,                       &_getters_multi_disjoint, 2, _props_multi},
-};
+  return 1.0 / (TEST_CHI_UPPER - TEST_CHI_LOWER);
+}
 
-#define TEST_N_KERNELS (G_N_ELEMENTS (test_kernels))
+/*
+ * C_ell of a window from its definition, (2 / pi) int dk k^2 P(k, z = 0) [int dchi W(chi)
+ * j_ell(k chi)]^2, in Mpc throughout. The radial integral is taken by Gauss-Legendre on
+ * panels a fraction of a half-oscillation wide, the outer one by a log-k trapezoid over
+ * the range the kernel's closure reports. Only that range and P(k) come from the library:
+ * the window and the quadrature are written here.
+ */
+static gdouble
+_cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*window) (gdouble), gint ell)
+{
+  NcXcorKernelIntegrand *closure    = nc_xcor_kernel_get_eval (xclk, cosmo, ell);
+  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (TEST_CL_GL_ORDER);
+  const gdouble RH                  = nc_hicosmo_RH_Mpc (cosmo);
+  gdouble chi_min, chi_max, k_min, k_max, lnk_lo, lnk_hi, dlnk;
+  gdouble sum = 0.0;
+  guint i;
+
+  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (xclk), &chi_min, &chi_max);
+  nc_xcor_kernel_integrand_get_range (closure, &k_min, &k_max);
+
+  lnk_lo = log (k_min / RH);
+  lnk_hi = log (k_max / RH);
+  dlnk   = (lnk_hi - lnk_lo) / (TEST_CL_N_K - 1.0);
+
+  for (i = 0; i < TEST_CL_N_K; i++)
+  {
+    const gdouble k       = exp (lnk_lo + dlnk * i);
+    const gdouble pk      = ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k);
+    const guint n_panel   = MAX (16, TEST_CL_PER_LOBE * (guint) floor ((chi_max - chi_min) * k / M_PI) + 1);
+    const gdouble trapeze = ((i == 0) || (i == TEST_CL_N_K - 1)) ? 0.5 : 1.0;
+    gdouble radial        = 0.0;
+    guint p, q;
+
+    for (p = 0; p < n_panel; p++)
+    {
+      const gdouble lo = chi_min + (chi_max - chi_min) * p / (gdouble) n_panel;
+      const gdouble hi = chi_min + (chi_max - chi_min) * (p + 1) / (gdouble) n_panel;
+
+      for (q = 0; q < TEST_CL_GL_ORDER; q++)
+      {
+        gdouble chi, w;
+
+        gsl_integration_glfixed_point (lo, hi, q, &chi, &w, gl);
+        radial += w * window (chi) * gsl_sf_bessel_jl (ell, k * chi);
+      }
+    }
+
+    sum += trapeze * dlnk * gsl_pow_3 (k) * pk * gsl_pow_2 (radial);
+  }
+
+  gsl_integration_glfixed_table_free (gl);
+  nc_xcor_kernel_integrand_unref (closure);
+
+  return 2.0 / M_PI * sum;
+}
+
+/* _new_full() is _new() plus an explicit sBessel integrator, which is what moves the
+ * kernel off the Limber tier. The window must not depend on that choice. */
+static void
+test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
+{
+  const TestKernel *tk      = pdata;
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
+  NcXcorKernel *full;
+  gdouble chi_min, chi_max;
+  guint i;
+
+  if (tk->build_full == NULL)
+  {
+    g_test_skip ("no _new_full form for this window");
+    ncm_sbessel_integrator_free (sbi);
+
+    return;
+  }
+
+  full = tk->build_full (test->dist, test->ps, sbi);
+
+  g_assert_null (nc_xcor_kernel_peek_integrator (test->xclk));
+  g_assert_true (nc_xcor_kernel_peek_integrator (full) == sbi);
+  nc_xcor_kernel_prepare (full, test->cosmo);
+
+  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (test->xclk), &chi_min, &chi_max);
+
+  {
+    gdouble full_min, full_max;
+
+    nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (full), &full_min, &full_max);
+    g_assert_cmpfloat (full_min, ==, chi_min);
+    g_assert_cmpfloat (full_max, ==, chi_max);
+  }
+
+  for (i = 0; i <= TEST_GRID; i++)
+  {
+    const gdouble chi = chi_min + (chi_max - chi_min) * i / (gdouble) TEST_GRID;
+
+    ncm_assert_cmpdouble_e (nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (full), chi), ==,
+                            nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (test->xclk), chi),
+                            1.0e-14, 0.0);
+  }
+
+  nc_xcor_kernel_free (full);
+  ncm_sbessel_integrator_free (sbi);
+}
 
 static void
 test_nc_xcor_kernel_analytic_new (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
@@ -668,54 +962,6 @@ test_nc_xcor_kernel_analytic_getters (TestNcXcorKernelAnalytic *test, gconstpoin
   tk->check_getters (test->xclk);
 }
 
-/* _new_full() is _new() plus an explicit sBessel integrator, which is what moves the
- * kernel off the Limber tier. The window must not depend on that choice. */
-static void
-test_nc_xcor_kernel_analytic_new_full (TestNcXcorKernelAnalytic *test, gconstpointer pdata)
-{
-  const TestKernel *tk      = pdata;
-  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (0, 8));
-  NcXcorKernel *full;
-  gdouble chi_min, chi_max;
-  guint i;
-
-  if (tk->build_full == NULL)
-  {
-    g_test_skip ("no _new_full form for this window");
-    ncm_sbessel_integrator_free (sbi);
-
-    return;
-  }
-
-  full = tk->build_full (test->dist, test->ps, sbi);
-
-  g_assert_null (nc_xcor_kernel_peek_integrator (test->xclk));
-  g_assert_true (nc_xcor_kernel_peek_integrator (full) == sbi);
-  nc_xcor_kernel_prepare (full, test->cosmo);
-
-  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (test->xclk), &chi_min, &chi_max);
-
-  {
-    gdouble full_min, full_max;
-
-    nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (full), &full_min, &full_max);
-    g_assert_cmpfloat (full_min, ==, chi_min);
-    g_assert_cmpfloat (full_max, ==, chi_max);
-  }
-
-  for (i = 0; i <= TEST_GRID; i++)
-  {
-    const gdouble chi = chi_min + (chi_max - chi_min) * i / (gdouble) TEST_GRID;
-
-    ncm_assert_cmpdouble_e (nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (full), chi), ==,
-                            nc_xcor_kernel_radial_eval_W (NC_XCOR_KERNEL_RADIAL (test->xclk), chi),
-                            1.0e-14, 0.0);
-  }
-
-  nc_xcor_kernel_free (full);
-  ncm_sbessel_integrator_free (sbi);
-}
-
 /* The non-Limber Chebyshev closure of the window matches W_ell(k) computed directly, in
  * two multipole blocks, within what the closure was asked for */
 static void
@@ -743,25 +989,6 @@ test_nc_xcor_kernel_analytic_closure (TestNcXcorKernelAnalytic *test, gconstpoin
     nc_xcor_kernel_integrand_unref (closure);
     ncm_sbessel_integrator_free (sbi);
   }
-}
-
-/* The closure of one multipole of the window at the given tolerances, non-Limber */
-static NcXcorKernelIntegrand *
-_closure_at (TestNcXcorKernelAnalytic *test, gint ell, gdouble adaptive_epsilon, gdouble tol)
-{
-  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (ell, ell));
-  NcXcorKernelIntegrand *closure;
-
-  g_object_set (test->xclk, "integrator", sbi, NULL);
-  nc_xcor_kernel_set_l_limber (test->xclk, -1);
-  nc_xcor_kernel_set_adaptive_epsilon (test->xclk, adaptive_epsilon);
-  nc_xcor_kernel_set_reltol (test->xclk, tol);
-  nc_xcor_kernel_set_peak_epsilon (test->xclk, tol);
-
-  closure = nc_xcor_kernel_get_eval_vectorized_full (test->xclk, test->cosmo, ell, ell, sbi);
-  ncm_sbessel_integrator_free (sbi);
-
-  return closure;
 }
 
 /* A tiny adaptive-epsilon makes the domain of the disjoint window five decades wide. A
@@ -793,112 +1020,6 @@ test_nc_xcor_kernel_analytic_closure_check_control (TestNcXcorKernelAnalytic *te
 
   nc_xcor_kernel_integrand_unref (closure);
 }
-
-/* The Gaussian window in closed form, normalized to one over its support, in Mpc^-1 */
-static gdouble
-_window_gauss (gdouble chi)
-{
-  const gdouble chi_min = MAX (0.0, TEST_CHI_MEAN - TEST_N_SIGMA * TEST_CHI_SIGMA);
-  const gdouble chi_max = TEST_CHI_MEAN + TEST_N_SIGMA * TEST_CHI_SIGMA;
-  const gdouble s2      = M_SQRT2 * TEST_CHI_SIGMA;
-  const gdouble norm    = 0.5 * sqrt (2.0 * M_PI) * TEST_CHI_SIGMA * (erf ((chi_max - TEST_CHI_MEAN) / s2) - erf ((chi_min - TEST_CHI_MEAN) / s2));
-
-  if ((chi < chi_min) || (chi > chi_max))
-    return 0.0;
-
-  return exp (-0.5 * gsl_pow_2 ((chi - TEST_CHI_MEAN) / TEST_CHI_SIGMA)) / norm;
-}
-
-/* The top-hat window in closed form, normalized to one over its support, in Mpc^-1 */
-static gdouble
-_window_tophat (gdouble chi)
-{
-  if ((chi < TEST_CHI_LOWER) || (chi > TEST_CHI_UPPER))
-    return 0.0;
-
-  return 1.0 / (TEST_CHI_UPPER - TEST_CHI_LOWER);
-}
-
-#define TEST_CL_N_K 8192
-#define TEST_CL_GL_ORDER 12
-#define TEST_CL_PER_LOBE 2
-
-/*
- * C_ell of a window from its definition, (2 / pi) int dk k^2 P(k, z = 0) [int dchi W(chi)
- * j_ell(k chi)]^2, in Mpc throughout. The radial integral is taken by Gauss-Legendre on
- * panels a fraction of a half-oscillation wide, the outer one by a log-k trapezoid over
- * the range the kernel's closure reports. Only that range and P(k) come from the library:
- * the window and the quadrature are written here.
- */
-static gdouble
-_cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*window) (gdouble), gint ell)
-{
-  NcXcorKernelIntegrand *closure    = nc_xcor_kernel_get_eval (xclk, cosmo, ell);
-  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (TEST_CL_GL_ORDER);
-  const gdouble RH                  = nc_hicosmo_RH_Mpc (cosmo);
-  gdouble chi_min, chi_max, k_min, k_max, lnk_lo, lnk_hi, dlnk;
-  gdouble sum = 0.0;
-  guint i;
-
-  nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (xclk), &chi_min, &chi_max);
-  nc_xcor_kernel_integrand_get_range (closure, &k_min, &k_max);
-
-  lnk_lo = log (k_min / RH);
-  lnk_hi = log (k_max / RH);
-  dlnk   = (lnk_hi - lnk_lo) / (TEST_CL_N_K - 1.0);
-
-  for (i = 0; i < TEST_CL_N_K; i++)
-  {
-    const gdouble k       = exp (lnk_lo + dlnk * i);
-    const gdouble pk      = ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k);
-    const guint n_panel   = MAX (16, TEST_CL_PER_LOBE * (guint) floor ((chi_max - chi_min) * k / M_PI) + 1);
-    const gdouble trapeze = ((i == 0) || (i == TEST_CL_N_K - 1)) ? 0.5 : 1.0;
-    gdouble radial        = 0.0;
-    guint p, q;
-
-    for (p = 0; p < n_panel; p++)
-    {
-      const gdouble lo = chi_min + (chi_max - chi_min) * p / (gdouble) n_panel;
-      const gdouble hi = chi_min + (chi_max - chi_min) * (p + 1) / (gdouble) n_panel;
-
-      for (q = 0; q < TEST_CL_GL_ORDER; q++)
-      {
-        gdouble chi, w;
-
-        gsl_integration_glfixed_point (lo, hi, q, &chi, &w, gl);
-        radial += w * window (chi) * gsl_sf_bessel_jl (ell, k * chi);
-      }
-    }
-
-    sum += trapeze * dlnk * gsl_pow_3 (k) * pk * gsl_pow_2 (radial);
-  }
-
-  gsl_integration_glfixed_table_free (gl);
-  nc_xcor_kernel_integrand_unref (closure);
-
-  return 2.0 / M_PI * sum;
-}
-
-/* One (window, multipole) checked against the definition, with the deviation it is held to */
-typedef struct _TestClDefinition
-{
-  const gchar *name;
-
-  gdouble (*window) (gdouble);
-
-  gint ell;
-  gdouble rtol;
-} TestClDefinition;
-
-/* Held an order above the deviation measured at the library's default tolerances,
- * 8.1e-10 for the Gaussian at ell 8 and 3.5e-6 for the top-hat at ell 2. The top-hat's
- * transform oscillates over the whole k range, and the log-k trapezoid of the
- * definition needs TEST_CL_N_K = 8192 to resolve it: at 512 and 2048 points the
- * deviation is 7.9e-5 and 5.0e-6, the reference's own error. */
-static const TestClDefinition test_cl_definitions[] = {
-  {"gauss",  &_window_gauss,  8, 1.0e-8},
-  {"tophat", &_window_tophat, 2, 3.0e-5},
-};
 
 /*
  * The non-Limber C_ell of the solver is the integral the window's closed form defines:
@@ -940,87 +1061,5 @@ test_nc_xcor_kernel_analytic_cl_definition (TestNcXcorKernelAnalytic *test, gcon
 
   nc_xcor_free (xc);
   nc_xcor_solver_free (solver);
-}
-
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcorKernelAnalytic *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"basic",     &test_nc_xcor_kernel_analytic_basic},
-  {"props",     &test_nc_xcor_kernel_analytic_props},
-  {"getters",   &test_nc_xcor_kernel_analytic_getters},
-  {"new_full",  &test_nc_xcor_kernel_analytic_new_full},
-  {"support",   &test_nc_xcor_kernel_analytic_support},
-  {"window",    &test_nc_xcor_kernel_analytic_window},
-  {"z_range",   &test_nc_xcor_kernel_analytic_z_range},
-  {"limber",    &test_nc_xcor_kernel_analytic_limber},
-  {"serialize", &test_nc_xcor_kernel_analytic_serialize},
-  {"closure",   &test_nc_xcor_kernel_analytic_closure},
-};
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint i, j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < TEST_N_KERNELS; i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/kernel/analytic/%s/%s",
-                                     test_kernels[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcorKernelAnalytic, &test_kernels[i],
-                  &test_nc_xcor_kernel_analytic_new,
-                  test_checks[j].func,
-                  &test_nc_xcor_kernel_analytic_free);
-
-      g_free (path);
-    }
-  }
-
-  for (i = 0; i < TEST_N_KERNELS; i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_cl_definitions); j++)
-    {
-      if (g_strcmp0 (test_kernels[i].name, test_cl_definitions[j].name) == 0)
-      {
-        gchar *path = g_strdup_printf ("/nc/xcor/kernel/analytic/%s/cl_definition", test_kernels[i].name);
-
-        g_test_add (path, TestNcXcorKernelAnalytic, &test_kernels[i],
-                    &test_nc_xcor_kernel_analytic_new,
-                    &test_nc_xcor_kernel_analytic_cl_definition,
-                    &test_nc_xcor_kernel_analytic_free);
-        g_free (path);
-      }
-    }
-  }
-
-  for (i = 0; i < TEST_N_KERNELS; i++)
-  {
-    if (g_strcmp0 (test_kernels[i].name, "multi_disjoint") != 0)
-      continue;
-
-    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/narrow_peak", TestNcXcorKernelAnalytic, &test_kernels[i],
-                &test_nc_xcor_kernel_analytic_new,
-                &test_nc_xcor_kernel_analytic_narrow_peak,
-                &test_nc_xcor_kernel_analytic_free);
-    g_test_add ("/nc/xcor/kernel/analytic/multi_disjoint/closure_check_control", TestNcXcorKernelAnalytic, &test_kernels[i],
-                &test_nc_xcor_kernel_analytic_new,
-                &test_nc_xcor_kernel_analytic_closure_check_control,
-                &test_nc_xcor_kernel_analytic_free);
-  }
-
-  g_test_run ();
 }
 

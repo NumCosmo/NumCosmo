@@ -62,15 +62,31 @@ struct _TestNcmStatsDistKernelBare
 
 G_DEFINE_TYPE (TestNcmStatsDistKernelBare, test_ncm_stats_dist_kernel_bare, NCM_TYPE_STATS_DIST_KERNEL)
 
-static void
-test_ncm_stats_dist_kernel_bare_init (TestNcmStatsDistKernelBare *bare)
+typedef struct _TestNcmStatsDistKernelFunc
 {
-}
+  const gchar *name;
 
-static void
-test_ncm_stats_dist_kernel_bare_class_init (TestNcmStatsDistKernelBareClass *klass)
+  void (*test_func) (TestNcmStatsDistKernel *test, gconstpointer pdata);
+} TestNcmStatsDistKernelFunc;
+
+#define TEST_NCM_STATS_DIST_KERNEL_CONSTRUCTORS_LEN 2
+#define TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN 5
+
+/* Radial integrals of the unnormalized kernel g(s) = Kbar(s), s = r^2, at unit scale.
+ * The derivatives are the closed forms of the two kernel shapes. */
+typedef enum _TestRadial
 {
-}
+  TEST_RADIAL_NORM,
+  TEST_RADIAL_MOM2,
+  TEST_RADIAL_RK,
+  TEST_RADIAL_RLAP,
+} TestRadial;
+
+typedef struct _TestRadialArg
+{
+  TestNcmStatsDistKernel *test;
+  TestRadial which;
+} TestRadialArg;
 
 static void test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer pdata);
 static void test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointer pdata);
@@ -87,16 +103,6 @@ static void test_ncm_stats_dist_kernel_st_nu_default (void);
 static void test_ncm_stats_dist_kernel_traps (void);
 static void test_ncm_stats_dist_kernel_unimplemented_subprocess (void);
 
-typedef struct _TestNcmStatsDistKernelFunc
-{
-  const gchar *name;
-
-  void (*test_func) (TestNcmStatsDistKernel *test, gconstpointer pdata);
-} TestNcmStatsDistKernelFunc;
-
-#define TEST_NCM_STATS_DIST_KERNEL_CONSTRUCTORS_LEN 2
-#define TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN 5
-
 static TestNcmStatsDistKernelFunc constructors[TEST_NCM_STATS_DIST_KERNEL_CONSTRUCTORS_LEN] = {
   {"gauss", &test_ncm_stats_dist_kernel_new_gauss},
   {"st",    &test_ncm_stats_dist_kernel_new_st}
@@ -108,6 +114,11 @@ static TestNcmStatsDistKernelFunc tests[TEST_NCM_STATS_DIST_KERNEL_TESTS_LEN] = 
   {"norm",   &test_ncm_stats_dist_kernel_norm},
   {"sum",    &test_ncm_stats_dist_kernel_sum},
   {"sample", &test_ncm_stats_dist_kernel_sample},
+};
+
+static const gchar *unimplemented[] = {
+  "get_rot_bandwidth", "get_var_factor", "get_lnnorm", "eval_unnorm",
+  "eval_unnorm_vec", "eval_gamma_lambda", "sample"
 };
 
 gint
@@ -141,70 +152,14 @@ main (gint argc, gchar *argv[])
 }
 
 static void
-test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointer pdata)
+test_ncm_stats_dist_kernel_bare_init (TestNcmStatsDistKernelBare *bare)
 {
-  const guint dim                    = g_test_rand_int_range (1, 4);
-  NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
-
-  test->dim         = dim;
-  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_gauss);
-  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_GAUSS;
-
-  ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
-  ncm_stats_dist_kernel_gauss_free (sdk_gauss);
-  {
-    NcmStatsDistKernelGauss *sdk_gauss0 = ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
-
-    ncm_stats_dist_kernel_gauss_clear (&sdk_gauss0);
-    g_assert_true (sdk_gauss0 == NULL);
-  }
 }
 
 static void
-test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer pdata)
+test_ncm_stats_dist_kernel_bare_class_init (TestNcmStatsDistKernelBareClass *klass)
 {
-  const gdouble nu             = g_test_rand_double_range (3.0, 5.0);
-  const guint dim              = g_test_rand_int_range (1, 4);
-  NcmStatsDistKernelST *sdk_st = ncm_stats_dist_kernel_st_new (dim, nu);
-
-  test->dim         = dim;
-  test->nu          = nu;
-  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_ST3;
-  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_st);
-
-  g_assert_cmpfloat (ncm_stats_dist_kernel_st_get_nu (sdk_st), ==, nu);
-
-  ncm_stats_dist_kernel_st_ref (sdk_st);
-  ncm_stats_dist_kernel_st_free (sdk_st);
-  {
-    NcmStatsDistKernelST *sdk_st0 = ncm_stats_dist_kernel_st_ref (sdk_st);
-
-    ncm_stats_dist_kernel_st_clear (&sdk_st0);
-    g_assert_true (sdk_st0 == NULL);
-  }
 }
-
-static void
-test_ncm_stats_dist_kernel_dim (TestNcmStatsDistKernel *test, gconstpointer pdata)
-{
-  g_assert_true (test->dim == ncm_stats_dist_kernel_get_dim (test->kernel));
-}
-
-/* Radial integrals of the unnormalized kernel g(s) = Kbar(s), s = r^2, at unit scale.
- * The derivatives are the closed forms of the two kernel shapes. */
-typedef enum _TestRadial
-{
-  TEST_RADIAL_NORM,
-  TEST_RADIAL_MOM2,
-  TEST_RADIAL_RK,
-  TEST_RADIAL_RLAP,
-} TestRadial;
-
-typedef struct _TestRadialArg
-{
-  TestNcmStatsDistKernel *test;
-  TestRadial which;
-} TestRadialArg;
 
 static gdouble
 _test_radial_integrand (gdouble r, gpointer userdata)
@@ -277,6 +232,85 @@ _test_radial (TestNcmStatsDistKernel *test, TestRadial which)
   return 2.0 * pow (M_PI, 0.5 * test->dim) / tgamma (0.5 * test->dim) * res;
 }
 
+/* A random upper-triangular Cholesky factor, Sigma = U^T U. */
+static NcmMatrix *
+_test_random_cov_decomp (guint dim)
+{
+  NcmMatrix *U = ncm_matrix_new (dim, dim);
+  guint i, j;
+
+  for (i = 0; i < dim; i++)
+  {
+    for (j = 0; j < dim; j++)
+    {
+      if (j < i)
+        ncm_matrix_set (U, i, j, 0.0);
+      else if (j == i)
+        ncm_matrix_set (U, i, j, g_test_rand_double_range (0.5, 2.0));
+      else
+        ncm_matrix_set (U, i, j, g_test_rand_double_range (-1.0, 1.0));
+    }
+  }
+
+  return U;
+}
+
+static void
+test_ncm_stats_dist_kernel_new_gauss (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  const guint dim                    = g_test_rand_int_range (1, 4);
+  NcmStatsDistKernelGauss *sdk_gauss = ncm_stats_dist_kernel_gauss_new (dim);
+
+  test->dim         = dim;
+  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_gauss);
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_GAUSS;
+
+  ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
+  ncm_stats_dist_kernel_gauss_free (sdk_gauss);
+  {
+    NcmStatsDistKernelGauss *sdk_gauss0 = ncm_stats_dist_kernel_gauss_ref (sdk_gauss);
+
+    ncm_stats_dist_kernel_gauss_clear (&sdk_gauss0);
+    g_assert_true (sdk_gauss0 == NULL);
+  }
+}
+
+static void
+test_ncm_stats_dist_kernel_new_st (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  const gdouble nu             = g_test_rand_double_range (3.0, 5.0);
+  const guint dim              = g_test_rand_int_range (1, 4);
+  NcmStatsDistKernelST *sdk_st = ncm_stats_dist_kernel_st_new (dim, nu);
+
+  test->dim         = dim;
+  test->nu          = nu;
+  test->kernel_type = NCM_STATS_DIST_KERNEL_TYPE_ST3;
+  test->kernel      = NCM_STATS_DIST_KERNEL (sdk_st);
+
+  g_assert_cmpfloat (ncm_stats_dist_kernel_st_get_nu (sdk_st), ==, nu);
+
+  ncm_stats_dist_kernel_st_ref (sdk_st);
+  ncm_stats_dist_kernel_st_free (sdk_st);
+  {
+    NcmStatsDistKernelST *sdk_st0 = ncm_stats_dist_kernel_st_ref (sdk_st);
+
+    ncm_stats_dist_kernel_st_clear (&sdk_st0);
+    g_assert_true (sdk_st0 == NULL);
+  }
+}
+
+static void
+test_ncm_stats_dist_kernel_free (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  NCM_TEST_FREE (ncm_stats_dist_kernel_free, test->kernel);
+}
+
+static void
+test_ncm_stats_dist_kernel_dim (TestNcmStatsDistKernel *test, gconstpointer pdata)
+{
+  g_assert_true (test->dim == ncm_stats_dist_kernel_get_dim (test->kernel));
+}
+
 static void
 test_ncm_stats_dist_kernel_bandwidth (TestNcmStatsDistKernel *test, gconstpointer pdata)
 {
@@ -313,29 +347,6 @@ test_ncm_stats_dist_kernel_bandwidth (TestNcmStatsDistKernel *test, gconstpointe
     g_assert_cmpfloat (ncm_stats_dist_kernel_get_var_factor (test->kernel), ==, GSL_POSINF);
     ncm_stats_dist_kernel_st_set_nu (sdk_st, test->nu);
   }
-}
-
-/* A random upper-triangular Cholesky factor, Sigma = U^T U. */
-static NcmMatrix *
-_test_random_cov_decomp (guint dim)
-{
-  NcmMatrix *U = ncm_matrix_new (dim, dim);
-  guint i, j;
-
-  for (i = 0; i < dim; i++)
-  {
-    for (j = 0; j < dim; j++)
-    {
-      if (j < i)
-        ncm_matrix_set (U, i, j, 0.0);
-      else if (j == i)
-        ncm_matrix_set (U, i, j, g_test_rand_double_range (0.5, 2.0));
-      else
-        ncm_matrix_set (U, i, j, g_test_rand_double_range (-1.0, 1.0));
-    }
-  }
-
-  return U;
 }
 
 static void
@@ -647,12 +658,6 @@ test_ncm_stats_dist_kernel_sample (TestNcmStatsDistKernel *test, gconstpointer p
 }
 
 static void
-test_ncm_stats_dist_kernel_free (TestNcmStatsDistKernel *test, gconstpointer pdata)
-{
-  NCM_TEST_FREE (ncm_stats_dist_kernel_free, test->kernel);
-}
-
-static void
 test_ncm_stats_dist_kernel_st_nu_default (void)
 {
   NcmStatsDistKernelST *sdk_st = g_object_new (NCM_TYPE_STATS_DIST_KERNEL_ST, "dimension", 2, NULL);
@@ -662,11 +667,6 @@ test_ncm_stats_dist_kernel_st_nu_default (void)
 
   ncm_stats_dist_kernel_st_free (sdk_st);
 }
-
-static const gchar *unimplemented[] = {
-  "get_rot_bandwidth", "get_var_factor", "get_lnnorm", "eval_unnorm",
-  "eval_unnorm_vec", "eval_gamma_lambda", "sample"
-};
 
 static void
 test_ncm_stats_dist_kernel_traps (void)

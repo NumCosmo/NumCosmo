@@ -85,11 +85,17 @@ typedef enum
   SHAPE_POWER_EXP,
   SHAPE_LENSING,
   SHAPE_MULTI,
+  SHAPE_RATIONAL,
+  SHAPE_POWER,
+  SHAPE_COS,
+  SHAPE_SIN,
+  SHAPE_LORENTZ,
   SHAPE_LEN
 } Shape;
 
 static const char *shape_names[SHAPE_LEN] = {
-  "gauss", "tophat", "tophat_smooth", "student_t", "power_exp", "lensing", "multi"
+  "gauss", "tophat", "tophat_smooth", "student_t", "power_exp", "lensing", "multi",
+  "rational", "power", "cos", "sin", "lorentz"
 };
 
 typedef struct
@@ -100,12 +106,25 @@ typedef struct
 
   /* gauss / student_t / multi */
   double chi_mean, chi_sigma, n_sigma;
-  /* tophat / tophat_smooth / power_exp */
+
+  /* tophat / tophat_smooth / power_exp / rational / power / cos / sin / lorentz,
+   * and gauss / student_t when explicit_support is set */
   double chi_lower, chi_upper;
+
+  /* 1: gauss and student_t take their support from chi_lower, chi_upper rather
+   * than mean -/+ n widths, so a table defined on given limits is certified on
+   * exactly those doubles */
+  int explicit_support;
   /* student_t */
   double chi_scale, nu, n_scale;
   /* power_exp */
   double alpha, beta;
+  /* power: chi^power_n */
+  long power_n;
+  /* cos, sin: cos (omega chi), sin (omega chi) */
+  double omega;
+  /* 1: the window is divided by chi */
+  int over_x;
   /* lensing */
   double chi_source_lower, chi_source_upper;
 
@@ -257,6 +276,52 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
       acb_pow (out, u, v, prec);
       break;
 
+    case SHAPE_RATIONAL:
+      /* chi^2 / (1 + t^2)^3,  t = (chi - mean)/scale: the rational integrand of
+       * ncm_sbessel_integrator_integrate_rational (). Integer power, so no
+       * branch cut; the poles at mean -/+ i scale make the division return a
+       * non-finite ball on any ball containing one. */
+      acb_set_d (t, p->chi_mean);
+      acb_sub (u, chi, t, prec);
+      acb_set_d (t, p->chi_scale);
+      acb_div (u, u, t, prec);
+      acb_sqr (u, u, prec);
+      acb_add_si (u, u, 1, prec);
+      acb_pow_si (u, u, 3, prec);
+      acb_sqr (v, chi, prec);
+      acb_div (out, v, u, prec);
+      break;
+
+    case SHAPE_POWER:
+      /* chi^n, integer n, so no branch cut */
+      acb_pow_si (out, chi, p->power_n, prec);
+      break;
+
+    case SHAPE_COS:
+      /* cos (omega chi) */
+      acb_set_d (t, p->omega);
+      acb_mul (u, chi, t, prec);
+      acb_cos (out, u, prec);
+      break;
+
+    case SHAPE_SIN:
+      /* sin (omega chi) */
+      acb_set_d (t, p->omega);
+      acb_mul (u, chi, t, prec);
+      acb_sin (out, u, prec);
+      break;
+
+    case SHAPE_LORENTZ:
+      /* 1 / (1 + t^2),  t = (chi - mean) / scale; poles at mean -/+ i scale */
+      acb_set_d (t, p->chi_mean);
+      acb_sub (u, chi, t, prec);
+      acb_set_d (t, p->chi_scale);
+      acb_div (u, u, t, prec);
+      acb_sqr (u, u, prec);
+      acb_add_si (u, u, 1, prec);
+      acb_inv (out, u, prec);
+      break;
+
     case SHAPE_POWER_EXP:
       /* x^alpha exp (-x^beta),  x = chi / chi_scale */
       acb_set_d (t, p->chi_scale);
@@ -350,6 +415,10 @@ window_u (acb_t out, const acb_t chi, Par *p, slong order, slong prec)
       fprintf (stderr, "window_u: bad shape\n");
       exit (1);
   }
+
+  /* chi > 0 on every support that uses it, so no pole is crossed */
+  if (p->over_x)
+    acb_div (out, out, chi, prec);
 
   acb_clear (t);
   acb_clear (u);
@@ -736,6 +805,11 @@ shape_support (Par *p)
       break;
 
     case SHAPE_POWER_EXP:
+    case SHAPE_RATIONAL:
+    case SHAPE_POWER:
+    case SHAPE_COS:
+    case SHAPE_SIN:
+    case SHAPE_LORENTZ:
       p->chi_min = p->chi_lower;
       p->chi_max = p->chi_upper;
       break;
@@ -805,6 +879,24 @@ shape_support (Par *p)
     default:
       fprintf (stderr, "shape_support: bad shape\n");
       exit (1);
+  }
+
+  if (p->explicit_support)
+  {
+    if ((p->shape != SHAPE_GAUSS) && (p->shape != SHAPE_STUDENT_T))
+    {
+      fprintf (stderr, "shape_support: --explicit-support applies to gauss and student_t\n");
+      exit (1);
+    }
+
+    if (!(p->chi_lower < p->chi_upper))
+    {
+      fprintf (stderr, "shape_support: --explicit-support needs chi_lower < chi_upper\n");
+      exit (1);
+    }
+
+    p->chi_min = p->chi_lower;
+    p->chi_max = p->chi_upper;
   }
 }
 

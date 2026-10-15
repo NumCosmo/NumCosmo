@@ -104,26 +104,19 @@ radial integrals are computed by
 ## Numerical accuracy
 
 $S_{ij}$ is a sum of angular power spectra, so its accuracy is that of the
-$C^{ij}_\ell$. [Accuracy Control for Angular Power
-Spectra](../../../tutorials/python/xcor_accuracy.qmd) measures it on cluster top-hat bins
-at the defaults of [[numcosmo|NcXcorSSCSij]], `NcXcorKernel:reltol` $10^{-6}$ and
-`NcXcorKernel:peak-epsilon` $10^{-5}$. The error of a cross spectrum is measured
-against $\sqrt{C^{ii}_\ell C^{jj}_\ell}$: at these defaults the cross spectrum of two
-separated bins deviates from a tighter closure, and the certified separated pair X14
-from its certified value, by less than peak-epsilon of that scale, see the tutorial's
-[certified values](../../../tutorials/python/xcor_accuracy.qmd#sec-certified). A cross spectrum of separated
-bins is three orders of magnitude below that scale, so its relative error is larger by
-the same factor. The off-diagonal $S_{ij}$ of separated bins are in the same case: for
-seven top-hat bins over $z \in [0.1, 0.8]$, $|S_{06}|$ is four orders of magnitude below
-$S_{00}$.
-
-[[numcosmo|NcXcorSSCSij]] rebuilds $S_{ij}$ at every likelihood step, so its defaults are
-looser than the validation setting of the tutorial; on its cluster top-hat, peak-epsilon
-$10^{-6}$ costs 1.5 times the closure nodes of $10^{-5}$, see the tutorial's
-[closure cost](../../../tutorials/python/xcor_accuracy.qmd#sec-tolerances). Below $10^{-6}$
-`nc_xcor_kernel_set_peak_epsilon` warns. The quadrature is
-`NC_XCOR_METHOD_KERNEL_EXACT`, which integrates the closures exactly on the common
-refinement of their panels and has no tolerance.
+$C^{ij}_\ell$. [[numcosmo|NcXcorSSCSij]] computes them with [[numcosmo|NcXcorSolver]] at
+`NcXcorSolver:reltol` $10^{-6}$, its default, which fits the closures with reltol
+$10^{-6}$ and peak-epsilon $10^{-6}$, the floor of peak-epsilon; it rebuilds $S_{ij}$ at
+every likelihood step, so it is looser than the solver's own default $10^{-8}$.
+[Accuracy Control for Angular Power Spectra](../../../tutorials/python/xcor_accuracy.qmd)
+measures the error of these closures on cluster top-hat bins. The error of a cross
+spectrum is measured against $\sqrt{C^{ii}_\ell C^{jj}_\ell}$, and a cross spectrum of
+separated bins is three orders of magnitude below that scale, so its relative error is
+larger by the same factor. The off-diagonal $S_{ij}$ of separated bins are in the same
+case: for seven top-hat bins over $z \in [0.1, 0.8]$, $|S_{06}|$ is four orders of
+magnitude below $S_{00}$. The quadrature is `NC_XCOR_METHOD_KERNEL_EXACT`, which
+integrates the closures exactly on the common refinement of their panels and has no
+tolerance.
 
 ## Varying $S_{ij}$ along a chain
 

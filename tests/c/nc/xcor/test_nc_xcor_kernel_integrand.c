@@ -70,6 +70,21 @@ typedef struct _TestCase
   gboolean multi_comp;
 } TestCase;
 
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_kernel_integrand_new (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_free (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_eval (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_comps (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_ref_clear (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+static void test_nc_xcor_kernel_integrand_vectorized (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
+
 static const TestCase test_cases[] = {
   {"limber",     FALSE, FALSE},
   {"non_limber", TRUE,  FALSE},
@@ -80,6 +95,44 @@ static const TestCase test_cases[] = {
    * degenerate to within rounding -- see NC_XCOR_KERNEL_COMPONENT_K_RANGE_MIN_WIDTH. */
   {"multi",      TRUE,  TRUE },
 };
+
+static const TestCheck test_checks[] = {
+  {"eval",       &test_nc_xcor_kernel_integrand_eval      },
+  {"comps",      &test_nc_xcor_kernel_integrand_comps     },
+  {"panels",     &test_nc_xcor_kernel_integrand_panels    },
+  {"ref_clear",  &test_nc_xcor_kernel_integrand_ref_clear },
+  {"vectorized", &test_nc_xcor_kernel_integrand_vectorized},
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint i, j;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_cases); i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/kernel/integrand/%s/%s",
+                                     test_cases[i].name, test_checks[j].name);
+
+      g_test_add (path, TestNcXcorKernelIntegrand, &test_cases[i],
+                  &test_nc_xcor_kernel_integrand_new,
+                  test_checks[j].func,
+                  &test_nc_xcor_kernel_integrand_free);
+
+      g_free (path);
+    }
+  }
+
+  g_test_run ();
+}
 
 static NcXcorKernel *
 _build_multi (TestNcXcorKernelIntegrand *test)
@@ -325,50 +378,5 @@ test_nc_xcor_kernel_integrand_vectorized (TestNcXcorKernelIntegrand *test, gcons
   g_free (Wb);
   nc_xcor_kernel_integrand_unref (block);
   nc_xcor_kernel_integrand_unref (one);
-}
-
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcorKernelIntegrand *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"eval",       &test_nc_xcor_kernel_integrand_eval      },
-  {"comps",      &test_nc_xcor_kernel_integrand_comps     },
-  {"panels",     &test_nc_xcor_kernel_integrand_panels    },
-  {"ref_clear",  &test_nc_xcor_kernel_integrand_ref_clear },
-  {"vectorized", &test_nc_xcor_kernel_integrand_vectorized},
-};
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint i, j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_cases); i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/kernel/integrand/%s/%s",
-                                     test_cases[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcorKernelIntegrand, &test_cases[i],
-                  &test_nc_xcor_kernel_integrand_new,
-                  test_checks[j].func,
-                  &test_nc_xcor_kernel_integrand_free);
-
-      g_free (path);
-    }
-  }
-
-  g_test_run ();
 }
 

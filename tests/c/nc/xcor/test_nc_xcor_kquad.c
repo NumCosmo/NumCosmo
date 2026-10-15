@@ -70,9 +70,60 @@ typedef struct _TestMethod
   NcXcorMethod meth;
 } TestMethod;
 
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcorKQuad *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_free (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_method_table (void);
+static void test_nc_xcor_kquad_compute (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_auto (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_error (TestNcXcorKQuad *test, gconstpointer pdata);
+static void test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata);
+
 static const TestMethod test_methods[] = {
   {"kernel_exact", NC_XCOR_METHOD_KERNEL_EXACT},
 };
+
+static const TestCheck test_checks[] = {
+  {"compute",         &test_nc_xcor_kquad_compute        },
+  {"auto",            &test_nc_xcor_kquad_auto           },
+  {"error",           &test_nc_xcor_kquad_error          },
+  {"integrate_block", &test_nc_xcor_kquad_integrate_block},
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint i, j;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/kquad/%s/%s", test_methods[i].name, test_checks[j].name);
+
+      g_test_add (path, TestNcXcorKQuad, &test_methods[i],
+                  &test_nc_xcor_kquad_new, test_checks[j].func, &test_nc_xcor_kquad_free);
+
+      g_free (path);
+    }
+  }
+
+  g_test_add_func ("/nc/xcor/kquad/methods", &test_nc_xcor_kquad_method_table);
+
+  g_test_run ();
+}
 
 static void
 test_nc_xcor_kquad_new (TestNcXcorKQuad *test, gconstpointer pdata)
@@ -215,20 +266,6 @@ test_nc_xcor_kquad_integrate_block (TestNcXcorKQuad *test, gconstpointer pdata)
   nc_xcor_kernel_integrand_unref (i2);
 }
 
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcorKQuad *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"compute",         &test_nc_xcor_kquad_compute        },
-  {"auto",            &test_nc_xcor_kquad_auto           },
-  {"error",           &test_nc_xcor_kquad_error          },
-  {"integrate_block", &test_nc_xcor_kquad_integrate_block},
-};
-
 /* Every method has to describe itself: the solver picks an integrator by these. */
 static void
 test_nc_xcor_kquad_method_table (void)
@@ -262,34 +299,5 @@ test_nc_xcor_kquad_method_table (void)
      * its own to report instead, and the redshift-space tier reports none. */
     g_assert_cmpint (nc_xcor_method_has_error_estimate (all[i]), ==, all[i] == NC_XCOR_METHOD_KERNEL_EXACT);
   }
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint i, j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/kquad/%s/%s", test_methods[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcorKQuad, &test_methods[i],
-                  &test_nc_xcor_kquad_new, test_checks[j].func, &test_nc_xcor_kquad_free);
-
-      g_free (path);
-    }
-  }
-
-  g_test_add_func ("/nc/xcor/kquad/methods", &test_nc_xcor_kquad_method_table);
-
-  g_test_run ();
 }
 

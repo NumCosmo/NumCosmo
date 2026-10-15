@@ -51,6 +51,60 @@ typedef struct _TestNcXcorSSCSij
   NcXcorSSCSij *ssc;
 } TestNcXcorSSCSij;
 
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcorSSCSij *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_ssc_sij_new (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_free (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_invalid_area_negative (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_invalid_area_fullsky (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_basic (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_knobs (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_footprint (TestNcXcorSSCSij *test, gconstpointer pdata);
+static void test_nc_xcor_ssc_sij_traps (TestNcXcorSSCSij *test, gconstpointer pdata);
+
+static const TestCheck test_checks[] = {
+  {"basic",     &test_nc_xcor_ssc_sij_basic    },
+  {"knobs",     &test_nc_xcor_ssc_sij_knobs    },
+  {"footprint", &test_nc_xcor_ssc_sij_footprint},
+  {"traps",     &test_nc_xcor_ssc_sij_traps    },
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint j;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+  {
+    gchar *path = g_strdup_printf ("/nc/xcor/ssc_sij/%s", test_checks[j].name);
+
+    g_test_add (path, TestNcXcorSSCSij, NULL,
+                &test_nc_xcor_ssc_sij_new, test_checks[j].func, &test_nc_xcor_ssc_sij_free);
+
+    g_free (path);
+  }
+
+  g_test_add ("/nc/xcor/ssc_sij/invalid/area/negative/subprocess", TestNcXcorSSCSij, NULL,
+              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_negative,
+              &test_nc_xcor_ssc_sij_free);
+  g_test_add ("/nc/xcor/ssc_sij/invalid/area/fullsky/subprocess", TestNcXcorSSCSij, NULL,
+              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_fullsky,
+              &test_nc_xcor_ssc_sij_free);
+
+  g_test_run ();
+}
+
 static void
 test_nc_xcor_ssc_sij_new (TestNcXcorSSCSij *test, gconstpointer pdata)
 {
@@ -120,9 +174,6 @@ test_nc_xcor_ssc_sij_knobs (TestNcXcorSSCSij *test, gconstpointer pdata)
 
   nc_xcor_ssc_sij_set_reltol (test->ssc, 1.0e-5);
   ncm_assert_cmpdouble_e (nc_xcor_ssc_sij_get_reltol (test->ssc), ==, 1.0e-5, 1.0e-15, 0.0);
-
-  nc_xcor_ssc_sij_set_peak_epsilon (test->ssc, 1.0e-4);
-  ncm_assert_cmpdouble_e (nc_xcor_ssc_sij_get_peak_epsilon (test->ssc), ==, 1.0e-4, 1.0e-15, 0.0);
 
   nc_xcor_ssc_sij_set_method (test->ssc, NC_XCOR_METHOD_LIMBER_Z_CUBATURE);
   g_assert_cmpuint (nc_xcor_ssc_sij_get_method (test->ssc), ==, NC_XCOR_METHOD_LIMBER_Z_CUBATURE);
@@ -199,50 +250,5 @@ static void
 test_nc_xcor_ssc_sij_invalid_area_fullsky (TestNcXcorSSCSij *test, gconstpointer pdata)
 {
   nc_xcor_ssc_sij_set_area (test->ssc, 4.0 * ncm_c_pi () * gsl_pow_2 (180.0 / ncm_c_pi ()));
-}
-
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcorSSCSij *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"basic",     &test_nc_xcor_ssc_sij_basic    },
-  {"knobs",     &test_nc_xcor_ssc_sij_knobs    },
-  {"footprint", &test_nc_xcor_ssc_sij_footprint},
-  {"traps",     &test_nc_xcor_ssc_sij_traps    },
-};
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-  {
-    gchar *path = g_strdup_printf ("/nc/xcor/ssc_sij/%s", test_checks[j].name);
-
-    g_test_add (path, TestNcXcorSSCSij, NULL,
-                &test_nc_xcor_ssc_sij_new, test_checks[j].func, &test_nc_xcor_ssc_sij_free);
-
-    g_free (path);
-  }
-
-  g_test_add ("/nc/xcor/ssc_sij/invalid/area/negative/subprocess", TestNcXcorSSCSij, NULL,
-              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_negative,
-              &test_nc_xcor_ssc_sij_free);
-  g_test_add ("/nc/xcor/ssc_sij/invalid/area/fullsky/subprocess", TestNcXcorSSCSij, NULL,
-              &test_nc_xcor_ssc_sij_new, &test_nc_xcor_ssc_sij_invalid_area_fullsky,
-              &test_nc_xcor_ssc_sij_free);
-
-  g_test_run ();
 }
 

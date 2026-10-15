@@ -39,13 +39,11 @@
  * library's own path does.
  *
  * Every point is held to rtol |I| + atol peak, the peak being the multipole's largest
- * certified |I|. The rtol is 3 times #NcmSBesselIntegratorLevin:cheb-reltol, the
- * tolerance of the forcing fit that bounds the integrator's result: the fit's acceptance
- * test bounds the change between two levels, not the error. Measured at d = 0, the worst
- * point is 5.8e-9 relative (tau_batched/rule/tophat_near, ell = 200) on x86-64 and 1.03
- * times 1e-8 on arm64 (macOS CI); the atol is 1e-11. At d = 1, 2: worst 1.7e-10 at
- * d = 1, 2.1e-9 relative and 2.8e-9 of the peak at d = 2 (j_ell'' is reached from
- * neighbouring orders whose leading terms cancel), so the atol is 1e-8.
+ * certified |I|. The rtol is 3 times #NcmSBesselIntegratorLevin:reltol; the atol is
+ * 1e-11 at d = 0 and 1e-8 at d = 1, 2, where j_ell' and j_ell'' are reached from
+ * neighboring orders whose leading terms cancel. On x86-64 at the default reltol 1e-8
+ * the worst point uses 0.22 of this allowance at d = 0 (tophat_broad, ell = 200, 6.6e-9
+ * relative), 0.03 at d = 1 and 0.05 at d = 2.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -94,7 +92,88 @@ typedef struct _TestWindow
   gdouble chi_max;
 } TestWindow;
 
+static void test_nc_xcor_window_levin (gconstpointer pdata);
+static gint _test_cmp_str (gconstpointer a, gconstpointer b);
+static void _test_add (const gchar *path, const gchar *shape, TestPath tpath, guint d, guint n_block, gboolean forced);
+
 static NcmObjDictStr *test_table = NULL;
+
+gint
+main (gint argc, gchar *argv[])
+{
+  NcmSerialize *ser;
+  GStrv all_keys;
+  GPtrArray *shapes;
+  gchar *filename;
+  guint i;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  filename   = ncm_cfg_get_data_filename (TEST_SPARSE_FILE, TRUE);
+  ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  test_table = ncm_serialize_dict_str_from_binfile (ser, filename);
+  all_keys   = ncm_obj_dict_str_keys (test_table);
+  shapes     = g_ptr_array_new ();
+
+  for (i = 0; all_keys[i] != NULL; i++)
+    if (g_str_has_prefix (all_keys[i], "kernel/") && g_str_has_suffix (all_keys[i], "/d0"))
+      g_ptr_array_add (shapes, all_keys[i]);
+
+  g_ptr_array_sort (shapes, _test_cmp_str);
+
+  for (i = 0; i < shapes->len; i++)
+  {
+    gchar **parts     = g_strsplit (g_ptr_array_index (shapes, i), "/", 3);
+    const gchar *name = parts[1];
+    gchar *path;
+    guint d, n;
+
+    path = g_strdup_printf ("/nc/xcor/window_levin/d0/%s", name);
+    _test_add (path, name, TEST_PATH_ELL, 0, 1, FALSE);
+    g_free (path);
+
+    for (d = 1; d <= 2; d++)
+    {
+      for (n = 1; n <= TEST_BATCH; n += TEST_BATCH - 1)
+      {
+        path = g_strdup_printf ("/nc/xcor/window_levin/deriv/d%u/block%u/%s", d, n, name);
+        _test_add (path, name, TEST_PATH_DERIV, d, n, FALSE);
+        g_free (path);
+      }
+    }
+
+    path = g_strdup_printf ("/nc/xcor/window_levin/tau/rule/%s", name);
+    _test_add (path, name, TEST_PATH_TAU, 0, 1, FALSE);
+    g_free (path);
+
+    path = g_strdup_printf ("/nc/xcor/window_levin/tau/forced/%s", name);
+    _test_add (path, name, TEST_PATH_TAU, 0, 1, TRUE);
+    g_free (path);
+
+    path = g_strdup_printf ("/nc/xcor/window_levin/tau_batched/rule/%s", name);
+    _test_add (path, name, TEST_PATH_TAU_BATCHED, 0, TEST_BATCH, FALSE);
+    g_free (path);
+
+    path = g_strdup_printf ("/nc/xcor/window_levin/tau_batched/forced/%s", name);
+    _test_add (path, name, TEST_PATH_TAU_BATCHED, 0, TEST_BATCH, TRUE);
+    g_free (path);
+
+    g_strfreev (parts);
+  }
+
+  g_ptr_array_unref (shapes);
+  g_free (all_keys); /* transfer container */
+  g_free (filename);
+
+  g_test_run ();
+
+  ncm_obj_dict_str_unref (test_table);
+  ncm_serialize_free (ser);
+}
 
 static gint
 _test_cmp_int (gconstpointer a, gconstpointer b)
@@ -214,6 +293,21 @@ _test_integral (const TestCase *tc, NcmSBesselIntegrator *sbi, NcXcorKernelRadia
   return total;
 }
 
+/* Registers @tc under @path, taking ownership */
+static void
+_test_add (const gchar *path, const gchar *shape, TestPath tpath, guint d, guint n_block, gboolean forced)
+{
+  TestCase *tc = g_new0 (TestCase, 1);
+
+  tc->shape   = g_strdup (shape);
+  tc->path    = tpath;
+  tc->d       = d;
+  tc->n_block = n_block;
+  tc->forced  = forced;
+
+  g_test_add_data_func_full (path, tc, &test_nc_xcor_window_levin, &_test_case_free);
+}
+
 /*
  * One case: every multipole the table certifies at the order, every point compared.
  */
@@ -258,7 +352,7 @@ test_nc_xcor_window_levin (gconstpointer pdata)
       peak = GSL_MAX (peak, fabs (ncm_matrix_get (table, j, 1 + tc->d)));
 
     sbi  = _test_integrator (tc, ell);
-    rtol = TEST_RTOL_FACTOR * ncm_sbessel_integrator_levin_get_cheb_reltol (NCM_SBESSEL_INTEGRATOR_LEVIN (sbi));
+    rtol = TEST_RTOL_FACTOR * ncm_sbessel_integrator_levin_get_reltol (NCM_SBESSEL_INTEGRATOR_LEVIN (sbi));
 
     for (j = 0; j < n; j++)
     {
@@ -295,97 +389,5 @@ test_nc_xcor_window_levin (gconstpointer pdata)
   nc_xcor_kernel_free (xclk);
   ncm_serialize_free (ser);
   g_free (kkey);
-}
-
-/* Registers @tc under @path, taking ownership */
-static void
-_test_add (const gchar *path, const gchar *shape, TestPath tpath, guint d, guint n_block, gboolean forced)
-{
-  TestCase *tc = g_new0 (TestCase, 1);
-
-  tc->shape   = g_strdup (shape);
-  tc->path    = tpath;
-  tc->d       = d;
-  tc->n_block = n_block;
-  tc->forced  = forced;
-
-  g_test_add_data_func_full (path, tc, &test_nc_xcor_window_levin, &_test_case_free);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  NcmSerialize *ser;
-  GStrv all_keys;
-  GPtrArray *shapes;
-  gchar *filename;
-  guint i;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  filename   = ncm_cfg_get_data_filename (TEST_SPARSE_FILE, TRUE);
-  ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-  test_table = ncm_serialize_dict_str_from_binfile (ser, filename);
-  all_keys   = ncm_obj_dict_str_keys (test_table);
-  shapes     = g_ptr_array_new ();
-
-  for (i = 0; all_keys[i] != NULL; i++)
-    if (g_str_has_prefix (all_keys[i], "kernel/") && g_str_has_suffix (all_keys[i], "/d0"))
-      g_ptr_array_add (shapes, all_keys[i]);
-
-  g_ptr_array_sort (shapes, _test_cmp_str);
-
-  for (i = 0; i < shapes->len; i++)
-  {
-    gchar **parts     = g_strsplit (g_ptr_array_index (shapes, i), "/", 3);
-    const gchar *name = parts[1];
-    gchar *path;
-    guint d, n;
-
-    path = g_strdup_printf ("/nc/xcor/window_levin/d0/%s", name);
-    _test_add (path, name, TEST_PATH_ELL, 0, 1, FALSE);
-    g_free (path);
-
-    for (d = 1; d <= 2; d++)
-    {
-      for (n = 1; n <= TEST_BATCH; n += TEST_BATCH - 1)
-      {
-        path = g_strdup_printf ("/nc/xcor/window_levin/deriv/d%u/block%u/%s", d, n, name);
-        _test_add (path, name, TEST_PATH_DERIV, d, n, FALSE);
-        g_free (path);
-      }
-    }
-
-    path = g_strdup_printf ("/nc/xcor/window_levin/tau/rule/%s", name);
-    _test_add (path, name, TEST_PATH_TAU, 0, 1, FALSE);
-    g_free (path);
-
-    path = g_strdup_printf ("/nc/xcor/window_levin/tau/forced/%s", name);
-    _test_add (path, name, TEST_PATH_TAU, 0, 1, TRUE);
-    g_free (path);
-
-    path = g_strdup_printf ("/nc/xcor/window_levin/tau_batched/rule/%s", name);
-    _test_add (path, name, TEST_PATH_TAU_BATCHED, 0, TEST_BATCH, FALSE);
-    g_free (path);
-
-    path = g_strdup_printf ("/nc/xcor/window_levin/tau_batched/forced/%s", name);
-    _test_add (path, name, TEST_PATH_TAU_BATCHED, 0, TEST_BATCH, TRUE);
-    g_free (path);
-
-    g_strfreev (parts);
-  }
-
-  g_ptr_array_unref (shapes);
-  g_free (all_keys); /* transfer container */
-  g_free (filename);
-
-  g_test_run ();
-
-  ncm_obj_dict_str_unref (test_table);
-  ncm_serialize_free (ser);
 }
 

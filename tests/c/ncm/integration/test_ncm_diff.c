@@ -40,6 +40,36 @@ typedef struct _TestNcmDiff
   guint ntests;
 } TestNcmDiff;
 
+/*
+ * 1 to M
+ * ALL
+ */
+typedef struct _TestNcmDiffAll
+{
+  gdouble w_sin;
+  gdouble w_asin;
+  gdouble w_tan;
+  gdouble w_exp;
+  gdouble w_log;
+  gdouble w_poly3[4];
+  gdouble w_plaw;
+} TestNcmDiffAll;
+
+/* Counts the evaluations of the function it wraps. */
+typedef struct _TestNcmDiffCount
+{
+  NcmDiffFunc1to1 f;
+  gdouble w;
+  guint n;
+} TestNcmDiffCount;
+
+/* exp (x) recording the extreme points it was evaluated at. */
+typedef struct _TestNcmDiffDom
+{
+  gdouble xmin;
+  gdouble xmax;
+} TestNcmDiffDom;
+
 void test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_free (TestNcmDiff *test, gconstpointer pdata);
 
@@ -364,7 +394,6 @@ test_ncm_diff_log_tables (TestNcmDiff *test, gconstpointer pdata)
 /*
  * SIN
  */
-
 static gdouble
 _test_ncm_diff_sin (const gdouble x, gpointer userdata)
 {
@@ -392,7 +421,6 @@ _test_ncm_diff_d2sin (const gdouble x, gpointer userdata)
 /*
  * ASIN
  */
-
 static gdouble
 _test_ncm_diff_asin (const gdouble x, gpointer userdata)
 {
@@ -447,7 +475,6 @@ _test_ncm_diff_d2tan (const gdouble x, gpointer userdata)
 /*
  * EXP
  */
-
 static gdouble
 _test_ncm_diff_exp (const gdouble x, gpointer userdata)
 {
@@ -575,22 +602,6 @@ _test_ncm_diff_d2plaw (const gdouble x, gpointer userdata)
   return w_ptr[0] * (w_ptr[0] - 1.0) * pow (x, w_ptr[0] - 2.0);
 }
 
-/*
- * 1 to M
- * ALL
- */
-
-typedef struct _TestNcmDiffAll
-{
-  gdouble w_sin;
-  gdouble w_asin;
-  gdouble w_tan;
-  gdouble w_exp;
-  gdouble w_log;
-  gdouble w_poly3[4];
-  gdouble w_plaw;
-} TestNcmDiffAll;
-
 static void
 _test_ncm_diff_all (const gdouble x, NcmVector *y, gpointer userdata)
 {
@@ -657,7 +668,6 @@ _test_ncm_diff_d2all (const gdouble x, gpointer userdata)
  * N to 1
  * ALL
  */
-
 static gdouble
 _test_ncm_diff_N_to_1_all (NcmVector *x, gpointer userdata)
 {
@@ -782,7 +792,6 @@ _test_ncm_diff_exp12 (NcmVector *x, gpointer userdata)
  * N to M
  * ALL
  */
-
 static void
 _test_ncm_diff_N_to_M_all (NcmVector *x, NcmVector *y, gpointer userdata)
 {
@@ -879,7 +888,6 @@ _test_ncm_diff_N_to_M_d2all (GArray *x_a, gpointer userdata)
 /*
  * SIN
  */
-
 void
 test_ncm_diff_rf_d1_1_to_1_sin (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -943,7 +951,6 @@ test_ncm_diff_rc_d2_1_to_1_sin (TestNcmDiff *test, gconstpointer pdata)
 /*
  * ASIN
  */
-
 void
 test_ncm_diff_rf_d1_1_to_1_asin (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1023,7 +1030,6 @@ test_ncm_diff_rc_d2_1_to_1_asin (TestNcmDiff *test, gconstpointer pdata)
 /*
  * TAN
  */
-
 void
 test_ncm_diff_rf_d1_1_to_1_tan (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1096,7 +1102,6 @@ test_ncm_diff_rc_d2_1_to_1_tan (TestNcmDiff *test, gconstpointer pdata)
 /*
  * EXP
  */
-
 void
 test_ncm_diff_rf_d1_1_to_1_exp (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1161,7 +1166,6 @@ test_ncm_diff_rc_d2_1_to_1_exp (TestNcmDiff *test, gconstpointer pdata)
 /*
  * LOG
  */
-
 void
 test_ncm_diff_rf_d1_1_to_1_log (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1226,7 +1230,6 @@ test_ncm_diff_rc_d2_1_to_1_log (TestNcmDiff *test, gconstpointer pdata)
 /*
  * POLY3
  */
-
 void
 test_ncm_diff_rf_d1_1_to_1_poly3 (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1291,7 +1294,6 @@ test_ncm_diff_rc_d2_1_to_1_poly3 (TestNcmDiff *test, gconstpointer pdata)
 /*
  * PLAW
  */
-
 void
 test_ncm_diff_rf_d1_1_to_1_plaw (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1357,7 +1359,6 @@ test_ncm_diff_rc_d2_1_to_1_plaw (TestNcmDiff *test, gconstpointer pdata)
  * 1 to M
  * ALL
  */
-
 void
 test_ncm_diff_rf_d1_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1521,7 +1522,6 @@ test_ncm_diff_rc_d2_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
  * N to 1
  * ALL
  */
-
 void
 test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -1884,7 +1884,6 @@ test_ncm_diff_rf_Hessian_N_to_1_rosenbrock (TestNcmDiff *test, gconstpointer pda
  * N to M
  * ALL
  */
-
 void
 test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 {
@@ -2170,14 +2169,6 @@ test_ncm_diff_1_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata)
   }
 }
 
-/* Counts the evaluations of the function it wraps. */
-typedef struct _TestNcmDiffCount
-{
-  NcmDiffFunc1to1 f;
-  gdouble w;
-  guint n;
-} TestNcmDiffCount;
-
 static gdouble
 _test_ncm_diff_counted (const gdouble x, gpointer userdata)
 {
@@ -2363,13 +2354,6 @@ test_ncm_diff_rf_Hessian_N_to_1_tiny_x (TestNcmDiff *test, gconstpointer pdata)
 
   g_array_unref (x_a);
 }
-
-/* exp (x) recording the extreme points it was evaluated at. */
-typedef struct _TestNcmDiffDom
-{
-  gdouble xmin;
-  gdouble xmax;
-} TestNcmDiffDom;
 
 static gdouble
 _test_ncm_diff_exp_dom (const gdouble x, gpointer userdata)

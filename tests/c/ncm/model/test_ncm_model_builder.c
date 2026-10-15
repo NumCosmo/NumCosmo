@@ -31,24 +31,6 @@
 #include <glib.h>
 #include <glib-object.h>
 
-/*
- * A builder with one scalar and one vector parameter; @z_default changes the
- * scalar parameter's default value and @extra adds a second scalar parameter.
- */
-static NcmModelBuilder *
-test_builder_new (GType ptype, const gchar *name, const gdouble z_default, const gboolean extra)
-{
-  NcmModelBuilder *mb = ncm_model_builder_new (ptype, name, "Test model");
-
-  ncm_model_builder_add_sparam (mb, "z", "z", -1.0, 1.0, 0.1, 0.0, z_default, NCM_PARAM_TYPE_FIXED);
-  ncm_model_builder_add_vparam (mb, 2, "v", "v", -1.0, 1.0, 0.1, 0.0, 0.25, NCM_PARAM_TYPE_FIXED);
-
-  if (extra)
-    ncm_model_builder_add_sparam (mb, "w", "w", -1.0, 1.0, 0.1, 0.0, 0.0, NCM_PARAM_TYPE_FIXED);
-
-  return mb;
-}
-
 void test_ncm_model_builder_create (void);
 void test_ncm_model_builder_parent_params (void);
 void test_ncm_model_builder_params_arrays (void);
@@ -83,6 +65,24 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/model_builder/errors/add_after_create/subprocess", &test_ncm_model_builder_add_after_create_subprocess);
 
   g_test_run ();
+}
+
+/*
+ * A builder with one scalar and one vector parameter; @z_default changes the
+ * scalar parameter's default value and @extra adds a second scalar parameter.
+ */
+static NcmModelBuilder *
+test_builder_new (GType ptype, const gchar *name, const gdouble z_default, const gboolean extra)
+{
+  NcmModelBuilder *mb = ncm_model_builder_new (ptype, name, "Test model");
+
+  ncm_model_builder_add_sparam (mb, "z", "z", -1.0, 1.0, 0.1, 0.0, z_default, NCM_PARAM_TYPE_FIXED);
+  ncm_model_builder_add_vparam (mb, 2, "v", "v", -1.0, 1.0, 0.1, 0.0, 0.25, NCM_PARAM_TYPE_FIXED);
+
+  if (extra)
+    ncm_model_builder_add_sparam (mb, "w", "w", -1.0, 1.0, 0.1, 0.0, 0.0, NCM_PARAM_TYPE_FIXED);
+
+  return mb;
 }
 
 void

@@ -34,6 +34,27 @@
 #include <glib-object.h>
 #include <gsl/gsl_errno.h>
 
+static void test_ncm_integrate_locked_failure (void);
+static void test_ncm_integrate_locked_failure_subprocess (void);
+static void test_ncm_integrate_cached_0_x (void);
+static void test_ncm_integrate_divonne_xgiven (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/integrate/locked_a_b/failure", &test_ncm_integrate_locked_failure);
+  g_test_add_func ("/ncm/integrate/locked_a_b/failure/subprocess", &test_ncm_integrate_locked_failure_subprocess);
+  g_test_add_func ("/ncm/integrate/cached_0_x", &test_ncm_integrate_cached_0_x);
+  g_test_add_func ("/ncm/integrate/divonne_xgiven", &test_ncm_integrate_divonne_xgiven);
+
+  g_test_run ();
+}
+
 static gdouble
 _f_osc (gdouble x, gpointer p)
 {
@@ -41,6 +62,12 @@ _f_osc (gdouble x, gpointer p)
     (*(guint *) p)++;
 
   return exp (sin (5.0 * x));
+}
+
+static gdouble
+_f_x_p_y (gdouble x, gdouble y, gpointer p)
+{
+  return x + y;
 }
 
 /* A GSL failure aborts instead of returning a result. */
@@ -86,12 +113,6 @@ test_ncm_integrate_cached_0_x (void)
   ncm_function_cache_free (tight);
 }
 
-static gdouble
-_f_x_p_y (gdouble x, gdouble y, gpointer p)
-{
-  return x + y;
-}
-
 /* Divonne integrates correctly and leaves the caller's peak list unchanged. */
 static void
 test_ncm_integrate_divonne_xgiven (void)
@@ -105,21 +126,5 @@ test_ncm_integrate_divonne_xgiven (void)
   g_assert_cmpfloat (xgiven[0], ==, 0.25);
   g_assert_cmpfloat (xgiven[1], ==, 1.5);
   ncm_assert_cmpdouble_e (res, ==, 3.0, 1.0e-8, 0.0);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/integrate/locked_a_b/failure", &test_ncm_integrate_locked_failure);
-  g_test_add_func ("/ncm/integrate/locked_a_b/failure/subprocess", &test_ncm_integrate_locked_failure_subprocess);
-  g_test_add_func ("/ncm/integrate/cached_0_x", &test_ncm_integrate_cached_0_x);
-  g_test_add_func ("/ncm/integrate/divonne_xgiven", &test_ncm_integrate_divonne_xgiven);
-
-  g_test_run ();
 }
 

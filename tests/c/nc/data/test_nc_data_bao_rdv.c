@@ -136,12 +136,147 @@ test_nc_data_bao_rdv_free (TestNcDataBaoRDV *test, gconstpointer pdata)
 }
 
 /* Percival2007 */
-
 void
 test_nc_data_bao_rdv_new_percival2007 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *data;
   NcDataBaoId id   = NC_DATA_BAO_RDV_PERCIVAL2007;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* Percival 2010 */
+void
+test_nc_data_bao_rdv_new_percival2010 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcDataBaoId id   = NC_DATA_BAO_RDV_PERCIVAL2010;
+  NcDistance *dist = nc_distance_new (2.0);
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* Beutler 2011 */
+void
+test_nc_data_bao_rdv_new_beutler2011 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_BEUTLER2011;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* Padmanabhan 2012 */
+void
+test_nc_data_bao_rdv_new_padmanabhan2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_PADMANABHAN2012;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* Anderson 2012 */
+void
+test_nc_data_bao_rdv_new_anderson2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_ANDERSON2012;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* Blake 2012 */
+void
+test_nc_data_bao_rdv_new_blake2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_BLAKE2012;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* Kazin 2014 */
+void
+test_nc_data_bao_rdv_new_kazin2014 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_KAZIN2014;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* DESI DR1 BGS and QSO 2024 */
+void
+test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024;
+  NcDistance *dist = nc_distance_new (2.0);
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
+  g_assert_true (data != NULL);
+  test->rdv = NC_DATA_BAO_RDV (data);
+  g_assert_true (NC_IS_DATA_BAO_RDV (data));
+
+  nc_distance_free (dist);
+}
+
+/* DESI DR2 - BGS - 2025 */
+void
+test_nc_data_bao_rdv_new_desi_dr2_bgs_2025 (TestNcDataBaoRDV *test, gconstpointer pdata)
+{
+  NcmData *data;
+  NcDataBaoId id   = NC_DATA_BAO_RDV_DESI_DR2_BGS_2025;
   NcDistance *dist = nc_distance_new (2.0);
 
   test->id = id;
@@ -195,24 +330,6 @@ test_nc_data_bao_rdv_set_sample_percival2007 (TestNcDataBaoRDV *test, gconstpoin
   ncm_vector_free (x);
 }
 
-/* Percival 2010 */
-
-void
-test_nc_data_bao_rdv_new_percival2010 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcDataBaoId id   = NC_DATA_BAO_RDV_PERCIVAL2010;
-  NcDistance *dist = nc_distance_new (2.0);
-  NcmData *data;
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
-}
-
 void
 test_nc_data_bao_rdv_set_sample_percival2010 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
@@ -254,24 +371,6 @@ test_nc_data_bao_rdv_set_sample_percival2010 (TestNcDataBaoRDV *test, gconstpoin
   ncm_vector_free (x);
 }
 
-/* Beutler 2011 */
-
-void
-test_nc_data_bao_rdv_new_beutler2011 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_RDV_BEUTLER2011;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
-}
-
 void
 test_nc_data_bao_rdv_set_sample_beutler2011 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
@@ -301,24 +400,6 @@ test_nc_data_bao_rdv_set_sample_beutler2011 (TestNcDataBaoRDV *test, gconstpoint
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 0, 0), ==, icov00);
 
   ncm_vector_free (x);
-}
-
-/* Padmanabhan 2012 */
-
-void
-test_nc_data_bao_rdv_new_padmanabhan2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_RDV_PADMANABHAN2012;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
 }
 
 void
@@ -352,24 +433,6 @@ test_nc_data_bao_rdv_set_sample_padmanabhan2012 (TestNcDataBaoRDV *test, gconstp
   ncm_vector_free (x);
 }
 
-/* Anderson 2012 */
-
-void
-test_nc_data_bao_rdv_new_anderson2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_RDV_ANDERSON2012;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
-}
-
 void
 test_nc_data_bao_rdv_set_sample_anderson2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
@@ -399,24 +462,6 @@ test_nc_data_bao_rdv_set_sample_anderson2012 (TestNcDataBaoRDV *test, gconstpoin
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 0, 0), ==, icov00);
 
   ncm_vector_free (x);
-}
-
-/* Blake 2012 */
-
-void
-test_nc_data_bao_rdv_new_blake2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_RDV_BLAKE2012;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
 }
 
 void
@@ -475,24 +520,6 @@ test_nc_data_bao_rdv_set_sample_blake2012 (TestNcDataBaoRDV *test, gconstpointer
   ncm_vector_free (x);
 }
 
-/* Kazin 2014 */
-
-void
-test_nc_data_bao_rdv_new_kazin2014 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_RDV_KAZIN2014;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
-}
-
 void
 test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
@@ -549,24 +576,6 @@ test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpointer
   ncm_vector_free (x);
 }
 
-/* DESI DR1 BGS and QSO 2024 */
-
-void
-test_nc_data_bao_rdv_new_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_RDV_DESI_DR1_BGS_QSO_2024;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
-}
-
 void
 test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
@@ -607,24 +616,6 @@ test_nc_data_bao_rdv_set_sample_desi_dr1_bgs_qso_2024 (TestNcDataBaoRDV *test, g
   ncm_assert_cmpdouble (ncm_matrix_get (inv_cov, 1, 1), ==, icov11);
 
   ncm_vector_free (x);
-}
-
-/* DESI DR2 - BGS - 2025 */
-
-void
-test_nc_data_bao_rdv_new_desi_dr2_bgs_2025 (TestNcDataBaoRDV *test, gconstpointer pdata)
-{
-  NcmData *data;
-  NcDataBaoId id   = NC_DATA_BAO_RDV_DESI_DR2_BGS_2025;
-  NcDistance *dist = nc_distance_new (2.0);
-
-  test->id = id;
-  data     = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
-  g_assert_true (data != NULL);
-  test->rdv = NC_DATA_BAO_RDV (data);
-  g_assert_true (NC_IS_DATA_BAO_RDV (data));
-
-  nc_distance_free (dist);
 }
 
 void

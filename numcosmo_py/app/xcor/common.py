@@ -141,36 +141,10 @@ class XcorKernelCommon:
             min=0.0,
             max=1.0,
             help=(
-                "NcmSBesselIntegratorLevin ODE solve relative tolerance "
-                "(library default: 1e-13, near machine precision). "
-                "This is the dominant cost/precision knob for tier 3 -- "
-                "see dev-notes/xcor_ultralevin_batching_plan.md sec 9.4. "
-                "Leave unset to keep the library default."
-            ),
-        ),
-    ] = None
-
-    integrator_cheb_reltol: Annotated[
-        float | None,
-        typer.Option(
-            min=0.0,
-            max=1.0,
-            help=(
-                "NcmSBesselIntegratorLevin integrand Chebyshev-fit relative "
-                "tolerance (library default: 1e-8). The looser of this and "
-                "--integrator-reltol bounds the result. Leave unset to keep "
+                "NcmSBesselIntegratorLevin relative tolerance, for the forcing "
+                "fit and the ODE solve (library default: 1e-8). This is the "
+                "dominant cost/precision knob for tier 3. Leave unset to keep "
                 "the library default."
-            ),
-        ),
-    ] = None
-
-    integrator_max_order: Annotated[
-        int | None,
-        typer.Option(
-            help=(
-                "NcmSBesselIntegratorLevin maximum spectral order "
-                "(library default: 16384). Leave unset to keep the library "
-                "default."
             ),
         ),
     ] = None
@@ -222,12 +196,10 @@ class XcorKernelCommon:
         :raises typer.BadParameter: If a tolerance is not positive.
         """
         # typer's min is inclusive, but zero tolerance aborts in the library.
-        for name, tol in (
-            ("--integrator-reltol", self.integrator_reltol),
-            ("--integrator-cheb-reltol", self.integrator_cheb_reltol),
-        ):
-            if tol is not None and tol <= 0.0:
-                raise typer.BadParameter(f"{name} must be positive, got {tol}.")
+        if self.integrator_reltol is not None and self.integrator_reltol <= 0.0:
+            raise typer.BadParameter(
+                f"--integrator-reltol must be positive, got {self.integrator_reltol}."
+            )
 
         self._create_cosmology()
         self._create_integrator()
@@ -284,8 +256,8 @@ class XcorKernelCommon:
     def _create_integrator(self) -> None:
         """Create the Levin integrator shared by every kernel.
 
-        Pass the tolerances at construction: set_reltol() would rebuild every
-        operator to apply them, which is pure waste when nothing has run yet.
+        Pass the tolerance at construction: set_reltol() would rebuild every
+        operator to apply it, which is pure waste when nothing has run yet.
         """
         print("Creating integrator...")
         defaults = Ncm.SBesselIntegratorLevin.new(0, 8)
@@ -302,27 +274,16 @@ class XcorKernelCommon:
                 else defaults.get_reltol()
             ),
             defaults.get_cheb_min_order(),
-            (
-                self.integrator_cheb_reltol
-                if self.integrator_cheb_reltol is not None
-                else defaults.get_cheb_reltol()
-            ),
         )
-        if self.integrator_max_order is not None:
-            self.integrator.set_max_order(self.integrator_max_order)
         # A closure cannot be fitted to more precision than the integrator
         # samples, and the library refuses the pairing. The integrator
-        # tolerances are the ones this command exposes, so a request to compute
+        # tolerance is the one this command exposes, so a request to compute
         # loosely is honoured by loosening the fit to match rather than by
         # failing.
-        self.closure_tol_floor = max(
-            self.integrator.get_reltol(), self.integrator.get_cheb_reltol()
-        )
+        self.closure_tol_floor = self.integrator.get_reltol()
         print(
             f"  [OK] Levin integrator created "
-            f"(reltol={self.integrator.get_reltol():.1e}, "
-            f"cheb_reltol={self.integrator.get_cheb_reltol():.1e}, "
-            f"max_order={self.integrator.get_max_order()})"
+            f"(reltol={self.integrator.get_reltol():.1e})"
         )
         print()
 
@@ -692,6 +653,7 @@ class XcorKernelCommon:
         """
         if self._solver_cache is None:
             solver = Nc.XcorSolver.new()
+            solver.set_reltol(self.integrator.get_reltol())
             ids = [solver.register_kernel(kernel) for _, kernel in self.kernels]
             self._solver_cache = (solver, ids)
         return self._solver_cache

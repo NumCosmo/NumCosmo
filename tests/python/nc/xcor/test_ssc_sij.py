@@ -151,8 +151,8 @@ def test_diagonal_dominates(cosmology: Cosmology) -> None:
     """Off-diagonal S_ij of separated bins are orders below the diagonal.
 
     This is what makes the off-diagonals hard: they are a small residual of a
-    large cancellation, which is why `peak-epsilon` and not `reltol` sets
-    their accuracy.
+    large cancellation, so their accuracy is set by the closures' peak-epsilon,
+    which the solver sets at its floor (1e-6) at the default reltol.
     """
     sij = _matrix_to_np(_make_ssc_sij(cosmology).eval(cosmology.cosmo))
 
@@ -335,27 +335,6 @@ def test_footprint_can_be_given_at_construction(cosmology: Cosmology) -> None:
     )
 
 
-def test_area_and_mask_are_mutually_exclusive(cosmology: Cosmology) -> None:
-    """Setting one footprint description discards the other."""
-    mask = _cap_mask()
-    cl_mask, _fsky = mask_angular_power_spectrum(mask)
-    lmax = find_lmax(cl_mask)
-
-    ssc_sij = _make_ssc_sij(cosmology)
-
-    ssc_sij.set_area(3000.0)
-    assert ssc_sij.get_area() == 3000.0
-    assert ssc_sij.get_lmax() == 0
-
-    ssc_sij.set_mask_cl(Ncm.Vector.new_array(cl_mask[: lmax + 1].tolist()))
-    assert ssc_sij.get_area() == 0.0
-    assert ssc_sij.get_lmax() == lmax
-
-    ssc_sij.set_area(3000.0)
-    assert ssc_sij.get_area() == 3000.0
-    assert ssc_sij.get_lmax() == 0
-
-
 def test_area_survives_serialization(cosmology: Cosmology) -> None:
     """The area rescaling round trips.
 
@@ -388,10 +367,6 @@ def test_serialization_round_trip(cosmology: Cosmology) -> None:
     ssc_sij = _make_ssc_sij(cosmology)
     ssc_sij.set_mask_cl(Ncm.Vector.new_array(cl_mask[: lmax + 1].tolist()))
     ssc_sij.set_reltol(1.0e-7)
-    # Non-default marker for the round trip, kept at or above 1e-6 and away from
-    # reltol -- the floor enters the S_ij integrand squared, and ssc.py warns
-    # against letting the two tolerances coincide.
-    ssc_sij.set_peak_epsilon(3.0e-6)
     ssc_sij.set_block_size(4)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
@@ -403,7 +378,6 @@ def test_serialization_round_trip(cosmology: Cosmology) -> None:
     assert dup.get_block_size() == ssc_sij.get_block_size()
     assert dup.get_method() == ssc_sij.get_method()
     assert_allclose(dup.get_reltol(), ssc_sij.get_reltol())
-    assert_allclose(dup.get_peak_epsilon(), ssc_sij.get_peak_epsilon())
     assert_allclose(dup.get_fsky(), ssc_sij.get_fsky(), rtol=1.0e-12)
 
     assert_allclose(

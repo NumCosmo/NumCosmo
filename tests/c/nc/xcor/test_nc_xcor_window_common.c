@@ -72,11 +72,6 @@ typedef struct _TestSetting
   gdouble factor;           /* the deviation bound, in units of peak-epsilon */
 } TestSetting;
 
-static const TestSetting test_settings[] = {
-  {"default", 0.0,    0.0,    0.0,    3.0},
-  {"tight",   1.0e-8, 1.0e-7, 1.0e-9, 3.0},
-};
-
 /* One (shape, order) case: the kernel's key in its table, the table whose multipoles it
  * leaves out (NULL: none), and whether the scale is the closure's own peak */
 typedef struct _TestCase
@@ -87,6 +82,84 @@ typedef struct _TestCase
   NcmObjDictStr *exclude;
   gboolean closure_peak;
 } TestCase;
+
+static void test_nc_xcor_window (gconstpointer pdata);
+static gint _test_cmp_str (gconstpointer a, gconstpointer b);
+static void _test_case_free (gpointer data);
+
+static const TestSetting test_settings[] = {
+  {"default", 0.0,    0.0,    0.0,    3.0},
+  {"tight",   1.0e-8, 1.0e-7, 1.0e-9, 3.0},
+};
+
+/**
+ * test_nc_xcor_window_register:
+ * @table: the table of certified windows and their kernels
+ * @exclude: (nullable): a table whose multipoles are left out
+ * @closure_peak: whether a multipole's scale is the closure's own peak
+ * @d: Bessel-derivative order
+ * @forms: which kernels to register
+ * @prefix: test-path prefix
+ *
+ * Registers a test per kernel of order @d in @table selected by @forms, at
+ * @prefix/d@d/shape.
+ */
+void
+test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, guint d, TestNcXcorWindowForms forms, const gchar *prefix)
+{
+  GStrv all_keys  = ncm_obj_dict_str_keys (table);
+  GPtrArray *keys = g_ptr_array_new ();
+  guint i;
+
+  for (i = 0; all_keys[i] != NULL; i++)
+    g_ptr_array_add (keys, all_keys[i]);
+
+  g_ptr_array_sort (keys, _test_cmp_str);
+
+  for (i = 0; i < keys->len; i++)
+  {
+    const gchar *key = g_ptr_array_index (keys, i);
+
+    if (g_str_has_prefix (key, "kernel/"))
+    {
+      gchar **parts       = g_strsplit (key, "/", 3);
+      TestCase *tc        = g_new0 (TestCase, 1);
+      gboolean power_exp  = NC_IS_XCOR_KERNEL_ANALYTIC_POWER_EXP (ncm_obj_dict_str_peek (table, key));
+      gboolean registered = TRUE;
+      gchar *path;
+
+      tc->shape        = g_strdup (parts[1]);
+      tc->d            = atoi (parts[2] + 1);
+      tc->table        = table;
+      tc->exclude      = exclude;
+      tc->closure_peak = closure_peak;
+      path             = g_strdup_printf ("%s/d%u/%s", prefix, tc->d, tc->shape);
+
+      switch (forms)
+      {
+        case TEST_NC_XCOR_WINDOW_FORMS_POWER_EXP:
+          registered = power_exp;
+          break;
+        case TEST_NC_XCOR_WINDOW_FORMS_OTHER:
+          registered = !power_exp;
+          break;
+        default:
+          break;
+      }
+
+      if ((tc->d == d) && registered)
+        g_test_add_data_func_full (path, tc, &test_nc_xcor_window, &_test_case_free);
+      else
+        _test_case_free (tc);
+
+      g_free (path);
+      g_strfreev (parts);
+    }
+  }
+
+  g_ptr_array_unref (keys);
+  g_free (all_keys); /* transfer container */
+}
 
 static gint
 _test_cmp_int (gconstpointer a, gconstpointer b)
@@ -290,117 +363,6 @@ _test_checks_ell (const TestCase *tc, gint ell)
   return checks;
 }
 
-/*
- * One (shape, order): the closures at every setting, the multipoles 2..9 as one block,
- * as the solver builds them, and every other multipole alone.
- */
-static void
-test_nc_xcor_window (gconstpointer pdata)
-{
-  const TestCase *tc = pdata;
-  gchar *kkey        = g_strdup_printf ("kernel/%s/d%u", tc->shape, tc->d);
-  NcXcorKernel *xclk = NC_XCOR_KERNEL (ncm_obj_dict_str_peek (tc->table, kkey));
-  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  GArray *ells       = _test_ells (tc->table, tc->shape);
-  guint s, i;
-
-  g_assert_nonnull (xclk);
-
-  for (s = 0; s < G_N_ELEMENTS (test_settings); s++)
-  {
-    guint n_block = 0;
-
-    for (i = 0; i < ells->len; i++)
-      if ((g_array_index (ells, gint, i) >= 2) && (g_array_index (ells, gint, i) <= 9) &&
-          _test_checks_ell (tc, g_array_index (ells, gint, i)))
-        n_block++;
-
-    if (n_block == 8)
-      _test_block (xclk, cosmo, tc, &test_settings[s], 2, 9);
-
-    for (i = 0; i < ells->len; i++)
-    {
-      const gint ell = g_array_index (ells, gint, i);
-
-      if (((n_block != 8) || (ell > 9)) && _test_checks_ell (tc, ell))
-        _test_block (xclk, cosmo, tc, &test_settings[s], ell, ell);
-    }
-  }
-
-  g_array_unref (ells);
-  nc_hicosmo_free (cosmo);
-  g_free (kkey);
-}
-
-/**
- * test_nc_xcor_window_register:
- * @table: the table of certified windows and their kernels
- * @exclude: (nullable): a table whose multipoles are left out
- * @closure_peak: whether a multipole's scale is the closure's own peak
- * @d: Bessel-derivative order
- * @forms: which kernels to register
- * @prefix: test-path prefix
- *
- * Registers a test per kernel of order @d in @table selected by @forms, at
- * @prefix/d@d/shape.
- */
-void
-test_nc_xcor_window_register (NcmObjDictStr *table, NcmObjDictStr *exclude, gboolean closure_peak, guint d, TestNcXcorWindowForms forms, const gchar *prefix)
-{
-  GStrv all_keys  = ncm_obj_dict_str_keys (table);
-  GPtrArray *keys = g_ptr_array_new ();
-  guint i;
-
-  for (i = 0; all_keys[i] != NULL; i++)
-    g_ptr_array_add (keys, all_keys[i]);
-
-  g_ptr_array_sort (keys, _test_cmp_str);
-
-  for (i = 0; i < keys->len; i++)
-  {
-    const gchar *key = g_ptr_array_index (keys, i);
-
-    if (g_str_has_prefix (key, "kernel/"))
-    {
-      gchar **parts       = g_strsplit (key, "/", 3);
-      TestCase *tc        = g_new0 (TestCase, 1);
-      gboolean power_exp  = NC_IS_XCOR_KERNEL_ANALYTIC_POWER_EXP (ncm_obj_dict_str_peek (table, key));
-      gboolean registered = TRUE;
-      gchar *path;
-
-      tc->shape        = g_strdup (parts[1]);
-      tc->d            = atoi (parts[2] + 1);
-      tc->table        = table;
-      tc->exclude      = exclude;
-      tc->closure_peak = closure_peak;
-      path             = g_strdup_printf ("%s/d%u/%s", prefix, tc->d, tc->shape);
-
-      switch (forms)
-      {
-        case TEST_NC_XCOR_WINDOW_FORMS_POWER_EXP:
-          registered = power_exp;
-          break;
-        case TEST_NC_XCOR_WINDOW_FORMS_OTHER:
-          registered = !power_exp;
-          break;
-        default:
-          break;
-      }
-
-      if ((tc->d == d) && registered)
-        g_test_add_data_func_full (path, tc, &test_nc_xcor_window, &_test_case_free);
-      else
-        _test_case_free (tc);
-
-      g_free (path);
-      g_strfreev (parts);
-    }
-  }
-
-  g_ptr_array_unref (keys);
-  g_free (all_keys); /* transfer container */
-}
-
 /* The table in @filename, a dictionary of the certified windows and their kernels */
 static NcmObjDictStr *
 _test_table (const gchar *filename)
@@ -447,5 +409,47 @@ test_nc_xcor_window_sparse_table (void)
   g_free (filename);
 
   return table;
+}
+
+/*
+ * One (shape, order): the closures at every setting, the multipoles 2..9 as one block,
+ * as the solver builds them, and every other multipole alone.
+ */
+static void
+test_nc_xcor_window (gconstpointer pdata)
+{
+  const TestCase *tc = pdata;
+  gchar *kkey        = g_strdup_printf ("kernel/%s/d%u", tc->shape, tc->d);
+  NcXcorKernel *xclk = NC_XCOR_KERNEL (ncm_obj_dict_str_peek (tc->table, kkey));
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  GArray *ells       = _test_ells (tc->table, tc->shape);
+  guint s, i;
+
+  g_assert_nonnull (xclk);
+
+  for (s = 0; s < G_N_ELEMENTS (test_settings); s++)
+  {
+    guint n_block = 0;
+
+    for (i = 0; i < ells->len; i++)
+      if ((g_array_index (ells, gint, i) >= 2) && (g_array_index (ells, gint, i) <= 9) &&
+          _test_checks_ell (tc, g_array_index (ells, gint, i)))
+        n_block++;
+
+    if (n_block == 8)
+      _test_block (xclk, cosmo, tc, &test_settings[s], 2, 9);
+
+    for (i = 0; i < ells->len; i++)
+    {
+      const gint ell = g_array_index (ells, gint, i);
+
+      if (((n_block != 8) || (ell > 9)) && _test_checks_ell (tc, ell))
+        _test_block (xclk, cosmo, tc, &test_settings[s], ell, ell);
+    }
+  }
+
+  g_array_unref (ells);
+  nc_hicosmo_free (cosmo);
+  g_free (kkey);
 }
 

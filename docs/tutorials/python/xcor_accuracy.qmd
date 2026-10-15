@@ -63,7 +63,7 @@ def sci(x, digits=1):
 # The settings compared on this page: (reltol, peak-epsilon).
 SETTINGS = {
     "NcXcorKernel default": (1.0e-4, 1.0e-4),
-    "NcXcorSSCSij default": (1.0e-6, 1.0e-5),
+    "reltol 1e-6, peak-epsilon 1e-5": (1.0e-6, 1.0e-5),
     "validation": (1.0e-8, 1.0e-6),
 }
 ```
@@ -131,7 +131,7 @@ def closure_cost(kernel):
 
 cost_settings = {
     "NcXcorKernel default": (1.0e-4, 1.0e-4),
-    "NcXcorSSCSij default": (1.0e-6, 1.0e-5),
+    "reltol 1e-6, peak-epsilon 1e-5": (1.0e-6, 1.0e-5),
     "reltol 100 times smaller": (1.0e-8, 1.0e-5),
     "peak-epsilon 10 times smaller": (1.0e-6, 1.0e-6),
 }
@@ -146,13 +146,13 @@ for name, (reltol, peak_epsilon) in cost_settings.items():
 ```{python}
 #| echo: false
 # The claims of the paragraph below, checked so that a change breaks the render.
-assert cost["NcXcorSSCSij default"] == cost["reltol 100 times smaller"]
-assert cost["peak-epsilon 10 times smaller"][1] > cost["NcXcorSSCSij default"][1]
+assert cost["reltol 1e-6, peak-epsilon 1e-5"] == cost["reltol 100 times smaller"]
+assert cost["peak-epsilon 10 times smaller"][1] > cost["reltol 1e-6, peak-epsilon 1e-5"][1]
 
 display(Markdown(rf"""
 At peak-epsilon $10^{{-5}}$, reltol $10^{{-6}}$ and $10^{{-8}}$ give the same
-{cost['NcXcorSSCSij default'][0]} panels and {cost['NcXcorSSCSij default'][1]} nodes. A
-peak-epsilon 10 times smaller increases the nodes from {cost['NcXcorSSCSij default'][1]}
+{cost['reltol 1e-6, peak-epsilon 1e-5'][0]} panels and {cost['reltol 1e-6, peak-epsilon 1e-5'][1]} nodes. A
+peak-epsilon 10 times smaller increases the nodes from {cost['reltol 1e-6, peak-epsilon 1e-5'][1]}
 to {cost['peak-epsilon 10 times smaller'][1]}. On this kernel the cost of a closure is set
 by peak-epsilon.
 """))
@@ -170,7 +170,7 @@ peak.
 
 A closure is not more accurate than the values it interpolates. Building a closure
 aborts when the larger of reltol and peak-epsilon is below the relative tolerance of the
-integrator that evaluates $W_\ell(k)$, `NcmSBesselIntegratorLevin:cheb-reltol`, which is
+integrator that evaluates $W_\ell(k)$, `NcmSBesselIntegratorLevin:reltol`, which is
 $10^{-8}$ by default.
 :::
 
@@ -200,7 +200,7 @@ $$
 where $\delta W$ on a panel is the sum of the absolute values of the coefficients above
 the order of the level below, a bound on the difference between the two expansions the
 acceptance test compared. The cell below computes three spectra of cluster top-hat bins
-at the [[numcosmo|NcXcorSSCSij]] defaults: the auto spectrum of $0.1 < z < 0.2$, its
+at reltol $10^{-6}$ and peak-epsilon $10^{-5}$: the auto spectrum of $0.1 < z < 0.2$, its
 cross spectrum with the adjacent bin $0.3 < z < 0.4$, and its cross spectrum with the
 separated bin $0.6 < z < 0.7$.
 
@@ -208,7 +208,7 @@ separated bin $0.6 < z < 0.7$.
 xcor = Nc.Xcor.new(dist, ps, Nc.XcorMethod.KERNEL_EXACT)
 xcor.prepare(cosmo)
 
-RELTOL, PEAK_EPSILON = SETTINGS["NcXcorSSCSij default"]
+RELTOL, PEAK_EPSILON = SETTINGS["reltol 1e-6, peak-epsilon 1e-5"]
 bins = {
     "0.1 < z < 0.2": make_kernel(0.1, 0.2, RELTOL, PEAK_EPSILON),
     "0.3 < z < 0.4": make_kernel(0.3, 0.4, RELTOL, PEAK_EPSILON),
@@ -355,7 +355,7 @@ ref_diagonal = np.sqrt(np.abs(ref_auto * ref_far))
 
 dev = {}
 print(f"{'setting':<22} {'auto':>10} {'separated':>10}")
-for name in ("NcXcorKernel default", "NcXcorSSCSij default"):
+for name in ("NcXcorKernel default", "reltol 1e-6, peak-epsilon 1e-5"):
     cl_auto, cl_separated, _ = pair_spectra(*SETTINGS[name])
     dev[name] = (
         np.abs(cl_auto - ref_auto).max() / np.abs(ref_auto).max(),
@@ -368,13 +368,13 @@ for name in ("NcXcorKernel default", "NcXcorSSCSij default"):
 #| echo: false
 display(Markdown(rf"""
 At the defaults of [[numcosmo|NcXcorKernel]] the deviations are {sci(dev['NcXcorKernel default'][0])}
-of the auto spectrum and {sci(dev['NcXcorKernel default'][1])} of the diagonal. At the
-defaults of [[numcosmo|NcXcorSSCSij]] the auto spectrum agrees with the reference to
-{sci(dev['NcXcorSSCSij default'][0])} and the separated cross spectrum to
-{sci(dev['NcXcorSSCSij default'][1])} of the diagonal. At this setting the estimates of
+of the auto spectrum and {sci(dev['NcXcorKernel default'][1])} of the diagonal. At reltol
+$10^{{-6}}$ and peak-epsilon $10^{{-5}}$ the auto spectrum agrees with the reference to
+{sci(dev['reltol 1e-6, peak-epsilon 1e-5'][0])} and the separated cross spectrum to
+{sci(dev['reltol 1e-6, peak-epsilon 1e-5'][1])} of the diagonal. At this setting the estimates of
 the previous section exceed these deviations by a factor of
-{diag_err['cross, separated bins'] / dev['NcXcorSSCSij default'][1]:.0f} for the separated
-cross spectrum and {sci(rel_err['auto, 0.1 < z < 0.2'] / dev['NcXcorSSCSij default'][0])}
+{diag_err['cross, separated bins'] / dev['reltol 1e-6, peak-epsilon 1e-5'][1]:.0f} for the separated
+cross spectrum and {sci(rel_err['auto, 0.1 < z < 0.2'] / dev['reltol 1e-6, peak-epsilon 1e-5'][0])}
 for the auto spectrum.
 """))
 ```
@@ -512,7 +512,7 @@ than peak-epsilon.
 
 ```{python}
 #| echo: false
-_a2_ssc = certified_deviation['A2', 'NcXcorSSCSij default']
+_a2_ssc = certified_deviation['A2', 'reltol 1e-6, peak-epsilon 1e-5']
 _a2_val = certified_deviation['A2', 'validation']
 _a2_dom = certified_deviation['A2', 'validation, adaptive-epsilon 1e-9']
 _x14_val = certified_deviation['X14', 'validation']
@@ -535,7 +535,7 @@ display(Markdown(rf"""
 At the same setting the separated pair X14, with its hard edges, deviates by at most
 {_ratio:.1f} times the deviation of the auto spectrum A2.
 
-A2 deviates by {sci(_a2_ssc[0])} at the [[numcosmo|NcXcorSSCSij]] setting ($\ell = {_a2_ssc[1]}$)
+A2 deviates by {sci(_a2_ssc[0])} at reltol $10^{{-6}}$ and peak-epsilon $10^{{-5}}$ ($\ell = {_a2_ssc[1]}$)
 and by {sci(_a2_val[0])} at the validation setting ($\ell = {_a2_val[1]}$), so this part
 of its deviation does not decrease with peak-epsilon. It is the range of $k$: at
 $\ell = 5$ the closure ends at {closure_range['default'][1]:.2f} $\mathrm{{Mpc^{{-1}}}}$
@@ -615,7 +615,7 @@ top-hat are therefore larger than those of a smooth window.
 - On the cluster top-hat of this page the cost of a closure is set by peak-epsilon.
   [[numcosmo|nc_xcor_kernel_set_peak_epsilon]] warns below $10^{-6}$, and the
   construction aborts when the larger of the two is below the integrator's
-  `cheb-reltol`.
+  `reltol`.
 - `NcXcorKernel:adaptive-epsilon` ends the range of $k$. What lies beyond it is part of
   neither $C_\ell$ nor its error estimate; what the default leaves out of A2 is measured
   in [Certified values](#sec-certified).

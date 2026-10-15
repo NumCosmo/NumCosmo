@@ -48,11 +48,13 @@ typedef struct _TestNcDistanceVector
   void (*calc_vector) (NcDistance *dist, NcHICosmo *cosmo, NcmVector *z, NcmVector *res);
 } TestNcDistanceVector;
 
-TestNcDistanceVector comoving         = {nc_distance_comoving, nc_distance_comoving_array, nc_distance_comoving_vector};
-TestNcDistanceVector transverse       = {nc_distance_transverse, nc_distance_transverse_array, nc_distance_transverse_vector};
-TestNcDistanceVector luminosity       = {nc_distance_luminosity, nc_distance_luminosity_array, nc_distance_luminosity_vector};
-TestNcDistanceVector angular_diameter = {nc_distance_angular_diameter, nc_distance_angular_diameter_array, nc_distance_angular_diameter_vector};
-TestNcDistanceVector dmodulus         = {nc_distance_dmodulus, nc_distance_dmodulus_array, nc_distance_dmodulus_vector};
+/*
+ * Helper structure and function for GSL integration in volume radial integral tests
+ */
+typedef struct _TestIntegrandData
+{
+  gdouble Omega_k;
+} TestIntegrandData;
 
 void test_nc_distance_new (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_new_spherical (TestNcDistance *test, gconstpointer pdata);
@@ -98,6 +100,16 @@ void test_nc_distance_drag_redshift_no_recomb (TestNcDistance *test, gconstpoint
 
 void test_nc_distance_free (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_free_recomb (TestNcDistance *test, gconstpointer pdata);
+
+TestNcDistanceVector comoving = {nc_distance_comoving, nc_distance_comoving_array, nc_distance_comoving_vector};
+
+TestNcDistanceVector transverse = {nc_distance_transverse, nc_distance_transverse_array, nc_distance_transverse_vector};
+
+TestNcDistanceVector luminosity = {nc_distance_luminosity, nc_distance_luminosity_array, nc_distance_luminosity_vector};
+
+TestNcDistanceVector angular_diameter = {nc_distance_angular_diameter, nc_distance_angular_diameter_array, nc_distance_angular_diameter_vector};
+
+TestNcDistanceVector dmodulus = {nc_distance_dmodulus, nc_distance_dmodulus_array, nc_distance_dmodulus_vector};
 
 gint
 main (gint argc, gchar *argv[])
@@ -399,6 +411,93 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_free);
 
   g_test_run ();
+}
+
+static gdouble
+_no_lambda_comoving (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble E2        = nc_hicosmo_E2 (cosmo, z);
+  const gdouble E2Omega_r = nc_hicosmo_E2Omega_r (cosmo, z);
+
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
+
+  const gdouble x = (sqrt (E2Omega_r) - sqrt (E2)) / (1.0 + z);
+  const gdouble y = sqrt (Omega_r0) - 1.0;
+
+  if (fabs (Omega_k0) < 1.0e-14)
+  {
+    return 2.0 / x - 2.0 / y;
+  }
+  else if (Omega_k0 < 0.0)
+  {
+    const gdouble atan_x = atan (x / sqrt (fabs (Omega_k0)));
+    const gdouble atan_y = atan (y / sqrt (fabs (Omega_k0)));
+
+    return -2.0 * (atan_x - atan_y) / sqrt (fabs (Omega_k0));
+  }
+  else
+  {
+    const gdouble xa  = x / sqrt (Omega_k0);
+    const gdouble ya  = y / sqrt (Omega_k0);
+    const gdouble arg = 2.0 * (xa - ya) / ((1.0 - xa) * (1.0 + ya));
+
+    return log1p (arg) / sqrt (Omega_k0);
+  }
+}
+
+static gdouble
+_volume_integrand (gdouble chi_prime, void *params)
+{
+  TestIntegrandData *data = (TestIntegrandData *) params;
+  const gdouble Omega_k   = data->Omega_k;
+
+  if (fabs (Omega_k) > NCM_ZERO_LIMIT)
+  {
+    const gdouble abs_Ok  = fabs (Omega_k);
+    const gdouble sqrt_Ok = sqrt (abs_Ok);
+    gdouble sinn_val;
+
+    if (Omega_k > 0.0)
+      sinn_val = sinh (sqrt_Ok * chi_prime);
+    else
+      sinn_val = sin (sqrt_Ok * chi_prime);
+
+    return (sinn_val * sinn_val) / abs_Ok;
+  }
+  else
+  {
+    return chi_prime * chi_prime;
+  }
+}
+
+/*
+ * The fitting formulas of nc_distance_decoupling_redshift () and
+ * nc_distance_drag_redshift (): Hu & Sugiyama (1996) for $z_\star$ and Eisenstein & Hu
+ * (1998) for $z_d$. Copies of the expressions in nc_distance.c, so that a change to
+ * either one has to be made here as well.
+ */
+static gdouble
+test_nc_distance_z_star_hu_sugiyama (NcHICosmo *cosmo)
+{
+  const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
+  const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
+  const gdouble g1         = 0.0783 * pow (omega_b_h2, -0.238) / (1.0 + 39.5 * pow (omega_b_h2, 0.763));
+  const gdouble g2         = 0.560 / (1.0 + 21.1 * pow (omega_b_h2, 1.81));
+
+  return 1048.0 * (1.0 + 1.24e-3 * pow (omega_b_h2, -0.738)) * (1.0 + g1 * pow (omega_m_h2, g2));
+}
+
+static gdouble
+test_nc_distance_z_d_eisenstein_hu (NcHICosmo *cosmo)
+{
+  const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
+  const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
+  const gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
+  const gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
+
+  return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
+         (1.0 + b1 * pow (omega_b_h2, b2));
 }
 
 void
@@ -898,39 +997,6 @@ test_nc_distance_array (TestNcDistance *test, gconstpointer pdata)
   ncm_vector_free (res_vec);
 }
 
-static gdouble
-_no_lambda_comoving (NcHICosmo *cosmo, const gdouble z)
-{
-  const gdouble E2        = nc_hicosmo_E2 (cosmo, z);
-  const gdouble E2Omega_r = nc_hicosmo_E2Omega_r (cosmo, z);
-
-  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
-  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
-
-  const gdouble x = (sqrt (E2Omega_r) - sqrt (E2)) / (1.0 + z);
-  const gdouble y = sqrt (Omega_r0) - 1.0;
-
-  if (fabs (Omega_k0) < 1.0e-14)
-  {
-    return 2.0 / x - 2.0 / y;
-  }
-  else if (Omega_k0 < 0.0)
-  {
-    const gdouble atan_x = atan (x / sqrt (fabs (Omega_k0)));
-    const gdouble atan_y = atan (y / sqrt (fabs (Omega_k0)));
-
-    return -2.0 * (atan_x - atan_y) / sqrt (fabs (Omega_k0));
-  }
-  else
-  {
-    const gdouble xa  = x / sqrt (Omega_k0);
-    const gdouble ya  = y / sqrt (Omega_k0);
-    const gdouble arg = 2.0 * (xa - ya) / ((1.0 - xa) * (1.0 + ya));
-
-    return log1p (arg) / sqrt (Omega_k0);
-  }
-}
-
 void
 test_nc_distance_comoving_no_lambda (TestNcDistance *test, gconstpointer pdata)
 {
@@ -1119,39 +1185,6 @@ test_nc_distance_angular_diameter_no_lambda (TestNcDistance *test, gconstpointer
       g_assert_not_reached ();
 
       break;
-  }
-}
-
-/*
- * Helper structure and function for GSL integration in volume radial integral tests
- */
-typedef struct _TestIntegrandData
-{
-  gdouble Omega_k;
-} TestIntegrandData;
-
-static gdouble
-_volume_integrand (gdouble chi_prime, void *params)
-{
-  TestIntegrandData *data = (TestIntegrandData *) params;
-  const gdouble Omega_k   = data->Omega_k;
-
-  if (fabs (Omega_k) > NCM_ZERO_LIMIT)
-  {
-    const gdouble abs_Ok  = fabs (Omega_k);
-    const gdouble sqrt_Ok = sqrt (abs_Ok);
-    gdouble sinn_val;
-
-    if (Omega_k > 0.0)
-      sinn_val = sinh (sqrt_Ok * chi_prime);
-    else
-      sinn_val = sin (sqrt_Ok * chi_prime);
-
-    return (sinn_val * sinn_val) / abs_Ok;
-  }
-  else
-  {
-    return chi_prime * chi_prime;
   }
 }
 
@@ -1356,35 +1389,6 @@ test_nc_distance_wrapper_functions (TestNcDistance *test, gconstpointer pdata)
 
     ncm_assert_cmpdouble_e (result_wrapper, ==, result_from_Dc, 1.0e-14, 0.0);
   }
-}
-
-/*
- * The fitting formulas of nc_distance_decoupling_redshift () and
- * nc_distance_drag_redshift (): Hu & Sugiyama (1996) for $z_\star$ and Eisenstein & Hu
- * (1998) for $z_d$. Copies of the expressions in nc_distance.c, so that a change to
- * either one has to be made here as well.
- */
-static gdouble
-test_nc_distance_z_star_hu_sugiyama (NcHICosmo *cosmo)
-{
-  const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
-  const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
-  const gdouble g1         = 0.0783 * pow (omega_b_h2, -0.238) / (1.0 + 39.5 * pow (omega_b_h2, 0.763));
-  const gdouble g2         = 0.560 / (1.0 + 21.1 * pow (omega_b_h2, 1.81));
-
-  return 1048.0 * (1.0 + 1.24e-3 * pow (omega_b_h2, -0.738)) * (1.0 + g1 * pow (omega_m_h2, g2));
-}
-
-static gdouble
-test_nc_distance_z_d_eisenstein_hu (NcHICosmo *cosmo)
-{
-  const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
-  const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
-  const gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
-  const gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
-
-  return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
-         (1.0 + b1 * pow (omega_b_h2, b2));
 }
 
 void

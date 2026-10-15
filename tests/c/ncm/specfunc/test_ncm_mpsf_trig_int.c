@@ -35,6 +35,17 @@ typedef struct _TestNcmMPSFSTrigInt
   guint ntests;
 } TestNcmMPSFSTrigInt;
 
+#define NTOT 100
+#define XMAX 25.0
+#define L 80
+#define TRIG_NTHREADS 4
+#define TRIG_NX 64
+
+typedef struct _TrigWorker
+{
+  gdouble res[TRIG_NX];
+} TrigWorker;
+
 void test_ncm_mpsf_trig_int_new (TestNcmMPSFSTrigInt *test, gconstpointer pdata);
 void test_ncm_mpsf_trig_int_free (TestNcmMPSFSTrigInt *test, gconstpointer pdata);
 
@@ -44,10 +55,6 @@ void test_ncm_mpsf_trig_int_traps (TestNcmMPSFSTrigInt *test, gconstpointer pdat
 void test_ncm_mpsf_trig_int_invalid_st (TestNcmMPSFSTrigInt *test, gconstpointer pdata);
 void test_ncm_mpsf_trig_int_odd (void);
 void test_ncm_mpsf_trig_int_threads (void);
-
-#define NTOT 100
-#define XMAX 25.0
-#define L 80
 
 gint
 main (gint argc, gchar *argv[])
@@ -79,6 +86,34 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 
   ncm_mpsf_sin_int_free_cache ();
+}
+
+static gdouble
+_trig_x (guint i)
+{
+  return 0.5 + 60.0 * i / (TRIG_NX - 1.0);
+}
+
+static gpointer
+_trig_worker (gpointer data)
+{
+  TrigWorker *w = (TrigWorker *) data;
+  guint i;
+
+  for (i = 0; i < TRIG_NX; i++)
+  {
+    MPFR_DECL_INIT (res, 128);
+
+    mpq_t q;
+
+    mpq_init (q);
+    mpq_set_d (q, _trig_x (i));
+    ncm_mpsf_sin_int_mpfr (q, res, MPFR_RNDN);
+    w->res[i] = mpfr_get_d (res, MPFR_RNDN);
+    mpq_clear (q);
+  }
+
+  return NULL;
 }
 
 void
@@ -132,42 +167,6 @@ test_ncm_mpsf_trig_int_odd (void)
     g_assert_cmpfloat (ncm_sf_sin_int (-xs[i]), ==, -ncm_sf_sin_int (xs[i]));
     ncm_assert_cmpdouble_e (ncm_sf_sin_int (-xs[i]), ==, -gsl_sf_Si (xs[i]), 1.0e-7, 0.0);
   }
-}
-
-#define TRIG_NTHREADS 4
-#define TRIG_NX 64
-
-typedef struct _TrigWorker
-{
-  gdouble res[TRIG_NX];
-} TrigWorker;
-
-static gdouble
-_trig_x (guint i)
-{
-  return 0.5 + 60.0 * i / (TRIG_NX - 1.0);
-}
-
-static gpointer
-_trig_worker (gpointer data)
-{
-  TrigWorker *w = (TrigWorker *) data;
-  guint i;
-
-  for (i = 0; i < TRIG_NX; i++)
-  {
-    MPFR_DECL_INIT (res, 128);
-
-    mpq_t q;
-
-    mpq_init (q);
-    mpq_set_d (q, _trig_x (i));
-    ncm_mpsf_sin_int_mpfr (q, res, MPFR_RNDN);
-    w->res[i] = mpfr_get_d (res, MPFR_RNDN);
-    mpq_clear (q);
-  }
-
-  return NULL;
 }
 
 /* Concurrent evaluations give the serial results bit for bit. */

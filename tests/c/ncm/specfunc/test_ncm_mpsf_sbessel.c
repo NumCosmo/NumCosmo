@@ -38,6 +38,24 @@
 #define REF_PREC 1024
 #define TEST_PREC 256
 
+static void test_ncm_mpsf_sbessel_branches (void);
+static void test_ncm_mpsf_sbessel_gsl (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/mpsf/sbessel/branches", &test_ncm_mpsf_sbessel_branches);
+  g_test_add_func ("/ncm/mpsf/sbessel/gsl", &test_ncm_mpsf_sbessel_gsl);
+
+  g_test_run ();
+}
+
 /* j_l(x) at REF_PREC bits by upward recurrence from j_0 = sin x / x and
  * j_1 = sin x / x^2 - cos x / x, independent of both branches of ncm_mpsf_sbessel. */
 static void
@@ -138,20 +156,5 @@ test_ncm_mpsf_sbessel_gsl (void)
   }
 
   ncm_mpsf_sbessel_free_cache ();
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/mpsf/sbessel/branches", &test_ncm_mpsf_sbessel_branches);
-  g_test_add_func ("/ncm/mpsf/sbessel/gsl", &test_ncm_mpsf_sbessel_gsl);
-
-  g_test_run ();
 }
 

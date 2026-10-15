@@ -35,6 +35,32 @@
 
 #define TEST_DIM 5
 
+static void test_ncm_reparam_linear_round_trip (void);
+static void test_ncm_reparam_param_desc (void);
+static void test_ncm_reparam_duplicate_name (void);
+static void test_ncm_reparam_duplicate_name_subprocess (void);
+static void test_ncm_reparam_singular (void);
+static void test_ncm_reparam_singular_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/reparam/linear/round_trip", &test_ncm_reparam_linear_round_trip);
+  g_test_add_func ("/ncm/reparam/param_desc", &test_ncm_reparam_param_desc);
+  g_test_add_func ("/ncm/reparam/duplicate_name", &test_ncm_reparam_duplicate_name);
+  g_test_add_func ("/ncm/reparam/duplicate_name/subprocess", &test_ncm_reparam_duplicate_name_subprocess);
+  g_test_add_func ("/ncm/reparam/singular", &test_ncm_reparam_singular);
+  g_test_add_func ("/ncm/reparam/singular/subprocess", &test_ncm_reparam_singular_subprocess);
+
+  g_test_run ();
+}
+
 /* T = 1 + a random matrix with entries in [-0.3, 0.3], invertible, and v random. */
 static NcmReparamLinear *
 _test_reparam_new (NcmRNG *rng)
@@ -196,24 +222,5 @@ test_ncm_reparam_singular_subprocess (void)
   ncm_vector_set_zero (v);
 
   ncm_reparam_linear_new (2, T, v);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/reparam/linear/round_trip", &test_ncm_reparam_linear_round_trip);
-  g_test_add_func ("/ncm/reparam/param_desc", &test_ncm_reparam_param_desc);
-  g_test_add_func ("/ncm/reparam/duplicate_name", &test_ncm_reparam_duplicate_name);
-  g_test_add_func ("/ncm/reparam/duplicate_name/subprocess", &test_ncm_reparam_duplicate_name_subprocess);
-  g_test_add_func ("/ncm/reparam/singular", &test_ncm_reparam_singular);
-  g_test_add_func ("/ncm/reparam/singular/subprocess", &test_ncm_reparam_singular_subprocess);
-
-  g_test_run ();
 }
 

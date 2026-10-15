@@ -15,12 +15,12 @@ env:
   # the datafile release tag changes; this knob covers everything else, such as
   # a file replaced in place under an unchanged tag. See
   # .github/actions/data-cache.
-  DATA_CACHE_VERSION: 2
+  DATA_CACHE_VERSION: 4
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
-  # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock, e.g.
-  # scipy.linalg.solve in test_sbessel_ode_solver), and the run-alone OpenMP tests
-  # (omp suite => is_parallel: false) get OMP_NUM_THREADS = cores so their `#pragma omp
-  # parallel` branches actually run, inside the ordinary `meson test` invocation (see
+  # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock), and
+  # the run-alone OpenMP tests (omp suite => is_parallel: false) get OMP_NUM_THREADS =
+  # cores so their `#pragma omp parallel` branches actually run, inside the ordinary
+  # `meson test` invocation (see
   # TESTING.md). The globals below are just a single-thread fallback for the meson driver
   # and any non-test step; meson's per-test env overrides them.
   OMP_NUM_THREADS: 1

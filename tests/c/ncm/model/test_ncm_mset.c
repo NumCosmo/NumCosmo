@@ -42,6 +42,78 @@ typedef struct _TestNcmMSet
   GArray *ma_destroyed;
 } TestNcmMSet;
 
+/* A two-level slotted host family: the child class extends its parent's
+ * declared submodel slots, exercising the parent-slot copy in
+ * ncm_model_class_add_submodels(). */
+#define TEST_TYPE_HOST_SLOTTED (test_host_slotted_get_type ())
+
+G_DECLARE_DERIVABLE_TYPE (TestHostSlotted, test_host_slotted, TEST, HOST_SLOTTED, NcmModel)
+
+struct _TestHostSlottedClass
+{
+  NcmModelClass parent_class;
+};
+
+G_DEFINE_TYPE (TestHostSlotted, test_host_slotted, NCM_TYPE_MODEL)
+
+NCM_MSET_MODEL_REGISTER_ID (test_host_slotted, TEST_TYPE_HOST_SLOTTED)
+
+#define TEST_TYPE_SUB_P (test_sub_p_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestSubP, test_sub_p, TEST, SUB_P, NcmModel)
+
+struct _TestSubP
+{
+  NcmModel parent_instance;
+};
+
+G_DEFINE_TYPE (TestSubP, test_sub_p, NCM_TYPE_MODEL)
+
+NCM_MSET_MODEL_REGISTER_ID (test_sub_p, TEST_TYPE_SUB_P)
+
+#define TEST_TYPE_SUB_Q (test_sub_q_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestSubQ, test_sub_q, TEST, SUB_Q, NcmModel)
+
+struct _TestSubQ
+{
+  NcmModel parent_instance;
+};
+
+G_DEFINE_TYPE (TestSubQ, test_sub_q, NCM_TYPE_MODEL)
+
+NCM_MSET_MODEL_REGISTER_ID (test_sub_q, TEST_TYPE_SUB_Q)
+
+#define TEST_TYPE_HOST_SLOTTED_CHILD (test_host_slotted_child_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestHostSlottedChild, test_host_slotted_child, TEST, HOST_SLOTTED_CHILD, TestHostSlotted)
+
+struct _TestHostSlottedChild
+{
+  TestHostSlotted parent_instance;
+};
+
+G_DEFINE_TYPE (TestHostSlottedChild, test_host_slotted_child, TEST_TYPE_HOST_SLOTTED)
+
+/*
+ * A minimal submodel type with NcHICosmo as its main model but NO typed slot
+ * declared on NcHICosmo -- the only in-tree way to exercise ncm_mset_load()'s
+ * pass 3, which attaches pass-1 submodels that pass-2 slot injection did not
+ * consume.
+ */
+#define TEST_TYPE_UNSLOTTED_SUB (test_unslotted_sub_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestUnslottedSub, test_unslotted_sub, TEST, UNSLOTTED_SUB, NcmModel)
+
+struct _TestUnslottedSub
+{
+  NcmModel parent_instance;
+};
+
+G_DEFINE_TYPE (TestUnslottedSub, test_unslotted_sub, NCM_TYPE_MODEL)
+
+NCM_MSET_MODEL_REGISTER_ID (test_unslotted_sub, TEST_TYPE_UNSLOTTED_SUB)
+
 void test_ncm_mset_new (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_free (TestNcmMSet *test, gconstpointer pdata);
 
@@ -164,6 +236,134 @@ main (gint argc, gchar *argv[])
 }
 
 void
+_set_destroyed (gpointer b)
+{
+  gboolean *destroyed = b;
+
+  *destroyed = TRUE;
+}
+
+static void
+test_sub_p_init (TestSubP *sub)
+{
+}
+
+static void
+test_sub_p_class_init (TestSubPClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted submodel P", "TestSubP");
+  ncm_model_class_add_params (model_class, 1, 0, 1);
+  ncm_model_class_set_sparam (model_class, 0, "x_0^{(p)}", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_mset_model_register_id (model_class, "TestSubP", "Test slotted submodel P", NULL, FALSE,
+                              test_host_slotted_id ());
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+static void
+test_sub_q_init (TestSubQ *sub)
+{
+}
+
+static void
+test_sub_q_class_init (TestSubQClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted submodel Q", "TestSubQ");
+  ncm_model_class_add_params (model_class, 1, 0, 1);
+  ncm_model_class_set_sparam (model_class, 0, "x_0^{(q)}", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_mset_model_register_id (model_class, "TestSubQ", "Test slotted submodel Q", NULL, FALSE,
+                              test_host_slotted_id ());
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+static void
+test_host_slotted_init (TestHostSlotted *host)
+{
+}
+
+static void
+test_host_slotted_class_init (TestHostSlottedClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted host", "TestHostSlotted");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  ncm_model_class_add_submodels (model_class, 1);
+  ncm_model_class_set_submodel (model_class, 0, "sub-p", "sub-p", TEST_TYPE_SUB_P);
+
+  ncm_mset_model_register_id (model_class, "TestHostSlotted", "Test slotted host", NULL, FALSE,
+                              NCM_MSET_MODEL_MAIN);
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+static void
+test_host_slotted_child_init (TestHostSlottedChild *host)
+{
+}
+
+static void
+test_host_slotted_child_class_init (TestHostSlottedChildClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Test slotted host child", "TestHostSlottedChild");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  /* Extends the parent's one declared slot with a second one. */
+  ncm_model_class_add_submodels (model_class, 2);
+  ncm_model_class_set_submodel (model_class, 1, "sub-q", "sub-q", TEST_TYPE_SUB_Q);
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+static void
+test_unslotted_sub_init (TestUnslottedSub *sub)
+{
+}
+
+static void
+test_unslotted_sub_class_init (TestUnslottedSubClass *klass)
+{
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  ncm_model_class_set_name_nick (model_class, "Unslotted test submodel", "TestUnslottedSub");
+  ncm_model_class_add_params (model_class, 1, 0, 1);
+  ncm_model_class_set_sparam (model_class, 0, "x_0", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
+
+  ncm_mset_model_register_id (model_class,
+                              "TestUnslottedSub",
+                              "Unslotted test submodel",
+                              NULL,
+                              FALSE,
+                              nc_hicosmo_id ());
+
+  ncm_model_class_check_params_info (model_class);
+}
+
+static void
+_test_ncm_mset_value_int (GValue *v, const gint i)
+{
+  g_value_init (v, G_TYPE_INT);
+  g_value_set_int (v, i);
+}
+
+static void
+_test_ncm_mset_value_str (GValue *v, const gchar *str)
+{
+  g_value_init (v, G_TYPE_STRING);
+  g_value_set_string (v, str);
+}
+
+void
 test_ncm_mset_new (TestNcmMSet *test, gconstpointer pdata)
 {
   test->mset         = ncm_mset_empty_new ();
@@ -201,14 +401,6 @@ test_ncm_mset_new (TestNcmMSet *test, gconstpointer pdata)
     nc_snia_dist_cov_free (snia);
     nc_distance_free (dist);
   }
-}
-
-void
-_set_destroyed (gpointer b)
-{
-  gboolean *destroyed = b;
-
-  *destroyed = TRUE;
 }
 
 void
@@ -615,175 +807,6 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
 
   nc_cluster_mass_free (benson);
   nc_cluster_mass_free (mass);
-}
-
-/* A two-level slotted host family: the child class extends its parent's
- * declared submodel slots, exercising the parent-slot copy in
- * ncm_model_class_add_submodels(). */
-#define TEST_TYPE_HOST_SLOTTED (test_host_slotted_get_type ())
-G_DECLARE_DERIVABLE_TYPE (TestHostSlotted, test_host_slotted, TEST, HOST_SLOTTED, NcmModel)
-
-struct _TestHostSlottedClass
-{
-  NcmModelClass parent_class;
-};
-
-G_DEFINE_TYPE (TestHostSlotted, test_host_slotted, NCM_TYPE_MODEL)
-NCM_MSET_MODEL_REGISTER_ID (test_host_slotted, TEST_TYPE_HOST_SLOTTED)
-
-#define TEST_TYPE_SUB_P (test_sub_p_get_type ())
-G_DECLARE_FINAL_TYPE (TestSubP, test_sub_p, TEST, SUB_P, NcmModel)
-
-struct _TestSubP
-{
-  NcmModel parent_instance;
-};
-
-G_DEFINE_TYPE (TestSubP, test_sub_p, NCM_TYPE_MODEL)
-NCM_MSET_MODEL_REGISTER_ID (test_sub_p, TEST_TYPE_SUB_P)
-
-#define TEST_TYPE_SUB_Q (test_sub_q_get_type ())
-G_DECLARE_FINAL_TYPE (TestSubQ, test_sub_q, TEST, SUB_Q, NcmModel)
-
-struct _TestSubQ
-{
-  NcmModel parent_instance;
-};
-
-G_DEFINE_TYPE (TestSubQ, test_sub_q, NCM_TYPE_MODEL)
-NCM_MSET_MODEL_REGISTER_ID (test_sub_q, TEST_TYPE_SUB_Q)
-
-static void
-test_sub_p_init (TestSubP *sub)
-{
-}
-
-static void
-test_sub_p_class_init (TestSubPClass *klass)
-{
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  ncm_model_class_set_name_nick (model_class, "Test slotted submodel P", "TestSubP");
-  ncm_model_class_add_params (model_class, 1, 0, 1);
-  ncm_model_class_set_sparam (model_class, 0, "x_0^{(p)}", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
-
-  ncm_mset_model_register_id (model_class, "TestSubP", "Test slotted submodel P", NULL, FALSE,
-                              test_host_slotted_id ());
-
-  ncm_model_class_check_params_info (model_class);
-}
-
-static void
-test_sub_q_init (TestSubQ *sub)
-{
-}
-
-static void
-test_sub_q_class_init (TestSubQClass *klass)
-{
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  ncm_model_class_set_name_nick (model_class, "Test slotted submodel Q", "TestSubQ");
-  ncm_model_class_add_params (model_class, 1, 0, 1);
-  ncm_model_class_set_sparam (model_class, 0, "x_0^{(q)}", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
-
-  ncm_mset_model_register_id (model_class, "TestSubQ", "Test slotted submodel Q", NULL, FALSE,
-                              test_host_slotted_id ());
-
-  ncm_model_class_check_params_info (model_class);
-}
-
-static void
-test_host_slotted_init (TestHostSlotted *host)
-{
-}
-
-static void
-test_host_slotted_class_init (TestHostSlottedClass *klass)
-{
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  ncm_model_class_set_name_nick (model_class, "Test slotted host", "TestHostSlotted");
-  ncm_model_class_add_params (model_class, 0, 0, 1);
-
-  ncm_model_class_add_submodels (model_class, 1);
-  ncm_model_class_set_submodel (model_class, 0, "sub-p", "sub-p", TEST_TYPE_SUB_P);
-
-  ncm_mset_model_register_id (model_class, "TestHostSlotted", "Test slotted host", NULL, FALSE,
-                              NCM_MSET_MODEL_MAIN);
-
-  ncm_model_class_check_params_info (model_class);
-}
-
-#define TEST_TYPE_HOST_SLOTTED_CHILD (test_host_slotted_child_get_type ())
-G_DECLARE_FINAL_TYPE (TestHostSlottedChild, test_host_slotted_child, TEST, HOST_SLOTTED_CHILD, TestHostSlotted)
-
-struct _TestHostSlottedChild
-{
-  TestHostSlotted parent_instance;
-};
-
-G_DEFINE_TYPE (TestHostSlottedChild, test_host_slotted_child, TEST_TYPE_HOST_SLOTTED)
-
-static void
-test_host_slotted_child_init (TestHostSlottedChild *host)
-{
-}
-
-static void
-test_host_slotted_child_class_init (TestHostSlottedChildClass *klass)
-{
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  ncm_model_class_set_name_nick (model_class, "Test slotted host child", "TestHostSlottedChild");
-  ncm_model_class_add_params (model_class, 0, 0, 1);
-
-  /* Extends the parent's one declared slot with a second one. */
-  ncm_model_class_add_submodels (model_class, 2);
-  ncm_model_class_set_submodel (model_class, 1, "sub-q", "sub-q", TEST_TYPE_SUB_Q);
-
-  ncm_model_class_check_params_info (model_class);
-}
-
-/*
- * A minimal submodel type with NcHICosmo as its main model but NO typed slot
- * declared on NcHICosmo -- the only in-tree way to exercise ncm_mset_load()'s
- * pass 3, which attaches pass-1 submodels that pass-2 slot injection did not
- * consume.
- */
-#define TEST_TYPE_UNSLOTTED_SUB (test_unslotted_sub_get_type ())
-G_DECLARE_FINAL_TYPE (TestUnslottedSub, test_unslotted_sub, TEST, UNSLOTTED_SUB, NcmModel)
-
-struct _TestUnslottedSub
-{
-  NcmModel parent_instance;
-};
-
-G_DEFINE_TYPE (TestUnslottedSub, test_unslotted_sub, NCM_TYPE_MODEL)
-NCM_MSET_MODEL_REGISTER_ID (test_unslotted_sub, TEST_TYPE_UNSLOTTED_SUB)
-
-static void
-test_unslotted_sub_init (TestUnslottedSub *sub)
-{
-}
-
-static void
-test_unslotted_sub_class_init (TestUnslottedSubClass *klass)
-{
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  ncm_model_class_set_name_nick (model_class, "Unslotted test submodel", "TestUnslottedSub");
-  ncm_model_class_add_params (model_class, 1, 0, 1);
-  ncm_model_class_set_sparam (model_class, 0, "x_0", "x0", -10.0, 10.0, 1.0, 0.0, 1.0, NCM_PARAM_TYPE_FIXED);
-
-  ncm_mset_model_register_id (model_class,
-                              "TestUnslottedSub",
-                              "Unslotted test submodel",
-                              NULL,
-                              FALSE,
-                              nc_hicosmo_id ());
-
-  ncm_model_class_check_params_info (model_class);
 }
 
 void
@@ -1517,20 +1540,6 @@ test_ncm_mset_load_twice_same_ser (void)
   ncm_model_free (cosmo);
   nc_hiprim_free (prim);
   nc_hireion_free (reion);
-}
-
-static void
-_test_ncm_mset_value_int (GValue *v, const gint i)
-{
-  g_value_init (v, G_TYPE_INT);
-  g_value_set_int (v, i);
-}
-
-static void
-_test_ncm_mset_value_str (GValue *v, const gchar *str)
-{
-  g_value_init (v, G_TYPE_STRING);
-  g_value_set_string (v, str);
 }
 
 /* __getitem__ and __setitem__ by integer id, stack position included, and by name;

@@ -41,6 +41,13 @@ typedef struct _TestNcmSpline2d
   gdouble test_error;
 } TestNcmSpline2d;
 
+#define _NCM_SPLINE2D_TEST_NKNOTS_X 50
+#define _NCM_SPLINE2D_TEST_NKNOTS_Y 25
+#define _NCM_SPLINE2D_TEST_XI 10.0
+#define _NCM_SPLINE2D_TEST_DX 0.3
+#define _NCM_SPLINE2D_TEST_YI 7.0
+#define _NCM_SPLINE2D_TEST_DY 0.15
+
 void test_ncm_spline2d_bicubic_notaknot_new_empty (TestNcmSpline2d *test, gconstpointer pdata);
 void test_ncm_spline2d_gsl_cspline_new_empty (TestNcmSpline2d *test, gconstpointer pdata);
 void test_ncm_spline2d_spline_new_empty (TestNcmSpline2d *test, gconstpointer pdata);
@@ -379,12 +386,55 @@ F_func_y (gdouble y, gpointer p)
   return F_func (55.0, y, p);
 }
 
-#define _NCM_SPLINE2D_TEST_NKNOTS_X 50
-#define _NCM_SPLINE2D_TEST_NKNOTS_Y 25
-#define _NCM_SPLINE2D_TEST_XI 10.0
-#define _NCM_SPLINE2D_TEST_DX 0.3
-#define _NCM_SPLINE2D_TEST_YI 7.0
-#define _NCM_SPLINE2D_TEST_DY 0.15
+void
+test_ncm_spline2d_new_sanity (NcmSpline2d *s2d)
+{
+  NcmSpline2d *s2d_ref = ncm_spline2d_ref (s2d);
+
+  ncm_spline2d_clear (&s2d_ref);
+
+  g_assert_true (s2d_ref == NULL);
+  g_assert_true (NCM_IS_SPLINE2D (s2d));
+}
+
+/* A product of cubics is reproduced by the not-a-knot types, inside and outside the knots
+ * (measured: values 7e-13 absolute, derivatives 9e-13 relative), and a bilinear function
+ * by the natural GSL type. */
+static gdouble
+_rp_p (const gdouble x, const gint t)
+{
+  return (t == 2) ? 1.0 + 2.0 * x : x * x * x - 2.0 * x;
+}
+
+static gdouble
+_rp_q (const gdouble y, const gint t)
+{
+  return (t == 2) ? 3.0 - y : y * y * y + y * y;
+}
+
+static gdouble
+_rp_dp (const gdouble x, const gint t)
+{
+  return (t == 2) ? 2.0 : 3.0 * x * x - 2.0;
+}
+
+static gdouble
+_rp_dq (const gdouble y, const gint t)
+{
+  return (t == 2) ? -1.0 : 3.0 * y * y + 2.0 * y;
+}
+
+static gdouble
+_rp_Ip (const gdouble a, const gdouble b, const gint t)
+{
+  return (t == 2) ? (b - a) + (b * b - a * a) : (gsl_pow_4 (b) - gsl_pow_4 (a)) / 4.0 - (b * b - a * a);
+}
+
+static gdouble
+_rp_Iq (const gdouble a, const gdouble b, const gint t)
+{
+  return (t == 2) ? 3.0 * (b - a) - 0.5 * (b * b - a * a) : (gsl_pow_4 (b) - gsl_pow_4 (a)) / 4.0 + (gsl_pow_3 (b) - gsl_pow_3 (a)) / 3.0;
+}
 
 void
 test_ncm_spline2d_bicubic_notaknot_new_empty (TestNcmSpline2d *test, gconstpointer pdata)
@@ -423,17 +473,6 @@ test_ncm_spline2d_free_empty (TestNcmSpline2d *test, gconstpointer pdata)
 
   if (test->s_base != NULL)
     NCM_TEST_FREE (ncm_spline_free, test->s_base);
-}
-
-void
-test_ncm_spline2d_new_sanity (NcmSpline2d *s2d)
-{
-  NcmSpline2d *s2d_ref = ncm_spline2d_ref (s2d);
-
-  ncm_spline2d_clear (&s2d_ref);
-
-  g_assert_true (s2d_ref == NULL);
-  g_assert_true (NCM_IS_SPLINE2D (s2d));
 }
 
 void
@@ -1513,45 +1552,6 @@ test_ncm_spline2d_eval_integ_x_y_xy_spline (TestNcmSpline2d *test, gconstpointer
     NCM_TEST_FREE (ncm_vector_free, yv);
     NCM_TEST_FREE (ncm_matrix_free, zm);
   }
-}
-
-/* A product of cubics is reproduced by the not-a-knot types, inside and outside the knots
- * (measured: values 7e-13 absolute, derivatives 9e-13 relative), and a bilinear function
- * by the natural GSL type. */
-static gdouble
-_rp_p (const gdouble x, const gint t)
-{
-  return (t == 2) ? 1.0 + 2.0 * x : x * x * x - 2.0 * x;
-}
-
-static gdouble
-_rp_q (const gdouble y, const gint t)
-{
-  return (t == 2) ? 3.0 - y : y * y * y + y * y;
-}
-
-static gdouble
-_rp_dp (const gdouble x, const gint t)
-{
-  return (t == 2) ? 2.0 : 3.0 * x * x - 2.0;
-}
-
-static gdouble
-_rp_dq (const gdouble y, const gint t)
-{
-  return (t == 2) ? -1.0 : 3.0 * y * y + 2.0 * y;
-}
-
-static gdouble
-_rp_Ip (const gdouble a, const gdouble b, const gint t)
-{
-  return (t == 2) ? (b - a) + (b * b - a * a) : (gsl_pow_4 (b) - gsl_pow_4 (a)) / 4.0 - (b * b - a * a);
-}
-
-static gdouble
-_rp_Iq (const gdouble a, const gdouble b, const gint t)
-{
-  return (t == 2) ? 3.0 * (b - a) - 0.5 * (b * b - a * a) : (gsl_pow_4 (b) - gsl_pow_4 (a)) / 4.0 + (gsl_pow_3 (b) - gsl_pow_3 (a)) / 3.0;
 }
 
 void

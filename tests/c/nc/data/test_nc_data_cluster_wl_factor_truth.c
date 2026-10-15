@@ -92,12 +92,6 @@
 #define TRUTH_QUAD_REF_NODES (60)
 #define TRUTH_QUAD_REF_RULE (5)
 
-/* pz spline centres placed around z_cl so the photo-z bump straddles the kink
- * (see test_nc_data_cluster_wl_truth.c's identical STRADDLE_ZAVG). */
-static const gdouble STRADDLE_ZAVG[] = {
-  0.32, 0.40, 0.46, 0.50, 0.54, 0.60, 0.68, 0.80
-};
-
 typedef struct _TruthCfg
 {
   const gchar *shape;    /* "var_add" | "series_lensed" | "quad" */
@@ -125,6 +119,12 @@ static void test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorT
 static void test_nc_data_cluster_wl_factor_truth_free (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_factor_truth_cross_shape (void);
+
+/* pz spline centres placed around z_cl so the photo-z bump straddles the kink
+ * (see test_nc_data_cluster_wl_truth.c's identical STRADDLE_ZAVG). */
+static const gdouble STRADDLE_ZAVG[] = {
+  0.32, 0.40, 0.46, 0.50, 0.54, 0.60, 0.68, 0.80
+};
 
 gint
 main (gint argc, gchar *argv[])
@@ -292,6 +292,53 @@ _truth_gen_shape (NcGalaxyShapeFactor *s_dist, NcmMSet *mset, NcGalaxyShapeFacto
   nc_galaxy_shape_factor_gen (s_dist, mset, s_data, rng);
 }
 
+/* Per-galaxy comparison of @v against the reference -2lnP vector: fail (reporting
+ * the closest-to-tolerance galaxy) if any galaxy exceeds reltol*max(|.|) + abstol.
+ * Reports max|abs| separately, since the worst-excess galaxy (abstol-bound, near
+ * zero -2lnP) is usually not the largest-error one. Verbatim from
+ * test_nc_data_cluster_wl_truth.c's _truth_cmp. */
+static void
+_truth_cmp (const gchar *label, NcmVector *v, NcmVector *ref, gdouble reltol, gdouble abstol)
+{
+  const guint len      = ncm_vector_len (ref);
+  gdouble worst_excess = -G_MAXDOUBLE;
+  gdouble max_abs      = 0.0;
+  guint worst_i        = 0;
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble ai     = ncm_vector_get (v, i);
+    const gdouble bi     = ncm_vector_get (ref, i);
+    const gdouble mean   = GSL_MAX (fabs (ai), fabs (bi));
+    const gdouble adiff  = fabs (ai - bi);
+    const gdouble excess = adiff - (reltol * mean + abstol);
+
+    g_assert_true (gsl_finite (ai));
+
+    max_abs = GSL_MAX (max_abs, adiff);
+
+    if (excess > worst_excess)
+    {
+      worst_excess = excess;
+      worst_i      = i;
+    }
+  }
+
+  {
+    const gdouble ai  = ncm_vector_get (v, worst_i);
+    const gdouble bi  = ncm_vector_get (ref, worst_i);
+    const gdouble rel = (fabs (bi) > 0.0) ? fabs (ai - bi) / fabs (bi) : 0.0;
+
+    g_test_message ("%s: max|abs|=%.3e; closest-to-tol at %u: % .17g vs reference % .17g (abs %.3e, rel %.3e; reltol %.3e abstol %.3e)",
+                    label, max_abs, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
+
+    if (worst_excess > 0.0)
+      g_error ("%s disagrees with the reference at galaxy %u: % .17g vs % .17g (abs %.3e, rel %.3e exceeds reltol %.3e abstol %.3e)",
+               label, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
+  }
+}
+
 /* Regenerate the curated sample for one configuration (deterministic in @seed)
  * and recompute the FIXED-320x7 reference. Leaves dcwlf at the
  * production fixed-node configuration. */
@@ -443,53 +490,6 @@ test_nc_data_cluster_wl_factor_truth_free (TestNcDataClusterWLFactorTruth *test,
   ncm_mset_clear (&test->mset);
   ncm_vector_clear (&test->ref);
   NCM_TEST_FREE (nc_data_cluster_wl_factor_free, test->dcwlf);
-}
-
-/* Per-galaxy comparison of @v against the reference -2lnP vector: fail (reporting
- * the closest-to-tolerance galaxy) if any galaxy exceeds reltol*max(|.|) + abstol.
- * Reports max|abs| separately, since the worst-excess galaxy (abstol-bound, near
- * zero -2lnP) is usually not the largest-error one. Verbatim from
- * test_nc_data_cluster_wl_truth.c's _truth_cmp. */
-static void
-_truth_cmp (const gchar *label, NcmVector *v, NcmVector *ref, gdouble reltol, gdouble abstol)
-{
-  const guint len      = ncm_vector_len (ref);
-  gdouble worst_excess = -G_MAXDOUBLE;
-  gdouble max_abs      = 0.0;
-  guint worst_i        = 0;
-  guint i;
-
-  for (i = 0; i < len; i++)
-  {
-    const gdouble ai     = ncm_vector_get (v, i);
-    const gdouble bi     = ncm_vector_get (ref, i);
-    const gdouble mean   = GSL_MAX (fabs (ai), fabs (bi));
-    const gdouble adiff  = fabs (ai - bi);
-    const gdouble excess = adiff - (reltol * mean + abstol);
-
-    g_assert_true (gsl_finite (ai));
-
-    max_abs = GSL_MAX (max_abs, adiff);
-
-    if (excess > worst_excess)
-    {
-      worst_excess = excess;
-      worst_i      = i;
-    }
-  }
-
-  {
-    const gdouble ai  = ncm_vector_get (v, worst_i);
-    const gdouble bi  = ncm_vector_get (ref, worst_i);
-    const gdouble rel = (fabs (bi) > 0.0) ? fabs (ai - bi) / fabs (bi) : 0.0;
-
-    g_test_message ("%s: max|abs|=%.3e; closest-to-tol at %u: % .17g vs reference % .17g (abs %.3e, rel %.3e; reltol %.3e abstol %.3e)",
-                    label, max_abs, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
-
-    if (worst_excess > 0.0)
-      g_error ("%s disagrees with the reference at galaxy %u: % .17g vs % .17g (abs %.3e, rel %.3e exceeds reltol %.3e abstol %.3e)",
-               label, worst_i, ai, bi, fabs (ai - bi), rel, reltol, abstol);
-  }
 }
 
 static void

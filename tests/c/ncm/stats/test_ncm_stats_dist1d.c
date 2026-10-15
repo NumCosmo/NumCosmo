@@ -39,8 +39,8 @@
  * on [xi, xf], whose normalization, cumulative distribution and quantiles have closed
  * forms through the unit Gaussian P and Q.
  */
-
 #define TEST_TYPE_GAUSS1D (test_gauss1d_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestGauss1d, test_gauss1d, TEST, GAUSS1D, NcmStatsDist1d)
 
 struct _TestGauss1d
@@ -52,6 +52,89 @@ struct _TestGauss1d
 };
 
 G_DEFINE_TYPE (TestGauss1d, test_gauss1d, NCM_TYPE_STATS_DIST1D)
+
+/*
+ * Toy distribution sampling a tabulated density: p(x) = max(P(x), 0) for a spline P, the
+ * photometric-redshift densities of the HSC PDR1 catalogs in the tests below.
+ */
+#define TEST_TYPE_SPLINE1D (test_spline1d_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestSpline1d, test_spline1d, TEST, SPLINE1D, NcmStatsDist1d)
+
+struct _TestSpline1d
+{
+  NcmStatsDist1d parent_instance;
+  NcmSpline *P;
+};
+
+G_DEFINE_TYPE (TestSpline1d, test_spline1d, NCM_TYPE_STATS_DIST1D)
+
+/*
+ * Toy distribution with two bumps separated by an interval of zero density, on [0, 10]:
+ * [1, 3] and [6.5, 7.5], either top hats of heights 1 and 3 or the smooth bumps
+ * a (1 - t^2)^2, t = (x - c) / w, with the same supports and amplitudes 1 and 3.
+ */
+#define TEST_TYPE_BUMPS1D (test_bumps1d_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestBumps1d, test_bumps1d, TEST, BUMPS1D, NcmStatsDist1d)
+
+struct _TestBumps1d
+{
+  NcmStatsDist1d parent_instance;
+  gboolean smooth;
+};
+
+G_DEFINE_TYPE (TestBumps1d, test_bumps1d, NCM_TYPE_STATS_DIST1D)
+
+#define TEST_XI (-1.0)
+#define TEST_XF 4.0
+#define TEST_MU 0.7
+#define TEST_SIGMA 0.9
+#define TEST_NPOINTS 201
+
+static void test_ncm_stats_dist1d_gauss (void);
+static void test_ncm_stats_dist1d_zero_xi (void);
+static void test_ncm_stats_dist1d_mode_edge (void);
+static void test_ncm_stats_dist1d_no_cdf (void);
+static void test_ncm_stats_dist1d_point_mass (void);
+static void test_ncm_stats_dist1d_gen (void);
+static void test_ncm_stats_dist1d_hsc_pz (void);
+static void test_ncm_stats_dist1d_zero_gap (void);
+static void test_ncm_stats_dist1d_reversed_subprocess (void);
+static void test_ncm_stats_dist1d_zero_density_subprocess (void);
+static void test_ncm_stats_dist1d_no_h_subprocess (void);
+static void test_ncm_stats_dist1d_traps (void);
+
+static const gdouble test_bumps_lo[2] = {1.0, 6.5};
+
+static const gdouble test_bumps_hi[2] = {3.0, 7.5};
+
+static const gdouble test_bumps_a[2] = {1.0, 3.0};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/stats/dist1d/gauss", &test_ncm_stats_dist1d_gauss);
+  g_test_add_func ("/ncm/stats/dist1d/zero_xi", &test_ncm_stats_dist1d_zero_xi);
+  g_test_add_func ("/ncm/stats/dist1d/mode_edge", &test_ncm_stats_dist1d_mode_edge);
+  g_test_add_func ("/ncm/stats/dist1d/no_cdf", &test_ncm_stats_dist1d_no_cdf);
+  g_test_add_func ("/ncm/stats/dist1d/point_mass", &test_ncm_stats_dist1d_point_mass);
+  g_test_add_func ("/ncm/stats/dist1d/gen", &test_ncm_stats_dist1d_gen);
+  g_test_add_func ("/ncm/stats/dist1d/hsc_pz", &test_ncm_stats_dist1d_hsc_pz);
+  g_test_add_func ("/ncm/stats/dist1d/zero_gap", &test_ncm_stats_dist1d_zero_gap);
+  g_test_add_func ("/ncm/stats/dist1d/traps", &test_ncm_stats_dist1d_traps);
+  g_test_add_func ("/ncm/stats/dist1d/reversed/subprocess", &test_ncm_stats_dist1d_reversed_subprocess);
+  g_test_add_func ("/ncm/stats/dist1d/zero_density/subprocess", &test_ncm_stats_dist1d_zero_density_subprocess);
+  g_test_add_func ("/ncm/stats/dist1d/no_h/subprocess", &test_ncm_stats_dist1d_no_h_subprocess);
+
+  g_test_run ();
+}
 
 static void
 test_gauss1d_init (TestGauss1d *tg)
@@ -122,22 +205,6 @@ _test_gauss1d_tail (TestGauss1d *tg, gdouble xi, gdouble xf, gdouble x)
   return (gsl_cdf_gaussian_Q (x - tg->mu, tg->sigma) - Qf) / (Qi - Qf);
 }
 
-/*
- * Toy distribution sampling a tabulated density: p(x) = max(P(x), 0) for a spline P, the
- * photometric-redshift densities of the HSC PDR1 catalogs in the tests below.
- */
-
-#define TEST_TYPE_SPLINE1D (test_spline1d_get_type ())
-G_DECLARE_FINAL_TYPE (TestSpline1d, test_spline1d, TEST, SPLINE1D, NcmStatsDist1d)
-
-struct _TestSpline1d
-{
-  NcmStatsDist1d parent_instance;
-  NcmSpline *P;
-};
-
-G_DEFINE_TYPE (TestSpline1d, test_spline1d, NCM_TYPE_STATS_DIST1D)
-
 static void
 test_spline1d_init (TestSpline1d *ts)
 {
@@ -175,27 +242,6 @@ test_spline1d_class_init (TestSpline1dClass *klass)
   sd1_class->p                    = &_test_spline1d_p;
   sd1_class->m2lnp                = &_test_spline1d_m2lnp;
 }
-
-/*
- * Toy distribution with two bumps separated by an interval of zero density, on [0, 10]:
- * [1, 3] and [6.5, 7.5], either top hats of heights 1 and 3 or the smooth bumps
- * a (1 - t^2)^2, t = (x - c) / w, with the same supports and amplitudes 1 and 3.
- */
-
-#define TEST_TYPE_BUMPS1D (test_bumps1d_get_type ())
-G_DECLARE_FINAL_TYPE (TestBumps1d, test_bumps1d, TEST, BUMPS1D, NcmStatsDist1d)
-
-struct _TestBumps1d
-{
-  NcmStatsDist1d parent_instance;
-  gboolean smooth;
-};
-
-G_DEFINE_TYPE (TestBumps1d, test_bumps1d, NCM_TYPE_STATS_DIST1D)
-
-static const gdouble test_bumps_lo[2] = {1.0, 6.5};
-static const gdouble test_bumps_hi[2] = {3.0, 7.5};
-static const gdouble test_bumps_a[2]  = {1.0, 3.0};
 
 static void
 test_bumps1d_init (TestBumps1d *tb)
@@ -260,12 +306,6 @@ _test_bumps1d_cdf (TestBumps1d *tb, gdouble x)
 
   return (_test_bumps1d_mass (tb, 0, x) + _test_bumps1d_mass (tb, 1, x)) / M;
 }
-
-#define TEST_XI (-1.0)
-#define TEST_XF 4.0
-#define TEST_MU 0.7
-#define TEST_SIGMA 0.9
-#define TEST_NPOINTS 201
 
 /*
  * At reltol 1e-8 the measured errors are 1.2e-9 (normalization, relative), 3.6e-9
@@ -618,30 +658,5 @@ test_ncm_stats_dist1d_traps (void)
   g_test_trap_subprocess ("/ncm/stats/dist1d/no_h/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*`TestGauss1d' does not implement get_current_h*");
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/stats/dist1d/gauss", &test_ncm_stats_dist1d_gauss);
-  g_test_add_func ("/ncm/stats/dist1d/zero_xi", &test_ncm_stats_dist1d_zero_xi);
-  g_test_add_func ("/ncm/stats/dist1d/mode_edge", &test_ncm_stats_dist1d_mode_edge);
-  g_test_add_func ("/ncm/stats/dist1d/no_cdf", &test_ncm_stats_dist1d_no_cdf);
-  g_test_add_func ("/ncm/stats/dist1d/point_mass", &test_ncm_stats_dist1d_point_mass);
-  g_test_add_func ("/ncm/stats/dist1d/gen", &test_ncm_stats_dist1d_gen);
-  g_test_add_func ("/ncm/stats/dist1d/hsc_pz", &test_ncm_stats_dist1d_hsc_pz);
-  g_test_add_func ("/ncm/stats/dist1d/zero_gap", &test_ncm_stats_dist1d_zero_gap);
-  g_test_add_func ("/ncm/stats/dist1d/traps", &test_ncm_stats_dist1d_traps);
-  g_test_add_func ("/ncm/stats/dist1d/reversed/subprocess", &test_ncm_stats_dist1d_reversed_subprocess);
-  g_test_add_func ("/ncm/stats/dist1d/zero_density/subprocess", &test_ncm_stats_dist1d_zero_density_subprocess);
-  g_test_add_func ("/ncm/stats/dist1d/no_h/subprocess", &test_ncm_stats_dist1d_no_h_subprocess);
-
-  g_test_run ();
 }
 

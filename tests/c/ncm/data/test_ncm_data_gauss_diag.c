@@ -34,15 +34,12 @@
 
 #define TEST_NP 5
 
-static const gdouble test_x[TEST_NP]      = {0.0, 0.25, 0.5, 0.75, 1.0};
-static const gdouble test_sigma0[TEST_NP] = {0.1, 0.2, 0.3, 0.2, 0.1};
-
 /*
  * A NcmDataGaussDiag with mean a + b x_i and standard deviations s sigma0_i, where
  * (a, b, s) is the NcmModelMVND mean; sigma_func returns TRUE only when s changed.
  */
-
 #define TEST_TYPE_DIAG (test_diag_get_type ())
+
 G_DECLARE_FINAL_TYPE (TestDiag, test_diag, TEST, DIAG, NcmDataGaussDiag)
 
 struct _TestDiag
@@ -52,6 +49,43 @@ struct _TestDiag
 };
 
 G_DEFINE_TYPE (TestDiag, test_diag, NCM_TYPE_DATA_GAUSS_DIAG)
+
+typedef struct _TestNcmDataGaussDiag
+{
+  NcmMSet *mset;
+  NcmData *data;
+  NcmDataGaussDiag *diag;
+  NcmRNG *rng;
+} TestNcmDataGaussDiag;
+
+void test_ncm_data_gauss_diag_new (TestNcmDataGaussDiag *test, gconstpointer pdata);
+void test_ncm_data_gauss_diag_free (TestNcmDataGaussDiag *test, gconstpointer pdata);
+
+void test_ncm_data_gauss_diag_profiled_uh (TestNcmDataGaussDiag *test, gconstpointer pdata);
+void test_ncm_data_gauss_diag_profiled_offset (TestNcmDataGaussDiag *test, gconstpointer pdata);
+void test_ncm_data_gauss_diag_sigma_func (TestNcmDataGaussDiag *test, gconstpointer pdata);
+void test_ncm_data_gauss_diag_sigma_prop (TestNcmDataGaussDiag *test, gconstpointer pdata);
+void test_ncm_data_gauss_diag_resize (TestNcmDataGaussDiag *test, gconstpointer pdata);
+
+static const gdouble test_x[TEST_NP] = {0.0, 0.25, 0.5, 0.75, 1.0};
+
+static const gdouble test_sigma0[TEST_NP] = {0.1, 0.2, 0.3, 0.2, 0.1};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add ("/ncm/data_gauss_diag/profiled/uh", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_profiled_uh, &test_ncm_data_gauss_diag_free);
+  g_test_add ("/ncm/data_gauss_diag/profiled/offset", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_profiled_offset, &test_ncm_data_gauss_diag_free);
+  g_test_add ("/ncm/data_gauss_diag/sigma_func", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_sigma_func, &test_ncm_data_gauss_diag_free);
+  g_test_add ("/ncm/data_gauss_diag/sigma_prop", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_sigma_prop, &test_ncm_data_gauss_diag_free);
+  g_test_add ("/ncm/data_gauss_diag/resize", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_resize, &test_ncm_data_gauss_diag_free);
+
+  g_test_run ();
+}
 
 static void
 test_diag_init (TestDiag *td)
@@ -102,14 +136,6 @@ test_diag_class_init (TestDiagClass *klass)
   NCM_DATA_GAUSS_DIAG_CLASS (klass)->sigma_func = &_test_diag_sigma_func;
 }
 
-typedef struct _TestNcmDataGaussDiag
-{
-  NcmMSet *mset;
-  NcmData *data;
-  NcmDataGaussDiag *diag;
-  NcmRNG *rng;
-} TestNcmDataGaussDiag;
-
 static void
 _test_set_params (TestNcmDataGaussDiag *test, const gdouble a, const gdouble b, const gdouble s)
 {
@@ -147,31 +173,6 @@ _test_profiled_chi2 (TestNcmDataGaussDiag *test)
   ncm_vector_free (mu);
 
   return wr2 - wr * wr / wt;
-}
-
-void test_ncm_data_gauss_diag_new (TestNcmDataGaussDiag *test, gconstpointer pdata);
-void test_ncm_data_gauss_diag_free (TestNcmDataGaussDiag *test, gconstpointer pdata);
-
-void test_ncm_data_gauss_diag_profiled_uh (TestNcmDataGaussDiag *test, gconstpointer pdata);
-void test_ncm_data_gauss_diag_profiled_offset (TestNcmDataGaussDiag *test, gconstpointer pdata);
-void test_ncm_data_gauss_diag_sigma_func (TestNcmDataGaussDiag *test, gconstpointer pdata);
-void test_ncm_data_gauss_diag_sigma_prop (TestNcmDataGaussDiag *test, gconstpointer pdata);
-void test_ncm_data_gauss_diag_resize (TestNcmDataGaussDiag *test, gconstpointer pdata);
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add ("/ncm/data_gauss_diag/profiled/uh", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_profiled_uh, &test_ncm_data_gauss_diag_free);
-  g_test_add ("/ncm/data_gauss_diag/profiled/offset", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_profiled_offset, &test_ncm_data_gauss_diag_free);
-  g_test_add ("/ncm/data_gauss_diag/sigma_func", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_sigma_func, &test_ncm_data_gauss_diag_free);
-  g_test_add ("/ncm/data_gauss_diag/sigma_prop", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_sigma_prop, &test_ncm_data_gauss_diag_free);
-  g_test_add ("/ncm/data_gauss_diag/resize", TestNcmDataGaussDiag, NULL, &test_ncm_data_gauss_diag_new, &test_ncm_data_gauss_diag_resize, &test_ncm_data_gauss_diag_free);
-
-  g_test_run ();
 }
 
 void

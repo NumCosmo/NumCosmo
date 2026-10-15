@@ -806,40 +806,6 @@ def test_lensing_is_broad_and_peaks_in_front_of_its_sources(
 # --- the spec a kernel reports back ----------------------------------------
 
 
-def test_kdep_reports_its_parameters() -> None:
-    """The scale dependence is part of the spec too.
-
-    Through the accessors and through the GObject properties: serialization
-    reads the latter, so the two have to agree.
-    """
-    kdep = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
-
-    assert (
-        kdep.get_amplitude(),
-        kdep.get_k_transition(),
-        kdep.get_chi_ref(),
-    ) == (0.3, 0.05, 1500.0)
-
-    assert (
-        kdep.props.amplitude,
-        kdep.props.k_transition,
-        kdep.props.chi_ref,
-    ) == (0.3, 0.05, 1500.0)
-
-
-def test_a_kernel_reports_the_scale_dependence_it_carries(cosmology: Cosmology) -> None:
-    """peek_kdep returns the attached factor, or None when there is none.
-
-    The distinction is part of the spec: no factor at all and a factor that
-    evaluates to one are different states, and a reader of a stored kernel has
-    to be able to tell them apart.
-    """
-    kdep = Nc.XcorKernelRadialKDepGrowth.new(0.3, 0.05, 1500.0)
-
-    assert _gauss_with_kdep(cosmology, None).peek_kdep() is None
-    assert _gauss_with_kdep(cosmology, kdep).peek_kdep() is not None
-
-
 @pytest.mark.parametrize("shape", ["gauss", "tophat", "multi_disjoint"])
 def test_limber_z_is_the_window_in_hubble_radius_units(
     cosmology: Cosmology, shape: str

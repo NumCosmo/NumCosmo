@@ -34,6 +34,10 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
 
+#define _NC_WINDOW_TEST_KMIN 0.01
+#define _NC_WINDOW_TEST_KMAX 1.0e3
+#define _NC_WINDOW_TEST_XMIN 0.01
+#define _NC_WINDOW_TEST_XMAX 1.0e3
 
 void test_nc_window_new_tophat (void);
 void test_nc_window_new_gaussian (void);
@@ -44,6 +48,8 @@ void test_nc_window_deriv_fourier_gaussian (void);
 void test_nc_window_eval_real_tophat (void);
 void test_nc_window_eval_real_gaussian (void);
 void test_nc_window_free (void);
+
+NcWindow *wf;
 
 gint
 main (gint argc, gchar *argv[])
@@ -66,13 +72,6 @@ main (gint argc, gchar *argv[])
 
   g_test_run ();
 }
-
-#define _NC_WINDOW_TEST_KMIN 0.01
-#define _NC_WINDOW_TEST_KMAX 1.0e3
-#define _NC_WINDOW_TEST_XMIN 0.01
-#define _NC_WINDOW_TEST_XMAX 1.0e3
-
-NcWindow *wf;
 
 void
 test_nc_window_new_tophat (void)

@@ -129,10 +129,9 @@ _nc_xcor_kernel_validate_component_list (NcXcorKernel *xclk, guint n_l)
  * the looser of the two. Other integrators are not checked.
  */
 void
-_nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi)
+_nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegrator *sbi, gdouble reltol, gdouble peak_epsilon)
 {
-  NcXcorKernelPrivate *self = _nc_xcor_kernel_get_private (xclk);
-  const gdouble fit_tol     = GSL_MAX (self->reltol, self->peak_epsilon);
+  const gdouble fit_tol = GSL_MAX (reltol, peak_epsilon);
   gdouble integrator_reltol;
 
   if ((sbi == NULL) || !NCM_IS_SBESSEL_INTEGRATOR_LEVIN (sbi))
@@ -141,16 +140,15 @@ _nc_xcor_kernel_check_integrator_tolerance (NcXcorKernel *xclk, NcmSBesselIntegr
   {
     NcmSBesselIntegratorLevin *sbilv = NCM_SBESSEL_INTEGRATOR_LEVIN (sbi);
 
-    integrator_reltol = GSL_MAX (ncm_sbessel_integrator_levin_get_reltol (sbilv),
-                                 ncm_sbessel_integrator_levin_get_cheb_reltol (sbilv));
+    integrator_reltol = ncm_sbessel_integrator_levin_get_reltol (sbilv);
   }
 
   if (fit_tol < integrator_reltol)
     g_error ("_nc_xcor_kernel_check_integrator_tolerance: kernel %s builds its closure of W_l(k) "
-             "to %.17g but the integrator computes W_l(k) only to %.17g (the looser of its "
-             "reltol and cheb-reltol). A closure cannot resolve what the values do not carry. "
+             "to %.17g but the integrator computes W_l(k) only to %.17g (its reltol). A "
+             "closure cannot resolve what the values do not carry. "
              "Loosen NcXcorKernel:reltol and NcXcorKernel:peak-epsilon to at least %.17g, "
-             "or construct the integrator with tighter tolerances.",
+             "or construct the integrator with a tighter reltol.",
              G_OBJECT_TYPE_NAME (xclk), fit_tol, integrator_reltol, integrator_reltol);
 }
 

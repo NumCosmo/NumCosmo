@@ -41,6 +41,45 @@ typedef struct _TestNcmFitMCMC
   NcmFitMCMC *mcmc;
 } TestNcmFitMCMC;
 
+static void test_ncm_fit_mcmc_new (TestNcmFitMCMC *test, gconstpointer pdata);
+static void test_ncm_fit_mcmc_free (TestNcmFitMCMC *test, gconstpointer pdata);
+static void test_ncm_fit_mcmc_posterior (TestNcmFitMCMC *test, gconstpointer pdata);
+static void test_ncm_fit_mcmc_bound (TestNcmFitMCMC *test, gconstpointer pdata);
+static void test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata);
+
+static gdouble _test_ncm_fit_mcmc_x0_max = 0.0;
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/ncm/fit_mcmc/posterior", TestNcmFitMCMC, NULL,
+              &test_ncm_fit_mcmc_new,
+              &test_ncm_fit_mcmc_posterior,
+              &test_ncm_fit_mcmc_free);
+  g_test_add ("/ncm/fit_mcmc/bound", TestNcmFitMCMC, NULL,
+              &test_ncm_fit_mcmc_new,
+              &test_ncm_fit_mcmc_bound,
+              &test_ncm_fit_mcmc_free);
+  g_test_add ("/ncm/fit_mcmc/invalid", TestNcmFitMCMC, NULL,
+              &test_ncm_fit_mcmc_new,
+              &test_ncm_fit_mcmc_invalid,
+              &test_ncm_fit_mcmc_free);
+
+  g_test_run ();
+}
+
+static gboolean
+_test_ncm_fit_mcmc_valid_x0 (NcmModel *model)
+{
+  return ncm_model_orig_param_get (model, 0) <= _test_ncm_fit_mcmc_x0_max;
+}
+
 static void
 test_ncm_fit_mcmc_new (TestNcmFitMCMC *test, gconstpointer pdata)
 {
@@ -159,14 +198,6 @@ test_ncm_fit_mcmc_bound (TestNcmFitMCMC *test, gconstpointer pdata)
   ncm_assert_cmpdouble_e (ncm_matrix_get (ncm_fit_state_peek_covar (fstate), 0, 0), ==, var, 0.15, 0.0);
 }
 
-static gdouble _test_ncm_fit_mcmc_x0_max = 0.0;
-
-static gboolean
-_test_ncm_fit_mcmc_valid_x0 (NcmModel *model)
-{
-  return ncm_model_orig_param_get (model, 0) <= _test_ncm_fit_mcmc_x0_max;
-}
-
 static void
 test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata)
 {
@@ -196,30 +227,5 @@ test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata)
     g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, i), 1), <=, _test_ncm_fit_mcmc_x0_max);
 
   ncm_mset_catalog_free (mcat);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/ncm/fit_mcmc/posterior", TestNcmFitMCMC, NULL,
-              &test_ncm_fit_mcmc_new,
-              &test_ncm_fit_mcmc_posterior,
-              &test_ncm_fit_mcmc_free);
-  g_test_add ("/ncm/fit_mcmc/bound", TestNcmFitMCMC, NULL,
-              &test_ncm_fit_mcmc_new,
-              &test_ncm_fit_mcmc_bound,
-              &test_ncm_fit_mcmc_free);
-  g_test_add ("/ncm/fit_mcmc/invalid", TestNcmFitMCMC, NULL,
-              &test_ncm_fit_mcmc_new,
-              &test_ncm_fit_mcmc_invalid,
-              &test_ncm_fit_mcmc_free);
-
-  g_test_run ();
 }
 

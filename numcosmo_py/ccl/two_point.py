@@ -154,7 +154,7 @@ def tracer_components(
 def _levin_integrator(
     ell_min: int, ell_max: int, reltol: float
 ) -> Ncm.SBesselIntegratorLevin:
-    """A Levin integrator at the library's knot defaults with both tolerances set."""
+    """A Levin integrator at the library's knot defaults with its tolerance set."""
     proto = Ncm.SBesselIntegratorLevin.new(ell_min, ell_max)
 
     return Ncm.SBesselIntegratorLevin.new_full(
@@ -166,7 +166,6 @@ def _levin_integrator(
         proto.get_ell_cache_max(),
         reltol,
         proto.get_cheb_min_order(),
-        reltol,
     )
 
 
@@ -441,10 +440,10 @@ def tracer_kernel(
     domain, places the knots and integrates the outer integral exactly, so the
     only things CCL contributes are the tabulated windows and the growth.
 
-    The Levin integrator is the library default. Loosening its solve tolerance
-    (1e-13) to the 1e-8 the raw transforms above use makes the closure
-    refinement at 1e-6 chase solve noise on an RSD table and never finish; the
-    accuracy knob here is ``kernel_reltol``, not the solve.
+    The Levin integrator is the library default. Through :class:`TracerClSolver` and
+    :func:`angular_cl` the solver sets the closure and integrator tolerances
+    (``NcXcorSolver:reltol``); ``kernel_reltol`` sets the kernel's own, which apply
+    when the kernel is evaluated outside a solver.
 
     :param order: B-spline order of the window reconstruction.
     :param kernel_reltol: when given, sets both the kernel's closure ``reltol``
@@ -494,7 +493,8 @@ class TracerClSolver:
     :param ells: the multipoles, requested one by one; contiguous runs merge into
         blocks of up to ``block_size`` sharing one operator factorisation.
     :param order: B-spline order of the window reconstruction.
-    :param kernel_reltol: closure tolerance for every kernel; see :func:`tracer_kernel`.
+    :param kernel_reltol: tolerance of the solve, ``NcXcorSolver:reltol``, and of every
+        kernel's own closure; the solver default (1e-8) applies otherwise.
     :param kernel_adaptive_epsilon: domain truncation for every kernel; see
         :func:`tracer_kernel`.
     :param block_size: largest number of consecutive multipoles per block,
@@ -517,7 +517,7 @@ class TracerClSolver:
         self.ells = np.atleast_1d(np.asarray(ells, dtype=int))
         self.pairs = [(int(a), int(b)) for a, b in pairs]
         self.order = order
-        # One integrator for every kernel and as the solver's template.
+        # One integrator for every kernel; the solver builds its own per block.
         self.integrator = Ncm.SBesselIntegratorLevin.new(0, 8)
         self.kernels = [
             tracer_kernel(
@@ -534,11 +534,12 @@ class TracerClSolver:
         block_size = max(1, min(block_size, Nc.XCOR_KERNEL_MAX_ELL_BLOCK))
 
         self.solver = Nc.XcorSolver.new()
+        if kernel_reltol is not None:
+            self.solver.set_reltol(kernel_reltol)
         ids = [self.solver.register_kernel(k) for k in self.kernels]
         for a, b in self.pairs:
             for ell in self.ells:
                 self.solver.request_cl(ids[a], ids[b], int(ell), int(ell))
-        self.solver.set_integrator(self.integrator)
         self.solver.plan_blocks(block_size)
 
         self.xcor = Nc.Xcor.new(
@@ -614,7 +615,8 @@ def angular_cl(
     chain should keep a :class:`TracerClSolver` instead.
 
     :param order: B-spline order of the window reconstruction.
-    :param kernel_reltol: closure tolerance for both kernels; see :func:`tracer_kernel`.
+    :param kernel_reltol: tolerance of the solve, ``NcXcorSolver:reltol``; the solver
+        default (1e-8) applies otherwise.
     :param kernel_adaptive_epsilon: domain truncation for both kernels; see
         :func:`tracer_kernel`.
     :param block_size: largest number of consecutive multipoles per block.

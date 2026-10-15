@@ -32,6 +32,8 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#define NTESTS 1000
+
 void test_ncm_trivec_new (void);
 void test_ncm_trivec_new_full (void);
 void test_ncm_trivec_new_full_c (void);
@@ -168,7 +170,18 @@ main (int argc, char *argv[])
   g_test_run ();
 }
 
-#define NTESTS 1000
+/* The angles returned for v rebuild v, component by component, to a few ulp of |v|; frees w */
+static void
+_assert_rebuilds (NcmTriVec *v, NcmTriVec *w)
+{
+  const gdouble norm = ncm_trivec_norm (v);
+  guint k;
+
+  for (k = 0; k < 3; k++)
+    g_assert_cmpfloat (fabs (w->c[k] - v->c[k]), <, 1.0e-15 * norm);
+
+  ncm_trivec_free (w);
+}
 
 void
 test_ncm_trivec_new (void)
@@ -503,19 +516,6 @@ test_ncm_trivec_set_spherical_coord (void)
 
     ncm_trivec_free (v);
   }
-}
-
-/* The angles returned for v rebuild v, component by component, to a few ulp of |v|; frees w */
-static void
-_assert_rebuilds (NcmTriVec *v, NcmTriVec *w)
-{
-  const gdouble norm = ncm_trivec_norm (v);
-  guint k;
-
-  for (k = 0; k < 3; k++)
-    g_assert_cmpfloat (fabs (w->c[k] - v->c[k]), <, 1.0e-15 * norm);
-
-  ncm_trivec_free (w);
 }
 
 void

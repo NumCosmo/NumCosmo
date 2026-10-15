@@ -35,6 +35,10 @@ typedef struct _TestNcmMPSFS0F1
   guint ntests;
 } TestNcmMPSFS0F1;
 
+#define NTOT 100
+#define XMAX 2.0
+#define L 80
+
 void test_ncm_mpsf_0F1_new (TestNcmMPSFS0F1 *test, gconstpointer pdata);
 void test_ncm_mpsf_0F1_free (TestNcmMPSFS0F1 *test, gconstpointer pdata);
 
@@ -42,10 +46,6 @@ void test_ncm_mpsf_0F1_cmp_gsl (TestNcmMPSFS0F1 *test, gconstpointer pdata);
 
 void test_ncm_mpsf_0F1_traps (TestNcmMPSFS0F1 *test, gconstpointer pdata);
 void test_ncm_mpsf_0F1_invalid_st (TestNcmMPSFS0F1 *test, gconstpointer pdata);
-
-#define NTOT 100
-#define XMAX 2.0
-#define L 80
 
 gint
 main (gint argc, gchar *argv[])

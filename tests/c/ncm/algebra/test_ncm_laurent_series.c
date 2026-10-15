@@ -38,6 +38,159 @@
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_integration.h>
 
+/* Ground truth: direct numerical theta-integration of
+ * cm(theta)*exp(z*(cos(theta-phi)-1)), no Jacobi-Anger identity used. */
+struct _ThetaCtx
+{
+  const NcmLaurentSeries *cm;
+  gdouble phi;
+  gdouble z;
+};
+
+static void test_add_scale_hand_computed (void);
+static void test_conv_hand_computed (void);
+static void test_conj_hand_computed (void);
+static void test_eval_hand_computed (void);
+static void test_jacobi_anger_matches_direct_integration (void);
+static void test_chi_taylor_matches_python_reference (void);
+static void test_introspectable_api_matches_native (void);
+static void test_copy_is_independent (void);
+static void test_reset_grows_only_when_needed (void);
+static void test_into_variants_match_returns_new (void);
+static void test_tps_new_owns_coefficients_and_reports_order (void);
+static void test_tps_boxed_copy_is_refcount_not_deep_copy (void);
+static void test_tps_conv_is_truncated_cauchy_product (void);
+static void test_tps_conj_add_scale_match_scalar_ops (void);
+static void test_tps_eval_hand_computed (void);
+static void test_tps_pow_matches_sympy_reference (void);
+static void test_conj_off_unit_circle (void);
+static void test_add_disjoint_ranges (void);
+static void test_tps_pow_laurent_coefficients (void);
+static void test_jacobi_anger_accumulate_eval (void);
+static void test_invalid_arguments_abort (void);
+static void test_invalid_new_hmax_below_hmin_subprocess (void);
+static void test_invalid_reset_hmax_below_hmin_subprocess (void);
+static void test_invalid_jacobi_anger_no_Ik_subprocess (void);
+static void test_invalid_tps_pow_l0_not_constant_subprocess (void);
+static void test_invalid_tps_pow_a0_zero_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_add_func ("/ncm/laurent_series/add_scale_hand_computed", &test_add_scale_hand_computed);
+  g_test_add_func ("/ncm/laurent_series/conv_hand_computed", &test_conv_hand_computed);
+  g_test_add_func ("/ncm/laurent_series/conj_hand_computed", &test_conj_hand_computed);
+  g_test_add_func ("/ncm/laurent_series/eval_hand_computed", &test_eval_hand_computed);
+  g_test_add_func ("/ncm/laurent_series/jacobi_anger_matches_direct_integration", &test_jacobi_anger_matches_direct_integration);
+  g_test_add_func ("/ncm/laurent_series/jacobi_anger_accumulate_eval", &test_jacobi_anger_accumulate_eval);
+  g_test_add_func ("/ncm/laurent_series/chi_taylor_matches_python_reference", &test_chi_taylor_matches_python_reference);
+  g_test_add_func ("/ncm/laurent_series/introspectable_api_matches_native", &test_introspectable_api_matches_native);
+  g_test_add_func ("/ncm/laurent_series/copy_is_independent", &test_copy_is_independent);
+  g_test_add_func ("/ncm/laurent_series/reset_grows_only_when_needed", &test_reset_grows_only_when_needed);
+  g_test_add_func ("/ncm/laurent_series/into_variants_match_returns_new", &test_into_variants_match_returns_new);
+  g_test_add_func ("/ncm/laurent_series/tps_new_owns_coefficients_and_reports_order", &test_tps_new_owns_coefficients_and_reports_order);
+  g_test_add_func ("/ncm/laurent_series/tps_boxed_copy_is_refcount_not_deep_copy", &test_tps_boxed_copy_is_refcount_not_deep_copy);
+  g_test_add_func ("/ncm/laurent_series/tps_conv_is_truncated_cauchy_product", &test_tps_conv_is_truncated_cauchy_product);
+  g_test_add_func ("/ncm/laurent_series/tps_conj_add_scale_match_scalar_ops", &test_tps_conj_add_scale_match_scalar_ops);
+  g_test_add_func ("/ncm/laurent_series/tps_eval_hand_computed", &test_tps_eval_hand_computed);
+  g_test_add_func ("/ncm/laurent_series/tps_pow_matches_sympy_reference", &test_tps_pow_matches_sympy_reference);
+  g_test_add_func ("/ncm/laurent_series/conj_off_unit_circle", &test_conj_off_unit_circle);
+  g_test_add_func ("/ncm/laurent_series/add_disjoint_ranges", &test_add_disjoint_ranges);
+  g_test_add_func ("/ncm/laurent_series/tps_pow_laurent_coefficients", &test_tps_pow_laurent_coefficients);
+  g_test_add_func ("/ncm/laurent_series/invalid/arguments_abort", &test_invalid_arguments_abort);
+  g_test_add_func ("/ncm/laurent_series/invalid/new_hmax_below_hmin/subprocess", &test_invalid_new_hmax_below_hmin_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/reset_hmax_below_hmin/subprocess", &test_invalid_reset_hmax_below_hmin_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/jacobi_anger_no_Ik/subprocess", &test_invalid_jacobi_anger_no_Ik_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/tps_pow_l0_not_constant/subprocess", &test_invalid_tps_pow_l0_not_constant_subprocess);
+  g_test_add_func ("/ncm/laurent_series/invalid/tps_pow_a0_zero/subprocess", &test_invalid_tps_pow_a0_zero_subprocess);
+
+  return g_test_run ();
+}
+
+static gdouble
+_theta_integrand (gdouble theta, gpointer p)
+{
+  struct _ThetaCtx *c = (struct _ThetaCtx *) p;
+  complex double v    = 0.0;
+  gint h;
+
+  for (h = ncm_laurent_series_get_hmin (c->cm); h <= ncm_laurent_series_get_hmax (c->cm); h++)
+    v += ncm_laurent_series_get (c->cm, h) * cexp (I * h * theta);
+
+  return creal (v) * exp (c->z * (cos (theta - c->phi) - 1.0));
+}
+
+static gdouble
+_direct_theta_integral (const NcmLaurentSeries *cm, gdouble phi, gdouble z)
+{
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
+  gsl_function F;
+  gdouble result, abserr;
+  struct _ThetaCtx ctx = {cm, phi, z};
+
+  F.function = &_theta_integrand;
+  F.params   = &ctx;
+
+  gsl_integration_qag (&F, 0.0, 2.0 * M_PI, 1.0e-12, 1.0e-11, 1000, GSL_INTEG_GAUSS61, w, &result, &abserr);
+  gsl_integration_workspace_free (w);
+
+  return result;
+}
+
+static NcmLaurentSeries *
+_track (GPtrArray *scratch, NcmLaurentSeries *x)
+{
+  g_ptr_array_add (scratch, x);
+
+  return x;
+}
+
+/* Fills tps with a series whose coefficients have several powers of w, L_0 constant. */
+static void
+_fill_tps_laurent (NcmLaurentSeriesTPS *tps, complex double a0)
+{
+  const guint order = ncm_laurent_series_tps_order (tps);
+  guint n;
+
+  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (tps, 0), 0, a0);
+
+  for (n = 1; n <= order; n++)
+  {
+    NcmLaurentSeries *L = ncm_laurent_series_tps_get (tps, n);
+
+    ncm_laurent_series_reset (L, -(gint) n, (gint) n);
+    ncm_laurent_series_set (L, -(gint) n, 0.3 / n - 0.2 * I);
+    ncm_laurent_series_set (L, 0, 0.5 + 0.1 * n * I);
+    ncm_laurent_series_set (L, (gint) n, -0.4 + 0.7 * I / n);
+  }
+}
+
+static gdouble
+_tps_max_diff (const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b)
+{
+  const guint order = ncm_laurent_series_tps_order (a);
+  gdouble d         = 0.0;
+  guint n;
+
+  for (n = 0; n <= order; n++)
+  {
+    const NcmLaurentSeries *La = ncm_laurent_series_tps_get (a, n);
+    const NcmLaurentSeries *Lb = ncm_laurent_series_tps_get (b, n);
+    const gint hmin            = MIN (ncm_laurent_series_get_hmin (La), ncm_laurent_series_get_hmin (Lb));
+    const gint hmax            = MAX (ncm_laurent_series_get_hmax (La), ncm_laurent_series_get_hmax (Lb));
+    gint h;
+
+    for (h = hmin; h <= hmax; h++)
+      d = MAX (d, cabs (ncm_laurent_series_get (La, h) - ncm_laurent_series_get (Lb, h)));
+  }
+
+  return d;
+}
+
 static void
 test_add_scale_hand_computed (void)
 {
@@ -126,45 +279,6 @@ test_eval_hand_computed (void)
   ncm_laurent_series_free (a);
 }
 
-/* Ground truth: direct numerical theta-integration of
- * cm(theta)*exp(z*(cos(theta-phi)-1)), no Jacobi-Anger identity used. */
-struct _ThetaCtx
-{
-  const NcmLaurentSeries *cm;
-  gdouble phi;
-  gdouble z;
-};
-
-static gdouble
-_theta_integrand (gdouble theta, gpointer p)
-{
-  struct _ThetaCtx *c = (struct _ThetaCtx *) p;
-  complex double v    = 0.0;
-  gint h;
-
-  for (h = ncm_laurent_series_get_hmin (c->cm); h <= ncm_laurent_series_get_hmax (c->cm); h++)
-    v += ncm_laurent_series_get (c->cm, h) * cexp (I * h * theta);
-
-  return creal (v) * exp (c->z * (cos (theta - c->phi) - 1.0));
-}
-
-static gdouble
-_direct_theta_integral (const NcmLaurentSeries *cm, gdouble phi, gdouble z)
-{
-  gsl_integration_workspace *w = gsl_integration_workspace_alloc (1000);
-  gsl_function F;
-  gdouble result, abserr;
-  struct _ThetaCtx ctx = {cm, phi, z};
-
-  F.function = &_theta_integrand;
-  F.params   = &ctx;
-
-  gsl_integration_qag (&F, 0.0, 2.0 * M_PI, 1.0e-12, 1.0e-11, 1000, GSL_INTEG_GAUSS61, w, &result, &abserr);
-  gsl_integration_workspace_free (w);
-
-  return result;
-}
-
 static void
 test_jacobi_anger_matches_direct_integration (void)
 {
@@ -205,14 +319,6 @@ test_jacobi_anger_matches_direct_integration (void)
   }
 
   g_rand_free (rng);
-}
-
-static NcmLaurentSeries *
-_track (GPtrArray *scratch, NcmLaurentSeries *x)
-{
-  g_ptr_array_add (scratch, x);
-
-  return x;
 }
 
 /* Cross-language regression: chi_I(chi_L,g) Taylor coefficients, chi (TRACE)
@@ -693,48 +799,6 @@ test_tps_pow_matches_sympy_reference (void)
   ncm_laurent_series_tps_unref (out);
 }
 
-/* Fills tps with a series whose coefficients have several powers of w, L_0 constant. */
-static void
-_fill_tps_laurent (NcmLaurentSeriesTPS *tps, complex double a0)
-{
-  const guint order = ncm_laurent_series_tps_order (tps);
-  guint n;
-
-  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (tps, 0), 0, a0);
-
-  for (n = 1; n <= order; n++)
-  {
-    NcmLaurentSeries *L = ncm_laurent_series_tps_get (tps, n);
-
-    ncm_laurent_series_reset (L, -(gint) n, (gint) n);
-    ncm_laurent_series_set (L, -(gint) n, 0.3 / n - 0.2 * I);
-    ncm_laurent_series_set (L, 0, 0.5 + 0.1 * n * I);
-    ncm_laurent_series_set (L, (gint) n, -0.4 + 0.7 * I / n);
-  }
-}
-
-static gdouble
-_tps_max_diff (const NcmLaurentSeriesTPS *a, const NcmLaurentSeriesTPS *b)
-{
-  const guint order = ncm_laurent_series_tps_order (a);
-  gdouble d         = 0.0;
-  guint n;
-
-  for (n = 0; n <= order; n++)
-  {
-    const NcmLaurentSeries *La = ncm_laurent_series_tps_get (a, n);
-    const NcmLaurentSeries *Lb = ncm_laurent_series_tps_get (b, n);
-    const gint hmin            = MIN (ncm_laurent_series_get_hmin (La), ncm_laurent_series_get_hmin (Lb));
-    const gint hmax            = MAX (ncm_laurent_series_get_hmax (La), ncm_laurent_series_get_hmax (Lb));
-    gint h;
-
-    for (h = hmin; h <= hmax; h++)
-      d = MAX (d, cabs (ncm_laurent_series_get (La, h) - ncm_laurent_series_get (Lb, h)));
-  }
-
-  return d;
-}
-
 static void
 test_conj_off_unit_circle (void)
 {
@@ -930,42 +994,5 @@ test_invalid_tps_pow_a0_zero_subprocess (void)
 
   ncm_laurent_series_tps_unref (a);
   ncm_laurent_series_tps_unref (out);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_add_func ("/ncm/laurent_series/add_scale_hand_computed", &test_add_scale_hand_computed);
-  g_test_add_func ("/ncm/laurent_series/conv_hand_computed", &test_conv_hand_computed);
-  g_test_add_func ("/ncm/laurent_series/conj_hand_computed", &test_conj_hand_computed);
-  g_test_add_func ("/ncm/laurent_series/eval_hand_computed", &test_eval_hand_computed);
-  g_test_add_func ("/ncm/laurent_series/jacobi_anger_matches_direct_integration", &test_jacobi_anger_matches_direct_integration);
-  g_test_add_func ("/ncm/laurent_series/jacobi_anger_accumulate_eval", &test_jacobi_anger_accumulate_eval);
-  g_test_add_func ("/ncm/laurent_series/chi_taylor_matches_python_reference", &test_chi_taylor_matches_python_reference);
-  g_test_add_func ("/ncm/laurent_series/introspectable_api_matches_native", &test_introspectable_api_matches_native);
-  g_test_add_func ("/ncm/laurent_series/copy_is_independent", &test_copy_is_independent);
-  g_test_add_func ("/ncm/laurent_series/reset_grows_only_when_needed", &test_reset_grows_only_when_needed);
-  g_test_add_func ("/ncm/laurent_series/into_variants_match_returns_new", &test_into_variants_match_returns_new);
-  g_test_add_func ("/ncm/laurent_series/tps_new_owns_coefficients_and_reports_order", &test_tps_new_owns_coefficients_and_reports_order);
-  g_test_add_func ("/ncm/laurent_series/tps_boxed_copy_is_refcount_not_deep_copy", &test_tps_boxed_copy_is_refcount_not_deep_copy);
-  g_test_add_func ("/ncm/laurent_series/tps_conv_is_truncated_cauchy_product", &test_tps_conv_is_truncated_cauchy_product);
-  g_test_add_func ("/ncm/laurent_series/tps_conj_add_scale_match_scalar_ops", &test_tps_conj_add_scale_match_scalar_ops);
-  g_test_add_func ("/ncm/laurent_series/tps_eval_hand_computed", &test_tps_eval_hand_computed);
-  g_test_add_func ("/ncm/laurent_series/tps_pow_matches_sympy_reference", &test_tps_pow_matches_sympy_reference);
-  g_test_add_func ("/ncm/laurent_series/conj_off_unit_circle", &test_conj_off_unit_circle);
-  g_test_add_func ("/ncm/laurent_series/add_disjoint_ranges", &test_add_disjoint_ranges);
-  g_test_add_func ("/ncm/laurent_series/tps_pow_laurent_coefficients", &test_tps_pow_laurent_coefficients);
-  g_test_add_func ("/ncm/laurent_series/invalid/arguments_abort", &test_invalid_arguments_abort);
-  g_test_add_func ("/ncm/laurent_series/invalid/new_hmax_below_hmin/subprocess", &test_invalid_new_hmax_below_hmin_subprocess);
-  g_test_add_func ("/ncm/laurent_series/invalid/reset_hmax_below_hmin/subprocess", &test_invalid_reset_hmax_below_hmin_subprocess);
-  g_test_add_func ("/ncm/laurent_series/invalid/jacobi_anger_no_Ik/subprocess", &test_invalid_jacobi_anger_no_Ik_subprocess);
-  g_test_add_func ("/ncm/laurent_series/invalid/tps_pow_l0_not_constant/subprocess", &test_invalid_tps_pow_l0_not_constant_subprocess);
-  g_test_add_func ("/ncm/laurent_series/invalid/tps_pow_a0_zero/subprocess", &test_invalid_tps_pow_a0_zero_subprocess);
-
-  return g_test_run ();
 }
 

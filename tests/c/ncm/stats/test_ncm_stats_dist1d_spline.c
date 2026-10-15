@@ -36,6 +36,38 @@
 
 #define TEST_NKNOTS 101
 
+static void test_ncm_stats_dist1d_spline_gauss (void);
+static void test_ncm_stats_dist1d_spline_mode_at_zero (void);
+static void test_ncm_stats_dist1d_spline_tails (void);
+static void test_ncm_stats_dist1d_spline_density (void);
+static void test_ncm_stats_dist1d_spline_hsc_pz (void);
+static void test_ncm_stats_dist1d_spline_serialize (void);
+static void test_ncm_stats_dist1d_spline_none_subprocess (void);
+static void test_ncm_stats_dist1d_spline_both_subprocess (void);
+static void test_ncm_stats_dist1d_spline_traps (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/stats/dist1d_spline/gauss", &test_ncm_stats_dist1d_spline_gauss);
+  g_test_add_func ("/ncm/stats/dist1d_spline/mode_at_zero", &test_ncm_stats_dist1d_spline_mode_at_zero);
+  g_test_add_func ("/ncm/stats/dist1d_spline/tails", &test_ncm_stats_dist1d_spline_tails);
+  g_test_add_func ("/ncm/stats/dist1d_spline/density", &test_ncm_stats_dist1d_spline_density);
+  g_test_add_func ("/ncm/stats/dist1d_spline/hsc_pz", &test_ncm_stats_dist1d_spline_hsc_pz);
+  g_test_add_func ("/ncm/stats/dist1d_spline/serialize", &test_ncm_stats_dist1d_spline_serialize);
+  g_test_add_func ("/ncm/stats/dist1d_spline/traps", &test_ncm_stats_dist1d_spline_traps);
+  g_test_add_func ("/ncm/stats/dist1d_spline/none/subprocess", &test_ncm_stats_dist1d_spline_none_subprocess);
+  g_test_add_func ("/ncm/stats/dist1d_spline/both/subprocess", &test_ncm_stats_dist1d_spline_both_subprocess);
+
+  g_test_run ();
+}
+
 /* A cubic spline of f on n equally spaced knots in [a, b] */
 static NcmSpline *
 _test_spline_new (gdouble ( *f ) (gdouble), gdouble a, gdouble b, guint n)
@@ -97,6 +129,19 @@ static gdouble
 _test_gauss_density (gdouble x)
 {
   return exp (-0.5 * x * x);
+}
+
+/* Continuity of the value and of the outward slope at a bound */
+static void
+_test_assert_c1 (NcmStatsDist1d *sd1, gdouble xb, gdouble outward, gdouble L)
+{
+  const gdouble h     = 1.0e-6 * L;
+  const gdouble m_b   = ncm_stats_dist1d_eval_m2lnp (sd1, xb);
+  const gdouble s_in  = outward * (m_b - ncm_stats_dist1d_eval_m2lnp (sd1, xb - outward * h)) / h;
+  const gdouble s_out = outward * (ncm_stats_dist1d_eval_m2lnp (sd1, xb + outward * h) - m_b) / h;
+
+  ncm_assert_cmpdouble_e (ncm_stats_dist1d_eval_m2lnp (sd1, xb + outward * 1.0e-12 * L), ==, m_b, 0.0, 1.0e-9);
+  ncm_assert_cmpdouble_e (s_out, ==, s_in, 1.0e-3, 1.0e-3);
 }
 
 /*
@@ -174,19 +219,6 @@ test_ncm_stats_dist1d_spline_mode_at_zero (void)
     ncm_stats_dist1d_free (sd1);
     ncm_spline_free (m2lnp);
   }
-}
-
-/* Continuity of the value and of the outward slope at a bound */
-static void
-_test_assert_c1 (NcmStatsDist1d *sd1, gdouble xb, gdouble outward, gdouble L)
-{
-  const gdouble h     = 1.0e-6 * L;
-  const gdouble m_b   = ncm_stats_dist1d_eval_m2lnp (sd1, xb);
-  const gdouble s_in  = outward * (m_b - ncm_stats_dist1d_eval_m2lnp (sd1, xb - outward * h)) / h;
-  const gdouble s_out = outward * (ncm_stats_dist1d_eval_m2lnp (sd1, xb + outward * h) - m_b) / h;
-
-  ncm_assert_cmpdouble_e (ncm_stats_dist1d_eval_m2lnp (sd1, xb + outward * 1.0e-12 * L), ==, m_b, 0.0, 1.0e-9);
-  ncm_assert_cmpdouble_e (s_out, ==, s_in, 1.0e-3, 1.0e-3);
 }
 
 /*
@@ -380,27 +412,5 @@ test_ncm_stats_dist1d_spline_traps (void)
   g_test_trap_subprocess ("/ncm/stats/dist1d_spline/both/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*exactly one of the m2lnp and density splines must be set*");
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/stats/dist1d_spline/gauss", &test_ncm_stats_dist1d_spline_gauss);
-  g_test_add_func ("/ncm/stats/dist1d_spline/mode_at_zero", &test_ncm_stats_dist1d_spline_mode_at_zero);
-  g_test_add_func ("/ncm/stats/dist1d_spline/tails", &test_ncm_stats_dist1d_spline_tails);
-  g_test_add_func ("/ncm/stats/dist1d_spline/density", &test_ncm_stats_dist1d_spline_density);
-  g_test_add_func ("/ncm/stats/dist1d_spline/hsc_pz", &test_ncm_stats_dist1d_spline_hsc_pz);
-  g_test_add_func ("/ncm/stats/dist1d_spline/serialize", &test_ncm_stats_dist1d_spline_serialize);
-  g_test_add_func ("/ncm/stats/dist1d_spline/traps", &test_ncm_stats_dist1d_spline_traps);
-  g_test_add_func ("/ncm/stats/dist1d_spline/none/subprocess", &test_ncm_stats_dist1d_spline_none_subprocess);
-  g_test_add_func ("/ncm/stats/dist1d_spline/both/subprocess", &test_ncm_stats_dist1d_spline_both_subprocess);
-
-  g_test_run ();
 }
 

@@ -53,6 +53,37 @@ typedef struct _TestNcHIPrim
   NcHIPrim *prim;
 } TestNcHIPrim;
 
+static void test_nc_hiprim_new (TestNcHIPrim *test, gconstpointer pdata);
+static void test_nc_hiprim_free (TestNcHIPrim *test, gconstpointer pdata);
+static void test_nc_hiprim_spectra (TestNcHIPrim *test, gconstpointer pdata);
+static void test_nc_hiprim_amplitudes (TestNcHIPrim *test, gconstpointer pdata);
+static void test_nc_hiprim_impl (TestNcHIPrim *test, gconstpointer pdata);
+static void test_nc_hiprim_lnk_range (TestNcHIPrim *test, gconstpointer pdata);
+static void test_nc_hiprim_serialize (TestNcHIPrim *test, gconstpointer pdata);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add ("/nc/hiprim/power_law/spectra", TestNcHIPrim, NULL,
+              &test_nc_hiprim_new, &test_nc_hiprim_spectra, &test_nc_hiprim_free);
+  g_test_add ("/nc/hiprim/power_law/amplitudes", TestNcHIPrim, NULL,
+              &test_nc_hiprim_new, &test_nc_hiprim_amplitudes, &test_nc_hiprim_free);
+  g_test_add ("/nc/hiprim/power_law/impl", TestNcHIPrim, NULL,
+              &test_nc_hiprim_new, &test_nc_hiprim_impl, &test_nc_hiprim_free);
+  g_test_add ("/nc/hiprim/power_law/lnk_range", TestNcHIPrim, NULL,
+              &test_nc_hiprim_new, &test_nc_hiprim_lnk_range, &test_nc_hiprim_free);
+  g_test_add ("/nc/hiprim/power_law/serialize", TestNcHIPrim, NULL,
+              &test_nc_hiprim_new, &test_nc_hiprim_serialize, &test_nc_hiprim_free);
+
+  g_test_run ();
+}
+
 static void
 test_nc_hiprim_new (TestNcHIPrim *test, gconstpointer pdata)
 {
@@ -154,28 +185,5 @@ test_nc_hiprim_serialize (TestNcHIPrim *test, gconstpointer pdata)
 
   nc_hiprim_free (dup);
   ncm_serialize_free (ser);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add ("/nc/hiprim/power_law/spectra", TestNcHIPrim, NULL,
-              &test_nc_hiprim_new, &test_nc_hiprim_spectra, &test_nc_hiprim_free);
-  g_test_add ("/nc/hiprim/power_law/amplitudes", TestNcHIPrim, NULL,
-              &test_nc_hiprim_new, &test_nc_hiprim_amplitudes, &test_nc_hiprim_free);
-  g_test_add ("/nc/hiprim/power_law/impl", TestNcHIPrim, NULL,
-              &test_nc_hiprim_new, &test_nc_hiprim_impl, &test_nc_hiprim_free);
-  g_test_add ("/nc/hiprim/power_law/lnk_range", TestNcHIPrim, NULL,
-              &test_nc_hiprim_new, &test_nc_hiprim_lnk_range, &test_nc_hiprim_free);
-  g_test_add ("/nc/hiprim/power_law/serialize", TestNcHIPrim, NULL,
-              &test_nc_hiprim_new, &test_nc_hiprim_serialize, &test_nc_hiprim_free);
-
-  g_test_run ();
 }
 

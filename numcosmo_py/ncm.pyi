@@ -77,7 +77,6 @@ ODE_SPLINE_MIN_STEP: float = 0.0
 POWSPEC_CORR3D_DEFAULT_SIZE: int = 100
 POWSPEC_FILTER_DEFAULT_SIZE: int = 200
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_MIN_ORDER: int = 2
-SBESSEL_INTEGRATOR_LEVIN_DEFAULT_CHEB_RELTOL: float = 0.0
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_ELL_CACHE_MAX: int = 1200
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_N_KNOTS: int = 21
 SBESSEL_INTEGRATOR_LEVIN_DEFAULT_RELTOL: float = 0.0
@@ -9761,19 +9760,15 @@ class SBesselIntegratorLevin(SBesselIntegrator):
 
         SBesselIntegratorLevin(**properties)
         new(ell_min:int, ell_max:int) -> NumCosmoMath.SBesselIntegratorLevin
-        new_full(ell_min:int, ell_max:int, x_knots_min:float, x_knots_max:float, n_knots:int, ell_cache_max:int, reltol:float, cheb_min_order:int, cheb_reltol:float) -> NumCosmoMath.SBesselIntegratorLevin
+        new_full(ell_min:int, ell_max:int, x_knots_min:float, x_knots_max:float, n_knots:int, ell_cache_max:int, reltol:float, cheb_min_order:int) -> NumCosmoMath.SBesselIntegratorLevin
 
     Object NcmSBesselIntegratorLevin
 
     Properties from NcmSBesselIntegratorLevin:
-      max-order -> guint: max-order
-        Maximum Chebyshev order
       reltol -> gdouble: reltol
-        ODE solve relative tolerance
+        Relative tolerance
       cheb-min-order -> guint: cheb-min-order
         Minimum Chebyshev order for RHS
-      cheb-reltol -> gdouble: cheb-reltol
-        Integrand Chebyshev fit relative tolerance
       x-knots-min -> gdouble: x-knots-min
         Minimum knot value
       x-knots-max -> gdouble: x-knots-max
@@ -9803,10 +9798,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
 
     class Props:
         cheb_min_order: int
-        cheb_reltol: float
         dead_edge_cells: bool
         ell_cache_max: int
-        max_order: int
         n_knots: int
         reltol: float
         tau_constraint_guard: float
@@ -9821,10 +9814,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def __init__(
         self,
         cheb_min_order: int = ...,
-        cheb_reltol: float = ...,
         dead_edge_cells: bool = ...,
         ell_cache_max: int = ...,
-        max_order: int = ...,
         n_knots: int = ...,
         reltol: float = ...,
         tau_constraint_guard: float = ...,
@@ -9839,10 +9830,8 @@ class SBesselIntegratorLevin(SBesselIntegrator):
     def clear(sbilv: SBesselIntegratorLevin) -> None: ...
     def free(self) -> None: ...
     def get_cheb_min_order(self) -> int: ...
-    def get_cheb_reltol(self) -> float: ...
     def get_dead_edge_cells(self) -> bool: ...
     def get_ell_cache_max(self) -> int: ...
-    def get_max_order(self) -> int: ...
     def get_n_constraint_fallbacks(self) -> int: ...
     def get_n_knots(self) -> int: ...
     def get_n_locked_eligible_solves(self) -> int: ...
@@ -9875,14 +9864,11 @@ class SBesselIntegratorLevin(SBesselIntegrator):
         ell_cache_max: int,
         reltol: float,
         cheb_min_order: int,
-        cheb_reltol: float,
     ) -> SBesselIntegratorLevin: ...
     def peek_ode_solver(self) -> SBesselOdeSolver: ...
     def ref(self) -> SBesselIntegratorLevin: ...
     def set_cheb_min_order(self, cheb_min_order: int) -> None: ...
-    def set_cheb_reltol(self, cheb_reltol: float) -> None: ...
     def set_dead_edge_cells(self, enable: bool) -> None: ...
-    def set_max_order(self, max_order: int) -> None: ...
     def set_record_panels(self, record: bool) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_tau_constraint(self, tau_constraint: bool) -> None: ...

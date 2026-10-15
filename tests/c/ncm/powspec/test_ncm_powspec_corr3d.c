@@ -33,6 +33,36 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_powspec_corr3d_calibration (void);
+static void test_ncm_powspec_corr3d_quadrature (void);
+static void test_ncm_powspec_corr3d_redshift (void);
+static void test_ncm_powspec_corr3d_reprepare (void);
+static void test_ncm_powspec_corr3d_outside (void);
+static void test_ncm_powspec_corr3d_outside_subprocess (void);
+static void test_ncm_powspec_corr3d_unprepared (void);
+static void test_ncm_powspec_corr3d_unprepared_subprocess (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/powspec_corr3d/calibration", &test_ncm_powspec_corr3d_calibration);
+  g_test_add_func ("/ncm/powspec_corr3d/quadrature", &test_ncm_powspec_corr3d_quadrature);
+  g_test_add_func ("/ncm/powspec_corr3d/redshift", &test_ncm_powspec_corr3d_redshift);
+  g_test_add_func ("/ncm/powspec_corr3d/reprepare", &test_ncm_powspec_corr3d_reprepare);
+  g_test_add_func ("/ncm/powspec_corr3d/outside", &test_ncm_powspec_corr3d_outside);
+  g_test_add_func ("/ncm/powspec_corr3d/outside/subprocess", &test_ncm_powspec_corr3d_outside_subprocess);
+  g_test_add_func ("/ncm/powspec_corr3d/unprepared", &test_ncm_powspec_corr3d_unprepared);
+  g_test_add_func ("/ncm/powspec_corr3d/unprepared/subprocess", &test_ncm_powspec_corr3d_unprepared_subprocess);
+
+  g_test_run ();
+}
+
 /* NcmPowspecAnalytic (BBKS, LCDM growth) on k in [1e-6, 1e2] and z in [0, 2]. */
 static NcmPowspec *
 _test_powspec_new (void)
@@ -207,26 +237,5 @@ test_ncm_powspec_corr3d_unprepared_subprocess (void)
   NcmPowspecCorr3d *psc = ncm_powspec_corr3d_new (ps);
 
   ncm_powspec_corr3d_get_r_min (psc);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/powspec_corr3d/calibration", &test_ncm_powspec_corr3d_calibration);
-  g_test_add_func ("/ncm/powspec_corr3d/quadrature", &test_ncm_powspec_corr3d_quadrature);
-  g_test_add_func ("/ncm/powspec_corr3d/redshift", &test_ncm_powspec_corr3d_redshift);
-  g_test_add_func ("/ncm/powspec_corr3d/reprepare", &test_ncm_powspec_corr3d_reprepare);
-  g_test_add_func ("/ncm/powspec_corr3d/outside", &test_ncm_powspec_corr3d_outside);
-  g_test_add_func ("/ncm/powspec_corr3d/outside/subprocess", &test_ncm_powspec_corr3d_outside_subprocess);
-  g_test_add_func ("/ncm/powspec_corr3d/unprepared", &test_ncm_powspec_corr3d_unprepared);
-  g_test_add_func ("/ncm/powspec_corr3d/unprepared/subprocess", &test_ncm_powspec_corr3d_unprepared_subprocess);
-
-  g_test_run ();
 }
 

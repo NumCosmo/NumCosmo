@@ -122,8 +122,11 @@ void _nc_xcor_check_qag_status (const gchar *where, gint ret, gdouble reltol, gd
  */
 void _nc_xcor_kernel_integrate_block_exact (NcXcor *xc, NcXcorKernelIntegrand *xclki1, NcXcorKernelIntegrand *xclki2, guint lmin, guint lmax, gboolean isauto, NcmVector *vp, NcmVector *vp_err);
 
+/* nc_xcor_kernel_get_eval_vectorized_full() with the closure tolerances given, not the kernel's. */
+NcXcorKernelIntegrand *_nc_xcor_kernel_get_eval_vectorized_tol (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax, NcmSBesselIntegrator *sbi, gdouble reltol, gdouble peak_epsilon);
+
 /* Fails loudly when NcXcor:reltol asks for more than the kernel's closure carries. */
-void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk);
+void _nc_xcor_check_kernel_tolerance (NcXcor *xc, NcXcorKernel *xclk, NcmSBesselIntegrator *sbi);
 
 /*
  * TRUE when there is a multipole at or above which both kernels run in the

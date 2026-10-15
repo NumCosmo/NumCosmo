@@ -33,6 +33,26 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_vparam_components (void);
+static void test_ncm_vparam_setters (void);
+static void test_ncm_vparam_set_sparam_copy (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/vparam/components", &test_ncm_vparam_components);
+  g_test_add_func ("/ncm/vparam/setters", &test_ncm_vparam_setters);
+  g_test_add_func ("/ncm/vparam/set_sparam_copy", &test_ncm_vparam_set_sparam_copy);
+
+  g_test_run ();
+}
+
 static NcmVParam *
 _test_vparam_new (const guint len)
 {
@@ -145,21 +165,5 @@ test_ncm_vparam_set_sparam_copy (void)
 
   ncm_vparam_free (cp);
   ncm_vparam_free (vp);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/vparam/components", &test_ncm_vparam_components);
-  g_test_add_func ("/ncm/vparam/setters", &test_ncm_vparam_setters);
-  g_test_add_func ("/ncm/vparam/set_sparam_copy", &test_ncm_vparam_set_sparam_copy);
-
-  g_test_run ();
 }
 

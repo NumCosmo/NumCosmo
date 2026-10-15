@@ -65,10 +65,65 @@ typedef struct _TestMethod
   NcXcorMethod meth;
 } TestMethod;
 
+typedef struct _TestCheck
+{
+  const gchar *name;
+
+  void (*func) (TestNcXcor *test, gconstpointer pdata);
+} TestCheck;
+
+static void test_nc_xcor_new (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_free (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_limber_backends_agree (void);
+static void test_nc_xcor_basic (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_compute (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_compute_full (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_auto (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_disjoint (TestNcXcor *test, gconstpointer pdata);
+static void test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata);
+
 static const TestMethod test_methods[] = {
   {"limber_z_gsl",      NC_XCOR_METHOD_LIMBER_Z_GSL     },
   {"limber_z_cubature", NC_XCOR_METHOD_LIMBER_Z_CUBATURE},
 };
+
+static const TestCheck test_checks[] = {
+  {"basic",        &test_nc_xcor_basic       },
+  {"compute",      &test_nc_xcor_compute     },
+  {"compute_full", &test_nc_xcor_compute_full},
+  {"auto",         &test_nc_xcor_auto        },
+  {"disjoint",     &test_nc_xcor_disjoint    },
+  {"properties",   &test_nc_xcor_properties  },
+};
+
+gint
+main (gint argc, gchar *argv[])
+{
+  guint i, j;
+
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
+  {
+    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
+    {
+      gchar *path = g_strdup_printf ("/nc/xcor/%s/%s", test_methods[i].name, test_checks[j].name);
+
+      g_test_add (path, TestNcXcor, &test_methods[i],
+                  &test_nc_xcor_new, test_checks[j].func, &test_nc_xcor_free);
+
+      g_free (path);
+    }
+  }
+
+  g_test_add_func ("/nc/xcor/limber/backends_agree", &test_nc_xcor_limber_backends_agree);
+
+  g_test_run ();
+}
 
 static void
 test_nc_xcor_new (TestNcXcor *test, gconstpointer pdata)
@@ -306,22 +361,6 @@ test_nc_xcor_properties (TestNcXcor *test, gconstpointer pdata)
   }
 }
 
-typedef struct _TestCheck
-{
-  const gchar *name;
-
-  void (*func) (TestNcXcor *test, gconstpointer pdata);
-} TestCheck;
-
-static const TestCheck test_checks[] = {
-  {"basic",        &test_nc_xcor_basic       },
-  {"compute",      &test_nc_xcor_compute     },
-  {"compute_full", &test_nc_xcor_compute_full},
-  {"auto",         &test_nc_xcor_auto        },
-  {"disjoint",     &test_nc_xcor_disjoint    },
-  {"properties",   &test_nc_xcor_properties  },
-};
-
 /* The two Limber backends integrate the same integrand with different quadrature, so
  * they must agree far better than either agrees with the truth. */
 static void
@@ -367,34 +406,5 @@ test_nc_xcor_limber_backends_agree (void)
   ncm_powspec_free (ps);
   nc_distance_free (dist);
   nc_hicosmo_free (cosmo);
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  guint i, j;
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  for (i = 0; i < G_N_ELEMENTS (test_methods); i++)
-  {
-    for (j = 0; j < G_N_ELEMENTS (test_checks); j++)
-    {
-      gchar *path = g_strdup_printf ("/nc/xcor/%s/%s", test_methods[i].name, test_checks[j].name);
-
-      g_test_add (path, TestNcXcor, &test_methods[i],
-                  &test_nc_xcor_new, test_checks[j].func, &test_nc_xcor_free);
-
-      g_free (path);
-    }
-  }
-
-  g_test_add_func ("/nc/xcor/limber/backends_agree", &test_nc_xcor_limber_backends_agree);
-
-  g_test_run ();
 }
 

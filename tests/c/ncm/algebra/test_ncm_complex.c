@@ -33,6 +33,22 @@
 #include <glib.h>
 #include <glib-object.h>
 
+static void test_ncm_complex_ops (void);
+
+gint
+main (gint argc, gchar *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
+
+  g_test_add_func ("/ncm/complex/ops", &test_ncm_complex_ops);
+
+  g_test_run ();
+}
+
 static void
 test_ncm_complex_ops (void)
 {
@@ -125,19 +141,5 @@ test_ncm_complex_ops (void)
     ncm_complex_clear (&c1);
     g_assert_null (c1);
   }
-}
-
-gint
-main (gint argc, gchar *argv[])
-{
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init_full_ptr (&argc, &argv);
-  ncm_cfg_enable_gsl_err_handler ();
-
-  g_test_set_nonfatal_assertions ();
-
-  g_test_add_func ("/ncm/complex/ops", &test_ncm_complex_ops);
-
-  g_test_run ();
 }
 

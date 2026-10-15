@@ -38,6 +38,9 @@ typedef struct _TestNcmIntegral1d
   gdouble reltol;
 } TestNcmIntegral1d;
 
+#define NCM_INTEGRAL1D_TESTCMP_ABS g_assert_cmpfloat (fabs (result), <=, prec)
+#define NCM_INTEGRAL1D_TESTCMP(d) ncm_assert_cmpdouble_e (result, ==, (d), prec, 0.0)
+
 void test_ncm_integral1d_new_sinx (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_new_x5_2_sinx (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_new_mx2_2 (TestNcmIntegral1d *test, gconstpointer pdata);
@@ -146,6 +149,20 @@ test_exp_mx2_2 (gpointer userdata, const gdouble x, const gdouble w)
 }
 
 void
+_set_destroyed (gpointer b)
+{
+  gboolean *destroyed = b;
+
+  *destroyed = TRUE;
+}
+
+static void
+_test_count_free (gpointer data)
+{
+  (*(guint *) data)++;
+}
+
+void
 test_ncm_integral1d_new_sinx (TestNcmIntegral1d *test, gconstpointer pdata)
 {
   test->int1d  = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&test_sin, NULL));
@@ -191,21 +208,10 @@ test_ncm_integral1d_new_mx2_2 (TestNcmIntegral1d *test, gconstpointer pdata)
 }
 
 void
-_set_destroyed (gpointer b)
-{
-  gboolean *destroyed = b;
-
-  *destroyed = TRUE;
-}
-
-void
 test_ncm_integral1d_free (TestNcmIntegral1d *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (ncm_integral1d_free, test->int1d);
 }
-
-#define NCM_INTEGRAL1D_TESTCMP_ABS g_assert_cmpfloat (fabs (result), <=, prec)
-#define NCM_INTEGRAL1D_TESTCMP(d) ncm_assert_cmpdouble_e (result, ==, (d), prec, 0.0)
 
 void
 test_ncm_integral1d_sinx_eval (TestNcmIntegral1d *test, gconstpointer pdata)
@@ -393,12 +399,6 @@ void
 test_ncm_integral1d_invalid_test (TestNcmIntegral1d *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
-}
-
-static void
-_test_count_free (gpointer data)
-{
-  (*(guint *) data)++;
 }
 
 /* userfree frees the user data when it is replaced and on finalization. */

@@ -146,6 +146,16 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
+static void
+_test_nc_data_cluster_ncount_saveload (TestNcDataClusterNCount *test, gconstpointer pdata)
+{
+  nc_data_cluster_ncount_catalog_save (test->ncdata, "test_nc_data_cluster_ncount_tmp.fits", TRUE);
+  nc_data_cluster_ncount_free (test->ncdata);
+
+  test->ncdata = nc_data_cluster_ncount_new (test->cad, "NcClusterRedshiftNodist", "NcClusterMassAscaso");
+  nc_data_cluster_ncount_catalog_load (test->ncdata, "test_nc_data_cluster_ncount_tmp.fits");
+}
+
 void
 test_nc_data_cluster_ncount_new (TestNcDataClusterNCount *test, gconstpointer pdata)
 {
@@ -302,16 +312,6 @@ test_nc_data_cluster_ncount_serialize (TestNcDataClusterNCount *test, gconstpoin
 
   g_variant_unref (var);
   ncm_serialize_free (ser);
-}
-
-static void
-_test_nc_data_cluster_ncount_saveload (TestNcDataClusterNCount *test, gconstpointer pdata)
-{
-  nc_data_cluster_ncount_catalog_save (test->ncdata, "test_nc_data_cluster_ncount_tmp.fits", TRUE);
-  nc_data_cluster_ncount_free (test->ncdata);
-
-  test->ncdata = nc_data_cluster_ncount_new (test->cad, "NcClusterRedshiftNodist", "NcClusterMassAscaso");
-  nc_data_cluster_ncount_catalog_load (test->ncdata, "test_nc_data_cluster_ncount_tmp.fits");
 }
 
 void
