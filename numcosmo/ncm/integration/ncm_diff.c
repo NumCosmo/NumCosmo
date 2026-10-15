@@ -80,6 +80,7 @@
 #include "build_cfg.h"
 
 #include "ncm/integration/ncm_diff.h"
+#include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_cfg.h"
 
 typedef struct _NcmDiffPrivate
@@ -99,6 +100,7 @@ typedef struct _NcmDiffPrivate
   GPtrArray *central_tables;
   GPtrArray *forward_tables;
   GPtrArray *backward_tables;
+  NcmMemoryPool *work_pool; /* NcmDiffWork, one per concurrent call */
 } NcmDiffPrivate;
 
 /* Extrapolation nodes h_i = 1/g_i and Lagrange weights lambda_i for one order. */
@@ -133,6 +135,8 @@ struct _NcmDiff
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmDiff, ncm_diff, G_TYPE_OBJECT)
 
+static gpointer _ncm_diff_work_pool_alloc (gpointer userdata);
+
 static void
 ncm_diff_init (NcmDiff *diff)
 {
@@ -158,6 +162,7 @@ ncm_diff_init (NcmDiff *diff)
   g_ptr_array_set_free_func (self->central_tables,  &_ncm_diff_table_free);
   g_ptr_array_set_free_func (self->forward_tables,  &_ncm_diff_table_free);
   g_ptr_array_set_free_func (self->backward_tables, &_ncm_diff_table_free);
+  self->work_pool = ncm_memory_pool_new (_ncm_diff_work_pool_alloc, NULL, (GDestroyNotify) ncm_diff_work_unref);
 }
 
 static void
@@ -279,6 +284,11 @@ _ncm_diff_dispose (GObject *object)
 static void
 _ncm_diff_finalize (GObject *object)
 {
+  NcmDiff *diff               = NCM_DIFF (object);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+
+  ncm_memory_pool_free (self->work_pool, TRUE);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_diff_parent_class)->finalize (object);
 }
@@ -1445,6 +1455,13 @@ ncm_diff_work_clear (NcmDiffWork **work)
   g_clear_pointer (work, ncm_diff_work_unref);
 }
 
+/* A new workspace for the pool of an #NcmDiff */
+static gpointer
+_ncm_diff_work_pool_alloc (gpointer userdata)
+{
+  return ncm_diff_work_new ();
+}
+
 /* Marks @work in use by the calling derivative; a second concurrent use aborts. */
 static void
 _ncm_diff_work_enter (NcmDiffWork *work)
@@ -1577,15 +1594,15 @@ static GArray *
 ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, NcmDiffStepAlgo onesided_algo, guint po, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
-  NcmDiffWork *work           = ncm_diff_work_new ();
+  NcmDiffWork **work_ptr      = ncm_memory_pool_get (self->work_pool);
   GArray *df;
 
   if (self->dual_series)
-    df = _ncm_diff_by_step_algo_dual (diff, work, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
+    df = _ncm_diff_by_step_algo_dual (diff, *work_ptr, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
   else
-    df = _ncm_diff_by_step_algo_single (diff, work, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
+    df = _ncm_diff_by_step_algo_single (diff, *work_ptr, step_algo, onesided_algo, po, x_a, dim, f, user_data, Eerr);
 
-  ncm_diff_work_unref (work);
+  ncm_memory_pool_return (work_ptr);
 
   return df;
 }
@@ -2547,15 +2564,15 @@ static GArray *
 ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
-  NcmDiffWork *work           = ncm_diff_work_new ();
+  NcmDiffWork **work_ptr      = ncm_memory_pool_get (self->work_pool);
   GArray *df;
 
   if (self->dual_series)
-    df = _ncm_diff_Hessian_by_step_algo_dual (diff, work, Hstep_algo, po, x_a, f, user_data, Eerr);
+    df = _ncm_diff_Hessian_by_step_algo_dual (diff, *work_ptr, Hstep_algo, po, x_a, f, user_data, Eerr);
   else
-    df = _ncm_diff_Hessian_by_step_algo_single (diff, work, Hstep_algo, po, x_a, f, user_data, Eerr);
+    df = _ncm_diff_Hessian_by_step_algo_single (diff, *work_ptr, Hstep_algo, po, x_a, f, user_data, Eerr);
 
-  ncm_diff_work_unref (work);
+  ncm_memory_pool_return (work_ptr);
 
   return df;
 }
@@ -3677,10 +3694,11 @@ static GArray *_ncm_diff_sc_dn_work (NcmDiff *diff, NcmDiffWork *work, const gui
 static GArray *
 _ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
 {
-  NcmDiffWork *work = ncm_diff_work_new ();
-  GArray *df        = _ncm_diff_sc_dn_work (diff, work, order, x_a, dim, f, user_data, Eerr);
+  NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  NcmDiffWork **work_ptr      = ncm_memory_pool_get (self->work_pool);
+  GArray *df                  = _ncm_diff_sc_dn_work (diff, *work_ptr, order, x_a, dim, f, user_data, Eerr);
 
-  ncm_diff_work_unref (work);
+  ncm_memory_pool_return (work_ptr);
 
   return df;
 }

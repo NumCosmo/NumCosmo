@@ -70,6 +70,13 @@ typedef struct _TestNcmDiffDom
   gdouble xmax;
 } TestNcmDiffDom;
 
+typedef struct _TestNcmDiffThread
+{
+  NcmDiff *diff;
+  GArray *expected;
+  gboolean all_equal;
+} TestNcmDiffThread;
+
 void test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_free (TestNcmDiff *test, gconstpointer pdata);
 
@@ -140,6 +147,7 @@ void test_ncm_diff_invalid_st (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_new_single (TestNcmDiff *test, gconstpointer pdata);
 
 void test_ncm_diff_work_ref (void);
+void test_ncm_diff_work_threads (void);
 static void _test_ncm_diff_add (const gchar *path, gconstpointer pdata, void (*test_func) (TestNcmDiff *test, gconstpointer pdata));
 
 gint
@@ -270,6 +278,7 @@ main (gint argc, gchar *argv[])
   _test_ncm_diff_add ("/ncm/diff/invalid/st/subprocess", NULL, &test_ncm_diff_invalid_st);
 
   g_test_add_func ("/ncm/diff/work/ref", &test_ncm_diff_work_ref);
+  g_test_add_func ("/ncm/diff/work/threads", &test_ncm_diff_work_threads);
 
   g_test_run ();
 }
@@ -2766,5 +2775,62 @@ test_ncm_diff_work_ref (void)
   ncm_diff_work_unref (work2);
   ncm_diff_work_clear (&work);
   g_assert_null (work);
+}
+
+static void
+_test_ncm_diff_thread_f (const gdouble x, NcmVector *y, gpointer user_data)
+{
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (y); i++)
+    ncm_vector_set (y, i, exp ((0.1 + 0.05 * i) * x) * sin ((1.0 + 0.1 * i) * x));
+}
+
+static gpointer
+_test_ncm_diff_thread_run (gpointer data)
+{
+  TestNcmDiffThread *td = data;
+  guint k, i;
+
+  for (k = 0; k < 200; k++)
+  {
+    GArray *d = ncm_diff_rc_d2_1_to_M (td->diff, 0.7, 8, &_test_ncm_diff_thread_f, NULL, NULL);
+
+    for (i = 0; i < d->len; i++)
+      td->all_equal = td->all_equal && (g_array_index (d, gdouble, i) == g_array_index (td->expected, gdouble, i));
+
+    g_array_unref (d);
+  }
+
+  return NULL;
+}
+
+/* Threads sharing one NcmDiff take separate workspaces from its pool: every concurrent call
+ * returns exactly the serial result */
+void
+test_ncm_diff_work_threads (void)
+{
+  NcmDiff *diff    = ncm_diff_new ();
+  GArray *expected = ncm_diff_rc_d2_1_to_M (diff, 0.7, 8, &_test_ncm_diff_thread_f, NULL, NULL);
+  TestNcmDiffThread td[4];
+  GThread *threads[4];
+  guint t;
+
+  for (t = 0; t < 4; t++)
+  {
+    td[t].diff      = diff;
+    td[t].expected  = expected;
+    td[t].all_equal = TRUE;
+    threads[t]      = g_thread_new ("ncm-diff-work", &_test_ncm_diff_thread_run, &td[t]);
+  }
+
+  for (t = 0; t < 4; t++)
+  {
+    g_thread_join (threads[t]);
+    g_assert_true (td[t].all_equal);
+  }
+
+  g_array_unref (expected);
+  ncm_diff_free (diff);
 }
 
