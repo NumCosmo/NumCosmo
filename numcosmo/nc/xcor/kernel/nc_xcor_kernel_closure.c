@@ -403,7 +403,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
                                       const gdouble reltol, const gdouble peak_epsilon)
 {
   NcXcorKernelPrivate *self        = _nc_xcor_kernel_get_private (xclk);
-  NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_integrand_new (lmax - lmin + 1);
+  NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_integrand_new (lmax - lmin + 1, 1);
   const guint n_l                  = lmax - lmin + 1;
 
   {

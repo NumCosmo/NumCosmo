@@ -46,6 +46,7 @@ void ncm_spectral_panels_product_clear (NcmSpectralPanelsProduct **prod);
 guint ncm_spectral_panels_product_get_p (NcmSpectralPanelsProduct *prod);
 
 void ncm_spectral_panels_product_integrate (NcmSpectralPanelsProduct *prod, NcmSpectralPanels *P, NcmVector *s1, NcmSpectralPanels *Q, NcmVector *s2, NcmVector *result, NcmVector *err);
+void ncm_spectral_panels_product_integrate_rows (NcmSpectralPanelsProduct *prod, NcmSpectralPanels *P, guint o1, NcmVector *s1, NcmSpectralPanels *Q, guint o2, NcmVector *s2, NcmVector *result, NcmVector *err);
 
 G_END_DECLS
 

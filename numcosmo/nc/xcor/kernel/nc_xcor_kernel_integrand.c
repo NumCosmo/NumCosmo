@@ -38,9 +38,12 @@
  * NcXcorKernelIntegrand:
  *
  * The closure of $W_\ell(k)$ over a block of multipoles: a Chebyshev series on panels,
- * one row per multipole, built by nc_xcor_kernel_get_eval_vectorized_full(). Row $i$ is
- * a function of $x = k / s_i$, with $s_i$ the scale of nc_xcor_kernel_integrand_get_scale(),
- * and is zero outside its support nc_xcor_kernel_integrand_get_range_comp().
+ * built by nc_xcor_kernel_get_eval_vectorized_full(). The panels hold
+ * nc_xcor_kernel_integrand_get_n_terms() groups of one row per multipole, and multipole
+ * $i$ of a block of $n$ is the sum of the panel rows $i + t n$ over the terms $t$. Panel
+ * row $r$ is a function of $x = k / s_r$, with $s_r$ the scale of
+ * nc_xcor_kernel_integrand_get_scale(), and is zero outside its support
+ * nc_xcor_kernel_integrand_get_range_comp().
  *
  * Evaluation reads the panels and writes nothing, so one integrand may be evaluated by
  * several threads at once.
@@ -58,21 +61,23 @@
 G_DEFINE_BOXED_TYPE (NcXcorKernelIntegrand, nc_xcor_kernel_integrand, nc_xcor_kernel_integrand_ref, nc_xcor_kernel_integrand_unref)
 
 /*
- * A closure of @len rows with empty panels and unset rows, for the builder to fill:
- * the panels, every row and the block's k range.
+ * A closure of @len multipoles in @n_terms terms with empty panels and unset rows, for
+ * the builder to fill: the panels, every panel row and the block's k range.
  */
 NcXcorKernelIntegrand *
-_nc_xcor_kernel_integrand_new (guint len)
+_nc_xcor_kernel_integrand_new (guint len, guint n_terms)
 {
   NcXcorKernelIntegrand *integrand = g_new0 (NcXcorKernelIntegrand, 1);
+  const guint n_rows               = len * n_terms;
 
   integrand->refcount = 1;
   integrand->len      = len;
-  integrand->sp       = ncm_spectral_panels_new (len);
-  integrand->rows     = g_array_sized_new (FALSE, TRUE, sizeof (NcXcorKernelIntegrandRow), len);
-  integrand->scales   = ncm_vector_new (len);
+  integrand->n_terms  = n_terms;
+  integrand->sp       = ncm_spectral_panels_new (n_rows);
+  integrand->rows     = g_array_sized_new (FALSE, TRUE, sizeof (NcXcorKernelIntegrandRow), n_rows);
+  integrand->scales   = ncm_vector_new (n_rows);
 
-  g_array_set_size (integrand->rows, len);
+  g_array_set_size (integrand->rows, n_rows);
 
   return integrand;
 }
@@ -142,6 +147,22 @@ nc_xcor_kernel_integrand_get_len (NcXcorKernelIntegrand *integrand)
 }
 
 /**
+ * nc_xcor_kernel_integrand_get_n_terms:
+ * @integrand: a #NcXcorKernelIntegrand
+ *
+ * Gets the number of terms: the panels hold this many groups of
+ * nc_xcor_kernel_integrand_get_len() rows, and each multipole is the sum of its row in
+ * every group.
+ *
+ * Returns: the number of terms
+ */
+guint
+nc_xcor_kernel_integrand_get_n_terms (NcXcorKernelIntegrand *integrand)
+{
+  return integrand->n_terms;
+}
+
+/**
  * nc_xcor_kernel_integrand_get_range:
  * @integrand: a #NcXcorKernelIntegrand
  * @k_min: (out): minimum k value
@@ -159,11 +180,11 @@ nc_xcor_kernel_integrand_get_range (NcXcorKernelIntegrand *integrand, gdouble *k
 /**
  * nc_xcor_kernel_integrand_get_range_comp:
  * @integrand: a #NcXcorKernelIntegrand
- * @i: row index
+ * @i: panel row index
  * @k_min: (out): minimum k value
  * @k_max: (out): maximum k value
  *
- * Gets the k range row @i is supported on, which can be a part of the range
+ * Gets the k range panel row @i is supported on, which can be a part of the range
  * nc_xcor_kernel_integrand_get_range() reports for the block: under the Limber
  * approximation each multipole vanishes outside its own band.
  */
@@ -179,13 +200,13 @@ nc_xcor_kernel_integrand_get_range_comp (NcXcorKernelIntegrand *integrand, guint
 /**
  * nc_xcor_kernel_integrand_get_scale:
  * @integrand: a #NcXcorKernelIntegrand
- * @i: row index
+ * @i: panel row index
  *
- * The panels are in the variable $x = k / s_i$, with $s_i$ the scale of row @i:
+ * The panels are in the variable $x = k / s_i$, with $s_i$ the scale of panel row @i:
  * $s_i = 1$ for a closure built in $k$, and $s_i = \nu_i = \ell_i + 1/2$ for a Limber
  * closure built in $u = k / \nu$, whose panels are then common to the block.
  *
- * Returns: the scale of row @i
+ * Returns: the scale of panel row @i
  */
 gdouble
 nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i)
@@ -197,9 +218,9 @@ nc_xcor_kernel_integrand_get_scale (NcXcorKernelIntegrand *integrand, guint i)
  * nc_xcor_kernel_integrand_peek_scales:
  * @integrand: a #NcXcorKernelIntegrand
  *
- * Peeks the scales of every row, see nc_xcor_kernel_integrand_get_scale().
+ * Peeks the scales of every panel row, see nc_xcor_kernel_integrand_get_scale().
  *
- * Returns: (transfer none): the scales, one per row
+ * Returns: (transfer none): the scales, one per panel row
  */
 NcmVector *
 nc_xcor_kernel_integrand_peek_scales (NcXcorKernelIntegrand *integrand)
@@ -211,7 +232,8 @@ nc_xcor_kernel_integrand_peek_scales (NcXcorKernelIntegrand *integrand)
  * nc_xcor_kernel_integrand_peek_panels:
  * @integrand: a #NcXcorKernelIntegrand
  *
- * Peeks the panels, one row per multipole, in the variable $x = k / s_i$ of
+ * Peeks the panels, nc_xcor_kernel_integrand_get_n_terms() groups of one row per
+ * multipole, row $i$ in the variable $x = k / s_i$ of
  * nc_xcor_kernel_integrand_get_scale().
  *
  * Returns: (transfer none): the panels
@@ -244,13 +266,14 @@ nc_xcor_kernel_integrand_eval (NcXcorKernelIntegrand *integrand, gdouble k, gdou
  * @len: number of rows to evaluate
  * @W: (array) (out caller-allocates): full-length array to store results in
  *
- * Evaluates rows [@offset, @offset + @len) at wavenumber @k, writing them at their own
- * indices in @W and leaving the rest of @W untouched. A row is zero outside its support.
+ * Evaluates multipoles [@offset, @offset + @len) at wavenumber @k, the sum of their
+ * terms, writing them at their own indices in @W and leaving the rest of @W untouched. A
+ * panel row is zero outside its support.
  */
 void
 nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k, guint offset, guint len, gdouble *W)
 {
-  guint i;
+  guint i, t;
 
   /* In k, the support of every row is the panels' range. */
   if (!integrand->scaled)
@@ -261,10 +284,11 @@ nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k
 
     for (i = offset; i < offset + len; i++)
     {
-      if ((k < x_min) || (k > x_max))
-        W[i] = 0.0;
-      else
-        W[i] = ncm_spectral_panels_eval_row (integrand->sp, i, k);
+      W[i] = 0.0;
+
+      if ((k >= x_min) && (k <= x_max))
+        for (t = 0; t < integrand->n_terms; t++)
+          W[i] += ncm_spectral_panels_eval_row (integrand->sp, i + t * integrand->len, k);
     }
 
     return;
@@ -278,29 +302,31 @@ nc_xcor_kernel_integrand_eval_comps (NcXcorKernelIntegrand *integrand, gdouble k
    * past the row's support. */
   for (i = offset; i < offset + len; i++)
   {
-    const NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, i);
+    W[i] = 0.0;
 
-    if ((k < row->k_min) || (k > row->k_max))
+    for (t = 0; t < integrand->n_terms; t++)
     {
-      W[i] = 0.0;
-    }
-    else
-    {
-      const gdouble x = GSL_MIN (GSL_MAX (k / ncm_vector_fast_get (integrand->scales, i), row->x_min), row->x_max);
-      guint p         = ncm_spectral_panels_find_panel (integrand->sp, x);
+      const guint r                       = i + t * integrand->len;
+      const NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, r);
 
-      if ((x == row->x_max) && (p > 0))
+      if ((k >= row->k_min) && (k <= row->k_max))
       {
-        gdouble a, b;
-        guint N;
+        const gdouble x = GSL_MIN (GSL_MAX (k / ncm_vector_fast_get (integrand->scales, r), row->x_min), row->x_max);
+        guint p         = ncm_spectral_panels_find_panel (integrand->sp, x);
 
-        ncm_spectral_panels_peek_panel (integrand->sp, p, &a, &b, &N);
+        if ((x == row->x_max) && (p > 0))
+        {
+          gdouble a, b;
+          guint N;
 
-        if (a == x)
-          p--;
+          ncm_spectral_panels_peek_panel (integrand->sp, p, &a, &b, &N);
+
+          if (a == x)
+            p--;
+        }
+
+        W[i] += ncm_spectral_panels_eval_row_on (integrand->sp, p, r, x);
       }
-
-      W[i] = ncm_spectral_panels_eval_row_on (integrand->sp, p, i, x);
     }
   }
 }

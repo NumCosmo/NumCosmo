@@ -11013,6 +11013,17 @@ class SpectralPanelsProduct(GObject.Object):
         result: Vector,
         err: typing.Optional[Vector] = None,
     ) -> None: ...
+    def integrate_rows(
+        self,
+        P: SpectralPanels,
+        o1: int,
+        s1: typing.Optional[Vector],
+        Q: SpectralPanels,
+        o2: int,
+        s2: typing.Optional[Vector],
+        result: Vector,
+        err: typing.Optional[Vector] = None,
+    ) -> None: ...
     @classmethod
     def new(cls, p: int) -> SpectralPanelsProduct: ...
     def ref(self) -> SpectralPanelsProduct: ...

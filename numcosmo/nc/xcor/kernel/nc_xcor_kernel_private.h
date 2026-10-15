@@ -70,7 +70,7 @@ typedef struct _NcXcorKernelPrivate
   gboolean outdated;
 } NcXcorKernelPrivate;
 
-/* One row of a closure: its support in k and in its variable x = k / s, s its scale. */
+/* One panel row of a closure: its support in k and in its variable x = k / s, s its scale. */
 typedef struct _NcXcorKernelIntegrandRow
 {
   gdouble k_min;
@@ -79,15 +79,17 @@ typedef struct _NcXcorKernelIntegrandRow
   gdouble x_max;
 } NcXcorKernelIntegrandRow;
 
-/* The Chebyshev closure of one ell block: panels of coefficients, one row per
- * multipole, over the block's domain. */
+/* The Chebyshev closure of one ell block: panels of coefficients over the block's
+ * domain, n_terms groups of len rows; multipole i is the sum of the panel rows
+ * i + t len over the terms t. */
 struct _NcXcorKernelIntegrand
 {
   gint refcount;
-  guint len;
-  NcmSpectralPanels *sp; /* one row per multipole, in x = k / scale */
-  GArray *rows;          /* NcXcorKernelIntegrandRow, one per multipole */
-  NcmVector *scales;     /* per multipole, 1 when the closure is in k, nu = l + 1/2 when it is in u = k / nu */
+  guint len;             /* the multipoles of the block */
+  guint n_terms;         /* the groups of len panel rows summed into each multipole */
+  NcmSpectralPanels *sp; /* n_terms len rows, row r in x = k / scale_r */
+  GArray *rows;          /* NcXcorKernelIntegrandRow, one per panel row */
+  NcmVector *scales;     /* per panel row, 1 when the closure is in k, nu = l + 1/2 when it is in u = k / nu */
   gboolean scaled;       /* whether any scale differs from 1 */
   gdouble k_min;         /* the k range of the whole block */
   gdouble k_max;
@@ -151,7 +153,7 @@ typedef struct _ComponentStates
 
 NcXcorKernelPrivate *_nc_xcor_kernel_get_private (NcXcorKernel *xclk);
 
-NcXcorKernelIntegrand *_nc_xcor_kernel_integrand_new (guint len);
+NcXcorKernelIntegrand *_nc_xcor_kernel_integrand_new (guint len, guint n_terms);
 
 void _nc_xcor_kernel_component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint comp_idx, NcHICosmo *cosmo, guint n_l);
 void _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states);

@@ -64,23 +64,110 @@ _nc_xcor_panels_product (void)
   return prod;
 }
 
+/* The result and error of one pair of terms, of the length of the last block it served */
+typedef struct _NcXcorTermProduct
+{
+  NcmVector *res;
+  NcmVector *err;
+} NcXcorTermProduct;
+
+static gpointer
+_nc_xcor_term_product_new (gpointer userdata)
+{
+  return g_new0 (NcXcorTermProduct, 1);
+}
+
+static void
+_nc_xcor_term_product_free (gpointer p)
+{
+  NcXcorTermProduct *tp = p;
+
+  ncm_vector_clear (&tp->res);
+  ncm_vector_clear (&tp->err);
+  g_free (tp);
+}
+
+/* The scratch space of the term products, one per concurrent caller */
+static NcmMemoryPool *
+_nc_xcor_term_product_pool (void)
+{
+  static gsize init        = 0;
+  static NcmMemoryPool *mp = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    mp = ncm_memory_pool_new (_nc_xcor_term_product_new, NULL, _nc_xcor_term_product_free);
+    g_once_init_leave (&init, 1);
+  }
+
+  return mp;
+}
+
 /*
  * Integrates a pair of Chebyshev closures with NcmSpectralPanelsProduct: each
- * closure's panels in its own variable k / s_i, one row per multipole. An auto
- * spectrum is the product of the first closure with itself.
+ * closure's panels in their own variables k / s_r. With one term per closure the
+ * panel rows are the multipoles; otherwise each multipole is the sum over the pairs of
+ * terms (t1, t2) of the product of row i + t1 n of the first closure with row
+ * i + t2 n of the second, n the block's multipoles, and the error estimates add. An
+ * auto spectrum is the product of the first closure with itself, where the pairs
+ * (t1, t2) and (t2, t1) are one integral counted twice.
  */
 static void
 _nc_xcor_kernel_integrate_block_panels (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
                                         NcXcorKernelIntegrand *xclki2,
                                         gboolean isauto, NcmVector *vp, NcmVector *vp_err)
 {
-  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
-  NcmSpectralPanels *sp1     = nc_xcor_kernel_integrand_peek_panels (xclki1);
-  NcmSpectralPanels *sp2     = isauto ? sp1 : nc_xcor_kernel_integrand_peek_panels (xclki2);
-  NcmVector *s1              = nc_xcor_kernel_integrand_peek_scales (xclki1);
-  NcmVector *s2              = isauto ? s1 : nc_xcor_kernel_integrand_peek_scales (xclki2);
+  const gdouble const_factor     = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  NcmSpectralPanelsProduct *prod = _nc_xcor_panels_product ();
+  NcmSpectralPanels *sp1         = nc_xcor_kernel_integrand_peek_panels (xclki1);
+  NcmSpectralPanels *sp2         = isauto ? sp1 : nc_xcor_kernel_integrand_peek_panels (xclki2);
+  NcmVector *s1                  = nc_xcor_kernel_integrand_peek_scales (xclki1);
+  NcmVector *s2                  = isauto ? s1 : nc_xcor_kernel_integrand_peek_scales (xclki2);
+  const guint n_terms1           = nc_xcor_kernel_integrand_get_n_terms (xclki1);
+  const guint n_terms2           = isauto ? n_terms1 : nc_xcor_kernel_integrand_get_n_terms (xclki2);
 
-  ncm_spectral_panels_product_integrate (_nc_xcor_panels_product (), sp1, s1, sp2, s2, vp, vp_err);
+  if ((n_terms1 == 1) && (n_terms2 == 1))
+  {
+    ncm_spectral_panels_product_integrate (prod, sp1, s1, sp2, s2, vp, vp_err);
+  }
+  else
+  {
+    const guint len         = ncm_vector_len (vp);
+    NcXcorTermProduct **ptr = ncm_memory_pool_get (_nc_xcor_term_product_pool ());
+    NcXcorTermProduct *tp   = *ptr;
+    guint t1, t2;
+
+    if ((tp->res == NULL) || (ncm_vector_len (tp->res) != len))
+    {
+      ncm_vector_clear (&tp->res);
+      ncm_vector_clear (&tp->err);
+      tp->res = ncm_vector_new (len);
+      tp->err = ncm_vector_new (len);
+    }
+
+    ncm_vector_set_zero (vp);
+
+    if (vp_err != NULL)
+      ncm_vector_set_zero (vp_err);
+
+    for (t1 = 0; t1 < n_terms1; t1++)
+    {
+      for (t2 = (isauto ? t1 : 0); t2 < n_terms2; t2++)
+      {
+        const gdouble weight = (isauto && (t2 != t1)) ? 2.0 : 1.0;
+
+        ncm_spectral_panels_product_integrate_rows (prod, sp1, t1 * len, s1, sp2, t2 * len, s2,
+                                                    tp->res, (vp_err != NULL) ? tp->err : NULL);
+        ncm_vector_axpy (vp, weight, tp->res);
+
+        if (vp_err != NULL)
+          ncm_vector_axpy (vp_err, weight, tp->err);
+      }
+    }
+
+    ncm_memory_pool_return (ptr);
+  }
+
   ncm_vector_scale (vp, const_factor);
 
   if (vp_err != NULL)
