@@ -178,6 +178,7 @@ void nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx (NcHaloDe
 gdouble nc_wl_surface_mass_density_reduced_shear_optzs (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble zs, const gdouble zl, NcWLSurfaceMassDensityOptzs *optzs);
 
 void nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble zl, const gdouble zc, NcWLSurfaceMassDensitySigmaCache *sigma_cache);
+void nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep_with_rs (NcHaloDensityProfile *dp, const gdouble R, const gdouble r_s, const gdouble rho_s, NcWLSurfaceMassDensitySigmaCache *sigma_cache);
 void nc_wl_surface_mass_density_reduced_shear_crit_cache_prep (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl, const gdouble zc, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache);
 void nc_wl_surface_mass_density_lens_ctx_prep (NcWLSurfaceMassDensityLensCtx *ctx, NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble zl);
 void nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const NcWLSurfaceMassDensityLensCtx *ctx, const gdouble zs, NcWLSurfaceMassDensityCritCache *crit_cache);
