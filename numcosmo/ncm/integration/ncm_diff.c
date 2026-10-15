@@ -2509,18 +2509,24 @@ _ncm_diff_dual_replay (NcmDiffDual *dual, const gdouble trunc_ratio, const gdoub
     _ncm_diff_dual_extrapolate (dual, trunc_ratio, canc_pad);
 }
 
-static GArray *_ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
-static GArray *_ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
+static GArray *_ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffWork *work, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
+static GArray *_ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffWork *work, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr);
 
 static GArray *
 ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
+  NcmDiffWork *work           = ncm_diff_work_new ();
+  GArray *df;
 
   if (self->dual_series)
-    return _ncm_diff_Hessian_by_step_algo_dual (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
+    df = _ncm_diff_Hessian_by_step_algo_dual (diff, work, Hstep_algo, po, x_a, f, user_data, Eerr);
+  else
+    df = _ncm_diff_Hessian_by_step_algo_single (diff, work, Hstep_algo, po, x_a, f, user_data, Eerr);
 
-  return _ncm_diff_Hessian_by_step_algo_single (diff, Hstep_algo, po, x_a, f, user_data, Eerr);
+  ncm_diff_work_unref (work);
+
+  return df;
 }
 
 static void _ncm_diff_hessian_eval_step (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, NcmDiffFuncNto1 f, gpointer user_data, const guint a, const gdouble x, const gdouble hxo, const guint b, const gdouble y, const gdouble hyo, NcmVector *x_v, const gdouble fval, gdouble *quot_t, gdouble *canc_t, gdouble *canc_abs_t);
@@ -2528,33 +2534,37 @@ static gboolean _ncm_diff_hessian_move_fits (NcmDiffPrivate *self, NcmDiffScheme
 static void _ncm_diff_hessian_restart_bases (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDiffScheme *sy, const gdouble x, const gdouble y);
 
 static GArray *
-_ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
+_ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffWork *work, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
   GPtrArray *tables           = (po == 0) ? self->forward_tables : self->central_tables;
-  NcmVector *x_v              = NULL;
   GArray *df                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
   const guint nvar            = x_a->len;
   gdouble fval                = 0.0;
-  NcmMatrix *Eerr_m           = NULL;
-  NcmDiffLadder ladder;
-  NcmMatrix *df_m;
+  NcmDiffLadder *ladder;
+  NcmVector *x_v;
   guint a;
 
+  _ncm_diff_work_enter (work);
+  _ncm_diff_work_init_steps (work, nvar, 1);
+  _ncm_diff_work_init_single (work, 1);
 
+  /* The workspace ladder carries the tables of its last use, so this scheme's are set */
+  ladder         = &g_array_index (work->ladders, NcmDiffLadder, 0);
+  ladder->tables = tables;
+  x_v            = work->x_v;
+
+  /* df and Eerr belong to the caller; row a, column b is entry a nvar + b */
   g_array_set_size (df, nvar * nvar);
-  df_m = ncm_matrix_new_array (df, nvar);
 
   if (Eerr != NULL)
   {
     *Eerr = g_array_new (FALSE, FALSE, sizeof (gdouble));
     g_array_set_size (*Eerr, nvar * nvar);
-    Eerr_m = ncm_matrix_new_array (*Eerr, nvar);
   }
 
-  _ncm_diff_ladder_init (&ladder, tables);
-
-  x_v = ncm_vector_new_array (x_a);
+  for (a = 0; a < nvar; a++)
+    ncm_vector_set (x_v, a, g_array_index (x_a, gdouble, a));
 
   fval = f (x_v, user_data);
 
@@ -2577,26 +2587,26 @@ _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hst
 
       _ncm_diff_scheme_init (self, &sx, NULL, NULL, 0, a, x);
       _ncm_diff_scheme_init (self, &sy, NULL, NULL, 0, b, y);
-      _ncm_diff_ladder_reset (&ladder);
+      _ncm_diff_ladder_reset (ladder);
 
-      while (!ladder.converged)
+      while (!ladder->converged)
       {
-        while (_ncm_diff_ladder_needs_step (&ladder))
+        while (_ncm_diff_ladder_needs_step (ladder))
         {
-          const gint k = k_top + ladder.quots->len;
+          const gint k = k_top + ladder->quots->len;
           gdouble quot_t, canc_t, canc_abs_t;
 
           _ncm_diff_hessian_eval_step (diff, Hstep_algo, f, user_data,
                                        a, x, sx.sign * _ncm_diff_step_h (self, 0, sx.h0, k),
                                        b, y, sy.sign * _ncm_diff_step_h (self, 0, sy.h0, k),
                                        x_v, fval, &quot_t, &canc_t, &canc_abs_t);
-          _ncm_diff_ladder_add_step (&ladder, quot_t, canc_t, canc_abs_t);
+          _ncm_diff_ladder_add_step (ladder, quot_t, canc_t, canc_abs_t);
         }
 
-        _ncm_diff_ladder_extrapolate (&ladder, self->trunc_ratio, self->canc_pad);
+        _ncm_diff_ladder_extrapolate (ladder, self->trunc_ratio, self->canc_pad);
 
         /* Moving up, as in the vector driver: the two axes share the factor. */
-        if (may_move && !ladder.first_informative)
+        if (may_move && !ladder->first_informative)
         {
           const gint k_new = may_jump ? 0 : k_top - 1;
           gdouble hx0_new, hy0_new;
@@ -2607,7 +2617,7 @@ _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hst
             if (restart)
             {
               _ncm_diff_hessian_restart_bases (self, &sx, &sy, x, y);
-              _ncm_diff_ladder_reset (&ladder);
+              _ncm_diff_ladder_reset (ladder);
               k_top    = 0;
               may_jump = FALSE;
               continue;
@@ -2630,46 +2640,44 @@ _ncm_diff_Hessian_by_step_algo_single (NcmDiff *diff, NcmDiffHessianStepAlgo Hst
             }
             else if (may_jump)
             {
-              _ncm_diff_ladder_reset (&ladder);
-              _ncm_diff_ladder_add_step (&ladder, quot_t, canc_t, canc_abs_t);
+              _ncm_diff_ladder_reset (ladder);
+              _ncm_diff_ladder_add_step (ladder, quot_t, canc_t, canc_abs_t);
               sx.h0    = hx0_new;
               sy.h0    = hy0_new;
               may_jump = FALSE;
             }
             else
             {
-              _ncm_diff_ladder_prepend_step (&ladder, quot_t, canc_t, canc_abs_t);
-              _ncm_diff_ladder_replay (&ladder, self->trunc_ratio, self->canc_pad);
+              _ncm_diff_ladder_prepend_step (ladder, quot_t, canc_t, canc_abs_t);
+              _ncm_diff_ladder_replay (ladder, self->trunc_ratio, self->canc_pad);
               k_top = k_new;
             }
           }
         }
       }
 
-      ncm_matrix_set (df_m, a, b, ladder.control.df_best);
-      ncm_matrix_set (df_m, b, a, ladder.control.df_best);
+      g_array_index (df, gdouble, a * nvar + b) = ladder->control.df_best;
+      g_array_index (df, gdouble, b * nvar + a) = ladder->control.df_best;
 
-      if (Eerr_m != NULL)
+      if (Eerr != NULL)
       {
-        ncm_matrix_set (Eerr_m, a, b, ladder.control.err_best);
-        ncm_matrix_set (Eerr_m, b, a, ladder.control.err_best);
+        g_array_index (*Eerr, gdouble, a * nvar + b) = ladder->control.err_best;
+        g_array_index (*Eerr, gdouble, b * nvar + a) = ladder->control.err_best;
       }
     }
   }
 
-  if (Eerr_m != NULL)
-    ncm_matrix_scale (Eerr_m, NCM_DIFF_ERR_PAD);
-
+  if (Eerr != NULL)
   {
-    _ncm_diff_ladder_clear (&ladder);
+    guint i;
 
-    ncm_vector_clear (&x_v);
-
-    ncm_matrix_clear (&df_m);
-    ncm_matrix_clear (&Eerr_m);
-
-    return df;
+    for (i = 0; i < (*Eerr)->len; i++)
+      g_array_index (*Eerr, gdouble, i) *= NCM_DIFF_ERR_PAD;
   }
+
+  _ncm_diff_work_leave (work);
+
+  return df;
 }
 
 /* Evaluates one Hessian cross-term step with offsets hxo and hyo: the
@@ -2765,33 +2773,38 @@ _ncm_diff_hessian_restart_bases (NcmDiffPrivate *self, NcmDiffScheme *sx, NcmDif
 }
 
 static GArray *
-_ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
+_ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffWork *work, NcmDiffHessianStepAlgo Hstep_algo, guint po, GArray *x_a, NcmDiffFuncNto1 f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
   GPtrArray *tables           = (po == 0) ? self->forward_tables : self->central_tables;
-  NcmVector *x_v              = NULL;
   GArray *df                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
   const guint nvar            = x_a->len;
   gdouble fval                = 0.0;
-  NcmMatrix *Eerr_m           = NULL;
-  NcmDiffDual dual;
-  NcmMatrix *df_m;
+  NcmDiffDual *dual;
+  NcmVector *x_v;
   guint a;
 
+  _ncm_diff_work_enter (work);
+  _ncm_diff_work_init_steps (work, nvar, 1);
+  _ncm_diff_work_init_dual (work, 1);
 
+  /* The workspace dual carries the tables of its last use, so this scheme's are set */
+  dual           = &g_array_index (work->duals, NcmDiffDual, 0);
+  dual->A.tables = tables;
+  dual->B.tables = tables;
+  x_v            = work->x_v;
+
+  /* df and Eerr belong to the caller; row a, column b is entry a nvar + b */
   g_array_set_size (df, nvar * nvar);
-  df_m = ncm_matrix_new_array (df, nvar);
 
   if (Eerr != NULL)
   {
     *Eerr = g_array_new (FALSE, FALSE, sizeof (gdouble));
     g_array_set_size (*Eerr, nvar * nvar);
-    Eerr_m = ncm_matrix_new_array (*Eerr, nvar);
   }
 
-  _ncm_diff_dual_init (&dual, tables);
-
-  x_v = ncm_vector_new_array (x_a);
+  for (a = 0; a < nvar; a++)
+    ncm_vector_set (x_v, a, g_array_index (x_a, gdouble, a));
 
   fval = f (x_v, user_data);
 
@@ -2815,13 +2828,13 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
 
       _ncm_diff_scheme_init (self, &sx, NULL, NULL, 0, a, x);
       _ncm_diff_scheme_init (self, &sy, NULL, NULL, 0, b, y);
-      _ncm_diff_dual_reset (&dual);
+      _ncm_diff_dual_reset (dual);
 
-      while (!dual.converged)
+      while (!dual->converged)
       {
-        while (_ncm_diff_dual_needs_step (&dual))
+        while (_ncm_diff_dual_needs_step (dual))
         {
-          const gint k = k_top + dual.A.quots->len;
+          const gint k = k_top + dual->A.quots->len;
           guint s;
 
           for (s = 0; s < 2; s++)
@@ -2833,14 +2846,14 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
                                          a, x, sx.sign * _ncm_diff_step_h (self, 0, sx.h0 * fac, k),
                                          b, y, sy.sign * _ncm_diff_step_h (self, 0, sy.h0 * fac, k),
                                          x_v, fval, &quot_t, &canc_t, &canc_abs_t);
-            _ncm_diff_ladder_add_step ((s == 0) ? &dual.A : &dual.B, quot_t, canc_t, canc_abs_t);
+            _ncm_diff_ladder_add_step ((s == 0) ? &dual->A : &dual->B, quot_t, canc_t, canc_abs_t);
           }
         }
 
-        _ncm_diff_dual_extrapolate (&dual, self->trunc_ratio, self->canc_pad);
+        _ncm_diff_dual_extrapolate (dual, self->trunc_ratio, self->canc_pad);
 
         /* Moving up, as in the single Hessian driver, both ladders together. */
-        if (may_move && _ncm_diff_dual_first_uninformative (&dual))
+        if (may_move && _ncm_diff_dual_first_uninformative (dual))
         {
           const gint k_new = may_jump ? 0 : k_top - 1;
           gdouble hx0_new, hy0_new;
@@ -2851,7 +2864,7 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
             if (restart)
             {
               _ncm_diff_hessian_restart_bases (self, &sx, &sy, x, y);
-              _ncm_diff_dual_reset (&dual);
+              _ncm_diff_dual_reset (dual);
               k_top    = 0;
               may_jump = FALSE;
               continue;
@@ -2882,45 +2895,38 @@ _ncm_diff_Hessian_by_step_algo_dual (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep
             }
             else if (may_jump)
             {
-              _ncm_diff_dual_reset (&dual);
-              _ncm_diff_ladder_add_step (&dual.A, quot_t[0], canc_t[0], canc_abs_t[0]);
-              _ncm_diff_ladder_add_step (&dual.B, quot_t[1], canc_t[1], canc_abs_t[1]);
+              _ncm_diff_dual_reset (dual);
+              _ncm_diff_ladder_add_step (&dual->A, quot_t[0], canc_t[0], canc_abs_t[0]);
+              _ncm_diff_ladder_add_step (&dual->B, quot_t[1], canc_t[1], canc_abs_t[1]);
               sx.h0    = hx0_new;
               sy.h0    = hy0_new;
               may_jump = FALSE;
             }
             else
             {
-              _ncm_diff_ladder_prepend_step (&dual.A, quot_t[0], canc_t[0], canc_abs_t[0]);
-              _ncm_diff_ladder_prepend_step (&dual.B, quot_t[1], canc_t[1], canc_abs_t[1]);
-              _ncm_diff_dual_replay (&dual, self->trunc_ratio, self->canc_pad);
+              _ncm_diff_ladder_prepend_step (&dual->A, quot_t[0], canc_t[0], canc_abs_t[0]);
+              _ncm_diff_ladder_prepend_step (&dual->B, quot_t[1], canc_t[1], canc_abs_t[1]);
+              _ncm_diff_dual_replay (dual, self->trunc_ratio, self->canc_pad);
               k_top = k_new;
             }
           }
         }
       }
 
-      ncm_matrix_set (df_m, a, b, dual.cross.df_best);
-      ncm_matrix_set (df_m, b, a, dual.cross.df_best);
+      g_array_index (df, gdouble, a * nvar + b) = dual->cross.df_best;
+      g_array_index (df, gdouble, b * nvar + a) = dual->cross.df_best;
 
-      if (Eerr_m != NULL)
+      if (Eerr != NULL)
       {
-        ncm_matrix_set (Eerr_m, a, b, _ncm_diff_cross_control_err (&dual.cross));
-        ncm_matrix_set (Eerr_m, b, a, _ncm_diff_cross_control_err (&dual.cross));
+        g_array_index (*Eerr, gdouble, a * nvar + b) = _ncm_diff_cross_control_err (&dual->cross);
+        g_array_index (*Eerr, gdouble, b * nvar + a) = _ncm_diff_cross_control_err (&dual->cross);
       }
     }
   }
 
-  {
-    _ncm_diff_dual_clear (&dual);
+  _ncm_diff_work_leave (work);
 
-    ncm_vector_clear (&x_v);
-
-    ncm_matrix_clear (&df_m);
-    ncm_matrix_clear (&Eerr_m);
-
-    return df;
-  }
+  return df;
 }
 
 static void _ncm_diff_step_quotient (NcmVector *f1, const NcmVector *f2, const gdouble scale, NcmVector *canc);
