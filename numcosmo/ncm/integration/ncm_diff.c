@@ -1333,6 +1333,18 @@ struct _NcmDiffWork
   guint n_duals;
   GArray *ladders;
   guint n_ladders;
+  guint sc_dim;
+  NcmVector *sc_y_v;
+  NcmMatrix *sc_fvals;
+  NcmMatrix *sc_coeffs;
+  NcmMatrix *sc_fvals_probe;
+  NcmMatrix *sc_coeffs_probe;
+  NcmMatrix *sc_fvals_best;
+  GArray *sc_d_prev;
+  GArray *sc_w;
+  GArray *sc_conv;
+  GArray *sc_cosm;
+  GArray *sc_est;
 };
 
 G_DEFINE_BOXED_TYPE (NcmDiffWork, ncm_diff_work, ncm_diff_work_ref, ncm_diff_work_unref)
@@ -1405,6 +1417,18 @@ ncm_diff_work_unref (NcmDiffWork *work)
       _ncm_diff_ladder_clear (&g_array_index (work->ladders, NcmDiffLadder, i));
 
     g_clear_pointer (&work->ladders, g_array_unref);
+
+    ncm_vector_clear (&work->sc_y_v);
+    ncm_matrix_clear (&work->sc_fvals);
+    ncm_matrix_clear (&work->sc_coeffs);
+    ncm_matrix_clear (&work->sc_fvals_probe);
+    ncm_matrix_clear (&work->sc_coeffs_probe);
+    ncm_matrix_clear (&work->sc_fvals_best);
+    g_clear_pointer (&work->sc_d_prev, g_array_unref);
+    g_clear_pointer (&work->sc_w, g_array_unref);
+    g_clear_pointer (&work->sc_conv, g_array_unref);
+    g_clear_pointer (&work->sc_cosm, g_array_unref);
+    g_clear_pointer (&work->sc_est, g_array_unref);
     g_free (work);
   }
 }
@@ -1435,6 +1459,18 @@ _ncm_diff_work_leave (NcmDiffWork *work)
   g_atomic_int_set (&work->in_use, 0);
 }
 
+/* Sizes the point, of @nvar coordinates; it is rebuilt only when its size changes. */
+static void
+_ncm_diff_work_init_point (NcmDiffWork *work, const guint nvar)
+{
+  if ((work->x_v == NULL) || (work->nvar != nvar))
+  {
+    ncm_vector_clear (&work->x_v);
+    work->x_v  = ncm_vector_new (nvar);
+    work->nvar = nvar;
+  }
+}
+
 /*
  * Sizes the vectors of one step: the point, of @nvar coordinates, and the function value,
  * the two side values and the two (quotient, cancellation) pairs, of @dim components. A
@@ -1443,12 +1479,7 @@ _ncm_diff_work_leave (NcmDiffWork *work)
 static void
 _ncm_diff_work_init_steps (NcmDiffWork *work, const guint nvar, const guint dim)
 {
-  if ((work->x_v == NULL) || (work->nvar != nvar))
-  {
-    ncm_vector_clear (&work->x_v);
-    work->x_v  = ncm_vector_new (nvar);
-    work->nvar = nvar;
-  }
+  _ncm_diff_work_init_point (work, nvar);
 
   if ((work->f_v == NULL) || (work->dim != dim))
   {
@@ -3147,7 +3178,54 @@ typedef struct _NcmDiffSCData
   NcmVector *x_v;
   guint a;
   gdouble coeff_abs;
+  gdouble *cosm; /* scratch of _ncm_diff_sc_dct, 2 (NCM_DIFF_SC_MAX_N - 1) entries */
+  gdouble *est;  /* scratch of _ncm_diff_sc_deriv_est, 4 NCM_DIFF_SC_MAX_N entries */
 } NcmDiffSCData;
+
+/*
+ * Sizes the spectral driver's storage for @dim components: the function value, the node
+ * values and coefficients of the refinement and of the probes, the per-component arrays,
+ * and the scratch of the transform and of the derivative estimate. The matrices are
+ * rebuilt only when @dim changes.
+ */
+static void
+_ncm_diff_work_init_spectral (NcmDiffWork *work, const guint dim)
+{
+  if (work->sc_d_prev == NULL)
+  {
+    work->sc_d_prev = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    work->sc_w      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    work->sc_conv   = g_array_new (FALSE, FALSE, sizeof (NcmDiffCrossControl));
+    work->sc_cosm   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    work->sc_est    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+    g_array_set_size (work->sc_cosm, 2 * (NCM_DIFF_SC_MAX_N - 1));
+    g_array_set_size (work->sc_est, 4 * NCM_DIFF_SC_MAX_N);
+  }
+
+  if ((work->sc_y_v == NULL) || (work->sc_dim != dim))
+  {
+    ncm_vector_clear (&work->sc_y_v);
+    ncm_matrix_clear (&work->sc_fvals);
+    ncm_matrix_clear (&work->sc_coeffs);
+    ncm_matrix_clear (&work->sc_fvals_probe);
+    ncm_matrix_clear (&work->sc_coeffs_probe);
+    ncm_matrix_clear (&work->sc_fvals_best);
+
+    work->sc_y_v          = ncm_vector_new (dim);
+    work->sc_fvals        = ncm_matrix_new (dim, NCM_DIFF_SC_MAX_N);
+    work->sc_coeffs       = ncm_matrix_new (dim, NCM_DIFF_SC_MAX_N);
+    work->sc_fvals_probe  = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
+    work->sc_coeffs_probe = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
+    work->sc_fvals_best   = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
+
+    g_array_set_size (work->sc_d_prev, dim);
+    g_array_set_size (work->sc_w, dim);
+    g_array_set_size (work->sc_conv, dim);
+
+    work->sc_dim = dim;
+  }
+}
 
 /*
  * Evaluates the function at the Chebyshev-Lobatto nodes of [x - R, x + R]
@@ -3213,10 +3291,9 @@ _ncm_diff_sc_eval_nodes (NcmDiffSCData *data, const gdouble x, const gdouble R,
  * against the function evaluations for the N used here.
  */
 static void
-_ncm_diff_sc_dct (NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *coeffs)
+_ncm_diff_sc_dct (NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *coeffs, gdouble *cosm)
 {
   const guint two_Nm1 = 2 * (N - 1);
-  gdouble *cosm       = g_new (gdouble, two_Nm1);
   guint i, k, c;
 
   for (i = 0; i < two_Nm1; i++)
@@ -3241,8 +3318,6 @@ _ncm_diff_sc_dct (NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *c
       ncm_matrix_set (coeffs, c, k, sum * (((k == 0) || (k == N - 1)) ? 1.0 : 2.0) / (N - 1.0) + ((k == 0) ? offset : 0.0));
     }
   }
-
-  g_free (cosm);
 }
 
 /*
@@ -3297,14 +3372,14 @@ _ncm_diff_sc_eval0 (const gdouble *c, const guint n)
  */
 static void
 _ncm_diff_sc_deriv_est (const gdouble *c, const guint len, const gdouble R, const guint order, const gdouble coeff_abs,
-                        gdouble *deriv, gdouble *tail, gdouble *coeff_round, gdouble *q_fit)
+                        gdouble *est, gdouble *deriv, gdouble *tail, gdouble *coeff_round, gdouble *q_fit)
 {
   const gdouble Rinv     = 1.0 / R;
   const guint tail_start = (3 * len) / 4;
-  gdouble *b             = g_new (gdouble, len);
-  gdouble *nb            = g_new (gdouble, len);
-  gdouble *tb            = g_new (gdouble, len);
-  gdouble *tmp           = g_new (gdouble, len);
+  gdouble *b             = est;
+  gdouble *nb            = est + len;
+  gdouble *tb            = est + 2 * len;
+  gdouble *tmp           = est + 3 * len;
   gdouble sum_abs_c      = 0.0;
   gdouble sum_variation  = 0.0;
   gdouble sum_abs_tail   = 0.0;
@@ -3372,11 +3447,6 @@ _ncm_diff_sc_deriv_est (const gdouble *c, const guint len, const gdouble R, cons
     tail[0]        = tail_sum * scale;
     coeff_round[0] = coeff_round_sum * scale;
   }
-
-  g_free (b);
-  g_free (nb);
-  g_free (tb);
-  g_free (tmp);
 }
 
 /*
@@ -3408,13 +3478,13 @@ _ncm_diff_sc_probe (NcmDiffSCData *data, const gdouble x, const gdouble R, const
   if (!_ncm_diff_sc_eval_nodes (data, x, R, dim, y_v, fvals, 0, NCM_DIFF_SC_PROBE_N))
     return FALSE;
 
-  _ncm_diff_sc_dct (fvals, dim, NCM_DIFF_SC_PROBE_N, coeffs);
+  _ncm_diff_sc_dct (fvals, dim, NCM_DIFF_SC_PROBE_N, coeffs, data->cosm);
 
   for (c = 0; c < dim; c++)
   {
     gdouble deriv, tail, coeff_round, q_fit, err;
 
-    _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), NCM_DIFF_SC_PROBE_N, R, order, data->coeff_abs, &deriv, &tail, &coeff_round, &q_fit);
+    _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), NCM_DIFF_SC_PROBE_N, R, order, data->coeff_abs, data->est, &deriv, &tail, &coeff_round, &q_fit);
 
     err = tail + coeff_round;
 
@@ -3459,7 +3529,7 @@ _ncm_diff_sc_find_scale (NcmDiffSCData *data, const gdouble x, const gdouble R0,
         || !_ncm_diff_sc_eval_nodes (data, x, R, dim, y_v, fvals, 3, 5))
       break;
 
-    _ncm_diff_sc_dct (fvals, dim, 5, coeffs);
+    _ncm_diff_sc_dct (fvals, dim, 5, coeffs, data->cosm);
 
     {
       gboolean round_off = FALSE;
@@ -3602,41 +3672,65 @@ _ncm_diff_sc_scan_window (NcmDiffSCData *data, const gdouble x, const gdouble R0
   return R_best;
 }
 
+static GArray *_ncm_diff_sc_dn_work (NcmDiff *diff, NcmDiffWork *work, const guint order, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr);
+
 static GArray *
 _ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
+{
+  NcmDiffWork *work = ncm_diff_work_new ();
+  GArray *df        = _ncm_diff_sc_dn_work (diff, work, order, x_a, dim, f, user_data, Eerr);
+
+  ncm_diff_work_unref (work);
+
+  return df;
+}
+
+static GArray *
+_ncm_diff_sc_dn_work (NcmDiff *diff, NcmDiffWork *work, const guint order, GArray *x_a, const guint dim, NcmDiffFuncNtoM f, gpointer user_data, GArray **Eerr)
 {
   NcmDiffPrivate * const self = ncm_diff_get_instance_private (diff);
   const guint nvar            = x_a->len;
   GArray *df                  = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  NcmVector *x_v              = ncm_vector_new_array (x_a);
-  NcmVector *y_v              = ncm_vector_new (dim);
-  NcmMatrix *fvals            = ncm_matrix_new (dim, NCM_DIFF_SC_MAX_N);
-  NcmMatrix *coeffs           = ncm_matrix_new (dim, NCM_DIFF_SC_MAX_N);
-  NcmMatrix *fvals_probe      = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
-  NcmMatrix *coeffs_probe     = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
-  NcmMatrix *fvals_best       = ncm_matrix_new (dim, NCM_DIFF_SC_PROBE_N);
-  GArray *d_prev              = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *w_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *conv                = g_array_new (FALSE, FALSE, sizeof (NcmDiffCrossControl));
-  NcmDiffSCData data          = {f, user_data, x_v, 0, 2.0 * self->func_abs_prec};
-  NcmMatrix *Eerr_m           = NULL;
-  NcmMatrix *df_m;
-  gboolean fallback = FALSE;
+  gboolean fallback           = FALSE;
+  NcmDiffSCData data;
+  NcmVector *y_v;
+  NcmMatrix *fvals, *coeffs, *fvals_probe, *coeffs_probe, *fvals_best;
+  GArray *d_prev, *w_a, *conv;
   guint a;
 
+  _ncm_diff_work_enter (work);
+  _ncm_diff_work_init_point (work, nvar);
+  _ncm_diff_work_init_spectral (work, dim);
+
+  y_v          = work->sc_y_v;
+  fvals        = work->sc_fvals;
+  coeffs       = work->sc_coeffs;
+  fvals_probe  = work->sc_fvals_probe;
+  coeffs_probe = work->sc_coeffs_probe;
+  fvals_best   = work->sc_fvals_best;
+  d_prev       = work->sc_d_prev;
+  w_a          = work->sc_w;
+  conv         = work->sc_conv;
+
+  data.f         = f;
+  data.user_data = user_data;
+  data.x_v       = work->x_v;
+  data.a         = 0;
+  data.coeff_abs = 2.0 * self->func_abs_prec;
+  data.cosm      = &g_array_index (work->sc_cosm, gdouble, 0);
+  data.est       = &g_array_index (work->sc_est, gdouble, 0);
+
+  for (a = 0; a < nvar; a++)
+    ncm_vector_set (work->x_v, a, g_array_index (x_a, gdouble, a));
+
+  /* df and Eerr belong to the caller; row a, column c is entry a dim + c */
   g_array_set_size (df, dim * nvar);
-  df_m = ncm_matrix_new_array (df, dim);
 
   if (Eerr != NULL)
   {
     *Eerr = g_array_new (FALSE, FALSE, sizeof (gdouble));
     g_array_set_size (*Eerr, dim * nvar);
-    Eerr_m = ncm_matrix_new_array (*Eerr, dim);
   }
-
-  g_array_set_size (d_prev, dim);
-  g_array_set_size (w_a, dim);
-  g_array_set_size (conv, dim);
 
   for (a = 0; a < nvar; a++)
   {
@@ -3698,14 +3792,14 @@ _ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim,
           N_cur = N;
         }
 
-        _ncm_diff_sc_dct (fvals, dim, N, coeffs);
+        _ncm_diff_sc_dct (fvals, dim, N, coeffs, data.cosm);
 
         for (c = 0; c < dim; c++)
         {
           NcmDiffCrossControl *cs = &g_array_index (conv, NcmDiffCrossControl, c);
           gdouble d_c, tail_c, coeff_round_c, q_fit_c;
 
-          _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), N, R, order, data.coeff_abs, &d_c, &tail_c, &coeff_round_c, &q_fit_c);
+          _ncm_diff_sc_deriv_est (ncm_matrix_ptr (coeffs, c, 0), N, R, order, data.coeff_abs, data.est, &d_c, &tail_c, &coeff_round_c, &q_fit_c);
 
           if (tail_c > coeff_round_c)
             resolved = FALSE;
@@ -3751,33 +3845,19 @@ _ncm_diff_sc_dn (NcmDiff *diff, const guint order, GArray *x_a, const guint dim,
           && (cs->err_best > 1.0e-3 * fabs (cs->df_best)))
         fallback = TRUE;
 
-      ncm_matrix_set (df_m, a, c, cs->df_best);
+      g_array_index (df, gdouble, a * dim + c) = cs->df_best;
 
-      if (Eerr_m != NULL)
-        ncm_matrix_set (Eerr_m, a, c, cs->err_best * NCM_DIFF_SC_ERR_PAD);
+      if (Eerr != NULL)
+        g_array_index (*Eerr, gdouble, a * dim + c) = cs->err_best * NCM_DIFF_SC_ERR_PAD;
     }
 
     if (fallback)
       break;
   }
 
+  _ncm_diff_work_leave (work);
+
   {
-    g_array_unref (d_prev);
-    g_array_unref (w_a);
-    g_array_unref (conv);
-
-    ncm_vector_clear (&x_v);
-    ncm_vector_clear (&y_v);
-
-    ncm_matrix_clear (&fvals);
-    ncm_matrix_clear (&coeffs);
-    ncm_matrix_clear (&fvals_probe);
-    ncm_matrix_clear (&coeffs_probe);
-    ncm_matrix_clear (&fvals_best);
-
-    ncm_matrix_clear (&df_m);
-    ncm_matrix_clear (&Eerr_m);
-
     if (fallback)
     {
       if (self->domain_warnings)
