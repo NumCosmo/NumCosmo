@@ -32,6 +32,8 @@
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
+#include <numcosmo/nc/background/nc_distance.h>
+#include <numcosmo/ncm/integration/ncm_diff.h>
 
 G_BEGIN_DECLS
 
@@ -95,6 +97,21 @@ typedef gdouble (*NcXcorKernelComponentEvalKFactor) (NcXcorKernelComponent *comp
 typedef void (*NcXcorKernelComponentEvalKFactorVec) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 
 /**
+ * NcXcorKernelComponentEvalKernelDchi:
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @dist: a #NcDistance
+ * @xck: the line-of-sight point
+ * @work: a #NcmDiffWork
+ * @k: wave numbers
+ * @out: output, the same length as @k and distinct from it
+ *
+ * Evaluates a derivative of the radial kernel $K(\chi, k)$ with respect to $\chi$ at fixed
+ * $k$, at the point @xck, for every wave number of @k.
+ */
+typedef void (*NcXcorKernelComponentEvalKernelDchi) (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, const NcXcorKinetic *xck, NcmDiffWork *work, NcmVector *k, NcmVector *out);
+
+/**
  * NcXcorKernelComponentEvalPrefactor:
  * @comp: a #NcXcorKernelComponent
  * @cosmo: a #NcHICosmo
@@ -131,9 +148,11 @@ struct _NcXcorKernelComponentClass
   NcXcorKernelComponentEvalWindow eval_window;
   NcXcorKernelComponentEvalKFactor eval_kfactor;
   NcXcorKernelComponentEvalKFactorVec eval_kfactor_vec;
+  NcXcorKernelComponentEvalKernelDchi eval_kernel_d1chi;
+  NcXcorKernelComponentEvalKernelDchi eval_kernel_d2chi;
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[12];
+  gpointer padding[10];
 };
 
 NcXcorKernelComponent *nc_xcor_kernel_component_ref (NcXcorKernelComponent *comp);
@@ -165,6 +184,8 @@ gdouble nc_xcor_kernel_component_eval_kernel (NcXcorKernelComponent *comp, NcHIC
 gdouble nc_xcor_kernel_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
 gdouble nc_xcor_kernel_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
 void nc_xcor_kernel_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
+void nc_xcor_kernel_component_eval_kernel_d1chi (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, const NcXcorKinetic *xck, NcmDiffWork *work, NcmVector *k, NcmVector *out);
+void nc_xcor_kernel_component_eval_kernel_d2chi (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, const NcXcorKinetic *xck, NcmDiffWork *work, NcmVector *k, NcmVector *out);
 gdouble nc_xcor_kernel_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 void nc_xcor_kernel_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 

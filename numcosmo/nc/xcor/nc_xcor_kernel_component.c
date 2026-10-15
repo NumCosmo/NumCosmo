@@ -110,6 +110,9 @@ typedef struct _NcXcorKernelComponentPrivate
   guint max_iter;     /* Maximum iterations for GSL solvers */
   gdouble tol;        /* Tolerance for GSL solvers */
   guint bessel_deriv; /* Derivative order of the spherical Bessel weight */
+  NcmDiff *diff;      /* the default chi derivatives of the kernel, on the domain [chi_min, chi_max] */
+  NcmVector *chi_lb;  /* that domain, set by nc_xcor_kernel_component_prepare() */
+  NcmVector *chi_ub;
 } NcXcorKernelComponentPrivate;
 
 enum
@@ -140,6 +143,11 @@ nc_xcor_kernel_component_init (NcXcorKernelComponent *comp)
   self->max_iter         = 0.0;
   self->tol              = 0.0;
   self->bessel_deriv     = 0;
+  self->diff             = ncm_diff_new ();
+  self->chi_lb           = ncm_vector_new (1);
+  self->chi_ub           = ncm_vector_new (1);
+
+  ncm_diff_set_domain_warnings (self->diff, FALSE);
 }
 
 static void
@@ -151,6 +159,9 @@ nc_xcor_kernel_component_dispose (GObject *object)
   ncm_spline_clear (&self->k_max_spline);
   ncm_spline_clear (&self->KL_max_spline);
   ncm_spline_clear (&self->k_epsilon_spline);
+  ncm_diff_clear (&self->diff);
+  ncm_vector_clear (&self->chi_lb);
+  ncm_vector_clear (&self->chi_ub);
 
   /* Chain up */
   G_OBJECT_CLASS (nc_xcor_kernel_component_parent_class)->dispose (object);
@@ -814,6 +825,12 @@ nc_xcor_kernel_component_prepare (NcXcorKernelComponent *comp, NcHICosmo *cosmo)
 
   klass->get_limits (comp, cosmo, &chi_min, &chi_max, &k_min, &k_max);
 
+  /* The chi derivatives of the kernel stay inside its support: near an end they are
+   * one-sided */
+  ncm_vector_set (self->chi_lb, 0, chi_min);
+  ncm_vector_set (self->chi_ub, 0, chi_max);
+  ncm_diff_set_domain (self->diff, self->chi_lb, self->chi_ub);
+
   {
     NcmVector *yv                 = ncm_vector_new (self->ny);
     NcmVector *k_max_v            = ncm_vector_new (self->ny);
@@ -983,6 +1000,106 @@ nc_xcor_kernel_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosm
     for (i = 0; i < len; i++)
       ncm_vector_set (out, i, klass->eval_kfactor (comp, cosmo, xck, ncm_vector_get (k, i)));
   }
+}
+
+/* The kernel at one chi for the wave numbers of the derivative, see
+ * _nc_xcor_kernel_component_eval_kernel_dchi() */
+typedef struct _NcXcorKernelComponentDchiData
+{
+  NcXcorKernelComponent *comp;
+  NcHICosmo *cosmo;
+  NcDistance *dist;
+  NcmVector *k;
+  NcmVector *k_eval;
+} NcXcorKernelComponentDchiData;
+
+static void
+_nc_xcor_kernel_component_dchi_f (const gdouble chi, NcmVector *y, gpointer user_data)
+{
+  NcXcorKernelComponentDchiData *data = user_data;
+  NcXcorKinetic xck;
+  gdouble window;
+
+  xck.chi_z = chi;
+  xck.z     = nc_distance_inv_comoving (data->dist, data->cosmo, chi);
+  xck.E_z   = nc_hicosmo_E (data->cosmo, xck.z);
+  window    = nc_xcor_kernel_component_eval_window (data->comp, data->cosmo, &xck);
+
+  /* eval_kfactor_vec may rescale its wave numbers in place, which does not restore them
+   * bit for bit: every evaluation starts from a copy of the original ones */
+  ncm_vector_memcpy (data->k_eval, data->k);
+  nc_xcor_kernel_component_eval_kfactor_vec (data->comp, data->cosmo, &xck, data->k_eval, y);
+  ncm_vector_scale (y, window);
+}
+
+/*
+ * The default derivatives of order @order of K = window x kfactor with respect to chi at
+ * fixed k, by NcmDiff on the vector of the kernel values at the wave numbers @k, with the
+ * workspace @work. @out serves as the scratch copy of @k during the differentiation and
+ * receives the derivatives at the end.
+ */
+static void
+_nc_xcor_kernel_component_eval_kernel_dchi (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, const NcXcorKinetic *xck, NcmDiffWork *work, NcmVector *k, NcmVector *out, const guint order)
+{
+  NcXcorKernelComponentPrivate *self = nc_xcor_kernel_component_get_instance_private (comp);
+  NcXcorKernelComponentDchiData data = {comp, cosmo, dist, k, out};
+
+  if (order == 1)
+    ncm_diff_rc_d1_1_to_M_ws (self->diff, work, xck->chi_z, ncm_vector_len (k), &_nc_xcor_kernel_component_dchi_f, &data, out, NULL);
+  else
+    ncm_diff_rc_d2_1_to_M_ws (self->diff, work, xck->chi_z, ncm_vector_len (k), &_nc_xcor_kernel_component_dchi_f, &data, out, NULL);
+}
+
+/**
+ * nc_xcor_kernel_component_eval_kernel_d1chi: (virtual eval_kernel_d1chi)
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @dist: a #NcDistance
+ * @xck: the line-of-sight point
+ * @work: a #NcmDiffWork
+ * @k: wave numbers
+ * @out: output, the same length as @k and distinct from it
+ *
+ * Evaluates $\partial_\chi K(\chi, k)$, the derivative of the radial kernel with respect to
+ * $\chi$ at fixed $k$, at the point @xck for every wave number of @k. A component that does
+ * not implement it gets a numerical derivative: #NcmDiff on the vector of
+ * nc_xcor_kernel_component_eval_window() times nc_xcor_kernel_component_eval_kfactor_vec()
+ * over @k, one-sided near the ends of the support nc_xcor_kernel_component_prepare() set,
+ * with the storage of @work. A workspace serves one call at a time.
+ */
+void
+nc_xcor_kernel_component_eval_kernel_d1chi (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, const NcXcorKinetic *xck, NcmDiffWork *work, NcmVector *k, NcmVector *out)
+{
+  NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
+
+  if (klass->eval_kernel_d1chi != NULL)
+    klass->eval_kernel_d1chi (comp, cosmo, dist, xck, work, k, out);
+  else
+    _nc_xcor_kernel_component_eval_kernel_dchi (comp, cosmo, dist, xck, work, k, out, 1);
+}
+
+/**
+ * nc_xcor_kernel_component_eval_kernel_d2chi: (virtual eval_kernel_d2chi)
+ * @comp: a #NcXcorKernelComponent
+ * @cosmo: a #NcHICosmo
+ * @dist: a #NcDistance
+ * @xck: the line-of-sight point
+ * @work: a #NcmDiffWork
+ * @k: wave numbers
+ * @out: output, the same length as @k and distinct from it
+ *
+ * Evaluates $\partial^2_\chi K(\chi, k)$ at the point @xck for every wave number of @k, see
+ * nc_xcor_kernel_component_eval_kernel_d1chi().
+ */
+void
+nc_xcor_kernel_component_eval_kernel_d2chi (NcXcorKernelComponent *comp, NcHICosmo *cosmo, NcDistance *dist, const NcXcorKinetic *xck, NcmDiffWork *work, NcmVector *k, NcmVector *out)
+{
+  NcXcorKernelComponentClass *klass = NC_XCOR_KERNEL_COMPONENT_GET_CLASS (comp);
+
+  if (klass->eval_kernel_d2chi != NULL)
+    klass->eval_kernel_d2chi (comp, cosmo, dist, xck, work, k, out);
+  else
+    _nc_xcor_kernel_component_eval_kernel_dchi (comp, cosmo, dist, xck, work, k, out, 2);
 }
 
 /**

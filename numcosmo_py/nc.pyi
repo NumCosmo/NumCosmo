@@ -24935,6 +24935,24 @@ class XcorKernelComponent(GObject.Object):
     @staticmethod
     def clear(comp: XcorKernelComponent) -> None: ...
     def do_eval_kernel(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def do_eval_kernel_d1chi(
+        self,
+        cosmo: HICosmo,
+        dist: Distance,
+        xck: XcorKinetic,
+        work: NumCosmoMath.DiffWork,
+        k: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
+    def do_eval_kernel_d2chi(
+        self,
+        cosmo: HICosmo,
+        dist: Distance,
+        xck: XcorKinetic,
+        work: NumCosmoMath.DiffWork,
+        k: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
     def do_eval_kfactor(self, cosmo: HICosmo, xck: XcorKinetic, k: float) -> float: ...
     def do_eval_kfactor_vec(
         self,
@@ -24952,6 +24970,24 @@ class XcorKernelComponent(GObject.Object):
     def eval_k_epsilon(self, x: float) -> float: ...
     def eval_k_max(self, x: float) -> float: ...
     def eval_kernel(self, cosmo: HICosmo, chi: float, k: float) -> float: ...
+    def eval_kernel_d1chi(
+        self,
+        cosmo: HICosmo,
+        dist: Distance,
+        xck: XcorKinetic,
+        work: NumCosmoMath.DiffWork,
+        k: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
+    def eval_kernel_d2chi(
+        self,
+        cosmo: HICosmo,
+        dist: Distance,
+        xck: XcorKinetic,
+        work: NumCosmoMath.DiffWork,
+        k: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
     def eval_kfactor(self, cosmo: HICosmo, xck: XcorKinetic, k: float) -> float: ...
     def eval_kfactor_vec(
         self,
@@ -25009,6 +25045,30 @@ class XcorKernelComponentClass(GObject.GPointer):
             XcorKernelComponent,
             HICosmo,
             XcorKinetic,
+            NumCosmoMath.Vector,
+            NumCosmoMath.Vector,
+        ],
+        None,
+    ] = ...
+    eval_kernel_d1chi: typing.Callable[
+        [
+            XcorKernelComponent,
+            HICosmo,
+            Distance,
+            XcorKinetic,
+            NumCosmoMath.DiffWork,
+            NumCosmoMath.Vector,
+            NumCosmoMath.Vector,
+        ],
+        None,
+    ] = ...
+    eval_kernel_d2chi: typing.Callable[
+        [
+            XcorKernelComponent,
+            HICosmo,
+            Distance,
+            XcorKinetic,
+            NumCosmoMath.DiffWork,
             NumCosmoMath.Vector,
             NumCosmoMath.Vector,
         ],
