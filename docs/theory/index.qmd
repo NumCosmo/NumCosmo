@@ -29,16 +29,25 @@ classes and methods.
 - [A Small-Shear Series Marginalization for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_series.qmd) --- in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
 - [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd) --- a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
 
-## Numerical Methods
+## Angular Power Spectra
 
-- [FFTLog](ncm/fftlog/fftlog.qmd) --- logarithmic fast Fourier transform.
-- [Numerical Differentiation](ncm/integration/diff.qmd) --- difference quotients with Richardson extrapolation, their round-off and error control, moving the step up, domains, the Hessian, the dual-series scheme and derivatives from Chebyshev fits.
-- [AutoKnots: Adaptive Knot Placement](ncm/spline/spline_func.qmd) --- the rounds of midpoint tests, the false pass, the closure of the settled mesh that replaced the reopening by standard deviation, the spread along runs of equal width, and the aliased Eisenstein--Hu spline.
-- [Quintic Hermite Interpolation](ncm/spline/hermite.qmd) --- the quintic through the values and two derivatives at the knots, its third-derivative jumps against the cubic's, the error bound, and the ODE order NcmOdeSpline pairs it with.
-- [Spectral Methods](ncm/algebra/spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
 - [The Ultraspherical Spectral Solver](ncm/specfunc/sbessel_ode_solver.qmd) --- the banded discretization of the spherical Bessel operator, batching over multipoles, the incremental Givens QR and conjugate panel spans.
 - [UltraLevin: Non-Limber Angular Power Spectra](ncm/specfunc/sbessel_projection.qmd) --- the Levin reduction, fixed panels in x, the window over k and its exact outer integral.
-- [CSQ1D Formalism](ncm/dynamics/csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.
+
+## Approximation and Interpolation
+
+- [Spectral Methods](ncm/algebra/spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
+- [FFTLog](ncm/fftlog/fftlog.qmd) --- logarithmic fast Fourier transform.
+- [AutoKnots: Adaptive Knot Placement](ncm/spline/spline_func.qmd) --- the rounds of midpoint tests, the false pass, the closure of the settled mesh that replaced the reopening by standard deviation, the spread along runs of equal width, and the aliased Eisenstein--Hu spline.
+- [Quintic Hermite Interpolation](ncm/spline/hermite.qmd) --- the quintic through the values and two derivatives at the knots, its third-derivative jumps against the cubic's, the error bound, and the ODE order NcmOdeSpline pairs it with.
+
+## Statistics
+
 - [Kernel Mixture Densities](ncm/stats/stats_dist.qmd) --- reconstructing a density from samples as a non-negative kernel mixture, the center-shrinkage covariance budget, and fitting the bandwidth and kernel tail together.
 - [Poisson-Lognormal Distribution](ncm/core/poisson_lognormal.qmd) --- the change of variables, the mode through the Lambert $W$ function, the Gauss-Hermite rule centered on the mode and scaled to the width of the peak and the Laplace approximation used for small $\sigma$.
 - [Autocorrelation Time and Effective Sample Size](ncm/stats/autocorrelation.qmd) --- the exact one-sample-at-a-time autocovariance accumulator, the levels of block averages that remove the ceiling a fixed lag budget puts on $\tau$, the three estimators, and what an ensemble mean does and does not see.
+
+## Numerical Methods
+
+- [Numerical Differentiation](ncm/integration/diff.qmd) --- difference quotients with Richardson extrapolation, their round-off and error control, moving the step up, domains, the Hessian, the dual-series scheme and derivatives from Chebyshev fits.
+- [CSQ1D Formalism](ncm/dynamics/csq1d.qmd) --- complex-structure evolution of a time-dependent oscillator.
