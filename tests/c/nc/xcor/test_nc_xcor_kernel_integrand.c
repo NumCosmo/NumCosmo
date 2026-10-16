@@ -313,6 +313,9 @@ test_nc_xcor_kernel_integrand_panels (TestNcXcorKernelIntegrand *test, gconstpoi
 
   g_assert_nonnull (sp);
 
+  /* One term: the rows are the windows, nothing is collapsed */
+  g_assert_null (nc_xcor_kernel_integrand_peek_collapsed (integ, 0));
+
   {
     const guint len = nc_xcor_kernel_integrand_get_len (integ);
     gdouble k_min, k_max, x_min, x_max;

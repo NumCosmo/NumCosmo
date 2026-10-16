@@ -540,6 +540,16 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       }
     }
 
+    /* With several terms the k integrals read the sum of each multipole's rows as one
+     * polynomial, exact up to the dropped coefficients */
+    if (comp_states->n_terms > 1)
+    {
+      NcmSpectral *spectral = ncm_spectral_new ();
+
+      _nc_xcor_kernel_integrand_collapse (integrand, spectral, NC_XCOR_KERNEL_COLLAPSE_FRACTION * abstol);
+      ncm_spectral_free (spectral);
+    }
+
     return integrand;
   }
 }

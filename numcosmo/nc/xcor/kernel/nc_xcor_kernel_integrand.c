@@ -70,16 +70,63 @@ _nc_xcor_kernel_integrand_new (guint len, guint n_terms)
   NcXcorKernelIntegrand *integrand = g_new0 (NcXcorKernelIntegrand, 1);
   const guint n_rows               = len * n_terms;
 
-  integrand->refcount = 1;
-  integrand->len      = len;
-  integrand->n_terms  = n_terms;
-  integrand->sp       = ncm_spectral_panels_new (n_rows);
-  integrand->rows     = g_array_sized_new (FALSE, TRUE, sizeof (NcXcorKernelIntegrandRow), n_rows);
-  integrand->scales   = ncm_vector_new (n_rows);
+  integrand->refcount  = 1;
+  integrand->len       = len;
+  integrand->n_terms   = n_terms;
+  integrand->sp        = ncm_spectral_panels_new (n_rows);
+  integrand->rows      = g_array_sized_new (FALSE, TRUE, sizeof (NcXcorKernelIntegrandRow), n_rows);
+  integrand->scales    = ncm_vector_new (n_rows);
+  integrand->collapsed = NULL;
 
   g_array_set_size (integrand->rows, n_rows);
 
   return integrand;
+}
+
+/*
+ * Builds the collapsed closure of a block of several terms: for every multipole the sum
+ * of its term rows as one row in k, by ncm_spectral_panels_new_sum_rows() on the rows'
+ * supports and scales, trailing coefficients below @abstol dropped. The products of
+ * nc_xcor_kquad.c read these; nc_xcor_kernel_integrand_eval_comps() keeps reading the
+ * rows.
+ */
+void
+_nc_xcor_kernel_integrand_collapse (NcXcorKernelIntegrand *integrand, NcmSpectral *spectral, gdouble abstol)
+{
+  const guint len         = integrand->len;
+  const guint n_terms     = integrand->n_terms;
+  NcmSpectralPanels **sps = g_new (NcmSpectralPanels *, n_terms);
+  guint *rows             = g_new (guint, n_terms);
+  gdouble *scales         = g_new (gdouble, n_terms);
+  gdouble *x_min          = g_new (gdouble, n_terms);
+  gdouble *x_max          = g_new (gdouble, n_terms);
+  guint i, t;
+
+  g_clear_pointer (&integrand->collapsed, g_ptr_array_unref);
+  integrand->collapsed = g_ptr_array_new_full (len, (GDestroyNotify) ncm_spectral_panels_free);
+
+  for (i = 0; i < len; i++)
+  {
+    for (t = 0; t < n_terms; t++)
+    {
+      const guint r                       = i + t * len;
+      const NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, r);
+
+      sps[t]    = integrand->sp;
+      rows[t]   = r;
+      scales[t] = ncm_vector_get (integrand->scales, r);
+      x_min[t]  = row->x_min;
+      x_max[t]  = row->x_max;
+    }
+
+    g_ptr_array_add (integrand->collapsed, ncm_spectral_panels_new_sum_rows (spectral, n_terms, sps, rows, scales, x_min, x_max, abstol));
+  }
+
+  g_free (sps);
+  g_free (rows);
+  g_free (scales);
+  g_free (x_min);
+  g_free (x_max);
 }
 
 /**
@@ -113,6 +160,7 @@ nc_xcor_kernel_integrand_unref (NcXcorKernelIntegrand *integrand)
     ncm_spectral_panels_clear (&integrand->sp);
     g_array_unref (integrand->rows);
     ncm_vector_clear (&integrand->scales);
+    g_clear_pointer (&integrand->collapsed, g_ptr_array_unref);
     g_free (integrand);
   }
 }
@@ -160,6 +208,29 @@ guint
 nc_xcor_kernel_integrand_get_n_terms (NcXcorKernelIntegrand *integrand)
 {
   return integrand->n_terms;
+}
+
+/**
+ * nc_xcor_kernel_integrand_peek_collapsed:
+ * @integrand: a #NcXcorKernelIntegrand
+ * @i: a multipole of the block
+ *
+ * Peeks the collapsed closure of multipole @i: with several terms, the sum of its term
+ * rows as a one-row panel set in $k$, trailing coefficients below a hundredth of the fit's
+ * absolute floor dropped, which is what the $k$ integrals read. With one term the rows are
+ * the windows and there is none.
+ *
+ * Returns: (transfer none) (nullable): the collapsed closure of multipole @i, or %NULL with one term
+ */
+NcmSpectralPanels *
+nc_xcor_kernel_integrand_peek_collapsed (NcXcorKernelIntegrand *integrand, guint i)
+{
+  if (integrand->collapsed == NULL)
+    return NULL;
+
+  g_assert_cmpuint (i, <, integrand->len);
+
+  return g_ptr_array_index (integrand->collapsed, i);
 }
 
 /**

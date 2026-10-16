@@ -64,7 +64,7 @@ _nc_xcor_panels_product (void)
   return prod;
 }
 
-/* The result and error of one pair of terms, of the length of the last block it served */
+/* The result and error of one multipole's product */
 typedef struct _NcXcorTermProduct
 {
   NcmVector *res;
@@ -106,11 +106,11 @@ _nc_xcor_term_product_pool (void)
 /*
  * Integrates a pair of Chebyshev closures with NcmSpectralPanelsProduct: each
  * closure's panels in their own variables k / s_r. With one term per closure the
- * panel rows are the multipoles; otherwise each multipole is the sum over the pairs of
- * terms (t1, t2) of the product of row i + t1 n of the first closure with row
- * i + t2 n of the second, n the block's multipoles, and the error estimates add. An
- * auto spectrum is the product of the first closure with itself, where the pairs
- * (t1, t2) and (t2, t1) are one integral counted twice.
+ * panel rows are the multipoles and the block is one product. Otherwise a closure of
+ * several terms holds each multipole's window collapsed into one row in k
+ * (nc_xcor_kernel_integrand_peek_collapsed()), and the block is one product per
+ * multipole: of two collapsed rows, or of a collapsed row and the other closure's row
+ * of that multipole in its own variable.
  */
 static void
 _nc_xcor_kernel_integrate_block_panels (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
@@ -135,34 +135,33 @@ _nc_xcor_kernel_integrate_block_panels (NcXcor *xc, NcXcorKernelIntegrand *xclki
     const guint len         = ncm_vector_len (vp);
     NcXcorTermProduct **ptr = ncm_memory_pool_get (_nc_xcor_term_product_pool ());
     NcXcorTermProduct *tp   = *ptr;
-    guint t1, t2;
+    NcmVector *err1         = (vp_err != NULL) ? tp->err : NULL;
+    guint i;
 
-    if ((tp->res == NULL) || (ncm_vector_len (tp->res) != len))
+    if (tp->res == NULL)
     {
-      ncm_vector_clear (&tp->res);
-      ncm_vector_clear (&tp->err);
-      tp->res = ncm_vector_new (len);
-      tp->err = ncm_vector_new (len);
+      tp->res = ncm_vector_new (1);
+      tp->err = ncm_vector_new (1);
     }
 
-    ncm_vector_set_zero (vp);
-
-    if (vp_err != NULL)
-      ncm_vector_set_zero (vp_err);
-
-    for (t1 = 0; t1 < n_terms1; t1++)
+    for (i = 0; i < len; i++)
     {
-      for (t2 = (isauto ? t1 : 0); t2 < n_terms2; t2++)
-      {
-        const gdouble weight = (isauto && (t2 != t1)) ? 2.0 : 1.0;
+      NcmSpectralPanels *P = nc_xcor_kernel_integrand_peek_collapsed (xclki1, i);
+      NcmSpectralPanels *Q = isauto ? P : nc_xcor_kernel_integrand_peek_collapsed (xclki2, i);
 
-        ncm_spectral_panels_product_integrate_rows (prod, sp1, t1 * len, s1, sp2, t2 * len, s2,
-                                                    tp->res, (vp_err != NULL) ? tp->err : NULL);
-        ncm_vector_axpy (vp, weight, tp->res);
+      if ((P != NULL) && (Q != NULL))
+        ncm_spectral_panels_product_integrate (prod, P, NULL, Q, NULL, tp->res, err1);
+      else if (P != NULL)
+        ncm_spectral_panels_product_integrate_rows (prod, P, 0, NULL, sp2, i, s2, tp->res, err1);
+      else if (Q != NULL)
+        ncm_spectral_panels_product_integrate_rows (prod, sp1, i, s1, Q, 0, NULL, tp->res, err1);
+      else
+        g_error ("_nc_xcor_kernel_integrate_block_panels: a closure of several terms has no collapsed rows.");
 
-        if (vp_err != NULL)
-          ncm_vector_axpy (vp_err, weight, tp->err);
-      }
+      ncm_vector_set (vp, i, ncm_vector_get (tp->res, 0));
+
+      if (vp_err != NULL)
+        ncm_vector_set (vp_err, i, ncm_vector_get (err1, 0));
     }
 
     ncm_memory_pool_return (ptr);

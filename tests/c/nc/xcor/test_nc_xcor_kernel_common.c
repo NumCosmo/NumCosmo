@@ -1473,16 +1473,31 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
       peak = GSL_MAX (peak, fabs (_limber_direct (comps, cosmo, dist, l, k)));
     }
 
-    for (j = 0; j < n_k; j++)
+    /* The collapsed row the k integrals read agrees with the formula as the rows do */
     {
-      const gdouble k = k_lo * pow (k_hi / k_lo, j / (n_k - 1.0));
+      NcmSpectralPanels *col = nc_xcor_kernel_integrand_peek_collapsed (xclki, l - lmin);
+      gdouble dev_col        = 0.0;
+      gdouble c_lo, c_hi;
 
-      nc_xcor_kernel_integrand_eval (xclki, k, W);
-      dev = GSL_MAX (dev, fabs (W[l - lmin] - _limber_direct (comps, cosmo, dist, l, k)));
+      g_assert_nonnull (col);
+      g_assert_cmpuint (ncm_spectral_panels_get_fdim (col), ==, 1);
+      ncm_spectral_panels_get_range (col, &c_lo, &c_hi);
+
+      for (j = 0; j < n_k; j++)
+      {
+        const gdouble k      = k_lo * pow (k_hi / k_lo, j / (n_k - 1.0));
+        const gdouble direct = _limber_direct (comps, cosmo, dist, l, k);
+        const gdouble colv   = ((k >= c_lo) && (k <= c_hi)) ? ncm_spectral_panels_eval_row (col, 0, k) : 0.0;
+
+        nc_xcor_kernel_integrand_eval (xclki, k, W);
+        dev     = GSL_MAX (dev, fabs (W[l - lmin] - direct));
+        dev_col = GSL_MAX (dev_col, fabs (colv - direct));
+      }
+
+      g_assert_cmpfloat (peak, >, 0.0);
+      g_assert_cmpfloat (dev, <=, tol * peak);
+      g_assert_cmpfloat (dev_col, <=, tol * peak);
     }
-
-    g_assert_cmpfloat (peak, >, 0.0);
-    g_assert_cmpfloat (dev, <=, tol * peak);
   }
 
   g_ptr_array_unref (comps);
