@@ -559,9 +559,12 @@ _nc_xcor_solver_guint_cmp (gconstpointer a, gconstpointer b)
  * @solver: a #NcXcorSolver
  * @default_block_size: preferred number of multipoles per block
  *
- * Tiles the union of all requested $\ell$-ranges into contiguous blocks, each
- * covering at most @default_block_size multipoles, further capped by
- * #NC_XCOR_KERNEL_MAX_ELL_BLOCK. A block also never straddles a registered
+ * Tiles the union of all requested $\ell$-ranges into contiguous blocks. A block starting at
+ * $\ell_0$ covers at most 8 multipoles when $\ell_0 < 16$, 16 when $\ell_0 < 64$ and
+ * @default_block_size otherwise, never more than @default_block_size nor
+ * #NC_XCOR_KERNEL_MAX_ELL_BLOCK. The $k$ domain of a block is the union of its multipoles'
+ * domains, which differ most at low $\ell$: narrower blocks there cost less in total and
+ * give more blocks to run in parallel. A block also never straddles a registered
  * kernel's l_limber threshold, since a kernel evaluated in Limber mode below
  * l_limber and non-Limber mode above it needs the switch to fall on a block
  * boundary.
@@ -624,7 +627,8 @@ nc_xcor_solver_plan_blocks (NcXcorSolver *solver, guint default_block_size)
 
     while (cursor <= overall_lmax)
     {
-      guint block_end = MIN (cursor + max_block_size - 1, overall_lmax);
+      const guint width = MIN ((cursor < 16) ? 8 : ((cursor < 64) ? 16 : max_block_size), max_block_size);
+      guint block_end   = MIN (cursor + width - 1, overall_lmax);
 
       while ((next_boundary_idx < boundaries->len) &&
              (g_array_index (boundaries, guint, next_boundary_idx) <= cursor))

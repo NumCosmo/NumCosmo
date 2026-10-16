@@ -65,6 +65,7 @@ static void test_nc_xcor_solver_free (TestNcXcorSolver *test, gconstpointer pdat
 static void test_nc_xcor_solver_register (TestNcXcorSolver *test, gconstpointer pdata);
 static void test_nc_xcor_solver_requests (TestNcXcorSolver *test, gconstpointer pdata);
 static void test_nc_xcor_solver_plan_tiling (TestNcXcorSolver *test, gconstpointer pdata);
+static void test_nc_xcor_solver_plan_low_ell (TestNcXcorSolver *test, gconstpointer pdata);
 static void test_nc_xcor_solver_plan_union (TestNcXcorSolver *test, gconstpointer pdata);
 static void test_nc_xcor_solver_plan_kernel_integrator (TestNcXcorSolver *test, gconstpointer pdata);
 static void test_nc_xcor_solver_plan_l_limber_sorted (TestNcXcorSolver *test, gconstpointer pdata);
@@ -79,6 +80,7 @@ static const TestCheck test_checks[] = {
   {"plan",           &test_nc_xcor_solver_plan          },
   {"plan/l_limber",  &test_nc_xcor_solver_plan_l_limber },
   {"plan/tiling",    &test_nc_xcor_solver_plan_tiling   },
+  {"plan/low_ell",   &test_nc_xcor_solver_plan_low_ell  },
   {"plan/union",     &test_nc_xcor_solver_plan_union    },
   {"plan/kernel_integrator", &test_nc_xcor_solver_plan_kernel_integrator},
   {"plan/l_limber_sorted", &test_nc_xcor_solver_plan_l_limber_sorted},
@@ -277,6 +279,21 @@ test_nc_xcor_solver_plan_tiling (TestNcXcorSolver *test, gconstpointer pdata)
 
   nc_xcor_solver_plan_blocks (test->solver, 4);
   _test_assert_blocks (test->solver, by4, G_N_ELEMENTS (by4) / 2);
+}
+
+/* With blocks of 32, 8 multipoles per block below l = 16, 16 below l = 64 and 32 above */
+static void
+test_nc_xcor_solver_plan_low_ell (TestNcXcorSolver *test, gconstpointer pdata)
+{
+  const guint id       = nc_xcor_solver_register_kernel (test->solver, test->k1);
+  const guint blocks[] = {
+    2, 9, 10, 17, 18, 33, 34, 49, 50, 65, 66, 97, 98, 129, 130, 161, 162, 193, 194, 225,
+    226, 257, 258, 289, 290, 300
+  };
+
+  nc_xcor_solver_request_cl (test->solver, id, id, 2, 300);
+  nc_xcor_solver_plan_blocks (test->solver, 32);
+  _test_assert_blocks (test->solver, blocks, G_N_ELEMENTS (blocks) / 2);
 }
 
 /* The blocks cover the whole span of the requests, the gap between disjoint ones
