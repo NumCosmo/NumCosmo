@@ -53,10 +53,20 @@ ps = Ncm.PowspecAnalytic.new(
 )
 
 
-def gauss_window(l_limber: int, ell: int) -> Nc.XcorKernelIntegrand:
+def gauss_window(
+    l_limber: int, ell: int, deriv: int = 0, n_sigma: float = 4.0
+) -> Nc.XcorKernelIntegrand:
     """The window of a Gaussian kernel at one multipole, exact or under Limber."""
     sbi = Ncm.SBesselIntegratorLevin.new(ell, ell)
-    kernel = Nc.XcorKernelAnalyticGauss.new_full(dist, ps, 1500.0, 300.0, 4.0, sbi)
+    kernel = Nc.XcorKernelAnalyticGauss(
+        dist=dist,
+        powspec=ps,
+        chi_mean=1500.0,
+        chi_sigma=300.0,
+        n_sigma=n_sigma,
+        integrator=sbi,
+        bessel_deriv=deriv,
+    )
     kernel.set_l_limber(l_limber)
     kernel.set_reltol(1.0e-8)
     kernel.prepare(cosmo)
@@ -149,6 +159,134 @@ axs[1].plot(ells + 0.5, scaled, "o-", ms=4)
 axs[1].set_xscale("log")
 axs[1].set_xlabel(r"$\nu$")
 axs[1].set_ylabel(r"$\nu^2 \times$ largest difference / peak")
+fig.tight_layout()
+plt.show()
+```
+
+## Derivative weights
+
+A component whose Bessel weight is $j_\ell^{(d)}$, with $d$ the component's
+`bessel-deriv` (1 for a Doppler-type term, 2 for redshift-space distortions), has a
+window that the Limber form of a single order cannot represent: the moments of $j_\ell''$
+of order zero and one vanish, so the weight acts as $\delta''$ and the leading term of
+its Limber expansion is a second derivative of $K$. The library writes the derivative
+instead as its exact combination of neighboring orders [@DLMF, §10.51.1],
+$$
+j_\ell' = \frac{\ell\, j_{\ell-1} - (\ell+1)\, j_{\ell+1}}{2\ell+1},
+\qquad
+j_\ell'' = a_\ell\, j_{\ell-2} - b_\ell\, j_\ell + c_\ell\, j_{\ell+2},
+$$
+with
+$$
+a_\ell = \frac{\ell(\ell-1)}{(2\ell-1)(2\ell+1)},
+\qquad
+b_\ell = \frac{2\ell^2+2\ell-1}{(2\ell-1)(2\ell+3)},
+\qquad
+c_\ell = \frac{(\ell+1)(\ell+2)}{(2\ell+1)(2\ell+3)},
+$$
+and applies the Limber form to each order,
+$$
+W_\ell(k) \simeq p_\ell(k) \sum_t c_{\ell,t}\, I^\mathrm{L}_{\ell+t}(k),
+$$
+where $c_{\ell,t}$ is the coefficient of $j_{\ell+t}$ in the weight, $t \in \{-1, 1\}$
+for $d = 1$ and $t \in \{-2, 0, 2\}$ for $d = 2$, zero for a negative order, so that
+$\ell = 0$ and $1$ need no special case. The combination is a finite difference of $K$
+across the three points $\chi_{\ell+t} = \nu_{\ell+t}/k$, spaced by $2/k$, which the
+Bessel function sets rather than the kernel's tabulation; that is why it tolerates the
+splines a kernel is built from, where a derivative of $K$ in $\chi$ does not. The
+three-point form for $d = 2$ is the one of @Tanidis2019.
+
+The two-point form $-(2\ell + \tfrac14)\,\nu^{-2}\, I^\mathrm{L}_\ell + 2(\nu+1)^{-1}
+I^\mathrm{L}_{\ell+1}$, obtained from the Bessel equation at the Limber point and used
+by other codes, does not converge: its two terms cancel to leading order and the Limber
+error of each is the size of what survives, about 1.2 of the window's peak at every
+multipole on the kernel of @fig-limber-deriv.
+
+In the closure each order is a term of its own, sampled in $x = k/\nu_{\ell+t}$, so that
+every term of every multipole of a block shares the point $\chi = 1/x$: one window
+factor and one vectorized wave-number factor per term at each sample. Before the $k$
+integrals the terms of each multipole are collapsed into one piecewise polynomial in
+$k$, on the union of their panel edges, by rebasing each term's series onto every cell
+it covers and adding the coefficients; the rebase is exact, and trailing coefficients
+below a hundredth of the fit's absolute floor are dropped. The $k$ integral of a
+multipole is then one product of two such polynomials, as for a single order.
+
+### Discarded border contributions
+
+A kernel that does not vanish at an end of its support leaves a step in each order's
+window at that order's band edge, $(\nu_{\ell+t})/\chi_\mathrm{end}$, of the size of
+$K$ there relative to its peak; the exact window continues past the edge as an
+oscillating tail of that size, which the Limber path discards, as it discards the
+tail of the density term at its single edge. Relative to the total window the
+discarded part of a derivative term is the size of the density term's; relative to the
+derivative term alone it is amplified by $(\nu\sigma/\chi)^2$, $\sigma$ the kernel's
+width. @fig-limber-deriv shows both regimes. A kernel that is nonzero at its ends, or a
+use that needs the derivative term itself at better than that, belongs on the
+non-Limber path, which integrates the ends exactly.
+
+```{python}
+#| label: fig-limber-deriv
+#| fig-cap: >
+#|   The window W_l(k) of the Gaussian kernel of @fig-limber-exact with the j_l'' weight,
+#|   at l = 10 and l = 100, from UltraLevin (solid) and from the Limber form of the
+#|   recurrence (dashed), each divided by the peak of the UltraLevin window; the kernel
+#|   is cut at 8 sigma, where it is 1e-14 of its peak. Bottom: the largest difference
+#|   between the two windows over k, divided by that peak and multiplied by nu^2, for
+#|   the cut at 8 sigma (circles) and at 4 sigma (squares), where the kernel is 3e-4 of
+#|   its peak at the cut: the first tends to a constant, the second grows with nu as the
+#|   discarded border contributions of the three orders do.
+#| code-fold: true
+ells_d = np.array([10, 20, 30, 50, 100, 200, 300])
+fig, axs = plt.subplots(2, 1, figsize=(8, 6.0))
+q_lo, q_hi = np.inf, 0.0
+
+for ell in (10, 100):
+    color, shade = shown[ell]
+    levin = gauss_window(-1, ell, 2, 8.0)
+    limber = gauss_window(0, ell, 2, 8.0)
+    k_lo, k_hi = levin.get_range()
+    ks = np.geomspace(k_lo, k_hi, 2000)
+    w_levin = np.array([levin.eval_array(k)[0] for k in ks])
+    lo, hi = limber.get_range()
+    w_limber = np.array([limber.eval_array(k)[0] if lo <= k <= hi else 0.0 for k in ks])
+    peak = np.abs(w_levin).max()
+    visible = (np.abs(w_levin) > 1.0e-3 * peak) | (np.abs(w_limber) > 1.0e-3 * peak)
+    q_lo = min(q_lo, ks[visible].min() / (ell + 0.5))
+    q_hi = max(q_hi, ks[visible].max() / (ell + 0.5))
+    axs[0].plot(ks / (ell + 0.5), w_levin / peak, color=color, lw=2.0,
+                label=rf"$\ell = {ell}$, UltraLevin")
+    axs[0].plot(ks / (ell + 0.5), w_limber / peak, color=shade, lw=1.0, ls="--",
+                label=rf"$\ell = {ell}$, Limber")
+
+for n_sigma, marker in ((8.0, "o"), (4.0, "s")):
+    scaled_d = []
+    for ell in ells_d:
+        levin = gauss_window(-1, ell, 2, n_sigma)
+        limber = gauss_window(0, ell, 2, n_sigma)
+        k_lo, k_hi = levin.get_range()
+        ks = np.geomspace(k_lo, k_hi, 2000)
+        w_levin = np.array([levin.eval_array(k)[0] for k in ks])
+        lo, hi = limber.get_range()
+        w_limber = np.array(
+            [limber.eval_array(k)[0] if lo <= k <= hi else 0.0 for k in ks]
+        )
+        peak = np.abs(w_levin).max()
+        scaled_d.append(np.abs(w_limber - w_levin).max() / peak * (ell + 0.5) ** 2)
+    axs[1].plot(ells_d + 0.5, scaled_d, marker + "-", ms=4,
+                label=rf"cut at ${n_sigma:g}\sigma$")
+
+axs[0].set_xscale("log")
+axs[0].set_xlim(q_lo, q_hi)
+axs[0].xaxis.set_major_formatter(FormatStrFormatter("%g"))
+axs[0].xaxis.set_minor_formatter(FormatStrFormatter("%g"))
+axs[0].set_xlabel(r"$k / \nu$  [$R_{H0}^{-1}$]")
+axs[0].set_ylabel(r"$W_\ell(k)$ / peak")
+axs[0].legend(fontsize=8)
+axs[1].set_xscale("log")
+axs[1].set_yscale("log")
+axs[1].set_xlabel(r"$\nu$")
+axs[1].set_ylabel(r"$\nu^2 \times$ largest difference / peak")
+axs[1].legend(fontsize=8)
 fig.tight_layout()
 plt.show()
 ```
