@@ -125,6 +125,90 @@ _nc_xcor_kernel_integrand_sum_terms (NcXcorKernelIntegrand *integrand, NcmSpectr
   }
 }
 
+static gdouble _nc_xcor_kernel_integrand_cell_bound (NcmSpectralPanels *win, guint p);
+static gdouble _nc_xcor_kernel_integrand_cell_peak (NcmSpectralPanels *win, guint p);
+
+/*
+ * The smallest over the multipoles of a block of several terms of the peak of |W_i(k)|, from
+ * the summed windows: each cell's polynomial sampled at 2 N + 1 Chebyshev-Lobatto points, N
+ * its coefficient count. The cell of the largest bound sum_j |c_j| is sampled first, and a
+ * cell whose bound is below the largest value found is skipped. Multipoles whose window is
+ * zero everywhere are left out, and a block whose windows all are gives 0.
+ */
+gdouble
+_nc_xcor_kernel_integrand_window_peak_min (NcXcorKernelIntegrand *integrand)
+{
+  gdouble peak_min = G_MAXDOUBLE;
+  guint i, p;
+
+  g_assert_nonnull (integrand->windows);
+
+  for (i = 0; i < integrand->len; i++)
+  {
+    NcmSpectralPanels *win = g_ptr_array_index (integrand->windows, i);
+    const guint n_panels   = ncm_spectral_panels_get_n_panels (win);
+    gdouble bound_max      = -1.0;
+    gdouble peak           = 0.0;
+    guint p_max            = 0;
+
+    for (p = 0; p < n_panels; p++)
+    {
+      const gdouble bound = _nc_xcor_kernel_integrand_cell_bound (win, p);
+
+      if (bound > bound_max)
+      {
+        bound_max = bound;
+        p_max     = p;
+      }
+    }
+
+    if (n_panels > 0)
+      peak = _nc_xcor_kernel_integrand_cell_peak (win, p_max);
+
+    for (p = 0; p < n_panels; p++)
+      if ((p != p_max) && (_nc_xcor_kernel_integrand_cell_bound (win, p) > peak))
+        peak = GSL_MAX (peak, _nc_xcor_kernel_integrand_cell_peak (win, p));
+
+    if (peak > 0.0)
+      peak_min = GSL_MIN (peak_min, peak);
+  }
+
+  return (peak_min < G_MAXDOUBLE) ? peak_min : 0.0;
+}
+
+/* sum_j |c_j| of cell p, a bound on |W| over the cell */
+static gdouble
+_nc_xcor_kernel_integrand_cell_bound (NcmSpectralPanels *win, guint p)
+{
+  gdouble a, b, bound = 0.0;
+  guint N, j;
+  const gdouble *c = ncm_spectral_panels_peek_panel (win, p, &a, &b, &N);
+
+  for (j = 0; j < N; j++)
+    bound += fabs (c[j]);
+
+  return bound;
+}
+
+/* The largest |W| over 2 N + 1 Chebyshev-Lobatto points of cell p */
+static gdouble
+_nc_xcor_kernel_integrand_cell_peak (NcmSpectralPanels *win, guint p)
+{
+  gdouble a, b, peak = 0.0;
+  guint N, j;
+
+  ncm_spectral_panels_peek_panel (win, p, &a, &b, &N);
+
+  for (j = 0; j < 2 * N + 1; j++)
+  {
+    const gdouble x = 0.5 * (a + b) - 0.5 * (b - a) * cos (M_PI * j / (2.0 * N));
+
+    peak = GSL_MAX (peak, fabs (ncm_spectral_panels_eval_row_on (win, p, 0, x)));
+  }
+
+  return peak;
+}
+
 /**
  * nc_xcor_kernel_integrand_ref:
  * @integrand: a #NcXcorKernelIntegrand

@@ -390,24 +390,70 @@ _nc_xcor_kernel_spectral_pool (void)
 }
 
 /*
- * Builds the closure as a Chebyshev series.
- *
- * The domain is found from the seeds by ncm_function_sample_set_expand_domain(),
- * which stops where W is negligible. On it the whole ell block is expanded on one
- * Chebyshev-Lobatto grid per panel, doubling the order until every multipole's
- * coefficients converge.
- *
- * The panels start from the component boundaries the expansion found, since
- * the block W_l(k) jumps there (see _component_states_collect_cuts), and from
- * the grid of #NcmSpectralPanelsBuilder:min-panels-per-efold, so that a feature narrower than
- * the domain is not missed by a first grid spread over all of it.
+ * Builds the closure of a block as a Chebyshev series with the tolerances @reltol and
+ * @peak_epsilon and the domain threshold #NcXcorKernel:adaptive-epsilon, all relative to
+ * the block's smallest window peak (_nc_xcor_kernel_cheb_fit()). With one term the rows
+ * are the windows and one fit does it. With several, the fit samples the terms, which
+ * cancel in the windows: the three are scaled by the ratio rho of the smallest window peak
+ * to the terms' smallest peak. The first fit takes rho = NC_XCOR_KERNEL_WINDOW_FIT_FACTOR,
+ * the measured rho follows from its summed windows, and a block whose rho is smaller is
+ * fitted again with it.
  */
+static NcXcorKernelIntegrand *_nc_xcor_kernel_cheb_fit (NcXcorKernel *xclk, gint lmin, gint lmax, ComponentStates *comp_states, void (*expand_func) (const gdouble, NcmVector *, gpointer), void (*compute_func) (const gdouble, NcmVector *, gpointer), gdouble reltol, gdouble peak_epsilon, gdouble epsilon, gdouble *env_min);
+
 NcXcorKernelIntegrand *
 _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint lmin, gint lmax,
                                       ComponentStates *comp_states,
                                       void (*expand_func) (const gdouble, NcmVector *, gpointer),
                                       void (*compute_func) (const gdouble, NcmVector *, gpointer),
                                       const gdouble reltol, const gdouble peak_epsilon)
+{
+  const gdouble epsilon = comp_states->epsilon;
+  NcXcorKernelIntegrand *integrand;
+  gdouble env_min;
+
+  if (comp_states->n_terms == 1)
+    return _nc_xcor_kernel_cheb_fit (xclk, lmin, lmax, comp_states, expand_func, compute_func,
+                                     reltol, peak_epsilon, epsilon, &env_min);
+
+  {
+    const gdouble c = NC_XCOR_KERNEL_WINDOW_FIT_FACTOR;
+    gdouble peak_min, rho;
+
+    integrand = _nc_xcor_kernel_cheb_fit (xclk, lmin, lmax, comp_states, expand_func, compute_func,
+                                          c * reltol, c * peak_epsilon, c * epsilon, &env_min);
+    peak_min = _nc_xcor_kernel_integrand_window_peak_min (integrand);
+    rho      = (env_min > 0.0) ? peak_min / env_min : 1.0;
+
+    if ((peak_min > 0.0) && (rho < c))
+    {
+      nc_xcor_kernel_integrand_unref (integrand);
+      integrand = _nc_xcor_kernel_cheb_fit (xclk, lmin, lmax, comp_states, expand_func, compute_func,
+                                            rho * reltol, rho * peak_epsilon, rho * epsilon, &env_min);
+    }
+  }
+
+  return integrand;
+}
+
+/*
+ * Fits the closure with the given tolerances and domain threshold. The domain is found
+ * from the seeds by ncm_function_sample_set_expand_domain(), which stops where
+ * @expand_func is below @epsilon of its largest value. On it the whole block is expanded
+ * on one Chebyshev-Lobatto grid per panel, doubling the order until every row's
+ * coefficients converge to max (@reltol V, @peak_epsilon env_min), V the largest row value
+ * on the panel's nodes. The panels start from the component boundaries the expansion found,
+ * since the block jumps there (see _component_states_collect_cuts), and from the grid of
+ * #NcmSpectralPanelsBuilder:min-panels-per-efold, so that a feature narrower than the
+ * domain is not missed by a first grid spread over all of it. Then the rows' ranges and,
+ * with several terms, the summed windows. @env_min receives the smallest over the
+ * multipoles of the largest sampled value of @expand_func.
+ */
+static NcXcorKernelIntegrand *
+_nc_xcor_kernel_cheb_fit (NcXcorKernel *xclk, gint lmin, gint lmax, ComponentStates *comp_states,
+                          void (*expand_func) (const gdouble, NcmVector *, gpointer),
+                          void (*compute_func) (const gdouble, NcmVector *, gpointer),
+                          gdouble reltol, gdouble peak_epsilon, gdouble epsilon, gdouble *env_min)
 {
   NcXcorKernelPrivate *self        = _nc_xcor_kernel_get_private (xclk);
   NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_integrand_new (lmax - lmin + 1, comp_states->n_terms);
@@ -442,7 +488,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
       comp_states->k_min_hard,
       comp_states->k_max_hard,
       self->expansion_factor,
-      comp_states->epsilon,
+      epsilon,
       self->max_border_expansions,
       comp_states->adaptive_boundary_tries,
       comp_states
@@ -453,7 +499,8 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
     /* A floor scaled to the smallest of the block's peaks, so a sub-dominant
      * multipole is not held to a tolerance relative to its neighbours. */
-    abstol = ncm_function_sample_set_get_absmaxF_min (fss) * peak_epsilon;
+    *env_min = ncm_function_sample_set_get_absmaxF_min (fss);
+    abstol   = *env_min * peak_epsilon;
 
     /* Expand on the continuous intervals between the cuts, from the builder's grid,
      * bisecting where a panel does not converge. In panel mode the compute function

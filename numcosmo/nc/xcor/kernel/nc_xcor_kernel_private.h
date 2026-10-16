@@ -100,6 +100,11 @@ struct _NcXcorKernelIntegrand
  * trailing coefficients: at most that fraction times their number is added to its window */
 #define NC_XCOR_KERNEL_WINDOW_SUM_FRACTION (1.0e-2)
 
+/* The factor of the first fit's tolerances for a block of several terms: the fit meets
+ * tolerances relative to the windows when their smallest peak is at least this fraction
+ * of the terms' smallest peak, and is redone otherwise */
+#define NC_XCOR_KERNEL_WINDOW_FIT_FACTOR (0.5)
+
 
 typedef struct _ComponentParams
 {
@@ -168,6 +173,7 @@ NcXcorKernelPrivate *_nc_xcor_kernel_get_private (NcXcorKernel *xclk);
 
 NcXcorKernelIntegrand *_nc_xcor_kernel_integrand_new (guint len, guint n_terms);
 void _nc_xcor_kernel_integrand_sum_terms (NcXcorKernelIntegrand *integrand, NcmSpectral *spectral, gdouble abstol);
+gdouble _nc_xcor_kernel_integrand_window_peak_min (NcXcorKernelIntegrand *integrand);
 
 void _nc_xcor_kernel_component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint comp_idx, NcHICosmo *cosmo, guint n_l);
 void _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states);
