@@ -84,6 +84,7 @@ _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states)
 
   ncm_vector_clear (&comp_states->k_vec);
   ncm_vector_clear (&comp_states->kf_vec);
+  ncm_vector_clear (&comp_states->y_terms);
 }
 
 GPtrArray *
@@ -187,16 +188,13 @@ _nc_xcor_kernel_cmp_gdouble (gconstpointer a, gconstpointer b)
 /*
  * Collects into cuts the k strictly inside (k_min, k_max) at which the block
  * W_l(k) is discontinuous, sorted ascending with exact duplicates removed:
- * the truncation boundary of every component whose boundary was found, under
- * Limber the band edges nu / chi_max and nu / chi_min of every component for
- * every multipole of the block, and under Limber in u, for every component with
- * a Bessel derivative and every multipole, u = (1 + 1 / nu) / chi_max, where its
- * j_{l+1} term stops (see _component_states_compute_limber_u()). Each cut becomes a panel edge, with the
+ * the truncation boundary of every component whose boundary was found, and under
+ * Limber the band edges of every component for every multipole and term of the block (see
+ * _component_states_compute_limber_u()). Each cut becomes a panel edge, with the
  * component or multipole off on the outer side, so that every panel is a
  * smooth function; a polynomial interpolating across a jump does not converge
  * below the size of the jump. The boundaries are fixed before this runs: only
  * the domain expansion moves them, and it has finished.
- *
  */
 static void
 _component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdouble k_max, GArray *cuts)
@@ -221,31 +219,18 @@ _component_states_collect_cuts (ComponentStates *comp_states, gdouble k_min, gdo
      * see _component_states_compute_limber_u(). */
     if (comp_states->is_limber)
     {
-      guint j;
+      guint j, tau;
 
-      for (j = 0; j < comp_states->n_l; j++)
+      for (tau = 0; tau < comp_states->n_terms; tau++)
       {
-        if ((state->k_min_limber_ell[j] > k_min) && (state->k_min_limber_ell[j] < k_max))
-          g_array_append_val (cuts, state->k_min_limber_ell[j]);
+        for (j = 0; j < comp_states->n_l; j++)
+        {
+          if ((state->k_min_limber_ell[tau][j] > k_min) && (state->k_min_limber_ell[tau][j] < k_max))
+            g_array_append_val (cuts, state->k_min_limber_ell[tau][j]);
 
-        if ((state->k_max_limber_ell[j] > k_min) && (state->k_max_limber_ell[j] < k_max))
-          g_array_append_val (cuts, state->k_max_limber_ell[j]);
-      }
-    }
-
-    /* The j_{l+1} term of a derivative component is dropped once its peak
-     * (nu + 1) / k passes chi_max, a step at u = (1 + 1 / nu) / chi_max inside the band. */
-    if (comp_states->is_limber && comp_states->in_u && (nc_xcor_kernel_component_get_bessel_deriv (state->comp) > 0))
-    {
-      guint j;
-
-      for (j = 0; j < comp_states->n_l; j++)
-      {
-        const gdouble nu     = comp_states->lmin + j + 0.5;
-        const gdouble u_step = (1.0 + 1.0 / nu) / state->chi_max;
-
-        if ((u_step > k_min) && (u_step < k_max))
-          g_array_append_val (cuts, u_step);
+          if ((state->k_max_limber_ell[tau][j] > k_min) && (state->k_max_limber_ell[tau][j] < k_max))
+            g_array_append_val (cuts, state->k_max_limber_ell[tau][j]);
+        }
       }
     }
   }
@@ -382,6 +367,28 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
   }
 }
 
+static gpointer
+_nc_xcor_kernel_spectral_new (gpointer userdata)
+{
+  return ncm_spectral_new ();
+}
+
+/* The NcmSpectral of the row sums, one per concurrent closure build */
+static NcmMemoryPool *
+_nc_xcor_kernel_spectral_pool (void)
+{
+  static gsize init        = 0;
+  static NcmMemoryPool *mp = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    mp = ncm_memory_pool_new (&_nc_xcor_kernel_spectral_new, NULL, (GDestroyNotify) ncm_spectral_free);
+    g_once_init_leave (&init, 1);
+  }
+
+  return mp;
+}
+
 /*
  * Builds the closure as a Chebyshev series.
  *
@@ -403,7 +410,7 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
                                       const gdouble reltol, const gdouble peak_epsilon)
 {
   NcXcorKernelPrivate *self        = _nc_xcor_kernel_get_private (xclk);
-  NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_integrand_new (lmax - lmin + 1);
+  NcXcorKernelIntegrand *integrand = _nc_xcor_kernel_integrand_new (lmax - lmin + 1, comp_states->n_terms);
   const guint n_l                  = lmax - lmin + 1;
 
   {
@@ -485,51 +492,84 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
 
     integrand->scaled = comp_states->in_u;
 
-    /* The sampled range is in x; each multipole's k range is its scale times
-     * the part of it inside the band, and the block's k range is their union. */
-    for (i = 0; i < n_l; i++)
+    /* The sampled range is in x; each panel row's k range is its scale times
+     * the part of it inside the band. Row tau n_l + i is the j_{l + t} term of multipole
+     * i, t = offsets[tau], with scale nu + t; a row whose order l + t is negative is empty
+     * and keeps the scale nu. The block's k range is the sampled range times the smallest
+     * and the largest scale. */
     {
-      NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, i);
-      const gdouble x_min           = integrand->k_min;
-      const gdouble x_max           = integrand->k_max;
-      gdouble k_min_i               = x_min;
-      gdouble k_max_i               = x_max;
+      gdouble scale_lo = G_MAXDOUBLE;
+      gdouble scale_hi = 0.0;
 
-      if (comp_states->is_limber)
+      for (i = 0; i < comp_states->n_terms * n_l; i++)
       {
-        gdouble band_min = G_MAXDOUBLE;
-        gdouble band_max = 0.0;
-        guint ci;
+        NcXcorKernelIntegrandRow *row = &g_array_index (integrand->rows, NcXcorKernelIntegrandRow, i);
+        const guint tau               = i / n_l;
+        const guint i_l               = i % n_l;
+        const gint m                  = lmin + (gint) i_l + comp_states->offsets[tau];
+        const gdouble x_min           = integrand->k_min;
+        const gdouble x_max           = integrand->k_max;
+        gdouble k_min_i               = x_min;
+        gdouble k_max_i               = x_max;
+        gdouble scale                 = 1.0;
 
-        for (ci = 0; ci < comp_states->n_comp; ci++)
+        if (comp_states->is_limber)
         {
-          band_min = GSL_MIN (band_min, comp_states->states[ci].k_min_limber_ell[i]);
-          band_max = GSL_MAX (band_max, comp_states->states[ci].k_max_limber_ell[i]);
+          gdouble band_min = G_MAXDOUBLE;
+          gdouble band_max = 0.0;
+          guint ci;
+
+          for (ci = 0; ci < comp_states->n_comp; ci++)
+          {
+            const ComponentState *state = &comp_states->states[ci];
+
+            band_min = GSL_MIN (band_min, state->k_min_limber_ell[tau][i_l]);
+            band_max = GSL_MAX (band_max, state->k_max_limber_ell[tau][i_l]);
+          }
+
+          k_min_i = GSL_MAX (k_min_i, band_min);
+          k_max_i = GSL_MIN (k_max_i, band_max);
+
+          /* A band disjoint from the closure's domain leaves nothing to integrate;
+           * report the empty range as the domain's lower edge rather than an
+           * inverted one. */
+          if (k_min_i >= k_max_i)
+            k_min_i = k_max_i = x_min;
         }
 
-        k_min_i = GSL_MAX (k_min_i, band_min);
-        k_max_i = GSL_MIN (k_max_i, band_max);
+        if (comp_states->in_u)
+        {
+          scale = (m >= 0) ? m + 0.5 : lmin + i_l + 0.5;
 
-        /* A band disjoint from the closure's domain leaves nothing to integrate;
-         * report the empty range as the domain's lower edge rather than an
-         * inverted one. */
-        if (k_min_i >= k_max_i)
-          k_min_i = k_max_i = x_min;
+          if (m >= 0)
+          {
+            scale_lo = GSL_MIN (scale_lo, scale);
+            scale_hi = GSL_MAX (scale_hi, scale);
+          }
+        }
+
+        ncm_vector_set (integrand->scales, i, scale);
+        row->x_min = k_min_i;
+        row->x_max = k_max_i;
+        row->k_min = k_min_i * scale;
+        row->k_max = k_max_i * scale;
       }
 
-      const gdouble scale = comp_states->in_u ? (lmin + i + 0.5) : 1.0;
-
-      ncm_vector_set (integrand->scales, i, scale);
-      row->x_min = k_min_i;
-      row->x_max = k_max_i;
-      row->k_min = k_min_i * scale;
-      row->k_max = k_max_i * scale;
+      if (integrand->scaled)
+      {
+        integrand->k_min *= scale_lo;
+        integrand->k_max *= scale_hi;
+      }
     }
 
-    if (integrand->scaled)
+    /* With several terms the k integrals read each multipole's window as one polynomial,
+     * the sum of its rows, exact up to the dropped coefficients */
+    if (comp_states->n_terms > 1)
     {
-      integrand->k_min *= ncm_vector_get (integrand->scales, 0);
-      integrand->k_max *= ncm_vector_get (integrand->scales, n_l - 1);
+      NcmSpectral **spectral_ptr = ncm_memory_pool_get (_nc_xcor_kernel_spectral_pool ());
+
+      _nc_xcor_kernel_integrand_sum_terms (integrand, *spectral_ptr, NC_XCOR_KERNEL_WINDOW_SUM_FRACTION * abstol);
+      ncm_memory_pool_return (spectral_ptr);
     }
 
     return integrand;

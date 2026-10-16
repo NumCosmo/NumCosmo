@@ -1,4 +1,5 @@
 src_site_theory_nc_xcor_files = files(
+    'limber.qmd',
     'ssc.qmd',
 )
 

@@ -10886,6 +10886,9 @@ class SpectralPanels(GObject.Object):
     def restrict(
         self, spectral: Spectral, a: float, b: float
     ) -> typing.Tuple[bool, Matrix]: ...
+    def restrict_rows(
+        self, spectral: Spectral, a: float, b: float, r0: int, n: int
+    ) -> typing.Tuple[bool, Matrix]: ...
 
 class SpectralPanelsBuilder(GObject.Object):
     r"""
@@ -11009,6 +11012,17 @@ class SpectralPanelsProduct(GObject.Object):
         P: SpectralPanels,
         s1: typing.Optional[Vector],
         Q: SpectralPanels,
+        s2: typing.Optional[Vector],
+        result: Vector,
+        err: typing.Optional[Vector] = None,
+    ) -> None: ...
+    def integrate_rows(
+        self,
+        P: SpectralPanels,
+        o1: int,
+        s1: typing.Optional[Vector],
+        Q: SpectralPanels,
+        o2: int,
         s2: typing.Optional[Vector],
         result: Vector,
         err: typing.Optional[Vector] = None,

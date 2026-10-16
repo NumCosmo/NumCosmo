@@ -36,7 +36,12 @@
  *
  * The rows whose two scales are equal share one refinement in $x = k / s_r$. Otherwise each
  * row is integrated alone, in the variable of the side whose scale differs from 1, or of the
- * first side when both do.
+ * first side when both do; a bilinear form then serves a single row, so each cell is
+ * integrated instead by Gauss-Legendre quadrature with enough nodes for the polynomial,
+ * again without quadrature error.
+ *
+ * ncm_spectral_panels_product_integrate_rows() pairs a block of rows of one panel set with
+ * a block of rows of another, or of the same set.
  *
  * The error estimate propagates $d(PQ) = |P| \, dQ + |Q| \, dP$, with $dP$ on a cell the
  * sum of the absolute coefficients of its panel above the order of the level below, and
@@ -54,6 +59,10 @@
 #include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/core/ncm_memory_pool.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_integration.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #include <math.h>
 #include <string.h>
@@ -106,8 +115,10 @@ typedef struct _NcmSpectralPanelsProductWork
   GArray *res;   /* gdouble, per row, the error estimate */
   GArray *rows1; /* guint, per cell, the panel of each side holding it */
   GArray *rows2;
-  NcmMatrix *cell1;
-  NcmMatrix *cell2;
+  GPtrArray *gl;     /* GArray of gdouble, at index M the M Gauss-Legendre nodes and weights on [-1, 1], interleaved, made on demand */
+  GArray *nodes;     /* gdouble, per node of a cell: the panel variable and the values of each side, and the recurrence */
+  GPtrArray *cells1; /* NcmMatrix, at index N the cell coefficients of a side for panels of N coefficients */
+  GPtrArray *cells2;
 } NcmSpectralPanelsProductWork;
 
 /* What a group of rows needs */
@@ -118,6 +129,8 @@ typedef struct _NcmSpectralPanelsProductGroup
   gboolean isauto;
   gboolean scaled1; /* whether any scale of a side differs from 1 */
   gboolean scaled2;
+  guint o1; /* the row of each side that row 0 of the result reads */
+  guint o2;
   guint r0;
   guint n;
   gdouble c1; /* the variable of each side, x_j = c_j x */
@@ -129,6 +142,8 @@ G_DEFINE_TYPE (NcmSpectralPanelsProduct, ncm_spectral_panels_product, G_TYPE_OBJ
 
 static gpointer _ncm_spectral_panels_product_work_new (gpointer userdata);
 static void _ncm_spectral_panels_product_work_free (gpointer p);
+static void _ncm_spectral_panels_product_gl_free (gpointer p);
+static void _ncm_spectral_panels_product_cell_free (gpointer p);
 static void _ncm_spectral_panels_product_tables_fill (gdouble *A, const guint n_tables, const guint nmax);
 
 static void
@@ -280,8 +295,10 @@ _ncm_spectral_panels_product_work_new (gpointer userdata)
   work->res        = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->rows1      = g_array_new (FALSE, FALSE, sizeof (guint));
   work->rows2      = g_array_new (FALSE, FALSE, sizeof (guint));
-  work->cell1      = NULL;
-  work->cell2      = NULL;
+  work->gl         = g_ptr_array_new_with_free_func (_ncm_spectral_panels_product_gl_free);
+  work->nodes      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->cells1     = g_ptr_array_new_with_free_func (_ncm_spectral_panels_product_cell_free);
+  work->cells2     = g_ptr_array_new_with_free_func (_ncm_spectral_panels_product_cell_free);
 
   return work;
 }
@@ -303,11 +320,29 @@ _ncm_spectral_panels_product_work_free (gpointer p)
   g_array_unref (work->sum);
   g_array_unref (work->res);
   g_array_unref (work->rows1);
+  g_ptr_array_unref (work->gl);
+  g_array_unref (work->nodes);
   g_array_unref (work->rows2);
-  ncm_matrix_clear (&work->cell1);
-  ncm_matrix_clear (&work->cell2);
+  g_ptr_array_unref (work->cells1);
+  g_ptr_array_unref (work->cells2);
 
   g_free (work);
+}
+
+/* A slot of the cell matrices, empty until its count is first used */
+static void
+_ncm_spectral_panels_product_cell_free (gpointer p)
+{
+  if (p != NULL)
+    ncm_matrix_free (p);
+}
+
+/* A slot of the node tables, empty until its count is first used */
+static void
+_ncm_spectral_panels_product_gl_free (gpointer p)
+{
+  if (p != NULL)
+    g_array_unref (p);
 }
 
 /**
@@ -376,7 +411,8 @@ ncm_spectral_panels_product_get_p (NcmSpectralPanelsProduct *prod)
   return prod->p;
 }
 
-static void _ncm_spectral_panels_product_scales (NcmVector *s, guint fdim, GArray *out, gboolean *scaled);
+static void _ncm_spectral_panels_product_integrate_rows (NcmSpectralPanelsProduct *prod, NcmSpectralPanels *P, guint o1, NcmVector *s1, NcmSpectralPanels *Q, guint o2, NcmVector *s2, NcmVector *result, NcmVector *err);
+static void _ncm_spectral_panels_product_scales (NcmVector *s, guint o, guint n, GArray *out, gboolean *scaled);
 static void _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work, const NcmSpectralPanelsProductGroup *group);
 
 /**
@@ -399,12 +435,7 @@ void
 ncm_spectral_panels_product_integrate (NcmSpectralPanelsProduct *prod, NcmSpectralPanels *P, NcmVector *s1,
                                        NcmSpectralPanels *Q, NcmVector *s2, NcmVector *result, NcmVector *err)
 {
-  const guint fdim                   = ncm_spectral_panels_get_fdim (P);
-  NcmSpectralPanelsProductWork **ptr = ncm_memory_pool_get (prod->work_pool);
-  NcmSpectralPanelsProductWork *work = *ptr;
-  NcmSpectralPanelsProductGroup group;
-  gboolean equal = TRUE;
-  guint r;
+  const guint fdim = ncm_spectral_panels_get_fdim (P);
 
   if (ncm_spectral_panels_get_fdim (Q) != fdim)
     g_error ("ncm_spectral_panels_product_integrate: the panel sets have %u and %u rows.",
@@ -414,30 +445,89 @@ ncm_spectral_panels_product_integrate (NcmSpectralPanelsProduct *prod, NcmSpectr
       ((s1 != NULL) && (ncm_vector_len (s1) != fdim)) || ((s2 != NULL) && (ncm_vector_len (s2) != fdim)))
     g_error ("ncm_spectral_panels_product_integrate: the vectors must have fdim = %u entries.", fdim);
 
+  _ncm_spectral_panels_product_integrate_rows (prod, P, 0, s1, Q, 0, s2, result, err);
+}
+
+/**
+ * ncm_spectral_panels_product_integrate_rows:
+ * @prod: a #NcmSpectralPanelsProduct
+ * @P: the first panel set
+ * @o1: the row of @P that row 0 of @result reads
+ * @s1: (nullable): the scales of the rows of @P, %NULL for all 1
+ * @Q: the second panel set
+ * @o2: the row of @Q that row 0 of @result reads
+ * @s2: (nullable): the scales of the rows of @Q, %NULL for all 1
+ * @result: the integral of each row
+ * @err: (nullable): the error estimate of each row
+ *
+ * Computes $I_r = \int k^p P_{o_1 + r}(k / s_{1, o_1 + r}) Q_{o_2 + r}(k / s_{2, o_2 + r}) \, dk$
+ * for $r$ from 0 to the length $n$ of @result minus one, over the range both panel sets
+ * cover, zero when they do not overlap: a block of $n$ rows of @P against a block of $n$
+ * rows of @Q, which may be another block of @P itself. @s1 and @s2 hold one scale per row of
+ * their panel set, @err has $n$ entries. When @Q is @P with the same rows and scales the
+ * product is computed as a square. A cell of the common refinement outside a single panel
+ * of either side is an error.
+ */
+void
+ncm_spectral_panels_product_integrate_rows (NcmSpectralPanelsProduct *prod, NcmSpectralPanels *P, guint o1, NcmVector *s1,
+                                            NcmSpectralPanels *Q, guint o2, NcmVector *s2, NcmVector *result, NcmVector *err)
+{
+  const guint n     = ncm_vector_len (result);
+  const guint fdim1 = ncm_spectral_panels_get_fdim (P);
+  const guint fdim2 = ncm_spectral_panels_get_fdim (Q);
+
+  if ((o1 + n > fdim1) || (o2 + n > fdim2))
+    g_error ("ncm_spectral_panels_product_integrate_rows: rows [%u, %u) and [%u, %u) do not fit "
+             "the panel sets of %u and %u rows.", o1, o1 + n, o2, o2 + n, fdim1, fdim2);
+
+  if (((s1 != NULL) && (ncm_vector_len (s1) != fdim1)) || ((s2 != NULL) && (ncm_vector_len (s2) != fdim2)))
+    g_error ("ncm_spectral_panels_product_integrate_rows: the scales must have one entry per row "
+             "of their panel set, %u and %u.", fdim1, fdim2);
+
+  if ((err != NULL) && (ncm_vector_len (err) != n))
+    g_error ("ncm_spectral_panels_product_integrate_rows: the error vector must have %u entries.", n);
+
+  _ncm_spectral_panels_product_integrate_rows (prod, P, o1, s1, Q, o2, s2, result, err);
+}
+
+/* The integral of the rows [o1, o1 + n) of P against [o2, o2 + n) of Q, n the length of result */
+static void
+_ncm_spectral_panels_product_integrate_rows (NcmSpectralPanelsProduct *prod, NcmSpectralPanels *P, guint o1, NcmVector *s1,
+                                             NcmSpectralPanels *Q, guint o2, NcmVector *s2, NcmVector *result, NcmVector *err)
+{
+  const guint n_rows                 = ncm_vector_len (result);
+  NcmSpectralPanelsProductWork **ptr = ncm_memory_pool_get (prod->work_pool);
+  NcmSpectralPanelsProductWork *work = *ptr;
+  NcmSpectralPanelsProductGroup group;
+  gboolean equal = TRUE;
+  guint r;
+
   group.P        = P;
   group.Q        = Q;
+  group.o1       = o1;
+  group.o2       = o2;
   group.want_err = (err != NULL);
 
-  _ncm_spectral_panels_product_scales (s1, fdim, work->s1, &group.scaled1);
-  _ncm_spectral_panels_product_scales (s2, fdim, work->s2, &group.scaled2);
+  _ncm_spectral_panels_product_scales (s1, o1, n_rows, work->s1, &group.scaled1);
+  _ncm_spectral_panels_product_scales (s2, o2, n_rows, work->s2, &group.scaled2);
 
-  g_array_set_size (work->sigma, fdim);
-  g_array_set_size (work->sum, fdim);
-  g_array_set_size (work->res, fdim);
-  memset (work->sum->data, 0, sizeof (gdouble) * fdim);
-  memset (work->res->data, 0, sizeof (gdouble) * fdim);
+  g_array_set_size (work->sigma, n_rows);
+  g_array_set_size (work->sum, n_rows);
+  g_array_set_size (work->res, n_rows);
+  memset (work->sum->data, 0, sizeof (gdouble) * n_rows);
+  memset (work->res->data, 0, sizeof (gdouble) * n_rows);
 
-  for (r = 0; r < fdim; r++)
+  for (r = 0; r < n_rows; r++)
     equal = equal && (g_array_index (work->s1, gdouble, r) == g_array_index (work->s2, gdouble, r));
 
-  group.isauto = (P == Q) && equal;
+  group.isauto = (P == Q) && (o1 == o2) && equal;
 
   if (equal)
   {
     /* One refinement in x = k / s for every row */
-    memcpy (work->sigma->data, work->s1->data, sizeof (gdouble) * fdim);
+    memcpy (work->sigma->data, work->s1->data, sizeof (gdouble) * n_rows);
     group.r0 = 0;
-    group.n  = fdim;
+    group.n  = n_rows;
     group.c1 = 1.0;
     group.c2 = 1.0;
     _ncm_spectral_panels_product_group (prod, work, &group);
@@ -448,10 +538,10 @@ ncm_spectral_panels_product_integrate (NcmSpectralPanelsProduct *prod, NcmSpectr
      * of the first side when both do */
     const gboolean first = group.scaled1;
 
-    memcpy (work->sigma->data, (first ? work->s1 : work->s2)->data, sizeof (gdouble) * fdim);
+    memcpy (work->sigma->data, (first ? work->s1 : work->s2)->data, sizeof (gdouble) * n_rows);
     group.n = 1;
 
-    for (r = 0; r < fdim; r++)
+    for (r = 0; r < n_rows; r++)
     {
       const gdouble sigma = g_array_index (work->sigma, gdouble, r);
 
@@ -462,28 +552,28 @@ ncm_spectral_panels_product_integrate (NcmSpectralPanelsProduct *prod, NcmSpectr
     }
   }
 
-  for (r = 0; r < fdim; r++)
+  for (r = 0; r < n_rows; r++)
     ncm_vector_set (result, r, g_array_index (work->sum, gdouble, r));
 
   if (err != NULL)
-    for (r = 0; r < fdim; r++)
+    for (r = 0; r < n_rows; r++)
       ncm_vector_set (err, r, g_array_index (work->res, gdouble, r));
 
   ncm_memory_pool_return (ptr);
 }
 
-/* The scales of one side, 1 when s is NULL, and whether any differs from 1 */
+/* The scales of the rows [o, o + n) of one side, 1 when s is NULL, and whether any differs from 1 */
 static void
-_ncm_spectral_panels_product_scales (NcmVector *s, guint fdim, GArray *out, gboolean *scaled)
+_ncm_spectral_panels_product_scales (NcmVector *s, guint o, guint n, GArray *out, gboolean *scaled)
 {
   guint r;
 
-  g_array_set_size (out, fdim);
+  g_array_set_size (out, n);
   *scaled = FALSE;
 
-  for (r = 0; r < fdim; r++)
+  for (r = 0; r < n; r++)
   {
-    const gdouble sr = (s != NULL) ? ncm_vector_get (s, r) : 1.0;
+    const gdouble sr = (s != NULL) ? ncm_vector_get (s, o + r) : 1.0;
 
     g_array_index (out, gdouble, r) = sr;
     *scaled                         = *scaled || (sr != 1.0);
@@ -495,6 +585,10 @@ static void _ncm_spectral_panels_product_weights (const guint p, const gdouble m
 static const gdouble *_ncm_spectral_panels_product_tables (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work, const guint n1, const guint n2, guint *nmax);
 static gdouble _ncm_spectral_panels_product_pow (const gdouble s, const guint n);
 static void _ncm_spectral_panels_product_err (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work, const NcmSpectralPanelsProductGroup *group);
+static void _ncm_spectral_panels_product_row (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work, const NcmSpectralPanelsProductGroup *group);
+static void _ncm_spectral_panels_product_cell_rows (NcmSpectralPanels *sp, GArray *edges, const gdouble c, GArray *rows);
+static void _ncm_spectral_panels_product_cells (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work, const NcmSpectralPanelsProductGroup *group);
+static NcmMatrix **_ncm_spectral_panels_product_cell (GPtrArray *cells, NcmSpectralPanels *sp, const gdouble x);
 
 /*
  * Integrates the rows [r0, r0 + n) on the common refinement of the two edge sets in x,
@@ -507,9 +601,7 @@ static void
 _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work,
                                     const NcmSpectralPanelsProductGroup *group)
 {
-  const guint p = prod->p;
   gdouble lo1, hi1, lo2, hi2, x_min, x_max;
-  guint ie, r;
 
   if ((ncm_spectral_panels_get_n_panels (group->P) == 0) || (ncm_spectral_panels_get_n_panels (group->Q) == 0))
     return;
@@ -525,6 +617,164 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
 
   _ncm_spectral_panels_product_edges (group, x_min, x_max, work->edges);
 
+  if (group->n == 1)
+    _ncm_spectral_panels_product_row (prod, work, group);
+  else
+    _ncm_spectral_panels_product_cells (prod, work, group);
+
+  if (group->want_err)
+    _ncm_spectral_panels_product_err (prod, work, group);
+}
+
+static const gdouble *_ncm_spectral_panels_product_gl (NcmSpectralPanelsProductWork *work, const guint M);
+static void _ncm_spectral_panels_product_clenshaw_nodes (const gdouble *c, const guint N, const gdouble *s, const guint M, gdouble *b1, gdouble *b2, gdouble *f);
+
+/*
+ * Integrates the one row r0 of a group on the cells of work->edges by Gauss-Legendre
+ * quadrature. On a cell x^p P Q is a polynomial of degree p + n1 + n2 - 2, n_j the
+ * coefficient count of the panel of side j holding it, which M = (p + n1 + n2) / 2 nodes
+ * integrate exactly. Each side is evaluated on its own panel, so a cell needs neither a
+ * restriction nor a bilinear form, which pay off only when shared by many rows.
+ */
+static void
+_ncm_spectral_panels_product_row (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work,
+                                  const NcmSpectralPanelsProductGroup *group)
+{
+  const guint p      = prod->p;
+  const guint r      = group->r0;
+  const guint row1   = group->o1 + r;
+  const guint row2   = group->o2 + r;
+  const gdouble s_p1 = _ncm_spectral_panels_product_pow (g_array_index (work->sigma, gdouble, r), p + 1);
+  guint ie, ig, m;
+
+  /* A cell's panel on each side is the one holding its midpoint: an end can round past
+   * the edge it was mapped from, and off its panel a high-order polynomial grows fast. */
+  for (ie = 0; ie + 1 < work->edges->len; ie++)
+  {
+    const gdouble a    = g_array_index (work->edges, gdouble, ie);
+    const gdouble b    = g_array_index (work->edges, gdouble, ie + 1);
+    const gdouble mid  = 0.5 * (a + b);
+    const gdouble half = 0.5 * (b - a);
+    const guint panel1 = ncm_spectral_panels_find_panel (group->P, group->c1 * mid);
+    const guint panel2 = ncm_spectral_panels_find_panel (group->Q, group->c2 * mid);
+    gdouble pa1, pb1, pa2, pb2, acc = 0.0;
+    guint n1, n2, M;
+    const gdouble *c1 = ncm_spectral_panels_peek_panel (group->P, panel1, &pa1, &pb1, &n1);
+    const gdouble *c2 = ncm_spectral_panels_peek_panel (group->Q, panel2, &pa2, &pb2, &n2);
+    const gdouble *gl;
+    gdouble *s1, *s2, *f1, *f2, *b1, *b2;
+
+    M  = (p + n1 + n2) / 2;
+    gl = _ncm_spectral_panels_product_gl (work, M);
+
+    g_array_set_size (work->nodes, 6 * M);
+    s1 = &g_array_index (work->nodes, gdouble, 0);
+    s2 = s1 + M;
+    f1 = s2 + M;
+    f2 = f1 + M;
+    b1 = f2 + M;
+    b2 = b1 + M;
+
+    for (ig = 0; ig < M; ig++)
+    {
+      const gdouble x = mid + half * gl[2 * ig];
+
+      s1[ig] = ncm_spectral_x_to_s (pa1, pb1, group->c1 * x);
+      s2[ig] = ncm_spectral_x_to_s (pa2, pb2, group->c2 * x);
+    }
+
+    _ncm_spectral_panels_product_clenshaw_nodes (c1 + (gsize) row1 * n1, n1, s1, M, b1, b2, f1);
+    _ncm_spectral_panels_product_clenshaw_nodes (c2 + (gsize) row2 * n2, n2, s2, M, b1, b2, f2);
+
+    for (ig = 0; ig < M; ig++)
+    {
+      const gdouble x = mid + half * gl[2 * ig];
+      gdouble w       = gl[2 * ig + 1];
+
+      for (m = 0; m < p; m++)
+        w *= x;
+
+      acc += w * f1[ig] * f2[ig];
+    }
+
+    g_array_index (work->sum, gdouble, r) += s_p1 * half * acc;
+  }
+}
+
+/*
+ * Evaluates the Chebyshev series c of N terms at the M points s into f, with b1 and b2 of
+ * M entries as scratch: one pass over the coefficients carries the M recurrences, which are
+ * independent of each other.
+ */
+static void
+_ncm_spectral_panels_product_clenshaw_nodes (const gdouble *c, const guint N, const gdouble *s, const guint M, gdouble *b1, gdouble *b2, gdouble *f)
+{
+  guint g, n;
+
+  for (g = 0; g < M; g++)
+  {
+    b1[g] = 0.0;
+    b2[g] = 0.0;
+  }
+
+  for (n = N - 1; n >= 1; n--)
+  {
+    const gdouble cn = c[n];
+
+    for (g = 0; g < M; g++)
+    {
+      const gdouble b0 = 2.0 * s[g] * b1[g] - b2[g] + cn;
+
+      b2[g] = b1[g];
+      b1[g] = b0;
+    }
+  }
+
+  for (g = 0; g < M; g++)
+    f[g] = s[g] * b1[g] - b2[g] + c[0];
+}
+
+/* The M Gauss-Legendre nodes and weights on [-1, 1], interleaved, made once per work space */
+static const gdouble *
+_ncm_spectral_panels_product_gl (NcmSpectralPanelsProductWork *work, const guint M)
+{
+  GArray *nw;
+
+  if (work->gl->len <= M)
+    g_ptr_array_set_size (work->gl, M + 1);
+
+  nw = g_ptr_array_index (work->gl, M);
+
+  if (nw == NULL)
+  {
+    gsl_integration_glfixed_table *t = gsl_integration_glfixed_table_alloc (M);
+    guint i;
+
+    nw = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 2 * M);
+    g_array_set_size (nw, 2 * M);
+
+    for (i = 0; i < M; i++)
+      gsl_integration_glfixed_point (-1.0, 1.0, i, &g_array_index (nw, gdouble, 2 * i), &g_array_index (nw, gdouble, 2 * i + 1), t);
+
+    gsl_integration_glfixed_table_free (t);
+    g_ptr_array_index (work->gl, M) = nw;
+  }
+
+  return &g_array_index (nw, gdouble, 0);
+}
+
+/*
+ * Integrates the rows [r0, r0 + n) of a group on the cells of work->edges: on a cell both
+ * sides are restricted to polynomials in the cell's variable t, and one bilinear form G
+ * serves every row.
+ */
+static void
+_ncm_spectral_panels_product_cells (NcmSpectralPanelsProduct *prod, NcmSpectralPanelsProductWork *work,
+                                    const NcmSpectralPanelsProductGroup *group)
+{
+  const guint p = prod->p;
+  guint ie, r;
+
   for (ie = 0; ie + 1 < work->edges->len; ie++)
   {
     const gdouble a    = g_array_index (work->edges, gdouble, ie);
@@ -533,11 +783,13 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
     const gdouble half = 0.5 * (b - a);
     NcmMatrix *cm1, *cm2;
 
-    if (!ncm_spectral_panels_restrict (group->P, work->spectral, a * group->c1, b * group->c1, &work->cell1))
+    NcmMatrix **cell1 = _ncm_spectral_panels_product_cell (work->cells1, group->P, group->c1 * mid);
+
+    if (!ncm_spectral_panels_restrict_rows (group->P, work->spectral, a * group->c1, b * group->c1, group->o1 + group->r0, group->n, cell1))
       g_error ("ncm_spectral_panels_product_integrate: cell [%.17g, %.17g] is not inside a single panel "
                "of the first panel set.", a, b);
 
-    cm1 = work->cell1;
+    cm1 = *cell1;
 
     if (group->isauto)
     {
@@ -545,11 +797,13 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
     }
     else
     {
-      if (!ncm_spectral_panels_restrict (group->Q, work->spectral, a * group->c2, b * group->c2, &work->cell2))
+      NcmMatrix **cell2 = _ncm_spectral_panels_product_cell (work->cells2, group->Q, group->c2 * mid);
+
+      if (!ncm_spectral_panels_restrict_rows (group->Q, work->spectral, a * group->c2, b * group->c2, group->o2 + group->r0, group->n, cell2))
         g_error ("ncm_spectral_panels_product_integrate: cell [%.17g, %.17g] is not inside a single panel "
                  "of the second panel set.", a, b);
 
-      cm2 = work->cell2;
+      cm2 = *cell2;
     }
 
     {
@@ -589,8 +843,8 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
       for (r = group->r0; r < group->r0 + group->n; r++)
       {
         const gdouble s_p1 = _ncm_spectral_panels_product_pow (g_array_index (work->sigma, gdouble, r), p + 1);
-        const gdouble *ca  = &dc1[r * tda1];
-        const gdouble *cb  = &dc2[r * tda2];
+        const gdouble *ca  = &dc1[(r - group->r0) * tda1];
+        const gdouble *cb  = &dc2[(r - group->r0) * tda2];
         gdouble acc        = 0.0;
 
         for (i = 0; i < n1; i++)
@@ -608,9 +862,25 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
       }
     }
   }
+}
 
-  if (group->want_err)
-    _ncm_spectral_panels_product_err (prod, work, group);
+/*
+ * The slot of the cell matrix for the panel of sp holding x: one per coefficient count, so
+ * that cells on panels of different orders reuse their own matrix instead of reallocating
+ * one; ncm_spectral_panels_restrict_rows() replaces it only for another row count.
+ */
+static NcmMatrix **
+_ncm_spectral_panels_product_cell (GPtrArray *cells, NcmSpectralPanels *sp, const gdouble x)
+{
+  gdouble a, b;
+  guint N;
+
+  ncm_spectral_panels_peek_panel (sp, ncm_spectral_panels_find_panel (sp, x), &a, &b, &N);
+
+  if (cells->len <= N)
+    g_ptr_array_set_size (cells, N + 1);
+
+  return (NcmMatrix **) &g_ptr_array_index (cells, N);
 }
 
 static gint
@@ -759,7 +1029,6 @@ _ncm_spectral_panels_product_pow (const gdouble s, const guint n)
   return v;
 }
 
-static void _ncm_spectral_panels_product_cell_rows (NcmSpectralPanels *sp, GArray *edges, const gdouble c, GArray *rows);
 static gdouble _ncm_spectral_panels_product_tail (NcmSpectralPanels *sp, guint panel, guint r);
 static gdouble _ncm_spectral_panels_product_eval_k (NcmSpectralPanels *sp, guint r, const gdouble k, const gdouble s, const gboolean scaled);
 
@@ -793,14 +1062,14 @@ _ncm_spectral_panels_product_err (NcmSpectralPanelsProduct *prod, NcmSpectralPan
     {
       const gdouble sigma = g_array_index (work->sigma, gdouble, r);
       const gdouble s_p1  = _ncm_spectral_panels_product_pow (sigma, p + 1);
-      const gdouble dW1   = _ncm_spectral_panels_product_tail (group->P, panel1, r);
-      const gdouble dW2   = group->isauto ? dW1 : _ncm_spectral_panels_product_tail (group->Q, panel2, r);
+      const gdouble dW1   = _ncm_spectral_panels_product_tail (group->P, panel1, group->o1 + r);
+      const gdouble dW2   = group->isauto ? dW1 : _ncm_spectral_panels_product_tail (group->Q, panel2, group->o2 + r);
 
       for (ig = 0; ig < NCM_SPECTRAL_PANELS_PRODUCT_GL5_N; ig++)
       {
         const gdouble x     = mid + half * _ncm_spectral_panels_product_gl5_x[ig];
         const gdouble k     = sigma * x;
-        const gdouble absW1 = fabs (_ncm_spectral_panels_product_eval_k (group->P, r, k, g_array_index (work->s1, gdouble, r), group->scaled1));
+        const gdouble absW1 = fabs (_ncm_spectral_panels_product_eval_k (group->P, group->o1 + r, k, g_array_index (work->s1, gdouble, r), group->scaled1));
         gdouble w           = half * _ncm_spectral_panels_product_gl5_w[ig];
 
         for (m = 0; m < p; m++)
@@ -812,7 +1081,7 @@ _ncm_spectral_panels_product_err (NcmSpectralPanelsProduct *prod, NcmSpectralPan
         }
         else
         {
-          const gdouble absW2 = fabs (_ncm_spectral_panels_product_eval_k (group->Q, r, k, g_array_index (work->s2, gdouble, r), group->scaled2));
+          const gdouble absW2 = fabs (_ncm_spectral_panels_product_eval_k (group->Q, group->o2 + r, k, g_array_index (work->s2, gdouble, r), group->scaled2));
 
           g_array_index (work->res, gdouble, r) += s_p1 * w * (absW1 * dW2 + absW2 * dW1);
         }

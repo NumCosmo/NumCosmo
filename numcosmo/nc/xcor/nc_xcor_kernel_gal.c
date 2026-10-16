@@ -190,6 +190,7 @@ typedef struct _RSDComponentData
 static gdouble _rsd_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
 static gdouble _rsd_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
 static gdouble _rsd_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+static void _rsd_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
 static gdouble _rsd_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
 static void _rsd_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
 static void _rsd_component_data_clear (RSDComponentData *data);
@@ -201,7 +202,7 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_RSD,
                                       _rsd_component_eval_kernel,
                                       _rsd_component_eval_window,
                                       _rsd_component_eval_kfactor,
-                                      NULL,
+                                      _rsd_component_eval_kfactor_vec,
                                       _rsd_component_eval_prefactor,
                                       _rsd_component_get_limits,
                                       RSDComponentData,
@@ -874,6 +875,31 @@ _rsd_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, cons
   const gdouble f_kz     = -(1.0 + z) * dpowspec / (2.0 * powspec);
 
   return -f_kz *sqrt (powspec);
+}
+
+/* P(k, z) for every k in one call, so the growth factor is evaluated once; dP/dz per k */
+static void
+_rsd_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out)
+{
+  RSDComponentData *data = _NC_XCOR_KERNEL_COMPONENT_RSD_GET_DATA (comp);
+  const gdouble z        = xck->z;
+  const gdouble RH_Mpc   = nc_hicosmo_RH_Mpc (cosmo);
+  const guint len        = ncm_vector_len (k);
+  guint i;
+
+  ncm_vector_scale (k, 1.0 / RH_Mpc);
+  ncm_powspec_eval_vec (data->ps, NCM_MODEL (cosmo), z, k, out);
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble powspec  = ncm_vector_get (out, i);
+    const gdouble dpowspec = ncm_powspec_deriv_z (data->ps, NCM_MODEL (cosmo), z, ncm_vector_get (k, i));
+    const gdouble f_kz     = -(1.0 + z) * dpowspec / (2.0 * powspec);
+
+    ncm_vector_set (out, i, -f_kz * sqrt (powspec));
+  }
+
+  ncm_vector_scale (k, RH_Mpc);
 }
 
 static gdouble

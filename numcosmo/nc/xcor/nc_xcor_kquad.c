@@ -64,23 +64,109 @@ _nc_xcor_panels_product (void)
   return prod;
 }
 
+/* The result and error of one multipole's product */
+typedef struct _NcXcorTermProduct
+{
+  NcmVector *res;
+  NcmVector *err;
+} NcXcorTermProduct;
+
+static gpointer
+_nc_xcor_term_product_new (gpointer userdata)
+{
+  return g_new0 (NcXcorTermProduct, 1);
+}
+
+static void
+_nc_xcor_term_product_free (gpointer p)
+{
+  NcXcorTermProduct *tp = p;
+
+  ncm_vector_clear (&tp->res);
+  ncm_vector_clear (&tp->err);
+  g_free (tp);
+}
+
+/* The scratch space of the term products, one per concurrent caller */
+static NcmMemoryPool *
+_nc_xcor_term_product_pool (void)
+{
+  static gsize init        = 0;
+  static NcmMemoryPool *mp = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    mp = ncm_memory_pool_new (_nc_xcor_term_product_new, NULL, _nc_xcor_term_product_free);
+    g_once_init_leave (&init, 1);
+  }
+
+  return mp;
+}
+
 /*
  * Integrates a pair of Chebyshev closures with NcmSpectralPanelsProduct: each
- * closure's panels in its own variable k / s_i, one row per multipole. An auto
- * spectrum is the product of the first closure with itself.
+ * closure's panels in their own variables k / s_r. With one term per closure the
+ * panel rows are the multipoles and the block is one product. Otherwise a closure of
+ * several terms holds each multipole's window summed into one row in k
+ * (nc_xcor_kernel_integrand_peek_window()), and the block is one product per
+ * multipole: of two such rows, or of one and the other closure's row of that
+ * multipole in its own variable.
  */
 static void
 _nc_xcor_kernel_integrate_block_panels (NcXcor *xc, NcXcorKernelIntegrand *xclki1,
                                         NcXcorKernelIntegrand *xclki2,
                                         gboolean isauto, NcmVector *vp, NcmVector *vp_err)
 {
-  const gdouble const_factor = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
-  NcmSpectralPanels *sp1     = nc_xcor_kernel_integrand_peek_panels (xclki1);
-  NcmSpectralPanels *sp2     = isauto ? sp1 : nc_xcor_kernel_integrand_peek_panels (xclki2);
-  NcmVector *s1              = nc_xcor_kernel_integrand_peek_scales (xclki1);
-  NcmVector *s2              = isauto ? s1 : nc_xcor_kernel_integrand_peek_scales (xclki2);
+  const gdouble const_factor     = 2.0 / (M_PI * gsl_pow_3 (xc->RH));
+  NcmSpectralPanelsProduct *prod = _nc_xcor_panels_product ();
+  NcmSpectralPanels *sp1         = nc_xcor_kernel_integrand_peek_panels (xclki1);
+  NcmSpectralPanels *sp2         = isauto ? sp1 : nc_xcor_kernel_integrand_peek_panels (xclki2);
+  NcmVector *s1                  = nc_xcor_kernel_integrand_peek_scales (xclki1);
+  NcmVector *s2                  = isauto ? s1 : nc_xcor_kernel_integrand_peek_scales (xclki2);
+  const guint n_terms1           = nc_xcor_kernel_integrand_get_n_terms (xclki1);
+  const guint n_terms2           = isauto ? n_terms1 : nc_xcor_kernel_integrand_get_n_terms (xclki2);
 
-  ncm_spectral_panels_product_integrate (_nc_xcor_panels_product (), sp1, s1, sp2, s2, vp, vp_err);
+  if ((n_terms1 == 1) && (n_terms2 == 1))
+  {
+    ncm_spectral_panels_product_integrate (prod, sp1, s1, sp2, s2, vp, vp_err);
+  }
+  else
+  {
+    const guint len         = ncm_vector_len (vp);
+    NcXcorTermProduct **ptr = ncm_memory_pool_get (_nc_xcor_term_product_pool ());
+    NcXcorTermProduct *tp   = *ptr;
+    NcmVector *err1         = (vp_err != NULL) ? tp->err : NULL;
+    guint i;
+
+    if (tp->res == NULL)
+    {
+      tp->res = ncm_vector_new (1);
+      tp->err = ncm_vector_new (1);
+    }
+
+    for (i = 0; i < len; i++)
+    {
+      NcmSpectralPanels *P = nc_xcor_kernel_integrand_peek_window (xclki1, i);
+      NcmSpectralPanels *Q = isauto ? P : nc_xcor_kernel_integrand_peek_window (xclki2, i);
+
+      if ((P != NULL) && (Q != NULL))
+        ncm_spectral_panels_product_integrate (prod, P, NULL, Q, NULL, tp->res, err1);
+      else if (P != NULL)
+        ncm_spectral_panels_product_integrate_rows (prod, P, 0, NULL, sp2, i, s2, tp->res, err1);
+      else if (Q != NULL)
+        ncm_spectral_panels_product_integrate_rows (prod, sp1, i, s1, Q, 0, NULL, tp->res, err1);
+      else
+        g_error ("_nc_xcor_kernel_integrate_block_panels: a closure of several terms has no summed windows.");
+
+      ncm_vector_set (vp, i, ncm_vector_get (tp->res, 0));
+
+      if (vp_err != NULL)
+        ncm_vector_set (vp_err, i, ncm_vector_get (err1, 0));
+    }
+
+    ncm_memory_pool_return (ptr);
+  }
+
   ncm_vector_scale (vp, const_factor);
 
   if (vp_err != NULL)

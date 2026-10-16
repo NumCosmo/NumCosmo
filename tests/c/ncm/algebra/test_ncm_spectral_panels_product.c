@@ -71,6 +71,9 @@ static void test_ncm_spectral_panels_product_fdim (void);
 static void test_ncm_spectral_panels_product_fdim_subprocess (void);
 static void test_ncm_spectral_panels_product_lengths (void);
 static void test_ncm_spectral_panels_product_lengths_subprocess (void);
+static void test_ncm_spectral_panels_product_rows (void);
+static void test_ncm_spectral_panels_product_rows_fit (void);
+static void test_ncm_spectral_panels_product_rows_fit_subprocess (void);
 
 static const Side side_P = {
   0.5, 3.0, 1.3, {
@@ -116,6 +119,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels_product/fdim/subprocess", &test_ncm_spectral_panels_product_fdim_subprocess);
   g_test_add_func ("/ncm/spectral_panels_product/lengths", &test_ncm_spectral_panels_product_lengths);
   g_test_add_func ("/ncm/spectral_panels_product/lengths/subprocess", &test_ncm_spectral_panels_product_lengths_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_product/rows", &test_ncm_spectral_panels_product_rows);
+  g_test_add_func ("/ncm/spectral_panels_product/rows_fit", &test_ncm_spectral_panels_product_rows_fit);
+  g_test_add_func ("/ncm/spectral_panels_product/rows_fit/subprocess", &test_ncm_spectral_panels_product_rows_fit_subprocess);
 
   g_test_run ();
 
@@ -178,16 +184,16 @@ _cmp_gdouble (gconstpointer pa, gconstpointer pb)
 }
 
 /*
- * The exact int k^p P_r(k / s1) Q_r(k / s2) dk over the overlap, piece by piece between
+ * The exact int k^p P_r1(k / s1) Q_r2(k / s2) dk over the overlap, piece by piece between
  * the breakpoints in k; with the largest |P| and |Q| there and int k^p dk, for the bound
  * of the error estimate.
  */
 static gdouble
-_exact (const Side *P, gdouble s1, const Side *Q, gdouble s2, guint r, guint p, gdouble *max_P, gdouble *max_Q, gdouble *int_kp)
+_exact (const Side *P, gdouble s1, guint r1, const Side *Q, gdouble s2, guint r2, guint p, gdouble *max_P, gdouble *max_Q, gdouble *int_kp)
 {
   const gdouble k_lo = MAX (P->lo * s1, Q->lo * s2);
   const gdouble k_hi = MIN (P->hi * s1, Q->hi * s2);
-  const gdouble a    = P->rate[r] / s1 + Q->rate[r] / s2;
+  const gdouble a    = P->rate[r1] / s1 + Q->rate[r2] / s2;
   GArray *cuts       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   const gdouble bp[] = {P->bp * s1, Q->bp * s2};
   gdouble total      = 0.0;
@@ -218,14 +224,14 @@ _exact (const Side *P, gdouble s1, const Side *Q, gdouble s2, guint r, guint p, 
     const gdouble k0  = g_array_index (cuts, gdouble, j);
     const gdouble k1  = g_array_index (cuts, gdouble, j + 1);
     const gdouble km  = 0.5 * (k0 + k1);
-    const gdouble f_P = P->factor[r][(km / s1 < P->bp) ? 0 : 1];
-    const gdouble f_Q = Q->factor[r][(km / s2 < Q->bp) ? 0 : 1];
+    const gdouble f_P = P->factor[r1][(km / s1 < P->bp) ? 0 : 1];
+    const gdouble f_Q = Q->factor[r2][(km / s2 < Q->bp) ? 0 : 1];
 
     total += f_P * f_Q * _int_xp_exp (p, a, k0, k1);
 
     /* Each piece is monotone, so its largest value is at an end */
-    *max_P = MAX (*max_P, MAX (fabs (f_P * exp (P->rate[r] * k0 / s1)), fabs (f_P * exp (P->rate[r] * k1 / s1))));
-    *max_Q = MAX (*max_Q, MAX (fabs (f_Q * exp (Q->rate[r] * k0 / s2)), fabs (f_Q * exp (Q->rate[r] * k1 / s2))));
+    *max_P = MAX (*max_P, MAX (fabs (f_P * exp (P->rate[r1] * k0 / s1)), fabs (f_P * exp (P->rate[r1] * k1 / s1))));
+    *max_Q = MAX (*max_Q, MAX (fabs (f_Q * exp (Q->rate[r2] * k0 / s2)), fabs (f_Q * exp (Q->rate[r2] * k1 / s2))));
   }
 
   *int_kp = (gsl_pow_int (k_hi, p + 1) - gsl_pow_int (k_lo, p + 1)) / (p + 1);
@@ -268,7 +274,7 @@ _check_pair (NcmSpectralPanels *sp_P, const Side *P, NcmVector *s1, NcmSpectralP
       const gdouble sr1 = (s1 != NULL) ? ncm_vector_get (s1, r) : 1.0;
       const gdouble sr2 = (s2 != NULL) ? ncm_vector_get (s2, r) : 1.0;
       gdouble max_P, max_Q, int_kp;
-      const gdouble exact = _exact (P, sr1, Q, sr2, r, p, &max_P, &max_Q, &int_kp);
+      const gdouble exact = _exact (P, sr1, r, Q, sr2, r, p, &max_P, &max_Q, &int_kp);
 
       g_assert_cmpfloat (fabs (ncm_vector_get (result, r) - exact), <=, ncm_vector_get (err, r));
       g_assert_cmpfloat (ncm_vector_get (err, r), <=, 2.0 * TEST_RELTOL * max_P * max_Q * int_kp);
@@ -565,5 +571,73 @@ test_ncm_spectral_panels_product_lengths_subprocess (void)
   NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (2);
 
   ncm_spectral_panels_product_integrate (prod, sp_P, NULL, sp_P, NULL, result, NULL);
+}
+
+/*
+ * One row of P against one row of Q at every pair of offsets, and P against its own other
+ * row with other scales, each checked against the exact integral as in _check_pair()
+ */
+static void
+test_ncm_spectral_panels_product_rows (void)
+{
+  NcmSpectralPanels *sp_P = _side_panels_new (&side_P, 3, 5);
+  NcmSpectralPanels *sp_Q = _side_panels_new (&side_Q, 3, 5);
+  NcmVector *s1           = _scales_new (1.5, 2.5);
+  NcmVector *s2           = _scales_new (0.75, 1.25);
+  NcmVector *result       = ncm_vector_new (1);
+  NcmVector *err          = ncm_vector_new (1);
+  guint p, o1, o2, self;
+
+  for (p = 0; p <= 3; p++)
+  {
+    NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (p);
+
+    for (self = 0; self < 2; self++)
+    {
+      NcmSpectralPanels *sp_2 = self ? sp_P : sp_Q;
+      const Side *side_2      = self ? &side_P : &side_Q;
+
+      for (o1 = 0; o1 < 2; o1++)
+      {
+        for (o2 = 0; o2 < 2; o2++)
+        {
+          gdouble max_P, max_Q, int_kp;
+          const gdouble exact = _exact (&side_P, ncm_vector_get (s1, o1), o1, side_2, ncm_vector_get (s2, o2), o2, p, &max_P, &max_Q, &int_kp);
+
+          ncm_spectral_panels_product_integrate_rows (prod, sp_P, o1, s1, sp_2, o2, s2, result, err);
+
+          g_assert_cmpfloat (fabs (ncm_vector_get (result, 0) - exact), <=, ncm_vector_get (err, 0));
+          g_assert_cmpfloat (ncm_vector_get (err, 0), <=, 2.0 * TEST_RELTOL * max_P * max_Q * int_kp);
+        }
+      }
+    }
+
+    ncm_spectral_panels_product_free (prod);
+  }
+
+  ncm_vector_free (err);
+  ncm_vector_free (result);
+  ncm_vector_free (s2);
+  ncm_vector_free (s1);
+  ncm_spectral_panels_free (sp_Q);
+  ncm_spectral_panels_free (sp_P);
+}
+
+static void
+test_ncm_spectral_panels_product_rows_fit (void)
+{
+  g_test_trap_subprocess ("/ncm/spectral_panels_product/rows_fit/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*do not fit the panel sets of 2 and 2 rows*");
+}
+
+static void
+test_ncm_spectral_panels_product_rows_fit_subprocess (void)
+{
+  NcmSpectralPanels *sp_P        = _side_panels_new (&side_P, 3, 5);
+  NcmVector *result              = ncm_vector_new (2);
+  NcmSpectralPanelsProduct *prod = ncm_spectral_panels_product_new (2);
+
+  ncm_spectral_panels_product_integrate_rows (prod, sp_P, 0, NULL, sp_P, 1, NULL, result, NULL);
 }
 
