@@ -367,6 +367,28 @@ _component_states_compute_k_seeds (ComponentStates *comp_states, GArray *k_seeds
   }
 }
 
+static gpointer
+_nc_xcor_kernel_spectral_new (gpointer userdata)
+{
+  return ncm_spectral_new ();
+}
+
+/* The NcmSpectral of the row sums, one per concurrent closure build */
+static NcmMemoryPool *
+_nc_xcor_kernel_spectral_pool (void)
+{
+  static gsize init        = 0;
+  static NcmMemoryPool *mp = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    mp = ncm_memory_pool_new (&_nc_xcor_kernel_spectral_new, NULL, (GDestroyNotify) ncm_spectral_free);
+    g_once_init_leave (&init, 1);
+  }
+
+  return mp;
+}
+
 /*
  * Builds the closure as a Chebyshev series.
  *
@@ -544,10 +566,10 @@ _nc_xcor_kernel_build_cheb_integrand (NcXcorKernel *xclk, NcHICosmo *cosmo, gint
      * the sum of its rows, exact up to the dropped coefficients */
     if (comp_states->n_terms > 1)
     {
-      NcmSpectral *spectral = ncm_spectral_new ();
+      NcmSpectral **spectral_ptr = ncm_memory_pool_get (_nc_xcor_kernel_spectral_pool ());
 
-      _nc_xcor_kernel_integrand_sum_terms (integrand, spectral, NC_XCOR_KERNEL_WINDOW_SUM_FRACTION * abstol);
-      ncm_spectral_free (spectral);
+      _nc_xcor_kernel_integrand_sum_terms (integrand, *spectral_ptr, NC_XCOR_KERNEL_WINDOW_SUM_FRACTION * abstol);
+      ncm_memory_pool_return (spectral_ptr);
     }
 
     return integrand;

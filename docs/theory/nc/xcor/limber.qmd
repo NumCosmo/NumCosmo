@@ -192,8 +192,8 @@ where $c_{\ell,t}$ is the coefficient of $j_{\ell+t}$ in the weight, $t \in \{-1
 for $d = 1$ and $t \in \{-2, 0, 2\}$ for $d = 2$, zero for a negative order, so that
 $\ell = 0$ and $1$ need no special case. The combination is a finite difference of $K$
 across the three points $\chi_{\ell+t} = \nu_{\ell+t}/k$, spaced by $2/k$, which the
-Bessel function sets rather than the kernel's tabulation; that is why it tolerates the
-splines a kernel is built from, where a derivative of $K$ in $\chi$ does not. The
+Bessel function sets rather than the kernel's tabulation, so the knots of the splines a
+kernel is built from do not enter it, where they enter a derivative of $K$ in $\chi$. The
 three-point form for $d = 2$ is the one of @Tanidis2019.
 
 The two-point form $-(2\ell + \tfrac14)\,\nu^{-2}\, I^\mathrm{L}_\ell + 2(\nu+1)^{-1}

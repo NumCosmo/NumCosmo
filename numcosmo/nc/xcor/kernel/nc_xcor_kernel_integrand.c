@@ -84,23 +84,25 @@ _nc_xcor_kernel_integrand_new (guint len, guint n_terms)
 }
 
 /*
- * Sums the terms of a block of several: for every multipole its window as one row in k,
- * the sum of its term rows, by ncm_spectral_panels_new_sum_rows() on the rows'
- * supports and scales, trailing coefficients below @abstol dropped. The products of
- * nc_xcor_kquad.c read these; nc_xcor_kernel_integrand_eval_comps() keeps reading the
- * rows.
+ * Builds, for a block of several terms, each multipole's window as one row in k: the sum
+ * of its term rows by ncm_spectral_panels_new_sum_rows() on their supports and scales,
+ * trailing coefficients below @abstol dropped. The k integrals of nc_xcor_kquad.c read
+ * these rows; nc_xcor_kernel_integrand_eval_comps() reads the term rows.
  */
 void
 _nc_xcor_kernel_integrand_sum_terms (NcXcorKernelIntegrand *integrand, NcmSpectral *spectral, gdouble abstol)
 {
-  const guint len         = integrand->len;
-  const guint n_terms     = integrand->n_terms;
-  NcmSpectralPanels **sps = g_new (NcmSpectralPanels *, n_terms);
-  guint *rows             = g_new (guint, n_terms);
-  gdouble *scales         = g_new (gdouble, n_terms);
-  gdouble *x_min          = g_new (gdouble, n_terms);
-  gdouble *x_max          = g_new (gdouble, n_terms);
+  const guint len     = integrand->len;
+  const guint n_terms = integrand->n_terms;
+  NcmSpectralPanels *sps[MAX_LIMBER_TERMS];
+  guint rows[MAX_LIMBER_TERMS];
+  gdouble scales[MAX_LIMBER_TERMS];
+  gdouble x_min[MAX_LIMBER_TERMS];
+  gdouble x_max[MAX_LIMBER_TERMS];
   guint i, t;
+
+  if (n_terms > MAX_LIMBER_TERMS)
+    g_error ("_nc_xcor_kernel_integrand_sum_terms: %u terms, at most %d fit.", n_terms, MAX_LIMBER_TERMS);
 
   g_clear_pointer (&integrand->windows, g_ptr_array_unref);
   integrand->windows = g_ptr_array_new_full (len, (GDestroyNotify) ncm_spectral_panels_free);
@@ -121,12 +123,6 @@ _nc_xcor_kernel_integrand_sum_terms (NcXcorKernelIntegrand *integrand, NcmSpectr
 
     g_ptr_array_add (integrand->windows, ncm_spectral_panels_new_sum_rows (spectral, n_terms, sps, rows, scales, x_min, x_max, abstol));
   }
-
-  g_free (sps);
-  g_free (rows);
-  g_free (scales);
-  g_free (x_min);
-  g_free (x_max);
 }
 
 /**
@@ -217,8 +213,8 @@ nc_xcor_kernel_integrand_get_n_terms (NcXcorKernelIntegrand *integrand)
  *
  * Peeks the window of multipole @i as one row in $k$: with several terms, the sum of its
  * term rows as a one-row panel set, trailing coefficients below a hundredth of the fit's
- * absolute floor dropped, which is what the $k$ integrals read. With one term the rows are
- * the windows and there is none.
+ * absolute floor dropped; the $k$ integrals read it. With one term the rows are the
+ * windows and there is none.
  *
  * Returns: (transfer none) (nullable): the window of multipole @i as one row, or %NULL with one term
  */

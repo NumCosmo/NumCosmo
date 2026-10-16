@@ -46,6 +46,7 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral_panels.h"
+#include "ncm/core/ncm_memory_pool.h"
 #include <math.h>
 #include <float.h>
 #include <string.h>
@@ -681,6 +682,57 @@ ncm_spectral_panels_restrict_rows (NcmSpectralPanels *sp, NcmSpectral *spectral,
   return TRUE;
 }
 
+/* The scratch of ncm_spectral_panels_new_sum_rows(), one per concurrent caller */
+typedef struct _NcmSpectralPanelsSumWork
+{
+  GArray *edges;      /* gdouble, the union of the rows' edges in k */
+  GArray *sum;        /* gdouble, the coefficients of a cell's sum */
+  GPtrArray *rebased; /* NcmMatrix, at index N the rebase output for panels of N coefficients */
+} NcmSpectralPanelsSumWork;
+
+static gpointer
+_ncm_spectral_panels_sum_work_new (gpointer userdata)
+{
+  NcmSpectralPanelsSumWork *work = g_new0 (NcmSpectralPanelsSumWork, 1);
+
+  work->edges   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->sum     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->rebased = g_ptr_array_new ();
+
+  return work;
+}
+
+static void
+_ncm_spectral_panels_sum_work_free (gpointer p)
+{
+  NcmSpectralPanelsSumWork *work = p;
+  guint j;
+
+  for (j = 0; j < work->rebased->len; j++)
+    if (g_ptr_array_index (work->rebased, j) != NULL)
+      ncm_matrix_free (g_ptr_array_index (work->rebased, j));
+
+  g_ptr_array_unref (work->rebased);
+  g_array_unref (work->edges);
+  g_array_unref (work->sum);
+  g_free (work);
+}
+
+static NcmMemoryPool *
+_ncm_spectral_panels_sum_pool (void)
+{
+  static gsize init        = 0;
+  static NcmMemoryPool *mp = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    mp = ncm_memory_pool_new (&_ncm_spectral_panels_sum_work_new, NULL, &_ncm_spectral_panels_sum_work_free);
+    g_once_init_leave (&init, 1);
+  }
+
+  return mp;
+}
+
 static gint
 _ncm_spectral_panels_cmp_gdouble (gconstpointer a, gconstpointer b)
 {
@@ -717,11 +769,15 @@ _ncm_spectral_panels_cmp_gdouble (gconstpointer a, gconstpointer b)
 NcmSpectralPanels *
 ncm_spectral_panels_new_sum_rows (NcmSpectral *spectral, guint n, NcmSpectralPanels * const *sps, const guint *rows, const gdouble *scales, const gdouble *x_min, const gdouble *x_max, gdouble abstol)
 {
-  NcmSpectralPanels *out = ncm_spectral_panels_new (1);
-  GArray *edges          = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *sum            = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GPtrArray *rebased     = g_ptr_array_new (); /* the rebase output of each N met, indexed by N */
+  NcmSpectralPanels *out              = ncm_spectral_panels_new (1);
+  NcmSpectralPanelsSumWork **work_ptr = ncm_memory_pool_get (_ncm_spectral_panels_sum_pool ());
+  NcmSpectralPanelsSumWork *work      = *work_ptr;
+  GArray *edges                       = work->edges;
+  GArray *sum                         = work->sum;
+  GPtrArray *rebased                  = work->rebased;
   guint r, e, j;
+
+  g_array_set_size (edges, 0);
 
   for (r = 0; r < n; r++)
   {
@@ -834,13 +890,7 @@ ncm_spectral_panels_new_sum_rows (NcmSpectral *spectral, guint n, NcmSpectralPan
     ncm_spectral_panels_append_data (out, a, b, (const gdouble *) sum->data, sum->len, sum->len);
   }
 
-  for (j = 0; j < rebased->len; j++)
-    if (g_ptr_array_index (rebased, j) != NULL)
-      ncm_matrix_free (g_ptr_array_index (rebased, j));
-
-  g_array_unref (edges);
-  g_array_unref (sum);
-  g_ptr_array_unref (rebased);
+  ncm_memory_pool_return (work_ptr);
 
   return out;
 }
