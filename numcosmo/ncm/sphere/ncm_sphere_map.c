@@ -53,8 +53,6 @@
 #include "ncm/algebra/ncm_complex.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_c.h"
-#include "ncm/spline/ncm_spline_func.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -2284,7 +2282,8 @@ ncm_sphere_map_set_alm (NcmSphereMap *smap, guint l, guint m, gdouble Re_alm, gd
  * @l: value of $\ell \le \ell_\mathrm{max}$
  *
  * Gets $C_\ell$ as computed by the last ncm_sphere_map_prepare_alm() or
- * ncm_sphere_map_update_Cl(), or set by ncm_sphere_map_set_Cls().
+ * ncm_sphere_map_update_Cl(), or set by ncm_sphere_map_set_Cls(). Aborts when there are
+ * none, which includes after ncm_sphere_map_set_lmax() until they are computed or set again.
  *
  * Returns: $C_\ell = \frac{1}{2\ell + 1} \sum_{m=-\ell}^{\ell} |a_{\ell m}|^2$
  */
@@ -2292,6 +2291,9 @@ gdouble
 ncm_sphere_map_get_Cl (NcmSphereMap *smap, guint l)
 {
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
+
+  if (!self->has_Cls)
+    g_error ("ncm_sphere_map_get_Cl: no C_l, compute them with ncm_sphere_map_prepare_alm() or ncm_sphere_map_update_Cl(), or set them with ncm_sphere_map_set_Cls().");
 
   _ncm_sphere_map_check_lm (self, l, 0, G_STRFUNC);
 
@@ -2375,8 +2377,8 @@ ncm_sphere_map_set_map (NcmSphereMap *smap, GArray *map)
  * @smap: a #NcmSphereMap
  * @Cls: a #NcmVector with the $C_\ell$ for $\ell = 0, \dots, \ell_\mathrm{max}$ (or more)
  *
- * Sets the $C_\ell$ of @smap used by ncm_sphere_map_get_Cl() and
- * ncm_sphere_map_calc_Ctheta(); the map and the $a_{\ell m}$ are not changed.
+ * Sets the $C_\ell$ of @smap returned by ncm_sphere_map_get_Cl(); the map and the
+ * $a_{\ell m}$ are not changed.
  *
  */
 void
@@ -2427,70 +2429,6 @@ ncm_sphere_map_alm2map (NcmSphereMap *smap)
   for (i = 0; i < self->fft_plan_c2r->len; i++)
   {
     fftw_execute (g_ptr_array_index (self->fft_plan_c2r, i));
-  }
-}
-
-static gdouble
-_ncm_sphere_map_calc_Ctheta_theta (const gdouble theta, gpointer userdata)
-{
-  NcmSphereMapPrivate * const self = (NcmSphereMapPrivate * const ) userdata;
-  const gdouble x                  = cos (theta);
-  gdouble p_ellm2                  = 1.0;
-  gdouble p_ellm1                  = x;
-  gdouble p_ell;
-  guint ell;
-
-  gdouble Ctheta =
-    1.0 * (2.0 * 0.0 + 1.0) * ncm_vector_fast_get (self->Cl, 0) +
-    x   * (2.0 * 1.0 + 1.0) * ncm_vector_fast_get (self->Cl, 1);
-
-  for (ell = 2; ell <= self->lmax; ell++)
-  {
-    p_ell   = (x * (2.0 * ell - 1.0) * p_ellm1 - (ell - 1.0) * p_ellm2) / ell;
-    p_ellm2 = p_ellm1;
-    p_ellm1 = p_ell;
-
-    Ctheta += p_ell * (2.0 * ell + 1.0) * ncm_vector_fast_get (self->Cl, ell);
-  }
-
-  return Ctheta / (4.0 * ncm_c_pi ());
-}
-
-/**
- * ncm_sphere_map_calc_Ctheta:
- * @smap: a #NcmSphereMap
- * @reltol: relative tolerance of the spline for $C(\theta)$
- *
- * Computes the angular two-point correlation function
- * $$C(\theta) = \sum_{\ell=0}^{\ell_\mathrm{max}} \frac{2\ell + 1}{4\pi} C_\ell P_\ell(\cos\theta)$$
- * from the current $C_\ell$ (ncm_sphere_map_prepare_alm(), ncm_sphere_map_update_Cl() or
- * ncm_sphere_map_set_Cls()), as a spline on $\theta \in [0, \pi]$ with knots added until
- * it reproduces the sum to @reltol.
- *
- * Returns: (transfer full): the $C(\theta)$ spline.
- */
-NcmSpline *
-ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol)
-{
-  NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
-
-  if (!self->has_Cls)
-  {
-    g_error ("ncm_sphere_map_calc_Ctheta: no C_l, compute them with ncm_sphere_map_prepare_alm() or set them with ncm_sphere_map_set_Cls().");
-
-    return NULL;
-  }
-  else
-  {
-    NcmSpline *s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-    gsl_function F;
-
-    F.params   = self;
-    F.function = &_ncm_sphere_map_calc_Ctheta_theta;
-
-    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, M_PI, -1, reltol);
-
-    return s;
   }
 }
 

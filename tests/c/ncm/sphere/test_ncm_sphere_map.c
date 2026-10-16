@@ -61,7 +61,6 @@ void test_ncm_sphere_map_invalid_ring (TestNcmSphereMap *test, gconstpointer pda
 void test_ncm_sphere_map_invalid_lmax_zero (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_alm_index (TestNcmSphereMap *test, gconstpointer pdata);
 void test_ncm_sphere_map_invalid_cross (TestNcmSphereMap *test, gconstpointer pdata);
-void test_ncm_sphere_map_Ctheta (void);
 void test_ncm_sphere_map_healpy_pixels (void);
 void test_ncm_sphere_map_healpy_ang2pix (void);
 void test_ncm_sphere_map_healpy_transforms (void);
@@ -167,7 +166,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_invalid_cross,
               &test_ncm_sphere_map_free);
-  g_test_add_func ("/ncm/sphere_map/Ctheta", &test_ncm_sphere_map_Ctheta);
   g_test_add_func ("/ncm/sphere_map/healpy/pixels", &test_ncm_sphere_map_healpy_pixels);
   g_test_add_func ("/ncm/sphere_map/healpy/ang2pix", &test_ncm_sphere_map_healpy_ang2pix);
   g_test_add_func ("/ncm/sphere_map/healpy/transforms", &test_ncm_sphere_map_healpy_transforms);
@@ -550,10 +548,10 @@ test_ncm_sphere_map_traps (TestNcmSphereMap *test, gconstpointer pdata)
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*the vector has 5 values, lmax = 10 needs 11*");
 
-  /* A new lmax zeroes the C_l; C(theta) used to come out zero without complaint. */
+  /* A new lmax zeroes the C_l, so they are refused until computed or set again. */
   g_test_trap_subprocess ("/ncm/sphere_map/invalid/Cls_stale/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*ncm_sphere_map_calc_Ctheta: no C_l*");
+  g_test_trap_assert_stderr ("*ncm_sphere_map_get_Cl: no C_l*");
 
   g_test_trap_subprocess ("/ncm/sphere_map/invalid/get_pix/subprocess", 0, 0);
   g_test_trap_assert_failed ();
@@ -724,47 +722,6 @@ test_ncm_sphere_map_invalid_cross (TestNcmSphereMap *test, gconstpointer pdata)
   ncm_sphere_map_compute_cross_Cl (test->pix, other);
 }
 
-/*
- * C(theta) = sum (2l + 1) / (4 pi) C_l P_l(cos theta), with P_l from GSL, for
- * C_l = 1 / (l + 1)^2 up to lmax 200; the spline at reltol 1e-8 was measured at 8.9e-10
- * of the peak.
- */
-void
-test_ncm_sphere_map_Ctheta (void)
-{
-  const guint lmax   = 200;
-  NcmSphereMap *smap = ncm_sphere_map_new (16);
-  NcmVector *Cls     = ncm_vector_new (lmax + 1);
-  NcmSpline *Ctheta;
-  gdouble peak = 0.0, maxdiff = 0.0;
-  guint l, i;
-
-  for (l = 0; l <= lmax; l++)
-    ncm_vector_set (Cls, l, 1.0 / gsl_pow_2 (l + 1.0));
-
-  ncm_sphere_map_set_lmax (smap, lmax);
-  ncm_sphere_map_set_Cls (smap, Cls);
-  Ctheta = ncm_sphere_map_calc_Ctheta (smap, 1.0e-8);
-
-  for (i = 0; i <= 400; i++)
-  {
-    const gdouble theta = M_PI * i / 400.0;
-    gdouble truth       = 0.0;
-
-    for (l = 0; l <= lmax; l++)
-      truth += (2.0 * l + 1.0) / (4.0 * M_PI) * ncm_vector_get (Cls, l) * gsl_sf_legendre_Pl (l, cos (theta));
-
-    peak    = GSL_MAX (peak, fabs (truth));
-    maxdiff = GSL_MAX (maxdiff, fabs (ncm_spline_eval (Ctheta, theta) - truth));
-  }
-
-  g_assert_cmpfloat (maxdiff, <, 1.0e-9 * peak);
-
-  ncm_spline_free (Ctheta);
-  ncm_vector_free (Cls);
-  ncm_sphere_map_free (smap);
-}
-
 /* The added noise has zero mean and variance sd^2: over 49152 pixels, both within four
  * standard errors, for a fixed seed. */
 void
@@ -812,7 +769,7 @@ test_ncm_sphere_map_invalid_Cls_stale (TestNcmSphereMap *test, gconstpointer pda
   ncm_sphere_map_set_lmax (test->pix, 10);
   ncm_sphere_map_set_Cls (test->pix, Cls);
   ncm_sphere_map_set_lmax (test->pix, 12);
-  ncm_sphere_map_calc_Ctheta (test->pix, 1.0e-6);
+  ncm_sphere_map_get_Cl (test->pix, 0);
 }
 
 void
