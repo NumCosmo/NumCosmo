@@ -681,3 +681,167 @@ ncm_spectral_panels_restrict_rows (NcmSpectralPanels *sp, NcmSpectral *spectral,
   return TRUE;
 }
 
+static gint
+_ncm_spectral_panels_cmp_gdouble (gconstpointer a, gconstpointer b)
+{
+  const gdouble x = *(const gdouble *) a;
+  const gdouble y = *(const gdouble *) b;
+
+  return (x > y) - (x < y);
+}
+
+/**
+ * ncm_spectral_panels_new_sum_rows: (skip)
+ * @spectral: a #NcmSpectral, for the scratch of the rebase
+ * @n: the number of rows
+ * @sps: the panel set of each row
+ * @rows: the row of each in its panel set
+ * @scales: the scale $s_r$ of each row: row $r$ is a function of $x = k / s_r$
+ * @x_min: the lower end of each row's support in its $x$, the row being zero outside
+ * @x_max: the upper end of each row's support in its $x$
+ * @abstol: trailing coefficients of a cell's sum below this are dropped, keeping at least
+ *   one; 0 keeps all
+ *
+ * Builds the sum of @n scaled rows as one row in $k$. The partition is the union of the
+ * rows' support ends and of their panel edges inside the supports, all in $k$; on each
+ * cell every row whose support contains it is rebased onto the cell with
+ * ncm_spectral_chebyshev_rebase_rows_data(), which is exact for a polynomial, and the
+ * coefficients are added. A cell no row covers holds zero. A row with an empty support
+ * ($x_\mathrm{min} \ge x_\mathrm{max}$) is skipped. Edges closer than 16 ulps are merged,
+ * which moves a row's edge by that much. Dropping the coefficients below @abstol changes
+ * a cell's sum by at most their number times @abstol.
+ *
+ * Returns: (transfer full): a one-row #NcmSpectralPanels over the union of the supports,
+ *   without panels when every support is empty
+ */
+NcmSpectralPanels *
+ncm_spectral_panels_new_sum_rows (NcmSpectral *spectral, guint n, NcmSpectralPanels * const *sps, const guint *rows, const gdouble *scales, const gdouble *x_min, const gdouble *x_max, gdouble abstol)
+{
+  NcmSpectralPanels *out = ncm_spectral_panels_new (1);
+  GArray *edges          = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *sum            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GPtrArray *rebased     = g_ptr_array_new (); /* the rebase output of each N met, indexed by N */
+  guint r, e, j;
+
+  for (r = 0; r < n; r++)
+  {
+    NcmSpectralPanels *sp = sps[r];
+    const gdouble s       = scales[r];
+    const gdouble lo      = s * x_min[r];
+    const gdouble hi      = s * x_max[r];
+    guint p;
+
+    g_assert_cmpuint (rows[r], <, sp->fdim);
+    g_assert_cmpfloat (s, >, 0.0);
+
+    if (!(x_min[r] < x_max[r]))
+      continue;
+
+    g_array_append_val (edges, lo);
+    g_array_append_val (edges, hi);
+
+    for (p = 1; p + 1 < sp->edges->len; p++)
+    {
+      const gdouble k = s * g_array_index (sp->edges, gdouble, p);
+
+      if ((k > lo) && (k < hi))
+        g_array_append_val (edges, k);
+    }
+  }
+
+  if (edges->len > 0)
+  {
+    guint kept = 0;
+
+    g_array_sort (edges, &_ncm_spectral_panels_cmp_gdouble);
+
+    for (e = 0; e < edges->len; e++)
+    {
+      const gdouble k = g_array_index (edges, gdouble, e);
+
+      if ((kept == 0) || (k - g_array_index (edges, gdouble, kept - 1) > 16.0 * DBL_EPSILON * fabs (k)))
+        g_array_index (edges, gdouble, kept++) = k;
+    }
+
+    g_array_set_size (edges, kept);
+  }
+
+  for (e = 1; e < edges->len; e++)
+  {
+    const gdouble a   = g_array_index (edges, gdouble, e - 1);
+    const gdouble b   = g_array_index (edges, gdouble, e);
+    const gdouble mid = 0.5 * (a + b);
+
+    g_array_set_size (sum, 0);
+
+    for (r = 0; r < n; r++)
+    {
+      NcmSpectralPanels *sp = sps[r];
+      const gdouble s       = scales[r];
+      const gdouble x       = mid / s;
+      const gdouble *c;
+      NcmMatrix *m;
+      gdouble pa, pb;
+      guint p, N;
+
+      if (!(x_min[r] < x_max[r]) || (x <= x_min[r]) || (x >= x_max[r]))
+        continue;
+
+      p = ncm_spectral_panels_find_panel (sp, x);
+      c = ncm_spectral_panels_peek_panel (sp, p, &pa, &pb, &N) + (gsize) rows[r] * N;
+
+      if (rebased->len <= N)
+        g_ptr_array_set_size (rebased, N + 1);
+
+      if (g_ptr_array_index (rebased, N) == NULL)
+        g_ptr_array_index (rebased, N) = ncm_matrix_new (1, N);
+
+      m = g_ptr_array_index (rebased, N);
+      ncm_spectral_chebyshev_rebase_rows_data (spectral, c, 1, N, N, pa, pb, a / s, b / s, m);
+
+      if (sum->len < N)
+      {
+        const guint old = sum->len;
+
+        g_array_set_size (sum, N);
+
+        for (j = old; j < N; j++)
+          g_array_index (sum, gdouble, j) = 0.0;
+      }
+
+      for (j = 0; j < N; j++)
+        g_array_index (sum, gdouble, j) += ncm_matrix_get (m, 0, j);
+    }
+
+    if (sum->len == 0)
+    {
+      const gdouble zero = 0.0;
+
+      ncm_spectral_panels_append_data (out, a, b, &zero, 1, 1);
+      continue;
+    }
+
+    if (abstol > 0.0)
+    {
+      guint keep = sum->len;
+
+      while ((keep > 1) && (fabs (g_array_index (sum, gdouble, keep - 1)) < abstol))
+        keep--;
+
+      g_array_set_size (sum, keep);
+    }
+
+    ncm_spectral_panels_append_data (out, a, b, (const gdouble *) sum->data, sum->len, sum->len);
+  }
+
+  for (j = 0; j < rebased->len; j++)
+    if (g_ptr_array_index (rebased, j) != NULL)
+      ncm_matrix_free (g_ptr_array_index (rebased, j));
+
+  g_array_unref (edges);
+  g_array_unref (sum);
+  g_ptr_array_unref (rebased);
+
+  return out;
+}
+
