@@ -41,6 +41,7 @@ void test_ncm_data_rosenbrock_basic (void);
 void test_ncm_dataset_basic (void);
 void test_ncm_fftlog_basic (void);
 void test_ncm_sphere_nn (void);
+void test_ncm_sphere_xi (void);
 void test_ncm_timer_basic (void);
 void test_ncm_sbessel_ode_solver_basic (void);
 void test_ncm_sbessel_integrator_gl_basic (void);
@@ -138,6 +139,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
   g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
+  g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
   g_test_add_func ("/ncm/sbessel_ode_solver/basic", test_ncm_sbessel_ode_solver_basic);
   g_test_add_func ("/ncm/sbessel_integrator_gl/basic", test_ncm_sbessel_integrator_gl_basic);
@@ -510,6 +512,24 @@ test_ncm_sphere_nn (void)
   g_assert_true (NCM_IS_SPHERE_NN (snn));
 
   NCM_TEST_FREE (ncm_sphere_nn_free, snn);
+}
+
+void
+test_ncm_sphere_xi (void)
+{
+  NcmSphereXi *sxi = ncm_sphere_xi_new (NULL, 10);
+  NcmSphereXi *sxi2;
+
+  g_assert_true (sxi != NULL);
+  g_assert_true (NCM_IS_SPHERE_XI (sxi));
+
+  sxi2 = ncm_sphere_xi_ref (sxi);
+  ncm_sphere_xi_clear (&sxi2);
+  g_assert_true (sxi2 == NULL);
+
+  g_assert_true (NCM_IS_SPHERE_XI (sxi));
+
+  NCM_TEST_FREE (ncm_sphere_xi_free, sxi);
 }
 
 void

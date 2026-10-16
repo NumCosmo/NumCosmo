@@ -26,6 +26,7 @@ project:
     - theory/ncm/specfunc/sbessel_ode_solver.qmd
     - theory/ncm/specfunc/sbessel_projection.qmd
     - theory/nc/xcor/limber.qmd
+    - theory/ncm/sphere/sphere_xi.qmd
     - theory/nc/xcor/ssc.qmd
     - theory/nc/lss/halo/castro_hmf.qmd
     - theory/ncm/stats/stats_dist.qmd
@@ -177,6 +178,8 @@ website:
                 text: "UltraLevin: Non-Limber"
               - href: theory/nc/xcor/limber.qmd
                 text: "Limber"
+              - href: theory/ncm/sphere/sphere_xi.qmd
+                text: "Angular Correlation Function"
           - section: "Approximation and Interpolation"
             contents:
               - href: theory/ncm/algebra/spectral.qmd
