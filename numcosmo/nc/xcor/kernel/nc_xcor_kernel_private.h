@@ -93,12 +93,12 @@ struct _NcXcorKernelIntegrand
   gboolean scaled;       /* whether any scale differs from 1 */
   gdouble k_min;         /* the k range of the whole block */
   gdouble k_max;
-  GPtrArray *collapsed; /* NcmSpectralPanels per multipole, the sum of its terms as one row in k; NULL with one term */
+  GPtrArray *windows; /* NcmSpectralPanels per multipole, its window as one row in k, the sum of its terms; NULL with one term */
 };
 
-/* The fraction of the fit's absolute floor below which the collapse drops trailing
- * coefficients: at most that fraction times their number is added to a multipole's window */
-#define NC_XCOR_KERNEL_COLLAPSE_FRACTION (1.0e-2)
+/* The fraction of the fit's absolute floor below which the sum of a multipole's terms drops
+ * trailing coefficients: at most that fraction times their number is added to its window */
+#define NC_XCOR_KERNEL_WINDOW_SUM_FRACTION (1.0e-2)
 
 
 typedef struct _ComponentParams
@@ -167,7 +167,7 @@ typedef struct _ComponentStates
 NcXcorKernelPrivate *_nc_xcor_kernel_get_private (NcXcorKernel *xclk);
 
 NcXcorKernelIntegrand *_nc_xcor_kernel_integrand_new (guint len, guint n_terms);
-void _nc_xcor_kernel_integrand_collapse (NcXcorKernelIntegrand *integrand, NcmSpectral *spectral, gdouble abstol);
+void _nc_xcor_kernel_integrand_sum_terms (NcXcorKernelIntegrand *integrand, NcmSpectral *spectral, gdouble abstol);
 
 void _nc_xcor_kernel_component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint comp_idx, NcHICosmo *cosmo, guint n_l);
 void _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states);

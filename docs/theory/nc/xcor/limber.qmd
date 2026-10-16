@@ -205,7 +205,7 @@ multipole on the kernel of @fig-limber-deriv.
 In the closure each order is a term of its own, sampled in $x = k/\nu_{\ell+t}$, so that
 every term of every multipole of a block shares the point $\chi = 1/x$: one window
 factor and one vectorized wave-number factor per term at each sample. Before the $k$
-integrals the terms of each multipole are collapsed into one piecewise polynomial in
+integrals the terms of each multipole are summed into one piecewise polynomial in
 $k$, on the union of their panel edges, by rebasing each term's series onto every cell
 it covers and adding the coefficients; the rebase is exact, and trailing coefficients
 below a hundredth of the fit's absolute floor are dropped. The $k$ integral of a

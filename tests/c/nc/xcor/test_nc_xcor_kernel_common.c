@@ -1473,9 +1473,9 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
       peak = GSL_MAX (peak, fabs (_limber_direct (comps, cosmo, dist, l, k)));
     }
 
-    /* The collapsed row the k integrals read agrees with the formula as the rows do */
+    /* The summed window the k integrals read agrees with the formula as the rows do */
     {
-      NcmSpectralPanels *col = nc_xcor_kernel_integrand_peek_collapsed (xclki, l - lmin);
+      NcmSpectralPanels *col = nc_xcor_kernel_integrand_peek_window (xclki, l - lmin);
       gdouble dev_col        = 0.0;
       gdouble c_lo, c_hi;
 
