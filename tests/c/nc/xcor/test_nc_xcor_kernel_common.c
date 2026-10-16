@@ -119,6 +119,7 @@ static void test_nc_xcor_kernel_integrator (void);
 static void test_nc_xcor_kernel_cluster_limber_range_ends (void);
 static void test_nc_xcor_kernel_gal_limber_capped_powspec (void);
 static void test_nc_xcor_kernel_gal_rsd_limber_steps (void);
+static void test_nc_xcor_kernel_deriv_limber_window (void);
 static void test_nc_xcor_kernel_gal_rsd_limber_z_st (void);
 static void test_nc_xcor_kernel_gal_rsd_limber_z_trap (void);
 static void test_nc_xcor_kernel_gal_bias (void);
@@ -245,6 +246,7 @@ test_nc_xcor_kernel_main (gint argc, gchar *argv[], const gchar *kernel)
   g_test_add_func ("/nc/xcor/kernel/gal/bias", &test_nc_xcor_kernel_gal_bias);
   g_test_add_func ("/nc/xcor/kernel/cluster_tophat/volume_normalized", &test_nc_xcor_kernel_cluster_tophat_volume_normalized);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_steps", &test_nc_xcor_kernel_gal_rsd_limber_steps);
+  g_test_add_func ("/nc/xcor/kernel/analytic/deriv_limber_window", &test_nc_xcor_kernel_deriv_limber_window);
   g_test_add_func ("/nc/xcor/kernel/gal/limber_capped_powspec", &test_nc_xcor_kernel_gal_limber_capped_powspec);
   g_test_add_func ("/nc/xcor/kernel/cluster/limber_range_ends", &test_nc_xcor_kernel_cluster_limber_range_ends);
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/subprocess", &test_nc_xcor_kernel_gal_rsd_limber_z_st);
@@ -1504,6 +1506,77 @@ test_nc_xcor_kernel_gal_rsd_limber_steps (void)
   nc_xcor_kernel_integrand_unref (xclki);
   nc_xcor_kernel_free (NC_XCOR_KERNEL (g));
   ncm_spline_free (dndz);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
+/* A kernel of the j_l'' weight alone: its order terms cancel in the window by 2.8e4 at
+ * l ~ 1000, so tolerances relative to the terms would leave the window at 3e-3 of its peak.
+ * The summed windows must agree with the recurrence formula within the closure tolerance of
+ * each multipole's peak, at the default tolerances, over the window's whole range. */
+static void
+test_nc_xcor_kernel_deriv_limber_window (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmSBesselIntegrator *sbi = NCM_SBESSEL_INTEGRATOR (ncm_sbessel_integrator_levin_new (1000, 1031));
+  NcXcorKernel *xclk        = NC_XCOR_KERNEL (g_object_new (NC_TYPE_XCOR_KERNEL_ANALYTIC_GAUSS,
+                                                            "dist", dist,
+                                                            "powspec", ps,
+                                                            "chi-mean", 1500.0,
+                                                            "chi-sigma", 300.0,
+                                                            "n-sigma", 8.0,
+                                                            "integrator", sbi,
+                                                            "bessel-deriv", 2,
+                                                            NULL));
+  const gint lmin = 1000;
+  const gint lmax = 1031;
+  const gint ls[] = { 1000, 1016, 1031 };
+  const guint n_k = 600;
+  NcXcorKernelIntegrand *xclki;
+  GPtrArray *comps;
+  gdouble tol;
+  guint n, j;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+  nc_xcor_kernel_set_l_limber (xclk, 0);
+  nc_xcor_kernel_prepare (xclk, cosmo);
+
+  xclki = nc_xcor_kernel_get_eval_vectorized (xclk, cosmo, lmin, lmax);
+  comps = nc_xcor_kernel_get_component_list (xclk);
+  tol   = GSL_MAX (nc_xcor_kernel_get_reltol (xclk), nc_xcor_kernel_get_peak_epsilon (xclk));
+
+  for (n = 0; n < G_N_ELEMENTS (ls); n++)
+  {
+    const gint l           = ls[n];
+    NcmSpectralPanels *win = nc_xcor_kernel_integrand_peek_window (xclki, l - lmin);
+    gdouble peak           = 0.0, dev = 0.0;
+    gdouble k_lo, k_hi;
+
+    g_assert_nonnull (win);
+    ncm_spectral_panels_get_range (win, &k_lo, &k_hi);
+
+    for (j = 0; j < n_k; j++)
+    {
+      const gdouble k      = k_lo * pow (k_hi / k_lo, (j + 0.5) / n_k);
+      const gdouble direct = _limber_direct (comps, cosmo, dist, l, k);
+
+      peak = GSL_MAX (peak, fabs (direct));
+      dev  = GSL_MAX (dev, fabs (ncm_spectral_panels_eval_row (win, 0, k) - direct));
+    }
+
+    g_assert_cmpfloat (peak, >, 0.0);
+    g_assert_cmpfloat (dev, <=, tol * peak);
+  }
+
+  g_ptr_array_unref (comps);
+  nc_xcor_kernel_integrand_unref (xclki);
+  nc_xcor_kernel_free (xclk);
+  ncm_sbessel_integrator_free (sbi);
   ncm_powspec_free (ps);
   nc_distance_free (dist);
   nc_hicosmo_free (cosmo);
