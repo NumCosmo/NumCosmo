@@ -74,6 +74,7 @@ void test_nc_hcosmo_bi_today (TestNcHCosmoBI *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_lcdm (TestNcHCosmoBI *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_ode (TestNcHCosmoBI *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_valid (TestNcHCosmoBI *test, gconstpointer pdata);
+void test_nc_hcosmo_bi_functions (TestNcHCosmoBI *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -100,6 +101,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/hcosmo_bi/valid", TestNcHCosmoBI, NULL,
               &test_nc_hcosmo_bi_new,
               &test_nc_hcosmo_bi_valid,
+              &test_nc_hcosmo_bi_free);
+
+  g_test_add ("/nc/hcosmo_bi/functions", TestNcHCosmoBI, NULL,
+              &test_nc_hcosmo_bi_new,
+              &test_nc_hcosmo_bi_functions,
               &test_nc_hcosmo_bi_free);
 
   g_test_run ();
@@ -297,5 +303,56 @@ test_nc_hcosmo_bi_valid (TestNcHCosmoBI *test, gconstpointer pdata)
   _test_nc_hcosmo_bi_set (test->cosmo, &invalid);
   g_assert_cmpfloat (nc_hcosmo_bi_Omega_L0 (test->cosmo), <, 0.0);
   g_assert_false (ncm_model_params_valid (NCM_MODEL (test->cosmo)));
+}
+
+void
+test_nc_hcosmo_bi_functions (TestNcHCosmoBI *test, gconstpointer pdata)
+{
+  const TestNcHCosmoBICase c = {
+    0.3, {
+      60.0, 70.0, 85.0
+    }
+  };
+  NcmMSet *mset = ncm_mset_new (NCM_MODEL (test->cosmo), NULL, NULL);
+
+  const struct
+  {
+    const gchar *name;
+    gdouble value;
+  } expected[] = {
+    {"NcHCosmoBI:H0",          0.0},
+    {"NcHCosmoBI:RH_Mpc",      0.0},
+    {"NcHCosmoBI:Omega_s0",    0.0},
+    {"NcHCosmoBI:Omega_L0",    0.0},
+    {"NcHCosmoBI:age",         0.0},
+    {"NcHCosmoBI:H2_minus_H1", 10.0},
+    {"NcHCosmoBI:H3_minus_H2", 15.0},
+  };
+
+  gdouble values[7];
+  guint i;
+
+  _test_nc_hcosmo_bi_set (test->cosmo, &c);
+
+  values[0] = nc_hcosmo_bi_H0 (test->cosmo);
+  values[1] = nc_hcosmo_bi_RH_Mpc (test->cosmo);
+  values[2] = nc_hcosmo_bi_Omega_s0 (test->cosmo);
+  values[3] = nc_hcosmo_bi_Omega_L0 (test->cosmo);
+  values[4] = nc_hcosmo_bi_age (test->cosmo);
+  values[5] = expected[5].value;
+  values[6] = expected[6].value;
+
+  ncm_assert_cmpdouble_e (values[1], ==, ncm_c_c () / (1.0e3 * values[0]), 1.0e-15, 0.0);
+
+  for (i = 0; i < 7; i++)
+  {
+    NcmMSetFuncList *func = ncm_mset_func_list_new (expected[i].name, NULL);
+    const gdouble value   = ncm_mset_func_eval0 (NCM_MSET_FUNC (func), mset);
+
+    ncm_assert_cmpdouble_e (value, ==, values[i], 1.0e-15, 0.0);
+    ncm_mset_func_list_free (func);
+  }
+
+  ncm_mset_free (mset);
 }
 

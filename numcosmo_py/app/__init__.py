@@ -45,9 +45,9 @@ from .fisher import ComputeTheoryVector, RunFisher, RunFisherBias
 from .from_cosmosis import COSMOSIS
 from .generate import (
     BuildPlanckRelease,
+    GenerateBianchi,
     GenerateClusterRichnessCount,
     GenerateClusterWL,
-    GenerateBianchi,
     GenerateDEWSpline,
     GenerateJpasForecast,
     GeneratePlanck,

@@ -55,6 +55,7 @@ void test_nc_hcosmo_bi_dist_lcdm (TestNcHCosmoBIDist *test, gconstpointer pdata)
 void test_nc_hcosmo_bi_dist_quad (TestNcHCosmoBIDist *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_dist_rotation (TestNcHCosmoBIDist *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata);
+void test_nc_hcosmo_bi_dist_properties (TestNcHCosmoBIDist *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_dist_zmax (TestNcHCosmoBIDist *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_dist_zmax_unreached (TestNcHCosmoBIDist *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_dist_pitfalls (TestNcHCosmoBIDist *test, gconstpointer pdata);
@@ -84,6 +85,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/hcosmo_bi_dist/data", TestNcHCosmoBIDist, NULL,
               &test_nc_hcosmo_bi_dist_new,
               &test_nc_hcosmo_bi_dist_data,
+              &test_nc_hcosmo_bi_dist_free);
+
+  g_test_add ("/nc/hcosmo_bi_dist/properties", TestNcHCosmoBIDist, NULL,
+              &test_nc_hcosmo_bi_dist_new,
+              &test_nc_hcosmo_bi_dist_properties,
               &test_nc_hcosmo_bi_dist_free);
 
   g_test_add ("/nc/hcosmo_bi_dist/pitfalls", TestNcHCosmoBIDist, NULL,
@@ -369,6 +375,10 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
     g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
     g_clear_error (&error);
 
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, "eDM_av", 0.0, 1.0, &error);
+    g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
+    g_clear_error (&error);
+
     nc_data_hcosmo_bi_dist_mu_free (dmu_obs);
     nc_dist_mu_obs_free (obs);
   }
@@ -379,6 +389,69 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
   ncm_matrix_free (p);
   ncm_mset_free (mset);
   NCM_TEST_FREE (nc_data_hcosmo_bi_dist_mu_free, dmu);
+}
+
+void
+test_nc_hcosmo_bi_dist_properties (TestNcHCosmoBIDist *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcHCosmoBIDist *dup;
+  NcDataHCosmoBIDistMu *dmu;
+  NcDataHCosmoBIDistMu *dmu_dup;
+  gdouble dl_a, dl_b;
+
+  ncm_assert_cmpdouble (nc_hcosmo_bi_dist_get_zmax (test->dist), ==, 0.3);
+  ncm_assert_cmpdouble (nc_hcosmo_bi_dist_get_reltol (test->dist), ==, NC_HCOSMO_BI_DIST_DEFAULT_RELTOL);
+
+  _test_nc_hcosmo_bi_dist_set (test->cosmo, 0.334, 0.85 * 73.04, 73.04, 1.15 * 73.04);
+  nc_hcosmo_bi_dist_prepare_if_needed (test->dist, test->cosmo);
+  dl_a = nc_hcosmo_bi_dist_luminosity (test->dist, 0.2, 0.6, 0.0, 0.8);
+
+  /* A looser tolerance changes the node count and the result stays within it */
+  nc_hcosmo_bi_dist_set_reltol (test->dist, 1.0e-6);
+  nc_hcosmo_bi_dist_prepare_if_needed (test->dist, test->cosmo);
+  g_assert_cmpuint (nc_hcosmo_bi_dist_get_n_nodes (test->dist), <=, 33);
+  dl_b = nc_hcosmo_bi_dist_luminosity (test->dist, 0.2, 0.6, 0.0, 0.8);
+  ncm_assert_cmpdouble_e (dl_b, ==, dl_a, 1.0e-6, 0.0);
+
+  nc_hcosmo_bi_dist_set_zmax (test->dist, 0.5);
+  nc_hcosmo_bi_dist_prepare_if_needed (test->dist, test->cosmo);
+  g_assert_cmpfloat (nc_hcosmo_bi_dist_get_t_lb_max (test->dist), >, 0.0);
+
+  /* Serialization keeps zmax and reltol; the data object keeps its calculator and tables */
+  dup = NC_HCOSMO_BI_DIST (ncm_serialize_dup_obj (ser, G_OBJECT (test->dist)));
+  ncm_assert_cmpdouble (nc_hcosmo_bi_dist_get_zmax (dup), ==, 0.5);
+  ncm_assert_cmpdouble (nc_hcosmo_bi_dist_get_reltol (dup), ==, 1.0e-6);
+
+  dmu = nc_data_hcosmo_bi_dist_mu_new (NULL);
+  nc_data_hcosmo_bi_dist_mu_set_dist (dmu, dup);
+  {
+    NcmVector *z     = ncm_vector_new (2);
+    NcmVector *mu    = ncm_vector_new (2);
+    NcmVector *sigma = ncm_vector_new (2);
+    NcmMatrix *p     = ncm_matrix_new (2, 3);
+
+    ncm_vector_set_all (z, 0.1);
+    ncm_vector_set_all (mu, 38.0);
+    ncm_vector_set_all (sigma, 0.2);
+    ncm_matrix_set_identity (p);
+    nc_data_hcosmo_bi_dist_mu_set_data (dmu, z, p, mu, sigma);
+    g_assert_cmpuint (ncm_matrix_nrows (nc_data_hcosmo_bi_dist_mu_peek_p (dmu)), ==, 2);
+
+    ncm_vector_free (z);
+    ncm_vector_free (mu);
+    ncm_vector_free (sigma);
+    ncm_matrix_free (p);
+  }
+  dmu_dup = NC_DATA_HCOSMO_BI_DIST_MU (ncm_serialize_dup_obj (ser, G_OBJECT (dmu)));
+  g_assert_cmpuint (ncm_vector_len (nc_data_hcosmo_bi_dist_mu_peek_z (dmu_dup)), ==, 2);
+  ncm_assert_cmpdouble (ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu_dup), 1, 1), ==, 1.0);
+  g_assert_true (ncm_data_is_init (NCM_DATA (dmu_dup)));
+
+  nc_data_hcosmo_bi_dist_mu_free (dmu_dup);
+  nc_data_hcosmo_bi_dist_mu_free (dmu);
+  nc_hcosmo_bi_dist_free (dup);
+  ncm_serialize_free (ser);
 }
 
 void

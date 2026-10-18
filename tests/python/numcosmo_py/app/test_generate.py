@@ -507,3 +507,22 @@ def test_generate_bianchi_invalid_suffix(tmp_path: Path):
             experiment=exp_file.absolute(),
             catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
         )
+
+
+def test_generate_bianchi_edd_table(tmp_path: Path, edd_cf4_excerpt_file: Path):
+    """Test Bianchi I generation from an EDD export, with a catalog written out."""
+    exp_file = tmp_path / "bianchi_edd.yaml"
+    cat_file = tmp_path / "edd.gvar"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        edd_table=edd_cf4_excerpt_file,
+        edd_downloaded="2026-10-17",
+        omegam_mean=None,
+        ordering=False,
+        catalog_out=cat_file.absolute(),
+    )
+    assert exp_file.exists()
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = ser.from_file(cat_file.absolute().as_posix())
+    assert isinstance(obs, Nc.DistMuObs)
+    assert obs.len() == 6

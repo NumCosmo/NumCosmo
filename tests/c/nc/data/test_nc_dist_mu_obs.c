@@ -136,6 +136,19 @@ test_nc_dist_mu_obs_columns (TestNcDistMuObs *test, gconstpointer pdata)
   g_assert_true (ncm_catalog_has_column (NCM_CATALOG (basic), NC_DIST_MU_OBS_COL_SIGMA_MU));
 
   nc_dist_mu_obs_free (basic);
+
+  /* Typed columns */
+  {
+    const gchar *tcols[]              = {"id", NC_DIST_MU_OBS_COL_RA, NC_DIST_MU_OBS_COL_DEC, NC_DIST_MU_OBS_COL_Z, NC_DIST_MU_OBS_COL_MU, NC_DIST_MU_OBS_COL_SIGMA_MU, "flag", NULL};
+    const NcmCatalogColType ttypes[7] = {NCM_CATALOG_COL_TYPE_INT, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_BOOL};
+    NcDistMuObs *typed                = nc_dist_mu_obs_new_full (3, (GStrv) tcols, ttypes, 7);
+
+    g_assert_cmpint (ncm_catalog_get_col_type (NCM_CATALOG (typed), "id", NULL), ==, NCM_CATALOG_COL_TYPE_INT);
+    g_assert_cmpint (ncm_catalog_get_col_type (NCM_CATALOG (typed), "flag", NULL), ==, NCM_CATALOG_COL_TYPE_BOOL);
+    g_assert_cmpint (ncm_catalog_get_col_type (NCM_CATALOG (typed), NC_DIST_MU_OBS_COL_MU, NULL), ==, NCM_CATALOG_COL_TYPE_DOUBLE);
+
+    nc_dist_mu_obs_free (typed);
+  }
 }
 
 void
