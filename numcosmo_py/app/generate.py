@@ -1731,6 +1731,16 @@ class GenerateBianchi:
         ),
     ] = None
 
+    fundamental_domain: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Bound the orientation to one fundamental domain of its symmetry "
+                "(u1 <= 1/2, u2 <= 1/4); the box holds eight copies of every orientation."
+            )
+        ),
+    ] = True
+
     def _load_obs(self) -> Nc.DistMuObs:
         """Load the catalog from --catalog, --data-file or --edd-table.
 
@@ -1792,6 +1802,7 @@ class GenerateBianchi:
             sample_col=self.sample_col,
             fit_offsets=self.fit_offsets,
             reference_sample=self.reference_sample,
+            fundamental_domain=self.fundamental_domain,
             desc=(
                 f"{source}, mu = {self.mu_col or 'mu'}, "
                 f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "

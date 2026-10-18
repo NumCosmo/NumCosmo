@@ -51,6 +51,7 @@ def build_bianchi_experiment(
     sample_col: str | None = None,
     fit_offsets: bool = False,
     reference_sample: str | None = None,
+    fundamental_domain: bool = True,
     desc: str = "",
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Build a Bianchi I experiment from a catalog.
@@ -88,6 +89,11 @@ def build_bianchi_experiment(
         stay fixed: that of ``reference_sample``.
     :param reference_sample: name of the sample whose offset stays fixed at zero, or the
         sample index as a string; required with ``fit_offsets``.
+    :param fundamental_domain: whether the orientation is bounded to one fundamental domain
+        of its symmetry. The moduli see each principal axis up to sign, so eight points of
+        the (u1, u2, u3) box give the same likelihood: the four translations
+        (u1, u2 + k/4, u3 - k/4) and their images under u1 -> 1 - u1. The domain
+        u1 <= 1/2, u2 <= 1/4 holds one copy of each.
     :param desc: description stored in the data object.
     :return: the experiment (``likelihood`` and ``model-set``) and the derived
         functions H0, Omega_s0, Omega_L0, H2_minus_H1 and H3_minus_H2.
@@ -103,6 +109,11 @@ def build_bianchi_experiment(
     cosmo["H3"] = 1.03 * h_mid
     for name in ("u1", "u2", "u3"):
         cosmo[name] = 0.5
+    if fundamental_domain:
+        for name, upper in (("u1", 0.5), ("u2", 0.25)):
+            pid = cosmo.param_index_from_name(name)[1]
+            cosmo.param_set_upper_bound(pid, upper)
+            cosmo[name] = 0.5 * upper
     cosmo.params_set_default_ftype()
 
     data = Nc.DataHCosmoBIDistMu.new(None)

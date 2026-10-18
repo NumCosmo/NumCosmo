@@ -475,6 +475,13 @@ def test_generate_bianchi(tmp_path: Path):
     assert 0 < z.len() < 1008
     assert max(z.get(i) for i in range(z.len())) <= 0.02
 
+    # The orientation is bounded to one fundamental domain by default
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    cosmo = cast(Nc.HCosmoBI, mset.peek(Nc.HCosmoBI.id()))
+    assert cosmo.param_get_upper_bound(cosmo.param_index_from_name("u1")[1]) == 0.5
+    assert cosmo.param_get_upper_bound(cosmo.param_index_from_name("u2")[1]) == 0.25
+    assert cosmo.param_get_upper_bound(cosmo.param_index_from_name("u3")[1]) == 1.0
+
     # The written catalog loads as a NcDistMuObs and gives the same experiment
     exp_file2 = tmp_path / "bianchi2.yaml"
     _ = gen.GenerateBianchi(
@@ -482,8 +489,15 @@ def test_generate_bianchi(tmp_path: Path):
         data_file=cat_file.absolute(),
         mu_col="DM_av",
         z_max=0.02,
+        fundamental_domain=False,
     )
     assert exp_file2.exists()
+    ser2 = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment2 = ser2.dict_str_from_yaml_file(exp_file2.absolute().as_posix())
+    mset2 = cast(Ncm.MSet, experiment2.get("model-set"))
+    cosmo2 = cast(Nc.HCosmoBI, mset2.peek(Nc.HCosmoBI.id()))
+    assert cosmo2.param_get_upper_bound(cosmo2.param_index_from_name("u1")[1]) == 1.0
+    assert cosmo2.param_get_upper_bound(cosmo2.param_index_from_name("u2")[1]) == 1.0
 
 
 def test_generate_bianchi_sources(tmp_path: Path):
