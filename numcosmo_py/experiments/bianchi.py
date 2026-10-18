@@ -25,7 +25,10 @@
 
 import math
 
+import numpy as np
+
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.datasets.dist_mu_obs import SampleRule, samples_by_rule
 
 
 def build_bianchi_experiment(
@@ -42,6 +45,11 @@ def build_bianchi_experiment(
     ordering: bool = True,
     wall_scale: float = 0.1,
     zmax_factor: float = 1.05,
+    sigma_v: float = 0.0,
+    fit_sigma_v: bool = False,
+    sample_rule: SampleRule = SampleRule.NONE,
+    sample_col: str | None = None,
+    fit_offsets: bool = False,
     desc: str = "",
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Build a Bianchi I experiment from a catalog.
@@ -67,6 +75,14 @@ def build_bianchi_experiment(
     :param wall_scale: width of the walls of the ordering priors [km/s/Mpc].
     :param zmax_factor: the distance calculator covers this factor times the largest
         selected redshift.
+    :param sigma_v: peculiar velocity dispersion [km/s] of the :class:`Nc.DistMuNuisance`
+        added to the model set when it is positive, ``fit_sigma_v`` or ``fit_offsets``.
+    :param fit_sigma_v: whether ``sigma_v`` is a free parameter.
+    :param sample_rule: rule assigning the sample of each object, see
+        :func:`numcosmo_py.datasets.dist_mu_obs.samples_by_rule`.
+    :param sample_col: integer column of the catalog with the sample indices; it
+        overrides ``sample_rule``.
+    :param fit_offsets: whether one free offset per sample is added.
     :param desc: description stored in the data object.
     :return: the experiment (``likelihood`` and ``model-set``) and the derived
         functions H0, Omega_s0, Omega_L0, H2_minus_H1 and H3_minus_H2.
@@ -84,19 +100,51 @@ def build_bianchi_experiment(
         cosmo[name] = 0.5
     cosmo.params_set_default_ftype()
 
-    mset = Ncm.MSet.new_array([cosmo])
-    mset.prepare_fparam_map()
-
     data = Nc.DataHCosmoBIDistMu.new(None)
-    data.set_obs(obs, mu_col, sigma_col, z_min, z_max)
+    data.set_obs(obs, mu_col, sigma_col, sample_col, z_min, z_max)
     z_sel = data.peek_z()
     if z_sel.len() == 0:
         raise ValueError("No object of the catalog lies in the redshift selection.")
+
+    sample_names: list[str] = []
+    if sample_col is None and sample_rule != SampleRule.NONE:
+        # The selection of set_obs, redone here to label the selected rows.
+        columns = list(obs.peek_columns())
+        table = obs.peek_data().to_numpy()
+        z_all = table[:, columns.index("z")]
+        mu_all = table[:, columns.index(mu_col or "mu")]
+        sigma_all = table[:, columns.index(sigma_col or "sigma_mu")]
+        selected = np.nonzero(
+            (z_all >= z_min)
+            & (z_all <= z_max)
+            & np.isfinite(mu_all)
+            & np.isfinite(sigma_all)
+        )[0]
+        assert len(selected) == z_sel.len()
+        samples, sample_names = samples_by_rule(obs, sample_rule, selected)
+        data.set_samples(Ncm.Vector.new_array(samples))
+    nsamples = int(max(data.peek_samples().get(i) for i in range(z_sel.len()))) + 1
     dist = Nc.HCosmoBIDist.new(
         zmax_factor * max(z_sel.get(i) for i in range(z_sel.len()))
     )
     data.set_dist(dist)
-    data.set_desc(desc)
+    data.set_desc(desc + (f", samples {sample_names}" if sample_names else ""))
+
+    models: list[Ncm.Model] = [cosmo]
+    if sigma_v > 0.0 or fit_sigma_v or fit_offsets:
+        nuisance = Nc.DistMuNuisance.new(nsamples if fit_offsets else 0)
+        nuisance["sigmav"] = sigma_v
+        nuisance.param_set_ftype(
+            nuisance.param_index_from_name("sigmav")[1],
+            Ncm.ParamType.FREE if fit_sigma_v else Ncm.ParamType.FIXED,
+        )
+        for s in range(nsamples if fit_offsets else 0):
+            nuisance.param_set_ftype(
+                nuisance.param_index_from_name(f"dmu_{s}")[1], Ncm.ParamType.FREE
+            )
+        models.append(nuisance)
+    mset = Ncm.MSet.new_array(models)
+    mset.prepare_fparam_map()
 
     dset = Ncm.Dataset.new_array([data])
     likelihood = Ncm.Likelihood.new(dset)

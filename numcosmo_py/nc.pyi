@@ -84,9 +84,13 @@ DATA_SNIA_COV_LEN: int = 1
 DATA_SNIA_SIMPLE_LEN: int = 1
 DATA_XCOR_DL: int = 10
 DATA_XCOR_MAX: int = 5
+DIST_MU_NUISANCE_DEFAULT_DMU: float = 0.0
+DIST_MU_NUISANCE_DEFAULT_PARAMS_ABSTOL: float = 0.0
+DIST_MU_NUISANCE_DEFAULT_SIGMA_V: float = 0.0
 DIST_MU_OBS_COL_DEC: str = r"dec"
 DIST_MU_OBS_COL_MU: str = r"mu"
 DIST_MU_OBS_COL_RA: str = r"ra"
+DIST_MU_OBS_COL_SAMPLE: str = r"sample"
 DIST_MU_OBS_COL_SIGMA_MU: str = r"sigma_mu"
 DIST_MU_OBS_COL_Z: str = r"z"
 GALAXY_HOD_ZHENG07_DEFAULT_ALPHA: float = 1.15
@@ -6153,6 +6157,10 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
         Data redshifts
       p -> NcmMatrix: p
         Data directions
+      sigma-mu -> NcmVector: sigma-mu
+        Measured uncertainties of the moduli
+      sample -> NcmVector: sample
+        Sample index of each object
 
     Properties from NcmDataGaussDiag:
       n-points -> guint: n-points
@@ -6183,6 +6191,8 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
     class Props:
         dist: typing.Optional[HCosmoBIDist]
         p: NumCosmoMath.Matrix
+        sample: NumCosmoMath.Vector
+        sigma_mu: NumCosmoMath.Vector
         z: NumCosmoMath.Vector
         mean: NumCosmoMath.Vector
         n_points: int
@@ -6199,6 +6209,8 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
         self,
         dist: typing.Optional[HCosmoBIDist] = ...,
         p: NumCosmoMath.Matrix = ...,
+        sample: NumCosmoMath.Vector = ...,
+        sigma_mu: NumCosmoMath.Vector = ...,
         z: NumCosmoMath.Vector = ...,
         mean: NumCosmoMath.Vector = ...,
         n_points: int = ...,
@@ -6216,6 +6228,8 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
     @classmethod
     def new(cls, dist: typing.Optional[HCosmoBIDist] = None) -> DataHCosmoBIDistMu: ...
     def peek_p(self) -> NumCosmoMath.Matrix: ...
+    def peek_samples(self) -> NumCosmoMath.Vector: ...
+    def peek_sigma_mu(self) -> NumCosmoMath.Vector: ...
     def peek_z(self) -> NumCosmoMath.Vector: ...
     def ref(self) -> DataHCosmoBIDistMu: ...
     def set_data(
@@ -6231,9 +6245,11 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
         obs: DistMuObs,
         mu_col: typing.Optional[str],
         sigma_col: typing.Optional[str],
+        sample_col: typing.Optional[str],
         z_min: float,
         z_max: float,
     ) -> None: ...
+    def set_samples(self, sample: NumCosmoMath.Vector) -> None: ...
 
 class DataHCosmoBIDistMuClass(GObject.GPointer):
     r"""
@@ -7524,6 +7540,105 @@ class DataXcorClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataGaussCovClass = ...
+
+class DistMuNuisance(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuNuisance(**properties)
+        new(nsamples:int) -> NumCosmo.DistMuNuisance
+
+    Object NcDistMuNuisance
+
+    Properties from NcDistMuNuisance:
+      sigmav -> gdouble: sigmav
+        \sigma_v
+      dmu -> NcmVector: dmu
+        \delta\mu
+      dmu-length -> guint: dmu-length
+        \delta\mu:length
+      sigmav-fit -> gboolean: sigmav-fit
+        \sigma_v:fit
+      dmu-fit -> GVariant: dmu-fit
+        \delta\mu:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        dmu: NumCosmoMath.Vector
+        dmu_fit: GLib.Variant
+        dmu_length: int
+        sigmav: float
+        sigmav_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        dmu: NumCosmoMath.Vector = ...,
+        dmu_fit: GLib.Variant = ...,
+        dmu_length: int = ...,
+        sigmav: float = ...,
+        sigmav_fit: bool = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(nuisance: DistMuNuisance) -> None: ...
+    def free(self) -> None: ...
+    def get_dmu(self, sample: int) -> float: ...
+    def get_nsamples(self) -> int: ...
+    def get_sigma_v(self) -> float: ...
+    @staticmethod
+    def id() -> int: ...
+    @classmethod
+    def new(cls, nsamples: int) -> DistMuNuisance: ...
+    def ref(self) -> DistMuNuisance: ...
+    def sigma_mu_v(self, z: float) -> float: ...
+
+class DistMuNuisanceClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuNuisanceClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
 
 class DistMuObs(NumCosmoMath.Catalog):
     r"""
@@ -27255,6 +27370,34 @@ class DataSNIAId(GObject.GEnum):
     SIMPLE_UNION: DataSNIAId = ...
     SIMPLE_UNION2: DataSNIAId = ...
     SIMPLE_UNION2_1: DataSNIAId = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class DistMuNuisanceSParams(GObject.GEnum):
+    SIGMA_V: DistMuNuisanceSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class DistMuNuisanceVParams(GObject.GEnum):
+    DMU: DistMuNuisanceVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

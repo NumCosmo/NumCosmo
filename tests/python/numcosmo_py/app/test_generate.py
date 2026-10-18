@@ -526,3 +526,30 @@ def test_generate_bianchi_edd_table(tmp_path: Path, edd_cf4_excerpt_file: Path):
     obs = ser.from_file(cat_file.absolute().as_posix())
     assert isinstance(obs, Nc.DistMuObs)
     assert obs.len() == 6
+
+
+def test_generate_bianchi_nuisance(tmp_path: Path, edd_cf4_excerpt_file: Path):
+    """Test Bianchi I generation with the velocity dispersion and per-sample offsets."""
+    exp_file = tmp_path / "bianchi_nuisance.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        edd_table=edd_cf4_excerpt_file,
+        sigma_v=300.0,
+        fit_sigma_v=True,
+        sample_rule=dist_mu_obs.SampleRule.SMALLEST_ERROR,
+        fit_offsets=True,
+        omegam_mean=None,
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    nuisance = cast(Nc.DistMuNuisance, mset.peek(Nc.DistMuNuisance.id()))
+    assert nuisance.get_sigma_v() == 300.0
+    assert nuisance.get_nsamples() >= 1
+    assert mset.fparams_len() == 7 + 1 + nuisance.get_nsamples()
+    likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+    data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+    samples = data.peek_samples()
+    assert (
+        max(samples.get(i) for i in range(samples.len())) == nuisance.get_nsamples() - 1
+    )

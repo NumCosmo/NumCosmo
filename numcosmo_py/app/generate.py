@@ -37,6 +37,7 @@ import typer
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.datasets.dist_mu_obs import (
     DistMuObsCatalogID,
+    SampleRule,
     edd_cf4_snia_to_dist_mu_obs,
 )
 from numcosmo_py.datasets.hicosmo import (
@@ -1686,6 +1687,39 @@ class GenerateBianchi:
         ),
     ] = 1.05
 
+    sigma_v: Annotated[
+        float,
+        typer.Option(
+            help="Peculiar velocity dispersion [km/s] added in quadrature to the errors."
+        ),
+    ] = 0.0
+
+    fit_sigma_v: Annotated[
+        bool, typer.Option(help="Fit the peculiar velocity dispersion.")
+    ] = False
+
+    sample_rule: Annotated[
+        SampleRule,
+        typer.Option(
+            help=(
+                "Rule assigning each object to a sample: smallest_error picks the survey "
+                "with the smallest error, hemisphere splits at dec = 0."
+            )
+        ),
+    ] = SampleRule.NONE
+
+    sample_col: Annotated[
+        str | None,
+        typer.Option(
+            help="Integer column with the sample indices; overrides --sample-rule.",
+            show_default=False,
+        ),
+    ] = None
+
+    fit_offsets: Annotated[
+        bool, typer.Option(help="Fit one distance modulus offset per sample.")
+    ] = False
+
     def _load_obs(self) -> Nc.DistMuObs:
         """Load the catalog from --catalog, --data-file or --edd-table.
 
@@ -1741,6 +1775,11 @@ class GenerateBianchi:
             ordering=self.ordering,
             wall_scale=self.wall_scale,
             zmax_factor=self.zmax_factor,
+            sigma_v=self.sigma_v,
+            fit_sigma_v=self.fit_sigma_v,
+            sample_rule=self.sample_rule,
+            sample_col=self.sample_col,
+            fit_offsets=self.fit_offsets,
             desc=(
                 f"{source}, mu = {self.mu_col or 'mu'}, "
                 f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "

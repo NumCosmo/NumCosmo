@@ -1559,6 +1559,14 @@
     "nick": "int-e",
     "type": "Nc.DistanceComovingMethod"
   },
+  "NC_DIST_MU_NUISANCE_DMU": {
+    "nick": "dmu",
+    "type": "Nc.DistMuNuisanceVParams"
+  },
+  "NC_DIST_MU_NUISANCE_SIGMA_V": {
+    "nick": "sigma-v",
+    "type": "Nc.DistMuNuisanceSParams"
+  },
   "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
     "nick": "cf4-snia",
     "type": "Nc.DistMuObsCatalogId"
