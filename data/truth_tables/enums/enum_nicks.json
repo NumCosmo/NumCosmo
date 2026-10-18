@@ -1775,6 +1775,34 @@
     "nick": "z",
     "type": "Nc.HaloPositionSParams"
   },
+  "NC_HCOSMO_BI_H1": {
+    "nick": "h1",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_H2": {
+    "nick": "h2",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_H3": {
+    "nick": "h3",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_OMEGA_M": {
+    "nick": "omega-m",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U1": {
+    "nick": "u1",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U2": {
+    "nick": "u2",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U3": {
+    "nick": "u3",
+    "type": "Nc.HCosmoBISParams"
+  },
   "NC_HICOSMO_DE_CPL_W0": {
     "nick": "w0",
     "type": "Nc.HICosmoDECplSParams"

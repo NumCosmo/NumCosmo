@@ -95,6 +95,7 @@
 #include <numcosmo/nc/background/nc_hicosmo_qgrw.h>
 #include <numcosmo/nc/background/nc_hicosmo_qgw.h>
 #include <numcosmo/nc/background/nc_hicosmo_Vexp.h>
+#include <numcosmo/nc/background/nc_hcosmo_bi.h>
 #include <numcosmo/nc/primordial/nc_hiprim_power_law.h>
 #include <numcosmo/nc/primordial/nc_hiprim_atan.h>
 #include <numcosmo/nc/primordial/nc_hiprim_expc.h>

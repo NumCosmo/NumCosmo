@@ -79,6 +79,7 @@ void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
 void test_nc_galaxy_wl_obs_basic (void);
 void test_nc_halo_position_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
+void test_nc_hcosmo_bi_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
@@ -174,6 +175,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/wl_obs/basic", test_nc_galaxy_wl_obs_basic);
   g_test_add_func ("/nc/halo_position/basic", test_nc_halo_position_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
+  g_test_add_func ("/nc/hcosmo_bi/basic", test_nc_hcosmo_bi_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
   g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
@@ -849,6 +851,23 @@ test_nc_hicosmo_qgw_basic (void)
   g_assert_true (NC_IS_HICOSMO_QGW (qgw));
 
   NCM_TEST_FREE (nc_hicosmo_free, NC_HICOSMO (qgw));
+}
+
+void
+test_nc_hcosmo_bi_basic (void)
+{
+  NcHCosmoBI *cosmo = nc_hcosmo_bi_new ();
+  NcHCosmoBI *cosmo2;
+
+  g_assert_true (NC_IS_HCOSMO_BI (cosmo));
+
+  cosmo2 = nc_hcosmo_bi_ref (cosmo);
+  nc_hcosmo_bi_clear (&cosmo2);
+  g_assert_true (cosmo2 == NULL);
+
+  g_assert_true (NC_IS_HCOSMO_BI (cosmo));
+
+  NCM_TEST_FREE (nc_hcosmo_bi_free, cosmo);
 }
 
 void

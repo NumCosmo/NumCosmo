@@ -593,6 +593,11 @@ model_tests = [
         'name': 'nc_distance',
         'sources': ['nc/background/test_nc_distance.c'],
     },
+    {
+        'name': 'nc_hcosmo_bi',
+        'sources': ['nc/background/test_nc_hcosmo_bi.c'],
+        'include_directories': [sundials_inc],
+    },
 ]
 
 # Data tests
