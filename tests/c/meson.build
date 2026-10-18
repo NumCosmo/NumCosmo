@@ -598,6 +598,10 @@ model_tests = [
         'sources': ['nc/background/test_nc_hcosmo_bi.c'],
         'include_directories': [sundials_inc],
     },
+    {
+        'name': 'nc_hcosmo_bi_dist',
+        'sources': ['nc/background/test_nc_hcosmo_bi_dist.c'],
+    },
 ]
 
 # Data tests

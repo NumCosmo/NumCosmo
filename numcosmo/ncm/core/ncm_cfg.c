@@ -114,6 +114,7 @@
 #include "nc/background/nc_hicosmo_qlinear.h"
 #include "nc/background/nc_hicosmo_qspline.h"
 #include "nc/background/nc_hcosmo_bi.h"
+#include "nc/background/nc_hcosmo_bi_dist.h"
 #include "nc/background/nc_hicosmo_qrbf.h"
 #include "nc/background/nc_hicosmo_lcdm.h"
 #include "nc/background/nc_hicosmo_de_xcdm.h"
@@ -246,6 +247,7 @@
 #include "nc/data/nc_data_bao_dmr_hr.h"
 #include "nc/data/nc_data_bao_dvr_dtdh.h"
 #include "nc/data/nc_data_dist_mu.h"
+#include "nc/data/nc_data_hcosmo_bi_dist_mu.h"
 #include "nc/data/nc_data_cluster_pseudo_counts.h"
 #include "nc/data/nc_data_cluster_ncount.h"
 #include "nc/data/nc_data_cluster_ncounts_gauss.h"
@@ -894,6 +896,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
 
   ncm_cfg_register_obj (NC_TYPE_HCOSMO_BI);
+  ncm_cfg_register_obj (NC_TYPE_HCOSMO_BI_DIST);
 
 
 
@@ -1057,6 +1060,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVR_DTDH);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
+  ncm_cfg_register_obj (NC_TYPE_DATA_HCOSMO_BI_DIST_MU);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
 

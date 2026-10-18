@@ -80,6 +80,8 @@ void test_nc_galaxy_wl_obs_basic (void);
 void test_nc_halo_position_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hcosmo_bi_basic (void);
+void test_nc_hcosmo_bi_dist_basic (void);
+void test_nc_data_hcosmo_bi_dist_mu_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
@@ -176,6 +178,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/halo_position/basic", test_nc_halo_position_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
   g_test_add_func ("/nc/hcosmo_bi/basic", test_nc_hcosmo_bi_basic);
+  g_test_add_func ("/nc/hcosmo_bi_dist/basic", test_nc_hcosmo_bi_dist_basic);
+  g_test_add_func ("/nc/data/hcosmo_bi_dist_mu/basic", test_nc_data_hcosmo_bi_dist_mu_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
   g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
@@ -868,6 +872,42 @@ test_nc_hcosmo_bi_basic (void)
   g_assert_true (NC_IS_HCOSMO_BI (cosmo));
 
   NCM_TEST_FREE (nc_hcosmo_bi_free, cosmo);
+}
+
+void
+test_nc_hcosmo_bi_dist_basic (void)
+{
+  NcHCosmoBIDist *dist = nc_hcosmo_bi_dist_new (0.1);
+  NcHCosmoBIDist *dist2;
+
+  g_assert_true (NC_IS_HCOSMO_BI_DIST (dist));
+
+  dist2 = nc_hcosmo_bi_dist_ref (dist);
+  nc_hcosmo_bi_dist_clear (&dist2);
+  g_assert_true (dist2 == NULL);
+
+  g_assert_true (NC_IS_HCOSMO_BI_DIST (dist));
+
+  NCM_TEST_FREE (nc_hcosmo_bi_dist_free, dist);
+}
+
+void
+test_nc_data_hcosmo_bi_dist_mu_basic (void)
+{
+  NcHCosmoBIDist *dist      = nc_hcosmo_bi_dist_new (0.1);
+  NcDataHCosmoBIDistMu *dmu = nc_data_hcosmo_bi_dist_mu_new (dist);
+  NcDataHCosmoBIDistMu *dmu2;
+
+  g_assert_true (NC_IS_DATA_HCOSMO_BI_DIST_MU (dmu));
+
+  dmu2 = nc_data_hcosmo_bi_dist_mu_ref (dmu);
+  nc_data_hcosmo_bi_dist_mu_clear (&dmu2);
+  g_assert_true (dmu2 == NULL);
+
+  g_assert_true (NC_IS_DATA_HCOSMO_BI_DIST_MU (dmu));
+
+  nc_hcosmo_bi_dist_free (dist);
+  NCM_TEST_FREE (nc_data_hcosmo_bi_dist_mu_free, dmu);
 }
 
 void
