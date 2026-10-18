@@ -284,6 +284,9 @@ HIREION_CAMB_DEFAULT_HII_HEII_REION_EXPO: float = 1.5
 HIREION_CAMB_DEFAULT_HII_HEII_Z: float = 13.0
 HIREION_DEFAULT_PARAMS_ABSTOL: float = 0.0
 MULTIPLICITY_FUNC_DELTA_C0: float = 1.68647
+OBSERVER_VELOCITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
+OBSERVER_VELOCITY_DEFAULT_V: float = 0.0
+OBSERVER_VELOCITY_MAX_V: float = 2000.0
 PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_100_100_EE: float = 1.0
 PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_143_143_EE: float = 1.0
 PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_217_217_EE: float = 1.0
@@ -19891,6 +19894,109 @@ class MultiplicityFuncWatsonClass(GObject.GPointer):
 
     parent_class: MultiplicityFuncClass = ...
 
+class ObserverVelocity(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        ObserverVelocity(**properties)
+        new() -> NumCosmo.ObserverVelocity
+
+    Object NcObserverVelocity
+
+    Properties from NcObserverVelocity:
+      vx -> gdouble: vx
+        v_x
+      vy -> gdouble: vy
+        v_y
+      vz -> gdouble: vz
+        v_z
+      vx-fit -> gboolean: vx-fit
+        v_x:fit
+      vy-fit -> gboolean: vy-fit
+        v_y:fit
+      vz-fit -> gboolean: vz-fit
+        v_z:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        vx: float
+        vx_fit: bool
+        vy: float
+        vy_fit: bool
+        vz: float
+        vz_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        vx: float = ...,
+        vx_fit: bool = ...,
+        vy: float = ...,
+        vy_fit: bool = ...,
+        vz: float = ...,
+        vz_fit: bool = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def beta_n(self, nx: float, ny: float, nz: float) -> float: ...
+    @staticmethod
+    def clear(ov: ObserverVelocity) -> None: ...
+    def doppler(self, nx: float, ny: float, nz: float) -> float: ...
+    def free(self) -> None: ...
+    @staticmethod
+    def id() -> int: ...
+    @classmethod
+    def new(cls) -> ObserverVelocity: ...
+    def ref(self) -> ObserverVelocity: ...
+    def speed(self) -> float: ...
+    def z_rest(self, z_obs: float, nx: float, ny: float, nz: float) -> float: ...
+
+class ObserverVelocityClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ObserverVelocityClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+
 class PlanckFI(NumCosmoMath.Model):
     r"""
     :Constructors:
@@ -28566,6 +28672,22 @@ class MultiplicityFuncMassDef(GObject.GEnum):
     FOF: MultiplicityFuncMassDef = ...
     MEAN: MultiplicityFuncMassDef = ...
     VIRIAL: MultiplicityFuncMassDef = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class ObserverVelocitySParams(GObject.GEnum):
+    VX: ObserverVelocitySParams = ...
+    VY: ObserverVelocitySParams = ...
+    VZ: ObserverVelocitySParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

@@ -41,6 +41,13 @@
  * $\sqrt{\sigma_\mu^2 + \sigma_{\mu,v}(z)^2}$, see nc_dist_mu_nuisance_sigma_mu_v().
  * Without it the standard deviation is $\sigma_\mu$.
  *
+ * When the model set holds a #NcObserverVelocity, the model value of an object is that of
+ * the rest frame at nc_observer_velocity_z_rest() minus $5\log_{10}$ of
+ * nc_observer_velocity_doppler(), the observer's motion relative to the rest frame of the
+ * model; the velocity term of the standard deviation keeps the observed redshift. The
+ * rest-frame redshift of every object must stay positive and within
+ * #NcHCosmoBIDist:zmax, which bounds the velocity by the smallest redshift of the data.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -49,6 +56,7 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_hcosmo_bi_dist_mu.h"
+#include "nc/data/nc_observer_velocity.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -284,6 +292,7 @@ _nc_data_hcosmo_bi_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
   NcDataHCosmoBIDistMu *dmu  = NC_DATA_HCOSMO_BI_DIST_MU (diag);
   NcHCosmoBI *cosmo          = NC_HCOSMO_BI (ncm_mset_peek (mset, nc_hcosmo_bi_id ()));
   NcDistMuNuisance *nuisance = NC_DIST_MU_NUISANCE (ncm_mset_peek (mset, nc_dist_mu_nuisance_id ()));
+  NcObserverVelocity *ov     = NC_OBSERVER_VELOCITY (ncm_mset_peek (mset, nc_observer_velocity_id ()));
   const gdouble f_lnRH       = 5.0 * log10 (nc_hcosmo_bi_RH_Mpc (cosmo));
   const guint np             = ncm_data_gauss_diag_get_size (diag);
   const gint nsamples        = (nuisance != NULL) ? (gint) nc_dist_mu_nuisance_get_nsamples (nuisance) : 0;
@@ -291,15 +300,28 @@ _nc_data_hcosmo_bi_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
 
   for (i = 0; i < np; i++)
   {
-    const gdouble z     = ncm_vector_get (dmu->z, i);
-    const gint s        = (gint) ncm_vector_get (dmu->sample, i);
-    const gdouble dmu_i = nc_hcosmo_bi_dist_dmodulus_sky (dmu->dist, z,
-                                                          ncm_matrix_get (dmu->p, i, 0),
-                                                          ncm_matrix_get (dmu->p, i, 1),
-                                                          ncm_matrix_get (dmu->p, i, 2));
+    const gdouble px  = ncm_matrix_get (dmu->p, i, 0);
+    const gdouble py  = ncm_matrix_get (dmu->p, i, 1);
+    const gdouble pz  = ncm_matrix_get (dmu->p, i, 2);
+    const gint s      = (gint) ncm_vector_get (dmu->sample, i);
     const gdouble off = ((s >= 0) && (s < nsamples)) ? nc_dist_mu_nuisance_get_dmu (nuisance, s) : 0.0;
+    gdouble z         = ncm_vector_get (dmu->z, i);
+    gdouble f_lnD     = 0.0;
 
-    ncm_vector_set (vp, i, dmu_i + f_lnRH + off);
+    if (ov != NULL)
+    {
+      const gdouble D = nc_observer_velocity_doppler (ov, px, py, pz);
+
+      z     = (1.0 + z) * D - 1.0;
+      f_lnD = 5.0 * log10 (D);
+
+      if (z <= 0.0)
+        g_error ("_nc_data_hcosmo_bi_dist_mu_mean_func: object %u has a rest-frame redshift %g <= 0 for the "
+                 "observer velocity %g km/s; raise the lower redshift limit of the data or bound the velocity.",
+                 i, z, nc_observer_velocity_speed (ov));
+    }
+
+    ncm_vector_set (vp, i, nc_hcosmo_bi_dist_dmodulus_sky (dmu->dist, z, px, py, pz) - f_lnD + f_lnRH + off);
   }
 }
 

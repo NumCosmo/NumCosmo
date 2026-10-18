@@ -500,6 +500,43 @@ def test_generate_bianchi(tmp_path: Path):
     assert cosmo2.param_get_upper_bound(cosmo2.param_index_from_name("u2")[1]) == 1.0
 
 
+def test_generate_bianchi_velocity(tmp_path: Path):
+    """Test Bianchi I generation with the observer velocity free."""
+    exp_file = tmp_path / "bianchi_v.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+        z_min=0.01,
+        z_max=0.03,
+        fit_velocity=True,
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    velocity = cast(Nc.ObserverVelocity, mset.peek(Nc.ObserverVelocity.id()))
+    assert velocity is not None
+    assert all(
+        velocity.param_get_ftype(velocity.param_index_from_name(n)[1])
+        == Ncm.ParamType.FREE
+        for n in ("vx", "vy", "vz")
+    )
+    assert velocity.speed() == 0.0
+    # The distance table reaches beyond the largest redshift by the largest beta
+    likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+    data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+    dist = data.props.dist
+    assert dist.props.zmax > 1.05 * 0.03 + Nc.OBSERVER_VELOCITY_MAX_V / 299792.458
+
+    # Too small a lower redshift limit for the velocity bound
+    with pytest.raises(ValueError, match="raise z_min"):
+        _ = gen.GenerateBianchi(
+            experiment=(tmp_path / "bianchi_v2.yaml").absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+            z_max=0.03,
+            fit_velocity=True,
+        )
+
+
 def test_generate_bianchi_sources(tmp_path: Path):
     """Test Bianchi I generation rejects zero or two catalog sources."""
     exp_file = tmp_path / "bianchi.yaml"

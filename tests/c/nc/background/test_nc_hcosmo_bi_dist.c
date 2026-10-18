@@ -443,6 +443,40 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
       nc_dist_mu_nuisance_free (nuisance);
     }
 
+    /* An observer velocity: the mean is the rest-frame modulus at z_rest minus 5 log10 D */
+    {
+      NcObserverVelocity *ov = nc_observer_velocity_new ();
+      NcmMSet *mset_v        = ncm_mset_new (NCM_MODEL (test->cosmo), NULL, ov, NULL);
+      const gdouble f_lnRH   = 5.0 * log10 (nc_hcosmo_bi_RH_Mpc (test->cosmo));
+      gdouble m2lnL_v, m2lnL_ref_v = 0.0;
+
+      ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VX, 200.0);
+      ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VY, -300.0);
+      ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VZ, 100.0);
+
+      for (i = 0; i < 3; i++)
+      {
+        const gdouble px     = ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu), i, 0);
+        const gdouble py     = ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu), i, 1);
+        const gdouble pz     = ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu), i, 2);
+        const gdouble D      = nc_observer_velocity_doppler (ov, px, py, pz);
+        const gdouble z_rest = nc_observer_velocity_z_rest (ov, ncm_vector_get (z, i), px, py, pz);
+        const gdouble mu_v   = nc_hcosmo_bi_dist_dmodulus_sky (test->dist, z_rest, px, py, pz) - 5.0 * log10 (D) + f_lnRH;
+        const gdouble s_i    = ncm_vector_get (sigma, i);
+
+        g_assert_cmpfloat (fabs (D - 1.0), >, 1.0e-5);
+        m2lnL_ref_v += gsl_pow_2 ((ncm_vector_get (mu, i) - mu_v) / s_i) + 2.0 * log (s_i) + ncm_c_ln2pi ();
+      }
+
+      ncm_data_prepare (NCM_DATA (dmu), mset_v);
+      ncm_data_m2lnL_val (NCM_DATA (dmu), mset_v, &m2lnL_v);
+      ncm_assert_cmpdouble_e (m2lnL_v, ==, m2lnL_ref_v, 1.0e-13, 0.0);
+      g_assert_cmpfloat (fabs (m2lnL_v - m2lnL), >, 1.0e-3);
+
+      ncm_mset_free (mset_v);
+      nc_observer_velocity_free (ov);
+    }
+
     nc_data_hcosmo_bi_dist_mu_free (dmu_obs);
     nc_dist_mu_obs_free (obs);
   }

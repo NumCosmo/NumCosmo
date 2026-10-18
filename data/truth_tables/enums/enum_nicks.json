@@ -2719,6 +2719,18 @@
     "nick": "virial",
     "type": "Nc.MultiplicityFuncMassDef"
   },
+  "NC_OBSERVER_VELOCITY_VX": {
+    "nick": "vx",
+    "type": "Nc.ObserverVelocitySParams"
+  },
+  "NC_OBSERVER_VELOCITY_VY": {
+    "nick": "vy",
+    "type": "Nc.ObserverVelocitySParams"
+  },
+  "NC_OBSERVER_VELOCITY_VZ": {
+    "nick": "vz",
+    "type": "Nc.ObserverVelocitySParams"
+  },
   "NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_100_100_EE": {
     "nick": "a-cnoise-e2e-100-100-ee",
     "type": "Nc.PlanckFICorTTTEEESParams"

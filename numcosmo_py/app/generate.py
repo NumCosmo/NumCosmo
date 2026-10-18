@@ -1741,6 +1741,16 @@ class GenerateBianchi:
         ),
     ] = True
 
+    fit_velocity: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Fit the velocity of the observer relative to the rest frame of the model "
+                "(three components, km/s); needs --z-min above the velocity bound over c."
+            )
+        ),
+    ] = False
+
     def _load_obs(self) -> Nc.DistMuObs:
         """Load the catalog from --catalog, --data-file or --edd-table.
 
@@ -1803,6 +1813,7 @@ class GenerateBianchi:
             fit_offsets=self.fit_offsets,
             reference_sample=self.reference_sample,
             fundamental_domain=self.fundamental_domain,
+            fit_velocity=self.fit_velocity,
             desc=(
                 f"{source}, mu = {self.mu_col or 'mu'}, "
                 f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "

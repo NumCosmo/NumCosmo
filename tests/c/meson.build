@@ -624,6 +624,10 @@ data_tests = [
         'sources': ['nc/data/test_nc_dist_mu_nuisance.c'],
     },
     {
+        'name': 'nc_observer_velocity',
+        'sources': ['nc/data/test_nc_observer_velocity.c'],
+    },
+    {
         'name': 'nc_data_bao_dtr_dhr',
         'sources': ['nc/data/test_nc_data_bao_dtr_dhr.c'],
     },

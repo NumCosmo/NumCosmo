@@ -28,7 +28,11 @@ import math
 import numpy as np
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.datasets.dist_mu_obs import SampleRule, samples_by_rule
+from numcosmo_py.datasets.dist_mu_obs import (
+    SPEED_OF_LIGHT_KM_S,
+    SampleRule,
+    samples_by_rule,
+)
 
 
 def build_bianchi_experiment(
@@ -52,6 +56,7 @@ def build_bianchi_experiment(
     fit_offsets: bool = False,
     reference_sample: str | None = None,
     fundamental_domain: bool = True,
+    fit_velocity: bool = False,
     desc: str = "",
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Build a Bianchi I experiment from a catalog.
@@ -94,6 +99,11 @@ def build_bianchi_experiment(
         the (u1, u2, u3) box give the same likelihood: the four translations
         (u1, u2 + k/4, u3 - k/4) and their images under u1 -> 1 - u1. The domain
         u1 <= 1/2, u2 <= 1/4 holds one copy of each.
+    :param fit_velocity: whether a :class:`Nc.ObserverVelocity` with its three components
+        free is added to the model set, the velocity of the observer relative to the rest
+        frame of the model. The rest-frame redshift of every object must stay positive, so
+        ``z_min`` must exceed the largest velocity allowed over the speed of light; the
+        distance calculator reaches that much beyond the largest redshift.
     :param desc: description stored in the data object.
     :return: the experiment (``likelihood`` and ``model-set``) and the derived
         functions H0, Omega_s0, Omega_L0, H2_minus_H1 and H3_minus_H2.
@@ -145,9 +155,18 @@ def build_bianchi_experiment(
         sample_names = [names[i] for i in used]
         data.set_samples(Ncm.Vector.new_array(samples))
     nsamples = int(max(data.peek_samples().get(i) for i in range(z_sel.len()))) + 1
-    dist = Nc.HCosmoBIDist.new(
-        zmax_factor * max(z_sel.get(i) for i in range(z_sel.len()))
-    )
+    z_top = max(z_sel.get(i) for i in range(z_sel.len()))
+    beta_max = 0.0
+    if fit_velocity:
+        beta_max = Nc.OBSERVER_VELOCITY_MAX_V / SPEED_OF_LIGHT_KM_S
+        z_low = min(z_sel.get(i) for i in range(z_sel.len()))
+        if z_low <= beta_max * (1.0 + z_low) / (1.0 - beta_max):
+            raise ValueError(
+                f"The smallest selected redshift {z_low:.4g} allows a rest-frame redshift "
+                f"below zero for velocities up to {Nc.OBSERVER_VELOCITY_MAX_V:g} km/s; "
+                "raise z_min."
+            )
+    dist = Nc.HCosmoBIDist.new(zmax_factor * z_top + beta_max * (1.0 + z_top))
     data.set_dist(dist)
     data.set_desc(desc + (f", samples {sample_names}" if sample_names else ""))
 
@@ -177,6 +196,13 @@ def build_bianchi_experiment(
                     Ncm.ParamType.FIXED if s == reference else Ncm.ParamType.FREE,
                 )
         models.append(nuisance)
+    if fit_velocity:
+        velocity = Nc.ObserverVelocity.new()
+        for name in ("vx", "vy", "vz"):
+            velocity.param_set_ftype(
+                velocity.param_index_from_name(name)[1], Ncm.ParamType.FREE
+            )
+        models.append(velocity)
     mset = Ncm.MSet.new_array(models)
     mset.prepare_fparam_map()
 
