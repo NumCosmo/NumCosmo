@@ -1720,6 +1720,17 @@ class GenerateBianchi:
         bool, typer.Option(help="Fit one distance modulus offset per sample.")
     ] = False
 
+    reference_sample: Annotated[
+        str | None,
+        typer.Option(
+            help=(
+                "Sample whose offset stays fixed at zero with --fit-offsets, by name "
+                "(a survey, north or south) or by index."
+            ),
+            show_default=False,
+        ),
+    ] = None
+
     def _load_obs(self) -> Nc.DistMuObs:
         """Load the catalog from --catalog, --data-file or --edd-table.
 
@@ -1780,6 +1791,7 @@ class GenerateBianchi:
             sample_rule=self.sample_rule,
             sample_col=self.sample_col,
             fit_offsets=self.fit_offsets,
+            reference_sample=self.reference_sample,
             desc=(
                 f"{source}, mu = {self.mu_col or 'mu'}, "
                 f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "

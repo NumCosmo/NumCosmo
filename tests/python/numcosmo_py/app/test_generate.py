@@ -538,6 +538,7 @@ def test_generate_bianchi_nuisance(tmp_path: Path, edd_cf4_excerpt_file: Path):
         fit_sigma_v=True,
         sample_rule=dist_mu_obs.SampleRule.SMALLEST_ERROR,
         fit_offsets=True,
+        reference_sample="0",
         omegam_mean=None,
     )
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
@@ -546,7 +547,22 @@ def test_generate_bianchi_nuisance(tmp_path: Path, edd_cf4_excerpt_file: Path):
     nuisance = cast(Nc.DistMuNuisance, mset.peek(Nc.DistMuNuisance.id()))
     assert nuisance.get_sigma_v() == 300.0
     assert nuisance.get_nsamples() >= 1
-    assert mset.fparams_len() == 7 + 1 + nuisance.get_nsamples()
+    assert mset.fparams_len() == 7 + 1 + nuisance.get_nsamples() - 1
+    with pytest.raises(ValueError, match="not among the samples"):
+        gen.GenerateBianchi(
+            experiment=(tmp_path / "b3.yaml").absolute(),
+            edd_table=edd_cf4_excerpt_file,
+            sample_rule=dist_mu_obs.SampleRule.SMALLEST_ERROR,
+            fit_offsets=True,
+            reference_sample="nosuchsurvey",
+        )
+    with pytest.raises(ValueError, match="needs a reference_sample"):
+        gen.GenerateBianchi(
+            experiment=(tmp_path / "b2.yaml").absolute(),
+            edd_table=edd_cf4_excerpt_file,
+            sample_rule=dist_mu_obs.SampleRule.HEMISPHERE,
+            fit_offsets=True,
+        )
     likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
     data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
     samples = data.peek_samples()

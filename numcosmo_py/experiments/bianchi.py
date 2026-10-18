@@ -50,6 +50,7 @@ def build_bianchi_experiment(
     sample_rule: SampleRule = SampleRule.NONE,
     sample_col: str | None = None,
     fit_offsets: bool = False,
+    reference_sample: str | None = None,
     desc: str = "",
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Build a Bianchi I experiment from a catalog.
@@ -82,7 +83,11 @@ def build_bianchi_experiment(
         :func:`numcosmo_py.datasets.dist_mu_obs.samples_by_rule`.
     :param sample_col: integer column of the catalog with the sample indices; it
         overrides ``sample_rule``.
-    :param fit_offsets: whether one free offset per sample is added.
+    :param fit_offsets: whether one free offset per sample is added. A common shift of
+        every offset is degenerate with the scale of H1, H2 and H3, so one offset must
+        stay fixed: that of ``reference_sample``.
+    :param reference_sample: name of the sample whose offset stays fixed at zero, or the
+        sample index as a string; required with ``fit_offsets``.
     :param desc: description stored in the data object.
     :return: the experiment (``likelihood`` and ``model-set``) and the derived
         functions H0, Omega_s0, Omega_L0, H2_minus_H1 and H3_minus_H2.
@@ -121,7 +126,12 @@ def build_bianchi_experiment(
             & np.isfinite(sigma_all)
         )[0]
         assert len(selected) == z_sel.len()
-        samples, sample_names = samples_by_rule(obs, sample_rule, selected)
+        samples, names = samples_by_rule(obs, sample_rule, selected)
+        # Only the samples with objects get an offset, in the order of their names.
+        used = sorted({int(x) for x in samples if x >= 0})
+        remap = {old: new for new, old in enumerate(used)}
+        samples = [float(remap[int(x)]) if x >= 0 else -1.0 for x in samples]
+        sample_names = [names[i] for i in used]
         data.set_samples(Ncm.Vector.new_array(samples))
     nsamples = int(max(data.peek_samples().get(i) for i in range(z_sel.len()))) + 1
     dist = Nc.HCosmoBIDist.new(
@@ -138,10 +148,23 @@ def build_bianchi_experiment(
             nuisance.param_index_from_name("sigmav")[1],
             Ncm.ParamType.FREE if fit_sigma_v else Ncm.ParamType.FIXED,
         )
-        for s in range(nsamples if fit_offsets else 0):
-            nuisance.param_set_ftype(
-                nuisance.param_index_from_name(f"dmu_{s}")[1], Ncm.ParamType.FREE
-            )
+        if fit_offsets:
+            if reference_sample is None:
+                raise ValueError("fit_offsets needs a reference_sample.")
+            if reference_sample in sample_names:
+                reference = sample_names.index(reference_sample)
+            elif reference_sample.isdigit() and int(reference_sample) < nsamples:
+                reference = int(reference_sample)
+            else:
+                raise ValueError(
+                    f"Reference sample {reference_sample} not among the samples "
+                    f"{sample_names or list(range(nsamples))}."
+                )
+            for s in range(nsamples):
+                nuisance.param_set_ftype(
+                    nuisance.param_index_from_name(f"dmu_{s}")[1],
+                    Ncm.ParamType.FIXED if s == reference else Ncm.ParamType.FREE,
+                )
         models.append(nuisance)
     mset = Ncm.MSet.new_array(models)
     mset.prepare_fparam_map()
