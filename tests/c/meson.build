@@ -616,6 +616,10 @@ data_tests = [
         'timeout': 0,
     },
     {
+        'name': 'nc_dist_mu_obs',
+        'sources': ['nc/data/test_nc_dist_mu_obs.c'],
+    },
+    {
         'name': 'nc_data_bao_dtr_dhr',
         'sources': ['nc/data/test_nc_data_bao_dtr_dhr.c'],
     },

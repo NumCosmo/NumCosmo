@@ -84,6 +84,11 @@ DATA_SNIA_COV_LEN: int = 1
 DATA_SNIA_SIMPLE_LEN: int = 1
 DATA_XCOR_DL: int = 10
 DATA_XCOR_MAX: int = 5
+DIST_MU_OBS_COL_DEC: str = r"dec"
+DIST_MU_OBS_COL_MU: str = r"mu"
+DIST_MU_OBS_COL_RA: str = r"ra"
+DIST_MU_OBS_COL_SIGMA_MU: str = r"sigma_mu"
+DIST_MU_OBS_COL_Z: str = r"z"
 GALAXY_HOD_ZHENG07_DEFAULT_ALPHA: float = 1.15
 GALAXY_HOD_ZHENG07_DEFAULT_LOG_M0: float = 12.7
 GALAXY_HOD_ZHENG07_DEFAULT_LOG_M1: float = 13.93
@@ -6206,6 +6211,7 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
     @staticmethod
     def clear(dmu: DataHCosmoBIDistMu) -> None: ...
     def free(self) -> None: ...
+    def get_obs(self) -> DistMuObs: ...
     @classmethod
     def new(cls, dist: HCosmoBIDist) -> DataHCosmoBIDistMu: ...
     def peek_p(self) -> NumCosmoMath.Matrix: ...
@@ -6219,6 +6225,14 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
         sigma: NumCosmoMath.Vector,
     ) -> None: ...
     def set_dist(self, dist: HCosmoBIDist) -> None: ...
+    def set_obs(
+        self,
+        obs: DistMuObs,
+        mu_col: typing.Optional[str],
+        sigma_col: typing.Optional[str],
+        z_min: float,
+        z_max: float,
+    ) -> None: ...
 
 class DataHCosmoBIDistMuClass(GObject.GPointer):
     r"""
@@ -7509,6 +7523,71 @@ class DataXcorClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataGaussCovClass = ...
+
+class DistMuObs(NumCosmoMath.Catalog):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuObs(**properties)
+        new(nrows:int, col_names:list=None) -> NumCosmo.DistMuObs
+
+    Object NcDistMuObs
+
+    Properties from NcmCatalog:
+      data -> NcmMatrix: Data
+        Catalog data matrix
+      columns -> GStrv: Columns
+        Catalog column names
+      col-types -> GVariant: Column types
+        Per-column logical types
+      len -> guint: Length
+        Number of catalog rows
+      meta -> NcmVarDict: Metadata
+        Catalog-wide free-form metadata
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        col_types: GLib.Variant
+        columns: list[str]
+        data: NumCosmoMath.Matrix
+        len: int
+        meta: typing.Optional[NumCosmoMath.VarDict]
+
+    props: Props = ...
+    def __init__(
+        self,
+        col_types: GLib.Variant = ...,
+        columns: typing.Sequence[str] = ...,
+        data: NumCosmoMath.Matrix = ...,
+        len: int = ...,
+        meta: typing.Optional[NumCosmoMath.VarDict] = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(obs: DistMuObs) -> None: ...
+    def free(self) -> None: ...
+    def get_direction(self, i: int) -> NumCosmoMath.TriVec: ...
+    @classmethod
+    def new(
+        cls, nrows: int, col_names: typing.Optional[typing.Sequence[str]] = None
+    ) -> DistMuObs: ...
+    def ref(self) -> DistMuObs: ...
+    def set_direction(self, i: int, n: NumCosmoMath.TriVec) -> None: ...
+
+class DistMuObsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuObsClass()
+    """
+
+    parent_class: NumCosmoMath.CatalogClass = ...
 
 class Distance(GObject.Object):
     r"""

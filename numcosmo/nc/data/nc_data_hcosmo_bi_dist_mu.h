@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/data/ncm_data_gauss_diag.h>
 #include <numcosmo/nc/background/nc_hcosmo_bi_dist.h>
+#include <numcosmo/nc/data/nc_dist_mu_obs.h>
 
 G_BEGIN_DECLS
 
@@ -46,6 +47,8 @@ void nc_data_hcosmo_bi_dist_mu_clear (NcDataHCosmoBIDistMu **dmu);
 
 void nc_data_hcosmo_bi_dist_mu_set_dist (NcDataHCosmoBIDistMu *dmu, NcHCosmoBIDist *dist);
 void nc_data_hcosmo_bi_dist_mu_set_data (NcDataHCosmoBIDistMu *dmu, NcmVector *z, NcmMatrix *p, NcmVector *mu, NcmVector *sigma);
+void nc_data_hcosmo_bi_dist_mu_set_obs (NcDataHCosmoBIDistMu *dmu, NcDistMuObs *obs, const gchar *mu_col, const gchar *sigma_col, const gdouble z_min, const gdouble z_max, GError **error);
+NcDistMuObs *nc_data_hcosmo_bi_dist_mu_get_obs (NcDataHCosmoBIDistMu *dmu);
 
 NcmVector *nc_data_hcosmo_bi_dist_mu_peek_z (NcDataHCosmoBIDistMu *dmu);
 NcmMatrix *nc_data_hcosmo_bi_dist_mu_peek_p (NcDataHCosmoBIDistMu *dmu);

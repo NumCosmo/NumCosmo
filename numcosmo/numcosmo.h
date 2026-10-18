@@ -210,6 +210,7 @@
 /* Observable data */
 #include <numcosmo/nc/data/nc_data_snia.h>
 #include <numcosmo/nc/data/nc_data_dist_mu.h>
+#include <numcosmo/nc/data/nc_dist_mu_obs.h>
 #include <numcosmo/nc/data/nc_data_hcosmo_bi_dist_mu.h>
 #include <numcosmo/nc/data/nc_data_snia_cov.h>
 #include <numcosmo/nc/data/nc_data_download.h>

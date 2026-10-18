@@ -301,6 +301,7 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
     }
   };
   gdouble m2lnL_ref = 0.0;
+  gdouble term[3];
   gdouble m2lnL;
   guint i;
 
@@ -325,7 +326,8 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
     ncm_matrix_set (p, i, 1, dirs[i][1]);
     ncm_matrix_set (p, i, 2, dirs[i][2]);
 
-    m2lnL_ref += gsl_pow_2 ((mu_i - mu_t) / s_i) + 2.0 * log (s_i) + ncm_c_ln2pi ();
+    term[i]    = gsl_pow_2 ((mu_i - mu_t) / s_i) + 2.0 * log (s_i) + ncm_c_ln2pi ();
+    m2lnL_ref += term[i];
   }
 
   nc_data_hcosmo_bi_dist_mu_set_data (dmu, z, p, mu, sigma);
@@ -337,6 +339,39 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
   ncm_data_prepare (NCM_DATA (dmu), mset);
   ncm_data_m2lnL_val (NCM_DATA (dmu), mset, &m2lnL);
   ncm_assert_cmpdouble_e (m2lnL, ==, m2lnL_ref, 1.0e-13, 0.0);
+
+  /* The catalog built from the data, read back with a cut keeping the first two objects */
+  {
+    NcDistMuObs *obs              = nc_data_hcosmo_bi_dist_mu_get_obs (dmu);
+    NcDataHCosmoBIDistMu *dmu_obs = nc_data_hcosmo_bi_dist_mu_new (test->dist);
+    NcmVector *z_obs;
+    gdouble m2lnL_obs, m2lnL_two;
+    GError *error = NULL;
+
+    g_assert_cmpuint (ncm_catalog_len (NCM_CATALOG (obs)), ==, 3);
+    ncm_assert_cmpdouble_e (ncm_catalog_get (NCM_CATALOG (obs), NC_DIST_MU_OBS_COL_MU, 1, NULL), ==, ncm_vector_get (mu, 1), 0.0, 0.0);
+
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, NULL, 0.0, 1.0, &error);
+    g_assert_no_error (error);
+    ncm_data_prepare (NCM_DATA (dmu_obs), mset);
+    ncm_data_m2lnL_val (NCM_DATA (dmu_obs), mset, &m2lnL_obs);
+    ncm_assert_cmpdouble_e (m2lnL_obs, ==, m2lnL, 1.0e-13, 0.0);
+
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, NULL, 0.0, 0.025, &error);
+    g_assert_no_error (error);
+    z_obs = nc_data_hcosmo_bi_dist_mu_peek_z (dmu_obs);
+    g_assert_cmpuint (ncm_vector_len (z_obs), ==, 2);
+    ncm_data_prepare (NCM_DATA (dmu_obs), mset);
+    ncm_data_m2lnL_val (NCM_DATA (dmu_obs), mset, &m2lnL_two);
+    ncm_assert_cmpdouble_e (m2lnL_two, ==, term[0] + term[1], 1.0e-13, 0.0);
+
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, "DM_av", NULL, 0.0, 1.0, &error);
+    g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
+    g_clear_error (&error);
+
+    nc_data_hcosmo_bi_dist_mu_free (dmu_obs);
+    nc_dist_mu_obs_free (obs);
+  }
 
   ncm_vector_free (z);
   ncm_vector_free (mu);

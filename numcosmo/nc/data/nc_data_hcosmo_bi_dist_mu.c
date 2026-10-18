@@ -367,6 +367,126 @@ nc_data_hcosmo_bi_dist_mu_set_data (NcDataHCosmoBIDistMu *dmu, NcmVector *z, Ncm
 }
 
 /**
+ * nc_data_hcosmo_bi_dist_mu_set_obs:
+ * @dmu: a #NcDataHCosmoBIDistMu
+ * @obs: a #NcDistMuObs
+ * @mu_col: (nullable): column of the distance moduli
+ * @sigma_col: (nullable): column of their uncertainties
+ * @z_min: lower redshift limit
+ * @z_max: upper redshift limit
+ * @error: a #GError
+ *
+ * Fills @dmu with the objects of @obs whose redshift lies in [@z_min, @z_max], taking
+ * the moduli from @mu_col and their uncertainties from @sigma_col; %NULL selects
+ * #NC_DIST_MU_OBS_COL_MU and #NC_DIST_MU_OBS_COL_SIGMA_MU. A column missing from @obs
+ * sets @error. The directions come from nc_dist_mu_obs_get_direction().
+ *
+ */
+void
+nc_data_hcosmo_bi_dist_mu_set_obs (NcDataHCosmoBIDistMu *dmu, NcDistMuObs *obs, const gchar *mu_col, const gchar *sigma_col, const gdouble z_min, const gdouble z_max, GError **error)
+{
+  NcmCatalog *catalog = NCM_CATALOG (obs);
+  const guint nrows   = ncm_catalog_len (catalog);
+  const gchar *mcol   = (mu_col != NULL) ? mu_col : NC_DIST_MU_OBS_COL_MU;
+  const gchar *scol   = (sigma_col != NULL) ? sigma_col : NC_DIST_MU_OBS_COL_SIGMA_MU;
+  guint np            = 0;
+  NcmVector *z, *mu, *sigma;
+  NcmMatrix *p;
+  guint i, k;
+
+  if (!ncm_catalog_has_column (catalog, mcol))
+  {
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
+                                "nc_data_hcosmo_bi_dist_mu_set_obs: column `%s' not found.", mcol);
+
+    return;
+  }
+
+  if (!ncm_catalog_has_column (catalog, scol))
+  {
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
+                                "nc_data_hcosmo_bi_dist_mu_set_obs: column `%s' not found.", scol);
+
+    return;
+  }
+
+  for (i = 0; i < nrows; i++)
+  {
+    const gdouble zi = ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, i, NULL);
+
+    if ((zi >= z_min) && (zi <= z_max))
+      np++;
+  }
+
+  z     = ncm_vector_new (np);
+  mu    = ncm_vector_new (np);
+  sigma = ncm_vector_new (np);
+  p     = ncm_matrix_new (np, 3);
+
+  for (i = 0, k = 0; i < nrows; i++)
+  {
+    const gdouble zi = ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, i, NULL);
+    NcmTriVec n;
+
+    if (!((zi >= z_min) && (zi <= z_max)))
+      continue;
+
+    nc_dist_mu_obs_get_direction (obs, i, &n);
+    ncm_vector_set (z, k, zi);
+    ncm_vector_set (mu, k, ncm_catalog_get (catalog, mcol, i, NULL));
+    ncm_vector_set (sigma, k, ncm_catalog_get (catalog, scol, i, NULL));
+    ncm_matrix_set (p, k, 0, n.c[0]);
+    ncm_matrix_set (p, k, 1, n.c[1]);
+    ncm_matrix_set (p, k, 2, n.c[2]);
+    k++;
+  }
+
+  nc_data_hcosmo_bi_dist_mu_set_data (dmu, z, p, mu, sigma);
+
+  ncm_vector_free (z);
+  ncm_vector_free (mu);
+  ncm_vector_free (sigma);
+  ncm_matrix_free (p);
+}
+
+/**
+ * nc_data_hcosmo_bi_dist_mu_get_obs:
+ * @dmu: a #NcDataHCosmoBIDistMu
+ *
+ * Builds a #NcDistMuObs with the five required columns from the current data of
+ * @dmu: the moduli are the current mean, so a resampled @dmu gives a mock catalog.
+ *
+ * Returns: (transfer full): a new #NcDistMuObs
+ */
+NcDistMuObs *
+nc_data_hcosmo_bi_dist_mu_get_obs (NcDataHCosmoBIDistMu *dmu)
+{
+  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (dmu);
+  const guint np         = ncm_data_gauss_diag_get_size (diag);
+  NcDistMuObs *obs       = nc_dist_mu_obs_new (np, NULL);
+  NcmCatalog *catalog    = NCM_CATALOG (obs);
+  NcmVector *mean        = ncm_data_gauss_diag_peek_mean (diag);
+  NcmVector *std         = ncm_data_gauss_diag_peek_std (diag);
+  guint i;
+
+  for (i = 0; i < np; i++)
+  {
+    NcmTriVec n = {
+      {
+        ncm_matrix_get (dmu->p, i, 0), ncm_matrix_get (dmu->p, i, 1), ncm_matrix_get (dmu->p, i, 2)
+      }
+    };
+
+    nc_dist_mu_obs_set_direction (obs, i, &n);
+    ncm_catalog_set (catalog, NC_DIST_MU_OBS_COL_Z, i, ncm_vector_get (dmu->z, i), NULL);
+    ncm_catalog_set (catalog, NC_DIST_MU_OBS_COL_MU, i, ncm_vector_get (mean, i), NULL);
+    ncm_catalog_set (catalog, NC_DIST_MU_OBS_COL_SIGMA_MU, i, ncm_vector_get (std, i), NULL);
+  }
+
+  return obs;
+}
+
+/**
  * nc_data_hcosmo_bi_dist_mu_peek_z:
  * @dmu: a #NcDataHCosmoBIDistMu
  *

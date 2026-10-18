@@ -82,6 +82,7 @@ void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hcosmo_bi_basic (void);
 void test_nc_hcosmo_bi_dist_basic (void);
 void test_nc_data_hcosmo_bi_dist_mu_basic (void);
+void test_nc_dist_mu_obs_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
@@ -180,6 +181,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hcosmo_bi/basic", test_nc_hcosmo_bi_basic);
   g_test_add_func ("/nc/hcosmo_bi_dist/basic", test_nc_hcosmo_bi_dist_basic);
   g_test_add_func ("/nc/data/hcosmo_bi_dist_mu/basic", test_nc_data_hcosmo_bi_dist_mu_basic);
+  g_test_add_func ("/nc/dist_mu_obs/basic", test_nc_dist_mu_obs_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
   g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
@@ -908,6 +910,23 @@ test_nc_data_hcosmo_bi_dist_mu_basic (void)
 
   nc_hcosmo_bi_dist_free (dist);
   NCM_TEST_FREE (nc_data_hcosmo_bi_dist_mu_free, dmu);
+}
+
+void
+test_nc_dist_mu_obs_basic (void)
+{
+  NcDistMuObs *obs = nc_dist_mu_obs_new (3, NULL);
+  NcDistMuObs *obs2;
+
+  g_assert_true (NC_IS_DIST_MU_OBS (obs));
+
+  obs2 = nc_dist_mu_obs_ref (obs);
+  nc_dist_mu_obs_clear (&obs2);
+  g_assert_true (obs2 == NULL);
+
+  g_assert_true (NC_IS_DIST_MU_OBS (obs));
+
+  NCM_TEST_FREE (nc_dist_mu_obs_free, obs);
 }
 
 void
