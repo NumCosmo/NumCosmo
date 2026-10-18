@@ -30,6 +30,7 @@
 #include <numcosmo/numcosmo.h>
 
 #include <math.h>
+#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -44,6 +45,7 @@ void test_nc_dist_mu_obs_free (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_columns (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_direction (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_serialize (TestNcDistMuObs *test, gconstpointer pdata);
+void test_nc_dist_mu_obs_cf4_snia (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_missing_column (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_pitfalls (TestNcDistMuObs *test, gconstpointer pdata);
 
@@ -67,6 +69,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/dist_mu_obs/serialize", TestNcDistMuObs, NULL,
               &test_nc_dist_mu_obs_new,
               &test_nc_dist_mu_obs_serialize,
+              &test_nc_dist_mu_obs_free);
+
+  g_test_add ("/nc/dist_mu_obs/cf4_snia", TestNcDistMuObs, NULL,
+              &test_nc_dist_mu_obs_new,
+              &test_nc_dist_mu_obs_cf4_snia,
               &test_nc_dist_mu_obs_free);
 
   g_test_add ("/nc/dist_mu_obs/pitfalls", TestNcDistMuObs, NULL,
@@ -192,6 +199,45 @@ test_nc_dist_mu_obs_serialize (TestNcDistMuObs *test, gconstpointer pdata)
 
   nc_dist_mu_obs_free (dup);
   ncm_serialize_free (ser);
+}
+
+void
+test_nc_dist_mu_obs_cf4_snia (TestNcDistMuObs *test, gconstpointer pdata)
+{
+  NcDistMuObs *cf4    = nc_dist_mu_obs_new_from_catalog_id (NC_DIST_MU_OBS_CATALOG_CF4_SNIA);
+  NcmCatalog *catalog = NCM_CATALOG (cf4);
+  gchar *source       = NULL;
+  NcmTriVec n;
+  guint i;
+
+  g_assert_true (NC_IS_DIST_MU_OBS (cf4));
+  g_assert_cmpuint (ncm_catalog_len (catalog), ==, 1008);
+  g_assert_true (ncm_catalog_has_column (catalog, "DM_av"));
+  g_assert_true (ncm_catalog_has_column (catalog, "Vcmb"));
+  g_assert_cmpint (ncm_catalog_get_col_type (catalog, "pgc", NULL), ==, NCM_CATALOG_COL_TYPE_INT);
+
+  g_assert_true (ncm_var_dict_get_string (ncm_catalog_peek_meta (catalog), "source", &source));
+  g_assert_nonnull (strstr (source, "CF4 SNIa"));
+  g_free (source);
+
+  /* First row of the EDD export: pgc 250, RA 0.8958, DE 23.2008, Vcmb 6914, DM_zp 34.912, eDM 0.13, DM_av 35.05 */
+  g_assert_cmpint (ncm_catalog_get_int (catalog, "pgc", 0, NULL), ==, 250);
+  ncm_assert_cmpdouble (ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_RA, 0, NULL), ==, 0.8958);
+  ncm_assert_cmpdouble (ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_DEC, 0, NULL), ==, 23.2008);
+  ncm_assert_cmpdouble_e (ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, 0, NULL), ==, 6914.0 / 299792.458, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble (ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_MU, 0, NULL), ==, 34.912);
+  ncm_assert_cmpdouble (ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_SIGMA_MU, 0, NULL), ==, 0.13);
+  ncm_assert_cmpdouble (ncm_catalog_get (catalog, "DM_av", 0, NULL), ==, 35.05);
+
+  for (i = 0; i < ncm_catalog_len (catalog); i++)
+  {
+    nc_dist_mu_obs_get_direction (cf4, i, &n);
+    ncm_assert_cmpdouble_e (ncm_trivec_norm (&n), ==, 1.0, 1.0e-15, 0.0);
+    g_assert_cmpfloat (ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_SIGMA_MU, i, NULL), >, 0.0);
+    g_assert_cmpfloat (ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, i, NULL), >, 0.0);
+  }
+
+  nc_dist_mu_obs_free (cf4);
 }
 
 void

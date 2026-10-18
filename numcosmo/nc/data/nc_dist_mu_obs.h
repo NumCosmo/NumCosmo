@@ -44,8 +44,26 @@ G_DECLARE_FINAL_TYPE (NcDistMuObs, nc_dist_mu_obs, NC, DIST_MU_OBS, NcmCatalog)
 #define NC_DIST_MU_OBS_COL_MU "mu"
 #define NC_DIST_MU_OBS_COL_SIGMA_MU "sigma_mu"
 
-NcDistMuObs * nc_dist_mu_obs_new (guint nrows, GStrv col_names);
+/**
+ * NcDistMuObsCatalogId:
+ * @NC_DIST_MU_OBS_CATALOG_CF4_SNIA: the EDD table All CF4 SNIa Samples (Cosmicflows-4, Tully et al. 2023), 1008 supernova hosts
+ *
+ * Catalogs of the NumCosmo data release, see nc_dist_mu_obs_new_from_catalog_id().
+ *
+ */
+typedef enum _NcDistMuObsCatalogId /*< prefix=NC_DIST_MU_OBS_CATALOG >*/
+{
+  NC_DIST_MU_OBS_CATALOG_CF4_SNIA = 0,
+  /*< private >*/
+  NC_DIST_MU_OBS_CATALOG_LEN, /*< skip >*/
+} NcDistMuObsCatalogId;
+
+NcDistMuObs *nc_dist_mu_obs_new (guint nrows, GStrv col_names);
+NcDistMuObs *nc_dist_mu_obs_new_full (guint nrows, GStrv col_names, const NcmCatalogColType *col_types, guint n_types);
+NcDistMuObs *nc_dist_mu_obs_new_from_catalog_id (NcDistMuObsCatalogId id);
 NcDistMuObs *nc_dist_mu_obs_ref (NcDistMuObs *obs);
+
+gchar *nc_dist_mu_obs_catalog_id_get_filename (NcDistMuObsCatalogId id);
 
 void nc_dist_mu_obs_free (NcDistMuObs *obs);
 void nc_dist_mu_obs_clear (NcDistMuObs **obs);

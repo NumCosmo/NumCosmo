@@ -260,9 +260,11 @@ _nc_data_hcosmo_bi_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_hcosmo_bi_dist_mu_new:
- * @dist: a #NcHCosmoBIDist
+ * @dist: (nullable): a #NcHCosmoBIDist
  *
- * Creates an empty #NcDataHCosmoBIDistMu; nc_data_hcosmo_bi_dist_mu_set_data() fills it.
+ * Creates an empty #NcDataHCosmoBIDistMu; nc_data_hcosmo_bi_dist_mu_set_data() or
+ * nc_data_hcosmo_bi_dist_mu_set_obs() fills it, and nc_data_hcosmo_bi_dist_mu_set_dist()
+ * sets the calculator when @dist is %NULL.
  *
  * Returns: (transfer full): a new #NcDataHCosmoBIDistMu
  */
@@ -319,7 +321,7 @@ nc_data_hcosmo_bi_dist_mu_clear (NcDataHCosmoBIDistMu **dmu)
 /**
  * nc_data_hcosmo_bi_dist_mu_set_dist:
  * @dmu: a #NcDataHCosmoBIDistMu
- * @dist: a #NcHCosmoBIDist
+ * @dist: (nullable): a #NcHCosmoBIDist
  *
  * Sets #NcDataHCosmoBIDistMu:dist.
  *

@@ -47,6 +47,7 @@ from .generate import (
     BuildPlanckRelease,
     GenerateClusterRichnessCount,
     GenerateClusterWL,
+    GenerateBianchi,
     GenerateDEWSpline,
     GenerateJpasForecast,
     GeneratePlanck,
@@ -271,6 +272,12 @@ GEN_XCDM_CMD: CMDArg = {
     "help": "Generate xcdm experiments.",
 }
 
+GEN_BIANCHI_CMD: CMDArg = {
+    "name": "bianchi",
+    "no_args_is_help": True,
+    "help": "Generate Bianchi I experiments from a catalog of distance moduli.",
+}
+
 GEN_DEWSPLINE_CMD: CMDArg = {
     "name": "de-wspline",
     "no_args_is_help": True,
@@ -370,6 +377,7 @@ app_generate.command(**LOAD_CLUSTER_WL_CMD)(LoadClusterWL)
 app_generate.command(**GEN_CLUSTER_RICHNESS_COUNT_CMD)(GenerateClusterRichnessCount)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
+app_generate.command(**GEN_BIANCHI_CMD)(GenerateBianchi)
 app_generate.command(**GEN_DEWSPLINE_CMD)(GenerateDEWSpline)
 app_generate.command(**GEN_SAMPLER_TEST_CMD)(GenerateSamplerTest)
 # ------------------------------------------------------------------------------

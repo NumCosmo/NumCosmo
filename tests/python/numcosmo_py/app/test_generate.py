@@ -27,14 +27,16 @@
 from typing import cast
 from pathlib import Path
 import pytest
+import typer
 
 pytest.importorskip("astropy")
 pytest.importorskip("getdist")
 # flake8: noqa: E402
 
 
-from numcosmo_py import Ncm
+from numcosmo_py import Nc, Ncm
 import numcosmo_py.app.generate as gen
+import numcosmo_py.datasets.dist_mu_obs as dist_mu_obs
 import numcosmo_py.datasets.hicosmo as hicosmo
 
 Ncm.cfg_init()
@@ -448,3 +450,60 @@ def test_generate_planck_native_from_release(tmp_path: Path, monkeypatch):
     dset = ser.from_binfile(str(dset_file.absolute()))
     names = {dset.get_data(i).__class__.__name__ for i in range(dset.get_ndata())}
     assert names == {"DataPlanckSimall", "DataPlanckCommander", "DataPlanckSmica"}
+
+
+# Bianchi
+def test_generate_bianchi(tmp_path: Path):
+    """Test Bianchi I generation from the CF4 SNIa catalog with a redshift cut."""
+    exp_file = tmp_path / "bianchi.yaml"
+    cat_file = tmp_path / "cf4.obj"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+        z_max=0.02,
+        catalog_out=cat_file.absolute(),
+    )
+    assert exp_file.exists()
+    assert exp_file.with_suffix(".functions.yaml").exists()
+    assert cat_file.exists()
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+    data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+    z = data.peek_z()
+    assert 0 < z.len() < 1008
+    assert max(z.get(i) for i in range(z.len())) <= 0.02
+
+    # The written catalog loads as a NcDistMuObs and gives the same experiment
+    exp_file2 = tmp_path / "bianchi2.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file2.absolute(),
+        data_file=cat_file.absolute(),
+        mu_col="DM_av",
+        z_max=0.02,
+    )
+    assert exp_file2.exists()
+
+
+def test_generate_bianchi_sources(tmp_path: Path):
+    """Test Bianchi I generation rejects zero or two catalog sources."""
+    exp_file = tmp_path / "bianchi.yaml"
+    with pytest.raises(typer.BadParameter, match="exactly one of"):
+        _ = gen.GenerateBianchi(experiment=exp_file.absolute())
+    with pytest.raises(typer.BadParameter, match="exactly one of"):
+        _ = gen.GenerateBianchi(
+            experiment=exp_file.absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+            data_file=exp_file.absolute(),
+        )
+
+
+def test_generate_bianchi_invalid_suffix(tmp_path: Path):
+    """Test Bianchi I generation rejects invalid file suffix."""
+    exp_file = tmp_path / "bianchi.txt"
+    with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
+        _ = gen.GenerateBianchi(
+            experiment=exp_file.absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+        )

@@ -1559,6 +1559,10 @@
     "nick": "int-e",
     "type": "Nc.DistanceComovingMethod"
   },
+  "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
+    "nick": "cf4-snia",
+    "type": "Nc.DistMuObsCatalogId"
+  },
   "NC_GALAXY_HOD_ZHENG07_ALPHA": {
     "nick": "alpha",
     "type": "Nc.GalaxyHODZheng07SParams"

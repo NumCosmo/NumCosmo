@@ -40,6 +40,9 @@
  * frame, $(\cos\delta\cos\alpha, \cos\delta\sin\alpha, \sin\delta)$, and
  * nc_dist_mu_obs_set_direction() writes the position of a row from a unit vector.
  *
+ * nc_dist_mu_obs_new_from_catalog_id() loads a catalog of the NumCosmo data release,
+ * see #NcDistMuObsCatalogId.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -48,6 +51,9 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_dist_mu_obs.h"
+#include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_serialize.h"
+#include "nc/data/nc_data_download.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -126,6 +132,100 @@ nc_dist_mu_obs_new (guint nrows, GStrv col_names)
                                    NULL);
 
   return obs;
+}
+
+/**
+ * nc_dist_mu_obs_new_full:
+ * @nrows: number of objects
+ * @col_names: (array zero-terminated=1): column names, including the five required ones
+ * @col_types: (array length=n_types): the #NcmCatalogColType of each column
+ * @n_types: number of columns
+ *
+ * Creates a new #NcDistMuObs with @nrows rows, the columns @col_names and their types,
+ * see ncm_catalog_new_full().
+ *
+ * Returns: (transfer full): a new #NcDistMuObs
+ */
+NcDistMuObs *
+nc_dist_mu_obs_new_full (guint nrows, GStrv col_names, const NcmCatalogColType *col_types, guint n_types)
+{
+  GArray *types = g_array_sized_new (FALSE, TRUE, sizeof (guint32), n_types);
+  NcDistMuObs *obs;
+  GVariant *var;
+  guint i;
+
+  for (i = 0; i < n_types; i++)
+  {
+    const guint32 t = col_types[i];
+
+    g_array_append_val (types, t);
+  }
+
+  var = ncm_cfg_array_to_variant (types, G_VARIANT_TYPE ("u"));
+  obs = g_object_new (NC_TYPE_DIST_MU_OBS,
+                      "columns", col_names,
+                      "col-types", var,
+                      "len", nrows,
+                      NULL);
+
+  g_variant_unref (var);
+  g_array_unref (types);
+
+  return obs;
+}
+
+/**
+ * nc_dist_mu_obs_catalog_id_get_filename:
+ * @id: a #NcDistMuObsCatalogId
+ *
+ * Gives the local file of catalog @id, downloaded from the NumCosmo data release into
+ * the user data directory when it is not there yet, see nc_data_download_release_file().
+ *
+ * Returns: (transfer full): the full path of the file
+ */
+gchar *
+nc_dist_mu_obs_catalog_id_get_filename (NcDistMuObsCatalogId id)
+{
+  switch (id)
+  {
+    case NC_DIST_MU_OBS_CATALOG_CF4_SNIA:
+
+      return nc_data_download_release_file ("nc_dist_mu_obs_cf4_snia.gvar");
+
+      break;
+    default:
+      g_error ("nc_dist_mu_obs_catalog_id_get_filename: id %d not recognized.", id);
+
+      return NULL;
+
+      break;
+  }
+}
+
+/**
+ * nc_dist_mu_obs_new_from_catalog_id:
+ * @id: a #NcDistMuObsCatalogId
+ *
+ * Loads the catalog @id from the NumCosmo data release, see
+ * nc_dist_mu_obs_catalog_id_get_filename(); the provenance of its table is in its
+ * metadata, see ncm_catalog_peek_meta().
+ *
+ * Returns: (transfer full): the catalog
+ */
+NcDistMuObs *
+nc_dist_mu_obs_new_from_catalog_id (NcDistMuObsCatalogId id)
+{
+  gchar *filename   = nc_dist_mu_obs_catalog_id_get_filename (id);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  GObject *obj      = ncm_serialize_from_binfile (ser, filename);
+
+  g_free (filename);
+  ncm_serialize_free (ser);
+
+  if (!NC_IS_DIST_MU_OBS (obj))
+    g_error ("nc_dist_mu_obs_new_from_catalog_id: the file of catalog id %d does not contain a NcDistMuObs.", id);
+
+  return NC_DIST_MU_OBS (obj);
 }
 
 /**
