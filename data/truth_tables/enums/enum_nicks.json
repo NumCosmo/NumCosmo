@@ -1559,6 +1559,10 @@
     "nick": "int-e",
     "type": "Nc.DistanceComovingMethod"
   },
+  "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
+    "nick": "cf4-snia",
+    "type": "Nc.DistMuObsCatalogId"
+  },
   "NC_GALAXY_HOD_ZHENG07_ALPHA": {
     "nick": "alpha",
     "type": "Nc.GalaxyHODZheng07SParams"
@@ -1774,6 +1778,34 @@
   "NC_HALO_POSITION_Z": {
     "nick": "z",
     "type": "Nc.HaloPositionSParams"
+  },
+  "NC_HCOSMO_BI_H1": {
+    "nick": "h1",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_H2": {
+    "nick": "h2",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_H3": {
+    "nick": "h3",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_OMEGA_M": {
+    "nick": "omega-m",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U1": {
+    "nick": "u1",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U2": {
+    "nick": "u2",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U3": {
+    "nick": "u3",
+    "type": "Nc.HCosmoBISParams"
   },
   "NC_HICOSMO_DE_CPL_W0": {
     "nick": "w0",

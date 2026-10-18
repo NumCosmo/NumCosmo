@@ -24,6 +24,7 @@
 """NumCosmo APP subcommands generate experiment files."""
 
 import dataclasses
+import math
 import shlex
 from abc import ABC, abstractmethod
 from enum import StrEnum, auto
@@ -34,6 +35,10 @@ import numpy as np
 import typer
 
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.datasets.dist_mu_obs import (
+    DistMuObsCatalogID,
+    edd_cf4_snia_to_dist_mu_obs,
+)
 from numcosmo_py.datasets.hicosmo import (
     BAOID,
     HID,
@@ -42,6 +47,7 @@ from numcosmo_py.datasets.hicosmo import (
     add_h_likelihood,
     add_snia_likelihood,
 )
+from numcosmo_py.experiments.bianchi import build_bianchi_experiment
 from numcosmo_py.experiments.cluster_richness_count import (
     generate_cluster_richness_count,
     load_cluster_richness_count,
@@ -1586,6 +1592,171 @@ class GenerateXCDM:
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+
+@dataclasses.dataclass(kw_only=True)
+class GenerateBianchi:
+    """Generate a Bianchi I experiment from a catalog of distance moduli."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to write.")
+    ]
+
+    catalog: Annotated[
+        DistMuObsCatalogID | None,
+        typer.Option(help="Catalog shipped with NumCosmo.", show_default=False),
+    ] = None
+
+    data_file: Annotated[
+        Path | None,
+        typer.Option(
+            help="Serialized NcDistMuObs file, an alternative to --catalog.",
+            show_default=False,
+        ),
+    ] = None
+
+    edd_table: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "EDD text export of All CF4 SNIa Samples, an alternative to "
+                "--catalog; --edd-downloaded gives its download date."
+            ),
+            show_default=False,
+        ),
+    ] = None
+
+    edd_downloaded: Annotated[
+        str, typer.Option(help="Download date of --edd-table.")
+    ] = "unknown"
+
+    catalog_out: Annotated[
+        Path | None,
+        typer.Option(
+            help="If given, the catalog used is also written to this file.",
+            show_default=False,
+        ),
+    ] = None
+
+    mu_col: Annotated[
+        str | None,
+        typer.Option(help="Column of the distance moduli.", show_default="mu"),
+    ] = None
+
+    sigma_col: Annotated[
+        str | None,
+        typer.Option(help="Column of their uncertainties.", show_default="sigma_mu"),
+    ] = None
+
+    z_min: Annotated[float, typer.Option(help="Lower redshift limit.")] = 0.0
+
+    z_max: Annotated[float, typer.Option(help="Upper redshift limit.")] = math.inf
+
+    h_min: Annotated[
+        float, typer.Option(help="Lower bound of H1, H2 and H3 [km/s/Mpc].")
+    ] = 50.0
+
+    h_max: Annotated[
+        float, typer.Option(help="Upper bound of H1, H2 and H3 [km/s/Mpc].")
+    ] = 100.0
+
+    omegam_mean: Annotated[
+        float | None,
+        typer.Option(
+            help="Mean of the Gaussian prior on Omegam; omit for no prior.",
+            show_default=False,
+        ),
+    ] = 0.3
+
+    omegam_sigma: Annotated[
+        float, typer.Option(help="Standard deviation of the Gaussian prior on Omegam.")
+    ] = 0.04
+
+    ordering: Annotated[bool, typer.Option(help="Add the H1 < H2 < H3 priors.")] = True
+
+    wall_scale: Annotated[
+        float,
+        typer.Option(help="Width of the walls of the ordering priors [km/s/Mpc]."),
+    ] = 0.1
+
+    zmax_factor: Annotated[
+        float,
+        typer.Option(
+            help="The distance calculator covers this factor times the largest selected redshift."
+        ),
+    ] = 1.05
+
+    def _load_obs(self) -> Nc.DistMuObs:
+        """Load the catalog from --catalog, --data-file or --edd-table.
+
+        Raises:
+            ValueError: The loaded file does not contain a NcDistMuObs.
+        """
+        if self.catalog is not None:
+            return Nc.DistMuObs.new_from_catalog_id(self.catalog.genum)
+        if self.edd_table is not None:
+            return edd_cf4_snia_to_dist_mu_obs(self.edd_table, self.edd_downloaded)
+        assert self.data_file is not None
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        obs = ser.from_file(self.data_file.absolute().as_posix())
+        if not isinstance(obs, Nc.DistMuObs):
+            raise ValueError(  # noqa: TRY004
+                f"File does not contain a NcDistMuObs: {type(obs).__name__}"
+            )
+        return obs
+
+    def __post_init__(self):
+        """Generate the Bianchi I experiment."""
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        n_sources = sum(
+            x is not None for x in (self.catalog, self.data_file, self.edd_table)
+        )
+        if n_sources != 1:
+            raise typer.BadParameter(
+                "exactly one of --catalog, --data-file or --edd-table is required"
+            )
+
+        obs = self._load_obs()
+        source = (
+            self.catalog.value
+            if self.catalog is not None
+            else str(self.edd_table if self.edd_table is not None else self.data_file)
+        )
+        experiment, functions = build_bianchi_experiment(
+            obs,
+            mu_col=self.mu_col,
+            sigma_col=self.sigma_col,
+            z_min=self.z_min,
+            z_max=self.z_max,
+            h_min=self.h_min,
+            h_max=self.h_max,
+            omegam_mean=self.omegam_mean,
+            omegam_sigma=self.omegam_sigma,
+            ordering=self.ordering,
+            wall_scale=self.wall_scale,
+            zmax_factor=self.zmax_factor,
+            desc=(
+                f"{source}, mu = {self.mu_col or 'mu'}, "
+                f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "
+                f"{self.z_min} <= z <= {self.z_max}"
+            ),
+        )
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+        ser.array_to_yaml_file(
+            functions,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
+        if self.catalog_out is not None:
+            ser.reset(True)
+            ser.to_file(obs, self.catalog_out.absolute().as_posix())
 
 
 @dataclasses.dataclass(kw_only=True)

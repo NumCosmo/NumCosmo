@@ -593,6 +593,15 @@ model_tests = [
         'name': 'nc_distance',
         'sources': ['nc/background/test_nc_distance.c'],
     },
+    {
+        'name': 'nc_hcosmo_bi',
+        'sources': ['nc/background/test_nc_hcosmo_bi.c'],
+        'include_directories': [sundials_inc],
+    },
+    {
+        'name': 'nc_hcosmo_bi_dist',
+        'sources': ['nc/background/test_nc_hcosmo_bi_dist.c'],
+    },
 ]
 
 # Data tests
@@ -605,6 +614,10 @@ data_tests = [
             'ncm/data/ncm_data_gauss_cov_test.h',
         ],
         'timeout': 0,
+    },
+    {
+        'name': 'nc_dist_mu_obs',
+        'sources': ['nc/data/test_nc_dist_mu_obs.c'],
     },
     {
         'name': 'nc_data_bao_dtr_dhr',

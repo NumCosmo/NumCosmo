@@ -79,6 +79,10 @@ void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
 void test_nc_galaxy_wl_obs_basic (void);
 void test_nc_halo_position_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
+void test_nc_hcosmo_bi_basic (void);
+void test_nc_hcosmo_bi_dist_basic (void);
+void test_nc_data_hcosmo_bi_dist_mu_basic (void);
+void test_nc_dist_mu_obs_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
@@ -174,6 +178,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/wl_obs/basic", test_nc_galaxy_wl_obs_basic);
   g_test_add_func ("/nc/halo_position/basic", test_nc_halo_position_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
+  g_test_add_func ("/nc/hcosmo_bi/basic", test_nc_hcosmo_bi_basic);
+  g_test_add_func ("/nc/hcosmo_bi_dist/basic", test_nc_hcosmo_bi_dist_basic);
+  g_test_add_func ("/nc/data/hcosmo_bi_dist_mu/basic", test_nc_data_hcosmo_bi_dist_mu_basic);
+  g_test_add_func ("/nc/dist_mu_obs/basic", test_nc_dist_mu_obs_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
   g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
@@ -849,6 +857,76 @@ test_nc_hicosmo_qgw_basic (void)
   g_assert_true (NC_IS_HICOSMO_QGW (qgw));
 
   NCM_TEST_FREE (nc_hicosmo_free, NC_HICOSMO (qgw));
+}
+
+void
+test_nc_hcosmo_bi_basic (void)
+{
+  NcHCosmoBI *cosmo = nc_hcosmo_bi_new ();
+  NcHCosmoBI *cosmo2;
+
+  g_assert_true (NC_IS_HCOSMO_BI (cosmo));
+
+  cosmo2 = nc_hcosmo_bi_ref (cosmo);
+  nc_hcosmo_bi_clear (&cosmo2);
+  g_assert_true (cosmo2 == NULL);
+
+  g_assert_true (NC_IS_HCOSMO_BI (cosmo));
+
+  NCM_TEST_FREE (nc_hcosmo_bi_free, cosmo);
+}
+
+void
+test_nc_hcosmo_bi_dist_basic (void)
+{
+  NcHCosmoBIDist *dist = nc_hcosmo_bi_dist_new (0.1);
+  NcHCosmoBIDist *dist2;
+
+  g_assert_true (NC_IS_HCOSMO_BI_DIST (dist));
+
+  dist2 = nc_hcosmo_bi_dist_ref (dist);
+  nc_hcosmo_bi_dist_clear (&dist2);
+  g_assert_true (dist2 == NULL);
+
+  g_assert_true (NC_IS_HCOSMO_BI_DIST (dist));
+
+  NCM_TEST_FREE (nc_hcosmo_bi_dist_free, dist);
+}
+
+void
+test_nc_data_hcosmo_bi_dist_mu_basic (void)
+{
+  NcHCosmoBIDist *dist      = nc_hcosmo_bi_dist_new (0.1);
+  NcDataHCosmoBIDistMu *dmu = nc_data_hcosmo_bi_dist_mu_new (dist);
+  NcDataHCosmoBIDistMu *dmu2;
+
+  g_assert_true (NC_IS_DATA_HCOSMO_BI_DIST_MU (dmu));
+
+  dmu2 = nc_data_hcosmo_bi_dist_mu_ref (dmu);
+  nc_data_hcosmo_bi_dist_mu_clear (&dmu2);
+  g_assert_true (dmu2 == NULL);
+
+  g_assert_true (NC_IS_DATA_HCOSMO_BI_DIST_MU (dmu));
+
+  nc_hcosmo_bi_dist_free (dist);
+  NCM_TEST_FREE (nc_data_hcosmo_bi_dist_mu_free, dmu);
+}
+
+void
+test_nc_dist_mu_obs_basic (void)
+{
+  NcDistMuObs *obs = nc_dist_mu_obs_new (3, NULL);
+  NcDistMuObs *obs2;
+
+  g_assert_true (NC_IS_DIST_MU_OBS (obs));
+
+  obs2 = nc_dist_mu_obs_ref (obs);
+  nc_dist_mu_obs_clear (&obs2);
+  g_assert_true (obs2 == NULL);
+
+  g_assert_true (NC_IS_DIST_MU_OBS (obs));
+
+  NCM_TEST_FREE (nc_dist_mu_obs_free, obs);
 }
 
 void

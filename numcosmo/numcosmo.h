@@ -95,6 +95,8 @@
 #include <numcosmo/nc/background/nc_hicosmo_qgrw.h>
 #include <numcosmo/nc/background/nc_hicosmo_qgw.h>
 #include <numcosmo/nc/background/nc_hicosmo_Vexp.h>
+#include <numcosmo/nc/background/nc_hcosmo_bi.h>
+#include <numcosmo/nc/background/nc_hcosmo_bi_dist.h>
 #include <numcosmo/nc/primordial/nc_hiprim_power_law.h>
 #include <numcosmo/nc/primordial/nc_hiprim_atan.h>
 #include <numcosmo/nc/primordial/nc_hiprim_expc.h>
@@ -208,6 +210,8 @@
 /* Observable data */
 #include <numcosmo/nc/data/nc_data_snia.h>
 #include <numcosmo/nc/data/nc_data_dist_mu.h>
+#include <numcosmo/nc/data/nc_dist_mu_obs.h>
+#include <numcosmo/nc/data/nc_data_hcosmo_bi_dist_mu.h>
 #include <numcosmo/nc/data/nc_data_snia_cov.h>
 #include <numcosmo/nc/data/nc_data_download.h>
 #include <numcosmo/nc/data/nc_data_hubble.h>
