@@ -3339,8 +3339,16 @@
     "nick": "len",
     "type": "Nc.XcorKerneltSZSParams"
   },
-  "NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN": {
-    "nick": "len",
+  "NC_XCOR_KERNEL_WEAK_LENSING_IA_A": {
+    "nick": "ia-a",
+    "type": "Nc.XcorKernelWeakLensingSParams"
+  },
+  "NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA": {
+    "nick": "ia-eta",
+    "type": "Nc.XcorKernelWeakLensingSParams"
+  },
+  "NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV": {
+    "nick": "ia-z-piv",
     "type": "Nc.XcorKernelWeakLensingSParams"
   },
   "NC_XCOR_KERNEL_WEAK_LENSING_VPARAM_LEN": {

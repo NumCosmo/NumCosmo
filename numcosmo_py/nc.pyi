@@ -439,6 +439,9 @@ XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_KERNEL_MAX_ELL_BLOCK: int = 64
 XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON: float = 1e-06
 XCOR_KERNEL_RADIAL_MAX_COMPS: int = 6
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_A: float = 1.0
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_ETA: float = 0.0
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_Z_PIV: float = 0.62
 XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL: float = 0.0
@@ -26061,6 +26064,22 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar (galaxy angular density)
       intr-shear -> gdouble: intr-shear
         Intrinsic galaxy shear
+      doia -> gboolean: doia
+        Do intrinsic alignment
+      growth-powspec -> NcmPowspec: growth-powspec
+        Power spectrum of the intrinsic alignment growth factor
+      ia-A -> gdouble: ia-A
+        A_{\mathrm{IA}}
+      ia-eta -> gdouble: ia-eta
+        \eta_{\mathrm{IA}}
+      ia-z-piv -> gdouble: ia-z-piv
+        z_{\mathrm{piv}}
+      ia-A-fit -> gboolean: ia-A-fit
+        A_{\mathrm{IA}}:fit
+      ia-eta-fit -> gboolean: ia-eta-fit
+        \eta_{\mathrm{IA}}:fit
+      ia-z-piv-fit -> gboolean: ia-z-piv-fit
+        z_{\mathrm{piv}}:fit
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -26114,6 +26133,14 @@ class XcorKernelWeakLensing(XcorKernel):
 
     class Props:
         dndz: NumCosmoMath.Spline
+        doia: bool
+        growth_powspec: NumCosmoMath.Powspec
+        ia_A: float
+        ia_A_fit: bool
+        ia_eta: float
+        ia_eta_fit: bool
+        ia_z_piv: float
+        ia_z_piv_fit: bool
         intr_shear: float
         nbar: float
         adaptive_boundary_tries: int
@@ -26142,6 +26169,14 @@ class XcorKernelWeakLensing(XcorKernel):
     def __init__(
         self,
         dndz: NumCosmoMath.Spline = ...,
+        doia: bool = ...,
+        growth_powspec: NumCosmoMath.Powspec = ...,
+        ia_A: float = ...,
+        ia_A_fit: bool = ...,
+        ia_eta: float = ...,
+        ia_eta_fit: bool = ...,
+        ia_z_piv: float = ...,
+        ia_z_piv_fit: bool = ...,
         intr_shear: float = ...,
         nbar: float = ...,
         adaptive_boundary_tries: int = ...,
@@ -28793,7 +28828,9 @@ class XcorKernelTableKind(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class XcorKernelWeakLensingSParams(GObject.GEnum):
-    LEN: XcorKernelWeakLensingSParams = ...
+    IA_A: XcorKernelWeakLensingSParams = ...
+    IA_ETA: XcorKernelWeakLensingSParams = ...
+    IA_Z_PIV: XcorKernelWeakLensingSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

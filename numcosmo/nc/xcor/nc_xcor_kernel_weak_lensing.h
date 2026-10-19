@@ -45,12 +45,18 @@ G_DECLARE_FINAL_TYPE (NcXcorKernelWeakLensing, nc_xcor_kernel_weak_lensing, NC, 
 
 /**
  * NcXcorKernelWeakLensingSParams:
- * @NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN: number of scalar parameters
+ * @NC_XCOR_KERNEL_WEAK_LENSING_IA_A: intrinsic alignment amplitude $A_\mathrm{IA}$
+ * @NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA: intrinsic alignment redshift exponent $\eta_\mathrm{IA}$
+ * @NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV: intrinsic alignment pivot redshift $z_\mathrm{piv}$
  *
  */
-typedef enum _NcXcorKernelWeakLensingSParams /*< prefix=NC_XCOR_KERNEL_WEAK_LENSING_SPARAM >*/
+typedef enum _NcXcorKernelWeakLensingSParams /*< prefix=NC_XCOR_KERNEL_WEAK_LENSING >*/
 {
-  NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN,
+  NC_XCOR_KERNEL_WEAK_LENSING_IA_A = 0,
+  NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA,
+  NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV,
+  /* < private > */
+  NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN, /*< skip >*/
 } NcXcorKernelWeakLensingSParams;
 
 /**
@@ -72,6 +78,9 @@ typedef enum _NcXcorKernelWeakLensingVParams /*< prefix=NC_XCOR_KERNEL_WEAK_LENS
 /* #define NC_XCOR_KERNEL_WEAK_LENSING_G_FUNC_LEN (200) */
 
 #define NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
+#define NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_A (1.0)
+#define NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_ETA (0.0)
+#define NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_Z_PIV (0.62)
 
 NcXcorKernelWeakLensing *nc_xcor_kernel_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, NcmSpline *dn_dz, gdouble nbar, gdouble intr_shear);
 

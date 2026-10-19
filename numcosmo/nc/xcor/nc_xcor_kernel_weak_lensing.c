@@ -38,6 +38,21 @@
  * \end{equation}
  * where $\frac{dn}{dz}$ is the redshift distribution of galaxies.
  *
+ * With #NcXcorKernelWeakLensing:doia set, the kernel adds the nonlinear alignment (NLA)
+ * intrinsic shear, in the convention of CCL's WeakLensingTracer with use_A_ia,
+ * \begin{equation}
+ *    W^{\mathrm{IA}} = -A_\mathrm{IA} \left(\frac{1+z}{1+z_\mathrm{piv}}\right)^{\eta_\mathrm{IA}}
+ *    \frac{C_1 \rho_\mathrm{crit} \Omega_m}{D(k, z)} \frac{H(z)}{c} \frac{dn}{dz},
+ * \end{equation}
+ * with $C_1 \rho_\mathrm{crit} = 5 \times 10^{-14}\, h^{-2} M_\odot^{-1} \mathrm{Mpc}^3
+ * \times \rho_\mathrm{crit}$, weighted by $j_\ell(k\chi) / (k\chi)^2$ and the spin-2
+ * factor $\sqrt{(\ell+2)!/(\ell-2)!}$, as the lensing term. The growth factor is read
+ * from a power spectrum, $D(k, z) = \sqrt{P_D(k, z) / P_D(k, 0)}$, as the redshift-space
+ * distortion term of #NcXcorKernelGal reads the growth rate. $P_D$ is
+ * #NcXcorKernelWeakLensing:growth-powspec when set and the kernel's power spectrum
+ * otherwise. The NLA model divides by the linear growth factor: with a nonlinear kernel
+ * power spectrum, set growth-powspec to the linear one, since the ratio of nonlinear
+ * spectra includes the nonlinear evolution in $D$.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -81,7 +96,10 @@ struct _NcXcorKernelWeakLensing
   gdouble intr_shear;
 
   gdouble noise;
+  gboolean doia;
+  NcmPowspec *growth_ps;
   NcXcorKernelComponent *wl_comp;
+  NcXcorKernelComponent *ia_comp;
 };
 
 enum
@@ -90,6 +108,8 @@ enum
   PROP_DN_DZ,
   PROP_NBAR,
   PROP_INTR_SHEAR,
+  PROP_DOIA,
+  PROP_GROWTH_POWSPEC,
   PROP_SIZE,
 };
 
@@ -97,6 +117,9 @@ G_DEFINE_TYPE (NcXcorKernelWeakLensing, nc_xcor_kernel_weak_lensing, NC_TYPE_XCO
 
 static gdouble _nc_xcor_kernel_weak_lensing_lens_eff_eval_source (NcXcorLensingEfficiency *lens_eff, gdouble z);
 static void _nc_xcor_kernel_weak_lensing_lens_eff_get_z_range (NcXcorLensingEfficiency *lens_eff, gdouble *zmin, gdouble *zmax);
+static gdouble _nc_xcor_kernel_weak_lensing_dndz (NcXcorKernelWeakLensing *xclkg, gdouble z);
+static gdouble _nc_xcor_kernel_weak_lensing_ia_amplitude (NcXcorKernelWeakLensing *xclkg, gdouble z);
+static NcmPowspec *_nc_xcor_kernel_weak_lensing_peek_growth_ps (NcXcorKernelWeakLensing *xclkg);
 
 NC_XCOR_LENSING_EFFICIENCY_DEFINE_TYPE (NC, XCOR_KERNEL_WEAK_LENSING_LENS_EFF,
                                         NcXcorKernelWeakLensingLensEff,
@@ -142,6 +165,50 @@ NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_WEAK_LENSING,
                                       WeakLensingComponentData,
                                       _wl_component_data_clear)
 
+/*
+ * Intrinsic Alignment Component Definition
+ * Handles the NLA intrinsic shear: -A_IA(z) C1 rho_crit Omega_m / D(k, z) * dn_dz(z) * E(z)
+ */
+
+typedef struct _IAComponentData
+{
+  NcXcorKernelWeakLensing *xclkg;
+  NcDistance *dist;
+  NcmPowspec *ps;
+  NcmPowspec *growth_ps;
+} IAComponentData;
+
+#define _NC_XCOR_KERNEL_COMPONENT_IA_GET_DATA(comp) \
+        ((IAComponentData *) ((guint8 *) (comp) + sizeof (NcXcorKernelComponent)))
+
+static gdouble _ia_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k);
+static gdouble _ia_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck);
+static gdouble _ia_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k);
+static void _ia_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out);
+static gdouble _ia_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l);
+static void _ia_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max);
+static void _ia_component_data_clear (IAComponentData *data);
+static NcXcorKernelComponent *_nc_xcor_kernel_component_ia_new (NcXcorKernelWeakLensing *xclkg, NcDistance *dist, NcmPowspec *ps, NcmPowspec *growth_ps);
+
+NC_XCOR_KERNEL_COMPONENT_DEFINE_TYPE (NC, XCOR_KERNEL_COMPONENT_IA,
+                                      NcXcorKernelComponentIA,
+                                      nc_xcor_kernel_component_ia,
+                                      _ia_component_eval_kernel,
+                                      _ia_component_eval_window,
+                                      _ia_component_eval_kfactor,
+                                      _ia_component_eval_kfactor_vec,
+                                      _ia_component_eval_prefactor,
+                                      _ia_component_get_limits,
+                                      IAComponentData,
+                                      _ia_component_data_clear)
+
+/* Kernel Parameters */
+
+#define VECTOR   (NCM_MODEL (xclkg))
+#define IA_A     (ncm_model_orig_param_get (VECTOR, NC_XCOR_KERNEL_WEAK_LENSING_IA_A))
+#define IA_ETA   (ncm_model_orig_param_get (VECTOR, NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA))
+#define IA_Z_PIV (ncm_model_orig_param_get (VECTOR, NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV))
+
 static void
 nc_xcor_kernel_weak_lensing_init (NcXcorKernelWeakLensing *xclkg)
 {
@@ -155,7 +222,10 @@ nc_xcor_kernel_weak_lensing_init (NcXcorKernelWeakLensing *xclkg)
   xclkg->nbar       = 0.0;
   xclkg->intr_shear = 0.0;
   xclkg->noise      = 0.0;
+  xclkg->doia       = FALSE;
+  xclkg->growth_ps  = NULL;
   xclkg->wl_comp    = NULL;
+  xclkg->ia_comp    = NULL;
 }
 
 static void
@@ -206,6 +276,13 @@ _nc_xcor_kernel_weak_lensing_set_property (GObject *object, guint prop_id, const
     case PROP_INTR_SHEAR:
       xclkg->intr_shear = g_value_get_double (value);
       break;
+    case PROP_DOIA:
+      xclkg->doia = g_value_get_boolean (value);
+      break;
+    case PROP_GROWTH_POWSPEC:
+      ncm_powspec_clear (&xclkg->growth_ps);
+      xclkg->growth_ps = g_value_dup_object (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -229,6 +306,12 @@ _nc_xcor_kernel_weak_lensing_get_property (GObject *object, guint prop_id, GValu
       break;
     case PROP_INTR_SHEAR:
       g_value_set_double (value, xclkg->intr_shear);
+      break;
+    case PROP_DOIA:
+      g_value_set_boolean (value, xclkg->doia);
+      break;
+    case PROP_GROWTH_POWSPEC:
+      g_value_set_object (value, xclkg->growth_ps);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -269,6 +352,13 @@ _nc_xcor_kernel_weak_lensing_constructed (GObject *object)
 
       g_assert_null (xclkg->wl_comp);
       xclkg->wl_comp = _nc_xcor_kernel_component_weak_lensing_new (dist, ps, xclkg->lens_eff, xclkg->dn_dz_zmax);
+
+      /* Component for the intrinsic alignment */
+      if (xclkg->doia)
+      {
+        g_assert_null (xclkg->ia_comp);
+        xclkg->ia_comp = _nc_xcor_kernel_component_ia_new (xclkg, dist, ps, _nc_xcor_kernel_weak_lensing_peek_growth_ps (xclkg));
+      }
     }
   }
 }
@@ -282,6 +372,8 @@ _nc_xcor_kernel_weak_lensing_dispose (GObject *object)
   ncm_spline_clear (&xclkg->dn_dz);
   nc_xcor_lensing_efficiency_clear (&xclkg->lens_eff);
   nc_xcor_kernel_component_clear (&xclkg->wl_comp);
+  nc_xcor_kernel_component_clear (&xclkg->ia_comp);
+  ncm_powspec_clear (&xclkg->growth_ps);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_kernel_weak_lensing_parent_class)->dispose (object);
@@ -342,6 +434,56 @@ nc_xcor_kernel_weak_lensing_class_init (NcXcorKernelWeakLensingClass *klass)
                                                         0.0, 20.0, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcXcorKernelWeakLensing:doia:
+   *
+   * Whether to include the nonlinear alignment (NLA) intrinsic shear. Adds a
+   * component with kernel $-A_\mathrm{IA}(z) C_1 \rho_\mathrm{crit} \Omega_m
+   * E(z)\, \mathrm{d}n/\mathrm{d}z / D(k, z)$ weighted by $j_\ell(k\chi) /
+   * (k\chi)^2$, where $D(k, z) = \sqrt{P_D(k, z) / P_D(k, 0)}$ is the growth factor
+   * read from #NcXcorKernelWeakLensing:growth-powspec and $A_\mathrm{IA}(z) = A_\mathrm{IA}
+   * [(1+z)/(1+z_\mathrm{piv})]^{\eta_\mathrm{IA}}$.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DOIA,
+                                   g_param_spec_boolean ("doia",
+                                                         NULL,
+                                                         "Do intrinsic alignment",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcXcorKernelWeakLensing:growth-powspec:
+   *
+   * The power spectrum the intrinsic alignment term reads its growth factor from,
+   * $D(k, z) = \sqrt{P_D(k, z) / P_D(k, 0)}$; %NULL (the default) uses the kernel's
+   * #NcXcorKernel:powspec. The NLA model divides by the linear growth factor: with a
+   * nonlinear #NcXcorKernel:powspec, set this to the linear spectrum. Used only with
+   * #NcXcorKernelWeakLensing:doia.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_GROWTH_POWSPEC,
+                                   g_param_spec_object ("growth-powspec",
+                                                        NULL,
+                                                        "Power spectrum of the intrinsic alignment growth factor",
+                                                        NCM_TYPE_POWSPEC,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  ncm_model_class_set_sparam (model_class, NC_XCOR_KERNEL_WEAK_LENSING_IA_A,
+                              "A_{\\mathrm{IA}}", "ia_A",
+                              -10.0, 10.0, 0.1,
+                              NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL, NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_A, NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA,
+                              "\\eta_{\\mathrm{IA}}", "ia_eta",
+                              -10.0, 10.0, 0.1,
+                              NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL, NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_ETA, NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV,
+                              "z_{\\mathrm{piv}}", "ia_z_piv",
+                              0.0, 10.0, 0.1,
+                              NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL, NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_Z_PIV, NCM_PARAM_TYPE_FIXED);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -363,15 +505,8 @@ _nc_xcor_kernel_weak_lensing_lens_eff_eval_source (NcXcorLensingEfficiency *lens
 {
   NcXcorKernelWeakLensingLensEff *data_obj = NC_XCOR_KERNEL_WEAK_LENSING_LENS_EFF (lens_eff);
   NcXcorKernelWeakLensing *xclkg           = data_obj->data;
-  const gdouble alpha                      = 1.0e-2;
 
-  if (z < xclkg->dn_dz_zmin)
-    return xclkg->dn_dz_min * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmin) / alpha));
-
-  if (z > xclkg->dn_dz_zmax)
-    return xclkg->dn_dz_max * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmax) / alpha));
-
-  return ncm_spline_eval (xclkg->dn_dz, z);
+  return _nc_xcor_kernel_weak_lensing_dndz (xclkg, z);
 }
 
 static void
@@ -384,6 +519,43 @@ _nc_xcor_kernel_weak_lensing_lens_eff_get_z_range (NcXcorLensingEfficiency *lens
   *zmax = xclkg->dn_dz_zmax;
 }
 
+/*
+ * Implementation of the weak lensing kernel helper functions
+ */
+
+static gdouble
+_nc_xcor_kernel_weak_lensing_dndz (NcXcorKernelWeakLensing *xclkg, gdouble z)
+{
+  const gdouble alpha = 1.0e-2;
+
+  if (z < xclkg->dn_dz_zmin)
+    return xclkg->dn_dz_min * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmin) / alpha));
+
+  if (z > xclkg->dn_dz_zmax)
+    return xclkg->dn_dz_max * exp (-gsl_pow_2 ((z - xclkg->dn_dz_zmax) / alpha));
+
+  return ncm_spline_eval (xclkg->dn_dz, z);
+}
+
+/* Returns C1 rho_crit A_IA(z), with C1 = 5e-14 h^-2 M_sun^-1 Mpc^3: the h^-2 cancels the
+ * h^2 of the critical density, so the product is dimensionless. */
+static gdouble
+_nc_xcor_kernel_weak_lensing_ia_amplitude (NcXcorKernelWeakLensing *xclkg, gdouble z)
+{
+  const gdouble C1_rho_crit = 5.0e-14 * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+
+  return C1_rho_crit * IA_A * pow ((1.0 + z) / (1.0 + IA_Z_PIV), IA_ETA);
+}
+
+static NcmPowspec *
+_nc_xcor_kernel_weak_lensing_peek_growth_ps (NcXcorKernelWeakLensing *xclkg)
+{
+  if (xclkg->growth_ps != NULL)
+    return xclkg->growth_ps;
+
+  return nc_xcor_kernel_peek_powspec (NC_XCOR_KERNEL (xclkg));
+}
+
 static void
 _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 {
@@ -394,6 +566,9 @@ _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
 
+  if (xclkg->growth_ps != NULL)
+    ncm_powspec_prepare_if_needed (xclkg->growth_ps, NCM_MODEL (cosmo));
+
   g_assert_cmpfloat (0.0, ==, 0.0);
   g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, 0.0)));
   g_assert (gsl_finite (ncm_spline_eval (xclkg->dn_dz, xclkg->dn_dz_zmax)));
@@ -402,6 +577,12 @@ _nc_xcor_kernel_weak_lensing_prepare (NcXcorKernel *xclk, NcHICosmo *cosmo)
 
   g_assert_nonnull (xclkg->wl_comp);
   nc_xcor_kernel_component_prepare (xclkg->wl_comp, cosmo);
+
+  if (xclkg->doia)
+  {
+    g_assert_nonnull (xclkg->ia_comp);
+    nc_xcor_kernel_component_prepare (xclkg->ia_comp, cosmo);
+  }
 }
 
 /*
@@ -500,17 +681,157 @@ _nc_xcor_kernel_component_weak_lensing_new (NcDistance *dist, NcmPowspec *ps, Nc
 }
 
 /*
+ * Implementation of the intrinsic alignment component.
+ *
+ * The kernel is the density kernel E(z) dn_dz(z) times -C1 rho_crit A_IA(z) Omega_m /
+ * D(k, z), with j_l(k chi) / (k chi)^2 as the lensing term: it has the 1 / k^2 of the
+ * lensing component and a 1 / chi^2 in its window. The growth factor is read from
+ * the growth power spectrum P_D, D(k, z) = sqrt (P_D(k, z) / P_D(k, 0)), so the k factor
+ * is sqrt (P(k, z) P_D(k, 0) / P_D(k, z)) / k^2. Omega_m and the spin-2 factor are in
+ * the prefactor.
+ */
+
+static void
+_ia_component_data_clear (IAComponentData *data)
+{
+  /* No need to clear, these are weak references from parent kernel */
+}
+
+static gdouble
+_ia_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble chi, gdouble k)
+{
+  IAComponentData *data = _NC_XCOR_KERNEL_COMPONENT_IA_GET_DATA (comp);
+  const gdouble z       = nc_distance_inv_comoving (data->dist, cosmo, chi);
+  const gdouble E_z     = nc_hicosmo_E (cosmo, z);
+  const gdouble k_RH    = k / nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble powspec = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), z, k_RH);
+  const gdouble P_D_z   = ncm_powspec_eval (data->growth_ps, NCM_MODEL (cosmo), z, k_RH);
+  const gdouble P_D_0   = ncm_powspec_eval (data->growth_ps, NCM_MODEL (cosmo), 0.0, k_RH);
+  const gdouble dn_dz_z = _nc_xcor_kernel_weak_lensing_dndz (data->xclkg, z);
+  const gdouble A_z     = _nc_xcor_kernel_weak_lensing_ia_amplitude (data->xclkg, z);
+
+  return -A_z *dn_dz_z *E_z *sqrt (powspec *P_D_0 / P_D_z) / gsl_pow_2 (k * chi);
+}
+
+static gdouble
+_ia_component_eval_window (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck)
+{
+  IAComponentData *data = _NC_XCOR_KERNEL_COMPONENT_IA_GET_DATA (comp);
+  const gdouble dn_dz_z = _nc_xcor_kernel_weak_lensing_dndz (data->xclkg, xck->z);
+  const gdouble A_z     = _nc_xcor_kernel_weak_lensing_ia_amplitude (data->xclkg, xck->z);
+
+  return -A_z * dn_dz_z * xck->E_z / gsl_pow_2 (xck->chi_z);
+}
+
+static gdouble
+_ia_component_eval_kfactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, gdouble k)
+{
+  IAComponentData *data = _NC_XCOR_KERNEL_COMPONENT_IA_GET_DATA (comp);
+  const gdouble k_RH    = k / nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble powspec = ncm_powspec_eval (data->ps, NCM_MODEL (cosmo), xck->z, k_RH);
+  const gdouble P_D_z   = ncm_powspec_eval (data->growth_ps, NCM_MODEL (cosmo), xck->z, k_RH);
+  const gdouble P_D_0   = ncm_powspec_eval (data->growth_ps, NCM_MODEL (cosmo), 0.0, k_RH);
+
+  return sqrt (powspec * P_D_0 / P_D_z) / gsl_pow_2 (k);
+}
+
+static void
+_ia_component_eval_kfactor_vec (NcXcorKernelComponent *comp, NcHICosmo *cosmo, const NcXcorKinetic *xck, NcmVector *k, NcmVector *out)
+{
+  IAComponentData *data = _NC_XCOR_KERNEL_COMPONENT_IA_GET_DATA (comp);
+  const gdouble RH_Mpc  = nc_hicosmo_RH_Mpc (cosmo);
+  const guint len       = ncm_vector_len (k);
+  guint i;
+
+  ncm_vector_scale (k, 1.0 / RH_Mpc);
+  ncm_powspec_eval_vec (data->ps, NCM_MODEL (cosmo), xck->z, k, out);
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble k_i   = ncm_vector_get (k, i);
+    const gdouble P_D_z = ncm_powspec_eval (data->growth_ps, NCM_MODEL (cosmo), xck->z, k_i);
+    const gdouble P_D_0 = ncm_powspec_eval (data->growth_ps, NCM_MODEL (cosmo), 0.0, k_i);
+
+    ncm_vector_set (out, i, sqrt (ncm_vector_get (out, i) * P_D_0 / P_D_z) / gsl_pow_2 (k_i * RH_Mpc));
+  }
+
+  ncm_vector_scale (k, RH_Mpc);
+}
+
+static gdouble
+_ia_component_eval_prefactor (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble k, gint l)
+{
+  const gdouble lfactor = sqrt ((l + 2.0) * (l + 1.0) * l * (l - 1.0));
+
+  return nc_hicosmo_Omega_m0 (cosmo) * lfactor;
+}
+
+static void
+_ia_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble *chi_min, gdouble *chi_max, gdouble *k_min, gdouble *k_max)
+{
+  IAComponentData *data          = _NC_XCOR_KERNEL_COMPONENT_IA_GET_DATA (comp);
+  NcDistance *dist               = data->dist;
+  NcmPowspec *ps                 = data->ps;
+  NcXcorKernelWeakLensing *xclkg = data->xclkg;
+
+  nc_distance_prepare_if_needed (dist, cosmo);
+  ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
+  ncm_powspec_prepare_if_needed (data->growth_ps, NCM_MODEL (cosmo));
+
+  /* Bounded by the dn_dz support, as the clustering component of NcXcorKernelGal. */
+  *chi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
+  *chi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
+  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+}
+
+static NcXcorKernelComponent *
+_nc_xcor_kernel_component_ia_new (NcXcorKernelWeakLensing *xclkg, NcDistance *dist, NcmPowspec *ps, NcmPowspec *growth_ps)
+{
+  NcXcorKernelComponent *comp = g_object_new (nc_xcor_kernel_component_ia_get_type (), NULL);
+  IAComponentData *data       = _NC_XCOR_KERNEL_COMPONENT_IA_GET_DATA (comp);
+
+  data->xclkg     = xclkg;
+  data->dist      = dist;
+  data->ps        = ps;
+  data->growth_ps = growth_ps;
+
+  return comp;
+}
+
+/*
  * Kernel implementation.
  */
 
 /* chi^2 times the radial weight (1 + z) g(z) / chi, with chi cancelled: written as the
- * product, chi = 0 at z = 0 gives 0 * inf instead of the limit 0. */
+ * product, chi = 0 at z = 0 gives 0 * inf instead of the limit 0.
+ *
+ * The intrinsic alignment term is its window times chi^2, divided by the 3/2 Omega_m of
+ * the prefactor, over D(k, z) of the growth power spectrum at the Limber k = (l + 1/2) /
+ * chi. It is skipped where dn_dz vanishes, which includes chi = 0, where k is infinite. */
 static gdouble
 _nc_xcor_kernel_weak_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   NcXcorKernelWeakLensing *xclkg = NC_XCOR_KERNEL_WEAK_LENSING (xclk);
+  gdouble res                    = xck->chi_z * (1.0 + z) * nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z);
 
-  return xck->chi_z * (1.0 + z) * nc_xcor_lensing_efficiency_eval (xclkg->lens_eff, z);
+  if (xclkg->doia)
+  {
+    const gdouble dn_dz_z = _nc_xcor_kernel_weak_lensing_dndz (xclkg, z);
+
+    if (dn_dz_z != 0.0)
+    {
+      NcmPowspec *ps     = _nc_xcor_kernel_weak_lensing_peek_growth_ps (xclkg);
+      const gdouble k    = (l + 0.5) / (xck->chi_z * nc_hicosmo_RH_Mpc (cosmo));
+      const gdouble D_kz = sqrt (ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k) /
+                                 ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k));
+      const gdouble A_z = _nc_xcor_kernel_weak_lensing_ia_amplitude (xclkg, z);
+
+      res -= A_z * dn_dz_z * xck->E_z / (1.5 * D_kz);
+    }
+  }
+
+  return res;
 }
 
 static gdouble
@@ -562,6 +883,9 @@ _nc_xcor_kernel_weak_lensing_get_component_list (NcXcorKernel *xclk)
 
   if (xclkg->wl_comp != NULL)
     g_ptr_array_add (comp_list, g_object_ref (xclkg->wl_comp));
+
+  if (xclkg->doia && (xclkg->ia_comp != NULL))
+    g_ptr_array_add (comp_list, g_object_ref (xclkg->ia_comp));
 
   return comp_list;
 }
