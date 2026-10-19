@@ -87,6 +87,7 @@ DATA_XCOR_MAX: int = 5
 DIST_MU_NUISANCE_DEFAULT_DMU: float = 0.0
 DIST_MU_NUISANCE_DEFAULT_PARAMS_ABSTOL: float = 0.0
 DIST_MU_NUISANCE_DEFAULT_SIGMA_V: float = 0.0
+DIST_MU_NUISANCE_DEFAULT_SIGMA_V_S: float = 0.0
 DIST_MU_OBS_COL_DEC: str = r"dec"
 DIST_MU_OBS_COL_MU: str = r"mu"
 DIST_MU_OBS_COL_RA: str = r"ra"
@@ -7552,6 +7553,7 @@ class DistMuNuisance(NumCosmoMath.Model):
 
         DistMuNuisance(**properties)
         new(nsamples:int) -> NumCosmo.DistMuNuisance
+        new_full(nsamples:int, sigma_v_per_sample:bool) -> NumCosmo.DistMuNuisance
 
     Object NcDistMuNuisance
 
@@ -7560,12 +7562,18 @@ class DistMuNuisance(NumCosmoMath.Model):
         \sigma_v
       dmu -> NcmVector: dmu
         \delta\mu
+      sigmav-s -> NcmVector: sigmav-s
+        \sigma_{v,s}
       dmu-length -> guint: dmu-length
         \delta\mu:length
+      sigmav-s-length -> guint: sigmav-s-length
+        \sigma_{v,s}:length
       sigmav-fit -> gboolean: sigmav-fit
         \sigma_v:fit
       dmu-fit -> GVariant: dmu-fit
         \delta\mu:fit
+      sigmav-s-fit -> GVariant: sigmav-s-fit
+        \sigma_{v,s}:fit
 
     Properties from NcmModel:
       name -> gchararray: name
@@ -7597,6 +7605,9 @@ class DistMuNuisance(NumCosmoMath.Model):
         dmu_length: int
         sigmav: float
         sigmav_fit: bool
+        sigmav_s: NumCosmoMath.Vector
+        sigmav_s_fit: GLib.Variant
+        sigmav_s_length: int
         implementation: int
         name: str
         nick: str
@@ -7615,6 +7626,9 @@ class DistMuNuisance(NumCosmoMath.Model):
         dmu_length: int = ...,
         sigmav: float = ...,
         sigmav_fit: bool = ...,
+        sigmav_s: NumCosmoMath.Vector = ...,
+        sigmav_s_fit: GLib.Variant = ...,
+        sigmav_s_length: int = ...,
         reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
@@ -7624,13 +7638,18 @@ class DistMuNuisance(NumCosmoMath.Model):
     def free(self) -> None: ...
     def get_dmu(self, sample: int) -> float: ...
     def get_nsamples(self) -> int: ...
+    def get_nsigma_v(self) -> int: ...
     def get_sigma_v(self) -> float: ...
+    def get_sigma_v_sample(self, sample: int) -> float: ...
     @staticmethod
     def id() -> int: ...
     @classmethod
     def new(cls, nsamples: int) -> DistMuNuisance: ...
+    @classmethod
+    def new_full(cls, nsamples: int, sigma_v_per_sample: bool) -> DistMuNuisance: ...
     def ref(self) -> DistMuNuisance: ...
     def sigma_mu_v(self, z: float) -> float: ...
+    def sigma_mu_v_sample(self, z: float, sample: int) -> float: ...
 
 class DistMuNuisanceClass(GObject.GPointer):
     r"""
@@ -27504,6 +27523,7 @@ class DistMuNuisanceSParams(GObject.GEnum):
 
 class DistMuNuisanceVParams(GObject.GEnum):
     DMU: DistMuNuisanceVParams = ...
+    SIGMA_V_S: DistMuNuisanceVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

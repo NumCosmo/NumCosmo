@@ -1741,6 +1741,16 @@ class GenerateBianchi:
         ),
     ] = True
 
+    sigma_v_per_sample: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "One velocity dispersion per sample, started at --sigma-v and free with "
+                "--fit-sigma-v; needs a sample rule or column."
+            )
+        ),
+    ] = False
+
     fit_velocity: Annotated[
         bool,
         typer.Option(
@@ -1808,6 +1818,7 @@ class GenerateBianchi:
             zmax_factor=self.zmax_factor,
             sigma_v=self.sigma_v,
             fit_sigma_v=self.fit_sigma_v,
+            sigma_v_per_sample=self.sigma_v_per_sample,
             sample_rule=self.sample_rule,
             sample_col=self.sample_col,
             fit_offsets=self.fit_offsets,

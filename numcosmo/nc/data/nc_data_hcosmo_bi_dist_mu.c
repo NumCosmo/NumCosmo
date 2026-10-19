@@ -38,8 +38,8 @@
  * When the model set holds a #NcDistMuNuisance, the model value of an object of sample
  * $s$ gains the offset $\delta\mu_s$ (objects whose sample index is $-1$ or at least the
  * number of offsets get none), and the standard deviation becomes
- * $\sqrt{\sigma_\mu^2 + \sigma_{\mu,v}(z)^2}$, see nc_dist_mu_nuisance_sigma_mu_v().
- * Without it the standard deviation is $\sigma_\mu$.
+ * $\sqrt{\sigma_\mu^2 + \sigma_{\mu,v}(z)^2}$ with the dispersion of the object's sample, see
+ * nc_dist_mu_nuisance_sigma_mu_v_sample(). Without it the standard deviation is $\sigma_\mu$.
  *
  * When the model set holds a #NcObserverVelocity, the model value of an object is that of
  * the rest frame at nc_observer_velocity_z_rest() minus $5\log_{10}$ of
@@ -57,6 +57,7 @@
 
 #include "nc/data/nc_data_hcosmo_bi_dist_mu.h"
 #include "nc/data/nc_observer_velocity.h"
+#include "ncm/model/ncm_model_ctrl.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -72,7 +73,8 @@ struct _NcDataHCosmoBIDistMu
   NcmMatrix *p;
   NcmVector *sigma_mu;
   NcmVector *sample;
-  gdouble sigma_v_last;
+  NcmModelCtrl *nuisance_ctrl;
+  gboolean sigma_has_v;
   gboolean sigma_stale;
 };
 
@@ -92,13 +94,14 @@ G_DEFINE_TYPE (NcDataHCosmoBIDistMu, nc_data_hcosmo_bi_dist_mu, NCM_TYPE_DATA_GA
 static void
 nc_data_hcosmo_bi_dist_mu_init (NcDataHCosmoBIDistMu *dmu)
 {
-  dmu->dist         = NULL;
-  dmu->z            = NULL;
-  dmu->p            = NULL;
-  dmu->sigma_mu     = NULL;
-  dmu->sample       = NULL;
-  dmu->sigma_v_last = 0.0;
-  dmu->sigma_stale  = TRUE;
+  dmu->dist          = NULL;
+  dmu->z             = NULL;
+  dmu->p             = NULL;
+  dmu->sigma_mu      = NULL;
+  dmu->sample        = NULL;
+  dmu->nuisance_ctrl = ncm_model_ctrl_new (NULL);
+  dmu->sigma_has_v   = FALSE;
+  dmu->sigma_stale   = TRUE;
 }
 
 static void
@@ -172,6 +175,7 @@ _nc_data_hcosmo_bi_dist_mu_dispose (GObject *object)
   ncm_matrix_clear (&dmu->p);
   ncm_vector_clear (&dmu->sigma_mu);
   ncm_vector_clear (&dmu->sample);
+  ncm_model_ctrl_clear (&dmu->nuisance_ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_hcosmo_bi_dist_mu_parent_class)->dispose (object);
@@ -326,40 +330,48 @@ _nc_data_hcosmo_bi_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
 }
 
 /*
- * Fills @sigma with sqrt(sigma_mu^2 + sigma_mu_v(z)^2) when the model set holds a
- * NcDistMuNuisance and with sigma_mu otherwise; returns TRUE when it wrote @sigma, which
- * happens when sigma_v changed since the last call or the data changed since.
+ * Fills @sigma with sqrt(sigma_mu^2 + sigma_mu_v(z)^2), the dispersion being that of the
+ * object's sample, when the model set holds a NcDistMuNuisance and with sigma_mu otherwise;
+ * returns TRUE when it wrote @sigma, which happens when the nuisance model changed since
+ * the last call (any of its parameters, tracked by a NcmModelCtrl), when it appeared or
+ * left the model set, or when the data changed.
  */
 static gboolean
 _nc_data_hcosmo_bi_dist_mu_sigma_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *sigma)
 {
   NcDataHCosmoBIDistMu *dmu  = NC_DATA_HCOSMO_BI_DIST_MU (diag);
   NcDistMuNuisance *nuisance = NC_DIST_MU_NUISANCE (ncm_mset_peek (mset, nc_dist_mu_nuisance_id ()));
-  const gdouble sigma_v      = (nuisance != NULL) ? nc_dist_mu_nuisance_get_sigma_v (nuisance) : 0.0;
   const guint np             = ncm_data_gauss_diag_get_size (diag);
+  gboolean changed           = dmu->sigma_stale;
   guint i;
 
-  if (!dmu->sigma_stale && (sigma_v == dmu->sigma_v_last))
+  if (nuisance != NULL)
+    changed = ncm_model_ctrl_update (dmu->nuisance_ctrl, NCM_MODEL (nuisance)) || changed || !dmu->sigma_has_v;
+  else
+    changed = changed || dmu->sigma_has_v;
+
+  if (!changed)
     return FALSE;
 
   for (i = 0; i < np; i++)
   {
     const gdouble sm = ncm_vector_get (dmu->sigma_mu, i);
+    const gint s     = (gint) ncm_vector_get (dmu->sample, i);
 
-    if (sigma_v == 0.0)
+    if ((nuisance == NULL) || (nc_dist_mu_nuisance_get_sigma_v_sample (nuisance, s) == 0.0))
     {
       ncm_vector_set (sigma, i, sm);
     }
     else
     {
-      const gdouble sv = nc_dist_mu_nuisance_sigma_mu_v (nuisance, ncm_vector_get (dmu->z, i));
+      const gdouble sv = nc_dist_mu_nuisance_sigma_mu_v_sample (nuisance, ncm_vector_get (dmu->z, i), s);
 
       ncm_vector_set (sigma, i, hypot (sm, sv));
     }
   }
 
-  dmu->sigma_v_last = sigma_v;
-  dmu->sigma_stale  = FALSE;
+  dmu->sigma_has_v = (nuisance != NULL);
+  dmu->sigma_stale = FALSE;
 
   return TRUE;
 }

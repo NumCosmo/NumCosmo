@@ -1567,6 +1567,10 @@
     "nick": "sigma-v",
     "type": "Nc.DistMuNuisanceSParams"
   },
+  "NC_DIST_MU_NUISANCE_SIGMA_V_S": {
+    "nick": "sigma-v-s",
+    "type": "Nc.DistMuNuisanceVParams"
+  },
   "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
     "nick": "cf4-snia",
     "type": "Nc.DistMuObsCatalogId"

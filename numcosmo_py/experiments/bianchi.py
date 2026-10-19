@@ -51,6 +51,7 @@ def build_bianchi_experiment(
     zmax_factor: float = 1.05,
     sigma_v: float = 0.0,
     fit_sigma_v: bool = False,
+    sigma_v_per_sample: bool = False,
     sample_rule: SampleRule = SampleRule.NONE,
     sample_col: str | None = None,
     fit_offsets: bool = False,
@@ -85,6 +86,10 @@ def build_bianchi_experiment(
     :param sigma_v: peculiar velocity dispersion [km/s] of the :class:`Nc.DistMuNuisance`
         added to the model set when it is positive, ``fit_sigma_v`` or ``fit_offsets``.
     :param fit_sigma_v: whether ``sigma_v`` is a free parameter.
+    :param sigma_v_per_sample: whether each sample gets its own velocity dispersion,
+        started at ``sigma_v`` and free when ``fit_sigma_v`` is set; the common value
+        stays for objects without a sample, free only when such objects exist. Needs
+        samples.
     :param sample_rule: rule assigning the sample of each object, see
         :func:`numcosmo_py.datasets.dist_mu_obs.samples_by_rule`.
     :param sample_col: integer column of the catalog with the sample indices; it
@@ -171,13 +176,31 @@ def build_bianchi_experiment(
     data.set_desc(desc + (f", samples {sample_names}" if sample_names else ""))
 
     models: list[Ncm.Model] = [cosmo]
-    if sigma_v > 0.0 or fit_sigma_v or fit_offsets:
-        nuisance = Nc.DistMuNuisance.new(nsamples if fit_offsets else 0)
+    if sigma_v > 0.0 or fit_sigma_v or fit_offsets or sigma_v_per_sample:
+        if sigma_v_per_sample and nsamples == 0:
+            raise ValueError("sigma_v_per_sample needs samples.")
+        nuisance = Nc.DistMuNuisance.new_full(
+            nsamples if (fit_offsets or sigma_v_per_sample) else 0, sigma_v_per_sample
+        )
+        # The common dispersion serves the objects without a sample; with one per
+        # sample it is free only if such objects exist.
+        unlabelled = any(data.peek_samples().get(i) < 0.0 for i in range(z_sel.len()))
         nuisance["sigmav"] = sigma_v
         nuisance.param_set_ftype(
             nuisance.param_index_from_name("sigmav")[1],
-            Ncm.ParamType.FREE if fit_sigma_v else Ncm.ParamType.FIXED,
+            (
+                Ncm.ParamType.FREE
+                if fit_sigma_v and (not sigma_v_per_sample or unlabelled)
+                else Ncm.ParamType.FIXED
+            ),
         )
+        if sigma_v_per_sample:
+            for s in range(nsamples):
+                nuisance[f"sigmav_s_{s}"] = sigma_v
+                nuisance.param_set_ftype(
+                    nuisance.param_index_from_name(f"sigmav_s_{s}")[1],
+                    Ncm.ParamType.FREE if fit_sigma_v else Ncm.ParamType.FIXED,
+                )
         if fit_offsets:
             if reference_sample is None:
                 raise ValueError("fit_offsets needs a reference_sample.")

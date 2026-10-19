@@ -500,6 +500,47 @@ def test_generate_bianchi(tmp_path: Path):
     assert cosmo2.param_get_upper_bound(cosmo2.param_index_from_name("u2")[1]) == 1.0
 
 
+def test_generate_bianchi_sigma_v_per_sample(
+    tmp_path: Path, edd_cf4_excerpt_file: Path
+):
+    """Test Bianchi I generation with a velocity dispersion per sample."""
+    exp_file = tmp_path / "bianchi_svs.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        edd_table=edd_cf4_excerpt_file.absolute(),
+        sigma_v=250.0,
+        fit_sigma_v=True,
+        sigma_v_per_sample=True,
+        sample_rule=dist_mu_obs.SampleRule.SMALLEST_ERROR,
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    nuisance = cast(Nc.DistMuNuisance, mset.peek(Nc.DistMuNuisance.id()))
+    n = nuisance.get_nsamples()
+    assert n > 0
+    assert nuisance.get_nsigma_v() == n
+    for s in range(n):
+        assert nuisance.get_sigma_v_sample(s) == 250.0
+        assert (
+            nuisance.param_get_ftype(nuisance.param_index_from_name(f"sigmav_s_{s}")[1])
+            == Ncm.ParamType.FREE
+        )
+    # Sample -1 keeps the common value, which stays fixed since every object has a sample
+    assert nuisance.get_sigma_v_sample(-1) == 250.0
+    assert (
+        nuisance.param_get_ftype(nuisance.param_index_from_name("sigmav")[1])
+        == Ncm.ParamType.FIXED
+    )
+
+    with pytest.raises(ValueError, match="needs samples"):
+        _ = gen.GenerateBianchi(
+            experiment=(tmp_path / "bianchi_svs2.yaml").absolute(),
+            edd_table=edd_cf4_excerpt_file.absolute(),
+            sigma_v_per_sample=True,
+        )
+
+
 def test_generate_bianchi_velocity(tmp_path: Path):
     """Test Bianchi I generation with the observer velocity free."""
     exp_file = tmp_path / "bianchi_v.yaml"

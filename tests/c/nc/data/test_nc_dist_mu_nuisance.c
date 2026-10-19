@@ -44,6 +44,7 @@ void test_nc_dist_mu_nuisance_free (TestNcDistMuNuisance *test, gconstpointer pd
 void test_nc_dist_mu_nuisance_params (TestNcDistMuNuisance *test, gconstpointer pdata);
 void test_nc_dist_mu_nuisance_sigma_mu_v (TestNcDistMuNuisance *test, gconstpointer pdata);
 void test_nc_dist_mu_nuisance_serialize (TestNcDistMuNuisance *test, gconstpointer pdata);
+void test_nc_dist_mu_nuisance_sigma_v_per_sample (TestNcDistMuNuisance *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -65,6 +66,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/dist_mu_nuisance/serialize", TestNcDistMuNuisance, NULL,
               &test_nc_dist_mu_nuisance_new,
               &test_nc_dist_mu_nuisance_serialize,
+              &test_nc_dist_mu_nuisance_free);
+
+  g_test_add ("/nc/dist_mu_nuisance/sigma_v_per_sample", TestNcDistMuNuisance, NULL,
+              &test_nc_dist_mu_nuisance_new,
+              &test_nc_dist_mu_nuisance_sigma_v_per_sample,
               &test_nc_dist_mu_nuisance_free);
 
   g_test_run ();
@@ -153,5 +159,61 @@ test_nc_dist_mu_nuisance_serialize (TestNcDistMuNuisance *test, gconstpointer pd
 
   nc_dist_mu_nuisance_free (dup);
   ncm_serialize_free (ser);
+}
+
+void
+test_nc_dist_mu_nuisance_sigma_v_per_sample (TestNcDistMuNuisance *test, gconstpointer pdata)
+{
+  NcDistMuNuisance *per = nc_dist_mu_nuisance_new_full (3, TRUE);
+  NcmModel *model       = NCM_MODEL (per);
+  const gdouble sv[3]   = {150.0, 0.0, 420.0};
+  const gdouble z       = 0.02;
+  gint s;
+
+  /* The plain constructor has no per-sample dispersion: every sample uses sigma_v */
+  g_assert_cmpuint (nc_dist_mu_nuisance_get_nsigma_v (test->nuisance), ==, 0);
+  ncm_model_orig_param_set (NCM_MODEL (test->nuisance), NC_DIST_MU_NUISANCE_SIGMA_V, 250.0);
+
+  for (s = -1; s < 4; s++)
+  {
+    ncm_assert_cmpdouble (nc_dist_mu_nuisance_get_sigma_v_sample (test->nuisance, s), ==, 250.0);
+    ncm_assert_cmpdouble (nc_dist_mu_nuisance_sigma_mu_v_sample (test->nuisance, z, s), ==,
+                          nc_dist_mu_nuisance_sigma_mu_v (test->nuisance, z));
+  }
+
+  /* With one per sample: the sample's value inside the range, sigma_v outside it */
+  g_assert_cmpuint (nc_dist_mu_nuisance_get_nsamples (per), ==, 3);
+  g_assert_cmpuint (nc_dist_mu_nuisance_get_nsigma_v (per), ==, 3);
+  g_assert_cmpint (ncm_model_param_get_ftype (model, ncm_model_vparam_index (model, NC_DIST_MU_NUISANCE_SIGMA_V_S, 0)), ==, NCM_PARAM_TYPE_FIXED);
+  ncm_model_orig_param_set (model, NC_DIST_MU_NUISANCE_SIGMA_V, 250.0);
+
+  for (s = 0; s < 3; s++)
+    ncm_model_orig_vparam_set (model, NC_DIST_MU_NUISANCE_SIGMA_V_S, s, sv[s]);
+
+  for (s = 0; s < 3; s++)
+  {
+    const gdouble ref = 5.0 / M_LN10 * (sv[s] / (1.0e-3 * ncm_c_c ())) * (1.0 + z) / (z * (1.0 + 0.5 * z));
+
+    ncm_assert_cmpdouble (nc_dist_mu_nuisance_get_sigma_v_sample (per, s), ==, sv[s]);
+    ncm_assert_cmpdouble_e (nc_dist_mu_nuisance_sigma_mu_v_sample (per, z, s), ==, ref, 1.0e-15, 0.0);
+  }
+
+  ncm_assert_cmpdouble (nc_dist_mu_nuisance_get_sigma_v_sample (per, -1), ==, 250.0);
+  ncm_assert_cmpdouble (nc_dist_mu_nuisance_get_sigma_v_sample (per, 3), ==, 250.0);
+  ncm_assert_cmpdouble (nc_dist_mu_nuisance_sigma_mu_v_sample (per, z, 7), ==, nc_dist_mu_nuisance_sigma_mu_v (per, z));
+
+  /* Serialization keeps the per-sample values */
+  {
+    NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcDistMuNuisance *dup = NC_DIST_MU_NUISANCE (ncm_serialize_dup_obj (ser, G_OBJECT (per)));
+
+    g_assert_cmpuint (nc_dist_mu_nuisance_get_nsigma_v (dup), ==, 3);
+    ncm_assert_cmpdouble (nc_dist_mu_nuisance_get_sigma_v_sample (dup, 2), ==, 420.0);
+
+    nc_dist_mu_nuisance_free (dup);
+    ncm_serialize_free (ser);
+  }
+
+  nc_dist_mu_nuisance_free (per);
 }
 

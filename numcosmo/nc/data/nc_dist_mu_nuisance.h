@@ -55,6 +55,7 @@ typedef enum /*< enum,underscore_name=NC_DIST_MU_NUISANCE_SPARAMS,prefix=NC_DIST
 /**
  * NcDistMuNuisanceVParams:
  * @NC_DIST_MU_NUISANCE_DMU: distance modulus offset of each sample $\delta\mu_s$ [mag]
+ * @NC_DIST_MU_NUISANCE_SIGMA_V_S: peculiar velocity dispersion of each sample $\sigma_{v,s}$ [km/s]
  *
  * #NcDistMuNuisance vector parameters.
  *
@@ -62,6 +63,7 @@ typedef enum /*< enum,underscore_name=NC_DIST_MU_NUISANCE_SPARAMS,prefix=NC_DIST
 typedef enum /*< enum,underscore_name=NC_DIST_MU_NUISANCE_VPARAMS,prefix=NC_DIST_MU_NUISANCE >*/
 {
   NC_DIST_MU_NUISANCE_DMU,
+  NC_DIST_MU_NUISANCE_SIGMA_V_S,
   /* < private > */
   NC_DIST_MU_NUISANCE_VPARAM_LEN, /*< skip >*/
 } NcDistMuNuisanceVParams;
@@ -69,18 +71,23 @@ typedef enum /*< enum,underscore_name=NC_DIST_MU_NUISANCE_VPARAMS,prefix=NC_DIST
 NCM_MSET_MODEL_DECLARE_ID (nc_dist_mu_nuisance);
 
 NcDistMuNuisance *nc_dist_mu_nuisance_new (guint nsamples);
+NcDistMuNuisance *nc_dist_mu_nuisance_new_full (guint nsamples, gboolean sigma_v_per_sample);
 NcDistMuNuisance *nc_dist_mu_nuisance_ref (NcDistMuNuisance *nuisance);
 
 void nc_dist_mu_nuisance_free (NcDistMuNuisance *nuisance);
 void nc_dist_mu_nuisance_clear (NcDistMuNuisance **nuisance);
 
 guint nc_dist_mu_nuisance_get_nsamples (NcDistMuNuisance *nuisance);
+guint nc_dist_mu_nuisance_get_nsigma_v (NcDistMuNuisance *nuisance);
 gdouble nc_dist_mu_nuisance_get_sigma_v (NcDistMuNuisance *nuisance);
+gdouble nc_dist_mu_nuisance_get_sigma_v_sample (NcDistMuNuisance *nuisance, const gint sample);
 gdouble nc_dist_mu_nuisance_get_dmu (NcDistMuNuisance *nuisance, const guint sample);
 gdouble nc_dist_mu_nuisance_sigma_mu_v (NcDistMuNuisance *nuisance, const gdouble z);
+gdouble nc_dist_mu_nuisance_sigma_mu_v_sample (NcDistMuNuisance *nuisance, const gdouble z, const gint sample);
 
 #define NC_DIST_MU_NUISANCE_DEFAULT_SIGMA_V (0.0)
 #define NC_DIST_MU_NUISANCE_DEFAULT_DMU (0.0)
+#define NC_DIST_MU_NUISANCE_DEFAULT_SIGMA_V_S (0.0)
 #define NC_DIST_MU_NUISANCE_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS

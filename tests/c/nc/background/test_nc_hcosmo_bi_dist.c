@@ -417,6 +417,48 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
       /* Unchanged sigma_v: the same value; everything back to zero: the original likelihood */
       ncm_data_m2lnL_val (NCM_DATA (dmu), mset_n, &m2lnL_again);
       ncm_assert_cmpdouble_e (m2lnL_again, ==, m2lnL_n, 0.0, 0.0);
+
+      /* A dispersion per sample: objects of samples 0 and 1 take theirs, the object without
+       * a sample keeps sigma_v */
+      {
+        NcDistMuNuisance *per = nc_dist_mu_nuisance_new_full (2, TRUE);
+        NcmMSet *mset_p       = ncm_mset_new (NCM_MODEL (test->cosmo), NULL, per, NULL);
+        const gdouble sv_s[2] = {120.0, 500.0};
+        gdouble m2lnL_p, m2lnL_ref_p = 0.0;
+
+        ncm_model_orig_param_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V, sigma_v);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V_S, 0, sv_s[0]);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V_S, 1, sv_s[1]);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_DMU, 0, dmu_s[0]);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_DMU, 1, dmu_s[1]);
+
+        for (i = 0; i < 3; i++)
+        {
+          const gdouble zi    = ncm_vector_get (z, i);
+          const gdouble sv_i  = (i < 2) ? sv_s[i] : sigma_v;
+          const gdouble mu_t  = ncm_vector_get (mu, i) - 0.05 * (i + 1.0) + ((i < 2) ? dmu_s[i] : 0.0);
+          const gdouble s_v   = 5.0 / M_LN10 * (sv_i / (1.0e-3 * ncm_c_c ())) * (1.0 + zi) / (zi * (1.0 + 0.5 * zi));
+          const gdouble s_tot = hypot (ncm_vector_get (sigma, i), s_v);
+
+          m2lnL_ref_p += gsl_pow_2 ((ncm_vector_get (mu, i) - mu_t) / s_tot) + 2.0 * log (s_tot) + ncm_c_ln2pi ();
+        }
+
+        ncm_data_prepare (NCM_DATA (dmu), mset_p);
+        ncm_data_m2lnL_val (NCM_DATA (dmu), mset_p, &m2lnL_p);
+        ncm_assert_cmpdouble_e (m2lnL_p, ==, m2lnL_ref_p, 1.0e-13, 0.0);
+
+        /* Changing one per-sample value is seen */
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V_S, 1, 700.0);
+        ncm_data_m2lnL_val (NCM_DATA (dmu), mset_p, &m2lnL_again);
+        g_assert_cmpfloat (fabs (m2lnL_again - m2lnL_p), >, 1.0e-6);
+
+        ncm_mset_free (mset_p);
+        nc_dist_mu_nuisance_free (per);
+      }
+
+      /* Back to the plain nuisance model: its own value again */
+      ncm_data_m2lnL_val (NCM_DATA (dmu), mset_n, &m2lnL_again);
+      ncm_assert_cmpdouble_e (m2lnL_again, ==, m2lnL_n, 1.0e-13, 0.0);
       ncm_model_orig_param_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_SIGMA_V, 0.0);
       ncm_model_orig_vparam_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_DMU, 0, 0.0);
       ncm_model_orig_vparam_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_DMU, 1, 0.0);
