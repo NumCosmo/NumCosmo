@@ -706,6 +706,10 @@ lss_tests = [
         'name': 'nc_transfer_func',
         'sources': ['nc/powspec/test_nc_transfer_func.c'],
     },
+    {
+        'name': 'nc_powspec_mnl_halofit',
+        'sources': ['nc/powspec/test_nc_powspec_mnl_halofit.c'],
+    },
     # nc_powspec is built twice from one source (via -D, see the C file). Measured: the
     # CLASS-backed cbe half is fast (~4s, splined once) -> fast-lane unit; the analytic
     # transfer-function half (EH/BBKS + halofit + corr3d) is the slow one (>2 min) -> heavy
