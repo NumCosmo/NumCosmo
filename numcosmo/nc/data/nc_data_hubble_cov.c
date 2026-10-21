@@ -238,6 +238,9 @@ nc_data_hubble_cov_new_from_id (NcDataHubbleCovId id)
     case NC_DATA_HUBBLE_COV_LOUBSER2025:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_cov_loubser2025.obj", TRUE);
       break;
+    case NC_DATA_HUBBLE_COV_MORESCO2020:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_cov_moresco2020.obj", TRUE);
+      break;
     default:                                                                 /* LCOV_EXCL_LINE */
       g_error ("nc_data_hubble_cov_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
       break;                                                                 /* LCOV_EXCL_LINE */

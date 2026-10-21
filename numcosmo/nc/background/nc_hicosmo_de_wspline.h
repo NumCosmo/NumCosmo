@@ -49,6 +49,18 @@ typedef struct _NcHICosmoDEWSplinePrivate NcHICosmoDEWSplinePrivate;
 
 
 /**
+ * NcHICosmoDEWSplineSParams:
+ * @NC_HICOSMO_DE_WSPLINE_AS_DRAG: Sound horizon at the drag epoch in units of the Hubble distance, $r_s(z_d) H_0 / c$, used when #NcHICosmoDEWSpline:use-as-drag is set
+ *
+ */
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_WSPLINE_SPARAMS,prefix=NC_HICOSMO_DE_WSPLINE >*/
+{
+  NC_HICOSMO_DE_WSPLINE_AS_DRAG = NC_HICOSMO_DE_SPARAM_LEN,
+  /* < private > */
+  NC_HICOSMO_DE_WSPLINE_SPARAM_LEN, /*< skip >*/
+} NcHICosmoDEWSplineSParams;
+
+/**
  * NcHICosmoDEWSplineVParams:
  * @NC_HICOSMO_DE_WSPLINE_W: Dark energy equation of state parameter values at spline knots
  *
@@ -61,6 +73,7 @@ typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_WSPLINE_VPARAMS,prefix=NC_HI
 } NcHICosmoDEWSplineVParams;
 
 #define NC_HICOSMO_DE_WSPLINE_DEFAULT_W0 (-1.0)
+#define NC_HICOSMO_DE_WSPLINE_DEFAULT_AS_DRAG (0.035)
 
 #define NC_HICOSMO_DE_WSPLINE_N (NC_HICOSMO_DE_WSPLINE_W + 1 - NC_HICOSMO_DE_BASE_N)
 
@@ -85,6 +98,9 @@ NcmVector *nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline);
 gdouble nc_hicosmo_de_wspline_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p);
 gdouble nc_hicosmo_de_wspline_weighted_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight);
 gdouble nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline);
+
+void nc_hicosmo_de_wspline_set_use_as_drag (NcHICosmoDEWSpline *wspline, gboolean use_as_drag);
+gboolean nc_hicosmo_de_wspline_get_use_as_drag (NcHICosmoDEWSpline *wspline);
 
 G_END_DECLS
 

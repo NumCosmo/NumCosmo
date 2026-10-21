@@ -1319,6 +1319,10 @@
     "nick": "loubser2025",
     "type": "Nc.DataHubbleCovId"
   },
+  "NC_DATA_HUBBLE_COV_MORESCO2020": {
+    "nick": "moresco2020",
+    "type": "Nc.DataHubbleCovId"
+  },
   "NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018": {
     "nick": "gomez-valent-comp2018",
     "type": "Nc.DataHubbleId"
@@ -1898,6 +1902,10 @@
   "NC_HICOSMO_DE_T_GAMMA0": {
     "nick": "t-gamma0",
     "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_WSPLINE_AS_DRAG": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoDEWSplineSParams"
   },
   "NC_HICOSMO_DE_WSPLINE_W": {
     "nick": "w",

@@ -1364,6 +1364,15 @@ class GenerateQSpline:
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
+    sh0es_calibrators: Annotated[
+        bool,
+        typer.Option(
+            help="Keep the SH0ES Cepheid calibrators in the Pantheon+SH0ES STAT+SYS "
+            "catalogs; without them the selection is the Pantheon+ SN-only one.",
+            show_default=True,
+        ),
+    ] = True
+
     include_bao: Annotated[
         BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
@@ -1439,7 +1448,9 @@ class GenerateQSpline:
         dist = Nc.Distance.new(10.0)
 
         if self.include_snia is not None:
-            add_snia_likelihood(dset, mset, dist, self.include_snia)
+            add_snia_likelihood(
+                dset, mset, dist, self.include_snia, self.sh0es_calibrators
+            )
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
@@ -1784,6 +1795,15 @@ class GenerateDEWSpline:
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
+    sh0es_calibrators: Annotated[
+        bool,
+        typer.Option(
+            help="Keep the SH0ES Cepheid calibrators in the Pantheon+SH0ES STAT+SYS "
+            "catalogs; without them the selection is the Pantheon+ SN-only one.",
+            show_default=True,
+        ),
+    ] = True
+
     include_bao: Annotated[
         BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
@@ -1839,6 +1859,16 @@ class GenerateDEWSpline:
         ),
     ] = False
 
+    use_as_drag: Annotated[
+        bool,
+        typer.Option(
+            help="Use the asdrag parameter, r_s(z_d) H0 / c, for the BAO sound "
+            "horizon instead of computing it from the model; it is fitted when BAO "
+            "data are included.",
+            show_default=True,
+        ),
+    ] = False
+
     def __post_init__(self):
         """Generate DE WSpline experiment."""
         Ncm.cfg_init()
@@ -1862,16 +1892,21 @@ class GenerateDEWSpline:
             cosmo.param_set_desc(f"w_{i}", {"fit": True})
 
         cosmo.param_set_desc("Omegac", {"fit": True})
+        cosmo.set_use_as_drag(self.use_as_drag)
         mset = Ncm.MSet.new_array([cosmo])
         dset = Ncm.Dataset.new()
 
         dist = Nc.Distance.new(10.0)
 
         if self.include_snia is not None:
-            add_snia_likelihood(dset, mset, dist, self.include_snia)
+            add_snia_likelihood(
+                dset, mset, dist, self.include_snia, self.sh0es_calibrators
+            )
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
+            if self.use_as_drag:
+                cosmo.param_set_desc("asdrag", {"fit": True})
 
         if self.include_hubble is not None:
             add_h_likelihood(dset, mset, self.include_hubble)
