@@ -53,6 +53,7 @@ class BAOID(StrEnum):
     SDSS_ALL_COMBINED = auto()
     ALL_COMBINED_JAN_2023 = SDSS_ALL_COMBINED
     ALL_COMBINED_JUN_2025 = auto()
+    DESI_DR2_2025 = auto()
 
 
 class HID(StrEnum):
@@ -61,6 +62,7 @@ class HID(StrEnum):
     ALL_COMBINED_JAN_2023 = auto()
     ALL_COMBINED_APR_2025 = auto()
     ALL_COMBINED_OCT_2026 = auto()
+    CC_MORESCO_2020 = auto()
 
 
 def add_snia_likelihood(
@@ -68,8 +70,14 @@ def add_snia_likelihood(
     modelset: Ncm.MSet,
     dist: Nc.Distance,
     snia_id: SNIaID = SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
+    sh0es_calibrators: bool = True,
 ) -> None:
-    """Generate a likelihood for SNIa data."""
+    """Generate a likelihood for SNIa data.
+
+    The Pantheon+SH0ES STAT+SYS catalogs keep z_HD > 0.01 and, when
+    ``sh0es_calibrators`` is set, the SH0ES Cepheid calibrators; without them the
+    selection is the one of the Pantheon+ SN-only likelihood.
+    """
     cosmo = modelset.peek(Nc.HICosmo.id())
     assert cosmo is not None
 
@@ -78,7 +86,7 @@ def add_snia_likelihood(
         SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
         SNIaID.COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT,
     ):
-        snia0_data = snia_data.apply_filter_sh0es_z(0.01, True)
+        snia0_data = snia_data.apply_filter_sh0es_z(0.01, sh0es_calibrators)
         snia_data = snia0_data
 
     snia_model = Nc.SNIADistCov.new_by_id(dist, snia_id.genum)
@@ -124,6 +132,14 @@ def add_bao_likelihood(
             for bao_enum in bao_enums:
                 bao_likelihood = Nc.data_bao_create(dist, bao_enum)
                 dataset.append_data(bao_likelihood)
+        case BAOID.DESI_DR2_2025:
+            bao_enums = [
+                Nc.DataBaoId.RDV_DESI_DR2_BGS_2025,
+                Nc.DataBaoId.DVR_DTDH_DESI_DR2_2025,
+            ]
+            for bao_enum in bao_enums:
+                bao_likelihood = Nc.data_bao_create(dist, bao_enum)
+                dataset.append_data(bao_likelihood)
         case _:
             raise ValueError(f"Unknown BAO data set id: {bao_id}")
 
@@ -155,6 +171,10 @@ def add_h_likelihood(
                 Nc.DataHubbleId.JIMENEZ2023,
             ]
             h_cov_enums = [Nc.DataHubbleCovId.LOUBSER2025]
+        case HID.CC_MORESCO_2020:
+            # The D4000n sample with the Moresco et al. (2020) covariance, as published.
+            h_enums = []
+            h_cov_enums = [Nc.DataHubbleCovId.MORESCO2020]
         case _:
             raise ValueError(f"Unknown Hubble data set id: {h_id}")
 

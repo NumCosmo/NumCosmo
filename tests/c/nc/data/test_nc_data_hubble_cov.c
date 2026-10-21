@@ -58,6 +58,7 @@ void test_nc_data_hubble_cov_loubser2025_m2lnL (TestNcDataHubbleCov *test, gcons
 void test_nc_data_hubble_cov_serialization (TestNcDataHubbleCov *test, gconstpointer pdata);
 
 void test_nc_data_hubble_cov_api_set_size (void);
+void test_nc_data_hubble_cov_moresco2020 (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -80,6 +81,7 @@ main (gint argc, gchar *argv[])
               &test_nc_data_hubble_cov_free);
 
   g_test_add_func ("/nc/data_hubble_cov/api/set_size", &test_nc_data_hubble_cov_api_set_size);
+  g_test_add_func ("/nc/data_hubble_cov/moresco2020", &test_nc_data_hubble_cov_moresco2020);
 
   g_test_run ();
 }
@@ -235,6 +237,41 @@ test_nc_data_hubble_cov_api_set_size (void)
   g_object_get (hubble_cov, "z", &z, NULL);
   g_assert_null (z);
 
+  NCM_TEST_FREE (ncm_data_free, NCM_DATA (hubble_cov));
+}
+
+/*
+ * Moresco et al. (2020) covariance of the 15 D4000n points, as gitlab.com/mmoresco/CCcovariance
+ * builds it (examples/CC_covariance.ipynb): the notebook prints det(Cov) = 4.560e+33. First and
+ * last points from data/HzTable_MM_BC03.dat.
+ */
+void
+test_nc_data_hubble_cov_moresco2020 (void)
+{
+  NcDataHubbleCov *hubble_cov = nc_data_hubble_cov_new_from_id (NC_DATA_HUBBLE_COV_MORESCO2020);
+  NcmDataGaussCov *gauss      = NCM_DATA_GAUSS_COV (hubble_cov);
+  NcmVector *mean             = ncm_data_gauss_cov_peek_mean (gauss);
+  NcmMatrix *cov              = ncm_matrix_dup (ncm_data_gauss_cov_peek_cov (gauss));
+  NcmVector *z                = NULL;
+  guint i, j;
+
+  g_object_get (hubble_cov, "z", &z, NULL);
+  g_assert_cmpuint (ncm_data_gauss_cov_get_size (gauss), ==, 15);
+
+  ncm_assert_cmpdouble (ncm_vector_get (z, 0), ==, 0.1791);
+  ncm_assert_cmpdouble (ncm_vector_get (mean, 0), ==, 74.91);
+  ncm_assert_cmpdouble (ncm_vector_get (z, 14), ==, 1.965);
+  ncm_assert_cmpdouble (ncm_vector_get (mean, 14), ==, 186.5);
+
+  for (i = 0; i < 15; i++)
+    for (j = 0; j < i; j++)
+      ncm_assert_cmpdouble (ncm_matrix_get (cov, i, j), ==, ncm_matrix_get (cov, j, i));
+
+  g_assert_cmpint (ncm_matrix_cholesky_decomp (cov, 'U'), ==, 0);
+  g_assert_cmpfloat (fabs (exp (ncm_matrix_cholesky_lndet (cov)) / 4.560e33 - 1.0), <, 1.0e-3);
+
+  ncm_vector_free (z);
+  ncm_matrix_free (cov);
   NCM_TEST_FREE (ncm_data_free, NCM_DATA (hubble_cov));
 }
 

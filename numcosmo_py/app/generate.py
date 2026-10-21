@@ -1364,6 +1364,15 @@ class GenerateQSpline:
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
+    sh0es_calibrators: Annotated[
+        bool,
+        typer.Option(
+            help="Keep the SH0ES Cepheid calibrators in the Pantheon+SH0ES STAT+SYS "
+            "catalogs; without them the selection is the Pantheon+ SN-only one.",
+            show_default=True,
+        ),
+    ] = True
+
     include_bao: Annotated[
         BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
@@ -1439,7 +1448,9 @@ class GenerateQSpline:
         dist = Nc.Distance.new(10.0)
 
         if self.include_snia is not None:
-            add_snia_likelihood(dset, mset, dist, self.include_snia)
+            add_snia_likelihood(
+                dset, mset, dist, self.include_snia, self.sh0es_calibrators
+            )
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
@@ -1784,6 +1795,15 @@ class GenerateDEWSpline:
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
+    sh0es_calibrators: Annotated[
+        bool,
+        typer.Option(
+            help="Keep the SH0ES Cepheid calibrators in the Pantheon+SH0ES STAT+SYS "
+            "catalogs; without them the selection is the Pantheon+ SN-only one.",
+            show_default=True,
+        ),
+    ] = True
+
     include_bao: Annotated[
         BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
@@ -1879,7 +1899,9 @@ class GenerateDEWSpline:
         dist = Nc.Distance.new(10.0)
 
         if self.include_snia is not None:
-            add_snia_likelihood(dset, mset, dist, self.include_snia)
+            add_snia_likelihood(
+                dset, mset, dist, self.include_snia, self.sh0es_calibrators
+            )
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)

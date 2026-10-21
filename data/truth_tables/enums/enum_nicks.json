@@ -1319,6 +1319,10 @@
     "nick": "loubser2025",
     "type": "Nc.DataHubbleCovId"
   },
+  "NC_DATA_HUBBLE_COV_MORESCO2020": {
+    "nick": "moresco2020",
+    "type": "Nc.DataHubbleCovId"
+  },
   "NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018": {
     "nick": "gomez-valent-comp2018",
     "type": "Nc.DataHubbleId"

@@ -40,12 +40,14 @@ G_DECLARE_FINAL_TYPE (NcDataHubbleCov, nc_data_hubble_cov, NC, DATA_HUBBLE_COV, 
 /**
  * NcDataHubbleCovId:
  * @NC_DATA_HUBBLE_COV_LOUBSER2025: [Loubser (2025)](https://arxiv.org/abs/2511.02730), DESI DR1 cosmic chronometers
+ * @NC_DATA_HUBBLE_COV_MORESCO2020: D4000n cosmic chronometers of Moresco et al. (2012, 2015, 2016) with the covariance of [Moresco et al. (2020)](https://arxiv.org/abs/2003.07362)
  *
  * Identifiers for Hubble parameter datasets with a full covariance.
  */
 typedef enum _NcDataHubbleCovId /*< prefix=NC_DATA_HUBBLE_COV >*/
 {
   NC_DATA_HUBBLE_COV_LOUBSER2025 = 0,
+  NC_DATA_HUBBLE_COV_MORESCO2020,
   /* < private > */
   NC_DATA_HUBBLE_COV_NSAMPLES, /*< skip >*/
 } NcDataHubbleCovId;
