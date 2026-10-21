@@ -99,6 +99,45 @@
  * integrand evaluations, so it is never contended in practice. */
 G_LOCK_DEFINE_STATIC (calib_stats);
 
+/* A finished fixed-node grid, published on the #NcGalaxyWLObs it was built
+ * from so that the clones #NcmFitESMCMC (or #NcmFitMC) makes of this dataset
+ * can use it instead of each rebuilding its own. Clones made through a
+ * serializer in which register_shared() ran share the same @obs instance,
+ * and that sharing is what makes the grid reachable: a clone with its own
+ * copy of @obs never sees it.
+ *
+ * The grid depends only on the catalog, the redshift factor, z_cl and the
+ * node settings, so it is the same in every clone of a run that does not
+ * sample those. The per-galaxy arrays are held by reference and are never
+ * written after the bundle is made: every rebuild, here or in a clone,
+ * allocates new arrays (see _fixed_nodes_grid_reset()). The key is compared
+ * by value, since the change hashes of the factors are per-instance
+ * counters and cannot be compared between a dataset and its clone. */
+typedef struct _NcDataClusterWLFactorSharedGrid
+{
+  gint ref;
+  guint n_gal;
+  gdouble z_cl;
+  guint n_nodes;
+  guint rule_n;
+  gboolean auto_nodes;
+  gdouble node_reltol;
+  guint max_total_nodes;
+  GType z_type;
+  GPtrArray *fixed_bg_nodes;
+  GPtrArray *z_nodes_per_galaxy;
+  GArray *fixed_norm;
+  GArray *fixed_bg_norm;
+  GArray *fixed_fg_norm;
+  GArray *n_total_per_galaxy;
+  GArray *calib_n_nodes;
+  GArray *calib_rule_n;
+} NcDataClusterWLFactorSharedGrid;
+
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (nc-data-cluster-wl-factor-shared-grid, _nc_data_cluster_wl_factor_shared_grid)
+/* *INDENT-ON* */
+
 /* Fallback -2lnP for a non-positive fixed-nodes P_gal. */
 #define NC_GALAXY_LOW_PROB 1.0e6
 
@@ -281,6 +320,13 @@ typedef struct _NcDataClusterWLFactorPrivate
    * i.e. every galaxy the same); 0 for fully-foreground galaxies. Mirrors
    * fixed_norm's exact lifecycle (same reset points). */
   GArray *n_total_per_galaxy; /* element type: guint */
+
+  /* Grid sharing between clones, see NcDataClusterWLFactorSharedGrid.
+   * share_grid: register_shared() ran, so a finished grid is published on
+   * @obs. has_resampled: resample() wrote into @obs since set_obs(), so its
+   * content no longer matches anything published from it. */
+  gboolean share_grid;
+  gboolean has_resampled;
 
   /* Last z_cl the grid was actually built for (GSL_NAN forces the first
    * rebuild). The grid only depends on z_cl, not on halo_position as a
@@ -612,50 +658,211 @@ _step_shape_data_prepare (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcG
   nc_galaxy_shape_factor_data_prepare (self->shape_factor, mset, s_data, z_hi);
 }
 
-/* fixed_bg_nodes has no GDestroyNotify (NcmIntegralFixed is not NULL-safe to
- * free, and entries are legitimately NULL for foreground-only galaxies), so
- * both disposal and grid-rebuild resizing must free non-NULL entries by hand
- * through this one shared helper. */
+/* fixed_bg_nodes entries are legitimately NULL for foreground-only galaxies,
+ * and NcmIntegralFixed is not NULL-safe to free. */
 static void
-_fixed_bg_nodes_free_entries (GPtrArray *fixed_bg_nodes)
+_fixed_bg_nodes_free_entry (gpointer bg_intf)
 {
-  guint i;
-
-  for (i = 0; i < fixed_bg_nodes->len; i++)
-  {
-    NcmIntegralFixed *bg_intf = (NcmIntegralFixed *) g_ptr_array_index (fixed_bg_nodes, i);
-
-    if (bg_intf != NULL)
-      ncm_integral_fixed_free (bg_intf);
-  }
+  if (bg_intf != NULL)
+    ncm_integral_fixed_free ((NcmIntegralFixed *) bg_intf);
 }
 
-/* Resizes the per-galaxy fixed-node arrays to the current galaxy count,
- * freeing whatever they held before -- called once per prepare() cycle
- * (not per galaxy) right before the steps[] loop, only when
- * fixed_grid_changed. After this, every slot is NULL/0 and
- * _step_fixed_nodes_grid's indexed writes are leak-free. */
+/* z_nodes_per_galaxy entries are NULL between _fixed_nodes_grid_reset() and
+ * the grid step, and stay NULL when the grid is adopted instead. */
+static void
+_z_nodes_free_entry (gpointer z_nodes)
+{
+  if (z_nodes != NULL)
+    ncm_vector_free ((NcmVector *) z_nodes);
+}
+
+/* Replaces the per-galaxy fixed-node arrays with new ones sized to the
+ * current galaxy count -- called once per prepare() cycle (not per galaxy)
+ * right before the steps[] loop, only when fixed_grid_changed. After this,
+ * every slot is NULL/0 and _step_fixed_nodes_grid's indexed writes are
+ * leak-free.
+ *
+ * New arrays rather than resizing in place: the old ones may be published
+ * on @obs or adopted from it (see NcDataClusterWLFactorSharedGrid), and
+ * other clones may be reading them. Dropping the reference leaves them to
+ * whoever still holds one. */
 static void
 _fixed_nodes_grid_reset (NcDataClusterWLFactorPrivate *self)
 {
+  const guint n_gal = self->shape_data->len;
+
   g_array_set_size (self->calib_n_nodes, 0);
   g_array_set_size (self->calib_rule_n, 0);
-  g_array_set_size (self->calib_n_nodes, self->shape_data->len);
-  g_array_set_size (self->calib_rule_n, self->shape_data->len);
+  g_array_set_size (self->calib_n_nodes, n_gal);
+  g_array_set_size (self->calib_rule_n, n_gal);
 
-  _fixed_bg_nodes_free_entries (self->fixed_bg_nodes);
-  g_ptr_array_set_size (self->fixed_bg_nodes, 0);
-  g_ptr_array_set_size (self->fixed_bg_nodes, self->shape_data->len);
+  g_ptr_array_unref (self->fixed_bg_nodes);
+  self->fixed_bg_nodes = g_ptr_array_new_full (n_gal, &_fixed_bg_nodes_free_entry);
+  g_ptr_array_set_size (self->fixed_bg_nodes, n_gal);
 
-  g_ptr_array_set_size (self->z_nodes_per_galaxy, 0);
-  g_ptr_array_set_size (self->z_nodes_per_galaxy, self->shape_data->len);
+  g_ptr_array_unref (self->z_nodes_per_galaxy);
+  self->z_nodes_per_galaxy = g_ptr_array_new_full (n_gal, &_z_nodes_free_entry);
+  g_ptr_array_set_size (self->z_nodes_per_galaxy, n_gal);
 
-  g_array_set_size (self->fixed_norm, self->shape_data->len);
-  g_array_set_size (self->fixed_bg_norm, self->shape_data->len);
-  g_array_set_size (self->fixed_fg_norm, self->shape_data->len);
+  g_array_unref (self->fixed_norm);
+  g_array_unref (self->fixed_bg_norm);
+  g_array_unref (self->fixed_fg_norm);
+  g_array_unref (self->n_total_per_galaxy);
 
-  g_array_set_size (self->n_total_per_galaxy, 0);
-  g_array_set_size (self->n_total_per_galaxy, self->shape_data->len);
+  self->fixed_norm         = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), n_gal);
+  self->fixed_bg_norm      = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), n_gal);
+  self->fixed_fg_norm      = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), n_gal);
+  self->n_total_per_galaxy = g_array_sized_new (FALSE, TRUE, sizeof (guint), n_gal);
+
+  g_array_set_size (self->fixed_norm, n_gal);
+  g_array_set_size (self->fixed_bg_norm, n_gal);
+  g_array_set_size (self->fixed_fg_norm, n_gal);
+  g_array_set_size (self->n_total_per_galaxy, n_gal);
+}
+
+static gpointer
+_shared_grid_dup (gpointer sg, gpointer user_data)
+{
+  NcDataClusterWLFactorSharedGrid *shared_grid = (NcDataClusterWLFactorSharedGrid *) sg;
+
+  if (shared_grid != NULL)
+    g_atomic_int_inc (&shared_grid->ref);
+
+  return shared_grid;
+}
+
+static void
+_shared_grid_unref (gpointer sg)
+{
+  NcDataClusterWLFactorSharedGrid *shared_grid = (NcDataClusterWLFactorSharedGrid *) sg;
+
+  if (g_atomic_int_dec_and_test (&shared_grid->ref))
+  {
+    g_ptr_array_unref (shared_grid->fixed_bg_nodes);
+    g_ptr_array_unref (shared_grid->z_nodes_per_galaxy);
+    g_array_unref (shared_grid->fixed_norm);
+    g_array_unref (shared_grid->fixed_bg_norm);
+    g_array_unref (shared_grid->fixed_fg_norm);
+    g_array_unref (shared_grid->n_total_per_galaxy);
+    g_array_unref (shared_grid->calib_n_nodes);
+    g_array_unref (shared_grid->calib_rule_n);
+    g_free (shared_grid);
+  }
+}
+
+/* Whether the grid in hand was built from @obs as it is now, by a redshift
+ * factor that does not depend on the model (get_hash() constant 0, as for
+ * #NcGalaxyRedshiftFactorSpline), so that it holds for every clone. */
+static gboolean
+_fixed_nodes_grid_is_shareable (NcDataClusterWLFactorPrivate *self)
+{
+  return (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) &&
+         (self->obs != NULL) && !self->obs_changed && !self->has_resampled && !self->resampling &&
+         gsl_finite (self->fixed_nodes_zcl) &&
+         (self->shape_data->len > 0) && (self->n_total_per_galaxy->len == self->shape_data->len) &&
+         (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) == 0);
+}
+
+/* Publishes the grid in hand on @obs, keyed by what it was built under. Runs
+ * only after the whole grid is built (the steps[] loop, including its
+ * parallel part, has returned). */
+static void
+_fixed_nodes_grid_publish (NcDataClusterWLFactorPrivate *self)
+{
+  NcDataClusterWLFactorSharedGrid *shared_grid;
+
+  if (!_fixed_nodes_grid_is_shareable (self))
+    return;
+
+  shared_grid      = g_new0 (NcDataClusterWLFactorSharedGrid, 1);
+  shared_grid->ref = 1;
+
+  shared_grid->n_gal              = self->shape_data->len;
+  shared_grid->z_cl               = self->fixed_nodes_zcl;
+  shared_grid->n_nodes            = self->fixed_nodes_n_nodes_seen;
+  shared_grid->rule_n             = self->fixed_nodes_rule_n_seen;
+  shared_grid->auto_nodes         = self->fixed_nodes_auto_nodes_seen;
+  shared_grid->node_reltol        = self->fixed_nodes_node_reltol_seen;
+  shared_grid->max_total_nodes    = self->fixed_nodes_max_total_nodes_seen;
+  shared_grid->z_type             = G_OBJECT_TYPE (self->redshift_factor);
+  shared_grid->fixed_bg_nodes     = g_ptr_array_ref (self->fixed_bg_nodes);
+  shared_grid->z_nodes_per_galaxy = g_ptr_array_ref (self->z_nodes_per_galaxy);
+  shared_grid->fixed_norm         = g_array_ref (self->fixed_norm);
+  shared_grid->fixed_bg_norm      = g_array_ref (self->fixed_bg_norm);
+  shared_grid->fixed_fg_norm      = g_array_ref (self->fixed_fg_norm);
+  shared_grid->n_total_per_galaxy = g_array_ref (self->n_total_per_galaxy);
+  shared_grid->calib_n_nodes      = g_array_sized_new (FALSE, FALSE, sizeof (gint), self->calib_n_nodes->len);
+  shared_grid->calib_rule_n       = g_array_sized_new (FALSE, FALSE, sizeof (gint), self->calib_rule_n->len);
+
+  g_array_append_vals (shared_grid->calib_n_nodes, self->calib_n_nodes->data, self->calib_n_nodes->len);
+  g_array_append_vals (shared_grid->calib_rule_n, self->calib_rule_n->data, self->calib_rule_n->len);
+
+  g_object_set_qdata_full (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark (),
+                           shared_grid, &_shared_grid_unref);
+}
+
+/* Takes the grid published on @obs instead of building one, when it was
+ * built under exactly the current settings. Never while resampling or after
+ * a resample: the catalog then no longer matches what was published.
+ *
+ * Under auto-nodes the per-galaxy pairs come from a calibration that probes
+ * the shape integrand at the model point it ran at, neither of which is in
+ * the key. So the grid is taken only by a dataset that replays a stored
+ * node-config (already loaded into calib_n_nodes/calib_rule_n by
+ * _node_config_adopt()) holding exactly the published pairs: a clone, which
+ * inherits node-config from the dataset it was made from. Any other
+ * dataset on the same @obs calibrates for itself. */
+static gboolean
+_fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
+{
+  NcDataClusterWLFactorSharedGrid *shared_grid;
+  gboolean match;
+
+  if ((self->obs == NULL) || self->resampling || self->has_resampled ||
+      (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) != 0))
+    return FALSE;
+
+  shared_grid = g_object_dup_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark (),
+                                    &_shared_grid_dup, NULL);
+
+  if (shared_grid == NULL)
+    return FALSE;
+
+  match = (!self->auto_nodes ||
+           (self->node_config_valid &&
+            (self->calib_n_nodes->len == shared_grid->calib_n_nodes->len) &&
+            (self->calib_rule_n->len == shared_grid->calib_rule_n->len) &&
+            (memcmp (self->calib_n_nodes->data, shared_grid->calib_n_nodes->data, sizeof (gint) * self->calib_n_nodes->len) == 0) &&
+            (memcmp (self->calib_rule_n->data, shared_grid->calib_rule_n->data, sizeof (gint) * self->calib_rule_n->len) == 0))) &&
+          (shared_grid->n_gal == self->shape_data->len) &&
+          (shared_grid->z_cl == self->z_cl) &&
+          (shared_grid->n_nodes == self->n_nodes) &&
+          (shared_grid->rule_n == self->rule_n) &&
+          (shared_grid->auto_nodes == self->auto_nodes) &&
+          (shared_grid->node_reltol == self->node_reltol) &&
+          (shared_grid->max_total_nodes == self->max_total_nodes) &&
+          (shared_grid->z_type == G_OBJECT_TYPE (self->redshift_factor));
+
+  if (match)
+  {
+    g_ptr_array_unref (self->fixed_bg_nodes);
+    g_ptr_array_unref (self->z_nodes_per_galaxy);
+    g_array_unref (self->fixed_norm);
+    g_array_unref (self->fixed_bg_norm);
+    g_array_unref (self->fixed_fg_norm);
+    g_array_unref (self->n_total_per_galaxy);
+
+    self->fixed_bg_nodes     = g_ptr_array_ref (shared_grid->fixed_bg_nodes);
+    self->z_nodes_per_galaxy = g_ptr_array_ref (shared_grid->z_nodes_per_galaxy);
+    self->fixed_norm         = g_array_ref (shared_grid->fixed_norm);
+    self->fixed_bg_norm      = g_array_ref (shared_grid->fixed_bg_norm);
+    self->fixed_fg_norm      = g_array_ref (shared_grid->fixed_fg_norm);
+    self->n_total_per_galaxy = g_array_ref (shared_grid->n_total_per_galaxy);
+  }
+
+  _shared_grid_unref (shared_grid);
+
+  return match;
 }
 
 static void
@@ -714,13 +921,12 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 
   self->node_config_valid = FALSE;
 
-  /* No destroy-func on fixed_bg_nodes: entries are nullable (NcmIntegralFixed
-   * is not NULL-safe to free), so clearing/resizing this array is handled
-   * manually with an explicit NULL check -- see _fixed_nodes_grid_reset().
-   * z_nodes_per_galaxy's entries are never NULL, so its destroy-func is
-   * safe to rely on for both resizing and disposal. */
-  self->fixed_bg_nodes                   = g_ptr_array_new ();
-  self->z_nodes_per_galaxy               = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  self->share_grid    = FALSE;
+  self->has_resampled = FALSE;
+
+  /* fixed_bg_nodes entries are nullable, see _fixed_bg_nodes_free_entry(). */
+  self->fixed_bg_nodes                   = g_ptr_array_new_with_free_func (&_fixed_bg_nodes_free_entry);
+  self->z_nodes_per_galaxy               = g_ptr_array_new_with_free_func (&_z_nodes_free_entry);
   self->fixed_norm                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->fixed_bg_norm                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->fixed_fg_norm                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -1017,7 +1223,6 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
   g_clear_pointer (&self->cub_res, ncm_vector_free);
   g_clear_pointer (&self->cub_err, ncm_vector_free);
 
-  _fixed_bg_nodes_free_entries (self->fixed_bg_nodes);
   g_clear_pointer (&self->fixed_bg_nodes, g_ptr_array_unref);
   g_clear_pointer (&self->z_nodes_per_galaxy, g_ptr_array_unref);
   g_clear_pointer (&self->fixed_norm, g_array_unref);
@@ -1099,7 +1304,8 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   GError *error                             = NULL;
   gboolean pos_changed, z_changed, radius_changed, optzs_changed, crit_changed, pop_changed, fixed_grid_changed;
   NcDataClusterWLFactorStep steps[9];
-  guint n_steps = 0;
+  guint n_steps         = 0;
+  gboolean grid_adopted = FALSE;
 
   self->resampling = ncm_data_is_resampling (data);
 
@@ -1250,6 +1456,11 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
      * count are both known, and consumed by the grid step below. */
     self->node_config_valid = (self->node_config != NULL) && _node_config_adopt (self);
 
+    /* A clone of a dataset whose grid was published on the shared @obs
+     * takes that grid, already built under these settings, and skips the
+     * grid step below; the steps that depend on the model still run. */
+    grid_adopted = _fixed_nodes_grid_adopt (self);
+
     self->fixed_nodes_zcl                  = self->z_cl;
     self->fixed_nodes_n_nodes_seen         = self->n_nodes;
     self->fixed_nodes_rule_n_seen          = self->rule_n;
@@ -1309,7 +1520,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
   if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES)
   {
-    if (fixed_grid_changed)
+    if (fixed_grid_changed && !grid_adopted)
       steps[n_steps++] = &_step_fixed_nodes_grid;
 
     if (fixed_grid_changed || crit_changed)
@@ -1405,6 +1616,11 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     g_array_set_size (self->calib_n_nodes, 0);
     g_array_set_size (self->calib_rule_n, 0);
   }
+
+  /* A grid built here, as opposed to adopted, replaces whatever this dataset
+   * published before, so clones made from now on take the current one. */
+  if (self->share_grid && fixed_grid_changed && !grid_adopted)
+    _fixed_nodes_grid_publish (self);
 
   /* One line per prepare() instead of one per galaxy. */
   if (self->calib_unconverged > 0)
@@ -1898,6 +2114,11 @@ _nc_data_cluster_wl_factor_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   guint gal_i;
 
+  /* The rows written below change @obs in place, so a grid published from
+   * it no longer describes it. */
+  self->has_resampled = TRUE;
+  g_object_set_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark (), NULL);
+
   for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
   {
     NcGalaxyShapeFactorData *s_data      = g_ptr_array_index (self->shape_data, gal_i);
@@ -1970,6 +2191,13 @@ _nc_data_cluster_wl_factor_register_shared (NcmData *data, NcmSerialize *ser)
    * left to the ordinary (cheap) per-thread deep copy. */
   if (NC_IS_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (self->shape_factor))
     nc_galaxy_shape_factor_moments_tilt_register_shared (NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (self->shape_factor), ser);
+
+  /* The fixed-node grid travels with @obs: once @obs is shared, every clone
+   * reaches the grid published on it (see NcDataClusterWLFactorSharedGrid).
+   * Publish the grid in hand now, e.g. the one nc_data_cluster_wl_factor_data_prepare()
+   * built, and every grid this dataset builds from now on. */
+  self->share_grid = TRUE;
+  _fixed_nodes_grid_publish (self);
 }
 
 static void
@@ -2359,9 +2587,10 @@ nc_data_cluster_wl_factor_set_obs (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   nc_galaxy_wl_obs_clear (&self->obs);
-  self->len         = nc_galaxy_wl_obs_len (obs);
-  self->obs         = nc_galaxy_wl_obs_ref (obs);
-  self->obs_changed = TRUE;
+  self->len           = nc_galaxy_wl_obs_len (obs);
+  self->obs           = nc_galaxy_wl_obs_ref (obs);
+  self->obs_changed   = TRUE;
+  self->has_resampled = FALSE;
 
   ncm_data_set_init (NCM_DATA (dcwlf), TRUE);
   ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
