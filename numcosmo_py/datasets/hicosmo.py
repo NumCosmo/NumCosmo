@@ -37,9 +37,14 @@ class SNIaID(GEnum):
     """Possible SNIa data sets ids."""
 
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT = (
+        Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT
+    )
     SIMPLE_UNION2_1 = Nc.DataSNIAId.SIMPLE_UNION2_1
     COV_DES_Y5_STAT_SYS = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS
     COV_DES_Y5_STATONLY = Nc.DataSNIAId.COV_DES_Y5_STATONLY
+    COV_DES_DOVEKIE_STAT_SYS = Nc.DataSNIAId.COV_DES_DOVEKIE_STAT_SYS
+    COV_DES_DOVEKIE_STATONLY = Nc.DataSNIAId.COV_DES_DOVEKIE_STATONLY
 
 
 class BAOID(StrEnum):
@@ -68,7 +73,10 @@ def add_snia_likelihood(
     assert cosmo is not None
 
     snia_data = Nc.DataSNIACov.new_from_cat_id(snia_id.genum, False)
-    if snia_id == SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT:
+    if snia_id in (
+        SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
+        SNIaID.COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT,
+    ):
         snia0_data = snia_data.apply_filter_sh0es_z(0.01, True)
         snia_data = snia0_data
 

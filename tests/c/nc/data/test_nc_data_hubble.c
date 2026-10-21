@@ -99,6 +99,9 @@ void test_nc_data_hubble_set_sample_jimenez2023 (TestNcDataHubble *test, gconstp
 void test_nc_data_hubble_new_tomasetti2023 (TestNcDataHubble *test, gconstpointer pdata);
 void test_nc_data_hubble_set_sample_tomasetti2023 (TestNcDataHubble *test, gconstpointer pdata);
 
+void test_nc_data_hubble_new_loubser2025 (TestNcDataHubble *test, gconstpointer pdata);
+void test_nc_data_hubble_set_sample_loubser2025 (TestNcDataHubble *test, gconstpointer pdata);
+
 void test_nc_data_hubble_get_redshift (TestNcDataHubble *test, gconstpointer pdata);
 
 gint
@@ -183,6 +186,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_hubble/set_sample/tomasetti2023", TestNcDataHubble, NULL,
               &test_nc_data_hubble_new_tomasetti2023,
               &test_nc_data_hubble_set_sample_tomasetti2023,
+              &test_nc_data_hubble_free);
+  g_test_add ("/nc/data_hubble/set_sample/loubser2025", TestNcDataHubble, NULL,
+              &test_nc_data_hubble_new_loubser2025,
+              &test_nc_data_hubble_set_sample_loubser2025,
               &test_nc_data_hubble_free);
   g_test_add ("/nc/data_hubble/get_redshift", TestNcDataHubble, NULL,
               &test_nc_data_hubble_new_simon2005,
@@ -457,6 +464,20 @@ void
 test_nc_data_hubble_new_tomasetti2023 (TestNcDataHubble *test, gconstpointer pdata)
 {
   NcDataHubbleId id = NC_DATA_HUBBLE_TOMASETTI2023;
+  NcmData *data;
+
+  test->id = id;
+  data     = NCM_DATA (nc_data_hubble_new_from_id (id));
+  g_assert_true (data != NULL);
+  test->hubble = NC_DATA_HUBBLE (data);
+  g_assert_true (NC_IS_DATA_HUBBLE (data));
+}
+
+/* Loubser 2025 */
+void
+test_nc_data_hubble_new_loubser2025 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubbleId id = NC_DATA_HUBBLE_LOUBSER2025;
   NcmData *data;
 
   test->id = id;
@@ -1228,6 +1249,40 @@ test_nc_data_hubble_set_sample_tomasetti2023 (TestNcDataHubble *test, gconstpoin
   ncm_assert_cmpdouble (ncm_vector_get (x, 0), ==, z0);
   ncm_assert_cmpdouble (ncm_vector_get (y, 0), ==, bf0);
   ncm_assert_cmpdouble (ncm_vector_get (sigma_v, 0), ==, sigma0);
+
+  ncm_vector_free (x);
+}
+
+void
+test_nc_data_hubble_set_sample_loubser2025 (TestNcDataHubble *test, gconstpointer pdata)
+{
+  NcDataHubble *hubble   = test->hubble;
+  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble);
+  NcDataHubbleId id      = NC_DATA_HUBBLE_LOUBSER2025;
+  NcmVector *y           = ncm_data_gauss_diag_peek_mean (diag);
+  NcmVector *sigma_v     = ncm_data_gauss_diag_peek_std (diag);
+  NcmVector *x           = NULL;
+
+  /* z, H(z), statistical and systematic errors, arXiv:2511.02730 */
+  const gdouble z[3]        = {0.46, 0.67, 0.83};
+  const gdouble bf[3]       = {88.48, 119.45, 108.28};
+  const gdouble sigma_st[3] = {0.57, 6.39, 10.07};
+  const gdouble sigma_sy[3] = {12.32, 16.64, 15.08};
+  guint i;
+
+  g_assert_true (hubble != NULL);
+  g_assert_true (NC_IS_DATA_HUBBLE (hubble));
+  g_object_get (hubble, "z", &x, NULL);
+
+  g_assert_cmpuint (test->id, ==, id);
+  g_assert_cmpuint (ncm_vector_len (x), ==, 3);
+
+  for (i = 0; i < 3; i++)
+  {
+    ncm_assert_cmpdouble (ncm_vector_get (x, i), ==, z[i]);
+    ncm_assert_cmpdouble (ncm_vector_get (y, i), ==, bf[i]);
+    ncm_assert_cmpdouble_e (ncm_vector_get (sigma_v, i), ==, hypot (sigma_st[i], sigma_sy[i]), 1.0e-15, 0.0);
+  }
 
   ncm_vector_free (x);
 }

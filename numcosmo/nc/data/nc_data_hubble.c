@@ -318,6 +318,9 @@ nc_data_hubble_new_from_id (NcDataHubbleId id)
     case NC_DATA_HUBBLE_TOMASETTI2023:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_tomasetti2023.obj", TRUE);
       break;
+    case NC_DATA_HUBBLE_LOUBSER2025:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_loubser2025.obj", TRUE);
+      break;
     default:                                                             /* LCOV_EXCL_LINE */
       g_error ("nc_data_hubble_new_from_id: id %d not recognized.", id); /* LCOV_EXCL_LINE */
       break;                                                             /* LCOV_EXCL_LINE */
