@@ -33,12 +33,10 @@
  * Dark Energy equation of state: $w(\alpha)$ approximated by a cubic spline.
  *
  * The sound horizon at the drag epoch, used by the BAO observables through
- * nc_distance_r_zd(), is computed from the model by default: the Eisenstein-Hu fit for
- * the drag redshift and the sound-horizon integral, as nc_distance_drag_redshift() and
- * nc_distance_sound_horizon() compute it for an #NcDistance without #NcDistance:recomb.
- * With #NcHICosmoDEWSpline:use-as-drag set, it is the parameter
- * #NcHICosmoDEWSpline:asdrag, $r_s(z_d) H_0 / c$, instead: BAO then constrains only
- * distance ratios, as in #NcHICosmoQSpline.
+ * nc_distance_r_zd(), is computed by #NcDistance with its #NcDistance:sound-horizon-method method by
+ * default. With #NcHICosmoDEWSpline:use-as-drag set, it is the parameter
+ * #NcHICosmoDEWSpline:asdrag, $r_s(z_d) H_0 / c$, instead: BAO then constrains only distance
+ * ratios, as in #NcHICosmoQSpline.
  *
  */
 
@@ -250,6 +248,7 @@ static gdouble _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdo
 static gdouble _nc_hicosmo_de_wspline_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wspline_as_drag (NcHICosmo *cosmo);
+static gboolean _nc_hicosmo_de_wspline_as_drag_is_free (NcHICosmo *cosmo);
 
 static void
 nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
@@ -300,7 +299,7 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
    * NcHICosmoDEWSpline:use-as-drag:
    *
    * Whether the sound horizon at the drag epoch is the parameter
-   * #NcHICosmoDEWSpline:asdrag (TRUE) or computed from the model (FALSE).
+   * #NcHICosmoDEWSpline:asdrag (TRUE) or computed by #NcDistance (FALSE).
    */
   g_object_class_install_property (object_class,
                                    PROP_USE_AS_DRAG,
@@ -341,6 +340,7 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_wspline_w_de);
 
   nc_hicosmo_set_as_drag_impl (hicosmo_class, &_nc_hicosmo_de_wspline_as_drag);
+  nc_hicosmo_set_as_drag_is_free_impl (hicosmo_class, &_nc_hicosmo_de_wspline_as_drag_is_free);
 }
 
 #define VECTOR (NCM_MODEL (cosmo_de))
@@ -462,58 +462,21 @@ _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z)
   }
 }
 
-static gdouble _nc_hicosmo_de_wspline_sound_horizon_integrand (gdouble z, gpointer p);
-
-/*
- * The computed branch must be kept equal to nc_distance_r_zd() for an #NcDistance without
- * #NcDistance:recomb and without its integral cache: nc_distance_drag_redshift(),
- * nc_distance_sound_horizon() and _nc_distance_sinn().
- */
 static gdouble
 _nc_hicosmo_de_wspline_as_drag (NcHICosmo *cosmo)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
+
+  return AS_DRAG;
+}
+
+static gboolean
+_nc_hicosmo_de_wspline_as_drag_is_free (NcHICosmo *cosmo)
 {
   NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (cosmo);
   NcHICosmoDEWSplinePrivate * const self = wspline->priv;
 
-  if (self->use_as_drag)
-  {
-    NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
-
-    return AS_DRAG;
-  }
-  else
-  {
-    const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
-    const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
-    const gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
-    const gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
-    const gdouble zd         = 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
-                               (1.0 + b1 * pow (omega_b_h2, b2));
-    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
-    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
-    gdouble result, error;
-    gsl_function F;
-
-    F.function = &_nc_hicosmo_de_wspline_sound_horizon_integrand;
-    F.params   = cosmo;
-
-    ncm_integral_locked_a_inf (&F, zd, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
-
-    if (fabs (Omega_k0) < NCM_ZERO_LIMIT)
-      return result;
-    else if (Omega_k0 > 0.0)
-      return sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
-    else
-      return fabs (sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0);
-  }
-}
-
-static gdouble
-_nc_hicosmo_de_wspline_sound_horizon_integrand (gdouble z, gpointer p)
-{
-  NcHICosmo *cosmo = NC_HICOSMO (p);
-
-  return sqrt (nc_hicosmo_bgp_cs2 (cosmo, z) / nc_hicosmo_E2 (cosmo, z));
+  return self->use_as_drag;
 }
 
 /**
@@ -680,7 +643,7 @@ _nc_hicosmo_de_wspline_register_functions (void)
  * @use_as_drag: whether to use #NcHICosmoDEWSpline:asdrag
  *
  * Sets the source of the sound horizon at the drag epoch: the parameter
- * #NcHICosmoDEWSpline:asdrag when @use_as_drag is TRUE, the computation from the model
+ * #NcHICosmoDEWSpline:asdrag when @use_as_drag is TRUE, the computation of #NcDistance
  * otherwise. Free #NcHICosmoDEWSpline:asdrag separately to fit it.
  */
 void

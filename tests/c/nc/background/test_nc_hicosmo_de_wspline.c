@@ -97,7 +97,7 @@ test_nc_hicosmo_de_wspline_free (TestNcHICosmoDEWSpline *test, gconstpointer pda
   NCM_TEST_FREE (nc_hicosmo_free, NC_HICOSMO (test->wspline));
 }
 
-/* By default the sound horizon at drag is computed, equal to NcDistance on the same model as XCDM. */
+/* By default NcDistance computes the sound horizon at drag, as for the same model as XCDM. */
 void
 test_nc_hicosmo_de_wspline_as_drag_computed (TestNcHICosmoDEWSpline *test, gconstpointer pdata)
 {

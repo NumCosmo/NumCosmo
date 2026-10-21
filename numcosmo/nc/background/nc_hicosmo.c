@@ -204,6 +204,7 @@ static gdouble _nc_hicosmo_T_gamma0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Yp_4He (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_z_lss (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_as_drag (NcHICosmo *cosmo);
+static gboolean _nc_hicosmo_as_drag_is_free (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_xb (NcHICosmo *cosmo);
 
 static gdouble _nc_hicosmo_E2Omega_mnu (NcHICosmo *cosmo, const gdouble z);
@@ -286,22 +287,23 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   model_class->valid        = &_nc_hicosmo_valid;
   model_class->add_submodel = &_nc_hicosmo_add_submodel;
 
-  klass->H0           = &_nc_hicosmo_H0;
-  klass->Omega_b0     = &_nc_hicosmo_Omega_b0;
-  klass->Omega_g0     = &_nc_hicosmo_Omega_g0;
-  klass->Omega_nu0    = &_nc_hicosmo_Omega_nu0;
-  klass->Omega_mnu0   = &_nc_hicosmo_Omega_mnu0;
-  klass->Press_mnu0   = &_nc_hicosmo_Press_mnu0;
-  klass->Omega_mnu0_n = &_nc_hicosmo_Omega_mnu0_n;
-  klass->Press_mnu0_n = &_nc_hicosmo_Press_mnu0_n;
-  klass->Omega_r0     = &_nc_hicosmo_Omega_r0;
-  klass->Omega_c0     = &_nc_hicosmo_Omega_c0;
-  klass->Omega_t0     = &_nc_hicosmo_Omega_t0;
-  klass->T_gamma0     = &_nc_hicosmo_T_gamma0;
-  klass->Yp_4He       = &_nc_hicosmo_Yp_4He;
-  klass->z_lss        = &_nc_hicosmo_z_lss;
-  klass->as_drag      = &_nc_hicosmo_as_drag;
-  klass->xb           = &_nc_hicosmo_xb;
+  klass->H0              = &_nc_hicosmo_H0;
+  klass->Omega_b0        = &_nc_hicosmo_Omega_b0;
+  klass->Omega_g0        = &_nc_hicosmo_Omega_g0;
+  klass->Omega_nu0       = &_nc_hicosmo_Omega_nu0;
+  klass->Omega_mnu0      = &_nc_hicosmo_Omega_mnu0;
+  klass->Press_mnu0      = &_nc_hicosmo_Press_mnu0;
+  klass->Omega_mnu0_n    = &_nc_hicosmo_Omega_mnu0_n;
+  klass->Press_mnu0_n    = &_nc_hicosmo_Press_mnu0_n;
+  klass->Omega_r0        = &_nc_hicosmo_Omega_r0;
+  klass->Omega_c0        = &_nc_hicosmo_Omega_c0;
+  klass->Omega_t0        = &_nc_hicosmo_Omega_t0;
+  klass->T_gamma0        = &_nc_hicosmo_T_gamma0;
+  klass->Yp_4He          = &_nc_hicosmo_Yp_4He;
+  klass->z_lss           = &_nc_hicosmo_z_lss;
+  klass->as_drag         = &_nc_hicosmo_as_drag;
+  klass->as_drag_is_free = &_nc_hicosmo_as_drag_is_free;
+  klass->xb              = &_nc_hicosmo_xb;
 
   klass->E2Omega_mnu   = &_nc_hicosmo_E2Omega_mnu;
   klass->E2Press_mnu   = &_nc_hicosmo_E2Press_mnu;
@@ -431,6 +433,12 @@ _nc_hicosmo_as_drag (NcHICosmo *cosmo)
   g_error ("nc_hicosmo_as_drag: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo));
 
   return 0.0;
+}
+
+static gboolean
+_nc_hicosmo_as_drag_is_free (NcHICosmo *cosmo)
+{
+  return ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_as_drag);
 }
 
 static gdouble
@@ -818,6 +826,36 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, z_ls
  *
  */
 NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO, NcHICosmo, nc_hicosmo, NcHICosmoFunc0, as_drag)
+
+/**
+ * nc_hicosmo_set_as_drag_is_free_impl: (skip)
+ * @model_class: a #NcHICosmoClass
+ * @f: an implementation of as_drag_is_free
+ *
+ * Sets the implementation of nc_hicosmo_as_drag_is_free() for @model_class.
+ */
+void
+nc_hicosmo_set_as_drag_is_free_impl (NcHICosmoClass *model_class, NcHICosmoFuncBool f)
+{
+  model_class->as_drag_is_free = f;
+}
+
+/**
+ * nc_hicosmo_as_drag_is_free: (virtual as_drag_is_free)
+ * @cosmo: a #NcHICosmo
+ *
+ * Whether the sound horizon at the drag epoch is the parameter returned by
+ * nc_hicosmo_as_drag(). By default it is %TRUE when the model implements
+ * nc_hicosmo_as_drag(); models where it is optional decide per instance. When it is
+ * %FALSE, nc_distance_r_zd() computes the sound horizon from the model.
+ *
+ * Returns: whether the sound horizon at the drag epoch is a free parameter of @cosmo
+ */
+gboolean
+nc_hicosmo_as_drag_is_free (NcHICosmo *cosmo)
+{
+  return NC_HICOSMO_GET_CLASS (cosmo)->as_drag_is_free (cosmo);
+}
 
 /**
  * nc_hicosmo_set_xb_impl: (skip)
@@ -1787,9 +1825,10 @@ nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *q
  * nc_hicosmo_as_drag: (virtual as_drag)
  * @cosmo: a #NcHICosmo
  *
- * Computes the sound horizon at the drag epoch.
+ * The sound horizon at the drag epoch as a model parameter, in units of the Hubble
+ * distance. nc_distance_r_zd() uses it when nc_hicosmo_as_drag_is_free() is %TRUE.
  *
- * Returns: the sound horizon at the drag epoch $r_s(z_d)$ in Mpc
+ * Returns: the sound horizon at the drag epoch $r_s(z_d) H_0 / c$
  */
 /**
  * nc_hicosmo_xb: (virtual xb)

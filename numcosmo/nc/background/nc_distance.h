@@ -71,6 +71,23 @@ typedef enum _NcDistanceComovingMethod
   NC_DISTANCE_COMOVING_METHOD_LEN, /*< skip >*/
 } NcDistanceComovingMethod;
 
+/**
+ * NcDistanceSoundHorizonMethod:
+ * @NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT: the fit of [Aubourg et al. (2015)](https://arxiv.org/abs/1411.1074) calibrated on CAMB, their eq. 16 for $N_\mathrm{eff} = 3.046$ and eq. 17 otherwise
+ * @NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU: the sound-horizon integral up to the drag redshift of the [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112) fit
+ * @NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB: the sound-horizon integral up to the drag redshift of #NcDistance:recomb
+ *
+ * Methods for the sound horizon at the drag epoch computed by nc_distance_r_zd().
+ */
+typedef enum _NcDistanceSoundHorizonMethod /*< prefix=NC_DISTANCE_SOUND_HORIZON_METHOD >*/
+{
+  NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT = 0,
+  NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU,
+  NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB,
+  /* < private > */
+  NC_DISTANCE_SOUND_HORIZON_METHOD_LEN, /*< skip >*/
+} NcDistanceSoundHorizonMethod;
+
 struct _NcDistance
 {
   /*< private >*/
@@ -90,6 +107,7 @@ struct _NcDistance
   gdouble max_comoving;
   NcRecomb *recomb;
   NcDistanceComovingMethod cmethod;
+  NcDistanceSoundHorizonMethod sound_horizon_method;
 };
 
 typedef struct _NcDistanceFunc
@@ -117,6 +135,8 @@ NcDistance *nc_distance_ref (NcDistance *dist);
 
 void nc_distance_require_zf (NcDistance *dist, const gdouble zf);
 void nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb);
+void nc_distance_set_sound_horizon_method (NcDistance *dist, NcDistanceSoundHorizonMethod sound_horizon_method);
+NcDistanceSoundHorizonMethod nc_distance_get_sound_horizon_method (NcDistance *dist);
 void nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi);
 
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
