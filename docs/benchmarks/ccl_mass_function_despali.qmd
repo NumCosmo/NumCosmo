@@ -1,0 +1,480 @@
+---
+title: "Benchmarking NumCosmo vs. CCL: Despali Halo Mass Function"
+date: "2026-10-20"
+abstract: |
+    This document compares the halo mass function and the multiplicity function of
+    Despali (2016), with the ellipsoidal correction, implemented in NumCosmo and CCL,
+    at the mass definitions 200m, 200c and 500c, at CCL's default and high-precision
+    settings.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+
+---
+
+## Introduction
+
+Compares the halo mass function and the multiplicity function of Despali (2016) from
+CCL and NumCosmo. Reports their relative differences in plots and tables, for each
+mass definition, cosmology, redshift and CCL precision setting.
+
+The physics behind these quantities -- the growth function, the transfer function,
+the filtered variance and the multiplicity function -- is worked through in
+[Halo Mass Function](../examples/intro/halo_mass_function.qmd).
+
+### Scope of the comparison
+
+Two quantities are compared:
+
+1. **The halo mass function** $\mathrm{d}n/\mathrm{d}\ln M$.
+   `compare_mass_function` returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for
+   both codes; the factor $M \ln 10$ is the same for both and cancels in their
+   relative difference.
+2. **The multiplicity function** $f(\sigma)$. Both codes evaluate it at the same
+   $\sigma$, NumCosmo's $\sigma(M, z)$, so the fitting formula is compared apart from
+   the filtered variance.
+
+Both are evaluated on 128 masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$,
+at $z = 0$, $0.5$, $1$ and $1.5$, for the five cosmologies defined below. Despali
+(2016) is compared with its ellipsoidal correction, at three mass definitions: 200
+times the mean matter density (200m), and 200 and 500 times the critical density (200c
+and 500c).
+
+Both CCL precision settings are reported: CCL's defaults, and the values selected by
+`CCLParams.set_high_prec_params()`.
+[CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) describes the
+parameters of CCL's tabulated mass variance and compares the halo mass function with
+one group of them raised at a time.
+
+```{python}
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import CCLParams
+
+from numcosmo_py.plotting.tools import set_rc_params_article, latex_float
+import numcosmo_py.ccl.comparison as nc_cmp
+from numcosmo_py.ccl import multiplicity_func_pairing as mfp
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the
+following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+The models are built twice, once per precision setting. `setup_models` switches
+CCL's global parameters to high precision when asked and does not switch them back,
+and a CCL cosmology copies the global parameters when it is created. The
+default-precision set is therefore built first.
+
+```{python}
+parameters, models_def = setup_models(high_precision=False)
+_, models_hp = setup_models(high_precision=True)
+
+PRECISION_SETS = [
+    ("CCL defaults", models_def),
+    ("High precision", models_hp),
+]
+```
+
+### Parameter Overview
+
+The table below summarizes the parameters. There are five parameter sets.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-params
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
+# | code-fold: true
+
+df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+### Configurations
+
+The pairings between CCL's mass functions and NumCosmo's multiplicity functions come
+from `numcosmo_py.ccl.multiplicity_func_pairing`, which the mass-function tests also
+use. Each entry below is one fit at one mass definition.
+
+A prepared `NcHaloMassFunction` keeps the multiplicity function it was given, so each
+comparison needs a new pair; the entries are therefore stored as constructors rather
+than as objects.
+
+```{python}
+MEAN = Nc.MultiplicityFuncMassDef.MEAN
+CRITICAL = Nc.MultiplicityFuncMassDef.CRITICAL
+
+DESPALI_PAIRS = [
+    ("Despali 200m", lambda: mfp.despali_pair("matter", MEAN, True, 200)),
+    ("Despali 200c", lambda: mfp.despali_pair("critical", CRITICAL, True, 200)),
+    ("Despali 500c", lambda: mfp.despali_pair("critical", CRITICAL, True, 500)),
+]
+
+m_arr = np.geomspace(1.0e11, 1.0e15, 128)
+Z_ARR = [0.0, 0.5, 1.0, 1.5]
+Z_STYLES = ["-", "--", "-.", ":"]
+```
+
+### Mass definitions
+
+Despali's fit coefficients are polynomials in
+$x = \log_{10}(\Delta/\Delta_\mathrm{vir})$, where $\Delta$ and $\Delta_\mathrm{vir}$
+are relative to the same density.
+$\Delta_\mathrm{vir}$ is the virial overdensity of Bryan and Norman (1998), a function
+of $\Omega_m(a)$, the matter density relative to the critical density at scale factor
+$a$. CCL computes $\Delta_\mathrm{vir}$ relative to the density of the mass definition,
+and NumCosmo relative to the critical density, so a mean overdensity enters
+NumCosmo's $x$ as $\Delta \, \Omega_m(a)$.
+
+The first table below gives $\Delta_\mathrm{vir}$ relative to the critical density as
+each code computes it, CCL through a critical mass definition and NumCosmo through
+`delta_vir`. It does not depend on the entry. The second table gives $x$ for each
+entry as each code's fit computes it. Its last column is the absolute difference,
+since $x$ is close to zero for some entries. Both are at CCL's default precision.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-delta-vir
+# | tbl-cap: $\Delta_\mathrm{vir}$ relative to the critical density in CCL and NumCosmo
+# | tbl-colwidths: [24, 8, 22, 22, 24]
+# | code-fold: true
+
+# For a critical mass definition, CCL gives Delta_vir relative to the critical
+# density, as NumCosmo's delta_vir does.
+CRITICAL_MASS_DEF = pyccl.halos.MassDef(200, "critical")
+DESPALI_OBJECTS = [(label, *factory()) for label, factory in DESPALI_PAIRS]
+
+DELTA_VIR = {}
+X = {}
+for m, name in zip(models_def, PARAMETERS_SET):
+    ccl_cosmo, nc_cosmo = m["CCL"], m["NC"].cosmo
+    for z in Z_ARR:
+        a = 1.0 / (1.0 + z)
+        ccl_dv = CRITICAL_MASS_DEF.get_Delta_vir(ccl_cosmo, a)
+        nc_dv = DESPALI_OBJECTS[0][2].delta_vir(nc_cosmo, z)
+        DELTA_VIR[(name, z)] = (ccl_dv, nc_dv)
+        for label, ccl_hmf, nc_mulf in DESPALI_OBJECTS:
+            # The expression CCL's Despali (2016) fit evaluates.
+            mass_def = ccl_hmf.mass_def
+            ccl_x = np.log10(
+                mass_def.get_Delta(ccl_cosmo, a) / mass_def.get_Delta_vir(ccl_cosmo, a)
+            )
+            # The expressions NumCosmo's fit evaluates, in its order.
+            Delta = nc_mulf.get_Delta()
+            if nc_mulf.get_mdef() == MEAN:
+                Omega_m = nc_cosmo.E2Omega_m(z) / nc_cosmo.E2(z)
+                nc_x = np.log10(Delta * Omega_m / nc_dv)
+            else:
+                nc_x = np.log10(Delta / nc_dv)
+            X[(label, name, z)] = (ccl_x, nc_x)
+
+rows = [
+    [
+        name,
+        f"{z:g}",
+        f"${latex_float(ccl_dv, convert_g=False)}$",
+        f"${latex_float(nc_dv, convert_g=False)}$",
+        f"${latex_float(abs(nc_dv / ccl_dv - 1.0), convert_g=False)}$",
+    ]
+    for (name, z), (ccl_dv, nc_dv) in DELTA_VIR.items()
+]
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "Cosmology",
+        "$z$",
+        r"$\Delta_\mathrm{vir}^{\mathrm{CCL}}$",
+        r"$\Delta_\mathrm{vir}^{\mathrm{NumCosmo}}$",
+        r"$\left|\Delta_\mathrm{vir}^{\mathrm{NumCosmo}}"
+        r"/\Delta_\mathrm{vir}^{\mathrm{CCL}} - 1\right|$",
+    ],
+)
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-x
+# | tbl-cap: $x = \log_{10}(\Delta/\Delta_\mathrm{vir})$ for each entry in CCL and NumCosmo
+# | tbl-colwidths: [16, 24, 8, 16, 16, 20]
+# | code-fold: true
+
+rows = [
+    [
+        label,
+        name,
+        f"{z:g}",
+        f"${latex_float(ccl_x, convert_g=False)}$",
+        f"${latex_float(nc_x, convert_g=False)}$",
+        f"${latex_float(abs(nc_x - ccl_x), convert_g=False)}$",
+    ]
+    for label, _ in DESPALI_PAIRS
+    for (x_label, name, z), (ccl_x, nc_x) in X.items()
+    if x_label == label
+]
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "Entry",
+        "Cosmology",
+        "$z$",
+        r"$x^{\mathrm{CCL}}$",
+        r"$x^{\mathrm{NumCosmo}}$",
+        r"$\left|x^{\mathrm{NumCosmo}} - x^{\mathrm{CCL}}\right|$",
+    ],
+)
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+```{python}
+# | code-fold: true
+
+
+def compare_entry(compare_func, pair_factory, model, name, z):
+    """Compare one entry in one cosmology at one redshift."""
+    ccl_hmf, nc_mulf = pair_factory()
+    return compare_func(
+        model["CCL"], model["NC"], ccl_hmf, nc_mulf, m_arr, z, model=name
+    )
+
+
+def compare_all(compare_func):
+    """Compare every entry, cosmology, redshift and precision setting."""
+    return {
+        (prec, z): [
+            [
+                compare_entry(compare_func, factory, m, name, z)
+                for m, name in zip(model_set, PARAMETERS_SET)
+            ]
+            for _, factory in DESPALI_PAIRS
+        ]
+        for prec, model_set in PRECISION_SETS
+        for z in Z_ARR
+    }
+
+
+def plot_entries(comparisons, prec, x_label, y_label):
+    """Plot the relative difference for each entry at one precision setting."""
+    fig, axs = plt.subplots(1, 3, sharex=True, figsize=(12.0, 4.0))
+    for i, (ax, (label, _)) in enumerate(zip(axs, DESPALI_PAIRS)):
+        ax.set_title(label, fontsize=9)
+        ax.set_xlabel(x_label)
+        entry = [p for z in Z_ARR for p in comparisons[(prec, z)][i]]
+        if all(p.rel_diff_max == 0.0 for p in entry):
+            # A log scale cannot show a difference that is zero everywhere.
+            ax.text(
+                0.5,
+                0.5,
+                "relative difference 0\nat every point",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=8,
+            )
+            continue
+        for z, ls in zip(Z_ARR, Z_STYLES):
+            for p, c in zip(comparisons[(prec, z)][i], COLORS):
+                ax.plot(
+                    p.x,
+                    p.abs_diff,
+                    lw=0.8,
+                    color=c,
+                    linestyle=ls,
+                    label=p.model if z == Z_ARR[0] else None,
+                )
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.grid()
+
+    axs[0].legend(loc="best", fontsize=7)
+    fig.supylabel(y_label)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+
+def summary_table(comparisons, stat_header):
+    """Display one row per precision setting, entry, cosmology and redshift."""
+    table = []
+    for prec, _ in PRECISION_SETS:
+        for z in Z_ARR:
+            for (label, _), entry in zip(DESPALI_PAIRS, comparisons[(prec, z)]):
+                for p in entry:
+                    # row[0] is the cosmology, passed to the comparison as model=.
+                    row = p.summary_row(convert_g=False)
+                    table.append([prec, label, row[0], f"{z:g}"] + row[2:])
+
+    df = pd.DataFrame(
+        table, columns=["Precision", "Entry", "Cosmology", "$z$"] + stat_header
+    )
+    display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+## Halo mass function
+
+The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each entry, in
+every cosmology, at every redshift and at both precision settings, through
+`compare_mass_function`.
+
+```{python}
+mf_comparisons = compare_all(nc_cmp.compare_mass_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-despali-mf-def
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL's default precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+MF_Y_LABEL = (
+    r"$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}"
+    r"/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$"
+)
+plot_entries(mf_comparisons, "CCL defaults", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-despali-mf-hp
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL's high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+plot_entries(mf_comparisons, "High precision", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$ over the mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-mf
+# | tbl-cap: Halo mass function, all entries, cosmologies, redshifts and precision settings
+# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | code-fold: true
+
+# CompareFunc1d.table_header() names the power spectrum and is shared with the other
+# benchmark pages, so it is not used here.
+summary_table(
+    mf_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Multiplicity function
+
+The following compares $f(\sigma)$ for each entry, in every cosmology, at every
+redshift and at both precision settings, through `compare_multiplicity_function`.
+For each mass, both codes receive NumCosmo's $\sigma$ at that mass and redshift, so
+the horizontal axis is $\sigma$.
+
+```{python}
+fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-despali-fsigma-def
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL's default precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+FS_Y_LABEL = (
+    r"$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$"
+)
+plot_entries(fs_comparisons, "CCL defaults", r"$\sigma$", FS_Y_LABEL)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-despali-fsigma-hp
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL's high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+plot_entries(fs_comparisons, "High precision", r"$\sigma$", FS_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$ over the
+mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-fsigma
+# | tbl-cap: Multiplicity function, all entries, cosmologies, redshifts and precision settings
+# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | code-fold: true
+
+summary_table(
+    fs_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Summary
+
+The table below gives, for each entry, the largest relative difference over the
+five cosmologies, the four redshifts and the mass range, for each quantity at each
+precision setting.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-worst
+# | tbl-cap: Largest relative difference per entry, over all cosmologies, redshifts and masses
+# | tbl-colwidths: [20, 20, 20, 20, 20]
+# | code-fold: true
+
+
+def worst(comparisons, prec, i):
+    """Largest relative difference of entry i at one precision setting."""
+    return max(p.rel_diff_max for z in Z_ARR for p in comparisons[(prec, z)][i])
+
+
+rows = []
+for i, (label, _) in enumerate(DESPALI_PAIRS):
+    row = [label]
+    for comparisons in (mf_comparisons, fs_comparisons):
+        for prec, _ in PRECISION_SETS:
+            value = latex_float(worst(comparisons, prec, i), convert_g=False)
+            row.append(f"${value}$")
+    rows.append(row)
+
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "Entry",
+        r"$\mathrm{d}n/\mathrm{d}\ln M$, CCL defaults",
+        r"$\mathrm{d}n/\mathrm{d}\ln M$, high precision",
+        r"$f(\sigma)$, CCL defaults",
+        r"$f(\sigma)$, high precision",
+    ],
+)
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```

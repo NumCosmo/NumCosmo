@@ -1,0 +1,439 @@
+---
+title: "Benchmarking NumCosmo vs. CCL: Tinker Halo Mass Functions"
+date: "2026-10-20"
+abstract: |
+    This document compares the halo mass function and the multiplicity function of
+    Tinker (2008) and Tinker (2010) implemented in NumCosmo and CCL, at the mass
+    definitions 200m, 200c and 500c for Tinker (2008) and 200m for Tinker (2010), at
+    CCL's default and high-precision settings.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+
+---
+
+## Introduction
+
+Compares the halo mass function and the multiplicity function of Tinker (2008) and
+Tinker (2010) from CCL and NumCosmo. Reports their relative differences in plots and
+tables, for each mass definition, cosmology, redshift and CCL precision setting.
+
+The physics behind these quantities -- the growth function, the transfer function,
+the filtered variance and the multiplicity function -- is worked through in
+[Halo Mass Function](../examples/intro/halo_mass_function.qmd).
+
+### Scope of the comparison
+
+Two quantities are compared:
+
+1. **The halo mass function** $\mathrm{d}n/\mathrm{d}\ln M$.
+   `compare_mass_function` returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for
+   both codes; the factor $M \ln 10$ is the same for both and cancels in their
+   relative difference.
+2. **The multiplicity function** $f(\sigma)$. Both codes evaluate it at the same
+   $\sigma$, NumCosmo's $\sigma(M, z)$, so the fitting formula is compared apart from
+   the filtered variance.
+
+Both are evaluated on 128 masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$,
+at $z = 0$, $0.5$, $1$ and $1.5$, for the five cosmologies defined below. Tinker
+(2008) is compared at three mass definitions: 200 times the mean matter density
+(200m), and 200 and 500 times the critical density (200c and 500c). Tinker (2010) is
+compared at 200m.
+
+NumCosmo's Tinker (2008) multiplicity function is built with
+`set_linear_interp(True)`, so its fit coefficients are interpolated linearly in the
+overdensity, as CCL does.
+
+Both CCL precision settings are reported: CCL's defaults, and the values selected by
+`CCLParams.set_high_prec_params()`.
+[CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) describes the
+parameters of CCL's tabulated mass variance and compares the halo mass function with
+one group of them raised at a time.
+
+```{python}
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import CCLParams
+
+from numcosmo_py.plotting.tools import set_rc_params_article, latex_float
+import numcosmo_py.ccl.comparison as nc_cmp
+from numcosmo_py.ccl import multiplicity_func_pairing as mfp
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the
+following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+The models are built twice, once per precision setting. `setup_models` switches
+CCL's global parameters to high precision when asked and does not switch them back,
+and a CCL cosmology copies the global parameters when it is created. The
+default-precision set is therefore built first.
+
+```{python}
+parameters, models_def = setup_models(high_precision=False)
+_, models_hp = setup_models(high_precision=True)
+
+PRECISION_SETS = [
+    ("CCL defaults", models_def),
+    ("High precision", models_hp),
+]
+```
+
+### Parameter Overview
+
+The table below summarizes the parameters. There are five parameter sets.
+
+```{python}
+# | label: tbl-ccl-vs-nc-tinker-params
+# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
+# | code-fold: true
+
+df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+### Configurations
+
+The pairings between CCL's mass functions and NumCosmo's multiplicity functions come
+from `numcosmo_py.ccl.multiplicity_func_pairing`, which the mass-function tests also
+use. Each entry below is one fit at one mass definition.
+
+A prepared `NcHaloMassFunction` keeps the multiplicity function it was given, so each
+comparison needs a new pair; the entries are therefore stored as constructors rather
+than as objects.
+
+```{python}
+MEAN = Nc.MultiplicityFuncMassDef.MEAN
+CRITICAL = Nc.MultiplicityFuncMassDef.CRITICAL
+
+TINKER_PAIRS = [
+    (
+        "Tinker08 200m",
+        lambda: mfp.tinker08_pair("matter", MEAN, 200, linear_interp=True),
+    ),
+    (
+        "Tinker08 200c",
+        lambda: mfp.tinker08_pair("critical", CRITICAL, 200, linear_interp=True),
+    ),
+    (
+        "Tinker08 500c",
+        lambda: mfp.tinker08_pair("critical", CRITICAL, 500, linear_interp=True),
+    ),
+    ("Tinker10 200m", lambda: mfp.tinker10_pair("matter", MEAN, 200)),
+]
+
+m_arr = np.geomspace(1.0e11, 1.0e15, 128)
+Z_ARR = [0.0, 0.5, 1.0, 1.5]
+Z_STYLES = ["-", "--", "-.", ":"]
+```
+
+### Mass definitions
+
+Tinker's fit coefficients are tabulated in the overdensity relative to the mean
+matter density, $\Delta_m$, from $\Delta_m = 200$ to $3200$. A critical overdensity
+$\Delta_c$ enters the fit as $\Delta_m = \Delta_c / \Omega_m(a)$, where
+$\Omega_m(a)$ is the matter density relative to the critical density at scale factor
+$a$. The table below gives $\Delta_m$ for the two critical definitions as each code
+computes it, CCL through its mass definition and NumCosmo through
+`get_matter_Delta`, at CCL's default precision.
+
+```{python}
+# | label: tbl-ccl-vs-nc-tinker-delta-m
+# | tbl-cap: $\Delta_m$ of the critical mass definitions in CCL and NumCosmo
+# | tbl-colwidths: [16, 24, 8, 16, 16, 20]
+# | code-fold: true
+
+DELTA_M = {}
+for label, factory in TINKER_PAIRS:
+    ccl_hmf, nc_mulf = factory()
+    if ccl_hmf.mass_def.rho_type != "critical":
+        continue
+    for m, name in zip(models_def, PARAMETERS_SET):
+        for z in Z_ARR:
+            # The value CCL's Tinker (2008) fit evaluates.
+            ccl_value = ccl_hmf.mass_def._get_Delta_m(m["CCL"], 1.0 / (1.0 + z))
+            nc_value = nc_mulf.get_matter_Delta(m["NC"].cosmo, z)
+            DELTA_M[(label, name, z)] = (ccl_value, nc_value)
+
+rows = [
+    [
+        label,
+        name,
+        f"{z:g}",
+        f"${latex_float(ccl_value, convert_g=False)}$",
+        f"${latex_float(nc_value, convert_g=False)}$",
+        f"${latex_float(abs(nc_value / ccl_value - 1.0), convert_g=False)}$",
+    ]
+    for (label, name, z), (ccl_value, nc_value) in DELTA_M.items()
+]
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "Entry",
+        "Cosmology",
+        "$z$",
+        r"$\Delta_m^{\mathrm{CCL}}$",
+        r"$\Delta_m^{\mathrm{NumCosmo}}$",
+        r"$\left|\Delta_m^{\mathrm{NumCosmo}}/\Delta_m^{\mathrm{CCL}} - 1\right|$",
+    ],
+)
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+```{python}
+# | code-fold: true
+
+
+def compare_entry(compare_func, pair_factory, model, name, z):
+    """Compare one entry in one cosmology at one redshift."""
+    ccl_hmf, nc_mulf = pair_factory()
+    return compare_func(
+        model["CCL"], model["NC"], ccl_hmf, nc_mulf, m_arr, z, model=name
+    )
+
+
+def compare_all(compare_func):
+    """Compare every entry, cosmology, redshift and precision setting."""
+    return {
+        (prec, z): [
+            [
+                compare_entry(compare_func, factory, m, name, z)
+                for m, name in zip(model_set, PARAMETERS_SET)
+            ]
+            for _, factory in TINKER_PAIRS
+        ]
+        for prec, model_set in PRECISION_SETS
+        for z in Z_ARR
+    }
+
+
+def plot_entries(comparisons, prec, x_label, y_label):
+    """Plot the relative difference for each entry at one precision setting."""
+    fig, axs = plt.subplots(2, 2, sharex=True, figsize=(9.0, 7.0))
+    for i, (ax, (label, _)) in enumerate(zip(axs.flat, TINKER_PAIRS)):
+        ax.set_title(label, fontsize=9)
+        entry = [p for z in Z_ARR for p in comparisons[(prec, z)][i]]
+        if all(p.rel_diff_max == 0.0 for p in entry):
+            # A log scale cannot show a difference that is zero everywhere.
+            ax.text(
+                0.5,
+                0.5,
+                "relative difference 0\nat every point",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=8,
+            )
+            continue
+        for z, ls in zip(Z_ARR, Z_STYLES):
+            for p, c in zip(comparisons[(prec, z)][i], COLORS):
+                ax.plot(
+                    p.x,
+                    p.abs_diff,
+                    lw=0.8,
+                    color=c,
+                    linestyle=ls,
+                    label=p.model if z == Z_ARR[0] else None,
+                )
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.grid()
+
+    for ax in axs[-1, :]:
+        ax.set_xlabel(x_label)
+    axs[0, 0].legend(loc="best", fontsize=7)
+    fig.supylabel(y_label)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+
+def summary_table(comparisons, stat_header):
+    """Display one row per precision setting, entry, cosmology and redshift."""
+    table = []
+    for prec, _ in PRECISION_SETS:
+        for z in Z_ARR:
+            for (label, _), entry in zip(TINKER_PAIRS, comparisons[(prec, z)]):
+                for p in entry:
+                    # row[0] is the cosmology, passed to the comparison as model=.
+                    row = p.summary_row(convert_g=False)
+                    table.append([prec, label, row[0], f"{z:g}"] + row[2:])
+
+    df = pd.DataFrame(
+        table, columns=["Precision", "Entry", "Cosmology", "$z$"] + stat_header
+    )
+    display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+## Halo mass function
+
+The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each entry, in
+every cosmology, at every redshift and at both precision settings, through
+`compare_mass_function`.
+
+```{python}
+mf_comparisons = compare_all(nc_cmp.compare_mass_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-tinker-mf-def
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL's default precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+MF_Y_LABEL = (
+    r"$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}"
+    r"/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$"
+)
+plot_entries(mf_comparisons, "CCL defaults", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-tinker-mf-hp
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL's high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+plot_entries(mf_comparisons, "High precision", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$ over the mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-tinker-mf
+# | tbl-cap: Halo mass function, all entries, cosmologies, redshifts and precision settings
+# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | code-fold: true
+
+# CompareFunc1d.table_header() names the power spectrum and is shared with the other
+# benchmark pages, so it is not used here.
+summary_table(
+    mf_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Multiplicity function
+
+The following compares $f(\sigma)$ for each entry, in every cosmology, at every
+redshift and at both precision settings, through `compare_multiplicity_function`.
+For each mass, both codes receive NumCosmo's $\sigma$ at that mass and redshift, so
+the horizontal axis is $\sigma$.
+
+```{python}
+fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-tinker-fsigma-def
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL's default precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+FS_Y_LABEL = (
+    r"$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$"
+)
+plot_entries(fs_comparisons, "CCL defaults", r"$\sigma$", FS_Y_LABEL)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-tinker-fsigma-hp
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL's high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+plot_entries(fs_comparisons, "High precision", r"$\sigma$", FS_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$ over the
+mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-tinker-fsigma
+# | tbl-cap: Multiplicity function, all entries, cosmologies, redshifts and precision settings
+# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | code-fold: true
+
+summary_table(
+    fs_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Summary
+
+The table below gives, for each entry, the largest relative difference over the
+five cosmologies, the four redshifts and the mass range, for each quantity at each
+precision setting.
+
+```{python}
+# | label: tbl-ccl-vs-nc-tinker-worst
+# | tbl-cap: Largest relative difference per entry, over all cosmologies, redshifts and masses
+# | tbl-colwidths: [20, 20, 20, 20, 20]
+# | code-fold: true
+
+
+def worst(comparisons, prec, i):
+    """Largest relative difference of entry i at one precision setting."""
+    return max(p.rel_diff_max for z in Z_ARR for p in comparisons[(prec, z)][i])
+
+
+rows = []
+for i, (label, _) in enumerate(TINKER_PAIRS):
+    row = [label]
+    for comparisons in (mf_comparisons, fs_comparisons):
+        for prec, _ in PRECISION_SETS:
+            value = latex_float(worst(comparisons, prec, i), convert_g=False)
+            row.append(f"${value}$")
+    rows.append(row)
+
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "Entry",
+        r"$\mathrm{d}n/\mathrm{d}\ln M$, CCL defaults",
+        r"$\mathrm{d}n/\mathrm{d}\ln M$, high precision",
+        r"$f(\sigma)$, CCL defaults",
+        r"$f(\sigma)$, high precision",
+    ],
+)
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```

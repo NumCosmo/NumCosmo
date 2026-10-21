@@ -7,6 +7,25 @@ agreement on key observables, and against values certified in arbitrary
 precision, which establish accuracy rather than agreement.
 
 - [CCL Background](ccl_background.qmd) --- background expansion and distances.
+- Halo mass function
+  - [CCL Halo Mass Function](ccl_mass_function.qmd) --- halo mass function and
+    multiplicity function for eight multiplicity-function families, at CCL's default
+    and high-precision settings.
+  - [CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) --- the
+    parameters of CCL's tabulated mass variance, and the halo mass function with one
+    group of them raised at a time.
+  - [CCL Tinker Mass Functions](ccl_mass_function_tinker.qmd) --- halo mass function
+    and multiplicity function for Tinker (2008) and Tinker (2010), at their mass
+    definitions, at CCL's default and high-precision settings.
+  - [CCL Despali Mass Function](ccl_mass_function_despali.qmd) --- halo mass function
+    and multiplicity function for Despali (2016), with the ellipsoidal correction, at its
+    mass definitions, at CCL's default and high-precision settings.
+  - [CCL Bocquet Mass Function](ccl_mass_function_bocquet.qmd) --- halo mass function
+    and multiplicity function for Bocquet (2016), in its hydrodynamical calibration, at
+    its mass definitions, at CCL's default and high-precision settings.
+  - [CCL Watson Mass Function](ccl_mass_function_watson.qmd) --- halo mass function
+    and multiplicity function for Watson (2013), at its mass definitions, at CCL's
+    default and high-precision settings.
 - [CCL Power Spectrum](ccl_power_spectrum.qmd) --- linear and nonlinear matter power spectra.
 - [CCL Two-Point Correlation](ccl_two_point.qmd) --- angular two-point statistics.
 - [Certified Radial Projection](xcor_certified_projection.qmd) --- the radial
