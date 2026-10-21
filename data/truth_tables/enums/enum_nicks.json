@@ -1899,6 +1899,10 @@
     "nick": "t-gamma0",
     "type": "Nc.HICosmoDESParams"
   },
+  "NC_HICOSMO_DE_WSPLINE_AS_DRAG": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoDEWSplineSParams"
+  },
   "NC_HICOSMO_DE_WSPLINE_W": {
     "nick": "w",
     "type": "Nc.HICosmoDEWSplineVParams"

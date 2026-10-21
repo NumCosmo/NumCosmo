@@ -32,6 +32,14 @@
  *
  * Dark Energy equation of state: $w(\alpha)$ approximated by a cubic spline.
  *
+ * The sound horizon at the drag epoch, used by the BAO observables through
+ * nc_distance_r_zd(), is computed from the model by default: the Eisenstein-Hu fit for
+ * the drag redshift and the sound-horizon integral, as nc_distance_drag_redshift() and
+ * nc_distance_sound_horizon() compute it for an #NcDistance without #NcDistance:recomb.
+ * With #NcHICosmoDEWSpline:use-as-drag set, it is the parameter
+ * #NcHICosmoDEWSpline:asdrag, $r_s(z_d) H_0 / c$, instead: BAO then constrains only
+ * distance ratios, as in #NcHICosmoQSpline.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -62,6 +70,7 @@ struct _NcHICosmoDEWSplinePrivate
   gdouble int_f;
   NcHICosmoSplineKnots knots;
   NcmSpline *w_alpha;
+  gboolean use_as_drag;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoDEWSpline, nc_hicosmo_de_wspline, NC_TYPE_HICOSMO_DE)
@@ -72,6 +81,7 @@ enum
   PROP_Z_1,
   PROP_Z_F,
   PROP_KNOTS,
+  PROP_USE_AS_DRAG,
   PROP_SIZE,
 };
 
@@ -80,14 +90,15 @@ nc_hicosmo_de_wspline_init (NcHICosmoDEWSpline *wspline)
 {
   NcHICosmoDEWSplinePrivate * const self = wspline->priv = nc_hicosmo_de_wspline_get_instance_private (wspline);
 
-  self->nknots  = 0;
-  self->size    = 0;
-  self->z_1     = 0.0;
-  self->z_f     = 0.0;
-  self->alpha_f = 0.0;
-  self->w_f     = 0.0;
-  self->int_f   = 0.0;
-  self->w_alpha = NULL;
+  self->nknots      = 0;
+  self->size        = 0;
+  self->z_1         = 0.0;
+  self->z_f         = 0.0;
+  self->alpha_f     = 0.0;
+  self->w_f         = 0.0;
+  self->int_f       = 0.0;
+  self->w_alpha     = NULL;
+  self->use_as_drag = FALSE;
 }
 
 static void
@@ -108,6 +119,9 @@ _nc_hicosmo_de_wspline_get_property (GObject *object, guint prop_id, GValue *val
       break;
     case PROP_KNOTS:
       g_value_set_enum (value, self->knots);
+      break;
+    case PROP_USE_AS_DRAG:
+      g_value_set_boolean (value, self->use_as_drag);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -133,6 +147,9 @@ _nc_hicosmo_de_wspline_set_property (GObject *object, guint prop_id, const GValu
       break;
     case PROP_KNOTS:
       self->knots = g_value_get_enum (value);
+      break;
+    case PROP_USE_AS_DRAG:
+      nc_hicosmo_de_wspline_set_use_as_drag (wspline, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -232,12 +249,14 @@ static gdouble _nc_hicosmo_de_wspline_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble
 static gdouble _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wspline_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z);
+static gdouble _nc_hicosmo_de_wspline_as_drag (NcHICosmo *cosmo);
 
 static void
 nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
 {
   GObjectClass *object_class     = G_OBJECT_CLASS (klass);
   NcHICosmoDEClass *parent_class = NC_HICOSMO_DE_CLASS (klass);
+  NcHICosmoClass *hicosmo_class  = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class     = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_hicosmo_de_wspline_set_property;
@@ -247,7 +266,8 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   object_class->finalize    = &_nc_hicosmo_de_wspline_finalize;
 
   ncm_model_class_set_name_nick (model_class, "WSpline - DE EOS reconstruction w(z)", "WSpline");
-  ncm_model_class_add_params (model_class, 0,
+  ncm_model_class_add_params (model_class,
+                              NC_HICOSMO_DE_WSPLINE_SPARAM_LEN - NC_HICOSMO_DE_SPARAM_LEN,
                               NC_HICOSMO_DE_WSPLINE_VPARAM_LEN - NC_HICOSMO_DE_VPARAM_LEN,
                               PROP_SIZE);
 
@@ -276,6 +296,36 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
                                                       NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcHICosmoDEWSpline:use-as-drag:
+   *
+   * Whether the sound horizon at the drag epoch is the parameter
+   * #NcHICosmoDEWSpline:asdrag (TRUE) or computed from the model (FALSE).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_USE_AS_DRAG,
+                                   g_param_spec_boolean ("use-as-drag",
+                                                         NULL,
+                                                         "use the asdrag parameter for the sound horizon at drag",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcHICosmoDEWSpline:asdrag:
+   *
+   * Sound horizon at the drag epoch in units of the Hubble distance, $r_s(z_d) H_0 / c$,
+   * used when #NcHICosmoDEWSpline:use-as-drag is set.
+   */
+  /**
+   * NcHICosmoDEWSpline:asdrag-fit:
+   *
+   * Whether to fit #NcHICosmoDEWSpline:asdrag.
+   */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_WSPLINE_AS_DRAG, "A_s", "asdrag",
+                              1.0e-4, 1.0, 1.0e-3,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_WSPLINE_DEFAULT_AS_DRAG,
+                              NCM_PARAM_TYPE_FIXED);
+
   /* Set w_0 param info */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_WSPLINE_W, 6, "w", "w",
                               -5.0, 1.0, 1.0e-2,
@@ -289,10 +339,13 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_wspline_dE2Omega_de_dz);
   nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_wspline_d2E2Omega_de_dz2);
   nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_wspline_w_de);
+
+  nc_hicosmo_set_as_drag_impl (hicosmo_class, &_nc_hicosmo_de_wspline_as_drag);
 }
 
 #define VECTOR (NCM_MODEL (cosmo_de))
 #define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define AS_DRAG (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_WSPLINE_AS_DRAG))
 
 static void
 _nc_hicosmo_de_wspline_prepare (NcHICosmoDEWSpline *wspline)
@@ -407,6 +460,60 @@ _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z)
   {
     return self->w_f;
   }
+}
+
+static gdouble _nc_hicosmo_de_wspline_sound_horizon_integrand (gdouble z, gpointer p);
+
+/*
+ * The computed branch must be kept equal to nc_distance_r_zd() for an #NcDistance without
+ * #NcDistance:recomb and without its integral cache: nc_distance_drag_redshift(),
+ * nc_distance_sound_horizon() and _nc_distance_sinn().
+ */
+static gdouble
+_nc_hicosmo_de_wspline_as_drag (NcHICosmo *cosmo)
+{
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (cosmo);
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  if (self->use_as_drag)
+  {
+    NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
+
+    return AS_DRAG;
+  }
+  else
+  {
+    const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
+    const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
+    const gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
+    const gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
+    const gdouble zd         = 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
+                               (1.0 + b1 * pow (omega_b_h2, b2));
+    const gdouble Omega_k0      = nc_hicosmo_Omega_k0 (cosmo);
+    const gdouble sqrt_Omega_k0 = sqrt (fabs (Omega_k0));
+    gdouble result, error;
+    gsl_function F;
+
+    F.function = &_nc_hicosmo_de_wspline_sound_horizon_integrand;
+    F.params   = cosmo;
+
+    ncm_integral_locked_a_inf (&F, zd, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
+
+    if (fabs (Omega_k0) < NCM_ZERO_LIMIT)
+      return result;
+    else if (Omega_k0 > 0.0)
+      return sinh (sqrt_Omega_k0 * result) / sqrt_Omega_k0;
+    else
+      return fabs (sin (sqrt_Omega_k0 * result) / sqrt_Omega_k0);
+  }
+}
+
+static gdouble
+_nc_hicosmo_de_wspline_sound_horizon_integrand (gdouble z, gpointer p)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (p);
+
+  return sqrt (nc_hicosmo_bgp_cs2 (cosmo, z) / nc_hicosmo_E2 (cosmo, z));
 }
 
 /**
@@ -565,5 +672,40 @@ _nc_hicosmo_de_wspline_register_functions (void)
   ncm_mset_func_list_register ("lp_w2", "\\Vert w''\\Vert_p", "NcHICosmoDEWSpline", "Lp norm of w'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_de_wspline_lp_w2, 1, 1);
   ncm_mset_func_list_register ("wlp_kappa", "\\Vert\\kappa\\Vert_{p,W}", "NcHICosmoDEWSpline", "Weighted Lp norm of w geometric curvature, x[0]=p, obj=weight spline W(alpha)", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_kappa, 1, 1);
   ncm_mset_func_list_register ("wlp_w2", "\\Vert w''\\Vert_{p,W}", "NcHICosmoDEWSpline", "Weighted Lp norm of w'' (second derivative), x[0]=p, obj=weight spline W(alpha)", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_w2, 1, 1);
+}
+
+/**
+ * nc_hicosmo_de_wspline_set_use_as_drag:
+ * @wspline: a #NcHICosmoDEWSpline
+ * @use_as_drag: whether to use #NcHICosmoDEWSpline:asdrag
+ *
+ * Sets the source of the sound horizon at the drag epoch: the parameter
+ * #NcHICosmoDEWSpline:asdrag when @use_as_drag is TRUE, the computation from the model
+ * otherwise. Free #NcHICosmoDEWSpline:asdrag separately to fit it.
+ */
+void
+nc_hicosmo_de_wspline_set_use_as_drag (NcHICosmoDEWSpline *wspline, gboolean use_as_drag)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  if (self->use_as_drag != use_as_drag)
+  {
+    self->use_as_drag = use_as_drag;
+    ncm_model_state_mark_outdated (NCM_MODEL (wspline));
+  }
+}
+
+/**
+ * nc_hicosmo_de_wspline_get_use_as_drag:
+ * @wspline: a #NcHICosmoDEWSpline
+ *
+ * Returns: whether the sound horizon at the drag epoch is #NcHICosmoDEWSpline:asdrag.
+ */
+gboolean
+nc_hicosmo_de_wspline_get_use_as_drag (NcHICosmoDEWSpline *wspline)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  return self->use_as_drag;
 }
 

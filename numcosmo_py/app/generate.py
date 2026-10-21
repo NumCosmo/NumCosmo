@@ -1839,6 +1839,16 @@ class GenerateDEWSpline:
         ),
     ] = False
 
+    use_as_drag: Annotated[
+        bool,
+        typer.Option(
+            help="Use the asdrag parameter, r_s(z_d) H0 / c, for the BAO sound "
+            "horizon instead of computing it from the model; it is fitted when BAO "
+            "data are included.",
+            show_default=True,
+        ),
+    ] = False
+
     def __post_init__(self):
         """Generate DE WSpline experiment."""
         Ncm.cfg_init()
@@ -1862,6 +1872,7 @@ class GenerateDEWSpline:
             cosmo.param_set_desc(f"w_{i}", {"fit": True})
 
         cosmo.param_set_desc("Omegac", {"fit": True})
+        cosmo.set_use_as_drag(self.use_as_drag)
         mset = Ncm.MSet.new_array([cosmo])
         dset = Ncm.Dataset.new()
 
@@ -1872,6 +1883,8 @@ class GenerateDEWSpline:
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
+            if self.use_as_drag:
+                cosmo.param_set_desc("asdrag", {"fit": True})
 
         if self.include_hubble is not None:
             add_h_likelihood(dset, mset, self.include_hubble)

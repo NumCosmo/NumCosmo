@@ -223,6 +223,28 @@ def test_generate_dewspline(tmp_path: Path):
     assert exp_file.exists()
 
 
+@pytest.mark.parametrize("use_as_drag", [False, True])
+def test_generate_dewspline_use_as_drag(tmp_path: Path, use_as_drag: bool):
+    """With use_as_drag the BAO sound horizon is the free asdrag parameter."""
+    exp_file = tmp_path / "dewspline.yaml"
+    _ = gen.GenerateDEWSpline(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+        use_as_drag=use_as_drag,
+    )
+
+    # The experiment refers to the dataset saved beside it, which must be loaded first.
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    _ = ser.from_binfile(exp_file.with_suffix(".dataset.gvar").absolute().as_posix())
+    exp = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = exp.peek("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    assert isinstance(cosmo, Nc.HICosmoDEWSpline)
+    assert cosmo.get_use_as_drag() == use_as_drag
+    assert (mset.fparam_get_pi_by_name("NcHICosmo:asdrag") is not None) == use_as_drag
+
+
 CURVATURE_PRIORS = [
     gen.CurvaturePriorType.NONE,
     gen.CurvaturePriorType.MEAN_KAPPA,
