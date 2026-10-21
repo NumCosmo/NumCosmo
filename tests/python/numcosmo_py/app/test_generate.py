@@ -246,6 +246,27 @@ def test_generate_dewspline_use_as_drag(tmp_path: Path, use_as_drag: bool):
     assert (mset.fparam_get_pi_by_name("NcHICosmo:asdrag") is not None) == use_as_drag
 
 
+def test_generate_dewspline_omega_b_h2_prior(tmp_path: Path):
+    """The Omega_b h^2 prior frees Omega_b and lands in the likelihood priors."""
+    exp_file = tmp_path / "dewspline.yaml"
+    _ = gen.GenerateDEWSpline(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.DESI_DR2_2025,
+        omega_b_h2_prior=hicosmo.OmegaBH2PriorID.BBN_DESI_DR2_2025,
+        curvature_prior=gen.CurvaturePriorType.NONE,
+    )
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    _ = ser.from_binfile(exp_file.with_suffix(".dataset.gvar").absolute().as_posix())
+    exp = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = exp.peek("model-set")
+    likelihood = exp.peek("likelihood")
+    assert isinstance(mset, Ncm.MSet)
+    assert isinstance(likelihood, Ncm.Likelihood)
+    assert mset.fparam_get_pi_by_name("NcHICosmo:Omegab") is not None
+    assert likelihood.priors_length_f() == 1
+
+
 CURVATURE_PRIORS = [
     gen.CurvaturePriorType.NONE,
     gen.CurvaturePriorType.MEAN_KAPPA,

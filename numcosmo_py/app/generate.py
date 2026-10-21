@@ -42,9 +42,11 @@ from numcosmo_py.datasets.dist_mu_obs import (
 from numcosmo_py.datasets.hicosmo import (
     BAOID,
     HID,
+    OmegaBH2PriorID,
     SNIaID,
     add_bao_likelihood,
     add_h_likelihood,
+    add_omega_b_h2_prior,
     add_snia_likelihood,
 )
 from numcosmo_py.experiments.bianchi import build_bianchi_experiment
@@ -1877,6 +1879,15 @@ class GenerateDEWSpline:
         ),
     ] = False
 
+    omega_b_h2_prior: Annotated[
+        OmegaBH2PriorID | None,
+        typer.Option(
+            help="Free Omega_b with a Gaussian prior on Omega_b h^2; with the computed "
+            "sound horizon it ties the BAO scale to the physical densities.",
+            show_default=True,
+        ),
+    ] = None
+
     use_as_drag: Annotated[
         bool,
         typer.Option(
@@ -1936,8 +1947,10 @@ class GenerateDEWSpline:
         if dset.get_length() == 0:
             raise ValueError("No data included in the experiment.")
 
-        mset.prepare_fparam_map()
         likelihood = Ncm.Likelihood.new(dset)
+        if self.omega_b_h2_prior is not None:
+            add_omega_b_h2_prior(likelihood, mset, self.omega_b_h2_prior)
+        mset.prepare_fparam_map()
         # It can be useful to add Omega_m as a function when fitting Omegac
         mfunc_oa = Ncm.ObjArray.new()
         mfunc_Omegam = Ncm.MSetFuncList.new("NcHICosmo:Omega_m0", None)

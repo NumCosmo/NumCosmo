@@ -47,6 +47,20 @@ class SNIaID(GEnum):
     COV_DES_DOVEKIE_STATONLY = Nc.DataSNIAId.COV_DES_DOVEKIE_STATONLY
 
 
+class OmegaBH2PriorID(StrEnum):
+    """Gaussian priors on Omega_b h^2."""
+
+    BBN_DESI_DR2_2025 = auto()
+
+
+# Mean and standard deviation of each Omega_b h^2 prior.
+OMEGA_B_H2_PRIORS: dict[OmegaBH2PriorID, tuple[float, float]] = {
+    # DESI DR2 (arXiv:2503.14738, eq. 14): BBN with PRyMordial, marginalized over the
+    # nuclear reaction rates.
+    OmegaBH2PriorID.BBN_DESI_DR2_2025: (0.02218, 0.00055),
+}
+
+
 class BAOID(StrEnum):
     """Possible BAO data sets ids."""
 
@@ -94,6 +108,28 @@ def add_snia_likelihood(
         modelset.set(snia_model)
 
     dataset.append_data(snia_data)
+
+
+def add_omega_b_h2_prior(
+    likelihood: Ncm.Likelihood,
+    modelset: Ncm.MSet,
+    prior_id: OmegaBH2PriorID = OmegaBH2PriorID.BBN_DESI_DR2_2025,
+) -> None:
+    """Free Omega_b and add a Gaussian prior on Omega_b h^2.
+
+    The prior constrains Omega_b h^2, so Omega_b follows H0: its bounds are widened to
+    [0.01, 0.15], which do not bind for 0.5 < h < 1 (the model default, [0.03, 0.05], does at
+    h < 0.67). Call it before ``modelset.prepare_fparam_map()``, since it frees ``Omegab``.
+    """
+    cosmo = modelset.peek(Nc.HICosmo.id())
+    assert cosmo is not None
+    cosmo.param_set_desc(
+        "Omegab", {"fit": True, "lower-bound": 0.01, "upper-bound": 0.15}
+    )
+
+    mean, sigma = OMEGA_B_H2_PRIORS[prior_id]
+    func = Ncm.MSetFuncList.new("NcHICosmo:Omega_b0h2", None)
+    likelihood.priors_add(Ncm.PriorGaussFunc.new(func, mean, sigma, 0.0))
 
 
 def add_bao_likelihood(

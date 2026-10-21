@@ -8,9 +8,12 @@ from numcosmo_py import Nc, Ncm
 from numcosmo_py.datasets.hicosmo import (
     BAOID,
     HID,
+    OMEGA_B_H2_PRIORS,
+    OmegaBH2PriorID,
     SNIaID,
     add_bao_likelihood,
     add_h_likelihood,
+    add_omega_b_h2_prior,
     add_snia_likelihood,
 )
 
@@ -72,3 +75,27 @@ def test_add_snia_likelihood_sh0es_calibrators(sh0es_calibrators, n_snia):
     )
 
     assert dset.get_data(0).get_length() == n_snia
+
+
+def test_add_omega_b_h2_prior():
+    """The BBN prior frees Omega_b and adds -2 ln of a Gaussian in Omega_b h^2."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+    mset = Ncm.MSet.new_array([cosmo])
+    dset = Ncm.Dataset.new()
+    add_bao_likelihood(dset, mset, Nc.Distance.new(3.0), BAOID.DESI_DR2_2025)
+    likelihood = Ncm.Likelihood.new(dset)
+
+    m2lnL_data = likelihood.m2lnL_val(mset)
+    add_omega_b_h2_prior(likelihood, mset, OmegaBH2PriorID.BBN_DESI_DR2_2025)
+    mset.prepare_fparam_map()
+
+    mean, sigma = OMEGA_B_H2_PRIORS[OmegaBH2PriorID.BBN_DESI_DR2_2025]
+    assert mset.fparam_get_pi_by_name("NcHICosmo:Omegab") is not None
+    i = cosmo.param_index_from_name("Omegab")[1]
+    assert (cosmo.param_get_lower_bound(i), cosmo.param_get_upper_bound(i)) == (
+        0.01,
+        0.15,
+    )
+    assert likelihood.m2lnL_val(mset) == pytest.approx(
+        m2lnL_data + ((cosmo.Omega_b0h2() - mean) / sigma) ** 2, rel=1.0e-12
+    )
