@@ -1524,10 +1524,11 @@ static gdouble _nc_distance_r_zd_camb_fit_Mpc (NcHICosmo *cosmo);
  *
  * - %NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT (default): the fit of
  *   [Aubourg et al. (2015)](https://arxiv.org/abs/1411.1074) calibrated on CAMB,
- *   $r_d = 55.154\,e^{-72.3 (\omega_\nu + 0.0006)^2} / (\omega_{cb}^{0.25351} \omega_b^{0.12807})$ Mpc
- *   (their eq. 16, accurate to 0.021% for $N_\mathrm{eff} = 3.046$, $\sum m_\nu < 0.6$ eV and
- *   $\omega_b$, $\omega_{cb}$ within $3\sigma$ of Planck), and their eq. 17 when
- *   $N_\mathrm{eff} \neq 3.046$ (accurate to 0.119%). It assumes that curvature and dark energy are
+ *   $r_d = 55.154\,e^{-72.3 (\omega_\nu + 0.0006)^2} / [\omega_{cb}^{0.25351} \omega_b^{0.12807} (1 + (N_\mathrm{eff} - 3.046) / 30.60)]$ Mpc:
+ *   their eq. 16 (accurate to 0.021% for $N_\mathrm{eff} = 3.046$, $\sum m_\nu < 0.6$ eV and
+ *   $\omega_b$, $\omega_{cb}$ within $3\sigma$ of Planck) times the $N_\mathrm{eff}$ factor of their
+ *   eq. 17, so that $r_d$ is continuous in $N_\mathrm{eff}$; for $2.8 \le N_\mathrm{eff} \le 4$ it is
+ *   within 0.1% of the recombination history. It assumes that curvature and dark energy are
  *   negligible before recombination;
  * - %NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU: nc_distance_sound_horizon() at the drag redshift of the
  *   [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112) fit; that redshift is about
@@ -1582,11 +1583,8 @@ _nc_distance_r_zd_camb_fit_Mpc (NcHICosmo *cosmo)
   const gdouble omega_nu = ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Omega_mnu0) ? nc_hicosmo_Omega_mnu0h2 (cosmo) : 0.0;
   const gdouble Neff     = nc_hicosmo_Neff (cosmo);
 
-  if (Neff == 3.046)
-    return 55.154 * exp (-72.3 * gsl_pow_2 (omega_nu + 0.0006)) / (pow (omega_cb, 0.25351) * pow (omega_b, 0.12807));
-  else
-    return 56.067 * exp (-49.7 * gsl_pow_2 (omega_nu + 0.002)) /
-           (pow (omega_cb, 0.2436) * pow (omega_b, 0.128876) * (1.0 + (Neff - 3.046) / 30.60));
+  return 55.154 * exp (-72.3 * gsl_pow_2 (omega_nu + 0.0006)) /
+         (pow (omega_cb, 0.25351) * pow (omega_b, 0.12807) * (1.0 + (Neff - 3.046) / 30.60));
 }
 
 /**

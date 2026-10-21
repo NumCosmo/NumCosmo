@@ -100,6 +100,7 @@ void test_nc_distance_drag_redshift_no_recomb (TestNcDistance *test, gconstpoint
 void test_nc_distance_r_zd_default_camb_fit (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_r_zd_camb_fit_recomb (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_r_zd_camb_fit_neff (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_r_zd_camb_fit_continuous (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_r_zd_eisenstein_hu (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_r_zd_recomb_required (void);
 void test_nc_distance_r_zd_as_drag_free (void);
@@ -427,6 +428,10 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new_recomb,
               &test_nc_distance_r_zd_camb_fit_neff,
               &test_nc_distance_free_recomb);
+  g_test_add ("/nc/distance/r_zd/camb_fit/continuous", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_r_zd_camb_fit_continuous,
+              &test_nc_distance_free);
   g_test_add ("/nc/distance/r_zd/eisenstein_hu", TestNcDistance, NULL,
               &test_nc_distance_new,
               &test_nc_distance_r_zd_eisenstein_hu,
@@ -1564,7 +1569,7 @@ test_nc_distance_r_zd_camb_fit_recomb (TestNcDistance *test, gconstpointer pdata
   }
 }
 
-/* For N_eff != 3.046 the fit is eq. 17 of Aubourg et al. (2015), accurate to 0.119%. */
+/* For N_eff != 3.046 the fit carries the N_eff factor of eq. 17 of Aubourg et al. (2015), whose stated accuracy is 0.119%. */
 void
 test_nc_distance_r_zd_camb_fit_neff (TestNcDistance *test, gconstpointer pdata)
 {
@@ -1585,6 +1590,46 @@ test_nc_distance_r_zd_camb_fit_neff (TestNcDistance *test, gconstpointer pdata)
 
     ncm_assert_cmpdouble_e (r_fit, ==, r_recomb, 1.19e-3, 0.0);
   }
+}
+
+/*
+ * The fit is continuous: at fixed omega_b, omega_c, r_d in Mpc does not depend on H0, whose
+ * steps move the round-off of the computed N_eff, and a step of 1e-9 in N_eff around 3.046
+ * changes r_d by its N_eff factor only.
+ */
+void
+test_nc_distance_r_zd_camb_fit_continuous (TestNcDistance *test, gconstpointer pdata)
+{
+  const gdouble dH0[5] = {0.0, 1.0e-8, 1.0e-6, 1.0e-4, 1.0e-2};
+  const gdouble H0     = ncm_model_param_get_by_name (NCM_MODEL (test->cosmo), "H0", NULL);
+  const gdouble dNeff  = 1.0e-9;
+  gdouble r_ref        = 0.0;
+  gdouble r_up, r_down;
+  guint i;
+
+  for (i = 0; i < 5; i++)
+  {
+    gdouble r_d;
+
+    ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "H0", H0 + dH0[i], NULL);
+    test_nc_distance_set_omegas (test, 0.02237, 0.1200);
+    r_d = nc_distance_r_zd_Mpc (test->dist, test->cosmo);
+
+    if (i == 0)
+      r_ref = r_d;
+    else
+      ncm_assert_cmpdouble_e (r_d, ==, r_ref, 1.0e-13, 0.0);
+  }
+
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "ENnu", 3.046 + dNeff, NULL);
+  nc_distance_prepare (test->dist, test->cosmo);
+  r_up = nc_distance_r_zd_Mpc (test->dist, test->cosmo);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "ENnu", 3.046 - dNeff, NULL);
+  nc_distance_prepare (test->dist, test->cosmo);
+  r_down = nc_distance_r_zd_Mpc (test->dist, test->cosmo);
+
+  ncm_assert_cmpdouble_e (r_up, ==, r_ref / (1.0 + dNeff / 30.60), 1.0e-12, 0.0);
+  ncm_assert_cmpdouble_e (r_down, ==, r_ref / (1.0 - dNeff / 30.60), 1.0e-12, 0.0);
 }
 
 /* The eisenstein-hu method is the sound-horizon integral up to the Eisenstein & Hu drag redshift. */
