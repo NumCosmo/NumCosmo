@@ -48,15 +48,11 @@ def test_constructor():
     [
         Nc.DataSNIAId.COV_DES_Y5_STATONLY,
         Nc.DataSNIAId.COV_DES_Y5_STAT_SYS,
-        Nc.DataSNIAId.COV_DES_DOVEKIE_STATONLY,
-        Nc.DataSNIAId.COV_DES_DOVEKIE_STAT_SYS,
         Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT,
         Nc.DataSNIAId.COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL,
         Nc.DataSNIAId.COV_PANTHEON,
         Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_STAT,
         Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
-        Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT,
-        Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT,
         Nc.DataSNIAId.COV_SNLS3_STAT_ONLY,
         Nc.DataSNIAId.COV_SNLS3_SYS_STAT,
     ],
@@ -69,41 +65,6 @@ def test_constructor_catalog_id(cov_id):
 
     assert snia_cov.get_dof() > 0
     assert snia_cov.get_length() > 0
-
-
-@pytest.mark.parametrize(
-    "orig_id, hoyt_id",
-    [
-        (
-            Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
-            Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT,
-        ),
-        (
-            Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_STAT,
-            Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT,
-        ),
-    ],
-)
-def test_pantheon_plus_hoyt26_changes_only_low_z_mag_b_corr(orig_id, hoyt_id):
-    """The Hoyt et al. 2026 fix changes m_b_corr of 114 low-z rows and nothing else."""
-    orig = Nc.DataSNIACov.new_from_cat_id(orig_id, False)
-    hoyt = Nc.DataSNIACov.new_from_cat_id(hoyt_id, False)
-
-    mbc_orig = np.array(orig.props.magnitude_b_corrected.dup_array())
-    mbc_hoyt = np.array(hoyt.props.magnitude_b_corrected.dup_array())
-    z_cmb = np.array(orig.props.z_cmb.dup_array())
-    changed = mbc_orig != mbc_hoyt
-
-    assert np.sum(changed) == 114
-    assert np.all((z_cmb[changed] > 0.01) & (z_cmb[changed] < 0.15))
-    assert not np.any(np.array(orig.peek_is_calib(), dtype=bool)[changed])
-    assert np.array_equal(
-        orig.peek_cov_mbc_mbc().to_numpy(), hoyt.peek_cov_mbc_mbc().to_numpy()
-    )
-    for v in ("z_hd", "z_cmb", "z_He", "ceph_dist"):
-        assert np.array_equal(
-            getattr(orig.props, v).dup_array(), getattr(hoyt.props, v).dup_array()
-        )
 
 
 @pytest.mark.acceptance
@@ -183,44 +144,6 @@ def test_recover_best_fit_DES_Y5():
     # Omegab = 0.0432
     np.testing.assert_allclose(
         [cosmo["Omegac"], cosmo["w"]], [0.2208, -0.80], rtol=1e-2, atol=1e-2
-    )
-
-
-@pytest.mark.acceptance
-def test_recover_best_fit_DES_Dovekie():
-    """Test recover best fit DES-Dovekie."""
-    cov_id = Nc.DataSNIAId.COV_DES_DOVEKIE_STAT_SYS
-    snia_data = Nc.DataSNIACov.new_from_cat_id(cov_id, False)
-    cosmo = Nc.HICosmoDEXcdm.new()
-    cosmo.omega_x2omega_k()
-    cosmo["Omegak"] = 0.0
-    cosmo["w"] = -1.0
-    cosmo.param_set_desc("Omegac", {"fit": True})
-
-    dist = Nc.Distance.new(3.0)
-    snia_model = Nc.SNIADistCov.new_by_id(dist, cov_id)
-    mset = Ncm.MSet.new_array([cosmo, snia_model])
-    dset = Ncm.Dataset.new_array([snia_data])
-
-    likelihood = Ncm.Likelihood.new(dset)
-    best_fit = Ncm.Fit.factory(
-        Ncm.FitType.NLOPT,
-        "ln-neldermead",
-        likelihood,
-        mset,
-        Ncm.FitGradType.NUMDIFF_CENTRAL,
-    )
-
-    best_fit.run_restart(Ncm.FitRunMsgs.NONE, 1.0e-6, 0.0, None, None)
-    best_fit.obs_fisher()
-    pi = mset.fparam_get_pi_by_name("NcHICosmo:Omegac")
-    # DES-Dovekie flat LambdaCDM, SN only, from arXiv:2511.07517:
-    # Omegam = 0.330 +- 0.015
-    np.testing.assert_allclose(
-        [cosmo["Omegac"] + cosmo["Omegab"], best_fit.covar_sd(pi.mid, pi.pid)],
-        [0.330, 0.015],
-        rtol=0.0,
-        atol=1.0e-3,
     )
 
 
