@@ -97,6 +97,12 @@ void test_nc_distance_decoupling_redshift_recomb (TestNcDistance *test, gconstpo
 void test_nc_distance_decoupling_redshift_no_recomb (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_drag_redshift_recomb (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_drag_redshift_no_recomb (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_r_zd_default_camb_fit (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_r_zd_camb_fit_recomb (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_r_zd_camb_fit_neff (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_r_zd_eisenstein_hu (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_r_zd_recomb_required (void);
+void test_nc_distance_r_zd_as_drag_free (void);
 
 void test_nc_distance_free (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_free_recomb (TestNcDistance *test, gconstpointer pdata);
@@ -409,6 +415,24 @@ main (gint argc, gchar *argv[])
               &test_nc_distance_new,
               &test_nc_distance_drag_redshift_no_recomb,
               &test_nc_distance_free);
+  g_test_add ("/nc/distance/r_zd/camb_fit/default", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_r_zd_default_camb_fit,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/r_zd/camb_fit/recomb", TestNcDistance, NULL,
+              &test_nc_distance_new_recomb,
+              &test_nc_distance_r_zd_camb_fit_recomb,
+              &test_nc_distance_free_recomb);
+  g_test_add ("/nc/distance/r_zd/camb_fit/neff", TestNcDistance, NULL,
+              &test_nc_distance_new_recomb,
+              &test_nc_distance_r_zd_camb_fit_neff,
+              &test_nc_distance_free_recomb);
+  g_test_add ("/nc/distance/r_zd/eisenstein_hu", TestNcDistance, NULL,
+              &test_nc_distance_new,
+              &test_nc_distance_r_zd_eisenstein_hu,
+              &test_nc_distance_free);
+  g_test_add_func ("/nc/distance/r_zd/recomb_required", &test_nc_distance_r_zd_recomb_required);
+  g_test_add_func ("/nc/distance/r_zd/as_drag_free", &test_nc_distance_r_zd_as_drag_free);
 
   g_test_run ();
 }
@@ -498,6 +522,27 @@ test_nc_distance_z_d_eisenstein_hu (NcHICosmo *cosmo)
 
   return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
          (1.0 + b1 * pow (omega_b_h2, b2));
+}
+
+/* Aubourg et al. (2015), arXiv:1411.1074, eq. 16, for N_eff = 3.046 and no massive neutrinos. */
+static gdouble
+test_nc_distance_r_d_aubourg_eq16_Mpc (NcHICosmo *cosmo)
+{
+  const gdouble omega_b  = nc_hicosmo_Omega_b0h2 (cosmo);
+  const gdouble omega_cb = omega_b + nc_hicosmo_Omega_c0h2 (cosmo);
+
+  return 55.154 * exp (-72.3 * gsl_pow_2 (0.0006)) / (pow (omega_cb, 0.25351) * pow (omega_b, 0.12807));
+}
+
+/* Sets Omega_b h^2 and Omega_c h^2 at fixed H0 and prepares the distance (and its recomb). */
+static void
+test_nc_distance_set_omegas (TestNcDistance *test, const gdouble omega_b, const gdouble omega_c)
+{
+  const gdouble h2 = nc_hicosmo_h2 (test->cosmo);
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B, omega_b / h2);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_C, omega_c / h2);
+  nc_distance_prepare (test->dist, test->cosmo);
 }
 
 void
@@ -1465,5 +1510,133 @@ test_nc_distance_drag_redshift_no_recomb (TestNcDistance *test, gconstpointer pd
   /* With no NcRecomb attached the Eisenstein & Hu fitting formula is the documented
    * fallback. */
   ncm_assert_cmpdouble_e (z_d, ==, test_nc_distance_z_d_eisenstein_hu (cosmo), 1.0e-14, 0.0);
+}
+
+/* The default sound horizon is the CAMB-calibrated fit, eq. 16 of Aubourg et al. (2015). */
+void
+test_nc_distance_r_zd_default_camb_fit (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = test->cosmo;
+  NcDistance *dist = test->dist;
+
+  g_assert_cmpint (nc_distance_get_sound_horizon_method (dist), ==, NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT);
+  g_assert_false (nc_hicosmo_as_drag_is_free (cosmo));
+  ncm_assert_cmpdouble_e (nc_distance_r_zd_Mpc (dist, cosmo), ==, test_nc_distance_r_d_aubourg_eq16_Mpc (cosmo), 1.0e-14, 0.0);
+}
+
+/*
+ * Against the recombination history, at the corners and the center of omega_b, omega_c
+ * within 3 sigma of Planck 2018 (0.02237 +- 0.00015, 0.1200 +- 0.0012): the fit is accurate
+ * to 0.021% (Aubourg et al. 2015, eq. 16).
+ */
+void
+test_nc_distance_r_zd_camb_fit_recomb (TestNcDistance *test, gconstpointer pdata)
+{
+  const gdouble omega_b[3] = {0.02237 - 0.00045, 0.02237, 0.02237 + 0.00045};
+  const gdouble omega_c[3] = {0.1200 - 0.0036, 0.1200, 0.1200 + 0.0036};
+  const guint points[5][2] = {
+    {
+      0, 0
+    }, {
+      0, 2
+    }, {
+      1, 1
+    }, {
+      2, 0
+    }, {
+      2, 2
+    }
+  };
+  guint i;
+
+  for (i = 0; i < 5; i++)
+  {
+    gdouble r_fit, r_recomb;
+
+    test_nc_distance_set_omegas (test, omega_b[points[i][0]], omega_c[points[i][1]]);
+
+    nc_distance_set_sound_horizon_method (test->dist, NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT);
+    r_fit = nc_distance_r_zd (test->dist, test->cosmo);
+    nc_distance_set_sound_horizon_method (test->dist, NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB);
+    r_recomb = nc_distance_r_zd (test->dist, test->cosmo);
+
+    ncm_assert_cmpdouble_e (r_fit, ==, r_recomb, 2.1e-4, 0.0);
+  }
+}
+
+/* For N_eff != 3.046 the fit is eq. 17 of Aubourg et al. (2015), accurate to 0.119%. */
+void
+test_nc_distance_r_zd_camb_fit_neff (TestNcDistance *test, gconstpointer pdata)
+{
+  const gdouble Neff[2] = {2.8, 4.0};
+  guint i;
+
+  for (i = 0; i < 2; i++)
+  {
+    gdouble r_fit, r_recomb;
+
+    ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "ENnu", Neff[i], NULL);
+    test_nc_distance_set_omegas (test, 0.02237, 0.1200);
+
+    nc_distance_set_sound_horizon_method (test->dist, NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT);
+    r_fit = nc_distance_r_zd (test->dist, test->cosmo);
+    nc_distance_set_sound_horizon_method (test->dist, NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB);
+    r_recomb = nc_distance_r_zd (test->dist, test->cosmo);
+
+    ncm_assert_cmpdouble_e (r_fit, ==, r_recomb, 1.19e-3, 0.0);
+  }
+}
+
+/* The eisenstein-hu method is the sound-horizon integral up to the Eisenstein & Hu drag redshift. */
+void
+test_nc_distance_r_zd_eisenstein_hu (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = test->cosmo;
+  NcDistance *dist = test->dist;
+
+  nc_distance_set_sound_horizon_method (dist, NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU);
+  ncm_assert_cmpdouble_e (nc_distance_r_zd (dist, cosmo), ==,
+                          nc_distance_sound_horizon (dist, cosmo, test_nc_distance_z_d_eisenstein_hu (cosmo)), 1.0e-14, 0.0);
+}
+
+/* The recomb method without NcDistance:recomb aborts. */
+void
+test_nc_distance_r_zd_recomb_required (void)
+{
+  if (g_test_subprocess ())
+  {
+    NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+    NcDistance *dist = nc_distance_new (3.0);
+
+    nc_distance_set_sound_horizon_method (dist, NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB);
+    nc_distance_prepare (dist, cosmo);
+    nc_distance_r_zd (dist, cosmo);
+
+    return;
+  }
+
+  g_test_trap_subprocess (NULL, 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*requires NcDistance:recomb*");
+}
+
+/* A model whose class implements as_drag (NcHICosmoQSpline) has a free sound horizon by default. */
+void
+test_nc_distance_r_zd_as_drag_free (void)
+{
+  NcmSpline *s         = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  NcHICosmo *cosmo     = NC_HICOSMO (nc_hicosmo_qspline_new (s, 8, 2.0));
+  NcDistance *dist     = nc_distance_new (3.0);
+  const gdouble asdrag = 0.0331;
+
+  ncm_model_param_set_by_name (NCM_MODEL (cosmo), "asdrag", asdrag, NULL);
+  nc_distance_prepare (dist, cosmo);
+
+  g_assert_true (nc_hicosmo_as_drag_is_free (cosmo));
+  ncm_assert_cmpdouble (nc_distance_r_zd (dist, cosmo), ==, asdrag);
+
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+  ncm_spline_free (s);
 }
 

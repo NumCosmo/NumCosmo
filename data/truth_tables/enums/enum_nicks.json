@@ -1583,6 +1583,18 @@
     "nick": "int-e",
     "type": "Nc.DistanceComovingMethod"
   },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT": {
+    "nick": "camb-fit",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU": {
+    "nick": "eisenstein-hu",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB": {
+    "nick": "recomb",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
   "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
     "nick": "cf4-snia",
     "type": "Nc.DistMuObsCatalogId"

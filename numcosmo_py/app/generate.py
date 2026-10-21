@@ -1863,7 +1863,7 @@ class GenerateDEWSpline:
         bool,
         typer.Option(
             help="Use the asdrag parameter, r_s(z_d) H0 / c, for the BAO sound "
-            "horizon instead of computing it from the model; it is fitted when BAO "
+            "horizon instead of NcDistance:sound-horizon-method; it is fitted when BAO "
             "data are included.",
             show_default=True,
         ),
