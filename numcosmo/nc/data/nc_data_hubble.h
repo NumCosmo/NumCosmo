@@ -58,7 +58,6 @@ G_DECLARE_FINAL_TYPE (NcDataHubble, nc_data_hubble, NC, DATA_HUBBLE, NcmDataGaus
  * @NC_DATA_HUBBLE_JIAO2023: Jiao et al. 2023 -- arXiv:2205.05701
  * @NC_DATA_HUBBLE_JIMENEZ2023: Jimenez et al. 2023 -- arXiv:2306.11425
  * @NC_DATA_HUBBLE_TOMASETTI2023: Tomasetti et al. 2023 -- arXiv:2305.16387
- * @NC_DATA_HUBBLE_LOUBSER2025: Loubser 2025, DESI DR1 cosmic chronometers -- arXiv:2511.02730
  *
  * Identifiers for different Hubble parameter observational datasets.
  */
@@ -83,7 +82,6 @@ typedef enum _NcDataHubbleId /*< prefix=NC_DATA_HUBBLE >*/
   NC_DATA_HUBBLE_JIAO2023,
   NC_DATA_HUBBLE_JIMENEZ2023,
   NC_DATA_HUBBLE_TOMASETTI2023,
-  NC_DATA_HUBBLE_LOUBSER2025,
   /* < private > */
   NC_DATA_HUBBLE_NSAMPLES, /*< skip >*/
 } NcDataHubbleId;

@@ -1315,6 +1315,10 @@
     "nick": "cabre",
     "type": "Nc.DataHubbleId"
   },
+  "NC_DATA_HUBBLE_COV_LOUBSER2025": {
+    "nick": "loubser2025",
+    "type": "Nc.DataHubbleCovId"
+  },
   "NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018": {
     "nick": "gomez-valent-comp2018",
     "type": "Nc.DataHubbleId"
@@ -1325,10 +1329,6 @@
   },
   "NC_DATA_HUBBLE_JIMENEZ2023": {
     "nick": "jimenez2023",
-    "type": "Nc.DataHubbleId"
-  },
-  "NC_DATA_HUBBLE_LOUBSER2025": {
-    "nick": "loubser2025",
     "type": "Nc.DataHubbleId"
   },
   "NC_DATA_HUBBLE_MORESCO2012_BC03": {

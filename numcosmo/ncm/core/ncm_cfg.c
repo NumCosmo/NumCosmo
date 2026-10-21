@@ -258,6 +258,7 @@
 #include "nc/data/nc_data_cmb_shift_param.h"
 #include "nc/data/nc_data_cmb_dist_priors.h"
 #include "nc/data/nc_data_hubble.h"
+#include "nc/data/nc_data_hubble_cov.h"
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/data/nc_data_xcor.h"
 #include "nc/data/nc_data_planck_lkl.h"
@@ -1065,6 +1066,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_HCOSMO_BI_DIST_MU);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
+  ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 

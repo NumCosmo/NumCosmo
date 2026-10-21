@@ -648,6 +648,10 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
     {
+        'name': 'nc_data_hubble_cov',
+        'sources': ['nc/data/test_nc_data_hubble_cov.c'],
+    },
+    {
         'name': 'nc_data_snia_cov',
         'sources': ['nc/data/test_nc_data_snia_cov.c'],
     },
