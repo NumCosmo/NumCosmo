@@ -562,6 +562,10 @@ model_tests = [
         'sources': ['nc/background/test_nc_hicosmo_qspline.c'],
     },
     {
+        'name': 'nc_hicosmo_de_wpoly',
+        'sources': ['nc/background/test_nc_hicosmo_de_wpoly.c'],
+    },
+    {
         'name': 'nc_hicosmo_qgw',
         'sources': ['nc/background/test_nc_hicosmo_qgw.c'],
     },

@@ -1919,6 +1919,10 @@
     "nick": "a",
     "type": "Nc.HICosmoDEWPolyVParams"
   },
+  "NC_HICOSMO_DE_WPOLY_AS_DRAG": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoDEWPolySParams"
+  },
   "NC_HICOSMO_DE_WSPLINE_AS_DRAG": {
     "nick": "as-drag",
     "type": "Nc.HICosmoDEWSplineSParams"

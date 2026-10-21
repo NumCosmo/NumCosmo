@@ -35,6 +35,12 @@
  * is evaluated by fixed-order Gauss-Legendre quadrature whose order is set at
  * construction from $L$ and $z_f$ so that the rule is exact to double precision.
  *
+ * The sound horizon at the drag epoch, used by the BAO observables through
+ * nc_distance_r_zd(), is computed by #NcDistance with its #NcDistance:sound-horizon-method method by
+ * default. With #NcHICosmoDEWPoly:use-as-drag set, it is the parameter
+ * #NcHICosmoDEWPoly:asdrag, $r_s(z_d) H_0 / c$, instead: BAO then constrains only distance
+ * ratios.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -64,6 +70,7 @@ struct _NcHICosmoDEWPolyPrivate
   gsize gl_n;
   gdouble *gl_x;
   gdouble *gl_w;
+  gboolean use_as_drag;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoDEWPoly, nc_hicosmo_de_wpoly, NC_TYPE_HICOSMO_DE)
@@ -72,6 +79,7 @@ enum
 {
   PROP_0,
   PROP_Z_F,
+  PROP_USE_AS_DRAG,
   PROP_SIZE,
 };
 
@@ -80,15 +88,16 @@ nc_hicosmo_de_wpoly_init (NcHICosmoDEWPoly *wpoly)
 {
   NcHICosmoDEWPolyPrivate * const self = wpoly->priv = nc_hicosmo_de_wpoly_get_instance_private (wpoly);
 
-  self->ncoeffs = 0;
-  self->lmax    = 0;
-  self->z_f     = 0.0;
-  self->alpha_f = 0.0;
-  self->w_f     = 0.0;
-  self->int_f   = 0.0;
-  self->gl_n    = 0;
-  self->gl_x    = NULL;
-  self->gl_w    = NULL;
+  self->ncoeffs     = 0;
+  self->lmax        = 0;
+  self->z_f         = 0.0;
+  self->alpha_f     = 0.0;
+  self->w_f         = 0.0;
+  self->int_f       = 0.0;
+  self->gl_n        = 0;
+  self->gl_x        = NULL;
+  self->gl_w        = NULL;
+  self->use_as_drag = FALSE;
 }
 
 static void
@@ -101,6 +110,9 @@ _nc_hicosmo_de_wpoly_get_property (GObject *object, guint prop_id, GValue *value
   {
     case PROP_Z_F:
       g_value_set_double (value, self->z_f);
+      break;
+    case PROP_USE_AS_DRAG:
+      g_value_set_boolean (value, self->use_as_drag);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -118,6 +130,9 @@ _nc_hicosmo_de_wpoly_set_property (GObject *object, guint prop_id, const GValue 
   {
     case PROP_Z_F:
       self->z_f = g_value_get_double (value);
+      break;
+    case PROP_USE_AS_DRAG:
+      nc_hicosmo_de_wpoly_set_use_as_drag (wpoly, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -202,12 +217,15 @@ static gdouble _nc_hicosmo_de_wpoly_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z
 static gdouble _nc_hicosmo_de_wpoly_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wpoly_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wpoly_w_de (NcHICosmoDE *cosmo_de, gdouble z);
+static gdouble _nc_hicosmo_de_wpoly_as_drag (NcHICosmo *cosmo);
+static gboolean _nc_hicosmo_de_wpoly_as_drag_is_free (NcHICosmo *cosmo);
 
 static void
 nc_hicosmo_de_wpoly_class_init (NcHICosmoDEWPolyClass *klass)
 {
   GObjectClass *object_class     = G_OBJECT_CLASS (klass);
   NcHICosmoDEClass *parent_class = NC_HICOSMO_DE_CLASS (klass);
+  NcHICosmoClass *hicosmo_class  = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class     = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_hicosmo_de_wpoly_set_property;
@@ -216,7 +234,8 @@ nc_hicosmo_de_wpoly_class_init (NcHICosmoDEWPolyClass *klass)
   object_class->finalize    = &_nc_hicosmo_de_wpoly_finalize;
 
   ncm_model_class_set_name_nick (model_class, "WPoly - DE EOS Legendre polynomial w(z)", "WPoly");
-  ncm_model_class_add_params (model_class, 0,
+  ncm_model_class_add_params (model_class,
+                              NC_HICOSMO_DE_WPOLY_SPARAM_LEN - NC_HICOSMO_DE_SPARAM_LEN,
                               NC_HICOSMO_DE_WPOLY_VPARAM_LEN - NC_HICOSMO_DE_VPARAM_LEN,
                               PROP_SIZE);
 
@@ -227,6 +246,36 @@ nc_hicosmo_de_wpoly_class_init (NcHICosmoDEWPolyClass *klass)
                                                         "final redshift",
                                                         1.0e-3, 1.0e10, 2.33,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcHICosmoDEWPoly:use-as-drag:
+   *
+   * Whether the sound horizon at the drag epoch is the parameter
+   * #NcHICosmoDEWPoly:asdrag (TRUE) or computed by #NcDistance (FALSE).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_USE_AS_DRAG,
+                                   g_param_spec_boolean ("use-as-drag",
+                                                         NULL,
+                                                         "use the asdrag parameter for the sound horizon at drag",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcHICosmoDEWPoly:asdrag:
+   *
+   * Sound horizon at the drag epoch in units of the Hubble distance, $r_s(z_d) H_0 / c$,
+   * used when #NcHICosmoDEWPoly:use-as-drag is set.
+   */
+  /**
+   * NcHICosmoDEWPoly:asdrag-fit:
+   *
+   * Whether to fit #NcHICosmoDEWPoly:asdrag.
+   */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_WPOLY_AS_DRAG, "A_s", "asdrag",
+                              1.0e-4, 1.0, 1.0e-3,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_WPOLY_DEFAULT_AS_DRAG,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_WPOLY_A, NC_HICOSMO_DE_WPOLY_DEFAULT_A_LEN, "a", "a",
                               -5.0, 5.0, 1.0e-2,
@@ -239,10 +288,14 @@ nc_hicosmo_de_wpoly_class_init (NcHICosmoDEWPolyClass *klass)
   nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_wpoly_dE2Omega_de_dz);
   nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_wpoly_d2E2Omega_de_dz2);
   nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_wpoly_w_de);
+
+  nc_hicosmo_set_as_drag_impl (hicosmo_class, &_nc_hicosmo_de_wpoly_as_drag);
+  nc_hicosmo_set_as_drag_is_free_impl (hicosmo_class, &_nc_hicosmo_de_wpoly_as_drag_is_free);
 }
 
 #define VECTOR (NCM_MODEL (cosmo_de))
 #define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define AS_DRAG (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_WPOLY_AS_DRAG))
 
 /* w(z) + 1 on [0, z_f]. */
 static gdouble
@@ -382,6 +435,23 @@ _nc_hicosmo_de_wpoly_w_de (NcHICosmoDE *cosmo_de, gdouble z)
     return _nc_hicosmo_de_wpoly_w1 (wpoly, z) - 1.0;
   else
     return self->w_f;
+}
+
+static gdouble
+_nc_hicosmo_de_wpoly_as_drag (NcHICosmo *cosmo)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
+
+  return AS_DRAG;
+}
+
+static gboolean
+_nc_hicosmo_de_wpoly_as_drag_is_free (NcHICosmo *cosmo)
+{
+  NcHICosmoDEWPoly *wpoly              = NC_HICOSMO_DE_WPOLY (cosmo);
+  NcHICosmoDEWPolyPrivate * const self = wpoly->priv;
+
+  return self->use_as_drag;
 }
 
 /**
@@ -560,5 +630,40 @@ nc_hicosmo_de_wpoly_turning_points (NcHICosmoDEWPoly *wpoly)
   g_free (d);
 
   return tp;
+}
+
+/**
+ * nc_hicosmo_de_wpoly_set_use_as_drag:
+ * @wpoly: a #NcHICosmoDEWPoly
+ * @use_as_drag: whether to use #NcHICosmoDEWPoly:asdrag
+ *
+ * Sets the source of the sound horizon at the drag epoch: the parameter
+ * #NcHICosmoDEWPoly:asdrag when @use_as_drag is TRUE, the computation of #NcDistance
+ * otherwise. Free #NcHICosmoDEWPoly:asdrag separately to fit it.
+ */
+void
+nc_hicosmo_de_wpoly_set_use_as_drag (NcHICosmoDEWPoly *wpoly, gboolean use_as_drag)
+{
+  NcHICosmoDEWPolyPrivate * const self = wpoly->priv;
+
+  if (self->use_as_drag != use_as_drag)
+  {
+    self->use_as_drag = use_as_drag;
+    ncm_model_state_mark_outdated (NCM_MODEL (wpoly));
+  }
+}
+
+/**
+ * nc_hicosmo_de_wpoly_get_use_as_drag:
+ * @wpoly: a #NcHICosmoDEWPoly
+ *
+ * Returns: whether the sound horizon at the drag epoch is #NcHICosmoDEWPoly:asdrag.
+ */
+gboolean
+nc_hicosmo_de_wpoly_get_use_as_drag (NcHICosmoDEWPoly *wpoly)
+{
+  NcHICosmoDEWPolyPrivate * const self = wpoly->priv;
+
+  return self->use_as_drag;
 }
 
