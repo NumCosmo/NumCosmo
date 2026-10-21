@@ -1315,6 +1315,10 @@
     "nick": "cabre",
     "type": "Nc.DataHubbleId"
   },
+  "NC_DATA_HUBBLE_COV_LOUBSER2025": {
+    "nick": "loubser2025",
+    "type": "Nc.DataHubbleCovId"
+  },
   "NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018": {
     "nick": "gomez-valent-comp2018",
     "type": "Nc.DataHubbleId"
@@ -1423,6 +1427,14 @@
     "nick": "length",
     "type": "Nc.DataPlanckLKLType"
   },
+  "NC_DATA_SNIA_COV_DES_DOVEKIE_STATONLY": {
+    "nick": "cov-des-dovekie-statonly",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_DES_DOVEKIE_STAT_SYS": {
+    "nick": "cov-des-dovekie-stat-sys",
+    "type": "Nc.DataSNIAId"
+  },
   "NC_DATA_SNIA_COV_DES_Y5_STATONLY": {
     "nick": "cov-des-y5-statonly",
     "type": "Nc.DataSNIAId"
@@ -1481,6 +1493,14 @@
   },
   "NC_DATA_SNIA_COV_PANTHEON": {
     "nick": "cov-pantheon",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-hoyt26-stat",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-hoyt26-sys-stat",
     "type": "Nc.DataSNIAId"
   },
   "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT": {

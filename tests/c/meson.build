@@ -648,8 +648,17 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
     {
+        'name': 'nc_data_hubble_cov',
+        'sources': ['nc/data/test_nc_data_hubble_cov.c'],
+    },
+    {
         'name': 'nc_data_snia_cov',
         'sources': ['nc/data/test_nc_data_snia_cov.c'],
+    },
+    {
+        'name': 'nc_data_snia_cov_fit',
+        'sources': ['nc/data/test_nc_data_snia_cov_fit.c'],
+        'suite': ['c-acceptance'],
     },
     # Truth-table validation of NcDataClusterWLFactor's integration methods:
     # regenerates a curated sample from a fixed seed (nothing stored) and

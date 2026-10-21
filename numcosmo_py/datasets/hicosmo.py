@@ -37,9 +37,14 @@ class SNIaID(GEnum):
     """Possible SNIa data sets ids."""
 
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT = Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_SYS_STAT
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT = (
+        Nc.DataSNIAId.COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT
+    )
     SIMPLE_UNION2_1 = Nc.DataSNIAId.SIMPLE_UNION2_1
     COV_DES_Y5_STAT_SYS = Nc.DataSNIAId.COV_DES_Y5_STAT_SYS
     COV_DES_Y5_STATONLY = Nc.DataSNIAId.COV_DES_Y5_STATONLY
+    COV_DES_DOVEKIE_STAT_SYS = Nc.DataSNIAId.COV_DES_DOVEKIE_STAT_SYS
+    COV_DES_DOVEKIE_STATONLY = Nc.DataSNIAId.COV_DES_DOVEKIE_STATONLY
 
 
 class BAOID(StrEnum):
@@ -55,6 +60,7 @@ class HID(StrEnum):
 
     ALL_COMBINED_JAN_2023 = auto()
     ALL_COMBINED_APR_2025 = auto()
+    ALL_COMBINED_OCT_2026 = auto()
 
 
 def add_snia_likelihood(
@@ -68,7 +74,10 @@ def add_snia_likelihood(
     assert cosmo is not None
 
     snia_data = Nc.DataSNIACov.new_from_cat_id(snia_id.genum, False)
-    if snia_id == SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT:
+    if snia_id in (
+        SNIaID.COV_PANTHEON_PLUS_SH0ES_SYS_STAT,
+        SNIaID.COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT,
+    ):
         snia0_data = snia_data.apply_filter_sh0es_z(0.01, True)
         snia_data = snia0_data
 
@@ -127,6 +136,7 @@ def add_h_likelihood(
     """Generate a likelihood for Hubble data."""
     assert modelset.peek(Nc.HICosmo.id()) is not None
 
+    h_cov_enums: list[Nc.DataHubbleCovId] = []
     match h_id:
         case HID.ALL_COMBINED_JAN_2023:
             h_enums = [Nc.DataHubbleId.GOMEZ_VALENT_COMP2018]
@@ -136,9 +146,21 @@ def add_h_likelihood(
                 Nc.DataHubbleId.TOMASETTI2023,
                 Nc.DataHubbleId.JIMENEZ2023,
             ]
+        case HID.ALL_COMBINED_OCT_2026:
+            # APR_2025 plus Loubser 2025 (DESI DR1), whose three points share a
+            # systematic error and carry a full covariance.
+            h_enums = [
+                Nc.DataHubbleId.GOMEZ_VALENT_COMP2018,
+                Nc.DataHubbleId.TOMASETTI2023,
+                Nc.DataHubbleId.JIMENEZ2023,
+            ]
+            h_cov_enums = [Nc.DataHubbleCovId.LOUBSER2025]
         case _:
             raise ValueError(f"Unknown Hubble data set id: {h_id}")
 
     for h_enum in h_enums:
         h_likelihood = Nc.DataHubble.new_from_id(h_enum)
         dataset.append_data(h_likelihood)
+
+    for h_cov_enum in h_cov_enums:
+        dataset.append_data(Nc.DataHubbleCov.new_from_id(h_cov_enum))

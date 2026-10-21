@@ -150,6 +150,10 @@ for _, member in sorted(Nc.DataHubbleId.__enum_values__.items()):
 To use a different H(z) dataset, replace `GOMEZ_VALENT_COMP2018` by one of the
 identifiers printed above.
 
+Datasets whose points are correlated, such as cosmic chronometers sharing a systematic
+error, are `Nc.DataHubbleCov` objects with a full covariance, selected by
+`Nc.DataHubbleCovId` (for example `Nc.DataHubbleCov.new_from_id(Nc.DataHubbleCovId.LOUBSER2025)`).
+
 Each predefined Hubble-rate dataset stores the redshift values `z`, the observed
 Hubble parameter values `mean`, and the corresponding one-sigma uncertainties `sigma`.
 The next cell prints the first few rows of the dataset selected above.

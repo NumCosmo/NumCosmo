@@ -6421,6 +6421,92 @@ class DataHubbleClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
+class DataHubbleCov(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHubbleCov(**properties)
+        new_empty() -> NumCosmo.DataHubbleCov
+        new_from_file(filename:str) -> NumCosmo.DataHubbleCov
+        new_from_id(id:NumCosmo.DataHubbleCovId) -> NumCosmo.DataHubbleCov
+
+    Object NcDataHubbleCov
+
+    Properties from NcDataHubbleCov:
+      z -> NcmVector: z
+        Data redshifts
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        z: NumCosmoMath.Vector
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        z: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new_empty(cls) -> DataHubbleCov: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataHubbleCov: ...
+    @classmethod
+    def new_from_id(cls, id: DataHubbleCovId) -> DataHubbleCov: ...
+
+class DataHubbleCovClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHubbleCovClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
+
 class DataPlanckCommander(NumCosmoMath.Data):
     r"""
     :Constructors:
@@ -27125,6 +27211,20 @@ class DataHubbleBaoId(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class DataHubbleCovId(GObject.GEnum):
+    LOUBSER2025: DataHubbleCovId = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class DataHubbleId(GObject.GEnum):
     BORGHI2022: DataHubbleId = ...
     BUSCA2013_BAO_WMAP: DataHubbleId = ...
@@ -27236,11 +27336,15 @@ class DataSNIACovResample(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class DataSNIAId(GObject.GEnum):
+    COV_DES_DOVEKIE_STATONLY: DataSNIAId = ...
+    COV_DES_DOVEKIE_STAT_SYS: DataSNIAId = ...
     COV_DES_Y5_STATONLY: DataSNIAId = ...
     COV_DES_Y5_STAT_SYS: DataSNIAId = ...
     COV_JLA_SNLS3_SDSS_SYS_STAT: DataSNIAId = ...
     COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: DataSNIAId = ...
     COV_PANTHEON: DataSNIAId = ...
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT: DataSNIAId = ...
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT: DataSNIAId = ...
     COV_PANTHEON_PLUS_SH0ES_STAT: DataSNIAId = ...
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT: DataSNIAId = ...
     COV_SNLS3_STAT_ONLY: DataSNIAId = ...

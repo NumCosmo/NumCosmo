@@ -216,6 +216,7 @@
 #include <numcosmo/nc/data/nc_data_download.h>
 #include <numcosmo/nc/data/nc_data_hubble.h>
 #include <numcosmo/nc/data/nc_data_hubble_bao.h>
+#include <numcosmo/nc/data/nc_data_hubble_cov.h>
 #include <numcosmo/nc/data/nc_data_bao_a.h>
 #include <numcosmo/nc/data/nc_data_bao_dv.h>
 #include <numcosmo/nc/data/nc_data_bao_rdv.h>
