@@ -48,6 +48,7 @@ typedef struct _TestNcmFitCase
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_new (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_new_empty (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_new_badly_scaled (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_traps (TestNcmFit *test, gconstpointer pdata);
 
 void test_ncm_fit_free (TestNcmFit *test, gconstpointer pdata);
@@ -59,6 +60,9 @@ void test_ncm_fit_ls_f_J (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_params_set_get (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_m2lnL_v (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_badly_scaled (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_run_levmar_stop_reason (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_gsl_ls_invalid_step (TestNcmFit *test, gconstpointer pdata);
@@ -100,6 +104,9 @@ void test_ncm_fit_invalid_run (TestNcmFit *test, gconstpointer pdata);
 static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/run",                    &test_ncm_fit_new, &test_ncm_fit_run },
   { "/run/simple",             &test_ncm_fit_new, &test_ncm_fit_run_simple },
+  { "/run/m2lnL_v",            &test_ncm_fit_new, &test_ncm_fit_run_m2lnL_v },
+  { "/run/badly_scaled",       &test_ncm_fit_new_badly_scaled, &test_ncm_fit_run_badly_scaled },
+  { "/run/levmar_stop_reason", &test_ncm_fit_new_badly_scaled, &test_ncm_fit_run_levmar_stop_reason },
   { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
   { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
   { "/gsl_ls_invalid_step",    &test_ncm_fit_new, &test_ncm_fit_gsl_ls_invalid_step },
@@ -235,6 +242,49 @@ void
 test_ncm_fit_new_empty (TestNcmFit *test, gconstpointer pdata)
 {
   _test_ncm_fit_new (test, pdata, NCM_PARAM_TYPE_FIXED);
+}
+
+/*
+ * Rosenbrock beside a one-dimensional MVND whose mean is 1e5, started at that mean:
+ * the parameter vector has norm 1e5 while the Rosenbrock steps from (-1.2, 1) are of
+ * order 1 or smaller.
+ */
+void
+test_ncm_fit_new_badly_scaled (TestNcmFit *test, gconstpointer pdata)
+{
+  const TestNcmFitAlgo *algo     = pdata;
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, g_test_rand_int ());
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (1, 1.0, 2.0, 1.0, 1.0e5, 1.0e5, rng);
+  NcmModelMVND *model_mvnd       = ncm_model_mvnd_new (1);
+  NcmDataRosenbrock *drb         = ncm_data_rosenbrock_new ();
+  NcmModelRosenbrock *mrb        = ncm_model_rosenbrock_new ();
+  NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, drb, NULL);
+  NcmLikelihood *lh              = ncm_likelihood_new (dset);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NCM_MODEL (mrb), NULL);
+  NcmFit *fit;
+
+  ncm_model_param_set_lower_bound (NCM_MODEL (model_mvnd), 0, -1.0e6);
+  ncm_model_param_set_upper_bound (NCM_MODEL (model_mvnd), 0, 1.0e6);
+  ncm_model_param_set (NCM_MODEL (model_mvnd), 0, ncm_vector_get (ncm_data_gauss_cov_mvnd_peek_mean (data_mvnd), 0));
+  ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1, -1.2);
+  ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2, 1.0);
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  fit = ncm_fit_factory (algo->fit_type, (gchar *) algo->algo_str, lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  ncm_fit_set_maxiter (fit, algo->max_iter);
+
+  test->data_mvnd = ncm_data_gauss_cov_mvnd_ref (data_mvnd);
+  test->fit       = ncm_fit_ref (fit);
+  test->rng       = rng;
+
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_data_rosenbrock_free (drb);
+  ncm_model_rosenbrock_free (mrb);
+  ncm_dataset_clear (&dset);
+  ncm_likelihood_clear (&lh);
+  ncm_mset_clear (&mset);
+  ncm_fit_clear (&fit);
 }
 
 void
@@ -1795,6 +1845,82 @@ test_ncm_fit_fisher_bias_gauss (TestNcmFit *test, gconstpointer pdata)
   ncm_vector_free (f_true);
   ncm_rng_free (rng);
   ncm_vector_free (bias);
+}
+
+/* After a run, the likelihood terms are those of the final point. */
+void
+test_ncm_fit_run_m2lnL_v (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit         = test->fit;
+  NcmMSet *mset       = ncm_fit_peek_mset (fit);
+  NcmLikelihood *lh   = ncm_fit_peek_likelihood (fit);
+  NcmDataset *dset    = ncm_likelihood_peek_dataset (lh);
+  NcmVector *expected = ncm_vector_new (ncm_dataset_get_length (dset));
+  NcmVector *m2lnL_v;
+  guint i;
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  m2lnL_v = ncm_likelihood_peek_m2lnL_v (lh);
+  g_assert_nonnull (m2lnL_v);
+  ncm_dataset_m2lnL_vec (dset, mset, expected);
+
+  for (i = 0; i < ncm_vector_len (expected); i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (m2lnL_v, i), ==, ncm_vector_get (expected, i), 1.0e-12, 1.0e-12);
+
+  ncm_vector_free (expected);
+}
+
+/*
+ * Levmar and GSL least squares only: the minimum x1 = x2 = 1 is reached whatever
+ * the scale of the other parameter. The other algorithms are not tested on Rosenbrock.
+ */
+void
+test_ncm_fit_run_badly_scaled (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit   = test->fit;
+  NcmModel *mrb = ncm_mset_peek (ncm_fit_peek_mset (fit), ncm_model_rosenbrock_id ());
+
+  if (!NCM_IS_FIT_LEVMAR (fit) && !NCM_IS_FIT_GSL_LS (fit))
+    return;
+
+  ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_assert_cmpdouble_e (ncm_model_param_get (mrb, NCM_MODEL_ROSENBROCK_X1), ==, 1.0, 1.0e-4, 0.0);
+  ncm_assert_cmpdouble_e (ncm_model_param_get (mrb, NCM_MODEL_ROSENBROCK_X2), ==, 1.0, 1.0e-4, 0.0);
+}
+
+static GString *_test_ncm_fit_log = NULL;
+
+static void
+_test_ncm_fit_log_writer (NcmFit *fit, const gchar *msg)
+{
+  g_string_append (_test_ncm_fit_log, msg);
+}
+
+static void
+_test_ncm_fit_log_updater (NcmFit *fit, guint n)
+{
+}
+
+/* Levmar only: a run cut at one iteration logs levmar's stop reason. */
+void
+test_ncm_fit_run_levmar_stop_reason (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit = test->fit;
+
+  if (!NCM_IS_FIT_LEVMAR (fit))
+    return;
+
+  _test_ncm_fit_log = g_string_new (NULL);
+  ncm_fit_set_logger (fit, &_test_ncm_fit_log_writer, &_test_ncm_fit_log_updater, NULL, NULL);
+  ncm_fit_set_maxiter (fit, 1);
+
+  g_assert_false (ncm_fit_run (fit, NCM_FIT_RUN_MSGS_FULL));
+  g_assert_nonnull (strstr (_test_ncm_fit_log->str, "levmar: maximum number of iterations"));
+
+  g_string_free (_test_ncm_fit_log, TRUE);
+  _test_ncm_fit_log = NULL;
 }
 
 void

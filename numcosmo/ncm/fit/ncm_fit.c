@@ -1686,7 +1686,8 @@ ncm_fit_reset (NcmFit *fit)
  * Resets @fit and minimizes $-2\ln L$ from the current parameters, leaving the result
  * in the #NcmFitState and the parameters at the minimum found. With no free parameters
  * it only evaluates $-2\ln L$. A non-finite $-2\ln L$ at the starting point gives a
- * warning and returns FALSE.
+ * warning and returns FALSE. After the run the terms of the likelihood,
+ * ncm_likelihood_peek_m2lnL_v(), are those of the final parameters.
  *
  * Returns: TRUE if the minimization converged.
  */
@@ -1720,7 +1721,13 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
     }
     else
     {
+      gdouble m2lnL_f;
+
       run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
+
+      /* The algorithm's last evaluation need not be at the final parameters, and
+       * least-squares algorithms never fill the likelihood terms. */
+      ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL_f);
     }
   }
 

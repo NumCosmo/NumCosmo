@@ -287,6 +287,39 @@ def test_generate_qspline_curvature_prior(
     assert exp_file.with_suffix(".functions.yaml").exists()
 
 
+@pytest.mark.parametrize(
+    "generator, func_name",
+    [
+        (gen.GenerateDEWSpline, "NcHICosmoDEWSpline:lp_w2"),
+        (gen.GenerateQSpline, "NcHICosmoQSpline:lp_q2"),
+    ],
+)
+def test_generate_spline_default_curvature_prior(
+    tmp_path: Path, generator: type, func_name: str
+):
+    """The default curvature prior is the L2 norm of the second derivative."""
+    exp_file = tmp_path / "spline.yaml"
+    _ = generator(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+    )
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    _ = ser.from_binfile(exp_file.with_suffix(".dataset.gvar").absolute().as_posix())
+    exp = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    likelihood = exp.peek("likelihood")
+    assert isinstance(likelihood, Ncm.Likelihood)
+    priors = [likelihood.priors_peek_f(i) for i in range(likelihood.priors_length_f())]
+    curvature = [
+        prior
+        for prior in priors
+        if isinstance(prior, Ncm.PriorGaussFunc)
+        and prior.props.mean_func.props.full_name == func_name
+    ]
+    assert len(curvature) == 1
+    assert curvature[0].props.variable == 2.0
+
+
 # LOCAL_* priors build a data-driven weight from the expected Fisher, so they
 # need Gaussian-family data (Hubble) rather than the empirical-fit BAO alone.
 LOCAL_CURVATURE_PRIORS = [

@@ -121,10 +121,10 @@ def _spline_knots(placement: "KnotPlacement"):
 class CurvaturePriorType(StrEnum):
     """Curvature prior functional for a spline reconstruction (q(z) or w(z)).
 
-    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (default);
+    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature;
     LP_KAPPA / LP_D2 are the Lp norms of the geometric curvature and of the second
     derivative respectively, with order p given by ``--curvature-p`` (large p
-    approaches the maximum curvature). LOCAL_KAPPA / LOCAL_D2 are the data-driven
+    approaches the maximum curvature). LP_D2 is the default. LOCAL_KAPPA / LOCAL_D2 are the data-driven
     *local* counterparts: the curvature norm is weighted by W(x), built from the
     data Fisher information so the prior relaxes where the data constrains the
     reconstruction and stays strong where it is blind (see
@@ -1384,7 +1384,7 @@ class GenerateQSpline:
     curvature_prior: Annotated[
         CurvaturePriorType,
         typer.Option(help="Curvature prior functional.", show_default=True),
-    ] = CurvaturePriorType.MEAN_KAPPA
+    ] = CurvaturePriorType.LP_D2
 
     curvature_sigma: Annotated[
         float,
@@ -1815,7 +1815,7 @@ class GenerateDEWSpline:
     curvature_prior: Annotated[
         CurvaturePriorType,
         typer.Option(help="Curvature prior functional.", show_default=True),
-    ] = CurvaturePriorType.MEAN_KAPPA
+    ] = CurvaturePriorType.LP_D2
 
     curvature_sigma: Annotated[
         float,
