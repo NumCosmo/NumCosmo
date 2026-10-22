@@ -63,6 +63,7 @@ void test_ncm_fit_run_simple (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_m2lnL_v (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_badly_scaled (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_levmar_stop_reason (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_log_state_m2lnL_v (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_gsl_ls_invalid_step (TestNcmFit *test, gconstpointer pdata);
@@ -107,6 +108,7 @@ static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/run/m2lnL_v",            &test_ncm_fit_new, &test_ncm_fit_run_m2lnL_v },
   { "/run/badly_scaled",       &test_ncm_fit_new_badly_scaled, &test_ncm_fit_run_badly_scaled },
   { "/run/levmar_stop_reason", &test_ncm_fit_new_badly_scaled, &test_ncm_fit_run_levmar_stop_reason },
+  { "/log_state/m2lnL_v",      &test_ncm_fit_new, &test_ncm_fit_log_state_m2lnL_v },
   { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
   { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
   { "/gsl_ls_invalid_step",    &test_ncm_fit_new, &test_ncm_fit_gsl_ls_invalid_step },
@@ -1921,6 +1923,51 @@ test_ncm_fit_run_levmar_stop_reason (TestNcmFit *test, gconstpointer pdata)
 
   g_string_free (_test_ncm_fit_log, TRUE);
   _test_ncm_fit_log = NULL;
+}
+
+/*
+ * A logged state shows the likelihood terms of the current parameters, also for the
+ * least-squares fitters, whose evaluations compute only residuals: the terms are those
+ * of the starting point until the state is logged after a step.
+ */
+void
+test_ncm_fit_log_state_m2lnL_v (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit         = test->fit;
+  NcmMSet *mset       = ncm_fit_peek_mset (fit);
+  NcmLikelihood *lh   = ncm_fit_peek_likelihood (fit);
+  NcmDataset *dset    = ncm_likelihood_peek_dataset (lh);
+  NcmVector *expected = ncm_vector_new (ncm_dataset_get_length (dset));
+  NcmVector *f        = ncm_vector_new (ncm_fit_state_get_data_len (ncm_fit_peek_state (fit)));
+  NcmVector *m2lnL_v;
+  gdouble m2lnL;
+  guint i;
+
+  ncm_fit_m2lnL_val (fit, &m2lnL);
+
+  for (i = 0; i < ncm_mset_fparam_len (mset); i++)
+    ncm_mset_fparam_set (mset, i, ncm_mset_fparam_get (mset, i) + 0.1);
+
+  if (ncm_fit_is_least_squares (fit))
+    ncm_fit_ls_f (fit, f);
+  else
+    ncm_fit_m2lnL_val (fit, &m2lnL);
+
+  _test_ncm_fit_log = g_string_new (NULL);
+  ncm_fit_set_logger (fit, &_test_ncm_fit_log_writer, &_test_ncm_fit_log_updater, NULL, NULL);
+  ncm_fit_set_messages (fit, NCM_FIT_RUN_MSGS_FULL);
+  ncm_fit_log_state (fit);
+
+  m2lnL_v = ncm_likelihood_peek_m2lnL_v (lh);
+  ncm_dataset_m2lnL_vec (dset, mset, expected);
+
+  for (i = 0; i < ncm_vector_len (expected); i++)
+    ncm_assert_cmpdouble_e (ncm_vector_get (m2lnL_v, i), ==, ncm_vector_get (expected, i), 1.0e-12, 1.0e-12);
+
+  g_string_free (_test_ncm_fit_log, TRUE);
+  _test_ncm_fit_log = NULL;
+  ncm_vector_free (expected);
+  ncm_vector_free (f);
 }
 
 void

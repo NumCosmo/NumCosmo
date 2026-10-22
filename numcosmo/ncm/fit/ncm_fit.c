@@ -1965,7 +1965,8 @@ ncm_fit_log_end (NcmFit *fit)
  * @fit: a #NcmFit
  *
  * Logs the current state: elapsed time, counts, degrees of freedom, $-2\ln L$ with its
- * terms, and the free parameters.
+ * terms, and the free parameters. A least-squares fitter evaluates only residuals, so
+ * for it the terms are computed here, at the current parameters.
  *
  */
 void
@@ -1976,11 +1977,11 @@ ncm_fit_log_state (NcmFit *fit)
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    NcmVector *m2lnL_v = ncm_likelihood_peek_m2lnL_v (self->lh);
-    gdouble elap_sec   = g_timer_elapsed (self->timer, NULL);
-    gulong elap_min    = elap_sec / 60;
-    gulong elap_hour   = elap_min / 60;
-    gulong elap_day    = elap_hour / 24;
+    NcmVector *m2lnL_v;
+    gdouble elap_sec = g_timer_elapsed (self->timer, NULL);
+    gulong elap_min  = elap_sec / 60;
+    gulong elap_hour = elap_min / 60;
+    gulong elap_day  = elap_hour / 24;
 
     elap_sec  = fmod (elap_sec, 60);
     elap_min  = elap_min % 60;
@@ -1990,6 +1991,15 @@ ncm_fit_log_state (NcmFit *fit)
     _ncm_fit_message (fit, "#  function evaluations [%06u]\n", ncm_fit_state_get_func_eval (self->fstate));
     _ncm_fit_message (fit, "#  gradient evaluations [%06u]\n", ncm_fit_state_get_grad_eval (self->fstate));
     _ncm_fit_message (fit, "#  degrees of freedom   [%06d]\n", ncm_fit_state_get_dof (self->fstate));
+
+    if (NCM_FIT_GET_CLASS (fit)->is_least_squares)
+    {
+      gdouble m2lnL;
+
+      ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL);
+    }
+
+    m2lnL_v = ncm_likelihood_peek_m2lnL_v (self->lh);
 
     if (m2lnL_v != NULL)
     {
