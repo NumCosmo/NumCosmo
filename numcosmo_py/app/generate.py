@@ -121,10 +121,10 @@ def _spline_knots(placement: "KnotPlacement"):
 class CurvaturePriorType(StrEnum):
     """Curvature prior functional for a spline reconstruction (q(z) or w(z)).
 
-    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (default);
+    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature;
     LP_KAPPA / LP_D2 are the Lp norms of the geometric curvature and of the second
     derivative respectively, with order p given by ``--curvature-p`` (large p
-    approaches the maximum curvature). LOCAL_KAPPA / LOCAL_D2 are the data-driven
+    approaches the maximum curvature). LP_D2 at p = 10 is the default. LOCAL_KAPPA / LOCAL_D2 are the data-driven
     *local* counterparts: the curvature norm is weighted by W(x), built from the
     data Fisher information so the prior relaxes where the data constrains the
     reconstruction and stays strong where it is blind (see
@@ -142,6 +142,7 @@ class CurvaturePriorType(StrEnum):
 def _add_curvature_prior(
     likelihood: Ncm.Likelihood,
     *,
+    cosmo: "Nc.HICosmoQSpline | Nc.HICosmoDEWSpline",
     namespace: str,
     d2_name: str,
     prior_type: CurvaturePriorType,
@@ -158,6 +159,11 @@ def _add_curvature_prior(
     ``wlp_*`` function carries ``weight`` (a precomputed W(x) spline) as its
     associated object. The prior func is added to the likelihood only, not to the
     derived-function array (those are evaluated with nvar=0).
+
+    For LP_D2 and LOCAL_D2 with an even integer p the prior is on the residual
+    functions ``lp_*_ls``/``wlp_*_ls``, whose sum of squares is the squared norm:
+    the same Gaussian prior on the norm, with one least-squares residual per
+    quadrature node of ``cosmo``'s spline. Other orders use the norm itself.
     """
     if prior_type is CurvaturePriorType.NONE:
         return
@@ -180,7 +186,18 @@ def _add_curvature_prior(
     ):
         raise ValueError(f"{prior_type} requires a precomputed weight spline.")
 
-    func = Ncm.MSetFuncList.new(func_name, obj)
+    residuals = (
+        prior_type in (CurvaturePriorType.LP_D2, CurvaturePriorType.LOCAL_D2)
+        and p == int(p)
+        and int(p) > 0
+        and int(p) % 2 == 0
+    )
+    if residuals:
+        func = Ncm.MSetFuncList.new_dim(
+            f"{func_name}_ls", obj, cosmo.d2_lp_residuals_len(obj, int(p))
+        )
+    else:
+        func = Ncm.MSetFuncList.new(func_name, obj)
     likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
 
 
@@ -1384,7 +1401,7 @@ class GenerateQSpline:
     curvature_prior: Annotated[
         CurvaturePriorType,
         typer.Option(help="Curvature prior functional.", show_default=True),
-    ] = CurvaturePriorType.MEAN_KAPPA
+    ] = CurvaturePriorType.LP_D2
 
     curvature_sigma: Annotated[
         float,
@@ -1398,7 +1415,7 @@ class GenerateQSpline:
             "(large p approaches the maximum curvature).",
             show_default=True,
         ),
-    ] = 2.0
+    ] = 10.0
 
     curvature_ref_factor: Annotated[
         float,
@@ -1493,6 +1510,7 @@ class GenerateQSpline:
 
         _add_curvature_prior(
             likelihood,
+            cosmo=cosmo,
             namespace="NcHICosmoQSpline",
             d2_name="lp_q2",
             prior_type=self.curvature_prior,
@@ -1815,7 +1833,7 @@ class GenerateDEWSpline:
     curvature_prior: Annotated[
         CurvaturePriorType,
         typer.Option(help="Curvature prior functional.", show_default=True),
-    ] = CurvaturePriorType.MEAN_KAPPA
+    ] = CurvaturePriorType.LP_D2
 
     curvature_sigma: Annotated[
         float,
@@ -1829,7 +1847,7 @@ class GenerateDEWSpline:
             "(large p approaches the maximum curvature).",
             show_default=True,
         ),
-    ] = 2.0
+    ] = 10.0
 
     curvature_ref_factor: Annotated[
         float,
@@ -1947,6 +1965,7 @@ class GenerateDEWSpline:
 
         _add_curvature_prior(
             likelihood,
+            cosmo=cosmo,
             namespace="NcHICosmoDEWSpline",
             d2_name="lp_w2",
             prior_type=self.curvature_prior,

@@ -77,6 +77,32 @@ test_ncm_data_rosenbrock (void)
   ncm_data_m2lnL_val (data, mset, &m2lnL);
   g_assert_cmpfloat (m2lnL, ==, 0.1);
 
+  /* The least-squares residuals reproduce -2 ln L. */
+  {
+    const gdouble x[3][2] = {
+      {
+        -1.2, 1.0
+      }, {
+        0.3, 1.0
+      }, {
+        2.0, -0.5
+      }
+    };
+    NcmVector *f = ncm_vector_new (ncm_data_get_length (data));
+    guint i;
+
+    for (i = 0; i < 3; i++)
+    {
+      ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1, x[i][0]);
+      ncm_model_param_set (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2, x[i][1]);
+      ncm_data_m2lnL_val (data, mset, &m2lnL);
+      ncm_data_leastsquares_f (data, mset, f);
+      ncm_assert_cmpdouble_e (ncm_vector_dot (f, f), ==, m2lnL, 1.0e-14, 0.0);
+    }
+
+    ncm_vector_free (f);
+  }
+
   ncm_data_free (data);
   ncm_mset_free (mset);
   ncm_model_rosenbrock_free (mrb);

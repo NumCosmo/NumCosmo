@@ -138,7 +138,7 @@ _ncm_prior_gauss_param_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_prior_gauss_param_parent_class)->finalize (object);
 }
 
-static gdouble _ncm_prior_gauss_param_mean (NcmPriorGauss *pg, NcmMSet *mset);
+static void _ncm_prior_gauss_param_mean (NcmPriorGauss *pg, NcmMSet *mset, gdouble *x);
 
 static void
 ncm_prior_gauss_param_class_init (NcmPriorGaussParamClass *klass)
@@ -177,13 +177,13 @@ ncm_prior_gauss_param_class_init (NcmPriorGaussParamClass *klass)
   pg_class->mean = &_ncm_prior_gauss_param_mean;
 }
 
-static gdouble
-_ncm_prior_gauss_param_mean (NcmPriorGauss *pg, NcmMSet *mset)
+static void
+_ncm_prior_gauss_param_mean (NcmPriorGauss *pg, NcmMSet *mset, gdouble *x)
 {
   NcmPriorGaussParam *pgp = NCM_PRIOR_GAUSS_PARAM (pg);
   NcmModel *model         = ncm_mset_peek (mset, pgp->mid);
 
-  return ncm_model_param_get_by_name (model, pgp->param_name, NULL);
+  x[0] = ncm_model_param_get_by_name (model, pgp->param_name, NULL);
 }
 
 /**

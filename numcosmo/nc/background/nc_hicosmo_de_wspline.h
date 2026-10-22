@@ -97,6 +97,8 @@ NcHICosmoDEWSpline *nc_hicosmo_de_wspline_new (gsize nknots, const gdouble z_f);
 NcmVector *nc_hicosmo_de_wspline_get_alpha (NcHICosmoDEWSpline *wspline);
 gdouble nc_hicosmo_de_wspline_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p);
 gdouble nc_hicosmo_de_wspline_weighted_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight);
+guint nc_hicosmo_de_wspline_d2_lp_residuals_len (NcHICosmoDEWSpline *wspline, NcmSpline *weight, const guint p);
+void nc_hicosmo_de_wspline_d2_lp_residuals (NcHICosmoDEWSpline *wspline, NcmSpline *weight, const guint p, gdouble *f);
 gdouble nc_hicosmo_de_wspline_mean_kappa (NcHICosmoDEWSpline *wspline);
 
 void nc_hicosmo_de_wspline_set_use_as_drag (NcHICosmoDEWSpline *wspline, gboolean use_as_drag);

@@ -565,6 +565,52 @@ nc_hicosmo_de_wspline_weighted_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCu
 }
 
 /**
+ * nc_hicosmo_de_wspline_d2_lp_residuals_len:
+ * @wspline: a #NcHICosmoDEWSpline
+ * @weight: (nullable): a #NcmSpline holding the weight density $W(\alpha)$
+ * @p: the norm order, even and positive
+ *
+ * Gets the number of residuals of nc_hicosmo_de_wspline_d2_lp_residuals(), see
+ * ncm_spline_curvature_d2_lp_residuals_len(). It depends only on the knots and @p: it
+ * is the dimension to give `NcHICosmoDEWSpline:lp_w2_ls` and
+ * `NcHICosmoDEWSpline:wlp_w2_ls` in ncm_mset_func_list_new_dim().
+ *
+ * Returns: the number of residuals.
+ */
+guint
+nc_hicosmo_de_wspline_d2_lp_residuals_len (NcHICosmoDEWSpline *wspline, NcmSpline *weight, const guint p)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  return ncm_spline_curvature_d2_lp_residuals_len (self->w_alpha, weight, p, 0.0, self->alpha_f);
+}
+
+/**
+ * nc_hicosmo_de_wspline_d2_lp_residuals:
+ * @wspline: a #NcHICosmoDEWSpline
+ * @weight: (nullable): a #NcmSpline holding the weight density $W(\alpha)$
+ * @p: the norm order, even and positive
+ * @f: (array) (element-type double): the residuals, nc_hicosmo_de_wspline_d2_lp_residuals_len() values
+ *
+ * Computes residuals whose sum of squares is the square of the $L_p$ norm of $w''(\alpha)$
+ * over $[0, \alpha_f]$, weighted by @weight when given: the square of
+ * nc_hicosmo_de_wspline_lp_norm() or nc_hicosmo_de_wspline_weighted_lp_norm() for
+ * #NCM_SPLINE_CURVATURE_D2. See ncm_spline_curvature_d2_lp_residuals().
+ */
+void
+nc_hicosmo_de_wspline_d2_lp_residuals (NcHICosmoDEWSpline *wspline, NcmSpline *weight, const guint p, gdouble *f)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  _nc_hicosmo_de_wspline_prepare (wspline);
+
+  if (weight != NULL)
+    ncm_spline_prepare (weight);
+
+  ncm_spline_curvature_d2_lp_residuals (self->w_alpha, weight, p, 0.0, self->alpha_f, f);
+}
+
+/**
  * nc_hicosmo_de_wspline_mean_kappa:
  * @wspline: a #NcHICosmoDEWSpline
  *
@@ -627,6 +673,45 @@ _nc_hicosmo_de_wspline_wlp_w2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdou
   f[0] = nc_hicosmo_de_wspline_weighted_lp_norm (cosmo, NCM_SPLINE_CURVATURE_D2, x[0], weight);
 }
 
+/* The residual functions take p as their variable; their dimension, given at
+ * construction, must be the model's number of residuals for that p. */
+static guint
+_nc_hicosmo_de_wspline_ls_p (NcmMSetFuncList *flist, NcHICosmoDEWSpline *cosmo, NcmSpline *weight, const gdouble x)
+{
+  const guint p   = (guint) x;
+  const guint dim = ncm_mset_func_get_dim (NCM_MSET_FUNC (flist));
+
+  if ((gdouble) p != x)
+    g_error ("NcHICosmoDEWSpline:%s: the order p = %g must be an even positive integer.",
+             ncm_mset_func_peek_name (NCM_MSET_FUNC (flist)), x);
+
+  if (dim != nc_hicosmo_de_wspline_d2_lp_residuals_len (cosmo, weight, p))
+    g_error ("NcHICosmoDEWSpline:%s: the function has dimension %u, the model has %u residuals at p = %u "
+             "(nc_hicosmo_de_wspline_d2_lp_residuals_len()).",
+             ncm_mset_func_peek_name (NCM_MSET_FUNC (flist)), dim, nc_hicosmo_de_wspline_d2_lp_residuals_len (cosmo, weight, p), p);
+
+  return p;
+}
+
+static void
+_nc_hicosmo_de_wspline_lp_w2_ls (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDEWSpline *cosmo = NC_HICOSMO_DE_WSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_DE_WSPLINE (cosmo));
+  nc_hicosmo_de_wspline_d2_lp_residuals (cosmo, NULL, _nc_hicosmo_de_wspline_ls_p (flist, cosmo, NULL, x[0]), f);
+}
+
+static void
+_nc_hicosmo_de_wspline_wlp_w2_ls (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDEWSpline *cosmo = NC_HICOSMO_DE_WSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcmSpline *weight         = NCM_SPLINE (ncm_mset_func_list_peek_obj (flist));
+
+  g_assert (NC_IS_HICOSMO_DE_WSPLINE (cosmo));
+  nc_hicosmo_de_wspline_d2_lp_residuals (cosmo, weight, _nc_hicosmo_de_wspline_ls_p (flist, cosmo, weight, x[0]), f);
+}
+
 void
 _nc_hicosmo_de_wspline_register_functions (void)
 {
@@ -635,6 +720,8 @@ _nc_hicosmo_de_wspline_register_functions (void)
   ncm_mset_func_list_register ("lp_w2", "\\Vert w''\\Vert_p", "NcHICosmoDEWSpline", "Lp norm of w'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_de_wspline_lp_w2, 1, 1);
   ncm_mset_func_list_register ("wlp_kappa", "\\Vert\\kappa\\Vert_{p,W}", "NcHICosmoDEWSpline", "Weighted Lp norm of w geometric curvature, x[0]=p, obj=weight spline W(alpha)", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_kappa, 1, 1);
   ncm_mset_func_list_register ("wlp_w2", "\\Vert w''\\Vert_{p,W}", "NcHICosmoDEWSpline", "Weighted Lp norm of w'' (second derivative), x[0]=p, obj=weight spline W(alpha)", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_w2, 1, 1);
+  ncm_mset_func_list_register ("lp_w2_ls", "f_{w''}", "NcHICosmoDEWSpline", "Residuals of the Lp norm of w'', x[0]=p even; dimension from nc_hicosmo_de_wspline_d2_lp_residuals_len()", G_TYPE_NONE, _nc_hicosmo_de_wspline_lp_w2_ls, 1, 0);
+  ncm_mset_func_list_register ("wlp_w2_ls", "f_{w'',W}", "NcHICosmoDEWSpline", "Residuals of the weighted Lp norm of w'', x[0]=p even, obj=weight spline W(alpha); dimension from nc_hicosmo_de_wspline_d2_lp_residuals_len()", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_w2_ls, 1, 0);
 }
 
 /**
