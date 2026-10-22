@@ -379,10 +379,12 @@ the same sampled points.
 
 ```{python}
 #| label: fig-ini-h
-#| fig-cap: "Relative error (solid) and relative estimate (dashed) of $\\mathrm{d}e^x/\\mathrm{d}x$ and $\\mathrm{d}^2e^x/\\mathrm{d}x^2$ at $x = 1$ against `NcmDiff:ini-h`, on 61 values. The vertical line is the default $\\epsilon^{1/8}$, where the errors are $7.9 \\times 10^{-13}$ (`rf_d1`), $7.0 \\times 10^{-14}$ (`rc_d1`) and $1.3 \\times 10^{-10}$ (`rc_d2`). Every estimate covers its error. Below $\\eta = 3.2 \\times 10^{-8}$ the error of `rc_d2` exceeds $10^{-3}$: its quotients are dominated by cancellation, and the step is moved up at most $r_s^3$ above $\\eta \\max(1, |x|)$."
+#| fig-cap: "Relative error (solid) and relative estimate (dashed) of $\\mathrm{d}e^x/\\mathrm{d}x$ and $\\mathrm{d}^2e^x/\\mathrm{d}x^2$ at $x = 1$ against `NcmDiff:ini-h`, on 61 values. The vertical line is the default $\\epsilon^{1/8}$."
 #| code-fold: true
 eps = np.finfo(float).eps
 etas = np.logspace(-15.5, -0.5, 61)
+ini_h_default = {}
+ini_h_covered = True
 fig, ax = plt.subplots(figsize=(6.4, 3.8))
 for color, method in zip(("C0", "C1", "C2"), ("rf_d1", "rc_d1", "rc_d2")):
     err, est = [], []
@@ -392,6 +394,11 @@ for color, method in zip(("C0", "C1", "C2"), ("rf_d1", "rc_d1", "rc_d2")):
         est.append(e / math.e)
     ax.loglog(etas, err, color=color, label=method)
     ax.loglog(etas, est, color=color, ls="--", lw=0.8)
+    value, _, _ = derivative(Ncm.Diff.new(), method, 1.0, math.exp)
+    ini_h_default[method] = abs(value - math.e) / math.e
+    ini_h_covered = ini_h_covered and all(a <= b for a, b in zip(err, est))
+    if method == "rc_d2":
+        ini_h_bad = [eta for eta, a in zip(etas, err) if a > 1.0e-3]
 ax.axvline(eps ** (1.0 / 8.0), color="0.5", lw=0.8)
 ax.set_xlabel(r"$\eta$ (ini-h)")
 ax.set_ylabel("relative error, estimate")
@@ -401,19 +408,44 @@ plt.show()
 ```
 
 ```{python}
+#| echo: false
+def sci(v, math=True):
+    """A value as a LaTeX power of ten with two digits, in a math span unless math is False."""
+    m, e = f"{v:.1e}".split("e")
+    body = f"{m} \\times 10^{{{int(e)}}}"
+    return f"${body}$" if math else body
+
+
+text = (
+    f"At the default $\\epsilon^{{1/8}}$ the errors are {sci(ini_h_default['rf_d1'])} (`rf_d1`), "
+    f"{sci(ini_h_default['rc_d1'])} (`rc_d1`) and {sci(ini_h_default['rc_d2'])} (`rc_d2`). "
+    + ("Every estimate in @fig-ini-h covers its error. " if ini_h_covered else "Some estimates in @fig-ini-h do not cover their errors. ")
+)
+if ini_h_bad:
+    text += (
+        f"Below $\\eta = {sci(max(ini_h_bad), False)}$ the error of `rc_d2` exceeds $10^{{-3}}$: its quotients "
+        "are dominated by cancellation, and the step is moved up at most $r_s^3$ above $\\eta \\max(1, |x|)$."
+    )
+Markdown(text)
+```
+
+```{python}
 #| label: fig-tiny-x
-#| fig-cap: "Relative error (solid) and relative estimate (dashed) of the derivatives of $e^x$ against $x$, from $10^{-300}$ to 1, with the default settings. Over the 31 points the largest relative errors are $2.0 \\times 10^{-12}$ (`rf_d1`), $2.4 \\times 10^{-13}$ (`rc_d1`), $6.8 \\times 10^{-10}$ (`rc_d2`) and $1.6 \\times 10^{-14}$ (`sc_d1`), each inside its estimate; `rc_d1` takes 13 to 17 evaluations, `sc_d1` 99 to 167."
+#| fig-cap: "Relative error (solid) and relative estimate (dashed) of the derivatives of $e^x$ against $x$, from $10^{-300}$ to 1, with the default settings."
 #| code-fold: true
 xs = np.logspace(-300, 0, 31)
 diff = Ncm.Diff.new()
+tiny_x = {}
 fig, ax = plt.subplots(figsize=(6.4, 3.8))
 for color, method in zip(("C0", "C1", "C2", "C3"), ("rf_d1", "rc_d1", "rc_d2", "sc_d1")):
-    err, est = [], []
+    err, est, nev = [], [], []
     for x0 in xs:
-        value, e, _ = derivative(diff, method, x0, math.exp)
+        value, e, n = derivative(diff, method, x0, math.exp)
         exact = math.exp(x0)
         err.append(max(abs(value - exact) / exact, 1.0e-17))
         est.append(e / exact)
+        nev.append(n)
+    tiny_x[method] = (max(err), all(a <= b for a, b in zip(err, est)), min(nev), max(nev))
     ax.loglog(xs, err, color=color, label=method)
     ax.loglog(xs, est, color=color, ls="--", lw=0.8)
 ax.set_xlabel(r"$x$")
@@ -423,6 +455,17 @@ ax.set_xticks([10.0**e for e in range(-300, 1, 50)])
 ax.set_ylim(1.0e-17, 1.0e-3)
 ax.legend(ncol=2)
 plt.show()
+```
+
+```{python}
+#| echo: false
+Markdown(
+    "Over the 31 points of @fig-tiny-x the largest relative errors are "
+    + ", ".join(f"{sci(tiny_x[m][0])} (`{m}`)" for m in ("rf_d1", "rc_d1", "rc_d2", "sc_d1"))
+    + (", each inside its estimate" if all(v[1] for v in tiny_x.values()) else ", not all inside their estimates")
+    + f"; `rc_d1` takes {tiny_x['rc_d1'][2]} to {tiny_x['rc_d1'][3]} evaluations, "
+    + f"`sc_d1` {tiny_x['sc_d1'][2]} to {tiny_x['sc_d1'][3]}."
+)
 ```
 
 ## Domains

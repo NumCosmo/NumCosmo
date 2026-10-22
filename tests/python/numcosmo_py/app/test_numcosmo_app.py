@@ -38,6 +38,7 @@ pytest.importorskip("getdist")
 
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.app.loading import load_catalog
+from numcosmo_py.app.run_fit import RunCommonOptions
 from numcosmo_py.app import app
 from numcosmo_py.app.esmcmc import IniSampler, Parallelization
 from numcosmo_py.interpolation.stats_dist import CrossValidationMethod
@@ -139,6 +140,34 @@ def test_run_fit(simple_experiment):
     result = runner.invoke(app, ["run", "fit", filename.as_posix()])
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_fit_diff_options(simple_experiment):
+    """The numerical-derivative options reach the fit's NcmDiff."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "fit",
+            filename.as_posix(),
+            "--diff-ini-h",
+            "1.0e-3",
+            "--no-diff-dual-series",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    run = RunCommonOptions(
+        experiment=filename, diff_ini_h=1.0e-3, diff_dual_series=False
+    )
+    diff = run.fit.peek_diff()
+    assert diff.props.ini_h == 1.0e-3
+    assert not diff.props.dual_series
+
+    default = RunCommonOptions(experiment=filename)
+    assert default.fit.peek_diff().props.dual_series == Ncm.Diff().props.dual_series
 
 
 @pytest.mark.parametrize("subcommand", [["run", "test"], ["run", "fit"]])

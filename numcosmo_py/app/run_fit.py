@@ -86,6 +86,25 @@ class RunCommonOptions(LoadExperiment):
         typer.Option(help="Absolute tolerance for -2lnL."),
     ] = None
 
+    diff_ini_h: Annotated[
+        float | None,
+        typer.Option(
+            help="Initial step of the numerical derivatives relative to max(1, |x|) "
+            "(NcmDiff:ini-h): the scale on which the likelihood varies. "
+            "Default: NcmDiff's.",
+        ),
+    ] = None
+
+    diff_dual_series: Annotated[
+        bool | None,
+        typer.Option(
+            "--diff-dual-series/--no-diff-dual-series",
+            help="Two Richardson ladders per numerical derivative (NcmDiff:dual-series); "
+            "one ladder costs about two thirds of the evaluations. Default: NcmDiff's.",
+            show_default=False,
+        ),
+    ] = None
+
     bench: Annotated[
         bool,
         typer.Option(
@@ -128,6 +147,10 @@ class RunCommonOptions(LoadExperiment):
             fit.set_m2lnL_reltol(self.m2lnl_reltol)
         if self.m2lnl_abstol is not None:
             fit.set_m2lnL_abstol(self.m2lnl_abstol)
+        if self.diff_ini_h is not None:
+            fit.peek_diff().props.ini_h = self.diff_ini_h
+        if self.diff_dual_series is not None:
+            fit.peek_diff().props.dual_series = self.diff_dual_series
 
         self.fit = fit
 

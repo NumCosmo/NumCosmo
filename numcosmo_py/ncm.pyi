@@ -3107,12 +3107,15 @@ class Fit(GObject.Object):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -3131,6 +3134,7 @@ class Fit(GObject.Object):
     parent_instance: GObject.Object = ...
     def __init__(
         self,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -3927,12 +3931,15 @@ class FitGSLLS(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -3950,6 +3957,7 @@ class FitGSLLS(Fit):
     props: Props = ...
     def __init__(
         self,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4022,6 +4030,8 @@ class FitGSLMM(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4029,6 +4039,7 @@ class FitGSLMM(Fit):
 
     class Props:
         algorithm: FitGSLMMAlgos
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4047,6 +4058,7 @@ class FitGSLMM(Fit):
     def __init__(
         self,
         algorithm: FitGSLMMAlgos = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4134,6 +4146,8 @@ class FitGSLMMS(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4141,6 +4155,7 @@ class FitGSLMMS(Fit):
 
     class Props:
         algorithm: FitGSLMMSAlgos
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4159,6 +4174,7 @@ class FitGSLMMS(Fit):
     def __init__(
         self,
         algorithm: FitGSLMMSAlgos = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4262,6 +4278,8 @@ class FitLevmar(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4269,6 +4287,7 @@ class FitLevmar(Fit):
 
     class Props:
         algorithm: FitLevmarAlgos
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4287,6 +4306,7 @@ class FitLevmar(Fit):
     def __init__(
         self,
         algorithm: FitLevmarAlgos = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4603,6 +4623,8 @@ class FitNLOpt(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4611,6 +4633,7 @@ class FitNLOpt(Fit):
     class Props:
         algorithm: FitNloptAlgorithm
         local_algorithm: FitNloptAlgorithm
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4630,6 +4653,7 @@ class FitNLOpt(Fit):
         self,
         algorithm: FitNloptAlgorithm = ...,
         local_algorithm: FitNloptAlgorithm = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,

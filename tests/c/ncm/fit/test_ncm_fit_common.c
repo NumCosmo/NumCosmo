@@ -64,6 +64,7 @@ void test_ncm_fit_run_m2lnL_v (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_badly_scaled (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_run_levmar_stop_reason (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_log_state_m2lnL_v (TestNcmFit *test, gconstpointer pdata);
+void test_ncm_fit_diff_dup_copy (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_dof (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_levmar_set_algo (TestNcmFit *test, gconstpointer pdata);
 void test_ncm_fit_gsl_ls_invalid_step (TestNcmFit *test, gconstpointer pdata);
@@ -109,6 +110,7 @@ static const TestNcmFitCase test_ncm_fit_cases[] = {
   { "/run/badly_scaled",       &test_ncm_fit_new_badly_scaled, &test_ncm_fit_run_badly_scaled },
   { "/run/levmar_stop_reason", &test_ncm_fit_new_badly_scaled, &test_ncm_fit_run_levmar_stop_reason },
   { "/log_state/m2lnL_v",      &test_ncm_fit_new, &test_ncm_fit_log_state_m2lnL_v },
+  { "/diff/dup_copy",          &test_ncm_fit_new, &test_ncm_fit_diff_dup_copy },
   { "/dof",                    &test_ncm_fit_new, &test_ncm_fit_dof },
   { "/levmar_set_algo",        &test_ncm_fit_new, &test_ncm_fit_levmar_set_algo },
   { "/gsl_ls_invalid_step",    &test_ncm_fit_new, &test_ncm_fit_gsl_ls_invalid_step },
@@ -1968,6 +1970,33 @@ test_ncm_fit_log_state_m2lnL_v (TestNcmFit *test, gconstpointer pdata)
   _test_ncm_fit_log = NULL;
   ncm_vector_free (expected);
   ncm_vector_free (f);
+}
+
+/* The settings of the fit's NcmDiff survive ncm_fit_dup () and are shared by ncm_fit_copy_new (). */
+void
+test_ncm_fit_diff_dup_copy (TestNcmFit *test, gconstpointer pdata)
+{
+  NcmFit *fit       = test->fit;
+  NcmDiff *diff     = ncm_fit_peek_diff (fit);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmFit *dup, *copy;
+  gboolean dual_series;
+  gdouble ini_h;
+
+  g_object_set (diff, "ini-h", 1.0e-3, "dual-series", FALSE, NULL);
+
+  dup = ncm_fit_dup (fit, ser);
+  g_assert_true (ncm_fit_peek_diff (dup) != diff);
+  g_object_get (ncm_fit_peek_diff (dup), "ini-h", &ini_h, "dual-series", &dual_series, NULL);
+  g_assert_cmpfloat (ini_h, ==, 1.0e-3);
+  g_assert_false (dual_series);
+
+  copy = ncm_fit_copy_new (fit, ncm_fit_peek_likelihood (fit), ncm_fit_peek_mset (fit), ncm_fit_get_grad_type (fit));
+  g_assert_true (ncm_fit_peek_diff (copy) == diff);
+
+  ncm_fit_free (copy);
+  ncm_fit_free (dup);
+  ncm_serialize_free (ser);
 }
 
 void
