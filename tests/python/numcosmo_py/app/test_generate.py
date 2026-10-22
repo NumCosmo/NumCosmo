@@ -27,6 +27,7 @@
 from typing import cast
 from pathlib import Path
 import pytest
+import numpy as np
 import typer
 
 pytest.importorskip("astropy")
@@ -290,14 +291,18 @@ def test_generate_qspline_curvature_prior(
 @pytest.mark.parametrize(
     "generator, func_name",
     [
-        (gen.GenerateDEWSpline, "NcHICosmoDEWSpline:lp_w2"),
-        (gen.GenerateQSpline, "NcHICosmoQSpline:lp_q2"),
+        (gen.GenerateDEWSpline, "NcHICosmoDEWSpline:lp_w2_ls"),
+        (gen.GenerateQSpline, "NcHICosmoQSpline:lp_q2_ls"),
     ],
 )
 def test_generate_spline_default_curvature_prior(
     tmp_path: Path, generator: type, func_name: str
 ):
-    """The default curvature prior is the L2 norm of the second derivative."""
+    """The default curvature prior is the L10 norm of the second derivative.
+
+    It is a Gaussian prior on the residual functions, with one residual per
+    quadrature node, and the same value as the prior on the norm.
+    """
     exp_file = tmp_path / "spline.yaml"
     _ = generator(
         experiment=exp_file.absolute(),
@@ -317,7 +322,17 @@ def test_generate_spline_default_curvature_prior(
         and prior.props.mean_func.props.full_name == func_name
     ]
     assert len(curvature) == 1
-    assert curvature[0].props.variable == 2.0
+    assert curvature[0].props.variable == 10.0
+
+    mset = exp.peek("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    assert curvature[0].props.dimension == cosmo.d2_lp_residuals_len(None, 10)
+
+    norm = Ncm.MSetFuncList.new(func_name.removesuffix("_ls"), None)
+    f = np.array(curvature[0].eval_array(mset, None))
+    expected = norm.eval1(mset, 10.0) / curvature[0].props.sigma
+    assert np.sum(f**2) == pytest.approx(expected**2, rel=1.0e-10)
 
 
 # LOCAL_* priors build a data-driven weight from the expected Fisher, so they
@@ -370,6 +385,7 @@ def test_add_curvature_prior_local_requires_weight():
     with pytest.raises(ValueError, match="requires a precomputed weight spline"):
         gen._add_curvature_prior(
             likelihood,
+            cosmo=Nc.HICosmoDEWSpline.new(6, 2.33),
             namespace="NcHICosmoDEWSpline",
             d2_name="lp_w2",
             prior_type=gen.CurvaturePriorType.LOCAL_D2,

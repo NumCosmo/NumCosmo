@@ -326,18 +326,20 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
   }
 }
 
-/* The state's dimensions: one residual per data point and per prior, and the degrees of
- * freedom of the dataset plus one per prior, minus the free parameters. */
+/* The state's dimensions: one residual per data point, per least-squares prior
+ * component and per m2lnL prior, and the degrees of freedom of the dataset plus one per
+ * prior, minus the free parameters. */
 static void
 _ncm_fit_state_dims (NcmFit *fit, guint *data_len, guint *fparam_len, gint *dof)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
   NcmDataset *dset           = ncm_likelihood_peek_dataset (self->lh);
   const guint n_priors       = ncm_likelihood_priors_length_f (self->lh) + ncm_likelihood_priors_length_m2lnL (self->lh);
+  const guint n_residuals    = ncm_likelihood_priors_ls_len (self->lh) + ncm_likelihood_priors_length_m2lnL (self->lh);
 
   g_assert (ncm_dataset_all_init (dset));
 
-  *data_len   = ncm_dataset_get_n (dset) + n_priors;
+  *data_len   = ncm_dataset_get_n (dset) + n_residuals;
   *fparam_len = ncm_mset_fparam_len (self->mset);
   *dof        = ncm_dataset_get_dof (dset) + (gint) n_priors - (gint) * fparam_len;
 

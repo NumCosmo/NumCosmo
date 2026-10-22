@@ -54,6 +54,7 @@ void ncm_likelihood_priors_take (NcmLikelihood *lh, NcmPrior *prior);
 
 NcmPrior *ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i);
 guint ncm_likelihood_priors_length_f (NcmLikelihood *lh);
+guint ncm_likelihood_priors_ls_len (NcmLikelihood *lh);
 NcmPrior *ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i);
 guint ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh);
 
