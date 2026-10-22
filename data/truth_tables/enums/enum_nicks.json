@@ -1315,6 +1315,14 @@
     "nick": "cabre",
     "type": "Nc.DataHubbleId"
   },
+  "NC_DATA_HUBBLE_COV_LOUBSER2025": {
+    "nick": "loubser2025",
+    "type": "Nc.DataHubbleCovId"
+  },
+  "NC_DATA_HUBBLE_COV_MORESCO2020": {
+    "nick": "moresco2020",
+    "type": "Nc.DataHubbleCovId"
+  },
   "NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018": {
     "nick": "gomez-valent-comp2018",
     "type": "Nc.DataHubbleId"
@@ -1423,6 +1431,14 @@
     "nick": "length",
     "type": "Nc.DataPlanckLKLType"
   },
+  "NC_DATA_SNIA_COV_DES_DOVEKIE_STATONLY": {
+    "nick": "cov-des-dovekie-statonly",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_DES_DOVEKIE_STAT_SYS": {
+    "nick": "cov-des-dovekie-stat-sys",
+    "type": "Nc.DataSNIAId"
+  },
   "NC_DATA_SNIA_COV_DES_Y5_STATONLY": {
     "nick": "cov-des-y5-statonly",
     "type": "Nc.DataSNIAId"
@@ -1481,6 +1497,14 @@
   },
   "NC_DATA_SNIA_COV_PANTHEON": {
     "nick": "cov-pantheon",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-hoyt26-stat",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-hoyt26-sys-stat",
     "type": "Nc.DataSNIAId"
   },
   "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT": {
@@ -1558,6 +1582,22 @@
   "NC_DISTANCE_COMOVING_METHOD_INT_E": {
     "nick": "int-e",
     "type": "Nc.DistanceComovingMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT": {
+    "nick": "camb-fit",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU": {
+    "nick": "eisenstein-hu",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB": {
+    "nick": "recomb",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
+    "nick": "cf4-snia",
+    "type": "Nc.DistMuObsCatalogId"
   },
   "NC_GALAXY_HOD_ZHENG07_ALPHA": {
     "nick": "alpha",
@@ -1775,6 +1815,34 @@
     "nick": "z",
     "type": "Nc.HaloPositionSParams"
   },
+  "NC_HCOSMO_BI_H1": {
+    "nick": "h1",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_H2": {
+    "nick": "h2",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_H3": {
+    "nick": "h3",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_OMEGA_M": {
+    "nick": "omega-m",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U1": {
+    "nick": "u1",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U2": {
+    "nick": "u2",
+    "type": "Nc.HCosmoBISParams"
+  },
+  "NC_HCOSMO_BI_U3": {
+    "nick": "u3",
+    "type": "Nc.HCosmoBISParams"
+  },
   "NC_HICOSMO_DE_CPL_W0": {
     "nick": "w0",
     "type": "Nc.HICosmoDECplSParams"
@@ -1846,6 +1914,10 @@
   "NC_HICOSMO_DE_T_GAMMA0": {
     "nick": "t-gamma0",
     "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_WSPLINE_AS_DRAG": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoDEWSplineSParams"
   },
   "NC_HICOSMO_DE_WSPLINE_W": {
     "nick": "w",

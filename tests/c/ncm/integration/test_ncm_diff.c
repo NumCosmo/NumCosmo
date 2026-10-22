@@ -31,6 +31,7 @@
 #include <numcosmo/numcosmo.h>
 
 #include <math.h>
+#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -69,6 +70,28 @@ typedef struct _TestNcmDiffDom
   gdouble xmin;
   gdouble xmax;
 } TestNcmDiffDom;
+
+typedef struct _TestNcmDiffThread
+{
+  NcmDiff *diff;
+  GArray *expected;
+  gboolean all_equal;
+} TestNcmDiffThread;
+
+typedef struct _TestNcmDiffNested
+{
+  NcmDiff *diff;
+  NcmDiffWork *work;
+  NcmVector *df;
+} TestNcmDiffNested;
+
+typedef struct _TestNcmDiffRandomCall
+{
+  guint method;
+  guint dim;
+  guint nvar;
+  gdouble x[4];
+} TestNcmDiffRandomCall;
 
 void test_ncm_diff_new (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_free (TestNcmDiff *test, gconstpointer pdata);
@@ -138,6 +161,15 @@ void test_ncm_diff_traps (TestNcmDiff *test, gconstpointer pdata);
 void test_ncm_diff_invalid_st (TestNcmDiff *test, gconstpointer pdata);
 
 void test_ncm_diff_new_single (TestNcmDiff *test, gconstpointer pdata);
+
+void test_ncm_diff_work_ref (void);
+void test_ncm_diff_work_threads (void);
+void test_ncm_diff_work_ws (void);
+void test_ncm_diff_work_ws_length (void);
+void test_ncm_diff_work_ws_length_subprocess (void);
+void test_ncm_diff_work_in_use (void);
+void test_ncm_diff_work_in_use_subprocess (void);
+void test_ncm_diff_work_random (void);
 static void _test_ncm_diff_add (const gchar *path, gconstpointer pdata, void (*test_func) (TestNcmDiff *test, gconstpointer pdata));
 
 gint
@@ -266,6 +298,15 @@ main (gint argc, gchar *argv[])
   _test_ncm_diff_add ("/ncm/diff/traps", NULL, &test_ncm_diff_traps);
 
   _test_ncm_diff_add ("/ncm/diff/invalid/st/subprocess", NULL, &test_ncm_diff_invalid_st);
+
+  g_test_add_func ("/ncm/diff/work/ref", &test_ncm_diff_work_ref);
+  g_test_add_func ("/ncm/diff/work/threads", &test_ncm_diff_work_threads);
+  g_test_add_func ("/ncm/diff/work/ws", &test_ncm_diff_work_ws);
+  g_test_add_func ("/ncm/diff/work/ws/length", &test_ncm_diff_work_ws_length);
+  g_test_add_func ("/ncm/diff/work/ws/length/subprocess", &test_ncm_diff_work_ws_length_subprocess);
+  g_test_add_func ("/ncm/diff/work/in_use", &test_ncm_diff_work_in_use);
+  g_test_add_func ("/ncm/diff/work/in_use/subprocess", &test_ncm_diff_work_in_use_subprocess);
+  g_test_add_func ("/ncm/diff/work/random", &test_ncm_diff_work_random);
 
   g_test_run ();
 }
@@ -2744,5 +2785,361 @@ void
 test_ncm_diff_invalid_st (TestNcmDiff *test, gconstpointer pdata)
 {
   g_assert_not_reached ();
+}
+
+/* A copy of a workspace is the same workspace with one more reference; clearing the
+ * last reference frees it and sets the pointer to NULL */
+void
+test_ncm_diff_work_ref (void)
+{
+  NcmDiffWork *work  = ncm_diff_work_new ();
+  NcmDiffWork *work2 = ncm_diff_work_ref (work);
+  NcmDiffWork *work3 = g_boxed_copy (NCM_TYPE_DIFF_WORK, work);
+
+  g_assert_true (work2 == work);
+  g_assert_true (work3 == work);
+
+  g_boxed_free (NCM_TYPE_DIFF_WORK, work3);
+  ncm_diff_work_unref (work2);
+  ncm_diff_work_clear (&work);
+  g_assert_null (work);
+}
+
+static void
+_test_ncm_diff_thread_f (const gdouble x, NcmVector *y, gpointer user_data)
+{
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (y); i++)
+    ncm_vector_set (y, i, exp ((0.1 + 0.05 * i) * x) * sin ((1.0 + 0.1 * i) * x));
+}
+
+static gpointer
+_test_ncm_diff_thread_run (gpointer data)
+{
+  TestNcmDiffThread *td = data;
+  guint k, i;
+
+  for (k = 0; k < 200; k++)
+  {
+    GArray *d = ncm_diff_rc_d2_1_to_M (td->diff, 0.7, 8, &_test_ncm_diff_thread_f, NULL, NULL);
+
+    for (i = 0; i < d->len; i++)
+      td->all_equal = td->all_equal && (g_array_index (d, gdouble, i) == g_array_index (td->expected, gdouble, i));
+
+    g_array_unref (d);
+  }
+
+  return NULL;
+}
+
+/* Threads sharing one NcmDiff take separate workspaces from its pool: every concurrent call
+ * returns exactly the serial result */
+void
+test_ncm_diff_work_threads (void)
+{
+  NcmDiff *diff    = ncm_diff_new ();
+  GArray *expected = ncm_diff_rc_d2_1_to_M (diff, 0.7, 8, &_test_ncm_diff_thread_f, NULL, NULL);
+  TestNcmDiffThread td[4];
+  GThread *threads[4];
+  guint t;
+
+  for (t = 0; t < 4; t++)
+  {
+    td[t].diff      = diff;
+    td[t].expected  = expected;
+    td[t].all_equal = TRUE;
+    threads[t]      = g_thread_new ("ncm-diff-work", &_test_ncm_diff_thread_run, &td[t]);
+  }
+
+  for (t = 0; t < 4; t++)
+  {
+    g_thread_join (threads[t]);
+    g_assert_true (td[t].all_equal);
+  }
+
+  g_array_unref (expected);
+  ncm_diff_free (diff);
+}
+
+/* One workspace reused across dimensions, dual and single series: the _ws calls return
+ * exactly the values and errors of the GArray calls */
+void
+test_ncm_diff_work_ws (void)
+{
+  NcmDiffWork *work  = ncm_diff_work_new ();
+  const guint dims[] = {8, 3, 8};
+  gint dual;
+
+  for (dual = 1; dual >= 0; dual--)
+  {
+    NcmDiff *diff = ncm_diff_new ();
+    guint n, order;
+
+    ncm_diff_set_dual_series (diff, dual);
+
+    for (n = 0; n < G_N_ELEMENTS (dims); n++)
+    {
+      const guint dim  = dims[n];
+      const gdouble x  = 0.3 + 0.2 * n;
+      NcmVector *df    = ncm_vector_new (dim);
+      NcmVector *err   = ncm_vector_new (dim);
+      NcmVector *df_ne = ncm_vector_new (dim);
+
+      for (order = 1; order <= 2; order++)
+      {
+        GArray *Eerr = NULL;
+        GArray *ref  = (order == 1) ? ncm_diff_rc_d1_1_to_M (diff, x, dim, &_test_ncm_diff_thread_f, NULL, &Eerr)
+                                    : ncm_diff_rc_d2_1_to_M (diff, x, dim, &_test_ncm_diff_thread_f, NULL, &Eerr);
+        guint i;
+
+        if (order == 1)
+        {
+          ncm_diff_rc_d1_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df, err);
+          ncm_diff_rc_d1_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df_ne, NULL);
+        }
+        else
+        {
+          ncm_diff_rc_d2_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df, err);
+          ncm_diff_rc_d2_1_to_M_ws (diff, work, x, dim, &_test_ncm_diff_thread_f, NULL, df_ne, NULL);
+        }
+
+        for (i = 0; i < dim; i++)
+        {
+          g_assert_cmpfloat (ncm_vector_get (df, i), ==, g_array_index (ref, gdouble, i));
+          g_assert_cmpfloat (ncm_vector_get (err, i), ==, g_array_index (Eerr, gdouble, i));
+          g_assert_cmpfloat (ncm_vector_get (df_ne, i), ==, g_array_index (ref, gdouble, i));
+        }
+
+        g_array_unref (ref);
+        g_array_unref (Eerr);
+      }
+
+      ncm_vector_free (df);
+      ncm_vector_free (err);
+      ncm_vector_free (df_ne);
+    }
+
+    ncm_diff_free (diff);
+  }
+
+  ncm_diff_work_unref (work);
+}
+
+void
+test_ncm_diff_work_ws_length (void)
+{
+  g_test_trap_subprocess ("/ncm/diff/work/ws/length/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*output vectors must have dim = 4 entries*");
+}
+
+void
+test_ncm_diff_work_ws_length_subprocess (void)
+{
+  NcmDiff *diff     = ncm_diff_new ();
+  NcmDiffWork *work = ncm_diff_work_new ();
+  NcmVector *df     = ncm_vector_new (3);
+
+  ncm_diff_rc_d1_1_to_M_ws (diff, work, 0.5, 4, &_test_ncm_diff_thread_f, NULL, df, NULL);
+}
+
+/* A function that differentiates with the workspace its own derivative is using */
+static void
+_test_ncm_diff_nested_f (const gdouble x, NcmVector *y, gpointer user_data)
+{
+  TestNcmDiffNested *nd = user_data;
+
+  ncm_diff_rc_d1_1_to_M_ws (nd->diff, nd->work, x, 1, &_test_ncm_diff_thread_f, NULL, nd->df, NULL);
+  ncm_vector_set (y, 0, ncm_vector_get (nd->df, 0));
+}
+
+void
+test_ncm_diff_work_in_use (void)
+{
+  g_test_trap_subprocess ("/ncm/diff/work/in_use/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmDiffWork is in use by another call*");
+}
+
+void
+test_ncm_diff_work_in_use_subprocess (void)
+{
+  TestNcmDiffNested nd = {ncm_diff_new (), ncm_diff_work_new (), ncm_vector_new (1)};
+  NcmVector *df        = ncm_vector_new (1);
+
+  ncm_diff_rc_d1_1_to_M_ws (nd.diff, nd.work, 0.5, 1, &_test_ncm_diff_nested_f, &nd, df, NULL);
+}
+
+static void
+_test_ncm_diff_random_NtoM (NcmVector *x, NcmVector *y, gpointer user_data)
+{
+  gdouble s = 0.0;
+  guint a, i;
+
+  for (a = 0; a < ncm_vector_len (x); a++)
+    s += (a + 1.0) * ncm_vector_get (x, a);
+
+  for (i = 0; i < ncm_vector_len (y); i++)
+    ncm_vector_set (y, i, exp ((0.1 + 0.03 * i) * s) * sin ((1.0 + 0.1 * i) * s));
+}
+
+static gdouble
+_test_ncm_diff_random_Nto1 (NcmVector *x, gpointer user_data)
+{
+  gdouble r = 0.0;
+  guint a;
+
+  for (a = 0; a < ncm_vector_len (x); a++)
+    r += sin ((a + 1.0) * ncm_vector_get (x, a));
+
+  return r * exp (ncm_vector_get (x, 0));
+}
+
+static gdouble
+_test_ncm_diff_random_1to1 (const gdouble x, gpointer user_data)
+{
+  return exp (sin (x)) * (1.0 + x * x);
+}
+
+/* The values, then the errors, of one call: one method per driver */
+static GArray *
+_test_ncm_diff_random_run (NcmDiff *diff, NcmDiffWork *work, const TestNcmDiffRandomCall *c)
+{
+  GArray *x_a = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *out = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *d   = NULL;
+  GArray *e   = NULL;
+
+  g_array_append_vals (x_a, c->x, c->nvar);
+
+  switch (c->method)
+  {
+    case 0:
+      d = ncm_diff_rc_d1_N_to_M (diff, x_a, c->dim, &_test_ncm_diff_random_NtoM, NULL, &e);
+      break;
+    case 1:
+      d = ncm_diff_rf_Hessian_N_to_1 (diff, x_a, &_test_ncm_diff_random_Nto1, NULL, &e);
+      break;
+    case 2:
+      d = ncm_diff_sc_d2_N_to_M (diff, x_a, c->dim, &_test_ncm_diff_random_NtoM, NULL, &e);
+      break;
+    case 3:
+    {
+      gdouble err;
+      const gdouble v = ncm_diff_rc_d2_1_to_1 (diff, c->x[0], &_test_ncm_diff_random_1to1, NULL, &err);
+
+      g_array_append_val (out, v);
+      g_array_append_val (out, err);
+      break;
+    }
+    default:
+    {
+      NcmVector *dv = ncm_vector_new (c->dim);
+      NcmVector *ev = ncm_vector_new (c->dim);
+      guint i;
+
+      ncm_diff_rc_d2_1_to_M_ws (diff, work, c->x[0], c->dim, &_test_ncm_diff_thread_f, NULL, dv, ev);
+
+      for (i = 0; i < c->dim; i++)
+      {
+        const gdouble dvi = ncm_vector_get (dv, i);
+
+        g_array_append_val (out, dvi);
+      }
+
+      for (i = 0; i < c->dim; i++)
+      {
+        const gdouble evi = ncm_vector_get (ev, i);
+
+        g_array_append_val (out, evi);
+      }
+
+      ncm_vector_free (dv);
+      ncm_vector_free (ev);
+      break;
+    }
+  }
+
+  if (d != NULL)
+  {
+    g_array_append_vals (out, d->data, d->len);
+    g_array_append_vals (out, e->data, e->len);
+    g_array_unref (d);
+    g_array_unref (e);
+  }
+
+  g_array_unref (x_a);
+
+  return out;
+}
+
+/*
+ * Random calls on one long-lived NcmDiff and NcmDiffWork, whose dual-series setting and
+ * domain change between calls, against the same calls on a fresh NcmDiff and NcmDiffWork:
+ * state a reused workspace carries from earlier calls must not change any value or error.
+ */
+void
+test_ncm_diff_work_random (void)
+{
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 4242);
+  NcmDiff *diff     = ncm_diff_new ();
+  NcmDiffWork *work = ncm_diff_work_new ();
+  NcmVector *lb     = ncm_vector_new (4);
+  NcmVector *ub     = ncm_vector_new (4);
+  guint k;
+
+  ncm_vector_set_all (lb, 0.25);
+  ncm_vector_set_all (ub, 1.25);
+  ncm_diff_set_domain_warnings (diff, FALSE);
+
+  for (k = 0; k < 300; k++)
+  {
+    const gboolean dual   = ncm_rng_uniform_int_gen (rng, 2);
+    const gboolean domain = ncm_rng_uniform_int_gen (rng, 2);
+    NcmDiff *fresh        = ncm_diff_new ();
+    NcmDiffWork *fresh_w  = ncm_diff_work_new ();
+    TestNcmDiffRandomCall c;
+    GArray *r1, *r2;
+    guint a;
+
+    c.method = ncm_rng_uniform_int_gen (rng, 5);
+    c.dim    = 1 + ncm_rng_uniform_int_gen (rng, 32);
+    c.nvar   = ((c.method == 3) || (c.method == 4)) ? 1 : 1 + ncm_rng_uniform_int_gen (rng, 4);
+
+    for (a = 0; a < 4; a++)
+      c.x[a] = (ncm_rng_uniform_int_gen (rng, 4) == 0) ? 0.251 : ncm_rng_uniform_gen (rng, 0.3, 1.2);
+
+    ncm_diff_set_dual_series (diff, dual);
+    ncm_diff_set_dual_series (fresh, dual);
+    ncm_diff_set_domain_warnings (fresh, FALSE);
+
+    if (domain)
+    {
+      ncm_diff_set_domain (diff, lb, ub);
+      ncm_diff_set_domain (fresh, lb, ub);
+    }
+    else
+    {
+      ncm_diff_clear_domain (diff);
+    }
+
+    r1 = _test_ncm_diff_random_run (diff, work, &c);
+    r2 = _test_ncm_diff_random_run (fresh, fresh_w, &c);
+
+    g_assert_cmpuint (r1->len, ==, r2->len);
+    g_assert_true (memcmp (r1->data, r2->data, sizeof (gdouble) * r1->len) == 0);
+
+    g_array_unref (r1);
+    g_array_unref (r2);
+    ncm_diff_work_unref (fresh_w);
+    ncm_diff_free (fresh);
+  }
+
+  ncm_vector_free (lb);
+  ncm_vector_free (ub);
+  ncm_diff_work_unref (work);
+  ncm_diff_free (diff);
+  ncm_rng_free (rng);
 }
 

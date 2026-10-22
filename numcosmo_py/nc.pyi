@@ -84,6 +84,11 @@ DATA_SNIA_COV_LEN: int = 1
 DATA_SNIA_SIMPLE_LEN: int = 1
 DATA_XCOR_DL: int = 10
 DATA_XCOR_MAX: int = 5
+DIST_MU_OBS_COL_DEC: str = r"dec"
+DIST_MU_OBS_COL_MU: str = r"mu"
+DIST_MU_OBS_COL_RA: str = r"ra"
+DIST_MU_OBS_COL_SIGMA_MU: str = r"sigma_mu"
+DIST_MU_OBS_COL_Z: str = r"z"
 GALAXY_HOD_ZHENG07_DEFAULT_ALPHA: float = 1.15
 GALAXY_HOD_ZHENG07_DEFAULT_LOG_M0: float = 12.7
 GALAXY_HOD_ZHENG07_DEFAULT_LOG_M1: float = 13.93
@@ -151,6 +156,15 @@ HALO_POSITION_DEFAULT_DEC: float = 0.0
 HALO_POSITION_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_POSITION_DEFAULT_RA: float = 0.0
 HALO_POSITION_DEFAULT_Z: float = 0.2
+HCOSMO_BI_DEFAULT_H1: float = 70.0
+HCOSMO_BI_DEFAULT_H2: float = 70.0
+HCOSMO_BI_DEFAULT_H3: float = 70.0
+HCOSMO_BI_DEFAULT_OMEGA_M: float = 0.3
+HCOSMO_BI_DEFAULT_PARAMS_ABSTOL: float = 0.0
+HCOSMO_BI_DEFAULT_U1: float = 1.0
+HCOSMO_BI_DEFAULT_U2: float = 0.0
+HCOSMO_BI_DEFAULT_U3: float = 0.0
+HCOSMO_BI_DIST_DEFAULT_RELTOL: float = 0.0
 HICOSMO_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HICOSMO_DEFAULT_PARAMS_RELTOL: float = 0.0
 HICOSMO_DE_CPL_DEFAULT_W0: float = 1.0
@@ -167,6 +181,7 @@ HICOSMO_DE_DEFAULT_OMEGA_X: float = 0.7
 HICOSMO_DE_DEFAULT_T_GAMMA0: float = 2.7245
 HICOSMO_DE_JBP_DEFAULT_W0: float = 1.0
 HICOSMO_DE_JBP_DEFAULT_W1: float = 0.0
+HICOSMO_DE_WSPLINE_DEFAULT_AS_DRAG: float = 0.035
 HICOSMO_DE_WSPLINE_DEFAULT_W0: float = 1.0
 HICOSMO_DE_WSPLINE_N: int = 5
 HICOSMO_DE_XCDM_DEFAULT_W0: float = 1.0
@@ -457,6 +472,7 @@ def data_bao_create(dist: Distance, id: DataBaoId) -> NumCosmoMath.Data: ...
 def data_cmb_create(dist: Distance, id: DataCMBId) -> NumCosmoMath.Data: ...
 def data_download_release_file(filename: str) -> str: ...
 def data_snia_cov_error_quark() -> int: ...
+def dist_mu_obs_catalog_id_get_filename(id: DistMuObsCatalogId) -> str: ...
 def galaxy_shape_factor_error_quark() -> int: ...
 def galaxy_wl_obs_catalog_id_get_filename(id: GalaxyWLObsCatalogId) -> str: ...
 def halo_catalog_error_quark() -> int: ...
@@ -6127,6 +6143,117 @@ class DataDistMuClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
 
+class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHCosmoBIDistMu(**properties)
+        new(dist:NumCosmo.HCosmoBIDist=None) -> NumCosmo.DataHCosmoBIDistMu
+
+    Object NcDataHCosmoBIDistMu
+
+    Properties from NcDataHCosmoBIDistMu:
+      dist -> NcHCosmoBIDist: dist
+        Distance object
+      z -> NcmVector: z
+        Data redshifts
+      p -> NcmMatrix: p
+        Data directions
+
+    Properties from NcmDataGaussDiag:
+      n-points -> guint: n-points
+        Data sample size
+      w-mean -> gboolean: w-mean
+        Whether to minimize analytically over the weighted mean
+      mean -> NcmVector: mean
+        Data mean
+      sigma -> NcmVector: sigma
+        Data standard deviation
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        dist: typing.Optional[HCosmoBIDist]
+        p: NumCosmoMath.Matrix
+        z: NumCosmoMath.Vector
+        mean: NumCosmoMath.Vector
+        n_points: int
+        sigma: NumCosmoMath.Vector
+        w_mean: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        dist: typing.Optional[HCosmoBIDist] = ...,
+        p: NumCosmoMath.Matrix = ...,
+        z: NumCosmoMath.Vector = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        sigma: NumCosmoMath.Vector = ...,
+        w_mean: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(dmu: DataHCosmoBIDistMu) -> None: ...
+    def free(self) -> None: ...
+    def get_obs(self) -> DistMuObs: ...
+    @classmethod
+    def new(cls, dist: typing.Optional[HCosmoBIDist] = None) -> DataHCosmoBIDistMu: ...
+    def peek_p(self) -> NumCosmoMath.Matrix: ...
+    def peek_z(self) -> NumCosmoMath.Vector: ...
+    def ref(self) -> DataHCosmoBIDistMu: ...
+    def set_data(
+        self,
+        z: NumCosmoMath.Vector,
+        p: NumCosmoMath.Matrix,
+        mu: NumCosmoMath.Vector,
+        sigma: NumCosmoMath.Vector,
+    ) -> None: ...
+    def set_dist(self, dist: typing.Optional[HCosmoBIDist] = None) -> None: ...
+    def set_obs(
+        self,
+        obs: DistMuObs,
+        mu_col: typing.Optional[str],
+        sigma_col: typing.Optional[str],
+        z_min: float,
+        z_max: float,
+    ) -> None: ...
+
+class DataHCosmoBIDistMuClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHCosmoBIDistMuClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussDiagClass = ...
+
 class DataHubble(NumCosmoMath.DataGaussDiag):
     r"""
     :Constructors:
@@ -6301,6 +6428,92 @@ class DataHubbleClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
+
+class DataHubbleCov(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHubbleCov(**properties)
+        new_empty() -> NumCosmo.DataHubbleCov
+        new_from_file(filename:str) -> NumCosmo.DataHubbleCov
+        new_from_id(id:NumCosmo.DataHubbleCovId) -> NumCosmo.DataHubbleCov
+
+    Object NcDataHubbleCov
+
+    Properties from NcDataHubbleCov:
+      z -> NcmVector: z
+        Data redshifts
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        z: NumCosmoMath.Vector
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        z: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new_empty(cls) -> DataHubbleCov: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataHubbleCov: ...
+    @classmethod
+    def new_from_id(cls, id: DataHubbleCovId) -> DataHubbleCov: ...
+
+class DataHubbleCovClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHubbleCovClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class DataPlanckCommander(NumCosmoMath.Data):
     r"""
@@ -7406,6 +7619,82 @@ class DataXcorClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
+class DistMuObs(NumCosmoMath.Catalog):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuObs(**properties)
+        new(nrows:int, col_names:list=None) -> NumCosmo.DistMuObs
+        new_from_catalog_id(id:NumCosmo.DistMuObsCatalogId) -> NumCosmo.DistMuObs
+        new_full(nrows:int, col_names:list, col_types:list) -> NumCosmo.DistMuObs
+
+    Object NcDistMuObs
+
+    Properties from NcmCatalog:
+      data -> NcmMatrix: Data
+        Catalog data matrix
+      columns -> GStrv: Columns
+        Catalog column names
+      col-types -> GVariant: Column types
+        Per-column logical types
+      len -> guint: Length
+        Number of catalog rows
+      meta -> NcmVarDict: Metadata
+        Catalog-wide free-form metadata
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        col_types: GLib.Variant
+        columns: list[str]
+        data: NumCosmoMath.Matrix
+        len: int
+        meta: typing.Optional[NumCosmoMath.VarDict]
+
+    props: Props = ...
+    def __init__(
+        self,
+        col_types: GLib.Variant = ...,
+        columns: typing.Sequence[str] = ...,
+        data: NumCosmoMath.Matrix = ...,
+        len: int = ...,
+        meta: typing.Optional[NumCosmoMath.VarDict] = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(obs: DistMuObs) -> None: ...
+    def free(self) -> None: ...
+    def get_direction(self, i: int) -> NumCosmoMath.TriVec: ...
+    @classmethod
+    def new(
+        cls, nrows: int, col_names: typing.Optional[typing.Sequence[str]] = None
+    ) -> DistMuObs: ...
+    @classmethod
+    def new_from_catalog_id(cls, id: DistMuObsCatalogId) -> DistMuObs: ...
+    @classmethod
+    def new_full(
+        cls,
+        nrows: int,
+        col_names: typing.Sequence[str],
+        col_types: typing.Sequence[NumCosmoMath.CatalogColType],
+    ) -> DistMuObs: ...
+    def ref(self) -> DistMuObs: ...
+    def set_direction(self, i: int, n: NumCosmoMath.TriVec) -> None: ...
+
+class DistMuObsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuObsClass()
+    """
+
+    parent_class: NumCosmoMath.CatalogClass = ...
+
 class Distance(GObject.Object):
     r"""
     :Constructors:
@@ -7424,6 +7713,8 @@ class Distance(GObject.Object):
         Recombination object
       compute-inv-comoving -> gboolean: compute-inv-comoving
         Whether to compute the inverse comoving function
+      sound-horizon-method -> NcDistanceSoundHorizonMethod: sound-horizon-method
+        Sound horizon at the drag epoch method
 
     Signals from GObject:
       notify (GParam)
@@ -7432,6 +7723,7 @@ class Distance(GObject.Object):
     class Props:
         compute_inv_comoving: bool
         recomb: Recomb
+        sound_horizon_method: DistanceSoundHorizonMethod
         zf: float
 
     props: Props = ...
@@ -7451,8 +7743,13 @@ class Distance(GObject.Object):
     max_comoving: float = ...
     recomb: Recomb = ...
     cmethod: DistanceComovingMethod = ...
+    sound_horizon_method: DistanceSoundHorizonMethod = ...
     def __init__(
-        self, compute_inv_comoving: bool = ..., recomb: Recomb = ..., zf: float = ...
+        self,
+        compute_inv_comoving: bool = ...,
+        recomb: Recomb = ...,
+        sound_horizon_method: DistanceSoundHorizonMethod = ...,
+        zf: float = ...,
     ) -> None: ...
     def DA_r(self, cosmo: HICosmo, z: float) -> float: ...
     def DH_r(self, cosmo: HICosmo, z: float) -> float: ...
@@ -7503,6 +7800,7 @@ class Distance(GObject.Object):
     def dsound_horizon_dz(self, cosmo: HICosmo, z: float) -> float: ...
     def dtransverse_dz(self, cosmo: HICosmo, z: float) -> float: ...
     def free(self) -> None: ...
+    def get_sound_horizon_method(self) -> DistanceSoundHorizonMethod: ...
     def hubble(self, cosmo: HICosmo) -> float: ...
     def inv_comoving(self, cosmo: HICosmo, xi: float) -> float: ...
     def lookback_time(self, cosmo: HICosmo, z: float) -> float: ...
@@ -7528,6 +7826,9 @@ class Distance(GObject.Object):
     def ref(self) -> Distance: ...
     def require_zf(self, zf: float) -> None: ...
     def set_recomb(self, recomb: Recomb) -> None: ...
+    def set_sound_horizon_method(
+        self, sound_horizon_method: DistanceSoundHorizonMethod
+    ) -> None: ...
     def shift_parameter(self, cosmo: HICosmo, z: float) -> float: ...
     def shift_parameter_lss(self, cosmo: HICosmo) -> float: ...
     def sigma_critical(self, cosmo: HICosmo, zs: float, zl: float) -> float: ...
@@ -10335,6 +10636,204 @@ class GrowthFuncClass(GObject.GPointer):
 
 class GrowthFuncPrivate(GObject.GPointer): ...
 
+class HCosmoBI(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        HCosmoBI(**properties)
+        new() -> NumCosmo.HCosmoBI
+
+    Object NcHCosmoBI
+
+    Properties from NcHCosmoBI:
+      H1 -> gdouble: H1
+        H_1
+      H2 -> gdouble: H2
+        H_2
+      H3 -> gdouble: H3
+        H_3
+      Omegam -> gdouble: Omegam
+        \Omega_{m0}
+      u1 -> gdouble: u1
+        u_1
+      u2 -> gdouble: u2
+        u_2
+      u3 -> gdouble: u3
+        u_3
+      H1-fit -> gboolean: H1-fit
+        H_1:fit
+      H2-fit -> gboolean: H2-fit
+        H_2:fit
+      H3-fit -> gboolean: H3-fit
+        H_3:fit
+      Omegam-fit -> gboolean: Omegam-fit
+        \Omega_{m0}:fit
+      u1-fit -> gboolean: u1-fit
+        u_1:fit
+      u2-fit -> gboolean: u2-fit
+        u_2:fit
+      u3-fit -> gboolean: u3-fit
+        u_3:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        H1: float
+        H1_fit: bool
+        H2: float
+        H2_fit: bool
+        H3: float
+        H3_fit: bool
+        Omegam: float
+        Omegam_fit: bool
+        u1: float
+        u1_fit: bool
+        u2: float
+        u2_fit: bool
+        u3: float
+        u3_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        H1: float = ...,
+        H1_fit: bool = ...,
+        H2: float = ...,
+        H2_fit: bool = ...,
+        H3: float = ...,
+        H3_fit: bool = ...,
+        Omegam: float = ...,
+        Omegam_fit: bool = ...,
+        u1: float = ...,
+        u1_fit: bool = ...,
+        u2: float = ...,
+        u2_fit: bool = ...,
+        u3: float = ...,
+        u3_fit: bool = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def E(self, t_lb: float) -> typing.Tuple[float, float, float]: ...
+    def H0(self) -> float: ...
+    def Omega_L0(self) -> float: ...
+    def Omega_s0(self) -> float: ...
+    def RH_Mpc(self) -> float: ...
+    def age(self) -> float: ...
+    @staticmethod
+    def clear(cosmo: HCosmoBI) -> None: ...
+    def free(self) -> None: ...
+    def get_quaternion(self) -> NumCosmoMath.Quaternion: ...
+    @staticmethod
+    def id() -> int: ...
+    def ln_a(self, t_lb: float) -> typing.Tuple[float, float, float]: ...
+    @classmethod
+    def new(cls) -> HCosmoBI: ...
+    def ref(self) -> HCosmoBI: ...
+
+class HCosmoBIClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HCosmoBIClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+
+class HCosmoBIDist(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        HCosmoBIDist(**properties)
+        new(zmax:float) -> NumCosmo.HCosmoBIDist
+
+    Object NcHCosmoBIDist
+
+    Properties from NcHCosmoBIDist:
+      zmax -> gdouble: zmax
+        Maximum redshift
+      reltol -> gdouble: reltol
+        Relative tolerance
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        reltol: float
+        zmax: float
+
+    props: Props = ...
+    def __init__(self, reltol: float = ..., zmax: float = ...) -> None: ...
+    @staticmethod
+    def clear(dist: HCosmoBIDist) -> None: ...
+    def dmodulus_sky(self, z: float, px: float, py: float, pz: float) -> float: ...
+    def free(self) -> None: ...
+    def get_n_nodes(self) -> int: ...
+    def get_reltol(self) -> float: ...
+    def get_t_lb_max(self) -> float: ...
+    def get_zmax(self) -> float: ...
+    def luminosity(self, z: float, n1: float, n2: float, n3: float) -> float: ...
+    @classmethod
+    def new(cls, zmax: float) -> HCosmoBIDist: ...
+    def prepare(self, cosmo: HCosmoBI) -> None: ...
+    def prepare_if_needed(self, cosmo: HCosmoBI) -> None: ...
+    def ref(self) -> HCosmoBIDist: ...
+    def set_reltol(self, reltol: float) -> None: ...
+    def set_zmax(self, zmax: float) -> None: ...
+    def sky_to_axes(
+        self, px: float, py: float, pz: float
+    ) -> typing.Tuple[float, float, float]: ...
+    def t_lb_emission(self, z: float, n1: float, n2: float, n3: float) -> float: ...
+
+class HCosmoBIDistClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        HCosmoBIDistClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class HICosmo(NumCosmoMath.Model):
     r"""
     :Constructors:
@@ -10468,6 +10967,7 @@ class HICosmo(NumCosmoMath.Model):
     def Yp_4He(self) -> float: ...
     def abs_alpha(self, x: float) -> float: ...
     def as_drag(self) -> float: ...
+    def as_drag_is_free(self) -> bool: ...
     def baryon_density(self) -> float: ...
     def bgp_cs2(self, z: float) -> float: ...
     @staticmethod
@@ -10508,6 +11008,7 @@ class HICosmo(NumCosmoMath.Model):
     def do_T_gamma0(self) -> float: ...
     def do_Yp_4He(self) -> float: ...
     def do_as_drag(self) -> float: ...
+    def do_as_drag_is_free(self) -> bool: ...
     def do_bgp_cs2(self, z: float) -> float: ...
     def do_d2E2_dz2(self, z: float) -> float: ...
     def do_dE2_dz(self, z: float) -> float: ...
@@ -10591,6 +11092,7 @@ class HICosmoClass(GObject.GPointer):
         [HICosmo, int], typing.Tuple[float, float, float, float]
     ] = ...
     get_bg_var: typing.Callable[[HICosmo, float, HIPertBGVar], None] = ...
+    as_drag_is_free: typing.Callable[[HICosmo], bool] = ...
 
 class HICosmoDE(HICosmo):
     r"""
@@ -11352,10 +11854,16 @@ class HICosmoDEWSpline(HICosmoDE):
         final redshift
       knots -> NcHICosmoSplineKnots: knots
         knot placement in alpha=ln(1+z)
+      use-as-drag -> gboolean: use-as-drag
+        use the asdrag parameter for the sound horizon at drag
+      asdrag -> gdouble: asdrag
+        A_s
       w -> NcmVector: w
         w
       w-length -> guint: w-length
         w:length
+      asdrag-fit -> gboolean: asdrag-fit
+        A_s:fit
       w-fit -> GVariant: w-fit
         w:fit
 
@@ -11448,7 +11956,10 @@ class HICosmoDEWSpline(HICosmoDE):
     """
 
     class Props:
+        asdrag: float
+        asdrag_fit: bool
         knots: HICosmoSplineKnots
+        use_as_drag: bool
         w: NumCosmoMath.Vector
         w_fit: GLib.Variant
         w_length: int
@@ -11499,7 +12010,10 @@ class HICosmoDEWSpline(HICosmoDE):
     priv: HICosmoDEWSplinePrivate = ...
     def __init__(
         self,
+        asdrag: float = ...,
+        asdrag_fit: bool = ...,
         knots: HICosmoSplineKnots = ...,
+        use_as_drag: bool = ...,
         w: NumCosmoMath.Vector = ...,
         w_fit: GLib.Variant = ...,
         w_length: int = ...,
@@ -11539,11 +12053,22 @@ class HICosmoDEWSpline(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
+    def d2_lp_residuals(
+        self,
+        weight: typing.Optional[NumCosmoMath.Spline],
+        p: int,
+        f: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> None: ...
+    def d2_lp_residuals_len(
+        self, weight: typing.Optional[NumCosmoMath.Spline], p: int
+    ) -> int: ...
     def get_alpha(self) -> NumCosmoMath.Vector: ...
+    def get_use_as_drag(self) -> bool: ...
     def lp_norm(self, ctype: NumCosmoMath.SplineCurvatureType, p: float) -> float: ...
     def mean_kappa(self) -> float: ...
     @classmethod
     def new(cls, nknots: int, z_f: float) -> HICosmoDEWSpline: ...
+    def set_use_as_drag(self, use_as_drag: bool) -> None: ...
     def weighted_lp_norm(
         self,
         ctype: NumCosmoMath.SplineCurvatureType,
@@ -12851,6 +13376,15 @@ class HICosmoQSpline(HICosmo):
     def add_continuity_priors(
         self, lh: NumCosmoMath.Likelihood, sigma: float, abstol: float
     ) -> HICosmoQSplineContPrior: ...
+    def d2_lp_residuals(
+        self,
+        weight: typing.Optional[NumCosmoMath.Spline],
+        p: int,
+        f: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> None: ...
+    def d2_lp_residuals_len(
+        self, weight: typing.Optional[NumCosmoMath.Spline], p: int
+    ) -> int: ...
     def lp_norm(self, ctype: NumCosmoMath.SplineCurvatureType, p: float) -> float: ...
     def mean_kappa(self) -> float: ...
     @classmethod
@@ -25388,11 +25922,13 @@ class XcorKernelIntegrand(GObject.GBoxed):
     def clear(integrand: XcorKernelIntegrand) -> None: ...
     def eval_array(self, k: float) -> list[float]: ...
     def get_len(self) -> int: ...
+    def get_n_terms(self) -> int: ...
     def get_range(self) -> typing.Tuple[float, float]: ...
     def get_range_comp(self, i: int) -> typing.Tuple[float, float]: ...
     def get_scale(self, i: int) -> float: ...
     def peek_panels(self) -> NumCosmoMath.SpectralPanels: ...
     def peek_scales(self) -> NumCosmoMath.Vector: ...
+    def peek_window(self, i: int) -> typing.Optional[NumCosmoMath.SpectralPanels]: ...
     def ref(self) -> XcorKernelIntegrand: ...
     def unref(self) -> None: ...
 
@@ -26911,6 +27447,21 @@ class DataHubbleBaoId(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class DataHubbleCovId(GObject.GEnum):
+    LOUBSER2025: DataHubbleCovId = ...
+    MORESCO2020: DataHubbleCovId = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class DataHubbleId(GObject.GEnum):
     BORGHI2022: DataHubbleId = ...
     BUSCA2013_BAO_WMAP: DataHubbleId = ...
@@ -27022,11 +27573,15 @@ class DataSNIACovResample(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class DataSNIAId(GObject.GEnum):
+    COV_DES_DOVEKIE_STATONLY: DataSNIAId = ...
+    COV_DES_DOVEKIE_STAT_SYS: DataSNIAId = ...
     COV_DES_Y5_STATONLY: DataSNIAId = ...
     COV_DES_Y5_STAT_SYS: DataSNIAId = ...
     COV_JLA_SNLS3_SDSS_SYS_STAT: DataSNIAId = ...
     COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: DataSNIAId = ...
     COV_PANTHEON: DataSNIAId = ...
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT: DataSNIAId = ...
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT: DataSNIAId = ...
     COV_PANTHEON_PLUS_SH0ES_STAT: DataSNIAId = ...
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT: DataSNIAId = ...
     COV_SNLS3_STAT_ONLY: DataSNIAId = ...
@@ -27053,9 +27608,41 @@ class DataSNIAId(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class DistMuObsCatalogId(GObject.GEnum):
+    CF4_SNIA: DistMuObsCatalogId = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+    @staticmethod
+    def get_filename(id: DistMuObsCatalogId) -> str: ...
+
 class DistanceComovingMethod(GObject.GEnum):
     FROM_MODEL: DistanceComovingMethod = ...
     INT_E: DistanceComovingMethod = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class DistanceSoundHorizonMethod(GObject.GEnum):
+    CAMB_FIT: DistanceSoundHorizonMethod = ...
+    EISENSTEIN_HU: DistanceSoundHorizonMethod = ...
+    RECOMB: DistanceSoundHorizonMethod = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -27213,6 +27800,26 @@ class GalaxyWLObsEllipConv(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class HCosmoBISParams(GObject.GEnum):
+    H1: HCosmoBISParams = ...
+    H2: HCosmoBISParams = ...
+    H3: HCosmoBISParams = ...
+    OMEGA_M: HCosmoBISParams = ...
+    U1: HCosmoBISParams = ...
+    U2: HCosmoBISParams = ...
+    U3: HCosmoBISParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class HICosmoDECplSParams(GObject.GEnum):
     W0: HICosmoDECplSParams = ...
     W1: HICosmoDECplSParams = ...
@@ -27267,6 +27874,20 @@ class HICosmoDEVParams(GObject.GEnum):
     M: HICosmoDEVParams = ...
     MU: HICosmoDEVParams = ...
     T: HICosmoDEVParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HICosmoDEWSplineSParams(GObject.GEnum):
+    AS_DRAG: HICosmoDEWSplineSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

@@ -67,6 +67,7 @@
 #include "ncm/powspec/ncm_powspec_spline2d.h"
 #include "ncm/powspec/tests/ncm_powspec_analytic.h"
 #include "ncm/powspec/ncm_powspec.h"
+#include "ncm/sphere/ncm_sphere_xi.h"
 #include "ncm/model/ncm_model.h"
 #include "ncm/model/ncm_model_ctrl.h"
 #include "ncm/model/ncm_model_builder.h"
@@ -112,6 +113,8 @@
 #include "nc/background/nc_hicosmo_qconst.h"
 #include "nc/background/nc_hicosmo_qlinear.h"
 #include "nc/background/nc_hicosmo_qspline.h"
+#include "nc/background/nc_hcosmo_bi.h"
+#include "nc/background/nc_hcosmo_bi_dist.h"
 #include "nc/background/nc_hicosmo_qrbf.h"
 #include "nc/background/nc_hicosmo_lcdm.h"
 #include "nc/background/nc_hicosmo_de_xcdm.h"
@@ -246,6 +249,8 @@
 #include "nc/data/nc_data_bao_dmr_hr.h"
 #include "nc/data/nc_data_bao_dvr_dtdh.h"
 #include "nc/data/nc_data_dist_mu.h"
+#include "nc/data/nc_dist_mu_obs.h"
+#include "nc/data/nc_data_hcosmo_bi_dist_mu.h"
 #include "nc/data/nc_data_cluster_pseudo_counts.h"
 #include "nc/data/nc_data_cluster_ncount.h"
 #include "nc/data/nc_data_cluster_ncounts_gauss.h"
@@ -255,6 +260,7 @@
 #include "nc/data/nc_data_cmb_shift_param.h"
 #include "nc/data/nc_data_cmb_dist_priors.h"
 #include "nc/data/nc_data_hubble.h"
+#include "nc/data/nc_data_hubble_cov.h"
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/data/nc_data_xcor.h"
 #include "nc/data/nc_data_planck_lkl.h"
@@ -416,6 +422,7 @@ void _nc_planck_fi_cor_tt_register_functions (void);
 void _nc_hicosmo_de_wspline_register_functions (void);
 void _nc_hicosmo_qspline_register_functions (void);
 void _nc_galaxy_shape_pop_beta_register_functions (void);
+void _nc_hcosmo_bi_register_functions (void);
 
 static gchar *_ncm_cfg_data_dir (void);
 
@@ -826,6 +833,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_CORR3D);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_ANALYTIC);
 
+  ncm_cfg_register_obj (NCM_TYPE_SPHERE_XI);
+
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
@@ -889,6 +898,9 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
+
+  ncm_cfg_register_obj (NC_TYPE_HCOSMO_BI);
+  ncm_cfg_register_obj (NC_TYPE_HCOSMO_BI_DIST);
 
 
 
@@ -1054,8 +1066,11 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVR_DTDH);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
+  ncm_cfg_register_obj (NC_TYPE_DIST_MU_OBS);
+  ncm_cfg_register_obj (NC_TYPE_DATA_HCOSMO_BI_DIST_MU);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
+  ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 
@@ -1127,6 +1142,7 @@ ncm_cfg_register_functions (void)
     _nc_hicosmo_de_wspline_register_functions ();
     _nc_hicosmo_qspline_register_functions ();
     _nc_galaxy_shape_pop_beta_register_functions ();
+    _nc_hcosmo_bi_register_functions ();
 
     g_once_init_leave (&_functions_initialized, TRUE);
   }

@@ -29,8 +29,8 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/ncm/algebra/ncm_quaternion.h>
-#include <numcosmo/ncm/spline/ncm_spline.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_vector_float.h>
@@ -144,7 +144,6 @@ void ncm_sphere_map_set_Cls (NcmSphereMap *smap, NcmVector *Cls);
 
 void ncm_sphere_map_alm2map (NcmSphereMap *smap);
 
-NcmSpline *ncm_sphere_map_calc_Ctheta (NcmSphereMap *smap, const gdouble reltol);
 
 #define NCM_SPHERE_MAP_N(nside) (12 * (nside) * (nside))
 #define NCM_SPHERE_MAP_INT_TO_XY(i, x, y)         \

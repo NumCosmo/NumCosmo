@@ -128,6 +128,8 @@ gdouble ncm_spline_curvature_density (NcmSpline *s, NcmSplineCurvatureType ctype
 gdouble ncm_spline_curvature_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, const gdouble xi, const gdouble xf);
 gdouble ncm_spline_curvature_weighted_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble p, NcmSpline *weight, const gdouble xi, const gdouble xf);
 gdouble ncm_spline_curvature_max (NcmSpline *s, NcmSplineCurvatureType ctype, const gdouble xi, const gdouble xf);
+guint ncm_spline_curvature_d2_lp_residuals_len (NcmSpline *s, NcmSpline *weight, const guint p, const gdouble xi, const gdouble xf);
+void ncm_spline_curvature_d2_lp_residuals (NcmSpline *s, NcmSpline *weight, const guint p, const gdouble xi, const gdouble xf, gdouble *f);
 
 /* Utilities -- internal use */
 

@@ -184,6 +184,7 @@
 /* Spherical maps, HEALPIX implementation */
 #include <numcosmo/ncm/sphere/ncm_sphere_map.h>
 #include <numcosmo/ncm/sphere/ncm_sphere_nn.h>
+#include <numcosmo/ncm/sphere/ncm_sphere_xi.h>
 
 #endif /* _NUMCOSMO_MATH_H */
 

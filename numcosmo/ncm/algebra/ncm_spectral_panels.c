@@ -46,6 +46,7 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral_panels.h"
+#include "ncm/core/ncm_memory_pool.h"
 #include <math.h>
 #include <float.h>
 #include <string.h>
@@ -604,19 +605,41 @@ _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
  * @coeffs: (out) (transfer full): the coefficients on [@a, @b]
  *
  * Computes the Chebyshev coefficients of every entry of $F$ on [@a, @b], which must lie
- * inside one panel. An end that edges computed in another variable put a rounding outside
- * the panel, within $10^{-12}$ of its width or four units in the last place of the larger
- * edge, is clamped to the edge. The restriction of a
- * polynomial to a subinterval is a polynomial of the same degree, so the coefficients follow
- * exactly from those of the panel by ncm_spectral_chebyshev_rebase_rows_data(), with the
- * scratch space of @spectral; when [@a, @b] is the panel they are its own. A matrix of the
- * right shape in @coeffs is reused, and a new one is allocated otherwise. @a must be below
- * @b.
+ * inside one panel, see ncm_spectral_panels_restrict_rows().
  *
  * Returns: whether [@a, @b] lies inside one panel; when it does not, @coeffs is unchanged.
  */
 gboolean
 ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, NcmMatrix **coeffs)
+{
+  return ncm_spectral_panels_restrict_rows (sp, spectral, a, b, 0, sp->fdim, coeffs);
+}
+
+/**
+ * ncm_spectral_panels_restrict_rows:
+ * @sp: a #NcmSpectralPanels
+ * @spectral: a #NcmSpectral
+ * @a: left end of the subinterval
+ * @b: right end of the subinterval
+ * @r0: the first row
+ * @n: the number of rows
+ * @coeffs: (out) (transfer full): the coefficients on [@a, @b], @n rows
+ *
+ * Computes the Chebyshev coefficients of the entries [@r0, @r0 + @n) of $F$ on [@a, @b],
+ * which must lie inside one panel; row $i$ of @coeffs is entry @r0 + $i$. An end that
+ * edges computed in another variable put a rounding outside the panel, within $10^{-12}$
+ * of its width or four units in the last place of the larger edge, is clamped to the
+ * edge. The restriction of a polynomial to a subinterval is a polynomial of the same
+ * degree, so the coefficients follow exactly from those of the panel by
+ * ncm_spectral_chebyshev_rebase_rows_data(), with the scratch space of @spectral; when
+ * [@a, @b] is the panel they are its own. A matrix of the right shape in @coeffs is
+ * reused, and a new one is allocated otherwise. @a must be below @b, and the rows inside
+ * #NcmSpectralPanels:fdim.
+ *
+ * Returns: whether [@a, @b] lies inside one panel; when it does not, @coeffs is unchanged.
+ */
+gboolean
+ncm_spectral_panels_restrict_rows (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, guint r0, guint n, NcmMatrix **coeffs)
 {
   const guint i = ncm_spectral_panels_find_panel (sp, 0.5 * (a + b));
   gdouble pa, pb;
@@ -627,30 +650,248 @@ ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdou
 
   g_assert_cmpfloat (a, <, b);
 
+  if (r0 + n > sp->fdim)
+    g_error ("ncm_spectral_panels_restrict_rows: rows [%u, %u) are not inside the %u rows of the panel set.",
+             r0, r0 + n, sp->fdim);
+
   if ((a < pa - slack) || (b > pb + slack))
     return FALSE;
 
   a = MAX (a, pa);
   b = MIN (b, pb);
+  c = c + (gsize) r0 * N;
 
-  if ((*coeffs != NULL) && ((ncm_matrix_nrows (*coeffs) != sp->fdim) || (ncm_matrix_ncols (*coeffs) != N)))
+  if ((*coeffs != NULL) && ((ncm_matrix_nrows (*coeffs) != n) || (ncm_matrix_ncols (*coeffs) != N)))
     ncm_matrix_clear (coeffs);
 
   if (*coeffs == NULL)
-    *coeffs = ncm_matrix_new (sp->fdim, N);
+    *coeffs = ncm_matrix_new (n, N);
 
   if ((a == pa) && (b == pb))
   {
     guint r;
 
-    for (r = 0; r < sp->fdim; r++)
+    for (r = 0; r < n; r++)
       memcpy (ncm_matrix_ptr (*coeffs, r, 0), c + (gsize) r * N, sizeof (gdouble) * N);
   }
   else
   {
-    ncm_spectral_chebyshev_rebase_rows_data (spectral, c, sp->fdim, N, N, pa, pb, a, b, *coeffs);
+    ncm_spectral_chebyshev_rebase_rows_data (spectral, c, n, N, N, pa, pb, a, b, *coeffs);
   }
 
   return TRUE;
+}
+
+/* The scratch of ncm_spectral_panels_new_sum_rows(), one per concurrent caller */
+typedef struct _NcmSpectralPanelsSumWork
+{
+  GArray *edges;      /* gdouble, the union of the rows' edges in k */
+  GArray *sum;        /* gdouble, the coefficients of a cell's sum */
+  GPtrArray *rebased; /* NcmMatrix, at index N the rebase output for panels of N coefficients */
+} NcmSpectralPanelsSumWork;
+
+static gpointer
+_ncm_spectral_panels_sum_work_new (gpointer userdata)
+{
+  NcmSpectralPanelsSumWork *work = g_new0 (NcmSpectralPanelsSumWork, 1);
+
+  work->edges   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->sum     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->rebased = g_ptr_array_new ();
+
+  return work;
+}
+
+static void
+_ncm_spectral_panels_sum_work_free (gpointer p)
+{
+  NcmSpectralPanelsSumWork *work = p;
+  guint j;
+
+  for (j = 0; j < work->rebased->len; j++)
+    if (g_ptr_array_index (work->rebased, j) != NULL)
+      ncm_matrix_free (g_ptr_array_index (work->rebased, j));
+
+  g_ptr_array_unref (work->rebased);
+  g_array_unref (work->edges);
+  g_array_unref (work->sum);
+  g_free (work);
+}
+
+static NcmMemoryPool *
+_ncm_spectral_panels_sum_pool (void)
+{
+  static gsize init        = 0;
+  static NcmMemoryPool *mp = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    mp = ncm_memory_pool_new (&_ncm_spectral_panels_sum_work_new, NULL, &_ncm_spectral_panels_sum_work_free);
+    g_once_init_leave (&init, 1);
+  }
+
+  return mp;
+}
+
+static gint
+_ncm_spectral_panels_cmp_gdouble (gconstpointer a, gconstpointer b)
+{
+  const gdouble x = *(const gdouble *) a;
+  const gdouble y = *(const gdouble *) b;
+
+  return (x > y) - (x < y);
+}
+
+/**
+ * ncm_spectral_panels_new_sum_rows: (skip)
+ * @spectral: a #NcmSpectral, for the scratch of the rebase
+ * @n: the number of rows
+ * @sps: the panel set of each row
+ * @rows: the row of each in its panel set
+ * @scales: the scale $s_r$ of each row: row $r$ is a function of $x = k / s_r$
+ * @x_min: the lower end of each row's support in its $x$, the row being zero outside
+ * @x_max: the upper end of each row's support in its $x$
+ * @abstol: trailing coefficients of a cell's sum below this are dropped, keeping at least
+ *   one; 0 keeps all
+ *
+ * Builds the sum of @n scaled rows as one row in $k$. The partition is the union of the
+ * rows' support ends and of their panel edges inside the supports, all in $k$; on each
+ * cell every row whose support contains it is rebased onto the cell with
+ * ncm_spectral_chebyshev_rebase_rows_data(), which is exact for a polynomial, and the
+ * coefficients are added. A cell no row covers holds zero. A row with an empty support
+ * ($x_\mathrm{min} \ge x_\mathrm{max}$) is skipped. Edges closer than 16 ulps are merged,
+ * which moves a row's edge by that much. Dropping the coefficients below @abstol changes
+ * a cell's sum by at most their number times @abstol.
+ *
+ * Returns: (transfer full): a one-row #NcmSpectralPanels over the union of the supports,
+ *   without panels when every support is empty
+ */
+NcmSpectralPanels *
+ncm_spectral_panels_new_sum_rows (NcmSpectral *spectral, guint n, NcmSpectralPanels * const *sps, const guint *rows, const gdouble *scales, const gdouble *x_min, const gdouble *x_max, gdouble abstol)
+{
+  NcmSpectralPanels *out              = ncm_spectral_panels_new (1);
+  NcmSpectralPanelsSumWork **work_ptr = ncm_memory_pool_get (_ncm_spectral_panels_sum_pool ());
+  NcmSpectralPanelsSumWork *work      = *work_ptr;
+  GArray *edges                       = work->edges;
+  GArray *sum                         = work->sum;
+  GPtrArray *rebased                  = work->rebased;
+  guint r, e, j;
+
+  g_array_set_size (edges, 0);
+
+  for (r = 0; r < n; r++)
+  {
+    NcmSpectralPanels *sp = sps[r];
+    const gdouble s       = scales[r];
+    const gdouble lo      = s * x_min[r];
+    const gdouble hi      = s * x_max[r];
+    guint p;
+
+    g_assert_cmpuint (rows[r], <, sp->fdim);
+    g_assert_cmpfloat (s, >, 0.0);
+
+    if (!(x_min[r] < x_max[r]))
+      continue;
+
+    g_array_append_val (edges, lo);
+    g_array_append_val (edges, hi);
+
+    for (p = 1; p + 1 < sp->edges->len; p++)
+    {
+      const gdouble k = s * g_array_index (sp->edges, gdouble, p);
+
+      if ((k > lo) && (k < hi))
+        g_array_append_val (edges, k);
+    }
+  }
+
+  if (edges->len > 0)
+  {
+    guint kept = 0;
+
+    g_array_sort (edges, &_ncm_spectral_panels_cmp_gdouble);
+
+    for (e = 0; e < edges->len; e++)
+    {
+      const gdouble k = g_array_index (edges, gdouble, e);
+
+      if ((kept == 0) || (k - g_array_index (edges, gdouble, kept - 1) > 16.0 * DBL_EPSILON * fabs (k)))
+        g_array_index (edges, gdouble, kept++) = k;
+    }
+
+    g_array_set_size (edges, kept);
+  }
+
+  for (e = 1; e < edges->len; e++)
+  {
+    const gdouble a   = g_array_index (edges, gdouble, e - 1);
+    const gdouble b   = g_array_index (edges, gdouble, e);
+    const gdouble mid = 0.5 * (a + b);
+
+    g_array_set_size (sum, 0);
+
+    for (r = 0; r < n; r++)
+    {
+      NcmSpectralPanels *sp = sps[r];
+      const gdouble s       = scales[r];
+      const gdouble x       = mid / s;
+      const gdouble *c;
+      NcmMatrix *m;
+      gdouble pa, pb;
+      guint p, N;
+
+      if (!(x_min[r] < x_max[r]) || (x <= x_min[r]) || (x >= x_max[r]))
+        continue;
+
+      p = ncm_spectral_panels_find_panel (sp, x);
+      c = ncm_spectral_panels_peek_panel (sp, p, &pa, &pb, &N) + (gsize) rows[r] * N;
+
+      if (rebased->len <= N)
+        g_ptr_array_set_size (rebased, N + 1);
+
+      if (g_ptr_array_index (rebased, N) == NULL)
+        g_ptr_array_index (rebased, N) = ncm_matrix_new (1, N);
+
+      m = g_ptr_array_index (rebased, N);
+      ncm_spectral_chebyshev_rebase_rows_data (spectral, c, 1, N, N, pa, pb, a / s, b / s, m);
+
+      if (sum->len < N)
+      {
+        const guint old = sum->len;
+
+        g_array_set_size (sum, N);
+
+        for (j = old; j < N; j++)
+          g_array_index (sum, gdouble, j) = 0.0;
+      }
+
+      for (j = 0; j < N; j++)
+        g_array_index (sum, gdouble, j) += ncm_matrix_get (m, 0, j);
+    }
+
+    if (sum->len == 0)
+    {
+      const gdouble zero = 0.0;
+
+      ncm_spectral_panels_append_data (out, a, b, &zero, 1, 1);
+      continue;
+    }
+
+    if (abstol > 0.0)
+    {
+      guint keep = sum->len;
+
+      while ((keep > 1) && (fabs (g_array_index (sum, gdouble, keep - 1)) < abstol))
+        keep--;
+
+      g_array_set_size (sum, keep);
+    }
+
+    ncm_spectral_panels_append_data (out, a, b, (const gdouble *) sum->data, sum->len, sum->len);
+  }
+
+  ncm_memory_pool_return (work_ptr);
+
+  return out;
 }
 

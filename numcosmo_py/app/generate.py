@@ -24,6 +24,7 @@
 """NumCosmo APP subcommands generate experiment files."""
 
 import dataclasses
+import math
 import shlex
 from abc import ABC, abstractmethod
 from enum import StrEnum, auto
@@ -34,6 +35,10 @@ import numpy as np
 import typer
 
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.datasets.dist_mu_obs import (
+    DistMuObsCatalogID,
+    edd_cf4_snia_to_dist_mu_obs,
+)
 from numcosmo_py.datasets.hicosmo import (
     BAOID,
     HID,
@@ -42,6 +47,7 @@ from numcosmo_py.datasets.hicosmo import (
     add_h_likelihood,
     add_snia_likelihood,
 )
+from numcosmo_py.experiments.bianchi import build_bianchi_experiment
 from numcosmo_py.experiments.cluster_richness_count import (
     generate_cluster_richness_count,
     load_cluster_richness_count,
@@ -115,10 +121,10 @@ def _spline_knots(placement: "KnotPlacement"):
 class CurvaturePriorType(StrEnum):
     """Curvature prior functional for a spline reconstruction (q(z) or w(z)).
 
-    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature (default);
+    NONE disables the prior; MEAN_KAPPA is the geometric L2 curvature;
     LP_KAPPA / LP_D2 are the Lp norms of the geometric curvature and of the second
     derivative respectively, with order p given by ``--curvature-p`` (large p
-    approaches the maximum curvature). LOCAL_KAPPA / LOCAL_D2 are the data-driven
+    approaches the maximum curvature). LP_D2 at p = 10 is the default. LOCAL_KAPPA / LOCAL_D2 are the data-driven
     *local* counterparts: the curvature norm is weighted by W(x), built from the
     data Fisher information so the prior relaxes where the data constrains the
     reconstruction and stays strong where it is blind (see
@@ -136,6 +142,7 @@ class CurvaturePriorType(StrEnum):
 def _add_curvature_prior(
     likelihood: Ncm.Likelihood,
     *,
+    cosmo: "Nc.HICosmoQSpline | Nc.HICosmoDEWSpline",
     namespace: str,
     d2_name: str,
     prior_type: CurvaturePriorType,
@@ -152,6 +159,11 @@ def _add_curvature_prior(
     ``wlp_*`` function carries ``weight`` (a precomputed W(x) spline) as its
     associated object. The prior func is added to the likelihood only, not to the
     derived-function array (those are evaluated with nvar=0).
+
+    For LP_D2 and LOCAL_D2 with an even integer p the prior is on the residual
+    functions ``lp_*_ls``/``wlp_*_ls``, whose sum of squares is the squared norm:
+    the same Gaussian prior on the norm, with one least-squares residual per
+    quadrature node of ``cosmo``'s spline. Other orders use the norm itself.
     """
     if prior_type is CurvaturePriorType.NONE:
         return
@@ -174,7 +186,18 @@ def _add_curvature_prior(
     ):
         raise ValueError(f"{prior_type} requires a precomputed weight spline.")
 
-    func = Ncm.MSetFuncList.new(func_name, obj)
+    residuals = (
+        prior_type in (CurvaturePriorType.LP_D2, CurvaturePriorType.LOCAL_D2)
+        and p == int(p)
+        and int(p) > 0
+        and int(p) % 2 == 0
+    )
+    if residuals:
+        func = Ncm.MSetFuncList.new_dim(
+            f"{func_name}_ls", obj, cosmo.d2_lp_residuals_len(obj, int(p))
+        )
+    else:
+        func = Ncm.MSetFuncList.new(func_name, obj)
     likelihood.priors_add(Ncm.PriorGaussFunc.new(func, 0.0, sigma, var))
 
 
@@ -1358,6 +1381,15 @@ class GenerateQSpline:
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
+    sh0es_calibrators: Annotated[
+        bool,
+        typer.Option(
+            help="Keep the SH0ES Cepheid calibrators in the Pantheon+SH0ES STAT+SYS "
+            "catalogs; without them the selection is the Pantheon+ SN-only one.",
+            show_default=True,
+        ),
+    ] = True
+
     include_bao: Annotated[
         BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
@@ -1369,7 +1401,7 @@ class GenerateQSpline:
     curvature_prior: Annotated[
         CurvaturePriorType,
         typer.Option(help="Curvature prior functional.", show_default=True),
-    ] = CurvaturePriorType.MEAN_KAPPA
+    ] = CurvaturePriorType.LP_D2
 
     curvature_sigma: Annotated[
         float,
@@ -1383,7 +1415,7 @@ class GenerateQSpline:
             "(large p approaches the maximum curvature).",
             show_default=True,
         ),
-    ] = 2.0
+    ] = 10.0
 
     curvature_ref_factor: Annotated[
         float,
@@ -1433,7 +1465,9 @@ class GenerateQSpline:
         dist = Nc.Distance.new(10.0)
 
         if self.include_snia is not None:
-            add_snia_likelihood(dset, mset, dist, self.include_snia)
+            add_snia_likelihood(
+                dset, mset, dist, self.include_snia, self.sh0es_calibrators
+            )
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
@@ -1476,6 +1510,7 @@ class GenerateQSpline:
 
         _add_curvature_prior(
             likelihood,
+            cosmo=cosmo,
             namespace="NcHICosmoQSpline",
             d2_name="lp_q2",
             prior_type=self.curvature_prior,
@@ -1589,6 +1624,171 @@ class GenerateXCDM:
 
 
 @dataclasses.dataclass(kw_only=True)
+class GenerateBianchi:
+    """Generate a Bianchi I experiment from a catalog of distance moduli."""
+
+    experiment: Annotated[
+        Path, typer.Argument(help="Path to the experiment file to write.")
+    ]
+
+    catalog: Annotated[
+        DistMuObsCatalogID | None,
+        typer.Option(help="Catalog shipped with NumCosmo.", show_default=False),
+    ] = None
+
+    data_file: Annotated[
+        Path | None,
+        typer.Option(
+            help="Serialized NcDistMuObs file, an alternative to --catalog.",
+            show_default=False,
+        ),
+    ] = None
+
+    edd_table: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "EDD text export of All CF4 SNIa Samples, an alternative to "
+                "--catalog; --edd-downloaded gives its download date."
+            ),
+            show_default=False,
+        ),
+    ] = None
+
+    edd_downloaded: Annotated[
+        str, typer.Option(help="Download date of --edd-table.")
+    ] = "unknown"
+
+    catalog_out: Annotated[
+        Path | None,
+        typer.Option(
+            help="If given, the catalog used is also written to this file.",
+            show_default=False,
+        ),
+    ] = None
+
+    mu_col: Annotated[
+        str | None,
+        typer.Option(help="Column of the distance moduli.", show_default="mu"),
+    ] = None
+
+    sigma_col: Annotated[
+        str | None,
+        typer.Option(help="Column of their uncertainties.", show_default="sigma_mu"),
+    ] = None
+
+    z_min: Annotated[float, typer.Option(help="Lower redshift limit.")] = 0.0
+
+    z_max: Annotated[float, typer.Option(help="Upper redshift limit.")] = math.inf
+
+    h_min: Annotated[
+        float, typer.Option(help="Lower bound of H1, H2 and H3 [km/s/Mpc].")
+    ] = 50.0
+
+    h_max: Annotated[
+        float, typer.Option(help="Upper bound of H1, H2 and H3 [km/s/Mpc].")
+    ] = 100.0
+
+    omegam_mean: Annotated[
+        float | None,
+        typer.Option(
+            help="Mean of the Gaussian prior on Omegam; omit for no prior.",
+            show_default=False,
+        ),
+    ] = 0.3
+
+    omegam_sigma: Annotated[
+        float, typer.Option(help="Standard deviation of the Gaussian prior on Omegam.")
+    ] = 0.04
+
+    ordering: Annotated[bool, typer.Option(help="Add the H1 < H2 < H3 priors.")] = True
+
+    wall_scale: Annotated[
+        float,
+        typer.Option(help="Width of the walls of the ordering priors [km/s/Mpc]."),
+    ] = 0.1
+
+    zmax_factor: Annotated[
+        float,
+        typer.Option(
+            help="The distance calculator covers this factor times the largest selected redshift."
+        ),
+    ] = 1.05
+
+    def _load_obs(self) -> Nc.DistMuObs:
+        """Load the catalog from --catalog, --data-file or --edd-table.
+
+        Raises:
+            ValueError: The loaded file does not contain a NcDistMuObs.
+        """
+        if self.catalog is not None:
+            return Nc.DistMuObs.new_from_catalog_id(self.catalog.genum)
+        if self.edd_table is not None:
+            return edd_cf4_snia_to_dist_mu_obs(self.edd_table, self.edd_downloaded)
+        assert self.data_file is not None
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        obs = ser.from_file(self.data_file.absolute().as_posix())
+        if not isinstance(obs, Nc.DistMuObs):
+            raise ValueError(  # noqa: TRY004
+                f"File does not contain a NcDistMuObs: {type(obs).__name__}"
+            )
+        return obs
+
+    def __post_init__(self):
+        """Generate the Bianchi I experiment."""
+        Ncm.cfg_init()
+
+        if self.experiment.suffix != ".yaml":
+            raise ValueError(
+                f"Invalid experiment file suffix: {self.experiment.suffix}"
+            )
+
+        n_sources = sum(
+            x is not None for x in (self.catalog, self.data_file, self.edd_table)
+        )
+        if n_sources != 1:
+            raise typer.BadParameter(
+                "exactly one of --catalog, --data-file or --edd-table is required"
+            )
+
+        obs = self._load_obs()
+        source = (
+            self.catalog.value
+            if self.catalog is not None
+            else str(self.edd_table if self.edd_table is not None else self.data_file)
+        )
+        experiment, functions = build_bianchi_experiment(
+            obs,
+            mu_col=self.mu_col,
+            sigma_col=self.sigma_col,
+            z_min=self.z_min,
+            z_max=self.z_max,
+            h_min=self.h_min,
+            h_max=self.h_max,
+            omegam_mean=self.omegam_mean,
+            omegam_sigma=self.omegam_sigma,
+            ordering=self.ordering,
+            wall_scale=self.wall_scale,
+            zmax_factor=self.zmax_factor,
+            desc=(
+                f"{source}, mu = {self.mu_col or 'mu'}, "
+                f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "
+                f"{self.z_min} <= z <= {self.z_max}"
+            ),
+        )
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        ser.dict_str_to_yaml_file(experiment, self.experiment.absolute().as_posix())
+        ser.array_to_yaml_file(
+            functions,
+            self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
+        )
+        if self.catalog_out is not None:
+            ser.reset(True)
+            ser.to_file(obs, self.catalog_out.absolute().as_posix())
+
+
+@dataclasses.dataclass(kw_only=True)
 class GenerateDEWSpline:
     """Generate DE WSpline experiment."""
 
@@ -1613,6 +1813,15 @@ class GenerateDEWSpline:
         SNIaID | None, typer.Option(help="Include SNIa data.", show_default=True)
     ] = None
 
+    sh0es_calibrators: Annotated[
+        bool,
+        typer.Option(
+            help="Keep the SH0ES Cepheid calibrators in the Pantheon+SH0ES STAT+SYS "
+            "catalogs; without them the selection is the Pantheon+ SN-only one.",
+            show_default=True,
+        ),
+    ] = True
+
     include_bao: Annotated[
         BAOID | None, typer.Option(help="Include BAO data.", show_default=True)
     ] = None
@@ -1624,7 +1833,7 @@ class GenerateDEWSpline:
     curvature_prior: Annotated[
         CurvaturePriorType,
         typer.Option(help="Curvature prior functional.", show_default=True),
-    ] = CurvaturePriorType.MEAN_KAPPA
+    ] = CurvaturePriorType.LP_D2
 
     curvature_sigma: Annotated[
         float,
@@ -1638,7 +1847,7 @@ class GenerateDEWSpline:
             "(large p approaches the maximum curvature).",
             show_default=True,
         ),
-    ] = 2.0
+    ] = 10.0
 
     curvature_ref_factor: Annotated[
         float,
@@ -1668,6 +1877,16 @@ class GenerateDEWSpline:
         ),
     ] = False
 
+    use_as_drag: Annotated[
+        bool,
+        typer.Option(
+            help="Use the asdrag parameter, r_s(z_d) H0 / c, for the BAO sound "
+            "horizon instead of NcDistance:sound-horizon-method; it is fitted when BAO "
+            "data are included.",
+            show_default=True,
+        ),
+    ] = False
+
     def __post_init__(self):
         """Generate DE WSpline experiment."""
         Ncm.cfg_init()
@@ -1691,16 +1910,21 @@ class GenerateDEWSpline:
             cosmo.param_set_desc(f"w_{i}", {"fit": True})
 
         cosmo.param_set_desc("Omegac", {"fit": True})
+        cosmo.set_use_as_drag(self.use_as_drag)
         mset = Ncm.MSet.new_array([cosmo])
         dset = Ncm.Dataset.new()
 
         dist = Nc.Distance.new(10.0)
 
         if self.include_snia is not None:
-            add_snia_likelihood(dset, mset, dist, self.include_snia)
+            add_snia_likelihood(
+                dset, mset, dist, self.include_snia, self.sh0es_calibrators
+            )
 
         if self.include_bao is not None:
             add_bao_likelihood(dset, mset, dist, self.include_bao)
+            if self.use_as_drag:
+                cosmo.param_set_desc("asdrag", {"fit": True})
 
         if self.include_hubble is not None:
             add_h_likelihood(dset, mset, self.include_hubble)
@@ -1741,6 +1965,7 @@ class GenerateDEWSpline:
 
         _add_curvature_prior(
             likelihood,
+            cosmo=cosmo,
             namespace="NcHICosmoDEWSpline",
             d2_name="lp_w2",
             prior_type=self.curvature_prior,

@@ -73,6 +73,10 @@ def main() -> int:
     for cat_id in _enum_members(Nc.GalaxyWLObsCatalogId):
         print(f"# {Nc.galaxy_wl_obs_catalog_id_get_filename(cat_id)}", flush=True)
 
+    # Catalogs of distance moduli with sky positions (CF4 SNIa).
+    for cat_id in _enum_members(Nc.DistMuObsCatalogId):
+        print(f"# {Nc.dist_mu_obs_catalog_id_get_filename(cat_id)}", flush=True)
+
     # Curated native Planck likelihoods. Loading, not just downloading: a
     # truncated .gvar then fails here instead of inside a test.
     for release_id in pnr.PlanckReleaseId:

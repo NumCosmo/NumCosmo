@@ -67,6 +67,7 @@ struct _NcmLikelihood
   NcmVector *m2lnL_v;
   NcmVector *ls_f_data;
   NcmVector *ls_f_priors;
+  GArray *prior_f_work;
 };
 
 enum
@@ -90,6 +91,7 @@ ncm_likelihood_init (NcmLikelihood *lh)
   lh->priors_m2lnL = ncm_obj_array_sized_new (10);
   lh->ls_f_data    = ncm_vector_new_data_static (GINT_TO_POINTER (1), 1, 1); /* Invalid vectors */
   lh->ls_f_priors  = ncm_vector_new_data_static (GINT_TO_POINTER (1), 1, 1); /* Invalid vectors */
+  lh->prior_f_work = g_array_new (FALSE, FALSE, sizeof (gdouble));
 }
 
 static void
@@ -179,6 +181,7 @@ _ncm_likelihood_dispose (GObject *object)
 
   ncm_vector_clear (&lh->ls_f_data);
   ncm_vector_clear (&lh->ls_f_priors);
+  g_clear_pointer (&lh->prior_f_work, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_likelihood_parent_class)->dispose (object);
@@ -438,6 +441,43 @@ ncm_likelihood_priors_length_f (NcmLikelihood *lh)
 }
 
 /**
+ * ncm_likelihood_priors_ls_len:
+ * @lh: a #NcmLikelihood
+ *
+ * Gets the number of least-squares residuals of the priors: the sum of the dimensions
+ * (ncm_mset_func_get_dim()) of the least-squares priors.
+ *
+ * Returns: the number of least-squares residuals of the priors.
+ */
+guint
+ncm_likelihood_priors_ls_len (NcmLikelihood *lh)
+{
+  guint i, len = 0;
+
+  for (i = 0; i < lh->priors_f->len; i++)
+    len += ncm_mset_func_get_dim (NCM_MSET_FUNC (ncm_obj_array_peek (lh->priors_f, i)));
+
+  return len;
+}
+
+/* Sum of the squares of the residuals of a least-squares prior. */
+static gdouble
+_ncm_likelihood_prior_f2 (NcmLikelihood *lh, NcmPrior *prior, NcmMSet *mset)
+{
+  const guint dim = ncm_mset_func_get_dim (NCM_MSET_FUNC (prior));
+  gdouble f2      = 0.0;
+  guint i;
+
+  g_array_set_size (lh->prior_f_work, dim);
+  ncm_mset_func_eval (NCM_MSET_FUNC (prior), mset, NULL, &g_array_index (lh->prior_f_work, gdouble, 0));
+
+  for (i = 0; i < dim; i++)
+    f2 += gsl_pow_2 (g_array_index (lh->prior_f_work, gdouble, i));
+
+  return f2;
+}
+
+/**
  * ncm_likelihood_priors_length_m2lnL:
  * @lh: a #NcmLikelihood
  *
@@ -453,16 +493,16 @@ ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh)
  * ncm_likelihood_priors_leastsquares_f:
  * @lh: a #NcmLikelihood.
  * @mset: a #NcmMSet.
- * @priors_f: a #NcmVector, one element per least-squares prior
+ * @priors_f: a #NcmVector of length ncm_likelihood_priors_ls_len()
  *
- * Evaluates the least-squares priors into @priors_f. Aborts if @lh has an m2lnL
- * prior.
+ * Evaluates the least-squares priors into @priors_f, each prior's residuals in the
+ * order the priors were added. Aborts if @lh has an m2lnL prior.
  *
  */
 void
 ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *priors_f)
 {
-  guint i                  = 0;
+  guint i, offset          = 0;
   gboolean has_prior_m2lnL = ncm_likelihood_priors_length_m2lnL (lh) != 0;
 
   if (has_prior_m2lnL)
@@ -470,10 +510,17 @@ ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVecto
 
   for (i = 0; i < lh->priors_f->len; i++)
   {
-    NcmPrior *prior         = NCM_PRIOR (ncm_obj_array_peek (lh->priors_f, i));
-    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    NcmMSetFunc *prior = NCM_MSET_FUNC (ncm_obj_array_peek (lh->priors_f, i));
+    const guint dim    = ncm_mset_func_get_dim (prior);
+    guint j;
 
-    ncm_vector_set (priors_f, i, prior_val);
+    g_array_set_size (lh->prior_f_work, dim);
+    ncm_mset_func_eval (prior, mset, NULL, &g_array_index (lh->prior_f_work, gdouble, 0));
+
+    for (j = 0; j < dim; j++)
+      ncm_vector_set (priors_f, offset + j, g_array_index (lh->prior_f_work, gdouble, j));
+
+    offset += dim;
   }
 
   return;
@@ -494,7 +541,7 @@ void
 ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
 {
   guint data_size          = ncm_dataset_get_n (lh->dset);
-  guint priors_f_size      = ncm_likelihood_priors_length_f (lh);
+  guint priors_f_size      = ncm_likelihood_priors_ls_len (lh);
   gboolean has_prior_m2lnL = ncm_likelihood_priors_length_m2lnL (lh) != 0;
 
   if (has_prior_m2lnL)
@@ -523,8 +570,8 @@ ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
  * @mset: a #NcmMSet.
  * @priors_m2lnL: (out): the sum of the priors m2lnL.
  *
- * Computes the $-2\ln P$ of all priors: $f_i^2$ for the least-squares priors plus
- * the values of the m2lnL priors.
+ * Computes the $-2\ln P$ of all priors: the sum of the squared residuals of the
+ * least-squares priors plus the values of the m2lnL priors.
  *
  */
 void
@@ -536,10 +583,9 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
 
   for (i = 0; i < lh->priors_f->len; i++)
   {
-    NcmPrior *prior         = NCM_PRIOR (ncm_obj_array_peek (lh->priors_f, i));
-    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    NcmPrior *prior = NCM_PRIOR (ncm_obj_array_peek (lh->priors_f, i));
 
-    *priors_m2lnL += prior_val * prior_val;
+    *priors_m2lnL += _ncm_likelihood_prior_f2 (lh, prior, mset);
   }
 
   for (i = 0; i < lh->priors_m2lnL->len; i++)
@@ -559,9 +605,9 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
  * @mset: a #NcmMSet.
  * @priors_m2lnL_v: a #NcmVector
  *
- * Computes the $-2\ln P$ of each prior into @priors_m2lnL_v: first $f_i^2$ for the
- * least-squares priors, then the values of the m2lnL priors, each in the order they
- * were added.
+ * Computes the $-2\ln P$ of each prior into @priors_m2lnL_v: first the sum of the
+ * squared residuals of each least-squares prior, then the values of the m2lnL priors,
+ * each in the order they were added.
  *
  */
 void
@@ -573,10 +619,9 @@ ncm_likelihood_priors_m2lnL_vec (NcmLikelihood *lh, NcmMSet *mset, NcmVector *pr
 
   for (i = 0; i < lh->priors_f->len; i++)
   {
-    NcmPrior *prior         = NCM_PRIOR (g_ptr_array_index (lh->priors_f, i));
-    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    NcmPrior *prior = NCM_PRIOR (g_ptr_array_index (lh->priors_f, i));
 
-    ncm_vector_set (priors_m2lnL_v, j, prior_val * prior_val);
+    ncm_vector_set (priors_m2lnL_v, j, _ncm_likelihood_prior_f2 (lh, prior, mset));
     j++;
   }
 

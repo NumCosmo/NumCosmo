@@ -25,6 +25,8 @@ project:
     - theory/ncm/algebra/spectral.qmd
     - theory/ncm/specfunc/sbessel_ode_solver.qmd
     - theory/ncm/specfunc/sbessel_projection.qmd
+    - theory/nc/xcor/limber.qmd
+    - theory/ncm/sphere/sphere_xi.qmd
     - theory/nc/xcor/ssc.qmd
     - theory/nc/lss/halo/castro_hmf.qmd
     - theory/ncm/stats/stats_dist.qmd
@@ -168,30 +170,40 @@ website:
                 text: "Castro Halo Mass Function and Bias"
               - href: theory/nc/xcor/ssc.qmd
                 text: "Super-Sample Covariance"
-          - section: "Numerical Methods"
+          - section: "Angular Power Spectra"
             contents:
-              - href: theory/ncm/fftlog/fftlog.qmd
-                text: "FFTLog"
+              - href: theory/ncm/specfunc/sbessel_ode_solver.qmd
+                text: "Ultraspherical Spectral Solver"
+              - href: theory/ncm/specfunc/sbessel_projection.qmd
+                text: "UltraLevin: Non-Limber"
+              - href: theory/nc/xcor/limber.qmd
+                text: "Limber"
+              - href: theory/ncm/sphere/sphere_xi.qmd
+                text: "Angular Correlation Function"
+          - section: "Approximation and Interpolation"
+            contents:
               - href: theory/ncm/algebra/spectral.qmd
                 text: "Spectral Methods"
-              - href: theory/ncm/integration/diff.qmd
-                text: "Numerical Differentiation"
+              - href: theory/ncm/fftlog/fftlog.qmd
+                text: "FFTLog"
               - href: theory/ncm/spline/spline_func.qmd
                 text: "AutoKnots: Adaptive Knot Placement"
               - href: theory/ncm/spline/hermite.qmd
                 text: "Quintic Hermite Interpolation"
-              - href: theory/ncm/specfunc/sbessel_ode_solver.qmd
-                text: "Ultraspherical Spectral Solver"
-              - href: theory/ncm/specfunc/sbessel_projection.qmd
-                text: "UltraLevin: Angular Power Spectra"
-              - href: theory/ncm/dynamics/csq1d.qmd
-                text: "CSQ1D Formalism"
+          - section: "Statistics"
+            contents:
               - href: theory/ncm/stats/stats_dist.qmd
                 text: "Kernel Mixture Densities"
               - href: theory/ncm/core/poisson_lognormal.qmd
                 text: "Poisson-Lognormal Distribution"
               - href: theory/ncm/stats/autocorrelation.qmd
                 text: "Autocorrelation Time and ESS"
+          - section: "Numerical Methods"
+            contents:
+              - href: theory/ncm/integration/diff.qmd
+                text: "Numerical Differentiation"
+              - href: theory/ncm/dynamics/csq1d.qmd
+                text: "CSQ1D Formalism"
       - section: examples/index.qmd
         contents:
           - section: "Background & Distances"

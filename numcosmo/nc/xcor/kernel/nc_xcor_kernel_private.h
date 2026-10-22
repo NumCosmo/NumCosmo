@@ -70,7 +70,7 @@ typedef struct _NcXcorKernelPrivate
   gboolean outdated;
 } NcXcorKernelPrivate;
 
-/* One row of a closure: its support in k and in its variable x = k / s, s its scale. */
+/* One panel row of a closure: its support in k and in its variable x = k / s, s its scale. */
 typedef struct _NcXcorKernelIntegrandRow
 {
   gdouble k_min;
@@ -79,19 +79,32 @@ typedef struct _NcXcorKernelIntegrandRow
   gdouble x_max;
 } NcXcorKernelIntegrandRow;
 
-/* The Chebyshev closure of one ell block: panels of coefficients, one row per
- * multipole, over the block's domain. */
+/* The Chebyshev closure of one ell block: panels of coefficients over the block's
+ * domain, n_terms groups of len rows; multipole i is the sum of the panel rows
+ * i + t len over the terms t. */
 struct _NcXcorKernelIntegrand
 {
   gint refcount;
-  guint len;
-  NcmSpectralPanels *sp; /* one row per multipole, in x = k / scale */
-  GArray *rows;          /* NcXcorKernelIntegrandRow, one per multipole */
-  NcmVector *scales;     /* per multipole, 1 when the closure is in k, nu = l + 1/2 when it is in u = k / nu */
+  guint len;             /* the multipoles of the block */
+  guint n_terms;         /* the groups of len panel rows summed into each multipole */
+  NcmSpectralPanels *sp; /* n_terms len rows, row r in x = k / scale_r */
+  GArray *rows;          /* NcXcorKernelIntegrandRow, one per panel row */
+  NcmVector *scales;     /* per panel row, 1 when the closure is in k, nu = l + 1/2 when it is in u = k / nu */
   gboolean scaled;       /* whether any scale differs from 1 */
   gdouble k_min;         /* the k range of the whole block */
   gdouble k_max;
+  GPtrArray *windows; /* NcmSpectralPanels per multipole, its window as one row in k, the sum of its terms; NULL with one term */
 };
+
+/* The fraction of the fit's absolute floor below which the sum of a multipole's terms drops
+ * trailing coefficients: at most that fraction times their number is added to its window */
+#define NC_XCOR_KERNEL_WINDOW_SUM_FRACTION (1.0e-2)
+
+/* The factor of the first fit's tolerances for a block of several terms: the fit meets
+ * tolerances relative to the windows when their smallest peak is at least this fraction
+ * of the terms' smallest peak, and is redone otherwise */
+#define NC_XCOR_KERNEL_WINDOW_FIT_FACTOR (0.5)
+
 
 typedef struct _ComponentParams
 {
@@ -101,6 +114,7 @@ typedef struct _ComponentParams
 
 #define MAX_ELL_BLOCK NC_XCOR_KERNEL_MAX_ELL_BLOCK
 #define MAX_COMP_BLOCK 6
+#define MAX_LIMBER_TERMS 5 /* the order offsets -2, ..., 2 of the Bessel derivative weights */
 
 
 typedef struct _ComponentState
@@ -115,9 +129,9 @@ typedef struct _ComponentState
   gdouble last_k_right;
   guint left_boundary_found;
   guint right_boundary_found;
-  guint group;                             /* Components truncated together, see _component_states_init_non_limber */
-  gdouble k_min_limber_ell[MAX_ELL_BLOCK]; /* Per-ell minimum k for Limber */
-  gdouble k_max_limber_ell[MAX_ELL_BLOCK]; /* Per-ell maximum k for Limber */
+  guint group;                                               /* Components truncated together, see _component_states_init_non_limber */
+  gdouble k_min_limber_ell[MAX_LIMBER_TERMS][MAX_ELL_BLOCK]; /* Limber: per term and multipole, the band in the term's x, empty when the term does not apply */
+  gdouble k_max_limber_ell[MAX_LIMBER_TERMS][MAX_ELL_BLOCK];
   ComponentParams params;
 } ComponentState;
 
@@ -134,9 +148,13 @@ typedef struct _ComponentStates
   const guint n_l;
   const gdouble epsilon;
   const guint adaptive_boundary_tries;
-  const gboolean is_limber; /* k_min_limber_ell/k_max_limber_ell are set only then */
-  const gboolean in_u;      /* the sampled variable is u = k / nu: k_min_hard, k_max_hard,
-                             * the band arrays and every sample are in u */
+  const gboolean is_limber;       /* k_min_limber_ell/k_max_limber_ell are set only then */
+  const gboolean in_u;            /* the sampled variable is u = k / nu: k_min_hard, k_max_hard,
+                                   * the band arrays and every sample are in u */
+  const guint n_terms;            /* Limber: the order offsets of the block, the rows
+                                   * [tau n_l, (tau + 1) n_l) holding the j_{l + t_tau} terms
+                                   * in x = k / (nu + t_tau); 1 otherwise */
+  gint offsets[MAX_LIMBER_TERMS]; /* t_tau, ascending; {0} outside Limber */
 
   /* While a panel is being expanded a component is on or off for the whole
    * panel, decided at interval_mid, the midpoint of the continuous interval
@@ -144,14 +162,18 @@ typedef struct _ComponentStates
   gboolean panel_mode;
   gdouble interval_mid;
 
-  /* Limber only: the block's wave numbers and wave number factors at one node */
+  /* Limber only: the block's wave numbers and wave number factors of one term at one node;
+   * with several terms the rows of all of them at one node */
   NcmVector *k_vec;
   NcmVector *kf_vec;
+  NcmVector *y_terms;
 } ComponentStates;
 
 NcXcorKernelPrivate *_nc_xcor_kernel_get_private (NcXcorKernel *xclk);
 
-NcXcorKernelIntegrand *_nc_xcor_kernel_integrand_new (guint len);
+NcXcorKernelIntegrand *_nc_xcor_kernel_integrand_new (guint len, guint n_terms);
+void _nc_xcor_kernel_integrand_sum_terms (NcXcorKernelIntegrand *integrand, NcmSpectral *spectral, gdouble abstol);
+gdouble _nc_xcor_kernel_integrand_window_peak_min (NcXcorKernelIntegrand *integrand);
 
 void _nc_xcor_kernel_component_state_init (ComponentState *state, NcXcorKernelComponent *comp, guint comp_idx, NcHICosmo *cosmo, guint n_l);
 void _nc_xcor_kernel_component_states_clear (ComponentStates *comp_states);

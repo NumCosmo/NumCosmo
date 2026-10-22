@@ -180,6 +180,7 @@ typedef struct _NcHICosmoClass NcHICosmoClass;
 typedef struct _NcHICosmo NcHICosmo;
 
 typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
+typedef gboolean (*NcHICosmoFuncBool) (NcHICosmo *cosmo);
 typedef gdouble (*NcHICosmoFunc1Z) (NcHICosmo *cosmo, const gdouble z);
 typedef gdouble (*NcHICosmoFunc1K) (NcHICosmo *cosmo, const gdouble k);
 
@@ -255,6 +256,7 @@ struct _NcHICosmoClass
   NcHICosmoFuncNMassNu NMassNu;
   NcHICosmoFuncMassNuInfo MassNuInfo;
   NcHICosmoGetBGVar get_bg_var;
+  NcHICosmoFuncBool as_drag_is_free;
 };
 
 struct _NcHICosmo
@@ -281,6 +283,7 @@ void nc_hicosmo_set_Omega_c0_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f
 void nc_hicosmo_set_Omega_g0_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_Omega_nu0_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_Omega_mnu0_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
+void nc_hicosmo_set_as_drag_is_free_impl (NcHICosmoClass *model_class, NcHICosmoFuncBool f);
 void nc_hicosmo_set_Press_mnu0_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_Omega_mnu0_n_impl (NcHICosmoClass *model_class, NcHICosmoVFunc0 f);
 void nc_hicosmo_set_Press_mnu0_n_impl (NcHICosmoClass *model_class, NcHICosmoVFunc0 f);
@@ -366,6 +369,9 @@ NCM_INLINE gdouble nc_hicosmo_H_number_density (NcHICosmo *cosmo);
 
 NCM_INLINE gdouble nc_hicosmo_z_lss (NcHICosmo *cosmo);
 NCM_INLINE gdouble nc_hicosmo_as_drag (NcHICosmo *cosmo);
+
+gboolean nc_hicosmo_as_drag_is_free (NcHICosmo *cosmo);
+
 NCM_INLINE gdouble nc_hicosmo_xb (NcHICosmo *cosmo);
 
 NCM_INLINE gdouble nc_hicosmo_E2Omega_b (NcHICosmo *cosmo, const gdouble z);

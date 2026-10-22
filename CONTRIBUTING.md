@@ -360,7 +360,10 @@ alongside them. Two things make an entry stale, and nothing else does:
   back out of the sources that name it, so bumping the tag there is enough.
 - `DATA_CACHE_VERSION` in `.github/workflows/build_check.yml`. Bump it for
   anything the tag does not catch — most importantly a file replaced in place
-  under an unchanged tag, which the library would otherwise never re-download.
+  under an unchanged tag, which the library would otherwise never re-download,
+  and a new asset under an unchanged tag: on a cache hit the writer neither
+  prefetches nor saves, so the new file would be downloaded by every job on
+  every run. `.github/workflows/weekly_flaky.yml` carries the same value.
 
 There are no `restore-keys`: a partial match would hand back a file whose name
 is unchanged but whose contents the new release replaced, and the library only

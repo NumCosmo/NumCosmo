@@ -93,6 +93,10 @@ math_tests = [
         'sources': ['ncm/sphere/test_ncm_sphere_nn.c'],
     },
     {
+        'name': 'ncm_sphere_xi',
+        'sources': ['ncm/sphere/test_ncm_sphere_xi.c'],
+    },
+    {
         'name': 'ncm_powspec',
         'sources': ['ncm/powspec/test_ncm_powspec.c'],
     },
@@ -550,6 +554,14 @@ model_tests = [
         'sources': ['nc/background/test_nc_hicosmo_de.c'],
     },
     {
+        'name': 'nc_hicosmo_de_wspline',
+        'sources': ['nc/background/test_nc_hicosmo_de_wspline.c'],
+    },
+    {
+        'name': 'nc_hicosmo_qspline',
+        'sources': ['nc/background/test_nc_hicosmo_qspline.c'],
+    },
+    {
         'name': 'nc_hicosmo_qgw',
         'sources': ['nc/background/test_nc_hicosmo_qgw.c'],
     },
@@ -589,6 +601,15 @@ model_tests = [
         'name': 'nc_distance',
         'sources': ['nc/background/test_nc_distance.c'],
     },
+    {
+        'name': 'nc_hcosmo_bi',
+        'sources': ['nc/background/test_nc_hcosmo_bi.c'],
+        'include_directories': [sundials_inc],
+    },
+    {
+        'name': 'nc_hcosmo_bi_dist',
+        'sources': ['nc/background/test_nc_hcosmo_bi_dist.c'],
+    },
 ]
 
 # Data tests
@@ -601,6 +622,10 @@ data_tests = [
             'ncm/data/ncm_data_gauss_cov_test.h',
         ],
         'timeout': 0,
+    },
+    {
+        'name': 'nc_dist_mu_obs',
+        'sources': ['nc/data/test_nc_dist_mu_obs.c'],
     },
     {
         'name': 'nc_data_bao_dtr_dhr',
@@ -631,8 +656,17 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
     {
+        'name': 'nc_data_hubble_cov',
+        'sources': ['nc/data/test_nc_data_hubble_cov.c'],
+    },
+    {
         'name': 'nc_data_snia_cov',
         'sources': ['nc/data/test_nc_data_snia_cov.c'],
+    },
+    {
+        'name': 'nc_data_snia_cov_fit',
+        'sources': ['nc/data/test_nc_data_snia_cov_fit.c'],
+        'suite': ['c-acceptance'],
     },
     # Truth-table validation of NcDataClusterWLFactor's integration methods:
     # regenerates a curated sample from a fixed seed (nothing stored) and

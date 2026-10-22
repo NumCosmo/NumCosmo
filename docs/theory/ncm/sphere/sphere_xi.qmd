@@ -1,0 +1,189 @@
+---
+title: "Angular Correlation Function"
+---
+
+This page describes the two forms in which [[numcosmo-math|NcmSphereXi]] computes the
+angular correlation function of a spin-0 field from its angular power spectrum: the bin
+averages, through a kernel that [[numcosmo-math|ncm_sphere_xi_prepare]] evaluates at double
+precision for every angle and [[numcosmo-math|ncm_sphere_xi_apply]] uses, and the
+Chebyshev series of [[numcosmo-math|ncm_sphere_xi_to_chebyshev]], evaluated at given angles
+or on a uniform grid.
+
+## Bin averages
+
+Let $C_\ell$ be the angular power spectrum of a spin-0 field on the sphere. Its angular
+correlation function at separation $\theta$, truncated at the multipole $\ell_\mathrm{max}$,
+is
+$$
+\xi(\theta) = \sum_{\ell=0}^{\ell_\mathrm{max}} \frac{2\ell + 1}{4\pi}\,C_\ell\,P_\ell(\cos\theta),
+$$
+where $P_\ell$ is the Legendre polynomial of degree $\ell$. The bins are given by the edges
+$\theta_0 < \theta_1 < \dots < \theta_n$ in $[0, \pi]$ (`theta-edges`), and bin $b$ is
+$[\theta_b, \theta_{b+1}]$. With $x \equiv \cos\theta$ and $x_b \equiv \cos\theta_b$, the
+average of $\xi$ over bin $b$ weighted by solid angle, $\mathrm{d}\Omega \propto \mathrm{d}x$,
+is
+$$
+\bar{\xi}_b \equiv \frac{1}{x_b - x_{b+1}} \int_{x_{b+1}}^{x_b} \xi\,\mathrm{d}x
+= \sum_{\ell=0}^{\ell_\mathrm{max}} K_{b\ell}\,C_\ell,
+\qquad
+K_{b\ell} \equiv \frac{2\ell + 1}{4\pi}\,\frac{1}{x_b - x_{b+1}} \int_{x_{b+1}}^{x_b} P_\ell(x)\,\mathrm{d}x.
+$$
+The kernel $K$ is an $n \times (\ell_\mathrm{max} + 1)$ matrix that depends only on the edges
+and on $\ell_\mathrm{max}$. [[numcosmo-math|ncm_sphere_xi_prepare]] computes it once, and
+every new set of spectra costs one matrix product.
+
+## The antiderivative
+
+For $\ell \ge 1$ the integrals use the antiderivative
+$$
+G_\ell(\theta) \equiv -\frac{\sin^2\theta\,P_\ell^\prime(\cos\theta)}{\ell(\ell + 1)},
+\qquad
+\int_{x_{b+1}}^{x_b} P_\ell(x)\,\mathrm{d}x = G_\ell(\theta_b) - G_\ell(\theta_{b+1}),
+$$
+which is zero at $\theta = 0$ and $\theta = \pi$. The code holds $G_\ell$ at the two edges of
+the current bin in `G_lo` and `G_hi`, and the denominator in the form
+$$
+x_b - x_{b+1} = 2 \sin\frac{\theta_{b+1} + \theta_b}{2}\,\sin\frac{\theta_{b+1} - \theta_b}{2}
+$$
+(`dx`), which has no subtraction. The entries are then
+$$
+K_{b0} = \frac{1}{4\pi},
+\qquad
+K_{b\ell} = \frac{2\ell + 1}{4\pi}\,\frac{G_\ell(\theta_b) - G_\ell(\theta_{b+1})}{x_b - x_{b+1}}
+\quad (\ell \ge 1).
+$$
+For $\ell\theta \ll 1$, $G_\ell \approx -\sin^2\theta / 2$, so the difference
+$G_\ell(\theta_b) - G_\ell(\theta_{b+1})$ has a relative cancellation of order
+$(\theta_{b+1} - \theta_b) / \theta_b$, set by the bin width alone.
+
+## Recurrences in $u$
+
+`_ncm_sphere_xi_edge_integrals` computes $G_\ell(\theta)$ for $\ell = 1, \dots, \ell_\mathrm{max}$
+at one edge. Near $x = 1$, $P_\ell^\prime(1) = \ell(\ell + 1) / 2$, so a change of $x$ by one
+rounding unit changes $P_\ell$ by about $\ell^2 / 2$ rounding units, and forming
+$x = \cos\theta$ in double precision limits $K$ at small angles ($1.3 \times 10^{-10}$ at
+$\ell = 3000$, see [Accuracy](#accuracy)). The recurrences are therefore written in
+$$
+u \equiv 1 - \cos\theta = 2 \sin^2\frac{\theta}{2},
+$$
+which is computed to full relative precision, and $x$ is never formed. With
+$D_\ell \equiv P_\ell - P_{\ell-1}$, $P_1 = 1 - u$, $D_1 = -u$ and $P_1^\prime = 1$, they are
+$$
+D_{\ell+1} = \frac{\ell D_\ell - (2\ell + 1)\,u\,P_\ell}{\ell + 1},
+\qquad
+P_{\ell+1} = P_\ell + D_{\ell+1},
+\qquad
+P_{\ell+1}^\prime = P_\ell^\prime - u P_\ell^\prime + (\ell + 1) P_\ell,
+$$
+with $\sin^2\theta = u(2 - u)$ (`s2`). Near $x = -1$ the same loss appears in $1 + x$, so for
+$\theta > \pi / 2$ the recurrences run at $\pi - \theta$ (`reflect`), and
+$$
+G_\ell(\theta) = (-1)^{\ell + 1}\,G_\ell(\pi - \theta)
+$$
+(`sign`, multiplied by `sign_step` $= -1$ at each $\ell$ when reflected and $+1$ otherwise).
+
+## Applying the kernel
+
+[[numcosmo-math|ncm_sphere_xi_apply]] takes a matrix with one spectrum per row, column $j$
+holding $C_{\ell_\mathrm{min} + j}$, and computes
+$$
+\bar{\xi}_b = \sum_{\ell=\ell_\mathrm{min}}^{\ell_\mathrm{min} + n_\ell - 1} K_{b\ell}\,C_\ell
+$$
+for every row with one call to `cblas_dgemm` on the columns $\ell_\mathrm{min}, \dots,
+\ell_\mathrm{min} + n_\ell - 1$ of $K$; the multipoles below $\ell_\mathrm{min}$ are taken as
+zero, and the last one must not exceed $\ell_\mathrm{max}$.
+[[numcosmo-math|ncm_sphere_xi_apply_vector]] does the same for one spectrum with
+`cblas_dgemv`.
+
+## Chebyshev series
+
+With $a_\ell \equiv (2\ell + 1) C_\ell / (4\pi)$, the truncated sum is a polynomial of degree
+$\ell_\mathrm{max}$ in $x$, so it has an exact Chebyshev series of the same degree,
+$$
+\xi = \sum_{k=0}^{\ell_\mathrm{max}} c_k\,T_k(x) = \sum_{k=0}^{\ell_\mathrm{max}} c_k \cos(k\theta),
+\qquad
+c_k = \frac{2 - \delta_{k0}}{\pi} \sum_{\substack{\ell \ge k \\ \ell - k\ \mathrm{even}}}
+\Lambda\!\left(\frac{\ell - k}{2}\right) \Lambda\!\left(\frac{\ell + k}{2}\right) a_\ell,
+$$
+with
+$$
+\Lambda(m) \equiv \frac{\Gamma(m + \frac12)}{\Gamma(m + 1)},
+\qquad
+\Lambda(0) = \sqrt{\pi},
+\qquad
+\Lambda(m + 1) = \Lambda(m)\,\frac{m + \frac12}{m + 1}.
+$$
+[[numcosmo-math|ncm_sphere_xi_set_lmax]] fills the table of $\Lambda(m)$, $m = 0, \dots,
+\ell_\mathrm{max}$, by the ratio recurrence (`Lambda`).
+[[numcosmo-math|ncm_sphere_xi_to_chebyshev]] stores $a_\ell$ split by the parity of $\ell$
+(`a_parity`), so that the multipoles $\ell = k + 2i$ of $c_k$ are contiguous, builds the
+weights $w_i = (2 - \delta_{k0}) \Lambda(i) \Lambda(k + i) / \pi$ (`w`) and applies them to all
+spectra with one `cblas_dgemv` per $k$. The cost is $\ell_\mathrm{max}^2 / 4$ multiplications
+per spectrum.
+
+The series is evaluated as a cosine series in $\theta$.
+[[numcosmo-math|ncm_sphere_xi_eval_chebyshev]] computes $\cos(k\theta)$ for
+$k = 0, \dots, \ell_\mathrm{max}$ by the rotation
+$$
+\cos((k + 1)\theta) = \cos(k\theta)\cos\theta - \sin(k\theta)\sin\theta,
+\qquad
+\sin((k + 1)\theta) = \sin(k\theta)\cos\theta + \cos(k\theta)\sin\theta
+$$
+(`cos_k`), and the sums for all spectra with one `cblas_dgemv` per angle. A Clenshaw sum in
+$x$ would form $x = \cos\theta$ and lose accuracy at small angles, as in the recurrences
+above. [[numcosmo-math|ncm_sphere_xi_eval_chebyshev_grid]] evaluates the series on
+$\theta_j = j\pi / (n_c - 1)$, $j = 0, \dots, n_c - 1$, with $n_c$ the number of
+coefficients ($n_c - 1 = \ell_\mathrm{max}$ for those of
+[[numcosmo-math|ncm_sphere_xi_to_chebyshev]]), by FFTW's `REDFT00`, which computes
+$$
+Y_j = X_0 + (-1)^j X_{n_c-1} + 2 \sum_{k=1}^{n_c-2} X_k \cos\frac{\pi jk}{n_c - 1};
+$$
+with $X_0 = c_0$, $X_{n_c-1} = c_{n_c-1}$ and $X_k = c_k / 2$ otherwise, $Y_j = \xi(\theta_j)$.
+The plan for $n_c$ and the number of spectra is made on the first call and kept (`dct_plan`).
+
+## Derivations
+
+**The antiderivative.** The Legendre polynomials satisfy
+$(2\ell + 1) P_\ell = P_{\ell+1}^\prime - P_{\ell-1}^\prime$, so
+$\int P_\ell\,\mathrm{d}x = (P_{\ell+1} - P_{\ell-1}) / (2\ell + 1)$, and
+$(1 - x^2) P_\ell^\prime = \ell(\ell + 1)(P_{\ell-1} - P_{\ell+1}) / (2\ell + 1)$. Together,
+$$
+\frac{P_{\ell+1} - P_{\ell-1}}{2\ell + 1} = -\frac{(1 - x^2)\,P_\ell^\prime}{\ell(\ell + 1)} = G_\ell,
+$$
+which is zero at $x = \pm 1$.
+
+**The recurrences in $u$.** Substituting $x = 1 - u$ in
+$(\ell + 1) P_{\ell+1} = (2\ell + 1)\,x\,P_\ell - \ell P_{\ell-1}$ and subtracting
+$(\ell + 1) P_\ell$ from both sides gives the recurrence for $D_{\ell+1}$. The recurrence
+$P_{\ell+1}^\prime = x P_\ell^\prime + (\ell + 1) P_\ell$ with $x = 1 - u$ gives the one for
+$P_{\ell+1}^\prime$.
+
+**The Chebyshev coefficients.** The Fourier series of the Legendre polynomials is
+$$
+P_\ell(\cos\theta) = \frac{1}{\pi} \sum_{j=0}^{\ell} \Lambda(j)\,\Lambda(\ell - j) \cos((\ell - 2j)\theta).
+$$
+The terms $j$ and $\ell - j$ give the same $\cos(k\theta)$ with $k = |\ell - 2j|$ and the
+same product of $\Lambda$, so for $k > 0$ they add, and with $j = (\ell - k)/2$ the
+coefficient of $T_k$ in $P_\ell$ is $(2 - \delta_{k0}) \Lambda((\ell - k)/2) \Lambda((\ell + k)/2) / \pi$.
+
+**The reflection.** From $P_\ell(-x) = (-1)^\ell P_\ell(x)$, $P_\ell^\prime(-x) =
+(-1)^{\ell+1} P_\ell^\prime(x)$, and $\sin^2(\pi - \theta) = \sin^2\theta$.
+
+## Accuracy
+
+Against the closed form $(P_{\ell+1} - P_{\ell-1}) / (2\ell + 1)$ evaluated by mpmath with 40
+digits at the same double-precision edges, $|K_{b\ell} - K_{b\ell}^\mathrm{ref}|$ is at most
+$7 \times 10^{-15}$ of $(2\ell + 1) / (4\pi)$ for $\ell \le 3000$ and $2 \times 10^{-15}$ for
+$\ell = 10^4$ to $3 \times 10^4$, on bins from zero to $\pi$ including arcminute bins. The
+recurrences in $x$ give $1.3 \times 10^{-10}$ at $\ell = 3000$ on the same bins, in the bins
+below $13'$.
+
+For the 15 spectra of five lens bins with magnification and redshift-space distortions, the
+Chebyshev series evaluated by the rotation agrees with the 30-digit truncated sum to
+$2 \times 10^{-14}$ of the largest $|\xi|$ on $[2.5', 250']$ at $\ell_\mathrm{max} = 2000$
+and to $1 \times 10^{-14}$ at $2 \times 10^4$; the Clenshaw sum in $x$ gives
+$2$--$4 \times 10^{-11}$. The conversion takes $1.3$ ms and $0.13$ s for the 15 spectra at
+these $\ell_\mathrm{max}$ on one core.
+
+The C test checks the kernel, the Chebyshev coefficients and the values of the series against
+the tables printed by `tests/tools/make_sphere_xi_cases.py`.

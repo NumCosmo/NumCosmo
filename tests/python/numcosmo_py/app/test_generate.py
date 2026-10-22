@@ -27,14 +27,17 @@
 from typing import cast
 from pathlib import Path
 import pytest
+import numpy as np
+import typer
 
 pytest.importorskip("astropy")
 pytest.importorskip("getdist")
 # flake8: noqa: E402
 
 
-from numcosmo_py import Ncm
+from numcosmo_py import Nc, Ncm
 import numcosmo_py.app.generate as gen
+import numcosmo_py.datasets.dist_mu_obs as dist_mu_obs
 import numcosmo_py.datasets.hicosmo as hicosmo
 
 Ncm.cfg_init()
@@ -221,6 +224,28 @@ def test_generate_dewspline(tmp_path: Path):
     assert exp_file.exists()
 
 
+@pytest.mark.parametrize("use_as_drag", [False, True])
+def test_generate_dewspline_use_as_drag(tmp_path: Path, use_as_drag: bool):
+    """With use_as_drag the BAO sound horizon is the free asdrag parameter."""
+    exp_file = tmp_path / "dewspline.yaml"
+    _ = gen.GenerateDEWSpline(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+        use_as_drag=use_as_drag,
+    )
+
+    # The experiment refers to the dataset saved beside it, which must be loaded first.
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    _ = ser.from_binfile(exp_file.with_suffix(".dataset.gvar").absolute().as_posix())
+    exp = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = exp.peek("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    assert isinstance(cosmo, Nc.HICosmoDEWSpline)
+    assert cosmo.get_use_as_drag() == use_as_drag
+    assert (mset.fparam_get_pi_by_name("NcHICosmo:asdrag") is not None) == use_as_drag
+
+
 CURVATURE_PRIORS = [
     gen.CurvaturePriorType.NONE,
     gen.CurvaturePriorType.MEAN_KAPPA,
@@ -261,6 +286,53 @@ def test_generate_qspline_curvature_prior(
     )
     assert exp_file.exists()
     assert exp_file.with_suffix(".functions.yaml").exists()
+
+
+@pytest.mark.parametrize(
+    "generator, func_name",
+    [
+        (gen.GenerateDEWSpline, "NcHICosmoDEWSpline:lp_w2_ls"),
+        (gen.GenerateQSpline, "NcHICosmoQSpline:lp_q2_ls"),
+    ],
+)
+def test_generate_spline_default_curvature_prior(
+    tmp_path: Path, generator: type, func_name: str
+):
+    """The default curvature prior is the L10 norm of the second derivative.
+
+    It is a Gaussian prior on the residual functions, with one residual per
+    quadrature node, and the same value as the prior on the norm.
+    """
+    exp_file = tmp_path / "spline.yaml"
+    _ = generator(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+    )
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    _ = ser.from_binfile(exp_file.with_suffix(".dataset.gvar").absolute().as_posix())
+    exp = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    likelihood = exp.peek("likelihood")
+    assert isinstance(likelihood, Ncm.Likelihood)
+    priors = [likelihood.priors_peek_f(i) for i in range(likelihood.priors_length_f())]
+    curvature = [
+        prior
+        for prior in priors
+        if isinstance(prior, Ncm.PriorGaussFunc)
+        and prior.props.mean_func.props.full_name == func_name
+    ]
+    assert len(curvature) == 1
+    assert curvature[0].props.variable == 10.0
+
+    mset = exp.peek("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    assert curvature[0].props.dimension == cosmo.d2_lp_residuals_len(None, 10)
+
+    norm = Ncm.MSetFuncList.new(func_name.removesuffix("_ls"), None)
+    f = np.array(curvature[0].eval_array(mset, None))
+    expected = norm.eval1(mset, 10.0) / curvature[0].props.sigma
+    assert np.sum(f**2) == pytest.approx(expected**2, rel=1.0e-10)
 
 
 # LOCAL_* priors build a data-driven weight from the expected Fisher, so they
@@ -313,6 +385,7 @@ def test_add_curvature_prior_local_requires_weight():
     with pytest.raises(ValueError, match="requires a precomputed weight spline"):
         gen._add_curvature_prior(
             likelihood,
+            cosmo=Nc.HICosmoDEWSpline.new(6, 2.33),
             namespace="NcHICosmoDEWSpline",
             d2_name="lp_w2",
             prior_type=gen.CurvaturePriorType.LOCAL_D2,
@@ -448,3 +521,79 @@ def test_generate_planck_native_from_release(tmp_path: Path, monkeypatch):
     dset = ser.from_binfile(str(dset_file.absolute()))
     names = {dset.get_data(i).__class__.__name__ for i in range(dset.get_ndata())}
     assert names == {"DataPlanckSimall", "DataPlanckCommander", "DataPlanckSmica"}
+
+
+# Bianchi
+def test_generate_bianchi(tmp_path: Path):
+    """Test Bianchi I generation from the CF4 SNIa catalog with a redshift cut."""
+    exp_file = tmp_path / "bianchi.yaml"
+    cat_file = tmp_path / "cf4.obj"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+        z_max=0.02,
+        catalog_out=cat_file.absolute(),
+    )
+    assert exp_file.exists()
+    assert exp_file.with_suffix(".functions.yaml").exists()
+    assert cat_file.exists()
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+    data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+    z = data.peek_z()
+    assert 0 < z.len() < 1008
+    assert max(z.get(i) for i in range(z.len())) <= 0.02
+
+    # The written catalog loads as a NcDistMuObs and gives the same experiment
+    exp_file2 = tmp_path / "bianchi2.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file2.absolute(),
+        data_file=cat_file.absolute(),
+        mu_col="DM_av",
+        z_max=0.02,
+    )
+    assert exp_file2.exists()
+
+
+def test_generate_bianchi_sources(tmp_path: Path):
+    """Test Bianchi I generation rejects zero or two catalog sources."""
+    exp_file = tmp_path / "bianchi.yaml"
+    with pytest.raises(typer.BadParameter, match="exactly one of"):
+        _ = gen.GenerateBianchi(experiment=exp_file.absolute())
+    with pytest.raises(typer.BadParameter, match="exactly one of"):
+        _ = gen.GenerateBianchi(
+            experiment=exp_file.absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+            data_file=exp_file.absolute(),
+        )
+
+
+def test_generate_bianchi_invalid_suffix(tmp_path: Path):
+    """Test Bianchi I generation rejects invalid file suffix."""
+    exp_file = tmp_path / "bianchi.txt"
+    with pytest.raises(ValueError, match="Invalid experiment file suffix: .txt"):
+        _ = gen.GenerateBianchi(
+            experiment=exp_file.absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+        )
+
+
+def test_generate_bianchi_edd_table(tmp_path: Path, edd_cf4_excerpt_file: Path):
+    """Test Bianchi I generation from an EDD export, with a catalog written out."""
+    exp_file = tmp_path / "bianchi_edd.yaml"
+    cat_file = tmp_path / "edd.gvar"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        edd_table=edd_cf4_excerpt_file,
+        edd_downloaded="2026-10-17",
+        omegam_mean=None,
+        ordering=False,
+        catalog_out=cat_file.absolute(),
+    )
+    assert exp_file.exists()
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = ser.from_file(cat_file.absolute().as_posix())
+    assert isinstance(obs, Nc.DistMuObs)
+    assert obs.len() == 6

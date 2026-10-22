@@ -32,6 +32,12 @@
  *
  * Dark Energy equation of state: $w(\alpha)$ approximated by a cubic spline.
  *
+ * The sound horizon at the drag epoch, used by the BAO observables through
+ * nc_distance_r_zd(), is computed by #NcDistance with its #NcDistance:sound-horizon-method method by
+ * default. With #NcHICosmoDEWSpline:use-as-drag set, it is the parameter
+ * #NcHICosmoDEWSpline:asdrag, $r_s(z_d) H_0 / c$, instead: BAO then constrains only distance
+ * ratios, as in #NcHICosmoQSpline.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -62,6 +68,7 @@ struct _NcHICosmoDEWSplinePrivate
   gdouble int_f;
   NcHICosmoSplineKnots knots;
   NcmSpline *w_alpha;
+  gboolean use_as_drag;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcHICosmoDEWSpline, nc_hicosmo_de_wspline, NC_TYPE_HICOSMO_DE)
@@ -72,6 +79,7 @@ enum
   PROP_Z_1,
   PROP_Z_F,
   PROP_KNOTS,
+  PROP_USE_AS_DRAG,
   PROP_SIZE,
 };
 
@@ -80,14 +88,15 @@ nc_hicosmo_de_wspline_init (NcHICosmoDEWSpline *wspline)
 {
   NcHICosmoDEWSplinePrivate * const self = wspline->priv = nc_hicosmo_de_wspline_get_instance_private (wspline);
 
-  self->nknots  = 0;
-  self->size    = 0;
-  self->z_1     = 0.0;
-  self->z_f     = 0.0;
-  self->alpha_f = 0.0;
-  self->w_f     = 0.0;
-  self->int_f   = 0.0;
-  self->w_alpha = NULL;
+  self->nknots      = 0;
+  self->size        = 0;
+  self->z_1         = 0.0;
+  self->z_f         = 0.0;
+  self->alpha_f     = 0.0;
+  self->w_f         = 0.0;
+  self->int_f       = 0.0;
+  self->w_alpha     = NULL;
+  self->use_as_drag = FALSE;
 }
 
 static void
@@ -108,6 +117,9 @@ _nc_hicosmo_de_wspline_get_property (GObject *object, guint prop_id, GValue *val
       break;
     case PROP_KNOTS:
       g_value_set_enum (value, self->knots);
+      break;
+    case PROP_USE_AS_DRAG:
+      g_value_set_boolean (value, self->use_as_drag);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -133,6 +145,9 @@ _nc_hicosmo_de_wspline_set_property (GObject *object, guint prop_id, const GValu
       break;
     case PROP_KNOTS:
       self->knots = g_value_get_enum (value);
+      break;
+    case PROP_USE_AS_DRAG:
+      nc_hicosmo_de_wspline_set_use_as_drag (wspline, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -232,12 +247,15 @@ static gdouble _nc_hicosmo_de_wspline_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble
 static gdouble _nc_hicosmo_de_wspline_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wspline_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
 static gdouble _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z);
+static gdouble _nc_hicosmo_de_wspline_as_drag (NcHICosmo *cosmo);
+static gboolean _nc_hicosmo_de_wspline_as_drag_is_free (NcHICosmo *cosmo);
 
 static void
 nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
 {
   GObjectClass *object_class     = G_OBJECT_CLASS (klass);
   NcHICosmoDEClass *parent_class = NC_HICOSMO_DE_CLASS (klass);
+  NcHICosmoClass *hicosmo_class  = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class     = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_hicosmo_de_wspline_set_property;
@@ -247,7 +265,8 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   object_class->finalize    = &_nc_hicosmo_de_wspline_finalize;
 
   ncm_model_class_set_name_nick (model_class, "WSpline - DE EOS reconstruction w(z)", "WSpline");
-  ncm_model_class_add_params (model_class, 0,
+  ncm_model_class_add_params (model_class,
+                              NC_HICOSMO_DE_WSPLINE_SPARAM_LEN - NC_HICOSMO_DE_SPARAM_LEN,
                               NC_HICOSMO_DE_WSPLINE_VPARAM_LEN - NC_HICOSMO_DE_VPARAM_LEN,
                               PROP_SIZE);
 
@@ -276,6 +295,36 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
                                                       NC_HICOSMO_SPLINE_KNOTS_CHEBYSHEV,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcHICosmoDEWSpline:use-as-drag:
+   *
+   * Whether the sound horizon at the drag epoch is the parameter
+   * #NcHICosmoDEWSpline:asdrag (TRUE) or computed by #NcDistance (FALSE).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_USE_AS_DRAG,
+                                   g_param_spec_boolean ("use-as-drag",
+                                                         NULL,
+                                                         "use the asdrag parameter for the sound horizon at drag",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcHICosmoDEWSpline:asdrag:
+   *
+   * Sound horizon at the drag epoch in units of the Hubble distance, $r_s(z_d) H_0 / c$,
+   * used when #NcHICosmoDEWSpline:use-as-drag is set.
+   */
+  /**
+   * NcHICosmoDEWSpline:asdrag-fit:
+   *
+   * Whether to fit #NcHICosmoDEWSpline:asdrag.
+   */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_WSPLINE_AS_DRAG, "A_s", "asdrag",
+                              1.0e-4, 1.0, 1.0e-3,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_WSPLINE_DEFAULT_AS_DRAG,
+                              NCM_PARAM_TYPE_FIXED);
+
   /* Set w_0 param info */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_WSPLINE_W, 6, "w", "w",
                               -5.0, 1.0, 1.0e-2,
@@ -289,10 +338,14 @@ nc_hicosmo_de_wspline_class_init (NcHICosmoDEWSplineClass *klass)
   nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_wspline_dE2Omega_de_dz);
   nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_wspline_d2E2Omega_de_dz2);
   nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_wspline_w_de);
+
+  nc_hicosmo_set_as_drag_impl (hicosmo_class, &_nc_hicosmo_de_wspline_as_drag);
+  nc_hicosmo_set_as_drag_is_free_impl (hicosmo_class, &_nc_hicosmo_de_wspline_as_drag_is_free);
 }
 
 #define VECTOR (NCM_MODEL (cosmo_de))
 #define OMEGA_X (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
+#define AS_DRAG (ncm_model_orig_param_get (VECTOR, NC_HICOSMO_DE_WSPLINE_AS_DRAG))
 
 static void
 _nc_hicosmo_de_wspline_prepare (NcHICosmoDEWSpline *wspline)
@@ -409,6 +462,23 @@ _nc_hicosmo_de_wspline_w_de (NcHICosmoDE *cosmo_de, gdouble z)
   }
 }
 
+static gdouble
+_nc_hicosmo_de_wspline_as_drag (NcHICosmo *cosmo)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
+
+  return AS_DRAG;
+}
+
+static gboolean
+_nc_hicosmo_de_wspline_as_drag_is_free (NcHICosmo *cosmo)
+{
+  NcHICosmoDEWSpline *wspline            = NC_HICOSMO_DE_WSPLINE (cosmo);
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  return self->use_as_drag;
+}
+
 /**
  * nc_hicosmo_de_wspline_new:
  * @nknots: number of knots in the $w(z)$ spline
@@ -495,6 +565,52 @@ nc_hicosmo_de_wspline_weighted_lp_norm (NcHICosmoDEWSpline *wspline, NcmSplineCu
 }
 
 /**
+ * nc_hicosmo_de_wspline_d2_lp_residuals_len:
+ * @wspline: a #NcHICosmoDEWSpline
+ * @weight: (nullable): a #NcmSpline holding the weight density $W(\alpha)$
+ * @p: the norm order, even and positive
+ *
+ * Gets the number of residuals of nc_hicosmo_de_wspline_d2_lp_residuals(), see
+ * ncm_spline_curvature_d2_lp_residuals_len(). It depends only on the knots and @p: it
+ * is the dimension to give `NcHICosmoDEWSpline:lp_w2_ls` and
+ * `NcHICosmoDEWSpline:wlp_w2_ls` in ncm_mset_func_list_new_dim().
+ *
+ * Returns: the number of residuals.
+ */
+guint
+nc_hicosmo_de_wspline_d2_lp_residuals_len (NcHICosmoDEWSpline *wspline, NcmSpline *weight, const guint p)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  return ncm_spline_curvature_d2_lp_residuals_len (self->w_alpha, weight, p, 0.0, self->alpha_f);
+}
+
+/**
+ * nc_hicosmo_de_wspline_d2_lp_residuals:
+ * @wspline: a #NcHICosmoDEWSpline
+ * @weight: (nullable): a #NcmSpline holding the weight density $W(\alpha)$
+ * @p: the norm order, even and positive
+ * @f: (array) (element-type double): the residuals, nc_hicosmo_de_wspline_d2_lp_residuals_len() values
+ *
+ * Computes residuals whose sum of squares is the square of the $L_p$ norm of $w''(\alpha)$
+ * over $[0, \alpha_f]$, weighted by @weight when given: the square of
+ * nc_hicosmo_de_wspline_lp_norm() or nc_hicosmo_de_wspline_weighted_lp_norm() for
+ * #NCM_SPLINE_CURVATURE_D2. See ncm_spline_curvature_d2_lp_residuals().
+ */
+void
+nc_hicosmo_de_wspline_d2_lp_residuals (NcHICosmoDEWSpline *wspline, NcmSpline *weight, const guint p, gdouble *f)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  _nc_hicosmo_de_wspline_prepare (wspline);
+
+  if (weight != NULL)
+    ncm_spline_prepare (weight);
+
+  ncm_spline_curvature_d2_lp_residuals (self->w_alpha, weight, p, 0.0, self->alpha_f, f);
+}
+
+/**
  * nc_hicosmo_de_wspline_mean_kappa:
  * @wspline: a #NcHICosmoDEWSpline
  *
@@ -557,6 +673,45 @@ _nc_hicosmo_de_wspline_wlp_w2 (NcmMSetFuncList *flist, NcmMSet *mset, const gdou
   f[0] = nc_hicosmo_de_wspline_weighted_lp_norm (cosmo, NCM_SPLINE_CURVATURE_D2, x[0], weight);
 }
 
+/* The residual functions take p as their variable; their dimension, given at
+ * construction, must be the model's number of residuals for that p. */
+static guint
+_nc_hicosmo_de_wspline_ls_p (NcmMSetFuncList *flist, NcHICosmoDEWSpline *cosmo, NcmSpline *weight, const gdouble x)
+{
+  const guint p   = (guint) x;
+  const guint dim = ncm_mset_func_get_dim (NCM_MSET_FUNC (flist));
+
+  if ((gdouble) p != x)
+    g_error ("NcHICosmoDEWSpline:%s: the order p = %g must be an even positive integer.",
+             ncm_mset_func_peek_name (NCM_MSET_FUNC (flist)), x);
+
+  if (dim != nc_hicosmo_de_wspline_d2_lp_residuals_len (cosmo, weight, p))
+    g_error ("NcHICosmoDEWSpline:%s: the function has dimension %u, the model has %u residuals at p = %u "
+             "(nc_hicosmo_de_wspline_d2_lp_residuals_len()).",
+             ncm_mset_func_peek_name (NCM_MSET_FUNC (flist)), dim, nc_hicosmo_de_wspline_d2_lp_residuals_len (cosmo, weight, p), p);
+
+  return p;
+}
+
+static void
+_nc_hicosmo_de_wspline_lp_w2_ls (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDEWSpline *cosmo = NC_HICOSMO_DE_WSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_DE_WSPLINE (cosmo));
+  nc_hicosmo_de_wspline_d2_lp_residuals (cosmo, NULL, _nc_hicosmo_de_wspline_ls_p (flist, cosmo, NULL, x[0]), f);
+}
+
+static void
+_nc_hicosmo_de_wspline_wlp_w2_ls (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDEWSpline *cosmo = NC_HICOSMO_DE_WSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcmSpline *weight         = NCM_SPLINE (ncm_mset_func_list_peek_obj (flist));
+
+  g_assert (NC_IS_HICOSMO_DE_WSPLINE (cosmo));
+  nc_hicosmo_de_wspline_d2_lp_residuals (cosmo, weight, _nc_hicosmo_de_wspline_ls_p (flist, cosmo, weight, x[0]), f);
+}
+
 void
 _nc_hicosmo_de_wspline_register_functions (void)
 {
@@ -565,5 +720,42 @@ _nc_hicosmo_de_wspline_register_functions (void)
   ncm_mset_func_list_register ("lp_w2", "\\Vert w''\\Vert_p", "NcHICosmoDEWSpline", "Lp norm of w'' (second derivative), x[0]=p", G_TYPE_NONE, _nc_hicosmo_de_wspline_lp_w2, 1, 1);
   ncm_mset_func_list_register ("wlp_kappa", "\\Vert\\kappa\\Vert_{p,W}", "NcHICosmoDEWSpline", "Weighted Lp norm of w geometric curvature, x[0]=p, obj=weight spline W(alpha)", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_kappa, 1, 1);
   ncm_mset_func_list_register ("wlp_w2", "\\Vert w''\\Vert_{p,W}", "NcHICosmoDEWSpline", "Weighted Lp norm of w'' (second derivative), x[0]=p, obj=weight spline W(alpha)", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_w2, 1, 1);
+  ncm_mset_func_list_register ("lp_w2_ls", "f_{w''}", "NcHICosmoDEWSpline", "Residuals of the Lp norm of w'', x[0]=p even; dimension from nc_hicosmo_de_wspline_d2_lp_residuals_len()", G_TYPE_NONE, _nc_hicosmo_de_wspline_lp_w2_ls, 1, 0);
+  ncm_mset_func_list_register ("wlp_w2_ls", "f_{w'',W}", "NcHICosmoDEWSpline", "Residuals of the weighted Lp norm of w'', x[0]=p even, obj=weight spline W(alpha); dimension from nc_hicosmo_de_wspline_d2_lp_residuals_len()", NCM_TYPE_SPLINE, _nc_hicosmo_de_wspline_wlp_w2_ls, 1, 0);
+}
+
+/**
+ * nc_hicosmo_de_wspline_set_use_as_drag:
+ * @wspline: a #NcHICosmoDEWSpline
+ * @use_as_drag: whether to use #NcHICosmoDEWSpline:asdrag
+ *
+ * Sets the source of the sound horizon at the drag epoch: the parameter
+ * #NcHICosmoDEWSpline:asdrag when @use_as_drag is TRUE, the computation of #NcDistance
+ * otherwise. Free #NcHICosmoDEWSpline:asdrag separately to fit it.
+ */
+void
+nc_hicosmo_de_wspline_set_use_as_drag (NcHICosmoDEWSpline *wspline, gboolean use_as_drag)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  if (self->use_as_drag != use_as_drag)
+  {
+    self->use_as_drag = use_as_drag;
+    ncm_model_state_mark_outdated (NCM_MODEL (wspline));
+  }
+}
+
+/**
+ * nc_hicosmo_de_wspline_get_use_as_drag:
+ * @wspline: a #NcHICosmoDEWSpline
+ *
+ * Returns: whether the sound horizon at the drag epoch is #NcHICosmoDEWSpline:asdrag.
+ */
+gboolean
+nc_hicosmo_de_wspline_get_use_as_drag (NcHICosmoDEWSpline *wspline)
+{
+  NcHICosmoDEWSplinePrivate * const self = wspline->priv;
+
+  return self->use_as_drag;
 }
 
