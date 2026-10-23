@@ -784,6 +784,10 @@ galaxy_tests = [
         'name': 'nc_galaxy_position_factor',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
     },
+    {
+        'name': 'nc_galaxy_shape_factor_moments_tilt',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
+    },
 ]
 
 # Cross-correlation tests

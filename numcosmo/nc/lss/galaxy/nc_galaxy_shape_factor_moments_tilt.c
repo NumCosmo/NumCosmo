@@ -503,7 +503,7 @@ _moments_tilt_nphi_for (const gdouble *lam, const gdouble sn2)
 static gboolean
 _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
                       gdouble *cphi, gdouble *s2phi, guint *nphi_io,
-                      const gdouble sn2, const gdouble *target,
+                      const gdouble sn2, const gdouble *target, const guint maxit,
                       gdouble *lam, gdouble *W)
 {
   gdouble E[3], C[9], F[3], step[3], trial[3], E2[3];
@@ -524,7 +524,7 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
    * resolution that re-solves if the first answer does not survive it. */
   for (pass = 0; pass < 2; pass++)
   {
-    for (it = 0; it < NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_MAXIT; it++)
+    for (it = 0; it < maxit; it++)
     {
       gdouble t = 1.0;
       guint h, a;
@@ -628,6 +628,21 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
           *nphi_io = nphi;
         }
       }
+    }
+
+    /* Left at the iteration cap: lam took a step after lnZ and fmax were
+     * computed, so both are recomputed at the lam that is returned. */
+    if (it == maxit)
+    {
+      guint a;
+
+      if (!_moments_tilt_moments (r, wr, nr, cphi, s2phi, nphi, sn2, lam, E, NULL, &lnZ))
+        return FALSE;  /* LCOV_EXCL_LINE */
+
+      fmax = 0.0;
+
+      for (a = 0; a < 3; a++)
+        fmax = MAX (fmax, fabs (E[a] - target[a]));
     }
 
     if (pass == 0)
@@ -834,6 +849,7 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltBuild
   gdouble *src_w;
   guint nr;
   guint nphi_cur;
+  guint newton_maxit;
 } NcGalaxyShapeFactorMomentsTiltBuild;
 
 /*
@@ -912,7 +928,7 @@ _moments_tilt_node_cb (gpointer user_data, const gdouble ghat, const NcGalaxySha
   _moments_tilt_start_from_memo (memo, below, ghat, lam);
   _moments_tilt_clamp_start (lam, b->sn2);
 
-  ok = _moments_tilt_newton (b->src_r, b->src_w, b->nr, b->cphi, b->s2phi, &b->nphi_cur, b->sn2, target, lam, &W);
+  ok = _moments_tilt_newton (b->src_r, b->src_w, b->nr, b->cphi, b->s2phi, &b->nphi_cur, b->sn2, target, b->newton_maxit, lam, &W);
 
   if (!ok)
   {
@@ -925,7 +941,7 @@ _moments_tilt_node_cb (gpointer user_data, const gdouble ghat, const NcGalaxySha
     lam[0] = v[0];
     lam[1] = v[1];
     lam[2] = v[2];
-    ok     = _moments_tilt_newton (b->src_r, b->src_w, b->nr, b->cphi, b->s2phi, &b->nphi_cur, b->sn2, target, lam, &W);
+    ok     = _moments_tilt_newton (b->src_r, b->src_w, b->nr, b->cphi, b->s2phi, &b->nphi_cur, b->sn2, target, b->newton_maxit, lam, &W);
 
     if (!ok)
     {
@@ -965,7 +981,7 @@ _moments_tilt_probe_cb (gpointer user_data, const gdouble *v, const gdouble *ctx
 static NcGalaxyShapeFactorMomentsTable *
 _moments_tilt_build_table (NcmSpectral *spectral, const NcGalaxyWLObsEllipConv ellip_conv, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
                            const gdouble sn, const guint n_panels, const gdouble top,
-                           const gdouble gate, const guint max_degree)
+                           const gdouble gate, const guint max_degree, const guint newton_maxit)
 {
   const guint nq    = NC_GALAXY_SHAPE_FACTOR_MOMENTS_MOMENT_NNODES;
   const guint nr    = NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_SRC_NR;
@@ -978,17 +994,18 @@ _moments_tilt_build_table (NcmSpectral *spectral, const NcGalaxyWLObsEllipConv e
 
   b.ellip_conv = ellip_conv;
 
-  b.pop      = pop;
-  b.pop_data = pop_data;
-  b.sn2      = sn * sn;
-  b.r_arr    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), MAX (nq, nr));
-  b.p_arr    = NULL;
-  b.cphi     = g_new0 (gdouble, NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NPHI_MAX);
-  b.s2phi    = g_new0 (gdouble, NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NPHI_MAX);
-  b.src_r    = g_new0 (gdouble, nr);
-  b.src_w    = g_new0 (gdouble, nr);
-  b.nr       = nr;
-  b.nphi_cur = 0;
+  b.pop          = pop;
+  b.pop_data     = pop_data;
+  b.sn2          = sn * sn;
+  b.r_arr        = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), MAX (nq, nr));
+  b.p_arr        = NULL;
+  b.cphi         = g_new0 (gdouble, NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NPHI_MAX);
+  b.s2phi        = g_new0 (gdouble, NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NPHI_MAX);
+  b.src_r        = g_new0 (gdouble, nr);
+  b.src_w        = g_new0 (gdouble, nr);
+  b.nr           = nr;
+  b.nphi_cur     = 0;
+  b.newton_maxit = newton_maxit;
 
   /* Source-disc geometry: shear-independent, so built once for the whole
    * table rather than per node. sum src_w = int P_pop dr = 1. */
@@ -1187,6 +1204,7 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
   NcGalaxyWLObsEllipConv ellip_conv;
   gdouble accuracy_gate;
   guint max_degree;
+  guint newton_maxit;
   guint64 pop_hash;
 
   /* (sn, e_rms, n_panels) -> table, valid for pop_hash == tab_cache_hash. */
@@ -1284,6 +1302,7 @@ enum
   PROP_0,
   PROP_ACCURACY_GATE,
   PROP_MAX_DEGREE,
+  PROP_NEWTON_MAXIT,
   PROP_RESTRICT_RANGE,
   PROP_STRICT_SOLVE,
   PROP_TABLES,
@@ -1320,9 +1339,9 @@ _moments_tilt_stamp (NcGalaxyShapeFactorMomentsTiltPrivate * const self)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   gchar *pop_desc   = ncm_serialize_to_string (ser, G_OBJECT (self->pop_ref), TRUE);
-  gchar *stamp      = g_strdup_printf ("%s|ellip-conv=%d|gate=%.17g|max-degree=%u|pop=%s",
+  gchar *stamp      = g_strdup_printf ("%s|ellip-conv=%d|gate=%.17g|max-degree=%u|newton-maxit=%u|pop=%s",
                                        NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_TABLES_FORMAT,
-                                       (gint) self->ellip_conv, self->accuracy_gate, self->max_degree, pop_desc);
+                                       (gint) self->ellip_conv, self->accuracy_gate, self->max_degree, self->newton_maxit, pop_desc);
 
   g_free (pop_desc);
   ncm_serialize_free (ser);
@@ -1353,6 +1372,7 @@ nc_galaxy_shape_factor_moments_tilt_init (NcGalaxyShapeFactorMomentsTilt *gsfmt)
 
   self->accuracy_gate = 1.0e-3;
   self->max_degree    = 16;
+  self->newton_maxit  = 0;
   self->pop_hash      = 0;
   self->tab_cache     = g_hash_table_new_full (&_nc_galaxy_shape_factor_moments_key_hash, &_nc_galaxy_shape_factor_moments_key_equal,
                                                &g_free, (GDestroyNotify) & _nc_galaxy_shape_factor_moments_table_unref);
@@ -1413,6 +1433,9 @@ _nc_galaxy_shape_factor_moments_tilt_set_property (GObject *object, guint prop_i
       break;
     case PROP_MAX_DEGREE:
       self->max_degree = g_value_get_uint (value);
+      break;
+    case PROP_NEWTON_MAXIT:
+      self->newton_maxit = g_value_get_uint (value);
       break;
     case PROP_RESTRICT_RANGE:
       self->restrict_range = g_value_get_boolean (value);
@@ -1500,6 +1523,9 @@ _nc_galaxy_shape_factor_moments_tilt_get_property (GObject *object, guint prop_i
       break;
     case PROP_MAX_DEGREE:
       g_value_set_uint (value, self->max_degree);
+      break;
+    case PROP_NEWTON_MAXIT:
+      g_value_set_uint (value, self->newton_maxit);
       break;
     case PROP_RESTRICT_RANGE:
       g_value_set_boolean (value, self->restrict_range);
@@ -1858,7 +1884,7 @@ _nc_galaxy_shape_factor_moments_tilt_acquire_table (NcGalaxyShapeFactorMomentsTi
     NcmSpectral **sp = ncm_memory_pool_get (self->spectral_pool);
 
     built = _moments_tilt_build_table (*sp, self->ellip_conv, pop, data->pop_data, sn, n_panels, top,
-                                       self->accuracy_gate, self->max_degree);
+                                       self->accuracy_gate, self->max_degree, self->newton_maxit);
     ncm_memory_pool_return (sp);
   }
 
@@ -2091,7 +2117,7 @@ _nc_galaxy_shape_factor_moments_tilt_get_desc (NcGalaxyShapeFactor *gsf)
   NcGalaxyShapeFactorMomentsTiltPrivate * const self =
     nc_galaxy_shape_factor_moments_tilt_get_instance_private (NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (gsf));
   gchar *parent_desc = NC_GALAXY_SHAPE_FACTOR_CLASS (nc_galaxy_shape_factor_moments_tilt_parent_class)->get_desc (gsf);
-  gchar *desc        = g_strdup_printf ("%s, gate=%g, max_degree=%u", parent_desc, self->accuracy_gate, self->max_degree);
+  gchar *desc        = g_strdup_printf ("%s, gate=%g, max_degree=%u, newton_maxit=%u", parent_desc, self->accuracy_gate, self->max_degree, self->newton_maxit);
 
   g_free (parent_desc);
 
@@ -2185,6 +2211,23 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
                                                       "Maximum local degree",
                                                       "Largest Chebyshev degree a single panel may reach",
                                                       4, 64, 16,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyShapeFactorMomentsTilt:newton-maxit:
+   *
+   * Largest number of Newton iterations per pass of the solve for the tilt
+   * parameters at one table node. A solve that reaches it returns the last
+   * iterate with its own log-normalization, and counts as converged only if
+   * its residual is below the acceptance threshold $10^{-8}$.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_NEWTON_MAXIT,
+                                   g_param_spec_uint ("newton-maxit",
+                                                      "Maximum Newton iterations",
+                                                      "Largest number of Newton iterations per solve pass at a table node",
+                                                      1, 1000, NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_MAXIT,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
   /**

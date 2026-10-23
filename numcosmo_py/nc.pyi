@@ -9829,6 +9829,8 @@ class GalaxyShapeFactorMomentsTilt(GalaxyShapeFactor):
         Target |ln Z| accuracy of the interpolant
       max-degree -> guint: Maximum local degree
         Largest Chebyshev degree a single panel may reach
+      newton-maxit -> guint: Maximum Newton iterations
+        Largest number of Newton iterations per solve pass at a table node
       restrict-range -> gboolean: Restrict to the reachable range
         Whether to build each table only over the reachable folded shear
       strict-solve -> gboolean: Strict solve
@@ -9849,6 +9851,7 @@ class GalaxyShapeFactorMomentsTilt(GalaxyShapeFactor):
     class Props:
         accuracy_gate: float
         max_degree: int
+        newton_maxit: int
         restrict_range: bool
         strict_solve: bool
         tables: NumCosmoMath.ObjArray
@@ -9860,6 +9863,7 @@ class GalaxyShapeFactorMomentsTilt(GalaxyShapeFactor):
         self,
         accuracy_gate: float = ...,
         max_degree: int = ...,
+        newton_maxit: int = ...,
         restrict_range: bool = ...,
         strict_solve: bool = ...,
         tables: NumCosmoMath.ObjArray = ...,
