@@ -911,7 +911,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->n_nodes         = 10;
   self->rule_n          = 5;
   self->auto_nodes      = FALSE;
-  self->node_reltol     = 1.0e-2;
+  self->node_reltol     = 1.0e-4;
   self->max_total_nodes = 2000;
   self->low_prob_count  = 0;
 
@@ -2465,17 +2465,21 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
    * Target relative tolerance for the per-galaxy fixed-node selection (see
    * #NcDataClusterWLFactor:auto-nodes).
    *
-   * The default, 1e-2, changes the posterior of an HSC cluster by less than
-   * 0.001 sigma on the MLE and 0.02 in -2lnL over +-4 sigma compared to
-   * 1e-6, at about a sixth of the cost per evaluation of 1e-4 (about 93
-   * against 559 redshift nodes per galaxy).
+   * The default is 1e-4. On the HSC-SSP PDR1 catalog HWL16a-002 (15011
+   * galaxies, pairs calibrated at $\log_{10} M = 14$), against a 320x7 grid
+   * over $\log_{10} M \in [13.4, 14.8]$: at 1e-4 the error in $-2\ln L$ is
+   * at most $2.4\times10^{-4}$ and the best-fit $\log_{10} M$ moves by
+   * $8\times10^{-7}$; at 1e-2 they are $3.5\times10^{-2}$ and
+   * $1.6\times10^{-4}$ (standard error $0.084$), at 2.7 times fewer
+   * redshift nodes (9 against 24 per galaxy, 5.5 against 11.2 ms per
+   * evaluation on one thread).
    */
   g_object_class_install_property (object_class,
                                    PROP_NODE_RELTOL,
                                    g_param_spec_double ("node-reltol",
                                                         NULL,
                                                         "Target relative tolerance for the per-galaxy fixed-node selection",
-                                                        0.0, G_MAXDOUBLE, 1.0e-2,
+                                                        0.0, G_MAXDOUBLE, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**

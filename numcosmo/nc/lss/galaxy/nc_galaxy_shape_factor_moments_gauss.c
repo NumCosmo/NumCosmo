@@ -44,6 +44,22 @@
  * closed form for both ellipticity conventions. This class evaluates the
  * Gaussian those moments define and does not solve for the tilt.
  *
+ * ## Accuracy against the exact marginal
+ *
+ * The Gaussian is an approximation to the exact lensed, noisy marginal;
+ * #NcGalaxyShapeFactorMomentsGauss:moment-tol bounds only the tabulation of
+ * the moments. Measured on the HSC-SSP PDR1 catalog HWL16a-002 (TRACE
+ * convention, Gaussian population with $\sigma = 0.3$), against
+ * #NcGalaxyShapeFactorQuad at $g = 0.03$ on 188 galaxies with
+ * $|\chi_\mathrm{obs}| < 1$: $|\Delta\ln P|$ up to $0.24$, median $0.023$.
+ * On the 14161 galaxies of that catalog with $|\chi_\mathrm{obs}| < 1$, with
+ * the same redshift nodes, the best-fit $\log_{10} M$ is $0.040$ dex below
+ * the one from #NcGalaxyShapeFactorSeriesLensed at order 12, $0.44$ of its
+ * standard error, and $-2\ln L$ is larger by about $210$ over the scan.
+ * For an exact marginal use #NcGalaxyShapeFactorSeriesLensed at order 12 or
+ * higher (Gauss and Beta populations) or #NcGalaxyShapeFactorQuad
+ * ($|\chi_\mathrm{obs}| < 1$ only).
+ *
  * ## Tables
  *
  * The noise variance $\sigma_\nu^2$ enters the second moments only

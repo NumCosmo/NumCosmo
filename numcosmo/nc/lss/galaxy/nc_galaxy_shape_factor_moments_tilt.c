@@ -57,6 +57,25 @@
  * map whose radius of convergence is $\hat g\simeq 0.62$, so it is
  * inaccurate at large shear.
  *
+ * ## Accuracy against the exact marginal
+ *
+ * The tilt is an approximation to the exact lensed, noisy marginal: it
+ * matches three moments, and #NcGalaxyShapeFactorMomentsTilt:accuracy-gate
+ * bounds only the interpolation of the solved tilt, not its distance from
+ * the exact marginal. At $g = 0$ the model is the exact zero-shear
+ * marginal. Measured on the HSC-SSP PDR1 catalog HWL16a-002 (TRACE
+ * convention, Gaussian population with $\sigma = 0.3$, the catalog's own
+ * ellipticities and noise), against #NcGalaxyShapeFactorQuad at $g = 0.03$
+ * on 188 galaxies with $|\chi_\mathrm{obs}| < 1$: $|\Delta\ln P|$ up to
+ * $0.26$, median $0.016$. On the 14161 galaxies of that catalog with
+ * $|\chi_\mathrm{obs}| < 1$, with the same redshift nodes, the best-fit
+ * $\log_{10} M$ is $0.030$ dex below the one from
+ * #NcGalaxyShapeFactorSeriesLensed at order 12 (which agrees with
+ * #NcGalaxyShapeFactorQuad to $6\times10^{-5}$ per galaxy), $0.32$ of its
+ * standard error. For an exact marginal use #NcGalaxyShapeFactorSeriesLensed
+ * at order 12 or higher (Gauss and Beta populations) or
+ * #NcGalaxyShapeFactorQuad ($|\chi_\mathrm{obs}| < 1$ only).
+ *
  * ## The mesh
  *
  * $\lambda_1$ has a boundary layer at $\hat g=1$ whose width scales as
