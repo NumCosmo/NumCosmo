@@ -79,6 +79,12 @@ PIP_TO_CONDA = {
     "matplotlib": "matplotlib-base",
 }
 
+# Distribution -> conda-forge packages that also provide it in the recipe. The
+# recipe uses astropy-base: astropy >=7 pulls h5py, which lags hdf5 migrations.
+RECIPE_ALTERNATIVES = {
+    "astropy": {"astropy-base"},
+}
+
 STDLIB = set(sys.stdlib_module_names) | {"__future__"}
 REQUIREMENT_NAME = re.compile(r"^\s*([A-Za-z0-9_.\-]+)")
 ENV_ENTRY = re.compile(r"^\s+-\s+([A-Za-z0-9_.\-]+)")
@@ -146,7 +152,7 @@ def check_feedstock() -> list[str]:
     return [
         f"recipe run requirements lack {conda_name(name)} (needed by {source})"
         for name, source in sorted(needed.items())
-        if conda_name(name) not in run
+        if not ({conda_name(name)} | RECIPE_ALTERNATIVES.get(name, set())) & run
     ]
 
 

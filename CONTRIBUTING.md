@@ -348,6 +348,8 @@ through `pytest.importorskip` needs only the `environment.yml` entry. When a
 module's import name differs from its distribution name (`gi` and
 `pygobject`), or its PyPI name from its conda-forge name (`matplotlib` and
 `matplotlib-base`), add it to `IMPORT_TO_DIST` or `PIP_TO_CONDA` in the script.
+When the recipe uses another package that provides a distribution (`astropy-base`
+for `astropy`), add it to `RECIPE_ALTERNATIVES`.
 
 Run `python .github/scripts/check_deps.py feedstock` before a release: the
 recipe is updated in its own repository, so the `lint` job cannot see it.
