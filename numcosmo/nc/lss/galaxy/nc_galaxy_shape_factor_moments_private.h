@@ -128,7 +128,7 @@ gboolean _nc_galaxy_shape_factor_moments_key_equal (gconstpointer a, gconstpoint
 NcmVector *_nc_galaxy_shape_factor_moments_table_to_vector (const NcGalaxyShapeFactorMomentsKey *key, const NcGalaxyShapeFactorMomentsTable *table);
 gboolean _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFactorMomentsKey *key, NcGalaxyShapeFactorMomentsTable **table_out);
 gdouble _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cosmo);
-gboolean _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src, const gboolean c_upper);
+gboolean _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src);
 
 /*
  * Panel index of @ghat, in O(1) and without a search: panel j covers

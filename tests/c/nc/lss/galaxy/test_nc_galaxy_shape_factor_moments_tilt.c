@@ -241,8 +241,8 @@ test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_cap (TestNcGalaxyShapeFact
 
 /* A galaxy that cannot reach the critical curve for any mass below the
  * log10MDelta upper bound gets a table cut below 1. Freeing a parameter the
- * bound does not cover (Omega_c) restores the full table; fixing it again
- * restores the cut; freeing log10MDelta keeps the cut. */
+ * bound does not cover (Omega_c, then cDelta) restores the full table;
+ * fixing it again restores the cut; freeing log10MDelta keeps the cut. */
 void
 test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata)
 {
@@ -251,10 +251,12 @@ test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params (TestNcGalax
   NcGalaxyShapeFactorData *data;
   NcGalaxyShapeFactorMomentsTilt *gsfmt;
   guint log10M_idx = 0;
+  guint cDelta_idx = 0;
   gdouble top_cut;
 
   ncm_model_param_set (NCM_MODEL (test->pop), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, MOMENTS_TILT_RANGE_SIGMA_POP);
   g_assert_true (ncm_model_param_index_from_name (hms, "log10MDelta", &log10M_idx, NULL));
+  g_assert_true (ncm_model_param_index_from_name (hms, "cDelta", &cDelta_idx, NULL));
   ncm_model_param_set_upper_bound (hms, log10M_idx, MOMENTS_TILT_RANGE_LOG10M_UPPER);
 
   gsfmt = _moments_tilt_build (test, MOMENTS_TILT_DEFAULT_MAXIT, TRUE, MOMENTS_TILT_RANGE_RA, &data);
@@ -277,6 +279,11 @@ test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params (TestNcGalax
   ncm_mset_prepare_fparam_map (test->mset);
   nc_galaxy_shape_factor_prepare (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset);
   g_assert_cmpfloat (_moments_tilt_top (gsfmt, test, data), ==, top_cut);
+
+  ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), cDelta_idx, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+  nc_galaxy_shape_factor_prepare (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset);
+  g_assert_cmpfloat (_moments_tilt_top (gsfmt, test, data), ==, 1.0);
 
   nc_galaxy_shape_factor_data_unref (data);
   nc_galaxy_shape_factor_moments_tilt_free (gsfmt);

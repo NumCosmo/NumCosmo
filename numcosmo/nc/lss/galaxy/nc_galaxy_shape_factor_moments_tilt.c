@@ -1217,14 +1217,12 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
   gboolean restrict_range;
 
   /* Cached by prepare() for the reachable-range bound: the models the bound
-   * needs, plus two private copies of the density profile held at the
-   * corners of the mass/concentration prior box. The copies exist because
-   * the bound is evaluated at those corners and the profile in the mset
-   * must not be disturbed to do it. */
+   * needs, plus a private copy of the density profile held at the upper
+   * bound of the mass. The copy exists because the bound is evaluated there
+   * and the profile in the mset must not be disturbed to do it. */
   NcHICosmo *cosmo;
   NcWLSurfaceMassDensity *smd;
-  NcHaloDensityProfile *dp_c_lo;
-  NcHaloDensityProfile *dp_c_hi;
+  NcHaloDensityProfile *dp_box;
   gdouble z_cl;
   gdouble delta_R;
   gboolean range_ready;
@@ -1246,7 +1244,7 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
 
   /* tab_cache is shared by every galaxy of the instance, and
    * nc_data_cluster_wl_factor_data_prepare() may build tables for several
-   * at once. dp_c_lo/dp_c_hi are shared too, and a density profile updates
+   * at once. dp_box is shared too, and a density profile updates
    * state lazily on use. Each gets its own lock; neither is held while a
    * table is built. */
   GMutex cache_lock;
@@ -1389,8 +1387,7 @@ nc_galaxy_shape_factor_moments_tilt_init (NcGalaxyShapeFactorMomentsTilt *gsfmt)
   self->restrict_range = TRUE;
   self->cosmo          = NULL;
   self->smd            = NULL;
-  self->dp_c_lo        = NULL;
-  self->dp_c_hi        = NULL;
+  self->dp_box         = NULL;
   self->z_cl           = 0.0;
   self->delta_R        = 0.0;
   self->range_ready    = FALSE;
@@ -1601,10 +1598,10 @@ _nc_galaxy_shape_factor_moments_tilt_data_init (NcGalaxyShapeFactor *gsf, NcmMSe
 
 /*
  * Whether the reachable-range bound of data_prepare() holds for the free
- * parameters of @mset. The bound varies log10MDelta and cDelta over their
- * bounds and the halo center over its box; the shape population only
- * changes the tables, which are keyed on it. Every other free parameter
- * (cosmology, z_cl, the other profile and mass-summary parameters, the
+ * parameters of @mset. The bound varies log10MDelta up to its upper bound
+ * and the halo center over its box; the shape population only changes the
+ * tables, which are keyed on it. Every other free parameter (cosmology,
+ * z_cl, cDelta and the other profile and mass-summary parameters, the
  * surface mass density, the redshift models) moves the shear or the
  * redshift support out of what the bound covered.
  */
@@ -1636,7 +1633,7 @@ _moments_tilt_range_holds (NcmMSet *mset)
       {
         const gchar *name = ncm_model_param_name (model, pid);
 
-        if ((g_strcmp0 (name, "log10MDelta") == 0) || (g_strcmp0 (name, "cDelta") == 0))
+        if (g_strcmp0 (name, "log10MDelta") == 0)
           continue;
       }
 
@@ -1736,12 +1733,11 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
 
     if ((cosmo != NULL) && (hp != NULL) && (smd != NULL) && (dp != NULL))
     {
-      if (self->dp_c_lo == NULL)
+      if (self->dp_box == NULL)
       {
         NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
-        self->dp_c_lo = NC_HALO_DENSITY_PROFILE (ncm_model_dup (NCM_MODEL (dp), ser));
-        self->dp_c_hi = NC_HALO_DENSITY_PROFILE (ncm_model_dup (NCM_MODEL (dp), ser));
+        self->dp_box = NC_HALO_DENSITY_PROFILE (ncm_model_dup (NCM_MODEL (dp), ser));
 
         ncm_serialize_free (ser);
       }
@@ -1757,8 +1753,7 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
       self->z_cl    = nc_halo_position_get_redshift (hp);
       self->delta_R = _nc_galaxy_shape_factor_moments_centre_delta (hp, cosmo);
 
-      self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_c_lo, dp, FALSE) &&
-                          _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_c_hi, dp, TRUE);
+      self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_box, dp);
     }
   }
 
@@ -1779,13 +1774,16 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
  * cross the tangential critical curve somewhere in the parameter box the
  * sampler explores. Most cannot, and those should not pay for the layer.
  *
- * The bound is rigorous and costs two shear evaluations. At fixed (R, z_s, c)
- * both kappa and gamma grow with M, so d/dM[gamma/(1-kappa)] > 0 while
- * kappa < 1; |g| grows with z_s; and ghat = min(|g|, 1/|g|) equals 1 exactly
- * where |g| = 1, so the maximum over the box is at a corner unless the path
- * crosses 1. Monotonicity in the concentration is NOT assumed -- outside the
- * scale radius a higher concentration can lower the shear -- hence both
- * concentration bounds and two calls rather than one.
+ * The bound holds at a fixed concentration and costs one convergence and
+ * one shear evaluation at the corner (R_min, z_sup, M_max). At fixed
+ * (R, z_s, c) both kappa and gamma grow with M and with z_s. If kappa < 1 at
+ * the corner, |g| = gamma / (1 - kappa) is largest there and ghat =
+ * min(|g|, 1/|g|) is bounded by min(|g|, 1). If kappa >= 1 at the corner,
+ * |g| passed through 1 at a smaller mass or redshift, so ghat reaches 1 and
+ * the full mesh is kept. The shear is not monotonic in the concentration
+ * (outside the scale radius a higher concentration lowers it), so the bound
+ * is not taken over a concentration range: a free cDelta disables the
+ * restriction (see _moments_tilt_range_holds).
  *
  * The inner radial cut is deliberately not used as a floor on R: no r_min
  * weighting is applied at fit time, so a galaxy selected at the fiducial
@@ -1837,19 +1835,20 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
   }
   else
   {
-    gdouble g_lo, g_hi;
+    gdouble kappa, g_t;
 
-    /* Two shear evaluations, cheap next to the table build that follows,
-     * serialized because the profile copies are shared across galaxies. */
+    /* Two evaluations, cheap next to the table build that follows,
+     * serialized because the profile copy is shared across galaxies. */
     g_mutex_lock (&self->range_lock);
-    g_lo = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_c_lo, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl));
-    g_hi = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_c_hi, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl));
+    kappa = nc_wl_surface_mass_density_convergence (self->smd, self->dp_box, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl);
+    g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_box, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl));
     g_mutex_unlock (&self->range_lock);
 
-    /* A non-finite shear (kappa = 1 on the nose) bounds nothing. */
-    if (gsl_finite (g_lo) && gsl_finite (g_hi))
+    /* kappa >= 1 at the corner: |g| crossed 1 inside the box. A non-finite
+     * value bounds nothing. */
+    if (gsl_finite (kappa) && gsl_finite (g_t) && (kappa < 1.0))
     {
-      const gdouble g_cal = fabs (1.0 + data->m) * MAX (g_lo, g_hi) + hypot (data->c1, data->c2);
+      const gdouble g_cal = fabs (1.0 + data->m) * g_t + hypot (data->c1, data->c2);
 
       ghat_max = MIN (g_cal, 1.0);
     }
@@ -2202,8 +2201,7 @@ _nc_galaxy_shape_factor_moments_tilt_dispose (GObject *object)
   g_clear_pointer (&self->tab_cache, g_hash_table_unref);
   nc_hicosmo_clear (&self->cosmo);
   nc_wl_surface_mass_density_clear (&self->smd);
-  nc_halo_density_profile_clear (&self->dp_c_lo);
-  nc_halo_density_profile_clear (&self->dp_c_hi);
+  nc_halo_density_profile_clear (&self->dp_box);
   nc_galaxy_shape_pop_clear (&self->pop_ref);
   g_clear_pointer (&self->pending_tables, ncm_obj_array_unref);
   g_clear_pointer (&self->tables_stamp, g_free);
@@ -2319,12 +2317,12 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    * halo center free over the whole field makes every galaxy reach
    * $\hat g = 1$, which costs nothing but saves nothing.
    *
-   * The bound covers the mass (log10MDelta), the concentration (cDelta),
-   * the halo center (ra, dec) and the shape population. If any other
-   * parameter is free in the model set at prepare time, such as a
-   * cosmological parameter, the halo redshift or a redshift-model
-   * parameter, the bound does not hold and every galaxy gets the full
-   * mesh, as with this property set to %FALSE.
+   * The bound covers the mass (log10MDelta), the halo center (ra, dec) and
+   * the shape population. If any other parameter is free in the model set
+   * at prepare time, such as the concentration, a cosmological parameter,
+   * the halo redshift or a redshift-model parameter, the bound does not
+   * hold and every galaxy gets the full mesh, as with this property set to
+   * %FALSE.
    *
    */
   g_object_class_install_property (object_class,

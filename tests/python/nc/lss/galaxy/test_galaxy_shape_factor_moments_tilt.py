@@ -223,16 +223,18 @@ def test_reachable_range_and_guard():
 def test_range_covers_shear_calibration():
     """The table is read at the calibrated shear (1 + m) g_t e^{2i phi} + c,
     so the reachable range must bound that, not the bare reduced shear. At
-    this radius the bare bound sits just under the first panel top, 0.5, and
-    a 10% multiplicative bias carries the shear past it."""
+    this radius and concentration the bare bound is 0.485, just under the
+    first panel top, 0.5, and a 10% multiplicative bias carries the shear
+    past it."""
     mset, pop = _build_mset(0.4658)
     hms = Nc.HaloDensityProfile.peek_mass_summary(mset.peek(Nc.HaloDensityProfile.id()))
     hms.param_set_desc("log10MDelta", {"upper-bound": 15.5})
+    hms.param_set_by_name("cDelta", 12.0)
     conv = Nc.GalaxyWLObsEllipConv.TRACE
 
     def layout(c1, c2, m):
         gsf = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
-        d, _keep = _make_data(gsf, mset, 0.1, ra=0.042)
+        d, _keep = _make_data(gsf, mset, 0.1, ra=0.026)
         gsf.data_set(d, 0.0, 0.0, 0.1, c1, c2, m, Nc.WLEllipticityFrame.CELESTIAL)
         gsf.prepare(mset)
         gsf.data_prepare(mset, d, 3.0)

@@ -500,12 +500,15 @@ _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cos
   return delta;
 }
 
-/* Sets @dp_copy's mass to the top of its prior box and its concentration to
- * @c_bound, leaving the profile in the mset untouched. Returns FALSE when
- * the parameters cannot be resolved by name, which is not an error: the
- * caller then skips the restriction and builds the full mesh. */
+/* Sets @dp_copy's mass to the top of its prior box and its concentration,
+ * when the mass summary has one, to the value in @dp_src, leaving the
+ * profile in the mset untouched. The shear is not monotonic in the
+ * concentration, so the bound is taken at a fixed concentration only; a
+ * free cDelta is excluded by _moments_tilt_range_holds. Returns FALSE when
+ * the mass cannot be resolved by name, which is not an error: the caller
+ * then skips the restriction and builds the full mesh. */
 gboolean
-_nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src, const gboolean c_upper)
+_nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src)
 {
   NcHaloMassSummary *hms_copy = nc_halo_density_profile_peek_mass_summary (dp_copy);
   NcHaloMassSummary *hms_src  = nc_halo_density_profile_peek_mass_summary (dp_src);
@@ -515,7 +518,7 @@ _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, N
   guint idx;
 
   /* Resolve by name: the parameter set differs per NcHaloMassSummary
-   * implementation, and several have no free concentration at all. */
+   * implementation, and several have no concentration parameter at all. */
   /* LCOV_EXCL_START: every NcHaloMassSummary in the library has log10MDelta. */
   if (!ncm_model_param_index_from_name (m_src, "log10MDelta", &idx, &error))
   {
@@ -529,11 +532,9 @@ _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, N
   ncm_model_param_set (m_copy, idx, ncm_model_param_get_upper_bound (m_src, idx));
 
   if (ncm_model_param_index_from_name (m_src, "cDelta", &idx, &error))
-    ncm_model_param_set (m_copy, idx, c_upper ? ncm_model_param_get_upper_bound (m_src, idx)
-                                              : ncm_model_param_get_lower_bound (m_src, idx));
+    ncm_model_param_set (m_copy, idx, ncm_model_param_get (m_src, idx));
   else
     g_clear_error (&error);
-
 
   return TRUE;
 }
