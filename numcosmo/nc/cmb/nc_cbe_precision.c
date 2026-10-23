@@ -282,7 +282,7 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", sBBN_file);
         g_free (sBBN_file);
 
-        sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "bbn"G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
+        sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "bbn"G_DIR_SEPARATOR_S "sBBN_2017.dat", TRUE);
         sBBN_file_len = strlen (sBBN_file);
         g_assert_cmpuint (sBBN_file_len, <, _FILENAMESIZE_);
       }
