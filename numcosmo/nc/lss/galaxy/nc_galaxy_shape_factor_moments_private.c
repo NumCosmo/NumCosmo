@@ -410,6 +410,10 @@ _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFa
   if ((n_panels < 1) || (n_panels > NC_GALAXY_SHAPE_FACTOR_MOMENTS_MAX_PANELS))
     return FALSE;
 
+  /* The degree loop below reads one entry per panel. */
+  if (ncm_vector_len (v) < NC_GALAXY_SHAPE_FACTOR_MOMENTS_TABLES_HEADER + n_panels)
+    return FALSE;
+
   /* The last panel starts at 1 - 2^-(n_panels - 1) and must have positive width. */
   if (!((ncm_vector_get (v, 4) > 1.0 - ldexp (1.0, -(gint) (n_panels - 1))) && (ncm_vector_get (v, 4) <= 1.0)))
     return FALSE;

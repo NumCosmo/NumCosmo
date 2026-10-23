@@ -666,10 +666,19 @@ def _stored_tables(conv):
     return mset, pop, tables.peek(0).dup_array(), src.props.tables_stamp, ref
 
 
+def _eight_panels(v, h):
+    c = list(v[: h + 1])
+    c[3] = 8.0
+    c[4] = 1.0
+    return c
+
+
 def _corruptions(v):
     """One malformed copy of a stored table per check the loader makes."""
     h, n_panels = 6, int(v[3])
     yield "short", v[:h]
+    # Header and one degree, with the panel count claiming eight panels.
+    yield "short-panels", _eight_panels(v, h)
     for k, bad in (
         (0, 0.0),
         (0, 5.0),

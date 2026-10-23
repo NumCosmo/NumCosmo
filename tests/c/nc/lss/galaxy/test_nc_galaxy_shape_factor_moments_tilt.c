@@ -62,6 +62,7 @@ void test_nc_galaxy_shape_factor_moments_tilt_free (TestNcGalaxyShapeFactorMomen
 void test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_default (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_cap (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_moments_tilt_tables_short_vector (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -85,6 +86,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_moments_tilt/restrict_range/free_params", TestNcGalaxyShapeFactorMomentsTilt, NULL,
               &test_nc_galaxy_shape_factor_moments_tilt_new,
               &test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params,
+              &test_nc_galaxy_shape_factor_moments_tilt_free);
+
+  g_test_add ("/nc/galaxy_shape_factor_moments_tilt/tables/short_vector", TestNcGalaxyShapeFactorMomentsTilt, NULL,
+              &test_nc_galaxy_shape_factor_moments_tilt_new,
+              &test_nc_galaxy_shape_factor_moments_tilt_tables_short_vector,
               &test_nc_galaxy_shape_factor_moments_tilt_free);
 
   g_test_run ();
@@ -286,6 +292,70 @@ test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params (TestNcGalax
   g_assert_cmpfloat (_moments_tilt_top (gsfmt, test, data), ==, 1.0);
 
   nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_shape_factor_moments_tilt_free (gsfmt);
+}
+
+/* A stored table whose vector holds the header and one entry while its
+ * panel-count field says eight is rejected without reading past the vector,
+ * and the table is rebuilt: the instance evaluates as a fresh one. */
+void
+test_nc_galaxy_shape_factor_moments_tilt_tables_short_vector (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata)
+{
+  NcGalaxyShapeFactorData *data_ref, *data;
+  NcGalaxyShapeFactorMomentsTilt *gsf_ref = _moments_tilt_build (test, MOMENTS_TILT_DEFAULT_MAXIT, FALSE, 0.0, &data_ref);
+  NcGalaxyShapeFactorMomentsTilt *gsfmt   = g_object_new (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_TILT,
+                                                          "ellip-conv", NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
+                                                          "restrict-range", FALSE,
+                                                          NULL);
+  NcmObjArray *tables = ncm_obj_array_new ();
+  NcmVector *v        = ncm_vector_new (7);
+  GPtrArray *data_array;
+  gchar *stamp = NULL;
+  gdouble ln_ref, ln_val;
+
+  ln_ref = nc_galaxy_shape_factor_eval_ln_marginal (NC_GALAXY_SHAPE_FACTOR (gsf_ref), test->pop, data_ref, 0.4, 0.0, 0.3, -0.2);
+  g_object_get (gsf_ref, "tables-stamp", &stamp, NULL);
+  g_assert_nonnull (stamp);
+
+  ncm_vector_set (v, 0, 4.0); /* n_comp */
+  ncm_vector_set (v, 1, 0.1); /* sn */
+  ncm_vector_set (v, 2, 0.0); /* e_rms */
+  ncm_vector_set (v, 3, 8.0); /* n_panels, more than the vector holds */
+  ncm_vector_set (v, 4, 1.0); /* top */
+  ncm_vector_set (v, 5, 0.0); /* n_failed */
+  ncm_vector_set (v, 6, 4.0); /* first degree */
+  ncm_obj_array_add (tables, G_OBJECT (v));
+
+  g_object_set (gsfmt, "tables-stamp", stamp, "tables", tables, NULL);
+
+  data_array = g_ptr_array_new ();
+  {
+    NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+    NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+
+    p_data->ra  = 0.0;
+    p_data->dec = 0.0;
+    data        = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, p_data, z_data);
+    nc_galaxy_shape_factor_data_set (NC_GALAXY_SHAPE_FACTOR (gsfmt), data, 0.0, 0.0, MOMENTS_TILT_STD_NOISE, 0.0, 0.0, 0.0,
+                                     NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+    g_ptr_array_add (data_array, data);
+    g_assert_true (nc_galaxy_shape_factor_prepare_data_array (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, data_array, TRUE, TRUE));
+    nc_galaxy_position_factor_data_unref (p_data);
+    nc_galaxy_redshift_factor_data_unref (z_data);
+  }
+
+  ln_val = nc_galaxy_shape_factor_eval_ln_marginal (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->pop, data, 0.4, 0.0, 0.3, -0.2);
+
+  g_assert_cmpuint (nc_galaxy_shape_factor_moments_tilt_get_table_build_count (gsfmt), ==, 1);
+  g_assert_cmpfloat (ln_val, ==, ln_ref);
+
+  g_free (stamp);
+  ncm_vector_free (v);
+  ncm_obj_array_unref (tables);
+  g_ptr_array_unref (data_array);
+  nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_shape_factor_data_unref (data_ref);
+  nc_galaxy_shape_factor_moments_tilt_free (gsf_ref);
   nc_galaxy_shape_factor_moments_tilt_free (gsfmt);
 }
 
