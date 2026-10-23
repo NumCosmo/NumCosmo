@@ -25,6 +25,7 @@ dependencies:
   - gsl>=2.8
   - hdf5
   - healpy
+  - ipython
   - jupyter
   - lcov
   - libflint
