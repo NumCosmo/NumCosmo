@@ -1798,10 +1798,11 @@ test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata
     g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 200, &repaired), ==, 0);
     g_assert_false (repaired);
 
+    /* The same dpotrf on another buffer: BLAS kernels may round differently by alignment. */
     for (i = 0; i < n; i++)
       for (j = 0; j < n; j++)
         if ((UL == 'U') ? (j >= i) : (j <= i))
-          g_assert_cmpfloat (ncm_matrix_get (dec, i, j), ==, ncm_matrix_get (ref, i, j));
+          ncm_assert_cmpdouble_e (ncm_matrix_get (dec, i, j), ==, ncm_matrix_get (ref, i, j), 1.0e-13, 1.0e-13);
 
     /* Indefinite by eps along one direction (an exactly singular matrix can still pass
      * dpotrf through rounding): refused without the repair, repaired with it, the input
