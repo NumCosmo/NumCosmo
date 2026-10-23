@@ -923,9 +923,9 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 
   self->calib_count = 0;
 
-  self->calib_n_nodes = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->calib_n_nodes = g_array_new (FALSE, TRUE, sizeof (gint));
 
-  self->calib_rule_n = g_array_new (FALSE, FALSE, sizeof (gint));
+  self->calib_rule_n = g_array_new (FALSE, TRUE, sizeof (gint));
 
   self->node_config = NULL;
 
@@ -977,6 +977,9 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
  */
 #define NC_DATA_CLUSTER_WL_FACTOR_NODE_CONFIG_FORMAT "cluster-wl-nodes-v1"
 
+/* Packs the per-galaxy pairs with the settings they were calibrated under
+ * (the fixed_nodes_*_seen values), not the current properties, which may
+ * have changed since the last prepare. */
 static NcmVarDict *
 _node_config_pack (NcDataClusterWLFactorPrivate *self)
 {
@@ -986,12 +989,12 @@ _node_config_pack (NcDataClusterWLFactorPrivate *self)
   ncm_var_dict_set_int (vd, "len", (gint) self->calib_n_nodes->len);
   ncm_var_dict_set_int_array (vd, "n-nodes", self->calib_n_nodes);
   ncm_var_dict_set_int_array (vd, "rule-n", self->calib_rule_n);
-  ncm_var_dict_set_double (vd, "z-cl", self->z_cl);
-  ncm_var_dict_set_boolean (vd, "auto-nodes", self->auto_nodes);
-  ncm_var_dict_set_double (vd, "node-reltol", self->node_reltol);
-  ncm_var_dict_set_int (vd, "max-total-nodes", (gint) self->max_total_nodes);
-  ncm_var_dict_set_int (vd, "n-nodes-global", (gint) self->n_nodes);
-  ncm_var_dict_set_int (vd, "rule-n-global", (gint) self->rule_n);
+  ncm_var_dict_set_double (vd, "z-cl", self->fixed_nodes_zcl);
+  ncm_var_dict_set_boolean (vd, "auto-nodes", self->fixed_nodes_auto_nodes_seen);
+  ncm_var_dict_set_double (vd, "node-reltol", self->fixed_nodes_node_reltol_seen);
+  ncm_var_dict_set_int (vd, "max-total-nodes", (gint) self->fixed_nodes_max_total_nodes_seen);
+  ncm_var_dict_set_int (vd, "n-nodes-global", (gint) self->fixed_nodes_n_nodes_seen);
+  ncm_var_dict_set_int (vd, "rule-n-global", (gint) self->fixed_nodes_rule_n_seen);
 
   return vd;
 }
@@ -2660,6 +2663,11 @@ nc_data_cluster_wl_factor_set_obs (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *
 
   if (obs != self->obs)
     _shared_obs_owner_clear (dcwlf, self->obs);
+
+  /* The calibrated pairs describe the previous catalog; the next prepare
+   * recalibrates, and until then the node-config getter reports none. */
+  g_array_set_size (self->calib_n_nodes, 0);
+  g_array_set_size (self->calib_rule_n, 0);
 
   nc_galaxy_wl_obs_clear (&self->obs);
   self->len           = nc_galaxy_wl_obs_len (obs);

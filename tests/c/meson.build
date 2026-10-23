@@ -679,6 +679,10 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
         'suite': ['c', 'omp'],
     },
+    {
+        'name': 'nc_data_cluster_wl_factor_node_config',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_node_config.c'],
+    },
 ]
 
 # Large-scale structure tests (halos, clusters, bias, transfer, power spectrum, window)
