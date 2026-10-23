@@ -22,14 +22,14 @@
 
 The class solves the tilt's moment equations exactly and interpolates the
 solution on a dyadic Chebyshev mesh in ghat = min(|g|, 1/|g|). These tests
-target what that construction promises:
+check:
 
 * the closed-form target moments, in both ellipticity conventions, including
   the facts that do not depend on the population (E[x] = ghat exactly under
-  TRACE_DET; the collapse to (1, 1 + sn^2, sn^2) at ghat = 1);
+  TRACE_DET; the values (1, 1 + sn^2, sn^2) at ghat = 1);
 * g = 0 returning the exact zero-shear marginal bitwise, which also makes
   NcGalaxyShapeFactorFixedQuad a valid pointwise reference there, and only
-  there -- at g > 0 the tilt family and the full convolution are different
+  there: at g > 0 the tilt family and the full convolution are different
   models;
 * invariance under g -> 1/g, at observed ellipticities with a cross
   component, in both conventions;
@@ -111,7 +111,7 @@ def test_construct(conv):
 
 @pytest.mark.parametrize("conv", _CONVS.values(), ids=_CONVS.keys())
 def test_boundary_moments(conv, mset_pop):
-    """At ghat = 1 both maps collapse every source to 1."""
+    """At ghat = 1 both maps send every source ellipticity to 1."""
     mset, pop = mset_pop
     gsf = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
     sn = 0.1
@@ -149,8 +149,8 @@ def test_zero_shear_is_exact(conv, mset_pop):
 
 @pytest.mark.parametrize("conv", _CONVS.values(), ids=_CONVS.keys())
 def test_duality(conv, mset_pop):
-    """P(g) = P(1/g), including a cross component, which the fold's
-    conjugation of the observed ellipticity flips."""
+    """P(g) = P(1/g), including a cross component, whose sign the fold's
+    conjugation of the observed ellipticity changes."""
     mset, pop = mset_pop
     gsf = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
     data, _keep = _make_data(gsf, mset, 0.1)
@@ -169,8 +169,9 @@ def _golden():
 
 @pytest.mark.parametrize("conv_name", _CONVS.keys())
 def test_matches_frozen_tilted_series(conv_name):
-    """Same object as the perturbative class it replaced, to its truncation
-    error -- the check that keeps the TRACE_DET derivation honest."""
+    """Agrees with the frozen values of the perturbative class it replaced,
+    to that class's truncation error. This is the independent check of the
+    TRACE_DET derivation."""
     golden = _golden()
     tol = golden["tol"]["tilted_series"][conv_name]
     conv = _CONVS[conv_name]
@@ -191,8 +192,8 @@ def test_matches_frozen_tilted_series(conv_name):
 
 def test_reachable_range_and_guard():
     """A galaxy that cannot reach the critical curve gets a truncated mesh,
-    equal to the full one where both are defined, and refuses to
-    extrapolate past it."""
+    equal to the full one where both are defined; past it eval_marginal
+    returns 0 and the range error is counted."""
     mset, pop = _build_mset(0.4658)
     hms = Nc.HaloDensityProfile.peek_mass_summary(mset.peek(Nc.HaloDensityProfile.id()))
     hms.param_set_desc("log10MDelta", {"upper-bound": 14.5})
@@ -224,7 +225,7 @@ def test_range_covers_shear_calibration():
     """The table is read at the calibrated shear (1 + m) g_t e^{2i phi} + c,
     so the reachable range must bound that, not the bare reduced shear. At
     this radius and concentration the bare bound is 0.485, just under the
-    first panel top, 0.5, and a 10% multiplicative bias carries the shear
+    first panel top, 0.5, and a 10% multiplicative bias moves the shear
     past it."""
     mset, pop = _build_mset(0.4658)
     hms = Nc.HaloDensityProfile.peek_mass_summary(mset.peek(Nc.HaloDensityProfile.id()))
@@ -275,12 +276,12 @@ def test_serialized_tables():
 
 def test_register_shared_anchors_tables_across_dups():
     """register_shared() anchors each built table's vector in the given
-    NcmSerialize, so it survives ser.reset(True) (autosave-only cleanup) and
+    NcmSerialize, so it survives ser.reset(True) (autosave-only cleanup), and
     a later dup through that same ser adopts the identical tables instead of
-    rebuilding them from a freshly-serialized copy -- the sequence
+    rebuilding them from a re-serialized copy. This is the sequence
     NcmFitESMCMC's per-worker-thread clone runs (dup, then reset(True), for
-    every worker), which for a large galaxy catalog otherwise makes
-    per-thread setup grow with the number of cached tables."""
+    every worker); without the anchor, per-thread setup for a large galaxy
+    catalog grows with the number of cached tables."""
     mset, pop = _build_mset(0.3)
     src = Nc.GalaxyShapeFactorMomentsTilt.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     src.prepare(mset)
@@ -324,10 +325,10 @@ def test_register_shared_anchors_tables_across_dups():
     assert dup2.get_table_build_count() == 0
 
 
-def test_without_register_shared_tables_are_rebuilt_but_still_correct():
-    """Negative control: skipping register_shared() still adopts the
-    (deep-copied) tables correctly -- proving correctness does not depend
-    on sharing -- only the no-rebuild guarantee above does."""
+def test_without_register_shared_tables_are_adopted_from_the_copy():
+    """Negative control: without register_shared() the dup still adopts the
+    deep-copied tables and evaluates to the same value. Correctness does not
+    depend on sharing; only the no-rebuild guarantee above does."""
     mset, pop = _build_mset(0.3)
     src = Nc.GalaxyShapeFactorMomentsTilt.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     src.prepare(mset)
@@ -369,8 +370,9 @@ def test_data_prefetch_is_inert(cls, mset_pop):
 
 
 def _polar_rule(sn, n_gl=40, n_phi=96):
-    """Polar product rule on the observed-ellipticity plane, fine across the
-    |chi| = 1 layer the noise smears, and out to 12 sigma_nu beyond it."""
+    """Polar product rule on the observed-ellipticity plane, with finer
+    panels across the layer around |chi| = 1 that the noise produces, and
+    out to 12 sigma_nu beyond it."""
     edges = np.concatenate(
         [
             np.linspace(0.0, 0.8, 5),
@@ -409,9 +411,10 @@ def test_tilt_is_exponential_family(conv, mset_pop):
 
 @pytest.mark.parametrize("conv", _CONVS.values(), ids=_CONVS.keys())
 def test_normalized_and_moment_matched(conv, mset_pop):
-    """The model integrates to one and reproduces the exact moments it was
-    matched to, both to far better than the accuracy gate; including the
-    part of the plane beyond |chi| = 1 that only the noise reaches."""
+    """The model integrates to one within a tenth of the accuracy gate and
+    reproduces the exact moments it was matched to within 1e-5, with the
+    integral covering the part of the plane beyond |chi| = 1 that only the
+    noise reaches."""
     mset, pop = mset_pop
     sn = 0.1
     gsf = Nc.GalaxyShapeFactorMomentsTilt(ellip_conv=conv, restrict_range=False)
@@ -484,8 +487,8 @@ def test_zero_shear_marginal_up_to_and_past_unit_circle(conv, mset_pop):
 
 
 def test_tighter_gate_refines_and_agrees(mset_pop):
-    """A tighter accuracy gate raises the local degrees and moves ln P by no
-    more than the looser gate allows."""
+    """A tighter accuracy gate raises the local degrees and changes ln P by
+    at most the looser gate."""
     mset, pop = mset_pop
     conv = Nc.GalaxyWLObsEllipConv.TRACE
     loose = Nc.GalaxyShapeFactorMomentsTilt(ellip_conv=conv, restrict_range=False)
@@ -520,9 +523,8 @@ def test_counters():
     assert gsf.get_table_build_count() == 0
 
 
-# A narrow population with little noise: the moment equations become too
-# stiff for the Newton solve at some nodes. Found by scanning (sigma_pop,
-# sigma_nu); TRACE_DET only.
+# (sigma_pop, sigma_nu) of a narrow population with little noise, TRACE_DET
+# only: the Newton solve of the moment equations fails at some nodes.
 _STIFF = (0.01, 0.01)
 
 
@@ -570,7 +572,7 @@ gsf.eval_ln_marginal(pop, data, 0.99, 0.0, 0.3, 0.1)
 
 def test_range_edges():
     """The reachable range at its edges: a foreground galaxy gets the
-    smallest mesh, a halo centre free enough to reach the galaxy the full
+    smallest mesh, a halo center free enough to reach the galaxy the full
     one, and without prepare() there is no bound at all."""
     mset, pop = _build_mset(0.3)
     hp = mset.peek(Nc.HaloPosition.id())
@@ -686,8 +688,8 @@ def _corruptions(v):
 
 
 def test_corrupted_tables_are_rebuilt():
-    """A stored table whose shape does not add up is rebuilt, not trusted;
-    a non-vector entry is skipped; a sound one is adopted."""
+    """A stored table with an inconsistent layout is rebuilt; a non-vector
+    entry is skipped; a consistent one is adopted."""
     conv = Nc.GalaxyWLObsEllipConv.TRACE_DET
     mset, pop, v, stamp, ref = _stored_tables(conv)
 
@@ -711,7 +713,7 @@ def test_corrupted_tables_are_rebuilt():
 def test_narrow_population_small_noise():
     """A narrow population seen with little noise: the moment solve needs its
     finest angular rule, yet every node converges, the tilt identity and the
-    g -> 1/g symmetry hold, and, given the degree it asks for (the default
+    g -> 1/g symmetry hold, and, with max_degree raised to 64 (the default
     cap of 16 is sized for real shape noise, see
     test_small_noise_realistic_population), the table is within its gate
     of a much tighter one."""
@@ -745,8 +747,8 @@ def test_narrow_population_small_noise():
 
 def _fine_polar_rule(sn, n_rad=40, n_phi=128):
     """As _polar_rule, resolving the sigma_nu-wide ridge at |chi| = 1 in both
-    radius and angle: at small noise and large shear the density crowds
-    against the unit circle around the shear axis."""
+    radius and angle: at small noise and large shear the density is
+    concentrated near the unit circle around the shear axis."""
     edges = np.unique(
         np.concatenate(
             [
@@ -779,7 +781,7 @@ def _fine_polar_rule(sn, n_rad=40, n_phi=128):
 
 
 def test_small_noise_realistic_population():
-    """Real catalogues reach sigma_nu ~ 0.01 with e_rms ~ 0.4: there the
+    """Real catalogs reach sigma_nu ~ 0.01 with e_rms ~ 0.4: there the
     default table is normalized and within its gate of a much tighter one,
     around the lensed mean where the likelihood is read."""
     mset, pop = _build_mset(0.3)

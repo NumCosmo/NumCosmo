@@ -117,9 +117,9 @@ _nc_galaxy_shape_factor_moments_exact_t_trace (NcGalaxyShapePop *pop, NcGalaxySh
     return;
   }
 
-  /* r = sin(psi)/delta, w = cos(psi): absorbs the sqrt singularity L and B
-   * develop at r -> 1 as delta -> 1, which is the whole reason g = 1 is
-   * reachable at all here. */
+  /* r = sin(psi)/delta, w = cos(psi): the substitution absorbs the
+   * square-root singularity the circle averages develop at r -> 1 as
+   * delta -> 1, so the integrand is finite at delta = 1 (g = 1). */
   psi_max = asin (MIN (d, 1.0));
 
   /* sin and cos of the same psi side by side, so the compiler can fuse
@@ -146,8 +146,8 @@ _nc_galaxy_shape_factor_moments_exact_t_trace (NcGalaxyShapePop *pop, NcGalaxySh
     const gdouble r  = r_data[i];
     const gdouble r2 = r * r;
 
-    /* measure in psi: int P F dr = (1/delta) int P F w dpsi, the 1/delta
-     * folded into the per-term factors below. */
+    /* Measure in psi: int P F dr = (1/delta) int P F w dpsi, with the
+     * 1/delta included in the per-term factors below. */
     const gdouble P   = p_data[i] * 0.5 * psi_max * _nc_galaxy_shape_factor_moments_gl64_w[i];
     const gdouble num = 1.0 + c2 - r2;
     const gdouble wc2 = w + c2;
@@ -190,8 +190,8 @@ _nc_galaxy_shape_factor_moments_exact_t_trace (NcGalaxyShapePop *pop, NcGalaxySh
  * The fold to ghat <= 1 is exact here too. With g real, the |g| > 1 map
  * (1 + g conj(eps))/(conj(eps) + g) is the |g| <= 1 map at 1/g applied to
  * conj(eps), and conjugation preserves an isotropic population's measure.
- * It conjugates the observed ellipticity, i.e. flips y, which no moment used
- * here can see.
+ * It conjugates the observed ellipticity, i.e. flips the sign of y, and
+ * every moment used here is even in y.
  */
 static void
 _nc_galaxy_shape_factor_moments_exact_t_trace_det (NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
@@ -260,7 +260,7 @@ void
 _nc_galaxy_shape_factor_moments_table_unref (NcGalaxyShapeFactorMomentsTable *table)
 {
   if (g_atomic_ref_count_dec (&table->ref_count))
-    g_free (table);  /* coef lives in the same block */
+    g_free (table);  /* coef is in the same block */
 }
 
 void
@@ -271,8 +271,8 @@ _nc_galaxy_shape_factor_moments_panel_bounds (const NcGalaxyShapeFactorMomentsTa
 }
 
 /* Ascending Chebyshev-Lobatto node k of degree d, mapped to [lo, hi]:
- * k = 0 is lo and k = d is hi. Under d -> 2d node k becomes node 2k, which
- * is what makes refinement reuse every solve already done. */
+ * k = 0 is lo and k = d is hi. Under d -> 2d node k becomes node 2k, so a
+ * refinement reuses every node already solved. */
 gdouble
 _nc_galaxy_shape_factor_moments_node (const gdouble lo, const gdouble hi, const guint d, const guint k)
 {
@@ -281,8 +281,9 @@ _nc_galaxy_shape_factor_moments_node (const gdouble lo, const gdouble hi, const 
   return lo + 0.5 * (hi - lo) * (t + 1.0);
 }
 
-/* The @n_comp series separately, for the validation entry points and for
- * the build's own check that a truncation did not move the nodes. */
+/* Evaluates the @n_comp series at @t, one Clenshaw recurrence each. Used by
+ * the validation entry points and by the build's check of a truncation at
+ * the panel's nodes. */
 void
 _nc_galaxy_shape_factor_moments_clenshaw_raw (const guint n_comp, const gdouble *coef, const guint d, const gdouble t, gdouble *out)
 {
@@ -308,9 +309,10 @@ _nc_galaxy_shape_factor_moments_clenshaw_raw (const guint n_comp, const gdouble 
 }
 
 /* Grows *@table to hold @n_coef coefficients right after the header and
- * points coef there: one allocation per table, so a table can be prefetched
- * as a single span and its coefficients are never a pointer hop away from
- * the header. Moves the block; nothing may hold the old pointer. */
+ * points coef there: one allocation per table, so a table is prefetched as
+ * a single span and reading the coefficients needs no second pointer
+ * dereference. The block may move; no other pointer to the old block may
+ * be kept. */
 static void
 _nc_galaxy_shape_factor_moments_table_alloc_coef (NcGalaxyShapeFactorMomentsTable **table, const guint n_coef)
 {
@@ -386,9 +388,10 @@ _nc_galaxy_shape_factor_moments_table_to_vector (const NcGalaxyShapeFactorMoment
   return v;
 }
 
-/* Rebuilds one table from its vector, rejecting anything whose shape does
- * not add up rather than trusting the length. Returns FALSE and leaves the
- * caller to rebuild. */
+/* Rebuilds one table from its vector. Returns FALSE, with no table, when a
+ * header field is out of range, a degree is outside [1, 255] or the vector
+ * length does not match the panel degrees; the caller then rebuilds the
+ * table. */
 gboolean
 _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFactorMomentsKey *key, NcGalaxyShapeFactorMomentsTable **table_out)
 {
@@ -407,7 +410,7 @@ _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFa
   if ((n_panels < 1) || (n_panels > NC_GALAXY_SHAPE_FACTOR_MOMENTS_MAX_PANELS))
     return FALSE;
 
-  /* The last panel starts at 1 - 2^-(n_panels - 1) and must have width. */
+  /* The last panel starts at 1 - 2^-(n_panels - 1) and must have positive width. */
   if (!((ncm_vector_get (v, 4) > 1.0 - ldexp (1.0, -(gint) (n_panels - 1))) && (ncm_vector_get (v, 4) <= 1.0)))
     return FALSE;
 
@@ -461,16 +464,17 @@ _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFa
 }
 
 /*
- * Largest displacement the halo centre's prior permits, as a physical
- * transverse length at the cluster redshift. Zero when the centre is fixed.
- * The corners are fed through nc_halo_position_projected_radius_from_ra_dec(),
- * which is the same mapping the pipeline uses for a galaxy's own radius, so
- * the cos(dec) factor and the angular-diameter conversion come with it.
+ * Largest displacement the halo center's prior permits, as a physical
+ * transverse length at the cluster redshift. Zero when the center is fixed.
+ * The four corners of the prior box are mapped through
+ * nc_halo_position_projected_radius_from_ra_dec(), the same mapping the
+ * pipeline uses for a galaxy's own radius, which applies the cos(dec)
+ * factor and the angular-diameter conversion.
  *
- * This is a bound over the PRIOR BOX, not over the posterior: walkers are
- * initialised across the whole box, so a bound taken from the current point
- * would not hold for the chain. Its being a property of the prior is also
- * what lets a table be built once and stay valid throughout.
+ * The bound is taken over the prior box, not at the current point: walkers
+ * are initialized across the whole box, and a bound that depends only on
+ * the prior lets a table be built once and remain valid for the whole
+ * chain.
  */
 gdouble
 _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cosmo)
@@ -556,16 +560,18 @@ _nc_galaxy_shape_factor_moments_gl64_init (void)
 /*
  * ---- Memo of solved nodes ----
  *
- * Every node the build evaluates, sorted by folded shear. It serves three
- * purposes. NcmSpectral asks for nodes in DESCENDING order within a panel,
- * while a continuation wants to climb from ghat = 0, so the builder solves
- * each panel's first level itself, ascending, and NcmSpectral's requests
- * then land in the memo. A refinement node always has solved neighbours on
- * both sides to start from. And the first node of panel j is the last node
- * of panel j-1, so it is found here rather than solved twice.
+ * Every node the build evaluates, sorted by folded shear. It has three uses.
+ * NcmSpectral requests the nodes of a panel in descending order, while a
+ * continuation starts at ghat = 0 and proceeds upward, so the builder
+ * solves each panel's first level itself, ascending, and NcmSpectral's
+ * requests are then served from the memo. A refinement node has solved
+ * neighbors on both sides, which the node callback may use as starting
+ * points. The first node of panel j is the last node of panel j-1, so it is
+ * found here instead of solved twice.
  *
  * Lookups use a tolerance, not bitwise equality: NcmSpectral computes its
- * cosines from its own table, and the nodes are far apart compared to it.
+ * cosines from its own table, and the nodes are far apart compared with the
+ * tolerance.
  */
 typedef struct _NcGalaxyShapeFactorMomentsMemoEntry
 {
@@ -698,17 +704,16 @@ _nc_galaxy_shape_factor_moments_scalar_f (gpointer user_data, gdouble x)
  * Per panel: solve the first level (degree 4) ascending, so the continuation
  * runs up the interval; let NcmSpectral refine until every component has
  * converged to @abstol, capped at @max_degree; then truncate to the smallest
- * degree whose tail, measured by @probe, is inside @trunc_tol, and confirm
- * that truncation at the panel's own nodes before accepting it.
+ * degree whose summed tail, measured by @probe, is below @trunc_tol, and
+ * confirm that truncation at the panel's own nodes before accepting it.
  *
  * NcmSpectral's convergence test is per component and compares successive
- * levels, so it measures the error BETWEEN nodes, which is where an
- * unresolved series goes wrong. The probe alone cannot be trusted with that:
- * the exact tilt satisfies dW/dghat = t . dlambda/dghat, so over a panel
- * where t barely moves, a probe weighted by t sees the coefficients of W
- * cancel those of t . lambda, and reports a small error for a series that is
- * not resolved. The probe is used only to trim what NcmSpectral has already
- * resolved.
+ * levels, so it measures the error between nodes, where an unresolved series
+ * has its error. The probe alone does not measure that: the exact tilt
+ * satisfies dW/dghat = t . dlambda/dghat, so over a panel where t is nearly
+ * constant the coefficients of W cancel those of t . lambda in a probe
+ * weighted by t, and the probe is small for a series that is not resolved.
+ * The probe is used only to truncate what NcmSpectral has already resolved.
  */
 NcGalaxyShapeFactorMomentsTable *
 _nc_galaxy_shape_factor_moments_build (NcmSpectral *spectral, const guint n_comp, const guint n_panels, const gdouble top,
@@ -803,8 +808,8 @@ _nc_galaxy_shape_factor_moments_build (NcmSpectral *spectral, const guint n_comp
 
     ncm_matrix_free (cm);
 
-    /* Truncate to the smallest degree whose remaining tail is inside the
-     * margin... */
+    /* Truncate to the smallest degree whose summed tail, measured by
+     * @probe, is below @trunc_tol. */
     {
       gdouble tail = 0.0;
 
@@ -822,10 +827,10 @@ _nc_galaxy_shape_factor_moments_build (NcmSpectral *spectral, const guint n_comp
       }
     }
 
-    /* ...then confirm it at the panel's own nodes rather than trusting the
-     * tail estimate. The full series reproduces every node exactly, so any
-     * disagreement there is the truncation's own, and the check solves
-     * nothing: the nodes are all in the memo. */
+    /* Confirm the truncation at the panel's own nodes. The full series
+     * reproduces every node exactly, so any difference there is due to the
+     * truncation. Every node is in the memo, so the check evaluates no new
+     * node. */
     while (m < d)
     {
       gdouble worst = 0.0;
@@ -849,8 +854,9 @@ _nc_galaxy_shape_factor_moments_build (NcmSpectral *spectral, const guint n_comp
       if (worst < trunc_tol)
         break;
 
-      /* LCOV_EXCL_START: safety net; no scanned population, noise or gate
-       * has had the tail estimate under-call the truncation error. */
+      /* LCOV_EXCL_START: reached only when the tail estimate is below the
+       * truncation error, which no tested population, noise or gate has
+       * produced. */
       m++;
       /* LCOV_EXCL_STOP */
     }

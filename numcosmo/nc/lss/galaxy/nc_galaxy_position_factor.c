@@ -44,8 +44,9 @@
  * parallel. A per-galaxy method may write only that galaxy's own data
  * fragment; shared instance state may change only in prepare(), which always
  * runs alone. Models reached through the #NcmMSet that update themselves
- * lazily on their first call after a parameter change are covered by the
- * orchestrator, which prepares one galaxy alone before starting the rest.
+ * lazily on their first call after a parameter change are handled by
+ * #NcDataClusterWLFactor, which prepares one galaxy alone before starting
+ * the rest.
  *
  */
 

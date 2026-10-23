@@ -362,13 +362,12 @@ _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp)
 }
 
 /* M_2k = <r^2k> = B(alpha+2k,beta)/B(alpha,beta) = prod_{j=0}^{2k-1}
- * (alpha+j)/(alpha+beta+j), the r=|chi_I| reparametrization's own moment
- * (note alpha+2k, not alpha+k -- see the class docs' x=r^2 vs r discussion).
- * The k=1 case reduces to nc_galaxy_shape_pop_beta_get_e_rms()'s own
- * alpha(alpha+1)/[(alpha+beta)(alpha+beta+1)]. Elementary product, no
- * gsl_sf_lnbeta() call needed for this integer-order case -- verified to
- * machine precision. Uses the already-resolved @data->ldata, matching
- * eval_p()'s own read contract. */
+ * (alpha+j)/(alpha+beta+j), the moment in r = |chi_I| (alpha+2k, not
+ * alpha+k: see the x = r^2 against r discussion in the class docs). For
+ * k=1 this is nc_galaxy_shape_pop_beta_get_e_rms()'s
+ * alpha(alpha+1)/[(alpha+beta)(alpha+beta+1)]. For integer k the product
+ * agrees with gsl_sf_lnbeta() to machine precision. Reads the resolved
+ * @data->ldata, as eval_p() does. */
 static gdouble
 _nc_galaxy_shape_pop_beta_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
 {

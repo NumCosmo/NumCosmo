@@ -328,7 +328,9 @@ def test_shared_dup_resample_matches_deep_copied_dup():
     """With the same seed, a dup sharing the obs and a dup with its own deep
     copy of it draw the same realization and give the same -2lnL."""
     dcwlf, dup_shared, mset = _shared_dup_setup()
-    dup_copy = duplicate_via_serialization(dcwlf, Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP))
+    dup_copy = duplicate_via_serialization(
+        dcwlf, Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    )
     assert dup_copy.peek_obs() is not dcwlf.peek_obs()
 
     dup_shared.resample(mset, Ncm.RNG.seeded_new(None, 99))
@@ -352,7 +354,9 @@ def test_shared_dups_keep_their_own_realization():
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     Ncm.Dataset.new_array([dcwlf]).register_shared(ser)
     dup_b = duplicate_via_serialization(dcwlf, ser)
-    dup_ref = duplicate_via_serialization(dcwlf, Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP))
+    dup_ref = duplicate_via_serialization(
+        dcwlf, Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    )
 
     dup_a.resample(mset, Ncm.RNG.seeded_new(None, 11))
     dup_b.resample(mset, Ncm.RNG.seeded_new(None, 22))
@@ -427,7 +431,9 @@ def _build_mc_fit(n_gal=60):
 def _fit_mc_best_fits(use_threads, n_real, seed, n_gal):
     """Sorted best-fit masses of an NcmFitMC from the model: with the default
     (arrival) row order only the set of values is comparable across runs."""
-    mc = Ncm.FitMC.new(_build_mc_fit(n_gal), Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.NONE)
+    mc = Ncm.FitMC.new(
+        _build_mc_fit(n_gal), Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.NONE
+    )
     mc.set_use_threads(use_threads)
     mc.set_rng(Ncm.RNG.seeded_new("mt19937", seed))
     mc.start_run()
@@ -456,7 +462,9 @@ def test_threaded_fit_mc_matches_serial():
     try:
         threaded = _fit_mc_best_fits(True, n_real, 2026, n_gal)
     finally:
-        Ncm.cfg_set_openmp_nthreads(int(os.environ.get("OMP_NUM_THREADS", os.cpu_count())))
+        Ncm.cfg_set_openmp_nthreads(
+            int(os.environ.get("OMP_NUM_THREADS", os.cpu_count()))
+        )
 
     assert_allclose(threaded, serial, rtol=0.0, atol=0.0)
 
@@ -622,7 +630,7 @@ _HEALTHY_GALAXIES = [
 # One galaxy whose observed ellipticity is flatly incompatible with any model
 # prediction at this noise level, so its marginal underflows to exactly 0 in
 # double precision: CUBATURE substitutes the NC_GALAXY_LOW_PROB fallback,
-# FIXED_NODES rescues it in log space.
+# FIXED_NODES re-evaluates it in log space.
 _UNDERFLOWING_GALAXY = (0.03, 0.02, 0.60, 0.030, 0.9, 0.0, 0.01)
 
 
@@ -692,12 +700,12 @@ def test_low_prob_count_zero_on_healthy_eval(integ_method):
 
 
 def test_low_prob_count_counts_underflowing_galaxies():
-    """When a galaxy's marginal really does evaluate non-positive -- here by
-    honest floating-point underflow, an ellipticity no model can produce at
-    this noise level -- CUBATURE, which integrates in linear space,
+    """When a galaxy's marginal really does evaluate non-positive (here by
+    floating-point underflow, an ellipticity no model can produce at
+    this noise level), CUBATURE, which integrates in linear space,
     substitutes the flat fallback AND counts it.
 
-    FIXED_NODES rescues the same galaxy in log space instead (see
+    FIXED_NODES re-evaluates the same galaxy in log space instead (see
     test_fixed_nodes_rescues_underflowing_galaxies). LNINT is excluded on
     purpose: it does not substitute, it skips the galaxy and stores NaN (see
     test_low_prob_count_resets_between_methods)."""
@@ -712,8 +720,9 @@ def test_low_prob_count_counts_underflowing_galaxies():
 
 def test_fixed_nodes_rescues_underflowing_galaxies():
     """The shape likelihood of that galaxy is exactly 0 at every node, but its
-    log is finite: FIXED_NODES redoes the galaxy in log space and returns the
-    same -2 ln P as the log-domain LNINT, without counting a substitution."""
+    log is finite: FIXED_NODES re-evaluates the galaxy in log space and
+    returns the same -2 ln P as the log-domain LNINT, without counting a
+    substitution."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
     fixed = dcwlf.m2lnL_val(mset)
@@ -728,9 +737,9 @@ def test_fixed_nodes_rescues_underflowing_galaxies():
 
 def test_fixed_nodes_counts_a_genuine_zero():
     """A galaxy outside the position footprint has a marginal that is exactly
-    zero, not an underflow: the log-space rescue finds a finite shape
-    likelihood but nothing to scale it by, so FIXED_NODES still substitutes
-    the fallback and counts it."""
+    zero, not an underflow: the log-space re-evaluation gives a finite shape
+    likelihood, but the position factor is zero outside the footprint, so
+    FIXED_NODES still substitutes the fallback and counts it."""
     outside = (0.5, 0.02, 0.60, 0.030, 0.1, 0.0, 0.1)  # footprint is |ra| <= 0.2
     dcwlf, mset, _, _ = _build_probe_setup([outside])
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
@@ -747,8 +756,8 @@ def test_low_prob_count_resets_between_methods():
     LNINT never substitutes NC_GALAXY_LOW_PROB, so its answer is legitimately
     zero -- but it must still clear the counter, or it would keep reporting a
     stale count left behind by an earlier FIXED_NODES/CUBATURE evaluation on
-    the same object. FIXED_NODES, which rescues this galaxy, must clear it
-    too."""
+    the same object. FIXED_NODES, which re-evaluates this galaxy in log
+    space, must clear it too."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
 
     for method in (

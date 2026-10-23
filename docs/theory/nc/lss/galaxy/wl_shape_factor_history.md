@@ -675,7 +675,7 @@ implying $\langle\epsilon_\mathrm{obs}\rangle=(1-M_2)g$. The map this
 codebase actually implements
 (`nc_wl_ellipticity_apply_shear_trace_det_ptr`/the inline
 `nc_wl_ellipticity_apply_shear_trace_det`, both in `nc_wl_ellipticity.h`) is
-`(e + g) / (1.0 + conj(g) * e)` — holomorphic in the intrinsic ellipticity,
+`(e + g) / (1.0 + conj(g) * e)`, holomorphic in the intrinsic ellipticity,
 with the conjugate on $g$, not on $\epsilon$. Under the class's own
 tangential gauge fix ($g$ real) the correct recursion is
 $c_j = n_j - \epsilon_s\,c_{j-1}$ instead, giving
@@ -696,22 +696,22 @@ moments corroborate the same isotropy
 recursion and none agree with the note's stated one.
 
 The TRACE recursion in the same note is correct as written and needed no
-change — checked the same way, against
+change; it was checked the same way, against
 `nc_wl_ellipticity_apply_shear_trace_ptr` and against
 `direct_estimate()`'s TRACE responsivity $R=1-\langle e_\mathrm{rms}^2\rangle$,
 which is exactly the corrected $m_1=2-M_2$.
 
 A second departure from the note: its own step ordering (§4.1) builds the
 coefficient tables "per population, in `prepare()`". The tables are
-rational functions of `(ellip-conv, trunc-order)` alone — the population
-enters only through radial moments contracted against them afterward — so
+rational functions of `(ellip-conv, trunc-order)` alone (the population
+enters only through radial moments contracted against them afterward), so
 building them in `prepare()` would repeat that $O(n^3)$ work once per
 galaxy per MCMC step under a per-galaxy population
 (`NcGalaxyShapePopGaussLocal`, whose `prepare()` runs per galaxy, unlike a
 global population's). They are built once in `constructed()` instead,
 alongside the convention dispatch; the per-galaxy contraction against that
 galaxy's moments still happens in `prepare()`'s usual cache-refresh slot,
-mirroring `NcGalaxyShapeFactorCGF`'s own `_peek_V`.
+as in `NcGalaxyShapeFactorCGF`'s own `_peek_V`.
 
 ## `NcGalaxyShapeFactorTiltedSeries`: three departures from its design notes (2026)
 
@@ -724,15 +724,15 @@ already ship" (`TILT_SERIES.md` §8). That production plan was not followed.
 Hardcoding a fixed symbolic form freezes both the truncation order (unlike
 `NcGalaxyShapeFactorMomentSeries`, whose target-series tables are already
 built to arbitrary order at construction time) and the population's
-functional form — reopening exactly the population-genericity question
-§6/§8 of the same note works hard to close. Instead, $\lambda(g)$ and $W(g)$
+functional form, which reopens the population-genericity question that
+§6/§8 of the same note close. Instead, $\lambda(g)$ and $W(g)$
 are solved via a noise-integrated generating function
 $Z(\lambda)=\mathbb{E}_{P_0}[e^{\lambda\cdot T}]$, expanded as a formal power
 series in $g$ using the population's own radial moments
-(`nc_galaxy_shape_pop_moment_2k()`) at each order — exact, reaches any
+(`nc_galaxy_shape_pop_moment_2k()`) at each order: this is exact, reaches any
 `trunc-order` with the same code, and works for every population the class
 docs claim to support (`NcGalaxyShapePopBeta` included), which a fixed
-symbolic reduction pinned to a specific population parametrisation could
+symbolic reduction for one population parametrization could
 not. See `nc_galaxy_shape_factor_tilted_series.c`'s own top-of-file and
 `_tilted_series_solve()`/`_tilted_series_compute_D()` comments for the
 derivation.
@@ -745,14 +745,14 @@ exactly, to six significant figures. The one number that did *not* match
 was the tex's printed Gaussian-core value at $|g|=0.25$, $N=9$:
 $m=\lambda_1 c_t = 0.595680$ (tex §4.2). Both the from-scratch Python
 re-derivation and this class's own evaluated $\lambda(g)$ agree with each
-other exactly on $m=0.595548$ — a $0.022\%$ discrepancy from the tex's
+other exactly on $m=0.595548$, a $0.022\%$ discrepancy from the tex's
 printed value, while $c_t=0.253087$ and $c_x=0.224074$ (the other two
 numbers in the same tex sentence) match exactly. Two independent
 implementations agreeing with each other and disagreeing with a single
 printed reference number is evidence the *reference* value is itself
 series/precision-limited (the tex's own §8 repeatedly documents comparably
 small residuals as "series-limited, not quadrature-limited" for adjacent
-quantities), not evidence of a bug here — recorded rather than chased
+quantities), not evidence of a bug here. It is recorded rather than chased
 further; see the test suite's module docstring
 (`tests/python/nc/lss/galaxy/test_galaxy_shape_factor_tilted_series.py`).
 
@@ -763,49 +763,49 @@ log-domain evaluation, and it is `eval_marginal`, not `eval_ln_marginal`,
 that the fixed-nodes pipeline path
 (`nc_galaxy_shape_factor_eval_at_nodes()`) actually calls
 (`nc_galaxy_shape_factor.c:1488`). So on the path the pipeline runs, this
-class is not cheaper than `MomentSeries`' Gaussian evaluation — the class
-docs state the honest operation count instead of repeating the note's claim.
+class is not cheaper than `MomentSeries`' Gaussian evaluation; the class
+docs state the operation count of that path instead of repeating the note's claim.
 
-**Third departure, a convention trap rather than a design choice.**
+**Third departure, a convention mismatch rather than a design choice.**
 `tilt_series.tex`'s closed form for $\ln P_0$ (Remark 3.5) uses $P_\text{pop}$
 as the population's raw 2-D area density. NumCosmo's own
-`nc_galaxy_shape_pop_eval_p()` is instead the *radial marginal* — the disc
-measure $2\pi r$ already folded in (`nc_galaxy_shape_pop.h`'s own doc
+`nc_galaxy_shape_pop_eval_p()` is instead the *radial marginal*, with the disc
+measure $2\pi r$ already included (`nc_galaxy_shape_pop.h`'s own doc
 comment). Substituting NumCosmo's convention into the tex's polar-coordinate
 convolution derivation changes which exponential form is stable to evaluate:
 the raw form needs $I_0(Rr/\sigma_\nu^2)$ against $\exp[-(R^2+r^2)/2\sigma_\nu^2]$,
 while NumCosmo's convention (after the $2\pi r$ cancels against the r-Jacobian
 already in the tex's own integral) is best evaluated as
-$I_{0,\text{scaled}}(Rr/\sigma_\nu^2)$ against $\exp[-(R-r)^2/2\sigma_\nu^2]$ —
-the same numerical-stability trick tex Remark 3.4 already flags for the
+$I_{0,\text{scaled}}(Rr/\sigma_\nu^2)$ against $\exp[-(R-r)^2/2\sigma_\nu^2]$,
+the same numerical-stability form tex Remark 3.4 already states for the
 Marcum-$Q$ closed form, but it has to be re-derived from scratch for the
 radial-marginal convention rather than copied, because the prefactor and the
 exponent both change, not just the prefactor. Getting this wrong would not
 error: it silently returns $\ln P_0$ for the wrong radial convention.
 Verified against an independent from-scratch trapezoid reference to six
-decimal digits across the full catalogue $\sigma_\nu$ range, including the
+decimal digits across the full catalog $\sigma_\nu$ range, including the
 sharp small-$\sigma_\nu$, near-disc-boundary corner where
 `NcGalaxyShapeFactorFixedQuad`'s own default resolution (`n-radial=n-angular=21`)
-turns out to be under-converged (confirmed by re-running `FixedQuad` at much
-higher resolution and watching it converge toward this class's answer).
+is under-converged (confirmed by re-running `FixedQuad` at much
+higher resolution, which converges toward this class's answer).
 
-## `NcGalaxyShapeFactorTiltedSeries`: default `trunc-order` lowered to 5, exact-truncation and cache-split optimisations (2026)
+## `NcGalaxyShapeFactorTiltedSeries`: default `trunc-order` lowered to 5, exact-truncation and cache-split optimizations (2026)
 
 An externally measured bias comparison across `trunc-order` $\in\{5,7,9\}$
-(medians and the hardest small-$\sigma_\nu$ corner of the catalogue box)
+(medians and the hardest small-$\sigma_\nu$ corner of the catalog box)
 found the remaining calibration bias numerically negligible at every one of
-these orders once the solve is correct — $N=7$ within $0.005\%$ of $N=9$ on
+these orders once the solve is correct: $N=7$ within $0.005\%$ of $N=9$ on
 calibration and $0.004\%$ on bias everywhere including the hardest corner,
 and even $N=5$ at only $+0.061\%$ bias in that corner. Since the class's own
 default was originally set an order of magnitude above
 `NcGalaxyShapeFactorMomentSeries`' default of 5 purely on a *convergence
 speed* argument, not a measured-bias one (see the departure recorded above),
-and the measured bias shows $N$ buying back only a fraction of a percent in
+and the measured bias changes by only a fraction of a percent with $N$ in
 the worst cell, the default was lowered to match `MomentSeries`' own: **5**.
 `trunc-order` remains a `CONSTRUCT_ONLY` property, so any caller needing the
-old behaviour can still request `trunc-order=9` explicitly.
+old behavior can still request `trunc-order=9` explicitly.
 
-Two optimisations landed alongside the default change:
+Two optimizations landed alongside the default change:
 
 - **Exact order-truncation in the solve.** At order $p$ in
   `_tilted_series_solve()`'s order-by-order loop, only the $g^p$ coefficient
@@ -818,17 +818,17 @@ Two optimisations landed alongside the default change:
   the *current* order $p$, which is exact, not approximate (only the final
   post-loop pass, which reads off the complete $W(g)$, still runs at the
   full $N$). Measured setup cost after this change: 94 $\mu$s/galaxy at
-  $N=5$ (was 159 $\mu$s pre-optimisation, externally measured), 226 $\mu$s at
-  $N=7$, 506 $\mu$s at $N=9$ (was 1246 $\mu$s) — combined with the default
+  $N=5$ (was 159 $\mu$s pre-optimization, externally measured), 226 $\mu$s at
+  $N=7$, 506 $\mu$s at $N=9$ (was 1246 $\mu$s); combined with the default
   change, a 41k-galaxy cluster's one-time setup cost drops from roughly 52 s
-  to well under 4 s.
+  to under 4 s.
 - **Split per-galaxy cache.** `NcGalaxyShapeFactorTiltedSeriesLData`
   previously invalidated $\lambda(g)$, $W(g)$ *and* $\ln P_0$ together on any
   change to `(pop_hash, sn, R)`, even though $\lambda(g)$/$W(g)$ never depend
   on $R$ (`_tilted_series_solve()`'s inputs carry no $R$ dependence at all).
-  The cache is now two independently validated groups —
-  $(\lambda,W,\text{lam\_bound})$ keyed on `(pop_hash, sn)`, and $\ln P_0$
-  keyed on `(pop_hash, sn, R^2)` — so an $R$-only change at fixed `sn` no
+  The cache is now two independently validated groups,
+  $(\lambda,W,\text{lam\_bound})$ keyed on `(pop_hash, sn)` and $\ln P_0$
+  keyed on `(pop_hash, sn, R^2)`, so an $R$-only change at fixed `sn` no
   longer re-runs the $3\times3$-solve-per-order loop. This is a
   correctness-preserving refactor with no effect on the fixed-nodes pipeline
   path (where $R$ is constant per galaxy for the life of a fit); its benefit
@@ -836,22 +836,22 @@ Two optimisations landed alongside the default change:
   `nc_galaxy_shape_factor_gen()` sweeping `epsilon_obs` at fixed
   `std_noise`).
 
-A third proposal from the same external review — replacing the
+A third proposal from the same external review, replacing the
 order-by-order solve with Newton's method on the formal power series, using
 the true series-valued Jacobian $\nabla^2W(\lambda(g))=\mathrm{Cov}_\lambda(T)$
 to double the number of correct orders per pass ($\approx\log_2 N$ passes
-instead of $N$) — was *not* implemented. The review itself only recommended
+instead of $N$), was *not* implemented. The review itself only recommended
 it "if (1) and (2) aren't enough", conditioned on the old $N=9$ default;
 under the new $N=5$ default, order-by-order truncated to the working order
 is already a handful of cheap linear passes ($p=1..5$), while Newton would
 need a doubled-order Jacobian series (new quartic-moment machinery: $D_{3,0}$,
 $D_{4,0}$, $D_{0,4}$, $D_{1,2}$, $D_{2,2}$) and a $3\times3$ series-matrix
 inversion for a routine this class already validates against the tex's own
-published $\lambda^{(1..5)}$ table to six figures — not a trade worth making
+published $\lambda^{(1..5)}$ table to six figures: not a trade worth making
 at this order for savings the measurement above shows are already small.
 
-One low-order correctness fix surfaced by testing `trunc-order` down to 1
-(not just the default) rather than by the optimisation work itself:
+One low-order correctness fix was found by testing `trunc-order` down to 1
+(not just the default) rather than by the optimization work itself:
 `_tilted_series_solve()` unconditionally reads `M[1]` and `M[2]` to build the
 closed-form $V=\mathrm{Cov}_{P_0}(T)$ regardless of `trunc-order`, but
 `n_M = MAX(n_moments, trunc-order/2 + 2)` could give `n_M=2` at
@@ -875,9 +875,9 @@ Ordering in $\delta$ alone is *inadmissible*, not merely less accurate. The
 discarded tail of $C_t$ is positive term by term, so every truncation
 undershoots it; and the exact $C_t$ vanishes at $\delta=1$, where the shear
 map sends the whole unit disc to the single point $\chi=1$ and the marginal
-is exactly the noise kernel centred on $(1,0)$. The undershoot therefore
-drives $C_t$ negative near the critical curve, and a target with $C_t<0$ is
-not the moment vector of any distribution — the moment conditions then have
+is exactly the noise kernel centered on $(1,0)$. The undershoot therefore
+makes $C_t$ negative near the critical curve, and a target with $C_t<0$ is
+not the moment vector of any distribution: the moment conditions then have
 no solution at all, at any order.
 
 The individual omitted coefficients are unknown; their *sum* is not, because
@@ -898,8 +898,8 @@ ellipticity.
 
 ### The change of basis is folded into the shared tables
 
-The correction lands two orders above the truncation, so `trunc-order` keeps
-its meaning — the number of true moment orders — and a derived
+The correction is placed two orders above the truncation, so `trunc-order` keeps
+its meaning (the number of true moment orders) and a derived
 `solve_order = trunc_order + 2` carries the endpoint terms.
 
 `MomentSeries`' shared table build produces $g$-coefficients. Both that
@@ -910,42 +910,42 @@ $g(\delta)$ is odd with no constant term and the row index is the same
 function of the exponent in both variables. Two facts make this exact:
 $\delta$-coefficient $p$ of $f(g(\delta))$ depends only on $g$-coefficients
 $\le p$, so rows $0..N$ come out as the exact $\delta$-coefficients; and the
-tables stop at $N$, so the two correction slots land in an all-zero region.
+tables stop at $N$, so the two correction slots fall in an all-zero region.
 
 ### What was measured
 
 Against `NcGalaxyShapeFactorFixedQuad` at a resolution verified converged
 (identical through $1600\times1024$):
 
-- **Accuracy is a trade, not a strict win.** Over a 36-point box (two
+- **Accuracy improves in some cases and worsens in others.** Over a 36-point box (two
   populations $\times$ three noise levels $\times$ six shears, worst case over
   four observed ellipticities) the $\delta$ ordering is better in 23 cases and
   worse in 13. The gains are at large shear on narrow populations (up to
   $6\times$); the losses are on the wide population at large noise and large
   shear (up to $1.5\times$ worse).
-- **At the critical curve it wins everywhere.** Against the exact
+- **At the critical curve it is closer in every case.** Against the exact
   $\mathcal{N}(\chi;(1,0),\sigma_\nu^2)$ limit, over twelve
   (population, $\sigma_\nu$, order) combinations, the new ordering is closer
   in all twelve, by $1.4\times$ to $21\times$. The old ordering's error there
   often *grew* with order; the new one's does not.
 - **Both orderings converge to the same limit.** At $|g|=0.25$ the recovered
   Gaussian core agrees to nine significant figures between the two schemes at
-  high order, from opposite sides — which is what licenses treating those
+  high order, from opposite sides, which is what justifies treating those
   numbers as a reference rather than a recording of current output. The old
   ordering converges *faster* at that moderate shear.
 - **Cost rises $1.29\times$** on the cold per-galaxy path at the default
   order ($5.6\to7.2\,\mu$s), and $1.16$–$1.46\times$ over trunc-order 3–15.
   The new class at trunc-order $N$ costs what the old one cost at $N+2$,
-  which is the expected price of the two extra solve orders and nothing more.
+  which is the expected cost of the two extra solve orders.
 
-- **The order-growth pathology survives, much reduced.** On the narrow,
+- **The growth of the error with order remains, much reduced.** On the narrow,
   low-noise corner ($\sigma_e=0.3$, $\sigma_\nu=0.05$,
   $|\chi_\mathrm{obs}|=0.8$, swept in $|g|$) the peak excess over the exact
-  ceiling still grows with order — $+0.7$, $+2.4$, $+4.1$, $+5.8$ nats at
-  orders 5, 9, 15, 21 — so the standing advice that raising `trunc-order`
-  can hurt near $|g|\simeq1$ still holds. Under the old ordering the same
-  sweep gave $+3.1$ nats at order 5 and then tripped the guard outright,
-  57 times at order 9 rising to 146 at order 21; the new ordering trips it
+  ceiling still grows with order, $+0.7$, $+2.4$, $+4.1$, $+5.8$ nats at
+  orders 5, 9, 15, 21, so the standing advice that raising `trunc-order`
+  can increase the error near $|g|\simeq1$ still holds. Under the old ordering the same
+  sweep gave $+3.1$ nats at order 5 and then triggered the guard
+  57 times at order 9 rising to 146 at order 21; the new ordering triggers it
   zero times at every order tested.
 
 ### The ceiling on what this ordering can do
@@ -953,20 +953,20 @@ Against `NcGalaxyShapeFactorFixedQuad` at a resolution verified converged
 Worth recording next to the gains, because it bounds them. $\delta$ is
 stationary in $\hat g=\min(g,1/g)$ at $\hat g=1$, so the inverse
 $\hat g(\delta)=(1-\sqrt{1-\delta^2})/\delta$ has a square-root branch
-point at $\delta=1$ — numerically, $\hat g \simeq 1-\sqrt2\sqrt{1-\delta}$
+point at $\delta=1$; numerically, $\hat g \simeq 1-\sqrt2\sqrt{1-\delta}$
 there. $\lambda$ is analytic in $\hat g$ and therefore *not* analytic in
 $\delta$, so its $\delta$-coefficients decay only algebraically near the
 critical curve no matter how many are kept.
 
-The endpoint correction pins the *value* at $\delta=1$, which is what
-restores admissibility, but it cannot repair the approach to it. That is the
+The endpoint correction fixes the *value* at $\delta=1$, which is what
+restores admissibility, but it does not change the approach to it. That is the
 structural reason the gains above concentrate at the endpoint itself while
 moderate-shear accuracy slightly regresses, and the reason raising
-`trunc-order` buys little near $|g|\simeq1$. Escaping it needs an exact,
-non-perturbative solve interpolated in $\hat g$ — a different construction,
+`trunc-order` changes little near $|g|\simeq1$. Removing it needs an exact,
+non-perturbative solve interpolated in $\hat g$: a different construction,
 not a deeper truncation of this one.
 
-### The one regression, and it is real
+### The one regression
 
 With `TRACE_DET`, a narrow population ($\sigma_e=0.3$), the **default**
 trunc-order 5, and noise comparable to the population width
@@ -976,12 +976,12 @@ ordering never reached that region, because $s_K$ caps its argument near
 $0.69$ and the series is never evaluated close to $\delta=1$.
 
 This is a limitation of the perturbative solve, not of the correction or of
-the implementation: pinning the target at $\delta=1$ fixes the *target*, and
+the implementation: the endpoint correction fixes the *target* value at $\delta=1$, and
 when the retained partial sum is still far from the endpoint the single
 correction coefficient is large, which distorts the target just below
 $\delta=1$. The truncation error was checked to fall like $g^{N+1}$ for both
 conventions and all orders tested, so the retained $\delta$-coefficients are
-exact as claimed and the change of basis is not implicated. Raising
+exact as claimed and the change of basis is not the cause. Raising
 trunc-order to 9 removes the region entirely. `TRACE` is unaffected across
 the same box.
 
@@ -990,7 +990,7 @@ the same box.
 The truncated-series classes `NcGalaxyShapeFactorMomentSeries` and
 `NcGalaxyShapeFactorTiltedSeries` were removed. Both approximated the same
 exact moments of the lensed, noisy marginal by a series in the shear; the
-replacements compute those moments in closed form and use them directly —
+replacements compute those moments in closed form and use them directly:
 `MomentsGauss` for a matched Gaussian, `MomentsTilt` for the exponential
 tilt, now solved exactly rather than order by order. Before the removal, the
 old classes' values at $g\le0.2$ were frozen in
@@ -1011,19 +1011,19 @@ $4.6\times10^{-4}$ for $\sigma_\nu$ from 0.008 to 0.31, with zero Newton
 failures, and the interpolation error against a fully refined table stays
 below $8\times10^{-5}$ in $\ln P$.
 
-Several departures from the design notes were forced by measurement:
+Several departures from the design notes followed from measurement:
 
 - **The degree criterion.** The notes' signed tail, weighted by the target
-  moments at the panel midpoint, measures the mass error. It cannot decide
-  resolution on its own: the exact solve satisfies
+  moments at the panel midpoint, measures the mass error. It cannot determine
+  the resolution on its own: the exact solve satisfies
   $\mathrm dW/\mathrm d\hat g=t\cdot\mathrm d\lambda/\mathrm d\hat g$, so
   where $t$ barely varies across a panel the coefficients of $W$ cancel those
   of $t\cdot\lambda$ term by term. It stopped one panel at degree 7 whose
-  worst $|\ln Z|$ was 9.3 nats. Resolution is now decided per component,
-  comparing successive refinement levels, and the signed tail — taken over
-  four representative statistic vectors, not one — only trims what is
+  worst $|\ln Z|$ was 9.3 nats. Resolution is now determined per component,
+  comparing successive refinement levels, and the signed tail (taken over
+  four representative statistic vectors, not one) only truncates what is
   already resolved, with the truncation confirmed at the panel's own nodes.
-- **The Newton acceptance** sat on the attainable residual floor (1.3 to
+- **The Newton acceptance** was at the attainable residual floor (1.3 to
   $2.4\times10^{-9}$, flat in $|\lambda|$ from 284 to 7900), so converged
   solves were reported as failures; it is $10^{-8}$. Stopping once the
   residual is both acceptable and no longer improving cut builds 10 to 15
@@ -1033,8 +1033,8 @@ Several departures from the design notes were forced by measurement:
 
 The panels are built by `NcmSpectral`, whose Lobatto nodes, nested doubling
 and DCT match the construction above to roundoff. It visits nodes in
-descending order within a panel while the continuation needs to climb from
-$\hat g=0$, so a memo of solved nodes is primed with each panel's first
+descending order within a panel while the continuation needs to run from
+$\hat g=0$ upward, so a memo of solved nodes is filled first with each panel's first
 level in ascending order; this also shares each panel's first node with the
 previous panel's last. At steady state the build is as fast as the
 hand-written one or faster.
@@ -1043,25 +1043,23 @@ hand-written one or faster.
 
 The first version computed the TRACE moments under both conventions: the
 target used $\delta=2\hat g/(1+\hat g^2)$, which is the $\chi$ map. The
-normalization check could not see it. For $\epsilon$ the map is the disc
+normalization check could not detect it. For $\epsilon$ the map is the disc
 automorphism $w=(z+\hat g)/(1+\hat g z)$, so by the mean-value property
 $\langle w\rangle=\hat g$ and $\langle w^2\rangle=\hat g^2$ over every
 source circle, and the automorphism identity with the Poisson integral gives
 $\langle|w|^2\rangle=1-(1-\hat g^2)(1-r^2)/(1-\hat g^2r^2)$:
-
 $$
 \mathrm E[x]=\hat g,\qquad
 \mathrm E[x^2]=\tfrac12(\hat g^2+\langle A\rangle)+\sigma_\nu^2,\qquad
 \mathrm E[y^2]=\tfrac12(\langle A\rangle-\hat g^2)+\sigma_\nu^2 .
 $$
-
 Checked three ways: against a two-dimensional quadrature through the
 engine's own shear map (agreement to $10^{-15}$); against the removed
 `TiltedSeries` and `MomentSeries`, whose gap to the new classes falls with
 both $g$ and truncation order, while a deliberate convention mismatch leaves
 an $O(g)$ gap that no order removes; and by $P(g)=P(1/g)$ at observed
 ellipticities with a cross component, the fold conjugating the observed
-ellipticity for $|g|>1$. Under TRACE_DET the matched Gaussian is centred on
+ellipticity for $|g|>1$. Under TRACE_DET the matched Gaussian is centered on
 $\hat g$ with an isotropic covariance.
 
 ### Preparing a dataset once
@@ -1072,7 +1070,7 @@ precomputation and leaves it in serializable properties
 so it can be saved and reused. On HWL16a-002 (15011 galaxies, TRACE,
 auto-nodes) it takes 83 s on one thread and 12 s on sixteen, bitwise
 identical at every thread count; a dataset reloaded from it evaluates with
-no calibration and no table build. Two findings shaped it: the per-galaxy
+no calibration and no table build. Two findings determined its design: the per-galaxy
 range step has to run before the auto-node calibration, which probes the
 shape integrand and would otherwise build full-mesh tables nothing reads
 (that halved the time), and the parallel loop runs serially until one
@@ -1085,7 +1083,7 @@ position, redshift and shape factor, and of the models they reach, found all
 of them safe per galaxy: the only shared writes are the models' lazy
 first-call updates (halo-position rotation, LSST-SRD constants, the
 numerically integrated profiles' splines, Cuba's settings), which the serial
-warm-up absorbs. The declaration was removed; thread safety is now part of each
+warm-up triggers before the parallel loop. The declaration was removed; thread safety is now part of each
 factor base class's contract, and every factor is prepared in parallel. On
 HWL16a-002, `FixedQuad`'s preparation went from 98 s on one thread to 15 s on
 sixteen and `CGF`'s from 1.0 s to 0.1 s, both bitwise identical to serial, and

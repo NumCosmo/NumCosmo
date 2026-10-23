@@ -32,11 +32,11 @@ G_BEGIN_DECLS
 
 /*
  * Software prefetch hints for loops whose per-iteration data is scattered
- * over the heap (one small allocation per galaxy, say), so the hardware
- * prefetcher cannot follow it. A prefetch never faults, so a stale or NULL
- * address is harmless; it only costs the instruction. Without GCC/Clang
- * builtins, or with NCM_DISABLE_PREFETCH defined (for A/B timing), both
- * helpers compile to nothing.
+ * over the heap (for example one small allocation per galaxy), where the
+ * hardware prefetcher cannot follow it. A prefetch never faults, so a stale
+ * or NULL address is harmless; it only costs the instruction. Without
+ * GCC/Clang builtins, or with NCM_DISABLE_PREFETCH defined (for A/B
+ * timing), both helpers compile to nothing.
  */
 
 #if (defined (__GNUC__) || defined (__clang__)) && !defined (NCM_DISABLE_PREFETCH)

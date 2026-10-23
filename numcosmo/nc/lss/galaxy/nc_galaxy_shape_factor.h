@@ -115,23 +115,23 @@ struct _NcGalaxyShapeFactorClass
    * to append and chain to the parent. */
   gchar *(*get_desc) (NcGalaxyShapeFactor *gsf);
 
-  /* Per-galaxy precomputation, called once per galaxy by the orchestrator
-   * after the radius, optzs and population updates and BEFORE any redshift
-   * quadrature is built, so that whatever it establishes is already in
-   * place when the auto-node calibration probes the shape integrand.
-   * @z_max bounds the galaxy's redshift support. The default is a no-op: a
-   * subclass needs this only when it caches something that depends on the
-   * galaxy AND on the models in @mset, which neither eval_marginal (no mset)
-   * nor prepare (no data) can compute. Whatever it builds must also be
-   * reachable lazily from eval_marginal, since nothing guarantees this ran. */
+  /* Per-galaxy precomputation, called once per galaxy by #NcDataClusterWLFactor
+   * after the radius, optzs and population updates and before any redshift
+   * quadrature is built, so that what it establishes is in place when the
+   * auto-node calibration probes the shape integrand. @z_max bounds the
+   * galaxy's redshift support. The default does nothing: a subclass needs
+   * this only when it caches something that depends on the galaxy and on
+   * the models in @mset, which neither eval_marginal (no mset) nor prepare
+   * (no data) can compute. What it builds must also be built lazily from
+   * eval_marginal, since nothing guarantees this ran. */
   void (*data_prepare) (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
 
   /* Prefetch hint for the subclass-owned per-galaxy state (@data->ldata and
-   * whatever it points to), called by nc_galaxy_shape_factor_data_prefetch()
-   * one stage at a time -- see there for what each stage may assume is
-   * already cached. Must only issue prefetches and read pointers the
-   * previous stage fetched; it must not change any state. NULL (the
-   * default) prefetches nothing. */
+   * what it points to), called by nc_galaxy_shape_factor_data_prefetch()
+   * one stage at a time; see there for what each stage may assume is
+   * already cached. It issues prefetches only, reads only pointers the
+   * previous stage fetched, and changes no state. NULL (the default)
+   * prefetches nothing. */
   void (*data_prefetch) (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */

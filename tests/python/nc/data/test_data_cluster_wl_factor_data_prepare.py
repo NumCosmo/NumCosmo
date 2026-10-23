@@ -25,12 +25,12 @@
 every position, redshift and shape factor, and the result must not depend on
 the thread count.
 
-Each run builds everything from scratch -- models, catalog, dataset -- so the
+Each run builds everything from scratch (models, catalog, dataset), so the
 models' lazy first-call state (halo-position rotation, LSST-SRD constants, the
-numerically integrated Einasto profile's splines, Cuba's settings) starts cold
-and the orchestrator's serial warm-up is exercised every time. The catalog
-mixes background galaxies with foreground-only ones, so the warm-up has to
-skip past galaxies without a redshift grid.
+numerically integrated Einasto profile's splines, Cuba's settings) starts
+unset and the orchestrator's serial warm-up is exercised every time. The
+catalog mixes background galaxies with foreground-only ones, so the warm-up
+has to skip galaxies without a redshift grid.
 """
 
 import os
@@ -63,8 +63,8 @@ SHAPE_FACTORS = {
 def _quad():
     """Quad runs a Cuba cubature per evaluation and the calibration needs
     thousands of them per galaxy: a loose tolerance and a short catalog (see
-    N_GAL_OF) keep it a unit test. Accuracy is irrelevant here, only that
-    parallel equals serial."""
+    N_GAL_OF) keep its run time that of a unit test. The test compares
+    parallel with serial, not accuracy."""
     gsf = Nc.GalaxyShapeFactorQuad.new(ELLIP_CONV)
     gsf.set_reltol(1.0e-2)
     return gsf
@@ -87,7 +87,7 @@ def _galaxies(n_gal):
     ra = rng.uniform(-0.15, 0.15, n_gal)
     dec = rng.uniform(-0.15, 0.15, n_gal)
     zp = rng.uniform(0.25, 1.5, n_gal)
-    zp[:3] = 0.05  # foreground-only first: the warm-up must look past them
+    zp[:3] = 0.05  # foreground-only first: the warm-up must skip them
     sigma0 = rng.uniform(0.02, 0.05, n_gal)
     e1, e2 = rng.normal(0.0, 0.25, (2, n_gal)).clip(-0.7, 0.7)
     std_noise = rng.uniform(0.02, 0.3, n_gal)
@@ -234,8 +234,9 @@ def _reload(dcwlf):
 
 
 def test_node_config_replay_skips_calibration():
-    """A reloaded dataset replays the stored node grid instead of searching
-    again, and evaluates bitwise as the dataset that chose it."""
+    """A reloaded dataset replays the stored node grid instead of calibrating
+    again, and evaluates bitwise identically to the dataset that calibrated
+    it."""
     dcwlf, mset = _build("var-add", "nfw", "composed")
     assert not dcwlf.is_data_prepared()
     dcwlf.data_prepare(mset)
@@ -296,8 +297,8 @@ def test_node_config_cleared_and_prepared_state():
 
 def test_resample_skips_eager_precomputation():
     """The prepare() that ncm_data_resample() runs only feeds gen(): no
-    MomentsTilt table and no auto-node search is spent on it, and the next
-    prepare() rebuilds everything from the resampled catalog."""
+    MomentsTilt table is built and no auto-node calibration is run for it,
+    and the next prepare() rebuilds everything from the resampled catalog."""
     dcwlf, mset = _build("moments-tilt", "nfw", "composed")
     gsf = dcwlf.props.shape_factor
     rng = Ncm.RNG.seeded_new(None, 20260923)

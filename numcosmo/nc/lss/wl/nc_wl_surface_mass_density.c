@@ -941,11 +941,10 @@ nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep (NcHaloDensityProfile 
  * @rho_s: the profile's scale density at the cluster redshift
  * @sigma_cache: (out): a #NcWLSurfaceMassDensitySigmaCache
  *
- * As nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep(), with the
- * scale quantities supplied by a caller that already holds them, as
- * #NcGalaxyShapeFactor does after its prepare. Beyond saving the per-call
- * recomputation, this leaves the profile's own lazily updated state
- * untouched, so it can be called for many radii concurrently.
+ * As nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep(), with
+ * @r_s and @rho_s supplied by the caller, as #NcGalaxyShapeFactor does
+ * after its prepare(). It does not touch the profile's lazily updated
+ * state, so it can be called for many radii concurrently.
  *
  */
 void

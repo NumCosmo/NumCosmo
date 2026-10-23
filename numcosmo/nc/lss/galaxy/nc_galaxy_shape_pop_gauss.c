@@ -243,13 +243,11 @@ _nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp)
   return 1.0;
 }
 
-/* M_2k = <r^2k> = (2sigma^2)^k k! P(k+1,a)/(1-e^-a), a=inv_2sigma2, in its
- * elementary (integer-k) form: P(k+1,a) = 1 - e^-a sum_{j=0}^k a^j/j!, and
- * (2sigma^2)^k k! = 1/term_k where term_j=a^j/j! (term_k is exactly what the
- * loop below leaves in @term at exit). No incomplete-gamma special function
- * needed for this integer-order case -- verified against
- * gsl_sf_gamma_inc_P() to machine precision. Uses the already-resolved
- * @data->ldata, matching eval_p()'s own read contract. */
+/* M_2k = <r^2k> = (2sigma^2)^k k! P(k+1,a)/(1-e^-a), a = inv_2sigma2, in
+ * its integer-k form: P(k+1,a) = 1 - e^-a sum_{j=0}^k a^j/j!, and
+ * (2sigma^2)^k k! = 1/term_k with term_j = a^j/j!, the value the loop below
+ * leaves in @term. For integer k this agrees with gsl_sf_gamma_inc_P() to
+ * machine precision. Reads the resolved @data->ldata, as eval_p() does. */
 gdouble
 _nc_galaxy_shape_pop_gauss_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
 {

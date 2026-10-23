@@ -504,7 +504,8 @@ class GalaxyShapeFactorGenMomentsGauss(GalaxyShapeFactorGenBase):
         ]
 
     def requires_sigma(self) -> bool:
-        """The exact moments need only the population's radial marginal."""
+        """MomentsGauss works with any population: the exact moments need only
+        its radial marginal."""
         return False
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
@@ -544,7 +545,8 @@ class GalaxyShapeFactorGenMomentsTilt(GalaxyShapeFactorGenBase):
         ]
 
     def requires_sigma(self) -> bool:
-        """The exact moments need only the population's radial marginal."""
+        """MomentsTilt works with any population: the exact moments need only
+        its radial marginal."""
         return False
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:

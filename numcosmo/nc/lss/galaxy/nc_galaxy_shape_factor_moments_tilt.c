@@ -54,8 +54,8 @@
  * The moment equations are solved exactly, by a damped Newton iteration at
  * Chebyshev-Lobatto nodes, and the solution is interpolated. Solving them
  * order by order in $\delta$ instead gives a Taylor section of the inverse
- * map whose radius of convergence is $\hat g\simeq 0.62$, which loses
- * accuracy exactly where the shear is large.
+ * map whose radius of convergence is $\hat g\simeq 0.62$, so it is
+ * inaccurate at large shear.
  *
  * ## The mesh
  *
@@ -74,48 +74,47 @@
  *   K = \max\left(2, \mathrm{round}\left(\log_2(1/\sigma_\nu)\right)\right).
  * $$
  * The layer is resolved once $2^{-(K-1)}\lesssim\sigma_\nu$, and the error
- * then saturates in $K$ at the value that rule gives, which makes $K$ a
- * stopping rule rather than a parameter to tune. Measured worst
- * $|\ln Z|$ over three population widths: $9.8\times10^{-4}$ at
- * $\sigma_\nu=0.008$, $5.3\times10^{-4}$ at $0.015$, $3.8\times10^{-5}$ at
- * $0.05$ and $3.0\times10^{-6}$ at $0.40$ -- inside the
- * #NcGalaxyShapeFactorMomentsTilt:accuracy-gate everywhere, with fewer
- * Newton solves than the single-series form and an evaluation degree of
- * five to eight instead of sixteen to sixty-four.
+ * does not decrease for larger $K$, so $K$ is fixed by this rule and is not
+ * a parameter to tune. The worst $|\ln Z|$ over three population widths is
+ * $9.8\times10^{-4}$ at $\sigma_\nu=0.008$, $5.3\times10^{-4}$ at $0.015$,
+ * $3.8\times10^{-5}$ at $0.05$ and $3.0\times10^{-6}$ at $0.40$, inside
+ * the #NcGalaxyShapeFactorMomentsTilt:accuracy-gate at every width. The
+ * mesh needs fewer Newton solves than a single series, and its evaluation
+ * degree is five to eight instead of sixteen to sixty-four.
  *
  * The panel index costs one frexp() and no search, because panel $j$ covers
  * $1-\hat g\in(2^{-(j+1)},2^{-j}]$, i.e. $j$ is the exponent field of the
- * double $1-\hat g$. That is the reason to prefer this mesh to an
- * adaptively placed one with possibly fewer panels.
+ * double $1-\hat g$. This is why the dyadic mesh is used instead of an
+ * adaptively placed one with fewer panels.
  *
  * ## Local degree
  *
  * Each panel chooses its own degree at build time. Chebyshev-Lobatto nodes
- * nest exactly under doubling -- the degree-$d$ nodes are the even-indexed
- * degree-$2d$ nodes -- so refining from $d$ to $2d$ adds $d$ solves and
+ * nest exactly under doubling (the degree-$d$ nodes are the even-indexed
+ * degree-$2d$ nodes), so refining from $d$ to $2d$ adds $d$ solves and
  * discards none. The stopping test is the signed combination
  * $$
  *   \Xi(m) = \sum_{k>m}\left| t_1 a_k + t_2 b_k + t_3 c_k - e_k \right|,
  * $$
  * where $a,b,c,e$ are the Chebyshev coefficients of
  * $\lambda_1,\lambda_2,\lambda_3,W$ and $t$ is the target moment vector at
- * the panel midpoint. That is the same linear combination the evaluation
- * forms, and it is what controls the model-mass error; the termwise bound
+ * the panel midpoint. This is the linear combination the evaluation forms,
+ * and it determines the model-mass error. The termwise bound
  * $\sum(|t_1a_k|+|t_2b_k|+\dots)$ is a rigorous upper bound on it but
  * overestimates by a median factor of 45, which would select degrees far
  * higher than needed. $\Xi$ is accurate to a factor of about three and is
- * not an upper bound, hence the factor of ten of margin against the gate.
+ * not an upper bound, so the test is run against the gate divided by ten.
  *
  * ## Error reporting
  *
- * A shear beyond the table's upper end is a violated assumption rather than
- * a point to extrapolate through, since a Chebyshev panel diverges quickly
- * outside its own interval. Such an evaluation is counted, warned about
- * once per instance, and returns zero probability, which
- * #NcDataClusterWLFactor routes through its existing low-probability path.
- * Newton failures during a build are counted separately and read back with
- * nc_galaxy_shape_factor_moments_tilt_get_solve_error_count(); note the
- * count is per distinct table, not per galaxy, since one table serves every
+ * A shear above the table's upper end is outside the range the table was
+ * built for. A Chebyshev panel diverges outside its own interval, so the
+ * evaluation does not extrapolate: it is counted, warned about once per
+ * instance, and returns zero probability, which #NcDataClusterWLFactor
+ * routes through its existing low-probability path. Newton failures during
+ * a build are counted separately and read back with
+ * nc_galaxy_shape_factor_moments_tilt_get_solve_error_count(); the count
+ * is per distinct table, not per galaxy, since one table serves every
  * galaxy sharing its key.
  *
  */
@@ -144,38 +143,32 @@
 #include <gsl/gsl_integration.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* Radial nodes of the closed-form target-moment quadrature (stage 1), in
- * the psi variable of r = sin(psi)/delta. */
-
 /* Radial nodes of the source-disc quadrature inside the Newton solve. The
- * source disc has no noise edge layer, which is exactly what lets this be
- * 32 rather than the 120 the observed-plane grid needs. */
+ * source disc has no noise edge layer, so 32 nodes resolve it. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_SRC_NR 32
 
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NPHI_MIN 16
 
-/* The verification pass re-evaluates at twice the working resolution and
- * re-solves if the answer does not survive it. At the cap that pass cannot
- * run, so the cap is where under-resolution stops being detected -- hence
- * 4096 rather than 2048, which the largest lambda_1 of the small-noise end
- * reaches on its own. */
+/* Largest angular node count of the Newton solve. The verification pass
+ * re-evaluates at twice the working count and re-solves if the residual is
+ * not acceptable there; at the cap that pass cannot run, so under-resolution
+ * is not detected there. The largest lambda_1 of the small-noise end needs
+ * 2048 nodes, so the cap is 4096. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NPHI_MAX 4096
 
 /* Newton controls.
  *
- * TOL is what the iteration drives at; OK is what it accepts. The two
- * differ because the attainable residual has a floor: the moments are
- * quadratures of exp(lambda . T), and the accuracy with which their
- * cancellation can be resolved does not reach TOL. Measured, the floor sits
- * between 1.3e-9 and 2.4e-9 and is flat in |lambda| over the range the
- * small-noise end reaches -- 1.3e-9 at |lambda| = 284 and 1.8e-9 at
- * |lambda| = 7900 -- so the acceptance is a constant above it rather than a
- * function of the iterate. A residual of 1e-8 on moments of order one is
- * five orders below the accuracy gate, so accepting there costs nothing.
+ * TOL is the residual the iteration stops at; OK is the residual it accepts.
+ * The moments are quadratures of exp(lambda . T), and the residual their
+ * cancellation can resolve has a floor between 1.3e-9 and 2.4e-9, flat in
+ * |lambda| over the range the small-noise end reaches (1.3e-9 at
+ * |lambda| = 284, 1.8e-9 at |lambda| = 7900), so the acceptance is a
+ * constant above the floor and not a function of the iterate. A residual
+ * of 1e-8 on moments of order one is five orders below the accuracy gate.
  *
- * An acceptance AT the floor is not a neutral choice: it turns converged
- * solves into reported failures, and a failed node is replaced by its
- * predecessor's lambda, which is a wrong value at that node.
+ * An acceptance at the floor turns converged solves into reported failures,
+ * and a failed node is replaced by its predecessor's lambda, which is a
+ * wrong value at that node.
  */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_TOL 1.0e-12
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_OK 1.0e-8
@@ -191,14 +184,16 @@
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_LNP0_DELTA 40.0
 
 /* Most bytes of a galaxy's table data_prefetch() fetches. A restricted
- * table is whole below this; a full-mesh one is cut, its last panels being
- * the ones the fewest evaluations reach. */
+ * table is below this and is fetched whole; a full-mesh one is cut at this
+ * size, which leaves out its last panels, the ones the fewest evaluations
+ * reach. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_PREFETCH_CAP 4096
 
-/* Panel mesh. K = round(log2(1/sigma_nu)) reaches 7 at the smallest
- * per-galaxy shape dispersion seen in production (0.008); the cap is one
- * above that, and a sigma_nu small enough to want more is clamped and
- * warned about rather than allowed to overrun the fixed-size layout. */
+/* Smallest panel count of the mesh. The count is K = round(log2(1/sigma_nu))
+ * bounded below by this value and above by
+ * NC_GALAXY_SHAPE_FACTOR_MOMENTS_MAX_PANELS (8); K exceeds the cap for
+ * sigma_nu < 2^-8.5 ~ 0.0028, and such a sigma_nu is clamped to the cap
+ * and warned about once per instance. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_MIN_PANELS 2
 
 /* Margin of the stopping test against the accuracy gate. The signed tail
@@ -206,14 +201,12 @@
  * bound on it, so the test is run against gate / SAFETY. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_GATE_SAFETY 10.0
 
-/* Tolerance of the upper-end guard, in units of the table's upper end. */
-
 /*
  * ---- Gauss-Legendre node tables on [-1,1], built once ----
  *
  * Both node counts are compile-time constants, so the tables depend on
- * nothing per galaxy: gsl_integration_glfixed_table_alloc() must not be
- * called per evaluation (it allocates).
+ * nothing per galaxy. gsl_integration_glfixed_table_alloc() allocates and
+ * must not be called per evaluation.
  */
 static gdouble _moments_tilt_gl32_x[NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_SRC_NR];
 static gdouble _moments_tilt_gl32_w[NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_SRC_NR];
@@ -234,24 +227,23 @@ _moments_tilt_gl_init (void)
 /*
  * ---- The analytic-noise source-disc quadrature ----
  *
- * Z, E[T] and Cov[T] under q = P_0 e^{lam.T}/Z, with the noise integral
- * done in closed form (this file's class doc comment). @r/@wr are the
- * source-disc radial nodes and their weights with P_pop folded in (so
- * sum wr = 1 and lam = 0 gives Z = 1 exactly); @cphi/@s2phi the angular
- * tables. Returns FALSE outside the natural domain u,v > 0.
+ * Computes Z, E[T] and Cov[T] under q = P_0 e^{lam.T}/Z, with the noise
+ * integral done in closed form (this file's class doc comment), and writes
+ * E[T] to @E, Cov[T] to @C and ln Z to @lnZ. @r/@wr are the source-disc
+ * radial nodes and their weights with P_pop folded in (so sum wr = 1 and
+ * lam = 0 gives Z = 1 exactly); @cphi/@s2phi are the angular tables.
+ * Returns FALSE outside the natural domain u,v > 0 and when Z is not finite
+ * and positive.
  *
  * The exponent is evaluated twice rather than stored: for fixed r it is
  * the quadratic K0 + K1 c + K2 c^2 in c = cos(phi), three flops, while
  * storing it would need an nr x nphi scratch array that grows with the
  * angular refinement.
  *
- * @C may be NULL. The line search only needs E[T] to decide whether a trial
- * step reduced the residual, and the second moments (E[x^3], E[x^4],
- * E[x^2 y^2], E[y^4]) are more than half the inner loop's arithmetic -- so
- * computing them for a step that is about to be halved away is pure waste.
- * With the continuation warm start the full step is usually accepted on the
- * first try, which makes this one cheap extra pass per Newton iteration
- * instead of one full one.
+ * @C may be NULL, in which case the fourth-order sums (E[x^3], E[x^4],
+ * E[x^2 y^2], E[y^4]) are skipped; they are more than half the inner
+ * loop's arithmetic. The line search needs only E[T] to test a trial step,
+ * so it passes NULL.
  */
 static gboolean
 _moments_tilt_moments (const gdouble *r, const gdouble *wr, const guint nr,
@@ -283,9 +275,9 @@ _moments_tilt_moments (const gdouble *r, const gdouble *wr, const guint nr,
   l3_v = l3 / v;
   wphi = 1.0 / nphi;
 
-  /* Pass 1: the exponent's maximum over the grid. Taking it from the grid
-   * itself (rather than from a continuous bound) keeps the largest term at
-   * exactly 1 whatever the angular resolution is. */
+  /* Pass 1: the exponent's maximum over the grid. Taken from the grid
+   * itself rather than from a continuous bound, so the largest term is
+   * exactly 1 at every angular resolution. */
   for (i = 0; i < nr; i++)
   {
     const gdouble ri = r[i];
@@ -368,19 +360,20 @@ _moments_tilt_moments (const gdouble *r, const gdouble *wr, const guint nr,
     C[8] = s_y4 / Z - E[2] * E[2];
   }
 
-  /* The r-independent pieces are added AFTER the quadrature, not folded
-   * into the exponent: folding them in would be equally correct but is
-   * easy to do twice, and a doubled term here is a constant shift of W,
-   * hence of ln P, which is indistinguishable from model error. */
+  /* The r-independent terms are added after the quadrature, not folded
+   * into the exponent. A term folded in and also added here would be a
+   * constant shift of W, hence of ln P, indistinguishable from model
+   * error. */
   *lnZ = log (Z) + smax + 0.5 * l1 * l1 * sn2 / u - 0.5 * log (u * v);
 
   return TRUE;
 }
 
-/* 3x3 solve with partial pivoting: Cov(T) is positive definite in exact
- * arithmetic, but a Newton iterate far from the solution can make the
- * quadrature's version of it indefinite, and a Cholesky would fail
- * there. */
+/* Solves the 3x3 system A x = b by Gaussian elimination with partial
+ * pivoting; returns FALSE on a zero pivot. Cov(T) is positive definite in
+ * exact arithmetic, but at a Newton iterate far from the solution the
+ * quadrature's version of it can be indefinite, where a Cholesky
+ * factorization fails. */
 static gboolean
 _moments_tilt_solve3 (const gdouble *A_in, const gdouble *b_in, gdouble *x)
 {
@@ -466,11 +459,12 @@ _moments_tilt_set_phi (gdouble *cphi, gdouble *s2phi, const guint nphi)
 }
 
 /*
- * Angular resolution rule, calibrated: n_phi ~ 32 sqrt(A), A = |lam_1|/u
- * (the measured constant runs 10.5-26.2 across ghat and the catalogue's
- * noise corners). Under-resolving is SILENT and severe -- 8 sqrt(A) loses
- * eight digits with no visible symptom -- which is why the solve below
- * also re-verifies at 2 n_phi.
+ * Angular node count of the Newton solve at @lam: the smallest power of two
+ * in [NPHI_MIN, NPHI_MAX] not below k sqrt(A), A = |lam_1|/u. The measured
+ * constant needed runs from 10.5 to 26.2 across ghat and the catalog's
+ * noise corners. Convergence in n_phi is spectral, so under-resolution has
+ * no symptom in the residual (8 sqrt(A) loses eight digits); the solve
+ * therefore also verifies its answer at 2 n_phi.
  */
 static guint
 _moments_tilt_nphi_for (const gdouble *lam, const gdouble sn2)
@@ -478,11 +472,9 @@ _moments_tilt_nphi_for (const gdouble *lam, const gdouble sn2)
   const gdouble u = MAX (1.0 - 2.0 * lam[1] * sn2, 1.0e-6);
   const gdouble A = fabs (lam[0]) / u;
 
-  /* k = 16 halves the build and holds to 4e-5 in lambda for
-   * sigma_nu >= 0.02; below that it loses four orders against k = 32, so
-   * the small-noise end keeps the larger constant. Under-resolution here is
-   * silent, since convergence in n_phi is spectral: there is no band in
-   * which the answer is merely somewhat inaccurate. */
+  /* k = 16 halves the build and holds lambda to 4e-5 for sigma_nu >= 0.02;
+   * below that it loses four orders against k = 32, so the small-noise end
+   * uses the larger constant. */
   const gdouble k = (sn2 >= 4.0e-4) ? 16.0 : 32.0;
   const gdouble n = k * sqrt (MAX (A, 1.0));
   guint nphi      = NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NPHI_MIN;
@@ -494,11 +486,14 @@ _moments_tilt_nphi_for (const gdouble *lam, const gdouble sn2)
 }
 
 /*
- * Damped Newton for lam with E_lam[T] = @target, warm-started from @lam.
- * @cphi/@s2phi are scratch of NPHI_MAX entries whose currently-filled
- * length is tracked by @nphi_io across calls, so the continuation along
- * ghat only rebuilds the angular tables when the resolution rule actually
- * changes them.
+ * Damped Newton for lam with E_lam[T] = @target, started from @lam; writes
+ * the solution to @lam and W(lam) to @W. Returns TRUE if the final residual
+ * is below NEWTON_OK, FALSE if a moment evaluation or the 3x3 solve fails
+ * or the residual is above NEWTON_OK at the iteration cap; on FALSE at the
+ * cap @lam and @W still hold a matching pair. @cphi/@s2phi are scratch of
+ * NPHI_MAX entries whose filled length is tracked by @nphi_io across calls,
+ * so the continuation along ghat rebuilds the angular tables only when the
+ * resolution rule changes them.
  */
 static gboolean
 _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
@@ -521,7 +516,7 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
   }
 
   /* Two passes: the solve, then one verification at doubled angular
-   * resolution that re-solves if the first answer does not survive it. */
+   * resolution that re-solves if the residual there is above NEWTON_OK. */
   for (pass = 0; pass < 2; pass++)
   {
     for (it = 0; it < maxit; it++)
@@ -543,13 +538,13 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
       if (fmax < NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_TOL)
         break;
 
-      /* Stop once the residual is acceptable and has stopped improving.
-       * The iteration drives at TOL, but TOL is below the floor the moment
-       * quadrature can reach at large |lambda|, so without this the last
-       * nodes of a small-noise table run to the iteration cap for nothing:
-       * each of those iterations costs a full nr x nphi moment pass, plus
-       * the line search's own. Gated on the residual ALREADY being
-       * acceptable, so it can never cut a solve short of convergence. */
+      /* Stop once the residual is below NEWTON_OK and has not halved since
+       * the previous iteration. TOL is below the floor the moment
+       * quadrature reaches at large |lambda|, so without this test the last
+       * nodes of a small-noise table run to the iteration cap, each
+       * iteration costing a full nr x nphi moment pass plus the line
+       * search's own. The test requires the residual to be below NEWTON_OK
+       * first, so it never stops a solve short of acceptance. */
       if ((fmax >= 0.5 * fmax_prev) && (fmax < NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_OK))
         break;
 
@@ -558,17 +553,17 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
       if (!_moments_tilt_solve3 (C, F, step))
         return FALSE;
 
-      /* Backtrack on the convex objective phi(lambda) = W(lambda) -
-       * lambda.t, whose gradient is exactly the residual F, rather than on
-       * ||F|| itself. Both cost one first-moment pass, but only the Armijo
-       * condition on phi inherits the global convergence of damped Newton
-       * on a strictly convex function: a residual-norm test can stall at a
-       * point where ||F|| cannot decrease along the Newton ray even though
-       * phi still can.
+      /* Line search: halves the step until the Armijo condition holds on
+       * the convex objective phi(lambda) = W(lambda) - lambda.t, whose
+       * gradient is the residual F. Both this and a test on ||F|| cost one
+       * first-moment pass, but only the Armijo condition on phi has the
+       * global convergence of damped Newton on a strictly convex function:
+       * a residual-norm test can stall at a point where ||F|| cannot
+       * decrease along the Newton ray while phi still can.
        *
        * F.step = F^T C^{-1} F > 0 for a positive-definite covariance, so
-       * -step is a descent direction; should that fail numerically, the
-       * residual test is kept as the fallback. */
+       * -step is a descent direction. If F.step <= 0 numerically, the
+       * residual-norm test is used instead. */
       {
         gdouble phi_cur = lnZ;
         gdouble gTs     = 0.0;
@@ -616,9 +611,9 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
         lam[a] -= t * step[a];
 
       {
-        /* The resolution rule may ask for FEWER nodes as the iterate moves,
-         * but never below the floor the verification pass established --
-         * shrinking back would silently undo the refinement. */
+        /* The node count follows the resolution rule at the new iterate,
+         * bounded below by nphi_floor, the count the verification pass
+         * set: a smaller count would undo the refinement. */
         const guint n2 = MAX (_moments_tilt_nphi_for (lam, sn2), nphi_floor);
 
         if (n2 != nphi)
@@ -630,7 +625,7 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
       }
     }
 
-    /* Left at the iteration cap: lam took a step after lnZ and fmax were
+    /* At the iteration cap lam took a step after lnZ and fmax were
      * computed, so both are recomputed at the lam that is returned. */
     if (it == maxit)
     {
@@ -657,8 +652,8 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
       nphi_floor = n2;
       *nphi_io   = n2;
 
-      /* Same lambda as the pass that just converged, on a finer angular
-       * rule: it cannot become infeasible. */
+      /* The same lambda as the pass that just converged, on a finer
+       * angular rule: u, v > 0 still hold, so it is feasible. */
       if (!_moments_tilt_moments (r, wr, nr, cphi, s2phi, nphi, sn2, lam, E2, NULL, &lnZ2))
         return FALSE;  /* LCOV_EXCL_LINE */
 
@@ -671,7 +666,8 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
 
         if (f2 <= NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_OK)
         {
-          /* Survived the refinement: keep lam and the refined lnZ. */
+          /* The residual holds at the finer rule: keep lam and the refined
+           * lnZ. */
           lnZ = lnZ2;
           break;
         }
@@ -693,16 +689,18 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
  * share one interleaved coefficient block so that the evaluation reads each
  * cache line once instead of striding the array four times.
  *
- * off[j] indexes @coef in DOUBLES and already includes the factor of four:
+ * off[j] indexes @coef in doubles and includes the factor of four:
  * off[0] = 0 and off[j+1] = off[j] + 4 * (deg[j] + 1). Build and evaluation
- * have to agree on that, since a mismatch reads a valid but wrong part of
- * the block rather than running off its end.
+ * must agree on this layout: a mismatch reads a valid but wrong part of
+ * the block and does not run off its end.
  */
 
-/* Number of panels the noise level calls for. The rule saturates the error
- * at exactly this value, so it is a stopping rule and not a tuning knob.
- * The floor of two buys two orders of margin at the large-sigma end for one
- * redundant panel; the cap is a layout limit, reported when it binds. */
+/* Number of panels for the noise level @sn: K = round(log2(1/sn)) clamped
+ * to [MIN_PANELS, NC_GALAXY_SHAPE_FACTOR_MOMENTS_MAX_PANELS]; *@clamped is
+ * set when the cap binds, and the caller warns. The error does not
+ * decrease above K, so K is a stopping rule and not a tuning parameter.
+ * The floor of two gives two orders of margin at the large-sn end for one
+ * redundant panel. */
 static guint
 _moments_tilt_panels_for_sn (const gdouble sn, gboolean *clamped)
 {
@@ -720,28 +718,26 @@ _moments_tilt_panels_for_sn (const gdouble sn, gboolean *clamped)
 }
 
 /*
- * Size of coefficient k, measured as the largest error it can contribute to
- * ln P: the same signed combination the evaluation forms, taken over a
- * small set of representative statistic vectors rather than at a single
- * one.
+ * Size of one coefficient vector @v = (a_k, b_k, c_k, e_k), measured as the
+ * largest error it can contribute to ln P: the signed combination the
+ * evaluation forms, maximized over four statistic vectors. The four are
+ * the target moments @t_mid at the panel midpoint and the corners of the
+ * observable disc, |chi_obs| = 1 along and across the gauge axis, where
+ * the statistic (x, x^2, y^2) reaches its extremes.
  *
- * The single-point form, weighted by the target moments at the panel
- * midpoint, measures the model-mass error alone and is what the model-mass
- * gate is stated in. It cannot be used on its own to decide resolution,
- * because the exact solve satisfies dW/dghat = t . dlambda/dghat, so over a
- * panel where t barely varies the coefficients of W cancel t . lambda term
- * by term. The mass error is small --
- * but it hides an unresolved lambda, and the density shape is then wrong
- * between nodes even though its mass is right. Measured on a Gaussian
- * population of width 0.4658 at sigma_nu = 0.015, the midpoint-only form
- * stopped a panel at degree 7 whose worst |ln Z| was 9.3 nats.
+ * The midpoint form alone measures the model-mass error, which is what the
+ * accuracy gate is stated in, but it does not determine the resolution: the
+ * exact solve satisfies dW/dghat = t . dlambda/dghat, so over a panel where
+ * t varies little the coefficients of W cancel t . lambda term by term. The
+ * mass error is then small while lambda is unresolved, and the density
+ * shape is wrong between nodes. On a Gaussian population of width 0.4658
+ * at sigma_nu = 0.015 the midpoint form alone stops a panel at degree 7
+ * whose worst |ln Z| is 9.3 nats.
  *
- * The four probes are the mass weighting plus the corners of the observable
- * disc, |chi_obs| = 1 along and across the gauge axis, which is where the
- * statistic (x, x^2, y^2) reaches its extremes. The termwise bound
- * |t1 a_k| + |t2 b_k| + |t3 c_k| + |e_k| would also avoid the cancellation
- * and is a rigorous upper bound, but it overestimates by a median factor of
- * 45 and selects degrees far above what the function needs.
+ * The termwise bound |t1 a_k| + |t2 b_k| + |t3 c_k| + |e_k| also avoids
+ * the cancellation and is a rigorous upper bound, but it overestimates by
+ * a median factor of 45 and selects degrees far above what the function
+ * needs.
  */
 
 static gdouble
@@ -761,11 +757,13 @@ _moments_tilt_probe_max (const gdouble *v, const gdouble *t_mid)
 }
 
 /*
- * Quadratic extrapolation of lambda along the ascending node sequence, from
- * the three previous converged nodes. Cuts the Newton iteration count of a
- * whole table by about a third against starting from the previous node.
+ * Writes to @lam the extrapolation of lambda to @ghat from the @n_hist
+ * previous converged nodes: constant from one, linear from two, quadratic
+ * (Lagrange) from three. The quadratic start reduces the Newton iteration
+ * count of a table by about a third against starting from the previous
+ * node.
  *
- * The history is a shift register whose MOST RECENT entry is always slot 2,
+ * The history is a shift register whose most recent entry is always slot 2,
  * so a partially filled one is read from the end: slots 3 - @n_hist to 2.
  */
 static void
@@ -798,8 +796,8 @@ _moments_tilt_warm_start (const gdouble *g_hist, const gdouble *lam_hist, const 
     const gdouble x0 = g_hist[0], x1 = g_hist[1], x2 = g_hist[2];
     const gdouble d01 = x0 - x1, d02 = x0 - x2, d12 = x1 - x2;
 
-    /* The abscissae are distinct memo entries, never closer than its
-     * lookup tolerance, so none of the divisors vanishes. */
+    /* The abscissae are distinct memo entries, never closer than the memo's
+     * lookup tolerance, so no divisor vanishes. */
     {
       const gdouble l0 = ((ghat - x1) * (ghat - x2)) / (d01 * d02);
       const gdouble l1 = ((ghat - x0) * (ghat - x2)) / (-d01 * d12);
@@ -812,11 +810,11 @@ _moments_tilt_warm_start (const gdouble *g_hist, const gdouble *lam_hist, const 
 }
 
 /*
- * Keeps an extrapolated start inside the natural domain of W, which needs
- * 1 - 2 lambda_2 sigma_nu^2 > 0 and the same for lambda_3. Extrapolation is
- * free to overshoot that bound, and the first moment evaluation at an
- * infeasible point fails outright rather than being recoverable, so the
- * start is clamped with a margin instead.
+ * Clamps lambda_2 and lambda_3 of a starting point to 0.45 / sigma_nu^2,
+ * inside the natural domain of W, which needs 1 - 2 lambda_2 sigma_nu^2 > 0
+ * and the same for lambda_3. An extrapolated start can overshoot that
+ * bound, and the first moment evaluation at an infeasible point returns
+ * FALSE, which fails the solve.
  */
 static void
 _moments_tilt_clamp_start (gdouble *lam, const gdouble sn2)
@@ -830,7 +828,7 @@ _moments_tilt_clamp_start (gdouble *lam, const gdouble sn2)
 /*
  * ---- The table build, on the shared NcmSpectral-driven builder ----
  *
- * What this class contributes is the node: the exact target moments at the
+ * This class supplies the node callback: the exact target moments at the
  * folded shear, then the damped Newton solve for (lambda, W). The builder
  * places the nodes, refines, converges and transforms; see
  * _nc_galaxy_shape_factor_moments_build().
@@ -853,11 +851,10 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltBuild
 } NcGalaxyShapeFactorMomentsTiltBuild;
 
 /*
- * Starting point for a node, from the solved nodes around it. Between two
- * solved neighbours -- every refinement node -- it interpolates linearly.
- * Above all of them -- climbing a panel's first level -- it extrapolates
- * quadratically from the three below, which cuts the Newton iteration count
- * of a table by about a third against starting from the previous node.
+ * Writes to @lam the starting point for the node at @ghat, from the solved
+ * nodes around it. Between two solved neighbors (every refinement node) it
+ * interpolates linearly. Above all of them (the first level of a panel) it
+ * extrapolates from the three below with _moments_tilt_warm_start().
  */
 static void
 _moments_tilt_start_from_memo (const NcGalaxyShapeFactorMomentsMemo *memo, const guint below, const gdouble ghat, gdouble *lam)
@@ -932,10 +929,8 @@ _moments_tilt_node_cb (gpointer user_data, const gdouble ghat, const NcGalaxySha
 
   if (!ok)
   {
-    /* Retry from the nearest solved node below. Interpolation and
-     * extrapolation buy iterations when they land well and cost a solve
-     * when they do not; the neighbour is the start a plain continuation
-     * would have used. */
+    /* Retry from the nearest solved node below, the start a plain
+     * continuation would use. */
     const gdouble *v = _nc_galaxy_shape_factor_moments_memo_vals (memo, below);
 
     lam[0] = v[0];
@@ -945,7 +940,7 @@ _moments_tilt_node_cb (gpointer user_data, const gdouble ghat, const NcGalaxySha
 
     if (!ok)
     {
-      /* Keep the neighbour's value rather than a diverged iterate, which
+      /* Keep the neighbor's value rather than a diverged iterate, which
        * would spread through the whole panel. */
       vals[0] = v[0];
       vals[1] = v[1];
@@ -1007,8 +1002,8 @@ _moments_tilt_build_table (NcmSpectral *spectral, const NcGalaxyWLObsEllipConv e
   b.nphi_cur     = 0;
   b.newton_maxit = newton_maxit;
 
-  /* Source-disc geometry: shear-independent, so built once for the whole
-   * table rather than per node. sum src_w = int P_pop dr = 1. */
+  /* Source-disc nodes and weights, independent of the shear, so built once
+   * for the whole table. sum src_w = int P_pop dr = 1. */
   g_array_set_size (b.r_arr, nr);
   {
     gdouble *r_data = (gdouble *) b.r_arr->data;
@@ -1045,10 +1040,12 @@ _moments_tilt_build_table (NcmSpectral *spectral, const NcGalaxyWLObsEllipConv e
 }
 
 /*
- * Fused Clenshaw: the four series share the argument and the weights
- * (x, x^2, y^2, -1) do not depend on the summation index, so the
- * combination is formed inside the recurrence. That is 9d flops instead of
- * 12d, over one pass of the interleaved block instead of four strided ones.
+ * Evaluates lambda_1 x + lambda_2 x^2 + lambda_3 y^2 - W on panel @j at the
+ * Chebyshev argument @t by one fused Clenshaw recurrence: the four series
+ * share the argument and the weights (x, x^2, y^2, -1) do not depend on the
+ * summation index, so the combination is formed inside the recurrence.
+ * That is 9d flops instead of 12d, over one pass of the interleaved block
+ * instead of four strided ones.
  */
 static gdouble
 _moments_tilt_clenshaw_fused (const NcGalaxyShapeFactorMomentsTable *table, const guint j,
@@ -1061,7 +1058,7 @@ _moments_tilt_clenshaw_fused (const NcGalaxyShapeFactorMomentsTable *table, cons
   guint k;
 
   /* b0 = t2 b1 + (ck - b2): ck and b2 are known before b1 is, so only
-   * the multiply-add sits on the loop-carried chain. */
+   * the multiply-add is on the loop-carried dependency chain. */
   for (k = d; k >= 1; k--)
   {
     const gdouble ck = coef[4 * k + 0] * x + coef[4 * k + 1] * x2 + coef[4 * k + 2] * y2 - coef[4 * k + 3];
@@ -1082,10 +1079,10 @@ _moments_tilt_clenshaw_fused (const NcGalaxyShapeFactorMomentsTable *table, cons
  * convention (nc_galaxy_shape_pop_eval_p(): the disc measure 2 pi r
  * already folded in).
  *
- * The window is localized around the mass, and only the exponents are
- * combined in log space. Any error here is a per-galaxy additive constant in
- * ln P and cancels from every derivative in g, which is what licenses a
- * generic quadrature here rather than a closed form.
+ * The window is localized around the mass, and the exponents are combined
+ * in log space. Any error here is a per-galaxy additive constant in ln P
+ * and cancels from every derivative in g, so a generic quadrature is used
+ * rather than a closed form.
  */
 static gdouble _moments_tilt_lnP0_x[NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_LNP0_NNODES];
 static gdouble _moments_tilt_lnP0_w[NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_LNP0_NNODES];
@@ -1177,27 +1174,25 @@ struct _NcGalaxyShapeFactorMomentsTilt
 /*
  * ---- Instance-level table cache ----
  *
- * A table is a pure function of (population parameters, sigma_nu, e_rms,
- * panel count): it does not depend on the shear or on the observed
+ * A table is a function of (population parameters, sigma_nu, e_rms, panel
+ * count) only: it does not depend on the shear or on the observed
  * ellipticity, and NcGalaxyShapePopData's only per-galaxy input is e_rms.
- * The population is held as a generation counter rather than as part of
- * every key, so that a real population change drops the whole cache at once
- * instead of leaving one dead generation per step.
+ * The population enters as a generation counter rather than as part of
+ * every key, so a population change drops the whole cache at once instead
+ * of leaving one stale generation per step.
  *
- * Caching on the per-galaxy ldata alone loses the table twice over: every
- * galaxy sharing a key would pay its own identical build, and
- * NcDataClusterWLFactor rebuilds every NcGalaxyShapeFactorData from scratch
- * on resample, discarding all of them. Hanging the cache on the instance
- * survives both. Each galaxy holds a reference rather than a copy, which is
- * also what makes the whole-cache flush above safe.
+ * The cache is held by the instance, not by the per-galaxy ldata: every
+ * galaxy sharing a key reads the same table, and NcDataClusterWLFactor
+ * rebuilds every NcGalaxyShapeFactorData on resample, which would discard
+ * per-galaxy copies. Each galaxy holds a reference, not a copy, so the
+ * whole-cache flush above is safe.
  *
- * Thread confinement, not locking: nothing iterates galaxies under OpenMP
- * here, and NcmFitESMCMC's threaded modes deep-copy the dataset per thread,
- * so each thread owns a distinct factor instance. An intra-instance
- * parallel galaxy loop would need a lock added here.
+ * Concurrency: tab_cache is protected by cache_lock and dp_box by
+ * range_lock (see the private struct). NcmFitESMCMC's threaded modes
+ * deep-copy the dataset per thread, so each thread owns a distinct factor
+ * instance; the locks cover nc_data_cluster_wl_factor_data_prepare()
+ * building tables for several galaxies of one instance at once.
  */
-
-
 
 typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
 {
@@ -1211,15 +1206,13 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
   GHashTable *tab_cache;
   guint64 tab_cache_hash;
 
-  /* Solve bookkeeping:
-   * touched only through g_atomic_int_*, never reset internally. */
   gboolean strict_solve;
   gboolean restrict_range;
 
   /* Cached by prepare() for the reachable-range bound: the models the bound
    * needs, plus a private copy of the density profile held at the upper
-   * bound of the mass. The copy exists because the bound is evaluated there
-   * and the profile in the mset must not be disturbed to do it. */
+   * bound of the mass. The bound is evaluated on the copy so that the
+   * profile in the mset is not modified. */
   NcHICosmo *cosmo;
   NcWLSurfaceMassDensity *smd;
   NcHaloDensityProfile *dp_box;
@@ -1228,43 +1221,46 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
   gboolean range_ready;
 
   /* Whether the per-galaxy bound holds for the current free parameters:
-   * only the mass, the concentration, the halo center and the shape
-   * population may be free (see _moments_tilt_range_holds). @range_gen is
-   * incremented when it changes, so tables cut to a bound are refreshed. */
+   * only the mass, the halo center and the shape population may be free
+   * (see _moments_tilt_range_holds). @range_gen is incremented when it
+   * changes, so tables cut to a bound are refreshed. */
   gboolean range_holds;
   guint range_gen;
 
-  /* Serialized table set. @pending_tables holds what a load brought in,
-   * un-validated: the stamp can only be checked once the population is
-   * known, which is at prepare(), and properties are restored in file order
-   * so neither property may depend on the other having been set. */
   /* One NcmSpectral per concurrent build: it holds per-instance plans and
    * buffers. */
   NcmMemoryPool *spectral_pool;
 
   /* tab_cache is shared by every galaxy of the instance, and
    * nc_data_cluster_wl_factor_data_prepare() may build tables for several
-   * at once. dp_box is shared too, and a density profile updates
-   * state lazily on use. Each gets its own lock; neither is held while a
+   * at once. dp_box is shared too, and a density profile updates state
+   * lazily on use. Each has its own lock; neither lock is held while a
    * table is built. */
   GMutex cache_lock;
   GMutex range_lock;
+
+  /* Serialized table set. @pending_tables holds what a load brought in,
+   * not yet validated: the stamp can only be checked once the population is
+   * known, at prepare(), and properties are restored in file order, so
+   * neither property may depend on the other having been set. */
   NcmObjArray *pending_tables;
   gchar *tables_stamp;
   NcGalaxyShapePop *pop_ref;
   gint stamp_warned;
 
-  /* Memoized PROP_TABLES payload: the same NcmVector instances survive
+  /* Memoized PROP_TABLES payload: the same NcmVector instances are returned
    * across gets as long as @tab_cache is unchanged (@tables_generation
-   * tracks that). Registering these with an NcmSerialize (see
+   * tracks that). Registering them with an NcmSerialize (see
    * nc_galaxy_shape_factor_moments_tilt_register_shared()) lets every
    * ESMCMC worker thread's clone reuse the identical, read-only vectors
-   * instead of each thread re-serializing and rebuilding every table --
-   * the dominant per-thread setup cost the tables would otherwise be. */
+   * instead of re-serializing and rebuilding every table, which is
+   * otherwise the dominant per-thread setup cost. */
   NcmObjArray *shared_tables_cache;
   guint64 shared_tables_cache_gen;
   guint64 tables_generation;
 
+  /* Counters and one-shot warning flags, accessed only through
+   * g_atomic_int_*; reset only by the public reset functions. */
   gint solve_error_count;
   gint solve_warned;
   gint table_build_count;
@@ -1274,7 +1270,7 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
 } NcGalaxyShapeFactorMomentsTiltPrivate;
 
 /*
- * Per-galaxy scratch, split on two axes: the table depends only on
+ * Per-galaxy scratch, split in two: the table depends only on
  * (pop_hash, sn, panel count) and ln_P0 additionally on R, so an R-only
  * change never re-runs the Newton solves.
  */
@@ -1285,9 +1281,9 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltLData
   guint64 pop_hash_seen_tab;
   gboolean tab_valid;
 
-  /* Reachable range, filled by data_prepare(). Absent (range_valid FALSE)
-   * means the galaxy never saw data_prepare() and pays for the full mesh,
-   * which is always correct and never wrong, only slower. */
+  /* Reachable range, filled by data_prepare(). With range_valid FALSE the
+   * galaxy never saw data_prepare() and uses the full mesh, which is
+   * correct and slower. */
   gdouble ghat_max;
   gboolean range_valid;
   guint range_gen_seen;
@@ -1299,7 +1295,7 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltLData
   gboolean p0_valid;
 
   /* Bytes of @table the evaluation reads, set with @table: what
-   * data_prefetch() fetches without touching the table header. */
+   * data_prefetch() fetches without reading the table header. */
   gsize table_span;
 } NcGalaxyShapeFactorMomentsTiltLData;
 
@@ -1321,22 +1317,22 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorMomentsTilt, nc_galaxy_shape_fact
 /*
  * ---- Serializing the table set ----
  *
- * A table is expensive to build and is a pure function of its key, so a run
- * that has built them can hand them to the next one instead of paying again.
- * They travel as an NcmObjArray of NcmVector, one per table, each carrying
- * its own key and layout:
+ * A table is a function of its key only, so a run that has built the tables
+ * can pass them to the next run. They are stored as an NcmObjArray of
+ * NcmVector, one per table, each carrying its own key and layout:
  *
  *   [ sigma_nu, e_rms, n_panels, top, n_failed, deg_0 .. deg_{n-1}, coef .. ]
  *
  * Only the degrees are stored, never the offsets: off[] is a prefix sum of
- * the degrees, so writing it too would put the "offsets count doubles"
- * convention on both sides of a format boundary where they could disagree.
+ * the degrees, and storing it too would put the "offsets count doubles"
+ * convention on both sides of the format boundary, where the two copies
+ * could disagree.
  *
- * Validity is a stamp rather than a hash. The pkey counters the in-process
- * caches use are per-process and mean nothing after a load, so the stamp is
- * built from values: the format tag, the build knobs, and the serialized
- * population the tables were solved against. A mismatch drops the whole set
- * and rebuilds, which is always correct; it is never an error.
+ * Validity is checked by a stamp, not a hash. The pkey counters the
+ * in-process caches use are per-process and carry no meaning after a load,
+ * so the stamp is built from values: the format tag, the build settings,
+ * and the serialized population the tables were solved against. A mismatch
+ * drops the whole set and rebuilds; it is not an error.
  */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_TABLES_FORMAT "moments-tilt-v1"
 
@@ -1355,8 +1351,9 @@ _moments_tilt_stamp (NcGalaxyShapeFactorMomentsTiltPrivate * const self)
   return stamp;
 }
 
-/* The pool keeps the returned pointer in a slot of its own and hands out
- * the slot: ncm_memory_pool_get() returns an NcmSpectral **. */
+/* Allocator of the NcmSpectral pool. The pool keeps the returned pointer in
+ * a slot of its own and hands out the slot: ncm_memory_pool_get() returns
+ * an NcmSpectral **. */
 static gpointer
 _moments_tilt_spectral_alloc (gpointer userdata)
 {
@@ -1411,9 +1408,9 @@ nc_galaxy_shape_factor_moments_tilt_init (NcGalaxyShapeFactorMomentsTilt *gsfmt)
   self->panels_warned           = 0;
 }
 
-/* The convention is a construct-only property of the parent, so it is read
- * once here: the target moments branch on it, and a table built under one
- * convention is wrong under the other. */
+/* Reads the ellipticity convention, a construct-only property of the
+ * parent, once at construction. The target moments branch on it, and a
+ * table built under one convention is wrong under the other. */
 static void
 _nc_galaxy_shape_factor_moments_tilt_constructed (GObject *object)
 {
@@ -1472,13 +1469,13 @@ _nc_galaxy_shape_factor_moments_tilt_set_property (GObject *object, guint prop_i
 }
 
 /*
- * Returns a ref of the memoized "tables" payload, rebuilding it only when
- * @tab_cache has changed (@tables_generation) since the last build. The
- * NcmVector instances inside are stable across calls as long as the
- * generation does not change, which is what lets
- * nc_galaxy_shape_factor_moments_tilt_register_shared() anchor them in an
- * NcmSerialize: a later ncm_serialize_to_variant() of the same instance
- * finds each vector already named and emits a cheap reference instead of
+ * Returns a reference to the memoized "tables" payload, rebuilding it only
+ * when @tab_cache has changed (@tables_generation) since the last build.
+ * The NcmVector instances inside are the same across calls as long as the
+ * generation does not change, so
+ * nc_galaxy_shape_factor_moments_tilt_register_shared() can register them
+ * in an NcmSerialize: a later ncm_serialize_to_variant() of the same
+ * instance finds each vector already named and emits a reference instead of
  * re-serializing it.
  */
 static NcmObjArray *
@@ -1566,9 +1563,10 @@ _nc_galaxy_shape_factor_moments_tilt_ldata_noop (NcGalaxyShapeFactorData *data, 
 {
 }
 
-/* A per-galaxy population reads its moments from the catalog row, so a new
- * row invalidates the cache without any model pkey moving. Not sufficient
- * on its own -- the sn/R2 value-keying below is what covers
+/* Invalidates the per-galaxy table and ln_P0 when a catalog row is read: a
+ * per-galaxy population reads its moments from the row, so a new row
+ * changes them without any model pkey moving. This covers only row reads;
+ * the sn and R2 value checks in peek_table() cover
  * nc_galaxy_shape_factor_data_set() and gen(). */
 static void
 _nc_galaxy_shape_factor_moments_tilt_ldata_read_row (NcGalaxyShapeFactorData *data, NcGalaxyWLObs *obs, const guint i)
@@ -1598,12 +1596,13 @@ _nc_galaxy_shape_factor_moments_tilt_data_init (NcGalaxyShapeFactor *gsf, NcmMSe
 
 /*
  * Whether the reachable-range bound of data_prepare() holds for the free
- * parameters of @mset. The bound varies log10MDelta up to its upper bound
- * and the halo center over its box; the shape population only changes the
- * tables, which are keyed on it. Every other free parameter (cosmology,
- * z_cl, cDelta and the other profile and mass-summary parameters, the
- * surface mass density, the redshift models) moves the shear or the
- * redshift support out of what the bound covered.
+ * parameters of @mset: TRUE when only log10MDelta, the halo center (ra,
+ * dec) and shape-population parameters are free. The bound covers
+ * log10MDelta up to its upper bound and the halo center over its box; the
+ * shape population changes only the tables, which are keyed on it. Every
+ * other free parameter (cosmology, z_cl, cDelta and the other profile and
+ * mass-summary parameters, the surface mass density, the redshift models)
+ * moves the shear or the redshift support outside what the bound covers.
  */
 static gboolean
 _moments_tilt_range_holds (NcmMSet *mset)
@@ -1612,7 +1611,7 @@ _moments_tilt_range_holds (NcmMSet *mset)
   guint i, pid;
 
   /* Read from the models, not from the free-parameter map, which the
-   * caller need not have prepared. */
+   * caller may not have prepared. */
   for (i = 0; i < n_models; i++)
   {
     NcmModel *model = ncm_mset_peek (mset, ncm_mset_get_mid_array_pos (mset, i));
@@ -1672,9 +1671,9 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
     self->tables_generation++;
   }
 
-  /* Adopt whatever a load brought in, once and only if it was built for
-   * this population and these knobs. This runs after the generation flush
-   * above, so an adopted set is not immediately dropped. */
+  /* Adopt the tables a load brought in, once, and only if their stamp
+   * matches this population and these build settings. This runs after the
+   * generation flush above, so an adopted set is not dropped at once. */
   if (G_UNLIKELY (self->pending_tables != NULL))
   {
     NcmObjArray *pending = self->pending_tables;
@@ -1769,15 +1768,16 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
 }
 
 /*
- * Per-galaxy reachable range. The dyadic mesh exists to resolve the layer at
+ * Per-galaxy reachable range: writes ghat_max to the galaxy's ldata and
+ * builds its table. The dyadic mesh exists to resolve the layer at
  * ghat = 1, and a galaxy reaches that layer only if its line of sight can
  * cross the tangential critical curve somewhere in the parameter box the
- * sampler explores. Most cannot, and those should not pay for the layer.
+ * sampler explores. Most do not, and their tables stop below the layer.
  *
- * The bound holds at a fixed concentration and costs one convergence and
- * one shear evaluation at the corner (R_min, z_sup, M_max). At fixed
- * (R, z_s, c) both kappa and gamma grow with M and with z_s. If kappa < 1 at
- * the corner, |g| = gamma / (1 - kappa) is largest there and ghat =
+ * The bound is taken at a fixed concentration and needs one convergence
+ * and one shear evaluation at the corner (R_min, z_sup, M_max). At fixed
+ * (R, z_s, c) both kappa and gamma grow with M and with z_s. If kappa < 1
+ * at the corner, |g| = gamma / (1 - kappa) is largest there and ghat =
  * min(|g|, 1/|g|) is bounded by min(|g|, 1). If kappa >= 1 at the corner,
  * |g| passed through 1 at a smaller mass or redshift, so ghat reaches 1 and
  * the full mesh is kept. The shear is not monotonic in the concentration
@@ -1785,17 +1785,17 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
  * is not taken over a concentration range: a free cDelta disables the
  * restriction (see _moments_tilt_range_holds).
  *
- * The inner radial cut is deliberately not used as a floor on R: no r_min
- * weighting is applied at fit time, so a galaxy selected at the fiducial
- * centre is still evaluated at whatever radius the current centre gives.
+ * The inner radial cut is not used as a floor on R: no r_min weighting is
+ * applied at fit time, so a galaxy selected at the fiducial center is
+ * still evaluated at whatever radius the current center gives.
  *
- * The shear the table is read at is the CALIBRATED one,
- * g = (1 + m) g_t e^{2i phi} + c (see nc_galaxy_shape_factor.c), not the bare
- * reduced shear the two calls return, so the bound carries the galaxy's own
- * m and c: |g| <= |1 + m| |g_t| + |c| by the triangle inequality. Leaving them
- * out under-covers every galaxy with m > 0 by up to m |g_t|, which on real
- * HSC data put ghat just past a dyadic panel top (0.500318 vs 0.5) and
- * returned zero probability there.
+ * The shear the table is read at is the calibrated one,
+ * g = (1 + m) g_t e^{2i phi} + c (see nc_galaxy_shape_factor.c), not the
+ * bare reduced shear the two calls return, so the bound includes the
+ * galaxy's own m and c: |g| <= |1 + m| |g_t| + |c| by the triangle
+ * inequality. Without them the bound is too small by up to m |g_t| for
+ * every galaxy with m > 0, and the evaluation then returns zero
+ * probability above a panel top.
  */
 static inline void _nc_galaxy_shape_factor_moments_tilt_peek_table (NcGalaxyShapeFactorMomentsTiltPrivate * const self,
                                                                     NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
@@ -1823,7 +1823,7 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
 
   if ((R_min <= 0.0) || (z_sup <= self->z_cl))
   {
-    /* No background source, or a radius the centre's prior can take to the
+    /* No background source, or a radius the center's prior can take to the
      * halo itself: nothing to bound. */
     ghat_max = (z_sup <= self->z_cl) ? 0.0 : 1.0;
   }
@@ -1837,8 +1837,8 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
   {
     gdouble kappa, g_t;
 
-    /* Two evaluations, cheap next to the table build that follows,
-     * serialized because the profile copy is shared across galaxies. */
+    /* Two evaluations, under range_lock because the profile copy is shared
+     * across galaxies. */
     g_mutex_lock (&self->range_lock);
     kappa = nc_wl_surface_mass_density_convergence (self->smd, self->dp_box, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl);
     g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_box, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl));
@@ -1861,18 +1861,16 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
   ldata->ghat_max    = ghat_max;
   ldata->range_valid = TRUE;
 
-  /* Force the table to be re-acquired: the range decides how many panels it
-   * has, and the cache is keyed on that. */
+  /* Force the table to be re-acquired: the range sets its panel count, and
+   * the cache is keyed on that. */
   ldata->tab_valid = FALSE;
 
-  /* Build it now rather than at the first evaluation, so that what this
-   * function leaves behind is what the likelihood will actually read, and a
+  /* Build the table now rather than at the first evaluation, so that a
    * prepared dataset evaluates without building anything.
-   *
-   * The orchestrator runs this step before the redshift grid for the same
-   * reason: the auto-node calibration probes the shape integrand, and with
-   * the range already recorded here the probe finds this table instead of
-   * building a full-mesh one that nothing reads afterwards. */
+   * NcDataClusterWLFactor runs this step before the redshift grid: the
+   * auto-node calibration probes the shape integrand, and with the range
+   * already recorded the probe finds this table instead of building a
+   * full-mesh one that nothing reads afterwards. */
   {
     NcGalaxyShapePop *pop = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
 
@@ -1909,7 +1907,7 @@ _nc_galaxy_shape_factor_moments_tilt_report_failures (NcGalaxyShapeFactorMoments
     g_warning ("NcGalaxyShapeFactorMomentsTilt: the exact moment-matching Newton "
                "solve failed at %u nodes of a %u-panel table (sigma_nu=%g); the "
                "affected panel is built from the remaining nodes and is not "
-               "accurate. Warned once per instance -- read the running total "
+               "accurate. Warned once per instance; read the running total "
                "with nc_galaxy_shape_factor_moments_tilt_get_solve_error_count(). "
                "The count is per distinct table, not per galaxy.",
                n_failed, n_panels, sn);
@@ -1918,14 +1916,15 @@ _nc_galaxy_shape_factor_moments_tilt_report_failures (NcGalaxyShapeFactorMoments
 }
 
 /*
- * Returns a NEW reference to the table for this key, building it if needed.
+ * Returns a new reference to the table for (sn, e_rms, n_panels), building
+ * it if it is not cached.
  *
- * The lookup and the insertion happen under cache_lock; the build does not,
- * since it is where all the time goes. Two threads that miss the same key
- * therefore both build it, and the second to finish discards its own copy
- * for the one already inserted. The reference is taken while the lock is
- * still held: a concurrent insert of the same key would otherwise free the
- * table between the lookup and the ref.
+ * The lookup and the insertion happen under cache_lock; the build does not.
+ * Two threads that miss the same key therefore both build it, and the
+ * second to finish discards its own copy for the one already inserted. The
+ * reference is taken while the lock is held: a concurrent replacement of
+ * the same key would otherwise free the table between the lookup and the
+ * ref.
  */
 static NcGalaxyShapeFactorMomentsTable *
 _nc_galaxy_shape_factor_moments_tilt_acquire_table (NcGalaxyShapeFactorMomentsTiltPrivate * const self,
@@ -1984,13 +1983,12 @@ _nc_galaxy_shape_factor_moments_tilt_acquire_table (NcGalaxyShapeFactorMomentsTi
 }
 
 /*
- * Refreshes this galaxy's table and ln_P0 independently: the former on
- * population generation, catalog row or std_noise changes, the latter
- * additionally on the observed radius.
+ * The two cold paths of peek_table(), kept out of line so that its checks
+ * inline into every evaluation. refresh_table() acquires the galaxy's table
+ * for the current population generation, range generation and std_noise;
+ * refresh_ln_P0() recomputes ln_P0, which additionally depends on the
+ * observed radius.
  */
-
-/* The cold paths of peek_table(), kept out of line so the warm checks
- * inline into every evaluation. */
 G_GNUC_NO_INLINE static void
 _nc_galaxy_shape_factor_moments_tilt_refresh_table (NcGalaxyShapeFactorMomentsTiltPrivate * const self,
                                                     NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data)
@@ -2004,7 +2002,7 @@ _nc_galaxy_shape_factor_moments_tilt_refresh_table (NcGalaxyShapeFactorMomentsTi
   gdouble top        = 1.0;
   NcGalaxyShapeFactorMomentsTable *table;
 
-  /* Quantise the reachable range upward onto the mesh: J panels cover
+  /* Quantize the reachable range upward onto the mesh: J panels cover
    * [0, 1 - 2^-J], and J = K restores the full mesh. A galaxy that never
    * saw data_prepare() has no bound recorded and gets the full mesh. */
   if (self->range_holds && ldata->range_valid && (ldata->ghat_max < 1.0))
@@ -2016,7 +2014,7 @@ _nc_galaxy_shape_factor_moments_tilt_refresh_table (NcGalaxyShapeFactorMomentsTi
   }
 
   if (G_UNLIKELY (clamped && g_atomic_int_compare_and_exchange (&self->panels_warned, 0, 1)))
-    g_warning ("NcGalaxyShapeFactorMomentsTilt: sigma_nu=%g asks for more "
+    g_warning ("NcGalaxyShapeFactorMomentsTilt: sigma_nu=%g needs more "
                "than the %u panels the layout holds, so the mesh stops there "
                "and the boundary layer at ghat=1 is under-resolved. Warned "
                "once per instance.",
@@ -2062,9 +2060,9 @@ _nc_galaxy_shape_factor_moments_tilt_peek_table (NcGalaxyShapeFactorMomentsTiltP
   NcGalaxyShapeFactorMomentsTiltLData *ldata = (NcGalaxyShapeFactorMomentsTiltLData *) data->ldata;
   const gdouble sn                           = data->std_noise;
 
-  /* R = |epsilon_obs| is read from the ARGUMENTS, not from
+  /* R = |epsilon_obs| is read from the arguments, not from
    * data->epsilon_obs_1/2: the two coincide on the fixed-nodes pipeline
-   * path but nothing guarantees it in general. */
+   * path but not in general. */
   const gdouble R2 = gsl_pow_2 (epsilon_obs_1) + gsl_pow_2 (epsilon_obs_2);
 
   if (G_UNLIKELY (!ldata->tab_valid || (ldata->pop_hash_seen_tab != self->pop_hash) ||
@@ -2080,21 +2078,23 @@ _nc_galaxy_shape_factor_moments_tilt_peek_table (NcGalaxyShapeFactorMomentsTiltP
 }
 
 /*
- * Gauge-fixes (g, eps_obs) together by -arg(g), folds |g| to ghat = min(|g|,1/|g|)
- * -- which is exact, not an approximation: the marginal is invariant under
- * g -> 1/g and the table is a function of ghat alone -- and returns
- * ln P_0 + lambda_1 x + lambda_2 x^2 + lambda_3 y^2 - W.
+ * Returns ln P_0 + lambda_1 x + lambda_2 x^2 + lambda_3 y^2 - W, or its
+ * exponential when @want_log is FALSE. (x, y) is eps_obs rotated by
+ * -arg(g), and the table is read at ghat = min(|g|, 1/|g|); the fold is
+ * exact, since the marginal is invariant under g -> 1/g and the table is a
+ * function of ghat alone.
  *
- * The upper-end check runs BEFORE the panel index is formed. The index
+ * The upper-end check runs before the panel index is formed. The index
  * clamps to the last panel, so a ghat above the table's end would otherwise
  * be evaluated there, outside that panel's own interval, where a Chebyshev
- * series diverges quickly. Such a point means the range the table was built
- * for was too small, which is reported rather than extrapolated through.
+ * series diverges. Such a point is outside the range the table was built
+ * for: it is counted, warned about once per instance, and returns zero
+ * probability (GSL_NEGINF for the log).
  *
- * There is no ceiling guard on the density. Such a guard is what a
- * truncated tilt needs, to catch a lambda so negative that the model becomes
- * a spurious spike; the tilt here is solved, not truncated, and the density
- * integrates to one by construction of W.
+ * There is no ceiling guard on the density. A truncated tilt needs one, to
+ * catch a lambda so negative that the model becomes a spurious spike; the
+ * tilt here is solved, not truncated, and the density integrates to one by
+ * construction of W.
  */
 static gdouble
 _nc_galaxy_shape_factor_moments_tilt_eval (NcGalaxyShapeFactorMomentsTiltPrivate * const self,
@@ -2113,10 +2113,10 @@ _nc_galaxy_shape_factor_moments_tilt_eval (NcGalaxyShapeFactorMomentsTiltPrivate
   gdouble lnP;
 
   /* lambda(0) = 0 and W(0) = 0 hold exactly, and the zero-shear node is
-   * never solved for that reason. Truncating a panel costs the series its
-   * exactness at the node, so the zero-shear case is returned directly
-   * rather than through the interpolant: at g = 0 this class IS the exact
-   * zero-shear marginal, and that identity is worth keeping bitwise. */
+   * never solved. A truncated series is not exact at its nodes, so the
+   * zero-shear case is returned directly rather than through the
+   * interpolant: at g = 0 this class is the exact zero-shear marginal, and
+   * the identity holds bitwise. */
   if (g_mag == 0.0)
     return want_log ? ln_P0 : exp (ln_P0);
 
@@ -2129,7 +2129,7 @@ _nc_galaxy_shape_factor_moments_tilt_eval (NcGalaxyShapeFactorMomentsTiltPrivate
                  "%g this galaxy's table covers, so the reachable range it was "
                  "built for was violated. The point is reported as zero "
                  "probability rather than extrapolated. Warned once per "
-                 "instance -- read the running total with "
+                 "instance; read the running total with "
                  "nc_galaxy_shape_factor_moments_tilt_get_range_error_count().",
                  ghat, table->top);
 
@@ -2247,8 +2247,8 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    *
    * Target accuracy of the interpolant, in nats of model mass
    * $|\ln Z|$. Each panel is truncated to the smallest degree whose signed
-   * coefficient tail sits a factor of ten below this, that factor being the
-   * margin for the tail being an estimate of the error rather than a bound
+   * coefficient tail is below one tenth of this value; the factor of ten is
+   * the margin for the tail being an estimate of the error and not a bound
    * on it. The default of $10^{-3}$ is about a hundred times below the
    * irreducible error of the tilt family itself, so it does not limit the
    * accuracy of a fit.
@@ -2266,10 +2266,10 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    * NcGalaxyShapeFactorMomentsTilt:max-degree:
    *
    * Largest local degree a panel may reach. The adaptive refinement doubles
-   * from four, so the ladder is 4, 8, 16, and stopping at 16 is what the
-   * measured degrees ask for: the minimum is four to six on almost every
-   * panel, since the dyadic grading is self-similar and each panel sees the
-   * same shape in its own rescaled coordinate.
+   * from four, so the degrees tried are 4, 8, 16. The degree selected is
+   * four to six on almost every panel, since the dyadic grading is
+   * self-similar and each panel has the same shape in its own rescaled
+   * coordinate, so the default of 16 is not reached.
    *
    */
   g_object_class_install_property (object_class,
@@ -2301,21 +2301,21 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    * NcGalaxyShapeFactorMomentsTilt:restrict-range:
    *
    * Whether to build each galaxy's table only over the range of folded
-   * shear its line of sight can actually reach inside the parameter box,
-   * instead of over all of $[0,1]$.
+   * shear its line of sight can reach inside the parameter box, instead of
+   * over all of $[0,1]$.
    *
    * The mesh exists to resolve the boundary layer at $\hat g=1$, which a
    * galaxy reaches only if its line of sight can cross the tangential
-   * critical curve. On a real cluster most cannot, and the bound is two
-   * shear evaluations against the dozens of Newton solves it saves. It
-   * needs nc_galaxy_shape_factor_data_prepare() to have run for the galaxy;
-   * without that the full mesh is used, which is slower and equally
-   * correct.
+   * critical curve. On a real cluster most do not, and the bound costs two
+   * shear evaluations per galaxy against the dozens of Newton solves of the
+   * panels it removes. It needs nc_galaxy_shape_factor_data_prepare() to
+   * have run for the galaxy; without that the full mesh is used, which is
+   * slower and equally correct.
    *
-   * The bound is a property of the prior box, so it does not move as the
-   * sampler moves, and it is only worth anything if that prior is tight: a
+   * The bound is a property of the prior box, so it does not change as the
+   * sampler moves, and it removes panels only if that prior is tight: a
    * halo center free over the whole field makes every galaxy reach
-   * $\hat g = 1$, which costs nothing but saves nothing.
+   * $\hat g = 1$, and every table is then the full mesh.
    *
    * The bound covers the mass (log10MDelta), the halo center (ra, dec) and
    * the shape population. If any other parameter is free in the model set
@@ -2338,11 +2338,11 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    *
    * Whether a Newton failure during a table build is a fatal error instead
    * of a warning counted in
-   * nc_galaxy_shape_factor_moments_tilt_get_solve_error_count(). Off by
-   * default, so that an exploratory run reports rather than stops.
+   * nc_galaxy_shape_factor_moments_tilt_get_solve_error_count(). %FALSE by
+   * default, so that an exploratory run reports and continues.
    *
-   * Deliberately installed without %G_PARAM_CONSTRUCT: that would overwrite
-   * the value set in the instance initialiser.
+   * Installed without %G_PARAM_CONSTRUCT, which would overwrite the value
+   * set in the instance initializer.
    *
    */
   g_object_class_install_property (object_class,
@@ -2358,14 +2358,12 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    *
    * The interpolation tables this instance has built, as an
    * #NcmObjArray of #NcmVector, one per table, each carrying its own key and
-   * layout. Serializing an instance carries them with it, so a run that has
-   * built them can be saved and a later run started from it pays no build
-   * cost at all.
+   * layout. Serializing an instance includes them, so a later run started
+   * from the saved instance builds no table.
    *
    * They are adopted only if #NcGalaxyShapeFactorMomentsTilt:tables-stamp
-   * says they were built for the same population and the same build
-   * settings. A mismatch discards them and rebuilds, which changes nothing
-   * but the time taken.
+   * matches the current population and build settings. A mismatch discards
+   * them and rebuilds, which changes only the time taken.
    *
    */
   g_object_class_install_property (object_class,
@@ -2383,8 +2381,8 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    * format tag, the build settings, and the serialized population.
    *
    * It is built from values rather than from the parameter-key counters the
-   * in-process caches use, because those counters are per-process and carry
-   * no meaning across a save and load.
+   * in-process caches use: those counters are per-process and carry no
+   * meaning across a save and load.
    *
    */
   g_object_class_install_property (object_class,
@@ -2397,8 +2395,8 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
 
   gsf_class->data_init = &_nc_galaxy_shape_factor_moments_tilt_data_init;
 
-  /* The table cache and the shared profile copies are locked (see the
-   * private struct), and everything else a galaxy touches is its own. */
+  /* The table cache and the shared profile copy are locked (see the
+   * private struct); everything else a galaxy touches is its own. */
   gsf_class->prepare          = &_nc_galaxy_shape_factor_moments_tilt_prepare;
   gsf_class->data_prepare     = &_nc_galaxy_shape_factor_moments_tilt_data_prepare;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_moments_tilt_eval_marginal;
@@ -2474,8 +2472,8 @@ nc_galaxy_shape_factor_moments_tilt_clear (NcGalaxyShapeFactorMomentsTilt **gsfm
  * reset. One table serves every galaxy sharing its key, so this counts
  * nodes of distinct tables and not galaxies affected. Under a parallel
  * nc_data_cluster_wl_factor_data_prepare(), two threads can build the same
- * table at once and one copy is discarded; the discarded build's failures are
- * counted too, so the total can exceed what the tables kept would give.
+ * table at once and one copy is discarded; the discarded build's failures
+ * are counted too, so the total can exceed the count over the tables kept.
  *
  * Returns: the running count of failed nodes
  */
@@ -2507,10 +2505,10 @@ nc_galaxy_shape_factor_moments_tilt_reset_solve_error_count (NcGalaxyShapeFactor
  * nc_galaxy_shape_factor_moments_tilt_get_range_error_count:
  * @gsfmt: a #NcGalaxyShapeFactorMomentsTilt
  *
- * Number of evaluations whose folded shear fell above the range its table
- * covers since the last reset. Any non-zero value means a table was built
- * for a smaller range than the sampler actually visited, and those
- * evaluations returned zero probability instead of an extrapolated value.
+ * Number of evaluations whose folded shear was above the range its table
+ * covers since the last reset. A non-zero value means a table was built
+ * for a smaller range than the sampler visited, and those evaluations
+ * returned zero probability instead of an extrapolated value.
  *
  * Returns: the running count of out-of-range evaluations
  */
@@ -2542,15 +2540,14 @@ nc_galaxy_shape_factor_moments_tilt_reset_range_error_count (NcGalaxyShapeFactor
  * nc_galaxy_shape_factor_moments_tilt_get_table_build_count:
  * @gsfmt: a #NcGalaxyShapeFactorMomentsTilt
  *
- * Number of tables actually built since the last reset, as opposed to
- * served from the instance cache. This is the measure of what a run spends
- * on the interpolant: a serial run over the same population and the same
- * per-galaxy shape dispersions builds the same number, and a run reusing
- * prepared tables builds none. A parallel
- * nc_data_cluster_wl_factor_data_prepare() can build a table twice when two
- * threads need it at once, keeping one; both builds are counted, so the count
- * then exceeds the number of distinct tables and varies from run to run,
- * while the results do not.
+ * Number of tables built since the last reset, not counting tables served
+ * from the instance cache. A serial run over the same population and the
+ * same per-galaxy shape dispersions builds the same number, and a run
+ * reusing stored tables builds none. A parallel
+ * nc_data_cluster_wl_factor_data_prepare() can build a table twice when
+ * two threads need it at once, keeping one; both builds are counted, so
+ * the count then exceeds the number of distinct tables and varies from run
+ * to run, while the results do not.
  *
  * Returns: the running count of table builds
  */
@@ -2582,31 +2579,30 @@ nc_galaxy_shape_factor_moments_tilt_reset_table_build_count (NcGalaxyShapeFactor
  * @gsfmt: a #NcGalaxyShapeFactorMomentsTilt
  * @ser: a #NcmSerialize
  *
- * Anchors this instance's current table set (its "tables" property) in
- * @ser, by the individual #NcmVector of each table, under names derived
- * from @gsfmt's own identity.
+ * Registers the #NcmVector of each table of this instance's current table
+ * set (its #NcGalaxyShapeFactorMomentsTilt:tables property) as a named
+ * instance in @ser, under names derived from the address of @gsfmt.
  *
- * The tables are pure functions of (population, shape dispersion, panel
- * count), read-only once built and never touched again -- see the class
- * documentation. A later ncm_serialize_to_variant()/ncm_serialize_dup_obj()
- * of @gsfmt through @ser therefore finds each vector already named and
- * hands back a reference instead of re-serializing and rebuilding it, for
- * every caller sharing @ser, including across ncm_serialize_reset(ser,
- * TRUE) (autosave-only) which is what #NcmFitESMCMC and #NcmFitMC run
- * between per-worker fit clones. This is the same anchoring
- * #NcDataClusterWLFactor's own register_shared() already does for its
- * "obs" property; without it, every worker thread's clone deep-copies
- * every cached table, which for a large galaxy catalog dominates
- * per-thread setup time.
+ * The tables are functions of (population, shape dispersion, panel count)
+ * only and are read-only once built (see the class documentation). A later
+ * ncm_serialize_to_variant() or ncm_serialize_dup_obj() of @gsfmt through
+ * @ser finds each vector already named and emits a reference instead of
+ * re-serializing and rebuilding it, for every caller sharing @ser,
+ * including across ncm_serialize_reset(ser, TRUE) (autosave only), which
+ * #NcmFitESMCMC and #NcmFitMC run between per-worker fit clones.
+ * #NcDataClusterWLFactor's register_shared() does the same for its "obs"
+ * property. Without this registration every worker thread's clone
+ * deep-copies every cached table, which for a large galaxy catalog
+ * dominates per-thread setup time.
  *
- * Registering does not itself build any table: an instance with an empty
- * cache anchors nothing, and a later ncm_serialize_to_variant() call still
- * has to pick up whatever tables exist by then, so callers should populate
- * the cache (e.g. run one serial warm-up prepare) before running this.
+ * Registering does not build any table: an instance with an empty cache
+ * registers nothing, and a later ncm_serialize_to_variant() serializes
+ * whatever tables exist by then, so callers populate the cache first (for
+ * example by one serial prepare).
  *
- * Safe to call repeatedly, including as the cache grows: re-registering
- * under the same names is idempotent for tables already shared, and the
- * new ones are added the same way.
+ * May be called repeatedly, including as the cache grows: registering a
+ * table already registered under the same name changes nothing, and new
+ * tables are added.
  */
 void
 nc_galaxy_shape_factor_moments_tilt_register_shared (NcGalaxyShapeFactorMomentsTilt *gsfmt, NcmSerialize *ser)
@@ -2619,7 +2615,7 @@ nc_galaxy_shape_factor_moments_tilt_register_shared (NcGalaxyShapeFactorMomentsT
   {
     GObject *vec = ncm_obj_array_peek (tables, i);
 
-    /* NcmSerialize's named-instance syntax only accepts [A-Za-z0-9:] inside
+    /* NcmSerialize's named-instance syntax accepts only [A-Za-z0-9:] inside
      * the brackets (see its is_named_regex): no "0x" prefix, no
      * underscore. */
     gchar *name = g_strdup_printf ("ncGsfMomentsTiltTab:%" G_GSIZE_FORMAT ":%u", (gsize) gsfmt, i);
@@ -2641,11 +2637,12 @@ nc_galaxy_shape_factor_moments_tilt_register_shared (NcGalaxyShapeFactorMomentsT
  * @Ex2: (out): $\mathbb E[x^2]$
  * @Ey2: (out): $\mathbb E[y^2]$
  *
- * The closed-form target moments of the exact marginal at @ghat, including
- * the noise variance, in this instance's ellipticity convention. Exposed for
- * validation. At $\hat g = 1$ both conventions' maps send every source to
- * 1, so there they are exactly $(1, 1 + \sigma_\nu^2, \sigma_\nu^2)$;
- * under TRACE_DET $\mathrm{E}[x] = \hat g$ at every shear.
+ * Computes the closed-form target moments of the exact marginal at @ghat,
+ * including the noise variance, in this instance's ellipticity convention.
+ * Exposed for validation. At $\hat g = 1$ both conventions' maps send every
+ * source to 1, so there the moments are exactly
+ * $(1, 1 + \sigma_\nu^2, \sigma_\nu^2)$; under TRACE_DET
+ * $\mathrm{E}[x] = \hat g$ at every shear.
  *
  */
 void
@@ -2680,11 +2677,12 @@ nc_galaxy_shape_factor_moments_tilt_exact_moments (NcGalaxyShapeFactorMomentsTil
  * @lambda_1: (out): $\lambda_1$
  * @lambda_2: (out): $\lambda_2$
  * @lambda_3: (out): $\lambda_3$
- * @W: (out): the exact log-normaliser $W$
+ * @W: (out): the exact log-normalizer $W$
  *
- * The interpolated tilt at @g_1, @g_2, building this galaxy's table if
- * needed. Exposed for validation against the design notes' own tables. A
- * shear beyond the table's range returns zeros.
+ * Computes the interpolated tilt at @g_1, @g_2, building this galaxy's
+ * table if needed. Exposed for validation. Zero shear returns zeros, which
+ * is the exact value; a folded shear above the table's upper end also
+ * returns zeros, without counting or warning.
  *
  */
 void
@@ -2699,9 +2697,9 @@ nc_galaxy_shape_factor_moments_tilt_eval_tilt (NcGalaxyShapeFactorMomentsTilt *g
 
   _nc_galaxy_shape_factor_moments_tilt_peek_table (self, pop, data, 0.0, 0.0, &table, &ln_P0);
 
-  /* Zero shear and out-of-range both return an untilted lambda, the first
-   * because that is the exact answer and the second because there is no
-   * answer to give. */
+  /* Zero shear returns lambda = 0, W = 0, the exact value; a folded shear
+   * above the table's upper end returns the same, since the table has no
+   * value there. */
   if ((g_mag == 0.0) || (ghat > table->top + NC_GALAXY_SHAPE_FACTOR_MOMENTS_TOP_TOL))
   {
     *lambda_1 = *lambda_2 = *lambda_3 = *W = 0.0;
@@ -2727,9 +2725,9 @@ nc_galaxy_shape_factor_moments_tilt_eval_tilt (NcGalaxyShapeFactorMomentsTilt *g
  * @top: (out): upper end of the mesh
  * @degrees: (out) (element-type gdouble) (transfer full): per-panel degree
  *
- * The mesh this galaxy's table actually uses, building it if needed.
- * Exposed so that a validation run can report the node budget a
- * configuration costs and check the adaptive degree against the measured
+ * Returns the mesh of this galaxy's table, building the table if needed.
+ * Exposed so that a validation run can report the node count of a
+ * configuration and check the adaptive degree against the measured
  * profile.
  *
  */

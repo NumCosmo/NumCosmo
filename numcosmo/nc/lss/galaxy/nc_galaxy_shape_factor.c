@@ -57,8 +57,9 @@
  * parallel. A per-galaxy method may write only that galaxy's own data
  * fragment; shared instance state may change only in prepare(), which always
  * runs alone. Models reached through the #NcmMSet that update themselves
- * lazily on their first call after a parameter change are covered by the
- * orchestrator, which prepares one galaxy alone before starting the rest.
+ * lazily on their first call after a parameter change are handled by
+ * #NcDataClusterWLFactor, which prepares one galaxy alone before starting
+ * the rest.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -493,19 +494,17 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
  * @data: a #NcGalaxyShapeFactorData
  * @z_max: an upper bound on the galaxy's redshift support
  *
- * Per-galaxy prepare: gives the subclass the one point where @mset and @data
- * are both in hand, so it can precompute whatever depends on the galaxy and
- * on the models at once. Call it after
- * nc_galaxy_shape_factor_update_data_radius(),
+ * Per-galaxy prepare: calls the subclass's data_prepare with @mset and
+ * @data, so that it precomputes what depends on the galaxy and on the
+ * models together. Call it after nc_galaxy_shape_factor_update_data_radius(),
  * nc_galaxy_shape_factor_update_data_optzs() and
  * nc_galaxy_shape_factor_update_data_pop(), whose results it may read, and
- * before anything evaluates the marginal for this galaxy -- in particular
- * before a redshift-quadrature calibration probes it, so that the probe
- * already sees what this establishes.
+ * before anything evaluates the marginal for this galaxy, in particular
+ * before a redshift-quadrature calibration probes it.
  *
- * This is an optimization, never a precondition: a subclass that caches here
- * must still be able to build the same state lazily, because nothing
- * guarantees this function ran for a given galaxy.
+ * It is an optimization, not a precondition: a subclass that caches here
+ * must build the same state lazily when this function did not run for a
+ * galaxy.
  */
 void
 nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max)
@@ -522,23 +521,24 @@ nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, Nc
  * @stage: prefetch stage, 0, 1 or 2
  *
  * Issues software prefetches for the memory nc_galaxy_shape_factor_eval_at_nodes()
- * will read for @data, so a loop over galaxies can fetch the next galaxies'
+ * reads for @data, so that a loop over galaxies fetches the next galaxies'
  * state while it evaluates the current one. Each galaxy's state is a chain
  * of small heap allocations, which the hardware prefetcher cannot follow;
- * with many galaxies it does not fit in cache, and every evaluation would
- * otherwise wait on memory at each link of the chain.
+ * with many galaxies it does not fit in cache, and without prefetching
+ * every evaluation waits on memory at each link of the chain.
  *
  * The chain is walked one link per @stage, so that no stage reads a pointer
- * that is not already on its way into cache:
+ * that is not already being fetched:
  *
  * - stage 0: @data itself;
  * - stage 1: the structures @data points to, read through @data;
  * - stage 2: the arrays those structures point to.
  *
  * The caller issues the stages for a galaxy on consecutive iterations, the
- * highest stage for the galaxy evaluated next, e.g. stage 2 for galaxy i+1,
- * stage 1 for i+2 and stage 0 for i+3 while evaluating galaxy i. Calling
- * a stage out of order is harmless but stalls on the missing link.
+ * highest stage for the galaxy evaluated next: stage 2 for galaxy i+1,
+ * stage 1 for i+2 and stage 0 for i+3 while evaluating galaxy i. A stage
+ * called out of order changes nothing and stalls on the pointer the skipped
+ * stage would have fetched.
  *
  * This only issues hints: it changes no state and has no effect on results.
  */
@@ -1478,10 +1478,10 @@ nc_galaxy_shape_factor_update_data_at_nodes_sigma (NcGalaxyShapeFactor *gsf, NcG
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
   NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
 
-  /* r_s and rho_s are the ones prepare() cached at z_cl, refreshed whenever
-   * the models they depend on move, which is also when this runs. Using them
-   * saves recomputing them per galaxy and leaves the profile's lazily
-   * updated state alone, which is what lets galaxies be updated in parallel. */
+  /* Uses the r_s and rho_s that prepare() cached at z_cl; they are refreshed
+   * whenever the models they depend on change, which is also when this
+   * runs. This avoids recomputing them per galaxy and does not touch the
+   * profile's lazily updated state, so galaxies can be updated in parallel. */
   nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep_with_rs (self->density_profile, cdata->radius,
                                                                      self->r_s, self->rho_s,
                                                                      &cdata->sigma_cache);
@@ -1615,11 +1615,11 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
  * @z_nodes: the z values at each quadrature node
  * @out: a #NcmVector receiving the log shape likelihood at each node
  *
- * Logarithmic counterpart of nc_galaxy_shape_factor_eval_at_nodes(): writes
- * ln P(epsilon_obs | z_j, data) at every node, through eval_ln_marginal(). It
- * is meant for a galaxy whose linear values underflow to zero at every node,
- * where the log values stay finite and let the caller rescale before
- * integrating. Requires a prior call to
+ * Writes ln P(epsilon_obs | z_j, data) at every node through
+ * eval_ln_marginal(), the logarithmic counterpart of
+ * nc_galaxy_shape_factor_eval_at_nodes(). For a galaxy whose linear values
+ * underflow to zero at every node the log values are finite, and the caller
+ * rescales them before integrating. Requires a prior call to
  * nc_galaxy_shape_factor_prepare_data_array_at_nodes().
  *
  */

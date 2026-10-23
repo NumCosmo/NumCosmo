@@ -28,11 +28,12 @@
 
 /*
  * Machinery shared by the shape factors built on the exact target moments
- * of the lensed intrinsic-ellipticity distribution (#NcGalaxyShapeFactorMomentsTilt
- * and, in time, a Gaussian matched to the same moments): the closed-form
- * target moments, the dyadic Chebyshev mesh in ghat = min(|g|, 1/|g|) and
- * its interleaved coefficient tables, the instance-cache key, the tables'
- * serialized form, and the reachable-range bound. Not public API.
+ * of the lensed intrinsic-ellipticity distribution
+ * (#NcGalaxyShapeFactorMomentsTilt and #NcGalaxyShapeFactorMomentsGauss):
+ * the closed-form target moments, the dyadic Chebyshev mesh in
+ * ghat = min(|g|, 1/|g|) and its interleaved coefficient tables, the
+ * instance-cache key, the tables' serialized form, and the reachable-range
+ * bound. Not public API.
  */
 #ifndef _NC_GALAXY_SHAPE_FACTOR_MOMENTS_PRIVATE_H_
 #define _NC_GALAXY_SHAPE_FACTOR_MOMENTS_PRIVATE_H_
@@ -53,13 +54,14 @@
 
 G_BEGIN_DECLS
 
-/* Radial nodes of the closed-form target-moment quadrature, in the psi
- * variable of r = sin(psi)/delta. */
+/* Node count of the radial quadrature of the target moments: in the psi
+ * variable of r = sin(psi)/delta for the TRACE convention, in r for
+ * TRACE_DET. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_MOMENT_NNODES 64
 
-/* Panel mesh. K = round(log2(1/sigma_nu)) reaches 7 at the smallest
- * per-galaxy shape dispersion seen in production (0.008); the cap is one
- * above that. */
+/* Largest number of panels. K = round(log2(1/sigma_nu)) is 7 at
+ * sigma_nu = 0.008, the smallest per-galaxy shape dispersion in production
+ * catalogs; the cap is one above that. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_MAX_PANELS 8
 
 /* Largest number of interleaved series a table holds. */
@@ -137,11 +139,11 @@ gboolean _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *d
  * difference of doubles in [0, 1], hence a multiple of 2^-53 and never
  * subnormal, so frexp's e is the biased exponent minus 1022.
  *
- * A ghat exactly on a breakpoint resolves one panel low, which is harmless
- * because a breakpoint is a Lobatto endpoint of the lower panel and that
- * panel is exact there. ghat = 1 is not harmless: frexp(0) reports exponent
- * zero and would select panel 0, far outside its interval, so it is
- * branched explicitly.
+ * A ghat exactly on a breakpoint selects the lower panel; a breakpoint is a
+ * Lobatto endpoint of that panel, where its series is exact. At ghat = 1,
+ * u = 0 is not a normal double (frexp(0) reports exponent zero, which the
+ * formula would map to panel 0), so that case is branched explicitly to the
+ * last panel.
  */
 static inline guint
 _nc_galaxy_shape_factor_moments_panel_index (const NcGalaxyShapeFactorMomentsTable *table, const gdouble ghat)
@@ -193,20 +195,20 @@ _nc_galaxy_shape_factor_moments_panel_arg (const NcGalaxyShapeFactorMomentsTable
  * ---- The generic table builder ----
  *
  * The build is driven by NcmSpectral, which places the Chebyshev-Lobatto
- * nodes, refines 2^k -> 2^(k+1) by evaluating only the new odd nodes, decides
- * convergence per component, and runs the DCT. What varies between schemes
- * is what a node costs and what error a coefficient carries, so those come
- * in as callbacks:
+ * nodes, refines 2^k -> 2^(k+1) by evaluating only the new odd nodes, tests
+ * convergence per component, and runs the DCT. The cost of a node and the
+ * error a coefficient contributes differ between schemes, so those are
+ * callbacks:
  *
  * - @node fills the n_comp values at a folded shear. Every node it has
- *   produced so far is in @memo, sorted, so it can pick its own starting
- *   point from the solved neighbours. Returns FALSE when it could not produce
- *   an accurate value; the value it wrote is kept and the failure counted.
+ *   produced so far is in @memo, sorted, so it can take its starting point
+ *   from the solved neighbors. Returns FALSE when it could not produce an
+ *   accurate value; the value it wrote is kept and the failure counted.
  * - @panel_ctx fills a small per-panel context (e.g. the target moments at
  *   the panel midpoint) passed back to @probe.
  * - @probe measures the error a coefficient vector (or a nodal difference)
- *   of n_comp entries contributes to ln P. It decides the truncation and the
- *   verification after NcmSpectral has converged.
+ *   of n_comp entries contributes to ln P. It is used for the truncation and
+ *   its verification after NcmSpectral has converged.
  */
 typedef struct _NcGalaxyShapeFactorMomentsMemo NcGalaxyShapeFactorMomentsMemo;
 

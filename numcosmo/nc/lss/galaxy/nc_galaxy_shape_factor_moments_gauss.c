@@ -41,8 +41,8 @@
  * with $\mu = \mathrm{E}[x]$, $C_t = \mathrm{Var}(x)$ and
  * $C_x = \mathrm{E}[y^2]$ of the exact marginal. These are the same exact
  * moments #NcGalaxyShapeFactorMomentsTilt matches its tilt to, computed in
- * closed form for both ellipticity conventions; this class stops at the
- * Gaussian those moments define, instead of solving for the tilt.
+ * closed form for both ellipticity conventions. This class evaluates the
+ * Gaussian those moments define and does not solve for the tilt.
  *
  * ## Tables
  *
@@ -53,17 +53,18 @@
  * depends only on the population, and every galaxy of a population with a
  * single dispersion shares one. The variance is tabulated rather than
  * $\mathrm{E}[x^2]$: near $\hat g = 1$ the difference
- * $\mathrm{E}[x^2] - \mu^2$ cancels down to a small number, and
- * interpolating the raw moment would carry its error into $C_t$.
+ * $\mathrm{E}[x^2] - \mu^2$ is small compared with $\mathrm{E}[x^2]$, so the
+ * absolute interpolation error of $\mathrm{E}[x^2]$ would be a large
+ * relative error in $C_t$.
  *
  * The moments are tabulated on the same dyadic Chebyshev mesh in
  * $\hat g = \min(|g|, 1/|g|)$ as #NcGalaxyShapeFactorMomentsTilt, all
  * panels, and each panel is resolved to the absolute tolerance
- * #NcGalaxyShapeFactorMomentsGauss:moment-tol. A node is one radial
- * quadrature, so the tolerance can be set far below anything that matters
- * rather than tuned: the error it leaves in $\ln P$ scales as
- * $1/\sigma_\nu^2$, and a loose tolerance would tie the accuracy to the
- * smallest $\sigma_\nu$ in the catalog.
+ * #NcGalaxyShapeFactorMomentsGauss:moment-tol. The error the tolerance
+ * leaves in $\ln P$ scales as $1/\sigma_\nu^2$, so the tolerance has to be
+ * set for the smallest $\sigma_\nu$ in the catalog. A node costs one radial
+ * quadrature, so the default is set below that level for any catalog
+ * instead of being tuned per catalog.
  *
  */
 
@@ -85,10 +86,10 @@
  * second moment across it. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS_N_COMP 3
 
-/* Panels of a galaxy's table data_prefetch() fetches: the tables span the
- * full mesh, but weak-lensing shears keep nearly every evaluation in the
- * first two (ghat < 3/4). A later panel is still read correctly, only not
- * prefetched. */
+/* Number of panels of a galaxy's table that data_prefetch() fetches. The
+ * tables span the full mesh; weak-lensing shears put nearly every
+ * evaluation in the first two panels (ghat < 3/4). A later panel is read
+ * correctly but not prefetched. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS_PREFETCH_PANELS 2
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS_PREFETCH_CAP 4096
 
@@ -204,8 +205,8 @@ _moments_gauss_build_table (NcGalaxyShapeFactorMomentsGaussPrivate * const self,
   return table;
 }
 
-/* The pool keeps the returned pointer in a slot of its own and hands out
- * the slot: ncm_memory_pool_get() returns an NcmSpectral **. */
+/* The pool stores the returned pointer in a slot and ncm_memory_pool_get()
+ * returns that slot, an NcmSpectral **. */
 static gpointer
 _moments_gauss_spectral_alloc (gpointer userdata)
 {
@@ -236,8 +237,8 @@ nc_galaxy_shape_factor_moments_gauss_init (NcGalaxyShapeFactorMomentsGauss *gsfm
   self->table_build_count = 0;
 }
 
-/* The convention is a construct-only property of the parent, so it is read
- * once here: the moments branch on it. */
+/* Reads the ellipticity convention from the parent once: it is a
+ * construct-only property, and the moments branch on it. */
 static void
 _nc_galaxy_shape_factor_moments_gauss_constructed (GObject *object)
 {
@@ -305,8 +306,9 @@ _nc_galaxy_shape_factor_moments_gauss_ldata_noop (NcGalaxyShapeFactorData *data,
 {
 }
 
-/* A per-galaxy population reads its dispersion from the catalog row, so a
- * new row invalidates the table without any model pkey moving. */
+/* Invalidates the galaxy's table on a new row: a per-galaxy population
+ * reads its dispersion from the catalog row, so the table can change
+ * without any model pkey changing. */
 static void
 _nc_galaxy_shape_factor_moments_gauss_ldata_read_row (NcGalaxyShapeFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
@@ -338,9 +340,9 @@ _nc_galaxy_shape_factor_moments_gauss_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
   NcGalaxyShapeFactorMomentsGaussPrivate * const self =
     nc_galaxy_shape_factor_moments_gauss_get_instance_private (NC_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS (gsf));
 
-  /* No capability gate: only nc_galaxy_shape_pop_eval_p_array() and
-   * nc_galaxy_shape_pop_moment_2k() are used, which every NcGalaxyShapePop
-   * provides. */
+  /* Every NcGalaxyShapePop provides nc_galaxy_shape_pop_eval_p_array() and
+   * nc_galaxy_shape_pop_moment_2k(), the only population methods used, so
+   * there is no capability gate. */
   self->pop_hash = nc_galaxy_shape_factor_get_pop_hash (gsf);
 
   if (self->tab_cache_hash != self->pop_hash)
@@ -350,8 +352,9 @@ _nc_galaxy_shape_factor_moments_gauss_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
   }
 }
 
-/* The cold path of peek_table(), kept out of line so the warm check
- * inlines into every evaluation. */
+/* Looks up or builds the table of @data and stores it in its ldata: the
+ * cold path of peek_table(), kept out of line so the warm check inlines
+ * into every evaluation. */
 G_GNUC_NO_INLINE static void
 _nc_galaxy_shape_factor_moments_gauss_refresh_table (NcGalaxyShapeFactorMomentsGaussPrivate * const self,
                                                      NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data)
@@ -437,8 +440,8 @@ _nc_galaxy_shape_factor_moments_gauss_moments (const NcGalaxyShapeFactorMomentsT
   gdouble a1 = 0.0, a2 = 0.0, b1 = 0.0, b2 = 0.0, c1 = 0.0, c2 = 0.0;
   guint k;
 
-  /* x0 = t2 x1 + (ck - x2): ck and x2 are known before x1 is, so only
-   * the multiply-add sits on each loop-carried chain. */
+  /* x0 = t2 x1 + (ck - x2): ck and x2 are known before x1 is, so each
+   * loop-carried chain contains only the multiply-add. */
   for (k = d; k >= 1; k--)
   {
     const gdouble *ck = &coef[NC_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS_N_COMP * k];
@@ -460,11 +463,11 @@ _nc_galaxy_shape_factor_moments_gauss_moments (const NcGalaxyShapeFactorMomentsT
 }
 
 /*
- * Gauge-fixes (g, eps_obs) together by -arg(g), folds |g| to
- * ghat = min(|g|, 1/|g|) -- exact in both conventions for an isotropic
- * population -- and evaluates the Gaussian. The folded map conjugates the
- * observed ellipticity for |g| > 1, i.e. flips y, which this density is even
- * in.
+ * Rotates (g, eps_obs) together by -arg(g), folds |g| to
+ * ghat = min(|g|, 1/|g|) and evaluates the Gaussian. The fold is exact in
+ * both conventions for an isotropic population: for |g| > 1 the folded map
+ * conjugates the observed ellipticity, i.e. flips the sign of y, and this
+ * density is even in y.
  */
 static gdouble
 _nc_galaxy_shape_factor_moments_gauss_eval (const NcGalaxyShapeFactorMomentsTable *table, const gdouble sn2,
@@ -584,10 +587,10 @@ nc_galaxy_shape_factor_moments_gauss_class_init (NcGalaxyShapeFactorMomentsGauss
    * NcGalaxyShapeFactorMomentsGauss:moment-tol:
    *
    * Absolute tolerance to which each tabulated moment is resolved. The
-   * error it leaves in $\ln P$ scales as $1/\sigma_\nu^2$, so the default of
-   * $10^{-10}$ is set far below what any realistic $\sigma_\nu$ can
-   * notice; a node costs one radial quadrature, so there is little to gain
-   * from loosening it.
+   * error it leaves in $\ln P$ scales as $1/\sigma_\nu^2$, so the tolerance
+   * has to be set for the smallest $\sigma_\nu$ in the catalog. A node
+   * costs one radial quadrature, so the default of $10^{-10}$ is set below
+   * that level for any catalog.
    *
    */
   g_object_class_install_property (object_class,
@@ -602,7 +605,7 @@ nc_galaxy_shape_factor_moments_gauss_class_init (NcGalaxyShapeFactorMomentsGauss
    * NcGalaxyShapeFactorMomentsGauss:max-degree:
    *
    * Largest local degree a panel may reach. Refinement doubles from four,
-   * so the default of 32 allows the ladder 4, 8, 16, 32.
+   * so the default of 32 allows the degrees 4, 8, 16, 32.
    *
    */
   g_object_class_install_property (object_class,
@@ -615,8 +618,8 @@ nc_galaxy_shape_factor_moments_gauss_class_init (NcGalaxyShapeFactorMomentsGauss
 
   gsf_class->data_init = &_nc_galaxy_shape_factor_moments_gauss_data_init;
 
-  /* The table cache is locked, and everything else a galaxy touches is its
-   * own. */
+  /* Concurrent evaluations: the table cache is protected by cache_lock, and
+   * every other field an evaluation writes is in its galaxy's ldata. */
   gsf_class->prepare          = &_nc_galaxy_shape_factor_moments_gauss_prepare;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_moments_gauss_eval_marginal;
   gsf_class->data_prefetch    = &_nc_galaxy_shape_factor_moments_gauss_data_prefetch;
@@ -685,8 +688,8 @@ nc_galaxy_shape_factor_moments_gauss_clear (NcGalaxyShapeFactorMomentsGauss **gs
  * nc_galaxy_shape_factor_moments_gauss_get_table_build_count:
  * @gsfmg: a #NcGalaxyShapeFactorMomentsGauss
  *
- * Number of tables actually built since the last reset, as opposed to
- * served from the instance cache. Under a parallel
+ * Number of tables built since the last reset, not counting those served
+ * from the instance cache. Under a parallel
  * nc_data_cluster_wl_factor_data_prepare(), two threads can build the same
  * table at once and one copy is discarded; both are counted.
  *
@@ -763,8 +766,8 @@ nc_galaxy_shape_factor_moments_gauss_exact_moments (NcGalaxyShapeFactorMomentsGa
  * @var_x: (out): $\mathrm{Var}(x)$, noise included
  * @e_y2: (out): $\mathrm{E}[y^2]$, noise included
  *
- * The moments the evaluation uses at @g_1, @g_2, read from the table and
- * building it if needed: the same definitions as
+ * Evaluates the moments at (@g_1, @g_2) from the table, building it if
+ * needed. They follow the same definitions as
  * nc_galaxy_shape_factor_moments_gauss_exact_moments(), so the two can be
  * compared directly.
  *

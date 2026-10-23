@@ -160,19 +160,16 @@ _nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *
     p_data[i] = klass->eval_p (gsp, data, g_array_index (r, gdouble, i));
 }
 
-/* Number of fixed Gauss-Legendre nodes for the generic moment_2k() fallback.
- * This path is only exercised by a population with no closed-form override
- * (Gauss, GaussLocal and Beta all have one), so it is sized for headroom
- * rather than hot-loop cost. */
+/* Number of fixed Gauss-Legendre nodes of the default moment_2k(). Only a
+ * population without a closed-form override reaches it (Gauss, GaussLocal
+ * and Beta override), so the count is chosen for accuracy, not for
+ * evaluation cost. */
 #define NC_GALAXY_SHAPE_POP_MOMENT_2K_DEFAULT_NNODES 64
 
-/* Real (non-stub) default: fixed Gauss-Legendre quadrature of
- * int_0^1 r^2k P_pop(r) dr, batched through eval_p_array() (r^2k is
- * evaluated on the node array, not the population, so this is the second
- * safe generic fallback in the class, after eval_p_array() itself). k=0 is
- * the population's own normalization constant, returned as 1.0 directly
- * rather than integrated -- quadrature there would be a pure error source
- * for a quantity that is exact by construction. */
+/* Default moment_2k(): fixed Gauss-Legendre quadrature of
+ * int_0^1 r^2k P_pop(r) dr, with P_pop evaluated on the node array through
+ * eval_p_array(), so it is valid for any population. k=0 returns 1.0
+ * without integrating: it is the population's normalization. */
 static gdouble
 _nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
 {
@@ -589,15 +586,13 @@ nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *dat
  *
  * Computes the radial moment
  * $M_{2k} = \langle |\chi_I|^{2k} \rangle = \int_0^1 r^{2k}\,P_\mathrm{pop}(r)\,\mathrm{d}r$,
- * reading the resolved parameters from @data (the
- * nc_galaxy_shape_pop_eval_p() contract: no live parameter access), so
- * @data must have been resolved by nc_galaxy_shape_pop_prepare() since the
- * population's parameters last changed. $k=0$ always returns exactly 1
- * (the population's own normalization), never integrated.
+ * reading the resolved parameters from @data as nc_galaxy_shape_pop_eval_p()
+ * does, so @data must have been resolved by nc_galaxy_shape_pop_prepare()
+ * since the population's parameters last changed. $k=0$ returns exactly 1,
+ * the population's normalization, without integrating.
  *
- * The base class provides a real (non-error) fixed-quadrature default valid
- * for any population; concrete models override it with a closed form where
- * one exists.
+ * The base class default is a fixed Gauss-Legendre quadrature valid for any
+ * population; a subclass whose moments have a closed form overrides it.
  *
  * Returns: the radial moment $M_{2k}$.
  */

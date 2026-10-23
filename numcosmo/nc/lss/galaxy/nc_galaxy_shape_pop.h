@@ -93,20 +93,18 @@ struct _NcGalaxyShapePopClass
   void (*eval_p_array) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 
   /*
-   * Radial moment M_2k = <|chi_I|^2k> = int_0^1 r^2k P_pop(r) dr (P_pop(r)
-   * is eval_p()'s own normalization, int_0^1 P_pop(r) dr = 1, so the radial
-   * Jacobian is already folded in -- see nc_galaxy_shape_pop_eval_p()'s doc
-   * comment). Unlike eval_p_rho2_g_series() above, a population-agnostic
-   * generic default exists (fixed Gauss-Legendre quadrature over
-   * eval_p_array()), so this is a real fallback, not an error stub -- the
-   * second one in this class, after eval_p_array() itself. A subclass whose
-   * moments have a closed form (e.g. the truncated Gaussian's regularized
-   * incomplete gamma, or the Beta population's Beta-function ratio)
-   * overrides it. Reads resolved parameters from @data (the eval_p()
-   * contract), so a caller must have run nc_galaxy_shape_pop_prepare() on
-   * @data since the population's parameters last changed -- guaranteed by
+   * Radial moment M_2k = <|chi_I|^2k> = int_0^1 r^2k P_pop(r) dr, where
+   * P_pop(r) is the density eval_p() evaluates, normalized to
+   * int_0^1 P_pop(r) dr = 1 with the radial Jacobian included (see
+   * nc_galaxy_shape_pop_eval_p()). The base class default is a fixed
+   * Gauss-Legendre quadrature over eval_p_array(), valid for any
+   * population; a subclass whose moments have a closed form (the truncated
+   * Gaussian's regularized incomplete gamma, the Beta population's
+   * Beta-function ratio) overrides it. Reads the resolved parameters from
+   * @data as eval_p() does, so nc_galaxy_shape_pop_prepare() must have run
+   * on @data since the population's parameters last changed;
    * nc_galaxy_shape_factor_update_data_pop() and the array-prepare paths
-   * that call it unconditionally per pass.
+   * that call it do so on every pass.
    */
   gdouble (*moment_2k) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 

@@ -4,17 +4,17 @@
 Run this against a library that still carries NcGalaxyShapeFactorTiltedSeries
 and NcGalaxyShapeFactorMomentSeries, i.e. *before* their removal. They were
 the only independent check on NcGalaxyShapeFactorMomentsTilt and
-NcGalaxyShapeFactorMomentsGauss at small shear -- for the TRACE_DET
-convention, the only check besides the closed-form derivation itself -- and
+NcGalaxyShapeFactorMomentsGauss at small shear (for the TRACE_DET
+convention, the only check besides the closed-form derivation itself), and
 the values written here keep that check reproducible once they are gone. It
-should not be re-run to "refresh" the fixtures: after the removal it cannot
-be, and before it, doing so would defeat their purpose.
+is not to be re-run: after the removal it cannot be, and before it a re-run
+would overwrite the frozen values.
 
 Both old classes are truncated series in the shear, so they agree with the
 exact classes only up to their truncation error, which grows with g. The
 tolerance stored for each (class, convention, g) is ten times the largest
-gap measured here, so the tests assert "still the same object", not an
-equality the two constructions never had.
+gap measured here, so the tests assert agreement to that tolerance, not
+equality.
 
 Writes data/truth_tables/moments/golden.json.
 """

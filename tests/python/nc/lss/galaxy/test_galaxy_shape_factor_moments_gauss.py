@@ -22,7 +22,7 @@
 
 A Gaussian matched to the exact moments of the lensed, noisy marginal. These
 tests check that the tabulated moments are the exact ones to the table's
-tolerance, right up to the critical curve; that the tables do not depend on
+tolerance, up to the critical curve; that the tables do not depend on
 the noise, so one serves a whole population; the TRACE_DET structure (mean
 ghat, isotropic covariance); invariance under g -> 1/g; and agreement with
 the frozen values of the removed truncated-series Gaussian,
@@ -113,7 +113,7 @@ def test_one_table_per_population():
 
 
 def test_trace_det_structure():
-    """Under TRACE_DET the matched Gaussian is centred on ghat and isotropic."""
+    """Under TRACE_DET the matched Gaussian is centered on ghat and isotropic."""
     mset, pop = _build_mset(0.3)
     gsf = Nc.GalaxyShapeFactorMomentsGauss.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     data, _keep = _make_data(gsf, mset, 0.05)
@@ -202,7 +202,7 @@ def test_is_the_matched_gaussian(conv):
 
 def test_noise_enters_additively():
     """The table holds the source moments; each galaxy adds its own
-    sigma_nu^2 to both second moments and leaves the mean alone."""
+    sigma_nu^2 to both second moments and does not change the mean."""
     mset, pop = _build_mset(0.3)
     gsf = Nc.GalaxyShapeFactorMomentsGauss.new(Nc.GalaxyWLObsEllipConv.TRACE)
     d1, _a = _make_data(gsf, mset, 0.05)
@@ -216,8 +216,8 @@ def test_noise_enters_additively():
 
 
 def test_properties_layout_and_counter():
-    """The build knobs are properties that survive a save and load; the
-    mesh covers all of [0, 1] within the degree cap, and a tighter
+    """moment_tol and max_degree are properties that survive a save and
+    load; the mesh covers all of [0, 1] within the degree cap, and a tighter
     tolerance needs no lower degree; the build counter resets."""
     gsf = Nc.GalaxyShapeFactorMomentsGauss(
         ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE, moment_tol=1.0e-8, max_degree=32
