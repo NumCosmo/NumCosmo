@@ -330,6 +330,28 @@ letting the compilers float to 15 turned a 20-second solve into an
 hours-long one. `mamba create --dry-run` on the same specs prints the
 conflict.
 
+### Declaring Python dependencies
+
+A third-party Python module is declared in up to three lists, and
+`.github/scripts/check_deps.py` compares each one with the import statements
+in the tracked sources (`notebooks/` excluded):
+
+| list | must contain | checked by |
+|---|---|---|
+| `pyproject.toml` | core: what `import numcosmo_py` loads; `app`, `catalog`, `plot`: what `numcosmo_py.app` (the `numcosmo` CLI), `numcosmo_py.catalog` and `numcosmo_py.plotting` load | `check_deps.py repo`, `lint` job |
+| `environment.yml` | every module imported by the package, tests, docs, examples and tools, and every `pyproject.toml` entry except the `firecrown` extra | `check_deps.py repo`, `lint` job |
+| conda-forge recipe `run:` | the core, the `app`, `catalog` and `plot` extras, and the imports of `examples/` | `check_deps.py feedstock`, weekly `feedstock_deps.yml` |
+
+"Load" means an import at module level outside a `try` block, followed through
+the package's own modules. An import inside a function, inside a `try` block or
+through `pytest.importorskip` needs only the `environment.yml` entry. When a
+module's import name differs from its distribution name (`gi` and
+`pygobject`), or its PyPI name from its conda-forge name (`matplotlib` and
+`matplotlib-base`), add it to `IMPORT_TO_DIST` or `PIP_TO_CONDA` in the script.
+
+Run `python .github/scripts/check_deps.py feedstock` before a release: the
+recipe is updated in its own repository, so the `lint` job cannot see it.
+
 ### Keeping them current
 
 `.github/workflows/conda_lock_update.yml` regenerates all locks weekly (and on
