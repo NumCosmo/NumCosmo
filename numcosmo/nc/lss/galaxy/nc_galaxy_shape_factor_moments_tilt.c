@@ -1229,6 +1229,13 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
   gdouble delta_R;
   gboolean range_ready;
 
+  /* Whether the per-galaxy bound holds for the current free parameters:
+   * only the mass, the concentration, the halo center and the shape
+   * population may be free (see _moments_tilt_range_holds). @range_gen is
+   * incremented when it changes, so tables cut to a bound are refreshed. */
+  gboolean range_holds;
+  guint range_gen;
+
   /* Serialized table set. @pending_tables holds what a load brought in,
    * un-validated: the stamp can only be checked once the population is
    * known, which is at prepare(), and properties are restored in file order
@@ -1285,6 +1292,7 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltLData
    * which is always correct and never wrong, only slower. */
   gdouble ghat_max;
   gboolean range_valid;
+  guint range_gen_seen;
   guint n_panels_seen;
 
   gdouble ln_P0;
@@ -1386,6 +1394,8 @@ nc_galaxy_shape_factor_moments_tilt_init (NcGalaxyShapeFactorMomentsTilt *gsfmt)
   self->z_cl           = 0.0;
   self->delta_R        = 0.0;
   self->range_ready    = FALSE;
+  self->range_holds    = FALSE;
+  self->range_gen      = 0;
   self->spectral_pool  = ncm_memory_pool_new (&_moments_tilt_spectral_alloc, NULL, &_moments_tilt_spectral_free);
   g_mutex_init (&self->cache_lock);
   g_mutex_init (&self->range_lock);
@@ -1589,6 +1599,54 @@ _nc_galaxy_shape_factor_moments_tilt_data_init (NcGalaxyShapeFactor *gsf, NcmMSe
   data->ldata_required_columns = &_nc_galaxy_shape_factor_moments_tilt_ldata_required_columns;
 }
 
+/*
+ * Whether the reachable-range bound of data_prepare() holds for the free
+ * parameters of @mset. The bound varies log10MDelta and cDelta over their
+ * bounds and the halo center over its box; the shape population only
+ * changes the tables, which are keyed on it. Every other free parameter
+ * (cosmology, z_cl, the other profile and mass-summary parameters, the
+ * surface mass density, the redshift models) moves the shear or the
+ * redshift support out of what the bound covered.
+ */
+static gboolean
+_moments_tilt_range_holds (NcmMSet *mset)
+{
+  const guint n_models = ncm_mset_nmodels (mset);
+  guint i, pid;
+
+  /* Read from the models, not from the free-parameter map, which the
+   * caller need not have prepared. */
+  for (i = 0; i < n_models; i++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, ncm_mset_get_mid_array_pos (mset, i));
+    const guint len = ncm_model_len (model);
+
+    if (NC_IS_GALAXY_SHAPE_POP (model))
+      continue;
+
+    for (pid = 0; pid < len; pid++)
+    {
+      if (ncm_model_param_get_ftype (model, pid) != NCM_PARAM_TYPE_FREE)
+        continue;
+
+      if (NC_IS_HALO_POSITION (model) && ((pid == NC_HALO_POSITION_RA) || (pid == NC_HALO_POSITION_DEC)))
+        continue;
+
+      if (NC_IS_HALO_MASS_SUMMARY (model))
+      {
+        const gchar *name = ncm_model_param_name (model, pid);
+
+        if ((g_strcmp0 (name, "log10MDelta") == 0) || (g_strcmp0 (name, "cDelta") == 0))
+          continue;
+      }
+
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
 static void
 _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
@@ -1701,6 +1759,16 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
 
       self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_c_lo, dp, FALSE) &&
                           _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_c_hi, dp, TRUE);
+    }
+  }
+
+  {
+    const gboolean holds = self->restrict_range && _moments_tilt_range_holds (mset);
+
+    if (holds != self->range_holds)
+    {
+      self->range_holds = holds;
+      self->range_gen++;
     }
   }
 }
@@ -1940,7 +2008,7 @@ _nc_galaxy_shape_factor_moments_tilt_refresh_table (NcGalaxyShapeFactorMomentsTi
   /* Quantise the reachable range upward onto the mesh: J panels cover
    * [0, 1 - 2^-J], and J = K restores the full mesh. A galaxy that never
    * saw data_prepare() has no bound recorded and gets the full mesh. */
-  if (ldata->range_valid && (ldata->ghat_max < 1.0))
+  if (self->range_holds && ldata->range_valid && (ldata->ghat_max < 1.0))
   {
     const gdouble need = ceil (log2 (1.0 / (1.0 - ldata->ghat_max)));
 
@@ -1962,6 +2030,7 @@ _nc_galaxy_shape_factor_moments_tilt_refresh_table (NcGalaxyShapeFactorMomentsTi
   ldata->table_span        = _nc_galaxy_shape_factor_moments_table_span (table, table->n_panels, NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_PREFETCH_CAP);
   ldata->pop_hash_seen_tab = self->pop_hash;
   ldata->sn_seen           = sn;
+  ldata->range_gen_seen    = self->range_gen;
   ldata->n_panels_seen     = n_panels;
   ldata->tab_valid         = TRUE;
 
@@ -2000,7 +2069,7 @@ _nc_galaxy_shape_factor_moments_tilt_peek_table (NcGalaxyShapeFactorMomentsTiltP
   const gdouble R2 = gsl_pow_2 (epsilon_obs_1) + gsl_pow_2 (epsilon_obs_2);
 
   if (G_UNLIKELY (!ldata->tab_valid || (ldata->pop_hash_seen_tab != self->pop_hash) ||
-                  (ldata->sn_seen != sn)))
+                  (ldata->sn_seen != sn) || (ldata->range_gen_seen != self->range_gen)))
     _nc_galaxy_shape_factor_moments_tilt_refresh_table (self, pop, data);
 
   if (G_UNLIKELY (!ldata->p0_valid || (ldata->pop_hash_seen_p0 != self->pop_hash) ||
@@ -2247,8 +2316,15 @@ nc_galaxy_shape_factor_moments_tilt_class_init (NcGalaxyShapeFactorMomentsTiltCl
    *
    * The bound is a property of the prior box, so it does not move as the
    * sampler moves, and it is only worth anything if that prior is tight: a
-   * halo centre free over the whole field makes every galaxy reach
+   * halo center free over the whole field makes every galaxy reach
    * $\hat g = 1$, which costs nothing but saves nothing.
+   *
+   * The bound covers the mass (log10MDelta), the concentration (cDelta),
+   * the halo center (ra, dec) and the shape population. If any other
+   * parameter is free in the model set at prepare time, such as a
+   * cosmological parameter, the halo redshift or a redshift-model
+   * parameter, the bound does not hold and every galaxy gets the full
+   * mesh, as with this property set to %FALSE.
    *
    */
   g_object_class_install_property (object_class,

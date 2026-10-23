@@ -23,9 +23,11 @@
  */
 
 /*
- * Tests of NcGalaxyShapeFactorMomentsTilt:newton-maxit: a table built with a
+ * Tests of NcGalaxyShapeFactorMomentsTilt:newton-maxit (a table built with a
  * small iteration cap, where solves end at the cap, agrees with the default
- * table and reports no failed solve.
+ * table and reports no failed solve) and of NcGalaxyShapeFactorMomentsTilt:
+ * restrict-range (the bound is dropped when a parameter it does not cover
+ * is free).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,6 +44,10 @@
 #define MOMENTS_TILT_STD_NOISE (0.1)
 #define MOMENTS_TILT_SMALL_MAXIT (2)
 #define MOMENTS_TILT_DEFAULT_MAXIT (40)
+#define MOMENTS_TILT_RANGE_SIGMA_POP (0.4658)
+#define MOMENTS_TILT_RANGE_LOG10M_UPPER (14.5)
+#define MOMENTS_TILT_RANGE_RA (0.8)
+#define MOMENTS_TILT_RANGE_Z_MAX (3.0)
 
 typedef struct _TestNcGalaxyShapeFactorMomentsTilt
 {
@@ -55,6 +61,7 @@ void test_nc_galaxy_shape_factor_moments_tilt_new (TestNcGalaxyShapeFactorMoment
 void test_nc_galaxy_shape_factor_moments_tilt_free (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_default (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_cap (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -75,26 +82,33 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_cap,
               &test_nc_galaxy_shape_factor_moments_tilt_free);
 
+  g_test_add ("/nc/galaxy_shape_factor_moments_tilt/restrict_range/free_params", TestNcGalaxyShapeFactorMomentsTilt, NULL,
+              &test_nc_galaxy_shape_factor_moments_tilt_new,
+              &test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params,
+              &test_nc_galaxy_shape_factor_moments_tilt_free);
+
   g_test_run ();
 
   return 0;
 }
 
-/* Builds a MomentsTilt with @newton_maxit over the whole folded-shear range
- * and the per-galaxy data of one galaxy at the halo center, prepared. */
+/* Builds a MomentsTilt with @newton_maxit and @restrict_range, and the
+ * per-galaxy data of one galaxy at right ascension @ra (degrees from the
+ * halo center), prepared. */
 static NcGalaxyShapeFactorMomentsTilt *
-_moments_tilt_build (TestNcGalaxyShapeFactorMomentsTilt *test, const guint newton_maxit, NcGalaxyShapeFactorData **data)
+_moments_tilt_build (TestNcGalaxyShapeFactorMomentsTilt *test, const guint newton_maxit, const gboolean restrict_range,
+                     const gdouble ra, NcGalaxyShapeFactorData **data)
 {
   NcGalaxyShapeFactorMomentsTilt *gsfmt = g_object_new (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_TILT,
                                                         "ellip-conv", NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
-                                                        "restrict-range", FALSE,
+                                                        "restrict-range", restrict_range,
                                                         "newton-maxit", newton_maxit,
                                                         NULL);
   NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
   NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
   GPtrArray *data_array              = g_ptr_array_new ();
 
-  p_data->ra  = 0.0;
+  p_data->ra  = ra;
   p_data->dec = 0.0;
 
   *data = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, p_data, z_data);
@@ -109,6 +123,20 @@ _moments_tilt_build (TestNcGalaxyShapeFactorMomentsTilt *test, const guint newto
   nc_galaxy_redshift_factor_data_unref (z_data);
 
   return gsfmt;
+}
+
+/* Returns the top of the table @gsfmt holds for @data. */
+static gdouble
+_moments_tilt_top (NcGalaxyShapeFactorMomentsTilt *gsfmt, TestNcGalaxyShapeFactorMomentsTilt *test, NcGalaxyShapeFactorData *data)
+{
+  guint n_panels  = 0;
+  gdouble top     = 0.0;
+  GArray *degrees = NULL;
+
+  nc_galaxy_shape_factor_moments_tilt_peek_layout (gsfmt, test->pop, data, &n_panels, &top, &degrees);
+  g_array_unref (degrees);
+
+  return top;
 }
 
 void
@@ -182,8 +210,8 @@ test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_cap (TestNcGalaxyShapeFact
   const gdouble ghat[]  = { 0.2, 0.6, 0.9, 0.99 };
   const gdouble e_obs[] = { 0.3, 0.2, -0.4, 0.5, 0.05, -0.1, 0.8, 0.1 };
   NcGalaxyShapeFactorData *data_ref, *data_cap;
-  NcGalaxyShapeFactorMomentsTilt *gsf_ref = _moments_tilt_build (test, MOMENTS_TILT_DEFAULT_MAXIT, &data_ref);
-  NcGalaxyShapeFactorMomentsTilt *gsf_cap = _moments_tilt_build (test, MOMENTS_TILT_SMALL_MAXIT, &data_cap);
+  NcGalaxyShapeFactorMomentsTilt *gsf_ref = _moments_tilt_build (test, MOMENTS_TILT_DEFAULT_MAXIT, FALSE, 0.0, &data_ref);
+  NcGalaxyShapeFactorMomentsTilt *gsf_cap = _moments_tilt_build (test, MOMENTS_TILT_SMALL_MAXIT, FALSE, 0.0, &data_cap);
   gdouble gate                            = 0.0;
   gdouble max_diff                        = 0.0;
   guint i, j;
@@ -209,5 +237,48 @@ test_nc_galaxy_shape_factor_moments_tilt_newton_maxit_cap (TestNcGalaxyShapeFact
   nc_galaxy_shape_factor_data_unref (data_cap);
   nc_galaxy_shape_factor_moments_tilt_free (gsf_ref);
   nc_galaxy_shape_factor_moments_tilt_free (gsf_cap);
+}
+
+/* A galaxy that cannot reach the critical curve for any mass below the
+ * log10MDelta upper bound gets a table cut below 1. Freeing a parameter the
+ * bound does not cover (Omega_c) restores the full table; fixing it again
+ * restores the cut; freeing log10MDelta keeps the cut. */
+void
+test_nc_galaxy_shape_factor_moments_tilt_restrict_range_free_params (TestNcGalaxyShapeFactorMomentsTilt *test, gconstpointer pdata)
+{
+  NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
+  NcmModel *hms            = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp));
+  NcGalaxyShapeFactorData *data;
+  NcGalaxyShapeFactorMomentsTilt *gsfmt;
+  guint log10M_idx = 0;
+  gdouble top_cut;
+
+  ncm_model_param_set (NCM_MODEL (test->pop), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, MOMENTS_TILT_RANGE_SIGMA_POP);
+  g_assert_true (ncm_model_param_index_from_name (hms, "log10MDelta", &log10M_idx, NULL));
+  ncm_model_param_set_upper_bound (hms, log10M_idx, MOMENTS_TILT_RANGE_LOG10M_UPPER);
+
+  gsfmt = _moments_tilt_build (test, MOMENTS_TILT_DEFAULT_MAXIT, TRUE, MOMENTS_TILT_RANGE_RA, &data);
+  nc_galaxy_shape_factor_data_prepare (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, data, MOMENTS_TILT_RANGE_Z_MAX);
+
+  top_cut = _moments_tilt_top (gsfmt, test, data);
+  g_assert_cmpfloat (top_cut, <, 1.0);
+
+  ncm_mset_param_set_ftype (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+  nc_galaxy_shape_factor_prepare (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset);
+  g_assert_cmpfloat (_moments_tilt_top (gsfmt, test, data), ==, 1.0);
+
+  ncm_mset_param_set_ftype (test->mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_C, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_prepare_fparam_map (test->mset);
+  nc_galaxy_shape_factor_prepare (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset);
+  g_assert_cmpfloat (_moments_tilt_top (gsfmt, test, data), ==, top_cut);
+
+  ncm_mset_param_set_ftype (test->mset, nc_halo_mass_summary_id (), log10M_idx, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+  nc_galaxy_shape_factor_prepare (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset);
+  g_assert_cmpfloat (_moments_tilt_top (gsfmt, test, data), ==, top_cut);
+
+  nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_shape_factor_moments_tilt_free (gsfmt);
 }
 
