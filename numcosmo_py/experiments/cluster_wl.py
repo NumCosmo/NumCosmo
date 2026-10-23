@@ -497,8 +497,10 @@ class GalaxyShapeFactorGenMomentsGauss(GalaxyShapeFactorGenBase):
         """Return the help text for this scheme."""
         return [
             "GalaxyShapeFactorGenMomentsGauss",
-            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-            f"moment_tol={DEFAULT_SHAPE_MOMENTS_GAUSS_MOMENT_TOL}",
+            (
+                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+                f"moment_tol={DEFAULT_SHAPE_MOMENTS_GAUSS_MOMENT_TOL}"
+            ),
         ]
 
     def requires_sigma(self) -> bool:
@@ -535,8 +537,10 @@ class GalaxyShapeFactorGenMomentsTilt(GalaxyShapeFactorGenBase):
         """Return the help text for this scheme."""
         return [
             "GalaxyShapeFactorGenMomentsTilt",
-            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-            f"accuracy_gate={DEFAULT_SHAPE_MOMENTS_TILT_ACCURACY_GATE}",
+            (
+                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+                f"accuracy_gate={DEFAULT_SHAPE_MOMENTS_TILT_ACCURACY_GATE}"
+            ),
         ]
 
     def requires_sigma(self) -> bool:
