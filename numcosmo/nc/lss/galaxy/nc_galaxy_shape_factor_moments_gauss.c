@@ -52,10 +52,13 @@
  * convention, Gaussian population with $\sigma = 0.3$), against
  * #NcGalaxyShapeFactorQuad at $g = 0.03$ on 188 galaxies with
  * $|\chi_\mathrm{obs}| < 1$: $|\Delta\ln P|$ up to $0.24$, median $0.023$.
- * On the 14161 galaxies of that catalog with $|\chi_\mathrm{obs}| < 1$, with
- * the same redshift nodes, the best-fit $\log_{10} M$ is $0.040$ dex below
- * the one from #NcGalaxyShapeFactorSeriesLensed at order 12, $0.44$ of its
- * standard error, and $-2\ln L$ is larger by about $210$ over the scan.
+ * With the same redshift nodes, the best-fit $\log_{10} M$ is below the one
+ * from #NcGalaxyShapeFactorSeriesLensed at order 12 by $0.040$ dex on the
+ * 14161 galaxies of HWL16a-002 with $|\chi_\mathrm{obs}| < 1$ ($0.44$
+ * standard errors) and by $0.095$ dex on the 10197 such galaxies of
+ * HWL16a-007 ($0.84$ standard errors); on the full catalogs, $0.59$ and
+ * $1.15$ standard errors. $-2\ln L$ is larger by about $210$ and $170$ over
+ * the scans.
  * For an exact marginal use #NcGalaxyShapeFactorSeriesLensed at order 12 or
  * higher (Gauss and Beta populations) or #NcGalaxyShapeFactorQuad
  * ($|\chi_\mathrm{obs}| < 1$ only).
