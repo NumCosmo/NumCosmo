@@ -286,34 +286,19 @@ test_nc_data_cluster_wl_factor_node_config_set_obs (TestNcDataClusterWLFactorNod
   ncm_serialize_free (ser);
 }
 
-/* With auto-nodes off no galaxy is calibrated, so every node-config entry is
- * zero. The first prepare with auto-nodes on fills the arrays with nonzero
- * pairs, so entries the second prepare left unwritten would show them. */
+/* The node-config exists only after an auto-nodes calibration, and every
+ * entry it carries is a calibrated pair or zero (galaxies without background
+ * support): never uninitialized memory. */
 void
 test_nc_data_cluster_wl_factor_node_config_zero_fill (TestNcDataClusterWLFactorNodeConfig *test, gconstpointer pdata)
 {
-  GArray *n_nodes = NULL;
-  GArray *rule_n  = NULL;
+  const guint max_total = nc_data_cluster_wl_factor_get_max_total_nodes (test->dcwlf);
+  GArray *n_nodes       = NULL;
+  GArray *rule_n        = NULL;
   gboolean any_nonzero;
   NcmVarDict *vd;
   guint i;
 
-  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
-
-  vd = _node_config_peek (test->dcwlf, &n_nodes, NULL);
-  g_assert_nonnull (vd);
-  g_assert_cmpuint (n_nodes->len, ==, NODE_CONFIG_NROWS);
-
-  any_nonzero = FALSE;
-
-  for (i = 0; i < n_nodes->len; i++)
-    any_nonzero = any_nonzero || (g_array_index (n_nodes, gint, i) != 0);
-
-  g_assert_true (any_nonzero);
-  g_array_unref (n_nodes);
-  ncm_var_dict_unref (vd);
-
-  nc_data_cluster_wl_factor_set_auto_nodes (test->dcwlf, FALSE);
   nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
 
   vd = _node_config_peek (test->dcwlf, &n_nodes, &rule_n);
@@ -321,14 +306,28 @@ test_nc_data_cluster_wl_factor_node_config_zero_fill (TestNcDataClusterWLFactorN
   g_assert_cmpuint (n_nodes->len, ==, NODE_CONFIG_NROWS);
   g_assert_cmpuint (rule_n->len, ==, NODE_CONFIG_NROWS);
 
+  any_nonzero = FALSE;
+
   for (i = 0; i < NODE_CONFIG_NROWS; i++)
   {
-    g_assert_cmpint (g_array_index (n_nodes, gint, i), ==, 0);
-    g_assert_cmpint (g_array_index (rule_n, gint, i), ==, 0);
+    const gint n = g_array_index (n_nodes, gint, i);
+    const gint r = g_array_index (rule_n, gint, i);
+
+    g_assert_cmpint (n, >=, 0);
+    g_assert_cmpint (r, >=, 0);
+    g_assert_cmpint ((n - 1) * r, <=, (gint) max_total);
+    any_nonzero = any_nonzero || (n != 0);
   }
 
+  g_assert_true (any_nonzero);
   g_array_unref (n_nodes);
   g_array_unref (rule_n);
   ncm_var_dict_unref (vd);
+
+  nc_data_cluster_wl_factor_set_auto_nodes (test->dcwlf, FALSE);
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+
+  vd = _node_config_peek (test->dcwlf, NULL, NULL);
+  g_assert_null (vd);
 }
 
