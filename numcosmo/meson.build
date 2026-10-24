@@ -333,6 +333,7 @@ ncm_headers_internal = files(
     'ncm/stats/ncm_stats_dist_vkde_private.h',
     'nc/perturbations/nc_hipert_private.h',
     'nc/data/nc_data_download_priv.h',
+    'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_private.h',
     'nc/xcor/nc_xcor_priv.h',
     'nc/xcor/kernel/nc_xcor_kernel_private.h',
 )
@@ -399,7 +400,6 @@ nc_headers = files(
     'nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h',
-    'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_private.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop_beta.h',
     'nc/lss/galaxy/nc_galaxy_redshift_obs.h',

@@ -52,12 +52,9 @@ Create the development environment from the repository root:
 ```bash
 conda env create -n numcosmo_developer -f environment.yml
 conda activate numcosmo_developer
-pip install -v pygobject-stubs pytest-tap types-tabulate
 meson setup build --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX
 meson compile -C build
 ```
-
-Note: The pip packages provide type stubs for better mypy type checking support during development.
 
 To test the installation, run the unit tests:
 ```bash
@@ -163,14 +160,15 @@ from source against Homebrew's interpreter.
 
 ##### Python packages using pip
 
-For Python-related functionality and the build system, install the following using pip:
+For the build system and the Python package with the dependencies of its tests and
+command-line interface, run from the repository root:
 ```bash
-pip install meson ninja pytest numpy
+pip install meson ninja -e ".[test]"
 ```
 
-For development with type checking and additional testing tools (type stubs provide better mypy support):
+For type checking with mypy, add the type stubs:
 ```bash
-pip install pygobject-stubs pytest-tap types-tabulate
+pip install mypy pygobject-stubs types-tabulate
 ```
 
 #### Building from repository {#sec-building}
