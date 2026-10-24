@@ -3,7 +3,3144 @@ CHANGELOG
 
 [Current]
 
+[v0.29.0]
+ * Add moment-based shape factors (#378)
+
+     Add the moment-based shape factors NcGalaxyShapeFactorMomentsTilt and
+     NcGalaxyShapeFactorMomentsGauss
+
+     * Add NcGalaxyShapeFactorMomentsTilt: the exact zero-shear marginal tilted
+     by a quadratic statistic, moment-matched by a damped Newton solve and
+     interpolated on a dyadic Chebyshev mesh in the folded shear
+     * Add NcGalaxyShapeFactorMomentsGauss: a Gaussian matched to the same exact
+     moments, tabulated per population
+     * Add NcGalaxyShapePop:moment_2k with a fixed-quadrature default and closed
+     forms for the Gauss, GaussLocal and Beta populations
+     * Add the NcGalaxyShapeFactor data_prepare and data_prefetch hooks,
+     nc_galaxy_shape_factor_eval_ln_at_nodes and the thread-safety contract of
+     the factors
+     * Add nc_data_cluster_wl_factor_data_prepare: parallel per-galaxy
+     preparation over OpenMP threads, with the prefetched evaluation path
+     * Add NcDataClusterWLFactor:node-config: the calibrated per-galaxy
+     (n_nodes, rule_n) pairs are serialized and replayed on load instead of
+     recalibrated
+     * Share the fixed-node grid and the MomentsTilt tables between ESMCMC and
+     MC worker clones through the shared NcGalaxyWLObs; each NcmFitMC worker
+     resamples into a private copy
+     * The prepare() that feeds resample() skips the auto-node calibration and
+     the MomentsTilt table builds
+     * Re-evaluate galaxies whose fixed-node likelihood underflows in log space
+     before reporting NC_GALAXY_LOW_PROB
+     * MomentsTilt restrict-range: each table is cut at the folded shear
+     reachable over the mass upper bound and the halo-center box, at the fixed
+     concentration; a free parameter the bound does not cover, or kappa >= 1 at
+     the corner, keeps the full mesh
+     * MomentsTilt newton-maxit (construct-only, default 40): the Newton solve
+     returns a matching (lambda, W) when it ends at the cap
+     * Add nc_wl_surface_mass_density_reduced_shear_sigma_cache_prep_with_rs for
+     the per-galaxy shear at fixed nodes
+     * Add MomentsTilt and MomentsGauss to the cluster-wl experiment CLI and
+     regenerate nc.pyi
+     * Document the measured accuracy of both approximations against the exact
+     marginal in the class docs: ln P within 0.26 per galaxy at g = 0.03 on HSC
+     HWL16a-002, best-fit log10M 0.32 and 0.70 standard errors below
+     SeriesLensed order 12 on HWL16a-002 and HWL16a-007 for Tilt, 0.44 and 0.84
+     for Gauss
+     * Add the shape-factor history document
+     docs/theory/nc/lss/galaxy/wl_shape_factor_history.md
+     * Tests: C tests for node-config, the Newton cap, restrict-range and a
+     truncated stored table; Python tests for both classes, data_prepare
+     parallel equals serial, node-config replay and the resample path; compat
+     fixtures in data/truth_tables/moments
+ * Test the NcCBEPrecision data file fallback
+
+     * Test that each of the four data file properties set to a missing file
+     warns and falls back to its default
+     * Fall back to sBBN_2017.dat, the sBBN-file default, instead of sBBN.dat in
+     nc_cbe_precision.c (the file is unused: NumCosmo supplies YHe)
+
+ * Accept astropy-base for astropy in the feedstock check
+
+     * Add RECIPE_ALTERNATIVES to check_deps.py: the recipe requires
+     astropy-base, since astropy >=7 pulls h5py, which has no hdf5 2 build
+     * Document RECIPE_ALTERNATIVES in CONTRIBUTING.md
+
+ * Fix two test failures seen on the conda-forge builds
+
+     * Raise CLASS _FILENAMESIZE_ from 256 to 1024: data file paths under long
+     installation prefixes (311 characters under conda-build) aborted
+     NcCBEPrecision
+     * Keep NcCBEPrivate below GObject's 64 KiB private size: 56712 bytes at
+     1024, 65928 at 4096 (noted in common.h)
+     * Reject a CLASS file name of exactly _FILENAMESIZE_ characters in
+     nc_cbe_precision.c: the buffer also holds the terminating NUL
+     * Compare the nearPD and plain Cholesky factors to rounding (1e-13) in
+     test_ncm_matrix.c: the same dpotrf on two buffers differs in the last bits
+     on osx_64
+
+ * Check that imported Python modules are declared
+
+     * Add .github/scripts/check_deps.py: compares pyproject.toml,
+     environment.yml and the conda-forge recipe with the imports in the tracked
+     sources
+     * Run check_deps.py repo in the lint job of build_check.yml
+     * Add feedstock_deps.yml: runs check_deps.py feedstock weekly and on demand
+     * Document the three lists and the check in CONTRIBUTING.md, section
+     "Declaring Python dependencies"
+     * Add ipython to environment.yml: 16 doc pages import IPython.display
+     * Import Annotated from typing in examples/plot_sbessel_solution.py instead
+     of typing_extensions
+     * Regenerate the CI conda locks for the new environment.yml (certifi only)
+
+ * Declare the Python modules imported by the numcosmo CLI and docs
+
+     * Add getdist and scipy to the pyproject app extra: numcosmo_py.app imports
+     both at module level
+     * Add mpmath to environment.yml: docs/theory/ncm/integration/diff.qmd and
+     two tests/tools generators import it
+     * Remove click from environment.yml: no tracked source imports it, typer
+     requires it
+     * Regenerate the CI conda locks for the new environment.yml (ruff 0.17.2,
+     pygobject-stubs 2.20.0)
+
+ * NcmFit keeps its NcmDiff settings; CLI options for the numerical derivatives;
+     computed captions in the NcmDiff page
+
+     * Fix: ncm_fit_dup (used per thread by run mc) and ncm_fit_copy_new built a
+     default NcmDiff, dropping ini-h, dual-series and the other settings;
+     NcmFit:diff is now a property (serialized by dup) and copy_new shares the
+     source fit's NcmDiff
+     * numcosmo run fit / mc / mcmc / fisher: --diff-ini-h and
+     --diff-dual-series/--no-diff-dual-series set the fit's NcmDiff; unset,
+     NcmDiff's defaults apply
+     * docs/theory/ncm/integration/diff.qmd: the numbers of fig-ini-h and
+     fig-tiny-x are computed at render time; the typed ones were stale on master
+     (for example rc_d2 at the default step 6.3e-12, not 1.3e-10)
+     * Tests: dup and copy_new keep the NcmDiff settings (all fitters); the CLI
+     options reach the fit's NcmDiff
+     * Stubs regenerated
+
+ * Show the current likelihood terms in every logged fit state
+
+     * Fix: with --run-messages full, least-squares fitters (levmar, GSL least
+     squares) printed the starting point's -2lnL breakdown at every step, and
+     the previous run's during restarts; the end-of-run refresh of #424 did not
+     cover the step log
+     * ncm_fit_log_state evaluates the likelihood terms at the current
+     parameters for least-squares fitters, one extra evaluation per logged
+     state, only with messages on
+     * Test: a state logged after a step shows the terms of the new parameters,
+     for every fitter (failed for levmar and GSL least squares before)
+
+ * Least-squares form of the curvature priors: vector Gaussian priors and Lp
+     residuals of the second derivative
+
+     * Behavior change: numcosmo generate qspline / de-wspline default to
+     --curvature-p 10, the L10 norm of q'' or w'' (decision B of the w(z)
+     reconstruction plan); with lp_d2 or local_d2 and an even p the prior is on
+     the residual functions lp_*_ls / wlp_*_ls, the same Gaussian prior on the
+     norm with one least-squares residual per quadrature node
+     * API change: NcmPriorGauss's mean virtual fills the NcmMSetFunc:dimension
+     components of the quantity; NcmPriorGaussFunc accepts a vector mean
+     function and has its dimension, with f_i = (x_i - mu) / sigma
+     * NcmLikelihood: ncm_likelihood_priors_ls_len counts the residuals of the
+     least-squares priors; each prior fills its block, and its -2lnL term is the
+     sum of its squares; NcmFit sizes its state by residuals and adds one degree
+     of freedom per prior
+     * NcmMSetFuncList: a function registered with dimension 0 takes its
+     dimension at construction, ncm_mset_func_list_new_dim; it survives
+     serialization, and a missing or wrong dimension aborts
+     * ncm_spline_curvature_d2_lp_residuals / _len: residuals with sum of
+     squares N_p^2 of s'' for even p, exact for cubic splines (p / 2 + 1
+     Gauss-Legendre nodes per piece, p / 2 + 2 with a cubic weight between the
+     knots of both); Gauss-Legendre tables cached per order
+     * NcHICosmoDEWSpline / NcHICosmoQSpline: d2_lp_residuals and _len, and the
+     functions lp_w2_ls, wlp_w2_ls, lp_q2_ls, wlp_q2_ls (x[0] = p, dimension
+     from _len, checked at evaluation)
+     * Tests: vector prior in the likelihood and the fit dimensions; dimension
+     at construction and its errors; exact residuals for x^3 with and without a
+     cubic weight at p = 2 and 10, random splines against an exact
+     Gauss-Legendre reference, zero curvature, odd p; the residual prior equals
+     the norm prior for WSpline and QSpline (new C test), wrong dimension and
+     non-integer p; the generator default; valgrind clean on all new and changed
+     tests
+     * Stubs regenerated
+
+ * Fix the least-squares fit report and levmar's early stop; w'' curvature prior
+     by default
+
+     * Behavior change: numcosmo generate qspline / de-wspline default to
+     --curvature-prior lp_d2 (the L2 norm of q'' or w''); mean_kappa, the
+     geometric curvature, must now be asked for
+     * Behavior change: the bundled levmar stops on a small step only when every
+     component is small, |Dp_i| <= eps2 (|p_i| + eps2); the original ||Dp|| <=
+     eps2 ||p|| let one large parameter (H0, M) end a run far from the minimum
+     * ncm_fit_run evaluates the likelihood terms at the final parameters, so
+     the -2lnL breakdown in the fit report is that of the best fit for every
+     fitter (least-squares fitters printed the starting point's)
+     * NcmFitLevmar logs levmar's stop reason when it is maximum iterations, a
+     singular matrix, no further reduction or invalid values; its four run
+     functions are merged into one
+     * NcmDataRosenbrock provides its least-squares form
+     * Tests: likelihood terms after a run (all fitters), Rosenbrock beside a
+     parameter of order 1e5 (levmar and GSL least squares), the levmar
+     stop-reason message, the default curvature prior, Rosenbrock residuals
+
+ * Make the CAMB-fit sound horizon continuous in N_eff
+
+     * Fix: the camb-fit method of nc_distance_r_zd switched between eq. 16 and
+     eq. 17 of Aubourg et al. (2015) on an exact N_eff == 3.046 test; the
+     computed N_eff carries round-off that moves with H0, so r_d jumped by 1e-4
+     to 5e-4 under small parameter steps and broke numerical derivatives
+     (F[H0,H0] 1.8e11 against 76.7)
+     * The fit is now eq. 16 times the N_eff factor of eq. 17, 1 / (1 + (N_eff -
+     3.046) / 30.60): equal to eq. 16 at N_eff = 3.046 and within 0.1% of the
+     recombination history for 2.8 <= N_eff <= 4
+     * Tests: r_d in Mpc independent of H0 at fixed omega_b, omega_c, and a step
+     of 1e-9 in N_eff around 3.046 changes r_d by the N_eff factor only (fails
+     on the previous code)
+
+ * Compute the BAO sound horizon with the CAMB-calibrated fit by default
+
+     * Behavior change: nc_distance_r_zd, and so every BAO likelihood with a
+     computed sound horizon, now uses the fit of Aubourg et al. (2015,
+     arXiv:1411.1074) calibrated on CAMB, eq. 16 for N_eff = 3.046 and eq. 17
+     otherwise. At Planck 2018 densities r_d = 147.08 Mpc; before it was 150.78
+     Mpc, 2.5% larger, because the Eisenstein & Hu drag redshift is about 40
+     below the one of the recombination history (NcRecombSeager gives 147.09
+     Mpc)
+     * NcDistance:sound-horizon-method selects camb-fit (default), eisenstein-hu
+     (the previous behavior) or recomb (the recombination history of
+     NcDistance:recomb); set eisenstein-hu to reproduce earlier results
+     * nc_hicosmo_as_drag_is_free: whether the sound horizon is a free model
+     parameter; by default TRUE when the class implements as_drag
+     (NcHICosmoQSpline, NcHICosmoQRBF), and NcHICosmoDEWSpline:use-as-drag for
+     NcHICosmoDEWSpline
+     * NcHICosmoDEWSpline no longer computes the sound horizon itself;
+     NcDistance does
+     * nc_distance_drag_redshift is unchanged; nc_hicosmo_as_drag documents its
+     units, r_d H0 / c
+     * Tests: the fit against the recombination history at the corners and
+     center of the Planck 3 sigma range of omega_b, omega_c (within 0.021%) and
+     at N_eff = 2.8 and 4.0 (within 0.119%), the three methods, the abort of
+     recomb without NcDistance:recomb, a free sound horizon
+     * Enum nick table and stubs regenerated
+
+ * Shape-only datasets: DESI DR2 BAO set, Moresco 2020 CC covariance, uncalibrated
+     Pantheon+
+
+     * NC_DATA_HUBBLE_COV_MORESCO2020: the 15 D4000n cosmic chronometers with
+     the covariance of
+      Moresco et al. 2020 (arXiv:2003.07362) as gitlab.com/mmoresco/CCcovariance
+     builds it,
+      diag(errHz^2) + C_spsooo + C_imf; det = 4.560e+33 as the notebook prints
+     * HID.CC_MORESCO_2020: that block alone
+     * BAOID.DESI_DR2_2025: DESI DR2 BGS and table IV only
+     * add_snia_likelihood(sh0es_calibrators=False): Pantheon+SH0ES STAT+SYS
+     with the z_HD > 0.01
+      cut of the Pantheon+ SN-only likelihood; generate qspline and de-wspline
+      --no-sh0es-calibrators
+     * tests: Moresco covariance (size, symmetry, determinant), the new HID and
+     BAOID sets, the
+      calibrator option (1657 and 1590 SNe)
+     * enum nick table and stubs regenerated
+
+ * NcHICosmoDEWSpline: optional free sound horizon at drag (asdrag)
+
+     * asdrag parameter, r_s(z_d) H0 / c, as in NcHICosmoQSpline, used when the
+     new
+      use-as-drag property is set; BAO then constrains only distance ratios
+     * by default the sound horizon is computed in the model, equal to
+     nc_distance_r_zd for an
+      NcDistance without recomb (Eisenstein-Hu drag redshift and the
+     sound-horizon integral)
+     * generate de-wspline --use-as-drag sets the property and fits asdrag when
+     BAO is included
+     * tests: C test of the computed value against NcDistance on XCDM at three
+     curvatures, the
+      switch, serialization; generator option
+     * enum nick table and stubs regenerated
+
+ * Move the new SNIa catalog tests to C
+
+     * test_nc_data_snia_cov.c: DES-Dovekie catalogs load as version 2 with 1820
+     SNe and their
+      distance model; the Hoyt26 catalogs differ from Pantheon+SH0ES only in 114
+     low-z m_b_corr
+     * test_nc_data_snia_cov_fit.c (c-acceptance): DES-Dovekie flat LCDM best
+     fit and error
+      against arXiv:2511.07517
+     * test_snia_cov.py: back to master
+
+ * CI: bump DATA_CACHE_VERSION for the new data assets
+
+     * build_check.yml 4 -> 5: the four new SNIa catalogs are new assets under
+     the same release
+      tag, so a cache hit would never store them
+     * weekly_flaky.yml 2 -> 5: it must match build_check.yml
+     * CONTRIBUTING: a new asset under an unchanged tag also needs the bump
+
+ * Add NcDataHubbleCov and the ALL_COMBINED_OCT_2026 H(z) set
+
+     * NcDataHubbleCov: H(z) data with a full covariance (NcmDataGaussCov), ids
+     in
+      NcDataHubbleCovId
+     * Loubser 2025 moves from NcDataHubbleId to NC_DATA_HUBBLE_COV_LOUBSER2025:
+     its three points
+      share a fully correlated systematic, C = diag(sigma_stat^2) + s s^T, which
+     reproduces the
+      paper's correlations 0.932, 0.830, 0.776
+     * HID.ALL_COMBINED_OCT_2026: APR_2025 plus Loubser 2025
+     * tests: Loubser values and correlations, -2lnL against a cofactor inverse,
+     serialization,
+      set_size; the three HID sets
+     * hz.qmd: where correlated H(z) data live
+     * enum nick table and stubs regenerated
+
+ * Add DES-Dovekie, Pantheon+ Hoyt26 SNIa and Loubser 2025 H(z) data
+
+     * NcDataSNIAId: COV_DES_DOVEKIE_{STATONLY,STAT_SYS} (arXiv:2511.07517) and
+      COV_PANTHEON_PLUS_SH0ES_HOYT26_{SYS_STAT,STAT} (Pantheon+SH0ES with the
+     Hoyt et al. 2026
+      low-z bias-correction fix, arXiv:2601.19424); new release assets, the old
+     catalogs stay
+     * nc_snia_dist_cov_new_by_id: the four new ids
+     * NcDataHubbleId: LOUBSER2025, DESI DR1 cosmic chronometers
+     (arXiv:2511.02730)
+     * SNIaID: the new ids; the Hoyt26 STAT+SYS catalog gets the Pantheon+ z >
+     0.01 filter
+     * tests: catalogs load, Dovekie flat LCDM Omega_m against the paper, Hoyt26
+     changes only
+      low-z m_b_corr, Loubser points
+     * enum nick table and stubs regenerated
+
+ * Test that generate_stubs.py reproduces the committed stubs
+
+     * Add tests/python/numcosmo_py/test_generate_stubs.py: run main_func for
+     NumCosmoMath and NumCosmo and compare with ncm.pyi and nc.pyi
+     * Compare ast.unparse of both sides, so the check does not depend on the
+     black version
+     * On a mismatch, fail with the first lines of the diff and point to
+     update_pyi.sh
+
+ * Fix mypy errors from pygobject-stubs 2.19
+
+     * Type gi._gi callables as GI.CallableInfo in _callable_get_arguments
+     * Accept GI.TypeInfo and GIRepository.TypeInfo in _type_to_python
+     * Assert non-None names from BaseInfo.get_name in generate_stubs.py
+     * Rename the parent ObjectInfo in _gi_build_stub to parent_info
+     * Cast ModelBuilder.create results to GObject.GType for GObject.new
+
+ * CI: update conda lock files
+
+ * Fix the import order and widen the Bianchi tests
+
+     * numcosmo_py/app/__init__.py: GenerateBianchi in sorted order (ruff I001)
+     * test_nc_hcosmo_bi.c: the registered NcmMSetFuncList functions against the
+     direct API
+     * test_nc_hcosmo_bi_dist.c: zmax and reltol getters and setters,
+     serialization of the calculator and of the data object, the sigma column
+     error
+     * test_nc_dist_mu_obs.c: nc_dist_mu_obs_new_full() with typed columns
+     * tests/python/conftest.py: an EDD excerpt fixture of All CF4 SNIa Samples
+     * tests/python/numcosmo_py/datasets/test_dist_mu_obs.py:
+     dist_mu_obs_from_table() and the EDD importer
+     * test_generate.py: generate bianchi from --edd-table with --catalog-out
+
+ * Add the CF4 SNIa catalog to the data release and numcosmo generate bianchi
+
+     * nc_dist_mu_obs: nc_dist_mu_obs_new_full() with column types,
+     NcDistMuObsCatalogId and nc_dist_mu_obs_new_from_catalog_id()
+     * NC_DIST_MU_OBS_CATALOG_CF4_SNIA: nc_dist_mu_obs_cf4_snia.gvar downloaded
+     from datafile-release-v1.0.0, the EDD table All CF4 SNIa Samples, 1008
+     hosts, provenance in the metadata
+     * prefetch_data.py: prefetch the NcDistMuObs catalogs for the CI data cache
+     * numcosmo_py/datasets/dist_mu_obs.py: NcDistMuObs from an astropy table
+     and from the EDD export
+     * numcosmo_py/experiments/bianchi.py: build_bianchi_experiment() from a
+     catalog, with the column choice, the redshift cut and the priors
+     * numcosmo generate bianchi: --catalog, --data-file or --edd-table as the
+     source, --catalog-out, the priors as options
+     * nc_data_hcosmo_bi_dist_mu_new() and nc_data_hcosmo_bi_dist_mu_set_dist()
+     accept a NULL calculator
+     * test_nc_dist_mu_obs.c: the release catalog; test_generate.py: the
+     command; enum nicks and nc.pyi regenerated
+
+ * Add NcDistMuObs and read it from NcDataHCosmoBIDistMu
+
+     * nc_dist_mu_obs.{c,h}: NcmCatalog of distance moduli with sky positions;
+     required columns ra, dec, z, mu, sigma_mu, any other column kept
+     * nc_dist_mu_obs_get_direction() and nc_dist_mu_obs_set_direction(): unit
+     vector of a row in the equatorial frame
+     * nc_data_hcosmo_bi_dist_mu_set_obs(): fill the data from a catalog with a
+     column choice and a redshift cut
+     * nc_data_hcosmo_bi_dist_mu_get_obs(): catalog from the current data, so a
+     resampled data object gives a mock catalog
+     * Register the type in ncm_cfg.c, meson.build and numcosmo.h; regenerate
+     nc.pyi
+     * test_nc_dist_mu_obs.c: columns, directions, serialization and the
+     missing-column error
+     * test_nc_hcosmo_bi_dist.c: catalog round trip with a cut and a missing
+     column; test_ncm_generic.c: ref, free and clear
+
+ * Regenerate the Python stubs for the Bianchi I classes
+
+     * numcosmo_py/nc.pyi: NcHCosmoBI, NcHCosmoBIDist and NcDataHCosmoBIDistMu
+
+ * Add NcHCosmoBIDist and NcDataHCosmoBIDistMu
+
+     * nc_hcosmo_bi_dist.{c,h}: exact luminosity distance from the ray map of a
+     NcHCosmoBI
+     * Per model, Chebyshev tables of a_i^-2 and ln V on nodes chosen by
+     ncm_spectral_compute_chebyshev_coeffs_batch_adaptive
+     * Per ray, Newton on the E^2 series for the emission time and the K_ij
+     integrals from the node weights
+     * An axis contracting before zmax is reached, or a redshift above zmax, is
+     an error
+     * nc_data_hcosmo_bi_dist_mu.{c,h}: NcmDataGaussDiag of distance moduli with
+     sky directions
+     * Register both types in ncm_cfg.c, meson.build and numcosmo.h
+     * test_nc_hcosmo_bi_dist.c: LCDM and anisotropic QAG references at 1e-13,
+     rotation, data -2lnL and the two error paths
+     * test_ncm_generic.c: ref, free and clear of both types
+
+ * Add NcHCosmoBI, a Bianchi I model with matter and a cosmological constant
+
+     * nc_hcosmo_bi.{c,h}: NcmModel subclass with H1, H2, H3, Omegam and the
+     orientation u1, u2, u3
+     * Closed-form ln a_i and H_i / H_0 in lookback time, factored at the roots
+     of the volume
+     * Parameters valid only for Omega_L0 > 0
+     * Register H0, RH_Mpc, Omega_s0, Omega_L0, age, H2_minus_H1 and H3_minus_H2
+     as NcmMSetFuncList functions
+     * Register the type in ncm_cfg.c, meson.build and numcosmo.h; add the
+     parameter nicks to enum_nicks.json
+     * test_nc_hcosmo_bi.c: values today, flat LCDM, a CVODE reference ODE and
+     the validity check
+     * test_ncm_generic.c: ref, free and clear of NcHCosmoBI
+
+ * Remove ncm_sphere_map_calc_Ctheta
+
+     * NcmSphereXi computes the same function from the C_ell of the map, exactly
+     for the
+      truncated sum (ncm_sphere_xi_to_chebyshev, then
+     ncm_sphere_xi_eval_chebyshev or
+      ncm_sphere_xi_eval_chebyshev_grid); calc_Ctheta built an adaptive spline
+     of Legendre
+      sums in cos(theta), 9.6 s for 15 spectra at lmax 2000 with errors of 5e-8,
+     and
+      aborted at reltol 1e-8 where C(theta) crosses zero
+     * ncm_sphere_map_get_Cl aborts when there are no C_ell, as calc_Ctheta did:
+     after
+      ncm_sphere_map_set_lmax until they are computed or set again
+     * The stale C_ell trap now goes through get_Cl; the C(theta) test is
+     dropped, its
+      function being covered by the NcmSphereXi tests
+     * ncm_sphere_map.h includes ncm_vector.h instead of ncm_spline.h
+
+ * Add NcmSphereXi, the angular correlation function from C_ell
+
+     * Bin averages weighted by solid angle through a kernel matrix built once
+      (ncm_sphere_xi_prepare) and applied to many spectra with one BLAS product
+      (ncm_sphere_xi_apply, ncm_sphere_xi_apply_vector); the integrals use the
+      antiderivative -sin^2(theta) P'_ell / [ell (ell + 1)] with recurrences in
+      1 - cos(theta), which keeps double precision at small angles
+     * Exact Chebyshev series of the truncated sum (ncm_sphere_xi_to_chebyshev),
+      evaluated as a cosine series at given angles
+     (ncm_sphere_xi_eval_chebyshev) or
+      on the uniform grid by one DCT (ncm_sphere_xi_eval_chebyshev_grid)
+     * Tests against the 40-digit tables of tests/tools/make_sphere_xi_cases.py
+      (kernel, Chebyshev coefficients, values), the BLAS products, the grid, P_2
+     and
+      P_3, serialization and the aborts; ref/clear coverage in
+     test_ncm_generic.c
+     * Theory page docs/theory/ncm/sphere/sphere_xi.qmd; registration in meson,
+      numcosmo-math.h and ncm_cfg.c; regenerated ncm.pyi
+
+ * Plan narrower blocks at low multipoles
+
+     * nc_xcor_solver_plan_blocks: a block starting at l0 holds at most 8
+      multipoles when l0 < 16, 16 when l0 < 64 and the requested block size
+      above, never more than the requested size
+     * A block's k domain is the union of its multipoles' domains, which differ
+      most at low l: non-Limber with five galaxy kernels (magnification + RSD),
+      l 2-33 as one block costs 4.2 s of closures, in 2-5, 6-13 and 14-33
+      2.3 s together
+     * Calibrated one thread per block start and width on three kernel sets
+      (limber_all's bins with and without magnification and RSD, a narrow bin
+      with a weak-lensing kernel): 8 is best at l0 = 2, 16 for l0 from 8 to 32,
+      32 from 64 on; in parallel the thresholds 16 and 64 are within 3% of the
+      fastest of the schedules compared at 3 and 12 threads
+     * limber_all (l 2-2000, magnification + RSD): l-limber 200 2.09 -> 1.50 s
+     at
+      3 threads, 2.13 -> 0.61 s at 12; non-Limber throughout 9.26 -> 8.99 s and
+      3.47 -> 3.03 s
+     * Test: /nc/xcor/solver/plan/low_ell, the blocks of l 2-300 at block size
+     32
+
+ * Hold Limber blocks of several terms to tolerances relative to their windows
+
+     * The fit's tolerances and the domain threshold sample the order terms,
+     which
+      cancel in the windows: by 2.8e4 for a kernel of the j_l'' weight alone at
+      l ~ 1000, whose windows came out at 3e-3 of their peak whatever reltol
+     * _nc_xcor_kernel_build_cheb_integrand fits a block of several terms with
+      reltol, peak-epsilon and adaptive-epsilon times
+      NC_XCOR_KERNEL_WINDOW_FIT_FACTOR = 1/2, measures the ratio rho of the
+      smallest window peak (from the summed windows) to the terms' smallest
+      peak, and fits again with the three scaled by rho when it is smaller; the
+      fit itself moves to _nc_xcor_kernel_cheb_fit, one-term blocks unchanged
+     * _nc_xcor_kernel_integrand_window_peak_min: each window's peak, the cell
+     of
+      the largest bound sum |c_j| sampled first, cells whose bound is below the
+      value found skipped
+     * Measured: the pure d = 2 kernel's window at l 1016 within 1.2e-6 of the
+      recurrence formula (was 3.0e-3); galaxy kernels (rho 0.64-0.73) are not
+      fitted again, their spectra move by 1.2e-6 of sqrt(C_ii C_jj); limber_all
+      density bit-identical, RSD 0.170 -> 0.189 s, magnification + RSD
+      0.193 -> 0.214 s (3 threads)
+     * Test: /nc/xcor/kernel/analytic/deriv_limber_window, the summed windows of
+      the pure d = 2 kernel at l 1000-1031 against the recurrence formula at the
+      closure tolerance; fails without the rescaling (3.5e-3 of the peak)
+
+ * Keep the row sums' scratch in pools, and three comments
+
+     * ncm_spectral_panels_new_sum_rows takes its edges, coefficients and rebase
+      matrices from a memory pool item, one per concurrent caller, instead of
+      allocating them per call and per cell
+     * _nc_xcor_kernel_integrand_sum_terms uses local arrays bounded by
+      MAX_LIMBER_TERMS, with an error above it, instead of five g_new
+     * The closure builder takes the NcmSpectral of the sums from a memory pool
+      instead of constructing one per build
+     * Comments of _nc_xcor_kernel_integrand_sum_terms and
+      nc_xcor_kernel_integrand_peek_window, and one sentence of the Limber page,
+      reworded
+     * limber_all bit-identical with and without RSD; valgrind clean
+
+ * Name the summed windows after what they are
+
+     * The sum of a multipole's order terms is its window as one row in k:
+      _nc_xcor_kernel_integrand_sum_terms(),
+     nc_xcor_kernel_integrand_peek_window(),
+      the field windows and NC_XCOR_KERNEL_WINDOW_SUM_FRACTION replace the
+      "collapse" names, in the comments and on the theory page too
+     * Stubs regenerated
+
+ * Limber page: derivative weights, the collapse and the discarded borders
+
+     * Section on the Bessel derivative weights: the order recurrence (DLMF
+      10.51.1) with its coefficients, Limber per order, why the two-point form
+      does not converge, the terms in x = k / (nu + t) sharing chi = 1 / x, the
+      collapse before the k integrals, and the border contributions the Limber
+      path discards
+     * Figure: the j_l'' window of the Gaussian kernel from UltraLevin and from
+      the recurrence at l = 10 and 100, and nu^2 times the largest difference
+      for cuts at 8 and 4 sigma (flat, and growing with the discarded borders)
+     * references.bib: DLMF and Tanidis & Camera 2019, tidied
+
+ * Test the Limber RSD part against the exact one, not against CCL
+
+     * test_rsd_auto_limber_rsd_part_matches_exact replaces
+      test_rsd_auto_limber_matches_ccl: the Limber Kaiser term against the exact
+      one, within 5e-4, 5e-5, 5e-6, 5e-7 of the spectrum at l = 50, 100, 200,
+      400 (measured 1.6e-4, 1.1e-5, 1.1e-6, 7.4e-8), and at least ten times
+      closer than CCL's two-point form, which misses nearly the whole term;
+      the density term under Limber is the control, both codes within 1e-6
+      (measured 2e-8)
+     * The RSD share test's docstring describes the recurrence form; its
+      assertions hold unchanged
+
+ * Collapse the Limber order terms before the k integrals
+
+     * A closure of several terms now holds, per multipole, the sum of its term
+      rows as one row in k (ncm_spectral_panels_new_sum_rows), built after the
+      fit with trailing coefficients below a hundredth of the fit's absolute
+      floor dropped; nc_xcor_kernel_integrand_peek_collapsed() exposes it, the
+      rows and nc_xcor_kernel_integrand_eval_comps() are unchanged
+     * nc_xcor_kquad.c integrates one product per multipole, of two collapsed
+      rows or of a collapsed row against the other closure's row in its own
+      variable, instead of the sum over term pairs; the error estimate comes
+      per multipole from the same call
+     * limber_all (l 2-2000, Limber, 3 threads, warm): without RSD
+     bit-identical;
+      with RSD 0.31 -> 0.17 s, magnification + RSD 0.34 -> 0.19 s; the collapsed
+      products are within 6.5e-7 of sqrt(C_ii C_jj) of the term-pair ones
+     * Tests: rsd_limber_steps checks the collapsed row against the recurrence
+      formula at the closure tolerance; a one-term closure has no collapsed row;
+      valgrind clean
+
+ * Add ncm_spectral_panels_new_sum_rows
+
+     * The sum of n scaled rows of panel sets as one row in k: the partition is
+      the union of the rows' support ends and interior panel edges in k, each
+      row is rebased once onto every cell its support covers, exact for a
+      polynomial, and the coefficients are added; a cell no row covers is zero
+     * Edges closer than 16 ulps are merged; trailing coefficients of a cell
+      below an absolute threshold are dropped, at most their number times the
+      threshold in the sum; rows with an empty support are skipped, and all
+      empty gives a panel set without panels
+     * For the Limber closures with several order terms: one piecewise
+      polynomial per multipole, so that their products take the coefficient
+      path instead of the term pairs (measured in
+      NumCosmoDevNotes/benches/limber_collapse_rebase)
+     * Tests: rows from different sets with different scales and supports
+      against the polynomials at 2000 points, the union's edges, a gap cell, an
+      empty row, all empty; truncation of x^8 on a narrow cell within the
+      bound; valgrind clean
+
+ * Limber derivative weights by the order recurrence
+
+     * A Bessel derivative weight is its exact combination of neighbouring
+     orders,
+      DLMF 10.51.1: j_l' = (l j_{l-1} - (l + 1) j_{l+1}) / (2 l + 1), and j_l''
+     the
+      same applied twice, with orders l - 2, l, l + 2; Limber is applied to each
+      order term, replacing the two-point form -(2 l + 1/4) / nu^2 L_l + 2 / (nu
+     + 1)
+      L_{l+1}, which does not converge (1.2 of the RSD window's peak at every l)
+     * nc_xcor_kernel_limber.c: each order offset used by the block is a closure
+      term in x = k / (nu + t), sharing chi = 1 / x across multipoles and terms;
+      _limber_order_coef() gives the coefficients, zero for negative orders, so
+      l = 0 and 1 need no special case
+     * nc_xcor_kernel_closure.c: cuts and row ranges per term from the per-term
+      band arrays; a row of negative order is empty and keeps the scale nu
+     * Measured: on the analytic Gaussian the d = 2 Limber window converges to
+      UltraLevin as 1 / nu^2 (3.1e-2 at l = 100, 3.5e-3 at l = 300, 8 sigma
+     cut),
+      d = 1 the same; on limber_all's bins the RSD-part error is 4.7e-5 at
+      l = 200 and 6.3e-8 at l = 1000 of sqrt(C_ii C_jj), against 3.1e-3 and
+      1.3e-4 for the two-point form; without RSD limber_all is bit-identical;
+      with RSD 0.15 -> 0.30 s (nine term pairs in the products)
+     * A kernel nonzero at an end of its support leaves a step at each order
+      term's band edge, the same size relative to the total window as the
+      density term's own step; the Limber path discards these border
+      contributions, to be documented on the theory page
+     * rsd_limber_steps checks the three-term closure against the recurrence
+      formula over the rows' k range, its truncated dN/dz steps included
+
+ * Revert the chi derivatives of the kernel component
+
+     * The Limber derivative weights move to the order recurrence of the
+     spherical
+      Bessel functions, which needs no derivative of the kernel
+     * The NcmDiff default is not continuous in chi on spline inputs: near the
+      support ends its central and one-sided estimates differ by 2e-4 for a
+      128-knot n(z)
+
+ * Add the chi derivatives of the kernel component
+
+     * nc_xcor_kernel_component_eval_kernel_d1chi and _d2chi: first and second
+      derivatives of K(chi, k) in chi at fixed k, over a vector of wave numbers,
+      with a caller NcmDiffWork; virtual, with eval_kernel_d1chi and
+      eval_kernel_d2chi in the class (padding 12 -> 10)
+     * Default: NcmDiff (rc_d1/d2_1_to_M_ws) on eval_window x eval_kfactor_vec,
+      with the component's own NcmDiff, its domain set to [chi_min, chi_max] in
+      prepare so that the derivatives are one-sided near the support ends
+     * Each evaluation starts from a copy of k (eval_kfactor_vec rescales it in
+      place); out holds the copy, so it must be distinct from k
+     * Components check: the derivatives against scalar NcmDiff derivatives of
+      eval_kernel at each k, inside the support and 1e-3 of it from each end, on
+      every kernel (largest deviation 2e-11 for d1, 2e-9 for d2)
+     * Regenerate nc.pyi
+
+ * Add a draft theory page for the Limber path
+
+     * docs/theory/nc/xcor/limber.qmd: when the Limber path is used
+     (NcXcorKernel:l-limber), what it shares with the non-Limber path, the
+     factorization K = K_chi K_k it requires, and the Limber form of the radial
+     integral with its 1/nu^2 error measured against UltraLevin on a Gaussian
+     kernel
+     * The derivative weights, the closure variables and the outer integral are
+     not written yet: the j_l'' Limber form is being replaced (the two-point
+     formula does not converge)
+     * Registered in meson, the render list, the Angular Power Spectra sidebar
+     section and the theory index
+
+ * Regroup the theory pages
+
+     * Sidebar and theory index: Numerical Methods split into Angular Power
+     Spectra (Ultraspherical Spectral Solver, UltraLevin), Approximation and
+     Interpolation (Spectral Methods, FFTLog, AutoKnots, Quintic Hermite),
+     Statistics (Kernel Mixture Densities, Poisson-Lognormal, Autocorrelation
+     Time and ESS) and Numerical Methods (Numerical Differentiation, CSQ1D)
+     * Sidebar label "UltraLevin: Non-Limber"
+
+ * Split the Limber j_{l+1} term into its own closure term
+
+     * nc_xcor_kernel_limber.c: a Bessel derivative component adds rows [n_l, 2
+     n_l) holding its j_{l+1} terms in x = k / (nu + 1); chi = 1 / x is shared
+     by every multipole and both terms, so each point is one window evaluation
+     and one vectorized kfactor call per term; the j_{l+1} band is [1 / chi_max,
+     1 / chi_min] in x, the formula's own band (the j_l band clipped it, beyond
+     the closure domain in limber_all)
+     * nc_xcor_kernel_closure.c: the per-multipole u_step cuts are gone; the
+     j_{l+1} band edges are cuts; rows, scales nu + 1 and the block's k range
+     cover both terms; the domain search samples |A| + |B|
+     * ncm_spectral_panels_restrict_rows(): restricts a block of rows;
+     ncm_spectral_panels_restrict() is its all-rows case; a row range outside
+     the panel set aborts
+     * NcmSpectralPanelsProduct: a group restricts only its own rows (a
+     mixed-scale product restricted all rows for each row); a one-row group
+     integrates each cell by Gauss-Legendre with (p + n1 + n2) / 2 nodes, exact,
+     both sides evaluated on their own panels in one Clenshaw pass over the
+     nodes; cell matrices are kept per panel order, no allocation per cell
+     * NcXcorKernelGal: vectorized RSD kfactor (P(k, z) in one call, dP/dz per
+     k)
+     * limber_all (l 2-2000, Limber, 3 threads, warm): RSD 0.275 -> 0.149 s,
+     magnification + RSD 0.32 -> 0.174 s; without RSD bit-identical; against the
+     split at tau 1e-8, 1.9e-6 of sqrt(C_ii C_jj) at the default 1e-4 (master
+     6.4e-6)
+     * Tests: rsd_limber_steps checks the two-term closure against the Limber
+     formula from the component calls at max(reltol, peak-epsilon) (1.2e-8 of
+     the peak measured; a 1% change of the j_{l+1} coefficient gives 0.24);
+     restrict_rows test; the kquad and Python test helpers handle or refuse
+     several terms
+     * Full suite: C 182, OMP 7, Python 4911 passed / 32 skipped, pytest-mpi
+     * Stubs regenerated
+
+ * Let a closure hold several terms and the product pair row blocks
+
+     * ncm_spectral_panels_product_integrate_rows(): integrates rows [o1, o1 +
+     n) of one panel set against rows [o2, o2 + n) of another, or of the same
+     set; the square shortcut needs the same rows as well;
+     ncm_spectral_panels_product_integrate() is its case o1 = o2 = 0
+     * NcXcorKernelIntegrand: the panels hold n_terms groups of one row per
+     multipole and each multipole is the sum of its rows;
+     nc_xcor_kernel_integrand_get_n_terms(); get_scale(), peek_scales() and
+     get_range_comp() index panel rows; every closure is built with one term
+     * nc_xcor_kquad.c: with several terms, the product of two closures is the
+     sum over the pairs of terms, an auto spectrum counting the mixed pairs
+     twice, with scratch vectors from a memory pool
+     * Tests: /ncm/spectral_panels_product/rows checks every pair of row
+     offsets, and a panel set against its own other row with other scales,
+     against the exact integrals; rows_fit checks the abort for rows outside the
+     panel sets
+     * No result changes: limber_all C_ell bit-identical with and without
+     magnification and RSD, same timings
+     * Stubs regenerated
+
+ * Sum the squared cancellation scales of a Richardson row
+
+     * _ncm_diff_ladder_accum accumulates the squares of lambda_t k_t and takes
+     one square root (_ncm_diff_ladder_quadrature) instead of a hypot per term;
+     with the largest term outside [2^-500, 2^500] the terms are scaled by its
+     power of two and summed again, so tiny and huge functions are handled as
+     hypot handled them
+     * Same quadrature norm: derivative values unchanged on the harness, the
+     stress runs and a function scaled from 1e-300 to 1e300 (single and dual);
+     the reported errors change in the last bit only (at most 3.7e-16 relative)
+     * rc_d2_1_to_M_ws, M = 32, one thread: 24.0 -> 19.1 us (cheap f), 32.7 ->
+     22.4 us (spline f); hypot was 37% of the time
+     * ncm_diff C tests 120 ok over 20 runs (a first version without the
+     rescaling failed /ncm/diff/rc/d2/1_to_M/all on a function near 1e-185)
+
+ * Test reused NcmDiff workspaces against fresh ones
+
+     * /ncm/diff/work/random: 300 random calls (step, Hessian, spectral, scalar
+     and _ws drivers; 1-32 components, 1-4 coordinates; dual-series and domain
+     changed between calls) on one long-lived NcmDiff and NcmDiffWork, each
+     equal bit for bit to the same call on a fresh NcmDiff and NcmDiffWork; it
+     fails when the ladder reset leaves the control from an earlier call
+     * ncm_diff C tests 120 ok
+
+ * Leave domain_warnings unset in ncm_diff_init
+
+     * ncm_diff_init sets domain_warnings to FALSE, the unset state; its default
+     TRUE comes only from the domain-warnings param spec (construct property),
+     so a new NcmDiff still warns
+     * ncm_diff C tests 119 ok; harness bit-identical
+
+ * Add explicit-workspace NcmDiff derivatives
+
+     * ncm_diff_rc_d1_1_to_M_ws and ncm_diff_rc_d2_1_to_M_ws: the derivatives of
+     ncm_diff_rc_d1_1_to_M and ncm_diff_rc_d2_1_to_M with a caller's
+     NcmDiffWork, written into caller NcmVectors (err nullable); once the
+     workspace has served a call of the same dimension a call allocates nothing
+     and takes no lock; vectors of another length abort
+     * The single and dual step drivers write their derivatives and errors into
+     the workspace (df_a, err_a) and take the point as an array;
+     _ncm_diff_by_step_algo_work runs the driver of the current setting;
+     ncm_diff_by_step_algo copies the outputs into the returned arrays; the
+     in-use guard covers the copy
+     * The scalar Richardson wrappers (rf/rc, _1_to_M and _1_to_1) pass their
+     point directly instead of building an array for it
+     * Results bit-identical (harness.c); one thread, rc_d2_1_to_M_ws times as
+     the pooled call (24.0 us cheap f, 32.7 us spline f per call; no allocation
+     left in the profile, hypot 37%)
+     * Tests: /ncm/diff/work/ws (a reused workspace across dimensions, dual and
+     single, with and without errors, equals the GArray calls exactly),
+     /ncm/diff/work/ws/length, /ncm/diff/work/in_use (a function differentiating
+     with the workspace in use aborts); ncm_diff C tests 119 ok
+     * Stubs regenerated
+
+ * Keep a pool of NcmDiffWork in NcmDiff
+
+     * NcmDiff holds a memory pool of workspaces, created in ncm_diff_init and
+     freed in finalize; the step and Hessian dispatchers and the spectral entry
+     take a workspace from it and return it, so repeated calls reuse their
+     storage and concurrent calls on one NcmDiff get separate workspaces
+     * rc_d2_1_to_M on f: R -> R^32
+     (NumCosmoDevNotes/benches/ncm_diff_workspace/bench_d2.c, one thread): 45.1
+     -> 24.2 us per call (cheap f), 53.8 -> 33.5 us (one spline lookup per
+     component)
+     * Results bit-identical (harness.c, now reusing pooled workspaces across
+     dimensions 1 and 3 and 1 and 2 coordinates); ncm_diff C tests 116 ok
+     * Test: /ncm/diff/work/threads, four threads sharing one NcmDiff return the
+     serial result; with the pool bypassed the in-use guard aborts it
+
+ * Use NcmDiffWork in the spectral driver
+
+     * _ncm_diff_sc_dn creates a workspace and calls _ncm_diff_sc_dn_work, which
+     takes the point, the function value, the node and coefficient matrices, the
+     per-component arrays and the helper scratch from it (its spectral part,
+     matrices rebuilt only when the dimension changes); it leaves the workspace
+     before the fallback to the Richardson driver
+     * _ncm_diff_sc_dct and _ncm_diff_sc_deriv_est take their scratch from
+     NcmDiffSCData instead of allocating on every call
+     * _ncm_diff_work_init_point sizes the point alone, for the spectral driver
+     * Results bit-identical (harness.c); ncm_diff C tests 115 ok
+
+ * Use NcmDiffWork in the Hessian drivers
+
+     * _ncm_diff_Hessian_by_step_algo_single and _dual: the ladder or dual and
+     the point from the workspace; each sets its scheme's tables on the
+     workspace ladder or dual, which keep the tables of their last use; df and
+     Eerr written by index
+     * The Hessian dispatcher passes one workspace to either driver
+     * Results bit-identical (harness.c); ncm_diff C tests 115 ok
+
+ * Use NcmDiffWork in the single-series driver
+
+     * _ncm_diff_by_step_algo_single: ladders, point and step vectors from the
+     workspace (its ladders part, sized like the duals); df and Eerr written by
+     index, the error pad applied element by element
+     * The dispatcher passes one workspace to either driver
+     * Results bit-identical (harness.c, all 21 methods, dual and single, with
+     and without a domain); ncm_diff C tests 115 ok
+
+ * Add NcmDiffWork and use it in the dual-series driver
+
+     * NcmDiffWork: a reference-counted boxed workspace for the NcmDiff
+     derivative calls (new, ref, unref, clear; a copy adds a reference); its
+     parts are sized by the driver that uses them and kept between calls; a call
+     on a workspace already in use aborts
+     * _ncm_diff_by_step_algo_dual: takes a workspace for its duals, point and
+     step vectors; writes the caller's df and Eerr by index instead of through
+     matrix views; the dispatcher creates a workspace per call, so the next step
+     (a pool in NcmDiff) can reuse it
+     * Results bit-identical: all 21 derivative methods, dual and single, with
+     and without a domain
+     (NumCosmoDevNotes/benches/ncm_diff_workspace/harness.c); ncm_diff C tests
+     115 ok
+     * Test: /ncm/diff/work/ref
+     * Stubs regenerated
+
+ * Updated stubs.
+
+ * Set every tolerance of the kernel-space solve from NcXcorSolver:reltol
+
+     * nc_xcor_solver.c: the block integrators are built at tau =
+     NcXcorSolver:reltol and each closure is fitted with reltol tau and
+     peak-epsilon max(tau, 1e-6) through
+     _nc_xcor_kernel_get_eval_vectorized_tol(); the kernels' reltol and
+     peak-epsilon, and NcXcor:reltol, are not used there; default tau 1e-4
+     * ncm_sbessel_integrator_levin.c: the ODE solve runs at reltol/10; its
+     error changes in steps as k moves, and a closure fitted in k at the same
+     reltol did not converge (LSST lens bins to l 2000 at 1e-6); worst error
+     over every certified reference now a quarter of reltol (0.6 before)
+     * The closure builders and _nc_xcor_kernel_check_integrator_tolerance()
+     take the tolerances as arguments; nc_xcor_kernel_get_eval_vectorized_full()
+     passes the kernel's own
+     * NcXcorSSCSij and numcosmo_py.ssc: reltol is the tolerance of their solve;
+     peak-epsilon is removed (it no longer reached S_ij); TracerClSolver's
+     kernel_reltol sets its solver's reltol
+     * Measured on limber_all (5 LSST lens bins, 15 pairs, magnification and
+     RSD, l 2-2000 non-Limber, block 32, 12 threads): 3.2 s per solve at the
+     default, 5.3 s before at the same accuracy (3.8e-6 of sqrt(C_ii C_jj));
+     7.9, 38, 46 s at 1e-5, 1e-6, 1e-8; below 1e-6 a block-dependent part of
+     ~1e-6 remains from the peak-epsilon floor and the k-range truncation
+     (documented)
+     * Docs: NcXcorSolver:reltol with these numbers, the projection theory page
+     (ODE at reltol/10), the SSC theory page, the accuracy tutorial's settings
+     named by value; the certified-projection benchmark sets its solver to 1e-6
+     * Tests: comparisons of the solver with nc_xcor_compute() configure both
+     paths at the same tolerance; SSC peak-epsilon checks removed
+
+ * Let NcXcorSolver build its own Levin integrators
+
+     * nc_xcor_solver.c: one NcmSBesselIntegratorLevin per ell-block, built for
+     the block's range at the new NcXcorSolver:reltol (default 1e-8, the
+     integrator's), with ell-cache-max covering the block and the other settings
+     at their defaults; nc_xcor_solver_set_integrator() and the fallback to the
+     first kernel's integrator are removed, so the abort for a template whose
+     ell-cache-max did not cover a block cannot occur
+     * nc_xcor_solver_set_reltol()/get_reltol(): a different value discards the
+     block integrators
+     * _nc_xcor_check_kernel_tolerance() takes the integrator that builds the
+     closure: in the solver path it read the kernel's own integrator, which the
+     solve does not use
+     * NcXcorSSCSij and numcosmo_py.ccl.two_point.TracerClSolver stop passing an
+     integrator (both used the default); the xcor CLI sets the solver's reltol
+     from --integrator-reltol, which reached the solve before only through the
+     first kernel's integrator
+     * Tests: the C cache_max trap test is replaced by block_integrators (the
+     block integrators carry the solver's reltol, cover their block and are not
+     the kernel's); the Python set_integrator test becomes a set_reltol test;
+     the tests with closures fitted to 1e-2 set the solver to 1e-2
+     * Stubs regenerated
+
+ * Hold the CCL batching tests to reltol
+
+     * test_batching_agrees_within_the_error_budget: rtol 1e-6 becomes reltol
+     (1e-8); the alone-versus-batched gap is 2.6e-14 (1.4e-7 before the
+     stopping-test changes)
+     * test_tighter_request_narrows_the_batching_difference becomes
+     test_batching_difference_is_within_each_tolerance: the gap is at most
+     reltol at 1e-10 and 1e-6 (measured 1.4e-11 and 9e-16); the ordering it
+     asserted compared two values below their tolerances
+
+ * Use one tolerance for the Levin integrator
+
+     * NcmSBesselIntegratorLevin:cheb-reltol is removed (property, accessors,
+     the new_full argument, the xcor CLI's --integrator-cheb-reltol); :reltol
+     sets the forcing fit and the ODE solve, default 1e-8
+     * With the fit at reltol from 1e-4 to 1e-10 every certified reference is
+     within 0.6 reltol of its peak; panels that cancel multiply the error
+     relative to the result (23 reltol on d1 gauss_far l 500 at 1e-11, two
+     panels of -12.8 and +13.8 times the peak); the fixture xcor kernels give
+     C_ell equal to 10 digits to the former 1e-13/1e-8 pair, 5-14 % faster; a
+     reltol below the integrand's interpolation error aborts at the fit's
+     max-level (CMB lensing at 1e-12)
+     * The xcor tolerance guards compare against reltol alone
+     * xcor_window_ilk.bin is regenerated without the property (96 tables
+     bit-identical); the dense release file is regenerated the same way (192
+     tables bit-identical); DATA_CACHE_VERSION 4
+     * Tests: the cheb-reltol checks are removed, new_full calls lose the
+     argument, and the CLI test asserts that the two tolerances give different
+     results within the looser one, not a difference above 1e-6
+     * Writing pass over the branch's comments and docs: block-first comments,
+     measurements without history, no agent verbs; measured numbers updated in
+     the set_reltol test and the window Levin test header
+     * Stubs regenerated
+
+ * Merge a thin edge piece into the Levin panel next to it
+
+     * ncm_sbessel_integrator_levin.c: an edge piece narrower than
+     NCM_SBESSEL_LEVIN_THIN_PIECE_FRACTION (1e-4) of its knot is solved with the
+     adjacent fixed panel as one moving panel; with no fixed panel to merge
+     into, the whole range is one moving panel
+     * The derivative weights evaluate F' at the ends of a piece, and the
+     forcing x F'', from a Chebyshev fit made on the piece, so on a width delta
+     they have an error of the samples' roundoff over delta: 1e-5 of a d2
+     integral for a piece 1e-9 of its cell at cheb-reltol 1e-12, 5e-7 at the
+     default for a piece of a few ulps (a bound on a knot, d2 multi_mid l 2 of
+     the certified windows); after the merge every width from ulps to 1e-8
+     relative is within 8e-14 for d0, d1 and d2
+     * test_ncm_sbessel_integrator_levin.c: Arb case thin_piece (Gaussian on [0,
+     100.00000001], l 2, d2) held to 1e-10 at cheb-reltol 1e-12; on master the
+     error is 2.5e-5
+
+ * Account for the kept-coefficient shift in the sbessel ODE stopping test
+
+     * ncm_sbessel_ode_solver.c: a column is quiet when COEFF_SHIFT_FACTOR (10)
+     times n^2 rho_n is below tolerance rho_max; truncation at column N also
+     changes the coefficients below N, and the endpoint derivatives change by
+     8-10 N^2 |c^N| (rational and Gaussian panels)
+     * Measured on every certified reference (windows d0/d1/d2, the Levin Arb
+     cases, the Arb rational rows) at reltol = cheb-reltol from 1e-4 to 1e-10:
+     worst error / reltol 1.9-13 with factor 1, 0.8-3.2 with 3, 0.13-0.6 with 10
+     (always d2 gauss_far, l 2); 2-4 more columns per panel; at the default
+     1e-13 the roundoff condition stops the solve first, so the result is
+     unchanged
+     * Docs: the solver overview, NcmSBesselIntegratorLevin:reltol and the
+     theory page's stopping rule, animation replica and figure caption
+
+ * Read every Levin panel through the general boundary term
+
+     * ncm_sbessel_integrator_levin.c: every constraint, Dirichlet and the tau
+     fallbacks included, is evaluated with W = [x j u' - (x j)' u] from
+     solve_values; the form without the u terms assumes u(a) = u(b) = 0, which a
+     truncated Dirichlet solve meets only to its truncation error: on a short
+     panel at reltol 1e-5 the solve stopped at 8 columns with u(a) as large as
+     the u' terms, and that form had an error of 1e-2 of the certified
+     lensing_cmb d2 window's peak (W: 8e-10); the endpoints path and
+     endpoints_result are removed
+     * Docs: the class overview and the projection theory page state the general
+     term and the reason
+     * test_ncm_sbessel_integrator_levin.c: Arb case short_panel (constant on
+     [490.80, 499.48], l 200) held to reltol at 1e-6, 1e-5, 1e-4; on master the
+     error there is the whole integral
+
+ * Document the range contract and what cheb-reltol measures
+
+     * NcXcorKernelComponent: section "Every feature needs a range that brackets
+     it": an adaptive fit does not detect a feature that is not sampled, so
+     get_limits must bracket the component closely and far-apart features go in
+     separate components; the get_limits doc links to it
+     * ncm_spectral_compute_chebyshev_coeffs_adaptive: the l1 change measures
+     roughly the error of the coarser level, the returned fit is in general
+     orders of magnitude more accurate, and [a, b] must bracket the features of
+     F
+     * NcmSBesselIntegratorLevin:cheb-reltol and :reltol: what each measures,
+     and that the result is within the looser of the two
+
+ * Weight the sbessel ODE stopping test by n^2
+
+     * ncm_sbessel_ode_solver.c: a column is quiet when n^2 rho_n < tolerance
+     rho_max (n^2 is |T_n'(+-1)|, and the Levin boundary term evaluates u'(a),
+     u'(b)) or rho_n < eps/10 rho_max (COEFF_ROUNDOFF_FLOOR); at the solver's
+     default tolerance eps/10 the test is unchanged; every solve path uses it
+     * The test is documented as made for u and u' together; a test for u alone
+     (the unweighted one) can be added if a caller needs it
+     * Measured on the rational truth-table panel (l 2, k 10^0.5): the
+     coefficient test gave 3e4 times reltol (5e-9 at the default 1e-13), the n^2
+     test about 0.2 reltol down to a roundoff level near 1e-12; an adaptive k
+     fit of I_l(k) that did not converge below 1e-8 converges at 65 nodes down
+     to 1e-11
+     * Docs: the tolerance, the solver overview,
+     NcmSBesselIntegratorLevin:reltol, and the theory page's stopping rule,
+     animation replica and figure caption
+     * test_ncm_sbessel_integrator_levin.c: Arb case reltol_bound (rational,
+     [0.01, 6.5], l 0..7, k 10^0.5) held to reltol at 1e-8 and 1e-10; set_reltol
+     holds each result to its reltol
+
+ * Drop the duplicated solver fallback test and fix a self-comparison
+
+     * test_solve_fallback_method_matches_compute: test_nc_xcor_solver_solve
+     covers it for both Limber-z methods at the same 1e-10
+     * test_peek_block_integrator_before_and_after_solve compared get_result(0)
+     with itself; it now compares the second solve's result with the first's,
+     bitwise
+     * With the previous commit: 122 Python cases removed; C xcor 23/23, xcor
+     Python lane 870 passed
+
+ * Remove the xcor Python tests that duplicate C tests
+
+     * test_kernel_component: the interface, creation, properties and get_limits
+     tests ran on the 19 C components covered by test_nc_xcor_kernel_common.c
+     (components); one test keeps them for the Python subclass, which exercises
+     the binding; properties_via_get_component_list removed for the same reason
+     * C components test now also asserts the getters' defaults are positive,
+     the one check only Python had
+     * test_component_monotonicity renamed
+     test_component_analysis_is_positive_and_finite: it checks positivity and
+     k_epsilon >= 0.99 k_max, no monotonicity
+     * test_kernel_analytic: kdep_reports_its_parameters and
+     a_kernel_reports_the_scale_dependence duplicate
+     test_nc_xcor_kernel_radial_kdep
+     * test_integration: kernel_integrator_types (non-empty output, get_lmax),
+     xcor_compute_lmax_range and xcor_tolerance_scaling (finite and positive CMB
+     lensing autos; the reltol sweep asserted nothing about precision); the C
+     Limber-backend check now asserts every auto spectrum is positive, on every
+     kernel
+     * test_kernel_noise: kernel_noise_parametrized repeated the CMB lensing,
+     ISW and tSZ noise tests of the same file
+     * test_kernel_observables: all_kernels_have_observables duplicates the C
+     basic check; kernel_type_consistency tested the fixture names only
+     * test_ssc_sij: area_and_mask_are_mutually_exclusive duplicates
+     test_nc_xcor_ssc_sij_footprint
+     * test_nc_xcor_solver_solve now checks the solver's delegation to
+     nc_xcor_compute for both Limber-z methods at 1e-10 (was LIMBER_Z_GSL at
+     1e-9), covering the Python fallback test removed next
+
+ * Document the C test file layout and moving settled Python tests to C
+
+     * CONTRIBUTING.md and TESTING.md (new 6.2): includes, defines/types/data,
+     prototypes, main, helpers, fixture creators/destructors, tests;
+     test_ncm_vector.c as the model
+     * CONTRIBUTING.md: develop a test in Python, move it to C once settled if
+     it uses only the C API; what stays in Python (bindings, numcosmo_py,
+     comparisons with other codes); remove the Python test only after its C
+     counterpart has every assertion
+     * TESTING.md 7: release-file truth tables and generator-printed certified
+     tables in C tests
+
+ * Reorder the table-registered C tests to the test-file layout
+
+     * Tests and fixtures registered through {name, function} tables were taken
+     for helpers in the first pass and placed before the fixtures; they now
+     follow the fixtures
+     * The shared units with a test_*_main or test_*_register function (cbe,
+     xcor kernel and window, fit, esmcmc, stats_dist) take the same order, that
+     function in the place of main
+     * test_ncm_mset_catalog.c: its helpers move before the fixtures (the five
+     that need CFITSIO in their own HAVE_CFITSIO block) and its #defines move up
+     with the types
+     * Moves only (plus prototypes where needed); registered test paths
+     unchanged, build without warnings, C lanes pass
+
+ * Reorder test_ncm_mset_catalog.c to the test-file layout
+
+     * The registration-table typedef moves up with the other types
+     * The two static function-list helpers move after main, with prototypes
+     since main uses them
+     * Registered test paths unchanged (69), build without warnings, the test
+     passes
+
+ * Reorder the remaining C tests in nc/powspec to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 0 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/stats to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 12 prototype lines added or moved for functions used before their
+     definition (2 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/sphere to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 0 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/specfunc to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 0 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/mpi to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 9 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/model to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 32 prototype lines added or moved for functions used before their
+     definition (2 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/integration to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 6 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/fit to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 6 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/fftlog to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 0 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/core to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 48 prototype lines added or moved for functions used before their
+     definition (2 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the remaining C tests in ncm/algebra to the test-file layout
+
+     * Types (including GObject type macros) and static data first, then the
+     prototypes, main, the helpers, the fixture creators/destructors and the
+     test implementations; moves only, no code change
+     * 8 prototype lines added or moved for functions used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in nc/xcor to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 117 prototypes added for tests, fixtures and helpers used before their
+     definition (11 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in nc/primordial to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 7 prototypes added for tests, fixtures and helpers used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/stats to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 56 prototypes added for tests, fixtures and helpers used before their
+     definition (7 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/spline to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 93 prototypes added for tests, fixtures and helpers used before their
+     definition (8 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/sphere to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 0 prototypes added for tests, fixtures and helpers used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/specfunc to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 3 prototypes added for tests, fixtures and helpers used before their
+     definition (6 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/powspec to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 31 prototypes added for tests, fixtures and helpers used before their
+     definition (4 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/mpi to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 16 prototypes added for tests, fixtures and helpers used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/model to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 9 prototypes added for tests, fixtures and helpers used before their
+     definition (5 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/integration to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 4 prototypes added for tests, fixtures and helpers used before their
+     definition (4 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/fit to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 33 prototypes added for tests, fixtures and helpers used before their
+     definition (10 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/dynamics to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 19 prototypes added for tests, fixtures and helpers used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/data to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 0 prototypes added for tests, fixtures and helpers used before their
+     definition (2 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/core to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 55 prototypes added for tests, fixtures and helpers used before their
+     definition (8 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in ncm/algebra to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 129 prototypes added for tests, fixtures and helpers used before their
+     definition (11 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in nc/lss to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 14 prototypes added for tests, fixtures and helpers used before their
+     definition (3 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in nc/data to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 0 prototypes added for tests, fixtures and helpers used before their
+     definition (7 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Reorder the C tests in nc/background to the test-file layout
+
+     * Types and static data first, then the prototypes, main, the helpers, the
+     fixture creators/destructors and the test implementations; moves only, no
+     code change
+     * 0 prototypes added for tests, fixtures and helpers used before their
+     definition (1 files)
+     * Registered test paths unchanged (binary -l), build without warnings, C
+     lanes pass
+
+ * Drop the set_max_order calls left in the xcor solver tests
+
+     * test_solver.py still called NcmSBesselIntegratorLevin.set_max_order
+     (removed in dfa75339) in three places; four tests failed with
+     AttributeError in the full Python run
+     * compare_xcor_window_arb.py: the comment means the spectral fit's
+     max-level, not the removed property
+
+ * Move the conjugate-point tests to C and drop the Python ODE solver tests
+
+     * make_sbessel_arb_cases.py: the conjugate span of j_2 on [200, 200 + s]
+     computed once in mpmath and rounded to double; two Gaussian cells on that
+     span and 0.01 off it
+     * 3 C tests: Dirichlet on the conjugate span is wrong by more than 1e-6
+     (measured 1.2e-2); pinned at (0, 1), (2, 3), (10, 11) agrees with Arb to
+     1e-9 (measured 5.4e-13 to 1.9e-12); Dirichlet off the span to 1e-9
+     (7.2e-15)
+     * The five cases that call no NumCosmo code (the conjugate span exists,
+     phase increments, knots on zeros of j_l) move to a bench outside the
+     repository
+     * Delete tests/python/ncm/specfunc/test_sbessel_ode_solver.py, now empty;
+     drop its name from a CI comment
+
+ * Move the tau constraint, floor factor and derivative-error tests to C
+
+     * 16 C tests for the 24 Python cases of TestSBesselTauConstraint,
+     TestTauFloorFactorAndDiagnostics and TestDerivErrorBoundsTheFailure, same
+     tolerances; the boundary functional W = x j_l u' - (x j_l)' u written with
+     ncm_sf_sbessel
+     * The narrow-panel quad reference and the composite Gauss-Legendre
+     references of the derivative-error bound become 7 certified Arb cells
+     (gauss, explicit support) in make_sbessel_arb_cases.py ode; the tests read
+     the panel and the Gaussian from the table rows. Measured: narrow panel
+     2.2e-13 against 1e-9; the bound holds at spans 30 to 150, where the
+     realized error passes 1e-9
+     * The hand-written Chebyshev to C^(2) conversion of the forcing is replaced
+     by ncm_spectral_chebT_to_gegenbauer_alpha2 (agreement 1.8e-16 of the peak)
+     * Remove the three Python classes; 10 Python cases left (conjugate points,
+     phase conditioning)
+
+ * Move the ODE operator's stored-rotation tests to C
+
+     * 8 C tests for TestSBesselStoredRotations: a reused operator, whose stored
+     rotations are applied and extended, against a new one, for repeated,
+     longer, sequential, leading-zero and batched right-hand sides and at ell
+     50; same tolerances (1e-15 identical, 1e-12, 1e-11 at ell 50)
+     * Every comparison now also requires the same solution length; the Python
+     tests required it only through assert_allclose shapes
+     * convergence: get_n_cols counts stored columns, which a reused operator
+     keeps from an earlier, longer solve, so the check is n_cols >= the new
+     operator's with identical solution and length, instead of |difference| <= 2
+     (measured: solutions bitwise identical, n_cols 125 against 123)
+     * Remove the Python class; 34 Python cases left
+
+ * Move the ODE operator's memory tests to C, checked against new operators
+
+     * 11 C tests for the 17 Python cases of
+     TestSBesselOperatorMemoryManagement: stored capacity never decreases,
+     n_cols positive after a solve, reconfigure_operator drops the
+     factorization; sequences of right-hand sides of growing, shrinking and
+     varying order, a batch, solve_endpoints and the 20-solve sequence the
+     Python test drew with numpy seed 21
+     * New: every solve on the reused operator is compared with the same solve
+     on a new operator, to 1e-12 relative plus 1e-12 of the peak (measured:
+     bitwise identical on every sequence)
+     * Remove the Python class and two comment lines left at module level by the
+     timing-test removal; 42 Python cases left
+
+ * Check the ODE solver's forcings by Green's identity against Arb, in C
+
+     * Arb tool: --over-x divides any shape by chi; new sin and lorentz (1 / (1
+     + ((chi - mean) / scale)^2)) shapes; exp (x) is power_exp with chi-scale
+     -1. Checked against mpmath to 25 digits
+     * make_sbessel_arb_cases.py: shapes exp2, sin, lorentz and the /x suffix;
+     rows gain an over_x column (levin values unchanged); ode table adds
+     int_1^20 g j_l / x dx for g = x^2, x^3, exp (x), sin (x), cos (x), exp
+     (-x^2), 1 / (1 + x^2)
+     * The forcing tests built from each row's own shape, expanded by
+     ncm_spectral_compute_chebyshev_coeffs and converted by
+     ncm_spectral_chebT_to_gegenbauer_alpha2, and checked by Green's identity
+     besides u(a) = u(b) = 0; one multipole and the batch 2..8. Measured worst
+     2.6e-12, exp (-x^2) 2.7e-9, against rtol 1e-8
+     * The Python x^2 test hand-wrote its C^(2) coefficients wrongly (the
+     Chebyshev-T values); it only checked the boundary values, and Green's
+     identity misses by up to 380x with those coefficients
+     * The four timing tests, which asserted nothing, move to a bench outside
+     the repository; 59 Python cases left (the later test classes)
+
+ * Check the sbessel ODE solver's Green identity against certified Arb values in C
+
+     * make_sbessel_levin_arb_cases.py becomes make_sbessel_arb_cases.py with
+     two tables, levin and ode; the levin rows are unchanged
+     * test_ncm_sbessel_arb_cases.h: the row type, its search and the integrand
+     shapes, shared by the two tests
+     * ode table: int_1^20 j_l / x dx and int_1^20 j_l dx, ell 0..20, the Green
+     identity for the forcings 1 and x
+     * Green identity through the LU solve of the operator matrix, solve_dense,
+     the adaptive QR solve, solve_endpoints and its batched form, held to rtol
+     1e-8 as in Python (measured at most 3.9e-13); u = x j_l with Dirichlet data
+     checked against ncm_sf_sbessel
+     * Remove the 95 Python cases that used scipy quad and spherical_jn for
+     these; 102 left
+
+ * Move the sbessel ODE solver's self-consistency tests to C
+
+     * New test_ncm_sbessel_ode_solver.c (20 tests, the 258 Python cases):
+     solve_values and solve_endpoints against the Chebyshev evaluation of
+     solve(), batched against single-multipole solves (including the specialised
+     batch sizes 2 to 64), zero right-hand sides, the accessors,
+     reconfigure_operator and the reuse of the factorization
+     * The QR and dense solves are compared with an LU solve of the library's
+     operator matrix through GSL on the NcmMatrix storage, in place of
+     scipy.linalg.solve
+     * Same tolerances as the Python tests; 197 Python cases left (Green
+     identity, right-hand-side families, timing and the later test classes)
+
+ * Move the unread gauss_jl_100 table out of the repository
+
+     * data/truth_tables/sbessel had only gauss_jl_100.json.gz left, read by no
+     test; it is kept with the other sbessel sources outside the repository
+     * The README describes the sbessel tables as files of the data-file release
+
+ * Check the Levin integrator against the jl_500 truth tables in C
+
+     * make_sbessel_jl_bin.py writes gauss_jl_500 and rational_jl_500 as
+     NcmVarDict binfiles: the JSON keys (center, std, bounds, kvals, lvals,
+     convention), the table as an NcmMatrix, and the source name, its SHA-256
+     and the generator
+     * The binfiles are files of the data-file release, fetched by
+     nc_data_download_release_file and prefetched for the CI cache; the JSON
+     sources leave the repository
+     * Every cell of both 501 x 101 tables is held to 1e-8 of its multipole's
+     peak, all k; measured worst 1.3e-11 (gauss) and 3.1e-9 (rational). The
+     Python test only asked that the largest k with relative error below 1e-7
+     (1e-4 rational) reach 2.8 ell
+     * Remove test_truth_table from Python; test_gaussian_vs_quadrature is the
+     one SciPy comparison left
+
+ * Check the Levin integrals against certified Arb values in C
+
+     * make_sbessel_levin_arb_cases.py: the 86 cases (shape, [a, b], parameters,
+     deriv, ell, k) and their values from nc_xcor_kernel_analytic_arb, printed
+     as the C table; each integrand is written the same way in the tool and in
+     the test
+     * 15 C tests replace the Python ones that used SciPy quad: constant,
+     linear, quadratic and rational kernels, moving and accepted/rejected edge
+     cells (with their call counts and sampled range), set_reltol, k scaling,
+     narrow bounds, high ell, oscillatory and evanescent regimes
+     * Measured against Arb the library is within 7e-13 on every default-setting
+     case, so k_scaling at k = 100, narrow bounds, oscillatory and high ell now
+     use the requested 1e-8 instead of 1e-5, 1e-4, 1e-2 and 3.0
+     * Rational at ell 200 moves from k = 1 (1.5e-178, below the 1e-100 j_ell
+     threshold, so the library returns 0) to k = 20, the turning point on the
+     peak
+     * set_reltol uses exp (-x / 1000) on [100, 1e4], where reltol 1e-4 leaves
+     1.3e-6 of the peak and 1e-11 gives 1.2e-12; the old range gave 1.5e-13 at
+     both
+     * test_gaussian_vs_quadrature stays in Python as the external check;
+     test_truth_table moves with the jl_500 conversion
+
+ * Add the power and cos shapes to the Arb window tool
+
+     * power: chi^n with an integer n (--power-n), on [--chi-lower, --chi-upper]
+     * cos: cos (omega chi) (--omega), on the same support
+     * Checked against closed forms at ell 0: int_1^20 sin x dx and the
+     sine-integral form of int_1^2 cos (500 x) j_0 (x) dx, 30 digits
+
+ * Move the Levin tests without an outside reference to C
+
+     * New test_ncm_sbessel_integrator_levin.c (31 tests, 5 abort traps): block
+     against integrate_ell, ell-range changes, block sizes, the zero Bessel
+     batch, the oscillatory resolution floor, panel records, derivative closed
+     forms, batched and recurrence checks, deriv 0 and deriv 3 on a Levin
+     instance, tau constraint rule and fallbacks, turning knot, shared j_l rows,
+     non-positive tolerances
+     * Same tolerances as the Python tests; j_l' for the closed form from
+     ncm_sf_sbessel with scipy's recurrence
+     * Remove the 57 ported Python cases; the 46 left compare against SciPy or
+     the sbessel truth tables
+
+ * Remove NcmSBesselIntegratorLevin:max-order, which changed nothing
+
+     * The property only set the reserved capacity of three scratch arrays that
+     grow on demand; no fit, solve or panel decision read it, and its doc
+     claimed it bounded the Chebyshev order
+     * The scratch arrays are allocated once at init; _ensure_prepared is gone
+     * Drop the xcor CLI's --integrator-max-order and the set_max_order calls in
+     the Levin tests; regenerate the stubs
+     * Regenerate xcor_window_ilk.bin: the 96 tables and 48 kernels are
+     unchanged, the serialized integrators lose max-order and shared objects are
+     written once
+     * The dense table is regenerated the same way and replaced under its
+     release name; DATA_CACHE_VERSION 3 discards CI's cached copy
+
+ * Let the Arb window tool certify the sbessel integrands
+
+     * rational shape: chi^2 / (1 + ((chi - mean)/scale)^2)^3 on [chi-lower,
+     chi-upper], the integrand of ncm_sbessel_integrator_integrate_rational,
+     with an integer power so no branch cut
+     * --explicit-support: gauss and student_t take their support from
+     --chi-lower and --chi-upper instead of mean -/+ n widths, so a table
+     defined on given limits is certified on exactly those doubles
+     * --unnormalized: print the integral of the unnormalized window with its
+     own radius, since the sbessel tables are not normalized
+     * Both options are off by default; every existing table and command is
+     unchanged
+     * Ported from branch certified-references (2391db50)
+
+ * Write the magnification weight as 5(s - 0.4) so it vanishes exactly at s = 0.4
+
+     * _nc_xcor_kernel_gal_lens_eff_eval_source computes 5.0 * (mag_bias - 0.4)
+     instead of 5.0 * mag_bias - 2.0
+     * clang on arm64 fuses 5s - 2 into a multiply-add, which gives 1.1e-16 at s
+     = 0.4, and gal/magbias_null failed on the macOS Miniforge job; the
+     subtraction is exact at 0.4 and nothing fuses
+     * reproduced on x86 with clang -march=native -ffp-contract=on: old form
+     1.1e-16, new form 0
+
+ * Interpolate the lensing efficiency g(z) with a quintic Hermite spline
+
+     * NcXcorLensingEfficiency stores g(-z) as an NcmSplineHermite through the
+     ODE steps, with g' = -y_1 / E and g'' from the right-hand side at each
+     step, in place of the not-a-knot cubic through g alone
+     * the interpolation error, which set the accuracy of g between steps, drops
+     from up to 1.5e-10 relative (1.8e-11 of peak) to 2e-14 to 6e-14 relative on
+     the weak-lensing, magnification and CMB-lensing kernels; the step count is
+     unchanged
+     * C_ell moves by at most 4.3e-12 of peak; the adaptive closures keep the
+     same node counts and the cost is unchanged (NumCosmoDevNotes
+     benches/lens_eff_spline)
+     * the 24 C xcor binaries and the xcor Python lane (992 passed, 17 skipped)
+     pass
+
+ * Hold the single-multipole closure test's domain fixed at adaptive-epsilon 1e-8
+
+     * test_single_ell_closures_match_block sets adaptive-epsilon 1e-8 on its
+     kernels and restores it afterwards, so it compares the single-multipole and
+     block fits, not where each cuts the domain
+     * with the magnification bias now on by default, the default 1e-5 cut the
+     magnification tail at different places for blocks of 1 and of 4 (9.7e-6 of
+     peak on the gal x wl Limber pair); at 1e-8 the pair measures 2.5e-10 and
+     the gal auto 1.8e-11, under the unchanged 1e-8 tolerance
+     * the stopping rule's defect itself (it ignores the k^2 dk weight of C_ell)
+     is parked for a separate investigation
+     * the 23 C xcor binaries and the xcor Python lane (992 passed, 17 skipped)
+     pass
+
+ * Default the galaxy kernel's magnification bias to s = 0.6 from one constant
+
+     * NC_XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS goes from 0.4, where the weight 5s -
+     2 vanishes while the term is still computed, to 0.6, unit weight
+     * the CLI kernel config and numcosmo_py.ccl.comparison take their default
+     from Nc.XCOR_KERNEL_GAL_DEFAULT_MAG_BIAS instead of their own 0.0 and 1.234
+     * the NcXcorKernelGal docs state the 5s - 2 convention, shared with CCL (1
+     - 2.5s) and CosmoSIS (2(alpha - 1), alpha = 2.5s), and that s = 0.4
+     switches the term off
+     * new C test gal/magbias_null: at s = 0.4 the kernel with magnification
+     equals the kernel without it to the last bit, and differs at s = 0.6
+     * nc.pyi regenerated with update_pyi.sh
+     * Known failure: test_integration.py::test_single_ell_closures_match_block
+     (gal bin 0 x WL bin 0, Limber) now exercises the magnification term and
+     fails, 9.7e-6 of peak against 1e-8: the default domain truncation
+     (adaptive-epsilon 1e-5) drops 1.8e-5 to 2.1e-5 of the magnification C_ell
+     (NumCosmoDevNotes benches/limber_magbias)
+
+ * Normalize the weak-lensing and galaxy kernels' dN/dz on a copy, not the
+     caller's spline
+
+     * NcXcorKernelWeakLensing and NcXcorKernelGal scaled the dndz spline they
+     were given in place: the caller's spline came back normalized, kernels
+     sharing one spline renormalized it, and a kernel rebuilt from its
+     serialization normalized the normalized spline again (the integral is
+     0.99999999999999978, one ulp), which moved the weak-lensing window by up to
+     3.5e-11 (the (ubuntu, apt, pip) job of PR #405)
+     * the dndz property now holds the caller's spline as given; the kernel
+     normalizes a copy of its own when the property is set, at construction or
+     later, releases the previous splines and marks itself outdated
+     * the C serialize check compares the copy with the original exactly, every
+     kernel; new C test dndz_untouched: the caller's spline unchanged, two
+     kernels on one spline identical, a spline set after construction gives the
+     kernel built with it, for both kernels
+     * the 23 C xcor binaries and the xcor Python lane (992 passed, 17 skipped)
+     pass
+
+ * Split the slow xcor C tests, move Python duplicates to C, fix lensing at z = 0
+
+     * the dense and sparse window tests at d = 1, 2 and nc_xcor_kernel split
+     into more binaries (power-exponential windows, CMB lensing, CMB ISW);
+     #404's Cov-c run timed out on a slow runner with sparse_d1 at 1080 s
+     * kernel, component, serialization, solver, NcXcor property and Limber
+     backend checks move from Python to C; each Python test was removed only
+     after its C counterpart had all of its assertions
+     * NcXcorKernelWeakLensing and NcXcorKernelCMBLensing return the limit 0 at
+     z = 0 instead of NaN; the unused weak-lensing radial-weight helper is
+     removed
+     * NCM_SERIALIZE_OPT_KEEP_SHARED names the option that keeps shared objects
+     shared; CLEAN_DUP stays as a synonym, every use in the repository switched,
+     the reuse caveat documented
+     * the window vocabulary moves to numcosmo_py.certified.xcor.windows with
+     build_kernel and table_window; the kquad pair matrix,
+     compare_xcor_window_arb.py, make_xcor_window_bin.py and the certified
+     projection page build from it; test_pair_kernel_matches_the_vocabulary is
+     removed
+
+ * Hold the Levin window check to 3 times the integrator's cheb-reltol
+
+     * The rtol was 1e-8, equal to NcmSBesselIntegratorLevin:cheb-reltol, the
+     forcing-fit tolerance that bounds the result; the fit's acceptance test
+     bounds the change between levels, not the error, so the bound had no margin
+     * The worst d = 0 point, ell = 200 of the top-hats on the tau paths, is
+     5.8e-9 relative on x86-64 and 1.015 and 1.028 times 1e-8 on arm64, where
+     macOS CI failed
+     * Read the tolerance from the integrator and replace the outdated measured
+     worst in the comment
+
+ * Print each computed table of the Hermite page from one cell
+
+     * The headers were written outside the cells that print the rows, so Quarto
+     rendered an empty table and the rows as loose text; the smoothness and the
+     error tables now come whole from their cells
+
+ * Fit the certified projection page's figures in the text column and compute its
+     timing prose
+
+     * Draw the every-shape and derivative-weight figures at 7 inches with
+     folded code, the every-shape legend below the figure, the derivative legend
+     in the empty corner
+     * Leave a gap between stacked panels so the tick labels at the joint do not
+     collide; redshift ticks at 1, 3 and 100 on the window panels
+     * State the tail-by-tail captions without metaphors; print the convention
+     check as m x 10^e
+     * Write the block-size and FKEM cost ratios from the timing table: the
+     fixed paragraph claimed one OpenMP thread where the render states its own
+
+ * Fit the derivatives page's figure in the text column
+
+     * Stack the spectrum and the derivative panels in one 7-inch figure: the
+     11-inch side-by-side figure ran under the margin caption and cut the
+     derivative panel's title
+     * Set the derivative panel's y range from the curves: the 2e-7 floor hid
+     the error NcmDiff reports on UltraLevin, about 6e-8
+
+ * Compute the derivatives page's table-size and forward-variant comparisons on
+     the page
+
+     * A cell repeats the CCL comparison with a 1200-point n(z) table and takes
+     the UltraLevin derivative with the forward NcmDiff variant, and writes the
+     paragraph from the results
+     * The forward variant now agrees with the central one to 5e-8 at worst; the
+     deviation at one multipole recorded before is gone
+     * Drop the pointers to the private development notes from both pages, and
+     the warm-solve profile the certified page cannot recompute
+
+ * Check the xcor tutorial's qualitative claims in the cells that write them
+
+     * Assert, before each generated paragraph, the comparisons its prose
+     states: the equal closures at two reltols, the estimate between the two
+     tolerances, the estimates of one order, the separated pair's size, every
+     certified deviation below peak-epsilon, the domain ends against the
+     certified interval, the shapes' ranges and costs; a change that breaks one
+     fails the render
+     * Restore the NcXcorKernel and NcXcorSSCSij links in the generated
+     paragraphs; linkgen.lua processes cell output
+
+ * State only the measured values in two certified-window comments
+
+     * test_nc_xcor_window_common.c: the worst measured deviation and where it
+     occurs, without the unmeasured explanation of the factor near 2
+     * tests/c/meson.build: the measured -O0 slowdown, 6.3 to 7.8 times, in
+     place of 7 to 10
+
+ * Resolve the top-hat's k integral in the C_ell definition check and tighten its
+     bound
+
+     * Raise TEST_CL_N_K from 512 to 8192: the top-hat's transform oscillates
+     over the whole k range, and the 7.9e-5 measured at 512 points (5.0e-6 at
+     2048) was the reference's own error
+     * Hold the top-hat at ell 2 to 3e-5, an order above the 3.5e-6 measured at
+     8192 points; the Gaussian stays at 1e-8 (8.1e-10 at every grid)
+
+ * Drop the skipped ends of the narrow panel product test
+
+     * Three of the ten ends lay outside (0.1, 0.5) and were skipped by the
+     loop; the guard goes with them
+
+ * Write adaptive-epsilon as epsilon_dom throughout the UltraLevin page
+
+     * The truncation order, the component drop, the jump bound and the defaults
+     table still wrote it as epsilon
+
+ * Import numcosmo_py inside windows.make_kernel
+
+     * The Arb generators in tests/tools import windows for the vocabulary
+     alone; a module-level import made make_xcor_pair_grid.py load numcosmo_py
+     and gi
+
+ * State the separated pair's estimate ratio the right way round in the xcor
+     tutorial
+
+     * The estimate relative to |C_ell| exceeds the one relative to the diagonal
+     by the inverse of the pair's fraction of the diagonal, not by that fraction
+
+ * Hold the tight certified-window setting to 3 peak-epsilon as the default one
+
+     * The worst shape at the tight setting, power_exp_isw at d = 0, measures
+     1.95 against the former factor of 2; the acceptance test compares two
+     consecutive levels, so the accepted level's error is the threshold times
+     the ratio of the remaining tail, near 2 for a hard-edged window
+
+ * Compute every number quoted in the xcor accuracy tutorial on the page
+
+     * Keep the measured values of each table in a dictionary and write the
+     paragraphs that quote them from cells, through display(Markdown()), so the
+     prose cannot drift from the tables
+     * Write NcXcorKernel:adaptive-epsilon as epsilon_dom, as on the UltraLevin
+     page, and keep epsilon for the closure error of the Cauchy-Schwarz bound
+     * Point the summary at the sections that hold the measurements instead of
+     repeating them
+
+ * Drop the stale comparison wording of the xcor view app
+
+     * Use compare_limber directly in place of the _comparing alias
+     * State the one BadParameter the kernel options raise, and describe the
+     Limber curve as the same kernel under the Limber approximation
+
+ * Name the domain tolerance and the jump height apart, and source every number on
+     the xcor pages
+
+     * Write NcXcorKernel:adaptive-epsilon as epsilon_dom on the UltraLevin page
+     and keep Delta for the panel half-width: the jump height of the aliasing
+     residual is delta_jump
+     * State on the UltraLevin page that Eq. (8) is the acceptance test of the
+     Spectral Methods page, Eq. (2), with the forcing's terms
+     * Link the SSC page to the tutorial's certified table and closure cost
+     instead of copying their numbers
+     * Certified projection page: state the padding once, with the exception at
+     chi = 0; state that the library integrates over its closures' range; move
+     the warm-solve profile to the development notes; drop the history from the
+     per-shape figure comment
+     * Derivatives page: move the 1200-point and the forward-variant
+     measurements to the development notes
+     * Solver page: state that low pins are used, without the appraisal
+
+ * Give every certified-window test binary the 360 s timeout
+
+     * dense_d0 and dense_d1, left at 180 s, had a margin below 2 on a loaded
+     -O0 coverage runner
+
+ * Share the analytic kernel builder of the window tables through windows.py
+
+     * Move _make_kernel from test_xcor_window_truth_table.py to
+     windows.make_kernel, used by make_xcor_window_bin.py, which no longer
+     imports a test module
+     * Document the chunked certification options of
+     make_xcor_kquad_truth_table.py and where a merged entry records its parts
+
+ * State the current check in three test comments
+
+     * test_nc_xcor_window_levin.c: why the forced path must report fallbacks
+     below the turning point
+     * test_integration.py: describe test_xcor_kernel_methods as the check it
+     is, and name the closure tolerance rather than the removed spline's
+
+ * Check the non-Limber C_ell of an analytic window against its definition in C
+
+     * Add test_nc_xcor_kernel_analytic_cl_definition: the solver's C_ell
+     against (2 / pi) int dk k^2 P(k) [int dchi W(chi) j_ell(k chi)]^2 with the
+     Gaussian and top-hat windows written in closed form and the quadrature
+     written in the test, which pins the unit convention
+     * Held to 1e-8 for the Gaussian at ell 8 and 1e-3 for the top-hat at ell 2,
+     an order above the measured 8.2e-10 and 7.9e-5
+
+ * Check the k quadrature at ell 10 as well
+
+     * Add ell 10 to CHECKED_ELLS of test_k_integral.py, in the l = 4-10 region
+     where every method and the reference are worst
+     * State the tolerance comments without the history of the earlier multipole
+     ladder
+
+ * State the scale of the sparse certified-window checks as the code applies it
+
+     * The closure's own peak enters the scale at every order of the sparse
+     table, not only the derivative orders
+     * Record the measured deviations at the current defaults, 1.24 at the
+     defaults and 1.95 at the tight setting in units of peak-epsilon
+
+ * Build the certified-window tests as one binary per table and order from a
+     common unit
+
+     * Move the checks, the table loaders and the registration of
+     test_nc_xcor_window_dense.c to test_nc_xcor_window_common.c, with
+     test_nc_xcor_window_register() taking the Bessel-derivative order
+     * Add one main per table and order, dense d0 to d2 and sparse d0 to d2,
+     replacing the six builds of one source selected by a test-path prefix
+     * Raise the timeout of dense_d2, sparse_d1 and sparse_d2 to 360 s: on the
+     -O0 coverage build sparse_d1 takes 539 s against the former limit of 540 s;
+     on the Optimized build the six take 12, 23, 38, 21, 76 and 53 s
+
+ * Restore the data cache for the coverage c shard
+
+     * The c shard runs the dense certified-window tests, which read
+     xcor_window_ilk_dense.bin from the data cache; without the restore every
+     one of its binaries downloaded the file during the run
+
+ * State the min-panel-fraction block, the interval midpoint and the exact
+     quadrature directly
+
+     * Describe what the min-panel-fraction block of the panels builder does,
+     the fatal retry without the convergence prediction included
+     * Rename ComponentStates::panel_mid to interval_mid, the midpoint of the
+     continuous interval holding the panel
+     * Replace the em-dashes in the vp_err documentation of nc_xcor.c
+
+ * Hold the row scales of NcXcorKernelIntegrand in a vector
+
+     * Replace the scale field of NcXcorKernelIntegrandRow by an NcmVector of
+     the scales held by the integrand, filled by the closure builder
+     * Add nc_xcor_kernel_integrand_peek_scales() and regenerate nc.pyi
+     * Pass the peeked scale vectors to NcmSpectralPanelsProduct in
+     nc_xcor_kquad.c instead of allocating two vectors on every block
+
+ * Accept a cell end within four ulp of a panel edge in
+     ncm_spectral_panels_restrict
+
+     * Widen the slack of ncm_spectral_panels_restrict() to the larger of 1e-12
+     of the panel width and four units in the last place of the larger edge: the
+     product maps an edge of one side into the variable of the other and back,
+     and the round trip can leave the edge by one ulp, which the width term
+     alone does not cover on a panel narrower than about 1e-4 of its position
+     * Add test_ncm_spectral_panels_product_narrow, a constant pair with a panel
+     of relative width 1e-5 on the side mapped through the other's scale, in
+     both orders, which aborted before
+
+ * Keep the print-fit report of NcmStatsDist out of the test output
+
+     * Report the fit result and the linear search through ncm_message(), as the
+     other print-fit messages are, so that the log stream receives every line of
+     the report
+     * Send the log stream to /dev/null while test_ncm_stats_dist_cv_auto_kernel
+     runs with print-fit on, and restore it after
+
+ * Trim the ssc module docstring to the current closure
+
+     * Describe what the module computes and link the theory page and the
+     accuracy tutorial
+     * Name reltol and peak-epsilon as NcXcorKernel properties, not spline
+     floors
+     * The spline-era precision tables move to the development notes
+
+ * Compare FKEM on zero-padded tables in the certified projection page
+
+     * Pad every CCL table with two zero samples per end and pass every window
+     component
+     * Report C_ell deviations over the diagonal and relative to the certified
+     value
+     * Rewrite the FKEM sections from the padded results; drop the fixed tables
+     * Name the pairs by kquad case and turning-point ratio
+
+ * Name things directly in the UltraLevin and solver pages
+
+     * Sub-cell widths in factors of sqrt(2) in place of the half-octave ladder
+     * Order-one homogeneous coefficients below N_min in place of the plateau
+     * Upper bound, peaks and accuracy limits in place of ceiling, spikes and
+     floors
+
+ * Replace the spline-era SSC accuracy table with the tutorial's measurements
+
+     * ssc.qmd states the accuracy at the NcXcorSSCSij defaults and links the
+     xcor accuracy tutorial
+     * NcXcorSSCSij docs describe peak-epsilon as the closure's absolute term,
+     not a spline floor
+     * Drop the adaptive-quadrature sentences left from the removed
+     KERNEL_CUBATURE
+
+ * State the certified projection page directly outside the FKEM sections
+
+     * Remove em-dashes and figurative phrasing; American spelling
+     * Join the display equations to the surrounding text
+     * Name partial panels as on the UltraLevin page in the timing profile
+
+ * State the ultraspherical solver page directly
+
+     * Replace figurative and agent phrasing with the operation, inequality or
+     count
+     * State the pinned constraint's use on short panels without history
+     * Rewrite the captions in the same register
+
+ * State the truncation of the spectral operator matrices directly
+
+     * Replace three figurative phrases in the truncation section
+
+ * State the spectral methods page directly
+
+     * l1 norm in place of l1 mass; join Eq. (3) to the text after it
+     * Replace figurative phrasing in the adaptive entry points, batch fits and
+     rebase
+
+ * State the CCL comparison with the numbers of its tables
+
+     * Replace evaluative phrasing (strong, good, very good agreement) with
+     measured deviations
+     * State the kernel cancellation and the ISW growth-function deviation
+     directly
+     * Describe the two timings without figurative phrasing; drop trailing
+     whitespace
+
+ * State the super-sample covariance page directly
+
+     * Remove em-dashes, figurative and evaluative phrasing
+     * Join the display equations to the surrounding text
+     * Name l_limber = -1 and link the radial integrals to the UltraLevin page
+     * State the g_error on use-norma FALSE and the fixed resampling covariance
+
+ * State the xcor derivatives benchmark directly and with the rendered numbers
+
+     * Ratio of derivative to spectrum deviation is 14, NcmDiff error four to
+     six orders below
+     * Replace anthropomorphic and figurative phrasing with the measured
+     statements
+
+ * State the operations in the UltraLevin page and the xcor accuracy tutorial
+
+     * Replace agent verbs (decides, pays, judged, reads zero) with the
+     operation performed
+     * Rename the tutorial's shape section to "Kernel shape and cost"
+
+ * Correct and tighten the UltraLevin theory page after the closure rewrite
+
+     * Define the closure's terms in Eq. (8): reltol, a = peak-epsilon times the
+     smallest peak
+     * Define epsilon_F and epsilon_abs where Eq. (8) is introduced
+     * Fix the forcing x F in the Wronskian derivation (was y F)
+     * Rename the jump height to Delta, apart from j_ell, and drop the bisection
+     width guard
+     * Name adaptive-epsilon and adaptive-boundary-tries in the domain expansion
+     * Point the table at Eq. (8) and N_min, and give the k closure defaults
+     * Remove the em-dash pair, figurative phrasing and the British spelling
+     * Use W_ref for the running maximum in the xcor accuracy tutorial, as on
+     the theory page
+
+ * Rewrite the xcor accuracy tutorial for the panel closures
+
+     * Acceptance test max(reltol V, a) with a = peak-epsilon times the block's
+     smallest peak
+     * Cost in panels and nodes at four settings; peak-epsilon sets it on the
+     cluster top-hat
+     * Range of k from NcXcorKernel:adaptive-epsilon and what it leaves out
+     * Error estimate of nc_xcor_compute_full, cancellation, and the diagonal
+     scale
+     * Deviations from a tighter closure and from the certified kquad table on
+     its intervals
+     * Cost of a top-hat against a smoothed top-hat and a Gaussian
+
+ * Drop the single-multipole Limber-against-non-Limber tests
+
+     * test_limber_vs_non_limber and test_k_projection_limber_vs_non_limber
+     removed (7.6 s of 27 s on one core): their multipoles start the blocks of
+     the vectorized forms, which carry the same or tighter tolerances; single
+     against block is checked once in test_integration.py
+     * The one tighter single tolerance moved to the block test: tSZ at ell 800,
+     8e-5 (was 1e-4), which it passes
+     * test_limber_vs_limber_z stays: it covers ell 10 to 1000, its block form
+     only 100 to 108
+
+ * Take the k projections through the panel product
+
+     * test_kernel.py: _k2_integrals gives int k^2 W_r^2 dk of every row of a
+     closure exactly, restricting its panels to [k_min / s_r, k_max / s_r] and
+     squaring them with NcmSpectralPanelsProduct (p = 2)
+     * test_k_projection_limber_vs_non_limber and its vectorized form use it
+     instead of 5000-point trapezoids in ln k; tolerances unchanged, 28 cases
+     pass, same time (the closures dominate)
+
+ * Compare the library with the certified kquad table on each entry's own interval
+
+     * test_closure_matches_certified_c_ell: the library's C_ell restricted to
+     the entry's [k_lo, k_hi] (power spectrum kmin and kmax), the deviation over
+     sqrt(C_aa C_bb) from the library's autos on the same interval at reltol
+     1e-8, peak-epsilon 1e-6
+     * Bound 3 peak-epsilon at the defaults: measured worst 1.6 over the 129
+     entries (R11 ell 10, the hard-edge oscillation the dense windows show at
+     1.9); fails at 0.1
+     * The 3e-2 budget of the pair's scale, its X14 carve-out and their comments
+     removed: on a shared interval the far-separated crosses are within 0.6
+     peak-epsilon of the diagonal
+     * test_kernel_analytic.py: test_cl_matches_quadrature_from_the_definition
+     (SciPy reference, about 43 s) removed with _cl_reference, CL_CASES and the
+     Gauss-Legendre nodes only it used
+
+ * Regenerate the certified kquad table: 129 entries
+
+     * 14 stale entries recomputed (generated before b73fc3b0 and kept by
+     --resume), 36 added: ell 3-9 and 100 for A1, A2 and X14, and the cases
+     missing at ell 10 and 50 (A4, N3, R4, R6, R7, R8, X5-X8)
+     * Entries a single run could not finish within its time limit were
+     certified in 12 parts of their k range, re-split where a part timed out (R8
+     ell 50: 12 parts, 8 sub-parts, 4 pieces; about 218 h of single-core Arb);
+     each entry keeps its stated [k_lo, k_hi]
+     * Worst certified radius 1.33e-9 of the value;
+     test_certified_table_is_certified and test_closure_matches_certified_c_ell
+     pass
+
+ * Test the panels builder on undeclared kinks and a raised level cap
+
+     * undeclared_kinks: exp(x) plus a C^0, C^1 or C^2 kink at 0.3137, not a
+     breakpoint, resolved by bisecting at it; C^1 and C^2 at reltol 1e-12
+     (measured 16 and 10 panels, 0.03 and 0.02 reltol), C^0 at 1e-8 (22 panels,
+     0.18 reltol); the panel at the kink is the narrowest
+     * undeclared_kink_floor: C^0 at 1e-10 needs a panel below
+     min-panel-fraction, so the build refuses with the tolerances (subprocess)
+     * level_cap_raised: level-cap 7, above the spectral object's maximum level,
+     raises it; as accurate in no more panels than the default 5
+     * test_ncm_spectral_panels_product.c: the p property read back through
+     g_object_get
+
+ * Re-split the sub-parts of a chunked kquad entry that time out
+
+     * make_xcor_kquad_truth_table.py: --resplit-sub N certifies a sub-part
+     still missing as N pieces <part>.<sub>.<piece>, summed into the sub-part
+     once all are in, which is then summed into the part as before
+     * Smoke check on A1 ell 2 (2 parts x 2 sub-parts x 2 pieces, on the table's
+     interval): |diff| 1.5e-19 against radii summing to 2.3e-18
+
+ * Check the method table's flags in C and drop the duplicate error-bound test
+
+     * test_nc_xcor_kquad.c (/nc/xcor/kquad/methods): kernel-space names carry
+     the NC_XCOR_METHOD_KERNEL_ prefix and only KERNEL_EXACT reports an error
+     estimate, the two checks test_k_integral.py made
+     * test_k_integral.py: test_method_introspection_is_consistent and
+     test_limber_z_methods_have_no_block_quadrature removed;
+     test_block_entry_point_matches_compute stays (bit-exact on 8 pairs, the C
+     test is 1e-9 on one)
+     * test_kernel_exact.py:
+     test_achieved_residual_estimate_still_bounds_the_true_error removed,
+     test_spectral_path_reports_an_error_estimate makes the same check on the
+     same kernel and more
+
+ * Check the Levin integrator against the certified windows in C
+
+     * test_nc_xcor_window_levin.c: each component's window integrated over its
+     support against the sparse Arb table (xcor_window_ilk.bin), 16 shapes,
+     every multipole the table certifies
+     * Paths: integrate_ell at d = 0; integrate_deriv at d = 1, 2 in blocks of 1
+     and 8; the tau constraint by the rule and forced, one multipole and in
+     blocks of 8 (forced must fall back)
+     * Same tolerances as before: rtol 1e-8 with atol 1e-11 of the peak at d =
+     0, 1e-8 and 1e-8 at d = 1, 2; 144 subtests in 5.6 s, all failing at rtol
+     1e-16
+     * test_xcor_window_truth_table.py: the four Python comparisons removed (145
+     cases); the two checks on the JSON radii stay
+     * Docs that named the Python test as the integrator's guard point to the C
+     tests
+
+ * Compare single-multipole closures with a block once, use blocks elsewhere
+
+     * test_integration.py: test_single_ell_closures_match_block, one multipole
+     per closure against four on a tier-2 and a tier-3 pair, measured 3.1e-10
+     and 2.0e-11 of the block's peak, bound 1e-8
+     * test_xcor_kernel_methods: the ell_batch_size = 1 pass dropped from the
+     14-cell matrix
+     * test_kernel_analytic.py: the two Limber-against-non-Limber tests on
+     blocks of four from ell 100 and 200, every multipole compared
+     * test_kernel_table.py: _cls on blocks of four from each multipole of ELLS
+
+ * Check the closures at ell 500 and 1000 against the sparse certified windows, in
+     C
+
+     * make_xcor_window_bin.py (was make_xcor_window_dense_bin.py): writes the
+     dense set or the sparse set (xcor_window_ilk, _d1, _d2), NaN where an order
+     certifies no cell; the dense output is unchanged (sha256 496410cb)
+     * data/truth_tables/xcor/xcor_window_ilk.bin: the sparse tables, 96 cells
+     of 16 shapes, 127 KB
+     * test_nc_xcor_window_dense.c: /nc/xcor/window_sparse/d<d>/<shape> checks
+     the multipoles the dense table lacks (ell 500, 1000; d = 2 to 500), at the
+     dense paths' bounds
+     * The sparse x/nu grid misses the peak of the derivative orders' windows by
+     10 to 100 times, so a sparse multipole's scale is the closure's own largest
+     |W| over a dense scan of its domain
+     * Measured worst: 0.82 peak-epsilon at the defaults, 1.78 at the tight
+     setting (bounds 3 and 2)
+     * meson: nc_xcor_window_sparse_d0, _d1, _d2, 33 s, 120 s and 88 s on one
+     loaded core
+     * test_xcor_window_truth_table.py: test_chebyshev_closure_matches_arb
+     removed (d = 0 only, 7 shapes, per-shape tolerances, a comment about the
+     removed spline closure)
+
+ * Drop the const on the CVodeGetDky flag in NcmOdeSpline
+
+     * ncm_util_cvode_check_flag takes a gpointer, so the const gint discarded
+     its qualifier (-Wdiscarded-qualifiers)
+
+ * Check the k quadrature on representative pairs and multipoles
+
+     * test_k_integral.py: the reference convergence, the method against the
+     reference and integrate_block against compute on 8 pairs at ell 2, 6 and 50
+     (72 tests, was 420)
+     * The pairs cover each kind of integrand: Gaussian and top-hat autos, an
+     overlapping and a far-separated cross, the RSD weight, lensing, a
+     disconnected support and the non-separable X9
+     * ell 6 stays: it is where every method and the reference are worst
+     * cases.PAIRS and cases.ELLS_SUITE unchanged for bench_k_integral.py
+
+ * Re-split the parts of a chunked kquad entry that time out
+
+     * --resplit M with --k-chunks and --resume certifies each missing part as M
+     sub-parts of its own interval, labelled <part>.<sub>, and sums them into
+     the part as parts are summed into an entry.
+     * An entry's split range and scale are fixed when it is first split and
+     kept with its parts; parts saved before that give the range back from the
+     uniform tiling. The library's own range moves with the closures' domains
+     (the near-edge seed moved it), and parts of two splits do not sum to the
+     integral; every stored part is checked against the edges before a run.
+     * Checked on A2 at ell 2: part 2 of 3 re-split into 2 reproduces the
+     one-run entry to 4e-22, against radii of 1.3e-15. Without the kept range
+     the same test was off by 9e-12, the parts tiling two different ranges.
+
+ * Prefetch the dense certified windows into the CI data cache
+
+     * prefetch_data.py fetches xcor_window_ilk_dense.bin, the file of the
+     datafile release the dense closure test reads.
+     * DATA_CACHE_VERSION 1 -> 2 in build_check.yml and weekly_flaky.yml: the
+     file is new under an unchanged release tag, so the cached entry would never
+     pick it up.
+     * The download path was checked on the published asset: fetched into the
+     user data directory with its sha256 unchanged, and nc_xcor_window_dense_d0
+     passing on it.
+
+ * Check the closures against dense certified windows, in C
+
+     * nc_data_download_release_file() fetches a file of the
+     datafile-release-v1.0.0 GitHub release into the user data directory on
+     first use, through the shared download helpers, with the release URL in one
+     place.
+     * tests/tools/make_xcor_window_dense_bin.py writes the dense certified
+     windows (I_ell^(d)(k) of the 16 analytic windows, d = 0, 1, 2, 50 k per
+     decade over the closure's domain, relative radius 1e-25) as one
+     NcmSerialize file with the kernels that define them, a file of the data
+     release.
+     * test_nc_xcor_window_dense: for every shape and d, closures at the default
+     and at reltol 1e-8, peak-epsilon 1e-7, adaptive-epsilon 1e-9, ell 2..9 as
+     one block and every other multipole alone, against every certified point:
+     inside the domain within 3 (default) and 2 (tight) peak-epsilon of the
+     multipole's peak, beyond it within adaptive-epsilon of the block's norm.
+     Measured worst 1.9 and 1.2 peak-epsilon.
+     * The C test list takes an optional args key; the test runs as three meson
+     tests, one per d, selected by path prefix.
+     * Results change: none.
+     * Cost: about 85 s of test time over three parallel tests.
+
+ * Seed the k domain at each component's near edge
+
+     * A window that does not vanish at its near edge chi_min adds a feature at
+     k = nu / chi_min, where that edge reaches the turning point of j_l, falling
+     as a power of k beyond it. Between the main peak and it the block can stay
+     below adaptive-epsilon for the 5 points the expansion stops on, so the
+     domain missed it: 1.25e-3 of the peak on the analytic lensing window with
+     the j_l'' weight at ell 200, 3.2e-5 at ell 10, against certified windows.
+     Non-Limber blocks now seed it, at the block's largest nu, inside the hard k
+     range; Limber blocks cut at their band edges and are unchanged.
+     * numcosmo_py.ccl: tracer_kernel, TracerClSolver and angular_cl take
+     kernel_adaptive_epsilon beside kernel_reltol.
+     * test_ccl_angular_cl: the CCL table kernels start at chi > 0 and are now
+     seeded at their near edge, the native kernels start at chi = 0, so at the
+     default truncation each carries its own share of the dropped tail. Both
+     sides converged at adaptive-epsilon 1e-9: measured 1.9e-8 (shear) and
+     1.1e-9 (convergence), asserted at 5e-8 and 5e-9, tighter than the 2e-6 and
+     1e-7 before.
+     * test_kernel_analytic: the visible-jump test bounds the panel count by the
+     finer truncation's instead of 12, which the extended domain passes (13
+     against 15).
+     * Results change: Limber and split_baseline.py paths bit-identical,
+     err_compare.py bit-identical. The LSST number-counts kernel (non-Limber)
+     moves: against a closure at 1e-8 with adaptive-epsilon 1e-9, 1.5e-6 ->
+     2.1e-6 (ell 2..9), 2.9e-7 -> 3.1e-7 (98..105), 1.3e-7 -> 1.1e-7 (498..505)
+     of the block's largest auto C_ell. The CCL table kernels move toward the
+     converged value: 4.7e-6 -> 1.1e-6 (shear) and 1.1e-5 -> 4.5e-6 (CMB
+     lensing).
+     * Cost: one more panel in one LSST block (7 -> 8, block of 32 at ell 498).
+
+ * Certify a kquad entry in parallel parts of its k range
+
+     * nc_xcor_kquad_arb takes --scale, the magnitude of the whole C_ell, so a
+     run over part of the k range certifies its panels against the whole
+     integral rather than against its own total.
+     * make_xcor_kquad_truth_table.py --k-chunks N splits each entry's range
+     into N parts uniform in k, certifies them as separate pool tasks against
+     the library's C_ell as scale, keeps finished parts beside --out for
+     --resume, and merges them: values summed in decimal, radii added with half
+     a unit of each part's last printed digit, the sum held to the same radius
+     check as one run.
+     * Checked on A2 at ell 2 in three parts: 2.2713212476511808e-5 +- 6.4e-16
+     against 2.2713212476e-5 +- 1.4e-16 in one run.
+
+ * Specialize NcXcorKernelIntegrand to the Chebyshev closure
+
+     * The integrand is a record: the panels, one row per multipole with its
+     scale and its support in k and in x, the block's k range. The struct is
+     private, filled by the builder through _nc_xcor_kernel_integrand_new().
+     * Gone: nc_xcor_kernel_integrand_new() with its callbacks, the four setters
+     (get_scale, get_range_comp, eval_comps, panels), the callback typedefs, the
+     public struct fields, the inline dispatch, ChebIntegrandData and the unused
+     NcmSpectral pool.
+     * The closure no longer holds a reference to the cosmology, nor RH_Mpc and
+     lmin, which nothing read.
+     * The accessors are plain functions; peek_panels() never returns NULL, so
+     the kquad guard and the tests' panel checks go. Evaluation is read-only and
+     documented as safe from several threads.
+     * The kernel viewer reads the row count through get_len().
+     * Results change: none; bit-identical to ba2186e2 on split_baseline.py, the
+     LSST benchmark at block sizes 8 and 32, and err_compare.py.
+     * Cost: none measured; evaluation runs the same code without the
+     function-pointer indirection.
+
+ * Remove the one-value closure enum
+
+     * NcXcorKernelClosure, NcXcor:closure-type, nc_xcor_set/get_closure_type
+     and the closure argument of nc_xcor_kernel_get_eval, get_eval_vectorized
+     and get_eval_vectorized_full go; the Chebyshev closure is the only
+     representation since the spline's removal.
+     * The representation's rationale moves from the enum to
+     nc_xcor_kernel_get_eval_vectorized_full(); the closure-type measurement
+     paragraph, from the earlier Arb table, goes.
+     * The CLI drops --closure-type and XcorClosureOption.
+     * Tests drop the closure axis: C case tables, test_k_integral (tolerances
+     keyed by method, the frozen tests in their own xdist group),
+     bench_k_integral, the cases module, the kquad table driver; two CLI tests
+     that only checked the option go.
+     * Enum nick table and stubs regenerated.
+     * Results change: none; bit-identical to ba2186e2 on split_baseline.py, the
+     LSST benchmark at block sizes 8 and 32, and err_compare.py.
+     * Cost: none.
+
+ * State the panel convergence test as the l1 change it is
+
+     * NcXcorKernel:reltol and Eq. (8) of sbessel_projection.qmd described a
+     2-norm test on the coefficients; ncm_spectral's test is the l1 change
+     between two levels, the new top coefficients included, against max(reltol
+     V, abstol) with V the largest value on the finer nodes, as the Spectral
+     Methods page states.
+
+ * Drop the spline closure from the projection pages
+
+     * sbessel_projection.qmd describes the Chebyshev panels as the one
+     representation: the spline paragraph, the spline-against-panels figure, the
+     spline cells of the outer integral and the spline table row go.
+     * The panel check against the expansion samples, removed in ba2186e2, goes
+     from the rules and the table.
+     * The error record is the coefficient tail on each panel, with no tolerance
+     fallback.
+     * The figures read panels through peek_panels(), which replaced the
+     integrand's panel accessors in 88897f17.
+     * xcor_certified_projection.qmd: a comment no longer cites the spline
+     closure.
+
+ * Remove the spline closure
+
+     * NC_XCOR_KERNEL_CLOSURE_SPLINE goes; NC_XCOR_KERNEL_CLOSURE_CHEBYSHEV
+     keeps its value 1.
+     * With it go the spline builder, the Limber evaluation in k, DECAY_RATE and
+     the edge values that fed it, the tolerance-balance warning,
+     NcXcorKernel:max-iter and NcXcorKernel:track-closure-error.
+     * The integrand loses its knots, tolerances and closure-error record; kquad
+     keeps only the panel product, and its GL(5), mixed and fallback paths go.
+     * Beyond its truncation boundary a non-Limber component is zero in every
+     mode; the decay tail only reached points a whole expansion step past a
+     boundary, where it was already exactly 0.
+     * nc_xcor_compute_full() documents the error estimate as the panel
+     coefficient tail.
+     * The CLI drops the spline choice and --compare-closure.
+     * Tests of the removed API go; the integrand ref/clear coverage stays; the
+     app tests use the Chebyshev closure.
+     * Enum nick table and stubs regenerated.
+     * Results change: C_ell bit-identical to ba2186e2 on split_baseline.py
+     (Chebyshev paths) and the LSST benchmark at block sizes 8 and 32; the error
+     estimate is bit-identical with tracking on, the former default; with
+     tracking off it was the tolerance ceiling and is now the tail estimate, a
+     median 1.5e-2 to 1.7e-1 of the ceiling.
+     * Cost: none, the Chebyshev path runs the same code.
+
+ * Stop testing through the spline closure
+
+     * C tests drop their spline cases (kquad, kquad_error, kquad_exact,
+     kernel_integrand) and read only panels
+     * Python tests that took the spline as some closure use the Chebyshev one
+     (test_kernel, test_integration, test_solver, test_kernel_analytic);
+     test_k_integral, cases_k_integral and bench_k_integral lose the spline axis
+     and the default closure is Chebyshev
+     * Delete the tests of the spline closure alone: its knots, its agreement
+     with the Chebyshev closure (now the C check against direct W_ell(k)), its
+     narrow-shell peak-epsilon behaviour, and its tolerance-balance warning
+     * The disjoint-components test turns the panel grid off, so that a
+     non-dyadic edge still means a cut
+     * The k-projection tests in test_kernel build their closures at 1e-6: the
+     thresholds measure the Limber approximation's error in the integrated
+     power, a few 1e-6, which closures at peak-epsilon 1e-4 move by about 3e-6
+     and closures at 1e-6 by under 1e-7
+     * The Python xcor lane takes 67 s against 146 s: 1708 tests pass against
+     2148
+
+ * Read a Chebyshev closure in u at the ends of a multipole's range from inside it
+
+     * A closure in u evaluated at k divided by the scale and compared the
+     quotient with the panels' range: at the end of a multipole's k range, its x
+     end times the scale, k / scale could round one ulp past the end and read
+     zero, and where the end is an interior cut the panel starting there is past
+     the multipole's support
+     * Store each multipole's support in x; whether k is inside is decided in k
+     against the support times the scale, x is clamped to the support, and the
+     upper end is read on the panel that ends there
+     * Add ncm_spectral_panels_eval_row_on(), a row of a given panel at x, its
+     edges included; ncm_spectral_panels_eval_row() is the panel lookup and it
+     * Add /nc/xcor/kernel/cluster/limber_range_ends: a Limber cluster top-hat
+     block at ell 10-17, each multipole read at exactly the ends of its k range
+     against just inside them; before this change an upper end read 0 against
+     4.66 and a lower end 0 against 13.3
+     * Results change: none outside the exact ends of a multipole's range;
+     split_baseline.py and the LSST-Y1 closures, panel counts and C_ell are
+     bit-identical to ba2186e2; C_ell never read these points
+     * Regenerate the Python stubs
+
+ * Give each multipole of a Limber block in u its own hard k range
+
+     * Under Limber in u the band [1 / chi_max, 1 / chi_min] is shared by the
+     block, but a component's hard k limits are [k_min / nu, k_max / nu] in u,
+     one range per multipole; the block's u range took the intersection over the
+     multipoles, so where k_max of the power spectrum lies inside the window's
+     support every multipole but the highest stopped short of it, at (nu /
+     nu_max) k_max
+     * The block's hard range is now the union over the multipoles, [k_min /
+     nu_max, k_max / nu_min]; each multipole's band array holds the band within
+     its own range, so its own ends are cuts and its k range at packaging is its
+     own
+     * The u evaluation decides per multipole, at the interval point, whether it
+     is within its range; an inactive multipole takes an active one's k for the
+     vectorized power spectrum, inside the component's k range, and contributes
+     nothing
+     * Add /nc/xcor/kernel/gal/limber_capped_powspec: a Limber galaxy block at
+     ell 100-131 with the power spectrum capped near the peak of dN/dz, every
+     multipole compared with the Limber formula in z between (nu / nu_max) k_max
+     and k_max; before this change the closure reads 0 there, against about 0.57
+     for the formula and a bound of 5.7e-5
+     * Results change: none where the hard limits do not bind; split_baseline.py
+     and the LSST-Y1 closures, panel counts and C_ell are bit-identical to
+     ba2186e2
+
+ * Move the closure check against direct W_ell(k) to C, on every analytic window
+
+     * Add tests/c/nc/xcor/test_nc_xcor_closure_check.[ch], the shared unit of
+     the Python closure_check.py it replaces: W_ell(k) from the kernel's
+     components with its own Levin integrator, compared with a non-Limber
+     Chebyshev closure inside every panel and on a log-spaced grid, against the
+     bound the closure was asked for
+     * nc_xcor_kernel_analytic checks the closure of every analytic window at
+     ell 2-9 and 50-57, and runs the narrow-peak test and the ell + 1 control on
+     the disjoint multimodal window
+     * Remove closure_check.py and its two Python tests
+     * Measured: the worst deviation over its bound is 0.58 (student_t, ell
+     50-57), the narrow peak 0.30; the test binary takes 3.7 s, the Python
+     version took 1-6 s per closure
+
+ * Check the Chebyshev closure against W_ell(k) computed directly
+
+     * Add tests/python/nc/xcor/closure_check.py: direct_window() computes
+     W_ell(k) from the kernel's components, prefactor times the Levin integral
+     of kernel times j_ell^(d), without the kernel's evaluator, truncation or
+     any fit; check_against_direct() compares a non-Limber Chebyshev closure
+     with it at points inside every panel, between its nodes and away from its
+     edges, and on a log-spaced grid over the range
+     * The bound at a point is what the closure was asked for: max(reltol
+     vscale, abstol) of its panel, vscale the largest |W| on the panel's nodes
+     and abstol peak-epsilon times the smallest multipole peak, plus
+     adaptive-epsilon times the block's norm for the truncated tails
+     * The narrow-peak test compares the closure with the direct values instead
+     of with the spline closure's peak; a missed peak cannot avoid the grid
+     * A control test holds the same closure against W_(ell + 1)(k) and requires
+     the check to fail
+     * Measured: the worst deviation over its bound is 0.52 on the narrow peak
+     (adaptive-epsilon 1e-11), 0.02 on the multimodal window at ell 2-9 and 0.19
+     on the lensing window at ell 50-57; the ell + 1 control fails by 724 to 5e5
+
+ * Track the non-Limber truncation boundaries only during the domain expansion
+
+     * Split the non-Limber evaluation: _component_states_eval_non_limber()
+     computes each component and whether it was integrated, reading the
+     boundaries found and changing nothing;
+     _component_states_compute_non_limber() sums them into W, for the closures;
+     _component_states_expand_non_limber() also tracks the boundaries and the
+     running peak norm, for the seeds and the domain expansion
+     * The closure builders take the expansion function next to the evaluation;
+     the Limber paths pass their one evaluation for both
+     * Drop the running peak norm from the two Limber evaluations, where nothing
+     read it, and the panel-mode test from the tracking, which panel mode no
+     longer reaches
+     * An evaluation no longer depends on the order of the calls before it: the
+     closures evaluate inside the domain the expansion found, where the tracking
+     changed nothing
+     * Results change: none; split_baseline.py, the LSST-Y1 closures, panel
+     counts and C_ell at blocks of 8 and 32 are bit-identical to ba2186e2
+
+ * Move the Chebyshev panel settings from NcXcorKernel to its panels builder
+
+     * Replace NcXcorKernel:panel-order-cap, panel-level-min and
+     panels-per-efold, their accessors and fields, by
+     NcXcorKernel:panels-builder, the NcmSpectralPanelsBuilder that builds the
+     Chebyshev closures (nc_xcor_kernel_peek_panels_builder() and
+     set_panels_builder()); its level-cap, level-min, min-panels-per-efold and
+     min-panel-fraction are the settings
+     * The defaults are the builder's, the ones the kernel had (level 3 to 5,
+     one panel per e-fold); the cap no longer has a 0-means-default value, and
+     the builder reports a level-min not below the level-cap
+     * panel-order-cap was in 0.28.0; the xcor API is not stable before 1.0 and
+     the property moves without forwarding
+     * Tests set the builder's level-cap and grid through the kernel's builder
+     * Results change: none; split_baseline.py, the LSST-Y1 closures, panel
+     counts and C_ell at blocks of 8 and 32 are bit-identical to ba2186e2
+     * Regenerate the Python stubs
+
+ * Give every Chebyshev closure the panel grid and drop the expansion-sample check
+
+     * NcXcorKernel holds one NcmSpectralPanelsBuilder: the panels-per-efold
+     grid (default 1), in u under Limber and in k otherwise, now starts every
+     Chebyshev closure, where non-Limber closures had none
+     * Remove the check of converged panels against the domain-expansion
+     samples, with NcmSpectralPanelsBuilder's acceptance callback and
+     ncm_spectral_panels_builder_build_full(), now without a user
+     * Measured before the change
+     (NumCosmoDevNotes/benches/spectral_panels/step5): the check rejected none
+     of 186,000 converged panels over the baselines, the LSST and BAO
+     benchmarks, the xcor tests and the certified windows; the non-Limber grid
+     keeps every certified window within its Arb allowance (ell 2 to 1000) and
+     every LSST C_ell 60 times or more inside the request, against a 1e-8
+     reference
+     * Rename the AnalyticMulti test that guarded the check after what it
+     guards, a narrow peak on a wide domain
+     * Results change: non-Limber Chebyshev C_ell move by at most 8.0e-7 of peak
+     on split_baseline.py and 1.6e-6 on the LSST-Y1 closures at reltol 1e-4;
+     Limber closures are bit-identical
+     * Cost: the LSST-Y1 non-Limber closures take 0.83x the time
+
+ * Read xcor's Chebyshev closures through their NcmSpectralPanels
+
+     * Remove nc_xcor_kernel_integrand_get_n_panels(), peek_panel(), restrict()
+     and peek_spectral(), their setters, callback types and fields:
+     nc_xcor_kernel_integrand_peek_panels() gives the panel set, and
+     NcmSpectralPanels reads, restricts and evaluates it
+     * The Chebyshev closure no longer makes NcmMatrix views of its panels
+     * kquad's spline with Chebyshev path reads and restricts the panel set,
+     with an NcmSpectral in its scratch for the restriction
+     * ncm_spectral_panels_restrict() clamps an end within 1e-12 of the panel
+     width outside the panel to its edge, as the cells of two variables need;
+     NcmSpectralPanelsProduct uses it instead of its own copy
+     * Tests read the panels through peek_panels(); the single-panel spectral
+     test goes with its accessor; the panel set's restriction test covers the
+     clamp
+     * Results change: none; split_baseline.py, the LSST-Y1 closures, panel
+     counts and C_ell at blocks of 8 and 32, and C_ell and error estimates from
+     nc_xcor_compute_full() and from nc_xcor_integrate_block() on spline with
+     Chebyshev pairs are bit-identical to 979fb734
+     * Regenerate the Python stubs
+
+ * Apply uncrustify and black to the whole tree
+
+     * uncrustify 0.83.0 and black 26.5.1, the versions of the CI lock
+     environment, on every C file outside numcosmo/external and every Python
+     file
+     * Formatting only: ten C test files and ten Python test and tool files
+
+ * Build and integrate xcor's Chebyshev closures with the panel objects
+
+     * NcXcorKernel holds two NcmSpectralPanelsBuilder, one for closures in u
+     with the panels-per-efold grid and one for closures in k without it,
+     configured by panel-order-cap, panel-level-min and panels-per-efold; the
+     closure build passes the cuts as breakpoints and the check against the
+     domain-expansion values as the acceptance callback
+     * The compute functions decide which components are on at the midpoint of
+     the panel's continuous interval, given by the builder's interval index,
+     instead of the panel midpoint; every decision threshold inside the range is
+     a cut, so the decisions are the same
+     * The Chebyshev closure stores an NcmSpectralPanels, set on the integrand
+     (nc_xcor_kernel_integrand_set_panels() and peek_panels()); eval, restrict
+     and the panel accessors read it, peek_panel through views made with the
+     closure
+     * Two Chebyshev closures are integrated with NcmSpectralPanelsProduct; a
+     spline paired with a Chebyshev closure, or an error estimate with a closure
+     whose interpolation error is not recorded, keeps the previous spectral path
+     until spline closures become panel sets
+     * Remove xcor's own split, initial edges and ends bookkeeping, now the
+     builder's
+     * Results change: none; split_baseline.py's eight paths, the LSST-Y1
+     closures, panel counts and C_ell at blocks of 8 and 32, and
+     nc_xcor_compute_full() C_ell and error estimates (Limber, Limber with
+     magnification and RSD, non-Limber, autos and cross, closure error tracked
+     and not) are bit-identical to 979fb734
+     * Regenerate the Python stubs
+
+ * Add NcmSpectralPanelsProduct, exact integrals of products of panel sets
+
+     * NcmSpectralPanelsProduct integrates int k^p P_r(k / s1_r) Q_r(k / s2_r)
+     dk per row over the overlap of two panel sets, p a construct-only property
+     * On each cell of the common refinement both sides are polynomials, so the
+     integral is the bilinear form of their coefficients with the tables int T_i
+     T_j T_m, m <= p, built at construction up to 65 coefficients and in pooled
+     scratch above; x^p in the Chebyshev polynomials of a cell has closed forms
+     up to p = 2
+     * Rows with equal scales share one refinement in x = k / s; otherwise each
+     row is integrated alone, in the variable of the side whose scale differs
+     from 1, or of the first side when both do; a panel set with itself and the
+     same scales is integrated as a square
+     * Cells reach panel edges through the conversion between the two variables,
+     so a cell end within 1e-12 of a panel width outside the panel is clamped to
+     it; a cell outside one panel is an error
+     * The optional error estimate propagates |P| dQ + |Q| dP, dP the
+     coefficient tail of the panel above the order of the level below, with |P|
+     and |Q| at the five Gauss-Legendre nodes of each cell; the rules are those
+     of xcor's spectral integration, ported unchanged
+     * Scratch space comes from a memory pool, so one object serves concurrent
+     calls
+     * Test against the exact integrals of piecewise exponentials with jumps, p
+     from 0 to 3, cross and square, equal, one-sided and different scales,
+     tables above 65 coefficients, disjoint ranges, two threads, and the error
+     cases; the error stays within the estimate and the estimate within 2 reltol
+     max|P| max|Q| int k^p dk; ref and free in test_ncm_generic
+     * Mark the user data of the panel callbacks as their closure
+     * Register the type and regenerate the Python stubs
+
+ * Add NcmSpectralPanelsBuilder, the adaptive construction of Chebyshev panels
+
+     * NcmSpectralPanelsBuilder fills an NcmSpectralPanels with the panels of F
+     on [a, b]: breakpoints split the range into continuous intervals, F is
+     called with the index of the interval of the panel, and no panel straddles
+     a breakpoint
+     * min-panels-per-efold (default 1, 0 disables, needs a > 0) splits each
+     interval at the grid exp (j / p) anchored at 1, dropping grid points within
+     a quarter spacing of an edge
+     * Each initial panel is expanded from level-min (3) to level-cap (5) and
+     bisected when it does not converge, the halves reusing F at their ends;
+     below min-panel-fraction (1e-6) the expansion is forced and not converging
+     is an error; the rules are those of xcor's Chebyshev closure, ported
+     unchanged
+     * reltol and abstol are build arguments; known values on each side of the
+     breakpoints replace evaluations; build_full adds an acceptance callback
+     whose refusal bisects a converged panel
+     * Scratch space comes from a memory pool, so one builder serves concurrent
+     builds; the panel set is reset and refilled, allocating nothing once grown
+     * Make the coefficients output of
+     ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap() optional and add
+     ncm_spectral_peek_batch_coeffs(), so the builder copies a converged panel
+     straight from the scratch space; add ncm_spectral_panels_append_data()
+     * Test resolution of smooth and bisected functions against the exact ones,
+     no point evaluated twice, breakpoints and the side of F, known values (two
+     evaluations fewer per breakpoint, same panels), the grid, the acceptance
+     callback, reuse across builds and dimensions, two threads on one builder,
+     and the error cases; ref and free in test_ncm_generic
+     * Register the type and regenerate the Python stubs
+
+ * Add NcmSpectralPanels, a vector function as contiguous Chebyshev panels
+
+     * NcmSpectralPanels holds the edges of contiguous panels and, per panel,
+     fdim rows of Chebyshev coefficients whose length may differ between panels
+     * Append panels in order with checks for the row count, empty panels and
+     gaps; reset keeps each panel's array in a pool, so a panel set rebuilt at
+     every likelihood evaluation stops allocating once it has grown
+     * Read panels raw (peek_panel) or as an NcmMatrix copy (get_panel), find
+     the panel of a point (an interior edge belongs to the panel starting
+     there), evaluate all rows or one by Clenshaw, and restrict to a subinterval
+     of one panel exactly
+     * Serialize through fdim and a (adaad) panels property, copied rather than
+     shared since the pooled arrays are rewritten in place
+     * Add ncm_spectral_chebyshev_rebase_rows_data(), the pointer form of
+     ncm_spectral_chebyshev_rebase_rows(), which now wraps it
+     * Test exact cubic and piecewise-constant rows, the edge side, panel
+     lookup, restriction, reset, a bit-exact serialization round trip and the
+     error cases; ref and free in test_ncm_generic
+     * Register the type and regenerate the Python stubs
+
+ * Name the dimension of a batch NcmSpectral function fdim
+
+     * Rename n_comp to fdim and the NcmSpectralFBatch output y to fval, as
+     NcmIntegralND names the dimension of an integrand's values and the values
+     * Call the values of F its entries and the rows of a coefficient matrix
+     rows in the docs, comments and local names; "component" means
+     NcXcorKernelComponent in xcor
+     * Rename the batch test small_component to small_entry and the xcor
+     callback's argument to fval
+     * Regenerate the Python stubs
+
+ * Add quintic Hermite spline support and optimize distance and growth
+     calculations
+
+     - Add `NcmSplineHermite`, a local C^2 quintic interpolator constructed from
+     function values and first and second derivatives at each knot, with
+     analytical evaluation, derivatives, and integrals.
+     - Support serialization of derivative vectors, spline reset, and
+     integration into the public API and build system.
+     - Extend `NcmOdeSpline` with `ncm_ode_spline_new_hermite()`, a `d2ydx2`
+     callback, and a configurable `max-order` property, defaulting to Adams
+     order 7 for Hermite splines and 3 otherwise.
+     - Compute second derivatives from the callback or `CVodeGetDky`, with a
+     finite-difference fallback when the integration order is below 2. Unify
+     knot recording across integration paths.
+     - Replace the comoving-distance and inverse splines in `NcDistance` with
+     quintic Hermite splines using analytical derivatives and shared knots.
+     Reduce preparation from 78,823 knots and 55 ms to 2,796 knots and 2.9 ms.
+     - Switch `NcGrowthFunc` from BDF to CVODE Adams with fixed-point iteration
+     at order 7, removing the dense linear solver and Jacobian. Use Hermite
+     interpolation with derivatives obtained from the ODE state and right-hand
+     side, retaining knot arrays across preparations.
+     - Reduce growth preparation from 2,970 knots and 2.7 ms to 1,308 knots and
+     1.2 ms, with relative differences of 2.2e-13 in D and 4.5e-11 in dD/dz
+     against the BDF reference.
+     - Expand C tests covering quintic exactness, sixth-order convergence,
+     derivatives, integrals, serialization, reset, abort paths, ODE derivative
+     sources, endpoint knot replacement, property handling, and both integration
+     paths.
+     - Add a theory page documenting Hermite coefficients, continuity,
+     interpolation error bounds, measured ODE convergence, and Chebyshev
+     spectral behavior.
+     - Regenerate NumCosmoMath Python type stubs and register the implementation
+     and documentation.
+
+ * CI: update conda lock files
+
+ * Cut the Limber u closure at the steps of Bessel derivative components
+
+     * Under Limber in u, the j_{l+1} term of a derivative component (RSD) stops
+     once its peak (nu + 1) / k passes chi_max, a step at u = (1 + 1 / nu) /
+     chi_max inside the band where the window is nonzero at chi_max
+     * Add these steps, one per multipole, to the closure cuts in
+     _component_states_collect_cuts(), so no Chebyshev panel spans one
+     * Decide the j_{l+1} switch at the panel midpoint (u_side) in
+     _component_states_compute_limber_u(), as the band-edge choice already is,
+     so a panel ending on a step takes the limit from its own side
+     * Fixes the abort of the Limber magnification + RSD Chebyshev closure on
+     master ("reached the maximum order 5 (N = 33) without converging"): the l1
+     panel test refines the panel holding the step down to the forced width,
+     where it cannot converge
+     * Add /nc/xcor/kernel/gal/rsd_limber_steps: an RSD kernel with a truncated
+     dN/dz whose Chebyshev closure must build; it aborts without this change
+     * Results change: on the LSST-Y1 magnification + RSD Limber case (ell
+     2-600), C_ell deviate from a converged reference (reltol 1e-7) by at most
+     6.3e-7 at the default tolerance, against 6.7e-7 for f9a8c934 (l2 test, no
+     cuts)
+     * Cost: that solve takes 0.26 s against 0.17 s for f9a8c934, since each
+     block of 32 multipoles gains 32 cuts (panels 304 to 1500)
+
+ * Reuse the parent's end values when a Chebyshev panel is split
+
+     * Add f_a, f_b and ends to
+     ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap(): known F(a) and
+     F(b) replace the first level's end nodes, and ends returns F at a, the
+     midpoint and b of the last level evaluated, on failure too
+     * Hand each half of a split in _nc_xcor_kernel_cheb_split() the parent's
+     values at its ends, from one ends matrix per split depth kept for the
+     closure build
+     * Start initial panels without known ends, since an initial edge can be a
+     cut where W_l(k) jumps
+     * Test known ends against a plain expansion and the ends output on failure
+     and on level 0
+     * Regenerate the Python stubs
+     * Results change: C_ell move by at most 1.1e-15 and W by 7.5e-13 of their
+     peaks, with the same panels, since a half's end node lands within rounding
+     of the parent's midpoint
+     * Cost: the LSST-Y1 non-Limber closures take 0.86-0.89x the time; the BAO
+     review solve 0.98x
+
+ * Use an l1 panel acceptance test in NcmSpectral
+
+     * Accept a level when the l1 change of the coefficients, the new top ones
+     included, is at most max(reltol vscale, abstol), vscale the largest |f| on
+     the finer nodes; the l1 change bounds the sup change of the interpolant
+     * Apply it to the batch and the scalar adaptive paths, replacing the l2
+     test
+     * Measure abstol in units of f instead of coefficient units
+     * Predict a failing last doubling from the band masses of the coefficients
+     by geometric extrapolation, replacing the l2 prediction and its tuned
+     factor of 10
+     * Document the test, the folding identity of nested grids and the predictor
+     in spectral.qmd and the gtk-doc
+     * Results change: W at ell 1681 of the BAO review moves from 1.9e-6 to
+     6.1e-7 of its peak at peak-epsilon 1e-6, and the disjoint top-hat cross of
+     test_kernel_exact.py at default tolerances from 4.0e-2 to 2.7e-3 of its
+     peak
+     * Cost: the BAO review solve at 1e-6 takes 0.13 s against 0.09 s; the
+     geometric predictor takes 0.89-0.92x the closure time of the l2 one on
+     LSST-Y1 non-Limber closures
+
+ * Remove NC_XCOR_METHOD_KERNEL_CUBATURE
+
+     * Remove the kernel-space cubature quadrature, its NcmIntegralND integrands
+     and its range helpers from nc_xcor_kquad.c
+     * Drop needs_integrator from NcXcorKQuad and the cubature-only fields of
+     NcXcorArg
+     * Pin the NcXcorMethod values, keeping NC_XCOR_METHOD_KERNEL_EXACT at 3
+     * Remove the --cls-method option and XcorMethodOption from the xcor app
+     * Reduce bench_k_integral.py to KERNEL_EXACT and fix its undefined
+     reference_kind
+     * Run the solver tests and test_xcor_kernel_methods on KERNEL_EXACT
+     * Remove the cubature rows of test_k_integral.py and the cubature test of
+     test_ssc_sij.py
+     * Regenerate enum_nicks.json and the Python stubs
+     * Rewrite the docs and comments that described the cubature, in nc_xcor.h,
+     nc_xcor_kquad.c, nc_xcor_ssc_sij.c, ssc.py, ssc.qmd and xcor_accuracy.qmd
+     * Reason: the cubature integrates across panel edges, which are jumps at
+     component cuts; on finer panels it misses the frozen-closure reference by
+     5e-7 of the peak where KERNEL_EXACT matches it to 1e-11
+
+ * Move the kernel-space quadrature tests to C
+
+     * Add test_nc_xcor_kquad_common.{c,h}: the shared environment, capped and
+     converged top-hat builders, and a Gauss-Legendre reference for the outer k
+     integral on the union of both closures' breakpoints
+     * Add nc_xcor_kquad_exact: KERNEL_EXACT against the reference for spline,
+     Chebyshev and spline x Chebyshev closures, non-Limber, Limber and mixed
+     tiers, auto and cross
+     * Add nc_xcor_kquad_error: the KERNEL_EXACT error estimate bounds the true
+     error of an auto spectrum, for both closures
+     * Add nc_xcor_disjoint: the cross spectra of disjoint shells, from
+     test_disjoint_bins.py
+     * Move test_nc_xcor_kquad.c onto the shared environment
+     * Check the cluster top-hat volume normalization in test_nc_xcor_kernel.c
+     * Require NaN from methods without an error estimate in the test_nc_xcor.c
+     compute_full check
+     * Remove test_disjoint_bins.py and the test_kernel_exact.py tests these
+     replace
+
+ * Speed up NcXcorKernel closures and the exact spectral integration
+
+     * Build the Limber Chebyshev closure in u = k / nu, where the multipoles of
+     a block share the line-of-sight point and the window evaluation; the Spline
+     closure and the non-Limber closures stay in k
+     * Factorize NcXcorKernelComponent into a window factor and a wave-number
+     factor, with the new virtual methods eval_window, eval_kfactor and
+     eval_kfactor_vec; the vector form evaluates P(k) once per node through
+     ncm_powspec_eval_vec()
+     * Give closures per-multipole scales (nc_xcor_kernel_integrand_get_scale())
+     and integrate u-u and mixed u-k pairs exactly in
+     NC_XCOR_METHOD_KERNEL_EXACT, aborting on a pair whose scales disagree
+     * Add NcXcorKernel:panels-per-efold, an initial geometric panel grid
+     anchored at 1 so that closures share panel edges, and
+     NcXcorKernel:panel-level-min, the starting refinement level
+     * Return zero outside a Chebyshev closure's panels instead of extrapolating
+     its end panels
+     * Integrate each cell of the common refinement as one bilinear form shared
+     by all multipoles, from int T_i T_j T_k tables built once per process up to
+     65 coefficients
+     * Add ncm_spectral_chebyshev_rebase_rows(), which changes the basis of all
+     multipoles of a cell in one pass; both rebase functions compute the
+     recurrence directly, two degrees per pass, and agree to the last bit
+     * Keep the NcmSpectral FFTW plans, nodes and work buffers across calls;
+     ncm_spectral_free_buffers() releases them
+     * Split nc_xcor_kernel.c into integrand, closure, Limber and non-Limber
+     files under xcor/kernel/ (internal only)
+     * Rename the fit-residual tracking to closure-error tracking (API break):
+     NcXcorKernel:track-closure-error,
+     nc_xcor_kernel_get/set_track_closure_error() and
+     nc_xcor_kernel_integrand_set/peek_closure_error() replace
+     track-fit-residual, nc_xcor_kernel_get/set_track_fit_residual() and
+     nc_xcor_kernel_integrand_set/peek_residuals()
+     * Fix vector reference leaks in the galaxy and weak lensing z ranges, and
+     release the component references taken while building a closure
+     * Document every NcXcorKernel property and regenerate the Python stubs
+     * Test the factorization against eval_kernel, the vector wave-number factor
+     against the scalar one, ncm_spectral_chebyshev_rebase_rows() against
+     ncm_spectral_chebyshev_rebase() and ncm_spectral_free_buffers(); tighten
+     the KERNEL_EXACT against KERNEL_CUBATURE comparison from rtol 1e-3 to 1e-6,
+     with the cubature at reltol 1e-8
+     * Results change: the Limber Chebyshev C_ell move by at most 8.7e-7
+     relative to LIMBER_Z_CUBATURE at reltol 1e-9 on five lens autos, ell 2 to
+     2000; the 15 spectra of that case take 0.083 s at one thread, against 0.82
+     s for CCL qag
+     * Known limitation: at peak-epsilon <= 1e-6 the panel acceptance test (l2
+     norm of the coefficient difference) accepts panels whose spectrum ends in a
+     broad plateau of sub-tolerance modes (the damped BAO wiggles), leaving
+     about twice the requested pointwise error on W; C_ell moved by 2.5e-7 in
+     the measured case. A sup-norm test is planned
+
+ * Add a tutorial on the spectral operator matrices
+
+     * Add docs/tutorials/python/spectral_operators.qmd
+     * Show the projection matrix, its band structure and its columns as T_i in
+     C^(2)
+     * Check each column against the library's Chebyshev and C^(2) evaluations
+     * Show the s^2 d^2/ds^2 matrix and check it against NumPy's Chebyshev
+     derivatives
+     * Show that the s and s^2 matrices drop only the coefficients of degree N
+     and above
+     * Assemble the spherical Bessel panel operator and check it on x j_l and
+     the solver matrix
+     * Register the tutorial in meson.build, _quarto.yml.in and
+     tutorials/index.qmd
+     * Name the binomial coefficient at its first use in spectral.qmd
+
+ * Name the Chebyshev variable s in the w(z) reconstruction basis
+
+     * Rename the mapped variable u to s in WzReconstruction.design_matrix
+
+ * Use s, c^k and delta_r/delta_a in NcmDiff and its theory page
+
+     * Rename the relative and absolute function precisions s and a to delta_r
+     and delta_a
+     * Write the Chebyshev window expansion in s with coefficients c^k
+     * Correct the coefficient formula of the rounding bound to the DCT-I
+     weights
+     * Use delta_r in the ncm_diff_set_func_precision doc
+     * Rename the node variable t to s and the local sums s to sum in the
+     spectral helpers
+
+ * Use s, c^k(f) and f_spl in the UltraLevin projection page
+
+     * Name the spline in the refinement test f_spl and define it
+     * Write the Chebyshev cell variable as s in k = m + h s
+     * Write the panel coefficients as c^i(W^X), c^j(W^Y) and c^j(k^2 W^Y)
+     * Write the integration variable of Eq. (9) as s
+
+ * Name the solver tolerance epsilon_ODE and the realized error delta_rel
+
+     * Replace the operator tolerance tau with epsilon_ODE, as in
+     sbessel_projection.qmd
+     * Rename the realized relative error of Eq. (5) to delta_rel and define it
+     * Say the coefficients decay faster than any exponential past N_min, not
+     that they collapse
+     * Replace "sits below the truth" with "is smaller than the actual error"
+
+ * Use s, c^n and upper-index components in the ultraspherical solver page
+
+     * Write the panel map and Eq. (2) in the Chebyshev variable s
+     * Write the expansion of u as sum_n c^n T_n(s) and its constraints in c^n
+     * Write the linear system as A c = r, sum_j A^k_j c^j = r^k, with column
+     index j
+     * Write the QR stopping ratio as |r~^j / R^j_j|
+     * Label coefficients of named functions as c^n(x j_l), c^n(u_p), c^j(v),
+     c^k(xF)
+     * Update the figure axis labels to c^n and c^j
+
+ * Name the Chebyshev variable s in the sbessel solver, Levin integrator and xcor
+     kernel
+
+     * Rename the Chebyshev panel evaluation variable t to s in nc_xcor_kernel.c
+     * Rename the evaluation points t0/t1 to s0/s1 in ncm_sbessel_ode_solver.c
+     * Write the mapped operator and its row comments in s
+     * Call the s and s^2 rows multiplication terms, not identity terms
+     * Write x(s) and the rebase argument alpha s_out + beta in the Levin
+     comments
+
+ * Use s, c^k and the refinement level r in the spectral theory page
+
+     * Write the Chebyshev variable as s and the coefficients as c^k in Eq. (1)
+     * Index the Lobatto nodes by j and write the DCT output as c~^k
+     * Explain the refinement level r, N = 2^r + 1, at its first appearance
+     * Write the convergence test, Eq. (2), between levels r - 1 and r
+     * Replace max-order with max-level and k_cap with r_cap (level_cap)
+     * Write the derivative coefficients as c'^k, keeping b_k for Clenshaw only
+     * Write the rebase map as s_in = alpha s_out + beta with coefficients
+     c_out^j
+     * Write the ultraspherical conversions and the operator table in s, c^k and
+     g^k
+     * Define the operator matrix, g^k = M^k_i c^i, truncated to N x N
+     * Write the polynomial coefficients of a full operator as p_2, p_1, p_0
+     * Replace the two em-dashes and the words "collapse" and "simply"
+
+ * Rename the NcmSpectral Chebyshev variable to s and the refinement order to
+     level
+
+     * Rename ncm_spectral_x_to_t/t_to_x to ncm_spectral_x_to_s/s_to_x and
+     document both
+     * Rename get_x*_matrix and compute_x*_row to get_s*_matrix and
+     compute_s*_row
+     * Rename gegenbauer_alpha2_xmul to gegenbauer_alpha2_mul_affine
+     * Rename the Chebyshev coefficient parameter a to c and the endpoint a_v to
+     a
+     * Rename the C^(lambda) coefficient parameter of
+     gegenbauer_alpha{1,2}_eval{,_x} to g
+     * Rename the [-1, 1] variable parameter t to s
+     * Rename NcmSpectral:max-order to max-level and its new/set/get functions
+     to match
+     * Rename the k_min/k_cap parameters to level_min/level_cap
+     * Define the refinement level r, N = 2^r + 1, in the NcmSpectral class doc
+     * Write s, c^k, g^k and s_in/s_out (rebase) in the gtk-doc formulas
+     * Rename the Clenshaw state in chebyshev_deriv to y_k so it differs from c
+     * Update the callers in the sbessel ODE solver, Levin integrator and xcor
+     kernel
+     * Update the C and Python tests and the spectral.qmd links
+     * Regenerate ncm.pyi
+
+ * Improve NcXcor closure handling and remove redundant qag methods
+
+     * Close settled adaptive sample sets by rechecking anomalously wide
+     intervals, refining failed intervals and their neighboring equal-width runs
+     until the mesh passes closure
+     * Add `ncm_function_sample_set_adaptive_midpoint_full()` to report closure
+     rounds and flagged and failed intervals, with tests covering no-op, passing
+     and failing closures
+     * Make Limber integration honor `NcXcor:closure-type`, using the Chebyshev
+     builder when requested and splitting panels at every multipole band edge
+     * Determine Limber band membership per panel while retaining Gaussian
+     fall-off for spline sampling
+     * Remove the redundant `KERNEL_GSL` and `KERNEL_GSL_BLOCK` methods and
+     their qagp implementation, CLI options, tests, benchmarks and reference
+     cases; use `KERNEL_EXACT` for per-multipole kernel-space integration
+     * Update closure tests and certified accuracy/cost comparisons to reflect
+     the settled-sample-set behavior, including narrow-shell and mixed-closure
+     cases
+     * Update the NcXcor, solver, kernel, CLI and spherical-Bessel projection
+     documentation to describe the final closure behavior and method set
+     * Regenerate enum truth data and Python bindings
+
+ * Share one integrator across the kernels in TracerClSolver
+
+     * tracer_kernel takes an optional integrator; without one it builds the
+      library-default Levin integrator as before.
+     * TracerClSolver builds one integrator, hands it to every kernel and sets
+     it
+      as the solver's template, instead of one per tracer with the solver
+     copying
+      the first kernel's.
+     * Dropped the ell-cache-max cap on block_size, an absolute multipole rather
+      than a width.
+
+ * Make NcXcorSolver the sole keeper of the integrator settings
+
+     * NcXcorSSCSij builds one spherical Bessel integrator, shares it among all
+      kernels and hands it to the solver as its template, instead of nbins+1
+      identical ones.
+     * nc_xcor_solver_plan_blocks no longer caps the block width by the kernels'
+      ell-cache-max, an absolute multipole rather than a width; the cap never
+      applied with blocks of at most 64.
+     * The solver aborts when a block needing an integrator reaches above its
+      template's ell-cache-max, before any integration, instead of failing
+      inside set_ell_range on a per-block copy.
+     * Replaced the Python test of the old cap with one checking the plan
+     ignores
+      kernel integrators, and added a C trap test for the new abort.
+
+ * Rename the remaining golden references in the C tests and docs
+
+     * Rename TRUTH_GOLDEN_* and the golden fields to TRUTH_REF_* and ref in
+     test_nc_data_cluster_wl_factor_truth.c
+     * Rename /ncm/sky_footprint/gen/golden to
+     /ncm/sky_footprint/gen/truth_table
+     * Rename /nc/wl_ellipticity_series/trace/matches_python_golden_value to
+     matches_python_reference_value
+     * Say "reference" or "truth table" in the comments of
+     test_ncm_laurent_series.c, nc_galaxy_shape_factor_var_add.c and
+     test_hipert_boltzmann_cbe.py
+     * Rename TESTING.md section 7 to "Determinism & truth tables"
+
+ * Rename the golden table constants in the halo tests
+
+     * Rename PBS_GOLDEN to PBS_TRUTH_TABLE in test_bias_castro.py
+     * Rename C23_GOLDEN and C25_GOLDEN to C23_TRUTH_TABLE and C25_TRUTH_TABLE
+     in test_multiplicity_func_castro_cctoolkit.py
+
+ * Rename the golden loaders and constants in the WL galaxy tests
+
+     * Rename _load_*golden to _load_*truth_table in seven galaxy test files
+     * Rename _*GOLDEN_FILE to _*TRUTH_TABLE_FILE and _GOLDEN_N to
+     _TRUTH_TABLE_N
+     * Say "parity" instead of "golden parity" in the galaxy test docstrings
+
+ * Rename the BBN golden.json to pre_migration_values.json
+
+     * Move data/truth_tables/bbn/golden.json to bbn/pre_migration_values.json
+     * Rename load_golden to load_pre_migration_values in test_bbn_migration.py
+     * Rename the golden locals in test_bbn_migration.py and both fixture
+     generators
+     * Write pre_migration_values.json from make_bbn_compat_fixtures.py
+
+ * Rename the cluster ncount golden file and tests to truth tables
+
+     * Move cluster/nc_data_cluster_ncount_golden_seed0.bin to
+     cluster/ncount_resample_seed0.bin
+     * Rename test_ncount_resample_golden.py to
+     test_ncount_resample_truth_table.py
+     * Rename GOLDEN_FILE/RTOL/ATOL to TRUTH_TABLE_FILE/RTOL/ATOL in both
+     cluster tests
+     * Rename _load_golden and _load_golden_columns to _load_truth_table and
+     _load_truth_table_columns
+     * Rename test_*_matches_golden_snapshot to test_*_matches_truth_table
+     * Update the cluster/ row of the truth tables README
+
+ * Rename the Planck golden files and tests to truth tables
+
+     * Move planck_m2lnl_golden.bin to truth_tables/planck/m2lnl_baseline.bin
+     * Move planck_synthetic_m2lnl_golden.bin to
+     truth_tables/planck/m2lnl_synthetic.bin
+     * Rename test_planck_golden.py to test_planck_truth_table.py
+     * Rename test_planck_synthetic_golden.py to
+     test_planck_synthetic_truth_table.py
+     * Rename GOLDEN_FILE/RTOL/ATOL to TRUTH_TABLE_FILE/RTOL/ATOL in both tests
+     * Say in the synthetic test docstring that the real-data test skips without
+     plc_3.0, not that no CI lane has the data
+     * Replace "golden" with "truth table" in the fixtures_planck.py comment
+     * Add the planck/ row, with each file's provenance, to the truth tables
+     README
+
+ * Adds missing Planck tests to CI.
+
+ * Fixed bibtex entry.
+
+ * Add the AutoKnots theory page
+
+     * docs/theory/ncm/spline/spline_func.qmd: the rounds as published,
+      the false pass and the reopening by standard deviation it had, the
+      closure of the settled mesh and the spread along runs of equal
+      width, the aliased Eisenstein-Hu spline with a figure of the
+      samples at one phase on its oscillation, and the measurements on
+      the random families.
+     * Registered in the Quarto render list and sidebar, the theory index
+      and meson; the AutoKnots paper added to references.bib; the
+      NcmSplineFunc file doc links to the page.
+
+ * Spread a failed closure test along its run of equal widths
+
+     * A flagged interval that fails its closure test now flags every
+      adjacent interval of the same width, on both sides, for testing.
+      A flagged interval that passes spreads nothing.
+     * Bisection locks onto an oscillation below the tolerance: runs of
+      intervals one period wide pass every midpoint test at the same
+      phase, and the width rule sees only the ends of a run. Reaching
+      the inside cost one closure cycle per interval, each a full
+      spline preparation.
+     * Eisenstein-Hu ln P(k) at 1e-13, where the baryon term keeps a
+      2.5e-9 wiggle at k > 10: 225 closure rounds and 1.27 s become 42
+      rounds and 0.21 s, 73475 knots become 64819, and the true error
+      lands within tolerance instead of 4.7 times it.
+      nc_data_cluster_ncount and nc_powspec_cbe return from 48 s and
+      32 s to 6 s and 5 s. The four stress families are unchanged knot
+      for knot.
+     * Two widths count as equal within the closure margin, since
+      bisection midpoints carry one ulp of u.
+     * The Eisenstein-Hu ln P(k) spline asked 1e-13 and master delivered
+      2.5e-10 above k = 10: the undamped j0 piece of the baryon term keeps
+      a 2.5e-9 wiggle there, bisection locked onto its period, and the
+      aliased runs passed every midpoint test. Honoring 1e-13 takes 65k
+      knots; 1e-9 is honored with 12k and the cluster tests run faster
+      than master.
+     * NcmSplineFunc doc: a flagged interval that fails flags its run of
+      equal widths; comments on the two walks.
+
+ * Close the settled autoknots mesh instead of reopening by standard deviation
+
+     * Replace the three adaptive placements of ncm_spline_func.c by one routine
+     with the knot variable (x, ln x, asinh x) as forward and inverse maps; GCC
+     inlines the three cases with their maps resolved
+     * After the midpoint rounds converge, flag every interval wider in the knot
+     variable than the mean of its two neighbors by 1e-8 (a border interval,
+     than its one neighbor), test the flagged midpoints with the ordinary
+     criterion, keep every evaluation as a knot, split only failures, resume,
+     and stop at a closure round with no failure
+     * Remove the mean + sigma reopening: ncm_spline_set_func_scale() loses
+     refine and refine_ns, and the stress tool its --refine and --refine-ns
+     options
+     * Add ncm_spline_set_func_full(), reporting closure rounds, flagged and
+     failed counts, for tests
+     * State in the NcmSplineFunc doc that the closure removes errors from an
+     adaptive mesh and discovers no feature the starting knots and their
+     midpoints do not see
+     * Test the closure's three outcomes: a line (nothing flagged, 11 knots), a
+     smooth function on all three types (flagged, all pass, every evaluation a
+     knot), and a hidden pair of Gaussians the midpoint test accepts and the
+     closure finds (failed >= 2)
+     * Re-pin four Python tests that moved with the knots: the two golden
+     catalogs at rtol 1e-7 with the observable draws pinned exactly, the WL
+     kernel comparison with CCL with a peak-scaled atol, and the Chebyshev
+     decomposition at the 1e-8 it requests
+
+
 [v0.28.0]
+ * Release version 0.28.0
+
+     * Bump the version to 0.28.0 in meson.build, pyproject.toml and test_cfg.py
+     * Regenerate ChangeLog.md with a v0.28.0 section
+     * Fix the version-file path and the branch name in RELEASE_INSTRUCTIONS.md
+
  * Mark every 0.27 compatibility piece with "dropped in 1.0"
 
      * Use the same phrase in the Yp sinks, late add_submodel and the Python
@@ -11369,6 +14506,252 @@ CHANGELOG
 
 
 []
+ * Add moment-based shape factors (#378)
+ * Test the NcCBEPrecision data file fallback
+ * Accept astropy-base for astropy in the feedstock check
+ * Fix two test failures seen on the conda-forge builds
+ * Check that imported Python modules are declared
+ * Declare the Python modules imported by the numcosmo CLI and docs
+ * NcmFit keeps its NcmDiff settings; CLI options for the numerical derivatives;
+     computed captions in the NcmDiff page
+ * Show the current likelihood terms in every logged fit state
+ * Least-squares form of the curvature priors: vector Gaussian priors and Lp
+     residuals of the second derivative
+ * Fix the least-squares fit report and levmar's early stop; w'' curvature prior
+     by default
+ * Make the CAMB-fit sound horizon continuous in N_eff
+ * Compute the BAO sound horizon with the CAMB-calibrated fit by default
+ * Shape-only datasets: DESI DR2 BAO set, Moresco 2020 CC covariance, uncalibrated
+     Pantheon+
+ * NcHICosmoDEWSpline: optional free sound horizon at drag (asdrag)
+ * Move the new SNIa catalog tests to C
+ * CI: bump DATA_CACHE_VERSION for the new data assets
+ * Add NcDataHubbleCov and the ALL_COMBINED_OCT_2026 H(z) set
+ * Add DES-Dovekie, Pantheon+ Hoyt26 SNIa and Loubser 2025 H(z) data
+ * Test that generate_stubs.py reproduces the committed stubs
+ * Fix mypy errors from pygobject-stubs 2.19
+ * CI: update conda lock files
+ * Fix the import order and widen the Bianchi tests
+ * Add the CF4 SNIa catalog to the data release and numcosmo generate bianchi
+ * Add NcDistMuObs and read it from NcDataHCosmoBIDistMu
+ * Regenerate the Python stubs for the Bianchi I classes
+ * Add NcHCosmoBIDist and NcDataHCosmoBIDistMu
+ * Add NcHCosmoBI, a Bianchi I model with matter and a cosmological constant
+ * Remove ncm_sphere_map_calc_Ctheta
+ * Add NcmSphereXi, the angular correlation function from C_ell
+ * Plan narrower blocks at low multipoles
+ * Hold Limber blocks of several terms to tolerances relative to their windows
+ * Keep the row sums' scratch in pools, and three comments
+ * Name the summed windows after what they are
+ * Limber page: derivative weights, the collapse and the discarded borders
+ * Test the Limber RSD part against the exact one, not against CCL
+ * Collapse the Limber order terms before the k integrals
+ * Add ncm_spectral_panels_new_sum_rows
+ * Limber derivative weights by the order recurrence
+ * Revert the chi derivatives of the kernel component
+ * Add the chi derivatives of the kernel component
+ * Add a draft theory page for the Limber path
+ * Regroup the theory pages
+ * Split the Limber j_{l+1} term into its own closure term
+ * Let a closure hold several terms and the product pair row blocks
+ * Sum the squared cancellation scales of a Richardson row
+ * Test reused NcmDiff workspaces against fresh ones
+ * Leave domain_warnings unset in ncm_diff_init
+ * Add explicit-workspace NcmDiff derivatives
+ * Keep a pool of NcmDiffWork in NcmDiff
+ * Use NcmDiffWork in the spectral driver
+ * Use NcmDiffWork in the Hessian drivers
+ * Use NcmDiffWork in the single-series driver
+ * Add NcmDiffWork and use it in the dual-series driver
+ * Updated stubs.
+ * Set every tolerance of the kernel-space solve from NcXcorSolver:reltol
+ * Let NcXcorSolver build its own Levin integrators
+ * Hold the CCL batching tests to reltol
+ * Use one tolerance for the Levin integrator
+ * Merge a thin edge piece into the Levin panel next to it
+ * Account for the kept-coefficient shift in the sbessel ODE stopping test
+ * Read every Levin panel through the general boundary term
+ * Document the range contract and what cheb-reltol measures
+ * Weight the sbessel ODE stopping test by n^2
+ * Drop the duplicated solver fallback test and fix a self-comparison
+ * Remove the xcor Python tests that duplicate C tests
+ * Document the C test file layout and moving settled Python tests to C
+ * Reorder the table-registered C tests to the test-file layout
+ * Reorder test_ncm_mset_catalog.c to the test-file layout
+ * Reorder the remaining C tests in nc/powspec to the test-file layout
+ * Reorder the remaining C tests in ncm/stats to the test-file layout
+ * Reorder the remaining C tests in ncm/sphere to the test-file layout
+ * Reorder the remaining C tests in ncm/specfunc to the test-file layout
+ * Reorder the remaining C tests in ncm/mpi to the test-file layout
+ * Reorder the remaining C tests in ncm/model to the test-file layout
+ * Reorder the remaining C tests in ncm/integration to the test-file layout
+ * Reorder the remaining C tests in ncm/fit to the test-file layout
+ * Reorder the remaining C tests in ncm/fftlog to the test-file layout
+ * Reorder the remaining C tests in ncm/core to the test-file layout
+ * Reorder the remaining C tests in ncm/algebra to the test-file layout
+ * Reorder the C tests in nc/xcor to the test-file layout
+ * Reorder the C tests in nc/primordial to the test-file layout
+ * Reorder the C tests in ncm/stats to the test-file layout
+ * Reorder the C tests in ncm/spline to the test-file layout
+ * Reorder the C tests in ncm/sphere to the test-file layout
+ * Reorder the C tests in ncm/specfunc to the test-file layout
+ * Reorder the C tests in ncm/powspec to the test-file layout
+ * Reorder the C tests in ncm/mpi to the test-file layout
+ * Reorder the C tests in ncm/model to the test-file layout
+ * Reorder the C tests in ncm/integration to the test-file layout
+ * Reorder the C tests in ncm/fit to the test-file layout
+ * Reorder the C tests in ncm/dynamics to the test-file layout
+ * Reorder the C tests in ncm/data to the test-file layout
+ * Reorder the C tests in ncm/core to the test-file layout
+ * Reorder the C tests in ncm/algebra to the test-file layout
+ * Reorder the C tests in nc/lss to the test-file layout
+ * Reorder the C tests in nc/data to the test-file layout
+ * Reorder the C tests in nc/background to the test-file layout
+ * Drop the set_max_order calls left in the xcor solver tests
+ * Move the conjugate-point tests to C and drop the Python ODE solver tests
+ * Move the tau constraint, floor factor and derivative-error tests to C
+ * Move the ODE operator's stored-rotation tests to C
+ * Move the ODE operator's memory tests to C, checked against new operators
+ * Check the ODE solver's forcings by Green's identity against Arb, in C
+ * Check the sbessel ODE solver's Green identity against certified Arb values in C
+ * Move the sbessel ODE solver's self-consistency tests to C
+ * Move the unread gauss_jl_100 table out of the repository
+ * Check the Levin integrator against the jl_500 truth tables in C
+ * Check the Levin integrals against certified Arb values in C
+ * Add the power and cos shapes to the Arb window tool
+ * Move the Levin tests without an outside reference to C
+ * Remove NcmSBesselIntegratorLevin:max-order, which changed nothing
+ * Let the Arb window tool certify the sbessel integrands
+ * Write the magnification weight as 5(s - 0.4) so it vanishes exactly at s = 0.4
+ * Interpolate the lensing efficiency g(z) with a quintic Hermite spline
+ * Hold the single-multipole closure test's domain fixed at adaptive-epsilon 1e-8
+ * Default the galaxy kernel's magnification bias to s = 0.6 from one constant
+ * Normalize the weak-lensing and galaxy kernels' dN/dz on a copy, not the
+     caller's spline
+ * Split the slow xcor C tests, move Python duplicates to C, fix lensing at z = 0
+ * Hold the Levin window check to 3 times the integrator's cheb-reltol
+ * Print each computed table of the Hermite page from one cell
+ * Fit the certified projection page's figures in the text column and compute its
+     timing prose
+ * Fit the derivatives page's figure in the text column
+ * Compute the derivatives page's table-size and forward-variant comparisons on
+     the page
+ * Check the xcor tutorial's qualitative claims in the cells that write them
+ * State only the measured values in two certified-window comments
+ * Resolve the top-hat's k integral in the C_ell definition check and tighten its
+     bound
+ * Drop the skipped ends of the narrow panel product test
+ * Write adaptive-epsilon as epsilon_dom throughout the UltraLevin page
+ * Import numcosmo_py inside windows.make_kernel
+ * State the separated pair's estimate ratio the right way round in the xcor
+     tutorial
+ * Hold the tight certified-window setting to 3 peak-epsilon as the default one
+ * Compute every number quoted in the xcor accuracy tutorial on the page
+ * Drop the stale comparison wording of the xcor view app
+ * Name the domain tolerance and the jump height apart, and source every number on
+     the xcor pages
+ * Give every certified-window test binary the 360 s timeout
+ * Share the analytic kernel builder of the window tables through windows.py
+ * State the current check in three test comments
+ * Check the non-Limber C_ell of an analytic window against its definition in C
+ * Check the k quadrature at ell 10 as well
+ * State the scale of the sparse certified-window checks as the code applies it
+ * Build the certified-window tests as one binary per table and order from a
+     common unit
+ * Restore the data cache for the coverage c shard
+ * State the min-panel-fraction block, the interval midpoint and the exact
+     quadrature directly
+ * Hold the row scales of NcXcorKernelIntegrand in a vector
+ * Accept a cell end within four ulp of a panel edge in
+     ncm_spectral_panels_restrict
+ * Keep the print-fit report of NcmStatsDist out of the test output
+ * Trim the ssc module docstring to the current closure
+ * Compare FKEM on zero-padded tables in the certified projection page
+ * Name things directly in the UltraLevin and solver pages
+ * Replace the spline-era SSC accuracy table with the tutorial's measurements
+ * State the certified projection page directly outside the FKEM sections
+ * State the ultraspherical solver page directly
+ * State the truncation of the spectral operator matrices directly
+ * State the spectral methods page directly
+ * State the CCL comparison with the numbers of its tables
+ * State the super-sample covariance page directly
+ * State the xcor derivatives benchmark directly and with the rendered numbers
+ * State the operations in the UltraLevin page and the xcor accuracy tutorial
+ * Correct and tighten the UltraLevin theory page after the closure rewrite
+ * Rewrite the xcor accuracy tutorial for the panel closures
+ * Drop the single-multipole Limber-against-non-Limber tests
+ * Take the k projections through the panel product
+ * Compare the library with the certified kquad table on each entry's own interval
+ * Regenerate the certified kquad table: 129 entries
+ * Test the panels builder on undeclared kinks and a raised level cap
+ * Re-split the sub-parts of a chunked kquad entry that time out
+ * Check the method table's flags in C and drop the duplicate error-bound test
+ * Check the Levin integrator against the certified windows in C
+ * Compare single-multipole closures with a block once, use blocks elsewhere
+ * Check the closures at ell 500 and 1000 against the sparse certified windows, in
+     C
+ * Drop the const on the CVodeGetDky flag in NcmOdeSpline
+ * Check the k quadrature on representative pairs and multipoles
+ * Re-split the parts of a chunked kquad entry that time out
+ * Prefetch the dense certified windows into the CI data cache
+ * Check the closures against dense certified windows, in C
+ * Seed the k domain at each component's near edge
+ * Certify a kquad entry in parallel parts of its k range
+ * Specialize NcXcorKernelIntegrand to the Chebyshev closure
+ * Remove the one-value closure enum
+ * State the panel convergence test as the l1 change it is
+ * Drop the spline closure from the projection pages
+ * Remove the spline closure
+ * Stop testing through the spline closure
+ * Read a Chebyshev closure in u at the ends of a multipole's range from inside it
+ * Give each multipole of a Limber block in u its own hard k range
+ * Move the closure check against direct W_ell(k) to C, on every analytic window
+ * Check the Chebyshev closure against W_ell(k) computed directly
+ * Track the non-Limber truncation boundaries only during the domain expansion
+ * Move the Chebyshev panel settings from NcXcorKernel to its panels builder
+ * Give every Chebyshev closure the panel grid and drop the expansion-sample check
+ * Read xcor's Chebyshev closures through their NcmSpectralPanels
+ * Apply uncrustify and black to the whole tree
+ * Build and integrate xcor's Chebyshev closures with the panel objects
+ * Add NcmSpectralPanelsProduct, exact integrals of products of panel sets
+ * Add NcmSpectralPanelsBuilder, the adaptive construction of Chebyshev panels
+ * Add NcmSpectralPanels, a vector function as contiguous Chebyshev panels
+ * Name the dimension of a batch NcmSpectral function fdim
+ * Add quintic Hermite spline support and optimize distance and growth
+     calculations
+ * CI: update conda lock files
+ * Cut the Limber u closure at the steps of Bessel derivative components
+ * Reuse the parent's end values when a Chebyshev panel is split
+ * Use an l1 panel acceptance test in NcmSpectral
+ * Remove NC_XCOR_METHOD_KERNEL_CUBATURE
+ * Move the kernel-space quadrature tests to C
+ * Speed up NcXcorKernel closures and the exact spectral integration
+ * Add a tutorial on the spectral operator matrices
+ * Name the Chebyshev variable s in the w(z) reconstruction basis
+ * Use s, c^k and delta_r/delta_a in NcmDiff and its theory page
+ * Use s, c^k(f) and f_spl in the UltraLevin projection page
+ * Name the solver tolerance epsilon_ODE and the realized error delta_rel
+ * Use s, c^n and upper-index components in the ultraspherical solver page
+ * Name the Chebyshev variable s in the sbessel solver, Levin integrator and xcor
+     kernel
+ * Use s, c^k and the refinement level r in the spectral theory page
+ * Rename the NcmSpectral Chebyshev variable to s and the refinement order to
+     level
+ * Improve NcXcor closure handling and remove redundant qag methods
+ * Share one integrator across the kernels in TracerClSolver
+ * Make NcXcorSolver the sole keeper of the integrator settings
+ * Rename the remaining golden references in the C tests and docs
+ * Rename the golden table constants in the halo tests
+ * Rename the golden loaders and constants in the WL galaxy tests
+ * Rename the BBN golden.json to pre_migration_values.json
+ * Rename the cluster ncount golden file and tests to truth tables
+ * Rename the Planck golden files and tests to truth tables
+ * Adds missing Planck tests to CI.
+ * Fixed bibtex entry.
+ * Add the AutoKnots theory page
+ * Spread a failed closure test along its run of equal widths
+ * Close the settled autoknots mesh instead of reopening by standard deviation
+ * Release version 0.28.0
  * Mark every 0.27 compatibility piece with "dropped in 1.0"
  * Place stored parameter descriptions by name, so files from 0.27 load correctly
  * Tighten the wording of the data directory and download lock docs
