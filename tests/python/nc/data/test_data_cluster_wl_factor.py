@@ -25,6 +25,7 @@ end-to-end; this file covers what those never touch: the GObject property
 get/set round trip and the plain getter/setter/``ref`` wrappers.
 """
 
+import os
 import pathlib
 import subprocess
 import sys
@@ -276,6 +277,198 @@ def test_without_register_shared_obs_is_deep_copied_across_dups():
     assert dup1.peek_obs() is not dup2.peek_obs()
 
 
+def _shared_dup_setup(n=6):
+    """A dataset registered as shared and one dup made through that
+    serializer, as NcmFitMC makes each worker's clone: the dup holds the
+    same obs object as the original."""
+    dcwlf, mset = _build_multi_galaxy_setup(n)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
+
+    dset = Ncm.Dataset.new()
+    dset.append_data(dcwlf)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dset.register_shared(ser)
+
+    dup = duplicate_via_serialization(dcwlf, ser)
+    assert dup.peek_obs() is dcwlf.peek_obs()
+
+    return dcwlf, dup, mset
+
+
+def test_resample_on_shared_dup_leaves_shared_obs_untouched():
+    """A dup that resamples an obs shared through register_shared() writes
+    its realization to a copy of its own: the shared obs, which every other
+    worker's clone reads, keeps its rows."""
+    dcwlf, dup, mset = _shared_dup_setup()
+    obs = dcwlf.peek_obs()
+    before = np.array(obs.peek_data().dup_array())
+
+    dup.resample(mset, Ncm.RNG.seeded_new(None, 1234))
+
+    assert_allclose(np.array(obs.peek_data().dup_array()), before, rtol=0.0, atol=0.0)
+    assert dup.peek_obs() is not obs
+    assert not np.array_equal(np.array(dup.peek_obs().peek_data().dup_array()), before)
+
+
+def test_resample_on_owner_writes_obs_in_place():
+    """The dataset that registered the obs as shared still resamples into
+    it, as a dataset that never registered does."""
+    dcwlf, _dup, mset = _shared_dup_setup()
+    obs = dcwlf.peek_obs()
+    before = np.array(obs.peek_data().dup_array())
+
+    dcwlf.resample(mset, Ncm.RNG.seeded_new(None, 1234))
+
+    assert dcwlf.peek_obs() is obs
+    assert not np.array_equal(np.array(obs.peek_data().dup_array()), before)
+
+
+def test_shared_dup_resample_matches_deep_copied_dup():
+    """With the same seed, a dup sharing the obs and a dup with its own deep
+    copy of it draw the same realization and give the same -2lnL."""
+    dcwlf, dup_shared, mset = _shared_dup_setup()
+    dup_copy = duplicate_via_serialization(
+        dcwlf, Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    )
+    assert dup_copy.peek_obs() is not dcwlf.peek_obs()
+
+    dup_shared.resample(mset, Ncm.RNG.seeded_new(None, 99))
+    dup_copy.resample(mset, Ncm.RNG.seeded_new(None, 99))
+
+    assert_allclose(
+        np.array(dup_shared.peek_obs().peek_data().dup_array()),
+        np.array(dup_copy.peek_obs().peek_data().dup_array()),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert dup_shared.m2lnL_val(mset) == dup_copy.m2lnL_val(mset)
+
+
+def test_shared_dups_keep_their_own_realization():
+    """The interleaving threaded NcmFitMC produces, run by hand: worker A
+    resamples, worker B resamples, then A evaluates. A's -2lnL must be that
+    of its own realization (a deep-copied dup resampled with A's seed), not
+    of the rows B drew."""
+    dcwlf, dup_a, mset = _shared_dup_setup()
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    Ncm.Dataset.new_array([dcwlf]).register_shared(ser)
+    dup_b = duplicate_via_serialization(dcwlf, ser)
+    dup_ref = duplicate_via_serialization(
+        dcwlf, Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    )
+
+    dup_a.resample(mset, Ncm.RNG.seeded_new(None, 11))
+    dup_b.resample(mset, Ncm.RNG.seeded_new(None, 22))
+    dup_ref.resample(mset, Ncm.RNG.seeded_new(None, 11))
+
+    assert dup_a.m2lnL_val(mset) == dup_ref.m2lnL_val(mset)
+
+
+def _build_mc_fit(n_gal=60):
+    """A mass-only fit of a small NcDataClusterWLFactor dataset, cheap
+    enough to run an NcmFitMC of tens of realizations."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+    dist = Nc.Distance.new(100.0)
+    hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
+    dp = Nc.HaloDensityProfileNFW.new(hms)
+    hp = Nc.HaloPosition.new(dist)
+    smd = Nc.WLSurfaceMassDensity.new(dist)
+
+    hms.param_set_by_name("cDelta", 5.0)
+    hms.param_set_by_name("log10MDelta", 14.5)
+    hms.param_set_ftype(1, Ncm.ParamType.FREE)
+    hp.param_set_by_name("z", 0.2)
+    hp.prepare(cosmo)
+
+    pop_shape = Nc.GalaxyShapePopGauss.new()
+    pop_shape.param_set_by_name("sigma", 0.28)
+    pop_z = Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source()
+    obs_z = Nc.GalaxyRedshiftObsGauss.new()
+
+    mset = Ncm.MSet.empty_new()
+    for model in (cosmo, dp, hp, smd, pop_shape, pop_z, obs_z):
+        mset.set(model)
+    mset.prepare_fparam_map()
+
+    position_factor = Nc.GalaxyPositionFactorFlat.new(-0.09, 0.09, -0.09, 0.09)
+    redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 5.0)
+    shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
+
+    pos_data0 = Nc.GalaxyPositionFactorData.new(position_factor, mset)
+    z_data0 = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
+    s_data0 = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data0, z_data0)
+    cols = Nc.GalaxyShapeFactorData.required_columns(s_data0)
+
+    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n_gal, cols)
+    for i in range(n_gal):
+        for c in cols:
+            obs.set(c, i, 0.0)
+        obs.set("std_noise", i, 0.03)
+        obs.set("sigma0", i, 0.05)
+
+    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
+    dcwlf.set_obs(obs)
+    dcwlf.set_cut(0.3, 5.0)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(False)
+
+    dset = Ncm.Dataset.new()
+    dset.append_data(dcwlf)
+    fit = Ncm.Fit.factory(
+        Ncm.FitType.NLOPT,
+        "ln-neldermead",
+        Ncm.Likelihood.new(dset),
+        mset,
+        Ncm.FitGradType.NUMDIFF_FORWARD,
+    )
+    fit.set_params_reltol(1.0e-8)
+    fit.set_m2lnL_reltol(1.0e-9)
+
+    return fit
+
+
+def _fit_mc_best_fits(use_threads, n_real, seed, n_gal):
+    """Sorted best-fit masses of an NcmFitMC from the model: with the default
+    (arrival) row order only the set of values is comparable across runs."""
+    mc = Ncm.FitMC.new(
+        _build_mc_fit(n_gal), Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.NONE
+    )
+    mc.set_use_threads(use_threads)
+    mc.set_rng(Ncm.RNG.seeded_new("mt19937", seed))
+    mc.start_run()
+    mc.run(n_real)
+    mc.end_run()
+
+    cat = mc.peek_catalog()
+    nadd = cat.nadd_vals()
+
+    return np.sort([cat.peek_row(i).get(nadd) for i in range(cat.len())])
+
+
+@pytest.mark.skipif(
+    os.environ.get("OMP_THREAD_LIMIT") == "1",
+    reason="needs more than one OpenMP thread",
+)
+def test_threaded_fit_mc_matches_serial():
+    """Threaded NcmFitMC from the model fits the same realizations as the
+    serial run with the same seed. End-to-end check of the path the
+    interleaving test above covers deterministically: on this small catalog
+    the threads seldom overlap, so it is not by itself a test of the race."""
+    n_real, n_gal = 32, 300
+    serial = _fit_mc_best_fits(False, n_real, 2026, n_gal)
+
+    Ncm.cfg_set_openmp_nthreads(4)
+    try:
+        threaded = _fit_mc_best_fits(True, n_real, 2026, n_gal)
+    finally:
+        Ncm.cfg_set_openmp_nthreads(
+            int(os.environ.get("OMP_NUM_THREADS", os.cpu_count()))
+        )
+
+    assert_allclose(threaded, serial, rtol=0.0, atol=0.0)
+
+
 def test_construct_only_properties_readable():
     """The construct-only factor properties round-trip through the property
     system (peek_obs/set_obs cover the "obs" property; these three only
@@ -436,7 +629,8 @@ _HEALTHY_GALAXIES = [
 
 # One galaxy whose observed ellipticity is flatly incompatible with any model
 # prediction at this noise level, so its marginal underflows to exactly 0 in
-# double precision and the NC_GALAXY_LOW_PROB fallback is substituted.
+# double precision: CUBATURE substitutes the NC_GALAXY_LOW_PROB fallback,
+# FIXED_NODES re-evaluates it in log space.
 _UNDERFLOWING_GALAXY = (0.03, 0.02, 0.60, 0.030, 0.9, 0.0, 0.01)
 
 
@@ -505,23 +699,54 @@ def test_low_prob_count_zero_on_healthy_eval(integ_method):
     assert m2lnL < 1.0e5  # nowhere near the 1e6 flat fallback
 
 
-@pytest.mark.parametrize(
-    "integ_method",
-    [Nc.DataClusterWLIntegMethod.FIXED_NODES, Nc.DataClusterWLIntegMethod.CUBATURE],
-)
-def test_low_prob_count_counts_underflowing_galaxies(integ_method):
-    """When a galaxy's marginal really does evaluate non-positive -- here by
-    honest floating-point underflow, an ellipticity no model can produce at
-    this noise level -- the flat fallback is substituted AND counted.
+def test_low_prob_count_counts_underflowing_galaxies():
+    """When a galaxy's marginal really does evaluate non-positive (here by
+    floating-point underflow, an ellipticity no model can produce at
+    this noise level), CUBATURE, which integrates in linear space,
+    substitutes the flat fallback AND counts it.
 
-    LNINT is excluded on purpose: it does not substitute, it skips the galaxy
-    and stores NaN (see test_low_prob_count_resets_between_methods)."""
+    FIXED_NODES re-evaluates the same galaxy in log space instead (see
+    test_fixed_nodes_rescues_underflowing_galaxies). LNINT is excluded on
+    purpose: it does not substitute, it skips the galaxy and stores NaN (see
+    test_low_prob_count_resets_between_methods)."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
-    dcwlf.set_integ_method(integ_method)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
 
     m2lnL = dcwlf.m2lnL_val(mset)
 
     assert dcwlf.get_low_prob_count() >= 1
+    assert m2lnL > 1.0e5  # the flat NC_GALAXY_LOW_PROB wall, ~1e6
+
+
+def test_fixed_nodes_rescues_underflowing_galaxies():
+    """The shape likelihood of that galaxy is exactly 0 at every node, but its
+    log is finite: FIXED_NODES re-evaluates the galaxy in log space and
+    returns the same -2 ln P as the log-domain LNINT, without counting a
+    substitution."""
+    dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    fixed = dcwlf.m2lnL_val(mset)
+    assert dcwlf.get_low_prob_count() == 0
+
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
+    lnint = dcwlf.m2lnL_val(mset)
+
+    assert fixed < 1.0e5
+    assert fixed == pytest.approx(lnint, rel=1.0e-6)
+
+
+def test_fixed_nodes_counts_a_genuine_zero():
+    """A galaxy outside the position footprint has a marginal that is exactly
+    zero, not an underflow: the log-space re-evaluation gives a finite shape
+    likelihood, but the position factor is zero outside the footprint, so
+    FIXED_NODES still substitutes the fallback and counts it."""
+    outside = (0.5, 0.02, 0.60, 0.030, 0.1, 0.0, 0.1)  # footprint is |ra| <= 0.2
+    dcwlf, mset, _, _ = _build_probe_setup([outside])
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+
+    m2lnL = dcwlf.m2lnL_val(mset)
+
+    assert dcwlf.get_low_prob_count() == 1
     assert m2lnL > 1.0e5  # the flat NC_GALAXY_LOW_PROB wall, ~1e6
 
 
@@ -531,19 +756,24 @@ def test_low_prob_count_resets_between_methods():
     LNINT never substitutes NC_GALAXY_LOW_PROB, so its answer is legitimately
     zero -- but it must still clear the counter, or it would keep reporting a
     stale count left behind by an earlier FIXED_NODES/CUBATURE evaluation on
-    the same object."""
+    the same object. FIXED_NODES, which re-evaluates this galaxy in log
+    space, must clear it too."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
 
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
-    dcwlf.m2lnL_val(mset)
-    assert dcwlf.get_low_prob_count() >= 1  # counter is now dirty
+    for method in (
+        Nc.DataClusterWLIntegMethod.LNINT,
+        Nc.DataClusterWLIntegMethod.FIXED_NODES,
+    ):
+        dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
+        dcwlf.m2lnL_val(mset)
+        assert dcwlf.get_low_prob_count() >= 1  # counter is now dirty
 
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
-    dcwlf.m2lnL_val(mset)
-    assert dcwlf.get_low_prob_count() == 0
+        dcwlf.set_integ_method(method)
+        dcwlf.m2lnL_val(mset)
+        assert dcwlf.get_low_prob_count() == 0
 
     # And back again, so the reset is not a one-way latch.
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
     dcwlf.m2lnL_val(mset)
     assert dcwlf.get_low_prob_count() >= 1
 

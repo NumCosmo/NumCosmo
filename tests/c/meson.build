@@ -679,6 +679,10 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
         'suite': ['c', 'omp'],
     },
+    {
+        'name': 'nc_data_cluster_wl_factor_node_config',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_node_config.c'],
+    },
 ]
 
 # Large-scale structure tests (halos, clusters, bias, transfer, power spectrum, window)
@@ -779,6 +783,10 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_position_factor',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
+    },
+    {
+        'name': 'nc_galaxy_shape_factor_moments_tilt',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
     },
 ]
 
