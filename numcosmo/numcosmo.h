@@ -206,6 +206,7 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_beta.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>
 
