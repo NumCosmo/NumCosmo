@@ -30,11 +30,11 @@ Set the version in these three files:
 Everything else (the library soname, the C version macros, the documentation) is derived from
 `meson.build`.
 
-Regenerate the ChangeLog and add a `[vX.Y.Z]` line below `[Current]`, so the commits since the
-last tag fall under the new version:
+Regenerate the ChangeLog; with the version argument the commits since the last tag are listed
+under `[vX.Y.Z]`:
 
 ```bash
-bash generate-changelog.sh > ChangeLog.md
+bash generate-changelog.sh X.Y.Z > ChangeLog.md
 ```
 
 Commit as `Release version X.Y.Z`, open a pull request and merge it once CI passes.
