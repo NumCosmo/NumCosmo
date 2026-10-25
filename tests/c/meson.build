@@ -175,6 +175,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_acorr.c'],
     },
     {
+        'name': 'ncm_stats_rows',
+        'sources': ['ncm/stats/test_ncm_stats_rows.c'],
+    },
+    {
         'name': 'ncm_stats_dist1d',
         'sources': ['ncm/stats/test_ncm_stats_dist1d.c'],
     },

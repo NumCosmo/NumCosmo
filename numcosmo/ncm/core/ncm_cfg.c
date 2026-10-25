@@ -82,6 +82,7 @@
 #include "ncm/data/ncm_data_gaussmix2d.h"
 #include "ncm/stats/ncm_stats_acorr.h"
 #include "ncm/stats/ncm_stats_vec.h"
+#include "ncm/stats/ncm_stats_rows.h"
 #include "ncm/fit/ncm_fit_esmcmc_walker_stretch.h"
 #include "ncm/data/ncm_data.h"
 #include "ncm/stats/ncm_stats_dist1d_epdf.h"
@@ -849,6 +850,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
   ncm_cfg_register_obj (NCM_TYPE_STATS_ACORR);
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
+  ncm_cfg_register_obj (NCM_TYPE_STATS_ROWS);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
 
