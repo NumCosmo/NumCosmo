@@ -77,6 +77,7 @@
 
 #include "ncm/stats/ncm_stats_vec.h"
 #include "ncm/stats/ncm_stats_acorr.h"
+#include "ncm/stats/ncm_stats_rows.h"
 #include "ncm/algebra/ncm_lapack.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm_enum_types.h"
@@ -124,6 +125,7 @@ struct _NcmStatsVec
   GArray *saved_w;
   NcmVector *x_contiguous;
   GPtrArray *q_array;
+  NcmStatsRows *rows;
 };
 
 G_DEFINE_TYPE (NcmStatsVec, ncm_stats_vec, G_TYPE_OBJECT)
@@ -146,6 +148,7 @@ ncm_stats_vec_init (NcmStatsVec *svec)
   svec->saved_x  = NULL;
   svec->saved_w  = NULL;
   svec->save_x   = FALSE;
+  svec->rows     = NULL;
 
   svec->x_contiguous = NULL;
 
@@ -157,6 +160,8 @@ static void
 _ncm_stats_vec_dispose (GObject *object)
 {
   NcmStatsVec *svec = NCM_STATS_VEC (object);
+
+  ncm_stats_rows_clear (&svec->rows);
 
   ncm_vector_clear (&svec->x);
   ncm_vector_clear (&svec->x_contiguous);
@@ -918,61 +923,20 @@ ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i)
   }
 }
 
-static guint
-_ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
+/* The NcmStatsRows of the deprecated row analyses, given the saved rows, created on first
+ * use and sized to the rows added. */
+static NcmStatsRows *
+_ncm_stats_vec_peek_rows (NcmStatsVec *svec)
 {
-  g_assert_cmpuint (pad, <, ncm_stats_vec_nitens (svec));
-  {
-    const guint n                     = ncm_stats_vec_nitens (svec) - pad;
-    const gsl_multifit_robust_type *T = gsl_multifit_robust_default;
-    gsl_multifit_robust_workspace *w  = gsl_multifit_robust_alloc (T, n, 1);
-    NcmMatrix *X                      = ncm_matrix_new (n, 1);
-    NcmMatrix *cov                    = ncm_matrix_new (1, 1);
-    NcmVector *y                      = ncm_vector_new (n);
-    NcmVector *c                      = ncm_vector_new (1);
-    gsl_multifit_robust_stats stats;
-    gint status;
-    gdouble t0, cutoff;
-    guint i;
+  g_assert (svec->save_x);
 
-    for (i = 0; i < n; i++)
-    {
-      NcmVector *row_i = ncm_stats_vec_peek_row (svec, i + pad);
+  if (svec->rows == NULL)
+    svec->rows = ncm_stats_rows_new (svec->len);
 
-      ncm_vector_set (y, i, ncm_vector_get (row_i, p));
-    }
+  ncm_stats_rows_set_rows (svec->rows, svec->saved_x);
+  ncm_stats_rows_set_nrows (svec->rows, svec->nitens);
 
-    ncm_vector_set (c, 0, ncm_stats_vec_get_mean (svec, p));
-    ncm_matrix_set_all (X, 1.0);
-
-    gsl_multifit_robust_maxiter (100000, w);
-    status = gsl_multifit_robust (ncm_matrix_gsl (X), ncm_vector_gsl (y), ncm_vector_gsl (c), ncm_matrix_gsl (cov), w);
-
-    if ((status != GSL_SUCCESS) && (status != GSL_EMAXITER))
-      g_error ("_ncm_stats_vec_estimate_const_break_int: error %d computing gsl_multifit_robust\n", status);
-
-    stats = gsl_multifit_robust_statistics (w);
-
-    t0 = ncm_vector_get (c, 0);
-
-    cutoff = ceil (sqrt (gsl_cdf_chisq_Qinv (1.0 / n, 1.0)));
-
-    for (i = 0; i < n; i++)
-    {
-      NcmVector *row_i = ncm_stats_vec_peek_row (svec, i + pad);
-
-      if (fabs ((ncm_vector_get (row_i, p) - t0) / stats.sigma_rob) < cutoff)
-        break;
-    }
-
-    gsl_multifit_robust_free (w);
-    ncm_matrix_free (X);
-    ncm_matrix_free (cov);
-    ncm_vector_free (y);
-    ncm_vector_free (c);
-
-    return i;
-  }
+  return svec->rows;
 }
 
 /**
@@ -980,62 +944,16 @@ _ncm_stats_vec_estimate_const_break_int (NcmStatsVec *svec, guint p, guint pad)
  * @svec: a #NcmStatsVec
  * @p: parameter id
  *
- * Estimates the mean $\mu$ and standard deviation $\sigma$ of parameter @p
- * with robust regression and returns the first index $t_0$ within
- * $\alpha\sigma$ of $\mu$, where $\alpha$ is $\sqrt{x}$ rounded up, with $x$ the value
- * exceeded with probability $1/N$ by a $\chi^2_1$ variable, and $N$ the size of the sample.
- * The robust regression is repeated on the rows after each cut until no row is cut.
- * Requires #NcmStatsVec:save-x.
+ * Calls ncm_stats_rows_estimate_const_break() on the saved rows. Requires
+ * #NcmStatsVec:save-x. Deprecated with #NcmStatsVec:save-x, dropped in 1.0: read the rows
+ * from where they live and call ncm_stats_rows_estimate_const_break().
  *
  * Returns: $t_0$
  */
 gdouble
 ncm_stats_vec_estimate_const_break (NcmStatsVec *svec, guint p)
 {
-  guint n  = ncm_stats_vec_nitens (svec);
-  guint t0 = 0;
-  guint t1 = 0;
-
-  do {
-    t1  = _ncm_stats_vec_estimate_const_break_int (svec, p, t0);
-    t0 += t1;
-
-    if (t0 >= n)
-    {
-      t0 = n - 1;
-      break;
-    }
-  } while (t1 > 0);
-
-  return t0;
-}
-
-static gdouble
-_ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
-{
-  const gdouble pi_32 = sqrt (gsl_pow_3 (M_PI));
-  const guint maxiter = 100;
-  const gdouble ffac  = 1.0 / (pi_32 * sqrt (q));
-  gdouble p           = 0.0;
-  guint i             = 0;
-
-  g_assert_cmpfloat (q, >=, 0.0);
-
-  for (i = 0; i < maxiter; i++)
-  {
-    gint sig          = 0;
-    const gdouble lnf = lgamma_r (i + 0.5, &sig) - lgamma_r (i + 1.0, &sig);
-    const gdouble z   = sqrt (4.0 * i + 1.0);
-    const gdouble u   = gsl_pow_2 (4.0 * i + 1.0) / (16.0 * q);
-    const gdouble ti  = z * exp (-u + lnf + gsl_sf_bessel_lnKnu (0.25, u));
-
-    p += ti;
-
-    if (fabs (ti / p) < GSL_DBL_EPSILON)
-      break;
-  }
-
-  return GSL_MIN (GSL_MAX (p * ffac, 0.0), 1.0);
+  return ncm_stats_rows_estimate_const_break (_ncm_stats_vec_peek_rows (svec), p);
 }
 
 /**
@@ -1048,154 +966,16 @@ _ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
  * @wp_order: (out): worst parameter AR fit order
  * @wp_pvalue: (out): value of the worst parameter
  *
- * Applies the Heidelberger--Welch convergence diagnostic with @ntests
- * sequential Schruben tests. Uses 10 tests when @ntests is zero and a
- * p-value of $0.05$ when @pvalue is zero.
- *
- * Each test applies the Cramér-von Mises statistic of the Brownian bridge of the rows from
- * a starting index to the last, with the spectral density at zero estimated by an AR fit
- * to the second half of the rows. The values reported are the Cramér-von Mises
- * cumulative distribution at the statistic, that is one minus the p-values. Sets @bindex
- * to the smallest starting index at which every value is at most $1 -$ @pvalue, and to -1
- * when no index qualifies. The returned vector contains the values at @bindex, or for the
- * full sample when no index qualifies; @wp, @wp_order and @wp_pvalue identify the
- * parameter with the largest value there, its AR order and its value. Requires
- * #NcmStatsVec:save-x and at least 10 rows.
- *
- * See:
- *
- * - [Heidelberger (1981)](https://doi.org/10.1145/358598.358630)
- * - [Schruben (1982)](https://doi.org/10.1287/opre.30.3.569)
- * - [Heidelberger (1983)](https://doi.org/10.1287/opre.31.6.1109)
+ * Calls ncm_stats_rows_heidel_diag() on the saved rows. Requires #NcmStatsVec:save-x and at
+ * least 10 rows. Deprecated with #NcmStatsVec:save-x, dropped in 1.0: read the rows from
+ * where they live and call ncm_stats_rows_heidel_diag().
  *
  * Returns: (transfer full): the Cramér-von Mises cumulative distribution values.
  */
 NcmVector *
 ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble pvalue, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_pvalue)
 {
-  NcmStatsVec *chunk   = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
-  const gint half_size = svec->nitens / 2;
-  const gint block     = (ntests == 0) ? ((half_size - 1) / 10 + 1) : ((half_size - 1) / (gint) ntests + 1);
-  const gdouble onepv  = (pvalue == 0.0) ? 0.95 : (1.0 - pvalue);
-  NcmVector *pvals     = ncm_vector_new (svec->len);
-  NcmVector *Ivals     = ncm_vector_new (svec->len);
-  NcmVector *spec0     = ncm_vector_new (svec->len);
-  NcmVector *cumsum    = ncm_vector_new (svec->len);
-  GArray *ar_order     = g_array_new (FALSE, FALSE, sizeof (guint));
-  guint c_order        = 0;
-  gint i;
-
-  g_assert_cmpuint (svec->nitens, >=, 10);
-  g_assert_cmpfloat (pvalue, <, 1.0);
-  g_assert (svec->save_x);
-
-  for (i = svec->nitens - 1; i >= half_size; i--)
-  {
-    NcmVector *row = ncm_stats_vec_peek_row (svec, i);
-
-    ncm_stats_vec_append (chunk, row, FALSE);
-  }
-
-  {
-    NcmStatsAcorr *acorr = ncm_stats_acorr_new_full (svec->len,
-                                                     NCM_STATS_ACORR_DEFAULT_MAX_LAG,
-                                                     NCM_STATS_ACORR_DEFAULT_MAX_LEVELS,
-                                                     NCM_STATS_ACORR_METHOD_AR);
-
-    for (i = svec->nitens - 1; i >= half_size; i--)
-      ncm_stats_acorr_update (acorr, ncm_stats_vec_peek_row (svec, i));
-
-    for (i = 0; i < (gint) svec->len; i++)
-    {
-      c_order = ncm_stats_acorr_get_ar_order (acorr, i);
-
-      ncm_vector_set (spec0, i, ncm_stats_acorr_get_spec0 (acorr, i));
-      g_array_append_val (ar_order, c_order);
-    }
-
-    ncm_stats_acorr_free (acorr);
-  }
-
-  bindex[0] = -1;
-  wp[0]     = 0;
-
-  for (i = half_size - 1; i >= 0; i--)
-  {
-    NcmVector *row = ncm_stats_vec_peek_row (svec, i);
-
-    ncm_stats_vec_append (chunk, row, FALSE);
-
-    if ((i % block) == 0)
-    {
-      const guint nitens = svec->nitens - i;
-      gint j;
-      guint p;
-
-      ncm_vector_set_zero (cumsum);
-      ncm_vector_set_zero (Ivals);
-
-      for (j = svec->nitens - 1; j >= i; j--)
-      {
-        NcmVector *row  = ncm_stats_vec_peek_row (svec, j);
-        const gdouble n = (svec->nitens - j);
-
-        for (p = 0; p < svec->len; p++)
-        {
-          const gdouble mean_p_n = ncm_stats_vec_get_mean (chunk, p) * n;
-          const gdouble cumsum_p = ncm_vector_get (cumsum, p) + ncm_vector_get (row, p);
-
-          ncm_vector_set (cumsum, p, cumsum_p);
-          ncm_vector_addto (Ivals, p, gsl_pow_2 (cumsum_p - mean_p_n));
-        }
-      }
-
-      {
-        gdouble max_pval = 0.0;
-        gint lwp         = 0;
-
-        for (p = 0; p < svec->len; p++)
-        {
-          const gdouble Ival_p = ncm_vector_get (Ivals, p) / (gsl_pow_2 (nitens) * ncm_vector_get (spec0, p));
-          const gdouble pval_p = _ncm_stats_vec_heidel_diag_pcramer (Ival_p);
-
-          ncm_vector_set (Ivals, p, pval_p);
-
-          if (pval_p > max_pval)
-          {
-            max_pval = pval_p;
-            lwp      = p;
-          }
-        }
-
-        if (max_pval <= onepv)
-        {
-          bindex[0] = i;
-          wp[0]     = lwp;
-
-          ncm_vector_memcpy (pvals, Ivals);
-        }
-      }
-    }
-  }
-
-  if (bindex[0] == -1)
-  {
-    ncm_vector_memcpy (pvals, Ivals);
-    wp[0] = ncm_vector_get_max_index (pvals);
-  }
-
-  wp_pvalue[0] = ncm_vector_get (pvals, wp[0]);
-  wp_order[0]  = g_array_index (ar_order, guint, wp[0]);
-
-  ncm_vector_clear (&spec0);
-  ncm_vector_clear (&cumsum);
-  ncm_vector_clear (&Ivals);
-
-  ncm_stats_vec_clear (&chunk);
-
-  g_array_unref (ar_order);
-
-  return pvals;
+  return ncm_stats_rows_heidel_diag (_ncm_stats_vec_peek_rows (svec), ntests, pvalue, bindex, wp, wp_order, wp_pvalue);
 }
 
 /**
@@ -1206,47 +986,16 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
  * @mean: (out): mean
  * @var: (out): test's variance
  *
- * Computes, for variable @p and the rows from the last down to @fi, the cumulative sums in
- * that order, their mean and the variance used by ncm_stats_vec_heidel_diag().
- *
- * See ncm_stats_vec_heidel_diag().
+ * Calls ncm_stats_rows_visual_heidel_diag() on the saved rows. Requires #NcmStatsVec:save-x
+ * and at least 10 rows. Deprecated with #NcmStatsVec:save-x, dropped in 1.0: read the rows
+ * from where they live and call ncm_stats_rows_visual_heidel_diag().
  *
  * Returns: (transfer full): the cumulative sums.
  */
 NcmVector *
 ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var)
 {
-  NcmStatsAcorr *acorr = ncm_stats_acorr_new_full (1,
-                                                   NCM_STATS_ACORR_DEFAULT_MAX_LAG,
-                                                   NCM_STATS_ACORR_DEFAULT_MAX_LEVELS,
-                                                   NCM_STATS_ACORR_METHOD_AR);
-  const guint nitens  = svec->nitens - fi;
-  gdouble cumsum      = 0.0;
-  NcmVector *cumsum_v = ncm_vector_new (nitens);
-  gint i, j = 0;
-
-  g_assert_cmpuint (svec->nitens, >=, 10);
-  g_assert_cmpuint (fi, <, svec->nitens);
-  g_assert (svec->save_x);
-
-  for (i = svec->nitens - 1; i >= (gint) fi; i--)
-  {
-    NcmVector *row      = ncm_stats_vec_peek_row (svec, i);
-    const gdouble p_val = ncm_vector_get (row, p);
-
-    cumsum += p_val;
-    ncm_vector_set (cumsum_v, j, cumsum);
-    j++;
-
-    ncm_stats_acorr_update_var (acorr, 0, p_val);
-  }
-
-  mean[0] = ncm_stats_acorr_get_mean (acorr, 0);
-  var[0]  = ncm_stats_acorr_get_spec0 (acorr, 0) * nitens;
-
-  ncm_stats_acorr_free (acorr);
-
-  return cumsum_v;
+  return ncm_stats_rows_visual_heidel_diag (_ncm_stats_vec_peek_rows (svec), p, fi, mean, var);
 }
 
 /**
@@ -1258,80 +1007,16 @@ ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint 
  * @wp_order: (out): worst parameter AR fit order
  * @wp_ess: (out): worst parameter ESS
  *
- * Finds the starting row that maximizes the smallest effective sample size (ESS) over the
- * variables, computed from that row to the last with an AR fit, testing @ntests starting
- * rows (10 when @ntests is zero). Requires #NcmStatsVec:save-x and at least 10 rows.
+ * Calls ncm_stats_rows_max_ess_time() on the saved rows. Requires #NcmStatsVec:save-x and
+ * at least 10 rows. Deprecated with #NcmStatsVec:save-x, dropped in 1.0: read the rows from
+ * where they live and call ncm_stats_rows_max_ess_time().
  *
  * Returns: (transfer full): a #NcmVector containing the best ess.
  */
 NcmVector *
 ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess)
 {
-  NcmStatsAcorr *acorr = ncm_stats_acorr_new_full (svec->len,
-                                                   NCM_STATS_ACORR_DEFAULT_MAX_LAG,
-                                                   NCM_STATS_ACORR_DEFAULT_MAX_LEVELS,
-                                                   NCM_STATS_ACORR_METHOD_AR);
-  const gint size     = svec->nitens;
-  const gint block    = (ntests == 0) ? ((size - 1) / 10 + 1) : ((size - 1) / (gint) ntests + 1);
-  NcmVector *esss_tmp = ncm_vector_new (svec->len);
-  NcmVector *esss     = ncm_vector_new (svec->len);
-  gdouble max_t_ess   = 0.0;
-  gint i, j = 0;
-
-  g_assert_cmpuint (svec->nitens, >=, 10);
-  g_assert (svec->save_x);
-
-  bindex[0] = -1;
-
-  for (i = size - 1; i >= 0; i--)
-  {
-    NcmVector *row_i = ncm_stats_vec_peek_row (svec, i);
-
-    ncm_stats_acorr_update (acorr, row_i);
-
-    if ((i == 0) || ((i % block == 0) && (j >= 99)))
-    {
-      gdouble min_ess = GSL_POSINF;
-      guint cur_size  = size - i;
-      guint lwp_order = 0;
-      guint k, lwp    = 0;
-
-      for (k = 0; k < svec->len; k++)
-      {
-        const gdouble ess   = ncm_stats_acorr_get_ess (acorr, k);
-        const gdouble c_ess = GSL_MIN (cur_size, ess);
-
-        lwp_order = ncm_stats_acorr_get_ar_order (acorr, k);
-
-        ncm_vector_set (esss_tmp, k, ess);
-
-        if (c_ess < min_ess)
-        {
-          min_ess = c_ess;
-          lwp     = k;
-        }
-      }
-
-      if (min_ess >= max_t_ess)
-      {
-        max_t_ess   = min_ess;
-        bindex[0]   = i;
-        wp_order[0] = lwp_order;
-        wp[0]       = lwp;
-
-        ncm_vector_memcpy (esss, esss_tmp);
-      }
-    }
-
-    j++;
-  }
-
-  wp_ess[0] = ncm_vector_get (esss, wp[0]);
-
-  ncm_vector_clear (&esss_tmp);
-  ncm_stats_acorr_free (acorr);
-
-  return esss;
+  return ncm_stats_rows_max_ess_time (_ncm_stats_vec_peek_rows (svec), ntests, bindex, wp, wp_order, wp_ess);
 }
 
 /**
@@ -1374,248 +1059,38 @@ ncm_stats_vec_dup_saved_x (NcmStatsVec *svec)
  * ncm_stats_vec_compute_cov_robust_diag:
  * @svec: a #NcmStatsVec
  *
- * Estimates the variance of each variable from the saved rows as the square of the Qn
- * scale estimator of Rousseeuw and Croux. Requires #NcmStatsVec:save-x and at least 4 rows.
+ * Calls ncm_stats_rows_cov_robust_diag() on the saved rows. Requires #NcmStatsVec:save-x and
+ * at least 4 rows. Deprecated with #NcmStatsVec:save-x, dropped in 1.0: read the rows from
+ * where they live and call ncm_stats_rows_cov_robust_diag().
  *
  * Returns: (transfer full): a diagonal matrix of the variances.
  */
 NcmMatrix *
 ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
 {
-  NcmMatrix *cov   = ncm_matrix_new (svec->len, svec->len);
-  GArray *data     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *work     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *work_int = g_array_new (FALSE, FALSE, sizeof (gint));
-  guint i;
-
-  if (svec->nitens < 4)
-    g_error ("ncm_stats_vec_compute_cov_robust_diag: too few points to estimate the covariance [%d].",
-             svec->nitens);
-
   if (!svec->save_x)
     g_error ("ncm_stats_vec_compute_cov_robust_diag: This algorithm requires the saved data into the object.");
 
-  g_array_set_size (data, svec->nitens);
-  g_array_set_size (work, svec->nitens * 3);
-  g_array_set_size (work_int, svec->nitens * 5);
-
-  ncm_matrix_set_zero (cov);
-
-  for (i = 0; i < svec->len; i++)
-  {
-    gdouble var_ii;
-    guint a;
-
-    for (a = 0; a < svec->nitens; a++)
-    {
-      NcmVector *theta_a      = ncm_stats_vec_peek_row (svec, a);
-      const gdouble theta_a_i = ncm_vector_get (theta_a, i);
-
-      g_array_index (data, gdouble, a) = theta_a_i;
-    }
-
-    gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
-    var_ii = gsl_stats_Qn_from_sorted_data (
-      &g_array_index (data, gdouble, 0),
-      1, svec->nitens,
-      &g_array_index (work, gdouble, 0),
-      &g_array_index (work_int, gint, 0)
-    );
-    var_ii = gsl_pow_2 (var_ii);
-    ncm_matrix_set (cov, i, i, var_ii);
-  }
-
-  g_array_unref (data);
-  g_array_unref (work);
-  g_array_unref (work_int);
-
-  return cov;
+  return ncm_stats_rows_cov_robust_diag (_ncm_stats_vec_peek_rows (svec));
 }
 
 /**
  * ncm_stats_vec_compute_cov_robust_ogk:
  * @svec: a #NcmStatsVec
  *
- * Estimates the covariance from the saved rows by the orthogonalized
- * Gnanadesikan-Kettenring (OGK) method of Maronna and Zamar (2002), with the Qn scale
- * estimator. Requires #NcmStatsVec:save-x and at least 4 rows.
+ * Calls ncm_stats_rows_cov_robust_ogk() on the saved rows. Requires #NcmStatsVec:save-x and
+ * at least 4 rows. Deprecated with #NcmStatsVec:save-x, dropped in 1.0: read the rows from
+ * where they live and call ncm_stats_rows_cov_robust_ogk().
  *
  * Returns: (transfer full): the covariance matrix.
  */
 NcmMatrix *
 ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
 {
-  NcmMatrix *cov     = ncm_matrix_new (svec->len, svec->len);
-  NcmMatrix *E       = ncm_matrix_new (svec->len, svec->len);
-  NcmMatrix *y       = ncm_matrix_new (svec->nitens, svec->len);
-  NcmMatrix *z       = ncm_matrix_new (svec->len, svec->nitens);
-  NcmVector *sigma_x = ncm_vector_new (svec->len);
-  NcmVector *sigma_z = ncm_vector_new (svec->len);
-  GArray *data       = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *work       = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *work_int   = g_array_new (FALSE, FALSE, sizeof (gint));
-  guint a, i;
-
-  if (svec->nitens < 4)
-    g_error ("ncm_stats_vec_compute_cov_robust_ogk: too few points to estimate the covariance [%d].",
-             svec->nitens);
-
   if (!svec->save_x)
     g_error ("ncm_stats_vec_compute_cov_robust_ogk: This algorithm requires the saved data into the object.");
 
-  g_array_set_size (data, svec->nitens);
-  g_array_set_size (work, svec->nitens * 3);
-  g_array_set_size (work_int, svec->nitens * 5);
-
-  for (a = 0; a < svec->nitens; a++)
-  {
-    NcmVector *theta_a = ncm_stats_vec_peek_row (svec, a);
-
-    ncm_matrix_set_row (y, a, theta_a);
-  }
-
-  for (i = 0; i < svec->len; i++)
-  {
-    gdouble sigma_i;
-
-    for (a = 0; a < svec->nitens; a++)
-    {
-      NcmVector *theta_a      = ncm_stats_vec_peek_row (svec, a);
-      const gdouble theta_a_i = ncm_vector_get (theta_a, i);
-
-      g_array_index (data, gdouble, a) = theta_a_i;
-    }
-
-    gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
-    sigma_i = gsl_stats_Qn_from_sorted_data (
-      &g_array_index (data, gdouble, 0),
-      1, svec->nitens,
-      &g_array_index (work, gdouble, 0),
-      &g_array_index (work_int, gint, 0)
-    );
-
-    ncm_vector_set (sigma_x, i, sigma_i);
-    ncm_matrix_mul_col (y, i, 1.0 / sigma_i);
-  }
-
-  ncm_matrix_set_identity (cov);
-
-  for (i = 0; i < svec->len; i++)
-  {
-    guint j;
-
-    for (j = i + 1; j < svec->len; j++)
-    {
-      gdouble s_ipj, s_imj;
-
-      for (a = 0; a < svec->nitens; a++)
-      {
-        const gdouble y_a_i = ncm_matrix_get (y, a, i);
-        const gdouble y_a_j = ncm_matrix_get (y, a, j);
-
-        g_array_index (data, gdouble, a) = y_a_i + y_a_j;
-      }
-
-      gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
-      s_ipj = gsl_stats_Qn_from_sorted_data (
-        &g_array_index (data, gdouble, 0),
-        1, svec->nitens,
-        &g_array_index (work, gdouble, 0),
-        &g_array_index (work_int, gint, 0)
-      );
-
-      for (a = 0; a < svec->nitens; a++)
-      {
-        const gdouble y_a_i = ncm_matrix_get (y, a, i);
-        const gdouble y_a_j = ncm_matrix_get (y, a, j);
-
-        g_array_index (data, gdouble, a) = y_a_i - y_a_j;
-      }
-
-      gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
-      s_imj = gsl_stats_Qn_from_sorted_data (
-        &g_array_index (data, gdouble, 0),
-        1, svec->nitens,
-        &g_array_index (work, gdouble, 0),
-        &g_array_index (work_int, gint, 0)
-      );
-      ncm_matrix_set (cov, i, j, 0.25 * (s_ipj * s_ipj - s_imj * s_imj));
-    }
-  }
-
-  {
-    NcmLapackWS *lapack_work = ncm_lapack_ws_new ();
-    gint neval;
-    gint info;
-
-    info = ncm_lapack_dsyevr ('V', 'A', 'U', svec->len,
-                              ncm_matrix_data (cov), ncm_matrix_tda (cov),
-                              0.0, 0.0, 0.0, 0.0,
-                              0.0, &neval, &g_array_index (data, gdouble, 0),
-                              ncm_matrix_data (E), ncm_matrix_tda (E),
-                              &g_array_index (work_int, gint, 0),
-                              lapack_work);
-
-    NCM_LAPACK_CHECK_INFO ("dsyevr", info);
-
-    ncm_lapack_ws_free (lapack_work);
-  }
-
-  {
-    ncm_matrix_dgemm (z, 'N', 'T', 1.0, E, y, 0.0);
-
-    for (i = 0; i < svec->len; i++)
-    {
-      gdouble sigma_z_i;
-
-      for (a = 0; a < svec->nitens; a++)
-      {
-        const gdouble z_a_i = ncm_matrix_get (z, i, a);
-
-        g_array_index (data, gdouble, a) = z_a_i;
-      }
-
-      gsl_sort (&g_array_index (data, gdouble, 0), 1, svec->nitens);
-      sigma_z_i = gsl_stats_Qn_from_sorted_data (
-        &g_array_index (data, gdouble, 0),
-        1, svec->nitens,
-        &g_array_index (work, gdouble, 0),
-        &g_array_index (work_int, gint, 0)
-      );
-
-      ncm_vector_set (sigma_z, i, sigma_z_i);
-    }
-  }
-
-  for (i = 0; i < svec->len; i++)
-  {
-    const gdouble sigma_z_i = ncm_vector_get (sigma_z, i);
-    guint j;
-
-    for (j = 0; j < svec->len; j++)
-    {
-      const gdouble sigma_x_j = ncm_vector_get (sigma_x, j);
-      const gdouble E_ij      = ncm_matrix_get (E, i, j);
-      const gdouble V_ij      = sigma_z_i * E_ij * sigma_x_j;
-
-      ncm_matrix_set (E, i, j, V_ij);
-    }
-  }
-
-  /* dsyrk writes one triangle; the caller gets a full covariance matrix. */
-  ncm_matrix_dsyrk (cov, 'U', 'T', 1.0, E, 0.0);
-  ncm_matrix_copy_triangle (cov, 'U');
-
-  g_array_unref (data);
-  g_array_unref (work);
-  g_array_unref (work_int);
-  ncm_matrix_free (y);
-  ncm_matrix_free (z);
-  ncm_matrix_free (E);
-  ncm_vector_free (sigma_x);
-  ncm_vector_free (sigma_z);
-
-  return cov;
+  return ncm_stats_rows_cov_robust_ogk (_ncm_stats_vec_peek_rows (svec));
 }
 
 /**
