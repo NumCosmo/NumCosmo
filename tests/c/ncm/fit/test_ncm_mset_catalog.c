@@ -2498,12 +2498,36 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
   res = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_NONE);
   g_assert_cmpuint (ncm_matrix_ncols (res), ==, 2);
 
-  /* The limits sit inside the range of theta_0 and below that of 2 theta_0. */
+  /*
+   * The p-value of limit j at x_k is zero at or below the smallest value of x_k theta_0,
+   * one at or above the largest, and strictly between them inside. The limit 0.9 is above
+   * every draw of theta_0 with probability 0.9^40, about 1.5%.
+   */
   for (k = 0; k < 2; k++)
   {
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), >, 0.0);
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), <, ncm_matrix_get (res, k, 1));
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), <, 1.0);
+    const gdouble x_k = ncm_vector_get (x_v, k);
+    guint j;
+
+    for (j = 0; j < 2; j++)
+    {
+      const gdouble pv_kj = ncm_matrix_get (res, k, j);
+
+      if (ps[j] <= x_k * p0[0])
+      {
+        g_assert_cmpfloat (pv_kj, ==, 0.0);
+      }
+      else if (ps[j] >= x_k * p0[n - 1])
+      {
+        g_assert_cmpfloat (pv_kj, ==, 1.0);
+      }
+      else
+      {
+        g_assert_cmpfloat (pv_kj, >, 0.0);
+        g_assert_cmpfloat (pv_kj, <, 1.0);
+      }
+    }
+
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), <=, ncm_matrix_get (res, k, 1));
   }
 
   g_assert_cmpfloat (ncm_matrix_get (res, 1, 0), <, ncm_matrix_get (res, 0, 0));
