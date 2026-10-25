@@ -942,7 +942,7 @@ ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gbool
  *
  * Creates a #NcmMSetCatalog from the catalog in @filename, synchronized with it. The
  * model set is read from the file, or for older files from the file with the same base
- * name and the .mset extension.
+ * name and the .mset extension. @burnin is applied as in ncm_mset_catalog_set_burnin().
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
@@ -1717,6 +1717,16 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     fits_get_num_rows (self->fptr, &nrows, &status);
     NCM_FITS_ERROR (status);
 
+    if (self->file_first_id % (gint) self->nchains != 0)
+      g_error ("_ncm_mset_catalog_open_create_file: the first id %d of catalog `%s' is not a "
+               "multiple of its number of chains %u.",
+               self->file_first_id, self->file, self->nchains);
+
+    if (self->burnin % self->nchains != 0)
+      g_error ("_ncm_mset_catalog_open_create_file: burnin of %ld row(s) is not a multiple of "
+               "the number of chains %u of catalog `%s'.",
+               self->burnin, self->nchains, self->file);
+
     if (nrows < self->burnin)
       g_error ("_ncm_mset_catalog_open_create_file: burnin of %ld row(s) exceeds "
                "catalog `%s' (%ld row(s), %u chain(s), i.e. %ld iteration(s)).",
@@ -2173,8 +2183,9 @@ ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval)
  * @mcat: a #NcmMSetCatalog
  * @first_id: id of the first row
  *
- * Sets the id of the first row, e.g. the realization a #NcmFitMC catalog starts at. On a
- * non-empty catalog it aborts.
+ * Sets the id of the first row, e.g. the realization a #NcmFitMC catalog starts at. Row
+ * $t$ belongs to chain $t \bmod n_\mathrm{chains}$ only when @first_id is a multiple of the
+ * number of chains, so any other value aborts, as does a non-empty catalog.
  *
  */
 void
@@ -2191,6 +2202,10 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
   if (!ncm_mset_catalog_is_empty (mcat))
     g_error ("ncm_mset_catalog_set_first_id: cannot modify first_id to %d in a non-empty catalog, catalog first id: %d, catalog current id: %d.",
              first_id, self->first_id, self->cur_id);
+
+  if (first_id % (gint) self->nchains != 0)
+    g_error ("ncm_mset_catalog_set_first_id: first_id %d is not a multiple of the number of chains %u.",
+             first_id, self->nchains);
 
   self->first_id = first_id;
   self->cur_id   = first_id - 1;
@@ -3126,7 +3141,9 @@ ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *co
  *
  * Sets the number of leading rows of the file that are not read; the ids of the rows
  * read start after them. It applies only when rows are loaded from a file, so it must be
- * set before that, and is meant for analyzing a catalog.
+ * set before that, and is meant for analyzing a catalog. Loading aborts when @burnin is
+ * not a multiple of the number of chains, since the rows read would then be assigned to
+ * the wrong chains.
  *
  */
 void
