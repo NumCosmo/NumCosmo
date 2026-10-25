@@ -3107,12 +3107,15 @@ class Fit(GObject.Object):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -3131,6 +3134,7 @@ class Fit(GObject.Object):
     parent_instance: GObject.Object = ...
     def __init__(
         self,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -3927,12 +3931,15 @@ class FitGSLLS(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -3950,6 +3957,7 @@ class FitGSLLS(Fit):
     props: Props = ...
     def __init__(
         self,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4022,6 +4030,8 @@ class FitGSLMM(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4029,6 +4039,7 @@ class FitGSLMM(Fit):
 
     class Props:
         algorithm: FitGSLMMAlgos
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4047,6 +4058,7 @@ class FitGSLMM(Fit):
     def __init__(
         self,
         algorithm: FitGSLMMAlgos = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4134,6 +4146,8 @@ class FitGSLMMS(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4141,6 +4155,7 @@ class FitGSLMMS(Fit):
 
     class Props:
         algorithm: FitGSLMMSAlgos
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4159,6 +4174,7 @@ class FitGSLMMS(Fit):
     def __init__(
         self,
         algorithm: FitGSLMMSAlgos = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4262,6 +4278,8 @@ class FitLevmar(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4269,6 +4287,7 @@ class FitLevmar(Fit):
 
     class Props:
         algorithm: FitLevmarAlgos
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4287,6 +4306,7 @@ class FitLevmar(Fit):
     def __init__(
         self,
         algorithm: FitLevmarAlgos = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -4603,6 +4623,8 @@ class FitNLOpt(Fit):
         Inequality constraints tolerance
       sub-fit -> NcmFit: sub-fit
         Subsidiary fit
+      diff -> NcmDiff: diff
+        Numerical differentiation object
 
     Signals from GObject:
       notify (GParam)
@@ -4611,6 +4633,7 @@ class FitNLOpt(Fit):
     class Props:
         algorithm: FitNloptAlgorithm
         local_algorithm: FitNloptAlgorithm
+        diff: Diff
         equality_constraints: ObjArray
         equality_constraints_tot: Vector
         grad_type: FitGradType
@@ -4630,6 +4653,7 @@ class FitNLOpt(Fit):
         self,
         algorithm: FitNloptAlgorithm = ...,
         local_algorithm: FitNloptAlgorithm = ...,
+        diff: Diff = ...,
         equality_constraints: ObjArray = ...,
         equality_constraints_tot: Vector = ...,
         grad_type: FitGradType = ...,
@@ -5634,6 +5658,7 @@ class Likelihood(GObject.Object):
     def priors_leastsquares_f(self, mset: MSet, priors_f: Vector) -> None: ...
     def priors_length_f(self) -> int: ...
     def priors_length_m2lnL(self) -> int: ...
+    def priors_ls_len(self) -> int: ...
     def priors_m2lnL_val(self, mset: MSet) -> float: ...
     def priors_m2lnL_vec(self, mset: MSet, priors_m2lnL_v: Vector) -> None: ...
     def priors_peek_f(self, i: int) -> Prior: ...
@@ -6298,6 +6323,7 @@ class MSetCatalog(GObject.Object):
     def get_burnin(self) -> int: ...
     def get_covar(self) -> Matrix: ...
     def get_cur_id(self) -> int: ...
+    def get_diag_rows(self) -> StatsRows: ...
     def get_ess(self, p: int) -> float: ...
     def get_first_id(self) -> int: ...
     def get_full_covar(self) -> Matrix: ...
@@ -6603,6 +6629,7 @@ class MSetFuncList(MSetFunc):
 
         MSetFuncList(**properties)
         new(full_name:str, obj:GObject.Object=None) -> NumCosmoMath.MSetFuncList
+        new_dim(full_name:str, obj:GObject.Object=None, dim:int) -> NumCosmoMath.MSetFuncList
         new_ns_name(ns:str, name:str, obj:GObject.Object=None) -> NumCosmoMath.MSetFuncList
 
     Object NcmMSetFuncList
@@ -6652,6 +6679,10 @@ class MSetFuncList(MSetFunc):
     @classmethod
     def new(
         cls, full_name: str, obj: typing.Optional[GObject.Object] = None
+    ) -> MSetFuncList: ...
+    @classmethod
+    def new_dim(
+        cls, full_name: str, obj: typing.Optional[GObject.Object], dim: int
     ) -> MSetFuncList: ...
     @classmethod
     def new_ns_name(
@@ -9128,7 +9159,7 @@ class PriorGauss(Prior):
     ) -> None: ...
     @staticmethod
     def clear(pg: PriorGauss) -> None: ...
-    def do_mean(self, mset: MSet) -> float: ...
+    def do_mean(self, mset: MSet, x: float) -> None: ...
     def free(self) -> None: ...
     def get_mean(self) -> float: ...
     def get_sigma(self) -> float: ...
@@ -9148,7 +9179,7 @@ class PriorGaussClass(GObject.GPointer):
     """
 
     parent_class: PriorClass = ...
-    mean: typing.Callable[[PriorGauss, MSet], float] = ...
+    mean: typing.Callable[[PriorGauss, MSet, float], None] = ...
     padding: list[None] = ...
 
 class PriorGaussFunc(PriorGauss):
@@ -11305,6 +11336,17 @@ class Spline(GObject.Object):
     def clear(s: Spline) -> None: ...
     def copy(self) -> Spline: ...
     def copy_empty(self) -> Spline: ...
+    def curvature_d2_lp_residuals(
+        self,
+        weight: typing.Optional[Spline],
+        p: int,
+        xi: float,
+        xf: float,
+        f: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> None: ...
+    def curvature_d2_lp_residuals_len(
+        self, weight: typing.Optional[Spline], p: int, xi: float, xf: float
+    ) -> int: ...
     def curvature_density(self, ctype: SplineCurvatureType, x: float) -> float: ...
     def curvature_lp_norm(
         self, ctype: SplineCurvatureType, p: float, xi: float, xf: float
@@ -13241,6 +13283,66 @@ class StatsDistVKDEClass(GObject.GPointer):
 
     parent_class: StatsDistKDEClass = ...
     padding: list[None] = ...
+
+class StatsRows(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        StatsRows(**properties)
+        new(ncols:int) -> NumCosmoMath.StatsRows
+
+    Object NcmStatsRows
+
+    Properties from NcmStatsRows:
+      ncols -> guint: ncols
+        Number of columns
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        ncols: int
+
+    props: Props = ...
+    def __init__(self, ncols: int = ...) -> None: ...
+    @staticmethod
+    def clear(rows: StatsRows) -> None: ...
+    def cov_robust_diag(self, cov: Matrix) -> None: ...
+    def cov_robust_ogk(self, cov: Matrix) -> None: ...
+    def estimate_const_break(self, p: int) -> float: ...
+    def free(self) -> None: ...
+    def get_ncols(self) -> int: ...
+    def get_nrows(self) -> int: ...
+    def heidel_diag(
+        self, ntests: int, pvalue: float
+    ) -> typing.Tuple[Vector, int, int, int, float]: ...
+    def max_ess_time(
+        self, ntests: int
+    ) -> typing.Tuple[Vector, int, int, int, float]: ...
+    @classmethod
+    def new(cls, ncols: int) -> StatsRows: ...
+    def peek_row(self, i: int) -> Vector: ...
+    def ref(self) -> StatsRows: ...
+    def reset(self) -> None: ...
+    def set_nrows(self, nrows: int) -> None: ...
+    def set_rows(self, sample: typing.Sequence[Vector]) -> None: ...
+    def visual_heidel_diag(
+        self, p: int, fi: int
+    ) -> typing.Tuple[Vector, float, float]: ...
+
+class StatsRowsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        StatsRowsClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class StatsVec(GObject.Object):
     r"""

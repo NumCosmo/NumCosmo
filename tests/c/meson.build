@@ -175,6 +175,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_acorr.c'],
     },
     {
+        'name': 'ncm_stats_rows',
+        'sources': ['ncm/stats/test_ncm_stats_rows.c'],
+    },
+    {
         'name': 'ncm_stats_dist1d',
         'sources': ['ncm/stats/test_ncm_stats_dist1d.c'],
     },
@@ -554,6 +558,14 @@ model_tests = [
         'sources': ['nc/background/test_nc_hicosmo_de.c'],
     },
     {
+        'name': 'nc_hicosmo_de_wspline',
+        'sources': ['nc/background/test_nc_hicosmo_de_wspline.c'],
+    },
+    {
+        'name': 'nc_hicosmo_qspline',
+        'sources': ['nc/background/test_nc_hicosmo_qspline.c'],
+    },
+    {
         'name': 'nc_hicosmo_qgw',
         'sources': ['nc/background/test_nc_hicosmo_qgw.c'],
     },
@@ -656,8 +668,17 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
     {
+        'name': 'nc_data_hubble_cov',
+        'sources': ['nc/data/test_nc_data_hubble_cov.c'],
+    },
+    {
         'name': 'nc_data_snia_cov',
         'sources': ['nc/data/test_nc_data_snia_cov.c'],
+    },
+    {
+        'name': 'nc_data_snia_cov_fit',
+        'sources': ['nc/data/test_nc_data_snia_cov_fit.c'],
+        'suite': ['c-acceptance'],
     },
     # Truth-table validation of NcDataClusterWLFactor's integration methods:
     # regenerates a curated sample from a fixed seed (nothing stored) and
@@ -669,6 +690,10 @@ data_tests = [
         'name': 'nc_data_cluster_wl_factor_truth',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
         'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'nc_data_cluster_wl_factor_node_config',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_node_config.c'],
     },
 ]
 
@@ -770,6 +795,10 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_position_factor',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
+    },
+    {
+        'name': 'nc_galaxy_shape_factor_moments_tilt',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
     },
 ]
 

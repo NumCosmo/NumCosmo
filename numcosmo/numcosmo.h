@@ -200,10 +200,13 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_beta.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>
 
@@ -218,6 +221,7 @@
 #include <numcosmo/nc/data/nc_data_download.h>
 #include <numcosmo/nc/data/nc_data_hubble.h>
 #include <numcosmo/nc/data/nc_data_hubble_bao.h>
+#include <numcosmo/nc/data/nc_data_hubble_cov.h>
 #include <numcosmo/nc/data/nc_data_bao_a.h>
 #include <numcosmo/nc/data/nc_data_bao_dv.h>
 #include <numcosmo/nc/data/nc_data_bao_rdv.h>

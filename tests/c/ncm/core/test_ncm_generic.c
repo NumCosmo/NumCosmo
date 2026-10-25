@@ -40,6 +40,7 @@ void test_ncm_data_gaussmix2d_basic (void);
 void test_ncm_data_rosenbrock_basic (void);
 void test_ncm_dataset_basic (void);
 void test_ncm_fftlog_basic (void);
+void test_ncm_stats_rows_basic (void);
 void test_ncm_sphere_nn (void);
 void test_ncm_sphere_xi (void);
 void test_ncm_timer_basic (void);
@@ -124,6 +125,8 @@ void test_nc_galaxy_shape_factor_basic (void);
 void test_nc_galaxy_shape_factor_quad_basic (void);
 void test_nc_galaxy_shape_factor_series_lensed_basic (void);
 void test_nc_galaxy_shape_factor_fixed_quad_basic (void);
+void test_nc_galaxy_shape_factor_moments_tilt_basic (void);
+void test_nc_galaxy_shape_factor_moments_gauss_basic (void);
 void test_nc_galaxy_shape_pop_gauss_basic (void);
 void test_nc_wl_ellipticity_series_trace_basic (void);
 void test_nc_wl_ellipticity_series_trace_det_basic (void);
@@ -144,6 +147,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/data_rosenbrock/basic", test_ncm_data_rosenbrock_basic);
   g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
   g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
+  g_test_add_func ("/ncm/stats_rows/basic", test_ncm_stats_rows_basic);
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
@@ -231,6 +235,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/shape_factor_quad/basic", test_nc_galaxy_shape_factor_quad_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_series_lensed/basic", test_nc_galaxy_shape_factor_series_lensed_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_fixed_quad/basic", test_nc_galaxy_shape_factor_fixed_quad_basic);
+  g_test_add_func ("/nc/galaxy/shape_factor_moments_tilt/basic", test_nc_galaxy_shape_factor_moments_tilt_basic);
+  g_test_add_func ("/nc/galaxy/shape_factor_moments_gauss/basic", test_nc_galaxy_shape_factor_moments_gauss_basic);
   g_test_add_func ("/nc/galaxy/shape_pop_gauss/basic", test_nc_galaxy_shape_pop_gauss_basic);
   g_test_add_func ("/nc/wl_ellipticity_series/trace/basic", test_nc_wl_ellipticity_series_trace_basic);
   g_test_add_func ("/nc/wl_ellipticity_series/trace_det/basic", test_nc_wl_ellipticity_series_trace_det_basic);
@@ -506,6 +512,26 @@ test_ncm_fftlog_basic (void)
   g_assert_true (NCM_IS_FFTLOG (fftlog));
 
   NCM_TEST_FREE (ncm_fftlog_free, fftlog);
+}
+
+void
+test_ncm_stats_rows_basic (void)
+{
+  NcmStatsRows *rows = ncm_stats_rows_new (2);
+  NcmStatsRows *rows2;
+
+  g_assert_true (rows != NULL);
+  g_assert_true (NCM_IS_STATS_ROWS (rows));
+  g_assert_cmpuint (ncm_stats_rows_get_ncols (rows), ==, 2);
+  g_assert_cmpuint (ncm_stats_rows_get_nrows (rows), ==, 0);
+
+  rows2 = ncm_stats_rows_ref (rows);
+  ncm_stats_rows_clear (&rows2);
+  g_assert_true (rows2 == NULL);
+
+  g_assert_true (NCM_IS_STATS_ROWS (rows));
+
+  NCM_TEST_FREE (ncm_stats_rows_free, rows);
 }
 
 void
@@ -1944,6 +1970,42 @@ test_nc_galaxy_shape_factor_fixed_quad_basic (void)
   g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_FIXED_QUAD (gsffq));
 
   NCM_TEST_FREE (nc_galaxy_shape_factor_fixed_quad_free, gsffq);
+}
+
+void
+test_nc_galaxy_shape_factor_moments_tilt_basic (void)
+{
+  NcGalaxyShapeFactorMomentsTilt *gsfm = nc_galaxy_shape_factor_moments_tilt_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
+  NcGalaxyShapeFactorMomentsTilt *gsfm2;
+
+  g_assert_true (gsfm != NULL);
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (gsfm));
+
+  gsfm2 = nc_galaxy_shape_factor_moments_tilt_ref (gsfm);
+  nc_galaxy_shape_factor_moments_tilt_clear (&gsfm2);
+  g_assert_true (gsfm2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (gsfm));
+
+  NCM_TEST_FREE (nc_galaxy_shape_factor_moments_tilt_free, gsfm);
+}
+
+void
+test_nc_galaxy_shape_factor_moments_gauss_basic (void)
+{
+  NcGalaxyShapeFactorMomentsGauss *gsfm = nc_galaxy_shape_factor_moments_gauss_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
+  NcGalaxyShapeFactorMomentsGauss *gsfm2;
+
+  g_assert_true (gsfm != NULL);
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS (gsfm));
+
+  gsfm2 = nc_galaxy_shape_factor_moments_gauss_ref (gsfm);
+  nc_galaxy_shape_factor_moments_gauss_clear (&gsfm2);
+  g_assert_true (gsfm2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS (gsfm));
+
+  NCM_TEST_FREE (nc_galaxy_shape_factor_moments_gauss_free, gsfm);
 }
 
 void

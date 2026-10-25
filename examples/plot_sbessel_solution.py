@@ -9,11 +9,10 @@ for a specific l and k value.
 import json
 import gzip
 from pathlib import Path
-from typing import Tuple
+from typing import Annotated, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import typer
-from typing_extensions import Annotated
 from numcosmo_py import Ncm
 
 # Initialize NumCosmo

@@ -82,6 +82,7 @@
 #include "ncm/data/ncm_data_gaussmix2d.h"
 #include "ncm/stats/ncm_stats_acorr.h"
 #include "ncm/stats/ncm_stats_vec.h"
+#include "ncm/stats/ncm_stats_rows.h"
 #include "ncm/fit/ncm_fit_esmcmc_walker_stretch.h"
 #include "ncm/data/ncm_data.h"
 #include "ncm/stats/ncm_stats_dist1d_epdf.h"
@@ -215,6 +216,8 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_cgf.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h"
@@ -260,6 +263,7 @@
 #include "nc/data/nc_data_cmb_shift_param.h"
 #include "nc/data/nc_data_cmb_dist_priors.h"
 #include "nc/data/nc_data_hubble.h"
+#include "nc/data/nc_data_hubble_cov.h"
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/data/nc_data_xcor.h"
 #include "nc/data/nc_data_planck_lkl.h"
@@ -848,6 +852,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
   ncm_cfg_register_obj (NCM_TYPE_STATS_ACORR);
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
+  ncm_cfg_register_obj (NCM_TYPE_STATS_ROWS);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
 
@@ -1017,6 +1022,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_FIXED_QUAD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_SERIES_LENSED);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_CGF);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_TILT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS_LOCAL);
@@ -1069,6 +1076,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_HCOSMO_BI_DIST_MU);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
+  ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 

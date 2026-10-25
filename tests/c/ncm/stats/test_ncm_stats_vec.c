@@ -105,6 +105,9 @@ void test_ncm_stats_vec_invalid_get_var (TestNcmStatsVec *test, gconstpointer pd
 static void test_ncm_stats_vec_reset_mean (void);
 static void test_ncm_stats_vec_strided (void);
 static void test_ncm_stats_vec_quantile_replay (void);
+static void test_ncm_stats_vec_quantile_late_traps (void);
+static void test_ncm_stats_vec_quantile_late_subprocess (void);
+static void test_ncm_stats_vec_save_x_warned_once (void);
 static void test_ncm_stats_vec_bad_length_subprocess (void);
 static void test_ncm_stats_vec_cov_matrix_var_subprocess (void);
 static void test_ncm_stats_vec_input_traps (void);
@@ -125,6 +128,11 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
+
+  /* The first NcmStatsVec with save-x warns once per process; later ones in the tests do not. */
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*save-x is deprecated*");
+  ncm_stats_vec_free (ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE));
+  g_test_assert_expected_messages ();
 
   /* Default vector allocation */
 
@@ -201,6 +209,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/stats_vec/reset_mean", &test_ncm_stats_vec_reset_mean);
   g_test_add_func ("/ncm/stats_vec/strided", &test_ncm_stats_vec_strided);
   g_test_add_func ("/ncm/stats_vec/quantile_replay", &test_ncm_stats_vec_quantile_replay);
+  g_test_add_func ("/ncm/stats_vec/quantile_late/traps", &test_ncm_stats_vec_quantile_late_traps);
+  g_test_add_func ("/ncm/stats_vec/quantile_late/subprocess", &test_ncm_stats_vec_quantile_late_subprocess);
+  g_test_add_func ("/ncm/stats_vec/save_x/warned_once", &test_ncm_stats_vec_save_x_warned_once);
   g_test_add_func ("/ncm/stats_vec/input_traps", &test_ncm_stats_vec_input_traps);
   g_test_add_func ("/ncm/stats_vec/input_traps/bad_length/subprocess", &test_ncm_stats_vec_bad_length_subprocess);
   g_test_add_func ("/ncm/stats_vec/input_traps/cov_matrix_var/subprocess", &test_ncm_stats_vec_cov_matrix_var_subprocess);
@@ -692,12 +703,15 @@ test_ncm_stats_vec_diag_visual (TestNcmStatsVec *test, gconstpointer pdata)
   {
     gdouble mean = 0.0;
     gdouble var  = 0.0;
+    NcmVector *cumsum;
 
-    ncm_stats_vec_visual_heidel_diag (test->svec, p, 0, &mean, &var);
+    cumsum = ncm_stats_vec_visual_heidel_diag (test->svec, p, 0, &mean, &var);
 
     g_assert_true (gsl_finite (mean));
     g_assert_true (gsl_finite (var));
     g_assert_cmpfloat (var, >, 0.0);
+
+    ncm_vector_free (cumsum);
   }
 }
 
@@ -863,6 +877,39 @@ test_ncm_stats_vec_strided (void)
   }
 
   ncm_matrix_free (m);
+}
+
+/* Enabling the quantiles after a row without save-x aborts: the rows are not there to replay. */
+static void
+test_ncm_stats_vec_quantile_late_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/stats_vec/quantile_late/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*must be enabled before the first row*");
+}
+
+static void
+test_ncm_stats_vec_quantile_late_subprocess (void)
+{
+  NcmStatsVec *svec = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, FALSE);
+
+  ncm_stats_vec_set (svec, 0, 1.0);
+  ncm_stats_vec_update (svec);
+  ncm_stats_vec_enable_quantile (svec, 0.5);
+
+  g_assert_not_reached ();
+}
+
+/* main() saw the warning of the first NcmStatsVec with save-x; another one is silent, and a
+ * warning would abort here. */
+static void
+test_ncm_stats_vec_save_x_warned_once (void)
+{
+  NcmStatsVec *svec = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, TRUE);
+
+  g_assert_true (ncm_stats_vec_nrows (svec) == 0);
+
+  ncm_stats_vec_free (svec);
 }
 
 /* Enabling the quantiles late replays the saved rows except those of zero weight */

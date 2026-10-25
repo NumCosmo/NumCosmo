@@ -39,6 +39,7 @@
 #include <gsl/gsl_sf_trig.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_eigen.h>
+#include <gsl/gsl_sort.h>
 
 #include "test_ncm_stats_dist_common.h"
 
@@ -114,6 +115,8 @@ static void test_ncm_stats_dist_kde_lscv_shrink (void);
 static void test_ncm_stats_dist_kde_cov_fixed_reprepare (void);
 static void test_ncm_stats_dist_print_fit (void);
 static void test_ncm_stats_dist_kde_cov_fixed_nearPD (void);
+static void test_ncm_stats_dist_kde_robust_rows (void);
+static void test_ncm_stats_dist_vkde_robust_rows (void);
 
 static gboolean _test_ncm_stats_dist_is_divergence_check (const gchar *name);
 
@@ -224,6 +227,10 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
                      &test_ncm_stats_dist_print_fit);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cov_fixed/nearPD",
                      &test_ncm_stats_dist_kde_cov_fixed_nearPD);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/robust_rows",
+                     &test_ncm_stats_dist_kde_robust_rows);
+    g_test_add_func ("/ncm/stats/dist/nd/vkde/gauss/robust_rows",
+                     &test_ncm_stats_dist_vkde_robust_rows);
     g_test_add_func ("/ncm/stats/dist/nd/vkde/gauss/points_per_dim",
                      &test_ncm_stats_dist_vkde_points_per_dim);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cv_objectives",
@@ -474,6 +481,36 @@ _test_ncm_stats_dist_kde_gauss_new (const guint d, const guint n, const NcmStats
   ncm_stats_dist_kernel_free (kernel);
 
   return sd;
+}
+
+/* Adds a correlated Gaussian sample of n points to sd and writes their -2lnL, the squared
+ * norm of each point, in m2lnL. */
+static void
+_test_ncm_stats_dist_robust_rows_fill (NcmStatsDist *sd, const guint n, NcmVector *m2lnL)
+{
+  const guint d = ncm_stats_dist_get_dim (sd);
+  NcmRNG *rng   = ncm_rng_seeded_new (NULL, 20261025);
+  NcmVector *y  = ncm_vector_new (d);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    gdouble z0 = 0.0;
+
+    for (j = 0; j < d; j++)
+    {
+      const gdouble z = ncm_rng_ugaussian_gen (rng);
+
+      ncm_vector_set (y, j, (1.0 + j) * z + 0.5 * z0);
+      z0 = z;
+    }
+
+    ncm_stats_dist_add_obs (sd, y);
+    ncm_vector_set (m2lnL, i, ncm_vector_dot (y, y));
+  }
+
+  ncm_vector_free (y);
+  ncm_rng_free (rng);
 }
 
 /* ln N (x - y; 0, s^2 Sigma) with Sigma = U^T U, through GSL. */
@@ -1555,7 +1592,9 @@ test_ncm_stats_dist_sanity (TestNcmStatsDist *test, gconstpointer pdata)
     ncm_stats_dist_kernel_free (kernel);
 
     ncm_stats_dist_set_kernel (test->sd, NCM_STATS_DIST_KERNEL (sdk_gauss));
-    g_assert_true (NCM_STATS_DIST_KERNEL (sdk_gauss) == ncm_stats_dist_get_kernel (test->sd));
+    g_assert_true (NCM_STATS_DIST_KERNEL (sdk_gauss) == ncm_stats_dist_peek_kernel (test->sd));
+
+    ncm_stats_dist_kernel_gauss_free (sdk_gauss);
   }
 }
 
@@ -2634,6 +2673,165 @@ test_ncm_stats_dist_kde_cov_fixed_nearPD (void)
   ncm_vector_free (x);
   ncm_rng_free (rng);
   ncm_matrix_free (cov);
+  ncm_stats_dist_free (sd);
+  ncm_stats_dist_kernel_free (kernel);
+}
+
+static void
+test_ncm_stats_dist_kde_robust_rows (void)
+{
+  /*
+   * With the robust covariance types the KDE scale matrix is the robust covariance of the
+   * kernel points, the first n_kernels rows of the sample array. The split makes n_kernels
+   * smaller than the sample size, so a covariance of the whole sample would not match.
+   */
+  const NcmStatsDistKDECovType cov_type[] = {NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG, NCM_STATS_DIST_KDE_COV_TYPE_ROBUST};
+  const guint d                           = 3;
+  const guint n                           = 300;
+  NcmStatsDistKernel *kernel              = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDistKDE *sdkde                  = ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP);
+  NcmStatsDist *sd                        = NCM_STATS_DIST (sdkde);
+  NcmVector *m2lnL                        = ncm_vector_new (n);
+  NcmStatsRows *rows                      = ncm_stats_rows_new (d);
+  NcmMatrix *cov                          = ncm_matrix_new (d, d);
+  guint t, p, q;
+
+  ncm_stats_dist_set_split_frac (sd, 0.5);
+  _test_ncm_stats_dist_robust_rows_fill (sd, n, m2lnL);
+
+  for (t = 0; t < G_N_ELEMENTS (cov_type); t++)
+  {
+    ncm_stats_dist_kde_set_cov_type (sdkde, cov_type[t]);
+    ncm_stats_dist_prepare (sd, m2lnL);
+
+    g_assert_cmpuint (ncm_stats_dist_get_n_kernels (sd), <, ncm_stats_dist_get_sample_size (sd));
+
+    ncm_stats_rows_set_rows (rows, ncm_stats_dist_peek_sample_array (sd));
+    ncm_stats_rows_set_nrows (rows, ncm_stats_dist_get_n_kernels (sd));
+
+    if (cov_type[t] == NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG)
+      ncm_stats_rows_cov_robust_diag (rows, cov);
+    else
+      ncm_stats_rows_cov_robust_ogk (rows, cov);
+
+    ncm_stats_rows_reset (rows);
+
+    for (p = 0; p < d; p++)
+      for (q = 0; q < d; q++)
+        g_assert_cmpfloat (ncm_matrix_get (ncm_stats_dist_peek_full_cov (sd), p, q), ==, ncm_matrix_get (cov, p, q));
+  }
+
+  ncm_matrix_free (cov);
+  ncm_stats_rows_free (rows);
+  ncm_vector_free (m2lnL);
+  ncm_stats_dist_free (sd);
+  ncm_stats_dist_kernel_free (kernel);
+}
+
+static void
+test_ncm_stats_dist_vkde_robust_rows (void)
+{
+  /*
+   * With the robust covariance types the factor of VKDE kernel i is the Cholesky factor of
+   * the robust covariance of its k nearest neighbors in the whole sample, the distance
+   * being the one of the KDE scale matrix. The neighbors are found here by sorting every
+   * distance to the kernel point, and the k-th and (k+1)-th distances are required to
+   * differ so that the neighbor set is unique. The robust covariances do not depend on the
+   * order of the rows, so the factors must be equal.
+   */
+  const NcmStatsDistKDECovType cov_type[] = {NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG, NCM_STATS_DIST_KDE_COV_TYPE_ROBUST};
+  const guint d                           = 3;
+  const guint n                           = 300;
+  NcmStatsDistKernel *kernel              = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (d));
+  NcmStatsDistVKDE *sdvkde                = ncm_stats_dist_vkde_new (kernel, NCM_STATS_DIST_CV_SPLIT_M2LNP);
+  NcmStatsDist *sd                        = NCM_STATS_DIST (sdvkde);
+  NcmVector *m2lnL                        = ncm_vector_new (n);
+  NcmStatsRows *rows                      = ncm_stats_rows_new (d);
+  NcmMatrix *cov                          = ncm_matrix_new (d, d);
+  gsl_matrix *L                           = gsl_matrix_alloc (d, d);
+  NcmMatrix *U_i                          = ncm_matrix_new (d, d);
+  GPtrArray *neighbors                    = g_ptr_array_new ();
+  GArray *dist2                           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *perm                            = g_array_new (FALSE, FALSE, sizeof (size_t));
+  NcmVector *delta                        = ncm_vector_new (d);
+  guint t, i, j, p, q;
+
+  ncm_stats_dist_set_split_frac (sd, 0.5);
+  ncm_stats_dist_set_center_shrink (sd, FALSE);
+  ncm_stats_dist_vkde_set_local_frac (sdvkde, 0.1);
+  _test_ncm_stats_dist_robust_rows_fill (sd, n, m2lnL);
+
+  for (t = 0; t < G_N_ELEMENTS (cov_type); t++)
+  {
+    ncm_stats_dist_kde_set_cov_type (NCM_STATS_DIST_KDE (sdvkde), cov_type[t]);
+    ncm_stats_dist_prepare (sd, m2lnL);
+
+    {
+      GPtrArray *sample   = ncm_stats_dist_peek_sample_array (sd);
+      const guint n_obs   = sample->len;
+      const guint n_k     = ncm_stats_dist_get_n_kernels (sd);
+      const guint k       = ncm_stats_dist_vkde_get_n_neighbors (sdvkde, n_obs);
+      const guint maxiter = ncm_stats_dist_kde_get_nearPD_maxiter (NCM_STATS_DIST_KDE (sdvkde));
+
+      g_assert_cmpuint (n_k, <, n_obs);
+      g_assert_cmpuint (k, <, n_obs);
+
+      gsl_matrix_memcpy (L, ncm_matrix_gsl (ncm_stats_dist_peek_full_cov (sd)));
+      g_assert_cmpint (gsl_linalg_cholesky_decomp1 (L), ==, 0);
+
+      g_array_set_size (dist2, n_obs);
+      g_array_set_size (perm, n_obs);
+      g_ptr_array_set_size (neighbors, k);
+
+      for (i = 0; i < n_k; i++)
+      {
+        NcmVector *x_i = g_ptr_array_index (sample, i);
+        gboolean repaired;
+
+        /* |L^-1 (x_j - x_i)|^2 for every point j, with L L^T the KDE scale matrix. */
+        for (j = 0; j < n_obs; j++)
+        {
+          ncm_vector_memcpy (delta, g_ptr_array_index (sample, j));
+          ncm_vector_sub (delta, x_i);
+          gsl_blas_dtrsv (CblasLower, CblasNoTrans, CblasNonUnit, L, ncm_vector_gsl (delta));
+          g_array_index (dist2, gdouble, j) = ncm_vector_dot (delta, delta);
+        }
+
+        gsl_sort_index (&g_array_index (perm, size_t, 0), &g_array_index (dist2, gdouble, 0), 1, n_obs);
+
+        g_assert_cmpfloat (g_array_index (dist2, gdouble, g_array_index (perm, size_t, k)), >,
+                           (1.0 + 1.0e-8) * g_array_index (dist2, gdouble, g_array_index (perm, size_t, k - 1)));
+
+        for (j = 0; j < k; j++)
+          g_ptr_array_index (neighbors, j) = g_ptr_array_index (sample, g_array_index (perm, size_t, j));
+
+        ncm_stats_rows_set_rows (rows, neighbors);
+
+        if (cov_type[t] == NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG)
+          ncm_stats_rows_cov_robust_diag (rows, cov);
+        else
+          ncm_stats_rows_cov_robust_ogk (rows, cov);
+
+        ncm_stats_rows_reset (rows);
+
+        g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, U_i, 'U', maxiter, &repaired), ==, 0);
+
+        for (p = 0; p < d; p++)
+          for (q = p; q < d; q++)
+            g_assert_cmpfloat (ncm_matrix_get (ncm_stats_dist_peek_cov_decomp (sd, i), p, q), ==, ncm_matrix_get (U_i, p, q));
+      }
+    }
+  }
+
+  ncm_vector_free (delta);
+  g_array_unref (perm);
+  g_array_unref (dist2);
+  g_ptr_array_unref (neighbors);
+  ncm_matrix_free (U_i);
+  gsl_matrix_free (L);
+  ncm_matrix_free (cov);
+  ncm_stats_rows_free (rows);
+  ncm_vector_free (m2lnL);
   ncm_stats_dist_free (sd);
   ncm_stats_dist_kernel_free (kernel);
 }

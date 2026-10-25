@@ -3919,6 +3919,10 @@ static const gchar *_nc_data_snia_cats[] = {
   "snia_pantheon_plus_sh0es_statonly.fits",
   "snia_des_y5_statonly.fits",
   "snia_des_y5_stat_sys.fits",
+  "snia_des_dovekie_statonly.fits",
+  "snia_des_dovekie_stat_sys.fits",
+  "snia_pantheon_plus_sh0es_hoyt26.fits",
+  "snia_pantheon_plus_sh0es_hoyt26_statonly.fits",
 };
 
 /**

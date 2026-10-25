@@ -56,6 +56,7 @@
 #include "build_cfg.h"
 
 #include "nc/background/nc_distance.h"
+#include "nc_enum_types.h"
 #include "ncm/integration/ncm_integrate.h"
 #include "ncm/core/ncm_c.h"
 #include "ncm/core/ncm_cfg.h"
@@ -74,6 +75,7 @@ enum
   PROP_ZF,
   PROP_RECOMB,
   PROP_INV_COMOVING,
+  PROP_SOUND_HORIZON_METHOD,
   PROP_SIZE,
 };
 
@@ -100,7 +102,8 @@ nc_distance_init (NcDistance *dist)
 
   dist->recomb = NULL;
 
-  dist->cmethod = NC_DISTANCE_COMOVING_METHOD_LEN;
+  dist->cmethod              = NC_DISTANCE_COMOVING_METHOD_LEN;
+  dist->sound_horizon_method = NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT;
 
   dist->ctrl = ncm_model_ctrl_new (NULL);
 }
@@ -123,6 +126,9 @@ _nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, 
       break;
     case PROP_INV_COMOVING:
       nc_distance_compute_inv_comoving (dist, g_value_get_boolean (value));
+      break;
+    case PROP_SOUND_HORIZON_METHOD:
+      nc_distance_set_sound_horizon_method (dist, g_value_get_enum (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -147,6 +153,9 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
       break;
     case PROP_INV_COMOVING:
       g_value_set_boolean (value, dist->cpu_inv_comoving);
+      break;
+    case PROP_SOUND_HORIZON_METHOD:
+      g_value_set_enum (value, dist->sound_horizon_method);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -247,6 +256,21 @@ nc_distance_class_init (NcDistanceClass *klass)
                                                          "Whether to compute the inverse comoving function",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDistance:sound-horizon-method:
+   *
+   * The method used by nc_distance_r_zd() for the sound horizon at the drag epoch, when
+   * the model does not provide it as a free parameter (nc_hicosmo_as_drag_is_free()).
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SOUND_HORIZON_METHOD,
+                                   g_param_spec_enum ("sound-horizon-method",
+                                                      NULL,
+                                                      "Sound horizon at the drag epoch method",
+                                                      NC_TYPE_DISTANCE_SOUND_HORIZON_METHOD,
+                                                      NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -325,6 +349,32 @@ nc_distance_require_zf (NcDistance *dist, const gdouble zf)
 
     ncm_model_ctrl_force_update (dist->ctrl);
   }
+}
+
+/**
+ * nc_distance_set_sound_horizon_method:
+ * @dist: a #NcDistance
+ * @sound_horizon_method: a #NcDistanceSoundHorizonMethod
+ *
+ * Sets the method for the sound horizon at the drag epoch, see #NcDistance:sound-horizon-method.
+ */
+void
+nc_distance_set_sound_horizon_method (NcDistance *dist, NcDistanceSoundHorizonMethod sound_horizon_method)
+{
+  g_assert_cmpint (sound_horizon_method, <, NC_DISTANCE_SOUND_HORIZON_METHOD_LEN);
+  dist->sound_horizon_method = sound_horizon_method;
+}
+
+/**
+ * nc_distance_get_sound_horizon_method:
+ * @dist: a #NcDistance
+ *
+ * Returns: the method for the sound horizon at the drag epoch, see #NcDistance:sound-horizon-method.
+ */
+NcDistanceSoundHorizonMethod
+nc_distance_get_sound_horizon_method (NcDistance *dist)
+{
+  return dist->sound_horizon_method;
 }
 
 /**
@@ -1363,6 +1413,8 @@ nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
     return GSL_NAN;
 }
 
+static gdouble _nc_distance_drag_redshift_eisenstein_hu (NcHICosmo *cosmo);
+
 /**
  * nc_distance_drag_redshift:
  * @dist: a #NcDistance
@@ -1388,19 +1440,21 @@ gdouble
 nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
   if (dist->recomb != NULL)
-  {
     return nc_recomb_get_tau_drag_z (dist->recomb, cosmo);
-  }
   else
-  {
-    gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
-    gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
-    gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
-    gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
+    return _nc_distance_drag_redshift_eisenstein_hu (cosmo);
+}
 
-    return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
-           (1.0 + b1 * pow (omega_b_h2, b2));
-  }
+static gdouble
+_nc_distance_drag_redshift_eisenstein_hu (NcHICosmo *cosmo)
+{
+  const gdouble omega_m_h2 = nc_hicosmo_Omega_m0h2 (cosmo);
+  const gdouble omega_b_h2 = nc_hicosmo_Omega_b0h2 (cosmo);
+  const gdouble b1         = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
+  const gdouble b2         = 0.238 * pow (omega_m_h2, 0.223);
+
+  return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
+         (1.0 + b1 * pow (omega_b_h2, b2));
 }
 
 /**
@@ -1456,36 +1510,81 @@ nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, const gdouble z)
   return sqrt_Omega_m0 * Dv / z;
 }
 
+static gdouble _nc_distance_r_zd_camb_fit_Mpc (NcHICosmo *cosmo);
+
 /**
  * nc_distance_r_zd:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  *
- * This function computes the sound horizon [nc_distance_sound_horizon ()]
- * at the drag redshift [nc_distance_drag_redshift()].
+ * The sound horizon at the drag epoch in units of the Hubble distance, $r_d H_0 / c$.
+ * When nc_hicosmo_as_drag_is_free() is %TRUE it is the model parameter
+ * nc_hicosmo_as_drag(); otherwise it is computed with the method of
+ * #NcDistance:sound-horizon-method:
  *
- * Returns: $r(z_d)$.
+ * - %NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT (default): the fit of
+ *   [Aubourg et al. (2015)](https://arxiv.org/abs/1411.1074) calibrated on CAMB,
+ *   $r_d = 55.154\,e^{-72.3 (\omega_\nu + 0.0006)^2} / [\omega_{cb}^{0.25351} \omega_b^{0.12807} (1 + (N_\mathrm{eff} - 3.046) / 30.60)]$ Mpc:
+ *   their eq. 16 (accurate to 0.021% for $N_\mathrm{eff} = 3.046$, $\sum m_\nu < 0.6$ eV and
+ *   $\omega_b$, $\omega_{cb}$ within $3\sigma$ of Planck) times the $N_\mathrm{eff}$ factor of their
+ *   eq. 17, so that $r_d$ is continuous in $N_\mathrm{eff}$; for $2.8 \le N_\mathrm{eff} \le 4$ it is
+ *   within 0.1% of the recombination history. It assumes that curvature and dark energy are
+ *   negligible before recombination;
+ * - %NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU: nc_distance_sound_horizon() at the drag redshift of the
+ *   [Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112) fit; that redshift is about
+ *   40 below the one of the recombination history and $r_d$ about 2.5% larger;
+ * - %NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB: nc_distance_sound_horizon() at the drag redshift of
+ *   #NcDistance:recomb, which must be set.
+ *
+ * Returns: $r_d H_0 / c$, or NaN when the drag redshift is not finite.
  */
 gdouble
 nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo)
 {
-  gdouble r_zd;
+  gdouble zd;
 
-  if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_as_drag))
+  if (nc_hicosmo_as_drag_is_free (cosmo))
+    return nc_hicosmo_as_drag (cosmo);
+
+  switch (dist->sound_horizon_method)
   {
-    r_zd = nc_hicosmo_as_drag (cosmo);
+    case NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT:
+
+      return _nc_distance_r_zd_camb_fit_Mpc (cosmo) / nc_hicosmo_RH_Mpc (cosmo);
+
+      break;
+    case NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU:
+      zd = _nc_distance_drag_redshift_eisenstein_hu (cosmo);
+      break;
+    case NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB:
+
+      if (dist->recomb == NULL)
+        g_error ("nc_distance_r_zd: the sound-horizon method recomb requires NcDistance:recomb.");
+
+      zd = nc_recomb_get_tau_drag_z (dist->recomb, cosmo);
+      break;
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return GSL_NAN; /* LCOV_EXCL_LINE */
   }
-  else
-  {
-    gdouble zd = nc_distance_drag_redshift (dist, cosmo);
 
-    if (!gsl_finite (zd))
-      return GSL_NAN;
+  if (!gsl_finite (zd))
+    return GSL_NAN;
 
-    r_zd = nc_distance_sound_horizon (dist, cosmo, zd);
-  }
+  return nc_distance_sound_horizon (dist, cosmo, zd);
+}
 
-  return r_zd;
+static gdouble
+_nc_distance_r_zd_camb_fit_Mpc (NcHICosmo *cosmo)
+{
+  const gdouble omega_b  = nc_hicosmo_Omega_b0h2 (cosmo);
+  const gdouble omega_cb = omega_b + nc_hicosmo_Omega_c0h2 (cosmo);
+  const gdouble omega_nu = ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Omega_mnu0) ? nc_hicosmo_Omega_mnu0h2 (cosmo) : 0.0;
+  const gdouble Neff     = nc_hicosmo_Neff (cosmo);
+
+  return 55.154 * exp (-72.3 * gsl_pow_2 (omega_nu + 0.0006)) /
+         (pow (omega_cb, 0.25351) * pow (omega_b, 0.12807) * (1.0 + (Neff - 3.046) / 30.60));
 }
 
 /**

@@ -1,6 +1,6 @@
 [project]
 name = 'numcosmo_py'
-version = '0.28.0'
+version = '0.29.0'
 description = 'NumCosmo is a free software C library for cosmology calculations'
 readme = 'README.md'
 classifiers = [
@@ -42,7 +42,7 @@ dependencies = [
 # imports, so a bare `import numcosmo_py` only needs the core dependencies.
 [project.optional-dependencies]
 catalog = ["astropy", "networkx", "scipy"]
-app = ["astropy", "matplotlib", "pydantic", "rich", "tabulate", "typer"]
+app = ["astropy", "getdist", "matplotlib", "pydantic", "rich", "scipy", "tabulate", "typer"]
 plot = ["getdist", "matplotlib"]
 all = ["numcosmo_py[catalog,app,plot]"]
 # Optional cosmology integrations; pulled in only when needed (not in the

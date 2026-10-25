@@ -53,6 +53,10 @@ G_BEGIN_DECLS
  * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance, statistics covariance only
  * @NC_DATA_SNIA_COV_DES_Y5_STATONLY: Dark Energy Survey Y5 SNIa compilation, statistics covariance only
  * @NC_DATA_SNIA_COV_DES_Y5_STAT_SYS: Dark Energy Survey Y5 SNIa compilation, statistics and systematics covariance
+ * @NC_DATA_SNIA_COV_DES_DOVEKIE_STATONLY: Dark Energy Survey Y5 SNIa compilation recalibrated with Dovekie, statistics covariance only
+ * @NC_DATA_SNIA_COV_DES_DOVEKIE_STAT_SYS: Dark Energy Survey Y5 SNIa compilation recalibrated with Dovekie, statistics and systematics covariance
+ * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance with the Hoyt et al. 2026 low-redshift bias-correction fix, full covariance statistics and systematics
+ * @NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT: Pantheon SNIa compilation 2022 plus Sh0es Cepheid distance with the Hoyt et al. 2026 low-redshift bias-correction fix, statistics covariance only
  *
  * Supernovae data sets.
  *
@@ -78,6 +82,10 @@ typedef enum _NcDataSNIAId /*< prefix=NC_DATA_SNIA >*/
   NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT,
   NC_DATA_SNIA_COV_DES_Y5_STATONLY,
   NC_DATA_SNIA_COV_DES_Y5_STAT_SYS,
+  NC_DATA_SNIA_COV_DES_DOVEKIE_STATONLY,
+  NC_DATA_SNIA_COV_DES_DOVEKIE_STAT_SYS,
+  NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT,
+  NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT,
   /* < private > */
   NC_DATA_SNIA_LEN, /*< skip >*/
 } NcDataSNIAId;
@@ -87,7 +95,7 @@ typedef enum _NcDataSNIAId /*< prefix=NC_DATA_SNIA >*/
 #define NC_DATA_SNIA_SIMPLE_LEN ((NC_DATA_SNIA_SIMPLE_END) -(NC_DATA_SNIA_SIMPLE_START) +1)
 
 #define NC_DATA_SNIA_COV_START NC_DATA_SNIA_COV_SNLS3_SYS_STAT
-#define NC_DATA_SNIA_COV_END NC_DATA_SNIA_COV_DES_Y5_STAT_SYS
+#define NC_DATA_SNIA_COV_END NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT
 #define NC_DATA_SNIA_COV_LEN ((NC_DATA_SNIA_COV_END) -(NC_DATA_SNIA_COV_START) +1)
 
 G_END_DECLS

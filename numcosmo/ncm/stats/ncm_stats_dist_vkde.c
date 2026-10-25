@@ -95,7 +95,7 @@ _ncm_stats_dist_vkde_stats_vec_new (gpointer userdata)
 {
   NcmStatsDist *sd                   = NCM_STATS_DIST (userdata);
   NcmStatsDistPrivate * const ppself = ncm_stats_dist_get_instance_private (sd);
-  NcmStatsVec *sample                = ncm_stats_vec_new (ppself->d, NCM_STATS_VEC_COV, TRUE);
+  NcmStatsVec *sample                = ncm_stats_vec_new (ppself->d, NCM_STATS_VEC_COV, FALSE);
 
   return sample;
 }
@@ -236,6 +236,8 @@ ncm_stats_dist_vkde_init (NcmStatsDistVKDE *sdvkde)
   self->cov_array0 = g_ptr_array_new ();
   self->lnnorms    = NULL;
   self->sample_T   = NULL;
+  self->neighbors  = g_ptr_array_new ();
+  self->local_cov  = NULL;
 
   self->local_frac     = 0.0;
   self->points_per_dim = 0.0;
@@ -309,9 +311,11 @@ _ncm_stats_dist_vkde_dispose (GObject *object)
 
   ncm_vector_clear (&self->lnnorms);
   ncm_matrix_clear (&self->sample_T);
+  ncm_matrix_clear (&self->local_cov);
 
   g_clear_pointer (&self->cov_array, g_ptr_array_unref);
   g_clear_pointer (&self->cov_array0, g_ptr_array_unref);
+  g_clear_pointer (&self->neighbors, g_ptr_array_unref);
 
   if (self->mp_stats_vec != NULL)
   {
@@ -495,6 +499,12 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
     self->sample_T = ncm_matrix_new (ppself->d, ppself->n_obs);
   }
 
+  if ((self->local_cov == NULL) || (ncm_matrix_nrows (self->local_cov) != ppself->d))
+  {
+    ncm_matrix_clear (&self->local_cov);
+    self->local_cov = ncm_matrix_new (ppself->d, ppself->d);
+  }
+
   {
     guint cur_size = self->cov_array->len;
 
@@ -509,9 +519,15 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
     }
   }
 
-  /* The local scale matrix of each kernel from its k nearest neighbors. */
+  /*
+   * Computes the covariance of the k nearest neighbors of each kernel and writes its
+   * Cholesky factor in cov_array. The neighbors of the current kernel are in
+   * self->neighbors, the array pself->rows analyzes for the robust covariance types.
+   */
   {
     const size_t k = ncm_stats_dist_vkde_get_n_neighbors (sdvkde, ppself->n_obs);
+
+    ncm_stats_rows_set_rows (pself->rows, self->neighbors);
 
     for (i = 0; i < ppself->n_kernels; i++)
     {
@@ -526,14 +542,17 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
         knn_list_t *p;
 
         p = rb_knn_list_t_first (&trav, table);
+        g_ptr_array_set_size (self->neighbors, 0);
 
         do {
           NcmVector *ni = g_ptr_array_index (sample_array, p->node->coord_index);
 
           ncm_stats_vec_append (sample, ni, FALSE);
+          g_ptr_array_add (self->neighbors, ni);
         } while ((p = rb_knn_list_t_next (&trav)) != NULL);
       }
       rb_knn_list_destroy (table);
+      ncm_stats_rows_set_nrows (pself->rows, self->neighbors->len);
 
       {
         NcmMatrix *sample_cov = NULL;
@@ -543,30 +562,29 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
           case NCM_STATS_DIST_KDE_COV_TYPE_SAMPLE:
           case NCM_STATS_DIST_KDE_COV_TYPE_FIXED:
 
-            sample_cov = ncm_matrix_ref (ncm_stats_vec_peek_cov_matrix (sample, 0));
+            sample_cov = ncm_stats_vec_peek_cov_matrix (sample, 0);
             break;
           case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-            sample_cov = ncm_stats_vec_compute_cov_robust_diag (sample);
+            ncm_stats_rows_cov_robust_diag (pself->rows, self->local_cov);
+            sample_cov = self->local_cov;
             break;
           case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
-            sample_cov = ncm_stats_vec_compute_cov_robust_ogk (sample);
+            ncm_stats_rows_cov_robust_ogk (pself->rows, self->local_cov);
+            sample_cov = self->local_cov;
             break;
           default:
             g_assert_not_reached ();
             break;
         }
 
-        {
-          NcmMatrix *cov_decomp = g_ptr_array_index (self->cov_array, i);
-
-          _ncm_stats_dist_cholesky (cov_decomp, sample_cov, pself->nearPD_maxiter, "a local kernel covariance");
-          ncm_matrix_free (sample_cov);
-        }
+        _ncm_stats_dist_cholesky (g_ptr_array_index (self->cov_array, i), sample_cov, pself->nearPD_maxiter, "a local kernel covariance");
       }
 
       ncm_stats_vec_reset (sample, TRUE);
       ncm_memory_pool_return (sample_ptr);
     }
+
+    ncm_stats_rows_reset (pself->rows);
 
     /*
      * What center shrinkage needs from a variable-bandwidth estimator: the mean of the

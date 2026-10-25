@@ -30,13 +30,13 @@
  *
  * This object is a subclass of #NcmPrior and the base class of the Gaussian priors used
  * by #NcmLikelihood, on a parameter (#NcmPriorGaussParam) or on a derived quantity
- * (#NcmPriorGaussFunc). The subclass provides the quantity $x$; the prior returns the
- * least-squares form
+ * (#NcmPriorGaussFunc). The subclass provides the quantity $x$, with
+ * #NcmMSetFunc:dimension components $x_i$; the prior returns the least-squares form
  * $$
- * f = \frac{x - \mu}{\sigma}, \qquad -2\ln P(x) = f^2 = \frac{\left(x - \mu\right)^2}{\sigma^2},
+ * f_i = \frac{x_i - \mu}{\sigma}, \qquad -2\ln P(x) = \sum_i f_i^2,
  * $$
- * where $\mu$ is the mean and $\sigma$ the standard deviation. The prior is not
- * normalized.
+ * where $\mu$ is the mean and $\sigma$ the standard deviation, common to all
+ * components. The prior is not normalized.
  *
  */
 
@@ -125,12 +125,10 @@ _ncm_prior_gauss_get_property (GObject *object, guint prop_id, GValue *value, GP
 
 static void _ncm_prior_gauss_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
 
-static gdouble
-_ncm_prior_gauss_mean (NcmPriorGauss *pg, NcmMSet *mset)
+static void
+_ncm_prior_gauss_mean (NcmPriorGauss *pg, NcmMSet *mset, gdouble *x)
 {
   g_error ("method mean not implemented by %s.", G_OBJECT_TYPE_NAME (pg));
-
-  return 0.0;
 }
 
 static void
@@ -194,9 +192,13 @@ _ncm_prior_gauss_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdoub
 {
   NcmPriorGauss *pg                 = NCM_PRIOR_GAUSS (func);
   NcmPriorGaussPrivate * const self = ncm_prior_gauss_get_instance_private (pg);
-  const gdouble mean                = NCM_PRIOR_GAUSS_GET_CLASS (pg)->mean (pg, mset);
+  const guint dim                   = ncm_mset_func_get_dim (func);
+  guint i;
 
-  res[0] = (mean - self->mu) / self->sigma;
+  NCM_PRIOR_GAUSS_GET_CLASS (pg)->mean (pg, mset, res);
+
+  for (i = 0; i < dim; i++)
+    res[i] = (res[i] - self->mu) / self->sigma;
 }
 
 /**

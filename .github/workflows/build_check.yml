@@ -15,7 +15,7 @@ env:
   # the datafile release tag changes; this knob covers everything else, such as
   # a file replaced in place under an unchanged tag. See
   # .github/actions/data-cache.
-  DATA_CACHE_VERSION: 4
+  DATA_CACHE_VERSION: 5
   # Thread policy is set PER TEST by meson (tests/meson.build), not here: concurrent tests
   # get OMP/BLAS = 1 (avoid cores^2 oversubscription + the mixed-OpenBLAS deadlock), and
   # the run-alone OpenMP tests (omp suite => is_parallel: false) get OMP_NUM_THREADS =
@@ -69,6 +69,12 @@ jobs:
     - name: Conda lock files
       if: ${{ !cancelled() }}
       run: python3 .github/scripts/conda_locks.py check
+    # Fails when a third-party Python module imported by the package, tests,
+    # docs or examples is missing from pyproject.toml or environment.yml. See
+    # CONTRIBUTING.md, section "Declaring Python dependencies".
+    - name: Python dependencies
+      if: ${{ !cancelled() }}
+      run: python3 .github/scripts/check_deps.py repo
     # Rejects evaluative wording in comments and docs, and reports theory-page
     # cross-references the branch drops. See CONTRIBUTING.md, section "Writing
     # style for comments and documentation".

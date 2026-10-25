@@ -27,7 +27,10 @@
 #define _ERRORMSGSIZE_ 2048 /**< generic error messages are cut beyond this number of characters */
 typedef char ErrorMsg[_ERRORMSGSIZE_]; /**< Generic error messages (there is such a field in each structure) */
 
-#define _FILENAMESIZE_ 256 /**< size of the string read in each line of the file (extra characters not taken into account) */
+/* NumCosmo: 1024 instead of 256, so data file paths under long installation prefixes fit.
+ * NcCBEPrivate embeds CLASS structs holding FileName fields and must stay below GObject's
+ * 64 KiB private size limit (56712 bytes at 1024, 65928 at 4096). */
+#define _FILENAMESIZE_ 1024 /**< size of the string read in each line of the file (extra characters not taken into account) */
 typedef char FileName[_FILENAMESIZE_];
 
 #define _PI_ 3.1415926535897932384626433832795e0 /**< The number pi */

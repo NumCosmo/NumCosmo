@@ -1377,6 +1377,193 @@ ncm_spline_curvature_weighted_lp_norm (NcmSpline *s, NcmSplineCurvatureType ctyp
   return pow (num / wnorm, 1.0 / p);
 }
 
+/*
+ * The pieces of [xi, xf] between consecutive knots of @s and, if any, of @weight:
+ * returns the end of the piece that starts at @a, advancing the knot indices.
+ */
+static gdouble
+_ncm_spline_next_break (NcmVector *xv, guint *i, NcmVector *wv, guint *j, const gdouble a, const gdouble xf)
+{
+  gdouble b = xf;
+
+  while ((*i < ncm_vector_len (xv)) && (ncm_vector_get (xv, *i) <= a))
+    (*i)++;
+
+  if ((*i < ncm_vector_len (xv)) && (ncm_vector_get (xv, *i) < b))
+    b = ncm_vector_get (xv, *i);
+
+  if (wv != NULL)
+  {
+    while ((*j < ncm_vector_len (wv)) && (ncm_vector_get (wv, *j) <= a))
+      (*j)++;
+
+    if ((*j < ncm_vector_len (wv)) && (ncm_vector_get (wv, *j) < b))
+      b = ncm_vector_get (wv, *j);
+  }
+
+  return b;
+}
+
+/* Gauss-Legendre tables, one per number of nodes, allocated once. */
+static gsl_integration_glfixed_table *
+_ncm_spline_glfixed_table (const guint n)
+{
+  static GPtrArray *tables = NULL;
+
+  G_LOCK_DEFINE_STATIC (tables_lock);
+
+  gsl_integration_glfixed_table *t;
+
+  G_LOCK (tables_lock);
+
+  if (tables == NULL)
+    tables = g_ptr_array_new ();
+
+  if (tables->len <= n)
+    g_ptr_array_set_size (tables, n + 1);
+
+  t = g_ptr_array_index (tables, n);
+
+  if (t == NULL)
+  {
+    t                             = gsl_integration_glfixed_table_alloc (n);
+    g_ptr_array_index (tables, n) = t;
+  }
+
+  G_UNLOCK (tables_lock);
+
+  return t;
+}
+
+/* Nodes per piece: c = s'' is linear on each piece, so W c^p has degree p, or p + 3
+ * with a cubic W, and n nodes integrate it exactly when 2 n - 1 >= that degree. */
+static guint
+_ncm_spline_d2_lp_nodes (NcmSpline *weight, const guint p)
+{
+  if ((p == 0) || (p % 2 != 0))
+    g_error ("ncm_spline_curvature_d2_lp_residuals: the order p = %u must be even and positive.", p);
+
+  return (weight != NULL) ? p / 2 + 2 : p / 2 + 1;
+}
+
+/**
+ * ncm_spline_curvature_d2_lp_residuals_len:
+ * @s: a #NcmSpline
+ * @weight: (nullable): a #NcmSpline with the weight $W(x) \ge 0$
+ * @p: the order, even and positive
+ * @xi: the lower limit
+ * @xf: the upper limit
+ *
+ * Gets the number of values ncm_spline_curvature_d2_lp_residuals() writes: $p / 2 + 1$
+ * per piece of [@xi, @xf] between consecutive knots of @s, or $p / 2 + 2$ per piece
+ * between consecutive knots of @s and @weight when @weight is given. Aborts for an odd
+ * or zero @p.
+ *
+ * Returns: the number of residuals.
+ */
+guint
+ncm_spline_curvature_d2_lp_residuals_len (NcmSpline *s, NcmSpline *weight, const guint p, const gdouble xi, const gdouble xf)
+{
+  NcmVector *xv     = ncm_spline_peek_xv (s);
+  NcmVector *wv     = (weight != NULL) ? ncm_spline_peek_xv (weight) : NULL;
+  const guint nodes = _ncm_spline_d2_lp_nodes (weight, p);
+  guint i = 0, j = 0, n = 0;
+  gdouble a = xi;
+
+  g_assert_cmpfloat (xf, >, xi);
+
+  while (a < xf)
+  {
+    a = _ncm_spline_next_break (xv, &i, wv, &j, a, xf);
+    n++;
+  }
+
+  return nodes * n;
+}
+
+/**
+ * ncm_spline_curvature_d2_lp_residuals:
+ * @s: a #NcmSpline
+ * @weight: (nullable): a #NcmSpline with the weight $W(x) \ge 0$
+ * @p: the order, even and positive
+ * @xi: the lower limit
+ * @xf: the upper limit
+ * @f: (array) (element-type double): the residuals, ncm_spline_curvature_d2_lp_residuals_len() values
+ *
+ * Computes residuals $f_k$ whose sum of squares is the square of the $L_p$ norm of the
+ * second derivative, the #NCM_SPLINE_CURVATURE_D2 case of ncm_spline_curvature_lp_norm()
+ * and ncm_spline_curvature_weighted_lp_norm():
+ * $$\sum_k f_k^2 = N_p^2, \qquad N_p^p = \frac{\int_{x_i}^{x_f} W(x)\,|s''(x)|^p\,\mathrm{d}x}{\int_{x_i}^{x_f} W(x)\,\mathrm{d}x},$$
+ * with $W = 1$ when @weight is %NULL. On Gauss-Legendre nodes $x_k$ with weights $w_k$,
+ * $g_k = \sqrt{w_k W(x_k) / D}\,\mathrm{sign}(s''(x_k))\,|s''(x_k)|^{p/2}$ with
+ * $D = \sum_k w_k W(x_k)$, so that $\sum_k g_k^2 = N_p^p$, and
+ * $f_k = g_k \Vert g\Vert^{2/p - 1}$ ($f = 0$ when $g = 0$). The rule has $p / 2 + 1$
+ * nodes on each piece of [@xi, @xf] between knots of @s, or $p / 2 + 2$ on each piece
+ * between knots of @s and @weight: for a cubic @s, and a cubic @weight, it is exact.
+ * For $p = 2$, $f = g$ is linear in the values of $s''$. A negative $W(x_k)$, or an odd
+ * or zero @p, aborts. Both splines must be prepared.
+ *
+ * The residuals are the least-squares form of a Gaussian prior on $N_p$ (see
+ * #NcmPriorGaussFunc), one residual per node instead of one for the norm. For
+ * $p > 2$ they are homogeneous of degree one in $s''$, like $N_p$, so they are not
+ * differentiable where $s'' = 0$ everywhere.
+ */
+void
+ncm_spline_curvature_d2_lp_residuals (NcmSpline *s, NcmSpline *weight, const guint p, const gdouble xi, const gdouble xf, gdouble *f)
+{
+  const guint nodes                = _ncm_spline_d2_lp_nodes (weight, p);
+  gsl_integration_glfixed_table *t = _ncm_spline_glfixed_table (nodes);
+  NcmVector *xv                    = ncm_spline_peek_xv (s);
+  NcmVector *wv                    = (weight != NULL) ? ncm_spline_peek_xv (weight) : NULL;
+  gdouble a                        = xi;
+  gdouble D                        = 0.0;
+  gdouble g2                       = 0.0;
+  guint i = 0, j = 0, k = 0, n;
+
+  g_assert_cmpfloat (xf, >, xi);
+
+  while (a < xf)
+  {
+    const gdouble b = _ncm_spline_next_break (xv, &i, wv, &j, a, xf);
+    guint q;
+
+    for (q = 0; q < nodes; q++)
+    {
+      gdouble x, wq;
+
+      gsl_integration_glfixed_point (a, b, q, &x, &wq, t);
+
+      {
+        const gdouble W  = (weight != NULL) ? ncm_spline_eval (weight, x) : 1.0;
+        const gdouble c  = ncm_spline_curvature_density (s, NCM_SPLINE_CURVATURE_D2, x);
+        const gdouble wW = wq * W;
+
+        if (W < 0.0)
+          g_error ("ncm_spline_curvature_d2_lp_residuals: negative weight W(%.15g) = %.15g.", x, W);
+
+        f[k] = sqrt (wW) * GSL_SIGN (c) * pow (fabs (c), 0.5 * p);
+        D   += wW;
+        g2  += gsl_pow_2 (f[k]);
+        k++;
+      }
+    }
+
+    a = b;
+  }
+
+  g_assert_cmpfloat (D, >, 0.0);
+
+  /* g = f / sqrt (D), and the residuals are g |g|^(2 / p - 1). */
+  g2 /= D;
+
+  {
+    const gdouble scale = (g2 > 0.0) ? pow (g2, 1.0 / p - 0.5) / sqrt (D) : 0.0;
+
+    for (n = 0; n < k; n++)
+      f[n] *= scale;
+  }
+}
+
 /**
  * ncm_spline_curvature_max:
  * @s: a #NcmSpline
