@@ -1092,8 +1092,9 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
     g_error ("ncm_stats_vec_compute_cov_robust_diag: This algorithm requires the saved data into the object.");
 
   NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
-  NcmMatrix *res     = ncm_stats_rows_cov_robust_diag (rows);
+  NcmMatrix *res     = ncm_matrix_new (svec->len, svec->len);
 
+  ncm_stats_rows_cov_robust_diag (rows, res);
   ncm_stats_rows_reset (rows);
 
   return res;
@@ -1116,8 +1117,9 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
     g_error ("ncm_stats_vec_compute_cov_robust_ogk: This algorithm requires the saved data into the object.");
 
   NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
-  NcmMatrix *res     = ncm_stats_rows_cov_robust_ogk (rows);
+  NcmMatrix *res     = ncm_matrix_new (svec->len, svec->len);
 
+  ncm_stats_rows_cov_robust_ogk (rows, res);
   ncm_stats_rows_reset (rows);
 
   return res;

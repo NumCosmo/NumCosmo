@@ -54,8 +54,8 @@ NcmVector *ncm_stats_rows_max_ess_time (NcmStatsRows *rows, const guint ntests, 
 NcmVector *ncm_stats_rows_heidel_diag (NcmStatsRows *rows, const guint ntests, const gdouble pvalue, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_pvalue);
 NcmVector *ncm_stats_rows_visual_heidel_diag (NcmStatsRows *rows, const guint p, const guint fi, gdouble *mean, gdouble *var);
 gdouble ncm_stats_rows_estimate_const_break (NcmStatsRows *rows, guint p);
-NcmMatrix *ncm_stats_rows_cov_robust_diag (NcmStatsRows *rows);
-NcmMatrix *ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows);
+void ncm_stats_rows_cov_robust_diag (NcmStatsRows *rows, NcmMatrix *cov);
+void ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows, NcmMatrix *cov);
 
 G_END_DECLS
 

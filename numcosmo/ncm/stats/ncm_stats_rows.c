@@ -72,6 +72,7 @@ struct _NcmStatsRows
   NcmVector *c;
   NcmMatrix *E;
   NcmMatrix *c_cov;
+  NcmLapackWS *lapack_ws;
   NcmStatsAcorr *acorr;
   NcmStatsAcorr *acorr1;
   NcmStatsVec *chunk;
@@ -112,29 +113,30 @@ _ncm_stats_rows_free_row_buffers (NcmStatsRows *rows)
 static void
 ncm_stats_rows_init (NcmStatsRows *rows)
 {
-  rows->nrows    = 0;
-  rows->ncols    = 0;
-  rows->sample   = NULL;
-  rows->esss     = NULL;
-  rows->Ivals    = NULL;
-  rows->spec0    = NULL;
-  rows->cumsum   = NULL;
-  rows->sigma_x  = NULL;
-  rows->sigma_z  = NULL;
-  rows->c        = NULL;
-  rows->E        = NULL;
-  rows->c_cov    = NULL;
-  rows->acorr    = NULL;
-  rows->acorr1   = NULL;
-  rows->chunk    = NULL;
-  rows->ar_order = g_array_new (FALSE, FALSE, sizeof (guint));
-  rows->data     = NULL;
-  rows->work     = NULL;
-  rows->work_int = NULL;
-  rows->y        = NULL;
-  rows->z        = NULL;
-  rows->ones     = NULL;
-  rows->yfit     = NULL;
+  rows->nrows     = 0;
+  rows->ncols     = 0;
+  rows->sample    = NULL;
+  rows->esss      = NULL;
+  rows->Ivals     = NULL;
+  rows->spec0     = NULL;
+  rows->cumsum    = NULL;
+  rows->sigma_x   = NULL;
+  rows->sigma_z   = NULL;
+  rows->c         = NULL;
+  rows->E         = NULL;
+  rows->c_cov     = NULL;
+  rows->lapack_ws = NULL;
+  rows->acorr     = NULL;
+  rows->acorr1    = NULL;
+  rows->chunk     = NULL;
+  rows->ar_order  = g_array_new (FALSE, FALSE, sizeof (guint));
+  rows->data      = NULL;
+  rows->work      = NULL;
+  rows->work_int  = NULL;
+  rows->y         = NULL;
+  rows->z         = NULL;
+  rows->ones      = NULL;
+  rows->yfit      = NULL;
 }
 
 static void
@@ -184,18 +186,19 @@ _ncm_stats_rows_constructed (GObject *object)
 
     g_assert_cmpuint (ncols, >, 0);
 
-    rows->esss    = ncm_vector_new (ncols);
-    rows->Ivals   = ncm_vector_new (ncols);
-    rows->spec0   = ncm_vector_new (ncols);
-    rows->cumsum  = ncm_vector_new (ncols);
-    rows->sigma_x = ncm_vector_new (ncols);
-    rows->sigma_z = ncm_vector_new (ncols);
-    rows->c       = ncm_vector_new (1);
-    rows->E       = ncm_matrix_new (ncols, ncols);
-    rows->c_cov   = ncm_matrix_new (1, 1);
-    rows->acorr   = ncm_stats_acorr_new_full (ncols, NCM_STATS_ACORR_DEFAULT_MAX_LAG, NCM_STATS_ACORR_DEFAULT_MAX_LEVELS, NCM_STATS_ACORR_METHOD_AR);
-    rows->acorr1  = ncm_stats_acorr_new_full (1, NCM_STATS_ACORR_DEFAULT_MAX_LAG, NCM_STATS_ACORR_DEFAULT_MAX_LEVELS, NCM_STATS_ACORR_METHOD_AR);
-    rows->chunk   = ncm_stats_vec_new (ncols, NCM_STATS_VEC_VAR, FALSE);
+    rows->esss      = ncm_vector_new (ncols);
+    rows->Ivals     = ncm_vector_new (ncols);
+    rows->spec0     = ncm_vector_new (ncols);
+    rows->cumsum    = ncm_vector_new (ncols);
+    rows->sigma_x   = ncm_vector_new (ncols);
+    rows->sigma_z   = ncm_vector_new (ncols);
+    rows->c         = ncm_vector_new (1);
+    rows->E         = ncm_matrix_new (ncols, ncols);
+    rows->c_cov     = ncm_matrix_new (1, 1);
+    rows->lapack_ws = ncm_lapack_ws_new ();
+    rows->acorr     = ncm_stats_acorr_new_full (ncols, NCM_STATS_ACORR_DEFAULT_MAX_LAG, NCM_STATS_ACORR_DEFAULT_MAX_LEVELS, NCM_STATS_ACORR_METHOD_AR);
+    rows->acorr1    = ncm_stats_acorr_new_full (1, NCM_STATS_ACORR_DEFAULT_MAX_LAG, NCM_STATS_ACORR_DEFAULT_MAX_LEVELS, NCM_STATS_ACORR_METHOD_AR);
+    rows->chunk     = ncm_stats_vec_new (ncols, NCM_STATS_VEC_VAR, FALSE);
 
     g_array_set_size (rows->ar_order, ncols);
   }
@@ -216,6 +219,7 @@ _ncm_stats_rows_dispose (GObject *object)
   ncm_vector_clear (&rows->c);
   ncm_matrix_clear (&rows->E);
   ncm_matrix_clear (&rows->c_cov);
+  ncm_lapack_ws_clear (&rows->lapack_ws);
   ncm_stats_acorr_clear (&rows->acorr);
   ncm_stats_acorr_clear (&rows->acorr1);
   ncm_stats_vec_clear (&rows->chunk);
@@ -830,19 +834,21 @@ _ncm_stats_rows_qn (NcmStatsRows *rows)
 /**
  * ncm_stats_rows_cov_robust_diag:
  * @rows: a #NcmStatsRows
+ * @cov: a #NcmMatrix of #NcmStatsRows:ncols rows and columns
  *
  * Estimates the variance of each column as the square of the Qn scale estimator of
- * Rousseeuw and Croux. Requires at least 4 rows.
- *
- * Returns: (transfer full): a diagonal matrix of the variances.
+ * Rousseeuw and Croux and writes the diagonal matrix of the variances in @cov. Requires at
+ * least 4 rows.
  */
-NcmMatrix *
-ncm_stats_rows_cov_robust_diag (NcmStatsRows *rows)
+void
+ncm_stats_rows_cov_robust_diag (NcmStatsRows *rows, NcmMatrix *cov)
 {
   const guint nrows = rows->nrows;
   const guint ncols = rows->ncols;
-  NcmMatrix *cov    = ncm_matrix_new (ncols, ncols);
   guint i;
+
+  g_assert_cmpuint (ncm_matrix_nrows (cov), ==, ncols);
+  g_assert_cmpuint (ncm_matrix_ncols (cov), ==, ncols);
 
   if (nrows < 4)
     g_error ("ncm_stats_rows_cov_robust_diag: too few points to estimate the covariance [%u].", nrows);
@@ -859,28 +865,28 @@ ncm_stats_rows_cov_robust_diag (NcmStatsRows *rows)
 
     ncm_matrix_set (cov, i, i, gsl_pow_2 (_ncm_stats_rows_qn (rows)));
   }
-
-  return cov;
 }
 
 /**
  * ncm_stats_rows_cov_robust_ogk:
  * @rows: a #NcmStatsRows
+ * @cov: a #NcmMatrix of #NcmStatsRows:ncols rows and columns
  *
  * Estimates the covariance by the orthogonalized Gnanadesikan-Kettenring (OGK) method of
- * Maronna and Zamar (2002), with the Qn scale estimator. Requires at least 4 rows.
- *
- * Returns: (transfer full): the covariance matrix.
+ * Maronna and Zamar (2002), with the Qn scale estimator, and writes it in @cov. Requires at
+ * least 4 rows.
  */
-NcmMatrix *
-ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
+void
+ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows, NcmMatrix *cov)
 {
   const guint nrows = rows->nrows;
   const guint ncols = rows->ncols;
-  NcmMatrix *cov    = ncm_matrix_new (ncols, ncols);
   NcmMatrix *E      = rows->E;
   NcmMatrix *y, *z;
   guint a, i;
+
+  g_assert_cmpuint (ncm_matrix_nrows (cov), ==, ncols);
+  g_assert_cmpuint (ncm_matrix_ncols (cov), ==, ncols);
 
   if (nrows < 4)
     g_error ("ncm_stats_rows_cov_robust_ogk: too few points to estimate the covariance [%u].", nrows);
@@ -933,7 +939,6 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
   }
 
   {
-    NcmLapackWS *lapack_work = ncm_lapack_ws_new ();
     gint neval;
     gint info;
 
@@ -943,11 +948,9 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
                               0.0, &neval, ncm_vector_data (rows->data),
                               ncm_matrix_data (E), ncm_matrix_tda (E),
                               &g_array_index (rows->work_int, gint, 0),
-                              lapack_work);
+                              rows->lapack_ws);
 
     NCM_LAPACK_CHECK_INFO ("dsyevr", info);
-
-    ncm_lapack_ws_free (lapack_work);
   }
 
   ncm_matrix_dgemm (z, 'N', 'T', 1.0, E, y, 0.0);
@@ -977,7 +980,5 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
   /* dsyrk writes one triangle; the caller gets a full covariance matrix. */
   ncm_matrix_dsyrk (cov, 'U', 'T', 1.0, E, 0.0);
   ncm_matrix_copy_triangle (cov, 'U');
-
-  return cov;
 }
 

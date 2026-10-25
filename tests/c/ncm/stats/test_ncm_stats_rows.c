@@ -148,9 +148,12 @@ _test_ncm_stats_rows_check (NcmStatsRows *rows)
   NcmVector *pvals    = ncm_stats_rows_heidel_diag (rows, 0, 0.0, &hd_bindex, &hd_wp, &hd_wp_order, &hd_wp_pvalue);
   NcmVector *pvals5   = ncm_stats_rows_heidel_diag (rows, 5, 0.1, &hd5_bindex, &hd5_wp, &hd5_wp_order, &hd5_wp_pvalue);
   NcmVector *cs       = ncm_stats_rows_visual_heidel_diag (rows, 0, 7, &cs_mean, &cs_var);
-  NcmMatrix *cov_diag = ncm_stats_rows_cov_robust_diag (rows);
-  NcmMatrix *cov_ogk  = ncm_stats_rows_cov_robust_ogk (rows);
+  NcmMatrix *cov_diag = ncm_matrix_new (TEST_NCOLS, TEST_NCOLS);
+  NcmMatrix *cov_ogk  = ncm_matrix_new (TEST_NCOLS, TEST_NCOLS);
   guint i, j;
+
+  ncm_stats_rows_cov_robust_diag (rows, cov_diag);
+  ncm_stats_rows_cov_robust_ogk (rows, cov_ogk);
 
   g_assert_cmpuint (ncm_stats_rows_get_nrows (rows), ==, TEST_NROWS);
   g_assert_cmpuint (ncm_stats_rows_get_ncols (rows), ==, TEST_NCOLS);
@@ -333,15 +336,17 @@ static void
 test_ncm_stats_rows_set_nrows (TestNcmStatsRows *test, gconstpointer pdata)
 {
   NcmStatsRows *rows  = test->rows;
-  NcmMatrix *cov_full = ncm_stats_rows_cov_robust_diag (rows);
-  NcmMatrix *cov_head;
+  NcmMatrix *cov_full = ncm_matrix_new (TEST_NCOLS, TEST_NCOLS);
+  NcmMatrix *cov_head = ncm_matrix_new (TEST_NCOLS, TEST_NCOLS);
   guint i;
+
+  ncm_stats_rows_cov_robust_diag (rows, cov_full);
 
   ncm_stats_rows_set_nrows (rows, 100);
   g_assert_cmpuint (ncm_stats_rows_get_nrows (rows), ==, 100);
   g_assert_true (ncm_stats_rows_peek_row (rows, 99) == g_ptr_array_index (test->sample, 99));
 
-  cov_head = ncm_stats_rows_cov_robust_diag (rows);
+  ncm_stats_rows_cov_robust_diag (rows, cov_head);
 
   for (i = 0; i < 2; i++)
     g_assert_cmpfloat (ncm_matrix_get (cov_head, i, i), >, ncm_matrix_get (cov_full, i, i));
@@ -368,7 +373,7 @@ static void
 test_ncm_stats_rows_reset (TestNcmStatsRows *test, gconstpointer pdata)
 {
   GPtrArray *own = g_ptr_array_new_full (TEST_NROWS, &_test_ncm_stats_rows_count_free);
-  NcmMatrix *cov;
+  NcmMatrix *cov = ncm_matrix_new (TEST_NCOLS, TEST_NCOLS);
   guint t;
 
   for (t = 0; t < TEST_NROWS; t++)
@@ -377,7 +382,7 @@ test_ncm_stats_rows_reset (TestNcmStatsRows *test, gconstpointer pdata)
   ncm_stats_rows_set_rows (test->rows, own);
   g_ptr_array_unref (own);
 
-  cov = ncm_stats_rows_cov_robust_ogk (test->rows);
+  ncm_stats_rows_cov_robust_ogk (test->rows, cov);
   ncm_matrix_free (cov);
 
   _test_ncm_stats_rows_nfreed = 0;
