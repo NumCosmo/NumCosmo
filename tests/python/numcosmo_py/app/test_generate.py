@@ -637,6 +637,7 @@ def test_generate_bianchi_velocity(tmp_path: Path):
     likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
     data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
     dist = data.props.dist
+    assert dist is not None
     assert dist.props.zmax > 1.05 * 0.03 + Nc.OBSERVER_VELOCITY_MAX_V / 299792.458
 
     # Too small a lower redshift limit for the velocity bound

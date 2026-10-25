@@ -44,7 +44,9 @@ def test_dist_mu_obs_from_table():
     assert obs.get_bool("ok", 1) is False
     assert np.isnan(obs.get("extra", 1))
     assert obs.get("extra", 2) == 3.0
-    assert obs.peek_meta().get_string("source") == (True, "unit test")
+    meta = obs.peek_meta()
+    assert meta is not None
+    assert meta.get_string("source") == (True, "unit test")
 
 
 def test_edd_cf4_snia_to_dist_mu_obs(edd_cf4_excerpt_file: Path):
@@ -67,6 +69,7 @@ def test_edd_cf4_snia_to_dist_mu_obs(edd_cf4_excerpt_file: Path):
     assert obs.get("sigma_mu", 0) == 0.13
 
     meta = obs.peek_meta()
+    assert meta is not None
     assert meta.get_string("downloaded") == (True, "2026-10-17")
     assert meta.get_string("source")[1].startswith("All CF4 SNIa Samples")
 
@@ -95,7 +98,7 @@ def test_samples_by_rule(edd_cf4_excerpt_file: Path):
         errors = {n: data[i, columns.index(f"eDM_{n}")] for n in names}
         finite = {n: e for n, e in errors.items() if np.isfinite(e)}
         if finite:
-            assert names[int(s)] == min(finite, key=finite.get)
+            assert names[int(s)] == min(finite, key=finite.__getitem__)
         else:
             assert s == -1.0
 
