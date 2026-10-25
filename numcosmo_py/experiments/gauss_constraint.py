@@ -107,24 +107,23 @@ def sample_with_tmvn(
         mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
     )
 
-    sv = Ncm.StatsVec.new(dim + 1, Ncm.StatsVecType.COV, True)
+    sv = Ncm.StatsVec.new(dim + 1, Ncm.StatsVecType.COV, False)
+    rows = []
     for s in np.transpose(tmvn_sampler.sample(ssize)):
         dgc.peek_mean().set_array(s)
         st = np.concatenate(([dgc.m2lnL_val(mset)], s))
-        sv.append(Ncm.Vector.new_array(st), True)
+        sv.append(Ncm.Vector.new_array(st), False)
+        rows.append(st)
 
     filename = f"gauss_constraint_{dim}d_tmvn_samples.dat"
     with open(filename, "w", encoding="utf-8") as f:
         mean_array = [f"{v: 22.15g}" for v in sv.peek_mean().dup_array()]
         stdev_array = [f"{sv.get_sd(i): 22.15g}" for i in range(dim)]
-        f.write(f"#   Number of samples : {sv.nitens}\n")
+        f.write(f"#   Number of samples : {sv.nitens()}\n")
         f.write(f"#   Mean : {' '.join(mean_array)}\n")
         f.write(f"#   Stdev: {' '.join(stdev_array)}\n")
 
-        f.writelines(
-            " ".join([f"{v: 22.15g}" for v in sv.peek_row(i).dup_array()]) + "\n"
-            for i in range(sv.nitens())
-        )
+        f.writelines(" ".join([f"{v: 22.15g}" for v in row]) + "\n" for row in rows)
 
     return filename
 
