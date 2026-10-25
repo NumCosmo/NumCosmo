@@ -100,6 +100,10 @@ typedef struct _NcmMSetCatalogPrivate
   NcmStatsVec *mean_pstats;
   NcmStatsVec *e_stats;
   NcmStatsVec *e_mean_stats;
+  GPtrArray *rows;
+  GPtrArray *e_mean_rows;
+  GPtrArray *chain_rows;
+  NcmStatsRows *diag_rows;
   GPtrArray *e_var_array;
   gint naccepted;
   GArray *accept_ratio;
@@ -221,6 +225,10 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   g_ptr_array_set_free_func (self->e_var_array, (GDestroyNotify) & ncm_vector_free);
   self->e_stats      = NULL;
   self->e_mean_stats = NULL;
+  self->rows         = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vector_free);
+  self->e_mean_rows  = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vector_free);
+  self->chain_rows   = g_ptr_array_new ();
+  self->diag_rows    = NULL;
   self->naccepted    = 0;
   self->accept_ratio = NULL;
   self->chain_means  = NULL;
@@ -280,7 +288,8 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
   const guint total           = free_params_len + self->nadd_vals + (self->weighted ? 1 : 0);
   guint i;
 
-  self->pstats     = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, TRUE);
+  self->pstats     = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, FALSE);
+  self->diag_rows  = ncm_stats_rows_new (total);
   self->params_max = ncm_vector_new (total);
   self->params_min = ncm_vector_new (total);
 
@@ -291,14 +300,14 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
   {
     for (i = 0; i < self->nchains; i++)
     {
-      NcmStatsVec *pstats = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, TRUE);
+      NcmStatsVec *pstats = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, FALSE);
 
       g_ptr_array_add (self->chain_pstats, pstats);
     }
 
     self->mean_pstats  = ncm_stats_vec_new (free_params_len, NCM_STATS_VEC_COV, FALSE);
     self->e_stats      = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, FALSE);
-    self->e_mean_stats = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, TRUE);
+    self->e_mean_stats = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, FALSE);
     self->accept_ratio = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
     self->chain_means = ncm_vector_new (self->nchains);
@@ -588,6 +597,10 @@ _ncm_mset_catalog_dispose (GObject *object)
   ncm_stats_vec_clear (&self->mean_pstats);
   ncm_stats_vec_clear (&self->e_stats);
   ncm_stats_vec_clear (&self->e_mean_stats);
+  ncm_stats_rows_clear (&self->diag_rows);
+  g_clear_pointer (&self->chain_rows, g_ptr_array_unref);
+  g_clear_pointer (&self->e_mean_rows, g_ptr_array_unref);
+  g_clear_pointer (&self->rows, g_ptr_array_unref);
 
   g_clear_pointer (&self->e_var_array, g_ptr_array_unref);
   g_clear_pointer (&self->accept_ratio, g_array_unref);
@@ -2447,7 +2460,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 
       for (i = 0; i < rows_to_add; i++)
       {
-        NcmVector *row = ncm_stats_vec_peek_row (self->pstats, i);
+        NcmVector *row = g_ptr_array_index (self->rows, i);
 
         _ncm_mset_catalog_write_row (mcat, row, i + 1);
       }
@@ -2485,6 +2498,10 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       }
 
       ncm_stats_vec_prepend_data (self->pstats, rows, FALSE);
+
+      /* self->rows takes the reference each row was created with. */
+      for (i = 0; i < rows->len; i++)
+        g_ptr_array_insert (self->rows, i, g_ptr_array_index (rows, i));
 
       if (self->nchains > 1)
       {
@@ -2531,7 +2548,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 
       for (i = 0; i < rows_to_add; i++)
       {
-        NcmVector *row = ncm_stats_vec_peek_row (self->pstats, offset + i);
+        NcmVector *row = g_ptr_array_index (self->rows, offset + i);
 
         _ncm_mset_catalog_write_row (mcat, row, offset + i + 1);
       }
@@ -2683,6 +2700,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   ncm_mset_catalog_erase_data (mcat);
 
   ncm_stats_vec_reset (self->pstats, TRUE);
+  g_ptr_array_set_size (self->rows, 0);
+  g_ptr_array_set_size (self->e_mean_rows, 0);
   ncm_stats_acorr_reset (self->acorr);
 
   if (self->nchains > 1)
@@ -3388,12 +3407,14 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
     ncm_stats_vec_append (self->pstats, x, FALSE);
   }
 
+  g_ptr_array_add (self->rows, ncm_vector_ref (x));
+
   /* Counting the number of accepted steps */
   if (ncm_stats_vec_nitens (self->pstats) > self->nchains)
   {
     const gint current_index = ncm_stats_vec_nitens (self->pstats) - 1;
     const gint last_index    = current_index - self->nchains;
-    NcmVector *last_x        = ncm_stats_vec_peek_row (self->pstats, last_index);
+    NcmVector *last_x        = g_ptr_array_index (self->rows, last_index);
 
     if (ncm_vector_cmp2 (last_x, x, 1.0e-14, 0.0) > 0)
       self->naccepted++;
@@ -3417,7 +3438,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
 
       g_assert_cmpuint (ncm_stats_vec_nitens (self->e_stats), ==, self->nchains);
 
-      ncm_stats_vec_append (self->e_mean_stats, e_mean, TRUE);
+      ncm_stats_vec_append (self->e_mean_stats, e_mean, FALSE);
+      g_ptr_array_add (self->e_mean_rows, ncm_vector_dup (e_mean));
       ncm_stats_acorr_update (self->acorr, e_mean);
       g_ptr_array_add (self->e_var_array, e_var);
 
@@ -3870,7 +3892,8 @@ ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_peek_pstats:
  * @mcat: a #NcmMSetCatalog
  *
- * Peeks the parameters #NcmStatsVec object.
+ * Peeks the online statistics of all rows (mean, variance, covariance). It keeps no rows;
+ * they are read with ncm_mset_catalog_peek_row().
  *
  * Returns: (transfer none): the #NcmStatsVec object.
  */
@@ -3886,7 +3909,8 @@ ncm_mset_catalog_peek_pstats (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_peek_e_mean_stats:
  * @mcat: a #NcmMSetCatalog
  *
- * Peeks the ensemble #NcmStatsVec object.
+ * Peeks the online statistics of the ensemble means. It keeps no rows; the series is read
+ * with ncm_mset_catalog_peek_e_mean_t() or ncm_mset_catalog_get_diag_rows().
  *
  * Returns: (transfer none): the #NcmStatsVec object.
  */
@@ -3903,7 +3927,7 @@ ncm_mset_catalog_peek_e_mean_stats (NcmMSetCatalog *mcat)
  * @mcat: a #NcmMSetCatalog
  * @i: chain index
  *
- * Peeks the chain #NcmStatsVec object.
+ * Peeks the online statistics of chain @i. It keeps no rows.
  *
  * Returns: (transfer none): the #NcmStatsVec object.
  */
@@ -3913,6 +3937,45 @@ ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const guint i)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   return g_ptr_array_index (self->chain_pstats, i);
+}
+
+static GPtrArray *_ncm_mset_catalog_dup_rows (GPtrArray *rows);
+
+/**
+ * ncm_mset_catalog_get_diag_rows:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Creates a #NcmStatsRows given the series the burn-in diagnostics of @mcat read: the
+ * rows when @mcat has one chain, the ensemble means when it has several. It holds a
+ * reference to each row present when it is created, so it stays valid when @mcat adds
+ * rows or is reset; rows added later are not part of it.
+ *
+ * Returns: (transfer full): a new #NcmStatsRows.
+ */
+NcmStatsRows *
+ncm_mset_catalog_get_diag_rows (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  NcmStatsRows *rows          = ncm_stats_rows_new (ncm_stats_vec_len (self->pstats));
+  GPtrArray *sample           = _ncm_mset_catalog_dup_rows ((self->nchains == 1) ? self->rows : self->e_mean_rows);
+
+  ncm_stats_rows_set_rows (rows, sample);
+  g_ptr_array_unref (sample);
+
+  return rows;
+}
+
+/* A new array holding a reference to each element of rows. */
+static GPtrArray *
+_ncm_mset_catalog_dup_rows (GPtrArray *rows)
+{
+  GPtrArray *dup = g_ptr_array_new_full (rows->len, (GDestroyNotify) & ncm_vector_free);
+  guint i;
+
+  for (i = 0; i < rows->len; i++)
+    g_ptr_array_add (dup, ncm_vector_ref (g_ptr_array_index (rows, i)));
+
+  return dup;
 }
 
 /**
@@ -3944,12 +4007,11 @@ NcmVector *
 ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  guint nrows                 = ncm_stats_vec_nrows (self->pstats);
 
-  if (i >= nrows)
+  if (i >= self->rows->len)
     return NULL;
   else
-    return ncm_stats_vec_peek_row (self->pstats, i);
+    return g_ptr_array_index (self->rows, i);
 }
 
 /**
@@ -3968,7 +4030,7 @@ ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat)
   if (ncm_stats_vec_nitens (self->pstats) == 0)
     return NULL;
   else
-    return ncm_stats_vec_peek_row (self->pstats, ncm_stats_vec_nitens (self->pstats) - 1);
+    return g_ptr_array_index (self->rows, ncm_stats_vec_nitens (self->pstats) - 1);
 }
 
 /**
@@ -3985,7 +4047,7 @@ ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   if (ncm_stats_vec_nitens (self->e_mean_stats) > 0)
-    return ncm_stats_vec_peek_row (self->e_mean_stats, ncm_stats_vec_nitens (self->e_mean_stats) - 1);
+    return g_ptr_array_index (self->e_mean_rows, ncm_stats_vec_nitens (self->e_mean_stats) - 1);
   else
     return NULL;
 }
@@ -4027,7 +4089,7 @@ ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t)
   {
     g_assert_cmpuint (t, <, ncm_stats_vec_nitens (self->e_mean_stats));
 
-    return ncm_stats_vec_peek_row (self->e_mean_stats, t);
+    return g_ptr_array_index (self->e_mean_rows, t);
   }
   else
   {
@@ -4769,7 +4831,7 @@ ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean fo
     guint i;
 
     for (i = 0; i < nitens; i++)
-      ncm_stats_acorr_update (rows, ncm_stats_vec_peek_row (self->pstats, i));
+      ncm_stats_acorr_update (rows, g_ptr_array_index (self->rows, i));
 
     for (p = 0; p < total; p++)
       ncm_vector_set (self->tau, p, ncm_stats_acorr_get_tau (rows, p));
@@ -5172,7 +5234,7 @@ ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i)
 
   for (k = 0; k < ncm_stats_vec_nitens (self->pstats); k++)
   {
-    NcmVector *row = ncm_stats_vec_peek_row (self->pstats, k);
+    NcmVector *row = g_ptr_array_index (self->rows, k);
 
     gsl_histogram_increment (self->h, ncm_vector_get (row, i));
   }
@@ -5932,7 +5994,7 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
 
   if ((thin != 1) || (tc > 0))
   {
-    GPtrArray *rows = ncm_stats_vec_dup_saved_x (self->pstats);
+    GPtrArray *rows = _ncm_mset_catalog_dup_rows (self->rows);
     gchar *file     = g_strdup (ncm_mset_catalog_peek_filename (mcat));
     guint t, tf;
 
@@ -6025,7 +6087,7 @@ guint
 ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  GPtrArray *rows             = ncm_stats_vec_dup_saved_x (self->pstats);
+  GPtrArray *rows             = _ncm_mset_catalog_dup_rows (self->rows);
   gchar *file                 = g_strdup (ncm_mset_catalog_peek_filename (mcat));
   guint i, ndel;
 
@@ -6095,7 +6157,7 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
    * catalog reaching here is a programming error, not a request. */
   g_return_if_fail (!self->readonly);
 
-  const gint last_t = ncm_stats_vec_nrows (self->pstats);
+  const gint last_t = self->rows->len;
 
   if (last_t > 0)
   {
@@ -6105,7 +6167,7 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
     g_assert_cmpuint (new_len, <, last_t);
 
     {
-      GPtrArray *rows = ncm_stats_vec_dup_saved_x (self->pstats);
+      GPtrArray *rows = _ncm_mset_catalog_dup_rows (self->rows);
       gchar *file     = g_strdup (ncm_mset_catalog_peek_filename (mcat));
       guint t;
 
@@ -6165,7 +6227,7 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
  * @mtype: #NcmFitRunMsgs log level
  *
  * The starting time $t_m$ that maximizes the smallest effective sample size (ESS) over
- * the columns, see ncm_stats_vec_max_ess_time(). A catalog with one chain is read row
+ * the columns, see ncm_stats_rows_max_ess_time(). A catalog with one chain is read row
  * by row; one with several chains is read through the ensemble means, so $t_m$ is in
  * iterations. Fewer than ten rows (ensembles) give no estimate: $t_m$ is zero and
  * @max_ess zero.
@@ -6176,8 +6238,8 @@ guint
 ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  NcmStatsVec *pstats         = (self->nchains == 1) ? self->pstats : self->e_mean_stats;
-  const gint last_t           = ncm_stats_vec_nrows (pstats);
+  GPtrArray *sample           = (self->nchains == 1) ? self->rows : self->e_mean_rows;
+  const gint last_t           = sample->len;
   NcmVector *esss             = NULL;
   gdouble wp_ess              = 0.0;
   gint bindex                 = 0;
@@ -6201,7 +6263,9 @@ ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gd
     return 0;
   }
 
-  esss = ncm_stats_vec_max_ess_time (pstats, ntests, &bindex, &wp, &wp_order, &wp_ess);
+  ncm_stats_rows_set_rows (self->diag_rows, sample);
+  esss = ncm_stats_rows_max_ess_time (self->diag_rows, ntests, &bindex, &wp, &wp_order, &wp_ess);
+  ncm_stats_rows_reset (self->diag_rows);
 
   if (max_ess != NULL)
     *max_ess = wp_ess;
@@ -6253,7 +6317,7 @@ _fonempval (gdouble v_i, guint i, gpointer user_data)
  * @mtype: #NcmFitRunMsgs log level
  *
  * Applies the Heidelberger and Welch convergence diagnostic, see
- * ncm_stats_vec_heidel_diag(). A catalog with one chain is read row by row; one with
+ * ncm_stats_rows_heidel_diag(). A catalog with one chain is read row by row; one with
  * several chains is read through the ensemble means, so the time is in iterations. When
  * @pvalue is zero the required p-value is $1 - 0.95^{1/n}$, $n$ the number of free
  * parameters, so that all $n$ pass together with probability 0.95.
@@ -6265,12 +6329,12 @@ guint
 ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  NcmStatsVec *pstats         = (self->nchains == 1) ? self->pstats : self->e_mean_stats;
+  GPtrArray *sample           = (self->nchains == 1) ? self->rows : self->e_mean_rows;
   const gdouble pvalue_lef    = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (self->mset)) : pvalue;
   gint bindex                 = 0;
   guint wp = 0, wp_order = 0;
   gdouble wp_pvalue  = 0.0;
-  const guint last_t = ncm_stats_vec_nrows (pstats);
+  const guint last_t = sample->len;
   NcmVector *pvals;
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
@@ -6288,7 +6352,9 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
     return 0;
   }
 
-  pvals = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &wp_pvalue);
+  ncm_stats_rows_set_rows (self->diag_rows, sample);
+  pvals = ncm_stats_rows_heidel_diag (self->diag_rows, ntests, pvalue_lef, &bindex, &wp, &wp_order, &wp_pvalue);
+  ncm_stats_rows_reset (self->diag_rows);
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
@@ -6330,7 +6396,7 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
  * @mtype: #NcmFitRunMsgs log level
  *
  * The time $t_0$ from which column @p stays near its robust mean, see
- * ncm_stats_vec_estimate_const_break(). A catalog with one chain is read row by row;
+ * ncm_stats_rows_estimate_const_break(). A catalog with one chain is read row by row;
  * one with several chains is read through the ensemble means, so $t_0$ is in iterations.
  *
  * Returns: $t_0$, rounded up.
@@ -6352,10 +6418,9 @@ ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs 
     ncm_message ("# NcmMSetCatalog: Computing the constant break point for parameter `%d', sample size `%u':\n", p, n);
   }
 
-  if (self->nchains > 1)
-    tc = ceil (ncm_stats_vec_estimate_const_break (self->e_mean_stats, p));
-  else
-    tc = ceil (ncm_stats_vec_estimate_const_break (self->pstats, p));
+  ncm_stats_rows_set_rows (self->diag_rows, (self->nchains > 1) ? self->e_mean_rows : self->rows);
+  tc = ceil (ncm_stats_rows_estimate_const_break (self->diag_rows, p));
+  ncm_stats_rows_reset (self->diag_rows);
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_message ("# NcmMSetCatalog: Constant break point at `%d':\n", tc);
@@ -6456,6 +6521,8 @@ _ess_res_cmp (gconstpointer a, gconstpointer b)
     return 1;
 }
 
+static void _ncm_mset_catalog_set_chain_rows (NcmMSetCatalogPrivate *self, const guint i);
+
 /**
  * ncm_mset_catalog_max_ess_time_by_chain:
  * @mcat: a #NcmMSetCatalog
@@ -6463,7 +6530,7 @@ _ess_res_cmp (gconstpointer a, gconstpointer b)
  * @max_ess: (out) (optional): the smallest effective sample size of the worst chain
  * @mtype: #NcmFitRunMsgs log level
  *
- * Applies ncm_stats_vec_max_ess_time() to each chain on its own. The worst chain is the
+ * Applies ncm_stats_rows_max_ess_time() to each chain on its own. The worst chain is the
  * one with the latest starting time, and its time and ESS are returned. A catalog with
  * one chain is passed to ncm_mset_catalog_calc_max_ess_time(). Fewer than ten iterations
  * give zero, and @max_ess zero.
@@ -6510,10 +6577,13 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
     {
       gint bindex = 0;
       guint wp = 0, wp_order = 0;
-      gdouble wp_ess      = 0.0;
-      NcmStatsVec *pstats = g_ptr_array_index (self->chain_pstats, i);
-      NcmVector *esss     = ncm_stats_vec_max_ess_time (pstats, ntests, &bindex, &wp, &wp_order, &wp_ess);
-      guint size          = ncm_stats_vec_nitens (pstats);
+      gdouble wp_ess = 0.0;
+      NcmVector *esss;
+      guint size;
+
+      _ncm_mset_catalog_set_chain_rows (self, i);
+      esss = ncm_stats_rows_max_ess_time (self->diag_rows, ntests, &bindex, &wp, &wp_order, &wp_ess);
+      size = ncm_stats_rows_get_nrows (self->diag_rows);
 
       if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
       {
@@ -6541,6 +6611,8 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
 
       ncm_vector_free (esss);
     }
+
+    ncm_stats_rows_reset (self->diag_rows);
 
     if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
     {
@@ -6588,6 +6660,26 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
   }
 }
 
+/*
+ * Fills self->chain_rows with the rows of chain i, rows i, i + nchains, i + 2 nchains,
+ * ..., in order, and gives it to self->diag_rows; the caller resets self->diag_rows after
+ * its last chain. The first id is a multiple of nchains, so row t belongs to chain
+ * t mod nchains.
+ */
+static void
+_ncm_mset_catalog_set_chain_rows (NcmMSetCatalogPrivate *self, const guint i)
+{
+  const guint nrows = (self->rows->len > i) ? (self->rows->len - i + self->nchains - 1) / self->nchains : 0;
+  guint t;
+
+  g_ptr_array_set_size (self->chain_rows, nrows);
+
+  for (t = 0; t < nrows; t++)
+    g_ptr_array_index (self->chain_rows, t) = g_ptr_array_index (self->rows, i + t * self->nchains);
+
+  ncm_stats_rows_set_rows (self->diag_rows, self->chain_rows);
+}
+
 /**
  * ncm_mset_catalog_heidel_diag_by_chain:
  * @mcat: a #NcmMSetCatalog
@@ -6596,7 +6688,7 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
  * @wp_pvalue: (out) (optional): the worst value of the worst chain
  * @mtype: #NcmFitRunMsgs log level
  *
- * Applies ncm_stats_vec_heidel_diag() to each chain on its own. The worst chain is one
+ * Applies ncm_stats_rows_heidel_diag() to each chain on its own. The worst chain is one
  * that passes from no starting time, the one with the largest value among those, or
  * else the one with the latest starting time; @wp_pvalue is its largest Cramér-von Mises
  * cumulative distribution value, one minus its p-value. Fewer than ten iterations give
@@ -6641,10 +6733,13 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
     {
       gint bindex = 0;
       guint wp = 0, wp_order = 0;
-      gdouble lwp_pvalue  = 0.0;
-      NcmStatsVec *pstats = (self->nchains == 1) ? self->pstats : g_ptr_array_index (self->chain_pstats, i);
-      NcmVector *pvals    = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &lwp_pvalue);
-      guint size          = ncm_stats_vec_nitens (pstats);
+      gdouble lwp_pvalue = 0.0;
+      NcmVector *pvals;
+      guint size;
+
+      _ncm_mset_catalog_set_chain_rows (self, i);
+      pvals = ncm_stats_rows_heidel_diag (self->diag_rows, ntests, pvalue_lef, &bindex, &wp, &wp_order, &lwp_pvalue);
+      size  = ncm_stats_rows_get_nrows (self->diag_rows);
 
       if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
       {
@@ -6672,6 +6767,8 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
 
       ncm_vector_free (pvals);
     }
+
+    ncm_stats_rows_reset (self->diag_rows);
 
     if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
     {
