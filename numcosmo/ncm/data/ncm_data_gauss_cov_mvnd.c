@@ -386,7 +386,8 @@ ncm_data_gauss_cov_mvnd_est_ratio (NcmDataGaussCovMVND *data_mvnd, NcmMSet *mset
  * Draws realizations of the data until @n of them fall inside [@lower, @upper] in
  * every component and returns their statistics. If @maxiter realizations in a row
  * are rejected it warns and returns the statistics gathered so far. If
- * @save_realizations is %TRUE, the realizations are saved in the #NcmStatsVec.
+ * @save_realizations is %TRUE, the realizations are saved in the #NcmStatsVec through
+ * #NcmStatsVec:save-x, which is deprecated and dropped in 1.0 with this argument.
  *
  * Returns: (transfer full): a new #NcmStatsVec with the statistics of the MVND.
  */

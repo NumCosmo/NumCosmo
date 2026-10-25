@@ -28,8 +28,9 @@
  *
  * Online weighted statistics for vectors.
  *
- * Maintains the weighted mean, variance, covariance, quantiles, and
- * autocorrelation diagnostics of appended samples.
+ * Maintains the weighted mean, variance, covariance and quantiles of appended
+ * samples. The analyses that read the rows themselves (burn-in diagnostics, robust
+ * covariances) are in #NcmStatsRows.
  *
  * The mean is updated as $$\bar{x}_n = \bar{x}_{n-1} + (x_n -
  * \bar{x}_{n-1})\frac{w_n}{W_n},$$ where $\bar{x}_n$ is the mean of the first
@@ -202,6 +203,16 @@ _ncm_stats_vec_constructed (GObject *object)
 
     if (svec->save_x)
     {
+      static gsize warned = 0;
+
+      /* Deprecated, dropped in 1.0; warned once per process. */
+      if (g_once_init_enter (&warned))
+      {
+        g_warning ("NcmStatsVec:save-x is deprecated and dropped in 1.0: keep the rows where they "
+                   "are added and give them to a NcmStatsRows for the row analyses.");
+        g_once_init_leave (&warned, 1);
+      }
+
       g_assert (svec->saved_x == NULL);
       svec->saved_x = g_ptr_array_new ();
       svec->saved_w = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -342,7 +353,9 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
   /**
    * NcmStatsVec:save-x:
    *
-   * Whether to save each input vector.
+   * Whether to keep a reference to each added row. Deprecated, dropped in 1.0: keep the
+   * rows where they are added and give them to a #NcmStatsRows for the row analyses. The
+   * first #NcmStatsVec created with it in a process emits a warning.
    *
    */
   g_object_class_install_property (object_class,
@@ -361,7 +374,7 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
  * @save_x: whether to save each added vector
  *
  * Creates a new #NcmStatsVec, see #NcmStatsVec:length, #NcmStatsVec:type and
- * #NcmStatsVec:save-x.
+ * #NcmStatsVec:save-x; @save_x %TRUE is deprecated, dropped in 1.0.
  *
  * Returns: (transfer full): a new #NcmStatsVec.
  */
@@ -792,15 +805,19 @@ ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
  *
  * Enables the running estimate of the $p$ quantile of each variable, together with the
  * $p/2$ and $(1 + p)/2$ quantiles, by the P-squared algorithm of GSL. The quantiles ignore
- * the weights, except that rows of zero weight are left out. On a non-empty @svec the
- * saved rows are replayed; without #NcmStatsVec:save-x the earlier rows are left out, with
- * a warning.
+ * the weights, except that rows of zero weight are left out. It must be called before the
+ * first row is added, and aborts otherwise; with the deprecated #NcmStatsVec:save-x the
+ * saved rows are replayed instead.
  */
 void
 ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p)
 {
   g_assert_cmpfloat (p, >, 0.0);
   g_assert_cmpfloat (p, <, 1.0);
+
+  if ((svec->nitens > 0) && !svec->save_x)
+    g_error ("ncm_stats_vec_enable_quantile: the quantiles must be enabled before the first row, "
+             "%u row(s) were already added.", svec->nitens);
 
   {
     guint i;
@@ -815,33 +832,26 @@ ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p)
     }
   }
 
+  /* Deprecated with #NcmStatsVec:save-x, dropped in 1.0: the saved rows are replayed. */
   if (svec->nitens > 0)
   {
-    if (!svec->save_x)
-    {
-      g_warning ("ncm_stats_vec_enable_quantile: Enabling quantile calculation in a non-empty NcmStatsVec,"
-                 " all previous data will be ignored in the quantile.");
-    }
-    else
-    {
-      guint i;
+    guint i;
 
-      for (i = 0; i < svec->saved_x->len; i++)
+    for (i = 0; i < svec->saved_x->len; i++)
+    {
+      NcmVector *x = g_ptr_array_index (svec->saved_x, i);
+      guint j;
+
+      /* As in the updates, a row of zero weight does not enter the quantiles */
+      if (g_array_index (svec->saved_w, gdouble, i) == 0.0)
+        continue;
+
+      for (j = 0; j < svec->len; j++)
       {
-        NcmVector *x = g_ptr_array_index (svec->saved_x, i);
-        guint j;
+        const gdouble x_j                   = ncm_vector_get (x, j);
+        gsl_rstat_quantile_workspace *qws_j = g_ptr_array_index (svec->q_array, j);
 
-        /* As in the updates, a row of zero weight does not enter the quantiles */
-        if (g_array_index (svec->saved_w, gdouble, i) == 0.0)
-          continue;
-
-        for (j = 0; j < svec->len; j++)
-        {
-          const gdouble x_j                   = ncm_vector_get (x, j);
-          gsl_rstat_quantile_workspace *qws_j = g_ptr_array_index (svec->q_array, j);
-
-          gsl_rstat_quantile_add (x_j, qws_j);
-        }
+        gsl_rstat_quantile_add (x_j, qws_j);
       }
     }
   }
@@ -1043,7 +1053,8 @@ ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex,
  * ncm_stats_vec_dup_saved_x:
  * @svec: a #NcmStatsVec
  *
- * Creates a new array with references to the saved rows.
+ * Creates a new array with references to the saved rows. Deprecated with
+ * #NcmStatsVec:save-x, dropped in 1.0: keep the rows where they are added.
  *
  * Returns: (transfer full) (element-type NcmVector) (nullable): the saved rows, or %NULL without #NcmStatsVec:save-x.
  */
@@ -1391,7 +1402,8 @@ ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset)
  * @svec: a #NcmStatsVec
  *
  * Gets the number of saved rows, including rows kept by ncm_stats_vec_reset() with
- * @rm_saved %FALSE. Requires #NcmStatsVec:save-x.
+ * @rm_saved %FALSE. Requires #NcmStatsVec:save-x. Deprecated with #NcmStatsVec:save-x,
+ * dropped in 1.0: keep the rows where they are added.
  *
  * Returns: the number of saved rows.
  */
@@ -1421,7 +1433,8 @@ ncm_stats_vec_nitens (NcmStatsVec *svec)
  * @i: position of the saved row
  *
  * Gets the saved row at position @i, counting every saved row; see ncm_stats_vec_reset() for
- * rows kept across a reset. Requires #NcmStatsVec:save-x.
+ * rows kept across a reset. Requires #NcmStatsVec:save-x. Deprecated with
+ * #NcmStatsVec:save-x, dropped in 1.0: keep the rows where they are added.
  *
  * Returns: (transfer none): the saved row at position @i.
  */
@@ -1441,7 +1454,8 @@ ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i)
  * @p: element index
  *
  * Gets element @p of the saved row at position @i, see ncm_stats_vec_peek_row(); @i must be
- * below ncm_stats_vec_nitens(). Requires #NcmStatsVec:save-x.
+ * below ncm_stats_vec_nitens(). Requires #NcmStatsVec:save-x. Deprecated with
+ * #NcmStatsVec:save-x, dropped in 1.0: keep the rows where they are added.
  *
  * Returns: the element.
  */

@@ -33,6 +33,7 @@
 #include <numcosmo/ncm/fit/ncm_fit.h>
 #include <numcosmo/ncm/stats/ncm_stats_acorr.h>
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
+#include <numcosmo/ncm/stats/ncm_stats_rows.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_epdf.h>
 
 G_BEGIN_DECLS
@@ -182,6 +183,7 @@ NcmObjArray *ncm_mset_catalog_peek_functions_array (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_pstats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_e_mean_stats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const guint i);
+NcmStatsRows *ncm_mset_catalog_get_diag_rows (NcmMSetCatalog *mcat);
 GArray *ncm_mset_catalog_peek_accept_ratio_array (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
