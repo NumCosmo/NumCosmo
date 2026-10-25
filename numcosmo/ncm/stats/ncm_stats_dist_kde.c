@@ -122,6 +122,7 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
   NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   self->sample            = NULL;
+  self->rows              = NULL;
   self->cov_type          = NCM_STATS_DIST_KDE_COV_TYPE_LEN;
   self->cov               = NULL;
   self->cov_fixed         = NULL;
@@ -201,6 +202,7 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   ncm_stats_vec_clear (&self->sample);
+  ncm_stats_rows_clear (&self->rows);
   ncm_matrix_clear (&self->cov);
   ncm_matrix_clear (&self->cov_fixed);
   ncm_matrix_clear (&self->cov_fixed_decomp);
@@ -315,6 +317,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
     ncm_stats_vec_clear (&self->sample);
+    ncm_stats_rows_clear (&self->rows);
 
     ncm_matrix_clear (&self->cov);
     ncm_matrix_clear (&self->cov_decomp);
@@ -325,7 +328,8 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_matrix_clear (&self->invUcenter_matrix);
     g_ptr_array_set_size (self->invUcenter_array, 0);
 
-    self->sample      = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
+    self->sample      = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, FALSE);
+    self->rows        = ncm_stats_rows_new (dim);
     self->cov         = ncm_matrix_new (dim, dim);
     self->cov_decomp  = ncm_matrix_new (dim, dim);
     self->cov_decomp0 = ncm_matrix_new (dim, dim);
@@ -374,24 +378,21 @@ _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-    {
-      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_diag (self->sample);
+      ncm_stats_rows_set_rows (self->rows, sample_array);
+      ncm_stats_rows_set_nrows (self->rows, pself->n_kernels);
+      ncm_stats_rows_cov_robust_diag (self->rows, self->cov);
+      ncm_stats_rows_reset (self->rows);
 
-      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the robust diagonal covariance");
-      ncm_matrix_memcpy (self->cov, cov);
-      ncm_matrix_free (cov);
-
+      _ncm_stats_dist_cholesky (self->cov_decomp, self->cov, self->nearPD_maxiter, "the robust diagonal covariance");
       break;
-    }
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
-    {
-      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_ogk (self->sample);
+      ncm_stats_rows_set_rows (self->rows, sample_array);
+      ncm_stats_rows_set_nrows (self->rows, pself->n_kernels);
+      ncm_stats_rows_cov_robust_ogk (self->rows, self->cov);
+      ncm_stats_rows_reset (self->rows);
 
-      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the robust covariance");
-      ncm_matrix_memcpy (self->cov, cov);
-      ncm_matrix_free (cov);
-    }
-    break;
+      _ncm_stats_dist_cholesky (self->cov_decomp, self->cov, self->nearPD_maxiter, "the robust covariance");
+      break;
     default:
       g_assert_not_reached ();
       break;
