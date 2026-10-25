@@ -54,6 +54,9 @@ typedef struct _TestNcmStatsRows
   NcmStatsVec *svec;
 } TestNcmStatsRows;
 
+/* Counts the rows freed by the arrays of the reset test. */
+static guint _test_ncm_stats_rows_nfreed = 0;
+
 /* Reference values of make_stats_rows_cases.py, printed at 701a5314 (the original
  * NcmStatsVec implementation). */
 /* BEGIN make_stats_rows_cases.py */
@@ -89,6 +92,7 @@ static void test_ncm_stats_rows_reference_serialized (TestNcmStatsRows *test, gc
 static void test_ncm_stats_rows_reference_stats_vec (TestNcmStatsRows *test, gconstpointer pdata);
 static void test_ncm_stats_rows_set_nrows (TestNcmStatsRows *test, gconstpointer pdata);
 static void test_ncm_stats_rows_properties (TestNcmStatsRows *test, gconstpointer pdata);
+static void test_ncm_stats_rows_reset (TestNcmStatsRows *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -116,10 +120,21 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_rows_new,
               &test_ncm_stats_rows_properties,
               &test_ncm_stats_rows_free);
+  g_test_add ("/ncm/stats_rows/reset", TestNcmStatsRows, NULL,
+              &test_ncm_stats_rows_new,
+              &test_ncm_stats_rows_reset,
+              &test_ncm_stats_rows_free);
 
   g_test_run ();
 
   return 0;
+}
+
+static void
+_test_ncm_stats_rows_count_free (gpointer row)
+{
+  _test_ncm_stats_rows_nfreed++;
+  ncm_vector_free (row);
 }
 
 /* Runs the six analyses on @rows and compares them with the reference table. */
@@ -344,5 +359,35 @@ test_ncm_stats_rows_properties (TestNcmStatsRows *test, gconstpointer pdata)
   g_object_get (test->rows, "ncols", &ncols, NULL);
 
   g_assert_cmpuint (ncols, ==, TEST_NCOLS);
+}
+
+/* The intended cycle: set_rows, the analyses, reset. The object is given an array only it
+ * references, whose element free function counts: reset releases every row, and the next
+ * set_rows gives the reference results again. */
+static void
+test_ncm_stats_rows_reset (TestNcmStatsRows *test, gconstpointer pdata)
+{
+  GPtrArray *own = g_ptr_array_new_full (TEST_NROWS, &_test_ncm_stats_rows_count_free);
+  NcmMatrix *cov;
+  guint t;
+
+  for (t = 0; t < TEST_NROWS; t++)
+    g_ptr_array_add (own, ncm_vector_ref (g_ptr_array_index (test->sample, t)));
+
+  ncm_stats_rows_set_rows (test->rows, own);
+  g_ptr_array_unref (own);
+
+  cov = ncm_stats_rows_cov_robust_ogk (test->rows);
+  ncm_matrix_free (cov);
+
+  _test_ncm_stats_rows_nfreed = 0;
+  ncm_stats_rows_reset (test->rows);
+  g_assert_cmpuint (_test_ncm_stats_rows_nfreed, ==, TEST_NROWS);
+  g_assert_cmpuint (ncm_stats_rows_get_nrows (test->rows), ==, 0);
+  g_assert_cmpuint (ncm_stats_rows_get_ncols (test->rows), ==, TEST_NCOLS);
+
+  ncm_stats_rows_set_rows (test->rows, test->sample);
+  _test_ncm_stats_rows_check (test->rows);
+  ncm_stats_rows_reset (test->rows);
 }
 

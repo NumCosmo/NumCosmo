@@ -45,6 +45,7 @@ void ncm_stats_rows_clear (NcmStatsRows **rows);
 
 void ncm_stats_rows_set_rows (NcmStatsRows *rows, GPtrArray *sample);
 void ncm_stats_rows_set_nrows (NcmStatsRows *rows, guint nrows);
+void ncm_stats_rows_reset (NcmStatsRows *rows);
 guint ncm_stats_rows_get_nrows (NcmStatsRows *rows);
 guint ncm_stats_rows_get_ncols (NcmStatsRows *rows);
 NcmVector *ncm_stats_rows_peek_row (NcmStatsRows *rows, guint i);

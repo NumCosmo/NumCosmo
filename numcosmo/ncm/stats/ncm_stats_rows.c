@@ -29,9 +29,11 @@
  * Analyses of a sample of rows, each a #NcmVector, given with ncm_stats_rows_set_rows():
  * the burn-in estimates ncm_stats_rows_max_ess_time(), ncm_stats_rows_heidel_diag() and
  * ncm_stats_rows_estimate_const_break(), and the robust covariances
- * ncm_stats_rows_cov_robust_diag() and ncm_stats_rows_cov_robust_ogk(). The object keeps
- * the work buffers of the analyses, allocated once for its number of columns and grown with
- * the number of rows, so successive analyses allocate nothing but their results.
+ * ncm_stats_rows_cov_robust_diag() and ncm_stats_rows_cov_robust_ogk(). The work buffers
+ * sized by the number of columns are allocated once. Those sized by the number of rows are
+ * allocated by the first analysis that needs them and freed, with the reference to the
+ * sample, by ncm_stats_rows_reset(), so the intended use is ncm_stats_rows_set_rows(), the
+ * analyses, then ncm_stats_rows_reset().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -74,13 +76,15 @@ struct _NcmStatsRows
   NcmStatsAcorr *acorr1;
   NcmStatsVec *chunk;
   GArray *ar_order;
-  /* Work buffers sized by nrows, grown in ncm_stats_rows_set_nrows(). */
-  GArray *data;
-  GArray *work;
+
+  /* Work buffers sized by nrows, allocated by the first analysis that needs them and freed
+   * by ncm_stats_rows_reset(); NULL when not allocated. */
+  NcmVector *data;
+  NcmVector *work;
   GArray *work_int;
   NcmMatrix *y;
   NcmMatrix *z;
-  NcmMatrix *X;
+  NcmVector *ones;
   NcmVector *yfit;
 };
 
@@ -91,6 +95,19 @@ enum
 };
 
 G_DEFINE_TYPE (NcmStatsRows, ncm_stats_rows, G_TYPE_OBJECT)
+
+/* Frees the buffers sized by nrows. */
+static void
+_ncm_stats_rows_free_row_buffers (NcmStatsRows *rows)
+{
+  ncm_vector_clear (&rows->data);
+  ncm_vector_clear (&rows->work);
+  g_clear_pointer (&rows->work_int, g_array_unref);
+  ncm_matrix_clear (&rows->y);
+  ncm_matrix_clear (&rows->z);
+  ncm_vector_clear (&rows->ones);
+  ncm_vector_clear (&rows->yfit);
+}
 
 static void
 ncm_stats_rows_init (NcmStatsRows *rows)
@@ -111,12 +128,12 @@ ncm_stats_rows_init (NcmStatsRows *rows)
   rows->acorr1   = NULL;
   rows->chunk    = NULL;
   rows->ar_order = g_array_new (FALSE, FALSE, sizeof (guint));
-  rows->data     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  rows->work     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  rows->work_int = g_array_new (FALSE, FALSE, sizeof (gint));
+  rows->data     = NULL;
+  rows->work     = NULL;
+  rows->work_int = NULL;
   rows->y        = NULL;
   rows->z        = NULL;
-  rows->X        = NULL;
+  rows->ones     = NULL;
   rows->yfit     = NULL;
 }
 
@@ -202,10 +219,8 @@ _ncm_stats_rows_dispose (GObject *object)
   ncm_stats_acorr_clear (&rows->acorr);
   ncm_stats_acorr_clear (&rows->acorr1);
   ncm_stats_vec_clear (&rows->chunk);
-  ncm_matrix_clear (&rows->y);
-  ncm_matrix_clear (&rows->z);
-  ncm_matrix_clear (&rows->X);
-  ncm_vector_clear (&rows->yfit);
+
+  _ncm_stats_rows_free_row_buffers (rows);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_rows_parent_class)->dispose (object);
@@ -217,9 +232,6 @@ _ncm_stats_rows_finalize (GObject *object)
   NcmStatsRows *rows = NCM_STATS_ROWS (object);
 
   g_clear_pointer (&rows->ar_order, g_array_unref);
-  g_clear_pointer (&rows->data, g_array_unref);
-  g_clear_pointer (&rows->work, g_array_unref);
-  g_clear_pointer (&rows->work_int, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_rows_parent_class)->finalize (object);
@@ -312,8 +324,8 @@ ncm_stats_rows_clear (NcmStatsRows **rows)
  * @rows: a #NcmStatsRows
  * @sample: (element-type NcmVector): the rows, each a #NcmVector of #NcmStatsRows:ncols elements
  *
- * Sets the sample, which @rows references, and the number of rows to its length; see
- * ncm_stats_rows_set_nrows() to analyze fewer rows.
+ * Sets the sample, which @rows references until ncm_stats_rows_reset() or the next call, and
+ * the number of rows to its length; see ncm_stats_rows_set_nrows() to analyze fewer rows.
  */
 void
 ncm_stats_rows_set_rows (NcmStatsRows *rows, GPtrArray *sample)
@@ -329,8 +341,7 @@ ncm_stats_rows_set_rows (NcmStatsRows *rows, GPtrArray *sample)
  * @rows: a #NcmStatsRows
  * @nrows: number of rows to analyze, the first @nrows of the sample
  *
- * Sets the number of rows the analyses use, at most the length of the sample. The buffers
- * sized by the number of rows are allocated only when it grows.
+ * Sets the number of rows the analyses use, at most the length of the sample.
  */
 void
 ncm_stats_rows_set_nrows (NcmStatsRows *rows, guint nrows)
@@ -339,28 +350,22 @@ ncm_stats_rows_set_nrows (NcmStatsRows *rows, guint nrows)
   g_assert_cmpuint (nrows, <=, rows->sample->len);
 
   rows->nrows = nrows;
+}
 
-  if ((rows->y == NULL) || (ncm_matrix_nrows (rows->y) < nrows))
-  {
-    ncm_matrix_clear (&rows->y);
-    ncm_matrix_clear (&rows->z);
-    ncm_matrix_clear (&rows->X);
-    ncm_vector_clear (&rows->yfit);
+/**
+ * ncm_stats_rows_reset:
+ * @rows: a #NcmStatsRows
+ *
+ * Releases the reference to the sample, frees the work buffers sized by the number of rows,
+ * and sets the number of rows to zero. The buffers sized by the number of columns are kept.
+ */
+void
+ncm_stats_rows_reset (NcmStatsRows *rows)
+{
+  g_clear_pointer (&rows->sample, g_ptr_array_unref);
+  rows->nrows = 0;
 
-    if (nrows > 0)
-    {
-      rows->y    = ncm_matrix_new (nrows, rows->ncols);
-      rows->z    = ncm_matrix_new (rows->ncols, nrows);
-      rows->X    = ncm_matrix_new (nrows, 1);
-      rows->yfit = ncm_vector_new (nrows);
-
-      ncm_matrix_set_all (rows->X, 1.0);
-    }
-
-    g_array_set_size (rows->data, nrows);
-    g_array_set_size (rows->work, nrows * 3);
-    g_array_set_size (rows->work_int, nrows * 5);
-  }
+  _ncm_stats_rows_free_row_buffers (rows);
 }
 
 /**
@@ -403,6 +408,28 @@ ncm_stats_rows_peek_row (NcmStatsRows *rows, guint i)
 }
 
 #define _ROW(rows, i) ((NcmVector *) g_ptr_array_index ((rows)->sample, (i)))
+
+/* Allocates *v with at least n elements when it is missing or shorter. */
+static void
+_ncm_stats_rows_alloc_vector (NcmVector **v, guint n)
+{
+  if ((*v == NULL) || (ncm_vector_len (*v) < n))
+  {
+    ncm_vector_clear (v);
+    *v = ncm_vector_new (n);
+  }
+}
+
+/* Allocates *m as an nrows x ncols matrix when it is missing or of another shape. */
+static void
+_ncm_stats_rows_alloc_matrix (NcmMatrix **m, guint nrows, guint ncols)
+{
+  if ((*m == NULL) || (ncm_matrix_nrows (*m) != nrows) || (ncm_matrix_ncols (*m) != ncols))
+  {
+    ncm_matrix_clear (m);
+    *m = ncm_matrix_new (nrows, ncols);
+  }
+}
 
 /**
  * ncm_stats_rows_max_ess_time:
@@ -695,15 +722,21 @@ _ncm_stats_rows_estimate_const_break_int (NcmStatsRows *rows, guint p, guint pad
     const guint n                     = rows->nrows - pad;
     const gsl_multifit_robust_type *T = gsl_multifit_robust_default;
     gsl_multifit_robust_workspace *w  = gsl_multifit_robust_alloc (T, n, 1);
-    gsl_matrix_view X                 = gsl_matrix_submatrix (ncm_matrix_gsl (rows->X), 0, 0, n, 1);
-    gsl_vector_view y                 = gsl_vector_subvector (ncm_vector_gsl (rows->yfit), 0, n);
     gsl_multifit_robust_stats stats;
+    gsl_matrix_view X;
+    gsl_vector_view y;
     gint status;
     gdouble t0, cutoff;
     guint i;
 
     for (i = 0; i < n; i++)
+    {
       ncm_vector_set (rows->yfit, i, ncm_vector_get (_ROW (rows, i + pad), p));
+      ncm_vector_set (rows->ones, i, 1.0);
+    }
+
+    X = gsl_matrix_view_array (ncm_vector_data (rows->ones), n, 1);
+    y = gsl_vector_view_array (ncm_vector_data (rows->yfit), n);
 
     gsl_multifit_robust_maxiter (100000, w);
     status = gsl_multifit_robust (&X.matrix, &y.vector, ncm_vector_gsl (rows->c), ncm_matrix_gsl (rows->c_cov), w);
@@ -749,6 +782,9 @@ ncm_stats_rows_estimate_const_break (NcmStatsRows *rows, guint p)
   guint t0          = 0;
   guint t1          = 0;
 
+  _ncm_stats_rows_alloc_vector (&rows->yfit, nrows);
+  _ncm_stats_rows_alloc_vector (&rows->ones, nrows);
+
   do {
     t1  = _ncm_stats_rows_estimate_const_break_int (rows, p, t0);
     t0 += t1;
@@ -763,15 +799,31 @@ ncm_stats_rows_estimate_const_break (NcmStatsRows *rows, guint p)
   return t0;
 }
 
+/* Sizes the scratch of _ncm_stats_rows_qn() and of the eigenproblem of the OGK estimate. */
+static void
+_ncm_stats_rows_size_qn (NcmStatsRows *rows)
+{
+  const guint n_int = MAX (rows->nrows * 5, 2 * rows->ncols);
+
+  _ncm_stats_rows_alloc_vector (&rows->data, MAX (rows->nrows, rows->ncols));
+  _ncm_stats_rows_alloc_vector (&rows->work, rows->nrows * 3);
+
+  if (rows->work_int == NULL)
+    rows->work_int = g_array_new (FALSE, FALSE, sizeof (gint));
+
+  if (rows->work_int->len < n_int)
+    g_array_set_size (rows->work_int, n_int);
+}
+
 /* Qn scale of the column held in data, sorted in place. */
 static gdouble
 _ncm_stats_rows_qn (NcmStatsRows *rows)
 {
-  gsl_sort (&g_array_index (rows->data, gdouble, 0), 1, rows->nrows);
+  gsl_sort (ncm_vector_data (rows->data), 1, rows->nrows);
 
-  return gsl_stats_Qn_from_sorted_data (&g_array_index (rows->data, gdouble, 0),
+  return gsl_stats_Qn_from_sorted_data (ncm_vector_data (rows->data),
                                         1, rows->nrows,
-                                        &g_array_index (rows->work, gdouble, 0),
+                                        ncm_vector_data (rows->work),
                                         &g_array_index (rows->work_int, gint, 0));
 }
 
@@ -795,6 +847,7 @@ ncm_stats_rows_cov_robust_diag (NcmStatsRows *rows)
   if (nrows < 4)
     g_error ("ncm_stats_rows_cov_robust_diag: too few points to estimate the covariance [%u].", nrows);
 
+  _ncm_stats_rows_size_qn (rows);
   ncm_matrix_set_zero (cov);
 
   for (i = 0; i < ncols; i++)
@@ -802,7 +855,7 @@ ncm_stats_rows_cov_robust_diag (NcmStatsRows *rows)
     guint a;
 
     for (a = 0; a < nrows; a++)
-      g_array_index (rows->data, gdouble, a) = ncm_vector_get (_ROW (rows, a), i);
+      ncm_vector_fast_set (rows->data, a, ncm_vector_get (_ROW (rows, a), i));
 
     ncm_matrix_set (cov, i, i, gsl_pow_2 (_ncm_stats_rows_qn (rows)));
   }
@@ -825,13 +878,18 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
   const guint nrows = rows->nrows;
   const guint ncols = rows->ncols;
   NcmMatrix *cov    = ncm_matrix_new (ncols, ncols);
-  NcmMatrix *y      = rows->y;
-  NcmMatrix *z      = rows->z;
   NcmMatrix *E      = rows->E;
+  NcmMatrix *y, *z;
   guint a, i;
 
   if (nrows < 4)
     g_error ("ncm_stats_rows_cov_robust_ogk: too few points to estimate the covariance [%u].", nrows);
+
+  _ncm_stats_rows_size_qn (rows);
+  _ncm_stats_rows_alloc_matrix (&rows->y, nrows, ncols);
+  _ncm_stats_rows_alloc_matrix (&rows->z, ncols, nrows);
+  y = rows->y;
+  z = rows->z;
 
   /* y holds every row; each column is scaled after its scale is read from it unscaled. */
   for (a = 0; a < nrows; a++)
@@ -842,7 +900,7 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
     gdouble sigma_i;
 
     for (a = 0; a < nrows; a++)
-      g_array_index (rows->data, gdouble, a) = ncm_matrix_get (y, a, i);
+      ncm_vector_fast_set (rows->data, a, ncm_matrix_get (y, a, i));
 
     sigma_i = _ncm_stats_rows_qn (rows);
 
@@ -861,12 +919,12 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
       gdouble s_ipj, s_imj;
 
       for (a = 0; a < nrows; a++)
-        g_array_index (rows->data, gdouble, a) = ncm_matrix_get (y, a, i) + ncm_matrix_get (y, a, j);
+        ncm_vector_fast_set (rows->data, a, ncm_matrix_get (y, a, i) + ncm_matrix_get (y, a, j));
 
       s_ipj = _ncm_stats_rows_qn (rows);
 
       for (a = 0; a < nrows; a++)
-        g_array_index (rows->data, gdouble, a) = ncm_matrix_get (y, a, i) - ncm_matrix_get (y, a, j);
+        ncm_vector_fast_set (rows->data, a, ncm_matrix_get (y, a, i) - ncm_matrix_get (y, a, j));
 
       s_imj = _ncm_stats_rows_qn (rows);
 
@@ -882,7 +940,7 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
     info = ncm_lapack_dsyevr ('V', 'A', 'U', ncols,
                               ncm_matrix_data (cov), ncm_matrix_tda (cov),
                               0.0, 0.0, 0.0, 0.0,
-                              0.0, &neval, &g_array_index (rows->data, gdouble, 0),
+                              0.0, &neval, ncm_vector_data (rows->data),
                               ncm_matrix_data (E), ncm_matrix_tda (E),
                               &g_array_index (rows->work_int, gint, 0),
                               lapack_work);
@@ -897,7 +955,7 @@ ncm_stats_rows_cov_robust_ogk (NcmStatsRows *rows)
   for (i = 0; i < ncols; i++)
   {
     for (a = 0; a < nrows; a++)
-      g_array_index (rows->data, gdouble, a) = ncm_matrix_get (z, i, a);
+      ncm_vector_fast_set (rows->data, a, ncm_matrix_get (z, i, a));
 
     ncm_vector_set (rows->sigma_z, i, _ncm_stats_rows_qn (rows));
   }

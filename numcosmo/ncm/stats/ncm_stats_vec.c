@@ -923,8 +923,8 @@ ncm_stats_vec_get_quantile_all (NcmStatsVec *svec, guint i)
   }
 }
 
-/* The NcmStatsRows of the deprecated row analyses, given the saved rows, created on first
- * use and sized to the rows added. */
+/* The NcmStatsRows of the deprecated row analyses, created on first use and given the saved
+ * rows and their number; each analysis resets it after use. */
 static NcmStatsRows *
 _ncm_stats_vec_peek_rows (NcmStatsVec *svec)
 {
@@ -953,7 +953,12 @@ _ncm_stats_vec_peek_rows (NcmStatsVec *svec)
 gdouble
 ncm_stats_vec_estimate_const_break (NcmStatsVec *svec, guint p)
 {
-  return ncm_stats_rows_estimate_const_break (_ncm_stats_vec_peek_rows (svec), p);
+  NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
+  gdouble res        = ncm_stats_rows_estimate_const_break (rows, p);
+
+  ncm_stats_rows_reset (rows);
+
+  return res;
 }
 
 /**
@@ -975,7 +980,12 @@ ncm_stats_vec_estimate_const_break (NcmStatsVec *svec, guint p)
 NcmVector *
 ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble pvalue, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_pvalue)
 {
-  return ncm_stats_rows_heidel_diag (_ncm_stats_vec_peek_rows (svec), ntests, pvalue, bindex, wp, wp_order, wp_pvalue);
+  NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
+  NcmVector *res     = ncm_stats_rows_heidel_diag (rows, ntests, pvalue, bindex, wp, wp_order, wp_pvalue);
+
+  ncm_stats_rows_reset (rows);
+
+  return res;
 }
 
 /**
@@ -995,7 +1005,12 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
 NcmVector *
 ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var)
 {
-  return ncm_stats_rows_visual_heidel_diag (_ncm_stats_vec_peek_rows (svec), p, fi, mean, var);
+  NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
+  NcmVector *res     = ncm_stats_rows_visual_heidel_diag (rows, p, fi, mean, var);
+
+  ncm_stats_rows_reset (rows);
+
+  return res;
 }
 
 /**
@@ -1016,7 +1031,12 @@ ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint 
 NcmVector *
 ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess)
 {
-  return ncm_stats_rows_max_ess_time (_ncm_stats_vec_peek_rows (svec), ntests, bindex, wp, wp_order, wp_ess);
+  NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
+  NcmVector *res     = ncm_stats_rows_max_ess_time (rows, ntests, bindex, wp, wp_order, wp_ess);
+
+  ncm_stats_rows_reset (rows);
+
+  return res;
 }
 
 /**
@@ -1071,7 +1091,12 @@ ncm_stats_vec_compute_cov_robust_diag (NcmStatsVec *svec)
   if (!svec->save_x)
     g_error ("ncm_stats_vec_compute_cov_robust_diag: This algorithm requires the saved data into the object.");
 
-  return ncm_stats_rows_cov_robust_diag (_ncm_stats_vec_peek_rows (svec));
+  NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
+  NcmMatrix *res     = ncm_stats_rows_cov_robust_diag (rows);
+
+  ncm_stats_rows_reset (rows);
+
+  return res;
 }
 
 /**
@@ -1090,7 +1115,12 @@ ncm_stats_vec_compute_cov_robust_ogk (NcmStatsVec *svec)
   if (!svec->save_x)
     g_error ("ncm_stats_vec_compute_cov_robust_ogk: This algorithm requires the saved data into the object.");
 
-  return ncm_stats_rows_cov_robust_ogk (_ncm_stats_vec_peek_rows (svec));
+  NcmStatsRows *rows = _ncm_stats_vec_peek_rows (svec);
+  NcmMatrix *res     = ncm_stats_rows_cov_robust_ogk (rows);
+
+  ncm_stats_rows_reset (rows);
+
+  return res;
 }
 
 /**
