@@ -100,8 +100,7 @@ def sample_with_tmvn(
     )
     mset.fparams_set_vector(dgc.peek_mean())
 
-    cov_np = np.array(dgc.peek_cov().dup_array())
-    cov_np.shape = (dim, dim)
+    cov_np = np.array(dgc.peek_cov().dup_array()).reshape(dim, dim)
 
     tmvn_sampler = TruncatedMVN(
         mu=np.zeros(dim), cov=cov_np, lb=bounds[:, 0], ub=bounds[:, 1], seed=0
