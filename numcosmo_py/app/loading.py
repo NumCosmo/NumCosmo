@@ -320,6 +320,7 @@ class LoadedCatalog:
     markovian_start: int
     full_stats: Ncm.StatsVec
     stats: Ncm.StatsVec
+    diag_rows: Ncm.StatsRows
     nitems: int
 
 
@@ -426,6 +427,7 @@ def load_catalog(
     assert isinstance(stats, Ncm.StatsVec)
 
     nitems: int = stats.nitens()
+    diag_rows = mcat.get_diag_rows()
 
     return LoadedCatalog(
         mcat=mcat,
@@ -441,6 +443,7 @@ def load_catalog(
         markovian_start=markovian_start,
         full_stats=full_stats,
         stats=stats,
+        diag_rows=diag_rows,
         nitems=nitems,
     )
 
@@ -514,6 +517,7 @@ class LoadCatalog(AppLogging):
     indices: list[int] = dataclasses.field(init=False)
     full_stats: Ncm.StatsVec = dataclasses.field(init=False)
     stats: Ncm.StatsVec = dataclasses.field(init=False)
+    diag_rows: Ncm.StatsRows = dataclasses.field(init=False)
     nitems: int = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
@@ -533,6 +537,7 @@ class LoadCatalog(AppLogging):
         self.indices = loaded.indices
         self.full_stats = loaded.full_stats
         self.stats = loaded.stats
+        self.diag_rows = loaded.diag_rows
         self.nitems = loaded.nitems
         # the burn-in actually applied, which the markovian-id floor may have raised
         # above the requested `burnin`
