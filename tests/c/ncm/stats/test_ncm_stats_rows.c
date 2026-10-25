@@ -100,6 +100,11 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
 
+  /* The first NcmStatsVec with save-x warns once per process; later ones in the tests do not. */
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*save-x is deprecated*");
+  ncm_stats_vec_free (ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE));
+  g_test_assert_expected_messages ();
+
   g_test_add ("/ncm/stats_rows/reference", TestNcmStatsRows, NULL,
               &test_ncm_stats_rows_new,
               &test_ncm_stats_rows_reference,

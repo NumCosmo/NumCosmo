@@ -367,7 +367,7 @@ class AnalyzeMCMC(LoadCatalog):
 
         # Constant Break
 
-        cb = [self.stats.estimate_const_break(i) for i in self.indices]
+        cb = [self.diag_rows.estimate_const_break(i) for i in self.indices]
         cb_worst = int(np.argmax(cb))
         const_break_row = []
         const_break_row.append("Constant break")
@@ -390,7 +390,7 @@ class AnalyzeMCMC(LoadCatalog):
                 ess_worst_index,
                 ess_worst_order,
                 ess_worst_ess,
-            ) = self.stats.max_ess_time(100)
+            ) = self.diag_rows.max_ess_time(100)
             ess_row = []
             ess_row.append("ESS")
             ess_row.append(self._cut_text(ess_best_cutoff))
@@ -416,7 +416,7 @@ class AnalyzeMCMC(LoadCatalog):
                 hw_worst_index,
                 hw_worst_order,
                 hw_worst_pvalue,
-            ) = self.stats.heidel_diag(100, hw_pvalue)
+            ) = self.diag_rows.heidel_diag(100, hw_pvalue)
 
             hw_row = []
             hw_row.append(f"Heidelberger-Welch (>{hw_pvalue * 100.0:.1f}%)")
@@ -1045,7 +1045,7 @@ class VisualHW(ParameterAnalysis):
         """Visual Heidelberger and Welch."""
         super().__post_init__()
 
-        cumsum_vec, mean, var = self.stats.visual_heidel_diag(self.pindex, 0)
+        cumsum_vec, mean, var = self.diag_rows.visual_heidel_diag(self.pindex, 0)
         cumsum = np.array(cumsum_vec.dup_array())
         mean_a = (np.array(range(len(cumsum))) + 1.0) * mean
 
