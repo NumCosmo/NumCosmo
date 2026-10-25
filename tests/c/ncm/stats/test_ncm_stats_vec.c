@@ -692,12 +692,15 @@ test_ncm_stats_vec_diag_visual (TestNcmStatsVec *test, gconstpointer pdata)
   {
     gdouble mean = 0.0;
     gdouble var  = 0.0;
+    NcmVector *cumsum;
 
-    ncm_stats_vec_visual_heidel_diag (test->svec, p, 0, &mean, &var);
+    cumsum = ncm_stats_vec_visual_heidel_diag (test->svec, p, 0, &mean, &var);
 
     g_assert_true (gsl_finite (mean));
     g_assert_true (gsl_finite (var));
     g_assert_cmpfloat (var, >, 0.0);
+
+    ncm_vector_free (cumsum);
   }
 }
 

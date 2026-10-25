@@ -29,6 +29,7 @@
 #include <glib.h>
 #include "ncm/stats/ncm_stats_dist_kde.h"
 #include "ncm/core/ncm_memory_pool.h"
+#include "ncm/stats/ncm_stats_rows.h"
 
 G_BEGIN_DECLS
 
@@ -36,6 +37,7 @@ typedef struct _NcmStatsDistKDEPrivate
 {
   /*< private >*/
   NcmStatsVec *sample;
+  NcmStatsRows *rows;
   NcmStatsDistKDECovType cov_type;
   NcmMatrix *cov;
   NcmMatrix *cov_fixed;
