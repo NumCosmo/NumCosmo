@@ -435,6 +435,29 @@ _test_ncm_mset_catalog_add_uniform_rows (TestNcmMSetCatalog *test, guint n)
   ncm_vector_free (row);
 }
 
+/* As _test_ncm_mset_catalog_add_uniform_rows(), with the first free parameter (column 1)
+ * of row i drawn uniform in [i/n, (i+1)/n): its smallest value is below 1/n and its
+ * largest above 1 - 1/n for every seed. */
+static void
+_test_ncm_mset_catalog_add_stratified_rows (TestNcmMSetCatalog *test, guint n)
+{
+  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
+  NcmVector *row    = ncm_vector_new (ncols);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    for (j = 0; j < ncols; j++)
+      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
+
+    ncm_vector_set (row, 1, (i + ncm_vector_get (row, 1)) / n);
+
+    ncm_mset_catalog_add_from_vector (test->mcat, row);
+  }
+
+  ncm_vector_free (row);
+}
+
 /* The first free parameter of every row, sorted. */
 static gdouble *
 _test_ncm_mset_catalog_sorted_p0 (TestNcmMSetCatalog *test)
@@ -2699,24 +2722,28 @@ void
 test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
   /* The distribution, confidence interval and p-value functions on a catalog shorter than
-   * 100 rows. The function is x theta_0 at x = 1 and 2, with theta_0 uniform in [0, 1). */
-  const guint n       = 40;
-  const gdouble ps[2] = {0.5, 0.9};
-  NcmMSetFunc *func   = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
-  NcmMSetFunc *func0  = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:p0", NULL));
-  NcmVector *x_v      = ncm_vector_new (2);
-  GArray *p_val       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+   * 100 rows. The function is x theta_0 at x = 1 and 2, with theta_0 drawn uniform in each
+   * of the 40 intervals [i/40, (i+1)/40). */
+  const guint n         = 40;
+  const gdouble ps[2]   = {0.5, 0.9};
+  const gdouble lims[4] = {-0.5, 0.5, 0.9, 2.5};
+  NcmMSetFunc *func     = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
+  NcmMSetFunc *func0    = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:p0", NULL));
+  NcmVector *x_v        = ncm_vector_new (2);
+  GArray *p_val         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *lim           = g_array_new (FALSE, FALSE, sizeof (gdouble));
   gdouble *p0;
   NcmStatsDist1d *sd1;
   NcmMatrix *res;
   guint k;
 
-  _test_ncm_mset_catalog_add_uniform_rows (test, n);
+  _test_ncm_mset_catalog_add_stratified_rows (test, n);
   p0 = _test_ncm_mset_catalog_sorted_p0 (test);
 
   ncm_vector_set (x_v, 0, 1.0);
   ncm_vector_set (x_v, 1, 2.0);
   g_array_append_vals (p_val, ps, 2);
+  g_array_append_vals (lim, lims, 4);
 
   sd1 = ncm_mset_catalog_calc_distrib (test->mcat, func0, NCM_FIT_RUN_MSGS_NONE);
   g_assert_cmpfloat (ncm_stats_dist1d_eval_inv_pdf (sd1, 0.5), >, p0[0]);
@@ -2737,18 +2764,24 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
 
   ncm_matrix_free (res);
 
-  res = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_NONE);
-  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 2);
+  res = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, lim, 0, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 4);
 
-  /* The limits sit inside the range of theta_0 and below that of 2 theta_0. */
+  /*
+   * x theta_0 covers at least [x/40, 39x/40], and the p-value is zero at or below its
+   * smallest value and one at or above its largest: -0.5 gives zero and 2.5 gives one for
+   * x = 1 and 2, and 0.5 and 0.9 lie strictly inside.
+   */
   for (k = 0; k < 2; k++)
   {
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), >, 0.0);
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), <, ncm_matrix_get (res, k, 1));
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), <, 1.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), ==, 0.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), >, 0.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), <, ncm_matrix_get (res, k, 2));
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 2), <, 1.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 3), ==, 1.0);
   }
 
-  g_assert_cmpfloat (ncm_matrix_get (res, 1, 0), <, ncm_matrix_get (res, 0, 0));
+  g_assert_cmpfloat (ncm_matrix_get (res, 1, 1), <, ncm_matrix_get (res, 0, 1));
 
   /* With the progress messages on, the results do not change. The distribution of the
    * free parameter theta_0 is that of the function theta_0. */
@@ -2762,10 +2795,15 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
     sd1_p = ncm_mset_catalog_calc_param_distrib (test->mcat, ncm_mset_fparam_get_pi (mset, 0), NCM_FIT_RUN_MSGS_SIMPLE);
     g_assert_cmpfloat (ncm_stats_dist1d_eval_inv_pdf (sd1_p, 0.5), ==, ncm_stats_dist1d_eval_inv_pdf (sd1_f, 0.5));
 
-    res_msgs = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_SIMPLE);
+    res_msgs = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, lim, 0, NCM_FIT_RUN_MSGS_SIMPLE);
 
     for (k = 0; k < 2; k++)
-      g_assert_cmpfloat (ncm_matrix_get (res_msgs, k, 0), ==, ncm_matrix_get (res, k, 0));
+    {
+      guint j;
+
+      for (j = 0; j < 4; j++)
+        g_assert_cmpfloat (ncm_matrix_get (res_msgs, k, j), ==, ncm_matrix_get (res, k, j));
+    }
 
     ncm_matrix_free (res_msgs);
 
@@ -2781,6 +2819,7 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
   ncm_matrix_free (res);
 
   g_free (p0);
+  g_array_unref (lim);
   g_array_unref (p_val);
   ncm_vector_free (x_v);
   ncm_mset_func_free (func);
