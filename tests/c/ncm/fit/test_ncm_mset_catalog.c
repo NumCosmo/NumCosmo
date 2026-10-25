@@ -829,6 +829,8 @@ test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata)
 
       ncm_matrix_log_vals (cat_cov,  "# CMP     : ", "% 12.5e");
     }
+
+    ncm_matrix_free (cat_cov);
   }
 }
 

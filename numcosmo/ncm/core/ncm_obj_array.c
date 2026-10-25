@@ -835,8 +835,9 @@ ncm_var_dict_set_object (NcmVarDict *vd, const gchar *key, NcmSerialize *ser, GO
   g_assert (key != NULL);
   g_assert (obj != NULL);
 
+  /* The serializer returns a full reference, which the table takes. */
   var = ncm_serialize_to_variant (ser, obj);
-  g_hash_table_insert ((GHashTable *) vd, g_strdup (key), g_variant_ref_sink (var));
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key), var);
 }
 
 /**
@@ -856,8 +857,9 @@ ncm_var_dict_set_object_array (NcmVarDict *vd, const gchar *key, NcmSerialize *s
   g_assert (key != NULL);
   g_assert (oa != NULL);
 
+  /* The serializer returns a full reference, which the table takes. */
   var = ncm_serialize_array_to_variant (ser, oa);
-  g_hash_table_insert ((GHashTable *) vd, g_strdup (key), g_variant_ref_sink (var));
+  g_hash_table_insert ((GHashTable *) vd, g_strdup (key), var);
 }
 
 /**
