@@ -1792,6 +1792,17 @@ class GenerateBianchi:
         ),
     ] = False
 
+    heliocentric: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Turn the CMB-frame redshifts back into heliocentric ones (the linear "
+                "correction, 369.82 km/s toward the Planck 2018 apex); the observer velocity "
+                "then includes the motion of the Sun."
+            )
+        ),
+    ] = False
+
     def _load_obs(self) -> Nc.DistMuObs:
         """Load the catalog from --catalog, --data-file or --edd-table.
 
@@ -1856,6 +1867,7 @@ class GenerateBianchi:
             reference_sample=self.reference_sample,
             fundamental_domain=self.fundamental_domain,
             fit_velocity=self.fit_velocity,
+            heliocentric=self.heliocentric,
             desc=(
                 f"{source}, mu = {self.mu_col or 'mu'}, "
                 f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "
