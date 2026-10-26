@@ -97,14 +97,14 @@ The factor is constant and equals the volume of $S^3$, which the unit box covers
 sampler that draws $u_1$, $u_2$, $u_3$ uniformly on $[0, 1]$, or with a
 flat prior on the box, draws rotations uniformly, with no Jacobian.
 
-The chunk below draws $2 \times 10^5$ points uniformly on the box, checks the constant
+The chunk below draws $2 \times 10^6$ points uniformly on the box, checks the constant
 numerically from the quaternion the model returns, and checks the consequence on the sky:
 each axis is then uniformly distributed on the sphere, so the component of an axis along any
 fixed direction is uniform on $[-1, 1]$.
 
 ```{python}
 #| label: fig-haar
-#| fig-cap: "Histograms of $u_1$, $u_2$, $u_3$ for $2\\times 10^5$ uniform draws on the box (left) and of the component of axis 3 along the equatorial $z$ direction for the same draws, against the uniform density on $[-1, 1]$ of an isotropic axis (right)."
+#| fig-cap: "Histograms of $u_1$, $u_2$, $u_3$ for $2\\times 10^6$ uniform draws on the box (left) and of the component of axis 3 along the equatorial $z$ direction for the same draws, against the uniform density on $[-1, 1]$ of an isotropic axis (right)."
 #| code-fold: true
 import math
 import numpy as np
@@ -137,7 +137,7 @@ for _ in range(5):
 print("volume element at five random points:", np.round(elements, 6), "; 2 pi^2 =", round(2 * math.pi**2, 6))
 
 # Uniform draws on the box; the angles and axis 3 of each from the model.
-n = 200000
+n = 2000000
 u_draws = rng.uniform(size=(n, 3))
 angles = np.empty((n, 3))
 z_axis3 = np.empty(n)
@@ -194,7 +194,7 @@ from them. The angles of the uniform draws above follow the marginal densities:
 
 ```{python}
 #| label: fig-angles
-#| fig-cap: "Histograms of $\\alpha$, $\\beta$, $\\gamma$ for the $2\\times 10^5$ uniform draws on the box, against the marginal densities of the uniform distribution on rotations, $\\tfrac{4}{\\pi}\\sin^2\\alpha$, $\\tfrac12\\sin\\beta$ and $\\tfrac{1}{2\\pi}$."
+#| fig-cap: "Histograms of $\\alpha$, $\\beta$, $\\gamma$ for the $2\\times 10^6$ uniform draws on the box, against the marginal densities of the uniform distribution on rotations, $\\tfrac{4}{\\pi}\\sin^2\\alpha$, $\\tfrac12\\sin\\beta$ and $\\tfrac{1}{2\\pi}$."
 #| code-fold: true
 fig, axes = plt.subplots(1, 3, figsize=(12, 3))
 ranges = [(0, math.pi / 2), (0, math.pi), (0, 2 * math.pi)]
@@ -399,7 +399,7 @@ the angles they overlap and add up to the densities of the uniform distribution.
 
 ```{python}
 #| label: fig-classes
-#| fig-cap: "The $2\\times 10^5$ uniform draws on the box colored by the group element $g$ with $q = g\\,q_\\mathrm{rep}$, $q_\\mathrm{rep}$ in the fundamental domain. Top: histograms of $u_1$, $u_2$, $u_3$, stacked; the classes partition the box, $u_1 \\leq \\tfrac12$ for $g \\in \\{1, k, -1, -k\\}$ and the quarters of $u_2$ or $u_3$ for $m$. Bottom: histograms of $\\alpha$, $\\beta$, $\\gamma$, stacked; the classes overlap; $g$ and $-g$ have equal distributions, since the angles are those of $\\pm q$ with $a \\geq 0$, and the first family has $\\alpha \\geq \\pi/4$ because $a^2 + d^2 \\leq \\tfrac12$ there."
+#| fig-cap: "The $2\\times 10^6$ uniform draws on the box colored by the group element $g$ with $q = g\\,q_\\mathrm{rep}$, $q_\\mathrm{rep}$ in the fundamental domain. Top: histograms of $u_1$, $u_2$, $u_3$, stacked; the classes partition the box, $u_1 \\leq \\tfrac12$ for $g \\in \\{1, k, -1, -k\\}$ and the quarters of $u_2$ or $u_3$ for $m$. Bottom: histograms of $\\alpha$, $\\beta$, $\\gamma$, stacked; the classes overlap; $g$ and $-g$ have equal distributions, since the angles are those of $\\pm q$ with $a \\geq 0$, and the first family has $\\alpha \\geq \\pi/4$ because $a^2 + d^2 \\leq \\tfrac12$ there."
 #| code-fold: true
 labels = ["1", "k", "-1", "-k", "i", "j", "-i", "-j"]
 u1, u2, u3 = u_draws.T
