@@ -86,32 +86,6 @@ nc_dist_mu_nuisance_init (NcDistMuNuisance *nuisance)
 }
 
 static void
-_nc_dist_mu_nuisance_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_DIST_MU_NUISANCE (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_nc_dist_mu_nuisance_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_DIST_MU_NUISANCE (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
 _nc_dist_mu_nuisance_finalize (GObject *object)
 {
   /* Chain up : end */
@@ -126,9 +100,7 @@ nc_dist_mu_nuisance_class_init (NcDistMuNuisanceClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_dist_mu_nuisance_set_property;
-  model_class->get_property = &_nc_dist_mu_nuisance_get_property;
-  object_class->finalize    = &_nc_dist_mu_nuisance_finalize;
+  object_class->finalize = &_nc_dist_mu_nuisance_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Distance modulus nuisance parameters", "DistMuNuisance");
   ncm_model_class_add_params (model_class, NC_DIST_MU_NUISANCE_SPARAM_LEN, NC_DIST_MU_NUISANCE_VPARAM_LEN, PROP_SIZE);

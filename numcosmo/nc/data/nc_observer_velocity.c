@@ -90,32 +90,6 @@ nc_observer_velocity_init (NcObserverVelocity *ov)
 }
 
 static void
-_nc_observer_velocity_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_OBSERVER_VELOCITY (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
-_nc_observer_velocity_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_OBSERVER_VELOCITY (object));
-
-  switch (prop_id)
-  {
-    default:                                                      /* LCOV_EXCL_LINE */
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
-      break;                                                      /* LCOV_EXCL_LINE */
-  }
-}
-
-static void
 _nc_observer_velocity_finalize (GObject *object)
 {
   /* Chain up : end */
@@ -130,9 +104,7 @@ nc_observer_velocity_class_init (NcObserverVelocityClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = &_nc_observer_velocity_set_property;
-  model_class->get_property = &_nc_observer_velocity_get_property;
-  object_class->finalize    = &_nc_observer_velocity_finalize;
+  object_class->finalize = &_nc_observer_velocity_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Observer velocity", "ObserverVelocity");
   ncm_model_class_add_params (model_class, NC_OBSERVER_VELOCITY_SPARAM_LEN, 0, PROP_SIZE);

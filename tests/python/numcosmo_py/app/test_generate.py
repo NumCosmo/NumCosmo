@@ -727,6 +727,33 @@ def test_generate_bianchi_nuisance(tmp_path: Path, edd_cf4_excerpt_file: Path):
             sample_rule=dist_mu_obs.SampleRule.HEMISPHERE,
             fit_offsets=True,
         )
+    # The reference sample by name: south stays fixed, north is free
+    exp_hemi = tmp_path / "b4.yaml"
+    gen.GenerateBianchi(
+        experiment=exp_hemi.absolute(),
+        edd_table=edd_cf4_excerpt_file,
+        sample_rule=dist_mu_obs.SampleRule.HEMISPHERE,
+        fit_offsets=True,
+        reference_sample="south",
+        omegam_mean=None,
+    )
+    ser_hemi = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    mset_hemi = cast(
+        Ncm.MSet,
+        ser_hemi.dict_str_from_yaml_file(exp_hemi.absolute().as_posix()).get(
+            "model-set"
+        ),
+    )
+    nuisance_hemi = cast(Nc.DistMuNuisance, mset_hemi.peek(Nc.DistMuNuisance.id()))
+    assert nuisance_hemi.get_nsamples() == 2
+    assert (
+        nuisance_hemi.param_get_ftype(nuisance_hemi.param_index_from_name("dmu_0")[1])
+        == Ncm.ParamType.FREE
+    )
+    assert (
+        nuisance_hemi.param_get_ftype(nuisance_hemi.param_index_from_name("dmu_1")[1])
+        == Ncm.ParamType.FIXED
+    )
     likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
     data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
     samples = data.peek_samples()

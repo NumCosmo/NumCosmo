@@ -476,6 +476,12 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
         g_assert_no_error (error);
         ncm_assert_cmpdouble (ncm_vector_get (nc_data_hcosmo_bi_dist_mu_peek_samples (dmu_obs), 0), ==, 0.0);
         ncm_assert_cmpdouble (ncm_vector_get (nc_data_hcosmo_bi_dist_mu_peek_samples (dmu_obs), 2), ==, -1.0);
+        ncm_assert_cmpdouble (ncm_vector_get (nc_data_hcosmo_bi_dist_mu_peek_sigma_mu (dmu_obs), 1),
+                              ==, ncm_catalog_get (NCM_CATALOG (obs_s), NC_DIST_MU_OBS_COL_SIGMA_MU, 1, NULL));
+
+        nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs_s, NULL, NULL, "nosuchcolumn", 0.0, 1.0, &error);
+        g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
+        g_clear_error (&error);
 
         nc_dist_mu_obs_free (obs_s);
       }
