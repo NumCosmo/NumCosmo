@@ -242,25 +242,77 @@ print(f"largest difference of the quaternion rebuilt from the angles: {worst_q:.
 ## The symmetry of the axes
 
 This symmetry is a property of the likelihood, not of the parametrization. The distances
-depend on $n_1^2$, $n_2^2$, $n_3^2$, so each axis is defined up to its sign: the likelihood
-is invariant under the three reflections $n_i \to -n_i$. A single reflection is not a
-rotation and has no point in the box; the product of two reflections is the rotation by
-$\pi$ about the third axis, which is. In quaternion form these rotations are the right
-multiplications of $q$ by $\pm 1$, $\pm i$, $\pm j$, $\pm k$: eight quaternions, four
-rotations, one likelihood. On the box the eight
-points are, modulo 1,
+depend on the direction only through $n_1^2$, $n_2^2$, $n_3^2$, so the likelihood is
+invariant under the three reflections $n_i \to -n_i$. A single reflection is not a rotation
+and has no point in the box. The product of two reflections is the rotation by $\pi$ about
+the third axis; with the identity, the three rotations by $\pi$ form the group of the
+symmetry that acts on the box. Each is a rotation of the vector $\hat n$ in the frame of
+the axes, $\hat n \to g\,\hat n\,g^\dagger$ with $g$ the unit quaternion $i$, $j$ or $k$, so
+on the orientation it acts from the left,
 $$
-(u_1,\; u_2 + \tfrac{k}{4},\; u_3 + \tfrac{k}{4})
-\quad\text{and}\quad
-(1 - u_1,\; \tfrac14 - u_3 + \tfrac{k}{4},\; \tfrac34 - u_2 + \tfrac{k}{4}),
-\qquad k = 0, 1, 2, 3 .
+q \to g\,q,
+\qquad
+g \in \{1, i, j, k\},
 $$
-The first four come from $\pm 1$ and $\pm k$ (right multiplication by $k$ adds $\tfrac14$ to
-both $u_2$ and $u_3$); the second four from $\pm i$ and $\pm j$, which exchange the roles of
-$z_1$ and $z_2$. Exactly one of the eight has $u_1 \leq \tfrac12$ and $u_2 < \tfrac14$ (for
-$u_1 \neq \tfrac12$), so the fundamental domain used by the Bianchi I experiments,
-$u_1 \leq \tfrac12$, $u_2 \leq \tfrac14$, holds one copy of each orientation and keeps the
-flat measure, being a subset of the box. The chunk below checks the eight maps.
+and together with the sign of $q$ the orbit of an orientation has eight points,
+$g \in \{\pm 1, \pm i, \pm j, \pm k\}$. The right product $q \to q\,g$ rotates the sky
+direction $\hat p$ instead and is not a symmetry.
+
+In the complex form $z_1 = a + id = \sqrt{u_1}\,e^{2\pi i u_3}$,
+$z_2 = c + ib = \sqrt{1 - u_1}\,e^{2\pi i u_2}$, the products are
+$$
+k\,q = (iz_1,\; -iz_2),
+\qquad
+i\,q = (iz_2,\; iz_1),
+\qquad
+-q = (-z_1,\; -z_2),
+$$
+by expanding $k(a + bi + cj + dk)$ and $i(a + bi + cj + dk)$. Multiplication of $z_1$ or
+$z_2$ by $i$ is a quarter turn of its phase, a shift of $u_3$ or $u_2$ by $\tfrac14$; the
+exchange of $z_1$ and $z_2$ sends $u_1$ to $1 - u_1$. The eight images of $(u_1, u_2, u_3)$,
+modulo 1, are therefore
+$$
+k^m q:\ (u_1,\; u_2 - \tfrac{m}{4},\; u_3 + \tfrac{m}{4}),
+\qquad
+j^m i\,q:\ (1 - u_1,\; u_3 + \tfrac14 - \tfrac{m}{4},\; u_2 + \tfrac14 + \tfrac{m}{4}),
+\qquad
+m = 0, 1, 2, 3,
+$$
+where $k^2 = j^2 = -1$ gives the sign of $q$. The rotations by $\pi$ of space appear as
+quarter turns on the box because the quaternion angle is half the rotation angle.
+
+**Fundamental domain.** Within the first family $u_1$ is fixed and $u_2$ takes the four
+values $u_2 - m/4$, one of which lies in $[0, \tfrac14)$; within the second family $u_1$ is
+replaced by $1 - u_1$ and $u_2$ takes the four values $u_3 + \tfrac14 - m/4$, again one in
+$[0, \tfrac14)$. The condition $u_1 \leq \tfrac12$ selects one family
+(for $u_1 \neq \tfrac12$) and $0 \leq u_2 < \tfrac14$ selects one member of it, so the
+domain
+$$
+u_1 \leq \tfrac12,
+\qquad
+0 \leq u_2 < \tfrac14
+$$
+holds one image of every orientation. It is the domain used by the Bianchi I experiments,
+and it keeps the flat measure, being a subset of the box.
+
+**Reading the image from the parameters.** A point $(u_1, u_2, u_3)$ belongs to the first
+family if $u_1 \leq \tfrac12$, with $m = -\lfloor 4u_2 \rfloor \bmod 4$ and representative
+$(u_1, u_2 + m/4, u_3 - m/4)$; otherwise to the second family, with
+$m = \lfloor 4(u_3 - \tfrac14) \rfloor \bmod 4$ and representative
+$(1 - u_1, u_3 - \tfrac14 - m/4, u_2 - \tfrac14 + m/4)$, all modulo 1. The group element is
+$k^m$ in the first family and $j^m i$ in the second: $1, k, -1, -k$ and $i, j, -i, -j$ for
+$m = 0, 1, 2, 3$.
+
+**A cut on the right products is not a fundamental domain.** A rule that keeps $a \geq 0$ and,
+among the right products $q, qi, qj, qk$, the lexicographically largest $(a, b, c, d)$,
+compares $q$ with points that are not its images. On the true orbit it keeps one, two or
+three of the eight images (31%, 50% and 19% of random orientations), so a posterior
+restricted by it keeps up to three copies of an orientation and loses part of the others.
+
+The chunk below checks, on random orientations, that the eight left images give the same
+distance moduli, that the right products do not, that the representative read from the
+parameters lies in the domain with the stated group element, and the count of images kept
+by the cut on the right products.
 
 ```{python}
 #| code-fold: true
@@ -276,26 +328,65 @@ def set_quaternion(a, b, c, d):
 def qmul(p, r):
     a1, b1, c1, d1 = p
     a2, b2, c2, d2 = r
-    return (
-        a1 * a2 - b1 * b2 - c1 * c2 - d1 * d2,
-        a1 * b2 + b1 * a2 + c1 * d2 - d1 * c2,
-        a1 * c2 - b1 * d2 + c1 * a2 + d1 * b2,
-        a1 * d2 + b1 * c2 - c1 * b2 + d1 * a2,
+    return np.array(
+        [
+            a1 * a2 - b1 * b2 - c1 * c2 - d1 * d2,
+            a1 * b2 + b1 * a2 + c1 * d2 - d1 * c2,
+            a1 * c2 - b1 * d2 + c1 * a2 + d1 * b2,
+            a1 * d2 + b1 * c2 - c1 * b2 + d1 * a2,
+        ]
     )
 
 
-u = rng.uniform(size=3)
-q = quaternion(u)
-u1, u2, u3 = u
-expected = [(u1, u2 + k / 4, u3 + k / 4) for k in range(4)]
-expected += [(1 - u1, 0.25 - u3 + k / 4, 0.75 - u2 + k / 4) for k in range(4)]
-found = []
-for unit in ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)):
-    for sign in (1, -1):
-        found.append(set_quaternion(*(sign * np.array(qmul(q, unit)))))
-worst = 0.0
-for e in expected:
-    e = np.array(e) % 1.0
-    worst = max(worst, min(np.abs(((f - e) + 0.5) % 1.0 - 0.5).max() for f in found))
-print(f"eight images of (u1, u2, u3) = {np.round(u, 4)}: largest distance from the stated maps {worst:.1e}")
+UNITS = {"1": (1, 0, 0, 0), "i": (0, 1, 0, 0), "j": (0, 0, 1, 0), "k": (0, 0, 0, 1)}
+
+
+def unit(name):
+    return (-1.0 if name.startswith("-") else 1.0) * np.array(UNITS[name.strip("-")], float)
+
+
+def classify(u):
+    u1, u2, u3 = u
+    if u1 <= 0.5:
+        m = (-int(math.floor(4.0 * u2))) % 4
+        return np.array([u1, (u2 + m / 4.0) % 1.0, (u3 - m / 4.0) % 1.0]), ["1", "k", "-1", "-k"][m]
+    m = int(math.floor(4.0 * ((u3 - 0.25) % 1.0)))
+    return np.array([1.0 - u1, (u3 - 0.25 - m / 4.0) % 1.0, (u2 - 0.25 + m / 4.0) % 1.0]), ["i", "j", "-i", "-j"][m]
+
+
+def moduli(q):
+    set_quaternion(*q)
+    dist.prepare(cosmo)
+    return np.array([dist.dmodulus_sky(0.05, *p) for p in directions])
+
+
+def principal_right(q):
+    a, b, c, d = q
+    cand = np.array([[a, b, c, d], [-b, a, d, -c], [-c, -d, a, b], [-d, c, -b, a]])
+    return q[0] >= 0.0 and np.allclose(cand[max(range(4), key=lambda i: tuple(cand[i]))], q)
+
+
+for i, h in enumerate((0.9 * 73.0, 73.0, 1.1 * 73.0)):
+    cosmo.orig_param_set(i, h)
+dist = Nc.HCosmoBIDist.new(0.2)
+directions = rng.normal(size=(10, 3))
+directions /= np.linalg.norm(directions, axis=1)[:, None]
+
+worst_left, best_right, n_domain, n_group = 0.0, np.inf, 0, 0
+kept = np.zeros(9, int)
+n_trials = 40
+for _ in range(n_trials):
+    u = rng.uniform(size=3)
+    q = quaternion(u)
+    mu = moduli(q)
+    images = [s * qmul(unit(g), q) for g in ("1", "i", "j", "k") for s in (1.0, -1.0)]
+    worst_left = max(worst_left, max(np.abs(moduli(img) - mu).max() for img in images))
+    best_right = min(best_right, min(np.abs(moduli(qmul(q, unit(g))) - mu).max() for g in ("i", "j", "k")))
+    rep, g = classify(u)
+    n_domain += (rep[0] <= 0.5) and (0.0 <= rep[1] < 0.25)
+    n_group += np.allclose(qmul(unit(g), quaternion(rep)), q, atol=1.0e-12)
+    kept[sum(principal_right(img) for img in images)] += 1
+print(f"{n_trials} orientations: moduli at the eight left images equal to {worst_left:.1e} mag; the right products differ by at least {best_right:.2f} mag")
+print(f"representative in the fundamental domain: {n_domain}; q = g q_rep with the stated g: {n_group}")
+print("images per orbit kept by the cut on the right products:", {k: int(v) for k, v in enumerate(kept) if v})
 ```
