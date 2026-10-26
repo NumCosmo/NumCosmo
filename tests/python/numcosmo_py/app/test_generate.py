@@ -612,6 +612,42 @@ def test_generate_bianchi_sigma_v_per_sample(
         )
 
 
+def test_generate_bianchi_heliocentric(tmp_path: Path):
+    """Test the heliocentric redshifts: z - (v_sun / c) cos(theta) with the Planck apex."""
+    files = {}
+    for name, heliocentric in (("cmb", False), ("hel", True)):
+        files[name] = tmp_path / f"bianchi_{name}.yaml"
+        _ = gen.GenerateBianchi(
+            experiment=files[name].absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+            z_min=0.01,
+            z_max=0.03,
+            fit_velocity=True,
+            heliocentric=heliocentric,
+        )
+    z = {}
+    p_sky = None
+    for name, path in files.items():
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        experiment = ser.dict_str_from_yaml_file(path.absolute().as_posix())
+        likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+        data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+        z[name] = np.array(data.peek_z().dup_array())
+        p_sky = np.array(data.peek_p().dup_array()).reshape(-1, 3)
+    assert p_sky is not None
+    shift = z["cmb"] - z["hel"]
+    # The shift is v . p for one vector v, the Sun's velocity over c toward the apex.
+    v, *_ = np.linalg.lstsq(p_sky, shift, rcond=None)
+    assert np.allclose(p_sky @ v, shift, atol=1.0e-12)
+    assert np.isclose(np.linalg.norm(v), 369.82 / 299792.458, rtol=1.0e-10)
+    # Apex (l, b) = (264.021, 48.253) deg: RA 167.94, Dec -6.94 deg in the equatorial frame.
+    apex = v / np.linalg.norm(v)
+    ra = np.degrees(np.arctan2(apex[1], apex[0])) % 360.0
+    dec = np.degrees(np.arcsin(apex[2]))
+    assert abs(ra - 167.94) < 0.02
+    assert abs(dec + 6.94) < 0.02
+
+
 def test_generate_bianchi_velocity(tmp_path: Path):
     """Test Bianchi I generation with the observer velocity free."""
     exp_file = tmp_path / "bianchi_v.yaml"

@@ -26,6 +26,7 @@
 import math
 
 import numpy as np
+from astropy.coordinates import SkyCoord
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.datasets.dist_mu_obs import (
@@ -58,6 +59,7 @@ def build_bianchi_experiment(
     reference_sample: str | None = None,
     fundamental_domain: bool = True,
     fit_velocity: bool = False,
+    heliocentric: bool = False,
     desc: str = "",
 ) -> tuple[Ncm.ObjDictStr, Ncm.ObjArray]:
     """Build a Bianchi I experiment from a catalog.
@@ -109,6 +111,10 @@ def build_bianchi_experiment(
         frame of the model. The rest-frame redshift of every object must stay positive, so
         ``z_min`` must exceed the largest velocity allowed over the speed of light; the
         distance calculator reaches that much beyond the largest redshift.
+    :param heliocentric: whether the CMB-frame redshifts of the catalog are turned back
+        into heliocentric ones, z - (v_sun/c) cos(theta) with v_sun = 369.82 km/s toward
+        (l, b) = (264.021, 48.253) deg (Planck 2018), the linear correction the catalog
+        applied; the observer velocity then includes the motion of the Sun.
     :param desc: description stored in the data object.
     :return: the experiment (``likelihood`` and ``model-set``) and the derived
         functions H0, Omega_s0, Omega_L0, H2_minus_H1 and H3_minus_H2.
@@ -134,6 +140,19 @@ def build_bianchi_experiment(
     data = Nc.DataHCosmoBIDistMu.new(None)
     data.set_obs(obs, mu_col, sigma_col, sample_col, z_min, z_max)
     z_sel = data.peek_z()
+    if heliocentric:
+        apex = SkyCoord(l=264.021, b=48.253, unit="deg", frame="galactic").icrs
+        n_apex = np.array(
+            [
+                math.cos(apex.dec.rad) * math.cos(apex.ra.rad),
+                math.cos(apex.dec.rad) * math.sin(apex.ra.rad),
+                math.sin(apex.dec.rad),
+            ]
+        )
+        p_sel = data.peek_p()
+        for i in range(z_sel.len()):
+            cos_theta = sum(p_sel.get(i, k) * n_apex[k] for k in range(3))
+            z_sel.set(i, z_sel.get(i) - 369.82 / SPEED_OF_LIGHT_KM_S * cos_theta)
     if z_sel.len() == 0:
         raise ValueError("No object of the catalog lies in the redshift selection.")
 
