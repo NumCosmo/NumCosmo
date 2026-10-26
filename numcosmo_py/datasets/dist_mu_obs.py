@@ -108,8 +108,9 @@ def edd_cf4_snia_to_dist_mu_obs(path: Path | str, downloaded: str) -> Nc.DistMuO
     ``RA`` and ``DE``, ``z`` as ``Vcmb`` divided by the speed of light, ``mu`` as
     ``DM_zp`` and ``sigma_mu`` as ``eDM``; every other numeric column of the export is
     kept under its EDD name, so ``DM_av`` and the per-sample moduli are available as
-    alternatives. ``eDM`` is the smallest ``eDM_X`` of the object, and the ``eDM_X``
-    columns differ in whether they contain a peculiar velocity term.
+    alternatives. ``eDM`` is the smallest ``eDM_X`` of the object. Some ``eDM_X``
+    columns grow toward low redshift as a peculiar velocity term would, others are a
+    single constant; the export does not state what they contain.
 
     :param path: the export file.
     :param downloaded: the download date, stored in the metadata.
