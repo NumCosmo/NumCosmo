@@ -241,14 +241,17 @@ print(f"largest difference of the quaternion rebuilt from the angles: {worst_q:.
 
 ## The symmetry of the axes
 
-This symmetry is a property of the likelihood, not of the parametrization. The distances
-depend on the direction only through $n_1^2$, $n_2^2$, $n_3^2$, so the likelihood is
-invariant under the three reflections $n_i \to -n_i$. A single reflection is not a rotation
-and has no point in the box. The product of two reflections is the rotation by $\pi$ about
-the third axis; with the identity, the three rotations by $\pi$ form the group of the
-symmetry that acts on the box. Each is a rotation of the vector $\hat n$ in the frame of
-the axes, $\hat n \to g\,\hat n\,g^\dagger$ with $g$ the unit quaternion $i$, $j$ or $k$, so
-on the orientation it acts from the left,
+This symmetry is a property of the likelihood, not of the parametrization. The distance
+of a source depends on its direction $\hat n$ only through $n_1^2$, $n_2^2$, $n_3^2$, so it
+is invariant under the three reflections $n_i \to -n_i$. The orientation is a unit
+quaternion, which parametrizes the proper rotations only: reflections are improper and are
+excluded by the parametrization itself, so they never arise in the parameter space. What
+the parameters inherit from the invariance is its proper part, the products of two
+reflections, which are the rotations by $\pi$ about the axes. With the identity, the three
+rotations by $\pi$ form the group of the symmetry that acts on the box. Each is a rotation
+of $\hat n$ in the frame of the axes, $\hat n \to g\,\hat n\,g^\dagger$ with $g$ the unit
+quaternion $i$, $j$ or $k$,
+so on the orientation it acts from the left,
 $$
 q \to g\,q,
 \qquad
