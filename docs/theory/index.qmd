@@ -9,6 +9,7 @@ classes and methods.
 ## Background & Thermal History
 
 - [Cosmological Distances](nc/background/distances.qmd) --- comoving, transverse, luminosity, and angular diameter distances.
+- [Bianchi I Orientation](nc/background/hcosmo_bi.qmd) --- the orientation parameters of NcHCosmoBI, uniform sampling of rotations, and the hyperspherical angles.
 - [Cosmic Recombination](nc/recomb/recombination.qmd) --- Saha equilibrium, the Seager solver, optical depth and visibility.
 
 ## Linear Theory & Power Spectrum

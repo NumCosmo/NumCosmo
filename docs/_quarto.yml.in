@@ -13,6 +13,7 @@ project:
     - benchmarks/index.qmd
     - theory/ncm/dynamics/csq1d.qmd
     - theory/nc/background/distances.qmd
+    - theory/nc/background/hcosmo_bi.qmd
     - theory/nc/recomb/recombination.qmd
     - theory/nc/powspec/transfer_func_eh.qmd
     - theory/nc/lss/galaxy/wl_ellipticity.qmd
@@ -144,6 +145,8 @@ website:
             contents:
               - href: theory/nc/background/distances.qmd
                 text: "Cosmological Distances"
+              - href: theory/nc/background/hcosmo_bi.qmd
+                text: "Bianchi I Orientation"
               - href: theory/nc/recomb/recombination.qmd
                 text: "Cosmic Recombination"
           - section: "Linear Theory & Power Spectrum"

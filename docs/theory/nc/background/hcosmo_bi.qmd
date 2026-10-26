@@ -1,0 +1,272 @@
+---
+title: Bianchi I Orientation
+format:
+  html: default
+  ipynb: default
+---
+
+{{< include /_functions.qmd >}}
+
+This page describes the orientation parameters of [[numcosmo|NcHCosmoBI]], the Bianchi I
+model with pressureless matter and a cosmological constant. The model has three expansion
+rates today, one per principal axis, and the direction of each observed source enters the
+distance through its components along those axes. The three parameters $u_1$, $u_2$, $u_3$
+fix the rotation from the equatorial frame of the catalog to the frame of the axes. The page
+states the parametrization, shows that a uniform distribution on the three parameters is the
+uniform distribution on rotations, and relates the parameters to the hyperspherical angles
+of the same quaternion.
+
+## The model and its frame
+
+The metric is
+$$
+\mathrm{d}s^2 = -\mathrm{d}t^2 + \sum_{i=1}^{3} a_i^2(t)\,\mathrm{d}x_i^2,
+\qquad
+a_i(t_0) = 1,
+$$
+with the expansion rates $H_i = \dot a_i / a_i$ along the three axes. The parameters of
+[[numcosmo|NcHCosmoBI]] are $H_1$, $H_2$, $H_3$ today, the matter density parameter
+$\Omega_{m0}$, and $u_1$, $u_2$, $u_3$. A source observed from the unit direction $\hat p$,
+with equatorial components $(p_x, p_y, p_z)$, has components $n_i$ along the axes, and its
+redshift and distance depend on the direction only through $n_1^2$, $n_2^2$, $n_3^2$. The
+map $\hat p \mapsto \hat n$ is a rotation.
+
+## The rotation as a unit quaternion
+
+A unit quaternion $q = (s; \vec v)$, with $s^2 + |\vec v|^2 = 1$, rotates a vector by
+$$
+\hat n = q\,\hat p\,q^\dagger,
+$$
+where $\hat p$ is the pure quaternion $(0; \hat p)$ and $q^\dagger = (s; -\vec v)$. This is
+[[numcosmo-math|ncm_quaternion_rotate]]. The quaternions $q$ and $-q$ give the same rotation:
+the unit quaternions form the sphere $S^3$, and the rotation group $SO(3)$ is $S^3$ with
+antipodal points identified.
+
+## The parameters
+
+The orientation parameters are three numbers in $[0, 1]$, and the quaternion is
+$$
+q(u_1, u_2, u_3) = \Big(\sqrt{u_1}\cos 2\pi u_3;\;
+\sqrt{1 - u_1}\,\sin 2\pi u_2,\;
+\sqrt{1 - u_1}\,\cos 2\pi u_2,\;
+\sqrt{u_1}\,\sin 2\pi u_3\Big),
+$$
+returned by [[numcosmo|nc_hcosmo_bi_get_quaternion]]. It is a unit quaternion for every
+point of the box, since $u_1 + (1 - u_1) = 1$, and the defaults $(u_1, u_2, u_3) = (1, 0, 0)$
+give $q = (1; 0, 0, 0)$, the identity. Writing $q = (a; b, c, d)$, the inverse map is
+$$
+u_1 = a^2 + d^2,
+\qquad
+2\pi u_2 = \arg(c + ib),
+\qquad
+2\pi u_3 = \arg(a + id),
+$$
+with the arguments taken in $[0, 2\pi)$; this is [[numcosmo|nc_hcosmo_bi_set_quaternion]].
+The two quaternions $q$ and $-q$ map to different points of the box, $(u_1, u_2 + \tfrac12,
+u_3 + \tfrac12)$ modulo 1, with the same rotation.
+
+## Uniform sampling
+
+The claim is that the uniform distribution on the box $[0, 1]^3$ is the uniform (Haar)
+distribution on rotations. The uniform distribution on $SO(3)$ is the uniform distribution on
+$S^3$ followed by the identification of $q$ with $-q$, so it is enough to show that the volume
+element of $S^3$ is constant in the coordinates $(u_1, u_2, u_3)$.
+
+Group the four components into two complex numbers,
+$$
+z_1 = a + id = \sqrt{u_1}\,e^{2\pi i u_3},
+\qquad
+z_2 = c + ib = \sqrt{1 - u_1}\,e^{2\pi i u_2},
+$$
+so that $|z_1|^2 + |z_2|^2 = 1$ and the line element of $S^3$, inherited from
+$\mathbb{R}^4$, is $\mathrm{d}s^2 = |\mathrm{d}z_1|^2 + |\mathrm{d}z_2|^2$. From
+$$
+\mathrm{d}z_1 = \Big(\frac{\mathrm{d}u_1}{2\sqrt{u_1}} + 2\pi i\sqrt{u_1}\,\mathrm{d}u_3\Big) e^{2\pi i u_3},
+\qquad
+\mathrm{d}z_2 = \Big(-\frac{\mathrm{d}u_1}{2\sqrt{1 - u_1}} + 2\pi i\sqrt{1 - u_1}\,\mathrm{d}u_2\Big) e^{2\pi i u_2},
+$$
+the line element is diagonal,
+$$
+\mathrm{d}s^2 = \frac{\mathrm{d}u_1^2}{4 u_1 (1 - u_1)} + 4\pi^2 (1 - u_1)\,\mathrm{d}u_2^2 + 4\pi^2 u_1\,\mathrm{d}u_3^2,
+$$
+and the volume element is the square root of the product of the three coefficients,
+$$
+\mathrm{d}V = \sqrt{\frac{16\pi^4 u_1 (1 - u_1)}{4 u_1 (1 - u_1)}}\;\mathrm{d}u_1\,\mathrm{d}u_2\,\mathrm{d}u_3 = 2\pi^2\,\mathrm{d}u_1\,\mathrm{d}u_2\,\mathrm{d}u_3 .
+$$
+The factor is constant, and it is the volume of $S^3$, as it must be for a map of the unit
+box onto the sphere. A sampler that draws $u_1$, $u_2$, $u_3$ uniformly on $[0, 1]$, or with a
+flat prior on the box, draws rotations uniformly, with no Jacobian.
+
+The chunk below checks the constant numerically, from the quaternion the model returns, and
+checks the consequence on the sky: for uniform draws of the parameters, each axis is
+uniformly distributed on the sphere, so the component of an axis along any fixed direction
+is uniform on $[-1, 1]$.
+
+```{python}
+#| label: fig-haar
+#| fig-cap: "Distribution of the component of axis 3 along the equatorial $z$ direction for $2\\times 10^4$ uniform draws of $(u_1, u_2, u_3)$, against the uniform density on $[-1, 1]$ of an isotropic axis."
+#| code-fold: true
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+cosmo = Nc.HCosmoBI.new()
+
+
+def quaternion(u):
+    for i, x in enumerate(u):
+        cosmo.orig_param_set(Nc.HCosmoBISParams.U1 + i, x)
+    q = cosmo.get_quaternion()
+    return np.array([q.s, q.v.c[0], q.v.c[1], q.v.c[2]])
+
+
+# The volume element sqrt(det J^T J) of the map box -> S^3 at random points.
+rng = np.random.default_rng(1)
+h = 1.0e-6
+elements = []
+for _ in range(5):
+    u = rng.uniform(0.05, 0.95, 3)
+    J = np.column_stack([(quaternion(u + h * e) - quaternion(u - h * e)) / (2 * h) for e in np.eye(3)])
+    elements.append(math.sqrt(np.linalg.det(J.T @ J)))
+print("volume element at five random points:", np.round(elements, 6), "; 2 pi^2 =", round(2 * math.pi**2, 6))
+
+# Axis 3 of uniform draws, rotated with ncm_quaternion_rotate.
+n = 20000
+z_axis3 = np.empty(n)
+for k in range(n):
+    u = rng.uniform(size=3)
+    for i, x in enumerate(u):
+        cosmo.orig_param_set(Nc.HCosmoBISParams.U1 + i, x)
+    q = cosmo.get_quaternion()
+    v = Ncm.TriVec.new_full([0.0, 0.0, 1.0])
+    q.rotate(v)
+    z_axis3[k] = v.c[2]
+
+fig, ax = plt.subplots(figsize=(6, 3.2))
+ax.hist(z_axis3, bins=40, range=(-1, 1), density=True, histtype="step", label="axis 3, $z$ component")
+ax.axhline(0.5, color="C3", lw=1, label="uniform on $[-1, 1]$")
+ax.set_xlabel("component along the equatorial $z$ direction")
+ax.set_ylabel("density")
+ax.legend()
+plt.show()
+```
+
+## The hyperspherical angles
+
+The same unit quaternion can be written with three angles,
+$$
+q = \big(\cos\alpha;\; \sin\alpha\cos\beta,\; \sin\alpha\sin\beta\cos\gamma,\; \sin\alpha\sin\beta\sin\gamma\big),
+\qquad
+\alpha \in [0, \pi],\; \beta \in [0, \pi],\; \gamma \in [0, 2\pi),
+$$
+the spherical coordinates of $S^3$. In these coordinates the volume element is
+$\sin^2\!\alpha\,\sin\beta\,\mathrm{d}\alpha\,\mathrm{d}\beta\,\mathrm{d}\gamma$, so a
+sampler that is flat in the angles has to weight each point by $\sin^2\!\alpha\,\sin\beta$ to
+be uniform on rotations, while a sampler flat in $(u_1, u_2, u_3)$ needs no weight. The two
+sets of coordinates describe the same point, and the conversion follows from
+$(a; b, c, d)$:
+$$
+\alpha = \arccos a,
+\qquad
+\beta = \operatorname{atan2}\big(\sqrt{c^2 + d^2},\, b\big),
+\qquad
+\gamma = \operatorname{atan2}(d, c),
+$$
+with $(a; b, c, d)$ from $(u_1, u_2, u_3)$ as above, and back through
+$u_1 = a^2 + d^2$, $2\pi u_2 = \arg(c + ib)$, $2\pi u_3 = \arg(a + id)$. Restricting to
+$a \geq 0$, that is $\alpha \leq \pi/2$, keeps one of $q$ and $-q$.
+[[numcosmo|nc_hcosmo_bi_get_angles]] returns the angles of the model's quaternion after
+flipping its sign if $a < 0$, and [[numcosmo|nc_hcosmo_bi_set_angles]] sets the parameters
+from them.
+
+```{python}
+#| code-fold: true
+# Round trip through the angles and the rotation of one vector, on random parameters.
+worst_q, worst_v = 0.0, 0.0
+for _ in range(200):
+    u = rng.uniform(size=3)
+    for i, x in enumerate(u):
+        cosmo.orig_param_set(Nc.HCosmoBISParams.U1 + i, x)
+    q = cosmo.get_quaternion()
+    sign = -1.0 if q.s < 0.0 else 1.0
+    alpha, beta, gamma = cosmo.get_angles()
+    q_angles = np.array(
+        [
+            math.cos(alpha),
+            math.sin(alpha) * math.cos(beta),
+            math.sin(alpha) * math.sin(beta) * math.cos(gamma),
+            math.sin(alpha) * math.sin(beta) * math.sin(gamma),
+        ]
+    )
+    worst_q = max(worst_q, np.abs(q_angles - sign * np.array([q.s, q.v.c[0], q.v.c[1], q.v.c[2]])).max())
+    v1 = Ncm.TriVec.new_full([0.36, -0.48, 0.8])
+    q.rotate(v1)
+    cosmo.set_angles(alpha, beta, gamma)
+    v2 = Ncm.TriVec.new_full([0.36, -0.48, 0.8])
+    cosmo.get_quaternion().rotate(v2)
+    worst_v = max(worst_v, max(abs(v1.c[i] - v2.c[i]) for i in range(3)))
+print(f"largest difference of the quaternion rebuilt from the angles: {worst_q:.1e}; of a rotated vector after set_angles: {worst_v:.1e}")
+```
+
+## The symmetry of the axes
+
+This symmetry is a property of the likelihood, not of the parametrization. The distances
+depend on $n_1^2$, $n_2^2$, $n_3^2$, so each axis is defined up to its sign: the likelihood
+is invariant under the three reflections $n_i \to -n_i$. A single reflection is not a
+rotation and has no point in the box; the product of two reflections is the rotation by
+$\pi$ about the third axis, which is. In quaternion form these rotations are the right
+multiplications of $q$ by $\pm 1$, $\pm i$, $\pm j$, $\pm k$: eight quaternions, four
+rotations, one likelihood. On the box the eight
+points are, modulo 1,
+$$
+(u_1,\; u_2 + \tfrac{k}{4},\; u_3 + \tfrac{k}{4})
+\quad\text{and}\quad
+(1 - u_1,\; \tfrac14 - u_3 + \tfrac{k}{4},\; \tfrac34 - u_2 + \tfrac{k}{4}),
+\qquad k = 0, 1, 2, 3 .
+$$
+The first four come from $\pm 1$ and $\pm k$ (right multiplication by $k$ adds $\tfrac14$ to
+both $u_2$ and $u_3$); the second four from $\pm i$ and $\pm j$, which exchange the roles of
+$z_1$ and $z_2$. Exactly one of the eight has $u_1 \leq \tfrac12$ and $u_2 < \tfrac14$ (for
+$u_1 \neq \tfrac12$), so the fundamental domain used by the Bianchi I experiments,
+$u_1 \leq \tfrac12$, $u_2 \leq \tfrac14$, holds one copy of each orientation and keeps the
+flat measure, being a subset of the box. The chunk below checks the eight maps.
+
+```{python}
+#| code-fold: true
+def set_quaternion(a, b, c, d):
+    """Set the model's orientation from (a, b, c, d) through the axis-angle constructor."""
+    norm = math.sqrt(b * b + c * c + d * d)
+    q = Ncm.Quaternion.new()
+    q.set_from_data(b / norm, c / norm, d / norm, 2.0 * math.atan2(norm, a))
+    cosmo.set_quaternion(q)
+    return np.array([cosmo.orig_param_get(Nc.HCosmoBISParams.U1 + i) for i in range(3)])
+
+
+def qmul(p, r):
+    a1, b1, c1, d1 = p
+    a2, b2, c2, d2 = r
+    return (
+        a1 * a2 - b1 * b2 - c1 * c2 - d1 * d2,
+        a1 * b2 + b1 * a2 + c1 * d2 - d1 * c2,
+        a1 * c2 - b1 * d2 + c1 * a2 + d1 * b2,
+        a1 * d2 + b1 * c2 - c1 * b2 + d1 * a2,
+    )
+
+
+u = rng.uniform(size=3)
+q = quaternion(u)
+u1, u2, u3 = u
+expected = [(u1, u2 + k / 4, u3 + k / 4) for k in range(4)]
+expected += [(1 - u1, 0.25 - u3 + k / 4, 0.75 - u2 + k / 4) for k in range(4)]
+found = []
+for unit in ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)):
+    for sign in (1, -1):
+        found.append(set_quaternion(*(sign * np.array(qmul(q, unit)))))
+worst = 0.0
+for e in expected:
+    e = np.array(e) % 1.0
+    worst = max(worst, min(np.abs(((f - e) + 0.5) % 1.0 - 0.5).max() for f in found))
+print(f"eight images of (u1, u2, u3) = {np.round(u, 4)}: largest distance from the stated maps {worst:.1e}")
+```

@@ -88,6 +88,8 @@
  * $\gamma \in [0, 2\pi)$, is read by nc_hcosmo_bi_get_angles() and set by
  * nc_hcosmo_bi_set_angles(); $u_1 = a^2 + d^2$, $2\pi u_2 = \arg(c + ib)$ and
  * $2\pi u_3 = \arg(a + id)$ for $q = (a; b, c, d)$, see nc_hcosmo_bi_set_quaternion().
+ * The parametrization, the uniform measure on rotations and the symmetry of the axes are
+ * described in <a href="../../theory/nc/background/hcosmo_bi.html">Bianchi I Orientation</a>.
  *
  * The volume vanishes at $w = w_+$, that is at $t_{lb} = H_0 t_0 = -\kappa^{-1}\ln w_+$,
  * returned by nc_hcosmo_bi_age(); nc_hcosmo_bi_ln_a() and nc_hcosmo_bi_E() require $t_{lb}$
