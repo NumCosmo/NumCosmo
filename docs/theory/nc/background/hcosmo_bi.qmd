@@ -62,15 +62,15 @@ u_1 = a^2 + d^2,
 2\pi u_3 = \arg(a + id),
 $$
 with the arguments taken in $[0, 2\pi)$; this is [[numcosmo|nc_hcosmo_bi_set_quaternion]].
-The two quaternions $q$ and $-q$ map to different points of the box, $(u_1, u_2 + \tfrac12,
-u_3 + \tfrac12)$ modulo 1, with the same rotation.
+The two quaternions $q$ and $-q$ map to different points of the box,
+$(u_1, u_2 + \tfrac12, u_3 + \tfrac12)$ modulo 1, with the same rotation.
 
 ## Uniform sampling
 
-The claim is that the uniform distribution on the box $[0, 1]^3$ is the uniform (Haar)
-distribution on rotations. The uniform distribution on $SO(3)$ is the uniform distribution on
-$S^3$ followed by the identification of $q$ with $-q$, so it is enough to show that the volume
-element of $S^3$ is constant in the coordinates $(u_1, u_2, u_3)$.
+The uniform distribution on the box $[0, 1]^3$ is the uniform (Haar) distribution on
+rotations. The uniform distribution on $SO(3)$ is the uniform distribution on $S^3$ followed
+by the identification of $q$ with $-q$, so the statement holds if the volume element of $S^3$
+is constant in the coordinates $(u_1, u_2, u_3)$.
 
 Group the four components into two complex numbers,
 $$
@@ -93,18 +93,18 @@ and the volume element is the square root of the product of the three coefficien
 $$
 \mathrm{d}V = \sqrt{\frac{16\pi^4 u_1 (1 - u_1)}{4 u_1 (1 - u_1)}}\;\mathrm{d}u_1\,\mathrm{d}u_2\,\mathrm{d}u_3 = 2\pi^2\,\mathrm{d}u_1\,\mathrm{d}u_2\,\mathrm{d}u_3 .
 $$
-The factor is constant, and it is the volume of $S^3$, as it must be for a map of the unit
-box onto the sphere. A sampler that draws $u_1$, $u_2$, $u_3$ uniformly on $[0, 1]$, or with a
+The factor is constant and equals the volume of $S^3$, which the unit box covers once. A
+sampler that draws $u_1$, $u_2$, $u_3$ uniformly on $[0, 1]$, or with a
 flat prior on the box, draws rotations uniformly, with no Jacobian.
 
-The chunk below checks the constant numerically, from the quaternion the model returns, and
-checks the consequence on the sky: for uniform draws of the parameters, each axis is
-uniformly distributed on the sphere, so the component of an axis along any fixed direction
-is uniform on $[-1, 1]$.
+The chunk below draws $2 \times 10^5$ points uniformly on the box, checks the constant
+numerically from the quaternion the model returns, and checks the consequence on the sky:
+each axis is then uniformly distributed on the sphere, so the component of an axis along any
+fixed direction is uniform on $[-1, 1]$.
 
 ```{python}
 #| label: fig-haar
-#| fig-cap: "Distribution of the component of axis 3 along the equatorial $z$ direction for $2\\times 10^4$ uniform draws of $(u_1, u_2, u_3)$, against the uniform density on $[-1, 1]$ of an isotropic axis."
+#| fig-cap: "Histograms of $u_1$, $u_2$, $u_3$ for $2\\times 10^5$ uniform draws on the box (left) and of the component of axis 3 along the equatorial $z$ direction for the same draws, against the uniform density on $[-1, 1]$ of an isotropic axis (right)."
 #| code-fold: true
 import math
 import numpy as np
@@ -115,9 +115,13 @@ Ncm.cfg_init()
 cosmo = Nc.HCosmoBI.new()
 
 
-def quaternion(u):
+def set_u(u):
     for i, x in enumerate(u):
         cosmo.orig_param_set(Nc.HCosmoBISParams.U1 + i, x)
+
+
+def quaternion(u):
+    set_u(u)
     q = cosmo.get_quaternion()
     return np.array([q.s, q.v.c[0], q.v.c[1], q.v.c[2]])
 
@@ -132,40 +136,48 @@ for _ in range(5):
     elements.append(math.sqrt(np.linalg.det(J.T @ J)))
 print("volume element at five random points:", np.round(elements, 6), "; 2 pi^2 =", round(2 * math.pi**2, 6))
 
-# Axis 3 of uniform draws, rotated with ncm_quaternion_rotate.
-n = 20000
+# Uniform draws on the box; the angles and axis 3 of each from the model.
+n = 200000
+u_draws = rng.uniform(size=(n, 3))
+angles = np.empty((n, 3))
 z_axis3 = np.empty(n)
 for k in range(n):
-    u = rng.uniform(size=3)
-    for i, x in enumerate(u):
-        cosmo.orig_param_set(Nc.HCosmoBISParams.U1 + i, x)
-    q = cosmo.get_quaternion()
+    set_u(u_draws[k])
+    angles[k] = cosmo.get_angles()
     v = Ncm.TriVec.new_full([0.0, 0.0, 1.0])
-    q.rotate(v)
+    cosmo.get_quaternion().rotate(v)
     z_axis3[k] = v.c[2]
 
-fig, ax = plt.subplots(figsize=(6, 3.2))
-ax.hist(z_axis3, bins=40, range=(-1, 1), density=True, histtype="step", label="axis 3, $z$ component")
-ax.axhline(0.5, color="C3", lw=1, label="uniform on $[-1, 1]$")
-ax.set_xlabel("component along the equatorial $z$ direction")
-ax.set_ylabel("density")
-ax.legend()
+fig, axes = plt.subplots(1, 4, figsize=(12, 3))
+for i, ax in enumerate(axes[:3]):
+    ax.hist(u_draws[:, i], bins=50, range=(0, 1), density=True, histtype="step")
+    ax.axhline(1.0, color="C3", lw=1)
+    ax.set_xlabel(f"$u_{i + 1}$")
+    ax.set_ylim(0, 1.3)
+axes[3].hist(z_axis3, bins=50, range=(-1, 1), density=True, histtype="step")
+axes[3].axhline(0.5, color="C3", lw=1)
+axes[3].set_xlabel("axis 3, component along $z$")
+axes[3].set_ylim(0, 0.65)
+axes[0].set_ylabel("density")
+plt.tight_layout()
 plt.show()
 ```
 
 ## The hyperspherical angles
 
-The same unit quaternion can be written with three angles,
+The same unit quaternion can be written with the spherical coordinates of $S^3$,
 $$
 q = \big(\cos\alpha;\; \sin\alpha\cos\beta,\; \sin\alpha\sin\beta\cos\gamma,\; \sin\alpha\sin\beta\sin\gamma\big),
 \qquad
-\alpha \in [0, \pi],\; \beta \in [0, \pi],\; \gamma \in [0, 2\pi),
+\alpha \in [0, \tfrac{\pi}{2}],\; \beta \in [0, \pi],\; \gamma \in [0, 2\pi),
 $$
-the spherical coordinates of $S^3$. In these coordinates the volume element is
-$\sin^2\!\alpha\,\sin\beta\,\mathrm{d}\alpha\,\mathrm{d}\beta\,\mathrm{d}\gamma$, so a
-sampler that is flat in the angles has to weight each point by $\sin^2\!\alpha\,\sin\beta$ to
-be uniform on rotations, while a sampler flat in $(u_1, u_2, u_3)$ needs no weight. The two
-sets of coordinates describe the same point, and the conversion follows from
+where the range of $\alpha$ keeps $a \geq 0$, one of $q$ and $-q$. In these coordinates the
+volume element is $\sin^2\!\alpha\,\sin\beta\,\mathrm{d}\alpha\,\mathrm{d}\beta\,\mathrm{d}\gamma$:
+the uniform distribution on rotations has the marginal densities
+$\tfrac{4}{\pi}\sin^2\!\alpha$ on $[0, \pi/2]$, $\tfrac12\sin\beta$ on $[0, \pi]$ and
+$\tfrac{1}{2\pi}$ on $[0, 2\pi)$, so a sampler that is flat in the angles has to weight each
+point by $\sin^2\!\alpha\,\sin\beta$, while a sampler flat in $(u_1, u_2, u_3)$ needs no
+weight. The two sets of coordinates describe the same point, and the conversion follows from
 $(a; b, c, d)$:
 $$
 \alpha = \arccos a,
@@ -175,11 +187,28 @@ $$
 \gamma = \operatorname{atan2}(d, c),
 $$
 with $(a; b, c, d)$ from $(u_1, u_2, u_3)$ as above, and back through
-$u_1 = a^2 + d^2$, $2\pi u_2 = \arg(c + ib)$, $2\pi u_3 = \arg(a + id)$. Restricting to
-$a \geq 0$, that is $\alpha \leq \pi/2$, keeps one of $q$ and $-q$.
+$u_1 = a^2 + d^2$, $2\pi u_2 = \arg(c + ib)$, $2\pi u_3 = \arg(a + id)$.
 [[numcosmo|nc_hcosmo_bi_get_angles]] returns the angles of the model's quaternion after
 flipping its sign if $a < 0$, and [[numcosmo|nc_hcosmo_bi_set_angles]] sets the parameters
-from them.
+from them. The angles of the uniform draws above follow the marginal densities:
+
+```{python}
+#| label: fig-angles
+#| fig-cap: "Histograms of $\\alpha$, $\\beta$, $\\gamma$ for the $2\\times 10^5$ uniform draws on the box, against the marginal densities of the uniform distribution on rotations, $\\tfrac{4}{\\pi}\\sin^2\\alpha$, $\\tfrac12\\sin\\beta$ and $\\tfrac{1}{2\\pi}$."
+#| code-fold: true
+fig, axes = plt.subplots(1, 3, figsize=(12, 3))
+ranges = [(0, math.pi / 2), (0, math.pi), (0, 2 * math.pi)]
+labels = [r"$\alpha$", r"$\beta$", r"$\gamma$"]
+densities = [lambda x: 4 / math.pi * np.sin(x) ** 2, lambda x: 0.5 * np.sin(x), lambda x: np.full_like(x, 1 / (2 * math.pi))]
+for i, ax in enumerate(axes):
+    ax.hist(angles[:, i], bins=50, range=ranges[i], density=True, histtype="step")
+    x = np.linspace(*ranges[i], 200)
+    ax.plot(x, densities[i](x), color="C3", lw=1)
+    ax.set_xlabel(labels[i])
+axes[0].set_ylabel("density")
+plt.tight_layout()
+plt.show()
+```
 
 ```{python}
 #| code-fold: true
