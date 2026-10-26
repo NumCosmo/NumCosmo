@@ -82,7 +82,12 @@
  * returned by nc_hcosmo_bi_get_quaternion(); a unit vector $\hat n$ in the equatorial frame
  * has components $q\,\hat n\,q^\dagger$ along the three axes. The uniform distribution
  * on the box $[0, 1]^3$ gives the uniform distribution on rotations, and the defaults
- * $(1, 0, 0)$ give the identity.
+ * $(1, 0, 0)$ give the identity. The same quaternion in hyperspherical angles,
+ * $q = (\cos\alpha;\; \sin\alpha\cos\beta,\; \sin\alpha\sin\beta\cos\gamma,\;
+ * \sin\alpha\sin\beta\sin\gamma)$ with $\alpha \in [0, \pi/2]$, $\beta \in [0, \pi]$,
+ * $\gamma \in [0, 2\pi)$, is read by nc_hcosmo_bi_get_angles() and set by
+ * nc_hcosmo_bi_set_angles(); $u_1 = a^2 + d^2$, $2\pi u_2 = \arg(c + ib)$ and
+ * $2\pi u_3 = \arg(a + id)$ for $q = (a; b, c, d)$, see nc_hcosmo_bi_set_quaternion().
  *
  * The volume vanishes at $w = w_+$, that is at $t_{lb} = H_0 t_0 = -\kappa^{-1}\ln w_+$,
  * returned by nc_hcosmo_bi_age(); nc_hcosmo_bi_ln_a() and nc_hcosmo_bi_E() require $t_{lb}$
@@ -460,6 +465,95 @@ nc_hcosmo_bi_get_quaternion (NcHCosmoBI *cosmo, NcmQuaternion *q)
   q->v.c[0] = r2 * sin (2.0 * M_PI * U2);
   q->v.c[1] = r2 * cos (2.0 * M_PI * U2);
   q->v.c[2] = r1 * sin (2.0 * M_PI * U3);
+}
+
+/**
+ * nc_hcosmo_bi_set_quaternion:
+ * @cosmo: a #NcHCosmoBI
+ * @q: a unit #NcmQuaternion
+ *
+ * Sets the orientation parameters $u_i$ to those of @q, see #NcHCosmoBI; $q$ and $-q$ give
+ * different points of the box with the same rotation. The result is in $[0, 1]^3$, which may
+ * lie outside the fundamental domain when the parameter bounds restrict it.
+ *
+ */
+void
+nc_hcosmo_bi_set_quaternion (NcHCosmoBI *cosmo, const NcmQuaternion *q)
+{
+  const gdouble a  = q->s;
+  const gdouble b  = q->v.c[0];
+  const gdouble c  = q->v.c[1];
+  const gdouble d  = q->v.c[2];
+  const gdouble u1 = a * a + d * d;
+  gdouble u2       = atan2 (b, c) / (2.0 * M_PI);
+  gdouble u3       = atan2 (d, a) / (2.0 * M_PI);
+
+  u2 -= floor (u2);
+  u3 -= floor (u3);
+
+  ncm_model_orig_param_set (VECTOR, NC_HCOSMO_BI_U1, u1);
+  ncm_model_orig_param_set (VECTOR, NC_HCOSMO_BI_U2, u2);
+  ncm_model_orig_param_set (VECTOR, NC_HCOSMO_BI_U3, u3);
+}
+
+/**
+ * nc_hcosmo_bi_get_angles:
+ * @cosmo: a #NcHCosmoBI
+ * @alpha: (out): $\alpha \in [0, \pi/2]$
+ * @beta: (out): $\beta \in [0, \pi]$
+ * @gamma: (out): $\gamma \in [0, 2\pi)$
+ *
+ * Computes the hyperspherical angles of the orientation quaternion, see #NcHCosmoBI, after
+ * changing its sign if needed so that its scalar part is not negative.
+ *
+ */
+void
+nc_hcosmo_bi_get_angles (NcHCosmoBI *cosmo, gdouble *alpha, gdouble *beta, gdouble *gamma)
+{
+  NcmQuaternion q;
+  gdouble sign;
+
+  nc_hcosmo_bi_get_quaternion (cosmo, &q);
+  sign = (q.s < 0.0) ? -1.0 : 1.0;
+
+  {
+    const gdouble a = sign * q.s;
+    const gdouble b = sign * q.v.c[0];
+    const gdouble c = sign * q.v.c[1];
+    const gdouble d = sign * q.v.c[2];
+    gdouble g       = atan2 (d, c);
+
+    if (g < 0.0)
+      g += 2.0 * M_PI;
+
+    alpha[0] = acos (CLAMP (a, -1.0, 1.0));
+    beta[0]  = atan2 (hypot (c, d), b);
+    gamma[0] = g;
+  }
+}
+
+/**
+ * nc_hcosmo_bi_set_angles:
+ * @cosmo: a #NcHCosmoBI
+ * @alpha: $\alpha$
+ * @beta: $\beta$
+ * @gamma: $\gamma$
+ *
+ * Sets the orientation parameters from the hyperspherical angles of the quaternion, see
+ * #NcHCosmoBI and nc_hcosmo_bi_set_quaternion().
+ *
+ */
+void
+nc_hcosmo_bi_set_angles (NcHCosmoBI *cosmo, const gdouble alpha, const gdouble beta, const gdouble gamma)
+{
+  NcmQuaternion q;
+
+  q.s      = cos (alpha);
+  q.v.c[0] = sin (alpha) * cos (beta);
+  q.v.c[1] = sin (alpha) * sin (beta) * cos (gamma);
+  q.v.c[2] = sin (alpha) * sin (beta) * sin (gamma);
+
+  nc_hcosmo_bi_set_quaternion (cosmo, &q);
 }
 
 #define _NC_HCOSMO_BI_FUNC0_TO_FLIST(fname)                                                                                   \
