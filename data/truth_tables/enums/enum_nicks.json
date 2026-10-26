@@ -1595,6 +1595,18 @@
     "nick": "recomb",
     "type": "Nc.DistanceSoundHorizonMethod"
   },
+  "NC_DIST_MU_NUISANCE_DMU": {
+    "nick": "dmu",
+    "type": "Nc.DistMuNuisanceVParams"
+  },
+  "NC_DIST_MU_NUISANCE_SIGMA_V": {
+    "nick": "sigma-v",
+    "type": "Nc.DistMuNuisanceSParams"
+  },
+  "NC_DIST_MU_NUISANCE_SIGMA_V_S": {
+    "nick": "sigma-v-s",
+    "type": "Nc.DistMuNuisanceVParams"
+  },
   "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
     "nick": "cf4-snia",
     "type": "Nc.DistMuObsCatalogId"
@@ -2750,6 +2762,18 @@
   "NC_MULTIPLICITY_FUNC_MASS_DEF_VIRIAL": {
     "nick": "virial",
     "type": "Nc.MultiplicityFuncMassDef"
+  },
+  "NC_OBSERVER_VELOCITY_VX": {
+    "nick": "vx",
+    "type": "Nc.ObserverVelocitySParams"
+  },
+  "NC_OBSERVER_VELOCITY_VY": {
+    "nick": "vy",
+    "type": "Nc.ObserverVelocitySParams"
+  },
+  "NC_OBSERVER_VELOCITY_VZ": {
+    "nick": "vz",
+    "type": "Nc.ObserverVelocitySParams"
   },
   "NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_100_100_EE": {
     "nick": "a-cnoise-e2e-100-100-ee",

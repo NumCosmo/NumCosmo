@@ -37,6 +37,7 @@ import typer
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.datasets.dist_mu_obs import (
     DistMuObsCatalogID,
+    SampleRule,
     edd_cf4_snia_to_dist_mu_obs,
 )
 from numcosmo_py.datasets.hicosmo import (
@@ -1715,6 +1716,82 @@ class GenerateBianchi:
         ),
     ] = 1.05
 
+    sigma_v: Annotated[
+        float,
+        typer.Option(
+            help="Peculiar velocity dispersion [km/s] added in quadrature to the errors."
+        ),
+    ] = 0.0
+
+    fit_sigma_v: Annotated[
+        bool, typer.Option(help="Fit the peculiar velocity dispersion.")
+    ] = False
+
+    sample_rule: Annotated[
+        SampleRule,
+        typer.Option(
+            help=(
+                "Rule assigning each object to a sample: smallest_error picks the survey "
+                "with the smallest error (a group is not the sample of its survey), "
+                "hemisphere splits at dec = 0."
+            )
+        ),
+    ] = SampleRule.NONE
+
+    sample_col: Annotated[
+        str | None,
+        typer.Option(
+            help="Integer column with the sample indices; overrides --sample-rule.",
+            show_default=False,
+        ),
+    ] = None
+
+    fit_offsets: Annotated[
+        bool, typer.Option(help="Fit one distance modulus offset per sample.")
+    ] = False
+
+    reference_sample: Annotated[
+        str | None,
+        typer.Option(
+            help=(
+                "Sample whose offset stays fixed at zero with --fit-offsets, by name "
+                "(a survey, north or south) or by index."
+            ),
+            show_default=False,
+        ),
+    ] = None
+
+    fundamental_domain: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Bound the orientation to one fundamental domain of its symmetry "
+                "(u1 <= 1/2, u2 <= 1/4); the box holds eight copies of every orientation."
+            )
+        ),
+    ] = True
+
+    sigma_v_per_sample: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "One velocity dispersion per sample, started at --sigma-v and free with "
+                "--fit-sigma-v; needs a sample rule or column. It tests whether the "
+                "samples need different uncertainty models."
+            )
+        ),
+    ] = False
+
+    fit_velocity: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Fit the velocity of the observer relative to the rest frame of the model "
+                "(three components, km/s); needs --z-min above the velocity bound over c."
+            )
+        ),
+    ] = False
+
     def _load_obs(self) -> Nc.DistMuObs:
         """Load the catalog from --catalog, --data-file or --edd-table.
 
@@ -1770,6 +1847,15 @@ class GenerateBianchi:
             ordering=self.ordering,
             wall_scale=self.wall_scale,
             zmax_factor=self.zmax_factor,
+            sigma_v=self.sigma_v,
+            fit_sigma_v=self.fit_sigma_v,
+            sigma_v_per_sample=self.sigma_v_per_sample,
+            sample_rule=self.sample_rule,
+            sample_col=self.sample_col,
+            fit_offsets=self.fit_offsets,
+            reference_sample=self.reference_sample,
+            fundamental_domain=self.fundamental_domain,
+            fit_velocity=self.fit_velocity,
             desc=(
                 f"{source}, mu = {self.mu_col or 'mu'}, "
                 f"sigma_mu = {self.sigma_col or 'sigma_mu'}, "

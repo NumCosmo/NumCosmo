@@ -32,8 +32,9 @@
  * #NC_DIST_MU_OBS_COL_DEC (equatorial J2000, degrees), #NC_DIST_MU_OBS_COL_Z (redshift),
  * #NC_DIST_MU_OBS_COL_MU and #NC_DIST_MU_OBS_COL_SIGMA_MU (distance modulus and its
  * uncertainty, magnitudes). Any other column is kept as given, so alternative moduli
- * or identifiers of the source table travel with the object. Creating a catalog
- * without one of the five columns is an error. The provenance of the table goes in
+ * or identifiers of the source table travel with the object; the integer column
+ * #NC_DIST_MU_OBS_COL_SAMPLE, when present, labels the sample of each object, see
+ * #NcDistMuNuisance. Creating a catalog without one of the five columns is an error. The provenance of the table goes in
  * the catalog metadata, see ncm_catalog_set_meta().
  *
  * nc_dist_mu_obs_get_direction() gives the unit vector of a row in the equatorial

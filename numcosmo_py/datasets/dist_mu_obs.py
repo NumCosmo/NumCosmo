@@ -27,6 +27,7 @@ Builds :class:`Nc.DistMuObs` catalogs from external tables and names the catalog
 shipped with NumCosmo.
 """
 
+from enum import StrEnum, auto
 from pathlib import Path
 
 import numpy as np
@@ -107,7 +108,9 @@ def edd_cf4_snia_to_dist_mu_obs(path: Path | str, downloaded: str) -> Nc.DistMuO
     ``RA`` and ``DE``, ``z`` as ``Vcmb`` divided by the speed of light, ``mu`` as
     ``DM_zp`` and ``sigma_mu`` as ``eDM``; every other numeric column of the export is
     kept under its EDD name, so ``DM_av`` and the per-sample moduli are available as
-    alternatives.
+    alternatives. ``eDM`` is the smallest ``eDM_X`` of the object. Some ``eDM_X``
+    columns grow toward low redshift as a peculiar velocity term would, others are a
+    single constant; the export does not state what they contain.
 
     :param path: the export file.
     :param downloaded: the download date, stored in the metadata.
@@ -143,3 +146,56 @@ def edd_cf4_snia_to_dist_mu_obs(path: Path | str, downloaded: str) -> Nc.DistMuO
         "sigma_mu": "eDM, minimum error of all measured moduli",
     }
     return dist_mu_obs_from_table(out, meta)
+
+
+class SampleRule(StrEnum):
+    """Rules assigning a sample index to each object of a catalog."""
+
+    NONE = auto()
+    SMALLEST_ERROR = auto()
+    HEMISPHERE = auto()
+
+
+def survey_names(obs: Nc.DistMuObs) -> list[str]:
+    """Surveys of a catalog: the ``X`` of every ``DM_X``/``eDM_X`` column pair.
+
+    :param obs: the catalog.
+    :return: the survey names, sorted.
+    """
+    columns = list(obs.peek_columns())
+    return sorted(
+        c[3:] for c in columns if c.startswith("DM_") and f"eDM_{c[3:]}" in columns
+    )
+
+
+def samples_by_rule(
+    obs: Nc.DistMuObs, rule: SampleRule, selected: np.ndarray | None = None
+) -> tuple[list[float], list[str]]:
+    """Sample index of each object by a rule.
+
+    ``SMALLEST_ERROR`` assigns each object to the survey with the smallest error among
+    those that measured it, indexed into :func:`survey_names`, -1 when none did. The
+    group of a survey holds only the objects where its error is the smallest, so it is
+    not the sample of that survey, and offsets fitted on these groups are differences
+    between subsets of the catalog, not zero points of the surveys;
+    ``HEMISPHERE`` assigns 0 to dec >= 0 and 1 to dec < 0; ``NONE`` assigns -1.
+
+    :param obs: the catalog.
+    :param rule: the rule.
+    :param selected: row indices to label, all rows when ``None``.
+    :return: the sample index of each selected row and the sample names.
+    """
+    rows = np.arange(obs.len()) if selected is None else np.asarray(selected)
+    columns = list(obs.peek_columns())
+    data = obs.peek_data().to_numpy()
+    if rule == SampleRule.NONE:
+        return [-1.0] * len(rows), []
+    if rule == SampleRule.HEMISPHERE:
+        dec = data[rows, columns.index("dec")]
+        return [0.0 if d >= 0.0 else 1.0 for d in dec], ["north", "south"]
+    names = survey_names(obs)
+    errors = np.column_stack([data[rows, columns.index(f"eDM_{n}")] for n in names])
+    errors = np.where(np.isfinite(errors), errors, np.inf)
+    best = np.argmin(errors, axis=1)
+    none = ~np.isfinite(errors).any(axis=1)
+    return [-1.0 if n else float(b) for b, n in zip(best, none)], names

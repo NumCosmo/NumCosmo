@@ -84,6 +84,8 @@ void test_nc_hcosmo_bi_basic (void);
 void test_nc_hcosmo_bi_dist_basic (void);
 void test_nc_data_hcosmo_bi_dist_mu_basic (void);
 void test_nc_dist_mu_obs_basic (void);
+void test_nc_dist_mu_nuisance_basic (void);
+void test_nc_observer_velocity_basic (void);
 void test_nc_hipert_adiab_basic (void);
 void test_nc_hipert_em_basic (void);
 void test_nc_hipert_gw_basic (void);
@@ -186,6 +188,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hcosmo_bi_dist/basic", test_nc_hcosmo_bi_dist_basic);
   g_test_add_func ("/nc/data/hcosmo_bi_dist_mu/basic", test_nc_data_hcosmo_bi_dist_mu_basic);
   g_test_add_func ("/nc/dist_mu_obs/basic", test_nc_dist_mu_obs_basic);
+  g_test_add_func ("/nc/dist_mu_nuisance/basic", test_nc_dist_mu_nuisance_basic);
+  g_test_add_func ("/nc/observer_velocity/basic", test_nc_observer_velocity_basic);
 
   g_test_add_func ("/nc/hipert/adiab/basic", test_nc_hipert_adiab_basic);
   g_test_add_func ("/nc/hipert/em/basic", test_nc_hipert_em_basic);
@@ -953,6 +957,40 @@ test_nc_dist_mu_obs_basic (void)
   g_assert_true (NC_IS_DIST_MU_OBS (obs));
 
   NCM_TEST_FREE (nc_dist_mu_obs_free, obs);
+}
+
+void
+test_nc_dist_mu_nuisance_basic (void)
+{
+  NcDistMuNuisance *nuisance = nc_dist_mu_nuisance_new (2);
+  NcDistMuNuisance *nuisance2;
+
+  g_assert_true (NC_IS_DIST_MU_NUISANCE (nuisance));
+
+  nuisance2 = nc_dist_mu_nuisance_ref (nuisance);
+  nc_dist_mu_nuisance_clear (&nuisance2);
+  g_assert_true (nuisance2 == NULL);
+
+  g_assert_true (NC_IS_DIST_MU_NUISANCE (nuisance));
+
+  NCM_TEST_FREE (nc_dist_mu_nuisance_free, nuisance);
+}
+
+void
+test_nc_observer_velocity_basic (void)
+{
+  NcObserverVelocity *ov = nc_observer_velocity_new ();
+  NcObserverVelocity *ov2;
+
+  g_assert_true (NC_IS_OBSERVER_VELOCITY (ov));
+
+  ov2 = nc_observer_velocity_ref (ov);
+  nc_observer_velocity_clear (&ov2);
+  g_assert_true (ov2 == NULL);
+
+  g_assert_true (NC_IS_OBSERVER_VELOCITY (ov));
+
+  NCM_TEST_FREE (nc_observer_velocity_free, ov);
 }
 
 void

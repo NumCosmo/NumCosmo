@@ -251,6 +251,8 @@
 #include "nc/data/nc_data_bao_dvr_dtdh.h"
 #include "nc/data/nc_data_dist_mu.h"
 #include "nc/data/nc_dist_mu_obs.h"
+#include "nc/data/nc_dist_mu_nuisance.h"
+#include "nc/data/nc_observer_velocity.h"
 #include "nc/data/nc_data_hcosmo_bi_dist_mu.h"
 #include "nc/data/nc_data_cluster_pseudo_counts.h"
 #include "nc/data/nc_data_cluster_ncount.h"
@@ -1069,6 +1071,8 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
   ncm_cfg_register_obj (NC_TYPE_DIST_MU_OBS);
+  ncm_cfg_register_obj (NC_TYPE_DIST_MU_NUISANCE);
+  ncm_cfg_register_obj (NC_TYPE_OBSERVER_VELOCITY);
   ncm_cfg_register_obj (NC_TYPE_DATA_HCOSMO_BI_DIST_MU);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);

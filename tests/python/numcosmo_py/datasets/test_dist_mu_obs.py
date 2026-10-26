@@ -10,8 +10,11 @@ from numcosmo_py import Nc, Ncm
 from numcosmo_py.datasets.dist_mu_obs import (
     SPEED_OF_LIGHT_KM_S,
     DistMuObsCatalogID,
+    SampleRule,
     dist_mu_obs_from_table,
     edd_cf4_snia_to_dist_mu_obs,
+    samples_by_rule,
+    survey_names,
 )
 
 Ncm.cfg_init()
@@ -41,7 +44,9 @@ def test_dist_mu_obs_from_table():
     assert obs.get_bool("ok", 1) is False
     assert np.isnan(obs.get("extra", 1))
     assert obs.get("extra", 2) == 3.0
-    assert obs.peek_meta().get_string("source") == (True, "unit test")
+    meta = obs.peek_meta()
+    assert meta is not None
+    assert meta.get_string("source") == (True, "unit test")
 
 
 def test_edd_cf4_snia_to_dist_mu_obs(edd_cf4_excerpt_file: Path):
@@ -64,6 +69,7 @@ def test_edd_cf4_snia_to_dist_mu_obs(edd_cf4_excerpt_file: Path):
     assert obs.get("sigma_mu", 0) == 0.13
 
     meta = obs.peek_meta()
+    assert meta is not None
     assert meta.get_string("downloaded") == (True, "2026-10-17")
     assert meta.get_string("source")[1].startswith("All CF4 SNIa Samples")
 
@@ -74,3 +80,31 @@ def test_edd_cf4_snia_to_dist_mu_obs(edd_cf4_excerpt_file: Path):
 def test_catalog_id_enum():
     """The catalog ids map to the C enum."""
     assert DistMuObsCatalogID.CF4_SNIA.genum == Nc.DistMuObsCatalogId.CF4_SNIA
+
+
+def test_samples_by_rule(edd_cf4_excerpt_file: Path):
+    """Sample rules on the EDD excerpt."""
+    obs = edd_cf4_snia_to_dist_mu_obs(edd_cf4_excerpt_file, "2026-10-17")
+    names = survey_names(obs)
+    assert "pantheonplus" in names and "stahl" in names
+    assert names == sorted(names)
+
+    samples, labels = samples_by_rule(obs, SampleRule.SMALLEST_ERROR)
+    assert labels == names
+    assert len(samples) == obs.len()
+    columns = list(obs.peek_columns())
+    data = obs.peek_data().to_numpy()
+    for i, s in enumerate(samples):
+        errors = {n: data[i, columns.index(f"eDM_{n}")] for n in names}
+        finite = {n: e for n, e in errors.items() if np.isfinite(e)}
+        if finite:
+            assert names[int(s)] == min(finite, key=finite.__getitem__)
+        else:
+            assert s == -1.0
+
+    samples, labels = samples_by_rule(obs, SampleRule.HEMISPHERE, np.array([0, 1]))
+    assert labels == ["north", "south"]
+    assert samples == [0.0 if obs.get("dec", i) >= 0 else 1.0 for i in (0, 1)]
+
+    samples, labels = samples_by_rule(obs, SampleRule.NONE)
+    assert labels == [] and set(samples) == {-1.0}
