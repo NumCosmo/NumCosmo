@@ -1732,7 +1732,8 @@ class GenerateBianchi:
         typer.Option(
             help=(
                 "Rule assigning each object to a sample: smallest_error picks the survey "
-                "with the smallest error, hemisphere splits at dec = 0."
+                "with the smallest error (a group is not the sample of its survey), "
+                "hemisphere splits at dec = 0."
             )
         ),
     ] = SampleRule.NONE
@@ -1775,7 +1776,8 @@ class GenerateBianchi:
         typer.Option(
             help=(
                 "One velocity dispersion per sample, started at --sigma-v and free with "
-                "--fit-sigma-v; needs a sample rule or column."
+                "--fit-sigma-v; needs a sample rule or column. It tests whether the "
+                "samples need different uncertainty models."
             )
         ),
     ] = False

@@ -35,13 +35,17 @@
  * \sigma_{\mu,v}(z) = \frac{5}{\ln 10}\,\frac{\sigma_v}{c}\,\frac{1 + z}{z\,(1 + z/2)}
  * $$
  * in quadrature to the uncertainty of the modulus of an object at redshift $z$, the
- * same form as #NcSNIADistCov uses for its peculiar velocity term. The
+ * same form as #NcSNIADistCov uses for its peculiar velocity term. When the
+ * uncertainties of the catalog already contain a peculiar velocity term, $\sigma_v$ is
+ * the dispersion beyond that term, not the velocity dispersion of the objects. The
  * number of samples is the construction property #NcDistMuNuisance:dmu-length; with no
  * samples the model carries only $\sigma_v$. A dispersion per sample is the vector
  * parameter $\sigma_{v,s}$, of length #NcDistMuNuisance:sigmav_s-length (zero unless
  * asked for, see nc_dist_mu_nuisance_new_full()): an object of sample $s$ within that
  * length uses $\sigma_{v,s}$ and every other object uses $\sigma_v$, see
- * nc_dist_mu_nuisance_sigma_mu_v_sample(). The defaults, $\sigma_v = 0$,
+ * nc_dist_mu_nuisance_sigma_mu_v_sample(). It tests whether the samples need different
+ * uncertainty models; with uncertainties that contain different velocity terms per
+ * sample, its values differ by those terms. The defaults, $\sigma_v = 0$,
  * $\sigma_{v,s} = 0$ and $\delta\mu_s = 0$, leave a likelihood unchanged.
  *
  */

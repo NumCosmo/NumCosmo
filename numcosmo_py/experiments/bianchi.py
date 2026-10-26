@@ -89,7 +89,7 @@ def build_bianchi_experiment(
     :param sigma_v_per_sample: whether each sample gets its own velocity dispersion,
         started at ``sigma_v`` and free when ``fit_sigma_v`` is set; the common value
         stays for objects without a sample, free only when such objects exist. Needs
-        samples.
+        samples. It tests whether the samples need different uncertainty models.
     :param sample_rule: rule assigning the sample of each object, see
         :func:`numcosmo_py.datasets.dist_mu_obs.samples_by_rule`.
     :param sample_col: integer column of the catalog with the sample indices; it

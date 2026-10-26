@@ -108,7 +108,8 @@ def edd_cf4_snia_to_dist_mu_obs(path: Path | str, downloaded: str) -> Nc.DistMuO
     ``RA`` and ``DE``, ``z`` as ``Vcmb`` divided by the speed of light, ``mu`` as
     ``DM_zp`` and ``sigma_mu`` as ``eDM``; every other numeric column of the export is
     kept under its EDD name, so ``DM_av`` and the per-sample moduli are available as
-    alternatives.
+    alternatives. ``eDM`` is the smallest ``eDM_X`` of the object, and the ``eDM_X``
+    columns differ in whether they contain a peculiar velocity term.
 
     :param path: the export file.
     :param downloaded: the download date, stored in the metadata.
@@ -172,7 +173,10 @@ def samples_by_rule(
     """Sample index of each object by a rule.
 
     ``SMALLEST_ERROR`` assigns each object to the survey with the smallest error among
-    those that measured it, indexed into :func:`survey_names`, -1 when none did;
+    those that measured it, indexed into :func:`survey_names`, -1 when none did. The
+    group of a survey holds only the objects where its error is the smallest, so it is
+    not the sample of that survey, and offsets fitted on these groups are differences
+    between subsets of the catalog, not zero points of the surveys;
     ``HEMISPHERE`` assigns 0 to dec >= 0 and 1 to dec < 0; ``NONE`` assigns -1.
 
     :param obs: the catalog.
