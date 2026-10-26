@@ -393,3 +393,34 @@ print(f"{n_trials} orientations: moduli at the eight left images equal to {worst
 print(f"representative in the fundamental domain: {n_domain}; q = g q_rep with the stated g: {n_group}")
 print("images per orbit kept by the cut on the right products:", {k: int(v) for k, v in enumerate(kept) if v})
 ```
+
+The classes on the draws of the box above: the eight sign patterns partition the box, and in
+the angles they overlap and add up to the densities of the uniform distribution.
+
+```{python}
+#| label: fig-classes
+#| fig-cap: "The $2\\times 10^5$ uniform draws on the box colored by the group element $g$ with $q = g\\,q_\\mathrm{rep}$, $q_\\mathrm{rep}$ in the fundamental domain. Top: histograms of $u_1$, $u_2$, $u_3$, stacked; the classes partition the box, $u_1 \\leq \\tfrac12$ for $g \\in \\{1, k, -1, -k\\}$ and the quarters of $u_2$ or $u_3$ for $m$. Bottom: histograms of $\\alpha$, $\\beta$, $\\gamma$, stacked; the classes overlap; $g$ and $-g$ have equal distributions, since the angles are those of $\\pm q$ with $a \\geq 0$, and the first family has $\\alpha \\geq \\pi/4$ because $a^2 + d^2 \\leq \\tfrac12$ there."
+#| code-fold: true
+labels = ["1", "k", "-1", "-k", "i", "j", "-i", "-j"]
+u1, u2, u3 = u_draws.T
+first = u1 <= 0.5
+m_first = (-np.floor(4.0 * u2).astype(int)) % 4
+m_second = np.floor(4.0 * ((u3 - 0.25) % 1.0)).astype(int) % 4
+cls = np.where(first, m_first, 4 + m_second)
+colors = plt.cm.tab10(np.arange(8))
+
+fig, axes = plt.subplots(2, 3, figsize=(12, 6))
+for i, ax in enumerate(axes[0]):
+    ax.hist([u_draws[cls == c, i] for c in range(8)], bins=40, range=(0, 1), stacked=True, color=colors, label=labels)
+    ax.set_xlabel(f"$u_{i + 1}$")
+ranges = [(0, math.pi / 2), (0, math.pi), (0, 2 * math.pi)]
+names = [r"$\alpha$", r"$\beta$", r"$\gamma$"]
+for i, ax in enumerate(axes[1]):
+    ax.hist([angles[cls == c, i] for c in range(8)], bins=40, range=ranges[i], stacked=True, color=colors)
+    ax.set_xlabel(names[i])
+axes[0, 0].set_ylabel("count")
+axes[1, 0].set_ylabel("count")
+axes[0, 2].legend(title="$g$", ncol=2, fontsize=8)
+plt.tight_layout()
+plt.show()
+```
