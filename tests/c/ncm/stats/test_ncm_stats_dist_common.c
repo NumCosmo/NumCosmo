@@ -2771,7 +2771,6 @@ test_ncm_stats_dist_vkde_robust_rows (void)
       const guint n_obs   = sample->len;
       const guint n_k     = ncm_stats_dist_get_n_kernels (sd);
       const guint k       = ncm_stats_dist_vkde_get_n_neighbors (sdvkde, n_obs);
-      const guint maxiter = ncm_stats_dist_kde_get_nearPD_maxiter (NCM_STATS_DIST_KDE (sdvkde));
 
       g_assert_cmpuint (n_k, <, n_obs);
       g_assert_cmpuint (k, <, n_obs);
@@ -2814,7 +2813,7 @@ test_ncm_stats_dist_vkde_robust_rows (void)
 
         ncm_stats_rows_reset (rows);
 
-        g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, U_i, 'U', maxiter, &repaired), ==, 0);
+        g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, U_i, 'U', &repaired), ==, 0);
 
         for (p = 0; p < d; p++)
           for (q = p; q < d; q++)

@@ -1712,33 +1712,119 @@ ncm_matrix_nearPD (NcmMatrix *cm, gchar UL, gboolean cholesky_decomp, const guin
  * @cm: a symmetric #NcmMatrix
  * @decomp: a #NcmMatrix of the same size
  * @UL: 'U' or 'L', the triangle used
- * @maxiter: iterations of ncm_matrix_nearPD() allowed, zero for none
- * @repaired: (out) (nullable): whether the factor comes from ncm_matrix_nearPD()
+ * @repaired: (out) (nullable): whether the factor is of a repaired matrix
  *
  * Stores in @decomp the Cholesky factor of @cm, reading the @UL triangle and leaving @cm
- * unchanged. If @cm is not positive definite to rounding, the factor of the nearest
- * positive definite matrix, from ncm_matrix_nearPD(), is stored instead.
+ * unchanged. If @cm is not positive definite to rounding, it stores instead the factor of
+ * the matrix $X = D \tilde{R} D$, where $D = \mathrm{diag}(A)^{1/2}$ with $A$ the matrix in
+ * @cm, $R = D^{-1} A D^{-1}$, and $\tilde{R}$ is $R$ with every eigenvalue $\lambda$
+ * replaced by $\max(\lambda, \delta)$, $\delta = \sqrt{u}\,\lambda_\mathrm{max}(R)$ and
+ * $u$ the double precision unit roundoff. $\tilde{R}$ is the nearest matrix to $R$ in the
+ * Frobenius norm with every eigenvalue at least $\delta$
+ * [(Cheng & Higham 1998)](https://doi.org/10.1137/S0895479896302898), so $X$ is the nearest
+ * such matrix in the norm $\Vert D^{-1}(X - A) D^{-1}\Vert_F$, which does not depend on the
+ * units of the variables; its condition number in the correlation form is at most
+ * $1/\sqrt{u}$. No repair is possible when a diagonal entry of @cm is not positive.
  *
- * Returns: zero on success, otherwise the status of the last Cholesky decomposition.
+ * Returns: zero on success, otherwise the status of the Cholesky decomposition of @cm, with
+ * @decomp undefined.
  */
 gint
-ncm_matrix_cholesky_decomp_nearPD (const NcmMatrix *cm, NcmMatrix *decomp, gchar UL, const guint maxiter, gboolean *repaired)
+ncm_matrix_cholesky_decomp_nearPD (const NcmMatrix *cm, NcmMatrix *decomp, gchar UL, gboolean *repaired)
 {
+  const guint n = ncm_matrix_nrows (cm);
   gint ret;
-
-  ncm_matrix_memcpy (decomp, cm);
-  ret = ncm_matrix_cholesky_decomp (decomp, UL);
 
   if (repaired != NULL)
     *repaired = FALSE;
 
-  if ((ret != 0) && (maxiter > 0))
-  {
-    ncm_matrix_memcpy (decomp, cm);
-    ret = ncm_matrix_nearPD (decomp, UL, TRUE, maxiter);
+  ncm_matrix_memcpy (decomp, cm);
+  ret = ncm_matrix_cholesky_decomp (decomp, UL);
 
-    if (repaired != NULL)
-      *repaired = TRUE;
+  if (ret == 0)
+    return 0;
+
+  {
+    NcmVector *D    = ncm_vector_new (n);
+    NcmVector *eva  = ncm_vector_new (n);
+    NcmMatrix *R    = ncm_matrix_new (n, n);
+    NcmMatrix *eve  = ncm_matrix_new (n, n);
+    GArray *isuppz  = g_array_new (FALSE, FALSE, sizeof (gint));
+    NcmLapackWS *ws = ncm_lapack_ws_new ();
+    gint neva       = 0;
+    gboolean pos    = TRUE;
+    guint i, j;
+
+    g_array_set_size (isuppz, 2 * n);
+
+    for (i = 0; i < n; i++)
+    {
+      const gdouble A_ii = ncm_matrix_get (cm, i, i);
+
+      if (!(A_ii > 0.0) || !gsl_finite (A_ii))
+        pos = FALSE;
+
+      ncm_vector_set (D, i, sqrt (A_ii));
+    }
+
+    if (pos)
+    {
+      gdouble delta;
+      gint eret;
+
+      /* R = D^-1 A D^-1 in the UL triangle, which is what dsyevr reads. */
+      for (i = 0; i < n; i++)
+      {
+        for (j = 0; j < n; j++)
+        {
+          if ((UL == 'U') ? (j >= i) : (j <= i))
+            ncm_matrix_set (R, i, j, ncm_matrix_get (cm, i, j) / (ncm_vector_get (D, i) * ncm_vector_get (D, j)));
+        }
+      }
+
+      eret = ncm_lapack_dsyevr ('V', 'A', UL, n, ncm_matrix_data (R), ncm_matrix_tda (R),
+                                0.0, 0.0,
+                                0, 0, 0.0,
+                                &neva, ncm_vector_data (eva),
+                                ncm_matrix_data (eve), ncm_matrix_tda (eve),
+                                &g_array_index (isuppz, gint, 0),
+                                ws);
+      g_assert_cmpint (eret, ==, 0);
+      g_assert_cmpint (neva, ==, n);
+
+      /* The eigenvalues are in ascending order and the trace of R is n, so the last is positive. */
+      delta = GSL_SQRT_DBL_EPSILON * ncm_vector_get (eva, n - 1);
+
+      /* Row i of eve is the i-th eigenvector; scaled by the square root of the clipped eigenvalue. */
+      for (i = 0; i < n; i++)
+        cblas_dscal (n, sqrt (GSL_MAX (ncm_vector_get (eva, i), delta)), ncm_matrix_ptr (eve, i, 0), 1);
+
+      cblas_dsyrk (CblasRowMajor, (UL == 'U') ? CblasUpper : CblasLower,
+                   CblasTrans, n, n,
+                   1.0, ncm_matrix_data (eve), ncm_matrix_tda (eve),
+                   0.0, ncm_matrix_data (decomp), ncm_matrix_tda (decomp));
+
+      for (i = 0; i < n; i++)
+      {
+        for (j = 0; j < n; j++)
+        {
+          if ((UL == 'U') ? (j >= i) : (j <= i))
+            ncm_matrix_set (decomp, i, j, ncm_matrix_get (decomp, i, j) * ncm_vector_get (D, i) * ncm_vector_get (D, j));
+        }
+      }
+
+      ret = ncm_matrix_cholesky_decomp (decomp, UL);
+
+      if (repaired != NULL)
+        *repaired = TRUE;
+    }
+
+    g_array_unref (isuppz);
+    ncm_lapack_ws_free (ws);
+    ncm_vector_free (D);
+    ncm_vector_free (eva);
+    ncm_matrix_free (R);
+    ncm_matrix_free (eve);
   }
 
   return ret;

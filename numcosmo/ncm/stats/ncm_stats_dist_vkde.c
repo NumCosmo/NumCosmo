@@ -577,7 +577,7 @@ _ncm_stats_dist_vkde_build_cov_array_kdtree (NcmStatsDist *sd, GPtrArray *sample
             break;
         }
 
-        _ncm_stats_dist_cholesky (g_ptr_array_index (self->cov_array, i), sample_cov, pself->nearPD_maxiter, "a local kernel covariance");
+        _ncm_stats_dist_cholesky (g_ptr_array_index (self->cov_array, i), sample_cov, "a local kernel covariance");
       }
 
       ncm_stats_vec_reset (sample, TRUE);

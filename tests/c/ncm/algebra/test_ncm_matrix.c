@@ -31,6 +31,7 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_eigen.h>
 
 typedef struct _TestNcmMatrix
 {
@@ -1763,6 +1764,50 @@ test_ncm_matrix_is_identity (TestNcmMatrix *test, gconstpointer pdata)
   }
 }
 
+/*
+ * The repaired matrix of ncm_matrix_cholesky_decomp_nearPD() computed independently with
+ * GSL: D Rt D with R = D^-1 A D^-1, D = diag(A)^1/2 and Rt the eigenvalues of R clipped
+ * from below at sqrt(eps) lambda_max(R). @A is read in its @UL triangle.
+ */
+static void
+_test_ncm_matrix_clip (const NcmMatrix *A, gchar UL, NcmMatrix *X)
+{
+  const guint n                = ncm_matrix_nrows (A);
+  gsl_matrix *R                = gsl_matrix_alloc (n, n);
+  gsl_matrix *Q                = gsl_matrix_alloc (n, n);
+  gsl_vector *eval             = gsl_vector_alloc (n);
+  gsl_eigen_symmv_workspace *w = gsl_eigen_symmv_alloc (n);
+  gdouble delta;
+  guint i, j, k;
+
+  for (i = 0; i < n; i++)
+    for (j = 0; j < n; j++)
+    {
+      const gdouble A_ij = ((UL == 'U') ? (j >= i) : (j <= i)) ? ncm_matrix_get (A, i, j) : ncm_matrix_get (A, j, i);
+
+      gsl_matrix_set (R, i, j, A_ij / sqrt (ncm_matrix_get (A, i, i) * ncm_matrix_get (A, j, j)));
+    }
+
+  gsl_eigen_symmv (R, eval, Q, w);
+  delta = GSL_SQRT_DBL_EPSILON * gsl_vector_max (eval);
+
+  for (i = 0; i < n; i++)
+    for (j = 0; j < n; j++)
+    {
+      gdouble X_ij = 0.0;
+
+      for (k = 0; k < n; k++)
+        X_ij += gsl_matrix_get (Q, i, k) * GSL_MAX (gsl_vector_get (eval, k), delta) * gsl_matrix_get (Q, j, k);
+
+      ncm_matrix_set (X, i, j, X_ij * sqrt (ncm_matrix_get (A, i, i) * ncm_matrix_get (A, j, j)));
+    }
+
+  gsl_eigen_symmv_free (w);
+  gsl_vector_free (eval);
+  gsl_matrix_free (Q);
+  gsl_matrix_free (R);
+}
+
 void
 test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata)
 {
@@ -1779,14 +1824,29 @@ test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata
     NcmMatrix *ref  = ncm_matrix_new (n, n);
     NcmMatrix *dec  = ncm_matrix_new (n, n);
     NcmMatrix *back = ncm_matrix_new (n, n);
+    NcmMatrix *X    = ncm_matrix_new (n, n);
+    NcmVector *S    = ncm_vector_new (n);
+    gdouble norm    = 0.0;
     gboolean repaired;
     guint i, j;
 
-    /* Positive definite: the plain factor, no repair. */
+    /* Rows of squared norm above 2 eps, so that B B^T - eps I below keeps positive variances. */
     for (i = 0; i < n; i++)
-      for (j = 0; j < n - 1; j++)
-        ncm_matrix_set (B, i, j, g_test_rand_double_range (-1.0, 1.0));
+    {
+      gdouble norm2;
 
+      do {
+        norm2 = 0.0;
+
+        for (j = 0; j < n - 1; j++)
+        {
+          ncm_matrix_set (B, i, j, g_test_rand_double_range (-1.0, 1.0));
+          norm2 += gsl_pow_2 (ncm_matrix_get (B, i, j));
+        }
+      } while (norm2 <= 2.0 * eps);
+    }
+
+    /* Positive definite: the plain factor, no repair. */
     ncm_matrix_dgemm (cov, 'N', 'T', 1.0, B, B, 0.0);
 
     for (i = 0; i < n; i++)
@@ -1795,7 +1855,7 @@ test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata
     ncm_matrix_memcpy (ref, cov);
     g_assert_cmpint (ncm_matrix_cholesky_decomp (ref, UL), ==, 0);
 
-    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 200, &repaired), ==, 0);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, &repaired), ==, 0);
     g_assert_false (repaired);
 
     /* The same dpotrf on another buffer: BLAS kernels may round differently by alignment. */
@@ -1805,37 +1865,63 @@ test_ncm_matrix_cholesky_decomp_nearPD (TestNcmMatrix *test, gconstpointer pdata
           ncm_assert_cmpdouble_e (ncm_matrix_get (dec, i, j), ==, ncm_matrix_get (ref, i, j), 1.0e-13, 1.0e-13);
 
     /* Indefinite by eps along one direction (an exactly singular matrix can still pass
-     * dpotrf through rounding): refused without the repair, repaired with it, the input
-     * untouched, and the repaired factor reproduces the matrix up to the eps that had to
-     * be added back. */
+     * dpotrf through rounding): the plain factor fails, the repaired one succeeds, the
+     * input is untouched, and the factor reproduces the clipped matrix computed with GSL. */
     ncm_matrix_dgemm (cov, 'N', 'T', 1.0, B, B, 0.0);
 
     for (i = 0; i < n; i++)
       ncm_matrix_addto (cov, i, i, -eps);
 
     ncm_matrix_memcpy (ref, cov);
+    ncm_matrix_memcpy (dec, cov);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp (dec, UL), !=, 0);
 
-    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 0, &repaired), !=, 0);
-    g_assert_false (repaired);
-
-    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 200, &repaired), ==, 0);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, &repaired), ==, 0);
     g_assert_true (repaired);
     g_assert_cmpfloat (ncm_matrix_cmp (cov, ref, 0.0), ==, 0.0);
 
+    _test_ncm_matrix_clip (ref, UL, X);
     ncm_matrix_triang_to_sym (dec, UL, TRUE, back);
 
     for (i = 0; i < n; i++)
       for (j = 0; j < n; j++)
-        ncm_assert_cmpdouble_e (ncm_matrix_get (back, i, j), ==, ncm_matrix_get (ref, i, j), 0.0, 2.0 * eps);
+        norm = GSL_MAX (norm, fabs (ncm_matrix_get (ref, i, j)));
+
+    for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+        ncm_assert_cmpdouble_e (ncm_matrix_get (back, i, j), ==, ncm_matrix_get (X, i, j), 0.0, 1.0e-12 * norm);
+
+    /* The repair does not depend on the units: rescaling the variables by S rescales the
+     * repaired matrix by S. */
+    for (i = 0; i < n; i++)
+      ncm_vector_set (S, i, pow (10.0, (gdouble) ((gint) (i % 5) - 2) * 2.0));
+
+    for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+        ncm_matrix_set (cov, i, j, ncm_matrix_get (ref, i, j) * ncm_vector_get (S, i) * ncm_vector_get (S, j));
+
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, &repaired), ==, 0);
+    g_assert_true (repaired);
+    ncm_matrix_triang_to_sym (dec, UL, TRUE, back);
+
+    for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+      {
+        const gdouble SS = ncm_vector_get (S, i) * ncm_vector_get (S, j);
+
+        ncm_assert_cmpdouble_e (ncm_matrix_get (back, i, j), ==, SS * ncm_matrix_get (X, i, j), 0.0, 1.0e-12 * SS * norm);
+      }
 
     /* NULL is accepted for the flag. */
-    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (cov, dec, UL, 200, NULL), ==, 0);
+    g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (ref, dec, UL, NULL), ==, 0);
 
     NCM_TEST_FREE (ncm_matrix_free, B);
     NCM_TEST_FREE (ncm_matrix_free, cov);
     NCM_TEST_FREE (ncm_matrix_free, ref);
     NCM_TEST_FREE (ncm_matrix_free, dec);
     NCM_TEST_FREE (ncm_matrix_free, back);
+    NCM_TEST_FREE (ncm_matrix_free, X);
+    NCM_TEST_FREE (ncm_vector_free, S);
   }
 }
 
@@ -2055,12 +2141,17 @@ test_ncm_matrix_api_nearPD (void)
   /* Symmetric but indefinite */
   ncm_matrix_set_from_data (A, (gdouble[]) {1.0, 0.9, 0.9, 0.9, 1.0, -0.9, 0.9, -0.9, 1.0});
 
-  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', 0, &repaired), !=, 0);
-  g_assert_false (repaired);
+  ncm_matrix_memcpy (L, A);
+  g_assert_cmpint (ncm_matrix_cholesky_decomp (L, 'U'), !=, 0);
 
-  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', 100, &repaired), ==, 0);
+  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', &repaired), ==, 0);
   g_assert_true (repaired);
   g_assert_cmpfloat (ncm_matrix_get (A, 1, 2), ==, -0.9); /* left unchanged */
+
+  /* A variance that is not positive: no repair. */
+  ncm_matrix_set (A, 2, 2, 0.0);
+  g_assert_cmpint (ncm_matrix_cholesky_decomp_nearPD (A, L, 'U', &repaired), !=, 0);
+  g_assert_false (repaired);
 
   ncm_matrix_free (A);
   ncm_matrix_free (L);
