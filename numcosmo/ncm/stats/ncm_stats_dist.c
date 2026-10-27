@@ -1908,27 +1908,25 @@ _ncm_stats_dist_cut_weights (NcmStatsDist *sd)
 
 /*
  * The family's one Cholesky: the upper factor of @cov into @decomp. A covariance that is
- * not positive definite to rounding is repaired with nearPD and reported, since it means
- * the sample is degenerate somewhere; one that nearPD cannot repair is fatal. @what names
- * the matrix in both messages.
+ * not positive definite to rounding is repaired by ncm_matrix_cholesky_decomp_nearPD() and
+ * reported, since it means the sample is degenerate somewhere; one that cannot be repaired
+ * (a variance that is not positive) is fatal. @what names the matrix in both messages.
  */
 void
-_ncm_stats_dist_cholesky (NcmMatrix *decomp, const NcmMatrix *cov, const guint maxiter, const gchar *what)
+_ncm_stats_dist_cholesky (NcmMatrix *decomp, const NcmMatrix *cov, const gchar *what)
 {
   gboolean repaired;
-  const gint ret = ncm_matrix_cholesky_decomp_nearPD (cov, decomp, 'U', maxiter, &repaired);
+  const gint ret = ncm_matrix_cholesky_decomp_nearPD (cov, decomp, 'U', &repaired);
 
   if (ret != 0)
-    g_error ("_ncm_stats_dist_cholesky: %s is not positive definite and nearPD could not repair it in %u "
-             "iterations. The sample is degenerate: a parameter that does not vary, or coincident points.",
-             what, maxiter);
+    g_error ("_ncm_stats_dist_cholesky: %s is not positive definite and cannot be repaired: a "
+             "variance is not positive. The sample is degenerate: a parameter that does not vary.",
+             what);
 
   if (repaired)
     g_warning ("_ncm_stats_dist_cholesky: %s was not positive definite to rounding; using the nearest "
                "positive definite matrix instead.", what);
 }
-
-#define NCM_STATS_DIST_CENTER_NEARPD_MAXITER (200)
 
 /*
  * The shrunk kernel factor U of Ahat Sigma Ahat^T from the factor U0 of Sigma, for the
@@ -1955,7 +1953,7 @@ _ncm_stats_dist_refactor_decomp (NcmStatsDist *sd, NcmMatrix *U0, NcmMatrix *U)
     ncm_matrix_dtrmm (M, 'L', 'U', 'N', 1.0, U0);
 
     ncm_matrix_dgemm (B, 'T', 'N', 1.0, M, M, 0.0); /* B = M^T M = Ahat Sigma Ahat^T */
-    _ncm_stats_dist_cholesky (U, B, NCM_STATS_DIST_CENTER_NEARPD_MAXITER, "the shrunk kernel covariance");
+    _ncm_stats_dist_cholesky (U, B, "the shrunk kernel covariance");
   }
 }
 

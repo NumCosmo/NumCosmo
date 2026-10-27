@@ -7042,7 +7042,7 @@ class Matrix(GObject.Object):
     ) -> None: ...
     def cholesky_decomp(self, UL: int) -> int: ...
     def cholesky_decomp_nearPD(
-        self, decomp: Matrix, UL: int, maxiter: int
+        self, decomp: Matrix, UL: int
     ) -> typing.Tuple[int, bool]: ...
     def cholesky_inverse(self, UL: int) -> int: ...
     def cholesky_lndet(self) -> float: ...
@@ -12884,7 +12884,7 @@ class StatsDistKDE(StatsDist):
 
     Properties from NcmStatsDistKDE:
       nearPD-maxiter -> guint: nearPD-maxiter
-        Maximum number of iterations in the nearPD call
+        Ignored, deprecated
       cov-type -> NcmStatsDistKDECovType: cov-type
         Covariance type
       cov-fixed -> NcmMatrix: cov-fixed
@@ -13176,7 +13176,7 @@ class StatsDistVKDE(StatsDistKDE):
 
     Properties from NcmStatsDistKDE:
       nearPD-maxiter -> guint: nearPD-maxiter
-        Maximum number of iterations in the nearPD call
+        Ignored, deprecated
       cov-type -> NcmStatsDistKDECovType: cov-type
         Covariance type
       cov-fixed -> NcmMatrix: cov-fixed
