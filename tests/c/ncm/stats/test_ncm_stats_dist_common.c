@@ -115,6 +115,7 @@ static void test_ncm_stats_dist_kde_lscv_shrink (void);
 static void test_ncm_stats_dist_kde_cov_fixed_reprepare (void);
 static void test_ncm_stats_dist_print_fit (void);
 static void test_ncm_stats_dist_kde_cov_fixed_nearPD (void);
+static void test_ncm_stats_dist_kde_nearPD_maxiter_deprecated (void);
 static void test_ncm_stats_dist_kde_robust_rows (void);
 static void test_ncm_stats_dist_vkde_robust_rows (void);
 
@@ -227,6 +228,8 @@ test_ncm_stats_dist_main (gint argc, gchar *argv[], TestNcmStatsDistMode mode)
                      &test_ncm_stats_dist_print_fit);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/cov_fixed/nearPD",
                      &test_ncm_stats_dist_kde_cov_fixed_nearPD);
+    g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/nearPD_maxiter/deprecated",
+                     &test_ncm_stats_dist_kde_nearPD_maxiter_deprecated);
     g_test_add_func ("/ncm/stats/dist/nd/kde/gauss/robust_rows",
                      &test_ncm_stats_dist_kde_robust_rows);
     g_test_add_func ("/ncm/stats/dist/nd/vkde/gauss/robust_rows",
@@ -2612,6 +2615,29 @@ test_ncm_stats_dist_print_fit (void)
   ncm_rng_free (rng);
 }
 
+/*
+ * NcmStatsDistKDE:nearPD-maxiter is ignored and deprecated: the first value other than the
+ * default warns once per process, a second one is silent, and the value is still stored.
+ */
+static void
+test_ncm_stats_dist_kde_nearPD_maxiter_deprecated (void)
+{
+  NcmStatsDistKernel *kernel = NCM_STATS_DIST_KERNEL (ncm_stats_dist_kernel_gauss_new (2));
+  NcmStatsDistKDE *sdkde     = ncm_stats_dist_kde_new (kernel, NCM_STATS_DIST_CV_NONE);
+
+  g_assert_cmpuint (ncm_stats_dist_kde_get_nearPD_maxiter (sdkde), ==, 200);
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*nearPD-maxiter is deprecated*");
+  ncm_stats_dist_kde_set_nearPD_maxiter (sdkde, 10);
+  g_test_assert_expected_messages ();
+
+  ncm_stats_dist_kde_set_nearPD_maxiter (sdkde, 20);
+  g_assert_cmpuint (ncm_stats_dist_kde_get_nearPD_maxiter (sdkde), ==, 20);
+
+  ncm_stats_dist_kernel_free (kernel);
+  ncm_stats_dist_kde_free (sdkde);
+}
+
 static void
 test_ncm_stats_dist_kde_cov_fixed_nearPD (void)
 {
@@ -2767,10 +2793,10 @@ test_ncm_stats_dist_vkde_robust_rows (void)
     ncm_stats_dist_prepare (sd, m2lnL);
 
     {
-      GPtrArray *sample   = ncm_stats_dist_peek_sample_array (sd);
-      const guint n_obs   = sample->len;
-      const guint n_k     = ncm_stats_dist_get_n_kernels (sd);
-      const guint k       = ncm_stats_dist_vkde_get_n_neighbors (sdvkde, n_obs);
+      GPtrArray *sample = ncm_stats_dist_peek_sample_array (sd);
+      const guint n_obs = sample->len;
+      const guint n_k   = ncm_stats_dist_get_n_kernels (sd);
+      const guint k     = ncm_stats_dist_vkde_get_n_neighbors (sdvkde, n_obs);
 
       g_assert_cmpuint (n_k, <, n_obs);
       g_assert_cmpuint (k, <, n_obs);

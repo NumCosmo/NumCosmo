@@ -260,7 +260,7 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
                                    PROP_NEARPD_MAXITER,
                                    g_param_spec_uint ("nearPD-maxiter",
                                                       NULL,
-                                                      "Maximum number of iterations in the nearPD call",
+                                                      "Ignored, deprecated",
                                                       1, G_MAXUINT, 200,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
