@@ -384,7 +384,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
     const guint nadd    = ncm_mset_catalog_nadd_vals (self->mcat);
     const guint m2lnp_i = ncm_mset_catalog_get_m2lnp_var (self->mcat);
     NcmVector *m2lnp    = ncm_vector_new (np);
-    NcmVector *last_row = NULL;
+    gdouble last_row_0  = GSL_NAN;
     guint i, j;
 
     ncm_stats_dist_reset (self->sd);
@@ -395,7 +395,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
     {
       NcmVector *row_i = ncm_mset_catalog_peek_row (self->mcat, i);
 
-      if ((last_row != NULL) && (ncm_vector_get (last_row, 0) == ncm_vector_get (row_i, 0)))
+      if (ncm_vector_get (row_i, 0) == last_row_0)
       {
         continue;
       }
@@ -410,7 +410,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
         ncm_vector_free (srow_i);
       }
 
-      last_row = row_i;
+      last_row_0 = ncm_vector_get (row_i, 0);
     }
 
     /* Consecutive repeated rows are added once, so only j entries are filled. */
@@ -448,7 +448,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
     const guint np      = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
     const guint n       = MIN (cat_len, np);
     const guint nadd    = ncm_mset_catalog_nadd_vals (self->mcat);
-    NcmVector *last_row = NULL;
+    gdouble last_row_0  = GSL_NAN;
     guint i;
 
     ncm_stats_dist_reset (self->sd);
@@ -457,7 +457,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
     {
       NcmVector *row_i = ncm_mset_catalog_peek_row (self->mcat, i);
 
-      if ((last_row != NULL) && (ncm_vector_get (last_row, 0) == ncm_vector_get (row_i, 0)))
+      if (ncm_vector_get (row_i, 0) == last_row_0)
       {
         continue;
       }
@@ -470,7 +470,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
         ncm_vector_free (srow_i);
       }
 
-      last_row = row_i;
+      last_row_0 = ncm_vector_get (row_i, 0);
     }
 
     ncm_stats_dist_prepare (self->sd, NULL);
