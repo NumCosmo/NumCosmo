@@ -110,6 +110,8 @@ void test_ncm_mset_catalog_file_hdu0_legacy_object_format (void);
 void test_ncm_mset_catalog_file_legacy_fallback (void);
 void test_ncm_mset_catalog_file_missing_mset_traps (void);
 void test_ncm_mset_catalog_file_missing_mset_subprocess (void);
+void test_ncm_mset_catalog_no_mset_no_file_traps (void);
+void test_ncm_mset_catalog_no_mset_no_file_subprocess (void);
 void test_ncm_mset_catalog_file_peek_info (void);
 void test_ncm_mset_catalog_file_multichain (void);
 void test_ncm_mset_catalog_file_weighted_roundtrip (void);
@@ -223,6 +225,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/legacy_fallback", &test_ncm_mset_catalog_file_legacy_fallback);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/traps", &test_ncm_mset_catalog_file_missing_mset_traps);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/subprocess", &test_ncm_mset_catalog_file_missing_mset_subprocess);
+  g_test_add_func ("/ncm/mset/catalog/no_mset_no_file/traps", &test_ncm_mset_catalog_no_mset_no_file_traps);
+  g_test_add_func ("/ncm/mset/catalog/no_mset_no_file/subprocess", &test_ncm_mset_catalog_no_mset_no_file_subprocess);
   g_test_add_func ("/ncm/mset/catalog/weighted/tau/traps", &test_ncm_mset_catalog_weighted_tau_traps);
   g_test_add_func ("/ncm/mset/catalog/weighted/tau/subprocess", &test_ncm_mset_catalog_weighted_tau_subprocess);
   g_test_add_func ("/ncm/mset/catalog/tau/frozen_keff", &test_ncm_mset_catalog_tau_frozen_walkers);
@@ -1944,6 +1948,23 @@ test_ncm_mset_catalog_file_missing_mset_subprocess (void)
   /* Neither an embedded mset (just stripped) nor a `.mset' sidecar (never
    * written) exists: this must abort with a fatal error. */
   ncm_mset_catalog_new_from_file_ro (filename, 0);
+
+  g_assert_not_reached ();
+}
+
+void
+test_ncm_mset_catalog_no_mset_no_file_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/catalog/no_mset_no_file/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*_ncm_mset_catalog_constructed: a catalog needs an NcmMSet or a file*");
+}
+
+void
+test_ncm_mset_catalog_no_mset_no_file_subprocess (void)
+{
+  /* Without an mset and without a file there is nothing to take the columns from. */
+  g_object_new (NCM_TYPE_MSET_CATALOG, NULL);
 
   g_assert_not_reached ();
 }

@@ -365,6 +365,9 @@ _ncm_mset_catalog_constructed (GObject *object)
     {
 #ifdef HAVE_CFITSIO
 
+      if (self->file == NULL)
+        g_error ("_ncm_mset_catalog_constructed: a catalog needs an NcmMSet or a file.");
+
       if (!g_file_test (self->file, G_FILE_TEST_EXISTS))
         g_error ("_ncm_mset_catalog_constructed: cannot create catalog file `%s' not found.",
                  self->file);
