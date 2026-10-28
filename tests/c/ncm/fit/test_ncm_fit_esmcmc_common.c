@@ -84,6 +84,7 @@ void test_ncm_fit_esmcmc_apes_desc (void);
 void test_ncm_fit_esmcmc_phase_label (void);
 void test_ncm_fit_esmcmc_phase_markovian_subprocess (void);
 void test_ncm_fit_esmcmc_phase_exploration_subprocess (void);
+void test_ncm_fit_esmcmc_validate_threaded_read_block (void);
 
 static gboolean _test_ncm_fit_esmcmc_is_recovery_check (const gchar *name);
 
@@ -165,6 +166,9 @@ test_ncm_fit_esmcmc_main (gint argc, gchar *argv[], TestNcmFitESMCMCMode mode)
     g_test_add_func ("/ncm/fit/esmcmc/phase/label", &test_ncm_fit_esmcmc_phase_label);
     g_test_add_func ("/ncm/fit/esmcmc/phase/markovian/subprocess", &test_ncm_fit_esmcmc_phase_markovian_subprocess);
     g_test_add_func ("/ncm/fit/esmcmc/phase/exploration/subprocess", &test_ncm_fit_esmcmc_phase_exploration_subprocess);
+#ifdef HAVE_CFITSIO
+    g_test_add_func ("/ncm/fit/esmcmc/validate/threaded_read_block", &test_ncm_fit_esmcmc_validate_threaded_read_block);
+#endif /* HAVE_CFITSIO */
   }
 
   return g_test_run ();
@@ -1263,6 +1267,84 @@ test_ncm_fit_esmcmc_parity_serial_vs_threaded (void)
 
   ncm_mset_catalog_clear (&mcat_serial);
   ncm_mset_catalog_clear (&mcat_threaded);
+}
+
+/*
+ * Validates a 4200-row catalog with threads while its rows are read back from the file in
+ * blocks of 7 rows, so that the workers read rows from different blocks at the same time.
+ */
+void
+test_ncm_fit_esmcmc_validate_threaded_read_block (void)
+{
+  const gint dim                      = 2;
+  const gint nwalkers                 = 60;
+  gchar *tmp_dir                      = g_dir_make_tmp ("tmp_test_ncm_fit_esmcmc_validate_XXXXXX", NULL);
+  gchar *filename                     = g_build_filename (tmp_dir, "cat.fits", NULL);
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, 20261028);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 0.3, -1.0, 1.0, rng);
+  NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
+  NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
+  NcmLikelihood *lh                   = ncm_likelihood_new (dset);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
+  NcmFitESMCMCWalkerStretch *stretch;
+  NcmFit *fit;
+  NcmFitESMCMC *esmcmc;
+  GDir *dir;
+  const gchar *name;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  fit     = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  stretch = ncm_fit_esmcmc_walker_stretch_new (nwalkers, ncm_mset_fparams_len (mset));
+  esmcmc  = ncm_fit_esmcmc_new (fit,
+                                nwalkers,
+                                NCM_MSET_TRANS_KERN (init_sampler),
+                                NCM_FIT_ESMCMC_WALKER (stretch),
+                                NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_fit_esmcmc_set_rng (esmcmc, rng);
+  ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
+  ncm_fit_esmcmc_set_data_file (esmcmc, filename);
+  ncm_mset_catalog_set_read_block (ncm_fit_esmcmc_peek_catalog (esmcmc), 7);
+
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
+  ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 1.0e-2);
+
+  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_run (esmcmc, 70);
+  ncm_fit_esmcmc_end_run (esmcmc);
+
+  g_assert_cmpuint (ncm_mset_catalog_len (ncm_fit_esmcmc_peek_catalog (esmcmc)), ==, 70 * nwalkers);
+  g_assert_true (ncm_fit_esmcmc_validate (esmcmc, 0, 0));
+
+  ncm_fit_esmcmc_clear (&esmcmc);
+  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
+  ncm_fit_clear (&fit);
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_mset_clear (&mset);
+  ncm_likelihood_clear (&lh);
+  ncm_dataset_clear (&dset);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  ncm_rng_free (rng);
+
+  dir = g_dir_open (tmp_dir, 0, NULL);
+  g_assert_nonnull (dir);
+
+  while ((name = g_dir_read_name (dir)) != NULL)
+  {
+    gchar *path = g_build_filename (tmp_dir, name, NULL);
+
+    g_unlink (path);
+    g_free (path);
+  }
+
+  g_dir_close (dir);
+  g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 void

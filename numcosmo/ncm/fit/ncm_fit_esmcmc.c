@@ -2638,7 +2638,7 @@ _ncm_fit_esmcmc_validate_interval (NcmFitESMCMC *esmcmc, glong i, glong f)
 
   for (k = i; k < f; k++)
   {
-    NcmVector *cur_row          = ncm_mset_catalog_peek_row (self->mcat, k);
+    NcmVector *cur_row          = ncm_mset_catalog_get_row (self->mcat, k);
     const gdouble row_m2lnL     = ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID);
     NcmFitESMCMCWorker **fk_ptr = ncm_memory_pool_get (self->walker_pool);
     NcmFit *fit_k               = fk_ptr[0]->fit;
@@ -2683,6 +2683,7 @@ _ncm_fit_esmcmc_validate_interval (NcmFitESMCMC *esmcmc, glong i, glong f)
     }
 
     ncm_memory_pool_return (fk_ptr);
+    ncm_vector_free (cur_row);
   }
 }
 
