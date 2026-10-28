@@ -4412,7 +4412,7 @@ ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t)
 static gdouble _ncm_mset_catalog_get_post_lnnorm_sum (NcmMSetCatalog *mcat, NcmVector *mean, NcmMatrix *cov, const gdouble lnNorma, const gdouble R2_cut, gdouble *lnnorm_sd);
 
 static gdouble
-_ncm_mset_catalog_get_post_lnnorm_elipsoid (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
+_ncm_mset_catalog_get_post_lnnorm_ellipsoid (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   const guint fparams_len     = ncm_mset_fparams_len (self->mset);
@@ -4776,7 +4776,7 @@ ncm_mset_catalog_get_post_lnnorm (NcmMSetCatalog *mcat, gdouble *post_lnnorm_sd)
         self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_hyperbox (mcat, TRUE, &self->post_lnnorm_sd);
         break;
       case NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID:
-        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_elipsoid (mcat, &self->post_lnnorm_sd);
+        self->post_lnnorm = _ncm_mset_catalog_get_post_lnnorm_ellipsoid (mcat, &self->post_lnnorm_sd);
         break;
       default:
         g_assert_not_reached ();
@@ -6606,7 +6606,7 @@ ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gd
 }
 
 static gdouble
-_fonempval (gdouble v_i, guint i, gpointer user_data)
+_f_one_m_pval (gdouble v_i, guint i, gpointer user_data)
 {
   return (1.0 - v_i) * 100.0;
 }
@@ -6686,7 +6686,7 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
     ncm_message ("# NcmMSetCatalog: - worst parameter pvalue:   %5.2f%%\n", (1.0 - wp_pvalue) * 100.0);
     ncm_message ("# NcmMSetCatalog: - worst parameter ar order: %-4u\n", wp_order);
     ncm_message ("# NcmMSetCatalog: - target pvalue:            %5.2f%%\n", pvalue_lef * 100.0);
-    ncm_vector_log_vals_func (pvals, "# NcmMSetCatalog: - pvalues:                  ", "%5.2f%%", &_fonempval, NULL);
+    ncm_vector_log_vals_func (pvals, "# NcmMSetCatalog: - pvalues:                  ", "%5.2f%%", &_f_one_m_pval, NULL);
   }
 
   ncm_vector_free (pvals);
@@ -6855,7 +6855,7 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
   }
   else
   {
-    gint tbindex = -1;
+    gint tb_index = -1;
     guint twp = 0, twp_order = 0;
     gdouble twp_ess = 0.0;
     guint i, ti = 0;
@@ -6907,9 +6907,9 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
         g_array_append_val (res_a, res_i);
       }
 
-      if (bindex > tbindex)
+      if (bindex > tb_index)
       {
-        tbindex   = bindex;
+        tb_index  = bindex;
         twp       = wp;
         twp_order = wp_order;
         twp_ess   = wp_ess;
@@ -6952,9 +6952,9 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
       ncm_message ("# NcmMSetCatalog: - Worst chain:\n");
       ncm_cfg_msg_sepa ();
       ncm_message ("# NcmMSetCatalog: - worst chain no:           %-4u\n", ti);
-      ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4d\n", tbindex);
+      ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4d\n", tb_index);
       ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", size);
-      ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", size - tbindex);
+      ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", size - tb_index);
       ncm_message ("# NcmMSetCatalog: - worst parameter:          %-4u\n", twp);
       ncm_message ("# NcmMSetCatalog: - worst parameter order:    %-4u\n", twp_order);
       ncm_message ("# NcmMSetCatalog: - worst parameter ESS:      %-.2f\n", twp_ess);
@@ -6963,7 +6963,7 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
     if (max_ess != NULL)
       max_ess[0] = twp_ess;
 
-    return tbindex;
+    return tb_index;
   }
 }
 
@@ -7006,7 +7006,7 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
 
   {
     const gdouble pvalue_lef = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (self->mset)) : pvalue;
-    gint tbindex             = -1;
+    gint tb_index            = -1;
     guint twp = 0, twp_order = 0;
     gdouble twp_pvalue = 0.0;
     guint i, ti = 0;
@@ -7058,9 +7058,9 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
         g_array_append_val (res_a, res_i);
       }
 
-      if ((i == 0) || ((tbindex >= 0) && (bindex > tbindex)) || ((bindex == -1) && (tbindex >= 0)) || ((bindex == -1) && (lwp_pvalue > twp_pvalue)))
+      if ((i == 0) || ((tb_index >= 0) && (bindex > tb_index)) || ((bindex == -1) && (tb_index >= 0)) || ((bindex == -1) && (lwp_pvalue > twp_pvalue)))
       {
-        tbindex    = bindex;
+        tb_index   = bindex;
         twp        = wp;
         twp_order  = wp_order;
         twp_pvalue = lwp_pvalue;
@@ -7115,7 +7115,7 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
       ncm_cfg_msg_sepa ();
       ncm_message ("# NcmMSetCatalog: - worst chain index:        %-4u\n", ti);
 
-      if (tbindex == -1)
+      if (tb_index == -1)
       {
         ncm_message ("# NcmMSetCatalog: - best cutoff time:         not satisfied!\n");
         ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", size);
@@ -7123,9 +7123,9 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
       }
       else
       {
-        ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4u\n", tbindex);
+        ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4u\n", tb_index);
         ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", size);
-        ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", size - tbindex);
+        ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", size - tb_index);
       }
 
       ncm_message ("# NcmMSetCatalog: - worst parameter:          %-4u\n", twp);
@@ -7136,7 +7136,7 @@ ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests,
     if (wp_pvalue != NULL)
       wp_pvalue[0] = twp_pvalue;
 
-    return (tbindex >= 0) ? tbindex : 0;
+    return (tb_index >= 0) ? tb_index : 0;
   }
 }
 
