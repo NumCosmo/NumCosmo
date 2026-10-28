@@ -85,8 +85,8 @@ typedef struct _NcmMSetCatalogPrivate
   gdouble post_lnnorm;
   gdouble post_lnnorm_sd;
   gboolean post_lnnorm_up;
-  GPtrArray *order_cat;
-  gboolean order_cat_sort;
+  GArray *order_m2lnp;
+  gboolean order_sorted;
   GPtrArray *add_vals_names;
   GPtrArray *add_vals_symbs;
   guint ncols;
@@ -188,13 +188,10 @@ enum
 };
 
 static gint
-_ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b, gpointer data)
+_ncm_mset_catalog_double_compare (gconstpointer a, gconstpointer b)
 {
-  const NcmVector **row_a = (const NcmVector **) a;
-  const NcmVector **row_b = (const NcmVector **) b;
-  const gint i            = GPOINTER_TO_INT (data);
-  const gdouble a_m2lnp   = ncm_vector_get (*row_a, i);
-  const gdouble b_m2lnp   = ncm_vector_get (*row_b, i);
+  const gdouble a_m2lnp = *(const gdouble *) a;
+  const gdouble b_m2lnp = *(const gdouble *) b;
 
   return (a_m2lnp == b_m2lnp) ? 0.0 : ((a_m2lnp > b_m2lnp) ? +1 : -1);
 }
@@ -213,8 +210,8 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_sd = GSL_NAN;
   self->post_lnnorm_up = FALSE;
-  self->order_cat      = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vector_free);
-  self->order_cat_sort = FALSE;
+  self->order_m2lnp    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->order_sorted   = FALSE;
   self->add_vals_names = g_ptr_array_new_with_free_func (g_free);
   self->add_vals_symbs = g_ptr_array_new_with_free_func (g_free);
   self->ncols          = 0;
@@ -629,7 +626,7 @@ _ncm_mset_catalog_dispose (GObject *object)
 #endif /* HAVE_CFITSIO */
 
   ncm_vector_clear (&self->bestfit_row);
-  g_clear_pointer (&self->order_cat, g_ptr_array_unref);
+  g_clear_pointer (&self->order_m2lnp, g_array_unref);
 
   ncm_mset_clear (&self->mset);
   ncm_obj_array_clear (&self->functions);
@@ -2890,8 +2887,8 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_up = FALSE;
 
-  g_ptr_array_set_size (self->order_cat, 0);
-  self->order_cat_sort = FALSE;
+  g_array_set_size (self->order_m2lnp, 0);
+  self->order_sorted = FALSE;
 }
 
 /**
@@ -2945,8 +2942,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   self->post_lnnorm    = 0.0;
   self->post_lnnorm_up = FALSE;
 
-  g_ptr_array_set_size (self->order_cat, 0);
-  self->order_cat_sort = FALSE;
+  g_array_set_size (self->order_m2lnp, 0);
+  self->order_sorted = FALSE;
 
   self->cur_id       = self->first_id - 1;
   self->markovian_id = self->first_id; /* a new chain: nothing non-Markovian yet */
@@ -3687,8 +3684,8 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
       ncm_mset_fparams_set_vector_offset (self->mset, x, self->nadd_vals);
     }
 
-    g_ptr_array_add (self->order_cat, ncm_vector_ref (x));
-    self->order_cat_sort = FALSE;
+    g_array_append_val (self->order_m2lnp, *m2lnp);
+    self->order_sorted = FALSE;
   }
 
   switch (self->smode)
@@ -4807,10 +4804,10 @@ _ncm_mset_catalog_sort_by_m2lnp (NcmMSetCatalog *mcat)
     return;
   }
 
-  if (!self->order_cat_sort)
+  if (!self->order_sorted)
   {
-    g_ptr_array_sort_with_data (self->order_cat, &_ncm_mset_catalog_double_compare, GINT_TO_POINTER (self->m2lnp_var));
-    self->order_cat_sort = TRUE;
+    g_array_sort (self->order_m2lnp, &_ncm_mset_catalog_double_compare);
+    self->order_sorted = TRUE;
   }
 }
 
@@ -4858,7 +4855,7 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
 
   for (i = 0; i < nitens; i++)
   {
-    const gdouble m2lnp_i = ncm_vector_get (g_ptr_array_index (self->order_cat, i), self->m2lnp_var);
+    const gdouble m2lnp_i = g_array_index (self->order_m2lnp, gdouble, i);
 
     s += exp (0.5 * (m2lnp_i - self->bestfit));
   }
@@ -4915,7 +4912,7 @@ ncm_mset_catalog_get_nth_m2lnL_percentile (NcmMSetCatalog *mcat, const gdouble p
 
   _ncm_mset_catalog_sort_by_m2lnp (mcat);
 
-  m2lnL = ncm_vector_get (g_ptr_array_index (self->order_cat, nitens), self->m2lnp_var);
+  m2lnL = g_array_index (self->order_m2lnp, gdouble, nitens);
 
   if (nth != NULL)
     nth[0] = nitens;

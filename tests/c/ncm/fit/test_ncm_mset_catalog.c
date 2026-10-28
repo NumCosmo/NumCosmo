@@ -122,6 +122,7 @@ void test_ncm_mset_catalog_file_multichain (void);
 void test_ncm_mset_catalog_file_weighted_roundtrip (void);
 void test_ncm_mset_catalog_file_read_block (gconstpointer pdata);
 void test_ncm_mset_catalog_file_read_block_restore (void);
+void test_ncm_mset_catalog_file_read_block_release (void);
 void test_ncm_mset_catalog_file_prepend_chain_order (void);
 void test_ncm_mset_catalog_file_write_front (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
@@ -246,6 +247,7 @@ main (gint argc, gchar *argv[])
   g_test_add_data_func ("/ncm/mset/catalog/file/read_block/one_chain", GUINT_TO_POINTER (1), &test_ncm_mset_catalog_file_read_block);
   g_test_add_data_func ("/ncm/mset/catalog/file/read_block/four_chains", GUINT_TO_POINTER (4), &test_ncm_mset_catalog_file_read_block);
   g_test_add_func ("/ncm/mset/catalog/file/read_block/restore", &test_ncm_mset_catalog_file_read_block_restore);
+  g_test_add_func ("/ncm/mset/catalog/file/read_block/release", &test_ncm_mset_catalog_file_read_block_release);
   g_test_add_func ("/ncm/mset/catalog/file/prepend_chain_order", &test_ncm_mset_catalog_file_prepend_chain_order);
   g_test_add_func ("/ncm/mset/catalog/file/write_front", &test_ncm_mset_catalog_file_write_front);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
@@ -2722,6 +2724,60 @@ test_ncm_mset_catalog_file_read_block_restore (void)
   ncm_mset_catalog_clear (&mcat);
 
   g_ptr_array_unref (rows);
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * A row written to the file is freed once the sync drops it from memory, with
+ * NcmMSetCatalog:m2lnp-var set as every sampler sets it. Row 0 has the largest -2lnL, so it
+ * is not the best-fit row, which the catalog keeps.
+ */
+void
+test_ncm_mset_catalog_file_read_block_release (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_release_XXXXXX", NULL);
+  gchar *filename          = g_build_filename (tmp_dir, "cat.fits", NULL);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmVector *row           = ncm_vector_new (TEST_CAT_DIM + 1);
+  const guint nrows        = 10;
+  gpointer row0            = NULL;
+  NcmMSetCatalog *mcat;
+  guint i;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  for (i = 0; i < nrows; i++)
+  {
+    ncm_vector_set_all (row, 0.1 * i);
+    ncm_vector_set (row, 0, nrows - i);
+    ncm_mset_catalog_add_from_vector (mcat, row);
+
+    if (i == 0)
+    {
+      row0 = ncm_mset_catalog_peek_row (mcat, 0);
+      g_object_add_weak_pointer (G_OBJECT (row0), &row0);
+    }
+  }
+
+  ncm_mset_catalog_sync (mcat, TRUE);
+
+  g_assert_null (row0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 0), 0), ==, nrows);
+  g_assert_cmpfloat (ncm_mset_catalog_get_nth_m2lnL_percentile (mcat, 0.5, NULL), ==, 6.0);
+
+  ncm_mset_catalog_clear (&mcat);
+  ncm_vector_free (row);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
   _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
   g_free (filename);
   g_free (tmp_dir);
