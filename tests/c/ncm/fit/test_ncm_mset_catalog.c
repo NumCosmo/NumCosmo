@@ -112,6 +112,7 @@ void test_ncm_mset_catalog_file_missing_mset_traps (void);
 void test_ncm_mset_catalog_file_missing_mset_subprocess (void);
 void test_ncm_mset_catalog_file_peek_info (void);
 void test_ncm_mset_catalog_file_multichain (void);
+void test_ncm_mset_catalog_file_weighted_roundtrip (void);
 void test_ncm_mset_catalog_file_prepend_chain_order (void);
 void test_ncm_mset_catalog_file_write_front (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
@@ -230,6 +231,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/set_rng/twice", &test_ncm_mset_catalog_set_rng_twice);
   g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
   g_test_add_func ("/ncm/mset/catalog/file/multichain", &test_ncm_mset_catalog_file_multichain);
+  g_test_add_func ("/ncm/mset/catalog/file/weighted_roundtrip", &test_ncm_mset_catalog_file_weighted_roundtrip);
   g_test_add_func ("/ncm/mset/catalog/file/prepend_chain_order", &test_ncm_mset_catalog_file_prepend_chain_order);
   g_test_add_func ("/ncm/mset/catalog/file/write_front", &test_ncm_mset_catalog_file_write_front);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
@@ -2288,6 +2290,77 @@ test_ncm_mset_catalog_file_multichain (void)
   g_unlink (filename);
   g_rmdir (tmp_dir);
 
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/* A weighted catalog written to a file loads back with the same columns and rows: the
+ * weight column is counted once, in nadd_vals. */
+void
+test_ncm_mset_catalog_file_weighted_roundtrip (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_weighted_XXXXXX", NULL);
+  gchar *filename          = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 24680);
+  GPtrArray *rows          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  const guint nrows        = 50;
+  NcmMSetCatalog *mcat;
+  guint ncols, i, p;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat  = ncm_mset_catalog_new (mset, 1, 1, TRUE, "m2lnL", "-2\\ln(L)", NULL);
+  ncols = ncm_mset_catalog_ncols (mcat);
+
+  g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 2);
+  g_assert_cmpuint (ncols, ==, TEST_CAT_DIM + 2);
+
+  ncm_mset_catalog_set_file (mcat, filename);
+
+  for (i = 0; i < nrows; i++)
+  {
+    NcmVector *row = ncm_vector_new (ncols);
+
+    ncm_vector_set (row, 0, ncm_rng_ugaussian_gen (rng));
+    ncm_vector_set (row, 1, 1.0 + 0.1 * fabs (ncm_rng_ugaussian_gen (rng)));
+
+    for (p = 2; p < ncols; p++)
+      ncm_vector_set (row, p, ncm_rng_ugaussian_gen (rng));
+
+    ncm_mset_catalog_add_from_vector (mcat, row);
+    g_ptr_array_add (rows, row);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
+
+  g_assert_true (ncm_mset_catalog_weighted (mcat));
+  g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 2);
+  g_assert_cmpuint (ncm_mset_catalog_ncols (mcat), ==, ncols);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows);
+
+  for (i = 0; i < nrows; i++)
+  {
+    NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+
+    g_assert_cmpuint (ncm_vector_len (row), ==, ncols);
+
+    for (p = 0; p < ncols; p++)
+      g_assert_cmpfloat (ncm_vector_get (row, p), ==, ncm_vector_get (g_ptr_array_index (rows, i), p));
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+  g_ptr_array_unref (rows);
+  ncm_rng_free (rng);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
   g_free (filename);
   g_free (tmp_dir);
 }
