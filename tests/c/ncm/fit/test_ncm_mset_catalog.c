@@ -101,6 +101,11 @@ void test_ncm_mset_catalog_peek_current_row (TestNcmMSetCatalog *test, gconstpoi
 
 static void _test_ncm_mset_catalog_flist_scaled_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
 static void _test_ncm_mset_catalog_flist_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static GPtrArray *_test_ncm_mset_catalog_write_ar1 (const gchar *filename, const guint nchains, const guint nrows);
+static NcmMSetCatalog *_test_ncm_mset_catalog_open_read_block (const gchar *filename, const guint read_block);
+static void _test_ncm_mset_catalog_assert_rows (NcmMSetCatalog *mcat, GPtrArray *rows);
+static GArray *_test_ncm_mset_catalog_read_block_results (NcmMSetCatalog *mcat, const gchar *oob_file);
+static void _test_ncm_mset_catalog_rm_tmp_dir (const gchar *tmp_dir);
 
 #ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
@@ -115,6 +120,8 @@ void test_ncm_mset_catalog_no_mset_no_file_subprocess (void);
 void test_ncm_mset_catalog_file_peek_info (void);
 void test_ncm_mset_catalog_file_multichain (void);
 void test_ncm_mset_catalog_file_weighted_roundtrip (void);
+void test_ncm_mset_catalog_file_read_block (gconstpointer pdata);
+void test_ncm_mset_catalog_file_read_block_restore (void);
 void test_ncm_mset_catalog_file_prepend_chain_order (void);
 void test_ncm_mset_catalog_file_write_front (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
@@ -236,6 +243,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
   g_test_add_func ("/ncm/mset/catalog/file/multichain", &test_ncm_mset_catalog_file_multichain);
   g_test_add_func ("/ncm/mset/catalog/file/weighted_roundtrip", &test_ncm_mset_catalog_file_weighted_roundtrip);
+  g_test_add_data_func ("/ncm/mset/catalog/file/read_block/one_chain", GUINT_TO_POINTER (1), &test_ncm_mset_catalog_file_read_block);
+  g_test_add_data_func ("/ncm/mset/catalog/file/read_block/four_chains", GUINT_TO_POINTER (4), &test_ncm_mset_catalog_file_read_block);
+  g_test_add_func ("/ncm/mset/catalog/file/read_block/restore", &test_ncm_mset_catalog_file_read_block_restore);
   g_test_add_func ("/ncm/mset/catalog/file/prepend_chain_order", &test_ncm_mset_catalog_file_prepend_chain_order);
   g_test_add_func ("/ncm/mset/catalog/file/write_front", &test_ncm_mset_catalog_file_write_front);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
@@ -2382,6 +2392,337 @@ test_ncm_mset_catalog_file_weighted_roundtrip (void)
 
   g_unlink (filename);
   g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * Writes a catalog of nrows rows to filename, nchains interleaved AR(1) chains with
+ * coefficient 0.8 in each parameter and column 0 the sum of their squares, and returns the
+ * rows written. Every 13th row has its first parameter set to 100, outside the bounds
+ * [-50, 50], so that ncm_mset_catalog_trim_oob() removes it.
+ */
+static GPtrArray *
+_test_ncm_mset_catalog_write_ar1 (const gchar *filename, const guint nchains, const guint nrows)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 4321);
+  NcmMatrix *state         = ncm_matrix_new (nchains, TEST_CAT_DIM);
+  GPtrArray *rows          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  const gdouble phi        = 0.8;
+  NcmMSetCatalog *mcat;
+  guint i, j;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = ncm_mset_catalog_new (mset, 1, nchains, FALSE, "m2lnL", "-2\\ln(L)", NULL);
+  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
+  ncm_mset_catalog_set_file (mcat, filename);
+  ncm_matrix_set_zero (state);
+
+  for (i = 0; i < nrows; i++)
+  {
+    NcmVector *row = ncm_vector_new (TEST_CAT_DIM + 1);
+    const guint c  = i % nchains;
+    gdouble m2lnL  = 0.0;
+
+    for (j = 0; j < TEST_CAT_DIM; j++)
+    {
+      const gdouble x_j = phi * ncm_matrix_get (state, c, j) + sqrt (1.0 - phi * phi) * ncm_rng_ugaussian_gen (rng);
+
+      ncm_matrix_set (state, c, j, x_j);
+      ncm_vector_set (row, j + 1, x_j);
+      m2lnL += x_j * x_j;
+    }
+
+    ncm_vector_set (row, 0, m2lnL);
+
+    if (i % 13 == 12)
+      ncm_vector_set (row, 1, 100.0);
+
+    ncm_mset_catalog_add_from_vector (mcat, row);
+    g_ptr_array_add (rows, row);
+  }
+
+  ncm_mset_catalog_sync (mcat, TRUE);
+  ncm_mset_catalog_clear (&mcat);
+
+  ncm_matrix_free (state);
+  ncm_rng_free (rng);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  return rows;
+}
+
+static NcmMSetCatalog *
+_test_ncm_mset_catalog_open_read_block (const gchar *filename, const guint read_block)
+{
+  return g_object_new (NCM_TYPE_MSET_CATALOG,
+                       "filename", filename,
+                       "read-block", read_block,
+                       NULL);
+}
+
+/*
+ * Checks that every row of mcat equals the row written, reading them forward, backward and
+ * with stride 37, so that consecutive reads cross block boundaries in both directions and
+ * jump between blocks.
+ */
+static void
+_test_ncm_mset_catalog_assert_rows (NcmMSetCatalog *mcat, GPtrArray *rows)
+{
+  const guint n = rows->len;
+  guint k, p;
+
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, n);
+
+  for (k = 0; k < 3 * n; k++)
+  {
+    const guint i  = (k < n) ? k : ((k < 2 * n) ? 2 * n - 1 - k : ((k - 2 * n) * 37) % n);
+    NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+    NcmVector *ref = g_ptr_array_index (rows, i);
+
+    g_assert_nonnull (row);
+    g_assert_cmpuint (ncm_vector_len (row), ==, ncm_vector_len (ref));
+
+    for (p = 0; p < ncm_vector_len (ref); p++)
+      g_assert_cmpfloat (ncm_vector_get (row, p), ==, ncm_vector_get (ref, p));
+  }
+}
+
+/*
+ * Returns, in one array, the results of the catalog analyses on mcat: mean, covariance, tau
+ * on the ensemble means and on the single chain, ESS and Heidelberger-Welch cut times,
+ * constant-break times, the by-chain variants when there are several chains, the p-value
+ * of the first parameter's distribution, the confidence intervals of x theta_0, and the
+ * rows ncm_mset_catalog_trim_oob() writes to oob_file. The trim is last: it resets mcat.
+ */
+static GArray *
+_test_ncm_mset_catalog_read_block_results (NcmMSetCatalog *mcat, const gchar *oob_file)
+{
+  GArray *res        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmMSetFunc *func  = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
+  NcmVector *x_v     = ncm_vector_new (2);
+  GArray *p_val      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const gdouble ps[] = {0.68, 0.95};
+  NcmVector *mean    = NULL;
+  NcmMatrix *cov     = NULL;
+  NcmMatrix *ci;
+  gdouble val;
+  guint i, j;
+
+  ncm_mset_catalog_get_mean (mcat, &mean);
+  ncm_mset_catalog_get_covar (mcat, &cov);
+
+  for (i = 0; i < ncm_vector_len (mean); i++)
+  {
+    g_array_append_vals (res, ncm_vector_ptr (mean, i), 1);
+
+    for (j = 0; j < ncm_vector_len (mean); j++)
+      g_array_append_vals (res, ncm_matrix_ptr (cov, i, j), 1);
+  }
+
+  ncm_mset_catalog_estimate_autocorrelation_tau (mcat, FALSE);
+  g_array_append_vals (res, ncm_vector_data (ncm_mset_catalog_peek_autocorrelation_tau (mcat)),
+                       ncm_vector_len (ncm_mset_catalog_peek_autocorrelation_tau (mcat)));
+  ncm_mset_catalog_estimate_autocorrelation_tau (mcat, TRUE);
+  g_array_append_vals (res, ncm_vector_data (ncm_mset_catalog_peek_autocorrelation_tau (mcat)),
+                       ncm_vector_len (ncm_mset_catalog_peek_autocorrelation_tau (mcat)));
+
+  {
+    gdouble max_ess = 0.0;
+
+    val = ncm_mset_catalog_calc_max_ess_time (mcat, 5, &max_ess, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+    g_array_append_val (res, max_ess);
+  }
+
+  val = ncm_mset_catalog_calc_heidel_diag (mcat, 5, 0.0, NCM_FIT_RUN_MSGS_NONE);
+  g_array_append_val (res, val);
+
+  for (i = 0; i < TEST_CAT_DIM + 1; i++)
+  {
+    val = ncm_mset_catalog_calc_const_break (mcat, i, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+  }
+
+  if (ncm_mset_catalog_nchains (mcat) > 1)
+  {
+    gdouble max_ess   = 0.0;
+    gdouble wp_pvalue = 0.0;
+
+    val = ncm_mset_catalog_max_ess_time_by_chain (mcat, 5, &max_ess, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+    g_array_append_val (res, max_ess);
+
+    val = ncm_mset_catalog_heidel_diag_by_chain (mcat, 5, 0.0, &wp_pvalue, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+    g_array_append_val (res, wp_pvalue);
+  }
+
+  ncm_mset_catalog_param_pdf (mcat, 0);
+  val = ncm_mset_catalog_param_pdf_pvalue (mcat, 0.5, FALSE);
+  g_array_append_val (res, val);
+
+  ncm_vector_set (x_v, 0, 1.0);
+  ncm_vector_set (x_v, 1, 2.0);
+  g_array_append_vals (p_val, ps, 2);
+  ci = ncm_mset_catalog_calc_ci_direct (mcat, func, x_v, p_val);
+
+  for (i = 0; i < ncm_matrix_nrows (ci); i++)
+    for (j = 0; j < ncm_matrix_ncols (ci); j++)
+      g_array_append_vals (res, ncm_matrix_ptr (ci, i, j), 1);
+
+  val = ncm_mset_catalog_trim_oob (mcat, oob_file);
+  g_array_append_val (res, val);
+
+  {
+    NcmMSetCatalog *oob = ncm_mset_catalog_new_from_file_ro (oob_file, 0);
+
+    for (i = 0; i < ncm_mset_catalog_len (oob); i++)
+    {
+      NcmVector *row = ncm_mset_catalog_peek_row (oob, i);
+
+      g_array_append_vals (res, ncm_vector_data (row), ncm_vector_len (row));
+    }
+
+    ncm_mset_catalog_clear (&oob);
+  }
+
+  ncm_matrix_free (ci);
+  ncm_matrix_free (cov);
+  ncm_vector_free (mean);
+  ncm_vector_free (x_v);
+  g_array_unref (p_val);
+  ncm_mset_func_free (func);
+
+  return res;
+}
+
+static void
+_test_ncm_mset_catalog_rm_tmp_dir (const gchar *tmp_dir)
+{
+  GDir *dir = g_dir_open (tmp_dir, 0, NULL);
+  const gchar *name;
+
+  g_assert_nonnull (dir);
+
+  while ((name = g_dir_read_name (dir)) != NULL)
+  {
+    gchar *path = g_build_filename (tmp_dir, name, NULL);
+
+    g_unlink (path);
+    g_free (path);
+  }
+
+  g_dir_close (dir);
+  g_rmdir (tmp_dir);
+}
+
+/*
+ * A catalog loaded with read-block 1, 7 and larger than the catalog gives the rows written
+ * and, bitwise, the same analysis results and trim_oob output. pdata is the number of
+ * chains.
+ */
+void
+test_ncm_mset_catalog_file_read_block (gconstpointer pdata)
+{
+  const guint nchains        = GPOINTER_TO_UINT (pdata);
+  const guint nrows          = 200;
+  const guint read_blocks[3] = {nrows + 1, 1, 7};
+  gchar *tmp_dir             = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_read_block_XXXXXX", NULL);
+  gchar *filename            = g_build_filename (tmp_dir, "cat.fits", NULL);
+  GPtrArray *rows            = _test_ncm_mset_catalog_write_ar1 (filename, nchains, nrows);
+  GArray *ref                = NULL;
+  gchar *contents            = NULL;
+  gsize length               = 0;
+  guint k, i;
+
+  g_assert_true (g_file_get_contents (filename, &contents, &length, NULL));
+
+  for (k = 0; k < 3; k++)
+  {
+    gchar *copy_name = g_strdup_printf ("cat_%u.fits", read_blocks[k]);
+    gchar *oob_name  = g_strdup_printf ("oob_%u.fits", read_blocks[k]);
+    gchar *copy      = g_build_filename (tmp_dir, copy_name, NULL);
+    gchar *oob       = g_build_filename (tmp_dir, oob_name, NULL);
+    NcmMSetCatalog *mcat;
+    GArray *res;
+
+    g_assert_true (g_file_set_contents (copy, contents, length, NULL));
+
+    mcat = _test_ncm_mset_catalog_open_read_block (copy, read_blocks[k]);
+
+    g_assert_cmpuint (ncm_mset_catalog_get_read_block (mcat), ==, read_blocks[k]);
+    g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, nchains);
+
+    _test_ncm_mset_catalog_assert_rows (mcat, rows);
+    res = _test_ncm_mset_catalog_read_block_results (mcat, oob);
+
+    if (ref == NULL)
+    {
+      ref = res;
+    }
+    else
+    {
+      g_assert_cmpuint (res->len, ==, ref->len);
+
+      for (i = 0; i < ref->len; i++)
+        g_assert_cmpfloat (g_array_index (res, gdouble, i), ==, g_array_index (ref, gdouble, i));
+
+      g_array_unref (res);
+    }
+
+    ncm_mset_catalog_clear (&mcat);
+    g_free (copy_name);
+    g_free (oob_name);
+    g_free (copy);
+    g_free (oob);
+  }
+
+  g_array_unref (ref);
+  g_ptr_array_unref (rows);
+  g_free (contents);
+
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * Detaching the file and erasing its data keep every row of a catalog loaded with
+ * read-block 7, and the rows erased from the file are written back by the next sync.
+ */
+void
+test_ncm_mset_catalog_file_read_block_restore (void)
+{
+  const guint nrows = 200;
+  gchar *tmp_dir    = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_restore_XXXXXX", NULL);
+  gchar *filename   = g_build_filename (tmp_dir, "cat.fits", NULL);
+  GPtrArray *rows   = _test_ncm_mset_catalog_write_ar1 (filename, 4, nrows);
+  NcmMSetCatalog *mcat;
+
+  mcat = _test_ncm_mset_catalog_open_read_block (filename, 7);
+  ncm_mset_catalog_set_file (mcat, NULL);
+  g_assert_null (ncm_mset_catalog_peek_filename (mcat));
+  _test_ncm_mset_catalog_assert_rows (mcat, rows);
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat = _test_ncm_mset_catalog_open_read_block (filename, 7);
+  ncm_mset_catalog_erase_data (mcat);
+  _test_ncm_mset_catalog_assert_rows (mcat, rows);
+  ncm_mset_catalog_sync (mcat, TRUE);
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat = _test_ncm_mset_catalog_open_read_block (filename, 7);
+  _test_ncm_mset_catalog_assert_rows (mcat, rows);
+  ncm_mset_catalog_clear (&mcat);
+
+  g_ptr_array_unref (rows);
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
   g_free (filename);
   g_free (tmp_dir);
 }
