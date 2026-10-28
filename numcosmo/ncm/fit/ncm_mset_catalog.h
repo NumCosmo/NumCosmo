@@ -188,6 +188,7 @@ NcmStatsVec *ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const gui
 NcmStatsRows *ncm_mset_catalog_get_diag_rows (NcmMSetCatalog *mcat);
 GArray *ncm_mset_catalog_peek_accept_ratio_array (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
+NcmVector *ncm_mset_catalog_get_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_current_e_var (NcmMSetCatalog *mcat);

@@ -107,6 +107,7 @@ typedef struct _NcmMSetCatalogPrivate
   guint block_first;
   guint read_block;
   GArray *col_ws;
+  GMutex block_lock;
   GPtrArray *e_mean_rows;
   NcmStatsRows *diag_rows;
   GPtrArray *e_var_array;
@@ -235,6 +236,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->block_first  = 0;
   self->read_block   = 0;
   self->col_ws       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  g_mutex_init (&self->block_lock);
   self->e_mean_rows  = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vector_free);
   self->diag_rows    = NULL;
   self->naccepted    = 0;
@@ -681,6 +683,7 @@ _ncm_mset_catalog_finalize (GObject *object)
 
   g_array_unref (self->porder);
   g_timer_destroy (self->sync_timer);
+  g_mutex_clear (&self->block_lock);
 
   g_ptr_array_unref (self->add_vals_names);
   g_ptr_array_unref (self->add_vals_symbs);
@@ -4261,7 +4264,8 @@ static NcmVector *_ncm_mset_catalog_peek_block_row (NcmMSetCatalog *mcat, const 
  * in memory; any other row is read from the file together with the block of
  * #NcmMSetCatalog:read-block rows holding it, which replaces the previous block. A row
  * from a block stays valid until the next call on @mcat that reads a row outside that
- * block; hold a reference (ncm_vector_ref()) to keep it longer.
+ * block; hold a reference (ncm_vector_ref()) to keep it longer. Not safe while another
+ * thread reads rows of @mcat; use ncm_mset_catalog_get_row() there.
  *
  * Returns: (transfer none): the row with index @i or NULL if not available.
  */
@@ -4276,6 +4280,34 @@ ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i)
     return g_ptr_array_index (self->rows, i - self->rows_first);
   else
     return _ncm_mset_catalog_peek_block_row (mcat, i);
+}
+
+/**
+ * ncm_mset_catalog_get_row:
+ * @mcat: a #NcmMSetCatalog
+ * @i: the row index
+ *
+ * Gets the @i-th row as ncm_mset_catalog_peek_row() does, holding the block under a lock
+ * and returning a new reference, so that several threads can read rows of @mcat at the
+ * same time. No thread may add rows or change the file of @mcat meanwhile.
+ *
+ * Returns: (transfer full) (nullable): the row with index @i or NULL if not available.
+ */
+NcmVector *
+ncm_mset_catalog_get_row (NcmMSetCatalog *mcat, guint i)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  NcmVector *row;
+
+  g_mutex_lock (&self->block_lock);
+  row = ncm_mset_catalog_peek_row (mcat, i);
+
+  if (row != NULL)
+    ncm_vector_ref (row);
+
+  g_mutex_unlock (&self->block_lock);
+
+  return row;
 }
 
 /*
