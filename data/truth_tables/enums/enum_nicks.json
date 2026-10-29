@@ -387,6 +387,26 @@
     "nick": "work-return",
     "type": "Ncm.MPIJobCtrlTag"
   },
+  "NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE": {
+    "nick": "incompatible",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS": {
+    "nick": "invalid-add-vals",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR": {
+    "nick": "invalid-m2lnp-var",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET": {
+    "nick": "invalid-mset",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_ORDER": {
+    "nick": "order",
+    "type": "Ncm.MSetCatalogDescError"
+  },
   "NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID": {
     "nick": "ellipsoid",
     "type": "Ncm.MSetCatalogPostNormMethod"

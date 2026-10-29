@@ -41,6 +41,7 @@ void test_ncm_data_rosenbrock_basic (void);
 void test_ncm_dataset_basic (void);
 void test_ncm_fftlog_basic (void);
 void test_ncm_stats_rows_basic (void);
+void test_ncm_mset_catalog_desc_basic (void);
 void test_ncm_sphere_nn (void);
 void test_ncm_sphere_xi (void);
 void test_ncm_timer_basic (void);
@@ -148,6 +149,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/dataset/basic", test_ncm_dataset_basic);
   g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
   g_test_add_func ("/ncm/stats_rows/basic", test_ncm_stats_rows_basic);
+  g_test_add_func ("/ncm/mset_catalog_desc/basic", test_ncm_mset_catalog_desc_basic);
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
@@ -532,6 +534,34 @@ test_ncm_stats_rows_basic (void)
   g_assert_true (NCM_IS_STATS_ROWS (rows));
 
   NCM_TEST_FREE (ncm_stats_rows_free, rows);
+}
+
+void
+test_ncm_mset_catalog_desc_basic (void)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetCatalogDesc *desc;
+  NcmMSetCatalogDesc *desc2;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  desc = ncm_mset_catalog_desc_new (mset, 1, FALSE, NULL, NULL, -1, NULL, NULL);
+
+  g_assert_true (desc != NULL);
+  g_assert_true (NCM_IS_MSET_CATALOG_DESC (desc));
+  g_assert_cmpuint (ncm_mset_catalog_desc_ncols (desc), ==, 2);
+
+  desc2 = ncm_mset_catalog_desc_ref (desc);
+  ncm_mset_catalog_desc_clear (&desc2);
+  g_assert_true (desc2 == NULL);
+
+  g_assert_true (NCM_IS_MSET_CATALOG_DESC (desc));
+
+  NCM_TEST_FREE (ncm_mset_catalog_desc_free, desc);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
 }
 
 void

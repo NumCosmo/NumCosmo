@@ -347,6 +347,10 @@ math_tests = [
         'timeout': 0,
     },
     {
+        'name': 'ncm_mset_catalog_desc',
+        'sources': ['ncm/fit/test_ncm_mset_catalog_desc.c'],
+    },
+    {
         'name': 'ncm_obj_array',
         'sources': ['ncm/core/test_ncm_obj_array.c'],
     },

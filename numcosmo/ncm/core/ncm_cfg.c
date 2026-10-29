@@ -93,6 +93,7 @@
 #include "ncm/fit/ncm_fit_gsl_mm.h"
 #include "ncm/fit/ncm_fit_gsl_mms.h"
 #include "ncm/fit/ncm_fit_nlopt.h"
+#include "ncm/fit/ncm_mset_catalog_desc.h"
 #include "ncm/fit/ncm_prior_gauss_param.h"
 #include "ncm/fit/ncm_prior_gauss_func.h"
 #include "ncm/fit/ncm_prior_flat_param.h"
@@ -871,6 +872,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
+
+  ncm_cfg_register_obj (NCM_TYPE_MSET_CATALOG_DESC);
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);

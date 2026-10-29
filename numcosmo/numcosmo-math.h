@@ -160,6 +160,7 @@
 #include <numcosmo/ncm/fit/ncm_fit_gsl_mm.h>
 #include <numcosmo/ncm/fit/ncm_fit_gsl_mms.h>
 #include <numcosmo/ncm/fit/ncm_mset_catalog.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_desc.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern_flat.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern_gauss.h>
