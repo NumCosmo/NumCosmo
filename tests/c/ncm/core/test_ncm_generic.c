@@ -42,6 +42,7 @@ void test_ncm_dataset_basic (void);
 void test_ncm_fftlog_basic (void);
 void test_ncm_stats_rows_basic (void);
 void test_ncm_mset_catalog_desc_basic (void);
+void test_ncm_mset_catalog_storage_memory_basic (void);
 void test_ncm_sphere_nn (void);
 void test_ncm_sphere_xi (void);
 void test_ncm_timer_basic (void);
@@ -150,6 +151,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/fftlog/basic", test_ncm_fftlog_basic);
   g_test_add_func ("/ncm/stats_rows/basic", test_ncm_stats_rows_basic);
   g_test_add_func ("/ncm/mset_catalog_desc/basic", test_ncm_mset_catalog_desc_basic);
+  g_test_add_func ("/ncm/mset_catalog_storage_memory/basic", test_ncm_mset_catalog_storage_memory_basic);
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
@@ -562,6 +564,32 @@ test_ncm_mset_catalog_desc_basic (void)
   NCM_TEST_FREE (ncm_mset_catalog_desc_free, desc);
   ncm_mset_clear (&mset);
   ncm_model_mvnd_clear (&model_mvnd);
+}
+
+void
+test_ncm_mset_catalog_storage_memory_basic (void)
+{
+  NcmMSetCatalogStorageMemory *storage_mem = ncm_mset_catalog_storage_memory_new ();
+  NcmMSetCatalogStorage *storage           = NCM_MSET_CATALOG_STORAGE (storage_mem);
+  NcmMSetCatalogStorageMemory *storage_mem2;
+  NcmMSetCatalogStorage *storage2;
+
+  g_assert_true (NCM_IS_MSET_CATALOG_STORAGE_MEMORY (storage_mem));
+  g_assert_null (ncm_mset_catalog_storage_peek_desc (storage, NULL));
+
+  storage_mem2 = ncm_mset_catalog_storage_memory_ref (storage_mem);
+  ncm_mset_catalog_storage_memory_clear (&storage_mem2);
+  g_assert_null (storage_mem2);
+
+  storage2 = ncm_mset_catalog_storage_ref (storage);
+  ncm_mset_catalog_storage_clear (&storage2);
+  g_assert_null (storage2);
+
+  ncm_mset_catalog_storage_free (ncm_mset_catalog_storage_ref (storage));
+
+  g_assert_true (NCM_IS_MSET_CATALOG_STORAGE_MEMORY (storage_mem));
+
+  NCM_TEST_FREE (ncm_mset_catalog_storage_memory_free, storage_mem);
 }
 
 void

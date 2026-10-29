@@ -30,7 +30,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/algebra/ncm_vector.h>
-#include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
 #include <numcosmo/ncm/fit/ncm_mset_catalog_desc.h>
 
@@ -49,7 +48,7 @@ G_DECLARE_DERIVABLE_TYPE (NcmMSetCatalogStorage, ncm_mset_catalog_storage, NCM, 
  *   of the wrong length
  * @NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID: a Markovian id below the stored one or beyond
  *   the rows
- * @NCM_MSET_CATALOG_STORAGE_ERROR_WRITE_ONCE: a write-once item already holds another value
+ * @NCM_MSET_CATALOG_STORAGE_ERROR_RNG: an RNG set on a storage that has rows or an RNG
  * @NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND: the backend failed
  *
  * Error codes returned by the #NcmMSetCatalogStorage class.
@@ -62,7 +61,7 @@ typedef enum _NcmMSetCatalogStorageError /*< prefix=NCM_MSET_CATALOG_STORAGE_ERR
   NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING,
   NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
   NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID,
-  NCM_MSET_CATALOG_STORAGE_ERROR_WRITE_ONCE,
+  NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
   NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
 } NcmMSetCatalogStorageError;
 
@@ -82,19 +81,18 @@ struct _NcmMSetCatalogStorageClass
   void (*append) (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error);
   NcmVector *(*get_row) (NcmMSetCatalogStorage *storage, guint i, GError **error);
   void (*sync) (NcmMSetCatalogStorage *storage, GError **error);
-  gchar *(*get_rng_inis) (NcmMSetCatalogStorage *storage, GError **error);
-  void (*set_rng_inis) (NcmMSetCatalogStorage *storage, const gchar *state, GError **error);
+  void (*get_rng_init) (NcmMSetCatalogStorage *storage, gchar **algo, gulong *seed, gchar **state, GError **error);
+  void (*set_rng_init) (NcmMSetCatalogStorage *storage, const gchar *algo, gulong seed, const gchar *state, GError **error);
   gchar *(*get_rng_stat) (NcmMSetCatalogStorage *storage, GError **error);
   void (*set_rng_stat) (NcmMSetCatalogStorage *storage, const gchar *state, GError **error);
   guint (*get_markovian_id) (NcmMSetCatalogStorage *storage, GError **error);
   void (*set_markovian_id) (NcmMSetCatalogStorage *storage, guint markovian_id, GError **error);
-  gchar *(*get_initial_sampler) (NcmMSetCatalogStorage *storage, GError **error);
-  void (*set_initial_sampler) (NcmMSetCatalogStorage *storage, const gchar *sampler, GError **error);
-  NcmObjArray *(*get_functions_array) (NcmMSetCatalogStorage *storage, GError **error);
-  void (*set_functions_array) (NcmMSetCatalogStorage *storage, NcmObjArray *functions, GError **error);
   guint (*n_samplers) (NcmMSetCatalogStorage *storage, GError **error);
   void (*get_sampler) (NcmMSetCatalogStorage *storage, guint i, guint *start, gchar **sampler, gchar **options, GError **error);
   void (*set_sampler) (NcmMSetCatalogStorage *storage, guint i, guint start, const gchar *sampler, const gchar *options, GError **error);
+
+  /* Padding to allow adding up to 11 more virtual functions without breaking ABI. */
+  gpointer padding[11];
 };
 
 NcmMSetCatalogStorage *ncm_mset_catalog_storage_ref (NcmMSetCatalogStorage *storage);
@@ -102,28 +100,28 @@ void ncm_mset_catalog_storage_free (NcmMSetCatalogStorage *storage);
 void ncm_mset_catalog_storage_clear (NcmMSetCatalogStorage **storage);
 
 NcmMSetCatalogDesc *ncm_mset_catalog_storage_peek_desc (NcmMSetCatalogStorage *storage, GError **error);
-gboolean ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error);
+void ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error);
 
-gboolean ncm_mset_catalog_storage_start_recording (NcmMSetCatalogStorage *storage, const gchar *sampler, const gchar *options, NcmRNG *rng, GError **error);
-gboolean ncm_mset_catalog_storage_add_row (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error);
-gboolean ncm_mset_catalog_storage_end_recording (NcmMSetCatalogStorage *storage, GError **error);
+void ncm_mset_catalog_storage_set_rng (NcmMSetCatalogStorage *storage, NcmRNG *rng, GError **error);
+NcmRNG *ncm_mset_catalog_storage_get_rng (NcmMSetCatalogStorage *storage, GError **error);
+
+void ncm_mset_catalog_storage_start_recording (NcmMSetCatalogStorage *storage, const gchar *sampler, const gchar *options, GError **error);
+void ncm_mset_catalog_storage_add_row (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error);
+void ncm_mset_catalog_storage_end_recording (NcmMSetCatalogStorage *storage, GError **error);
 gboolean ncm_mset_catalog_storage_is_recording (NcmMSetCatalogStorage *storage);
 
 guint ncm_mset_catalog_storage_nrows (NcmMSetCatalogStorage *storage, GError **error);
 NcmVector *ncm_mset_catalog_storage_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error);
 
-gboolean ncm_mset_catalog_storage_set_markovian_id (NcmMSetCatalogStorage *storage, guint markovian_id, GError **error);
-gboolean ncm_mset_catalog_storage_set_initial_sampler (NcmMSetCatalogStorage *storage, const gchar *sampler, GError **error);
-gboolean ncm_mset_catalog_storage_set_functions_array (NcmMSetCatalogStorage *storage, NcmObjArray *functions, GError **error);
+void ncm_mset_catalog_storage_set_markovian_id (NcmMSetCatalogStorage *storage, guint markovian_id, GError **error);
 
 guint ncm_mset_catalog_storage_get_markovian_id (NcmMSetCatalogStorage *storage, GError **error);
-gchar *ncm_mset_catalog_storage_get_initial_sampler (NcmMSetCatalogStorage *storage, GError **error);
-NcmObjArray *ncm_mset_catalog_storage_get_functions_array (NcmMSetCatalogStorage *storage, GError **error);
-gchar *ncm_mset_catalog_storage_get_rng_inis (NcmMSetCatalogStorage *storage, GError **error);
+void ncm_mset_catalog_storage_get_rng_init (NcmMSetCatalogStorage *storage, gchar **algo, gulong *seed, gchar **state, GError **error);
 gchar *ncm_mset_catalog_storage_get_rng_stat (NcmMSetCatalogStorage *storage, GError **error);
 guint ncm_mset_catalog_storage_n_samplers (NcmMSetCatalogStorage *storage, GError **error);
-gboolean ncm_mset_catalog_storage_get_sampler (NcmMSetCatalogStorage *storage, guint i, guint *start, gchar **sampler, gchar **options, GError **error);
+void ncm_mset_catalog_storage_get_sampler (NcmMSetCatalogStorage *storage, guint i, guint *start, gchar **sampler, gchar **options, GError **error);
 
 G_END_DECLS
 
 #endif /* _NCM_MSET_CATALOG_STORAGE_H_ */
+

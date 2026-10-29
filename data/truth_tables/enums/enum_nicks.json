@@ -419,6 +419,34 @@
     "nick": "hyperbox-bs",
     "type": "Ncm.MSetCatalogPostNormMethod"
   },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND": {
+    "nick": "backend",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID": {
+    "nick": "markovian-id",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING": {
+    "nick": "not-recording",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING": {
+    "nick": "recording",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_RNG": {
+    "nick": "rng",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_ROW": {
+    "nick": "row",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED": {
+    "nick": "uninitialized",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
   "NCM_MSET_CATALOG_SYNC_AUTO": {
     "nick": "auto",
     "type": "Ncm.MSetCatalogSync"

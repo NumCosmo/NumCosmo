@@ -45,3 +45,4 @@ void ncm_mset_catalog_storage_memory_clear (NcmMSetCatalogStorageMemory **storag
 G_END_DECLS
 
 #endif /* _NCM_MSET_CATALOG_STORAGE_MEMORY_H_ */
+

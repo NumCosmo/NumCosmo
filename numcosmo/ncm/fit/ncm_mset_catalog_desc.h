@@ -83,11 +83,16 @@ const gchar *ncm_mset_catalog_desc_col_full_name (NcmMSetCatalogDesc *desc, guin
 const gchar *ncm_mset_catalog_desc_col_symb (NcmMSetCatalogDesc *desc, guint i);
 gboolean ncm_mset_catalog_desc_col_by_name (NcmMSetCatalogDesc *desc, const gchar *name, guint *col_index);
 
-gboolean ncm_mset_catalog_desc_check_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
-gboolean ncm_mset_catalog_desc_check_same_order (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
+void ncm_mset_catalog_desc_check_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
+void ncm_mset_catalog_desc_check_same_order (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
 
 #define NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME "NcmMSetCatalog:Row-weights"
 #define NCM_MSET_CATALOG_DESC_WEIGHT_SYMBOL "W"
+
+#define NCM_MSET_CATALOG_RTYPE_ESMCMC "NcmFitESMCMC"
+#define NCM_MSET_CATALOG_RTYPE_MC "NcmFitMC"
+#define NCM_MSET_CATALOG_RTYPE_MCBS "NcmFitMCBS"
+#define NCM_MSET_CATALOG_RTYPE_MCMC "NcmFitMCMC"
 
 G_END_DECLS
 

@@ -121,11 +121,11 @@ _test_ncm_mset_catalog_desc_assert_incompatible (NcmMSetCatalogDesc *desc, NcmMS
 {
   GError *error = NULL;
 
-  g_assert_false (ncm_mset_catalog_desc_check_compatible (desc, other, &error));
+  ncm_mset_catalog_desc_check_compatible (desc, other, &error);
   g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE);
   g_clear_error (&error);
 
-  g_assert_false (ncm_mset_catalog_desc_check_compatible (other, desc, &error));
+  ncm_mset_catalog_desc_check_compatible (other, desc, &error);
   g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE);
   g_clear_error (&error);
 }
@@ -248,9 +248,9 @@ test_ncm_mset_catalog_desc_serialize (TestNcmMSetCatalogDesc *test, gconstpointe
     g_assert_cmpstr (ncm_mset_catalog_desc_col_symb (dup, i), ==, ncm_mset_catalog_desc_col_symb (desc, i));
   }
 
-  g_assert_true (ncm_mset_catalog_desc_check_compatible (desc, dup, &error));
+  ncm_mset_catalog_desc_check_compatible (desc, dup, &error);
   g_assert_no_error (error);
-  g_assert_true (ncm_mset_catalog_desc_check_same_order (desc, dup, &error));
+  ncm_mset_catalog_desc_check_same_order (desc, dup, &error);
   g_assert_no_error (error);
 
   ncm_mset_catalog_desc_free (dup);
@@ -321,7 +321,7 @@ test_ncm_mset_catalog_desc_incompatible (TestNcmMSetCatalogDesc *test, gconstpoi
   /* Equal inputs are compatible. */
   other = ncm_mset_catalog_desc_new (mset, TEST_DESC_NCHAINS, TRUE, test_names, test_symbols, 0, TEST_DESC_RUN_TYPE, &error);
   g_assert_no_error (error);
-  g_assert_true (ncm_mset_catalog_desc_check_compatible (desc, other, &error));
+  ncm_mset_catalog_desc_check_compatible (desc, other, &error);
   g_assert_no_error (error);
   ncm_mset_catalog_desc_free (other);
 
@@ -409,14 +409,14 @@ test_ncm_mset_catalog_desc_order (TestNcmMSetCatalogDesc *test, gconstpointer pd
   g_assert_no_error (error);
   g_assert_cmpstr (ncm_mset_catalog_desc_col_full_name (other, 3), ==, ncm_mset_catalog_desc_col_full_name (desc, 3 + TEST_DESC_DIM - 1));
 
-  g_assert_true (ncm_mset_catalog_desc_check_compatible (desc, other, &error));
+  ncm_mset_catalog_desc_check_compatible (desc, other, &error);
   g_assert_no_error (error);
 
-  g_assert_false (ncm_mset_catalog_desc_check_same_order (desc, other, &error));
+  ncm_mset_catalog_desc_check_same_order (desc, other, &error);
   g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_ORDER);
   g_clear_error (&error);
 
-  g_assert_true (ncm_mset_catalog_desc_check_same_order (desc, desc, &error));
+  ncm_mset_catalog_desc_check_same_order (desc, desc, &error);
   g_assert_no_error (error);
 
   ncm_mset_catalog_desc_free (other);
