@@ -299,8 +299,9 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
   /**
    * NcmMSetCatalogDesc:mset:
    *
-   * The #NcmMSet whose free parameters are the parameter columns. The description holds a
-   * copy, made when the property is set; its free-parameter map must be prepared.
+   * The #NcmMSet whose free parameters are the parameter columns. The description
+   * holds a copy, made when the property is set; its free-parameter map must be
+   * prepared.
    */
   g_object_class_install_property (object_class,
                                    PROP_MSET,
@@ -309,6 +310,14 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
                                                         "NcmMSet object",
                                                         NCM_TYPE_MSET,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogDesc:nchains:
+   *
+   * The number of chains; the rows of iteration $i$ are rows $i\,n_\mathrm{chains}$ to
+   * $(i + 1)\,n_\mathrm{chains} - 1$. An ensemble sampler has one chain per walker; the
+   * other samplers have one.
+   */
   g_object_class_install_property (object_class,
                                    PROP_NCHAINS,
                                    g_param_spec_uint ("nchains",
@@ -316,6 +325,13 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
                                                       "Number of different chains in the catalog",
                                                       1, G_MAXUINT32, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogDesc:weighted:
+   *
+   * Whether each row carries a weight. The weight is the last additional value, named
+   * %NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME, added by the description after the user's.
+   */
   g_object_class_install_property (object_class,
                                    PROP_WEIGHTED,
                                    g_param_spec_boolean ("weighted",
@@ -362,6 +378,13 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
                                                      "Index of the variable representing m2lnp",
                                                      -1, G_MAXINT, -1,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogDesc:run-type-string:
+   *
+   * The run type, the name of the object that produces the catalog (see the type
+   * documentation); %NCM_MSET_CATALOG_RTYPE_UNDEFINED when unset.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RUN_TYPE_STR,
                                    g_param_spec_string ("run-type-string",
@@ -371,9 +394,9 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-/* Checks the inputs that the parameter specifications cannot: the mset is given and its
- * free-parameter map is prepared, names and symbols agree in number, and m2lnp_var is -1 or
- * one of the user's additional values. */
+/* Checks the inputs that the parameter specifications cannot: the mset is given and
+ * its free-parameter map is prepared, names and symbols agree in number, and m2lnp_var
+ * is -1 or one of the user's additional values. */
 static void
 _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, guint names_len, guint symbols_len, gint m2lnp_var, GError **error)
 {

@@ -349,6 +349,11 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
   object_class->dispose      = &_ncm_mset_catalog_storage_memory_dispose;
   object_class->finalize     = &_ncm_mset_catalog_storage_memory_finalize;
 
+  /**
+   * NcmMSetCatalogStorageMemory:desc:
+   *
+   * The stored #NcmMSetCatalogDesc, %NULL while the storage is uninitialized.
+   */
   g_object_class_install_property (object_class,
                                    PROP_DESC,
                                    g_param_spec_object ("desc",
@@ -369,6 +374,12 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
                                                        "Catalog rows",
                                                        NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogStorageMemory:rng-algo:
+   *
+   * The algorithm of the run's #NcmRNG, %NULL when no RNG was set.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RNG_ALGO,
                                    g_param_spec_string ("rng-algo",
@@ -376,6 +387,12 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
                                                         "RNG algorithm",
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogStorageMemory:rng-seed:
+   *
+   * The seed of the run's #NcmRNG.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RNG_SEED,
                                    g_param_spec_ulong ("rng-seed",
@@ -383,6 +400,13 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
                                                        "RNG seed",
                                                        0, G_MAXULONG, 0,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogStorageMemory:rng-inis:
+   *
+   * The state of the run's #NcmRNG before the first row (ncm_rng_get_state()), %NULL when
+   * no RNG was set. It is set together with #NcmMSetCatalogStorageMemory:rng-algo.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RNG_INIS,
                                    g_param_spec_string ("rng-inis",
@@ -390,6 +414,13 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
                                                         "RNG state before the first row",
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogStorageMemory:rng-stat:
+   *
+   * The state of the run's #NcmRNG after the last row, written at the end of each recording;
+   * %NULL when no RNG was set.
+   */
   g_object_class_install_property (object_class,
                                    PROP_RNG_STAT,
                                    g_param_spec_string ("rng-stat",
@@ -397,6 +428,12 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
                                                         "RNG state after the last synced row",
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalogStorageMemory:markovian-id:
+   *
+   * The first row of the Markovian chain, at most the number of rows.
+   */
   g_object_class_install_property (object_class,
                                    PROP_MARKOVIAN_ID,
                                    g_param_spec_uint ("markovian-id",
