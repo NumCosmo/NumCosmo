@@ -420,8 +420,10 @@ test_ncm_mset_catalog_storage_memory_rng (TestNcmMSetCatalogStorageMemory *test,
   g_assert_cmpstr (state1, !=, state0);
   g_free (state);
 
-  /* A storage rebuilt from its properties builds the RNG from the stored algorithm, seed and
-   * current state. */
+  /*
+   * A storage rebuilt from its properties builds the RNG from the stored algorithm,
+   * seed and current state.
+   */
   {
     NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     NcmMSetCatalogStorage *dup = NCM_MSET_CATALOG_STORAGE (ncm_serialize_dup_obj (ser, G_OBJECT (test->storage)));
@@ -488,7 +490,9 @@ test_ncm_mset_catalog_storage_memory_markovian_id (TestNcmMSetCatalogStorageMemo
   g_assert_no_error (error);
   g_assert_cmpuint (ncm_mset_catalog_storage_get_markovian_id (test->storage, &error), ==, 2);
 
-  /* The Markovian id may equal the number of rows: the chain starts at the next row. */
+  /*
+   * The Markovian id may equal the number of rows: the chain starts at the next row.
+   */
   ncm_mset_catalog_storage_set_markovian_id (test->storage, 4, &error);
   g_assert_no_error (error);
 
@@ -634,10 +638,13 @@ test_ncm_mset_catalog_storage_memory_property_traps (void)
   g_test_trap_assert_stderr ("*1 rows without a description*");
 }
 
+/*
+ * Built from properties there is no error location, so inconsistent properties
+ * abort.
+ */
 void
 test_ncm_mset_catalog_storage_memory_property_subprocess (void)
 {
-  /* Built from properties there is no error location, so inconsistent properties abort. */
   NcmObjArray *rows = ncm_obj_array_new ();
   NcmVector *row    = ncm_vector_new (2);
 
