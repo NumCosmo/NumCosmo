@@ -305,15 +305,13 @@ ncm_mset_catalog_storage_peek_desc (NcmMSetCatalogStorage *storage, GError **err
 static NcmMSetCatalogDesc *
 _ncm_mset_catalog_storage_require_desc (NcmMSetCatalogStorage *storage, GError **error)
 {
-  GError *local_error      = NULL;
-  NcmMSetCatalogDesc *desc = ncm_mset_catalog_storage_peek_desc (storage, &local_error);
+  NcmMSetCatalogDesc *desc = ncm_mset_catalog_storage_peek_desc (storage, error);
 
-  if ((local_error == NULL) && (desc == NULL))
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED,
-                 "the storage has no description");
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
-  if (local_error != NULL)
-    g_propagate_error (error, local_error);
+  if (desc == NULL)
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED,
+                                "the storage has no description");
 
   return desc;
 }
@@ -336,40 +334,46 @@ ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalo
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
   NcmMSetCatalogStorageClass *klass         = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error                       = NULL;
-  NcmMSetCatalogDesc *stored                = NULL;
+  NcmMSetCatalogDesc *stored;
 
   if (self->recording)
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
-                 "a recording is open");
-  else
-    stored = ncm_mset_catalog_storage_peek_desc (storage, &local_error);
-
-  if (local_error == NULL)
   {
-    if (stored == NULL)
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
+                                "ncm_mset_catalog_storage_set_desc: a recording is open");
+
+    return;
+  }
+
+  stored = ncm_mset_catalog_storage_peek_desc (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_desc: ");
+
+  if (stored == NULL)
+  {
+    klass->store_desc (storage, desc, error);
+    NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_desc: ");
+
+    return;
+  }
+
+  if (stored == desc)
+    return;
+
+  {
+    gchar *reason = NULL;
+
+    if (!ncm_mset_catalog_desc_is_compatible (stored, desc, &reason))
     {
-      klass->store_desc (storage, desc, &local_error);
-    }
-    else
-    {
-      if (stored != desc)
-      {
-        gchar *reason = NULL;
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE,
+                                  "ncm_mset_catalog_storage_set_desc: the description is not compatible with the stored one: %s",
+                                  reason);
+      g_free (reason);
 
-        if (!ncm_mset_catalog_desc_is_compatible (stored, desc, &reason))
-          g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE,
-                       "the description is not compatible with the stored one: %s", reason);
-
-        g_free (reason);
-      }
-
-      if ((local_error == NULL) && (stored != desc))
-        klass->bind_desc (storage, desc, &local_error);
+      return;
     }
   }
 
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_set_desc");
+  klass->bind_desc (storage, desc, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_desc: ");
 }
 
 /**
@@ -390,47 +394,49 @@ ncm_mset_catalog_storage_set_rng (NcmMSetCatalogStorage *storage, NcmRNG *rng, G
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
   NcmMSetCatalogStorageClass *klass         = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error                       = NULL;
   gchar *stored_algo                        = NULL;
-  guint nrows                               = 0;
+  gchar *state;
+  guint nrows;
 
   if (self->recording)
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
-                 "a recording is open");
-  else
-    _ncm_mset_catalog_storage_require_desc (storage, &local_error);
-
-  if (local_error == NULL)
-    nrows = ncm_mset_catalog_storage_nrows (storage, &local_error);
-
-  if (local_error == NULL)
-    klass->get_rng_init (storage, &stored_algo, NULL, NULL, &local_error);
-
-  if ((local_error == NULL) && ((nrows > 0) || (stored_algo != NULL)))
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
-                 "the storage has %u rows and %s RNG", nrows, (stored_algo != NULL) ? "an" : "no");
-
-  if (local_error == NULL)
   {
-    gchar *state = ncm_rng_get_state (rng);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
+                                "ncm_mset_catalog_storage_set_rng: a recording is open");
 
-    klass->set_rng_init (storage, ncm_rng_get_algo (rng), ncm_rng_get_seed (rng), state, &local_error);
-
-    if (local_error == NULL)
-      klass->set_rng_stat (storage, state, &local_error);
-
-    g_free (state);
+    return;
   }
 
-  if (local_error == NULL)
+  _ncm_mset_catalog_storage_require_desc (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_rng: ");
+
+  nrows = ncm_mset_catalog_storage_nrows (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_rng: ");
+
+  klass->get_rng_init (storage, &stored_algo, NULL, NULL, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, g_free (stored_algo), , "ncm_mset_catalog_storage_set_rng: ");
+
+  if ((nrows > 0) || (stored_algo != NULL))
   {
-    ncm_rng_clear (&self->rng);
-    self->rng = ncm_rng_ref (rng);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
+                                "ncm_mset_catalog_storage_set_rng: the storage has %u rows and %s RNG",
+                                nrows, (stored_algo != NULL) ? "an" : "no");
+    g_free (stored_algo);
+
+    return;
   }
 
-  g_free (stored_algo);
+  state = ncm_rng_get_state (rng);
 
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_set_rng");
+  klass->set_rng_init (storage, ncm_rng_get_algo (rng), ncm_rng_get_seed (rng), state, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, g_free (state), , "ncm_mset_catalog_storage_set_rng: ");
+
+  klass->set_rng_stat (storage, state, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, g_free (state), , "ncm_mset_catalog_storage_set_rng: ");
+
+  g_free (state);
+
+  ncm_rng_clear (&self->rng);
+  self->rng = ncm_rng_ref (rng);
 }
 
 /*
@@ -442,7 +448,6 @@ _ncm_mset_catalog_storage_load_rng (NcmMSetCatalogStorage *storage, GError **err
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
   NcmMSetCatalogStorageClass *klass         = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error                       = NULL;
   gchar *algo                               = NULL;
   gchar *inis                               = NULL;
   gchar *stat                               = NULL;
@@ -451,23 +456,30 @@ _ncm_mset_catalog_storage_load_rng (NcmMSetCatalogStorage *storage, GError **err
   if (self->rng != NULL)
     return;
 
-  klass->get_rng_init (storage, &algo, &seed, &inis, &local_error);
+  klass->get_rng_init (storage, &algo, &seed, &inis, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { g_free (algo);
+                                     g_free (inis);
+                            }, );
 
-  if ((local_error == NULL) && (algo != NULL))
-    stat = klass->get_rng_stat (storage, &local_error);
-
-  if ((local_error == NULL) && (algo != NULL))
+  if (algo == NULL)
   {
-    self->rng = ncm_rng_seeded_new (algo, seed);
-    ncm_rng_set_state (self->rng, (stat != NULL) ? stat : inis);
+    g_free (inis);
+
+    return;
   }
+
+  stat = klass->get_rng_stat (storage, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { g_free (algo);
+                                     g_free (inis);
+                                     g_free (stat);
+                            }, );
+
+  self->rng = ncm_rng_seeded_new (algo, seed);
+  ncm_rng_set_state (self->rng, (stat != NULL) ? stat : inis);
 
   g_free (algo);
   g_free (inis);
   g_free (stat);
-
-  if (local_error != NULL)
-    g_propagate_error (error, local_error);
 }
 
 /**
@@ -485,16 +497,9 @@ NcmRNG *
 ncm_mset_catalog_storage_get_rng (NcmMSetCatalogStorage *storage, GError **error)
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
-  GError *local_error                       = NULL;
 
-  _ncm_mset_catalog_storage_load_rng (storage, &local_error);
-
-  if (local_error != NULL)
-  {
-    ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_get_rng");
-
-    return NULL;
-  }
+  _ncm_mset_catalog_storage_load_rng (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_catalog_storage_get_rng: ");
 
   return (self->rng != NULL) ? ncm_rng_ref (self->rng) : NULL;
 }
@@ -522,86 +527,82 @@ void
 ncm_mset_catalog_storage_start_recording (NcmMSetCatalogStorage *storage, const gchar *sampler, const gchar *options, GError **error)
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
-  GError *local_error                       = NULL;
-  guint nrows                               = 0;
+  guint nrows;
 
   g_assert (sampler != NULL);
 
   if (self->recording)
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
-                 "a recording is already open");
-  else
-    _ncm_mset_catalog_storage_require_desc (storage, &local_error);
-
-  if (local_error == NULL)
-    nrows = ncm_mset_catalog_storage_nrows (storage, &local_error);
-
-  if (local_error == NULL)
-    _ncm_mset_catalog_storage_load_rng (storage, &local_error);
-
-  if (local_error == NULL)
-    _ncm_mset_catalog_storage_open_segment (storage, nrows, sampler, options, &local_error);
-
-  if (local_error != NULL)
   {
-    ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_start_recording");
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
+                                "ncm_mset_catalog_storage_start_recording: a recording is already open");
 
     return;
   }
+
+  _ncm_mset_catalog_storage_require_desc (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_start_recording: ");
+
+  nrows = ncm_mset_catalog_storage_nrows (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_start_recording: ");
+
+  _ncm_mset_catalog_storage_load_rng (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_start_recording: ");
+
+  _ncm_mset_catalog_storage_open_segment (storage, nrows, sampler, options, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_start_recording: ");
 
   self->recording = TRUE;
 
   g_timer_start (self->sync_timer);
 }
 
-/* Writes the segment (nrows, sampler, options): over the last segment when it starts at
- * nrows, after it otherwise. */
+/*
+ * Writes the segment (nrows, sampler, options): over the last segment when it starts
+ * at nrows, after it otherwise.
+ */
 static void
 _ncm_mset_catalog_storage_open_segment (NcmMSetCatalogStorage *storage, guint nrows, const gchar *sampler, const gchar *options, GError **error)
 {
   NcmMSetCatalogStorageClass *klass = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error               = NULL;
-  const guint n                     = klass->n_samplers (storage, &local_error);
+  const guint n                     = klass->n_samplers (storage, error);
   guint i                           = n;
 
-  if ((local_error == NULL) && (n > 0))
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  if (n > 0)
   {
     guint last_start = 0;
 
-    klass->get_sampler (storage, n - 1, &last_start, NULL, NULL, &local_error);
+    klass->get_sampler (storage, n - 1, &last_start, NULL, NULL, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
 
     if (last_start == nrows)
       i = n - 1;
   }
 
-  if (local_error == NULL)
-    klass->set_sampler (storage, i, nrows, sampler, (options != NULL) ? options : "", &local_error);
-
-  if (local_error != NULL)
-    g_propagate_error (error, local_error);
+  klass->set_sampler (storage, i, nrows, sampler, (options != NULL) ? options : "", error);
 }
 
-/* Writes the state of the recording's RNG, then lets the backend write what it holds. */
+/*
+ * Writes the state of the recording's RNG, then lets the backend write what it holds.
+ */
 static void
 _ncm_mset_catalog_storage_sync (NcmMSetCatalogStorage *storage, GError **error)
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
   NcmMSetCatalogStorageClass *klass         = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error                       = NULL;
 
   if (self->rng != NULL)
   {
     gchar *state = ncm_rng_get_state (self->rng);
 
-    klass->set_rng_stat (storage, state, &local_error);
+    klass->set_rng_stat (storage, state, error);
     g_free (state);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
   }
 
-  if ((local_error == NULL) && (klass->sync != NULL))
-    klass->sync (storage, &local_error);
-
-  if (local_error != NULL)
-    g_propagate_error (error, local_error);
+  if (klass->sync != NULL)
+    klass->sync (storage, error);
 }
 
 /* Sets error (NOT_RECORDING) outside a recording. */
@@ -611,8 +612,8 @@ _ncm_mset_catalog_storage_require_recording (NcmMSetCatalogStorage *storage, GEr
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
 
   if (!self->recording)
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING,
-                 "no recording is open");
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING,
+                                "no recording is open");
 }
 
 /**
@@ -624,51 +625,56 @@ _ncm_mset_catalog_storage_require_recording (NcmMSetCatalogStorage *storage, GEr
  * Appends a copy of @row, in the order of the bound description, then syncs as
  * #NcmMSetCatalogStorage:smode requires. Fails with
  * %NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING outside a recording and with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_ROW when the length of @row is not the number of columns.
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_ROW when the length of @row is not the number of
+ * columns.
  */
 void
 ncm_mset_catalog_storage_add_row (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error)
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
   NcmMSetCatalogStorageClass *klass         = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error                       = NULL;
-  NcmMSetCatalogDesc *desc                  = NULL;
+  NcmMSetCatalogDesc *desc;
 
-  _ncm_mset_catalog_storage_require_recording (storage, &local_error);
+  _ncm_mset_catalog_storage_require_recording (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_add_row: ");
 
-  if (local_error == NULL)
-    desc = _ncm_mset_catalog_storage_require_desc (storage, &local_error);
+  desc = _ncm_mset_catalog_storage_require_desc (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_add_row: ");
 
-  if ((local_error == NULL) && (ncm_vector_len (row) != ncm_mset_catalog_desc_ncols (desc)))
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
-                 "row of length %u, the description has %u columns",
-                 ncm_vector_len (row), ncm_mset_catalog_desc_ncols (desc));
+  if (ncm_vector_len (row) != ncm_mset_catalog_desc_ncols (desc))
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
+                                "ncm_mset_catalog_storage_add_row: row of length %u, the description has %u columns",
+                                ncm_vector_len (row), ncm_mset_catalog_desc_ncols (desc));
 
-  if (local_error == NULL)
-    klass->append (storage, row, &local_error);
+    return;
+  }
 
-  if ((local_error == NULL) && (klass->sync != NULL))
+  klass->append (storage, row, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_add_row: ");
+
+  if (klass->sync != NULL)
   {
     switch (self->smode)
     {
       case NCM_MSET_CATALOG_SYNC_AUTO:
-        _ncm_mset_catalog_storage_sync (storage, &local_error);
+        _ncm_mset_catalog_storage_sync (storage, error);
         break;
       case NCM_MSET_CATALOG_SYNC_TIMED:
 
         if (g_timer_elapsed (self->sync_timer, NULL) > self->sync_interval)
         {
           g_timer_start (self->sync_timer);
-          _ncm_mset_catalog_storage_sync (storage, &local_error);
+          _ncm_mset_catalog_storage_sync (storage, error);
         }
 
         break;
       default:
         break;
     }
-  }
 
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_add_row");
+    NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_add_row: ");
+  }
 }
 
 /**
@@ -676,26 +682,21 @@ ncm_mset_catalog_storage_add_row (NcmMSetCatalogStorage *storage, NcmVector *row
  * @storage: a #NcmMSetCatalogStorage
  * @error: a #GError
  *
- * Syncs, writing the state of the storage's #NcmRNG, and closes the recording. The recording
- * is closed even when the sync fails. Fails with
+ * Syncs, writing the state of the storage's #NcmRNG, and closes the recording. The
+ * recording is closed even when the sync fails. Fails with
  * %NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING outside a recording.
  */
 void
 ncm_mset_catalog_storage_end_recording (NcmMSetCatalogStorage *storage, GError **error)
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
-  GError *local_error                       = NULL;
 
-  _ncm_mset_catalog_storage_require_recording (storage, &local_error);
+  _ncm_mset_catalog_storage_require_recording (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_end_recording: ");
 
-  if (local_error == NULL)
-  {
-    _ncm_mset_catalog_storage_sync (storage, &local_error);
-
-    self->recording = FALSE;
-  }
-
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_end_recording");
+  _ncm_mset_catalog_storage_sync (storage, error);
+  self->recording = FALSE;
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_end_recording: ");
 }
 
 /**
@@ -732,30 +733,30 @@ ncm_mset_catalog_storage_nrows (NcmMSetCatalogStorage *storage, GError **error)
  * @error: a #GError
  *
  * Returns row @i in the order of the bound description. The returned vector must not be
- * modified. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_ROW when @i is not below the number
- * of rows.
+ * modified. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_ROW when @i is not below the
+ * number of rows.
  *
  * Returns: (transfer full) (nullable): row @i, or %NULL on error
  */
 NcmVector *
 ncm_mset_catalog_storage_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
 {
-  GError *local_error = NULL;
-  const guint nrows   = ncm_mset_catalog_storage_nrows (storage, &local_error);
-  NcmVector *row      = NULL;
+  NcmMSetCatalogStorageClass *klass = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
+  const guint nrows                 = klass->nrows (storage, error);
+  NcmVector *row;
 
-  if ((local_error == NULL) && (i >= nrows))
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
-                 "row %u, the storage has %u rows", i, nrows);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_catalog_storage_get_row: ");
 
-  if (local_error == NULL)
-    row = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage)->get_row (storage, i, &local_error);
-
-  if (local_error != NULL)
+  if (i >= nrows)
   {
-    ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_get_row");
-    ncm_vector_clear (&row);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
+                                "ncm_mset_catalog_storage_get_row: row %u, the storage has %u rows", i, nrows);
+
+    return NULL;
   }
+
+  row = klass->get_row (storage, i, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, ncm_vector_clear (&row), NULL, "ncm_mset_catalog_storage_get_row: ");
 
   return row;
 }
@@ -766,35 +767,37 @@ ncm_mset_catalog_storage_get_row (NcmMSetCatalogStorage *storage, guint i, GErro
  * @markovian_id: id of the first row of the Markovian chain
  * @error: a #GError
  *
- * Sets the Markovian id. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING outside a
- * recording and with %NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID when @markovian_id is
- * below the stored one or above the number of rows.
+ * Sets the Markovian id. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING
+ * outside a recording and with %NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID when
+ * @markovian_id is below the stored one or above the number of rows.
  */
 void
 ncm_mset_catalog_storage_set_markovian_id (NcmMSetCatalogStorage *storage, guint markovian_id, GError **error)
 {
   NcmMSetCatalogStorageClass *klass = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error               = NULL;
-  guint current                     = 0;
-  guint nrows                       = 0;
+  guint current;
+  guint nrows;
 
-  _ncm_mset_catalog_storage_require_recording (storage, &local_error);
+  _ncm_mset_catalog_storage_require_recording (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_markovian_id: ");
 
-  if (local_error == NULL)
-    current = klass->get_markovian_id (storage, &local_error);
+  current = klass->get_markovian_id (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_markovian_id: ");
 
-  if (local_error == NULL)
-    nrows = ncm_mset_catalog_storage_nrows (storage, &local_error);
+  nrows = klass->nrows (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_markovian_id: ");
 
-  if ((local_error == NULL) && ((markovian_id < current) || (markovian_id > nrows)))
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID,
-                 "id %u is below the stored id %u or above the %u rows",
-                 markovian_id, current, nrows);
+  if ((markovian_id < current) || (markovian_id > nrows))
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID,
+                                "ncm_mset_catalog_storage_set_markovian_id: id %u is below the stored id %u or above the %u rows",
+                                markovian_id, current, nrows);
 
-  if (local_error == NULL)
-    klass->set_markovian_id (storage, markovian_id, &local_error);
+    return;
+  }
 
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_set_markovian_id");
+  klass->set_markovian_id (storage, markovian_id, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_markovian_id: ");
 }
 
 /**
@@ -870,16 +873,19 @@ void
 ncm_mset_catalog_storage_get_sampler (NcmMSetCatalogStorage *storage, guint i, guint *start, gchar **sampler, gchar **options, GError **error)
 {
   NcmMSetCatalogStorageClass *klass = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
-  GError *local_error               = NULL;
-  const guint n                     = klass->n_samplers (storage, &local_error);
+  const guint n                     = klass->n_samplers (storage, error);
 
-  if ((local_error == NULL) && (i >= n))
-    g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
-                 "segment %u, the storage has %u segments", i, n);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_get_sampler: ");
 
-  if (local_error == NULL)
-    klass->get_sampler (storage, i, start, sampler, options, &local_error);
+  if (i >= n)
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
+                                "ncm_mset_catalog_storage_get_sampler: segment %u, the storage has %u segments", i, n);
 
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_get_sampler");
+    return;
+  }
+
+  klass->get_sampler (storage, i, start, sampler, options, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_get_sampler: ");
 }
 
