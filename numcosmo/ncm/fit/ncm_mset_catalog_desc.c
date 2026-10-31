@@ -164,7 +164,7 @@ _ncm_mset_catalog_desc_set_property (GObject *object, guint prop_id, const GValu
 
       if (mset != NULL)
       {
-        NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+        NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
 
         desc->mset = ncm_mset_dup (mset, ser);
         ncm_serialize_free (ser);
@@ -250,7 +250,7 @@ _ncm_mset_catalog_desc_constructed (GObject *object)
                                         desc->add_val_symbols->len,
                                         desc->m2lnp_var,
                                         &local_error);
-    ncm_util_forward_or_call_error (NULL, local_error, "ncm_mset_catalog_desc");
+    ncm_util_forward_or_call_error (NULL, local_error, "_ncm_mset_catalog_desc_constructed");
 
     if (desc->weighted)
     {
