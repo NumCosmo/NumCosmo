@@ -360,8 +360,8 @@ _ncm_mset_catalog_storage_fits_check (gint status, const gchar *where, GError **
     gchar msg[FLEN_STATUS];
 
     fits_get_errstatus (status, msg);
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                 "%s: FITS: %s", where, msg);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "%s: FITS: %s", where, msg);
   }
 }
 
@@ -370,13 +370,13 @@ static void
 _ncm_mset_catalog_storage_fits_require_writable (NcmMSetCatalogStorageFits *storage_fits, GError **error)
 {
   if (storage_fits->read_only)
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY,
-                 "the file `%s' is read-only", storage_fits->filename);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY,
+                                "the file `%s' is read-only", storage_fits->filename);
 }
 
 /*
- * Header key readers. A missing key leaves the output as given and sets missing (when not
- * NULL); any other failure sets error.
+ * Header key readers. A missing key leaves the output as given and sets missing (when
+ * not NULL); any other failure sets error.
  */
 
 static void
@@ -420,9 +420,9 @@ _ncm_mset_catalog_storage_fits_read_ulong (fitsfile *fptr, const gchar *key, gul
   }
 
   _ncm_mset_catalog_storage_fits_check (status, key, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (status == 0)
-    *value = (gulong) lvalue;
+  *value = (gulong) lvalue;
 }
 
 static void
@@ -445,9 +445,9 @@ _ncm_mset_catalog_storage_fits_read_bool (fitsfile *fptr, const gchar *key, gboo
   }
 
   _ncm_mset_catalog_storage_fits_check (status, key, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (status == 0)
-    *value = ivalue ? TRUE : FALSE;
+  *value = ivalue ? TRUE : FALSE;
 }
 
 /* Returns a newly allocated string, NULL when the key is missing. */
@@ -463,8 +463,9 @@ _ncm_mset_catalog_storage_fits_read_str (fitsfile *fptr, const gchar *key, GErro
     return NULL;
 
   _ncm_mset_catalog_storage_fits_check (status, key, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
-  return (status == 0) ? g_strdup (value) : NULL;
+  return g_strdup (value);
 }
 
 /* Returns a newly allocated long string, NULL when the key is missing. */
@@ -473,7 +474,7 @@ _ncm_mset_catalog_storage_fits_read_longstr (fitsfile *fptr, const gchar *key, G
 {
   gint status  = 0;
   gchar *value = NULL;
-  gchar *res   = NULL;
+  gchar *res;
 
   fits_read_key_longstr (fptr, (gchar *) key, &value, NULL, &status);
 
@@ -481,12 +482,10 @@ _ncm_mset_catalog_storage_fits_read_longstr (fitsfile *fptr, const gchar *key, G
     return NULL;
 
   _ncm_mset_catalog_storage_fits_check (status, key, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
-  if (status == 0)
-  {
-    res = g_strdup (value);
-    fits_free_memory (value, &status);
-  }
+  res = g_strdup (value);
+  fits_free_memory (value, &status);
 
   return res;
 }
@@ -550,8 +549,54 @@ _ncm_mset_catalog_storage_fits_flush (NcmMSetCatalogStorageFits *storage_fits, G
 }
 
 /*
- * Reads the mset of a file: the HDU0 vardict (`model-set' entry) or bare object, or the
- * `.mset' sidecar of files with an empty HDU0. Sets error (BACKEND) when none is found.
+ * Deserializes the mset held by HDU0: a vardict with a `model-set' entry, or a bare
+ * object. Takes ownership of data. Sets error (BACKEND) when HDU0 holds no mset.
+ */
+static NcmMSet *
+_ncm_mset_catalog_storage_fits_read_hdu0_mset (NcmMSetCatalogStorageFits *storage_fits, guint8 *data, glong len, const gchar *format, GError **error)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GObject *mset_obj = NULL;
+
+  if (strcmp (format, NCM_MSET_CATALOG_MSET_FORMAT_VARDICT) == 0)
+  {
+    GVariant *var  = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE), data, len, TRUE, g_free, data);
+    NcmVarDict *vd = ncm_serialize_var_dict_from_variant (ser, var);
+
+    ncm_var_dict_get_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, &mset_obj);
+
+    ncm_var_dict_unref (vd);
+    g_variant_unref (var);
+  }
+  else if (strcmp (format, NCM_MSET_CATALOG_MSET_FORMAT_OBJECT) == 0)
+  {
+    GVariant *var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), data, len, TRUE, g_free, data);
+
+    mset_obj = ncm_serialize_from_variant (ser, var);
+    g_variant_unref (var);
+  }
+  else
+  {
+    g_free (data);
+  }
+
+  ncm_serialize_free (ser);
+
+  if ((mset_obj == NULL) || !NCM_IS_MSET (mset_obj))
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "HDU0 of `%s' (format `%s') holds no NcmMSet", storage_fits->filename, format);
+    g_clear_object (&mset_obj);
+
+    return NULL;
+  }
+
+  return NCM_MSET (mset_obj);
+}
+
+/*
+ * Reads the mset of a file: HDU0 when it has data, the `.mset' sidecar otherwise, and
+ * moves to the table. Sets error (BACKEND) when no mset is found.
  */
 static NcmMSet *
 _ncm_mset_catalog_storage_fits_read_mset (NcmMSetCatalogStorageFits *storage_fits, GError **error)
@@ -566,14 +611,13 @@ _ncm_mset_catalog_storage_fits_read_mset (NcmMSetCatalogStorageFits *storage_fit
 
   fits_movabs_hdu (fptr, 1, &hdutype, &status);
   _ncm_mset_catalog_storage_fits_check (status, "HDU0", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
-  if (status == 0)
-  {
-    fits_get_img_param (fptr, 1, &bitpix, &naxis, naxes, &status);
-    _ncm_mset_catalog_storage_fits_check (status, "HDU0", error);
-  }
+  fits_get_img_param (fptr, 1, &bitpix, &naxis, naxes, &status);
+  _ncm_mset_catalog_storage_fits_check (status, "HDU0", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
-  if ((status == 0) && (naxis == 1) && (naxes[0] > 0))
+  if ((naxis == 1) && (naxes[0] > 0))
   {
     const glong len = naxes[0];
     guint8 *data    = g_malloc (len);
@@ -582,92 +626,47 @@ _ncm_mset_catalog_storage_fits_read_mset (NcmMSetCatalogStorageFits *storage_fit
 
     fits_read_img (fptr, TBYTE, 1, len, NULL, data, &any_null, &status);
     _ncm_mset_catalog_storage_fits_check (status, "HDU0", error);
+    NCM_UTIL_ON_ERROR_RETURN (error, g_free (data), NULL);
 
     format = _ncm_mset_catalog_storage_fits_read_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, g_free (data), NULL);
 
     if (format == NULL)
       format = g_strdup (NCM_MSET_CATALOG_MSET_FORMAT_OBJECT);
 
-    if (*error == NULL)
-    {
-      NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-
-      if (strcmp (format, NCM_MSET_CATALOG_MSET_FORMAT_VARDICT) == 0)
-      {
-        GVariant *var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE),
-                                                 data, len, TRUE, g_free, data);
-        NcmVarDict *vd    = ncm_serialize_var_dict_from_variant (ser, var);
-        GObject *mset_obj = NULL;
-
-        data = NULL;
-
-        if (ncm_var_dict_get_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, &mset_obj) && NCM_IS_MSET (mset_obj))
-          mset = NCM_MSET (mset_obj);
-        else
-          g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                       "HDU0 of `%s' has no `%s' entry", storage_fits->filename, NCM_MSET_CATALOG_HDU0_MSET_KEY);
-
-        ncm_var_dict_unref (vd);
-        g_variant_unref (var);
-      }
-      else if (strcmp (format, NCM_MSET_CATALOG_MSET_FORMAT_OBJECT) == 0)
-      {
-        GVariant *var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
-                                                 data, len, TRUE, g_free, data);
-        GObject *mset_obj = ncm_serialize_from_variant (ser, var);
-
-        data = NULL;
-
-        if (NCM_IS_MSET (mset_obj))
-          mset = NCM_MSET (mset_obj);
-        else
-          g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                       "HDU0 of `%s' holds no NcmMSet", storage_fits->filename);
-
-        g_variant_unref (var);
-      }
-      else
-      {
-        g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                     "unknown HDU0 format `%s' in `%s'", format, storage_fits->filename);
-      }
-
-      ncm_serialize_free (ser);
-    }
-
-    g_free (data);
+    mset = _ncm_mset_catalog_storage_fits_read_hdu0_mset (storage_fits, data, len, format, error);
     g_free (format);
+    NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
   }
-  else if (status == 0)
+  else
   {
     gchar *base_name = ncm_util_basename_fits (storage_fits->filename);
     gchar *mset_file = g_strdup_printf ("%s.mset", base_name);
 
-    if (g_file_test (mset_file, G_FILE_TEST_EXISTS))
+    g_free (base_name);
+
+    if (!g_file_test (mset_file, G_FILE_TEST_EXISTS))
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                  "`%s' has no embedded mset and no `%s' file", storage_fits->filename, mset_file);
+      g_free (mset_file);
+
+      return NULL;
+    }
+
     {
       NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
       mset = ncm_mset_load (mset_file, ser, error);
       ncm_serialize_free (ser);
+      g_free (mset_file);
+      NCM_UTIL_ON_ERROR_RETURN (error, ncm_mset_clear (&mset), NULL);
     }
-    else
-    {
-      g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                   "`%s' has no embedded mset and no `%s' file", storage_fits->filename, mset_file);
-    }
-
-    g_free (mset_file);
-    g_free (base_name);
   }
 
-  if (*error == NULL)
-  {
-    fits_movnam_hdu (fptr, BINARY_TBL, NCM_MSET_CATALOG_EXTNAME, 0, &status);
-    _ncm_mset_catalog_storage_fits_check (status, NCM_MSET_CATALOG_EXTNAME, error);
-  }
-
-  if ((*error != NULL) && (mset != NULL))
-    ncm_mset_clear (&mset);
+  fits_movnam_hdu (fptr, BINARY_TBL, NCM_MSET_CATALOG_EXTNAME, 0, &status);
+  _ncm_mset_catalog_storage_fits_check (status, NCM_MSET_CATALOG_EXTNAME, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, ncm_mset_clear (&mset), NULL);
 
   return mset;
 }
@@ -682,9 +681,10 @@ _ncm_mset_catalog_storage_fits_add_segment (NcmMSetCatalogStorageFits *storage_f
 }
 
 /*
- * The translation of files written by the previous library (no NSEGS key): the run type
- * values of each producer become the class names, and the sampler record becomes the
- * segments. Returns the run type of the Desc (newly allocated) and fills the segments.
+ * The translation of files written by the previous library (no NSEGS key): the run
+ * type values of each producer become the class names, and the sampler record becomes
+ * the segments. Returns the run type of the Desc (newly allocated) and fills the
+ * segments.
  */
 static gchar *
 _ncm_mset_catalog_storage_fits_translate_legacy (NcmMSetCatalogStorageFits *storage_fits, const gchar *rtype, guint nchains, guint nrows, GError **error)
@@ -706,11 +706,21 @@ _ncm_mset_catalog_storage_fits_translate_legacy (NcmMSetCatalogStorageFits *stor
 
   fitsfile *fptr    = FPTR (storage_fits);
   const gchar *rnew = NULL;
-  gchar *sampler    = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, error);
-  gchar *sampopt    = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, error);
-  gchar *initsmp    = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_INIT_SAMPLER_LABEL, error);
-  gchar *res;
+  gchar *sampler;
+  gchar *sampopt;
+  gchar *initsmp;
   guint i;
+
+  sampler = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
+  sampopt = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, g_free (sampler), NULL);
+
+  initsmp = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_INIT_SAMPLER_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { g_free (sampler);
+                                     g_free (sampopt);
+                            }, NULL);
 
   for (i = 0; i < G_N_ELEMENTS (table); i++)
   {
@@ -721,33 +731,28 @@ _ncm_mset_catalog_storage_fits_translate_legacy (NcmMSetCatalogStorageFits *stor
     }
   }
 
-  if (*error == NULL)
+  if ((rnew != NULL) && (strcmp (rnew, NCM_MSET_CATALOG_RTYPE_ESMCMC) == 0))
   {
-    if ((rnew != NULL) && (strcmp (rnew, NCM_MSET_CATALOG_RTYPE_ESMCMC) == 0))
-    {
-      if (initsmp != NULL)
-        _ncm_mset_catalog_storage_fits_add_segment (storage_fits, 0, initsmp, NULL);
+    if (initsmp != NULL)
+      _ncm_mset_catalog_storage_fits_add_segment (storage_fits, 0, initsmp, NULL);
 
-      if (sampler != NULL)
-        _ncm_mset_catalog_storage_fits_add_segment (storage_fits, (initsmp != NULL) ? MIN (nchains, nrows) : 0, sampler, sampopt);
-    }
-    else if (rnew != NULL)
-    {
-      _ncm_mset_catalog_storage_fits_add_segment (storage_fits, 0, rtype, NULL);
-    }
-    else if (sampler != NULL)
-    {
-      _ncm_mset_catalog_storage_fits_add_segment (storage_fits, 0, sampler, sampopt);
-    }
+    if (sampler != NULL)
+      _ncm_mset_catalog_storage_fits_add_segment (storage_fits, (initsmp != NULL) ? MIN (nchains, nrows) : 0, sampler, sampopt);
   }
-
-  res = g_strdup ((rnew != NULL) ? rnew : rtype);
+  else if (rnew != NULL)
+  {
+    _ncm_mset_catalog_storage_fits_add_segment (storage_fits, 0, rtype, NULL);
+  }
+  else if (sampler != NULL)
+  {
+    _ncm_mset_catalog_storage_fits_add_segment (storage_fits, 0, sampler, sampopt);
+  }
 
   g_free (sampler);
   g_free (sampopt);
   g_free (initsmp);
 
-  return res;
+  return g_strdup ((rnew != NULL) ? rnew : rtype);
 }
 
 /* Fills porder with the file column (1-based) of each column of desc. */
@@ -760,7 +765,7 @@ _ncm_mset_catalog_storage_fits_set_porder (NcmMSetCatalogStorageFits *storage_fi
 
   g_array_set_size (storage_fits->porder, ncols);
 
-  for (i = 0; (i < ncols) && (*error == NULL); i++)
+  for (i = 0; i < ncols; i++)
   {
     const gchar *name = ncm_mset_catalog_desc_col_full_name (desc, i);
     gint status       = 0;
@@ -769,201 +774,244 @@ _ncm_mset_catalog_storage_fits_set_porder (NcmMSetCatalogStorageFits *storage_fi
     fits_get_colnum (fptr, CASESEN, (gchar *) name, &colnum, &status);
 
     if (status == COL_NOT_FOUND)
-      g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                   "`%s' has no column `%s'", storage_fits->filename, name);
-    else
-      _ncm_mset_catalog_storage_fits_check (status, name, error);
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                  "`%s' has no column `%s'", storage_fits->filename, name);
+
+      return;
+    }
+
+    _ncm_mset_catalog_storage_fits_check (status, name, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
 
     g_array_index (storage_fits->porder, gint, i) = colnum;
   }
 }
 
-/*
- * Opens an existing file and reads its description and run metadata. The table columns
- * are the additional values (NADDVAL of them, the weight last when WEIGHTED) and then the
- * free parameters of the HDU0 mset, each found by its full name.
- */
-static void
-_ncm_mset_catalog_storage_fits_open_existing (NcmMSetCatalogStorageFits *storage_fits, GError **error)
+/* The values read from an existing file before its Desc is built. */
+typedef struct _NcmMSetCatalogStorageFitsHeader
 {
-  fitsfile *fptr    = NULL;
-  gint status       = 0;
-  gint nchains      = 0;
-  gint nadd_vals    = 0;
-  gint m2lnp_var    = -1;
-  gint markid       = 0;
-  gint nsegs        = 0;
-  gint tfields      = 0;
-  glong nrows       = 0;
-  gboolean weighted = FALSE;
-  gboolean missing  = FALSE;
-  gboolean legacy   = FALSE;
-  NcmMSet *mset     = NULL;
-  gchar *rtype      = NULL;
-  gchar *desc_rtype = NULL;
+  NcmMSet *mset;
+  gchar *rtype;
+  gchar *desc_rtype;
   GPtrArray *names;
   GPtrArray *symbs;
+  gint nchains;
+  gint nadd_vals;
+  gint m2lnp_var;
+  gint markid;
+  gint tfields;
+  glong nrows;
+  gboolean weighted;
+  gboolean legacy;
+} NcmMSetCatalogStorageFitsHeader;
+
+static void
+_ncm_mset_catalog_storage_fits_header_clear (NcmMSetCatalogStorageFitsHeader *header)
+{
+  ncm_mset_clear (&header->mset);
+  g_clear_pointer (&header->rtype, g_free);
+  g_clear_pointer (&header->desc_rtype, g_free);
+  g_clear_pointer (&header->names, g_ptr_array_unref);
+  g_clear_pointer (&header->symbs, g_ptr_array_unref);
+}
+
+/*
+ * Reads the description keys of the table: RTYPE, NCHAINS, NADDVAL, WEIGHTED, M2LNP_ID
+ * (-1 when missing), FIRST_ID, MARKID (in the file numbering), the column count and
+ * the additional-value names (the first NADDVAL columns, the weight last when weighted)
+ * and symbols (ASYMB<n>, "no-symbol" when missing).
+ */
+static void
+_ncm_mset_catalog_storage_fits_read_desc_keys (NcmMSetCatalogStorageFits *storage_fits, NcmMSetCatalogStorageFitsHeader *header, GError **error)
+{
+  fitsfile *fptr   = FPTR (storage_fits);
+  gint status      = 0;
+  gboolean missing = FALSE;
   guint i;
 
-  fits_open_file (&fptr, storage_fits->filename, storage_fits->read_only ? READONLY : READWRITE, &status);
-  _ncm_mset_catalog_storage_fits_check (status, storage_fits->filename, error);
+  fits_get_num_rows (fptr, &header->nrows, &status);
+  _ncm_mset_catalog_storage_fits_check (status, "NAXIS2", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error != NULL)
+  fits_get_num_cols (fptr, &header->tfields, &status);
+  _ncm_mset_catalog_storage_fits_check (status, "TFIELDS", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  header->rtype = _ncm_mset_catalog_storage_fits_read_str (fptr, NCM_MSET_CATALOG_RTYPE_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  if (header->rtype == NULL)
+    header->rtype = g_strdup (NCM_MSET_CATALOG_RTYPE_UNDEFINED);
+
+  _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_NCHAINS_LABEL, &header->nchains, &missing, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  if (missing || (header->nchains <= 0))
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "`%s' has no valid `%s' key", storage_fits->filename, NCM_MSET_CATALOG_NCHAINS_LABEL);
+
     return;
-
-  storage_fits->fptr = fptr;
-  names              = g_ptr_array_new_with_free_func (g_free);
-  symbs              = g_ptr_array_new_with_free_func (g_free);
-
-  mset = _ncm_mset_catalog_storage_fits_read_mset (storage_fits, error);
-
-  if (*error == NULL)
-  {
-    fits_get_num_rows (fptr, &nrows, &status);
-    _ncm_mset_catalog_storage_fits_check (status, "NAXIS2", error);
   }
 
-  if (*error == NULL)
+  _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_NADDVAL_LABEL, &header->nadd_vals, &missing, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  if (missing || (header->nadd_vals < 0))
   {
-    fits_get_num_cols (fptr, &tfields, &status);
-    _ncm_mset_catalog_storage_fits_check (status, "TFIELDS", error);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "`%s' has no valid `%s' key", storage_fits->filename, NCM_MSET_CATALOG_NADDVAL_LABEL);
+
+    return;
   }
 
-  if (*error == NULL)
-    rtype = _ncm_mset_catalog_storage_fits_read_str (fptr, NCM_MSET_CATALOG_RTYPE_LABEL, error);
+  _ncm_mset_catalog_storage_fits_read_bool (fptr, NCM_MSET_CATALOG_WEIGHTED_LABEL, &header->weighted, NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if ((*error == NULL) && (rtype == NULL))
-    rtype = g_strdup (NCM_MSET_CATALOG_RTYPE_UNDEFINED);
+  _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_M2LNP_ID_LABEL, &header->m2lnp_var, NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_NCHAINS_LABEL, &nchains, &missing, error);
+  _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, &storage_fits->first_id, NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if ((*error == NULL) && (missing || (nchains <= 0)))
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                 "`%s' has no valid `%s' key", storage_fits->filename, NCM_MSET_CATALOG_NCHAINS_LABEL);
+  header->markid = storage_fits->first_id;
+  _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, &header->markid, NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_NADDVAL_LABEL, &nadd_vals, &missing, error);
-
-  if ((*error == NULL) && (missing || (nadd_vals < 0)))
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                 "`%s' has no valid `%s' key", storage_fits->filename, NCM_MSET_CATALOG_NADDVAL_LABEL);
-
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_read_bool (fptr, NCM_MSET_CATALOG_WEIGHTED_LABEL, &weighted, NULL, error);
-
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_M2LNP_ID_LABEL, &m2lnp_var, NULL, error);
-
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, &storage_fits->first_id, NULL, error);
-
-  if (*error == NULL)
+  if ((guint) (ncm_mset_fparams_len (header->mset) + header->nadd_vals) != (guint) header->tfields)
   {
-    markid = storage_fits->first_id;
-    _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, &markid, NULL, error);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "`%s' has %d columns, its mset has %u free parameters and %d additional values",
+                                storage_fits->filename, header->tfields, ncm_mset_fparams_len (header->mset), header->nadd_vals);
+
+    return;
   }
 
-  if ((*error == NULL) && ((guint) (ncm_mset_fparams_len (mset) + nadd_vals) != (guint) tfields))
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                 "`%s' has %d columns, its mset has %u free parameters and %d additional values",
-                 storage_fits->filename, tfields, ncm_mset_fparams_len (mset), nadd_vals);
-
-  /* Additional-value names and symbols: the first nadd_vals columns and ASYMB<n>. */
-  for (i = 0; (i < (guint) nadd_vals) && (*error == NULL); i++)
+  for (i = 0; i < (guint) header->nadd_vals; i++)
   {
     gchar colname[FLEN_VALUE];
+    gchar *ttype  = g_strdup_printf ("TTYPE%u", i + 1);
     gchar *asymbi = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
     gchar *symbol;
-    gchar *ttype = g_strdup_printf ("TTYPE%u", i + 1);
 
     fits_read_key_str (fptr, ttype, colname, NULL, &status);
     _ncm_mset_catalog_storage_fits_check (status, ttype, error);
+    g_free (ttype);
+    NCM_UTIL_ON_ERROR_RETURN (error, g_free (asymbi), );
 
     symbol = _ncm_mset_catalog_storage_fits_read_str (fptr, asymbi, error);
-
-    if (*error == NULL)
-    {
-      g_ptr_array_add (names, g_strdup (colname));
-      g_ptr_array_add (symbs, (symbol != NULL) ? symbol : g_strdup ("no-symbol"));
-    }
-    else
-    {
-      g_free (symbol);
-    }
-
-    g_free (ttype);
     g_free (asymbi);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+    g_ptr_array_add (header->names, g_strdup (colname));
+    g_ptr_array_add (header->symbs, (symbol != NULL) ? symbol : g_strdup ("no-symbol"));
   }
 
-  if ((*error == NULL) && weighted)
+  if (header->weighted)
   {
-    if ((names->len == 0) || (strcmp (g_ptr_array_index (names, names->len - 1), NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME) != 0))
-      g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                   "`%s' is weighted and its last additional value is not `%s'",
-                   storage_fits->filename, NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME);
-    else
-      g_ptr_array_set_size (names, names->len - 1);
+    const guint n = header->names->len;
 
-    g_ptr_array_set_size (symbs, names->len);
-  }
-
-  /* Sampler segments: NSEGS and SEGS<n>, SEGN<n>, SEGO<n>, or the translation of a file
-   * without NSEGS. */
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_STORAGE_FITS_NSEGS_LABEL, &nsegs, &legacy, error);
-
-  if ((*error == NULL) && legacy)
-  {
-    desc_rtype = _ncm_mset_catalog_storage_fits_translate_legacy (storage_fits, rtype, nchains, nrows, error);
-  }
-  else if (*error == NULL)
-  {
-    desc_rtype = g_strdup (rtype);
-
-    for (i = 0; (i < (guint) nsegs) && (*error == NULL); i++)
+    if ((n == 0) || (strcmp (g_ptr_array_index (header->names, n - 1), NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME) != 0))
     {
-      gchar *key_s   = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_START_LABEL, i);
-      gchar *key_n   = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_SAMPLER_LABEL, i);
-      gchar *key_o   = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_OPTIONS_LABEL, i);
-      gint start     = 0;
-      gchar *sampler = NULL;
-      gchar *options = NULL;
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                  "`%s' is weighted and its last additional value is not `%s'",
+                                  storage_fits->filename, NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME);
 
-      _ncm_mset_catalog_storage_fits_read_int (fptr, key_s, &start, &missing, error);
+      return;
+    }
 
-      if ((*error == NULL) && missing)
-        g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                     "`%s' has %d segments and no `%s' key", storage_fits->filename, nsegs, key_s);
+    g_ptr_array_set_size (header->names, n - 1);
+    g_ptr_array_set_size (header->symbs, n - 1);
+  }
+}
 
-      if (*error == NULL)
-        sampler = _ncm_mset_catalog_storage_fits_read_longstr (fptr, key_n, error);
+/*
+ * Reads the sampler segments: NSEGS and SEGS<n>, SEGN<n>, SEGO<n>, or the translation of
+ * a file without NSEGS, which also sets the Desc run type.
+ */
+static void
+_ncm_mset_catalog_storage_fits_read_segments (NcmMSetCatalogStorageFits *storage_fits, NcmMSetCatalogStorageFitsHeader *header, GError **error)
+{
+  fitsfile *fptr   = FPTR (storage_fits);
+  gint nsegs       = 0;
+  gboolean missing = FALSE;
+  guint i;
 
-      if (*error == NULL)
-        options = _ncm_mset_catalog_storage_fits_read_longstr (fptr, key_o, error);
+  _ncm_mset_catalog_storage_fits_read_int (fptr, NCM_MSET_CATALOG_STORAGE_FITS_NSEGS_LABEL, &nsegs, &header->legacy, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-      if (*error == NULL)
-        _ncm_mset_catalog_storage_fits_add_segment (storage_fits, start, (sampler != NULL) ? sampler : "", options);
+  if (header->legacy)
+  {
+    header->desc_rtype = _ncm_mset_catalog_storage_fits_translate_legacy (storage_fits, header->rtype, header->nchains, header->nrows, error);
 
-      g_free (sampler);
-      g_free (options);
+    return;
+  }
+
+  header->desc_rtype = g_strdup (header->rtype);
+
+  for (i = 0; i < (guint) nsegs; i++)
+  {
+    gchar *key_s   = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_START_LABEL, i);
+    gchar *key_n   = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_SAMPLER_LABEL, i);
+    gchar *key_o   = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_OPTIONS_LABEL, i);
+    gint start     = 0;
+    gchar *sampler = NULL;
+    gchar *options = NULL;
+
+    _ncm_mset_catalog_storage_fits_read_int (fptr, key_s, &start, &missing, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, { g_free (key_s);
+                                       g_free (key_n);
+                                       g_free (key_o);
+                              }, );
+
+    if (missing)
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                  "`%s' has %d segments and no `%s' key", storage_fits->filename, nsegs, key_s);
       g_free (key_s);
       g_free (key_n);
       g_free (key_o);
+
+      return;
     }
+
+    g_free (key_s);
+
+    sampler = _ncm_mset_catalog_storage_fits_read_longstr (fptr, key_n, error);
+    g_free (key_n);
+    NCM_UTIL_ON_ERROR_RETURN (error, g_free (key_o), );
+
+    options = _ncm_mset_catalog_storage_fits_read_longstr (fptr, key_o, error);
+    g_free (key_o);
+    NCM_UTIL_ON_ERROR_RETURN (error, g_free (sampler), );
+
+    _ncm_mset_catalog_storage_fits_add_segment (storage_fits, start, (sampler != NULL) ? sampler : "", options);
+
+    g_free (sampler);
+    g_free (options);
   }
+}
 
-  /* RNG record. */
-  if (*error == NULL)
-    storage_fits->rng_inis = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, error);
+/*
+ * Reads the RNG record: RNG_INIS, RNG_STAT, RNG_ALGO (the default algorithm when missing
+ * and RNG_INIS is present) and RNG_SEED.
+ */
+static void
+_ncm_mset_catalog_storage_fits_read_rng (NcmMSetCatalogStorageFits *storage_fits, GError **error)
+{
+  fitsfile *fptr = FPTR (storage_fits);
 
-  if (*error == NULL)
-    storage_fits->rng_stat = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_RNG_STAT_LABEL, error);
+  storage_fits->rng_inis = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    storage_fits->rng_algo = _ncm_mset_catalog_storage_fits_read_str (fptr, NCM_MSET_CATALOG_RNG_ALGO_LABEL, error);
+  storage_fits->rng_stat = _ncm_mset_catalog_storage_fits_read_longstr (fptr, NCM_MSET_CATALOG_RNG_STAT_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if ((*error == NULL) && (storage_fits->rng_algo == NULL) && (storage_fits->rng_inis != NULL))
+  storage_fits->rng_algo = _ncm_mset_catalog_storage_fits_read_str (fptr, NCM_MSET_CATALOG_RNG_ALGO_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  if ((storage_fits->rng_algo == NULL) && (storage_fits->rng_inis != NULL))
   {
     NcmRNG *rng = ncm_rng_new (NULL);
 
@@ -971,48 +1019,90 @@ _ncm_mset_catalog_storage_fits_open_existing (NcmMSetCatalogStorageFits *storage
     ncm_rng_free (rng);
   }
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_read_ulong (fptr, NCM_MSET_CATALOG_RNG_SEED_LABEL, &storage_fits->rng_seed, NULL, error);
+  _ncm_mset_catalog_storage_fits_read_ulong (fptr, NCM_MSET_CATALOG_RNG_SEED_LABEL, &storage_fits->rng_seed, NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if ((*error == NULL) && (storage_fits->rng_algo != NULL) && (storage_fits->rng_inis == NULL))
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                 "`%s' has `%s' and no `%s' key", storage_fits->filename, NCM_MSET_CATALOG_RNG_ALGO_LABEL, NCM_MSET_CATALOG_RNG_INIS_LABEL);
-
-  if (*error == NULL)
-  {
-    g_ptr_array_add (names, NULL);
-    g_ptr_array_add (symbs, NULL);
-
-    storage_fits->desc = ncm_mset_catalog_desc_new (mset, nchains, weighted,
-                                                    (const gchar * const *) names->pdata,
-                                                    (const gchar * const *) symbs->pdata,
-                                                    m2lnp_var, desc_rtype, error);
-  }
-
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_set_porder (storage_fits, storage_fits->desc, error);
-
-  if (*error == NULL)
-  {
-    storage_fits->legacy       = legacy;
-    storage_fits->tail_first   = (guint) nrows;
-    storage_fits->n_pending    = 0;
-    storage_fits->markovian_id = (markid > storage_fits->first_id) ? (guint) (markid - storage_fits->first_id) : 0;
-
-    if (storage_fits->markovian_id > (guint) nrows)
-      storage_fits->markovian_id = (guint) nrows;
-  }
-
-  ncm_mset_clear (&mset);
-  g_free (rtype);
-  g_free (desc_rtype);
-  g_ptr_array_unref (names);
-  g_ptr_array_unref (symbs);
+  if ((storage_fits->rng_algo != NULL) && (storage_fits->rng_inis == NULL))
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "`%s' has `%s' and no `%s' key", storage_fits->filename,
+                                NCM_MSET_CATALOG_RNG_ALGO_LABEL, NCM_MSET_CATALOG_RNG_INIS_LABEL);
 }
 
 /*
- * Opens the file at the first call that needs it. A storage whose file does not exist stays
- * uninitialized until store_desc creates it; read-only, the missing file is an error.
+ * Opens an existing file and reads its description and run metadata. On failure the
+ * caller discards what was read.
+ */
+static void
+_ncm_mset_catalog_storage_fits_open_existing (NcmMSetCatalogStorageFits *storage_fits, GError **error)
+{
+  NcmMSetCatalogStorageFitsHeader header = { NULL, NULL, NULL, NULL, NULL, 0, 0, -1, 0, 0, 0, FALSE, FALSE };
+  fitsfile *fptr                         = NULL;
+  gint status                            = 0;
+
+  fits_open_file (&fptr, storage_fits->filename, storage_fits->read_only ? READONLY : READWRITE, &status);
+  _ncm_mset_catalog_storage_fits_check (status, storage_fits->filename, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  storage_fits->fptr = fptr;
+  header.names       = g_ptr_array_new_with_free_func (g_free);
+  header.symbs       = g_ptr_array_new_with_free_func (g_free);
+
+  header.mset = _ncm_mset_catalog_storage_fits_read_mset (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_header_clear (&header), );
+
+  _ncm_mset_catalog_storage_fits_read_desc_keys (storage_fits, &header, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_header_clear (&header), );
+
+  _ncm_mset_catalog_storage_fits_read_segments (storage_fits, &header, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_header_clear (&header), );
+
+  _ncm_mset_catalog_storage_fits_read_rng (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_header_clear (&header), );
+
+  g_ptr_array_add (header.names, NULL);
+  g_ptr_array_add (header.symbs, NULL);
+
+  storage_fits->desc = ncm_mset_catalog_desc_new (header.mset, header.nchains, header.weighted,
+                                                  (const gchar * const *) header.names->pdata,
+                                                  (const gchar * const *) header.symbs->pdata,
+                                                  header.m2lnp_var, header.desc_rtype, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_header_clear (&header), );
+
+  _ncm_mset_catalog_storage_fits_set_porder (storage_fits, storage_fits->desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_header_clear (&header), );
+
+  storage_fits->legacy       = header.legacy;
+  storage_fits->tail_first   = (guint) header.nrows;
+  storage_fits->n_pending    = 0;
+  storage_fits->markovian_id = (header.markid > storage_fits->first_id) ? (guint) (header.markid - storage_fits->first_id) : 0;
+
+  if (storage_fits->markovian_id > (guint) header.nrows)
+    storage_fits->markovian_id = (guint) header.nrows;
+
+  _ncm_mset_catalog_storage_fits_header_clear (&header);
+}
+
+/* Closes the file and discards what a failed open read. */
+static void
+_ncm_mset_catalog_storage_fits_discard_open (NcmMSetCatalogStorageFits *storage_fits)
+{
+  gint status = 0;
+
+  if (storage_fits->fptr != NULL)
+    fits_close_file (FPTR (storage_fits), &status);
+
+  storage_fits->fptr = NULL;
+  ncm_mset_catalog_desc_clear (&storage_fits->desc);
+  g_array_set_size (storage_fits->segments, 0);
+  g_clear_pointer (&storage_fits->rng_algo, g_free);
+  g_clear_pointer (&storage_fits->rng_inis, g_free);
+  g_clear_pointer (&storage_fits->rng_stat, g_free);
+}
+
+/*
+ * Opens the file at the first call that needs it. A storage whose file does not exist
+ * stays uninitialized until store_desc creates it; read-only, the missing file is an
+ * error.
  */
 static void
 _ncm_mset_catalog_storage_fits_ensure_open (NcmMSetCatalogStorageFits *storage_fits, GError **error)
@@ -1022,8 +1112,8 @@ _ncm_mset_catalog_storage_fits_ensure_open (NcmMSetCatalogStorageFits *storage_f
 
   if (storage_fits->filename == NULL)
   {
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                 "the storage has no file name");
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "the storage has no file name");
 
     return;
   }
@@ -1031,28 +1121,12 @@ _ncm_mset_catalog_storage_fits_ensure_open (NcmMSetCatalogStorageFits *storage_f
   if (g_file_test (storage_fits->filename, G_FILE_TEST_EXISTS))
   {
     _ncm_mset_catalog_storage_fits_open_existing (storage_fits, error);
-
-    if (*error != NULL)
-    {
-      gint status = 0;
-
-      if (storage_fits->fptr != NULL)
-        fits_close_file (FPTR (storage_fits), &status);
-
-      storage_fits->fptr = NULL;
-      ncm_mset_catalog_desc_clear (&storage_fits->desc);
-      g_array_set_size (storage_fits->segments, 0);
-      g_clear_pointer (&storage_fits->rng_algo, g_free);
-      g_clear_pointer (&storage_fits->rng_inis, g_free);
-      g_clear_pointer (&storage_fits->rng_stat, g_free);
-
-      return;
-    }
+    NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_discard_open (storage_fits), );
   }
   else if (storage_fits->read_only)
   {
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
-                 "the read-only file `%s' does not exist", storage_fits->filename);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                "the read-only file `%s' does not exist", storage_fits->filename);
 
     return;
   }
@@ -1060,8 +1134,10 @@ _ncm_mset_catalog_storage_fits_ensure_open (NcmMSetCatalogStorageFits *storage_f
   storage_fits->opened = TRUE;
 }
 
-/* Writes the n_pending rows at the end of the tail to the file and drops from the tail the
- * rows beyond keep-last per chain. */
+/*
+ * Writes the n_pending rows at the end of the tail to the file and drops from the tail
+ * the rows beyond keep-last per chain.
+ */
 static void
 _ncm_mset_catalog_storage_fits_write_pending (NcmMSetCatalogStorageFits *storage_fits, GError **error)
 {
@@ -1089,12 +1165,12 @@ _ncm_mset_catalog_storage_fits_write_pending (NcmMSetCatalogStorageFits *storage
   }
 
   _ncm_mset_catalog_storage_fits_check (status, "rows", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
+  storage_fits->n_pending = 0;
+
   {
     const guint keep = storage_fits->keep_last * ncm_mset_catalog_desc_nchains (storage_fits->desc);
-
-    storage_fits->n_pending = 0;
 
     if (storage_fits->tail->len > keep)
     {
@@ -1133,11 +1209,33 @@ _ncm_mset_catalog_storage_fits_read_block (NcmMSetCatalogStorageFits *storage_fi
   }
 
   _ncm_mset_catalog_storage_fits_check (status, "rows", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, g_ptr_array_set_size (storage_fits->block, 0), );
 
-  if (*error == NULL)
-    storage_fits->block_first = first;
-  else
-    g_ptr_array_set_size (storage_fits->block, 0);
+  storage_fits->block_first = first;
+}
+
+/* Writes segment i: SEGS<i>, SEGN<i>, SEGO<i>. */
+static void
+_ncm_mset_catalog_storage_fits_write_segment (NcmMSetCatalogStorageFits *storage_fits, guint i, GError **error)
+{
+  fitsfile *fptr                            = FPTR (storage_fits);
+  NcmMSetCatalogStorageFitsSegment *segment = &g_array_index (storage_fits->segments, NcmMSetCatalogStorageFitsSegment, i);
+  gchar *key_s                              = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_START_LABEL, i);
+  gchar *key_n                              = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_SAMPLER_LABEL, i);
+  gchar *key_o                              = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_OPTIONS_LABEL, i);
+
+  _ncm_mset_catalog_storage_fits_write_int (fptr, key_s, segment->start, "First row of the segment.", error);
+  g_free (key_s);
+  NCM_UTIL_ON_ERROR_RETURN (error, { g_free (key_n);
+                                     g_free (key_o);
+                            }, );
+
+  _ncm_mset_catalog_storage_fits_write_longstr (fptr, key_n, segment->sampler, "Sampler of the segment.", error);
+  g_free (key_n);
+  NCM_UTIL_ON_ERROR_RETURN (error, g_free (key_o), );
+
+  _ncm_mset_catalog_storage_fits_write_longstr (fptr, key_o, segment->options, "Sampler options of the segment.", error);
+  g_free (key_o);
 }
 
 /* Writes the segment record and the SAMPLER/SAMPOPT keys of the last segment. */
@@ -1146,39 +1244,27 @@ _ncm_mset_catalog_storage_fits_write_segments (NcmMSetCatalogStorageFits *storag
 {
   fitsfile *fptr = FPTR (storage_fits);
   const guint n  = storage_fits->segments->len;
+  NcmMSetCatalogStorageFitsSegment *last;
   guint i;
 
   _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_STORAGE_FITS_NSEGS_LABEL, n, "Number of sampler segments.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  for (i = 0; (i < n) && (*error == NULL); i++)
+  for (i = 0; i < n; i++)
   {
-    NcmMSetCatalogStorageFitsSegment *segment = &g_array_index (storage_fits->segments, NcmMSetCatalogStorageFitsSegment, i);
-    gchar *key_s                              = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_START_LABEL, i);
-    gchar *key_n                              = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_SAMPLER_LABEL, i);
-    gchar *key_o                              = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_OPTIONS_LABEL, i);
-
-    _ncm_mset_catalog_storage_fits_write_int (fptr, key_s, segment->start, "First row of the segment.", error);
-
-    if (*error == NULL)
-      _ncm_mset_catalog_storage_fits_write_longstr (fptr, key_n, segment->sampler, "Sampler of the segment.", error);
-
-    if (*error == NULL)
-      _ncm_mset_catalog_storage_fits_write_longstr (fptr, key_o, segment->options, "Sampler options of the segment.", error);
-
-    g_free (key_s);
-    g_free (key_n);
-    g_free (key_o);
+    _ncm_mset_catalog_storage_fits_write_segment (storage_fits, i, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
   }
 
-  if ((*error == NULL) && (n > 0))
-  {
-    NcmMSetCatalogStorageFitsSegment *last = &g_array_index (storage_fits->segments, NcmMSetCatalogStorageFitsSegment, n - 1);
+  if (n == 0)
+    return;
 
-    _ncm_mset_catalog_storage_fits_write_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, last->sampler, "sampler; informative only.", error);
+  last = &g_array_index (storage_fits->segments, NcmMSetCatalogStorageFitsSegment, n - 1);
 
-    if (*error == NULL)
-      _ncm_mset_catalog_storage_fits_write_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, last->options, "sampler options; informative only.", error);
-  }
+  _ncm_mset_catalog_storage_fits_write_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, last->sampler, "sampler; informative only.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_write_longstr (fptr, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, last->options, "sampler options; informative only.", error);
 }
 
 /* Writes the translated run type and the segment record of a file without NSEGS. */
@@ -1190,66 +1276,53 @@ _ncm_mset_catalog_storage_fits_migrate_legacy (NcmMSetCatalogStorageFits *storag
 
   _ncm_mset_catalog_storage_fits_write_str (FPTR (storage_fits), NCM_MSET_CATALOG_RTYPE_LABEL,
                                             ncm_mset_catalog_desc_get_run_type (storage_fits->desc), "Run type string.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_segments (storage_fits, error);
+  _ncm_mset_catalog_storage_fits_write_segments (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    storage_fits->legacy = FALSE;
+  storage_fits->legacy = FALSE;
 }
 
-/* Creates the file for desc: HDU0 with the mset, the table and the description keys. */
+/* Writes HDU0: the serialized mset in a vardict under `model-set'. */
 static void
-_ncm_mset_catalog_storage_fits_create (NcmMSetCatalogStorageFits *storage_fits, NcmMSetCatalogDesc *desc, GError **error)
+_ncm_mset_catalog_storage_fits_write_hdu0 (fitsfile *fptr, NcmMSet *mset, GError **error)
 {
-  NcmMSet *mset          = ncm_mset_catalog_desc_peek_mset (desc);
-  const guint nadd       = ncm_mset_catalog_desc_nadd_vals (desc);
-  const guint ncols      = ncm_mset_catalog_desc_ncols (desc);
-  const guint fparam_len = ncols - nadd;
-  GPtrArray *ttype       = g_ptr_array_new ();
-  GPtrArray *tform       = g_ptr_array_new ();
-  fitsfile *fptr         = NULL;
-  gint status            = 0;
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVarDict *vd    = ncm_var_dict_new ();
+  gint status       = 0;
+  GVariant *var;
+  glong naxes[1];
+
+  ncm_var_dict_set_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, G_OBJECT (mset));
+  var      = ncm_serialize_var_dict_to_variant (ser, vd);
+  naxes[0] = (glong) g_variant_get_size (var);
+
+  fits_create_img (fptr, BYTE_IMG, 1, naxes, &status);
+
+  if (status == 0)
+    fits_write_img (fptr, TBYTE, 1, naxes[0], (gpointer) g_variant_get_data (var), &status);
+
+  if (status == 0)
+    fits_write_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, NCM_MSET_CATALOG_MSET_FORMAT_VARDICT,
+                        "Format of the data stored in this HDU.", &status);
+
+  g_variant_unref (var);
+  ncm_var_dict_unref (vd);
+  ncm_serialize_free (ser);
+
+  _ncm_mset_catalog_storage_fits_check (status, "HDU0", error);
+}
+
+/* Creates the table with one double column per column of desc. */
+static void
+_ncm_mset_catalog_storage_fits_create_table (fitsfile *fptr, NcmMSetCatalogDesc *desc, GError **error)
+{
+  const guint ncols = ncm_mset_catalog_desc_ncols (desc);
+  GPtrArray *ttype  = g_ptr_array_new ();
+  GPtrArray *tform  = g_ptr_array_new ();
+  gint status       = 0;
   guint i;
-
-  fits_create_file (&fptr, storage_fits->filename, &status);
-  _ncm_mset_catalog_storage_fits_check (status, storage_fits->filename, error);
-
-  if (*error != NULL)
-  {
-    g_ptr_array_unref (ttype);
-    g_ptr_array_unref (tform);
-
-    return;
-  }
-
-  storage_fits->fptr = fptr;
-
-  {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-    NcmVarDict *vd    = ncm_var_dict_new ();
-    GVariant *var;
-    glong naxes[1];
-
-    ncm_var_dict_set_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, G_OBJECT (mset));
-    var      = ncm_serialize_var_dict_to_variant (ser, vd);
-    naxes[0] = (glong) g_variant_get_size (var);
-
-    fits_create_img (fptr, BYTE_IMG, 1, naxes, &status);
-
-    if (status == 0)
-      fits_write_img (fptr, TBYTE, 1, naxes[0], (gpointer) g_variant_get_data (var), &status);
-
-    if (status == 0)
-      fits_write_key_str (fptr, NCM_MSET_CATALOG_MSET_FORMAT_LABEL, NCM_MSET_CATALOG_MSET_FORMAT_VARDICT,
-                          "Format of the data stored in this HDU.", &status);
-
-    _ncm_mset_catalog_storage_fits_check (status, "HDU0", error);
-
-    g_variant_unref (var);
-    ncm_var_dict_unref (vd);
-    ncm_serialize_free (ser);
-  }
 
   for (i = 0; i < ncols; i++)
   {
@@ -1257,64 +1330,93 @@ _ncm_mset_catalog_storage_fits_create (NcmMSetCatalogStorageFits *storage_fits, 
     g_ptr_array_add (tform, "1D");
   }
 
-  if (*error == NULL)
-  {
-    fits_create_tbl (fptr, BINARY_TBL, 0, ncols, (gchar **) ttype->pdata, (gchar **) tform->pdata,
-                     NULL, NCM_MSET_CATALOG_EXTNAME, &status);
-    _ncm_mset_catalog_storage_fits_check (status, NCM_MSET_CATALOG_EXTNAME, error);
-  }
+  fits_create_tbl (fptr, BINARY_TBL, 0, ncols, (gchar **) ttype->pdata, (gchar **) tform->pdata,
+                   NULL, NCM_MSET_CATALOG_EXTNAME, &status);
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_str (fptr, NCM_MSET_CATALOG_RTYPE_LABEL, ncm_mset_catalog_desc_get_run_type (desc), "Run type string.", error);
+  g_ptr_array_unref (ttype);
+  g_ptr_array_unref (tform);
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_NCHAINS_LABEL, ncm_mset_catalog_desc_nchains (desc), "Number of chains.", error);
+  _ncm_mset_catalog_storage_fits_check (status, NCM_MSET_CATALOG_EXTNAME, error);
+}
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_NADDVAL_LABEL, nadd, "Number of additional values.", error);
+/* Writes the description keys and the initial run metadata of a new table. */
+static void
+_ncm_mset_catalog_storage_fits_write_desc_keys (fitsfile *fptr, NcmMSetCatalogDesc *desc, GError **error)
+{
+  NcmMSet *mset          = ncm_mset_catalog_desc_peek_mset (desc);
+  const guint nadd       = ncm_mset_catalog_desc_nadd_vals (desc);
+  const guint fparam_len = ncm_mset_catalog_desc_ncols (desc) - nadd;
+  guint i;
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_bool (fptr, NCM_MSET_CATALOG_WEIGHTED_LABEL, ncm_mset_catalog_desc_weighted (desc), "Whether the catalog is weighted.", error);
+  _ncm_mset_catalog_storage_fits_write_str (fptr, NCM_MSET_CATALOG_RTYPE_LABEL, ncm_mset_catalog_desc_get_run_type (desc), "Run type string.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  for (i = 0; (i < nadd) && (*error == NULL); i++)
+  _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_NCHAINS_LABEL, ncm_mset_catalog_desc_nchains (desc), "Number of chains.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_NADDVAL_LABEL, nadd, "Number of additional values.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_write_bool (fptr, NCM_MSET_CATALOG_WEIGHTED_LABEL, ncm_mset_catalog_desc_weighted (desc), "Whether the catalog is weighted.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  for (i = 0; i < nadd; i++)
   {
     gchar *asymbi     = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
     gchar *asymb_desc = g_strdup_printf ("Symbol for additional value %s[%u]", ncm_mset_catalog_desc_col_name (desc, i), i + 1);
 
     _ncm_mset_catalog_storage_fits_write_str (fptr, asymbi, ncm_mset_catalog_desc_col_symb (desc, i), asymb_desc, error);
-
     g_free (asymbi);
     g_free (asymb_desc);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
   }
 
-  for (i = 0; (i < fparam_len) && (*error == NULL); i++)
+  for (i = 0; i < fparam_len; i++)
   {
     gchar *fsymbi     = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_FSYMB_LABEL, i + 1);
     gchar *fsymb_desc = g_strdup_printf ("Symbol for parameter %s[%u]", ncm_mset_fparam_name (mset, i), i + 1);
 
     _ncm_mset_catalog_storage_fits_write_str (fptr, fsymbi, ncm_mset_fparam_symbol (mset, i), fsymb_desc, error);
-
     g_free (fsymbi);
     g_free (fsymb_desc);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
   }
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, 0, "Id of the first element.", error);
+  _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, 0, "Id of the first element.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_M2LNP_ID_LABEL, ncm_mset_catalog_desc_get_m2lnp_var (desc), "Id of the m2lnp variable.", error);
+  _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_M2LNP_ID_LABEL, ncm_mset_catalog_desc_get_m2lnp_var (desc), "Id of the m2lnp variable.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, 0, "First row id of the Markovian chain.", error);
+  _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, 0, "First row id of the Markovian chain.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_STORAGE_FITS_NSEGS_LABEL, 0, "Number of sampler segments.", error);
+  _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_STORAGE_FITS_NSEGS_LABEL, 0, "Number of sampler segments.", error);
+}
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
+/* Creates the file for desc: HDU0 with the mset, the table and the description keys. */
+static void
+_ncm_mset_catalog_storage_fits_create (NcmMSetCatalogStorageFits *storage_fits, NcmMSetCatalogDesc *desc, GError **error)
+{
+  fitsfile *fptr = NULL;
+  gint status    = 0;
 
-  g_ptr_array_unref (ttype);
-  g_ptr_array_unref (tform);
+  fits_create_file (&fptr, storage_fits->filename, &status);
+  _ncm_mset_catalog_storage_fits_check (status, storage_fits->filename, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  storage_fits->fptr = fptr;
+
+  _ncm_mset_catalog_storage_fits_write_hdu0 (fptr, ncm_mset_catalog_desc_peek_mset (desc), error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_create_table (fptr, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_write_desc_keys (fptr, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
 }
 
 /* Writes the pending rows of a writable storage and closes the file. */
@@ -1327,10 +1429,12 @@ _ncm_mset_catalog_storage_fits_close (NcmMSetCatalogStorageFits *storage_fits)
     gint status   = 0;
 
     if (!storage_fits->read_only)
+    {
       _ncm_mset_catalog_storage_fits_write_pending (storage_fits, &error);
 
-    if ((error == NULL) && !storage_fits->read_only)
-      _ncm_mset_catalog_storage_fits_flush (storage_fits, &error);
+      if (error == NULL)
+        _ncm_mset_catalog_storage_fits_flush (storage_fits, &error);
+    }
 
     if (error != NULL)
     {
@@ -1344,8 +1448,8 @@ _ncm_mset_catalog_storage_fits_close (NcmMSetCatalogStorageFits *storage_fits)
 }
 
 /*
- * The virtual functions. Each opens the file first; a getter on a storage without a file
- * answers the empty state.
+ * The virtual functions. Each opens the file first; a getter on a storage without a
+ * file answers the empty state.
  */
 
 static NcmMSetCatalogDesc *
@@ -1354,6 +1458,7 @@ _ncm_mset_catalog_storage_fits_peek_desc (NcmMSetCatalogStorage *storage, GError
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
   return storage_fits->desc;
 }
@@ -1366,18 +1471,16 @@ _ncm_mset_catalog_storage_fits_store_desc (NcmMSetCatalogStorage *storage, NcmMS
   g_assert_null (storage_fits->desc);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_create (storage_fits, desc, error);
+  _ncm_mset_catalog_storage_fits_create (storage_fits, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-  {
-    storage_fits->desc = ncm_mset_catalog_desc_ref (desc);
-    _ncm_mset_catalog_storage_fits_set_porder (storage_fits, desc, error);
-  }
+  storage_fits->desc = ncm_mset_catalog_desc_ref (desc);
+  _ncm_mset_catalog_storage_fits_set_porder (storage_fits, desc, error);
 }
 
 /* Binds desc: the column map follows its order and the rows in memory are permuted. */
@@ -1422,12 +1525,10 @@ _ncm_mset_catalog_storage_fits_bind_desc (NcmMSetCatalogStorage *storage, NcmMSe
   g_ptr_array_set_size (storage_fits->block, 0);
 
   _ncm_mset_catalog_storage_fits_set_porder (storage_fits, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-  {
-    ncm_mset_catalog_desc_clear (&storage_fits->desc);
-    storage_fits->desc = ncm_mset_catalog_desc_ref (desc);
-  }
+  ncm_mset_catalog_desc_clear (&storage_fits->desc);
+  storage_fits->desc = ncm_mset_catalog_desc_ref (desc);
 }
 
 static guint
@@ -1436,6 +1537,7 @@ _ncm_mset_catalog_storage_fits_nrows (NcmMSetCatalogStorage *storage, GError **e
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , 0);
 
   return storage_fits->tail_first + storage_fits->tail->len;
 }
@@ -1446,12 +1548,10 @@ _ncm_mset_catalog_storage_fits_append (NcmMSetCatalogStorage *storage, NcmVector
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-  {
-    g_ptr_array_add (storage_fits->tail, ncm_vector_dup (row));
-    storage_fits->n_pending++;
-  }
+  g_ptr_array_add (storage_fits->tail, ncm_vector_dup (row));
+  storage_fits->n_pending++;
 }
 
 static NcmVector *
@@ -1460,9 +1560,7 @@ _ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i,
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
-
-  if (*error != NULL)
-    return NULL;
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
   if (i >= storage_fits->tail_first)
     return ncm_vector_ref (g_ptr_array_index (storage_fits->tail, i - storage_fits->tail_first));
@@ -1472,9 +1570,7 @@ _ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i,
     const guint first = i - (i % storage_fits->read_block);
 
     _ncm_mset_catalog_storage_fits_read_block (storage_fits, first, MIN (storage_fits->read_block, storage_fits->tail_first - first), error);
-
-    if (*error != NULL)
-      return NULL;
+    NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
   }
 
   return ncm_vector_ref (g_ptr_array_index (storage_fits->block, i - storage_fits->block_first));
@@ -1489,9 +1585,9 @@ _ncm_mset_catalog_storage_fits_sync (NcmMSetCatalogStorage *storage, GError **er
     return;
 
   _ncm_mset_catalog_storage_fits_write_pending (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
+  _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
 }
 
 static void
@@ -1499,7 +1595,17 @@ _ncm_mset_catalog_storage_fits_get_rng_init (NcmMSetCatalogStorage *storage, gch
 {
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
+  if (algo != NULL)
+    *algo = NULL;
+
+  if (seed != NULL)
+    *seed = 0;
+
+  if (state != NULL)
+    *state = NULL;
+
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   if (algo != NULL)
     *algo = g_strdup (storage_fits->rng_algo);
@@ -1518,27 +1624,25 @@ _ncm_mset_catalog_storage_fits_set_rng_init (NcmMSetCatalogStorage *storage, con
   fitsfile *fptr                          = FPTR (storage_fits);
 
   _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_str (fptr, NCM_MSET_CATALOG_RNG_ALGO_LABEL, algo, "RNG Algorithm name.", error);
+  _ncm_mset_catalog_storage_fits_write_str (fptr, NCM_MSET_CATALOG_RNG_ALGO_LABEL, algo, "RNG Algorithm name.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_ulong (fptr, NCM_MSET_CATALOG_RNG_SEED_LABEL, seed, "RNG Algorithm seed.", error);
+  _ncm_mset_catalog_storage_fits_write_ulong (fptr, NCM_MSET_CATALOG_RNG_SEED_LABEL, seed, "RNG Algorithm seed.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_longstr (fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, state, NULL, error);
+  _ncm_mset_catalog_storage_fits_write_longstr (fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, state, NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
+  _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-  {
-    g_free (storage_fits->rng_algo);
-    g_free (storage_fits->rng_inis);
-    storage_fits->rng_algo = g_strdup (algo);
-    storage_fits->rng_seed = seed;
-    storage_fits->rng_inis = g_strdup (state);
-  }
+  g_free (storage_fits->rng_algo);
+  g_free (storage_fits->rng_inis);
+  storage_fits->rng_algo = g_strdup (algo);
+  storage_fits->rng_seed = seed;
+  storage_fits->rng_inis = g_strdup (state);
 }
 
 static gchar *
@@ -1547,6 +1651,7 @@ _ncm_mset_catalog_storage_fits_get_rng_stat (NcmMSetCatalogStorage *storage, GEr
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
   return g_strdup (storage_fits->rng_stat);
 }
@@ -1557,15 +1662,13 @@ _ncm_mset_catalog_storage_fits_set_rng_stat (NcmMSetCatalogStorage *storage, con
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_longstr (FPTR (storage_fits), NCM_MSET_CATALOG_RNG_STAT_LABEL, state, NULL, error);
+  _ncm_mset_catalog_storage_fits_write_longstr (FPTR (storage_fits), NCM_MSET_CATALOG_RNG_STAT_LABEL, state, NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-  {
-    g_free (storage_fits->rng_stat);
-    storage_fits->rng_stat = g_strdup (state);
-  }
+  g_free (storage_fits->rng_stat);
+  storage_fits->rng_stat = g_strdup (state);
 }
 
 static guint
@@ -1574,6 +1677,7 @@ _ncm_mset_catalog_storage_fits_get_markovian_id (NcmMSetCatalogStorage *storage,
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , 0);
 
   return storage_fits->markovian_id;
 }
@@ -1584,13 +1688,13 @@ _ncm_mset_catalog_storage_fits_set_markovian_id (NcmMSetCatalogStorage *storage,
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_write_int (FPTR (storage_fits), NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL,
-                                              (gint) markovian_id + storage_fits->first_id, "First row id of the Markovian chain.", error);
+  _ncm_mset_catalog_storage_fits_write_int (FPTR (storage_fits), NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL,
+                                            (gint) markovian_id + storage_fits->first_id, "First row id of the Markovian chain.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if (*error == NULL)
-    storage_fits->markovian_id = markovian_id;
+  storage_fits->markovian_id = markovian_id;
 }
 
 static guint
@@ -1599,6 +1703,7 @@ _ncm_mset_catalog_storage_fits_n_samplers (NcmMSetCatalogStorage *storage, GErro
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , 0);
 
   return storage_fits->segments->len;
 }
@@ -1610,14 +1715,12 @@ _ncm_mset_catalog_storage_fits_get_sampler (NcmMSetCatalogStorage *storage, guin
   NcmMSetCatalogStorageFitsSegment *segment;
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
-
-  if (*error != NULL)
-    return;
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   if (i >= storage_fits->segments->len)
   {
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
-                 "sampler segment %u, the storage has %u", i, storage_fits->segments->len);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
+                                "sampler segment %u, the storage has %u", i, storage_fits->segments->len);
 
     return;
   }
@@ -1640,35 +1743,37 @@ _ncm_mset_catalog_storage_fits_set_sampler (NcmMSetCatalogStorage *storage, guin
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
   _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  if ((*error == NULL) && (i > storage_fits->segments->len))
-    g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
-                 "sampler segment %u, the storage has %u", i, storage_fits->segments->len);
-
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_migrate_legacy (storage_fits, error);
-
-  if (*error == NULL)
+  if (i > storage_fits->segments->len)
   {
-    if (i == storage_fits->segments->len)
-    {
-      _ncm_mset_catalog_storage_fits_add_segment (storage_fits, start, sampler, options);
-    }
-    else
-    {
-      NcmMSetCatalogStorageFitsSegment *segment = &g_array_index (storage_fits->segments, NcmMSetCatalogStorageFitsSegment, i);
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
+                                "sampler segment %u, the storage has %u", i, storage_fits->segments->len);
 
-      _ncm_mset_catalog_storage_fits_segment_clear (segment);
-      segment->start   = start;
-      segment->sampler = g_strdup (sampler);
-      segment->options = g_strdup ((options != NULL) ? options : "");
-    }
-
-    _ncm_mset_catalog_storage_fits_write_segments (storage_fits, error);
+    return;
   }
 
-  if (*error == NULL)
-    _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
+  _ncm_mset_catalog_storage_fits_migrate_legacy (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  if (i == storage_fits->segments->len)
+  {
+    _ncm_mset_catalog_storage_fits_add_segment (storage_fits, start, sampler, options);
+  }
+  else
+  {
+    NcmMSetCatalogStorageFitsSegment *segment = &g_array_index (storage_fits->segments, NcmMSetCatalogStorageFitsSegment, i);
+
+    _ncm_mset_catalog_storage_fits_segment_clear (segment);
+    segment->start   = start;
+    segment->sampler = g_strdup (sampler);
+    segment->options = g_strdup ((options != NULL) ? options : "");
+  }
+
+  _ncm_mset_catalog_storage_fits_write_segments (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
 }
 
 #else /* HAVE_CFITSIO */
@@ -1676,8 +1781,8 @@ _ncm_mset_catalog_storage_fits_set_sampler (NcmMSetCatalogStorage *storage, guin
 static void
 _ncm_mset_catalog_storage_fits_no_cfitsio (GError **error)
 {
-  g_set_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO,
-               "NumCosmo was built without CFITSIO");
+  ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO,
+                              "NumCosmo was built without CFITSIO");
 }
 
 static void
@@ -1824,17 +1929,9 @@ ncm_mset_catalog_storage_fits_new (const gchar *filename, gboolean read_only, GE
                                                           "filename", filename,
                                                           "read-only", read_only,
                                                           NULL);
-  GError *local_error = NULL;
 
-  ncm_mset_catalog_storage_peek_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), &local_error);
-
-  if (local_error != NULL)
-  {
-    ncm_mset_catalog_storage_fits_clear (&storage_fits);
-    ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_fits_new");
-
-    return NULL;
-  }
+  ncm_mset_catalog_storage_peek_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, ncm_mset_catalog_storage_fits_clear (&storage_fits), NULL, "ncm_mset_catalog_storage_fits_new: ");
 
   return storage_fits;
 }
