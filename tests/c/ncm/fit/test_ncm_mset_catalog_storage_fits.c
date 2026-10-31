@@ -105,8 +105,10 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-/* A temporary directory, a file name in it and a Desc with two chains and two free
- * parameters of an NcmModelMVND. */
+/*
+ * A temporary directory, a file name in it and a Desc with two chains and two free
+ * parameters of an NcmModelMVND.
+ */
 static void
 test_ncm_mset_catalog_storage_fits_new (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
 {
@@ -443,8 +445,10 @@ test_ncm_mset_catalog_storage_fits_fixture_weighted (void)
   }
 }
 
-/* Every row of esmcmc.fits equals the row the previous reader gives, through the block
- * reads of a one-row block and of the default block. */
+/*
+ * Every row of esmcmc.fits equals the row the previous reader gives, through the block
+ * reads of a one-row block and of the default block.
+ */
 static void
 test_ncm_mset_catalog_storage_fits_fixture_rows (void)
 {
@@ -538,8 +542,10 @@ test_ncm_mset_catalog_storage_fits_errors (void)
   }
 }
 
-/* A new file: Desc, RNG, two recordings with syncs after every row, reopened writable and
- * read by the previous reader. */
+/*
+ * A new file: Desc, RNG, two recordings with syncs after every row, reopened writable
+ * and read by the previous reader.
+ */
 static void
 test_ncm_mset_catalog_storage_fits_write_reopen (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
 {
@@ -698,8 +704,10 @@ test_ncm_mset_catalog_storage_fits_write_reopen (TestNcmMSetCatalogStorageFits *
   ncm_rng_free (rng);
 }
 
-/* A Desc with the free parameters in the other order bound to a file: the rows come out in
- * the bound order, in memory and from the file. */
+/*
+ * A Desc with the free parameters in the other order bound to a file: the rows come
+ * out in the bound order, in memory and from the file.
+ */
 static void
 test_ncm_mset_catalog_storage_fits_bind_order (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
 {
@@ -780,8 +788,10 @@ test_ncm_mset_catalog_storage_fits_bind_order (TestNcmMSetCatalogStorageFits *te
   ncm_serialize_free (ser);
 }
 
-/* A copy of esmcmc.fits opened writable: the first recording writes the translated run type
- * and the segment record; the file keeps the previous reader working. */
+/*
+ * A copy of esmcmc.fits opened writable: the first recording writes the translated run
+ * type and the segment record; the file keeps the previous reader working.
+ */
 static void
 test_ncm_mset_catalog_storage_fits_migrate (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
 {
