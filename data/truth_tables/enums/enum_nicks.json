@@ -387,6 +387,10 @@
     "nick": "work-return",
     "type": "Ncm.MPIJobCtrlTag"
   },
+  "NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME": {
+    "nick": "duplicate-name",
+    "type": "Ncm.MSetCatalogDescError"
+  },
   "NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE": {
     "nick": "incompatible",
     "type": "Ncm.MSetCatalogDescError"

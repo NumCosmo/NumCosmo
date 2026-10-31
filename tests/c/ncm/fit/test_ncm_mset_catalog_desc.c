@@ -305,6 +305,43 @@ test_ncm_mset_catalog_desc_new_errors (TestNcmMSetCatalogDesc *test, gconstpoint
   g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR);
   g_clear_error (&error);
 
+  /* Names address the columns: empty, repeated, the weight column name and a free-parameter
+   * full name are refused. */
+  {
+    const gchar *two_symbols[]   = { "a", "b", NULL };
+    const gchar *empty_name[]    = { "m2lnL", "", NULL };
+    const gchar *repeated_name[] = { "m2lnL", "m2lnL", NULL };
+    const gchar *weight_name[]   = { "m2lnL", NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME, NULL };
+    const gchar *fparam_name[]   = { "m2lnL", "NcmModelMVND:mu_0", NULL };
+    const gchar *mixed_case[]    = { "m2lnL", "M2LNL", NULL };
+    NcmMSetCatalogDesc *desc;
+
+    g_assert_null (ncm_mset_catalog_desc_new (test->mset, 1, FALSE, empty_name, two_symbols, -1, NULL, &error));
+    g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME);
+    g_clear_error (&error);
+
+    g_assert_null (ncm_mset_catalog_desc_new (test->mset, 1, FALSE, repeated_name, two_symbols, -1, NULL, &error));
+    g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME);
+    g_clear_error (&error);
+
+    g_assert_null (ncm_mset_catalog_desc_new (test->mset, 1, FALSE, weight_name, two_symbols, -1, NULL, &error));
+    g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME);
+    g_clear_error (&error);
+
+    g_assert_null (ncm_mset_catalog_desc_new (test->mset, 1, FALSE, fparam_name, two_symbols, -1, NULL, &error));
+    g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME);
+    g_clear_error (&error);
+
+    /* Names differing in case are distinct; symbols may repeat. */
+    desc = ncm_mset_catalog_desc_new (test->mset, 1, FALSE, mixed_case, two_symbols, -1, NULL, &error);
+    g_assert_no_error (error);
+    ncm_mset_catalog_desc_free (desc);
+
+    desc = ncm_mset_catalog_desc_new (test->mset, 1, FALSE, two_symbols, repeated_name, -1, NULL, &error);
+    g_assert_no_error (error);
+    ncm_mset_catalog_desc_free (desc);
+  }
+
   ncm_mset_free (mset_nomap);
 }
 

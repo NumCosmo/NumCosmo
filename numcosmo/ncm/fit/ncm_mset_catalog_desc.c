@@ -232,7 +232,7 @@ _ncm_mset_catalog_desc_get_property (GObject *object, guint prop_id, GValue *val
   }
 }
 
-static void _ncm_mset_catalog_desc_check_input (NcmMSet *mset, guint names_len, guint symbols_len, gint m2lnp_var, GError **error);
+static void _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, guint names_len, guint symbols_len, gint m2lnp_var, GError **error);
 
 static void
 _ncm_mset_catalog_desc_constructed (GObject *object)
@@ -246,6 +246,7 @@ _ncm_mset_catalog_desc_constructed (GObject *object)
 
     /* Built from properties there is no error location: an invalid input aborts. */
     _ncm_mset_catalog_desc_check_input (desc->mset,
+                                        (const gchar * const *) desc->add_val_names->pdata,
                                         desc->add_val_names->len,
                                         desc->add_val_symbols->len,
                                         desc->m2lnp_var,
@@ -374,8 +375,10 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
  * free-parameter map is prepared, names and symbols agree in number, and m2lnp_var is -1 or
  * one of the user's additional values. */
 static void
-_ncm_mset_catalog_desc_check_input (NcmMSet *mset, guint names_len, guint symbols_len, gint m2lnp_var, GError **error)
+_ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, guint names_len, guint symbols_len, gint m2lnp_var, GError **error)
 {
+  guint i, j;
+
   if (mset == NULL)
     g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET,
                  "no NcmMSet given");
@@ -388,6 +391,54 @@ _ncm_mset_catalog_desc_check_input (NcmMSet *mset, guint names_len, guint symbol
   else if ((m2lnp_var < -1) || (m2lnp_var >= (gint) names_len))
     g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR,
                  "m2lnp-var %d is not -1 or one of the %u additional values", m2lnp_var, names_len);
+
+  if (*error != NULL)
+    return;
+
+  /* Column names address the columns, so each additional-value name is non-empty, appears
+   * once, and is neither the weight column name nor the full name of a free parameter. */
+  for (i = 0; (i < names_len) && (*error == NULL); i++)
+  {
+    const gchar *name = names[i];
+
+    if ((name == NULL) || (name[0] == '\0'))
+    {
+      g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
+                   "additional value %u has an empty name", i);
+
+      return;
+    }
+
+    if (strcmp (name, NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME) == 0)
+    {
+      g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
+                   "additional value %u has the weight column name `%s'", i, name);
+
+      return;
+    }
+
+    for (j = 0; j < i; j++)
+    {
+      if (strcmp (name, names[j]) == 0)
+      {
+        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
+                     "additional values %u and %u have the same name `%s'", j, i, name);
+
+        return;
+      }
+    }
+
+    for (j = 0; j < ncm_mset_fparams_len (mset); j++)
+    {
+      if (strcmp (name, ncm_mset_fparam_full_name (mset, j)) == 0)
+      {
+        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
+                     "additional value %u has the name of free parameter %u, `%s'", i, j, name);
+
+        return;
+      }
+    }
+  }
 }
 
 /**
@@ -415,7 +466,7 @@ ncm_mset_catalog_desc_new (NcmMSet *mset, guint nchains, gboolean weighted, cons
 
   GError *local_error = NULL;
 
-  _ncm_mset_catalog_desc_check_input (mset, names_len, symbols_len, m2lnp_var, &local_error);
+  _ncm_mset_catalog_desc_check_input (mset, names, names_len, symbols_len, m2lnp_var, &local_error);
 
   if (local_error != NULL)
   {
