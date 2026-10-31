@@ -29,29 +29,31 @@
  * An #NcmMSetCatalogStorage backed by a FITS file, the file format of #NcmMSetCatalog.
  *
  * The file holds the serialized #NcmMSet in HDU0 and a binary table named
- * %NCM_MSET_CATALOG_EXTNAME with one column per catalog column: the additional values (the
- * weight last, when the catalog is weighted) and then the free parameters. The table header
- * holds the description (`RTYPE`, `NCHAINS`, `NADDVAL`, `WEIGHTED`, `M2LNP_ID`, `ASYMB<n>`,
- * `FSYMB<n>`) and the run metadata (`RNG_ALGO`, `RNG_SEED`, `RNG_INIS`, `RNG_STAT`,
- * `MARKID`, and the sampler segments as `NSEGS`, `SEGS<n>`, `SEGN<n>`, `SEGO<n>`; `SAMPLER`
- * and `SAMPOPT` repeat the last segment for the previous library).
+ * %NCM_MSET_CATALOG_EXTNAME with one column per catalog column: the additional values
+ * (the weight last, when the catalog is weighted) and then the free parameters. The
+ * table header holds the description (`RTYPE`, `NCHAINS`, `NADDVAL`, `WEIGHTED`,
+ * `M2LNP_ID`, `ASYMB<n>`, `FSYMB<n>`) and the run metadata (`RNG_ALGO`, `RNG_SEED`,
+ * `RNG_INIS`, `RNG_STAT`, `MARKID`, and the sampler segments as `NSEGS`, `SEGS<n>`,
+ * `SEGN<n>`, `SEGO<n>`; `SAMPLER` and `SAMPOPT` repeat the last segment for the
+ * previous library).
  *
- * The file is opened at the first call that needs it. A storage on a file that does not
- * exist is uninitialized; ncm_mset_catalog_storage_set_desc() creates the file. A
+ * The file is opened at the first call that needs it. A storage on a file that does
+ * not exist is uninitialized; ncm_mset_catalog_storage_set_desc() creates the file. A
  * read-only storage (#NcmMSetCatalogStorageFits:read-only) fails every write with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY. Rows appended inside a recording are written to
- * the file at each sync; the last #NcmMSetCatalogStorageFits:keep-last rows per chain stay
- * in memory, and ncm_mset_catalog_storage_get_row() reads older rows from the file in blocks
- * of #NcmMSetCatalogStorageFits:read-block rows.
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY. Rows appended inside a recording are
+ * written to the file at each sync; the last #NcmMSetCatalogStorageFits:keep-last rows
+ * per chain stay in memory, and ncm_mset_catalog_storage_get_row() reads older rows
+ * from the file in blocks of #NcmMSetCatalogStorageFits:read-block rows.
  *
  * Files written by the previous library have no `NSEGS` key. They are read through a
  * translation: the run type values "Ensemble Sampler MCMC", "bootstrap-mean", the
  * #NcmFitMC resampling nicks and the transition kernel names become the class names
- * %NCM_MSET_CATALOG_RTYPE_ESMCMC, %NCM_MSET_CATALOG_RTYPE_MCBS, %NCM_MSET_CATALOG_RTYPE_MC
- * and %NCM_MSET_CATALOG_RTYPE_MCMC, and the sampler segments are rebuilt from `INITSMP`,
- * `SAMPLER` and `SAMPOPT`. A read-only storage keeps the translation in memory; a writable
- * one writes it to the file at the first recording. `FIRST_ID` is read, so that `MARKID`,
- * written in the file's numbering, is converted to a row index; new files have `FIRST_ID`
+ * %NCM_MSET_CATALOG_RTYPE_ESMCMC, %NCM_MSET_CATALOG_RTYPE_MCBS,
+ * %NCM_MSET_CATALOG_RTYPE_MC and %NCM_MSET_CATALOG_RTYPE_MCMC, and the sampler
+ * segments are rebuilt from `INITSMP`, `SAMPLER` and `SAMPOPT`. A read-only storage
+ * keeps the translation in memory; a writable one writes it to the file at the first
+ * recording. `FIRST_ID` is read, so that `MARKID`, written in the file's numbering, is
+ * converted to a row index; new files have `FIRST_ID`
  * 0. A file without `RNG_ALGO` and with an RNG state is read with the default algorithm of
  * ncm_rng_new(). Without CFITSIO every method fails with
  * %NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO.
@@ -293,7 +295,8 @@ ncm_mset_catalog_storage_fits_class_init (NcmMSetCatalogStorageFitsClass *klass)
    * NcmMSetCatalogStorageFits:read-only:
    *
    * Whether the file is opened for reading only; every write then fails with
-   * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY, and a file that does not exist is an error.
+   * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY, and a file that does not exist is an
+   * error.
    */
   g_object_class_install_property (object_class,
                                    PROP_READ_ONLY,
@@ -819,8 +822,8 @@ _ncm_mset_catalog_storage_fits_header_clear (NcmMSetCatalogStorageFitsHeader *he
 /*
  * Reads the description keys of the table: RTYPE, NCHAINS, NADDVAL, WEIGHTED, M2LNP_ID
  * (-1 when missing), FIRST_ID, MARKID (in the file numbering), the column count and
- * the additional-value names (the first NADDVAL columns, the weight last when weighted)
- * and symbols (ASYMB<n>, "no-symbol" when missing).
+ * the additional-value names (the first NADDVAL columns, the weight last when
+ * weighted) and symbols (ASYMB<n>, "no-symbol" when missing).
  */
 static void
 _ncm_mset_catalog_storage_fits_read_desc_keys (NcmMSetCatalogStorageFits *storage_fits, NcmMSetCatalogStorageFitsHeader *header, GError **error)
@@ -927,8 +930,8 @@ _ncm_mset_catalog_storage_fits_read_desc_keys (NcmMSetCatalogStorageFits *storag
 }
 
 /*
- * Reads the sampler segments: NSEGS and SEGS<n>, SEGN<n>, SEGO<n>, or the translation of
- * a file without NSEGS, which also sets the Desc run type.
+ * Reads the sampler segments: NSEGS and SEGS<n>, SEGN<n>, SEGO<n>, or the translation
+ * of a file without NSEGS, which also sets the Desc run type.
  */
 static void
 _ncm_mset_catalog_storage_fits_read_segments (NcmMSetCatalogStorageFits *storage_fits, NcmMSetCatalogStorageFitsHeader *header, GError **error)
@@ -994,8 +997,8 @@ _ncm_mset_catalog_storage_fits_read_segments (NcmMSetCatalogStorageFits *storage
 }
 
 /*
- * Reads the RNG record: RNG_INIS, RNG_STAT, RNG_ALGO (the default algorithm when missing
- * and RNG_INIS is present) and RNG_SEED.
+ * Reads the RNG record: RNG_INIS, RNG_STAT, RNG_ALGO (the default algorithm when
+ * missing and RNG_INIS is present) and RNG_SEED.
  */
 static void
 _ncm_mset_catalog_storage_fits_read_rng (NcmMSetCatalogStorageFits *storage_fits, GError **error)
@@ -1915,10 +1918,11 @@ _ncm_mset_catalog_storage_fits_set_sampler (NcmMSetCatalogStorage *storage, guin
  * @read_only: whether the file is opened for reading only
  * @error: a #GError
  *
- * Creates a storage on @filename and opens the file. A file that does not exist leaves the
- * storage uninitialized, to be created by ncm_mset_catalog_storage_set_desc(); read-only it
- * is an error. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND when the file cannot be
- * read and with %NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO without CFITSIO.
+ * Creates a storage on @filename and opens the file. A file that does not exist leaves
+ * the storage uninitialized, to be created by ncm_mset_catalog_storage_set_desc();
+ * read-only it is an error. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND when
+ * the file cannot be read and with %NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO without
+ * CFITSIO.
  *
  * Returns: (transfer full) (nullable): a new #NcmMSetCatalogStorageFits, %NULL on error
  */
