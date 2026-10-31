@@ -684,7 +684,10 @@ ncm_mset_catalog_storage_add_row (NcmMSetCatalogStorage *storage, NcmVector *row
  *
  * Syncs, writing the state of the storage's #NcmRNG, and closes the recording. The
  * recording is closed even when the sync fails. Fails with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING outside a recording.
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING outside a recording. This is where a
+ * file-backed storage reports a failure to write the rows of the recording; a storage
+ * dropped inside a recording writes them in dispose, which can only warn. Any holder of
+ * the storage may call it.
  */
 void
 ncm_mset_catalog_storage_end_recording (NcmMSetCatalogStorage *storage, GError **error)

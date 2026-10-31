@@ -1422,7 +1422,10 @@ _ncm_mset_catalog_storage_fits_create (NcmMSetCatalogStorageFits *storage_fits, 
   _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
 }
 
-/* Writes the pending rows of a writable storage and closes the file. */
+/*
+ * Writes the pending rows of a writable storage and closes the file. Called from dispose,
+ * which has no error channel: a failure is a warning, and the rows stay unwritten.
+ */
 static void
 _ncm_mset_catalog_storage_fits_close (NcmMSetCatalogStorageFits *storage_fits)
 {
@@ -1441,7 +1444,8 @@ _ncm_mset_catalog_storage_fits_close (NcmMSetCatalogStorageFits *storage_fits)
 
     if (error != NULL)
     {
-      g_warning ("ncm_mset_catalog_storage_fits: closing `%s': %s", storage_fits->filename, error->message);
+      g_warning ("ncm_mset_catalog_storage_fits: closing `%s': %s; %u rows not written, end the recording "
+                 "before dropping the storage", storage_fits->filename, error->message, storage_fits->n_pending);
       g_clear_error (&error);
     }
 
