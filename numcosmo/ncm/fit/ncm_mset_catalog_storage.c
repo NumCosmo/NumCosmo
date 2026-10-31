@@ -40,6 +40,9 @@
  * on a loaded storage it is rebuilt from the stored algorithm, seed and current state.
  * A storage with rows and no RNG never gets one.
  *
+ * ncm_mset_catalog_storage_erase() removes the rows, the sampler segments and the
+ * Markovian id outside a recording; the description and the RNG stay.
+ *
  * Rows, sampler segments and the Markovian id are written only inside a recording,
  * opened by ncm_mset_catalog_storage_start_recording() and closed by
  * ncm_mset_catalog_storage_end_recording(). One recording is open at a time. A
@@ -762,6 +765,77 @@ ncm_mset_catalog_storage_get_row (NcmMSetCatalogStorage *storage, guint i, GErro
   NCM_UTIL_ON_ERROR_FORWARD (error, ncm_vector_clear (&row), NULL, "ncm_mset_catalog_storage_get_row: ");
 
   return row;
+}
+
+/**
+ * ncm_mset_catalog_storage_peek_row:
+ * @storage: a #NcmMSetCatalogStorage
+ * @i: row index
+ * @error: a #GError
+ *
+ * Returns row @i in the order of the bound description without a new reference. The
+ * vector must not be modified, and it is readable until the next call on @storage that
+ * reads another row (ncm_mset_catalog_storage_peek_row() or
+ * ncm_mset_catalog_storage_get_row() with another index), adds a row, syncs, erases,
+ * sets the description, or until @storage is disposed. Concurrent readers use
+ * ncm_mset_catalog_storage_get_row(). Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_ROW
+ * when @i is not below the number of rows.
+ *
+ * Returns: (transfer none) (nullable): row @i, or %NULL on error
+ */
+NcmVector *
+ncm_mset_catalog_storage_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
+{
+  NcmMSetCatalogStorageClass *klass = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
+  const guint nrows                 = klass->nrows (storage, error);
+  NcmVector *row;
+
+  NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_catalog_storage_peek_row: ");
+
+  if (i >= nrows)
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW,
+                                "ncm_mset_catalog_storage_peek_row: row %u, the storage has %u rows", i, nrows);
+
+    return NULL;
+  }
+
+  row = klass->peek_row (storage, i, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_catalog_storage_peek_row: ");
+
+  return row;
+}
+
+/**
+ * ncm_mset_catalog_storage_erase:
+ * @storage: a #NcmMSetCatalogStorage
+ * @error: a #GError
+ *
+ * Removes every row, every sampler segment and the Markovian id. The description and
+ * the RNG stay: the stored initial RNG state remains the state before the first row
+ * ever added, and the current RNG state is left as written by the last sync. Fails with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description and with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING inside a recording.
+ */
+void
+ncm_mset_catalog_storage_erase (NcmMSetCatalogStorage *storage, GError **error)
+{
+  NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
+  NcmMSetCatalogStorageClass *klass         = NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage);
+
+  _ncm_mset_catalog_storage_require_desc (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_erase: ");
+
+  if (self->recording)
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
+                                "ncm_mset_catalog_storage_erase: a recording is open");
+
+    return;
+  }
+
+  klass->erase (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_erase: ");
 }
 
 /**

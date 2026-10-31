@@ -255,6 +255,8 @@ static void _ncm_mset_catalog_storage_fits_bind_desc (NcmMSetCatalogStorage *sto
 static guint _ncm_mset_catalog_storage_fits_nrows (NcmMSetCatalogStorage *storage, GError **error);
 static void _ncm_mset_catalog_storage_fits_append (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error);
 static NcmVector *_ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error);
+static NcmVector *_ncm_mset_catalog_storage_fits_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error);
+static void _ncm_mset_catalog_storage_fits_erase (NcmMSetCatalogStorage *storage, GError **error);
 static void _ncm_mset_catalog_storage_fits_sync (NcmMSetCatalogStorage *storage, GError **error);
 static void _ncm_mset_catalog_storage_fits_get_rng_init (NcmMSetCatalogStorage *storage, gchar **algo, gulong *seed, gchar **state, GError **error);
 static void _ncm_mset_catalog_storage_fits_set_rng_init (NcmMSetCatalogStorage *storage, const gchar *algo, gulong seed, const gchar *state, GError **error);
@@ -338,6 +340,8 @@ ncm_mset_catalog_storage_fits_class_init (NcmMSetCatalogStorageFitsClass *klass)
   storage_class->nrows            = &_ncm_mset_catalog_storage_fits_nrows;
   storage_class->append           = &_ncm_mset_catalog_storage_fits_append;
   storage_class->get_row          = &_ncm_mset_catalog_storage_fits_get_row;
+  storage_class->peek_row         = &_ncm_mset_catalog_storage_fits_peek_row;
+  storage_class->erase            = &_ncm_mset_catalog_storage_fits_erase;
   storage_class->sync             = &_ncm_mset_catalog_storage_fits_sync;
   storage_class->get_rng_init     = &_ncm_mset_catalog_storage_fits_get_rng_init;
   storage_class->set_rng_init     = &_ncm_mset_catalog_storage_fits_set_rng_init;
@@ -1561,8 +1565,13 @@ _ncm_mset_catalog_storage_fits_append (NcmMSetCatalogStorage *storage, NcmVector
   storage_fits->n_pending++;
 }
 
+/*
+ * Returns row i without a new reference: a tail element, or an element of the block,
+ * which is replaced when i is outside it. Valid until the next block read, append,
+ * sync or erase.
+ */
 static NcmVector *
-_ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
+_ncm_mset_catalog_storage_fits_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
 {
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
@@ -1570,7 +1579,7 @@ _ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i,
   NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
 
   if (i >= storage_fits->tail_first)
-    return ncm_vector_ref (g_ptr_array_index (storage_fits->tail, i - storage_fits->tail_first));
+    return g_ptr_array_index (storage_fits->tail, i - storage_fits->tail_first);
 
   if ((storage_fits->block->len == 0) || (i < storage_fits->block_first) || (i >= storage_fits->block_first + storage_fits->block->len))
   {
@@ -1580,7 +1589,117 @@ _ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i,
     NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
   }
 
-  return ncm_vector_ref (g_ptr_array_index (storage_fits->block, i - storage_fits->block_first));
+  return g_ptr_array_index (storage_fits->block, i - storage_fits->block_first);
+}
+
+static NcmVector *
+_ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
+{
+  NcmVector *row = _ncm_mset_catalog_storage_fits_peek_row (storage, i, error);
+
+  NCM_UTIL_ON_ERROR_RETURN (error, , NULL);
+
+  return ncm_vector_ref (row);
+}
+
+/* Deletes key from the header when it is present. */
+static void
+_ncm_mset_catalog_storage_fits_delete_key (fitsfile *fptr, const gchar *key, GError **error)
+{
+  gint status = 0;
+
+  fits_delete_key (fptr, key, &status);
+
+  if (status == KEY_NO_EXIST)
+    return;
+
+  _ncm_mset_catalog_storage_fits_check (status, key, error);
+}
+
+/*
+ * Deletes every row of the table, the segment keys (NSEGS and SEGS<i>, SEGN<i>,
+ * SEGO<i> for the current segments), the informative SAMPLER, SAMPOPT and INITSMP keys,
+ * and writes MARKID as the first id; then clears the tail, the block and the segments.
+ * A legacy file is left with NSEGS 0 and the translated RTYPE, so it is no longer legacy.
+ */
+static void
+_ncm_mset_catalog_storage_fits_erase (NcmMSetCatalogStorage *storage, GError **error)
+{
+  NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
+  fitsfile *fptr;
+  guint in_file;
+  gint status = 0;
+  guint i;
+
+  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  fptr    = FPTR (storage_fits);
+  in_file = storage_fits->tail_first + storage_fits->tail->len - storage_fits->n_pending;
+
+  if (in_file > 0)
+  {
+    fits_delete_rows (fptr, 1, in_file, &status);
+    _ncm_mset_catalog_storage_fits_check (status, "erase", error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
+  }
+
+  for (i = 0; i < storage_fits->segments->len; i++)
+  {
+    gchar *key_s = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_START_LABEL, i);
+    gchar *key_n = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_SAMPLER_LABEL, i);
+    gchar *key_o = g_strdup_printf ("%s%u", NCM_MSET_CATALOG_STORAGE_FITS_SEG_OPTIONS_LABEL, i);
+
+    _ncm_mset_catalog_storage_fits_delete_key (fptr, key_s, error);
+    g_free (key_s);
+    NCM_UTIL_ON_ERROR_RETURN (error, { g_free (key_n);
+                                       g_free (key_o);
+                              }, );
+
+    _ncm_mset_catalog_storage_fits_delete_key (fptr, key_n, error);
+    g_free (key_n);
+    NCM_UTIL_ON_ERROR_RETURN (error, g_free (key_o), );
+
+    _ncm_mset_catalog_storage_fits_delete_key (fptr, key_o, error);
+    g_free (key_o);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
+  }
+
+  _ncm_mset_catalog_storage_fits_delete_key (fptr, NCM_MSET_CATALOG_SAMPLER_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_delete_key (fptr, NCM_MSET_CATALOG_SAMPLER_OPTS_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_delete_key (fptr, NCM_MSET_CATALOG_INIT_SAMPLER_LABEL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  g_array_set_size (storage_fits->segments, 0);
+
+  if (storage_fits->legacy)
+  {
+    _ncm_mset_catalog_storage_fits_write_str (fptr, NCM_MSET_CATALOG_RTYPE_LABEL,
+                                              ncm_mset_catalog_desc_get_run_type (storage_fits->desc), "Run type string.", error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+    storage_fits->legacy = FALSE;
+  }
+
+  _ncm_mset_catalog_storage_fits_write_segments (storage_fits, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  _ncm_mset_catalog_storage_fits_write_int (fptr, NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL, storage_fits->first_id,
+                                            "First row id of the Markovian chain.", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  g_ptr_array_set_size (storage_fits->tail, 0);
+  g_ptr_array_set_size (storage_fits->block, 0);
+  storage_fits->tail_first   = 0;
+  storage_fits->n_pending    = 0;
+  storage_fits->block_first  = 0;
+  storage_fits->markovian_id = 0;
+
+  _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
 }
 
 static void
@@ -1823,6 +1942,20 @@ _ncm_mset_catalog_storage_fits_nrows (NcmMSetCatalogStorage *storage, GError **e
   _ncm_mset_catalog_storage_fits_no_cfitsio (error);
 
   return 0;
+}
+
+static NcmVector *
+_ncm_mset_catalog_storage_fits_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
+{
+  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
+
+  return NULL;
+}
+
+static void
+_ncm_mset_catalog_storage_fits_erase (NcmMSetCatalogStorage *storage, GError **error)
+{
+  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
 }
 
 static void

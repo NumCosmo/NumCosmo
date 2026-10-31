@@ -58,6 +58,8 @@ void test_ncm_mset_catalog_storage_memory_rng_after_rows (TestNcmMSetCatalogStor
 void test_ncm_mset_catalog_storage_memory_markovian_id (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
 void test_ncm_mset_catalog_storage_memory_bind_order (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
 void test_ncm_mset_catalog_storage_memory_serialize (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
+void test_ncm_mset_catalog_storage_memory_peek_row (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
+void test_ncm_mset_catalog_storage_memory_erase (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
 void test_ncm_mset_catalog_storage_memory_property_traps (void);
 void test_ncm_mset_catalog_storage_memory_property_subprocess (void);
 
@@ -111,6 +113,14 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_storage_memory_serialize,
               &test_ncm_mset_catalog_storage_memory_free);
 
+  g_test_add ("/ncm/mset/catalog/storage/memory/peek_row", TestNcmMSetCatalogStorageMemory, NULL,
+              &test_ncm_mset_catalog_storage_memory_new,
+              &test_ncm_mset_catalog_storage_memory_peek_row,
+              &test_ncm_mset_catalog_storage_memory_free);
+  g_test_add ("/ncm/mset/catalog/storage/memory/erase", TestNcmMSetCatalogStorageMemory, NULL,
+              &test_ncm_mset_catalog_storage_memory_new,
+              &test_ncm_mset_catalog_storage_memory_erase,
+              &test_ncm_mset_catalog_storage_memory_free);
   g_test_add_func ("/ncm/mset/catalog/storage/memory/property/traps", &test_ncm_mset_catalog_storage_memory_property_traps);
   g_test_add_func ("/ncm/mset/catalog/storage/memory/property/subprocess", &test_ncm_mset_catalog_storage_memory_property_subprocess);
 
@@ -628,6 +638,126 @@ test_ncm_mset_catalog_storage_memory_serialize (TestNcmMSetCatalogStorageMemory 
   ncm_mset_catalog_storage_free (storage);
   ncm_rng_free (rng);
   ncm_serialize_free (ser);
+}
+
+/* peek_row returns the stored vector itself; get_row a reference to the same vector. */
+void
+test_ncm_mset_catalog_storage_memory_peek_row (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata)
+{
+  GError *error = NULL;
+  guint i;
+
+  ncm_mset_catalog_storage_set_desc (test->storage, test->desc, &error);
+  g_assert_no_error (error);
+
+  g_assert_null (ncm_mset_catalog_storage_peek_row (test->storage, 0, &error));
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW);
+  g_clear_error (&error);
+
+  ncm_mset_catalog_storage_start_recording (test->storage, "sampler", NULL, &error);
+  _test_ncm_mset_catalog_storage_memory_add_rows (test->storage, 0, 5);
+  ncm_mset_catalog_storage_end_recording (test->storage, &error);
+  g_assert_no_error (error);
+
+  for (i = 0; i < 5; i++)
+  {
+    NcmVector *row    = ncm_mset_catalog_storage_peek_row (test->storage, i, &error);
+    NcmVector *expect = _test_ncm_mset_catalog_storage_memory_row (i);
+    NcmVector *ref;
+    guint c;
+
+    g_assert_no_error (error);
+    g_assert_nonnull (row);
+
+    for (c = 0; c < ncm_vector_len (expect); c++)
+      g_assert_cmpfloat (ncm_vector_get (row, c), ==, ncm_vector_get (expect, c));
+
+    g_assert_true (row == ncm_mset_catalog_storage_peek_row (test->storage, i, &error));
+
+    ref = ncm_mset_catalog_storage_get_row (test->storage, i, &error);
+    g_assert_true (ref == row);
+    ncm_vector_free (ref);
+    ncm_vector_free (expect);
+  }
+
+  g_assert_null (ncm_mset_catalog_storage_peek_row (test->storage, 5, &error));
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW);
+  g_clear_error (&error);
+}
+
+/*
+ * erase removes the rows, the segments and the Markovian id, keeps the description and
+ * the RNG, and the storage records again from row 0.
+ */
+void
+test_ncm_mset_catalog_storage_memory_erase (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata)
+{
+  NcmRNG *rng   = ncm_rng_seeded_new (NULL, 77);
+  GError *error = NULL;
+  gchar *algo   = NULL;
+  gchar *stat   = NULL;
+  gulong seed   = 0;
+  guint start;
+  gchar *sampler, *options;
+
+  ncm_mset_catalog_storage_erase (test->storage, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED);
+  g_clear_error (&error);
+
+  ncm_mset_catalog_storage_set_desc (test->storage, test->desc, &error);
+  ncm_mset_catalog_storage_set_rng (test->storage, rng, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_start_recording (test->storage, "A", "a-opts", &error);
+  _test_ncm_mset_catalog_storage_memory_add_rows (test->storage, 0, 4);
+  ncm_mset_catalog_storage_set_markovian_id (test->storage, 2, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_erase (test->storage, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING);
+  g_clear_error (&error);
+
+  ncm_mset_catalog_storage_end_recording (test->storage, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_erase (test->storage, &error);
+  g_assert_no_error (error);
+
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (test->storage, &error), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (test->storage, &error), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_storage_get_markovian_id (test->storage, &error), ==, 0);
+  g_assert_true (ncm_mset_catalog_storage_peek_desc (test->storage, &error) == test->desc);
+
+  ncm_mset_catalog_storage_get_rng_init (test->storage, &algo, &seed, NULL, &error);
+  g_assert_no_error (error);
+  g_assert_cmpstr (algo, ==, ncm_rng_get_algo (rng));
+  g_assert_cmpuint (seed, ==, 77);
+
+  stat = ncm_mset_catalog_storage_get_rng_stat (test->storage, &error);
+  g_assert_no_error (error);
+  g_assert_nonnull (stat);
+
+  ncm_mset_catalog_storage_start_recording (test->storage, "B", "b-opts", &error);
+  _test_ncm_mset_catalog_storage_memory_add_rows (test->storage, 0, 2);
+  ncm_mset_catalog_storage_end_recording (test->storage, &error);
+  g_assert_no_error (error);
+
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (test->storage, &error), ==, 2);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (test->storage, &error), ==, 1);
+  _test_ncm_mset_catalog_storage_memory_assert_row (test->storage, 0);
+  _test_ncm_mset_catalog_storage_memory_assert_row (test->storage, 1);
+
+  ncm_mset_catalog_storage_get_sampler (test->storage, 0, &start, &sampler, &options, &error);
+  g_assert_no_error (error);
+  g_assert_cmpuint (start, ==, 0);
+  g_assert_cmpstr (sampler, ==, "B");
+  g_assert_cmpstr (options, ==, "b-opts");
+
+  g_free (sampler);
+  g_free (options);
+  g_free (algo);
+  g_free (stat);
+  ncm_rng_free (rng);
 }
 
 void

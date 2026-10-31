@@ -89,6 +89,8 @@ struct _NcmMSetCatalogStorageClass
   guint (*nrows) (NcmMSetCatalogStorage *storage, GError **error);
   void (*append) (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error);
   NcmVector *(*get_row) (NcmMSetCatalogStorage *storage, guint i, GError **error);
+  NcmVector *(*peek_row) (NcmMSetCatalogStorage *storage, guint i, GError **error);
+  void (*erase) (NcmMSetCatalogStorage *storage, GError **error);
   void (*sync) (NcmMSetCatalogStorage *storage, GError **error);
   void (*get_rng_init) (NcmMSetCatalogStorage *storage, gchar **algo, gulong *seed, gchar **state, GError **error);
   void (*set_rng_init) (NcmMSetCatalogStorage *storage, const gchar *algo, gulong seed, const gchar *state, GError **error);
@@ -100,8 +102,8 @@ struct _NcmMSetCatalogStorageClass
   void (*get_sampler) (NcmMSetCatalogStorage *storage, guint i, guint *start, gchar **sampler, gchar **options, GError **error);
   void (*set_sampler) (NcmMSetCatalogStorage *storage, guint i, guint start, const gchar *sampler, const gchar *options, GError **error);
 
-  /* Padding to allow adding up to 11 more virtual functions without breaking ABI. */
-  gpointer padding[11];
+  /* Padding to allow adding up to 9 more virtual functions without breaking ABI. */
+  gpointer padding[9];
 };
 
 NcmMSetCatalogStorage *ncm_mset_catalog_storage_ref (NcmMSetCatalogStorage *storage);
@@ -121,6 +123,8 @@ gboolean ncm_mset_catalog_storage_is_recording (NcmMSetCatalogStorage *storage);
 
 guint ncm_mset_catalog_storage_nrows (NcmMSetCatalogStorage *storage, GError **error);
 NcmVector *ncm_mset_catalog_storage_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error);
+NcmVector *ncm_mset_catalog_storage_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error);
+void ncm_mset_catalog_storage_erase (NcmMSetCatalogStorage *storage, GError **error);
 
 void ncm_mset_catalog_storage_set_markovian_id (NcmMSetCatalogStorage *storage, guint markovian_id, GError **error);
 

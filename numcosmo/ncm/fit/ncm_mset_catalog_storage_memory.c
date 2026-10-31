@@ -328,6 +328,8 @@ static void _ncm_mset_catalog_storage_memory_bind_desc (NcmMSetCatalogStorage *s
 static guint _ncm_mset_catalog_storage_memory_nrows (NcmMSetCatalogStorage *storage, GError **error);
 static void _ncm_mset_catalog_storage_memory_append (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error);
 static NcmVector *_ncm_mset_catalog_storage_memory_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error);
+static NcmVector *_ncm_mset_catalog_storage_memory_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error);
+static void _ncm_mset_catalog_storage_memory_erase (NcmMSetCatalogStorage *storage, GError **error);
 static void _ncm_mset_catalog_storage_memory_get_rng_init (NcmMSetCatalogStorage *storage, gchar **algo, gulong *seed, gchar **state, GError **error);
 static void _ncm_mset_catalog_storage_memory_set_rng_init (NcmMSetCatalogStorage *storage, const gchar *algo, gulong seed, const gchar *state, GError **error);
 static gchar *_ncm_mset_catalog_storage_memory_get_rng_stat (NcmMSetCatalogStorage *storage, GError **error);
@@ -464,6 +466,8 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
   storage_class->nrows            = &_ncm_mset_catalog_storage_memory_nrows;
   storage_class->append           = &_ncm_mset_catalog_storage_memory_append;
   storage_class->get_row          = &_ncm_mset_catalog_storage_memory_get_row;
+  storage_class->peek_row         = &_ncm_mset_catalog_storage_memory_peek_row;
+  storage_class->erase            = &_ncm_mset_catalog_storage_memory_erase;
   storage_class->get_rng_init     = &_ncm_mset_catalog_storage_memory_get_rng_init;
   storage_class->set_rng_init     = &_ncm_mset_catalog_storage_memory_set_rng_init;
   storage_class->get_rng_stat     = &_ncm_mset_catalog_storage_memory_get_rng_stat;
@@ -554,6 +558,22 @@ static NcmVector *
 _ncm_mset_catalog_storage_memory_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
 {
   return ncm_vector_ref (g_ptr_array_index (NCM_MSET_CATALOG_STORAGE_MEMORY (storage)->rows, i));
+}
+
+static NcmVector *
+_ncm_mset_catalog_storage_memory_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
+{
+  return g_ptr_array_index (NCM_MSET_CATALOG_STORAGE_MEMORY (storage)->rows, i);
+}
+
+static void
+_ncm_mset_catalog_storage_memory_erase (NcmMSetCatalogStorage *storage, GError **error)
+{
+  NcmMSetCatalogStorageMemory *storage_mem = NCM_MSET_CATALOG_STORAGE_MEMORY (storage);
+
+  g_ptr_array_set_size (storage_mem->rows, 0);
+  g_array_set_size (storage_mem->samplers, 0);
+  storage_mem->markovian_id = 0;
 }
 
 static void

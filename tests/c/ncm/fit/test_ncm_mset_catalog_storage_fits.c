@@ -55,11 +55,14 @@ static void test_ncm_mset_catalog_storage_fits_fixture_esmcmc_variants (void);
 static void test_ncm_mset_catalog_storage_fits_fixture_producers (void);
 static void test_ncm_mset_catalog_storage_fits_fixture_weighted (void);
 static void test_ncm_mset_catalog_storage_fits_fixture_rows (void);
+static void test_ncm_mset_catalog_storage_fits_fixture_peek_row (void);
 static void test_ncm_mset_catalog_storage_fits_fixture_read_only (void);
 static void test_ncm_mset_catalog_storage_fits_errors (void);
 static void test_ncm_mset_catalog_storage_fits_write_reopen (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 static void test_ncm_mset_catalog_storage_fits_bind_order (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 static void test_ncm_mset_catalog_storage_fits_migrate (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
+static void test_ncm_mset_catalog_storage_fits_erase (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
+static void test_ncm_mset_catalog_storage_fits_erase_legacy (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 static void test_ncm_mset_catalog_storage_fits_serialize (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 
 static gchar *_test_ncm_mset_catalog_storage_fits_fixture_path (const gchar *name);
@@ -82,6 +85,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/producers", &test_ncm_mset_catalog_storage_fits_fixture_producers);
   g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/weighted", &test_ncm_mset_catalog_storage_fits_fixture_weighted);
   g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/rows", &test_ncm_mset_catalog_storage_fits_fixture_rows);
+  g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/peek_row", &test_ncm_mset_catalog_storage_fits_fixture_peek_row);
   g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/read_only", &test_ncm_mset_catalog_storage_fits_fixture_read_only);
   g_test_add_func ("/ncm/mset/catalog/storage/fits/errors", &test_ncm_mset_catalog_storage_fits_errors);
   g_test_add ("/ncm/mset/catalog/storage/fits/write_reopen", TestNcmMSetCatalogStorageFits, NULL,
@@ -95,6 +99,14 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/mset/catalog/storage/fits/migrate", TestNcmMSetCatalogStorageFits, NULL,
               &test_ncm_mset_catalog_storage_fits_new,
               &test_ncm_mset_catalog_storage_fits_migrate,
+              &test_ncm_mset_catalog_storage_fits_free);
+  g_test_add ("/ncm/mset/catalog/storage/fits/erase", TestNcmMSetCatalogStorageFits, NULL,
+              &test_ncm_mset_catalog_storage_fits_new,
+              &test_ncm_mset_catalog_storage_fits_erase,
+              &test_ncm_mset_catalog_storage_fits_free);
+  g_test_add ("/ncm/mset/catalog/storage/fits/erase_legacy", TestNcmMSetCatalogStorageFits, NULL,
+              &test_ncm_mset_catalog_storage_fits_new,
+              &test_ncm_mset_catalog_storage_fits_erase_legacy,
               &test_ncm_mset_catalog_storage_fits_free);
   g_test_add ("/ncm/mset/catalog/storage/fits/serialize", TestNcmMSetCatalogStorageFits, NULL,
               &test_ncm_mset_catalog_storage_fits_new,
@@ -495,6 +507,59 @@ test_ncm_mset_catalog_storage_fits_fixture_rows (void)
   g_free (path);
 }
 
+/*
+ * peek_row on the fixture for several block sizes: the values of the previous reader,
+ * the same vector as get_row, and the pointer kept while the same row is peeked again.
+ */
+static void
+test_ncm_mset_catalog_storage_fits_fixture_peek_row (void)
+{
+  gchar *path               = _test_ncm_mset_catalog_storage_fits_fixture_path ("esmcmc.fits");
+  NcmMSetCatalog *mcat      = ncm_mset_catalog_new_from_file_ro (path, 0);
+  const guint read_blocks[] = { 1, 5, 1024 };
+  GError *error             = NULL;
+  guint b, i, c;
+
+  for (b = 0; b < G_N_ELEMENTS (read_blocks); b++)
+  {
+    NcmMSetCatalogStorageFits *storage_fits = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS,
+                                                            "filename", path,
+                                                            "read-only", TRUE,
+                                                            "read-block", read_blocks[b],
+                                                            NULL);
+    NcmMSetCatalogStorage *storage = NCM_MSET_CATALOG_STORAGE (storage_fits);
+
+    for (i = 0; i < TEST_FITS_ESMCMC_NROWS; i++)
+    {
+      const guint j     = (i * 7) % TEST_FITS_ESMCMC_NROWS;
+      NcmVector *row    = ncm_mset_catalog_storage_peek_row (storage, j, &error);
+      NcmVector *mc_row = ncm_mset_catalog_peek_row (mcat, j);
+      NcmVector *ref;
+
+      g_assert_no_error (error);
+      g_assert_nonnull (row);
+
+      for (c = 0; c < 3; c++)
+        g_assert_cmpfloat (ncm_vector_get (row, c), ==, ncm_vector_get (mc_row, c));
+
+      g_assert_true (row == ncm_mset_catalog_storage_peek_row (storage, j, &error));
+
+      ref = ncm_mset_catalog_storage_get_row (storage, j, &error);
+      g_assert_true (ref == row);
+      ncm_vector_free (ref);
+    }
+
+    g_assert_null (ncm_mset_catalog_storage_peek_row (storage, TEST_FITS_ESMCMC_NROWS, &error));
+    g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW);
+    g_clear_error (&error);
+
+    ncm_mset_catalog_storage_free (storage);
+  }
+
+  ncm_mset_catalog_free (mcat);
+  g_free (path);
+}
+
 static void
 test_ncm_mset_catalog_storage_fits_fixture_read_only (void)
 {
@@ -852,6 +917,193 @@ test_ncm_mset_catalog_storage_fits_migrate (TestNcmMSetCatalogStorageFits *test,
     g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "Walker-2");
     g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "w2");
     g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, TEST_FITS_ESMCMC_NWALKERS);
+
+    ncm_mset_catalog_free (mcat);
+  }
+}
+
+/*
+ * A new file with rows, two segments and a Markovian id, erased: empty in memory and
+ * after reopening, the description and the RNG kept, a new recording from row 0, the
+ * file read by the previous reader; erase refused inside a recording and read-only.
+ */
+static void
+test_ncm_mset_catalog_storage_fits_erase (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
+{
+  GError *error                  = NULL;
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, 99);
+  NcmMSetCatalogStorage *storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_fits_new (test->filename, FALSE, &error));
+  guint i;
+
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_erase (storage, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED);
+  g_clear_error (&error);
+
+  ncm_mset_catalog_storage_set_desc (storage, test->desc, &error);
+  ncm_mset_catalog_storage_set_rng (storage, rng, &error);
+  g_assert_no_error (error);
+  g_object_set (storage, "smode", NCM_MSET_CATALOG_SYNC_AUTO, NULL);
+
+  ncm_mset_catalog_storage_start_recording (storage, "A", "a-opts", &error);
+
+  for (i = 0; i < 8; i++)
+  {
+    NcmVector *row = _test_ncm_mset_catalog_storage_fits_row (i, 3);
+
+    ncm_rng_uniform_gen (rng, 0.0, 1.0);
+    ncm_mset_catalog_storage_add_row (storage, row, &error);
+    ncm_vector_free (row);
+  }
+
+  ncm_mset_catalog_storage_end_recording (storage, &error);
+  ncm_mset_catalog_storage_start_recording (storage, "B", NULL, &error);
+  ncm_mset_catalog_storage_set_markovian_id (storage, 4, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_erase (storage, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING);
+  g_clear_error (&error);
+
+  ncm_mset_catalog_storage_end_recording (storage, &error);
+  g_assert_no_error (error);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 2);
+
+  ncm_mset_catalog_storage_erase (storage, &error);
+  g_assert_no_error (error);
+
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_storage_get_markovian_id (storage, &error), ==, 0);
+  g_assert_true (ncm_mset_catalog_storage_peek_desc (storage, &error) == test->desc);
+  g_assert_null (ncm_mset_catalog_storage_peek_row (storage, 0, &error));
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_ROW);
+  g_clear_error (&error);
+
+  ncm_mset_catalog_storage_free (storage);
+
+  /* Reopened writable: still empty, the RNG kept; a recording from row 0. */
+  storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_fits_new (test->filename, FALSE, &error));
+  g_assert_no_error (error);
+
+  {
+    gchar *algo = NULL;
+    gulong seed = 0;
+
+    g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 0);
+    g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 0);
+    g_assert_cmpuint (ncm_mset_catalog_storage_get_markovian_id (storage, &error), ==, 0);
+    g_assert_true (ncm_mset_catalog_desc_is_compatible (ncm_mset_catalog_storage_peek_desc (storage, &error), test->desc, NULL));
+
+    ncm_mset_catalog_storage_get_rng_init (storage, &algo, &seed, NULL, &error);
+    g_assert_no_error (error);
+    g_assert_cmpstr (algo, ==, ncm_rng_get_algo (rng));
+    g_assert_cmpuint (seed, ==, 99);
+    g_free (algo);
+  }
+
+  ncm_mset_catalog_storage_start_recording (storage, "C", "c-opts", &error);
+
+  for (i = 0; i < 3; i++)
+  {
+    NcmVector *row = _test_ncm_mset_catalog_storage_fits_row (i, 3);
+
+    ncm_mset_catalog_storage_add_row (storage, row, &error);
+    ncm_vector_free (row);
+  }
+
+  ncm_mset_catalog_storage_end_recording (storage, &error);
+  g_assert_no_error (error);
+  ncm_mset_catalog_storage_free (storage);
+
+  /* Reopened read-only. */
+  storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_fits_new (test->filename, TRUE, &error));
+  g_assert_no_error (error);
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 3);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 1);
+  _test_ncm_mset_catalog_storage_fits_check_segment (storage, 0, 0, "C", "c-opts");
+  g_assert_cmpuint (ncm_mset_catalog_storage_get_markovian_id (storage, &error), ==, 0);
+
+  for (i = 0; i < 3; i++)
+  {
+    NcmVector *row = ncm_mset_catalog_storage_peek_row (storage, i, &error);
+
+    g_assert_no_error (error);
+    g_assert_cmpfloat (ncm_vector_get (row, 0), ==, 100.0 * i);
+  }
+
+  ncm_mset_catalog_storage_erase (storage, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY);
+  g_clear_error (&error);
+  ncm_mset_catalog_storage_free (storage);
+
+  {
+    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (test->filename, 0);
+
+    g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 3);
+    g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "C");
+    g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "c-opts");
+    g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
+    g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 2), 0), ==, 200.0);
+
+    ncm_mset_catalog_free (mcat);
+  }
+
+  ncm_rng_free (rng);
+}
+
+/*
+ * A copy of the ESMCMC fixture erased: no rows, no segments, the translated run type
+ * written, readable by the previous reader.
+ */
+static void
+test_ncm_mset_catalog_storage_fits_erase_legacy (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
+{
+  gchar *src    = _test_ncm_mset_catalog_storage_fits_fixture_path ("esmcmc.fits");
+  GError *error = NULL;
+  gchar *contents;
+  gsize length;
+  NcmMSetCatalogStorage *storage;
+
+  g_file_get_contents (src, &contents, &length, &error);
+  g_file_set_contents (test->filename, contents, length, &error);
+  g_assert_no_error (error);
+  g_free (contents);
+  g_free (src);
+
+  storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_fits_new (test->filename, FALSE, &error));
+  g_assert_no_error (error);
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, TEST_FITS_ESMCMC_NROWS);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 2);
+
+  ncm_mset_catalog_storage_erase (storage, &error);
+  g_assert_no_error (error);
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 0);
+  ncm_mset_catalog_storage_free (storage);
+
+  storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_fits_new (test->filename, TRUE, &error));
+  g_assert_no_error (error);
+  g_assert_cmpstr (ncm_mset_catalog_desc_get_run_type (ncm_mset_catalog_storage_peek_desc (storage, &error)), ==, NCM_MSET_CATALOG_RTYPE_ESMCMC);
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_storage_get_markovian_id (storage, &error), ==, 0);
+  {
+    gchar *stat = ncm_mset_catalog_storage_get_rng_stat (storage, &error);
+
+    g_assert_no_error (error);
+    g_assert_nonnull (stat);
+    g_free (stat);
+  }
+  ncm_mset_catalog_storage_free (storage);
+
+  {
+    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (test->filename, 0);
+
+    g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 0);
+    g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, NCM_MSET_CATALOG_RTYPE_ESMCMC);
+    g_assert_null (ncm_mset_catalog_get_sampler (mcat));
 
     ncm_mset_catalog_free (mcat);
   }
