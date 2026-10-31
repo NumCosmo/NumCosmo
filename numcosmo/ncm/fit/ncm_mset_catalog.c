@@ -1192,6 +1192,19 @@ ncm_mset_catalog_clear (NcmMSetCatalog **mcat)
 
 #ifdef HAVE_CFITSIO
 
+/* Whether fptr was opened for writing; a missing key is left missing on a read-only file. */
+static gboolean
+_ncm_fits_file_writable (fitsfile *fptr)
+{
+  gint status = 0;
+  gint mode   = READONLY;
+
+  fits_file_mode (fptr, &mode, &status);
+  NCM_FITS_ERROR (status);
+
+  return mode == READWRITE;
+}
+
 static void
 _ncm_fits_update_key_str (fitsfile *fptr, gchar *keyname, gchar *value, gchar *comment, gboolean overwrite)
 {
@@ -1219,8 +1232,12 @@ _ncm_fits_update_key_str (fitsfile *fptr, gchar *keyname, gchar *value, gchar *c
     else if (status == KEY_NO_EXIST)
     {
       status = 0;
-      fits_update_key_str (fptr, keyname, value, comment, &status);
-      NCM_FITS_ERROR (status);
+
+      if (_ncm_fits_file_writable (fptr))
+      {
+        fits_update_key_str (fptr, keyname, value, comment, &status);
+        NCM_FITS_ERROR (status);
+      }
     }
     else
     {
@@ -1256,8 +1273,12 @@ _ncm_fits_update_key_longstr (fitsfile *fptr, gchar *keyname, gchar *value, gcha
     else if (status == KEY_NO_EXIST)
     {
       status = 0;
-      fits_update_key_longstr (fptr, keyname, value, comment, &status);
-      NCM_FITS_ERROR (status);
+
+      if (_ncm_fits_file_writable (fptr))
+      {
+        fits_update_key_longstr (fptr, keyname, value, comment, &status);
+        NCM_FITS_ERROR (status);
+      }
     }
     else
     {
@@ -1355,8 +1376,12 @@ _ncm_fits_update_key_int (fitsfile *fptr, gchar *keyname, gint value, gchar *com
     else if (status == KEY_NO_EXIST)
     {
       status = 0;
-      fits_update_key_lng (fptr, keyname, lvalue, comment, &status);
-      NCM_FITS_ERROR (status);
+
+      if (_ncm_fits_file_writable (fptr))
+      {
+        fits_update_key_lng (fptr, keyname, lvalue, comment, &status);
+        NCM_FITS_ERROR (status);
+      }
     }
     else
     {
@@ -1392,8 +1417,12 @@ _ncm_fits_update_key_ulong (fitsfile *fptr, gchar *keyname, gulong value, gchar 
     else if (status == KEY_NO_EXIST)
     {
       status = 0;
-      fits_update_key_lng (fptr, keyname, value, comment, &status);
-      NCM_FITS_ERROR (status);
+
+      if (_ncm_fits_file_writable (fptr))
+      {
+        fits_update_key_lng (fptr, keyname, value, comment, &status);
+        NCM_FITS_ERROR (status);
+      }
     }
     else
     {

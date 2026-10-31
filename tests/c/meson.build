@@ -351,6 +351,10 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_mset_catalog_desc.c'],
     },
     {
+        'name': 'ncm_mset_catalog_fixtures',
+        'sources': ['ncm/fit/test_ncm_mset_catalog_fixtures.c'],
+    },
+    {
         'name': 'ncm_mset_catalog_storage_memory',
         'sources': ['ncm/fit/test_ncm_mset_catalog_storage_memory.c'],
     },
