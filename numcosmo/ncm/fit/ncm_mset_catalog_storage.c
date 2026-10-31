@@ -29,38 +29,39 @@
  * Abstract storage of the rows, the #NcmMSetCatalogDesc and the run metadata of an
  * #NcmMSetCatalog.
  *
- * A storage without a description is uninitialized. ncm_mset_catalog_storage_set_desc()
- * stores a description on an uninitialized storage and binds a compatible one
- * (ncm_mset_catalog_desc_is_compatible()) on an initialized storage; rows are then read
- * and written in the order of the bound description.
+ * A storage without a description is uninitialized.
+ * ncm_mset_catalog_storage_set_desc() stores a description on an uninitialized storage
+ * and binds a compatible one (ncm_mset_catalog_desc_is_compatible()) on an initialized
+ * storage; rows are then read and written in the order of the bound description.
  *
- * The storage owns the #NcmRNG of the run. ncm_mset_catalog_storage_set_rng() gives one to a
- * storage that has neither rows nor an RNG, and records its algorithm, seed and state as the
- * initial RNG state. ncm_mset_catalog_storage_get_rng() returns it; on a loaded storage it is
- * rebuilt from the stored algorithm, seed and current state. A storage with rows and no RNG
- * never gets one.
+ * The storage owns the #NcmRNG of the run. ncm_mset_catalog_storage_set_rng() gives
+ * one to a storage that has neither rows nor an RNG, and records its algorithm, seed
+ * and state as the initial RNG state. ncm_mset_catalog_storage_get_rng() returns it;
+ * on a loaded storage it is rebuilt from the stored algorithm, seed and current state.
+ * A storage with rows and no RNG never gets one.
  *
- * Rows, sampler segments and the Markovian id are written only inside a recording, opened by
- * ncm_mset_catalog_storage_start_recording() and closed by
- * ncm_mset_catalog_storage_end_recording(). One recording is open at a time. A recording
- * opens a sampler segment at the current number of rows. The current RNG state is read from
- * the storage's #NcmRNG at each sync, which happens only right after a row is added (as
- * #NcmMSetCatalogStorage:smode requires) and when the recording ends. The caller draws from
- * the #NcmRNG only inside a recording, so the stored initial state is the state before the
- * first row and the stored current state is the state after the last written row.
+ * Rows, sampler segments and the Markovian id are written only inside a recording,
+ * opened by ncm_mset_catalog_storage_start_recording() and closed by
+ * ncm_mset_catalog_storage_end_recording(). One recording is open at a time. A
+ * recording opens a sampler segment at the current number of rows. The current RNG
+ * state is read from the storage's #NcmRNG at each sync, which happens only right
+ * after a row is added (as #NcmMSetCatalogStorage:smode requires) and when the
+ * recording ends. The caller should draw from the #NcmRNG only inside a recording, so
+ * the stored initial state is the state before the first row and the stored current
+ * state is the state after the last written row.
  *
  * The run metadata are the RNG algorithm, seed and initial state (written once by
- * ncm_mset_catalog_storage_set_rng()), the current RNG state, the Markovian id (the first row
- * of the Markovian chain, never decreasing and never beyond the rows) and the sampler
- * segments. The backend is their only holder. The #NcmMSetFunc array computing the
- * additional values is not stored: the description records the names and symbols of its
- * columns, and the functions belong to the experiment that also holds the likelihood, so
- * that objects shared between them are deserialized once.
+ * ncm_mset_catalog_storage_set_rng()), the current RNG state, the Markovian id (the
+ * first row of the Markovian chain, never decreasing and never beyond the rows) and
+ * the sampler segments. The backend is their only holder. The #NcmMSetFunc array
+ * computing the additional values is not stored: the description records the names and
+ * symbols of its columns, and the functions belong to the experiment that also holds
+ * the likelihood, so that objects shared between them are deserialized once.
  *
- * A backend answers the getters on an uninitialized storage without error: peek_desc %NULL,
- * nrows 0, get_rng_init with a %NULL algorithm, get_markovian_id 0 and n_samplers 0. A
- * file-backed storage whose file exists opens it at the first of these calls. The Desc is
- * stored before any run metadata: the setters require one.
+ * A backend answers the getters on an uninitialized storage without error: peek_desc
+ * %NULL, nrows 0, get_rng_init with a %NULL algorithm, get_markovian_id 0 and
+ * n_samplers 0. A file-backed storage whose file exists opens it at the first of these
+ * calls. The Desc is stored before any run metadata: the setters require one.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -106,7 +107,7 @@ ncm_mset_catalog_storage_init (NcmMSetCatalogStorage *storage)
 
   self->recording     = FALSE;
   self->rng           = NULL;
-  self->smode         = NCM_MSET_CATALOG_SYNC_DISABLE;
+  self->smode         = NCM_MSET_CATALOG_SYNC_LEN;
   self->sync_interval = 0.0;
   self->sync_timer    = g_timer_new ();
 }
@@ -161,8 +162,10 @@ _ncm_mset_catalog_storage_dispose (GObject *object)
   NcmMSetCatalogStorage *storage            = NCM_MSET_CATALOG_STORAGE (object);
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
 
-  /* The writer ends the recording; a storage released with one open keeps what the last
-   * sync wrote. */
+  /*
+   * The writer ends the recording; a storage released with one open keeps what the
+   * last sync wrote.
+   */
   self->recording = FALSE;
   ncm_rng_clear (&self->rng);
 
@@ -196,9 +199,9 @@ ncm_mset_catalog_storage_class_init (NcmMSetCatalogStorageClass *klass)
    * NcmMSetCatalogStorage:smode:
    *
    * When ncm_mset_catalog_storage_add_row() syncs: after every row, after the
-   * #NcmMSetCatalogStorage:sync-interval has elapsed since the last sync, or never (only
-   * ncm_mset_catalog_storage_end_recording() syncs). A backend with nothing to write (the
-   * memory storage) never syncs inside ncm_mset_catalog_storage_add_row().
+   * #NcmMSetCatalogStorage:sync-interval has elapsed since the last sync, or never
+   * (only ncm_mset_catalog_storage_end_recording() syncs). A backend with nothing to
+   * write (the memory storage) never syncs inside ncm_mset_catalog_storage_add_row().
    */
   g_object_class_install_property (object_class,
                                    PROP_SYNC_MODE,
@@ -271,7 +274,8 @@ ncm_mset_catalog_storage_free (NcmMSetCatalogStorage *storage)
  * ncm_mset_catalog_storage_clear:
  * @storage: a #NcmMSetCatalogStorage
  *
- * If *@storage is not %NULL, decreases its reference count and sets *@storage to %NULL.
+ * If *@storage is not %NULL, decreases its reference count and sets *@storage to
+ * %NULL.
  */
 void
 ncm_mset_catalog_storage_clear (NcmMSetCatalogStorage **storage)
@@ -284,8 +288,8 @@ ncm_mset_catalog_storage_clear (NcmMSetCatalogStorage **storage)
  * @storage: a #NcmMSetCatalogStorage
  * @error: a #GError
  *
- * Returns the description of @storage, %NULL when @storage is uninitialized. Sets @error
- * when the backend fails.
+ * Returns the description of @storage, %NULL when @storage is uninitialized. Sets
+ * @error when the backend fails.
  *
  * Returns: (transfer none) (nullable): the #NcmMSetCatalogDesc of @storage
  */
@@ -295,7 +299,9 @@ ncm_mset_catalog_storage_peek_desc (NcmMSetCatalogStorage *storage, GError **err
   return NCM_MSET_CATALOG_STORAGE_GET_CLASS (storage)->peek_desc (storage, error);
 }
 
-/* Returns the description of storage, or sets error (UNINITIALIZED or the backend's). */
+/*
+ * Returns the description of storage, or sets error (UNINITIALIZED or the backend's).
+ */
 static NcmMSetCatalogDesc *
 _ncm_mset_catalog_storage_require_desc (NcmMSetCatalogStorage *storage, GError **error)
 {
@@ -318,11 +324,12 @@ _ncm_mset_catalog_storage_require_desc (NcmMSetCatalogStorage *storage, GError *
  * @desc: a #NcmMSetCatalogDesc
  * @error: a #GError
  *
- * Stores @desc on an uninitialized @storage. On an initialized @storage it binds @desc when
- * it is compatible with the stored description (ncm_mset_catalog_desc_is_compatible()),
- * so rows are read and written in the order of @desc, and otherwise fails with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE, naming the difference. Fails with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a recording is open.
+ * Stores @desc on an uninitialized @storage. On an initialized @storage it binds @desc
+ * when it is compatible with the stored description
+ * (ncm_mset_catalog_desc_is_compatible()), so rows are read and written in the order
+ * of @desc, and otherwise fails with %NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE,
+ * naming the difference. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a
+ * recording is open.
  */
 void
 ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error)
@@ -371,11 +378,12 @@ ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalo
  * @rng: the #NcmRNG of the run
  * @error: a #GError
  *
- * Makes @rng the RNG of @storage and records its algorithm, seed and state as the initial RNG
- * state, which is also the current state until the first sync. @storage keeps a reference to
- * @rng. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description, with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a recording is open, and with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_RNG when @storage has rows or an RNG.
+ * Makes @rng the RNG of @storage and records its algorithm, seed and state as the
+ * initial RNG state, which is also the current state until the first sync. @storage
+ * keeps a reference to @rng. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED
+ * without a description, with %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a
+ * recording is open, and with %NCM_MSET_CATALOG_STORAGE_ERROR_RNG when @storage has
+ * rows or an RNG.
  */
 void
 ncm_mset_catalog_storage_set_rng (NcmMSetCatalogStorage *storage, NcmRNG *rng, GError **error)
@@ -425,8 +433,10 @@ ncm_mset_catalog_storage_set_rng (NcmMSetCatalogStorage *storage, NcmRNG *rng, G
   ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_storage_set_rng");
 }
 
-/* Builds the storage's RNG from the stored algorithm, seed and current state, when the
- * storage has one and it was not built yet. */
+/*
+ * Builds the storage's RNG from the stored algorithm, seed and current state, when the
+ * storage has one and it was not built yet.
+ */
 static void
 _ncm_mset_catalog_storage_load_rng (NcmMSetCatalogStorage *storage, GError **error)
 {
@@ -465,9 +475,9 @@ _ncm_mset_catalog_storage_load_rng (NcmMSetCatalogStorage *storage, GError **err
  * @storage: a #NcmMSetCatalogStorage
  * @error: a #GError
  *
- * Returns the RNG of @storage, the same object at every call. On a loaded storage it is built
- * from the stored algorithm and seed and set to the stored current state; its state is
- * written at each sync of a recording.
+ * Returns the RNG of @storage, the same object at every call. On a loaded storage it
+ * is built from the stored algorithm and seed and set to the stored current state; its
+ * state is written at each sync of a recording.
  *
  * Returns: (transfer full) (nullable): the #NcmRNG of @storage, %NULL when it has none
  */
@@ -498,15 +508,15 @@ static void _ncm_mset_catalog_storage_open_segment (NcmMSetCatalogStorage *stora
  * @options: (nullable): the sampler options
  * @error: a #GError
  *
- * Opens a recording, the only state in which rows, sampler segments and the Markovian id
- * are written. It opens a sampler segment for @sampler and @options starting at the current
- * number of rows; a last segment that starts at the same row, and so has no rows, is
- * replaced. A stored RNG is built (ncm_mset_catalog_storage_get_rng()) so that the syncs of
- * the recording write its state.
+ * Opens a recording, the only state in which rows, sampler segments and the Markovian
+ * id are written. It opens a sampler segment for @sampler and @options starting at the
+ * current number of rows; a last segment that starts at the same row, and so has no
+ * rows, is replaced. A stored RNG is built (ncm_mset_catalog_storage_get_rng()) so
+ * that the syncs of the recording write its state.
  *
- * Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description and with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING when a recording is already open; the recording
- * is then not opened.
+ * Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description and
+ * with %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING when a recording is already open; the
+ * recording is then not opened.
  */
 void
 ncm_mset_catalog_storage_start_recording (NcmMSetCatalogStorage *storage, const gchar *sampler, const gchar *options, GError **error)

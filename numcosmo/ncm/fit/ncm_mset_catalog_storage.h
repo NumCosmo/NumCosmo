@@ -41,18 +41,20 @@ G_DECLARE_DERIVABLE_TYPE (NcmMSetCatalogStorage, ncm_mset_catalog_storage, NCM, 
 
 /**
  * NcmMSetCatalogStorageError:
- * @NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED: the storage has no #NcmMSetCatalogDesc
+ * @NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED: the storage has no
+ * #NcmMSetCatalogDesc
  * @NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE: the #NcmMSetCatalogDesc to bind is not
  *   compatible with the stored one
  * @NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING: a recording is open
  * @NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING: a write outside a recording
- * @NCM_MSET_CATALOG_STORAGE_ERROR_ROW: a row or sampler-segment index out of range, or a row
- *   of the wrong length
- * @NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID: a Markovian id below the stored one or beyond
- *   the rows
+ * @NCM_MSET_CATALOG_STORAGE_ERROR_ROW: a row or sampler-segment index out of range, or
+ *   a row of the wrong length
+ * @NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID: a Markovian id below the stored one or
+ *   beyond the rows
  * @NCM_MSET_CATALOG_STORAGE_ERROR_RNG: an RNG set on a storage that has rows or an RNG
  * @NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY: a write through a read-only storage
- * @NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO: a file storage in a build without CFITSIO
+ * @NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO: a file storage in a build without
+ * CFITSIO
  * @NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND: the backend failed
  *
  * Error codes returned by the #NcmMSetCatalogStorage class.
