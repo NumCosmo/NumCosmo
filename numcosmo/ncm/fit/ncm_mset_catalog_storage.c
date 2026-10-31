@@ -732,8 +732,8 @@ ncm_mset_catalog_storage_nrows (NcmMSetCatalogStorage *storage, GError **error)
  * @i: row index
  * @error: a #GError
  *
- * Returns row @i in the order of the bound description. The returned vector must not be
- * modified. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_ROW when @i is not below the
+ * Returns row @i in the order of the bound description. The returned vector must not
+ * be modified. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_ROW when @i is not below the
  * number of rows.
  *
  * Returns: (transfer full) (nullable): row @i, or %NULL on error
@@ -864,8 +864,8 @@ ncm_mset_catalog_storage_n_samplers (NcmMSetCatalogStorage *storage, GError **er
  * @options: (out) (optional) (transfer full): the sampler options
  * @error: a #GError
  *
- * Returns sampler segment @i. Segment @i covers the rows from @start up to the start of
- * segment @i + 1, the last one up to the number of rows. Fails with
+ * Returns sampler segment @i. Segment @i covers the rows from @start up to the start
+ * of segment @i + 1, the last one up to the number of rows. Fails with
  * %NCM_MSET_CATALOG_STORAGE_ERROR_ROW when @i is not below the number of segments; the
  * outputs are then not set.
  */
