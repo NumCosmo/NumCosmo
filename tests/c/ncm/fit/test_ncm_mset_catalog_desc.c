@@ -317,7 +317,7 @@ test_ncm_mset_catalog_desc_new_errors (TestNcmMSetCatalogDesc *test, gconstpoint
     NcmMSetCatalogDesc *desc;
 
     g_assert_null (ncm_mset_catalog_desc_new (test->mset, 1, FALSE, empty_name, two_symbols, -1, NULL, &error));
-    g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME);
+    g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS);
     g_clear_error (&error);
 
     g_assert_null (ncm_mset_catalog_desc_new (test->mset, 1, FALSE, repeated_name, two_symbols, -1, NULL, &error));

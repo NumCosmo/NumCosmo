@@ -42,9 +42,9 @@ G_DECLARE_FINAL_TYPE (NcmMSetCatalogDesc, ncm_mset_catalog_desc, NCM, MSET_CATAL
  * @NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET: the #NcmMSet is missing or its free-parameter
  *   map is not prepared
  * @NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS: the additional-value names and symbols
- *   differ in number
- * @NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME: an additional-value name is empty, repeated,
- *   the weight column name or the full name of a free parameter
+ *   differ in number, or a name is empty
+ * @NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME: an additional-value name is repeated, the
+ *   weight column name or the full name of a free parameter
  * @NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR: the $-2\ln(p)$ column is not one of the
  *   additional values
  * @NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE: two descriptions are not compatible

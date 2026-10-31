@@ -434,7 +434,7 @@ _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, g
 
       if ((name == NULL) || (name[0] == '\0'))
       {
-        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
+        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS,
                      "additional value %u has an empty name", i);
         break;
       }
