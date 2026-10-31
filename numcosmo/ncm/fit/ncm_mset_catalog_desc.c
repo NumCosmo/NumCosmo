@@ -400,7 +400,7 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
 static void
 _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, guint names_len, guint symbols_len, gint m2lnp_var, GError **error)
 {
-  guint i, j;
+  guint i;
 
   if (mset == NULL)
     g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET,
@@ -418,49 +418,36 @@ _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, g
   if (*error != NULL)
     return;
 
-  /* Column names address the columns, so each additional-value name is non-empty, appears
-   * once, and is neither the weight column name nor the full name of a free parameter. */
-  for (i = 0; (i < names_len) && (*error == NULL); i++)
+  /* Column names address the columns: each additional-value name is non-empty and is not
+   * the weight column name, a free-parameter full name or an earlier name. */
   {
-    const gchar *name = names[i];
+    GHashTable *taken = g_hash_table_new (g_str_hash, g_str_equal);
 
-    if ((name == NULL) || (name[0] == '\0'))
+    g_hash_table_add (taken, (gpointer) NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME);
+
+    for (i = 0; i < ncm_mset_fparams_len (mset); i++)
+      g_hash_table_add (taken, (gpointer) ncm_mset_fparam_full_name (mset, i));
+
+    for (i = 0; i < names_len; i++)
     {
-      g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
-                   "additional value %u has an empty name", i);
+      const gchar *name = names[i];
 
-      return;
-    }
-
-    if (strcmp (name, NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME) == 0)
-    {
-      g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
-                   "additional value %u has the weight column name `%s'", i, name);
-
-      return;
-    }
-
-    for (j = 0; j < i; j++)
-    {
-      if (strcmp (name, names[j]) == 0)
+      if ((name == NULL) || (name[0] == '\0'))
       {
         g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
-                     "additional values %u and %u have the same name `%s'", j, i, name);
+                     "additional value %u has an empty name", i);
+        break;
+      }
 
-        return;
+      if (!g_hash_table_add (taken, (gpointer) name))
+      {
+        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
+                     "additional value %u has a repeated or reserved name `%s'", i, name);
+        break;
       }
     }
 
-    for (j = 0; j < ncm_mset_fparams_len (mset); j++)
-    {
-      if (strcmp (name, ncm_mset_fparam_full_name (mset, j)) == 0)
-      {
-        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
-                     "additional value %u has the name of free parameter %u, `%s'", i, j, name);
-
-        return;
-      }
-    }
+    g_hash_table_unref (taken);
   }
 }
 
