@@ -45,7 +45,7 @@
  * ncm_mset_catalog_desc_nadd_vals() and the column accessors include it.
  *
  * The run type names the object that produced the catalog. It is fixed for the catalog
- * and compared by ncm_mset_catalog_desc_check_compatible(). The rows themselves are
+ * and compared by ncm_mset_catalog_desc_is_compatible(). The rows themselves are
  * described by the sampler segments of the storage, given to
  * ncm_mset_catalog_storage_start_recording() and allowed to change at each recording.
  * The NumCosmo producers use:
@@ -720,66 +720,63 @@ ncm_mset_catalog_desc_col_by_name (NcmMSetCatalogDesc *desc, const gchar *name, 
   }
 }
 
-static void _ncm_mset_catalog_desc_check_add_vals (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
-static void _ncm_mset_catalog_desc_check_fparam_set (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
+static gchar *_ncm_mset_catalog_desc_add_vals_difference (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other);
+static gchar *_ncm_mset_catalog_desc_fparam_set_difference (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other);
 
 /**
- * ncm_mset_catalog_desc_check_compatible:
+ * ncm_mset_catalog_desc_is_compatible:
  * @desc: a #NcmMSetCatalogDesc
  * @other: a #NcmMSetCatalogDesc
- * @error: a #GError
+ * @reason: (out) (optional) (nullable) (transfer full): the first difference, %NULL when
+ * compatible
  *
- * Checks whether rows described by @other can be added to rows described by @desc: the
- * same number of chains, the same weighting, the same m2lnp-var and run type, the same
- * additional values (names and symbols, in order) and the same set of free-parameter
- * full names, in any order. The #NcmMSet models and parameter values are not compared.
- * When they are not compatible it sets @error with
- * %NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE, naming the first difference.
+ * Whether rows described by @other can be added to rows described by @desc: the same
+ * number of chains, the same weighting, the same m2lnp-var and run type, the same
+ * additional values (names and symbols, in order) and the same set of free-parameter full
+ * names, in any order. The #NcmMSet models and parameter values are not compared.
+ *
+ * Returns: %TRUE when @desc and @other are compatible
  */
-void
-ncm_mset_catalog_desc_check_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
+gboolean
+ncm_mset_catalog_desc_is_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, gchar **reason)
 {
-  GError *local_error = NULL;
+  gchar *why = NULL;
 
   if (desc->nchains != other->nchains)
-    g_set_error (&local_error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                 "%u chains and %u chains", desc->nchains, other->nchains);
+    why = g_strdup_printf ("%u chains and %u chains", desc->nchains, other->nchains);
   else if (desc->weighted != other->weighted)
-    g_set_error (&local_error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                 "one description is weighted and the other is not");
+    why = g_strdup ("one description is weighted and the other is not");
   else if (desc->m2lnp_var != other->m2lnp_var)
-    g_set_error (&local_error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                 "m2lnp-var %d and %d", desc->m2lnp_var, other->m2lnp_var);
+    why = g_strdup_printf ("m2lnp-var %d and %d", desc->m2lnp_var, other->m2lnp_var);
   else if (strcmp (desc->run_type, other->run_type) != 0)
-    g_set_error (&local_error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                 "run types `%s' and `%s'", desc->run_type, other->run_type);
+    why = g_strdup_printf ("run types `%s' and `%s'", desc->run_type, other->run_type);
 
-  if (local_error == NULL)
-    _ncm_mset_catalog_desc_check_add_vals (desc, other, &local_error);
+  if (why == NULL)
+    why = _ncm_mset_catalog_desc_add_vals_difference (desc, other);
 
-  if (local_error == NULL)
-    _ncm_mset_catalog_desc_check_fparam_set (desc, other, &local_error);
+  if (why == NULL)
+    why = _ncm_mset_catalog_desc_fparam_set_difference (desc, other);
 
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_desc_check_compatible");
+  if (reason != NULL)
+    *reason = why;
+  else
+    g_free (why);
+
+  return why == NULL;
 }
 
 /*
  * Compares the additional values of desc and other, names and symbols, position by
- * position.
+ * position. Returns the first difference as a newly allocated string, NULL when equal.
  */
-static void
-_ncm_mset_catalog_desc_check_add_vals (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
+static gchar *
+_ncm_mset_catalog_desc_add_vals_difference (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other)
 {
   guint i;
 
   if (desc->add_val_names->len != other->add_val_names->len)
-  {
-    g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                 "%u additional values and %u additional values",
-                 desc->add_val_names->len, other->add_val_names->len);
-
-    return;
-  }
+    return g_strdup_printf ("%u additional values and %u additional values",
+                            desc->add_val_names->len, other->add_val_names->len);
 
   for (i = 0; i < desc->add_val_names->len; i++)
   {
@@ -789,34 +786,28 @@ _ncm_mset_catalog_desc_check_add_vals (NcmMSetCatalogDesc *desc, NcmMSetCatalogD
     const gchar *other_symb = g_ptr_array_index (other->add_val_symbols, i);
 
     if ((strcmp (name, other_name) != 0) || (strcmp (symb, other_symb) != 0))
-    {
-      g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                   "additional value %u is `%s' (`%s') and `%s' (`%s')",
-                   i, name, symb, other_name, other_symb);
-
-      return;
-    }
+      return g_strdup_printf ("additional value %u is `%s' (`%s') and `%s' (`%s')",
+                              i, name, symb, other_name, other_symb);
   }
+
+  return NULL;
 }
 
 /*
- * Compares the free-parameter full names of desc and other as sets.
+ * Compares the free-parameter full names of desc and other as sets. Returns the first
+ * difference as a newly allocated string, NULL when equal.
  */
-static void
-_ncm_mset_catalog_desc_check_fparam_set (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
+static gchar *
+_ncm_mset_catalog_desc_fparam_set_difference (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other)
 {
   const guint len       = ncm_mset_fparams_len (desc->mset);
   const guint other_len = ncm_mset_fparams_len (other->mset);
+  gchar *why            = NULL;
   GHashTable *names;
   guint i;
 
   if (len != other_len)
-  {
-    g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                 "%u free parameters and %u free parameters", len, other_len);
-
-    return;
-  }
+    return g_strdup_printf ("%u free parameters and %u free parameters", len, other_len);
 
   names = g_hash_table_new (g_str_hash, g_str_equal);
 
@@ -829,56 +820,42 @@ _ncm_mset_catalog_desc_check_fparam_set (NcmMSetCatalogDesc *desc, NcmMSetCatalo
 
     if (!g_hash_table_contains (names, name))
     {
-      g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-                   "free parameter `%s' is not free in the other description", name);
+      why = g_strdup_printf ("free parameter `%s' is not free in the other description", name);
       break;
     }
   }
 
   g_hash_table_unref (names);
+
+  return why;
 }
 
 /**
- * ncm_mset_catalog_desc_check_same_order:
+ * ncm_mset_catalog_desc_has_same_order:
  * @desc: a #NcmMSetCatalogDesc
  * @other: a #NcmMSetCatalogDesc
- * @error: a #GError
  *
- * Checks whether @desc and @other list the same free parameters in the same order,
- * compared by full name. A row copied by position from a catalog described by @other
- * into one described by @desc keeps each parameter in its column only when this holds.
- * Otherwise it sets @error with %NCM_MSET_CATALOG_DESC_ERROR_ORDER, naming the first
- * position that differs.
+ * Whether @desc and @other list the same free parameters in the same order, compared by
+ * full name. A row copied by position from a catalog described by @other into one
+ * described by @desc keeps each parameter in its column only when this holds.
+ *
+ * Returns: %TRUE when the free parameters are the same and in the same order
  */
-void
-ncm_mset_catalog_desc_check_same_order (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
+gboolean
+ncm_mset_catalog_desc_has_same_order (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other)
 {
-  const guint len       = ncm_mset_fparams_len (desc->mset);
-  const guint other_len = ncm_mset_fparams_len (other->mset);
-  GError *local_error   = NULL;
+  const guint len = ncm_mset_fparams_len (desc->mset);
   guint i;
 
-  if (len != other_len)
-  {
-    g_set_error (&local_error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_ORDER,
-                 "%u free parameters and %u free parameters", len, other_len);
-  }
-  else
-  {
-    for (i = 0; i < len; i++)
-    {
-      const gchar *name       = ncm_mset_fparam_full_name (desc->mset, i);
-      const gchar *other_name = ncm_mset_fparam_full_name (other->mset, i);
+  if (len != ncm_mset_fparams_len (other->mset))
+    return FALSE;
 
-      if (strcmp (name, other_name) != 0)
-      {
-        g_set_error (&local_error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_ORDER,
-                     "free parameter %u is `%s' and `%s'", i, name, other_name);
-        break;
-      }
-    }
+  for (i = 0; i < len; i++)
+  {
+    if (strcmp (ncm_mset_fparam_full_name (desc->mset, i), ncm_mset_fparam_full_name (other->mset, i)) != 0)
+      return FALSE;
   }
 
-  ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_desc_check_same_order");
+  return TRUE;
 }
 

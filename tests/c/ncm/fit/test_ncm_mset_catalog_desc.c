@@ -119,15 +119,13 @@ _test_ncm_mset_catalog_desc_mset_new (NcmModelMVND *model_mvnd)
 static void
 _test_ncm_mset_catalog_desc_assert_incompatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other)
 {
-  GError *error = NULL;
+  gchar *reason = NULL;
 
-  ncm_mset_catalog_desc_check_compatible (desc, other, &error);
-  g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE);
-  g_clear_error (&error);
+  g_assert_false (ncm_mset_catalog_desc_is_compatible (desc, other, &reason));
+  g_assert_nonnull (reason);
+  g_free (reason);
 
-  ncm_mset_catalog_desc_check_compatible (other, desc, &error);
-  g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE);
-  g_clear_error (&error);
+  g_assert_false (ncm_mset_catalog_desc_is_compatible (other, desc, NULL));
 }
 
 void
@@ -226,7 +224,6 @@ test_ncm_mset_catalog_desc_serialize (TestNcmMSetCatalogDesc *test, gconstpointe
   NcmSerialize *ser        = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   NcmMSetCatalogDesc *desc = test->desc;
   NcmMSetCatalogDesc *dup  = NCM_MSET_CATALOG_DESC (ncm_serialize_dup_obj (ser, G_OBJECT (desc)));
-  GError *error            = NULL;
   gchar **names            = NULL;
   guint i;
 
@@ -248,10 +245,8 @@ test_ncm_mset_catalog_desc_serialize (TestNcmMSetCatalogDesc *test, gconstpointe
     g_assert_cmpstr (ncm_mset_catalog_desc_col_symb (dup, i), ==, ncm_mset_catalog_desc_col_symb (desc, i));
   }
 
-  ncm_mset_catalog_desc_check_compatible (desc, dup, &error);
-  g_assert_no_error (error);
-  ncm_mset_catalog_desc_check_same_order (desc, dup, &error);
-  g_assert_no_error (error);
+  g_assert_true (ncm_mset_catalog_desc_is_compatible (desc, dup, NULL));
+  g_assert_true (ncm_mset_catalog_desc_has_same_order (desc, dup));
 
   ncm_mset_catalog_desc_free (dup);
   ncm_serialize_free (ser);
@@ -358,8 +353,12 @@ test_ncm_mset_catalog_desc_incompatible (TestNcmMSetCatalogDesc *test, gconstpoi
   /* Equal inputs are compatible. */
   other = ncm_mset_catalog_desc_new (mset, TEST_DESC_NCHAINS, TRUE, test_names, test_symbols, 0, TEST_DESC_RUN_TYPE, &error);
   g_assert_no_error (error);
-  ncm_mset_catalog_desc_check_compatible (desc, other, &error);
-  g_assert_no_error (error);
+  {
+    gchar *reason = NULL;
+
+    g_assert_true (ncm_mset_catalog_desc_is_compatible (desc, other, &reason));
+    g_assert_null (reason);
+  }
   ncm_mset_catalog_desc_free (other);
 
   other = ncm_mset_catalog_desc_new (mset, TEST_DESC_NCHAINS + 1, TRUE, test_names, test_symbols, 0, TEST_DESC_RUN_TYPE, &error);
@@ -446,15 +445,9 @@ test_ncm_mset_catalog_desc_order (TestNcmMSetCatalogDesc *test, gconstpointer pd
   g_assert_no_error (error);
   g_assert_cmpstr (ncm_mset_catalog_desc_col_full_name (other, 3), ==, ncm_mset_catalog_desc_col_full_name (desc, 3 + TEST_DESC_DIM - 1));
 
-  ncm_mset_catalog_desc_check_compatible (desc, other, &error);
-  g_assert_no_error (error);
-
-  ncm_mset_catalog_desc_check_same_order (desc, other, &error);
-  g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_ORDER);
-  g_clear_error (&error);
-
-  ncm_mset_catalog_desc_check_same_order (desc, desc, &error);
-  g_assert_no_error (error);
+  g_assert_true (ncm_mset_catalog_desc_is_compatible (desc, other, NULL));
+  g_assert_false (ncm_mset_catalog_desc_has_same_order (desc, other));
+  g_assert_true (ncm_mset_catalog_desc_has_same_order (desc, desc));
 
   ncm_mset_catalog_desc_free (other);
   g_strfreev (fmap);

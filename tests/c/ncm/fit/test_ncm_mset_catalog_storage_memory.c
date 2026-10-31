@@ -262,7 +262,7 @@ test_ncm_mset_catalog_storage_memory_set_desc (TestNcmMSetCatalogStorageMemory *
   other = ncm_mset_catalog_desc_new (test->mset, TEST_STORAGE_NCHAINS + 1, FALSE, test_names, test_symbols,
                                      0, TEST_STORAGE_RUN_TYPE, &error);
   ncm_mset_catalog_storage_set_desc (test->storage, other, &error);
-  g_assert_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE);
   g_clear_error (&error);
 
   /* No description change while a recording is open. */
@@ -591,7 +591,7 @@ test_ncm_mset_catalog_storage_memory_serialize (TestNcmMSetCatalogStorageMemory 
 
   dup = NCM_MSET_CATALOG_STORAGE (ncm_serialize_dup_obj (ser, G_OBJECT (storage)));
 
-  ncm_mset_catalog_desc_check_same_order (ncm_mset_catalog_storage_peek_desc (dup, &error), test->desc, &error);
+  g_assert_true (ncm_mset_catalog_desc_has_same_order (ncm_mset_catalog_storage_peek_desc (dup, &error), test->desc));
   g_assert_no_error (error);
   g_assert_cmpuint (ncm_mset_catalog_storage_nrows (dup, &error), ==, 6);
 

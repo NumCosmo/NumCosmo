@@ -42,6 +42,8 @@ G_DECLARE_DERIVABLE_TYPE (NcmMSetCatalogStorage, ncm_mset_catalog_storage, NCM, 
 /**
  * NcmMSetCatalogStorageError:
  * @NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED: the storage has no #NcmMSetCatalogDesc
+ * @NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE: the #NcmMSetCatalogDesc to bind is not
+ *   compatible with the stored one
  * @NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING: a recording is open
  * @NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING: a write outside a recording
  * @NCM_MSET_CATALOG_STORAGE_ERROR_ROW: a row or sampler-segment index out of range, or a row
@@ -59,6 +61,7 @@ G_DECLARE_DERIVABLE_TYPE (NcmMSetCatalogStorage, ncm_mset_catalog_storage, NCM, 
 typedef enum _NcmMSetCatalogStorageError /*< prefix=NCM_MSET_CATALOG_STORAGE_ERROR >*/
 {
   NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED,
+  NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE,
   NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING,
   NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING,
   NCM_MSET_CATALOG_STORAGE_ERROR_ROW,

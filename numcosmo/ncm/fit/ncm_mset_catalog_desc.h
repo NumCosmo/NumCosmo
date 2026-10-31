@@ -47,9 +47,6 @@ G_DECLARE_FINAL_TYPE (NcmMSetCatalogDesc, ncm_mset_catalog_desc, NCM, MSET_CATAL
  *   weight column name or the full name of a free parameter
  * @NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR: the $-2\ln(p)$ column is not one of the
  *   additional values
- * @NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE: two descriptions are not compatible
- * @NCM_MSET_CATALOG_DESC_ERROR_ORDER: two descriptions list the free parameters in different
- *   orders
  *
  * Error codes returned by the #NcmMSetCatalogDesc class.
  *
@@ -60,8 +57,6 @@ typedef enum _NcmMSetCatalogDescError /*< prefix=NCM_MSET_CATALOG_DESC_ERROR >*/
   NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS,
   NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
   NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR,
-  NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE,
-  NCM_MSET_CATALOG_DESC_ERROR_ORDER,
 } NcmMSetCatalogDescError;
 
 GQuark ncm_mset_catalog_desc_error_quark (void);
@@ -86,8 +81,8 @@ const gchar *ncm_mset_catalog_desc_col_full_name (NcmMSetCatalogDesc *desc, guin
 const gchar *ncm_mset_catalog_desc_col_symb (NcmMSetCatalogDesc *desc, guint i);
 gboolean ncm_mset_catalog_desc_col_by_name (NcmMSetCatalogDesc *desc, const gchar *name, guint *col_index);
 
-void ncm_mset_catalog_desc_check_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
-void ncm_mset_catalog_desc_check_same_order (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error);
+gboolean ncm_mset_catalog_desc_is_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, gchar **reason);
+gboolean ncm_mset_catalog_desc_has_same_order (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other);
 
 #define NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME "NcmMSetCatalog:Row-weights"
 #define NCM_MSET_CATALOG_DESC_WEIGHT_SYMBOL "W"

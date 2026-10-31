@@ -31,7 +31,7 @@
  *
  * A storage without a description is uninitialized. ncm_mset_catalog_storage_set_desc()
  * stores a description on an uninitialized storage and binds a compatible one
- * (ncm_mset_catalog_desc_check_compatible()) on an initialized storage; rows are then read
+ * (ncm_mset_catalog_desc_is_compatible()) on an initialized storage; rows are then read
  * and written in the order of the bound description.
  *
  * The storage owns the #NcmRNG of the run. ncm_mset_catalog_storage_set_rng() gives one to a
@@ -319,10 +319,10 @@ _ncm_mset_catalog_storage_require_desc (NcmMSetCatalogStorage *storage, GError *
  * @error: a #GError
  *
  * Stores @desc on an uninitialized @storage. On an initialized @storage it binds @desc when
- * it is compatible with the stored description (ncm_mset_catalog_desc_check_compatible()),
- * so rows are read and written in the order of @desc, and otherwise sets @error with the
- * incompatibility. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a recording is
- * open.
+ * it is compatible with the stored description (ncm_mset_catalog_desc_is_compatible()),
+ * so rows are read and written in the order of @desc, and otherwise fails with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE, naming the difference. Fails with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a recording is open.
  */
 void
 ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error)
@@ -347,7 +347,15 @@ ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalo
     else
     {
       if (stored != desc)
-        ncm_mset_catalog_desc_check_compatible (stored, desc, &local_error);
+      {
+        gchar *reason = NULL;
+
+        if (!ncm_mset_catalog_desc_is_compatible (stored, desc, &reason))
+          g_set_error (&local_error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE,
+                       "the description is not compatible with the stored one: %s", reason);
+
+        g_free (reason);
+      }
 
       if ((local_error == NULL) && (stored != desc))
         klass->bind_desc (storage, desc, &local_error);

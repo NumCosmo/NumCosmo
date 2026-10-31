@@ -391,10 +391,6 @@
     "nick": "duplicate-name",
     "type": "Ncm.MSetCatalogDescError"
   },
-  "NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE": {
-    "nick": "incompatible",
-    "type": "Ncm.MSetCatalogDescError"
-  },
   "NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS": {
     "nick": "invalid-add-vals",
     "type": "Ncm.MSetCatalogDescError"
@@ -405,10 +401,6 @@
   },
   "NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET": {
     "nick": "invalid-mset",
-    "type": "Ncm.MSetCatalogDescError"
-  },
-  "NCM_MSET_CATALOG_DESC_ERROR_ORDER": {
-    "nick": "order",
     "type": "Ncm.MSetCatalogDescError"
   },
   "NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID": {
@@ -425,6 +417,10 @@
   },
   "NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND": {
     "nick": "backend",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE": {
+    "nick": "incompatible",
     "type": "Ncm.MSetCatalogStorageError"
   },
   "NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID": {

@@ -624,9 +624,8 @@ test_ncm_mset_catalog_storage_fits_write_reopen (TestNcmMSetCatalogStorageFits *
     NcmRNG *rng_file;
 
     g_assert_nonnull (desc);
-    ncm_mset_catalog_desc_check_compatible (desc, test->desc, &error);
-    ncm_mset_catalog_desc_check_same_order (desc, test->desc, &error);
-    g_assert_no_error (error);
+    g_assert_true (ncm_mset_catalog_desc_is_compatible (desc, test->desc, NULL));
+    g_assert_true (ncm_mset_catalog_desc_has_same_order (desc, test->desc));
     g_assert_cmpstr (ncm_mset_catalog_desc_get_run_type (desc), ==, NCM_MSET_CATALOG_RTYPE_ESMCMC);
 
     g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 12);
@@ -767,7 +766,7 @@ test_ncm_mset_catalog_storage_fits_bind_order (TestNcmMSetCatalogStorageFits *te
     NcmVector *row                  = ncm_mset_catalog_storage_get_row (reopened, 6, &error);
 
     g_assert_no_error (error);
-    ncm_mset_catalog_desc_check_same_order (ncm_mset_catalog_storage_peek_desc (reopened, &error), test->desc, &error);
+    g_assert_true (ncm_mset_catalog_desc_has_same_order (ncm_mset_catalog_storage_peek_desc (reopened, &error), test->desc));
     g_assert_no_error (error);
     g_assert_cmpfloat (ncm_vector_get (row, 1), ==, 602.0);
     g_assert_cmpfloat (ncm_vector_get (row, 2), ==, 601.0);
