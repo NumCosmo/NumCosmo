@@ -26,9 +26,9 @@
 /*
  * Reads the catalog files of data/truth_tables/catalog/, written by
  * tests/tools/make_catalog_fixtures.py, with the read-only constructor and checks the
- * state each file carries: the run type and sampler strings of each producer, the header
- * variants (no RNG keys, no RNG_ALGO, no M2LNP_ID, FIRST_ID other than 0, no MARKID, no
- * rows), weighted rows and a `functions' key in HDU0.
+ * state each file carries: the run type and sampler strings of each producer, the
+ * header variants (no RNG keys, no RNG_ALGO, no M2LNP_ID, FIRST_ID other than 0, no
+ * MARKID, no rows), weighted rows and a `functions' key in HDU0.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -127,8 +127,10 @@ test_ncm_mset_catalog_fixtures_esmcmc (void)
   g_assert_cmpint (ncm_mset_catalog_get_m2lnp_var (mcat), ==, 0);
   g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, TEST_FIXTURES_ESMCMC_NWALKERS);
 
-  /* The current library rebuilds the RNG from RNG_ALGO and RNG_INIS and does not restore
-   * RNG_SEED. */
+  /*
+   * The current library rebuilds the RNG from RNG_ALGO and RNG_INIS and does not
+   * restore RNG_SEED.
+   */
   g_assert_nonnull (rng);
   g_assert_cmpstr (ncm_rng_get_algo (rng), ==, "mt19937");
 
