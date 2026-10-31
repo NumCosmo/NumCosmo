@@ -43,7 +43,7 @@ import tempfile
 import numpy as np
 from astropy.io import fits
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import Ncm
 
 Ncm.cfg_init()
 
