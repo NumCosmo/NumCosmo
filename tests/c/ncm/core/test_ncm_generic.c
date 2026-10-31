@@ -43,6 +43,7 @@ void test_ncm_fftlog_basic (void);
 void test_ncm_stats_rows_basic (void);
 void test_ncm_mset_catalog_desc_basic (void);
 void test_ncm_mset_catalog_storage_memory_basic (void);
+void test_ncm_mset_catalog_storage_fits_basic (void);
 void test_ncm_sphere_nn (void);
 void test_ncm_sphere_xi (void);
 void test_ncm_timer_basic (void);
@@ -152,6 +153,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/stats_rows/basic", test_ncm_stats_rows_basic);
   g_test_add_func ("/ncm/mset_catalog_desc/basic", test_ncm_mset_catalog_desc_basic);
   g_test_add_func ("/ncm/mset_catalog_storage_memory/basic", test_ncm_mset_catalog_storage_memory_basic);
+#ifdef HAVE_CFITSIO
+  g_test_add_func ("/ncm/mset_catalog_storage_fits/basic", test_ncm_mset_catalog_storage_fits_basic);
+#endif /* HAVE_CFITSIO */
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
@@ -590,6 +594,43 @@ test_ncm_mset_catalog_storage_memory_basic (void)
   g_assert_true (NCM_IS_MSET_CATALOG_STORAGE_MEMORY (storage_mem));
 
   NCM_TEST_FREE (ncm_mset_catalog_storage_memory_free, storage_mem);
+}
+
+void
+test_ncm_mset_catalog_storage_fits_basic (void)
+{
+  gchar *tmpdir                           = g_dir_make_tmp ("test_ncm_generic_fits_XXXXXX", NULL);
+  gchar *filename                         = g_build_filename (tmpdir, "catalog.fits", NULL);
+  GError *error                           = NULL;
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, &error);
+  NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
+  NcmMSetCatalogStorageFits *storage_fits2;
+  NcmMSetCatalogStorage *storage2;
+
+  g_assert_no_error (error);
+  g_assert_true (NCM_IS_MSET_CATALOG_STORAGE_FITS (storage_fits));
+  g_assert_null (ncm_mset_catalog_storage_peek_desc (storage, &error));
+  g_assert_no_error (error);
+  g_assert_cmpstr (ncm_mset_catalog_storage_fits_peek_filename (storage_fits), ==, filename);
+  g_assert_false (ncm_mset_catalog_storage_fits_get_read_only (storage_fits));
+
+  storage_fits2 = ncm_mset_catalog_storage_fits_ref (storage_fits);
+  ncm_mset_catalog_storage_fits_clear (&storage_fits2);
+  g_assert_null (storage_fits2);
+
+  storage2 = ncm_mset_catalog_storage_ref (storage);
+  ncm_mset_catalog_storage_clear (&storage2);
+  g_assert_null (storage2);
+
+  ncm_mset_catalog_storage_free (ncm_mset_catalog_storage_ref (storage));
+
+  g_assert_true (NCM_IS_MSET_CATALOG_STORAGE_FITS (storage_fits));
+
+  NCM_TEST_FREE (ncm_mset_catalog_storage_fits_free, storage_fits);
+
+  g_rmdir (tmpdir);
+  g_free (filename);
+  g_free (tmpdir);
 }
 
 void

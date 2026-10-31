@@ -183,7 +183,7 @@ def build_catalog(nadd_vals, names, symbols, weighted):
 
 
 def write_weighted(path):
-    """Weighted rows added as vectors: m2lnL, the two parameters and the weight."""
+    """Weighted rows added as vectors in column order: m2lnL, the weight, the parameters."""
     mcat = build_catalog(1, ["m2lnL"], ["-2\\ln(L)"], True)
     mcat.set_file(path)
 
@@ -191,7 +191,7 @@ def write_weighted(path):
 
     for i in range(NROWS_WEIGHTED):
         x = rng.normal(size=DIM)
-        row = [float(np.dot(x, x))] + [float(v) for v in x] + [1.0 / (i + 1)]
+        row = [float(np.dot(x, x)), 1.0 / (i + 1)] + [float(v) for v in x]
         mcat.add_from_vector(Ncm.Vector.new_array(row))
 
     mcat.sync(True)

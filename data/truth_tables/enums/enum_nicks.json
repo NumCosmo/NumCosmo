@@ -431,6 +431,14 @@
     "nick": "not-recording",
     "type": "Ncm.MSetCatalogStorageError"
   },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO": {
+    "nick": "no-cfitsio",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY": {
+    "nick": "read-only",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
   "NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING": {
     "nick": "recording",
     "type": "Ncm.MSetCatalogStorageError"

@@ -162,6 +162,7 @@
 #include <numcosmo/ncm/fit/ncm_mset_catalog.h>
 #include <numcosmo/ncm/fit/ncm_mset_catalog_desc.h>
 #include <numcosmo/ncm/fit/ncm_mset_catalog_storage.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_storage_fits.h>
 #include <numcosmo/ncm/fit/ncm_mset_catalog_storage_memory.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern_flat.h>

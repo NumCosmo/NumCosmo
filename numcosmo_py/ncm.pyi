@@ -73,6 +73,10 @@ MSET_CATALOG_RTYPE_MCMC: str = r"NcmFitMCMC"
 MSET_CATALOG_RTYPE_UNDEFINED: str = r"undefined-run"
 MSET_CATALOG_SAMPLER_LABEL: str = r"SAMPLER"
 MSET_CATALOG_SAMPLER_OPTS_LABEL: str = r"SAMPOPT"
+MSET_CATALOG_STORAGE_FITS_NSEGS_LABEL: str = r"NSEGS"
+MSET_CATALOG_STORAGE_FITS_SEG_OPTIONS_LABEL: str = r"SEGO"
+MSET_CATALOG_STORAGE_FITS_SEG_SAMPLER_LABEL: str = r"SEGN"
+MSET_CATALOG_STORAGE_FITS_SEG_START_LABEL: str = r"SEGS"
 MSET_CATALOG_WEIGHTED_LABEL: str = r"WEIGHTED"
 MSET_INIT_MARRAY: int = 32
 MSET_MAX_STACKSIZE: int = 1000
@@ -6652,6 +6656,77 @@ class MSetCatalogStorageClass(GObject.GPointer):
     ] = ...
     set_sampler: typing.Callable[[MSetCatalogStorage, int, int, str, str], None] = ...
     padding: list[None] = ...
+
+class MSetCatalogStorageFits(MSetCatalogStorage):
+    r"""
+    :Constructors:
+
+    ::
+
+        MSetCatalogStorageFits(**properties)
+        new(filename:str, read_only:bool) -> NumCosmoMath.MSetCatalogStorageFits or None
+
+    Object NcmMSetCatalogStorageFits
+
+    Properties from NcmMSetCatalogStorageFits:
+      filename -> gchararray: filename
+        Catalog file name
+      read-only -> gboolean: read-only
+        Whether the file is read-only
+      keep-last -> guint: keep-last
+        Rows per chain kept in memory
+      read-block -> guint: read-block
+        Number of rows read from the file at once
+
+    Properties from NcmMSetCatalogStorage:
+      smode -> NcmMSetCatalogSync: smode
+        Storage sync mode
+      sync-interval -> gdouble: sync-interval
+        Data sync interval
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        filename: str
+        keep_last: int
+        read_block: int
+        read_only: bool
+        smode: MSetCatalogSync
+        sync_interval: float
+
+    props: Props = ...
+    def __init__(
+        self,
+        filename: str = ...,
+        keep_last: int = ...,
+        read_block: int = ...,
+        read_only: bool = ...,
+        smode: MSetCatalogSync = ...,
+        sync_interval: float = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(storage_fits: MSetCatalogStorageFits) -> None: ...
+    def free(self) -> None: ...
+    def get_read_only(self) -> bool: ...
+    @classmethod
+    def new(
+        cls, filename: str, read_only: bool
+    ) -> typing.Optional[MSetCatalogStorageFits]: ...
+    def peek_filename(self) -> str: ...
+    def ref(self) -> MSetCatalogStorageFits: ...
+
+class MSetCatalogStorageFitsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        MSetCatalogStorageFitsClass()
+    """
+
+    parent_class: MSetCatalogStorageClass = ...
 
 class MSetCatalogStorageMemory(MSetCatalogStorage):
     r"""
@@ -14744,6 +14819,8 @@ class MSetCatalogStorageError(GObject.GEnum):
     BACKEND: MSetCatalogStorageError = ...
     MARKOVIAN_ID: MSetCatalogStorageError = ...
     NOT_RECORDING: MSetCatalogStorageError = ...
+    NO_CFITSIO: MSetCatalogStorageError = ...
+    READ_ONLY: MSetCatalogStorageError = ...
     RECORDING: MSetCatalogStorageError = ...
     RNG: MSetCatalogStorageError = ...
     ROW: MSetCatalogStorageError = ...
