@@ -400,57 +400,72 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
 static void
 _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, guint names_len, guint symbols_len, gint m2lnp_var, GError **error)
 {
+  GHashTable *taken;
   guint i;
 
   if (mset == NULL)
-    g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET,
-                 "no NcmMSet given");
-  else if (!ncm_mset_fparam_map_valid (mset))
-    g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET,
-                 "the free-parameter map of the NcmMSet is not prepared");
-  else if (names_len != symbols_len)
-    g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS,
-                 "%u additional-value names and %u symbols", names_len, symbols_len);
-  else if ((m2lnp_var < -1) || (m2lnp_var >= (gint) names_len))
-    g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR,
-                 "m2lnp-var %d is not -1 or one of the %u additional values", m2lnp_var, names_len);
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET,
+                                "no NcmMSet given");
 
-  if (*error != NULL)
     return;
+  }
+
+  if (!ncm_mset_fparam_map_valid (mset))
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET,
+                                "the free-parameter map of the NcmMSet is not prepared");
+
+    return;
+  }
+
+  if (names_len != symbols_len)
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS,
+                                "%u additional-value names and %u symbols", names_len, symbols_len);
+
+    return;
+  }
+
+  if ((m2lnp_var < -1) || (m2lnp_var >= (gint) names_len))
+  {
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR,
+                                "m2lnp-var %d is not -1 or one of the %u additional values", m2lnp_var, names_len);
+
+    return;
+  }
 
   /*
    * Column names address the columns: each additional-value name is non-empty and is
    * not the weight column name, a free-parameter full name or an earlier name.
    */
+  taken = g_hash_table_new (g_str_hash, g_str_equal);
+
+  g_hash_table_add (taken, (gpointer) NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME);
+
+  for (i = 0; i < ncm_mset_fparams_len (mset); i++)
+    g_hash_table_add (taken, (gpointer) ncm_mset_fparam_full_name (mset, i));
+
+  for (i = 0; i < names_len; i++)
   {
-    GHashTable *taken = g_hash_table_new (g_str_hash, g_str_equal);
+    const gchar *name = names[i];
 
-    g_hash_table_add (taken, (gpointer) NCM_MSET_CATALOG_DESC_WEIGHT_COLNAME);
-
-    for (i = 0; i < ncm_mset_fparams_len (mset); i++)
-      g_hash_table_add (taken, (gpointer) ncm_mset_fparam_full_name (mset, i));
-
-    for (i = 0; i < names_len; i++)
+    if ((name == NULL) || (name[0] == '\0'))
     {
-      const gchar *name = names[i];
-
-      if ((name == NULL) || (name[0] == '\0'))
-      {
-        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS,
-                     "additional value %u has an empty name", i);
-        break;
-      }
-
-      if (!g_hash_table_add (taken, (gpointer) name))
-      {
-        g_set_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
-                     "additional value %u has a repeated or reserved name `%s'", i, name);
-        break;
-      }
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS,
+                                  "additional value %u has an empty name", i);
+      break;
     }
 
-    g_hash_table_unref (taken);
+    if (!g_hash_table_add (taken, (gpointer) name))
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_DESC_ERROR, NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME,
+                                  "additional value %u has a repeated or reserved name `%s'", i, name);
+      break;
+    }
   }
+
+  g_hash_table_unref (taken);
 }
 
 /**
@@ -478,16 +493,9 @@ ncm_mset_catalog_desc_new (NcmMSet *mset, guint nchains, gboolean weighted, cons
 {
   const guint names_len   = (names != NULL) ? g_strv_length ((gchar **) names) : 0;
   const guint symbols_len = (symbols != NULL) ? g_strv_length ((gchar **) symbols) : 0;
-  GError *local_error     = NULL;
 
-  _ncm_mset_catalog_desc_check_input (mset, names, names_len, symbols_len, m2lnp_var, &local_error);
-
-  if (local_error != NULL)
-  {
-    ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_desc_new");
-
-    return NULL;
-  }
+  _ncm_mset_catalog_desc_check_input (mset, names, names_len, symbols_len, m2lnp_var, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "ncm_mset_catalog_desc_new: ");
 
   return g_object_new (NCM_TYPE_MSET_CATALOG_DESC,
                        "mset",             mset,
