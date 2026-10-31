@@ -26,13 +26,14 @@
 /**
  * NcmMSetCatalogStorageMemory:
  *
- * An #NcmMSetCatalogStorage that keeps the description, every row and the run metadata in
- * memory.
+ * An #NcmMSetCatalogStorage that keeps the description, every row and the run metadata
+ * in memory.
  *
  * All of them are properties, so serialization writes the rows: it is slow for a long
- * catalog, which should use a file-backed storage. Rows are held in the order of the bound
- * description; binding a description whose free parameters are in another order replaces
- * every row by a permuted copy. The memory storage has nothing to write at a sync.
+ * catalog, which should use a file-backed storage. Rows are held in the order of the
+ * bound description; binding a description whose free parameters are in another order
+ * replaces every row by a permuted copy. The memory storage has nothing to write at a
+ * sync.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -404,8 +405,9 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
   /**
    * NcmMSetCatalogStorageMemory:rng-inis:
    *
-   * The state of the run's #NcmRNG before the first row (ncm_rng_get_state()), %NULL when
-   * no RNG was set. It is set together with #NcmMSetCatalogStorageMemory:rng-algo.
+   * The state of the run's #NcmRNG before the first row (ncm_rng_get_state()), %NULL
+   * when no RNG was set. It is set together with
+   * #NcmMSetCatalogStorageMemory:rng-algo.
    */
   g_object_class_install_property (object_class,
                                    PROP_RNG_INIS,
@@ -418,8 +420,8 @@ ncm_mset_catalog_storage_memory_class_init (NcmMSetCatalogStorageMemoryClass *kl
   /**
    * NcmMSetCatalogStorageMemory:rng-stat:
    *
-   * The state of the run's #NcmRNG after the last row, written at the end of each recording;
-   * %NULL when no RNG was set.
+   * The state of the run's #NcmRNG after the last row, written at the end of each
+   * recording; %NULL when no RNG was set.
    */
   g_object_class_install_property (object_class,
                                    PROP_RNG_STAT,
@@ -488,9 +490,11 @@ _ncm_mset_catalog_storage_memory_store_desc (NcmMSetCatalogStorage *storage, Ncm
   storage_mem->desc = ncm_mset_catalog_desc_ref (desc);
 }
 
-/* Replaces each row by a copy with the free parameters in the order of desc, then binds
- * desc. The two descriptions are compatible, so they have the same additional values and
- * the same free parameters. */
+/*
+ * Replaces each row by a copy with the free parameters in the order of desc, then
+ * binds desc. The two descriptions are compatible, so they have the same additional
+ * values and the same free parameters.
+ */
 static void
 _ncm_mset_catalog_storage_memory_bind_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error)
 {
@@ -654,8 +658,8 @@ _ncm_mset_catalog_storage_memory_set_sampler (NcmMSetCatalogStorage *storage, gu
 /**
  * ncm_mset_catalog_storage_memory_new:
  *
- * Creates an uninitialized memory storage; ncm_mset_catalog_storage_set_desc() gives it a
- * description.
+ * Creates an uninitialized memory storage; ncm_mset_catalog_storage_set_desc() gives
+ * it a description.
  *
  * Returns: (transfer full): a new #NcmMSetCatalogStorageMemory
  */
@@ -696,8 +700,8 @@ ncm_mset_catalog_storage_memory_free (NcmMSetCatalogStorageMemory *storage_mem)
  * ncm_mset_catalog_storage_memory_clear:
  * @storage_mem: a #NcmMSetCatalogStorageMemory
  *
- * If *@storage_mem is not %NULL, decreases its reference count and sets *@storage_mem to
- * %NULL.
+ * If *@storage_mem is not %NULL, decreases its reference count and sets *@storage_mem
+ * to %NULL.
  */
 void
 ncm_mset_catalog_storage_memory_clear (NcmMSetCatalogStorageMemory **storage_mem)
