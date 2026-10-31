@@ -28,40 +28,38 @@
  *
  * Immutable description of the columns and metadata of an #NcmMSetCatalog.
  *
- * The description includes the number of chains, whether rows are weighted,
- * the additional value representing $-2\ln(p)$ and the run type.
+ * The description includes the number of chains, whether rows are weighted, the
+ * additional value representing $-2\ln(p)$ and the run type.
  *
- * Each row contains the additional values followed by the free parameters
- * of the #NcmMSet, ordered according to its free-parameter map. The additional
- * values are those provided at construction, followed by the weight column
- * when the catalog is weighted.
+ * Each row contains the additional values followed by the free parameters of the
+ * #NcmMSet, ordered according to its free-parameter map. The additional values are
+ * those provided at construction, followed by the weight column when the catalog is
+ * weighted.
  *
- * All properties are set at construction and cannot be modified afterward.
- * The description stores a copy of the #NcmMSet, ensuring that subsequent
- * changes to the original do not affect it.
+ * All properties are set at construction and cannot be modified afterward. The
+ * description stores a copy of the #NcmMSet, ensuring that subsequent changes to the
+ * original do not affect it.
  *
  * The properties #NcmMSetCatalogDesc:nadd-val-names and
  * #NcmMSetCatalogDesc:nadd-val-symbols exclude the weight column, whereas
  * ncm_mset_catalog_desc_nadd_vals() and the column accessors include it.
  *
- * The run type names the object that produced the catalog. It is fixed for the
- * catalog and compared by ncm_mset_catalog_desc_check_compatible(). The rows
- * themselves are described by the sampler segments of the storage, given to
- * ncm_mset_catalog_storage_start_recording() and allowed to change at each
- * recording. The NumCosmo producers use:
+ * The run type names the object that produced the catalog. It is fixed for the catalog
+ * and compared by ncm_mset_catalog_desc_check_compatible(). The rows themselves are
+ * described by the sampler segments of the storage, given to
+ * ncm_mset_catalog_storage_start_recording() and allowed to change at each recording.
+ * The NumCosmo producers use:
  *
  * - #NcmFitESMCMC: run type %NCM_MSET_CATALOG_RTYPE_ESMCMC; segments: the initial
- *   sampler's name for the first ensemble, then the walker description and
- *   options;
- * - #NcmFitMC: run type %NCM_MSET_CATALOG_RTYPE_MC; segment: the resampling type
- *   nick;
- * - #NcmFitMCBS: run type %NCM_MSET_CATALOG_RTYPE_MCBS; segment: "from-model",
- *   options "bootstrap-nomix";
+ *   sampler's name for the first ensemble, then the walker description and options;
+ * - #NcmFitMC: run type %NCM_MSET_CATALOG_RTYPE_MC; segment: the resampling type nick;
+ * - #NcmFitMCBS: run type %NCM_MSET_CATALOG_RTYPE_MCBS; segment: "from-model", options
+ *   "bootstrap-nomix";
  * - #NcmFitMCMC: run type %NCM_MSET_CATALOG_RTYPE_MCMC; segment: the transition
  *   kernel's name.
  *
- * Any other string may be used as run type; %NCM_MSET_CATALOG_RTYPE_UNDEFINED is
- * the default.
+ * Any other string may be used as run type; %NCM_MSET_CATALOG_RTYPE_UNDEFINED is the
+ * default.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -315,8 +313,8 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
    * NcmMSetCatalogDesc:nchains:
    *
    * The number of chains; the rows of iteration $i$ are rows $i\,n_\mathrm{chains}$ to
-   * $(i + 1)\,n_\mathrm{chains} - 1$. An ensemble sampler has one chain per walker; the
-   * other samplers have one.
+   * $(i + 1)\,n_\mathrm{chains} - 1$. An ensemble sampler has one chain per walker;
+   * the other samplers have one.
    */
   g_object_class_install_property (object_class,
                                    PROP_NCHAINS,
@@ -394,9 +392,11 @@ ncm_mset_catalog_desc_class_init (NcmMSetCatalogDescClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-/* Checks the inputs that the parameter specifications cannot: the mset is given and
+/*
+ * Checks the inputs that the parameter specifications cannot: the mset is given and
  * its free-parameter map is prepared, names and symbols agree in number, and m2lnp_var
- * is -1 or one of the user's additional values. */
+ * is -1 or one of the user's additional values.
+ */
 static void
 _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, guint names_len, guint symbols_len, gint m2lnp_var, GError **error)
 {
@@ -418,8 +418,10 @@ _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, g
   if (*error != NULL)
     return;
 
-  /* Column names address the columns: each additional-value name is non-empty and is not
-   * the weight column name, a free-parameter full name or an earlier name. */
+  /*
+   * Column names address the columns: each additional-value name is non-empty and is
+   * not the weight column name, a free-parameter full name or an earlier name.
+   */
   {
     GHashTable *taken = g_hash_table_new (g_str_hash, g_str_equal);
 
@@ -456,15 +458,18 @@ _ncm_mset_catalog_desc_check_input (NcmMSet *mset, const gchar * const *names, g
  * @mset: a #NcmMSet
  * @nchains: number of chains
  * @weighted: whether the rows carry a weight column
- * @names: (in) (array zero-terminated=1) (element-type utf8) (nullable): names of the user's additional values
- * @symbols: (in) (array zero-terminated=1) (element-type utf8) (nullable): symbols of the user's additional values
+ * @names: (in) (array zero-terminated=1) (element-type utf8) (nullable): names of the
+ * user's additional values
+ * @symbols: (in) (array zero-terminated=1) (element-type utf8) (nullable): symbols of
+ * the user's additional values
  * @m2lnp_var: index of the additional value holding $-2\ln(p)$, or -1
  * @run_type: (nullable): run type string
  * @error: a #GError
  *
- * Creates a description from its inputs; see #NcmMSetCatalogDesc for the column layout. A
- * %NULL @run_type gives %NCM_MSET_CATALOG_RTYPE_UNDEFINED. The free-parameter map of @mset
- * must be prepared. On an invalid input it sets @error and returns %NULL.
+ * Creates a description from its inputs; see #NcmMSetCatalogDesc for the column
+ * layout. A %NULL @run_type gives %NCM_MSET_CATALOG_RTYPE_UNDEFINED. The
+ * free-parameter map of @mset must be prepared. On an invalid input it sets @error and
+ * returns %NULL.
  *
  * Returns: (transfer full) (nullable): a new #NcmMSetCatalogDesc
  */
@@ -473,8 +478,7 @@ ncm_mset_catalog_desc_new (NcmMSet *mset, guint nchains, gboolean weighted, cons
 {
   const guint names_len   = (names != NULL) ? g_strv_length ((gchar **) names) : 0;
   const guint symbols_len = (symbols != NULL) ? g_strv_length ((gchar **) symbols) : 0;
-
-  GError *local_error = NULL;
+  GError *local_error     = NULL;
 
   _ncm_mset_catalog_desc_check_input (mset, names, names_len, symbols_len, m2lnp_var, &local_error);
 
@@ -600,8 +604,9 @@ ncm_mset_catalog_desc_get_run_type (NcmMSetCatalogDesc *desc)
  * ncm_mset_catalog_desc_nadd_vals:
  * @desc: a #NcmMSetCatalogDesc
  *
- * Returns the number of additional values, the weight column included. It is the index of
- * the first free-parameter column, with the same meaning as ncm_mset_catalog_nadd_vals().
+ * Returns the number of additional values, the weight column included. It is the index
+ * of the first free-parameter column, with the same meaning as
+ * ncm_mset_catalog_nadd_vals().
  *
  * Returns: the number of additional values
  */
@@ -644,7 +649,8 @@ ncm_mset_catalog_desc_col_name (NcmMSetCatalogDesc *desc, guint i)
  * @desc: a #NcmMSetCatalogDesc
  * @i: column index
  *
- * Returns: (transfer none): the full name of column @i, model-qualified for a free parameter
+ * Returns: (transfer none): the full name of column @i, model-qualified for a free
+ * parameter
  */
 const gchar *
 ncm_mset_catalog_desc_col_full_name (NcmMSetCatalogDesc *desc, guint i)
@@ -677,8 +683,9 @@ ncm_mset_catalog_desc_col_symb (NcmMSetCatalogDesc *desc, guint i)
  * @name: a free-parameter name, an additional-value name or a column index
  * @col_index: (out): the column index
  *
- * Finds the column of @name, tried in order as a free-parameter name, an additional-value
- * name, then a decimal column index; the same lookup as ncm_mset_catalog_col_by_name().
+ * Finds the column of @name, tried in order as a free-parameter name, an
+ * additional-value name, then a decimal column index; the same lookup as
+ * ncm_mset_catalog_col_by_name().
  *
  * Returns: whether @name was found
  */
@@ -724,10 +731,10 @@ static void _ncm_mset_catalog_desc_check_fparam_set (NcmMSetCatalogDesc *desc, N
  *
  * Checks whether rows described by @other can be added to rows described by @desc: the
  * same number of chains, the same weighting, the same m2lnp-var and run type, the same
- * additional values (names and symbols, in order) and the same set of free-parameter full
- * names, in any order. The #NcmMSet models and parameter values are not compared. When they
- * are not compatible it sets @error with %NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE, naming
- * the first difference.
+ * additional values (names and symbols, in order) and the same set of free-parameter
+ * full names, in any order. The #NcmMSet models and parameter values are not compared.
+ * When they are not compatible it sets @error with
+ * %NCM_MSET_CATALOG_DESC_ERROR_INCOMPATIBLE, naming the first difference.
  */
 void
 ncm_mset_catalog_desc_check_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
@@ -756,7 +763,10 @@ ncm_mset_catalog_desc_check_compatible (NcmMSetCatalogDesc *desc, NcmMSetCatalog
   ncm_util_forward_or_call_error (error, local_error, "ncm_mset_catalog_desc_check_compatible");
 }
 
-/* Compares the additional values of desc and other, names and symbols, position by position. */
+/*
+ * Compares the additional values of desc and other, names and symbols, position by
+ * position.
+ */
 static void
 _ncm_mset_catalog_desc_check_add_vals (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
 {
@@ -789,7 +799,9 @@ _ncm_mset_catalog_desc_check_add_vals (NcmMSetCatalogDesc *desc, NcmMSetCatalogD
   }
 }
 
-/* Compares the free-parameter full names of desc and other as sets. */
+/*
+ * Compares the free-parameter full names of desc and other as sets.
+ */
 static void
 _ncm_mset_catalog_desc_check_fparam_set (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
 {
@@ -832,11 +844,11 @@ _ncm_mset_catalog_desc_check_fparam_set (NcmMSetCatalogDesc *desc, NcmMSetCatalo
  * @other: a #NcmMSetCatalogDesc
  * @error: a #GError
  *
- * Checks whether @desc and @other list the same free parameters in the same order, compared
- * by full name. A row copied by position from a catalog described by @other into one
- * described by @desc keeps each parameter in its column only when this holds. Otherwise it
- * sets @error with %NCM_MSET_CATALOG_DESC_ERROR_ORDER, naming the first position that
- * differs.
+ * Checks whether @desc and @other list the same free parameters in the same order,
+ * compared by full name. A row copied by position from a catalog described by @other
+ * into one described by @desc keeps each parameter in its column only when this holds.
+ * Otherwise it sets @error with %NCM_MSET_CATALOG_DESC_ERROR_ORDER, naming the first
+ * position that differs.
  */
 void
 ncm_mset_catalog_desc_check_same_order (NcmMSetCatalogDesc *desc, NcmMSetCatalogDesc *other, GError **error)
