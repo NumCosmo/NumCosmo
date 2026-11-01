@@ -608,33 +608,6 @@ ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n)
   mcmc->write_index    = mcmc->cur_sample_id + 1;
 }
 
-/**
- * ncm_fit_mcmc_set_first_sample_id:
- * @mcmc: a #NcmFitMCMC
- * @first_sample_id: index of the first state
- *
- * Makes @first_sample_id the index of the first state of the catalog. It requires a
- * started run and cannot move backwards.
- *
- */
-void
-ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id)
-{
-  const gint first_id = ncm_mset_catalog_get_first_id (mcmc->mcat);
-
-  if (first_id == first_sample_id)
-    return;
-
-  if (!mcmc->started)
-    g_error ("ncm_fit_mcmc_set_first_sample_id: run not started, run ncm_fit_mcmc_start_run() first.");
-
-  if (first_sample_id <= mcmc->cur_sample_id)
-    g_error ("ncm_fit_mcmc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
-             first_sample_id, first_id, mcmc->cur_sample_id);
-
-  ncm_mset_catalog_set_first_id (mcmc->mcat, first_sample_id);
-}
-
 static void _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc);
 
 /**

@@ -343,10 +343,10 @@ def _resolve_burnin_rows(
         raise typer.BadParameter("Give at most one of --burnin and --tail.")
 
     filename = mcmc_file.absolute().as_posix()
-    nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(filename)
+    nrows, nchains = Ncm.MSetCatalog.peek_info_from_file(filename)
     n_iterations = nrows // nchains
     markovian_id = Ncm.MSetCatalog.peek_markovian_id_from_file(filename)
-    markovian_iterations = -(-(markovian_id - first_id) // nchains)
+    markovian_iterations = -(-markovian_id // nchains)
 
     if tail is not None:
         if tail < 0:

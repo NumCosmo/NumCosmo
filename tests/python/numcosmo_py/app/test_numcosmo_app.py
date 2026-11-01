@@ -881,10 +881,9 @@ def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
         raise result.exception
 
     catalog2 = output2.absolute().with_suffix(".mcmc.fits")
-    _nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(catalog2.as_posix())
+    _nrows, nchains = Ncm.MSetCatalog.peek_info_from_file(catalog2.as_posix())
     assert (
-        Ncm.MSetCatalog.peek_markovian_id_from_file(catalog2.as_posix())
-        == first_id + 4 * nchains
+        Ncm.MSetCatalog.peek_markovian_id_from_file(catalog2.as_posix()) == 4 * nchains
     )
     result = runner.invoke(
         app, ["catalog", "analyze", catalog2.as_posix(), "--burnin", "1"]
@@ -1078,7 +1077,7 @@ def test_run_mcmc_apes_analyze_empty_catalog(simple_experiment):
         raise result.exception
 
     catalog = output.absolute().with_suffix(".mcmc.fits")
-    nrows, nchains, _first_id = Ncm.MSetCatalog.peek_info_from_file(catalog.as_posix())
+    nrows, nchains = Ncm.MSetCatalog.peek_info_from_file(catalog.as_posix())
     n_iterations = nrows // nchains
 
     result = runner.invoke(

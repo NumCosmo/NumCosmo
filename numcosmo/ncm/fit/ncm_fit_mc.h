@@ -81,7 +81,6 @@ gboolean ncm_fit_mc_is_running (NcmFitMC *mc);
 void ncm_fit_mc_start_run (NcmFitMC *mc);
 void ncm_fit_mc_end_run (NcmFitMC *mc);
 void ncm_fit_mc_reset (NcmFitMC *mc);
-void ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id);
 void ncm_fit_mc_run (NcmFitMC *mc, guint n);
 void ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre);
 void ncm_fit_mc_mean_covar (NcmFitMC *mc);

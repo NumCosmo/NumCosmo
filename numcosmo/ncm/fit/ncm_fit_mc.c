@@ -87,7 +87,6 @@ struct _NcmFitMC
   NcmMemoryPool *mp;
   gint write_index;
   gint cur_sample_id;
-  gint first_sample_id;
   gboolean started;
   gboolean keep_order;
   NcmObjArray *func_oa;
@@ -894,34 +893,6 @@ ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n)
 
   mc->cur_sample_id += n;
   mc->write_index    = mc->cur_sample_id + 1;
-}
-
-/**
- * ncm_fit_mc_set_first_sample_id:
- * @mc: a #NcmFitMC
- * @first_sample_id: first sample id
- *
- * Makes @first_sample_id the index of the first realization of the catalog, skipping
- * the realizations before it. It requires a started run and cannot move backwards.
- *
- */
-void
-ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id)
-{
-  const gint mcat_first_id = ncm_mset_catalog_get_first_id (mc->mcat);
-
-  if (mcat_first_id == first_sample_id)
-    return;
-
-  if (!mc->started)
-    g_error ("ncm_fit_mc_set_first_sample_id: run not started, run ncm_fit_mc_start_run() first.");
-
-  if (first_sample_id <= mc->cur_sample_id)
-    g_error ("ncm_fit_mc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
-             first_sample_id, mcat_first_id, mc->cur_sample_id);
-
-  ncm_mset_catalog_set_first_id (mc->mcat, first_sample_id);
-  ncm_fit_mc_intern_skip (mc, first_sample_id - mc->cur_sample_id - 1);
 }
 
 static void _ncm_fit_mc_run_single (NcmFitMC *mc);

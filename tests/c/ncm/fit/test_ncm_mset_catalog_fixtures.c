@@ -123,7 +123,6 @@ test_ncm_mset_catalog_fixtures_esmcmc (void)
 
   _test_ncm_mset_catalog_fixtures_check_esmcmc (mcat);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, TEST_FIXTURES_ESMCMC_NROWS);
-  g_assert_cmpint (ncm_mset_catalog_get_first_id (mcat), ==, 0);
   g_assert_cmpint (ncm_mset_catalog_get_m2lnp_var (mcat), ==, 0);
   g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, TEST_FIXTURES_ESMCMC_NWALKERS);
 
@@ -187,8 +186,8 @@ test_ncm_mset_catalog_fixtures_esmcmc_first_id (void)
 
   _test_ncm_mset_catalog_fixtures_check_esmcmc (mcat);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, TEST_FIXTURES_ESMCMC_NROWS);
-  g_assert_cmpint (ncm_mset_catalog_get_first_id (mcat), ==, TEST_FIXTURES_FIRST_ID);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, TEST_FIXTURES_FIRST_ID + TEST_FIXTURES_ESMCMC_NWALKERS);
+  /* FIRST_ID shifts only the file's MARKID: the ids of the rows read start at 0. */
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, TEST_FIXTURES_ESMCMC_NWALKERS);
 
   ncm_mset_catalog_free (mcat);
 }

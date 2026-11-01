@@ -109,7 +109,7 @@ NcmMSetCatalog *ncm_mset_catalog_new_from_file (const gchar *filename, glong bur
 NcmMSetCatalog *ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin);
 NcmMSetCatalog *ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin);
 NcmMSetCatalogStorage *ncm_mset_catalog_peek_storage (NcmMSetCatalog *mcat);
-void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains, gint *first_id);
+void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains);
 gint ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename);
 NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
@@ -120,7 +120,6 @@ void ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync sm
 void ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval);
 void ncm_mset_catalog_set_read_block (NcmMSetCatalog *mcat, guint read_block);
 guint ncm_mset_catalog_get_read_block (NcmMSetCatalog *mcat);
-void ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id);
 void ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str);
 void ncm_mset_catalog_set_sampler (NcmMSetCatalog *mcat, const gchar *sampler);
 void ncm_mset_catalog_set_sampler_options (NcmMSetCatalog *mcat, const gchar *options);
@@ -147,7 +146,6 @@ guint ncm_mset_catalog_nchains (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_nadd_vals (NcmMSetCatalog *mcat);
 gboolean ncm_mset_catalog_weighted (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t);
-gint ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat);
 gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
 
 guint ncm_mset_catalog_ncols (NcmMSetCatalog *mcat);

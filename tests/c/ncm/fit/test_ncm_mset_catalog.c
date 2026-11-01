@@ -82,8 +82,6 @@ void test_ncm_mset_catalog_weighted_tau_subprocess (void);
 void test_ncm_mset_catalog_accept_ratio_array (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_reset (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_set_rng_twice (void);
-void test_ncm_mset_catalog_first_id_chains_traps (void);
-void test_ncm_mset_catalog_first_id_chains_subprocess (void);
 void test_ncm_mset_catalog_calc_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_calc_add_param_ensemble_evol_short (TestNcmMSetCatalog *test, gconstpointer pdata);
@@ -129,8 +127,6 @@ void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void);
 void test_ncm_mset_catalog_file_burnin_chains_traps (void);
 void test_ncm_mset_catalog_file_burnin_chains_subprocess (void);
-void test_ncm_mset_catalog_file_first_id_chains_traps (void);
-void test_ncm_mset_catalog_file_first_id_chains_subprocess (void);
 void test_ncm_mset_catalog_file_markovian_id_roundtrip (void);
 void test_ncm_mset_catalog_file_markovian_id_missing_key (void);
 void test_ncm_mset_catalog_file_markovian_id_backwards_traps (void);
@@ -222,9 +218,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_invalid_run,
               &test_ncm_mset_catalog_free);
 
-  g_test_add_func ("/ncm/mset/catalog/first_id_chains/traps", &test_ncm_mset_catalog_first_id_chains_traps);
-  g_test_add_func ("/ncm/mset/catalog/first_id_chains/subprocess", &test_ncm_mset_catalog_first_id_chains_subprocess);
-
 #ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset/catalog/file/hdu0_roundtrip", &test_ncm_mset_catalog_file_hdu0_roundtrip);
   g_test_add_func ("/ncm/mset/catalog/file/sampler_history", &test_ncm_mset_catalog_file_sampler_history);
@@ -254,8 +247,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/subprocess", &test_ncm_mset_catalog_file_burnin_exceeds_subprocess);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_chains/traps", &test_ncm_mset_catalog_file_burnin_chains_traps);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_chains/subprocess", &test_ncm_mset_catalog_file_burnin_chains_subprocess);
-  g_test_add_func ("/ncm/mset/catalog/file/first_id_chains/traps", &test_ncm_mset_catalog_file_first_id_chains_traps);
-  g_test_add_func ("/ncm/mset/catalog/file/first_id_chains/subprocess", &test_ncm_mset_catalog_file_first_id_chains_subprocess);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/roundtrip", &test_ncm_mset_catalog_file_markovian_id_roundtrip);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/missing_key", &test_ncm_mset_catalog_file_markovian_id_missing_key);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/backwards/traps", &test_ncm_mset_catalog_file_markovian_id_backwards_traps);
@@ -2184,13 +2175,11 @@ test_ncm_mset_catalog_file_peek_info (void)
   NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
   glong nrows     = -1;
   guint nchains   = 0;
-  gint first_id   = -1;
 
-  ncm_mset_catalog_peek_info_from_file (filename, &nrows, &nchains, &first_id);
+  ncm_mset_catalog_peek_info_from_file (filename, &nrows, &nchains);
 
   g_assert_cmpint (nrows, ==, 1);
   g_assert_cmpuint (nchains, ==, 1);
-  g_assert_cmpint (first_id, ==, 0);
 
   ncm_mset_clear (&mset);
 
@@ -2244,38 +2233,6 @@ test_ncm_mset_catalog_file_burnin_chains_subprocess (void)
 
   /* A burn-in that is not a whole number of iterations would move rows to other chains. */
   ncm_mset_catalog_new_from_file_ro (filename, TEST_CAT_NCHAINS + 1);
-
-  g_assert_not_reached ();
-}
-
-void
-test_ncm_mset_catalog_file_first_id_chains_traps (void)
-{
-  g_test_trap_subprocess ("/ncm/mset/catalog/file/first_id_chains/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*is not a multiple of its number of chains*");
-}
-
-void
-test_ncm_mset_catalog_file_first_id_chains_subprocess (void)
-{
-  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_first_id_chains_XXXXXX", NULL);
-  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
-  NcmMSet *mset   = _test_ncm_mset_catalog_new_markovian_file (filename, 4, 0);
-  fitsfile *fptr  = NULL;
-  gint first_id   = 1;
-  gint status     = 0;
-
-  ncm_mset_clear (&mset);
-
-  /* A first id the library no longer writes: the file is edited directly. */
-  fits_open_file (&fptr, filename, READWRITE, &status);
-  fits_movnam_hdu (fptr, BINARY_TBL, NCM_MSET_CATALOG_EXTNAME, 0, &status);
-  fits_update_key (fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &first_id, NULL, &status);
-  fits_close_file (fptr, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  ncm_mset_catalog_new_from_file_ro (filename, 0);
 
   g_assert_not_reached ();
 }
@@ -2880,7 +2837,7 @@ test_ncm_mset_catalog_file_markovian_id_roundtrip (void)
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat_b), ==, 1);
 
   /* Burn-in past the id: everything loaded is Markovian, the id is the first row. */
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat_b2), ==, ncm_mset_catalog_get_first_id (mcat_b2));
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat_b2), ==, 0);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat_b2), ==, 0);
 
   ncm_mset_catalog_clear (&mcat_ro);
@@ -2916,7 +2873,7 @@ test_ncm_mset_catalog_file_markovian_id_missing_key (void)
   g_assert_cmpint (ncm_mset_catalog_peek_markovian_id_from_file (filename), ==, 0);
 
   mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, ncm_mset_catalog_get_first_id (mcat));
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 0);
 
   ncm_mset_catalog_clear (&mcat);
@@ -2964,7 +2921,7 @@ test_ncm_mset_catalog_file_markovian_id_trim (void)
   /* Cut 2 of the 4 non-Markovian iterations: 2 remain before the chain. */
   ncm_mset_catalog_trim (mcat, 2, 1);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 2);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, ncm_mset_catalog_get_first_id (mcat) + 2 * TEST_CAT_NCHAINS);
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 2 * TEST_CAT_NCHAINS);
 
   /* Thin by 2 without a cut: the 2 remaining non-Markovian iterations become 1. */
   ncm_mset_catalog_trim (mcat, 0, 2);
@@ -2973,7 +2930,7 @@ test_ncm_mset_catalog_file_markovian_id_trim (void)
   /* Cut past the chain start: every row left is Markovian. */
   ncm_mset_catalog_trim (mcat, 3, 1);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 0);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, ncm_mset_catalog_get_first_id (mcat));
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
 
   ncm_mset_catalog_clear (&mcat);
   ncm_mset_clear (&mset);
@@ -3168,7 +3125,7 @@ test_ncm_mset_catalog_trim_oob_markovian (void)
     }
   }
 
-  ncm_mset_catalog_set_markovian_id (mcat, ncm_mset_catalog_get_first_id (mcat) + mark_itens * TEST_CAT_NCHAINS);
+  ncm_mset_catalog_set_markovian_id (mcat, mark_itens * TEST_CAT_NCHAINS);
 
   ndel = ncm_mset_catalog_trim_oob (mcat, out_file);
 
@@ -3177,7 +3134,7 @@ test_ncm_mset_catalog_trim_oob_markovian (void)
 
   /* Out-of-bounds rows before the chain start are gone, so the start moves back by that many. */
   g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==,
-                   ncm_mset_catalog_get_first_id (mcat) + mark_itens * TEST_CAT_NCHAINS - oob_before);
+                   mark_itens * TEST_CAT_NCHAINS - oob_before);
 
   /* Trimming always leaves a single chain. */
   g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, 1);
@@ -3252,30 +3209,6 @@ test_ncm_mset_catalog_set_rng_twice (void)
   ncm_rng_free (rng2);
   ncm_mset_free (mset);
   ncm_model_mvnd_free (model);
-}
-
-void
-test_ncm_mset_catalog_first_id_chains_traps (void)
-{
-  g_test_trap_subprocess ("/ncm/mset/catalog/first_id_chains/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*is not a multiple of the number of chains*");
-}
-
-void
-test_ncm_mset_catalog_first_id_chains_subprocess (void)
-{
-  NcmModelMVND *model = ncm_model_mvnd_new (2);
-  NcmMSet *mset       = ncm_mset_new (NCM_MODEL (model), NULL, NULL);
-  NcmMSetCatalog *mcat;
-
-  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (mset);
-  mcat = ncm_mset_catalog_new (mset, 1, TEST_CAT_NCHAINS, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-
-  ncm_mset_catalog_set_first_id (mcat, TEST_CAT_NCHAINS + 1);
-
-  g_assert_not_reached ();
 }
 
 void

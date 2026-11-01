@@ -295,14 +295,13 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  * ncm_fit_mcbs_run:
  * @mcbs: a #NcmFitMCBS
  * @fiduc: (nullable): the fiducial #NcmMSet, see ncm_fit_mc_set_fiducial()
- * @ni: index of the first realization
- * @nf: one past the index of the last realization
+ * @nf: number of realizations
  * @nbstraps: number of bootstrap fits per realization
  * @rtype: bootstrap #NcmFitMCResampleType
  * @mtype: #NcmFitRunMsgs of the bootstrap runs
  * @bsmt: whether the bootstrap fits use OpenMP threads
  *
- * Resamples the realizations @ni to @nf - 1 from @fiduc and, for each, runs @nbstraps
+ * Resamples @nf realizations from @fiduc and, for each, runs @nbstraps
  * bootstrap fits of type @rtype, adding their mean to the catalog of @mcbs. At the end
  * the mean and covariance of the catalog become the parameters and covariance of the
  * #NcmFitState of the fit. @rtype must be a bootstrap; #NCM_FIT_MC_RESAMPLE_FROM_MODEL
@@ -312,7 +311,7 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  *
  */
 void
-ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, gboolean bsmt)
+ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, gboolean bsmt)
 {
   NcmRNG *mcat_rng     = ncm_mset_catalog_peek_rng (mcbs->mcat);
   NcmFitState *fstate  = ncm_fit_peek_state (mcbs->fit);
@@ -346,14 +345,11 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_mset_catalog_set_rng (mcbs->mcat,
                               ncm_mset_catalog_peek_rng (ncm_fit_mc_peek_catalog (mcbs->mc_resample)));
 
-  if (ni > 0)
-    ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, ni);
-
   ncm_fit_mc_set_rtype (mcbs->mc_bstrap, rtype);
   ncm_fit_mc_set_mtype (mcbs->mc_bstrap, mtype);
   ncm_fit_mc_set_use_threads (mcbs->mc_bstrap, bsmt);
 
-  for (i = ni; i < nf; i++)
+  for (i = 0; i < nf; i++)
   {
     ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_DISABLE);
     ncm_fit_mc_run (mcbs->mc_resample, i + 1);

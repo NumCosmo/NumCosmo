@@ -1877,9 +1877,6 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
   {
     gint k;
 
-    if (ncm_mset_catalog_get_first_id (self->mcat) > 0)
-      g_error ("ncm_fit_esmcmc_start_run: cannot use catalogs with first_id > 0 without a complete first ensemble.");
-
     for (k = 0; k <= self->cur_sample_id; k++)
     {
       NcmVector *cur_row      = ncm_mset_catalog_peek_row (self->mcat, k);
