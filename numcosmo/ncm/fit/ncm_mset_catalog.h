@@ -35,6 +35,8 @@
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
 #include <numcosmo/ncm/stats/ncm_stats_rows.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_epdf.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_desc.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_storage.h>
 
 G_BEGIN_DECLS
 

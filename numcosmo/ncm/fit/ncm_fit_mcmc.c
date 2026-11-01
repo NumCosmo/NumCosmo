@@ -349,7 +349,8 @@ ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
   ncm_mset_trans_kern_clear (&mcmc->tkern);
   mcmc->tkern = ncm_mset_trans_kern_ref (tkern);
 
-  ncm_mset_catalog_set_run_type (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
+  ncm_mset_catalog_set_run_type (mcmc->mcat, NCM_MSET_CATALOG_RTYPE_MCMC);
+  ncm_mset_catalog_set_sampler (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
   ncm_mset_trans_kern_set_mset (tkern, mset);
 }
 

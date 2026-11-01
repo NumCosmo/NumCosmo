@@ -97,7 +97,8 @@ ncm_fit_mcbs_set_property (GObject *object, guint prop_id, const GValue *value, 
                                                   NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
                                                   NULL);
         ncm_mset_catalog_set_m2lnp_var (mcbs->mcat, 0);
-        ncm_mset_catalog_set_run_type (mcbs->mcat, NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN);
+        ncm_mset_catalog_set_run_type (mcbs->mcat, NCM_MSET_CATALOG_RTYPE_MCBS);
+        ncm_mset_catalog_set_sampler (mcbs->mcat, "from-model");
         break;
       }
       case PROP_FILE:

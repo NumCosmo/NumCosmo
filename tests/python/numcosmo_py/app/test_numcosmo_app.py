@@ -1380,10 +1380,9 @@ def test_run_mcmc_apes_embeds_functions_array(tmp_path):
 
     catalog = output.absolute().with_suffix(".mcmc.fits")
     mcat = Ncm.MSetCatalog.new_from_file_ro(catalog.as_posix(), 0)
-    functions = mcat.peek_functions_array()
 
-    assert functions is not None
-    assert functions.len() == 1
+    # The functions are not stored in the catalog, the column they computed is.
+    assert mcat.peek_functions_array() is None
     assert "wDE" in [mcat.col_name(i) for i in range(mcat.ncols())]
 
 

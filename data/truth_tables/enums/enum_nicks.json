@@ -387,6 +387,22 @@
     "nick": "work-return",
     "type": "Ncm.MPIJobCtrlTag"
   },
+  "NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME": {
+    "nick": "duplicate-name",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS": {
+    "nick": "invalid-add-vals",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR": {
+    "nick": "invalid-m2lnp-var",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET": {
+    "nick": "invalid-mset",
+    "type": "Ncm.MSetCatalogDescError"
+  },
   "NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID": {
     "nick": "ellipsoid",
     "type": "Ncm.MSetCatalogPostNormMethod"
@@ -398,6 +414,46 @@
   "NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX_BS": {
     "nick": "hyperbox-bs",
     "type": "Ncm.MSetCatalogPostNormMethod"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND": {
+    "nick": "backend",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE": {
+    "nick": "incompatible",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID": {
+    "nick": "markovian-id",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING": {
+    "nick": "not-recording",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO": {
+    "nick": "no-cfitsio",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY": {
+    "nick": "read-only",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING": {
+    "nick": "recording",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_RNG": {
+    "nick": "rng",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_ROW": {
+    "nick": "row",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED": {
+    "nick": "uninitialized",
+    "type": "Ncm.MSetCatalogStorageError"
   },
   "NCM_MSET_CATALOG_SYNC_AUTO": {
     "nick": "auto",
