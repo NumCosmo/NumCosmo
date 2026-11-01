@@ -257,22 +257,19 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
   mcbs->filename = g_strdup (filename);
 
   if (g_regex_match (fits_ext, filename, 0, &match_info))
-  {
     mcbs->base_name = g_match_info_fetch (match_info, 1);
-    g_match_info_free (match_info);
-  }
   else
-  {
     mcbs->base_name = g_strdup (filename);
-  }
 
+  g_match_info_free (match_info);
   g_regex_unref (fits_ext);
 }
 
 /*
  * Builds the catalog of the bootstrap means at the first run: a description of the free
  * parameters and the -2ln(L) column, on a FITS storage of the file name (its rows
- * erased) or a memory storage, with the RNG set before.
+ * erased) or a memory storage, with the RNG set before. The resampling NcmFitMC is
+ * seeded as the catalog's RNG here, once: its catalog refuses an RNG once it has rows.
  */
 static void
 _ncm_fit_mcbs_build_catalog (NcmFitMCBS *mcbs, GError **error)
@@ -310,6 +307,18 @@ _ncm_fit_mcbs_build_catalog (NcmFitMCBS *mcbs, GError **error)
   {
     ncm_mset_catalog_set_rng (mcbs->mcat, mcbs->rng);
     ncm_rng_clear (&mcbs->rng);
+  }
+
+  {
+    NcmRNG *mcat_rng = ncm_mset_catalog_peek_rng (mcbs->mcat);
+
+    if (mcat_rng != NULL)
+    {
+      NcmRNG *rng = ncm_rng_seeded_new (ncm_rng_get_algo (mcat_rng), ncm_rng_get_seed (mcat_rng));
+
+      ncm_fit_mc_set_rng (mcbs->mc_resample, rng);
+      ncm_rng_free (rng);
+    }
   }
 
   ncm_mset_catalog_storage_free (storage);
@@ -371,12 +380,10 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, Nc
 {
   NcmFitState *fstate    = ncm_fit_peek_state (mcbs->fit);
   NcmLikelihood *lh      = ncm_fit_peek_likelihood (mcbs->fit);
-  gboolean cat_has_rng   = FALSE;
   NcmDataset *dset       = ncm_likelihood_peek_dataset (lh);
   const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, rtype);
   NcmMSetCatalogStorage *storage;
   NcmDatasetBStrapType bstrap_type;
-  NcmRNG *mcat_rng;
   guint i;
 
   if (rtype == NCM_FIT_MC_RESAMPLE_FROM_MODEL)
@@ -386,25 +393,16 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, Nc
 
   _ncm_fit_mcbs_build_catalog (mcbs, error);
   NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcbs_run: ");
-  mcat_rng = ncm_mset_catalog_peek_rng (mcbs->mcat);
-  storage  = ncm_mset_catalog_peek_storage (mcbs->mcat);
+  storage = ncm_mset_catalog_peek_storage (mcbs->mcat);
 
   ncm_fit_mc_set_mtype (mcbs->mc_resample, NCM_FIT_RUN_MSGS_SIMPLE);
   ncm_fit_mc_set_fiducial (mcbs->mc_resample, fiduc);
 
-  if (mcat_rng != NULL)
-  {
-    NcmRNG *rng = ncm_rng_seeded_new (ncm_rng_get_algo (mcat_rng), ncm_rng_get_seed (mcat_rng));
-
-    ncm_fit_mc_set_rng (mcbs->mc_resample, rng);
-    ncm_rng_free (rng);
-    cat_has_rng = TRUE;
-  }
-
   ncm_fit_mc_start_run (mcbs->mc_resample, error);
   NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcbs_run: ");
 
-  if (!cat_has_rng)
+  /* Without an RNG the first resampling run drew one; the catalog takes it. */
+  if (ncm_mset_catalog_peek_rng (mcbs->mcat) == NULL)
     ncm_mset_catalog_set_rng (mcbs->mcat,
                               ncm_mset_catalog_peek_rng (ncm_fit_mc_peek_catalog (mcbs->mc_resample)));
 

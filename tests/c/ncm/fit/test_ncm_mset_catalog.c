@@ -2055,6 +2055,15 @@ _test_ncm_mset_catalog_check_from_storage (NcmMSetCatalogStorage *storage, NcmMS
   guint i;
 
   g_assert_true (ncm_mset_catalog_peek_storage (mcat) == storage);
+
+  {
+    NcmMSetCatalogStorage *storage_prop = NULL;
+
+    g_object_get (mcat, "storage", &storage_prop, NULL);
+    g_assert_true (storage_prop == storage);
+    ncm_mset_catalog_storage_free (storage_prop);
+  }
+
   g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, "storage-run");
   g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, TEST_CAT_NCHAINS);
   g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 1);

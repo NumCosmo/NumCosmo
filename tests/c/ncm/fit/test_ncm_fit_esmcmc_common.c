@@ -1305,10 +1305,22 @@ test_ncm_fit_esmcmc_validate_threaded_read_block (void)
                                 NCM_FIT_ESMCMC_WALKER (stretch),
                                 NCM_FIT_RUN_MSGS_NONE);
 
+  g_assert_false (ncm_fit_esmcmc_has_rng (esmcmc));
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
+  g_assert_true (ncm_fit_esmcmc_has_rng (esmcmc));
   ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
   ncm_fit_esmcmc_set_data_file (esmcmc, filename);
   ncm_fit_esmcmc_set_read_block (esmcmc, 7);
+
+  {
+    gchar *data_file = NULL;
+    guint read_block = 0;
+
+    g_object_get (esmcmc, "data-file", &data_file, "read-block", &read_block, NULL);
+    g_assert_cmpstr (data_file, ==, filename);
+    g_assert_cmpuint (read_block, ==, 7);
+    g_free (data_file);
+  }
 
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
   ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
@@ -1320,8 +1332,34 @@ test_ncm_fit_esmcmc_validate_threaded_read_block (void)
 
   g_assert_cmpuint (ncm_mset_catalog_len (ncm_fit_esmcmc_peek_catalog (esmcmc)), ==, 70 * nwalkers);
   g_assert_true (ncm_fit_esmcmc_validate (esmcmc, 0, 0));
+  g_assert_true (ncm_fit_esmcmc_has_rng (esmcmc));
+
+  /* The catalog is built: the read block goes to it. */
+  ncm_fit_esmcmc_set_read_block (esmcmc, 5);
+  g_assert_cmpuint (ncm_mset_catalog_len (ncm_fit_esmcmc_peek_catalog (esmcmc)), ==, 70 * nwalkers);
 
   ncm_fit_esmcmc_clear (&esmcmc);
+
+  /* Resuming the file with an RNG of another seed is the storage's RNG error. */
+  {
+    NcmRNG *rng2          = ncm_rng_seeded_new (NULL, 20261029);
+    NcmFitESMCMC *esmcmc2 = ncm_fit_esmcmc_new (fit,
+                                                nwalkers,
+                                                NCM_MSET_TRANS_KERN (init_sampler),
+                                                NCM_FIT_ESMCMC_WALKER (stretch),
+                                                NCM_FIT_RUN_MSGS_NONE);
+    GError *error = NULL;
+
+    ncm_fit_esmcmc_set_rng (esmcmc2, rng2);
+    ncm_fit_esmcmc_set_data_file (esmcmc2, filename);
+    ncm_fit_esmcmc_start_run (esmcmc2, &error);
+    g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG);
+    g_clear_error (&error);
+
+    ncm_fit_esmcmc_free (esmcmc2);
+    ncm_rng_free (rng2);
+  }
+
   ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
   ncm_fit_clear (&fit);
   ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
