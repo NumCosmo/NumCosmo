@@ -35,6 +35,10 @@
 #include "build_cfg.h"
 #include <numcosmo/numcosmo.h>
 
+#ifdef HAVE_CFITSIO
+#include <fitsio.h>
+#endif /* HAVE_CFITSIO */
+
 #define TEST_FITS_ESMCMC_NROWS 18
 #define TEST_FITS_ESMCMC_NWALKERS 6
 #define TEST_FITS_RNG_SEED 20261031
@@ -64,6 +68,7 @@ static void test_ncm_mset_catalog_storage_fits_migrate (TestNcmMSetCatalogStorag
 static void test_ncm_mset_catalog_storage_fits_erase (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 static void test_ncm_mset_catalog_storage_fits_erase_legacy (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 static void test_ncm_mset_catalog_storage_fits_serialize (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
+static void test_ncm_mset_catalog_storage_fits_float_column (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 
 static gchar *_test_ncm_mset_catalog_storage_fits_fixture_path (const gchar *name);
 static NcmMSetCatalogStorage *_test_ncm_mset_catalog_storage_fits_open_fixture (const gchar *name);
@@ -111,6 +116,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/mset/catalog/storage/fits/serialize", TestNcmMSetCatalogStorageFits, NULL,
               &test_ncm_mset_catalog_storage_fits_new,
               &test_ncm_mset_catalog_storage_fits_serialize,
+              &test_ncm_mset_catalog_storage_fits_free);
+  g_test_add ("/ncm/mset/catalog/storage/fits/float_column", TestNcmMSetCatalogStorageFits, NULL,
+              &test_ncm_mset_catalog_storage_fits_new,
+              &test_ncm_mset_catalog_storage_fits_float_column,
               &test_ncm_mset_catalog_storage_fits_free);
 #endif /* HAVE_CFITSIO */
 
@@ -1156,4 +1165,121 @@ test_ncm_mset_catalog_storage_fits_serialize (TestNcmMSetCatalogStorageFits *tes
   ncm_mset_catalog_storage_free (dup);
   ncm_serialize_free (ser);
 }
+
+#ifdef HAVE_CFITSIO
+
+/*
+ * A table whose last column is a single float: the rows are read and written one column
+ * at a time instead of as raw bytes. Four rows of integer values are written as doubles,
+ * the column is replaced by a float one holding the same values, and the storage then
+ * reads them back and appends two rows through the per-column path.
+ */
+static void
+test_ncm_mset_catalog_storage_fits_float_column (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
+{
+  const guint ncols = ncm_mset_catalog_desc_ncols (test->desc);
+  GError *error     = NULL;
+  guint i, c;
+
+  {
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (test->filename, FALSE, &error);
+    NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
+
+    g_assert_no_error (error);
+    ncm_mset_catalog_storage_set_desc (storage, test->desc, &error);
+    g_assert_no_error (error);
+    ncm_mset_catalog_storage_start_recording (storage, "doubles", NULL, &error);
+    g_assert_no_error (error);
+
+    for (i = 0; i < 4; i++)
+    {
+      NcmVector *row = _test_ncm_mset_catalog_storage_fits_row (i, ncols);
+
+      ncm_mset_catalog_storage_add_row (storage, row, &error);
+      g_assert_no_error (error);
+      ncm_vector_free (row);
+    }
+
+    ncm_mset_catalog_storage_end_recording (storage, &error);
+    g_assert_no_error (error);
+    ncm_mset_catalog_storage_fits_free (storage_fits);
+  }
+
+  /* The last column becomes a float column with the same name and values. */
+  {
+    fitsfile *fptr = NULL;
+    gint status    = 0;
+    gchar name[FLEN_VALUE];
+    gchar *ttype = g_strdup_printf ("TTYPE%u", ncols);
+    gdouble values[4];
+
+    fits_open_file (&fptr, test->filename, READWRITE, &status);
+    fits_movnam_hdu (fptr, BINARY_TBL, NCM_MSET_CATALOG_EXTNAME, 0, &status);
+    fits_read_key_str (fptr, ttype, name, NULL, &status);
+    fits_read_col_dbl (fptr, ncols, 1, 1, 4, 0.0, values, NULL, &status);
+    fits_delete_col (fptr, ncols, &status);
+    fits_insert_col (fptr, ncols, name, "1E", &status);
+    fits_write_col_dbl (fptr, ncols, 1, 1, 4, values, &status);
+    fits_close_file (fptr, &status);
+    g_assert_cmpint (status, ==, 0);
+    g_free (ttype);
+  }
+
+  {
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (test->filename, FALSE, &error);
+    NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
+
+    g_assert_no_error (error);
+    g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 4);
+    g_assert_no_error (error);
+
+    for (i = 0; i < 4; i++)
+    {
+      NcmVector *row = ncm_mset_catalog_storage_peek_row (storage, i, &error);
+
+      g_assert_no_error (error);
+
+      for (c = 0; c < ncols; c++)
+        g_assert_cmpfloat (ncm_vector_get (row, c), ==, 100.0 * i + c);
+    }
+
+    ncm_mset_catalog_storage_start_recording (storage, "floats", NULL, &error);
+    g_assert_no_error (error);
+
+    for (i = 4; i < 6; i++)
+    {
+      NcmVector *row = _test_ncm_mset_catalog_storage_fits_row (i, ncols);
+
+      ncm_mset_catalog_storage_add_row (storage, row, &error);
+      g_assert_no_error (error);
+      ncm_vector_free (row);
+    }
+
+    ncm_mset_catalog_storage_end_recording (storage, &error);
+    g_assert_no_error (error);
+    ncm_mset_catalog_storage_fits_free (storage_fits);
+  }
+
+  {
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (test->filename, TRUE, &error);
+    NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
+
+    g_assert_no_error (error);
+    g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 6);
+
+    for (i = 0; i < 6; i++)
+    {
+      NcmVector *row = ncm_mset_catalog_storage_peek_row (storage, i, &error);
+
+      g_assert_no_error (error);
+
+      for (c = 0; c < ncols; c++)
+        g_assert_cmpfloat (ncm_vector_get (row, c), ==, 100.0 * i + c);
+    }
+
+    ncm_mset_catalog_storage_fits_free (storage_fits);
+  }
+}
+
+#endif /* HAVE_CFITSIO */
 
