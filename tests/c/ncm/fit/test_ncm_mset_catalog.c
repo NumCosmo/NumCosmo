@@ -89,7 +89,7 @@ void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer 
 void test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_ci_single (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata);
-void test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_diag_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_heidel (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_heidel_by_chain_fail (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_post_lnnorm_degenerate (TestNcmMSetCatalog *test, gconstpointer pdata);
@@ -167,7 +167,7 @@ TestNcmMSetCatalogTests tests[] =
   {"distrib/short", test_ncm_mset_catalog_distrib_short},
   {"ci/single", test_ncm_mset_catalog_ci_single},
   {"param_pdf", test_ncm_mset_catalog_param_pdf},
-  {"trim_by_type/short", test_ncm_mset_catalog_trim_by_type_short},
+  {"diag/short", test_ncm_mset_catalog_diag_short},
   {"heidel", test_ncm_mset_catalog_heidel},
   {"heidel/by_chain/fail", test_ncm_mset_catalog_heidel_by_chain_fail},
   {"post_lnnorm/degenerate", test_ncm_mset_catalog_post_lnnorm_degenerate},
@@ -3503,9 +3503,9 @@ test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata)
 }
 
 void
-test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointer pdata)
+test_ncm_mset_catalog_diag_short (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
-  /* Below ten iterations there is no estimate to trim at, and the catalog is kept whole. */
+  /* Below ten iterations the diagnostics give no time. */
   guint max_ess_time;
   gdouble max_ess = 1.0;
 
@@ -3534,9 +3534,6 @@ test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointe
 
     _test_ncm_mset_catalog_log_end (log);
   }
-
-  ncm_mset_catalog_trim_by_type (test->mcat, 0, NCM_MSET_CATALOG_TRIM_TYPE_ESS | NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL, NCM_FIT_RUN_MSGS_NONE);
-  g_assert_cmpuint (ncm_mset_catalog_len (test->mcat), ==, 5 * ncm_mset_catalog_nchains (test->mcat));
 }
 
 void

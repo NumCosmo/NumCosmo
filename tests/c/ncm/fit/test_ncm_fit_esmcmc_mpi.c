@@ -320,13 +320,19 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
     return;
   }
 
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
   ncm_fit_esmcmc_walker_apes_set_exploration (NCM_FIT_ESMCMC_WALKER_APES (walker), 10);
 
   ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run (test->esmcmc, 100);
   ncm_fit_esmcmc_end_run (test->esmcmc);
+
+  /* Trimmed at the constant break of -2ln(L), what the auto-trim of the sampler did. */
+  {
+    NcmMSetCatalog *mcat = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
+    const guint tc       = ncm_mset_catalog_calc_const_break (mcat, ncm_mset_catalog_get_m2lnp_var (mcat), NCM_FIT_RUN_MSGS_NONE);
+
+    ncm_mset_catalog_trim (mcat, tc, 1);
+  }
 
   {
     NcmMSetCatalog *mcat   = ncm_fit_esmcmc_peek_catalog (test->esmcmc);

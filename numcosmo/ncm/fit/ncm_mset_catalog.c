@@ -5325,53 +5325,6 @@ ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs 
   return tc;
 }
 
-/**
- * ncm_mset_catalog_trim_by_type:
- * @mcat: a #NcmMSetCatalog
- * @ntests: number of starting times tested, 10 when zero
- * @trim_type: the criteria, a #NcmMSetCatalogTrimType
- * @mtype: #NcmFitRunMsgs log level
- *
- * Trims the catalog with ncm_mset_catalog_trim() at the largest of the times given by
- * the criteria in @trim_type: ncm_mset_catalog_calc_max_ess_time(),
- * ncm_mset_catalog_calc_heidel_diag() with the default p-value, and
- * ncm_mset_catalog_calc_const_break() on the $-2\ln(L)$ column.
- *
- */
-void
-ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, const guint ntests, NcmMSetCatalogTrimType trim_type, NcmFitRunMsgs mtype)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  guint t_c                   = 0;
-
-  if (trim_type & NCM_MSET_CATALOG_TRIM_TYPE_ESS)
-  {
-    gdouble max_ess_time = 0.0;
-    const guint t_c_ess  = ncm_mset_catalog_calc_max_ess_time (mcat, ntests, &max_ess_time, mtype);
-
-    t_c = GSL_MAX (t_c, t_c_ess);
-  }
-
-  if (trim_type & NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL)
-  {
-    const guint t_c_heidel = ncm_mset_catalog_calc_heidel_diag (mcat, ntests, 0.0, mtype);
-
-    t_c = GSL_MAX (t_c, t_c_heidel);
-  }
-
-  if (trim_type & NCM_MSET_CATALOG_TRIM_TYPE_CK)
-  {
-    guint t_c_cb = ncm_mset_catalog_calc_const_break (mcat, self->m2lnp_var, mtype);
-
-    t_c = GSL_MAX (t_c, t_c_cb);
-  }
-
-  if ((t_c > 0) && (mtype >= NCM_FIT_RUN_MSGS_SIMPLE))
-    g_message ("# NcmMSetCatalog: Trimming the catalog at: %u.\n", t_c);
-
-  ncm_mset_catalog_trim (mcat, t_c, 1);
-}
-
 typedef struct _NcmMSetCatalogESSRes
 {
   guint chain_n;
