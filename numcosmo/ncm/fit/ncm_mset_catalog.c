@@ -34,10 +34,9 @@
  * catalog the last one is the row weight) followed by the free parameters. With
  * #NcmMSetCatalog:nchains chains the rows are interleaved, the row with id $i$ belonging to chain
  * $i \bmod n_\mathrm{chains}$ (the walkers of an ensemble sampler), and the catalog
- * keeps statistics of every chain, of the chain means and of each ensemble. Row ids start
- * at the first id (ncm_mset_catalog_get_first_id()); #NcmMSetCatalog:markovian-id marks
- * where the Markov chain starts and #NcmMSetCatalog:burnin drops leading rows when
- * reading a file.
+ * keeps statistics of every chain, of the chain means and of each ensemble. Row ids are
+ * row indices; #NcmMSetCatalog:markovian-id marks where the Markov chain starts and
+ * #NcmMSetCatalog:burnin drops leading rows when reading a file.
  *
  * The rows, the #NcmMSetCatalogDesc, the #NcmRNG of the run, the Markovian id and the
  * sampler segments live in the storage: a #NcmMSetCatalogStorageMemory for a catalog
@@ -142,7 +141,6 @@ typedef struct _NcmMSetCatalogPrivate
   gchar *init_sampler_str;
   gboolean init_recording;
   NcmVector *quantile_ws;
-  gint first_id;
   gint cur_id;
   gint markovian_id;
   glong burnin;
@@ -185,6 +183,7 @@ enum
   PROP_SYNC_INTERVAL,
   PROP_READ_BLOCK,
   PROP_READONLY,
+  PROP_STORAGE,
 };
 
 static gint
@@ -251,9 +250,8 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
 
   self->sync_timer       = g_timer_new ();
   self->sync_interval    = 0.0;
-  self->cur_id           = -1; /* Represents that there are no elements in the catalog, i.e., the id of the last added row. */
-  self->first_id         = 0;  /* The element to be in the catalog will be the one with index == 0, cross catalog index */
-  self->markovian_id     = 0;  /* First row of the Markovian chain, cross catalog index; effective value is max (markovian_id, first_id) */
+  self->cur_id           = -1; /* the id of the last added row, the row index; -1 for no rows */
+  self->markovian_id     = 0;  /* first row of the Markovian chain */
   self->burnin           = 0;  /* Number of elements to ignore when reading a catalog */
   self->file             = NULL;
   self->rtype_str        = NULL;
@@ -373,14 +371,16 @@ _ncm_mset_catalog_free_stats (NcmMSetCatalog *mcat)
 }
 
 static void _ncm_mset_catalog_take_desc (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc);
+static NcmMSetCatalogStorageFits *_ncm_mset_catalog_peek_fits_storage (NcmMSetCatalog *mcat);
 static void _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat);
 static NcmMSetCatalogStorage *_ncm_mset_catalog_new_fits_storage (NcmMSetCatalog *mcat, const gchar *filename, gboolean read_only);
 static NcmMSetCatalogStorage *_ncm_mset_catalog_new_memory_storage (NcmMSetCatalog *mcat);
 static NcmMSetCatalogDesc *_ncm_mset_catalog_new_desc (NcmMSetCatalog *mcat, guint nchains, gint m2lnp_var, const gchar *rtype_str);
 
 /*
- * A catalog without a model set is loaded from its file: the description, the model set,
- * the rows and the run metadata come from the file. A catalog with a model set builds its
+ * A catalog given a storage takes its description, rows and run metadata. A catalog
+ * without a model set is loaded from its file: the description, the model set, the rows
+ * and the run metadata come from the file. A catalog with a model set builds its
  * description from its properties and stores it in a memory storage or, with a file, in a
  * FITS storage, binding it to the file's description when the file exists.
  */
@@ -395,7 +395,34 @@ _ncm_mset_catalog_constructed (GObject *object)
 
     self->constructed = TRUE;
 
-    if (self->mset == NULL)
+    if (self->storage != NULL)
+    {
+      NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
+      NcmMSetCatalogDesc *desc;
+      GError *error = NULL;
+
+      if ((self->mset != NULL) || (self->file != NULL))
+        g_error ("_ncm_mset_catalog_constructed: a catalog built from a storage takes no NcmMSet and no file.");
+
+      desc = ncm_mset_catalog_storage_peek_desc (self->storage, &error);
+
+      if (error != NULL)
+        g_error ("_ncm_mset_catalog_constructed: %s", error->message);
+
+      if (desc == NULL)
+        g_error ("_ncm_mset_catalog_constructed: the storage has no description.");
+
+      g_object_get (self->storage, "smode", &self->smode, "sync-interval", &self->sync_interval, NULL);
+
+      if (storage_fits != NULL)
+      {
+        g_object_get (storage_fits, "read-block", &self->read_block, NULL);
+        self->readonly = ncm_mset_catalog_storage_fits_get_read_only (storage_fits);
+      }
+
+      _ncm_mset_catalog_take_desc (mcat, desc);
+    }
+    else if (self->mset == NULL)
     {
       NcmMSetCatalogDesc *desc;
       GError *error = NULL;
@@ -606,6 +633,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_READONLY:
       self->readonly = g_value_get_boolean (value);
       break;
+    case PROP_STORAGE:
+      self->storage = g_value_dup_object (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -710,6 +740,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_READONLY:
       g_value_set_boolean (value, self->readonly);
+      break;
+    case PROP_STORAGE:
+      g_value_set_object (value, self->storage);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -852,10 +885,9 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
    * Id of the first row produced by a Markovian step after the last move that did not
    * satisfy detailed balance (the initial ensemble, an exploration phase of the walker).
    * Rows from this id on form a valid Markov chain whose initial state is the ensemble of
-   * the #NcmMSetCatalog:nchains rows before it. Same numbering as the first id
-   * (ncm_mset_catalog_get_first_id()) and the current id; the effective value is never below the first id, and a file
-   * without the key reads as its first id (every row Markovian). When a file is read with
-   * a burn-in the stored value is shifted by it, like every other row id.
+   * the #NcmMSetCatalog:nchains rows before it. A row index, like the current id; a file
+   * without the key reads as 0 (every row Markovian). When a file is read with a burn-in
+   * the stored value is shifted by it, like every other row id.
    *
    */
   g_object_class_install_property (object_class,
@@ -1015,6 +1047,23 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                          "Whether the FITS file is opened read-only",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalog:storage:
+   *
+   * The #NcmMSetCatalogStorage the catalog is built on, see
+   * ncm_mset_catalog_new_from_storage(). Given, it must hold a description, and the
+   * catalog takes no #NcmMSetCatalog:mset and no #NcmMSetCatalog:filename. The catalog's
+   * sync mode, sync interval and read block are then the storage's.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_STORAGE,
+                                   g_param_spec_object ("storage",
+                                                        NULL,
+                                                        "The storage of the catalog",
+                                                        NCM_TYPE_MSET_CATALOG_STORAGE,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -1149,6 +1198,42 @@ ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin)
   return mcat;
 }
 
+/**
+ * ncm_mset_catalog_new_from_storage:
+ * @storage: a #NcmMSetCatalogStorage holding a description
+ * @burnin: number of leading rows to drop
+ *
+ * Creates a #NcmMSetCatalog on @storage: its description, rows and run metadata are
+ * the storage's. @burnin is applied as in ncm_mset_catalog_set_burnin(). A storage
+ * without a description aborts.
+ *
+ * Returns: (transfer full): a new #NcmMSetCatalog
+ */
+NcmMSetCatalog *
+ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin)
+{
+  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
+                                       "storage", storage,
+                                       "burnin", burnin,
+                                       NULL);
+
+  return mcat;
+}
+
+/**
+ * ncm_mset_catalog_peek_storage:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer none): the #NcmMSetCatalogStorage of @mcat
+ */
+NcmMSetCatalogStorage *
+ncm_mset_catalog_peek_storage (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->storage;
+}
+
 /* A read-only FITS storage of filename, with its description read. Aborts on error. */
 static NcmMSetCatalogStorageFits *
 _ncm_mset_catalog_open_ro (const gchar *filename, const gchar *func)
@@ -1170,23 +1255,21 @@ _ncm_mset_catalog_open_ro (const gchar *filename, const gchar *func)
  * @filename: filename of the catalog fits
  * @nrows: (out): number of rows (samples) currently in the catalog
  * @nchains: (out): number of chains (walkers) in the catalog
- * @first_id: (out): id of the first element in the catalog
  *
- * Reads the number of rows, of chains and the first id of @filename from its header,
- * without loading the catalog, e.g. to convert a burn-in from iterations to rows (see
+ * Reads the number of rows and of chains of @filename from its header, without loading
+ * the catalog, e.g. to convert a burn-in from iterations to rows (see
  * ncm_mset_catalog_set_burnin()) before ncm_mset_catalog_new_from_file_ro().
  *
  */
 void
-ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains, gint *first_id)
+ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains)
 {
   NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_open_ro (filename, "ncm_mset_catalog_peek_info_from_file");
   NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
   GError *error                           = NULL;
 
-  *nrows    = ncm_mset_catalog_storage_nrows (storage, &error);
-  *nchains  = ncm_mset_catalog_desc_nchains (ncm_mset_catalog_storage_peek_desc (storage, NULL));
-  *first_id = ncm_mset_catalog_storage_fits_get_first_id (storage_fits, &error);
+  *nrows   = ncm_mset_catalog_storage_nrows (storage, &error);
+  *nchains = ncm_mset_catalog_desc_nchains (ncm_mset_catalog_storage_peek_desc (storage, NULL));
 
   if (error != NULL)
     g_error ("ncm_mset_catalog_peek_info_from_file: %s", error->message);
@@ -1199,10 +1282,9 @@ ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint
  * @filename: catalog file name
  *
  * Reads #NcmMSetCatalog:markovian-id from the file header without loading the catalog,
- * in the file's own row numbering. A file without the key returns its first id (every
- * row Markovian).
+ * as a row index. A file without the key returns 0 (every row Markovian).
  *
- * Returns: the id of the first row of the Markovian chain.
+ * Returns: the index of the first row of the Markovian chain.
  */
 gint
 ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename)
@@ -1210,7 +1292,6 @@ ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename)
   NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_open_ro (filename, "ncm_mset_catalog_peek_markovian_id_from_file");
   NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
   GError *error                           = NULL;
-  const gint first_id                     = ncm_mset_catalog_storage_fits_get_first_id (storage_fits, &error);
   const guint markid                      = ncm_mset_catalog_storage_get_markovian_id (storage, &error);
 
   if (error != NULL)
@@ -1218,7 +1299,7 @@ ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename)
 
   ncm_mset_catalog_storage_fits_free (storage_fits);
 
-  return first_id + (gint) markid;
+  return (gint) markid;
 }
 
 /**
@@ -1328,40 +1409,23 @@ _ncm_mset_catalog_check_error (GError **error, const gchar *func)
 static void _ncm_mset_catalog_post_update_stats (NcmMSetCatalog *mcat, NcmVector *x);
 
 /*
- * Takes the rows and the run metadata of the storage: the first id of a FITS file, the
- * burn-in, the statistics of the rows after the burn-in, the Markovian id, the RNG and
- * the sampler strings. The catalog must hold no statistics. The ids start at the first
- * id of the file when it has rows, at the catalog's first id otherwise.
+ * Takes the rows and the run metadata of the storage: the burn-in, the statistics of the
+ * rows after the burn-in, the Markovian id, the RNG and the sampler strings. The catalog
+ * must hold no statistics.
  */
 static void
 _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat)
 {
-  NcmMSetCatalogPrivate *self             = ncm_mset_catalog_get_instance_private (mcat);
-  NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
-  GError *error                           = NULL;
-  const guint nrows                       = ncm_mset_catalog_storage_nrows (self->storage, &error);
-  const gchar *filename                   = ncm_mset_catalog_peek_filename (mcat);
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  GError *error               = NULL;
+  const guint nrows           = ncm_mset_catalog_storage_nrows (self->storage, &error);
+  const gchar *filename       = ncm_mset_catalog_peek_filename (mcat);
   guint markid;
   guint i;
 
   _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_load_storage");
 
   g_assert_cmpuint (ncm_stats_vec_nitens (self->pstats), ==, 0);
-
-  if (storage_fits != NULL)
-  {
-    const gint file_first_id = ncm_mset_catalog_storage_fits_get_first_id (storage_fits, &error);
-
-    _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_load_storage");
-
-    if (file_first_id % (gint) self->nchains != 0)
-      g_error ("_ncm_mset_catalog_load_storage: the first id %d of catalog `%s' is not a "
-               "multiple of its number of chains %u.",
-               file_first_id, filename, self->nchains);
-
-    if (nrows > 0)
-      self->first_id = file_first_id;
-  }
 
   if (self->burnin % self->nchains != 0)
     g_error ("_ncm_mset_catalog_load_storage: burnin of %ld row(s) is not a multiple of "
@@ -1373,7 +1437,7 @@ _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat)
              "catalog `%s' (%u row(s), %u chain(s), i.e. %u iteration(s)).",
              self->burnin, filename != NULL ? filename : "(memory)", nrows, self->nchains, nrows / self->nchains);
 
-  self->cur_id = self->first_id - 1;
+  self->cur_id = -1;
 
   for (i = self->burnin; i < nrows; i++)
   {
@@ -1385,11 +1449,11 @@ _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat)
 
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows - self->burnin);
 
-  /* Rows before the burn-in are dropped and the ids renumbered from the first id, so the
-   * stored Markovian id shifts by the same amount; it is never below the first id. */
+  /* Rows before the burn-in are dropped and the ids renumbered from 0, so the stored
+   * Markovian id shifts by the same amount; it is never below 0. */
   markid = ncm_mset_catalog_storage_get_markovian_id (self->storage, &error);
   _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_load_storage");
-  self->markovian_id = MAX (self->markovian_id, self->first_id + (gint) markid - (gint) self->burnin);
+  self->markovian_id = MAX (self->markovian_id, (gint) markid - (gint) self->burnin);
 
   {
     NcmRNG *rng = ncm_mset_catalog_storage_get_rng (self->storage, &error);
@@ -1465,7 +1529,7 @@ _ncm_mset_catalog_push_markovian_id (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   GError *error               = NULL;
-  const gint markid           = ncm_mset_catalog_get_markovian_id (mcat) - self->first_id + self->burnin;
+  const gint markid           = ncm_mset_catalog_get_markovian_id (mcat) + self->burnin;
   guint stored;
 
   if (!ncm_mset_catalog_storage_is_recording (self->storage))
@@ -1482,9 +1546,10 @@ _ncm_mset_catalog_push_markovian_id (NcmMSetCatalog *mcat)
 }
 
 /*
- * Opens the recording the next row is added to, when none is open: the initial sampler's
- * segment on an empty storage with an initial sampler, the sampler's segment otherwise
- * (named by the run type when no sampler was set). A pending Markovian id is written.
+ * Opens the recording the next row is added to, when none is open (a sampler may have
+ * opened one on the storage): the initial sampler's segment on an empty storage with an
+ * initial sampler, the sampler's segment otherwise (named by the run type when no sampler
+ * was set). A pending Markovian id is written.
  */
 static void
 _ncm_mset_catalog_ensure_recording (NcmMSetCatalog *mcat)
@@ -1494,7 +1559,11 @@ _ncm_mset_catalog_ensure_recording (NcmMSetCatalog *mcat)
   guint nrows;
 
   if (ncm_mset_catalog_storage_is_recording (self->storage))
+  {
+    _ncm_mset_catalog_push_markovian_id (mcat);
+
     return;
+  }
 
   nrows = ncm_mset_catalog_storage_nrows (self->storage, &error);
   _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_ensure_recording");
@@ -1578,7 +1647,7 @@ _ncm_mset_catalog_copy_rows (NcmMSetCatalog *mcat, NcmMSetCatalogStorage *src, N
   GError *error               = NULL;
   const guint nrows           = ncm_mset_catalog_storage_nrows (src, &error);
   const guint nsegs           = ncm_mset_catalog_storage_n_samplers (src, &error);
-  const gint markid           = ncm_mset_catalog_get_markovian_id (mcat) - self->first_id;
+  const gint markid           = ncm_mset_catalog_get_markovian_id (mcat);
   gboolean recording          = FALSE;
   guint i;
 
@@ -1749,7 +1818,7 @@ _ncm_mset_catalog_rebuild_empty (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc,
   if (desc != self->desc)
     _ncm_mset_catalog_take_desc (mcat, desc);
 
-  self->cur_id = self->first_id - 1;
+  self->cur_id = -1;
 }
 
 static void
@@ -1954,38 +2023,6 @@ ncm_mset_catalog_get_read_block (NcmMSetCatalog *mcat)
 }
 
 /**
- * ncm_mset_catalog_set_first_id:
- * @mcat: a #NcmMSetCatalog
- * @first_id: id of the first row
- *
- * Sets the id of the first row, e.g. the realization a #NcmFitMC catalog starts at. Row
- * $t$ belongs to chain $t \bmod n_\mathrm{chains}$ only when @first_id is a multiple of the
- * number of chains, so any other value aborts, as does a non-empty catalog. The first id
- * is not written to the file: a catalog loaded from a file written by this library
- * starts at zero.
- *
- */
-void
-ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  if (first_id == self->first_id)
-    return;
-
-  if (!ncm_mset_catalog_is_empty (mcat))
-    g_error ("ncm_mset_catalog_set_first_id: cannot modify first_id to %d in a non-empty catalog, catalog first id: %d, catalog current id: %d.",
-             first_id, self->first_id, self->cur_id);
-
-  if (first_id % (gint) self->nchains != 0)
-    g_error ("ncm_mset_catalog_set_first_id: first_id %d is not a multiple of the number of chains %u.",
-             first_id, self->nchains);
-
-  self->first_id = first_id;
-  self->cur_id   = first_id - 1;
-}
-
-/**
  * ncm_mset_catalog_set_run_type:
  * @mcat: a #NcmMSetCatalog
  * @rtype_str: description of the run
@@ -2044,10 +2081,10 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
   GError *error               = NULL;
 
   if (!ncm_mset_catalog_is_empty (mcat))
-    g_error ("ncm_mset_catalog_set_rng: refusing to set RNG in a non-empty catalog (first id: %d, current id: %d): "
+    g_error ("ncm_mset_catalog_set_rng: refusing to set RNG in a non-empty catalog (%u rows): "
              "this would discard the saved RNG state and repeat rows already computed. "
              "Do not pass an explicit RNG/seed when resuming; the catalog's saved state is used.",
-             self->first_id, self->cur_id);
+             ncm_mset_catalog_len (mcat));
 
   if (self->rng == rng)
     return;
@@ -2193,8 +2230,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   ncm_mset_catalog_reset_stats (mcat);
 
   self->burnin       = 0;
-  self->cur_id       = self->first_id - 1;
-  self->markovian_id = self->first_id; /* a new chain: nothing non-Markovian yet */
+  self->cur_id       = -1;
+  self->markovian_id = 0; /* a new chain: nothing non-Markovian yet */
 }
 
 /**
@@ -2324,7 +2361,7 @@ ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
-  return (self->cur_id < self->first_id);
+  return (self->cur_id < 0);
 }
 
 /**
@@ -2452,39 +2489,24 @@ ncm_mset_catalog_weighted (NcmMSetCatalog *mcat)
  * @mcat: a #NcmMSetCatalog
  * @t: row id
  *
- * Returns: the index in @mcat of the row with id @t
+ * Returns: the index in @mcat of the row with id @t, which is @t
  */
 guint
 ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  const guint row_n           = t - self->first_id;
 
-  g_assert_cmpint (t, >=, self->first_id);
-  g_assert_cmpuint (row_n, <, ncm_stats_vec_nitens (self->pstats));
+  g_assert_cmpint (t, >=, 0);
+  g_assert_cmpuint ((guint) t, <, ncm_stats_vec_nitens (self->pstats));
 
-  return row_n;
-}
-
-/**
- * ncm_mset_catalog_get_first_id:
- * @mcat: a #NcmMSetCatalog
- *
- * Returns: the id of the first row in this catalog.
- */
-gint
-ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  return self->first_id;
+  return (guint) t;
 }
 
 /**
  * ncm_mset_catalog_get_cur_id:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: the id of the last row added; the first id minus one when empty
+ * Returns: the id of the last row added, its row index; -1 when empty
  */
 gint
 ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat)
@@ -2645,14 +2667,14 @@ ncm_mset_catalog_set_markovian_id (NcmMSetCatalog *mcat, gint markovian_id)
  * ncm_mset_catalog_get_markovian_id:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: #NcmMSetCatalog:markovian-id, never below the first id.
+ * Returns: #NcmMSetCatalog:markovian-id, never below 0.
  */
 gint
 ncm_mset_catalog_get_markovian_id (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
-  return MAX (self->markovian_id, self->first_id);
+  return MAX (self->markovian_id, 0);
 }
 
 /**
@@ -2668,7 +2690,7 @@ guint
 ncm_mset_catalog_get_markovian_burnin (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  const gint rows             = ncm_mset_catalog_get_markovian_id (mcat) - self->first_id;
+  const gint rows             = ncm_mset_catalog_get_markovian_id (mcat);
 
   return (rows + self->nchains - 1) / self->nchains;
 }
@@ -5456,14 +5478,14 @@ ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_p
 }
 
 /*
- * Replaces the rows of the catalog by rows, with the given first and Markovian ids,
- * written in one recording named by the sampler string (the run type without one). A
+ * Replaces the rows of the catalog by rows, with the given Markovian id, written in one
+ * recording named by the sampler string (the run type without one). A
  * FITS storage is rebuilt: the file is renamed to <file>.<n>.bak, with the first free n,
  * and a new file written under its name; a memory storage is erased. The description
  * and the RNG are kept, and the burn-in is zero after it.
  */
 static void
-_ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint first_id, const gint markovian_id)
+_ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint markovian_id)
 {
   NcmMSetCatalogPrivate *self             = ncm_mset_catalog_get_instance_private (mcat);
   NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
@@ -5516,9 +5538,8 @@ _ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint fir
   ncm_mset_catalog_reset_stats (mcat);
 
   self->burnin       = 0;
-  self->first_id     = first_id;
-  self->cur_id       = first_id - 1;
-  self->markovian_id = first_id;
+  self->cur_id       = -1;
+  self->markovian_id = 0;
 
   if (rows->len > 0)
   {
@@ -5559,8 +5580,8 @@ _ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint fir
  * @thin: keep one iteration in every @thin
  *
  * Drops the first @tc iterations, the first $t_c n_\mathrm{chains}$ rows, and keeps one
- * iteration in every @thin of the rest, all chains of it. The first id moves forward by
- * $t_c n_\mathrm{chains}$ and the markovian id follows the rows it pointed to. The catalog
+ * iteration in every @thin of the rest, all chains of it. The markovian id follows the
+ * rows it pointed to. The catalog
  * must hold complete ensembles and must not be read-only.
  *
  * When a file is attached it is renamed to `<file>.<n>.bak`, with the first free $n$,
@@ -5593,9 +5614,8 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
 
     /* Iterations before the Markovian chain, in the old numbering; after the cut and the
      * thinning the same rows are the first ceil ((mark_iters - tc) / thin) kept iterations. */
-    const gint mark_iters   = (ncm_mset_catalog_get_markovian_id (mcat) - self->first_id + (gint) self->nchains - 1) / (gint) self->nchains;
-    const gint kept_iters   = (mark_iters > (gint) tc) ? (mark_iters - (gint) tc + (gint) thin - 1) / (gint) thin : 0;
-    const gint new_first_id = self->first_id + tc * self->nchains;
+    const gint mark_iters = (ncm_mset_catalog_get_markovian_id (mcat) + (gint) self->nchains - 1) / (gint) self->nchains;
+    const gint kept_iters = (mark_iters > (gint) tc) ? (mark_iters - (gint) tc + (gint) thin - 1) / (gint) thin : 0;
 
     g_assert_cmpint (rows->len % self->nchains, ==, 0);
 
@@ -5609,8 +5629,7 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
         g_ptr_array_add (kept, ncm_vector_ref (g_ptr_array_index (rows, t * self->nchains + i)));
     }
 
-    _ncm_mset_catalog_rewrite (mcat, kept, new_first_id,
-                               MIN (new_first_id + kept_iters * (gint) self->nchains, new_first_id + (gint) kept->len));
+    _ncm_mset_catalog_rewrite (mcat, kept, MIN (kept_iters * (gint) self->nchains, (gint) kept->len));
 
     g_ptr_array_unref (kept);
     g_ptr_array_unref (rows);
@@ -5640,8 +5659,8 @@ ncm_mset_catalog_trim_p (NcmMSetCatalog *mcat, const gdouble p)
  * @out_file: (nullable): output filename, %NULL for a catalog in memory
  *
  * Removes the rows whose free parameters lie outside the bounds of the #NcmMSet of the
- * catalog. The catalog is renumbered as a single chain from the same first id, with the
- * markovian id after the kept rows that preceded it, and written in one sampler segment
+ * catalog. The catalog is renumbered as a single chain, with the markovian id after the
+ * kept rows that preceded it, and written in one sampler segment
  * to @out_file, which must not hold rows; the storage used before is left as it was.
  *
  * Returns: the number of rows removed.
@@ -5651,7 +5670,7 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
   GPtrArray *rows             = _ncm_mset_catalog_collect_rows (mcat, 0, 1);
-  const guint mark_rows       = ncm_mset_catalog_get_markovian_id (mcat) - self->first_id;
+  const guint mark_rows       = ncm_mset_catalog_get_markovian_id (mcat);
   NcmMSetCatalogDesc *desc    = _ncm_mset_catalog_new_desc (mcat, 1, self->m2lnp_var, self->rtype_str);
   GError *error               = NULL;
   NcmMSetCatalogStorage *out;
@@ -5685,8 +5704,8 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
   ncm_mset_catalog_desc_free (desc);
 
   self->burnin       = 0;
-  self->cur_id       = self->first_id - 1;
-  self->markovian_id = self->first_id;
+  self->cur_id       = -1;
+  self->markovian_id = 0;
 
   g_object_set (self->storage, "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
 
@@ -5717,7 +5736,7 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
   }
 
   /* Rows are renumbered: the Markovian chain starts after the kept rows that preceded it. */
-  self->markovian_id = self->first_id + kept_before;
+  self->markovian_id = kept_before;
   _ncm_mset_catalog_push_markovian_id (mcat);
 
   ncm_mset_catalog_storage_end_recording (self->storage, &error);
@@ -5770,7 +5789,7 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
 
     /* The removed rows may have been the ones the chain was to start at: the id then sits
      * at the row after the new last one, i.e. the phase is still open. */
-    _ncm_mset_catalog_rewrite (mcat, rows, self->first_id, MIN (markovian_id, self->first_id + (gint) new_len));
+    _ncm_mset_catalog_rewrite (mcat, rows, MIN (markovian_id, (gint) new_len));
 
     g_ptr_array_unref (rows);
   }
@@ -6231,8 +6250,8 @@ ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests
 
 /*
  * Gives self->diag_rows the rows of chain i, rows i, i + nchains, i + 2 nchains, ..., in
- * order; the caller resets self->diag_rows after its last chain. The first id is a
- * multiple of nchains, so row t belongs to chain t mod nchains.
+ * order; the caller resets self->diag_rows after its last chain. Row t belongs to chain
+ * t mod nchains.
  */
 static void
 _ncm_mset_catalog_set_chain_rows (NcmMSetCatalog *mcat, const guint i)

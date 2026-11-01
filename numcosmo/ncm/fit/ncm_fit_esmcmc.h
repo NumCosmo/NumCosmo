@@ -49,6 +49,7 @@ void ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc);
 
 void ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename);
+void ncm_fit_esmcmc_set_read_block (NcmFitESMCMC *esmcmc, guint read_block);
 
 void ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *sampler);
 void ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype);
@@ -72,7 +73,7 @@ gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_accept_ratio_last_update (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc);
 
-void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc);
+void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error);
 void ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_reset (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n);

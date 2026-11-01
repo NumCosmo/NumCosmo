@@ -79,7 +79,7 @@ test_ncm_fit_esmcmc_parity_apes_catalog (gboolean use_threads, gboolean use_mpi)
   ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
   ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 5.0);
 
-  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_start_run (esmcmc, NULL);
   ncm_fit_esmcmc_run (esmcmc, 2);
   ncm_fit_esmcmc_end_run (esmcmc);
 

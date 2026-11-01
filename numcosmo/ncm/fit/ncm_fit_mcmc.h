@@ -53,10 +53,9 @@ void ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng);
 
 gdouble ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc);
 
-void ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc);
+void ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc, GError **error);
 void ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc);
 void ncm_fit_mcmc_reset (NcmFitMCMC *mcmc);
-void ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id);
 void ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n);
 void ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre);
 void ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc);
