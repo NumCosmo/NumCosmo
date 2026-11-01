@@ -706,6 +706,25 @@ ncm_mset_catalog_storage_end_recording (NcmMSetCatalogStorage *storage, GError *
 }
 
 /**
+ * ncm_mset_catalog_storage_sync:
+ * @storage: a #NcmMSetCatalogStorage
+ * @error: a #GError
+ *
+ * Writes what the open recording holds so far: the state of the storage's #NcmRNG and
+ * the rows the backend has not written yet. The recording stays open. Fails with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING outside a recording.
+ */
+void
+ncm_mset_catalog_storage_sync (NcmMSetCatalogStorage *storage, GError **error)
+{
+  _ncm_mset_catalog_storage_require_recording (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_sync: ");
+
+  _ncm_mset_catalog_storage_sync (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_sync: ");
+}
+
+/**
  * ncm_mset_catalog_storage_is_recording:
  * @storage: a #NcmMSetCatalogStorage
  *

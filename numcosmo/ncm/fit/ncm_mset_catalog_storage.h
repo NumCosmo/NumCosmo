@@ -119,6 +119,7 @@ NcmRNG *ncm_mset_catalog_storage_get_rng (NcmMSetCatalogStorage *storage, GError
 void ncm_mset_catalog_storage_start_recording (NcmMSetCatalogStorage *storage, const gchar *sampler, const gchar *options, GError **error);
 void ncm_mset_catalog_storage_add_row (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error);
 void ncm_mset_catalog_storage_end_recording (NcmMSetCatalogStorage *storage, GError **error);
+void ncm_mset_catalog_storage_sync (NcmMSetCatalogStorage *storage, GError **error);
 gboolean ncm_mset_catalog_storage_is_recording (NcmMSetCatalogStorage *storage);
 
 guint ncm_mset_catalog_storage_nrows (NcmMSetCatalogStorage *storage, GError **error);

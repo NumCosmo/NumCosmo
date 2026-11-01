@@ -550,7 +550,8 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 
   mc->rtype = rtype;
 
-  ncm_mset_catalog_set_run_type (mc->mcat, eval->value_nick);
+  ncm_mset_catalog_set_run_type (mc->mcat, NCM_MSET_CATALOG_RTYPE_MC);
+  ncm_mset_catalog_set_sampler (mc->mcat, eval->value_nick);
 
   switch (rtype)
   {

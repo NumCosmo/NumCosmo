@@ -4,9 +4,15 @@
 The files go to data/truth_tables/catalog/ and are read by tests/c/ncm/fit/
 test_ncm_mset_catalog_fixtures.c, which asserts the state each one carries.
 
-Four files are real runs of the current library on a two-parameter NcmModelMVND
-with an NcmDataGaussCovMVND likelihood, one per catalog producer, with the run
-type and sampler strings that producer writes today:
+The files were written by the library at commit e4fb1885, the last before the
+catalog moved to NcmMSetCatalogStorage: they have no NSEGS key and carry the run
+type strings of that library, which the FITS storage translates. The current
+library writes NSEGS and the class run types, so the fixtures are regenerated
+only with that revision.
+
+Four files are real runs of that library on a two-parameter NcmModelMVND with
+an NcmDataGaussCovMVND likelihood, one per catalog producer, with the run type
+and sampler strings that producer wrote:
 
   esmcmc.fits        NcmFitESMCMC, 6 walkers, 3 ensembles: RTYPE "Ensemble
                      Sampler MCMC", INITSMP, SAMPLER, SAMPOPT, MARKID

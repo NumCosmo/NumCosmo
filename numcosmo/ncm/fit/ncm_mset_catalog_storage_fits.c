@@ -2139,3 +2139,23 @@ ncm_mset_catalog_storage_fits_get_read_only (NcmMSetCatalogStorageFits *storage_
   return storage_fits->read_only;
 }
 
+/**
+ * ncm_mset_catalog_storage_fits_get_first_id:
+ * @storage_fits: a #NcmMSetCatalogStorageFits
+ * @error: a #GError
+ *
+ * Returns the `FIRST_ID` key of the file, the id of its first row in the numbering of
+ * the previous library; new files have 0. The file is opened when needed. Fails as
+ * ncm_mset_catalog_storage_peek_desc().
+ *
+ * Returns: the first id of the file, 0 on error
+ */
+gint
+ncm_mset_catalog_storage_fits_get_first_id (NcmMSetCatalogStorageFits *storage_fits, GError **error)
+{
+  ncm_mset_catalog_storage_peek_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , 0, "ncm_mset_catalog_storage_fits_get_first_id: ");
+
+  return storage_fits->first_id;
+}
+

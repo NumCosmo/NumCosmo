@@ -102,7 +102,7 @@ _test_ncm_mset_catalog_fixtures_open (const gchar *name)
 static void
 _test_ncm_mset_catalog_fixtures_check_esmcmc (NcmMSetCatalog *mcat)
 {
-  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, "Ensemble Sampler MCMC");
+  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, NCM_MSET_CATALOG_RTYPE_ESMCMC);
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "Stretch-Move");
   g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "multi-stretch=no");
   g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "Multivariate Gaussian Sampler");
@@ -154,10 +154,15 @@ test_ncm_mset_catalog_fixtures_esmcmc_no_rng_algo (void)
 {
   NcmMSetCatalog *mcat = _test_ncm_mset_catalog_fixtures_open ("esmcmc_no_rng_algo.fits");
 
-  /* The current library reads the RNG record only when RNG_ALGO is present. */
+  /* Without RNG_ALGO the RNG state is read with the default algorithm of ncm_rng_new(). */
+  NcmRNG *rng_default = ncm_rng_new (NULL);
+
   _test_ncm_mset_catalog_fixtures_check_esmcmc (mcat);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, TEST_FIXTURES_ESMCMC_NROWS);
-  g_assert_null (ncm_mset_catalog_peek_rng (mcat));
+  g_assert_nonnull (ncm_mset_catalog_peek_rng (mcat));
+  g_assert_cmpstr (ncm_rng_get_algo (ncm_mset_catalog_peek_rng (mcat)), ==, ncm_rng_get_algo (rng_default));
+
+  ncm_rng_free (rng_default);
 
   ncm_mset_catalog_free (mcat);
 }
@@ -165,12 +170,9 @@ test_ncm_mset_catalog_fixtures_esmcmc_no_rng_algo (void)
 static void
 test_ncm_mset_catalog_fixtures_esmcmc_no_m2lnp_id (void)
 {
-  NcmMSetCatalog *mcat;
+  NcmMSetCatalog *mcat = _test_ncm_mset_catalog_fixtures_open ("esmcmc_no_m2lnp_id.fits");
 
-  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*does not contain `M2LNP_ID' key*");
-  mcat = _test_ncm_mset_catalog_fixtures_open ("esmcmc_no_m2lnp_id.fits");
-  g_test_assert_expected_messages ();
-
+  /* Without M2LNP_ID no column holds -2ln(p). */
   _test_ncm_mset_catalog_fixtures_check_esmcmc (mcat);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, TEST_FIXTURES_ESMCMC_NROWS);
   g_assert_cmpint (ncm_mset_catalog_get_m2lnp_var (mcat), ==, -1);
@@ -221,7 +223,8 @@ test_ncm_mset_catalog_fixtures_mc (void)
 {
   NcmMSetCatalog *mcat = _test_ncm_mset_catalog_fixtures_open ("mc.fits");
 
-  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, "from-model");
+  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, NCM_MSET_CATALOG_RTYPE_MC);
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "from-model");
   g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, 1);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 10);
   g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 1);
@@ -236,7 +239,7 @@ test_ncm_mset_catalog_fixtures_mcbs (void)
 {
   NcmMSetCatalog *mcat = _test_ncm_mset_catalog_fixtures_open ("mcbs.fits");
 
-  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN);
+  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, NCM_MSET_CATALOG_RTYPE_MCBS);
   g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, 1);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 5);
   g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 1);
@@ -250,7 +253,8 @@ test_ncm_mset_catalog_fixtures_mcmc (void)
 {
   NcmMSetCatalog *mcat = _test_ncm_mset_catalog_fixtures_open ("mcmc.fits");
 
-  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, "Multivariate Gaussian Sampler");
+  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, NCM_MSET_CATALOG_RTYPE_MCMC);
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "Multivariate Gaussian Sampler");
   g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, 1);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 10);
   g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 1);
@@ -289,9 +293,8 @@ test_ncm_mset_catalog_fixtures_functions (void)
   g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 2);
   g_assert_cmpstr (ncm_mset_catalog_col_name (mcat, 1), ==, "H0");
 
-  g_assert_nonnull (functions);
-  g_assert_cmpuint (ncm_obj_array_len (functions), ==, 1);
-  g_assert_true (NCM_IS_MSET_FUNC (ncm_obj_array_peek (functions, 0)));
+  /* The functions array of the file is not read: the column it computed is. */
+  g_assert_null (functions);
 
   ncm_mset_catalog_free (mcat);
 }

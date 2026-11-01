@@ -301,15 +301,13 @@ def _catalog_indices(
 class LoadedCatalog:
     """The contents of an MCMC catalog file, loaded and ready for analysis.
 
-    Catalog files are self-sufficient: their model-set and, if present, the
-    functions that computed their extra columns are embedded in the file
-    itself (FITS HDU0), so no companion experiment file is needed to load
-    one.
+    Catalog files carry their model-set (FITS HDU0), so no companion
+    experiment file is needed to load one. The functions that computed the
+    extra columns are not stored: the columns are, with their names.
     """
 
     mcat: Ncm.MSetCatalog
     mset: Ncm.MSet
-    functions: Ncm.ObjArray | None
     fparams_len: int
     nadd_vals: int
     total_columns: int
@@ -408,8 +406,6 @@ def load_catalog(
     assert isinstance(mset, Ncm.MSet)
     mset.prepare_fparam_map()
 
-    functions: Ncm.ObjArray | None = mcat.peek_functions_array()
-
     fparams_len = mset.fparams_len()
     nadd_vals: int = mcat.nadd_vals()
     total_columns: int = fparams_len + nadd_vals
@@ -432,7 +428,6 @@ def load_catalog(
     return LoadedCatalog(
         mcat=mcat,
         mset=mset,
-        functions=functions,
         fparams_len=fparams_len,
         nadd_vals=nadd_vals,
         total_columns=total_columns,
@@ -509,7 +504,6 @@ class LoadCatalog(AppLogging):
     # These are set in __post_init__ from load_catalog(), not from the CLI.
     mcat: Ncm.MSetCatalog = dataclasses.field(init=False)
     mset: Ncm.MSet = dataclasses.field(init=False)
-    functions: Ncm.ObjArray | None = dataclasses.field(init=False)
     fparams_len: int = dataclasses.field(init=False)
     nadd_vals: int = dataclasses.field(init=False)
     total_columns: int = dataclasses.field(init=False)
@@ -529,7 +523,6 @@ class LoadCatalog(AppLogging):
         )
         self.mcat = loaded.mcat
         self.mset = loaded.mset
-        self.functions = loaded.functions
         self.fparams_len = loaded.fparams_len
         self.nadd_vals = loaded.nadd_vals
         self.total_columns = loaded.total_columns
