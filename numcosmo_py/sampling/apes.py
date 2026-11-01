@@ -155,33 +155,41 @@ class APES:
         )
 
         self.esmcmc.set_use_threads(False)
+        self._started_once = False
 
     def run_mcmc(self, initial_sample: np.ndarray, niter: int) -> None:
-        """Run the sampler for niter iterations."""
+        """Run the sampler for niter iterations.
+
+        The first run draws its initial ensemble from `initial_sample`, through a
+        catalog transition kernel that gives each row once; later runs continue the
+        chain and ignore it.
+        """
 
         if initial_sample.shape != (self.nwalkers, self.mset.fparams_len()):
             raise ValueError("Initial sample has wrong shape.")
 
-        mcat = self.esmcmc.peek_catalog()
-
-        # The initial sample must be in the catalog before start_run(), otherwise
-        # the sampler generates its own initial points and the sample is ignored.
-        # A non-empty catalog must already own its RNG, so seed one first as
-        # start_run() would.
-        if mcat.len() == 0:
-            if mcat.peek_rng() is None:
-                rng = Ncm.RNG.new(None)
-                rng.set_random_seed(False)
-                self.esmcmc.set_rng(rng)
+        if not self._started_once:
+            init_mcat = Ncm.MSetCatalog.new_array(
+                self.mset, 1, self.nwalkers, False, ["m2lnL"], [r"-2\ln(L)"]
+            )
+            init_mcat.set_m2lnp_var(0)
+            init_mcat.set_run_type("initial-sample")
             for point in initial_sample:
                 point_vector = Ncm.Vector.new_array(point)
                 self.mset.fparams_set_vector(point_vector)
                 m2lnL = self.fit.m2lnL_val()
-                mcat.add_from_vector_array(point_vector, [m2lnL])
-            assert mcat.len() == self.nwalkers
+                init_mcat.add_from_vector_array(point_vector, [m2lnL])
+
+            init_sampler = Ncm.MSetTransKernCat.new(init_mcat, None)
+            init_sampler.set_mset(self.mset)
+            init_sampler.set_prior_from_mset()
+            init_sampler.set_sampling(Ncm.MSetTransKernCatSampling.CHOOSE)
+            self.esmcmc.set_sampler(init_sampler)
+            self._started_once = True
 
         self.esmcmc.start_run()
 
+        mcat = self.esmcmc.peek_catalog()
         assert mcat.len() >= self.nwalkers
 
         self.esmcmc.run(niter)

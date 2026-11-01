@@ -1546,9 +1546,10 @@ _ncm_mset_catalog_push_markovian_id (NcmMSetCatalog *mcat)
 }
 
 /*
- * Opens the recording the next row is added to, when none is open: the initial sampler's
- * segment on an empty storage with an initial sampler, the sampler's segment otherwise
- * (named by the run type when no sampler was set). A pending Markovian id is written.
+ * Opens the recording the next row is added to, when none is open (a sampler may have
+ * opened one on the storage): the initial sampler's segment on an empty storage with an
+ * initial sampler, the sampler's segment otherwise (named by the run type when no sampler
+ * was set). A pending Markovian id is written.
  */
 static void
 _ncm_mset_catalog_ensure_recording (NcmMSetCatalog *mcat)
@@ -1558,7 +1559,11 @@ _ncm_mset_catalog_ensure_recording (NcmMSetCatalog *mcat)
   guint nrows;
 
   if (ncm_mset_catalog_storage_is_recording (self->storage))
+  {
+    _ncm_mset_catalog_push_markovian_id (mcat);
+
     return;
+  }
 
   nrows = ncm_mset_catalog_storage_nrows (self->storage, &error);
   _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_ensure_recording");

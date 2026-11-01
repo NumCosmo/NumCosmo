@@ -713,10 +713,12 @@ void
 test_ncm_fit_esmcmc_run_markovian_id (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   NcmFitESMCMCWalker *walker = ncm_fit_esmcmc_peek_walker (test->esmcmc);
-  NcmMSetCatalog *mcat       = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
-  const gint nwalkers        = ncm_mset_catalog_nchains (mcat);
+  NcmMSetCatalog *mcat;
+  gint nwalkers;
 
   ncm_fit_esmcmc_start_run (test->esmcmc);
+  mcat     = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
+  nwalkers = ncm_mset_catalog_nchains (mcat);
   ncm_fit_esmcmc_run (test->esmcmc, 4);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
@@ -1306,7 +1308,7 @@ test_ncm_fit_esmcmc_validate_threaded_read_block (void)
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
   ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
   ncm_fit_esmcmc_set_data_file (esmcmc, filename);
-  ncm_mset_catalog_set_read_block (ncm_fit_esmcmc_peek_catalog (esmcmc), 7);
+  ncm_fit_esmcmc_set_read_block (esmcmc, 7);
 
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
   ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));

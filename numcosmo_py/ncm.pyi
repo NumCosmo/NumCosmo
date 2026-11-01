@@ -3334,6 +3334,8 @@ class FitESMCMC(GObject.Object):
         Use MPI instead of threads
       data-file -> gchararray: data-file
         Data filename
+      read-block -> guint: read-block
+        Rows read from the catalog file at once
       function-array -> NcmObjArray: function-array
         Functions array
       init-max-rounds -> guint: init-max-rounds
@@ -3357,6 +3359,7 @@ class FitESMCMC(GObject.Object):
         min_runs: int
         mtype: FitRunMsgs
         nwalkers: int
+        read_block: int
         sampler: MSetTransKern
         skip_check: bool
         trim_type: MSetCatalogTrimType
@@ -3380,6 +3383,7 @@ class FitESMCMC(GObject.Object):
         min_runs: int = ...,
         mtype: FitRunMsgs = ...,
         nwalkers: int = ...,
+        read_block: int = ...,
         sampler: MSetTransKern = ...,
         skip_check: bool = ...,
         trim_type: MSetCatalogTrimType = ...,
@@ -3435,6 +3439,7 @@ class FitESMCMC(GObject.Object):
     def set_max_runs_time(self, max_runs_time: float) -> None: ...
     def set_min_runs(self, min_runs: int) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
+    def set_read_block(self, read_block: int) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
     def set_sampler(self, sampler: MSetTransKern) -> None: ...
     def set_skip_check(self, skip_check: bool) -> None: ...
