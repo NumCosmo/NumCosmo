@@ -118,6 +118,7 @@ void test_ncm_mset_catalog_no_mset_no_file_subprocess (void);
 void test_ncm_mset_catalog_file_peek_info (void);
 void test_ncm_mset_catalog_storage_memory (void);
 void test_ncm_mset_catalog_storage_fits (void);
+void test_ncm_mset_catalog_file_trim_oob_large (void);
 void test_ncm_mset_catalog_file_multichain (void);
 void test_ncm_mset_catalog_file_weighted_roundtrip (void);
 void test_ncm_mset_catalog_file_read_block (gconstpointer pdata);
@@ -237,6 +238,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
   g_test_add_func ("/ncm/mset/catalog/storage/memory", &test_ncm_mset_catalog_storage_memory);
   g_test_add_func ("/ncm/mset/catalog/storage/fits", &test_ncm_mset_catalog_storage_fits);
+  g_test_add_func ("/ncm/mset/catalog/file/trim_oob/large", &test_ncm_mset_catalog_file_trim_oob_large);
   g_test_add_func ("/ncm/mset/catalog/file/multichain", &test_ncm_mset_catalog_file_multichain);
   g_test_add_func ("/ncm/mset/catalog/file/weighted_roundtrip", &test_ncm_mset_catalog_file_weighted_roundtrip);
   g_test_add_data_func ("/ncm/mset/catalog/file/read_block/one_chain", GUINT_TO_POINTER (1), &test_ncm_mset_catalog_file_read_block);
@@ -2205,6 +2207,60 @@ test_ncm_mset_catalog_storage_fits (void)
   ncm_mset_clear (&mset);
   g_unlink (filename);
   g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * trim_oob and remove_last_ensemble on a file of more rows than the rewrite writes
+ * between two syncs: the rows out of bounds are removed, the rest kept in order.
+ */
+void
+test_ncm_mset_catalog_file_trim_oob_large (void)
+{
+  const guint nrows        = 70000;
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_trim_large_XXXXXX", NULL);
+  gchar *filename          = g_build_filename (tmp_dir, "cat.fits", NULL);
+  gchar *out_file          = g_build_filename (tmp_dir, "cat_oob.fits", NULL);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmVector *x             = ncm_vector_new (2);
+  NcmMSetCatalog *mcat;
+  guint i, ndel;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, 1, FALSE, "trim-large-run", filename);
+  g_object_set (ncm_mset_catalog_peek_storage (mcat), "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
+
+  for (i = 0; i < nrows; i++)
+  {
+    gdouble ax[1] = { 1.0 * i };
+
+    ncm_vector_set (x, 0, (i % 10000 == 5000) ? 100.0 : 1.0e-3 * (i % 100));
+    ncm_vector_set (x, 1, 0.5);
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+  }
+
+  ndel = ncm_mset_catalog_trim_oob (mcat, out_file);
+
+  g_assert_cmpuint (ndel, ==, nrows / 10000);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows - ndel);
+  g_assert_cmpstr (ncm_mset_catalog_peek_filename (mcat), ==, out_file);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 5000), 0), ==, 5001.0);
+
+  ncm_mset_catalog_remove_last_ensemble (mcat);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows - ndel - 1);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 5000), 0), ==, 5001.0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, nrows - ndel - 2), 0), ==, 1.0 * (nrows - 2));
+
+  ncm_vector_free (x);
+  ncm_mset_catalog_clear (&mcat);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (out_file);
   g_free (filename);
   g_free (tmp_dir);
 }
