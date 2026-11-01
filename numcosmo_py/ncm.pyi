@@ -3332,10 +3332,8 @@ class FitESMCMC(GObject.Object):
         Whether to use OpenMP threads (real thread count is controlled by OMP_NUM_THREADS)
       use-mpi -> gboolean: use-mpi
         Use MPI instead of threads
-      data-file -> gchararray: data-file
-        Data filename
-      read-block -> guint: read-block
-        Rows read from the catalog file at once
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
       function-array -> NcmObjArray: function-array
         Functions array
       init-max-rounds -> guint: init-max-rounds
@@ -3348,7 +3346,6 @@ class FitESMCMC(GObject.Object):
     class Props:
         auto_trim: bool
         auto_trim_div: int
-        data_file: str
         fit: Fit
         function_array: ObjArray
         init_max_rounds: int
@@ -3359,9 +3356,9 @@ class FitESMCMC(GObject.Object):
         min_runs: int
         mtype: FitRunMsgs
         nwalkers: int
-        read_block: int
         sampler: MSetTransKern
         skip_check: bool
+        storage: MSetCatalogStorage
         trim_type: MSetCatalogTrimType
         use_mpi: bool
         use_threads: bool
@@ -3372,7 +3369,6 @@ class FitESMCMC(GObject.Object):
         self,
         auto_trim: bool = ...,
         auto_trim_div: int = ...,
-        data_file: str = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
         init_max_rounds: int = ...,
@@ -3383,9 +3379,9 @@ class FitESMCMC(GObject.Object):
         min_runs: int = ...,
         mtype: FitRunMsgs = ...,
         nwalkers: int = ...,
-        read_block: int = ...,
         sampler: MSetTransKern = ...,
         skip_check: bool = ...,
+        storage: MSetCatalogStorage = ...,
         trim_type: MSetCatalogTrimType = ...,
         use_mpi: bool = ...,
         use_threads: bool = ...,
@@ -3435,14 +3431,13 @@ class FitESMCMC(GObject.Object):
     def set_auto_trim(self, enable: bool) -> None: ...
     def set_auto_trim_div(self, div: int) -> None: ...
     def set_auto_trim_type(self, ttype: MSetCatalogTrimType) -> None: ...
-    def set_data_file(self, filename: str) -> None: ...
     def set_max_runs_time(self, max_runs_time: float) -> None: ...
     def set_min_runs(self, min_runs: int) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
-    def set_read_block(self, read_block: int) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
     def set_sampler(self, sampler: MSetTransKern) -> None: ...
     def set_skip_check(self, skip_check: bool) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def start_run(self) -> None: ...
     def use_mpi(self, use_mpi: bool) -> None: ...
@@ -4392,8 +4387,8 @@ class FitMC(GObject.Object):
         Whether to use OpenMP threads (real thread count is controlled by OMP_NUM_THREADS)
       keep-order -> gboolean: keep-order
         Whether to keep the catalog in order of sampling under multi-threaded runs
-      data-file -> gchararray: data-file
-        Data file to be used by the catalog
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
       function-array -> NcmObjArray: function-array
         Functions array
 
@@ -4402,25 +4397,25 @@ class FitMC(GObject.Object):
     """
 
     class Props:
-        data_file: str
         fiducial: typing.Optional[MSet]
         fit: Fit
         function_array: ObjArray
         keep_order: bool
         mtype: FitRunMsgs
         rtype: FitMCResampleType
+        storage: MSetCatalogStorage
         use_threads: bool
 
     props: Props = ...
     def __init__(
         self,
-        data_file: str = ...,
         fiducial: typing.Optional[MSet] = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
         keep_order: bool = ...,
         mtype: FitRunMsgs = ...,
         rtype: FitMCResampleType = ...,
+        storage: MSetCatalogStorage = ...,
         use_threads: bool = ...,
     ) -> None: ...
     @staticmethod
@@ -4446,10 +4441,10 @@ class FitMC(GObject.Object):
     def reset(self) -> None: ...
     def run(self, n: int) -> None: ...
     def run_lre(self, prerun: int, lre: float) -> None: ...
-    def set_data_file(self, filename: str) -> None: ...
     def set_fiducial(self, fiduc: typing.Optional[MSet] = None) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def start_run(self) -> None: ...
 
@@ -4467,19 +4462,19 @@ class FitMCBS(GObject.Object):
     Properties from NcmFitMCBS:
       fit -> NcmFit: fit
         Fit object
-      filename -> gchararray: filename
-        Data filename
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        filename: str
         fit: Fit
+        storage: MSetCatalogStorage
 
     props: Props = ...
-    def __init__(self, filename: str = ..., fit: Fit = ...) -> None: ...
+    def __init__(self, fit: Fit = ..., storage: MSetCatalogStorage = ...) -> None: ...
     @staticmethod
     def clear(mcbs: FitMCBS) -> None: ...
     def free(self) -> None: ...
@@ -4495,8 +4490,8 @@ class FitMCBS(GObject.Object):
         mtype: FitRunMsgs,
         bsmt: bool,
     ) -> None: ...
-    def set_filename(self, filename: str) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
 
 class FitMCBSClass(GObject.GPointer):
     r"""
@@ -4538,26 +4533,26 @@ class FitMCMC(GObject.Object):
         Metropolis-Hastings sampler
       mtype -> NcmFitRunMsgs: mtype
         Run messages type
-      data-file -> gchararray: data-file
-        Data file to be used by the catalog
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        data_file: str
         fit: Fit
         mtype: FitRunMsgs
         sampler: MSetTransKern
+        storage: MSetCatalogStorage
 
     props: Props = ...
     def __init__(
         self,
-        data_file: str = ...,
         fit: Fit = ...,
         mtype: FitRunMsgs = ...,
         sampler: MSetTransKern = ...,
+        storage: MSetCatalogStorage = ...,
     ) -> None: ...
     @staticmethod
     def clear(mcmc: FitMCMC) -> None: ...
@@ -4571,10 +4566,10 @@ class FitMCMC(GObject.Object):
     def reset(self) -> None: ...
     def run(self, n: int) -> None: ...
     def run_lre(self, prerun: int, lre: float) -> None: ...
-    def set_data_file(self, filename: str) -> None: ...
     def set_fiducial(self, fiduc: MSet) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
     def set_trans_kern(self, tkern: MSetTransKern) -> None: ...
     def start_run(self) -> None: ...
 

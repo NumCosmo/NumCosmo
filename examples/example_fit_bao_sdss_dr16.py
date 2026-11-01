@@ -235,7 +235,7 @@ def test_fit_bao_sdss_dr16() -> None:
     # esmcmc.set_auto_trim_div (100)
     # esmcmc.set_max_runs_time (2.0 * 60.0)
     esmcmc.set_use_threads(True)
-    esmcmc.set_data_file(fitscat)
+    esmcmc.set_storage(Ncm.MSetCatalogStorageFits.new(fitscat, False))
 
     #
     # Running the esmcmc, it will first calculate 1000 points, after that

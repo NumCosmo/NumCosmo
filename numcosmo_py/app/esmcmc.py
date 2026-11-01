@@ -450,9 +450,11 @@ class RunMCMC(RunCommonOptions):
         esmcmc.set_use_threads(self.parallel == Parallelization.THREADS.value)
 
         if self.output is not None:
-            esmcmc.set_data_file(
-                self.output.absolute().with_suffix(".mcmc.fits").as_posix()
+            storage = Ncm.MSetCatalogStorageFits.new(
+                self.output.absolute().with_suffix(".mcmc.fits").as_posix(), False
             )
+            assert storage is not None
+            esmcmc.set_storage(storage)
 
         esmcmc.set_skip_check(self.skip_check)
 

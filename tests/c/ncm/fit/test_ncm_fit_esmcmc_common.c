@@ -1309,17 +1309,19 @@ test_ncm_fit_esmcmc_validate_threaded_read_block (void)
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
   g_assert_true (ncm_fit_esmcmc_has_rng (esmcmc));
   ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
-  ncm_fit_esmcmc_set_data_file (esmcmc, filename);
-  ncm_fit_esmcmc_set_read_block (esmcmc, 7);
-
   {
-    gchar *data_file = NULL;
-    guint read_block = 0;
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+    NcmMSetCatalogStorage *storage_prop     = NULL;
 
-    g_object_get (esmcmc, "data-file", &data_file, "read-block", &read_block, NULL);
-    g_assert_cmpstr (data_file, ==, filename);
-    g_assert_cmpuint (read_block, ==, 7);
-    g_free (data_file);
+    g_object_set (storage_fits, "read-block", 7, NULL);
+    ncm_fit_esmcmc_set_storage (esmcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+
+    g_object_get (esmcmc, "storage", &storage_prop, NULL);
+    g_assert_true (storage_prop == NCM_MSET_CATALOG_STORAGE (storage_fits));
+    g_assert_cmpstr (ncm_mset_catalog_storage_fits_peek_filename (NCM_MSET_CATALOG_STORAGE_FITS (storage_prop)), ==, filename);
+
+    ncm_mset_catalog_storage_free (storage_prop);
+    ncm_mset_catalog_storage_fits_free (storage_fits);
   }
 
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
@@ -1334,9 +1336,14 @@ test_ncm_fit_esmcmc_validate_threaded_read_block (void)
   g_assert_true (ncm_fit_esmcmc_validate (esmcmc, 0, 0));
   g_assert_true (ncm_fit_esmcmc_has_rng (esmcmc));
 
-  /* The catalog is built: the read block goes to it. */
-  ncm_fit_esmcmc_set_read_block (esmcmc, 5);
-  g_assert_cmpuint (ncm_mset_catalog_len (ncm_fit_esmcmc_peek_catalog (esmcmc)), ==, 70 * nwalkers);
+  /* The storage of the catalog is the one given. */
+  {
+    NcmMSetCatalogStorage *storage_prop = NULL;
+
+    g_object_get (esmcmc, "storage", &storage_prop, NULL);
+    g_assert_true (ncm_mset_catalog_peek_storage (ncm_fit_esmcmc_peek_catalog (esmcmc)) == storage_prop);
+    ncm_mset_catalog_storage_free (storage_prop);
+  }
 
   ncm_fit_esmcmc_clear (&esmcmc);
 
@@ -1350,8 +1357,11 @@ test_ncm_fit_esmcmc_validate_threaded_read_block (void)
                                                 NCM_FIT_RUN_MSGS_NONE);
     GError *error = NULL;
 
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+
     ncm_fit_esmcmc_set_rng (esmcmc2, rng2);
-    ncm_fit_esmcmc_set_data_file (esmcmc2, filename);
+    ncm_fit_esmcmc_set_storage (esmcmc2, NCM_MSET_CATALOG_STORAGE (storage_fits));
+    ncm_mset_catalog_storage_fits_free (storage_fits);
     ncm_fit_esmcmc_start_run (esmcmc2, &error);
     g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG);
     g_clear_error (&error);

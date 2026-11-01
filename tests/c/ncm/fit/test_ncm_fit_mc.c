@@ -36,6 +36,7 @@
 static void test_ncm_fit_mc_from_model (void);
 static void test_ncm_fit_mc_incompatible_file (void);
 static void test_ncm_fit_mc_data_file (void);
+static void _test_ncm_fit_mc_set_file (NcmFitMC *mc, const gchar *filename);
 
 gint
 main (gint argc, gchar *argv[])
@@ -51,6 +52,16 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/fit_mc/data_file", &test_ncm_fit_mc_data_file);
 
   g_test_run ();
+}
+
+/* Gives mc a FITS storage on filename. */
+static void
+_test_ncm_fit_mc_set_file (NcmFitMC *mc, const gchar *filename)
+{
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+
+  ncm_fit_mc_set_storage (mc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+  ncm_mset_catalog_storage_fits_free (storage_fits);
 }
 
 /*
@@ -94,7 +105,7 @@ test_ncm_fit_mc_incompatible_file (void)
 
   fit = ncm_fit_factory (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
   mc  = ncm_fit_mc_new (fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
-  ncm_fit_mc_set_data_file (mc, filename);
+  _test_ncm_fit_mc_set_file (mc, filename);
 
   ncm_fit_mc_start_run (mc, &error);
   g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE);
@@ -144,7 +155,7 @@ test_ncm_fit_mc_data_file (void)
 
   mc = ncm_fit_mc_new (fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_mc_set_rng (mc, rng);
-  ncm_fit_mc_set_data_file (mc, filename);
+  _test_ncm_fit_mc_set_file (mc, filename);
 
   ncm_fit_mc_start_run (mc, &error);
   g_assert_no_error (error);
@@ -155,7 +166,7 @@ test_ncm_fit_mc_data_file (void)
 
   mc = ncm_fit_mc_new (fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_mc_set_rng (mc, rng2);
-  ncm_fit_mc_set_data_file (mc, filename);
+  _test_ncm_fit_mc_set_file (mc, filename);
   ncm_fit_mc_start_run (mc, &error);
   g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG);
   g_assert_false (ncm_fit_mc_is_running (mc));
@@ -163,7 +174,7 @@ test_ncm_fit_mc_data_file (void)
   ncm_fit_mc_free (mc);
 
   mc = ncm_fit_mc_new (fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
-  ncm_fit_mc_set_data_file (mc, filename);
+  _test_ncm_fit_mc_set_file (mc, filename);
   ncm_fit_mc_start_run (mc, &error);
   g_assert_no_error (error);
   g_assert_cmpuint (ncm_mset_catalog_len (ncm_fit_mc_peek_catalog (mc)), ==, 10);

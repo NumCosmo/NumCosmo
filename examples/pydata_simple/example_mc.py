@@ -129,7 +129,7 @@ def run_mc() -> None:
     # Using `example_mcmc_out.fits' as the catalog file, if there
     # is already data in it, the sampler continues from where it stopped.
     #
-    mc.set_data_file("example_mc_out.fits")
+    mc.set_storage(Ncm.MSetCatalogStorageFits.new("example_mc_out.fits", False))
 
     #
     # Running the mcmc, it will first calculate 1000 points, after that

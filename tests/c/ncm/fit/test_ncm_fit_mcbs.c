@@ -92,9 +92,9 @@ static void
 test_ncm_fit_mcbs_filename (void)
 {
   /*
-   * The catalog on a file: the bootstrap catalogs are written next to it under the name
-   * without the .fits extension (a name without it is used whole). A second run adds its
-   * realizations to the same catalog.
+   * The catalog on a FITS storage: the bootstrap catalogs are written next to its file
+   * under the name without the .fits extension. A second run adds its realizations to
+   * the same catalog.
    */
   gchar *tmp_dir                 = g_dir_make_tmp ("tmp_test_ncm_fit_mcbs_XXXXXX", NULL);
   gchar *base                    = g_build_filename (tmp_dir, "mcbs", NULL);
@@ -106,7 +106,6 @@ test_ncm_fit_mcbs_filename (void)
   NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model), NULL, NULL);
   NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL);
   NcmLikelihood *lh              = ncm_likelihood_new (dset);
-  gchar *filename_prop           = NULL;
   GError *error                  = NULL;
   NcmFit *fit;
   NcmFitMCBS *mcbs;
@@ -117,11 +116,16 @@ test_ncm_fit_mcbs_filename (void)
   mcbs = ncm_fit_mcbs_new (fit);
   ncm_fit_mcbs_set_rng (mcbs, rng);
 
-  ncm_fit_mcbs_set_filename (mcbs, base);
-  ncm_fit_mcbs_set_filename (mcbs, filename);
-  g_object_get (mcbs, "filename", &filename_prop, NULL);
-  g_assert_cmpstr (filename_prop, ==, filename);
-  g_free (filename_prop);
+  {
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+    NcmMSetCatalogStorage *storage_prop     = NULL;
+
+    ncm_fit_mcbs_set_storage (mcbs, NCM_MSET_CATALOG_STORAGE (storage_fits));
+    g_object_get (mcbs, "storage", &storage_prop, NULL);
+    g_assert_true (storage_prop == NCM_MSET_CATALOG_STORAGE (storage_fits));
+    ncm_mset_catalog_storage_free (storage_prop);
+    ncm_mset_catalog_storage_fits_free (storage_fits);
+  }
 
   ncm_fit_mcbs_run (mcbs, NULL, 2, 5, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE, FALSE, &error);
   g_assert_no_error (error);

@@ -172,7 +172,9 @@ def test_wl_likelihood() -> None:
     esmcmc = Ncm.FitESMCMC.new(fit, nwalkers, init_sampler, apes, Ncm.FitRunMsgs.SIMPLE)
     esmcmc.set_use_threads(True)
 
-    esmcmc.set_data_file("example_wl_likelihood.fits")
+    esmcmc.set_storage(
+        Ncm.MSetCatalogStorageFits.new("example_wl_likelihood.fits", False)
+    )
 
     esmcmc.start_run()
     esmcmc.run(100)

@@ -174,7 +174,7 @@ def run_esmcmc() -> None:
     # Using `example_esmcmc_out.fits' as the catalog file, if there
     # is already data in it, the sampler continues from where it stopped.
     #
-    esmcmc.set_data_file("example_esmcmc_out.fits")
+    esmcmc.set_storage(Ncm.MSetCatalogStorageFits.new("example_esmcmc_out.fits", False))
 
     #
     # Running the esmcmc, it will first calculate 1000 points, after that
