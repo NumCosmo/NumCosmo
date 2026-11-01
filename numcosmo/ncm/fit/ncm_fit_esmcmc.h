@@ -73,7 +73,7 @@ gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_accept_ratio_last_update (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc);
 
-void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc);
+void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error);
 void ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_reset (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n);

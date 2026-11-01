@@ -293,11 +293,24 @@ _ncm_mset_trans_kern_cat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
   NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
+  const guint nfree                       = ncm_mset_fparams_len (mset);
+  guint i;
 
-  NCM_UNUSED (mset);
+  /* The rows are copied into thetastar by position: the free parameters of mset must be
+   * the catalog's, in the catalog's order. */
+  if (nfree != ncm_mset_fparams_len (mcat_mset))
+    g_error ("_ncm_mset_trans_kern_cat_set_mset: the model set has %u free parameters and the catalog %u.",
+             nfree, ncm_mset_fparams_len (mcat_mset));
 
-  if (!ncm_mset_cmp (mset, mcat_mset, FALSE))
-    g_error ("_ncm_mset_trans_kern_cat_set_mset: incompatible mset.");
+  for (i = 0; i < nfree; i++)
+  {
+    const gchar *name     = ncm_mset_fparam_full_name (mset, i);
+    const gchar *cat_name = ncm_mset_fparam_full_name (mcat_mset, i);
+
+    if (strcmp (name, cat_name) != 0)
+      g_error ("_ncm_mset_trans_kern_cat_set_mset: free parameter %u is `%s' in the model set and `%s' in the catalog.",
+               i, name, cat_name);
+  }
 }
 
 static void

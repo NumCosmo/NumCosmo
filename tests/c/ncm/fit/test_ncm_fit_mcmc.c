@@ -138,7 +138,7 @@ test_ncm_fit_mcmc_posterior (TestNcmFitMCMC *test, gconstpointer pdata)
   gdouble accept;
   guint i;
 
-  ncm_fit_mcmc_start_run (test->mcmc);
+  ncm_fit_mcmc_start_run (test->mcmc, NULL);
   ncm_fit_mcmc_run (test->mcmc, n);
   accept = ncm_fit_mcmc_get_accept_ratio (test->mcmc);
   ncm_fit_mcmc_end_run (test->mcmc);
@@ -185,7 +185,7 @@ test_ncm_fit_mcmc_bound (TestNcmFitMCMC *test, gconstpointer pdata)
   ncm_model_param_set_upper_bound (NCM_MODEL (test->model), 0, ncm_vector_get (y, 0));
   ncm_model_orig_param_set (NCM_MODEL (test->model), 0, ncm_vector_get (y, 0) - 0.5 * sigma);
 
-  ncm_fit_mcmc_start_run (test->mcmc);
+  ncm_fit_mcmc_start_run (test->mcmc, NULL);
   ncm_fit_mcmc_run (test->mcmc, n);
   ncm_fit_mcmc_end_run (test->mcmc);
 
@@ -215,7 +215,7 @@ test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata)
   _test_ncm_fit_mcmc_x0_max = ncm_vector_get (y, 0);
   klass->valid              = &_test_ncm_fit_mcmc_valid_x0;
 
-  ncm_fit_mcmc_start_run (test->mcmc);
+  ncm_fit_mcmc_start_run (test->mcmc, NULL);
   ncm_fit_mcmc_run (test->mcmc, 2000);
   ncm_fit_mcmc_end_run (test->mcmc);
 

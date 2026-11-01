@@ -53,7 +53,7 @@ void ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng);
 
 gdouble ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc);
 
-void ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc);
+void ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc, GError **error);
 void ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc);
 void ncm_fit_mcmc_reset (NcmFitMCMC *mcmc);
 void ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n);

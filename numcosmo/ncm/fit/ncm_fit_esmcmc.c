@@ -57,6 +57,7 @@
 #include "ncm/fit/ncm_mset_catalog_storage_memory.h"
 #include "ncm/fit/ncm_fit_esmcmc_walker_apes.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 #include "ncm/core/ncm_timer.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/mpi/ncm_mpi_job_mcmc.h"
@@ -931,20 +932,22 @@ ncm_fit_esmcmc_set_read_block (NcmFitESMCMC *esmcmc, guint read_block)
  * continued) or a memory storage, and gives it the RNG set before.
  */
 static void
-_ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc)
+_ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc, GError **error)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   NcmMSet *mset                    = ncm_fit_peek_mset (self->fit);
   const guint nfuncs               = (self->func_oa != NULL) ? self->func_oa->len : 0;
-  gchar **names                    = g_new (gchar *, nfuncs + 2);
-  gchar **symbols                  = g_new (gchar *, nfuncs + 2);
-  GError *error                    = NULL;
   NcmMSetCatalogDesc *desc;
   NcmMSetCatalogStorage *storage;
+  gchar **names;
+  gchar **symbols;
   guint k;
 
   if (self->mcat != NULL)
     return;
+
+  names   = g_new (gchar *, nfuncs + 2);
+  symbols = g_new (gchar *, nfuncs + 2);
 
   names[0]   = g_strdup (NCM_MSET_CATALOG_M2LNL_COLNAME);
   symbols[0] = g_strdup (NCM_MSET_CATALOG_M2LNL_SYMBOL);
@@ -963,10 +966,10 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc)
   symbols[1 + k] = NULL;
 
   desc = ncm_mset_catalog_desc_new (mset, self->nwalkers, FALSE, (const gchar * const *) names, (const gchar * const *) symbols,
-                                    NCM_FIT_ESMCMC_M2LNL_ID, NCM_MSET_CATALOG_RTYPE_ESMCMC, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_esmcmc_start_run: %s", error->message);
+                                    NCM_FIT_ESMCMC_M2LNL_ID, NCM_MSET_CATALOG_RTYPE_ESMCMC, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { g_strfreev (names);
+                                     g_strfreev (symbols);
+                            }, );
 
   if (self->data_file != NULL)
     storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS,
@@ -976,10 +979,12 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc)
   else
     storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_MEMORY, NULL);
 
-  ncm_mset_catalog_storage_set_desc (storage, desc, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_esmcmc_start_run: %s", error->message);
+  ncm_mset_catalog_storage_set_desc (storage, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { ncm_mset_catalog_storage_free (storage);
+                                     ncm_mset_catalog_desc_free (desc);
+                                     g_strfreev (names);
+                                     g_strfreev (symbols);
+                            }, );
 
   self->mcat = ncm_mset_catalog_new_from_storage (storage, 0);
   ncm_mset_catalog_set_functions_array (self->mcat, self->func_oa);
@@ -992,10 +997,11 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc)
       ncm_mset_catalog_set_rng (self->mcat, self->rng);
     else if ((strcmp (ncm_rng_get_algo (cat_rng), ncm_rng_get_algo (self->rng)) != 0) ||
              (ncm_rng_get_seed (cat_rng) != ncm_rng_get_seed (self->rng)))
-      g_error ("ncm_fit_esmcmc_start_run: catalog `%s' holds an RNG (%s, seed %lu) and another was set (%s, seed %lu); "
-               "do not set an RNG when resuming from a file.",
-               self->data_file, ncm_rng_get_algo (cat_rng), ncm_rng_get_seed (cat_rng),
-               ncm_rng_get_algo (self->rng), ncm_rng_get_seed (self->rng));
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
+                                  "ncm_fit_esmcmc_start_run: catalog `%s' holds an RNG (%s, seed %lu) and another was set (%s, seed %lu); "
+                                  "do not set an RNG when resuming from a file",
+                                  self->data_file, ncm_rng_get_algo (cat_rng), ncm_rng_get_seed (cat_rng),
+                                  ncm_rng_get_algo (self->rng), ncm_rng_get_seed (self->rng));
 
     ncm_rng_clear (&self->rng);
   }
@@ -1008,27 +1014,18 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc)
 
 /* Opens a recording of the catalog's storage for sampler, closing one left open. */
 static void
-_ncm_fit_esmcmc_start_recording (NcmFitESMCMC *esmcmc, const gchar *sampler, const gchar *options)
+_ncm_fit_esmcmc_start_recording (NcmFitESMCMC *esmcmc, const gchar *sampler, const gchar *options, GError **error)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   NcmMSetCatalogStorage *storage   = ncm_mset_catalog_peek_storage (self->mcat);
-  GError *error                    = NULL;
-
-  if (ncm_mset_catalog_storage_is_recording (storage))
-    ncm_mset_catalog_sync (self->mcat, TRUE);
 
   if (ncm_mset_catalog_storage_is_recording (storage))
   {
-    ncm_mset_catalog_storage_end_recording (storage, &error);
-
-    if (error != NULL)
-      g_error ("ncm_fit_esmcmc_start_run: %s", error->message);
+    ncm_mset_catalog_storage_end_recording (storage, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
   }
 
-  ncm_mset_catalog_storage_start_recording (storage, sampler, options, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_esmcmc_start_run: %s", error->message);
+  ncm_mset_catalog_storage_start_recording (storage, sampler, options, error);
 }
 
 /* Closes the recording of the catalog's storage, writing what it holds; none open is fine. */
@@ -1839,7 +1836,7 @@ _ncm_fit_esmcmc_check_init_points (NcmFitESMCMC *esmcmc)
 }
 
 static void
-_ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
+_ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc, GError **error)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   guint len;
@@ -1850,7 +1847,8 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
     g_error ("_ncm_fit_esmcmc_gen_init_points: initial points already generated.");
 
   ncm_mset_catalog_set_initial_sampler (self->mcat, ncm_mset_trans_kern_get_name (self->sampler));
-  _ncm_fit_esmcmc_start_recording (esmcmc, ncm_mset_trans_kern_get_name (self->sampler), NULL);
+  _ncm_fit_esmcmc_start_recording (esmcmc, ncm_mset_trans_kern_get_name (self->sampler), NULL, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
 
@@ -1882,7 +1880,7 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
   /* The initial ensemble is not a Markov step: the chain starts at the next row, in the
    * walker's own segment. */
   ncm_mset_catalog_set_markovian_id (self->mcat, ncm_mset_catalog_get_cur_id (self->mcat) + 1);
-  _ncm_fit_esmcmc_start_recording (esmcmc, ncm_fit_esmcmc_walker_desc (self->walker), ncm_fit_esmcmc_walker_opts (self->walker));
+  _ncm_fit_esmcmc_start_recording (esmcmc, ncm_fit_esmcmc_walker_desc (self->walker), ncm_fit_esmcmc_walker_opts (self->walker), error);
 }
 
 /*
@@ -1918,6 +1916,12 @@ _ncm_fit_esmcmc_real_nthreads (NcmFitESMCMCPrivate * const self)
 /**
  * ncm_fit_esmcmc_start_run:
  * @esmcmc: a #NcmFitESMCMC
+ * @error: a #GError
+ *
+ * Builds the catalog at the first call (ncm_fit_esmcmc_set_data_file()), failing with
+ * the errors of #NcmMSetCatalogStorage when the file cannot be opened, its description
+ * is incompatible or it holds an RNG of another algorithm or seed; a run also fails
+ * where a recording cannot be opened on the storage.
  *
  * Starts a run: creates a random number generator if the catalog has none, reads the
  * last iteration of the catalog, checking it unless #NcmFitESMCMC:skip-check is set (a
@@ -1926,7 +1930,7 @@ _ncm_fit_esmcmc_real_nthreads (NcmFitESMCMCPrivate * const self)
  *
  */
 void
-ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
+ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
   NcmLikelihood *lh                = ncm_fit_peek_likelihood (self->fit);
@@ -1938,7 +1942,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
   if (self->started)
     g_error ("ncm_fit_esmcmc_start_run: run already started, run ncm_fit_esmcmc_end_run() first.");
 
-  _ncm_fit_esmcmc_build_catalog (esmcmc);
+  _ncm_fit_esmcmc_build_catalog (esmcmc, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_esmcmc_start_run: ");
   mcat_cur_id = ncm_mset_catalog_get_cur_id (self->mcat);
 
   switch (self->mtype)
@@ -2046,7 +2051,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       ncm_vector_memcpy (full_theta_k, cur_row);
     }
 
-    _ncm_fit_esmcmc_gen_init_points (esmcmc);
+    _ncm_fit_esmcmc_gen_init_points (esmcmc, error);
+    NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_esmcmc_start_run: ");
 
     g_mutex_lock (&self->update_lock);
     self->ntotal        = 0;
@@ -2111,7 +2117,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       self->cur_sample_id -= (len - start);
       self->started        = FALSE;
 
-      ncm_fit_esmcmc_start_run (esmcmc);
+      ncm_fit_esmcmc_start_run (esmcmc, error);
 
       return;
     }
@@ -2129,7 +2135,10 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
 
   /* A complete first ensemble: the run records in the walker's segment from here. */
   if (!init_point_task)
-    _ncm_fit_esmcmc_start_recording (esmcmc, ncm_fit_esmcmc_walker_desc (self->walker), ncm_fit_esmcmc_walker_opts (self->walker));
+  {
+    _ncm_fit_esmcmc_start_recording (esmcmc, ncm_fit_esmcmc_walker_desc (self->walker), ncm_fit_esmcmc_walker_opts (self->walker), error);
+    NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_esmcmc_start_run: ");
+  }
 
   if (init_point_task)
     ncm_timer_task_pause (self->nt);

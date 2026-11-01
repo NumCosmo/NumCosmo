@@ -77,7 +77,7 @@ void ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng);
 
 gboolean ncm_fit_mc_is_running (NcmFitMC *mc);
 
-void ncm_fit_mc_start_run (NcmFitMC *mc);
+void ncm_fit_mc_start_run (NcmFitMC *mc, GError **error);
 void ncm_fit_mc_end_run (NcmFitMC *mc);
 void ncm_fit_mc_reset (NcmFitMC *mc);
 void ncm_fit_mc_run (NcmFitMC *mc, guint n);

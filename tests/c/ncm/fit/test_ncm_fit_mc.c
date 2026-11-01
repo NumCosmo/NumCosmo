@@ -34,6 +34,7 @@
 #include <glib-object.h>
 
 static void test_ncm_fit_mc_from_model (void);
+static void test_ncm_fit_mc_incompatible_file (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -45,8 +46,74 @@ main (gint argc, gchar *argv[])
   g_test_set_nonfatal_assertions ();
 
   g_test_add_func ("/ncm/fit_mc/from_model", &test_ncm_fit_mc_from_model);
+  g_test_add_func ("/ncm/fit_mc/incompatible_file", &test_ncm_fit_mc_incompatible_file);
 
   g_test_run ();
+}
+
+/*
+ * A data file whose description is not the fit's (one free parameter against two):
+ * start_run reports the storage's error and the run is not started.
+ */
+static void
+test_ncm_fit_mc_incompatible_file (void)
+{
+  gchar *tmp_dir                 = g_dir_make_tmp ("tmp_test_ncm_fit_mc_XXXXXX", NULL);
+  gchar *filename                = g_build_filename (tmp_dir, "mc.fits", NULL);
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, 20261101);
+  NcmDataGaussCovMVND *data_mvnd = ncm_data_gauss_cov_mvnd_new_full (2, 1.0e-1, 1.0, 50.0, -1.0, 1.0, rng);
+  NcmModelMVND *model            = ncm_model_mvnd_new (2);
+  NcmMSet *mset                  = ncm_mset_new (NCM_MODEL (model), NULL, NULL);
+  NcmDataset *dset               = ncm_dataset_new_list (data_mvnd, NULL);
+  NcmLikelihood *lh              = ncm_likelihood_new (dset);
+  NcmModelMVND *model1           = ncm_model_mvnd_new (1);
+  NcmMSet *mset1                 = ncm_mset_new (NCM_MODEL (model1), NULL, NULL);
+  const gchar *names[]           = {NCM_MSET_CATALOG_M2LNL_COLNAME, NULL};
+  const gchar *symbols[]         = {NCM_MSET_CATALOG_M2LNL_SYMBOL, NULL};
+  GError *error                  = NULL;
+  NcmFit *fit;
+  NcmFitMC *mc;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_param_set_all_ftype (mset1, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset1);
+
+  {
+    NcmMSetCatalogDesc *desc                = ncm_mset_catalog_desc_new (mset1, 1, FALSE, names, symbols, 0, NCM_MSET_CATALOG_RTYPE_MC, &error);
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, &error);
+
+    g_assert_no_error (error);
+    ncm_mset_catalog_storage_set_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), desc, &error);
+    g_assert_no_error (error);
+
+    ncm_mset_catalog_desc_free (desc);
+    ncm_mset_catalog_storage_fits_free (storage_fits);
+  }
+
+  fit = ncm_fit_factory (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  mc  = ncm_fit_mc_new (fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
+  ncm_fit_mc_set_data_file (mc, filename);
+
+  ncm_fit_mc_start_run (mc, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE);
+  g_assert_false (ncm_fit_mc_is_running (mc));
+  g_clear_error (&error);
+
+  ncm_fit_mc_free (mc);
+  ncm_fit_free (fit);
+  ncm_likelihood_free (lh);
+  ncm_dataset_free (dset);
+  ncm_mset_free (mset);
+  ncm_mset_free (mset1);
+  ncm_model_mvnd_free (model);
+  ncm_model_mvnd_free (model1);
+  ncm_data_gauss_cov_mvnd_free (data_mvnd);
+  ncm_rng_free (rng);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 static void
@@ -81,7 +148,7 @@ test_ncm_fit_mc_from_model (void)
   mc = ncm_fit_mc_new (fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_mc_set_rng (mc, rng);
 
-  ncm_fit_mc_start_run (mc);
+  ncm_fit_mc_start_run (mc, NULL);
   ncm_fit_mc_run (mc, n);
   ncm_fit_mc_end_run (mc);
 

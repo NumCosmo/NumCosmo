@@ -52,6 +52,7 @@
 #include "ncm/fit/ncm_mset_catalog_storage_fits.h"
 #include "ncm/fit/ncm_mset_catalog_storage_memory.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -248,32 +249,29 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
  * memory storage, with the RNG set before.
  */
 static void
-_ncm_fit_mcmc_build_catalog (NcmFitMCMC *mcmc)
+_ncm_fit_mcmc_build_catalog (NcmFitMCMC *mcmc, GError **error)
 {
   NcmMSet *mset          = ncm_fit_peek_mset (mcmc->fit);
   const gchar *names[]   = {NCM_MSET_CATALOG_M2LNL_COLNAME, NULL};
   const gchar *symbols[] = {NCM_MSET_CATALOG_M2LNL_SYMBOL, NULL};
-  GError *error          = NULL;
   NcmMSetCatalogDesc *desc;
   NcmMSetCatalogStorage *storage;
 
   if (mcmc->mcat != NULL)
     return;
 
-  desc = ncm_mset_catalog_desc_new (mset, 1, FALSE, names, symbols, 0, NCM_MSET_CATALOG_RTYPE_MCMC, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_mcmc_start_run: %s", error->message);
+  desc = ncm_mset_catalog_desc_new (mset, 1, FALSE, names, symbols, 0, NCM_MSET_CATALOG_RTYPE_MCMC, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   if (mcmc->data_file != NULL)
     storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS, "filename", mcmc->data_file, NULL);
   else
     storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_MEMORY, NULL);
 
-  ncm_mset_catalog_storage_set_desc (storage, desc, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_mcmc_start_run: %s", error->message);
+  ncm_mset_catalog_storage_set_desc (storage, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { ncm_mset_catalog_storage_free (storage);
+                                     ncm_mset_catalog_desc_free (desc);
+                            }, );
 
   mcmc->mcat = ncm_mset_catalog_new_from_storage (storage, 0);
   ncm_mset_catalog_set_sampler (mcmc->mcat, ncm_mset_trans_kern_get_name (mcmc->tkern));
@@ -286,10 +284,11 @@ _ncm_fit_mcmc_build_catalog (NcmFitMCMC *mcmc)
       ncm_mset_catalog_set_rng (mcmc->mcat, mcmc->rng);
     else if ((strcmp (ncm_rng_get_algo (cat_rng), ncm_rng_get_algo (mcmc->rng)) != 0) ||
              (ncm_rng_get_seed (cat_rng) != ncm_rng_get_seed (mcmc->rng)))
-      g_error ("ncm_fit_mcmc_start_run: catalog `%s' holds an RNG (%s, seed %lu) and another was set (%s, seed %lu); "
-               "do not set an RNG when resuming from a file.",
-               mcmc->data_file, ncm_rng_get_algo (cat_rng), ncm_rng_get_seed (cat_rng),
-               ncm_rng_get_algo (mcmc->rng), ncm_rng_get_seed (mcmc->rng));
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
+                                  "ncm_fit_mcmc_start_run: catalog `%s' holds an RNG (%s, seed %lu) and another was set (%s, seed %lu); "
+                                  "do not set an RNG when resuming from a file",
+                                  mcmc->data_file, ncm_rng_get_algo (cat_rng), ncm_rng_get_seed (cat_rng),
+                                  ncm_rng_get_algo (mcmc->rng), ncm_rng_get_seed (mcmc->rng));
 
     ncm_rng_clear (&mcmc->rng);
   }
@@ -300,23 +299,17 @@ _ncm_fit_mcmc_build_catalog (NcmFitMCMC *mcmc)
 
 /* Opens a recording of the catalog's storage named by the kernel, closing one left open. */
 static void
-_ncm_fit_mcmc_start_recording (NcmFitMCMC *mcmc)
+_ncm_fit_mcmc_start_recording (NcmFitMCMC *mcmc, GError **error)
 {
   NcmMSetCatalogStorage *storage = ncm_mset_catalog_peek_storage (mcmc->mcat);
-  GError *error                  = NULL;
 
   if (ncm_mset_catalog_storage_is_recording (storage))
   {
-    ncm_mset_catalog_storage_end_recording (storage, &error);
-
-    if (error != NULL)
-      g_error ("ncm_fit_mcmc_start_run: %s", error->message);
+    ncm_mset_catalog_storage_end_recording (storage, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
   }
 
-  ncm_mset_catalog_storage_start_recording (storage, ncm_mset_trans_kern_get_name (mcmc->tkern), NULL, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_mcmc_start_run: %s", error->message);
+  ncm_mset_catalog_storage_start_recording (storage, ncm_mset_trans_kern_get_name (mcmc->tkern), NULL, error);
 }
 
 /* Closes the recording of the catalog's storage, writing what it holds; none open is fine. */
@@ -545,6 +538,12 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
 /**
  * ncm_fit_mcmc_start_run:
  * @mcmc: a #NcmFitMCMC
+ * @error: a #GError
+ *
+ * Builds the catalog at the first call (ncm_fit_mcmc_set_data_file()), failing with the
+ * errors of #NcmMSetCatalogStorage when the file cannot be opened, its description is
+ * incompatible or it holds an RNG of another algorithm or seed; a run also fails where
+ * a recording cannot be opened on the storage.
  *
  * Starts a run: creates a random number generator if the catalog has none, and starts
  * the chain from the last state of the catalog, or from the current parameters of the
@@ -552,7 +551,7 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
  *
  */
 void
-ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
+ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc, GError **error)
 {
   NcmMSet *mset       = ncm_fit_peek_mset (mcmc->fit);
   NcmLikelihood *lh   = ncm_fit_peek_likelihood (mcmc->fit);
@@ -563,7 +562,8 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_start_run: run already started, run ncm_fit_mcmc_end_run() first.");
 
-  _ncm_fit_mcmc_build_catalog (mcmc);
+  _ncm_fit_mcmc_build_catalog (mcmc, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcmc_start_run: ");
   cur_id = ncm_mset_catalog_get_cur_id (mcmc->mcat);
 
   switch (mcmc->mtype)
@@ -618,7 +618,8 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   ncm_mset_catalog_set_sync_mode (mcmc->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
   ncm_mset_catalog_set_sync_interval (mcmc->mcat, NCM_FIT_MCMC_MIN_SYNC_INTERVAL);
 
-  _ncm_fit_mcmc_start_recording (mcmc);
+  _ncm_fit_mcmc_start_recording (mcmc, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcmc_start_run: ");
 
   if (cur_id > mcmc->cur_sample_id)
   {

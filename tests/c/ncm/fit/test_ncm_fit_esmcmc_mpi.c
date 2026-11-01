@@ -280,7 +280,7 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   gint run = 100;
 
-  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run (test->esmcmc, run);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 }
@@ -301,7 +301,7 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
   ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
   ncm_fit_esmcmc_walker_apes_set_exploration (NCM_FIT_ESMCMC_WALKER_APES (walker), 10);
 
-  ncm_fit_esmcmc_start_run (test->esmcmc);
+  ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run (test->esmcmc, 100);
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
@@ -357,7 +357,7 @@ _test_ncm_fit_esmcmc_parity_run (gboolean use_mpi)
   ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
   ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 1.0e-2);
 
-  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_start_run (esmcmc, NULL);
   ncm_fit_esmcmc_run (esmcmc, 5);
   ncm_fit_esmcmc_end_run (esmcmc);
 
@@ -443,7 +443,7 @@ _test_ncm_fit_esmcmc_parity_stats_run (gboolean use_mpi, gdouble *offboard_ratio
 
   handler_id = g_log_set_handler ("NUMCOSMO", G_LOG_LEVEL_MESSAGE, &_test_ncm_fit_esmcmc_capture_summary, summary);
 
-  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_start_run (esmcmc, NULL);
   ncm_fit_esmcmc_run (esmcmc, 5);
   ncm_fit_esmcmc_end_run (esmcmc);
 

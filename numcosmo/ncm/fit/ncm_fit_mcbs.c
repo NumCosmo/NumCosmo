@@ -45,6 +45,7 @@
 #include "ncm/fit/ncm_mset_catalog_storage_memory.h"
 #include "ncm_enum_types.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 
 #include <gio/gio.h>
 
@@ -274,32 +275,29 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
  * erased) or a memory storage, with the RNG set before.
  */
 static void
-_ncm_fit_mcbs_build_catalog (NcmFitMCBS *mcbs)
+_ncm_fit_mcbs_build_catalog (NcmFitMCBS *mcbs, GError **error)
 {
   NcmMSet *mset          = ncm_fit_peek_mset (mcbs->fit);
   const gchar *names[]   = {NCM_MSET_CATALOG_M2LNL_COLNAME, NULL};
   const gchar *symbols[] = {NCM_MSET_CATALOG_M2LNL_SYMBOL, NULL};
-  GError *error          = NULL;
   NcmMSetCatalogDesc *desc;
   NcmMSetCatalogStorage *storage;
 
   if (mcbs->mcat != NULL)
     return;
 
-  desc = ncm_mset_catalog_desc_new (mset, 1, FALSE, names, symbols, 0, NCM_MSET_CATALOG_RTYPE_MCBS, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_mcbs_run: %s", error->message);
+  desc = ncm_mset_catalog_desc_new (mset, 1, FALSE, names, symbols, 0, NCM_MSET_CATALOG_RTYPE_MCBS, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   if (mcbs->filename != NULL)
     storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS, "filename", mcbs->filename, NULL);
   else
     storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_MEMORY, NULL);
 
-  ncm_mset_catalog_storage_set_desc (storage, desc, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_mcbs_run: %s", error->message);
+  ncm_mset_catalog_storage_set_desc (storage, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { ncm_mset_catalog_storage_free (storage);
+                                     ncm_mset_catalog_desc_free (desc);
+                            }, );
 
   mcbs->mcat = ncm_mset_catalog_new_from_storage (storage, 0);
 
@@ -353,6 +351,11 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  * @rtype: bootstrap #NcmFitMCResampleType
  * @mtype: #NcmFitRunMsgs of the bootstrap runs
  * @bsmt: whether the bootstrap fits use OpenMP threads
+ * @error: a #GError
+ *
+ * Builds the catalog at the first call (ncm_fit_mcbs_set_filename()), failing with the
+ * errors of #NcmMSetCatalogStorage when the file cannot be opened or its description
+ * is incompatible; a run also fails where a recording cannot be opened on a storage.
  *
  * Resamples @nf realizations from @fiduc and, for each, runs @nbstraps
  * bootstrap fits of type @rtype, adding their mean to the catalog of @mcbs. At the end
@@ -364,7 +367,7 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  *
  */
 void
-ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, gboolean bsmt)
+ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, gboolean bsmt, GError **error)
 {
   NcmFitState *fstate    = ncm_fit_peek_state (mcbs->fit);
   NcmLikelihood *lh      = ncm_fit_peek_likelihood (mcbs->fit);
@@ -374,7 +377,6 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, Nc
   NcmMSetCatalogStorage *storage;
   NcmDatasetBStrapType bstrap_type;
   NcmRNG *mcat_rng;
-  GError *error = NULL;
   guint i;
 
   if (rtype == NCM_FIT_MC_RESAMPLE_FROM_MODEL)
@@ -382,7 +384,8 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, Nc
 
   bstrap_type = (rtype == NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX) ? NCM_DATASET_BSTRAP_PARTIAL : NCM_DATASET_BSTRAP_TOTAL;
 
-  _ncm_fit_mcbs_build_catalog (mcbs);
+  _ncm_fit_mcbs_build_catalog (mcbs, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcbs_run: ");
   mcat_rng = ncm_mset_catalog_peek_rng (mcbs->mcat);
   storage  = ncm_mset_catalog_peek_storage (mcbs->mcat);
 
@@ -398,16 +401,15 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, Nc
     cat_has_rng = TRUE;
   }
 
-  ncm_fit_mc_start_run (mcbs->mc_resample);
+  ncm_fit_mc_start_run (mcbs->mc_resample, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcbs_run: ");
 
   if (!cat_has_rng)
     ncm_mset_catalog_set_rng (mcbs->mcat,
                               ncm_mset_catalog_peek_rng (ncm_fit_mc_peek_catalog (mcbs->mc_resample)));
 
-  ncm_mset_catalog_storage_start_recording (storage, "from-model", eval->value_nick, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_mcbs_run: %s", error->message);
+  ncm_mset_catalog_storage_start_recording (storage, "from-model", eval->value_nick, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcbs_run: ");
 
   /* One NcmFitMC per realization: its catalog is built by its start_run on the
    * realization's own file. */
@@ -429,7 +431,8 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, Nc
       g_free (bstrap_str);
     }
 
-    ncm_fit_mc_start_run (mcbs->mc_bstrap);
+    ncm_fit_mc_start_run (mcbs->mc_bstrap, error);
+    NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcbs_run: ");
     ncm_fit_mc_run (mcbs->mc_bstrap, nbstraps);
 
     ncm_mset_catalog_add_from_vector (mcbs->mcat,
@@ -439,10 +442,8 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, Nc
     ncm_fit_mc_end_run (mcbs->mc_bstrap);
   }
 
-  ncm_mset_catalog_storage_end_recording (storage, &error);
-
-  if (error != NULL)
-    g_error ("ncm_fit_mcbs_run: %s", error->message);
+  ncm_mset_catalog_storage_end_recording (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcbs_run: ");
 
   {
     NcmVector *fparams = ncm_fit_state_peek_fparams (fstate);

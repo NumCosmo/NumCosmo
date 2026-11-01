@@ -60,6 +60,8 @@ static void test_ncm_mset_trans_kern_cat_free (TestNcmMSetTransKernCat *test, gc
 static void test_ncm_mset_trans_kern_cat_choose (TestNcmMSetTransKernCat *test, gconstpointer pdata);
 static void test_ncm_mset_trans_kern_cat_choose_cut (TestNcmMSetTransKernCat *test, gconstpointer pdata);
 static void test_ncm_mset_trans_kern_cat_rbf_repeated (TestNcmMSetTransKernCat *test, gconstpointer pdata);
+static void test_ncm_mset_trans_kern_cat_set_mset_traps (TestNcmMSetTransKernCat *test, gconstpointer pdata);
+static void test_ncm_mset_trans_kern_cat_set_mset_subprocess (TestNcmMSetTransKernCat *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -81,6 +83,16 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/mset/trans_kern/cat/rbf/repeated", TestNcmMSetTransKernCat, NULL,
               &test_ncm_mset_trans_kern_cat_new,
               &test_ncm_mset_trans_kern_cat_rbf_repeated,
+              &test_ncm_mset_trans_kern_cat_free);
+
+  g_test_add ("/ncm/mset/trans_kern/cat/set_mset/traps", TestNcmMSetTransKernCat, NULL,
+              &test_ncm_mset_trans_kern_cat_new,
+              &test_ncm_mset_trans_kern_cat_set_mset_traps,
+              &test_ncm_mset_trans_kern_cat_free);
+
+  g_test_add ("/ncm/mset/trans_kern/cat/set_mset/subprocess", TestNcmMSetTransKernCat, NULL,
+              &test_ncm_mset_trans_kern_cat_new,
+              &test_ncm_mset_trans_kern_cat_set_mset_subprocess,
               &test_ncm_mset_trans_kern_cat_free);
 
   g_test_run ();
@@ -178,6 +190,29 @@ test_ncm_mset_trans_kern_cat_free (TestNcmMSetTransKernCat *test, gconstpointer 
   ncm_rng_free (test->rng);
 
   NCM_TEST_FREE (ncm_mset_trans_kern_free, NCM_MSET_TRANS_KERN (test->tcat));
+}
+
+/* The rows are copied by position: a model set whose free parameters are not the
+ * catalog's, here one fewer, is refused. */
+static void
+test_ncm_mset_trans_kern_cat_set_mset_traps (TestNcmMSetTransKernCat *test, gconstpointer pdata)
+{
+  g_test_trap_subprocess ("/ncm/mset/trans_kern/cat/set_mset/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*free parameters and the catalog*");
+}
+
+static void
+test_ncm_mset_trans_kern_cat_set_mset_subprocess (TestNcmMSetTransKernCat *test, gconstpointer pdata)
+{
+  NcmMSet *mset2 = ncm_mset_dup (test->mset, ncm_serialize_global ());
+
+  ncm_mset_param_set_ftype (mset2, ncm_model_mvnd_id (), 0, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_prepare_fparam_map (mset2);
+
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (test->tcat), mset2);
+
+  g_assert_not_reached ();
 }
 
 static void

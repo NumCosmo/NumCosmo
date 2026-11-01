@@ -69,7 +69,7 @@ test_ncm_fit_mcbs_run (void)
   mcbs = ncm_fit_mcbs_new (fit);
   ncm_fit_mcbs_set_rng (mcbs, rng);
 
-  ncm_fit_mcbs_run (mcbs, NULL, 4, 20, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE, FALSE);
+  ncm_fit_mcbs_run (mcbs, NULL, 4, 20, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE, FALSE, NULL);
 
   mcat = ncm_fit_mcbs_get_catalog (mcbs);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 4);
