@@ -467,22 +467,6 @@
     "nick": "timed",
     "type": "Ncm.MSetCatalogSync"
   },
-  "NCM_MSET_CATALOG_TRIM_TYPE_ALL": {
-    "nick": "all",
-    "type": "Ncm.MSetCatalogTrimType"
-  },
-  "NCM_MSET_CATALOG_TRIM_TYPE_CK": {
-    "nick": "ck",
-    "type": "Ncm.MSetCatalogTrimType"
-  },
-  "NCM_MSET_CATALOG_TRIM_TYPE_ESS": {
-    "nick": "ess",
-    "type": "Ncm.MSetCatalogTrimType"
-  },
-  "NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL": {
-    "nick": "heidel",
-    "type": "Ncm.MSetCatalogTrimType"
-  },
   "NCM_MSET_ERROR_FULLNAME_INVALID": {
     "nick": "fullname-invalid",
     "type": "Ncm.MSetError"

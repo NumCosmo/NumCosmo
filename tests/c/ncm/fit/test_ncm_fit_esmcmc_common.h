@@ -25,7 +25,7 @@
 /*
  * The ESMCMC checks come in two halves that were fused in one check each.
  *
- * Driving a chain -- start_run(), run(), trim_by_type(), validate(), end_run() -- is
+ * Driving a chain -- start_run(), run(), trim(), validate(), end_run() -- is
  * mechanics, and a short chain exercises all of it. Requiring the sample covariance to
  * reproduce the data covariance is a statistical claim, converging as 1/sqrt(n), and the
  * checks pay for it with a loop that doubles the chain length up to fifteen times. That

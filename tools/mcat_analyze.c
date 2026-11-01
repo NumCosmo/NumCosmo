@@ -80,7 +80,6 @@ gint
 main (gint argc, gchar *argv[])
 {
   gchar *cat_filename       = NULL;
-  gboolean auto_trim        = FALSE;
   gboolean info             = FALSE;
   gboolean info_scf         = FALSE;
   gboolean evidence         = FALSE;
@@ -126,7 +125,6 @@ main (gint argc, gchar *argv[])
   GOptionEntry entries[] =
   {
     { "catalog",        'c', 0, G_OPTION_ARG_FILENAME,     &cat_filename,     "Catalog filename.", NULL },
-    { "auto-trim",      'a', 0, G_OPTION_ARG_NONE,         &auto_trim,        "Auto trim the catalog.", NULL },
     { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,             "Print catalog information.", NULL },
     { "info-scor-full", 'C', 0, G_OPTION_ARG_NONE,         &info_scf,         "Calculates the autocorrelation time using the full sample not the ensemble averages.", NULL },
     { "evidence",       'E', 0, G_OPTION_ARG_NONE,         &evidence,         "Computes the ln-Bayesian evidence and the 1sigma parameter space ln-volume.", NULL },
@@ -290,16 +288,10 @@ main (gint argc, gchar *argv[])
 
     ncm_mset_catalog_storage_fits_free (storage_fits);
 
-    if (auto_trim)
+    if ((trim > 0) || (thin > 0))
     {
-      ncm_mset_catalog_trim_by_type (mcat, ntests, NCM_MSET_CATALOG_TRIM_TYPE_ESS, NCM_FIT_RUN_MSGS_FULL);
-
-      if ((trim > 0) || (thin > 0))
-        g_warning ("mcat_analize: --auto-trim enabled ignoring --trim and --thin");
-    }
-    else if ((trim > 0) || (thin > 0))
-    {
-      ncm_mset_catalog_trim (mcat, MAX (trim, 0), MAX (thin, 1));
+      g_print ("mcat_analyze: --trim and --thin would rewrite `%s' in place; use --burn-in of this tool or numcosmo catalog analyze --burnin/--tail.\n", cat_filename);
+      exit (1);
     }
 
     ncm_mset_catalog_estimate_autocorrelation_tau (mcat, info_scf);

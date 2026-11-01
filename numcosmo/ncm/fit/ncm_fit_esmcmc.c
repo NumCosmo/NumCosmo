@@ -86,10 +86,7 @@ typedef struct _NcmFitESMCMCPrivate
   NcmTimer *nt;
   NcmSerialize *ser;
   NcmFitESMCMCWalker *walker;
-  gboolean auto_trim;
-  guint auto_trim_div;
   gdouble lre_step;
-  NcmMSetCatalogTrimType trim_type;
   guint min_runs;
   gdouble max_runs_time;
   gdouble log_time_interval;
@@ -139,9 +136,6 @@ enum
   PROP_SAMPLER,
   PROP_WALKER,
   PROP_LRE_STEP,
-  PROP_AUTO_TRIM,
-  PROP_AUTO_TRIM_DIV,
-  PROP_TRIM_TYPE,
   PROP_MIN_RUNS,
   PROP_MAX_RUNS_TIME,
   PROP_SKIP_CHECK,
@@ -184,9 +178,6 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   self->ser               = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
   self->walker            = NULL;
   self->lre_step          = 0.0;
-  self->auto_trim         = FALSE;
-  self->auto_trim_div     = 0;
-  self->trim_type         = 0;
   self->min_runs          = 0;
   self->max_runs_time     = 0.0;
   self->log_time_interval = 0.0;
@@ -349,15 +340,6 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_LRE_STEP:
       self->lre_step = g_value_get_double (value);
       break;
-    case PROP_AUTO_TRIM:
-      ncm_fit_esmcmc_set_auto_trim (esmcmc, g_value_get_boolean (value));
-      break;
-    case PROP_AUTO_TRIM_DIV:
-      ncm_fit_esmcmc_set_auto_trim_div (esmcmc, g_value_get_uint (value));
-      break;
-    case PROP_TRIM_TYPE:
-      ncm_fit_esmcmc_set_auto_trim_type (esmcmc, g_value_get_flags (value));
-      break;
     case PROP_MIN_RUNS:
       self->min_runs = g_value_get_uint (value);
       break;
@@ -439,15 +421,6 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_LRE_STEP:
       g_value_set_double (value, self->lre_step);
-      break;
-    case PROP_AUTO_TRIM:
-      g_value_set_boolean (value, self->auto_trim);
-      break;
-    case PROP_AUTO_TRIM_DIV:
-      g_value_set_uint (value, self->auto_trim_div);
-      break;
-    case PROP_TRIM_TYPE:
-      g_value_set_flags (value, self->trim_type);
       break;
     case PROP_MIN_RUNS:
       g_value_set_uint (value, self->min_runs);
@@ -598,27 +571,6 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                         "Step size in the lre run",
                                                         1.0e-2, 1.0, 0.1,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_AUTO_TRIM,
-                                   g_param_spec_boolean ("auto-trim",
-                                                         NULL,
-                                                         "Whether to automatically trim the catalog",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_AUTO_TRIM_DIV,
-                                   g_param_spec_uint ("auto-trim-div",
-                                                      NULL,
-                                                      "Automatically trim divisor",
-                                                      1, G_MAXUINT, 100,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_TRIM_TYPE,
-                                   g_param_spec_flags ("trim-type",
-                                                       NULL,
-                                                       "Trimming tests to apply",
-                                                       NCM_TYPE_MSET_CATALOG_TRIM_TYPE, NCM_MSET_CATALOG_TRIM_TYPE_ESS,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_MIN_RUNS,
                                    g_param_spec_uint ("min-runs",
@@ -1107,58 +1059,6 @@ ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng)
     ncm_rng_clear (&self->rng);
     self->rng = ncm_rng_ref (rng);
   }
-}
-
-/**
- * ncm_fit_esmcmc_set_auto_trim:
- * @esmcmc: a #NcmFitESMCMC
- * @enable: whether to trim
- *
- * Sets whether ncm_fit_esmcmc_run_lre() and ncm_fit_esmcmc_run_burnin() trim the
- * catalog (ncm_mset_catalog_trim_by_type()) between their runs.
- *
- */
-void
-ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable)
-{
-  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
-
-  self->auto_trim = enable;
-}
-
-/**
- * ncm_fit_esmcmc_set_auto_trim_div:
- * @esmcmc: a #NcmFitESMCMC
- * @div: number of tests
- *
- * Sets the number of tests of the automatic trimming, see
- * ncm_mset_catalog_trim_by_type().
- *
- */
-void
-ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div)
-{
-  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
-
-  self->auto_trim_div = div;
-}
-
-/**
- * ncm_fit_esmcmc_set_auto_trim_type:
- * @esmcmc: a #NcmFitESMCMC
- * @ttype: a #NcmMSetCatalogTrimType
- *
- * Sets the tests of the automatic trimming.
- *
- */
-void
-ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype)
-{
-  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
-
-  g_assert (ttype & (NCM_MSET_CATALOG_TRIM_TYPE_ALL));
-
-  self->trim_type = ttype;
 }
 
 /**
@@ -2525,9 +2425,6 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
       g_message ("# NcmFitESMCMC: Running first %u pre-runs...\n", prerun_left);
 
     ncm_fit_esmcmc_run (esmcmc, prerun);
-
-    if (self->auto_trim)
-      ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
   }
 
   ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
@@ -2569,9 +2466,6 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     }
 
     ncm_fit_esmcmc_run (esmcmc, ti + runs);
-
-    if (self->auto_trim)
-      ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
 
     tau_rounds = (lerror > lre) ? 0 : (tau_rounds + 1);
 
@@ -2626,9 +2520,6 @@ ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
       g_message ("# NcmFitESMCMC: Running first %u pre-runs...\n", prerun_left);
 
     ncm_fit_esmcmc_run (esmcmc, prerun);
-
-    if (self->auto_trim)
-      ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
   }
 
   ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
@@ -2650,9 +2541,6 @@ ncm_fit_esmcmc_run_burnin (NcmFitESMCMC *esmcmc, guint prerun, guint ntimes)
     }
 
     ncm_fit_esmcmc_run (esmcmc, runs);
-
-    if (self->auto_trim)
-      ncm_mset_catalog_trim_by_type (self->mcat, self->auto_trim_div, self->trim_type, self->mtype);
 
     ncm_mset_catalog_estimate_autocorrelation_tau (self->mcat, FALSE);
 

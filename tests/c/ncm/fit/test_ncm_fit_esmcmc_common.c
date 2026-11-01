@@ -45,7 +45,7 @@ typedef struct _TestNcmFitESMCMC
 
 /* Iterations, not samples: every walker steps once per iteration and the ensembles here
  * are 100 per dimension, so even this many fills a catalog of thousands for
- * trim_by_type() and validate() to work on. Only the recovery mode needs a chain sized
+ * trim() and validate() to work on. Only the recovery mode needs a chain sized
  * by the variance it has to resolve. */
 #define TEST_NCM_FIT_ESMCMC_MECHANICS_RUN (20)
 
@@ -58,7 +58,7 @@ typedef struct _TestNcmFitEsmcmcFunc
 } TestNcmFitEsmcmcFunc;
 
 #define TEST_NCM_FIT_ESMCMC_NWALKERS 7
-#define TEST_NCM_FIT_ESMCMC_TESTS 9
+#define TEST_NCM_FIT_ESMCMC_TESTS 8
 #define TEST_NCM_FIT_ESMCMC_TOL (2.5e-1)
 
 void test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata);
@@ -73,8 +73,7 @@ void test_ncm_fit_esmcmc_run_burnin (TestNcmFitESMCMC *test, gconstpointer pdata
 void test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_markovian_id (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata);
-void test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
+void test_ncm_fit_esmcmc_run_lre_vol (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_invalid_run (TestNcmFitESMCMC *test, gconstpointer pdata);
 void test_ncm_fit_esmcmc_parity_serial_vs_threaded (void);
 void test_ncm_fit_esmcmc_parity_apes_serial_vs_threaded (void);
@@ -114,8 +113,7 @@ TestNcmFitEsmcmcFunc tests[TEST_NCM_FIT_ESMCMC_TESTS] =
   {test_ncm_fit_esmcmc_run_exploration,       "run/exploration",       NULL},
   {test_ncm_fit_esmcmc_run_markovian_id,      "run/markovian_id",      NULL},
   {test_ncm_fit_esmcmc_run_restart_from_cat,  "run/restart_from_cat",  NULL},
-  {test_ncm_fit_esmcmc_run_lre_auto_trim,     "run/lre/auto_trim",     NULL},
-  {test_ncm_fit_esmcmc_run_lre_auto_trim_vol, "run/lre/auto_trim/vol", NULL},
+  {test_ncm_fit_esmcmc_run_lre_vol,           "run/lre/vol",           NULL},
 };
 
 gint
@@ -195,8 +193,7 @@ _test_ncm_fit_esmcmc_is_recovery_check (const gchar *name)
 {
   return (g_strcmp0 (name, "run") == 0) ||
          (g_strcmp0 (name, "run/lre") == 0) ||
-         (g_strcmp0 (name, "run/restart_from_cat") == 0) ||
-         (g_strcmp0 (name, "run/lre/auto_trim") == 0);
+         (g_strcmp0 (name, "run/restart_from_cat") == 0);
 }
 
 void
@@ -359,28 +356,18 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
   ncm_fit_esmcmc_clear (&esmcmc);
 }
 
+/* Trims mcat at the constant break of its -2ln(L) column, what the auto-trim of the sampler did. */
+static void
+_test_ncm_fit_esmcmc_trim_const_break (NcmMSetCatalog *mcat)
+{
+  const guint tc = ncm_mset_catalog_calc_const_break (mcat, ncm_mset_catalog_get_m2lnp_var (mcat), NCM_FIT_RUN_MSGS_NONE);
+
+  ncm_mset_catalog_trim (mcat, tc, 1);
+}
+
 void
 test_ncm_fit_esmcmc_properties (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
-  /* auto_trim */
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-
-  {
-    gboolean auto_trim;
-
-    g_object_get (G_OBJECT (test->esmcmc), "auto-trim", &auto_trim, NULL);
-    g_assert_true (auto_trim);
-  }
-
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
-
-  {
-    gboolean auto_trim;
-
-    g_object_get (G_OBJECT (test->esmcmc), "auto-trim", &auto_trim, NULL);
-    g_assert_false (auto_trim);
-  }
-
   /* max_runs_time */
   ncm_fit_esmcmc_set_max_runs_time (test->esmcmc, 123.0);
   {
@@ -465,8 +452,6 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
     }
   }
 
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
-
   /* Exercise start_run()'s FULL-only log branch once, then reset to NONE to
    * avoid overhead on the actual (possibly retried) run. The log goes to a
    * temporary file: on stdout it would break the TAP stream. */
@@ -496,8 +481,7 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 
   ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run (test->esmcmc, run);
-  ncm_mset_catalog_trim_by_type (ncm_fit_esmcmc_peek_catalog (test->esmcmc),
-                                 100, NCM_MSET_CATALOG_TRIM_TYPE_CK, NCM_FIT_RUN_MSGS_NONE);
+  _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
   /* Only coverage of ncm_fit_esmcmc_validate() in this suite: recomputes
@@ -535,8 +519,7 @@ test_ncm_fit_esmcmc_run (TestNcmFitESMCMC *test, gconstpointer pdata)
 
       ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
       ncm_fit_esmcmc_run (test->esmcmc, run);
-      ncm_mset_catalog_trim_by_type (ncm_fit_esmcmc_peek_catalog (test->esmcmc),
-                                     100, NCM_MSET_CATALOG_TRIM_TYPE_CK, NCM_FIT_RUN_MSGS_NONE);
+      _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
       ncm_fit_esmcmc_end_run (test->esmcmc);
     }
   } while (!ok && max_tries--);
@@ -556,12 +539,9 @@ test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
   gint max_tries      = 15;
   gdouble lre         = 1.0e-2;
 
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, FALSE);
-
   ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, lre);
-  ncm_mset_catalog_trim_by_type (ncm_fit_esmcmc_peek_catalog (test->esmcmc),
-                                 100, NCM_MSET_CATALOG_TRIM_TYPE_CK, NCM_FIT_RUN_MSGS_NONE);
+  _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
   ncm_fit_esmcmc_end_run (test->esmcmc);
 
   if (!test->recover)
@@ -590,8 +570,7 @@ test_ncm_fit_esmcmc_run_lre (TestNcmFitESMCMC *test, gconstpointer pdata)
       lre = lre * 0.9;
       ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
       ncm_fit_esmcmc_run_lre (test->esmcmc, run, lre);
-      ncm_mset_catalog_trim_by_type (ncm_fit_esmcmc_peek_catalog (test->esmcmc),
-                                     100, NCM_MSET_CATALOG_TRIM_TYPE_CK, NCM_FIT_RUN_MSGS_NONE);
+      _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
       ncm_fit_esmcmc_end_run (test->esmcmc);
     }
   } while (!ok && max_tries--);
@@ -627,12 +606,10 @@ test_ncm_fit_esmcmc_run_burnin (TestNcmFitESMCMC *test, gconstpointer pdata)
     return;
   }
 
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
-
   ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run_burnin (test->esmcmc, 100, 10);
   ncm_fit_esmcmc_end_run (test->esmcmc);
+  _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
 
   {
     NcmMSetCatalog *mcat   = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
@@ -680,13 +657,12 @@ test_ncm_fit_esmcmc_run_exploration (TestNcmFitESMCMC *test, gconstpointer pdata
     return;
   }
 
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
   ncm_fit_esmcmc_walker_apes_set_exploration (NCM_FIT_ESMCMC_WALKER_APES (walker), 10);
 
   ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run (test->esmcmc, 100);
   ncm_fit_esmcmc_end_run (test->esmcmc);
+  _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
 
   {
     NcmMSetCatalog *mcat   = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
@@ -801,12 +777,10 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
     return;
   }
 
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
-
   ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run_burnin (test->esmcmc, 10, 10);
   ncm_fit_esmcmc_end_run (test->esmcmc);
+  _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
 
   {
     NcmMSetCatalog *mcat   = ncm_fit_esmcmc_peek_catalog (test->esmcmc);
@@ -900,110 +874,18 @@ test_ncm_fit_esmcmc_run_restart_from_cat (TestNcmFitESMCMC *test, gconstpointer 
   }
 }
 
+/* The evidence and the parameter-space volume of an lre run, trimmed at the constant break. */
 void
-test_ncm_fit_esmcmc_run_lre_auto_trim (TestNcmFitESMCMC *test, gconstpointer pdata)
-{
-  NcmMatrix *orig_cov = ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd));
-  NcmMatrix *data_cov = ncm_matrix_dup (orig_cov);
-  NcmMatrix *data_cor = ncm_matrix_dup (orig_cov);
-  const gint run      = _test_ncm_fit_esmcmc_run_len (test, 6000, 12000);
-  gdouble prec        = 1.0e-2;
-
-  ncm_matrix_cov2cor (data_cor, data_cor);
-
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
-
-  ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
-  ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
-  ncm_fit_esmcmc_end_run (test->esmcmc);
-
-  {
-    NcmMatrix *cat_cov  = NULL;
-    NcmMatrix *cat_fcov = NULL;
-
-    ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_cov);
-    ncm_mset_catalog_get_full_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_fcov);
-
-    /* Both estimators have to come back the right shape and finite whatever the chain
-     * length; whether they have converged onto the data covariance is the recovery
-     * mode's question, and its loop below tightens prec without a cap. */
-    if (!test->recover)
-    {
-      g_assert_cmpuint (ncm_matrix_nrows (cat_cov), ==, (guint) test->dim);
-      g_assert_true (gsl_finite (ncm_matrix_get (cat_cov, 0, 0)));
-      g_assert_true (gsl_finite (ncm_matrix_get (cat_fcov, 0, 0)));
-
-      ncm_matrix_free (cat_cov);
-      ncm_matrix_free (cat_fcov);
-      ncm_matrix_free (data_cor);
-      ncm_matrix_free (data_cov);
-
-      return;
-    }
-
-    if (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0) >= TEST_NCM_FIT_ESMCMC_TOL)
-    {
-      NcmFitESMCMCWalker *walker;
-
-      if (NCM_IS_FIT_ESMCMC_WALKER_APES (walker = ncm_fit_esmcmc_peek_walker (test->esmcmc)))
-      {
-        if (ncm_fit_esmcmc_walker_apes_get_k_type (NCM_FIT_ESMCMC_WALKER_APES (walker)) == NCM_FIT_ESMCMC_WALKER_APES_KTYPE_GAUSS)
-        {
-          g_test_skip ("APES-Move:*:Gauss walker not supported");
-
-          ncm_matrix_free (cat_cov);
-          ncm_matrix_free (cat_fcov);
-
-          return;
-        }
-      }
-    }
-
-    g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
-
-    ncm_matrix_cov2cor (cat_cov, cat_cov);
-
-    while (fabs (ncm_matrix_get (cat_fcov, 0, 0) * 0.5 / test->dim - 1.0) > 0.1)
-    {
-      prec *= 0.9;
-
-      ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
-      ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
-      ncm_fit_esmcmc_end_run (test->esmcmc);
-
-      ncm_matrix_clear (&cat_cov);
-      ncm_matrix_clear (&cat_fcov);
-
-      ncm_mset_catalog_get_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_cov);
-      ncm_mset_catalog_get_full_covar (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &cat_fcov);
-
-      g_assert_cmpfloat (ncm_matrix_cmp_diag (cat_cov, data_cov, 0.0), <, TEST_NCM_FIT_ESMCMC_TOL);
-    }
-
-    ncm_assert_cmpdouble_e (ncm_matrix_get (cat_fcov, 0, 0), ==, 2.0 * test->dim, 0.1, 0.0);
-
-    ncm_matrix_free (cat_cov);
-    ncm_matrix_free (cat_fcov);
-  }
-
-  ncm_matrix_free (data_cor);
-  ncm_matrix_free (data_cov);
-}
-
-void
-test_ncm_fit_esmcmc_run_lre_auto_trim_vol (TestNcmFitESMCMC *test, gconstpointer pdata)
+test_ncm_fit_esmcmc_run_lre_vol (TestNcmFitESMCMC *test, gconstpointer pdata)
 {
   const gint run = MAX (test->dim * g_test_rand_int_range (6000, 12000) / test->nrun_div, 100);
   gdouble prec   = 1.0e-2;
   gdouble lnnorm_sd, lnnorm;
 
-  ncm_fit_esmcmc_set_auto_trim (test->esmcmc, TRUE);
-  ncm_fit_esmcmc_set_auto_trim_type (test->esmcmc, NCM_MSET_CATALOG_TRIM_TYPE_CK);
-
   ncm_fit_esmcmc_start_run (test->esmcmc, NULL);
   ncm_fit_esmcmc_run_lre (test->esmcmc, run, prec);
   ncm_fit_esmcmc_end_run (test->esmcmc);
+  _test_ncm_fit_esmcmc_trim_const_break (ncm_fit_esmcmc_peek_catalog (test->esmcmc));
 
   lnnorm = fabs (ncm_mset_catalog_get_post_lnnorm (ncm_fit_esmcmc_peek_catalog (test->esmcmc), &lnnorm_sd) / test->dim);
 

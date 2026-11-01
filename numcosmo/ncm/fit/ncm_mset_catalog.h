@@ -63,24 +63,6 @@ typedef enum _NcmMSetCatalogSync /*< prefix=NCM_MSET_CATALOG_SYNC >*/
 } NcmMSetCatalogSync;
 
 /**
- * NcmMSetCatalogTrimType:
- * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterion.
- * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch's convergence diagnostic.
- * @NCM_MSET_CATALOG_TRIM_TYPE_CK: trim the catalog using the estimate of the time where $-2\ln(L)$ stops evolving.
- * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
- *
- * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
- *
- */
-typedef enum _NcmMSetCatalogTrimType /*< prefix=NCM_MSET_CATALOG_TRIM_TYPE >*/
-{
-  NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
-  NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
-  NCM_MSET_CATALOG_TRIM_TYPE_CK     = 1 << 2,
-  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 3) - 1,
-} NcmMSetCatalogTrimType;
-
-/**
  * NcmMSetCatalogPostNormMethod:
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: the Gaussian normalized to the box of
  *   the parameter bounds, the error from the spread over slices of the rows
@@ -233,7 +215,6 @@ guint ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntes
 guint ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype);
 guint ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs mtype);
 
-void ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, guint ntests, NcmMSetCatalogTrimType trim_type, NcmFitRunMsgs mtype);
 
 guint ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype);
 guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, gdouble *wp_pvalue, NcmFitRunMsgs mtype);
