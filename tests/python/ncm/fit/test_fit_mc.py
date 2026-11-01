@@ -111,13 +111,13 @@ def test_serialize_deserialize(mc: Ncm.FitMC, tmp_path: Path):
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
     file = tmp_path / "fit_mc_test.nc"
-    mc.set_data_file(file.as_posix())
+    mc.set_storage(Ncm.MSetCatalogStorageFits.new(file.as_posix(), False))
     mc2 = duplicate_via_serialization(mc, ser)
 
     assert mc.props.use_threads == mc2.props.use_threads
     assert mc.props.rtype == mc2.props.rtype
     assert mc.props.mtype == mc2.props.mtype
-    assert mc.props.data_file == mc2.props.data_file
+    assert mc.props.storage.peek_filename() == mc2.props.storage.peek_filename()
 
 
 def test_use_threads_property_and_getter_round_trip(mc: Ncm.FitMC):

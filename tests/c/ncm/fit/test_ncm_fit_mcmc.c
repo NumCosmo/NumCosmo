@@ -47,6 +47,7 @@ static void test_ncm_fit_mcmc_posterior (TestNcmFitMCMC *test, gconstpointer pda
 static void test_ncm_fit_mcmc_bound (TestNcmFitMCMC *test, gconstpointer pdata);
 static void test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata);
 static void test_ncm_fit_mcmc_data_file (TestNcmFitMCMC *test, gconstpointer pdata);
+static void _test_ncm_fit_mcmc_set_file (NcmFitMCMC *mcmc, const gchar *filename);
 
 static gdouble _test_ncm_fit_mcmc_x0_max = 0.0;
 
@@ -234,6 +235,16 @@ test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata)
   ncm_mset_catalog_free (mcat);
 }
 
+/* Gives mcmc a FITS storage on filename. */
+static void
+_test_ncm_fit_mcmc_set_file (NcmFitMCMC *mcmc, const gchar *filename)
+{
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+
+  ncm_fit_mcmc_set_storage (mcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+}
+
 static void
 test_ncm_fit_mcmc_data_file (TestNcmFitMCMC *test, gconstpointer pdata)
 {
@@ -242,19 +253,20 @@ test_ncm_fit_mcmc_data_file (TestNcmFitMCMC *test, gconstpointer pdata)
    * once the catalog is built and empty; a second NcmFitMCMC on the file with an RNG of
    * another seed gets the storage's RNG error.
    */
-  gchar *tmp_dir               = g_dir_make_tmp ("tmp_test_ncm_fit_mcmc_XXXXXX", NULL);
-  gchar *filename              = g_build_filename (tmp_dir, "mcmc.fits", NULL);
-  NcmRNG *rng2                 = ncm_rng_seeded_new (NULL, 20261101);
-  NcmRNG *rng3                 = ncm_rng_seeded_new (NULL, 20261102);
-  NcmMSetTransKernGauss *tkern = ncm_mset_trans_kern_gauss_new (0);
-  gchar *data_file             = NULL;
-  GError *error                = NULL;
+  gchar *tmp_dir                      = g_dir_make_tmp ("tmp_test_ncm_fit_mcmc_XXXXXX", NULL);
+  gchar *filename                     = g_build_filename (tmp_dir, "mcmc.fits", NULL);
+  NcmRNG *rng2                        = ncm_rng_seeded_new (NULL, 20261101);
+  NcmRNG *rng3                        = ncm_rng_seeded_new (NULL, 20261102);
+  NcmMSetTransKernGauss *tkern        = ncm_mset_trans_kern_gauss_new (0);
+  NcmMSetCatalogStorage *storage_prop = NULL;
+  GError *error                       = NULL;
   NcmMSetCatalog *mcat;
 
-  ncm_fit_mcmc_set_data_file (test->mcmc, filename);
-  g_object_get (test->mcmc, "data-file", &data_file, NULL);
-  g_assert_cmpstr (data_file, ==, filename);
-  g_free (data_file);
+  _test_ncm_fit_mcmc_set_file (test->mcmc, filename);
+  g_object_get (test->mcmc, "storage", &storage_prop, NULL);
+  g_assert_true (NCM_IS_MSET_CATALOG_STORAGE_FITS (storage_prop));
+  g_assert_cmpstr (ncm_mset_catalog_storage_fits_peek_filename (NCM_MSET_CATALOG_STORAGE_FITS (storage_prop)), ==, filename);
+  ncm_mset_catalog_storage_free (storage_prop);
 
   ncm_fit_mcmc_start_run (test->mcmc, &error);
   g_assert_no_error (error);
@@ -288,7 +300,7 @@ test_ncm_fit_mcmc_data_file (TestNcmFitMCMC *test, gconstpointer pdata)
   /* The file is released before the second object opens it. */
   ncm_fit_mcmc_clear (&test->mcmc);
   test->mcmc = ncm_fit_mcmc_new (test->fit, NCM_MSET_TRANS_KERN (tkern), NCM_FIT_RUN_MSGS_NONE);
-  ncm_fit_mcmc_set_data_file (test->mcmc, filename);
+  _test_ncm_fit_mcmc_set_file (test->mcmc, filename);
   ncm_fit_mcmc_set_rng (test->mcmc, rng3);
   ncm_fit_mcmc_start_run (test->mcmc, &error);
   g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG);

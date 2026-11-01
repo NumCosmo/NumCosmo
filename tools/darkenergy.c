@@ -839,7 +839,12 @@ main (gint argc, gchar *argv[])
     }
 
     if (de_fit.mc_data != NULL)
-      ncm_fit_mc_set_data_file (mc, de_fit.mc_data);
+    {
+      NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (de_fit.mc_data, FALSE, NULL);
+
+      ncm_fit_mc_set_storage (mc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+      ncm_mset_catalog_storage_fits_free (storage_fits);
+    }
 
     ncm_fit_mc_start_run (mc, NULL);
 
@@ -885,7 +890,12 @@ main (gint argc, gchar *argv[])
     }
 
     if (de_fit.mc_data != NULL)
-      ncm_fit_mcbs_set_filename (mcbs, de_fit.mc_data);
+    {
+      NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (de_fit.mc_data, FALSE, NULL);
+
+      ncm_fit_mcbs_set_storage (mcbs, NCM_MSET_CATALOG_STORAGE (storage_fits));
+      ncm_mset_catalog_storage_fits_free (storage_fits);
+    }
 
     ncm_fit_mcbs_run (mcbs, resample_mset, de_fit.mc_prerun, de_fit.mcbs_nbootstraps, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_use_threads, NULL);
 
@@ -935,7 +945,12 @@ main (gint argc, gchar *argv[])
     }
 
     if (de_fit.mc_data != NULL)
-      ncm_fit_mcmc_set_data_file (mcmc, de_fit.mc_data);
+    {
+      NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (de_fit.mc_data, FALSE, NULL);
+
+      ncm_fit_mcmc_set_storage (mcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+      ncm_mset_catalog_storage_fits_free (storage_fits);
+    }
 
     ncm_fit_mcmc_start_run (mcmc, NULL);
     ncm_fit_mcmc_run_lre (mcmc, de_fit.mc_prerun, de_fit.mc_lre);
@@ -1037,7 +1052,12 @@ main (gint argc, gchar *argv[])
     }
 
     if (de_fit.mc_data != NULL)
-      ncm_fit_esmcmc_set_data_file (esmcmc, de_fit.mc_data);
+    {
+      NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (de_fit.mc_data, FALSE, NULL);
+
+      ncm_fit_esmcmc_set_storage (esmcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+      ncm_mset_catalog_storage_fits_free (storage_fits);
+    }
 
     ncm_fit_esmcmc_start_run (esmcmc, NULL);
     ncm_fit_esmcmc_run_lre (esmcmc, de_fit.mc_prerun, de_fit.mc_lre);

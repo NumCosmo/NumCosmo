@@ -105,8 +105,6 @@ typedef enum _NcmMSetCatalogPostNormMethod /*< prefix=NCM_MSET_CATALOG_POST_LNNO
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...) G_GNUC_NULL_TERMINATED;
 NcmMSetCatalog *ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols);
 
-NcmMSetCatalog *ncm_mset_catalog_new_from_file (const gchar *filename, glong burnin);
-NcmMSetCatalog *ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin);
 NcmMSetCatalog *ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin);
 NcmMSetCatalogStorage *ncm_mset_catalog_peek_storage (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains);
@@ -115,11 +113,6 @@ NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
 
-void ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename);
-void ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync smode);
-void ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval);
-void ncm_mset_catalog_set_read_block (NcmMSetCatalog *mcat, guint read_block);
-guint ncm_mset_catalog_get_read_block (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str);
 void ncm_mset_catalog_set_sampler (NcmMSetCatalog *mcat, const gchar *sampler);
 void ncm_mset_catalog_set_sampler_options (NcmMSetCatalog *mcat, const gchar *options);

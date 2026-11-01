@@ -148,7 +148,9 @@ def run_example():
     esmcmc.set_use_threads(True)
     init_sampler.set_cov_from_scale()
 
-    esmcmc.set_data_file("test.fits")
+    storage = Ncm.MSetCatalogStorageFits.new("test.fits", False)
+    assert storage is not None
+    esmcmc.set_storage(storage)
 
     esmcmc.start_run()
     esmcmc.run(1000)  # Number of points to be computed in each chain

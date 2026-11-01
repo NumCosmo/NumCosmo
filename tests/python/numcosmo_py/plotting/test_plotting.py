@@ -53,15 +53,10 @@ def fixture_mcat(request):
     mset.prepare_fparam_map()
     nchains = NCHAINS
 
-    mcat = Ncm.MSetCatalog(
-        mset=mset,
-        nadd_vals=2,
-        nadd_val_names=["a", "b"],
-        nadd_val_symbols=["c", "d"],
-        nchains=nchains,
-        m2lnp_var=0,
-        weighted=request.param,
+    mcat = Ncm.MSetCatalog.new_array(
+        mset, 2, nchains, request.param, ["a", "b"], ["c", "d"]
     )
+    mcat.set_m2lnp_var(0)
 
     nsamples = NSTEPS * nchains
     samples = np.random.rand(nsamples, 10) - 10.0

@@ -3332,10 +3332,8 @@ class FitESMCMC(GObject.Object):
         Whether to use OpenMP threads (real thread count is controlled by OMP_NUM_THREADS)
       use-mpi -> gboolean: use-mpi
         Use MPI instead of threads
-      data-file -> gchararray: data-file
-        Data filename
-      read-block -> guint: read-block
-        Rows read from the catalog file at once
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
       function-array -> NcmObjArray: function-array
         Functions array
       init-max-rounds -> guint: init-max-rounds
@@ -3348,7 +3346,6 @@ class FitESMCMC(GObject.Object):
     class Props:
         auto_trim: bool
         auto_trim_div: int
-        data_file: str
         fit: Fit
         function_array: ObjArray
         init_max_rounds: int
@@ -3359,9 +3356,9 @@ class FitESMCMC(GObject.Object):
         min_runs: int
         mtype: FitRunMsgs
         nwalkers: int
-        read_block: int
         sampler: MSetTransKern
         skip_check: bool
+        storage: MSetCatalogStorage
         trim_type: MSetCatalogTrimType
         use_mpi: bool
         use_threads: bool
@@ -3372,7 +3369,6 @@ class FitESMCMC(GObject.Object):
         self,
         auto_trim: bool = ...,
         auto_trim_div: int = ...,
-        data_file: str = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
         init_max_rounds: int = ...,
@@ -3383,9 +3379,9 @@ class FitESMCMC(GObject.Object):
         min_runs: int = ...,
         mtype: FitRunMsgs = ...,
         nwalkers: int = ...,
-        read_block: int = ...,
         sampler: MSetTransKern = ...,
         skip_check: bool = ...,
+        storage: MSetCatalogStorage = ...,
         trim_type: MSetCatalogTrimType = ...,
         use_mpi: bool = ...,
         use_threads: bool = ...,
@@ -3435,14 +3431,13 @@ class FitESMCMC(GObject.Object):
     def set_auto_trim(self, enable: bool) -> None: ...
     def set_auto_trim_div(self, div: int) -> None: ...
     def set_auto_trim_type(self, ttype: MSetCatalogTrimType) -> None: ...
-    def set_data_file(self, filename: str) -> None: ...
     def set_max_runs_time(self, max_runs_time: float) -> None: ...
     def set_min_runs(self, min_runs: int) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
-    def set_read_block(self, read_block: int) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
     def set_sampler(self, sampler: MSetTransKern) -> None: ...
     def set_skip_check(self, skip_check: bool) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def start_run(self) -> None: ...
     def use_mpi(self, use_mpi: bool) -> None: ...
@@ -4392,8 +4387,8 @@ class FitMC(GObject.Object):
         Whether to use OpenMP threads (real thread count is controlled by OMP_NUM_THREADS)
       keep-order -> gboolean: keep-order
         Whether to keep the catalog in order of sampling under multi-threaded runs
-      data-file -> gchararray: data-file
-        Data file to be used by the catalog
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
       function-array -> NcmObjArray: function-array
         Functions array
 
@@ -4402,25 +4397,25 @@ class FitMC(GObject.Object):
     """
 
     class Props:
-        data_file: str
         fiducial: typing.Optional[MSet]
         fit: Fit
         function_array: ObjArray
         keep_order: bool
         mtype: FitRunMsgs
         rtype: FitMCResampleType
+        storage: MSetCatalogStorage
         use_threads: bool
 
     props: Props = ...
     def __init__(
         self,
-        data_file: str = ...,
         fiducial: typing.Optional[MSet] = ...,
         fit: Fit = ...,
         function_array: ObjArray = ...,
         keep_order: bool = ...,
         mtype: FitRunMsgs = ...,
         rtype: FitMCResampleType = ...,
+        storage: MSetCatalogStorage = ...,
         use_threads: bool = ...,
     ) -> None: ...
     @staticmethod
@@ -4446,10 +4441,10 @@ class FitMC(GObject.Object):
     def reset(self) -> None: ...
     def run(self, n: int) -> None: ...
     def run_lre(self, prerun: int, lre: float) -> None: ...
-    def set_data_file(self, filename: str) -> None: ...
     def set_fiducial(self, fiduc: typing.Optional[MSet] = None) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
     def set_use_threads(self, use_threads: bool) -> None: ...
     def start_run(self) -> None: ...
 
@@ -4467,19 +4462,19 @@ class FitMCBS(GObject.Object):
     Properties from NcmFitMCBS:
       fit -> NcmFit: fit
         Fit object
-      filename -> gchararray: filename
-        Data filename
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        filename: str
         fit: Fit
+        storage: MSetCatalogStorage
 
     props: Props = ...
-    def __init__(self, filename: str = ..., fit: Fit = ...) -> None: ...
+    def __init__(self, fit: Fit = ..., storage: MSetCatalogStorage = ...) -> None: ...
     @staticmethod
     def clear(mcbs: FitMCBS) -> None: ...
     def free(self) -> None: ...
@@ -4495,8 +4490,8 @@ class FitMCBS(GObject.Object):
         mtype: FitRunMsgs,
         bsmt: bool,
     ) -> None: ...
-    def set_filename(self, filename: str) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
 
 class FitMCBSClass(GObject.GPointer):
     r"""
@@ -4538,26 +4533,26 @@ class FitMCMC(GObject.Object):
         Metropolis-Hastings sampler
       mtype -> NcmFitRunMsgs: mtype
         Run messages type
-      data-file -> gchararray: data-file
-        Data file to be used by the catalog
+      storage -> NcmMSetCatalogStorage: storage
+        Catalog storage
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
-        data_file: str
         fit: Fit
         mtype: FitRunMsgs
         sampler: MSetTransKern
+        storage: MSetCatalogStorage
 
     props: Props = ...
     def __init__(
         self,
-        data_file: str = ...,
         fit: Fit = ...,
         mtype: FitRunMsgs = ...,
         sampler: MSetTransKern = ...,
+        storage: MSetCatalogStorage = ...,
     ) -> None: ...
     @staticmethod
     def clear(mcmc: FitMCMC) -> None: ...
@@ -4571,10 +4566,10 @@ class FitMCMC(GObject.Object):
     def reset(self) -> None: ...
     def run(self, n: int) -> None: ...
     def run_lre(self, prerun: int, lre: float) -> None: ...
-    def set_data_file(self, filename: str) -> None: ...
     def set_fiducial(self, fiduc: MSet) -> None: ...
     def set_mtype(self, mtype: FitRunMsgs) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
+    def set_storage(self, storage: MSetCatalogStorage) -> None: ...
     def set_trans_kern(self, tkern: MSetTransKern) -> None: ...
     def start_run(self) -> None: ...
 
@@ -6178,27 +6173,11 @@ class MSetCatalog(GObject.Object):
 
         MSetCatalog(**properties)
         new_array(mset:NumCosmoMath.MSet, nadd_vals:int, nchains:int, weighted:bool, names:list, symbols:list) -> NumCosmoMath.MSetCatalog
-        new_from_file(filename:str, burnin:int) -> NumCosmoMath.MSetCatalog
-        new_from_file_ro(filename:str, burnin:int) -> NumCosmoMath.MSetCatalog
         new_from_storage(storage:NumCosmoMath.MSetCatalogStorage, burnin:int) -> NumCosmoMath.MSetCatalog
 
     Object NcmMSetCatalog
 
     Properties from NcmMSetCatalog:
-      mset -> NcmMSet: mset
-        NcmMSet object
-      nadd-vals -> guint: nadd-vals
-        Number of additional values
-      nadd-val-names -> GStrv: nadd-val-names
-        Additional value names
-      nadd-val-symbols -> GStrv: nadd-val-symbols
-        Additional value symbols
-      m2lnp-var -> gint: m2lnp-var
-        Index of the variable representing m2lnp
-      weighted -> gboolean: weighted
-        Catalog with weighted rows
-      nchains -> guint: nchains
-        Number of different chains in the catalog
       burnin -> glong: burnin
         Burn-in size
       markovian-id -> gint: markovian-id
@@ -6207,26 +6186,12 @@ class MSetCatalog(GObject.Object):
         Method used to calculate the autocorrelation time
       post-lnnorm-method -> NcmMSetCatalogPostNormMethod: post-lnnorm-method
         Method used to estimate the log evidence
-      rng -> NcmRNG: rng
-        Random number generator object
-      filename -> gchararray: filename
-        Catalog filename
-      run-type-string -> gchararray: run-type-string
-        Run type string
       sampler -> gchararray: sampler
         Description of the sampler that filled the rows
       sampler-options -> gchararray: sampler-options
         Tunable settings of the sampler that filled the rows
       initial-sampler -> gchararray: initial-sampler
         Description of the sampler that drew the initial points
-      smode -> NcmMSetCatalogSync: smode
-        Catalog sync mode
-      sync-interval -> gdouble: sync-interval
-        Data sync interval
-      read-block -> guint: read-block
-        Number of rows read from the file at once
-      read-only -> gboolean: read-only
-        Whether the FITS file is opened read-only
       storage -> NcmMSetCatalogStorage: storage
         The storage of the catalog
 
@@ -6236,53 +6201,25 @@ class MSetCatalog(GObject.Object):
 
     class Props:
         burnin: int
-        filename: str
         initial_sampler: typing.Optional[str]
-        m2lnp_var: int
         markovian_id: int
-        mset: MSet
-        nadd_val_names: list[str]
-        nadd_val_symbols: list[str]
-        nadd_vals: int
-        nchains: int
         post_lnnorm_method: MSetCatalogPostNormMethod
-        read_block: int
-        read_only: bool
-        rng: typing.Optional[RNG]
-        run_type_string: str
         sampler: typing.Optional[str]
         sampler_options: typing.Optional[str]
-        smode: MSetCatalogSync
         storage: MSetCatalogStorage
-        sync_interval: float
         tau_method: StatsAcorrMethod
-        weighted: bool
 
     props: Props = ...
     def __init__(
         self,
         burnin: int = ...,
-        filename: str = ...,
         initial_sampler: typing.Optional[str] = ...,
-        m2lnp_var: int = ...,
         markovian_id: int = ...,
-        mset: MSet = ...,
-        nadd_val_names: typing.Sequence[str] = ...,
-        nadd_val_symbols: typing.Sequence[str] = ...,
-        nadd_vals: int = ...,
-        nchains: int = ...,
         post_lnnorm_method: MSetCatalogPostNormMethod = ...,
-        read_block: int = ...,
-        read_only: bool = ...,
-        rng: RNG = ...,
-        run_type_string: str = ...,
         sampler: typing.Optional[str] = ...,
         sampler_options: typing.Optional[str] = ...,
-        smode: MSetCatalogSync = ...,
         storage: MSetCatalogStorage = ...,
-        sync_interval: float = ...,
         tau_method: StatsAcorrMethod = ...,
-        weighted: bool = ...,
     ) -> None: ...
     def add_from_mset_array(
         self, mset: MSet, ax: typing.Sequence[float] | npt.NDArray[np.float64]
@@ -6360,7 +6297,6 @@ class MSetCatalog(GObject.Object):
     def get_post_lnnorm(self) -> typing.Tuple[float, float]: ...
     def get_post_lnnorm_method(self) -> MSetCatalogPostNormMethod: ...
     def get_post_lnvol(self, level: float) -> typing.Tuple[float, float]: ...
-    def get_read_block(self) -> int: ...
     def get_rng(self) -> typing.Optional[RNG]: ...
     def get_row(self, i: int) -> typing.Optional[Vector]: ...
     def get_row_from_time(self, t: int) -> int: ...
@@ -6398,10 +6334,6 @@ class MSetCatalog(GObject.Object):
         symbols: typing.Sequence[str],
     ) -> MSetCatalog: ...
     @classmethod
-    def new_from_file(cls, filename: str, burnin: int) -> MSetCatalog: ...
-    @classmethod
-    def new_from_file_ro(cls, filename: str, burnin: int) -> MSetCatalog: ...
-    @classmethod
     def new_from_storage(
         cls, storage: MSetCatalogStorage, burnin: int
     ) -> MSetCatalog: ...
@@ -6433,7 +6365,6 @@ class MSetCatalog(GObject.Object):
     def reset(self) -> None: ...
     def reset_stats(self) -> None: ...
     def set_burnin(self, burnin: int) -> None: ...
-    def set_file(self, filename: typing.Optional[str] = None) -> None: ...
     def set_functions_array(
         self, functions: typing.Optional[ObjArray] = None
     ) -> None: ...
@@ -6441,13 +6372,10 @@ class MSetCatalog(GObject.Object):
     def set_m2lnp_var(self, p: int) -> None: ...
     def set_markovian_id(self, markovian_id: int) -> None: ...
     def set_post_lnnorm_method(self, method: MSetCatalogPostNormMethod) -> None: ...
-    def set_read_block(self, read_block: int) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
     def set_run_type(self, rtype_str: str) -> None: ...
     def set_sampler(self, sampler: typing.Optional[str] = None) -> None: ...
     def set_sampler_options(self, options: typing.Optional[str] = None) -> None: ...
-    def set_sync_interval(self, interval: float) -> None: ...
-    def set_sync_mode(self, smode: MSetCatalogSync) -> None: ...
     def set_tau_method(self, tau_method: StatsAcorrMethod) -> None: ...
     def sync(self, check: bool) -> None: ...
     def tau_needs_more(self) -> typing.Tuple[bool, int]: ...

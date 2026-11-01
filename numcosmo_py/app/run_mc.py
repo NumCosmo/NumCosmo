@@ -118,7 +118,11 @@ class RunMC(RunCommonOptions):
             mc.set_fiducial(fiduc)
 
         mc.set_use_threads(self.use_threads)
-        mc.set_data_file(self.output.with_suffix(".mc.fits").absolute().as_posix())
+        storage = Ncm.MSetCatalogStorageFits.new(
+            self.output.with_suffix(".mc.fits").absolute().as_posix(), False
+        )
+        assert storage is not None
+        mc.set_storage(storage)
 
         if self.seed is not None:
             rng = Ncm.RNG.seeded_new("mt19937", self.seed)

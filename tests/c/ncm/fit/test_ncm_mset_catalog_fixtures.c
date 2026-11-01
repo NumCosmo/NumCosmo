@@ -88,10 +88,12 @@ main (gint argc, gchar *argv[])
 static NcmMSetCatalog *
 _test_ncm_mset_catalog_fixtures_open (const gchar *name)
 {
-  gchar *rel_path      = g_strdup_printf ("truth_tables/catalog/%s", name);
-  gchar *path          = ncm_cfg_get_data_filename (rel_path, TRUE);
-  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (path, 0);
+  gchar *rel_path                         = g_strdup_printf ("truth_tables/catalog/%s", name);
+  gchar *path                             = ncm_cfg_get_data_filename (rel_path, TRUE);
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (path, TRUE, NULL);
+  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0);
 
+  ncm_mset_catalog_storage_fits_free (storage_fits);
   g_free (path);
   g_free (rel_path);
 

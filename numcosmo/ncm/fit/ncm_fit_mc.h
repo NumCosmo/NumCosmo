@@ -66,7 +66,7 @@ NcmFitMC *ncm_fit_mc_new_funcs_array (NcmFit *fit, NcmFitMCResampleType rtype, N
 void ncm_fit_mc_free (NcmFitMC *mc);
 void ncm_fit_mc_clear (NcmFitMC **mc);
 
-void ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename);
+void ncm_fit_mc_set_storage (NcmFitMC *mc, NcmMSetCatalogStorage *storage);
 
 void ncm_fit_mc_set_mtype (NcmFitMC *mc, NcmFitRunMsgs mtype);
 void ncm_fit_mc_set_use_threads (NcmFitMC *mc, gboolean use_threads);

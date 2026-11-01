@@ -211,7 +211,8 @@ def read_catalog(name):
         f"truth_tables/bbn/old_reparam_{name}.mc.fits", True
     )
 
-    return Ncm.MSetCatalog.new_from_file_ro(filename, 0)
+    storage = Ncm.MSetCatalogStorageFits.new(filename, True)
+    return Ncm.MSetCatalog.new_from_storage(storage, 0)
 
 
 @pytest.mark.parametrize("name", CATALOGS)

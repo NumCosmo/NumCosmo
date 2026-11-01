@@ -160,7 +160,9 @@ def create_esmcmc(
     esmcmc.set_use_threads(use_threads)
     # Setting the file name to save the chains.
     filename = f"{prefix}_mcmc_catalog_{sampler}_{nwalkers}.fits"
-    esmcmc.set_data_file(filename)
+    storage = Ncm.MSetCatalogStorageFits.new(filename, False)
+    assert storage is not None
+    esmcmc.set_storage(storage)
 
     return esmcmc
 

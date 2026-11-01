@@ -44,7 +44,7 @@ NcmFitMCMC *ncm_fit_mcmc_new (NcmFit * fit, NcmMSetTransKern * tkern, NcmFitRunM
 void ncm_fit_mcmc_free (NcmFitMCMC *mcmc);
 void ncm_fit_mcmc_clear (NcmFitMCMC **mcmc);
 
-void ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename);
+void ncm_fit_mcmc_set_storage (NcmFitMCMC *mcmc, NcmMSetCatalogStorage *storage);
 
 void ncm_fit_mcmc_set_mtype (NcmFitMCMC *mcmc, NcmFitRunMsgs mtype);
 void ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern);

@@ -29,10 +29,10 @@
  * Ordered table of free-parameter values of a #NcmMSet, kept in a
  * #NcmMSetCatalogStorage, with running statistics of its rows.
  *
- * Each row holds #NcmMSetCatalog:nadd-vals additional values ($-2\ln L$ and derived
- * functions, named by #NcmMSetCatalog:nadd-val-names; for a #NcmMSetCatalog:weighted
- * catalog the last one is the row weight) followed by the free parameters. With
- * #NcmMSetCatalog:nchains chains the rows are interleaved, the row with id $i$ belonging to chain
+ * Each row holds ncm_mset_catalog_nadd_vals() additional values ($-2\ln L$ and derived
+ * functions, named by ncm_mset_catalog_col_name(); for a weighted catalog the last one
+ * is the row weight) followed by the free parameters. With ncm_mset_catalog_nchains()
+ * chains the rows are interleaved, the row with id $i$ belonging to chain
  * $i \bmod n_\mathrm{chains}$ (the walkers of an ensemble sampler), and the catalog
  * keeps statistics of every chain, of the chain means and of each ensemble. Row ids are
  * row indices; #NcmMSetCatalog:markovian-id marks where the Markov chain starts and
@@ -40,10 +40,10 @@
  *
  * The rows, the #NcmMSetCatalogDesc, the #NcmRNG of the run, the Markovian id and the
  * sampler segments live in the storage: a #NcmMSetCatalogStorageMemory for a catalog
- * created by ncm_mset_catalog_new(), a #NcmMSetCatalogStorageFits for one created by
- * ncm_mset_catalog_new_from_file() or given a file by ncm_mset_catalog_set_file(). The
- * catalog opens a recording on the storage at the first row added and closes it in
- * ncm_mset_catalog_reset(), ncm_mset_catalog_set_file() and when it is disposed; the
+ * created by ncm_mset_catalog_new(), the storage given to
+ * ncm_mset_catalog_new_from_storage() otherwise (a #NcmMSetCatalogStorageFits for a
+ * file). The catalog opens a recording on the storage at the first row added and closes
+ * it in ncm_mset_catalog_reset() and when it is disposed; the
  * sampler strings (ncm_mset_catalog_set_sampler(), ncm_mset_catalog_set_sampler_options(),
  * ncm_mset_catalog_set_initial_sampler()) name the segments it opens. The rows are read
  * through ncm_mset_catalog_peek_row() and ncm_mset_catalog_get_row().
@@ -105,8 +105,6 @@ typedef struct _NcmMSetCatalogPrivate
   GPtrArray *add_vals_symbs;
   guint ncols;
   NcmStatsVec *pstats;
-  NcmMSetCatalogSync smode;
-  gboolean readonly;
   NcmRNG *rng;
   gboolean weighted;
   guint nchains;
@@ -115,7 +113,6 @@ typedef struct _NcmMSetCatalogPrivate
   NcmStatsVec *e_stats;
   NcmStatsVec *e_mean_stats;
   GPtrArray *last_rows;
-  guint read_block;
   GMutex row_lock;
   GPtrArray *e_mean_rows;
   NcmStatsRows *diag_rows;
@@ -133,8 +130,6 @@ typedef struct _NcmMSetCatalogPrivate
   NcmMSetCatalogPostNormMethod post_lnnorm_method;
   NcmVector *tau;
   GTimer *sync_timer;
-  gdouble sync_interval;
-  gchar *file;
   gchar *rtype_str;
   gchar *sampler_str;
   gchar *sampler_opts_str;
@@ -149,7 +144,6 @@ typedef struct _NcmMSetCatalogPrivate
   glong pdf_i;
   gsl_histogram *h;
   gsl_histogram_pdf *h_pdf;
-  gboolean constructed;
 } NcmMSetCatalogPrivate;
 
 struct _NcmMSetCatalog
@@ -162,27 +156,13 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT)
 enum
 {
   PROP_0,
-  PROP_MSET,
-  PROP_NADD_VALS,
-  PROP_ADD_VAL_NAMES,
-  PROP_ADD_VAL_SYMBS,
-  PROP_M2LNP_VAR,
-  PROP_WEIGHTED,
-  PROP_NCHAINS,
   PROP_BURNIN,
   PROP_MARKOVIAN_ID,
   PROP_TAU_METHOD,
   PROP_POST_LNNORM_METHOD,
-  PROP_RNG,
-  PROP_FILE,
-  PROP_RUN_TYPE_STR,
   PROP_SAMPLER,
   PROP_SAMPLER_OPTS,
   PROP_INIT_SAMPLER,
-  PROP_SYNC_MODE,
-  PROP_SYNC_INTERVAL,
-  PROP_READ_BLOCK,
-  PROP_READONLY,
   PROP_STORAGE,
 };
 
@@ -217,8 +197,6 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->add_vals_symbs = g_ptr_array_new_with_free_func (g_free);
   self->ncols          = 0;
   self->pstats         = NULL;
-  self->smode          = NCM_MSET_CATALOG_SYNC_LEN;
-  self->readonly       = FALSE;
   self->rng            = NULL;
   self->weighted       = FALSE;
   self->nchains        = 0;
@@ -230,7 +208,6 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->e_stats      = NULL;
   self->e_mean_stats = NULL;
   self->last_rows    = g_ptr_array_new ();
-  self->read_block   = 0;
   g_mutex_init (&self->row_lock);
   self->e_mean_rows  = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vector_free);
   self->diag_rows    = NULL;
@@ -249,11 +226,9 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->tau                = NULL;
 
   self->sync_timer       = g_timer_new ();
-  self->sync_interval    = 0.0;
   self->cur_id           = -1; /* the id of the last added row, the row index; -1 for no rows */
   self->markovian_id     = 0;  /* first row of the Markovian chain */
   self->burnin           = 0;  /* Number of elements to ignore when reading a catalog */
-  self->file             = NULL;
   self->rtype_str        = NULL;
   self->sampler_str      = NULL;
   self->sampler_opts_str = NULL;
@@ -265,8 +240,6 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->h_pdf            = NULL;
   self->params_max       = NULL;
   self->params_min       = NULL;
-
-  self->constructed = FALSE;
 }
 
 /* Releases the copies in last_rows and makes it n NULL entries. */
@@ -373,8 +346,6 @@ _ncm_mset_catalog_free_stats (NcmMSetCatalog *mcat)
 static void _ncm_mset_catalog_take_desc (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc);
 static NcmMSetCatalogStorageFits *_ncm_mset_catalog_peek_fits_storage (NcmMSetCatalog *mcat);
 static void _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat);
-static NcmMSetCatalogStorage *_ncm_mset_catalog_new_fits_storage (NcmMSetCatalog *mcat, const gchar *filename, gboolean read_only);
-static NcmMSetCatalogStorage *_ncm_mset_catalog_new_memory_storage (NcmMSetCatalog *mcat);
 static NcmMSetCatalogDesc *_ncm_mset_catalog_new_desc (NcmMSetCatalog *mcat, guint nchains, gint m2lnp_var, const gchar *rtype_str);
 
 /*
@@ -393,84 +364,21 @@ _ncm_mset_catalog_constructed (GObject *object)
     NcmMSetCatalog *mcat        = NCM_MSET_CATALOG (object);
     NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
-    self->constructed = TRUE;
+    NcmMSetCatalogDesc *desc;
+    GError *error = NULL;
 
-    if (self->storage != NULL)
-    {
-      NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
-      NcmMSetCatalogDesc *desc;
-      GError *error = NULL;
+    if (self->storage == NULL)
+      g_error ("_ncm_mset_catalog_constructed: a catalog needs a storage, see ncm_mset_catalog_new() and ncm_mset_catalog_new_from_storage().");
 
-      if ((self->mset != NULL) || (self->file != NULL))
-        g_error ("_ncm_mset_catalog_constructed: a catalog built from a storage takes no NcmMSet and no file.");
+    desc = ncm_mset_catalog_storage_peek_desc (self->storage, &error);
 
-      desc = ncm_mset_catalog_storage_peek_desc (self->storage, &error);
+    if (error != NULL)
+      g_error ("_ncm_mset_catalog_constructed: %s", error->message);
 
-      if (error != NULL)
-        g_error ("_ncm_mset_catalog_constructed: %s", error->message);
+    if (desc == NULL)
+      g_error ("_ncm_mset_catalog_constructed: the storage has no description.");
 
-      if (desc == NULL)
-        g_error ("_ncm_mset_catalog_constructed: the storage has no description.");
-
-      g_object_get (self->storage, "smode", &self->smode, "sync-interval", &self->sync_interval, NULL);
-
-      if (storage_fits != NULL)
-      {
-        g_object_get (storage_fits, "read-block", &self->read_block, NULL);
-        self->readonly = ncm_mset_catalog_storage_fits_get_read_only (storage_fits);
-      }
-
-      _ncm_mset_catalog_take_desc (mcat, desc);
-    }
-    else if (self->mset == NULL)
-    {
-      NcmMSetCatalogDesc *desc;
-      GError *error = NULL;
-
-      if (self->file == NULL)
-        g_error ("_ncm_mset_catalog_constructed: a catalog needs an NcmMSet or a file.");
-
-      if (!g_file_test (self->file, G_FILE_TEST_EXISTS))
-        g_error ("_ncm_mset_catalog_constructed: cannot create catalog file `%s' not found.",
-                 self->file);
-
-      self->storage = _ncm_mset_catalog_new_fits_storage (mcat, self->file, self->readonly);
-      desc          = ncm_mset_catalog_storage_peek_desc (self->storage, &error);
-
-      if (error != NULL)
-        g_error ("_ncm_mset_catalog_constructed: %s", error->message);
-
-      if (desc == NULL)
-        g_error ("_ncm_mset_catalog_constructed: file `%s' holds no catalog.", self->file);
-
-      _ncm_mset_catalog_take_desc (mcat, desc);
-    }
-    else
-    {
-      NcmMSetCatalogDesc *desc;
-      GError *error = NULL;
-
-      g_assert_cmpuint (self->add_vals_names->len, ==, self->add_vals_symbs->len);
-      g_assert_cmpuint (self->add_vals_names->len, ==, self->nadd_vals);
-
-      desc = _ncm_mset_catalog_new_desc (mcat, self->nchains, self->m2lnp_var, self->rtype_str);
-
-      if (self->file != NULL)
-        self->storage = _ncm_mset_catalog_new_fits_storage (mcat, self->file, self->readonly);
-      else
-        self->storage = _ncm_mset_catalog_new_memory_storage (mcat);
-
-      ncm_mset_catalog_storage_set_desc (self->storage, desc, &error);
-
-      if (error != NULL)
-        g_error ("_ncm_mset_catalog_constructed: %s", error->message);
-
-      _ncm_mset_catalog_take_desc (mcat, desc);
-      ncm_mset_catalog_desc_free (desc);
-    }
-
-    g_clear_pointer (&self->file, g_free);
-
+    _ncm_mset_catalog_take_desc (mcat, desc);
     _ncm_mset_catalog_load_storage (mcat);
   }
 }
@@ -485,7 +393,7 @@ static NcmMSetCatalogDesc *
 _ncm_mset_catalog_new_desc (NcmMSetCatalog *mcat, guint nchains, gint m2lnp_var, const gchar *rtype_str)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  const guint n_user          = self->add_vals_names->len - ((self->weighted && (self->desc != NULL)) ? 1 : 0);
+  const guint n_user          = self->add_vals_names->len - (self->weighted ? 1 : 0);
   GPtrArray *names            = g_ptr_array_new ();
   GPtrArray *symbols          = g_ptr_array_new ();
   GError *error               = NULL;
@@ -557,9 +465,6 @@ _ncm_mset_catalog_take_desc (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc)
   _ncm_mset_catalog_alloc_stats (mcat);
 }
 
-static void _ncm_mset_catalog_set_add_val_name_array (NcmMSetCatalog *mcat, gchar **names);
-static void _ncm_mset_catalog_set_add_val_symbol_array (NcmMSetCatalog *mcat, gchar **symbols);
-
 static void
 _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -570,27 +475,6 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
 
   switch (prop_id)
   {
-    case PROP_MSET:
-      self->mset = g_value_dup_object (value);
-      break;
-    case PROP_NADD_VALS:
-      self->nadd_vals = g_value_get_uint (value);
-      break;
-    case PROP_ADD_VAL_NAMES:
-      _ncm_mset_catalog_set_add_val_name_array (mcat, g_value_get_boxed (value));
-      break;
-    case PROP_ADD_VAL_SYMBS:
-      _ncm_mset_catalog_set_add_val_symbol_array (mcat, g_value_get_boxed (value));
-      break;
-    case PROP_M2LNP_VAR:
-      ncm_mset_catalog_set_m2lnp_var (mcat, g_value_get_int (value));
-      break;
-    case PROP_WEIGHTED:
-      self->weighted = g_value_get_boolean (value);
-      break;
-    case PROP_NCHAINS:
-      self->nchains = g_value_get_uint (value);
-      break;
     case PROP_BURNIN:
       ncm_mset_catalog_set_burnin (mcat, g_value_get_long (value));
       break;
@@ -603,15 +487,6 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_POST_LNNORM_METHOD:
       ncm_mset_catalog_set_post_lnnorm_method (mcat, g_value_get_enum (value));
       break;
-    case PROP_RNG:
-      ncm_mset_catalog_set_rng (mcat, g_value_get_object (value));
-      break;
-    case PROP_FILE:
-      ncm_mset_catalog_set_file (mcat, g_value_get_string (value));
-      break;
-    case PROP_RUN_TYPE_STR:
-      ncm_mset_catalog_set_run_type (mcat, g_value_get_string (value));
-      break;
     case PROP_SAMPLER:
       ncm_mset_catalog_set_sampler (mcat, g_value_get_string (value));
       break;
@@ -620,18 +495,6 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
       break;
     case PROP_INIT_SAMPLER:
       ncm_mset_catalog_set_initial_sampler (mcat, g_value_get_string (value));
-      break;
-    case PROP_SYNC_MODE:
-      ncm_mset_catalog_set_sync_mode (mcat, g_value_get_enum (value));
-      break;
-    case PROP_SYNC_INTERVAL:
-      ncm_mset_catalog_set_sync_interval (mcat, g_value_get_double (value));
-      break;
-    case PROP_READ_BLOCK:
-      ncm_mset_catalog_set_read_block (mcat, g_value_get_uint (value));
-      break;
-    case PROP_READONLY:
-      self->readonly = g_value_get_boolean (value);
       break;
     case PROP_STORAGE:
       self->storage = g_value_dup_object (value);
@@ -652,53 +515,6 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
 
   switch (prop_id)
   {
-    case PROP_MSET:
-      g_value_set_object (value, self->mset);
-      break;
-    case PROP_NADD_VALS:
-      g_value_set_uint (value, self->nadd_vals);
-      break;
-    case PROP_ADD_VAL_NAMES:
-    {
-      gchar **names = g_new (gchar *, self->add_vals_names->len + 1);
-      guint i;
-
-      for (i = 0; i < self->add_vals_names->len; i++)
-      {
-        names[i] = g_strdup (g_ptr_array_index (self->add_vals_names, i));
-      }
-
-      names[i] = NULL;
-
-      g_value_take_boxed (value, names);
-
-      break;
-    }
-    case PROP_ADD_VAL_SYMBS:
-    {
-      gchar **symbs = g_new (gchar *, self->add_vals_symbs->len + 1);
-      guint i;
-
-      for (i = 0; i < self->add_vals_symbs->len; i++)
-      {
-        symbs[i] = g_strdup (g_ptr_array_index (self->add_vals_symbs, i));
-      }
-
-      symbs[i] = NULL;
-
-      g_value_take_boxed (value, symbs);
-
-      break;
-    }
-    case PROP_M2LNP_VAR:
-      g_value_set_int (value, ncm_mset_catalog_get_m2lnp_var (mcat));
-      break;
-    case PROP_WEIGHTED:
-      g_value_set_boolean (value, self->weighted);
-      break;
-    case PROP_NCHAINS:
-      g_value_set_uint (value, self->nchains);
-      break;
     case PROP_BURNIN:
       g_value_set_long (value, ncm_mset_catalog_get_burnin (mcat));
       break;
@@ -711,15 +527,6 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_POST_LNNORM_METHOD:
       g_value_set_enum (value, ncm_mset_catalog_get_post_lnnorm_method (mcat));
       break;
-    case PROP_RNG:
-      g_value_set_object (value, self->rng);
-      break;
-    case PROP_FILE:
-      g_value_set_string (value, ncm_mset_catalog_peek_filename (mcat));
-      break;
-    case PROP_RUN_TYPE_STR:
-      g_value_set_string (value, self->rtype_str);
-      break;
     case PROP_SAMPLER:
       g_value_set_string (value, self->sampler_str);
       break;
@@ -728,18 +535,6 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_INIT_SAMPLER:
       g_value_set_string (value, self->init_sampler_str);
-      break;
-    case PROP_SYNC_MODE:
-      g_value_set_enum (value, self->smode);
-      break;
-    case PROP_SYNC_INTERVAL:
-      g_value_set_double (value, self->sync_interval);
-      break;
-    case PROP_READ_BLOCK:
-      g_value_set_uint (value, self->read_block);
-      break;
-    case PROP_READONLY:
-      g_value_set_boolean (value, self->readonly);
       break;
     case PROP_STORAGE:
       g_value_set_object (value, self->storage);
@@ -802,8 +597,6 @@ _ncm_mset_catalog_finalize (GObject *object)
   g_ptr_array_unref (self->add_vals_names);
   g_ptr_array_unref (self->add_vals_symbs);
 
-  g_clear_pointer (&self->file, g_free);
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_catalog_parent_class)->finalize (object);
 }
@@ -820,58 +613,6 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
   object_class->finalize     = &_ncm_mset_catalog_finalize;
 
   g_object_class_install_property (object_class,
-                                   PROP_MSET,
-                                   g_param_spec_object ("mset",
-                                                        NULL,
-                                                        "NcmMSet object",
-                                                        NCM_TYPE_MSET,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_NADD_VALS,
-                                   g_param_spec_uint ("nadd-vals",
-                                                      NULL,
-                                                      "Number of additional values",
-                                                      0, G_MAXUINT32, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_ADD_VAL_NAMES,
-                                   g_param_spec_boxed ("nadd-val-names",
-                                                       NULL,
-                                                       "Additional value names",
-                                                       G_TYPE_STRV,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_ADD_VAL_SYMBS,
-                                   g_param_spec_boxed ("nadd-val-symbols",
-                                                       NULL,
-                                                       "Additional value symbols",
-                                                       G_TYPE_STRV,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_M2LNP_VAR,
-                                   g_param_spec_int ("m2lnp-var",
-                                                     NULL,
-                                                     "Index of the variable representing m2lnp",
-                                                     -1, G_MAXINT, -1,
-                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_WEIGHTED,
-                                   g_param_spec_boolean ("weighted",
-                                                         NULL,
-                                                         "Catalog with weighted rows",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_NCHAINS,
-                                   g_param_spec_uint ("nchains",
-                                                      NULL,
-                                                      "Number of different chains in the catalog",
-                                                      1, G_MAXUINT32, 1,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
                                    PROP_BURNIN,
                                    g_param_spec_long ("burnin",
                                                       NULL,
@@ -885,7 +626,7 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
    * Id of the first row produced by a Markovian step after the last move that did not
    * satisfy detailed balance (the initial ensemble, an exploration phase of the walker).
    * Rows from this id on form a valid Markov chain whose initial state is the ensemble of
-   * the #NcmMSetCatalog:nchains rows before it. A row index, like the current id; a file
+   * the ncm_mset_catalog_nchains() rows before it. A row index, like the current id; a file
    * without the key reads as 0 (every row Markovian). When a file is read with a burn-in
    * the stored value is shifted by it, like every other row id.
    *
@@ -913,50 +654,6 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       "Method used to estimate the log evidence",
                                                       NCM_TYPE_MSET_CATALOG_POST_NORM_METHOD, NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_RNG,
-                                   g_param_spec_object ("rng",
-                                                        NULL,
-                                                        "Random number generator object",
-                                                        NCM_TYPE_RNG,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmMSetCatalog:smode:
-   *
-   * When the storage writes the rows added, see #NcmMSetCatalogStorage:smode.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_SYNC_MODE,
-                                   g_param_spec_enum ("smode",
-                                                      NULL,
-                                                      "Catalog sync mode",
-                                                      NCM_TYPE_MSET_CATALOG_SYNC, NCM_MSET_CATALOG_SYNC_AUTO,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmMSetCatalog:filename:
-   *
-   * The FITS file of the catalog, see ncm_mset_catalog_set_file(); %NULL for a catalog
-   * in memory.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_FILE,
-                                   g_param_spec_string ("filename",
-                                                        NULL,
-                                                        "Catalog filename",
-                                                        NULL,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_RUN_TYPE_STR,
-                                   g_param_spec_string ("run-type-string",
-                                                        NULL,
-                                                        "Run type string",
-                                                        NCM_MSET_CATALOG_RTYPE_UNDEFINED,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmMSetCatalog:sampler:
@@ -996,7 +693,7 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
    *
    * A description of the sampler that draws the initial points: the name of the first
    * sampler segment of an empty storage, which covers the first ensemble
-   * (#NcmMSetCatalog:nchains rows), see ncm_mset_catalog_set_initial_sampler().
+   * (ncm_mset_catalog_nchains() rows), see ncm_mset_catalog_set_initial_sampler().
    *
    */
   g_object_class_install_property (object_class,
@@ -1006,55 +703,14 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                         "Description of the sampler that drew the initial points",
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_SYNC_INTERVAL,
-                                   g_param_spec_double ("sync-interval",
-                                                        NULL,
-                                                        "Data sync interval",
-                                                        0.0, 1.0e3, 10.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmMSetCatalog:read-block:
-   *
-   * Number of consecutive rows read from the file at once,
-   * #NcmMSetCatalogStorageFits:read-block of the FITS storage. The storage keeps in
-   * memory the rows not yet written and the last two ensembles; see
-   * ncm_mset_catalog_peek_row(). A value at least as large as the catalog holds all its
-   * rows once they are read.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_READ_BLOCK,
-                                   g_param_spec_uint ("read-block",
-                                                      NULL,
-                                                      "Number of rows read from the file at once",
-                                                      1, G_MAXUINT, 1024,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmMSetCatalog:read-only:
-   *
-   * Whether the file given at construction is opened read-only. A read-only catalog
-   * refuses every write to its storage; ncm_mset_catalog_set_file() gives it a writable
-   * storage.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_READONLY,
-                                   g_param_spec_boolean ("read-only",
-                                                         NULL,
-                                                         "Whether the FITS file is opened read-only",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmMSetCatalog:storage:
    *
    * The #NcmMSetCatalogStorage the catalog is built on, see
-   * ncm_mset_catalog_new_from_storage(). Given, it must hold a description, and the
-   * catalog takes no #NcmMSetCatalog:mset and no #NcmMSetCatalog:filename. The catalog's
-   * sync mode, sync interval and read block are then the storage's.
+   * ncm_mset_catalog_new_from_storage(). It holds the description, the rows, the RNG,
+   * the Markovian id and the sampler segments; the catalog builds its statistics from
+   * its rows.
    *
    */
   g_object_class_install_property (object_class,
@@ -1066,6 +722,37 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
+/*
+ * A catalog of the free parameters of mset and the additional values named, on a new
+ * memory storage, without a -2ln(p) column and with the undefined run type. Aborts on an
+ * invalid input.
+ */
+static NcmMSetCatalog *
+_ncm_mset_catalog_new_memory (NcmMSet *mset, guint nchains, gboolean weighted, gchar **names, gchar **symbols)
+{
+  GError *error            = NULL;
+  NcmMSetCatalogDesc *desc = ncm_mset_catalog_desc_new (mset, nchains, weighted,
+                                                        (const gchar * const *) names, (const gchar * const *) symbols,
+                                                        -1, NCM_MSET_CATALOG_RTYPE_UNDEFINED, &error);
+  NcmMSetCatalogStorage *storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_memory_new ());
+  NcmMSetCatalog *mcat;
+
+  if (error != NULL)
+    g_error ("ncm_mset_catalog_new: %s", error->message);
+
+  ncm_mset_catalog_storage_set_desc (storage, desc, &error);
+
+  if (error != NULL)
+    g_error ("ncm_mset_catalog_new: %s", error->message);
+
+  mcat = ncm_mset_catalog_new_from_storage (storage, 0);
+
+  ncm_mset_catalog_storage_free (storage);
+  ncm_mset_catalog_desc_free (desc);
+
+  return mcat;
+}
+
 /**
  * ncm_mset_catalog_new:
  * @mset: a #NcmMSet
@@ -1075,8 +762,10 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
  * @...: a name and a symbol for each additional value
  *
  * Creates a #NcmMSetCatalog for the free parameters of @mset, which must not change
- * while the catalog is in use, on a #NcmMSetCatalogStorageMemory. With more than one
- * chain the statistics of each chain are kept separately.
+ * while the catalog is in use, on a #NcmMSetCatalogStorageMemory, without a $-2\ln(p)$
+ * column (ncm_mset_catalog_set_m2lnp_var()) and with the undefined run type
+ * (ncm_mset_catalog_set_run_type()). With more than one chain the statistics of each
+ * chain are kept separately.
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
@@ -1108,14 +797,7 @@ ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean we
   symbols[i] = NULL;
 
   {
-    NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
-                                         "mset",             mset,
-                                         "nadd-vals",        nadd_vals,
-                                         "nchains",          nchains,
-                                         "weighted",         weighted,
-                                         "nadd-val-names",   names,
-                                         "nadd-val-symbols", symbols,
-                                         NULL);
+    NcmMSetCatalog *mcat = _ncm_mset_catalog_new_memory (mset, nchains, weighted, names, symbols);
 
     g_free (names);
     g_free (symbols);
@@ -1141,61 +823,10 @@ ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean we
 NcmMSetCatalog *
 ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols)
 {
-  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
-                                       "mset",             mset,
-                                       "nadd-vals",        nadd_vals,
-                                       "nchains",          nchains,
-                                       "weighted",         weighted,
-                                       "nadd-val-names",   names,
-                                       "nadd-val-symbols", symbols,
-                                       NULL);
+  g_assert_cmpuint (g_strv_length (names), ==, nadd_vals);
+  g_assert_cmpuint (g_strv_length (symbols), ==, nadd_vals);
 
-  return mcat;
-}
-
-/**
- * ncm_mset_catalog_new_from_file:
- * @filename: catalog FITS file name
- * @burnin: number of leading rows to drop
- *
- * Creates a #NcmMSetCatalog on a writable #NcmMSetCatalogStorageFits of @filename, which
- * must exist. The description, the model set, the rows and the run metadata are read
- * from the file (see #NcmMSetCatalogStorageFits for the files of the previous library).
- * @burnin is applied as in ncm_mset_catalog_set_burnin().
- *
- * Returns: (transfer full): a new #NcmMSetCatalog
- */
-NcmMSetCatalog *
-ncm_mset_catalog_new_from_file (const gchar *filename, glong burnin)
-{
-  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
-                                       "filename", filename,
-                                       "burnin", burnin,
-                                       NULL);
-
-  return mcat;
-}
-
-/**
- * ncm_mset_catalog_new_from_file_ro:
- * @filename: catalog FITS file name
- * @burnin: number of leading rows to drop
- *
- * Creates a #NcmMSetCatalog as ncm_mset_catalog_new_from_file(), opening @filename
- * read-only.
- *
- * Returns: (transfer full): a new #NcmMSetCatalog
- */
-NcmMSetCatalog *
-ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin)
-{
-  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
-                                       "filename", filename,
-                                       "read-only", TRUE,
-                                       "burnin", burnin,
-                                       NULL);
-
-  return mcat;
+  return _ncm_mset_catalog_new_memory (mset, nchains, weighted, names, symbols);
 }
 
 /**
@@ -1258,7 +889,7 @@ _ncm_mset_catalog_open_ro (const gchar *filename, const gchar *func)
  *
  * Reads the number of rows and of chains of @filename from its header, without loading
  * the catalog, e.g. to convert a burn-in from iterations to rows (see
- * ncm_mset_catalog_set_burnin()) before ncm_mset_catalog_new_from_file_ro().
+ * ncm_mset_catalog_set_burnin()) before ncm_mset_catalog_new_from_storage().
  *
  */
 void
@@ -1348,42 +979,58 @@ ncm_mset_catalog_clear (NcmMSetCatalog **mcat)
 }
 
 /*
- * A FITS storage of filename with the catalog's sync mode, sync interval and read block,
- * keeping the last two ensembles in memory; the file is opened when it exists. Aborts
- * when it cannot be read.
+ * A writable FITS storage of filename with the sync mode and sync interval of the
+ * catalog's storage and the read block and kept rows of its FITS storage (the defaults
+ * for a memory one). The file is opened at its first use.
  */
 static NcmMSetCatalogStorage *
-_ncm_mset_catalog_new_fits_storage (NcmMSetCatalog *mcat, const gchar *filename, gboolean read_only)
+_ncm_mset_catalog_new_fits_storage (NcmMSetCatalog *mcat, const gchar *filename)
 {
-  NcmMSetCatalogPrivate *self    = ncm_mset_catalog_get_instance_private (mcat);
-  GError *error                  = NULL;
-  NcmMSetCatalogStorage *storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS,
-                                                 "filename", filename,
-                                                 "read-only", read_only,
-                                                 "read-block", self->read_block,
-                                                 "keep-last", 2,
-                                                 "smode", self->smode,
-                                                 "sync-interval", self->sync_interval,
-                                                 NULL);
+  NcmMSetCatalogPrivate *self             = ncm_mset_catalog_get_instance_private (mcat);
+  NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
+  NcmMSetCatalogSync smode                = NCM_MSET_CATALOG_SYNC_AUTO;
+  gdouble sync_interval                   = 0.0;
+  guint read_block                        = 1024;
+  guint keep_last                         = 2;
 
-  ncm_mset_catalog_storage_peek_desc (storage, &error);
+  g_object_get (self->storage, "smode", &smode, "sync-interval", &sync_interval, NULL);
 
-  if (error != NULL)
-    g_error ("ncm_mset_catalog: cannot open catalog file `%s': %s", filename, error->message);
+  if (storage_fits != NULL)
+    g_object_get (storage_fits, "read-block", &read_block, "keep-last", &keep_last, NULL);
 
-  return storage;
+  return g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS,
+                       "filename", filename,
+                       "read-only", FALSE,
+                       "read-block", read_block,
+                       "keep-last", keep_last,
+                       "smode", smode,
+                       "sync-interval", sync_interval,
+                       NULL);
 }
 
-/* A memory storage with the catalog's sync mode and sync interval. */
+/* A memory storage with the sync mode and sync interval of the catalog's storage. */
 static NcmMSetCatalogStorage *
 _ncm_mset_catalog_new_memory_storage (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  NcmMSetCatalogSync smode    = NCM_MSET_CATALOG_SYNC_AUTO;
+  gdouble sync_interval       = 0.0;
+
+  g_object_get (self->storage, "smode", &smode, "sync-interval", &sync_interval, NULL);
 
   return g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_MEMORY,
-                       "smode", self->smode,
-                       "sync-interval", self->sync_interval,
+                       "smode", smode,
+                       "sync-interval", sync_interval,
                        NULL);
+}
+
+/* Whether the storage is a read-only FITS storage. */
+static gboolean
+_ncm_mset_catalog_is_read_only (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
+
+  return (storage_fits != NULL) && ncm_mset_catalog_storage_fits_get_read_only (storage_fits);
 }
 
 /* The storage as a FITS storage, NULL for any other storage. */
@@ -1635,138 +1282,6 @@ _ncm_mset_catalog_add_row (NcmMSetCatalog *mcat, NcmVector *row)
 }
 
 /*
- * Copies the rows of src after the catalog's burn-in into dst, one recording per sampler
- * segment of src (one recording named by the sampler string, or the run type, when src
- * has no segment), and writes the Markovian id. dst must hold the description and no
- * rows.
- */
-static void
-_ncm_mset_catalog_copy_rows (NcmMSetCatalog *mcat, NcmMSetCatalogStorage *src, NcmMSetCatalogStorage *dst)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  GError *error               = NULL;
-  const guint nrows           = ncm_mset_catalog_storage_nrows (src, &error);
-  const guint nsegs           = ncm_mset_catalog_storage_n_samplers (src, &error);
-  const gint markid           = ncm_mset_catalog_get_markovian_id (mcat);
-  gboolean recording          = FALSE;
-  guint i;
-
-  _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-
-  if (nrows <= (guint) self->burnin)
-    return;
-
-  g_object_set (dst, "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
-
-  if (nsegs == 0)
-  {
-    ncm_mset_catalog_storage_start_recording (dst, (self->sampler_str != NULL) ? self->sampler_str : self->rtype_str,
-                                              self->sampler_opts_str, &error);
-    _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-    recording = TRUE;
-
-    for (i = self->burnin; i < nrows; i++)
-    {
-      NcmVector *row = ncm_mset_catalog_storage_peek_row (src, i, &error);
-
-      _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-      ncm_mset_catalog_storage_add_row (dst, row, &error);
-      _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-    }
-  }
-  else
-  {
-    guint s;
-
-    for (s = 0; s < nsegs; s++)
-    {
-      gchar *sampler = NULL;
-      gchar *options = NULL;
-      guint start    = 0;
-      guint end      = nrows;
-
-      ncm_mset_catalog_storage_get_sampler (src, s, &start, &sampler, &options, &error);
-      _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-
-      if (s + 1 < nsegs)
-      {
-        ncm_mset_catalog_storage_get_sampler (src, s + 1, &end, NULL, NULL, &error);
-        _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-      }
-
-      start = MAX (start, (guint) self->burnin);
-
-      if (start < end)
-      {
-        if (recording)
-        {
-          ncm_mset_catalog_storage_end_recording (dst, &error);
-          _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-        }
-
-        ncm_mset_catalog_storage_start_recording (dst, sampler, options, &error);
-        _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-        recording = TRUE;
-
-        for (i = start; i < end; i++)
-        {
-          NcmVector *row = ncm_mset_catalog_storage_peek_row (src, i, &error);
-
-          _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-          ncm_mset_catalog_storage_add_row (dst, row, &error);
-          _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-        }
-      }
-
-      g_free (sampler);
-      g_free (options);
-    }
-  }
-
-  g_assert (recording);
-
-  if (markid > 0)
-  {
-    ncm_mset_catalog_storage_set_markovian_id (dst, markid, &error);
-    _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-  }
-
-  ncm_mset_catalog_storage_end_recording (dst, &error);
-  _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_copy_rows");
-
-  g_object_set (dst, "smode", self->smode, NULL);
-}
-
-/*
- * Replaces the storage by new_storage, which holds no description: the description, the
- * RNG and the rows after the burn-in are copied into it, and the burn-in is then zero.
- * The previous storage is released; a FITS one is left as it was.
- */
-static void
-_ncm_mset_catalog_switch_storage (NcmMSetCatalog *mcat, NcmMSetCatalogStorage *new_storage)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  GError *error               = NULL;
-
-  _ncm_mset_catalog_end_recording (mcat);
-
-  ncm_mset_catalog_storage_set_desc (new_storage, self->desc, &error);
-  _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_set_file");
-
-  if (self->rng != NULL)
-  {
-    ncm_mset_catalog_storage_set_rng (new_storage, self->rng, &error);
-    _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_set_file");
-  }
-
-  _ncm_mset_catalog_copy_rows (mcat, self->storage, new_storage);
-
-  ncm_mset_catalog_storage_clear (&self->storage);
-  self->storage = new_storage;
-  self->burnin  = 0;
-}
-
-/*
  * Replaces the storage of an empty catalog by a new one of the same kind holding desc,
  * which becomes the catalog's description, and the catalog's RNG. A FITS file is
  * recreated. A read-only catalog aborts.
@@ -1788,20 +1303,21 @@ _ncm_mset_catalog_rebuild_empty (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc,
     if (ncm_mset_catalog_storage_fits_get_read_only (storage_fits))
       g_error ("%s: cannot change a read-only catalog (`%s').", func, filename);
 
+    new_storage = _ncm_mset_catalog_new_fits_storage (mcat, filename);
+
     _ncm_mset_catalog_end_recording (mcat);
     ncm_mset_catalog_storage_clear (&self->storage);
 
     if (g_file_test (filename, G_FILE_TEST_EXISTS))
       g_unlink (filename);
 
-    new_storage = _ncm_mset_catalog_new_fits_storage (mcat, filename, FALSE);
     g_free (filename);
   }
   else
   {
+    new_storage = _ncm_mset_catalog_new_memory_storage (mcat);
     _ncm_mset_catalog_end_recording (mcat);
     ncm_mset_catalog_storage_clear (&self->storage);
-    new_storage = _ncm_mset_catalog_new_memory_storage (mcat);
   }
 
   ncm_mset_catalog_storage_set_desc (new_storage, desc, &error);
@@ -1821,213 +1337,12 @@ _ncm_mset_catalog_rebuild_empty (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc,
   self->cur_id = -1;
 }
 
-static void
-_ncm_mset_catalog_set_add_val_name_array (NcmMSetCatalog *mcat, gchar **names)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  if (names != NULL)
-  {
-    const guint len = g_strv_length (names);
-    guint i;
-
-    g_ptr_array_set_size (self->add_vals_names, len);
-
-    for (i = 0; i < len; i++)
-    {
-      g_clear_pointer (&g_ptr_array_index (self->add_vals_names, i), g_free);
-      g_ptr_array_index (self->add_vals_names, i) = g_strdup (names[i]);
-    }
-  }
-  else
-  {
-    g_ptr_array_set_size (self->add_vals_names, 0);
-  }
-}
-
-static void
-_ncm_mset_catalog_set_add_val_symbol_array (NcmMSetCatalog *mcat, gchar **symbols)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  if (symbols != NULL)
-  {
-    const guint len = g_strv_length (symbols);
-    guint i;
-
-    g_ptr_array_set_size (self->add_vals_symbs, len);
-
-    for (i = 0; i < len; i++)
-    {
-      g_clear_pointer (&g_ptr_array_index (self->add_vals_symbs, i), g_free);
-      g_ptr_array_index (self->add_vals_symbs, i) = g_strdup (symbols[i]);
-    }
-  }
-  else
-  {
-    g_ptr_array_set_size (self->add_vals_symbs, 0);
-  }
-}
-
-/**
- * ncm_mset_catalog_set_file:
- * @mcat: a #NcmMSetCatalog
- * @filename: (nullable): a FITS file name, or %NULL
- *
- * Puts @mcat on a writable #NcmMSetCatalogStorageFits of @filename. A catalog with rows
- * writes them to @filename, which must then not hold rows; an empty catalog attaches to
- * @filename, created when it does not exist, and takes its rows (with the burn-in of
- * ncm_mset_catalog_set_burnin()) and run metadata. The description of @filename must be
- * compatible with the catalog's (ncm_mset_catalog_desc_is_compatible()), else it
- * aborts. With %NULL the catalog moves to a #NcmMSetCatalogStorageMemory holding its
- * rows; the file is left as it was. The open recording is closed first.
- *
- */
-void
-ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-  const gchar *cur_filename;
-
-  if (!self->constructed)
-  {
-    if (self->file != NULL)
-      g_error ("ncm_mset_catalog_set_file: file already set before construction.");
-
-    self->file = g_strdup (filename);
-
-    return;
-  }
-
-  cur_filename = ncm_mset_catalog_peek_filename (mcat);
-
-  if ((cur_filename != NULL) && (filename != NULL) && (strcmp (cur_filename, filename) == 0))
-    return;
-
-  if (filename == NULL)
-  {
-    if (cur_filename != NULL)
-      _ncm_mset_catalog_switch_storage (mcat, _ncm_mset_catalog_new_memory_storage (mcat));
-
-    return;
-  }
-
-  {
-    NcmMSetCatalogStorage *new_storage = _ncm_mset_catalog_new_fits_storage (mcat, filename, FALSE);
-    GError *error                      = NULL;
-
-    if (!ncm_mset_catalog_is_empty (mcat))
-    {
-      const guint file_nrows = ncm_mset_catalog_storage_nrows (new_storage, &error);
-
-      _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_set_file");
-
-      if (file_nrows > 0)
-        g_error ("ncm_mset_catalog_set_file: the catalog has %u row(s) and file `%s' has %u; "
-                 "a catalog with rows is written to a file without rows.",
-                 ncm_mset_catalog_len (mcat), filename, file_nrows);
-
-      _ncm_mset_catalog_switch_storage (mcat, new_storage);
-    }
-    else
-    {
-      _ncm_mset_catalog_end_recording (mcat);
-
-      ncm_mset_catalog_storage_set_desc (new_storage, self->desc, &error);
-      _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_set_file");
-
-      ncm_mset_catalog_storage_clear (&self->storage);
-      self->storage = new_storage;
-
-      ncm_mset_catalog_reset_stats (mcat);
-      _ncm_mset_catalog_load_storage (mcat);
-    }
-  }
-}
-
-/**
- * ncm_mset_catalog_set_sync_mode:
- * @mcat: a #NcmMSetCatalog
- * @smode: sync mode
- *
- * Sets #NcmMSetCatalog:smode, the sync mode of the storage.
- *
- */
-void
-ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync smode)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  self->smode = smode;
-
-  if (self->storage != NULL)
-    g_object_set (self->storage, "smode", smode, NULL);
-}
-
-/**
- * ncm_mset_catalog_set_sync_interval:
- * @mcat: a #NcmMSetCatalog
- * @interval: minimum time between syncs, in seconds
- *
- * Sets the minimum time between the syncs of ncm_mset_catalog_timed_sync() and of the
- * storage in %NCM_MSET_CATALOG_SYNC_TIMED mode.
- *
- */
-void
-ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  self->sync_interval = interval;
-
-  if (self->storage != NULL)
-    g_object_set (self->storage, "sync-interval", interval, NULL);
-}
-
-/**
- * ncm_mset_catalog_set_read_block:
- * @mcat: a #NcmMSetCatalog
- * @read_block: number of rows, at least one
- *
- * Sets #NcmMSetCatalog:read-block; nothing changes for a catalog in memory.
- *
- */
-void
-ncm_mset_catalog_set_read_block (NcmMSetCatalog *mcat, guint read_block)
-{
-  NcmMSetCatalogPrivate *self             = ncm_mset_catalog_get_instance_private (mcat);
-  NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
-
-  g_assert_cmpuint (read_block, >, 0);
-
-  self->read_block = read_block;
-
-  if (storage_fits != NULL)
-    g_object_set (storage_fits, "read-block", read_block, NULL);
-}
-
-/**
- * ncm_mset_catalog_get_read_block:
- * @mcat: a #NcmMSetCatalog
- *
- * Gets #NcmMSetCatalog:read-block.
- *
- * Returns: the number of rows read from the file at once.
- */
-guint
-ncm_mset_catalog_get_read_block (NcmMSetCatalog *mcat)
-{
-  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
-
-  return self->read_block;
-}
-
 /**
  * ncm_mset_catalog_set_run_type:
  * @mcat: a #NcmMSetCatalog
  * @rtype_str: description of the run
  *
- * Sets #NcmMSetCatalog:run-type-string, the run type of the catalog's description
+ * Sets the run type of the catalog's description
  * (ncm_mset_catalog_desc_get_run_type()). On an empty catalog a new value rebuilds the
  * storage with the new description (a FITS file is recreated); on a non-empty one it
  * aborts.
@@ -2042,14 +1357,6 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
 
   if ((self->rtype_str != NULL) && (strcmp (self->rtype_str, rtype_str) == 0))
     return;
-
-  if (!self->constructed)
-  {
-    g_clear_pointer (&self->rtype_str, g_free);
-    self->rtype_str = g_strdup (rtype_str);
-
-    return;
-  }
 
   if (!ncm_mset_catalog_is_empty (mcat))
     g_error ("ncm_mset_catalog_set_run_type: cannot change run type string in a non-empty catalog, actual: `%s' new: `%s'.",
@@ -2088,14 +1395,6 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
 
   if (self->rng == rng)
     return;
-
-  if (!self->constructed)
-  {
-    ncm_rng_clear (&self->rng);
-    self->rng = ncm_rng_ref (rng);
-
-    return;
-  }
 
   if (self->rng != NULL)
   {
@@ -2139,16 +1438,19 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
  * @mcat: a #NcmMSetCatalog
  * @check: unused
  *
- * Calls ncm_mset_catalog_sync() when the time since the last sync exceeds the interval
- * of ncm_mset_catalog_set_sync_interval().
+ * Calls ncm_mset_catalog_sync() when the time since the last sync exceeds
+ * #NcmMSetCatalogStorage:sync-interval of the storage.
  *
  */
 void
 ncm_mset_catalog_timed_sync (NcmMSetCatalog *mcat, gboolean check)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+  gdouble sync_interval       = 0.0;
 
-  if (g_timer_elapsed (self->sync_timer, NULL) > self->sync_interval)
+  g_object_get (self->storage, "sync-interval", &sync_interval, NULL);
+
+  if (g_timer_elapsed (self->sync_timer, NULL) > sync_interval)
   {
     g_timer_start (self->sync_timer);
     ncm_mset_catalog_sync (mcat, check);
@@ -2264,13 +1566,6 @@ ncm_mset_catalog_set_m2lnp_var (NcmMSetCatalog *mcat, const gint p)
 
   if (p == self->m2lnp_var)
     return;
-
-  if (!self->constructed)
-  {
-    self->m2lnp_var = p;
-
-    return;
-  }
 
   if (!ncm_mset_catalog_is_empty (mcat))
     g_error ("ncm_mset_catalog_set_m2lnp_var: cannot change the -2ln(p) column in a non-empty catalog, actual: %d new: %d.",
@@ -2604,7 +1899,7 @@ ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, guint *co
  * set before that, and is meant for analyzing a catalog. Loading aborts when @burnin is
  * not a multiple of the number of chains, since the rows read would then be assigned to
  * the wrong chains. The burn-in is zero again once the catalog leaves the file
- * (ncm_mset_catalog_set_file(), ncm_mset_catalog_reset()).
+ * (ncm_mset_catalog_reset()).
  *
  */
 void
@@ -3965,7 +3260,7 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
  * @post_lnnorm_sd: (out): standard deviation of the estimate
  *
  * Estimates $\ln Z$, $Z = \int e^{-m/2}\,\mathrm{d}\theta$ over the box of the
- * parameter bounds, $m$ the #NcmMSetCatalog:m2lnp-var column: the log evidence for a
+ * parameter bounds, $m$ the $-2\ln(p)$ column (ncm_mset_catalog_get_m2lnp_var()): the log evidence for a
  * flat prior of unit density on the box (for a normalized flat prior subtract the log of
  * the box volume). The estimate averages $g/e^{-m/2}$ over the rows, $g$ the Gaussian
  * with the rows' mean and $0.8^2$ times their covariance, normalized as
@@ -3975,7 +3270,7 @@ _ncm_mset_catalog_get_post_lnnorm_hyperbox (NcmMSetCatalog *mcat, gboolean use_b
  *
  * @post_lnnorm_sd is the spread of the estimate over slices of the rows, or over
  * bootstrap resamples; below 1000 rows the slices give none, and it is NaN with a
- * warning. Without #NcmMSetCatalog:m2lnp-var it warns and returns zero; a covariance
+ * warning. Without a $-2\ln(p)$ column (ncm_mset_catalog_get_m2lnp_var()) it warns and returns zero; a covariance
  * that is not positive definite warns and gives zero, with a NaN error.
  *
  * Returns: the estimate of $\ln Z$
@@ -4046,7 +3341,7 @@ _ncm_mset_catalog_sort_by_m2lnp (NcmMSetCatalog *mcat)
  *
  * Estimates the log volume of the highest-posterior region holding the fraction @level
  * of the rows: $Z$ (ncm_mset_catalog_get_post_lnnorm()) times the average over the rows
- * of $e^{m/2}$ on that region, $m$ the #NcmMSetCatalog:m2lnp-var column. @glnvol gets
+ * of $e^{m/2}$ on that region, $m$ the $-2\ln(p)$ column (ncm_mset_catalog_get_m2lnp_var()). @glnvol gets
  * the log volume of the same region for a Gaussian with the rows' covariance $C$, the
  * ellipsoid $\theta^T C^{-1}\theta \leq \chi^2_n(\text{@level})$. With fewer rows than
  * $1/\text{@level}$ it warns and returns zero.
@@ -4113,7 +3408,7 @@ ncm_mset_catalog_get_post_lnvol (NcmMSetCatalog *mcat, const gdouble level, gdou
  * @p: fraction of the rows, in $(0, 1)$
  * @nth: (out) (allow-none): number of rows with a smaller value
  *
- * Finds the value of the #NcmMSetCatalog:m2lnp-var column at sorted position
+ * Finds the value of the $-2\ln(p)$ column (ncm_mset_catalog_get_m2lnp_var()) at sorted position
  * $\lfloor p\,n\rfloor$: the fraction @p of the $n$ rows have a smaller value.
  *
  * Returns: the @p quantile of $-2\ln L$
@@ -4151,7 +3446,7 @@ ncm_mset_catalog_get_nth_m2lnL_percentile (NcmMSetCatalog *mcat, const gdouble p
  * ncm_mset_catalog_get_bestfit_m2lnL:
  * @mcat: a #NcmMSetCatalog
  *
- * Returns: the smallest value of the #NcmMSetCatalog:m2lnp-var column so far
+ * Returns: the smallest value of the $-2\ln(p)$ column (ncm_mset_catalog_get_m2lnp_var()) so far
  */
 gdouble
 ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
@@ -4166,7 +3461,7 @@ ncm_mset_catalog_get_bestfit_m2lnL (NcmMSetCatalog *mcat)
  * @mcat: a #NcmMSetCatalog
  *
  * Returns: (transfer full) (nullable): a copy of the row with the smallest
- *   #NcmMSetCatalog:m2lnp-var, or %NULL for an empty catalog
+ *   a $-2\ln(p)$ column (ncm_mset_catalog_get_m2lnp_var()), or %NULL for an empty catalog
  */
 NcmVector *
 ncm_mset_catalog_get_bestfit_row (NcmMSetCatalog *mcat)
@@ -5489,15 +4784,18 @@ _ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint mar
 {
   NcmMSetCatalogPrivate *self             = ncm_mset_catalog_get_instance_private (mcat);
   NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
+  NcmMSetCatalogSync smode                = NCM_MSET_CATALOG_SYNC_AUTO;
   GError *error                           = NULL;
   guint i;
 
+  g_object_get (self->storage, "smode", &smode, NULL);
   _ncm_mset_catalog_end_recording (mcat);
 
   if (storage_fits != NULL)
   {
-    gchar *file = g_strdup (ncm_mset_catalog_storage_fits_peek_filename (storage_fits));
-    guint bak_n = 0;
+    gchar *file                        = g_strdup (ncm_mset_catalog_storage_fits_peek_filename (storage_fits));
+    NcmMSetCatalogStorage *new_storage = _ncm_mset_catalog_new_fits_storage (mcat, file);
+    guint bak_n                        = 0;
 
     ncm_mset_catalog_storage_clear (&self->storage);
 
@@ -5517,7 +4815,7 @@ _ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint mar
       bak_n++;
     }
 
-    self->storage = _ncm_mset_catalog_new_fits_storage (mcat, file, FALSE);
+    self->storage = new_storage;
     g_free (file);
 
     ncm_mset_catalog_storage_set_desc (self->storage, self->desc, &error);
@@ -5565,7 +4863,7 @@ _ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint mar
     ncm_mset_catalog_storage_end_recording (self->storage, &error);
     _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_rewrite");
 
-    g_object_set (self->storage, "smode", self->smode, NULL);
+    g_object_set (self->storage, "smode", smode, NULL);
   }
   else
   {
@@ -5594,14 +4892,9 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc, const guint thin)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
-  /* This rewrites the catalog in place: the file is renamed to <file>.<n>.bak and a fresh
-   * one written, which goes around the read-only FITS handle opened by
-   * ncm_mset_catalog_new_from_file_ro(). No analysis path needs that - the numcosmo CLI
-   * resolves --burnin/--tail to a row count at read time and thins the analysis rather
-   * than the file - so a read-only catalog reaching here is a programming error. The
-   * superseded tools/mcat_analyze.c is the one caller that did it, silently destroying
-   * the catalog it was asked only to read. */
-  g_return_if_fail (!self->readonly);
+  /* The catalog is rewritten in place; a read-only one is refused: the burn-in and the
+   * thinning of an analysis are resolved at read time. */
+  g_return_if_fail (!_ncm_mset_catalog_is_read_only (mcat));
 
   g_assert_cmpuint (thin, >=, 1);
   g_assert_cmpuint (tc,   >=, 0);
@@ -5672,13 +4965,16 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
   GPtrArray *rows             = _ncm_mset_catalog_collect_rows (mcat, 0, 1);
   const guint mark_rows       = ncm_mset_catalog_get_markovian_id (mcat);
   NcmMSetCatalogDesc *desc    = _ncm_mset_catalog_new_desc (mcat, 1, self->m2lnp_var, self->rtype_str);
+  NcmMSetCatalogSync smode    = NCM_MSET_CATALOG_SYNC_AUTO;
   GError *error               = NULL;
   NcmMSetCatalogStorage *out;
   guint kept_before = 0;
   guint i, ndel;
 
+  g_object_get (self->storage, "smode", &smode, NULL);
+
   if (out_file != NULL)
-    out = _ncm_mset_catalog_new_fits_storage (mcat, out_file, FALSE);
+    out = _ncm_mset_catalog_new_fits_storage (mcat, out_file);
   else
     out = _ncm_mset_catalog_new_memory_storage (mcat);
 
@@ -5742,7 +5038,7 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
   ncm_mset_catalog_storage_end_recording (self->storage, &error);
   _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_trim_oob");
 
-  g_object_set (self->storage, "smode", self->smode, NULL);
+  g_object_set (self->storage, "smode", smode, NULL);
 
   g_ptr_array_unref (rows);
 
@@ -5768,12 +5064,9 @@ ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
 {
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
-  /* These three rewrite the catalog in place: the file is renamed to <file>.<n>.bak and a
-   * fresh one written, which goes around the read-only FITS handle opened by
-   * ncm_mset_catalog_new_from_file_ro(). Burn-in belongs at read time - the burnin argument
-   * of the _ro constructor, or --burnin on catalog analyze and plot-corner - so a read-only
-   * catalog reaching here is a programming error, not a request. */
-  g_return_if_fail (!self->readonly);
+  /* The catalog is rewritten in place; a read-only one is refused: the burn-in of an
+   * analysis is resolved at read time. */
+  g_return_if_fail (!_ncm_mset_catalog_is_read_only (mcat));
 
   const gint last_t = ncm_mset_catalog_len (mcat);
 

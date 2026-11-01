@@ -80,8 +80,7 @@ typedef struct _NcmFitESMCMCPrivate
   NcmMemoryPool *walker_pool;
   NcmMSetTransKern *sampler;
   NcmMSetCatalog *mcat;
-  gchar *data_file;
-  guint read_block;
+  NcmMSetCatalogStorage *storage;
   NcmRNG *rng;
   NcmFitRunMsgs mtype;
   NcmTimer *nt;
@@ -151,8 +150,7 @@ enum
   PROP_MTYPE,
   PROP_USE_THREADS,
   PROP_USE_MPI,
-  PROP_DATA_FILE,
-  PROP_READ_BLOCK,
+  PROP_STORAGE,
   PROP_FUNC_ARRAY,
   PROP_INIT_MAX_ROUNDS,
 };
@@ -179,8 +177,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
 
   self->sampler           = NULL;
   self->mcat              = NULL;
-  self->data_file         = NULL;
-  self->read_block        = 1024;
+  self->storage           = NULL;
   self->rng               = NULL;
   self->mtype             = NCM_FIT_RUN_MSGS_NONE;
   self->nt                = ncm_timer_new ();
@@ -385,11 +382,8 @@ _ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *valu
     case PROP_USE_MPI:
       ncm_fit_esmcmc_use_mpi (esmcmc, g_value_get_boolean (value));
       break;
-    case PROP_DATA_FILE:
-      ncm_fit_esmcmc_set_data_file (esmcmc, g_value_get_string (value));
-      break;
-    case PROP_READ_BLOCK:
-      ncm_fit_esmcmc_set_read_block (esmcmc, g_value_get_uint (value));
+    case PROP_STORAGE:
+      ncm_fit_esmcmc_set_storage (esmcmc, g_value_get_object (value));
       break;
     case PROP_FUNC_ARRAY:
     {
@@ -479,11 +473,8 @@ _ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_USE_MPI:
       g_value_set_uint (value, self->use_mpi);
       break;
-    case PROP_DATA_FILE:
-      g_value_set_string (value, self->data_file);
-      break;
-    case PROP_READ_BLOCK:
-      g_value_set_uint (value, self->read_block);
+    case PROP_STORAGE:
+      g_value_set_object (value, self->storage);
       break;
     case PROP_FUNC_ARRAY:
       g_value_set_boxed (value, self->func_oa);
@@ -511,7 +502,7 @@ _ncm_fit_esmcmc_dispose (GObject *object)
   ncm_serialize_clear (&self->ser);
   ncm_mset_catalog_clear (&self->mcat);
   ncm_rng_clear (&self->rng);
-  g_clear_pointer (&self->data_file, g_free);
+  ncm_mset_catalog_storage_clear (&self->storage);
 
   ncm_fit_esmcmc_walker_clear (&self->walker);
 
@@ -686,34 +677,20 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT  | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcmFitESMCMC:data-file:
+   * NcmFitESMCMC:storage:
    *
-   * The FITS file of the catalog, see ncm_fit_esmcmc_set_data_file(); %NULL keeps the
-   * catalog in memory.
+   * The #NcmMSetCatalogStorage of the catalog that ncm_fit_esmcmc_start_run() builds, see
+   * ncm_fit_esmcmc_set_storage(); without one the catalog is kept in a
+   * #NcmMSetCatalogStorageMemory.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_DATA_FILE,
-                                   g_param_spec_string ("data-file",
+                                   PROP_STORAGE,
+                                   g_param_spec_object ("storage",
                                                         NULL,
-                                                        "Data filename",
-                                                        NULL,
+                                                        "Catalog storage",
+                                                        NCM_TYPE_MSET_CATALOG_STORAGE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcmFitESMCMC:read-block:
-   *
-   * Rows read from the catalog file at once, #NcmMSetCatalogStorageFits:read-block of
-   * the storage built by ncm_fit_esmcmc_start_run().
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_READ_BLOCK,
-                                   g_param_spec_uint ("read-block",
-                                                      NULL,
-                                                      "Rows read from the catalog file at once",
-                                                      1, G_MAXUINT, 1024,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_FUNC_ARRAY,
                                    g_param_spec_boxed ("function-array",
@@ -880,50 +857,29 @@ ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc)
 }
 
 /**
- * ncm_fit_esmcmc_set_data_file:
+ * ncm_fit_esmcmc_set_storage:
  * @esmcmc: a #NcmFitESMCMC
- * @filename: a file name
+ * @storage: a #NcmMSetCatalogStorage
  *
- * Makes @filename the file of the catalog that ncm_fit_esmcmc_start_run() builds: a
- * #NcmMSetCatalogStorageFits on it, created when it does not exist, continued when it
- * does. Once the catalog is built the storage cannot change, so calling it after the
- * first ncm_fit_esmcmc_start_run() aborts.
+ * Makes @storage the storage of the catalog that ncm_fit_esmcmc_start_run() builds: the
+ * catalog's description is set on it then, a #NcmMSetCatalogStorageFits being created
+ * when its file does not exist and continued when it does. Once the catalog is built
+ * the storage cannot change, so calling it after the first ncm_fit_esmcmc_start_run()
+ * aborts.
  *
  */
 void
-ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename)
+ncm_fit_esmcmc_set_storage (NcmFitESMCMC *esmcmc, NcmMSetCatalogStorage *storage)
 {
   NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
 
-  g_assert_nonnull (filename);
+  g_assert_nonnull (storage);
 
   if (self->mcat != NULL)
-    g_error ("ncm_fit_esmcmc_set_data_file: the catalog is built by ncm_fit_esmcmc_start_run() and its storage cannot change.");
+    g_error ("ncm_fit_esmcmc_set_storage: the catalog is built by ncm_fit_esmcmc_start_run() and its storage cannot change.");
 
-  g_clear_pointer (&self->data_file, g_free);
-  self->data_file = g_strdup (filename);
-}
-
-/**
- * ncm_fit_esmcmc_set_read_block:
- * @esmcmc: a #NcmFitESMCMC
- * @read_block: rows read from the catalog file at once, at least one
- *
- * Sets #NcmFitESMCMC:read-block, applied to the storage that
- * ncm_fit_esmcmc_start_run() builds and to the catalog once built.
- *
- */
-void
-ncm_fit_esmcmc_set_read_block (NcmFitESMCMC *esmcmc, guint read_block)
-{
-  NcmFitESMCMCPrivate * const self = ncm_fit_esmcmc_get_instance_private (esmcmc);
-
-  g_assert_cmpuint (read_block, >, 0);
-
-  self->read_block = read_block;
-
-  if (self->mcat != NULL)
-    ncm_mset_catalog_set_read_block (self->mcat, read_block);
+  ncm_mset_catalog_storage_clear (&self->storage);
+  self->storage = ncm_mset_catalog_storage_ref (storage);
 }
 
 /*
@@ -938,7 +894,6 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc, GError **error)
   NcmMSet *mset                    = ncm_fit_peek_mset (self->fit);
   const guint nfuncs               = (self->func_oa != NULL) ? self->func_oa->len : 0;
   NcmMSetCatalogDesc *desc;
-  NcmMSetCatalogStorage *storage;
   gchar **names;
   gchar **symbols;
   guint k;
@@ -971,22 +926,16 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc, GError **error)
                                      g_strfreev (symbols);
                             }, );
 
-  if (self->data_file != NULL)
-    storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS,
-                            "filename", self->data_file,
-                            "read-block", self->read_block,
-                            NULL);
-  else
-    storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_MEMORY, NULL);
+  if (self->storage == NULL)
+    self->storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_memory_new ());
 
-  ncm_mset_catalog_storage_set_desc (storage, desc, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, { ncm_mset_catalog_storage_free (storage);
-                                     ncm_mset_catalog_desc_free (desc);
+  ncm_mset_catalog_storage_set_desc (self->storage, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, { ncm_mset_catalog_desc_free (desc);
                                      g_strfreev (names);
                                      g_strfreev (symbols);
                             }, );
 
-  self->mcat = ncm_mset_catalog_new_from_storage (storage, 0);
+  self->mcat = ncm_mset_catalog_new_from_storage (self->storage, 0);
   ncm_mset_catalog_set_functions_array (self->mcat, self->func_oa);
 
   if (self->rng != NULL)
@@ -1000,13 +949,12 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc, GError **error)
       ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
                                   "ncm_fit_esmcmc_start_run: catalog `%s' holds an RNG (%s, seed %lu) and another was set (%s, seed %lu); "
                                   "do not set an RNG when resuming from a file",
-                                  self->data_file, ncm_rng_get_algo (cat_rng), ncm_rng_get_seed (cat_rng),
+                                  ncm_mset_catalog_peek_filename (self->mcat), ncm_rng_get_algo (cat_rng), ncm_rng_get_seed (cat_rng),
                                   ncm_rng_get_algo (self->rng), ncm_rng_get_seed (self->rng));
 
     ncm_rng_clear (&self->rng);
   }
 
-  ncm_mset_catalog_storage_free (storage);
   ncm_mset_catalog_desc_free (desc);
   g_strfreev (names);
   g_strfreev (symbols);
@@ -1850,7 +1798,7 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc, GError **error)
   _ncm_fit_esmcmc_start_recording (esmcmc, ncm_mset_trans_kern_get_name (self->sampler), NULL, error);
   NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
+  g_object_set (ncm_mset_catalog_peek_storage (self->mcat), "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
 
   len = (guint) (self->cur_sample_id + 1);
 
@@ -1918,7 +1866,7 @@ _ncm_fit_esmcmc_real_nthreads (NcmFitESMCMCPrivate * const self)
  * @esmcmc: a #NcmFitESMCMC
  * @error: a #GError
  *
- * Builds the catalog at the first call (ncm_fit_esmcmc_set_data_file()), failing with
+ * Builds the catalog at the first call (ncm_fit_esmcmc_set_storage()), failing with
  * the errors of #NcmMSetCatalogStorage when the file cannot be opened, its description
  * is incompatible or it holds an RNG of another algorithm or seed; a run also fails
  * where a recording cannot be opened on the storage.
@@ -1998,8 +1946,10 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error)
 
   ncm_dataset_register_shared (ncm_likelihood_peek_dataset (lh), self->ser);
 
-  ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
-  ncm_mset_catalog_set_sync_interval (self->mcat, NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL);
+  g_object_set (ncm_mset_catalog_peek_storage (self->mcat),
+                "smode", NCM_MSET_CATALOG_SYNC_TIMED,
+                "sync-interval", NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL,
+                NULL);
 
   ncm_mset_catalog_sync (self->mcat, TRUE);
 
@@ -2490,7 +2440,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
   guint ki               = (self->cur_sample_id + 1) % self->nwalkers;
   guint i;
 
-  ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
+  g_object_set (ncm_mset_catalog_peek_storage (self->mcat), "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
 
   if (self->n > 0)
   {
