@@ -96,6 +96,8 @@ struct _NcmMSetCatalogStorageFits
   gboolean legacy;
   NcmMSetCatalogDesc *desc;
   GArray *porder;
+  guint rowlen;
+  gboolean raw_rows;
   gint first_id;
   GPtrArray *tail;
   guint tail_first;
@@ -143,6 +145,8 @@ ncm_mset_catalog_storage_fits_init (NcmMSetCatalogStorageFits *storage_fits)
   storage_fits->legacy       = FALSE;
   storage_fits->desc         = NULL;
   storage_fits->porder       = g_array_new (FALSE, FALSE, sizeof (gint));
+  storage_fits->rowlen       = 0;
+  storage_fits->raw_rows     = FALSE;
   storage_fits->first_id     = 0;
   storage_fits->tail         = g_ptr_array_new_with_free_func ((GDestroyNotify) & ncm_vector_free);
   storage_fits->tail_first   = 0;
@@ -762,15 +766,44 @@ _ncm_mset_catalog_storage_fits_translate_legacy (NcmMSetCatalogStorageFits *stor
   return g_strdup ((rnew != NULL) ? rnew : rtype);
 }
 
-/* Fills porder with the file column (1-based) of each column of desc. */
+/*
+ * Fills porder with the file column (1-based) of each column of desc, and decides whether
+ * the rows are read and written as raw bytes (raw_rows): every file column a single
+ * double ("1D" or "D") and the row length (NAXIS1) eight bytes per column.
+ */
 static void
 _ncm_mset_catalog_storage_fits_set_porder (NcmMSetCatalogStorageFits *storage_fits, NcmMSetCatalogDesc *desc, GError **error)
 {
   fitsfile *fptr    = FPTR (storage_fits);
   const guint ncols = ncm_mset_catalog_desc_ncols (desc);
+  gint tfields      = 0;
+  glong naxis1      = 0;
+  gint status       = 0;
   guint i;
 
   g_array_set_size (storage_fits->porder, ncols);
+
+  fits_get_num_cols (fptr, &tfields, &status);
+  fits_read_key_lng (fptr, "NAXIS1", &naxis1, NULL, &status);
+  _ncm_mset_catalog_storage_fits_check (status, "NAXIS1", error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  storage_fits->rowlen   = (guint) naxis1;
+  storage_fits->raw_rows = ((guint) tfields == ncols) && ((guint) naxis1 == ncols * sizeof (gdouble));
+
+  for (i = 0; (i < (guint) tfields) && storage_fits->raw_rows; i++)
+  {
+    gchar tform[FLEN_VALUE];
+    gchar *key = g_strdup_printf ("TFORM%u", i + 1);
+
+    fits_read_key_str (fptr, key, tform, NULL, &status);
+    _ncm_mset_catalog_storage_fits_check (status, key, error);
+    g_free (key);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+    if ((strcmp (tform, "1D") != 0) && (strcmp (tform, "D") != 0))
+      storage_fits->raw_rows = FALSE;
+  }
 
   for (i = 0; i < ncols; i++)
   {
@@ -1141,12 +1174,40 @@ _ncm_mset_catalog_storage_fits_ensure_open (NcmMSetCatalogStorageFits *storage_f
   storage_fits->opened = TRUE;
 }
 
+/* Rows per raw read or write: the workspace holds this many rows at most. */
+#define NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS (4096)
+
+/* The big-endian bytes of value, the FITS encoding of a double. */
+static void
+_ncm_mset_catalog_storage_fits_encode (guint8 *dst, const gdouble value)
+{
+  guint64 bits;
+
+  memcpy (&bits, &value, sizeof (guint64));
+  bits = GUINT64_TO_BE (bits);
+  memcpy (dst, &bits, sizeof (guint64));
+}
+
+/* The double encoded by the big-endian bytes at src. */
+static gdouble
+_ncm_mset_catalog_storage_fits_decode (const guint8 *src)
+{
+  guint64 bits;
+  gdouble value;
+
+  memcpy (&bits, src, sizeof (guint64));
+  bits = GUINT64_FROM_BE (bits);
+  memcpy (&value, &bits, sizeof (gdouble));
+
+  return value;
+}
+
 /*
  * Writes the n_pending rows at the end of the tail to the file and drops from the tail
- * the rows beyond keep-last per chain. The rows are written one at a time, every column
- * of a row before the next row: a row lies in one or two file records, so each record is
- * loaded and written once; a column pass over the rows would load every record of the
- * range once per column.
+ * the rows beyond keep-last per chain. Row-major, so each file record is loaded and
+ * written once: with raw_rows the rows are encoded into the workspace and written as
+ * bytes, in chunks of NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS rows appended to the table;
+ * otherwise every column of a row is written before the next row.
  */
 static void
 _ncm_mset_catalog_storage_fits_write_pending (NcmMSetCatalogStorageFits *storage_fits, GError **error)
@@ -1162,12 +1223,41 @@ _ncm_mset_catalog_storage_fits_write_pending (NcmMSetCatalogStorageFits *storage
   if (n == 0)
     return;
 
-  for (k = 0; (k < n) && (status == 0); k++)
+  if (storage_fits->raw_rows)
   {
-    NcmVector *row = g_ptr_array_index (storage_fits->tail, first + k);
+    const guint rowlen = storage_fits->rowlen;
+    guint8 *buf;
 
-    for (c = 0; (c < ncols) && (status == 0); c++)
-      fits_write_col_dbl (fptr, g_array_index (storage_fits->porder, gint, c), nrows + 1 + k, 1, 1, ncm_vector_ptr (row, c), &status);
+    g_array_set_size (storage_fits->col_ws, NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS * ncols);
+    buf = (guint8 *) storage_fits->col_ws->data;
+
+    for (k = 0; (k < n) && (status == 0); k += NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS)
+    {
+      const guint nk = MIN (NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS, n - k);
+      guint j;
+
+      for (j = 0; j < nk; j++)
+      {
+        NcmVector *row = g_ptr_array_index (storage_fits->tail, first + k + j);
+
+        for (c = 0; c < ncols; c++)
+          _ncm_mset_catalog_storage_fits_encode (buf + j * rowlen + (g_array_index (storage_fits->porder, gint, c) - 1) * sizeof (gdouble),
+                                                 ncm_vector_get (row, c));
+      }
+
+      fits_insert_rows (fptr, nrows + k, nk, &status);
+      fits_write_tblbytes (fptr, nrows + k + 1, 1, (LONGLONG) nk * rowlen, buf, &status);
+    }
+  }
+  else
+  {
+    for (k = 0; (k < n) && (status == 0); k++)
+    {
+      NcmVector *row = g_ptr_array_index (storage_fits->tail, first + k);
+
+      for (c = 0; (c < ncols) && (status == 0); c++)
+        fits_write_col_dbl (fptr, g_array_index (storage_fits->porder, gint, c), nrows + 1 + k, 1, 1, ncm_vector_ptr (row, c), &status);
+    }
   }
 
   _ncm_mset_catalog_storage_fits_check (status, "rows", error);
@@ -1188,7 +1278,11 @@ _ncm_mset_catalog_storage_fits_write_pending (NcmMSetCatalogStorageFits *storage
   }
 }
 
-/* Replaces the block by the n rows of the file starting at row first (0-based). */
+/*
+ * Replaces the block by the n rows of the file starting at row first (0-based). With
+ * raw_rows the rows are read as bytes, in chunks of NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS
+ * rows, and decoded; otherwise one column at a time over the n rows.
+ */
 static void
 _ncm_mset_catalog_storage_fits_read_block (NcmMSetCatalogStorageFits *storage_fits, guint first, guint n, GError **error)
 {
@@ -1196,22 +1290,55 @@ _ncm_mset_catalog_storage_fits_read_block (NcmMSetCatalogStorageFits *storage_fi
   const guint ncols   = storage_fits->porder->len;
   const gdouble dnull = 0.0;
   gint status         = 0;
-  gdouble *col;
   guint c, k;
 
   g_ptr_array_set_size (storage_fits->block, 0);
-  g_array_set_size (storage_fits->col_ws, n);
-  col = &g_array_index (storage_fits->col_ws, gdouble, 0);
 
   for (k = 0; k < n; k++)
     g_ptr_array_add (storage_fits->block, ncm_vector_new (ncols));
 
-  for (c = 0; (c < ncols) && (status == 0); c++)
+  if (storage_fits->raw_rows)
   {
-    fits_read_col_dbl (fptr, g_array_index (storage_fits->porder, gint, c), first + 1, 1, n, dnull, col, NULL, &status);
+    const guint rowlen = storage_fits->rowlen;
+    guint8 *buf;
 
-    for (k = 0; k < n; k++)
-      ncm_vector_fast_set (g_ptr_array_index (storage_fits->block, k), c, col[k]);
+    g_array_set_size (storage_fits->col_ws, NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS * ncols);
+    buf = (guint8 *) storage_fits->col_ws->data;
+
+    for (k = 0; (k < n) && (status == 0); k += NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS)
+    {
+      const guint nk = MIN (NCM_MSET_CATALOG_STORAGE_FITS_RAW_ROWS, n - k);
+      guint j;
+
+      fits_read_tblbytes (fptr, first + k + 1, 1, (LONGLONG) nk * rowlen, buf, &status);
+
+      if (status != 0)
+        break;
+
+      for (j = 0; j < nk; j++)
+      {
+        NcmVector *row = g_ptr_array_index (storage_fits->block, k + j);
+
+        for (c = 0; c < ncols; c++)
+          ncm_vector_fast_set (row, c,
+                               _ncm_mset_catalog_storage_fits_decode (buf + j * rowlen + (g_array_index (storage_fits->porder, gint, c) - 1) * sizeof (gdouble)));
+      }
+    }
+  }
+  else
+  {
+    gdouble *col;
+
+    g_array_set_size (storage_fits->col_ws, n);
+    col = &g_array_index (storage_fits->col_ws, gdouble, 0);
+
+    for (c = 0; (c < ncols) && (status == 0); c++)
+    {
+      fits_read_col_dbl (fptr, g_array_index (storage_fits->porder, gint, c), first + 1, 1, n, dnull, col, NULL, &status);
+
+      for (k = 0; k < n; k++)
+        ncm_vector_fast_set (g_ptr_array_index (storage_fits->block, k), c, col[k]);
+    }
   }
 
   _ncm_mset_catalog_storage_fits_check (status, "rows", error);

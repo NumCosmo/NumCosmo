@@ -4772,12 +4772,16 @@ ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_p
   _ncm_mset_catalog_calc_ensemble_evol (mcat, add_param, nsteps, mtype, pval, t_evol);
 }
 
+/* Rows written between two syncs of a rewrite: bounds the rows the storage keeps in memory. */
+#define NCM_MSET_CATALOG_REWRITE_SYNC_ROWS (65536)
+
 /*
  * Replaces the rows of the catalog by rows, with the given Markovian id, written in one
- * recording named by the sampler string (the run type without one). A
- * FITS storage is rebuilt: the file is renamed to <file>.<n>.bak, with the first free n,
- * and a new file written under its name; a memory storage is erased. The description
- * and the RNG are kept, and the burn-in is zero after it.
+ * recording named by the sampler string (the run type without one), synced every
+ * NCM_MSET_CATALOG_REWRITE_SYNC_ROWS rows. A FITS storage is rebuilt: the file is
+ * renamed to <file>.<n>.bak, with the first free n, and a new file written under its
+ * name; a memory storage is erased. The description and the RNG are kept, and the
+ * burn-in is zero after it.
  */
 static void
 _ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint markovian_id)
@@ -4855,6 +4859,12 @@ _ncm_mset_catalog_rewrite (NcmMSetCatalog *mcat, GPtrArray *rows, const gint mar
       ncm_mset_catalog_storage_add_row (self->storage, row, &error);
       _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_rewrite");
       _ncm_mset_catalog_post_update_stats (mcat, row);
+
+      if ((i + 1) % NCM_MSET_CATALOG_REWRITE_SYNC_ROWS == 0)
+      {
+        ncm_mset_catalog_storage_sync (self->storage, &error);
+        _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_rewrite");
+      }
     }
 
     self->markovian_id = markovian_id;
@@ -5024,6 +5034,12 @@ ncm_mset_catalog_trim_oob (NcmMSetCatalog *mcat, const gchar *out_file)
 
       if (i < mark_rows)
         kept_before++;
+
+      if ((i + 1) % NCM_MSET_CATALOG_REWRITE_SYNC_ROWS == 0)
+      {
+        ncm_mset_catalog_storage_sync (self->storage, &error);
+        _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_trim_oob");
+      }
     }
     else
     {
