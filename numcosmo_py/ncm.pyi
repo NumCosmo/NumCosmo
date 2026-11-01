@@ -6179,6 +6179,7 @@ class MSetCatalog(GObject.Object):
         new_array(mset:NumCosmoMath.MSet, nadd_vals:int, nchains:int, weighted:bool, names:list, symbols:list) -> NumCosmoMath.MSetCatalog
         new_from_file(filename:str, burnin:int) -> NumCosmoMath.MSetCatalog
         new_from_file_ro(filename:str, burnin:int) -> NumCosmoMath.MSetCatalog
+        new_from_storage(storage:NumCosmoMath.MSetCatalogStorage, burnin:int) -> NumCosmoMath.MSetCatalog
 
     Object NcmMSetCatalog
 
@@ -6225,6 +6226,8 @@ class MSetCatalog(GObject.Object):
         Number of rows read from the file at once
       read-only -> gboolean: read-only
         Whether the FITS file is opened read-only
+      storage -> NcmMSetCatalogStorage: storage
+        The storage of the catalog
 
     Signals from GObject:
       notify (GParam)
@@ -6249,6 +6252,7 @@ class MSetCatalog(GObject.Object):
         sampler: typing.Optional[str]
         sampler_options: typing.Optional[str]
         smode: MSetCatalogSync
+        storage: MSetCatalogStorage
         sync_interval: float
         tau_method: StatsAcorrMethod
         weighted: bool
@@ -6274,6 +6278,7 @@ class MSetCatalog(GObject.Object):
         sampler: typing.Optional[str] = ...,
         sampler_options: typing.Optional[str] = ...,
         smode: MSetCatalogSync = ...,
+        storage: MSetCatalogStorage = ...,
         sync_interval: float = ...,
         tau_method: StatsAcorrMethod = ...,
         weighted: bool = ...,
@@ -6396,6 +6401,10 @@ class MSetCatalog(GObject.Object):
     def new_from_file(cls, filename: str, burnin: int) -> MSetCatalog: ...
     @classmethod
     def new_from_file_ro(cls, filename: str, burnin: int) -> MSetCatalog: ...
+    @classmethod
+    def new_from_storage(
+        cls, storage: MSetCatalogStorage, burnin: int
+    ) -> MSetCatalog: ...
     def param_pdf(self, i: int) -> None: ...
     def param_pdf_pvalue(self, pvalue: float, both: bool) -> float: ...
     def peek_accept_ratio_array(self) -> list[float]: ...
@@ -6418,6 +6427,7 @@ class MSetCatalog(GObject.Object):
     def peek_pstats(self) -> StatsVec: ...
     def peek_rng(self) -> typing.Optional[RNG]: ...
     def peek_row(self, i: int) -> Vector: ...
+    def peek_storage(self) -> MSetCatalogStorage: ...
     def ref(self) -> MSetCatalog: ...
     def remove_last_ensemble(self) -> None: ...
     def reset(self) -> None: ...

@@ -185,6 +185,7 @@ enum
   PROP_SYNC_INTERVAL,
   PROP_READ_BLOCK,
   PROP_READONLY,
+  PROP_STORAGE,
 };
 
 static gint
@@ -373,14 +374,16 @@ _ncm_mset_catalog_free_stats (NcmMSetCatalog *mcat)
 }
 
 static void _ncm_mset_catalog_take_desc (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc);
+static NcmMSetCatalogStorageFits *_ncm_mset_catalog_peek_fits_storage (NcmMSetCatalog *mcat);
 static void _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat);
 static NcmMSetCatalogStorage *_ncm_mset_catalog_new_fits_storage (NcmMSetCatalog *mcat, const gchar *filename, gboolean read_only);
 static NcmMSetCatalogStorage *_ncm_mset_catalog_new_memory_storage (NcmMSetCatalog *mcat);
 static NcmMSetCatalogDesc *_ncm_mset_catalog_new_desc (NcmMSetCatalog *mcat, guint nchains, gint m2lnp_var, const gchar *rtype_str);
 
 /*
- * A catalog without a model set is loaded from its file: the description, the model set,
- * the rows and the run metadata come from the file. A catalog with a model set builds its
+ * A catalog given a storage takes its description, rows and run metadata. A catalog
+ * without a model set is loaded from its file: the description, the model set, the rows
+ * and the run metadata come from the file. A catalog with a model set builds its
  * description from its properties and stores it in a memory storage or, with a file, in a
  * FITS storage, binding it to the file's description when the file exists.
  */
@@ -395,7 +398,34 @@ _ncm_mset_catalog_constructed (GObject *object)
 
     self->constructed = TRUE;
 
-    if (self->mset == NULL)
+    if (self->storage != NULL)
+    {
+      NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
+      NcmMSetCatalogDesc *desc;
+      GError *error = NULL;
+
+      if ((self->mset != NULL) || (self->file != NULL))
+        g_error ("_ncm_mset_catalog_constructed: a catalog built from a storage takes no NcmMSet and no file.");
+
+      desc = ncm_mset_catalog_storage_peek_desc (self->storage, &error);
+
+      if (error != NULL)
+        g_error ("_ncm_mset_catalog_constructed: %s", error->message);
+
+      if (desc == NULL)
+        g_error ("_ncm_mset_catalog_constructed: the storage has no description.");
+
+      g_object_get (self->storage, "smode", &self->smode, "sync-interval", &self->sync_interval, NULL);
+
+      if (storage_fits != NULL)
+      {
+        g_object_get (storage_fits, "read-block", &self->read_block, NULL);
+        self->readonly = ncm_mset_catalog_storage_fits_get_read_only (storage_fits);
+      }
+
+      _ncm_mset_catalog_take_desc (mcat, desc);
+    }
+    else if (self->mset == NULL)
     {
       NcmMSetCatalogDesc *desc;
       GError *error = NULL;
@@ -606,6 +636,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_READONLY:
       self->readonly = g_value_get_boolean (value);
       break;
+    case PROP_STORAGE:
+      self->storage = g_value_dup_object (value);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -710,6 +743,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_READONLY:
       g_value_set_boolean (value, self->readonly);
+      break;
+    case PROP_STORAGE:
+      g_value_set_object (value, self->storage);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -1015,6 +1051,23 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                          "Whether the FITS file is opened read-only",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalog:storage:
+   *
+   * The #NcmMSetCatalogStorage the catalog is built on, see
+   * ncm_mset_catalog_new_from_storage(). Given, it must hold a description, and the
+   * catalog takes no #NcmMSetCatalog:mset and no #NcmMSetCatalog:filename. The catalog's
+   * sync mode, sync interval and read block are then the storage's.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_STORAGE,
+                                   g_param_spec_object ("storage",
+                                                        NULL,
+                                                        "The storage of the catalog",
+                                                        NCM_TYPE_MSET_CATALOG_STORAGE,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -1147,6 +1200,42 @@ ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin)
                                        NULL);
 
   return mcat;
+}
+
+/**
+ * ncm_mset_catalog_new_from_storage:
+ * @storage: a #NcmMSetCatalogStorage holding a description
+ * @burnin: number of leading rows to drop
+ *
+ * Creates a #NcmMSetCatalog on @storage: its description, rows and run metadata are
+ * the storage's. @burnin is applied as in ncm_mset_catalog_set_burnin(). A storage
+ * without a description aborts.
+ *
+ * Returns: (transfer full): a new #NcmMSetCatalog
+ */
+NcmMSetCatalog *
+ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin)
+{
+  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
+                                       "storage", storage,
+                                       "burnin", burnin,
+                                       NULL);
+
+  return mcat;
+}
+
+/**
+ * ncm_mset_catalog_peek_storage:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: (transfer none): the #NcmMSetCatalogStorage of @mcat
+ */
+NcmMSetCatalogStorage *
+ncm_mset_catalog_peek_storage (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->storage;
 }
 
 /* A read-only FITS storage of filename, with its description read. Aborts on error. */
