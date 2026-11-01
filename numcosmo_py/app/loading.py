@@ -397,9 +397,9 @@ def load_catalog(
 
     register_firecrown()
 
-    mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
-        mcmc_file.absolute().as_posix(), burnin_rows
-    )
+    storage = Ncm.MSetCatalogStorageFits.new(mcmc_file.absolute().as_posix(), True)
+    assert storage is not None
+    mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage(storage, burnin_rows)
     assert isinstance(mcat, Ncm.MSetCatalog)
 
     mset: Ncm.MSet = mcat.peek_mset()

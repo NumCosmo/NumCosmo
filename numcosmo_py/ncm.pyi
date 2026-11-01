@@ -6173,27 +6173,11 @@ class MSetCatalog(GObject.Object):
 
         MSetCatalog(**properties)
         new_array(mset:NumCosmoMath.MSet, nadd_vals:int, nchains:int, weighted:bool, names:list, symbols:list) -> NumCosmoMath.MSetCatalog
-        new_from_file(filename:str, burnin:int) -> NumCosmoMath.MSetCatalog
-        new_from_file_ro(filename:str, burnin:int) -> NumCosmoMath.MSetCatalog
         new_from_storage(storage:NumCosmoMath.MSetCatalogStorage, burnin:int) -> NumCosmoMath.MSetCatalog
 
     Object NcmMSetCatalog
 
     Properties from NcmMSetCatalog:
-      mset -> NcmMSet: mset
-        NcmMSet object
-      nadd-vals -> guint: nadd-vals
-        Number of additional values
-      nadd-val-names -> GStrv: nadd-val-names
-        Additional value names
-      nadd-val-symbols -> GStrv: nadd-val-symbols
-        Additional value symbols
-      m2lnp-var -> gint: m2lnp-var
-        Index of the variable representing m2lnp
-      weighted -> gboolean: weighted
-        Catalog with weighted rows
-      nchains -> guint: nchains
-        Number of different chains in the catalog
       burnin -> glong: burnin
         Burn-in size
       markovian-id -> gint: markovian-id
@@ -6202,26 +6186,12 @@ class MSetCatalog(GObject.Object):
         Method used to calculate the autocorrelation time
       post-lnnorm-method -> NcmMSetCatalogPostNormMethod: post-lnnorm-method
         Method used to estimate the log evidence
-      rng -> NcmRNG: rng
-        Random number generator object
-      filename -> gchararray: filename
-        Catalog filename
-      run-type-string -> gchararray: run-type-string
-        Run type string
       sampler -> gchararray: sampler
         Description of the sampler that filled the rows
       sampler-options -> gchararray: sampler-options
         Tunable settings of the sampler that filled the rows
       initial-sampler -> gchararray: initial-sampler
         Description of the sampler that drew the initial points
-      smode -> NcmMSetCatalogSync: smode
-        Catalog sync mode
-      sync-interval -> gdouble: sync-interval
-        Data sync interval
-      read-block -> guint: read-block
-        Number of rows read from the file at once
-      read-only -> gboolean: read-only
-        Whether the FITS file is opened read-only
       storage -> NcmMSetCatalogStorage: storage
         The storage of the catalog
 
@@ -6231,53 +6201,25 @@ class MSetCatalog(GObject.Object):
 
     class Props:
         burnin: int
-        filename: str
         initial_sampler: typing.Optional[str]
-        m2lnp_var: int
         markovian_id: int
-        mset: MSet
-        nadd_val_names: list[str]
-        nadd_val_symbols: list[str]
-        nadd_vals: int
-        nchains: int
         post_lnnorm_method: MSetCatalogPostNormMethod
-        read_block: int
-        read_only: bool
-        rng: typing.Optional[RNG]
-        run_type_string: str
         sampler: typing.Optional[str]
         sampler_options: typing.Optional[str]
-        smode: MSetCatalogSync
         storage: MSetCatalogStorage
-        sync_interval: float
         tau_method: StatsAcorrMethod
-        weighted: bool
 
     props: Props = ...
     def __init__(
         self,
         burnin: int = ...,
-        filename: str = ...,
         initial_sampler: typing.Optional[str] = ...,
-        m2lnp_var: int = ...,
         markovian_id: int = ...,
-        mset: MSet = ...,
-        nadd_val_names: typing.Sequence[str] = ...,
-        nadd_val_symbols: typing.Sequence[str] = ...,
-        nadd_vals: int = ...,
-        nchains: int = ...,
         post_lnnorm_method: MSetCatalogPostNormMethod = ...,
-        read_block: int = ...,
-        read_only: bool = ...,
-        rng: RNG = ...,
-        run_type_string: str = ...,
         sampler: typing.Optional[str] = ...,
         sampler_options: typing.Optional[str] = ...,
-        smode: MSetCatalogSync = ...,
         storage: MSetCatalogStorage = ...,
-        sync_interval: float = ...,
         tau_method: StatsAcorrMethod = ...,
-        weighted: bool = ...,
     ) -> None: ...
     def add_from_mset_array(
         self, mset: MSet, ax: typing.Sequence[float] | npt.NDArray[np.float64]
@@ -6355,7 +6297,6 @@ class MSetCatalog(GObject.Object):
     def get_post_lnnorm(self) -> typing.Tuple[float, float]: ...
     def get_post_lnnorm_method(self) -> MSetCatalogPostNormMethod: ...
     def get_post_lnvol(self, level: float) -> typing.Tuple[float, float]: ...
-    def get_read_block(self) -> int: ...
     def get_rng(self) -> typing.Optional[RNG]: ...
     def get_row(self, i: int) -> typing.Optional[Vector]: ...
     def get_row_from_time(self, t: int) -> int: ...
@@ -6393,10 +6334,6 @@ class MSetCatalog(GObject.Object):
         symbols: typing.Sequence[str],
     ) -> MSetCatalog: ...
     @classmethod
-    def new_from_file(cls, filename: str, burnin: int) -> MSetCatalog: ...
-    @classmethod
-    def new_from_file_ro(cls, filename: str, burnin: int) -> MSetCatalog: ...
-    @classmethod
     def new_from_storage(
         cls, storage: MSetCatalogStorage, burnin: int
     ) -> MSetCatalog: ...
@@ -6428,7 +6365,6 @@ class MSetCatalog(GObject.Object):
     def reset(self) -> None: ...
     def reset_stats(self) -> None: ...
     def set_burnin(self, burnin: int) -> None: ...
-    def set_file(self, filename: typing.Optional[str] = None) -> None: ...
     def set_functions_array(
         self, functions: typing.Optional[ObjArray] = None
     ) -> None: ...
@@ -6436,13 +6372,10 @@ class MSetCatalog(GObject.Object):
     def set_m2lnp_var(self, p: int) -> None: ...
     def set_markovian_id(self, markovian_id: int) -> None: ...
     def set_post_lnnorm_method(self, method: MSetCatalogPostNormMethod) -> None: ...
-    def set_read_block(self, read_block: int) -> None: ...
     def set_rng(self, rng: RNG) -> None: ...
     def set_run_type(self, rtype_str: str) -> None: ...
     def set_sampler(self, sampler: typing.Optional[str] = None) -> None: ...
     def set_sampler_options(self, options: typing.Optional[str] = None) -> None: ...
-    def set_sync_interval(self, interval: float) -> None: ...
-    def set_sync_mode(self, smode: MSetCatalogSync) -> None: ...
     def set_tau_method(self, tau_method: StatsAcorrMethod) -> None: ...
     def sync(self, check: bool) -> None: ...
     def tau_needs_more(self) -> typing.Tuple[bool, int]: ...

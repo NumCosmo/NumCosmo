@@ -1378,7 +1378,8 @@ def test_run_mcmc_apes_embeds_functions_array(tmp_path):
         raise result.exception
 
     catalog = output.absolute().with_suffix(".mcmc.fits")
-    mcat = Ncm.MSetCatalog.new_from_file_ro(catalog.as_posix(), 0)
+    storage = Ncm.MSetCatalogStorageFits.new(catalog.as_posix(), True)
+    mcat = Ncm.MSetCatalog.new_from_storage(storage, 0)
 
     # The functions are not stored in the catalog, the column they computed is.
     assert mcat.peek_functions_array() is None

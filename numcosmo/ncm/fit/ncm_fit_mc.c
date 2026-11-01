@@ -888,8 +888,10 @@ ncm_fit_mc_start_run (NcmFitMC *mc, GError **error)
 
   ncm_dataset_register_shared (dset, mc->ser);
 
-  ncm_mset_catalog_set_sync_mode (mc->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
-  ncm_mset_catalog_set_sync_interval (mc->mcat, NCM_FIT_MC_MIN_SYNC_INTERVAL);
+  g_object_set (ncm_mset_catalog_peek_storage (mc->mcat),
+                "smode", NCM_MSET_CATALOG_SYNC_TIMED,
+                "sync-interval", NCM_FIT_MC_MIN_SYNC_INTERVAL,
+                NULL);
 
   _ncm_fit_mc_start_recording (mc, error);
   NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mc_start_run: ");

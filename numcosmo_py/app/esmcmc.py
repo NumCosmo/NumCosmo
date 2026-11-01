@@ -381,9 +381,12 @@ class RunMCMC(RunCommonOptions):
             if not self.initial_catalog.exists():
                 raise RuntimeError(f"Catalog file {self.initial_catalog} not found.")
 
-            mcat = Ncm.MSetCatalog.new_from_file_ro(
-                self.initial_catalog.absolute().as_posix(),
-                self.initial_catalog_burnin,
+            ro_storage = Ncm.MSetCatalogStorageFits.new(
+                self.initial_catalog.absolute().as_posix(), True
+            )
+            assert ro_storage is not None
+            mcat = Ncm.MSetCatalog.new_from_storage(
+                ro_storage, self.initial_catalog_burnin
             )
             init_sampler = Ncm.MSetTransKernCat.new(mcat, None)
 

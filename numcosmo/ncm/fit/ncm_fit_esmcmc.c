@@ -1798,7 +1798,7 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc, GError **error)
   _ncm_fit_esmcmc_start_recording (esmcmc, ncm_mset_trans_kern_get_name (self->sampler), NULL, error);
   NCM_UTIL_ON_ERROR_RETURN (error, , );
 
-  ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
+  g_object_set (ncm_mset_catalog_peek_storage (self->mcat), "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
 
   len = (guint) (self->cur_sample_id + 1);
 
@@ -1946,8 +1946,10 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error)
 
   ncm_dataset_register_shared (ncm_likelihood_peek_dataset (lh), self->ser);
 
-  ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
-  ncm_mset_catalog_set_sync_interval (self->mcat, NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL);
+  g_object_set (ncm_mset_catalog_peek_storage (self->mcat),
+                "smode", NCM_MSET_CATALOG_SYNC_TIMED,
+                "sync-interval", NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL,
+                NULL);
 
   ncm_mset_catalog_sync (self->mcat, TRUE);
 
@@ -2438,7 +2440,7 @@ _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
   guint ki               = (self->cur_sample_id + 1) % self->nwalkers;
   guint i;
 
-  ncm_mset_catalog_set_sync_mode (self->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
+  g_object_set (ncm_mset_catalog_peek_storage (self->mcat), "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
 
   if (self->n > 0)
   {

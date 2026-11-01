@@ -1469,9 +1469,11 @@ class DumpMset(AppLogging):
         if not self.mcmc_file.exists():
             raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
 
-        mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
-            self.mcmc_file.absolute().as_posix(), 0
+        storage = Ncm.MSetCatalogStorageFits.new(
+            self.mcmc_file.absolute().as_posix(), True
         )
+        assert storage is not None
+        mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage(storage, 0)
         mset: Ncm.MSet = mcat.peek_mset()
         assert isinstance(mset, Ncm.MSet)
 

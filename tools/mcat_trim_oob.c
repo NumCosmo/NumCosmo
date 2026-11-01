@@ -67,8 +67,11 @@ main (gint argc, gchar *argv[])
   }
   else
   {
-    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename, 0);
-    guint ndel           = ncm_mset_catalog_trim_oob (mcat, out);
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (cat_filename, TRUE, NULL);
+    NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0);
+    guint ndel                              = ncm_mset_catalog_trim_oob (mcat, out);
+
+    ncm_mset_catalog_storage_fits_free (storage_fits);
 
     g_message ("# Trimming `%s', %u points deleted, saving to `%s'.\n", cat_filename, ndel, out);
   }
