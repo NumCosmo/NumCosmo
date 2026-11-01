@@ -1143,7 +1143,10 @@ _ncm_mset_catalog_storage_fits_ensure_open (NcmMSetCatalogStorageFits *storage_f
 
 /*
  * Writes the n_pending rows at the end of the tail to the file and drops from the tail
- * the rows beyond keep-last per chain.
+ * the rows beyond keep-last per chain. The rows are written one at a time, every column
+ * of a row before the next row: a row lies in one or two file records, so each record is
+ * loaded and written once; a column pass over the rows would load every record of the
+ * range once per column.
  */
 static void
 _ncm_mset_catalog_storage_fits_write_pending (NcmMSetCatalogStorageFits *storage_fits, GError **error)
@@ -1154,21 +1157,17 @@ _ncm_mset_catalog_storage_fits_write_pending (NcmMSetCatalogStorageFits *storage
   const guint first = storage_fits->tail->len - n;
   const guint nrows = storage_fits->tail_first + first;
   gint status       = 0;
-  gdouble *col;
   guint c, k;
 
   if (n == 0)
     return;
 
-  g_array_set_size (storage_fits->col_ws, n);
-  col = &g_array_index (storage_fits->col_ws, gdouble, 0);
-
-  for (c = 0; (c < ncols) && (status == 0); c++)
+  for (k = 0; (k < n) && (status == 0); k++)
   {
-    for (k = 0; k < n; k++)
-      col[k] = ncm_vector_get (g_ptr_array_index (storage_fits->tail, first + k), c);
+    NcmVector *row = g_ptr_array_index (storage_fits->tail, first + k);
 
-    fits_write_col_dbl (fptr, g_array_index (storage_fits->porder, gint, c), nrows + 1, 1, n, col, &status);
+    for (c = 0; (c < ncols) && (status == 0); c++)
+      fits_write_col_dbl (fptr, g_array_index (storage_fits->porder, gint, c), nrows + 1 + k, 1, 1, ncm_vector_ptr (row, c), &status);
   }
 
   _ncm_mset_catalog_storage_fits_check (status, "rows", error);
