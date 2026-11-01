@@ -38,7 +38,28 @@ typedef struct _TestNcmFitESMCMC
   NcmFitESMCMC *esmcmc;
   guint ntests;
   guint nrun_div;
+  gchar *tmp_dir;
+  gchar *filename;
 } TestNcmFitESMCMC;
+
+/* Puts the catalog of test->esmcmc on a FITS storage in a temporary directory. */
+static void
+_test_ncm_fit_esmcmc_mpi_set_file (TestNcmFitESMCMC *test, NcmFitESMCMC *esmcmc)
+{
+#ifdef HAVE_CFITSIO
+  NcmMSetCatalogStorageFits *storage_fits;
+
+  test->tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_fit_esmcmc_mpi_XXXXXX", NULL);
+  test->filename = g_build_filename (test->tmp_dir, "cat.fits", NULL);
+  storage_fits   = ncm_mset_catalog_storage_fits_new (test->filename, FALSE, NULL);
+
+  ncm_fit_esmcmc_set_storage (esmcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+#else
+  test->tmp_dir  = NULL;
+  test->filename = NULL;
+#endif /* HAVE_CFITSIO */
+}
 
 typedef struct _TestNcmFitEsmcmcFunc
 {
@@ -185,6 +206,7 @@ test_ncm_fit_esmcmc_new_apes (TestNcmFitESMCMC *test, gconstpointer pdata)
                                NCM_FIT_RUN_MSGS_NONE);
 
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
+  _test_ncm_fit_esmcmc_mpi_set_file (test, esmcmc);
   ncm_fit_esmcmc_use_mpi (esmcmc, TRUE);
 
   ncm_fit_run_restart (fit, NCM_FIT_RUN_MSGS_NONE, 1.0e-1, 0.0, NULL, NULL);
@@ -250,6 +272,7 @@ test_ncm_fit_esmcmc_new_stretch (TestNcmFitESMCMC *test, gconstpointer pdata)
                                 NCM_FIT_RUN_MSGS_NONE);
 
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
+  _test_ncm_fit_esmcmc_mpi_set_file (test, esmcmc);
   ncm_fit_esmcmc_set_use_threads (esmcmc, TRUE);
   ncm_fit_esmcmc_use_mpi (esmcmc, TRUE);
 
@@ -472,6 +495,15 @@ test_ncm_fit_esmcmc_free (TestNcmFitESMCMC *test, gconstpointer pdata)
   NCM_TEST_FREE (ncm_fit_free, test->fit);
   NCM_TEST_FREE (ncm_data_free, NCM_DATA (test->data_mvnd));
   NCM_TEST_FREE (ncm_rng_free, test->rng);
+
+  if (test->filename != NULL)
+  {
+    g_unlink (test->filename);
+    g_rmdir (test->tmp_dir);
+  }
+
+  g_clear_pointer (&test->filename, g_free);
+  g_clear_pointer (&test->tmp_dir, g_free);
 }
 
 void

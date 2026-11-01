@@ -85,6 +85,8 @@ void test_ncm_fit_esmcmc_phase_label (void);
 void test_ncm_fit_esmcmc_phase_markovian_subprocess (void);
 void test_ncm_fit_esmcmc_phase_exploration_subprocess (void);
 void test_ncm_fit_esmcmc_validate_threaded_read_block (void);
+void test_ncm_fit_esmcmc_file_read_block_identical (void);
+void test_ncm_fit_esmcmc_file_resume (void);
 
 static gboolean _test_ncm_fit_esmcmc_is_recovery_check (const gchar *name);
 
@@ -168,6 +170,8 @@ test_ncm_fit_esmcmc_main (gint argc, gchar *argv[], TestNcmFitESMCMCMode mode)
     g_test_add_func ("/ncm/fit/esmcmc/phase/exploration/subprocess", &test_ncm_fit_esmcmc_phase_exploration_subprocess);
 #ifdef HAVE_CFITSIO
     g_test_add_func ("/ncm/fit/esmcmc/validate/threaded_read_block", &test_ncm_fit_esmcmc_validate_threaded_read_block);
+    g_test_add_func ("/ncm/fit/esmcmc/file/read_block_identical", &test_ncm_fit_esmcmc_file_read_block_identical);
+    g_test_add_func ("/ncm/fit/esmcmc/file/resume", &test_ncm_fit_esmcmc_file_resume);
 #endif /* HAVE_CFITSIO */
   }
 
@@ -1394,6 +1398,187 @@ test_ncm_fit_esmcmc_validate_threaded_read_block (void)
   g_dir_close (dir);
   g_rmdir (tmp_dir);
   g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * A fixed-seed Stretch run of nsteps iterations, serial, on a FITS storage of filename
+ * with the given read block. With resume_at > 0 the run stops at that iteration, the
+ * sampler is released, and a second sampler without an RNG continues the file to nsteps.
+ * Returns the catalog read back from the file.
+ */
+static NcmMSetCatalog *
+_test_ncm_fit_esmcmc_file_run (const gchar *filename, const guint read_block, const guint nsteps, const guint resume_at)
+{
+  const gint dim                      = 2;
+  const gint nwalkers                 = 60;
+  NcmRNG *rng                         = ncm_rng_seeded_new (NULL, 20261101);
+  NcmDataGaussCovMVND *data_mvnd      = ncm_data_gauss_cov_mvnd_new_full (dim, 1.0e-2, 2.0e-2, 0.3, -1.0, 1.0, rng);
+  NcmModelMVND *model_mvnd            = ncm_model_mvnd_new (dim);
+  NcmDataset *dset                    = ncm_dataset_new_list (data_mvnd, NULL);
+  NcmLikelihood *lh                   = ncm_likelihood_new (dset);
+  NcmMSet *mset                       = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
+  NcmRNG *esmcmc_rng                  = ncm_rng_seeded_new (NULL, 20261101);
+  NcmFitESMCMCWalkerStretch *stretch;
+  NcmFit *fit;
+  NcmMSetCatalog *mcat;
+  guint i;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+
+  fit     = ncm_fit_factory (NCM_FIT_TYPE_GSL_MMS, "nmsimplex", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
+  stretch = ncm_fit_esmcmc_walker_stretch_new (nwalkers, ncm_mset_fparams_len (mset));
+
+  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
+  ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 1.0e-2);
+
+  for (i = 0; i < 2; i++)
+  {
+    const guint target                      = ((resume_at > 0) && (i == 0)) ? resume_at : nsteps;
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+    NcmFitESMCMC *esmcmc                    = ncm_fit_esmcmc_new (fit,
+                                                                  nwalkers,
+                                                                  NCM_MSET_TRANS_KERN (init_sampler),
+                                                                  NCM_FIT_ESMCMC_WALKER (stretch),
+                                                                  NCM_FIT_RUN_MSGS_NONE);
+
+    g_object_set (storage_fits, "read-block", read_block, NULL);
+    ncm_fit_esmcmc_set_storage (esmcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+    ncm_fit_esmcmc_set_use_threads (esmcmc, FALSE);
+
+    if (i == 0)
+      ncm_fit_esmcmc_set_rng (esmcmc, esmcmc_rng);
+
+    ncm_fit_esmcmc_start_run (esmcmc, NULL);
+    ncm_fit_esmcmc_run (esmcmc, target);
+    ncm_fit_esmcmc_end_run (esmcmc);
+
+    g_assert_cmpuint (ncm_mset_catalog_len (ncm_fit_esmcmc_peek_catalog (esmcmc)), ==, target * nwalkers);
+
+    ncm_fit_esmcmc_free (esmcmc);
+    ncm_mset_catalog_storage_fits_free (storage_fits);
+
+    if (resume_at == 0)
+      break;
+  }
+
+  {
+    NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, TRUE, NULL);
+
+    mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0);
+    ncm_mset_catalog_storage_fits_free (storage_fits);
+  }
+
+  ncm_data_gauss_cov_mvnd_clear (&data_mvnd);
+  ncm_model_mvnd_clear (&model_mvnd);
+  ncm_dataset_clear (&dset);
+  ncm_likelihood_clear (&lh);
+  ncm_mset_clear (&mset);
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
+  ncm_fit_clear (&fit);
+  ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
+  ncm_rng_free (rng);
+  ncm_rng_free (esmcmc_rng);
+
+  return mcat;
+}
+
+/* Removes every file of tmp_dir and the directory. */
+static void
+_test_ncm_fit_esmcmc_rm_tmp_dir (const gchar *tmp_dir)
+{
+  GDir *dir = g_dir_open (tmp_dir, 0, NULL);
+  const gchar *name;
+
+  g_assert_nonnull (dir);
+
+  while ((name = g_dir_read_name (dir)) != NULL)
+  {
+    gchar *path = g_build_filename (tmp_dir, name, NULL);
+
+    g_unlink (path);
+    g_free (path);
+  }
+
+  g_dir_close (dir);
+  g_rmdir (tmp_dir);
+}
+
+/*
+ * The same run written with read-block 1 and with one larger than the catalog gives
+ * byte-identical files and the same mean.
+ */
+void
+test_ncm_fit_esmcmc_file_read_block_identical (void)
+{
+  const guint nsteps    = 10;
+  gchar *tmp_dir        = g_dir_make_tmp ("tmp_test_ncm_fit_esmcmc_rb_XXXXXX", NULL);
+  gchar *filename1      = g_build_filename (tmp_dir, "cat_rb1.fits", NULL);
+  gchar *filename2      = g_build_filename (tmp_dir, "cat_rbN.fits", NULL);
+  NcmMSetCatalog *mcat1 = _test_ncm_fit_esmcmc_file_run (filename1, 1, nsteps, 0);
+  NcmMSetCatalog *mcat2 = _test_ncm_fit_esmcmc_file_run (filename2, nsteps * 60 + 1, nsteps, 0);
+  gchar *contents1      = NULL;
+  gchar *contents2      = NULL;
+  gsize length1         = 0;
+  gsize length2         = 0;
+  NcmVector *mean1      = NULL;
+  NcmVector *mean2      = NULL;
+  guint i;
+
+  g_assert_true (g_file_get_contents (filename1, &contents1, &length1, NULL));
+  g_assert_true (g_file_get_contents (filename2, &contents2, &length2, NULL));
+  g_assert_cmpuint (length1, ==, length2);
+  g_assert_cmpint (memcmp (contents1, contents2, length1), ==, 0);
+
+  ncm_mset_catalog_get_mean (mcat1, &mean1);
+  ncm_mset_catalog_get_mean (mcat2, &mean2);
+
+  for (i = 0; i < ncm_vector_len (mean1); i++)
+    g_assert_cmpfloat (ncm_vector_get (mean1, i), ==, ncm_vector_get (mean2, i));
+
+  ncm_vector_free (mean1);
+  ncm_vector_free (mean2);
+  g_free (contents1);
+  g_free (contents2);
+  ncm_mset_catalog_free (mcat1);
+  ncm_mset_catalog_free (mcat2);
+  _test_ncm_fit_esmcmc_rm_tmp_dir (tmp_dir);
+  g_free (filename1);
+  g_free (filename2);
+  g_free (tmp_dir);
+}
+
+/*
+ * A run stopped after four iterations and continued by a second sampler on the file
+ * gives the rows of the uninterrupted run; the continuation is one more segment.
+ */
+void
+test_ncm_fit_esmcmc_file_resume (void)
+{
+  const guint nsteps    = 10;
+  gchar *tmp_dir        = g_dir_make_tmp ("tmp_test_ncm_fit_esmcmc_resume_XXXXXX", NULL);
+  gchar *filename1      = g_build_filename (tmp_dir, "cat_full.fits", NULL);
+  gchar *filename2      = g_build_filename (tmp_dir, "cat_resumed.fits", NULL);
+  NcmMSetCatalog *mcat1 = _test_ncm_fit_esmcmc_file_run (filename1, 7, nsteps, 0);
+  NcmMSetCatalog *mcat2 = _test_ncm_fit_esmcmc_file_run (filename2, 7, nsteps, 4);
+  guint i;
+
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat1), ==, nsteps * 60);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat2), ==, nsteps * 60);
+
+  for (i = 0; i < ncm_mset_catalog_len (mcat1); i++)
+    g_assert_cmpint (ncm_vector_cmp2 (ncm_mset_catalog_peek_row (mcat1, i), ncm_mset_catalog_peek_row (mcat2, i), 0.0, 0.0), ==, 0);
+
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (ncm_mset_catalog_peek_storage (mcat1), NULL), ==, 2);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (ncm_mset_catalog_peek_storage (mcat2), NULL), ==, 3);
+
+  ncm_mset_catalog_free (mcat1);
+  ncm_mset_catalog_free (mcat2);
+  _test_ncm_fit_esmcmc_rm_tmp_dir (tmp_dir);
+  g_free (filename1);
+  g_free (filename2);
   g_free (tmp_dir);
 }
 
