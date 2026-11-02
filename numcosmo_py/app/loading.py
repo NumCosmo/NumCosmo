@@ -315,6 +315,7 @@ class LoadedCatalog:
     indices: list[int]
     burnin: int
     burnin_raised_from: int | None
+    thin: int
     markovian_start: int
     full_stats: Ncm.StatsVec
     stats: Ncm.StatsVec
@@ -382,14 +383,19 @@ def load_catalog(
     tail: int | None = None,
     include: list[str] | None = None,
     exclude: list[str] | None = None,
+    thin: int = 1,
 ) -> LoadedCatalog:
     """Load an MCMC catalog file and prepare it for analysis.
 
     `burnin` and `tail` are in iterations (ensemble steps), not raw rows --
-    see _resolve_burnin_rows().
+    see _resolve_burnin_rows(). `thin` keeps every thin-th iteration after the
+    burn-in (NcmMSetCatalog:thin); the catalog's rows and statistics are the
+    kept ones.
     """
     if not mcmc_file.exists():
         raise typer.BadParameter(f"MCMC file {mcmc_file} not found.")
+    if thin < 1:
+        raise typer.BadParameter(f"--thin must be at least 1, got {thin}.")
 
     burnin_rows, burnin_iterations, burnin_raised_from, markovian_start = (
         _resolve_burnin_rows(mcmc_file, burnin, tail)
@@ -400,7 +406,7 @@ def load_catalog(
     storage = Ncm.MSetCatalogStorageFits.new(mcmc_file.absolute().as_posix(), True)
     assert storage is not None
     mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage_full(
-        storage, burnin_rows, 1
+        storage, burnin_rows, thin
     )
     assert isinstance(mcat, Ncm.MSetCatalog)
 
@@ -437,6 +443,7 @@ def load_catalog(
         indices=indices,
         burnin=burnin_iterations,
         burnin_raised_from=burnin_raised_from,
+        thin=thin,
         markovian_start=markovian_start,
         full_stats=full_stats,
         stats=stats,
@@ -480,6 +487,19 @@ class LoadCatalog(AppLogging):
         ),
     ] = None
 
+    thin: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Keep every N-th iteration (ensemble step) after the burn-in, with "
+                "all its chains. Every statistic, diagnostic and plot uses the kept "
+                "rows. N below half the autocorrelation time multiplies the variance "
+                "of the mean by less than 1.02."
+            ),
+            min=1,
+        ),
+    ] = 1
+
     include: Annotated[
         list[str] | None,
         typer.Option(
@@ -521,7 +541,12 @@ class LoadCatalog(AppLogging):
         super().__post_init__()
 
         loaded = load_catalog(
-            self.mcmc_file, self.burnin, self.tail, self.include, self.exclude
+            self.mcmc_file,
+            self.burnin,
+            self.tail,
+            self.include,
+            self.exclude,
+            thin=self.thin,
         )
         self.mcat = loaded.mcat
         self.mset = loaded.mset
