@@ -1527,10 +1527,13 @@ def test_run_mcmc_apes_plot_corner_auto_thin(simple_experiment):
         assert ": thin " not in result.output
 
 
-def _write_ar1_catalog(path: Path, nchains: int, niter: int) -> None:
+def _write_ar1_catalog(
+    path: Path, nchains: int, niter: int, first_half_scale: float = 1.0
+) -> None:
     """Write nchains interleaved AR(1) chains with coefficient 0.9 in two parameters,
     whose autocorrelation time is (1 + 0.9) / (1 - 0.9) = 19 iterations, column 0
-    holding -2ln(L)."""
+    holding -2ln(L). The parameters of the first niter / 2 iterations are multiplied by
+    first_half_scale, as an unremoved burn-in."""
     rng = np.random.default_rng(1234)
     phi = 0.9
     model = Ncm.ModelMVND.new(2)
@@ -1543,18 +1546,20 @@ def _write_ar1_catalog(path: Path, nchains: int, niter: int) -> None:
     mcat = Ncm.MSetCatalog.new_from_storage(storage)
 
     state = np.zeros((nchains, 2))
-    for _ in range(niter):
+    for t in range(niter):
+        scale = first_half_scale if t < niter // 2 else 1.0
         for c in range(nchains):
             state[c] = phi * state[c] + np.sqrt(1.0 - phi * phi) * rng.normal(size=2)
-            row = np.concatenate(([np.sum(state[c] ** 2)], state[c]))
+            row = np.concatenate(([np.sum(state[c] ** 2)], scale * state[c]))
             mcat.add_from_vector(Ncm.Vector.new_array(row.tolist()))
 
     mcat.sync(True)
 
 
 def test_auto_thin_choice(tmp_path):
-    """_auto_thin() thins by half the smallest autocorrelation time of a long chain,
-    and not at all when the chain is too short for a reliable estimate."""
+    """_auto_thin() thins by half the smallest autocorrelation time of a chain of at
+    least 10 autocorrelation times, SHORT_CHAIN or not, and not at all for a shorter
+    chain or one whose estimate carries another flag."""
     long_file = tmp_path / "long.mcmc.fits"
     _write_ar1_catalog(long_file, 4, 2000)
     loaded = load_catalog(long_file)
@@ -1565,9 +1570,29 @@ def test_auto_thin_choice(tmp_path):
     assert thin == max(1, int(tau_min // 2))
     assert 5 <= thin <= 15
 
+    # About 21 tau: SHORT_CHAIN is raised and the thinning is chosen anyway.
+    medium_file = tmp_path / "medium.mcmc.fits"
+    _write_ar1_catalog(medium_file, 4, 400)
+    loaded = load_catalog(medium_file)
+    thin, reason = _auto_thin(loaded)
+    tau = loaded.mcat.peek_autocorrelation_tau()
+    tau_min = min(tau.get(1), tau.get(2))
+    assert all(
+        int(loaded.mcat.get_tau_diag(i)) & int(Ncm.StatsAcorrDiag.SHORT_CHAIN)
+        for i in (1, 2)
+    )
+    assert reason.startswith("smallest autocorrelation time")
+    assert thin == max(1, int(tau_min // 2))
+
     short_file = tmp_path / "short.mcmc.fits"
-    _write_ar1_catalog(short_file, 4, 12)
+    _write_ar1_catalog(short_file, 4, 60)
     thin, reason = _auto_thin(load_catalog(short_file))
+    assert thin == 1
+    assert reason.startswith("chain of 60 iterations is shorter than 10")
+
+    burnin_file = tmp_path / "burnin.mcmc.fits"
+    _write_ar1_catalog(burnin_file, 4, 2000, first_half_scale=20.0)
+    thin, reason = _auto_thin(load_catalog(burnin_file))
     assert thin == 1
     assert reason.startswith("autocorrelation time flagged")
 
