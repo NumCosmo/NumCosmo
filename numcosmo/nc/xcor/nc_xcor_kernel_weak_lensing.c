@@ -710,7 +710,7 @@ _ia_component_eval_kernel (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdoubl
   const gdouble dn_dz_z = _nc_xcor_kernel_weak_lensing_dndz (data->xclkg, z);
   const gdouble A_z     = _nc_xcor_kernel_weak_lensing_ia_amplitude (data->xclkg, z);
 
-  return -A_z *dn_dz_z *E_z *sqrt (powspec *P_D_0 / P_D_z) / gsl_pow_2 (k * chi);
+  return -(A_z * dn_dz_z * E_z) * sqrt (powspec * P_D_0 / P_D_z) / gsl_pow_2 (k * chi);
 }
 
 static gdouble
@@ -773,16 +773,18 @@ _ia_component_get_limits (NcXcorKernelComponent *comp, NcHICosmo *cosmo, gdouble
   NcDistance *dist               = data->dist;
   NcmPowspec *ps                 = data->ps;
   NcXcorKernelWeakLensing *xclkg = data->xclkg;
+  const gdouble RH_Mpc           = nc_hicosmo_RH_Mpc (cosmo);
 
   nc_distance_prepare_if_needed (dist, cosmo);
   ncm_powspec_prepare_if_needed (ps, NCM_MODEL (cosmo));
   ncm_powspec_prepare_if_needed (data->growth_ps, NCM_MODEL (cosmo));
 
-  /* Bounded by the dn_dz support, as the clustering component of NcXcorKernelGal. */
+  /* chi bounded by the dn_dz support, as the clustering component of NcXcorKernelGal; k by
+   * the range both power spectra cover. */
   *chi_min = nc_distance_comoving (dist, cosmo, MAX (xclkg->dn_dz_zmin, 1.0e-6));
   *chi_max = nc_distance_comoving (dist, cosmo, xclkg->dn_dz_zmax);
-  *k_min   = ncm_powspec_get_kmin (ps) * nc_hicosmo_RH_Mpc (cosmo);
-  *k_max   = ncm_powspec_get_kmax (ps) * nc_hicosmo_RH_Mpc (cosmo);
+  *k_min   = GSL_MAX (ncm_powspec_get_kmin (ps), ncm_powspec_get_kmin (data->growth_ps)) * RH_Mpc;
+  *k_max   = GSL_MIN (ncm_powspec_get_kmax (ps), ncm_powspec_get_kmax (data->growth_ps)) * RH_Mpc;
 }
 
 static NcXcorKernelComponent *
@@ -808,7 +810,7 @@ _nc_xcor_kernel_component_ia_new (NcXcorKernelWeakLensing *xclkg, NcDistance *di
  *
  * The intrinsic alignment term is its window times chi^2, divided by the 3/2 Omega_m of
  * the prefactor, over D(k, z) of the growth power spectrum at the Limber k = (l + 1/2) /
- * chi. It is skipped where dn_dz vanishes, which includes chi = 0, where k is infinite. */
+ * chi. At chi = 0 the Limber k is infinite and D = 1, its value at z = 0 for every k. */
 static gdouble
 _nc_xcor_kernel_weak_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
@@ -821,11 +823,17 @@ _nc_xcor_kernel_weak_lensing_eval_limber_z (NcXcorKernel *xclk, NcHICosmo *cosmo
 
     if (dn_dz_z != 0.0)
     {
-      NcmPowspec *ps     = _nc_xcor_kernel_weak_lensing_peek_growth_ps (xclkg);
-      const gdouble k    = (l + 0.5) / (xck->chi_z * nc_hicosmo_RH_Mpc (cosmo));
-      const gdouble D_kz = sqrt (ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k) /
-                                 ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k));
       const gdouble A_z = _nc_xcor_kernel_weak_lensing_ia_amplitude (xclkg, z);
+      gdouble D_kz      = 1.0;
+
+      if (xck->chi_z > 0.0)
+      {
+        NcmPowspec *ps  = _nc_xcor_kernel_weak_lensing_peek_growth_ps (xclkg);
+        const gdouble k = (l + 0.5) / (xck->chi_z * nc_hicosmo_RH_Mpc (cosmo));
+
+        D_kz = sqrt (ncm_powspec_eval (ps, NCM_MODEL (cosmo), z, k) /
+                     ncm_powspec_eval (ps, NCM_MODEL (cosmo), 0.0, k));
+      }
 
       res -= A_z * dn_dz_z * xck->E_z / (1.5 * D_kz);
     }
