@@ -121,6 +121,7 @@ void ncm_mset_catalog_storage_add_row (NcmMSetCatalogStorage *storage, NcmVector
 void ncm_mset_catalog_storage_end_recording (NcmMSetCatalogStorage *storage, GError **error);
 void ncm_mset_catalog_storage_sync (NcmMSetCatalogStorage *storage, GError **error);
 gboolean ncm_mset_catalog_storage_is_recording (NcmMSetCatalogStorage *storage);
+gboolean ncm_mset_catalog_storage_get_read_only (NcmMSetCatalogStorage *storage);
 
 guint ncm_mset_catalog_storage_nrows (NcmMSetCatalogStorage *storage, GError **error);
 NcmVector *ncm_mset_catalog_storage_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error);

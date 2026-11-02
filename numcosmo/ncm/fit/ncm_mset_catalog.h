@@ -87,7 +87,8 @@ typedef enum _NcmMSetCatalogPostNormMethod /*< prefix=NCM_MSET_CATALOG_POST_LNNO
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...) G_GNUC_NULL_TERMINATED;
 NcmMSetCatalog *ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols);
 
-NcmMSetCatalog *ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin);
+NcmMSetCatalog *ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage);
+NcmMSetCatalog *ncm_mset_catalog_new_from_storage_full (NcmMSetCatalogStorage *storage, glong burnin, guint thin);
 NcmMSetCatalogStorage *ncm_mset_catalog_peek_storage (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains);
 gint ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename);
@@ -132,6 +133,7 @@ gboolean ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, 
 
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
+guint ncm_mset_catalog_get_thin (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_set_markovian_id (NcmMSetCatalog *mcat, gint markovian_id);
 gint ncm_mset_catalog_get_markovian_id (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_get_markovian_burnin (NcmMSetCatalog *mcat);

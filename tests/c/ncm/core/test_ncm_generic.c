@@ -612,7 +612,7 @@ test_ncm_mset_catalog_storage_fits_basic (void)
   g_assert_null (ncm_mset_catalog_storage_peek_desc (storage, &error));
   g_assert_no_error (error);
   g_assert_cmpstr (ncm_mset_catalog_storage_fits_peek_filename (storage_fits), ==, filename);
-  g_assert_false (ncm_mset_catalog_storage_fits_get_read_only (storage_fits));
+  g_assert_false (ncm_mset_catalog_storage_get_read_only (storage));
 
   storage_fits2 = ncm_mset_catalog_storage_fits_ref (storage_fits);
   ncm_mset_catalog_storage_fits_clear (&storage_fits2);

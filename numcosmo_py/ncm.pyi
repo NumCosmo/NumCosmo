@@ -6158,13 +6158,16 @@ class MSetCatalog(GObject.Object):
 
         MSetCatalog(**properties)
         new_array(mset:NumCosmoMath.MSet, nadd_vals:int, nchains:int, weighted:bool, names:list, symbols:list) -> NumCosmoMath.MSetCatalog
-        new_from_storage(storage:NumCosmoMath.MSetCatalogStorage, burnin:int) -> NumCosmoMath.MSetCatalog
+        new_from_storage(storage:NumCosmoMath.MSetCatalogStorage) -> NumCosmoMath.MSetCatalog
+        new_from_storage_full(storage:NumCosmoMath.MSetCatalogStorage, burnin:int, thin:int) -> NumCosmoMath.MSetCatalog
 
     Object NcmMSetCatalog
 
     Properties from NcmMSetCatalog:
       burnin -> glong: burnin
         Burn-in size
+      thin -> guint: thin
+        Thinning of the iterations
       markovian-id -> gint: markovian-id
         First row id of the Markovian chain
       tau-method -> NcmStatsAcorrMethod: tau-method
@@ -6193,6 +6196,7 @@ class MSetCatalog(GObject.Object):
         sampler_options: typing.Optional[str]
         storage: MSetCatalogStorage
         tau_method: StatsAcorrMethod
+        thin: int
 
     props: Props = ...
     def __init__(
@@ -6205,6 +6209,7 @@ class MSetCatalog(GObject.Object):
         sampler_options: typing.Optional[str] = ...,
         storage: MSetCatalogStorage = ...,
         tau_method: StatsAcorrMethod = ...,
+        thin: int = ...,
     ) -> None: ...
     def add_from_mset_array(
         self, mset: MSet, ax: typing.Sequence[float] | npt.NDArray[np.float64]
@@ -6291,6 +6296,7 @@ class MSetCatalog(GObject.Object):
     def get_shrink_factor(self) -> float: ...
     def get_tau_diag(self, p: int) -> StatsAcorrDiag: ...
     def get_tau_method(self) -> StatsAcorrMethod: ...
+    def get_thin(self) -> int: ...
     def heidel_diag_by_chain(
         self, ntests: int, pvalue: float, mtype: FitRunMsgs
     ) -> typing.Tuple[int, float]: ...
@@ -6319,8 +6325,10 @@ class MSetCatalog(GObject.Object):
         symbols: typing.Sequence[str],
     ) -> MSetCatalog: ...
     @classmethod
-    def new_from_storage(
-        cls, storage: MSetCatalogStorage, burnin: int
+    def new_from_storage(cls, storage: MSetCatalogStorage) -> MSetCatalog: ...
+    @classmethod
+    def new_from_storage_full(
+        cls, storage: MSetCatalogStorage, burnin: int, thin: int
     ) -> MSetCatalog: ...
     def param_pdf(self, i: int) -> None: ...
     def param_pdf_pvalue(self, pvalue: float, both: bool) -> float: ...
@@ -6483,6 +6491,8 @@ class MSetCatalogStorage(GObject.Object):
     Object NcmMSetCatalogStorage
 
     Properties from NcmMSetCatalogStorage:
+      read-only -> gboolean: read-only
+        Whether the storage is read-only
       smode -> NcmMSetCatalogSync: smode
         Storage sync mode
       sync-interval -> gdouble: sync-interval
@@ -6493,13 +6503,17 @@ class MSetCatalogStorage(GObject.Object):
     """
 
     class Props:
+        read_only: bool
         smode: MSetCatalogSync
         sync_interval: float
 
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
-        self, smode: MSetCatalogSync = ..., sync_interval: float = ...
+        self,
+        read_only: bool = ...,
+        smode: MSetCatalogSync = ...,
+        sync_interval: float = ...,
     ) -> None: ...
     def add_row(self, row: Vector) -> None: ...
     @staticmethod
@@ -6528,6 +6542,7 @@ class MSetCatalogStorage(GObject.Object):
     def erase(self) -> None: ...
     def free(self) -> None: ...
     def get_markovian_id(self) -> int: ...
+    def get_read_only(self) -> bool: ...
     def get_rng(self) -> typing.Optional[RNG]: ...
     def get_rng_init(self) -> typing.Tuple[str, int, str]: ...
     def get_rng_stat(self) -> typing.Optional[str]: ...
@@ -6597,14 +6612,14 @@ class MSetCatalogStorageFits(MSetCatalogStorage):
     Properties from NcmMSetCatalogStorageFits:
       filename -> gchararray: filename
         Catalog file name
-      read-only -> gboolean: read-only
-        Whether the file is read-only
       keep-last -> guint: keep-last
         Rows per chain kept in memory
       read-block -> guint: read-block
         Number of rows read from the file at once
 
     Properties from NcmMSetCatalogStorage:
+      read-only -> gboolean: read-only
+        Whether the storage is read-only
       smode -> NcmMSetCatalogSync: smode
         Storage sync mode
       sync-interval -> gdouble: sync-interval
@@ -6636,7 +6651,6 @@ class MSetCatalogStorageFits(MSetCatalogStorage):
     def clear(storage_fits: MSetCatalogStorageFits) -> None: ...
     def free(self) -> None: ...
     def get_first_id(self) -> int: ...
-    def get_read_only(self) -> bool: ...
     @classmethod
     def new(
         cls, filename: str, read_only: bool
@@ -6685,6 +6699,8 @@ class MSetCatalogStorageMemory(MSetCatalogStorage):
         Sampler segments
 
     Properties from NcmMSetCatalogStorage:
+      read-only -> gboolean: read-only
+        Whether the storage is read-only
       smode -> NcmMSetCatalogSync: smode
         Storage sync mode
       sync-interval -> gdouble: sync-interval
@@ -6703,6 +6719,7 @@ class MSetCatalogStorageMemory(MSetCatalogStorage):
         rng_stat: str
         rows: ObjArray
         samplers: GLib.Variant
+        read_only: bool
         smode: MSetCatalogSync
         sync_interval: float
 
@@ -6717,6 +6734,7 @@ class MSetCatalogStorageMemory(MSetCatalogStorage):
         rng_stat: str = ...,
         rows: ObjArray = ...,
         samplers: GLib.Variant = ...,
+        read_only: bool = ...,
         smode: MSetCatalogSync = ...,
         sync_interval: float = ...,
     ) -> None: ...

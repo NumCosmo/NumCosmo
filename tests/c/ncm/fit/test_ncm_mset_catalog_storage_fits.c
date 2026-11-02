@@ -189,7 +189,7 @@ static NcmMSetCatalog *
 _test_ncm_mset_catalog_storage_fits_open_catalog (const gchar *filename)
 {
   NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, TRUE, NULL);
-  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0);
+  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
 
   ncm_mset_catalog_storage_fits_free (storage_fits);
 
@@ -206,7 +206,7 @@ _test_ncm_mset_catalog_storage_fits_open_fixture (const gchar *name)
 
   g_assert_no_error (error);
   g_assert_nonnull (storage_fits);
-  g_assert_true (ncm_mset_catalog_storage_fits_get_read_only (storage_fits));
+  g_assert_true (ncm_mset_catalog_storage_get_read_only (NCM_MSET_CATALOG_STORAGE (storage_fits)));
   g_assert_cmpstr (ncm_mset_catalog_storage_fits_peek_filename (storage_fits), ==, path);
 
   g_free (path);
@@ -591,6 +591,15 @@ test_ncm_mset_catalog_storage_fits_fixture_read_only (void)
   g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY);
   g_clear_error (&error);
   g_assert_false (ncm_mset_catalog_storage_is_recording (storage));
+
+  {
+    NcmRNG *rng = ncm_rng_seeded_new (NULL, 1);
+
+    ncm_mset_catalog_storage_set_rng (storage, rng, &error);
+    g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY);
+    g_clear_error (&error);
+    ncm_rng_free (rng);
+  }
 
   ncm_mset_catalog_storage_free (storage);
 }
