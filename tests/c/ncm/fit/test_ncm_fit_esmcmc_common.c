@@ -966,6 +966,7 @@ _test_ncm_fit_esmcmc_parity_run (gboolean use_threads)
   ncm_fit_clear (&fit);
   ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
   ncm_fit_esmcmc_clear (&esmcmc);
+  ncm_rng_free (esmcmc_rng);
   ncm_rng_free (rng);
 
   return mcat;
@@ -1025,6 +1026,7 @@ _test_ncm_fit_esmcmc_phase_run (NcmFitRunMsgs mtype, guint exploration)
   ncm_fit_clear (&fit);
   ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (apes));
   ncm_fit_esmcmc_clear (&esmcmc);
+  ncm_rng_free (esmcmc_rng);
   ncm_rng_free (rng);
 }
 

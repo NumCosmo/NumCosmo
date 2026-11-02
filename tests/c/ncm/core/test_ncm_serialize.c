@@ -756,6 +756,8 @@ test_ncm_serialize_from_yaml_special_types (TestNcmSerialize *test, gconstpointe
     ncm_vector_free (vector);
     ncm_matrix_free (matrix);
   }
+
+  g_object_unref (obj_new);
 }
 
 static void
@@ -814,6 +816,8 @@ test_ncm_serialize_from_yaml_special_types_block_flow (TestNcmSerialize *test, g
     ncm_vector_free (vector);
     ncm_matrix_free (matrix);
   }
+
+  g_object_unref (obj_new);
 }
 
 void
