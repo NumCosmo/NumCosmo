@@ -1043,6 +1043,7 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
 }
 
 static const GVariantType *_ncm_serialize_gtype_to_gvariant_type (GType t);
+static GVariant *_ncm_serialize_legacy_objects (GType gtype, const gchar *prop_name, GVariant *val);
 
 GObject *
 _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
@@ -2275,6 +2276,7 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
       GVariant *val     = g_variant_get_variant (var_val);
 
       names[i] = g_variant_get_string (var_key, NULL);
+      val      = _ncm_serialize_legacy_objects (gtype, names[i], val);
 
       if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_DTUPLE2_TYPE)))
       {
@@ -2406,6 +2408,125 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
   g_free (name);
 
   return obj;
+}
+
+/* Converts an object of the format before 2024-01-21, `{sa{sv}}`, to `(sa{sv})`. */
+static GVariant *
+_ncm_serialize_legacy_object (GVariant *entry)
+{
+  GVariant *children[2] = { g_variant_get_child_value (entry, 0), g_variant_get_child_value (entry, 1) };
+  GVariant *obj         = g_variant_new_tuple (children, 2);
+
+  g_variant_unref (children[0]);
+  g_variant_unref (children[1]);
+
+  return obj;
+}
+
+/*
+ * Returns the value of property prop_name of gtype in the current format, taking val.
+ * Files written before 2024-01-21 (b31b4893) store an object as the dict entry
+ * `{sa{sv}}`, arrays and dictionaries of objects with such entries, a reparam's
+ * `params-desc` (before 2024-01-16) as `a{u{sa{sv}}}`, and NcmModel:sparam-array as an
+ * array of objects, which becomes a dictionary keyed by position. The variant type alone does not
+ * tell such a value from a dictionary (an #NcmVarDict, for instance), so it is converted
+ * only when the property is declared as an object, #NcmObjArray or #NcmObjDictInt;
+ * nested objects are converted when their own properties are read.
+ */
+static GVariant *
+_ncm_serialize_legacy_objects (GType gtype, const gchar *prop_name, GVariant *val)
+{
+  GObjectClass *klass = g_type_class_ref (gtype);
+  GParamSpec *pspec   = g_object_class_find_property (klass, prop_name);
+  GVariant *res       = NULL;
+
+  if (pspec != NULL)
+  {
+    const GType vtype = pspec->value_type;
+
+    if (g_type_is_a (vtype, G_TYPE_OBJECT) && g_variant_is_of_type (val, G_VARIANT_TYPE ("{sa{sv}}")))
+    {
+      res = _ncm_serialize_legacy_object (val);
+    }
+    else if (g_type_is_a (vtype, NCM_TYPE_OBJ_ARRAY) && g_variant_is_of_type (val, G_VARIANT_TYPE ("a{sa{sv}}")))
+    {
+      GVariantBuilder builder;
+      const gsize n = g_variant_n_children (val);
+      gsize k;
+
+      g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE));
+
+      for (k = 0; k < n; k++)
+      {
+        GVariant *entry = g_variant_get_child_value (val, k);
+
+        g_variant_builder_add_value (&builder, _ncm_serialize_legacy_object (entry));
+        g_variant_unref (entry);
+      }
+
+      res = g_variant_builder_end (&builder);
+    }
+    else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_INT) && g_variant_is_of_type (val, G_VARIANT_TYPE ("a{sa{sv}}")))
+    {
+      /* An array, as NcmModel:sparam-array was: keyed by position. */
+      GVariantBuilder builder;
+      const gsize n = g_variant_n_children (val);
+      gsize k;
+
+      g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
+
+      for (k = 0; k < n; k++)
+      {
+        GVariant *entry = g_variant_get_child_value (val, k);
+
+        g_variant_builder_add_value (&builder, g_variant_new_dict_entry (g_variant_new_int32 ((gint32) k),
+                                                                         _ncm_serialize_legacy_object (entry)));
+        g_variant_unref (entry);
+      }
+
+      res = g_variant_builder_end (&builder);
+    }
+    else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_INT) && (g_variant_is_of_type (val, G_VARIANT_TYPE ("a{i{sa{sv}}}")) ||
+                                                            g_variant_is_of_type (val, G_VARIANT_TYPE ("a{u{sa{sv}}}"))))
+    {
+      GVariantBuilder builder;
+      const gsize n = g_variant_n_children (val);
+      gsize k;
+
+      g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
+
+      for (k = 0; k < n; k++)
+      {
+        GVariant *item  = g_variant_get_child_value (val, k);
+        GVariant *key   = g_variant_get_child_value (item, 0);
+        GVariant *entry = g_variant_get_child_value (item, 1);
+        GVariant *nkey;
+
+        /* Floating, so that the dict entry takes it. */
+        if (g_variant_is_of_type (key, G_VARIANT_TYPE_UINT32))
+          nkey = g_variant_new_int32 ((gint32) g_variant_get_uint32 (key));
+        else
+          nkey = g_variant_new_int32 (g_variant_get_int32 (key));
+
+        g_variant_builder_add_value (&builder, g_variant_new_dict_entry (nkey, _ncm_serialize_legacy_object (entry)));
+
+        g_variant_unref (item);
+        g_variant_unref (key);
+        g_variant_unref (entry);
+      }
+
+      res = g_variant_builder_end (&builder);
+    }
+  }
+
+  g_type_class_unref (klass);
+
+  if (res == NULL)
+    return val;
+
+  g_variant_unref (val);
+
+  return g_variant_ref_sink (res);
 }
 
 static const GVariantType *

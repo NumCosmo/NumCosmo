@@ -99,6 +99,7 @@ static void test_ncm_serialize_invalid_from_string_samename (TestNcmSerialize *t
 static void test_ncm_serialize_invalid_from_string_wrongorder (TestNcmSerialize *test, gconstpointer pdata);
 
 void test_ncm_serialize_set_taken_subprocess (void);
+void test_ncm_serialize_legacy_objects (void);
 void test_ncm_serialize_instances (void);
 void test_ncm_serialize_is_named (void);
 void test_ncm_serialize_shorthand (void);
@@ -211,6 +212,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/serialize/api/remove_ser", &test_ncm_serialize_remove_ser);
   g_test_add_func ("/ncm/serialize/api/named_no_autosave", &test_ncm_serialize_named_no_autosave);
   g_test_add_func ("/ncm/serialize/api/set_taken/subprocess", &test_ncm_serialize_set_taken_subprocess);
+  g_test_add_func ("/ncm/serialize/legacy/objects", &test_ncm_serialize_legacy_objects);
 
   g_test_run ();
 }
@@ -1188,6 +1190,67 @@ test_ncm_serialize_named_no_autosave (void)
   g_assert_false (ncm_serialize_contain_name (ser, "S0"));
 
   g_object_unref (obj);
+  ncm_serialize_free (ser);
+}
+
+/*
+ * Objects written before 2024-01-21 are the dict entry {sa{sv}}: an object property
+ * (a spline's vectors), an object array (an NcmMSet's models) and NcmModel:sparam-array,
+ * as an array, keyed by uint32 and keyed by int32, are read as objects.
+ */
+void
+test_ncm_serialize_legacy_objects (void)
+{
+  NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  const gchar *x1_desc = "{'name': <'x1'>, 'symbol': <'x_1'>, 'lower-bound': <-3.0>, 'upper-bound': <3.0>, "
+                         "'scale': <0.5>, 'absolute-tolerance': <0.0>, 'default-value': <0.25>, 'fit-type': <1>}";
+  const gchar *x2_desc = "{'name': <'x2'>, 'symbol': <'x_2'>, 'lower-bound': <-7.0>, 'upper-bound': <7.0>, "
+                         "'scale': <0.5>, 'absolute-tolerance': <0.0>, 'default-value': <0.75>, 'fit-type': <1>}";
+
+  {
+    GObject *obj = ncm_serialize_from_string (ser,
+                                              "('NcmSplineCubicNotaknot', {'length': <uint32 6>, "
+                                              "'x': <{'NcmVector', {'values': <[0.0, 1.0, 2.0, 3.0, 4.0, 5.0]>}}>, "
+                                              "'y': <{'NcmVector', {'values': <[0.0, 1.0, 4.0, 9.0, 16.0, 25.0]>}}>})");
+    NcmSpline *spline = NCM_SPLINE (obj);
+
+    g_assert_cmpuint (ncm_vector_len (ncm_spline_peek_xv (spline)), ==, 6);
+    g_assert_cmpfloat (ncm_vector_get (ncm_spline_peek_yv (spline), 3), ==, 9.0);
+    g_object_unref (obj);
+  }
+
+  {
+    GObject *obj = ncm_serialize_from_string (ser, "('NcmMSet', {'model-array': <{'NcmModelRosenbrock': @a{sv} {}}>})");
+
+    g_assert_true (NCM_IS_MODEL_ROSENBROCK (ncm_mset_peek (NCM_MSET (obj), ncm_model_rosenbrock_id ())));
+    g_object_unref (obj);
+  }
+
+  {
+    gchar *array_str = g_strdup_printf ("('NcmModelRosenbrock', {'sparam-array': <{'NcmSParam': %s, 'NcmSParam': %s}>})",
+                                        x1_desc, x2_desc);
+    gchar *uint32_str = g_strdup_printf ("('NcmModelRosenbrock', {'sparam-array': <{uint32 1: {'NcmSParam', %s}}>})",
+                                         x2_desc);
+    gchar *int32_str    = g_strdup_printf ("('NcmModelRosenbrock', {'sparam-array': <{0: {'NcmSParam', %s}}>})", x1_desc);
+    GObject *array_obj  = ncm_serialize_from_string (ser, array_str);
+    GObject *uint32_obj = ncm_serialize_from_string (ser, uint32_str);
+    GObject *int32_obj  = ncm_serialize_from_string (ser, int32_str);
+
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (array_obj), 0), ==, -3.0);
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (array_obj), 1), ==, -7.0);
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (uint32_obj), 0), ==, -200.0);
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (uint32_obj), 1), ==, -7.0);
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (int32_obj), 0), ==, -3.0);
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (int32_obj), 1), ==, -400.0);
+
+    g_object_unref (array_obj);
+    g_object_unref (uint32_obj);
+    g_object_unref (int32_obj);
+    g_free (array_str);
+    g_free (uint32_str);
+    g_free (int32_str);
+  }
+
   ncm_serialize_free (ser);
 }
 
