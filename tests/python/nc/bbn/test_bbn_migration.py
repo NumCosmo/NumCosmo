@@ -176,22 +176,50 @@ def test_a_stale_reparam_still_attaches():
 
 
 def test_a_reparam_of_a_gone_parameter_fails_loudly():
-    """Resizing is only safe while the descriptors still fit.
+    """A stored description of Yp (index 4 before the move) has nowhere to go.
 
-    A descriptor pointing past the end of the model means the parameter it
-    reparametrizes is gone, which no rebuild can repair -- so it must raise
-    rather than abort or silently reparametrize the wrong slot.
+    It must raise rather than abort or silently reparametrize another slot.
     """
     cosmo = Nc.HICosmoDEXcdm.new()
     reparam = Nc.HICosmoDEReparamOk.new(8)
 
-    # Slot 7 existed while the cosmology had eight parameters and does not now.
     reparam.set_param_desc_full(
-        7, "Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED
+        4, "Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED
     )
 
-    with pytest.raises(GLib.Error, match="no longer exists"):
+    with pytest.raises(GLib.Error, match="which was removed from the model"):
         cosmo.set_reparam(reparam)
+
+
+def test_a_stale_cmb_reparam_describes_the_same_parameters():
+    """The CMB reparametrization of a 2024 Planck run, written with Yp at index 4.
+
+    It describes omegac at 1 and omegab at 6. After the move omegab is at 5 and 6
+    is w, which must keep its own name and bounds.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+    reparam = Nc.HICosmoDEReparamCMB.new(8)
+    desc = Ncm.ObjDictInt.new()
+    desc.add(
+        1,
+        Ncm.SParam.new(
+            "omegac", "\\omega_{c0}", 0.0075, 0.25, 0.01, 0.0, 0.12, Ncm.ParamType.FREE
+        ),
+    )
+    desc.add(
+        6,
+        Ncm.SParam.new(
+            "omegab", "\\omega_{b0}", 0.005, 0.04, 0.01, 0.0, 0.022, Ncm.ParamType.FREE
+        ),
+    )
+    reparam.set_property("params-desc", desc)
+
+    cosmo.set_reparam(reparam)
+
+    assert cosmo.param_name(1) == "omegac"
+    assert cosmo.param_name(5) == "omegab"
+    assert cosmo.param_get_upper_bound(5) == 0.04
+    assert cosmo.param_name(6) == "w"
 
 
 # The three containers a catalog has ever used for its model-set, all written by

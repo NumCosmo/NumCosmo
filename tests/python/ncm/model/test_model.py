@@ -571,17 +571,9 @@ def test_ncm_model_reparam_without_descriptors_is_resized() -> None:
     assert cosmo.len() == 7
 
 
-@pytest.mark.parametrize("index", [7, -1])
-def test_ncm_model_reparam_descriptor_outside_model_raises(index: int) -> None:
-    """A descriptor naming a slot the model does not have cannot be rebuilt.
-
-    Descriptors are keyed by index into the model's original parameters, so a
-    key outside [0, len) means the parameter it reparametrizes is gone. Index 7
-    is past the end; a negative one is not a slot at all.
-    """
-    cosmo = Nc.HICosmoDEXcdm.new()
-    reparam = Nc.HICosmoDEReparamOk.new(8)
-
+def _ok_reparam_with_desc(length: int, index: int) -> Ncm.Reparam:
+    """An NcHICosmoDEReparamOk of the given length describing only parameter index."""
+    reparam = Nc.HICosmoDEReparamOk.new(length)
     desc = Ncm.ObjDictInt.new()
     desc.add(
         index,
@@ -589,18 +581,72 @@ def test_ncm_model_reparam_descriptor_outside_model_raises(index: int) -> None:
     )
     reparam.set_property("params-desc", desc)
 
+    return reparam
+
+
+def _reparam_error(length: int, reason: str) -> re.Pattern:
+    """The error of ncm_model_set_reparam() for an Ok reparametrization on Xcdm."""
+    return re.compile(
+        rf"^ncm-model-error: ncm_model_set_reparam: reparametrization "
+        rf"`NcHICosmoDEReparamOk' is for {length} parameters but model "
+        rf"`NcHICosmoDEXcdm' has 7, and {reason}\. "
+        rf"\({int(Ncm.ModelError.REPARAM_INCOMPATIBLE)}\)$",
+        re.DOTALL,
+    )
+
+
+def test_ncm_model_reparam_negative_descriptor_raises() -> None:
+    """A negative key is not a parameter index."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+
     with pytest.raises(
         GLib.Error,
-        match=re.compile(
-            rf"^ncm-model-error: ncm_model_set_reparam: reparametrization "
-            rf"`NcHICosmoDEReparamOk' is for 8 parameters but model "
-            rf"`NcHICosmoDEXcdm' has 7, and it reparametrizes parameter {index}, "
-            rf"which no longer exists\. "
-            rf"\({int(Ncm.ModelError.REPARAM_INCOMPATIBLE)}\)$",
-            re.DOTALL,
+        match=_reparam_error(
+            8, "it reparametrizes parameter -1, which no longer exists"
         ),
     ):
-        cosmo.set_reparam(reparam)
+        cosmo.set_reparam(_ok_reparam_with_desc(8, -1))
+
+
+def test_ncm_model_reparam_written_before_removal_moves_descriptors() -> None:
+    """A length of 7 + 1 is the layout before Yp (index 4) was removed.
+
+    Index 7 was w then; it is 6 now, so the description moves there.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+
+    cosmo.set_reparam(_ok_reparam_with_desc(8, 7))
+
+    assert cosmo.param_name(6) == "Bogus"
+    assert cosmo.param_name(5) == "Omegab"
+
+
+def test_ncm_model_reparam_descriptor_of_removed_parameter_raises() -> None:
+    """A description of Yp itself has nowhere to go."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=_reparam_error(
+            8, "it reparametrizes parameter 4, which was removed from the model"
+        ),
+    ):
+        cosmo.set_reparam(_ok_reparam_with_desc(8, 4))
+
+
+def test_ncm_model_reparam_ambiguous_layout_raises() -> None:
+    """A length that is neither 7 nor 8 cannot place a key at or after index 4."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=_reparam_error(
+            9,
+            "it reparametrizes parameter 5, at or after the removed parameter 4, "
+            "and its length is not the 8 the model had before the removal",
+        ),
+    ):
+        cosmo.set_reparam(_ok_reparam_with_desc(9, 5))
 
 
 def test_ncm_model_reparam_with_extra_state_raises() -> None:

@@ -130,6 +130,14 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
                               0.03,  0.05, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
                               NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * Yp, parameter 4 between Tgamma0 and ENnu, moved to the bbn submodel: files written
+   * before that store its description and index every later parameter one higher.
+   * Dropped in 1.0.
+   */
+  ncm_model_class_add_removed_param (model_class, "Yp", 4);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
