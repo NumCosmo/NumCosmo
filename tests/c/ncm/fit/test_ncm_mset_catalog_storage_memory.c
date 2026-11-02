@@ -60,12 +60,14 @@ void test_ncm_mset_catalog_storage_memory_bind_order (TestNcmMSetCatalogStorageM
 void test_ncm_mset_catalog_storage_memory_serialize (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
 void test_ncm_mset_catalog_storage_memory_peek_row (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
 void test_ncm_mset_catalog_storage_memory_erase (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
+void test_ncm_mset_catalog_storage_memory_read_only (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata);
 void test_ncm_mset_catalog_storage_memory_property_traps (void);
 void test_ncm_mset_catalog_storage_memory_property_subprocess (void);
 
 static NcmVector *_test_ncm_mset_catalog_storage_memory_row (guint i);
 static void _test_ncm_mset_catalog_storage_memory_add_rows (NcmMSetCatalogStorage *storage, guint first, guint n);
 static void _test_ncm_mset_catalog_storage_memory_assert_row (NcmMSetCatalogStorage *storage, guint i);
+static NcmMSetCatalogStorage *_test_ncm_mset_catalog_storage_memory_read_only_copy (NcmMSetCatalogStorage *storage);
 
 gint
 main (gint argc, gchar *argv[])
@@ -121,6 +123,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_storage_memory_new,
               &test_ncm_mset_catalog_storage_memory_erase,
               &test_ncm_mset_catalog_storage_memory_free);
+  g_test_add ("/ncm/mset/catalog/storage/memory/read_only", TestNcmMSetCatalogStorageMemory, NULL,
+              &test_ncm_mset_catalog_storage_memory_new,
+              &test_ncm_mset_catalog_storage_memory_read_only,
+              &test_ncm_mset_catalog_storage_memory_free);
   g_test_add_func ("/ncm/mset/catalog/storage/memory/property/traps", &test_ncm_mset_catalog_storage_memory_property_traps);
   g_test_add_func ("/ncm/mset/catalog/storage/memory/property/subprocess", &test_ncm_mset_catalog_storage_memory_property_subprocess);
 
@@ -172,6 +178,52 @@ _test_ncm_mset_catalog_storage_memory_assert_row (NcmMSetCatalogStorage *storage
 
   ncm_vector_free (row);
   ncm_vector_free (expect);
+}
+
+/*
+ * A new memory storage with every construct property of storage, the rows included,
+ * and read-only set.
+ */
+static NcmMSetCatalogStorage *
+_test_ncm_mset_catalog_storage_memory_read_only_copy (NcmMSetCatalogStorage *storage)
+{
+  GObjectClass *klass  = G_OBJECT_GET_CLASS (storage);
+  GArray *names        = g_array_new (FALSE, FALSE, sizeof (const gchar *));
+  GArray *values       = g_array_new (FALSE, TRUE, sizeof (GValue));
+  const gchar *ro_name = "read-only";
+  GValue ro_value      = G_VALUE_INIT;
+  GObject *copy;
+  guint n_props, i;
+  GParamSpec **pspecs = g_object_class_list_properties (klass, &n_props);
+
+  g_array_set_clear_func (values, (GDestroyNotify) g_value_unset);
+
+  for (i = 0; i < n_props; i++)
+  {
+    GValue value = G_VALUE_INIT;
+
+    if (!(pspecs[i]->flags & G_PARAM_WRITABLE) || (g_strcmp0 (pspecs[i]->name, ro_name) == 0))
+      continue;
+
+    g_value_init (&value, pspecs[i]->value_type);
+    g_object_get_property (G_OBJECT (storage), pspecs[i]->name, &value);
+    g_array_append_val (names, pspecs[i]->name);
+    g_array_append_val (values, value);
+  }
+
+  g_value_init (&ro_value, G_TYPE_BOOLEAN);
+  g_value_set_boolean (&ro_value, TRUE);
+  g_array_append_val (names, ro_name);
+  g_array_append_val (values, ro_value);
+
+  copy = g_object_new_with_properties (G_OBJECT_TYPE (storage), names->len,
+                                       (const gchar **) names->data, (const GValue *) values->data);
+
+  g_array_unref (values);
+  g_array_unref (names);
+  g_free (pspecs);
+
+  return NCM_MSET_CATALOG_STORAGE (copy);
 }
 
 void
@@ -757,6 +809,68 @@ test_ncm_mset_catalog_storage_memory_erase (TestNcmMSetCatalogStorageMemory *tes
   g_free (options);
   g_free (algo);
   g_free (stat);
+  ncm_rng_free (rng);
+}
+
+/*
+ * A memory storage built holding rows with read-only set reads its rows and binds a
+ * compatible description; storing a description, setting the RNG, opening a recording
+ * and erasing fail with READ_ONLY and change nothing.
+ */
+void
+test_ncm_mset_catalog_storage_memory_read_only (TestNcmMSetCatalogStorageMemory *test, gconstpointer pdata)
+{
+  NcmRNG *rng   = ncm_rng_seeded_new (NULL, 55);
+  NcmRNG *rng2  = ncm_rng_seeded_new (NULL, 56);
+  GError *error = NULL;
+  NcmMSetCatalogStorage *ro, *empty_ro;
+  guint i;
+
+  ncm_mset_catalog_storage_set_desc (test->storage, test->desc, &error);
+  ncm_mset_catalog_storage_set_rng (test->storage, rng, &error);
+  ncm_mset_catalog_storage_start_recording (test->storage, "A", NULL, &error);
+  _test_ncm_mset_catalog_storage_memory_add_rows (test->storage, 0, 4);
+  ncm_mset_catalog_storage_end_recording (test->storage, &error);
+  g_assert_no_error (error);
+  g_assert_false (ncm_mset_catalog_storage_get_read_only (test->storage));
+
+  ro = _test_ncm_mset_catalog_storage_memory_read_only_copy (test->storage);
+  g_assert_true (ncm_mset_catalog_storage_get_read_only (ro));
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (ro, &error), ==, 4);
+  g_assert_no_error (error);
+
+  for (i = 0; i < 4; i++)
+    _test_ncm_mset_catalog_storage_memory_assert_row (ro, i);
+
+  ncm_mset_catalog_storage_set_desc (ro, test->desc, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_set_rng (ro, rng2, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY);
+  g_clear_error (&error);
+
+  ncm_mset_catalog_storage_start_recording (ro, "B", NULL, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY);
+  g_clear_error (&error);
+  g_assert_false (ncm_mset_catalog_storage_is_recording (ro));
+
+  ncm_mset_catalog_storage_erase (ro, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY);
+  g_clear_error (&error);
+
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (ro, &error), ==, 4);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (ro, &error), ==, 1);
+  g_assert_no_error (error);
+
+  empty_ro = NCM_MSET_CATALOG_STORAGE (g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_MEMORY, "read-only", TRUE, NULL));
+  ncm_mset_catalog_storage_set_desc (empty_ro, test->desc, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY);
+  g_clear_error (&error);
+  g_assert_null (ncm_mset_catalog_storage_peek_desc (empty_ro, &error));
+
+  ncm_mset_catalog_storage_free (empty_ro);
+  ncm_mset_catalog_storage_free (ro);
+  ncm_rng_free (rng2);
   ncm_rng_free (rng);
 }
 

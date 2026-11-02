@@ -1024,13 +1024,13 @@ _ncm_mset_catalog_new_memory_storage (NcmMSetCatalog *mcat)
                        NULL);
 }
 
-/* Whether the storage is a read-only FITS storage. */
+/* Whether the storage is read-only. */
 static gboolean
 _ncm_mset_catalog_is_read_only (NcmMSetCatalog *mcat)
 {
-  NcmMSetCatalogStorageFits *storage_fits = _ncm_mset_catalog_peek_fits_storage (mcat);
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
-  return (storage_fits != NULL) && ncm_mset_catalog_storage_fits_get_read_only (storage_fits);
+  return (self->storage != NULL) && ncm_mset_catalog_storage_get_read_only (self->storage);
 }
 
 /* The storage as a FITS storage, NULL for any other storage. */
@@ -1296,12 +1296,16 @@ _ncm_mset_catalog_rebuild_empty (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc,
 
   g_assert (ncm_mset_catalog_is_empty (mcat));
 
+  if (_ncm_mset_catalog_is_read_only (mcat))
+  {
+    const gchar *filename = ncm_mset_catalog_peek_filename (mcat);
+
+    g_error ("%s: cannot change a read-only catalog (`%s').", func, filename != NULL ? filename : "(memory)");
+  }
+
   if (storage_fits != NULL)
   {
     gchar *filename = g_strdup (ncm_mset_catalog_storage_fits_peek_filename (storage_fits));
-
-    if (ncm_mset_catalog_storage_fits_get_read_only (storage_fits))
-      g_error ("%s: cannot change a read-only catalog (`%s').", func, filename);
 
     new_storage = _ncm_mset_catalog_new_fits_storage (mcat, filename);
 

@@ -65,6 +65,11 @@
  * %NULL, nrows 0, get_rng_init with a %NULL algorithm, get_markovian_id 0 and
  * n_samplers 0. A file-backed storage whose file exists opens it at the first of these
  * calls. The Desc is stored before any run metadata: the setters require one.
+ *
+ * A read-only storage (#NcmMSetCatalogStorage:read-only) fails every write with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY: storing a description, setting the RNG,
+ * opening a recording (and so adding rows, syncing and setting the Markovian id) and
+ * erasing. Binding a compatible description to an initialized storage is not a write.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -87,6 +92,7 @@ G_DEFINE_QUARK (ncm-mset-catalog-storage-error, ncm_mset_catalog_storage_error)
 
 typedef struct _NcmMSetCatalogStoragePrivate
 {
+  gboolean read_only;
   gboolean recording;
   NcmRNG *rng;
   NcmMSetCatalogSync smode;
@@ -97,6 +103,7 @@ typedef struct _NcmMSetCatalogStoragePrivate
 enum
 {
   PROP_0,
+  PROP_READ_ONLY,
   PROP_SYNC_MODE,
   PROP_SYNC_INTERVAL,
 };
@@ -108,6 +115,7 @@ ncm_mset_catalog_storage_init (NcmMSetCatalogStorage *storage)
 {
   NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
 
+  self->read_only     = FALSE;
   self->recording     = FALSE;
   self->rng           = NULL;
   self->smode         = NCM_MSET_CATALOG_SYNC_LEN;
@@ -125,6 +133,9 @@ _ncm_mset_catalog_storage_set_property (GObject *object, guint prop_id, const GV
 
   switch (prop_id)
   {
+    case PROP_READ_ONLY:
+      self->read_only = g_value_get_boolean (value);
+      break;
     case PROP_SYNC_MODE:
       self->smode = g_value_get_enum (value);
       break;
@@ -147,6 +158,9 @@ _ncm_mset_catalog_storage_get_property (GObject *object, guint prop_id, GValue *
 
   switch (prop_id)
   {
+    case PROP_READ_ONLY:
+      g_value_set_boolean (value, self->read_only);
+      break;
     case PROP_SYNC_MODE:
       g_value_set_enum (value, self->smode);
       break;
@@ -197,6 +211,21 @@ ncm_mset_catalog_storage_class_init (NcmMSetCatalogStorageClass *klass)
   object_class->get_property = &_ncm_mset_catalog_storage_get_property;
   object_class->dispose      = &_ncm_mset_catalog_storage_dispose;
   object_class->finalize     = &_ncm_mset_catalog_storage_finalize;
+
+  /**
+   * NcmMSetCatalogStorage:read-only:
+   *
+   * Whether every write fails with %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY. A
+   * file-backed storage also opens its file for reading only, and a file that does not
+   * exist is then an error.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_READ_ONLY,
+                                   g_param_spec_boolean ("read-only",
+                                                         NULL,
+                                                         "Whether the storage is read-only",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmMSetCatalogStorage:smode:
@@ -319,6 +348,17 @@ _ncm_mset_catalog_storage_require_desc (NcmMSetCatalogStorage *storage, GError *
   return desc;
 }
 
+/* Sets error (READ_ONLY) when the storage is read-only. */
+static void
+_ncm_mset_catalog_storage_require_writable (NcmMSetCatalogStorage *storage, GError **error)
+{
+  NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
+
+  if (self->read_only)
+    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY,
+                                "the storage is read-only");
+}
+
 /**
  * ncm_mset_catalog_storage_set_desc:
  * @storage: a #NcmMSetCatalogStorage
@@ -330,7 +370,8 @@ _ncm_mset_catalog_storage_require_desc (NcmMSetCatalogStorage *storage, GError *
  * (ncm_mset_catalog_desc_is_compatible()), so rows are read and written in the order
  * of @desc, and otherwise fails with %NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE,
  * naming the difference. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a
- * recording is open.
+ * recording is open, and with %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY when @storage
+ * is uninitialized and read-only.
  */
 void
 ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error)
@@ -352,6 +393,9 @@ ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalo
 
   if (stored == NULL)
   {
+    _ncm_mset_catalog_storage_require_writable (storage, error);
+    NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_desc: ");
+
     klass->store_desc (storage, desc, error);
     NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_desc: ");
 
@@ -389,8 +433,9 @@ ncm_mset_catalog_storage_set_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalo
  * initial RNG state, which is also the current state until the first sync. @storage
  * keeps a reference to @rng. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED
  * without a description, with %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING while a
- * recording is open, and with %NCM_MSET_CATALOG_STORAGE_ERROR_RNG when @storage has
- * rows or an RNG.
+ * recording is open, with %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY on a read-only
+ * @storage, and with %NCM_MSET_CATALOG_STORAGE_ERROR_RNG when @storage has rows or an
+ * RNG.
  */
 void
 ncm_mset_catalog_storage_set_rng (NcmMSetCatalogStorage *storage, NcmRNG *rng, GError **error)
@@ -408,6 +453,9 @@ ncm_mset_catalog_storage_set_rng (NcmMSetCatalogStorage *storage, NcmRNG *rng, G
 
     return;
   }
+
+  _ncm_mset_catalog_storage_require_writable (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_rng: ");
 
   _ncm_mset_catalog_storage_require_desc (storage, error);
   NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_set_rng: ");
@@ -522,9 +570,10 @@ static void _ncm_mset_catalog_storage_open_segment (NcmMSetCatalogStorage *stora
  * rows, is replaced. A stored RNG is built (ncm_mset_catalog_storage_get_rng()) so
  * that the syncs of the recording write its state.
  *
- * Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description and
- * with %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING when a recording is already open; the
- * recording is then not opened.
+ * Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description, with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING when a recording is already open and with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY on a read-only @storage; the recording is
+ * then not opened.
  */
 void
 ncm_mset_catalog_storage_start_recording (NcmMSetCatalogStorage *storage, const gchar *sampler, const gchar *options, GError **error)
@@ -541,6 +590,9 @@ ncm_mset_catalog_storage_start_recording (NcmMSetCatalogStorage *storage, const 
 
     return;
   }
+
+  _ncm_mset_catalog_storage_require_writable (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_start_recording: ");
 
   _ncm_mset_catalog_storage_require_desc (storage, error);
   NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_start_recording: ");
@@ -725,6 +777,20 @@ ncm_mset_catalog_storage_sync (NcmMSetCatalogStorage *storage, GError **error)
 }
 
 /**
+ * ncm_mset_catalog_storage_get_read_only:
+ * @storage: a #NcmMSetCatalogStorage
+ *
+ * Returns: whether @storage is read-only (#NcmMSetCatalogStorage:read-only)
+ */
+gboolean
+ncm_mset_catalog_storage_get_read_only (NcmMSetCatalogStorage *storage)
+{
+  NcmMSetCatalogStoragePrivate * const self = ncm_mset_catalog_storage_get_instance_private (storage);
+
+  return self->read_only;
+}
+
+/**
  * ncm_mset_catalog_storage_is_recording:
  * @storage: a #NcmMSetCatalogStorage
  *
@@ -833,8 +899,9 @@ ncm_mset_catalog_storage_peek_row (NcmMSetCatalogStorage *storage, guint i, GErr
  * Removes every row, every sampler segment and the Markovian id. The description and
  * the RNG stay: the stored initial RNG state remains the state before the first row
  * ever added, and the current RNG state is left as written by the last sync. Fails with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description and with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING inside a recording.
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED without a description, with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING inside a recording and with
+ * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY on a read-only @storage.
  */
 void
 ncm_mset_catalog_storage_erase (NcmMSetCatalogStorage *storage, GError **error)
@@ -852,6 +919,9 @@ ncm_mset_catalog_storage_erase (NcmMSetCatalogStorage *storage, GError **error)
 
     return;
   }
+
+  _ncm_mset_catalog_storage_require_writable (storage, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_erase: ");
 
   klass->erase (storage, error);
   NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_mset_catalog_storage_erase: ");

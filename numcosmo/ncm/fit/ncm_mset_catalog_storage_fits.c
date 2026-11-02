@@ -39,7 +39,7 @@
  *
  * The file is opened at the first call that needs it. A storage on a file that does
  * not exist is uninitialized; ncm_mset_catalog_storage_set_desc() creates the file. A
- * read-only storage (#NcmMSetCatalogStorageFits:read-only) fails every write with
+ * read-only storage (#NcmMSetCatalogStorage:read-only) fails every write with
  * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY. Rows appended inside a recording are
  * written to the file at each sync; the last #NcmMSetCatalogStorageFits:keep-last rows
  * per chain stay in memory, and ncm_mset_catalog_storage_get_row() reads older rows
@@ -88,7 +88,6 @@ struct _NcmMSetCatalogStorageFits
 {
   NcmMSetCatalogStorage parent_instance;
   gchar *filename;
-  gboolean read_only;
   guint keep_last;
   guint read_block;
   gpointer fptr;
@@ -117,7 +116,6 @@ enum
 {
   PROP_0,
   PROP_FILENAME,
-  PROP_READ_ONLY,
   PROP_KEEP_LAST,
   PROP_READ_BLOCK,
 };
@@ -137,7 +135,6 @@ static void
 ncm_mset_catalog_storage_fits_init (NcmMSetCatalogStorageFits *storage_fits)
 {
   storage_fits->filename     = NULL;
-  storage_fits->read_only    = FALSE;
   storage_fits->keep_last    = 0;
   storage_fits->read_block   = 0;
   storage_fits->fptr         = NULL;
@@ -176,9 +173,6 @@ _ncm_mset_catalog_storage_fits_set_property (GObject *object, guint prop_id, con
     case PROP_FILENAME:
       storage_fits->filename = g_value_dup_string (value);
       break;
-    case PROP_READ_ONLY:
-      storage_fits->read_only = g_value_get_boolean (value);
-      break;
     case PROP_KEEP_LAST:
       storage_fits->keep_last = g_value_get_uint (value);
       break;
@@ -203,9 +197,6 @@ _ncm_mset_catalog_storage_fits_get_property (GObject *object, guint prop_id, GVa
   {
     case PROP_FILENAME:
       g_value_set_string (value, storage_fits->filename);
-      break;
-    case PROP_READ_ONLY:
-      g_value_set_boolean (value, storage_fits->read_only);
       break;
     case PROP_KEEP_LAST:
       g_value_set_uint (value, storage_fits->keep_last);
@@ -298,21 +289,6 @@ ncm_mset_catalog_storage_fits_class_init (NcmMSetCatalogStorageFitsClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcmMSetCatalogStorageFits:read-only:
-   *
-   * Whether the file is opened for reading only; every write then fails with
-   * %NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY, and a file that does not exist is an
-   * error.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_READ_ONLY,
-                                   g_param_spec_boolean ("read-only",
-                                                         NULL,
-                                                         "Whether the file is read-only",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
    * NcmMSetCatalogStorageFits:keep-last:
    *
    * Rows per chain kept in memory after a sync; older rows are read from the file.
@@ -374,15 +350,6 @@ _ncm_mset_catalog_storage_fits_check (gint status, const gchar *where, GError **
     ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
                                 "%s: FITS: %s", where, msg);
   }
-}
-
-/* Sets error (READ_ONLY) when the storage is read-only. */
-static void
-_ncm_mset_catalog_storage_fits_require_writable (NcmMSetCatalogStorageFits *storage_fits, GError **error)
-{
-  if (storage_fits->read_only)
-    ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY,
-                                "the file `%s' is read-only", storage_fits->filename);
 }
 
 /*
@@ -1079,7 +1046,7 @@ _ncm_mset_catalog_storage_fits_open_existing (NcmMSetCatalogStorageFits *storage
   fitsfile *fptr                         = NULL;
   gint status                            = 0;
 
-  fits_open_file (&fptr, storage_fits->filename, storage_fits->read_only ? READONLY : READWRITE, &status);
+  fits_open_file (&fptr, storage_fits->filename, ncm_mset_catalog_storage_get_read_only (NCM_MSET_CATALOG_STORAGE (storage_fits)) ? READONLY : READWRITE, &status);
   _ncm_mset_catalog_storage_fits_check (status, storage_fits->filename, error);
   NCM_UTIL_ON_ERROR_RETURN (error, , );
 
@@ -1163,7 +1130,7 @@ _ncm_mset_catalog_storage_fits_ensure_open (NcmMSetCatalogStorageFits *storage_f
     _ncm_mset_catalog_storage_fits_open_existing (storage_fits, error);
     NCM_UTIL_ON_ERROR_RETURN (error, _ncm_mset_catalog_storage_fits_discard_open (storage_fits), );
   }
-  else if (storage_fits->read_only)
+  else if (ncm_mset_catalog_storage_get_read_only (NCM_MSET_CATALOG_STORAGE (storage_fits)))
   {
     ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
                                 "the read-only file `%s' does not exist", storage_fits->filename);
@@ -1564,7 +1531,7 @@ _ncm_mset_catalog_storage_fits_close (NcmMSetCatalogStorageFits *storage_fits)
     GError *error = NULL;
     gint status   = 0;
 
-    if (!storage_fits->read_only)
+    if (!ncm_mset_catalog_storage_get_read_only (NCM_MSET_CATALOG_STORAGE (storage_fits)))
     {
       _ncm_mset_catalog_storage_fits_write_pending (storage_fits, &error);
 
@@ -1608,9 +1575,6 @@ _ncm_mset_catalog_storage_fits_store_desc (NcmMSetCatalogStorage *storage, NcmMS
   g_assert_null (storage_fits->desc);
 
   _ncm_mset_catalog_storage_fits_ensure_open (storage_fits, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, , );
-
-  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
   NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   _ncm_mset_catalog_storage_fits_create (storage_fits, desc, error);
@@ -1684,9 +1648,6 @@ _ncm_mset_catalog_storage_fits_append (NcmMSetCatalogStorage *storage, NcmVector
 {
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
-  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, , );
-
   g_ptr_array_add (storage_fits->tail, ncm_vector_dup (row));
   storage_fits->n_pending++;
 }
@@ -1756,9 +1717,6 @@ _ncm_mset_catalog_storage_fits_erase (NcmMSetCatalogStorage *storage, GError **e
   guint in_file;
   gint status = 0;
   guint i;
-
-  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   fptr    = FPTR (storage_fits);
   in_file = storage_fits->tail_first + storage_fits->tail->len - storage_fits->n_pending;
@@ -1833,7 +1791,7 @@ _ncm_mset_catalog_storage_fits_sync (NcmMSetCatalogStorage *storage, GError **er
 {
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
-  if (storage_fits->read_only || (storage_fits->fptr == NULL))
+  if (ncm_mset_catalog_storage_get_read_only (NCM_MSET_CATALOG_STORAGE (storage_fits)) || (storage_fits->fptr == NULL))
     return;
 
   _ncm_mset_catalog_storage_fits_write_pending (storage_fits, error);
@@ -1875,9 +1833,6 @@ _ncm_mset_catalog_storage_fits_set_rng_init (NcmMSetCatalogStorage *storage, con
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
   fitsfile *fptr                          = FPTR (storage_fits);
 
-  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, , );
-
   _ncm_mset_catalog_storage_fits_write_str (fptr, NCM_MSET_CATALOG_RNG_ALGO_LABEL, algo, "RNG Algorithm name.", error);
   NCM_UTIL_ON_ERROR_RETURN (error, , );
 
@@ -1913,9 +1868,6 @@ _ncm_mset_catalog_storage_fits_set_rng_stat (NcmMSetCatalogStorage *storage, con
 {
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
 
-  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, , );
-
   _ncm_mset_catalog_storage_fits_write_longstr (FPTR (storage_fits), NCM_MSET_CATALOG_RNG_STAT_LABEL, state, NULL, error);
   NCM_UTIL_ON_ERROR_RETURN (error, , );
 
@@ -1938,9 +1890,6 @@ static void
 _ncm_mset_catalog_storage_fits_set_markovian_id (NcmMSetCatalogStorage *storage, guint markovian_id, GError **error)
 {
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
-
-  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   _ncm_mset_catalog_storage_fits_write_int (FPTR (storage_fits), NCM_MSET_CATALOG_MARKOVIAN_ID_LABEL,
                                             (gint) markovian_id + storage_fits->first_id, "First row id of the Markovian chain.", error);
@@ -1993,9 +1942,6 @@ static void
 _ncm_mset_catalog_storage_fits_set_sampler (NcmMSetCatalogStorage *storage, guint i, guint start, const gchar *sampler, const gchar *options, GError **error)
 {
   NcmMSetCatalogStorageFits *storage_fits = NCM_MSET_CATALOG_STORAGE_FITS (storage);
-
-  _ncm_mset_catalog_storage_fits_require_writable (storage_fits, error);
-  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   if (i > storage_fits->segments->len)
   {
@@ -2251,18 +2197,6 @@ const gchar *
 ncm_mset_catalog_storage_fits_peek_filename (NcmMSetCatalogStorageFits *storage_fits)
 {
   return storage_fits->filename;
-}
-
-/**
- * ncm_mset_catalog_storage_fits_get_read_only:
- * @storage_fits: a #NcmMSetCatalogStorageFits
- *
- * Returns: whether @storage_fits is read-only
- */
-gboolean
-ncm_mset_catalog_storage_fits_get_read_only (NcmMSetCatalogStorageFits *storage_fits)
-{
-  return storage_fits->read_only;
 }
 
 /**

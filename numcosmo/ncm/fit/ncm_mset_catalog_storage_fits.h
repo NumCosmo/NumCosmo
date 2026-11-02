@@ -43,7 +43,6 @@ NcmMSetCatalogStorageFits *ncm_mset_catalog_storage_fits_new (const gchar *filen
 NcmMSetCatalogStorageFits *ncm_mset_catalog_storage_fits_ref (NcmMSetCatalogStorageFits *storage_fits);
 
 const gchar *ncm_mset_catalog_storage_fits_peek_filename (NcmMSetCatalogStorageFits *storage_fits);
-gboolean ncm_mset_catalog_storage_fits_get_read_only (NcmMSetCatalogStorageFits *storage_fits);
 gint ncm_mset_catalog_storage_fits_get_first_id (NcmMSetCatalogStorageFits *storage_fits, GError **error);
 
 #define NCM_MSET_CATALOG_STORAGE_FITS_NSEGS_LABEL "NSEGS"
