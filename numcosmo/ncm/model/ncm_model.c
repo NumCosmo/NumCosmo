@@ -1396,7 +1396,10 @@ _ncm_model_reparam_extra_state (NcmReparam *reparam)
  * the reparametrization was written before the removal: each key moves down by the
  * number of removed indices below it, and a key of a removed parameter is refused. Any
  * other length keeps the keys, which must then lie before the first removed index and
- * inside the model, where both layouts agree.
+ * inside the model, where both layouts agree. The length is the only mark of the layout:
+ * a reparametrization of the old length built in code today, with the descriptions its
+ * constructor sets at the current indices, would be moved too. Deserialization does not
+ * hit that, since a stored params-desc replaces the constructor's.
  */
 static NcmReparam *
 _ncm_model_reparam_resize (NcmModel *model, NcmReparam *reparam, gchar **reason)
