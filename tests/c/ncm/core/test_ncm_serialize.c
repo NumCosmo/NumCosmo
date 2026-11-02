@@ -1196,7 +1196,7 @@ test_ncm_serialize_named_no_autosave (void)
 /*
  * Objects written before 2024-01-21 are the dict entry {sa{sv}}: an object property
  * (a spline's vectors), an object array (an NcmMSet's models) and NcmModel:sparam-array,
- * once an array and once keyed by uint32, are read as objects.
+ * as an array, keyed by uint32 and keyed by int32, are read as objects.
  */
 void
 test_ncm_serialize_legacy_objects (void)
@@ -1231,18 +1231,24 @@ test_ncm_serialize_legacy_objects (void)
                                         x1_desc, x2_desc);
     gchar *uint32_str = g_strdup_printf ("('NcmModelRosenbrock', {'sparam-array': <{uint32 1: {'NcmSParam', %s}}>})",
                                          x2_desc);
+    gchar *int32_str    = g_strdup_printf ("('NcmModelRosenbrock', {'sparam-array': <{0: {'NcmSParam', %s}}>})", x1_desc);
     GObject *array_obj  = ncm_serialize_from_string (ser, array_str);
     GObject *uint32_obj = ncm_serialize_from_string (ser, uint32_str);
+    GObject *int32_obj  = ncm_serialize_from_string (ser, int32_str);
 
     g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (array_obj), 0), ==, -3.0);
     g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (array_obj), 1), ==, -7.0);
     g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (uint32_obj), 0), ==, -200.0);
     g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (uint32_obj), 1), ==, -7.0);
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (int32_obj), 0), ==, -3.0);
+    g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (int32_obj), 1), ==, -400.0);
 
     g_object_unref (array_obj);
     g_object_unref (uint32_obj);
+    g_object_unref (int32_obj);
     g_free (array_str);
     g_free (uint32_str);
+    g_free (int32_str);
   }
 
   ncm_serialize_free (ser);

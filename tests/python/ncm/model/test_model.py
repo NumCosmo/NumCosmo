@@ -634,6 +634,19 @@ def test_ncm_model_reparam_descriptor_of_removed_parameter_raises() -> None:
         cosmo.set_reparam(_ok_reparam_with_desc(8, 4))
 
 
+def test_ncm_model_reparam_descriptor_past_the_model_raises() -> None:
+    """A length matching neither layout and a key past the model's end."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+
+    with pytest.raises(
+        GLib.Error,
+        match=_reparam_error(
+            9, "it reparametrizes parameter 8, which no longer exists"
+        ),
+    ):
+        cosmo.set_reparam(_ok_reparam_with_desc(9, 8))
+
+
 def test_ncm_model_reparam_ambiguous_layout_raises() -> None:
     """A length that is neither 7 nor 8 cannot place a key at or after index 4."""
     cosmo = Nc.HICosmoDEXcdm.new()
