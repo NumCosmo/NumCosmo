@@ -27,6 +27,7 @@
 from typing import Tuple
 from pathlib import Path
 
+import numpy as np
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -38,6 +39,7 @@ pytest.importorskip("getdist")
 
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.app.loading import load_catalog
+from numcosmo_py.app.catalog import _auto_thin
 from numcosmo_py.app.run_fit import RunCommonOptions
 from numcosmo_py.app import app
 from numcosmo_py.app.esmcmc import IniSampler, Parallelization
@@ -1523,6 +1525,51 @@ def test_run_mcmc_apes_plot_corner_auto_thin(simple_experiment):
         if result.exit_code != 0:
             raise result.exception
         assert ": thin " not in result.output
+
+
+def _write_ar1_catalog(path: Path, nchains: int, niter: int) -> None:
+    """Write nchains interleaved AR(1) chains with coefficient 0.9 in two parameters,
+    whose autocorrelation time is (1 + 0.9) / (1 - 0.9) = 19 iterations, column 0
+    holding -2ln(L)."""
+    rng = np.random.default_rng(1234)
+    phi = 0.9
+    model = Ncm.ModelMVND.new(2)
+    mset = Ncm.MSet.new_array([model])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+    desc = Ncm.MSetCatalogDesc.new(mset, nchains, False, ["m2lnL"], ["-2lnL"], 0)
+    storage = Ncm.MSetCatalogStorageFits.new(path.as_posix(), False)
+    storage.set_desc(desc)
+    mcat = Ncm.MSetCatalog.new_from_storage(storage)
+
+    state = np.zeros((nchains, 2))
+    for _ in range(niter):
+        for c in range(nchains):
+            state[c] = phi * state[c] + np.sqrt(1.0 - phi * phi) * rng.normal(size=2)
+            row = np.concatenate(([np.sum(state[c] ** 2)], state[c]))
+            mcat.add_from_vector(Ncm.Vector.new_array(row.tolist()))
+
+    mcat.sync(True)
+
+
+def test_auto_thin_choice(tmp_path):
+    """_auto_thin() thins by half the smallest autocorrelation time of a long chain,
+    and not at all when the chain is too short for a reliable estimate."""
+    long_file = tmp_path / "long.mcmc.fits"
+    _write_ar1_catalog(long_file, 4, 2000)
+    loaded = load_catalog(long_file)
+    thin, reason = _auto_thin(loaded)
+    tau = loaded.mcat.peek_autocorrelation_tau()
+    tau_min = min(tau.get(1), tau.get(2))
+    assert reason.startswith("smallest autocorrelation time")
+    assert thin == max(1, int(tau_min // 2))
+    assert 5 <= thin <= 15
+
+    short_file = tmp_path / "short.mcmc.fits"
+    _write_ar1_catalog(short_file, 4, 12)
+    thin, reason = _auto_thin(load_catalog(short_file))
+    assert thin == 1
+    assert reason.startswith("autocorrelation time flagged")
 
 
 def test_run_mcmc_apes_plot_corner_multi_catalog(simple_experiment):
