@@ -1547,8 +1547,10 @@ _ncm_model_cmp_guint (gconstpointer a, gconstpointer b)
  *
  * Sets the reparametrization of @model to @reparam and computes its parameters from the
  * original ones. A reparametrization for another length is rebuilt at the model's
- * length when it carries nothing but descriptions of existing parameters. It cannot be
- * removed: %NULL does nothing on a model without one and aborts on a model with one.
+ * length when it carries nothing but descriptions of existing parameters; one written
+ * before a parameter was removed (ncm_model_class_add_removed_param()) has its
+ * descriptions moved to the current indices. It cannot be removed: %NULL does nothing on
+ * a model without one and aborts on a model with one.
  */
 void
 ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
