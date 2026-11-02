@@ -511,7 +511,7 @@ _ncm_fit_mc_build_catalog (NcmFitMC *mc, GError **error)
                                      g_strfreev (symbols);
                             }, );
 
-  mc->mcat = ncm_mset_catalog_new_from_storage (mc->storage, 0, 1);
+  mc->mcat = ncm_mset_catalog_new_from_storage (mc->storage);
   ncm_mset_catalog_set_functions_array (mc->mcat, mc->func_oa);
   ncm_mset_catalog_set_sampler (mc->mcat, eval->value_nick);
 

@@ -286,7 +286,7 @@ _ncm_fit_mcbs_build_catalog (NcmFitMCBS *mcbs, GError **error)
   ncm_mset_catalog_storage_set_desc (mcbs->storage, desc, error);
   NCM_UTIL_ON_ERROR_RETURN (error, ncm_mset_catalog_desc_free (desc), );
 
-  mcbs->mcat = ncm_mset_catalog_new_from_storage (mcbs->storage, 0, 1);
+  mcbs->mcat = ncm_mset_catalog_new_from_storage (mcbs->storage);
 
   g_clear_pointer (&mcbs->base_name, g_free);
 

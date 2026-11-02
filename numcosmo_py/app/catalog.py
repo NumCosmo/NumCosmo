@@ -1473,7 +1473,7 @@ class DumpMset(AppLogging):
             self.mcmc_file.absolute().as_posix(), True
         )
         assert storage is not None
-        mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage(storage, 0, 1)
+        mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage(storage)
         mset: Ncm.MSet = mcat.peek_mset()
         assert isinstance(mset, Ncm.MSet)
 

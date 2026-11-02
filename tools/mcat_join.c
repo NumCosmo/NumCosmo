@@ -122,7 +122,7 @@ main (gint argc, gchar *argv[])
         if (burnin % nchains != 0)
           g_error ("Burnin[%u] not multiple of nchains %u.", i, nchains);
 
-        mcat       = ncm_mset_catalog_new_from_storage (storage, burnin, 1);
+        mcat       = ncm_mset_catalog_new_from_storage_full (storage, burnin, 1);
         max_time_i = ncm_mset_catalog_max_time (mcat);
         mmax_time  = GSL_MAX (mmax_time, max_time_i);
 
@@ -169,7 +169,7 @@ main (gint argc, gchar *argv[])
       out_fits = ncm_mset_catalog_storage_fits_new (out_name, FALSE, NULL);
       g_object_set (out_fits, "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
       ncm_mset_catalog_storage_set_desc (NCM_MSET_CATALOG_STORAGE (out_fits), desc, NULL);
-      mcat_out = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (out_fits), 0, 1);
+      mcat_out = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (out_fits));
       ncm_mset_catalog_set_sampler (mcat_out, "mcat_join");
 
       for (t = 0; t < mmax_time; t++)

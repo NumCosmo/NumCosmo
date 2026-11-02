@@ -399,7 +399,9 @@ def load_catalog(
 
     storage = Ncm.MSetCatalogStorageFits.new(mcmc_file.absolute().as_posix(), True)
     assert storage is not None
-    mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage(storage, burnin_rows, 1)
+    mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage_full(
+        storage, burnin_rows, 1
+    )
     assert isinstance(mcat, Ncm.MSetCatalog)
 
     mset: Ncm.MSet = mcat.peek_mset()

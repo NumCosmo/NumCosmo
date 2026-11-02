@@ -778,7 +778,7 @@ _ncm_mset_catalog_new_memory (NcmMSet *mset, guint nchains, gboolean weighted, g
   if (error != NULL)
     g_error ("ncm_mset_catalog_new: %s", error->message);
 
-  mcat = ncm_mset_catalog_new_from_storage (storage, 0, 1);
+  mcat = ncm_mset_catalog_new_from_storage (storage);
 
   ncm_mset_catalog_storage_free (storage);
   ncm_mset_catalog_desc_free (desc);
@@ -865,18 +865,38 @@ ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gbool
 /**
  * ncm_mset_catalog_new_from_storage:
  * @storage: a #NcmMSetCatalogStorage holding a description
- * @burnin: number of leading rows to drop
- * @thin: thinning of the iterations, see #NcmMSetCatalog:thin
  *
- * Creates a #NcmMSetCatalog on @storage: its description, rows and run metadata are
- * the storage's. @burnin is applied as in ncm_mset_catalog_set_burnin(). A storage
- * without a description aborts, and so does a @thin above 1 on a storage that is not
- * read-only.
+ * Creates a #NcmMSetCatalog on every row of @storage: its description, rows and run
+ * metadata are the storage's. This is the constructor for writing; an analysis that
+ * drops a burn-in or thins uses ncm_mset_catalog_new_from_storage_full(). A storage
+ * without a description aborts.
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
 NcmMSetCatalog *
-ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin, guint thin)
+ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage)
+{
+  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
+                                       "storage", storage,
+                                       NULL);
+
+  return mcat;
+}
+
+/**
+ * ncm_mset_catalog_new_from_storage_full:
+ * @storage: a #NcmMSetCatalogStorage holding a description
+ * @burnin: number of leading rows to drop
+ * @thin: thinning of the iterations, see #NcmMSetCatalog:thin
+ *
+ * Creates a #NcmMSetCatalog on the rows of @storage after @burnin, keeping every @thin-th
+ * iteration. @burnin is applied as in ncm_mset_catalog_set_burnin(). A storage without
+ * a description aborts, and so does a @thin above 1 on a storage that is not read-only.
+ *
+ * Returns: (transfer full): a new #NcmMSetCatalog
+ */
+NcmMSetCatalog *
+ncm_mset_catalog_new_from_storage_full (NcmMSetCatalogStorage *storage, glong burnin, guint thin)
 {
   NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
                                        "storage", storage,

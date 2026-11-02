@@ -189,7 +189,7 @@ static NcmMSetCatalog *
 _test_ncm_mset_catalog_storage_fits_open_catalog (const gchar *filename)
 {
   NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, TRUE, NULL);
-  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 1);
+  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
 
   ncm_mset_catalog_storage_fits_free (storage_fits);
 

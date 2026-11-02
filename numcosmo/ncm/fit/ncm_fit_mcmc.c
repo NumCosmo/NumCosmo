@@ -277,7 +277,7 @@ _ncm_fit_mcmc_build_catalog (NcmFitMCMC *mcmc, GError **error)
   ncm_mset_catalog_storage_set_desc (mcmc->storage, desc, error);
   NCM_UTIL_ON_ERROR_RETURN (error, ncm_mset_catalog_desc_free (desc), );
 
-  mcmc->mcat = ncm_mset_catalog_new_from_storage (mcmc->storage, 0, 1);
+  mcmc->mcat = ncm_mset_catalog_new_from_storage (mcmc->storage);
   ncm_mset_catalog_set_sampler (mcmc->mcat, ncm_mset_trans_kern_get_name (mcmc->tkern));
 
   if (mcmc->rng != NULL)

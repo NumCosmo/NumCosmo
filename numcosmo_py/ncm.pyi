@@ -6158,7 +6158,8 @@ class MSetCatalog(GObject.Object):
 
         MSetCatalog(**properties)
         new_array(mset:NumCosmoMath.MSet, nadd_vals:int, nchains:int, weighted:bool, names:list, symbols:list) -> NumCosmoMath.MSetCatalog
-        new_from_storage(storage:NumCosmoMath.MSetCatalogStorage, burnin:int, thin:int) -> NumCosmoMath.MSetCatalog
+        new_from_storage(storage:NumCosmoMath.MSetCatalogStorage) -> NumCosmoMath.MSetCatalog
+        new_from_storage_full(storage:NumCosmoMath.MSetCatalogStorage, burnin:int, thin:int) -> NumCosmoMath.MSetCatalog
 
     Object NcmMSetCatalog
 
@@ -6324,7 +6325,9 @@ class MSetCatalog(GObject.Object):
         symbols: typing.Sequence[str],
     ) -> MSetCatalog: ...
     @classmethod
-    def new_from_storage(
+    def new_from_storage(cls, storage: MSetCatalogStorage) -> MSetCatalog: ...
+    @classmethod
+    def new_from_storage_full(
         cls, storage: MSetCatalogStorage, burnin: int, thin: int
     ) -> MSetCatalog: ...
     def param_pdf(self, i: int) -> None: ...

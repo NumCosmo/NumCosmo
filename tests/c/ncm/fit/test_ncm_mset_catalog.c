@@ -527,7 +527,7 @@ static NcmMSetCatalog *
 _test_ncm_mset_catalog_open (const gchar *filename, gboolean read_only, glong burnin)
 {
   NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, read_only, NULL);
-  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), burnin, 1);
+  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage_full (NCM_MSET_CATALOG_STORAGE (storage_fits), burnin, 1);
 
   ncm_mset_catalog_storage_fits_free (storage_fits);
 
@@ -557,7 +557,7 @@ _test_ncm_mset_catalog_new_on_file (NcmMSet *mset, guint nchains, gboolean weigh
   ncm_mset_catalog_storage_set_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), desc, &error);
   g_assert_no_error (error);
 
-  mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 1);
+  mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
 
   ncm_mset_catalog_storage_fits_free (storage_fits);
   ncm_mset_catalog_desc_free (desc);
@@ -2093,7 +2093,7 @@ _test_ncm_mset_catalog_fill_storage (NcmMSetCatalogStorage *storage, NcmMSet **m
 static void
 _test_ncm_mset_catalog_check_from_storage (NcmMSetCatalogStorage *storage, NcmMSet *mset)
 {
-  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (storage, 0, 1);
+  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (storage);
   GError *error        = NULL;
   guint i;
 
@@ -2160,7 +2160,7 @@ _test_ncm_mset_catalog_check_from_storage (NcmMSetCatalogStorage *storage, NcmMS
 
   ncm_mset_catalog_clear (&mcat);
 
-  mcat = ncm_mset_catalog_new_from_storage (storage, TEST_CAT_NCHAINS, 1);
+  mcat = ncm_mset_catalog_new_from_storage_full (storage, TEST_CAT_NCHAINS, 1);
   g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 2 * TEST_CAT_NCHAINS);
   g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
   g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 0), 0), ==, 1.0 + 0.1 * TEST_CAT_NCHAINS);
@@ -2202,7 +2202,7 @@ test_ncm_mset_catalog_storage_fits (void)
   g_assert_no_error (error);
 
   {
-    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 1);
+    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
 
     g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 3 * TEST_CAT_NCHAINS);
     g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "catalog");
@@ -2588,7 +2588,7 @@ _test_ncm_mset_catalog_open_read_block (const gchar *filename, const guint read_
                                                  "filename", filename,
                                                  "read-block", read_block,
                                                  NULL);
-  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (storage, 0, 1);
+  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (storage);
 
   ncm_mset_catalog_storage_free (storage);
 
@@ -3001,7 +3001,7 @@ test_ncm_mset_catalog_file_thin (gconstpointer pdata)
                                                      "read-only", TRUE,
                                                      "read-block", read_blocks[r],
                                                      NULL);
-      NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (storage, burnin, thin);
+      NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage_full (storage, burnin, thin);
       GArray *res;
 
       g_assert_cmpuint (ncm_mset_catalog_get_thin (mcat), ==, thin);
@@ -3050,7 +3050,7 @@ test_ncm_mset_catalog_file_thin_writable_subprocess (void)
   NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
 
   g_ptr_array_unref (rows);
-  ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 2);
+  ncm_mset_catalog_new_from_storage_full (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 2);
 
   g_assert_not_reached ();
 }

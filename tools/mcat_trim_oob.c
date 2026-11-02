@@ -68,7 +68,7 @@ main (gint argc, gchar *argv[])
   else
   {
     NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (cat_filename, TRUE, NULL);
-    NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 1);
+    NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
     guint ndel                              = ncm_mset_catalog_trim_oob (mcat, out);
 
     ncm_mset_catalog_storage_fits_free (storage_fits);

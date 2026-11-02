@@ -162,7 +162,7 @@ def run_gauss_constraint_mcmc(
     if start_catalog is not None:
         storage = Ncm.MSetCatalogStorageFits.new(start_catalog.as_posix(), True)
         assert storage is not None
-        start_mcat = Ncm.MSetCatalog.new_from_storage(storage, 0, 1)
+        start_mcat = Ncm.MSetCatalog.new_from_storage(storage)
 
     esmcmc = create_esmcmc(
         likelihood,

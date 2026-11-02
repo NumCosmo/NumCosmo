@@ -1349,7 +1349,7 @@ _test_ncm_fit_esmcmc_file_run (const gchar *filename, const guint read_block, co
   {
     NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, TRUE, NULL);
 
-    mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 1);
+    mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
     ncm_mset_catalog_storage_fits_free (storage_fits);
   }
 

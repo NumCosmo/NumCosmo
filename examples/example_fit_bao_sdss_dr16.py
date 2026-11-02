@@ -190,7 +190,7 @@ def test_fit_bao_sdss_dr16() -> None:
 
     if os.path.exists(fitscat):
         lmcat = Ncm.MSetCatalog.new_from_storage(
-            Ncm.MSetCatalogStorageFits.new(fitscat, True), 0, 1
+            Ncm.MSetCatalogStorageFits.new(fitscat, True)
         )
         mcat_len = lmcat.len()
 
