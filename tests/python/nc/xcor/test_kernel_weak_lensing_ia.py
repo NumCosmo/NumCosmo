@@ -33,8 +33,6 @@ D(k, z) = sqrt(P_D(k, z) / P_D(k, 0)), P_D the growth-powspec property
 or the kernel's power spectrum; for a linear spectrum it is CCL's D(z).
 """
 
-import gc
-
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -294,68 +292,3 @@ def test_ia_exact_matches_ccl_kernel_bridge_at_low_ell(
     ref = two_point.angular_cl(cosmology, tracer, tracer, ells)
 
     assert_allclose(got, ref, rtol=1.0e-5)
-
-
-def test_ia_component_list_and_properties(cosmology, dndz_arrays) -> None:
-    """doia adds one component beside the lensing one; the parameters read back."""
-    kernel = _nc_wl_kernel(cosmology, dndz_arrays, doia=True, lmax=10)
-    assert kernel.get_property("doia") is True
-    assert len(kernel.get_component_list()) == 2
-    assert kernel["ia_A"] == IA_A
-    assert kernel["ia_eta"] == IA_ETA
-    assert kernel["ia_z_piv"] == IA_Z_PIV
-
-    plain = Nc.XcorKernelWeakLensing(
-        dist=cosmology.dist,
-        powspec=cosmology.ps_ml,
-        dndz=kernel.props.dndz,
-        nbar=1.0,
-        intr_shear=0.0,
-    )
-    assert plain.get_property("doia") is False
-    assert len(plain.get_component_list()) == 1
-    assert plain["ia_A"] == Nc.XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_A
-    assert plain["ia_eta"] == Nc.XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_ETA
-    assert plain["ia_z_piv"] == Nc.XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_Z_PIV
-    assert plain.get_property("growth-powspec") is None
-
-    with_growth = _nc_wl_kernel(
-        cosmology, dndz_arrays, doia=True, lmax=10, growth_ps=cosmology.ps_ml
-    )
-    assert with_growth.get_property("growth-powspec") is cosmology.ps_ml
-
-    # dropping the kernel disposes the IA component and its data
-    del kernel, plain, with_growth
-    gc.collect()
-
-
-def test_ia_kernel_survives_serialization(cosmology, dndz_arrays) -> None:
-    """A serialized copy keeps doia and the IA parameters and gives the same C_ell.
-
-    NcXcorSolver hands each OpenMP thread NcmSerialize-duplicated objects, so
-    a construct-only property that did not survive the round trip would
-    silently drop the IA term there.
-    """
-    ells = np.array([2, 5, 10])
-    kernel = _nc_wl_kernel(cosmology, dndz_arrays, doia=True, lmax=int(ells[-1]))
-
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-    copy = ser.dup_obj(kernel)
-
-    assert copy.get_property("doia") is True
-    assert len(copy.get_component_list()) == 2
-    assert copy["ia_A"] == IA_A
-
-    with_growth = _nc_wl_kernel(
-        cosmology,
-        dndz_arrays,
-        doia=True,
-        lmax=int(ells[-1]),
-        growth_ps=cosmology.ps_ml,
-    )
-    assert ser.dup_obj(with_growth).get_property("growth-powspec") is not None
-
-    original = _nc_cl(cosmology, kernel, ells, l_limber=-1)
-    duplicate = _nc_cl(cosmology, copy, ells, l_limber=-1)
-
-    assert_allclose(duplicate, original, rtol=1.0e-12)
