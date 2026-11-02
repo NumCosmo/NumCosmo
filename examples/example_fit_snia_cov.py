@@ -206,7 +206,7 @@ def test_fit_snia_cov() -> None:
 
     if os.path.exists(fitscat):
         lmcat = Ncm.MSetCatalog.new_from_storage(
-            Ncm.MSetCatalogStorageFits.new(fitscat, True), 0
+            Ncm.MSetCatalogStorageFits.new(fitscat, True), 0, 1
         )
         mcat_len = lmcat.len()
 

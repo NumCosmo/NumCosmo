@@ -283,7 +283,7 @@ main (gint argc, gchar *argv[])
   else
   {
     NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (cat_filename, TRUE, NULL);
-    NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), burnin);
+    NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits), burnin, 1);
     NcmMSet *mset                           = ncm_mset_catalog_get_mset (mcat);
 
     ncm_mset_catalog_storage_fits_free (storage_fits);

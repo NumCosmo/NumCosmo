@@ -6158,13 +6158,15 @@ class MSetCatalog(GObject.Object):
 
         MSetCatalog(**properties)
         new_array(mset:NumCosmoMath.MSet, nadd_vals:int, nchains:int, weighted:bool, names:list, symbols:list) -> NumCosmoMath.MSetCatalog
-        new_from_storage(storage:NumCosmoMath.MSetCatalogStorage, burnin:int) -> NumCosmoMath.MSetCatalog
+        new_from_storage(storage:NumCosmoMath.MSetCatalogStorage, burnin:int, thin:int) -> NumCosmoMath.MSetCatalog
 
     Object NcmMSetCatalog
 
     Properties from NcmMSetCatalog:
       burnin -> glong: burnin
         Burn-in size
+      thin -> guint: thin
+        Thinning of the iterations
       markovian-id -> gint: markovian-id
         First row id of the Markovian chain
       tau-method -> NcmStatsAcorrMethod: tau-method
@@ -6193,6 +6195,7 @@ class MSetCatalog(GObject.Object):
         sampler_options: typing.Optional[str]
         storage: MSetCatalogStorage
         tau_method: StatsAcorrMethod
+        thin: int
 
     props: Props = ...
     def __init__(
@@ -6205,6 +6208,7 @@ class MSetCatalog(GObject.Object):
         sampler_options: typing.Optional[str] = ...,
         storage: MSetCatalogStorage = ...,
         tau_method: StatsAcorrMethod = ...,
+        thin: int = ...,
     ) -> None: ...
     def add_from_mset_array(
         self, mset: MSet, ax: typing.Sequence[float] | npt.NDArray[np.float64]
@@ -6291,6 +6295,7 @@ class MSetCatalog(GObject.Object):
     def get_shrink_factor(self) -> float: ...
     def get_tau_diag(self, p: int) -> StatsAcorrDiag: ...
     def get_tau_method(self) -> StatsAcorrMethod: ...
+    def get_thin(self) -> int: ...
     def heidel_diag_by_chain(
         self, ntests: int, pvalue: float, mtype: FitRunMsgs
     ) -> typing.Tuple[int, float]: ...
@@ -6320,7 +6325,7 @@ class MSetCatalog(GObject.Object):
     ) -> MSetCatalog: ...
     @classmethod
     def new_from_storage(
-        cls, storage: MSetCatalogStorage, burnin: int
+        cls, storage: MSetCatalogStorage, burnin: int, thin: int
     ) -> MSetCatalog: ...
     def param_pdf(self, i: int) -> None: ...
     def param_pdf_pvalue(self, pvalue: float, both: bool) -> float: ...

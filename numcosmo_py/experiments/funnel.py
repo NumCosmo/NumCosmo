@@ -71,7 +71,7 @@ def run_funnel_mcmc(
     if start_catalog is not None:
         storage = Ncm.MSetCatalogStorageFits.new(start_catalog.as_posix(), True)
         assert storage is not None
-        start_mcat = Ncm.MSetCatalog.new_from_storage(storage, 0)
+        start_mcat = Ncm.MSetCatalog.new_from_storage(storage, 0, 1)
 
     esmcmc = create_esmcmc(
         likelihood,

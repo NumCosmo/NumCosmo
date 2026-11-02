@@ -887,7 +887,7 @@ _ncm_fit_esmcmc_build_catalog (NcmFitESMCMC *esmcmc, GError **error)
                                      g_strfreev (symbols);
                             }, );
 
-  self->mcat = ncm_mset_catalog_new_from_storage (self->storage, 0);
+  self->mcat = ncm_mset_catalog_new_from_storage (self->storage, 0, 1);
   ncm_mset_catalog_set_functions_array (self->mcat, self->func_oa);
 
   if (self->rng != NULL)

@@ -139,6 +139,7 @@ typedef struct _NcmMSetCatalogPrivate
   gint cur_id;
   gint markovian_id;
   glong burnin;
+  guint thin;
   NcmVector *params_max;
   NcmVector *params_min;
   glong pdf_i;
@@ -157,6 +158,7 @@ enum
 {
   PROP_0,
   PROP_BURNIN,
+  PROP_THIN,
   PROP_MARKOVIAN_ID,
   PROP_TAU_METHOD,
   PROP_POST_LNNORM_METHOD,
@@ -229,6 +231,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   self->cur_id           = -1; /* the id of the last added row, the row index; -1 for no rows */
   self->markovian_id     = 0;  /* first row of the Markovian chain */
   self->burnin           = 0;  /* Number of elements to ignore when reading a catalog */
+  self->thin             = 0;
   self->rtype_str        = NULL;
   self->sampler_str      = NULL;
   self->sampler_opts_str = NULL;
@@ -346,6 +349,8 @@ _ncm_mset_catalog_free_stats (NcmMSetCatalog *mcat)
 static void _ncm_mset_catalog_take_desc (NcmMSetCatalog *mcat, NcmMSetCatalogDesc *desc);
 static NcmMSetCatalogStorageFits *_ncm_mset_catalog_peek_fits_storage (NcmMSetCatalog *mcat);
 static void _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat);
+static guint _ncm_mset_catalog_storage_index (NcmMSetCatalogPrivate *self, guint i);
+static guint _ncm_mset_catalog_thinned_count (NcmMSetCatalogPrivate *self, guint n);
 static NcmMSetCatalogDesc *_ncm_mset_catalog_new_desc (NcmMSetCatalog *mcat, guint nchains, gint m2lnp_var, const gchar *rtype_str);
 
 /*
@@ -377,6 +382,9 @@ _ncm_mset_catalog_constructed (GObject *object)
 
     if (desc == NULL)
       g_error ("_ncm_mset_catalog_constructed: the storage has no description.");
+
+    if ((self->thin > 1) && !ncm_mset_catalog_storage_get_read_only (self->storage))
+      g_error ("_ncm_mset_catalog_constructed: thin %u requires a read-only storage.", self->thin);
 
     _ncm_mset_catalog_take_desc (mcat, desc);
     _ncm_mset_catalog_load_storage (mcat);
@@ -478,6 +486,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_BURNIN:
       ncm_mset_catalog_set_burnin (mcat, g_value_get_long (value));
       break;
+    case PROP_THIN:
+      self->thin = g_value_get_uint (value);
+      break;
     case PROP_MARKOVIAN_ID:
       ncm_mset_catalog_set_markovian_id (mcat, g_value_get_int (value));
       break;
@@ -517,6 +528,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
   {
     case PROP_BURNIN:
       g_value_set_long (value, ncm_mset_catalog_get_burnin (mcat));
+      break;
+    case PROP_THIN:
+      g_value_set_uint (value, ncm_mset_catalog_get_thin (mcat));
       break;
     case PROP_MARKOVIAN_ID:
       g_value_set_int (value, ncm_mset_catalog_get_markovian_id (mcat));
@@ -619,6 +633,25 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       "Burn-in size",
                                                       0, G_MAXLONG, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmMSetCatalog:thin:
+   *
+   * With thin = k, the catalog keeps every k-th iteration after the burn-in, with the
+   * rows of all chains (with one chain, every k-th row). The kept rows are the catalog:
+   * its ids, its online statistics, its diagnostics (the autocorrelation time is in kept
+   * iterations) and every row it returns. A k above 1 requires a read-only storage
+   * (#NcmMSetCatalogStorage:read-only); the catalog aborts otherwise. A k below half the
+   * autocorrelation time (in iterations) multiplies the variance of the mean by less
+   * than 1.02.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_THIN,
+                                   g_param_spec_uint ("thin",
+                                                      NULL,
+                                                      "Thinning of the iterations",
+                                                      1, G_MAXUINT, 1,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcmMSetCatalog:markovian-id:
@@ -745,7 +778,7 @@ _ncm_mset_catalog_new_memory (NcmMSet *mset, guint nchains, gboolean weighted, g
   if (error != NULL)
     g_error ("ncm_mset_catalog_new: %s", error->message);
 
-  mcat = ncm_mset_catalog_new_from_storage (storage, 0);
+  mcat = ncm_mset_catalog_new_from_storage (storage, 0, 1);
 
   ncm_mset_catalog_storage_free (storage);
   ncm_mset_catalog_desc_free (desc);
@@ -833,19 +866,22 @@ ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gbool
  * ncm_mset_catalog_new_from_storage:
  * @storage: a #NcmMSetCatalogStorage holding a description
  * @burnin: number of leading rows to drop
+ * @thin: thinning of the iterations, see #NcmMSetCatalog:thin
  *
  * Creates a #NcmMSetCatalog on @storage: its description, rows and run metadata are
  * the storage's. @burnin is applied as in ncm_mset_catalog_set_burnin(). A storage
- * without a description aborts.
+ * without a description aborts, and so does a @thin above 1 on a storage that is not
+ * read-only.
  *
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
 NcmMSetCatalog *
-ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin)
+ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage, glong burnin, guint thin)
 {
   NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
                                        "storage", storage,
                                        "burnin", burnin,
+                                       "thin", thin,
                                        NULL);
 
   return mcat;
@@ -1057,8 +1093,8 @@ static void _ncm_mset_catalog_post_update_stats (NcmMSetCatalog *mcat, NcmVector
 
 /*
  * Takes the rows and the run metadata of the storage: the burn-in, the statistics of the
- * rows after the burn-in, the Markovian id, the RNG and the sampler strings. The catalog
- * must hold no statistics.
+ * rows kept after the burn-in and the thinning, the Markovian id, the RNG and the
+ * sampler strings. The catalog must hold no statistics.
  */
 static void
 _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat)
@@ -1067,7 +1103,7 @@ _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat)
   GError *error               = NULL;
   const guint nrows           = ncm_mset_catalog_storage_nrows (self->storage, &error);
   const gchar *filename       = ncm_mset_catalog_peek_filename (mcat);
-  guint markid;
+  guint markid, nkept;
   guint i;
 
   _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_load_storage");
@@ -1085,22 +1121,28 @@ _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat)
              self->burnin, filename != NULL ? filename : "(memory)", nrows, self->nchains, nrows / self->nchains);
 
   self->cur_id = -1;
+  nkept        = _ncm_mset_catalog_thinned_count (self, nrows - self->burnin);
 
-  for (i = self->burnin; i < nrows; i++)
+  for (i = 0; i < nkept; i++)
   {
-    NcmVector *row = ncm_mset_catalog_storage_peek_row (self->storage, i, &error);
+    NcmVector *row = ncm_mset_catalog_storage_peek_row (self->storage, _ncm_mset_catalog_storage_index (self, i), &error);
 
     _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_load_storage");
     _ncm_mset_catalog_post_update_stats (mcat, row);
   }
 
-  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows - self->burnin);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nkept);
 
-  /* Rows before the burn-in are dropped and the ids renumbered from 0, so the stored
-   * Markovian id shifts by the same amount; it is never below 0. */
+  /* The ids are renumbered from 0 over the kept rows, so the stored Markovian id becomes
+   * the number of kept rows before it; it is never below 0. */
   markid = ncm_mset_catalog_storage_get_markovian_id (self->storage, &error);
   _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_load_storage");
-  self->markovian_id = MAX (self->markovian_id, (gint) markid - (gint) self->burnin);
+  {
+    const gint after = (gint) markid - (gint) self->burnin;
+    const gint kept  = (after > 0) ? (gint) _ncm_mset_catalog_thinned_count (self, after) : after;
+
+    self->markovian_id = MAX (self->markovian_id, kept);
+  }
 
   {
     NcmRNG *rng = ncm_mset_catalog_storage_get_rng (self->storage, &error);
@@ -1165,6 +1207,29 @@ _ncm_mset_catalog_load_storage (NcmMSetCatalog *mcat)
       _ncm_mset_catalog_check_error (&error, "_ncm_mset_catalog_load_storage");
     }
   }
+}
+
+/*
+ * The storage row of catalog row i: the burn-in, then i / nchains kept iterations of
+ * thin storage iterations each, then the chain i % nchains.
+ */
+static guint
+_ncm_mset_catalog_storage_index (NcmMSetCatalogPrivate *self, guint i)
+{
+  return (guint) self->burnin + (i / self->nchains) * self->thin * self->nchains + (i % self->nchains);
+}
+
+/*
+ * The number of catalog rows among the first n storage rows after the burn-in: every
+ * thin-th iteration is kept, the incomplete last one included when it is kept.
+ */
+static guint
+_ncm_mset_catalog_thinned_count (NcmMSetCatalogPrivate *self, guint n)
+{
+  const guint niter = n / self->nchains;
+  const guint nrem  = n % self->nchains;
+
+  return self->nchains * ((niter + self->thin - 1) / self->thin) + ((niter % self->thin == 0) ? nrem : 0);
 }
 
 /*
@@ -1931,6 +1996,20 @@ ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat)
   NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
 
   return self->burnin;
+}
+
+/**
+ * ncm_mset_catalog_get_thin:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: #NcmMSetCatalog:thin
+ */
+guint
+ncm_mset_catalog_get_thin (NcmMSetCatalog *mcat)
+{
+  NcmMSetCatalogPrivate *self = ncm_mset_catalog_get_instance_private (mcat);
+
+  return self->thin;
 }
 
 /**
@@ -2777,11 +2856,12 @@ ncm_mset_catalog_peek_accept_ratio_array (NcmMSetCatalog *mcat)
  * @mcat: a #NcmMSetCatalog
  * @i: the row index
  *
- * Gets the @i-th row from the storage (ncm_mset_catalog_storage_peek_row()): the row
- * @i + burn-in of the storage. The vector is readable until the next call on @mcat that
- * reads another row, adds a row, syncs, resets, changes the file, or until @mcat is
- * disposed; hold a reference (ncm_vector_ref()) to keep it longer. Not safe while
- * another thread reads rows of @mcat; use ncm_mset_catalog_get_row() there.
+ * Gets the @i-th row from the storage (ncm_mset_catalog_storage_peek_row()): the storage
+ * row of catalog row @i after the burn-in and #NcmMSetCatalog:thin. The vector is
+ * readable until the next call on @mcat that reads another row, adds a row, syncs,
+ * resets, changes the file, or until @mcat is disposed; hold a reference
+ * (ncm_vector_ref()) to keep it longer. Not safe while another thread reads rows of
+ * @mcat; use ncm_mset_catalog_get_row() there.
  *
  * Returns: (transfer none): the row with index @i or NULL if not available.
  */
@@ -2795,7 +2875,7 @@ ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i)
   if (i >= ncm_mset_catalog_len (mcat))
     return NULL;
 
-  row = ncm_mset_catalog_storage_peek_row (self->storage, i + self->burnin, &error);
+  row = ncm_mset_catalog_storage_peek_row (self->storage, _ncm_mset_catalog_storage_index (self, i), &error);
   _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_peek_row");
 
   return row;
@@ -2823,7 +2903,7 @@ ncm_mset_catalog_get_row (NcmMSetCatalog *mcat, guint i)
     return NULL;
 
   g_mutex_lock (&self->row_lock);
-  row = ncm_mset_catalog_storage_get_row (self->storage, i + self->burnin, &error);
+  row = ncm_mset_catalog_storage_get_row (self->storage, _ncm_mset_catalog_storage_index (self, i), &error);
   g_mutex_unlock (&self->row_lock);
 
   _ncm_mset_catalog_check_error (&error, "ncm_mset_catalog_get_row");

@@ -386,7 +386,7 @@ class RunMCMC(RunCommonOptions):
             )
             assert ro_storage is not None
             mcat = Ncm.MSetCatalog.new_from_storage(
-                ro_storage, self.initial_catalog_burnin
+                ro_storage, self.initial_catalog_burnin, 1
             )
             init_sampler = Ncm.MSetTransKernCat.new(mcat, None)
 

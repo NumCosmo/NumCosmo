@@ -212,7 +212,7 @@ def read_catalog(name):
     )
 
     storage = Ncm.MSetCatalogStorageFits.new(filename, True)
-    return Ncm.MSetCatalog.new_from_storage(storage, 0)
+    return Ncm.MSetCatalog.new_from_storage(storage, 0, 1)
 
 
 @pytest.mark.parametrize("name", CATALOGS)
