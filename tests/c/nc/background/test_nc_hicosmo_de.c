@@ -28,10 +28,6 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-#ifndef NUMCOSMO_GIR_SCAN
-#include <string.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-
 typedef struct _TestNcHICosmoDE
 {
   NcHICosmo *cosmo;
@@ -53,9 +49,6 @@ void test_nc_hicosmo_de_jbp_new_full (void);
 void test_nc_hicosmo_de_param_by_name_submodel (void);
 void test_nc_hicosmo_de_reparam_old_layout (void);
 void test_nc_hicosmo_de_reparam_old_layout_refused (void);
-
-static NcmReparam *_test_nc_hicosmo_de_reparam_with_desc (guint length, gint key);
-static void _test_nc_hicosmo_de_reparam_refused (guint length, gint key, const gchar *reason);
 
 gint
 main (gint argc, gchar *argv[])
@@ -82,6 +75,48 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hicosmo_de/reparam/old_layout/refused", &test_nc_hicosmo_de_reparam_old_layout_refused);
 
   g_test_run ();
+}
+
+/*
+ * An NcHICosmoDEReparamOk of length whose params-desc describes parameter key alone,
+ * as a stored params-desc does: it replaces the descriptions the constructor set.
+ */
+static NcmReparam *
+_test_nc_hicosmo_de_reparam_with_desc (guint length, gint key)
+{
+  NcmReparam *reparam = NCM_REPARAM (nc_hicosmo_de_reparam_ok_new (length));
+  NcmObjDictInt *desc = ncm_obj_dict_int_new ();
+  NcmSParam *sp       = ncm_sparam_new ("Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, NCM_PARAM_TYPE_FIXED);
+
+  ncm_obj_dict_int_add (desc, key, G_OBJECT (sp));
+  g_object_set (reparam, "params-desc", desc, NULL);
+
+  ncm_sparam_free (sp);
+  ncm_obj_dict_int_unref (desc);
+
+  return reparam;
+}
+
+/* Setting the reparam of length describing key on an Xcdm fails with reason, leaving none. */
+static void
+_test_nc_hicosmo_de_reparam_refused (guint length, gint key, const gchar *reason)
+{
+  NcHICosmo *cosmo    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcmReparam *reparam = _test_nc_hicosmo_de_reparam_with_desc (length, key);
+  GError *error       = NULL;
+  gchar *message      = g_strdup_printf ("ncm_model_set_reparam: reparametrization `NcHICosmoDEReparamOk' "
+                                         "is for %u parameters but model `NcHICosmoDEXcdm' has 7, and %s.",
+                                         length, reason);
+
+  ncm_model_set_reparam (NCM_MODEL (cosmo), reparam, &error);
+  g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE);
+  g_assert_cmpstr (error->message, ==, message);
+  g_assert_null (ncm_model_peek_reparam (NCM_MODEL (cosmo)));
+
+  g_free (message);
+  g_clear_error (&error);
+  ncm_reparam_free (reparam);
+  nc_hicosmo_free (cosmo);
 }
 
 void
@@ -391,44 +426,6 @@ test_nc_hicosmo_de_param_by_name_submodel (void)
 }
 
 /*
- * An NcHICosmoDEReparamOk of length whose params-desc describes parameter key alone,
- * as a stored params-desc does: it replaces the descriptions the constructor set.
- */
-static NcmReparam *
-_test_nc_hicosmo_de_reparam_with_desc (guint length, gint key)
-{
-  NcmReparam *reparam = NCM_REPARAM (nc_hicosmo_de_reparam_ok_new (length));
-  NcmObjDictInt *desc = ncm_obj_dict_int_new ();
-  NcmSParam *sp       = ncm_sparam_new ("Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, NCM_PARAM_TYPE_FIXED);
-
-  ncm_obj_dict_int_add (desc, key, G_OBJECT (sp));
-  g_object_set (reparam, "params-desc", desc, NULL);
-
-  ncm_sparam_free (sp);
-  ncm_obj_dict_int_unref (desc);
-
-  return reparam;
-}
-
-/* Setting the reparam of length describing key on an Xcdm fails with reason, leaving none. */
-static void
-_test_nc_hicosmo_de_reparam_refused (guint length, gint key, const gchar *reason)
-{
-  NcHICosmo *cosmo    = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcmReparam *reparam = _test_nc_hicosmo_de_reparam_with_desc (length, key);
-  GError *error       = NULL;
-
-  ncm_model_set_reparam (NCM_MODEL (cosmo), reparam, &error);
-  g_assert_error (error, NCM_MODEL_ERROR, NCM_MODEL_ERROR_REPARAM_INCOMPATIBLE);
-  g_assert_nonnull (strstr (error->message, reason));
-  g_assert_null (ncm_model_peek_reparam (NCM_MODEL (cosmo)));
-
-  g_clear_error (&error);
-  ncm_reparam_free (reparam);
-  nc_hicosmo_free (cosmo);
-}
-
-/*
  * NcHICosmoDE had Yp at index 4 (8 parameters); a reparam of length 8 was written before
  * the removal: its keys above 4 move down by one. The CMB case is the 2024 Planck one,
  * omegac at 1 and omegab at 6, which must land on 1 and 5 and leave w at 6.
@@ -501,9 +498,10 @@ test_nc_hicosmo_de_reparam_old_layout (void)
 void
 test_nc_hicosmo_de_reparam_old_layout_refused (void)
 {
-  _test_nc_hicosmo_de_reparam_refused (8, 4, "which was removed from the model");
-  _test_nc_hicosmo_de_reparam_refused (8, -1, "which no longer exists");
-  _test_nc_hicosmo_de_reparam_refused (9, 8, "which no longer exists");
-  _test_nc_hicosmo_de_reparam_refused (9, 5, "at or after the removed parameter 4, and its length is not the 8");
+  _test_nc_hicosmo_de_reparam_refused (8, 4, "it reparametrizes parameter 4, which was removed from the model");
+  _test_nc_hicosmo_de_reparam_refused (8, -1, "it reparametrizes parameter -1, which no longer exists");
+  _test_nc_hicosmo_de_reparam_refused (9, 8, "it reparametrizes parameter 8, which no longer exists");
+  _test_nc_hicosmo_de_reparam_refused (9, 5, "it reparametrizes parameter 5, at or after the removed parameter 4, "
+                                             "and its length is not the 8 the model had before the removal");
 }
 

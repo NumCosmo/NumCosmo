@@ -191,37 +191,6 @@ def test_a_reparam_of_a_gone_parameter_fails_loudly():
         cosmo.set_reparam(reparam)
 
 
-def test_a_stale_cmb_reparam_describes_the_same_parameters():
-    """The CMB reparametrization of a 2024 Planck run, written with Yp at index 4.
-
-    It describes omegac at 1 and omegab at 6. After the move omegab is at 5 and 6
-    is w, which must keep its own name and bounds.
-    """
-    cosmo = Nc.HICosmoDEXcdm.new()
-    reparam = Nc.HICosmoDEReparamCMB.new(8)
-    desc = Ncm.ObjDictInt.new()
-    desc.add(
-        1,
-        Ncm.SParam.new(
-            "omegac", "\\omega_{c0}", 0.0075, 0.25, 0.01, 0.0, 0.12, Ncm.ParamType.FREE
-        ),
-    )
-    desc.add(
-        6,
-        Ncm.SParam.new(
-            "omegab", "\\omega_{b0}", 0.005, 0.04, 0.01, 0.0, 0.022, Ncm.ParamType.FREE
-        ),
-    )
-    reparam.set_property("params-desc", desc)
-
-    cosmo.set_reparam(reparam)
-
-    assert cosmo.param_name(1) == "omegac"
-    assert cosmo.param_name(5) == "omegab"
-    assert cosmo.param_get_upper_bound(5) == 0.04
-    assert cosmo.param_name(6) == "w"
-
-
 # The three containers a catalog has ever used for its model-set, all written by
 # tests/tools/make_reparam_catalog_fixtures.py with a pre-migration NcHICosmoDE:
 # eight scalar parameters, an NcHICosmoDEReparamOk of length 8, a Yp property and

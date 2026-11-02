@@ -596,7 +596,11 @@ def _reparam_error(length: int, reason: str) -> re.Pattern:
 
 
 def test_ncm_model_reparam_negative_descriptor_raises() -> None:
-    """A negative key is not a parameter index."""
+    """A negative key is not a parameter index.
+
+    The keys of a reparametrization written before a parameter was removed are tested in
+    tests/c/nc/background/test_nc_hicosmo_de.c.
+    """
     cosmo = Nc.HICosmoDEXcdm.new()
 
     with pytest.raises(
@@ -606,60 +610,6 @@ def test_ncm_model_reparam_negative_descriptor_raises() -> None:
         ),
     ):
         cosmo.set_reparam(_ok_reparam_with_desc(8, -1))
-
-
-def test_ncm_model_reparam_written_before_removal_moves_descriptors() -> None:
-    """A length of 7 + 1 is the layout before Yp (index 4) was removed.
-
-    Index 7 was w then; it is 6 now, so the description moves there.
-    """
-    cosmo = Nc.HICosmoDEXcdm.new()
-
-    cosmo.set_reparam(_ok_reparam_with_desc(8, 7))
-
-    assert cosmo.param_name(6) == "Bogus"
-    assert cosmo.param_name(5) == "Omegab"
-
-
-def test_ncm_model_reparam_descriptor_of_removed_parameter_raises() -> None:
-    """A description of Yp itself has nowhere to go."""
-    cosmo = Nc.HICosmoDEXcdm.new()
-
-    with pytest.raises(
-        GLib.Error,
-        match=_reparam_error(
-            8, "it reparametrizes parameter 4, which was removed from the model"
-        ),
-    ):
-        cosmo.set_reparam(_ok_reparam_with_desc(8, 4))
-
-
-def test_ncm_model_reparam_descriptor_past_the_model_raises() -> None:
-    """A length matching neither layout and a key past the model's end."""
-    cosmo = Nc.HICosmoDEXcdm.new()
-
-    with pytest.raises(
-        GLib.Error,
-        match=_reparam_error(
-            9, "it reparametrizes parameter 8, which no longer exists"
-        ),
-    ):
-        cosmo.set_reparam(_ok_reparam_with_desc(9, 8))
-
-
-def test_ncm_model_reparam_ambiguous_layout_raises() -> None:
-    """A length that is neither 7 nor 8 cannot place a key at or after index 4."""
-    cosmo = Nc.HICosmoDEXcdm.new()
-
-    with pytest.raises(
-        GLib.Error,
-        match=_reparam_error(
-            9,
-            "it reparametrizes parameter 5, at or after the removed parameter 4, "
-            "and its length is not the 8 the model had before the removal",
-        ),
-    ):
-        cosmo.set_reparam(_ok_reparam_with_desc(9, 5))
 
 
 def test_ncm_model_reparam_with_extra_state_raises() -> None:
