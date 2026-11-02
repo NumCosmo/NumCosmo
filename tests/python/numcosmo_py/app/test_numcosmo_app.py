@@ -914,6 +914,58 @@ def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
     assert "exceeds catalog" in result.output
 
 
+def test_run_mcmc_apes_analyze_thin(simple_experiment):
+    """--thin keeps every N-th iteration after the burn-in with all its chains, and
+    analyze reports it."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--thin", "2"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "Thinning" in result.output
+
+    full = load_catalog(catalog, burnin=1)
+    thinned = load_catalog(catalog, burnin=1, thin=2)
+    nchains = full.nchains
+    assert thinned.thin == 2
+    assert thinned.mcat.get_thin() == 2
+    n_full_iter = full.mcat.len() // nchains
+    assert thinned.mcat.len() == nchains * ((n_full_iter + 1) // 2)
+    for i in range(thinned.mcat.len()):
+        kept = (i // nchains) * 2 * nchains + i % nchains
+        assert (
+            thinned.mcat.peek_row(i).dup_array() == full.mcat.peek_row(kept).dup_array()
+        )
+
+
+def test_load_catalog_thin_below_one_rejected(simple_experiment):
+    """load_catalog() rejects a thin below 1; the CLI's min=1 blocks it earlier."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    with pytest.raises(typer.BadParameter):
+        load_catalog(catalog, thin=0)
+
+
 def test_run_mcmc_apes_analyze_tail_markovian_floor(simple_experiment):
     """--tail spanning the whole chain is still floored at the catalog's markovian-id."""
     filename, _ = simple_experiment
@@ -1415,6 +1467,62 @@ def test_run_mcmc_apes_plot_corner(simple_experiment):
 
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_plot_corner_thin(simple_experiment):
+    """plot-corner reads the rows of a catalog loaded with --thin."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "plot-corner",
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--thin",
+            "2",
+            "--no-show",
+            "--output",
+            output.absolute(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert output.absolute().with_suffix(".corner.pdf").exists()
+
+
+def test_run_mcmc_apes_plot_corner_auto_thin(simple_experiment):
+    """By default plot-corner chooses the thinning from a first read and reports it;
+    --thin or --no-auto-thin skips that read."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    base = ["catalog", "plot-corner", catalog.as_posix(), "--no-show"]
+
+    result = runner.invoke(app, base)
+    if result.exit_code != 0:
+        raise result.exception
+    assert ": thin " in result.output
+
+    for extra in (["--thin", "2"], ["--no-auto-thin"]):
+        result = runner.invoke(app, base + extra)
+        if result.exit_code != 0:
+            raise result.exception
+        assert ": thin " not in result.output
 
 
 def test_run_mcmc_apes_plot_corner_multi_catalog(simple_experiment):
