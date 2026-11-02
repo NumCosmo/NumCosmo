@@ -77,6 +77,10 @@ TAU_FLAG_MEANINGS = (
 
 TAU_FLAG_COLOR = "bold bright_yellow"
 
+# Shortest chain, in autocorrelation times of every plotted column, plot-corner --auto-thin
+# thins; see _auto_thin().
+AUTO_THIN_MIN_TAUS = 10.0
+
 KEFF_MEANINGS = (
     ("K_eff", "independent walkers per iteration: Var(rows) / Var(ensemble mean)"),
     ("", "N when the N walkers are independent, 1 when they move together,"),
@@ -807,7 +811,14 @@ def _auto_thin(loaded: LoadedCatalog) -> tuple[int, str]:
     The thinning is half the smallest autocorrelation time (in iterations) of the
     plotted columns, at least 1: thinning by k below tau/2 multiplies the variance of
     the mean by less than 1.02 for every column. It is 1 when there are fewer than 10
-    iterations to estimate tau from, or when any of those estimates is flagged.
+    iterations to estimate tau from, when an estimate carries a flag other than
+    SHORT_CHAIN, or when the chain is shorter than AUTO_THIN_MIN_TAUS autocorrelation
+    times in any plotted column.
+
+    SHORT_CHAIN marks a chain shorter than 50 autocorrelation times, where tau is not
+    known precisely; the thinning needs less. On stationary AR(1) series of 10 tau, 95%
+    of the estimates are below 1.56 tau, so k stays below 0.78 tau and the variance
+    factor below 1.05; an underestimate only thins less.
     """
     mcat = loaded.mcat
     m2lnp = mcat.get_m2lnp_var()
@@ -817,11 +828,27 @@ def _auto_thin(loaded: LoadedCatalog) -> tuple[int, str]:
         return 1, "too few iterations to estimate the autocorrelation time"
 
     mcat.estimate_autocorrelation_tau(False)
-    flagged = [mcat.col_full_name(i) for i in columns if mcat.get_tau_diag(i) != 0]
+    short_chain = int(Ncm.StatsAcorrDiag.SHORT_CHAIN)
+    flagged = [
+        mcat.col_full_name(i)
+        for i in columns
+        if int(mcat.get_tau_diag(i)) & ~short_chain
+    ]
     if flagged:
         return 1, f"autocorrelation time flagged for {', '.join(flagged)}"
 
     tau = mcat.peek_autocorrelation_tau()
+    too_short = [
+        mcat.col_full_name(i)
+        for i in columns
+        if loaded.nitems < AUTO_THIN_MIN_TAUS * tau.get(i)
+    ]
+    if too_short:
+        return 1, (
+            f"chain of {loaded.nitems} iterations is shorter than "
+            f"{AUTO_THIN_MIN_TAUS:g} autocorrelation times for {', '.join(too_short)}"
+        )
+
     tau_min = min(tau.get(i) for i in columns)
 
     return max(1, int(tau_min // 2)), f"smallest autocorrelation time {tau_min:.3g}"
@@ -947,7 +974,8 @@ class PlotCorner(AppLogging):
                 "When --thin is not given, read each catalog twice: once to estimate "
                 "the autocorrelation time, keeping no rows, then with N half the "
                 "smallest autocorrelation time of the plotted columns (1 when it is "
-                "not estimated or is flagged)."
+                "not estimated, carries a flag other than a short chain, or the chain "
+                "is shorter than 10 autocorrelation times)."
             ),
         ),
     ] = True
