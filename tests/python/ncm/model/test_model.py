@@ -571,17 +571,9 @@ def test_ncm_model_reparam_without_descriptors_is_resized() -> None:
     assert cosmo.len() == 7
 
 
-@pytest.mark.parametrize("index", [7, -1])
-def test_ncm_model_reparam_descriptor_outside_model_raises(index: int) -> None:
-    """A descriptor naming a slot the model does not have cannot be rebuilt.
-
-    Descriptors are keyed by index into the model's original parameters, so a
-    key outside [0, len) means the parameter it reparametrizes is gone. Index 7
-    is past the end; a negative one is not a slot at all.
-    """
-    cosmo = Nc.HICosmoDEXcdm.new()
-    reparam = Nc.HICosmoDEReparamOk.new(8)
-
+def _ok_reparam_with_desc(length: int, index: int) -> Ncm.Reparam:
+    """An NcHICosmoDEReparamOk of the given length describing only parameter index."""
+    reparam = Nc.HICosmoDEReparamOk.new(length)
     desc = Ncm.ObjDictInt.new()
     desc.add(
         index,
@@ -589,18 +581,35 @@ def test_ncm_model_reparam_descriptor_outside_model_raises(index: int) -> None:
     )
     reparam.set_property("params-desc", desc)
 
+    return reparam
+
+
+def _reparam_error(length: int, reason: str) -> re.Pattern:
+    """The error of ncm_model_set_reparam() for an Ok reparametrization on Xcdm."""
+    return re.compile(
+        rf"^ncm-model-error: ncm_model_set_reparam: reparametrization "
+        rf"`NcHICosmoDEReparamOk' is for {length} parameters but model "
+        rf"`NcHICosmoDEXcdm' has 7, and {reason}\. "
+        rf"\({int(Ncm.ModelError.REPARAM_INCOMPATIBLE)}\)$",
+        re.DOTALL,
+    )
+
+
+def test_ncm_model_reparam_negative_descriptor_raises() -> None:
+    """A negative key is not a parameter index.
+
+    The keys of a reparametrization written before a parameter was removed are tested in
+    tests/c/nc/background/test_nc_hicosmo_de.c.
+    """
+    cosmo = Nc.HICosmoDEXcdm.new()
+
     with pytest.raises(
         GLib.Error,
-        match=re.compile(
-            rf"^ncm-model-error: ncm_model_set_reparam: reparametrization "
-            rf"`NcHICosmoDEReparamOk' is for 8 parameters but model "
-            rf"`NcHICosmoDEXcdm' has 7, and it reparametrizes parameter {index}, "
-            rf"which no longer exists\. "
-            rf"\({int(Ncm.ModelError.REPARAM_INCOMPATIBLE)}\)$",
-            re.DOTALL,
+        match=_reparam_error(
+            8, "it reparametrizes parameter -1, which no longer exists"
         ),
     ):
-        cosmo.set_reparam(reparam)
+        cosmo.set_reparam(_ok_reparam_with_desc(8, -1))
 
 
 def test_ncm_model_reparam_with_extra_state_raises() -> None:

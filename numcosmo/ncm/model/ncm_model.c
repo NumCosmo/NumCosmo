@@ -102,6 +102,8 @@ G_DEFINE_QUARK (ncm-model-error, ncm_model_error)
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmModel, ncm_model, G_TYPE_OBJECT)
 
 static gboolean _ncm_model_class_param_was_removed (NcmModelClass *model_class, const gchar *name);
+static GArray *_ncm_model_class_removed_indices (NcmModelClass *model_class);
+static gint _ncm_model_cmp_guint (gconstpointer a, gconstpointer b);
 
 typedef struct _NcmModelSubmodelSlot
 {
@@ -465,6 +467,7 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->parent_submodel_slot_len = 0;
   klass->submodel_slot            = NULL;
   klass->removed_param            = NULL;
+  klass->removed_param_index      = NULL;
 
   /**
    * NcmModel:name:
@@ -1148,21 +1151,28 @@ ncm_model_class_set_submodel (NcmModelClass *model_class, guint submodel_slot_id
  * ncm_model_class_add_removed_param:
  * @model_class: a #NcmModelClass
  * @name: name of a parameter the class no longer has
+ * @index: index the parameter had among the class's scalar parameters
  *
- * Declares @name as removed from the class: a stored description of it in
- * #NcmModel:sparam-array is skipped. Subclasses inherit the declaration.
+ * Declares @name, formerly the parameter of index @index, as removed from the class. A
+ * stored description of it in #NcmModel:sparam-array is skipped, and a stored
+ * #NcmReparam written when the class still had it is rebuilt with its descriptions moved
+ * to the current indices (ncm_model_set_reparam()). Subclasses inherit the declaration.
  */
 void
-ncm_model_class_add_removed_param (NcmModelClass *model_class, const gchar *name)
+ncm_model_class_add_removed_param (NcmModelClass *model_class, const gchar *name, guint index)
 {
   NcmModelClass *parent = g_type_class_peek_parent (model_class);
 
-  /* A subclass inherits its parent's pointer; it gets an array of its own. */
+  /* A subclass inherits its parent's pointers; it gets arrays of its own. */
   if ((model_class->removed_param == NULL) ||
       (NCM_IS_MODEL_CLASS (parent) && (model_class->removed_param == parent->removed_param)))
-    model_class->removed_param = g_ptr_array_new_with_free_func (g_free);
+  {
+    model_class->removed_param       = g_ptr_array_new_with_free_func (g_free);
+    model_class->removed_param_index = g_array_new (FALSE, FALSE, sizeof (guint));
+  }
 
   g_ptr_array_add (model_class->removed_param, g_strdup (name));
+  g_array_append_val (model_class->removed_param_index, index);
 }
 
 static gboolean
@@ -1372,25 +1382,42 @@ _ncm_model_reparam_extra_state (NcmReparam *reparam)
 }
 
 /*
- * A copy of @reparam sized for a model of @length parameters, or %NULL if it
- * cannot be rebuilt there -- in which case @reason says why.
+ * A copy of @reparam sized for @model, or %NULL if it cannot be rebuilt there -- in
+ * which case @reason says why.
  *
- * A NcmReparam stores no parameter *values*: length, params-desc and
- * compat-type are all it carries, and the working vector is allocated empty at
- * construction and filled from the model by old2new(). Rebuilding one at a
- * different length therefore loses nothing -- and since NcmReparam:length is
- * construct-only, agreeing with the model means a new instance.
+ * A NcmReparam stores no parameter *values*: length, params-desc and compat-type are
+ * all it carries, and the working vector is allocated empty at construction and filled
+ * from the model by old2new(). Rebuilding one at a different length therefore loses
+ * nothing -- and since NcmReparam:length is construct-only, agreeing with the model
+ * means a new instance.
+ *
+ * The descriptions are keyed by parameter index. When the stored length is the model's
+ * length plus the number of parameters declared removed (ncm_model_class_add_removed_param()),
+ * the reparametrization was written before the removal: each key moves down by the
+ * number of removed indices below it, and a key of a removed parameter is refused. Any
+ * other length keeps the keys, which must then lie before the first removed index and
+ * inside the model, where both layouts agree. The length is the only mark of the layout:
+ * a reparametrization of the old length built in code today, with the descriptions its
+ * constructor sets at the current indices, would be moved too. Deserialization does not
+ * hit that, since a stored params-desc replaces the constructor's.
  */
 static NcmReparam *
-_ncm_model_reparam_resize (NcmReparam *reparam, guint length, gchar **reason)
+_ncm_model_reparam_resize (NcmModel *model, NcmReparam *reparam, gchar **reason)
 {
-  NcmObjDictInt *desc = NULL;
-  const gchar *extra  = _ncm_model_reparam_extra_state (reparam);
+  const guint length   = ncm_model_len (model);
+  const guint rlength  = ncm_reparam_get_length (reparam);
+  GArray *removed      = _ncm_model_class_removed_indices (NCM_MODEL_GET_CLASS (model));
+  const gboolean old   = (removed->len > 0) && (rlength == length + removed->len);
+  const guint first_rm = (removed->len > 0) ? g_array_index (removed, guint, 0) : length;
+  NcmObjDictInt *desc  = NULL;
+  NcmObjDictInt *moved = NULL;
+  const gchar *extra   = _ncm_model_reparam_extra_state (reparam);
   NcmReparam *out;
 
   if (extra != NULL)
   {
     *reason = g_strdup_printf ("it carries state of its own (property `%s') that no rebuild can size", extra);
+    g_array_unref (removed);
 
     return NULL;
   }
@@ -1402,36 +1429,117 @@ _ncm_model_reparam_resize (NcmReparam *reparam, guint length, gchar **reason)
     GArray *keys = ncm_obj_dict_int_keys (desc);
     guint i;
 
+    moved = ncm_obj_dict_int_new ();
+
     for (i = 0; i < keys->len; i++)
     {
       const gint key = g_array_index (keys, gint, i);
+      gint new_key   = key;
 
-      if ((key < 0) || ((guint) key >= length))
+      if (key < 0)
       {
         *reason = g_strdup_printf ("it reparametrizes parameter %d, which no longer exists", key);
+      }
+      else if (old)
+      {
+        guint j;
 
+        for (j = 0; j < removed->len; j++)
+        {
+          const guint r = g_array_index (removed, guint, j);
+
+          if ((guint) key == r)
+            *reason = g_strdup_printf ("it reparametrizes parameter %d, which was removed from the model", key);
+          else if (r < (guint) key)
+            new_key--;
+        }
+      }
+      else if ((guint) key >= length)
+      {
+        *reason = g_strdup_printf ("it reparametrizes parameter %d, which no longer exists", key);
+      }
+      else if ((guint) key >= first_rm)
+      {
+        *reason = g_strdup_printf ("it reparametrizes parameter %d, at or after the removed parameter %u, "
+                                   "and its length is not the %u the model had before the removal",
+                                   key, first_rm, length + removed->len);
+      }
+
+      if (*reason != NULL)
+      {
         g_array_unref (keys);
+        g_array_unref (removed);
+        ncm_obj_dict_int_unref (moved);
         ncm_obj_dict_int_unref (desc);
 
         return NULL;
       }
+
+      ncm_obj_dict_int_add (moved, new_key, ncm_obj_dict_int_peek (desc, key));
     }
 
     g_array_unref (keys);
+    ncm_obj_dict_int_unref (desc);
   }
+
+  g_array_unref (removed);
 
   out = g_object_new (G_OBJECT_TYPE (reparam),
                       "length", length,
                       "compat-type", g_type_name (ncm_reparam_get_compat_type (reparam)),
                       NULL);
 
-  if (desc != NULL)
+  if (moved != NULL)
   {
-    g_object_set (out, "params-desc", desc, NULL);
-    ncm_obj_dict_int_unref (desc);
+    g_object_set (out, "params-desc", moved, NULL);
+    ncm_obj_dict_int_unref (moved);
   }
 
   return out;
+}
+
+/* The indices declared removed along the class chain of @model_class, sorted, each once. */
+static GArray *
+_ncm_model_class_removed_indices (NcmModelClass *model_class)
+{
+  GArray *indices = g_array_new (FALSE, FALSE, sizeof (guint));
+  gpointer klass  = model_class;
+  guint i, j;
+
+  while (NCM_IS_MODEL_CLASS (klass))
+  {
+    GArray *removed = NCM_MODEL_CLASS (klass)->removed_param_index;
+
+    if (removed != NULL)
+    {
+      for (i = 0; i < removed->len; i++)
+      {
+        const guint r = g_array_index (removed, guint, i);
+        gboolean seen = FALSE;
+
+        for (j = 0; j < indices->len; j++)
+          seen = seen || (g_array_index (indices, guint, j) == r);
+
+        if (!seen)
+          g_array_append_val (indices, r);
+      }
+    }
+
+    klass = g_type_class_peek_parent (klass);
+  }
+
+  g_array_sort (indices, _ncm_model_cmp_guint);
+
+  return indices;
+}
+
+static gint
+_ncm_model_cmp_guint (gconstpointer a, gconstpointer b)
+{
+  const guint ua = *(const guint *) a;
+  const guint ub = *(const guint *) b;
+
+  return (ua > ub) - (ua < ub);
 }
 
 /**
@@ -1442,8 +1550,10 @@ _ncm_model_reparam_resize (NcmReparam *reparam, guint length, gchar **reason)
  *
  * Sets the reparametrization of @model to @reparam and computes its parameters from the
  * original ones. A reparametrization for another length is rebuilt at the model's
- * length when it carries nothing but descriptions of existing parameters. It cannot be
- * removed: %NULL does nothing on a model without one and aborts on a model with one.
+ * length when it carries nothing but descriptions of existing parameters; one written
+ * before a parameter was removed (ncm_model_class_add_removed_param()) has its
+ * descriptions moved to the current indices. It cannot be removed: %NULL does nothing on
+ * a model without one and aborts on a model with one.
  */
 void
 ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
@@ -1473,7 +1583,7 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error)
      * long. Adopting it regardless aborted inside ncm_vector_memcpy(). */
     if (ncm_reparam_get_length (reparam) != ncm_model_len (model))
     {
-      resized = _ncm_model_reparam_resize (reparam, ncm_model_len (model), &reason);
+      resized = _ncm_model_reparam_resize (model, reparam, &reason);
 
       if (resized == NULL)
       {

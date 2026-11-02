@@ -176,21 +176,18 @@ def test_a_stale_reparam_still_attaches():
 
 
 def test_a_reparam_of_a_gone_parameter_fails_loudly():
-    """Resizing is only safe while the descriptors still fit.
+    """A stored description of Yp (index 4 before the move) has nowhere to go.
 
-    A descriptor pointing past the end of the model means the parameter it
-    reparametrizes is gone, which no rebuild can repair -- so it must raise
-    rather than abort or silently reparametrize the wrong slot.
+    It must raise rather than abort or silently reparametrize another slot.
     """
     cosmo = Nc.HICosmoDEXcdm.new()
     reparam = Nc.HICosmoDEReparamOk.new(8)
 
-    # Slot 7 existed while the cosmology had eight parameters and does not now.
     reparam.set_param_desc_full(
-        7, "Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED
+        4, "Bogus", "B", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED
     )
 
-    with pytest.raises(GLib.Error, match="no longer exists"):
+    with pytest.raises(GLib.Error, match="which was removed from the model"):
         cosmo.set_reparam(reparam)
 
 
