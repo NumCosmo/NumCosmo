@@ -120,3 +120,8 @@
    fun:fi_ini
    fun:fi_getinfo*
 }
+{
+   <GLib_g_free_object_size>
+   Memcheck:SizeMismatch
+   fun:free_sized
+}
