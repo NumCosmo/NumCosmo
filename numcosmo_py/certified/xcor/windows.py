@@ -147,6 +147,11 @@ WINDOWS: typing.Final[dict[str, Window]] = {
     "power_exp_mid": Window(
         "power_exp", (1200.0, 2.0, 1.5, 50.0, 4000.0), "skewed and broad"
     ),
+    "power_exp_ia_mid": Window(
+        "power_exp",
+        (1200.0, 0.0, 1.5, 50.0, 4000.0),
+        "NLA window of power_exp_mid: dn/dchi / chi^2, largest at chi_lower",
+    ),
     "power_exp_skew_far": Window(
         "power_exp",
         (2400.0, 6.0, 2.0, 3500.0, 7200.0),
