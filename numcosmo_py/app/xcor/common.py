@@ -64,8 +64,6 @@ from .kernels import (
 )
 from .plotting import style_ratio_axis
 
-Ncm.cfg_init()
-
 
 def contiguous_runs(ells: np.ndarray) -> list[tuple[int, int]]:
     r"""Split a sorted multipole array into its maximal contiguous runs.
@@ -195,6 +193,8 @@ class XcorKernelCommon:
         :raises ValueError: If the kernel specification is invalid.
         :raises typer.BadParameter: If a tolerance is not positive.
         """
+        Ncm.cfg_init()
+
         # typer's min is inclusive, but zero tolerance aborts in the library.
         if self.integrator_reltol is not None and self.integrator_reltol <= 0.0:
             raise typer.BadParameter(
