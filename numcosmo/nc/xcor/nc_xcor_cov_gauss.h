@@ -57,7 +57,8 @@ void nc_xcor_cov_gauss_add_spectrum (NcXcorCovGauss *cov, guint a, guint b, NcmM
 guint nc_xcor_cov_gauss_get_n_spectra (NcXcorCovGauss *cov);
 guint nc_xcor_cov_gauss_get_n_data (NcXcorCovGauss *cov);
 
-void nc_xcor_cov_gauss_compute (NcXcorCovGauss *cov, NcmMatrix *cl, NcmMatrix *noise, NcmMatrix *cov_mat);
+void nc_xcor_cov_gauss_compute (NcXcorCovGauss *cov, NcmMatrix *cl, NcmMatrix *noise);
+NcmMatrix *nc_xcor_cov_gauss_peek_matrix (NcXcorCovGauss *cov);
 
 G_END_DECLS
 

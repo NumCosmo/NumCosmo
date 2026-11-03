@@ -53,7 +53,7 @@ typedef struct _TestNcXcorCovGauss
   NcXcorCovGauss *cov;
   NcmMatrix *cl;
   NcmMatrix *noise;
-  NcmMatrix *cov_mat;
+  NcmMatrix *cov_mat; /* borrowed from cov by _test_nc_xcor_cov_gauss_compute() */
   gdouble amp[TEST_N_TRACERS][TEST_N_TRACERS];
   gdouble noise_level[TEST_N_TRACERS];
   guint pair_a[TEST_N_SPECTRA];
@@ -71,10 +71,12 @@ void test_nc_xcor_cov_gauss_noise_only (TestNcXcorCovGauss *test, gconstpointer 
 void test_nc_xcor_cov_gauss_f_sky (TestNcXcorCovGauss *test, gconstpointer pdata);
 void test_nc_xcor_cov_gauss_positive_definite (TestNcXcorCovGauss *test, gconstpointer pdata);
 void test_nc_xcor_cov_gauss_serialize (TestNcXcorCovGauss *test, gconstpointer pdata);
+void test_nc_xcor_cov_gauss_add_after_compute (TestNcXcorCovGauss *test, gconstpointer pdata);
 
 void test_nc_xcor_cov_gauss_invalid (void);
 void test_nc_xcor_cov_gauss_invalid_tracer_subprocess (void);
 void test_nc_xcor_cov_gauss_invalid_window_subprocess (void);
+void test_nc_xcor_cov_gauss_invalid_zero_band_subprocess (void);
 void test_nc_xcor_cov_gauss_invalid_cl_subprocess (void);
 void test_nc_xcor_cov_gauss_invalid_f_sky_subprocess (void);
 void test_nc_xcor_cov_gauss_invalid_ell_range_subprocess (void);
@@ -123,9 +125,15 @@ main (gint argc, gchar *argv[])
               &test_nc_xcor_cov_gauss_serialize,
               &test_nc_xcor_cov_gauss_free);
 
+  g_test_add ("/nc/xcor/cov_gauss/add_after_compute", TestNcXcorCovGauss, NULL,
+              &test_nc_xcor_cov_gauss_new,
+              &test_nc_xcor_cov_gauss_add_after_compute,
+              &test_nc_xcor_cov_gauss_free);
+
   g_test_add_func ("/nc/xcor/cov_gauss/invalid", &test_nc_xcor_cov_gauss_invalid);
   g_test_add_func ("/nc/xcor/cov_gauss/invalid/tracer/subprocess", &test_nc_xcor_cov_gauss_invalid_tracer_subprocess);
   g_test_add_func ("/nc/xcor/cov_gauss/invalid/window/subprocess", &test_nc_xcor_cov_gauss_invalid_window_subprocess);
+  g_test_add_func ("/nc/xcor/cov_gauss/invalid/zero_band/subprocess", &test_nc_xcor_cov_gauss_invalid_zero_band_subprocess);
   g_test_add_func ("/nc/xcor/cov_gauss/invalid/cl/subprocess", &test_nc_xcor_cov_gauss_invalid_cl_subprocess);
   g_test_add_func ("/nc/xcor/cov_gauss/invalid/f_sky/subprocess", &test_nc_xcor_cov_gauss_invalid_f_sky_subprocess);
   g_test_add_func ("/nc/xcor/cov_gauss/invalid/ell_range/subprocess", &test_nc_xcor_cov_gauss_invalid_ell_range_subprocess);
@@ -258,6 +266,18 @@ _test_nc_xcor_cov_gauss_fill (TestNcXcorCovGauss *test, gboolean with_signal)
   }
 }
 
+/* Computes the fixture's covariance and points test->cov_mat at the matrix owned by cov. */
+static void
+_test_nc_xcor_cov_gauss_compute (TestNcXcorCovGauss *test)
+{
+  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise);
+  test->cov_mat = nc_xcor_cov_gauss_peek_matrix (test->cov);
+
+  g_assert_nonnull (test->cov_mat);
+  g_assert_cmpuint (ncm_matrix_nrows (test->cov_mat), ==, nc_xcor_cov_gauss_get_n_data (test->cov));
+  g_assert_cmpuint (ncm_matrix_ncols (test->cov_mat), ==, nc_xcor_cov_gauss_get_n_data (test->cov));
+}
+
 void
 test_nc_xcor_cov_gauss_new (TestNcXcorCovGauss *test, gconstpointer pdata)
 {
@@ -290,7 +310,7 @@ test_nc_xcor_cov_gauss_new (TestNcXcorCovGauss *test, gconstpointer pdata)
 
   test->cl      = ncm_matrix_new (nc_xcor_cov_gauss_get_n_pairs (test->cov), TEST_N_ELL);
   test->noise   = ncm_matrix_new (TEST_N_TRACERS, TEST_N_ELL);
-  test->cov_mat = ncm_matrix_new (nc_xcor_cov_gauss_get_n_data (test->cov), nc_xcor_cov_gauss_get_n_data (test->cov));
+  test->cov_mat = NULL;
 
   _test_nc_xcor_cov_gauss_fill (test, TRUE);
 
@@ -309,7 +329,6 @@ test_nc_xcor_cov_gauss_free (TestNcXcorCovGauss *test, gconstpointer pdata)
 
   ncm_matrix_free (test->cl);
   ncm_matrix_free (test->noise);
-  ncm_matrix_free (test->cov_mat);
   NCM_TEST_FREE (nc_xcor_cov_gauss_free, test->cov);
 }
 
@@ -322,6 +341,7 @@ test_nc_xcor_cov_gauss_pair_index (TestNcXcorCovGauss *test, gconstpointer pdata
   g_assert_cmpuint (nc_xcor_cov_gauss_get_n_ell (test->cov), ==, TEST_N_ELL);
   g_assert_cmpuint (nc_xcor_cov_gauss_get_n_spectra (test->cov), ==, TEST_N_SPECTRA);
   g_assert_cmpuint (nc_xcor_cov_gauss_get_n_data (test->cov), ==, 16);
+  g_assert_null (nc_xcor_cov_gauss_peek_matrix (test->cov));
 
   for (a = 0; a < TEST_N_TRACERS; a++)
   {
@@ -337,7 +357,7 @@ test_nc_xcor_cov_gauss_pair_index (TestNcXcorCovGauss *test, gconstpointer pdata
 void
 test_nc_xcor_cov_gauss_formula (TestNcXcorCovGauss *test, gconstpointer pdata)
 {
-  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise, test->cov_mat);
+  _test_nc_xcor_cov_gauss_compute (test);
   _test_nc_xcor_cov_gauss_check (test, test->cov_mat, TRUE, TEST_F_SKY);
 }
 
@@ -351,7 +371,7 @@ test_nc_xcor_cov_gauss_negative_cross (TestNcXcorCovGauss *test, gconstpointer p
 {
   const guint offset_02 = 6;
 
-  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise, test->cov_mat);
+  _test_nc_xcor_cov_gauss_compute (test);
 
   g_assert_cmpfloat (ncm_matrix_get (test->cov_mat, 0, offset_02), <, 0.0);
   ncm_assert_cmpdouble_e (ncm_matrix_get (test->cov_mat, 0, offset_02), ==,
@@ -369,7 +389,7 @@ test_nc_xcor_cov_gauss_noise_only (TestNcXcorCovGauss *test, gconstpointer pdata
   const guint offset_11 = 8;
 
   _test_nc_xcor_cov_gauss_fill (test, FALSE);
-  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise, test->cov_mat);
+  _test_nc_xcor_cov_gauss_compute (test);
 
   _test_nc_xcor_cov_gauss_check (test, test->cov_mat, FALSE, TEST_F_SKY);
   g_assert_cmpfloat (ncm_matrix_get (test->cov_mat, 0, offset_11), ==, 0.0);
@@ -381,20 +401,21 @@ void
 test_nc_xcor_cov_gauss_f_sky (TestNcXcorCovGauss *test, gconstpointer pdata)
 {
   const guint n_data = nc_xcor_cov_gauss_get_n_data (test->cov);
-  NcmMatrix *half    = ncm_matrix_new (n_data, n_data);
+  NcmMatrix *full;
   guint i, j;
 
-  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise, test->cov_mat);
+  _test_nc_xcor_cov_gauss_compute (test);
+  full = ncm_matrix_dup (test->cov_mat);
 
   nc_xcor_cov_gauss_set_f_sky (test->cov, 0.5 * TEST_F_SKY);
   g_assert_cmpfloat (nc_xcor_cov_gauss_get_f_sky (test->cov), ==, 0.5 * TEST_F_SKY);
-  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise, half);
+  _test_nc_xcor_cov_gauss_compute (test);
 
   for (i = 0; i < n_data; i++)
     for (j = 0; j < n_data; j++)
-      g_assert_cmpfloat (ncm_matrix_get (half, i, j), ==, 2.0 * ncm_matrix_get (test->cov_mat, i, j));
+      g_assert_cmpfloat (ncm_matrix_get (test->cov_mat, i, j), ==, 2.0 * ncm_matrix_get (full, i, j));
 
-  ncm_matrix_free (half);
+  ncm_matrix_free (full);
 }
 
 /* The signal plus noise matrix is positive definite at every multipole, so is the covariance. */
@@ -404,13 +425,18 @@ test_nc_xcor_cov_gauss_positive_definite (TestNcXcorCovGauss *test, gconstpointe
   const guint n_data = nc_xcor_cov_gauss_get_n_data (test->cov);
   guint i, j;
 
-  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise, test->cov_mat);
+  _test_nc_xcor_cov_gauss_compute (test);
 
   for (i = 0; i < n_data; i++)
     for (j = 0; j < n_data; j++)
       g_assert_cmpfloat (ncm_matrix_get (test->cov_mat, i, j), ==, ncm_matrix_get (test->cov_mat, j, i));
 
-  g_assert_cmpint (ncm_matrix_cholesky_decomp (test->cov_mat, 'U'), ==, 0);
+  {
+    NcmMatrix *chol = ncm_matrix_dup (test->cov_mat);
+
+    g_assert_cmpint (ncm_matrix_cholesky_decomp (chol, 'U'), ==, 0);
+    ncm_matrix_free (chol);
+  }
 }
 
 void
@@ -418,7 +444,7 @@ test_nc_xcor_cov_gauss_serialize (TestNcXcorCovGauss *test, gconstpointer pdata)
 {
   NcXcorCovGauss *dup = NC_XCOR_COV_GAUSS (ncm_serialize_global_dup_obj (G_OBJECT (test->cov)));
   const guint n_data  = nc_xcor_cov_gauss_get_n_data (test->cov);
-  NcmMatrix *cov_dup  = ncm_matrix_new (n_data, n_data);
+  NcmMatrix *cov_dup;
   guint i, j;
 
   g_assert_cmpuint (nc_xcor_cov_gauss_get_n_tracers (dup), ==, TEST_N_TRACERS);
@@ -428,15 +454,47 @@ test_nc_xcor_cov_gauss_serialize (TestNcXcorCovGauss *test, gconstpointer pdata)
   g_assert_cmpuint (nc_xcor_cov_gauss_get_n_spectra (dup), ==, TEST_N_SPECTRA);
   g_assert_cmpuint (nc_xcor_cov_gauss_get_n_data (dup), ==, n_data);
 
-  nc_xcor_cov_gauss_compute (test->cov, test->cl, test->noise, test->cov_mat);
-  nc_xcor_cov_gauss_compute (dup, test->cl, test->noise, cov_dup);
+  _test_nc_xcor_cov_gauss_compute (test);
+  nc_xcor_cov_gauss_compute (dup, test->cl, test->noise);
+  cov_dup = nc_xcor_cov_gauss_peek_matrix (dup);
 
   for (i = 0; i < n_data; i++)
     for (j = 0; j < n_data; j++)
       g_assert_cmpfloat (ncm_matrix_get (cov_dup, i, j), ==, ncm_matrix_get (test->cov_mat, i, j));
 
-  ncm_matrix_free (cov_dup);
   NCM_TEST_FREE (nc_xcor_cov_gauss_free, dup);
+}
+
+/*
+ * A spectrum added after a compute rebuilds the workspaces: an object given the last
+ * spectrum after computing with the first five gives the fixture's covariance bit for bit.
+ */
+void
+test_nc_xcor_cov_gauss_add_after_compute (TestNcXcorCovGauss *test, gconstpointer pdata)
+{
+  NcXcorCovGauss *cov = nc_xcor_cov_gauss_new (TEST_N_TRACERS, TEST_ELL_MIN, TEST_ELL_MAX, TEST_F_SKY);
+  const guint n_data  = nc_xcor_cov_gauss_get_n_data (test->cov);
+  NcmMatrix *cov_mat;
+  guint s, i, j;
+
+  for (s = 0; s + 1 < TEST_N_SPECTRA; s++)
+    nc_xcor_cov_gauss_add_spectrum (cov, test->pair_a[s], test->pair_b[s], test->window[s]);
+
+  nc_xcor_cov_gauss_compute (cov, test->cl, test->noise);
+  g_assert_cmpuint (ncm_matrix_nrows (nc_xcor_cov_gauss_peek_matrix (cov)), ==, n_data - 3);
+
+  nc_xcor_cov_gauss_add_spectrum (cov, test->pair_a[s], test->pair_b[s], test->window[s]);
+  nc_xcor_cov_gauss_compute (cov, test->cl, test->noise);
+  cov_mat = nc_xcor_cov_gauss_peek_matrix (cov);
+
+  _test_nc_xcor_cov_gauss_compute (test);
+  g_assert_cmpuint (ncm_matrix_nrows (cov_mat), ==, n_data);
+
+  for (i = 0; i < n_data; i++)
+    for (j = 0; j < n_data; j++)
+      g_assert_cmpfloat (ncm_matrix_get (cov_mat, i, j), ==, ncm_matrix_get (test->cov_mat, i, j));
+
+  NCM_TEST_FREE (nc_xcor_cov_gauss_free, cov);
 }
 
 void
@@ -449,6 +507,10 @@ test_nc_xcor_cov_gauss_invalid (void)
   g_test_trap_subprocess ("/nc/xcor/cov_gauss/invalid/window/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   g_test_trap_assert_stderr ("*nc_xcor_cov_gauss_add_spectrum: the window has 29 columns, the multipole range [2, 31] has 30.*");
+
+  g_test_trap_subprocess ("/nc/xcor/cov_gauss/invalid/zero_band/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*nc_xcor_cov_gauss_add_spectrum: band power 1 of the spectrum (0, 1) has no nonzero weight.*");
 
   g_test_trap_subprocess ("/nc/xcor/cov_gauss/invalid/cl/subprocess", 0, 0);
   g_test_trap_assert_failed ();
@@ -482,16 +544,27 @@ test_nc_xcor_cov_gauss_invalid_window_subprocess (void)
 }
 
 void
+test_nc_xcor_cov_gauss_invalid_zero_band_subprocess (void)
+{
+  NcXcorCovGauss *cov = nc_xcor_cov_gauss_new (TEST_N_TRACERS, TEST_ELL_MIN, TEST_ELL_MAX, TEST_F_SKY);
+  NcmMatrix *window   = _test_nc_xcor_cov_gauss_window_tophat (3, 10);
+
+  ncm_matrix_set_zero (window);
+  ncm_matrix_set (window, 0, 0, 1.0);
+  ncm_matrix_set (window, 2, 25, 1.0);
+  nc_xcor_cov_gauss_add_spectrum (cov, 0, 1, window);
+}
+
+void
 test_nc_xcor_cov_gauss_invalid_cl_subprocess (void)
 {
   NcXcorCovGauss *cov = nc_xcor_cov_gauss_new (TEST_N_TRACERS, TEST_ELL_MIN, TEST_ELL_MAX, TEST_F_SKY);
   NcmMatrix *window   = _test_nc_xcor_cov_gauss_window_tophat (3, 10);
   NcmMatrix *cl       = ncm_matrix_new (5, TEST_N_ELL);
   NcmMatrix *noise    = ncm_matrix_new (TEST_N_TRACERS, TEST_N_ELL);
-  NcmMatrix *cov_mat  = ncm_matrix_new (3, 3);
 
   nc_xcor_cov_gauss_add_spectrum (cov, 0, 1, window);
-  nc_xcor_cov_gauss_compute (cov, cl, noise, cov_mat);
+  nc_xcor_cov_gauss_compute (cov, cl, noise);
 }
 
 void

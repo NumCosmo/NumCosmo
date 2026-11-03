@@ -38,8 +38,9 @@
  * power; nc_xcor_cov_gauss_add_spectrum() appends one. The window weights are used as given.
  * nc_xcor_cov_gauss_compute() takes the signal $C^{ab}_\ell$ of every tracer pair, in the
  * rows given by nc_xcor_cov_gauss_get_pair_index(), and the noise $N^a_\ell$ of every
- * tracer. The object holds no model; it writes its own workspaces, so one instance must not
- * be used by two threads at once.
+ * tracer, and writes the covariance into a matrix owned by the object,
+ * nc_xcor_cov_gauss_peek_matrix(). The object holds no model; it writes its own
+ * workspaces, so one instance must not be used by two threads at once.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -49,10 +50,6 @@
 
 #include "nc/xcor/nc_xcor_cov_gauss.h"
 #include "ncm/algebra/ncm_vector.h"
-
-#ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_blas.h>
-#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -74,6 +71,13 @@ typedef struct _NcXcorCovGaussSpectrum
   guint n_bp;
 } NcXcorCovGaussSpectrum;
 
+/* Columns [lo, hi) of a window row: its first nonzero weight and one past the last. */
+typedef struct _NcXcorCovGaussSupport
+{
+  guint lo;
+  guint hi;
+} NcXcorCovGaussSupport;
+
 struct _NcXcorCovGauss
 {
   /*< private > */
@@ -86,14 +90,15 @@ struct _NcXcorCovGauss
 
   GArray *spectra;    /* element-type NcXcorCovGaussSpectrum */
   GPtrArray *windows; /* element-type NcmMatrix*, n_bp x n_ell, owned */
+  GArray *support;    /* element-type NcXcorCovGaussSupport, one per band power */
   guint n_data;
-  guint max_bp;
 
   /* Workspaces of nc_xcor_cov_gauss_compute(). */
   NcmMatrix *cl_tot;   /* signal plus noise, n_pairs x n_ell */
   NcmVector *g_ell;    /* 1 / ((2 ell + 1) f_sky) */
   NcmVector *ell_term; /* the per-ell covariance of one pair of spectra */
-  NcmMatrix *scaled;   /* max_bp x n_ell */
+
+  NcmMatrix *cov_mat; /* the result, n_data x n_data */
 };
 
 G_DEFINE_TYPE (NcXcorCovGauss, nc_xcor_cov_gauss, G_TYPE_OBJECT)
@@ -109,12 +114,13 @@ nc_xcor_cov_gauss_init (NcXcorCovGauss *cov)
   cov->spectra = NULL;
   cov->windows = NULL;
   cov->n_data  = 0;
-  cov->max_bp  = 0;
 
   cov->cl_tot   = NULL;
   cov->g_ell    = NULL;
   cov->ell_term = NULL;
-  cov->scaled   = NULL;
+
+  cov->support = NULL;
+  cov->cov_mat = NULL;
 }
 
 static void _nc_xcor_cov_gauss_set_spectra (NcXcorCovGauss *cov, GVariant *var);
@@ -198,6 +204,7 @@ _nc_xcor_cov_gauss_constructed (GObject *object)
 
   cov->spectra = g_array_new (FALSE, FALSE, sizeof (NcXcorCovGaussSpectrum));
   cov->windows = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_matrix_free);
+  cov->support = g_array_new (FALSE, FALSE, sizeof (NcXcorCovGaussSupport));
 
   if (cov->n_tracers == 0)
     return;
@@ -224,7 +231,7 @@ _nc_xcor_cov_gauss_dispose (GObject *object)
   ncm_matrix_clear (&cov->cl_tot);
   ncm_vector_clear (&cov->g_ell);
   ncm_vector_clear (&cov->ell_term);
-  ncm_matrix_clear (&cov->scaled);
+  ncm_matrix_clear (&cov->cov_mat);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_cov_gauss_parent_class)->dispose (object);
@@ -236,6 +243,7 @@ _nc_xcor_cov_gauss_finalize (GObject *object)
   NcXcorCovGauss *cov = NC_XCOR_COV_GAUSS (object);
 
   g_clear_pointer (&cov->spectra, g_array_unref);
+  g_clear_pointer (&cov->support, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_xcor_cov_gauss_parent_class)->finalize (object);
@@ -329,6 +337,7 @@ _nc_xcor_cov_gauss_set_spectra (NcXcorCovGauss *cov, GVariant *var)
 
   g_array_set_size (cov->spectra, 0);
   g_ptr_array_set_size (cov->windows, 0);
+  g_array_set_size (cov->support, 0);
   cov->n_data = 0;
 
   if (var == NULL)
@@ -550,14 +559,15 @@ nc_xcor_cov_gauss_get_pair_index (NcXcorCovGauss *cov, guint a, guint b)
  *
  * Appends the spectrum of the tracer pair (@a, @b) to the data vector, with a copy of
  * @window. Its band powers take the next nc_xcor_cov_gauss_get_n_data() rows. Aborts if a
- * tracer index is out of range or @window does not have nc_xcor_cov_gauss_get_n_ell()
- * columns.
+ * tracer index is out of range, @window does not have nc_xcor_cov_gauss_get_n_ell()
+ * columns, or a band power has no nonzero weight.
  */
 void
 nc_xcor_cov_gauss_add_spectrum (NcXcorCovGauss *cov, guint a, guint b, NcmMatrix *window)
 {
   const guint n_ell = nc_xcor_cov_gauss_get_n_ell (cov);
   NcXcorCovGaussSpectrum sp;
+  guint i;
 
   if ((a >= cov->n_tracers) || (b >= cov->n_tracers))
     g_error ("nc_xcor_cov_gauss_add_spectrum: tracer pair (%u, %u) out of range, %u tracers.",
@@ -572,16 +582,30 @@ nc_xcor_cov_gauss_add_spectrum (NcXcorCovGauss *cov, guint a, guint b, NcmMatrix
   sp.offset = cov->n_data;
   sp.n_bp   = ncm_matrix_nrows (window);
 
+  for (i = 0; i < sp.n_bp; i++)
+  {
+    NcXcorCovGaussSupport sup = {n_ell, 0};
+    guint l;
+
+    for (l = 0; l < n_ell; l++)
+    {
+      if (ncm_matrix_get (window, i, l) != 0.0)
+      {
+        sup.lo = MIN (sup.lo, l);
+        sup.hi = l + 1;
+      }
+    }
+
+    if (sup.hi == 0)
+      g_error ("nc_xcor_cov_gauss_add_spectrum: band power %u of the spectrum (%u, %u) has no "
+               "nonzero weight.", i, a, b);
+
+    g_array_append_val (cov->support, sup);
+  }
+
   g_array_append_val (cov->spectra, sp);
   g_ptr_array_add (cov->windows, ncm_matrix_dup (window));
   cov->n_data += sp.n_bp;
-
-  if (sp.n_bp > cov->max_bp)
-  {
-    cov->max_bp = sp.n_bp;
-    ncm_matrix_clear (&cov->scaled);
-    cov->scaled = ncm_matrix_new (cov->max_bp, n_ell);
-  }
 }
 
 /**
@@ -613,18 +637,21 @@ nc_xcor_cov_gauss_get_n_data (NcXcorCovGauss *cov)
  * @cov: a #NcXcorCovGauss
  * @cl: signal $C^{ab}_\ell$, one row per tracer pair, one column per multipole
  * @noise: noise $N^a_\ell$, one row per tracer, one column per multipole
- * @cov_mat: output covariance, nc_xcor_cov_gauss_get_n_data() square
  *
- * Computes the covariance of the band powers of the data vector into @cov_mat. The rows of
- * @cl follow nc_xcor_cov_gauss_get_pair_index(); @noise is added to the auto spectra only.
- * Aborts if a matrix has the wrong shape.
+ * Computes the covariance of the band powers of the data vector into the matrix returned by
+ * nc_xcor_cov_gauss_peek_matrix(). The rows of @cl follow
+ * nc_xcor_cov_gauss_get_pair_index(); @noise is added to the auto spectra only. Aborts if
+ * the data vector has no spectra or a matrix has the wrong shape.
  */
 void
-nc_xcor_cov_gauss_compute (NcXcorCovGauss *cov, NcmMatrix *cl, NcmMatrix *noise, NcmMatrix *cov_mat)
+nc_xcor_cov_gauss_compute (NcXcorCovGauss *cov, NcmMatrix *cl, NcmMatrix *noise)
 {
   const guint n_ell   = nc_xcor_cov_gauss_get_n_ell (cov);
   const guint n_pairs = nc_xcor_cov_gauss_get_n_pairs (cov);
-  guint s, t, a, l;
+  guint s, t, a, i, j, l;
+
+  if (cov->n_data == 0)
+    g_error ("nc_xcor_cov_gauss_compute: the data vector has no spectra.");
 
   if ((ncm_matrix_nrows (cl) != n_pairs) || (ncm_matrix_ncols (cl) != n_ell))
     g_error ("nc_xcor_cov_gauss_compute: the signal matrix is %u x %u, expected %u x %u.",
@@ -634,9 +661,11 @@ nc_xcor_cov_gauss_compute (NcXcorCovGauss *cov, NcmMatrix *cl, NcmMatrix *noise,
     g_error ("nc_xcor_cov_gauss_compute: the noise matrix is %u x %u, expected %u x %u.",
              ncm_matrix_nrows (noise), ncm_matrix_ncols (noise), cov->n_tracers, n_ell);
 
-  if ((ncm_matrix_nrows (cov_mat) != cov->n_data) || (ncm_matrix_ncols (cov_mat) != cov->n_data))
-    g_error ("nc_xcor_cov_gauss_compute: the covariance matrix is %u x %u, expected %u x %u.",
-             ncm_matrix_nrows (cov_mat), ncm_matrix_ncols (cov_mat), cov->n_data, cov->n_data);
+  if ((cov->cov_mat == NULL) || (ncm_matrix_nrows (cov->cov_mat) != cov->n_data))
+  {
+    ncm_matrix_clear (&cov->cov_mat);
+    cov->cov_mat = ncm_matrix_new (cov->n_data, cov->n_data);
+  }
 
   ncm_matrix_memcpy (cov->cl_tot, cl);
 
@@ -651,6 +680,12 @@ nc_xcor_cov_gauss_compute (NcXcorCovGauss *cov, NcmMatrix *cl, NcmMatrix *noise,
   for (l = 0; l < n_ell; l++)
     ncm_vector_set (cov->g_ell, l, 1.0 / ((2.0 * (cov->ell_min + l) + 1.0) * cov->f_sky));
 
+  /*
+   * Upper triangle, spectrum pair by spectrum pair (t >= s): each entry is the sum of
+   * w_L w_L' times the per-ell term over the overlap of the two band supports, zero when
+   * they do not overlap. The lower triangle is then copied from the upper one, so the
+   * result is symmetric to the bit.
+   */
   for (s = 0; s < cov->spectra->len; s++)
   {
     const NcXcorCovGaussSpectrum *sp_s = &g_array_index (cov->spectra, NcXcorCovGaussSpectrum, s);
@@ -660,24 +695,53 @@ nc_xcor_cov_gauss_compute (NcXcorCovGauss *cov, NcmMatrix *cl, NcmMatrix *noise,
     {
       const NcXcorCovGaussSpectrum *sp_t = &g_array_index (cov->spectra, NcXcorCovGaussSpectrum, t);
       NcmMatrix *window_t                = g_ptr_array_index (cov->windows, t);
-      gsl_matrix_view scaled             = gsl_matrix_submatrix (ncm_matrix_gsl (cov->scaled), 0, 0, sp_t->n_bp, n_ell);
-      gsl_matrix_view block              = gsl_matrix_submatrix (ncm_matrix_gsl (cov_mat), sp_s->offset, sp_t->offset, sp_s->n_bp, sp_t->n_bp);
-      guint i, j;
+      const gdouble *term;
 
       _nc_xcor_cov_gauss_ell_term (cov, sp_s->a, sp_s->b, sp_t->a, sp_t->b);
+      term = ncm_vector_const_data (cov->ell_term);
 
-      for (i = 0; i < sp_t->n_bp; i++)
-        for (l = 0; l < n_ell; l++)
-          gsl_matrix_set (&scaled.matrix, i, l, ncm_matrix_get (window_t, i, l) * ncm_vector_get (cov->ell_term, l));
+      for (i = 0; i < sp_s->n_bp; i++)
+      {
+        const NcXcorCovGaussSupport *sup_i = &g_array_index (cov->support, NcXcorCovGaussSupport, sp_s->offset + i);
+        const gdouble *w_i                 = ncm_matrix_const_ptr (window_s, i, 0);
 
-      gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, ncm_matrix_gsl (window_s), &scaled.matrix, 0.0, &block.matrix);
+        for (j = (t == s) ? i : 0; j < sp_t->n_bp; j++)
+        {
+          const NcXcorCovGaussSupport *sup_j = &g_array_index (cov->support, NcXcorCovGaussSupport, sp_t->offset + j);
+          const gdouble *w_j                 = ncm_matrix_const_ptr (window_t, j, 0);
+          const guint lo                     = MAX (sup_i->lo, sup_j->lo);
+          const guint hi                     = MIN (sup_i->hi, sup_j->hi);
+          gdouble res                        = 0.0;
 
-      if (t != s)
-        for (i = 0; i < sp_s->n_bp; i++)
-          for (j = 0; j < sp_t->n_bp; j++)
-            ncm_matrix_set (cov_mat, sp_t->offset + j, sp_s->offset + i, gsl_matrix_get (&block.matrix, i, j));
+          for (l = lo; l < hi; l++)
+            res += w_i[l] * w_j[l] * term[l];
+
+          ncm_matrix_set (cov->cov_mat, sp_s->offset + i, sp_t->offset + j, res);
+        }
+      }
     }
   }
+
+  for (i = 0; i < cov->n_data; i++)
+    for (j = 0; j < i; j++)
+      ncm_matrix_set (cov->cov_mat, i, j, ncm_matrix_get (cov->cov_mat, j, i));
+}
+
+/**
+ * nc_xcor_cov_gauss_peek_matrix:
+ * @cov: a #NcXcorCovGauss
+ *
+ * Gets the covariance computed by the last nc_xcor_cov_gauss_compute(). The matrix is owned
+ * by @cov and is overwritten by the next compute; a compute after a change of
+ * nc_xcor_cov_gauss_get_n_data() replaces it.
+ *
+ * Returns: (transfer none) (nullable): the covariance, nc_xcor_cov_gauss_get_n_data()
+ * square, or %NULL before the first compute.
+ */
+NcmMatrix *
+nc_xcor_cov_gauss_peek_matrix (NcXcorCovGauss *cov)
+{
+  return cov->cov_mat;
 }
 
 /*
@@ -693,17 +757,16 @@ _nc_xcor_cov_gauss_ell_term (NcXcorCovGauss *cov, const guint a, const guint b, 
   const guint r_bd  = nc_xcor_cov_gauss_get_pair_index (cov, b, d);
   const guint r_ad  = nc_xcor_cov_gauss_get_pair_index (cov, a, d);
   const guint r_bc  = nc_xcor_cov_gauss_get_pair_index (cov, b, c);
+  const gdouble *ac = ncm_matrix_const_ptr (cov->cl_tot, r_ac, 0);
+  const gdouble *bd = ncm_matrix_const_ptr (cov->cl_tot, r_bd, 0);
+  const gdouble *ad = ncm_matrix_const_ptr (cov->cl_tot, r_ad, 0);
+  const gdouble *bc = ncm_matrix_const_ptr (cov->cl_tot, r_bc, 0);
+  const gdouble *g  = ncm_vector_const_data (cov->g_ell);
+  gdouble *term     = ncm_vector_data (cov->ell_term);
   guint l;
 
   for (l = 0; l < n_ell; l++)
-  {
-    const gdouble ac = ncm_matrix_get (cov->cl_tot, r_ac, l);
-    const gdouble bd = ncm_matrix_get (cov->cl_tot, r_bd, l);
-    const gdouble ad = ncm_matrix_get (cov->cl_tot, r_ad, l);
-    const gdouble bc = ncm_matrix_get (cov->cl_tot, r_bc, l);
-
-    ncm_vector_set (cov->ell_term, l, ncm_vector_get (cov->g_ell, l) * (ac * bd + ad * bc));
-  }
+    term[l] = g[l] * (ac[l] * bd[l] + ad[l] * bc[l]);
 }
 
 /* Row of the pair (a, b), a <= b, in the upper triangle taken row by row. */
