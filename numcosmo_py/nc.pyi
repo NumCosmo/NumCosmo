@@ -23964,6 +23964,86 @@ class XcorComponentTableClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
 
+class XcorCovGauss(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorCovGauss(**properties)
+        new(n_tracers:int, ell_min:int, ell_max:int, f_sky:float) -> NumCosmo.XcorCovGauss
+
+    Object NcXcorCovGauss
+
+    Properties from NcXcorCovGauss:
+      n-tracers -> guint: n-tracers
+        Number of tracers
+      ell-min -> guint: ell-min
+        Smallest multipole
+      ell-max -> guint: ell-max
+        Largest multipole
+      f-sky -> gdouble: f-sky
+        Observed fraction of the sky
+      spectra -> GVariant: spectra
+        Tracer pairs and windows of the spectra
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        ell_max: int
+        ell_min: int
+        f_sky: float
+        n_tracers: int
+        spectra: GLib.Variant
+
+    props: Props = ...
+    def __init__(
+        self,
+        ell_max: int = ...,
+        ell_min: int = ...,
+        f_sky: float = ...,
+        n_tracers: int = ...,
+        spectra: GLib.Variant = ...,
+    ) -> None: ...
+    def add_spectrum(self, a: int, b: int, window: NumCosmoMath.Matrix) -> None: ...
+    @staticmethod
+    def clear(cov: XcorCovGauss) -> None: ...
+    def compute(
+        self,
+        cl: NumCosmoMath.Matrix,
+        noise: NumCosmoMath.Matrix,
+        cov_mat: NumCosmoMath.Matrix,
+    ) -> None: ...
+    def free(self) -> None: ...
+    def get_ell_max(self) -> int: ...
+    def get_ell_min(self) -> int: ...
+    def get_f_sky(self) -> float: ...
+    def get_n_data(self) -> int: ...
+    def get_n_ell(self) -> int: ...
+    def get_n_pairs(self) -> int: ...
+    def get_n_spectra(self) -> int: ...
+    def get_n_tracers(self) -> int: ...
+    def get_pair_index(self, a: int, b: int) -> int: ...
+    @classmethod
+    def new(
+        cls, n_tracers: int, ell_min: int, ell_max: int, f_sky: float
+    ) -> XcorCovGauss: ...
+    def ref(self) -> XcorCovGauss: ...
+    def set_f_sky(self, f_sky: float) -> None: ...
+
+class XcorCovGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorCovGaussClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class XcorKernel(NumCosmoMath.Model):
     r"""
     :Constructors:

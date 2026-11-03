@@ -829,6 +829,10 @@ xcor_tests = [
         'sources': ['nc/xcor/test_nc_xcor.c'],
     },
     {
+        'name': 'nc_xcor_cov_gauss',
+        'sources': ['nc/xcor/test_nc_xcor_cov_gauss.c'],
+    },
+    {
         'name': 'nc_xcor_kernel',
         'sources': ['nc/xcor/test_nc_xcor_kernel.c', 'nc/xcor/test_nc_xcor_kernel_common.c'],
     },

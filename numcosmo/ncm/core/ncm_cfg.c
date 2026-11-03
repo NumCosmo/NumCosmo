@@ -279,6 +279,7 @@
 #include "nc/xcor/nc_xcor_AB.h"
 #include "nc/xcor/nc_xcor_solver.h"
 #include "nc/xcor/nc_xcor_ssc_sij.h"
+#include "nc/xcor/nc_xcor_cov_gauss.h"
 #include "nc/xcor/nc_xcor_kernel.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_kernel_gal.h"
@@ -1100,6 +1101,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_SOLVER);
   ncm_cfg_register_obj (NC_TYPE_XCOR_SSC_SIJ);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_COV_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL_KDEP);
