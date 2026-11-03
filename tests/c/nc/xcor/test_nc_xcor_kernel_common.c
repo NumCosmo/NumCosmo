@@ -126,9 +126,14 @@ static void test_nc_xcor_kernel_gal_bias (void);
 static void test_nc_xcor_kernel_cluster_tophat_volume_normalized (void);
 static void test_nc_xcor_kernel_table_full (void);
 static void test_nc_xcor_kernel_radial_kdep (void);
+static void test_nc_xcor_kernel_weak_lensing_ia_null (void);
+static void test_nc_xcor_kernel_weak_lensing_ia_redshift_law (void);
+static void test_nc_xcor_kernel_weak_lensing_ia_growth (void);
+static void test_nc_xcor_kernel_weak_lensing_ia_serialize (void);
 static NcXcorKernel *_build_gal (TestNcXcorKernel *test);
 static NcXcorKernel *_build_gal_magbias (TestNcXcorKernel *test);
 static NcXcorKernel *_build_weak_lensing (TestNcXcorKernel *test);
+static NcXcorKernel *_build_weak_lensing_ia (TestNcXcorKernel *test);
 static NcXcorKernel *_build_cmb_lensing (TestNcXcorKernel *test);
 static NcXcorKernel *_build_cmb_isw (TestNcXcorKernel *test);
 static NcXcorKernel *_build_tsz (TestNcXcorKernel *test);
@@ -139,6 +144,7 @@ static const TestKernel test_kernels[] = {
   {"gal",            &_build_gal,            TEST_ZMAX,     TRUE,  FALSE},
   {"gal_magbias",    &_build_gal_magbias,    TEST_ZMAX,     TRUE,  FALSE},
   {"weak_lensing",   &_build_weak_lensing,   TEST_ZMAX,     TRUE,  FALSE},
+  {"weak_lensing_ia", &_build_weak_lensing_ia, TEST_ZMAX,   TRUE,  FALSE},
   {"cmb_lensing",    &_build_cmb_lensing,    TEST_ZMAX_LSS, TRUE,  TRUE },
   {"cmb_isw",        &_build_cmb_isw,        TEST_ZMAX_LSS, TRUE,  TRUE },
   {"tsz",            &_build_tsz,            TEST_ZMAX,     FALSE, FALSE},
@@ -148,6 +154,7 @@ static const TestKernel test_kernels[] = {
 
 static const TestCross test_crosses[] = {
   {"gal",         &_build_weak_lensing},
+  {"weak_lensing_ia", &_build_gal      },
   {"cmb_lensing", &_build_cmb_isw     },
 };
 
@@ -253,6 +260,10 @@ test_nc_xcor_kernel_main (gint argc, gchar *argv[], const gchar *kernel)
   g_test_add_func ("/nc/xcor/kernel/gal/rsd_limber_z/trap", &test_nc_xcor_kernel_gal_rsd_limber_z_trap);
   g_test_add_func ("/nc/xcor/kernel/table/new_full", &test_nc_xcor_kernel_table_full);
   g_test_add_func ("/nc/xcor/kernel/radial/kdep", &test_nc_xcor_kernel_radial_kdep);
+  g_test_add_func ("/nc/xcor/kernel/weak_lensing/ia_null", &test_nc_xcor_kernel_weak_lensing_ia_null);
+  g_test_add_func ("/nc/xcor/kernel/weak_lensing/ia_redshift_law", &test_nc_xcor_kernel_weak_lensing_ia_redshift_law);
+  g_test_add_func ("/nc/xcor/kernel/weak_lensing/ia_growth", &test_nc_xcor_kernel_weak_lensing_ia_growth);
+  g_test_add_func ("/nc/xcor/kernel/weak_lensing/ia_serialize", &test_nc_xcor_kernel_weak_lensing_ia_serialize);
 
   return g_test_run ();
 }
@@ -324,6 +335,35 @@ _build_weak_lensing (TestNcXcorKernel *test)
   NcmSpline *dndz = _dndz_new ();
   NcXcorKernel *k = NC_XCOR_KERNEL (nc_xcor_kernel_weak_lensing_new (test->dist, test->ps, dndz, 3.0, 0.3));
 
+  ncm_spline_free (dndz);
+
+  return k;
+}
+
+/* The weak lensing kernel with the NLA intrinsic alignment, reading its growth factor
+ * from @growth_ps, or from @ps when %NULL. */
+static NcXcorKernel *
+_weak_lensing_ia_new (NcDistance *dist, NcmPowspec *ps, NcmSpline *dndz, NcmPowspec *growth_ps)
+{
+  return NC_XCOR_KERNEL (g_object_new (NC_TYPE_XCOR_KERNEL_WEAK_LENSING,
+                                       "dist", dist,
+                                       "powspec", ps,
+                                       "dndz", dndz,
+                                       "nbar", 3.0,
+                                       "intr-shear", 0.3,
+                                       "doia", TRUE,
+                                       "growth-powspec", growth_ps,
+                                       NULL));
+}
+
+static NcXcorKernel *
+_build_weak_lensing_ia (TestNcXcorKernel *test)
+{
+  NcmSpline *dndz = _dndz_new ();
+  NcXcorKernel *k = _weak_lensing_ia_new (test->dist, test->ps, dndz, NULL);
+
+  ncm_model_orig_param_set (NCM_MODEL (k), NC_XCOR_KERNEL_WEAK_LENSING_IA_A, 1.5);
+  ncm_model_orig_param_set (NCM_MODEL (k), NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA, 1.1);
   ncm_spline_free (dndz);
 
   return k;
@@ -731,8 +771,21 @@ test_nc_xcor_kernel_limber (TestNcXcorKernel *test, gconstpointer pdata)
 
     if (NC_IS_XCOR_KERNEL_WEAK_LENSING (test->xclk) || NC_IS_XCOR_KERNEL_CMB_LENSING (test->xclk))
     {
+      gboolean doia = FALSE;
+
+      if (NC_IS_XCOR_KERNEL_WEAK_LENSING (test->xclk))
+        g_object_get (test->xclk, "doia", &doia, NULL);
+
       g_assert_cmpfloat (zmin, ==, 0.0);
-      g_assert_cmpfloat (W_min, ==, 0.0);
+
+      /* The intrinsic alignment term, dn/dz E / D, does not vanish at z = 0: there the
+       * window is its limit, the shear part 0 and D = 1. */
+      if (doia)
+        ncm_assert_cmpdouble_e (W_min, ==,
+                                nc_xcor_kernel_eval_limber_z_full (test->xclk, test->cosmo, 1.0e-12, test->dist, l),
+                                1.0e-6, 0.0);
+      else
+        g_assert_cmpfloat (W_min, ==, 0.0);
     }
   }
 
@@ -1808,6 +1861,303 @@ test_nc_xcor_kernel_radial_kdep (void)
   nc_xcor_kernel_free (plain);
   nc_xcor_kernel_free (withk);
   nc_xcor_kernel_radial_kdep_free (kdep);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
+/* The intrinsic alignment term of the weak lensing Limber window: doia adds one component
+ * and leaves the parameters at their defaults; with A_IA = 0 the window equals that of the
+ * kernel without it, bit for bit, and otherwise the term is linear in A_IA. The term is the difference to the plain kernel, so the tolerances are relative to
+ * the windows, not to the term. */
+static void
+test_nc_xcor_kernel_weak_lensing_ia_null (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmSpline *dndz     = _dndz_new ();
+  NcXcorKernel *ia    = _weak_lensing_ia_new (dist, ps, dndz, NULL);
+  NcXcorKernel *plain = NC_XCOR_KERNEL (nc_xcor_kernel_weak_lensing_new (dist, ps, dndz, 3.0, 0.3));
+  const gint ells[3]  = {2, 10, 200};
+  GPtrArray *comps;
+  gboolean doia;
+  guint i, j;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  g_object_get (plain, "doia", &doia, NULL);
+  g_assert_false (doia);
+  g_object_get (ia, "doia", &doia, NULL);
+  g_assert_true (doia);
+
+  comps = nc_xcor_kernel_get_component_list (plain);
+  g_assert_cmpuint (comps->len, ==, 1);
+  g_ptr_array_unref (comps);
+
+  g_assert_cmpfloat (ncm_model_orig_param_get (NCM_MODEL (plain), NC_XCOR_KERNEL_WEAK_LENSING_IA_A), ==,
+                     NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_A);
+  g_assert_cmpfloat (ncm_model_orig_param_get (NCM_MODEL (plain), NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA), ==,
+                     NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_ETA);
+  g_assert_cmpfloat (ncm_model_orig_param_get (NCM_MODEL (plain), NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV), ==,
+                     NC_XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_Z_PIV);
+
+  comps = nc_xcor_kernel_get_component_list (ia);
+  g_assert_cmpuint (comps->len, ==, 2);
+  g_ptr_array_unref (comps);
+
+  ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_A, 0.0);
+  nc_xcor_kernel_prepare (ia, cosmo);
+  nc_xcor_kernel_prepare (plain, cosmo);
+
+  for (j = 0; j < 6; j++)
+  {
+    const gdouble z = 0.1 + 0.3 * j;
+
+    for (i = 0; i < 3; i++)
+      g_assert_cmpfloat (nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z, dist, ells[i]), ==,
+                         nc_xcor_kernel_eval_limber_z_full (plain, cosmo, z, dist, ells[i]));
+  }
+
+  for (j = 0; j < 6; j++)
+  {
+    const gdouble z = 0.3 + 0.1 * j;
+
+    for (i = 0; i < 3; i++)
+    {
+      const gdouble W_0 = nc_xcor_kernel_eval_limber_z_full (plain, cosmo, z, dist, ells[i]);
+      gdouble W_1, W_2;
+
+      ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_A, 1.5);
+      W_1 = nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z, dist, ells[i]);
+      ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_A, 3.0);
+      W_2 = nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z, dist, ells[i]);
+
+      g_assert_cmpfloat (W_1, !=, W_0);
+      ncm_assert_cmpdouble_e (W_2 - W_0, ==, 2.0 * (W_1 - W_0), 0.0,
+                              1.0e-14 * (fabs (W_0) + fabs (W_1) + fabs (W_2)));
+    }
+  }
+
+  nc_xcor_kernel_free (ia);
+  nc_xcor_kernel_free (plain);
+  ncm_spline_free (dndz);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
+/* A_IA(z) = A_IA ((1 + z) / (1 + z_piv))^eta_IA: at z_piv the term does not depend on
+ * eta_IA, elsewhere the ratio of the terms at two eta_IA is that power law. */
+static void
+test_nc_xcor_kernel_weak_lensing_ia_redshift_law (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmSpline *dndz     = _dndz_new ();
+  NcXcorKernel *ia    = _weak_lensing_ia_new (dist, ps, dndz, NULL);
+  NcXcorKernel *plain = NC_XCOR_KERNEL (nc_xcor_kernel_weak_lensing_new (dist, ps, dndz, 3.0, 0.3));
+  const gdouble z_piv = 0.5;
+  const gdouble eta   = 1.1;
+  const gint l        = 10;
+  guint j;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_A, 1.5);
+  ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV, z_piv);
+  nc_xcor_kernel_prepare (ia, cosmo);
+  nc_xcor_kernel_prepare (plain, cosmo);
+
+  {
+    gdouble W_eta0, W_eta;
+
+    ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA, 0.0);
+    W_eta0 = nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z_piv, dist, l);
+    ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA, eta);
+    W_eta = nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z_piv, dist, l);
+
+    g_assert_cmpfloat (W_eta, ==, W_eta0);
+  }
+
+  for (j = 0; j < 6; j++)
+  {
+    const gdouble z   = 0.3 + 0.1 * j;
+    const gdouble W_0 = nc_xcor_kernel_eval_limber_z_full (plain, cosmo, z, dist, l);
+    gdouble W_eta0, W_eta;
+
+    ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA, 0.0);
+    W_eta0 = nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z, dist, l);
+    ncm_model_orig_param_set (NCM_MODEL (ia), NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA, eta);
+    W_eta = nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z, dist, l);
+
+    ncm_assert_cmpdouble_e (W_eta - W_0, ==, pow ((1.0 + z) / (1.0 + z_piv), eta) * (W_eta0 - W_0), 0.0,
+                            1.0e-14 * (fabs (W_0) + fabs (W_eta0) + fabs (W_eta)));
+  }
+
+  nc_xcor_kernel_free (ia);
+  nc_xcor_kernel_free (plain);
+  ncm_spline_free (dndz);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
+/* NcXcorKernelWeakLensing:growth-powspec: the term divides by D(k, z) =
+ * sqrt (P_D(k, z) / P_D(k, 0)). A spectrum without growth gives D = 1, so its term is
+ * that of the kernel's own spectrum times the D(z) the analytic spectrum reports. */
+static void
+test_nc_xcor_kernel_weak_lensing_ia_growth (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmPowspec *ps_const = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                                NCM_POWSPEC_ANALYTIC_GROWTH_NONE));
+  NcmSpline *dndz     = _dndz_new ();
+  NcXcorKernel *ia    = _weak_lensing_ia_new (dist, ps, dndz, NULL);
+  NcXcorKernel *ia_c  = _weak_lensing_ia_new (dist, ps, dndz, ps_const);
+  NcXcorKernel *plain = NC_XCOR_KERNEL (nc_xcor_kernel_weak_lensing_new (dist, ps, dndz, 3.0, 0.3));
+  const gint ells[3]  = {2, 10, 200};
+  NcmPowspec *got;
+  guint i, j;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  g_object_get (ia, "growth-powspec", &got, NULL);
+  g_assert_null (got);
+  g_object_get (ia_c, "growth-powspec", &got, NULL);
+  g_assert_true (got == ps_const);
+  ncm_powspec_free (got);
+
+  nc_xcor_kernel_prepare (ia, cosmo);
+  nc_xcor_kernel_prepare (ia_c, cosmo);
+  nc_xcor_kernel_prepare (plain, cosmo);
+
+  for (j = 0; j < 6; j++)
+  {
+    const gdouble z = 0.3 + 0.1 * j;
+    const gdouble D = ncm_powspec_analytic_eval_growth (NCM_POWSPEC_ANALYTIC (ps), z);
+
+    g_assert_cmpfloat (D, <, 1.0);
+
+    for (i = 0; i < 3; i++)
+    {
+      const gdouble W_0 = nc_xcor_kernel_eval_limber_z_full (plain, cosmo, z, dist, ells[i]);
+      const gdouble W_D = nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z, dist, ells[i]);
+      const gdouble W_c = nc_xcor_kernel_eval_limber_z_full (ia_c, cosmo, z, dist, ells[i]);
+
+      ncm_assert_cmpdouble_e (W_c - W_0, ==, D * (W_D - W_0), 0.0,
+                              1.0e-13 * (fabs (W_0) + fabs (W_D) + fabs (W_c)));
+    }
+  }
+
+  nc_xcor_kernel_free (ia);
+  nc_xcor_kernel_free (ia_c);
+  nc_xcor_kernel_free (plain);
+  ncm_spline_free (dndz);
+  ncm_powspec_free (ps_const);
+  ncm_powspec_free (ps);
+  nc_distance_free (dist);
+  nc_hicosmo_free (cosmo);
+}
+
+/* A serialized copy of the kernel with the intrinsic alignment and a growth-powspec keeps
+ * doia, the parameters by name, the growth spectrum and both components: its Limber
+ * windows and its component kernels equal the original's bit for bit. NcXcorSolver hands
+ * each OpenMP thread such copies. */
+static void
+test_nc_xcor_kernel_weak_lensing_ia_serialize (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist = nc_distance_new (TEST_ZMAX);
+  NcmPowspec *ps   = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                            NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
+  NcmPowspec *ps_const = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
+                                                                NCM_POWSPEC_ANALYTIC_GROWTH_NONE));
+  NcmSpline *dndz    = _dndz_new ();
+  NcXcorKernel *ia   = _weak_lensing_ia_new (dist, ps, dndz, ps_const);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  const gint ells[3] = {2, 10, 200};
+  NcXcorKernel *dup;
+  NcmPowspec *got;
+  GPtrArray *comps, *dcomps;
+  gboolean doia;
+  guint i, j, a, b;
+
+  nc_distance_prepare (dist, cosmo);
+  ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
+
+  ncm_model_orig_param_set_by_name (NCM_MODEL (ia), "ia_A", 1.5, NULL);
+  ncm_model_orig_param_set_by_name (NCM_MODEL (ia), "ia_eta", 1.1, NULL);
+  ncm_model_orig_param_set_by_name (NCM_MODEL (ia), "ia_z_piv", 0.5, NULL);
+
+  dup = NC_XCOR_KERNEL (ncm_serialize_dup_obj (ser, G_OBJECT (ia)));
+
+  g_object_get (dup, "doia", &doia, "growth-powspec", &got, NULL);
+  g_assert_true (doia);
+  g_assert_nonnull (got);
+  ncm_powspec_free (got);
+
+  g_assert_cmpfloat (ncm_model_orig_param_get_by_name (NCM_MODEL (dup), "ia_A", NULL), ==, 1.5);
+  g_assert_cmpfloat (ncm_model_orig_param_get_by_name (NCM_MODEL (dup), "ia_eta", NULL), ==, 1.1);
+  g_assert_cmpfloat (ncm_model_orig_param_get_by_name (NCM_MODEL (dup), "ia_z_piv", NULL), ==, 0.5);
+
+  nc_xcor_kernel_prepare (ia, cosmo);
+  nc_xcor_kernel_prepare (dup, cosmo);
+
+  for (j = 0; j < 6; j++)
+  {
+    const gdouble z = 0.3 + 0.1 * j;
+
+    for (i = 0; i < 3; i++)
+      g_assert_cmpfloat (nc_xcor_kernel_eval_limber_z_full (dup, cosmo, z, dist, ells[i]), ==,
+                         nc_xcor_kernel_eval_limber_z_full (ia, cosmo, z, dist, ells[i]));
+  }
+
+  comps  = nc_xcor_kernel_get_component_list (ia);
+  dcomps = nc_xcor_kernel_get_component_list (dup);
+  g_assert_cmpuint (comps->len, ==, 2);
+  g_assert_cmpuint (dcomps->len, ==, comps->len);
+
+  for (i = 0; i < comps->len; i++)
+  {
+    NcXcorKernelComponent *comp  = g_ptr_array_index (comps, i);
+    NcXcorKernelComponent *dcomp = g_ptr_array_index (dcomps, i);
+    gdouble chi_min, chi_max, k_min, k_max;
+
+    g_assert_true (G_OBJECT_TYPE (dcomp) == G_OBJECT_TYPE (comp));
+
+    nc_xcor_kernel_component_get_limits (comp, cosmo, &chi_min, &chi_max, &k_min, &k_max);
+
+    for (a = 0; a < 3; a++)
+    {
+      const gdouble chi = chi_min + (chi_max - chi_min) * (a + 0.5) / 3.0;
+
+      for (b = 0; b < 3; b++)
+      {
+        const gdouble k = k_min * exp (log (k_max / k_min) * (b + 0.5) / 3.0);
+
+        g_assert_cmpfloat (nc_xcor_kernel_component_eval_kernel (dcomp, cosmo, chi, k), ==,
+                           nc_xcor_kernel_component_eval_kernel (comp, cosmo, chi, k));
+      }
+    }
+  }
+
+  g_ptr_array_unref (comps);
+  g_ptr_array_unref (dcomps);
+  nc_xcor_kernel_free (dup);
+  nc_xcor_kernel_free (ia);
+  ncm_serialize_free (ser);
+  ncm_spline_free (dndz);
+  ncm_powspec_free (ps_const);
   ncm_powspec_free (ps);
   nc_distance_free (dist);
   nc_hicosmo_free (cosmo);
