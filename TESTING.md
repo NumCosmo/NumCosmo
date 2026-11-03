@@ -142,6 +142,11 @@ skip silently otherwise. Gated at module top by `pytest.importorskip("<dep>")`, 
 |-----------|--------|------|
 | `pyccl` | `ccl` (selection label) | `pytest.importorskip("pyccl")` |
 | `getdist`, `astropy`, `healpy`, … | — | `pytest.importorskip(...)` |
+| MPI build and `mpiexec`, for a test that launches `mpiexec` itself | — | skip unless `NUMCOSMO_TEST_MPIEXEC` is set (`tests/python/meson.build` sets it) |
+
+A test of a program's start-up under MPI launches `mpiexec` in a subprocess instead of
+using the `mpi` lane: in that lane `conftest.py` calls `Ncm.cfg_init()`, so every rank
+other than 0 is already in the worker loop before any test runs.
 
 Capability is orthogonal to tier: a test can be `unit` *and* `ccl`. All markers are
 declared once in `tests/python/pytest.ini` (the single source); `conftest.py` only wires
