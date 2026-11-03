@@ -69,6 +69,7 @@ static void test_ncm_mset_catalog_storage_fits_erase (TestNcmMSetCatalogStorageF
 static void test_ncm_mset_catalog_storage_fits_erase_legacy (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 static void test_ncm_mset_catalog_storage_fits_serialize (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 static void test_ncm_mset_catalog_storage_fits_float_column (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
+static void test_ncm_mset_catalog_storage_fits_builders (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata);
 
 static gchar *_test_ncm_mset_catalog_storage_fits_fixture_path (const gchar *name);
 static NcmMSetCatalogStorage *_test_ncm_mset_catalog_storage_fits_open_fixture (const gchar *name);
@@ -120,6 +121,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/mset/catalog/storage/fits/float_column", TestNcmMSetCatalogStorageFits, NULL,
               &test_ncm_mset_catalog_storage_fits_new,
               &test_ncm_mset_catalog_storage_fits_float_column,
+              &test_ncm_mset_catalog_storage_fits_free);
+  g_test_add ("/ncm/mset/catalog/storage/fits/builders", TestNcmMSetCatalogStorageFits, NULL,
+              &test_ncm_mset_catalog_storage_fits_new,
+              &test_ncm_mset_catalog_storage_fits_builders,
               &test_ncm_mset_catalog_storage_fits_free);
 #endif /* HAVE_CFITSIO */
 
@@ -1291,4 +1296,115 @@ test_ncm_mset_catalog_storage_fits_float_column (TestNcmMSetCatalogStorageFits *
 }
 
 #endif /* HAVE_CFITSIO */
+
+/* The `model-builders' array of HDU0 of filename, or NULL when the key is absent. */
+static NcmObjArray *
+_test_ncm_mset_catalog_storage_fits_hdu0_builders (const gchar *filename)
+{
+  NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmObjArray *builders = NULL;
+  fitsfile *fptr        = NULL;
+  gint status           = 0;
+  gint bitpix, naxis, any_null;
+  glong naxes[1];
+  guint8 *data;
+  GVariant *var;
+  NcmVarDict *vd;
+
+  fits_open_file (&fptr, filename, READONLY, &status);
+  fits_get_img_param (fptr, 1, &bitpix, &naxis, naxes, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  data = g_malloc (naxes[0]);
+  fits_read_img (fptr, TBYTE, 1, naxes[0], NULL, data, &any_null, &status);
+  fits_close_file (fptr, &status);
+  g_assert_cmpint (status, ==, 0);
+
+  var = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE), data, naxes[0], TRUE, g_free, data);
+  vd  = ncm_serialize_var_dict_from_variant (ser, var);
+  ncm_var_dict_get_object_array (vd, NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY, ser, &builders);
+
+  ncm_var_dict_unref (vd);
+  g_variant_unref (var);
+  ncm_serialize_free (ser);
+
+  return builders;
+}
+
+/*
+ * A Desc whose mset holds a model of a builder type with a builder parent: HDU0 holds
+ * both builders, parents first, and a reopened file gives the model back. The Desc of
+ * the fixture, an NcmModelMVND, writes no builders.
+ */
+static void
+test_ncm_mset_catalog_storage_fits_builders (TestNcmMSetCatalogStorageFits *test, gconstpointer pdata)
+{
+  GError *error              = NULL;
+  NcmModelBuilder *mb_parent = ncm_model_builder_new (NCM_TYPE_MODEL, "TestFitsBuilderParent", "Parent");
+  const gchar *names[]       = { "m2lnL", NULL };
+  const gchar *symbols[]     = { "-2\\ln(L)", NULL };
+  NcmModelBuilder *mb_child;
+  GType ptype, ctype;
+  NcmModel *model;
+  NcmMSet *mset;
+  NcmMSetCatalogDesc *desc;
+  NcmMSetCatalogStorageFits *storage_fits;
+  NcmObjArray *builders;
+
+  storage_fits = ncm_mset_catalog_storage_fits_new (test->filename, FALSE, &error);
+  ncm_mset_catalog_storage_set_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), test->desc, &error);
+  g_assert_no_error (error);
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+  g_assert_null (_test_ncm_mset_catalog_storage_fits_hdu0_builders (test->filename));
+  g_unlink (test->filename);
+
+  ncm_model_builder_add_sparam (mb_parent, "a", "a", 0.0, 1.0, 0.1, 0.0, 0.25, NCM_PARAM_TYPE_FREE);
+  ptype = ncm_model_builder_create (mb_parent, &error);
+  g_assert_no_error (error);
+
+  mb_child = ncm_model_builder_new (ptype, "TestFitsBuilderChild", "Child");
+  ncm_model_builder_add_sparam (mb_child, "b", "b", 0.0, 1.0, 0.1, 0.0, 0.75, NCM_PARAM_TYPE_FREE);
+  ctype = ncm_model_builder_create (mb_child, &error);
+  g_assert_no_error (error);
+
+  model = g_object_new (ctype, NULL);
+  mset  = ncm_mset_new (model, NULL, NULL);
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+  desc = ncm_mset_catalog_desc_new (mset, 1, FALSE, names, symbols, 0, NCM_MSET_CATALOG_RTYPE_ESMCMC, &error);
+  g_assert_no_error (error);
+
+  storage_fits = ncm_mset_catalog_storage_fits_new (test->filename, FALSE, &error);
+  ncm_mset_catalog_storage_set_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), desc, &error);
+  g_assert_no_error (error);
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+
+  builders = _test_ncm_mset_catalog_storage_fits_hdu0_builders (test->filename);
+  g_assert_nonnull (builders);
+  g_assert_cmpuint (builders->len, ==, 2);
+  g_assert_true (ncm_model_builder_create (NCM_MODEL_BUILDER (ncm_obj_array_peek (builders, 0)), NULL) == ptype);
+  g_assert_true (ncm_model_builder_create (NCM_MODEL_BUILDER (ncm_obj_array_peek (builders, 1)), NULL) == ctype);
+  ncm_obj_array_unref (builders);
+
+  {
+    NcmMSetCatalogStorageFits *reopened = ncm_mset_catalog_storage_fits_new (test->filename, TRUE, &error);
+    NcmMSetCatalogDesc *desc_read       = ncm_mset_catalog_storage_peek_desc (NCM_MSET_CATALOG_STORAGE (reopened), &error);
+    NcmModel *model_read;
+
+    g_assert_no_error (error);
+    model_read = ncm_mset_peek_array_pos (ncm_mset_catalog_desc_peek_mset (desc_read), 0);
+    g_assert_true (G_OBJECT_TYPE (model_read) == ctype);
+    g_assert_cmpuint (ncm_model_len (model_read), ==, 2);
+    g_assert_cmpfloat (ncm_model_param_get (model_read, 0), ==, 0.25);
+    g_assert_cmpfloat (ncm_model_param_get (model_read, 1), ==, 0.75);
+
+    ncm_mset_catalog_storage_fits_free (reopened);
+  }
+
+  ncm_mset_catalog_desc_free (desc);
+  ncm_mset_free (mset);
+  ncm_model_free (model);
+  ncm_model_builder_free (mb_child);
+  ncm_model_builder_free (mb_parent);
+}
 

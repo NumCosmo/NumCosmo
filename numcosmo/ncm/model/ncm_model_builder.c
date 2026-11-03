@@ -39,8 +39,13 @@
  * as C subclasses do.
  *
  * Creating a type whose name is already registered returns the existing type if it
- * has the same parent and the same parameters, so the same builder may be created
- * again in one process; any other name clash aborts.
+ * has the same parent, the same parameters and the same stackable flag, so the same
+ * builder may be created again in one process; any other name clash is an error.
+ *
+ * The parent is looked up by name when the type is created, not when the builder is
+ * built, so a builder whose parent is itself a builder type can be deserialized before
+ * that parent is created. ncm_model_builder_peek_from_type() returns the builder that
+ * created a type.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -52,6 +57,7 @@
 #include "ncm/model/ncm_model.h"
 #include "ncm/model/ncm_mset.h"
 #include "ncm/core/ncm_obj_array.h"
+#include "ncm/core/ncm_util.h"
 
 struct _NcmModelBuilder
 {
@@ -80,6 +86,16 @@ enum
 };
 
 G_DEFINE_TYPE (NcmModelBuilder, ncm_model_builder, G_TYPE_OBJECT)
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (ncm-model-builder-error, ncm_model_builder_error)
+/* *INDENT-ON* */
+
+/* The qdata key under which a type created by a builder holds that builder. */
+static GQuark
+_ncm_model_builder_qdata_quark (void)
+{
+  return g_quark_from_static_string ("ncm-model-builder");
+}
 
 static void
 ncm_model_builder_init (NcmModelBuilder *mb)
@@ -106,16 +122,6 @@ ncm_model_builder_set_property (GObject *object, guint prop_id, const GValue *va
   {
     case PROP_PARENT_TYPE_STRING:
       mb->parent_type_string = g_value_dup_string (value);
-      mb->ptype              = g_type_from_name (mb->parent_type_string);
-
-      if (mb->ptype == 0)
-        g_error ("ncm_model_builder_set_property: parent type `%s' is not registered.",
-                 mb->parent_type_string);
-
-      if (!g_type_is_a (mb->ptype, NCM_TYPE_MODEL))
-        g_error ("ncm_model_builder_set_property: parent type `%s' is not a NcmModel.",
-                 mb->parent_type_string);
-
       break;
     case PROP_NAME:
       mb->name = g_value_dup_string (value);
@@ -229,7 +235,9 @@ ncm_model_builder_class_init (NcmModelBuilderClass *klass)
   /**
    * NcmModelBuilder:parent-type-string:
    *
-   * The name of the parent type, #NcmModel or one of its subclasses.
+   * The name of the parent type, #NcmModel or one of its subclasses. It is looked up
+   * by ncm_model_builder_create(), so the parent may be registered after the builder
+   * is built.
    */
   g_object_class_install_property (object_class,
                                    PROP_PARENT_TYPE_STRING,
@@ -552,30 +560,43 @@ ncm_model_builder_get_vparams (NcmModelBuilder *mb)
   return oa;
 }
 
+static void _ncm_model_builder_resolve_parent (NcmModelBuilder *mb, GError **error);
 static void _ncm_model_builder_class_init (gpointer g_class, gpointer class_data);
-static void _ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing);
+static void _ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing, GError **error);
 
 /**
  * ncm_model_builder_create:
  * @mb: a #NcmModelBuilder
+ * @error: a #GError location
  *
  * Registers the new type with the parameters of @mb and returns it. Later calls
  * return the same type. If a type with the name of @mb is already registered, it
- * is returned when it has the same parent and the same parameters; otherwise this
- * function aborts.
+ * is returned when it has the same parent, the same parameters and the same
+ * stackable flag.
+ *
+ * Sets @error and returns %G_TYPE_INVALID when the parent type is not registered
+ * (%NCM_MODEL_BUILDER_ERROR_PARENT_NOT_REGISTERED), is not a #NcmModel
+ * (%NCM_MODEL_BUILDER_ERROR_PARENT_NOT_MODEL) or when the type registered under the
+ * name of @mb differs from the one @mb would create
+ * (%NCM_MODEL_BUILDER_ERROR_NAME_CLASH).
  *
  * Returns: the new type.
  */
 GType
-ncm_model_builder_create (NcmModelBuilder *mb)
+ncm_model_builder_create (NcmModelBuilder *mb, GError **error)
 {
   if (!mb->created)
   {
     const GType existing = g_type_from_name (mb->name);
 
+    _ncm_model_builder_resolve_parent (mb, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , G_TYPE_INVALID);
+
     if (existing != 0)
     {
-      _ncm_model_builder_check_existing (mb, existing);
+      _ncm_model_builder_check_existing (mb, existing, error);
+      NCM_UTIL_ON_ERROR_RETURN (error, , G_TYPE_INVALID);
+
       mb->type = existing;
     }
     else
@@ -601,9 +622,55 @@ ncm_model_builder_create (NcmModelBuilder *mb)
   return mb->type;
 }
 
+/**
+ * ncm_model_builder_peek_from_type:
+ * @type: a #GType
+ *
+ * Gets the builder that created @type.
+ *
+ * Returns: (transfer none) (nullable): the #NcmModelBuilder whose
+ * ncm_model_builder_create() registered @type, or %NULL for any other type.
+ */
+NcmModelBuilder *
+ncm_model_builder_peek_from_type (GType type)
+{
+  return g_type_get_qdata (type, _ncm_model_builder_qdata_quark ());
+}
+
+/*
+ * Sets the parent type of @mb from its name. Sets error when the name is not
+ * registered or the type is not a NcmModel.
+ */
+static void
+_ncm_model_builder_resolve_parent (NcmModelBuilder *mb, GError **error)
+{
+  const GType ptype = g_type_from_name (mb->parent_type_string);
+
+  if (ptype == 0)
+  {
+    ncm_util_set_or_call_error (error, NCM_MODEL_BUILDER_ERROR, NCM_MODEL_BUILDER_ERROR_PARENT_NOT_REGISTERED,
+                                "ncm_model_builder_create: parent type `%s' of `%s' is not registered.",
+                                mb->parent_type_string, mb->name);
+
+    return;
+  }
+
+  if (!g_type_is_a (ptype, NCM_TYPE_MODEL))
+  {
+    ncm_util_set_or_call_error (error, NCM_MODEL_BUILDER_ERROR, NCM_MODEL_BUILDER_ERROR_PARENT_NOT_MODEL,
+                                "ncm_model_builder_create: parent type `%s' of `%s' is not a NcmModel.",
+                                mb->parent_type_string, mb->name);
+
+    return;
+  }
+
+  mb->ptype = ptype;
+}
+
 /*
  * The class_init of the new type: the parameters of @mb come after those of the
- * parent, whose ids are absolute.
+ * parent, whose ids are absolute. The type keeps @mb as qdata, for
+ * ncm_model_builder_peek_from_type(); the class_data reference holds @mb alive.
  */
 static void
 _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
@@ -611,6 +678,8 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_class);
   NcmModelBuilder *mb        = NCM_MODEL_BUILDER (class_data);
   guint i;
+
+  g_type_set_qdata (G_TYPE_FROM_CLASS (g_class), _ncm_model_builder_qdata_quark (), mb);
 
   if (model_class->model_id < 0)
     ncm_mset_model_register_id (model_class, mb->name, mb->desc, NULL, mb->stackable, -1);
@@ -638,30 +707,55 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
 static gboolean _ncm_model_builder_sparam_equal (const NcmSParam *a, const NcmSParam *b);
 
 /*
- * Aborts unless @existing, a type already registered under the name of @mb, has
- * the parent and the parameters @mb would give it.
+ * Sets error (NAME_CLASH) unless @existing, a type already registered under the name
+ * of @mb, has the parent, the parameters and, when registered under its own name, the
+ * stackable flag @mb would give it.
  */
 static void
-_ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing)
+_ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing, GError **error)
 {
   NcmModelClass *model_class;
+  NcmModelClass *parent_class;
   guint i;
 
   if (g_type_parent (existing) != mb->ptype)
-    g_error ("ncm_model_builder_create: a type named `%s' already exists with parent `%s', "
-             "but this builder has parent `%s'.",
-             mb->name, g_type_name (g_type_parent (existing)), g_type_name (mb->ptype));
+  {
+    ncm_util_set_or_call_error (error, NCM_MODEL_BUILDER_ERROR, NCM_MODEL_BUILDER_ERROR_NAME_CLASH,
+                                "ncm_model_builder_create: a type named `%s' already exists with parent `%s', "
+                                "but this builder has parent `%s'.",
+                                mb->name, g_type_name (g_type_parent (existing)), g_type_name (mb->ptype));
 
-  model_class = g_type_class_ref (existing);
+    return;
+  }
+
+  model_class  = g_type_class_ref (existing);
+  parent_class = NCM_MODEL_CLASS (g_type_class_peek_parent (model_class));
+
+  if ((parent_class->model_id < 0) && (model_class->can_stack != mb->stackable))
+  {
+    ncm_util_set_or_call_error (error, NCM_MODEL_BUILDER_ERROR, NCM_MODEL_BUILDER_ERROR_NAME_CLASH,
+                                "ncm_model_builder_create: a type named `%s' already exists with stackable %s, "
+                                "but this builder has stackable %s.",
+                                mb->name, model_class->can_stack ? "TRUE" : "FALSE", mb->stackable ? "TRUE" : "FALSE");
+    g_type_class_unref (model_class);
+
+    return;
+  }
 
   if ((model_class->sparam_len - model_class->parent_sparam_len != mb->sparams->len) ||
       (model_class->vparam_len - model_class->parent_vparam_len != mb->vparams->len))
-    g_error ("ncm_model_builder_create: a type named `%s' already exists with %u scalar and %u vector "
-             "parameter(s), but this builder has %u and %u.",
-             mb->name,
-             model_class->sparam_len - model_class->parent_sparam_len,
-             model_class->vparam_len - model_class->parent_vparam_len,
-             mb->sparams->len, mb->vparams->len);
+  {
+    ncm_util_set_or_call_error (error, NCM_MODEL_BUILDER_ERROR, NCM_MODEL_BUILDER_ERROR_NAME_CLASH,
+                                "ncm_model_builder_create: a type named `%s' already exists with %u scalar and %u vector "
+                                "parameter(s), but this builder has %u and %u.",
+                                mb->name,
+                                model_class->sparam_len - model_class->parent_sparam_len,
+                                model_class->vparam_len - model_class->parent_vparam_len,
+                                mb->sparams->len, mb->vparams->len);
+    g_type_class_unref (model_class);
+
+    return;
+  }
 
   for (i = 0; i < mb->sparams->len; i++)
   {
@@ -669,10 +763,16 @@ _ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing)
     const NcmSParam *b = NCM_SPARAM (ncm_obj_array_peek (mb->sparams, i));
 
     if (!_ncm_model_builder_sparam_equal (a, b))
-      g_error ("ncm_model_builder_create: a type named `%s' already exists, but its scalar parameter %u "
-               "(`%s' there, `%s' here) differs in name, symbol, bounds, scale, tolerance, default value "
-               "or fit type.",
-               mb->name, i, ncm_sparam_name (a), ncm_sparam_name (b));
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_BUILDER_ERROR, NCM_MODEL_BUILDER_ERROR_NAME_CLASH,
+                                  "ncm_model_builder_create: a type named `%s' already exists, but its scalar parameter %u "
+                                  "(`%s' there, `%s' here) differs in name, symbol, bounds, scale, tolerance, default value "
+                                  "or fit type.",
+                                  mb->name, i, ncm_sparam_name (a), ncm_sparam_name (b));
+      g_type_class_unref (model_class);
+
+      return;
+    }
   }
 
   for (i = 0; i < mb->vparams->len; i++)
@@ -688,9 +788,15 @@ _ncm_model_builder_check_existing (NcmModelBuilder *mb, GType existing)
       equal = _ncm_model_builder_sparam_equal (ncm_vparam_peek_sparam (a, j), ncm_vparam_peek_sparam (b, j));
 
     if (!equal)
-      g_error ("ncm_model_builder_create: a type named `%s' already exists, but its vector parameter %u "
-               "(`%s' there, `%s' here) differs in name, symbol, length or components.",
-               mb->name, i, ncm_vparam_name (a), ncm_vparam_name (b));
+    {
+      ncm_util_set_or_call_error (error, NCM_MODEL_BUILDER_ERROR, NCM_MODEL_BUILDER_ERROR_NAME_CLASH,
+                                  "ncm_model_builder_create: a type named `%s' already exists, but its vector parameter %u "
+                                  "(`%s' there, `%s' here) differs in name, symbol, length or components.",
+                                  mb->name, i, ncm_vparam_name (a), ncm_vparam_name (b));
+      g_type_class_unref (model_class);
+
+      return;
+    }
   }
 
   g_type_class_unref (model_class);

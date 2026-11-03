@@ -28,7 +28,10 @@
  *
  * An #NcmMSetCatalogStorage backed by a FITS file, the file format of #NcmMSetCatalog.
  *
- * The file holds the serialized #NcmMSet in HDU0 and a binary table named
+ * The file holds the serialized #NcmMSet in HDU0 (a vardict under the key
+ * %NCM_MSET_CATALOG_HDU0_MSET_KEY, with the #NcmModelBuilder objects of its builder
+ * model types under %NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY, parents first, so that a
+ * reader creates those types before the mset) and a binary table named
  * %NCM_MSET_CATALOG_EXTNAME with one column per catalog column: the additional values
  * (the weight last, when the catalog is weighted) and then the free parameters. The
  * table header holds the description (`RTYPE`, `NCHAINS`, `NADDVAL`, `WEIGHTED`,
@@ -67,6 +70,7 @@
 #include "ncm/fit/ncm_mset_catalog_storage_fits.h"
 #include "ncm/fit/ncm_mset_catalog.h"
 #include "ncm/core/ncm_serialize.h"
+#include "ncm/model/ncm_model_builder.h"
 #include "ncm/core/ncm_util.h"
 #include "ncm/core/ncm_cfg.h"
 
@@ -527,8 +531,46 @@ _ncm_mset_catalog_storage_fits_flush (NcmMSetCatalogStorageFits *storage_fits, G
 }
 
 /*
- * Deserializes the mset held by HDU0: a vardict with a `model-set' entry, or a bare
- * object. Takes ownership of data. Sets error (BACKEND) when HDU0 holds no mset.
+ * Creates the types of the builders under `model-builders' of vd, in array order, so
+ * that the mset under `model-set' deserializes. A file without the key leaves vd as it
+ * is. Sets error (BACKEND) when an element is not a NcmModelBuilder, and forwards the
+ * error of ncm_model_builder_create().
+ */
+static void
+_ncm_mset_catalog_storage_fits_create_hdu0_builders (NcmMSetCatalogStorageFits *storage_fits, NcmVarDict *vd, NcmSerialize *ser, GError **error)
+{
+  NcmObjArray *builders = NULL;
+  guint i;
+
+  if (!ncm_var_dict_get_object_array (vd, NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY, ser, &builders))
+    return;
+
+  for (i = 0; i < builders->len; i++)
+  {
+    GObject *obj = ncm_obj_array_peek (builders, i);
+
+    if (!NCM_IS_MODEL_BUILDER (obj))
+    {
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
+                                  "`%s' of `%s' holds a `%s', not a NcmModelBuilder",
+                                  NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY, storage_fits->filename, G_OBJECT_TYPE_NAME (obj));
+      ncm_obj_array_unref (builders);
+
+      return;
+    }
+
+    ncm_model_builder_create (NCM_MODEL_BUILDER (obj), error);
+    NCM_UTIL_ON_ERROR_RETURN (error, ncm_obj_array_unref (builders), );
+  }
+
+  ncm_obj_array_unref (builders);
+}
+
+/*
+ * Deserializes the mset held by HDU0: a vardict with a `model-set' entry and, when
+ * the mset holds models of builder types, their builders under `model-builders'; or
+ * a bare object. Takes ownership of data. Sets error (BACKEND) when HDU0 holds no
+ * mset, and forwards the errors of the builders.
  */
 static NcmMSet *
 _ncm_mset_catalog_storage_fits_read_hdu0_mset (NcmMSetCatalogStorageFits *storage_fits, guint8 *data, glong len, const gchar *format, GError **error)
@@ -540,6 +582,12 @@ _ncm_mset_catalog_storage_fits_read_hdu0_mset (NcmMSetCatalogStorageFits *storag
   {
     GVariant *var  = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE), data, len, TRUE, g_free, data);
     NcmVarDict *vd = ncm_serialize_var_dict_from_variant (ser, var);
+
+    _ncm_mset_catalog_storage_fits_create_hdu0_builders (storage_fits, vd, ser, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, { ncm_var_dict_unref (vd);
+                                       g_variant_unref (var);
+                                       ncm_serialize_free (ser);
+                              }, NULL);
 
     ncm_var_dict_get_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, &mset_obj);
 
@@ -1384,15 +1432,60 @@ _ncm_mset_catalog_storage_fits_migrate_legacy (NcmMSetCatalogStorageFits *storag
   storage_fits->legacy = FALSE;
 }
 
-/* Writes HDU0: the serialized mset in a vardict under `model-set'. */
+/*
+ * Appends to builders the builders of the type of model, of its ancestor types and of
+ * its submodels, parents first, skipping those already present. A builder inserted at
+ * pos keeps the one of its subtype after it.
+ */
+static void
+_ncm_mset_catalog_storage_fits_model_builders (NcmModel *model, NcmObjArray *builders)
+{
+  const guint pos = builders->len;
+  GType type;
+  guint i;
+
+  for (type = G_OBJECT_TYPE (model); type != NCM_TYPE_MODEL; type = g_type_parent (type))
+  {
+    NcmModelBuilder *mb = ncm_model_builder_peek_from_type (type);
+    gboolean present    = FALSE;
+
+    if (mb == NULL)
+      continue;
+
+    for (i = 0; i < builders->len; i++)
+      present = present || (ncm_obj_array_peek (builders, i) == G_OBJECT (mb));
+
+    if (!present)
+      g_ptr_array_insert ((GPtrArray *) builders, pos, g_object_ref (mb));
+  }
+
+  for (i = 0; i < ncm_model_get_submodel_len (model); i++)
+    _ncm_mset_catalog_storage_fits_model_builders (ncm_model_peek_submodel (model, i), builders);
+}
+
+/*
+ * Writes HDU0: a vardict with the serialized mset under `model-set' and, when the mset
+ * holds models of types created by NcmModelBuilder, those builders under
+ * `model-builders', parents first.
+ */
 static void
 _ncm_mset_catalog_storage_fits_write_hdu0 (fitsfile *fptr, NcmMSet *mset, GError **error)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcmVarDict *vd    = ncm_var_dict_new ();
-  gint status       = 0;
+  NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVarDict *vd        = ncm_var_dict_new ();
+  NcmObjArray *builders = ncm_obj_array_new ();
+  gint status           = 0;
   GVariant *var;
   glong naxes[1];
+  guint i;
+
+  for (i = 0; i < ncm_mset_nmodels (mset); i++)
+    _ncm_mset_catalog_storage_fits_model_builders (ncm_mset_peek_array_pos (mset, i), builders);
+
+  if (builders->len > 0)
+    ncm_var_dict_set_object_array (vd, NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY, ser, builders);
+
+  ncm_obj_array_unref (builders);
 
   ncm_var_dict_set_object (vd, NCM_MSET_CATALOG_HDU0_MSET_KEY, ser, G_OBJECT (mset));
   var      = ncm_serialize_var_dict_to_variant (ser, vd);
