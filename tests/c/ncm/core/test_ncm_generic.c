@@ -115,6 +115,7 @@ void test_nc_cluster_mass_selection_basic (void);
 void test_nc_cluster_photoz_gauss_basic (void);
 void test_nc_xcor_basic (void);
 void test_nc_xcor_solver_basic (void);
+void test_nc_xcor_cov_gauss_basic (void);
 void test_nc_xcor_kernel_radial_kdep_growth_basic (void);
 void test_nc_xcor_kernel_table_basic (void);
 void test_nc_xcor_component_table_basic (void);
@@ -230,6 +231,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/xcor/basic", test_nc_xcor_basic);
   g_test_add_func ("/nc/xcor/solver/basic", test_nc_xcor_solver_basic);
+  g_test_add_func ("/nc/xcor/cov_gauss/basic", test_nc_xcor_cov_gauss_basic);
   g_test_add_func ("/nc/xcor/kernel_radial_kdep_growth/basic", test_nc_xcor_kernel_radial_kdep_growth_basic);
   g_test_add_func ("/nc/xcor/kernel_table/basic", test_nc_xcor_kernel_table_basic);
   g_test_add_func ("/nc/xcor/component_table/basic", test_nc_xcor_component_table_basic);
@@ -1559,6 +1561,36 @@ test_nc_xcor_solver_basic (void)
   g_assert_null (nc_xcor_solver_peek_block_integrator (solver, 0));
 
   NCM_TEST_FREE (nc_xcor_solver_free, solver);
+}
+
+void
+test_nc_xcor_cov_gauss_basic (void)
+{
+  NcXcorCovGauss *cov   = nc_xcor_cov_gauss_new (2, 2, 10, 0.5);
+  NcXcorCovGauss *empty = g_object_new (NC_TYPE_XCOR_COV_GAUSS, NULL);
+  NcXcorCovGauss *cov2;
+  GVariant *spectra;
+
+  g_assert_true (cov != NULL);
+  g_assert_true (NC_IS_XCOR_COV_GAUSS (cov));
+
+  cov2 = nc_xcor_cov_gauss_ref (cov);
+  nc_xcor_cov_gauss_clear (&cov2);
+  g_assert_true (cov2 == NULL);
+
+  g_assert_true (NC_IS_XCOR_COV_GAUSS (cov));
+  g_assert_cmpuint (nc_xcor_cov_gauss_get_n_pairs (cov), ==, 3);
+  g_assert_cmpuint (nc_xcor_cov_gauss_get_n_spectra (cov), ==, 0);
+  g_assert_cmpuint (nc_xcor_cov_gauss_get_n_data (cov), ==, 0);
+
+  g_assert_cmpuint (nc_xcor_cov_gauss_get_n_tracers (empty), ==, 0);
+  g_assert_cmpuint (nc_xcor_cov_gauss_get_n_spectra (empty), ==, 0);
+  g_object_get (empty, "spectra", &spectra, NULL);
+  g_assert_cmpuint (g_variant_n_children (spectra), ==, 0);
+  g_variant_unref (spectra);
+
+  NCM_TEST_FREE (nc_xcor_cov_gauss_free, empty);
+  NCM_TEST_FREE (nc_xcor_cov_gauss_free, cov);
 }
 
 void
