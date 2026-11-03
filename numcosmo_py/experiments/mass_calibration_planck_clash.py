@@ -25,8 +25,6 @@
 
 from numcosmo_py import Nc, Ncm
 
-Ncm.cfg_init()
-
 
 def create_cosmology() -> Nc.HICosmo:
     """Create a cosmology."""
@@ -161,4 +159,5 @@ def run_example():
 
 
 if __name__ == "__main__":
+    Ncm.cfg_init()
     run_example()

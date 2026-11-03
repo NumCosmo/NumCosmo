@@ -17,8 +17,6 @@ from astropy.table import Column, Table, join
 
 from numcosmo_py import Nc, Ncm
 
-Ncm.cfg_init()
-
 
 class Coordinates(TypedDict, total=False):
     """Coordinates mapping.
