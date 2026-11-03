@@ -26,6 +26,8 @@
 
 from typing import cast
 
+import pytest
+from gi.repository import GLib
 from numpy.testing import assert_allclose
 from numcosmo_py import Ncm
 from numcosmo_py.helper import duplicate_via_serialization, GObject
@@ -196,3 +198,131 @@ def test_set_many_sparams() -> None:
         assert model.orig_param_get_scale(i) == 0.01
         assert model.param_index_from_name(f"param{i}") == (True, i)
         assert model.param_get_ftype(i) == Ncm.ParamType.FREE
+
+
+def _builder(
+    name: str, default: float = 0.5, parent: str = "NcmModel"
+) -> Ncm.ModelBuilder:
+    """Build a model builder with one scalar parameter of default value default."""
+    mb = Ncm.ModelBuilder(parent_type_string=parent, name=name, description="Test")
+    mb.add_sparam("p_1", "param1", 0.0, 1.0, 0.01, 0.0, default, Ncm.ParamType.FREE)
+    return mb
+
+
+def test_create_same_definition_returns_existing_type() -> None:
+    """A second builder with the same definition gets the existing type."""
+    mb1 = _builder("MyNewModelSame")
+    mb2 = _builder("MyNewModelSame")
+
+    assert mb1.create() == mb2.create()
+
+
+def test_create_name_clash_raises() -> None:
+    """A builder whose parameters differ from the registered type raises."""
+    mb1 = _builder("MyNewModelClash", 0.5)
+    mb2 = _builder("MyNewModelClash", 0.7)
+
+    mb1.create()
+    with pytest.raises(GLib.Error, match="scalar parameter 0 .* differs"):
+        mb2.create()
+
+
+def test_create_parent_clash_raises() -> None:
+    """A builder whose parent differs from the registered type raises."""
+    mb1 = _builder("MyNewModelClashParent")
+    mb2 = _builder("MyNewModelClashParent", parent="NcmModelRosenbrock")
+
+    mb1.create()
+    with pytest.raises(GLib.Error, match="already exists with parent `NcmModel'"):
+        mb2.create()
+
+
+def test_create_stackable_clash_raises() -> None:
+    """A builder whose stackable flag differs from the registered type raises."""
+    mb1 = _builder("MyNewModelClashStack")
+    mb2 = Ncm.ModelBuilder(
+        parent_type_string="NcmModel",
+        name="MyNewModelClashStack",
+        description="Test",
+        stackable=True,
+    )
+    mb2.add_sparam("p_1", "param1", 0.0, 1.0, 0.01, 0.0, 0.5, Ncm.ParamType.FREE)
+
+    mb1.create()
+    with pytest.raises(
+        GLib.Error, match="stackable FALSE, but this builder has stackable TRUE"
+    ):
+        mb2.create()
+
+
+def test_create_unknown_parent_raises() -> None:
+    """A parent name that is not a registered type raises at create."""
+    mb = Ncm.ModelBuilder(parent_type_string="NoSuchModel", name="MyNewModelNoParent")
+
+    with pytest.raises(
+        GLib.Error, match="parent type `NoSuchModel' .* is not registered"
+    ):
+        mb.create()
+
+
+def test_create_parent_not_model_raises() -> None:
+    """A parent that is not a NcmModel raises at create."""
+    mb = Ncm.ModelBuilder(parent_type_string="NcmVector", name="MyNewModelVectorParent")
+
+    with pytest.raises(
+        GLib.Error, match="parent type `NcmVector' .* is not a NcmModel"
+    ):
+        mb.create()
+
+
+def test_peek_from_type() -> None:
+    """A type created by a builder gives that builder back; other types give None."""
+    mb1 = _builder("MyNewModelPeek")
+    mb2 = _builder("MyNewModelPeek")
+    gtype = mb1.create()
+
+    assert Ncm.ModelBuilder.peek_from_type(gtype) is mb1
+    assert mb2.create() == gtype
+    assert Ncm.ModelBuilder.peek_from_type(gtype) is mb1
+    assert Ncm.ModelBuilder.peek_from_type(Ncm.Model.__gtype__) is None
+    assert Ncm.ModelBuilder.peek_from_type(Ncm.ModelRosenbrock.__gtype__) is None
+
+    GObject.new(gtype)
+    model = gtype.pytype()
+    assert Ncm.ModelBuilder.peek_from_type(model.__gtype__) is mb1
+
+
+def test_deserialize_before_parent_is_created() -> None:
+    """Builders deserialize before their parent type exists; created in order."""
+    parent = _builder("MyNewModelChainParent")
+    child = Ncm.ModelBuilder(
+        parent_type_string="MyNewModelChainParent",
+        name="MyNewModelChainChild",
+        description="Test",
+    )
+    child.add_sparam("p_2", "param2", 0.0, 1.0, 0.01, 0.0, 0.2, Ncm.ParamType.FREE)
+
+    builders = Ncm.ObjArray.new()
+    builders.add(parent)
+    builders.add(child)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    yaml = ser.array_to_yaml(builders)
+    ser.reset(True)
+
+    with pytest.raises(RuntimeError, match="unknown type name"):
+        GObject.type_from_name("MyNewModelChainParent")
+    builders_dup = ser.array_from_yaml(yaml)
+
+    parent_type = cast(Ncm.ModelBuilder, builders_dup.peek(0)).create()
+    child_type = cast(Ncm.ModelBuilder, builders_dup.peek(1)).create()
+
+    assert child_type.parent == parent_type
+    assert Ncm.ModelBuilder.peek_from_type(parent_type) is builders_dup.peek(0)
+    assert Ncm.ModelBuilder.peek_from_type(child_type) is builders_dup.peek(1)
+
+    GObject.new(child_type)
+    model = child_type.pytype()
+    assert model.len() == 2
+    assert model.param_name(0) == "param1"
+    assert model.param_name(1) == "param2"

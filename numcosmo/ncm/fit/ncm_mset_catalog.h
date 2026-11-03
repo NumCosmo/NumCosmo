@@ -247,6 +247,7 @@ guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint n
 #define NCM_MSET_CATALOG_MSET_FORMAT_OBJECT "gvariant"
 #define NCM_MSET_CATALOG_MSET_FORMAT_VARDICT "vardict"
 #define NCM_MSET_CATALOG_HDU0_MSET_KEY "model-set"
+#define NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY "model-builders"
 #define NCM_MSET_CATALOG_HDU0_FUNCTIONS_KEY "functions"
 #define NCM_MSET_CATALOG_DIST_EST_SD_SCALE (1.0e-3)
 

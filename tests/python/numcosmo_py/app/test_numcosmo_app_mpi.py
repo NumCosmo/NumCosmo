@@ -35,7 +35,7 @@ from pathlib import Path
 
 import pytest
 
-from numcosmo_py import GObject, Ncm
+from numcosmo_py import Ncm
 
 pytestmark = [
     pytest.mark.app,
@@ -46,41 +46,6 @@ pytestmark = [
 ]
 
 Ncm.cfg_init()
-
-
-@pytest.fixture(name="builder_experiment")
-def fixture_builder_experiment(tmp_path: Path) -> Path:
-    """Write an experiment whose model set holds a model of its builders file."""
-    model_builder = Ncm.ModelBuilder.new(
-        Ncm.Model, "NcmTestAppMPIBuilderModel", "Model created by a builder"
-    )
-    model_builder.add_sparam("p_1", "p1", 0.0, 1.0, 0.1, 0.0, 0.5, Ncm.ParamType.FIXED)
-    BuilderModel = model_builder.create()
-    GObject.new(BuilderModel)
-
-    mset = Ncm.MSet.new_array([Ncm.ModelMVND.new(2), BuilderModel.pytype()])
-    for i in range(2):
-        mset.param_set_ftype(Ncm.ModelMVND.id(), i, Ncm.ParamType.FREE)
-
-    rng = Ncm.RNG.seeded_new(None, 1234)
-    data_mvnd = Ncm.DataGaussCovMVND.new_full(2, 1.0, 2.0, 30.0, 0.0, 0.0, rng)
-    likelihood = Ncm.Likelihood.new(dset=Ncm.Dataset.new_array([data_mvnd]))
-
-    experiment_file = tmp_path / "builder_experiment.yaml"
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-
-    model_builders = Ncm.ObjDictStr.new()
-    model_builders.add("NcmTestAppMPIBuilderModel", model_builder)
-    ser.dict_str_to_yaml_file(
-        model_builders, experiment_file.with_suffix(".builders.yaml").as_posix()
-    )
-
-    experiment = Ncm.ObjDictStr.new()
-    experiment.add("model-set", mset)
-    experiment.add("likelihood", likelihood)
-    ser.dict_str_to_yaml_file(experiment, experiment_file.as_posix())
-
-    return experiment_file
 
 
 def test_run_mcmc_apes_mpi_builder_model(builder_experiment: Path) -> None:

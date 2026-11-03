@@ -24,6 +24,8 @@
 
 """Test NumCosmo app."""
 
+import subprocess
+import sys
 from typing import Tuple
 from pathlib import Path
 
@@ -820,6 +822,56 @@ def test_run_mcmc_apes_analyze(simple_experiment):
 
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_analyze_builder_model(builder_experiment: Path) -> None:
+    """Analyze, in a new process, a catalog whose model set holds a builder model.
+
+    The new process has not created the model type, so it comes from the builders
+    the catalog stores.
+    """
+    output = builder_experiment.with_suffix(".out.yaml")
+    catalog = output.with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            builder_experiment.as_posix(),
+            "--nwalkers",
+            "60",
+            "--nsamples",
+            "120",
+            "--output",
+            output.as_posix(),
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+    assert catalog.exists()
+
+    # python -c puts the working directory first on sys.path; tmp_path holds no
+    # numcosmo_py, so the subprocess imports the one the test imported.
+    analyze = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from numcosmo_py.app import app; app()",
+            "catalog",
+            "analyze",
+            catalog.as_posix(),
+        ],
+        cwd=builder_experiment.parent,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+
+    assert analyze.returncode == 0, analyze.stdout + analyze.stderr
+    assert "Catalog information" in analyze.stdout
 
 
 def test_run_mcmc_apes_analyze_burnin_iterations(simple_experiment):

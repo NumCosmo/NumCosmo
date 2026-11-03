@@ -40,6 +40,26 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmModelBuilder, ncm_model_builder, NCM, MODEL_BUILDER, GObject)
 
+/**
+ * NcmModelBuilderError:
+ * @NCM_MODEL_BUILDER_ERROR_PARENT_NOT_REGISTERED: The parent type is not registered.
+ * @NCM_MODEL_BUILDER_ERROR_PARENT_NOT_MODEL: The parent type is not a #NcmModel.
+ * @NCM_MODEL_BUILDER_ERROR_NAME_CLASH: A type with the name of the builder exists with
+ *   another parent, other parameters or another stackable flag.
+ *
+ * Error codes of ncm_model_builder_create().
+ */
+typedef enum _NcmModelBuilderError /*< prefix=NCM_MODEL_BUILDER_ERROR >*/
+{
+  NCM_MODEL_BUILDER_ERROR_PARENT_NOT_REGISTERED,
+  NCM_MODEL_BUILDER_ERROR_PARENT_NOT_MODEL,
+  NCM_MODEL_BUILDER_ERROR_NAME_CLASH,
+} NcmModelBuilderError;
+
+GQuark ncm_model_builder_error_quark (void);
+
+#define NCM_MODEL_BUILDER_ERROR (ncm_model_builder_error_quark ())
+
 NcmModelBuilder *ncm_model_builder_new (GType ptype, const gchar *name, const gchar *desc);
 NcmModelBuilder *ncm_model_builder_ref (NcmModelBuilder *mb);
 
@@ -52,7 +72,8 @@ void ncm_model_builder_add_vparam_obj (NcmModelBuilder *mb, NcmVParam *vparam);
 void ncm_model_builder_add_sparam (NcmModelBuilder *mb, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 void ncm_model_builder_add_vparam (NcmModelBuilder *mb, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 
-GType ncm_model_builder_create (NcmModelBuilder *mb);
+GType ncm_model_builder_create (NcmModelBuilder *mb, GError **error);
+NcmModelBuilder *ncm_model_builder_peek_from_type (GType type);
 
 void ncm_model_builder_add_sparams (NcmModelBuilder *mb, NcmObjArray *sparams);
 void ncm_model_builder_add_vparams (NcmModelBuilder *mb, NcmObjArray *vparams);

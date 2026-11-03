@@ -299,6 +299,18 @@
     "nick": "slice",
     "type": "Ncm.MatrixInternal"
   },
+  "NCM_MODEL_BUILDER_ERROR_NAME_CLASH": {
+    "nick": "name-clash",
+    "type": "Ncm.ModelBuilderError"
+  },
+  "NCM_MODEL_BUILDER_ERROR_PARENT_NOT_MODEL": {
+    "nick": "parent-not-model",
+    "type": "Ncm.ModelBuilderError"
+  },
+  "NCM_MODEL_BUILDER_ERROR_PARENT_NOT_REGISTERED": {
+    "nick": "parent-not-registered",
+    "type": "Ncm.ModelBuilderError"
+  },
   "NCM_MODEL_ERROR_INVALID_TYPE": {
     "nick": "invalid-type",
     "type": "Ncm.ModelError"
