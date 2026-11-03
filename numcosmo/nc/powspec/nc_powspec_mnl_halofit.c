@@ -98,9 +98,11 @@ typedef struct _NcPowspecMNLHaloFitCoeffs
   gdouble fnu;
 } NcPowspecMNLHaloFitCoeffs;
 
-/* Per-thread cache: the coefficients at redshift z of the preparation prepare_id. Every
+/*
+ * Per-thread cache: the coefficients at redshift z of the preparation prepare_id. Every
  * prepare of every object takes a new id from _nc_powspec_mnl_halofit_last_prepare_id,
- * starting at 1, so an entry never matches another object or an earlier preparation. */
+ * starting at 1, so an entry never matches another object or an earlier preparation.
+ */
 typedef struct _NcPowspecMNLHaloFitCache
 {
   gsize prepare_id;
@@ -714,9 +716,11 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit *pshf, NcmModel *model)
     ncm_vector_free (neffv);
     ncm_vector_free (Curv);
 
-    /* PKEqual replaces Omega_de (1 + w) of a CPL cosmology with w_a != 0 by that of the
+    /*
+     * PKEqual replaces Omega_de (1 + w) of a CPL cosmology with w_a != 0 by that of the
      * constant-w model with the same distance to the drag epoch, solved on the nodes of
-     * Rsigma and interpolated by preeval. */
+     * Rsigma and interpolated by preeval.
+     */
     self->Omega_de_onepw_from_spline = self->pkequal && NC_IS_HICOSMO_DE_CPL (cosmo) &&
                                        (ncm_model_orig_param_get (model, NC_HICOSMO_DE_CPL_W1) != 0.0);
 
@@ -759,6 +763,7 @@ _nc_powspec_mnl_halofit_xi_cmp (gdouble w, gpointer params)
   NcPowspecMNLHaloFitPrivate * const self = vps->pshf->priv;
 
   ncm_model_orig_param_set (NCM_MODEL (vps->cosmo), NC_HICOSMO_DE_CPL_W0, w);
+  nc_distance_prepare_if_needed (self->cpl_dist, vps->cosmo);
   {
     gdouble zdrag = nc_distance_drag_redshift (self->cpl_dist, vps->cosmo);
     gdouble xi    = nc_distance_comoving (self->cpl_dist, vps->cosmo, zdrag) - nc_distance_comoving (self->cpl_dist, vps->cosmo, vps->z);
@@ -767,9 +772,12 @@ _nc_powspec_mnl_halofit_xi_cmp (gdouble w, gpointer params)
   }
 }
 
-/* Omega_de (1 + w) / E^2 at z of the constant-w CPL model whose comoving distance from z to
+/*
+ * Omega_de (1 + w) / E^2 at z of the constant-w CPL model whose comoving distance from z to
  * the drag epoch equals that of @cosmo; uses self->cpl, self->cpl_dist and self->znl_solver,
- * so it is called only from prepare. */
+ * so it is called only from prepare. Aborts when no w in [-2, 0] gives that distance or the
+ * root solve does not converge.
+ */
 static gdouble
 _nc_powspec_mnl_halofit_pkequal_Omega_de_onepw (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosmo, const gdouble z)
 {
@@ -804,7 +812,9 @@ _nc_powspec_mnl_halofit_pkequal_Omega_de_onepw (NcPowspecMNLHaloFit *pshf, NcHIC
       Fxi.function = &_nc_powspec_mnl_halofit_xi_cmp;
       Fxi.params   = &vps;
 
-      gsl_root_fsolver_set (self->znl_solver, &Fxi, w0, w1);
+      if (gsl_root_fsolver_set (self->znl_solver, &Fxi, w0, w1) != GSL_SUCCESS)
+        g_error ("_nc_powspec_mnl_halofit_pkequal_Omega_de_onepw: no constant w in [% g, % g] "
+                 "gives the distance to the drag epoch at z = % g.", w0, w1, z);
 
       do {
         iter++;
@@ -819,7 +829,7 @@ _nc_powspec_mnl_halofit_pkequal_Omega_de_onepw (NcPowspecMNLHaloFit *pshf, NcHIC
       ncm_model_orig_param_set (NCM_MODEL (self->cpl), NC_HICOSMO_DE_CPL_W0, wfinal);
 
       if (iter >= max_iter)
-        g_warning ("_nc_powspec_mnl_halofit_pkequal_Omega_de_onepw: maximum number of iteration reached (%u), giving up.", max_iter);
+        g_error ("_nc_powspec_mnl_halofit_pkequal_Omega_de_onepw: maximum number of iterations reached (%d).", max_iter);
 
       return nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (self->cpl), z) / nc_hicosmo_E2 (self->cpl, z);
     }
@@ -871,8 +881,10 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosmo, co
   c->fnu           = fnu;
 }
 
-/* Returns the coefficients at redshift z from the calling thread's cache, computing them
- * when the cache holds another redshift or preparation. */
+/*
+ * Returns the coefficients at redshift z from the calling thread's cache, computing them
+ * when the cache holds another redshift or preparation.
+ */
 static const NcPowspecMNLHaloFitCoeffs *
 _nc_powspec_mnl_halofit_get_coeffs (NcPowspecMNLHaloFit *pshf, NcHICosmo *cosmo, const gdouble z)
 {

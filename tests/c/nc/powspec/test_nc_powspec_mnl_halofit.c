@@ -58,11 +58,13 @@ typedef struct _TestNcPowspecMNLHaloFitThread
 } TestNcPowspecMNLHaloFitThread;
 
 void test_nc_powspec_mnl_halofit_new (TestNcPowspecMNLHaloFit *test, gconstpointer pdata);
+void test_nc_powspec_mnl_halofit_pkequal_new (TestNcPowspecMNLHaloFit *test, gconstpointer pdata);
 void test_nc_powspec_mnl_halofit_free (TestNcPowspecMNLHaloFit *test, gconstpointer pdata);
 
 void test_nc_powspec_mnl_halofit_concurrent_eval (TestNcPowspecMNLHaloFit *test, gconstpointer pdata);
 void test_nc_powspec_mnl_halofit_concurrent_eval_vec (TestNcPowspecMNLHaloFit *test, gconstpointer pdata);
 void test_nc_powspec_mnl_halofit_reprepare (TestNcPowspecMNLHaloFit *test, gconstpointer pdata);
+void test_nc_powspec_mnl_halofit_pkequal_linear (TestNcPowspecMNLHaloFit *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -88,12 +90,29 @@ main (gint argc, gchar *argv[])
               &test_nc_powspec_mnl_halofit_reprepare,
               &test_nc_powspec_mnl_halofit_free);
 
+  g_test_add ("/nc/powspec/mnl/halofit/pkequal/concurrent/eval", TestNcPowspecMNLHaloFit, NULL,
+              &test_nc_powspec_mnl_halofit_pkequal_new,
+              &test_nc_powspec_mnl_halofit_concurrent_eval,
+              &test_nc_powspec_mnl_halofit_free);
+
+  g_test_add ("/nc/powspec/mnl/halofit/pkequal/concurrent/eval_vec", TestNcPowspecMNLHaloFit, NULL,
+              &test_nc_powspec_mnl_halofit_pkequal_new,
+              &test_nc_powspec_mnl_halofit_concurrent_eval_vec,
+              &test_nc_powspec_mnl_halofit_free);
+
+  g_test_add ("/nc/powspec/mnl/halofit/pkequal/linear", TestNcPowspecMNLHaloFit, NULL,
+              &test_nc_powspec_mnl_halofit_pkequal_new,
+              &test_nc_powspec_mnl_halofit_pkequal_linear,
+              &test_nc_powspec_mnl_halofit_free);
+
   g_test_run ();
 }
 
-/* Evaluates P(z_i, k_j) of the test's grid into @Pk with ncm_powspec_eval() or, with @vec,
+/*
+ * Evaluates P(z_i, k_j) of the test's grid into @Pk with ncm_powspec_eval() or, with @vec,
  * ncm_powspec_eval_vec() into @Pk_z row by row, visiting the redshifts from @offset on so
- * that threads with different offsets evaluate different redshifts at the same time. */
+ * that threads with different offsets evaluate different redshifts at the same time.
+ */
 static void
 _test_nc_powspec_mnl_halofit_fill (TestNcPowspecMNLHaloFit *test, guint offset, gboolean vec, NcmMatrix *Pk, NcmVector *Pk_z)
 {
@@ -163,19 +182,56 @@ _test_nc_powspec_mnl_halofit_concurrent (TestNcPowspecMNLHaloFit *test, gboolean
   }
 }
 
-void
-test_nc_powspec_mnl_halofit_new (TestNcPowspecMNLHaloFit *test, gconstpointer pdata)
+/*
+ * Returns the maximum of |P_nl / P_nl(PKEqual off) - 1| over the test's grid at w_a = @wa,
+ * with @pkequal_off a halofit object on the same linear spectrum with PKEqual off.
+ */
+static gdouble
+_test_nc_powspec_mnl_halofit_pkequal_max_diff (TestNcPowspecMNLHaloFit *test, NcPowspecMNLHaloFit *pkequal_off, const gdouble wa)
 {
-  NcHIReion *reion   = NC_HIREION (nc_hireion_camb_new ());
-  NcHIPrim *prim     = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcmMatrix *Pk              = ncm_matrix_new (TEST_NC_POWSPEC_MNL_HALOFIT_NZ, TEST_NC_POWSPEC_MNL_HALOFIT_NK);
+  NcmMatrix *Pk_off          = ncm_matrix_new (TEST_NC_POWSPEC_MNL_HALOFIT_NZ, TEST_NC_POWSPEC_MNL_HALOFIT_NK);
+  NcPowspecMNLHaloFit *ps_nl = test->ps_nl;
+  gdouble max_diff           = 0.0;
+  guint i, j;
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_CPL_W1, wa);
+
+  ncm_powspec_prepare (NCM_POWSPEC (test->ps_nl), NCM_MODEL (test->cosmo));
+  _test_nc_powspec_mnl_halofit_fill (test, 0, FALSE, Pk, test->Pk_z);
+
+  ncm_powspec_prepare (NCM_POWSPEC (pkequal_off), NCM_MODEL (test->cosmo));
+  test->ps_nl = pkequal_off;
+  _test_nc_powspec_mnl_halofit_fill (test, 0, FALSE, Pk_off, test->Pk_z);
+  test->ps_nl = ps_nl;
+
+  for (i = 0; i < TEST_NC_POWSPEC_MNL_HALOFIT_NZ; i++)
+    for (j = 0; j < TEST_NC_POWSPEC_MNL_HALOFIT_NK; j++)
+      max_diff = GSL_MAX (max_diff, fabs (ncm_matrix_get (Pk, i, j) / ncm_matrix_get (Pk_off, i, j) - 1.0));
+
+  ncm_matrix_free (Pk);
+  ncm_matrix_free (Pk_off);
+
+  return max_diff;
+}
+
+/*
+ * Builds the halofit object on @cosmo, with PKEqual on or off, prepares it and fills the
+ * serial reference grid. Takes ownership of @cosmo.
+ */
+static void
+_test_nc_powspec_mnl_halofit_setup (TestNcPowspecMNLHaloFit *test, NcHICosmo *cosmo, gboolean pkequal)
+{
   NcTransferFunc *tf = NC_TRANSFER_FUNC (nc_transfer_func_eh_new ());
   guint i;
 
-  test->cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL));
+  test->cosmo = cosmo;
   test->ps_ml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
   test->ps_nl = nc_powspec_mnl_halofit_new (test->ps_ml, 3.0, 1.0e-4);
   test->z     = ncm_vector_new (TEST_NC_POWSPEC_MNL_HALOFIT_NZ);
-  test->k     = ncm_vector_new (TEST_NC_POWSPEC_MNL_HALOFIT_NK);
+
+  nc_powspec_mnl_halofit_pkequal (test->ps_nl, pkequal);
+  test->k = ncm_vector_new (TEST_NC_POWSPEC_MNL_HALOFIT_NK);
 
   for (i = 0; i < TEST_NC_POWSPEC_MNL_HALOFIT_NZ; i++)
     ncm_vector_set (test->z, i, 2.5 * i / (TEST_NC_POWSPEC_MNL_HALOFIT_NZ - 1.0));
@@ -190,6 +246,36 @@ test_nc_powspec_mnl_halofit_new (TestNcPowspecMNLHaloFit *test, gconstpointer pd
   _test_nc_powspec_mnl_halofit_fill (test, 0, FALSE, test->Pk_serial, test->Pk_z);
 
   nc_transfer_func_free (tf);
+}
+
+void
+test_nc_powspec_mnl_halofit_new (TestNcPowspecMNLHaloFit *test, gconstpointer pdata)
+{
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim   = NC_HIPRIM (nc_hiprim_power_law_new ());
+
+  _test_nc_powspec_mnl_halofit_setup (test, NC_HICOSMO (nc_hicosmo_de_xcdm_new_full (reion, prim, NULL)), FALSE);
+
+  ncm_model_free (NCM_MODEL (reion));
+  ncm_model_free (NCM_MODEL (prim));
+}
+
+/*
+ * PKEqual on a CPL cosmology with w_0 = -0.9 and w_a = 0.1: the prepare solves for the
+ * constant w with the same distance to the drag epoch at every node of Rsigma.
+ */
+void
+test_nc_powspec_mnl_halofit_pkequal_new (TestNcPowspecMNLHaloFit *test, gconstpointer pdata)
+{
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim   = NC_HIPRIM (nc_hiprim_power_law_new ());
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_cpl_new_full (reion, prim, NULL));
+
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0, -0.9);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1, 0.1);
+
+  _test_nc_powspec_mnl_halofit_setup (test, cosmo, TRUE);
+
   ncm_model_free (NCM_MODEL (reion));
   ncm_model_free (NCM_MODEL (prim));
 }
@@ -218,9 +304,11 @@ test_nc_powspec_mnl_halofit_concurrent_eval_vec (TestNcPowspecMNLHaloFit *test, 
   _test_nc_powspec_mnl_halofit_concurrent (test, TRUE);
 }
 
-/* After a parameter change and a new prepare, the cached coefficients of the previous
+/*
+ * After a parameter change and a new prepare, the cached coefficients of the previous
  * preparation are not used: the values agree with a halofit object prepared only for the
- * new parameters. */
+ * new parameters.
+ */
 void
 test_nc_powspec_mnl_halofit_reprepare (TestNcPowspecMNLHaloFit *test, gconstpointer pdata)
 {
@@ -252,5 +340,24 @@ test_nc_powspec_mnl_halofit_reprepare (TestNcPowspecMNLHaloFit *test, gconstpoin
   ncm_matrix_free (Pk);
   ncm_matrix_free (Pk_fresh);
   NCM_TEST_FREE (ncm_powspec_free, NCM_POWSPEC (fresh));
+}
+
+/*
+ * PKEqual changes P_nl only through the dark energy of the constant-w model, so the
+ * difference to PKEqual off is linear in w_a for small w_a. The maximum relative difference
+ * over the grid divided by w_a is 0.0760 at w_a = 1e-3 and at 1e-4 (they agree to 3e-4); a
+ * root solve that does not converge gives a difference that does not vanish with w_a.
+ */
+void
+test_nc_powspec_mnl_halofit_pkequal_linear (TestNcPowspecMNLHaloFit *test, gconstpointer pdata)
+{
+  NcPowspecMNLHaloFit *pkequal_off = nc_powspec_mnl_halofit_new (test->ps_ml, 3.0, 1.0e-4);
+  const gdouble slope_1e3          = _test_nc_powspec_mnl_halofit_pkequal_max_diff (test, pkequal_off, 1.0e-3) / 1.0e-3;
+  const gdouble slope_1e4          = _test_nc_powspec_mnl_halofit_pkequal_max_diff (test, pkequal_off, 1.0e-4) / 1.0e-4;
+
+  g_assert_cmpfloat (slope_1e3, >, 0.0);
+  ncm_assert_cmpdouble_e (slope_1e4, ==, slope_1e3, 1.0e-3, 0.0);
+
+  NCM_TEST_FREE (ncm_powspec_free, NCM_POWSPEC (pkequal_off));
 }
 
