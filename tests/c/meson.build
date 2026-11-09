@@ -624,7 +624,7 @@ model_tests = [
     {
         'name': 'nc_hcosmo_bi',
         'sources': ['nc/background/test_nc_hcosmo_bi.c'],
-        'include_directories': [sundials_inc],
+        'dependencies': [sundials_dep],
     },
     {
         'name': 'nc_hcosmo_bi_dist',

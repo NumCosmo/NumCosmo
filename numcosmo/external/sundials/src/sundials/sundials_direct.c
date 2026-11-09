@@ -2,8 +2,11 @@
  * Programmer: Radu Serban @ LLNL
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -168,7 +171,6 @@ void SUNDlsMat_DestroyMat(SUNDlsMat A)
   A->data = NULL;
   free(A->cols);
   free(A);
-  A = NULL;
 }
 
 void SUNDlsMat_destroyMat(sunrealtype** a)
@@ -176,7 +178,6 @@ void SUNDlsMat_destroyMat(sunrealtype** a)
   free(a[0]);
   a[0] = NULL;
   free(a);
-  a = NULL;
 }
 
 int* SUNDlsMat_NewIntArray(int N)
@@ -251,17 +252,9 @@ sunrealtype* SUNDlsMat_newRealArray(sunindextype m)
   return (v);
 }
 
-void SUNDlsMat_DestroyArray(void* V)
-{
-  free(V);
-  V = NULL;
-}
+void SUNDlsMat_DestroyArray(void* V) { free(V); }
 
-void SUNDlsMat_destroyArray(void* v)
-{
-  free(v);
-  v = NULL;
-}
+void SUNDlsMat_destroyArray(void* v) { free(v); }
 
 void SUNDlsMat_AddIdentity(SUNDlsMat A)
 {

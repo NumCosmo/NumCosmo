@@ -4,8 +4,11 @@
  *                Aaron Collier @ LLNL
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -182,6 +185,38 @@ extern "C" {
 #error \
   "SUNDIALS precision not defined, report to github.com/LLNL/sundials/issues"
 #endif
+#endif
+
+/*
+ * -----------------------------------------------------------------
+ * Function : SUNRsamesign
+ * -----------------------------------------------------------------
+ * Usage : sunrealtype z;
+ *         z = SUNRsamesign(x, y);
+ * -----------------------------------------------------------------
+ * SUNRsamesign(x, y) returns true if x and y share the same sign,
+ * false otherwise
+ * -----------------------------------------------------------------
+ */
+
+#ifndef SUNRsamesign
+#define SUNRsamesign(x, y) (signbit((x)) == signbit((y)))
+#endif
+
+/*
+ * -----------------------------------------------------------------
+ * Function : SUNRdifferentsign
+ * -----------------------------------------------------------------
+ * Usage : sunrealtype z;
+ *         z = SUNRdifferentsign(x, y);
+ * -----------------------------------------------------------------
+ * SUNRdifferentsign(x) returns true if x and y have different
+ * signs, false otherwise
+ * -----------------------------------------------------------------
+ */
+
+#ifndef SUNRdifferentsign
+#define SUNRdifferentsign(x, y) (!SUNRsamesign((x), (y)))
 #endif
 
 /*

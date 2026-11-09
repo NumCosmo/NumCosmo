@@ -1,9 +1,12 @@
 /*---------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds @ SMU
+ * Programmer(s): Daniel R. Reynolds @ UMBC
  *---------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -21,10 +24,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <sundials/sundials_math.h>
 #include <sundials/sundials_types.h>
 
 #include "arkode_arkstep_impl.h"
+
+#include "sundials_cli.h"
+#include "sundials_utils.h"
 
 /*===============================================================
   Exported optional input functions.
@@ -457,7 +464,15 @@ int ARKStepSetTableNum(void* arkode_mem, ARKODE_DIRKTableID itable,
           (itable == ARKODE_ARK548L2SA_DIRK_8_4_5)) &&
         !((etable == ARKODE_ARK548L2SAb_ERK_8_4_5) &&
           (itable == ARKODE_ARK548L2SAb_DIRK_8_4_5)) &&
-        !((etable == ARKODE_ARK2_ERK_3_1_2) && (itable == ARKODE_ARK2_DIRK_3_1_2)))
+        !((etable == ARKODE_GKC21_ERK_3_1_2) &&
+          (itable == ARKODE_GKC21_ESDIRK_3_1_2)) &&
+        !((etable == ARKODE_ARS222_ERK_3_1_2) &&
+          (itable == ARKODE_ARS222_ESDIRK_3_1_2)) &&
+        /*New Embedded IMEX-SSP Methods*/
+        !((etable == ARKODE_SSP_ERK_3_1_2) && (itable == ARKODE_SSP_DIRK_3_1_2)) &&
+        !((etable == ARKODE_SSP_LSPUM_ERK_3_1_2) &&
+          (itable == ARKODE_SSP_LSPUM_SDIRK_3_1_2)) &&
+        !((etable == ARKODE_SSP_ERK_4_2_3) && (itable == ARKODE_ESDIRK_4_2_3)))
     {
       arkProcessError(ark_mem, ARK_ILL_INPUT, __LINE__, __func__, __FILE__,
                       "Incompatible Butcher tables for ARK method");
@@ -627,6 +642,54 @@ int ARKStepGetTimestepperStats(void* arkode_mem, long int* expsteps,
 /*===============================================================
   Private functions attached to ARKODE
   ===============================================================*/
+
+/*---------------------------------------------------------------
+  arkStep_SetOption:
+
+  Provides string-based control over ARKStep-specific "set" routines.
+  ---------------------------------------------------------------*/
+int arkStep_SetOptions(ARKodeMem ark_mem, int* argidx, char* argv[],
+                       size_t offset, sunbooleantype* arg_used)
+{
+  /* Set lists of keys, and the corresponding set routines */
+  static const struct sunKeyTwoCharPair twochar_pairs[] = {
+    {"table_names", ARKStepSetTableName}};
+  static const int num_twochar_keys = sizeof(twochar_pairs) /
+                                      sizeof(*twochar_pairs);
+
+  static const struct sunKeyActionPair action_pairs[] =
+    {{"explicit", ARKStepSetExplicit},
+     {"implicit", ARKStepSetImplicit},
+     {"imex", ARKStepSetImEx}};
+  static const int num_action_keys = sizeof(action_pairs) / sizeof(*action_pairs);
+
+  /* check all "twochar" keys */
+  int j, retval;
+  retval = sunCheckAndSetTwoCharArgs((void*)ark_mem, argidx, argv, offset,
+                                     twochar_pairs, num_twochar_keys, arg_used,
+                                     &j);
+  if (retval != ARK_SUCCESS)
+  {
+    arkProcessError(ark_mem, retval, __LINE__, __func__, __FILE__,
+                    "error setting command-line argument: %s",
+                    twochar_pairs[j].key);
+    return retval;
+  }
+  if (*arg_used) { return ARK_SUCCESS; }
+
+  /* check all action keys */
+  retval = sunCheckAndSetActionArgs((void*)ark_mem, argidx, argv, offset,
+                                    action_pairs, num_action_keys, arg_used, &j);
+  if (retval != ARK_SUCCESS)
+  {
+    arkProcessError(ark_mem, retval, __LINE__, __func__, __FILE__,
+                    "error setting command-line argument: %s",
+                    action_pairs[j].key);
+    return retval;
+  }
+
+  return (ARK_SUCCESS);
+}
 
 /*---------------------------------------------------------------
   arkStep_SetRelaxFn:
@@ -1239,6 +1302,26 @@ int arkStep_GetNonlinSolvStats(ARKodeMem ark_mem, long int* nniters,
 
   *nniters = step_mem->nls_iters;
   *nnfails = step_mem->nls_fails;
+
+  return (ARK_SUCCESS);
+}
+
+/*---------------------------------------------------------------
+  arkStep_GetStageIndex:
+
+  Returns the current stage index and number of stages
+  ---------------------------------------------------------------*/
+int arkStep_GetStageIndex(ARKodeMem ark_mem, int* stage, int* max_stages)
+{
+  ARKodeARKStepMem step_mem;
+  int retval;
+
+  /* access ARKodeARKStepMem structure */
+  retval = arkStep_AccessStepMem(ark_mem, __func__, &step_mem);
+  if (retval != ARK_SUCCESS) { return (retval); }
+
+  *stage      = step_mem->istage;
+  *max_stages = step_mem->stages;
 
   return (ARK_SUCCESS);
 }
