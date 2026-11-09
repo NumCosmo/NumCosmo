@@ -108,18 +108,26 @@ NcmMatrix *ncm_spectral_get_s_matrix (guint N);
 NcmMatrix *ncm_spectral_get_s2_matrix (guint N);
 NcmMatrix *ncm_spectral_get_d_matrix (guint N);
 NcmMatrix *ncm_spectral_get_s_d_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s2_d_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s3_d_matrix (guint N);
 NcmMatrix *ncm_spectral_get_d2_matrix (guint N);
 NcmMatrix *ncm_spectral_get_s_d2_matrix (guint N);
 NcmMatrix *ncm_spectral_get_s2_d2_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s3_d2_matrix (guint N);
+NcmMatrix *ncm_spectral_get_s4_d2_matrix (guint N);
 
 NCM_INLINE void ncm_spectral_compute_proj_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_s_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_s2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_d_row (gdouble * restrict row_data, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_s_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s2_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s3_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_s_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 NCM_INLINE void ncm_spectral_compute_s2_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s3_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
+NCM_INLINE void ncm_spectral_compute_s4_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff);
 
 G_END_DECLS
 
@@ -240,6 +248,53 @@ ncm_spectral_compute_s_d_row (gdouble * restrict row_data, glong k, glong offset
 }
 
 NCM_INLINE void
+ncm_spectral_compute_s2_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+{
+  const gdouble kd = (gdouble) k;
+  const gdouble kp1 = kd + 1.0;
+  const gdouble kp3 = kd + 3.0;
+
+  /* Five non-zero entries with rational function coefficients */
+  if (k >= 2)
+    row_data[offset - 1] += coeff * (kd - 1.0) / (4.0 * kp1);
+
+  row_data[offset + 1] += coeff * (kd + 5.0) / (4.0 * kp3);
+  row_data[offset + 3] -= coeff * (kd - 1.0) / (4.0 * kp1 );
+  row_data[offset + 5] -= coeff * (kd + 5.0) / (4.0 * kp3);
+
+  /* Special cases */
+  if (k == 0)
+  {
+    row_data[offset + 1] -= coeff / 4.0;  /* Additional -1/4 at column 1 = k+1 */
+  }
+}
+
+NCM_INLINE void
+ncm_spectral_compute_s3_d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+{
+  const gdouble kd = (gdouble) k;
+
+  /* Five non-zero entries with rational function coefficients */
+  if (k >= 3)
+    row_data[offset - 2] += coeff * (kd - 2.0) / (8.0 * (kd + 1.0));
+
+  row_data[offset]     += coeff * kd * (kd + 4.0) / (4.0 * (kd + 1.0) * (kd + 3.0));
+  row_data[offset + 2] += coeff * 3.0 * (kd + 2.0) / (4.0 * (kd + 1.0) * (kd + 3.0));
+  row_data[offset + 4] -= coeff * kd * (kd + 4.0) / (4.0 * (kd + 1.0) * (kd + 3.0));
+  row_data[offset + 6] -= coeff * (kd + 6.0) / (8.0 * (kd + 3.0));
+
+  /* Special cases */
+  if (k == 0)
+  {
+    row_data[offset + 2] -= coeff / 4.0;  /* Additional 1/4 at column 2 = k+2 */
+  }
+  else if (k == 1)
+  {
+    row_data[offset] -= coeff / 16.0; /* Additional 1/16 at column 1 = k */
+  }
+}
+
+NCM_INLINE void
 ncm_spectral_compute_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
 {
   const gdouble kd = (gdouble) k;
@@ -271,6 +326,57 @@ ncm_spectral_compute_s2_d2_row (gdouble * restrict row_data, glong k, glong offs
   row_data[offset]     += value_0;
   row_data[offset + 2] += value_1;
   row_data[offset + 4] += value_2;
+}
+
+NCM_INLINE void
+ncm_spectral_compute_s3_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+{
+  const gdouble kd = (gdouble) k;
+  const gdouble kp1 = kd + 1.0;
+  const gdouble kp2 = kd + 2.0;
+  const gdouble kp3 = kd + 3.0;
+
+  /* Five non-zero entries with rational function coefficients */
+  if (k >= 3)
+    row_data[offset - 1] += coeff * (kd - 1.0) * (kd - 2.0) / (4.0 * kp1);
+
+  row_data[offset + 1] += coeff * 3 * (kp1 * kp2 - 4.0) / (4.0 * kp3);
+  row_data[offset + 3] += coeff * 3 * (kp2 * kp3 - 4.0) / (4.0 * kp1);
+  row_data[offset + 5] += coeff * (kd + 5.0) * (kd + 6.0) / (4.0 * kp3);
+
+  /* Special cases */
+  if (k == 0)
+  {
+    row_data[offset + 1] += coeff / 2.0;  /* Additional 1/2 at column 1 = k+1 */
+  }
+}
+
+NCM_INLINE void
+ncm_spectral_compute_s4_d2_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
+{
+  const gdouble kd = (gdouble) k;
+  const gdouble kp1 = kd + 1.0;
+  const gdouble kp2 = kd + 2.0;
+  const gdouble kp3 = kd + 3.0;
+
+  /* Five non-zero entries with rational function coefficients */
+  if (k >= 4)
+    row_data[offset - 2] += coeff * (kd - 2.0) * (kd - 3.0) / (8.0 * kp1);
+
+  row_data[offset]     += coeff * kd * (kp1 * kp1 - 6.0) / (2.0 * kp1 * kp3);
+  row_data[offset + 2] += coeff * 3 * kp2 * (kp2 * kp2 - 5.0) / (4.0 * kp1 * kp3);
+  row_data[offset + 4] += coeff * (kd + 4.0) * (kp3 * kp3 - 6.0) / (2.0 * kp1 * kp3);
+  row_data[offset + 6] += coeff * (kd + 6.0) * (kd + 7.0) / (8.0 * kp3);
+
+  /* Special cases */
+  if (k == 0)
+  {
+    row_data[offset + 2] += coeff * 3.0 / 4.0;  /* Additional 3/4 at column 2 = k+2 */
+  }
+  else if (k == 1)
+  {
+    row_data[offset] += coeff / 8.0; /* Additional 1/8 at column 1 = k */
+  }
 }
 
 G_END_DECLS

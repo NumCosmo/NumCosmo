@@ -2509,6 +2509,82 @@ ncm_spectral_get_s_d_matrix (guint N)
 }
 
 /**
+ * ncm_spectral_get_s2_d_matrix:
+ * @N: size of the matrix
+ *
+ * Builds the $N \times N$ matrix of $s^2\,\mathrm{d}/\mathrm{d}s$ from the $T_n$ coefficients of $f$ to the
+ * $C^{(2)}_k$ coefficients of $s^2 f'$, truncated to the first $N$ columns.
+ *
+ * Returns: (transfer full): the operator matrix.
+ */
+NcmMatrix *
+ncm_spectral_get_s2_d_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  gdouble row_data[9];
+  const glong bandwidth = G_N_ELEMENTS (row_data);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 1) ? 1 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_s2_d_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_s3_d_matrix:
+ * @N: size of the matrix
+ *
+ * Builds the $N \times N$ matrix of $s^3\,\mathrm{d}/\mathrm{d}s$ from the $T_n$ coefficients of $f$ to the
+ * $C^{(2)}_k$ coefficients of $s^3 f'$, truncated to the first $N$ columns.
+ *
+ * Returns: (transfer full): the operator matrix.
+ */
+NcmMatrix *
+ncm_spectral_get_s3_d_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  gdouble row_data[9];
+  const glong bandwidth = G_N_ELEMENTS (row_data);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 2) ? 2 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_s3_d_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  return mat;
+}
+
+/**
  * ncm_spectral_get_d2_matrix:
  * @N: size of the matrix
  *
@@ -2623,6 +2699,82 @@ ncm_spectral_get_s2_d2_matrix (guint N)
 }
 
 /**
+ * ncm_spectral_get_s3_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Builds the $N \times N$ matrix of $s^3\,\mathrm{d}^2/\mathrm{d}s^2$ from the $T_n$ coefficients of $f$ to the
+ * $C^{(2)}_k$ coefficients of $s^3 f''$, truncated to the first $N$ columns.
+ *
+ * Returns: (transfer full): the operator matrix.
+ */
+NcmMatrix *
+ncm_spectral_get_s3_d2_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  gdouble row_data[9];
+  const glong bandwidth = G_N_ELEMENTS (row_data);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 1) ? 1 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_s3_d2_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  return mat;
+}
+
+/**
+ * ncm_spectral_get_s4_d2_matrix:
+ * @N: size of the matrix
+ *
+ * Builds the $N \times N$ matrix of $s^4\,\mathrm{d}^2/\mathrm{d}s^2$ from the $T_n$ coefficients of $f$ to the
+ * $C^{(2)}_k$ coefficients of $s^4 f''$, truncated to the first $N$ columns.
+ *
+ * Returns: (transfer full): the operator matrix.
+ */
+NcmMatrix *
+ncm_spectral_get_s4_d2_matrix (guint N)
+{
+  NcmMatrix *mat = ncm_matrix_new (N, N);
+  gdouble row_data[9];
+  const glong bandwidth = G_N_ELEMENTS (row_data);
+  glong j, k;
+
+  ncm_matrix_set_zero (mat);
+
+  for (k = 0; k < N; k++)
+  {
+    const glong offset        = (k >= 2) ? 2 : k;
+    const glong cols_to_write = GSL_MIN (bandwidth, (glong) N + offset - k);
+
+    memset (row_data, 0, sizeof (gdouble) * bandwidth);
+    ncm_spectral_compute_s4_d2_row (row_data, k, offset, 1.0);
+
+    for (j = 0; j < cols_to_write; j++)
+    {
+      const glong col = k - offset + j;
+
+      ncm_matrix_set (mat, k, col, row_data[j]);
+    }
+  }
+
+  return mat;
+}
+
+/**
  * ncm_spectral_compute_proj_row:
  * @row_data: the row
  * @k: row index
@@ -2698,6 +2850,39 @@ ncm_spectral_get_s2_d2_matrix (guint N)
  * - column $k + 4$: $-(k + 4)/(2(k + 3))$.
  */
 
+ /**
+ * ncm_spectral_compute_s2_d_row:
+ * @row_data: the row
+ * @k: row index
+ * @offset: position of column @k in @row_data
+ * @coeff: factor of the row
+ *
+ * Adds @coeff times row $k$ of ncm_spectral_get_s2_d_matrix() to @row_data. Its nonzero
+ * entries are
+ *
+ * - column $k - 1$, for $k \ge 2$: $(k - 1)/(4(k + 1))$;
+ * - column $k + 1$: $(k + 5)/(4(k + 3))$, minus $1/4$ when $k = 0$;
+ * - column $k + 3$: $-(k - 1)/(4(k + 1))$;
+ * - column $k + 5$: $-(k + 5)/(4(k + 3))$.
+ */
+
+ /**
+ * ncm_spectral_compute_s3_d_row:
+ * @row_data: the row
+ * @k: row index
+ * @offset: position of column @k in @row_data
+ * @coeff: factor of the row
+ *
+ * Adds @coeff times row $k$ of ncm_spectral_get_s3_d_matrix() to @row_data. Its nonzero
+ * entries are
+ *
+ * - column $k - 2$, for $k \ge 2$: $(k - 1)/(8(k + 1))$;
+ * - column $k$: $k(k + 4)/(4(k + 1)(k + 3))$, minus $1/16$ when $k = 1$;
+ * - column $k + 2$: $3(k + 2)/(4(k + 1)(k + 3))$, minus $1/4$ when $k = 0$;
+ * - column $k + 4$: $-k(k + 4)/(4(k + 1)(k + 3))$;
+ * - column $k + 6$: $-(k + 6)/(8(k + 3))$.
+ */
+
 /**
  * ncm_spectral_compute_d2_row:
  * @row_data: the row
@@ -2738,5 +2923,38 @@ ncm_spectral_get_s2_d2_matrix (guint N)
  * - column $k$: $k(k - 1)/(2(k + 1))$;
  * - column $k + 2$: $(k + 2)((k + 2)^2 - 3)/((k + 1)(k + 3))$;
  * - column $k + 4$: $(k + 4)(k + 5)/(2(k + 3))$.
+ */
+
+ /**
+ * ncm_spectral_compute_s3_d2_row:
+ * @row_data: the row
+ * @k: row index
+ * @offset: position of column @k in @row_data
+ * @coeff: factor of the row
+ *
+ * Adds @coeff times row $k$ of ncm_spectral_get_s3_d2_matrix() to @row_data. Its nonzero
+ * entries are
+ *
+ * - column $k - 1$, for $k \ge 3$: $(k - 1)(k - 2)/(4(k + 1))$;
+ * - column $k + 1$: $3((k + 1)(k + 2) - 4)/(4(k + 3))$, plus $1/2$ when $k = 0$;
+ * - column $k + 3$: $3((k + 2)(k + 3) - 4)/(4(k + 1))$;
+ * - column $k + 5$: $(k + 5)(k + 6)/(4(k + 3))$.
+ */
+
+ /**
+ * ncm_spectral_compute_s4_d2_row:
+ * @row_data: the row
+ * @k: row index
+ * @offset: position of column @k in @row_data
+ * @coeff: factor of the row
+ *
+ * Adds @coeff times row $k$ of ncm_spectral_get_s4_d2_matrix() to @row_data. Its nonzero
+ * entries are
+ *
+ * - column $k - 2$, for $k \ge 2$: $(k - 2)(k - 3)/(8(k + 1))$;
+ * - column $k$: $k((k - 1)^2 - 6)/(2(k + 1)(k + 3))$, plus $1/8$ when $k = 1$;
+ * - column $k + 2$: $3(k + 2)((k + 2)^2 - 5)/(4(k + 1)(k + 3))$, plus $3/4$ when $k = 0$;
+ * - column $k + 4$: $(k + 4)((k + 3)^2 - 6)/(2(k + 1)(k + 3))$.
+ * - column $k + 6$: $(k + 6)(k + 7)/(8(k + 3))$.
  */
 
