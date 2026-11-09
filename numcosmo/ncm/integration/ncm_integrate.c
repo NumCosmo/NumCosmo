@@ -291,15 +291,7 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
   gint nregions, neval, fail;
   gdouble prob;
 
-#ifdef HAVE_LIBCUBA_3_1
-  Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
-#elif defined (HAVE_LIBCUBA_3_3)
-  Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
-#elif defined (HAVE_LIBCUBA_4_0)
   Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
-#else
-  Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
-#endif /* HAVE_LIBCUBA_3_1 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_2dim: number of evaluations %d >= maximum number of evaluations %d (nregions %d, fail %d, result % 22.15g, error % 22.15g).\n",
@@ -353,7 +345,7 @@ _integrand_3dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
  * @error: (out): the error estimate
  *
  * Integrates over [@xi, @xf] by [@yi, @yf] with the Divonne algorithm of Cuba, at most
- * $10^7$ evaluations; aborts when Cuba is older than 4.0.
+ * $10^7$ evaluations.
  *
  * Returns: whether Cuba reached the tolerance.
  */
@@ -388,7 +380,6 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
     xgiven_u[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
   }
 
-#ifdef HAVE_LIBCUBA_4_0
   Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
            maxchisq, mindeviation, ngiven, ldxgiven, xgiven_u, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
            result, error, &prob);
@@ -404,14 +395,6 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
   ret = (fail == 0);
 
   return ret;
-
-#else
-  g_free (xgiven_u);
-  g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
-
-  return FALSE;
-
-#endif /*HAVE_LIBCUBA_4_0 */
 }
 
 /**
@@ -432,7 +415,7 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
  * @error: (out): the error estimate
  *
  * Integrates over the box [@xi, @xf] by [@yi, @yf] by [@zi, @zf] with the Divonne
- * algorithm of Cuba, with no evaluation limit; aborts when Cuba is older than 4.0.
+ * algorithm of Cuba, with no evaluation limit.
  *
  * Returns: whether Cuba reached the tolerance.
  */
@@ -469,15 +452,10 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
     xgiven_u[i * ldxgiven + 2] = (xgiven[i * ldxgiven + 2] - zi) / (zf - zi);
   }
 
-#ifdef HAVE_LIBCUBA_4_0
   Divonne (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border,
            maxchisq, mindeviation, ngiven, ldxgiven, xgiven_u, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail,
            result, error, &prob);
   g_free (xgiven_u);
-#else
-  g_free (xgiven_u);
-  g_error ("ncm_integrate_3dim_divonne: Needs libcuba > 4.0.");
-#endif /*HAVE_LIBCUBA_4_0 */
 
   if (neval >= maxeval)
     g_warning ("ncm_integrate_3dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);

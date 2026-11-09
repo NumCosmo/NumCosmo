@@ -2,8 +2,11 @@
  * Programmer(s): Cody J. Balos @ LLNL
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -18,6 +21,7 @@
 #define _SUNDIALS_LOGGER_IMPL_H
 
 #include <stdarg.h>
+#include <sundials/priv/sundials_logger_macros.h>
 #include <sundials/sundials_logger.h>
 #include <sundials/sundials_types.h>
 
@@ -149,38 +153,15 @@ struct SUNLogger_
   /* Hashmap used to store filename, FILE* pairs */
   SUNHashMap filenames;
 
-  /* Slic-style format string */
-  const char* format;
-
   /* Content for custom implementations */
   void* content;
 
+  /* Python binding function table (managed by sundials4py) */
+  void* python;
+
   /* Overridable operations */
-  SUNErrCode (*queuemsg)(SUNLogger logger, SUNLogLevel lvl, const char* scope,
-                         const char* label, const char* msg_txt, va_list args);
-  SUNErrCode (*flush)(SUNLogger logger, SUNLogLevel lvl);
-  SUNErrCode (*destroy)(SUNLogger* logger);
+  SUNLoggerQueueMsgFn queue_msg;
+  SUNLoggerFlushMsgFn flush_msg;
 };
-
-/*
-  This function creates a log message string in the correct format.
-  It allocates the log_msg parameter, which must be freed by the caller.
-  The format of the log message is:
-
-    [ERROR][rank <rank>][<scope>][<label>] <formatted txt>
-
-  :param lvl: the logging level (ERROR, WARNING, INFO, DEBUG)
-  :param rank: the MPI rank of the caller
-  :param scope: the scope part of the log message (see above)
-  :param label: the label part of the log message (see above)
-  :param txt: descriptive text for the log message in the form of a format string
-  :param args: format string substitutions
-  :param log_msg: on output this is an allocated string containing the log message
-
-  :return: void
-*/
-void sunCreateLogMessage(SUNLogLevel lvl, int rank, const char* scope,
-                         const char* label, const char* txt, va_list args,
-                         char** log_msg);
 
 #endif /* _SUNDIALS_LOGGER_IMPL_H */

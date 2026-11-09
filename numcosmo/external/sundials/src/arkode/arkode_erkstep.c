@@ -1,9 +1,12 @@
 /*---------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds @ SMU
+ * Programmer(s): Daniel R. Reynolds @ UMBC
  *---------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -90,23 +93,26 @@ void* ERKStepCreate(ARKRhsFn f, sunrealtype t0, N_Vector y0, SUNContext sunctx)
   memset(step_mem, 0, sizeof(struct ARKodeERKStepMemRec));
 
   /* Attach step_mem structure and function pointers to ark_mem */
-  ark_mem->step_init                = erkStep_Init;
-  ark_mem->step_fullrhs             = erkStep_FullRHS;
-  ark_mem->step                     = erkStep_TakeStep;
-  ark_mem->step_printallstats       = erkStep_PrintAllStats;
-  ark_mem->step_writeparameters     = erkStep_WriteParameters;
-  ark_mem->step_resize              = erkStep_Resize;
-  ark_mem->step_free                = erkStep_Free;
-  ark_mem->step_printmem            = erkStep_PrintMem;
-  ark_mem->step_setdefaults         = erkStep_SetDefaults;
-  ark_mem->step_setrelaxfn          = erkStep_SetRelaxFn;
-  ark_mem->step_setorder            = erkStep_SetOrder;
-  ark_mem->step_getnumrhsevals      = erkStep_GetNumRhsEvals;
-  ark_mem->step_getestlocalerrors   = erkStep_GetEstLocalErrors;
-  ark_mem->step_setforcing          = erkStep_SetInnerForcing;
-  ark_mem->step_supports_adaptive   = SUNTRUE;
-  ark_mem->step_supports_relaxation = SUNTRUE;
-  ark_mem->step_mem                 = (void*)step_mem;
+  ark_mem->step_init                  = erkStep_Init;
+  ark_mem->step_fullrhs               = erkStep_FullRHS;
+  ark_mem->step                       = erkStep_TakeStep;
+  ark_mem->step_printallstats         = erkStep_PrintAllStats;
+  ark_mem->step_writeparameters       = erkStep_WriteParameters;
+  ark_mem->step_setusecompensatedsums = NULL;
+  ark_mem->step_resize                = erkStep_Resize;
+  ark_mem->step_free                  = erkStep_Free;
+  ark_mem->step_printmem              = erkStep_PrintMem;
+  ark_mem->step_setoptions            = erkStep_SetOptions;
+  ark_mem->step_setdefaults           = erkStep_SetDefaults;
+  ark_mem->step_setrelaxfn            = erkStep_SetRelaxFn;
+  ark_mem->step_setorder              = erkStep_SetOrder;
+  ark_mem->step_getnumrhsevals        = erkStep_GetNumRhsEvals;
+  ark_mem->step_getestlocalerrors     = erkStep_GetEstLocalErrors;
+  ark_mem->step_setforcing            = erkStep_SetInnerForcing;
+  ark_mem->step_getstageindex         = erkStep_GetStageIndex;
+  ark_mem->step_supports_adaptive     = SUNTRUE;
+  ark_mem->step_supports_relaxation   = SUNTRUE;
+  ark_mem->step_mem                   = (void*)step_mem;
 
   /* Set default values for optional inputs */
   retval = erkStep_SetDefaults((void*)ark_mem);
@@ -248,14 +254,17 @@ int erkStep_Resize(ARKodeMem ark_mem, N_Vector y0,
   ark_mem->liw1 = liw1;
 
   /* Resize the RHS vectors */
-  for (i = 0; i < step_mem->stages; i++)
+  if (step_mem->F)
   {
-    if (!arkResizeVec(ark_mem, resize, resize_data, lrw_diff, liw_diff, y0,
-                      &step_mem->F[i]))
+    for (i = 0; i < step_mem->stages; i++)
     {
-      arkProcessError(ark_mem, ARK_MEM_FAIL, __LINE__, __func__, __FILE__,
-                      "Unable to resize vector");
-      return (ARK_MEM_FAIL);
+      if (!arkResizeVec(ark_mem, resize, resize_data, lrw_diff, liw_diff, y0,
+                        &step_mem->F[i]))
+      {
+        arkProcessError(ark_mem, ARK_MEM_FAIL, __LINE__, __func__, __FILE__,
+                        "Unable to resize vector");
+        return (ARK_MEM_FAIL);
+      }
     }
   }
 
@@ -267,7 +276,6 @@ int erkStep_Resize(ARKodeMem ark_mem, N_Vector y0,
   ---------------------------------------------------------------*/
 void erkStep_Free(ARKodeMem ark_mem)
 {
-  int j;
   sunindextype Bliw, Blrw;
   ARKodeERKStepMem step_mem;
 
@@ -290,15 +298,11 @@ void erkStep_Free(ARKodeMem ark_mem)
     }
 
     /* free the RHS vectors */
-    if (step_mem->F != NULL)
+    if (step_mem->F)
     {
-      for (j = 0; j < step_mem->stages; j++)
-      {
-        arkFreeVec(ark_mem, &step_mem->F[j]);
-      }
-      free(step_mem->F);
+      arkFreeVecArray(step_mem->stages, &(step_mem->F), ark_mem->lrw1,
+                      &(ark_mem->lrw), ark_mem->liw1, &(ark_mem->liw));
       step_mem->F = NULL;
-      ark_mem->liw -= step_mem->stages;
     }
 
     /* free the reusable arrays for fused vector interface */
@@ -359,6 +363,7 @@ void erkStep_PrintMem(ARKodeMem ark_mem, FILE* outfile)
   /* output integer quantities */
   fprintf(outfile, "ERKStep: q = %i\n", step_mem->q);
   fprintf(outfile, "ERKStep: p = %i\n", step_mem->p);
+  fprintf(outfile, "ERKStep: istage = %i\n", step_mem->istage);
   fprintf(outfile, "ERKStep: stages = %i\n", step_mem->stages);
 
   /* output long integer quantities */
@@ -387,18 +392,17 @@ void erkStep_PrintMem(ARKodeMem ark_mem, FILE* outfile)
 
   With initialization types FIRST_INIT this routine:
   - sets/checks the ARK Butcher tables to be used
-  - allocates any memory that depends on the number of ARK
+  - allocates any memory that depends on the number of
     stages, method order, or solver options
   - sets the call_fullrhs flag
 
   With other initialization types, this routine does nothing.
   ---------------------------------------------------------------*/
-int erkStep_Init(ARKodeMem ark_mem, SUNDIALS_MAYBE_UNUSED sunrealtype tout,
-                 int init_type)
+int erkStep_Init(ARKodeMem ark_mem, int init_type)
 {
   ARKodeERKStepMem step_mem;
   sunbooleantype reset_efun;
-  int retval, j;
+  int retval;
 
   /* access ARKodeERKStepMem structure */
   retval = erkStep_AccessStepMem(ark_mem, __func__, &step_mem);
@@ -456,20 +460,14 @@ int erkStep_Init(ARKodeMem ark_mem, SUNDIALS_MAYBE_UNUSED sunrealtype tout,
     return (ARK_ILL_INPUT);
   }
 
-  /* Allocate ARK RHS vector memory, update storage requirements */
+  /* Allocate RHS vector memory, update storage requirements */
   /*   Allocate F[0] ... F[stages-1] if needed */
-  if (step_mem->F == NULL)
+  if (!arkAllocVecArray(step_mem->stages, ark_mem->ewt, &(step_mem->F),
+                        ark_mem->lrw1, &(ark_mem->lrw), ark_mem->liw1,
+                        &(ark_mem->liw)))
   {
-    step_mem->F = (N_Vector*)calloc(step_mem->stages, sizeof(N_Vector));
+    return (ARK_MEM_FAIL);
   }
-  for (j = 0; j < step_mem->stages; j++)
-  {
-    if (!arkAllocVec(ark_mem, ark_mem->ewt, &(step_mem->F[j])))
-    {
-      return (ARK_MEM_FAIL);
-    }
-  }
-  ark_mem->liw += step_mem->stages; /* pointers */
 
   /* Allocate reusable arrays for fused vector interface */
   step_mem->nfusedopvecs = 2 * step_mem->stages + 2 + step_mem->nforcing;
@@ -488,24 +486,19 @@ int erkStep_Init(ARKodeMem ark_mem, SUNDIALS_MAYBE_UNUSED sunrealtype tout,
   }
 
   /* Allocate workspace for MRI forcing -- need to allocate here as the
-     number of stages may not bet set before this point and we assume
-     SetInnerForcing has been called before the first step i.e., methods
-     start with a fast integration */
-  if (step_mem->nforcing > 0)
+     number of stages may not be set before this point */
+  if (!(step_mem->stage_times))
   {
-    if (!(step_mem->stage_times))
-    {
-      step_mem->stage_times = (sunrealtype*)calloc(step_mem->stages,
-                                                   sizeof(sunrealtype));
-      ark_mem->lrw += step_mem->stages;
-    }
+    step_mem->stage_times = (sunrealtype*)calloc(step_mem->stages,
+                                                 sizeof(sunrealtype));
+    ark_mem->lrw += step_mem->stages;
+  }
 
-    if (!(step_mem->stage_coefs))
-    {
-      step_mem->stage_coefs = (sunrealtype*)calloc(step_mem->stages,
-                                                   sizeof(sunrealtype));
-      ark_mem->lrw += step_mem->stages;
-    }
+  if (!(step_mem->stage_coefs))
+  {
+    step_mem->stage_coefs = (sunrealtype*)calloc(step_mem->stages,
+                                                 sizeof(sunrealtype));
+    ark_mem->lrw += step_mem->stages;
   }
 
   /* Override the interpolant degree (if needed), used in arkInitialSetup */
@@ -609,6 +602,14 @@ int erkStep_FullRHS(ARKodeMem ark_mem, sunrealtype t, N_Vector y, N_Vector f,
     /* compute the RHS if needed */
     if (!(ark_mem->fn_is_current))
     {
+      /* call the user-supplied pre-RHS function (if supplied) */
+      if (ark_mem->PreRhsFn)
+      {
+        retval = ark_mem->PreRhsFn(t, y, ark_mem->user_data);
+        if (retval != 0) { return (ARK_PRERHSFN_FAIL); }
+      }
+
+      /* call f */
       retval = step_mem->f(t, y, step_mem->F[0], ark_mem->user_data);
       step_mem->nfe++;
       if (retval != 0)
@@ -647,6 +648,13 @@ int erkStep_FullRHS(ARKodeMem ark_mem, sunrealtype t, N_Vector y, N_Vector f,
       /* base RHS call on recomputeRHS argument */
       if (recomputeRHS)
       {
+        /* call the user-supplied pre-RHS function (if supplied) */
+        if (ark_mem->PreRhsFn)
+        {
+          retval = ark_mem->PreRhsFn(t, y, ark_mem->user_data);
+          if (retval != 0) { return (ARK_PRERHSFN_FAIL); }
+        }
+
         /* call f */
         retval = step_mem->f(t, y, step_mem->F[0], ark_mem->user_data);
         step_mem->nfe++;
@@ -676,6 +684,13 @@ int erkStep_FullRHS(ARKodeMem ark_mem, sunrealtype t, N_Vector y, N_Vector f,
     break;
 
   case ARK_FULLRHS_OTHER:
+
+    /* call the user-supplied pre-RHS function (if supplied) */
+    if (ark_mem->PreRhsFn)
+    {
+      retval = ark_mem->PreRhsFn(t, y, ark_mem->user_data);
+      if (retval != 0) { return (ARK_PRERHSFN_FAIL); }
+    }
 
     /* call f */
     retval = step_mem->f(t, y, f, ark_mem->user_data);
@@ -742,16 +757,22 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
   retval = erkStep_AccessStepMem(ark_mem, __func__, &step_mem);
   if (retval != ARK_SUCCESS) { return (retval); }
 
+  /* determine if method has fsal property */
+  sunbooleantype fsal = ARKodeButcherTable_IsStifflyAccurate(step_mem->B);
+
   /* local shortcuts for fused vector operations */
   cvals = step_mem->cvals;
   Xvecs = step_mem->Xvecs;
 
-  SUNLogInfo(ARK_LOGGER, "begin-stage", "stage = 0, tcur = " SUN_FORMAT_G,
+  /* initialize the current stage index */
+  step_mem->istage = 0;
+
+  SUNLogInfo(ARK_LOGGER, "begin-stages-list", "stage = 0, tcur = " SUN_FORMAT_G,
              ark_mem->tcur);
   SUNLogExtraDebugVec(ARK_LOGGER, "stage", ark_mem->yn, "z_0(:) =");
 
   /* Call the full RHS if needed. If this is the first step then we may need to
-     evaluate or copy the RHS values from an  earlier evaluation (e.g., to
+     evaluate or copy the RHS values from an earlier evaluation (e.g., to
      compute h0). For subsequent steps treat this RHS evaluation as an
      evaluation at the end of the just completed step to potentially reuse
      (FSAL methods) RHS evaluations from the end of the last step. */
@@ -763,7 +784,7 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
                                    ark_mem->fn, mode);
     if (retval)
     {
-      SUNLogInfo(ARK_LOGGER, "end-stage",
+      SUNLogInfo(ARK_LOGGER, "end-stages-list",
                  "status = failed rhs eval, retval = %i", retval);
       return ARK_RHSFUNC_FAIL;
     }
@@ -778,7 +799,7 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
     SUNErrCode errcode =
       SUNAdjointCheckpointScheme_NeedsSaving(ark_mem->checkpoint_scheme,
                                              ark_mem->checkpoint_step_idx, 0,
-                                             ark_mem->tcur, &do_save);
+                                             ark_mem->tn, &do_save);
     if (errcode)
     {
       arkProcessError(ark_mem, ARK_ADJ_CHECKPOINT_FAIL, __LINE__, __func__,
@@ -793,7 +814,7 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
       errcode =
         SUNAdjointCheckpointScheme_InsertVector(ark_mem->checkpoint_scheme,
                                                 ark_mem->checkpoint_step_idx, 0,
-                                                ark_mem->tcur, ark_mem->ycur);
+                                                ark_mem->tn, ark_mem->yn);
 
       if (errcode)
       {
@@ -806,17 +827,18 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
     }
   }
 
-  SUNLogInfo(ARK_LOGGER, "end-stage", "status = success");
+  SUNLogInfo(ARK_LOGGER, "end-stages-list", "status = success");
 
   /* Loop over internal stages to the step; since the method is explicit
      the first stage RHS is just the full RHS from the start of the step */
   for (is = 1; is < step_mem->stages; is++)
   {
-    /* Set current stage time(s) */
-    ark_mem->tcur = ark_mem->tn + step_mem->B->c[is] * ark_mem->h;
+    /* Set current stage time and index */
+    ark_mem->tcur    = ark_mem->tn + step_mem->B->c[is] * ark_mem->h;
+    step_mem->istage = is;
 
-    SUNLogInfo(ARK_LOGGER, "begin-stage", "stage = %i, tcur = " SUN_FORMAT_G,
-               is, ark_mem->tcur);
+    SUNLogInfo(ARK_LOGGER, "begin-stages-list",
+               "stage = %i, tcur = " SUN_FORMAT_G, is, ark_mem->tcur);
 
     /* Set ycur to current stage solution */
     nvec = 0;
@@ -846,21 +868,47 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
     retval = N_VLinearCombination(nvec, cvals, Xvecs, ark_mem->ycur);
     if (retval != 0)
     {
-      SUNLogInfo(ARK_LOGGER, "end-stage",
+      SUNLogInfo(ARK_LOGGER, "end-stages-list",
                  "status = failed vector op, retval = %i", retval);
       return (ARK_VECTOROP_ERR);
     }
 
-    /* apply user-supplied stage postprocessing function (if supplied) */
-    if (ark_mem->ProcessStage != NULL)
+    /* apply user-supplied stage postprocessing function (if supplied) unless
+       this is the last stage of a FSAL method, then apply the user-supplied
+       step postprocessing function (if supplied) */
+    if (is == step_mem->stages - 1 && fsal && ark_mem->PostProcessStepFn)
     {
-      retval = ark_mem->ProcessStage(ark_mem->tcur, ark_mem->ycur,
-                                     ark_mem->user_data);
+      retval = ark_mem->PostProcessStepFn(ark_mem->tcur, ark_mem->ycur,
+                                          ark_mem->user_data);
       if (retval != 0)
       {
-        SUNLogInfo(ARK_LOGGER, "end-stage",
+        SUNLogInfo(ARK_LOGGER, "end-stages-list",
+                   "status = failed postprocess step, retval = %i", retval);
+        return (ARK_POSTPROCESS_STEP_FAIL);
+      }
+    }
+    else if (ark_mem->PostProcessStageFn)
+    {
+      retval = ark_mem->PostProcessStageFn(ark_mem->tcur, ark_mem->ycur,
+                                           ark_mem->user_data);
+      if (retval != 0)
+      {
+        SUNLogInfo(ARK_LOGGER, "end-stages-list",
                    "status = failed postprocess stage, retval = %i", retval);
         return (ARK_POSTPROCESS_STAGE_FAIL);
+      }
+    }
+
+    /* call the user-supplied pre-RHS function (if supplied) */
+    if (ark_mem->PreRhsFn)
+    {
+      retval = ark_mem->PreRhsFn(ark_mem->tcur, ark_mem->ycur,
+                                 ark_mem->user_data);
+      if (retval != 0)
+      {
+        SUNLogInfo(ARK_LOGGER, "end-stages-list",
+                   "status = failed preprocess RHS, retval = %i", retval);
+        return (ARK_PRERHSFN_FAIL);
       }
     }
 
@@ -871,7 +919,7 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
 
     SUNLogExtraDebugVec(ARK_LOGGER, "stage RHS", step_mem->F[is],
                         "F_%i(:) =", is);
-    SUNLogInfoIf(retval != 0, ARK_LOGGER, "end-stage",
+    SUNLogInfoIf(retval != 0, ARK_LOGGER, "end-stages-list",
                  "status = failed rhs eval, retval = %i", retval);
 
     if (retval < 0) { return (ARK_RHSFUNC_FAIL); }
@@ -913,13 +961,15 @@ int erkStep_TakeStep(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr)
       }
     }
 
-    SUNLogInfo(ARK_LOGGER, "end-stage", "status = success");
+    SUNLogInfo(ARK_LOGGER, "end-stages-list", "status = success");
 
   } /* loop over stages */
 
   SUNLogInfo(ARK_LOGGER, "begin-compute-solution", "");
 
   /* compute time-evolved solution (in ark_ycur), error estimate (in dsm) */
+  ark_mem->tcur = ark_mem->tn + ark_mem->h;
+
   retval = erkStep_ComputeSolutions(ark_mem, dsmPtr);
   if (retval < 0)
   {
@@ -1335,8 +1385,8 @@ int erkStep_CheckButcherTable(ARKodeMem ark_mem)
   /* check that embedding order p > 0 */
   if ((step_mem->p < 1) && (!ark_mem->fixedstep))
   {
-    arkProcessError(ark_mem, ARK_INVALID_TABLE, __LINE__, __func__, __FILE__,
-                    "embedding order < 1!");
+    arkProcessError(ark_mem, ARK_INVALID_TABLE, __LINE__, __func__,
+                    __FILE__, "embedding order < 1, but ARKodeSetFixedStep was not called!");
     return (ARK_INVALID_TABLE);
   }
 
@@ -1346,7 +1396,7 @@ int erkStep_CheckButcherTable(ARKodeMem ark_mem)
     if (step_mem->B->d == NULL)
     {
       arkProcessError(ark_mem, ARK_INVALID_TABLE, __LINE__, __func__, __FILE__,
-                      "no embedding!");
+                      "no embedding, but ARKodeSetFixedStep was not called!");
       return (ARK_INVALID_TABLE);
     }
   }
@@ -1372,8 +1422,8 @@ int erkStep_CheckButcherTable(ARKodeMem ark_mem)
   {
     if (step_mem->q < 2)
     {
-      arkProcessError(ark_mem, ARK_INVALID_TABLE, __LINE__, __func__, __FILE__,
-                      "The Butcher table must be at least second order!");
+      arkProcessError(ark_mem, ARK_INVALID_TABLE, __LINE__, __func__,
+                      __FILE__, "The Butcher table must be at least second order when using relaxation!");
       return ARK_INVALID_TABLE;
     }
 
@@ -1382,7 +1432,7 @@ int erkStep_CheckButcherTable(ARKodeMem ark_mem)
       if (step_mem->B->b[i] < ZERO)
       {
         arkProcessError(ark_mem, ARK_INVALID_TABLE, __LINE__, __func__,
-                        __FILE__, "The Butcher table has a negative b value!");
+                        __FILE__, "The Butcher table has a negative b value but relaxation enabled!");
         return ARK_INVALID_TABLE;
       }
     }
@@ -1434,34 +1484,49 @@ int erkStep_ComputeSolutions(ARKodeMem ark_mem, sunrealtype* dsmPtr)
   /* initialize output */
   *dsmPtr = ZERO;
 
-  /* Compute time step solution */
-  /*   set arrays for fused vector operation */
-  nvec = 0;
-  for (j = 0; j < step_mem->stages; j++)
-  {
-    cvals[nvec] = ark_mem->h * step_mem->B->b[j];
-    Xvecs[nvec] = step_mem->F[j];
-    nvec += 1;
-  }
-  cvals[nvec] = ONE;
-  Xvecs[nvec] = ark_mem->yn;
-  nvec += 1;
+  /* determine if method has fsal property */
+  sunbooleantype fsal = ARKodeButcherTable_IsStifflyAccurate(step_mem->B);
 
-  /* apply external polynomial forcing */
-  if (step_mem->nforcing > 0)
+  /* Compute time step solution. For FSAL methods, ycur already contains the new
+     solution. */
+  if (!fsal)
   {
+    /* set arrays for fused vector operation */
+    nvec = 0;
     for (j = 0; j < step_mem->stages; j++)
     {
-      step_mem->stage_times[j] = ark_mem->tn + step_mem->B->c[j] * ark_mem->h;
-      step_mem->stage_coefs[j] = ark_mem->h * step_mem->B->b[j];
+      cvals[nvec] = ark_mem->h * step_mem->B->b[j];
+      Xvecs[nvec] = step_mem->F[j];
+      nvec += 1;
     }
-    erkStep_ApplyForcing(step_mem, step_mem->stage_times, step_mem->stage_coefs,
-                         step_mem->stages, &nvec);
-  }
+    cvals[nvec] = ONE;
+    Xvecs[nvec] = ark_mem->yn;
+    nvec += 1;
 
-  /*   call fused vector operation to do the work */
-  retval = N_VLinearCombination(nvec, cvals, Xvecs, y);
-  if (retval != 0) { return (ARK_VECTOROP_ERR); }
+    /* apply external polynomial forcing */
+    if (step_mem->nforcing > 0)
+    {
+      for (j = 0; j < step_mem->stages; j++)
+      {
+        step_mem->stage_times[j] = ark_mem->tn + step_mem->B->c[j] * ark_mem->h;
+        step_mem->stage_coefs[j] = ark_mem->h * step_mem->B->b[j];
+      }
+      erkStep_ApplyForcing(step_mem, step_mem->stage_times,
+                           step_mem->stage_coefs, step_mem->stages, &nvec);
+    }
+
+    /* call fused vector operation to do the work */
+    retval = N_VLinearCombination(nvec, cvals, Xvecs, y);
+    if (retval != 0) { return (ARK_VECTOROP_ERR); }
+
+    /* apply user-supplied step postprocessing function (if supplied) */
+    if (ark_mem->PostProcessStepFn)
+    {
+      retval = ark_mem->PostProcessStepFn(ark_mem->tcur, ark_mem->ycur,
+                                          ark_mem->user_data);
+      if (retval != 0) { return (ARK_POSTPROCESS_STEP_FAIL); }
+    }
+  }
 
   /* Compute yerr (if step adaptivity or error accumulation enabled) */
   if (!ark_mem->fixedstep || (ark_mem->AccumErrorType != ARK_ACCUMERROR_NONE))
@@ -1658,7 +1723,7 @@ int erkStepCompatibleWithAdjointSolver(
     return ARK_ILL_INPUT;
   }
 
-  if (ark_mem->constraintsSet)
+  if (ark_mem->constraints)
   {
     arkProcessError(ark_mem, ARK_ILL_INPUT, lineno, fname, filename,
                     "SUNAdjointStepper is not compatible with constraints");

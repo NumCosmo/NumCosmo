@@ -1,10 +1,13 @@
 /* -----------------------------------------------------------------------------
  * Programmer(s): David J. Gardner @ LLNL
- *                Daniel R. Reynolds @ SMU
+ *                Daniel R. Reynolds @ UMBC
  * -----------------------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -18,10 +21,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <sundials/sundials_math.h>
 #include <sundials/sundials_types.h>
 
 #include "arkode_mristep_impl.h"
+
+#include "sundials_cli.h"
+#include "sundials_utils.h"
 
 /*===============================================================
   Exported optional input functions.
@@ -118,7 +125,7 @@ int MRIStepSetPostInnerFn(void* arkode_mem, MRIStepPostInnerFn postfn)
   retval = mriStep_AccessARKODEStepMem(arkode_mem, __func__, &ark_mem, &step_mem);
   if (retval != ARK_SUCCESS) { return (retval); }
 
-  /* Set pre inner evolve function */
+  /* Set post inner evolve function */
   step_mem->post_inner_evolve = postfn;
 
   return (ARK_SUCCESS);
@@ -249,6 +256,46 @@ int MRIStepGetNumInnerStepperFails(void* arkode_mem, long int* inner_fails)
   ===============================================================*/
 
 /*---------------------------------------------------------------
+  mriStep_SetOption:
+
+  Provides command-line control over MRIStep-specific "set" routines.
+  ---------------------------------------------------------------*/
+int mriStep_SetOptions(ARKodeMem ark_mem, int* argidx, char* argv[],
+                       size_t offset, sunbooleantype* arg_used)
+{
+  /* The only MRIStep-specific "Set" routine takes a custom MRIStepCoupling
+     table; however, these may be specified by name, so here we'll support
+     a key to specify the MRIStepCoupling table name,
+     create the table with that name, attach it to MRIStep (who copies its
+     values), and then free the table. */
+  if (strcmp(argv[*argidx] + offset, "coupling_table_name") == 0)
+  {
+    (*argidx)++;
+    MRIStepCoupling Coupling = MRIStepCoupling_LoadTableByName(argv[*argidx]);
+    if (Coupling == NULL)
+    {
+      arkProcessError(ark_mem, ARK_ILL_INPUT, __LINE__, __func__, __FILE__,
+                      "error setting key %s %s (invalid table name)",
+                      argv[(*argidx) - 1], argv[*argidx]);
+      return ARK_ILL_INPUT;
+    }
+    int retval = MRIStepSetCoupling(ark_mem, Coupling);
+    MRIStepCoupling_Free(Coupling);
+    if (retval != ARK_SUCCESS)
+    {
+      arkProcessError(ark_mem, retval, __LINE__, __func__, __FILE__,
+                      "error setting key %s %s (SetCoupling failed)",
+                      argv[(*argidx) - 1], argv[*argidx]);
+      return retval;
+    }
+    *arg_used = SUNTRUE;
+    return ARK_SUCCESS;
+  }
+
+  return ARK_SUCCESS;
+}
+
+/*---------------------------------------------------------------
   mriStep_SetAdaptController:
 
   Specifies a temporal adaptivity controller for MRIStep to use.
@@ -289,11 +336,19 @@ int mriStep_SetUserData(ARKodeMem ark_mem, void* user_data)
   retval = mriStep_AccessStepMem(ark_mem, __func__, &step_mem);
   if (retval != ARK_SUCCESS) { return (retval); }
 
-  /* set user data in ARKODELS mem */
-  if (step_mem->lmem != NULL)
+  /* set user data in ARKLS mem */
+  if (step_mem->lmem)
   {
     retval = arkLSSetUserData(ark_mem, user_data);
     if (retval != ARKLS_SUCCESS) { return (retval); }
+  }
+
+  /* if MRIStep implements an ExtSTS method, pass the
+     user_data pointer to the inner LSRKStep integrator */
+  if (step_mem->extsts_method)
+  {
+    retval = ARKodeSetUserData(step_mem->stepper->content, user_data);
+    if (retval != ARK_SUCCESS) { return (retval); }
   }
 
   return (ARK_SUCCESS);
@@ -330,7 +385,8 @@ int mriStep_SetDefaults(ARKodeMem ark_mem)
   step_mem->dgmax          = DGMAX;  /* max gamma change to recompute J or P */
   step_mem->msbp           = MSBP;   /* max steps between updating J or P */
   step_mem->stages         = 0;      /* no stages */
-  step_mem->istage         = 0;      /* current stage index */
+  step_mem->istage         = 0;      /* implicit solver stage index */
+  step_mem->cur_stage      = 0;      /* current stage index */
   step_mem->jcur           = SUNFALSE;
   step_mem->convfail       = ARK_NO_FAILURES;
   step_mem->stage_predict  = NULL; /* no user-supplied stage predictor */
@@ -777,6 +833,26 @@ int mriStep_GetNonlinSolvStats(ARKodeMem ark_mem, long int* nniters,
 
   *nniters = step_mem->nls_iters;
   *nnfails = step_mem->nls_fails;
+
+  return (ARK_SUCCESS);
+}
+
+/*---------------------------------------------------------------
+  mriStep_GetStageIndex:
+
+  Returns the current stage index and number of stages
+  ---------------------------------------------------------------*/
+int mriStep_GetStageIndex(ARKodeMem ark_mem, int* stage, int* max_stages)
+{
+  ARKodeMRIStepMem step_mem;
+  int retval;
+
+  /* access ARKodeMRIStepMem structure */
+  retval = mriStep_AccessStepMem(ark_mem, __func__, &step_mem);
+  if (retval != ARK_SUCCESS) { return (retval); }
+
+  *stage      = step_mem->cur_stage;
+  *max_stages = step_mem->stages;
 
   return (ARK_SUCCESS);
 }
