@@ -290,18 +290,27 @@ test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
   g_assert_cmpfloat (kmin, >, 0.0);
   g_assert_cmpfloat (kmin, <, kmax);
 
-  /* ncm_powspec_var_tophat_R integrates the table only, while the filter continues it
-   * beyond both ends; at R = 1 / k_max the continuation carries 16% of sigma^2
-   * (Eisenstein-Hu) and at R = 1 / k_min 1% (BBKS), while two decades inside the two agree
-   * to 1e-9. Compare there. */
+  /*
+   * Compares the filter with ncm_powspec_var_tophat_R two decades inside the filter's R
+   * range, within 10 reltol of the peak of sigma^2 at each z (its value at the smallest R
+   * of the grid), the accuracy NcmPowspecFilter:reltol states. The quadrature integrates
+   * the table only, while the filter continues it beyond both ends; at R = 1 / k_max the
+   * continuation carries 16% of sigma^2 (Eisenstein-Hu) and at R = 1 / k_min 1% (BBKS).
+   * The sigma check uses the same bound, through
+   * sigma0^2 - sigma1^2 = (sigma0 - sigma1) (sigma0 + sigma1).
+   */
   {
-    const gdouble r_min = 100.0 * ncm_powspec_filter_get_r_min (psf);
-    const gdouble r_max = ncm_powspec_filter_get_r_max (psf) / 100.0;
+    const gdouble lnr_grid_min = log (ncm_powspec_filter_get_r_min (psf));
+    const gdouble r_min        = 100.0 * ncm_powspec_filter_get_r_min (psf);
+    const gdouble r_max        = ncm_powspec_filter_get_r_max (psf) / 100.0;
+    gdouble max_diff           = 0.0;
     gint i, j;
 
     for (i = 0; i < 10; i++)
     {
-      const gdouble z = zi + (zf - zi) / (100.0 - 1.0) * i;
+      const gdouble z      = zi + (zf - zi) / (100.0 - 1.0) * i;
+      const gdouble peak   = ncm_powspec_filter_eval_var_lnr (psf, z, lnr_grid_min);
+      const gdouble abstol = 10.0 * reltol * peak;
 
       for (j = 0; j < 10; j++)
       {
@@ -314,11 +323,14 @@ test_nc_powspec_filter_tophat (TestNcPowspec *test, gconstpointer pdata)
 
         if (var0 > 1.0e-4)
         {
-          ncm_assert_cmpdouble_e (var0, ==, var1, reltol * 10.0, 0.0);
-          ncm_assert_cmpdouble_e (sigma0, ==, sigma1, reltol * 10.0, 0.0);
+          max_diff = GSL_MAX (max_diff, fabs (var0 - var1) / peak);
+          ncm_assert_cmpdouble_e (var0, ==, var1, 0.0, abstol);
+          ncm_assert_cmpdouble_e (sigma0, ==, sigma1, 0.0, abstol / (sigma0 + sigma1));
         }
       }
     }
+
+    g_test_message ("filter max |var diff| / peak = %e", max_diff);
   }
   ncm_powspec_filter_free (psf);
 }
