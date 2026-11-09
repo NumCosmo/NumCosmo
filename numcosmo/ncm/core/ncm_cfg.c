@@ -653,10 +653,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   g_setenv ("CUBACORESMAX", "0", TRUE);
   g_setenv ("CUBAACCEL", "0", TRUE);
   g_setenv ("CUBAACCELMAX", "0", TRUE);
-#ifdef HAVE_LIBCUBA_4_0
   cubaaccel (0, 0);
   cubacores (0, 0);
-#endif
 
   gsl_err = gsl_set_error_handler_off ();
 
