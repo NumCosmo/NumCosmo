@@ -369,7 +369,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                    g_param_spec_double ("reltol",
                                                         NULL,
                                                         "Relative tolerance for calibration",
-                                                        GSL_DBL_EPSILON, 1.0, 1.0e-3,
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-8,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
