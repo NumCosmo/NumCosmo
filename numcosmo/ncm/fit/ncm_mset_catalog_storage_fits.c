@@ -58,8 +58,7 @@
  * recording. `FIRST_ID` is read, so that `MARKID`, written in the file's numbering, is
  * converted to a row index; new files have `FIRST_ID`
  * 0. A file without `RNG_ALGO` and with an RNG state is read with the default algorithm of
- * ncm_rng_new(). Without CFITSIO every method fails with
- * %NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO.
+ * ncm_rng_new().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -76,9 +75,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <string.h>
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmMSetCatalogStorageFitsSegment
@@ -337,8 +334,6 @@ ncm_mset_catalog_storage_fits_class_init (NcmMSetCatalogStorageFitsClass *klass)
   storage_class->get_sampler      = &_ncm_mset_catalog_storage_fits_get_sampler;
   storage_class->set_sampler      = &_ncm_mset_catalog_storage_fits_set_sampler;
 }
-
-#ifdef HAVE_CFITSIO
 
 #define FPTR(storage_fits) ((fitsfile *) (storage_fits)->fptr)
 
@@ -2067,153 +2062,6 @@ _ncm_mset_catalog_storage_fits_set_sampler (NcmMSetCatalogStorage *storage, guin
   _ncm_mset_catalog_storage_fits_flush (storage_fits, error);
 }
 
-#else /* HAVE_CFITSIO */
-
-static void
-_ncm_mset_catalog_storage_fits_no_cfitsio (GError **error)
-{
-  ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO,
-                              "NumCosmo was built without CFITSIO");
-}
-
-static void
-_ncm_mset_catalog_storage_fits_close (NcmMSetCatalogStorageFits *storage_fits)
-{
-}
-
-static NcmMSetCatalogDesc *
-_ncm_mset_catalog_storage_fits_peek_desc (NcmMSetCatalogStorage *storage, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-
-  return NULL;
-}
-
-static void
-_ncm_mset_catalog_storage_fits_store_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static void
-_ncm_mset_catalog_storage_fits_bind_desc (NcmMSetCatalogStorage *storage, NcmMSetCatalogDesc *desc, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static guint
-_ncm_mset_catalog_storage_fits_nrows (NcmMSetCatalogStorage *storage, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-
-  return 0;
-}
-
-static NcmVector *
-_ncm_mset_catalog_storage_fits_peek_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-
-  return NULL;
-}
-
-static void
-_ncm_mset_catalog_storage_fits_erase (NcmMSetCatalogStorage *storage, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static void
-_ncm_mset_catalog_storage_fits_append (NcmMSetCatalogStorage *storage, NcmVector *row, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static NcmVector *
-_ncm_mset_catalog_storage_fits_get_row (NcmMSetCatalogStorage *storage, guint i, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-
-  return NULL;
-}
-
-static void
-_ncm_mset_catalog_storage_fits_sync (NcmMSetCatalogStorage *storage, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static void
-_ncm_mset_catalog_storage_fits_get_rng_init (NcmMSetCatalogStorage *storage, gchar **algo, gulong *seed, gchar **state, GError **error)
-{
-  if (algo != NULL)
-    *algo = NULL;
-
-  if (seed != NULL)
-    *seed = 0;
-
-  if (state != NULL)
-    *state = NULL;
-
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static void
-_ncm_mset_catalog_storage_fits_set_rng_init (NcmMSetCatalogStorage *storage, const gchar *algo, gulong seed, const gchar *state, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static gchar *
-_ncm_mset_catalog_storage_fits_get_rng_stat (NcmMSetCatalogStorage *storage, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-
-  return NULL;
-}
-
-static void
-_ncm_mset_catalog_storage_fits_set_rng_stat (NcmMSetCatalogStorage *storage, const gchar *state, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static guint
-_ncm_mset_catalog_storage_fits_get_markovian_id (NcmMSetCatalogStorage *storage, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-
-  return 0;
-}
-
-static void
-_ncm_mset_catalog_storage_fits_set_markovian_id (NcmMSetCatalogStorage *storage, guint markovian_id, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static guint
-_ncm_mset_catalog_storage_fits_n_samplers (NcmMSetCatalogStorage *storage, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-
-  return 0;
-}
-
-static void
-_ncm_mset_catalog_storage_fits_get_sampler (NcmMSetCatalogStorage *storage, guint i, guint *start, gchar **sampler, gchar **options, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-static void
-_ncm_mset_catalog_storage_fits_set_sampler (NcmMSetCatalogStorage *storage, guint i, guint start, const gchar *sampler, const gchar *options, GError **error)
-{
-  _ncm_mset_catalog_storage_fits_no_cfitsio (error);
-}
-
-#endif /* HAVE_CFITSIO */
-
 /**
  * ncm_mset_catalog_storage_fits_new:
  * @filename: the FITS file
@@ -2223,8 +2071,7 @@ _ncm_mset_catalog_storage_fits_set_sampler (NcmMSetCatalogStorage *storage, guin
  * Creates a storage on @filename and opens the file. A file that does not exist leaves
  * the storage uninitialized, to be created by ncm_mset_catalog_storage_set_desc();
  * read-only it is an error. Fails with %NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND when
- * the file cannot be read and with %NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO without
- * CFITSIO.
+ * the file cannot be read.
  *
  * Returns: (transfer full) (nullable): a new #NcmMSetCatalogStorageFits, %NULL on error
  */

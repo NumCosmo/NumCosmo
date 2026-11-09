@@ -54,9 +54,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
@@ -1869,8 +1867,6 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
   }
 }
 
-#ifdef HAVE_CFITSIO
-
 /**
  * nc_data_cluster_ncount_catalog_save:
  * @ncount: a #NcDataClusterNCount
@@ -2519,6 +2515,4 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
 
   return;
 }
-
-#endif /* HAVE_CFITSIO */
 

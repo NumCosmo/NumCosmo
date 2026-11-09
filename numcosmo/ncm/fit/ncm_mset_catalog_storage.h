@@ -53,8 +53,6 @@ G_DECLARE_DERIVABLE_TYPE (NcmMSetCatalogStorage, ncm_mset_catalog_storage, NCM, 
  *   beyond the rows
  * @NCM_MSET_CATALOG_STORAGE_ERROR_RNG: an RNG set on a storage that has rows or an RNG
  * @NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY: a write through a read-only storage
- * @NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO: a file storage in a build without
- * CFITSIO
  * @NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND: the backend failed
  *
  * Error codes returned by the #NcmMSetCatalogStorage class.
@@ -70,7 +68,6 @@ typedef enum _NcmMSetCatalogStorageError /*< prefix=NCM_MSET_CATALOG_STORAGE_ERR
   NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID,
   NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
   NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY,
-  NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO,
   NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND,
 } NcmMSetCatalogStorageError;
 

@@ -66,10 +66,6 @@
 #include <glib/gstdio.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_CFITSIO
-#include <fitsio.h>
-#endif /* HAVE_CFITSIO */
-
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit.h>
 #endif /* NUMCOSMO_GIR_SCAN */

@@ -52,9 +52,7 @@
 
 #include <cvode/cvode.h>
 #include <fftw3.h>
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h> /* for nanosleep */
 #else

@@ -154,9 +154,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/stats_rows/basic", test_ncm_stats_rows_basic);
   g_test_add_func ("/ncm/mset_catalog_desc/basic", test_ncm_mset_catalog_desc_basic);
   g_test_add_func ("/ncm/mset_catalog_storage_memory/basic", test_ncm_mset_catalog_storage_memory_basic);
-#ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset_catalog_storage_fits/basic", test_ncm_mset_catalog_storage_fits_basic);
-#endif /* HAVE_CFITSIO */
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
