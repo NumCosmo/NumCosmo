@@ -566,26 +566,11 @@ fftw3_dep = dependency(
 numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
 
 #######################################################################################
-# Checking for cfitsio (optional):
+# Checking for cfitsio:
 #######################################################################################
 message('Checking for cfitsio')
 
-cfitsio_dep = dependency(
-  'cfitsio',
-  version: cfitsio_req,
-  required: false,
-)
-
-if cfitsio_dep.found()
-  numcosmo_conf.set('HAVE_CFITSIO', true)
-endif
-
-#######################################################################################
-# Using internal libcuba:
-#######################################################################################
-
-numcosmo_conf.set('HAVE_LIBCUBA', 1)
-numcosmo_conf.set('HAVE_LIBCUBA_4_0', 1)
+cfitsio_dep = dependency('cfitsio', version: cfitsio_req)
 
 #######################################################################################
 # Using internal sundials:

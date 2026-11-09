@@ -166,11 +166,9 @@ test_ncm_fit_esmcmc_main (gint argc, gchar *argv[], TestNcmFitESMCMCMode mode)
     g_test_add_func ("/ncm/fit/esmcmc/phase/label", &test_ncm_fit_esmcmc_phase_label);
     g_test_add_func ("/ncm/fit/esmcmc/phase/markovian/subprocess", &test_ncm_fit_esmcmc_phase_markovian_subprocess);
     g_test_add_func ("/ncm/fit/esmcmc/phase/exploration/subprocess", &test_ncm_fit_esmcmc_phase_exploration_subprocess);
-#ifdef HAVE_CFITSIO
     g_test_add_func ("/ncm/fit/esmcmc/validate/threaded_read_block", &test_ncm_fit_esmcmc_validate_threaded_read_block);
     g_test_add_func ("/ncm/fit/esmcmc/file/read_block_identical", &test_ncm_fit_esmcmc_file_read_block_identical);
     g_test_add_func ("/ncm/fit/esmcmc/file/resume", &test_ncm_fit_esmcmc_file_resume);
-#endif /* HAVE_CFITSIO */
   }
 
   return g_test_run ();

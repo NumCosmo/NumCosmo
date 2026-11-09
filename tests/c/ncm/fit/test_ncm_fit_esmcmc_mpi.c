@@ -46,7 +46,6 @@ typedef struct _TestNcmFitESMCMC
 static void
 _test_ncm_fit_esmcmc_mpi_set_file (TestNcmFitESMCMC *test, NcmFitESMCMC *esmcmc)
 {
-#ifdef HAVE_CFITSIO
   NcmMSetCatalogStorageFits *storage_fits;
 
   test->tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_fit_esmcmc_mpi_XXXXXX", NULL);
@@ -55,10 +54,6 @@ _test_ncm_fit_esmcmc_mpi_set_file (TestNcmFitESMCMC *test, NcmFitESMCMC *esmcmc)
 
   ncm_fit_esmcmc_set_storage (esmcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
   ncm_mset_catalog_storage_fits_free (storage_fits);
-#else
-  test->tmp_dir  = NULL;
-  test->filename = NULL;
-#endif /* HAVE_CFITSIO */
 }
 
 typedef struct _TestNcmFitEsmcmcFunc

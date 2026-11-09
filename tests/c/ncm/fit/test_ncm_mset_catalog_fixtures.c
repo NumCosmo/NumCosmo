@@ -66,7 +66,6 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
 
-#ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset/catalog/fixtures/esmcmc", &test_ncm_mset_catalog_fixtures_esmcmc);
   g_test_add_func ("/ncm/mset/catalog/fixtures/esmcmc/no_rng", &test_ncm_mset_catalog_fixtures_esmcmc_no_rng);
   g_test_add_func ("/ncm/mset/catalog/fixtures/esmcmc/no_rng_algo", &test_ncm_mset_catalog_fixtures_esmcmc_no_rng_algo);
@@ -79,7 +78,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/fixtures/mcmc", &test_ncm_mset_catalog_fixtures_mcmc);
   g_test_add_func ("/ncm/mset/catalog/fixtures/weighted", &test_ncm_mset_catalog_fixtures_weighted);
   g_test_add_func ("/ncm/mset/catalog/fixtures/functions", &test_ncm_mset_catalog_fixtures_functions);
-#endif /* HAVE_CFITSIO */
 
   g_test_run ();
 }

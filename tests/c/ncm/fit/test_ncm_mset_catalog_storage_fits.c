@@ -35,9 +35,7 @@
 #include "build_cfg.h"
 #include <numcosmo/numcosmo.h>
 
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 
 #define TEST_FITS_ESMCMC_NROWS 18
 #define TEST_FITS_ESMCMC_NWALKERS 6
@@ -85,7 +83,6 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
 
-#ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/esmcmc", &test_ncm_mset_catalog_storage_fits_fixture_esmcmc);
   g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/esmcmc_variants", &test_ncm_mset_catalog_storage_fits_fixture_esmcmc_variants);
   g_test_add_func ("/ncm/mset/catalog/storage/fits/fixture/producers", &test_ncm_mset_catalog_storage_fits_fixture_producers);
@@ -126,7 +123,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_storage_fits_new,
               &test_ncm_mset_catalog_storage_fits_builders,
               &test_ncm_mset_catalog_storage_fits_free);
-#endif /* HAVE_CFITSIO */
 
   g_test_run ();
 }
@@ -1180,8 +1176,6 @@ test_ncm_mset_catalog_storage_fits_serialize (TestNcmMSetCatalogStorageFits *tes
   ncm_serialize_free (ser);
 }
 
-#ifdef HAVE_CFITSIO
-
 /*
  * A table whose last column is a single float: the rows are read and written one column
  * at a time instead of as raw bytes. Four rows of integer values are written as doubles,
@@ -1294,8 +1288,6 @@ test_ncm_mset_catalog_storage_fits_float_column (TestNcmMSetCatalogStorageFits *
     ncm_mset_catalog_storage_fits_free (storage_fits);
   }
 }
-
-#endif /* HAVE_CFITSIO */
 
 /* The `model-builders' array of HDU0 of filename, or NULL when the key is absent. */
 static NcmObjArray *

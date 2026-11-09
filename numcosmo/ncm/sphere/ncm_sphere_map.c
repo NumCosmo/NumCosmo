@@ -56,9 +56,7 @@
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 
 #include <fftw3.h>
 #endif /* NUMCOSMO_GIR_SCAN */
@@ -1595,7 +1593,6 @@ ncm_sphere_map_add_to_ang (NcmSphereMap *smap, const gdouble theta, const gdoubl
 void
 ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name)
 {
-#ifdef HAVE_CFITSIO
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   gchar comment[FLEN_COMMENT];
   gchar ordering[FLEN_VALUE];
@@ -1700,10 +1697,6 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
 
   fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
-#else
-  g_error ("ncm_sphere_map_load_fits: CFITSIO not available.");
-
-#endif
 }
 
 /**
@@ -1723,7 +1716,6 @@ ncm_sphere_map_load_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
 void
 ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gchar *signal_name, gboolean overwrite)
 {
-#ifdef HAVE_CFITSIO
   NcmSphereMapPrivate * const self = ncm_sphere_map_get_instance_private (smap);
   const gchar *sname               = signal_name != NULL ?  signal_name : NCM_SPHERE_MAP_DEFAULT_SIGNAL;
   const gchar *ttype[]             = { sname };
@@ -1807,9 +1799,6 @@ ncm_sphere_map_save_fits (NcmSphereMap *smap, const gchar *fits_file, const gcha
 
   fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
-#else
-  g_error ("ncm_sphere_map_save_fits: CFITSIO not available.");
-#endif
 }
 
 static void
@@ -1835,7 +1824,6 @@ _ncm_sphere_map_radec_to_ang (const gdouble RA, const gdouble DEC, gdouble *thet
 void
 ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_file, const gchar *RA, const gchar *DEC, const gchar *S)
 {
-#ifdef HAVE_CFITSIO
   gchar comment[FLEN_COMMENT];
   gint status, hdutype, anynul;
   glong naxis2;
@@ -1919,10 +1907,6 @@ ncm_sphere_map_load_from_fits_catalog (NcmSphereMap *smap, const gchar *fits_fil
 
   fits_close_file (fptr, &status);
   NCM_FITS_ERROR (status);
-#else
-  g_error ("ncm_sphere_map_load_from_fits_catalog: CFITSIO not available.");
-
-#endif
 }
 
 static void

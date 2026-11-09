@@ -103,7 +103,6 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 
     switch (id)
     {
-#ifdef HAVE_CFITSIO
       case NC_DATA_CLUSTER_ABUNDANCE_FIT:
       {
         gint i = 0;
@@ -127,19 +126,14 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 
         break;
       }
-#endif /* HAVE_CONFIG_H */
       case NC_DATA_CLUSTER_ABUNDANCE_SAMPLING:
       {
         nc_data_cluster_ncount_init_from_sampling (ncount, mset, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), rng);
         nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
 
         if (de_data_cluster->save_cata != NULL)
-#ifdef HAVE_CFITSIO
           nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
 
-#else
-          g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
-#endif /* HAVE_CONFIG_H */
         _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
         g_ptr_array_add (ca_array, NCM_DATA (ncount));
       }
