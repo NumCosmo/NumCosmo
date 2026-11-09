@@ -2,8 +2,11 @@
  * Programmer(s): Cody J. Balos, Aaron Collier and Radu Serban @ LLNL
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -28,7 +31,7 @@
 #endif
 
 #ifndef SUNDIALS_DEPRECATED_MSG
-#  define SUNDIALS_DEPRECATED_MSG(msg) SUNDIALS_DEPRECATED
+#  define SUNDIALS_DEPRECATED_MSG(msg) 
 #endif
 
 #ifndef SUNDIALS_DEPRECATED_EXPORT_MSG
@@ -43,14 +46,12 @@
  * Define SUNDIALS version numbers
  * -----------------------------------------------------------------*/
 
-
-#define SUNDIALS_VERSION "7.3.0"
+#define SUNDIALS_VERSION "7.9.0"
 #define SUNDIALS_VERSION_MAJOR 7
-#define SUNDIALS_VERSION_MINOR 3
+#define SUNDIALS_VERSION_MINOR 9
 #define SUNDIALS_VERSION_PATCH 0
 #define SUNDIALS_VERSION_LABEL ""
 #define SUNDIALS_GIT_VERSION ""
-
 
 /* ------------------------------------------------------------------
  * SUNDIALS build information
@@ -95,13 +96,13 @@
 #define SUNDIALS_HAVE_POSIX_TIMERS
 
 /* BUILD CVODE with fused kernel functionality */
-/* #undef SUNDIALS_BUILD_PACKAGE_FUSED_KERNELS */
+/* #undef SUNDIALS_ENABLE_PACKAGE_FUSED_KERNELS */
 
 /* BUILD SUNDIALS with monitoring functionalities */
-/* #undef SUNDIALS_BUILD_WITH_MONITORING */
+/* #undef SUNDIALS_ENABLE_MONITORING */
 
 /* BUILD SUNDIALS with profiling functionalities */
-/* #define SUNDIALS_BUILD_WITH_PROFILING */
+/* #undef SUNDIALS_ENABLE_PROFILING */
 
 /* Enable error checking within SUNDIALS */
 /* #undef SUNDIALS_ENABLE_ERROR_CHECKS */
@@ -111,12 +112,12 @@
 
 /* Build metadata */
 #define SUN_C_COMPILER "GNU"
-#define SUN_C_COMPILER_VERSION "15.1.1"
-#define SUN_C_COMPILER_FLAGS "-Wmissing-declarations -Wcast-qual -Wno-unknown-warning-option -Wall -Wpedantic -Wextra -Wshadow -Wwrite-strings -Wcast-align -Wdisabled-optimization -Wvla -Walloca -Wduplicated-cond -Wduplicated-branches -Wunused-macros -Wunused-local-typedefs  -Werror"
+#define SUN_C_COMPILER_VERSION "16.2.1"
+#define SUN_C_COMPILER_FLAGS ""
 
 #define SUN_CXX_COMPILER ""
 #define SUN_CXX_COMPILER_VERSION ""
-#define SUN_CXX_COMPILER_FLAGS "-Wmissing-declarations -Wcast-qual -Wno-unknown-warning-option -Wall -Wpedantic -Wextra -Wshadow -Wwrite-strings -Wcast-align -Wdisabled-optimization -Wvla -Walloca -Wduplicated-cond -Wduplicated-branches -Wunused-macros -Wunused-local-typedefs  -Werror"
+#define SUN_CXX_COMPILER_FLAGS ""
 
 #define SUN_FORTRAN_COMPILER ""
 #define SUN_FORTRAN_COMPILER_VERSION ""
@@ -124,8 +125,8 @@
 
 #define SUN_BUILD_TYPE "Release"
 
-#define SUN_JOB_ID "20250513172327"
-#define SUN_JOB_START_TIME "20250513172327"
+#define SUN_JOB_ID "20261109175719"
+#define SUN_JOB_START_TIME "20261109175719"
 
 #define SUN_TPL_LIST "OPENMP;BLAS_LAPACK;PTHREAD"
 #define SUN_TPL_LIST_SIZE ""
@@ -189,7 +190,7 @@
 
 /* OpenMP */
 #define SUNDIALS_OPENMP_ENABLED
-#define SUN_OPENMP_VERSION ""
+#define SUN_OPENMP_VERSION "5.2"
 
 /* PETSC */
 /* #undef SUNDIALS_PETSC_ENABLED */
@@ -273,6 +274,9 @@
 /* SYCL options */
 /* #undef SUNDIALS_SYCL_2020_UNSUPPORTED */
 
+/* Python options */
+/* #undef SUNDIALS_ENABLE_PYTHON */
+
 
 /* ------------------------------------------------------------------
  * SUNDIALS modules enabled
@@ -299,5 +303,27 @@
 #define SUNDIALS_SUNNONLINSOL_NEWTON 1
 #define SUNDIALS_SUNNONLINSOL_FIXEDPOINT 1
 
+
+/* ------------------------------------------------------------------
+ * SUNDIALS deprecated macros
+ * -----------------------------------------------------------------*/
+
+/* DEPRECATION NOTICE: SUNDIALS_BUILD_PACKAGE_FUSED_KERNELS will be removed in
+ * the next major release. Use SUNDIALS_ENABLE_PACKAGE_FUSED_KERNELS instead. */
+#ifdef SUNDIALS_ENABLE_PACKAGE_FUSED_KERNELS
+#define SUNDIALS_BUILD_PACKAGE_FUSED_KERNELS
+#endif
+
+/* DEPRECATION NOTICE: SUNDIALS_BUILD_WITH_MONITORING will be removed in the
+ * next major release. Use SUNDIALS_ENABLE_MONITORING instead. */
+#ifdef SUNDIALS_ENABLE_MONITORING
+#define SUNDIALS_BUILD_WITH_MONITORING
+#endif
+
+/* DEPRECATION NOTICE: SUNDIALS_BUILD_WITH_PROFILING will be removed in the next
+ * major release. Use SUNDIALS_ENABLE_PROFILING instead. */
+#ifdef SUNDIALS_ENABLE_PROFILING
+#define SUNDIALS_BUILD_WITH_PROFILING
+#endif
 
 #endif /* _SUNDIALS_CONFIG_H */

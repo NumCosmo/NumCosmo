@@ -1,9 +1,12 @@
 /* -----------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds @ SMU
+ * Programmer(s): Daniel R. Reynolds @ UMBC
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -23,11 +26,16 @@
 extern "C" {
 #endif
 
-typedef enum
+enum ARKODE_ERKTableID
 {
-  ARKODE_ERK_NONE         = -1, /* ensure enum is signed int */
+  ARKODE_ERK_NONE = -1, /* ensure enum is signed int */
+  /* WARNING:  ARKODE_MIN_ERK_NUM must come after the first entry, ARKODE_HEUN_EULER_2_1_2,
+     because Python enums will only expose the member that is defined first. Due to
+     this and how pybind/nanobind handle the enums, if we defined ARKODE_MIN_ERK_NUM first,
+     then ARKODE_HEUN_EULER_2_1_2 would not be usable from the module scope (the MIN/MAX) entries
+     will still be usable when accessing through the IntEnum object, but not from module scope. */
+  ARKODE_HEUN_EULER_2_1_2 = 0,
   ARKODE_MIN_ERK_NUM      = 0,
-  ARKODE_HEUN_EULER_2_1_2 = ARKODE_MIN_ERK_NUM,
   ARKODE_BOGACKI_SHAMPINE_4_2_3,
   ARKODE_ARK324L2SA_ERK_4_2_3,
   ARKODE_ZONNEVELD_5_3_4,
@@ -42,7 +50,7 @@ typedef enum
   ARKODE_KNOTH_WOLKE_3_3,
   ARKODE_ARK437L2SA_ERK_7_3_4,
   ARKODE_ARK548L2SAb_ERK_8_4_5,
-  ARKODE_ARK2_ERK_3_1_2,
+  ARKODE_GKC21_ERK_3_1_2,
   ARKODE_SOFRONIOU_SPALETTA_5_3_4,
   ARKODE_SHU_OSHER_3_2_3,
   ARKODE_VERNER_9_5_6,
@@ -54,8 +62,24 @@ typedef enum
   ARKODE_EXPLICIT_MIDPOINT_EULER_2_1_2,
   ARKODE_RALSTON_3_1_2,
   ARKODE_TSITOURAS_7_4_5,
-  ARKODE_MAX_ERK_NUM = ARKODE_TSITOURAS_7_4_5
-} ARKODE_ERKTableID;
+  ARKODE_SSP_ERK_3_1_2,
+  ARKODE_SSP_ERK_4_1_2,
+  ARKODE_SSP_ERK_4_2_3,
+  ARKODE_SSP_ERK_10_3_4,
+  ARKODE_SSP_LSPUM_ERK_3_1_2,
+  ARKODE_ARS222_ERK_3_1_2,
+  ARKODE_KUTTA_RK4a_4_4,
+  ARKODE_KUTTA_RK4b_4_4,
+  ARKODE_MAX_ERK_NUM = ARKODE_KUTTA_RK4b_4_4
+};
+
+/* deprecated names */
+static const int ARKODE_ARK2_ERK_3_1_2   = ARKODE_GKC21_ERK_3_1_2;
+static const int ARKODE_ASCHER_ERK_3_1_2 = ARKODE_ARS222_ERK_3_1_2;
+
+#ifndef SWIG
+typedef enum ARKODE_ERKTableID ARKODE_ERKTableID;
+#endif
 
 /* Accessor routine to load built-in ERK table */
 SUNDIALS_EXPORT ARKodeButcherTable

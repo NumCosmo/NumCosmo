@@ -1,7 +1,10 @@
 /* -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -99,8 +102,11 @@ SUNErrCode SUNAdjointStepper_RecomputeFwd(SUNAdjointStepper self,
 
   SUNCheckCall(SUNStepper_SetStopTime(fwd_stepper, tf));
 
+  suncountertype nst_before, nst_after;
+  SUNCheckCall(SUNStepper_GetNumSteps(fwd_stepper, &nst_before));
   SUNCheckCall(SUNStepper_Evolve(fwd_stepper, tf, y0, &fwd_t));
-  self->nrecompute++;
+  SUNCheckCall(SUNStepper_GetNumSteps(fwd_stepper, &nst_after));
+  self->nrecompute += nst_after - nst_before;
 
   SUNCheckCall(SUNAdjointCheckpointScheme_EnableDense(self->checkpoint_scheme, 0));
 
@@ -148,7 +154,7 @@ SUNErrCode SUNAdjointStepper_PrintAllStats(SUNAdjointStepper self,
   suncountertype nst = 0;
   SUNCheckCall(SUNStepper_GetNumSteps(self->adj_sunstepper, &nst));
   sunfprintf_long(outfile, fmt, SUNTRUE, "Num backwards steps", nst);
-  sunfprintf_long(outfile, fmt, SUNFALSE, "Num recompute passes",
+  sunfprintf_long(outfile, fmt, SUNFALSE, "Num recompute steps",
                   self->nrecompute);
 
   return SUN_SUCCESS;
