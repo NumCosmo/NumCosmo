@@ -135,12 +135,10 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/sphere_map/cap_centres", &test_ncm_sphere_map_cap_centres);
 
-#ifdef HAVE_CFITSIO
   g_test_add ("/ncm/sphere_map/fits_roundtrip", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_fits_roundtrip,
               &test_ncm_sphere_map_free);
-#endif /* HAVE_CFITSIO */
 
   g_test_add ("/ncm/sphere_map/invalid/pixel/subprocess", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
@@ -175,7 +173,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_vectors,
               &test_ncm_sphere_map_free);
   g_test_add_func ("/ncm/sphere_map/update_Cl", &test_ncm_sphere_map_update_Cl);
-#ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/sphere_map/healpy/fits", &test_ncm_sphere_map_healpy_fits);
   g_test_add ("/ncm/sphere_map/fits_options", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
@@ -190,7 +187,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_invalid_fits_exists,
               &test_ncm_sphere_map_free);
-#endif /* HAVE_CFITSIO */
   g_test_add ("/ncm/sphere_map/noise", TestNcmSphereMap, NULL,
               &test_ncm_sphere_map_new,
               &test_ncm_sphere_map_noise,

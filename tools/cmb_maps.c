@@ -42,15 +42,15 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_statistics.h>
 #include <gsl/gsl_sf_coupling.h>
-#if defined HAVE_CHEALPIX && defined HAVE_CFITSIO
+#ifdef HAVE_CHEALPIX
 #include <fitsio.h>
 #include <chealpix.h>
-#endif /* defined HAVE_CHEALPIX && defined HAVE_CFITSIO */
+#endif /* HAVE_CHEALPIX */
 
 gint
 main (void)
 {
-#if defined HAVE_CHEALPIX && defined HAVE_CFITSIO
+#ifdef HAVE_CHEALPIX
   GTimer *bench          = g_timer_new ();
   NcSphereMapAlm *mapalm = nc_sphere_mapalm_new ();
   NcSphereMap *omap      = nc_sphere_healpix_read_map (argv[1], NULL);
@@ -184,8 +184,8 @@ main (void)
   }
 
 #else
-  g_error ("chealpix or cfitsio not installed.");
-#endif /* defined HAVE_CHEALPIX && defined HAVE_CFITSIO */
+  g_error ("chealpix not installed.");
+#endif /* HAVE_CHEALPIX */
 
   return 0;
 }

@@ -30,9 +30,7 @@
 #include <numcosmo/numcosmo.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 
 #define NTESTS_MIN 5000
 #define NTESTS_MAX 10000
@@ -106,7 +104,6 @@ static GArray *_test_ncm_mset_catalog_read_block_results (NcmMSetCatalog *mcat, 
 static void _test_ncm_mset_catalog_rm_tmp_dir (const gchar *tmp_dir);
 static void _test_ncm_mset_catalog_write_rows (const gchar *filename, const guint nchains, GPtrArray *rows, const gint markovian_id);
 
-#ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
 void test_ncm_mset_catalog_file_sampler_history (void);
 void test_ncm_mset_catalog_file_functions_array (void);
@@ -138,8 +135,6 @@ void test_ncm_mset_catalog_file_markovian_id_backwards_traps (void);
 void test_ncm_mset_catalog_file_markovian_id_backwards_subprocess (void);
 void test_ncm_mset_catalog_file_markovian_id_trim (void);
 void test_ncm_mset_catalog_file_markovian_id_frozen_needs_more (void);
-
-#endif /* HAVE_CFITSIO */
 
 TestNcmMSetCatalogTests fixtures[] =
 {
@@ -223,7 +218,6 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_invalid_run,
               &test_ncm_mset_catalog_free);
 
-#ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset/catalog/file/hdu0_roundtrip", &test_ncm_mset_catalog_file_hdu0_roundtrip);
   g_test_add_func ("/ncm/mset/catalog/file/sampler_history", &test_ncm_mset_catalog_file_sampler_history);
   g_test_add_func ("/ncm/mset/catalog/file/functions_array", &test_ncm_mset_catalog_file_functions_array);
@@ -263,7 +257,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/backwards/subprocess", &test_ncm_mset_catalog_file_markovian_id_backwards_subprocess);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/trim", &test_ncm_mset_catalog_file_markovian_id_trim);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/frozen_needs_more", &test_ncm_mset_catalog_file_markovian_id_frozen_needs_more);
-#endif /* HAVE_CFITSIO */
 
   g_test_run ();
 }
@@ -515,8 +508,6 @@ _test_ncm_mset_catalog_log_end (FILE *log)
   fclose (log);
 }
 
-#ifdef HAVE_CFITSIO
-
 /*
  * Builds a small free-parameter mset, writes a new-style catalog file for it
  * (mset embedded in HDU0), and returns both. The catalog is not left open.
@@ -707,8 +698,6 @@ _test_ncm_mset_catalog_new_markovian_file (const gchar *filename, const guint nr
 
   return mset;
 }
-
-#endif /* HAVE_CFITSIO */
 
 void
 test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
@@ -1714,8 +1703,6 @@ test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata
   g_assert_not_reached ();
 }
 
-#ifdef HAVE_CFITSIO
-
 void
 test_ncm_mset_catalog_file_hdu0_roundtrip (void)
 {
@@ -2342,8 +2329,6 @@ test_ncm_mset_catalog_file_burnin_chains_subprocess (void)
 
   g_assert_not_reached ();
 }
-
-#endif /* HAVE_CFITSIO */
 
 /*
  * A multi-chain catalog written to a file and read back.
@@ -3055,8 +3040,6 @@ test_ncm_mset_catalog_file_thin_writable_subprocess (void)
   g_assert_not_reached ();
 }
 
-#ifdef HAVE_CFITSIO
-
 /* The id survives the file round trip, the file-level peek sees it, the conversion to
  * iterations is exact, and reading with a burn-in shifts it like every other row id. */
 void
@@ -3260,8 +3243,6 @@ test_ncm_mset_catalog_file_markovian_id_frozen_needs_more (void)
   ncm_mset_clear (&mset);
   ncm_model_mvnd_clear (&model_mvnd);
 }
-
-#endif /* HAVE_CFITSIO */
 
 void
 test_ncm_mset_catalog_tau_frozen_walkers (void)

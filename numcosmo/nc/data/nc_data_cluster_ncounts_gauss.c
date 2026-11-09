@@ -54,9 +54,6 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#ifdef NUMCOSMO_HAVE_CFITSIO
-#include <fitsio.h>
-#endif /* NUMCOSMO_HAVE_CFITSIO */
 #endif /* NUMCOSMO_GIR_SCAN */
 
 enum
