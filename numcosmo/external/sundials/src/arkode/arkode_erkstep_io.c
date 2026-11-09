@@ -1,9 +1,12 @@
 /*---------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds @ SMU
+ * Programmer(s): Daniel R. Reynolds @ UMBC
  *---------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -21,10 +24,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <sundials/sundials_math.h>
 #include <sundials/sundials_types.h>
 
 #include "arkode_erkstep_impl.h"
+
+#include "sundials_cli.h"
+#include "sundials_utils.h"
 
 /*===============================================================
   Exported optional input functions.
@@ -256,6 +263,33 @@ int ERKStepGetTimestepperStats(void* arkode_mem, long int* expsteps,
   ===============================================================*/
 
 /*---------------------------------------------------------------
+  erkStep_SetOption:
+
+  Provides string-based control over ERKStep-specific "set" routines.
+  ---------------------------------------------------------------*/
+int erkStep_SetOptions(ARKodeMem ark_mem, int* argidx, char* argv[],
+                       size_t offset, sunbooleantype* arg_used)
+{
+  /* Set lists of keys, and the corresponding set routines */
+  static const struct sunKeyCharPair char_pairs[] = {
+    {"table_name", ERKStepSetTableName}};
+  static const int num_char_keys = sizeof(char_pairs) / sizeof(*char_pairs);
+
+  /* check all "char" keys */
+  int j, retval;
+  retval = sunCheckAndSetCharArgs((void*)ark_mem, argidx, argv, offset,
+                                  char_pairs, num_char_keys, arg_used, &j);
+  if (retval != ARK_SUCCESS)
+  {
+    arkProcessError(ark_mem, retval, __LINE__, __func__, __FILE__,
+                    "error setting key: %s", char_pairs[j].key);
+    return retval;
+  }
+
+  return (ARK_SUCCESS);
+}
+
+/*---------------------------------------------------------------
   erkStep_SetRelaxFn:
 
   Sets up the relaxation module using ERKStep's utility routines.
@@ -361,6 +395,26 @@ int erkStep_GetEstLocalErrors(ARKodeMem ark_mem, N_Vector ele)
 
   /* otherwise, copy local truncation error vector to output */
   N_VScale(ONE, ark_mem->tempv1, ele);
+  return (ARK_SUCCESS);
+}
+
+/*---------------------------------------------------------------
+  erkStep_GetStageIndex:
+
+  Returns the current stage index and number of stages
+  ---------------------------------------------------------------*/
+int erkStep_GetStageIndex(ARKodeMem ark_mem, int* stage, int* max_stages)
+{
+  ARKodeERKStepMem step_mem;
+  int retval;
+
+  /* access ARKodeARKStepMem structure */
+  retval = erkStep_AccessStepMem(ark_mem, __func__, &step_mem);
+  if (retval != ARK_SUCCESS) { return (retval); }
+
+  *stage      = step_mem->istage;
+  *max_stages = step_mem->stages;
+
   return (ARK_SUCCESS);
 }
 

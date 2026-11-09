@@ -1,9 +1,12 @@
 /* -----------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds @ SMU
+ * Programmer(s): Daniel R. Reynolds @ UMBC
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -23,11 +26,16 @@
 extern "C" {
 #endif
 
-typedef enum
+enum ARKODE_DIRKTableID
 {
-  ARKODE_DIRK_NONE    = -1, /* ensure enum is signed int */
+  ARKODE_DIRK_NONE = -1, /* ensure enum is signed int */
+  /* WARNING:  ARKODE_MIN_ERK_NUM must come after the first entry, ARKODE_SDIRK_2_1_2,
+     because Python enums will only expose the member that is defined first. Due to
+     this and how pybind/nanobind handle the enums, if we defined ARKODE_MIN_DIRK_NUM first,
+     then ARKODE_SDIRK_2_1_2 would not be usable from the module scope (the MIN/MAX) entries
+     will still be usable when accessing through the IntEnum object, but not from module scope. */
+  ARKODE_SDIRK_2_1_2  = 100,
   ARKODE_MIN_DIRK_NUM = 100,
-  ARKODE_SDIRK_2_1_2  = ARKODE_MIN_DIRK_NUM,
   ARKODE_BILLINGTON_3_3_2,
   ARKODE_TRBDF2_3_3_2,
   ARKODE_KVAERNO_4_2_3,
@@ -50,12 +58,24 @@ typedef enum
   ARKODE_ESDIRK437L2SA_7_3_4,
   ARKODE_ESDIRK547L2SA_7_4_5,
   ARKODE_ESDIRK547L2SA2_7_4_5,
-  ARKODE_ARK2_DIRK_3_1_2,
+  ARKODE_GKC21_ESDIRK_3_1_2,
   ARKODE_BACKWARD_EULER_1_1,
   ARKODE_IMPLICIT_MIDPOINT_1_2,
   ARKODE_IMPLICIT_TRAPEZOIDAL_2_2,
-  ARKODE_MAX_DIRK_NUM = ARKODE_IMPLICIT_TRAPEZOIDAL_2_2
-} ARKODE_DIRKTableID;
+  ARKODE_SSP_DIRK_3_1_2,
+  ARKODE_SSP_LSPUM_SDIRK_3_1_2,
+  ARKODE_ESDIRK_4_2_3,
+  ARKODE_ARS222_ESDIRK_3_1_2,
+  ARKODE_MAX_DIRK_NUM = ARKODE_ARS222_ESDIRK_3_1_2
+};
+
+/* deprecated names */
+static const int ARKODE_ARK2_DIRK_3_1_2    = ARKODE_GKC21_ESDIRK_3_1_2;
+static const int ARKODE_ASCHER_SDIRK_3_1_2 = ARKODE_ARS222_ESDIRK_3_1_2;
+
+#ifndef SWIG
+typedef enum ARKODE_DIRKTableID ARKODE_DIRKTableID;
+#endif
 
 /* Accessor routine to load built-in DIRK table */
 SUNDIALS_EXPORT ARKodeButcherTable

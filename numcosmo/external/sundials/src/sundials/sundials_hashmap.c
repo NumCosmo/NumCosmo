@@ -2,8 +2,11 @@
  * Programmer: Cody J. Balos @ LLNL
  * -----------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -463,7 +466,7 @@ SUNErrCode SUNHashMap_Values(SUNHashMap map, void*** values, int64_t value_size)
   if (!map) { return SUN_ERR_ARG_CORRUPT; }
 
   *values = (void**)malloc(SUNHashMap_Capacity(map) * value_size);
-  if (!values) { return SUN_ERR_MALLOC_FAIL; }
+  if (!*values) { return SUN_ERR_MALLOC_FAIL; }
 
   /* Copy the values into a new array */
   for (int64_t i = 0; i < SUNHashMap_Capacity(map); i++)

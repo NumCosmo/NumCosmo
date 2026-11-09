@@ -1,9 +1,12 @@
 /*---------------------------------------------------------------
- * Programmer(s): Daniel R. Reynolds @ SMU
+ * Programmer(s): Daniel R. Reynolds @ UMBC
  *---------------------------------------------------------------
  * SUNDIALS Copyright Start
- * Copyright (c) 2002-2025, Lawrence Livermore National Security
+ * Copyright (c) 2025-2026, Lawrence Livermore National Security,
+ * University of Maryland Baltimore County, and the SUNDIALS contributors.
+ * Copyright (c) 2013-2025, Lawrence Livermore National Security
  * and Southern Methodist University.
+ * Copyright (c) 2002-2013, Lawrence Livermore National Security.
  * All rights reserved.
  *
  * See the top-level LICENSE and NOTICE files for details.
@@ -38,7 +41,7 @@ extern "C" {
 #define CRDOWN SUN_RCONST(0.3)
 /* if |gamma/gammap-1| > DGMAX then call lsetup */
 #define DGMAX SUN_RCONST(0.2)
-/* declare divergence if ratio del/delp > RDIV */
+/* declare divergence if ratio delnrm/delnrm_p > RDIV */
 #define RDIV SUN_RCONST(2.3)
 /* max no. of steps between lsetup calls */
 #define MSBP 20
@@ -106,14 +109,13 @@ typedef struct ARKodeARKStepMemRec
   sunrealtype gamrat;     /* gamma / gammap                           */
   sunrealtype dgmax;      /* call lsetup if |gamma/gammap-1| >= dgmax */
 
-  int predictor;       /* implicit prediction method to use        */
-  sunrealtype crdown;  /* nonlinear conv rate estimation constant  */
-  sunrealtype rdiv;    /* nonlin divergence if del/delp > rdiv     */
-  sunrealtype crate;   /* estimated nonlin convergence rate        */
-  sunrealtype delp;    /* norm of previous nonlinear solver update */
-  sunrealtype eRNrm;   /* estimated residual norm, used in nonlin
-                            and linear solver convergence tests      */
-  sunrealtype nlscoef; /* coefficient in nonlin. convergence test  */
+  int predictor;        /* implicit prediction method to use        */
+  sunrealtype crdown;   /* nonlinear conv rate estimation constant  */
+  sunrealtype rdiv;     /* nonlin divergence if delnrm/delnrm_p > rdiv     */
+  sunrealtype crate;    /* estimated nonlin convergence rate        */
+  sunrealtype delnrm_p; /* norm of previous nonlinear solver update */
+  sunrealtype delnrm;   /* norm of current nonlinear solver update  */
+  sunrealtype nlscoef;  /* coefficient in nonlin. convergence test  */
 
   int msbp;       /* positive => max # steps between lsetup
                             negative => call at each Newton iter     */
@@ -184,7 +186,7 @@ int arkStep_AttachMasssol(ARKodeMem ark_mem, ARKMassInitFn minit,
                           SUNLinearSolver_Type msolve_type, void* mass_mem);
 void arkStep_DisableLSetup(ARKodeMem ark_mem);
 void arkStep_DisableMSetup(ARKodeMem ark_mem);
-int arkStep_Init(ARKodeMem ark_mem, sunrealtype tout, int init_type);
+int arkStep_Init(ARKodeMem ark_mem, int init_type);
 void* arkStep_GetLmem(ARKodeMem ark_mem);
 void* arkStep_GetMassMem(ARKodeMem ark_mem);
 ARKRhsFn arkStep_GetImplicitRHS(ARKodeMem ark_mem);
@@ -195,6 +197,8 @@ int arkStep_FullRHS(ARKodeMem ark_mem, sunrealtype t, N_Vector y, N_Vector f,
 int arkStep_TakeStep_ERK_Adjoint(ARKodeMem ark_mem, sunrealtype* dsmPtr,
                                  int* nflagPtr);
 int arkStep_TakeStep_Z(ARKodeMem ark_mem, sunrealtype* dsmPtr, int* nflagPtr);
+int arkStep_SetOptions(ARKodeMem ark_mem, int* argidx, char* argv[],
+                       size_t offset, sunbooleantype* arg_used);
 int arkStep_SetUserData(ARKodeMem ark_mem, void* user_data);
 int arkStep_SetDefaults(ARKodeMem ark_mem);
 int arkStep_SetOrder(ARKodeMem ark_mem, int ord);
@@ -235,6 +239,7 @@ void arkStep_Free(ARKodeMem ark_mem);
 void arkStep_PrintMem(ARKodeMem ark_mem, FILE* outfile);
 int arkStep_SetInnerForcing(ARKodeMem ark_mem, sunrealtype tshift,
                             sunrealtype tscale, N_Vector* f, int nvecs);
+int arkStep_GetStageIndex(ARKodeMem ark_mem, int* stage, int* max_stages);
 
 /* Internal utility routines */
 int arkStep_AccessARKODEStepMem(void* arkode_mem, const char* fname,
