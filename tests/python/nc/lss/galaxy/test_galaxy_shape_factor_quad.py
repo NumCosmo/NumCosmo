@@ -32,8 +32,6 @@ VarAdd's map-linearization approximation becomes exact).
 """
 
 import math
-import subprocess
-import sys
 
 import pytest
 import numpy as np
@@ -548,32 +546,6 @@ def test_eval_direct_matches_eval_marginal():
     val_direct = gsfq.eval_direct(pop, g_1, g_2, eps_obs_1, eps_obs_2, std_noise)
 
     assert_allclose(val_direct, val_marginal, rtol=1.0e-12)
-
-
-def test_eval_marginal_rejects_eps_obs_at_or_beyond_unit_disc():
-    """Unlike FixedQuad, Quad has no fallback for |eps_obs|>=1
-    (shear_at_origin() requires strictly inside the disc): it fails loudly
-    with a fatal g_error rather than returning a wrong answer, so this is
-    checked in a subprocess (see test_galaxy_shape_factor_cgf.py's
-    test_non_gaussian_population_gate for the same pattern)."""
-    script = (
-        "from numcosmo_py import Nc, Ncm\n"
-        "Ncm.cfg_init()\n"
-        "pop = Nc.GalaxyShapePopGauss.new()\n"
-        "pop['sigma'] = 0.2\n"
-        "data = Nc.GalaxyShapePopData.new(pop)\n"
-        "pop.prepare(data)\n"
-        "gsfq = Nc.GalaxyShapeFactorQuad.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)\n"
-        "gsfq.eval_direct(pop, 0.05, 0.0, 1.2, 0.0, 0.2)\n"
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", script],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode != 0
-    assert "outside this class' valid domain" in result.stderr
 
 
 if __name__ == "__main__":

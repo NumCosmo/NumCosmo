@@ -820,6 +820,21 @@ galaxy_tests = [
         'name': 'nc_galaxy_shape_factor_moments_tilt',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
     },
+    {
+        'name': 'nc_galaxy_shape_factor_quad',
+        'sources': [
+            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad.c',
+            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad_common.c',
+        ],
+    },
+    {
+        'name': 'nc_galaxy_shape_factor_quad_arb',
+        'sources': [
+            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad_arb.c',
+            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad_common.c',
+        ],
+        'suite': ['c-acceptance'],
+    },
 ]
 
 # Cross-correlation tests
