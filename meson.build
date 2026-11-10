@@ -563,8 +563,6 @@ fftw3_dep = dependency(
   version: fftw_req,
 )
 
-numcosmo_conf.set('HAVE_FFTW3', true)
-
 numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
 
 #######################################################################################
