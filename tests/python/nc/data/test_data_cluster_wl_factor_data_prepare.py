@@ -50,7 +50,6 @@ PARALLEL_THREADS = 4
 
 SHAPE_FACTORS = {
     "var-add": lambda: Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV),
-    "cgf": lambda: Nc.GalaxyShapeFactorCGF.new(ELLIP_CONV),
     "laplace": lambda: Nc.GalaxyShapeFactorLaplace.new(ELLIP_CONV),
     "series-lensed": lambda: Nc.GalaxyShapeFactorSeriesLensed.new(ELLIP_CONV, 2),
     "fixed-quad": lambda: Nc.GalaxyShapeFactorFixedQuad.new(ELLIP_CONV),
