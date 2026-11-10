@@ -66,13 +66,11 @@
  * $|\epsilon_\mathrm{obs}|\ge1$, the circle point that maps to
  * $\epsilon_\mathrm{obs}/|\epsilon_\mathrm{obs}|$.
  *
- * When $N_0=N_2(\epsilon_\mathrm{obs}-f_g(0))$ is less than $10^4$ times the
- * integrand's peak value, the integrand is the bracket
- * $N_2(\epsilon_\mathrm{obs}-\chi_L)-N_0$ and $N_0$ is added back after the
- * cubature, using $\int P_\mathrm{pop}=1$ over the whole disc. Near zero the
- * bracket is computed as $N_0\,\mathrm{expm1}(\Delta)$. Above that ratio the
- * error of the subtraction, relative to $P$, would be multiplied by $N_0/P$,
- * and the bracket is not used.
+ * Divonne integrates the scaled integrand itself. Subtracting the noise kernel
+ * at $f_g(0)$ from the scaled integrand made Divonne return wrong results, not
+ * return, or crash at ordinary points. Divonne's convergence flag is not
+ * checked: it is false at points where the result is accurate, and the
+ * class's accuracy is established against the Arb reference instead.
  *
  * A second path is selected by the temporary property
  * #NcGalaxyShapeFactorQuad:use-lp, for the comparison against the
@@ -128,9 +126,6 @@
 #define NC_GALAXY_SHAPE_FACTOR_QUAD_PEAK_NR 24
 #define NC_GALAXY_SHAPE_FACTOR_QUAD_PEAK_NT 48
 
-/* The N0 subtraction is used only when N0 / (peak of the integrand) is below this. */
-#define NC_GALAXY_SHAPE_FACTOR_QUAD_N0_MAX_RATIO 1.0e4
-
 /* Lower bound on r_I in the log-polar integrand: eval_p (r) / (2 pi r) is 0/0 at r = 0. */
 #define NC_GALAXY_SHAPE_FACTOR_QUAD_LP_R_MIN 1.0e-150
 
@@ -178,8 +173,6 @@ typedef struct _QuadIntArg
   complex double h;
   complex double eps_obs;
   gdouble noise_var;
-  gdouble d0;
-  gdouble N0s;
   gdouble s_p;
   gdouble s_N;
 } QuadIntArg;
@@ -204,29 +197,19 @@ _nc_galaxy_shape_factor_quad_point (const QuadIntArg *arg, const gdouble rho, co
 }
 
 /*
- * The integrand scaled to be of order one at its peak: pj e^{-s_p} (e^{-d/2s^2 + s_N} - N0s),
- * where s_p and s_N are the logs of pj and of the noise factor at the peak found before the
- * integral and N0s = e^{-d0/2s^2 + s_N} is the scaled noise kernel at f_g (0) (zero when
- * the subtraction is off). See this file's class doc for the psi-substitution.
+ * The integrand scaled to be of order one at its peak: pj e^{-s_p} e^{-d/2s^2 + s_N}, where s_p
+ * and s_N are the logs of pj and of the noise factor at the peak found before the integral.
+ * See this file's class doc for the psi-substitution.
  */
 static gdouble
 _nc_galaxy_shape_factor_quad_integrand (gdouble rho, gdouble theta, gpointer userdata)
 {
   QuadIntArg * const arg = (QuadIntArg *) userdata;
-  gdouble pj, d_i, bracket, ret;
+  gdouble pj, d_i, ret;
 
   _nc_galaxy_shape_factor_quad_point (arg, rho, theta, &pj, &d_i);
 
-  {
-    const gdouble delta_ratio = (arg->d0 - d_i) / (2.0 * arg->noise_var);
-
-    if ((arg->N0s > 0.0) && (delta_ratio <= NC_GALAXY_SHAPE_FACTOR_QUAD_EXPM1_SAFE_BOUND))
-      bracket = arg->N0s * expm1 (delta_ratio);
-    else
-      bracket = exp (-d_i / (2.0 * arg->noise_var) + arg->s_N) - arg->N0s;
-  }
-
-  ret = pj * exp (-arg->s_p) * bracket;
+  ret = pj * exp (-arg->s_p - d_i / (2.0 * arg->noise_var) + arg->s_N);
 
   /* Cuba can segfault on a non-finite sample, so clamp rather than
    * propagate (a genuine population divergence, e.g. Beta with alpha<1 at
@@ -630,9 +613,7 @@ _nc_galaxy_shape_factor_quad_eval_lp (NcGalaxyShapeFactorQuadPrivate * const sel
  * ln P. At |g| = 1 every point of the open disc maps to g, so P = N_2 (eps_obs - g) exactly.
  * Otherwise the integral is computed relative to the peak of its integrand, located by a
  * coarse search over psi and the hints, so that neither P nor any factor of the integrand
- * leaves the double range. The N0 subtraction is used only when N0 is less than
- * NC_GALAXY_SHAPE_FACTOR_QUAD_N0_MAX_RATIO times the integrand's peak value; above that its
- * error, relative to P, is multiplied by N0 / P.
+ * leaves the double range.
  */
 static gdouble
 _nc_galaxy_shape_factor_quad_eval_ln (NcGalaxyShapeFactorQuad *gsfq, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble std_noise, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
@@ -664,9 +645,7 @@ _nc_galaxy_shape_factor_quad_eval_ln (NcGalaxyShapeFactorQuad *gsfq, NcGalaxySha
   const complex double center = outside ? (1.0 - layer) * eps_obs / eps_abs : eps_obs;
   const complex double h      = self->shear_at_origin (center);
   const complex double chi_L0 = self->apply_shear (g, 0.0);
-  const complex double delta0 = eps_obs - chi_L0;
   const gdouble noise_var     = gsl_pow_2 (std_noise);
-  const gdouble d0            = gsl_pow_2 (creal (delta0)) + gsl_pow_2 (cimag (delta0));
   const gdouble mode_r        = nc_galaxy_shape_pop_get_mode_r (pop, pop_data);
   QuadIntArg arg;
   NcmIntegrand2dim integ = {&arg, &_nc_galaxy_shape_factor_quad_integrand};
@@ -725,8 +704,6 @@ _nc_galaxy_shape_factor_quad_eval_ln (NcGalaxyShapeFactorQuad *gsfq, NcGalaxySha
   arg.h               = h;
   arg.eps_obs         = eps_obs;
   arg.noise_var       = noise_var;
-  arg.d0              = d0;
-  arg.N0s             = 0.0;
   arg.s_p             = 0.0;
   arg.s_N             = 0.0;
 
@@ -756,14 +733,11 @@ _nc_galaxy_shape_factor_quad_eval_ln (NcGalaxyShapeFactorQuad *gsfq, NcGalaxySha
     }
   }
 
-  if (arg.s_N - d0 / (2.0 * noise_var) - arg.s_p < log (NC_GALAXY_SHAPE_FACTOR_QUAD_N0_MAX_RATIO))
-    arg.N0s = exp (arg.s_N - d0 / (2.0 * noise_var));
-
   ncm_integrate_2dim_divonne (&integ, 0.0, -M_PI, 1.0, M_PI,
                               self->reltol, 0.0, ngiven, 2, xgiven, &result, &error);
 
-  /* P = e^{-s_N} / (2 pi s^2) (N0s + e^{s_p} J) */
-  return -arg.s_N - log (2.0 * M_PI * noise_var) + log (arg.N0s + exp (arg.s_p) * result);
+  /* P = e^{s_p - s_N} J / (2 pi s^2) */
+  return arg.s_p - arg.s_N + log (result) - log (2.0 * M_PI * noise_var);
 }
 
 static gdouble
