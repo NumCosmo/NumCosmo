@@ -10058,6 +10058,8 @@ class GalaxyShapeFactorQuad(GalaxyShapeFactor):
     Properties from NcGalaxyShapeFactorQuad:
       reltol -> gdouble: reltol
         Cubature relative tolerance
+      use-lp -> gboolean: use-lp
+        Integrate in log-polar coordinates around the noise peak
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -10069,11 +10071,15 @@ class GalaxyShapeFactorQuad(GalaxyShapeFactor):
 
     class Props:
         reltol: float
+        use_lp: bool
         ellip_conv: GalaxyWLObsEllipConv
 
     props: Props = ...
     def __init__(
-        self, reltol: float = ..., ellip_conv: GalaxyWLObsEllipConv = ...
+        self,
+        reltol: float = ...,
+        use_lp: bool = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
     ) -> None: ...
     @staticmethod
     def clear(gsfq: GalaxyShapeFactorQuad) -> None: ...
