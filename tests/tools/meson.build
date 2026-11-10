@@ -25,7 +25,7 @@ if arb_dep.found()
         '-Wno-array-bounds',
     )
 
-    foreach tool : ['ncm_powspec_analytic_arb', 'nc_xcor_kernel_analytic_arb', 'nc_xcor_kquad_arb']
+    foreach tool : ['ncm_powspec_analytic_arb', 'nc_xcor_kernel_analytic_arb', 'nc_xcor_kquad_arb', 'nc_galaxy_shape_marginal_arb']
         executable(
             tool,
             tool + '.c',
