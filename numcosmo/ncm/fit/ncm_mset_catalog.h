@@ -33,7 +33,10 @@
 #include <numcosmo/ncm/fit/ncm_fit.h>
 #include <numcosmo/ncm/stats/ncm_stats_acorr.h>
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
+#include <numcosmo/ncm/stats/ncm_stats_rows.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_epdf.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_desc.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_storage.h>
 
 G_BEGIN_DECLS
 
@@ -60,24 +63,6 @@ typedef enum _NcmMSetCatalogSync /*< prefix=NCM_MSET_CATALOG_SYNC >*/
 } NcmMSetCatalogSync;
 
 /**
- * NcmMSetCatalogTrimType:
- * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterion.
- * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch's convergence diagnostic.
- * @NCM_MSET_CATALOG_TRIM_TYPE_CK: trim the catalog using the estimate of the time where $-2\ln(L)$ stops evolving.
- * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
- *
- * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
- *
- */
-typedef enum _NcmMSetCatalogTrimType /*< prefix=NCM_MSET_CATALOG_TRIM_TYPE >*/
-{
-  NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
-  NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
-  NCM_MSET_CATALOG_TRIM_TYPE_CK     = 1 << 2,
-  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 3) - 1,
-} NcmMSetCatalogTrimType;
-
-/**
  * NcmMSetCatalogPostNormMethod:
  * @NCM_MSET_CATALOG_POST_LNNORM_METHOD_HYPERBOX: the Gaussian normalized to the box of
  *   the parameter bounds, the error from the spread over slices of the rows
@@ -102,18 +87,15 @@ typedef enum _NcmMSetCatalogPostNormMethod /*< prefix=NCM_MSET_CATALOG_POST_LNNO
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...) G_GNUC_NULL_TERMINATED;
 NcmMSetCatalog *ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols);
 
-NcmMSetCatalog *ncm_mset_catalog_new_from_file (const gchar *filename, glong burnin);
-NcmMSetCatalog *ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin);
-void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains, gint *first_id);
+NcmMSetCatalog *ncm_mset_catalog_new_from_storage (NcmMSetCatalogStorage *storage);
+NcmMSetCatalog *ncm_mset_catalog_new_from_storage_full (NcmMSetCatalogStorage *storage, glong burnin, guint thin);
+NcmMSetCatalogStorage *ncm_mset_catalog_peek_storage (NcmMSetCatalog *mcat);
+void ncm_mset_catalog_peek_info_from_file (const gchar *filename, glong *nrows, guint *nchains);
 gint ncm_mset_catalog_peek_markovian_id_from_file (const gchar *filename);
 NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
 
-void ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename);
-void ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync smode);
-void ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval);
-void ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id);
 void ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str);
 void ncm_mset_catalog_set_sampler (NcmMSetCatalog *mcat, const gchar *sampler);
 void ncm_mset_catalog_set_sampler_options (NcmMSetCatalog *mcat, const gchar *options);
@@ -140,7 +122,6 @@ guint ncm_mset_catalog_nchains (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_nadd_vals (NcmMSetCatalog *mcat);
 gboolean ncm_mset_catalog_weighted (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t);
-gint ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat);
 gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
 
 guint ncm_mset_catalog_ncols (NcmMSetCatalog *mcat);
@@ -152,6 +133,7 @@ gboolean ncm_mset_catalog_col_by_name (NcmMSetCatalog *mcat, const gchar *name, 
 
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
+guint ncm_mset_catalog_get_thin (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_set_markovian_id (NcmMSetCatalog *mcat, gint markovian_id);
 gint ncm_mset_catalog_get_markovian_id (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_get_markovian_burnin (NcmMSetCatalog *mcat);
@@ -182,8 +164,10 @@ NcmObjArray *ncm_mset_catalog_peek_functions_array (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_pstats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_e_mean_stats (NcmMSetCatalog *mcat);
 NcmStatsVec *ncm_mset_catalog_peek_chain_pstats (NcmMSetCatalog *mcat, const guint i);
+NcmStatsRows *ncm_mset_catalog_get_diag_rows (NcmMSetCatalog *mcat);
 GArray *ncm_mset_catalog_peek_accept_ratio_array (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
+NcmVector *ncm_mset_catalog_get_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_current_e_var (NcmMSetCatalog *mcat);
@@ -233,7 +217,6 @@ guint ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntes
 guint ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype);
 guint ncm_mset_catalog_calc_const_break (NcmMSetCatalog *mcat, guint p, NcmFitRunMsgs mtype);
 
-void ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, guint ntests, NcmMSetCatalogTrimType trim_type, NcmFitRunMsgs mtype);
 
 guint ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype);
 guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, gdouble *wp_pvalue, NcmFitRunMsgs mtype);
@@ -264,6 +247,7 @@ guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint n
 #define NCM_MSET_CATALOG_MSET_FORMAT_OBJECT "gvariant"
 #define NCM_MSET_CATALOG_MSET_FORMAT_VARDICT "vardict"
 #define NCM_MSET_CATALOG_HDU0_MSET_KEY "model-set"
+#define NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY "model-builders"
 #define NCM_MSET_CATALOG_HDU0_FUNCTIONS_KEY "functions"
 #define NCM_MSET_CATALOG_DIST_EST_SD_SCALE (1.0e-3)
 

@@ -395,6 +395,32 @@ test_nc_cbe_prec (TestNcCBE *test, gconstpointer pdata)
 
   nc_cbe_precision_assert_default (cbe_prec);
 
+  /* A data file that does not exist is replaced, with a warning, by the default one. */
+  {
+    const gchar *file_props[] = {
+      "sBBN-file", "hyrec-Alpha-inf-file", "hyrec-R-inf-file", "hyrec-two-photon-tables-file"
+    };
+    guint i;
+
+    for (i = 0; i < G_N_ELEMENTS (file_props); i++)
+    {
+      gchar *default_file = NULL;
+      gchar *file         = NULL;
+
+      g_object_get (cbe_prec, file_props[i], &default_file, NULL);
+
+      g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*not found, using default.*");
+      g_object_set (cbe_prec, file_props[i], "/nonexistent/numcosmo/test_nc_cbe.dat", NULL);
+      g_test_assert_expected_messages ();
+
+      g_object_get (cbe_prec, file_props[i], &file, NULL);
+      g_assert_cmpstr (file, ==, default_file);
+
+      g_free (default_file);
+      g_free (file);
+    }
+  }
+
   {
     NcCBE *cbe = nc_cbe_prec_new (cbe_prec);
 

@@ -47,6 +47,9 @@ G_DEFINE_TYPE (TestPriorConst, test_prior_const, NCM_TYPE_PRIOR)
 
 #define TEST_PRIOR_CONST_VALUE (3.25)
 
+/* Dimension of the MVND model and of the vector function TestNcmLikelihood:theta. */
+#define TEST_NCM_LIKELIHOOD_DIM (3)
+
 typedef struct _TestNcmLikelihood
 {
   NcmModel *model;
@@ -64,6 +67,9 @@ static void test_ncm_likelihood_m2lnL (TestNcmLikelihood *test, gconstpointer pd
 static void test_ncm_likelihood_leastsquares (TestNcmLikelihood *test, gconstpointer pdata);
 static void test_ncm_likelihood_leastsquares_m2lnL_prior (TestNcmLikelihood *test, gconstpointer pdata);
 static void test_ncm_likelihood_peek_range (TestNcmLikelihood *test, gconstpointer pdata);
+static void test_ncm_likelihood_vector_prior (TestNcmLikelihood *test, gconstpointer pdata);
+
+static void _test_ncm_likelihood_theta (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f);
 
 gint
 main (gint argc, gchar *argv[])
@@ -74,10 +80,14 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
 
+  ncm_mset_func_list_register ("theta", "\\theta", "TestNcmLikelihood", "The free parameters",
+                               G_TYPE_NONE, _test_ncm_likelihood_theta, 0, TEST_NCM_LIKELIHOOD_DIM);
+
   g_test_add ("/ncm/likelihood/m2lnL", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_m2lnL, &test_ncm_likelihood_free);
   g_test_add ("/ncm/likelihood/leastsquares", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_leastsquares, &test_ncm_likelihood_free);
   g_test_add ("/ncm/likelihood/leastsquares/m2lnL_prior", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_leastsquares_m2lnL_prior, &test_ncm_likelihood_free);
   g_test_add ("/ncm/likelihood/peek_range", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_peek_range, &test_ncm_likelihood_free);
+  g_test_add ("/ncm/likelihood/vector_prior", TestNcmLikelihood, NULL, &test_ncm_likelihood_new, &test_ncm_likelihood_vector_prior, &test_ncm_likelihood_free);
 
   g_test_run ();
 }
@@ -107,7 +117,7 @@ test_ncm_likelihood_new (TestNcmLikelihood *test, gconstpointer pdata)
   NcmDataGaussCovMVND *data_mvnd = NULL;
   guint i;
 
-  test->dim = 3;
+  test->dim = TEST_NCM_LIKELIHOOD_DIM;
   data_mvnd = ncm_data_gauss_cov_mvnd_new_full (test->dim, 1.0e-2, 1.0, 50.0, -1.0, 1.0, rng);
 
   /* Without the normalization the data -2 ln L is the sum of squares of its least-squares f. */
@@ -236,5 +246,78 @@ test_ncm_likelihood_peek_range (TestNcmLikelihood *test, gconstpointer pdata)
   /* The test runs with nonfatal assertions, so the child reports and returns. */
   g_test_trap_subprocess (NULL, 0, 0);
   g_test_trap_assert_stderr ("*assertion failed (i < lh->priors_m2lnL->len)*");
+}
+
+/* The free parameters of the MVND model, as a vector function without variables. */
+static void
+_test_ncm_likelihood_theta (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  guint i;
+
+  for (i = 0; i < TEST_NCM_LIKELIHOOD_DIM; i++)
+    f[i] = ncm_mset_fparam_get (mset, i);
+}
+
+/*
+ * A Gaussian prior on a vector function contributes one residual per component,
+ * f_i = (theta_i - mu) / sigma, one term sum_i f_i^2 and one degree of freedom.
+ */
+static void
+test_ncm_likelihood_vector_prior (TestNcmLikelihood *test, gconstpointer pdata)
+{
+  const gdouble mu    = 0.5;
+  const gdouble sigma = 0.25;
+  NcmMSetFunc *theta  = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmLikelihood:theta", NULL));
+  NcmPrior *prior_v   = NCM_PRIOR (ncm_prior_gauss_func_new (theta, mu, sigma, 0.0));
+  const guint n       = ncm_dataset_get_n (test->dset);
+  const guint d       = TEST_NCM_LIKELIHOOD_DIM;
+  NcmVector *f        = ncm_vector_new (n + 2 + d);
+  const gdouble f_g   = ncm_mset_func_eval0 (NCM_MSET_FUNC (test->prior_g), test->mset);
+  const gdouble f_f   = ncm_mset_func_eval0 (NCM_MSET_FUNC (test->prior_f), test->mset);
+  gdouble sum_v2      = 0.0;
+  gdouble m2lnL_data, m2lnL;
+  NcmVector *v;
+  NcmFit *fit;
+  guint i;
+
+  ncm_mset_param_set_all_ftype (test->mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+  ncm_likelihood_priors_add (test->lh, prior_v);
+
+  g_assert_cmpuint (ncm_mset_func_get_dim (NCM_MSET_FUNC (prior_v)), ==, d);
+  g_assert_cmpuint (ncm_likelihood_priors_length_f (test->lh), ==, 3);
+  g_assert_cmpuint (ncm_likelihood_priors_ls_len (test->lh), ==, 2 + d);
+
+  ncm_likelihood_leastsquares_f (test->lh, test->mset, f);
+  ncm_assert_cmpdouble_e (ncm_vector_get (f, n), ==, f_g, 1.0e-15, 0.0);
+  ncm_assert_cmpdouble_e (ncm_vector_get (f, n + 1), ==, f_f, 1.0e-15, 0.0);
+
+  for (i = 0; i < d; i++)
+  {
+    const gdouble f_i = (ncm_mset_fparam_get (test->mset, i) - mu) / sigma;
+
+    ncm_assert_cmpdouble_e (ncm_vector_get (f, n + 2 + i), ==, f_i, 1.0e-15, 0.0);
+    sum_v2 += f_i * f_i;
+  }
+
+  ncm_dataset_m2lnL_val (test->dset, test->mset, &m2lnL_data);
+  ncm_likelihood_m2lnL_val (test->lh, test->mset, &m2lnL);
+  ncm_assert_cmpdouble_e (m2lnL, ==, m2lnL_data + f_g * f_g + f_f * f_f + sum_v2, 1.0e-14, 0.0);
+
+  /* One term per prior: the vector prior's term is the sum of its squares. */
+  v = ncm_likelihood_peek_m2lnL_v (test->lh);
+  g_assert_cmpuint (ncm_vector_len (v), ==, 4);
+  ncm_assert_cmpdouble_e (ncm_vector_get (v, 3), ==, sum_v2, 1.0e-14, 0.0);
+
+  /* The fit has one residual per component and one degree of freedom per prior. */
+  fit = ncm_fit_factory (NCM_FIT_TYPE_NLOPT, "ln-neldermead", test->lh, test->mset, NCM_FIT_GRAD_NUMDIFF_FORWARD);
+  g_assert_cmpuint (ncm_fit_state_get_data_len (ncm_fit_peek_state (fit)), ==, n + 2 + d);
+  g_assert_cmpint (ncm_fit_state_get_dof (ncm_fit_peek_state (fit)), ==,
+                   (gint) ncm_dataset_get_dof (test->dset) + 3 - (gint) ncm_mset_fparam_len (test->mset));
+
+  ncm_fit_free (fit);
+  ncm_vector_free (f);
+  ncm_prior_free (prior_v);
+  ncm_mset_func_free (theta);
 }
 

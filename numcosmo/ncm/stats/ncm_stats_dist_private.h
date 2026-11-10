@@ -113,7 +113,7 @@ typedef struct _NcmStatsDistPrivate
 
 /* Center shrinkage protocol between NcmStatsDist and its subclasses. */
 void _ncm_stats_dist_refactor_decomp (NcmStatsDist *sd, NcmMatrix *U0, NcmMatrix *U);
-void _ncm_stats_dist_cholesky (NcmMatrix *decomp, const NcmMatrix *cov, const guint maxiter, const gchar *what);
+void _ncm_stats_dist_cholesky (NcmMatrix *decomp, const NcmMatrix *cov, const gchar *what);
 gdouble _ncm_stats_dist_amise (NcmStatsDist *sd);
 
 G_END_DECLS

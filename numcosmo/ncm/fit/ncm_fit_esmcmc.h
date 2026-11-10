@@ -48,7 +48,7 @@ NcmFitESMCMC *ncm_fit_esmcmc_ref (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc);
 
-void ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename);
+void ncm_fit_esmcmc_set_storage (NcmFitESMCMC *esmcmc, NcmMSetCatalogStorage *storage);
 
 void ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *sampler);
 void ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype);
@@ -56,9 +56,6 @@ void ncm_fit_esmcmc_set_use_threads (NcmFitESMCMC *esmcmc, gboolean use_threads)
 gboolean ncm_fit_esmcmc_get_use_threads (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_use_mpi (NcmFitESMCMC *esmcmc, gboolean use_mpi);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
-void ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable);
-void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
-void ncm_fit_esmcmc_set_auto_trim_type (NcmFitESMCMC *esmcmc, NcmMSetCatalogTrimType ttype);
 void ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs);
 void ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time);
 void ncm_fit_esmcmc_set_skip_check (NcmFitESMCMC *esmcmc, gboolean skip_check);
@@ -72,7 +69,7 @@ gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_accept_ratio_last_update (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_offboard_ratio_last_update (NcmFitESMCMC *esmcmc);
 
-void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc);
+void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error);
 void ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_reset (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n);

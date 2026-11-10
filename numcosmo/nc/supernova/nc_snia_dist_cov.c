@@ -393,6 +393,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
       break;
     }
     case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_SYS_STAT:
+    case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT:
     {
       dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
                            "dist",               dist,
@@ -413,6 +414,7 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
       break;
     }
     case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT:
+    case NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT:
     {
       dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
                            "dist",               dist,
@@ -479,6 +481,27 @@ nc_snia_dist_cov_new_by_id (NcDistance *dist, NcDataSNIAId snia_id)
                            NULL
       );
       ncm_vector_free (lnsigma_int);
+      nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
+      break;
+    }
+    case NC_DATA_SNIA_COV_DES_DOVEKIE_STATONLY:
+    case NC_DATA_SNIA_COV_DES_DOVEKIE_STAT_SYS:
+    {
+      dcov = g_object_new (NC_TYPE_SNIA_DIST_COV,
+                           "dist",               dist,
+                           "alpha",              0.0,
+                           "beta",               0.0,
+                           "M1",                 -19.3,
+                           "M2",                 -19.3,
+                           "lnsigma_pecz",       lnsigma0,
+                           "lnsigma_lens",       lnsigma0,
+                           "lnsigma_int-length", 0,
+                           "alpha-fit",          FALSE,
+                           "beta-fit",           FALSE,
+                           "M1-fit",             TRUE,
+                           "M2-fit",             FALSE,
+                           NULL
+      );
       nc_snia_dist_cov_set_empty_fac (dcov, FALSE);
       break;
     }

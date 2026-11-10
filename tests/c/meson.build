@@ -175,6 +175,10 @@ math_tests = [
         'sources': ['ncm/stats/test_ncm_stats_acorr.c'],
     },
     {
+        'name': 'ncm_stats_rows',
+        'sources': ['ncm/stats/test_ncm_stats_rows.c'],
+    },
+    {
         'name': 'ncm_stats_dist1d',
         'sources': ['ncm/stats/test_ncm_stats_dist1d.c'],
     },
@@ -341,6 +345,22 @@ math_tests = [
         'sources': ['ncm/fit/test_ncm_mset_catalog.c'],
         'priority': 1,
         'timeout': 0,
+    },
+    {
+        'name': 'ncm_mset_catalog_desc',
+        'sources': ['ncm/fit/test_ncm_mset_catalog_desc.c'],
+    },
+    {
+        'name': 'ncm_mset_catalog_fixtures',
+        'sources': ['ncm/fit/test_ncm_mset_catalog_fixtures.c'],
+    },
+    {
+        'name': 'ncm_mset_catalog_storage_fits',
+        'sources': ['ncm/fit/test_ncm_mset_catalog_storage_fits.c'],
+    },
+    {
+        'name': 'ncm_mset_catalog_storage_memory',
+        'sources': ['ncm/fit/test_ncm_mset_catalog_storage_memory.c'],
     },
     {
         'name': 'ncm_obj_array',
@@ -554,6 +574,14 @@ model_tests = [
         'sources': ['nc/background/test_nc_hicosmo_de.c'],
     },
     {
+        'name': 'nc_hicosmo_de_wspline',
+        'sources': ['nc/background/test_nc_hicosmo_de_wspline.c'],
+    },
+    {
+        'name': 'nc_hicosmo_qspline',
+        'sources': ['nc/background/test_nc_hicosmo_qspline.c'],
+    },
+    {
         'name': 'nc_hicosmo_qgw',
         'sources': ['nc/background/test_nc_hicosmo_qgw.c'],
     },
@@ -596,7 +624,7 @@ model_tests = [
     {
         'name': 'nc_hcosmo_bi',
         'sources': ['nc/background/test_nc_hcosmo_bi.c'],
-        'include_directories': [sundials_inc],
+        'dependencies': [sundials_dep],
     },
     {
         'name': 'nc_hcosmo_bi_dist',
@@ -618,6 +646,14 @@ data_tests = [
     {
         'name': 'nc_dist_mu_obs',
         'sources': ['nc/data/test_nc_dist_mu_obs.c'],
+    },
+    {
+        'name': 'nc_dist_mu_nuisance',
+        'sources': ['nc/data/test_nc_dist_mu_nuisance.c'],
+    },
+    {
+        'name': 'nc_observer_velocity',
+        'sources': ['nc/data/test_nc_observer_velocity.c'],
     },
     {
         'name': 'nc_data_bao_dtr_dhr',
@@ -648,8 +684,17 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_hubble.c'],
     },
     {
+        'name': 'nc_data_hubble_cov',
+        'sources': ['nc/data/test_nc_data_hubble_cov.c'],
+    },
+    {
         'name': 'nc_data_snia_cov',
         'sources': ['nc/data/test_nc_data_snia_cov.c'],
+    },
+    {
+        'name': 'nc_data_snia_cov_fit',
+        'sources': ['nc/data/test_nc_data_snia_cov_fit.c'],
+        'suite': ['c-acceptance'],
     },
     # Truth-table validation of NcDataClusterWLFactor's integration methods:
     # regenerates a curated sample from a fixed seed (nothing stored) and
@@ -661,6 +706,10 @@ data_tests = [
         'name': 'nc_data_cluster_wl_factor_truth',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
         'suite': ['c', 'omp'],
+    },
+    {
+        'name': 'nc_data_cluster_wl_factor_node_config',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_node_config.c'],
     },
 ]
 
@@ -705,6 +754,10 @@ lss_tests = [
     {
         'name': 'nc_transfer_func',
         'sources': ['nc/powspec/test_nc_transfer_func.c'],
+    },
+    {
+        'name': 'nc_powspec_mnl_halofit',
+        'sources': ['nc/powspec/test_nc_powspec_mnl_halofit.c'],
     },
     # nc_powspec is built twice from one source (via -D, see the C file). Measured: the
     # CLASS-backed cbe half is fast (~4s, splined once) -> fast-lane unit; the analytic
@@ -763,6 +816,10 @@ galaxy_tests = [
         'name': 'nc_galaxy_position_factor',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
     },
+    {
+        'name': 'nc_galaxy_shape_factor_moments_tilt',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
+    },
 ]
 
 # Cross-correlation tests
@@ -770,6 +827,10 @@ xcor_tests = [
     {
         'name': 'nc_xcor',
         'sources': ['nc/xcor/test_nc_xcor.c'],
+    },
+    {
+        'name': 'nc_xcor_cov_gauss',
+        'sources': ['nc/xcor/test_nc_xcor_cov_gauss.c'],
     },
     {
         'name': 'nc_xcor_kernel',

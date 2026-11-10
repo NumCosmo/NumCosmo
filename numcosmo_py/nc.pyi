@@ -84,9 +84,14 @@ DATA_SNIA_COV_LEN: int = 1
 DATA_SNIA_SIMPLE_LEN: int = 1
 DATA_XCOR_DL: int = 10
 DATA_XCOR_MAX: int = 5
+DIST_MU_NUISANCE_DEFAULT_DMU: float = 0.0
+DIST_MU_NUISANCE_DEFAULT_PARAMS_ABSTOL: float = 0.0
+DIST_MU_NUISANCE_DEFAULT_SIGMA_V: float = 0.0
+DIST_MU_NUISANCE_DEFAULT_SIGMA_V_S: float = 0.0
 DIST_MU_OBS_COL_DEC: str = r"dec"
 DIST_MU_OBS_COL_MU: str = r"mu"
 DIST_MU_OBS_COL_RA: str = r"ra"
+DIST_MU_OBS_COL_SAMPLE: str = r"sample"
 DIST_MU_OBS_COL_SIGMA_MU: str = r"sigma_mu"
 DIST_MU_OBS_COL_Z: str = r"z"
 GALAXY_HOD_ZHENG07_DEFAULT_ALPHA: float = 1.15
@@ -181,6 +186,7 @@ HICOSMO_DE_DEFAULT_OMEGA_X: float = 0.7
 HICOSMO_DE_DEFAULT_T_GAMMA0: float = 2.7245
 HICOSMO_DE_JBP_DEFAULT_W0: float = 1.0
 HICOSMO_DE_JBP_DEFAULT_W1: float = 0.0
+HICOSMO_DE_WSPLINE_DEFAULT_AS_DRAG: float = 0.035
 HICOSMO_DE_WSPLINE_DEFAULT_W0: float = 1.0
 HICOSMO_DE_WSPLINE_N: int = 5
 HICOSMO_DE_XCDM_DEFAULT_W0: float = 1.0
@@ -280,6 +286,9 @@ HIREION_CAMB_DEFAULT_HII_HEII_REION_EXPO: float = 1.5
 HIREION_CAMB_DEFAULT_HII_HEII_Z: float = 13.0
 HIREION_DEFAULT_PARAMS_ABSTOL: float = 0.0
 MULTIPLICITY_FUNC_DELTA_C0: float = 1.68647
+OBSERVER_VELOCITY_DEFAULT_PARAMS_ABSTOL: float = 0.0
+OBSERVER_VELOCITY_DEFAULT_V: float = 0.0
+OBSERVER_VELOCITY_MAX_V: float = 2000.0
 PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_100_100_EE: float = 1.0
 PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_143_143_EE: float = 1.0
 PLANCK_FI_COR_TTTEEE_DEFAULT_A_cnoise_e2e_217_217_EE: float = 1.0
@@ -439,6 +448,9 @@ XCOR_KERNEL_GAL_G_FUNC_LEN: int = 200
 XCOR_KERNEL_MAX_ELL_BLOCK: int = 64
 XCOR_KERNEL_MIN_USEFUL_PEAK_EPSILON: float = 1e-06
 XCOR_KERNEL_RADIAL_MAX_COMPS: int = 6
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_A: float = 1.0
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_ETA: float = 0.0
+XCOR_KERNEL_WEAK_LENSING_DEFAULT_IA_Z_PIV: float = 0.62
 XCOR_KERNEL_WEAK_LENSING_DEFAULT_PARAMS_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_ABSTOL: float = 0.0
 XCOR_LENSING_EFFICIENCY_DEFAULT_RELTOL: float = 0.0
@@ -5934,6 +5946,8 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         Target relative tolerance for the per-galaxy fixed-node selection
       max-total-nodes -> guint: max-total-nodes
         Safety ceiling on the total background node count for auto-nodes selection
+      node-config -> NcmVarDict: Prepared node configuration
+        Per-galaxy calibrated redshift-quadrature configuration
 
     Properties from NcmData:
       name -> gchararray: name
@@ -5957,6 +5971,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         len: int
         max_total_nodes: int
         n_nodes: int
+        node_config: NumCosmoMath.VarDict
         node_reltol: float
         obs: GalaxyWLObs
         position_factor: GalaxyPositionFactor
@@ -5980,6 +5995,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         integ_method: DataClusterWLIntegMethod = ...,
         max_total_nodes: int = ...,
         n_nodes: int = ...,
+        node_config: NumCosmoMath.VarDict = ...,
         node_reltol: float = ...,
         obs: GalaxyWLObs = ...,
         position_factor: GalaxyPositionFactor = ...,
@@ -5997,11 +6013,13 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     ) -> None: ...
     @staticmethod
     def clear(dcwlf: DataClusterWLFactor) -> None: ...
+    def data_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def eval_m2lnP_gal(
         self, mset: NumCosmoMath.MSet, m2lnP_gal: NumCosmoMath.Vector
     ) -> None: ...
     def free(self) -> None: ...
     def get_auto_nodes(self) -> bool: ...
+    def get_calib_count(self) -> int: ...
     def get_integ_method(self) -> DataClusterWLIntegMethod: ...
     def get_low_prob_count(self) -> int: ...
     def get_max_total_nodes(self) -> int: ...
@@ -6009,6 +6027,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def get_node_reltol(self) -> float: ...
     def get_resample_flag(self) -> DataClusterWLResampleFlag: ...
     def get_rule_n(self) -> int: ...
+    def is_data_prepared(self) -> bool: ...
     @classmethod
     def new(
         cls,
@@ -6153,6 +6172,10 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
         Data redshifts
       p -> NcmMatrix: p
         Data directions
+      sigma-mu -> NcmVector: sigma-mu
+        Measured uncertainties of the moduli
+      sample -> NcmVector: sample
+        Sample index of each object
 
     Properties from NcmDataGaussDiag:
       n-points -> guint: n-points
@@ -6183,6 +6206,8 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
     class Props:
         dist: typing.Optional[HCosmoBIDist]
         p: NumCosmoMath.Matrix
+        sample: NumCosmoMath.Vector
+        sigma_mu: NumCosmoMath.Vector
         z: NumCosmoMath.Vector
         mean: NumCosmoMath.Vector
         n_points: int
@@ -6199,6 +6224,8 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
         self,
         dist: typing.Optional[HCosmoBIDist] = ...,
         p: NumCosmoMath.Matrix = ...,
+        sample: NumCosmoMath.Vector = ...,
+        sigma_mu: NumCosmoMath.Vector = ...,
         z: NumCosmoMath.Vector = ...,
         mean: NumCosmoMath.Vector = ...,
         n_points: int = ...,
@@ -6216,6 +6243,8 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
     @classmethod
     def new(cls, dist: typing.Optional[HCosmoBIDist] = None) -> DataHCosmoBIDistMu: ...
     def peek_p(self) -> NumCosmoMath.Matrix: ...
+    def peek_samples(self) -> NumCosmoMath.Vector: ...
+    def peek_sigma_mu(self) -> NumCosmoMath.Vector: ...
     def peek_z(self) -> NumCosmoMath.Vector: ...
     def ref(self) -> DataHCosmoBIDistMu: ...
     def set_data(
@@ -6231,9 +6260,11 @@ class DataHCosmoBIDistMu(NumCosmoMath.DataGaussDiag):
         obs: DistMuObs,
         mu_col: typing.Optional[str],
         sigma_col: typing.Optional[str],
+        sample_col: typing.Optional[str],
         z_min: float,
         z_max: float,
     ) -> None: ...
+    def set_samples(self, sample: NumCosmoMath.Vector) -> None: ...
 
 class DataHCosmoBIDistMuClass(GObject.GPointer):
     r"""
@@ -6420,6 +6451,92 @@ class DataHubbleClass(GObject.GPointer):
     """
 
     parent_class: NumCosmoMath.DataGaussDiagClass = ...
+
+class DataHubbleCov(NumCosmoMath.DataGaussCov):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHubbleCov(**properties)
+        new_empty() -> NumCosmo.DataHubbleCov
+        new_from_file(filename:str) -> NumCosmo.DataHubbleCov
+        new_from_id(id:NumCosmo.DataHubbleCovId) -> NumCosmo.DataHubbleCov
+
+    Object NcDataHubbleCov
+
+    Properties from NcDataHubbleCov:
+      z -> NcmVector: z
+        Data redshifts
+
+    Properties from NcmDataGaussCov:
+      n-points -> guint: n-points
+        Data sample size
+      use-norma -> gboolean: use-norma
+        Use the likelihood normalization to calculate -2lnL
+      mean -> NcmVector: mean
+        Data mean
+      cov -> NcmMatrix: cov
+        Data covariance
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        z: NumCosmoMath.Vector
+        cov: NumCosmoMath.Matrix
+        mean: NumCosmoMath.Vector
+        n_points: int
+        use_norma: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        z: NumCosmoMath.Vector = ...,
+        cov: NumCosmoMath.Matrix = ...,
+        mean: NumCosmoMath.Vector = ...,
+        n_points: int = ...,
+        use_norma: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @classmethod
+    def new_empty(cls) -> DataHubbleCov: ...
+    @classmethod
+    def new_from_file(cls, filename: str) -> DataHubbleCov: ...
+    @classmethod
+    def new_from_id(cls, id: DataHubbleCovId) -> DataHubbleCov: ...
+
+class DataHubbleCovClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataHubbleCovClass()
+    """
+
+    parent_class: NumCosmoMath.DataGaussCovClass = ...
 
 class DataPlanckCommander(NumCosmoMath.Data):
     r"""
@@ -7525,6 +7642,123 @@ class DataXcorClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataGaussCovClass = ...
 
+class DistMuNuisance(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuNuisance(**properties)
+        new(nsamples:int) -> NumCosmo.DistMuNuisance
+        new_full(nsamples:int, sigma_v_per_sample:bool) -> NumCosmo.DistMuNuisance
+
+    Object NcDistMuNuisance
+
+    Properties from NcDistMuNuisance:
+      sigmav -> gdouble: sigmav
+        \sigma_v
+      dmu -> NcmVector: dmu
+        \delta\mu
+      sigmav-s -> NcmVector: sigmav-s
+        \sigma_{v,s}
+      dmu-length -> guint: dmu-length
+        \delta\mu:length
+      sigmav-s-length -> guint: sigmav-s-length
+        \sigma_{v,s}:length
+      sigmav-fit -> gboolean: sigmav-fit
+        \sigma_v:fit
+      dmu-fit -> GVariant: dmu-fit
+        \delta\mu:fit
+      sigmav-s-fit -> GVariant: sigmav-s-fit
+        \sigma_{v,s}:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        dmu: NumCosmoMath.Vector
+        dmu_fit: GLib.Variant
+        dmu_length: int
+        sigmav: float
+        sigmav_fit: bool
+        sigmav_s: NumCosmoMath.Vector
+        sigmav_s_fit: GLib.Variant
+        sigmav_s_length: int
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        dmu: NumCosmoMath.Vector = ...,
+        dmu_fit: GLib.Variant = ...,
+        dmu_length: int = ...,
+        sigmav: float = ...,
+        sigmav_fit: bool = ...,
+        sigmav_s: NumCosmoMath.Vector = ...,
+        sigmav_s_fit: GLib.Variant = ...,
+        sigmav_s_length: int = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(nuisance: DistMuNuisance) -> None: ...
+    def free(self) -> None: ...
+    def get_dmu(self, sample: int) -> float: ...
+    def get_nsamples(self) -> int: ...
+    def get_nsigma_v(self) -> int: ...
+    def get_sigma_v(self) -> float: ...
+    def get_sigma_v_sample(self, sample: int) -> float: ...
+    @staticmethod
+    def id() -> int: ...
+    @classmethod
+    def new(cls, nsamples: int) -> DistMuNuisance: ...
+    @classmethod
+    def new_full(cls, nsamples: int, sigma_v_per_sample: bool) -> DistMuNuisance: ...
+    def ref(self) -> DistMuNuisance: ...
+    def sigma_mu_v(self, z: float) -> float: ...
+    def sigma_mu_v_sample(self, z: float, sample: int) -> float: ...
+
+class DistMuNuisanceClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DistMuNuisanceClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+
 class DistMuObs(NumCosmoMath.Catalog):
     r"""
     :Constructors:
@@ -7619,6 +7853,8 @@ class Distance(GObject.Object):
         Recombination object
       compute-inv-comoving -> gboolean: compute-inv-comoving
         Whether to compute the inverse comoving function
+      sound-horizon-method -> NcDistanceSoundHorizonMethod: sound-horizon-method
+        Sound horizon at the drag epoch method
 
     Signals from GObject:
       notify (GParam)
@@ -7627,6 +7863,7 @@ class Distance(GObject.Object):
     class Props:
         compute_inv_comoving: bool
         recomb: Recomb
+        sound_horizon_method: DistanceSoundHorizonMethod
         zf: float
 
     props: Props = ...
@@ -7646,8 +7883,13 @@ class Distance(GObject.Object):
     max_comoving: float = ...
     recomb: Recomb = ...
     cmethod: DistanceComovingMethod = ...
+    sound_horizon_method: DistanceSoundHorizonMethod = ...
     def __init__(
-        self, compute_inv_comoving: bool = ..., recomb: Recomb = ..., zf: float = ...
+        self,
+        compute_inv_comoving: bool = ...,
+        recomb: Recomb = ...,
+        sound_horizon_method: DistanceSoundHorizonMethod = ...,
+        zf: float = ...,
     ) -> None: ...
     def DA_r(self, cosmo: HICosmo, z: float) -> float: ...
     def DH_r(self, cosmo: HICosmo, z: float) -> float: ...
@@ -7698,6 +7940,7 @@ class Distance(GObject.Object):
     def dsound_horizon_dz(self, cosmo: HICosmo, z: float) -> float: ...
     def dtransverse_dz(self, cosmo: HICosmo, z: float) -> float: ...
     def free(self) -> None: ...
+    def get_sound_horizon_method(self) -> DistanceSoundHorizonMethod: ...
     def hubble(self, cosmo: HICosmo) -> float: ...
     def inv_comoving(self, cosmo: HICosmo, xi: float) -> float: ...
     def lookback_time(self, cosmo: HICosmo, z: float) -> float: ...
@@ -7723,6 +7966,9 @@ class Distance(GObject.Object):
     def ref(self) -> Distance: ...
     def require_zf(self, zf: float) -> None: ...
     def set_recomb(self, recomb: Recomb) -> None: ...
+    def set_sound_horizon_method(
+        self, sound_horizon_method: DistanceSoundHorizonMethod
+    ) -> None: ...
     def shift_parameter(self, cosmo: HICosmo, z: float) -> float: ...
     def shift_parameter_lss(self, cosmo: HICosmo) -> float: ...
     def sigma_critical(self, cosmo: HICosmo, zs: float, zl: float) -> float: ...
@@ -9221,6 +9467,10 @@ class GalaxyShapeFactor(GObject.Object):
     def data_get(
         self, data: GalaxyShapeFactorData
     ) -> typing.Tuple[float, float, float, float, float, float]: ...
+    def data_prefetch(self, data: GalaxyShapeFactorData, stage: int) -> None: ...
+    def data_prepare(
+        self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData, z_max: float
+    ) -> None: ...
     def data_set(
         self,
         data: GalaxyShapeFactorData,
@@ -9239,6 +9489,10 @@ class GalaxyShapeFactor(GObject.Object):
     ) -> typing.Tuple[float, float, float, float, float]: ...
     def do_data_init(
         self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData
+    ) -> None: ...
+    def do_data_prefetch(self, data: GalaxyShapeFactorData, stage: int) -> None: ...
+    def do_data_prepare(
+        self, mset: NumCosmoMath.MSet, data: GalaxyShapeFactorData, z_max: float
     ) -> None: ...
     def do_eval_ln_marginal(
         self,
@@ -9261,6 +9515,13 @@ class GalaxyShapeFactor(GObject.Object):
     def do_get_desc(self) -> str: ...
     def do_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def eval_at_nodes(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyShapeFactorData,
+        z_nodes: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
+    def eval_ln_at_nodes(
         self,
         mset: NumCosmoMath.MSet,
         data: GalaxyShapeFactorData,
@@ -9411,6 +9672,12 @@ class GalaxyShapeFactorClass(GObject.GPointer):
         float,
     ] = ...
     get_desc: typing.Callable[[GalaxyShapeFactor], str] = ...
+    data_prepare: typing.Callable[
+        [GalaxyShapeFactor, NumCosmoMath.MSet, GalaxyShapeFactorData, float], None
+    ] = ...
+    data_prefetch: typing.Callable[
+        [GalaxyShapeFactor, GalaxyShapeFactorData, int], None
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyShapeFactorData(GObject.GBoxed):
@@ -9616,6 +9883,163 @@ class GalaxyShapeFactorLaplaceClass(GObject.GPointer):
     ::
 
         GalaxyShapeFactorLaplaceClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapeFactorMomentsGauss(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentsGauss(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorMomentsGauss
+
+    Object NcGalaxyShapeFactorMomentsGauss
+
+    Properties from NcGalaxyShapeFactorMomentsGauss:
+      moment-tol -> gdouble: Moment tolerance
+        Absolute tolerance of the tabulated moments
+      max-degree -> guint: Maximum local degree
+        Largest Chebyshev degree a single panel may reach
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        max_degree: int
+        moment_tol: float
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self,
+        max_degree: int = ...,
+        moment_tol: float = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfmg: GalaxyShapeFactorMomentsGauss) -> None: ...
+    def eval_moments(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, g_1: float, g_2: float
+    ) -> typing.Tuple[float, float, float]: ...
+    def exact_moments(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, ghat: float
+    ) -> typing.Tuple[float, float, float]: ...
+    def free(self) -> None: ...
+    def get_table_build_count(self) -> int: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorMomentsGauss: ...
+    def peek_layout(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData
+    ) -> typing.Tuple[int, float, list[float]]: ...
+    def ref(self) -> GalaxyShapeFactorMomentsGauss: ...
+    def reset_table_build_count(self) -> None: ...
+
+class GalaxyShapeFactorMomentsGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentsGaussClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
+class GalaxyShapeFactorMomentsTilt(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentsTilt(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorMomentsTilt
+
+    Object NcGalaxyShapeFactorMomentsTilt
+
+    Properties from NcGalaxyShapeFactorMomentsTilt:
+      accuracy-gate -> gdouble: Accuracy gate
+        Target |ln Z| accuracy of the interpolant
+      max-degree -> guint: Maximum local degree
+        Largest Chebyshev degree a single panel may reach
+      newton-maxit -> guint: Maximum Newton iterations
+        Largest number of Newton iterations per solve pass at a table node
+      restrict-range -> gboolean: Restrict to the reachable range
+        Whether to build each table only over the reachable folded shear
+      strict-solve -> gboolean: Strict solve
+        Whether a Newton failure aborts instead of warning
+      tables -> NcmObjArray: Interpolation tables
+        Built interpolation tables, one NcmVector each
+      tables-stamp -> gchararray: Table provenance stamp
+        What the stored tables were built against
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        accuracy_gate: float
+        max_degree: int
+        newton_maxit: int
+        restrict_range: bool
+        strict_solve: bool
+        tables: NumCosmoMath.ObjArray
+        tables_stamp: str
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self,
+        accuracy_gate: float = ...,
+        max_degree: int = ...,
+        newton_maxit: int = ...,
+        restrict_range: bool = ...,
+        strict_solve: bool = ...,
+        tables: NumCosmoMath.ObjArray = ...,
+        tables_stamp: str = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfmt: GalaxyShapeFactorMomentsTilt) -> None: ...
+    def eval_tilt(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, g_1: float, g_2: float
+    ) -> typing.Tuple[float, float, float, float]: ...
+    def exact_moments(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, ghat: float
+    ) -> typing.Tuple[float, float, float]: ...
+    def free(self) -> None: ...
+    def get_range_error_count(self) -> int: ...
+    def get_solve_error_count(self) -> int: ...
+    def get_table_build_count(self) -> int: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorMomentsTilt: ...
+    def peek_layout(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData
+    ) -> typing.Tuple[int, float, list[float]]: ...
+    def ref(self) -> GalaxyShapeFactorMomentsTilt: ...
+    def register_shared(self, ser: NumCosmoMath.Serialize) -> None: ...
+    def reset_range_error_count(self) -> None: ...
+    def reset_solve_error_count(self) -> None: ...
+    def reset_table_build_count(self) -> None: ...
+
+class GalaxyShapeFactorMomentsTiltClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorMomentsTiltClass()
     """
 
     parent_class: GalaxyShapeFactorClass = ...
@@ -9852,6 +10276,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def do_gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
     ) -> typing.Tuple[float, float]: ...
+    def do_moment_2k(self, data: GalaxyShapePopData, k: int) -> float: ...
     def do_prepare(self, data: GalaxyShapePopData) -> None: ...
     def e_rms(self, data: GalaxyShapePopData) -> float: ...
     def eval_p(self, data: GalaxyShapePopData, r: float) -> float: ...
@@ -9875,6 +10300,7 @@ class GalaxyShapePop(NumCosmoMath.Model):
     def get_sigma(self, data: GalaxyShapePopData) -> float: ...
     @staticmethod
     def id() -> int: ...
+    def moment_2k(self, data: GalaxyShapePopData, k: int) -> float: ...
     def prepare(self, data: GalaxyShapePopData) -> None: ...
     def ref(self) -> GalaxyShapePop: ...
 
@@ -10005,6 +10431,7 @@ class GalaxyShapePopClass(GObject.GPointer):
         ],
         list[float],
     ] = ...
+    moment_2k: typing.Callable[[GalaxyShapePop, GalaxyShapePopData, int], float] = ...
     padding: list[None] = ...
 
 class GalaxyShapePopData(GObject.GBoxed):
@@ -10473,6 +10900,7 @@ class HCosmoBI(NumCosmoMath.Model):
     @staticmethod
     def clear(cosmo: HCosmoBI) -> None: ...
     def free(self) -> None: ...
+    def get_angles(self) -> typing.Tuple[float, float, float]: ...
     def get_quaternion(self) -> NumCosmoMath.Quaternion: ...
     @staticmethod
     def id() -> int: ...
@@ -10480,6 +10908,8 @@ class HCosmoBI(NumCosmoMath.Model):
     @classmethod
     def new(cls) -> HCosmoBI: ...
     def ref(self) -> HCosmoBI: ...
+    def set_angles(self, alpha: float, beta: float, gamma: float) -> None: ...
+    def set_quaternion(self, q: NumCosmoMath.Quaternion) -> None: ...
 
 class HCosmoBIClass(GObject.GPointer):
     r"""
@@ -10684,6 +11114,7 @@ class HICosmo(NumCosmoMath.Model):
     def Yp_4He(self) -> float: ...
     def abs_alpha(self, x: float) -> float: ...
     def as_drag(self) -> float: ...
+    def as_drag_is_free(self) -> bool: ...
     def baryon_density(self) -> float: ...
     def bgp_cs2(self, z: float) -> float: ...
     @staticmethod
@@ -10724,6 +11155,7 @@ class HICosmo(NumCosmoMath.Model):
     def do_T_gamma0(self) -> float: ...
     def do_Yp_4He(self) -> float: ...
     def do_as_drag(self) -> float: ...
+    def do_as_drag_is_free(self) -> bool: ...
     def do_bgp_cs2(self, z: float) -> float: ...
     def do_d2E2_dz2(self, z: float) -> float: ...
     def do_dE2_dz(self, z: float) -> float: ...
@@ -10807,6 +11239,7 @@ class HICosmoClass(GObject.GPointer):
         [HICosmo, int], typing.Tuple[float, float, float, float]
     ] = ...
     get_bg_var: typing.Callable[[HICosmo, float, HIPertBGVar], None] = ...
+    as_drag_is_free: typing.Callable[[HICosmo], bool] = ...
 
 class HICosmoDE(HICosmo):
     r"""
@@ -11568,10 +12001,16 @@ class HICosmoDEWSpline(HICosmoDE):
         final redshift
       knots -> NcHICosmoSplineKnots: knots
         knot placement in alpha=ln(1+z)
+      use-as-drag -> gboolean: use-as-drag
+        use the asdrag parameter for the sound horizon at drag
+      asdrag -> gdouble: asdrag
+        A_s
       w -> NcmVector: w
         w
       w-length -> guint: w-length
         w:length
+      asdrag-fit -> gboolean: asdrag-fit
+        A_s:fit
       w-fit -> GVariant: w-fit
         w:fit
 
@@ -11664,7 +12103,10 @@ class HICosmoDEWSpline(HICosmoDE):
     """
 
     class Props:
+        asdrag: float
+        asdrag_fit: bool
         knots: HICosmoSplineKnots
+        use_as_drag: bool
         w: NumCosmoMath.Vector
         w_fit: GLib.Variant
         w_length: int
@@ -11715,7 +12157,10 @@ class HICosmoDEWSpline(HICosmoDE):
     priv: HICosmoDEWSplinePrivate = ...
     def __init__(
         self,
+        asdrag: float = ...,
+        asdrag_fit: bool = ...,
         knots: HICosmoSplineKnots = ...,
+        use_as_drag: bool = ...,
         w: NumCosmoMath.Vector = ...,
         w_fit: GLib.Variant = ...,
         w_length: int = ...,
@@ -11755,11 +12200,22 @@ class HICosmoDEWSpline(HICosmoDE):
         sparam_array: NumCosmoMath.ObjDictInt = ...,
         submodel_array: NumCosmoMath.ObjArray = ...,
     ) -> None: ...
+    def d2_lp_residuals(
+        self,
+        weight: typing.Optional[NumCosmoMath.Spline],
+        p: int,
+        f: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> None: ...
+    def d2_lp_residuals_len(
+        self, weight: typing.Optional[NumCosmoMath.Spline], p: int
+    ) -> int: ...
     def get_alpha(self) -> NumCosmoMath.Vector: ...
+    def get_use_as_drag(self) -> bool: ...
     def lp_norm(self, ctype: NumCosmoMath.SplineCurvatureType, p: float) -> float: ...
     def mean_kappa(self) -> float: ...
     @classmethod
     def new(cls, nknots: int, z_f: float) -> HICosmoDEWSpline: ...
+    def set_use_as_drag(self, use_as_drag: bool) -> None: ...
     def weighted_lp_norm(
         self,
         ctype: NumCosmoMath.SplineCurvatureType,
@@ -13067,6 +13523,15 @@ class HICosmoQSpline(HICosmo):
     def add_continuity_priors(
         self, lh: NumCosmoMath.Likelihood, sigma: float, abstol: float
     ) -> HICosmoQSplineContPrior: ...
+    def d2_lp_residuals(
+        self,
+        weight: typing.Optional[NumCosmoMath.Spline],
+        p: int,
+        f: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> None: ...
+    def d2_lp_residuals_len(
+        self, weight: typing.Optional[NumCosmoMath.Spline], p: int
+    ) -> int: ...
     def lp_norm(self, ctype: NumCosmoMath.SplineCurvatureType, p: float) -> float: ...
     def mean_kappa(self) -> float: ...
     @classmethod
@@ -19776,6 +20241,109 @@ class MultiplicityFuncWatsonClass(GObject.GPointer):
 
     parent_class: MultiplicityFuncClass = ...
 
+class ObserverVelocity(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        ObserverVelocity(**properties)
+        new() -> NumCosmo.ObserverVelocity
+
+    Object NcObserverVelocity
+
+    Properties from NcObserverVelocity:
+      vx -> gdouble: vx
+        v_x
+      vy -> gdouble: vy
+        v_y
+      vz -> gdouble: vz
+        v_z
+      vx-fit -> gboolean: vx-fit
+        v_x:fit
+      vy-fit -> gboolean: vy-fit
+        v_y:fit
+      vz-fit -> gboolean: vz-fit
+        v_z:fit
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        vx: float
+        vx_fit: bool
+        vy: float
+        vy_fit: bool
+        vz: float
+        vz_fit: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        vx: float = ...,
+        vx_fit: bool = ...,
+        vy: float = ...,
+        vy_fit: bool = ...,
+        vz: float = ...,
+        vz_fit: bool = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    def beta_n(self, nx: float, ny: float, nz: float) -> float: ...
+    @staticmethod
+    def clear(ov: ObserverVelocity) -> None: ...
+    def doppler(self, nx: float, ny: float, nz: float) -> float: ...
+    def free(self) -> None: ...
+    @staticmethod
+    def id() -> int: ...
+    @classmethod
+    def new(cls) -> ObserverVelocity: ...
+    def ref(self) -> ObserverVelocity: ...
+    def speed(self) -> float: ...
+    def z_rest(self, z_obs: float, nx: float, ny: float, nz: float) -> float: ...
+
+class ObserverVelocityClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        ObserverVelocityClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+
 class PlanckFI(NumCosmoMath.Model):
     r"""
     :Constructors:
@@ -22902,6 +23470,10 @@ class WLSurfaceMassDensity(NumCosmoMath.Model):
         zl: float,
         optzs: WLSurfaceMassDensityOptzs,
     ) -> float: ...
+    @staticmethod
+    def reduced_shear_sigma_cache_prep_with_rs(
+        dp: HaloDensityProfile, R: float, r_s: float, rho_s: float
+    ) -> WLSurfaceMassDensitySigmaCache: ...
     def ref(self) -> WLSurfaceMassDensity: ...
     def shear(
         self,
@@ -23388,6 +23960,82 @@ class XcorComponentTableClass(GObject.GPointer):
     ::
 
         XcorComponentTableClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class XcorCovGauss(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorCovGauss(**properties)
+        new(n_tracers:int, ell_min:int, ell_max:int, f_sky:float) -> NumCosmo.XcorCovGauss
+
+    Object NcXcorCovGauss
+
+    Properties from NcXcorCovGauss:
+      n-tracers -> guint: n-tracers
+        Number of tracers
+      ell-min -> guint: ell-min
+        Smallest multipole
+      ell-max -> guint: ell-max
+        Largest multipole
+      f-sky -> gdouble: f-sky
+        Observed fraction of the sky
+      spectra -> GVariant: spectra
+        Tracer pairs and windows of the spectra
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        ell_max: int
+        ell_min: int
+        f_sky: float
+        n_tracers: int
+        spectra: GLib.Variant
+
+    props: Props = ...
+    def __init__(
+        self,
+        ell_max: int = ...,
+        ell_min: int = ...,
+        f_sky: float = ...,
+        n_tracers: int = ...,
+        spectra: GLib.Variant = ...,
+    ) -> None: ...
+    def add_spectrum(self, a: int, b: int, window: NumCosmoMath.Matrix) -> None: ...
+    @staticmethod
+    def clear(cov: XcorCovGauss) -> None: ...
+    def compute(self, cl: NumCosmoMath.Matrix, noise: NumCosmoMath.Matrix) -> None: ...
+    def free(self) -> None: ...
+    def get_ell_max(self) -> int: ...
+    def get_ell_min(self) -> int: ...
+    def get_f_sky(self) -> float: ...
+    def get_n_data(self) -> int: ...
+    def get_n_ell(self) -> int: ...
+    def get_n_pairs(self) -> int: ...
+    def get_n_spectra(self) -> int: ...
+    def get_n_tracers(self) -> int: ...
+    def get_pair_index(self, a: int, b: int) -> int: ...
+    @classmethod
+    def new(
+        cls, n_tracers: int, ell_min: int, ell_max: int, f_sky: float
+    ) -> XcorCovGauss: ...
+    def peek_matrix(self) -> typing.Optional[NumCosmoMath.Matrix]: ...
+    def ref(self) -> XcorCovGauss: ...
+    def set_f_sky(self, f_sky: float) -> None: ...
+
+class XcorCovGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        XcorCovGaussClass()
     """
 
     parent_class: GObject.ObjectClass = ...
@@ -26061,6 +26709,22 @@ class XcorKernelWeakLensing(XcorKernel):
         nbar (galaxy angular density)
       intr-shear -> gdouble: intr-shear
         Intrinsic galaxy shear
+      doia -> gboolean: doia
+        Do intrinsic alignment
+      growth-powspec -> NcmPowspec: growth-powspec
+        Power spectrum of the intrinsic alignment growth factor
+      ia-A -> gdouble: ia-A
+        A_{\mathrm{IA}}
+      ia-eta -> gdouble: ia-eta
+        \eta_{\mathrm{IA}}
+      ia-z-piv -> gdouble: ia-z-piv
+        z_{\mathrm{piv}}
+      ia-A-fit -> gboolean: ia-A-fit
+        A_{\mathrm{IA}}:fit
+      ia-eta-fit -> gboolean: ia-eta-fit
+        \eta_{\mathrm{IA}}:fit
+      ia-z-piv-fit -> gboolean: ia-z-piv-fit
+        z_{\mathrm{piv}}:fit
 
     Properties from NcXcorKernel:
       dist -> NcDistance: dist
@@ -26114,6 +26778,14 @@ class XcorKernelWeakLensing(XcorKernel):
 
     class Props:
         dndz: NumCosmoMath.Spline
+        doia: bool
+        growth_powspec: NumCosmoMath.Powspec
+        ia_A: float
+        ia_A_fit: bool
+        ia_eta: float
+        ia_eta_fit: bool
+        ia_z_piv: float
+        ia_z_piv_fit: bool
         intr_shear: float
         nbar: float
         adaptive_boundary_tries: int
@@ -26142,6 +26814,14 @@ class XcorKernelWeakLensing(XcorKernel):
     def __init__(
         self,
         dndz: NumCosmoMath.Spline = ...,
+        doia: bool = ...,
+        growth_powspec: NumCosmoMath.Powspec = ...,
+        ia_A: float = ...,
+        ia_A_fit: bool = ...,
+        ia_eta: float = ...,
+        ia_eta_fit: bool = ...,
+        ia_z_piv: float = ...,
+        ia_z_piv_fit: bool = ...,
         intr_shear: float = ...,
         nbar: float = ...,
         adaptive_boundary_tries: int = ...,
@@ -27125,6 +27805,21 @@ class DataHubbleBaoId(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class DataHubbleCovId(GObject.GEnum):
+    LOUBSER2025: DataHubbleCovId = ...
+    MORESCO2020: DataHubbleCovId = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class DataHubbleId(GObject.GEnum):
     BORGHI2022: DataHubbleId = ...
     BUSCA2013_BAO_WMAP: DataHubbleId = ...
@@ -27236,11 +27931,15 @@ class DataSNIACovResample(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class DataSNIAId(GObject.GEnum):
+    COV_DES_DOVEKIE_STATONLY: DataSNIAId = ...
+    COV_DES_DOVEKIE_STAT_SYS: DataSNIAId = ...
     COV_DES_Y5_STATONLY: DataSNIAId = ...
     COV_DES_Y5_STAT_SYS: DataSNIAId = ...
     COV_JLA_SNLS3_SDSS_SYS_STAT: DataSNIAId = ...
     COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: DataSNIAId = ...
     COV_PANTHEON: DataSNIAId = ...
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT: DataSNIAId = ...
+    COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT: DataSNIAId = ...
     COV_PANTHEON_PLUS_SH0ES_STAT: DataSNIAId = ...
     COV_PANTHEON_PLUS_SH0ES_SYS_STAT: DataSNIAId = ...
     COV_SNLS3_STAT_ONLY: DataSNIAId = ...
@@ -27255,6 +27954,35 @@ class DataSNIAId(GObject.GEnum):
     SIMPLE_UNION: DataSNIAId = ...
     SIMPLE_UNION2: DataSNIAId = ...
     SIMPLE_UNION2_1: DataSNIAId = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class DistMuNuisanceSParams(GObject.GEnum):
+    SIGMA_V: DistMuNuisanceSParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class DistMuNuisanceVParams(GObject.GEnum):
+    DMU: DistMuNuisanceVParams = ...
+    SIGMA_V_S: DistMuNuisanceVParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -27286,6 +28014,22 @@ class DistMuObsCatalogId(GObject.GEnum):
 class DistanceComovingMethod(GObject.GEnum):
     FROM_MODEL: DistanceComovingMethod = ...
     INT_E: DistanceComovingMethod = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class DistanceSoundHorizonMethod(GObject.GEnum):
+    CAMB_FIT: DistanceSoundHorizonMethod = ...
+    EISENSTEIN_HU: DistanceSoundHorizonMethod = ...
+    RECOMB: DistanceSoundHorizonMethod = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -27517,6 +28261,20 @@ class HICosmoDEVParams(GObject.GEnum):
     M: HICosmoDEVParams = ...
     MU: HICosmoDEVParams = ...
     T: HICosmoDEVParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class HICosmoDEWSplineSParams(GObject.GEnum):
+    AS_DRAG: HICosmoDEWSplineSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
@@ -28435,6 +29193,22 @@ class MultiplicityFuncMassDef(GObject.GEnum):
     _value2member_map_: dict = ...
     _value_repr_: wrapper_descriptor = ...
 
+class ObserverVelocitySParams(GObject.GEnum):
+    VX: ObserverVelocitySParams = ...
+    VY: ObserverVelocitySParams = ...
+    VZ: ObserverVelocitySParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
 class PlanckFICorTTSParams(GObject.GEnum):
     A_CIB_217: PlanckFICorTTSParams = ...
     A_PLANCK: PlanckFICorTTSParams = ...
@@ -28793,7 +29567,9 @@ class XcorKernelTableKind(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class XcorKernelWeakLensingSParams(GObject.GEnum):
-    LEN: XcorKernelWeakLensingSParams = ...
+    IA_A: XcorKernelWeakLensingSParams = ...
+    IA_ETA: XcorKernelWeakLensingSParams = ...
+    IA_Z_PIV: XcorKernelWeakLensingSParams = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...

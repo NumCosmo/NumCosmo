@@ -87,8 +87,9 @@ def enum_values(enum_type: type[E]) -> list[E]:
 def register_model_class(mb: Ncm.ModelBuilder) -> type:
     """Register a model class."""
     NcmTypeModelGeneric = mb.create()
-    # We need to create a new instance to register the type
-    GObject.new(NcmTypeModelGeneric)
+    # We need to create a new instance to register the type. The stubs type
+    # create() as type[Any], but it returns a GType.
+    GObject.new(cast(GObject.GType, NcmTypeModelGeneric))
     NcmModelGeneric = NcmTypeModelGeneric.pytype
     GObject.type_register(NcmModelGeneric)
 

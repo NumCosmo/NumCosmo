@@ -42,9 +42,9 @@ NcmFitMCBS *ncm_fit_mcbs_new (NcmFit * fit);
 void ncm_fit_mcbs_free (NcmFitMCBS *mcbs);
 void ncm_fit_mcbs_clear (NcmFitMCBS **mcbs);
 
-void ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename);
+void ncm_fit_mcbs_set_storage (NcmFitMCBS *mcbs, NcmMSetCatalogStorage *storage);
 void ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng);
-void ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, gboolean bsmt);
+void ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint nf, guint nbstraps, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, gboolean bsmt, GError **error);
 
 NcmMSetCatalog *ncm_fit_mcbs_get_catalog (NcmFitMCBS *mcbs);
 

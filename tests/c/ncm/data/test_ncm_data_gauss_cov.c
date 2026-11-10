@@ -244,7 +244,10 @@ test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointe
 
   NCM_TEST_FREE (ncm_stats_vec_free, sv);
 
+  /* The only NcmStatsVec with the deprecated save-x in this binary: it warns once. */
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*save-x is deprecated*");
   sv = ncm_data_gauss_cov_mvnd_stats_vec (test->gcov_mvnd, mset, 5000, 100000, lower, upper, TRUE, rng);
+  g_test_assert_expected_messages ();
 
   for (i = 0; i < 5; i++)
   {
@@ -252,6 +255,8 @@ test_ncm_data_gauss_cov_mvnd_sanity (TestNcmDataGaussCovTest *test, gconstpointe
   }
 
   g_assert_true (ncm_stats_vec_peek_row (sv, 0) != NULL);
+
+  NCM_TEST_FREE (ncm_stats_vec_free, sv);
 
   ncm_vector_free (lower);
   ncm_vector_free (upper);
@@ -295,6 +300,7 @@ test_ncm_data_gauss_cov_test_sanity (TestNcmDataGaussCovTest *test, gconstpointe
 
     g_assert_true (y_dup == ncm_data_gauss_cov_peek_mean (gauss));
 
+    ncm_vector_free (y_dup);
     NCM_TEST_FREE (ncm_vector_free, y);
   }
 
@@ -402,6 +408,7 @@ test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpoin
 
   g_assert_cmpuint (nerr, <, (np * (np - 1)) / 20);
 
+  ncm_rng_free (rng);
   ncm_stats_vec_clear (&stat);
   ncm_vector_clear (&mean);
 }
@@ -444,6 +451,7 @@ test_ncm_data_gauss_cov_test_bootstrap_resample (TestNcmDataGaussCovTest *test, 
     g_assert_cmpuint (ncm_bootstrap_get_fsize (boot), ==, 10);
   }
 
+  ncm_rng_free (rng);
   ncm_stats_vec_clear (&stat);
   ncm_vector_clear (&mean);
 }
@@ -487,6 +495,7 @@ test_ncm_data_gauss_cov_test_bootstrap_resample_norm (TestNcmDataGaussCovTest *t
     g_assert_cmpuint (ncm_bootstrap_get_fsize (boot), ==, 10);
   }
 
+  ncm_rng_free (rng);
   ncm_stats_vec_clear (&stat);
   ncm_vector_clear (&mean);
 }
@@ -554,6 +563,8 @@ test_ncm_data_gauss_cov_test_bulk_resample (TestNcmDataGaussCovTest *test, gcons
 
   g_assert_cmpuint (nerr, <, (np * (np - 1)) / 20);
 
+  ncm_rng_free (rng);
+  ncm_matrix_free (bulk);
   ncm_stats_vec_clear (&stat);
   ncm_vector_clear (&mean);
 }

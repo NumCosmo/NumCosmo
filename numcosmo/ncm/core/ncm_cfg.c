@@ -82,6 +82,7 @@
 #include "ncm/data/ncm_data_gaussmix2d.h"
 #include "ncm/stats/ncm_stats_acorr.h"
 #include "ncm/stats/ncm_stats_vec.h"
+#include "ncm/stats/ncm_stats_rows.h"
 #include "ncm/fit/ncm_fit_esmcmc_walker_stretch.h"
 #include "ncm/data/ncm_data.h"
 #include "ncm/stats/ncm_stats_dist1d_epdf.h"
@@ -92,6 +93,9 @@
 #include "ncm/fit/ncm_fit_gsl_mm.h"
 #include "ncm/fit/ncm_fit_gsl_mms.h"
 #include "ncm/fit/ncm_fit_nlopt.h"
+#include "ncm/fit/ncm_mset_catalog_desc.h"
+#include "ncm/fit/ncm_mset_catalog_storage_fits.h"
+#include "ncm/fit/ncm_mset_catalog_storage_memory.h"
 #include "ncm/fit/ncm_prior_gauss_param.h"
 #include "ncm/fit/ncm_prior_gauss_func.h"
 #include "ncm/fit/ncm_prior_flat_param.h"
@@ -215,6 +219,8 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_cgf.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h"
@@ -248,6 +254,8 @@
 #include "nc/data/nc_data_bao_dvr_dtdh.h"
 #include "nc/data/nc_data_dist_mu.h"
 #include "nc/data/nc_dist_mu_obs.h"
+#include "nc/data/nc_dist_mu_nuisance.h"
+#include "nc/data/nc_observer_velocity.h"
 #include "nc/data/nc_data_hcosmo_bi_dist_mu.h"
 #include "nc/data/nc_data_cluster_pseudo_counts.h"
 #include "nc/data/nc_data_cluster_ncount.h"
@@ -258,6 +266,7 @@
 #include "nc/data/nc_data_cmb_shift_param.h"
 #include "nc/data/nc_data_cmb_dist_priors.h"
 #include "nc/data/nc_data_hubble.h"
+#include "nc/data/nc_data_hubble_cov.h"
 #include "nc/data/nc_data_snia_cov.h"
 #include "nc/data/nc_data_xcor.h"
 #include "nc/data/nc_data_planck_lkl.h"
@@ -270,6 +279,7 @@
 #include "nc/xcor/nc_xcor_AB.h"
 #include "nc/xcor/nc_xcor_solver.h"
 #include "nc/xcor/nc_xcor_ssc_sij.h"
+#include "nc/xcor/nc_xcor_cov_gauss.h"
 #include "nc/xcor/nc_xcor_kernel.h"
 #include "nc/xcor/nc_xcor_kernel_component.h"
 #include "nc/xcor/nc_xcor_kernel_gal.h"
@@ -643,10 +653,8 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
   g_setenv ("CUBACORESMAX", "0", TRUE);
   g_setenv ("CUBAACCEL", "0", TRUE);
   g_setenv ("CUBAACCELMAX", "0", TRUE);
-#ifdef HAVE_LIBCUBA_4_0
   cubaaccel (0, 0);
   cubacores (0, 0);
-#endif
 
   gsl_err = gsl_set_error_handler_off ();
 
@@ -846,6 +854,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
   ncm_cfg_register_obj (NCM_TYPE_STATS_ACORR);
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
+  ncm_cfg_register_obj (NCM_TYPE_STATS_ROWS);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
 
@@ -864,6 +873,10 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_FIT_GSL_MMS);
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_NLOPT);
+
+  ncm_cfg_register_obj (NCM_TYPE_MSET_CATALOG_DESC);
+  ncm_cfg_register_obj (NCM_TYPE_MSET_CATALOG_STORAGE_FITS);
+  ncm_cfg_register_obj (NCM_TYPE_MSET_CATALOG_STORAGE_MEMORY);
 
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_PARAM);
   ncm_cfg_register_obj (NCM_TYPE_PRIOR_GAUSS_FUNC);
@@ -1015,6 +1028,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_FIXED_QUAD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_SERIES_LENSED);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_CGF);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_TILT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS_LOCAL);
@@ -1062,9 +1077,12 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_DIST_MU);
   ncm_cfg_register_obj (NC_TYPE_DIST_MU_OBS);
+  ncm_cfg_register_obj (NC_TYPE_DIST_MU_NUISANCE);
+  ncm_cfg_register_obj (NC_TYPE_OBSERVER_VELOCITY);
   ncm_cfg_register_obj (NC_TYPE_DATA_HCOSMO_BI_DIST_MU);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
+  ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_SNIA_COV);
 
@@ -1081,6 +1099,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_SOLVER);
   ncm_cfg_register_obj (NC_TYPE_XCOR_SSC_SIJ);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_COV_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_COMPONENT);
   ncm_cfg_register_obj (NC_TYPE_XCOR_KERNEL_RADIAL_KDEP);

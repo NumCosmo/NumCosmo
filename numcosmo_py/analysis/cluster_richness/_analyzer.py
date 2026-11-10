@@ -245,7 +245,9 @@ class CutAnalyzer:
                 mcmc_file = (
                     self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_mcmc.fits"
                 )
-                esmcmc.set_data_file(str(mcmc_file))
+                storage = Ncm.MSetCatalogStorageFits.new(str(mcmc_file), False)
+                assert storage is not None
+                esmcmc.set_storage(storage)
 
             esmcmc.start_run()
             esmcmc.run(self.n_mcmc_steps)
@@ -291,7 +293,9 @@ class CutAnalyzer:
                 bs_file = (
                     self.base_dir / f"{self.file_prefix}_{np.exp(cut):.2f}_bs.fits"
                 )
-                fitmc.set_data_file(str(bs_file))
+                storage = Ncm.MSetCatalogStorageFits.new(str(bs_file), False)
+                assert storage is not None
+                fitmc.set_storage(storage)
 
             fitmc.start_run()
             fitmc.run(self.n_bootstrap)

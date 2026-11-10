@@ -25,7 +25,6 @@
 
 """Tests for the plotting module."""
 
-import re
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -53,15 +52,10 @@ def fixture_mcat(request):
     mset.prepare_fparam_map()
     nchains = NCHAINS
 
-    mcat = Ncm.MSetCatalog(
-        mset=mset,
-        nadd_vals=2,
-        nadd_val_names=["a", "b"],
-        nadd_val_symbols=["c", "d"],
-        nchains=nchains,
-        m2lnp_var=0,
-        weighted=request.param,
+    mcat = Ncm.MSetCatalog.new_array(
+        mset, 2, nchains, request.param, ["a", "b"], ["c", "d"]
     )
+    mcat.set_m2lnp_var(0)
 
     nsamples = NSTEPS * nchains
     samples = np.random.rand(nsamples, 10) - 10.0
@@ -129,24 +123,6 @@ def test_catalog_data_to_mcsamples_plot(mcat):
     cd = mcat_to_catalog_data(mcat, "test")
     fig = plot_mcsamples([cd.to_mcsamples()])
     assert fig is not None
-
-
-def test_catalog_data_bad_burnin(mcat):
-    """Test the corret warning."""
-    with pytest.warns(
-        UserWarning,
-        match=re.escape(
-            f"Burnin (13) is not a multiple of nchains ({NCHAINS}). "
-            f"Burnin will be rounded down."
-        ),
-    ):
-        _ = mcat_to_catalog_data(mcat, "test", burnin=13)
-
-
-def test_catalog_data_too_many_burnin(mcat):
-    """Test the corret warning."""
-    with pytest.raises(ValueError, match="Burnin is greater than the number of steps."):
-        _ = mcat_to_catalog_data(mcat, "test", burnin=NCHAINS * (NSTEPS + 1))
 
 
 def test_catalog_data_with_indices(mcat):

@@ -205,7 +205,9 @@ def test_fit_snia_cov() -> None:
     fitscat = f"example_fit_{snia_id}_nwalkers{nwalkers}.fits"
 
     if os.path.exists(fitscat):
-        lmcat = Ncm.MSetCatalog.new_from_file_ro(fitscat, 0)
+        lmcat = Ncm.MSetCatalog.new_from_storage(
+            Ncm.MSetCatalogStorageFits.new(fitscat, True)
+        )
         mcat_len = lmcat.len()
 
         if mcat_len > nwalkers * 50:
@@ -240,18 +242,9 @@ def test_fit_snia_cov() -> None:
         fit, nwalkers, init_sampler, walker, Ncm.FitRunMsgs.SIMPLE, mfunc_oa
     )
 
-    #
-    # These methods enable the auto-trim options on ESMCMC. This option
-    # makes the sampler check the chains' health and trim any unnecessary
-    # burn-in part. We set the number of divisions to 100 so we test the
-    # chains in blocks of n/100. The last method asserts that each 2min
-    # the catalog will be checked.
-    #
-    # esmcmc.set_auto_trim (True)
-    # esmcmc.set_auto_trim_div (100)
     # esmcmc.set_max_runs_time (2.0 * 60.0)
     esmcmc.set_use_threads(True)
-    esmcmc.set_data_file(fitscat)
+    esmcmc.set_storage(Ncm.MSetCatalogStorageFits.new(fitscat, False))
 
     #
     # Running the esmcmc, it will first calculate 1000 points, after that

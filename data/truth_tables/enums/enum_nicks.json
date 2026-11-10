@@ -299,6 +299,18 @@
     "nick": "slice",
     "type": "Ncm.MatrixInternal"
   },
+  "NCM_MODEL_BUILDER_ERROR_NAME_CLASH": {
+    "nick": "name-clash",
+    "type": "Ncm.ModelBuilderError"
+  },
+  "NCM_MODEL_BUILDER_ERROR_PARENT_NOT_MODEL": {
+    "nick": "parent-not-model",
+    "type": "Ncm.ModelBuilderError"
+  },
+  "NCM_MODEL_BUILDER_ERROR_PARENT_NOT_REGISTERED": {
+    "nick": "parent-not-registered",
+    "type": "Ncm.ModelBuilderError"
+  },
   "NCM_MODEL_ERROR_INVALID_TYPE": {
     "nick": "invalid-type",
     "type": "Ncm.ModelError"
@@ -387,6 +399,22 @@
     "nick": "work-return",
     "type": "Ncm.MPIJobCtrlTag"
   },
+  "NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME": {
+    "nick": "duplicate-name",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_ADD_VALS": {
+    "nick": "invalid-add-vals",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_M2LNP_VAR": {
+    "nick": "invalid-m2lnp-var",
+    "type": "Ncm.MSetCatalogDescError"
+  },
+  "NCM_MSET_CATALOG_DESC_ERROR_INVALID_MSET": {
+    "nick": "invalid-mset",
+    "type": "Ncm.MSetCatalogDescError"
+  },
   "NCM_MSET_CATALOG_POST_LNNORM_METHOD_ELLIPSOID": {
     "nick": "ellipsoid",
     "type": "Ncm.MSetCatalogPostNormMethod"
@@ -399,6 +427,42 @@
     "nick": "hyperbox-bs",
     "type": "Ncm.MSetCatalogPostNormMethod"
   },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_BACKEND": {
+    "nick": "backend",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE": {
+    "nick": "incompatible",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_MARKOVIAN_ID": {
+    "nick": "markovian-id",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_NOT_RECORDING": {
+    "nick": "not-recording",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY": {
+    "nick": "read-only",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_RECORDING": {
+    "nick": "recording",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_RNG": {
+    "nick": "rng",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_ROW": {
+    "nick": "row",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
+  "NCM_MSET_CATALOG_STORAGE_ERROR_UNINITIALIZED": {
+    "nick": "uninitialized",
+    "type": "Ncm.MSetCatalogStorageError"
+  },
   "NCM_MSET_CATALOG_SYNC_AUTO": {
     "nick": "auto",
     "type": "Ncm.MSetCatalogSync"
@@ -410,22 +474,6 @@
   "NCM_MSET_CATALOG_SYNC_TIMED": {
     "nick": "timed",
     "type": "Ncm.MSetCatalogSync"
-  },
-  "NCM_MSET_CATALOG_TRIM_TYPE_ALL": {
-    "nick": "all",
-    "type": "Ncm.MSetCatalogTrimType"
-  },
-  "NCM_MSET_CATALOG_TRIM_TYPE_CK": {
-    "nick": "ck",
-    "type": "Ncm.MSetCatalogTrimType"
-  },
-  "NCM_MSET_CATALOG_TRIM_TYPE_ESS": {
-    "nick": "ess",
-    "type": "Ncm.MSetCatalogTrimType"
-  },
-  "NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL": {
-    "nick": "heidel",
-    "type": "Ncm.MSetCatalogTrimType"
   },
   "NCM_MSET_ERROR_FULLNAME_INVALID": {
     "nick": "fullname-invalid",
@@ -1315,6 +1363,14 @@
     "nick": "cabre",
     "type": "Nc.DataHubbleId"
   },
+  "NC_DATA_HUBBLE_COV_LOUBSER2025": {
+    "nick": "loubser2025",
+    "type": "Nc.DataHubbleCovId"
+  },
+  "NC_DATA_HUBBLE_COV_MORESCO2020": {
+    "nick": "moresco2020",
+    "type": "Nc.DataHubbleCovId"
+  },
   "NC_DATA_HUBBLE_GOMEZ_VALENT_COMP2018": {
     "nick": "gomez-valent-comp2018",
     "type": "Nc.DataHubbleId"
@@ -1423,6 +1479,14 @@
     "nick": "length",
     "type": "Nc.DataPlanckLKLType"
   },
+  "NC_DATA_SNIA_COV_DES_DOVEKIE_STATONLY": {
+    "nick": "cov-des-dovekie-statonly",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_DES_DOVEKIE_STAT_SYS": {
+    "nick": "cov-des-dovekie-stat-sys",
+    "type": "Nc.DataSNIAId"
+  },
   "NC_DATA_SNIA_COV_DES_Y5_STATONLY": {
     "nick": "cov-des-y5-statonly",
     "type": "Nc.DataSNIAId"
@@ -1481,6 +1545,14 @@
   },
   "NC_DATA_SNIA_COV_PANTHEON": {
     "nick": "cov-pantheon",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-hoyt26-stat",
+    "type": "Nc.DataSNIAId"
+  },
+  "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_HOYT26_SYS_STAT": {
+    "nick": "cov-pantheon-plus-sh0es-hoyt26-sys-stat",
     "type": "Nc.DataSNIAId"
   },
   "NC_DATA_SNIA_COV_PANTHEON_PLUS_SH0ES_STAT": {
@@ -1558,6 +1630,30 @@
   "NC_DISTANCE_COMOVING_METHOD_INT_E": {
     "nick": "int-e",
     "type": "Nc.DistanceComovingMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_CAMB_FIT": {
+    "nick": "camb-fit",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_EISENSTEIN_HU": {
+    "nick": "eisenstein-hu",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DISTANCE_SOUND_HORIZON_METHOD_RECOMB": {
+    "nick": "recomb",
+    "type": "Nc.DistanceSoundHorizonMethod"
+  },
+  "NC_DIST_MU_NUISANCE_DMU": {
+    "nick": "dmu",
+    "type": "Nc.DistMuNuisanceVParams"
+  },
+  "NC_DIST_MU_NUISANCE_SIGMA_V": {
+    "nick": "sigma-v",
+    "type": "Nc.DistMuNuisanceSParams"
+  },
+  "NC_DIST_MU_NUISANCE_SIGMA_V_S": {
+    "nick": "sigma-v-s",
+    "type": "Nc.DistMuNuisanceVParams"
   },
   "NC_DIST_MU_OBS_CATALOG_CF4_SNIA": {
     "nick": "cf4-snia",
@@ -1878,6 +1974,10 @@
   "NC_HICOSMO_DE_T_GAMMA0": {
     "nick": "t-gamma0",
     "type": "Nc.HICosmoDESParams"
+  },
+  "NC_HICOSMO_DE_WSPLINE_AS_DRAG": {
+    "nick": "as-drag",
+    "type": "Nc.HICosmoDEWSplineSParams"
   },
   "NC_HICOSMO_DE_WSPLINE_W": {
     "nick": "w",
@@ -2711,6 +2811,18 @@
     "nick": "virial",
     "type": "Nc.MultiplicityFuncMassDef"
   },
+  "NC_OBSERVER_VELOCITY_VX": {
+    "nick": "vx",
+    "type": "Nc.ObserverVelocitySParams"
+  },
+  "NC_OBSERVER_VELOCITY_VY": {
+    "nick": "vy",
+    "type": "Nc.ObserverVelocitySParams"
+  },
+  "NC_OBSERVER_VELOCITY_VZ": {
+    "nick": "vz",
+    "type": "Nc.ObserverVelocitySParams"
+  },
   "NC_PLANCK_FI_COR_TTTEEE_A_cnoise_e2e_100_100_EE": {
     "nick": "a-cnoise-e2e-100-100-ee",
     "type": "Nc.PlanckFICorTTTEEESParams"
@@ -3339,8 +3451,16 @@
     "nick": "len",
     "type": "Nc.XcorKerneltSZSParams"
   },
-  "NC_XCOR_KERNEL_WEAK_LENSING_SPARAM_LEN": {
-    "nick": "len",
+  "NC_XCOR_KERNEL_WEAK_LENSING_IA_A": {
+    "nick": "ia-a",
+    "type": "Nc.XcorKernelWeakLensingSParams"
+  },
+  "NC_XCOR_KERNEL_WEAK_LENSING_IA_ETA": {
+    "nick": "ia-eta",
+    "type": "Nc.XcorKernelWeakLensingSParams"
+  },
+  "NC_XCOR_KERNEL_WEAK_LENSING_IA_Z_PIV": {
+    "nick": "ia-z-piv",
     "type": "Nc.XcorKernelWeakLensingSParams"
   },
   "NC_XCOR_KERNEL_WEAK_LENSING_VPARAM_LEN": {

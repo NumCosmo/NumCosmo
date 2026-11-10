@@ -41,6 +41,7 @@ from numcosmo_py.app.loading import register_firecrown
 from numcosmo_py.experiments.gauss_constraint import (
     create_data_object,
     create_mset as create_gauss_constraint_mset,
+    sample_with_tmvn,
 )
 from numcosmo_py.interpolation.stats_dist import (
     CrossValidationMethod,
@@ -182,6 +183,29 @@ def test_gauss_constraint_data_object_verbose(capsys):
     assert "Constant normalization" in capsys.readouterr().out
 
     assert loud.get_log_norma(mset) == quiet.get_log_norma(mset)
+
+
+def test_gauss_constraint_sample_with_tmvn(tmp_path, monkeypatch):
+    """The truncated-Gaussian sample is written with its count and mean, one row per draw.
+
+    Each row is -2lnL followed by the parameters; the header mean is the mean of the rows.
+    """
+    dim = 2
+    ssize = 50
+    mset, mgc = create_gauss_constraint_mset(dim)
+    dgc = create_data_object(mset, dim, Ncm.RNG.seeded_new(None, 7), verbose=False)
+
+    monkeypatch.chdir(tmp_path)
+    filename = sample_with_tmvn(mset, mgc, dgc, dim, ssize)
+
+    with open(tmp_path / filename, encoding="utf-8") as f:
+        header = [next(f) for _ in range(3)]
+    rows = np.loadtxt(tmp_path / filename)
+
+    assert header[0] == f"#   Number of samples : {ssize}\n"
+    assert rows.shape == (ssize, dim + 1)
+    header_mean = np.array([float(v) for v in header[1].split(":")[1].split()])
+    assert np.allclose(header_mean, rows.mean(axis=0), rtol=1.0e-12, atol=0.0)
 
 
 def test_register_firecrown_without_firecrown(monkeypatch):

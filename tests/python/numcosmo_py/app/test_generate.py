@@ -27,6 +27,7 @@
 from typing import cast
 from pathlib import Path
 import pytest
+import numpy as np
 import typer
 
 pytest.importorskip("astropy")
@@ -223,6 +224,28 @@ def test_generate_dewspline(tmp_path: Path):
     assert exp_file.exists()
 
 
+@pytest.mark.parametrize("use_as_drag", [False, True])
+def test_generate_dewspline_use_as_drag(tmp_path: Path, use_as_drag: bool):
+    """With use_as_drag the BAO sound horizon is the free asdrag parameter."""
+    exp_file = tmp_path / "dewspline.yaml"
+    _ = gen.GenerateDEWSpline(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+        use_as_drag=use_as_drag,
+    )
+
+    # The experiment refers to the dataset saved beside it, which must be loaded first.
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    _ = ser.from_binfile(exp_file.with_suffix(".dataset.gvar").absolute().as_posix())
+    exp = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = exp.peek("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    assert isinstance(cosmo, Nc.HICosmoDEWSpline)
+    assert cosmo.get_use_as_drag() == use_as_drag
+    assert (mset.fparam_get_pi_by_name("NcHICosmo:asdrag") is not None) == use_as_drag
+
+
 CURVATURE_PRIORS = [
     gen.CurvaturePriorType.NONE,
     gen.CurvaturePriorType.MEAN_KAPPA,
@@ -263,6 +286,53 @@ def test_generate_qspline_curvature_prior(
     )
     assert exp_file.exists()
     assert exp_file.with_suffix(".functions.yaml").exists()
+
+
+@pytest.mark.parametrize(
+    "generator, func_name",
+    [
+        (gen.GenerateDEWSpline, "NcHICosmoDEWSpline:lp_w2_ls"),
+        (gen.GenerateQSpline, "NcHICosmoQSpline:lp_q2_ls"),
+    ],
+)
+def test_generate_spline_default_curvature_prior(
+    tmp_path: Path, generator: type, func_name: str
+):
+    """The default curvature prior is the L10 norm of the second derivative.
+
+    It is a Gaussian prior on the residual functions, with one residual per
+    quadrature node, and the same value as the prior on the norm.
+    """
+    exp_file = tmp_path / "spline.yaml"
+    _ = generator(
+        experiment=exp_file.absolute(),
+        include_bao=hicosmo.BAOID.ALL_COMBINED_JUN_2025,
+    )
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    _ = ser.from_binfile(exp_file.with_suffix(".dataset.gvar").absolute().as_posix())
+    exp = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    likelihood = exp.peek("likelihood")
+    assert isinstance(likelihood, Ncm.Likelihood)
+    priors = [likelihood.priors_peek_f(i) for i in range(likelihood.priors_length_f())]
+    curvature = [
+        prior
+        for prior in priors
+        if isinstance(prior, Ncm.PriorGaussFunc)
+        and prior.props.mean_func.props.full_name == func_name
+    ]
+    assert len(curvature) == 1
+    assert curvature[0].props.variable == 10.0
+
+    mset = exp.peek("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    assert curvature[0].props.dimension == cosmo.d2_lp_residuals_len(None, 10)
+
+    norm = Ncm.MSetFuncList.new(func_name.removesuffix("_ls"), None)
+    f = np.array(curvature[0].eval_array(mset, None))
+    expected = norm.eval1(mset, 10.0) / curvature[0].props.sigma
+    assert np.sum(f**2) == pytest.approx(expected**2, rel=1.0e-10)
 
 
 # LOCAL_* priors build a data-driven weight from the expected Fisher, so they
@@ -315,6 +385,7 @@ def test_add_curvature_prior_local_requires_weight():
     with pytest.raises(ValueError, match="requires a precomputed weight spline"):
         gen._add_curvature_prior(
             likelihood,
+            cosmo=Nc.HICosmoDEWSpline.new(6, 2.33),
             namespace="NcHICosmoDEWSpline",
             d2_name="lp_w2",
             prior_type=gen.CurvaturePriorType.LOCAL_D2,
@@ -475,6 +546,13 @@ def test_generate_bianchi(tmp_path: Path):
     assert 0 < z.len() < 1008
     assert max(z.get(i) for i in range(z.len())) <= 0.02
 
+    # The orientation is bounded to one fundamental domain by default
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    cosmo = cast(Nc.HCosmoBI, mset.peek(Nc.HCosmoBI.id()))
+    assert cosmo.param_get_upper_bound(cosmo.param_index_from_name("u1")[1]) == 0.5
+    assert cosmo.param_get_upper_bound(cosmo.param_index_from_name("u2")[1]) == 0.25
+    assert cosmo.param_get_upper_bound(cosmo.param_index_from_name("u3")[1]) == 1.0
+
     # The written catalog loads as a NcDistMuObs and gives the same experiment
     exp_file2 = tmp_path / "bianchi2.yaml"
     _ = gen.GenerateBianchi(
@@ -482,8 +560,130 @@ def test_generate_bianchi(tmp_path: Path):
         data_file=cat_file.absolute(),
         mu_col="DM_av",
         z_max=0.02,
+        fundamental_domain=False,
     )
     assert exp_file2.exists()
+    ser2 = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment2 = ser2.dict_str_from_yaml_file(exp_file2.absolute().as_posix())
+    mset2 = cast(Ncm.MSet, experiment2.get("model-set"))
+    cosmo2 = cast(Nc.HCosmoBI, mset2.peek(Nc.HCosmoBI.id()))
+    assert cosmo2.param_get_upper_bound(cosmo2.param_index_from_name("u1")[1]) == 1.0
+    assert cosmo2.param_get_upper_bound(cosmo2.param_index_from_name("u2")[1]) == 1.0
+
+
+def test_generate_bianchi_sigma_v_per_sample(
+    tmp_path: Path, edd_cf4_excerpt_file: Path
+):
+    """Test Bianchi I generation with a velocity dispersion per sample."""
+    exp_file = tmp_path / "bianchi_svs.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        edd_table=edd_cf4_excerpt_file.absolute(),
+        sigma_v=250.0,
+        fit_sigma_v=True,
+        sigma_v_per_sample=True,
+        sample_rule=dist_mu_obs.SampleRule.SMALLEST_ERROR,
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    nuisance = cast(Nc.DistMuNuisance, mset.peek(Nc.DistMuNuisance.id()))
+    n = nuisance.get_nsamples()
+    assert n > 0
+    assert nuisance.get_nsigma_v() == n
+    for s in range(n):
+        assert nuisance.get_sigma_v_sample(s) == 250.0
+        assert (
+            nuisance.param_get_ftype(nuisance.param_index_from_name(f"sigmav_s_{s}")[1])
+            == Ncm.ParamType.FREE
+        )
+    # Sample -1 keeps the common value, which stays fixed since every object has a sample
+    assert nuisance.get_sigma_v_sample(-1) == 250.0
+    assert (
+        nuisance.param_get_ftype(nuisance.param_index_from_name("sigmav")[1])
+        == Ncm.ParamType.FIXED
+    )
+
+    with pytest.raises(ValueError, match="needs samples"):
+        _ = gen.GenerateBianchi(
+            experiment=(tmp_path / "bianchi_svs2.yaml").absolute(),
+            edd_table=edd_cf4_excerpt_file.absolute(),
+            sigma_v_per_sample=True,
+        )
+
+
+def test_generate_bianchi_heliocentric(tmp_path: Path):
+    """Test the heliocentric redshifts: z - (v_sun / c) cos(theta) with the Planck apex."""
+    files = {}
+    for name, heliocentric in (("cmb", False), ("hel", True)):
+        files[name] = tmp_path / f"bianchi_{name}.yaml"
+        _ = gen.GenerateBianchi(
+            experiment=files[name].absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+            z_min=0.01,
+            z_max=0.03,
+            fit_velocity=True,
+            heliocentric=heliocentric,
+        )
+    z = {}
+    p_sky = None
+    for name, path in files.items():
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        experiment = ser.dict_str_from_yaml_file(path.absolute().as_posix())
+        likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+        data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+        z[name] = np.array(data.peek_z().dup_array())
+        p_sky = np.array(data.peek_p().dup_array()).reshape(-1, 3)
+    assert p_sky is not None
+    shift = z["cmb"] - z["hel"]
+    # The shift is v . p for one vector v, the Sun's velocity over c toward the apex.
+    v, *_ = np.linalg.lstsq(p_sky, shift, rcond=None)
+    assert np.allclose(p_sky @ v, shift, atol=1.0e-12)
+    assert np.isclose(np.linalg.norm(v), 369.82 / 299792.458, rtol=1.0e-10)
+    # Apex (l, b) = (264.021, 48.253) deg: RA 167.94, Dec -6.94 deg in the equatorial frame.
+    apex = v / np.linalg.norm(v)
+    ra = np.degrees(np.arctan2(apex[1], apex[0])) % 360.0
+    dec = np.degrees(np.arcsin(apex[2]))
+    assert abs(ra - 167.94) < 0.02
+    assert abs(dec + 6.94) < 0.02
+
+
+def test_generate_bianchi_velocity(tmp_path: Path):
+    """Test Bianchi I generation with the observer velocity free."""
+    exp_file = tmp_path / "bianchi_v.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+        z_min=0.01,
+        z_max=0.03,
+        fit_velocity=True,
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    velocity = cast(Nc.ObserverVelocity, mset.peek(Nc.ObserverVelocity.id()))
+    assert velocity is not None
+    assert all(
+        velocity.param_get_ftype(velocity.param_index_from_name(n)[1])
+        == Ncm.ParamType.FREE
+        for n in ("vx", "vy", "vz")
+    )
+    assert velocity.speed() == 0.0
+    # The distance table reaches beyond the largest redshift by the largest beta
+    likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+    data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+    dist = data.props.dist
+    assert dist is not None
+    assert dist.props.zmax > 1.05 * 0.03 + Nc.OBSERVER_VELOCITY_MAX_V / 299792.458
+
+    # Too small a lower redshift limit for the velocity bound
+    with pytest.raises(ValueError, match="raise z_min"):
+        _ = gen.GenerateBianchi(
+            experiment=(tmp_path / "bianchi_v2.yaml").absolute(),
+            catalog=dist_mu_obs.DistMuObsCatalogID.CF4_SNIA,
+            z_max=0.03,
+            fit_velocity=True,
+        )
 
 
 def test_generate_bianchi_sources(tmp_path: Path):
@@ -526,3 +726,73 @@ def test_generate_bianchi_edd_table(tmp_path: Path, edd_cf4_excerpt_file: Path):
     obs = ser.from_file(cat_file.absolute().as_posix())
     assert isinstance(obs, Nc.DistMuObs)
     assert obs.len() == 6
+
+
+def test_generate_bianchi_nuisance(tmp_path: Path, edd_cf4_excerpt_file: Path):
+    """Test Bianchi I generation with the velocity dispersion and per-sample offsets."""
+    exp_file = tmp_path / "bianchi_nuisance.yaml"
+    _ = gen.GenerateBianchi(
+        experiment=exp_file.absolute(),
+        edd_table=edd_cf4_excerpt_file,
+        sigma_v=300.0,
+        fit_sigma_v=True,
+        sample_rule=dist_mu_obs.SampleRule.SMALLEST_ERROR,
+        fit_offsets=True,
+        reference_sample="0",
+        omegam_mean=None,
+    )
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    experiment = ser.dict_str_from_yaml_file(exp_file.absolute().as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    nuisance = cast(Nc.DistMuNuisance, mset.peek(Nc.DistMuNuisance.id()))
+    assert nuisance.get_sigma_v() == 300.0
+    assert nuisance.get_nsamples() >= 1
+    assert mset.fparams_len() == 7 + 1 + nuisance.get_nsamples() - 1
+    with pytest.raises(ValueError, match="not among the samples"):
+        gen.GenerateBianchi(
+            experiment=(tmp_path / "b3.yaml").absolute(),
+            edd_table=edd_cf4_excerpt_file,
+            sample_rule=dist_mu_obs.SampleRule.SMALLEST_ERROR,
+            fit_offsets=True,
+            reference_sample="nosuchsurvey",
+        )
+    with pytest.raises(ValueError, match="needs a reference_sample"):
+        gen.GenerateBianchi(
+            experiment=(tmp_path / "b2.yaml").absolute(),
+            edd_table=edd_cf4_excerpt_file,
+            sample_rule=dist_mu_obs.SampleRule.HEMISPHERE,
+            fit_offsets=True,
+        )
+    # The reference sample by name: south stays fixed, north is free
+    exp_hemi = tmp_path / "b4.yaml"
+    gen.GenerateBianchi(
+        experiment=exp_hemi.absolute(),
+        edd_table=edd_cf4_excerpt_file,
+        sample_rule=dist_mu_obs.SampleRule.HEMISPHERE,
+        fit_offsets=True,
+        reference_sample="south",
+        omegam_mean=None,
+    )
+    ser_hemi = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    mset_hemi = cast(
+        Ncm.MSet,
+        ser_hemi.dict_str_from_yaml_file(exp_hemi.absolute().as_posix()).get(
+            "model-set"
+        ),
+    )
+    nuisance_hemi = cast(Nc.DistMuNuisance, mset_hemi.peek(Nc.DistMuNuisance.id()))
+    assert nuisance_hemi.get_nsamples() == 2
+    assert (
+        nuisance_hemi.param_get_ftype(nuisance_hemi.param_index_from_name("dmu_0")[1])
+        == Ncm.ParamType.FREE
+    )
+    assert (
+        nuisance_hemi.param_get_ftype(nuisance_hemi.param_index_from_name("dmu_1")[1])
+        == Ncm.ParamType.FIXED
+    )
+    likelihood = cast(Ncm.Likelihood, experiment.get("likelihood"))
+    data = cast(Nc.DataHCosmoBIDistMu, likelihood.peek_dataset().get_data(0))
+    samples = data.peek_samples()
+    assert (
+        max(samples.get(i) for i in range(samples.len())) == nuisance.get_nsamples() - 1
+    )

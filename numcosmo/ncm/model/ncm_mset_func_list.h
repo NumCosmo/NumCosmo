@@ -85,6 +85,7 @@ void ncm_mset_func_list_register (const gchar *name, const gchar *symbol, const 
 GArray *ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim);
 
 NcmMSetFuncList *ncm_mset_func_list_new (const gchar *full_name, GObject *obj);
+NcmMSetFuncList *ncm_mset_func_list_new_dim (const gchar *full_name, GObject *obj, guint dim);
 NcmMSetFuncList *ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, GObject *obj);
 NcmMSetFuncList *ncm_mset_func_list_ref (NcmMSetFuncList *flist);
 

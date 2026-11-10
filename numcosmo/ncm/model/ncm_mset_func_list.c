@@ -32,7 +32,10 @@
  * under a namespace and a name, for instance "NcHICosmo:H". A #NcmMSetFuncList is
  * built from that full name with ncm_mset_func_list_new() and takes the metadata
  * of the registered function. Some functions also need an object of a given type,
- * passed as the #NcmMSetFuncList:object property.
+ * passed as the #NcmMSetFuncList:object property. A function registered with
+ * dimension 0 takes its dimension at construction, from
+ * ncm_mset_func_list_new_dim(); its C function reads it with
+ * ncm_mset_func_get_dim().
  *
  * ncm_mset_func_list_select() lists the registered functions.
  * ncm_mset_func_list_new_ns_name() and ncm_mset_func_list_has_ns_name() also accept
@@ -60,6 +63,7 @@ typedef struct _NcmMSetFuncListPrivate
   GType obj_type;
   NcmMSetFuncListN func;
   GObject *obj;
+  guint reg_dim;
 } NcmMSetFuncListPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmMSetFuncList, ncm_mset_func_list, NCM_TYPE_MSET_FUNC)
@@ -73,9 +77,34 @@ ncm_mset_func_list_init (NcmMSetFuncList *flist)
   self->obj_type = G_TYPE_NONE;
   self->func     = NULL;
   self->obj      = NULL;
+  self->reg_dim  = 0;
 }
 
 static void _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *full_name);
+
+/* The dimension is checked once every construct property is set: the registered one,
+ * or, for a function registered with dimension 0, a positive one given at
+ * construction. */
+static void
+_ncm_mset_func_list_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_mset_func_list_parent_class)->constructed (object);
+  {
+    NcmMSetFuncList *flist              = NCM_MSET_FUNC_LIST (object);
+    NcmMSetFuncListPrivate * const self = ncm_mset_func_list_get_instance_private (flist);
+    NcmMSetFunc *func                   = NCM_MSET_FUNC (object);
+    const guint dim                     = ncm_mset_func_get_dim (func);
+
+    if ((self->reg_dim == 0) && (dim == 0))
+      g_error ("_ncm_mset_func_list_constructed: function `%s:%s' has its dimension set at construction, "
+               "use ncm_mset_func_list_new_dim().",
+               ncm_mset_func_peek_ns (func), ncm_mset_func_peek_name (func));
+    else if ((self->reg_dim != 0) && (dim != self->reg_dim))
+      g_error ("_ncm_mset_func_list_constructed: function `%s:%s' has dimension %u, not %u.",
+               ncm_mset_func_peek_ns (func), ncm_mset_func_peek_name (func), self->reg_dim, dim);
+  }
+}
 
 static void
 _ncm_mset_func_list_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -176,6 +205,7 @@ ncm_mset_func_list_class_init (NcmMSetFuncListClass *klass)
   GObjectClass *object_class   = G_OBJECT_CLASS (klass);
   NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
 
+  object_class->constructed  = &_ncm_mset_func_list_constructed;
   object_class->set_property = &_ncm_mset_func_list_set_property;
   object_class->get_property = &_ncm_mset_func_list_get_property;
   object_class->dispose      = &_ncm_mset_func_list_dispose;
@@ -240,8 +270,19 @@ _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *fu
     {
       NcmMSetFuncListStruct *fdata = &g_array_index (flist_class->func_array, NcmMSetFuncListStruct, GPOINTER_TO_INT (fdata_i));
 
-      ncm_mset_func_set_meta (func, fdata->name, fdata->symbol, fdata->ns, fdata->desc, fdata->nvar, fdata->dim);
+      /* Dimension 0: keep the one given at construction, set before or after the name.
+       * A dimension given before the name must be the registered one; one given after
+       * it is checked in constructed. */
+      const guint cur_dim = ncm_mset_func_get_dim (func);
+      const guint dim     = (fdata->dim == 0) ? cur_dim : fdata->dim;
 
+      if ((fdata->dim != 0) && (cur_dim != 0) && (cur_dim != fdata->dim))
+        g_error ("_ncm_mset_func_list_init_from_full_name: function `%s:%s' has dimension %u, not %u.",
+                 fdata->ns, fdata->name, fdata->dim, cur_dim);
+
+      ncm_mset_func_set_meta (func, fdata->name, fdata->symbol, fdata->ns, fdata->desc, fdata->nvar, dim);
+
+      self->reg_dim  = fdata->dim;
       self->obj_type = fdata->obj_type;
       self->func     = fdata->func;
     }
@@ -273,9 +314,10 @@ _ncm_mset_func_list_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gd
  * @obj_type: object type
  * @func: (scope notified): function pointer
  * @nvar: number of variables
- * @dim: function dimension
+ * @dim: function dimension, or 0 when it is given at construction
  *
- * Register a new function in the NcmMSetFuncList class.
+ * Register a new function in the NcmMSetFuncList class. A function registered with
+ * @dim 0 is created with ncm_mset_func_list_new_dim().
  *
  */
 void
@@ -398,7 +440,9 @@ ncm_mset_func_list_struct_free (NcmMSetFuncListStruct *fdata)
  *
  * Generates a new instance of #NcmMSetFuncList based on the provided @full_name. The
  * @full_name should adhere to the "namespace:name" format, aligning with a registered
- * function. The associated @obj must match the type as the registered object.
+ * function. The associated @obj must match the type as the registered object. A
+ * function registered with dimension 0 has no dimension of its own and aborts here:
+ * create it with ncm_mset_func_list_new_dim().
  *
  * Returns: (transfer full): newly created #NcmMSetFuncList.
  */
@@ -408,6 +452,30 @@ ncm_mset_func_list_new (const gchar *full_name, GObject *obj)
   NcmMSetFuncList *flist = g_object_new (NCM_TYPE_MSET_FUNC_LIST,
                                          "full-name", full_name,
                                          "object", obj,
+                                         NULL);
+
+  return flist;
+}
+
+/**
+ * ncm_mset_func_list_new_dim:
+ * @full_name: function full name
+ * @obj: (allow-none): associated object
+ * @dim: function dimension
+ *
+ * Creates a #NcmMSetFuncList as ncm_mset_func_list_new() with dimension @dim. For a
+ * function registered with dimension 0, @dim must be positive; for the others it must
+ * be the registered dimension. Aborts otherwise.
+ *
+ * Returns: (transfer full): newly created #NcmMSetFuncList.
+ */
+NcmMSetFuncList *
+ncm_mset_func_list_new_dim (const gchar *full_name, GObject *obj, guint dim)
+{
+  NcmMSetFuncList *flist = g_object_new (NCM_TYPE_MSET_FUNC_LIST,
+                                         "full-name", full_name,
+                                         "object", obj,
+                                         "dimension", dim,
                                          NULL);
 
   return flist;

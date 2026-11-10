@@ -66,10 +66,9 @@ NcmFitMC *ncm_fit_mc_new_funcs_array (NcmFit *fit, NcmFitMCResampleType rtype, N
 void ncm_fit_mc_free (NcmFitMC *mc);
 void ncm_fit_mc_clear (NcmFitMC **mc);
 
-void ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename);
+void ncm_fit_mc_set_storage (NcmFitMC *mc, NcmMSetCatalogStorage *storage);
 
 void ncm_fit_mc_set_mtype (NcmFitMC *mc, NcmFitRunMsgs mtype);
-void ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype);
 void ncm_fit_mc_set_use_threads (NcmFitMC *mc, gboolean use_threads);
 gboolean ncm_fit_mc_get_use_threads (NcmFitMC *mc);
 void ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order);
@@ -78,10 +77,9 @@ void ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng);
 
 gboolean ncm_fit_mc_is_running (NcmFitMC *mc);
 
-void ncm_fit_mc_start_run (NcmFitMC *mc);
+void ncm_fit_mc_start_run (NcmFitMC *mc, GError **error);
 void ncm_fit_mc_end_run (NcmFitMC *mc);
 void ncm_fit_mc_reset (NcmFitMC *mc);
-void ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id);
 void ncm_fit_mc_run (NcmFitMC *mc, guint n);
 void ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre);
 void ncm_fit_mc_mean_covar (NcmFitMC *mc);

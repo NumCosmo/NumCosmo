@@ -30,9 +30,7 @@
 #include <numcosmo/numcosmo.h>
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_statistics_double.h>
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 
 #define NTESTS_MIN 5000
 #define NTESTS_MAX 10000
@@ -89,35 +87,54 @@ void test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer 
 void test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_ci_single (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata);
-void test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_diag_short (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_heidel (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_heidel_by_chain_fail (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_post_lnnorm_degenerate (TestNcmMSetCatalog *test, gconstpointer pdata);
 void test_ncm_mset_catalog_remove_last_ensemble (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_diag_rows (TestNcmMSetCatalog *test, gconstpointer pdata);
+void test_ncm_mset_catalog_peek_current_row (TestNcmMSetCatalog *test, gconstpointer pdata);
 
 static void _test_ncm_mset_catalog_flist_scaled_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
 static void _test_ncm_mset_catalog_flist_p0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static GPtrArray *_test_ncm_mset_catalog_write_ar1 (const gchar *filename, const guint nchains, const guint nrows);
+static NcmMSetCatalog *_test_ncm_mset_catalog_open_read_block (const gchar *filename, const guint read_block);
+static void _test_ncm_mset_catalog_assert_rows (NcmMSetCatalog *mcat, GPtrArray *rows);
+static GArray *_test_ncm_mset_catalog_read_block_results (NcmMSetCatalog *mcat, const gchar *oob_file);
+static void _test_ncm_mset_catalog_rm_tmp_dir (const gchar *tmp_dir);
+static void _test_ncm_mset_catalog_write_rows (const gchar *filename, const guint nchains, GPtrArray *rows, const gint markovian_id);
 
-#ifdef HAVE_CFITSIO
 void test_ncm_mset_catalog_file_hdu0_roundtrip (void);
 void test_ncm_mset_catalog_file_sampler_history (void);
-void test_ncm_mset_catalog_file_functions_array_roundtrip (void);
+void test_ncm_mset_catalog_file_functions_array (void);
 void test_ncm_mset_catalog_file_hdu0_legacy_object_format (void);
 void test_ncm_mset_catalog_file_legacy_fallback (void);
 void test_ncm_mset_catalog_file_missing_mset_traps (void);
 void test_ncm_mset_catalog_file_missing_mset_subprocess (void);
+void test_ncm_mset_catalog_no_mset_no_file_traps (void);
+void test_ncm_mset_catalog_no_mset_no_file_subprocess (void);
 void test_ncm_mset_catalog_file_peek_info (void);
+void test_ncm_mset_catalog_storage_memory (void);
+void test_ncm_mset_catalog_storage_fits (void);
+void test_ncm_mset_catalog_file_trim_oob_large (void);
 void test_ncm_mset_catalog_file_multichain (void);
+void test_ncm_mset_catalog_file_weighted_roundtrip (void);
+void test_ncm_mset_catalog_file_read_block (gconstpointer pdata);
+void test_ncm_mset_catalog_file_read_block_restore (void);
+void test_ncm_mset_catalog_file_read_block_release (void);
+void test_ncm_mset_catalog_file_thin (gconstpointer pdata);
+void test_ncm_mset_catalog_file_thin_writable_traps (void);
+void test_ncm_mset_catalog_file_thin_writable_subprocess (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_traps (void);
 void test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void);
+void test_ncm_mset_catalog_file_burnin_chains_traps (void);
+void test_ncm_mset_catalog_file_burnin_chains_subprocess (void);
 void test_ncm_mset_catalog_file_markovian_id_roundtrip (void);
 void test_ncm_mset_catalog_file_markovian_id_missing_key (void);
 void test_ncm_mset_catalog_file_markovian_id_backwards_traps (void);
 void test_ncm_mset_catalog_file_markovian_id_backwards_subprocess (void);
 void test_ncm_mset_catalog_file_markovian_id_trim (void);
 void test_ncm_mset_catalog_file_markovian_id_frozen_needs_more (void);
-
-#endif /* HAVE_CFITSIO */
 
 TestNcmMSetCatalogTests fixtures[] =
 {
@@ -149,11 +166,13 @@ TestNcmMSetCatalogTests tests[] =
   {"distrib/short", test_ncm_mset_catalog_distrib_short},
   {"ci/single", test_ncm_mset_catalog_ci_single},
   {"param_pdf", test_ncm_mset_catalog_param_pdf},
-  {"trim_by_type/short", test_ncm_mset_catalog_trim_by_type_short},
+  {"diag/short", test_ncm_mset_catalog_diag_short},
   {"heidel", test_ncm_mset_catalog_heidel},
   {"heidel/by_chain/fail", test_ncm_mset_catalog_heidel_by_chain_fail},
   {"post_lnnorm/degenerate", test_ncm_mset_catalog_post_lnnorm_degenerate},
   {"remove_last_ensemble", test_ncm_mset_catalog_remove_last_ensemble},
+  {"diag_rows", test_ncm_mset_catalog_diag_rows},
+  {"peek_current_row", test_ncm_mset_catalog_peek_current_row},
   {NULL, NULL}
 };
 
@@ -199,14 +218,15 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_catalog_invalid_run,
               &test_ncm_mset_catalog_free);
 
-#ifdef HAVE_CFITSIO
   g_test_add_func ("/ncm/mset/catalog/file/hdu0_roundtrip", &test_ncm_mset_catalog_file_hdu0_roundtrip);
   g_test_add_func ("/ncm/mset/catalog/file/sampler_history", &test_ncm_mset_catalog_file_sampler_history);
-  g_test_add_func ("/ncm/mset/catalog/file/functions_array_roundtrip", &test_ncm_mset_catalog_file_functions_array_roundtrip);
+  g_test_add_func ("/ncm/mset/catalog/file/functions_array", &test_ncm_mset_catalog_file_functions_array);
   g_test_add_func ("/ncm/mset/catalog/file/hdu0_legacy_object_format", &test_ncm_mset_catalog_file_hdu0_legacy_object_format);
   g_test_add_func ("/ncm/mset/catalog/file/legacy_fallback", &test_ncm_mset_catalog_file_legacy_fallback);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/traps", &test_ncm_mset_catalog_file_missing_mset_traps);
   g_test_add_func ("/ncm/mset/catalog/file/missing_mset/subprocess", &test_ncm_mset_catalog_file_missing_mset_subprocess);
+  g_test_add_func ("/ncm/mset/catalog/no_mset_no_file/traps", &test_ncm_mset_catalog_no_mset_no_file_traps);
+  g_test_add_func ("/ncm/mset/catalog/no_mset_no_file/subprocess", &test_ncm_mset_catalog_no_mset_no_file_subprocess);
   g_test_add_func ("/ncm/mset/catalog/weighted/tau/traps", &test_ncm_mset_catalog_weighted_tau_traps);
   g_test_add_func ("/ncm/mset/catalog/weighted/tau/subprocess", &test_ncm_mset_catalog_weighted_tau_subprocess);
   g_test_add_func ("/ncm/mset/catalog/tau/frozen_keff", &test_ncm_mset_catalog_tau_frozen_walkers);
@@ -214,16 +234,29 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/mset/catalog/set_rng/twice", &test_ncm_mset_catalog_set_rng_twice);
   g_test_add_func ("/ncm/mset/catalog/file/peek_info", &test_ncm_mset_catalog_file_peek_info);
+  g_test_add_func ("/ncm/mset/catalog/storage/memory", &test_ncm_mset_catalog_storage_memory);
+  g_test_add_func ("/ncm/mset/catalog/storage/fits", &test_ncm_mset_catalog_storage_fits);
+  g_test_add_func ("/ncm/mset/catalog/file/trim_oob/large", &test_ncm_mset_catalog_file_trim_oob_large);
   g_test_add_func ("/ncm/mset/catalog/file/multichain", &test_ncm_mset_catalog_file_multichain);
+  g_test_add_func ("/ncm/mset/catalog/file/weighted_roundtrip", &test_ncm_mset_catalog_file_weighted_roundtrip);
+  g_test_add_data_func ("/ncm/mset/catalog/file/read_block/one_chain", GUINT_TO_POINTER (1), &test_ncm_mset_catalog_file_read_block);
+  g_test_add_data_func ("/ncm/mset/catalog/file/read_block/four_chains", GUINT_TO_POINTER (4), &test_ncm_mset_catalog_file_read_block);
+  g_test_add_func ("/ncm/mset/catalog/file/read_block/restore", &test_ncm_mset_catalog_file_read_block_restore);
+  g_test_add_func ("/ncm/mset/catalog/file/read_block/release", &test_ncm_mset_catalog_file_read_block_release);
+  g_test_add_data_func ("/ncm/mset/catalog/file/thin/one_chain", GUINT_TO_POINTER (1), &test_ncm_mset_catalog_file_thin);
+  g_test_add_data_func ("/ncm/mset/catalog/file/thin/four_chains", GUINT_TO_POINTER (4), &test_ncm_mset_catalog_file_thin);
+  g_test_add_func ("/ncm/mset/catalog/file/thin/writable/traps", &test_ncm_mset_catalog_file_thin_writable_traps);
+  g_test_add_func ("/ncm/mset/catalog/file/thin/writable/subprocess", &test_ncm_mset_catalog_file_thin_writable_subprocess);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/traps", &test_ncm_mset_catalog_file_burnin_exceeds_traps);
   g_test_add_func ("/ncm/mset/catalog/file/burnin_exceeds/subprocess", &test_ncm_mset_catalog_file_burnin_exceeds_subprocess);
+  g_test_add_func ("/ncm/mset/catalog/file/burnin_chains/traps", &test_ncm_mset_catalog_file_burnin_chains_traps);
+  g_test_add_func ("/ncm/mset/catalog/file/burnin_chains/subprocess", &test_ncm_mset_catalog_file_burnin_chains_subprocess);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/roundtrip", &test_ncm_mset_catalog_file_markovian_id_roundtrip);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/missing_key", &test_ncm_mset_catalog_file_markovian_id_missing_key);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/backwards/traps", &test_ncm_mset_catalog_file_markovian_id_backwards_traps);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/backwards/subprocess", &test_ncm_mset_catalog_file_markovian_id_backwards_subprocess);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/trim", &test_ncm_mset_catalog_file_markovian_id_trim);
   g_test_add_func ("/ncm/mset/catalog/file/markovian_id/frozen_needs_more", &test_ncm_mset_catalog_file_markovian_id_frozen_needs_more);
-#endif /* HAVE_CFITSIO */
 
   g_test_run ();
 }
@@ -384,6 +417,18 @@ _test_ncm_mset_catalog_add_ensembles (TestNcmMSetCatalog *test, guint nens)
   ncm_vector_free (row);
 }
 
+/* Asserts that a and b hold the same values. */
+static void
+_test_ncm_mset_catalog_assert_vector_eq (NcmVector *a, NcmVector *b)
+{
+  guint i;
+
+  g_assert_cmpuint (ncm_vector_len (a), ==, ncm_vector_len (b));
+
+  for (i = 0; i < ncm_vector_len (a); i++)
+    g_assert_cmpfloat (ncm_vector_get (a, i), ==, ncm_vector_get (b, i));
+}
+
 static void
 _test_ncm_mset_catalog_add_uniform_rows (TestNcmMSetCatalog *test, guint n)
 {
@@ -395,6 +440,29 @@ _test_ncm_mset_catalog_add_uniform_rows (TestNcmMSetCatalog *test, guint n)
   {
     for (j = 0; j < ncols; j++)
       ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
+
+    ncm_mset_catalog_add_from_vector (test->mcat, row);
+  }
+
+  ncm_vector_free (row);
+}
+
+/* As _test_ncm_mset_catalog_add_uniform_rows(), with the first free parameter (column 1)
+ * of row i drawn uniform in [i/n, (i+1)/n): its smallest value is below 1/n and its
+ * largest above 1 - 1/n for every seed. */
+static void
+_test_ncm_mset_catalog_add_stratified_rows (TestNcmMSetCatalog *test, guint n)
+{
+  const guint ncols = ncm_mset_catalog_ncols (test->mcat);
+  NcmVector *row    = ncm_vector_new (ncols);
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+  {
+    for (j = 0; j < ncols; j++)
+      ncm_vector_set (row, j, ncm_rng_uniform01_gen (test->rng));
+
+    ncm_vector_set (row, 1, (i + ncm_vector_get (row, 1)) / n);
 
     ncm_mset_catalog_add_from_vector (test->mcat, row);
   }
@@ -440,12 +508,55 @@ _test_ncm_mset_catalog_log_end (FILE *log)
   fclose (log);
 }
 
-#ifdef HAVE_CFITSIO
-
 /*
  * Builds a small free-parameter mset, writes a new-style catalog file for it
  * (mset embedded in HDU0), and returns both. The catalog is not left open.
  */
+
+/* A catalog on a FITS storage of filename, read-only when read_only, with burnin leading rows dropped. */
+static NcmMSetCatalog *
+_test_ncm_mset_catalog_open (const gchar *filename, gboolean read_only, glong burnin)
+{
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, read_only, NULL);
+  NcmMSetCatalog *mcat                    = ncm_mset_catalog_new_from_storage_full (NCM_MSET_CATALOG_STORAGE (storage_fits), burnin, 1);
+
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+
+  return mcat;
+}
+
+/*
+ * A new catalog of the free parameters of mset and one m2lnL column, the -2ln(p) column,
+ * with nchains chains and run type rtype, on a writable FITS storage of filename.
+ */
+static NcmMSetCatalog *
+_test_ncm_mset_catalog_new_on_file (NcmMSet *mset, guint nchains, gboolean weighted, const gchar *rtype, const gchar *filename)
+{
+  const gchar *names[]   = {"m2lnL", NULL};
+  const gchar *symbols[] = {"-2\\ln(L)", NULL};
+  GError *error          = NULL;
+  NcmMSetCatalogDesc *desc;
+  NcmMSetCatalogStorageFits *storage_fits;
+  NcmMSetCatalog *mcat;
+
+  desc = ncm_mset_catalog_desc_new (mset, nchains, weighted, names, symbols, 0, rtype, &error);
+  g_assert_no_error (error);
+
+  storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_set_desc (NCM_MSET_CATALOG_STORAGE (storage_fits), desc, &error);
+  g_assert_no_error (error);
+
+  mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
+
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+  ncm_mset_catalog_desc_free (desc);
+
+  return mcat;
+}
+
+/* Writes one row into a new catalog file of run type test-run; returns the model set. */
 static NcmMSet *
 _test_ncm_mset_catalog_new_file (const gchar *filename)
 {
@@ -456,10 +567,7 @@ _test_ncm_mset_catalog_new_file (const gchar *filename)
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (mset);
 
-  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
-  ncm_mset_catalog_set_run_type (mcat, "test-run");
-  ncm_mset_catalog_set_file (mcat, filename);
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, 1, FALSE, "test-run", filename);
 
   {
     NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
@@ -542,41 +650,6 @@ _test_ncm_mset_catalog_strip_hdu0 (const gchar *filename)
   g_assert_cmpint (status, ==, 0);
 }
 
-/* Counts the HISTORY cards of the table HDU that mention the sampler. */
-static guint
-_test_ncm_mset_catalog_count_sampler_history (const gchar *filename)
-{
-  fitsfile *fptr = NULL;
-  gint status    = 0;
-  gint hdutype   = 0;
-  gint nkeys     = 0;
-  guint count    = 0;
-  gint i;
-
-  fits_open_file (&fptr, filename, READONLY, &status);
-  g_assert_cmpint (status, ==, 0);
-  fits_movabs_hdu (fptr, 2, &hdutype, &status);
-  g_assert_cmpint (status, ==, 0);
-  fits_get_hdrspace (fptr, &nkeys, NULL, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  for (i = 1; i <= nkeys; i++)
-  {
-    gchar card[FLEN_CARD];
-
-    fits_read_record (fptr, i, card, &status);
-    g_assert_cmpint (status, ==, 0);
-
-    if (g_str_has_prefix (card, "HISTORY") && (strstr (card, " sampler: ") != NULL))
-      count++;
-  }
-
-  fits_close_file (fptr, &status);
-  g_assert_cmpint (status, ==, 0);
-
-  return count;
-}
-
 /*
  * Writes TEST_CAT_NCHAINS chains x nrows_per_chain rows into a new catalog file, setting
  * the Markovian id when that row is reached; returns the model set (the catalog is closed).
@@ -594,10 +667,7 @@ _test_ncm_mset_catalog_new_markovian_file (const gchar *filename, const guint nr
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (mset);
 
-  mcat = ncm_mset_catalog_new (mset, 1, TEST_CAT_NCHAINS, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
-  ncm_mset_catalog_set_run_type (mcat, "markovian-run");
-  ncm_mset_catalog_set_file (mcat, filename);
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, TEST_CAT_NCHAINS, FALSE, "markovian-run", filename);
 
   /* Fresh catalog: every row is Markovian until told otherwise. */
   g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
@@ -628,8 +698,6 @@ _test_ncm_mset_catalog_new_markovian_file (const gchar *filename, const guint nr
 
   return mset;
 }
-
-#endif /* HAVE_CFITSIO */
 
 void
 test_ncm_mset_catalog_new (TestNcmMSetCatalog *test, gconstpointer pdata)
@@ -800,6 +868,8 @@ test_ncm_mset_catalog_cov (TestNcmMSetCatalog *test, gconstpointer pdata)
 
       ncm_matrix_log_vals (cat_cov,  "# CMP     : ", "% 12.5e");
     }
+
+    ncm_matrix_free (cat_cov);
   }
 }
 
@@ -1633,8 +1703,6 @@ test_ncm_mset_catalog_invalid_run (TestNcmMSetCatalog *test, gconstpointer pdata
   g_assert_not_reached ();
 }
 
-#ifdef HAVE_CFITSIO
-
 void
 test_ncm_mset_catalog_file_hdu0_roundtrip (void)
 {
@@ -1647,7 +1715,7 @@ test_ncm_mset_catalog_file_hdu0_roundtrip (void)
 
   g_assert_false (g_file_test (mset_sidecar, G_FILE_TEST_EXISTS));
 
-  mcat2 = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mcat2 = _test_ncm_mset_catalog_open (filename, TRUE, 0);
   mset2 = ncm_mset_catalog_peek_mset (mcat2);
 
   g_assert_true (ncm_mset_cmp (mset, mset2, TRUE));
@@ -1663,9 +1731,38 @@ test_ncm_mset_catalog_file_hdu0_roundtrip (void)
   g_free (tmp_dir);
 }
 
+/* The segments of filename: their number, and the start, sampler and options of each. */
+static void
+_test_ncm_mset_catalog_assert_segments (const gchar *filename, const guint nsegs, const guint *starts, const gchar **samplers, const gchar **options)
+{
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, TRUE, NULL);
+  NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
+  guint i;
+
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, NULL), ==, nsegs);
+
+  for (i = 0; i < nsegs; i++)
+  {
+    guint start    = G_MAXUINT;
+    gchar *sampler = NULL;
+    gchar *opts    = NULL;
+
+    ncm_mset_catalog_storage_get_sampler (storage, i, &start, &sampler, &opts, NULL);
+    g_assert_cmpuint (start, ==, starts[i]);
+    g_assert_cmpstr (sampler, ==, samplers[i]);
+    g_assert_cmpstr (opts, ==, options[i]);
+    g_free (sampler);
+    g_free (opts);
+  }
+
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+}
+
 /*
- * The sampler is a record, not a constraint: it persists, it may change on a non-empty
- * catalog, and every change leaves a HISTORY card.
+ * The sampler strings name the segments of the storage: the initial sampler the first
+ * ensemble, the sampler and its options the rows after it, a changed sampler a new
+ * segment from its first row. They persist, they may change on a non-empty catalog, and
+ * a sampler that adds no rows is not recorded.
  */
 void
 test_ncm_mset_catalog_file_sampler_history (void)
@@ -1674,14 +1771,16 @@ test_ncm_mset_catalog_file_sampler_history (void)
   gchar *filename          = g_strdup_printf ("%s/cat.fits", tmp_dir);
   NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
   NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmVector *x;
   NcmMSetCatalog *mcat;
 
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (mset);
 
-  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
-  ncm_mset_catalog_set_run_type (mcat, "test-run");
+  x = ncm_vector_new (ncm_mset_fparams_len (mset));
+  ncm_mset_fparams_get_vector (mset, x);
+
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, 1, FALSE, "test-run", filename);
   g_assert_null (ncm_mset_catalog_get_sampler (mcat));
   g_assert_null (ncm_mset_catalog_get_sampler_options (mcat));
   g_assert_null (ncm_mset_catalog_get_initial_sampler (mcat));
@@ -1691,48 +1790,70 @@ test_ncm_mset_catalog_file_sampler_history (void)
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
   g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=a:other=1");
   g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
-  ncm_mset_catalog_set_file (mcat, filename);
 
+  /* One chain: the first row is the initial ensemble, the second the sampler's. */
   {
-    NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
     gdouble ax[1] = { 1.0 };
 
-    ncm_mset_fparams_get_vector (mset, x);
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
     ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
     ncm_mset_catalog_sync (mcat, TRUE);
-    ncm_vector_clear (&x);
   }
 
   ncm_mset_catalog_clear (&mcat);
-  g_assert_cmpuint (_test_ncm_mset_catalog_count_sampler_history (filename), ==, 2);
+
+  {
+    const guint starts[2]    = {0, 1};
+    const gchar *samplers[2] = {"init-a", "sampler-a"};
+    const gchar *options[2]  = {"", "opt=a:other=1"};
+
+    _test_ncm_mset_catalog_assert_segments (filename, 2, starts, samplers, options);
+  }
 
   /* Read back read-only. */
-  mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mcat = _test_ncm_mset_catalog_open (filename, TRUE, 0);
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
   g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=a:other=1");
   g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
   ncm_mset_catalog_clear (&mcat);
 
-  /* Continue with another sampler: allowed, recorded, and the history grows. The options
-   * are a record of their own, so retuning the same sampler is recorded on its own too. */
-  mcat = ncm_mset_catalog_new_from_file (filename, 0);
+  /* Continue with another sampler: allowed, and its rows form a new segment. The same
+   * value again changes nothing, and a sampler that adds no rows is not recorded. */
+  mcat = _test_ncm_mset_catalog_open (filename, FALSE, 0);
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-a");
   g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=a:other=1");
   g_assert_false (ncm_mset_catalog_is_empty (mcat));
+  ncm_mset_catalog_set_sampler (mcat, "sampler-c");
   ncm_mset_catalog_set_sampler (mcat, "sampler-b");
-  ncm_mset_catalog_set_sampler (mcat, "sampler-b"); /* the same again writes nothing */
+  ncm_mset_catalog_set_sampler (mcat, "sampler-b");
   ncm_mset_catalog_set_sampler_options (mcat, "opt=b:other=2");
   ncm_mset_catalog_set_sampler_options (mcat, "opt=b:other=2");
-  ncm_mset_catalog_sync (mcat, TRUE);
+
+  {
+    gdouble ax[1] = { 2.0 };
+
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+    ncm_mset_catalog_sync (mcat, TRUE);
+  }
+
   ncm_mset_catalog_clear (&mcat);
 
-  mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mcat = _test_ncm_mset_catalog_open (filename, TRUE, 0);
   g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "sampler-b");
   g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "opt=b:other=2");
   g_assert_cmpstr (ncm_mset_catalog_get_initial_sampler (mcat), ==, "init-a");
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 3);
   ncm_mset_catalog_clear (&mcat);
-  g_assert_cmpuint (_test_ncm_mset_catalog_count_sampler_history (filename), ==, 3);
 
+  {
+    const guint starts[3]    = {0, 1, 2};
+    const gchar *samplers[3] = {"init-a", "sampler-a", "sampler-b"};
+    const gchar *options[3]  = {"", "opt=a:other=1", "opt=b:other=2"};
+
+    _test_ncm_mset_catalog_assert_segments (filename, 3, starts, samplers, options);
+  }
+
+  ncm_vector_free (x);
   ncm_mset_clear (&mset);
   ncm_model_mvnd_clear (&model_mvnd);
   g_unlink (filename);
@@ -1741,8 +1862,9 @@ test_ncm_mset_catalog_file_sampler_history (void)
   g_free (tmp_dir);
 }
 
+/* The functions array is kept in memory only; a catalog loaded from the file has none. */
 void
-test_ncm_mset_catalog_file_functions_array_roundtrip (void)
+test_ncm_mset_catalog_file_functions_array (void)
 {
   gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_functions_XXXXXX", NULL);
   gchar *filename          = g_strdup_printf ("%s/cat.fits", tmp_dir);
@@ -1760,11 +1882,8 @@ test_ncm_mset_catalog_file_functions_array_roundtrip (void)
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (mset);
 
-  mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
-  ncm_mset_catalog_set_run_type (mcat, "test-run");
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, 1, FALSE, "test-run", filename);
   ncm_mset_catalog_set_functions_array (mcat, functions);
-  ncm_mset_catalog_set_file (mcat, filename);
 
   g_assert_true (ncm_mset_catalog_peek_functions_array (mcat) == functions);
 
@@ -1781,14 +1900,10 @@ test_ncm_mset_catalog_file_functions_array_roundtrip (void)
 
   ncm_mset_catalog_clear (&mcat);
 
-  mcat2      = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mcat2      = _test_ncm_mset_catalog_open (filename, TRUE, 0);
   functions2 = ncm_mset_catalog_peek_functions_array (mcat2);
 
-  g_assert_nonnull (functions2);
-  g_assert_cmpuint (ncm_obj_array_len (functions2), ==, 1);
-  g_assert_true (NCM_IS_VECTOR (ncm_obj_array_peek (functions2, 0)));
-  g_assert_cmpfloat (ncm_vector_get (NCM_VECTOR (ncm_obj_array_peek (functions2, 0)), 0), ==, 7.0);
-  g_assert_true (ncm_obj_array_peek (functions2, 0) != G_OBJECT (v));
+  g_assert_null (functions2);
 
   ncm_mset_catalog_clear (&mcat2);
   ncm_obj_array_unref (functions);
@@ -1814,7 +1929,7 @@ test_ncm_mset_catalog_file_hdu0_legacy_object_format (void)
 
   _test_ncm_mset_catalog_rewrite_hdu0_legacy_object (filename, mset);
 
-  mcat2 = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mcat2 = _test_ncm_mset_catalog_open (filename, TRUE, 0);
   mset2 = ncm_mset_catalog_peek_mset (mcat2);
 
   g_assert_true (ncm_mset_cmp (mset, mset2, TRUE));
@@ -1847,7 +1962,7 @@ test_ncm_mset_catalog_file_legacy_fallback (void)
   ncm_mset_save (mset, ser, mset_sidecar, TRUE, NULL);
   ncm_serialize_clear (&ser);
 
-  mcat2 = ncm_mset_catalog_new_from_file_ro (filename, 0);
+  mcat2 = _test_ncm_mset_catalog_open (filename, TRUE, 0);
   mset2 = ncm_mset_catalog_peek_mset (mcat2);
 
   g_assert_true (ncm_mset_cmp (mset, mset2, TRUE));
@@ -1883,9 +1998,266 @@ test_ncm_mset_catalog_file_missing_mset_subprocess (void)
 
   /* Neither an embedded mset (just stripped) nor a `.mset' sidecar (never
    * written) exists: this must abort with a fatal error. */
-  ncm_mset_catalog_new_from_file_ro (filename, 0);
+  _test_ncm_mset_catalog_open (filename, TRUE, 0);
 
   g_assert_not_reached ();
+}
+
+void
+test_ncm_mset_catalog_no_mset_no_file_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/catalog/no_mset_no_file/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*_ncm_mset_catalog_constructed: a catalog needs a storage*");
+}
+
+void
+test_ncm_mset_catalog_no_mset_no_file_subprocess (void)
+{
+  /* Without a storage there is nothing to take the description from. */
+  g_object_new (NCM_TYPE_MSET_CATALOG, NULL);
+
+  g_assert_not_reached ();
+}
+
+/*
+ * A storage holding a description and rows added in one recording, with a Markovian id;
+ * TEST_CAT_NCHAINS chains, two ensembles. The model set is returned through mset_out.
+ */
+static void
+_test_ncm_mset_catalog_fill_storage (NcmMSetCatalogStorage *storage, NcmMSet **mset_out)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  const gchar *names[]     = {"m2lnL", NULL};
+  const gchar *symbols[]   = {"-2\\ln(L)", NULL};
+  NcmMSetCatalogDesc *desc;
+  NcmVector *row;
+  GError *error = NULL;
+  guint i;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  desc = ncm_mset_catalog_desc_new (mset, TEST_CAT_NCHAINS, FALSE, names, symbols, 0, "storage-run", &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_set_desc (storage, desc, &error);
+  g_assert_no_error (error);
+
+  ncm_mset_catalog_storage_start_recording (storage, "filler", "n=2", &error);
+  g_assert_no_error (error);
+
+  row = ncm_vector_new (ncm_mset_catalog_desc_ncols (desc));
+
+  for (i = 0; i < 2 * TEST_CAT_NCHAINS; i++)
+  {
+    guint j;
+
+    for (j = 0; j < ncm_vector_len (row); j++)
+      ncm_vector_set (row, j, 1.0 + 0.1 * i + 0.01 * j);
+
+    ncm_mset_catalog_storage_add_row (storage, row, &error);
+    g_assert_no_error (error);
+  }
+
+  ncm_mset_catalog_storage_set_markovian_id (storage, TEST_CAT_NCHAINS, &error);
+  g_assert_no_error (error);
+  ncm_mset_catalog_storage_end_recording (storage, &error);
+  g_assert_no_error (error);
+
+  ncm_vector_free (row);
+  ncm_mset_catalog_desc_free (desc);
+  ncm_model_mvnd_clear (&model_mvnd);
+  *mset_out = mset;
+}
+
+/*
+ * A catalog built on storage: the description, the rows and the Markovian id are the
+ * storage's, rows added through the catalog reach the storage in a segment of its own, and
+ * a burn-in of one ensemble shifts the ids.
+ */
+static void
+_test_ncm_mset_catalog_check_from_storage (NcmMSetCatalogStorage *storage, NcmMSet *mset)
+{
+  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (storage);
+  GError *error        = NULL;
+  guint i;
+
+  g_assert_true (ncm_mset_catalog_peek_storage (mcat) == storage);
+
+  {
+    NcmMSetCatalogStorage *storage_prop = NULL;
+
+    g_object_get (mcat, "storage", &storage_prop, NULL);
+    g_assert_true (storage_prop == storage);
+    ncm_mset_catalog_storage_free (storage_prop);
+  }
+
+  g_assert_cmpstr (ncm_mset_catalog_get_run_type (mcat), ==, "storage-run");
+  g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, TEST_CAT_NCHAINS);
+  g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 1);
+  g_assert_cmpint (ncm_mset_catalog_get_m2lnp_var (mcat), ==, 0);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 2 * TEST_CAT_NCHAINS);
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, TEST_CAT_NCHAINS);
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "filler");
+  g_assert_cmpstr (ncm_mset_catalog_get_sampler_options (mcat), ==, "n=2");
+  g_assert_true (ncm_mset_cmp (ncm_mset_catalog_peek_mset (mcat), mset, TRUE));
+
+  for (i = 0; i < 2 * TEST_CAT_NCHAINS; i++)
+  {
+    NcmVector *row = ncm_mset_catalog_storage_get_row (storage, i, &error);
+
+    g_assert_no_error (error);
+    _test_ncm_mset_catalog_assert_vector_eq (ncm_mset_catalog_peek_row (mcat, i), row);
+    ncm_vector_free (row);
+  }
+
+  {
+    NcmVector *x  = ncm_vector_new (ncm_mset_fparams_len (mset));
+    gdouble ax[1] = { 7.0 };
+
+    ncm_mset_catalog_set_sampler (mcat, "catalog");
+
+    for (i = 0; i < TEST_CAT_NCHAINS; i++)
+    {
+      ncm_vector_set_all (x, 10.0 + i);
+      ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+    }
+
+    ncm_mset_catalog_sync (mcat, TRUE);
+    ncm_vector_free (x);
+  }
+
+  g_assert_cmpuint (ncm_mset_catalog_storage_nrows (storage, &error), ==, 3 * TEST_CAT_NCHAINS);
+  g_assert_no_error (error);
+  g_assert_cmpuint (ncm_mset_catalog_storage_n_samplers (storage, &error), ==, 2);
+  g_assert_no_error (error);
+
+  {
+    guint start    = 0;
+    gchar *sampler = NULL;
+
+    ncm_mset_catalog_storage_get_sampler (storage, 1, &start, &sampler, NULL, &error);
+    g_assert_no_error (error);
+    g_assert_cmpuint (start, ==, 2 * TEST_CAT_NCHAINS);
+    g_assert_cmpstr (sampler, ==, "catalog");
+    g_free (sampler);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat = ncm_mset_catalog_new_from_storage_full (storage, TEST_CAT_NCHAINS, 1);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 2 * TEST_CAT_NCHAINS);
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 0), 0), ==, 1.0 + 0.1 * TEST_CAT_NCHAINS);
+  ncm_mset_catalog_clear (&mcat);
+}
+
+void
+test_ncm_mset_catalog_storage_memory (void)
+{
+  NcmMSetCatalogStorageMemory *storage_mem = ncm_mset_catalog_storage_memory_new ();
+  NcmMSetCatalogStorage *storage           = NCM_MSET_CATALOG_STORAGE (storage_mem);
+  NcmMSet *mset                            = NULL;
+
+  _test_ncm_mset_catalog_fill_storage (storage, &mset);
+  _test_ncm_mset_catalog_check_from_storage (storage, mset);
+
+  ncm_mset_clear (&mset);
+  ncm_mset_catalog_storage_memory_free (storage_mem);
+}
+
+void
+test_ncm_mset_catalog_storage_fits (void)
+{
+  gchar *tmp_dir                          = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_storage_XXXXXX", NULL);
+  gchar *filename                         = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  GError *error                           = NULL;
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, &error);
+  NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
+  NcmMSet *mset                           = NULL;
+
+  g_assert_no_error (error);
+
+  _test_ncm_mset_catalog_fill_storage (storage, &mset);
+  _test_ncm_mset_catalog_check_from_storage (storage, mset);
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+
+  /* The same through a read-only storage on the file written above. */
+  storage_fits = ncm_mset_catalog_storage_fits_new (filename, TRUE, &error);
+  g_assert_no_error (error);
+
+  {
+    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (storage_fits));
+
+    g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 3 * TEST_CAT_NCHAINS);
+    g_assert_cmpstr (ncm_mset_catalog_get_sampler (mcat), ==, "catalog");
+    g_assert_cmpstr (ncm_mset_catalog_peek_filename (mcat), ==, filename);
+    g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, TEST_CAT_NCHAINS);
+    ncm_mset_catalog_clear (&mcat);
+  }
+
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+  ncm_mset_clear (&mset);
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * trim_oob and remove_last_ensemble on a file of more rows than the rewrite writes
+ * between two syncs: the rows out of bounds are removed, the rest kept in order.
+ */
+void
+test_ncm_mset_catalog_file_trim_oob_large (void)
+{
+  const guint nrows        = 70000;
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_trim_large_XXXXXX", NULL);
+  gchar *filename          = g_build_filename (tmp_dir, "cat.fits", NULL);
+  gchar *out_file          = g_build_filename (tmp_dir, "cat_oob.fits", NULL);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (2);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmVector *x             = ncm_vector_new (2);
+  NcmMSetCatalog *mcat;
+  guint i, ndel;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, 1, FALSE, "trim-large-run", filename);
+  g_object_set (ncm_mset_catalog_peek_storage (mcat), "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
+
+  for (i = 0; i < nrows; i++)
+  {
+    gdouble ax[1] = { 1.0 * i };
+
+    ncm_vector_set (x, 0, (i % 10000 == 5000) ? 100.0 : 1.0e-3 * (i % 100));
+    ncm_vector_set (x, 1, 0.5);
+    ncm_mset_catalog_add_from_vector_array (mcat, x, ax);
+  }
+
+  ndel = ncm_mset_catalog_trim_oob (mcat, out_file);
+
+  g_assert_cmpuint (ndel, ==, nrows / 10000);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows - ndel);
+  g_assert_cmpstr (ncm_mset_catalog_peek_filename (mcat), ==, out_file);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 5000), 0), ==, 5001.0);
+
+  ncm_mset_catalog_remove_last_ensemble (mcat);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows - ndel - 1);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 5000), 0), ==, 5001.0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, nrows - ndel - 2), 0), ==, 1.0 * (nrows - 2));
+
+  ncm_vector_free (x);
+  ncm_mset_catalog_clear (&mcat);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (out_file);
+  g_free (filename);
+  g_free (tmp_dir);
 }
 
 void
@@ -1896,13 +2268,11 @@ test_ncm_mset_catalog_file_peek_info (void)
   NcmMSet *mset   = _test_ncm_mset_catalog_new_file (filename);
   glong nrows     = -1;
   guint nchains   = 0;
-  gint first_id   = -1;
 
-  ncm_mset_catalog_peek_info_from_file (filename, &nrows, &nchains, &first_id);
+  ncm_mset_catalog_peek_info_from_file (filename, &nrows, &nchains);
 
   g_assert_cmpint (nrows, ==, 1);
   g_assert_cmpuint (nchains, ==, 1);
-  g_assert_cmpint (first_id, ==, 0);
 
   ncm_mset_clear (&mset);
 
@@ -1932,12 +2302,33 @@ test_ncm_mset_catalog_file_burnin_exceeds_subprocess (void)
 
   /* The file has a single row: any burnin > 1 must abort with a clear,
    * unit-labeled error message (see _ncm_mset_catalog_open_create_file). */
-  ncm_mset_catalog_new_from_file_ro (filename, 2);
+  _test_ncm_mset_catalog_open (filename, TRUE, 2);
 
   g_assert_not_reached ();
 }
 
-#endif /* HAVE_CFITSIO */
+void
+test_ncm_mset_catalog_file_burnin_chains_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/catalog/file/burnin_chains/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*is not a multiple of the number of chains*");
+}
+
+void
+test_ncm_mset_catalog_file_burnin_chains_subprocess (void)
+{
+  gchar *tmp_dir  = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_burnin_chains_XXXXXX", NULL);
+  gchar *filename = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmMSet *mset   = _test_ncm_mset_catalog_new_markovian_file (filename, 4, 0);
+
+  ncm_mset_clear (&mset);
+
+  /* A burn-in that is not a whole number of iterations would move rows to other chains. */
+  _test_ncm_mset_catalog_open (filename, TRUE, TEST_CAT_NCHAINS + 1);
+
+  g_assert_not_reached ();
+}
 
 /*
  * A multi-chain catalog written to a file and read back.
@@ -1967,12 +2358,8 @@ test_ncm_mset_catalog_file_multichain (void)
   ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (mset);
 
-  mcat = ncm_mset_catalog_new (mset, 1, TEST_CAT_NCHAINS, FALSE, "m2lnL", "-2\\ln(L)", NULL);
-
-  ncm_mset_catalog_set_m2lnp_var (mcat, 0);
-  ncm_mset_catalog_set_run_type (mcat, "multichain-run");
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, TEST_CAT_NCHAINS, FALSE, "multichain-run", filename);
   ncm_mset_catalog_set_rng (mcat, cat_rng);
-  ncm_mset_catalog_set_file (mcat, filename);
 
   /* The state the catalog recorded, which is the one the file carries: the generator
    * itself moves on as the rows below are drawn. */
@@ -2051,7 +2438,607 @@ test_ncm_mset_catalog_file_multichain (void)
   g_free (tmp_dir);
 }
 
-#ifdef HAVE_CFITSIO
+/* A weighted catalog written to a file loads back with the same columns and rows: the
+ * weight column is counted once, in nadd_vals. */
+void
+test_ncm_mset_catalog_file_weighted_roundtrip (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_weighted_XXXXXX", NULL);
+  gchar *filename          = g_strdup_printf ("%s/cat.fits", tmp_dir);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 24680);
+  GPtrArray *rows          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  const guint nrows        = 50;
+  NcmMSetCatalog *mcat;
+  guint ncols, i, p;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat  = _test_ncm_mset_catalog_new_on_file (mset, 1, TRUE, NCM_MSET_CATALOG_RTYPE_UNDEFINED, filename);
+  ncols = ncm_mset_catalog_ncols (mcat);
+
+  g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 2);
+  g_assert_cmpuint (ncols, ==, TEST_CAT_DIM + 2);
+
+  for (i = 0; i < nrows; i++)
+  {
+    NcmVector *row = ncm_vector_new (ncols);
+
+    ncm_vector_set (row, 0, ncm_rng_ugaussian_gen (rng));
+    ncm_vector_set (row, 1, 1.0 + 0.1 * fabs (ncm_rng_ugaussian_gen (rng)));
+
+    for (p = 2; p < ncols; p++)
+      ncm_vector_set (row, p, ncm_rng_ugaussian_gen (rng));
+
+    ncm_mset_catalog_add_from_vector (mcat, row);
+    g_ptr_array_add (rows, row);
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat = _test_ncm_mset_catalog_open (filename, TRUE, 0);
+
+  g_assert_true (ncm_mset_catalog_weighted (mcat));
+  g_assert_cmpuint (ncm_mset_catalog_nadd_vals (mcat), ==, 2);
+  g_assert_cmpuint (ncm_mset_catalog_ncols (mcat), ==, ncols);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, nrows);
+
+  for (i = 0; i < nrows; i++)
+  {
+    NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+
+    g_assert_cmpuint (ncm_vector_len (row), ==, ncols);
+
+    for (p = 0; p < ncols; p++)
+      g_assert_cmpfloat (ncm_vector_get (row, p), ==, ncm_vector_get (g_ptr_array_index (rows, i), p));
+  }
+
+  ncm_mset_catalog_clear (&mcat);
+  g_ptr_array_unref (rows);
+  ncm_rng_free (rng);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  g_unlink (filename);
+  g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * Writes a catalog of nrows rows to filename, nchains interleaved AR(1) chains with
+ * coefficient 0.8 in each parameter and column 0 the sum of their squares, and returns the
+ * rows written. Every 13th row has its first parameter set to 100, outside the bounds
+ * [-50, 50], so that ncm_mset_catalog_trim_oob() removes it.
+ */
+static GPtrArray *
+_test_ncm_mset_catalog_write_ar1 (const gchar *filename, const guint nchains, const guint nrows)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmRNG *rng              = ncm_rng_seeded_new (NULL, 4321);
+  NcmMatrix *state         = ncm_matrix_new (nchains, TEST_CAT_DIM);
+  GPtrArray *rows          = g_ptr_array_new_with_free_func ((GDestroyNotify) ncm_vector_free);
+  const gdouble phi        = 0.8;
+  NcmMSetCatalog *mcat;
+  guint i, j;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, nchains, FALSE, NCM_MSET_CATALOG_RTYPE_UNDEFINED, filename);
+  ncm_matrix_set_zero (state);
+
+  for (i = 0; i < nrows; i++)
+  {
+    NcmVector *row = ncm_vector_new (TEST_CAT_DIM + 1);
+    const guint c  = i % nchains;
+    gdouble m2lnL  = 0.0;
+
+    for (j = 0; j < TEST_CAT_DIM; j++)
+    {
+      const gdouble x_j = phi * ncm_matrix_get (state, c, j) + sqrt (1.0 - phi * phi) * ncm_rng_ugaussian_gen (rng);
+
+      ncm_matrix_set (state, c, j, x_j);
+      ncm_vector_set (row, j + 1, x_j);
+      m2lnL += x_j * x_j;
+    }
+
+    ncm_vector_set (row, 0, m2lnL);
+
+    if (i % 13 == 12)
+      ncm_vector_set (row, 1, 100.0);
+
+    ncm_mset_catalog_add_from_vector (mcat, row);
+    g_ptr_array_add (rows, row);
+  }
+
+  ncm_mset_catalog_sync (mcat, TRUE);
+  ncm_mset_catalog_clear (&mcat);
+
+  ncm_matrix_free (state);
+  ncm_rng_free (rng);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  return rows;
+}
+
+static NcmMSetCatalog *
+_test_ncm_mset_catalog_open_read_block (const gchar *filename, const guint read_block)
+{
+  NcmMSetCatalogStorage *storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS,
+                                                 "filename", filename,
+                                                 "read-block", read_block,
+                                                 NULL);
+  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage (storage);
+
+  ncm_mset_catalog_storage_free (storage);
+
+  return mcat;
+}
+
+/*
+ * Checks that every row of mcat equals the row written, reading them forward, backward and
+ * with stride 37, so that consecutive reads cross block boundaries in both directions and
+ * jump between blocks.
+ */
+static void
+_test_ncm_mset_catalog_assert_rows (NcmMSetCatalog *mcat, GPtrArray *rows)
+{
+  const guint n = rows->len;
+  guint k, p;
+
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, n);
+
+  for (k = 0; k < 3 * n; k++)
+  {
+    const guint i  = (k < n) ? k : ((k < 2 * n) ? 2 * n - 1 - k : ((k - 2 * n) * 37) % n);
+    NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+    NcmVector *ref = g_ptr_array_index (rows, i);
+
+    g_assert_nonnull (row);
+    g_assert_cmpuint (ncm_vector_len (row), ==, ncm_vector_len (ref));
+
+    for (p = 0; p < ncm_vector_len (ref); p++)
+      g_assert_cmpfloat (ncm_vector_get (row, p), ==, ncm_vector_get (ref, p));
+  }
+}
+
+/*
+ * Returns, in one array, the results of the catalog analyses on mcat: mean, covariance, tau
+ * on the ensemble means and on the single chain, ESS and Heidelberger-Welch cut times,
+ * constant-break times, the by-chain variants when there are several chains, the p-value
+ * of the first parameter's distribution, the confidence intervals of x theta_0, and, when
+ * oob_file is not NULL, the rows ncm_mset_catalog_trim_oob() writes to it. The trim is
+ * last: it resets mcat.
+ */
+static GArray *
+_test_ncm_mset_catalog_read_block_results (NcmMSetCatalog *mcat, const gchar *oob_file)
+{
+  GArray *res        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmMSetFunc *func  = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
+  NcmVector *x_v     = ncm_vector_new (2);
+  GArray *p_val      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  const gdouble ps[] = {0.68, 0.95};
+  NcmVector *mean    = NULL;
+  NcmMatrix *cov     = NULL;
+  NcmMatrix *ci;
+  gdouble val;
+  guint i, j;
+
+  ncm_mset_catalog_get_mean (mcat, &mean);
+  ncm_mset_catalog_get_covar (mcat, &cov);
+
+  for (i = 0; i < ncm_vector_len (mean); i++)
+  {
+    g_array_append_vals (res, ncm_vector_ptr (mean, i), 1);
+
+    for (j = 0; j < ncm_vector_len (mean); j++)
+      g_array_append_vals (res, ncm_matrix_ptr (cov, i, j), 1);
+  }
+
+  ncm_mset_catalog_estimate_autocorrelation_tau (mcat, FALSE);
+  g_array_append_vals (res, ncm_vector_data (ncm_mset_catalog_peek_autocorrelation_tau (mcat)),
+                       ncm_vector_len (ncm_mset_catalog_peek_autocorrelation_tau (mcat)));
+  ncm_mset_catalog_estimate_autocorrelation_tau (mcat, TRUE);
+  g_array_append_vals (res, ncm_vector_data (ncm_mset_catalog_peek_autocorrelation_tau (mcat)),
+                       ncm_vector_len (ncm_mset_catalog_peek_autocorrelation_tau (mcat)));
+
+  {
+    gdouble max_ess = 0.0;
+
+    val = ncm_mset_catalog_calc_max_ess_time (mcat, 5, &max_ess, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+    g_array_append_val (res, max_ess);
+  }
+
+  val = ncm_mset_catalog_calc_heidel_diag (mcat, 5, 0.0, NCM_FIT_RUN_MSGS_NONE);
+  g_array_append_val (res, val);
+
+  for (i = 0; i < TEST_CAT_DIM + 1; i++)
+  {
+    val = ncm_mset_catalog_calc_const_break (mcat, i, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+  }
+
+  if (ncm_mset_catalog_nchains (mcat) > 1)
+  {
+    gdouble max_ess   = 0.0;
+    gdouble wp_pvalue = 0.0;
+
+    val = ncm_mset_catalog_max_ess_time_by_chain (mcat, 5, &max_ess, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+    g_array_append_val (res, max_ess);
+
+    val = ncm_mset_catalog_heidel_diag_by_chain (mcat, 5, 0.0, &wp_pvalue, NCM_FIT_RUN_MSGS_NONE);
+    g_array_append_val (res, val);
+    g_array_append_val (res, wp_pvalue);
+  }
+
+  ncm_mset_catalog_param_pdf (mcat, 0);
+  val = ncm_mset_catalog_param_pdf_pvalue (mcat, 0.5, FALSE);
+  g_array_append_val (res, val);
+
+  ncm_vector_set (x_v, 0, 1.0);
+  ncm_vector_set (x_v, 1, 2.0);
+  g_array_append_vals (p_val, ps, 2);
+  ci = ncm_mset_catalog_calc_ci_direct (mcat, func, x_v, p_val);
+
+  for (i = 0; i < ncm_matrix_nrows (ci); i++)
+    for (j = 0; j < ncm_matrix_ncols (ci); j++)
+      g_array_append_vals (res, ncm_matrix_ptr (ci, i, j), 1);
+
+  if (oob_file != NULL)
+  {
+    val = ncm_mset_catalog_trim_oob (mcat, oob_file);
+    g_array_append_val (res, val);
+
+    {
+      NcmMSetCatalog *oob = _test_ncm_mset_catalog_open (oob_file, TRUE, 0);
+
+      for (i = 0; i < ncm_mset_catalog_len (oob); i++)
+      {
+        NcmVector *row = ncm_mset_catalog_peek_row (oob, i);
+
+        g_array_append_vals (res, ncm_vector_data (row), ncm_vector_len (row));
+      }
+
+      ncm_mset_catalog_clear (&oob);
+    }
+  }
+
+  ncm_matrix_free (ci);
+  ncm_matrix_free (cov);
+  ncm_vector_free (mean);
+  ncm_vector_free (x_v);
+  g_array_unref (p_val);
+  ncm_mset_func_free (func);
+
+  return res;
+}
+
+static void
+_test_ncm_mset_catalog_rm_tmp_dir (const gchar *tmp_dir)
+{
+  GDir *dir = g_dir_open (tmp_dir, 0, NULL);
+  const gchar *name;
+
+  g_assert_nonnull (dir);
+
+  while ((name = g_dir_read_name (dir)) != NULL)
+  {
+    gchar *path = g_build_filename (tmp_dir, name, NULL);
+
+    g_unlink (path);
+    g_free (path);
+  }
+
+  g_dir_close (dir);
+  g_rmdir (tmp_dir);
+}
+
+/*
+ * Writes rows, in order, to a new catalog file of nchains chains on an MVND model set,
+ * and sets the Markovian id when it is above 0.
+ */
+static void
+_test_ncm_mset_catalog_write_rows (const gchar *filename, const guint nchains, GPtrArray *rows, const gint markovian_id)
+{
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmMSetCatalog *mcat;
+  guint i;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, nchains, FALSE, NCM_MSET_CATALOG_RTYPE_UNDEFINED, filename);
+
+  for (i = 0; i < rows->len; i++)
+    ncm_mset_catalog_add_from_vector (mcat, g_ptr_array_index (rows, i));
+
+  if (markovian_id > 0)
+    ncm_mset_catalog_set_markovian_id (mcat, markovian_id);
+
+  ncm_mset_catalog_sync (mcat, TRUE);
+
+  ncm_mset_catalog_clear (&mcat);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+}
+
+/*
+ * A catalog loaded with read-block 1, 7 and larger than the catalog gives the rows written
+ * and, bitwise, the same analysis results and trim_oob output. pdata is the number of
+ * chains.
+ */
+void
+test_ncm_mset_catalog_file_read_block (gconstpointer pdata)
+{
+  const guint nchains        = GPOINTER_TO_UINT (pdata);
+  const guint nrows          = 200;
+  const guint read_blocks[3] = {nrows + 1, 1, 7};
+  gchar *tmp_dir             = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_read_block_XXXXXX", NULL);
+  gchar *filename            = g_build_filename (tmp_dir, "cat.fits", NULL);
+  GPtrArray *rows            = _test_ncm_mset_catalog_write_ar1 (filename, nchains, nrows);
+  GArray *ref                = NULL;
+  gchar *contents            = NULL;
+  gsize length               = 0;
+  guint k, i;
+
+  g_assert_true (g_file_get_contents (filename, &contents, &length, NULL));
+
+  for (k = 0; k < 3; k++)
+  {
+    gchar *copy_name = g_strdup_printf ("cat_%u.fits", read_blocks[k]);
+    gchar *oob_name  = g_strdup_printf ("oob_%u.fits", read_blocks[k]);
+    gchar *copy      = g_build_filename (tmp_dir, copy_name, NULL);
+    gchar *oob       = g_build_filename (tmp_dir, oob_name, NULL);
+    NcmMSetCatalog *mcat;
+    GArray *res;
+
+    g_assert_true (g_file_set_contents (copy, contents, length, NULL));
+
+    mcat = _test_ncm_mset_catalog_open_read_block (copy, read_blocks[k]);
+
+    {
+      guint read_block = 0;
+
+      g_object_get (ncm_mset_catalog_peek_storage (mcat), "read-block", &read_block, NULL);
+      g_assert_cmpuint (read_block, ==, read_blocks[k]);
+    }
+    g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, nchains);
+
+    _test_ncm_mset_catalog_assert_rows (mcat, rows);
+    res = _test_ncm_mset_catalog_read_block_results (mcat, oob);
+
+    if (ref == NULL)
+    {
+      ref = res;
+    }
+    else
+    {
+      g_assert_cmpuint (res->len, ==, ref->len);
+
+      for (i = 0; i < ref->len; i++)
+        g_assert_cmpfloat (g_array_index (res, gdouble, i), ==, g_array_index (ref, gdouble, i));
+
+      g_array_unref (res);
+    }
+
+    ncm_mset_catalog_clear (&mcat);
+    g_free (copy_name);
+    g_free (oob_name);
+    g_free (copy);
+    g_free (oob);
+  }
+
+  g_array_unref (ref);
+  g_ptr_array_unref (rows);
+  g_free (contents);
+
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/* Erasing the data of a catalog loaded with read-block 7 empties the catalog and the file. */
+void
+test_ncm_mset_catalog_file_read_block_restore (void)
+{
+  const guint nrows = 200;
+  gchar *tmp_dir    = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_restore_XXXXXX", NULL);
+  gchar *filename   = g_build_filename (tmp_dir, "cat.fits", NULL);
+  GPtrArray *rows   = _test_ncm_mset_catalog_write_ar1 (filename, 4, nrows);
+  NcmMSetCatalog *mcat;
+
+  mcat = _test_ncm_mset_catalog_open_read_block (filename, 7);
+  _test_ncm_mset_catalog_assert_rows (mcat, rows);
+  ncm_mset_catalog_erase_data (mcat);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 0);
+  g_assert_true (ncm_mset_catalog_is_empty (mcat));
+  ncm_mset_catalog_sync (mcat, TRUE);
+  ncm_mset_catalog_clear (&mcat);
+
+  mcat = _test_ncm_mset_catalog_open (filename, TRUE, 0);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 0);
+  ncm_mset_catalog_clear (&mcat);
+
+  g_ptr_array_unref (rows);
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * A row written to the file is freed once the sync drops it from memory, with
+ * NcmMSetCatalog:m2lnp-var set as every sampler sets it. Row 0 has the largest -2lnL, so it
+ * is not the best-fit row, which the catalog keeps.
+ */
+void
+test_ncm_mset_catalog_file_read_block_release (void)
+{
+  gchar *tmp_dir           = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_release_XXXXXX", NULL);
+  gchar *filename          = g_build_filename (tmp_dir, "cat.fits", NULL);
+  NcmModelMVND *model_mvnd = ncm_model_mvnd_new (TEST_CAT_DIM);
+  NcmMSet *mset            = ncm_mset_new (NCM_MODEL (model_mvnd), NULL, NULL);
+  NcmVector *row           = ncm_vector_new (TEST_CAT_DIM + 1);
+  const guint nrows        = 10;
+  gpointer row0            = NULL;
+  NcmMSetCatalog *mcat;
+  guint i;
+
+  ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (mset);
+
+  mcat = _test_ncm_mset_catalog_new_on_file (mset, 1, FALSE, NCM_MSET_CATALOG_RTYPE_UNDEFINED, filename);
+
+  for (i = 0; i < nrows; i++)
+  {
+    ncm_vector_set_all (row, 0.1 * i);
+    ncm_vector_set (row, 0, nrows - i);
+    ncm_mset_catalog_add_from_vector (mcat, row);
+
+    if (i == 0)
+    {
+      row0 = ncm_mset_catalog_peek_row (mcat, 0);
+      g_object_add_weak_pointer (G_OBJECT (row0), &row0);
+    }
+  }
+
+  ncm_mset_catalog_sync (mcat, TRUE);
+
+  g_assert_null (row0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, 0), 0), ==, nrows);
+  g_assert_cmpfloat (ncm_mset_catalog_get_nth_m2lnL_percentile (mcat, 0.5, NULL), ==, 6.0);
+
+  ncm_mset_catalog_clear (&mcat);
+  ncm_vector_free (row);
+  ncm_mset_clear (&mset);
+  ncm_model_mvnd_clear (&model_mvnd);
+
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+/*
+ * A catalog read with burn-in and thin keeps every thin-th iteration after the burn-in,
+ * with all its chains and the incomplete last iteration when it is kept; its Markovian id
+ * counts the kept rows before the stored one, and every analysis equals the one of a file
+ * holding only the kept rows. Thin 1 is the burn-in alone. Read-block 1 and larger than
+ * the file give the same.
+ */
+void
+test_ncm_mset_catalog_file_thin (gconstpointer pdata)
+{
+  const guint nchains        = GPOINTER_TO_UINT (pdata);
+  const guint nrows          = 203;
+  const guint burnin         = 2 * nchains;
+  const gint markovian_id    = 7 * nchains;
+  const guint thins[3]       = {1, 3, 7};
+  const guint read_blocks[2] = {1, nrows + 1};
+  gchar *tmp_dir             = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_thin_XXXXXX", NULL);
+  gchar *ar1_file            = g_build_filename (tmp_dir, "ar1.fits", NULL);
+  gchar *filename            = g_build_filename (tmp_dir, "cat.fits", NULL);
+  GPtrArray *rows            = _test_ncm_mset_catalog_write_ar1 (ar1_file, nchains, nrows);
+  guint k, r, i;
+
+  _test_ncm_mset_catalog_write_rows (filename, nchains, rows, markovian_id);
+
+  for (k = 0; k < 3; k++)
+  {
+    const guint thin = thins[k];
+    GPtrArray *kept  = g_ptr_array_new ();
+    gchar *ref_name  = g_strdup_printf ("ref_%u.fits", thin);
+    gchar *ref_file  = g_build_filename (tmp_dir, ref_name, NULL);
+    gint kept_markid = 0;
+    GArray *ref_res;
+
+    for (i = burnin; i < nrows; i++)
+    {
+      if (((i - burnin) / nchains) % thin == 0)
+      {
+        g_ptr_array_add (kept, g_ptr_array_index (rows, i));
+
+        if ((gint) i < markovian_id)
+          kept_markid++;
+      }
+    }
+
+    _test_ncm_mset_catalog_write_rows (ref_file, nchains, kept, kept_markid);
+
+    {
+      NcmMSetCatalog *ref = _test_ncm_mset_catalog_open (ref_file, TRUE, 0);
+
+      g_assert_cmpint (ncm_mset_catalog_get_markovian_id (ref), ==, kept_markid);
+      ref_res = _test_ncm_mset_catalog_read_block_results (ref, NULL);
+      ncm_mset_catalog_clear (&ref);
+    }
+
+    for (r = 0; r < 2; r++)
+    {
+      NcmMSetCatalogStorage *storage = g_object_new (NCM_TYPE_MSET_CATALOG_STORAGE_FITS,
+                                                     "filename", filename,
+                                                     "read-only", TRUE,
+                                                     "read-block", read_blocks[r],
+                                                     NULL);
+      NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_storage_full (storage, burnin, thin);
+      GArray *res;
+
+      g_assert_cmpuint (ncm_mset_catalog_get_thin (mcat), ==, thin);
+      g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, nchains);
+      g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, kept_markid);
+      _test_ncm_mset_catalog_assert_rows (mcat, kept);
+
+      res = _test_ncm_mset_catalog_read_block_results (mcat, NULL);
+      g_assert_cmpuint (res->len, ==, ref_res->len);
+
+      for (i = 0; i < ref_res->len; i++)
+        g_assert_cmpfloat (g_array_index (res, gdouble, i), ==, g_array_index (ref_res, gdouble, i));
+
+      g_array_unref (res);
+      ncm_mset_catalog_clear (&mcat);
+      ncm_mset_catalog_storage_free (storage);
+    }
+
+    g_array_unref (ref_res);
+    g_ptr_array_unref (kept);
+    g_free (ref_name);
+    g_free (ref_file);
+  }
+
+  g_ptr_array_unref (rows);
+  _test_ncm_mset_catalog_rm_tmp_dir (tmp_dir);
+  g_free (ar1_file);
+  g_free (filename);
+  g_free (tmp_dir);
+}
+
+void
+test_ncm_mset_catalog_file_thin_writable_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/mset/catalog/file/thin/writable/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*thin 2 requires a read-only storage*");
+}
+
+void
+test_ncm_mset_catalog_file_thin_writable_subprocess (void)
+{
+  gchar *tmp_dir                          = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_thin_writable_XXXXXX", NULL);
+  gchar *filename                         = g_build_filename (tmp_dir, "cat.fits", NULL);
+  GPtrArray *rows                         = _test_ncm_mset_catalog_write_ar1 (filename, 2, 20);
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+
+  g_ptr_array_unref (rows);
+  ncm_mset_catalog_new_from_storage_full (NCM_MSET_CATALOG_STORAGE (storage_fits), 0, 2);
+
+  g_assert_not_reached ();
+}
 
 /* The id survives the file round trip, the file-level peek sees it, the conversion to
  * iterations is exact, and reading with a burn-in shifts it like every other row id. */
@@ -2062,9 +3049,9 @@ test_ncm_mset_catalog_file_markovian_id_roundtrip (void)
   gchar *filename         = g_strdup_printf ("%s/cat.fits", tmp_dir);
   const gint markovian_id = 3 * TEST_CAT_NCHAINS; /* the fourth ensemble starts the chain */
   NcmMSet *mset           = _test_ncm_mset_catalog_new_markovian_file (filename, 6, markovian_id);
-  NcmMSetCatalog *mcat_ro = ncm_mset_catalog_new_from_file_ro (filename, 0);
-  NcmMSetCatalog *mcat_b  = ncm_mset_catalog_new_from_file_ro (filename, 2 * TEST_CAT_NCHAINS);
-  NcmMSetCatalog *mcat_b2 = ncm_mset_catalog_new_from_file_ro (filename, 5 * TEST_CAT_NCHAINS);
+  NcmMSetCatalog *mcat_ro = _test_ncm_mset_catalog_open (filename, TRUE, 0);
+  NcmMSetCatalog *mcat_b  = _test_ncm_mset_catalog_open (filename, TRUE, 2 * TEST_CAT_NCHAINS);
+  NcmMSetCatalog *mcat_b2 = _test_ncm_mset_catalog_open (filename, TRUE, 5 * TEST_CAT_NCHAINS);
   gint prop_id            = -1;
 
   g_assert_cmpint (ncm_mset_catalog_peek_markovian_id_from_file (filename), ==, markovian_id);
@@ -2079,7 +3066,7 @@ test_ncm_mset_catalog_file_markovian_id_roundtrip (void)
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat_b), ==, 1);
 
   /* Burn-in past the id: everything loaded is Markovian, the id is the first row. */
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat_b2), ==, ncm_mset_catalog_get_first_id (mcat_b2));
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat_b2), ==, 0);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat_b2), ==, 0);
 
   ncm_mset_catalog_clear (&mcat_ro);
@@ -2114,8 +3101,8 @@ test_ncm_mset_catalog_file_markovian_id_missing_key (void)
 
   g_assert_cmpint (ncm_mset_catalog_peek_markovian_id_from_file (filename), ==, 0);
 
-  mcat = ncm_mset_catalog_new_from_file_ro (filename, 0);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, ncm_mset_catalog_get_first_id (mcat));
+  mcat = _test_ncm_mset_catalog_open (filename, TRUE, 0);
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 0);
 
   ncm_mset_catalog_clear (&mcat);
@@ -2140,7 +3127,7 @@ test_ncm_mset_catalog_file_markovian_id_backwards_subprocess (void)
   gchar *tmp_dir       = g_dir_make_tmp ("tmp_test_ncm_mset_catalog_markid_back_XXXXXX", NULL);
   gchar *filename      = g_strdup_printf ("%s/cat.fits", tmp_dir);
   NcmMSet *mset        = _test_ncm_mset_catalog_new_markovian_file (filename, 4, 2 * TEST_CAT_NCHAINS);
-  NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file (filename, 0);
+  NcmMSetCatalog *mcat = _test_ncm_mset_catalog_open (filename, FALSE, 0);
 
   ncm_mset_catalog_set_markovian_id (mcat, TEST_CAT_NCHAINS);
 
@@ -2158,12 +3145,12 @@ test_ncm_mset_catalog_file_markovian_id_trim (void)
   gchar *filename         = g_strdup_printf ("%s/cat.fits", tmp_dir);
   const gint markovian_id = 4 * TEST_CAT_NCHAINS; /* iterations 0-3 non-Markovian, 4-9 Markovian */
   NcmMSet *mset           = _test_ncm_mset_catalog_new_markovian_file (filename, 10, markovian_id);
-  NcmMSetCatalog *mcat    = ncm_mset_catalog_new_from_file (filename, 0);
+  NcmMSetCatalog *mcat    = _test_ncm_mset_catalog_open (filename, FALSE, 0);
 
   /* Cut 2 of the 4 non-Markovian iterations: 2 remain before the chain. */
   ncm_mset_catalog_trim (mcat, 2, 1);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 2);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, ncm_mset_catalog_get_first_id (mcat) + 2 * TEST_CAT_NCHAINS);
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 2 * TEST_CAT_NCHAINS);
 
   /* Thin by 2 without a cut: the 2 remaining non-Markovian iterations become 1. */
   ncm_mset_catalog_trim (mcat, 0, 2);
@@ -2172,7 +3159,7 @@ test_ncm_mset_catalog_file_markovian_id_trim (void)
   /* Cut past the chain start: every row left is Markovian. */
   ncm_mset_catalog_trim (mcat, 3, 1);
   g_assert_cmpuint (ncm_mset_catalog_get_markovian_burnin (mcat), ==, 0);
-  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, ncm_mset_catalog_get_first_id (mcat));
+  g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, 0);
 
   ncm_mset_catalog_clear (&mcat);
   ncm_mset_clear (&mset);
@@ -2184,7 +3171,7 @@ test_ncm_mset_catalog_file_markovian_id_trim (void)
     gchar *filename2 = g_strdup_printf ("%s/cat2.fits", tmp_dir);
 
     mset = _test_ncm_mset_catalog_new_markovian_file (filename2, 10, markovian_id);
-    mcat = ncm_mset_catalog_new_from_file (filename2, 0);
+    mcat = _test_ncm_mset_catalog_open (filename2, FALSE, 0);
     ncm_mset_catalog_set_markovian_id (mcat, ncm_mset_catalog_get_cur_id (mcat) + 1);
     ncm_mset_catalog_remove_last_ensemble (mcat);
     g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==, ncm_mset_catalog_get_cur_id (mcat) + 1);
@@ -2256,8 +3243,6 @@ test_ncm_mset_catalog_file_markovian_id_frozen_needs_more (void)
   ncm_mset_clear (&mset);
   ncm_model_mvnd_clear (&model_mvnd);
 }
-
-#endif /* HAVE_CFITSIO */
 
 void
 test_ncm_mset_catalog_tau_frozen_walkers (void)
@@ -2367,7 +3352,7 @@ test_ncm_mset_catalog_trim_oob_markovian (void)
     }
   }
 
-  ncm_mset_catalog_set_markovian_id (mcat, ncm_mset_catalog_get_first_id (mcat) + mark_itens * TEST_CAT_NCHAINS);
+  ncm_mset_catalog_set_markovian_id (mcat, mark_itens * TEST_CAT_NCHAINS);
 
   ndel = ncm_mset_catalog_trim_oob (mcat, out_file);
 
@@ -2376,7 +3361,7 @@ test_ncm_mset_catalog_trim_oob_markovian (void)
 
   /* Out-of-bounds rows before the chain start are gone, so the start moves back by that many. */
   g_assert_cmpint (ncm_mset_catalog_get_markovian_id (mcat), ==,
-                   ncm_mset_catalog_get_first_id (mcat) + mark_itens * TEST_CAT_NCHAINS - oob_before);
+                   mark_itens * TEST_CAT_NCHAINS - oob_before);
 
   /* Trimming always leaves a single chain. */
   g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, 1);
@@ -2457,24 +3442,28 @@ void
 test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
   /* The distribution, confidence interval and p-value functions on a catalog shorter than
-   * 100 rows. The function is x theta_0 at x = 1 and 2, with theta_0 uniform in [0, 1). */
-  const guint n       = 40;
-  const gdouble ps[2] = {0.5, 0.9};
-  NcmMSetFunc *func   = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
-  NcmMSetFunc *func0  = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:p0", NULL));
-  NcmVector *x_v      = ncm_vector_new (2);
-  GArray *p_val       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+   * 100 rows. The function is x theta_0 at x = 1 and 2, with theta_0 drawn uniform in each
+   * of the 40 intervals [i/40, (i+1)/40). */
+  const guint n         = 40;
+  const gdouble ps[2]   = {0.5, 0.9};
+  const gdouble lims[4] = {-0.5, 0.5, 0.9, 2.5};
+  NcmMSetFunc *func     = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:scaled_p0", NULL));
+  NcmMSetFunc *func0    = NCM_MSET_FUNC (ncm_mset_func_list_new ("TestNcmMSetCatalog:p0", NULL));
+  NcmVector *x_v        = ncm_vector_new (2);
+  GArray *p_val         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *lim           = g_array_new (FALSE, FALSE, sizeof (gdouble));
   gdouble *p0;
   NcmStatsDist1d *sd1;
   NcmMatrix *res;
   guint k;
 
-  _test_ncm_mset_catalog_add_uniform_rows (test, n);
+  _test_ncm_mset_catalog_add_stratified_rows (test, n);
   p0 = _test_ncm_mset_catalog_sorted_p0 (test);
 
   ncm_vector_set (x_v, 0, 1.0);
   ncm_vector_set (x_v, 1, 2.0);
   g_array_append_vals (p_val, ps, 2);
+  g_array_append_vals (lim, lims, 4);
 
   sd1 = ncm_mset_catalog_calc_distrib (test->mcat, func0, NCM_FIT_RUN_MSGS_NONE);
   g_assert_cmpfloat (ncm_stats_dist1d_eval_inv_pdf (sd1, 0.5), >, p0[0]);
@@ -2495,18 +3484,24 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
 
   ncm_matrix_free (res);
 
-  res = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_NONE);
-  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 2);
+  res = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, lim, 0, NCM_FIT_RUN_MSGS_NONE);
+  g_assert_cmpuint (ncm_matrix_ncols (res), ==, 4);
 
-  /* The limits sit inside the range of theta_0 and below that of 2 theta_0. */
+  /*
+   * x theta_0 covers at least [x/40, 39x/40], and the p-value is zero at or below its
+   * smallest value and one at or above its largest: -0.5 gives zero and 2.5 gives one for
+   * x = 1 and 2, and 0.5 and 0.9 lie strictly inside.
+   */
   for (k = 0; k < 2; k++)
   {
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), >, 0.0);
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), <, ncm_matrix_get (res, k, 1));
-    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), <, 1.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 0), ==, 0.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), >, 0.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 1), <, ncm_matrix_get (res, k, 2));
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 2), <, 1.0);
+    g_assert_cmpfloat (ncm_matrix_get (res, k, 3), ==, 1.0);
   }
 
-  g_assert_cmpfloat (ncm_matrix_get (res, 1, 0), <, ncm_matrix_get (res, 0, 0));
+  g_assert_cmpfloat (ncm_matrix_get (res, 1, 1), <, ncm_matrix_get (res, 0, 1));
 
   /* With the progress messages on, the results do not change. The distribution of the
    * free parameter theta_0 is that of the function theta_0. */
@@ -2520,10 +3515,15 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
     sd1_p = ncm_mset_catalog_calc_param_distrib (test->mcat, ncm_mset_fparam_get_pi (mset, 0), NCM_FIT_RUN_MSGS_SIMPLE);
     g_assert_cmpfloat (ncm_stats_dist1d_eval_inv_pdf (sd1_p, 0.5), ==, ncm_stats_dist1d_eval_inv_pdf (sd1_f, 0.5));
 
-    res_msgs = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, p_val, 0, NCM_FIT_RUN_MSGS_SIMPLE);
+    res_msgs = ncm_mset_catalog_calc_pvalue (test->mcat, func, x_v, lim, 0, NCM_FIT_RUN_MSGS_SIMPLE);
 
     for (k = 0; k < 2; k++)
-      g_assert_cmpfloat (ncm_matrix_get (res_msgs, k, 0), ==, ncm_matrix_get (res, k, 0));
+    {
+      guint j;
+
+      for (j = 0; j < 4; j++)
+        g_assert_cmpfloat (ncm_matrix_get (res_msgs, k, j), ==, ncm_matrix_get (res, k, j));
+    }
 
     ncm_matrix_free (res_msgs);
 
@@ -2539,6 +3539,7 @@ test_ncm_mset_catalog_distrib_short (TestNcmMSetCatalog *test, gconstpointer pda
   ncm_matrix_free (res);
 
   g_free (p0);
+  g_array_unref (lim);
   g_array_unref (p_val);
   ncm_vector_free (x_v);
   ncm_mset_func_free (func);
@@ -2640,9 +3641,9 @@ test_ncm_mset_catalog_param_pdf (TestNcmMSetCatalog *test, gconstpointer pdata)
 }
 
 void
-test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointer pdata)
+test_ncm_mset_catalog_diag_short (TestNcmMSetCatalog *test, gconstpointer pdata)
 {
-  /* Below ten iterations there is no estimate to trim at, and the catalog is kept whole. */
+  /* Below ten iterations the diagnostics give no time. */
   guint max_ess_time;
   gdouble max_ess = 1.0;
 
@@ -2671,9 +3672,6 @@ test_ncm_mset_catalog_trim_by_type_short (TestNcmMSetCatalog *test, gconstpointe
 
     _test_ncm_mset_catalog_log_end (log);
   }
-
-  ncm_mset_catalog_trim_by_type (test->mcat, 0, NCM_MSET_CATALOG_TRIM_TYPE_ESS | NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL, NCM_FIT_RUN_MSGS_NONE);
-  g_assert_cmpuint (ncm_mset_catalog_len (test->mcat), ==, 5 * ncm_mset_catalog_nchains (test->mcat));
 }
 
 void
@@ -2772,5 +3770,64 @@ test_ncm_mset_catalog_remove_last_ensemble (TestNcmMSetCatalog *test, gconstpoin
   g_assert_true (ncm_vector_cmp2 (first, ncm_mset_catalog_peek_row (test->mcat, 0), 0.0, 0.0) == 0);
 
   ncm_vector_free (first);
+}
+
+void
+test_ncm_mset_catalog_diag_rows (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /*
+   * ncm_mset_catalog_get_diag_rows() gives the series the burn-in diagnostics read, the
+   * rows of one chain or the ensemble means: the same analysis on it gives exactly the
+   * catalog's result. It keeps its rows after the catalog is reset.
+   */
+  const guint nens = 50;
+  gint bindex      = 0;
+  guint wp = 0, wp_order = 0, tm, i, nrows;
+  gdouble max_ess = 0.0, wp_ess = 0.0;
+  NcmStatsRows *rows;
+  NcmVector *esss, *row_0;
+
+  _test_ncm_mset_catalog_add_ensembles (test, nens);
+
+  rows  = ncm_mset_catalog_get_diag_rows (test->mcat);
+  nrows = ncm_stats_rows_get_nrows (rows);
+  g_assert_cmpuint (nrows, ==, ncm_mset_catalog_max_time (test->mcat));
+
+  for (i = 0; i < nrows; i++)
+  {
+    NcmVector *row_i = (ncm_mset_catalog_nchains (test->mcat) == 1) ? ncm_mset_catalog_peek_row (test->mcat, i) : ncm_mset_catalog_peek_e_mean_t (test->mcat, i);
+
+    g_assert_true (ncm_stats_rows_peek_row (rows, i) == row_i);
+  }
+
+  tm   = ncm_mset_catalog_calc_max_ess_time (test->mcat, 0, &max_ess, NCM_FIT_RUN_MSGS_NONE);
+  esss = ncm_stats_rows_max_ess_time (rows, 0, &bindex, &wp, &wp_order, &wp_ess);
+
+  g_assert_cmpint (bindex, ==, tm);
+  g_assert_cmpfloat (wp_ess, ==, max_ess);
+
+  row_0 = ncm_vector_dup (ncm_stats_rows_peek_row (rows, 0));
+  ncm_mset_catalog_reset (test->mcat);
+
+  g_assert_cmpuint (ncm_stats_rows_get_nrows (rows), ==, nrows);
+  _test_ncm_mset_catalog_assert_vector_eq (ncm_stats_rows_peek_row (rows, 0), row_0);
+
+  ncm_vector_free (row_0);
+  ncm_vector_free (esss);
+  ncm_stats_rows_free (rows);
+}
+
+void
+test_ncm_mset_catalog_peek_current_row (TestNcmMSetCatalog *test, gconstpointer pdata)
+{
+  /* The last added row, and NULL on an empty catalog. */
+  g_assert_null (ncm_mset_catalog_peek_current_row (test->mcat));
+
+  _test_ncm_mset_catalog_add_ensembles (test, 3);
+
+  g_assert_true (ncm_mset_catalog_peek_current_row (test->mcat) == ncm_mset_catalog_peek_row (test->mcat, ncm_mset_catalog_len (test->mcat) - 1));
+
+  ncm_mset_catalog_reset (test->mcat);
+  g_assert_null (ncm_mset_catalog_peek_current_row (test->mcat));
 }
 

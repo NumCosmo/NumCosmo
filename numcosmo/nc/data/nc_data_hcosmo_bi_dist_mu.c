@@ -29,10 +29,24 @@
  * Distance moduli with directions, for a #NcHCosmoBI.
  *
  * Each object has a redshift $z$ (#NcDataHCosmoBIDistMu:z), a unit vector $\hat p$ in the
- * equatorial frame (row of #NcDataHCosmoBIDistMu:p), a distance modulus and its
- * uncertainty (the mean and standard deviation of #NcmDataGaussDiag). The model value is
+ * equatorial frame (row of #NcDataHCosmoBIDistMu:p), a distance modulus (the mean of
+ * #NcmDataGaussDiag), its measured uncertainty $\sigma_\mu$ (#NcDataHCosmoBIDistMu:sigma-mu)
+ * and a sample index (#NcDataHCosmoBIDistMu:sample, $-1$ for none). The model value is
  * nc_hcosmo_bi_dist_dmodulus_sky() plus $5\log_{10}$ nc_hcosmo_bi_RH_Mpc(), computed with
  * #NcDataHCosmoBIDistMu:dist, whose #NcHCosmoBIDist:zmax must cover the redshifts.
+ *
+ * When the model set holds a #NcDistMuNuisance, the model value of an object of sample
+ * $s$ gains the offset $\delta\mu_s$ (objects whose sample index is $-1$ or at least the
+ * number of offsets get none), and the standard deviation becomes
+ * $\sqrt{\sigma_\mu^2 + \sigma_{\mu,v}(z)^2}$ with the dispersion of the object's sample, see
+ * nc_dist_mu_nuisance_sigma_mu_v_sample(). Without it the standard deviation is $\sigma_\mu$.
+ *
+ * When the model set holds a #NcObserverVelocity, the model value of an object is that of
+ * the rest frame at nc_observer_velocity_z_rest() minus $5\log_{10}$ of
+ * nc_observer_velocity_doppler(), the observer's motion relative to the rest frame of the
+ * model; the velocity term of the standard deviation keeps the observed redshift. The
+ * rest-frame redshift of every object must stay positive and within
+ * #NcHCosmoBIDist:zmax, which bounds the velocity by the smallest redshift of the data.
  *
  */
 
@@ -42,9 +56,12 @@
 #include "build_cfg.h"
 
 #include "nc/data/nc_data_hcosmo_bi_dist_mu.h"
+#include "nc/data/nc_observer_velocity.h"
+#include "ncm/model/ncm_model_ctrl.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
+#include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcDataHCosmoBIDistMu
@@ -54,6 +71,11 @@ struct _NcDataHCosmoBIDistMu
   NcHCosmoBIDist *dist;
   NcmVector *z;
   NcmMatrix *p;
+  NcmVector *sigma_mu;
+  NcmVector *sample;
+  NcmModelCtrl *nuisance_ctrl;
+  gboolean sigma_has_v;
+  gboolean sigma_stale;
 };
 
 enum
@@ -62,6 +84,8 @@ enum
   PROP_DIST,
   PROP_Z,
   PROP_P,
+  PROP_SIGMA_MU,
+  PROP_SAMPLE,
   PROP_SIZE,
 };
 
@@ -70,9 +94,14 @@ G_DEFINE_TYPE (NcDataHCosmoBIDistMu, nc_data_hcosmo_bi_dist_mu, NCM_TYPE_DATA_GA
 static void
 nc_data_hcosmo_bi_dist_mu_init (NcDataHCosmoBIDistMu *dmu)
 {
-  dmu->dist = NULL;
-  dmu->z    = NULL;
-  dmu->p    = NULL;
+  dmu->dist          = NULL;
+  dmu->z             = NULL;
+  dmu->p             = NULL;
+  dmu->sigma_mu      = NULL;
+  dmu->sample        = NULL;
+  dmu->nuisance_ctrl = ncm_model_ctrl_new (NULL);
+  dmu->sigma_has_v   = FALSE;
+  dmu->sigma_stale   = TRUE;
 }
 
 static void
@@ -92,6 +121,13 @@ _nc_data_hcosmo_bi_dist_mu_set_property (GObject *object, guint prop_id, const G
       break;
     case PROP_P:
       ncm_matrix_substitute (&dmu->p, g_value_get_object (value), TRUE);
+      break;
+    case PROP_SIGMA_MU:
+      ncm_vector_substitute (&dmu->sigma_mu, g_value_get_object (value), TRUE);
+      dmu->sigma_stale = TRUE;
+      break;
+    case PROP_SAMPLE:
+      ncm_vector_substitute (&dmu->sample, g_value_get_object (value), TRUE);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -117,6 +153,12 @@ _nc_data_hcosmo_bi_dist_mu_get_property (GObject *object, guint prop_id, GValue 
     case PROP_P:
       g_value_set_object (value, dmu->p);
       break;
+    case PROP_SIGMA_MU:
+      g_value_set_object (value, dmu->sigma_mu);
+      break;
+    case PROP_SAMPLE:
+      g_value_set_object (value, dmu->sample);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -131,6 +173,9 @@ _nc_data_hcosmo_bi_dist_mu_dispose (GObject *object)
   nc_hcosmo_bi_dist_clear (&dmu->dist);
   ncm_vector_clear (&dmu->z);
   ncm_matrix_clear (&dmu->p);
+  ncm_vector_clear (&dmu->sigma_mu);
+  ncm_vector_clear (&dmu->sample);
+  ncm_model_ctrl_clear (&dmu->nuisance_ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_hcosmo_bi_dist_mu_parent_class)->dispose (object);
@@ -145,6 +190,7 @@ _nc_data_hcosmo_bi_dist_mu_finalize (GObject *object)
 
 static void _nc_data_hcosmo_bi_dist_mu_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_hcosmo_bi_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
+static gboolean _nc_data_hcosmo_bi_dist_mu_sigma_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *sigma);
 static void _nc_data_hcosmo_bi_dist_mu_set_size (NcmDataGaussDiag *diag, guint np);
 
 static void
@@ -201,9 +247,38 @@ nc_data_hcosmo_bi_dist_mu_class_init (NcDataHCosmoBIDistMuClass *klass)
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  data_class->prepare   = &_nc_data_hcosmo_bi_dist_mu_prepare;
-  diag_class->mean_func = &_nc_data_hcosmo_bi_dist_mu_mean_func;
-  diag_class->set_size  = &_nc_data_hcosmo_bi_dist_mu_set_size;
+  /**
+   * NcDataHCosmoBIDistMu:sigma-mu:
+   *
+   * Measured uncertainties of the distance moduli.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGMA_MU,
+                                   g_param_spec_object ("sigma-mu",
+                                                        NULL,
+                                                        "Measured uncertainties of the moduli",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataHCosmoBIDistMu:sample:
+   *
+   * Sample index of each object, $-1$ for none.
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SAMPLE,
+                                   g_param_spec_object ("sample",
+                                                        NULL,
+                                                        "Sample index of each object",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  data_class->prepare    = &_nc_data_hcosmo_bi_dist_mu_prepare;
+  diag_class->mean_func  = &_nc_data_hcosmo_bi_dist_mu_mean_func;
+  diag_class->sigma_func = &_nc_data_hcosmo_bi_dist_mu_sigma_func;
+  diag_class->set_size   = &_nc_data_hcosmo_bi_dist_mu_set_size;
 }
 
 static void
@@ -218,22 +293,87 @@ _nc_data_hcosmo_bi_dist_mu_prepare (NcmData *data, NcmMSet *mset)
 static void
 _nc_data_hcosmo_bi_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
-  NcDataHCosmoBIDistMu *dmu = NC_DATA_HCOSMO_BI_DIST_MU (diag);
-  NcHCosmoBI *cosmo         = NC_HCOSMO_BI (ncm_mset_peek (mset, nc_hcosmo_bi_id ()));
-  const gdouble f_lnRH      = 5.0 * log10 (nc_hcosmo_bi_RH_Mpc (cosmo));
-  const guint np            = ncm_data_gauss_diag_get_size (diag);
+  NcDataHCosmoBIDistMu *dmu  = NC_DATA_HCOSMO_BI_DIST_MU (diag);
+  NcHCosmoBI *cosmo          = NC_HCOSMO_BI (ncm_mset_peek (mset, nc_hcosmo_bi_id ()));
+  NcDistMuNuisance *nuisance = NC_DIST_MU_NUISANCE (ncm_mset_peek (mset, nc_dist_mu_nuisance_id ()));
+  NcObserverVelocity *ov     = NC_OBSERVER_VELOCITY (ncm_mset_peek (mset, nc_observer_velocity_id ()));
+  const gdouble f_lnRH       = 5.0 * log10 (nc_hcosmo_bi_RH_Mpc (cosmo));
+  const guint np             = ncm_data_gauss_diag_get_size (diag);
+  const gint nsamples        = (nuisance != NULL) ? (gint) nc_dist_mu_nuisance_get_nsamples (nuisance) : 0;
   guint i;
 
   for (i = 0; i < np; i++)
   {
-    const gdouble z     = ncm_vector_get (dmu->z, i);
-    const gdouble dmu_i = nc_hcosmo_bi_dist_dmodulus_sky (dmu->dist, z,
-                                                          ncm_matrix_get (dmu->p, i, 0),
-                                                          ncm_matrix_get (dmu->p, i, 1),
-                                                          ncm_matrix_get (dmu->p, i, 2));
+    const gdouble px  = ncm_matrix_get (dmu->p, i, 0);
+    const gdouble py  = ncm_matrix_get (dmu->p, i, 1);
+    const gdouble pz  = ncm_matrix_get (dmu->p, i, 2);
+    const gint s      = (gint) ncm_vector_get (dmu->sample, i);
+    const gdouble off = ((s >= 0) && (s < nsamples)) ? nc_dist_mu_nuisance_get_dmu (nuisance, s) : 0.0;
+    gdouble z         = ncm_vector_get (dmu->z, i);
+    gdouble f_lnD     = 0.0;
 
-    ncm_vector_set (vp, i, dmu_i + f_lnRH);
+    if (ov != NULL)
+    {
+      const gdouble D = nc_observer_velocity_doppler (ov, px, py, pz);
+
+      z     = (1.0 + z) * D - 1.0;
+      f_lnD = 5.0 * log10 (D);
+
+      if (z <= 0.0)
+        g_error ("_nc_data_hcosmo_bi_dist_mu_mean_func: object %u has a rest-frame redshift %g <= 0 for the "
+                 "observer velocity %g km/s; raise the lower redshift limit of the data or bound the velocity.",
+                 i, z, nc_observer_velocity_speed (ov));
+    }
+
+    ncm_vector_set (vp, i, nc_hcosmo_bi_dist_dmodulus_sky (dmu->dist, z, px, py, pz) - f_lnD + f_lnRH + off);
   }
+}
+
+/*
+ * Fills @sigma with sqrt(sigma_mu^2 + sigma_mu_v(z)^2), the dispersion being that of the
+ * object's sample, when the model set holds a NcDistMuNuisance and with sigma_mu otherwise;
+ * returns TRUE when it wrote @sigma, which happens when the nuisance model changed since
+ * the last call (any of its parameters, tracked by a NcmModelCtrl), when it appeared or
+ * left the model set, or when the data changed.
+ */
+static gboolean
+_nc_data_hcosmo_bi_dist_mu_sigma_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *sigma)
+{
+  NcDataHCosmoBIDistMu *dmu  = NC_DATA_HCOSMO_BI_DIST_MU (diag);
+  NcDistMuNuisance *nuisance = NC_DIST_MU_NUISANCE (ncm_mset_peek (mset, nc_dist_mu_nuisance_id ()));
+  const guint np             = ncm_data_gauss_diag_get_size (diag);
+  gboolean changed           = dmu->sigma_stale;
+  guint i;
+
+  if (nuisance != NULL)
+    changed = ncm_model_ctrl_update (dmu->nuisance_ctrl, NCM_MODEL (nuisance)) || changed || !dmu->sigma_has_v;
+  else
+    changed = changed || dmu->sigma_has_v;
+
+  if (!changed)
+    return FALSE;
+
+  for (i = 0; i < np; i++)
+  {
+    const gdouble sm = ncm_vector_get (dmu->sigma_mu, i);
+    const gint s     = (gint) ncm_vector_get (dmu->sample, i);
+
+    if ((nuisance == NULL) || (nc_dist_mu_nuisance_get_sigma_v_sample (nuisance, s) == 0.0))
+    {
+      ncm_vector_set (sigma, i, sm);
+    }
+    else
+    {
+      const gdouble sv = nc_dist_mu_nuisance_sigma_mu_v_sample (nuisance, ncm_vector_get (dmu->z, i), s);
+
+      ncm_vector_set (sigma, i, hypot (sm, sv));
+    }
+  }
+
+  dmu->sigma_has_v = (nuisance != NULL);
+  dmu->sigma_stale = FALSE;
+
+  return TRUE;
 }
 
 static void
@@ -246,12 +386,17 @@ _nc_data_hcosmo_bi_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
   {
     ncm_vector_clear (&dmu->z);
     ncm_matrix_clear (&dmu->p);
+    ncm_vector_clear (&dmu->sigma_mu);
+    ncm_vector_clear (&dmu->sample);
   }
 
   if ((np != 0) && (np != cnp))
   {
-    dmu->z = ncm_vector_new (np);
-    dmu->p = ncm_matrix_new (np, 3);
+    dmu->z        = ncm_vector_new (np);
+    dmu->p        = ncm_matrix_new (np, 3);
+    dmu->sigma_mu = ncm_vector_new (np);
+    dmu->sample   = ncm_vector_new (np);
+    ncm_vector_set_all (dmu->sample, -1.0);
   }
 
   /* Chain up : end */
@@ -343,8 +488,9 @@ nc_data_hcosmo_bi_dist_mu_set_dist (NcDataHCosmoBIDistMu *dmu, NcHCosmoBIDist *d
  * @mu: distance moduli
  * @sigma: uncertainties of the distance moduli
  *
- * Copies the data into @dmu and marks it initialized. The four arguments must have the
- * same number of objects, and @p three columns.
+ * Copies the data into @dmu, sets every sample index to $-1$ and marks @dmu
+ * initialized. The four arguments must have the same number of objects, and @p three
+ * columns.
  *
  */
 void
@@ -362,10 +508,30 @@ nc_data_hcosmo_bi_dist_mu_set_data (NcDataHCosmoBIDistMu *dmu, NcmVector *z, Ncm
 
   ncm_vector_memcpy (dmu->z, z);
   ncm_matrix_memcpy (dmu->p, p);
+  ncm_vector_memcpy (dmu->sigma_mu, sigma);
+  ncm_vector_set_all (dmu->sample, -1.0);
   ncm_vector_memcpy (ncm_data_gauss_diag_peek_mean (diag), mu);
   ncm_vector_memcpy (ncm_data_gauss_diag_peek_std (diag), sigma);
+  dmu->sigma_stale = TRUE;
 
   ncm_data_set_init (NCM_DATA (dmu), TRUE);
+}
+
+/**
+ * nc_data_hcosmo_bi_dist_mu_set_samples:
+ * @dmu: a #NcDataHCosmoBIDistMu
+ * @sample: sample index of each object, $-1$ for none
+ *
+ * Copies @sample into @dmu, which must already hold the data; @sample must have one
+ * entry per object.
+ *
+ */
+void
+nc_data_hcosmo_bi_dist_mu_set_samples (NcDataHCosmoBIDistMu *dmu, NcmVector *sample)
+{
+  g_assert_cmpuint (ncm_vector_len (sample), ==, ncm_data_gauss_diag_get_size (NCM_DATA_GAUSS_DIAG (dmu)));
+
+  ncm_vector_memcpy (dmu->sample, sample);
 }
 
 /**
@@ -374,25 +540,28 @@ nc_data_hcosmo_bi_dist_mu_set_data (NcDataHCosmoBIDistMu *dmu, NcmVector *z, Ncm
  * @obs: a #NcDistMuObs
  * @mu_col: (nullable): column of the distance moduli
  * @sigma_col: (nullable): column of their uncertainties
+ * @sample_col: (nullable): integer column of the sample indices
  * @z_min: lower redshift limit
  * @z_max: upper redshift limit
  * @error: a #GError
  *
- * Fills @dmu with the objects of @obs whose redshift lies in [@z_min, @z_max], taking
- * the moduli from @mu_col and their uncertainties from @sigma_col; %NULL selects
- * #NC_DIST_MU_OBS_COL_MU and #NC_DIST_MU_OBS_COL_SIGMA_MU. A column missing from @obs
- * sets @error. The directions come from nc_dist_mu_obs_get_direction().
+ * Fills @dmu with the objects of @obs whose redshift lies in [@z_min, @z_max] and whose
+ * modulus and uncertainty in @mu_col and @sigma_col are finite; %NULL selects
+ * #NC_DIST_MU_OBS_COL_MU and #NC_DIST_MU_OBS_COL_SIGMA_MU, so a per-survey column with
+ * empty entries selects the objects of that survey. The sample indices come from
+ * @sample_col, or are $-1$ when it is %NULL. A column missing from @obs sets @error.
+ * The directions come from nc_dist_mu_obs_get_direction().
  *
  */
 void
-nc_data_hcosmo_bi_dist_mu_set_obs (NcDataHCosmoBIDistMu *dmu, NcDistMuObs *obs, const gchar *mu_col, const gchar *sigma_col, const gdouble z_min, const gdouble z_max, GError **error)
+nc_data_hcosmo_bi_dist_mu_set_obs (NcDataHCosmoBIDistMu *dmu, NcDistMuObs *obs, const gchar *mu_col, const gchar *sigma_col, const gchar *sample_col, const gdouble z_min, const gdouble z_max, GError **error)
 {
   NcmCatalog *catalog = NCM_CATALOG (obs);
   const guint nrows   = ncm_catalog_len (catalog);
   const gchar *mcol   = (mu_col != NULL) ? mu_col : NC_DIST_MU_OBS_COL_MU;
   const gchar *scol   = (sigma_col != NULL) ? sigma_col : NC_DIST_MU_OBS_COL_SIGMA_MU;
   guint np            = 0;
-  NcmVector *z, *mu, *sigma;
+  NcmVector *z, *mu, *sigma, *sample;
   NcmMatrix *p;
   guint i, k;
 
@@ -412,31 +581,45 @@ nc_data_hcosmo_bi_dist_mu_set_obs (NcDataHCosmoBIDistMu *dmu, NcDistMuObs *obs, 
     return;
   }
 
+  if ((sample_col != NULL) && !ncm_catalog_has_column (catalog, sample_col))
+  {
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
+                                "nc_data_hcosmo_bi_dist_mu_set_obs: column `%s' not found.", sample_col);
+
+    return;
+  }
+
   for (i = 0; i < nrows; i++)
   {
-    const gdouble zi = ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, i, NULL);
+    const gdouble zi  = ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, i, NULL);
+    const gdouble mui = ncm_catalog_get (catalog, mcol, i, NULL);
+    const gdouble si  = ncm_catalog_get (catalog, scol, i, NULL);
 
-    if ((zi >= z_min) && (zi <= z_max))
+    if ((zi >= z_min) && (zi <= z_max) && gsl_finite (mui) && gsl_finite (si))
       np++;
   }
 
-  z     = ncm_vector_new (np);
-  mu    = ncm_vector_new (np);
-  sigma = ncm_vector_new (np);
-  p     = ncm_matrix_new (np, 3);
+  z      = ncm_vector_new (np);
+  mu     = ncm_vector_new (np);
+  sigma  = ncm_vector_new (np);
+  sample = ncm_vector_new (np);
+  p      = ncm_matrix_new (np, 3);
 
   for (i = 0, k = 0; i < nrows; i++)
   {
-    const gdouble zi = ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, i, NULL);
+    const gdouble zi  = ncm_catalog_get (catalog, NC_DIST_MU_OBS_COL_Z, i, NULL);
+    const gdouble mui = ncm_catalog_get (catalog, mcol, i, NULL);
+    const gdouble si  = ncm_catalog_get (catalog, scol, i, NULL);
     NcmTriVec n;
 
-    if (!((zi >= z_min) && (zi <= z_max)))
+    if (!((zi >= z_min) && (zi <= z_max) && gsl_finite (mui) && gsl_finite (si)))
       continue;
 
     nc_dist_mu_obs_get_direction (obs, i, &n);
     ncm_vector_set (z, k, zi);
-    ncm_vector_set (mu, k, ncm_catalog_get (catalog, mcol, i, NULL));
-    ncm_vector_set (sigma, k, ncm_catalog_get (catalog, scol, i, NULL));
+    ncm_vector_set (mu, k, mui);
+    ncm_vector_set (sigma, k, si);
+    ncm_vector_set (sample, k, (sample_col != NULL) ? (gdouble) ncm_catalog_get_int (catalog, sample_col, i, NULL) : -1.0);
     ncm_matrix_set (p, k, 0, n.c[0]);
     ncm_matrix_set (p, k, 1, n.c[1]);
     ncm_matrix_set (p, k, 2, n.c[2]);
@@ -444,10 +627,12 @@ nc_data_hcosmo_bi_dist_mu_set_obs (NcDataHCosmoBIDistMu *dmu, NcDistMuObs *obs, 
   }
 
   nc_data_hcosmo_bi_dist_mu_set_data (dmu, z, p, mu, sigma);
+  nc_data_hcosmo_bi_dist_mu_set_samples (dmu, sample);
 
   ncm_vector_free (z);
   ncm_vector_free (mu);
   ncm_vector_free (sigma);
+  ncm_vector_free (sample);
   ncm_matrix_free (p);
 }
 
@@ -455,20 +640,23 @@ nc_data_hcosmo_bi_dist_mu_set_obs (NcDataHCosmoBIDistMu *dmu, NcDistMuObs *obs, 
  * nc_data_hcosmo_bi_dist_mu_get_obs:
  * @dmu: a #NcDataHCosmoBIDistMu
  *
- * Builds a #NcDistMuObs with the five required columns from the current data of
- * @dmu: the moduli are the current mean, so a resampled @dmu gives a mock catalog.
+ * Builds a #NcDistMuObs with the five required columns and #NC_DIST_MU_OBS_COL_SAMPLE
+ * from the current data of @dmu: the moduli are the current mean, so a resampled @dmu
+ * gives a mock catalog; the uncertainties are the measured ones, #NcDataHCosmoBIDistMu:sigma-mu.
  *
  * Returns: (transfer full): a new #NcDistMuObs
  */
 NcDistMuObs *
 nc_data_hcosmo_bi_dist_mu_get_obs (NcDataHCosmoBIDistMu *dmu)
 {
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (dmu);
-  const guint np         = ncm_data_gauss_diag_get_size (diag);
-  NcDistMuObs *obs       = nc_dist_mu_obs_new (np, NULL);
-  NcmCatalog *catalog    = NCM_CATALOG (obs);
-  NcmVector *mean        = ncm_data_gauss_diag_peek_mean (diag);
-  NcmVector *std         = ncm_data_gauss_diag_peek_std (diag);
+  NcmDataGaussDiag *diag          = NCM_DATA_GAUSS_DIAG (dmu);
+  const guint np                  = ncm_data_gauss_diag_get_size (diag);
+  const gchar *cols[]             = {NC_DIST_MU_OBS_COL_RA, NC_DIST_MU_OBS_COL_DEC, NC_DIST_MU_OBS_COL_Z, NC_DIST_MU_OBS_COL_MU, NC_DIST_MU_OBS_COL_SIGMA_MU, NC_DIST_MU_OBS_COL_SAMPLE, NULL};
+  const NcmCatalogColType types[] = {NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_INT};
+  NcDistMuObs *obs                = nc_dist_mu_obs_new_full (np, (GStrv) cols, types, 6);
+  NcmCatalog *catalog             = NCM_CATALOG (obs);
+  NcmVector *mean                 = ncm_data_gauss_diag_peek_mean (diag);
+  NcmVector *std                  = dmu->sigma_mu;
   guint i;
 
   for (i = 0; i < np; i++)
@@ -483,6 +671,7 @@ nc_data_hcosmo_bi_dist_mu_get_obs (NcDataHCosmoBIDistMu *dmu)
     ncm_catalog_set (catalog, NC_DIST_MU_OBS_COL_Z, i, ncm_vector_get (dmu->z, i), NULL);
     ncm_catalog_set (catalog, NC_DIST_MU_OBS_COL_MU, i, ncm_vector_get (mean, i), NULL);
     ncm_catalog_set (catalog, NC_DIST_MU_OBS_COL_SIGMA_MU, i, ncm_vector_get (std, i), NULL);
+    ncm_catalog_set_int (catalog, NC_DIST_MU_OBS_COL_SAMPLE, i, (gint64) ncm_vector_get (dmu->sample, i), NULL);
   }
 
   return obs;
@@ -510,5 +699,29 @@ NcmMatrix *
 nc_data_hcosmo_bi_dist_mu_peek_p (NcDataHCosmoBIDistMu *dmu)
 {
   return dmu->p;
+}
+
+/**
+ * nc_data_hcosmo_bi_dist_mu_peek_sigma_mu:
+ * @dmu: a #NcDataHCosmoBIDistMu
+ *
+ * Returns: (transfer none): the measured uncertainties of the moduli
+ */
+NcmVector *
+nc_data_hcosmo_bi_dist_mu_peek_sigma_mu (NcDataHCosmoBIDistMu *dmu)
+{
+  return dmu->sigma_mu;
+}
+
+/**
+ * nc_data_hcosmo_bi_dist_mu_peek_samples:
+ * @dmu: a #NcDataHCosmoBIDistMu
+ *
+ * Returns: (transfer none): the sample index of each object, $-1$ for none
+ */
+NcmVector *
+nc_data_hcosmo_bi_dist_mu_peek_samples (NcDataHCosmoBIDistMu *dmu)
+{
+  return dmu->sample;
 }
 

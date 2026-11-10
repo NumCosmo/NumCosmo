@@ -122,10 +122,15 @@ void test_ncm_mset_func_list_no_full_name_subprocess (void);
 void test_ncm_mset_func_list_bad_full_name_subprocess (void);
 void test_ncm_mset_func_list_wrong_obj_subprocess (void);
 void test_ncm_mset_func_list_no_obj_subprocess (void);
+void test_ncm_mset_func_list_new_dim (void);
+void test_ncm_mset_func_list_new_dim_errors (void);
+void test_ncm_mset_func_list_no_dim_subprocess (void);
+void test_ncm_mset_func_list_wrong_dim_subprocess (void);
 
 static void _test_flist_plus_one (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
 static void _test_flist_const (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
 static void _test_flist_vec_len (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
+static void _test_flist_range (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res);
 
 gint
 main (gint argc, gchar *argv[])
@@ -166,6 +171,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset_func_list/errors/bad_full_name/subprocess", &test_ncm_mset_func_list_bad_full_name_subprocess);
   g_test_add_func ("/ncm/mset_func_list/errors/wrong_obj/subprocess", &test_ncm_mset_func_list_wrong_obj_subprocess);
   g_test_add_func ("/ncm/mset_func_list/errors/no_obj/subprocess", &test_ncm_mset_func_list_no_obj_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/new_dim", &test_ncm_mset_func_list_new_dim);
+  g_test_add_func ("/ncm/mset_func_list/new_dim/errors", &test_ncm_mset_func_list_new_dim_errors);
+  g_test_add_func ("/ncm/mset_func_list/new_dim/errors/no_dim/subprocess", &test_ncm_mset_func_list_no_dim_subprocess);
+  g_test_add_func ("/ncm/mset_func_list/new_dim/errors/wrong_dim/subprocess", &test_ncm_mset_func_list_wrong_dim_subprocess);
 
   g_test_run ();
 }
@@ -182,6 +191,7 @@ test_flist_register (void)
     ncm_mset_func_list_register ("twice", "t_B", "TestFListB", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
     ncm_mset_func_list_register ("only_a", "o_A", "TestFListA", "Constant", G_TYPE_NONE, _test_flist_const, 0, 1);
     ncm_mset_func_list_register ("vec_len", "l", "TestFListObj", "Vector length", NCM_TYPE_VECTOR, _test_flist_vec_len, 0, 1);
+    ncm_mset_func_list_register ("range", "r", "TestFListDim", "0, 1, ..., dim - 1", G_TYPE_NONE, _test_flist_range, 0, 0);
 
     g_once_init_leave (&registered, 1);
   }
@@ -971,7 +981,13 @@ test_ncm_mset_func_list_select (void)
   test_flist_register ();
 
   sel = ncm_mset_func_list_select ("TestFList", -1, -1);
-  g_assert_cmpuint (sel->len, ==, 5);
+  g_assert_cmpuint (sel->len, ==, 6);
+  g_array_unref (sel);
+
+  /* Dimension 0 selects the functions whose dimension is given at construction. */
+  sel = ncm_mset_func_list_select ("TestFList", -1, 0);
+  g_assert_cmpuint (sel->len, ==, 1);
+  g_assert_cmpstr (g_array_index (sel, NcmMSetFuncListStruct, 0).name, ==, "range");
   g_array_unref (sel);
 
   sel = ncm_mset_func_list_select ("TestFList", 1, -1);
@@ -1075,5 +1091,74 @@ test_ncm_mset_func_list_no_obj_subprocess (void)
 {
   test_flist_register ();
   ncm_mset_func_list_free (ncm_mset_func_list_new ("TestFListObj:vec_len", NULL));
+}
+
+/* A function registered with dimension 0 returns 0, 1, ..., dim - 1. */
+static void
+_test_flist_range (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  const guint dim = ncm_mset_func_get_dim (NCM_MSET_FUNC (flist));
+  guint k;
+
+  for (k = 0; k < dim; k++)
+    res[k] = k;
+}
+
+/* A function registered with dimension 0 takes its dimension at construction, and keeps it through serialization. */
+void
+test_ncm_mset_func_list_new_dim (void)
+{
+  NcmMSet *mset = ncm_mset_empty_new ();
+  NcmMSetFuncList *flist, *dup, *fixed;
+  gdouble res[4];
+  guint k;
+
+  test_flist_register ();
+
+  flist = ncm_mset_func_list_new_dim ("TestFListDim:range", NULL, 4);
+  g_assert_cmpuint (ncm_mset_func_get_dim (NCM_MSET_FUNC (flist)), ==, 4);
+
+  ncm_mset_func_eval (NCM_MSET_FUNC (flist), mset, NULL, res);
+
+  for (k = 0; k < 4; k++)
+    g_assert_cmpfloat (res[k], ==, k);
+
+  dup = NCM_MSET_FUNC_LIST (ncm_serialize_global_dup_obj (G_OBJECT (flist)));
+  g_assert_cmpuint (ncm_mset_func_get_dim (NCM_MSET_FUNC (dup)), ==, 4);
+
+  /* A registered dimension is accepted when it is the one given. */
+  fixed = ncm_mset_func_list_new_dim ("TestFList:plus_one", NULL, 1);
+  g_assert_cmpuint (ncm_mset_func_get_dim (NCM_MSET_FUNC (fixed)), ==, 1);
+
+  ncm_mset_func_list_free (fixed);
+  ncm_mset_func_list_free (dup);
+  ncm_mset_func_list_free (flist);
+  ncm_mset_free (mset);
+}
+
+void
+test_ncm_mset_func_list_new_dim_errors (void)
+{
+  g_test_trap_subprocess ("/ncm/mset_func_list/new_dim/errors/no_dim/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `TestFListDim:range' has its dimension set at construction, use ncm_mset_func_list_new_dim()*");
+
+  g_test_trap_subprocess ("/ncm/mset_func_list/new_dim/errors/wrong_dim/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*function `TestFList:plus_one' has dimension 1, not 3*");
+}
+
+void
+test_ncm_mset_func_list_no_dim_subprocess (void)
+{
+  test_flist_register ();
+  ncm_mset_func_list_free (ncm_mset_func_list_new ("TestFListDim:range", NULL));
+}
+
+void
+test_ncm_mset_func_list_wrong_dim_subprocess (void)
+{
+  test_flist_register ();
+  ncm_mset_func_list_free (ncm_mset_func_list_new_dim ("TestFList:plus_one", NULL, 3));
 }
 

@@ -32,7 +32,9 @@
  * #NcmMSet,
  * $$-2\ln L = \frac{100 (x_2 - x_1^2)^2 + (1 - x_1)^2}{10},$$
  * whose minimum 0 is at $(1, 1)$. It is a standard test of minimizers and
- * samplers; its length and degrees of freedom are a nominal 10.
+ * samplers; its length and degrees of freedom are a nominal 10. The least-squares
+ * form has the residuals $\sqrt{10} (x_2 - x_1^2)$ and $(1 - x_1) / \sqrt{10}$,
+ * followed by zeros up to the nominal length.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -71,6 +73,7 @@ ncm_data_rosenbrock_constructed (GObject *object)
 static guint _ncm_data_rosenbrock_get_length (NcmData *data);
 static guint _ncm_data_rosenbrock_get_dof (NcmData *data);
 static void _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
+static void _ncm_data_rosenbrock_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);
 
 static void
 ncm_data_rosenbrock_class_init (NcmDataRosenbrockClass *klass)
@@ -80,9 +83,10 @@ ncm_data_rosenbrock_class_init (NcmDataRosenbrockClass *klass)
 
   object_class->constructed = ncm_data_rosenbrock_constructed;
 
-  data_class->get_length = &_ncm_data_rosenbrock_get_length;
-  data_class->get_dof    = &_ncm_data_rosenbrock_get_dof;
-  data_class->m2lnL_val  = &_ncm_data_rosenbrock_m2lnL_val;
+  data_class->get_length     = &_ncm_data_rosenbrock_get_length;
+  data_class->get_dof        = &_ncm_data_rosenbrock_get_dof;
+  data_class->m2lnL_val      = &_ncm_data_rosenbrock_m2lnL_val;
+  data_class->leastsquares_f = &_ncm_data_rosenbrock_leastsquares_f;
 }
 
 /* These likelihoods are analytic and have no data points; 10 is a nominal count,
@@ -107,6 +111,18 @@ _ncm_data_rosenbrock_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   const gdouble x2        = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2);
 
   m2lnL[0] = (100.0 * gsl_pow_2 (x2 - x1 * x1) + gsl_pow_2 (1.0 - x1)) * 1.0e-1;
+}
+
+static void
+_ncm_data_rosenbrock_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
+{
+  NcmModelRosenbrock *mrb = NCM_MODEL_ROSENBROCK (ncm_mset_peek (mset, ncm_model_rosenbrock_id ()));
+  const gdouble x1        = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X1);
+  const gdouble x2        = ncm_model_param_get (NCM_MODEL (mrb), NCM_MODEL_ROSENBROCK_X2);
+
+  ncm_vector_set_zero (f);
+  ncm_vector_set (f, 0, sqrt (10.0) * (x2 - x1 * x1));
+  ncm_vector_set (f, 1, (1.0 - x1) / sqrt (10.0));
 }
 
 /**

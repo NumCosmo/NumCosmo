@@ -420,7 +420,7 @@ register LM_REAL mu,  /* damping constant */
                 tmp; /* mainly used in matrix & vector multiplications */
 LM_REAL p_eL2, jacTe_inf, pDp_eL2; /* ||e(p)||_2, ||J^T e||_inf, ||e(p+Dp)||_2 */
 LM_REAL p_L2, Dp_L2=LM_REAL_MAX, dF, dL;
-LM_REAL tau, eps1, eps2, eps2_sq, eps3;
+LM_REAL tau, eps1, eps2, eps3;
 LM_REAL init_p_eL2;
 int nu=2, nu2, stop=0, nfev, njev=0, nlss=0;
 const int nm=n*m;
@@ -471,14 +471,12 @@ int (*linsolver)(LM_REAL *A, LM_REAL *B, LM_REAL *x, int m)=NULL;
 	  tau=opts[0];
 	  eps1=opts[1];
 	  eps2=opts[2];
-	  eps2_sq=opts[2]*opts[2];
 	  eps3=opts[3];
   }
   else{ // use default values
 	  tau=LM_CNST(LM_INIT_MU);
 	  eps1=LM_CNST(LM_STOP_THRESH);
 	  eps2=LM_CNST(LM_STOP_THRESH);
-	  eps2_sq=LM_CNST(LM_STOP_THRESH)*LM_CNST(LM_STOP_THRESH);
 	  eps3=LM_CNST(LM_STOP_THRESH);
   }
 
@@ -715,9 +713,21 @@ if(!(k%100)){
         }
         //Dp_L2=sqrt(Dp_L2);
 
-        if(Dp_L2<=eps2_sq*p_L2){ /* relative change in p is small, stop */
-          stop=2;
-          break;
+        /* NumCosmo: the step test is relative per component, |Dp_i| <= eps2 (|p_i| + eps2);
+         * the original ||Dp|| <= eps2 ||p|| lets one large parameter stop the run. */
+        {
+          int small_step=1;
+
+          for(i=0; i<m; ++i)
+            if(FABS(pDp[i]-p[i]) > eps2*(FABS(p[i]) + eps2)){
+              small_step=0;
+              break;
+            }
+
+          if(small_step){ /* relative change in p is small, stop */
+            stop=2;
+            break;
+          }
         }
 
         if(Dp_L2>=(p_L2+eps2)/(LM_CNST(EPSILON)*LM_CNST(EPSILON))){ /* almost singular */
@@ -950,9 +960,21 @@ terminatePGLS:
       }
       //Dp_L2=sqrt(Dp_L2);
 
-      if(Dp_L2<=eps2_sq*p_L2){ /* relative change in p is small, stop */
-        stop=2;
-        break;
+      /* NumCosmo: the step test is relative per component, |Dp_i| <= eps2 (|p_i| + eps2);
+       * the original ||Dp|| <= eps2 ||p|| lets one large parameter stop the run. */
+      {
+        int small_step=1;
+
+        for(i=0; i<m; ++i)
+          if(FABS(pDp[i]-p[i]) > eps2*(FABS(p[i]) + eps2)){
+            small_step=0;
+            break;
+          }
+
+        if(small_step){ /* relative change in p is small, stop */
+          stop=2;
+          break;
+        }
       }
 
       for(i=0 ; i<m; ++i) /* update p's estimate */

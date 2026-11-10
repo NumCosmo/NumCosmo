@@ -24,9 +24,12 @@
 
 """Test NumCosmo app."""
 
+import subprocess
+import sys
 from typing import Tuple
 from pathlib import Path
 
+import numpy as np
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -38,6 +41,8 @@ pytest.importorskip("getdist")
 
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.app.loading import load_catalog
+from numcosmo_py.app.catalog import _auto_thin
+from numcosmo_py.app.run_fit import RunCommonOptions
 from numcosmo_py.app import app
 from numcosmo_py.app.esmcmc import IniSampler, Parallelization
 from numcosmo_py.interpolation.stats_dist import CrossValidationMethod
@@ -139,6 +144,34 @@ def test_run_fit(simple_experiment):
     result = runner.invoke(app, ["run", "fit", filename.as_posix()])
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_fit_diff_options(simple_experiment):
+    """The numerical-derivative options reach the fit's NcmDiff."""
+    filename, _ = simple_experiment
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "fit",
+            filename.as_posix(),
+            "--diff-ini-h",
+            "1.0e-3",
+            "--no-diff-dual-series",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    run = RunCommonOptions(
+        experiment=filename, diff_ini_h=1.0e-3, diff_dual_series=False
+    )
+    diff = run.fit.peek_diff()
+    assert diff.props.ini_h == 1.0e-3
+    assert not diff.props.dual_series
+
+    default = RunCommonOptions(experiment=filename)
+    assert default.fit.peek_diff().props.dual_series == Ncm.Diff().props.dual_series
 
 
 @pytest.mark.parametrize("subcommand", [["run", "test"], ["run", "fit"]])
@@ -791,6 +824,56 @@ def test_run_mcmc_apes_analyze(simple_experiment):
         raise result.exception
 
 
+def test_run_mcmc_apes_analyze_builder_model(builder_experiment: Path) -> None:
+    """Analyze, in a new process, a catalog whose model set holds a builder model.
+
+    The new process has not created the model type, so it comes from the builders
+    the catalog stores.
+    """
+    output = builder_experiment.with_suffix(".out.yaml")
+    catalog = output.with_suffix(".mcmc.fits")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            builder_experiment.as_posix(),
+            "--nwalkers",
+            "60",
+            "--nsamples",
+            "120",
+            "--output",
+            output.as_posix(),
+        ],
+    )
+
+    if result.exit_code != 0:
+        raise result.exception
+    assert catalog.exists()
+
+    # python -c puts the working directory first on sys.path; tmp_path holds no
+    # numcosmo_py, so the subprocess imports the one the test imported.
+    analyze = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from numcosmo_py.app import app; app()",
+            "catalog",
+            "analyze",
+            catalog.as_posix(),
+        ],
+        cwd=builder_experiment.parent,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+
+    assert analyze.returncode == 0, analyze.stdout + analyze.stderr
+    assert "Catalog information" in analyze.stdout
+
+
 def test_run_mcmc_apes_analyze_burnin_iterations(simple_experiment):
     """--burnin is interpreted in iterations (ensemble steps), not raw rows."""
     filename, _ = simple_experiment
@@ -852,10 +935,9 @@ def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
         raise result.exception
 
     catalog2 = output2.absolute().with_suffix(".mcmc.fits")
-    _nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(catalog2.as_posix())
+    _nrows, nchains = Ncm.MSetCatalog.peek_info_from_file(catalog2.as_posix())
     assert (
-        Ncm.MSetCatalog.peek_markovian_id_from_file(catalog2.as_posix())
-        == first_id + 4 * nchains
+        Ncm.MSetCatalog.peek_markovian_id_from_file(catalog2.as_posix()) == 4 * nchains
     )
     result = runner.invoke(
         app, ["catalog", "analyze", catalog2.as_posix(), "--burnin", "1"]
@@ -884,6 +966,58 @@ def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
     )
     assert result.exit_code != 0
     assert "exceeds catalog" in result.output
+
+
+def test_run_mcmc_apes_analyze_thin(simple_experiment):
+    """--thin keeps every N-th iteration after the burn-in with all its chains, and
+    analyze reports it."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    result = runner.invoke(
+        app, ["catalog", "analyze", catalog.as_posix(), "--thin", "2"]
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert "Thinning" in result.output
+
+    full = load_catalog(catalog, burnin=1)
+    thinned = load_catalog(catalog, burnin=1, thin=2)
+    nchains = full.nchains
+    assert thinned.thin == 2
+    assert thinned.mcat.get_thin() == 2
+    n_full_iter = full.mcat.len() // nchains
+    assert thinned.mcat.len() == nchains * ((n_full_iter + 1) // 2)
+    for i in range(thinned.mcat.len()):
+        kept = (i // nchains) * 2 * nchains + i % nchains
+        assert (
+            thinned.mcat.peek_row(i).dup_array() == full.mcat.peek_row(kept).dup_array()
+        )
+
+
+def test_load_catalog_thin_below_one_rejected(simple_experiment):
+    """load_catalog() rejects a thin below 1; the CLI's min=1 blocks it earlier."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+
+    with pytest.raises(typer.BadParameter):
+        load_catalog(catalog, thin=0)
 
 
 def test_run_mcmc_apes_analyze_tail_markovian_floor(simple_experiment):
@@ -1049,7 +1183,7 @@ def test_run_mcmc_apes_analyze_empty_catalog(simple_experiment):
         raise result.exception
 
     catalog = output.absolute().with_suffix(".mcmc.fits")
-    nrows, nchains, _first_id = Ncm.MSetCatalog.peek_info_from_file(catalog.as_posix())
+    nrows, nchains = Ncm.MSetCatalog.peek_info_from_file(catalog.as_posix())
     n_iterations = nrows // nchains
 
     result = runner.invoke(
@@ -1350,11 +1484,11 @@ def test_run_mcmc_apes_embeds_functions_array(tmp_path):
         raise result.exception
 
     catalog = output.absolute().with_suffix(".mcmc.fits")
-    mcat = Ncm.MSetCatalog.new_from_file_ro(catalog.as_posix(), 0)
-    functions = mcat.peek_functions_array()
+    storage = Ncm.MSetCatalogStorageFits.new(catalog.as_posix(), True)
+    mcat = Ncm.MSetCatalog.new_from_storage(storage)
 
-    assert functions is not None
-    assert functions.len() == 1
+    # The functions are not stored in the catalog, the column they computed is.
+    assert mcat.peek_functions_array() is None
     assert "wDE" in [mcat.col_name(i) for i in range(mcat.ncols())]
 
 
@@ -1387,6 +1521,132 @@ def test_run_mcmc_apes_plot_corner(simple_experiment):
 
     if result.exit_code != 0:
         raise result.exception
+
+
+def test_run_mcmc_apes_plot_corner_thin(simple_experiment):
+    """plot-corner reads the rows of a catalog loaded with --thin."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    result = runner.invoke(
+        app,
+        [
+            "catalog",
+            "plot-corner",
+            output.absolute().with_suffix(".mcmc.fits").as_posix(),
+            "--thin",
+            "2",
+            "--no-show",
+            "--output",
+            output.absolute(),
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+    assert output.absolute().with_suffix(".corner.pdf").exists()
+
+
+def test_run_mcmc_apes_plot_corner_auto_thin(simple_experiment):
+    """By default plot-corner chooses the thinning from a first read and reports it;
+    --thin or --no-auto-thin skips that read."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        ["run", "mcmc", "apes", filename.as_posix(), "--output", output.as_posix()],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    base = ["catalog", "plot-corner", catalog.as_posix(), "--no-show"]
+
+    result = runner.invoke(app, base)
+    if result.exit_code != 0:
+        raise result.exception
+    assert ": thin " in result.output
+
+    for extra in (["--thin", "2"], ["--no-auto-thin"]):
+        result = runner.invoke(app, base + extra)
+        if result.exit_code != 0:
+            raise result.exception
+        assert ": thin " not in result.output
+
+
+def _write_ar1_catalog(
+    path: Path, nchains: int, niter: int, first_half_scale: float = 1.0
+) -> None:
+    """Write nchains interleaved AR(1) chains with coefficient 0.9 in two parameters,
+    whose autocorrelation time is (1 + 0.9) / (1 - 0.9) = 19 iterations, column 0
+    holding -2ln(L). The parameters of the first niter / 2 iterations are multiplied by
+    first_half_scale, as an unremoved burn-in."""
+    rng = np.random.default_rng(1234)
+    phi = 0.9
+    model = Ncm.ModelMVND.new(2)
+    mset = Ncm.MSet.new_array([model])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+    desc = Ncm.MSetCatalogDesc.new(mset, nchains, False, ["m2lnL"], ["-2lnL"], 0)
+    storage = Ncm.MSetCatalogStorageFits.new(path.as_posix(), False)
+    storage.set_desc(desc)
+    mcat = Ncm.MSetCatalog.new_from_storage(storage)
+
+    state = np.zeros((nchains, 2))
+    for t in range(niter):
+        scale = first_half_scale if t < niter // 2 else 1.0
+        for c in range(nchains):
+            state[c] = phi * state[c] + np.sqrt(1.0 - phi * phi) * rng.normal(size=2)
+            row = np.concatenate(([np.sum(state[c] ** 2)], scale * state[c]))
+            mcat.add_from_vector(Ncm.Vector.new_array(row.tolist()))
+
+    mcat.sync(True)
+
+
+def test_auto_thin_choice(tmp_path):
+    """_auto_thin() thins by half the smallest autocorrelation time of a chain of at
+    least 10 autocorrelation times, SHORT_CHAIN or not, and not at all for a shorter
+    chain or one whose estimate carries another flag."""
+    long_file = tmp_path / "long.mcmc.fits"
+    _write_ar1_catalog(long_file, 4, 2000)
+    loaded = load_catalog(long_file)
+    thin, reason = _auto_thin(loaded)
+    tau = loaded.mcat.peek_autocorrelation_tau()
+    tau_min = min(tau.get(1), tau.get(2))
+    assert reason.startswith("smallest autocorrelation time")
+    assert thin == max(1, int(tau_min // 2))
+    assert 5 <= thin <= 15
+
+    # About 21 tau: SHORT_CHAIN is raised and the thinning is chosen anyway.
+    medium_file = tmp_path / "medium.mcmc.fits"
+    _write_ar1_catalog(medium_file, 4, 400)
+    loaded = load_catalog(medium_file)
+    thin, reason = _auto_thin(loaded)
+    tau = loaded.mcat.peek_autocorrelation_tau()
+    tau_min = min(tau.get(1), tau.get(2))
+    assert all(
+        int(loaded.mcat.get_tau_diag(i)) & int(Ncm.StatsAcorrDiag.SHORT_CHAIN)
+        for i in (1, 2)
+    )
+    assert reason.startswith("smallest autocorrelation time")
+    assert thin == max(1, int(tau_min // 2))
+
+    short_file = tmp_path / "short.mcmc.fits"
+    _write_ar1_catalog(short_file, 4, 60)
+    thin, reason = _auto_thin(load_catalog(short_file))
+    assert thin == 1
+    assert reason.startswith("chain of 60 iterations is shorter than 10")
+
+    burnin_file = tmp_path / "burnin.mcmc.fits"
+    _write_ar1_catalog(burnin_file, 4, 2000, first_half_scale=20.0)
+    thin, reason = _auto_thin(load_catalog(burnin_file))
+    assert thin == 1
+    assert reason.startswith("autocorrelation time flagged")
 
 
 def test_run_mcmc_apes_plot_corner_multi_catalog(simple_experiment):

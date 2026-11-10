@@ -61,7 +61,9 @@ def _object_get_props(
     for prop in props:
         namespace = prop.get_namespace()
         container = prop.get_container()
-        class_info = repo.find_by_name(namespace, container.get_name())
+        container_name = container.get_name()
+        assert container_name is not None
+        class_info = repo.find_by_name(namespace, container_name)
         if class_info is None:
             raise RuntimeError(f"Unable to find {namespace}.{container}")
 
@@ -92,7 +94,7 @@ def _object_get_props(
 
 
 def _callable_get_arguments(
-    ltype: GI.CallbackInfo,
+    ltype: GI.CallableInfo,
     current_namespace: str,
     needed_namespaces: set[str],
     can_default: bool = False,
@@ -117,7 +119,9 @@ def _callable_get_arguments(
 
         if arg.get_closure_index() >= 0:
             accept_optional_args = True
-            optional_args_name = function_args[arg.get_closure_index()].get_name()
+            closure_name = function_args[arg.get_closure_index()].get_name()
+            assert closure_name is not None
+            optional_args_name = closure_name
             skip.append(arg.get_closure_index())
             skip.append(arg.get_destroy_index())
 
@@ -141,7 +145,9 @@ def _callable_get_arguments(
 
                 dict_return_args[i] = t
             elif direction in (GI.Direction.IN, GI.Direction.INOUT):
-                dict_names[i] = arg.get_name()
+                arg_name = arg.get_name()
+                assert arg_name is not None
+                dict_names[i] = arg_name
                 dict_args[i] = arg
 
     # Traverse args in reverse to check for optional args
@@ -232,7 +238,7 @@ class TypeInfo:
 
 
 def _type_to_python(
-    ltype: GIRepository.TypeInfo,
+    ltype: GI.TypeInfo | GIRepository.TypeInfo,
     current_namespace: str,
     needed_namespaces: set[str],
     out_arg: bool = False,
@@ -458,6 +464,7 @@ def _build_function_info(
         # Override return value, for example Gtk.Button.new returns a Gtk.Widget instead
         # of Gtk.Button
         rt = function.get_container().get_name()
+        assert rt is not None
         if return_type != f"typing.Optional[{rt}]":
             return_type = rt
     elif method:
@@ -728,13 +735,15 @@ def _gi_build_stub(
                             fields.append(f"{n}: {t}")
 
             if isinstance(object_info, GI.ObjectInfo):
-                p = object_info.get_parent()
-                if p:
-                    if current_namespace == p.get_namespace():
-                        parents.append(f"{p.get_name()}")
+                parent_info = object_info.get_parent()
+                if parent_info:
+                    if current_namespace == parent_info.get_namespace():
+                        parents.append(f"{parent_info.get_name()}")
                     else:
-                        parents.append(f"{p.get_namespace()}.{p.get_name()}")
-                        needed_namespaces.add(p.get_namespace())
+                        parents.append(
+                            f"{parent_info.get_namespace()}.{parent_info.get_name()}"
+                        )
+                        needed_namespaces.add(parent_info.get_namespace())
 
                 ifaces = object_info.get_interfaces()
                 for i in ifaces:

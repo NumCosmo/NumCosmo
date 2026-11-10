@@ -233,6 +233,20 @@ CASES = {
         ],
         "ctor": [1200.0, 2.0, 1.5, 50.0, 4000.0],
     },
+    # The intrinsic alignment window of power_exp_mid's source distribution: the NLA
+    # term of NcXcorKernelWeakLensing weights dn/dchi by 1 / chi^2, which lowers alpha
+    # by 2. With alpha = 0 the window is largest at chi_lower and falls from there.
+    "power_exp_ia_mid": {
+        "shape": "power_exp",
+        "arb": [
+            "--chi-scale=1200",
+            "--alpha=0",
+            "--beta=1.5",
+            "--chi-lower=50",
+            "--chi-upper=4000",
+        ],
+        "ctor": [1200.0, 0.0, 1.5, 50.0, 4000.0],
+    },
     # The high-redshift windows. CMB lensing and ISW both have support out to the
     # last-scattering surface, chi = 14146 Mpc at z = 1096, and are broad: the
     # lensing efficiency is weighted at chi_mean = 479 with sigma = 1456, the ISW

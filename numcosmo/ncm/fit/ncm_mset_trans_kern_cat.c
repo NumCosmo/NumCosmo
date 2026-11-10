@@ -293,11 +293,24 @@ _ncm_mset_trans_kern_cat_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
   NcmMSetTransKernCat *tcat               = NCM_MSET_TRANS_KERN_CAT (tkern);
   NcmMSetTransKernCatPrivate * const self = ncm_mset_trans_kern_cat_get_instance_private (tcat);
   NcmMSet *mcat_mset                      = ncm_mset_catalog_peek_mset (self->mcat);
+  const guint nfree                       = ncm_mset_fparams_len (mset);
+  guint i;
 
-  NCM_UNUSED (mset);
+  /* The rows are copied into thetastar by position: the free parameters of mset must be
+   * the catalog's, in the catalog's order. */
+  if (nfree != ncm_mset_fparams_len (mcat_mset))
+    g_error ("_ncm_mset_trans_kern_cat_set_mset: the model set has %u free parameters and the catalog %u.",
+             nfree, ncm_mset_fparams_len (mcat_mset));
 
-  if (!ncm_mset_cmp (mset, mcat_mset, FALSE))
-    g_error ("_ncm_mset_trans_kern_cat_set_mset: incompatible mset.");
+  for (i = 0; i < nfree; i++)
+  {
+    const gchar *name     = ncm_mset_fparam_full_name (mset, i);
+    const gchar *cat_name = ncm_mset_fparam_full_name (mcat_mset, i);
+
+    if (strcmp (name, cat_name) != 0)
+      g_error ("_ncm_mset_trans_kern_cat_set_mset: free parameter %u is `%s' in the model set and `%s' in the catalog.",
+               i, name, cat_name);
+  }
 }
 
 static void
@@ -384,7 +397,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
     const guint nadd    = ncm_mset_catalog_nadd_vals (self->mcat);
     const guint m2lnp_i = ncm_mset_catalog_get_m2lnp_var (self->mcat);
     NcmVector *m2lnp    = ncm_vector_new (np);
-    NcmVector *last_row = NULL;
+    gdouble last_row_0  = GSL_NAN;
     guint i, j;
 
     ncm_stats_dist_reset (self->sd);
@@ -395,7 +408,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
     {
       NcmVector *row_i = ncm_mset_catalog_peek_row (self->mcat, i);
 
-      if ((last_row != NULL) && (ncm_vector_get (last_row, 0) == ncm_vector_get (row_i, 0)))
+      if (ncm_vector_get (row_i, 0) == last_row_0)
       {
         continue;
       }
@@ -410,7 +423,7 @@ _ncm_mset_trans_kern_cat_generate_rbf_interp (NcmMSetTransKern *tkern, NcmVector
         ncm_vector_free (srow_i);
       }
 
-      last_row = row_i;
+      last_row_0 = ncm_vector_get (row_i, 0);
     }
 
     /* Consecutive repeated rows are added once, so only j entries are filled. */
@@ -448,7 +461,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
     const guint np      = nchains > 1 ? nchains : ((cat_len > 1000) ? (cat_len / 10) : cat_len);
     const guint n       = MIN (cat_len, np);
     const guint nadd    = ncm_mset_catalog_nadd_vals (self->mcat);
-    NcmVector *last_row = NULL;
+    gdouble last_row_0  = GSL_NAN;
     guint i;
 
     ncm_stats_dist_reset (self->sd);
@@ -457,7 +470,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
     {
       NcmVector *row_i = ncm_mset_catalog_peek_row (self->mcat, i);
 
-      if ((last_row != NULL) && (ncm_vector_get (last_row, 0) == ncm_vector_get (row_i, 0)))
+      if (ncm_vector_get (row_i, 0) == last_row_0)
       {
         continue;
       }
@@ -470,7 +483,7 @@ _ncm_mset_trans_kern_cat_generate_kde (NcmMSetTransKern *tkern, NcmVector *theta
         ncm_vector_free (srow_i);
       }
 
-      last_row = row_i;
+      last_row_0 = ncm_vector_get (row_i, 0);
     }
 
     ncm_stats_dist_prepare (self->sd, NULL);

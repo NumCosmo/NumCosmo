@@ -87,6 +87,7 @@ enum
   PROP_INEQC,
   PROP_INEQC_TOT,
   PROP_SUBFIT,
+  PROP_DIFF,
   PROP_SIZE,
 };
 
@@ -141,7 +142,7 @@ ncm_fit_init (NcmFit *fit)
   self->inequality_constraints_tot = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   self->sub_fit = NULL;
-  self->diff    = ncm_diff_new ();
+  self->diff    = NULL;
 
   self->writer       = &_ncm_fit_writer;
   self->updater      = &_ncm_fit_updater;
@@ -255,6 +256,18 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     case PROP_SUBFIT:
       ncm_fit_set_sub_fit (fit, g_value_get_object (value));
       break;
+    case PROP_DIFF:
+    {
+      NcmDiff *diff = g_value_get_object (value);
+
+      if (diff != NULL)
+      {
+        ncm_diff_clear (&self->diff);
+        self->diff = ncm_diff_ref (diff);
+      }
+
+      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -320,24 +333,29 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
     case PROP_SUBFIT:
       g_value_set_object (value, self->sub_fit);
       break;
+    case PROP_DIFF:
+      g_value_set_object (value, self->diff);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
 }
 
-/* The state's dimensions: one residual per data point and per prior, and the degrees of
- * freedom of the dataset plus one per prior, minus the free parameters. */
+/* The state's dimensions: one residual per data point, per least-squares prior
+ * component and per m2lnL prior, and the degrees of freedom of the dataset plus one per
+ * prior, minus the free parameters. */
 static void
 _ncm_fit_state_dims (NcmFit *fit, guint *data_len, guint *fparam_len, gint *dof)
 {
   NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
   NcmDataset *dset           = ncm_likelihood_peek_dataset (self->lh);
   const guint n_priors       = ncm_likelihood_priors_length_f (self->lh) + ncm_likelihood_priors_length_m2lnL (self->lh);
+  const guint n_residuals    = ncm_likelihood_priors_ls_len (self->lh) + ncm_likelihood_priors_length_m2lnL (self->lh);
 
   g_assert (ncm_dataset_all_init (dset));
 
-  *data_len   = ncm_dataset_get_n (dset) + n_priors;
+  *data_len   = ncm_dataset_get_n (dset) + n_residuals;
   *fparam_len = ncm_mset_fparam_len (self->mset);
   *dof        = ncm_dataset_get_dof (dset) + (gint) n_priors - (gint) * fparam_len;
 
@@ -354,6 +372,9 @@ _ncm_fit_constructed (GObject *object)
     NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
     guint data_len, fparam_len;
     gint dof;
+
+    if (self->diff == NULL)
+      self->diff = ncm_diff_new ();
 
     if (!ncm_mset_fparam_map_valid (self->mset))
       ncm_mset_prepare_fparam_map (self->mset);
@@ -631,6 +652,23 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Subsidiary fit",
                                                         NCM_TYPE_FIT,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFit:diff:
+   *
+   * The #NcmDiff of the numerical derivatives (gradients, least-squares Jacobians,
+   * Hessians); a default one when none is given. Its settings, for example
+   * #NcmDiff:ini-h and #NcmDiff:dual-series, are kept by ncm_fit_dup() and shared by
+   * ncm_fit_copy_new().
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_DIFF,
+                                   g_param_spec_object ("diff",
+                                                        NULL,
+                                                        "Numerical differentiation object",
+                                                        NCM_TYPE_DIFF,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
@@ -767,13 +805,19 @@ ncm_fit_ref (NcmFit *fit)
  * @gtype: a #NcmFitGradType
  *
  * Creates a #NcmFit of the same type and settings as @fit for @lh, @mset and @gtype.
+ * The new fit shares the #NcmFit:diff of @fit.
  *
  * Returns: (transfer full): a new #NcmFit.
  */
 NcmFit *
 ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
-  return NCM_FIT_GET_CLASS (fit)->copy_new (fit, lh, mset, gtype);
+  NcmFitPrivate * const self = ncm_fit_get_instance_private (fit);
+  NcmFit *fit_copy           = NCM_FIT_GET_CLASS (fit)->copy_new (fit, lh, mset, gtype);
+
+  g_object_set (fit_copy, "diff", self->diff, NULL);
+
+  return fit_copy;
 }
 
 /**
@@ -1686,7 +1730,8 @@ ncm_fit_reset (NcmFit *fit)
  * Resets @fit and minimizes $-2\ln L$ from the current parameters, leaving the result
  * in the #NcmFitState and the parameters at the minimum found. With no free parameters
  * it only evaluates $-2\ln L$. A non-finite $-2\ln L$ at the starting point gives a
- * warning and returns FALSE.
+ * warning and returns FALSE. After the run the terms of the likelihood,
+ * ncm_likelihood_peek_m2lnL_v(), are those of the final parameters.
  *
  * Returns: TRUE if the minimization converged.
  */
@@ -1720,7 +1765,13 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
     }
     else
     {
+      gdouble m2lnL_f;
+
       run = NCM_FIT_GET_CLASS (fit)->run (fit, mtype);
+
+      /* The algorithm's last evaluation need not be at the final parameters, and
+       * least-squares algorithms never fill the likelihood terms. */
+      ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL_f);
     }
   }
 
@@ -1956,7 +2007,8 @@ ncm_fit_log_end (NcmFit *fit)
  * @fit: a #NcmFit
  *
  * Logs the current state: elapsed time, counts, degrees of freedom, $-2\ln L$ with its
- * terms, and the free parameters.
+ * terms, and the free parameters. A least-squares fitter evaluates only residuals, so
+ * for it the terms are computed here, at the current parameters.
  *
  */
 void
@@ -1967,11 +2019,11 @@ ncm_fit_log_state (NcmFit *fit)
 
   if (self->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    NcmVector *m2lnL_v = ncm_likelihood_peek_m2lnL_v (self->lh);
-    gdouble elap_sec   = g_timer_elapsed (self->timer, NULL);
-    gulong elap_min    = elap_sec / 60;
-    gulong elap_hour   = elap_min / 60;
-    gulong elap_day    = elap_hour / 24;
+    NcmVector *m2lnL_v;
+    gdouble elap_sec = g_timer_elapsed (self->timer, NULL);
+    gulong elap_min  = elap_sec / 60;
+    gulong elap_hour = elap_min / 60;
+    gulong elap_day  = elap_hour / 24;
 
     elap_sec  = fmod (elap_sec, 60);
     elap_min  = elap_min % 60;
@@ -1981,6 +2033,15 @@ ncm_fit_log_state (NcmFit *fit)
     _ncm_fit_message (fit, "#  function evaluations [%06u]\n", ncm_fit_state_get_func_eval (self->fstate));
     _ncm_fit_message (fit, "#  gradient evaluations [%06u]\n", ncm_fit_state_get_grad_eval (self->fstate));
     _ncm_fit_message (fit, "#  degrees of freedom   [%06d]\n", ncm_fit_state_get_dof (self->fstate));
+
+    if (NCM_FIT_GET_CLASS (fit)->is_least_squares)
+    {
+      gdouble m2lnL;
+
+      ncm_likelihood_m2lnL_val (self->lh, self->mset, &m2lnL);
+    }
+
+    m2lnL_v = ncm_likelihood_peek_m2lnL_v (self->lh);
 
     if (m2lnL_v != NULL)
     {

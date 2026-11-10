@@ -77,6 +77,10 @@ TAU_FLAG_MEANINGS = (
 
 TAU_FLAG_COLOR = "bold bright_yellow"
 
+# Shortest chain, in autocorrelation times of every plotted column, plot-corner --auto-thin
+# thins; see _auto_thin().
+AUTO_THIN_MIN_TAUS = 10.0
+
 KEFF_MEANINGS = (
     ("K_eff", "independent walkers per iteration: Var(rows) / Var(ensemble mean)"),
     ("", "N when the N walkers are independent, 1 when they move together,"),
@@ -148,8 +152,12 @@ class AnalyzeMCMC(LoadCatalog):
     ] = False
 
     def _cut_text(self, extra: float) -> str:
-        """Iterations still to remove, and the total that implies."""
-        return f"{extra:.0f} ({extra + self.burnin_applied:.0f})"
+        """Iterations of the file still to remove, and the total that implies.
+
+        The diagnostics count kept iterations; each is `thin` iterations of the file.
+        """
+        extra_file = extra * self.thin
+        return f"{extra_file:.0f} ({extra_file + self.burnin_applied:.0f})"
 
     def _burnin_text(self) -> str:
         """The burn-in applied, noting when the markovian-id floor raised the request."""
@@ -191,6 +199,7 @@ class AnalyzeMCMC(LoadCatalog):
         details.add_row("Number of chains", f"{self.nchains}")
         details.add_row("Markovian chain starts", f"{self.markovian_start}")
         details.add_row("Burn-in", self._burnin_text())
+        details.add_row("Thinning", f"{self.thin}")
         details.add_row("Number of parameters", f"{self.fparams_len}")
         details.add_row("Number of extra columns", f"{self.nadd_vals}")
         details.add_row("Weighted", f"{mcat.weighted()}")
@@ -367,7 +376,7 @@ class AnalyzeMCMC(LoadCatalog):
 
         # Constant Break
 
-        cb = [self.stats.estimate_const_break(i) for i in self.indices]
+        cb = [self.diag_rows.estimate_const_break(i) for i in self.indices]
         cb_worst = int(np.argmax(cb))
         const_break_row = []
         const_break_row.append("Constant break")
@@ -390,7 +399,7 @@ class AnalyzeMCMC(LoadCatalog):
                 ess_worst_index,
                 ess_worst_order,
                 ess_worst_ess,
-            ) = self.stats.max_ess_time(100)
+            ) = self.diag_rows.max_ess_time(100)
             ess_row = []
             ess_row.append("ESS")
             ess_row.append(self._cut_text(ess_best_cutoff))
@@ -416,7 +425,7 @@ class AnalyzeMCMC(LoadCatalog):
                 hw_worst_index,
                 hw_worst_order,
                 hw_worst_pvalue,
-            ) = self.stats.heidel_diag(100, hw_pvalue)
+            ) = self.diag_rows.heidel_diag(100, hw_pvalue)
 
             hw_row = []
             hw_row.append(f"Heidelberger-Welch (>{hw_pvalue * 100.0:.1f}%)")
@@ -795,6 +804,56 @@ class CalibrateCatalog(LoadCatalog):
                     plt.show()
 
 
+def _auto_thin(loaded: LoadedCatalog) -> tuple[int, str]:
+    """Return the thinning --auto-thin chooses for a catalog loaded without thinning,
+    and the reason for it.
+
+    The thinning is half the smallest autocorrelation time (in iterations) of the
+    plotted columns, at least 1: thinning by k below tau/2 multiplies the variance of
+    the mean by less than 1.02 for every column. It is 1 when there are fewer than 10
+    iterations to estimate tau from, when an estimate carries a flag other than
+    SHORT_CHAIN, or when the chain is shorter than AUTO_THIN_MIN_TAUS autocorrelation
+    times in any plotted column.
+
+    SHORT_CHAIN marks a chain shorter than 50 autocorrelation times, where tau is not
+    known precisely; the thinning needs less. On stationary AR(1) series of 10 tau, 95%
+    of the estimates are below 1.56 tau, so k stays below 0.78 tau and the variance
+    factor below 1.05; an underestimate only thins less.
+    """
+    mcat = loaded.mcat
+    m2lnp = mcat.get_m2lnp_var()
+    columns = [i for i in loaded.indices if i != m2lnp]
+
+    if loaded.nitems < 10 or not columns:
+        return 1, "too few iterations to estimate the autocorrelation time"
+
+    mcat.estimate_autocorrelation_tau(False)
+    short_chain = int(Ncm.StatsAcorrDiag.SHORT_CHAIN)
+    flagged = [
+        mcat.col_full_name(i)
+        for i in columns
+        if int(mcat.get_tau_diag(i)) & ~short_chain
+    ]
+    if flagged:
+        return 1, f"autocorrelation time flagged for {', '.join(flagged)}"
+
+    tau = mcat.peek_autocorrelation_tau()
+    too_short = [
+        mcat.col_full_name(i)
+        for i in columns
+        if loaded.nitems < AUTO_THIN_MIN_TAUS * tau.get(i)
+    ]
+    if too_short:
+        return 1, (
+            f"chain of {loaded.nitems} iterations is shorter than "
+            f"{AUTO_THIN_MIN_TAUS:g} autocorrelation times for {', '.join(too_short)}"
+        )
+
+    tau_min = min(tau.get(i) for i in columns)
+
+    return max(1, int(tau_min // 2)), f"smallest autocorrelation time {tau_min:.3g}"
+
+
 @dataclasses.dataclass(kw_only=True)
 class PlotCorner(AppLogging):
     """Plots the corner plot of one or more catalogs.
@@ -895,12 +954,28 @@ class PlotCorner(AppLogging):
         ),
     ] = 0
 
+    thin: Annotated[
+        int | None,
+        typer.Option(
+            help=(
+                "Keep every N-th iteration (ensemble step) after the burn-in, with "
+                "all its chains. Every statistic, diagnostic and plot uses the kept "
+                "rows. N below half the autocorrelation time multiplies the variance "
+                "of the mean by less than 1.02. When not given, --auto-thin chooses N."
+            ),
+            min=1,
+        ),
+    ] = None
+
     auto_thin: Annotated[
         bool,
         typer.Option(
             help=(
-                "Automatically thin the data using the estimate of "
-                "the autocorrelation time."
+                "When --thin is not given, read each catalog twice: once to estimate "
+                "the autocorrelation time, keeping no rows, then with N half the "
+                "smallest autocorrelation time of the plotted columns (1 when it is "
+                "not estimated, carries a flag other than a short chain, or the chain "
+                "is shorter than 10 autocorrelation times)."
             ),
         ),
     ] = True
@@ -975,18 +1050,29 @@ class PlotCorner(AppLogging):
         bestfit = None
         for i, mcmc_file in enumerate(self.mcmc_file):
             name = plot_names[i] if i < len(plot_names) else mcmc_file.stem
+            thin = self.thin
+            if thin is None:
+                thin = 1
+                if self.auto_thin:
+                    first = load_catalog(
+                        mcmc_file, self.burnin, self.tail, self.include, self.exclude
+                    )
+                    thin, reason = _auto_thin(first)
+                    del first
+                    self.console.print(
+                        f"# {name}: thin {thin} ({reason})", markup=False
+                    )
+
             loaded = load_catalog(
-                mcmc_file, self.burnin, self.tail, self.include, self.exclude
+                mcmc_file,
+                self.burnin,
+                self.tail,
+                self.include,
+                self.exclude,
+                thin=thin,
             )
 
-            thin = 1
-            if self.auto_thin:
-                loaded.mcat.estimate_autocorrelation_tau(False)
-                thin = int(np.ceil(loaded.mcat.peek_autocorrelation_tau().get_max()))
-
-            cd = mcat_to_catalog_data(
-                loaded.mcat, name, indices=loaded.indices, thin=thin
-            )
+            cd = mcat_to_catalog_data(loaded.mcat, name, indices=loaded.indices)
             if self.derived_expr is not None:
                 cd = add_derived_column(
                     cd,
@@ -1045,7 +1131,7 @@ class VisualHW(ParameterAnalysis):
         """Visual Heidelberger and Welch."""
         super().__post_init__()
 
-        cumsum_vec, mean, var = self.stats.visual_heidel_diag(self.pindex, 0)
+        cumsum_vec, mean, var = self.diag_rows.visual_heidel_diag(self.pindex, 0)
         cumsum = np.array(cumsum_vec.dup_array())
         mean_a = (np.array(range(len(cumsum))) + 1.0) * mean
 
@@ -1469,9 +1555,11 @@ class DumpMset(AppLogging):
         if not self.mcmc_file.exists():
             raise RuntimeError(f"MCMC file {self.mcmc_file} not found.")
 
-        mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
-            self.mcmc_file.absolute().as_posix(), 0
+        storage = Ncm.MSetCatalogStorageFits.new(
+            self.mcmc_file.absolute().as_posix(), True
         )
+        assert storage is not None
+        mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage(storage)
         mset: Ncm.MSet = mcat.peek_mset()
         assert isinstance(mset, Ncm.MSet)
 

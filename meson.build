@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.28.0',
+  version: '0.29.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.3.0',
   default_options: [
@@ -563,31 +563,14 @@ fftw3_dep = dependency(
   version: fftw_req,
 )
 
-numcosmo_conf.set('HAVE_FFTW3', true)
-
 numcosmo_conf.set_quoted('NUMCOSMO_FFTW_PLAN', get_option('fftw-planner'))
 
 #######################################################################################
-# Checking for cfitsio (optional):
+# Checking for cfitsio:
 #######################################################################################
 message('Checking for cfitsio')
 
-cfitsio_dep = dependency(
-  'cfitsio',
-  version: cfitsio_req,
-  required: false,
-)
-
-if cfitsio_dep.found()
-  numcosmo_conf.set('HAVE_CFITSIO', true)
-endif
-
-#######################################################################################
-# Using internal libcuba:
-#######################################################################################
-
-numcosmo_conf.set('HAVE_LIBCUBA', 1)
-numcosmo_conf.set('HAVE_LIBCUBA_4_0', 1)
+cfitsio_dep = dependency('cfitsio', version: cfitsio_req)
 
 #######################################################################################
 # Using internal sundials:

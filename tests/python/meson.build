@@ -27,6 +27,12 @@ if enable_gir and python_for_tests.found()
     # threads so the `#pragma omp parallel` paths run. See tests/meson.build.
     env = environment(common_env + omp_vars_serial)
 
+    # Tests that launch mpiexec themselves run only when the library is built with MPI.
+    mpiexec = find_program('mpiexec', required: false)
+    if mpi_c_dep.found() and mpiexec.found()
+        env.set('NUMCOSMO_TEST_MPIEXEC', mpiexec.full_path())
+    endif
+
     env_omp = environment(common_env + omp_vars_threaded)
 
     env_sphere_map = environment(common_env + omp_vars_serial)
@@ -203,21 +209,18 @@ if enable_gir and python_for_tests.found()
     )
 
     # MPI tests (if available)
-    if mpi_c_dep.found()
-        mpiexec = find_program('mpiexec', required: false)
-        if mpiexec.found()
-            test(
-                'pytest-mpi',
-                mpiexec,
-                args: ['-n', '2', pytest.full_path()]
-                + pytest_base_args
-                + ['--run-mpi', '-m', 'mpi', meson.current_source_dir()],
-                depends: [numcosmo_gir, numcosmo_math_gir],
-                env: env,
-                timeout: 1800,
-                is_parallel: pytest_is_parallel,
-                suite: ['python', 'mpi'],
-            )
-        endif
+    if mpi_c_dep.found() and mpiexec.found()
+        test(
+            'pytest-mpi',
+            mpiexec,
+            args: ['-n', '2', pytest.full_path()]
+            + pytest_base_args
+            + ['--run-mpi', '-m', 'mpi', meson.current_source_dir()],
+            depends: [numcosmo_gir, numcosmo_math_gir],
+            env: env,
+            timeout: 1800,
+            is_parallel: pytest_is_parallel,
+            suite: ['python', 'mpi'],
+        )
     endif
 endif

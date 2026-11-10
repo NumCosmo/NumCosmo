@@ -49,15 +49,8 @@ def fixture_mset_mcat():
     mset.param_set_all_ftype(Ncm.ParamType.FREE)
     mset.prepare_fparam_map()
 
-    mcat = Ncm.MSetCatalog(
-        mset=mset,
-        nadd_vals=1,
-        nadd_val_names=["m2lnL"],
-        nadd_val_symbols=["m2lnL"],
-        nchains=NCHAINS,
-        m2lnp_var=0,
-        weighted=False,
-    )
+    mcat = Ncm.MSetCatalog.new_array(mset, 1, NCHAINS, False, ["m2lnL"], ["m2lnL"])
+    mcat.set_m2lnp_var(0)
 
     rng = np.random.default_rng(42)
     nsamples = NSTEPS * NCHAINS

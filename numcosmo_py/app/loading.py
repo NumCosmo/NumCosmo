@@ -301,15 +301,13 @@ def _catalog_indices(
 class LoadedCatalog:
     """The contents of an MCMC catalog file, loaded and ready for analysis.
 
-    Catalog files are self-sufficient: their model-set and, if present, the
-    functions that computed their extra columns are embedded in the file
-    itself (FITS HDU0), so no companion experiment file is needed to load
-    one.
+    Catalog files carry their model-set (FITS HDU0), so no companion
+    experiment file is needed to load one. The functions that computed the
+    extra columns are not stored: the columns are, with their names.
     """
 
     mcat: Ncm.MSetCatalog
     mset: Ncm.MSet
-    functions: Ncm.ObjArray | None
     fparams_len: int
     nadd_vals: int
     total_columns: int
@@ -317,9 +315,11 @@ class LoadedCatalog:
     indices: list[int]
     burnin: int
     burnin_raised_from: int | None
+    thin: int
     markovian_start: int
     full_stats: Ncm.StatsVec
     stats: Ncm.StatsVec
+    diag_rows: Ncm.StatsRows
     nitems: int
 
 
@@ -344,10 +344,10 @@ def _resolve_burnin_rows(
         raise typer.BadParameter("Give at most one of --burnin and --tail.")
 
     filename = mcmc_file.absolute().as_posix()
-    nrows, nchains, first_id = Ncm.MSetCatalog.peek_info_from_file(filename)
+    nrows, nchains = Ncm.MSetCatalog.peek_info_from_file(filename)
     n_iterations = nrows // nchains
     markovian_id = Ncm.MSetCatalog.peek_markovian_id_from_file(filename)
-    markovian_iterations = -(-(markovian_id - first_id) // nchains)
+    markovian_iterations = -(-markovian_id // nchains)
 
     if tail is not None:
         if tail < 0:
@@ -383,14 +383,19 @@ def load_catalog(
     tail: int | None = None,
     include: list[str] | None = None,
     exclude: list[str] | None = None,
+    thin: int = 1,
 ) -> LoadedCatalog:
     """Load an MCMC catalog file and prepare it for analysis.
 
     `burnin` and `tail` are in iterations (ensemble steps), not raw rows --
-    see _resolve_burnin_rows().
+    see _resolve_burnin_rows(). `thin` keeps every thin-th iteration after the
+    burn-in (NcmMSetCatalog:thin); the catalog's rows and statistics are the
+    kept ones.
     """
     if not mcmc_file.exists():
         raise typer.BadParameter(f"MCMC file {mcmc_file} not found.")
+    if thin < 1:
+        raise typer.BadParameter(f"--thin must be at least 1, got {thin}.")
 
     burnin_rows, burnin_iterations, burnin_raised_from, markovian_start = (
         _resolve_burnin_rows(mcmc_file, burnin, tail)
@@ -398,16 +403,16 @@ def load_catalog(
 
     register_firecrown()
 
-    mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_file_ro(
-        mcmc_file.absolute().as_posix(), burnin_rows
+    storage = Ncm.MSetCatalogStorageFits.new(mcmc_file.absolute().as_posix(), True)
+    assert storage is not None
+    mcat: Ncm.MSetCatalog = Ncm.MSetCatalog.new_from_storage_full(
+        storage, burnin_rows, thin
     )
     assert isinstance(mcat, Ncm.MSetCatalog)
 
     mset: Ncm.MSet = mcat.peek_mset()
     assert isinstance(mset, Ncm.MSet)
     mset.prepare_fparam_map()
-
-    functions: Ncm.ObjArray | None = mcat.peek_functions_array()
 
     fparams_len = mset.fparams_len()
     nadd_vals: int = mcat.nadd_vals()
@@ -426,11 +431,11 @@ def load_catalog(
     assert isinstance(stats, Ncm.StatsVec)
 
     nitems: int = stats.nitens()
+    diag_rows = mcat.get_diag_rows()
 
     return LoadedCatalog(
         mcat=mcat,
         mset=mset,
-        functions=functions,
         fparams_len=fparams_len,
         nadd_vals=nadd_vals,
         total_columns=total_columns,
@@ -438,9 +443,11 @@ def load_catalog(
         indices=indices,
         burnin=burnin_iterations,
         burnin_raised_from=burnin_raised_from,
+        thin=thin,
         markovian_start=markovian_start,
         full_stats=full_stats,
         stats=stats,
+        diag_rows=diag_rows,
         nitems=nitems,
     )
 
@@ -480,6 +487,19 @@ class LoadCatalog(AppLogging):
         ),
     ] = None
 
+    thin: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Keep every N-th iteration (ensemble step) after the burn-in, with "
+                "all its chains. Every statistic, diagnostic and plot uses the kept "
+                "rows. N below half the autocorrelation time multiplies the variance "
+                "of the mean by less than 1.02."
+            ),
+            min=1,
+        ),
+    ] = 1
+
     include: Annotated[
         list[str] | None,
         typer.Option(
@@ -506,7 +526,6 @@ class LoadCatalog(AppLogging):
     # These are set in __post_init__ from load_catalog(), not from the CLI.
     mcat: Ncm.MSetCatalog = dataclasses.field(init=False)
     mset: Ncm.MSet = dataclasses.field(init=False)
-    functions: Ncm.ObjArray | None = dataclasses.field(init=False)
     fparams_len: int = dataclasses.field(init=False)
     nadd_vals: int = dataclasses.field(init=False)
     total_columns: int = dataclasses.field(init=False)
@@ -514,6 +533,7 @@ class LoadCatalog(AppLogging):
     indices: list[int] = dataclasses.field(init=False)
     full_stats: Ncm.StatsVec = dataclasses.field(init=False)
     stats: Ncm.StatsVec = dataclasses.field(init=False)
+    diag_rows: Ncm.StatsRows = dataclasses.field(init=False)
     nitems: int = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
@@ -521,11 +541,15 @@ class LoadCatalog(AppLogging):
         super().__post_init__()
 
         loaded = load_catalog(
-            self.mcmc_file, self.burnin, self.tail, self.include, self.exclude
+            self.mcmc_file,
+            self.burnin,
+            self.tail,
+            self.include,
+            self.exclude,
+            thin=self.thin,
         )
         self.mcat = loaded.mcat
         self.mset = loaded.mset
-        self.functions = loaded.functions
         self.fparams_len = loaded.fparams_len
         self.nadd_vals = loaded.nadd_vals
         self.total_columns = loaded.total_columns
@@ -533,6 +557,7 @@ class LoadCatalog(AppLogging):
         self.indices = loaded.indices
         self.full_stats = loaded.full_stats
         self.stats = loaded.stats
+        self.diag_rows = loaded.diag_rows
         self.nitems = loaded.nitems
         # the burn-in actually applied, which the markovian-id floor may have raised
         # above the requested `burnin`

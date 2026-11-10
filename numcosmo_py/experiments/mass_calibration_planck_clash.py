@@ -25,8 +25,6 @@
 
 from numcosmo_py import Nc, Ncm
 
-Ncm.cfg_init()
-
 
 def create_cosmology() -> Nc.HICosmo:
     """Create a cosmology."""
@@ -148,7 +146,9 @@ def run_example():
     esmcmc.set_use_threads(True)
     init_sampler.set_cov_from_scale()
 
-    esmcmc.set_data_file("test.fits")
+    storage = Ncm.MSetCatalogStorageFits.new("test.fits", False)
+    assert storage is not None
+    esmcmc.set_storage(storage)
 
     esmcmc.start_run()
     esmcmc.run(1000)  # Number of points to be computed in each chain
@@ -159,4 +159,5 @@ def run_example():
 
 
 if __name__ == "__main__":
+    Ncm.cfg_init()
     run_example()

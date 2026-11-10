@@ -24,6 +24,7 @@
 """A simplified interface for the NumCosmo models."""
 
 import sys
+from typing import cast
 
 from numcosmo_py import GObject, Ncm
 
@@ -45,7 +46,8 @@ MODEL_BUILDER.add_vparam(
 )
 
 NcmTypeModelGeneric = MODEL_BUILDER.create()
-GObject.new(NcmTypeModelGeneric)
+# The stubs type create() as type[Any], but it returns a GType.
+GObject.new(cast(GObject.GType, NcmTypeModelGeneric))
 NcmModelGeneric = NcmTypeModelGeneric.pytype
 GObject.type_register(NcmModelGeneric)
 del MODEL_BUILDER

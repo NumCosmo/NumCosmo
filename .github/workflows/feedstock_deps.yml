@@ -1,0 +1,25 @@
+name: Feedstock dependencies
+
+# Compares the run requirements of the conda-forge recipe
+# (conda-forge/numcosmo-feedstock) with pyproject.toml and the imports of
+# examples/. The recipe lives outside this repository, so the check runs weekly
+# and on demand instead of on every push; see CONTRIBUTING.md, section
+# "Declaring Python dependencies".
+
+on:
+  schedule:
+    # Mondays, 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  feedstock-deps:
+    name: Recipe run requirements
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check the recipe run requirements
+        run: python3 .github/scripts/check_deps.py feedstock

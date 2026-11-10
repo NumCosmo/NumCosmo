@@ -81,38 +81,96 @@ main (gint argc, gchar *argv[])
     }
     else
     {
-      GPtrArray *mcats_array   = g_ptr_array_new ();
-      GArray *max_time_array   = g_array_new (TRUE, TRUE, sizeof (guint));
-      NcmMSetCatalog *mcat_out = ncm_mset_catalog_new_from_file_ro (cat_filename[0], 0);
-      const guint nchains      = ncm_mset_catalog_nchains (mcat_out);
-      NcmMSet *mset            = ncm_mset_catalog_get_mset (mcat_out);
-      guint mmax_time          = 0;
+      NcmMSetCatalogStorageFits *first_fits = ncm_mset_catalog_storage_fits_new (cat_filename[0], TRUE, NULL);
+      NcmMSetCatalogStorage *first          = NCM_MSET_CATALOG_STORAGE (first_fits);
+      NcmMSetCatalogDesc *desc              = ncm_mset_catalog_storage_peek_desc (first, NULL);
+      GPtrArray *mcats_array                = g_ptr_array_new ();
+      GArray *max_time_array                = g_array_new (TRUE, TRUE, sizeof (guint));
+      gchar *out_name                       = NULL;
+      NcmMSetCatalogStorageFits *out_fits;
+      NcmMSetCatalog *mcat_out;
+      guint nchains;
+      guint mmax_time = 0;
       guint i, t;
 
+      if (desc == NULL)
+        g_error ("mcat_join: file `%s' holds no catalog.", cat_filename[0]);
+
+      nchains = ncm_mset_catalog_desc_nchains (desc);
       g_ptr_array_set_free_func (mcats_array, (GDestroyNotify) ncm_mset_catalog_free);
 
-      ncm_mset_catalog_set_file (mcat_out, NULL);
-      ncm_mset_catalog_reset (mcat_out);
-
+      /* Every input must describe the same catalog, with the parameters in the same order. */
       for (i = 0; i < nmcats; i++)
       {
-        const glong burnin   = (i < nburnins) ? atol (burnins[i]) : 0;
-        NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename[i], burnin);
-        NcmMSet *mset_i      = ncm_mset_catalog_get_mset (mcat);
-        guint max_time_i     = ncm_mset_catalog_max_time (mcat);
+        const glong burnin                      = (i < nburnins) ? atol (burnins[i]) : 0;
+        NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (cat_filename[i], TRUE, NULL);
+        NcmMSetCatalogStorage *storage          = NCM_MSET_CATALOG_STORAGE (storage_fits);
+        NcmMSetCatalogDesc *desc_i              = ncm_mset_catalog_storage_peek_desc (storage, NULL);
+        gchar *reason                           = NULL;
+        NcmMSetCatalog *mcat;
+        guint max_time_i;
 
-        g_assert_cmpuint (ncm_mset_catalog_nchains (mcat), ==, nchains);
-        g_assert_cmpuint (ncm_mset_cmp_all (mset, mset_i), ==, 0);
+        if (desc_i == NULL)
+          g_error ("mcat_join: file `%s' holds no catalog.", cat_filename[i]);
+
+        if (!ncm_mset_catalog_desc_is_compatible (desc, desc_i, &reason))
+          g_error ("mcat_join: catalog `%s' is not compatible with `%s': %s.", cat_filename[i], cat_filename[0], reason);
+
+        if (!ncm_mset_catalog_desc_has_same_order (desc, desc_i))
+          g_error ("mcat_join: catalog `%s' does not have the parameters of `%s' in the same order.", cat_filename[i], cat_filename[0]);
 
         if (burnin % nchains != 0)
           g_error ("Burnin[%u] not multiple of nchains %u.", i, nchains);
 
-        mmax_time = GSL_MAX (mmax_time, max_time_i);
+        mcat       = ncm_mset_catalog_new_from_storage_full (storage, burnin, 1);
+        max_time_i = ncm_mset_catalog_max_time (mcat);
+        mmax_time  = GSL_MAX (mmax_time, max_time_i);
 
-        ncm_mset_free (mset_i);
         g_ptr_array_add (mcats_array, mcat);
         g_array_append_val (max_time_array, max_time_i);
+        ncm_mset_catalog_storage_fits_free (storage_fits);
+        g_free (reason);
       }
+
+      if (out == NULL)
+      {
+        guint k = 0;
+
+        out_name = g_strdup_printf ("joined_mcat.fits");
+
+        while (g_file_test (out_name, G_FILE_TEST_EXISTS))
+        {
+          g_free (out_name);
+          out_name = g_strdup_printf ("joined_mcat_%d.fits", k++);
+        }
+      }
+      else if (g_file_test (out, G_FILE_TEST_EXISTS))
+      {
+        gchar *out_base = ncm_util_basename_fits (out);
+        guint k         = 0;
+
+        g_warning ("out file already exists, renaming.");
+        out_name = g_strdup_printf ("%s_ren.fits", out_base);
+
+        while (g_file_test (out_name, G_FILE_TEST_EXISTS))
+        {
+          g_free (out_name);
+          out_name = g_strdup_printf ("%s_ren%d.fits", out_base, k++);
+        }
+
+        g_free (out_base);
+      }
+      else
+      {
+        out_name = g_strdup (out);
+      }
+
+      /* The joined catalog is written at the end, in one recording. */
+      out_fits = ncm_mset_catalog_storage_fits_new (out_name, FALSE, NULL);
+      g_object_set (out_fits, "smode", NCM_MSET_CATALOG_SYNC_DISABLE, NULL);
+      ncm_mset_catalog_storage_set_desc (NCM_MSET_CATALOG_STORAGE (out_fits), desc, NULL);
+      mcat_out = ncm_mset_catalog_new_from_storage (NCM_MSET_CATALOG_STORAGE (out_fits));
+      ncm_mset_catalog_set_sampler (mcat_out, "mcat_join");
 
       for (t = 0; t < mmax_time; t++)
       {
@@ -135,50 +193,12 @@ main (gint argc, gchar *argv[])
         }
       }
 
-      if (out == NULL)
-      {
-        gchar *out_default = g_strdup_printf ("joined_mcat.fits");
-        guint i            = 0;
-
-        while (g_file_test (out_default, G_FILE_TEST_EXISTS))
-        {
-          g_free (out_default);
-          out_default = g_strdup_printf ("joined_mcat_%d.fits", i++);
-        }
-
-        ncm_mset_catalog_set_file (mcat_out, out_default);
-        g_free (out_default);
-      }
-      else
-      {
-        if (g_file_test (out, G_FILE_TEST_EXISTS))
-        {
-          g_warning ("out file already exists, renaming.");
-
-          gchar *out_base = ncm_util_basename_fits (out);
-          gchar *out_ren  = g_strdup_printf ("%s_ren.fits", out_base);
-          guint i         = 0;
-
-          while (g_file_test (out_ren, G_FILE_TEST_EXISTS))
-          {
-            g_free (out_ren);
-            out_ren = g_strdup_printf ("%s_ren%d.fits", out_base, i++);
-          }
-
-          ncm_mset_catalog_set_file (mcat_out, out_ren);
-
-          g_free (out_base);
-          g_free (out_ren);
-        }
-        else
-        {
-          ncm_mset_catalog_set_file (mcat_out, out);
-        }
-      }
-
+      ncm_mset_catalog_clear (&mcat_out);
+      ncm_mset_catalog_storage_fits_free (out_fits);
+      ncm_mset_catalog_storage_fits_free (first_fits);
       g_ptr_array_unref (mcats_array);
       g_array_unref (max_time_array);
-      ncm_mset_free (mset);
+      g_free (out_name);
     }
   }
 

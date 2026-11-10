@@ -83,6 +83,9 @@ void nc_hcosmo_bi_ln_a (NcHCosmoBI *cosmo, const gdouble t_lb, gdouble *ln_a1, g
 void nc_hcosmo_bi_E (NcHCosmoBI *cosmo, const gdouble t_lb, gdouble *E1, gdouble *E2, gdouble *E3);
 
 void nc_hcosmo_bi_get_quaternion (NcHCosmoBI *cosmo, NcmQuaternion *q);
+void nc_hcosmo_bi_set_quaternion (NcHCosmoBI *cosmo, const NcmQuaternion *q);
+void nc_hcosmo_bi_get_angles (NcHCosmoBI *cosmo, gdouble *alpha, gdouble *beta, gdouble *gamma);
+void nc_hcosmo_bi_set_angles (NcHCosmoBI *cosmo, const gdouble alpha, const gdouble beta, const gdouble gamma);
 
 #define NC_HCOSMO_BI_DEFAULT_H1 (70.0)
 #define NC_HCOSMO_BI_DEFAULT_H2 (70.0)

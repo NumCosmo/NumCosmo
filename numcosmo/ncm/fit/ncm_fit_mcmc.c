@@ -49,7 +49,10 @@
 #include "build_cfg.h"
 
 #include "ncm/fit/ncm_fit_mcmc.h"
+#include "ncm/fit/ncm_mset_catalog_storage_fits.h"
+#include "ncm/fit/ncm_mset_catalog_storage_memory.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_util.h"
 #include "ncm_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -62,7 +65,7 @@ enum
   PROP_FIT,
   PROP_SAMPLER,
   PROP_MTYPE,
-  PROP_DATA_FILE,
+  PROP_STORAGE,
 };
 
 struct _NcmFitMCMC
@@ -71,6 +74,8 @@ struct _NcmFitMCMC
   GObject parent_instance;
   NcmFit *fit;
   NcmMSetCatalog *mcat;
+  NcmMSetCatalogStorage *storage;
+  NcmRNG *rng;
   NcmFitRunMsgs mtype;
   NcmTimer *nt;
   NcmSerialize *ser;
@@ -91,6 +96,9 @@ static void
 ncm_fit_mcmc_init (NcmFitMCMC *mcmc)
 {
   mcmc->fit           = NULL;
+  mcmc->mcat          = NULL;
+  mcmc->storage       = NULL;
+  mcmc->rng           = NULL;
   mcmc->mtype         = NCM_FIT_RUN_MSGS_NONE;
   mcmc->tkern         = NULL;
   mcmc->nt            = ncm_timer_new ();
@@ -125,8 +133,8 @@ ncm_fit_mcmc_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_MTYPE:
       ncm_fit_mcmc_set_mtype (mcmc, g_value_get_enum (value));
       break;
-    case PROP_DATA_FILE:
-      ncm_fit_mcmc_set_data_file (mcmc, g_value_get_string (value));
+    case PROP_STORAGE:
+      ncm_fit_mcmc_set_storage (mcmc, g_value_get_object (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -152,8 +160,8 @@ ncm_fit_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_MTYPE:
       g_value_set_enum (value, mcmc->mtype);
       break;
-    case PROP_DATA_FILE:
-      g_value_set_string (value, ncm_mset_catalog_peek_filename (mcmc->mcat));
+    case PROP_STORAGE:
+      g_value_set_object (value, mcmc->storage);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -171,6 +179,8 @@ ncm_fit_mcmc_dispose (GObject *object)
   ncm_timer_clear (&mcmc->nt);
   ncm_serialize_clear (&mcmc->ser);
   ncm_mset_catalog_clear (&mcmc->mcat);
+  ncm_rng_clear (&mcmc->rng);
+  ncm_mset_catalog_storage_clear (&mcmc->storage);
   ncm_vector_clear (&mcmc->theta);
   ncm_vector_clear (&mcmc->thetastar);
 
@@ -217,26 +227,108 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                                       "Run messages type",
                                                       NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmFitMCMC:storage:
+   *
+   * The #NcmMSetCatalogStorage of the catalog that ncm_fit_mcmc_start_run() builds, see
+   * ncm_fit_mcmc_set_storage(); without one the catalog is kept in a
+   * #NcmMSetCatalogStorageMemory.
+   *
+   */
   g_object_class_install_property (object_class,
-                                   PROP_DATA_FILE,
-                                   g_param_spec_string ("data-file",
+                                   PROP_STORAGE,
+                                   g_param_spec_object ("storage",
                                                         NULL,
-                                                        "Data file to be used by the catalog",
-                                                        NULL,
+                                                        "Catalog storage",
+                                                        NCM_TYPE_MSET_CATALOG_STORAGE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
 _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
 {
-  NcmMSet *mset = ncm_fit_peek_mset (fit);
-
   g_assert (mcmc->fit == NULL);
-  mcmc->fit  = ncm_fit_ref (fit);
-  mcmc->mcat = ncm_mset_catalog_new (mset, 1, 1, FALSE,
-                                     NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL,
-                                     NULL);
-  ncm_mset_catalog_set_m2lnp_var (mcmc->mcat, 0);
+  mcmc->fit = ncm_fit_ref (fit);
+}
+
+/*
+ * Builds the catalog at the first start_run: a description of the free parameters and
+ * the -2ln(L) column on a FITS storage of the data file (created or continued) or a
+ * memory storage, with the RNG set before.
+ */
+static void
+_ncm_fit_mcmc_build_catalog (NcmFitMCMC *mcmc, GError **error)
+{
+  NcmMSet *mset          = ncm_fit_peek_mset (mcmc->fit);
+  const gchar *names[]   = {NCM_MSET_CATALOG_M2LNL_COLNAME, NULL};
+  const gchar *symbols[] = {NCM_MSET_CATALOG_M2LNL_SYMBOL, NULL};
+  NcmMSetCatalogDesc *desc;
+
+  if (mcmc->mcat != NULL)
+    return;
+
+  desc = ncm_mset_catalog_desc_new (mset, 1, FALSE, names, symbols, 0, NCM_MSET_CATALOG_RTYPE_MCMC, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
+
+  if (mcmc->storage == NULL)
+    mcmc->storage = NCM_MSET_CATALOG_STORAGE (ncm_mset_catalog_storage_memory_new ());
+
+  ncm_mset_catalog_storage_set_desc (mcmc->storage, desc, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, ncm_mset_catalog_desc_free (desc), );
+
+  mcmc->mcat = ncm_mset_catalog_new_from_storage (mcmc->storage);
+  ncm_mset_catalog_set_sampler (mcmc->mcat, ncm_mset_trans_kern_get_name (mcmc->tkern));
+
+  if (mcmc->rng != NULL)
+  {
+    NcmRNG *cat_rng = ncm_mset_catalog_peek_rng (mcmc->mcat);
+
+    if (cat_rng == NULL)
+      ncm_mset_catalog_set_rng (mcmc->mcat, mcmc->rng);
+    else if ((strcmp (ncm_rng_get_algo (cat_rng), ncm_rng_get_algo (mcmc->rng)) != 0) ||
+             (ncm_rng_get_seed (cat_rng) != ncm_rng_get_seed (mcmc->rng)))
+      ncm_util_set_or_call_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG,
+                                  "ncm_fit_mcmc_start_run: catalog `%s' holds an RNG (%s, seed %lu) and another was set (%s, seed %lu); "
+                                  "do not set an RNG when resuming from a file",
+                                  ncm_mset_catalog_peek_filename (mcmc->mcat), ncm_rng_get_algo (cat_rng), ncm_rng_get_seed (cat_rng),
+                                  ncm_rng_get_algo (mcmc->rng), ncm_rng_get_seed (mcmc->rng));
+
+    ncm_rng_clear (&mcmc->rng);
+  }
+
+  ncm_mset_catalog_desc_free (desc);
+}
+
+/* Opens a recording of the catalog's storage named by the kernel, closing one left open. */
+static void
+_ncm_fit_mcmc_start_recording (NcmFitMCMC *mcmc, GError **error)
+{
+  NcmMSetCatalogStorage *storage = ncm_mset_catalog_peek_storage (mcmc->mcat);
+
+  if (ncm_mset_catalog_storage_is_recording (storage))
+  {
+    ncm_mset_catalog_storage_end_recording (storage, error);
+    NCM_UTIL_ON_ERROR_RETURN (error, , );
+  }
+
+  ncm_mset_catalog_storage_start_recording (storage, ncm_mset_trans_kern_get_name (mcmc->tkern), NULL, error);
+}
+
+/* Closes the recording of the catalog's storage, writing what it holds; none open is fine. */
+static void
+_ncm_fit_mcmc_end_recording (NcmFitMCMC *mcmc)
+{
+  NcmMSetCatalogStorage *storage = ncm_mset_catalog_peek_storage (mcmc->mcat);
+  GError *error                  = NULL;
+
+  if (!ncm_mset_catalog_storage_is_recording (storage))
+    return;
+
+  ncm_mset_catalog_storage_end_recording (storage, &error);
+
+  if (error != NULL)
+    g_error ("ncm_fit_mcmc_end_run: %s", error->message);
 }
 
 /**
@@ -288,31 +380,27 @@ ncm_fit_mcmc_clear (NcmFitMCMC **mcmc)
 }
 
 /**
- * ncm_fit_mcmc_set_data_file:
+ * ncm_fit_mcmc_set_storage:
  * @mcmc: a #NcmFitMCMC
- * @filename: a file name
+ * @storage: a #NcmMSetCatalogStorage
  *
- * Makes @filename the file of the catalog of @mcmc (ncm_mset_catalog_set_file()).
- * Changing the file of a running catalog aborts.
+ * Makes @storage the storage of the catalog that ncm_fit_mcmc_start_run() builds: the
+ * catalog's description is set on it then, a #NcmMSetCatalogStorageFits being created
+ * when its file does not exist and continued when it does. Once the catalog is built
+ * the storage cannot change, so calling it after the first ncm_fit_mcmc_start_run()
+ * aborts.
  *
  */
 void
-ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename)
+ncm_fit_mcmc_set_storage (NcmFitMCMC *mcmc, NcmMSetCatalogStorage *storage)
 {
-  const gchar *cur_filename = ncm_mset_catalog_peek_filename (mcmc->mcat);
+  g_assert_nonnull (storage);
 
-  g_assert_nonnull (filename);
+  if (mcmc->mcat != NULL)
+    g_error ("ncm_fit_mcmc_set_storage: the catalog is built by ncm_fit_mcmc_start_run() and its storage cannot change.");
 
-  if (mcmc->started && (cur_filename != NULL))
-    g_error ("ncm_fit_mcmc_set_data_file: Cannot change data file during a run, call ncm_fit_mcmc_end_run() first.");
-
-  if ((cur_filename != NULL) && (strcmp (cur_filename, filename) == 0))
-    return;
-
-  ncm_mset_catalog_set_file (mcmc->mcat, filename);
-
-  if (mcmc->started)
-    g_assert_cmpint (mcmc->cur_sample_id, ==, ncm_mset_catalog_get_cur_id (mcmc->mcat));
+  ncm_mset_catalog_storage_clear (&mcmc->storage);
+  mcmc->storage = ncm_mset_catalog_storage_ref (storage);
 }
 
 /**
@@ -349,7 +437,9 @@ ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
   ncm_mset_trans_kern_clear (&mcmc->tkern);
   mcmc->tkern = ncm_mset_trans_kern_ref (tkern);
 
-  ncm_mset_catalog_set_run_type (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
+  if (mcmc->mcat != NULL)
+    ncm_mset_catalog_set_sampler (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
+
   ncm_mset_trans_kern_set_mset (tkern, mset);
 }
 
@@ -369,7 +459,15 @@ ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng)
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_set_rng: Cannot change the RNG object during a run, call ncm_fit_mcmc_end_run() first.");
 
-  ncm_mset_catalog_set_rng (mcmc->mcat, rng);
+  if (mcmc->mcat != NULL)
+  {
+    ncm_mset_catalog_set_rng (mcmc->mcat, rng);
+  }
+  else
+  {
+    ncm_rng_clear (&mcmc->rng);
+    mcmc->rng = ncm_rng_ref (rng);
+  }
 }
 
 /**
@@ -444,6 +542,12 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
 /**
  * ncm_fit_mcmc_start_run:
  * @mcmc: a #NcmFitMCMC
+ * @error: a #GError
+ *
+ * Builds the catalog at the first call (ncm_fit_mcmc_set_storage()), failing with the
+ * errors of #NcmMSetCatalogStorage when the file cannot be opened, its description is
+ * incompatible or it holds an RNG of another algorithm or seed; a run also fails where
+ * a recording cannot be opened on the storage.
  *
  * Starts a run: creates a random number generator if the catalog has none, and starts
  * the chain from the last state of the catalog, or from the current parameters of the
@@ -451,16 +555,20 @@ static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
  *
  */
 void
-ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
+ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc, GError **error)
 {
   NcmMSet *mset       = ncm_fit_peek_mset (mcmc->fit);
   NcmLikelihood *lh   = ncm_fit_peek_likelihood (mcmc->fit);
   NcmFitState *fstate = ncm_fit_peek_state (mcmc->fit);
   NcmDataset *dset    = ncm_likelihood_peek_dataset (lh);
-  const gint cur_id   = ncm_mset_catalog_get_cur_id (mcmc->mcat);
+  gint cur_id;
 
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_start_run: run already started, run ncm_fit_mcmc_end_run() first.");
+
+  _ncm_fit_mcmc_build_catalog (mcmc, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcmc_start_run: ");
+  cur_id = ncm_mset_catalog_get_cur_id (mcmc->mcat);
 
   switch (mcmc->mtype)
   {
@@ -511,10 +619,13 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   mcmc->naccepted = 0;
   mcmc->ntotal    = 0;
 
-  ncm_mset_catalog_set_sync_mode (mcmc->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
-  ncm_mset_catalog_set_sync_interval (mcmc->mcat, NCM_FIT_MCMC_MIN_SYNC_INTERVAL);
+  g_object_set (ncm_mset_catalog_peek_storage (mcmc->mcat),
+                "smode", NCM_MSET_CATALOG_SYNC_TIMED,
+                "sync-interval", NCM_FIT_MCMC_MIN_SYNC_INTERVAL,
+                NULL);
 
-  ncm_mset_catalog_sync (mcmc->mcat, TRUE);
+  _ncm_fit_mcmc_start_recording (mcmc, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "ncm_fit_mcmc_start_run: ");
 
   if (cur_id > mcmc->cur_sample_id)
   {
@@ -560,7 +671,7 @@ ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc)
   if (ncm_timer_task_is_running (mcmc->nt))
     ncm_timer_task_end (mcmc->nt);
 
-  ncm_mset_catalog_sync (mcmc->mcat, TRUE);
+  _ncm_fit_mcmc_end_recording (mcmc);
 
   mcmc->started = FALSE;
 }
@@ -581,7 +692,9 @@ ncm_fit_mcmc_reset (NcmFitMCMC *mcmc)
   mcmc->ntotal        = 0;
   mcmc->naccepted     = 0;
   mcmc->started       = FALSE;
-  ncm_mset_catalog_reset (mcmc->mcat);
+
+  if (mcmc->mcat != NULL)
+    ncm_mset_catalog_reset (mcmc->mcat);
 }
 
 static void
@@ -605,33 +718,6 @@ ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n)
 
   mcmc->cur_sample_id += n;
   mcmc->write_index    = mcmc->cur_sample_id + 1;
-}
-
-/**
- * ncm_fit_mcmc_set_first_sample_id:
- * @mcmc: a #NcmFitMCMC
- * @first_sample_id: index of the first state
- *
- * Makes @first_sample_id the index of the first state of the catalog. It requires a
- * started run and cannot move backwards.
- *
- */
-void
-ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id)
-{
-  const gint first_id = ncm_mset_catalog_get_first_id (mcmc->mcat);
-
-  if (first_id == first_sample_id)
-    return;
-
-  if (!mcmc->started)
-    g_error ("ncm_fit_mcmc_set_first_sample_id: run not started, run ncm_fit_mcmc_start_run() first.");
-
-  if (first_sample_id <= mcmc->cur_sample_id)
-    g_error ("ncm_fit_mcmc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
-             first_sample_id, first_id, mcmc->cur_sample_id);
-
-  ncm_mset_catalog_set_first_id (mcmc->mcat, first_sample_id);
 }
 
 static void _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc);
@@ -831,11 +917,17 @@ ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc)
  * ncm_fit_mcmc_get_catalog:
  * @mcmc: a #NcmFitMCMC
  *
+ * The catalog is built by the first ncm_fit_mcmc_start_run(); before it there is none
+ * and this aborts.
+ *
  * Returns: (transfer full): the catalog of @mcmc
  */
 NcmMSetCatalog *
 ncm_fit_mcmc_get_catalog (NcmFitMCMC *mcmc)
 {
+  if (mcmc->mcat == NULL)
+    g_error ("ncm_fit_mcmc_get_catalog: the catalog is built by ncm_fit_mcmc_start_run(), call it first.");
+
   return ncm_mset_catalog_ref (mcmc->mcat);
 }
 

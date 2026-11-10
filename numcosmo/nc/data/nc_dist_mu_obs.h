@@ -43,6 +43,7 @@ G_DECLARE_FINAL_TYPE (NcDistMuObs, nc_dist_mu_obs, NC, DIST_MU_OBS, NcmCatalog)
 #define NC_DIST_MU_OBS_COL_Z "z"
 #define NC_DIST_MU_OBS_COL_MU "mu"
 #define NC_DIST_MU_OBS_COL_SIGMA_MU "sigma_mu"
+#define NC_DIST_MU_OBS_COL_SAMPLE "sample"
 
 /**
  * NcDistMuObsCatalogId:

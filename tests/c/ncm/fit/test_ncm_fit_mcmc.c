@@ -46,6 +46,8 @@ static void test_ncm_fit_mcmc_free (TestNcmFitMCMC *test, gconstpointer pdata);
 static void test_ncm_fit_mcmc_posterior (TestNcmFitMCMC *test, gconstpointer pdata);
 static void test_ncm_fit_mcmc_bound (TestNcmFitMCMC *test, gconstpointer pdata);
 static void test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata);
+static void test_ncm_fit_mcmc_data_file (TestNcmFitMCMC *test, gconstpointer pdata);
+static void _test_ncm_fit_mcmc_set_file (NcmFitMCMC *mcmc, const gchar *filename);
 
 static gdouble _test_ncm_fit_mcmc_x0_max = 0.0;
 
@@ -69,6 +71,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/fit_mcmc/invalid", TestNcmFitMCMC, NULL,
               &test_ncm_fit_mcmc_new,
               &test_ncm_fit_mcmc_invalid,
+              &test_ncm_fit_mcmc_free);
+  g_test_add ("/ncm/fit_mcmc/data_file", TestNcmFitMCMC, NULL,
+              &test_ncm_fit_mcmc_new,
+              &test_ncm_fit_mcmc_data_file,
               &test_ncm_fit_mcmc_free);
 
   g_test_run ();
@@ -138,7 +144,7 @@ test_ncm_fit_mcmc_posterior (TestNcmFitMCMC *test, gconstpointer pdata)
   gdouble accept;
   guint i;
 
-  ncm_fit_mcmc_start_run (test->mcmc);
+  ncm_fit_mcmc_start_run (test->mcmc, NULL);
   ncm_fit_mcmc_run (test->mcmc, n);
   accept = ncm_fit_mcmc_get_accept_ratio (test->mcmc);
   ncm_fit_mcmc_end_run (test->mcmc);
@@ -185,7 +191,7 @@ test_ncm_fit_mcmc_bound (TestNcmFitMCMC *test, gconstpointer pdata)
   ncm_model_param_set_upper_bound (NCM_MODEL (test->model), 0, ncm_vector_get (y, 0));
   ncm_model_orig_param_set (NCM_MODEL (test->model), 0, ncm_vector_get (y, 0) - 0.5 * sigma);
 
-  ncm_fit_mcmc_start_run (test->mcmc);
+  ncm_fit_mcmc_start_run (test->mcmc, NULL);
   ncm_fit_mcmc_run (test->mcmc, n);
   ncm_fit_mcmc_end_run (test->mcmc);
 
@@ -215,7 +221,7 @@ test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata)
   _test_ncm_fit_mcmc_x0_max = ncm_vector_get (y, 0);
   klass->valid              = &_test_ncm_fit_mcmc_valid_x0;
 
-  ncm_fit_mcmc_start_run (test->mcmc);
+  ncm_fit_mcmc_start_run (test->mcmc, NULL);
   ncm_fit_mcmc_run (test->mcmc, 2000);
   ncm_fit_mcmc_end_run (test->mcmc);
 
@@ -227,5 +233,102 @@ test_ncm_fit_mcmc_invalid (TestNcmFitMCMC *test, gconstpointer pdata)
     g_assert_cmpfloat (ncm_vector_get (ncm_mset_catalog_peek_row (mcat, i), 1), <=, _test_ncm_fit_mcmc_x0_max);
 
   ncm_mset_catalog_free (mcat);
+}
+
+/* Gives mcmc a FITS storage on filename. */
+static void
+_test_ncm_fit_mcmc_set_file (NcmFitMCMC *mcmc, const gchar *filename)
+{
+  NcmMSetCatalogStorageFits *storage_fits = ncm_mset_catalog_storage_fits_new (filename, FALSE, NULL);
+
+  ncm_fit_mcmc_set_storage (mcmc, NCM_MSET_CATALOG_STORAGE (storage_fits));
+  ncm_mset_catalog_storage_fits_free (storage_fits);
+}
+
+static void
+test_ncm_fit_mcmc_data_file (TestNcmFitMCMC *test, gconstpointer pdata)
+{
+  /*
+   * A run on a data file; reset erases the catalog; the kernel and the RNG can be set
+   * once the catalog is built and empty; a second NcmFitMCMC on the file with an RNG of
+   * another seed gets the storage's RNG error.
+   */
+  gchar *tmp_dir                      = g_dir_make_tmp ("tmp_test_ncm_fit_mcmc_XXXXXX", NULL);
+  gchar *filename                     = g_build_filename (tmp_dir, "mcmc.fits", NULL);
+  NcmRNG *rng2                        = ncm_rng_seeded_new (NULL, 20261101);
+  NcmRNG *rng3                        = ncm_rng_seeded_new (NULL, 20261102);
+  NcmMSetTransKernGauss *tkern        = ncm_mset_trans_kern_gauss_new (0);
+  NcmMSetCatalogStorage *storage_prop = NULL;
+  GError *error                       = NULL;
+  NcmMSetCatalog *mcat;
+
+  _test_ncm_fit_mcmc_set_file (test->mcmc, filename);
+  g_object_get (test->mcmc, "storage", &storage_prop, NULL);
+  g_assert_true (NCM_IS_MSET_CATALOG_STORAGE_FITS (storage_prop));
+  g_assert_cmpstr (ncm_mset_catalog_storage_fits_peek_filename (NCM_MSET_CATALOG_STORAGE_FITS (storage_prop)), ==, filename);
+  ncm_mset_catalog_storage_free (storage_prop);
+
+  ncm_fit_mcmc_start_run (test->mcmc, &error);
+  g_assert_no_error (error);
+  ncm_fit_mcmc_run (test->mcmc, 200);
+  ncm_fit_mcmc_end_run (test->mcmc);
+
+  mcat = ncm_fit_mcmc_get_catalog (test->mcmc);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 200);
+  g_assert_cmpstr (ncm_mset_catalog_peek_filename (mcat), ==, filename);
+  ncm_mset_catalog_free (mcat);
+
+  ncm_fit_mcmc_reset (test->mcmc);
+  mcat = ncm_fit_mcmc_get_catalog (test->mcmc);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 0);
+  ncm_mset_catalog_free (mcat);
+
+  ncm_fit_mcmc_set_trans_kern (test->mcmc, NCM_MSET_TRANS_KERN (tkern));
+  ncm_mset_trans_kern_gauss_set_cov (tkern, ncm_data_gauss_cov_peek_cov (NCM_DATA_GAUSS_COV (test->data_mvnd)));
+  ncm_fit_mcmc_set_rng (test->mcmc, rng2);
+
+  ncm_fit_mcmc_start_run (test->mcmc, &error);
+  g_assert_no_error (error);
+  ncm_fit_mcmc_run (test->mcmc, 100);
+  ncm_fit_mcmc_end_run (test->mcmc);
+
+  mcat = ncm_fit_mcmc_get_catalog (test->mcmc);
+  g_assert_cmpuint (ncm_mset_catalog_len (mcat), ==, 100);
+  g_assert_cmpuint (ncm_rng_get_seed (ncm_mset_catalog_peek_rng (mcat)), ==, 20261101);
+  ncm_mset_catalog_free (mcat);
+
+  /* The file is released before the second object opens it. */
+  ncm_fit_mcmc_clear (&test->mcmc);
+  test->mcmc = ncm_fit_mcmc_new (test->fit, NCM_MSET_TRANS_KERN (tkern), NCM_FIT_RUN_MSGS_NONE);
+  _test_ncm_fit_mcmc_set_file (test->mcmc, filename);
+  ncm_fit_mcmc_set_rng (test->mcmc, rng3);
+  ncm_fit_mcmc_start_run (test->mcmc, &error);
+  g_assert_error (error, NCM_MSET_CATALOG_STORAGE_ERROR, NCM_MSET_CATALOG_STORAGE_ERROR_RNG);
+  g_clear_error (&error);
+
+  ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (tkern));
+  ncm_rng_free (rng2);
+  ncm_rng_free (rng3);
+
+  {
+    GDir *dir = g_dir_open (tmp_dir, 0, NULL);
+    const gchar *name;
+
+    g_assert_nonnull (dir);
+
+    while ((name = g_dir_read_name (dir)) != NULL)
+    {
+      gchar *path = g_build_filename (tmp_dir, name, NULL);
+
+      g_unlink (path);
+      g_free (path);
+    }
+
+    g_dir_close (dir);
+  }
+
+  g_rmdir (tmp_dir);
+  g_free (filename);
+  g_free (tmp_dir);
 }
 

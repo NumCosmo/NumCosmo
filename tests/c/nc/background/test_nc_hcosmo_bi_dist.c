@@ -357,13 +357,13 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
     g_assert_cmpuint (ncm_catalog_len (NCM_CATALOG (obs)), ==, 3);
     ncm_assert_cmpdouble_e (ncm_catalog_get (NCM_CATALOG (obs), NC_DIST_MU_OBS_COL_MU, 1, NULL), ==, ncm_vector_get (mu, 1), 0.0, 0.0);
 
-    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, NULL, 0.0, 1.0, &error);
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, NULL, NULL, 0.0, 1.0, &error);
     g_assert_no_error (error);
     ncm_data_prepare (NCM_DATA (dmu_obs), mset);
     ncm_data_m2lnL_val (NCM_DATA (dmu_obs), mset, &m2lnL_obs);
     ncm_assert_cmpdouble_e (m2lnL_obs, ==, m2lnL, 1.0e-13, 0.0);
 
-    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, NULL, 0.0, 0.025, &error);
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, NULL, NULL, 0.0, 0.025, &error);
     g_assert_no_error (error);
     z_obs = nc_data_hcosmo_bi_dist_mu_peek_z (dmu_obs);
     g_assert_cmpuint (ncm_vector_len (z_obs), ==, 2);
@@ -371,13 +371,159 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
     ncm_data_m2lnL_val (NCM_DATA (dmu_obs), mset, &m2lnL_two);
     ncm_assert_cmpdouble_e (m2lnL_two, ==, term[0] + term[1], 1.0e-13, 0.0);
 
-    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, "DM_av", NULL, 0.0, 1.0, &error);
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, "DM_av", NULL, NULL, 0.0, 1.0, &error);
     g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
     g_clear_error (&error);
 
-    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, "eDM_av", 0.0, 1.0, &error);
+    nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs, NULL, "eDM_av", NULL, 0.0, 1.0, &error);
     g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
     g_clear_error (&error);
+
+    /* Offsets and the velocity term through a NcDistMuNuisance in the model set */
+    {
+      NcDistMuNuisance *nuisance = nc_dist_mu_nuisance_new (2);
+      NcmMSet *mset_n            = ncm_mset_new (NCM_MODEL (test->cosmo), NULL, nuisance, NULL);
+      NcmVector *sample          = ncm_vector_new (3);
+      const gdouble dmu_s[2]     = {0.1, -0.2};
+      const gdouble sigma_v      = 300.0;
+      gdouble m2lnL_n, m2lnL_ref_n = 0.0, m2lnL_again;
+
+      ncm_vector_set (sample, 0, 0.0);
+      ncm_vector_set (sample, 1, 1.0);
+      ncm_vector_set (sample, 2, -1.0);
+      nc_data_hcosmo_bi_dist_mu_set_samples (dmu, sample);
+      ncm_assert_cmpdouble (ncm_vector_get (nc_data_hcosmo_bi_dist_mu_peek_samples (dmu), 1), ==, 1.0);
+
+      ncm_model_orig_param_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_SIGMA_V, sigma_v);
+      ncm_model_orig_vparam_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_DMU, 0, dmu_s[0]);
+      ncm_model_orig_vparam_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_DMU, 1, dmu_s[1]);
+      g_assert_cmpuint (nc_dist_mu_nuisance_get_nsamples (nuisance), ==, 2);
+
+      for (i = 0; i < 3; i++)
+      {
+        const gdouble zi    = ncm_vector_get (z, i);
+        const gdouble mu_t  = ncm_vector_get (mu, i) - 0.05 * (i + 1.0) + ((i < 2) ? dmu_s[i] : 0.0);
+        const gdouble s_v   = 5.0 / M_LN10 * (sigma_v / (1.0e-3 * ncm_c_c ())) * (1.0 + zi) / (zi * (1.0 + 0.5 * zi));
+        const gdouble s_tot = hypot (ncm_vector_get (sigma, i), s_v);
+
+        ncm_assert_cmpdouble_e (nc_dist_mu_nuisance_sigma_mu_v (nuisance, zi), ==, s_v, 1.0e-15, 0.0);
+        m2lnL_ref_n += gsl_pow_2 ((ncm_vector_get (mu, i) - mu_t) / s_tot) + 2.0 * log (s_tot) + ncm_c_ln2pi ();
+      }
+
+      ncm_data_prepare (NCM_DATA (dmu), mset_n);
+      ncm_data_m2lnL_val (NCM_DATA (dmu), mset_n, &m2lnL_n);
+      ncm_assert_cmpdouble_e (m2lnL_n, ==, m2lnL_ref_n, 1.0e-13, 0.0);
+
+      /* Unchanged sigma_v: the same value; everything back to zero: the original likelihood */
+      ncm_data_m2lnL_val (NCM_DATA (dmu), mset_n, &m2lnL_again);
+      ncm_assert_cmpdouble_e (m2lnL_again, ==, m2lnL_n, 0.0, 0.0);
+
+      /* A dispersion per sample: objects of samples 0 and 1 take theirs, the object without
+       * a sample keeps sigma_v */
+      {
+        NcDistMuNuisance *per = nc_dist_mu_nuisance_new_full (2, TRUE);
+        NcmMSet *mset_p       = ncm_mset_new (NCM_MODEL (test->cosmo), NULL, per, NULL);
+        const gdouble sv_s[2] = {120.0, 500.0};
+        gdouble m2lnL_p, m2lnL_ref_p = 0.0;
+
+        ncm_model_orig_param_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V, sigma_v);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V_S, 0, sv_s[0]);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V_S, 1, sv_s[1]);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_DMU, 0, dmu_s[0]);
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_DMU, 1, dmu_s[1]);
+
+        for (i = 0; i < 3; i++)
+        {
+          const gdouble zi    = ncm_vector_get (z, i);
+          const gdouble sv_i  = (i < 2) ? sv_s[i] : sigma_v;
+          const gdouble mu_t  = ncm_vector_get (mu, i) - 0.05 * (i + 1.0) + ((i < 2) ? dmu_s[i] : 0.0);
+          const gdouble s_v   = 5.0 / M_LN10 * (sv_i / (1.0e-3 * ncm_c_c ())) * (1.0 + zi) / (zi * (1.0 + 0.5 * zi));
+          const gdouble s_tot = hypot (ncm_vector_get (sigma, i), s_v);
+
+          m2lnL_ref_p += gsl_pow_2 ((ncm_vector_get (mu, i) - mu_t) / s_tot) + 2.0 * log (s_tot) + ncm_c_ln2pi ();
+        }
+
+        ncm_data_prepare (NCM_DATA (dmu), mset_p);
+        ncm_data_m2lnL_val (NCM_DATA (dmu), mset_p, &m2lnL_p);
+        ncm_assert_cmpdouble_e (m2lnL_p, ==, m2lnL_ref_p, 1.0e-13, 0.0);
+
+        /* Changing one per-sample value is seen */
+        ncm_model_orig_vparam_set (NCM_MODEL (per), NC_DIST_MU_NUISANCE_SIGMA_V_S, 1, 700.0);
+        ncm_data_m2lnL_val (NCM_DATA (dmu), mset_p, &m2lnL_again);
+        g_assert_cmpfloat (fabs (m2lnL_again - m2lnL_p), >, 1.0e-6);
+
+        ncm_mset_free (mset_p);
+        nc_dist_mu_nuisance_free (per);
+      }
+
+      /* Back to the plain nuisance model: its own value again */
+      ncm_data_m2lnL_val (NCM_DATA (dmu), mset_n, &m2lnL_again);
+      ncm_assert_cmpdouble_e (m2lnL_again, ==, m2lnL_n, 1.0e-13, 0.0);
+      ncm_model_orig_param_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_SIGMA_V, 0.0);
+      ncm_model_orig_vparam_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_DMU, 0, 0.0);
+      ncm_model_orig_vparam_set (NCM_MODEL (nuisance), NC_DIST_MU_NUISANCE_DMU, 1, 0.0);
+      ncm_data_m2lnL_val (NCM_DATA (dmu), mset_n, &m2lnL_again);
+      ncm_assert_cmpdouble_e (m2lnL_again, ==, m2lnL, 1.0e-13, 0.0);
+
+      /* The catalog written from the data carries the sample column */
+      {
+        NcDistMuObs *obs_s = nc_data_hcosmo_bi_dist_mu_get_obs (dmu);
+
+        g_assert_cmpint (ncm_catalog_get_int (NCM_CATALOG (obs_s), NC_DIST_MU_OBS_COL_SAMPLE, 1, NULL), ==, 1);
+        g_assert_cmpint (ncm_catalog_get_int (NCM_CATALOG (obs_s), NC_DIST_MU_OBS_COL_SAMPLE, 2, NULL), ==, -1);
+
+        nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs_s, NULL, NULL, NC_DIST_MU_OBS_COL_SAMPLE, 0.0, 1.0, &error);
+        g_assert_no_error (error);
+        ncm_assert_cmpdouble (ncm_vector_get (nc_data_hcosmo_bi_dist_mu_peek_samples (dmu_obs), 0), ==, 0.0);
+        ncm_assert_cmpdouble (ncm_vector_get (nc_data_hcosmo_bi_dist_mu_peek_samples (dmu_obs), 2), ==, -1.0);
+        ncm_assert_cmpdouble (ncm_vector_get (nc_data_hcosmo_bi_dist_mu_peek_sigma_mu (dmu_obs), 1),
+                              ==, ncm_catalog_get (NCM_CATALOG (obs_s), NC_DIST_MU_OBS_COL_SIGMA_MU, 1, NULL));
+
+        nc_data_hcosmo_bi_dist_mu_set_obs (dmu_obs, obs_s, NULL, NULL, "nosuchcolumn", 0.0, 1.0, &error);
+        g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND);
+        g_clear_error (&error);
+
+        nc_dist_mu_obs_free (obs_s);
+      }
+
+      ncm_vector_free (sample);
+      ncm_mset_free (mset_n);
+      nc_dist_mu_nuisance_free (nuisance);
+    }
+
+    /* An observer velocity: the mean is the rest-frame modulus at z_rest minus 5 log10 D */
+    {
+      NcObserverVelocity *ov = nc_observer_velocity_new ();
+      NcmMSet *mset_v        = ncm_mset_new (NCM_MODEL (test->cosmo), NULL, ov, NULL);
+      const gdouble f_lnRH   = 5.0 * log10 (nc_hcosmo_bi_RH_Mpc (test->cosmo));
+      gdouble m2lnL_v, m2lnL_ref_v = 0.0;
+
+      ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VX, 200.0);
+      ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VY, -300.0);
+      ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VZ, 100.0);
+
+      for (i = 0; i < 3; i++)
+      {
+        const gdouble px     = ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu), i, 0);
+        const gdouble py     = ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu), i, 1);
+        const gdouble pz     = ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu), i, 2);
+        const gdouble D      = nc_observer_velocity_doppler (ov, px, py, pz);
+        const gdouble z_rest = nc_observer_velocity_z_rest (ov, ncm_vector_get (z, i), px, py, pz);
+        const gdouble mu_v   = nc_hcosmo_bi_dist_dmodulus_sky (test->dist, z_rest, px, py, pz) - 5.0 * log10 (D) + f_lnRH;
+        const gdouble s_i    = ncm_vector_get (sigma, i);
+
+        g_assert_cmpfloat (fabs (D - 1.0), >, 1.0e-5);
+        m2lnL_ref_v += gsl_pow_2 ((ncm_vector_get (mu, i) - mu_v) / s_i) + 2.0 * log (s_i) + ncm_c_ln2pi ();
+      }
+
+      ncm_data_prepare (NCM_DATA (dmu), mset_v);
+      ncm_data_m2lnL_val (NCM_DATA (dmu), mset_v, &m2lnL_v);
+      ncm_assert_cmpdouble_e (m2lnL_v, ==, m2lnL_ref_v, 1.0e-13, 0.0);
+      g_assert_cmpfloat (fabs (m2lnL_v - m2lnL), >, 1.0e-3);
+
+      ncm_mset_free (mset_v);
+      nc_observer_velocity_free (ov);
+    }
 
     nc_data_hcosmo_bi_dist_mu_free (dmu_obs);
     nc_dist_mu_obs_free (obs);

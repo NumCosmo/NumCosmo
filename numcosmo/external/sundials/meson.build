@@ -1,20 +1,23 @@
 sundials_arkode_sources = files(
-    'include/arkode/arkode.h',
+    'include/arkode/arkode_arkstep_deprecated.h',
     'include/arkode/arkode_arkstep.h',
     'include/arkode/arkode_bandpre.h',
     'include/arkode/arkode_bbdpre.h',
-    'include/arkode/arkode_butcher.h',
     'include/arkode/arkode_butcher_dirk.h',
     'include/arkode/arkode_butcher_erk.h',
+    'include/arkode/arkode_butcher.h',
+    'include/arkode/arkode_erkstep_deprecated.h',
     'include/arkode/arkode_erkstep.h',
     'include/arkode/arkode_forcingstep.h',
+    'include/arkode/arkode.h',
     'include/arkode/arkode_ls.h',
     'include/arkode/arkode_lsrkstep.h',
+    'include/arkode/arkode_mristep_deprecated.h',
     'include/arkode/arkode_mristep.h',
     'include/arkode/arkode_splittingstep.h',
     'include/arkode/arkode_sprk.h',
+    'include/arkode/arkode_sprkstep_deprecated.h',
     'include/arkode/arkode_sprkstep.h',
-    'src/arkode/arkode.c',
     'src/arkode/arkode_adapt.c',
     'src/arkode/arkode_adapt_impl.h',
     'src/arkode/arkode_arkstep.c',
@@ -28,6 +31,7 @@ sundials_arkode_sources = files(
     'src/arkode/arkode_butcher.c',
     'src/arkode/arkode_butcher_dirk.c',
     'src/arkode/arkode_butcher_erk.c',
+    'src/arkode/arkode.c',
     'src/arkode/arkode_erkstep.c',
     'src/arkode/arkode_erkstep_impl.h',
     'src/arkode/arkode_erkstep_io.c',
@@ -42,13 +46,14 @@ sundials_arkode_sources = files(
     'src/arkode/arkode_lsrkstep.c',
     'src/arkode/arkode_lsrkstep_impl.h',
     'src/arkode/arkode_lsrkstep_io.c',
-    'src/arkode/arkode_mri_tables.c',
-    'src/arkode/arkode_mri_tables_impl.h',
     'src/arkode/arkode_mristep.c',
     'src/arkode/arkode_mristep_controller.c',
+    'src/arkode/arkode_mristep_extsts.c',
     'src/arkode/arkode_mristep_impl.h',
     'src/arkode/arkode_mristep_io.c',
     'src/arkode/arkode_mristep_nls.c',
+    'src/arkode/arkode_mri_tables.c',
+    'src/arkode/arkode_mri_tables_impl.h',
     'src/arkode/arkode_relaxation.c',
     'src/arkode/arkode_relaxation_impl.h',
     'src/arkode/arkode_root.c',
@@ -66,30 +71,20 @@ sundials_arkode_sources = files(
     'src/arkode/arkode_user_controller.h',
 )
 
-sunadaptcontroller_sources = files(
-    'include/sunadaptcontroller/sunadaptcontroller_imexgus.h',
-    'include/sunadaptcontroller/sunadaptcontroller_mrihtol.h',
-    'include/sunadaptcontroller/sunadaptcontroller_soderlind.h',
-    'src/sunadaptcontroller/imexgus/sunadaptcontroller_imexgus.c',
-    'src/sunadaptcontroller/mrihtol/sunadaptcontroller_mrihtol.c',
-    'src/sunadaptcontroller/soderlind/sunadaptcontroller_soderlind.c',
-)
-
 sundials_cvode_sources = files(
-    'include/cvode/cvode.h',
     'include/cvode/cvode_bandpre.h',
     'include/cvode/cvode_bbdpre.h',
     'include/cvode/cvode_diag.h',
+    'include/cvode/cvode.h',
     'include/cvode/cvode_ls.h',
     'include/cvode/cvode_proj.h',
-    'src/cvode/cvode.c',
     'src/cvode/cvode_bandpre.c',
     'src/cvode/cvode_bandpre_impl.h',
     'src/cvode/cvode_bbdpre.c',
     'src/cvode/cvode_bbdpre_impl.h',
+    'src/cvode/cvode.c',
     'src/cvode/cvode_diag.c',
     'src/cvode/cvode_diag_impl.h',
-    'src/cvode/cvode_fused_stubs.c',
     'src/cvode/cvode_impl.h',
     'src/cvode/cvode_io.c',
     'src/cvode/cvode_ls.c',
@@ -97,6 +92,7 @@ sundials_cvode_sources = files(
     'src/cvode/cvode_nls.c',
     'src/cvode/cvode_proj.c',
     'src/cvode/cvode_proj_impl.h',
+    'src/cvode/cvode_resize.c',
 )
 
 sundials_nvector_sources = files(
@@ -146,20 +142,54 @@ sundials_sunmatrix_sources = files(
 )
 
 sundials_sunnonlinsol_sources = files(
+    'include/sunnonlinsol/sunnonlinsol_auto.h',
     'include/sunnonlinsol/sunnonlinsol_fixedpoint.h',
     'include/sunnonlinsol/sunnonlinsol_newton.h',
+    'src/sunnonlinsol/auto/sunnonlinsol_auto.c',
     'src/sunnonlinsol/fixedpoint/sunnonlinsol_fixedpoint.c',
     'src/sunnonlinsol/newton/sunnonlinsol_newton.c',
 )
 
+sunadaptcontroller_sources = files(
+    'include/sunadaptcontroller/sunadaptcontroller_imexgus.h',
+    'include/sunadaptcontroller/sunadaptcontroller_mrihtol.h',
+    'include/sunadaptcontroller/sunadaptcontroller_soderlind.h',
+    'src/sunadaptcontroller/imexgus/sunadaptcontroller_imexgus.c',
+    'src/sunadaptcontroller/mrihtol/sunadaptcontroller_mrihtol.c',
+    'src/sunadaptcontroller/soderlind/sunadaptcontroller_soderlind.c',
+)
+
+sundomeigest_sources = files(
+    'include/sundomeigest/sundomeigest_arnoldi.h',
+    'include/sundomeigest/sundomeigest_power.h',
+    'src/sundomeigest/arnoldi/sundomeigest_arnoldi.c',
+    'src/sundomeigest/power/sundomeigest_power.c',
+)
+
+sunadjointcheckpointscheme_sources = files(
+    'include/sunadjointcheckpointscheme/sunadjointcheckpointscheme_fixed.h',
+    'src/sunadjointcheckpointscheme/fixed/sunadjointcheckpointscheme_fixed.c',
+)
+
+sunmemory_sources = files(
+    'include/sunmemory/sunmemory_system.h',
+    'src/sunmemory/system/sundials_system_memory.c',
+)
+
 sundials_sources = files(
+    'include/sundials/priv/sundials_context_impl.h',
+    'include/sundials/priv/sundials_errors_impl.h',
+    'include/sundials/priv/sundials_logger_macros.h',
     'include/sundials/sundials_adaptcontroller.h',
+    'include/sundials/sundials_adjointcheckpointscheme.h',
+    'include/sundials/sundials_adjointstepper.h',
     'include/sundials/sundials_band.h',
     'include/sundials/sundials_config.h',
     'include/sundials/sundials_context.h',
     'include/sundials/sundials_core.h',
     'include/sundials/sundials_dense.h',
     'include/sundials/sundials_direct.h',
+    'include/sundials/sundials_domeigestimator.h',
     'include/sundials/sundials_errors.h',
     'include/sundials/sundials_export.h',
     'include/sundials/sundials_futils.h',
@@ -175,23 +205,33 @@ sundials_sources = files(
     'include/sundials/sundials_profiler.h',
     'include/sundials/sundials_stepper.h',
     'include/sundials/sundials_types.h',
-    'include/sundials/sundials_types_deprecated.h',
     'include/sundials/sundials_version.h',
+    'src/sundials/stl/sunstl_vector.h',
+    'src/sundials/sundatanode/sundatanode_inmem.c',
+    'src/sundials/sundatanode/sundatanode_inmem.h',
     'src/sundials/sundials_adaptcontroller.c',
     'src/sundials/sundials_adiak_metadata.h',
     'src/sundials/sundials_adjointcheckpointscheme.c',
+    'src/sundials/sundials_adjointcheckpointscheme_impl.h',
     'src/sundials/sundials_adjointstepper.c',
+    'src/sundials/sundials_adjointstepper_impl.h',
     'src/sundials/sundials_band.c',
+    'src/sundials/sundials_cli.c',
+    'src/sundials/sundials_cli.h',
     'src/sundials/sundials_context.c',
+    'src/sundials/sundials_datanode.c',
+    'src/sundials/sundials_datanode.h',
     'src/sundials/sundials_debug.h',
     'src/sundials/sundials_dense.c',
     'src/sundials/sundials_direct.c',
+    'src/sundials/sundials_domeigestimator.c',
     'src/sundials/sundials_errors.c',
     'src/sundials/sundials_futils.c',
     'src/sundials/sundials_hashmap.c',
     'src/sundials/sundials_hashmap_impl.h',
     'src/sundials/sundials_iterative.c',
     'src/sundials/sundials_iterative_impl.h',
+    'src/sundials/sundials_lapack_defs.h',
     'src/sundials/sundials_linearsolver.c',
     'src/sundials/sundials_logger.c',
     'src/sundials/sundials_logger_impl.h',
@@ -203,14 +243,12 @@ sundials_sources = files(
     'src/sundials/sundials_nvector.c',
     'src/sundials/sundials_nvector_senswrapper.c',
     'src/sundials/sundials_profiler.c',
+    'src/sundials/sundials_profiler_impl.h',
     'src/sundials/sundials_stepper.c',
     'src/sundials/sundials_stepper_impl.h',
-    'src/sundials/sundials_sycl.h',
     'src/sundials/sundials_utils.h',
     'src/sundials/sundials_version.c',
-    'src/sundials/sundials_version.c',
 )
-
 inc = include_directories('include')
 src_sundials = include_directories('src/sundials')
 
@@ -226,6 +264,9 @@ libsundials = static_library(
         sundials_sunmatrix_sources,
         sundials_sunnonlinsol_sources,
         sunadaptcontroller_sources,
+        sundomeigest_sources,
+        sunadjointcheckpointscheme_sources,
+        sunmemory_sources,
         sundials_sources,
     ],
     dependencies: [omp_c],
@@ -235,3 +276,7 @@ libsundials = static_library(
     c_args: sundials_c_args,
     override_options: ['b_coverage=false'],
 )
+
+# libnumcosmo does not export SUNDIALS symbols; an executable that calls SUNDIALS
+# directly links this static library.
+sundials_dep = declare_dependency(link_with: libsundials, include_directories: inc)

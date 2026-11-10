@@ -32,9 +32,9 @@
  * chosen by #NcmStatsDistKDE:cov-type: the sample covariance of the points that carry the
  * kernels, a fixed matrix (#NcmStatsDistKDE:cov-fixed), the diagonal of the squared Qn
  * scale estimates, or the orthogonalized Gnanadesikan-Kettenring robust covariance. A
- * matrix that is not positive definite to rounding is replaced by the nearest one that
- * is, with a warning, and one that cannot be repaired in #NcmStatsDistKDE:nearPD-maxiter
- * iterations aborts. The bandwidth is #NcmStatsDist:over-smooth times the kernel rule of
+ * matrix that is not positive definite to rounding is replaced, with a warning, by the
+ * repaired matrix of ncm_matrix_cholesky_decomp_nearPD(), and one with a variance that is
+ * not positive aborts. The bandwidth is #NcmStatsDist:over-smooth times the kernel rule of
  * thumb, ncm_stats_dist_kernel_get_rot_bandwidth(). With a Gaussian kernel,
  * #NCM_STATS_DIST_CV_LOO evaluates its objective in closed form.
  *
@@ -122,6 +122,7 @@ ncm_stats_dist_kde_init (NcmStatsDistKDE *sdkde)
   NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   self->sample            = NULL;
+  self->rows              = NULL;
   self->cov_type          = NCM_STATS_DIST_KDE_COV_TYPE_LEN;
   self->cov               = NULL;
   self->cov_fixed         = NULL;
@@ -201,6 +202,7 @@ _ncm_stats_dist_kde_dispose (GObject *object)
   NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
   ncm_stats_vec_clear (&self->sample);
+  ncm_stats_rows_clear (&self->rows);
   ncm_matrix_clear (&self->cov);
   ncm_matrix_clear (&self->cov_fixed);
   ncm_matrix_clear (&self->cov_fixed_decomp);
@@ -249,15 +251,16 @@ ncm_stats_dist_kde_class_init (NcmStatsDistKDEClass *klass)
   /**
    * NcmStatsDistKDE:nearPD-maxiter:
    *
-   * Maximum number of iterations of the nearest positive definite matrix search applied
-   * to a covariance that is not positive definite to rounding. Default: 200.
+   * Ignored: the repair of a covariance that is not positive definite to rounding,
+   * ncm_matrix_cholesky_decomp_nearPD(), does not iterate. Deprecated, dropped in 1.0.
+   * Setting a value other than the default emits a warning once per process.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_NEARPD_MAXITER,
                                    g_param_spec_uint ("nearPD-maxiter",
                                                       NULL,
-                                                      "Maximum number of iterations in the nearPD call",
+                                                      "Ignored, deprecated",
                                                       1, G_MAXUINT, 200,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -315,6 +318,7 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
     ncm_stats_vec_clear (&self->sample);
+    ncm_stats_rows_clear (&self->rows);
 
     ncm_matrix_clear (&self->cov);
     ncm_matrix_clear (&self->cov_decomp);
@@ -325,7 +329,8 @@ _ncm_stats_dist_kde_set_dim (NcmStatsDist *sd, const guint dim)
     ncm_matrix_clear (&self->invUcenter_matrix);
     g_ptr_array_set_size (self->invUcenter_array, 0);
 
-    self->sample      = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, TRUE);
+    self->sample      = ncm_stats_vec_new (dim, NCM_STATS_VEC_COV, FALSE);
+    self->rows        = ncm_stats_rows_new (dim);
     self->cov         = ncm_matrix_new (dim, dim);
     self->cov_decomp  = ncm_matrix_new (dim, dim);
     self->cov_decomp0 = ncm_matrix_new (dim, dim);
@@ -357,7 +362,7 @@ _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
     {
       NcmMatrix *cov = ncm_stats_vec_peek_cov_matrix (self->sample, 0);
 
-      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the sample covariance");
+      _ncm_stats_dist_cholesky (self->cov_decomp, cov, "the sample covariance");
       ncm_matrix_memcpy (self->cov, cov);
       break;
     }
@@ -374,24 +379,21 @@ _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
       break;
     }
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST_DIAG:
-    {
-      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_diag (self->sample);
+      ncm_stats_rows_set_rows (self->rows, sample_array);
+      ncm_stats_rows_set_nrows (self->rows, pself->n_kernels);
+      ncm_stats_rows_cov_robust_diag (self->rows, self->cov);
+      ncm_stats_rows_reset (self->rows);
 
-      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the robust diagonal covariance");
-      ncm_matrix_memcpy (self->cov, cov);
-      ncm_matrix_free (cov);
-
+      _ncm_stats_dist_cholesky (self->cov_decomp, self->cov, "the robust diagonal covariance");
       break;
-    }
     case NCM_STATS_DIST_KDE_COV_TYPE_ROBUST:
-    {
-      NcmMatrix *cov = ncm_stats_vec_compute_cov_robust_ogk (self->sample);
+      ncm_stats_rows_set_rows (self->rows, sample_array);
+      ncm_stats_rows_set_nrows (self->rows, pself->n_kernels);
+      ncm_stats_rows_cov_robust_ogk (self->rows, self->cov);
+      ncm_stats_rows_reset (self->rows);
 
-      _ncm_stats_dist_cholesky (self->cov_decomp, cov, self->nearPD_maxiter, "the robust covariance");
-      ncm_matrix_memcpy (self->cov, cov);
-      ncm_matrix_free (cov);
-    }
-    break;
+      _ncm_stats_dist_cholesky (self->cov_decomp, self->cov, "the robust covariance");
+      break;
     default:
       g_assert_not_reached ();
       break;
@@ -452,7 +454,7 @@ _ncm_stats_dist_kde_prepare_shapes (NcmStatsDist *sd, GPtrArray *sample_array)
     NcmMatrix *C_decomp = pself->sample_decomp;
     NcmMatrix *mean_cov = pself->kernel_cov;
 
-    _ncm_stats_dist_cholesky (C_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), self->nearPD_maxiter, "the sample covariance");
+    _ncm_stats_dist_cholesky (C_decomp, ncm_stats_vec_peek_cov_matrix (self->sample, 0), "the sample covariance");
     ncm_matrix_memcpy (mean_cov, self->cov);
 
     ncm_matrix_memcpy (self->cov_decomp0, self->cov_decomp);
@@ -799,7 +801,7 @@ ncm_stats_dist_kde_clear (NcmStatsDistKDE **sdkde)
  * @sdkde: a #NcmStatsDistKDE
  * @maxiter: maximum number of iterations
  *
- * Sets #NcmStatsDistKDE:nearPD-maxiter.
+ * Sets #NcmStatsDistKDE:nearPD-maxiter, which is ignored. Deprecated, dropped in 1.0.
  *
  */
 void
@@ -807,12 +809,27 @@ ncm_stats_dist_kde_set_nearPD_maxiter (NcmStatsDistKDE *sdkde, const guint maxit
 {
   NcmStatsDistKDEPrivate * const self = ncm_stats_dist_kde_get_instance_private (sdkde);
 
+  if (maxiter != 200)
+  {
+    static gsize warned = 0;
+
+    /* Deprecated, dropped in 1.0; warned once per process. */
+    if (g_once_init_enter (&warned))
+    {
+      g_warning ("NcmStatsDistKDE:nearPD-maxiter is deprecated and dropped in 1.0: it is ignored, "
+                 "the covariance repair does not iterate.");
+      g_once_init_leave (&warned, 1);
+    }
+  }
+
   self->nearPD_maxiter = maxiter;
 }
 
 /**
  * ncm_stats_dist_kde_get_nearPD_maxiter:
  * @sdkde: a #NcmStatsDistKDE
+ *
+ * Deprecated, dropped in 1.0.
  *
  * Returns: #NcmStatsDistKDE:nearPD-maxiter.
  */
@@ -840,7 +857,7 @@ ncm_stats_dist_kde_set_cov_type (NcmStatsDistKDE *sdkde, NcmStatsDistKDECovType 
   self->cov_type = cov_type;
 
   if ((self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED) && (self->cov_fixed != NULL))
-    _ncm_stats_dist_cholesky (self->cov_fixed_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
+    _ncm_stats_dist_cholesky (self->cov_fixed_decomp, self->cov_fixed, "the fixed covariance");
 }
 
 /**
@@ -882,7 +899,7 @@ ncm_stats_dist_kde_set_cov_fixed (NcmStatsDistKDE *sdkde, NcmMatrix *cov_fixed)
   self->cov_fixed_decomp = ncm_matrix_new (pself->d, pself->d);
 
   if (self->cov_type == NCM_STATS_DIST_KDE_COV_TYPE_FIXED)
-    _ncm_stats_dist_cholesky (self->cov_fixed_decomp, self->cov_fixed, self->nearPD_maxiter, "the fixed covariance");
+    _ncm_stats_dist_cholesky (self->cov_fixed_decomp, self->cov_fixed, "the fixed covariance");
 }
 
 /**

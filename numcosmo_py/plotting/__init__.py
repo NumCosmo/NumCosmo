@@ -148,33 +148,18 @@ class CatalogData:
 def mcat_to_catalog_data(
     mcat: Ncm.MSetCatalog,
     name: str,
-    burnin: int = 0,
-    thin: int = 1,
     indices: npt.NDArray[np.int64] | Sequence[int] | None = None,
 ) -> CatalogData:
     """Convert a Ncm.MSetCatalog to a set of numpy arrays."""
     nchains: int = mcat.nchains()
     max_time: int = mcat.max_time()
 
-    if burnin % nchains != 0:
-        warnings.warn(
-            f"Burnin ({burnin}) is not a multiple of nchains ({nchains}). "
-            f"Burnin will be rounded down."
-        )
-    burnin_steps = burnin // nchains
-    if burnin_steps >= max_time:
-        raise ValueError("Burnin is greater than the number of steps.")
-
-    assert thin >= 1
-    # We are thinning by thin, but in such a way that the last sample is included in the
-    # final set of samples, that is why we start at burnin_steps + (max_time -
-    # burnin_steps - 1) % thin, instead of burnin_steps.
+    # Burn-in and thinning belong to the catalog (ncm_mset_catalog_new_from_storage_full()):
+    # its rows are already the kept ones.
     rows: np.ndarray = np.array(
         [
             mcat.peek_row(i * nchains + j).dup_array()
-            for i in range(
-                burnin_steps + (max_time - burnin_steps - 1) % thin, max_time, thin
-            )
+            for i in range(max_time)
             for j in range(nchains)
         ]
     )

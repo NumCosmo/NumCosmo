@@ -27,6 +27,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <gsl/gsl_integration.h>
 #include <gsl/gsl_errno.h>
 
 #include <glib.h>
@@ -108,6 +109,15 @@ static void test_ncm_spline_cubic_notaknot_extrapolates (void);
 static void test_ncm_spline_gsl_domain_nan (void);
 static void test_ncm_spline_integ_reversed (void);
 static void test_ncm_spline_curvature_norms (void);
+static void test_ncm_spline_curvature_d2_lp_residuals (void);
+static void test_ncm_spline_curvature_d2_lp_residuals_negative_weight (void);
+static void test_ncm_spline_curvature_d2_lp_residuals_negative_weight_subprocess (void);
+static void test_ncm_spline_curvature_d2_lp_residuals_odd_p (void);
+static void test_ncm_spline_curvature_d2_lp_residuals_odd_p_subprocess (void);
+static NcmSpline *_test_ncm_spline_curvature_random (NcmRNG *rng, const guint n, const gdouble offset);
+static gdouble _test_ncm_spline_weighted_d2_lp (NcmSpline *s, NcmSpline *w, const guint p, const gdouble xi, const gdouble xf);
+static gdouble _test_ncm_spline_residuals_f2 (NcmSpline *s, NcmSpline *w, const guint p, const gdouble xi, const gdouble xf);
+static gint _test_ncm_spline_cmp_double (gconstpointer a, gconstpointer b);
 static void test_ncm_spline_notaknot_repeated_knot (void);
 static void test_ncm_spline_notaknot_repeated_knot_subprocess (void);
 static void test_ncm_spline_cubic_d2_set_d2 (void);
@@ -182,6 +192,11 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spline_gsl/domain_nan", &test_ncm_spline_gsl_domain_nan);
   g_test_add_func ("/ncm/spline/integ_reversed", &test_ncm_spline_integ_reversed);
   g_test_add_func ("/ncm/spline/curvature_norms", &test_ncm_spline_curvature_norms);
+  g_test_add_func ("/ncm/spline/curvature_d2_lp_residuals", &test_ncm_spline_curvature_d2_lp_residuals);
+  g_test_add_func ("/ncm/spline/curvature_d2_lp_residuals/negative_weight", &test_ncm_spline_curvature_d2_lp_residuals_negative_weight);
+  g_test_add_func ("/ncm/spline/curvature_d2_lp_residuals/negative_weight/subprocess", &test_ncm_spline_curvature_d2_lp_residuals_negative_weight_subprocess);
+  g_test_add_func ("/ncm/spline/curvature_d2_lp_residuals/odd_p", &test_ncm_spline_curvature_d2_lp_residuals_odd_p);
+  g_test_add_func ("/ncm/spline/curvature_d2_lp_residuals/odd_p/subprocess", &test_ncm_spline_curvature_d2_lp_residuals_odd_p_subprocess);
   g_test_add_func ("/ncm/spline_cubic_notaknot/repeated_knot", &test_ncm_spline_notaknot_repeated_knot);
   g_test_add_func ("/ncm/spline_cubic_notaknot/repeated_knot/subprocess", &test_ncm_spline_notaknot_repeated_knot_subprocess);
   g_test_add_func ("/ncm/spline_cubic_d2/set_d2", &test_ncm_spline_cubic_d2_set_d2);
@@ -1785,6 +1800,238 @@ test_ncm_spline_curvature_norms (void)
     ncm_spline_free (s);
     ncm_spline_free (w);
   }
+}
+
+/* A not-a-knot spline through n random values on knots spread over [0, 1], plus @offset. */
+static NcmSpline *
+_test_ncm_spline_curvature_random (NcmRNG *rng, const guint n, const gdouble offset)
+{
+  NcmVector *xv = ncm_vector_new (n);
+  NcmVector *yv = ncm_vector_new (n);
+  NcmSpline *s;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble jitter = (i == 0 || i == n - 1) ? 0.0 : ncm_rng_uniform_gen (rng, -0.3, 0.3);
+
+    ncm_vector_set (xv, i, (i + jitter) / (n - 1.0));
+    ncm_vector_set (yv, i, offset + ncm_rng_uniform_gen (rng, -1.0, 1.0));
+  }
+
+  s = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+
+  return s;
+}
+
+static gint
+_test_ncm_spline_cmp_double (gconstpointer a, gconstpointer b)
+{
+  const gdouble x = *(const gdouble *) a;
+  const gdouble y = *(const gdouble *) b;
+
+  return (x > y) - (x < y);
+}
+
+/*
+ * N_p^p of s'' weighted by w from a 20-point Gauss-Legendre rule on each piece between
+ * the knots of s and w: exact to degree 39, so exact for cubic s and w and p <= 36.
+ */
+static gdouble
+_test_ncm_spline_weighted_d2_lp (NcmSpline *s, NcmSpline *w, const guint p, const gdouble xi, const gdouble xf)
+{
+  gsl_integration_glfixed_table *t = gsl_integration_glfixed_table_alloc (20);
+  NcmVector *xv                    = ncm_spline_peek_xv (s);
+  NcmVector *wv                    = ncm_spline_peek_xv (w);
+  GArray *br                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble num                      = 0.0;
+  gdouble den                      = 0.0;
+  guint i, q;
+
+  g_array_append_val (br, xi);
+  g_array_append_val (br, xf);
+
+  for (i = 0; i < ncm_vector_len (xv); i++)
+    if ((ncm_vector_get (xv, i) > xi) && (ncm_vector_get (xv, i) < xf))
+      g_array_append_val (br, ncm_vector_ptr (xv, i)[0]);
+
+  for (i = 0; i < ncm_vector_len (wv); i++)
+    if ((ncm_vector_get (wv, i) > xi) && (ncm_vector_get (wv, i) < xf))
+      g_array_append_val (br, ncm_vector_ptr (wv, i)[0]);
+
+  g_array_sort (br, &_test_ncm_spline_cmp_double);
+
+  for (i = 0; i + 1 < br->len; i++)
+  {
+    const gdouble a = g_array_index (br, gdouble, i);
+    const gdouble b = g_array_index (br, gdouble, i + 1);
+
+    if (b <= a)
+      continue;
+
+    for (q = 0; q < 20; q++)
+    {
+      gdouble x, wq;
+
+      gsl_integration_glfixed_point (a, b, q, &x, &wq, t);
+      num += wq * ncm_spline_eval (w, x) * gsl_pow_int (ncm_spline_curvature_density (s, NCM_SPLINE_CURVATURE_D2, x), p);
+      den += wq * ncm_spline_eval (w, x);
+    }
+  }
+
+  g_array_unref (br);
+  gsl_integration_glfixed_table_free (t);
+
+  return num / den;
+}
+
+/* Sum of squares of the residuals of s'' at order p, weighted by w when not NULL. */
+static gdouble
+_test_ncm_spline_residuals_f2 (NcmSpline *s, NcmSpline *w, const guint p, const gdouble xi, const gdouble xf)
+{
+  const guint len = ncm_spline_curvature_d2_lp_residuals_len (s, w, p, xi, xf);
+  GArray *f       = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+  gdouble f2      = 0.0;
+  guint k;
+
+  g_array_set_size (f, len);
+  ncm_spline_curvature_d2_lp_residuals (s, w, p, xi, xf, &g_array_index (f, gdouble, 0));
+
+  for (k = 0; k < len; k++)
+  {
+    g_assert_true (gsl_finite (g_array_index (f, gdouble, k)));
+    f2 += gsl_pow_2 (g_array_index (f, gdouble, k));
+  }
+
+  g_array_unref (f);
+
+  return f2;
+}
+
+/*
+ * The residuals reproduce N_p^2 of s'' for p = 2 and 10: exactly for x^3, where
+ * N_p^p = 6^p / (p + 1) on [0, 1], unweighted and with the cubic weight
+ * W = 1 + x + x^2 + x^3 on other knots, where N_p^p = 6^p sum_j 1 / (p + 1 + j) / (25 / 12);
+ * for random splines, to an exact Gauss-Legendre reference, unweighted (to the 1e-10 of
+ * ncm_spline_curvature_lp_norm() as well) and weighted, over the whole range and over
+ * part of it; and as zeros, not NaN, for a spline with s'' = 0.
+ */
+static void
+test_ncm_spline_curvature_d2_lp_residuals (void)
+{
+  const guint ps[]          = {2, 10};
+  const gdouble range[2][2] = {
+    {
+      0.0, 1.0
+    }, {
+      0.07, 0.83
+    }
+  };
+  NcmRNG *rng     = ncm_rng_seeded_new (NULL, 20261022);
+  NcmSpline *cube = _test_ncm_spline_cube (1.0);
+  NcmSpline *flat = _test_ncm_spline_cube (0.0);
+  NcmSpline *wcub;
+  guint pi, t, r, k;
+
+  {
+    NcmVector *xv = ncm_vector_new (7);
+    NcmVector *yv = ncm_vector_new (7);
+
+    for (k = 0; k < 7; k++)
+    {
+      const gdouble x = k / 6.0;
+
+      ncm_vector_set (xv, k, x);
+      ncm_vector_set (yv, k, 1.0 + x + x * x + x * x * x);
+    }
+
+    wcub = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+  }
+
+  g_assert_cmpuint (ncm_spline_curvature_d2_lp_residuals_len (cube, NULL, 2, 0.0, 1.0), ==, 2 * 10);
+  g_assert_cmpuint (ncm_spline_curvature_d2_lp_residuals_len (cube, NULL, 10, 0.0, 1.0), ==, 6 * 10);
+  /* Knots 0.1 i and i / 6 share 0.5: 13 interior knots, 14 pieces. */
+  g_assert_cmpuint (ncm_spline_curvature_d2_lp_residuals_len (cube, wcub, 10, 0.0, 1.0), ==, 7 * 14);
+
+  for (pi = 0; pi < G_N_ELEMENTS (ps); pi++)
+  {
+    const guint p      = ps[pi];
+    const gdouble Np_p = gsl_pow_int (6.0, p) / (p + 1.0);
+    const gdouble Nw_p = gsl_pow_int (6.0, p) * (1.0 / (p + 1.0) + 1.0 / (p + 2.0) + 1.0 / (p + 3.0) + 1.0 / (p + 4.0)) / (25.0 / 12.0);
+
+    ncm_assert_cmpdouble_e (_test_ncm_spline_residuals_f2 (cube, NULL, p, 0.0, 1.0), ==, pow (Np_p, 2.0 / p), 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (_test_ncm_spline_residuals_f2 (cube, wcub, p, 0.0, 1.0), ==, pow (Nw_p, 2.0 / p), 1.0e-14, 0.0);
+    g_assert_cmpfloat (_test_ncm_spline_residuals_f2 (flat, NULL, p, 0.0, 1.0), ==, 0.0);
+
+    for (t = 0; t < 10; t++)
+    {
+      NcmSpline *s = _test_ncm_spline_curvature_random (rng, 9, 0.0);
+      NcmSpline *w = _test_ncm_spline_curvature_random (rng, 7, 3.0);
+      NcmSpline *u = _test_ncm_spline_curvature_random (rng, 6, 0.0);
+
+      /* A constant weight on its own knots. */
+      ncm_vector_set_all (ncm_spline_peek_yv (u), 1.0);
+      ncm_spline_prepare (u);
+
+      for (r = 0; r < 2; r++)
+      {
+        const gdouble xi = range[r][0];
+        const gdouble xf = range[r][1];
+        const gdouble np = ncm_spline_curvature_lp_norm (s, NCM_SPLINE_CURVATURE_D2, p, xi, xf);
+
+        ncm_assert_cmpdouble_e (_test_ncm_spline_residuals_f2 (s, NULL, p, xi, xf), ==, pow (_test_ncm_spline_weighted_d2_lp (s, u, p, xi, xf), 2.0 / p), 1.0e-12, 0.0);
+        ncm_assert_cmpdouble_e (_test_ncm_spline_residuals_f2 (s, NULL, p, xi, xf), ==, np * np, 1.0e-10, 0.0);
+        ncm_assert_cmpdouble_e (_test_ncm_spline_residuals_f2 (s, w, p, xi, xf), ==, pow (_test_ncm_spline_weighted_d2_lp (s, w, p, xi, xf), 2.0 / p), 1.0e-12, 0.0);
+      }
+
+      ncm_spline_free (s);
+      ncm_spline_free (w);
+      ncm_spline_free (u);
+    }
+  }
+
+  ncm_spline_free (wcub);
+  ncm_spline_free (flat);
+  ncm_spline_free (cube);
+  ncm_rng_free (rng);
+}
+
+static void
+test_ncm_spline_curvature_d2_lp_residuals_negative_weight (void)
+{
+  g_test_trap_subprocess ("/ncm/spline/curvature_d2_lp_residuals/negative_weight/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*negative weight*");
+}
+
+static void
+test_ncm_spline_curvature_d2_lp_residuals_negative_weight_subprocess (void)
+{
+  NcmSpline *s = _test_ncm_spline_cube (1.0);
+  NcmSpline *w = _test_ncm_spline_cube (-1.0);
+  gdouble f[3 * 10];
+
+  ncm_spline_curvature_d2_lp_residuals (s, w, 2, 0.0, 1.0, f);
+}
+
+static void
+test_ncm_spline_curvature_d2_lp_residuals_odd_p (void)
+{
+  g_test_trap_subprocess ("/ncm/spline/curvature_d2_lp_residuals/odd_p/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the order p = 3 must be even and positive*");
+}
+
+static void
+test_ncm_spline_curvature_d2_lp_residuals_odd_p_subprocess (void)
+{
+  NcmSpline *s = _test_ncm_spline_cube (1.0);
+
+  ncm_spline_curvature_d2_lp_residuals_len (s, NULL, 3, 0.0, 1.0);
 }
 
 static void

@@ -96,7 +96,7 @@ _test_ncm_fit_esmcmc_walker_posterior (NcmFitESMCMCWalker *walker)
   esmcmc = ncm_fit_esmcmc_new (fit, nwalkers, NCM_MSET_TRANS_KERN (init), walker, NCM_FIT_RUN_MSGS_NONE);
   ncm_fit_esmcmc_set_rng (esmcmc, rng);
 
-  ncm_fit_esmcmc_start_run (esmcmc);
+  ncm_fit_esmcmc_start_run (esmcmc, NULL);
   ncm_fit_esmcmc_run (esmcmc, niter);
   ncm_fit_esmcmc_end_run (esmcmc);
 

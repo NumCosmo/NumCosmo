@@ -12,7 +12,6 @@ dependencies:
   # camb uses. Drop the pin once camb ships gcc 15 builds.
   - c-compiler <2
   - cfitsio
-  - click
   - coverage
   - fftw
   - fortran-compiler <2  # see the c-compiler note above
@@ -26,12 +25,14 @@ dependencies:
   - gsl>=2.8
   - hdf5
   - healpy
+  - ipython
   - jupyter
   - lcov
   - libflint
   - matplotlib-base
   - meson
   - mpfr
+  - mpmath
   - mypy
   - networkx
   - ninja

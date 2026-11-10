@@ -158,15 +158,6 @@ def run_esmcmc() -> None:
         fit, nwalkers, init_sampler, apes, Ncm.FitRunMsgs.SIMPLE, mfunc_oa
     )
 
-    #
-    # These methods enable the auto-trim options on ESMCMC. This option
-    # makes the sampler check the chains' health and trim any unnecessary
-    # burn-in part. We set the number of divisions to 100 so we test the
-    # chains in blocks of n/100. The last method asserts that each 2min
-    # the catalog will be checked.
-    #
-    # esmcmc.set_auto_trim(True)
-    # esmcmc.set_auto_trim_div(100)
     esmcmc.set_max_runs_time(2.0 * 60.0)
     esmcmc.set_use_threads(True)
 
@@ -174,7 +165,7 @@ def run_esmcmc() -> None:
     # Using `example_esmcmc_out.fits' as the catalog file, if there
     # is already data in it, the sampler continues from where it stopped.
     #
-    esmcmc.set_data_file("example_esmcmc_out.fits")
+    esmcmc.set_storage(Ncm.MSetCatalogStorageFits.new("example_esmcmc_out.fits", False))
 
     #
     # Running the esmcmc, it will first calculate 1000 points, after that

@@ -50,9 +50,7 @@
 #include <glib/gstdio.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
-#ifdef HAVE_CFITSIO
 #include <fitsio.h>
-#endif /* HAVE_CFITSIO */
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit.h>
@@ -983,10 +981,7 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
         } G_STMT_END
 
 
-#ifdef HAVE_CFITSIO
 static void nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr);
-
-#endif /* HAVE_CFITSIO */
 
 static void _nc_data_snia_cov_load_snia_data_V01 (NcDataSNIACov *snia_cov, const gchar *filename);
 static void _nc_data_snia_cov_load_snia_data_V2 (NcDataSNIACov *snia_cov, const gchar *filename);
@@ -1364,11 +1359,7 @@ nc_data_snia_cov_new_from_cat_id (NcDataSNIAId id, gboolean use_norma)
   NcDataSNIACov *snia_cov = NULL;
   gchar *full_filename    = nc_data_snia_cov_get_catalog_by_id (id);
 
-#ifdef HAVE_CFITSIO
   snia_cov = nc_data_snia_cov_new_full (full_filename, FALSE);
-#else
-  g_error ("nc_data_snia_cov_new_from_cat_id: catalog load not available, recompile "PACKAGE_NAME " with cfitsio support.");
-#endif /* HAVE_CFITSIO */
   g_free (full_filename);
 
   return snia_cov;
@@ -3107,8 +3098,6 @@ _nc_data_snia_cov_matrix_to_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov, g
   ncm_matrix_clear (&subcov);
 }
 
-#ifdef HAVE_CFITSIO
-
 static void
 nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
 {
@@ -3472,8 +3461,6 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
 
   return;
 }
-
-#endif /* HAVE_CFITSIO */
 
 static void
 _nc_data_snia_cov_restore_full_cov (NcDataSNIACov *snia_cov)
@@ -3919,6 +3906,10 @@ static const gchar *_nc_data_snia_cats[] = {
   "snia_pantheon_plus_sh0es_statonly.fits",
   "snia_des_y5_statonly.fits",
   "snia_des_y5_stat_sys.fits",
+  "snia_des_dovekie_statonly.fits",
+  "snia_des_dovekie_stat_sys.fits",
+  "snia_pantheon_plus_sh0es_hoyt26.fits",
+  "snia_pantheon_plus_sh0es_hoyt26_statonly.fits",
 };
 
 /**

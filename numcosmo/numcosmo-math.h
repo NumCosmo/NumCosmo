@@ -60,6 +60,7 @@
 #include <numcosmo/ncm/integration/ncm_integral_nd.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
 #include <numcosmo/ncm/stats/ncm_stats_acorr.h>
+#include <numcosmo/ncm/stats/ncm_stats_rows.h>
 #include <numcosmo/ncm/stats/ncm_stats_vec.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d.h>
 #include <numcosmo/ncm/stats/ncm_stats_dist1d_spline.h>
@@ -159,6 +160,10 @@
 #include <numcosmo/ncm/fit/ncm_fit_gsl_mm.h>
 #include <numcosmo/ncm/fit/ncm_fit_gsl_mms.h>
 #include <numcosmo/ncm/fit/ncm_mset_catalog.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_desc.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_storage.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_storage_fits.h>
+#include <numcosmo/ncm/fit/ncm_mset_catalog_storage_memory.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern_flat.h>
 #include <numcosmo/ncm/fit/ncm_mset_trans_kern_gauss.h>

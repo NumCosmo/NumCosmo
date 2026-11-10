@@ -524,23 +524,21 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
 
     assert s_dist_model["sigma"] == pop_dist[1]["sigma"]
 
-    bound = 1.0 + 6.0 * (
-        pop_dist[1]["sigma"] ** 2 + shape_factor[1]["std_noise"] ** 2
-    ) ** (1 / 2)
-
     for i in range(obs.len()):
-        assert abs(obs.get("epsilon_obs_1", i)) <= max(bound, 1.5)
-        assert abs(obs.get("epsilon_obs_2", i)) <= max(bound, 1.5)
-        assert obs.get("std_noise", i) <= 0.5
-        assert abs(obs.get("c1", i)) <= 6.0 * shape_factor[1]["c1_sigma"]
-        assert abs(obs.get("c2", i)) <= 6.0 * shape_factor[1]["c2_sigma"]
+        std_noise = obs.get("std_noise", i)
+        c1 = obs.get("c1", i)
+        c2 = obs.get("c2", i)
+
+        assert std_noise <= 0.5
+        assert abs(c1) <= 6.0 * shape_factor[1]["c1_sigma"]
+        assert abs(c2) <= 6.0 * shape_factor[1]["c2_sigma"]
         assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_factor[1]["m_sigma"]
 
-        if scheme == ShapeFactorGen.VAR_ADD.value:
-            # A single global sigma, no per-galaxy intrinsic-width draw, so
-            # the bound above is exact rather than a generous stand-in.
-            assert abs(obs.get("epsilon_obs_1", i)) <= bound
-            assert abs(obs.get("epsilon_obs_2", i)) <= bound
+        # The sheared intrinsic ellipticity has modulus at most 1; c enters
+        # through the shear (background) or additively (foreground), and the
+        # noise is Gaussian with this galaxy's own std_noise.
+        assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + abs(c1) + 6.0 * std_noise
+        assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + abs(c2) + 6.0 * std_noise
 
 
 def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_factor_bad):

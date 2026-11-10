@@ -1,14 +1,70 @@
-## Creating New Releases
+# Releasing NumCosmo
 
-The following steps should be followed to create a new release of NumCosmo:
+The steps below release version `X.Y.Z`.
 
-- Update the version number in `meson.build`, `pyproject.toml`, and `tests/python/ncm/core/test_cfg.py`.
-- Update the changelog using the command using the shell, e.g., `bash generate-changelog.sh > ChangeLog.md`.
-- Adjust ChangeLog.md so to add \[vX.X.X\] below \[Current\] to reflect the new version.
-- Commit changes to `meson.build`, `pyproject.toml`, `tests/python/core/test_cfg.py`, and `ChangeLog.md`.
-- Create a new tag, e.g., `git tag -a -s v0.24.0 -m "New version v0.24.0."`.
-- Push changes to GitHub, e.g., `git push --follow-tags origin master`.
-- Create a new release on GitHub, e.g., https://github.com/numcosmo/numcosmo/releases/new
-  - Create the release package, for example, if the build directory is `build`, use `meson dist -C build --no-tests`
-  - Upload the release package to GitHub.
-  
+## 1. Check master
+
+- CI on master is green and every open pull request is merged or left for the next release.
+- Every data file the tests use is on the `datafile-release-v1.0.0` release.
+  `python3 .github/scripts/prefetch_data.py` prints their paths; it skips files already in the
+  local data directory, so compare the names with
+  `gh release view datafile-release-v1.0.0 --json assets --jq '.assets[].name'`.
+- `python3 .github/scripts/check_deps.py feedstock` passes. Packages it reports go into the
+  conda-forge recipe in step 4.
+
+## 2. Bump the version in a branch
+
+```bash
+git checkout master && git pull
+git checkout -b release-X.Y.Z
+```
+
+Set the version in these three files:
+
+| file | line |
+|---|---|
+| `meson.build` | `version: 'X.Y.Z',` |
+| `pyproject.toml` | `version = 'X.Y.Z'` |
+| `tests/python/ncm/core/test_cfg.py` | `VERSION_MAJOR`, `VERSION_MINOR`, `VERSION_MICRO` |
+
+Everything else (the library soname, the C version macros, the documentation) is derived from
+`meson.build`.
+
+Regenerate the ChangeLog; with the version argument the commits since the last tag are listed
+under `[vX.Y.Z]`:
+
+```bash
+bash generate-changelog.sh X.Y.Z > ChangeLog.md
+```
+
+Commit as `Release version X.Y.Z`, open a pull request and merge it once CI passes.
+
+## 3. Tag and publish
+
+Tag the merged commit on master and push the tag:
+
+```bash
+git checkout master && git pull
+git tag -a -s vX.Y.Z -m "New version vX.Y.Z."
+git push origin vX.Y.Z
+```
+
+Build the tarball from a configured build directory and publish the GitHub release with it:
+
+```bash
+meson dist -C build --no-tests
+gh release create vX.Y.Z build/meson-dist/numcosmo-X.Y.Z.tar.xz --verify-tag --title "NumCosmo vX.Y.Z"
+```
+
+## 4. Update conda-forge
+
+After the GitHub release, the conda-forge bot opens a version pull request on
+`conda-forge/numcosmo-feedstock`. To get it at once, open an issue on the feedstock titled
+`@conda-forge-admin, please update version`. In that pull request:
+
+- the version and the `sha256` match the published tarball, and the build number is 0;
+- the `run` requirements include the packages `check_deps.py feedstock` reported in step 1;
+- the test import line in `recipe/meta.yaml` lists every `numcosmo_py` subpackage, and the test
+  list in `recipe/build.sh` names only tests present in this version.
+
+Merge it once its CI passes.

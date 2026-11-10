@@ -37,7 +37,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_DERIVABLE_TYPE (NcmPriorGauss, ncm_prior_gauss, NCM, PRIOR_GAUSS, NcmPrior)
 
-typedef gdouble (*NcmPriorGaussMean) (NcmPriorGauss *pg, NcmMSet *mset);
+typedef void (*NcmPriorGaussMean) (NcmPriorGauss *pg, NcmMSet *mset, gdouble *x);
 
 struct _NcmPriorGaussClass
 {

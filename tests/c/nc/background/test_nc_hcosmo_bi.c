@@ -75,6 +75,7 @@ void test_nc_hcosmo_bi_lcdm (TestNcHCosmoBI *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_ode (TestNcHCosmoBI *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_valid (TestNcHCosmoBI *test, gconstpointer pdata);
 void test_nc_hcosmo_bi_functions (TestNcHCosmoBI *test, gconstpointer pdata);
+void test_nc_hcosmo_bi_orientation (TestNcHCosmoBI *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -106,6 +107,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/hcosmo_bi/functions", TestNcHCosmoBI, NULL,
               &test_nc_hcosmo_bi_new,
               &test_nc_hcosmo_bi_functions,
+              &test_nc_hcosmo_bi_free);
+
+  g_test_add ("/nc/hcosmo_bi/orientation", TestNcHCosmoBI, NULL,
+              &test_nc_hcosmo_bi_new,
+              &test_nc_hcosmo_bi_orientation,
               &test_nc_hcosmo_bi_free);
 
   g_test_run ();
@@ -354,5 +360,76 @@ test_nc_hcosmo_bi_functions (TestNcHCosmoBI *test, gconstpointer pdata)
   }
 
   ncm_mset_free (mset);
+}
+
+void
+test_nc_hcosmo_bi_orientation (TestNcHCosmoBI *test, gconstpointer pdata)
+{
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, 20261026);
+  guint i;
+
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble u1 = ncm_rng_uniform01_gen (rng);
+    const gdouble u2 = ncm_rng_uniform01_gen (rng);
+    const gdouble u3 = ncm_rng_uniform01_gen (rng);
+    NcmQuaternion q, q_angles, q_back;
+    NcmTriVec v = {
+      {
+        0.36, -0.48, 0.8
+      }
+    };
+    NcmTriVec v_angles = v;
+    gdouble alpha, beta, gamma;
+
+    ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U1, u1);
+    ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U2, u2);
+    ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U3, u3);
+    nc_hcosmo_bi_get_quaternion (test->cosmo, &q);
+
+    /* set_quaternion inverts get_quaternion */
+    nc_hcosmo_bi_set_quaternion (test->cosmo, &q);
+    ncm_assert_cmpdouble_e (ncm_model_orig_param_get (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U1), ==, u1, 1.0e-13, 1.0e-15);
+    ncm_assert_cmpdouble_e (ncm_model_orig_param_get (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U2), ==, u2, 1.0e-13, 1.0e-15);
+    ncm_assert_cmpdouble_e (ncm_model_orig_param_get (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U3), ==, u3, 1.0e-13, 1.0e-15);
+
+    /* The angles reproduce the quaternion up to its sign and the same rotation */
+    nc_hcosmo_bi_get_angles (test->cosmo, &alpha, &beta, &gamma);
+    g_assert_cmpfloat (alpha, >=, 0.0);
+    g_assert_cmpfloat (alpha, <=, 0.5 * M_PI);
+    g_assert_cmpfloat (beta, >=, 0.0);
+    g_assert_cmpfloat (beta, <=, M_PI);
+    g_assert_cmpfloat (gamma, >=, 0.0);
+    g_assert_cmpfloat (gamma, <, 2.0 * M_PI);
+
+    q_angles.s      = cos (alpha);
+    q_angles.v.c[0] = sin (alpha) * cos (beta);
+    q_angles.v.c[1] = sin (alpha) * sin (beta) * cos (gamma);
+    q_angles.v.c[2] = sin (alpha) * sin (beta) * sin (gamma);
+    {
+      const gdouble sign = (q.s < 0.0) ? -1.0 : 1.0;
+
+      ncm_assert_cmpdouble_e (q_angles.s, ==, sign * q.s, 1.0e-13, 1.0e-15);
+      ncm_assert_cmpdouble_e (q_angles.v.c[0], ==, sign * q.v.c[0], 1.0e-13, 1.0e-15);
+      ncm_assert_cmpdouble_e (q_angles.v.c[1], ==, sign * q.v.c[1], 1.0e-13, 1.0e-15);
+      ncm_assert_cmpdouble_e (q_angles.v.c[2], ==, sign * q.v.c[2], 1.0e-13, 1.0e-15);
+    }
+
+    ncm_quaternion_rotate (&q, &v);
+    ncm_quaternion_rotate (&q_angles, &v_angles);
+    ncm_assert_cmpdouble_e (v_angles.c[0], ==, v.c[0], 1.0e-13, 1.0e-15);
+    ncm_assert_cmpdouble_e (v_angles.c[1], ==, v.c[1], 1.0e-13, 1.0e-15);
+    ncm_assert_cmpdouble_e (v_angles.c[2], ==, v.c[2], 1.0e-13, 1.0e-15);
+
+    /* set_angles gives back the quaternion with non-negative scalar part */
+    nc_hcosmo_bi_set_angles (test->cosmo, alpha, beta, gamma);
+    nc_hcosmo_bi_get_quaternion (test->cosmo, &q_back);
+    ncm_assert_cmpdouble_e (q_back.s, ==, q_angles.s, 1.0e-13, 1.0e-15);
+    ncm_assert_cmpdouble_e (q_back.v.c[0], ==, q_angles.v.c[0], 1.0e-13, 1.0e-15);
+    ncm_assert_cmpdouble_e (q_back.v.c[1], ==, q_angles.v.c[1], 1.0e-13, 1.0e-15);
+    ncm_assert_cmpdouble_e (q_back.v.c[2], ==, q_angles.v.c[2], 1.0e-13, 1.0e-15);
+  }
+
+  ncm_rng_free (rng);
 }
 

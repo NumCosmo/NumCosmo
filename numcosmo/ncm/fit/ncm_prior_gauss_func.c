@@ -28,8 +28,10 @@
  *
  * Gaussian prior on a derived quantity.
  *
- * This object is a subclass of #NcmPriorGauss whose quantity $x$ is a scalar
- * #NcmMSetFunc, the mean function, evaluated at #NcmPriorGauss:variable.
+ * This object is a subclass of #NcmPriorGauss whose quantity $x$ is an #NcmMSetFunc,
+ * the mean function, evaluated at #NcmPriorGauss:variable when it has one variable.
+ * The prior has the dimension of the mean function: a vector function gives one
+ * least-squares residual per component.
  *
  */
 
@@ -75,7 +77,7 @@ _ncm_prior_gauss_func_set_property (GObject *object, guint prop_id, const GValue
       ncm_mset_func_clear (&pgf->mean_func);
       pgf->mean_func = g_value_dup_object (value);
 
-      g_assert (ncm_mset_func_is_scalar (pgf->mean_func));
+      g_assert_cmpuint (ncm_mset_func_get_dim (pgf->mean_func), >, 0);
       g_assert_cmpint (ncm_mset_func_get_nvar (pgf->mean_func), <=, 1);
 
       break;
@@ -114,7 +116,8 @@ _ncm_prior_gauss_func_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_prior_gauss_func_parent_class)->dispose (object);
 }
 
-static gdouble _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset);
+static void _ncm_prior_gauss_func_constructed (GObject *object);
+static void _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset, gdouble *x);
 
 static void
 ncm_prior_gauss_func_class_init (NcmPriorGaussFuncClass *klass)
@@ -122,6 +125,7 @@ ncm_prior_gauss_func_class_init (NcmPriorGaussFuncClass *klass)
   GObjectClass *object_class   = G_OBJECT_CLASS (klass);
   NcmPriorGaussClass *pg_class = NCM_PRIOR_GAUSS_CLASS (klass);
 
+  object_class->constructed  = &_ncm_prior_gauss_func_constructed;
   object_class->set_property = &_ncm_prior_gauss_func_set_property;
   object_class->get_property = &_ncm_prior_gauss_func_get_property;
   object_class->dispose      = &_ncm_prior_gauss_func_dispose;
@@ -136,13 +140,28 @@ ncm_prior_gauss_func_class_init (NcmPriorGaussFuncClass *klass)
   pg_class->mean = &_ncm_prior_gauss_func_mean;
 }
 
-static gdouble
-_ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset)
+static void
+_ncm_prior_gauss_func_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_prior_gauss_func_parent_class)->constructed (object);
+  {
+    NcmPriorGaussFunc *pgf = NCM_PRIOR_GAUSS_FUNC (object);
+
+    ncm_mset_func_set_meta (NCM_MSET_FUNC (object), NULL, NULL, NULL, NULL, 0, ncm_mset_func_get_dim (pgf->mean_func));
+  }
+}
+
+static void
+_ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset, gdouble *x)
 {
   NcmPriorGaussFunc *pgf = NCM_PRIOR_GAUSS_FUNC (pg);
-  const gdouble var      = ncm_prior_gauss_get_var (pg);
+  gdouble var            = ncm_prior_gauss_get_var (pg);
 
-  return ncm_mset_func_eval1 (pgf->mean_func, mset, var);
+  if (ncm_mset_func_get_nvar (pgf->mean_func) == 1)
+    ncm_mset_func_eval (pgf->mean_func, mset, &var, x);
+  else
+    ncm_mset_func_eval (pgf->mean_func, mset, NULL, x);
 }
 
 /**
@@ -152,7 +171,8 @@ _ncm_prior_gauss_func_mean (NcmPriorGauss *pg, NcmMSet *mset)
  * @sigma: standard deviation
  * @var: argument of @mean_func
  *
- * Creates a new Gaussian prior for parameter @pid of model @mid.
+ * Creates a Gaussian prior on @mean_func, evaluated at @var when it has one variable:
+ * $f_i = (x_i - \mu) / \sigma$ for each of its components $x_i$.
  *
  * Returns: (transfer full): @pgf.
  */

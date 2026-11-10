@@ -200,10 +200,13 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_beta.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>
 
@@ -211,11 +214,14 @@
 #include <numcosmo/nc/data/nc_data_snia.h>
 #include <numcosmo/nc/data/nc_data_dist_mu.h>
 #include <numcosmo/nc/data/nc_dist_mu_obs.h>
+#include <numcosmo/nc/data/nc_dist_mu_nuisance.h>
+#include <numcosmo/nc/data/nc_observer_velocity.h>
 #include <numcosmo/nc/data/nc_data_hcosmo_bi_dist_mu.h>
 #include <numcosmo/nc/data/nc_data_snia_cov.h>
 #include <numcosmo/nc/data/nc_data_download.h>
 #include <numcosmo/nc/data/nc_data_hubble.h>
 #include <numcosmo/nc/data/nc_data_hubble_bao.h>
+#include <numcosmo/nc/data/nc_data_hubble_cov.h>
 #include <numcosmo/nc/data/nc_data_bao_a.h>
 #include <numcosmo/nc/data/nc_data_bao_dv.h>
 #include <numcosmo/nc/data/nc_data_bao_rdv.h>
@@ -259,6 +265,7 @@
 #include <numcosmo/nc/xcor/nc_xcor_lensing_efficiency.h>
 #include <numcosmo/nc/xcor/nc_xcor_solver.h>
 #include <numcosmo/nc/xcor/nc_xcor_ssc_sij.h>
+#include <numcosmo/nc/xcor/nc_xcor_cov_gauss.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_radial_kdep.h>
 #include <numcosmo/nc/xcor/nc_xcor_kernel_radial.h>
 #include <numcosmo/nc/xcor/nc_xcor_component_table.h>
