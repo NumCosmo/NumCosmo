@@ -348,8 +348,8 @@ def test_without_register_shared_tables_are_adopted_from_the_copy():
 
 @pytest.mark.parametrize(
     "cls",
-    [Nc.GalaxyShapeFactorMomentsTilt, Nc.GalaxyShapeFactorCGF],
-    ids=["moments-tilt", "cgf-no-hook"],
+    [Nc.GalaxyShapeFactorMomentsTilt, Nc.GalaxyShapeFactorVarAdd],
+    ids=["moments-tilt", "var-add-no-hook"],
 )
 def test_data_prefetch_is_inert(cls, mset_pop):
     """Every prefetch stage is safe before the galaxy has a table, after it

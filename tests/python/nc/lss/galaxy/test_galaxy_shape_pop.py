@@ -187,8 +187,7 @@ def test_get_sigma_raises_for_unsupported_population():
     """get_sigma() is a per-@data capability, not every model resolves it
     (e.g. Beta has no Gaussian width): nc_galaxy_shape_pop_get_sigma()
     reports this with a fatal g_error, a real process abort, so it is
-    checked in a subprocess (see test_galaxy_shape_factor_cgf.py's
-    test_non_gaussian_population_gate for the same pattern)."""
+    checked in a subprocess."""
     script = (
         "from numcosmo_py import Nc, Ncm\n"
         "Ncm.cfg_init()\n"
