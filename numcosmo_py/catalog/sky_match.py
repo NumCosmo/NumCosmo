@@ -84,6 +84,29 @@ class SharedFractionMethod(StrEnum):
     PMEM = auto()
 
 
+class LinkingMethod(StrEnum):
+    """Method to compute the linking coefficient of a candidate match.
+
+    :param JACCARD: Jaccard index of the member sets, that is, the number of shared
+        members divided by the number of members of their union.
+    :param SHARED_FRACTION: Combination of the shared member fractions of the two
+        objects, computed as prescribed by :class:`SharedFractionMethod`.
+    :param JACCARD_PMEM: Jaccard index weighted by the mean membership probability
+        of the shared members. When both catalogs provide a pmem column the product of
+        the two probabilities is averaged, otherwise the probabilities of the single
+        catalog providing them are averaged. Both factors lie between 0 and 1, so the
+        coefficient does too.
+    """
+
+    @staticmethod
+    def _generate_next_value_(name, _start, _count, _last_values):
+        return name.lower()
+
+    JACCARD = auto()
+    SHARED_FRACTION = auto()
+    JACCARD_PMEM = auto()
+
+
 class DistanceMethod(StrEnum):
     """Distance method to use in the matching.
 
@@ -1182,10 +1205,55 @@ class SkyMatch:
 
         return all_combinations, fraction_query, fraction_match
 
+    @staticmethod
+    def _compute_shared_pmem(matched_catalog_grouped: Table) -> Table:
+        """Average the membership probabilities of the shared members of each pair.
+
+        When both catalogs provide a pmem column, each shared member contributes the
+        product of its two membership probabilities; otherwise it contributes the
+        probability given by the single catalog providing them. The contributions are
+        summed and divided by the number of shared members, so the result lies between
+        0 and 1.
+
+        :param matched_catalog_grouped: Member matches grouped by (query_id, match_id).
+        :return: Table with the ``query_id``, ``match_id`` and ``mean_shared_pmem``
+            columns.
+        """
+        has_query_pmem = "pmem_query" in matched_catalog_grouped.colnames
+        has_match_pmem = "pmem_match" in matched_catalog_grouped.colnames
+
+        if has_query_pmem and has_match_pmem:
+            shared_pmem = (
+                matched_catalog_grouped["pmem_query"]
+                * matched_catalog_grouped["pmem_match"]
+            )
+        elif has_query_pmem:
+            shared_pmem = matched_catalog_grouped["pmem_query"]
+        elif has_match_pmem:
+            shared_pmem = matched_catalog_grouped["pmem_match"]
+        else:
+            raise ValueError(
+                "To perform a matching, pmem column must be provided for at least "
+                "one of the catalogs."
+            )
+
+        shared_pmem_table = Table(
+            {
+                "query_id": matched_catalog_grouped["query_id"],
+                "match_id": matched_catalog_grouped["match_id"],
+                "mean_shared_pmem": shared_pmem,
+            }
+        )
+
+        return shared_pmem_table.group_by(["query_id", "match_id"]).groups.aggregate(
+            np.mean
+        )
+
     def match_ID(
         self,
         use_shared_fraction: bool = False,
         shared_fraction_method: SharedFractionMethod = SharedFractionMethod.NO_PMEM,
+        linking_method: LinkingMethod | None = None,
     ) -> SkyMatchIDResult:
         """Match objects in the sky using shared members.
 
@@ -1195,14 +1263,23 @@ class SkyMatch:
 
         :param use_shared_fraction: If True, compute the linking coefficient from the
             shared member fractions (see ``shared_fraction_method``); otherwise use the
-            Jaccard index of the member sets.
+            Jaccard index of the member sets. Ignored when ``linking_method`` is given.
         :param shared_fraction_method: Method to compute the shared fraction of members.
+        :param linking_method: Method to compute the linking coefficient. When None, it
+            is taken from ``use_shared_fraction``.
         :return: A SkyMatchIDResult object.
         """
         assert self.query_member_data is not None
         assert self.match_member_data is not None
         assert self.query_ids is not None
         assert self.match_ids is not None
+
+        if linking_method is None:
+            linking_method = (
+                LinkingMethod.SHARED_FRACTION
+                if use_shared_fraction
+                else LinkingMethod.JACCARD
+            )
 
         # Preparing the member catalogs for the matching
 
@@ -1276,18 +1353,39 @@ class SkyMatch:
 
         # Linking coefficient
 
-        if use_shared_fraction:
-            all_combinations["linking_coefficient"] = (
-                fraction_query * (fraction_query + fraction_match) / 2
-            )
-        else:
-            all_combinations["linking_coefficient"] = all_combinations[
-                "shared_count"
-            ] / (
-                all_combinations["nmem_query"]
-                + all_combinations["nmem_match"]
-                - all_combinations["shared_count"]
-            )
+        match linking_method:
+            case LinkingMethod.SHARED_FRACTION:
+                all_combinations["linking_coefficient"] = (
+                    fraction_query * (fraction_query + fraction_match) / 2
+                )
+
+            case LinkingMethod.JACCARD:
+                all_combinations["linking_coefficient"] = all_combinations[
+                    "shared_count"
+                ] / (
+                    all_combinations["nmem_query"]
+                    + all_combinations["nmem_match"]
+                    - all_combinations["shared_count"]
+                )
+
+            case LinkingMethod.JACCARD_PMEM:
+                all_combinations = join(
+                    all_combinations,
+                    self._compute_shared_pmem(matched_catalog_grouped),
+                    keys=["query_id", "match_id"],
+                    join_type="left",
+                )
+                jaccard = all_combinations["shared_count"] / (
+                    all_combinations["nmem_query"]
+                    + all_combinations["nmem_match"]
+                    - all_combinations["shared_count"]
+                )
+                all_combinations["linking_coefficient"] = (
+                    jaccard * all_combinations["mean_shared_pmem"]
+                )
+
+            case _ as unreachable:
+                assert_never(unreachable)
 
         # Structured result: gather candidate matches per query object
 
