@@ -77,12 +77,17 @@ CASES = [
     ("trace", "beta", 1.57, 1.65, 0.1, 0.3, 0.0, 0.5, 0.0),
     ("trace_det", "beta", 1.92, 1.98, 0.03, 0.6, 0.0, 0.0, 0.5),
     ("trace_det", "beta", 1.57, 1.65, 0.05, -0.1, 0.25, 0.2, -0.3),
+    # Points where the default path was wrong (6.6), off by 7.5e-6, or did not return.
+    ("trace_det", "gauss", 0.05, 0.0, 0.1, 0.005111126056639749, 0.0, 0.0, 0.9),
+    ("trace_det", "beta", 1.57, 1.65, 0.1, 0.01, 0.0, 0.0, 0.02),
+    ("trace", "beta", 4.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0),
 ]
 
 
-# Indices of CASES checked by the unit tier: four cases on which the default and log-polar
-# paths take 0.7 s in total (|g| < 1 and > 1, |eps_obs| < 1 and >= 1, Gauss and Beta).
-UNIT_ROWS = {1, 2, 6, 11}
+# Indices of CASES checked by the unit tier: six cases on which the default and log-polar
+# paths take about 1 s in total (|g| < 1 and > 1, |eps_obs| < 1 and >= 1, Gauss and Beta,
+# and two of the points where the default path had failed).
+UNIT_ROWS = {1, 2, 6, 11, 14, 16}
 
 
 def find_tool() -> pathlib.Path:
