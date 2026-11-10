@@ -35,7 +35,7 @@ pytest.importorskip("astropy")
 from astropy.table import Table
 
 from numcosmo_py import Ncm
-from numcosmo_py.catalog import SkyMatch, SharedFractionMethod
+from numcosmo_py.catalog import SkyMatch, SharedFractionMethod, LinkingMethod
 
 Ncm.cfg_init()
 
@@ -274,3 +274,118 @@ def test_match_id_to_table_complete_properties():
     assert by_query[0]["MASS_Q"] == 2.0
     # query 0 has a single candidate (match 100, row 0) -> mass 5.0
     assert list(by_query[0]["MASS_M"]) == [5.0]
+
+
+# ---------------------------------------------------------------------------
+# ID matching: linking methods
+# ---------------------------------------------------------------------------
+
+# Member sets of the fixture built by _id_sky_match():
+#   q0 = {a, b, c}   m100 = {a, b, f}   shared = {a, b}   J = 2 / (3 + 3 - 2) = 0.5
+#   q1 = {d, e}      m101 = {d, g, h}   shared = {d}      J = 1 / (2 + 3 - 1) = 0.25
+QUERY_PMEM = {"a": 0.9, "b": 0.8, "c": 0.7, "d": 0.6, "e": 0.5}
+MATCH_PMEM = {"a": 0.5, "b": 0.4, "f": 0.3, "d": 0.2, "g": 0.1, "h": 0.05}
+
+
+def _weighted_sky_match(*, query_pmem=True, match_pmem=True):
+    """Build the ID fixture with distinct pmem values on the chosen catalogs."""
+    query_member = {
+        QUERY_ID_COL: [0, 0, 0, 1, 1],
+        "MemID": ["a", "b", "c", "d", "e"],
+    }
+    match_member = {
+        MATCH_ID_COL: [100, 100, 100, 101, 101, 101],
+        "MemID": ["a", "b", "f", "d", "g", "h"],
+    }
+    if query_pmem:
+        query_member["pmem"] = [QUERY_PMEM[m] for m in query_member["MemID"]]
+    if match_pmem:
+        match_member["pmem"] = [MATCH_PMEM[m] for m in match_member["MemID"]]
+
+    return _id_sky_match(
+        with_pmem=query_pmem or match_pmem,
+        query_member=query_member,
+        match_member=match_member,
+    )
+
+
+def test_match_id_jaccard_pmem_both_catalogs():
+    """With pmem on both catalogs each shared member contributes both weights."""
+    sky_match = _weighted_sky_match()
+    result = sky_match.match_ID(linking_method=LinkingMethod.JACCARD_PMEM)
+
+    # q0 x m100: 0.5 * (0.9 * 0.5) * (0.8 * 0.4); q1 x m101: 0.25 * (0.6 * 0.2).
+    assert_allclose(_coeff_for_query(result, sky_match, 0, 100), 0.5 * 0.45 * 0.32)
+    assert_allclose(_coeff_for_query(result, sky_match, 1, 101), 0.25 * 0.12)
+
+
+def test_match_id_jaccard_pmem_query_only():
+    """With pmem on the query catalog alone only its weights are multiplied."""
+    sky_match = _weighted_sky_match(match_pmem=False)
+    result = sky_match.match_ID(linking_method=LinkingMethod.JACCARD_PMEM)
+
+    assert_allclose(_coeff_for_query(result, sky_match, 0, 100), 0.5 * 0.9 * 0.8)
+    assert_allclose(_coeff_for_query(result, sky_match, 1, 101), 0.25 * 0.6)
+
+
+def test_match_id_jaccard_pmem_match_only():
+    """With pmem on the match catalog alone only its weights are multiplied."""
+    sky_match = _weighted_sky_match(query_pmem=False)
+    result = sky_match.match_ID(linking_method=LinkingMethod.JACCARD_PMEM)
+
+    assert_allclose(_coeff_for_query(result, sky_match, 0, 100), 0.5 * 0.5 * 0.4)
+    assert_allclose(_coeff_for_query(result, sky_match, 1, 101), 0.25 * 0.2)
+
+
+def test_match_id_jaccard_pmem_requires_pmem():
+    """The weighted Jaccard index raises when no catalog provides pmem."""
+    sky_match = _id_sky_match(with_pmem=False)
+    with pytest.raises(ValueError, match="pmem column must"):
+        sky_match.match_ID(linking_method=LinkingMethod.JACCARD_PMEM)
+
+
+def test_match_id_jaccard_pmem_unit_weights():
+    """Members certain of their object leave the plain Jaccard index untouched."""
+    sky_match = _id_sky_match()  # every pmem is 1.0
+    weighted = sky_match.match_ID(linking_method=LinkingMethod.JACCARD_PMEM)
+    jaccard = sky_match.match_ID(linking_method=LinkingMethod.JACCARD)
+
+    for query_row in (0, 1):
+        assert_allclose(
+            weighted.candidate_coefficients[query_row],
+            jaccard.candidate_coefficients[query_row],
+        )
+
+
+def test_match_id_jaccard_pmem_bounded_by_jaccard():
+    """Weighting by pmem can only lower the coefficient, and never below zero."""
+    sky_match = _weighted_sky_match()
+    weighted = sky_match.match_ID(linking_method=LinkingMethod.JACCARD_PMEM)
+    jaccard = sky_match.match_ID(linking_method=LinkingMethod.JACCARD)
+
+    for query_row in (0, 1):
+        weights = np.asarray(weighted.candidate_coefficients[query_row], dtype=float)
+        plain = np.asarray(jaccard.candidate_coefficients[query_row], dtype=float)
+        assert np.all(weights <= plain)
+        assert np.all(weights >= 0.0)
+
+
+@pytest.mark.parametrize(
+    "use_shared_fraction, linking_method",
+    [
+        (False, LinkingMethod.JACCARD),
+        (True, LinkingMethod.SHARED_FRACTION),
+    ],
+)
+def test_match_id_linking_method_matches_legacy_flag(
+    setup_id_match, use_shared_fraction, linking_method
+):
+    """The explicit linking methods reproduce the use_shared_fraction flag."""
+    legacy = setup_id_match.match_ID(use_shared_fraction=use_shared_fraction)
+    explicit = setup_id_match.match_ID(linking_method=linking_method)
+
+    for query_row in (0, 1):
+        assert_allclose(
+            explicit.candidate_coefficients[query_row],
+            legacy.candidate_coefficients[query_row],
+        )
