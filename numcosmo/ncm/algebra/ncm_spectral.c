@@ -2512,8 +2512,9 @@ ncm_spectral_get_s_d_matrix (guint N)
  * ncm_spectral_get_s2_d_matrix:
  * @N: size of the matrix
  *
- * Builds the $N \times N$ matrix of $s^2\,\mathrm{d}/\mathrm{d}s$ from the $T_n$ coefficients of $f$ to the
- * $C^{(2)}_k$ coefficients of $s^2 f'$, truncated to the first $N$ columns.
+ * Builds the $N \times N$ matrix of $s^2\,\mathrm{d}/\mathrm{d}s$ from the $T_n$
+ * coefficients of $f$ to the $C^{(2)}_k$ coefficients of $s^2 f'$, truncated to the first $N$
+ * columns.
  *
  * Returns: (transfer full): the operator matrix.
  */
@@ -2550,8 +2551,9 @@ ncm_spectral_get_s2_d_matrix (guint N)
  * ncm_spectral_get_s3_d_matrix:
  * @N: size of the matrix
  *
- * Builds the $N \times N$ matrix of $s^3\,\mathrm{d}/\mathrm{d}s$ from the $T_n$ coefficients of $f$ to the
- * $C^{(2)}_k$ coefficients of $s^3 f'$, truncated to the first $N$ columns.
+ * Builds the $N \times N$ matrix of $s^3\,\mathrm{d}/\mathrm{d}s$ from the $T_n$
+ * coefficients of $f$ to the $C^{(2)}_k$ coefficients of $s^3 f'$, truncated to the first $N$
+ * columns.
  *
  * Returns: (transfer full): the operator matrix.
  */
@@ -2702,8 +2704,9 @@ ncm_spectral_get_s2_d2_matrix (guint N)
  * ncm_spectral_get_s3_d2_matrix:
  * @N: size of the matrix
  *
- * Builds the $N \times N$ matrix of $s^3\,\mathrm{d}^2/\mathrm{d}s^2$ from the $T_n$ coefficients of $f$ to the
- * $C^{(2)}_k$ coefficients of $s^3 f''$, truncated to the first $N$ columns.
+ * Builds the $N \times N$ matrix of $s^3\,\mathrm{d}^2/\mathrm{d}s^2$ from the $T_n$
+ * coefficients of $f$ to the $C^{(2)}_k$ coefficients of $s^3 f''$, truncated to the first $N$
+ * columns.
  *
  * Returns: (transfer full): the operator matrix.
  */
@@ -2740,8 +2743,9 @@ ncm_spectral_get_s3_d2_matrix (guint N)
  * ncm_spectral_get_s4_d2_matrix:
  * @N: size of the matrix
  *
- * Builds the $N \times N$ matrix of $s^4\,\mathrm{d}^2/\mathrm{d}s^2$ from the $T_n$ coefficients of $f$ to the
- * $C^{(2)}_k$ coefficients of $s^4 f''$, truncated to the first $N$ columns.
+ * Builds the $N \times N$ matrix of $s^4\,\mathrm{d}^2/\mathrm{d}s^2$ from the $T_n$
+ * coefficients of $f$ to the $C^{(2)}_k$ coefficients of $s^4 f''$, truncated to the first $N$
+ * columns.
  *
  * Returns: (transfer full): the operator matrix.
  */
@@ -2850,7 +2854,7 @@ ncm_spectral_get_s4_d2_matrix (guint N)
  * - column $k + 4$: $-(k + 4)/(2(k + 3))$.
  */
 
- /**
+/**
  * ncm_spectral_compute_s2_d_row:
  * @row_data: the row
  * @k: row index
@@ -2866,7 +2870,7 @@ ncm_spectral_get_s4_d2_matrix (guint N)
  * - column $k + 5$: $-(k + 5)/(4(k + 3))$.
  */
 
- /**
+/**
  * ncm_spectral_compute_s3_d_row:
  * @row_data: the row
  * @k: row index
@@ -2876,7 +2880,7 @@ ncm_spectral_get_s4_d2_matrix (guint N)
  * Adds @coeff times row $k$ of ncm_spectral_get_s3_d_matrix() to @row_data. Its nonzero
  * entries are
  *
- * - column $k - 2$, for $k \ge 2$: $(k - 1)/(8(k + 1))$;
+ * - column $k - 2$, for $k \ge 3$: $(k - 2)/(8(k + 1))$;
  * - column $k$: $k(k + 4)/(4(k + 1)(k + 3))$, minus $1/16$ when $k = 1$;
  * - column $k + 2$: $3(k + 2)/(4(k + 1)(k + 3))$, minus $1/4$ when $k = 0$;
  * - column $k + 4$: $-k(k + 4)/(4(k + 1)(k + 3))$;
@@ -2925,7 +2929,7 @@ ncm_spectral_get_s4_d2_matrix (guint N)
  * - column $k + 4$: $(k + 4)(k + 5)/(2(k + 3))$.
  */
 
- /**
+/**
  * ncm_spectral_compute_s3_d2_row:
  * @row_data: the row
  * @k: row index
@@ -2941,7 +2945,7 @@ ncm_spectral_get_s4_d2_matrix (guint N)
  * - column $k + 5$: $(k + 5)(k + 6)/(4(k + 3))$.
  */
 
- /**
+/**
  * ncm_spectral_compute_s4_d2_row:
  * @row_data: the row
  * @k: row index
@@ -2951,10 +2955,10 @@ ncm_spectral_get_s4_d2_matrix (guint N)
  * Adds @coeff times row $k$ of ncm_spectral_get_s4_d2_matrix() to @row_data. Its nonzero
  * entries are
  *
- * - column $k - 2$, for $k \ge 2$: $(k - 2)(k - 3)/(8(k + 1))$;
- * - column $k$: $k((k - 1)^2 - 6)/(2(k + 1)(k + 3))$, plus $1/8$ when $k = 1$;
+ * - column $k - 2$, for $k \ge 4$: $(k - 2)(k - 3)/(8(k + 1))$;
+ * - column $k$: $k((k + 1)^2 - 6)/(2(k + 1)(k + 3))$, plus $1/8$ when $k = 1$;
  * - column $k + 2$: $3(k + 2)((k + 2)^2 - 5)/(4(k + 1)(k + 3))$, plus $3/4$ when $k = 0$;
- * - column $k + 4$: $(k + 4)((k + 3)^2 - 6)/(2(k + 1)(k + 3))$.
+ * - column $k + 4$: $(k + 4)((k + 3)^2 - 6)/(2(k + 1)(k + 3))$;
  * - column $k + 6$: $(k + 6)(k + 7)/(8(k + 3))$.
  */
 
