@@ -1261,9 +1261,7 @@ def test_eval_marginal_aborts_on_non_finite_marginal():
     is 0/0 = NaN) elsewhere -- unlike the deep-tail case above, where
     every term is a clean, finite 0.0. Forces the chi_i_native branch via
     eval_chi_i_native() for a deterministic method. Fatal via g_error, a
-    real process abort, so it is checked in a subprocess (see
-    test_galaxy_shape_factor_cgf.py's test_non_gaussian_population_gate
-    for the same pattern)."""
+    real process abort, so it is checked in a subprocess."""
     script = (
         "import sys\n"
         "sys.path.insert(0, 'tests/python/nc/lss/galaxy')\n"

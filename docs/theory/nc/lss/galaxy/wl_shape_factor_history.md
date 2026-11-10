@@ -682,18 +682,13 @@ $c_j = n_j - \epsilon_s\,c_{j-1}$ instead, giving
 $\langle\epsilon_\mathrm{obs}\rangle=g$ **exactly** (the responsivity term
 vanishes identically, not just at $n=1$).
 
-Found by cross-checking both candidate recursions against three independent
+Found by cross-checking both candidate recursions against two independent
 sources before writing any C: a brute-force 2D quadrature of the true map
-(reproducing $g$ exactly, not $(1-M_2)g$); the class doc's own reference
-Python (`tests/python/nc/lss/galaxy/test_galaxy_shape_factor_cgf.py`'s
-`_shear_map`, which spells out the identical `(chi+g)/(1+conj(g)*chi)`
-form independently); and
+(reproducing $g$ exactly, not $(1-M_2)g$); and
 `nc_galaxy_shape_factor_direct_estimate()`'s TRACE_DET branch, whose
 comment already states "epsilon convention: `<epsilon> = g`, no
-responsivity factor R". `NcGalaxyShapeFactorCGF`'s own TRACE_DET response
-moments corroborate the same isotropy
-(`A12=A21=0`, `A11=A22`, `lap_S=0`). All three agree with the corrected
-recursion and none agree with the note's stated one.
+responsivity factor R". Both agree with the corrected recursion and neither
+agrees with the note's stated one.
 
 The TRACE recursion in the same note is correct as written and needed no
 change; it was checked the same way, against
@@ -710,8 +705,7 @@ galaxy per MCMC step under a per-galaxy population
 (`NcGalaxyShapePopGaussLocal`, whose `prepare()` runs per galaxy, unlike a
 global population's). They are built once in `constructed()` instead,
 alongside the convention dispatch; the per-galaxy contraction against that
-galaxy's moments still happens in `prepare()`'s usual cache-refresh slot,
-as in `NcGalaxyShapeFactorCGF`'s own `_peek_V`.
+galaxy's moments still happens in `prepare()`'s usual cache-refresh slot.
 
 ## `NcGalaxyShapeFactorTiltedSeries`: three departures from its design notes (2026)
 
@@ -1086,6 +1080,6 @@ numerically integrated profiles' splines, Cuba's settings), which the serial
 warm-up triggers before the parallel loop. The declaration was removed; thread safety is now part of each
 factor base class's contract, and every factor is prepared in parallel. On
 HWL16a-002, `FixedQuad`'s preparation went from 98 s on one thread to 15 s on
-sixteen and `CGF`'s from 1.0 s to 0.1 s, both bitwise identical to serial, and
+sixteen, bitwise identical to serial, and
 a test prepares every shape factor on one and four threads from cold models and
 requires identical results.
