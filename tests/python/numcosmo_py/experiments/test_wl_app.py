@@ -868,6 +868,30 @@ def test_cluster_wl_app_generate_fixed_quad_marginal_spline(experiment_file):
     assert factor.props.spline_rel_err == pytest.approx(1e-3)
 
 
+def test_cluster_wl_app_generate_spectral_reltol(experiment_file):
+    """spectral's reltol is reachable through --shape-factor's key=value parsing
+    and is the reltol of the NcGalaxyShapeFactorSpectral of the saved dataset."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=spectral reltol=1e-4",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    factor = cluster_data.props.shape_factor
+
+    assert isinstance(factor, Nc.GalaxyShapeFactorSpectral)
+    assert factor.props.reltol == pytest.approx(1e-4)
+
+
 def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):
     """Test the generation of the cluster WL app with an unknown --z-dist type."""
     result = runner.invoke(

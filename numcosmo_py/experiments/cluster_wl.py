@@ -487,6 +487,33 @@ class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
         )
 
 
+DEFAULT_SHAPE_SPECTRAL_RELTOL = 1.0e-5
+
+
+class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
+    """Adaptive Chebyshev panels in polar coordinates (``NcGalaxyShapeFactorSpectral``)."""
+
+    reltol: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPECTRAL_RELTOL
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for this scheme."""
+        return [
+            "GalaxyShapeFactorGenSpectral",
+            f"{_SHARED_SHAPE_FACTOR_HELP}, \nreltol={DEFAULT_SHAPE_SPECTRAL_RELTOL}",
+        ]
+
+    def requires_sigma(self) -> bool:
+        """Spectral works with any population that gives its end exponents and
+        reduced density."""
+        return False
+
+    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
+        return Nc.GalaxyShapeFactorSpectral(
+            ellip_conv=self.ellip_conv.genum, reltol=self.reltol
+        )
+
+
 class GalaxyShapeFactorGenMomentsGauss(GalaxyShapeFactorGenBase):
     """Gaussian matched to the exact moments (``NcGalaxyShapeFactorMomentsGauss``)."""
 
@@ -560,6 +587,7 @@ GalaxyShapeFactorGenTypes = (
     | GalaxyShapeFactorGenSeriesLensed
     | GalaxyShapeFactorGenQuad
     | GalaxyShapeFactorGenFixedQuad
+    | GalaxyShapeFactorGenSpectral
     | GalaxyShapeFactorGenLaplace
     | GalaxyShapeFactorGenMomentsGauss
     | GalaxyShapeFactorGenMomentsTilt
@@ -573,6 +601,7 @@ class ShapeFactorGen(StrEnum):
     SERIES_LENSED = (auto(), GalaxyShapeFactorGenSeriesLensed)
     QUAD = (auto(), GalaxyShapeFactorGenQuad)
     FIXED_QUAD = (auto(), GalaxyShapeFactorGenFixedQuad)
+    SPECTRAL = (auto(), GalaxyShapeFactorGenSpectral)
     LAPLACE = (auto(), GalaxyShapeFactorGenLaplace)
     MOMENTS_GAUSS = (auto(), GalaxyShapeFactorGenMomentsGauss)
     MOMENTS_TILT = (auto(), GalaxyShapeFactorGenMomentsTilt)
