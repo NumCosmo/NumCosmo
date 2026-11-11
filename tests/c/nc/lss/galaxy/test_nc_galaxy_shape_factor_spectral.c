@@ -26,7 +26,7 @@
 /*
  * Tests of NcGalaxyShapeFactorSpectral: ln P against the values certified by the Arb
  * reference tests/tools/nc_galaxy_shape_marginal_arb.c, the |g| = 1 closed form, the
- * |g| > 1 reduction, the rotation of the frame, the hooks of NcGalaxyShapeFactor, the
+ * |g| > 1 reduction, shears next to |g| = 1, the rotation of the frame, the hooks of NcGalaxyShapeFactor, the
  * accepted panels, the property and the error for an input that cannot be integrated.
  */
 
@@ -49,6 +49,19 @@
  */
 #define TEST_SPECTRAL_TOL (1.0e-7)
 
+/*
+ * Points with 1 - |g| from 1e-5 to 1e-7, certified by the Arb reference with --coords=uv
+ * (radius of ln P below 1e-15): HWL16a-002 rows 475 and 7139 with the Beta population
+ * fitted to that catalog. The largest difference of the class measured on them is 3.7e-10.
+ */
+static const TestShapeArbCell test_spectral_near_unit_cells[] = {
+  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_SHAPE_ARB_POP_BETA, 1.5709751684077675, 1.6542629053559708, 0.0587911494076252, 0.9591169317498968, 0.28297475387508314, 0.691024972903032, 0.0, -18.15200444413578233, FALSE, FALSE},
+  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_SHAPE_ARB_POP_BETA, 1.5709751684077675, 1.6542629053559708, 0.0587911494076252, 0.9591264271024746, 0.28297755535316127, 0.691024972903032, 0.0, -18.15200449764241692, FALSE, FALSE},
+  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_SHAPE_ARB_POP_BETA, 1.5709751684077675, 1.6542629053559708, 0.0587911494076252, 0.9591169317498968, 0.28297475387508314, 0.691024972903032, 0.0, -18.14997346866772457, FALSE, FALSE},
+  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_SHAPE_ARB_POP_BETA, 1.5709751684077675, 1.6542629053559708, 0.0587911494076252, 0.9591264271024746, 0.28297755535316127, 0.691024972903032, 0.0, -18.15199473594852941, FALSE, FALSE},
+  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_SHAPE_ARB_POP_BETA, 1.5709751684077675, 1.6542629053559708, 0.04034872725605965, 0.999999, 0.0, 0.178728848695755, 0.3698130249977112, -59.93454784752150307, FALSE, FALSE},
+};
+
 typedef struct _TestNcGalaxyShapeFactorSpectral
 {
   NcmMSet *mset;
@@ -63,6 +76,7 @@ void test_nc_galaxy_shape_factor_spectral_free (TestNcGalaxyShapeFactorSpectral 
 void test_nc_galaxy_shape_factor_spectral_arb (void);
 void test_nc_galaxy_shape_factor_spectral_unit_shear (void);
 void test_nc_galaxy_shape_factor_spectral_large_shear (void);
+void test_nc_galaxy_shape_factor_spectral_near_unit (void);
 void test_nc_galaxy_shape_factor_spectral_rotation (void);
 void test_nc_galaxy_shape_factor_spectral_reltol (void);
 void test_nc_galaxy_shape_factor_spectral_panels (void);
@@ -81,6 +95,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/arb", &test_nc_galaxy_shape_factor_spectral_arb);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/unit_shear", &test_nc_galaxy_shape_factor_spectral_unit_shear);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/large_shear", &test_nc_galaxy_shape_factor_spectral_large_shear);
+  g_test_add_func ("/nc/galaxy_shape_factor_spectral/near_unit", &test_nc_galaxy_shape_factor_spectral_near_unit);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/rotation", &test_nc_galaxy_shape_factor_spectral_rotation);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/reltol", &test_nc_galaxy_shape_factor_spectral_reltol);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/panels", &test_nc_galaxy_shape_factor_spectral_panels);
@@ -254,6 +269,28 @@ test_nc_galaxy_shape_factor_spectral_large_shear (void)
 
   nc_galaxy_shape_pop_data_unref (pop_data);
   nc_galaxy_shape_pop_free (pop);
+}
+
+/* Every row of the table of shears next to |g| = 1, at the default reltol */
+void
+test_nc_galaxy_shape_factor_spectral_near_unit (void)
+{
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (test_spectral_near_unit_cells); i++)
+  {
+    const TestShapeArbCell *c         = &test_spectral_near_unit_cells[i];
+    NcGalaxyShapePopData *pop_data    = NULL;
+    NcGalaxyShapePop *pop             = _test_pop_new (c->pop, c->p1, c->p2, &pop_data);
+    NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (c->conv);
+    const gdouble lnP                 = nc_galaxy_shape_factor_spectral_eval_ln_direct (gsfs, pop, pop_data, c->g1, c->g2, c->e1, c->e2, c->std_noise);
+
+    g_assert_cmpfloat_with_epsilon (lnP, c->lnP, TEST_SPECTRAL_TOL);
+
+    nc_galaxy_shape_factor_spectral_free (gsfs);
+    nc_galaxy_shape_pop_data_unref (pop_data);
+    nc_galaxy_shape_pop_free (pop);
+  }
 }
 
 /* ln P is the same when g and eps_obs are rotated by the same angle */

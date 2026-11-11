@@ -13,9 +13,10 @@ $$
 where $P_\mathrm{pop}$ is the isotropic density of the intrinsic ellipticity $\chi_I$,
 $f_g$ the shear map of the ellipticity convention, $g$ the reduced shear and $N_2$ the
 isotropic two-dimensional Gaussian of variance $\sigma_\mathrm{noise}^2$ per component. The
-integral is computed in the polar coordinates of $\chi_I$ by
-[[numcosmo-math|NcmSpectralPolar]], described in
-[Spectral Integration on a Disc](../../../ncm/algebra/spectral_polar.qmd).
+integral is computed by [[numcosmo-math|NcmSpectralPolar]], described in
+[Spectral Integration on a Disc](../../../ncm/algebra/spectral_polar.qmd), in the polar
+coordinates of a variable of integration $\zeta$ that depends on the ellipticity
+convention, defined in [The Variable of Integration](#the-variable-of-integration).
 
 ## The Shear Modulus
 
@@ -31,50 +32,160 @@ and $\epsilon_\mathrm{obs}$. Three cases are separated before anything is integr
   with the real shear $t$ and the observed ellipticity $\epsilon$, since
   $f_g (\chi) = e^{i \varphi} f_t (\chi e^{-i \varphi})$ and $P_\mathrm{pop}$ is isotropic.
 
-The maps $f_t$ in real arithmetic are
-[[numcosmo|nc_wl_ellipticity_apply_shear_trace_real]] and
-[[numcosmo|nc_wl_ellipticity_apply_shear_trace_det_real]].
+## The Variable of Integration
 
-## The Integral in Polar Coordinates
+For `NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET` the integral is computed in $\chi_I$. For
+`NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE` it is computed in the trace--determinant ellipticity
+of the same intrinsic shape. This section defines that variable, writes Eq. (1) in it and
+states why it is used.
 
-With $\chi_I = r e^{i \theta}$, the density of $r$ is written as its two end power laws
-times a function that is finite at both ends,
+### The two ellipticities of one shape
+
+A shape with axis ratio $q \le 1$ and orientation $\varphi_s$ has the trace ellipticity
+$\chi_s$ and the trace--determinant ellipticity $\epsilon_s$ of
+[Galaxy Shapes and Ellipticity Frames](wl_ellipticity.qmd),
 $$
-P_\mathrm{pop} (r) = r^{\alpha_o} (1 - r)^{\alpha_1} \, \hat{P}_\mathrm{pop} (r) ,
+\chi_s = \frac{1 - q^2}{1 + q^2} \, e^{2 i \varphi_s} ,
+\qquad
+\epsilon_s = \frac{1 - q}{1 + q} \, e^{2 i \varphi_s} .
+$$
+They have the same phase, and eliminating $q$ gives $\chi_s = T (\epsilon_s)$ with
+$$
+T (w) \equiv \frac{2 w}{1 + |w|^2} ,
+\qquad
+T^{-1} (w) = \frac{w}{1 + \sqrt{1 - |w|^2}} .
+$$
+$T$ maps the open unit disc onto itself and the unit circle onto itself. For the moduli,
+$|T (w)| = u (|w|)$ with
+$$
+u (r) \equiv \frac{2 r}{1 + r^2} ,
+\qquad
+1 - u (r) = \frac{(1 - r)^2}{1 + r^2} ,
+\qquad
+u' (r) = \frac{2 (1 - r^2)}{(1 + r^2)^2} .
+\tag{2}
+$$
+
+### The shear map
+
+The shear acts on the shape, so the maps of the two conventions are one operation written
+in the two ellipticities. With $t < 1$ real, the trace--determinant map is
+$$
+m_t (w) \equiv \frac{w + t}{1 + t w} ,
+$$
+and the trace map is
+$$
+f_t (w) = \frac{w + 2 t + t^2 \bar{w}}{1 + t^2 + 2 t \, \mathrm{Re} \, w}
+= T \big( m_t (T^{-1} (w)) \big) .
+\tag{3}
+$$
+The second equality was checked numerically on $10^4$ random pairs $(t, w)$ to
+$2 \times 10^{-15}$. The class evaluates $m_t$ with
+[[numcosmo|nc_wl_ellipticity_apply_shear_trace_det_real]] for both conventions.
+
+### Eq. (1) in the trace--determinant ellipticity
+
+For the trace convention, let $\epsilon_I \equiv T^{-1} (\chi_I) = r e^{i \theta}$. The
+angle is the one of $\chi_I$, and the population is isotropic, so only the density of the
+modulus changes. $P_\mathrm{pop}$ is the density of $|\chi_I|$, normalized in
+$\mathrm{d} |\chi_I|$, written as its two end power laws times a function that is finite
+at both ends,
+$$
+P_\mathrm{pop} (|\chi_I|) = |\chi_I|^{\alpha_o} (1 - |\chi_I|)^{\alpha_1} \, \hat{P}_\mathrm{pop} (|\chi_I|) ,
 $$
 with $\alpha_o$ given by [[numcosmo|nc_galaxy_shape_pop_exponent_at_origin]], $\alpha_1$
 by [[numcosmo|nc_galaxy_shape_pop_exponent_at_one]] and $\hat{P}_\mathrm{pop}$ by
-[[numcosmo|nc_galaxy_shape_pop_eval_p_reduced]]. $P_\mathrm{pop} (r)$ is normalized in
-$\mathrm{d}r$, so the area density is $P_\mathrm{pop} (r) / (2 \pi r)$ and Eq. (1) becomes
+[[numcosmo|nc_galaxy_shape_pop_eval_p_reduced]]. The density of $r$ is
+$P_\mathrm{pop} (u (r)) \, u' (r)$, and with Eq. (2)
 $$
-P = e^{-d_0 / 2 \sigma_\mathrm{noise}^2} \int_0^{2\pi} \!\! \int_0^1 r^{\alpha_o} (1 - r)^{\alpha_1} \, G (r, \theta) \, \mathrm{d}r \, \mathrm{d}\theta ,
+P_\mathrm{pop} (u (r)) \, u' (r) = r^{\alpha_o} (1 - r)^{2 \alpha_1 + 1} \, \hat{P}_\epsilon (r) ,
 \qquad
-G (r, \theta) \equiv \frac{\hat{P}_\mathrm{pop} (r)}{2 \pi} \,
-\frac{e^{-(d (r, \theta) - d_0) / 2 \sigma_\mathrm{noise}^2}}{2 \pi \sigma_\mathrm{noise}^2} ,
-\tag{2}
+\hat{P}_\epsilon (r) \equiv \frac{2^{\alpha_o + 1} (1 + r)}{(1 + r^2)^{\alpha_o + \alpha_1 + 2}} \,
+\hat{P}_\mathrm{pop} (u (r)) .
+\tag{4}
 $$
-with $d (r, \theta) \equiv |\epsilon - f_t (r e^{i \theta})|^2$ and $d_0$ an offset taken
+The three factors of the left side contribute as follows:
+$u^{\alpha_o} = 2^{\alpha_o} r^{\alpha_o} (1 + r^2)^{-\alpha_o}$,
+$(1 - u)^{\alpha_1} = (1 - r)^{2 \alpha_1} (1 + r^2)^{-\alpha_1}$ and
+$u' = 2 (1 - r) (1 + r) (1 + r^2)^{-2}$. The exponent at $r = 1$ changes from $\alpha_1$
+to $2 \alpha_1 + 1$, and $\hat{P}_\epsilon$ is finite at both ends. With Eq. (3), Eq. (1)
+becomes
+$$
+P = \int_0^{2 \pi} \!\! \int_0^1 r^{\alpha_o} (1 - r)^{2 \alpha_1 + 1} \,
+\frac{\hat{P}_\epsilon (r)}{2 \pi} \,
+N_2 \big( \epsilon - T (m_t (r e^{i \theta})); \, \sigma_\mathrm{noise}^2 \big) \,
+\mathrm{d}r \, \mathrm{d}\theta .
+$$
+Nothing is approximated: it is Eq. (1) after the substitution $\chi_I = T (\epsilon_I)$.
+
+### Why this variable
+
+Let $\delta \equiv 1 - t$. The two forms of the map are compared near $|g| = 1$, where
+every point of the disc except a neighborhood of $-1$ maps close to $g$.
+
+- In $\epsilon_I$: $m_t (\epsilon_I) - 1 = -\delta \, (1 - \epsilon_I) / (1 + t \epsilon_I)$.
+  The denominator is zero at $\epsilon_I = -1 / t$, at the distance $\delta / t$ from the
+  unit circle, so the map varies on the scale $\delta$ around $\epsilon_I = -1$, in $r$
+  and in $\theta$.
+- In $\chi_I = x + i y$:
+  $f_t (\chi_I) = [(1 + t^2) x + 2 t + i (1 - t^2) y] / [\delta^2 + 2 t (1 + x)]$. The
+  denominator changes by its own size when $1 + x$ changes by $\delta^2 / 2 t$, so the map
+  varies on the scale $\delta^2$ in $r$ around $\chi_I = -1$ and on the scale $\delta$
+  in $\theta$.
+- The two statements are the same fact: by Eq. (2), the distance $\delta$ to the unit
+  circle in $\epsilon_I$ is the distance $\delta^2 / 2$ in $\chi_I$.
+
+The panels of [[numcosmo-math|NcmSpectralPolar]] halve until they resolve the scale of
+the integrand, up to [[numcosmo-math|NcmSpectralPolar:max-depth]]. At $\delta = 10^{-5}$
+the scale is $10^{-5}$ in $\epsilon_I$ and $10^{-10}$ in $\chi_I$, where a radius also
+keeps only six significant digits of $1 - r$ in double precision.
+
+### The variable $\zeta$ for both conventions
+
+In the sections below $\zeta = r e^{i \theta}$ is the variable of integration, $F_t$ the
+map from $\zeta$ to the sheared ellipticity, and $r^{a} (1 - r)^{b} \hat{P}_\zeta (r)$ the
+density of $r$:
+
+| | $\zeta$ | $F_t (\zeta)$ | $a$ | $b$ | $\hat{P}_\zeta (r)$ |
+|---|---|---|---|---|---|
+| `TRACE_DET` | $\chi_I$ | $m_t (\zeta)$ | $\alpha_o$ | $\alpha_1$ | $\hat{P}_\mathrm{pop} (r)$ |
+| `TRACE` | $T^{-1} (\chi_I)$ | $T (m_t (\zeta))$ | $\alpha_o$ | $2 \alpha_1 + 1$ | $\hat{P}_\epsilon (r)$ of Eq. (4) |
+
+The truncated Gaussian populations have $\alpha_o = 1$ and $\alpha_1 = 0$, and the Beta
+population $\alpha_o = \alpha - 1$ and $\alpha_1 = \beta - 1$ with a constant
+$\hat{P}_\mathrm{pop}$.
+
+## The Integral in Polar Coordinates
+
+The density of $r$ is normalized in $\mathrm{d}r$, so the area density is that density
+divided by $2 \pi r$, and Eq. (1) is
+$$
+P = e^{-d_0 / 2 \sigma_\mathrm{noise}^2} \int_0^{2\pi} \!\! \int_0^1 r^{a} (1 - r)^{b} \, G (r, \theta) \, \mathrm{d}r \, \mathrm{d}\theta ,
+\qquad
+G (r, \theta) \equiv \frac{\hat{P}_\zeta (r)}{2 \pi} \,
+\frac{e^{-(d (r, \theta) - d_0) / 2 \sigma_\mathrm{noise}^2}}{2 \pi \sigma_\mathrm{noise}^2} ,
+\tag{5}
+$$
+with $d (r, \theta) \equiv |\epsilon - F_t (r e^{i \theta})|^2$ and $d_0$ an offset taken
 out of the exponent so that $G$ stays in the double range. This is the integral of
 [Spectral Integration on a Disc](../../../ncm/algebra/spectral_polar.qmd) with $R = 1$,
-$a = \alpha_o$, $b = \alpha_1$ and the function $G$. The truncated Gaussian populations
-have $\alpha_o = 1$ and $\alpha_1 = 0$, and the Beta population $\alpha_o = \alpha - 1$ and
-$\alpha_1 = \beta - 1$ with a constant $\hat{P}_\mathrm{pop}$.
+the exponents $a$ and $b$ of the table above and the function $G$.
 
 ## Locating the Peak
 
 The panels are placed around the peak of the integrand, which is narrow when
 $\sigma_\mathrm{noise}$ is small. The peak is searched on one ray.
 
-- The center of the noise factor is $c \equiv f_t^{-1} (\epsilon_0)$, with
+- The center of the noise factor is $c \equiv F_t^{-1} (\epsilon_0)$, with
   $\epsilon_0 = \epsilon$ for $|\epsilon| < 1$ and otherwise the point of the unit circle
-  in the direction of $\epsilon$, moved inside by $10^{-12}$. The ray has the angle
-  $\theta_0 \equiv \arg c$.
-- $J_1$ and $J_2$ are the radial and the tangential stretch factors of $f_t^{-1}$ at
+  in the direction of $\epsilon$, moved inside by $10^{-12}$. For `TRACE`,
+  $F_t^{-1} = m_t^{-1} \circ T^{-1}$. The ray has the angle $\theta_0 \equiv \arg c$.
+- $J_1$ and $J_2$ are the radial and the tangential stretch factors of $F_t^{-1}$ at
   $\epsilon_0$, by finite differences. The noise factor has the widths
   $\sigma_\mathrm{noise} J_1$ and $\sigma_\mathrm{noise} J_2$ around $c$.
 - The function
   $$
-  h (r) \equiv \ln P_\mathrm{pop} (r) - \frac{d (r, \theta_0)}{2 \sigma_\mathrm{noise}^2}
+  h (r) \equiv a \ln r + b \ln (1 - r) + \ln \hat{P}_\zeta (r) - \frac{d (r, \theta_0)}{2 \sigma_\mathrm{noise}^2}
   $$
   is evaluated on a scan of the ray: 401 uniform radii, radii at $10^{-k}$ and
   $1 - 10^{-k}$ for $k = 2, \dots, 12$, and $|c|$ plus and minus multiples from $1/4$ to
@@ -98,7 +209,7 @@ The class computes
 $$
 \ln P = \ln I - \frac{d_0}{2 \sigma_\mathrm{noise}^2} ,
 $$
-with $I$ the integral of Eq. (2) from [[numcosmo-math|ncm_spectral_polar_integrate]] at
+with $I$ the integral of Eq. (5) from [[numcosmo-math|ncm_spectral_polar_integrate]] at
 the relative tolerance `reltol` and absolute tolerance zero.
 [[numcosmo|nc_galaxy_shape_factor_eval_marginal]] returns $e^{\ln P}$. An integral that
 fails with `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, or a non-finite $\ln P$, aborts with the
@@ -111,13 +222,13 @@ certifies $\ln P$ with ball arithmetic. On its 20,055 certified points with
 $(|\epsilon_\mathrm{obs}| - 1) / \sigma_\mathrm{noise} \le 8$ and $|g| \ne 1$ (truncated
 Gaussians of width 0.05 to 0.4, seven Beta populations, both conventions,
 $\sigma_\mathrm{noise}$ from 0.005 to 1, $|g|$ from 0 to 3, real $g$), the largest
-$|\ln P - \ln P_\mathrm{Arb}|$ is:
+$|\ln P - \ln P_\mathrm{Arb}|$ per convention is:
 
-| `reltol` | largest difference |
-|---|---|
-| $10^{-3}$ | $5 \times 10^{-7}$ |
-| $10^{-4}$ | $2.2 \times 10^{-7}$ |
-| $10^{-5}$ (default) | $6.9 \times 10^{-9}$ |
+| `reltol` | `TRACE` | `TRACE_DET` |
+|---|---|---|
+| $10^{-3}$ | $5.5 \times 10^{-6}$ | $5.0 \times 10^{-7}$ |
+| $10^{-4}$ | $8.6 \times 10^{-8}$ | $2.2 \times 10^{-7}$ |
+| $10^{-5}$ (default) | $6.9 \times 10^{-9}$ | $3.9 \times 10^{-9}$ |
 
 No point failed. The tolerance bounds the change of the interpolant between grids, which
 is why the differences are below it. The points with
@@ -131,7 +242,10 @@ not aligned with $\epsilon_\mathrm{obs}$, within $10^{-7}$.
 | symbol | in `nc_galaxy_shape_factor_spectral.c` |
 |---|---|
 | $t$, $\epsilon$ | `t`, `e_1` and `e_2` of the kernel |
-| $\alpha_o$, $\alpha_1$ | `a`, `b` |
+| $a$, $b$ | `a`, `b` |
+| $\alpha_1$ | `b_pop` |
+| $2^{\alpha_o + 1}$, $\alpha_o + \alpha_1 + 2$ of Eq. (4) | `dens_norm`, `dens_pow` of the kernel |
+| $F_t$, $F_t^{-1}$, $\hat{P}_\zeta$ | `map`, `map_inv`, `p_reduced` |
 | $1 / 2 \sigma_\mathrm{noise}^2$ | `c2` |
 | $d_0$, $d_0 / 2 \sigma_\mathrm{noise}^2$ | `shift` of the seed, `shift_c2` |
 | $1 / (2 \pi \sigma_\mathrm{noise}^2) / (2 \pi)$ | `norm` |
@@ -145,5 +259,5 @@ See [[numcosmo|NcGalaxyShapeFactorSpectral]] for the class reference.
 [[numcosmo|nc_galaxy_shape_factor_spectral_eval_ln_direct]] computes $\ln P$ from a
 population and the values of one galaxy, and
 [[numcosmo|nc_galaxy_shape_factor_spectral_eval_panels]] also returns the panels the
-integral was accepted on, with their angles in the frame of $g$ and
-$\epsilon_\mathrm{obs}$.
+integral was accepted on, in the polar coordinates of $\zeta$, with their angles in the
+frame of $g$ and $\epsilon_\mathrm{obs}$.

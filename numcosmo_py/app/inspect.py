@@ -493,8 +493,10 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             help=(
                 "Overlay the panels NcGalaxyShapeFactorSpectral accepted for "
                 "this galaxy at --g1/--g2, when the engine is Spectral. The "
-                "panels are rectangles in the polar coordinates of chi_I, "
-                "drawn through the shear map in the chi_L plane; the ones "
+                "panels are rectangles in the polar coordinates of the "
+                "variable the class integrates in (chi_I for TRACE_DET, the "
+                "trace-determinant ellipticity of chi_I for TRACE), drawn "
+                "through the shear map in the chi_L plane; the ones "
                 "refined beyond the starting level are drawn brighter. For "
                 "|g| > 1 the integral is computed at g / |g|^2 and the panels "
                 "are mapped with that shear."
@@ -652,6 +654,9 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
                 chi_l_pt = Ncm.Complex.new()
                 level_r_min = panels_arr[:, 4].min()
                 level_t_min = panels_arr[:, 5].min()
+                # For TRACE the panel radius r is the modulus of the
+                # trace-determinant ellipticity: |chi_I| = 2 r / (1 + r^2).
+                is_trace = ellip_conv == Nc.GalaxyWLObsEllipConv.TRACE
                 side = np.linspace(0.0, 1.0, 13)
 
                 for r_a, r_b, t_a, t_b, l_r, l_t, _val, _chg in panels_arr:
@@ -673,6 +678,9 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
                         ]
                     )
                     outline = np.empty((rs.size, 2))
+
+                    if is_trace:
+                        rs = 2.0 * rs / (1.0 + rs**2)
 
                     for k, (r_k, t_k) in enumerate(zip(rs, ts)):
                         chi_i_pt.set(r_k * math.cos(t_k), r_k * math.sin(t_k))

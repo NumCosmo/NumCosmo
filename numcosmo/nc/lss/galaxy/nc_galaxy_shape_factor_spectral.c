@@ -32,11 +32,19 @@
  * $$P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
  *   P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);
  *   \sigma_\mathrm{noise}^2\big)$$
- * with #NcmSpectralPolar in the polar coordinates $(r, \theta)$ of $\chi_I$, for any
- * isotropic population that implements nc_galaxy_shape_pop_exponent_at_origin(),
- * nc_galaxy_shape_pop_exponent_at_one() and nc_galaxy_shape_pop_eval_p_reduced(). The
- * two end power laws of $P_\mathrm{pop}(r)$ are the weight of the integral and the
- * reduced density times the noise kernel is its smooth factor.
+ * with #NcmSpectralPolar in the polar coordinates $(r, \theta)$ of the variable of
+ * integration, for any isotropic population that implements
+ * nc_galaxy_shape_pop_exponent_at_origin(), nc_galaxy_shape_pop_exponent_at_one() and
+ * nc_galaxy_shape_pop_eval_p_reduced(). The two end power laws of the density of $r$ are
+ * the weight of the integral and the reduced density times the noise kernel is its
+ * smooth factor.
+ *
+ * The variable of integration is $\chi_I$ for %NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET. For
+ * %NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE it is $\epsilon_I = T^{-1}(\chi_I)$,
+ * $T(\epsilon) = 2\epsilon / (1 + |\epsilon|^2)$, the trace--determinant ellipticity of
+ * the same shape, in which the shear map is the composition of the trace--determinant
+ * map with $T$. In it the integrand varies on the scale $1 - |g|$ near $|g| = 1$, and in
+ * $\chi_I$ on the scale $(1 - |g|)^2$.
  *
  * The shear enters through its modulus. At $|g| = 1$ every point of the open disc maps
  * to $g$ and $P = N_2(\epsilon_\mathrm{obs} - g; \sigma_\mathrm{noise}^2)$. For
@@ -44,10 +52,10 @@
  * rotated by the phase of $g$, so that the shear is the real number $t = |g|$.
  *
  * The panels are those of ncm_spectral_polar_peak_edges() for a peak located on the ray
- * through $f_t^{-1}(\epsilon_\mathrm{obs})$, at the radius that maximizes
- * $\ln P_\mathrm{pop}(r) - |\epsilon_\mathrm{obs} - f_t(\chi_I)|^2 / 2\sigma_\mathrm{noise}^2$
- * on a scan of that ray, with half widths $\sigma_\mathrm{noise}$ times the smaller
- * stretch factor of $f_t^{-1}$ there. The scan places the panels only: the integral is
+ * through the preimage of $\epsilon_\mathrm{obs}$, at the radius that maximizes the
+ * logarithm of the density of $r$ minus
+ * $|\epsilon_\mathrm{obs} - f_t(\chi_I)|^2 / 2\sigma_\mathrm{noise}^2$ on a scan of that ray, with half widths $\sigma_\mathrm{noise}$ times the smaller
+ * stretch factor of the inverse map there. The scan places the panels only: the integral is
  * accepted by the test of #NcmSpectralPolar with the relative tolerance
  * #NcGalaxyShapeFactorSpectral:reltol on panels that cover the whole disc.
  *
@@ -92,13 +100,26 @@ struct _NcGalaxyShapeFactorSpectral
   NcGalaxyShapeFactor parent_instance;
 };
 
+typedef struct _NcGalaxyShapeFactorSpectralKernel NcGalaxyShapeFactorSpectralKernel;
+
+/*
+ * The four functions of the object's convention act on the variable of integration z:
+ * chi_I for TRACE_DET and T^{-1} (chi_I) for TRACE, T (e) = 2 e / (1 + |e|^2).
+ */
 typedef struct _NcGalaxyShapeFactorSpectralPrivate
 {
-  NcmSpectralPolarF kernel; /* the integrand for the object's convention */
+  NcmSpectralPolarF kernel; /* the integrand */
 
-  void (*apply_shear_real) (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
+  /* z to the sheared ellipticity, at the real shear t */
+  void (*map) (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
 
-  complex double (*apply_shear_inv) (complex double g, complex double e_obs);
+  /* the sheared ellipticity e_obs to z, at the shear g */
+  complex double (*map_inv) (complex double g, complex double e_obs);
+
+  /* the density of r = |z| divided by its two end power laws */
+  gdouble (*p_reduced) (const NcGalaxyShapeFactorSpectralKernel *k, const gdouble r);
+
+  gboolean axis_ratio_var; /* TRUE for TRACE: z = T^{-1} (chi_I) */
 
   NcmSpectralPolar *polar;
   NcmMemoryPool *work_pool; /* NcGalaxyShapeFactorSpectralWork, one per concurrent evaluation */
@@ -113,26 +134,28 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
 } NcGalaxyShapeFactorSpectralWork;
 
 /* What the integrand needs, in the frame where the shear is the real number t */
-typedef struct _NcGalaxyShapeFactorSpectralKernel
+struct _NcGalaxyShapeFactorSpectralKernel
 {
   NcGalaxyShapePop *pop;
   NcGalaxyShapePopData *pop_data;
   gdouble t;
   gdouble e_1;
   gdouble e_2;
-  gdouble c2;       /* 1 / (2 std_noise^2) */
-  gdouble norm;     /* 1 / (2 pi std_noise^2) / (2 pi) */
-  gdouble shift_c2; /* c2 times the offset taken out of the exponent */
-} NcGalaxyShapeFactorSpectralKernel;
+  gdouble c2;        /* 1 / (2 std_noise^2) */
+  gdouble norm;      /* 1 / (2 pi std_noise^2) / (2 pi) */
+  gdouble shift_c2;  /* c2 times the offset taken out of the exponent */
+  gdouble dens_norm; /* TRACE: 2^(alpha_o + 1), alpha_o and alpha_1 the exponents of the population */
+  gdouble dens_pow;  /* TRACE: alpha_o + alpha_1 + 2 */
+};
 
-/* The peak of the integrand on the ray through f_t^{-1} (eps_obs) */
+/* The peak of the integrand on the ray through the preimage of eps_obs */
 typedef struct _NcGalaxyShapeFactorSpectralSeed
 {
   gdouble r_star;  /* radius of the maximum of h on the scan */
   gdouble theta_0; /* angle of the ray */
-  gdouble J_1;     /* radial stretch factor of f_t^{-1} at eps_obs */
+  gdouble J_1;     /* radial stretch factor of the inverse map at eps_obs */
   gdouble J_2;     /* tangential stretch factor */
-  gdouble shift;   /* smallest |eps_obs - f_t (chi_I)|^2 on the scan */
+  gdouble shift;   /* smallest squared distance of eps_obs to the sheared ellipticity on the scan */
 } NcGalaxyShapeFactorSpectralSeed;
 
 enum
@@ -152,12 +175,14 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
 {
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
-  self->kernel           = NULL;
-  self->apply_shear_real = NULL;
-  self->apply_shear_inv  = NULL;
-  self->polar            = ncm_spectral_polar_new ();
-  self->work_pool        = ncm_memory_pool_new (_nc_galaxy_shape_factor_spectral_work_new, NULL,
-                                                _nc_galaxy_shape_factor_spectral_work_free);
+  self->kernel         = NULL;
+  self->map            = NULL;
+  self->map_inv        = NULL;
+  self->p_reduced      = NULL;
+  self->axis_ratio_var = FALSE;
+  self->polar          = ncm_spectral_polar_new ();
+  self->work_pool      = ncm_memory_pool_new (_nc_galaxy_shape_factor_spectral_work_new, NULL,
+                                              _nc_galaxy_shape_factor_spectral_work_free);
   self->reltol = 0.0;
 }
 
@@ -195,6 +220,12 @@ _nc_galaxy_shape_factor_spectral_get_property (GObject *object, guint prop_id, G
 
 static void _nc_galaxy_shape_factor_spectral_kernel_trace (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
 static void _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
+static void _nc_galaxy_shape_factor_spectral_map_trace (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
+
+static complex double _nc_galaxy_shape_factor_spectral_map_inv_trace (complex double g, complex double e_obs);
+
+static gdouble _nc_galaxy_shape_factor_spectral_p_reduced_trace (const NcGalaxyShapeFactorSpectralKernel *k, const gdouble r);
+static gdouble _nc_galaxy_shape_factor_spectral_p_reduced_trace_det (const NcGalaxyShapeFactorSpectralKernel *k, const gdouble r);
 
 static void
 _nc_galaxy_shape_factor_spectral_constructed (GObject *object)
@@ -209,14 +240,18 @@ _nc_galaxy_shape_factor_spectral_constructed (GObject *object)
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
-        self->kernel           = &_nc_galaxy_shape_factor_spectral_kernel_trace;
-        self->apply_shear_real = &nc_wl_ellipticity_apply_shear_trace_real;
-        self->apply_shear_inv  = &nc_wl_ellipticity_apply_shear_inv_trace;
+        self->kernel         = &_nc_galaxy_shape_factor_spectral_kernel_trace;
+        self->map            = &_nc_galaxy_shape_factor_spectral_map_trace;
+        self->map_inv        = &_nc_galaxy_shape_factor_spectral_map_inv_trace;
+        self->p_reduced      = &_nc_galaxy_shape_factor_spectral_p_reduced_trace;
+        self->axis_ratio_var = TRUE;
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
-        self->kernel           = &_nc_galaxy_shape_factor_spectral_kernel_trace_det;
-        self->apply_shear_real = &nc_wl_ellipticity_apply_shear_trace_det_real;
-        self->apply_shear_inv  = &nc_wl_ellipticity_apply_shear_inv_trace_det;
+        self->kernel         = &_nc_galaxy_shape_factor_spectral_kernel_trace_det;
+        self->map            = &nc_wl_ellipticity_apply_shear_trace_det_real;
+        self->map_inv        = &nc_wl_ellipticity_apply_shear_inv_trace_det;
+        self->p_reduced      = &_nc_galaxy_shape_factor_spectral_p_reduced_trace_det;
+        self->axis_ratio_var = FALSE;
         break;
       default:                   /* LCOV_EXCL_LINE */
         g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -377,18 +412,21 @@ _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcG
     const gdouble cos_p                   = cos (phase);
     const gdouble sin_p                   = sin (phase);
     const gdouble a                       = nc_galaxy_shape_pop_exponent_at_origin (pop);
-    const gdouble b                       = nc_galaxy_shape_pop_exponent_at_one (pop);
+    const gdouble b_pop                   = nc_galaxy_shape_pop_exponent_at_one (pop);
+    const gdouble b                       = self->axis_ratio_var ? 2.0 * b_pop + 1.0 : b_pop;
     NcGalaxyShapeFactorSpectralWork **ptr = ncm_memory_pool_get (self->work_pool);
     NcGalaxyShapeFactorSpectralWork *work = *ptr;
     NcGalaxyShapeFactorSpectralKernel k   = {
-      .pop      = pop,
-      .pop_data = pop_data,
-      .t        = t,
-      .e_1      = epsilon_obs_1 * cos_p + epsilon_obs_2 * sin_p,
-      .e_2      = epsilon_obs_2 * cos_p - epsilon_obs_1 * sin_p,
-      .c2       = 0.5 / noise_var,
-      .norm     = 1.0 / (2.0 * M_PI * noise_var) / (2.0 * M_PI),
-      .shift_c2 = 0.0
+      .pop       = pop,
+      .pop_data  = pop_data,
+      .t         = t,
+      .e_1       = epsilon_obs_1 * cos_p + epsilon_obs_2 * sin_p,
+      .e_2       = epsilon_obs_2 * cos_p - epsilon_obs_1 * sin_p,
+      .c2        = 0.5 / noise_var,
+      .norm      = 1.0 / (2.0 * M_PI * noise_var) / (2.0 * M_PI),
+      .shift_c2  = 0.0,
+      .dens_norm = exp2 (a + 1.0),
+      .dens_pow  = a + b_pop + 2.0
     };
     NcGalaxyShapeFactorSpectralSeed seed;
     GError *error = NULL;
@@ -432,11 +470,12 @@ static gdouble _nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPr
 static void _nc_galaxy_shape_factor_spectral_sort (gdouble *x, const guint n);
 
 /*
- * Locates the peak of the integrand on the ray through c = f_t^{-1} (eps_obs), or through
- * the preimage of the point of the unit circle nearest to eps_obs when |eps_obs| >= 1:
- * the angle of the ray, the stretch factors of f_t^{-1} at that point by finite
- * differences, the smallest |eps_obs - f_t (chi_I)|^2 found and the radius r* that
- * maximizes h (r) = ln P_pop (r) - |eps_obs - f_t (chi_I)|^2 / 2 std_noise^2. h is scanned
+ * Locates the peak of the integrand on the ray through c, the preimage of eps_obs by the
+ * map of the variable of integration, or of the point of the unit circle nearest to
+ * eps_obs when |eps_obs| >= 1: the angle of the ray, the stretch factors of the inverse
+ * map at that point by finite differences, the smallest d found and the radius r* that
+ * maximizes h (r) = ln (density of r) - d / 2 std_noise^2, d the squared distance of
+ * eps_obs to the sheared ellipticity. h is scanned
  * on a uniform grid of radii merged with radii next to both ends and at |c| plus and minus
  * multiples of the widths std_noise J_1 and std_noise J_2, and r* is refined by golden
  * section between the neighbors of the best radius.
@@ -450,7 +489,7 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
   const complex double eps                                                   = k->e_1 + I * k->e_2;
   const gdouble abs_eps                                                      = cabs (eps);
   const complex double eps_0                                                 = (abs_eps < 1.0) ? eps : eps / abs_eps * (1.0 - 1.0e-12);
-  const complex double c                                                     = self->apply_shear_inv (k->t, eps_0);
+  const complex double c                                                     = self->map_inv (k->t, eps_0);
   const gdouble abs_c                                                        = cabs (c);
   const gdouble cos_0                                                        = (abs_c > 0.0) ? creal (c) / abs_c : 1.0;
   const gdouble sin_0                                                        = (abs_c > 0.0) ? cimag (c) / abs_c : 0.0;
@@ -472,12 +511,12 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
 
   if (cabs (eps_0) > 0.0)
   {
-    seed->J_1 = cabs (self->apply_shear_inv (k->t, eps_0 * (1.0 - dh)) - c) / (dh * cabs (eps_0));
-    seed->J_2 = cabs (self->apply_shear_inv (k->t, eps_0 * cexp (I * dh)) - c) / (dh * cabs (eps_0));
+    seed->J_1 = cabs (self->map_inv (k->t, eps_0 * (1.0 - dh)) - c) / (dh * cabs (eps_0));
+    seed->J_2 = cabs (self->map_inv (k->t, eps_0 * cexp (I * dh)) - c) / (dh * cabs (eps_0));
   }
   else
   {
-    seed->J_1 = seed->J_2 = cabs (self->apply_shear_inv (k->t, dh) - c) / dh;
+    seed->J_1 = seed->J_2 = cabs (self->map_inv (k->t, dh) - c) / dh;
   }
 
   for (i = 2; i < 2 + NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_END_DECADES; i++)
@@ -570,9 +609,10 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
 }
 
 /*
- * h (r) = ln P_pop (r) - d / (2 std_noise^2) at the radius r, 0 < r < 1, of the ray of
- * direction (cos_0, sin_0), with d = |eps_obs - f_t (chi_I)|^2 returned in *d. ln P_pop is
- * the two end power laws plus the logarithm of the reduced density.
+ * h (r) = ln (density of r) - d / (2 std_noise^2) at the radius r, 0 < r < 1, of the ray of
+ * direction (cos_0, sin_0), with d the squared distance of eps_obs to the sheared
+ * ellipticity, returned in *d. The logarithm of the density is the two end power laws,
+ * of exponents a and b, plus the logarithm of the reduced density.
  */
 static gdouble
 _nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k,
@@ -581,10 +621,10 @@ _nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPrivate * const s
 {
   gdouble f_x, f_y;
 
-  self->apply_shear_real (k->t, r * cos_0, r * sin_0, &f_x, &f_y);
+  self->map (k->t, r * cos_0, r * sin_0, &f_x, &f_y);
   *d = gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y);
 
-  return a * log (r) + b * log1p (-r) + log (nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, r)) - *d * k->c2;
+  return a * log (r) + b * log1p (-r) + log (self->p_reduced (k, r)) - *d * k->c2;
 }
 
 /* Sorts x[0..n-1] in ascending order, by insertion */
@@ -609,34 +649,38 @@ _nc_galaxy_shape_factor_spectral_sort (gdouble *x, const guint n)
 }
 
 /*
- * The integrand of ncm_spectral_polar_integrate() for the TRACE convention:
- * G (r, theta) = (P_pop (r) / (r^a (1 - r)^b)) N_2 (eps_obs - f_t (chi_I)) / (2 pi), with
- * the offset of the kernel taken out of the exponent of N_2.
+ * The integrand of ncm_spectral_polar_integrate() for the TRACE convention, in the polar
+ * coordinates of e_I = T^{-1} (chi_I): G (r, theta) = (reduced density of r = |e_I|)
+ * N_2 (eps_obs - T (m_t (e_I))) / (2 pi), with m_t the TRACE_DET map and the offset of the
+ * kernel taken out of the exponent of N_2.
  */
 static void
 _nc_galaxy_shape_factor_spectral_kernel_trace (gpointer user_data, gdouble r, guint n, const gdouble *theta,
                                                const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
 {
   const NcGalaxyShapeFactorSpectralKernel *k = user_data;
-  const gdouble pref                         = nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, r) * k->norm;
+  const gdouble pref                         = _nc_galaxy_shape_factor_spectral_p_reduced_trace (k, r) * k->norm;
   guint j;
 
   for (j = 0; j < n; j++)
   {
     gdouble f_x, f_y;
 
-    nc_wl_ellipticity_apply_shear_trace_real (k->t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
+    _nc_galaxy_shape_factor_spectral_map_trace (k->t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
     fval[j] = pref * exp (k->shift_c2 - (gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y)) * k->c2);
   }
 }
 
-/* The same integrand for the TRACE_DET convention */
+/*
+ * The integrand for the TRACE_DET convention, in the polar coordinates of chi_I:
+ * G (r, theta) = (P_pop (r) / (r^a (1 - r)^b)) N_2 (eps_obs - f_t (chi_I)) / (2 pi).
+ */
 static void
 _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r, guint n, const gdouble *theta,
                                                    const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
 {
   const NcGalaxyShapeFactorSpectralKernel *k = user_data;
-  const gdouble pref                         = nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, r) * k->norm;
+  const gdouble pref                         = _nc_galaxy_shape_factor_spectral_p_reduced_trace_det (k, r) * k->norm;
   guint j;
 
   for (j = 0; j < n; j++)
@@ -646,6 +690,54 @@ _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r
     nc_wl_ellipticity_apply_shear_trace_det_real (k->t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
     fval[j] = pref * exp (k->shift_c2 - (gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y)) * k->c2);
   }
+}
+
+/*
+ * The TRACE map at the real shear t in the variable e_I = x + i y: T (m_t (e_I)), with
+ * m_t the TRACE_DET map. It equals f_t (T (e_I)), f_t the TRACE map.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_map_trace (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y)
+{
+  gdouble m_x, m_y;
+
+  nc_wl_ellipticity_apply_shear_trace_det_real (t, x, y, &m_x, &m_y);
+  {
+    const gdouble T_fac = 2.0 / (1.0 + m_x * m_x + m_y * m_y);
+
+    *f_x = T_fac * m_x;
+    *f_y = T_fac * m_y;
+  }
+}
+
+/* The inverse of the map above at the shear g: m_g^{-1} (T^{-1} (e_obs)), for |e_obs| <= 1 */
+static complex double
+_nc_galaxy_shape_factor_spectral_map_inv_trace (complex double g, complex double e_obs)
+{
+  const gdouble abs_e2 = gsl_pow_2 (creal (e_obs)) + gsl_pow_2 (cimag (e_obs));
+
+  return nc_wl_ellipticity_apply_shear_inv_trace_det (g, e_obs / (1.0 + sqrt (1.0 - abs_e2)));
+}
+
+/*
+ * The density of r = |e_I| divided by r^alpha_o (1 - r)^(2 alpha_1 + 1), for a population
+ * that is a density of |chi_I| = 2 r / (1 + r^2) with the exponents alpha_o and alpha_1:
+ * 2^(alpha_o + 1) (1 + r) (1 + r^2)^-(alpha_o + alpha_1 + 2) times the reduced density of
+ * the population at |chi_I|.
+ */
+static gdouble
+_nc_galaxy_shape_factor_spectral_p_reduced_trace (const NcGalaxyShapeFactorSpectralKernel *k, const gdouble r)
+{
+  const gdouble q = 1.0 + r * r;
+
+  return k->dens_norm * (1.0 + r) * pow (q, -k->dens_pow) * nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, 2.0 * r / q);
+}
+
+/* The reduced density of the population at r = |chi_I| */
+static gdouble
+_nc_galaxy_shape_factor_spectral_p_reduced_trace_det (const NcGalaxyShapeFactorSpectralKernel *k, const gdouble r)
+{
+  return nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, r);
 }
 
 /**
@@ -775,8 +867,11 @@ nc_galaxy_shape_factor_spectral_eval_ln_direct (NcGalaxyShapeFactorSpectral *gsf
  * nc_galaxy_shape_factor_spectral_eval_ln_direct() and returns the panels the integral
  * was accepted on, for inspection: one row per panel with the columns of
  * ncm_spectral_polar_integrate(), $r_a$, $r_b$, $\theta_a$, $\theta_b$, the two levels,
- * the value and the change of the panel. $(r, \theta)$ are the polar coordinates of
- * $\chi_I$ in the frame of @g_1, @g_2 and of the observed ellipticity. For $|g| > 1$ the
+ * the value and the change of the panel. $(r, \theta)$ are the polar coordinates of the
+ * variable of integration in the frame of @g_1, @g_2 and of the observed ellipticity:
+ * $\chi_I$ for %NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, and for
+ * %NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE the variable with $|\chi_I| = 2 r / (1 + r^2)$ and
+ * the angle of $\chi_I$. For $|g| > 1$ the
  * panels are those of the integral at $g / |g|^2$, and at $|g| = 1$ there is no integral
  * and the function returns %NULL.
  *
