@@ -1,0 +1,149 @@
+---
+title: Shape Marginalization by Spectral Panels
+---
+
+This page describes [[numcosmo|NcGalaxyShapeFactorSpectral]], which computes the marginal
+of the observed ellipticity over the intrinsic one,
+$$
+P(\epsilon_\mathrm{obs} \mid g) = \int_{|\chi_I|<1} \mathrm{d}^2\chi_I\,
+P_\mathrm{pop}(\chi_I)\, N_2\big(\epsilon_\mathrm{obs} - f_g(\chi_I);\,
+\sigma_\mathrm{noise}^2\big) ,
+\tag{1}
+$$
+where $P_\mathrm{pop}$ is the isotropic density of the intrinsic ellipticity $\chi_I$,
+$f_g$ the shear map of the ellipticity convention, $g$ the reduced shear and $N_2$ the
+isotropic two-dimensional Gaussian of variance $\sigma_\mathrm{noise}^2$ per component. The
+integral is computed in the polar coordinates of $\chi_I$ by
+[[numcosmo-math|NcmSpectralPolar]], described in
+[Spectral Integration on a Disc](../../../ncm/algebra/spectral_polar.qmd).
+
+## The Shear Modulus
+
+The integral depends on the shear through its modulus and through the angle between $g$
+and $\epsilon_\mathrm{obs}$. Three cases are separated before anything is integrated.
+
+- $|g| = 1$: every point of the open disc maps to $g$, and
+  $P = N_2 (\epsilon_\mathrm{obs} - g; \sigma_\mathrm{noise}^2)$.
+- $|g| > 1$: for an isotropic population the integral equals the one at $g / |g|^2$, which
+  has the same phase and modulus $1 / |g|$. That shear replaces $g$.
+- The frame is rotated by the phase $\varphi$ of $g$: with $t \equiv |g| < 1$ and
+  $\epsilon \equiv \epsilon_\mathrm{obs} e^{-i \varphi}$, Eq. (1) is the same integral
+  with the real shear $t$ and the observed ellipticity $\epsilon$, since
+  $f_g (\chi) = e^{i \varphi} f_t (\chi e^{-i \varphi})$ and $P_\mathrm{pop}$ is isotropic.
+
+The maps $f_t$ in real arithmetic are
+[[numcosmo|nc_wl_ellipticity_apply_shear_trace_real]] and
+[[numcosmo|nc_wl_ellipticity_apply_shear_trace_det_real]].
+
+## The Integral in Polar Coordinates
+
+With $\chi_I = r e^{i \theta}$, the density of $r$ is written as its two end power laws
+times a function that is finite at both ends,
+$$
+P_\mathrm{pop} (r) = r^{\alpha_o} (1 - r)^{\alpha_1} \, \hat{P}_\mathrm{pop} (r) ,
+$$
+with $\alpha_o$ given by [[numcosmo|nc_galaxy_shape_pop_exponent_at_origin]], $\alpha_1$
+by [[numcosmo|nc_galaxy_shape_pop_exponent_at_one]] and $\hat{P}_\mathrm{pop}$ by
+[[numcosmo|nc_galaxy_shape_pop_eval_p_reduced]]. $P_\mathrm{pop} (r)$ is normalized in
+$\mathrm{d}r$, so the area density is $P_\mathrm{pop} (r) / (2 \pi r)$ and Eq. (1) becomes
+$$
+P = e^{-d_0 / 2 \sigma_\mathrm{noise}^2} \int_0^{2\pi} \!\! \int_0^1 r^{\alpha_o} (1 - r)^{\alpha_1} \, G (r, \theta) \, \mathrm{d}r \, \mathrm{d}\theta ,
+\qquad
+G (r, \theta) \equiv \frac{\hat{P}_\mathrm{pop} (r)}{2 \pi} \,
+\frac{e^{-(d (r, \theta) - d_0) / 2 \sigma_\mathrm{noise}^2}}{2 \pi \sigma_\mathrm{noise}^2} ,
+\tag{2}
+$$
+with $d (r, \theta) \equiv |\epsilon - f_t (r e^{i \theta})|^2$ and $d_0$ an offset taken
+out of the exponent so that $G$ stays in the double range. This is the integral of
+[Spectral Integration on a Disc](../../../ncm/algebra/spectral_polar.qmd) with $R = 1$,
+$a = \alpha_o$, $b = \alpha_1$ and the function $G$. The truncated Gaussian populations
+have $\alpha_o = 1$ and $\alpha_1 = 0$, and the Beta population $\alpha_o = \alpha - 1$ and
+$\alpha_1 = \beta - 1$ with a constant $\hat{P}_\mathrm{pop}$.
+
+## Locating the Peak
+
+The panels are placed around the peak of the integrand, which is narrow when
+$\sigma_\mathrm{noise}$ is small. The peak is searched on one ray.
+
+- The center of the noise factor is $c \equiv f_t^{-1} (\epsilon_0)$, with
+  $\epsilon_0 = \epsilon$ for $|\epsilon| < 1$ and otherwise the point of the unit circle
+  in the direction of $\epsilon$, moved inside by $10^{-12}$. The ray has the angle
+  $\theta_0 \equiv \arg c$.
+- $J_1$ and $J_2$ are the radial and the tangential stretch factors of $f_t^{-1}$ at
+  $\epsilon_0$, by finite differences. The noise factor has the widths
+  $\sigma_\mathrm{noise} J_1$ and $\sigma_\mathrm{noise} J_2$ around $c$.
+- The function
+  $$
+  h (r) \equiv \ln P_\mathrm{pop} (r) - \frac{d (r, \theta_0)}{2 \sigma_\mathrm{noise}^2}
+  $$
+  is evaluated on a scan of the ray: 401 uniform radii, radii at $10^{-k}$ and
+  $1 - 10^{-k}$ for $k = 2, \dots, 12$, and $|c|$ plus and minus multiples from $1/4$ to
+  $25$ of the two widths. $r_*$ is the maximum of $h$ by golden section between the
+  neighbors of the best radius of the scan.
+- $d_0$ is the smallest $d (r, \theta_0)$ of the scan.
+
+The edges are those of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
+$(r_*, \theta_0)$ with the radial half width
+$L \equiv \sigma_\mathrm{noise} \min (J_1, J_2)$ and the angular half width $L / r_*$. They
+cover the whole disc.
+
+The scan places the panels and sets $d_0$. It does not decide what is integrated: every
+panel is accepted by the test of [[numcosmo-math|NcmSpectralPolar]], and a panel where
+$G$ is negligible is accepted on its starting grid by the absolute term of that test. A
+peak placed wrongly changes the number of evaluations of $G$.
+
+## Result and Errors
+
+The class computes
+$$
+\ln P = \ln I - \frac{d_0}{2 \sigma_\mathrm{noise}^2} ,
+$$
+with $I$ the integral of Eq. (2) from [[numcosmo-math|ncm_spectral_polar_integrate]] at
+the relative tolerance `reltol` and absolute tolerance zero.
+[[numcosmo|nc_galaxy_shape_factor_eval_marginal]] returns $e^{\ln P}$. An integral that
+fails with `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, or a non-finite $\ln P$, aborts with the
+population, $\sigma_\mathrm{noise}$, $g$ and $\epsilon_\mathrm{obs}$ in the message.
+
+## Measured Accuracy
+
+The reference is the Arb tool `tests/tools/nc_galaxy_shape_marginal_arb.c`, which
+certifies $\ln P$ with ball arithmetic. On its 20,055 certified points with
+$(|\epsilon_\mathrm{obs}| - 1) / \sigma_\mathrm{noise} \le 8$ and $|g| \ne 1$ (truncated
+Gaussians of width 0.05 to 0.4, seven Beta populations, both conventions,
+$\sigma_\mathrm{noise}$ from 0.005 to 1, $|g|$ from 0 to 3, real $g$), the largest
+$|\ln P - \ln P_\mathrm{Arb}|$ is:
+
+| `reltol` | largest difference |
+|---|---|
+| $10^{-3}$ | $5 \times 10^{-7}$ |
+| $10^{-4}$ | $2.2 \times 10^{-7}$ |
+| $10^{-5}$ (default) | $6.9 \times 10^{-9}$ |
+
+No point failed. The tolerance bounds the change of the interpolant between grids, which
+is why the differences are below it. The points with
+$(|\epsilon_\mathrm{obs}| - 1) / \sigma_\mathrm{noise} > 8$ are observations more than
+eight noise standard deviations outside the disc; there the class was checked to return a
+finite value. The unit test compares 23 certified points, six of them at a complex $g$
+not aligned with $\epsilon_\mathrm{obs}$, within $10^{-7}$.
+
+## Symbols and the Code
+
+| symbol | in `nc_galaxy_shape_factor_spectral.c` |
+|---|---|
+| $t$, $\epsilon$ | `t`, `e_1` and `e_2` of the kernel |
+| $\alpha_o$, $\alpha_1$ | `a`, `b` |
+| $1 / 2 \sigma_\mathrm{noise}^2$ | `c2` |
+| $d_0$, $d_0 / 2 \sigma_\mathrm{noise}^2$ | `shift` of the seed, `shift_c2` |
+| $1 / (2 \pi \sigma_\mathrm{noise}^2) / (2 \pi)$ | `norm` |
+| $\theta_0$, $r_*$, $J_1$, $J_2$ | `theta_0`, `r_star`, `J_1`, `J_2` of the seed |
+| $h (r)$ | `_nc_galaxy_shape_factor_spectral_h` |
+| $G (r, \theta)$ | the two kernel functions, one per convention |
+
+## API Reference
+
+See [[numcosmo|NcGalaxyShapeFactorSpectral]] for the class reference.
+[[numcosmo|nc_galaxy_shape_factor_spectral_eval_ln_direct]] computes $\ln P$ from a
+population and the values of one galaxy, and
+[[numcosmo|nc_galaxy_shape_factor_spectral_eval_panels]] also returns the panels the
+integral was accepted on, with their angles in the frame of $g$ and
+$\epsilon_\mathrm{obs}$.

@@ -29,6 +29,7 @@ classes and methods.
 - [Galaxy Shapes and Ellipticity Frames](nc/lss/galaxy/wl_ellipticity.qmd) --- the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
 - [A Small-Shear Series Marginalization for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_series.qmd) --- in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
 - [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd) --- a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
+- [Shape Marginalization by Spectral Panels](nc/lss/galaxy/wl_shape_marginalization_spectral.qmd) --- the intrinsic-ellipticity marginal in polar coordinates with the population's end power laws as the weight, panels placed from a scan of one ray, and the accuracy measured against the Arb reference.
 
 ## Angular Power Spectra
 

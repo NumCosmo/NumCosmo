@@ -20,6 +20,7 @@ project:
     - theory/nc/lss/galaxy/galaxy_wl_framework.qmd
     - theory/nc/lss/galaxy/wl_shape_marginalization_series.qmd
     - theory/nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd
+    - theory/nc/lss/galaxy/wl_shape_marginalization_spectral.qmd
     - theory/nc/lss/wl/wl_surface_mass_density.qmd
     - theory/nc/lss/halo/halo_density_profile.qmd
     - theory/ncm/fftlog/fftlog.qmd
@@ -164,6 +165,8 @@ website:
                 text: "Small-Shear Series Marginalization"
               - href: theory/nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd
                 text: "Fixed-Node Lens-Domain Quadrature"
+              - href: theory/nc/lss/galaxy/wl_shape_marginalization_spectral.qmd
+                text: "Shape Marginalization by Spectral Panels"
           - section: "Clusters & Weak Lensing"
             contents:
               - href: theory/nc/lss/halo/halo_density_profile.qmd
