@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Print the certified table of test_nc_galaxy_shape_factor_quad.c (tests/c/nc/lss/galaxy).
+"""Print the certified table of the shape-marginal tests (tests/c/nc/lss/galaxy).
 
 Each row is one value
 
@@ -31,12 +31,13 @@ Each row is one value
 certified by ``nc_galaxy_shape_marginal_arb`` (polar coordinates, its default target
 radius) and rounded to the nearest double. The columns are the tool's input columns: the
 shear convention (``trace`` or ``trace_det``), the population (``gauss`` with sigma = p1,
-or ``beta`` with alpha = p1 and beta = p2), std_noise, g1, g2, e1, e2. The last column
-marks the rows the unit-tier test checks (UNIT_ROWS); the acceptance-tier test checks
-every row.
+or ``beta`` with alpha = p1 and beta = p2), std_noise, g1, g2, e1, e2. The last two
+columns are for the NcGalaxyShapeFactorQuad tests: whether its unit tier checks the row
+(UNIT_ROWS) and whether its acceptance tier does (the first QUAD_ROWS rows). The
+NcGalaxyShapeFactorSpectral test checks every row.
 
 The output replaces the block between the BEGIN and END markers of
-test_nc_galaxy_shape_factor_quad_common.c:
+test_nc_galaxy_shape_marginal_arb_cases.h:
 
     python3 tests/tools/make_shape_marginal_arb_cases.py
 
@@ -59,7 +60,7 @@ C_CONV = {
     "trace": "NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE",
     "trace_det": "NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET",
 }
-C_POP = {"gauss": "TEST_QUAD_POP_GAUSS", "beta": "TEST_QUAD_POP_BETA"}
+C_POP = {"gauss": "TEST_SHAPE_ARB_POP_GAUSS", "beta": "TEST_SHAPE_ARB_POP_BETA"}
 
 # conv, pop, p1, p2, std_noise, g1, g2, e1, e2
 CASES = [
@@ -81,7 +82,68 @@ CASES = [
     ("trace_det", "gauss", 0.05, 0.0, 0.1, 0.005111126056639749, 0.0, 0.0, 0.9),
     ("trace_det", "beta", 1.57, 1.65, 0.1, 0.01, 0.0, 0.0, 0.02),
     ("trace", "beta", 4.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0),
+    # Complex g at an angle to eps_obs. The first three are points where integration rules
+    # with a window around the peak were wrong by 3.8e-4, 2.7e-7 and 4.8e-8.
+    ("trace", "gauss", 0.05, 0.0, 0.03, 0.3, -0.219359538352843, 0.99, 0.0),
+    (
+        "trace",
+        "gauss",
+        0.05,
+        0.0,
+        0.005,
+        0.3227416423252818,
+        0.46019288007369547,
+        0.99,
+        0.0,
+    ),
+    (
+        "trace",
+        "gauss",
+        0.4,
+        0.0,
+        0.01,
+        -0.86591447813628053,
+        0.24534081713806422,
+        -0.93403982009271569,
+        -0.32813048392547611,
+    ),
+    (
+        "trace_det",
+        "gauss",
+        0.2,
+        0.0,
+        0.03,
+        -0.36850938805797601,
+        0.47349850148985267,
+        -0.89999983214337287,
+        0.00054967435876962577,
+    ),
+    (
+        "trace",
+        "beta",
+        1.5,
+        3.0,
+        0.1,
+        0.0020353798786394857,
+        -0.0097906704954068141,
+        -0.58556538052086571,
+        -0.79825634049185845,
+    ),
+    (
+        "trace_det",
+        "beta",
+        4.0,
+        1.0,
+        0.03,
+        -0.53863697645386155,
+        0.26432973271397636,
+        0.80049145894708595,
+        0.41135559331649529,
+    ),
 ]
+
+# The NcGalaxyShapeFactorQuad acceptance tier checks the first QUAD_ROWS rows.
+QUAD_ROWS = 17
 
 
 # Indices of CASES checked by the unit tier: six cases on which the default and log-polar
@@ -141,7 +203,9 @@ def main() -> None:
     ):
         print(
             f"  {{{C_CONV[conv]}, {C_POP[pop]}, {p1!r}, {p2!r}, {sn!r}, "
-            f"{g1!r}, {g2!r}, {e1!r}, {e2!r}, {float(value)!r}, {'TRUE' if i in UNIT_ROWS else 'FALSE'}}},"
+            f"{g1!r}, {g2!r}, {e1!r}, {e2!r}, {float(value)!r}, "
+            f"{'TRUE' if i in UNIT_ROWS else 'FALSE'}, "
+            f"{'TRUE' if i < QUAD_ROWS else 'FALSE'}}},"
         )
 
     print("  /* END make_shape_marginal_arb_cases.py */")

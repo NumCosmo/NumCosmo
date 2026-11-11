@@ -128,6 +128,7 @@ void test_nc_galaxy_redshift_binning_basic (void);
 void test_nc_galaxy_redshift_pop_basic (void);
 void test_nc_galaxy_shape_factor_basic (void);
 void test_nc_galaxy_shape_factor_quad_basic (void);
+void test_nc_galaxy_shape_factor_spectral_basic (void);
 void test_nc_galaxy_shape_factor_series_lensed_basic (void);
 void test_nc_galaxy_shape_factor_fixed_quad_basic (void);
 void test_nc_galaxy_shape_factor_moments_tilt_basic (void);
@@ -243,6 +244,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/redshift_pop/basic", test_nc_galaxy_redshift_pop_basic);
   g_test_add_func ("/nc/galaxy/shape_factor/basic", test_nc_galaxy_shape_factor_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_quad/basic", test_nc_galaxy_shape_factor_quad_basic);
+  g_test_add_func ("/nc/galaxy/shape_factor_spectral/basic", test_nc_galaxy_shape_factor_spectral_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_series_lensed/basic", test_nc_galaxy_shape_factor_series_lensed_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_fixed_quad/basic", test_nc_galaxy_shape_factor_fixed_quad_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_moments_tilt/basic", test_nc_galaxy_shape_factor_moments_tilt_basic);
@@ -2065,6 +2067,24 @@ test_nc_galaxy_shape_factor_quad_basic (void)
   g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_QUAD (gsfq));
 
   NCM_TEST_FREE (nc_galaxy_shape_factor_quad_free, gsfq);
+}
+
+void
+test_nc_galaxy_shape_factor_spectral_basic (void)
+{
+  NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
+  NcGalaxyShapeFactorSpectral *gsfs2;
+
+  g_assert_true (gsfs != NULL);
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (gsfs));
+
+  gsfs2 = nc_galaxy_shape_factor_spectral_ref (gsfs);
+  nc_galaxy_shape_factor_spectral_clear (&gsfs2);
+  g_assert_true (gsfs2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (gsfs));
+
+  NCM_TEST_FREE (nc_galaxy_shape_factor_spectral_free, gsfs);
 }
 
 void

@@ -35,6 +35,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "test_nc_galaxy_shape_factor_quad_common.h"
+#include "test_nc_galaxy_shape_marginal_arb_cases.h"
 
 #include <math.h>
 #include <glib-object.h>
@@ -46,54 +47,6 @@
  */
 #define TEST_QUAD_TOL_PSI (1.0e-6)
 #define TEST_QUAD_TOL_LP (5.0e-7)
-
-typedef enum _TestQuadPop
-{
-  TEST_QUAD_POP_GAUSS,
-  TEST_QUAD_POP_BETA,
-} TestQuadPop;
-
-/*
- * One certified value: the shear convention, the population (Gauss: sigma = p1; Beta:
- * alpha = p1, beta = p2), std_noise, g, eps_obs, ln P, and whether the unit tier checks it.
- */
-typedef struct _TestQuadCell
-{
-  NcGalaxyWLObsEllipConv conv;
-  TestQuadPop pop;
-  gdouble p1;
-  gdouble p2;
-  gdouble std_noise;
-  gdouble g1;
-  gdouble g2;
-  gdouble e1;
-  gdouble e2;
-  gdouble lnP;
-  gboolean unit;
-} TestQuadCell;
-
-/* Certified values of tests/tools/make_shape_marginal_arb_cases.py */
-static const TestQuadCell test_quad_cells[] = {
-  /* BEGIN make_shape_marginal_arb_cases.py */
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_GAUSS, 0.3, 0.0, 0.1, 0.3, 0.0, 0.0, 0.5, -1.402431117754455, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_QUAD_POP_GAUSS, 0.3, 0.0, 0.01, 0.6, 0.0, 0.5, 0.0, -2.536716442503229, TRUE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_QUAD_POP_GAUSS, 0.05, 0.0, 0.005, 0.1, 0.0, 0.05, 0.0, -0.31255850401115876, TRUE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_GAUSS, 0.05, 0.0, 0.03, 0.6, 0.0, -0.9, 0.0, -182.8521316909928, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_GAUSS, 0.2, 0.0, 0.05, 0.2, -0.4, 0.3, 0.25, -3.978049030486719, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_QUAD_POP_GAUSS, 0.3, 0.0, 1.0, 3.0, 0.0, 2.0, 0.0, -2.872477807137722, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_GAUSS, 0.3, 0.0, 0.1, 1.5, 0.0, 1.2, 0.0, -4.056650475069435, TRUE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_QUAD_POP_BETA, 1.0, 1.0, 0.03, 0.6, 0.0, 0.0, 0.5, -4.003703139471936, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_BETA, 4.0, 1.0, 0.1, 0.6, 0.0, 0.9, 0.0, 0.7997452547544199, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_BETA, 1.0, 1.0, 0.01, 0.3, 0.0, 0.0, 1.2, -206.2067527885707, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_QUAD_POP_BETA, 4.0, 1.0, 0.3, 1.5, 0.0, -0.5, 0.0, -4.309400768872423, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_QUAD_POP_BETA, 1.57, 1.65, 0.1, 0.3, 0.0, 0.5, 0.0, 0.5334663856834809, TRUE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_BETA, 1.92, 1.98, 0.03, 0.6, 0.0, 0.0, 0.5, -2.5176649373938598, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_BETA, 1.57, 1.65, 0.05, -0.1, 0.25, 0.2, -0.3, -1.532207192020498, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_GAUSS, 0.05, 0.0, 0.1, 0.005111126056639749, 0.0, 0.0, 0.9, -29.85714990728496, TRUE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, TEST_QUAD_POP_BETA, 1.57, 1.65, 0.1, 0.01, 0.0, 0.0, 0.02, 0.2155439914200594, FALSE},
-  {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, TEST_QUAD_POP_BETA, 4.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, -2.1641169160898808, TRUE},
-  /* END make_shape_marginal_arb_cases.py */
-};
 
 static TestNcGalaxyShapeFactorQuadMode test_quad_mode;
 
@@ -129,9 +82,9 @@ test_nc_galaxy_shape_factor_quad_main (gint argc, gchar *argv[], TestNcGalaxySha
 
 /* Returns a new population of kind @pop with parameters @p1, @p2. */
 static NcGalaxyShapePop *
-_test_quad_pop_new (const TestQuadPop pop, const gdouble p1, const gdouble p2)
+_test_quad_pop_new (const TestShapeArbPop pop, const gdouble p1, const gdouble p2)
 {
-  if (pop == TEST_QUAD_POP_GAUSS)
+  if (pop == TEST_SHAPE_ARB_POP_GAUSS)
   {
     NcGalaxyShapePopGauss *gauss = nc_galaxy_shape_pop_gauss_new ();
 
@@ -163,11 +116,11 @@ _test_quad_arb (const gboolean use_lp, const gdouble tol)
 {
   guint i;
 
-  for (i = 0; i < G_N_ELEMENTS (test_quad_cells); i++)
+  for (i = 0; i < G_N_ELEMENTS (test_shape_arb_cells); i++)
   {
-    const TestQuadCell *c = &test_quad_cells[i];
+    const TestShapeArbCell *c = &test_shape_arb_cells[i];
 
-    if ((test_quad_mode == TEST_NC_GALAXY_SHAPE_FACTOR_QUAD_UNIT) && !c->unit)
+    if (!c->quad || ((test_quad_mode == TEST_NC_GALAXY_SHAPE_FACTOR_QUAD_UNIT) && !c->quad_unit))
       continue;
 
     {
@@ -205,7 +158,7 @@ test_nc_galaxy_shape_factor_quad_unit_shear (void)
   const gdouble g[]     = {1.0, 0.0, 0.0, -1.0};
   const gdouble e[]     = {0.3, -0.2, 0.9, 0.4};
   const gdouble s       = 0.05;
-  NcGalaxyShapePop *pop = _test_quad_pop_new (TEST_QUAD_POP_BETA, 1.57, 1.65);
+  NcGalaxyShapePop *pop = _test_quad_pop_new (TEST_SHAPE_ARB_POP_BETA, 1.57, 1.65);
   guint i, j, k;
 
   for (i = 0; i < 2; i++)

@@ -10131,6 +10131,77 @@ class GalaxyShapeFactorSeriesLensedClass(GObject.GPointer):
 
     parent_class: GalaxyShapeFactorClass = ...
 
+class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorSpectral(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorSpectral
+
+    Object NcGalaxyShapeFactorSpectral
+
+    Properties from NcGalaxyShapeFactorSpectral:
+      reltol -> gdouble: reltol
+        Relative tolerance of the integral
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        reltol: float
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self, reltol: float = ..., ellip_conv: GalaxyWLObsEllipConv = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfs: GalaxyShapeFactorSpectral) -> None: ...
+    def eval_ln_direct(
+        self,
+        pop: GalaxyShapePop,
+        pop_data: GalaxyShapePopData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+        std_noise: float,
+    ) -> float: ...
+    def eval_panels(
+        self,
+        pop: GalaxyShapePop,
+        pop_data: GalaxyShapePopData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+        std_noise: float,
+    ) -> typing.Tuple[typing.Optional[NumCosmoMath.Matrix], float]: ...
+    def free(self) -> None: ...
+    def get_reltol(self) -> float: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorSpectral: ...
+    def ref(self) -> GalaxyShapeFactorSpectral: ...
+    def set_reltol(self, reltol: float) -> None: ...
+
+class GalaxyShapeFactorSpectralClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorSpectralClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
 class GalaxyShapeFactorVarAdd(GalaxyShapeFactor):
     r"""
     :Constructors:
