@@ -136,6 +136,22 @@ _nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapeP
   g_error ("_nc_galaxy_shape_pop_eval_p_rho2_g_series: method not implemented.");
 }
 
+static gdouble
+_nc_galaxy_shape_pop_exponent_at_one (NcGalaxyShapePop *gsp)
+{
+  g_error ("_nc_galaxy_shape_pop_exponent_at_one: method not implemented.");
+
+  return 0.0;
+}
+
+static gdouble
+_nc_galaxy_shape_pop_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
+{
+  g_error ("_nc_galaxy_shape_pop_eval_p_reduced: method not implemented.");
+
+  return 0.0;
+}
+
 /* LCOV_EXCL_STOP */
 
 /* Real (non-stub) default: plain loop calling eval_p() through the class
@@ -236,6 +252,8 @@ nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
   klass->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_eval_p_rho2_g_series;
   klass->eval_p_array         = &_nc_galaxy_shape_pop_eval_p_array;
   klass->moment_2k            = &_nc_galaxy_shape_pop_moment_2k;
+  klass->exponent_at_one      = &_nc_galaxy_shape_pop_exponent_at_one;
+  klass->eval_p_reduced       = &_nc_galaxy_shape_pop_eval_p_reduced;
 }
 
 /**
@@ -600,5 +618,37 @@ gdouble
 nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k)
 {
   return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->moment_2k (gsp, data, k);
+}
+
+/**
+ * nc_galaxy_shape_pop_exponent_at_one: (virtual exponent_at_one)
+ * @gsp: a #NcGalaxyShapePop
+ *
+ * Returns: the exponent $\alpha_1$ such that $P_\mathrm{pop}(r) \sim (1 - r)^{\alpha_1}$ as $r \to 1$.
+ */
+gdouble
+nc_galaxy_shape_pop_exponent_at_one (NcGalaxyShapePop *gsp)
+{
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->exponent_at_one (gsp);
+}
+
+/**
+ * nc_galaxy_shape_pop_eval_p_reduced: (virtual eval_p_reduced)
+ * @gsp: a #NcGalaxyShapePop
+ * @data: a resolved #NcGalaxyShapePopData
+ * @r: the ellipticity modulus $r = |\chi_I| \in [0,1]$
+ *
+ * Evaluates $P_\mathrm{pop}(r) / (r^{\alpha_o} (1 - r)^{\alpha_1})$, with $\alpha_o$ and
+ * $\alpha_1$ the exponents of nc_galaxy_shape_pop_exponent_at_origin() and
+ * nc_galaxy_shape_pop_exponent_at_one(). It is computed without the division, so it is
+ * finite at $r = 0$ and at $r = 1$. It reads the resolved parameters from @data, as
+ * nc_galaxy_shape_pop_eval_p() does.
+ *
+ * Returns: the density over its two end power laws.
+ */
+gdouble
+nc_galaxy_shape_pop_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
+{
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_reduced (gsp, data, r);
 }
 

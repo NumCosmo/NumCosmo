@@ -813,6 +813,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_intrinsic_mode.c'],
     },
     {
+        'name': 'nc_galaxy_shape_pop',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop.c'],
+    },
+    {
         'name': 'nc_galaxy_shape_pop_series',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
     },

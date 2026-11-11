@@ -122,6 +122,8 @@ static void _nc_galaxy_shape_pop_beta_eval_p_array (NcGalaxyShapePop *gsp, NcGal
 static void _nc_galaxy_shape_pop_beta_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, NcmRNG *rng, gdouble *e_int_1, gdouble *e_int_2);
 static gdouble _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp);
+static gdouble _nc_galaxy_shape_pop_beta_exponent_at_one (NcGalaxyShapePop *gsp);
+static gdouble _nc_galaxy_shape_pop_beta_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 static gdouble _nc_galaxy_shape_pop_beta_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 static void _nc_galaxy_shape_pop_beta_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
                                                             const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
@@ -179,6 +181,8 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
   gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_beta_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_beta_eval_p_rho2_g_series;
   gsp_class->moment_2k            = &_nc_galaxy_shape_pop_beta_moment_2k;
+  gsp_class->exponent_at_one      = &_nc_galaxy_shape_pop_beta_exponent_at_one;
+  gsp_class->eval_p_reduced       = &_nc_galaxy_shape_pop_beta_eval_p_reduced;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -359,6 +363,23 @@ _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp)
   const gdouble alpha = ALPHA;
 
   return (alpha - 1.0);
+}
+
+static gdouble
+_nc_galaxy_shape_pop_beta_exponent_at_one (NcGalaxyShapePop *gsp)
+{
+  const gdouble beta = BETA;
+
+  return (beta - 1.0);
+}
+
+/* P_pop (r) / (r^(alpha - 1) (1 - r)^(beta - 1)) = 1 / B (alpha, beta), independent of r */
+static gdouble
+_nc_galaxy_shape_pop_beta_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
+{
+  NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
+
+  return exp (ldata->lnnorm_r);
 }
 
 /* M_2k = <r^2k> = B(alpha+2k,beta)/B(alpha,beta) = prod_{j=0}^{2k-1}
