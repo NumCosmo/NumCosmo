@@ -187,6 +187,15 @@ NCM_INLINE void nc_wl_ellipticity_trace_det_kernel (NcmComplex g, NcmComplex e_o
 
 #endif /* NUMCOSMO_GIR_SCAN */
 
+/*
+ * The apply_shear maps for a real reduced shear t, 0 <= t < 1, in real arithmetic:
+ * (x, y) are the real and imaginary parts of the intrinsic ellipticity and (*f_x, *f_y)
+ * those of the observed one. They are the complex kernels above at g = t. For a complex g
+ * of modulus t, rotate the frame: f_g (chi) = (g / t) f_t (chi t / g).
+ */
+NCM_INLINE void nc_wl_ellipticity_apply_shear_trace_real (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
+NCM_INLINE void nc_wl_ellipticity_apply_shear_trace_det_real (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
+
 G_END_DECLS
 
 #endif /* _NC_WL_ELLIPTICITY_H_ */
@@ -507,6 +516,30 @@ nc_wl_ellipticity_trace_det_kernel (NcmComplex g, NcmComplex e_obs, gdouble * re
 }
 
 #endif /* NUMCOSMO_GIR_SCAN */
+
+/* (chi + t (t conj (chi) + 2)) / (1 + t^2 + 2 t Re chi) */
+NCM_INLINE void
+nc_wl_ellipticity_apply_shear_trace_real (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y)
+{
+  const gdouble t2      = t * t;
+  const gdouble den_inv = 1.0 / (1.0 + t2 + 2.0 * t * x);
+
+  *f_x = (x * (1.0 + t2) + 2.0 * t) * den_inv;
+  *f_y = y * (1.0 - t2) * den_inv;
+}
+
+/* (chi + t) / (1 + t chi) */
+NCM_INLINE void
+nc_wl_ellipticity_apply_shear_trace_det_real (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y)
+{
+  const gdouble num_x   = x + t;
+  const gdouble den_x   = 1.0 + t * x;
+  const gdouble den_y   = t * y;
+  const gdouble den_inv = 1.0 / (den_x * den_x + den_y * den_y);
+
+  *f_x = (num_x * den_x + y * den_y) * den_inv;
+  *f_y = (y * den_x - num_x * den_y) * den_inv;
+}
 
 G_END_DECLS
 

@@ -498,8 +498,14 @@ def wl_ellipticity_apply_shear_inv_trace_ptr(
 def wl_ellipticity_apply_shear_trace_det_ptr(
     g: NumCosmoMath.Complex, e: NumCosmoMath.Complex, e_obs: NumCosmoMath.Complex
 ) -> None: ...
+def wl_ellipticity_apply_shear_trace_det_real(
+    t: float, x: float, y: float, f_x: float, f_y: float
+) -> None: ...
 def wl_ellipticity_apply_shear_trace_ptr(
     g: NumCosmoMath.Complex, chi: NumCosmoMath.Complex, chi_obs: NumCosmoMath.Complex
+) -> None: ...
+def wl_ellipticity_apply_shear_trace_real(
+    t: float, x: float, y: float, f_x: float, f_y: float
 ) -> None: ...
 def wl_ellipticity_celestial_to_frame_angle(
     frame: WLEllipticityFrame, phi: float
