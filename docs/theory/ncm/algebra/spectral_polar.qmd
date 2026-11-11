@@ -209,4 +209,7 @@ lines; a direction with more nodes by an FFTW `REDFT00` plan.
 See [[numcosmo-math|NcmSpectralPolar]] for the full class reference:
 [[numcosmo-math|ncm_spectral_polar_integrate]] and
 [[numcosmo-math|ncm_spectral_polar_peak_edges]], with the properties `level-min`,
-`level-cap`, `max-depth` and `edge-ratio`.
+`level-cap`, `max-depth` and `edge-ratio`. On request,
+[[numcosmo-math|ncm_spectral_polar_integrate]] also returns the accepted panels, one row
+per panel with $r_a$, $r_b$, $\theta_a$, $\theta_b$, $l_r$, $l_\theta$, the value of
+Eq. (7) and $D_r + D_\theta$, for inspecting where the panels were refined.

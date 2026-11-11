@@ -90,6 +90,7 @@ void test_ncm_spectral_polar_peak_wrong_seed (TestNcmSpectralPolar *test, gconst
 void test_ncm_spectral_polar_peak_edges (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_power_laws (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_retest (TestNcmSpectralPolar *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_bisect (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_level_cap (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_threads (TestNcmSpectralPolar *test, gconstpointer pdata);
@@ -127,6 +128,7 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak_edges", test_ncm_spectral_polar_peak_edges);
   TEST_NCM_SPECTRAL_POLAR_ADD ("power_laws", test_ncm_spectral_polar_power_laws);
   TEST_NCM_SPECTRAL_POLAR_ADD ("retest", test_ncm_spectral_polar_retest);
+  TEST_NCM_SPECTRAL_POLAR_ADD ("panels", test_ncm_spectral_polar_panels);
   TEST_NCM_SPECTRAL_POLAR_ADD ("bisect", test_ncm_spectral_polar_bisect);
   TEST_NCM_SPECTRAL_POLAR_ADD ("level_cap", test_ncm_spectral_polar_level_cap);
   TEST_NCM_SPECTRAL_POLAR_ADD ("threads", test_ncm_spectral_polar_threads);
@@ -246,7 +248,7 @@ _gauss_integral (TestNcmSpectralPolar *test, TestGauss *g, gdouble r_peak, gdoub
 
   ncm_spectral_polar_peak_edges (test->sp, 1.0, r_peak, theta_peak, L_r, L_theta, test->r_edges, test->theta_edges);
   res = ncm_spectral_polar_integrate (test->sp, &_gauss, g, 1.0, 1.0, 0.0, test->r_edges, test->theta_edges,
-                                      reltol, 0.0, n_eval, &error);
+                                      reltol, 0.0, n_eval, NULL, &error);
   g_assert_no_error (error);
 
   return res;
@@ -380,7 +382,7 @@ test_ncm_spectral_polar_weight (TestNcmSpectralPolar *test, gconstpointer pdata)
       _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
 
       res = ncm_spectral_polar_integrate (test->sp, &_one, NULL, R, a, b, test->r_edges, test->theta_edges,
-                                          reltol, 0.0, NULL, &error);
+                                          reltol, 0.0, NULL, NULL, &error);
       g_assert_no_error (error);
       g_assert_cmpfloat (fabs (res / exact - 1.0), <=, reltol);
     }
@@ -519,7 +521,7 @@ test_ncm_spectral_polar_power_laws (TestNcmSpectralPolar *test, gconstpointer pd
     ref *= 2.0 * M_PI;
 
     res = ncm_spectral_polar_integrate (test->sp, &_radial, &rd, 1.0, rd.a, rd.b, test->r_edges, test->theta_edges,
-                                        reltol, 0.0, NULL, &error);
+                                        reltol, 0.0, NULL, NULL, &error);
     g_assert_no_error (error);
     g_assert_cmpfloat (fabs (res / ref - 1.0), <=, reltol);
 
@@ -550,9 +552,68 @@ test_ncm_spectral_polar_retest (TestNcmSpectralPolar *test, gconstpointer pdata)
   _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
 
   res = ncm_spectral_polar_integrate (test->sp, &_spike, &sk, 1.0, 1.0, 0.0, test->r_edges, test->theta_edges,
-                                      reltol, 0.0, NULL, &error);
+                                      reltol, 0.0, NULL, NULL, &error);
   g_assert_no_error (error);
   g_assert_cmpfloat (fabs (res / exact - 1.0), <=, reltol);
+}
+
+/*
+ * The accepted panels of the integral of the retest case: their values add up to the
+ * integral, their areas to the area of the domain, their levels are between level-min and
+ * level-cap, and the same call without the output gives the same integral.
+ */
+void
+test_ncm_spectral_polar_panels (TestNcmSpectralPolar *test, gconstpointer pdata)
+{
+  const gdouble r_edges[] = {0.0, 0.4, 0.7, 1.0};
+  const gdouble t_edges[] = {-M_PI, -0.5 * M_PI, 0.0, 0.5 * M_PI, M_PI};
+  const gdouble reltol    = 1.0e-6;
+  TestSpike sk            = { 0.4, 0.0, 1.0e-3, 1.0e5 };
+  NcmMatrix *panels       = NULL;
+  GError *error           = NULL;
+  gdouble sum             = 0.0;
+  gdouble area            = 0.0;
+  gdouble res, res_no_panels;
+  guint i;
+
+  _set_edges (test->r_edges, r_edges, G_N_ELEMENTS (r_edges));
+  _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
+
+  res = ncm_spectral_polar_integrate (test->sp, &_spike, &sk, 1.0, 1.0, 0.0, test->r_edges, test->theta_edges,
+                                      reltol, 0.0, NULL, &panels, &error);
+  g_assert_no_error (error);
+  g_assert_nonnull (panels);
+  g_assert_cmpuint (ncm_matrix_ncols (panels), ==, 8);
+  g_assert_cmpuint (ncm_matrix_nrows (panels), >, 12);
+
+  for (i = 0; i < ncm_matrix_nrows (panels); i++)
+  {
+    const gdouble ra = ncm_matrix_get (panels, i, 0);
+    const gdouble rb = ncm_matrix_get (panels, i, 1);
+    const gdouble ta = ncm_matrix_get (panels, i, 2);
+    const gdouble tb = ncm_matrix_get (panels, i, 3);
+
+    g_assert_cmpfloat (ra, <, rb);
+    g_assert_cmpfloat (ta, <, tb);
+    g_assert_cmpfloat (ncm_matrix_get (panels, i, 4), >=, ncm_spectral_polar_get_level_min (test->sp));
+    g_assert_cmpfloat (ncm_matrix_get (panels, i, 4), <=, ncm_spectral_polar_get_level_cap (test->sp));
+    g_assert_cmpfloat (ncm_matrix_get (panels, i, 5), >=, ncm_spectral_polar_get_level_min (test->sp));
+    g_assert_cmpfloat (ncm_matrix_get (panels, i, 5), <=, ncm_spectral_polar_get_level_cap (test->sp));
+    g_assert_cmpfloat (ncm_matrix_get (panels, i, 7), >=, 0.0);
+
+    sum  += ncm_matrix_get (panels, i, 6);
+    area += (rb - ra) * (tb - ta);
+  }
+
+  ncm_assert_cmpdouble_e (sum, ==, res, 1.0e-13, 0.0);
+  ncm_assert_cmpdouble_e (area, ==, 2.0 * M_PI, 1.0e-13, 0.0);
+
+  res_no_panels = ncm_spectral_polar_integrate (test->sp, &_spike, &sk, 1.0, 1.0, 0.0, test->r_edges, test->theta_edges,
+                                                reltol, 0.0, NULL, NULL, &error);
+  g_assert_no_error (error);
+  g_assert_cmpfloat (res_no_panels, ==, res);
+
+  ncm_matrix_free (panels);
 }
 
 /* Two panels for a Gaussian of width 0.01 and level-cap 4: bisections in r and in theta */
@@ -572,7 +633,7 @@ test_ncm_spectral_polar_bisect (TestNcmSpectralPolar *test, gconstpointer pdata)
   _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
 
   res = ncm_spectral_polar_integrate (test->sp, &_gauss, &g, 1.0, 1.0, 0.0, test->r_edges, test->theta_edges,
-                                      reltol, 0.0, NULL, &error);
+                                      reltol, 0.0, NULL, NULL, &error);
   g_assert_no_error (error);
   g_assert_cmpfloat (fabs (res - 1.0), <=, reltol);
 }
@@ -629,12 +690,13 @@ test_ncm_spectral_polar_threads (TestNcmSpectralPolar *test, gconstpointer pdata
   }
 }
 
-/* A jump in theta with max-depth 3: the error, and NaN */
+/* A jump in theta with max-depth 3: the error, NaN, and no panels */
 void
 test_ncm_spectral_polar_max_depth (TestNcmSpectralPolar *test, gconstpointer pdata)
 {
   const gdouble r_edges[] = {0.0, 1.0};
   const gdouble t_edges[] = {0.0, M_PI, 2.0 * M_PI};
+  NcmMatrix *panels       = (NcmMatrix *) test; /* any non-NULL value: the call must reset it */
   GError *error           = NULL;
   gdouble res;
 
@@ -644,8 +706,9 @@ test_ncm_spectral_polar_max_depth (TestNcmSpectralPolar *test, gconstpointer pda
   _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
 
   res = ncm_spectral_polar_integrate (test->sp, &_step, NULL, 1.0, 1.0, 0.0, test->r_edges, test->theta_edges,
-                                      1.0e-8, 0.0, NULL, &error);
+                                      1.0e-8, 0.0, NULL, &panels, &error);
   g_assert_error (error, NCM_SPECTRAL_POLAR_ERROR, NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH);
+  g_assert_null (panels);
   g_assert_cmpstr (g_quark_to_string (NCM_SPECTRAL_POLAR_ERROR), ==, "ncm-spectral-polar-error");
   g_assert_true (gsl_isnan (res));
   g_clear_error (&error);
@@ -671,7 +734,7 @@ test_ncm_spectral_polar_max_depth_no_error_subprocess (TestNcmSpectralPolar *tes
   _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
 
   ncm_spectral_polar_integrate (test->sp, &_step, NULL, 1.0, 1.0, 0.0, test->r_edges, test->theta_edges,
-                                1.0e-8, 0.0, NULL, NULL);
+                                1.0e-8, 0.0, NULL, NULL, NULL);
 }
 
 void
@@ -694,7 +757,7 @@ test_ncm_spectral_polar_levels_subprocess (TestNcmSpectralPolar *test, gconstpoi
   _set_edges (test->theta_edges, edges, G_N_ELEMENTS (edges));
 
   ncm_spectral_polar_integrate (test->sp, &_one, NULL, 1.0, 0.0, 0.0, test->r_edges, test->theta_edges,
-                                1.0e-8, 0.0, NULL, NULL);
+                                1.0e-8, 0.0, NULL, NULL, NULL);
 }
 
 void
@@ -714,7 +777,7 @@ test_ncm_spectral_polar_exponents_subprocess (TestNcmSpectralPolar *test, gconst
   _set_edges (test->theta_edges, edges, G_N_ELEMENTS (edges));
 
   ncm_spectral_polar_integrate (test->sp, &_one, NULL, 1.0, -1.0, 0.0, test->r_edges, test->theta_edges,
-                                1.0e-8, 0.0, NULL, NULL);
+                                1.0e-8, 0.0, NULL, NULL, NULL);
 }
 
 void
@@ -735,7 +798,7 @@ test_ncm_spectral_polar_edges_order_subprocess (TestNcmSpectralPolar *test, gcon
   _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
 
   ncm_spectral_polar_integrate (test->sp, &_one, NULL, 1.0, 0.0, 0.0, test->r_edges, test->theta_edges,
-                                1.0e-8, 0.0, NULL, NULL);
+                                1.0e-8, 0.0, NULL, NULL, NULL);
 }
 
 void

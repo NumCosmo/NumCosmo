@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/ncm/algebra/ncm_matrix.h>
 
 G_BEGIN_DECLS
 
@@ -79,7 +80,7 @@ guint ncm_spectral_polar_get_level_cap (NcmSpectralPolar *sp);
 guint ncm_spectral_polar_get_max_depth (NcmSpectralPolar *sp);
 gdouble ncm_spectral_polar_get_edge_ratio (NcmSpectralPolar *sp);
 
-gdouble ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, GError **error);
+gdouble ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
 void ncm_spectral_polar_peak_edges (NcmSpectralPolar *sp, gdouble R, gdouble r_peak, gdouble theta_peak, gdouble L_r, gdouble L_theta, GArray *r_edges, GArray *theta_edges);
 
 G_END_DECLS
