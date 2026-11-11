@@ -91,11 +91,11 @@ class LinkingMethod(StrEnum):
         members divided by the number of members of their union.
     :param SHARED_FRACTION: Combination of the shared member fractions of the two
         objects, computed as prescribed by :class:`SharedFractionMethod`.
-    :param JACCARD_PMEM: Jaccard index weighted by the product of the membership
-        probabilities of the shared members. When both catalogs provide a pmem column
-        each shared member contributes the product of its two probabilities, otherwise
-        it contributes the probability of the single catalog providing them. Both
-        factors lie between 0 and 1, so the coefficient does too.
+    :param JACCARD_PMEM: Jaccard index weighted by the mean membership probability
+        of the shared members. When both catalogs provide a pmem column the product of
+        the two probabilities is averaged, otherwise the probabilities of the single
+        catalog providing them are averaged. Both factors lie between 0 and 1, so the
+        coefficient does too.
     """
 
     @staticmethod
@@ -1207,16 +1207,16 @@ class SkyMatch:
 
     @staticmethod
     def _compute_shared_pmem(matched_catalog_grouped: Table) -> Table:
-        """Multiply the membership probabilities of the shared members of each pair.
+        """Average the membership probabilities of the shared members of each pair.
 
         When both catalogs provide a pmem column, each shared member contributes the
         product of its two membership probabilities; otherwise it contributes the
         probability given by the single catalog providing them. The contributions are
-        multiplied together, so the result lies between 0 and 1 and falls quickly with
-        the number of shared members.
+        summed and divided by the number of shared members, so the result lies between
+        0 and 1.
 
         :param matched_catalog_grouped: Member matches grouped by (query_id, match_id).
-        :return: Table with the ``query_id``, ``match_id`` and ``prod_shared_pmem``
+        :return: Table with the ``query_id``, ``match_id`` and ``mean_shared_pmem``
             columns.
         """
         has_query_pmem = "pmem_query" in matched_catalog_grouped.colnames
@@ -1241,12 +1241,12 @@ class SkyMatch:
             {
                 "query_id": matched_catalog_grouped["query_id"],
                 "match_id": matched_catalog_grouped["match_id"],
-                "prod_shared_pmem": shared_pmem,
+                "mean_shared_pmem": shared_pmem,
             }
         )
 
         return shared_pmem_table.group_by(["query_id", "match_id"]).groups.aggregate(
-            np.prod
+            np.mean
         )
 
     def match_ID(
@@ -1381,7 +1381,7 @@ class SkyMatch:
                     - all_combinations["shared_count"]
                 )
                 all_combinations["linking_coefficient"] = (
-                    jaccard * all_combinations["prod_shared_pmem"]
+                    jaccard * all_combinations["mean_shared_pmem"]
                 )
 
             case _ as unreachable:  # pragma: no cover
