@@ -30,8 +30,8 @@
  * ncm_spectral_polar_integrate() computes
  * $$I = \int\!\!\int r^a (R - r)^b \, G (r, \theta) \, \mathrm{d}r \, \mathrm{d}\theta$$
  * for $a, b > -1$ on a domain given by its edges: the radial edges
- * $0 \le r_0 < r_1 < \dots < r_m \le R$ and the angular edges
- * $\theta_0 < \theta_1 < \dots < \theta_n$ split it into the $m n$ panels
+ * $0 \le r_0 < r_1 < \dots < r_{n_r} \le R$ and the angular edges
+ * $\theta_0 < \theta_1 < \dots < \theta_{n_\theta}$ split it into the $n_r n_\theta$ panels
  * $[r_i, r_{i+1}] \times [\theta_j, \theta_{j+1}]$, so an edge is a value of $r$ or of
  * $\theta$ where one panel ends and the next starts. The power laws are in the weight, so
  * $G$ is the factor that is smooth at $r = 0$ and $r = R$; the polar Jacobian is part of
@@ -64,6 +64,9 @@
  *
  * A call takes its scratch space from a pool, so one object may be used by calls in
  * several threads; its properties must not change during a call.
+ *
+ * See <a href="../../theory/ncm/algebra/spectral_polar.html">Spectral Integration on a
+ * Disc</a> for the formulas.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -584,8 +587,8 @@ static gdouble _ncm_spectral_polar_retest (NcmSpectralPolarCall *call, gdouble a
  * @R: radius of the disc
  * @a: exponent of the weight at $r = 0$
  * @b: exponent of the weight at $r = R$
- * @r_edges: (element-type gdouble): the radial edges $r_0, \dots, r_m$
- * @theta_edges: (element-type gdouble): the angular edges $\theta_0, \dots, \theta_n$
+ * @r_edges: (element-type gdouble): the radial edges $r_0, \dots, r_{n_r}$
+ * @theta_edges: (element-type gdouble): the angular edges $\theta_0, \dots, \theta_{n_\theta}$
  * @reltol: relative tolerance
  * @abstol: absolute tolerance, in units of the integral
  * @n_eval: (out) (optional): number of values of $G$ computed

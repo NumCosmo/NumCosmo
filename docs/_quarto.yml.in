@@ -24,6 +24,7 @@ project:
     - theory/nc/lss/halo/halo_density_profile.qmd
     - theory/ncm/fftlog/fftlog.qmd
     - theory/ncm/algebra/spectral.qmd
+    - theory/ncm/algebra/spectral_polar.qmd
     - theory/ncm/specfunc/sbessel_ode_solver.qmd
     - theory/ncm/specfunc/sbessel_projection.qmd
     - theory/nc/xcor/limber.qmd
@@ -187,6 +188,8 @@ website:
             contents:
               - href: theory/ncm/algebra/spectral.qmd
                 text: "Spectral Methods"
+              - href: theory/ncm/algebra/spectral_polar.qmd
+                text: "Spectral Integration on a Disc"
               - href: theory/ncm/fftlog/fftlog.qmd
                 text: "FFTLog"
               - href: theory/ncm/spline/spline_func.qmd

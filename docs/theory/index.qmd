@@ -40,6 +40,7 @@ classes and methods.
 ## Approximation and Interpolation
 
 - [Spectral Methods](ncm/algebra/spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
+- [Spectral Integration on a Disc](ncm/algebra/spectral_polar.qmd) --- adaptive Chebyshev panels in polar coordinates, power laws at the radial ends integrated through moments, and the edges for an integrand with one maximum.
 - [FFTLog](ncm/fftlog/fftlog.qmd) --- logarithmic fast Fourier transform.
 - [AutoKnots: Adaptive Knot Placement](ncm/spline/spline_func.qmd) --- the rounds of midpoint tests, the false pass, the closure of the settled mesh that replaced the reopening by standard deviation, the spread along runs of equal width, and the aliased Eisenstein--Hu spline.
 - [Quintic Hermite Interpolation](ncm/spline/hermite.qmd) --- the quintic through the values and two derivatives at the knots, its third-derivative jumps against the cubic's, the error bound, and the ODE order NcmOdeSpline pairs it with.
