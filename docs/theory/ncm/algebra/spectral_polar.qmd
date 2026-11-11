@@ -6,7 +6,9 @@ This page describes [[numcosmo-math|NcmSpectralPolar]], which integrates a funct
 disc in polar coordinates when the integrand has power laws at the radial ends and one
 narrow maximum, as the population and the noise factors of a galaxy shape likelihood do. The
 Chebyshev expansion, its nested grids and its convergence test are those of
-[Spectral Methods](spectral.qmd), applied here in two variables.
+[Spectral Methods](spectral.qmd), applied here in two variables. The same expansion, kept
+instead of integrated, approximates a function of $(r, \theta)$; this is described in
+[Approximation on the Panels](#approximation-on-the-panels).
 
 ## The Integral and its Panels
 
@@ -187,6 +189,46 @@ contain the maximum, $F$ is largest on the side nearest to it, where the Lobatto
 nodes. The position and the widths only place the edges: with other values the number of
 evaluations of $G$ changes, and Eq. (5) is applied to every panel in the same way.
 
+## Approximation on the Panels
+
+[[numcosmo-math|ncm_spectral_polar_build]] expands a function $F (r, \theta)$ on the
+panels of the edges and keeps the coefficients $c^{kl}$ of Eq. (3) of every accepted panel
+in an [[numcosmo-math|NcmSpectralPolarPanels]]. It differs from the integral in three
+points.
+
+- There is no weight: $F$ is expanded as given on every panel, and Eq. (2) is not used.
+- The test is Eq. (5) with $\varepsilon_F$ given by the caller, the argument `abstol` in
+  the units of $F$, instead of Eq. (6). It is the $\varepsilon_\mathrm{abs}$ of
+  [Spectral Methods](spectral.qmd#adaptive-refinement). One of `reltol` and `abstol` may be
+  zero.
+- Each panel is tested once: the three steps of
+  [The Estimate of the Integral](#the-estimate-of-the-integral) are needed only because
+  Eq. (6) depends on $I$.
+
+The grids, the doubling and the bisection are those of [Refinement](#refinement). The
+panels given by the edges are the initial panels; an initial panel that was bisected holds
+several panels, which cover it without overlap.
+
+[[numcosmo-math|ncm_spectral_polar_panels_eval]] evaluates the approximation at a point
+$(r, \theta)$.
+
+1. The initial panel is found by bisection over the radial edges and over the angular edges.
+   The panels of that initial panel are then searched in the order they were accepted.
+2. On the panel, with $s_r$ and $s_\theta$ of the point, a Clenshaw recurrence in $s_r$
+   gives $u^l \equiv \sum_k c^{kl} T_k (s_r)$ for each angular index $l$, and a Clenshaw
+   recurrence in $s_\theta$ over the $u^l$ gives Eq. (3). This takes
+   $(N_r + 1) (N_\theta + 1)$ multiplications.
+
+A point on an edge belongs to the panel that starts there. The range is not checked, and
+the angle is not wrapped: the caller gives $\theta$ inside
+$[\theta_0, \theta_{n_\theta}]$.
+
+The remark below Eq. (5) applies to the approximation directly: $D_r + D_\theta$ is the
+change between grids, so a maximum of $F$ that is below $\varepsilon_F$ at every node of
+a panel is absent from its coefficients, and the panel is accepted without it. The edges
+must therefore be placed from the known position and width of such a maximum, as
+[Edges for One Peak](#edges-for-one-peak) does.
+
 ## Symbols and the Code
 
 | symbol | in `ncm_spectral_polar.c` |
@@ -199,6 +241,8 @@ evaluations of $G$ changes, and Eq. (5) is applied to every panel in the same wa
 | $D_r$, $D_\theta$, $V$ | `Dr`, `Dt`, `vs` |
 | $\varepsilon_F$, $A$ | `abstol_F`, `A` of the call |
 | $M^r_k$, $M^\theta_l$, times the normalization of $c^{kl}$ | the tables of `mom`, `mt` |
+| $\varepsilon_F$ of a build | `abstol_F` of the call, equal to `abstol` |
+| $c^{kl}$ of an accepted panel of a build | `coeffs` of `NcmSpectralPolarPanels`, row $l$, column $k$ |
 
 The transform of a grid is two one-dimensional passes. A direction with 9 or 17 nodes is
 transformed by the product with the DCT-I matrix, applied to the even and odd parts of the
@@ -213,3 +257,9 @@ See [[numcosmo-math|NcmSpectralPolar]] for the full class reference:
 [[numcosmo-math|ncm_spectral_polar_integrate]] also returns the accepted panels, one row
 per panel with $r_a$, $r_b$, $\theta_a$, $\theta_b$, $l_r$, $l_\theta$, the value of
 Eq. (7) and $D_r + D_\theta$, for inspecting where the panels were refined.
+
+See [[numcosmo-math|NcmSpectralPolarPanels]] for the approximation:
+[[numcosmo-math|ncm_spectral_polar_build]] fills it, and
+[[numcosmo-math|ncm_spectral_polar_panels_eval]],
+[[numcosmo-math|ncm_spectral_polar_panels_find_panel]] and
+[[numcosmo-math|ncm_spectral_polar_panels_peek_panel]] read it.

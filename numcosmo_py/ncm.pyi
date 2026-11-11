@@ -11433,6 +11433,16 @@ class SpectralPolar(GObject.Object):
         level_min: int = ...,
         max_depth: int = ...,
     ) -> None: ...
+    def build(
+        self,
+        F: typing.Callable[..., None],
+        r_edges: typing.Sequence[float] | npt.NDArray[np.float64],
+        theta_edges: typing.Sequence[float] | npt.NDArray[np.float64],
+        reltol: float,
+        abstol: float,
+        spp: SpectralPolarPanels,
+        *user_data: typing.Any,
+    ) -> int: ...
     @staticmethod
     def clear(sp: SpectralPolar) -> None: ...
     def free(self) -> None: ...
@@ -11477,6 +11487,63 @@ class SpectralPolarClass(GObject.GPointer):
     ::
 
         SpectralPolarClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class SpectralPolarPanels(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPolarPanels(**properties)
+        new() -> NumCosmoMath.SpectralPolarPanels
+
+    Object NcmSpectralPolarPanels
+
+    Properties from NcmSpectralPolarPanels:
+      panels -> GVariant: panels
+        Edges, panels and coefficients
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        panels: GLib.Variant
+
+    props: Props = ...
+    def __init__(self, panels: GLib.Variant = ...) -> None: ...
+    def append(
+        self, ra: float, rb: float, ta: float, tb: float, coeffs: Matrix
+    ) -> None: ...
+    @staticmethod
+    def clear(spp: SpectralPolarPanels) -> None: ...
+    def eval(self, r: float, theta: float) -> float: ...
+    def eval_on(self, i: int, r: float, theta: float) -> float: ...
+    def find_panel(self, r: float, theta: float) -> int: ...
+    def free(self) -> None: ...
+    def get_n_panels(self) -> int: ...
+    def get_panel(self, i: int) -> typing.Tuple[Matrix, float, float, float, float]: ...
+    def get_range(self) -> typing.Tuple[float, float, float, float]: ...
+    @classmethod
+    def new(cls) -> SpectralPolarPanels: ...
+    def ref(self) -> SpectralPolarPanels: ...
+    def reset(self) -> None: ...
+    def set_edges(
+        self,
+        r_edges: typing.Sequence[float] | npt.NDArray[np.float64],
+        theta_edges: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> None: ...
+
+class SpectralPolarPanelsClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPolarPanelsClass()
     """
 
     parent_class: GObject.ObjectClass = ...

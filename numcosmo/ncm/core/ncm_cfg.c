@@ -110,6 +110,7 @@
 #include "ncm/algebra/ncm_spectral_panels_builder.h"
 #include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
+#include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
 #include "nc/bbn/nc_bbn_parametrized.h"
@@ -829,6 +830,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_PANELS_BUILDER);
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_PANELS_PRODUCT);
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_POLAR);
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_POLAR_PANELS);
 
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
