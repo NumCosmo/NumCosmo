@@ -113,6 +113,7 @@ enum
   PROP_LEVEL_CAP,
   PROP_MAX_DEPTH,
   PROP_EDGE_RATIO,
+  PROP_MIN_RADIAL_PANELS,
 };
 
 struct _NcmSpectralPolar
@@ -123,6 +124,7 @@ struct _NcmSpectralPolar
   guint level_cap;
   guint max_depth;
   gdouble edge_ratio;
+  guint min_radial_panels;
   NcmMemoryPool *work_pool; /* NcmSpectralPolarWork, one per concurrent call */
 };
 
@@ -232,12 +234,13 @@ static void _ncm_spectral_polar_work_free (gpointer p);
 static void
 ncm_spectral_polar_init (NcmSpectralPolar *sp)
 {
-  sp->level_min  = 0;
-  sp->level_cap  = 0;
-  sp->max_depth  = 0;
-  sp->edge_ratio = 0.0;
-  sp->work_pool  = ncm_memory_pool_new (_ncm_spectral_polar_work_new, NULL,
-                                        _ncm_spectral_polar_work_free);
+  sp->level_min         = 0;
+  sp->level_cap         = 0;
+  sp->max_depth         = 0;
+  sp->edge_ratio        = 0.0;
+  sp->min_radial_panels = 0;
+  sp->work_pool         = ncm_memory_pool_new (_ncm_spectral_polar_work_new, NULL,
+                                               _ncm_spectral_polar_work_free);
 }
 
 static void
@@ -260,6 +263,9 @@ _ncm_spectral_polar_set_property (GObject *object, guint prop_id, const GValue *
       break;
     case PROP_EDGE_RATIO:
       ncm_spectral_polar_set_edge_ratio (sp, g_value_get_double (value));
+      break;
+    case PROP_MIN_RADIAL_PANELS:
+      ncm_spectral_polar_set_min_radial_panels (sp, g_value_get_uint (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -287,6 +293,9 @@ _ncm_spectral_polar_get_property (GObject *object, guint prop_id, GValue *value,
       break;
     case PROP_EDGE_RATIO:
       g_value_set_double (value, sp->edge_ratio);
+      break;
+    case PROP_MIN_RADIAL_PANELS:
+      g_value_set_uint (value, sp->min_radial_panels);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -370,6 +379,23 @@ ncm_spectral_polar_class_init (NcmSpectralPolarClass *klass)
                                                         "Ratio between consecutive edge distances",
                                                         1.0, G_MAXDOUBLE, 4.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmSpectralPolar:min-radial-panels:
+   *
+   * The number $n \ge 1$ of equal radial intervals whose inner edges $k R / n$,
+   * $k = 1, \dots, n - 1$, ncm_spectral_polar_peak_edges() adds to the edges of the peak.
+   * They bound the width of the panels far from the peak, whose convergence test is
+   * otherwise passed by wide panels with a larger error; a larger $n$ gives more panels of
+   * lower degree.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MIN_RADIAL_PANELS,
+                                   g_param_spec_uint ("min-radial-panels",
+                                                      NULL,
+                                                      "Number of equal radial intervals of the peak edges",
+                                                      1, G_MAXUINT, 2,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static gpointer
@@ -538,6 +564,22 @@ ncm_spectral_polar_set_edge_ratio (NcmSpectralPolar *sp, gdouble edge_ratio)
 }
 
 /**
+ * ncm_spectral_polar_set_min_radial_panels:
+ * @sp: a #NcmSpectralPolar
+ * @n: number of equal radial intervals
+ *
+ * Sets #NcmSpectralPolar:min-radial-panels, which must be at least 1.
+ */
+void
+ncm_spectral_polar_set_min_radial_panels (NcmSpectralPolar *sp, guint n)
+{
+  if (n < 1)
+    g_error ("ncm_spectral_polar_set_min_radial_panels: min-radial-panels must be at least 1.");
+
+  sp->min_radial_panels = n;
+}
+
+/**
  * ncm_spectral_polar_get_level_min:
  * @sp: a #NcmSpectralPolar
  *
@@ -583,6 +625,18 @@ gdouble
 ncm_spectral_polar_get_edge_ratio (NcmSpectralPolar *sp)
 {
   return sp->edge_ratio;
+}
+
+/**
+ * ncm_spectral_polar_get_min_radial_panels:
+ * @sp: a #NcmSpectralPolar
+ *
+ * Returns: #NcmSpectralPolar:min-radial-panels.
+ */
+guint
+ncm_spectral_polar_get_min_radial_panels (NcmSpectralPolar *sp)
+{
+  return sp->min_radial_panels;
 }
 
 static void _ncm_spectral_polar_check (NcmSpectralPolar *sp, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol);
@@ -1750,9 +1804,10 @@ static gint _ncm_spectral_polar_cmp_double (gconstpointer a, gconstpointer b);
  *
  * Fills @r_edges and @theta_edges with the edges of panels that cover the disk for an
  * integrand with one peak, to be passed to ncm_spectral_polar_integrate(). The radial
- * edges are 0, @R, $@R / 2$ and $@r_peak \pm @L_r \omega^\nu$, $\nu \ge 0$, inside $(0, @R)$,
- * with $\omega$ = #NcmSpectralPolar:edge-ratio; an edge closer than $@L_r / 4$ to the one
- * before is left out, except @R. The angular edges are
+ * edges are 0, @R, $k @R / n$ for $k = 1, \dots, n - 1$ and
+ * $@r_peak \pm @L_r \omega^\nu$, $\nu \ge 0$, inside $(0, @R)$, with
+ * $n$ = #NcmSpectralPolar:min-radial-panels and $\omega$ = #NcmSpectralPolar:edge-ratio; after
+ * sorting, an edge closer than $@L_r / 4$ to the one before is left out, except @R. The angular edges are
  * $@theta_peak \pm @L_theta \omega^\nu$ up to $@theta_peak \pm \pi$; when
  * $@L_theta \ge \pi / 4$ they are those of four equal panels with @theta_peak at the
  * center of one. @L_r and @L_theta are positive.
@@ -1762,7 +1817,6 @@ ncm_spectral_polar_peak_edges (NcmSpectralPolar *sp, gdouble R, gdouble r_peak, 
                                gdouble L_r, gdouble L_theta, GArray *r_edges, GArray *theta_edges)
 {
   const gdouble rho = sp->edge_ratio;
-  const gdouble mid = 0.5 * R;
   const gdouble end = R;
   const gdouble org = 0.0;
   gdouble w;
@@ -1777,7 +1831,13 @@ ncm_spectral_polar_peak_edges (NcmSpectralPolar *sp, gdouble R, gdouble r_peak, 
   g_array_set_size (r_edges, 0);
   g_array_append_val (r_edges, org);
   g_array_append_val (r_edges, end);
-  g_array_append_val (r_edges, mid);
+
+  for (i = 1; i < sp->min_radial_panels; i++)
+  {
+    const gdouble x = R * i / sp->min_radial_panels;
+
+    g_array_append_val (r_edges, x);
+  }
 
   for (w = L_r; w < 2.0 * R; w *= rho)
   {

@@ -10151,6 +10151,8 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         Largest |g| computed from the interpolant
       interp-abstol -> gdouble: interp-abstol
         Absolute tolerance on ln P of the interpolant
+      interp-min-radial-panels -> guint: interp-min-radial-panels
+        Minimum number of radial intervals of the interpolant
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -10163,6 +10165,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     class Props:
         interp_abstol: float
         interp_g_max: float
+        interp_min_radial_panels: int
         reltol: float
         use_interp: bool
         ellip_conv: GalaxyWLObsEllipConv
@@ -10172,6 +10175,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         self,
         interp_abstol: float = ...,
         interp_g_max: float = ...,
+        interp_min_radial_panels: int = ...,
         reltol: float = ...,
         use_interp: bool = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
@@ -10201,6 +10205,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def free(self) -> None: ...
     def get_interp_abstol(self) -> float: ...
     def get_interp_g_max(self) -> float: ...
+    def get_interp_min_radial_panels(self) -> int: ...
     def get_reltol(self) -> float: ...
     def get_use_interp(self) -> bool: ...
     @classmethod
@@ -10208,6 +10213,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def ref(self) -> GalaxyShapeFactorSpectral: ...
     def set_interp_abstol(self, abstol: float) -> None: ...
     def set_interp_g_max(self, g_max: float) -> None: ...
+    def set_interp_min_radial_panels(self, n: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_use_interp(self, use_interp: bool) -> None: ...
 

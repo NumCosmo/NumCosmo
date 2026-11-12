@@ -75,11 +75,13 @@ void ncm_spectral_polar_set_level_min (NcmSpectralPolar *sp, guint level_min);
 void ncm_spectral_polar_set_level_cap (NcmSpectralPolar *sp, guint level_cap);
 void ncm_spectral_polar_set_max_depth (NcmSpectralPolar *sp, guint max_depth);
 void ncm_spectral_polar_set_edge_ratio (NcmSpectralPolar *sp, gdouble edge_ratio);
+void ncm_spectral_polar_set_min_radial_panels (NcmSpectralPolar *sp, guint n);
 
 guint ncm_spectral_polar_get_level_min (NcmSpectralPolar *sp);
 guint ncm_spectral_polar_get_level_cap (NcmSpectralPolar *sp);
 guint ncm_spectral_polar_get_max_depth (NcmSpectralPolar *sp);
 gdouble ncm_spectral_polar_get_edge_ratio (NcmSpectralPolar *sp);
+guint ncm_spectral_polar_get_min_radial_panels (NcmSpectralPolar *sp);
 
 gdouble ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
 void ncm_spectral_polar_build (NcmSpectralPolar *sp, NcmSpectralPolarF F, gpointer user_data, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, NcmSpectralPolarPanels *spp, guint64 *n_eval, GError **error);

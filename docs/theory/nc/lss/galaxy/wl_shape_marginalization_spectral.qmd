@@ -343,8 +343,10 @@ computes the integral.
   It reaches $|g| = g_\mathrm{max} + 2 g_c < 3 g_\mathrm{max}$, so $g_\mathrm{max} < 1/3$
   keeps it inside $|g| < 1$, where $\ln P$ is smooth in $g$.
 - Edges: the radial edges of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
-  $\rho = 0$ of half width $L_g$ that are inside the region, and angular panels of
-  $\pi / 2$ at most.
+  $\rho = 0$ of half width $L_g$ that are inside the region, with `min-radial-panels`
+  equal to [[numcosmo|NcGalaxyShapeFactorSpectral:interp-min-radial-panels]] (default 2),
+  and angular panels of $\pi / 2$ at most. The integrals use a separate
+  [[numcosmo-math|NcmSpectralPolar]] with the default `min-radial-panels`, 2.
 - Test: a panel is accepted when $\ln P$ changes by at most
   [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]] between its two grids. The
   values at the nodes are those of the integral at `reltol`.
@@ -352,7 +354,8 @@ computes the integral.
 The approximation of a galaxy is built at its first evaluation with
 $|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
 $\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, the parameters of the population,
-`reltol`, $g_\mathrm{max}$ or the tolerance differ from those it was built for. A build
+`reltol`, $g_\mathrm{max}$, the tolerance or `interp-min-radial-panels` differ from those it
+was built for. A build
 computes of the order of $10^3$ integrals, so the approximation reduces the cost when the
 parameters of the population are fixed, and increases it when they change at every step
 unless a galaxy is evaluated at more shears per step than the build computes.
@@ -399,8 +402,9 @@ values next to $|g| = 1$ were not measured for $\sigma_\mathrm{noise}$ below 0.0
 
 The interpolation in $g$ was measured on 150 galaxies of HWL16a-002 and HWL16a-064, 100 of
 them with $\sigma_\mathrm{noise} < 0.1$, with $g_\mathrm{max} = 0.3$, against the integral
-at `reltol` $10^{-8}$ on 200 random shears of the disk per galaxy. No build failed. The
-integrals of a build and the largest difference in $\ln P$ are:
+at `reltol` $10^{-8}$ on 200 random shears of the disk per galaxy, with
+`interp-min-radial-panels` 2. No build failed. The integrals of a build and the largest
+difference in $\ln P$ are:
 
 | convention | population | `interp-abstol` | integrals, median / 90% / largest | largest difference |
 |---|---|---|---|---|
@@ -410,9 +414,12 @@ integrals of a build and the largest difference in $\ln P$ are:
 | `TRACE_DET` | Beta, fitted | $10^{-5}$ | 523 / 1,502 / 3,010 | $6.5 \times 10^{-9}$ |
 | `TRACE_DET` | Gaussian, 0.3 | $10^{-5}$ | 451 / 1,211 / 2,530 | $8.1 \times 10^{-9}$ |
 
-One evaluation of the approximation takes 0.12 to 0.15 microseconds (median over the
+One evaluation of the approximation takes 0.11 to 0.13 microseconds (median over the
 galaxies) at the default tolerance, against 0.25 to 0.6 milliseconds for the integral at
-$|g| \le 0.3$.
+$|g| \le 0.3$. For the Beta populations, `interp-min-radial-panels` 4 makes the evaluation
+1.5 (`TRACE`) and 1.8 (`TRACE_DET`) times faster, for 13% and 11% more integrals in the
+builds; with 1 the evaluation of `TRACE` Beta is 1.7 times slower, and the builds of the
+four rows compute 4% to 16% fewer integrals.
 
 ## Symbols and the Code
 

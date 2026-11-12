@@ -515,7 +515,7 @@ test_nc_galaxy_shape_factor_spectral_panels (void)
   nc_galaxy_shape_pop_free (pop);
 }
 
-/* A copy made through NcmSerialize has the convention and the reltol of the original */
+/* A copy made through NcmSerialize has the convention, the reltol and the interpolant settings of the original */
 void
 test_nc_galaxy_shape_factor_spectral_serialize (void)
 {
@@ -526,11 +526,13 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_false (nc_galaxy_shape_factor_spectral_get_use_interp (gsfs));
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_g_max (gsfs), ==, 0.3);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (gsfs), ==, 1.0e-5);
+  g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (gsfs), ==, 2);
 
   nc_galaxy_shape_factor_spectral_set_reltol (gsfs, 1.0e-4);
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
   nc_galaxy_shape_factor_spectral_set_interp_g_max (gsfs, 0.2);
   nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, 1.0e-4);
+  nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (gsfs, 4);
   dup = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (ncm_serialize_dup_obj (ser, G_OBJECT (gsfs)));
 
   g_assert_cmpint (nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (dup)), ==, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
@@ -538,6 +540,7 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_true (nc_galaxy_shape_factor_spectral_get_use_interp (dup));
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_g_max (dup), ==, 0.2);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (dup), ==, 1.0e-4);
+  g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (dup), ==, 4);
 
   ncm_serialize_free (ser);
   nc_galaxy_shape_factor_spectral_free (dup);
@@ -668,8 +671,8 @@ test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *te
 
 /*
  * The interpolant of a galaxy follows what it is evaluated for: after a change of the
- * population parameters, of eps_obs, of std_noise, of interp-abstol, of interp-g-max and
- * of reltol the value at one shear agrees with the integral for the new values, and it
+ * population parameters, of eps_obs, of std_noise, of interp-abstol, of interp-g-max, of
+ * reltol and of interp-min-radial-panels the value at one shear agrees with the integral for the new values, and it
  * differs from the value before the change where the change moves ln P by more than the
  * tolerance.
  */
@@ -744,6 +747,12 @@ test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpec
 
   ln_P_prev = ln_P;
   nc_galaxy_shape_factor_spectral_set_reltol (gsfs, 1.0e-7);
+  ln_P = nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g1, g2, e1, e2);
+  g_assert_cmpfloat (ln_P, !=, ln_P_prev);
+  g_assert_cmpfloat_with_epsilon (ln_P, ln_P_prev, 2.0 * TEST_SPECTRAL_INTERP_TOL);
+
+  ln_P_prev = ln_P;
+  nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (gsfs, 4);
   ln_P = nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g1, g2, e1, e2);
   g_assert_cmpfloat (ln_P, !=, ln_P_prev);
   g_assert_cmpfloat_with_epsilon (ln_P, ln_P_prev, 2.0 * TEST_SPECTRAL_INTERP_TOL);

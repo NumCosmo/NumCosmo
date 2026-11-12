@@ -11414,6 +11414,8 @@ class SpectralPolar(GObject.Object):
         Largest number of bisections of a panel
       edge-ratio -> gdouble: edge-ratio
         Ratio between consecutive edge distances
+      min-radial-panels -> guint: min-radial-panels
+        Number of equal radial intervals of the peak edges
 
     Signals from GObject:
       notify (GParam)
@@ -11424,6 +11426,7 @@ class SpectralPolar(GObject.Object):
         level_cap: int
         level_min: int
         max_depth: int
+        min_radial_panels: int
 
     props: Props = ...
     def __init__(
@@ -11432,6 +11435,7 @@ class SpectralPolar(GObject.Object):
         level_cap: int = ...,
         level_min: int = ...,
         max_depth: int = ...,
+        min_radial_panels: int = ...,
     ) -> None: ...
     def build(
         self,
@@ -11450,6 +11454,7 @@ class SpectralPolar(GObject.Object):
     def get_level_cap(self) -> int: ...
     def get_level_min(self) -> int: ...
     def get_max_depth(self) -> int: ...
+    def get_min_radial_panels(self) -> int: ...
     def integrate(
         self,
         G: typing.Callable[..., None],
@@ -11479,6 +11484,7 @@ class SpectralPolar(GObject.Object):
     def set_level_cap(self, level_cap: int) -> None: ...
     def set_level_min(self, level_min: int) -> None: ...
     def set_max_depth(self, max_depth: int) -> None: ...
+    def set_min_radial_panels(self, n: int) -> None: ...
 
 class SpectralPolarClass(GObject.GPointer):
     r"""

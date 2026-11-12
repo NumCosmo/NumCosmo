@@ -105,6 +105,9 @@ void test_ncm_spectral_polar_edges_order (TestNcmSpectralPolar *test, gconstpoin
 void test_ncm_spectral_polar_edges_order_subprocess (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_edge_ratio (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_edge_ratio_subprocess (TestNcmSpectralPolar *test, gconstpointer pdata);
+void test_ncm_spectral_polar_peak_edges_min_radial_panels (TestNcmSpectralPolar *test, gconstpointer pdata);
+void test_ncm_spectral_polar_min_radial_panels (TestNcmSpectralPolar *test, gconstpointer pdata);
+void test_ncm_spectral_polar_min_radial_panels_subprocess (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_peak_edges_args (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_peak_edges_args_subprocess (TestNcmSpectralPolar *test, gconstpointer pdata);
 
@@ -126,6 +129,7 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak/origin", test_ncm_spectral_polar_peak_origin);
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak/wrong_seed", test_ncm_spectral_polar_peak_wrong_seed);
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak_edges", test_ncm_spectral_polar_peak_edges);
+  TEST_NCM_SPECTRAL_POLAR_ADD ("peak_edges/min_radial_panels", test_ncm_spectral_polar_peak_edges_min_radial_panels);
   TEST_NCM_SPECTRAL_POLAR_ADD ("power_laws", test_ncm_spectral_polar_power_laws);
   TEST_NCM_SPECTRAL_POLAR_ADD ("retest", test_ncm_spectral_polar_retest);
   TEST_NCM_SPECTRAL_POLAR_ADD ("panels", test_ncm_spectral_polar_panels);
@@ -143,6 +147,8 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_ADD ("edges_order/subprocess", test_ncm_spectral_polar_edges_order_subprocess);
   TEST_NCM_SPECTRAL_POLAR_ADD ("edge_ratio", test_ncm_spectral_polar_edge_ratio);
   TEST_NCM_SPECTRAL_POLAR_ADD ("edge_ratio/subprocess", test_ncm_spectral_polar_edge_ratio_subprocess);
+  TEST_NCM_SPECTRAL_POLAR_ADD ("min_radial_panels", test_ncm_spectral_polar_min_radial_panels);
+  TEST_NCM_SPECTRAL_POLAR_ADD ("min_radial_panels/subprocess", test_ncm_spectral_polar_min_radial_panels_subprocess);
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak_edges_args", test_ncm_spectral_polar_peak_edges_args);
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak_edges_args/subprocess", test_ncm_spectral_polar_peak_edges_args_subprocess);
 
@@ -294,19 +300,22 @@ test_ncm_spectral_polar_defaults (TestNcmSpectralPolar *test, gconstpointer pdat
   g_assert_cmpuint (ncm_spectral_polar_get_level_cap (sp), ==, 7);
   g_assert_cmpuint (ncm_spectral_polar_get_max_depth (sp), ==, 30);
   g_assert_cmpfloat (ncm_spectral_polar_get_edge_ratio (sp), ==, 4.0);
+  g_assert_cmpuint (ncm_spectral_polar_get_min_radial_panels (sp), ==, 2);
 
   ncm_spectral_polar_set_level_min (sp, 2);
   ncm_spectral_polar_set_level_cap (sp, 6);
   ncm_spectral_polar_set_max_depth (sp, 12);
   ncm_spectral_polar_set_edge_ratio (sp, 2.5);
+  ncm_spectral_polar_set_min_radial_panels (sp, 3);
   g_assert_cmpuint (ncm_spectral_polar_get_level_min (sp), ==, 2);
   g_assert_cmpuint (ncm_spectral_polar_get_level_cap (sp), ==, 6);
   g_assert_cmpuint (ncm_spectral_polar_get_max_depth (sp), ==, 12);
   g_assert_cmpfloat (ncm_spectral_polar_get_edge_ratio (sp), ==, 2.5);
+  g_assert_cmpuint (ncm_spectral_polar_get_min_radial_panels (sp), ==, 3);
 }
 
 /*
- * A copy made through NcmSerialize has the four properties of the original and gives the
+ * A copy made through NcmSerialize has the five properties of the original and gives the
  * same integral and the same number of evaluations.
  */
 void
@@ -322,6 +331,7 @@ test_ncm_spectral_polar_serialize (TestNcmSpectralPolar *test, gconstpointer pda
   ncm_spectral_polar_set_level_cap (test->sp, 6);
   ncm_spectral_polar_set_max_depth (test->sp, 12);
   ncm_spectral_polar_set_edge_ratio (test->sp, 2.5);
+  ncm_spectral_polar_set_min_radial_panels (test->sp, 3);
 
   copy.sp = NCM_SPECTRAL_POLAR (ncm_serialize_dup_obj (ser, G_OBJECT (test->sp)));
 
@@ -329,6 +339,7 @@ test_ncm_spectral_polar_serialize (TestNcmSpectralPolar *test, gconstpointer pda
   g_assert_cmpuint (ncm_spectral_polar_get_level_cap (copy.sp), ==, 6);
   g_assert_cmpuint (ncm_spectral_polar_get_max_depth (copy.sp), ==, 12);
   g_assert_cmpfloat (ncm_spectral_polar_get_edge_ratio (copy.sp), ==, 2.5);
+  g_assert_cmpuint (ncm_spectral_polar_get_min_radial_panels (copy.sp), ==, 3);
 
   res     = _gauss_integral (test, &g, 0.4, 0.7, 0.02, 0.05, 1.0e-6, &n_eval);
   res_dup = _gauss_integral (&copy, &g, 0.4, 0.7, 0.02, 0.05, 1.0e-6, &n_eval_dup);
@@ -483,8 +494,51 @@ test_ncm_spectral_polar_peak_edges (TestNcmSpectralPolar *test, gconstpointer pd
 }
 
 /*
+ * With min-radial-panels 4 the radial edges are those of min-radial-panels 1 plus R / 4,
+ * R / 2 and 3 R / 4, none of which is within L_r / 4 of a peak edge here.
+ */
+void
+test_ncm_spectral_polar_peak_edges_min_radial_panels (TestNcmSpectralPolar *test, gconstpointer pdata)
+{
+  const gdouble R = 2.0, r_peak = 0.7, theta_peak = -1.3, L_r = 0.01, L_theta = 0.02;
+  const gdouble extra[] = {0.25 * R, 0.5 * R, 0.75 * R};
+  GArray *r_one         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  guint i, j, n_extra = 0;
+
+  ncm_spectral_polar_set_min_radial_panels (test->sp, 1);
+  ncm_spectral_polar_peak_edges (test->sp, R, r_peak, theta_peak, L_r, L_theta, r_one, test->theta_edges);
+  ncm_spectral_polar_set_min_radial_panels (test->sp, 4);
+  ncm_spectral_polar_peak_edges (test->sp, R, r_peak, theta_peak, L_r, L_theta, test->r_edges, test->theta_edges);
+
+  g_assert_cmpuint (test->r_edges->len, ==, r_one->len + G_N_ELEMENTS (extra));
+
+  for (i = 0; i + 1 < test->r_edges->len; i++)
+    g_assert_cmpfloat (g_array_index (test->r_edges, gdouble, i), <, g_array_index (test->r_edges, gdouble, i + 1));
+
+  for (i = 0; i < test->r_edges->len; i++)
+  {
+    const gdouble x = g_array_index (test->r_edges, gdouble, i);
+    gboolean in_one = FALSE;
+
+    for (j = 0; j < r_one->len; j++)
+      if (g_array_index (r_one, gdouble, j) == x)
+        in_one = TRUE;
+
+    if (!in_one)
+    {
+      g_assert_cmpfloat (x, ==, extra[n_extra]);
+      n_extra++;
+    }
+  }
+
+  g_assert_cmpuint (n_extra, ==, G_N_ELEMENTS (extra));
+  g_array_unref (r_one);
+}
+
+/*
  * Both power laws with a function of r and theta, against the QAWS rule of GSL for
- * 2 pi int_0^1 r^a (1 - r)^b exp (-r^2 / 2 sigma^2) dr.
+ * 2 pi int_0^1 r^a (1 - r)^b exp (-r^2 / 2 sigma^2) dr, with radial edges that put the two
+ * power laws on different panels and with one radial panel that carries both.
  */
 void
 test_ncm_spectral_polar_power_laws (TestNcmSpectralPolar *test, gconstpointer pdata)
@@ -501,21 +555,27 @@ test_ncm_spectral_polar_power_laws (TestNcmSpectralPolar *test, gconstpointer pd
     }
   };
   const gdouble r_edges[]       = {0.0, 0.25, 0.5, 1.0};
+  const gdouble r_edges_one[]   = {0.0, 1.0};
   const gdouble t_edges[]       = {-M_PI, -0.5 * M_PI, 0.0, 0.5 * M_PI, M_PI};
   const gdouble reltol          = 1.0e-9;
   gsl_integration_workspace *ws = gsl_integration_workspace_alloc (1000);
   guint i;
 
-  _set_edges (test->r_edges, r_edges, G_N_ELEMENTS (r_edges));
   _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
 
-  for (i = 0; i < G_N_ELEMENTS (exponents); i++)
+  for (i = 0; i < 2 * G_N_ELEMENTS (exponents); i++)
   {
-    TestRadial rd                   = { 0.3, exponents[i][0], exponents[i][1] };
+    const guint ie                  = i % G_N_ELEMENTS (exponents);
+    TestRadial rd                   = { 0.3, exponents[ie][0], exponents[ie][1] };
     gsl_integration_qaws_table *tab = gsl_integration_qaws_table_alloc (rd.a, rd.b, 0, 0);
     gsl_function F                  = { &_radial_1d, &rd };
     GError *error                   = NULL;
     gdouble ref, ref_err, res;
+
+    if (i < G_N_ELEMENTS (exponents))
+      _set_edges (test->r_edges, r_edges, G_N_ELEMENTS (r_edges));
+    else
+      _set_edges (test->r_edges, r_edges_one, G_N_ELEMENTS (r_edges_one));
 
     gsl_integration_qaws (&F, 0.0, 1.0, tab, 0.0, 1.0e-13, 1000, ws, &ref, &ref_err);
     ref *= 2.0 * M_PI;
@@ -813,6 +873,21 @@ void
 test_ncm_spectral_polar_edge_ratio_subprocess (TestNcmSpectralPolar *test, gconstpointer pdata)
 {
   ncm_spectral_polar_set_edge_ratio (test->sp, 1.0);
+}
+
+/* min-radial-panels 0 aborts */
+void
+test_ncm_spectral_polar_min_radial_panels (TestNcmSpectralPolar *test, gconstpointer pdata)
+{
+  g_test_trap_subprocess ("/ncm/spectral_polar/min_radial_panels/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*must be at least 1*");
+}
+
+void
+test_ncm_spectral_polar_min_radial_panels_subprocess (TestNcmSpectralPolar *test, gconstpointer pdata)
+{
+  ncm_spectral_polar_set_min_radial_panels (test->sp, 0);
 }
 
 void

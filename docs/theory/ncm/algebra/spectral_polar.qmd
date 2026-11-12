@@ -193,11 +193,13 @@ $I_0$.
 
 The function [[numcosmo-math|ncm_spectral_polar_peak_edges]] gives the edges for an
 integrand with one maximum at $(r_\mathrm{p}, \theta_\mathrm{p})$ of half widths $L_r$ and
-$L_\theta$, with $\omega > 1$ the property `edge-ratio`.
+$L_\theta$, with $\omega > 1$ the property `edge-ratio` and $n \ge 1$ the property
+`min-radial-panels` (default 2).
 
-- Radial edges: $0$, $R$, $R / 2$ and $r_\mathrm{p} \pm L_r \omega^\nu$, $\nu = 0, 1, \dots$,
-  for the values inside $(0, R)$. An edge closer than $L_r / 4$ to the one before is left
-  out, except $R$.
+- Radial edges: $0$, $R$, $k R / n$ for $k = 1, \dots, n - 1$, and
+  $r_\mathrm{p} \pm L_r \omega^\nu$, $\nu = 0, 1, \dots$, for the values inside
+  $(0, R)$. After sorting, an edge closer than $L_r / 4$ to the one before is left out,
+  except $R$.
 - Angular edges: $\theta_\mathrm{p} \pm \pi$ and $\theta_\mathrm{p} \pm L_\theta \omega^\nu$,
   $\nu = 0, 1, \dots$, for the values farther than $L_\theta / 4$ from
   $\theta_\mathrm{p} \pm \pi$. When $L_\theta \ge \pi / 4$ the full circle is split into
@@ -208,6 +210,16 @@ panels increase by the factor $\omega$ with the distance to it. On a panel that 
 contain the maximum, $F$ is largest on the side nearest to it, where the Lobatto grid has
 nodes. The position and the widths only place the edges: with other values the number of
 evaluations of $G$ changes, and Eq. (5) is applied to every panel in the same way.
+
+The edges $k R / n$ bound the width of the panels far from the maximum. Eq. (5) estimates
+the error of a panel from the change between two grids, and a wide panel far from the
+maximum can pass it with a larger error: for the shape marginal of
+[Shape Marginalization by Spectral Panels](../../nc/lss/galaxy/wl_shape_marginalization_spectral.qmd)
+at `reltol` $10^{-4}$, the largest error with $n = 1$ is 25 times the one with the default
+$n = 2$. A larger $n$ gives more panels of lower degree, which is also cheaper for an
+approximation that is evaluated many times
+([Approximation on the Panels](#approximation-on-the-panels)): one evaluation costs
+$(N_r + 1) (N_\theta + 1)$ multiplications.
 
 ## Approximation on the Panels
 
@@ -273,7 +285,7 @@ lines; a direction with more nodes by an FFTW `REDFT00` plan.
 See [[numcosmo-math|NcmSpectralPolar]] for the full class reference:
 [[numcosmo-math|ncm_spectral_polar_integrate]] and
 [[numcosmo-math|ncm_spectral_polar_peak_edges]], with the properties `level-min`,
-`level-cap`, `max-depth` and `edge-ratio`. On request,
+`level-cap`, `max-depth`, `edge-ratio` and `min-radial-panels`. On request,
 [[numcosmo-math|ncm_spectral_polar_integrate]] also returns the accepted panels, one row
 per panel with $r_a$, $r_b$, $\theta_a$, $\theta_b$, $l_r$, $l_\theta$, the value of
 Eq. (7) and $D_r + D_\theta$, for inspecting where the panels were refined.
