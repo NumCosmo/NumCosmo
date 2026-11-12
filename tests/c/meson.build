@@ -147,6 +147,14 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_spectral_panels_product.c'],
     },
     {
+        'name': 'ncm_spectral_polar',
+        'sources': ['ncm/algebra/test_ncm_spectral_polar.c'],
+    },
+    {
+        'name': 'ncm_spectral_polar_panels',
+        'sources': ['ncm/algebra/test_ncm_spectral_polar_panels.c'],
+    },
+    {
         'name': 'ncm_nnls',
         'sources': ['ncm/algebra/test_ncm_nnls.c'],
     },
@@ -809,6 +817,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_intrinsic_mode.c'],
     },
     {
+        'name': 'nc_galaxy_shape_pop',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop.c'],
+    },
+    {
         'name': 'nc_galaxy_shape_pop_series',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
     },
@@ -819,6 +831,15 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_shape_factor_moments_tilt',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
+    },
+    {
+        'name': 'nc_galaxy_shape_factor_spectral',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral.c'],
+    },
+    {
+        'name': 'nc_galaxy_shape_factor_spectral_cert',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral_cert.c'],
+        'suite': ['c-acceptance'],
     },
     {
         'name': 'nc_galaxy_shape_factor_quad',

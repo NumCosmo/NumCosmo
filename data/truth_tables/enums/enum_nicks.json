@@ -635,6 +635,10 @@
     "nick": "none",
     "type": "Ncm.SerializeOpt"
   },
+  "NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH": {
+    "nick": "max-depth",
+    "type": "Ncm.SpectralPolarError"
+  },
   "NCM_SPHERE_MAP_COORD_SYS_CELESTIAL": {
     "nick": "celestial",
     "type": "Ncm.SphereMapCoordSys"

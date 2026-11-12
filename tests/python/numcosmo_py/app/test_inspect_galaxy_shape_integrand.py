@@ -70,6 +70,13 @@ def fixture_fixed_quad_experiment(tmp_path: Path) -> Path:
     return _generate_wl_experiment(tmp_path, "fixed_quad_experiment.yaml", "fixed_quad")
 
 
+@pytest.fixture(name="spectral_experiment")
+def fixture_spectral_experiment(tmp_path: Path) -> Path:
+    """A mock cluster-WL experiment using the Spectral shape factor (the engine
+    eval_panels()/--show-panels works with)."""
+    return _generate_wl_experiment(tmp_path, "spectral_experiment.yaml", "spectral")
+
+
 @pytest.fixture(name="var_add_experiment")
 def fixture_var_add_experiment(tmp_path: Path) -> Path:
     """A mock cluster-WL experiment using the VarAdd shape factor (not
@@ -229,6 +236,83 @@ def test_galaxy_shape_integrand_show_nodes_skipped_for_non_fixed_quad(
 
     assert result.exit_code == 0, result.output
     assert "not FixedQuad -- skipping" in result.output
+
+
+def test_galaxy_shape_integrand_spectral_overlays_panels(
+    spectral_experiment: Path, tmp_path: Path
+):
+    """With the Spectral engine the accepted panels are fetched and drawn, their
+    count is printed, and the FixedQuad skip message is not."""
+    out_prefix = tmp_path / "spectral"
+
+    result = runner.invoke(
+        app,
+        [
+            "inspect",
+            "galaxy-shape-integrand",
+            spectral_experiment.as_posix(),
+            "--no-show-plot",
+            "--output-prefix",
+            out_prefix.as_posix(),
+            "--n-grid",
+            "25",
+            "--g1",
+            "0.2",
+            "--g2",
+            "0.1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "spectral_shape_integrand.png").exists()
+    assert "Spectral panels:" in result.output
+    assert "skipping" not in result.output
+
+
+def test_galaxy_shape_integrand_spectral_no_show_panels(spectral_experiment: Path):
+    """--no-show-panels does not fetch the panels."""
+    result = runner.invoke(
+        app,
+        [
+            "inspect",
+            "galaxy-shape-integrand",
+            spectral_experiment.as_posix(),
+            "--no-show-plot",
+            "--no-show-panels",
+            "--n-grid",
+            "20",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Spectral panels:" not in result.output
+
+
+@pytest.mark.parametrize(
+    "g1, expected",
+    [("1.0", "closed form and no panels"), ("1.5", "Spectral panels:")],
+)
+def test_galaxy_shape_integrand_spectral_large_shear(
+    spectral_experiment: Path, g1: str, expected: str
+):
+    """|g| = 1 has no panels and says so; |g| > 1 draws the panels of the
+    integral at g / |g|^2."""
+    result = runner.invoke(
+        app,
+        [
+            "inspect",
+            "galaxy-shape-integrand",
+            spectral_experiment.as_posix(),
+            "--no-show-plot",
+            "--n-grid",
+            "20",
+            "--g1",
+            g1,
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert expected in result.output
 
 
 def test_galaxy_shape_integrand_trace_ellip_conv(tmp_path: Path):

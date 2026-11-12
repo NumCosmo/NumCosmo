@@ -1,5 +1,6 @@
 src_site_theory_ncm_algebra_files = files(
     'spectral.qmd',
+    'spectral_polar.qmd',
 )
 
 if get_option('documentation')

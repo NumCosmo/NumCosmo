@@ -190,7 +190,7 @@ class GalaxyZGenComposed(BaseModel):
 
     Builds a ``NcGalaxyRedshiftFactorComposed`` scheme: an LSST-SRD true-z
     population (``NcGalaxyRedshiftPopLSSTSRD``) observed through a Gaussian
-    photo-z error kernel (``NcGalaxyRedshiftObsGauss``), parameterised by a
+    photo-z error kernel (``NcGalaxyRedshiftObsGauss``), parameterized by a
     per-galaxy ``sigma0`` (the photo-z error scales as ``sigma0*(1+z)``).
     """
 
@@ -487,6 +487,60 @@ class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
         )
 
 
+DEFAULT_SHAPE_SPECTRAL_RELTOL = 1.0e-5
+DEFAULT_SHAPE_SPECTRAL_USE_INTERP = False
+DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX = 0.3
+DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
+DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
+
+
+class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
+    """Adaptive Chebyshev panels in polar coordinates (``NcGalaxyShapeFactorSpectral``)."""
+
+    reltol: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPECTRAL_RELTOL
+    use_interp: Annotated[bool, Field()] = DEFAULT_SHAPE_SPECTRAL_USE_INTERP
+    interp_g_max: Annotated[float, Field(ge=1.0e-3, le=0.33)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX
+    )
+    interp_abstol: Annotated[float, Field(gt=0.0, le=1.0)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL
+    )
+    interp_min_radial_panels: Annotated[int, Field(ge=1)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS
+    )
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for this scheme."""
+        return [
+            "GalaxyShapeFactorGenSpectral",
+            (
+                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+                f"reltol={DEFAULT_SHAPE_SPECTRAL_RELTOL}, "
+                f"use_interp={DEFAULT_SHAPE_SPECTRAL_USE_INTERP}, "
+                f"interp_g_max={DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX}, "
+                f"interp_abstol={DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL}, "
+                "interp_min_radial_panels="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS}"
+            ),
+        ]
+
+    def requires_sigma(self) -> bool:
+        """Spectral works with any population that gives its end exponents and
+        reduced density."""
+        return False
+
+    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
+        return Nc.GalaxyShapeFactorSpectral(
+            ellip_conv=self.ellip_conv.genum,
+            reltol=self.reltol,
+            use_interp=self.use_interp,
+            interp_g_max=self.interp_g_max,
+            interp_abstol=self.interp_abstol,
+            interp_min_radial_panels=self.interp_min_radial_panels,
+        )
+
+
 class GalaxyShapeFactorGenMomentsGauss(GalaxyShapeFactorGenBase):
     """Gaussian matched to the exact moments (``NcGalaxyShapeFactorMomentsGauss``)."""
 
@@ -560,6 +614,7 @@ GalaxyShapeFactorGenTypes = (
     | GalaxyShapeFactorGenSeriesLensed
     | GalaxyShapeFactorGenQuad
     | GalaxyShapeFactorGenFixedQuad
+    | GalaxyShapeFactorGenSpectral
     | GalaxyShapeFactorGenLaplace
     | GalaxyShapeFactorGenMomentsGauss
     | GalaxyShapeFactorGenMomentsTilt
@@ -573,6 +628,7 @@ class ShapeFactorGen(StrEnum):
     SERIES_LENSED = (auto(), GalaxyShapeFactorGenSeriesLensed)
     QUAD = (auto(), GalaxyShapeFactorGenQuad)
     FIXED_QUAD = (auto(), GalaxyShapeFactorGenFixedQuad)
+    SPECTRAL = (auto(), GalaxyShapeFactorGenSpectral)
     LAPLACE = (auto(), GalaxyShapeFactorGenLaplace)
     MOMENTS_GAUSS = (auto(), GalaxyShapeFactorGenMomentsGauss)
     MOMENTS_TILT = (auto(), GalaxyShapeFactorGenMomentsTilt)
@@ -1339,7 +1395,7 @@ class ResampleFlagChoice(StrEnum):
     the real per-galaxy (ra, dec, z, noise) and only redraws intrinsic
     ellipticity, which is the appropriate choice for a real-catalog bias
     test. ``ALL`` (the default) matches historical/mock-generation
-    behaviour.
+    behavior.
     """
 
     POSITION = "position"
@@ -1426,7 +1482,7 @@ def load_cluster_wl(
     only describes the observed background galaxies, not the lensing cluster.
 
     ``resample_flag`` is written onto the resulting ``NcDataClusterWLFactor``
-    as-is (default ``ALL``, matching historical behaviour); see
+    as-is (default ``ALL``, matching historical behavior); see
     ``ResampleFlagChoice`` for why a real-catalog bias test wants ``SHAPE``
     only.
     """

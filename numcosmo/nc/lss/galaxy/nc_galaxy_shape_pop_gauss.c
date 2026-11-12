@@ -132,6 +132,8 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
   gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_exponent_at_origin;
   gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
   gsp_class->moment_2k            = &_nc_galaxy_shape_pop_gauss_moment_2k;
+  gsp_class->exponent_at_one      = &_nc_galaxy_shape_pop_gauss_exponent_at_one;
+  gsp_class->eval_p_reduced       = &_nc_galaxy_shape_pop_gauss_eval_p_reduced;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -241,6 +243,22 @@ static gdouble
 _nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp)
 {
   return 1.0;
+}
+
+/* The truncated Gaussian is finite and nonzero at r = 1 */
+gdouble
+_nc_galaxy_shape_pop_gauss_exponent_at_one (NcGalaxyShapePop *gsp)
+{
+  return 0.0;
+}
+
+/* P_pop (r) / r = 2 norm exp (-r^2 / 2 sigma^2), see _nc_galaxy_shape_pop_gauss_eval_p() */
+gdouble
+_nc_galaxy_shape_pop_gauss_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
+{
+  NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
+
+  return 2.0 * ldata->norm * exp (-ldata->inv_2sigma2 * r * r);
 }
 
 /* M_2k = <r^2k> = (2sigma^2)^k k! P(k+1,a)/(1-e^-a), a = inv_2sigma2, in

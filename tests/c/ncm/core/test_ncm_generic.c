@@ -70,6 +70,8 @@ void test_ncm_iset_basic (void);
 void test_ncm_spectral_panels_basic (void);
 void test_ncm_spectral_panels_builder_basic (void);
 void test_ncm_spectral_panels_product_basic (void);
+void test_ncm_spectral_polar_basic (void);
+void test_ncm_spectral_polar_panels_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -127,6 +129,7 @@ void test_nc_galaxy_redshift_binning_basic (void);
 void test_nc_galaxy_redshift_pop_basic (void);
 void test_nc_galaxy_shape_factor_basic (void);
 void test_nc_galaxy_shape_factor_quad_basic (void);
+void test_nc_galaxy_shape_factor_spectral_basic (void);
 void test_nc_galaxy_shape_factor_series_lensed_basic (void);
 void test_nc_galaxy_shape_factor_fixed_quad_basic (void);
 void test_nc_galaxy_shape_factor_moments_tilt_basic (void);
@@ -181,6 +184,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels/basic", test_ncm_spectral_panels_basic);
   g_test_add_func ("/ncm/spectral_panels_builder/basic", test_ncm_spectral_panels_builder_basic);
   g_test_add_func ("/ncm/spectral_panels_product/basic", test_ncm_spectral_panels_product_basic);
+  g_test_add_func ("/ncm/spectral_polar/basic", test_ncm_spectral_polar_basic);
+  g_test_add_func ("/ncm/spectral_polar_panels/basic", test_ncm_spectral_polar_panels_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -241,6 +246,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/redshift_pop/basic", test_nc_galaxy_redshift_pop_basic);
   g_test_add_func ("/nc/galaxy/shape_factor/basic", test_nc_galaxy_shape_factor_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_quad/basic", test_nc_galaxy_shape_factor_quad_basic);
+  g_test_add_func ("/nc/galaxy/shape_factor_spectral/basic", test_nc_galaxy_shape_factor_spectral_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_series_lensed/basic", test_nc_galaxy_shape_factor_series_lensed_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_fixed_quad/basic", test_nc_galaxy_shape_factor_fixed_quad_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_moments_tilt/basic", test_nc_galaxy_shape_factor_moments_tilt_basic);
@@ -2066,6 +2072,24 @@ test_nc_galaxy_shape_factor_quad_basic (void)
 }
 
 void
+test_nc_galaxy_shape_factor_spectral_basic (void)
+{
+  NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
+  NcGalaxyShapeFactorSpectral *gsfs2;
+
+  g_assert_true (gsfs != NULL);
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (gsfs));
+
+  gsfs2 = nc_galaxy_shape_factor_spectral_ref (gsfs);
+  nc_galaxy_shape_factor_spectral_clear (&gsfs2);
+  g_assert_true (gsfs2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (gsfs));
+
+  NCM_TEST_FREE (nc_galaxy_shape_factor_spectral_free, gsfs);
+}
+
+void
 test_nc_galaxy_shape_factor_series_lensed_basic (void)
 {
   NcGalaxyShapeFactorSeriesLensed *gsfsl = nc_galaxy_shape_factor_series_lensed_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, 4);
@@ -2321,5 +2345,39 @@ test_ncm_spectral_panels_product_basic (void)
   g_assert_true (NCM_IS_SPECTRAL_PANELS_PRODUCT (prod));
 
   NCM_TEST_FREE (ncm_spectral_panels_product_free, prod);
+}
+
+void
+test_ncm_spectral_polar_basic (void)
+{
+  NcmSpectralPolar *sp = ncm_spectral_polar_new ();
+  NcmSpectralPolar *sp2;
+
+  g_assert_true (NCM_IS_SPECTRAL_POLAR (sp));
+
+  sp2 = ncm_spectral_polar_ref (sp);
+  ncm_spectral_polar_clear (&sp2);
+  g_assert_true (sp2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_POLAR (sp));
+
+  NCM_TEST_FREE (ncm_spectral_polar_free, sp);
+}
+
+void
+test_ncm_spectral_polar_panels_basic (void)
+{
+  NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
+  NcmSpectralPolarPanels *spp2;
+
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
+
+  spp2 = ncm_spectral_polar_panels_ref (spp);
+  ncm_spectral_polar_panels_clear (&spp2);
+  g_assert_true (spp2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
+
+  NCM_TEST_FREE (ncm_spectral_polar_panels_free, spp);
 }
 
