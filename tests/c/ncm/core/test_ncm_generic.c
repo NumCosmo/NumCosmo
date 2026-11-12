@@ -128,15 +128,10 @@ void test_nc_galaxy_redshift_factor_spline_basic (void);
 void test_nc_galaxy_redshift_binning_basic (void);
 void test_nc_galaxy_redshift_pop_basic (void);
 void test_nc_galaxy_shape_factor_basic (void);
-void test_nc_galaxy_shape_factor_quad_basic (void);
 void test_nc_galaxy_shape_factor_spectral_basic (void);
-void test_nc_galaxy_shape_factor_series_lensed_basic (void);
-void test_nc_galaxy_shape_factor_fixed_quad_basic (void);
 void test_nc_galaxy_shape_factor_moments_tilt_basic (void);
 void test_nc_galaxy_shape_factor_moments_gauss_basic (void);
 void test_nc_galaxy_shape_pop_gauss_basic (void);
-void test_nc_wl_ellipticity_series_trace_basic (void);
-void test_nc_wl_ellipticity_series_trace_det_basic (void);
 void test_nc_data_cluster_wl_factor_basic (void);
 
 gint
@@ -245,15 +240,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/redshift_binning/basic", test_nc_galaxy_redshift_binning_basic);
   g_test_add_func ("/nc/galaxy/redshift_pop/basic", test_nc_galaxy_redshift_pop_basic);
   g_test_add_func ("/nc/galaxy/shape_factor/basic", test_nc_galaxy_shape_factor_basic);
-  g_test_add_func ("/nc/galaxy/shape_factor_quad/basic", test_nc_galaxy_shape_factor_quad_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_spectral/basic", test_nc_galaxy_shape_factor_spectral_basic);
-  g_test_add_func ("/nc/galaxy/shape_factor_series_lensed/basic", test_nc_galaxy_shape_factor_series_lensed_basic);
-  g_test_add_func ("/nc/galaxy/shape_factor_fixed_quad/basic", test_nc_galaxy_shape_factor_fixed_quad_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_moments_tilt/basic", test_nc_galaxy_shape_factor_moments_tilt_basic);
   g_test_add_func ("/nc/galaxy/shape_factor_moments_gauss/basic", test_nc_galaxy_shape_factor_moments_gauss_basic);
   g_test_add_func ("/nc/galaxy/shape_pop_gauss/basic", test_nc_galaxy_shape_pop_gauss_basic);
-  g_test_add_func ("/nc/wl_ellipticity_series/trace/basic", test_nc_wl_ellipticity_series_trace_basic);
-  g_test_add_func ("/nc/wl_ellipticity_series/trace_det/basic", test_nc_wl_ellipticity_series_trace_det_basic);
   g_test_add_func ("/nc/data/cluster_wl_factor/basic", test_nc_data_cluster_wl_factor_basic);
 
   g_test_run ();
@@ -2038,7 +2028,7 @@ test_nc_galaxy_shape_factor_basic (void)
 {
   /* NcGalaxyShapeFactor is abstract: same rationale as
    * test_nc_galaxy_redshift_pop_basic above. */
-  NcGalaxyShapeFactor *gsf = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_quad_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
+  NcGalaxyShapeFactor *gsf = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
   NcGalaxyShapeFactor *gsf2;
 
   g_assert_true (gsf != NULL);
@@ -2051,24 +2041,6 @@ test_nc_galaxy_shape_factor_basic (void)
   g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR (gsf));
 
   NCM_TEST_FREE (nc_galaxy_shape_factor_free, gsf);
-}
-
-void
-test_nc_galaxy_shape_factor_quad_basic (void)
-{
-  NcGalaxyShapeFactorQuad *gsfq = nc_galaxy_shape_factor_quad_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
-  NcGalaxyShapeFactorQuad *gsfq2;
-
-  g_assert_true (gsfq != NULL);
-  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_QUAD (gsfq));
-
-  gsfq2 = nc_galaxy_shape_factor_quad_ref (gsfq);
-  nc_galaxy_shape_factor_quad_clear (&gsfq2);
-  g_assert_true (gsfq2 == NULL);
-
-  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_QUAD (gsfq));
-
-  NCM_TEST_FREE (nc_galaxy_shape_factor_quad_free, gsfq);
 }
 
 void
@@ -2087,42 +2059,6 @@ test_nc_galaxy_shape_factor_spectral_basic (void)
   g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (gsfs));
 
   NCM_TEST_FREE (nc_galaxy_shape_factor_spectral_free, gsfs);
-}
-
-void
-test_nc_galaxy_shape_factor_series_lensed_basic (void)
-{
-  NcGalaxyShapeFactorSeriesLensed *gsfsl = nc_galaxy_shape_factor_series_lensed_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, 4);
-  NcGalaxyShapeFactorSeriesLensed *gsfsl2;
-
-  g_assert_true (gsfsl != NULL);
-  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_SERIES_LENSED (gsfsl));
-
-  gsfsl2 = nc_galaxy_shape_factor_series_lensed_ref (gsfsl);
-  nc_galaxy_shape_factor_series_lensed_clear (&gsfsl2);
-  g_assert_true (gsfsl2 == NULL);
-
-  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_SERIES_LENSED (gsfsl));
-
-  NCM_TEST_FREE (nc_galaxy_shape_factor_series_lensed_free, gsfsl);
-}
-
-void
-test_nc_galaxy_shape_factor_fixed_quad_basic (void)
-{
-  NcGalaxyShapeFactorFixedQuad *gsffq = nc_galaxy_shape_factor_fixed_quad_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET);
-  NcGalaxyShapeFactorFixedQuad *gsffq2;
-
-  g_assert_true (gsffq != NULL);
-  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_FIXED_QUAD (gsffq));
-
-  gsffq2 = nc_galaxy_shape_factor_fixed_quad_ref (gsffq);
-  nc_galaxy_shape_factor_fixed_quad_clear (&gsffq2);
-  g_assert_true (gsffq2 == NULL);
-
-  g_assert_true (NC_IS_GALAXY_SHAPE_FACTOR_FIXED_QUAD (gsffq));
-
-  NCM_TEST_FREE (nc_galaxy_shape_factor_fixed_quad_free, gsffq);
 }
 
 void
@@ -2180,55 +2116,11 @@ test_nc_galaxy_shape_pop_gauss_basic (void)
 }
 
 void
-test_nc_wl_ellipticity_series_trace_basic (void)
-{
-  NcWLEllipticitySeriesTrace *ser = nc_wl_ellipticity_series_trace_new (4);
-  NcWLEllipticitySeriesTrace *ser2;
-  guint order = 0;
-
-  g_assert_true (ser != NULL);
-  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE (ser));
-
-  g_object_get (ser, "order", &order, NULL);
-  g_assert_cmpuint (order, ==, 4);
-
-  ser2 = nc_wl_ellipticity_series_trace_ref (ser);
-  nc_wl_ellipticity_series_trace_clear (&ser2);
-  g_assert_true (ser2 == NULL);
-
-  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE (ser));
-
-  NCM_TEST_FREE (nc_wl_ellipticity_series_trace_free, ser);
-}
-
-void
-test_nc_wl_ellipticity_series_trace_det_basic (void)
-{
-  NcWLEllipticitySeriesTraceDet *ser = nc_wl_ellipticity_series_trace_det_new (4);
-  NcWLEllipticitySeriesTraceDet *ser2;
-  guint order = 0;
-
-  g_assert_true (ser != NULL);
-  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE_DET (ser));
-
-  g_object_get (ser, "order", &order, NULL);
-  g_assert_cmpuint (order, ==, 4);
-
-  ser2 = nc_wl_ellipticity_series_trace_det_ref (ser);
-  nc_wl_ellipticity_series_trace_det_clear (&ser2);
-  g_assert_true (ser2 == NULL);
-
-  g_assert_true (NC_IS_WL_ELLIPTICITY_SERIES_TRACE_DET (ser));
-
-  NCM_TEST_FREE (nc_wl_ellipticity_series_trace_det_free, ser);
-}
-
-void
 test_nc_data_cluster_wl_factor_basic (void)
 {
   NcGalaxyPositionFactor *position_factor = NC_GALAXY_POSITION_FACTOR (nc_galaxy_position_factor_flat_new (0.0, 2.0, -0.5, 0.5));
   NcGalaxyRedshiftFactor *redshift_factor = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_composed_new (0.0, 5.0));
-  NcGalaxyShapeFactor *shape_factor       = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_quad_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
+  NcGalaxyShapeFactor *shape_factor       = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET));
   NcDataClusterWLFactor *dcwlf            = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
   NcDataClusterWLFactor *dcwlf2;
 

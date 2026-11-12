@@ -28,7 +28,7 @@ check:
   the facts that do not depend on the population (E[x] = ghat exactly under
   TRACE_DET; the values (1, 1 + sn^2, sn^2) at ghat = 1);
 * g = 0 returning the exact zero-shear marginal bitwise, which also makes
-  NcGalaxyShapeFactorFixedQuad a valid pointwise reference there, and only
+  NcGalaxyShapeFactorSpectral a valid pointwise reference there, and only
   there: at g > 0 the tilt family and the full convolution are different
   models;
 * invariance under g -> 1/g, at observed ellipticities with a cross
@@ -139,7 +139,7 @@ def test_zero_shear_is_exact(conv, mset_pop):
     data, _keep = _make_data(gsf, mset, 0.1)
     assert gsf.eval_tilt(pop, data, 0.0, 0.0) == (0.0, 0.0, 0.0, 0.0)
 
-    ref = Nc.GalaxyShapeFactorFixedQuad.new(conv)
+    ref = Nc.GalaxyShapeFactorSpectral.new(conv)
     rdata, _keep2 = _make_data(ref, mset, 0.1)
     for r in (0.05, 0.3, 0.6):
         a = gsf.eval_ln_marginal(pop, data, 0.0, 0.0, r, 0.0)

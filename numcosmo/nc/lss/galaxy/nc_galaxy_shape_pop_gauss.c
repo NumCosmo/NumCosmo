@@ -93,8 +93,6 @@ static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyS
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp);
 gdouble _nc_galaxy_shape_pop_gauss_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
-void _nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                                      const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 
 static void
 nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
@@ -124,16 +122,15 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
 
   ncm_model_class_check_params_info (model_class);
 
-  gsp_class->data_init            = &_nc_galaxy_shape_pop_gauss_data_init;
-  gsp_class->prepare              = &_nc_galaxy_shape_pop_gauss_prepare;
-  gsp_class->eval_p               = &_nc_galaxy_shape_pop_gauss_eval_p;
-  gsp_class->gen                  = &_nc_galaxy_shape_pop_gauss_gen;
-  gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_e_rms;
-  gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_exponent_at_origin;
-  gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
-  gsp_class->moment_2k            = &_nc_galaxy_shape_pop_gauss_moment_2k;
-  gsp_class->exponent_at_one      = &_nc_galaxy_shape_pop_gauss_exponent_at_one;
-  gsp_class->eval_p_reduced       = &_nc_galaxy_shape_pop_gauss_eval_p_reduced;
+  gsp_class->data_init          = &_nc_galaxy_shape_pop_gauss_data_init;
+  gsp_class->prepare            = &_nc_galaxy_shape_pop_gauss_prepare;
+  gsp_class->eval_p             = &_nc_galaxy_shape_pop_gauss_eval_p;
+  gsp_class->gen                = &_nc_galaxy_shape_pop_gauss_gen;
+  gsp_class->e_rms              = &_nc_galaxy_shape_pop_gauss_e_rms;
+  gsp_class->exponent_at_origin = &_nc_galaxy_shape_pop_gauss_exponent_at_origin;
+  gsp_class->moment_2k          = &_nc_galaxy_shape_pop_gauss_moment_2k;
+  gsp_class->exponent_at_one    = &_nc_galaxy_shape_pop_gauss_exponent_at_one;
+  gsp_class->eval_p_reduced     = &_nc_galaxy_shape_pop_gauss_eval_p_reduced;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -177,8 +174,7 @@ _nc_galaxy_shape_pop_gauss_ldata_set_sigma (NcGalaxyShapePopData *data, const gd
   const gdouble inv_2sigma2         = 0.5 / (sigma * sigma);
 
   /* norm/inv_2sigma2 are the x-space (x=r^2) normalization,
-   * P(x) = norm*exp(-x/2 sigma^2) on [0,1]: used directly by
-   * eval_p_rho2_g_series, and by eval_p() below via the *2r conversion. */
+   * P(x) = norm*exp(-x/2 sigma^2) on [0,1], used by eval_p() below via the *2r conversion. */
   ldata->sigma       = sigma;
   ldata->inv_2sigma2 = inv_2sigma2;
   ldata->norm        = inv_2sigma2 / (-expm1 (-inv_2sigma2));
@@ -290,78 +286,6 @@ _nc_galaxy_shape_pop_gauss_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopDat
 
     return (1.0 - exp_ma * sum) / (term * (1.0 - exp_ma));
   }
-}
-
-/* P(x) = norm*exp(-x/2sigma^2) (eval_p()'s own full, normalized form): scale
- * @x_series by -1/2sigma^2 to get exp's own argument series, then apply
- * the standard exp-of-power-series recursion (g^0 term pulled out as a
- * scalar prefactor first, since x_series's own order-0 term is
- * |chi_L|^2 != 0 in general -- see nc_wl_ellipticity_series.c's own class
- * docs for why), folding @ldata->norm into that same prefactor so this
- * composes eval_p(x(g)) exactly (see eval_p_rho2_g_series's own doc comment
- * in nc_galaxy_shape_pop.h: the vfunc's contract is the full normalized
- * density, not a shape-only/reference-divided form), using the
- * already-resolved @data->ldata instead of a live parameter read, matching
- * eval_p()'s own convention. The recursion's own fold (each c[m] built from
- * c[0..m-1]) needs the same ping-pong-plus-term scratch as
- * ncm_laurent_series_tps_conv()'s own fold, for the same reason (add_into
- * forbids @out aliasing an input) -- three fixed scalar buffers, allocated
- * fresh here since this call isn't (yet) part of a persistent, repeatedly-
- * evaluated object the way nc_wl_ellipticity_series.c's evaluators are.
- * Not static: shared with NcGalaxyShapePopGaussLocal (see
- * nc_galaxy_shape_pop_gauss_private.h), which only differs in where sigma
- * comes from -- by the time this runs, prepare() has already resolved
- * data->ldata->inv_2sigma2 either way. */
-void
-_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                                 const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
-{
-  NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
-  const guint order                 = ncm_laurent_series_tps_order (x_series);
-  NcmLaurentSeriesTPS *exponent     = ncm_laurent_series_tps_new (order);
-  NcmLaurentSeriesTPS *c            = ncm_laurent_series_tps_new (order);
-  NcmLaurentSeries *fold_acc[2]     = {ncm_laurent_series_new (0, 0), ncm_laurent_series_new (0, 0)};
-  NcmLaurentSeries *fold_term       = ncm_laurent_series_new (0, 0);
-  complex double a0;
-  complex double prefactor;
-  guint m;
-
-  ncm_laurent_series_tps_scale (exponent, x_series, -ldata->inv_2sigma2);
-
-  g_assert_cmpint (ncm_laurent_series_get_hmin (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
-  g_assert_cmpint (ncm_laurent_series_get_hmax (ncm_laurent_series_tps_get (exponent, 0)), ==, 0);
-
-  a0        = ncm_laurent_series_get (ncm_laurent_series_tps_get (exponent, 0), 0);
-  prefactor = ldata->norm * cexp (a0);
-
-  ncm_laurent_series_set_single_into (ncm_laurent_series_tps_get (c, 0), 0, 1.0);
-
-  for (m = 1; m <= order; m++)
-  {
-    NcmLaurentSeries *acc = fold_acc[0];
-    guint k;
-
-    ncm_laurent_series_reset (acc, 0, 0);
-
-    for (k = 1; k <= m; k++)
-    {
-      NcmLaurentSeries *acc2 = fold_acc[k % 2];
-
-      ncm_laurent_series_conv_into (fold_term, ncm_laurent_series_tps_get (exponent, k), ncm_laurent_series_tps_get (c, m - k));
-      ncm_laurent_series_add_into (acc2, acc, fold_term, (gdouble) k);
-      acc = acc2;
-    }
-
-    ncm_laurent_series_scale_into (ncm_laurent_series_tps_get (c, m), acc, 1.0 / m);
-  }
-
-  ncm_laurent_series_tps_scale (out, c, prefactor);
-
-  ncm_laurent_series_tps_unref (exponent);
-  ncm_laurent_series_tps_unref (c);
-  ncm_laurent_series_free (fold_acc[0]);
-  ncm_laurent_series_free (fold_acc[1]);
-  ncm_laurent_series_free (fold_term);
 }
 
 /**

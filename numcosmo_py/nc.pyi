@@ -516,15 +516,6 @@ def wl_ellipticity_lndet_jac_trace_det_ptr(
 def wl_ellipticity_lndet_jac_trace_ptr(
     g: NumCosmoMath.Complex, chi_obs: NumCosmoMath.Complex
 ) -> float: ...
-def wl_ellipticity_shear_at_origin_trace_det_ptr(
-    target: NumCosmoMath.Complex, g: NumCosmoMath.Complex
-) -> None: ...
-def wl_ellipticity_shear_at_origin_trace_ptr(
-    target: NumCosmoMath.Complex, g: NumCosmoMath.Complex
-) -> None: ...
-def wl_ellipticity_trace_kernel_prep_clear(
-    prep: WLEllipticityTraceKernelPrep,
-) -> None: ...
 def xcor_kernel_integrand_clear(integrand: XcorKernelIntegrand) -> None: ...
 def xcor_method_get_name(meth: XcorMethod) -> str: ...
 def xcor_method_has_error_estimate(meth: XcorMethod) -> bool: ...
@@ -9692,94 +9683,6 @@ class GalaxyShapeFactorData(GObject.GBoxed):
     def unref(self) -> None: ...
     def write_row(self, obs: GalaxyWLObs, i: int) -> None: ...
 
-class GalaxyShapeFactorFixedQuad(GalaxyShapeFactor):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorFixedQuad(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorFixedQuad
-
-    Object NcGalaxyShapeFactorFixedQuad
-
-    Properties from NcGalaxyShapeFactorFixedQuad:
-      n-radial -> guint: Number of radial nodes
-        Number of fixed Gauss-Legendre nodes in the radial direction
-      n-angular -> guint: Number of angular nodes
-        Number of angular quadrature nodes
-      use-marginal-spline -> gboolean: Use marginal spline
-        Cache the marginal as a function of g instead of recomputing it every call
-      spline-g-max -> gdouble: g-spline cached box half-side
-        Half-side of the square use-marginal-spline's cache covers
-      spline-rel-err -> gdouble: g-spline target relative error
-        Target relative error for use-marginal-spline's autoknots build
-
-    Properties from NcGalaxyShapeFactor:
-      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
-        Weak lensing observables ellipticity convention
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        n_angular: int
-        n_radial: int
-        spline_g_max: float
-        spline_rel_err: float
-        use_marginal_spline: bool
-        ellip_conv: GalaxyWLObsEllipConv
-
-    props: Props = ...
-    def __init__(
-        self,
-        n_angular: int = ...,
-        n_radial: int = ...,
-        spline_g_max: float = ...,
-        spline_rel_err: float = ...,
-        use_marginal_spline: bool = ...,
-        ellip_conv: GalaxyWLObsEllipConv = ...,
-    ) -> None: ...
-    @staticmethod
-    def clear(gsffq: GalaxyShapeFactorFixedQuad) -> None: ...
-    def eval_chi_i_native(
-        self,
-        pop: GalaxyShapePop,
-        data: GalaxyShapeFactorData,
-        g_1: float,
-        g_2: float,
-        epsilon_obs_1: float,
-        epsilon_obs_2: float,
-    ) -> float: ...
-    def eval_two_panel(
-        self,
-        pop: GalaxyShapePop,
-        data: GalaxyShapeFactorData,
-        g_1: float,
-        g_2: float,
-        epsilon_obs_1: float,
-        epsilon_obs_2: float,
-    ) -> float: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorFixedQuad: ...
-    def peek_domain(
-        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData, g_1: float, g_2: float
-    ) -> typing.Tuple[NumCosmoMath.Matrix, NumCosmoMath.Vector]: ...
-    def ref(self) -> GalaxyShapeFactorFixedQuad: ...
-
-class GalaxyShapeFactorFixedQuadClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorFixedQuadClass()
-    """
-
-    parent_class: GalaxyShapeFactorClass = ...
-
 class GalaxyShapeFactorIntegrand(GObject.GBoxed):
     r"""
     :Constructors:
@@ -9808,48 +9711,6 @@ class GalaxyShapeFactorIntegrand(GObject.GBoxed):
         *callback_data: typing.Any,
     ) -> GalaxyShapeFactorIntegrand: ...
     def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
-
-class GalaxyShapeFactorLaplace(GalaxyShapeFactor):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorLaplace(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorLaplace
-
-    Object NcGalaxyShapeFactorLaplace
-
-    Properties from NcGalaxyShapeFactor:
-      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
-        Weak lensing observables ellipticity convention
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        ellip_conv: GalaxyWLObsEllipConv
-
-    props: Props = ...
-    def __init__(self, ellip_conv: GalaxyWLObsEllipConv = ...) -> None: ...
-    @staticmethod
-    def clear(gsfl: GalaxyShapeFactorLaplace) -> None: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorLaplace: ...
-    def ref(self) -> GalaxyShapeFactorLaplace: ...
-
-class GalaxyShapeFactorLaplaceClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorLaplaceClass()
-    """
-
-    parent_class: GalaxyShapeFactorClass = ...
 
 class GalaxyShapeFactorMomentsGauss(GalaxyShapeFactor):
     r"""
@@ -10004,129 +9865,6 @@ class GalaxyShapeFactorMomentsTiltClass(GObject.GPointer):
     ::
 
         GalaxyShapeFactorMomentsTiltClass()
-    """
-
-    parent_class: GalaxyShapeFactorClass = ...
-
-class GalaxyShapeFactorQuad(GalaxyShapeFactor):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorQuad(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorQuad
-
-    Object NcGalaxyShapeFactorQuad
-
-    Properties from NcGalaxyShapeFactorQuad:
-      reltol -> gdouble: reltol
-        Cubature relative tolerance
-      use-lp -> gboolean: use-lp
-        Integrate in log-polar coordinates around the noise peak
-
-    Properties from NcGalaxyShapeFactor:
-      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
-        Weak lensing observables ellipticity convention
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        reltol: float
-        use_lp: bool
-        ellip_conv: GalaxyWLObsEllipConv
-
-    props: Props = ...
-    def __init__(
-        self,
-        reltol: float = ...,
-        use_lp: bool = ...,
-        ellip_conv: GalaxyWLObsEllipConv = ...,
-    ) -> None: ...
-    @staticmethod
-    def clear(gsfq: GalaxyShapeFactorQuad) -> None: ...
-    def eval_direct(
-        self,
-        pop: GalaxyShapePop,
-        g_1: float,
-        g_2: float,
-        epsilon_obs_1: float,
-        epsilon_obs_2: float,
-        std_noise: float,
-    ) -> float: ...
-    def free(self) -> None: ...
-    def get_reltol(self) -> float: ...
-    @classmethod
-    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorQuad: ...
-    def ref(self) -> GalaxyShapeFactorQuad: ...
-    def set_reltol(self, reltol: float) -> None: ...
-
-class GalaxyShapeFactorQuadClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorQuadClass()
-    """
-
-    parent_class: GalaxyShapeFactorClass = ...
-
-class GalaxyShapeFactorSeriesLensed(GalaxyShapeFactor):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorSeriesLensed(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, trunc_order:int) -> NumCosmo.GalaxyShapeFactorSeriesLensed
-
-    Object NcGalaxyShapeFactorSeriesLensed
-
-    Properties from NcGalaxyShapeFactorSeriesLensed:
-      trunc-order -> guint: Truncation order
-        Truncation order N of the g-power series
-      n-nodes -> guint: Number of radial nodes
-        Number of fixed Gauss-Legendre nodes for the rho integral
-
-    Properties from NcGalaxyShapeFactor:
-      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
-        Weak lensing observables ellipticity convention
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        n_nodes: int
-        trunc_order: int
-        ellip_conv: GalaxyWLObsEllipConv
-
-    props: Props = ...
-    def __init__(
-        self,
-        n_nodes: int = ...,
-        trunc_order: int = ...,
-        ellip_conv: GalaxyWLObsEllipConv = ...,
-    ) -> None: ...
-    @staticmethod
-    def clear(gsfsl: GalaxyShapeFactorSeriesLensed) -> None: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(
-        cls, ellip_conv: GalaxyWLObsEllipConv, trunc_order: int
-    ) -> GalaxyShapeFactorSeriesLensed: ...
-    def ref(self) -> GalaxyShapeFactorSeriesLensed: ...
-
-class GalaxyShapeFactorSeriesLensedClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorSeriesLensedClass()
     """
 
     parent_class: GalaxyShapeFactorClass = ...
@@ -10334,12 +10072,6 @@ class GalaxyShapePop(NumCosmoMath.Model):
         r: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> list[float]: ...
     def do_eval_p_reduced(self, data: GalaxyShapePopData, r: float) -> float: ...
-    def do_eval_p_rho2_g_series(
-        self,
-        data: GalaxyShapePopData,
-        x_series: NumCosmoMath.LaurentSeriesTPS,
-        out: NumCosmoMath.LaurentSeriesTPS,
-    ) -> None: ...
     def do_exponent_at_one(self) -> float: ...
     def do_exponent_at_origin(self) -> float: ...
     def do_gen(
@@ -10355,19 +10087,12 @@ class GalaxyShapePop(NumCosmoMath.Model):
         r: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> list[float]: ...
     def eval_p_reduced(self, data: GalaxyShapePopData, r: float) -> float: ...
-    def eval_p_rho2_g_series(
-        self,
-        data: GalaxyShapePopData,
-        x_series: NumCosmoMath.LaurentSeriesTPS,
-        out: NumCosmoMath.LaurentSeriesTPS,
-    ) -> None: ...
     def exponent_at_one(self) -> float: ...
     def exponent_at_origin(self) -> float: ...
     def free(self) -> None: ...
     def gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
     ) -> typing.Tuple[float, float]: ...
-    def get_mode_r(self, data: GalaxyShapePopData) -> float: ...
     def get_sigma(self, data: GalaxyShapePopData) -> float: ...
     @staticmethod
     def id() -> int: ...
@@ -10485,15 +10210,6 @@ class GalaxyShapePopClass(GObject.GPointer):
     ] = ...
     e_rms: typing.Callable[[GalaxyShapePop, GalaxyShapePopData], float] = ...
     exponent_at_origin: typing.Callable[[GalaxyShapePop], float] = ...
-    eval_p_rho2_g_series: typing.Callable[
-        [
-            GalaxyShapePop,
-            GalaxyShapePopData,
-            NumCosmoMath.LaurentSeriesTPS,
-            NumCosmoMath.LaurentSeriesTPS,
-        ],
-        None,
-    ] = ...
     eval_p_array: typing.Callable[
         [
             GalaxyShapePop,
@@ -10526,7 +10242,6 @@ class GalaxyShapePopData(GObject.GBoxed):
     ldata_write_row: typing.Callable[[GalaxyShapePopData, GalaxyWLObs, int], None] = ...
     ldata_required_columns: None = ...
     ldata_get_sigma: typing.Callable[[GalaxyShapePopData], float] = ...
-    ldata_get_mode_r: typing.Callable[[GalaxyShapePopData], float] = ...
     ref_count: int = ...
     @classmethod
     def new(cls, gsp: GalaxyShapePop) -> GalaxyShapePopData: ...
@@ -23272,116 +22987,6 @@ class TransferFuncEHNoBaryonClass(GObject.GPointer):
     """
 
     parent_class: TransferFuncClass = ...
-
-class WLEllipticitySeriesTrace(GObject.Object):
-    r"""
-    :Constructors:
-
-    ::
-
-        WLEllipticitySeriesTrace(**properties)
-        new(order:int) -> NumCosmo.WLEllipticitySeriesTrace
-
-    Object NcWLEllipticitySeriesTrace
-
-    Properties from NcWLEllipticitySeriesTrace:
-      order -> guint: order
-        Truncation order
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        order: int
-
-    props: Props = ...
-    def __init__(self, order: int = ...) -> None: ...
-    @staticmethod
-    def clear(ser: WLEllipticitySeriesTrace) -> None: ...
-    def eval(self, rho: float) -> None: ...
-    def free(self) -> None: ...
-    def get_abs_sq(self) -> NumCosmoMath.LaurentSeriesTPS: ...
-    def get_chi(self) -> NumCosmoMath.LaurentSeriesTPS: ...
-    def get_jac(self) -> NumCosmoMath.LaurentSeriesTPS: ...
-    def get_order(self) -> int: ...
-    @classmethod
-    def new(cls, order: int) -> WLEllipticitySeriesTrace: ...
-    def ref(self) -> WLEllipticitySeriesTrace: ...
-
-class WLEllipticitySeriesTraceClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        WLEllipticitySeriesTraceClass()
-    """
-
-    parent_class: GObject.ObjectClass = ...
-
-class WLEllipticitySeriesTraceDet(GObject.Object):
-    r"""
-    :Constructors:
-
-    ::
-
-        WLEllipticitySeriesTraceDet(**properties)
-        new(order:int) -> NumCosmo.WLEllipticitySeriesTraceDet
-
-    Object NcWLEllipticitySeriesTraceDet
-
-    Properties from NcWLEllipticitySeriesTraceDet:
-      order -> guint: order
-        Truncation order
-
-    Signals from GObject:
-      notify (GParam)
-    """
-
-    class Props:
-        order: int
-
-    props: Props = ...
-    def __init__(self, order: int = ...) -> None: ...
-    @staticmethod
-    def clear(ser: WLEllipticitySeriesTraceDet) -> None: ...
-    def eval(self, rho: float) -> None: ...
-    def free(self) -> None: ...
-    def get_abs_sq(self) -> NumCosmoMath.LaurentSeriesTPS: ...
-    def get_chi(self) -> NumCosmoMath.LaurentSeriesTPS: ...
-    def get_jac(self) -> NumCosmoMath.LaurentSeriesTPS: ...
-    def get_order(self) -> int: ...
-    @classmethod
-    def new(cls, order: int) -> WLEllipticitySeriesTraceDet: ...
-    def ref(self) -> WLEllipticitySeriesTraceDet: ...
-
-class WLEllipticitySeriesTraceDetClass(GObject.GPointer):
-    r"""
-    :Constructors:
-
-    ::
-
-        WLEllipticitySeriesTraceDetClass()
-    """
-
-    parent_class: GObject.ObjectClass = ...
-
-class WLEllipticityTraceKernelPrep(GObject.GBoxed):
-    r"""
-    :Constructors:
-
-    ::
-
-        new() -> NumCosmo.WLEllipticityTraceKernelPrep
-    """
-
-    @staticmethod
-    def clear(prep: WLEllipticityTraceKernelPrep) -> None: ...
-    def dup(self) -> WLEllipticityTraceKernelPrep: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(cls) -> WLEllipticityTraceKernelPrep: ...
 
 class WLSurfaceMassDensity(NumCosmoMath.Model):
     r"""

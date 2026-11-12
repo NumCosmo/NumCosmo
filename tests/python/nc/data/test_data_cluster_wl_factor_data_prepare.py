@@ -27,7 +27,7 @@ the thread count.
 
 Each run builds everything from scratch (models, catalog, dataset), so the
 models' lazy first-call state (halo-position rotation, LSST-SRD constants, the
-numerically integrated Einasto profile's splines, Cuba's settings) starts
+numerically integrated Einasto profile's splines) starts
 unset and the orchestrator's serial warm-up is exercised every time. The
 catalog mixes background galaxies with foreground-only ones, so the warm-up
 has to skip galaxies without a redshift grid.
@@ -50,28 +50,25 @@ PARALLEL_THREADS = 4
 
 SHAPE_FACTORS = {
     "var-add": lambda: Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV),
-    "laplace": lambda: Nc.GalaxyShapeFactorLaplace.new(ELLIP_CONV),
-    "series-lensed": lambda: Nc.GalaxyShapeFactorSeriesLensed.new(ELLIP_CONV, 2),
-    "fixed-quad": lambda: Nc.GalaxyShapeFactorFixedQuad.new(ELLIP_CONV),
-    "quad": lambda: _quad(),
+    "spectral": lambda: _spectral(),
     "moments-tilt": lambda: Nc.GalaxyShapeFactorMomentsTilt.new(ELLIP_CONV),
     "moments-gauss": lambda: Nc.GalaxyShapeFactorMomentsGauss.new(ELLIP_CONV),
 }
 
 
-def _quad():
-    """Quad runs a Cuba cubature per evaluation and the calibration needs
+def _spectral():
+    """Spectral computes a 2D integral per evaluation and the calibration needs
     thousands of them per galaxy: a loose tolerance and a short catalog (see
     N_GAL_OF) keep its run time that of a unit test. The test compares
     parallel with serial, not accuracy."""
-    gsf = Nc.GalaxyShapeFactorQuad.new(ELLIP_CONV)
-    gsf.set_reltol(1.0e-2)
+    gsf = Nc.GalaxyShapeFactorSpectral.new(ELLIP_CONV)
+    gsf.set_reltol(1.0e-3)
     return gsf
 
 
 #: Galaxies per shape factor; the rest use N_GAL. Still more than the three
 #: foreground-only galaxies plus one warm-up galaxy plus PARALLEL_THREADS.
-N_GAL_OF = {"quad": 8}
+N_GAL_OF = {"spectral": 8}
 
 PROFILES = {
     "nfw": Nc.HaloDensityProfileNFW.new,

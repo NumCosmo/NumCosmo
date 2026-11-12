@@ -22,7 +22,7 @@
 
 Builds small mock cluster-WL experiments (via `generate cluster-wl`) and
 exercises the integrand-heatmap CLI through the actual Typer app: the
-different `--component` panels, the FixedQuad-only `--show-nodes` overlay,
+different `--component` panels, the Spectral-only `--show-panels` overlay,
 both ellipticity conventions, and the error paths (`_find_wl_factor()` /
 `_find_galaxy_shape_pop()` lookups, an out-of-range `--galaxy-index`).
 """
@@ -63,25 +63,11 @@ def _generate_wl_experiment(tmp_path: Path, name: str, shape_factor: str) -> Pat
     return experiment_file
 
 
-@pytest.fixture(name="fixed_quad_experiment")
-def fixture_fixed_quad_experiment(tmp_path: Path) -> Path:
-    """A mock cluster-WL experiment using the FixedQuad shape factor (the
-    only engine peek_domain()/--show-nodes works with)."""
-    return _generate_wl_experiment(tmp_path, "fixed_quad_experiment.yaml", "fixed_quad")
-
-
 @pytest.fixture(name="spectral_experiment")
 def fixture_spectral_experiment(tmp_path: Path) -> Path:
     """A mock cluster-WL experiment using the Spectral shape factor (the engine
     eval_panels()/--show-panels works with)."""
     return _generate_wl_experiment(tmp_path, "spectral_experiment.yaml", "spectral")
-
-
-@pytest.fixture(name="var_add_experiment")
-def fixture_var_add_experiment(tmp_path: Path) -> Path:
-    """A mock cluster-WL experiment using the VarAdd shape factor (not
-    FixedQuad, exercises the --show-nodes "skip" message)."""
-    return _generate_wl_experiment(tmp_path, "var_add_experiment.yaml", "var_add")
 
 
 @pytest.fixture(name="simple_experiment")
@@ -108,11 +94,10 @@ def fixture_simple_experiment(tmp_path: Path) -> Path:
     return exp_file
 
 
-def test_galaxy_shape_integrand_default_saves_total_with_nodes(
-    fixed_quad_experiment: Path, tmp_path: Path
+def test_galaxy_shape_integrand_default_saves_total(
+    spectral_experiment: Path, tmp_path: Path
 ):
-    """Default --component (total) with FixedQuad overlays the engine's own
-    quadrature nodes and saves a single figure."""
+    """Default --component (total) saves a single figure."""
     out_prefix = tmp_path / "default"
 
     result = runner.invoke(
@@ -120,7 +105,7 @@ def test_galaxy_shape_integrand_default_saves_total_with_nodes(
         [
             "inspect",
             "galaxy-shape-integrand",
-            fixed_quad_experiment.as_posix(),
+            spectral_experiment.as_posix(),
             "--no-show-plot",
             "--output-prefix",
             out_prefix.as_posix(),
@@ -131,12 +116,11 @@ def test_galaxy_shape_integrand_default_saves_total_with_nodes(
 
     assert result.exit_code == 0, result.output
     assert (tmp_path / "default_shape_integrand.png").exists()
-    assert "skipping" not in result.output
 
 
 @pytest.mark.parametrize("component", ["noise", "population", "total"])
 def test_galaxy_shape_integrand_single_component_panels(
-    fixed_quad_experiment: Path, tmp_path: Path, component: str
+    spectral_experiment: Path, tmp_path: Path, component: str
 ):
     """Each single-panel --component value renders and saves its own
     figure, with its own output filename suffix."""
@@ -147,7 +131,7 @@ def test_galaxy_shape_integrand_single_component_panels(
         [
             "inspect",
             "galaxy-shape-integrand",
-            fixed_quad_experiment.as_posix(),
+            spectral_experiment.as_posix(),
             "--no-show-plot",
             "--component",
             component,
@@ -166,7 +150,7 @@ def test_galaxy_shape_integrand_single_component_panels(
 
 
 def test_galaxy_shape_integrand_all_component_renders_three_panels(
-    fixed_quad_experiment: Path, tmp_path: Path
+    spectral_experiment: Path, tmp_path: Path
 ):
     """--component all draws all three panels side by side under one
     shared color scale and saves a single "_all" figure."""
@@ -177,7 +161,7 @@ def test_galaxy_shape_integrand_all_component_renders_three_panels(
         [
             "inspect",
             "galaxy-shape-integrand",
-            fixed_quad_experiment.as_posix(),
+            spectral_experiment.as_posix(),
             "--no-show-plot",
             "--component",
             "all",
@@ -192,57 +176,11 @@ def test_galaxy_shape_integrand_all_component_renders_three_panels(
     assert (tmp_path / "all_shape_integrand_all.png").exists()
 
 
-def test_galaxy_shape_integrand_no_show_nodes_skips_domain_overlay(
-    fixed_quad_experiment: Path, tmp_path: Path
-):
-    """--no-show-nodes never calls peek_domain(), even for FixedQuad."""
-    out_prefix = tmp_path / "no_nodes"
-
-    result = runner.invoke(
-        app,
-        [
-            "inspect",
-            "galaxy-shape-integrand",
-            fixed_quad_experiment.as_posix(),
-            "--no-show-plot",
-            "--no-show-nodes",
-            "--output-prefix",
-            out_prefix.as_posix(),
-            "--n-grid",
-            "20",
-        ],
-    )
-
-    assert result.exit_code == 0, result.output
-    assert (tmp_path / "no_nodes_shape_integrand.png").exists()
-
-
-def test_galaxy_shape_integrand_show_nodes_skipped_for_non_fixed_quad(
-    var_add_experiment: Path,
-):
-    """--show-nodes (the default) against a non-FixedQuad engine prints a
-    skip message instead of calling peek_domain()."""
-    result = runner.invoke(
-        app,
-        [
-            "inspect",
-            "galaxy-shape-integrand",
-            var_add_experiment.as_posix(),
-            "--no-show-plot",
-            "--n-grid",
-            "20",
-        ],
-    )
-
-    assert result.exit_code == 0, result.output
-    assert "not FixedQuad -- skipping" in result.output
-
-
 def test_galaxy_shape_integrand_spectral_overlays_panels(
     spectral_experiment: Path, tmp_path: Path
 ):
-    """With the Spectral engine the accepted panels are fetched and drawn, their
-    count is printed, and the FixedQuad skip message is not."""
+    """With the Spectral engine the accepted panels are fetched and drawn and their
+    count is printed."""
     out_prefix = tmp_path / "spectral"
 
     result = runner.invoke(
@@ -266,7 +204,6 @@ def test_galaxy_shape_integrand_spectral_overlays_panels(
     assert result.exit_code == 0, result.output
     assert (tmp_path / "spectral_shape_integrand.png").exists()
     assert "Spectral panels:" in result.output
-    assert "skipping" not in result.output
 
 
 def test_galaxy_shape_integrand_spectral_no_show_panels(spectral_experiment: Path):
@@ -319,7 +256,7 @@ def test_galaxy_shape_integrand_trace_ellip_conv(tmp_path: Path):
     """The TRACE ellipticity convention selects the *_trace_ptr shear
     helpers instead of the *_trace_det_ptr ones."""
     experiment = _generate_wl_experiment(
-        tmp_path, "trace_experiment.yaml", "fixed_quad ellip_conv=trace"
+        tmp_path, "trace_experiment.yaml", "spectral ellip_conv=trace"
     )
 
     result = runner.invoke(
@@ -337,14 +274,14 @@ def test_galaxy_shape_integrand_trace_ellip_conv(tmp_path: Path):
     assert result.exit_code == 0, result.output
 
 
-def test_galaxy_shape_integrand_galaxy_index_out_of_range(fixed_quad_experiment: Path):
+def test_galaxy_shape_integrand_galaxy_index_out_of_range(spectral_experiment: Path):
     """An out-of-range --galaxy-index raises a clear error."""
     result = runner.invoke(
         app,
         [
             "inspect",
             "galaxy-shape-integrand",
-            fixed_quad_experiment.as_posix(),
+            spectral_experiment.as_posix(),
             "--no-show-plot",
             "--galaxy-index",
             "10000000",
@@ -377,7 +314,7 @@ def test_galaxy_shape_integrand_requires_wl_factor(simple_experiment: Path):
 
 
 def test_galaxy_shape_integrand_requires_galaxy_shape_pop(
-    fixed_quad_experiment: Path, monkeypatch: pytest.MonkeyPatch
+    spectral_experiment: Path, monkeypatch: pytest.MonkeyPatch
 ):
     """_find_galaxy_shape_pop() raises when no Nc.GalaxyShapePop model is
     present in the model set, even though a WL factor is."""
@@ -388,7 +325,7 @@ def test_galaxy_shape_integrand_requires_galaxy_shape_pop(
         [
             "inspect",
             "galaxy-shape-integrand",
-            fixed_quad_experiment.as_posix(),
+            spectral_experiment.as_posix(),
             "--no-show-plot",
         ],
     )

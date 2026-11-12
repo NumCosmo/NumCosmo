@@ -37,7 +37,7 @@ combinations left untested at the orchestrator level:
 * shape=GaussLocal  x redshift=Composed (shape axis, new)
 
 (GaussGlobal x Composed is the existing file's combination.) The no-legacy-
-oracle schemes (Quad/SeriesLensed/FixedQuad/Laplace shape, Beta pop) are out
+oracle schemes (Spectral shape, Beta pop) are out
 of scope here by design -- see the cross-check scoping discussion.
 
 FROZEN REFERENCE VALUES: the dual-engine agreement documented above was

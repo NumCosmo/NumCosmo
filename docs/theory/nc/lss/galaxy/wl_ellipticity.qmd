@@ -243,12 +243,11 @@ one point back through an exact nonlinear map and re-weighting it by the
 local Jacobian is also not, in general, the same as integrating the noise
 against the whole nonlinear map: the two operations only commute exactly when
 the map is affine, so this formula remains an approximation for the same
-$\sigma$-truncation reason even though it no longer linearizes $g$. A future
-quadrature- or Laplace-based marginalization scheme would remove both
-approximations by integrating the (truncated) intrinsic distribution over the
-disc against the exact map instead of pulling one point back through it; see
-the [Galaxy Population & WL Framework](galaxy_wl_framework.qmd) page for how
-such a scheme would plug in alongside `VarAdd`.
+$\sigma$-truncation reason even though it no longer linearizes $g$. The class
+[[numcosmo|NcGalaxyShapeFactorSpectral]] removes both approximations by integrating the
+intrinsic distribution over the disk against the exact map instead of pulling one point
+back through it
+([Shape Marginalization by Spectral Panels](wl_shape_marginalization_spectral.qmd)).
 
 For the $\epsilon$ convention in the weak regime the log-Jacobian is
 

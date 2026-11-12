@@ -173,7 +173,6 @@
 #include <numcosmo/nc/lss/cluster/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/nc/lss/wl/nc_wl_surface_mass_density.h>
 #include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
-#include <numcosmo/nc/lss/wl/nc_wl_ellipticity_series.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_cluster_mass.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_calib.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_calib_wtg.h>
@@ -194,19 +193,14 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_position_factor_flat.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_quad.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_beta.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_intrinsic_mode.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>
 

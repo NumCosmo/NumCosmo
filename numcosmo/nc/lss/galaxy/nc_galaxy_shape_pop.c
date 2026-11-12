@@ -36,8 +36,8 @@
  * marginalization over the intrinsic ellipticity.
  *
  * $P_\mathrm{pop}(r)$ is NOT a 2D area density: a consumer needing the
- * density with respect to $\mathrm{d}^2\chi_I$ (e.g. #NcGalaxyShapeFactorFixedQuad,
- * #NcGalaxyShapeFactorQuad) computes $P_\mathrm{pop}(r)/(2\pi r)$ itself --
+ * density with respect to $\mathrm{d}^2\chi_I$ computes
+ * $P_\mathrm{pop}(r)/(2\pi r)$ itself --
  * a genuine, unavoidable pointwise divergence at $r=0$ for any population
  * whose $P_\mathrm{pop}(r)$ does not vanish at least linearly there (e.g.
  * #NcGalaxyShapePopBeta with $\alpha<2$), but a property of those
@@ -127,13 +127,6 @@ _nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
   g_error ("_nc_galaxy_shape_pop_e_rms: method not implemented.");
 
   return 0.0;
-}
-
-static void
-_nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                           const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
-{
-  g_error ("_nc_galaxy_shape_pop_eval_p_rho2_g_series: method not implemented.");
 }
 
 static gdouble
@@ -244,16 +237,15 @@ nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
   ncm_mset_model_register_id (model_class, "NcGalaxyShapePop", "Galaxy intrinsic ellipticity distribution", NULL, FALSE, NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (model_class);
 
-  klass->data_init            = &_nc_galaxy_shape_pop_data_init;
-  klass->prepare              = &_nc_galaxy_shape_pop_prepare;
-  klass->eval_p               = &_nc_galaxy_shape_pop_eval_p;
-  klass->gen                  = &_nc_galaxy_shape_pop_gen;
-  klass->e_rms                = &_nc_galaxy_shape_pop_e_rms;
-  klass->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_eval_p_rho2_g_series;
-  klass->eval_p_array         = &_nc_galaxy_shape_pop_eval_p_array;
-  klass->moment_2k            = &_nc_galaxy_shape_pop_moment_2k;
-  klass->exponent_at_one      = &_nc_galaxy_shape_pop_exponent_at_one;
-  klass->eval_p_reduced       = &_nc_galaxy_shape_pop_eval_p_reduced;
+  klass->data_init       = &_nc_galaxy_shape_pop_data_init;
+  klass->prepare         = &_nc_galaxy_shape_pop_prepare;
+  klass->eval_p          = &_nc_galaxy_shape_pop_eval_p;
+  klass->gen             = &_nc_galaxy_shape_pop_gen;
+  klass->e_rms           = &_nc_galaxy_shape_pop_e_rms;
+  klass->eval_p_array    = &_nc_galaxy_shape_pop_eval_p_array;
+  klass->moment_2k       = &_nc_galaxy_shape_pop_moment_2k;
+  klass->exponent_at_one = &_nc_galaxy_shape_pop_exponent_at_one;
+  klass->eval_p_reduced  = &_nc_galaxy_shape_pop_eval_p_reduced;
 }
 
 /**
@@ -317,7 +309,6 @@ nc_galaxy_shape_pop_data_new (NcGalaxyShapePop *gsp)
   data->ldata_write_row        = NULL;
   data->ldata_required_columns = NULL;
   data->ldata_get_sigma        = NULL;
-  data->ldata_get_mode_r       = NULL;
 
   g_atomic_ref_count_init (&data->ref_count);
   NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->data_init (gsp, data);
@@ -450,29 +441,6 @@ nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, c
 }
 
 /**
- * nc_galaxy_shape_pop_eval_p_rho2_g_series:
- * @gsp: a #NcGalaxyShapePop
- * @data: a resolved #NcGalaxyShapePopData
- * @x_series: $x(g)=|\chi_I(\chi_L,g)|^2$'s own $g$-Taylor coefficients,
- * population-independent
- * @out: this population's $P(x(g))=\mathrm{eval\_p}(x(g))$ composition, as
- * $g$-Taylor coefficients (same order as @x_series)
- *
- * Taylor-in-$g$ analog of nc_galaxy_shape_pop_eval_p(): composes this
- * population's own fully normalized density with the (already computed,
- * population-independent) shear-map series $x(g)$, order by order in $g$.
- * There is no generic default -- every subclass used with
- * #NcGalaxyShapeFactorSeriesLensed must provide its own implementation; the
- * base class errors clearly otherwise.
- */
-void
-nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                          const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out)
-{
-  NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_rho2_g_series (gsp, data, x_series, out);
-}
-
-/**
  * nc_galaxy_shape_pop_eval_p_array: (virtual eval_p_array)
  * @gsp: a #NcGalaxyShapePop
  * @data: a resolved #NcGalaxyShapePopData
@@ -491,9 +459,7 @@ nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePo
  *
  * - C optimization: pass @p pointing to a pre-allocated #GArray
  *   (`*p != NULL`). The existing array is resized and refilled, avoiding
- *   repeated allocation/deallocation in performance-critical loops (e.g.
- *   #NcGalaxyShapeFactorFixedQuad, which reuses the same @p across every
- *   $g$ a fit tries).
+ *   repeated allocation/deallocation in performance-critical loops.
  *
  * The generic default just loops calling eval_p(), so this is always safe
  * to call; a subclass may override it to batch the work (see
@@ -574,26 +540,6 @@ nc_galaxy_shape_pop_get_sigma (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data
              G_OBJECT_TYPE_NAME (gsp));
 
   return data->ldata_get_sigma (data);
-}
-
-/**
- * nc_galaxy_shape_pop_get_mode_r:
- * @gsp: a #NcGalaxyShapePop
- * @data: a resolved #NcGalaxyShapePopData
- *
- * Gets the mode of $r=|\chi_I|$ for this galaxy's resolved population
- * density, i.e. where $P_\mathrm{pop}(r)$ peaks. This is a per-@data
- * capability (@data->ldata_get_mode_r), not a virtual method, mirroring
- * nc_galaxy_shape_pop_get_sigma(); unlike that capability, 0 is always a
- * meaningful default (the model is assumed radially symmetric about
- * $\chi_I=0$ unless it says otherwise), so this never errors.
- *
- * Returns: the mode of $r$, or 0 if the model does not override it.
- */
-gdouble
-nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
-{
-  return (data->ldata_get_mode_r != NULL) ? data->ldata_get_mode_r (data) : 0.0;
 }
 
 /**

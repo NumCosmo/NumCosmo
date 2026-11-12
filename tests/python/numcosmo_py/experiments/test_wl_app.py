@@ -765,7 +765,7 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     alpha/beta free.
 
     Beta requires a scheme that doesn't linearize around a Gaussian (see
-    ``check_shape_pop_compat()``) -- fixed_quad qualifies. Covers
+    ``check_shape_pop_compat()``) -- spectral qualifies. Covers
     ``GalaxyPopGenBeta``'s get_shape_pop/register_models/get_mfuncs, and
     ``mfunc_oa.add(func)`` in generate.py's own ``_build_experiment`` (the
     only ``GalaxyPopGen`` variant with non-empty ``get_mfuncs()``), plus
@@ -780,7 +780,7 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--shape-factor=fixed_quad",
+            "--shape-factor=spectral",
             "--pop-dist=beta alpha=2.0 beta=5.0",
             "--parameter-list=NcGalaxyShapePop:alpha",
             "--parameter-list=NcGalaxyShapePop:beta",
@@ -826,7 +826,7 @@ def test_cluster_wl_app_generate_pop_beta_fixed_no_mfuncs(experiment_file):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--shape-factor=fixed_quad",
+            "--shape-factor=spectral",
             "--pop-dist=beta alpha=2.0 beta=5.0",
         ],
     )
@@ -838,34 +838,6 @@ def test_cluster_wl_app_generate_pop_beta_fixed_no_mfuncs(experiment_file):
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     mfunc_oa = cast(Ncm.ObjArray, ser.array_from_yaml_file(functions_file.as_posix()))
     assert mfunc_oa.len() == 0
-
-
-def test_cluster_wl_app_generate_fixed_quad_marginal_spline(experiment_file):
-    """fixed_quad's use-marginal-spline/spline-g-max/spline-rel-err
-    (CONSTRUCT_ONLY GObject properties) are reachable through
-    --shape-factor's key=value CLI parsing, not just direct Python/GI
-    construction."""
-    result = runner.invoke(
-        app,
-        [
-            "generate",
-            "cluster-wl",
-            experiment_file.as_posix(),
-            "--shape-factor=fixed_quad use_marginal_spline=true "
-            "spline_g_max=0.2 spline_rel_err=1e-3",
-        ],
-    )
-    assert result.exit_code == 0, result.output
-
-    dataset_file = experiment_file.with_suffix(".dataset.gvar")
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
-    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
-    factor = cast(Nc.GalaxyShapeFactorFixedQuad, cluster_data.props.shape_factor)
-
-    assert factor.props.use_marginal_spline is True
-    assert factor.props.spline_g_max == pytest.approx(0.2)
-    assert factor.props.spline_rel_err == pytest.approx(1e-3)
 
 
 def test_cluster_wl_app_generate_spectral_reltol(experiment_file):
@@ -1403,11 +1375,11 @@ def test_cluster_wl_load_app_data_file(experiment_file, real_wl_obs_file_with_me
     assert cluster_data.peek_obs().len() == 20
 
 
-def test_cluster_wl_load_app_fixed_quad_marginal_spline(
+def test_cluster_wl_load_app_spectral_interp(
     experiment_file, real_wl_obs_file_with_meta
 ):
-    """Same use-marginal-spline CLI wiring as
-    test_cluster_wl_app_generate_fixed_quad_marginal_spline, but through
+    """Same interpolation-option CLI wiring as
+    test_cluster_wl_app_generate_spectral_interp, but through
     cluster-wl-load (a real catalog) instead of cluster-wl (mock
     generation) -- both commands share the same --shape-factor parsing, but
     this exercises it end to end on the load path too."""
@@ -1418,8 +1390,8 @@ def test_cluster_wl_load_app_fixed_quad_marginal_spline(
             "cluster-wl-load",
             experiment_file.as_posix(),
             f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
-            "--shape-factor=fixed_quad ellip_conv=trace ellip_coord=celestial "
-            "use_marginal_spline=true spline_g_max=0.2 spline_rel_err=1e-3",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial "
+            "use_interp=true interp_g_max=0.2 interp_abstol=1e-4",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -1428,11 +1400,11 @@ def test_cluster_wl_load_app_fixed_quad_marginal_spline(
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
-    factor = cast(Nc.GalaxyShapeFactorFixedQuad, cluster_data.props.shape_factor)
+    factor = cast(Nc.GalaxyShapeFactorSpectral, cluster_data.props.shape_factor)
 
-    assert factor.props.use_marginal_spline is True
-    assert factor.props.spline_g_max == pytest.approx(0.2)
-    assert factor.props.spline_rel_err == pytest.approx(1e-3)
+    assert factor.props.use_interp is True
+    assert factor.props.interp_g_max == pytest.approx(0.2)
+    assert factor.props.interp_abstol == pytest.approx(1e-4)
 
 
 def test_cluster_wl_load_app_no_metadata_requires_explicit_values(

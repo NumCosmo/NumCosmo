@@ -35,18 +35,11 @@
  * validates the cheaper production configuration (FIXED_NODES-20x5, LNINT,
  * CUBATURE) against it.
  *
- * The Factor pipeline has several independently-coded *exact*
- * intrinsic-ellipticity marginalization schemes (SeriesLensed, Quad,
- * Laplace, FixedQuad) and a non-Gaussian population (Beta); this file gives
- * each of them its own self-contained correctness net. The matrix below is
- * deliberately curated, not a full cross-product: each shape scheme is
- * exercised against the reference at least once, VarAdd+Gauss is
- * kept as the cheap "does the wiring still work" baseline, and
- * SeriesLensed/Beta and Quad/Beta each get one spline-straddle (hardest
- * integrand) case. A final test cross-checks SeriesLensed
- * against Quad directly on the identical generated galaxy set: two
- * independently-coded exact schemes for the same physical marginal integral
- * must agree with each other.
+ * The matrix below covers the shape factors VarAdd (closed-form approximation) and
+ * Spectral (the marginal by adaptive Chebyshev panels) and the populations Gauss and
+ * Beta. It is curated, not a full cross-product: VarAdd+Gauss is the cheap baseline of
+ * the wiring at full resolution, and Spectral has one spline-straddle (hardest
+ * integrand) case for each population.
  *
  * The Spline redshift scheme's pz is a cubic spline (only C2 at its knots),
  * the hardest case for the adaptive methods, exactly when the photo-z bump
@@ -71,30 +64,21 @@
 #define TRUTH_PROD_NODES (20)
 #define TRUTH_PROD_RULE (5)
 #define TRUTH_PREC (1.0e-6)
-#define TRUTH_SERIES_ORDER (4)
 
-/* NcGalaxyShapeFactorQuad's *default* reltol (1e-7) is appropriate for
- * production single-galaxy work but pathologically expensive to call
- * O(reference-nodes x nrows) times in a truth table: measured at ~70ms per
- * eval_marginal() call (vs ~1us for SeriesLensed/VarAdd on the same input),
- * driven entirely by the 2D disc cubature's own adaptive refinement, not by
- * anything z-integration-related. Loosening to 1e-5 (measured ~1.6ms/call,
- * a ~45x speedup) changes eval_marginal()'s own output at the ~1e-5 relative
- * level -- negligible next to this file's ~1e-6/1e-5 z-integration
- * tolerances -- while keeping the Quad-specific configs' total runtime
- * reasonable. Quad configs also use fewer rows and a smaller reference node
- * count than the other shape schemes (see TRUTH_QUAD_NROWS below): the
- * z-integrand's smoothness is governed by the redshift scheme, not the
- * shape scheme, and that has already been validated at full resolution by
- * the (near-free) VarAdd/SeriesLensed configs above. */
-#define TRUTH_QUAD_RELTOL (1.0e-5)
-#define TRUTH_QUAD_NROWS (5)
-#define TRUTH_QUAD_REF_NODES (60)
-#define TRUTH_QUAD_REF_RULE (5)
+/*
+ * Rows and reference nodes of the Spectral configurations. One eval_marginal() of
+ * NcGalaxyShapeFactorSpectral at its default reltol takes of the order of 0.5 ms, against
+ * about 1 us for VarAdd, so these configurations use fewer rows and a smaller reference:
+ * the smoothness of the z-integrand is set by the redshift scheme, which the VarAdd
+ * configurations validate at full resolution.
+ */
+#define TRUTH_SPECTRAL_NROWS (5)
+#define TRUTH_SPECTRAL_REF_NODES (60)
+#define TRUTH_SPECTRAL_REF_RULE (5)
 
 typedef struct _TruthCfg
 {
-  const gchar *shape;    /* "var_add" | "series_lensed" | "quad" */
+  const gchar *shape;    /* "var_add" | "spectral" */
   const gchar *pop;      /* "gauss" | "beta" */
   const gchar *redshift; /* "composed" | "spline" */
   const gchar *conv;
@@ -118,7 +102,6 @@ typedef struct _TestNcDataClusterWLFactorTruth
 static void test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_factor_truth_free (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata);
 static void test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata);
-static void test_nc_data_cluster_wl_factor_truth_cross_shape (void);
 
 /* pz spline centres placed around z_cl so the photo-z bump straddles the kink
  * (see test_nc_data_cluster_wl_truth.c's identical STRADDLE_ZAVG). */
@@ -136,21 +119,11 @@ main (gint argc, gchar *argv[])
     { "var_add",       "gauss", "composed", "trace_det", "celestial", 2001, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
     { "var_add",       "gauss", "spline",   "trace",     "cartesian", 2002, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
 
-    /* SeriesLensed: exact truncated-series marginalization, both populations
-     * it supports, one of each redshift scheme (Beta paired with the harder
-     * Spline straddle case). Its own eval_marginal() is ~us-scale (a closed-
-     * form Taylor-series evaluation), so it affords the same full resolution
-     * as VarAdd. */
-    { "series_lensed", "gauss", "composed", "trace_det", "celestial", 2003, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
-    { "series_lensed", "beta",  "spline",   "trace_det", "cartesian", 2004, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
-
-    /* Quad: exact 2D disc quadrature, same shape-scheme-coverage rationale,
-     * but its own eval_marginal() is orders of magnitude more expensive (see
-     * TRUTH_QUAD_RELTOL's comment) -- fewer rows, a smaller reference node
-     * count, and a loosened internal reltol keep this file's total runtime
-     * reasonable. */
-    { "quad",          "gauss", "spline",   "trace",     "celestial", 2005, TRUTH_QUAD_NROWS, TRUTH_QUAD_REF_NODES, TRUTH_QUAD_REF_RULE },
-    { "quad",          "beta",  "composed", "trace_det", "cartesian", 2006, TRUTH_QUAD_NROWS, TRUTH_QUAD_REF_NODES, TRUTH_QUAD_REF_RULE },
+    /* Spectral: adaptive 2D Chebyshev panels, both populations and both redshift schemes,
+     * fewer rows and a smaller reference (see TRUTH_SPECTRAL_NROWS). */
+    { "spectral",      "beta",  "spline",   "trace_det", "cartesian", 2004, TRUTH_SPECTRAL_NROWS, TRUTH_SPECTRAL_REF_NODES, TRUTH_SPECTRAL_REF_RULE },
+    { "spectral",      "gauss", "spline",   "trace",     "celestial", 2005, TRUTH_SPECTRAL_NROWS, TRUTH_SPECTRAL_REF_NODES, TRUTH_SPECTRAL_REF_RULE },
+    { "spectral",      "beta",  "composed", "trace_det", "cartesian", 2006, TRUTH_SPECTRAL_NROWS, TRUTH_SPECTRAL_REF_NODES, TRUTH_SPECTRAL_REF_RULE },
   };
   guint i;
 
@@ -170,9 +143,6 @@ main (gint argc, gchar *argv[])
                 &test_nc_data_cluster_wl_factor_truth_free);
     g_free (path);
   }
-
-  g_test_add_func ("/nc/data_cluster_wl_factor_truth/cross_shape/series_lensed_vs_quad",
-                   &test_nc_data_cluster_wl_factor_truth_cross_shape);
 
   g_test_run ();
 
@@ -399,20 +369,9 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
     redshift_factor = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
 
   if (g_strcmp0 (cfg->shape, "var_add") == 0)
-  {
     shape_factor = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_var_add_new (ec));
-  }
-  else if (g_strcmp0 (cfg->shape, "series_lensed") == 0)
-  {
-    shape_factor = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_series_lensed_new (ec, TRUTH_SERIES_ORDER));
-  }
-  else /* quad */
-  {
-    NcGalaxyShapeFactorQuad *gsfq = nc_galaxy_shape_factor_quad_new (ec);
-
-    nc_galaxy_shape_factor_quad_set_reltol (gsfq, TRUTH_QUAD_RELTOL);
-    shape_factor = NC_GALAXY_SHAPE_FACTOR (gsfq);
-  }
+  else /* spectral */
+    shape_factor = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_spectral_new (ec));
 
   test->mset = ncm_mset_empty_new ();
   ncm_mset_set (test->mset, NCM_MODEL (cosmo), NULL);
@@ -502,14 +461,9 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
    * reaching ~1e-5 -- both mirror test_nc_data_cluster_wl_truth.c's
    * gauss/pz bars. The bars below keep a few x margin -- tight enough to
    * catch dropping the z_cl split or the effective support, or a node-count
-   * regression, for ANY of the shape schemes exercised across the matrix.
-   * Quad's own marginal is only accurate to TRUTH_QUAD_RELTOL (see its
-   * comment) and reference/production evaluate it at different z-nodes, so
-   * their residual disagreement floor is set by that, not by the
-   * z-integration itself -- the abstol is widened accordingly for it. */
+   * regression, for ANY of the shape schemes exercised across the matrix. */
   const gboolean is_spline = (g_strcmp0 (test->redshift, "spline") == 0);
-  const gboolean is_quad   = (g_strcmp0 (test->shape, "quad") == 0);
-  const gdouble abstol     = GSL_MAX (is_spline ? 1.0e-5 : 1.0e-6, is_quad ? 5.0e-4 : 0.0);
+  const gdouble abstol     = is_spline ? 1.0e-5 : 1.0e-6;
   NcmVector *vF            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vL            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vC            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
@@ -530,156 +484,5 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   ncm_vector_free (vL);
   ncm_vector_free (vC);
   ncm_vector_free (vA);
-}
-
-/* Direct shape-scheme-vs-shape-scheme cross-check: SeriesLensed (truncated
- * g-series) and Quad (2D disc cubature) are two independently-coded *exact*
- * marginalization schemes -- unlike the reference-vs-production tests above
- * (which only probe the z-integration's own convergence for a FIXED shape
- * scheme), this probes the shape marginalization itself, by feeding the
- * IDENTICAL generated galaxy set (same ra/dec/z/epsilon_obs/std_noise/c/m,
- * same Gauss population) through both and comparing -2lnP_gal directly. No
- * reference is needed: the two schemes' own physical answer must
- * agree with each other. Both are configured with LNINT at a tight
- * precision, so any disagreement beyond adaptive-quadrature-level tolerance
- * reflects a real discrepancy between the two marginalization
- * implementations. */
-static void
-test_nc_data_cluster_wl_factor_truth_cross_shape (void)
-{
-  NcmRNG *rng                             = ncm_rng_seeded_new (NULL, 3001);
-  NcHICosmo *cosmo                        = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcDistance *dist                        = nc_distance_new (100.0);
-  NcHaloMassSummary *hms                  = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
-  NcHaloDensityProfile *dp                = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
-  NcHaloPosition *hp                      = nc_halo_position_new (dist);
-  NcWLSurfaceMassDensity *smd             = nc_wl_surface_mass_density_new (dist);
-  NcGalaxyRedshiftPopLSSTSRD *pop_z       = nc_galaxy_redshift_pop_lsst_srd_new_y1_source ();
-  NcGalaxyRedshiftObsGauss *obs_z         = nc_galaxy_redshift_obs_gauss_new ();
-  NcGalaxyShapePopGauss *pop_shape        = nc_galaxy_shape_pop_gauss_new ();
-  const NcGalaxyWLObsEllipConv ec         = NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET;
-  const NcWLEllipticityFrame co           = NC_WL_ELLIPTICITY_FRAME_CELESTIAL;
-  const gdouble min_radius                = 0.2;
-  const gdouble max_radius                = 3.0;
-  const gdouble ra                        = 10.0;
-  const gdouble dec                       = -20.0;
-  NcGalaxyPositionFactor *position_factor = NC_GALAXY_POSITION_FACTOR (nc_galaxy_position_factor_flat_new (ra - 0.2, ra + 0.2, dec - 0.2, dec + 0.2));
-  NcGalaxyRedshiftFactor *redshift_factor = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_composed_new (0.0, 5.0));
-  NcGalaxyShapeFactor *shape_factor_gen   = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_series_lensed_new (ec, TRUTH_SERIES_ORDER));
-  NcGalaxyShapeFactor *shape_factor_lensed;
-  NcGalaxyShapeFactor *shape_factor_quad;
-  NcDataClusterWLFactor *dcwlf_lensed;
-  NcDataClusterWLFactor *dcwlf_quad;
-  NcmMSet *mset;
-  NcGalaxyPositionFactorData *p_data;
-  NcGalaxyRedshiftFactorData *z_data;
-  NcGalaxyShapeFactorData *s_data;
-  NcGalaxyWLObs *obs;
-  GStrvBuilder *builder = g_strv_builder_new ();
-  GList *columns, *l;
-  GStrv columns_strv;
-  NcmVector *v_lensed, *v_quad;
-  guint i;
-
-  ncm_model_param_set (NCM_MODEL (hms), NC_HALO_CM_PARAM_LOG10M_DELTA, 14.3);
-  ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_RA, ra);
-  ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_DEC, dec);
-  ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_Z, TRUTH_Z_CL);
-  nc_halo_position_prepare (hp, cosmo);
-  ncm_model_param_set (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.28);
-
-  mset = ncm_mset_empty_new ();
-  ncm_mset_set (mset, NCM_MODEL (cosmo), NULL);
-  ncm_mset_set (mset, NCM_MODEL (dp), NULL);
-  ncm_mset_set (mset, NCM_MODEL (hp), NULL);
-  ncm_mset_set (mset, NCM_MODEL (smd), NULL);
-  ncm_mset_set (mset, NCM_MODEL (pop_z), NULL);
-  ncm_mset_set (mset, NCM_MODEL (obs_z), NULL);
-  ncm_mset_set (mset, NCM_MODEL (pop_shape), NULL);
-
-  p_data = nc_galaxy_position_factor_data_new (position_factor, mset);
-  z_data = nc_galaxy_redshift_factor_data_new (redshift_factor, mset);
-  s_data = nc_galaxy_shape_factor_data_new (shape_factor_gen, mset, p_data, z_data);
-
-  columns = nc_galaxy_shape_factor_data_required_columns (s_data);
-
-  for (l = columns; l != NULL; l = g_list_next (l))
-    g_strv_builder_add (builder, l->data);
-
-  columns_strv = g_strv_builder_end (builder);
-  obs          = nc_galaxy_wl_obs_new (ec, co, TRUTH_QUAD_NROWS, columns_strv);
-
-  for (i = 0; i < TRUTH_QUAD_NROWS; i++)
-  {
-    gdouble radius;
-    const gdouble sigma0 = ncm_rng_uniform_gen (rng, 0.02, 0.06);
-
-    nc_galaxy_wl_obs_set (obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0, NULL);
-    nc_galaxy_redshift_factor_data_read_row (z_data, obs, i);
-    nc_galaxy_redshift_factor_gen (redshift_factor, mset, z_data, rng);
-
-    do {
-      nc_galaxy_position_factor_gen (position_factor, mset, p_data, rng);
-      radius = nc_halo_position_projected_radius_from_ra_dec (hp, cosmo, p_data->ra, p_data->dec);
-    } while ((radius < min_radius) || (radius > max_radius));
-
-    _truth_gen_shape (shape_factor_gen, mset, s_data, co, rng);
-    nc_galaxy_shape_factor_data_write_row (s_data, obs, i);
-  }
-
-  /* Two fresh, independent Factor/orchestrator stacks sharing only @mset and
-   * @obs: SeriesLensed and Quad. Quad's reltol is loosened for the same
-   * runtime reason as the main matrix's Quad configs (see
-   * TRUTH_QUAD_RELTOL's comment). */
-  shape_factor_lensed = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_series_lensed_new (ec, TRUTH_SERIES_ORDER));
-  shape_factor_quad   = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_quad_new (ec));
-  nc_galaxy_shape_factor_quad_set_reltol (NC_GALAXY_SHAPE_FACTOR_QUAD (shape_factor_quad), TRUTH_QUAD_RELTOL);
-
-  dcwlf_lensed = nc_data_cluster_wl_factor_new (
-    NC_GALAXY_POSITION_FACTOR (nc_galaxy_position_factor_flat_new (ra - 0.2, ra + 0.2, dec - 0.2, dec + 0.2)),
-    NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_composed_new (0.0, 5.0)),
-    shape_factor_lensed);
-  nc_data_cluster_wl_factor_set_cut (dcwlf_lensed, min_radius, max_radius);
-  nc_data_cluster_wl_factor_set_obs (dcwlf_lensed, obs);
-  nc_data_cluster_wl_factor_set_prec (dcwlf_lensed, TRUTH_PREC);
-  v_lensed = _truth_eval (dcwlf_lensed, mset, TRUTH_QUAD_NROWS, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-
-  dcwlf_quad = nc_data_cluster_wl_factor_new (
-    NC_GALAXY_POSITION_FACTOR (nc_galaxy_position_factor_flat_new (ra - 0.2, ra + 0.2, dec - 0.2, dec + 0.2)),
-    NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_composed_new (0.0, 5.0)),
-    shape_factor_quad);
-  nc_data_cluster_wl_factor_set_cut (dcwlf_quad, min_radius, max_radius);
-  nc_data_cluster_wl_factor_set_obs (dcwlf_quad, obs);
-  nc_data_cluster_wl_factor_set_prec (dcwlf_quad, TRUTH_PREC);
-  v_quad = _truth_eval (dcwlf_quad, mset, TRUTH_QUAD_NROWS, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-
-  _truth_cmp ("SeriesLensed vs Quad", v_lensed, v_quad, 1.0e-4, 5.0e-4);
-
-  ncm_vector_free (v_lensed);
-  ncm_vector_free (v_quad);
-  NCM_TEST_FREE (nc_data_cluster_wl_factor_free, dcwlf_lensed);
-  NCM_TEST_FREE (nc_data_cluster_wl_factor_free, dcwlf_quad);
-
-  nc_hicosmo_free (cosmo);
-  nc_distance_free (dist);
-  nc_halo_mass_summary_free (hms);
-  nc_halo_density_profile_free (dp);
-  nc_halo_position_free (hp);
-  nc_wl_surface_mass_density_free (smd);
-  nc_galaxy_redshift_pop_lsst_srd_free (pop_z);
-  nc_galaxy_redshift_obs_gauss_free (obs_z);
-  nc_galaxy_shape_pop_gauss_free (pop_shape);
-  nc_galaxy_position_factor_free (position_factor);
-  nc_galaxy_redshift_factor_free (redshift_factor);
-  nc_galaxy_shape_factor_free (shape_factor_gen);
-  nc_galaxy_position_factor_data_unref (p_data);
-  nc_galaxy_redshift_factor_data_unref (z_data);
-  nc_galaxy_shape_factor_data_unref (s_data);
-  nc_galaxy_wl_obs_free (obs);
-  g_strfreev (columns_strv);
-  g_strv_builder_unref (builder);
-  g_list_free_full (columns, g_free);
-  ncm_mset_clear (&mset);
-  ncm_rng_free (rng);
 }
 
