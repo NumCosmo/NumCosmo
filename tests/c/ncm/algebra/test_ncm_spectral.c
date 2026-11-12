@@ -339,8 +339,20 @@ _op_f (guint op, GArray *c, gdouble t)
     case 6:
       return t * _sum (c, _d2T, t);
 
-    default:
+    case 7:
       return t * t * _sum (c, _d2T, t);
+
+    case 8:
+      return t * t * _sum (c, _dT, t);
+
+    case 9:
+      return t * t * t * _sum (c, _dT, t);
+
+    case 10:
+      return t * t * t * _sum (c, _d2T, t);
+
+    default:
+      return t * t * t * t * _sum (c, _d2T, t);
   }
 }
 
@@ -1085,17 +1097,22 @@ test_ncm_spectral_operators (void)
   const _OpMatrix mats[] = {
     ncm_spectral_get_proj_matrix, ncm_spectral_get_s_matrix, ncm_spectral_get_s2_matrix,
     ncm_spectral_get_d_matrix, ncm_spectral_get_s_d_matrix, ncm_spectral_get_d2_matrix,
-    ncm_spectral_get_s_d2_matrix, ncm_spectral_get_s2_d2_matrix
+    ncm_spectral_get_s_d2_matrix, ncm_spectral_get_s2_d2_matrix, ncm_spectral_get_s2_d_matrix,
+    ncm_spectral_get_s3_d_matrix, ncm_spectral_get_s3_d2_matrix, ncm_spectral_get_s4_d2_matrix
   };
   const _OpRow rows[] = {
     ncm_spectral_compute_proj_row, ncm_spectral_compute_s_row, ncm_spectral_compute_s2_row,
     _d_row, ncm_spectral_compute_s_d_row, ncm_spectral_compute_d2_row,
-    ncm_spectral_compute_s_d2_row, ncm_spectral_compute_s2_d2_row
+    ncm_spectral_compute_s_d2_row, ncm_spectral_compute_s2_d2_row, ncm_spectral_compute_s2_d_row,
+    ncm_spectral_compute_s3_d_row, ncm_spectral_compute_s3_d2_row, ncm_spectral_compute_s4_d2_row
   };
-  const gdouble tols[] = {1.0e-14, 1.0e-14, 1.0e-14, 2.0e-13, 2.0e-13, 3.0e-12, 3.0e-12, 3.0e-12};
-  const guint N        = 24;
-  GArray *c            = _pattern_new (N - 8);
-  GArray *g            = _array_new (N);
+  const gdouble tols[] = {
+    1.0e-14, 1.0e-14, 1.0e-14, 2.0e-13, 2.0e-13, 3.0e-12, 3.0e-12, 3.0e-12,
+    2.0e-13, 2.0e-13, 3.0e-12, 3.0e-12
+  };
+  const guint N = 24;
+  GArray *c     = _pattern_new (N - 8);
+  GArray *g     = _array_new (N);
   guint op, i, j;
 
   for (op = 0; op < G_N_ELEMENTS (mats); op++)

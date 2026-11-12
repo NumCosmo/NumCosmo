@@ -295,10 +295,14 @@ def fixture_halo_mass_summary_bad(request) -> str:
 
 @pytest.fixture(
     name="halo_position",
-    params=zip(uniform(-180, 180, 3), uniform(-90, 90, 3), uniform(0.1, 1.0, 3)),
+    params=zip(uniform(-180, 180, 3), uniform(-89, 89, 3), uniform(0.1, 1.0, 3)),
 )
 def fixture_halo_position(request) -> tuple[float, float, float]:
-    """Fixture for the halo position."""
+    """Fixture for the halo position.
+
+    The declination is drawn in [-89, 89] so that the test's limits dec +- 0.2
+    stay in [-90, 90] and its RA span 0.4 / cos(dec) stays below 23 degrees.
+    """
     return request.param
 
 
@@ -1025,9 +1029,12 @@ def test_cluster_wl_app_halo_mass_summary_bad(experiment_file, halo_mass_summary
     assert not dataset_file.exists(), f"Dataset file {dataset_file} should not exist."
 
 
-def test_cluster_wl_app_halo_position(experiment_file, halo_position):
-    """Test the generation of the cluster WL app with specific RA and Dec."""
-    cluster_ra, cluster_dec, cluster_z = halo_position
+def _check_halo_position(
+    experiment_file: Path, cluster_ra: float, cluster_dec: float, cluster_z: float
+) -> None:
+    """Generate a cluster WL experiment centered on the given halo position, with
+    footprint dec +- 0.2 and RA span 0.4 / cos(dec), and check the saved
+    NcHaloPosition."""
     dec_min = cluster_dec - 0.2
     dec_max = cluster_dec + 0.2
     ra_min = cluster_ra - 0.2 / cos(deg2rad(cluster_dec))
@@ -1065,6 +1072,18 @@ def test_cluster_wl_app_halo_position(experiment_file, halo_position):
     assert hp["ra"] == cluster_ra
     assert hp["dec"] == cluster_dec
     assert hp["z"] == cluster_z
+
+
+def test_cluster_wl_app_halo_position(experiment_file, halo_position):
+    """Test the generation of the cluster WL app with specific RA and Dec."""
+    _check_halo_position(experiment_file, *halo_position)
+
+
+@pytest.mark.parametrize("cluster_dec", [-89.8, 89.8])
+def test_cluster_wl_app_halo_position_pole_edge(experiment_file, cluster_dec):
+    """At dec = +-89.8 the footprint's declination limit is exactly -90 or 90 and
+    its RA span is 114.6 degrees."""
+    _check_halo_position(experiment_file, 10.0, cluster_dec, 0.5)
 
 
 def test_cluster_wl_app_halo_position_bad(experiment_file, halo_position_bad):
