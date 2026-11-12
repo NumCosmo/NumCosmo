@@ -488,19 +488,35 @@ class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
 
 
 DEFAULT_SHAPE_SPECTRAL_RELTOL = 1.0e-5
+DEFAULT_SHAPE_SPECTRAL_USE_INTERP = False
+DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX = 0.3
+DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 
 
 class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     """Adaptive Chebyshev panels in polar coordinates (``NcGalaxyShapeFactorSpectral``)."""
 
     reltol: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPECTRAL_RELTOL
+    use_interp: Annotated[bool, Field()] = DEFAULT_SHAPE_SPECTRAL_USE_INTERP
+    interp_g_max: Annotated[float, Field(ge=1.0e-3, le=0.33)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX
+    )
+    interp_abstol: Annotated[float, Field(gt=0.0, le=1.0)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL
+    )
 
     @staticmethod
     def help_text() -> list[str]:
         """Return the help text for this scheme."""
         return [
             "GalaxyShapeFactorGenSpectral",
-            f"{_SHARED_SHAPE_FACTOR_HELP}, \nreltol={DEFAULT_SHAPE_SPECTRAL_RELTOL}",
+            (
+                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+                f"reltol={DEFAULT_SHAPE_SPECTRAL_RELTOL}, "
+                f"use_interp={DEFAULT_SHAPE_SPECTRAL_USE_INTERP}, "
+                f"interp_g_max={DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX}, "
+                f"interp_abstol={DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL}"
+            ),
         ]
 
     def requires_sigma(self) -> bool:
@@ -510,7 +526,11 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
         return Nc.GalaxyShapeFactorSpectral(
-            ellip_conv=self.ellip_conv.genum, reltol=self.reltol
+            ellip_conv=self.ellip_conv.genum,
+            reltol=self.reltol,
+            use_interp=self.use_interp,
+            interp_g_max=self.interp_g_max,
+            interp_abstol=self.interp_abstol,
         )
 
 

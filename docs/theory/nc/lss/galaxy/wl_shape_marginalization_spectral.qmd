@@ -315,6 +315,48 @@ with every term divided by $P (t_s)$ so that none leaves the double range. $1 - 
 computed with the rounding errors of the two squares removed, and $\delta$ and $\lambda$
 from it. A bracket that is not positive aborts as a non-finite $\ln P$.
 
+## Interpolation in $g$
+
+In a likelihood one galaxy is evaluated at many shears with the same
+$\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$. With
+[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] the class approximates
+$\ln P (\epsilon_\mathrm{obs} \mid g)$ as a function of $g$ for each galaxy with
+[[numcosmo-math|ncm_spectral_polar_build]], described in
+[Approximation on the Panels](../../../ncm/algebra/spectral_polar.qmd#approximation-on-the-panels),
+and evaluates that approximation for $|g| \le g_\mathrm{max}$
+([[numcosmo|NcGalaxyShapeFactorSpectral:interp-g-max]]). For $|g| > g_\mathrm{max}$ it
+computes the integral.
+
+- Frame: rotated by the phase of $\epsilon_\mathrm{obs}$, so that
+  $\epsilon_\mathrm{obs} = e > 0$. In this frame $\ln P$ does not change under
+  $g \to \bar{g}$, because the population is isotropic.
+- Center: $g_c$, the shear that maps $\chi_I = 0$ to $\epsilon_\mathrm{obs}$:
+  $g_c = e / (1 + \sqrt{1 - e^2})$ for `TRACE`, and 1 for $e \ge 1$; $g_c = e$ for
+  `TRACE_DET`. The population density divided by $2 \pi |\chi_I|$ has its maximum, or its
+  divergence for $\alpha_o < 1$, at $\chi_I = 0$, so $\ln P$ as a function of $g$ has its
+  narrowest structure at $g_c$, of width $L_g = \sigma_\mathrm{noise} / 2$ for `TRACE` and
+  $L_g = \sigma_\mathrm{noise}$ for `TRACE_DET`.
+- Coordinates: $g = g_c + \rho \, e^{i \psi}$, with $\psi \in [0, \pi]$ by the reflection.
+- Region: the rectangle in $(\rho, \psi)$ that contains the disc $|g| \le g_\mathrm{max}$:
+  $[0, g_\mathrm{max} + g_c] \times [0, \pi]$ for $g_c < g_\mathrm{max}$, and otherwise
+  $[g_c - g_\mathrm{max}, g_c + g_\mathrm{max}] \times [\pi - \arcsin (g_\mathrm{max} / g_c), \pi]$.
+  It reaches $|g| = g_\mathrm{max} + 2 g_c < 3 g_\mathrm{max}$, so $g_\mathrm{max} < 1/3$
+  keeps it inside $|g| < 1$, where $\ln P$ is smooth in $g$.
+- Edges: the radial edges of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
+  $\rho = 0$ of half width $L_g$ that are inside the region, and angular panels of
+  $\pi / 2$ at most.
+- Test: a panel is accepted when $\ln P$ changes by at most
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]] between its two grids. The
+  values at the nodes are those of the integral at `reltol`.
+
+The approximation of a galaxy is built at its first evaluation with
+$|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
+$\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, the parameters of the population,
+`reltol`, $g_\mathrm{max}$ or the tolerance differ from those it was built for. A build
+computes of the order of $10^3$ integrals, so the approximation reduces the cost when the
+parameters of the population are fixed, and increases it when they change at every step
+unless a galaxy is evaluated at more shears per step than the build computes.
+
 ## Measured Accuracy
 
 The reference is the Arb tool `tests/tools/nc_galaxy_shape_marginal_arb.c`, which
@@ -355,6 +397,23 @@ and 0.03 and $\epsilon_\mathrm{obs}$ at 1 to 5 $\sigma_\mathrm{noise}$ from $g$,
 returns a value at $|g| = 1 \pm 10^{-k}$ for $k = 6, \dots, 15$, in both conventions. The
 values next to $|g| = 1$ were not measured for $\sigma_\mathrm{noise}$ below 0.01.
 
+The interpolation in $g$ was measured on 150 galaxies of HWL16a-002 and HWL16a-064, 100 of
+them with $\sigma_\mathrm{noise} < 0.1$, with $g_\mathrm{max} = 0.3$, against the integral
+at `reltol` $10^{-8}$ on 200 random shears of the disc per galaxy. No build failed. The
+integrals of a build and the largest difference in $\ln P$ are:
+
+| convention | population | `interp-abstol` | integrals, median / 90% / largest | largest difference |
+|---|---|---|---|---|
+| `TRACE` | Beta, fitted | $10^{-4}$ | 927 / 1,858 / 2,372 | $4.4 \times 10^{-7}$ |
+| `TRACE` | Beta, fitted | $10^{-5}$ (default) | 1,694 / 2,818 / 3,876 | $1.0 \times 10^{-8}$ |
+| `TRACE` | Gaussian, 0.3 | $10^{-5}$ | 1,166 / 1,923 / 2,586 | $2.2 \times 10^{-9}$ |
+| `TRACE_DET` | Beta, fitted | $10^{-5}$ | 523 / 1,502 / 3,010 | $6.5 \times 10^{-9}$ |
+| `TRACE_DET` | Gaussian, 0.3 | $10^{-5}$ | 451 / 1,211 / 2,530 | $8.1 \times 10^{-9}$ |
+
+One evaluation of the approximation takes 0.12 to 0.15 microseconds (median over the
+galaxies) at the default tolerance, against 0.25 to 0.6 milliseconds for the integral at
+$|g| \le 0.3$.
+
 ## Symbols and the Code
 
 | symbol | in `nc_galaxy_shape_factor_spectral.c` |
@@ -370,6 +429,7 @@ values next to $|g| = 1$ were not measured for $\sigma_\mathrm{noise}$ below 0.0
 | $\theta_0$, $r_*$, $J_1$, $J_2$ | `theta_0`, `r_star`, `J_1`, `J_2` of the seed |
 | $h (r)$ | `_nc_galaxy_shape_factor_spectral_h` |
 | $\delta_s$ | `NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA` |
+| $g_\mathrm{max}$, $g_c$, $L_g$ | `g_max`, `g_c`, `L` of `_nc_galaxy_shape_factor_spectral_interp_build` |
 | $\delta$, $1 / \lambda$ | `delta`, `lambda_inv` |
 | $\ln A (t)$ | `_nc_galaxy_shape_factor_spectral_second_order_ln` |
 | $b + 2$, $k_0$, $k_1$, divided by $P (t_s)$ | `exponent`, `k_0`, `k_1` |
