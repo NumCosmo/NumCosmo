@@ -1,38 +1,53 @@
 ---
-title: Spectral Integration on a Disc
+title: Spectral Integration on a Disk
 ---
 
-This page describes [[numcosmo-math|NcmSpectralPolar]], which integrates a function on a
-disc in polar coordinates when the integrand has power laws at the radial ends and one
-narrow maximum, as the population and the noise factors of a galaxy shape likelihood do. The
-Chebyshev expansion, its nested grids and its convergence test are those of
-[Spectral Methods](spectral.qmd), applied here in two variables. The same expansion, kept
-instead of integrated, approximates a function of $(r, \theta)$; this is described in
-[Approximation on the Panels](#approximation-on-the-panels).
+This page describes [[numcosmo-math|NcmSpectralPolar]], which integrates functions on a
+disk of radius $R$ in polar coordinates $(r, \theta)$, with $0 \le r \le R$ and $\theta$
+in an interval of length $2\pi$, or on an annular sector of the disk, the region between
+two radii and two angles. The integrand may have a power law in $r$ at the origin,
+$r = 0$, and at the edge of the disk, $r = R$. One use is the marginalization of the galaxy
+shape likelihood over the intrinsic ellipticity, where the population and the noise
+factors have these power laws
+([Shape Marginalization by Spectral Panels](../../nc/lss/galaxy/wl_shape_marginalization_spectral.qmd)).
+
+The disk is divided into panels, rectangles in $(r, \theta)$. On each panel the integrand
+is approximated by a Chebyshev polynomial in $r$ and $\theta$, and the polynomial is
+integrated. On the panels that touch $r = 0$ or $r = R$, the power law of that end is left
+out of the polynomial, and the polynomial is integrated against it. The degree is raised
+on nested grids until the convergence test of [Spectral Methods](spectral.qmd) holds in
+both variables; a panel whose degree reaches the limit is bisected. For an integrand with
+one narrow maximum the edges of the panels are placed around it
+([Edges for One Peak](#edges-for-one-peak)). The polynomials of the panels also
+approximate the function itself
+([Approximation on the Panels](#approximation-on-the-panels)).
 
 ## The Integral and its Panels
 
-For a disc of radius $R$, exponents $a > -1$ and $b > -1$ and a function $G (r, \theta)$,
-[[numcosmo-math|ncm_spectral_polar_integrate]] computes
+The function [[numcosmo-math|ncm_spectral_polar_integrate]] computes
 $$
-I \equiv \int\!\!\int r^a (R - r)^b \, G (r, \theta) \, \mathrm{d}r \, \mathrm{d}\theta .
+I \equiv \int\!\!\int r^a (R - r)^b \, G (r, \theta) \, \mathrm{d}r \, \mathrm{d}\theta ,
 \tag{1}
 $$
-The power laws are in the weight, so $G$ is the factor that is smooth at $r = 0$ and at
-$r = R$. The polar Jacobian is part of $a$: a density regular at the origin in
-$\mathrm{d}^2 x$ has $a = 1$.
+where $R$ is the radius of the disk, $a > -1$ is the exponent of the power law at the
+origin, $b > -1$ the exponent of the power law at the edge, and $G (r, \theta)$ is smooth
+at $r = 0$ and at $r = R$. The domain of the integral is given by the edges of the panels,
+defined below. The polar Jacobian $r$ is included in $r^a$: a density in the plane,
+regular at the origin and integrated with
+$\mathrm{d}^2 x = r \, \mathrm{d}r \, \mathrm{d}\theta$, has $a = 1$.
 
-The domain is given by its edges. The radial edges
-$0 \le r_0 < r_1 < \dots < r_{n_r} \le R$ and the angular edges
+The radial edges $0 \le r_0 < r_1 < \dots < r_{n_r} \le R$ and the angular edges
 $\theta_0 < \theta_1 < \dots < \theta_{n_\theta}$, with
-$\theta_{n_\theta} - \theta_0 \le 2\pi$, split it into $n_r n_\theta$ panels. A panel is
-the rectangle $[r_a, r_b] \times [\theta_a, \theta_b]$ between two consecutive radial edges
-and two consecutive angular edges, with half widths
+$\theta_{n_\theta} - \theta_0 \le 2\pi$, split the domain into $n_r n_\theta$ panels. A
+panel is the rectangle $[r_a, r_b] \times [\theta_a, \theta_b]$ between two consecutive
+radial edges and two consecutive angular edges, with half widths
 $$
 h_r \equiv \frac{r_b - r_a}{2}, \qquad h_\theta \equiv \frac{\theta_b - \theta_a}{2} .
 $$
-A power law is singular only on the panels that touch its end. On a panel, the exponents
-left in the weight are
+The weight is not infinitely differentiable at $r = 0$ unless $a$ is a non-negative
+integer, and at $r = R$ unless $b$ is one; for $-1 < a < 0$ or $-1 < b < 0$ it is
+singular there, with a finite integral. Only the panels that touch $r = 0$ or $r = R$
+contain these points. On a panel, the exponents left in the weight are
 $$
 c_a \equiv \begin{cases} a, & r_a = 0, \\ 0, & r_a > 0, \end{cases}
 \qquad
@@ -43,7 +58,7 @@ $$
 F (r, \theta) \equiv r^{a - c_a} (R - r)^{b - c_b} \, G (r, \theta) .
 \tag{2}
 $$
-$F$ is the function expanded on the panel. The contribution of the panel to Eq. (1) is the
+The function $F$ is expanded on the panel. The contribution of the panel to Eq. (1) is the
 integral of $r^{c_a} (R - r)^{c_b} F$ over it.
 
 ## Expansion on a Panel
@@ -53,8 +68,8 @@ $$
 r = \frac{r_a + r_b}{2} + h_r s_r, \qquad
 \theta = \frac{\theta_a + \theta_b}{2} + h_\theta s_\theta ,
 $$
-$F$ is sampled on the tensor grid of Chebyshev--Lobatto nodes of levels $l_r$ and
-$l_\theta$,
+the function $F$ is sampled on the tensor grid of Chebyshev--Lobatto nodes of levels $l_r$
+and $l_\theta$,
 $$
 s_{r, i} = \cos \left( \frac{i \pi}{N_r} \right), \quad i = 0, \dots, N_r, \qquad
 s_{\theta, j} = \cos \left( \frac{j \pi}{N_\theta} \right), \quad j = 0, \dots, N_\theta ,
@@ -99,22 +114,24 @@ D_r + D_\theta \le \max \left( \varepsilon_\mathrm{rel} V, \; \varepsilon_F \rig
 \tag{5}
 $$
 where $V$ is the largest $|F|$ on the grid of the panel and $\varepsilon_\mathrm{rel}$ is
-the relative tolerance. The first term is relative to the panel alone. The second,
+the relative tolerance. The first term, $\varepsilon_\mathrm{rel} V$, is proportional to
+the largest $|F|$ on the panel. The second,
 $$
-\varepsilon_F \equiv \frac{\max \left( \varepsilon_\mathrm{rel} |I|, \; \varepsilon_\mathrm{abs} \right)}{A},
+\varepsilon_F \equiv \frac{\max \left( \varepsilon_\mathrm{rel} |I|, \; \varepsilon_\mathrm{abs} \right)}{W},
 \qquad
-A \equiv \sum_\mathrm{panels} (r_b - r_a)^{1 + c_a + c_b} \, B (1 + c_a, 1 + c_b) \, (\theta_b - \theta_a) ,
+W \equiv \sum_\mathrm{panels} (r_b - r_a)^{1 + c_a + c_b} \, \mathrm{B} (1 + c_a, 1 + c_b) \, (\theta_b - \theta_a) ,
 \tag{6}
 $$
 is the change of $F$ that, on every panel at once, changes the integral by
-$\max (\varepsilon_\mathrm{rel} |I|, \varepsilon_\mathrm{abs})$: $A$ is the integral over
-all the panels of the weight left out of $F$, with $B$ the Beta function, and
-$\varepsilon_\mathrm{abs}$ is the absolute tolerance in the units of $I$. It accepts on its
-starting grid a panel where $F$ is negligible against the whole integral.
+$\max (\varepsilon_\mathrm{rel} |I|, \varepsilon_\mathrm{abs})$: $W$ is the integral over
+all the panels of the weight left out of $F$, with $\mathrm{B}$ the Beta function, and
+$\varepsilon_\mathrm{abs}$ is the absolute tolerance in the units of $I$. With this term, a
+panel where $F$ is negligible against the whole integral satisfies Eq. (5) on its starting
+grid.
 
-Both sides of Eq. (5) are estimates. $D_r + D_\theta$ is the change between grids, not the
-distance to $F$, and a feature of $F$ located between the nodes of both grids does not
-change it.
+Both sides of Eq. (5) are estimates. The sum $D_r + D_\theta$ is the change between grids,
+not the distance to $F$, and a feature of $F$ located between the nodes of both grids does
+not change it.
 
 ## Refinement
 
@@ -131,8 +148,8 @@ the radial one when $D_r \ge D_\theta$, the angular one otherwise.
 
 The two halves of a bisected panel start again at `level-min` in both directions, with the
 exponents $c_a$ and $c_b$ of their own ends. A panel that needs a bisection after
-`max-depth` bisections is the error `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, and the integral
-returned is NaN.
+`max-depth` bisections sets the error `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, and the
+integral returned is NaN.
 
 ## The Value of a Panel
 
@@ -146,15 +163,17 @@ $$
 M^r_k \equiv \int_{-1}^{1} (1 + s)^{c_a} (1 - s)^{c_b} \, T_k (s) \, \mathrm{d}s, \qquad
 M^\theta_l \equiv \int_{-1}^{1} T_l (s) \, \mathrm{d}s .
 $$
-$M^\theta_l$ is $2 / (1 - l^2)$ for even $l$ and zero for odd $l$, the Clenshaw--Curtis
-moments of [Spectral Methods](spectral.qmd#spectral-integration), and so is $M^r_k$ when
-$c_a = c_b = 0$. Otherwise $M^r_k$ is computed by a Gauss--Jacobi rule of $N_r / 2 + 2$
-nodes, which is exact for the degree $N_r$ of $T_k$. The power laws are therefore integrated
-exactly against the interpolant, and the error of a panel is that of Eq. (3).
+The moment $M^\theta_l$ is $2 / (1 - l^2)$ for even $l$ and zero for odd $l$, the
+Clenshaw--Curtis moments of [Spectral Methods](spectral.qmd#spectral-integration), and so
+is $M^r_k$ when $c_a = c_b = 0$. Otherwise $M^r_k$ is computed by a Gauss--Jacobi rule of
+$N_r / 2 + 2$ nodes, which is exact for the degree $N_r$ of $T_k$. The power laws are
+therefore integrated exactly against the interpolant, and the error of a panel is that of
+Eq. (3).
 
 ## The Estimate of the Integral
 
-$\varepsilon_F$ needs $|I|$ before the integral is known. The call proceeds in three steps.
+The term $\varepsilon_F$ needs $|I|$ before the integral is known. The call proceeds in
+three steps.
 
 1. Every panel given by the edges is sampled on its starting grid. The sum $I_0$ of the
    values of Eq. (7) on those grids replaces $I$ in Eq. (6).
@@ -167,34 +186,35 @@ $\varepsilon_F$ needs $|I|$ before the integral is known. The call proceeds in t
 
 Step 3 changes the result when a starting grid has a node at a maximum much narrower than
 its panel: $I_0$ is then many times $I$, and a panel whose change is above the final
-$\varepsilon_F$ can be accepted in step 2 by the larger one.
+$\varepsilon_F$ can be accepted in step 2 by the larger $\varepsilon_F$ computed from
+$I_0$.
 
 ## Edges for One Peak
 
-[[numcosmo-math|ncm_spectral_polar_peak_edges]] gives the edges for an integrand with one
-maximum at $(r_\mathrm{p}, \theta_\mathrm{p})$ of half widths $L_r$ and $L_\theta$, with
-$\rho > 1$ the property `edge-ratio`.
+The function [[numcosmo-math|ncm_spectral_polar_peak_edges]] gives the edges for an
+integrand with one maximum at $(r_\mathrm{p}, \theta_\mathrm{p})$ of half widths $L_r$ and
+$L_\theta$, with $\omega > 1$ the property `edge-ratio`.
 
-- Radial edges: $0$, $R$, $R / 2$ and $r_\mathrm{p} \pm L_r \rho^k$, $k = 0, 1, \dots$,
+- Radial edges: $0$, $R$, $R / 2$ and $r_\mathrm{p} \pm L_r \omega^\nu$, $\nu = 0, 1, \dots$,
   for the values inside $(0, R)$. An edge closer than $L_r / 4$ to the one before is left
   out, except $R$.
-- Angular edges: $\theta_\mathrm{p} \pm \pi$ and $\theta_\mathrm{p} \pm L_\theta \rho^k$,
-  $k = 0, 1, \dots$, for the values farther than $L_\theta / 4$ from
+- Angular edges: $\theta_\mathrm{p} \pm \pi$ and $\theta_\mathrm{p} \pm L_\theta \omega^\nu$,
+  $\nu = 0, 1, \dots$, for the values farther than $L_\theta / 4$ from
   $\theta_\mathrm{p} \pm \pi$. When $L_\theta \ge \pi / 4$ the full circle is split into
   four equal panels with $\theta_\mathrm{p}$ at the center of one.
 
 The panel that contains the maximum is $2 L_r$ by $2 L_\theta$, and the widths of the
-panels increase by the factor $\rho$ with the distance to it. On a panel that does not
+panels increase by the factor $\omega$ with the distance to it. On a panel that does not
 contain the maximum, $F$ is largest on the side nearest to it, where the Lobatto grid has
 nodes. The position and the widths only place the edges: with other values the number of
 evaluations of $G$ changes, and Eq. (5) is applied to every panel in the same way.
 
 ## Approximation on the Panels
 
-[[numcosmo-math|ncm_spectral_polar_build]] expands a function $F (r, \theta)$ on the
-panels of the edges and keeps the coefficients $c^{kl}$ of Eq. (3) of every accepted panel
-in an [[numcosmo-math|NcmSpectralPolarPanels]]. It differs from the integral in three
-points.
+The function [[numcosmo-math|ncm_spectral_polar_build]] expands a function $F (r, \theta)$
+on the panels of the edges and keeps the coefficients $c^{kl}$ of Eq. (3) of every
+accepted panel in an [[numcosmo-math|NcmSpectralPolarPanels]]. It differs from the
+integral in three points.
 
 - There is no weight: $F$ is expanded as given on every panel, and Eq. (2) is not used.
 - The test is Eq. (5) with $\varepsilon_F$ given by the caller, the argument `abstol` in
@@ -209,8 +229,8 @@ The grids, the doubling and the bisection are those of [Refinement](#refinement)
 panels given by the edges are the initial panels; an initial panel that was bisected holds
 several panels, which cover it without overlap.
 
-[[numcosmo-math|ncm_spectral_polar_panels_eval]] evaluates the approximation at a point
-$(r, \theta)$.
+The function [[numcosmo-math|ncm_spectral_polar_panels_eval]] evaluates the approximation
+at a point $(r, \theta)$.
 
 1. The initial panel is found by bisection over the radial edges and over the angular edges.
    The panels of that initial panel are then searched in the order they were accepted.
@@ -219,9 +239,9 @@ $(r, \theta)$.
    recurrence in $s_\theta$ over the $u^l$ gives Eq. (3). This takes
    $(N_r + 1) (N_\theta + 1)$ multiplications.
 
-A point on an edge belongs to the panel that starts there. The range is not checked, and
-the angle is not wrapped: the caller gives $\theta$ inside
-$[\theta_0, \theta_{n_\theta}]$.
+A point on an edge belongs to the panel that starts there. A point outside the edges is
+assigned to the nearest panel, whose series is extrapolated. The angle is not wrapped: the
+caller gives $\theta$ inside $[\theta_0, \theta_{n_\theta}]$.
 
 The remark below Eq. (5) applies to the approximation directly: $D_r + D_\theta$ is the
 change between grids, so a maximum of $F$ that is below $\varepsilon_F$ at every node of
@@ -239,7 +259,7 @@ must therefore be placed from the known position and width of such a maximum, as
 | $c^{kl}$, before the normalization | `coeffs`, row $l$, column $k$ |
 | $b_r^k$, $b_\theta^l$ | `br`, `bt` |
 | $D_r$, $D_\theta$, $V$ | `Dr`, `Dt`, `vs` |
-| $\varepsilon_F$, $A$ | `abstol_F`, `A` of the call |
+| $\varepsilon_F$, $W$ | `abstol_F`, `A` of the call |
 | $M^r_k$, $M^\theta_l$, times the normalization of $c^{kl}$ | the tables of `mom`, `mt` |
 | $\varepsilon_F$ of a build | `abstol_F` of the call, equal to `abstol` |
 | $c^{kl}$ of an accepted panel of a build | `coeffs` of `NcmSpectralPolarPanels`, row $l$, column $k$ |

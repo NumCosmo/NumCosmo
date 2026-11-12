@@ -236,7 +236,7 @@ _step (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdoub
 }
 
 /*
- * The integral of the Gaussian on the unit disc, with weight r, from the edges of
+ * The integral of the Gaussian on the unit disk, with weight r, from the edges of
  * ncm_spectral_polar_peak_edges() for a peak at (r_peak, theta_peak) of half widths L_r
  * and L_theta.
  */
@@ -389,7 +389,7 @@ test_ncm_spectral_polar_weight (TestNcmSpectralPolar *test, gconstpointer pdata)
   }
 }
 
-/* A Gaussian inside the disc, of widths from 0.005 to 0.05, with the edges of its own peak */
+/* A Gaussian inside the disk, of widths from 0.005 to 0.05, with the edges of its own peak */
 void
 test_ncm_spectral_polar_peak (TestNcmSpectralPolar *test, gconstpointer pdata)
 {

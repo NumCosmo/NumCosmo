@@ -811,7 +811,7 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             all_concat = np.concatenate(all_values)
             vmax = all_concat.max()
             # The true min is dominated by the noise term's far corners (a
-            # small std_noise falls off steeply, so most of the disc's area
+            # small std_noise falls off steeply, so most of the disk's area
             # sits far below the peak), washing out the informative region
             # under a shared scale. Clip to a fixed range below the peak
             # instead of a percentile: exp(-40) is already ~4e-18 of it.

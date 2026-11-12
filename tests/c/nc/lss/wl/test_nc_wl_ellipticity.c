@@ -102,7 +102,7 @@ static const complex double test_ellips[] = {
   0.30 - 0.22 * I,
 };
 
-/* Disc points to re-center on, including near the |target|=1 boundary. */
+/* Disk points to re-center on, including near the |target|=1 boundary. */
 static const complex double test_targets[] = {
   0.00 + 0.00 * I,
   0.05 + 0.03 * I,

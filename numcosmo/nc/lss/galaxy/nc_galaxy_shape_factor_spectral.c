@@ -46,7 +46,7 @@
  * map with $T$. In it the integrand varies on the scale $1 - |g|$ near $|g| = 1$, and in
  * $\chi_I$ on the scale $(1 - |g|)^2$.
  *
- * The shear enters through its modulus. At $|g| = 1$ every point of the open disc maps
+ * The shear enters through its modulus. At $|g| = 1$ every point of the open disk maps
  * to $g$ and $P = N_2(\epsilon_\mathrm{obs} - g; \sigma_\mathrm{noise}^2)$. For
  * $|g| > 1$ the integral equals the one at $g / |g|^2$, which is used. The frame is then
  * rotated by the phase of $g$, so that the shear is the real number $t = |g|$.
@@ -65,7 +65,7 @@
  * $|\epsilon_\mathrm{obs} - f_t(\chi_I)|^2 / 2\sigma_\mathrm{noise}^2$ on a scan of that ray, with half widths $\sigma_\mathrm{noise}$ times the smaller
  * stretch factor of the inverse map there. The scan places the panels only: the integral is
  * accepted by the test of #NcmSpectralPolar with the relative tolerance
- * #NcGalaxyShapeFactorSpectral:reltol on panels that cover the whole disc.
+ * #NcGalaxyShapeFactorSpectral:reltol on panels that cover the whole disk.
  *
  * The class computes $\ln P$, with the smallest $|\epsilon_\mathrm{obs} - f_t(\chi_I)|^2$
  * of the scan taken out of the exponent, and nc_galaxy_shape_factor_eval_marginal()
@@ -573,7 +573,7 @@ typedef struct _NcGalaxyShapeFactorSpectralInterp
 
 /*
  * Builds the interpolant of ln P in g of the galaxy of data, for the observed ellipticity
- * (epsilon_obs_1, epsilon_obs_2), on a region that contains the disc
+ * (epsilon_obs_1, epsilon_obs_2), on a region that contains the disk
  * |g| <= NcGalaxyShapeFactorSpectral:interp-g-max, and records in the data of the galaxy
  * what it was built for. In the frame where eps_obs is on the positive real axis,
  * g = g_c + rho exp (i psi), with g_c the shear that maps chi_I = 0 to eps_obs:

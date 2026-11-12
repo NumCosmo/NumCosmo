@@ -430,7 +430,7 @@ test_nc_galaxy_shape_factor_spectral_reltol (void)
 }
 
 /*
- * The accepted panels cover the disc, ln P returned with them is the one of
+ * The accepted panels cover the disk, ln P returned with them is the one of
  * eval_ln_direct, a rotation of the frame shifts their angles by the rotation angle (the
  * edges follow the peak found by the scan, which the rotation moves by rounding only), and
  * |g| = 1 has no panels.
@@ -589,9 +589,9 @@ test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral *tes
 /*
  * The interpolant of ln P in g against the integral, for both conventions and three
  * galaxies: one with the center g_c of the interpolant inside |g| <= interp-g-max, one
- * with it outside, and one with |eps_obs| > 1. At shears of the disc the two agree within
+ * with it outside, and one with |eps_obs| > 1. At shears of the disk the two agree within
  * TEST_SPECTRAL_INTERP_TOL and the value does not change under the reflection of g on
- * the direction of eps_obs; outside the disc the value is the one of the integral.
+ * the direction of eps_obs; outside the disk the value is the one of the integral.
  */
 void
 test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)

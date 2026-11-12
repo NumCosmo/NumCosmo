@@ -190,7 +190,7 @@ class GalaxyZGenComposed(BaseModel):
 
     Builds a ``NcGalaxyRedshiftFactorComposed`` scheme: an LSST-SRD true-z
     population (``NcGalaxyRedshiftPopLSSTSRD``) observed through a Gaussian
-    photo-z error kernel (``NcGalaxyRedshiftObsGauss``), parameterised by a
+    photo-z error kernel (``NcGalaxyRedshiftObsGauss``), parameterized by a
     per-galaxy ``sigma0`` (the photo-z error scales as ``sigma0*(1+z)``).
     """
 
@@ -1388,7 +1388,7 @@ class ResampleFlagChoice(StrEnum):
     the real per-galaxy (ra, dec, z, noise) and only redraws intrinsic
     ellipticity, which is the appropriate choice for a real-catalog bias
     test. ``ALL`` (the default) matches historical/mock-generation
-    behaviour.
+    behavior.
     """
 
     POSITION = "position"
@@ -1475,7 +1475,7 @@ def load_cluster_wl(
     only describes the observed background galaxies, not the lensing cluster.
 
     ``resample_flag`` is written onto the resulting ``NcDataClusterWLFactor``
-    as-is (default ``ALL``, matching historical behaviour); see
+    as-is (default ``ALL``, matching historical behavior); see
     ``ResampleFlagChoice`` for why a real-catalog bias test wants ``SHAPE``
     only.
     """

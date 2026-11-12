@@ -259,7 +259,7 @@ nc_wl_ellipticity_apply_shear_inv_trace (NcmComplex g, NcmComplex chi_obs)
  * not g itself). This is that map's inverse: the g whose own distortion is
  * @target, i.e. the ordinary ellipticity<->distortion relation
  * g = target/(1+sqrt(1-|target|^2)). Requires |target|<1; used to
- * re-center a Mobius disc automorphism at an arbitrary disc point. */
+ * re-center a Mobius disk automorphism at an arbitrary disk point. */
 NCM_INLINE NcmComplex
 nc_wl_ellipticity_shear_at_origin_trace (NcmComplex target)
 {

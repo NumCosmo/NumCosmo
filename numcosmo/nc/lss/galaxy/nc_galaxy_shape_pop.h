@@ -68,7 +68,7 @@ struct _NcGalaxyShapePopClass
    * normalized x-space density's g-Taylor coefficients in @out (same order
    * as @x_series, including the population's own normalization constant --
    * see #NcGalaxyShapeFactorSeriesLensed's own pop_norm for the
-   * population-agnostic disc-measure factor left to the caller). No
+   * population-agnostic disk-measure factor left to the caller). No
    * sensible generic default exists (the composition depends entirely on
    * the population's own functional form), so the base class errors
    * clearly if unimplemented. Consumed by #NcGalaxyShapeFactorSeriesLensed.

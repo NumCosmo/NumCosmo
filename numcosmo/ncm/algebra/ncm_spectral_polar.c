@@ -25,7 +25,7 @@
 /**
  * NcmSpectralPolar:
  *
- * Adaptive integration on a disc in polar coordinates, with power laws at the radial ends.
+ * Adaptive integration on a disk in polar coordinates, with power laws at the radial ends.
  *
  * ncm_spectral_polar_integrate() computes
  * $$I = \int\!\!\int r^a (R - r)^b \, G (r, \theta) \, \mathrm{d}r \, \mathrm{d}\theta$$
@@ -71,7 +71,7 @@
  * several threads; its properties must not change during a call.
  *
  * See <a href="../../theory/ncm/algebra/spectral_polar.html">Spectral Integration on a
- * Disc</a> for the formulas.
+ * Disk</a> for the formulas.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -359,8 +359,8 @@ ncm_spectral_polar_class_init (NcmSpectralPolarClass *klass)
   /**
    * NcmSpectralPolar:edge-ratio:
    *
-   * The ratio $\rho > 1$ of ncm_spectral_polar_peak_edges(): its edges are at the
-   * distances $L$, $\rho L$, $\rho^2 L$, ... from the peak, on each side of it, $L$ being
+   * The ratio $\omega > 1$ of ncm_spectral_polar_peak_edges(): its edges are at the
+   * distances $L$, $\omega L$, $\omega^2 L$, ... from the peak, on each side of it, $L$ being
    * the half width of the peak in that direction.
    */
   g_object_class_install_property (object_class,
@@ -599,7 +599,7 @@ static NcmMatrix *_ncm_spectral_polar_panels (NcmSpectralPolarWork *work);
  * @sp: a #NcmSpectralPolar
  * @G: (scope call) (closure user_data): the function $G$
  * @user_data: user data for @G
- * @R: radius of the disc
+ * @R: radius of the disk
  * @a: exponent of the weight at $r = 0$
  * @b: exponent of the weight at $r = R$
  * @r_edges: (element-type gdouble): the radial edges $r_0, \dots, r_{n_r}$
@@ -1740,7 +1740,7 @@ static gint _ncm_spectral_polar_cmp_double (gconstpointer a, gconstpointer b);
 /**
  * ncm_spectral_polar_peak_edges:
  * @sp: a #NcmSpectralPolar
- * @R: radius of the disc
+ * @R: radius of the disk
  * @r_peak: radius of the peak, in $[0, @R]$
  * @theta_peak: angle of the peak
  * @L_r: radial half width of the peak
@@ -1748,12 +1748,12 @@ static gint _ncm_spectral_polar_cmp_double (gconstpointer a, gconstpointer b);
  * @r_edges: (element-type gdouble): array to fill with the radial edges
  * @theta_edges: (element-type gdouble): array to fill with the angular edges
  *
- * Fills @r_edges and @theta_edges with the edges of panels that cover the disc for an
+ * Fills @r_edges and @theta_edges with the edges of panels that cover the disk for an
  * integrand with one peak, to be passed to ncm_spectral_polar_integrate(). The radial
- * edges are 0, @R, $@R / 2$ and $@r_peak \pm @L_r \rho^k$, $k \ge 0$, inside $(0, @R)$,
- * with $\rho$ = #NcmSpectralPolar:edge-ratio; an edge closer than $@L_r / 4$ to the one
+ * edges are 0, @R, $@R / 2$ and $@r_peak \pm @L_r \omega^\nu$, $\nu \ge 0$, inside $(0, @R)$,
+ * with $\omega$ = #NcmSpectralPolar:edge-ratio; an edge closer than $@L_r / 4$ to the one
  * before is left out, except @R. The angular edges are
- * $@theta_peak \pm @L_theta \rho^k$ up to $@theta_peak \pm \pi$; when
+ * $@theta_peak \pm @L_theta \omega^\nu$ up to $@theta_peak \pm \pi$; when
  * $@L_theta \ge \pi / 4$ they are those of four equal panels with @theta_peak at the
  * center of one. @L_r and @L_theta are positive.
  */

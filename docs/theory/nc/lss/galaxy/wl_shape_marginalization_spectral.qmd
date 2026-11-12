@@ -14,7 +14,7 @@ where $P_\mathrm{pop}$ is the isotropic density of the intrinsic ellipticity $\c
 $f_g$ the shear map of the ellipticity convention, $g$ the reduced shear and $N_2$ the
 isotropic two-dimensional Gaussian of variance $\sigma_\mathrm{noise}^2$ per component. The
 integral is computed by [[numcosmo-math|NcmSpectralPolar]], described in
-[Spectral Integration on a Disc](../../../ncm/algebra/spectral_polar.qmd), in the polar
+[Spectral Integration on a Disk](../../../ncm/algebra/spectral_polar.qmd), in the polar
 coordinates of a variable of integration $\zeta$ that depends on the ellipticity
 convention, defined in [The Variable of Integration](#the-variable-of-integration).
 
@@ -23,7 +23,7 @@ convention, defined in [The Variable of Integration](#the-variable-of-integratio
 The integral depends on the shear through its modulus and through the angle between $g$
 and $\epsilon_\mathrm{obs}$. Three cases are separated before anything is integrated.
 
-- $|g| = 1$: every point of the open disc maps to $g$, and
+- $|g| = 1$: every point of the open disk maps to $g$, and
   $P = N_2 (\epsilon_\mathrm{obs} - g; \sigma_\mathrm{noise}^2)$.
 - $|g| > 1$: for an isotropic population the integral equals the one at $g / |g|^2$, which
   has the same phase and modulus $1 / |g|$. That shear replaces $g$.
@@ -55,8 +55,8 @@ T (w) \equiv \frac{2 w}{1 + |w|^2} ,
 \qquad
 T^{-1} (w) = \frac{w}{1 + \sqrt{1 - |w|^2}} .
 $$
-$T$ maps the open unit disc onto itself and the unit circle onto itself. For the moduli,
-$|T (w)| = u (|w|)$ with
+The map $T$ takes the open unit disk onto itself and the unit circle onto itself. For the
+moduli, $|T (w)| = u (|w|)$ with
 $$
 u (r) \equiv \frac{2 r}{1 + r^2} ,
 \qquad
@@ -93,7 +93,7 @@ P = \int_0^{2 \pi} \!\! \int_0^1 \frac{P_\mathrm{pop} (|\chi_I|)}{2 \pi} \,
 N_2 \big( \epsilon - f_t (\chi_I); \, \sigma_\mathrm{noise}^2 \big) \,
 \mathrm{d} |\chi_I| \, \mathrm{d}\theta .
 $$
-Every $\chi_I$ of the disc corresponds to one $\epsilon_I \equiv T^{-1} (\chi_I)$, the
+Every $\chi_I$ of the disk corresponds to one $\epsilon_I \equiv T^{-1} (\chi_I)$, the
 trace--determinant ellipticity of the same shape. It has the angle $\theta$ of $\chi_I$,
 and its modulus $r \equiv |\epsilon_I|$ satisfies $|\chi_I| = u (r)$. The integral over
 $|\chi_I|$ is written as an integral over $r$,
@@ -101,11 +101,11 @@ $$
 P_\mathrm{pop} (|\chi_I|) \, \mathrm{d} |\chi_I| = P_\mathrm{pop} (u (r)) \, u' (r) \, \mathrm{d}r :
 $$
 the probability of an interval of $|\chi_I|$, written for the interval of $r$ that
-corresponds to it. $P_\mathrm{pop} (u (r)) \, u' (r)$ is the density of $r$ for the same
-population, not a population defined in $\epsilon_I$.
+corresponds to it. The product $P_\mathrm{pop} (u (r)) \, u' (r)$ is the density of $r$
+for the same population, not a population defined in $\epsilon_I$.
 
-$P_\mathrm{pop}$ is written as its two end power laws times a function that is finite at
-both ends,
+The population $P_\mathrm{pop}$ is written as its two end power laws times a function that
+is finite at both ends,
 $$
 P_\mathrm{pop} (|\chi_I|) = |\chi_I|^{\alpha_o} (1 - |\chi_I|)^{\alpha_1} \, \hat{P}_\mathrm{pop} (|\chi_I|) ,
 $$
@@ -138,7 +138,7 @@ $\chi_I = T (\epsilon_I)$, the same number for every population and every $t$.
 ### Why this variable
 
 Let $\delta \equiv 1 - t$. The two forms of the map are compared near $|g| = 1$, where
-every point of the disc except a neighborhood of $-1$ maps close to $g$.
+every point of the disk except a neighborhood of $-1$ maps close to $g$.
 
 - In $\epsilon_I$: $m_t (\epsilon_I) - 1 = -\delta \, (1 - \epsilon_I) / (1 + t \epsilon_I)$.
   The denominator is zero at $\epsilon_I = -1 / t$, at the distance $\delta / t$ from the
@@ -185,7 +185,7 @@ G (r, \theta) \equiv \frac{\hat{P}_\zeta (r)}{2 \pi} \,
 $$
 with $d (r, \theta) \equiv |\epsilon - F_t (r e^{i \theta})|^2$ and $d_0$ an offset taken
 out of the exponent so that $G$ stays in the double range. This is the integral of
-[Spectral Integration on a Disc](../../../ncm/algebra/spectral_polar.qmd) with $R = 1$,
+[Spectral Integration on a Disk](../../../ncm/algebra/spectral_polar.qmd) with $R = 1$,
 the exponents $a$ and $b$ of the table above and the function $G$.
 
 ## Locating the Peak
@@ -206,14 +206,14 @@ $\sigma_\mathrm{noise}$ is small. The peak is searched on one ray.
   $$
   is evaluated on a scan of the ray: 401 uniform radii, radii at $10^{-k}$ and
   $1 - 10^{-k}$ for $k = 2, \dots, 12$, and $|c|$ plus and minus multiples from $1/4$ to
-  $25$ of the two widths. $r_*$ is the maximum of $h$ by golden section between the
-  neighbors of the best radius of the scan.
+  $25$ of the two widths. The radius $r_*$ is the maximum of $h$ by golden section between
+  the neighbors of the best radius of the scan.
 - $d_0$ is the smallest $d (r, \theta_0)$ of the scan.
 
 The edges are those of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
 $(r_*, \theta_0)$ with the radial half width
 $L \equiv \sigma_\mathrm{noise} \min (J_1, J_2)$ and the angular half width $L / r_*$. They
-cover the whole disc.
+cover the whole disk.
 
 The scan places the panels and sets $d_0$. It does not decide what is integrated: every
 panel is accepted by the test of [[numcosmo-math|NcmSpectralPolar]], and a panel where
@@ -228,10 +228,10 @@ $$
 $$
 with $I$ the integral of Eq. (5) from [[numcosmo-math|ncm_spectral_polar_integrate]] at
 the relative tolerance `reltol` and absolute tolerance zero.
-[[numcosmo|nc_galaxy_shape_factor_eval_marginal]] returns $e^{\ln P}$. An integral that
-fails with `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, or a non-finite $\ln P$, aborts with the
-population, $\sigma_\mathrm{noise}$, $g$ and $\epsilon_\mathrm{obs}$ in the message. For
-$1 - t < 10^{-5}$ the value is the one of the next section.
+The function [[numcosmo|nc_galaxy_shape_factor_eval_marginal]] returns $e^{\ln P}$. An
+integral that fails with `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, or a non-finite $\ln P$,
+aborts with the population, $\sigma_\mathrm{noise}$, $g$ and $\epsilon_\mathrm{obs}$ in
+the message. For $1 - t < 10^{-5}$ the value is the one of the next section.
 
 ## Shears Next to $|g| = 1$
 
@@ -247,7 +247,7 @@ the integrals are computed at $t_s \equiv 1 - \delta_s$.
 Let $w \equiv m_t (\zeta)$ be the trace--determinant ellipticity after the shear, and
 $\Phi (w) \equiv N_2 (\epsilon - C (w); \sigma_\mathrm{noise}^2)$ the noise factor, with $C$
 the identity for `TRACE_DET` and $C = T$ for `TRACE`. The function
-$m_t (\zeta) - t = (1 - t^2) \, \zeta / (1 + t \zeta)$ is holomorphic in the disc and zero
+$m_t (\zeta) - t = (1 - t^2) \, \zeta / (1 + t \zeta)$ is holomorphic in the disk and zero
 at $\zeta = 0$, so for an isotropic population $w$ has the mean $t$ and the same variance
 $s (t)$ in its two components, with no correlation:
 $$
@@ -275,15 +275,15 @@ The integral of Eq. (6) is computed by [[numcosmo-math|ncm_spectral_polar_integr
 $v \equiv 1 - r$, in which $1 - t^2 r^2 = (\delta + t v) (1 + t r)$ is formed without a
 difference of numbers close to 1, with the radial edges of
 [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at $v = 0$ of half width
-$\delta$. $A$ is accurate when the next order is small, which requires
+$\delta$. The term $A$ is accurate when the next order is small, which requires
 $\delta \, |\epsilon - g| \ll \sigma_\mathrm{noise}^2$.
 
 ### The term $B$ of the neighborhood of $\zeta = -1$
 
-$B \equiv P - A$ is what the expansion of Eq. (7) does not contain: the neighborhood of
-$\zeta = -1$ of size $\delta$, whose image by $m_t$ is the whole disc and not a
-neighborhood of $t$. In the variable $z \equiv (1 + w) / (1 - w)$ the map $m_t$ is the
-multiplication by
+The remainder $B \equiv P - A$ is what the expansion of Eq. (7) does not contain: the
+neighborhood of $\zeta = -1$ of size $\delta$, whose image by $m_t$ is the whole disk and
+not a neighborhood of $t$. In the variable $z \equiv (1 + w) / (1 - w)$ the map $m_t$ is
+the multiplication by
 $$
 \lambda \equiv \frac{1 + t}{1 - t} ,
 $$
@@ -293,7 +293,7 @@ B (t) = \lambda^{-(b + 2)} \left[ k_0 + \frac{k_1}{\lambda} + O (\lambda^{-2}) \
 \tag{8}
 $$
 with $k_0$ and $k_1$ functions of the galaxy and of the angle between $g$ and
-$\epsilon_\mathrm{obs}$ that do not depend on $t$. $B$ can be negative. When
+$\epsilon_\mathrm{obs}$ that do not depend on $t$. The remainder $B$ can be negative. When
 $\epsilon_\mathrm{obs}$ is many $\sigma_\mathrm{noise}$ from $g$, $\Phi (t)$ is small and
 $B$ is the larger term of $P$.
 
@@ -311,9 +311,9 @@ $$
 \ln P = \ln P (t_s) + \ln \left[ \frac{A (t)}{P (t_s)} +
 \lambda^{-(b + 2)} \, \frac{k_0 + k_1 / \lambda}{P (t_s)} \right] ,
 $$
-with every term divided by $P (t_s)$ so that none leaves the double range. $1 - |g|^2$ is
-computed with the rounding errors of the two squares removed, and $\delta$ and $\lambda$
-from it. A bracket that is not positive aborts as a non-finite $\ln P$.
+with every term divided by $P (t_s)$ so that none leaves the double range. The difference
+$1 - |g|^2$ is computed with the rounding errors of the two squares removed, and $\delta$
+and $\lambda$ from it. A bracket that is not positive aborts as a non-finite $\ln P$.
 
 ## Interpolation in $g$
 
@@ -337,7 +337,7 @@ computes the integral.
   narrowest structure at $g_c$, of width $L_g = \sigma_\mathrm{noise} / 2$ for `TRACE` and
   $L_g = \sigma_\mathrm{noise}$ for `TRACE_DET`.
 - Coordinates: $g = g_c + \rho \, e^{i \psi}$, with $\psi \in [0, \pi]$ by the reflection.
-- Region: the rectangle in $(\rho, \psi)$ that contains the disc $|g| \le g_\mathrm{max}$:
+- Region: the rectangle in $(\rho, \psi)$ that contains the disk $|g| \le g_\mathrm{max}$:
   $[0, g_\mathrm{max} + g_c] \times [0, \pi]$ for $g_c < g_\mathrm{max}$, and otherwise
   $[g_c - g_\mathrm{max}, g_c + g_\mathrm{max}] \times [\pi - \arcsin (g_\mathrm{max} / g_c), \pi]$.
   It reaches $|g| = g_\mathrm{max} + 2 g_c < 3 g_\mathrm{max}$, so $g_\mathrm{max} < 1/3$
@@ -375,7 +375,7 @@ $|\ln P - \ln P_\mathrm{Arb}|$ per convention is:
 No point failed. The tolerance bounds the change of the interpolant between grids, which
 is why the differences are below it. The points with
 $(|\epsilon_\mathrm{obs}| - 1) / \sigma_\mathrm{noise} > 8$ are observations more than
-eight noise standard deviations outside the disc; there the class was checked to return a
+eight noise standard deviations outside the disk; there the class was checked to return a
 finite value. The unit test compares 23 certified points, six of them at a complex $g$
 not aligned with $\epsilon_\mathrm{obs}$, within $10^{-7}$.
 
@@ -399,7 +399,7 @@ values next to $|g| = 1$ were not measured for $\sigma_\mathrm{noise}$ below 0.0
 
 The interpolation in $g$ was measured on 150 galaxies of HWL16a-002 and HWL16a-064, 100 of
 them with $\sigma_\mathrm{noise} < 0.1$, with $g_\mathrm{max} = 0.3$, against the integral
-at `reltol` $10^{-8}$ on 200 random shears of the disc per galaxy. No build failed. The
+at `reltol` $10^{-8}$ on 200 random shears of the disk per galaxy. No build failed. The
 integrals of a build and the largest difference in $\ln P$ are:
 
 | convention | population | `interp-abstol` | integrals, median / 90% / largest | largest difference |
@@ -438,8 +438,8 @@ $|g| \le 0.3$.
 ## API Reference
 
 See [[numcosmo|NcGalaxyShapeFactorSpectral]] for the class reference.
-[[numcosmo|nc_galaxy_shape_factor_spectral_eval_ln_direct]] computes $\ln P$ from a
-population and the values of one galaxy, and
+The function [[numcosmo|nc_galaxy_shape_factor_spectral_eval_ln_direct]] computes $\ln P$
+from a population and the values of one galaxy, and
 [[numcosmo|nc_galaxy_shape_factor_spectral_eval_panels]] also returns the panels the
 integral was accepted on, in the polar coordinates of $\zeta$, with their angles in the
 frame of $g$ and $\epsilon_\mathrm{obs}$.

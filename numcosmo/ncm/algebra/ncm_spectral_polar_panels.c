@@ -54,7 +54,7 @@
  * object, so one object may be evaluated in several threads.
  *
  * See <a href="../../theory/ncm/algebra/spectral_polar.html">Spectral Integration on a
- * Disc</a> for the formulas.
+ * Disk</a> for the formulas.
  */
 
 #ifdef HAVE_CONFIG_H

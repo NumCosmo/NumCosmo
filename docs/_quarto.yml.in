@@ -192,7 +192,7 @@ website:
               - href: theory/ncm/algebra/spectral.qmd
                 text: "Spectral Methods"
               - href: theory/ncm/algebra/spectral_polar.qmd
-                text: "Spectral Integration on a Disc"
+                text: "Spectral Integration on a Disk"
               - href: theory/ncm/fftlog/fftlog.qmd
                 text: "FFTLog"
               - href: theory/ncm/spline/spline_func.qmd

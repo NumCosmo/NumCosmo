@@ -28,7 +28,7 @@ classes and methods.
 - [Galaxy Population & WL Framework](nc/lss/galaxy/galaxy_wl_framework.qmd) --- the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z$\Rightarrow$P$\Rightarrow$S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
 - [Galaxy Shapes and Ellipticity Frames](nc/lss/galaxy/wl_ellipticity.qmd) --- the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
 - [A Small-Shear Series Marginalization for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_series.qmd) --- in-progress derivation of a Bessel-series marginalization scheme for the large-noise, small-$g$ regime.
-- [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd) --- a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disc intersection in the lensed frame.
+- [Fixed-Node Lens-Domain Quadrature for the Shape Likelihood](nc/lss/galaxy/wl_shape_marginalization_fixed_quad.qmd) --- a fast, series-free alternative: fixed-node quadrature over the noise-disk/unit-disk intersection in the lensed frame.
 - [Shape Marginalization by Spectral Panels](nc/lss/galaxy/wl_shape_marginalization_spectral.qmd) --- the intrinsic-ellipticity marginal in polar coordinates with the population's end power laws as the weight, panels placed from a scan of one ray, and the accuracy measured against the Arb reference.
 
 ## Angular Power Spectra
@@ -41,7 +41,7 @@ classes and methods.
 ## Approximation and Interpolation
 
 - [Spectral Methods](ncm/algebra/spectral.qmd) --- Chebyshev approximation, Clenshaw--Curtis integration, and ultraspherical operators.
-- [Spectral Integration on a Disc](ncm/algebra/spectral_polar.qmd) --- adaptive Chebyshev panels in polar coordinates, power laws at the radial ends integrated through moments, the edges for an integrand with one maximum, and the approximation of a function on the panels.
+- [Spectral Integration on a Disk](ncm/algebra/spectral_polar.qmd) --- adaptive Chebyshev panels in polar coordinates, power laws at the radial ends integrated through moments, the edges for an integrand with one maximum, and the approximation of a function on the panels.
 - [FFTLog](ncm/fftlog/fftlog.qmd) --- logarithmic fast Fourier transform.
 - [AutoKnots: Adaptive Knot Placement](ncm/spline/spline_func.qmd) --- the rounds of midpoint tests, the false pass, the closure of the settled mesh that replaced the reopening by standard deviation, the spread along runs of equal width, and the aliased Eisenstein--Hu spline.
 - [Quintic Hermite Interpolation](ncm/spline/hermite.qmd) --- the quintic through the values and two derivatives at the knots, its third-derivative jumps against the cubic's, the error bound, and the ODE order NcmOdeSpline pairs it with.
