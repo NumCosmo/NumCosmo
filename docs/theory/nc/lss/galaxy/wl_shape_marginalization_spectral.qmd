@@ -85,18 +85,33 @@ $2 \times 10^{-15}$. The class evaluates $m_t$ with
 
 ### Eq. (1) in the trace--determinant ellipticity
 
-For the trace convention, let $\epsilon_I \equiv T^{-1} (\chi_I) = r e^{i \theta}$. The
-angle is the one of $\chi_I$, and the population is isotropic, so only the density of the
-modulus changes. $P_\mathrm{pop}$ is the density of $|\chi_I|$, normalized in
-$\mathrm{d} |\chi_I|$, written as its two end power laws times a function that is finite
-at both ends,
+For the trace convention the population is the density of $|\chi_I|$, normalized in
+$\mathrm{d} |\chi_I|$, and it stays so. In the polar coordinates of $\chi_I$, with $\theta$
+its angle, Eq. (1) is
+$$
+P = \int_0^{2 \pi} \!\! \int_0^1 \frac{P_\mathrm{pop} (|\chi_I|)}{2 \pi} \,
+N_2 \big( \epsilon - f_t (\chi_I); \, \sigma_\mathrm{noise}^2 \big) \,
+\mathrm{d} |\chi_I| \, \mathrm{d}\theta .
+$$
+Every $\chi_I$ of the disc corresponds to one $\epsilon_I \equiv T^{-1} (\chi_I)$, the
+trace--determinant ellipticity of the same shape. It has the angle $\theta$ of $\chi_I$,
+and its modulus $r \equiv |\epsilon_I|$ satisfies $|\chi_I| = u (r)$. The integral over
+$|\chi_I|$ is written as an integral over $r$,
+$$
+P_\mathrm{pop} (|\chi_I|) \, \mathrm{d} |\chi_I| = P_\mathrm{pop} (u (r)) \, u' (r) \, \mathrm{d}r :
+$$
+the probability of an interval of $|\chi_I|$, written for the interval of $r$ that
+corresponds to it. $P_\mathrm{pop} (u (r)) \, u' (r)$ is the density of $r$ for the same
+population, not a population defined in $\epsilon_I$.
+
+$P_\mathrm{pop}$ is written as its two end power laws times a function that is finite at
+both ends,
 $$
 P_\mathrm{pop} (|\chi_I|) = |\chi_I|^{\alpha_o} (1 - |\chi_I|)^{\alpha_1} \, \hat{P}_\mathrm{pop} (|\chi_I|) ,
 $$
 with $\alpha_o$ given by [[numcosmo|nc_galaxy_shape_pop_exponent_at_origin]], $\alpha_1$
 by [[numcosmo|nc_galaxy_shape_pop_exponent_at_one]] and $\hat{P}_\mathrm{pop}$ by
-[[numcosmo|nc_galaxy_shape_pop_eval_p_reduced]]. The density of $r$ is
-$P_\mathrm{pop} (u (r)) \, u' (r)$, and with Eq. (2)
+[[numcosmo|nc_galaxy_shape_pop_eval_p_reduced]]. With Eq. (2), the density of $r$ is
 $$
 P_\mathrm{pop} (u (r)) \, u' (r) = r^{\alpha_o} (1 - r)^{2 \alpha_1 + 1} \, \hat{P}_\epsilon (r) ,
 \qquad
@@ -108,15 +123,17 @@ The three factors of the left side contribute as follows:
 $u^{\alpha_o} = 2^{\alpha_o} r^{\alpha_o} (1 + r^2)^{-\alpha_o}$,
 $(1 - u)^{\alpha_1} = (1 - r)^{2 \alpha_1} (1 + r^2)^{-\alpha_1}$ and
 $u' = 2 (1 - r) (1 + r) (1 + r^2)^{-2}$. The exponent at $r = 1$ changes from $\alpha_1$
-to $2 \alpha_1 + 1$, and $\hat{P}_\epsilon$ is finite at both ends. With Eq. (3), Eq. (1)
-becomes
+to $2 \alpha_1 + 1$, and $\hat{P}_\epsilon$ is finite at both ends. In the noise factor,
+$f_t (\chi_I) = f_t (T (\epsilon_I)) = T (m_t (\epsilon_I))$ by Eq. (3): the outer $T$ converts
+the sheared shape back to the trace ellipticity, in which it is observed. Eq. (1) becomes
 $$
 P = \int_0^{2 \pi} \!\! \int_0^1 r^{\alpha_o} (1 - r)^{2 \alpha_1 + 1} \,
 \frac{\hat{P}_\epsilon (r)}{2 \pi} \,
 N_2 \big( \epsilon - T (m_t (r e^{i \theta})); \, \sigma_\mathrm{noise}^2 \big) \,
 \mathrm{d}r \, \mathrm{d}\theta .
 $$
-Nothing is approximated: it is Eq. (1) after the substitution $\chi_I = T (\epsilon_I)$.
+Nothing is approximated: it is the integral above after the substitution
+$\chi_I = T (\epsilon_I)$, the same number for every population and every $t$.
 
 ### Why this variable
 
