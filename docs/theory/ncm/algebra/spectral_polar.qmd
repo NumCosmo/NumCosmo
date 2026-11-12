@@ -268,17 +268,19 @@ must therefore be placed from the known position and width of such a maximum, as
 | $r_a, r_b, \theta_a, \theta_b$ | `ra`, `rb`, `ta`, `tb` of a panel |
 | $l_r, l_\theta$; $N_r, N_\theta$ | `lx`, `ly`; `n`, `m` |
 | $r^{a - c_a} (R - r)^{b - c_b}$ at the radial nodes | `wr` |
-| $c^{kl}$, before the normalization | `coeffs`, row $l$, column $k$ |
+| $c^{kl}$ | `coeffs`, row $l$, column $k$ |
 | $b_r^k$, $b_\theta^l$ | `br`, `bt` |
 | $D_r$, $D_\theta$, $V$ | `Dr`, `Dt`, `vs` |
 | $\varepsilon_F$, $W$ | `abstol_F`, `A` of the call |
-| $M^r_k$, $M^\theta_l$, times the normalization of $c^{kl}$ | the tables of `mom`, `mt` |
+| $M^r_k$, $M^\theta_l$ | the tables of `mom`, `mt` |
 | $\varepsilon_F$ of a build | `abstol_F` of the call, equal to `abstol` |
 | $c^{kl}$ of an accepted panel of a build | `coeffs` of `NcmSpectralPolarPanels`, row $l$, column $k$ |
 
-The transform of a grid is two one-dimensional passes. A direction with 9 or 17 nodes is
-transformed by the product with the DCT-I matrix, applied to the even and odd parts of the
-lines; a direction with more nodes by an FFTW `REDFT00` plan.
+The transform of a grid is two one-dimensional passes, each over all the lines of the
+other direction at once. A direction with up to 129 nodes is transformed by the functions
+of [Transform on the Nested Grids](spectral.qmd#transform-on-the-nested-grids); a
+direction with more nodes by an FFTW `REDFT00` plan and the normalization of
+[Spectral Methods](spectral.qmd#computing-the-coefficients).
 
 ## API Reference
 

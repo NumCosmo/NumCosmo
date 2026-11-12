@@ -57,6 +57,7 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 #include <math.h>
@@ -447,7 +448,6 @@ ncm_spectral_get_max_level (NcmSpectral *spectral)
 }
 
 static void _ncm_spectral_prepare_level (NcmSpectral *spectral, guint level);
-static void _ncm_spectral_transform (NcmSpectral *spectral, guint N, guint howmany, const gdouble *vals, gdouble *coeffs);
 static void _ncm_spectral_coeffs_from_nodes (NcmSpectral *spectral, GArray *coeffs, guint N);
 
 /* Plans are cached by (N, fdim), so a change of fdim costs nothing here */
@@ -1059,8 +1059,10 @@ _ncm_spectral_coeffs_from_nodes (NcmSpectral *spectral, GArray *coeffs, guint N)
  * 48 KiB L1 cache. Above its 12 ways the rows evict each other and the kernel is 1.6 to 4
  * times slower: howmany a multiple of 64 at N = 129, of 128 at N = 65. Such sizes need a row
  * stride that is not a multiple of 8.
+ *
+ * Declared in ncm_spectral_private.h, for the other classes of the library.
  */
-static void
+void
 _ncm_spectral_transform (NcmSpectral *spectral, guint N, guint howmany, const gdouble *vals, gdouble *coeffs)
 {
   const guint n = N - 1;

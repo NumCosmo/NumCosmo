@@ -80,6 +80,8 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral_polar.h"
+#include "ncm/algebra/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral_private.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_util.h"
@@ -92,13 +94,6 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_gamma.h>
 #endif /* NUMCOSMO_GIR_SCAN */
-
-/*
- * Grids up to this level (17 points) are transformed by matrix products, larger ones by
- * FFTW. FFTW computes a DCT-I of 9 or 17 points through a padded real FFT, whose fixed
- * cost exceeds the product; at 33 points the product is the slower one.
- */
-#define NCM_SPECTRAL_POLAR_DENSE_LEVEL_MAX (4)
 
 /* Number of equal angular panels of ncm_spectral_polar_peak_edges() on the full circle */
 #define NCM_SPECTRAL_POLAR_FULL_CIRCLE_PANELS (4)
@@ -151,9 +146,8 @@ typedef struct _NcmSpectralPolarEntry
 } NcmSpectralPolarEntry;
 
 /*
- * The moments against T_k of (1 + s)^ca (1 - s)^cb on [-1, 1], times the DCT
- * normalization of coefficient k, for every level; have has bit l set when level l is
- * computed.
+ * The moments against T_k of (1 + s)^ca (1 - s)^cb on [-1, 1], for every level; have has
+ * bit l set when level l is computed.
  */
 typedef struct _NcmSpectralPolarMom
 {
@@ -173,7 +167,7 @@ typedef struct _NcmSpectralPolarWork
   gdouble *in;     /* the level grid, (n + 1) x (m + 1), row i = radius i */
   gdouble *tmp;    /* its radial transform, same layout */
   gdouble *tmpT;   /* the transpose of tmp */
-  gdouble *coeffs; /* the coefficients, (m + 1) x (n + 1): row l = angular index */
+  gdouble *coeffs; /* the Chebyshev coefficients, (m + 1) x (n + 1): row l = angular index */
   GArray *lines;   /* the np-long arrays below, one after the other */
   gdouble *br;     /* l1 mass of the coefficients per radial index */
   gdouble *bt;     /* and per angular index */
@@ -185,13 +179,10 @@ typedef struct _NcmSpectralPolarWork
   gdouble *gth;    /* the angles of one callback, contiguous */
   gdouble *gct;
   gdouble *gst;
-  gdouble *gf;  /* the values it returns */
-  gdouble *xc;  /* cos (pi q / 2^level_cap), the Lobatto points of every level */
-  GArray *fold; /* even and odd parts of the lines of a matrix-product transform */
-  GArray *mt;   /* angular moments times the DCT normalization, every level */
-  GArray *dct;  /* DCT-I matrices of the levels up to DENSE_LEVEL_MAX */
-  gsize dct_offset[NCM_SPECTRAL_POLAR_DENSE_LEVEL_MAX + 1];
-  GHashTable *plans;          /* (points << 32 | lines) -> fftw_plan */
+  gdouble *gf;                /* the values it returns */
+  gdouble *xc;                /* cos (pi q / 2^level_cap), the Lobatto points of every level */
+  GArray *mt;                 /* angular moments, every level */
+  NcmSpectral *spectral;      /* the transforms from node values to Chebyshev coefficients */
   NcmSpectralPolarMom mom[4]; /* 0: weight 1, 1: r^a, 2: (R - r)^b, 3: both */
   GArray *initial;            /* NcmSpectralPolarEntry, the initial panels on their starting grids */
   GArray *initial_grid;       /* their samples */
@@ -412,10 +403,8 @@ _ncm_spectral_polar_work_new (gpointer userdata)
   work->tmpT         = NULL;
   work->coeffs       = NULL;
   work->lines        = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  work->fold         = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->mt           = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  work->dct          = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  work->plans        = g_hash_table_new_full (g_int64_hash, g_int64_equal, g_free, ncm_cfg_fftw_plan_destroy);
+  work->spectral     = ncm_spectral_new ();
   work->initial      = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarEntry));
   work->initial_grid = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->accepted     = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarEntry));
@@ -443,10 +432,8 @@ _ncm_spectral_polar_work_free (gpointer p)
   g_clear_pointer (&work->tmpT, fftw_free);
   g_clear_pointer (&work->coeffs, fftw_free);
   g_array_unref (work->lines);
-  g_array_unref (work->fold);
   g_array_unref (work->mt);
-  g_array_unref (work->dct);
-  g_hash_table_unref (work->plans);
+  ncm_spectral_free (work->spectral);
   g_array_unref (work->initial);
   g_array_unref (work->initial_grid);
   g_array_unref (work->accepted);
@@ -897,12 +884,10 @@ static void
 _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
 {
   const guint np        = (1u << level_cap) + 1;
-  const guint dense_max = MIN (level_cap, NCM_SPECTRAL_POLAR_DENSE_LEVEL_MAX);
   const guint n_lines   = 12;
   const gsize table_len = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 1);
-  gsize dct_len         = 0;
-  gdouble *lines, *mt, *dct;
-  guint l, j, k;
+  gdouble *lines, *mt;
+  guint l, k;
 
   if (work->level_cap == level_cap)
     return;
@@ -912,7 +897,6 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
 
   g_array_set_size (work->grid, (gsize) np * np);
   g_array_set_size (work->lines, (gsize) n_lines * np);
-  g_array_set_size (work->fold, (gsize) 2 * ((1u << dense_max) / 2 + 1) * np);
   g_array_set_size (work->mt, table_len);
 
   g_clear_pointer (&work->in, fftw_free);
@@ -943,7 +927,7 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
 
   work->xc[(np - 1) / 2] = 0.0;
 
-  /* Moments of weight 1 against T_l, 2 / (1 - l^2) for even l, times the DCT normalization */
+  /* Moments of weight 1 against T_l, 2 / (1 - l^2) for even l */
   mt = &g_array_index (work->mt, gdouble, 0);
 
   for (l = 0; l <= level_cap; l++)
@@ -951,34 +935,7 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
     const guint m = 1u << l;
 
     for (k = 0; k <= m; k++)
-      mt[NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l) + k] =
-        (k % 2 == 0) ? (((k == 0) || (k == m)) ? 0.5 : 1.0) / m * 2.0 / (1.0 - (gdouble) k * k) : 0.0;
-  }
-
-  /* DCT-I matrices in the scaling of FFTW's REDFT00 */
-  for (l = 0; l <= dense_max; l++)
-  {
-    work->dct_offset[l] = dct_len;
-    dct_len            += ((gsize) (1u << l) + 1) * ((1u << l) + 1);
-  }
-
-  g_array_set_size (work->dct, dct_len);
-  dct = &g_array_index (work->dct, gdouble, 0);
-
-  for (l = 1; l <= dense_max; l++)
-  {
-    const guint n = 1u << l;
-
-    for (k = 0; k <= n; k++)
-    {
-      for (j = 0; j <= n; j++)
-      {
-        const guint q = (k * j) % (2 * n);
-
-        dct[work->dct_offset[l] + (gsize) k * (n + 1) + j] =
-          (((j == 0) || (j == n)) ? 1.0 : 2.0) * work->xc[((q <= n) ? q : 2 * n - q) << (level_cap - l)];
-      }
-    }
+      mt[NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l) + k] = (k % 2 == 0) ? 2.0 / (1.0 - (gdouble) k * k) : 0.0;
   }
 
   for (k = 0; k < 4; k++)
@@ -1192,14 +1149,10 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
   call->n_eval += (guint64) c * ((n - i0) / istep + 1);
 }
 
-static void _ncm_spectral_polar_dct_dense (NcmSpectralPolarWork *work, guint l, const gdouble *X, gdouble *Y, guint L);
-static void _ncm_spectral_polar_dct_fftw (NcmSpectralPolarWork *work, guint l, const gdouble *X, gdouble *Y, guint L);
-
 /*
- * Transforms the grid of level (lx, ly) into work->coeffs, in the scaling of REDFT00 in
- * both directions and with the angular index first, and fills work->br and work->bt with
- * the l1 masses of the normalized coefficients per radial and per angular index. Returns
- * the largest |F| on the grid.
+ * Transforms the grid of level (lx, ly) into its Chebyshev coefficients in work->coeffs,
+ * with the angular index first, and fills work->br and work->bt with the l1 masses of the
+ * coefficients per radial and per angular index. Returns the largest |F| on the grid.
  */
 static gdouble
 _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
@@ -1211,11 +1164,6 @@ _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
   const gdouble *grid = &g_array_index (work->grid, gdouble, 0);
   gdouble vs          = 0.0;
   guint i, j, k, l;
-
-  void (*dct_r) (NcmSpectralPolarWork *, guint, const gdouble *, gdouble *, guint) =
-    (lx <= NCM_SPECTRAL_POLAR_DENSE_LEVEL_MAX) ? &_ncm_spectral_polar_dct_dense : &_ncm_spectral_polar_dct_fftw;
-  void (*dct_t) (NcmSpectralPolarWork *, guint, const gdouble *, gdouble *, guint) =
-    (ly <= NCM_SPECTRAL_POLAR_DENSE_LEVEL_MAX) ? &_ncm_spectral_polar_dct_dense : &_ncm_spectral_polar_dct_fftw;
 
   for (i = 0; i <= n; i++)
   {
@@ -1236,7 +1184,7 @@ _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
    * Radial transform of the m + 1 columns of in, its transpose, then angular transform
    * of the n + 1 columns of the transpose.
    */
-  dct_r (work, lx, work->in, work->tmp, m + 1);
+  _ncm_spectral_transform (work->spectral, n + 1, m + 1, work->in, work->tmp);
 
   for (k = 0; k <= n; k++)
   {
@@ -1246,135 +1194,27 @@ _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
       work->tmpT[(gsize) j * (n + 1) + k] = row[j];
   }
 
-  dct_t (work, ly, work->tmpT, work->coeffs, n + 1);
+  _ncm_spectral_transform (work->spectral, m + 1, n + 1, work->tmpT, work->coeffs);
 
   memset (work->br, 0, sizeof (gdouble) * (n + 1));
 
   for (l = 0; l <= m; l++)
   {
-    const gdouble fl   = (((l == 0) || (l == m)) ? 0.5 : 1.0) / ((gdouble) n * m);
     const gdouble *row = work->coeffs + (gsize) l * (n + 1);
-    gdouble acc        = 0.5 * (fabs (row[0]) + fabs (row[n]));
+    gdouble acc        = 0.0;
 
-    work->br[0] += fl * 0.5 * fabs (row[0]);
-    work->br[n] += fl * 0.5 * fabs (row[n]);
-
-    for (k = 1; k < n; k++)
+    for (k = 0; k <= n; k++)
     {
       const gdouble ac = fabs (row[k]);
 
       acc         += ac;
-      work->br[k] += fl * ac;
+      work->br[k] += ac;
     }
 
-    work->bt[l] = fl * acc;
+    work->bt[l] = acc;
   }
 
   return vs;
-}
-
-/*
- * DCT-I along the first index of X, an (n + 1) x L array with n = 2^l and row j at
- * X + j L: Y_k = X_0 + (-1)^k X_n + 2 sum_{0 < j < n} X_j cos (pi j k / n) for each of the
- * L columns, the scaling of REDFT00, into Y with the same layout. Row k of the matrix is
- * even (k even) or odd about n / 2, so it acts on the even or on the odd part of X. Every
- * inner loop runs over the L columns.
- */
-static void
-_ncm_spectral_polar_dct_dense (NcmSpectralPolarWork *work, guint l, const gdouble *X, gdouble *Y, guint L)
-{
-  const guint n    = 1u << l;
-  const guint h    = n / 2;
-  const gdouble *T = &g_array_index (work->dct, gdouble, work->dct_offset[l]);
-  gdouble *fe      = &g_array_index (work->fold, gdouble, 0);
-  gdouble *fo      = fe + (gsize) (h + 1) * L;
-  guint j, k, c;
-
-  for (j = 0; j < h; j++)
-  {
-    const gdouble *xa = X + (gsize) j * L;
-    const gdouble *xb = X + (gsize) (n - j) * L;
-    gdouble *e        = fe + (gsize) j * L;
-    gdouble *o        = fo + (gsize) j * L;
-
-    for (c = 0; c < L; c++)
-    {
-      e[c] = xa[c] + xb[c];
-      o[c] = xa[c] - xb[c];
-    }
-  }
-
-  memcpy (fe + (gsize) h * L, X + (gsize) h * L, sizeof (gdouble) * L);
-
-  for (k = 0; k <= n; k++)
-  {
-    const gdouble *t   = T + (gsize) k * (n + 1);
-    const gdouble *src = (k % 2 == 0) ? fe : fo;
-    const guint nj     = (k % 2 == 0) ? h + 1 : h;
-    gdouble *y         = Y + (gsize) k * L;
-
-    for (c = 0; c < L; c++)
-      y[c] = t[0] * src[c];
-
-    for (j = 1; j < nj; j++)
-    {
-      const gdouble tj = t[j];
-      const gdouble *x = src + (gsize) j * L;
-
-      for (c = 0; c < L; c++)
-        y[c] += tj * x[c];
-    }
-  }
-}
-
-static fftw_plan _ncm_spectral_polar_get_plan (NcmSpectralPolarWork *work, guint N, guint L);
-
-/*
- * The transform of _ncm_spectral_polar_dct_dense() by FFTW: one REDFT00 plan over the L
- * columns, executed on X and Y through the new-array interface, which requires X and Y
- * from fftw_malloc.
- */
-static void
-_ncm_spectral_polar_dct_fftw (NcmSpectralPolarWork *work, guint l, const gdouble *X, gdouble *Y, guint L)
-{
-  fftw_execute_r2r (_ncm_spectral_polar_get_plan (work, (1u << l) + 1, L), (gdouble *) X, Y);
-}
-
-/*
- * The REDFT00 plan of N points along the first index of an N x L array (stride L,
- * distance 1), created on first use on scratch arrays, so that planning touches no array
- * of the workspace.
- */
-static fftw_plan
-_ncm_spectral_polar_get_plan (NcmSpectralPolarWork *work, guint N, guint L)
-{
-  const gint64 key = ((gint64) N << 32) | (gint64) L;
-  fftw_plan plan   = g_hash_table_lookup (work->plans, &key);
-
-  if (plan == NULL)
-  {
-    const fftw_r2r_kind kind[] = { FFTW_REDFT00 };
-    const gint n[]             = { (gint) N };
-    gdouble *in                = fftw_malloc (sizeof (gdouble) * N * L);
-    gdouble *out               = fftw_malloc (sizeof (gdouble) * N * L);
-    gint64 *key_copy           = g_new (gint64, 1);
-    gboolean first;
-
-    memset (in, 0, sizeof (gdouble) * N * L);
-
-    first = ncm_cfg_fftw_plan_begin ("ncm_spectral_polar_redft00_%u_%u", N, L);
-    plan  = fftw_plan_many_r2r (1, n, (gint) L, in, NULL, (gint) L, 1,
-                                out, NULL, (gint) L, 1, kind, ncm_cfg_get_fftw_default_flag ());
-    ncm_cfg_fftw_plan_end (first);
-
-    fftw_free (in);
-    fftw_free (out);
-
-    *key_copy = key;
-    g_hash_table_insert (work->plans, key_copy, plan);
-  }
-
-  return plan;
 }
 
 /*
@@ -1493,9 +1333,6 @@ _ncm_spectral_polar_moments (NcmSpectralPolarMom *mom, guint l)
 
     gsl_integration_fixed_free (ws);
   }
-
-  for (k = 0; k <= n; k++)
-    m[k] *= (((k == 0) || (k == n)) ? 0.5 : 1.0) / n;
 
   mom->have |= 1u << l;
 
@@ -1672,33 +1509,11 @@ _ncm_spectral_polar_predict (const gdouble *b, guint M)
   }
 }
 
-/*
- * Appends the panel at level (lx, ly) to call->spp with its Chebyshev coefficients:
- * work->coeffs, in the scaling of REDFT00, is normalized in place, each direction by its
- * number of intervals and by 1/2 at its first and last index.
- */
+/* Appends the panel at level (lx, ly) to call->spp with its Chebyshev coefficients */
 static void
 _ncm_spectral_polar_append (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint ly)
 {
-  NcmSpectralPolarWork *work = call->work;
-  const guint n              = 1u << lx;
-  const guint m              = 1u << ly;
-  const gdouble norm         = 1.0 / ((gdouble) n * m);
-  guint k, l;
-
-  for (l = 0; l <= m; l++)
-  {
-    const gdouble fl = (((l == 0) || (l == m)) ? 0.5 : 1.0) * norm;
-    gdouble *row     = work->coeffs + (gsize) l * (n + 1);
-
-    row[0] *= 0.5 * fl;
-    row[n] *= 0.5 * fl;
-
-    for (k = 1; k < n; k++)
-      row[k] *= fl;
-  }
-
-  ncm_spectral_polar_panels_append_data (call->spp, panel->ra, panel->rb, panel->ta, panel->tb, lx, ly, work->coeffs);
+  ncm_spectral_polar_panels_append_data (call->spp, panel->ra, panel->rb, panel->ta, panel->tb, lx, ly, call->work->coeffs);
 }
 
 /*
