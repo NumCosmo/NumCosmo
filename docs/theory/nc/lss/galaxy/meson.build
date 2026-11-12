@@ -3,6 +3,7 @@ src_site_theory_nc_lss_galaxy_files = files(
     'wl_ellipticity.qmd',
     'wl_shape_marginalization_fixed_quad.qmd',
     'wl_shape_marginalization_series.qmd',
+    'wl_shape_marginalization_spectral.qmd',
 )
 
 if get_option('documentation')

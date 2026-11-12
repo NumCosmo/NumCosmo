@@ -68,7 +68,7 @@ struct _NcGalaxyShapePopClass
    * normalized x-space density's g-Taylor coefficients in @out (same order
    * as @x_series, including the population's own normalization constant --
    * see #NcGalaxyShapeFactorSeriesLensed's own pop_norm for the
-   * population-agnostic disc-measure factor left to the caller). No
+   * population-agnostic disk-measure factor left to the caller). No
    * sensible generic default exists (the composition depends entirely on
    * the population's own functional form), so the base class errors
    * clearly if unimplemented. Consumed by #NcGalaxyShapeFactorSeriesLensed.
@@ -108,8 +108,23 @@ struct _NcGalaxyShapePopClass
    */
   gdouble (*moment_2k) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 
-  /* Padding to allow adding up to 9 more virtual functions without breaking ABI. */
-  gpointer padding[9];
+  /*
+   * The exponent alpha_1 of P_pop (r) ~ (1 - r)^alpha_1 as r -> 1, the counterpart of
+   * exponent_at_origin. The base class default is an error.
+   */
+  gdouble (*exponent_at_one) (NcGalaxyShapePop *gsp);
+
+  /*
+   * P_pop (r) / (r^alpha_o (1 - r)^alpha_1), with alpha_o and alpha_1 the exponents of
+   * exponent_at_origin and exponent_at_one, computed without the division, so that it is
+   * finite at r = 0 and r = 1. Reads the resolved parameters from @data as eval_p() does.
+   * Consumed by a quadrature that has the two power laws in its weight. The base class
+   * default is an error.
+   */
+  gdouble (*eval_p_reduced) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
+
+  /* Padding to allow adding up to 7 more virtual functions without breaking ABI. */
+  gpointer padding[7];
 };
 
 /**
@@ -186,6 +201,8 @@ void nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxySh
                                                const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 void nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 gdouble nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
+gdouble nc_galaxy_shape_pop_exponent_at_one (NcGalaxyShapePop *gsp);
+gdouble nc_galaxy_shape_pop_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 
 G_END_DECLS
 

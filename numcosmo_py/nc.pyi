@@ -498,8 +498,14 @@ def wl_ellipticity_apply_shear_inv_trace_ptr(
 def wl_ellipticity_apply_shear_trace_det_ptr(
     g: NumCosmoMath.Complex, e: NumCosmoMath.Complex, e_obs: NumCosmoMath.Complex
 ) -> None: ...
+def wl_ellipticity_apply_shear_trace_det_real(
+    t: float, x: float, y: float, f_x: float, f_y: float
+) -> None: ...
 def wl_ellipticity_apply_shear_trace_ptr(
     g: NumCosmoMath.Complex, chi: NumCosmoMath.Complex, chi_obs: NumCosmoMath.Complex
+) -> None: ...
+def wl_ellipticity_apply_shear_trace_real(
+    t: float, x: float, y: float, f_x: float, f_y: float
 ) -> None: ...
 def wl_ellipticity_celestial_to_frame_angle(
     frame: WLEllipticityFrame, phi: float
@@ -10125,6 +10131,103 @@ class GalaxyShapeFactorSeriesLensedClass(GObject.GPointer):
 
     parent_class: GalaxyShapeFactorClass = ...
 
+class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorSpectral(**properties)
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv) -> NumCosmo.GalaxyShapeFactorSpectral
+
+    Object NcGalaxyShapeFactorSpectral
+
+    Properties from NcGalaxyShapeFactorSpectral:
+      reltol -> gdouble: reltol
+        Relative tolerance of the integral
+      use-interp -> gboolean: use-interp
+        Whether ln P is interpolated in g for each galaxy
+      interp-g-max -> gdouble: interp-g-max
+        Largest |g| computed from the interpolant
+      interp-abstol -> gdouble: interp-abstol
+        Absolute tolerance on ln P of the interpolant
+      interp-min-radial-panels -> guint: interp-min-radial-panels
+        Minimum number of radial intervals of the interpolant
+
+    Properties from NcGalaxyShapeFactor:
+      ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
+        Weak lensing observables ellipticity convention
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        interp_abstol: float
+        interp_g_max: float
+        interp_min_radial_panels: int
+        reltol: float
+        use_interp: bool
+        ellip_conv: GalaxyWLObsEllipConv
+
+    props: Props = ...
+    def __init__(
+        self,
+        interp_abstol: float = ...,
+        interp_g_max: float = ...,
+        interp_min_radial_panels: int = ...,
+        reltol: float = ...,
+        use_interp: bool = ...,
+        ellip_conv: GalaxyWLObsEllipConv = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(gsfs: GalaxyShapeFactorSpectral) -> None: ...
+    def eval_ln_direct(
+        self,
+        pop: GalaxyShapePop,
+        pop_data: GalaxyShapePopData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+        std_noise: float,
+    ) -> float: ...
+    def eval_panels(
+        self,
+        pop: GalaxyShapePop,
+        pop_data: GalaxyShapePopData,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+        std_noise: float,
+    ) -> typing.Tuple[typing.Optional[NumCosmoMath.Matrix], float]: ...
+    def free(self) -> None: ...
+    def get_interp_abstol(self) -> float: ...
+    def get_interp_g_max(self) -> float: ...
+    def get_interp_min_radial_panels(self) -> int: ...
+    def get_reltol(self) -> float: ...
+    def get_use_interp(self) -> bool: ...
+    @classmethod
+    def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorSpectral: ...
+    def ref(self) -> GalaxyShapeFactorSpectral: ...
+    def set_interp_abstol(self, abstol: float) -> None: ...
+    def set_interp_g_max(self, g_max: float) -> None: ...
+    def set_interp_min_radial_panels(self, n: int) -> None: ...
+    def set_reltol(self, reltol: float) -> None: ...
+    def set_use_interp(self, use_interp: bool) -> None: ...
+
+class GalaxyShapeFactorSpectralClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyShapeFactorSpectralClass()
+    """
+
+    parent_class: GalaxyShapeFactorClass = ...
+
 class GalaxyShapeFactorVarAdd(GalaxyShapeFactor):
     r"""
     :Constructors:
@@ -10230,12 +10333,14 @@ class GalaxyShapePop(NumCosmoMath.Model):
         data: GalaxyShapePopData,
         r: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> list[float]: ...
+    def do_eval_p_reduced(self, data: GalaxyShapePopData, r: float) -> float: ...
     def do_eval_p_rho2_g_series(
         self,
         data: GalaxyShapePopData,
         x_series: NumCosmoMath.LaurentSeriesTPS,
         out: NumCosmoMath.LaurentSeriesTPS,
     ) -> None: ...
+    def do_exponent_at_one(self) -> float: ...
     def do_exponent_at_origin(self) -> float: ...
     def do_gen(
         self, data: GalaxyShapePopData, rng: NumCosmoMath.RNG
@@ -10249,12 +10354,14 @@ class GalaxyShapePop(NumCosmoMath.Model):
         data: GalaxyShapePopData,
         r: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> list[float]: ...
+    def eval_p_reduced(self, data: GalaxyShapePopData, r: float) -> float: ...
     def eval_p_rho2_g_series(
         self,
         data: GalaxyShapePopData,
         x_series: NumCosmoMath.LaurentSeriesTPS,
         out: NumCosmoMath.LaurentSeriesTPS,
     ) -> None: ...
+    def exponent_at_one(self) -> float: ...
     def exponent_at_origin(self) -> float: ...
     def free(self) -> None: ...
     def gen(
@@ -10396,6 +10503,10 @@ class GalaxyShapePopClass(GObject.GPointer):
         list[float],
     ] = ...
     moment_2k: typing.Callable[[GalaxyShapePop, GalaxyShapePopData, int], float] = ...
+    exponent_at_one: typing.Callable[[GalaxyShapePop], float] = ...
+    eval_p_reduced: typing.Callable[
+        [GalaxyShapePop, GalaxyShapePopData, float], float
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyShapePopData(GObject.GBoxed):

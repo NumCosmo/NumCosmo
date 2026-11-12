@@ -32,6 +32,7 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import typer
+from matplotlib.collections import LineCollection
 from matplotlib.patches import Circle
 from rich.table import Table
 
@@ -485,6 +486,24 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
         ),
     ] = True
 
+    show_panels: Annotated[
+        bool,
+        typer.Option(
+            "--show-panels/--no-show-panels",
+            help=(
+                "Overlay the panels NcGalaxyShapeFactorSpectral accepted for "
+                "this galaxy at --g1/--g2, when the engine is Spectral. The "
+                "panels are rectangles in the polar coordinates of the "
+                "variable the class integrates in (chi_I for TRACE_DET, the "
+                "trace-determinant ellipticity of chi_I for TRACE), drawn "
+                "through the shear map in the chi_L plane; the ones "
+                "refined beyond the starting level are drawn brighter. For "
+                "|g| > 1 the integral is computed at g / |g|^2 and the panels "
+                "are mapped with that shear."
+            ),
+        ),
+    ] = True
+
     def __post_init__(self) -> None:
         """Build and plot the integrand heatmap for the requested galaxy."""
         super().__post_init__()
@@ -590,7 +609,9 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             )
             nodes = chi_l_mat.to_numpy()
             node_w = node_weights.to_numpy()
-        elif self.show_nodes:
+        elif self.show_nodes and not isinstance(
+            shape_factor, Nc.GalaxyShapeFactorSpectral
+        ):
             self.console.print(
                 "--show-nodes requested but the shape factor is "
                 f"{type(shape_factor).__name__}, not FixedQuad -- skipping."
@@ -600,6 +621,81 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
         else:
             nodes = None
             node_w = None
+
+        panel_lines: list[np.ndarray] = []
+        panel_refined: list[bool] = []
+
+        if self.show_panels and isinstance(shape_factor, Nc.GalaxyShapeFactorSpectral):
+            panels, ln_marginal = shape_factor.eval_panels(
+                pop,
+                data.pop_data,
+                self.g1,
+                self.g2,
+                eps_obs.real,
+                eps_obs.imag,
+                data.std_noise,
+            )
+
+            if panels is None:
+                self.console.print(
+                    "--show-panels: |g| = 1 has a closed form and no panels; "
+                    f"ln P = {ln_marginal:.15g}."
+                )
+            else:
+                panels_arr = panels.to_numpy()
+                abs_g2 = self.g1**2 + self.g2**2
+                g_map = Ncm.Complex.new()
+                # For |g| > 1 the class integrates at g / |g|^2.
+                g_map.set(
+                    self.g1 / max(abs_g2, 1.0),
+                    self.g2 / max(abs_g2, 1.0),
+                )
+                chi_i_pt = Ncm.Complex.new()
+                chi_l_pt = Ncm.Complex.new()
+                level_r_min = panels_arr[:, 4].min()
+                level_t_min = panels_arr[:, 5].min()
+                # For TRACE the panel radius r is the modulus of the
+                # trace-determinant ellipticity: |chi_I| = 2 r / (1 + r^2).
+                is_trace = ellip_conv == Nc.GalaxyWLObsEllipConv.TRACE
+                side = np.linspace(0.0, 1.0, 13)
+
+                for r_a, r_b, t_a, t_b, l_r, l_t, _val, _chg in panels_arr:
+                    # The outline of [r_a, r_b] x [t_a, t_b], counterclockwise.
+                    rs = np.concatenate(
+                        [
+                            np.full(side.size, r_a),
+                            r_a + (r_b - r_a) * side,
+                            np.full(side.size, r_b),
+                            r_b + (r_a - r_b) * side,
+                        ]
+                    )
+                    ts = np.concatenate(
+                        [
+                            t_a + (t_b - t_a) * side,
+                            np.full(side.size, t_b),
+                            t_b + (t_a - t_b) * side,
+                            np.full(side.size, t_a),
+                        ]
+                    )
+                    outline = np.empty((rs.size, 2))
+
+                    if is_trace:
+                        rs = 2.0 * rs / (1.0 + rs**2)
+
+                    for k, (r_k, t_k) in enumerate(zip(rs, ts)):
+                        chi_i_pt.set(r_k * math.cos(t_k), r_k * math.sin(t_k))
+                        apply_shear(g_map, chi_i_pt, chi_l_pt)
+                        outline[k, 0] = chi_l_pt.Re()
+                        outline[k, 1] = chi_l_pt.Im()
+
+                    panel_lines.append(outline)
+                    panel_refined.append(l_r > level_r_min or l_t > level_t_min)
+
+                self.console.print(
+                    f"Spectral panels: {len(panel_lines)} accepted, "
+                    f"{sum(panel_refined)} refined beyond the starting level; "
+                    f"ln P = {ln_marginal:.15g}."
+                )
 
         def _plot_panel(
             ax: plt.Axes,
@@ -657,6 +753,35 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
                     label=f"FixedQuad nodes (n={nodes.shape[0]})",
                 )
 
+            if panel_lines:
+                ax.add_collection(
+                    LineCollection(
+                        [
+                            line
+                            for line, refined in zip(panel_lines, panel_refined)
+                            if not refined
+                        ],
+                        colors="lightgray",
+                        linewidths=0.3,
+                        alpha=0.6,
+                    )
+                )
+                ax.add_collection(
+                    LineCollection(
+                        [
+                            line
+                            for line, refined in zip(panel_lines, panel_refined)
+                            if refined
+                        ],
+                        colors="white",
+                        linewidths=0.6,
+                        label=(
+                            f"Spectral panels (n={len(panel_lines)}, "
+                            f"{sum(panel_refined)} refined)"
+                        ),
+                    )
+                )
+
             ax.set_xlabel("Re(chi_L)")
             ax.set_ylabel("Im(chi_L)")
             ax.set_title(str(component))
@@ -686,7 +811,7 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             all_concat = np.concatenate(all_values)
             vmax = all_concat.max()
             # The true min is dominated by the noise term's far corners (a
-            # small std_noise falls off steeply, so most of the disc's area
+            # small std_noise falls off steeply, so most of the disk's area
             # sits far below the peak), washing out the informative region
             # under a shared scale. Clip to a fixed range below the peak
             # instead of a percentile: exp(-40) is already ~4e-18 of it.

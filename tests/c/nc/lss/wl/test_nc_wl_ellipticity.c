@@ -59,6 +59,7 @@ static void test_nc_wl_ellipticity_trace_kernel_prepare_matches_plain (void);
 static void test_nc_wl_ellipticity_trace_kernel_prep_boxed (void);
 static void test_nc_wl_ellipticity_zero_shear (gconstpointer pdata);
 static void test_nc_wl_ellipticity_shear_at_origin_round_trip (gconstpointer pdata);
+static void test_nc_wl_ellipticity_real_shear (void);
 static void test_nc_wl_ellipticity_introspectable_wrappers (void);
 static void test_nc_wl_ellipticity_frame_parity (void);
 
@@ -101,7 +102,7 @@ static const complex double test_ellips[] = {
   0.30 - 0.22 * I,
 };
 
-/* Disc points to re-center on, including near the |target|=1 boundary. */
+/* Disk points to re-center on, including near the |target|=1 boundary. */
 static const complex double test_targets[] = {
   0.00 + 0.00 * I,
   0.05 + 0.03 * I,
@@ -148,6 +149,8 @@ main (gint argc, gchar *argv[])
   g_test_add_data_func ("/nc/wl_ellipticity/trace_det/shear_at_origin_round_trip",
                         &test_conv_trace_det, &test_nc_wl_ellipticity_shear_at_origin_round_trip);
 
+  g_test_add_func ("/nc/wl_ellipticity/real_shear",
+                   &test_nc_wl_ellipticity_real_shear);
   g_test_add_func ("/nc/wl_ellipticity/introspectable_wrappers",
                    &test_nc_wl_ellipticity_introspectable_wrappers);
   g_test_add_func ("/nc/wl_ellipticity/frame_parity",
@@ -450,6 +453,48 @@ test_nc_wl_ellipticity_introspectable_wrappers (void)
     ncm_complex_free (cg);
     ncm_complex_free (ce);
     ncm_complex_free (cout);
+  }
+}
+
+/*
+ * The real-shear maps agree with the complex ones at g = t, and at a complex g of modulus
+ * t after the rotation f_g (chi) = (g / t) f_t (chi t / g).
+ */
+static void
+test_nc_wl_ellipticity_real_shear (void)
+{
+  const gdouble ts[]     = {0.0, 0.01, 0.3, 0.6, 0.9, 0.99};
+  const gdouble phases[] = {0.0, 0.7, 2.5, -1.9};
+  guint i, j, k;
+
+  for (i = 0; i < G_N_ELEMENTS (ts); i++)
+  {
+    const gdouble t = ts[i];
+
+    for (j = 0; j < G_N_ELEMENTS (test_ellips); j++)
+    {
+      const complex double chi = test_ellips[j];
+      gdouble f_x, f_y;
+
+      nc_wl_ellipticity_apply_shear_trace_real (t, creal (chi), cimag (chi), &f_x, &f_y);
+      test_assert_cmplx_close (f_x + I * f_y, nc_wl_ellipticity_apply_shear_trace (t, chi), 1.0e-14);
+
+      nc_wl_ellipticity_apply_shear_trace_det_real (t, creal (chi), cimag (chi), &f_x, &f_y);
+      test_assert_cmplx_close (f_x + I * f_y, nc_wl_ellipticity_apply_shear_trace_det (t, chi), 1.0e-14);
+
+      for (k = 0; k < G_N_ELEMENTS (phases); k++)
+      {
+        const complex double rot = cexp (I * phases[k]);
+        const complex double g   = t * rot;
+        const complex double chr = chi * conj (rot);
+
+        nc_wl_ellipticity_apply_shear_trace_real (t, creal (chr), cimag (chr), &f_x, &f_y);
+        test_assert_cmplx_close (rot * (f_x + I * f_y), nc_wl_ellipticity_apply_shear_trace (g, chi), 1.0e-14);
+
+        nc_wl_ellipticity_apply_shear_trace_det_real (t, creal (chr), cimag (chr), &f_x, &f_y);
+        test_assert_cmplx_close (rot * (f_x + I * f_y), nc_wl_ellipticity_apply_shear_trace_det (g, chi), 1.0e-14);
+      }
+    }
   }
 }
 
