@@ -38,8 +38,16 @@
 #include <glib-object.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_sf_gegenbauer.h>
+#include <fftw3.h>
 
 #define _assert_small(err, tol) g_assert_cmpfloat ((err), <, (tol))
+
+/*
+ * Bound of _transform_error() and _transform_fftw_error(), in units of the l1 norm of the
+ * coefficients. The largest values measured over both transform tests are 1.7e-16 and
+ * 1.8e-16.
+ */
+#define TRANSFORM_TOL (16.0 * GSL_DBL_EPSILON)
 
 typedef gdouble (*_Basis) (guint k, gdouble t);
 
@@ -47,6 +55,21 @@ typedef struct _Counted
 {
   guint calls;
 } Counted;
+
+/*
+ * Values of the transform test functions at the N nodes of [a, b], recorded by the
+ * callbacks: entry r at node j in vals[j * fdim + r], seen[j] set when node j is evaluated.
+ */
+typedef struct _NodeRecord
+{
+  gdouble a;
+  gdouble b;
+  guint N;
+  guint fdim;
+  guint r;
+  gdouble *vals;
+  gboolean *seen;
+} NodeRecord;
 
 typedef NcmMatrix *(*_OpMatrix) (guint N);
 
@@ -56,6 +79,7 @@ static void test_ncm_spectral_max_level (void);
 static void test_ncm_spectral_x_t (void);
 static void test_ncm_spectral_fixed_modes (void);
 static void test_ncm_spectral_fixed_exp (void);
+static void test_ncm_spectral_fixed_transform (void);
 static void test_ncm_spectral_adaptive (void);
 static void test_ncm_spectral_adaptive_full (void);
 static void test_ncm_spectral_adaptive_try (void);
@@ -66,6 +90,7 @@ static void test_ncm_spectral_invalid_order_subprocess (void);
 static void test_ncm_spectral_adaptive_fatal (void);
 static void test_ncm_spectral_adaptive_fatal_subprocess (void);
 static void test_ncm_spectral_batch (void);
+static void test_ncm_spectral_batch_transform (void);
 static void test_ncm_spectral_batch_small_entry (void);
 static void test_ncm_spectral_batch_cap (void);
 static void test_ncm_spectral_batch_peek (void);
@@ -95,6 +120,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/x_t", &test_ncm_spectral_x_t);
   g_test_add_func ("/ncm/spectral/fixed/modes", &test_ncm_spectral_fixed_modes);
   g_test_add_func ("/ncm/spectral/fixed/exp", &test_ncm_spectral_fixed_exp);
+  g_test_add_func ("/ncm/spectral/fixed/transform", &test_ncm_spectral_fixed_transform);
   g_test_add_func ("/ncm/spectral/adaptive", &test_ncm_spectral_adaptive);
   g_test_add_func ("/ncm/spectral/adaptive/full", &test_ncm_spectral_adaptive_full);
   g_test_add_func ("/ncm/spectral/adaptive/try", &test_ncm_spectral_adaptive_try);
@@ -102,6 +128,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral/adaptive/fatal", &test_ncm_spectral_adaptive_fatal);
   g_test_add_func ("/ncm/spectral/adaptive/fatal/subprocess", &test_ncm_spectral_adaptive_fatal_subprocess);
   g_test_add_func ("/ncm/spectral/batch", &test_ncm_spectral_batch);
+  g_test_add_func ("/ncm/spectral/batch/transform", &test_ncm_spectral_batch_transform);
   g_test_add_func ("/ncm/spectral/batch/small_entry", &test_ncm_spectral_batch_small_entry);
   g_test_add_func ("/ncm/spectral/batch/cap", &test_ncm_spectral_batch_cap);
   g_test_add_func ("/ncm/spectral/batch/peek", &test_ncm_spectral_batch_peek);
@@ -362,6 +389,153 @@ _d_row (gdouble * restrict row_data, glong k, glong offset, gdouble coeff)
   ncm_spectral_compute_d_row (row_data, offset, coeff);
 }
 
+/* Entry r of the transform test functions: e^(p x) cos (q x + r), p and q set by r */
+static gdouble
+_transform_entry (guint r, gdouble x)
+{
+  return exp ((0.3 + 0.07 * r) * x) * cos ((1.0 + 0.4 * r) * x + r);
+}
+
+static NodeRecord *
+_node_record_new (gdouble a, gdouble b, guint N, guint fdim)
+{
+  NodeRecord *record = g_new0 (NodeRecord, 1);
+
+  record->a    = a;
+  record->b    = b;
+  record->N    = N;
+  record->fdim = fdim;
+  record->vals = g_new0 (gdouble, N * fdim);
+  record->seen = g_new0 (gboolean, N);
+
+  return record;
+}
+
+static void
+_node_record_free (NodeRecord *record)
+{
+  g_free (record->vals);
+  g_free (record->seen);
+  g_free (record);
+}
+
+/* The node of record at x: j with x = (a + b) / 2 + (b - a) / 2 cos (j pi / (N - 1)) */
+static guint
+_node_record_index (NodeRecord *record, gdouble x)
+{
+  const gdouble s = (2.0 * x - (record->a + record->b)) / (record->b - record->a);
+
+  return (guint) lround (acos (CLAMP (s, -1.0, 1.0)) * (record->N - 1.0) / M_PI);
+}
+
+static gdouble
+_transform_scalar (gpointer user_data, gdouble x)
+{
+  NodeRecord *record = (NodeRecord *) user_data;
+  const guint j      = _node_record_index (record, x);
+  const gdouble f    = _transform_entry (record->r, x);
+
+  record->vals[j] = f;
+  record->seen[j] = TRUE;
+
+  return f;
+}
+
+static void
+_transform_batch (gpointer user_data, gdouble x, NcmVector *fval)
+{
+  NodeRecord *record = (NodeRecord *) user_data;
+  const guint j      = _node_record_index (record, x);
+  guint r;
+
+  for (r = 0; r < record->fdim; r++)
+  {
+    const gdouble f = _transform_entry (r, x);
+
+    record->vals[j * record->fdim + r] = f;
+    ncm_vector_set (fval, r, f);
+  }
+
+  record->seen[j] = TRUE;
+}
+
+/*
+ * Largest difference between the N coefficients c and the Chebyshev coefficients of entry r
+ * of record, computed from the recorded node values by the direct sum in long double,
+ * divided by the l1 norm of those coefficients.
+ */
+static gdouble
+_transform_error (NodeRecord *record, guint r, const gdouble *c)
+{
+  const guint N        = record->N;
+  const guint n        = N - 1;
+  const long double pi = acosl (-1.0L);
+  long double l1       = 0.0L;
+  long double diff     = 0.0L;
+  guint j, k;
+
+  for (j = 0; j < N; j++)
+    g_assert_true (record->seen[j]);
+
+  for (k = 0; k < N; k++)
+  {
+    long double sum = (long double) record->vals[r] +
+                      (((k % 2) == 0) ? 1.0L : -1.0L) * record->vals[n * record->fdim + r];
+
+    for (j = 1; j < n; j++)
+      sum += 2.0L * record->vals[j * record->fdim + r] * cosl (pi * ((j * k) % (2 * n)) / n);
+
+    sum *= (((k == 0) || (k == n)) ? 0.5L : 1.0L) / n;
+
+    l1  += fabsl (sum);
+    diff = fmaxl (diff, fabsl (c[k] - sum));
+  }
+
+  return (gdouble) (diff / l1);
+}
+
+/*
+ * Largest difference between the N coefficients c and those of entry r of record computed
+ * by an FFTW REDFT00 transform of the recorded node values, divided by the l1 norm of the
+ * FFTW coefficients.
+ */
+static gdouble
+_transform_fftw_error (NodeRecord *record, guint r, const gdouble *c)
+{
+  const guint N          = record->N;
+  const guint n          = N - 1;
+  const gdouble inv_2Nm1 = 1.0 / (2.0 * n);
+  gdouble *in            = fftw_malloc (sizeof (gdouble) * N);
+  gdouble *out           = fftw_malloc (sizeof (gdouble) * N);
+  gdouble l1             = 0.0;
+  gdouble diff           = 0.0;
+  fftw_plan plan;
+  guint j, k;
+
+  ncm_cfg_lock_plan_fftw ();
+  plan = fftw_plan_r2r_1d ((gint) N, in, out, FFTW_REDFT00, FFTW_ESTIMATE);
+  ncm_cfg_unlock_plan_fftw ();
+
+  for (j = 0; j < N; j++)
+    in[j] = record->vals[j * record->fdim + r];
+
+  fftw_execute (plan);
+
+  for (k = 0; k < N; k++)
+  {
+    const gdouble ck = out[k] * (((k == 0) || (k == n)) ? inv_2Nm1 : 2.0 * inv_2Nm1);
+
+    l1  += fabs (ck);
+    diff = MAX (diff, fabs (c[k] - ck));
+  }
+
+  ncm_cfg_fftw_plan_destroy (plan);
+  fftw_free (in);
+  fftw_free (out);
+
+  return diff / l1;
+}
+
 static void
 test_ncm_spectral_max_level (void)
 {
@@ -452,6 +626,47 @@ test_ncm_spectral_fixed_exp (void)
       err = MAX (err, fabs (g_array_index (coeffs, gdouble, k) - (k == 0 ? 1.0 : 2.0) * gsl_sf_bessel_In (k, 1.0)));
 
     _assert_small (err, (N == 24) ? 3.0e-15 : 1.0e-7);
+  }
+
+  g_array_unref (coeffs);
+  ncm_spectral_free (spectral);
+}
+
+/*
+ * The coefficients at a fixed order against the direct sum over the same node values and
+ * against FFTW: N = 2^l + 1 for l = 0 to 7 (generated kernels), 257 and four orders that
+ * are not levels (FFTW in the library).
+ */
+static void
+test_ncm_spectral_fixed_transform (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  GArray *coeffs        = NULL;
+  const guint Ns[]      = {2, 3, 5, 9, 17, 33, 65, 129, 257, 4, 6, 24, 100};
+  const gdouble a       = -0.5;
+  const gdouble b       = 1.5;
+  guint i, r;
+
+  for (i = 0; i < G_N_ELEMENTS (Ns); i++)
+  {
+    for (r = 0; r < 4; r++)
+    {
+      NodeRecord *record = _node_record_new (a, b, Ns[i], 1);
+      gdouble err;
+
+      record->r = 11 * r;
+      ncm_spectral_compute_chebyshev_coeffs (spectral, _transform_scalar, a, b, Ns[i], &coeffs, record);
+      g_assert_cmpuint (coeffs->len, ==, Ns[i]);
+
+      record->r = 0;
+      err       = _transform_error (record, 0, &g_array_index (coeffs, gdouble, 0));
+      _assert_small (err, TRANSFORM_TOL);
+
+      err = _transform_fftw_error (record, 0, &g_array_index (coeffs, gdouble, 0));
+      _assert_small (err, TRANSFORM_TOL);
+
+      _node_record_free (record);
+    }
   }
 
   g_array_unref (coeffs);
@@ -666,6 +881,56 @@ test_ncm_spectral_batch (void)
 
   ncm_matrix_free (coeffs);
   g_array_unref (fixed);
+  ncm_spectral_free (spectral);
+}
+
+/*
+ * The coefficients of a batch at level l against the direct sum over the same node values
+ * and against FFTW, for 1, 2, 9 and 33 entries and l = 1 to 8: l <= 7 uses the generated
+ * kernels, l = 8 FFTW in the library.
+ * The expansion starts at level l - 1 with a tolerance that every function passes, so it
+ * stops at level l.
+ */
+static void
+test_ncm_spectral_batch_transform (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmMatrix *coeffs     = NULL;
+  const guint fdims[]   = {1, 2, 9, 33};
+  const gdouble a       = -0.5;
+  const gdouble b       = 1.5;
+  guint i, l, r;
+
+  for (i = 0; i < G_N_ELEMENTS (fdims); i++)
+  {
+    for (l = 1; l <= 8; l++)
+    {
+      const guint fdim   = fdims[i];
+      const guint N      = (1 << l) + 1;
+      NodeRecord *record = _node_record_new (a, b, N, fdim);
+      guint level;
+
+      level = ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (spectral, _transform_batch, fdim, a, b,
+                                                                        l - 1, l, 1.0e10, 0.0, TRUE, NULL, NULL,
+                                                                        NULL, &coeffs, record);
+      g_assert_cmpuint (level, ==, l);
+      g_assert_cmpuint (ncm_matrix_nrows (coeffs), ==, fdim);
+      g_assert_cmpuint (ncm_matrix_ncols (coeffs), ==, N);
+
+      for (r = 0; r < fdim; r++)
+      {
+        const gdouble err      = _transform_error (record, r, ncm_matrix_ptr (coeffs, r, 0));
+        const gdouble err_fftw = _transform_fftw_error (record, r, ncm_matrix_ptr (coeffs, r, 0));
+
+        _assert_small (err, TRANSFORM_TOL);
+        _assert_small (err_fftw, TRANSFORM_TOL);
+      }
+
+      _node_record_free (record);
+    }
+  }
+
+  ncm_matrix_free (coeffs);
   ncm_spectral_free (spectral);
 }
 

@@ -46,7 +46,9 @@ c^{N-1} = \frac{\tilde c^{N-1}}{2(N-1)},
 c^k = \frac{\tilde c^k}{N-1}\;\;(0 < k < N-1),
 $$
 the endpoint terms of the DCT-I on the Lobatto grid being halved. This fixed-order transform is
-[[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]].
+[[numcosmo-math|ncm_spectral_compute_chebyshev_coeffs]]. For $N = 2^r + 1$ with $r \le 7$ the
+same coefficients are computed without FFTW
+([Transform on the Nested Grids](#transform-on-the-nested-grids)).
 
 ## Adaptive Refinement
 
@@ -101,6 +103,54 @@ the relative term applies. A caller sets it when $f$ on $[a,b]$ is negligible ag
 larger quantity to which $f$ contributes. Without it, the refinement reaches full
 relative accuracy on a term that does not change the result, and for a sharply varying
 $f$ it can reach `max-level`.
+
+### Transform on the Nested Grids
+
+For a level $r \le 7$ the coefficients $c^k_{(r)}$ are computed by a function of
+straight-line code, one statement per arithmetic operation, with the normalization included.
+The file `ncm_spectral_cheb_private.h` has one such function per level. The script
+`tools/ncm_spectral_cheb_gen.py` writes that file, and the build does not run it. A level
+above 7 and an $N$ that is not $2^r + 1$ use FFTW as in
+[Computing the Coefficients](#computing-the-coefficients).
+
+The functions use the nesting of the grids. Let $n \equiv 2^r$. The even nodes of level $r$
+are the nodes of level $r - 1$, so their values give $c^k_{(r-1)}$. The odd nodes enter
+through
+$$
+d^k \equiv \frac{2}{n} \sum_{i=0}^{n/2-1} f(x_{2i+1})
+\cos\!\left(\frac{(2i+1)k\pi}{n}\right),
+\qquad 0 < k < \frac{n}{2},
+$$
+and through $d^0$, the same sum with the factor $1/n$. The coefficients of level $r$ are
+$$
+c^k_{(r)} = \tfrac{1}{2} c^k_{(r-1)} + d^k,
+\qquad
+c^{n-k}_{(r)} = \tfrac{1}{2} c^k_{(r-1)} - d^k,
+\qquad 0 \le k < \frac{n}{2},
+$$
+and $c^{n/2}_{(r)} = c^{n/2}_{(r-1)}$.
+
+The sum over the odd nodes is a type-II discrete cosine transform of $M = n/2$ values
+$v_i$,
+$$
+D_k \equiv \sum_{i=0}^{M-1} v_i \cos\!\left(\frac{(2i+1)k\pi}{2M}\right),
+\qquad 0 \le k < M,
+$$
+which is computed by halving $M$. The outputs of even index, $D_{2k}$, are the type-II
+transform of the $M/2$ sums $v_i + v_{M-1-i}$. The outputs of odd index follow from the
+type-II transform $Z_k$ of the $M/2$ values
+$2\cos\!\left((2i+1)\pi/(2M)\right)(v_i - v_{M-1-i})$ by
+$$
+D_1 = \tfrac{1}{2} Z_0,
+\qquad
+D_{2k+1} = Z_k - D_{2k-1},
+\qquad 0 < k < \frac{M}{2}.
+$$
+Every normalization factor is a power of two. The generator multiplies it into the cosine
+factors, so no operation is spent on the normalization of the interior coefficients.
+
+Each function transforms a batch of columns in one loop, which is how the batch expansions
+below use it.
 
 ### When the tolerance is not met
 

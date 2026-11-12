@@ -62,6 +62,7 @@
 #include <math.h>
 #ifndef NUMCOSMO_GIR_SCAN
 #include <fftw3.h>
+#include "ncm/algebra/ncm_spectral_cheb_private.h"
 #endif /* NUMCOSMO_GIR_SCAN */
 
 /* Largest max-level for which 2^max-level + 1 fits a guint */
@@ -81,12 +82,12 @@ struct _NcmSpectral
   /* Adaptive refinement fields */
   guint max_level;      /* Highest level allowed: N_max = 2^max_level + 1 */
   gdouble *f_vals;      /* Function values at the nodes, f_vals_len doubles, grown on demand */
-  gdouble *coeffs_work; /* DCT output, f_vals_len doubles */
+  gdouble *coeffs_work; /* Coefficients of f_vals, f_vals_len doubles */
   gsize f_vals_len;
   GArray *coeffs;         /* Scratch of the scalar adaptive expansion */
   GPtrArray *cos_arrays;  /* Chebyshev-Lobatto cosines per level */
   GHashTable *cos_tables; /* N -> cosines, for an N that is not a level */
-  GHashTable *plans;      /* (N, howmany) -> DCT-I plan, executed on the buffers above */
+  GHashTable *plans;      /* (N, howmany) -> DCT-I plan, for an N without a generated kernel */
 
   /* Scratch for the interval rebase: three coefficient rows */
   gdouble *rebase_work;
@@ -95,7 +96,7 @@ struct _NcmSpectral
   /* Batch expansion of the fdim entries of F, stored node-major, f_vals[j * fdim + r] */
   guint batch_fdim;
   gdouble *batch_f_vals;      /* batch_len doubles, grown on demand */
-  gdouble *batch_coeffs_work; /* batch_len doubles */
+  gdouble *batch_coeffs_work; /* Coefficients of batch_f_vals, batch_len doubles */
   gsize batch_len;
   NcmMatrix *batch_c_prev; /* Scratch of the adaptive expansion, grown on demand */
   NcmMatrix *batch_c_curr;
@@ -446,7 +447,8 @@ ncm_spectral_get_max_level (NcmSpectral *spectral)
 }
 
 static void _ncm_spectral_prepare_level (NcmSpectral *spectral, guint level);
-static void _ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N);
+static void _ncm_spectral_transform (NcmSpectral *spectral, guint N, guint howmany, const gdouble *vals, gdouble *coeffs);
+static void _ncm_spectral_coeffs_from_nodes (NcmSpectral *spectral, GArray *coeffs, guint N);
 
 /* Plans are cached by (N, fdim), so a change of fdim costs nothing here */
 static void
@@ -559,22 +561,22 @@ _ncm_spectral_batch_refine_to_level (NcmSpectral *spectral, NcmSpectralFBatch F,
   }
 }
 
+/*
+ * The Chebyshev coefficients of the fdim entries of F from their values at the N nodes in
+ * batch_f_vals, into the first N columns of coeffs, one row per entry.
+ */
 static void
-_ncm_spectral_batch_normalize_coeffs (NcmSpectral *spectral, NcmMatrix *coeffs, guint N)
+_ncm_spectral_batch_coeffs_from_nodes (NcmSpectral *spectral, NcmMatrix *coeffs, guint N)
 {
-  const guint fdim       = spectral->batch_fdim;
-  const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
-  const gdouble inv_Nm1  = 2.0 * inv_2Nm1;
+  const guint fdim = spectral->batch_fdim;
   guint i, r;
+
+  _ncm_spectral_transform (spectral, N, fdim, spectral->batch_f_vals, spectral->batch_coeffs_work);
 
   for (r = 0; r < fdim; r++)
   {
-    ncm_matrix_set (coeffs, r, 0, spectral->batch_coeffs_work[r] * inv_2Nm1);
-    ncm_matrix_set (coeffs, r, N - 1,
-                    spectral->batch_coeffs_work[(N - 1) * fdim + r] * inv_2Nm1);
-
-    for (i = 1; i < N - 1; i++)
-      ncm_matrix_set (coeffs, r, i, spectral->batch_coeffs_work[i * fdim + r] * inv_Nm1);
+    for (i = 0; i < N; i++)
+      ncm_matrix_set (coeffs, r, i, spectral->batch_coeffs_work[i * fdim + r]);
   }
 }
 
@@ -774,9 +776,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
   {
     const guint N = (1 << level) + 1;
 
-    fftw_execute_r2r (_ncm_spectral_get_plan (spectral, N, fdim),
-                      spectral->batch_f_vals, spectral->batch_coeffs_work);
-    _ncm_spectral_batch_normalize_coeffs (spectral, c_previous, N);
+    _ncm_spectral_batch_coeffs_from_nodes (spectral, c_previous, N);
   }
 
   while (level < level_cap)
@@ -795,9 +795,7 @@ ncm_spectral_compute_chebyshev_coeffs_batch_adaptive_cap (NcmSpectral *spectral,
     level++;
     N = (1 << level) + 1;
 
-    fftw_execute_r2r (_ncm_spectral_get_plan (spectral, N, fdim),
-                      spectral->batch_f_vals, spectral->batch_coeffs_work);
-    _ncm_spectral_batch_normalize_coeffs (spectral, c_current, N);
+    _ncm_spectral_batch_coeffs_from_nodes (spectral, c_current, N);
 
     /* Compared over the coefficients of the coarser level */
     if (_ncm_spectral_batch_check_convergence (spectral, c_current, c_previous, N_prev, N,
@@ -945,8 +943,7 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
       spectral->f_vals[i] = F (user_data, mid + half_h * cos_vals[i]);
   }
 
-  fftw_execute_r2r (_ncm_spectral_get_plan (spectral, N, 1), spectral->f_vals, spectral->coeffs_work);
-  _ncm_spectral_normalize_coeffs (spectral->coeffs_work, *coeffs, N);
+  _ncm_spectral_coeffs_from_nodes (spectral, *coeffs, N);
 }
 
 /* The Chebyshev-Lobatto cosines cos (j pi / 2^level) of the level, created on first use */
@@ -1036,20 +1033,63 @@ _ncm_spectral_refine_to_level (NcmSpectral *spectral, NcmSpectralF F,
   }
 }
 
+/*
+ * The Chebyshev coefficients of the function whose values at the N nodes are in f_vals,
+ * into the N entries of coeffs.
+ */
 static void
-_ncm_spectral_normalize_coeffs (gdouble *coeffs_work, GArray *coeffs, guint N)
+_ncm_spectral_coeffs_from_nodes (NcmSpectral *spectral, GArray *coeffs, guint N)
 {
-  const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
-  const gdouble inv_Nm1  = 2.0 * inv_2Nm1;
-  gdouble *coeffs_data   = (gdouble *) coeffs->data;
-  guint i;
+  _ncm_spectral_transform (spectral, N, 1, spectral->f_vals, spectral->coeffs_work);
+  memcpy (coeffs->data, spectral->coeffs_work, sizeof (gdouble) * N);
+}
 
-  coeffs_data[0]     = coeffs_work[0] * inv_2Nm1;
-  coeffs_data[N - 1] = coeffs_work[N - 1] * inv_2Nm1;
+/*
+ * The Chebyshev coefficients of howmany functions from their values at the N
+ * Chebyshev-Lobatto nodes. The array vals holds N rows of howmany columns, row j at
+ * vals + j howmany with the values at the node cos (j pi / (N - 1)), and coeffs receives
+ * the coefficients c^k of f = sum_k c^k T_k in the same layout, row k at coeffs + k howmany.
+ * For N = 2^l + 1 with l <= NCM_SPECTRAL_CHEB_MAX_LEVEL the generated kernel of level l
+ * computes them and no field of spectral is used. For any other N an FFTW REDFT00 plan of
+ * spectral does, which requires vals and coeffs allocated by fftw_malloc. The two arrays
+ * must not overlap.
+ *
+ * Known limit of the kernels: with howmany a multiple of 8 the rows are howmany / 8 cache
+ * lines apart, and N gcd (howmany / 8, 64) / 64 rows of each array use the same set of a
+ * 48 KiB L1 cache. Above its 12 ways the rows evict each other and the kernel is 1.6 to 4
+ * times slower: howmany a multiple of 64 at N = 129, of 128 at N = 65. Such sizes need a row
+ * stride that is not a multiple of 8.
+ */
+static void
+_ncm_spectral_transform (NcmSpectral *spectral, guint N, guint howmany, const gdouble *vals, gdouble *coeffs)
+{
+  const guint n = N - 1;
 
-  for (i = 1; i < N - 1; i++)
+  if (((n & (n - 1)) == 0) && (n <= (1u << NCM_SPECTRAL_CHEB_MAX_LEVEL)))
   {
-    coeffs_data[i] = coeffs_work[i] * inv_Nm1;
+    const NcmSpectralChebKernel kernel = _ncm_spectral_cheb_kernels[g_bit_nth_lsf (n, -1)];
+
+    kernel (vals, coeffs, howmany);
+  }
+  else
+  {
+    const gdouble inv_2Nm1 = 1.0 / (2.0 * (N - 1.0));
+    const gdouble inv_Nm1  = 2.0 * inv_2Nm1;
+    guint i, r;
+
+    fftw_execute_r2r (_ncm_spectral_get_plan (spectral, N, howmany), (gdouble *) vals, coeffs);
+
+    for (r = 0; r < howmany; r++)
+    {
+      coeffs[r]               *= inv_2Nm1;
+      coeffs[n * howmany + r] *= inv_2Nm1;
+    }
+
+    for (i = 1; i < n; i++)
+    {
+      for (r = 0; r < howmany; r++)
+        coeffs[i * howmany + r] *= inv_Nm1;
+    }
   }
 }
 
@@ -1109,14 +1149,12 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
   c_previous = spectral->coeffs;
   c_current  = *coeffs;
 
-  /* Transform using N and store in coeffs_work */
+  /* Coefficients at level_min */
   {
     const guint N = (1 << level) + 1;
 
-    fftw_execute_r2r (_ncm_spectral_get_plan (spectral, N, 1), spectral->f_vals, spectral->coeffs_work);
-
     g_array_set_size (c_previous, N);
-    _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_previous, N);
+    _ncm_spectral_coeffs_from_nodes (spectral, c_previous, N);
   }
 
   while (level < level_cap)
@@ -1128,10 +1166,8 @@ _ncm_spectral_compute_chebyshev_coeffs_adaptive_internal (NcmSpectral *spectral,
     {
       const guint N = (1 << level) + 1;
 
-      fftw_execute_r2r (_ncm_spectral_get_plan (spectral, N, 1), spectral->f_vals, spectral->coeffs_work);
-
       g_array_set_size (c_current, N);
-      _ncm_spectral_normalize_coeffs (spectral->coeffs_work, c_current, N);
+      _ncm_spectral_coeffs_from_nodes (spectral, c_current, N);
     }
 
     if (_ncm_spectral_check_convergence (spectral, c_current, c_previous, tol, abstol))
