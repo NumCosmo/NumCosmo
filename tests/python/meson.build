@@ -73,7 +73,16 @@ if enable_gir and python_for_tests.found()
         # replicated 12 or 24 times, which exhausted a 30 GB machine. Grouping
         # those files costs them their internal parallelism and nothing else.
         # Ungrouped tests behave exactly as under load.
-        pytest_parallel_args = pytest_base_args + ['-n', 'auto', '--dist', 'loadgroup']
+        # --max-worker-restart 0: a crashed worker fails the lane at once. xdist 3.8.0
+        # under loadgroup stops making progress after it replaces a crashed worker.
+        pytest_parallel_args = pytest_base_args + [
+            '-n',
+            'auto',
+            '--dist',
+            'loadgroup',
+            '--max-worker-restart',
+            '0',
+        ]
     else
         pytest_parallel_args = pytest_base_args
     endif
