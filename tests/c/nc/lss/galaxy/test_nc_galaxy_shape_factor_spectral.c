@@ -45,7 +45,7 @@
 
 /*
  * Largest |ln P - ln P_Arb| accepted at the default reltol (1e-5). The largest difference
- * measured is 6.9e-9, on the 20,055 certified points of the certification grid with
+ * measured is 6.9e-9, on the 20,062 certified points of the certification grid with
  * (|eps_obs| - 1) / std_noise <= 8.
  */
 #define TEST_SPECTRAL_TOL (1.0e-7)

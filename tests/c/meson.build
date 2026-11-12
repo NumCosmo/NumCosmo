@@ -837,6 +837,11 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral.c'],
     },
     {
+        'name': 'nc_galaxy_shape_factor_spectral_cert',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral_cert.c'],
+        'suite': ['c-acceptance'],
+    },
+    {
         'name': 'nc_galaxy_shape_factor_quad',
         'sources': [
             'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad.c',

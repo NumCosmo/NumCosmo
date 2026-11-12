@@ -363,7 +363,7 @@ unless a galaxy is evaluated at more shears per step than the build computes.
 ## Measured Accuracy
 
 The reference is the Arb tool `tests/tools/nc_galaxy_shape_marginal_arb.c`, which
-certifies $\ln P$ with ball arithmetic. On its 20,055 certified points with
+certifies $\ln P$ with ball arithmetic. On its 20,062 certified points with
 $(|\epsilon_\mathrm{obs}| - 1) / \sigma_\mathrm{noise} \le 8$ and $|g| \ne 1$ (truncated
 Gaussians of width 0.05 to 0.4, seven Beta populations, both conventions,
 $\sigma_\mathrm{noise}$ from 0.005 to 1, $|g|$ from 0 to 3, real $g$), the largest
@@ -378,9 +378,13 @@ $|\ln P - \ln P_\mathrm{Arb}|$ per convention is:
 No point failed. The tolerance bounds the change of the interpolant between grids, which
 is why the differences are below it. The points with
 $(|\epsilon_\mathrm{obs}| - 1) / \sigma_\mathrm{noise} > 8$ are observations more than
-eight noise standard deviations outside the disk; there the class was checked to return a
-finite value. The unit test compares 23 certified points, six of them at a complex $g$
-not aligned with $\epsilon_\mathrm{obs}$, within $10^{-7}$.
+eight noise standard deviations outside the disk; at the 3,057 certified ones the largest
+difference at the default `reltol` is $2.5 \times 10^{-10}$, and at the 2,904 certified
+points with $|g| = 1$ it is $2.9 \times 10^{-11}$. The unit test compares 23 certified
+points, six of them at a complex $g$ not aligned with $\epsilon_\mathrm{obs}$, within
+$10^{-7}$. The acceptance test `test_nc_galaxy_shape_factor_spectral_cert.c` compares all
+26,023 certified points within $10^{-7}$; their table is a file of the data-file release,
+written by `tests/tools/make_shape_marginal_arb_table.py`.
 
 Next to $|g| = 1$ the reference is the same tool in its coordinates `--coords=uv`, for two
 galaxies of the HSC catalog HWL16a-002 with the Beta population fitted to it,
