@@ -222,7 +222,7 @@ peak placed wrongly changes the number of evaluations of $G$.
 
 ## Result and Errors
 
-The class computes
+For $1 - t \ge 10^{-5}$ the class computes
 $$
 \ln P = \ln I - \frac{d_0}{2 \sigma_\mathrm{noise}^2} ,
 $$
@@ -230,7 +230,90 @@ with $I$ the integral of Eq. (5) from [[numcosmo-math|ncm_spectral_polar_integra
 the relative tolerance `reltol` and absolute tolerance zero.
 [[numcosmo|nc_galaxy_shape_factor_eval_marginal]] returns $e^{\ln P}$. An integral that
 fails with `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, or a non-finite $\ln P$, aborts with the
-population, $\sigma_\mathrm{noise}$, $g$ and $\epsilon_\mathrm{obs}$ in the message.
+population, $\sigma_\mathrm{noise}$, $g$ and $\epsilon_\mathrm{obs}$ in the message. For
+$1 - t < 10^{-5}$ the value is the one of the next section.
+
+## Shears Next to $|g| = 1$
+
+Let $\delta \equiv 1 - t$ and $\delta_s \equiv 10^{-5}$. By
+[The Variable of Integration](#the-variable-of-integration) the integrand of Eq. (5)
+varies on the scale $\delta$ around $\zeta = -1$, and a radius in double precision carries
+$1 - r$ with an absolute error of $10^{-16}$. For $\delta < \delta_s$ the integral is not
+computed at $t$. The marginal is written as a sum of two terms, $P = A (t) + B (t)$, and
+the integrals are computed at $t_s \equiv 1 - \delta_s$.
+
+### The second-order term $A$
+
+Let $w \equiv m_t (\zeta)$ be the trace--determinant ellipticity after the shear, and
+$\Phi (w) \equiv N_2 (\epsilon - C (w); \sigma_\mathrm{noise}^2)$ the noise factor, with $C$
+the identity for `TRACE_DET` and $C = T$ for `TRACE`. The function
+$m_t (\zeta) - t = (1 - t^2) \, \zeta / (1 + t \zeta)$ is holomorphic in the disc and zero
+at $\zeta = 0$, so for an isotropic population $w$ has the mean $t$ and the same variance
+$s (t)$ in its two components, with no correlation:
+$$
+s (t) \equiv \frac{1}{2} \big\langle |w - t|^2 \big\rangle
+= \frac{(1 - t^2)^2}{2} \int_0^1 r^{a} (1 - r)^{b} \, \hat{P}_\zeta (r) \,
+\frac{r^2}{1 - t^2 r^2} \, \mathrm{d}r .
+\tag{6}
+$$
+The expansion of $\Phi$ around $w = t$ to second order, averaged over the population, is
+$$
+A (t) \equiv \Phi (t) + \frac{s (t)}{2} \, \nabla^2 \Phi (t) .
+\tag{7}
+$$
+With $D (w) \equiv |\epsilon - C (w)|^2$,
+$\nabla^2 \Phi / \Phi = -\nabla^2 D / 2 \sigma_\mathrm{noise}^2 + |\nabla D|^2 / 4 \sigma_\mathrm{noise}^4$.
+At $w = t$:
+
+- `TRACE_DET`: $D = |\epsilon - t|^2$, $|\nabla D|^2 = 4 D$ and $\nabla^2 D = 4$.
+- `TRACE`: with $q \equiv 1 + t^2$, $\Delta_1 \equiv \mathrm{Re} \, \epsilon - 2 t / q$ and
+  $\Delta_2 \equiv \mathrm{Im} \, \epsilon$, $D = \Delta_1^2 + \Delta_2^2$,
+  $\nabla D = \big( -4 \Delta_1 (1 - t^2) / q^2 , \, -4 \Delta_2 / q \big)$ and
+  $\nabla^2 D = 8 (1 - t^2)^2 / q^4 + 8 / q^2 + 32 \, t \, \Delta_1 / q^3$.
+
+The integral of Eq. (6) is computed by [[numcosmo-math|ncm_spectral_polar_integrate]] in
+$v \equiv 1 - r$, in which $1 - t^2 r^2 = (\delta + t v) (1 + t r)$ is formed without a
+difference of numbers close to 1, with the radial edges of
+[[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at $v = 0$ of half width
+$\delta$. $A$ is accurate when the next order is small, which requires
+$\delta \, |\epsilon - g| \ll \sigma_\mathrm{noise}^2$.
+
+### The term $B$ of the neighborhood of $\zeta = -1$
+
+$B \equiv P - A$ is what the expansion of Eq. (7) does not contain: the neighborhood of
+$\zeta = -1$ of size $\delta$, whose image by $m_t$ is the whole disc and not a
+neighborhood of $t$. In the variable $z \equiv (1 + w) / (1 - w)$ the map $m_t$ is the
+multiplication by
+$$
+\lambda \equiv \frac{1 + t}{1 - t} ,
+$$
+and the expansion of the density of $\zeta$ around $\zeta = -1$ gives
+$$
+B (t) = \lambda^{-(b + 2)} \left[ k_0 + \frac{k_1}{\lambda} + O (\lambda^{-2}) \right] ,
+\tag{8}
+$$
+with $k_0$ and $k_1$ functions of the galaxy and of the angle between $g$ and
+$\epsilon_\mathrm{obs}$ that do not depend on $t$. $B$ can be negative. When
+$\epsilon_\mathrm{obs}$ is many $\sigma_\mathrm{noise}$ from $g$, $\Phi (t)$ is small and
+$B$ is the larger term of $P$.
+
+- `TRACE`: $k_1 = 0$. The terms of first order of the density of Eq. (4) around
+  $\zeta = -1$ have the coefficient
+  $-2 (\alpha_o - 1) - 2 (b + 2) + (b - 1) + 2 (\alpha_o + \alpha_1 + 2)$, which is zero
+  for $b = 2 \alpha_1 + 1$, and $\hat{P}_\mathrm{pop} (u (r))$ has no term of first order
+  in $1 - r$. The class sets $k_0 = \lambda_s^{b + 2} \, [P (t_s) - A (t_s)]$, with
+  $\lambda_s$ the value of $\lambda$ at $t_s$.
+- `TRACE_DET`: the same coefficient is $-(2 \alpha_o + b + 2)$, and $k_1 \ne 0$. The class
+  sets $k_0$ and $k_1$ from $P - A$ at $t_s$ and at $1 - 10 \delta_s$.
+
+The result is
+$$
+\ln P = \ln P (t_s) + \ln \left[ \frac{A (t)}{P (t_s)} +
+\lambda^{-(b + 2)} \, \frac{k_0 + k_1 / \lambda}{P (t_s)} \right] ,
+$$
+with every term divided by $P (t_s)$ so that none leaves the double range. $1 - |g|^2$ is
+computed with the rounding errors of the two squares removed, and $\delta$ and $\lambda$
+from it. A bracket that is not positive aborts as a non-finite $\ln P$.
 
 ## Measured Accuracy
 
@@ -254,6 +337,24 @@ eight noise standard deviations outside the disc; there the class was checked to
 finite value. The unit test compares 23 certified points, six of them at a complex $g$
 not aligned with $\epsilon_\mathrm{obs}$, within $10^{-7}$.
 
+Next to $|g| = 1$ the reference is the same tool in its coordinates `--coords=uv`, for two
+galaxies of the HSC catalog HWL16a-002 with the Beta population fitted to it,
+$(\alpha, \beta) = (1.571, 1.654)$. The differences $\ln P - \ln P_\mathrm{Arb}$ at the
+default `reltol` are:
+
+| $\sigma_\mathrm{noise}$ | $\lvert \epsilon_\mathrm{obs} - g \rvert / \sigma_\mathrm{noise}$ | $1 - \lvert g \rvert$ | `TRACE` | `TRACE_DET` |
+|---|---|---|---|---|
+| 0.0588 | 6.6 | $10^{-5}$ | $1.9 \times 10^{-13}$ | $-5.1 \times 10^{-12}$ |
+| 0.0588 | 6.6 | $10^{-7}$ | $-3.6 \times 10^{-15}$ | $-2.1 \times 10^{-14}$ |
+| 0.0403 | 22.3 | $10^{-6}$ | $-1.7 \times 10^{-10}$ | |
+| 0.0403 | 22.3 | $10^{-8}$ | $-1.7 \times 10^{-10}$ | $-1.9 \times 10^{-9}$ |
+
+In the first two rows $\Phi (t)$ is the larger term, and in the last two $B$ is. On 32
+galaxies, 20 of that catalog and of HWL16a-064 and 12 with $\sigma_\mathrm{noise}$ of 0.01
+and 0.03 and $\epsilon_\mathrm{obs}$ at 1 to 5 $\sigma_\mathrm{noise}$ from $g$, the class
+returns a value at $|g| = 1 \pm 10^{-k}$ for $k = 6, \dots, 15$, in both conventions. The
+values next to $|g| = 1$ were not measured for $\sigma_\mathrm{noise}$ below 0.01.
+
 ## Symbols and the Code
 
 | symbol | in `nc_galaxy_shape_factor_spectral.c` |
@@ -268,6 +369,10 @@ not aligned with $\epsilon_\mathrm{obs}$, within $10^{-7}$.
 | $1 / (2 \pi \sigma_\mathrm{noise}^2) / (2 \pi)$ | `norm` |
 | $\theta_0$, $r_*$, $J_1$, $J_2$ | `theta_0`, `r_star`, `J_1`, `J_2` of the seed |
 | $h (r)$ | `_nc_galaxy_shape_factor_spectral_h` |
+| $\delta_s$ | `NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA` |
+| $\delta$, $1 / \lambda$ | `delta`, `lambda_inv` |
+| $\ln A (t)$ | `_nc_galaxy_shape_factor_spectral_second_order_ln` |
+| $b + 2$, $k_0$, $k_1$, divided by $P (t_s)$ | `exponent`, `k_0`, `k_1` |
 | $G (r, \theta)$ | the two kernel functions, one per convention |
 
 ## API Reference

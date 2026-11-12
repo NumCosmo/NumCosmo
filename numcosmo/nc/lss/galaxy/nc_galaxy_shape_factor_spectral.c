@@ -51,6 +51,14 @@
  * $|g| > 1$ the integral equals the one at $g / |g|^2$, which is used. The frame is then
  * rotated by the phase of $g$, so that the shear is the real number $t = |g|$.
  *
+ * For $1 - t < 10^{-5}$ the integral is not computed at $t$, where the integrand varies
+ * on the scale $1 - t$ next to the unit circle. The value is the sum of the marginal to
+ * second order in the distance of the sheared ellipticity to its mean and of a term
+ * proportional to a power of $(1 - t) / (1 + t)$, whose coefficients are set by the
+ * integral at $1 - t = 10^{-5}$, and for %NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET also at
+ * $1 - t = 10^{-4}$. It assumes $10^{-5} |\epsilon_\mathrm{obs} - g| \ll
+ * \sigma_\mathrm{noise}^2$.
+ *
  * The panels are those of ncm_spectral_polar_peak_edges() for a peak located on the ray
  * through the preimage of $\epsilon_\mathrm{obs}$, at the radius that maximizes the
  * logarithm of the density of $r$ minus
@@ -91,6 +99,13 @@
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_END_DECADES (11)
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_OFFSETS (10)
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_EXTRA (2 * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_END_DECADES + 4 * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_OFFSETS)
+
+/*
+ * Below this distance of min (|g|, 1 / |g|) to 1 the integral is not computed at the shear;
+ * the value is formed from integrals at this distance. The errors measured against the Arb
+ * reference hold for this value.
+ */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA (1.0e-5)
 
 /* Steps of the golden-section search of the maximum of the scan */
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_GOLDEN_STEPS (40)
@@ -381,12 +396,18 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
   return _nc_galaxy_shape_factor_spectral_eval_ln (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf), pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
 }
 
-static void _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, NcGalaxyShapeFactorSpectralSeed *seed);
+static gdouble _nc_galaxy_shape_factor_spectral_one_minus_abs2 (const gdouble g_1, const gdouble g_2);
+static gdouble _nc_galaxy_shape_factor_spectral_integrate_ln (NcGalaxyShapeFactorSpectralPrivate * const self, NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, NcGalaxyShapeFactorSpectralWork *work, NcmMatrix **panels, GError **error);
+static gdouble _nc_galaxy_shape_factor_spectral_near_unit_ln (NcGalaxyShapeFactorSpectralPrivate * const self, NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, const gdouble delta, const gdouble lambda_inv, NcGalaxyShapeFactorSpectralWork *work, NcmMatrix **panels, GError **error);
 
 /*
- * ln P (eps_obs | g) for the population pop with resolved data pop_data. With panels not
- * NULL, also the accepted panels of ncm_spectral_polar_integrate(), with their angles in
- * the frame of g and eps_obs, or NULL at |g| = 1, where nothing is integrated.
+ * ln P (eps_obs | g) for the population pop with resolved data pop_data: the closed form
+ * at |g| = 1, the integral at t = min (|g|, 1 / |g|) for
+ * 1 - t >= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA, and below it the second-order
+ * term plus the term scaled from the integral at that distance from 1. With panels not
+ * NULL, also the accepted panels of the integral computed, with their angles in the frame
+ * of g and eps_obs, or NULL at |g| = 1, where nothing is integrated. A failed integral or
+ * a non-finite ln P aborts with the point in the message.
  */
 static gdouble
 _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
@@ -407,7 +428,10 @@ _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcG
 
   {
     /* For |g| > 1 the integral is the one at g / |g|^2, of the same phase */
-    const gdouble t                       = (abs_g2 > 1.0) ? 1.0 / sqrt (abs_g2) : sqrt (abs_g2);
+    const gdouble abs_g                   = sqrt (abs_g2);
+    const gdouble u                       = fabs (_nc_galaxy_shape_factor_spectral_one_minus_abs2 (g_1, g_2));
+    const gdouble delta                   = (abs_g2 > 1.0) ? u / (abs_g * (1.0 + abs_g)) : u / (1.0 + abs_g);
+    const gdouble lambda_inv              = u / gsl_pow_2 (1.0 + abs_g);
     const gdouble phase                   = (abs_g2 > 0.0) ? atan2 (g_2, g_1) : 0.0;
     const gdouble cos_p                   = cos (phase);
     const gdouble sin_p                   = sin (phase);
@@ -419,7 +443,7 @@ _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcG
     NcGalaxyShapeFactorSpectralKernel k   = {
       .pop       = pop,
       .pop_data  = pop_data,
-      .t         = t,
+      .t         = (abs_g2 > 1.0) ? 1.0 / abs_g : abs_g,
       .e_1       = epsilon_obs_1 * cos_p + epsilon_obs_2 * sin_p,
       .e_2       = epsilon_obs_2 * cos_p - epsilon_obs_1 * sin_p,
       .c2        = 0.5 / noise_var,
@@ -428,20 +452,13 @@ _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcG
       .dens_norm = exp2 (a + 1.0),
       .dens_pow  = a + b_pop + 2.0
     };
-    NcGalaxyShapeFactorSpectralSeed seed;
     GError *error = NULL;
-    gdouble L, integral, ln_P;
+    gdouble ln_P;
 
-    _nc_galaxy_shape_factor_spectral_seed (self, &k, std_noise, a, b, &seed);
-    k.shift_c2 = seed.shift * k.c2;
-
-    L = std_noise * GSL_MIN (seed.J_1, seed.J_2);
-    ncm_spectral_polar_peak_edges (self->polar, 1.0, seed.r_star, seed.theta_0, L, L / GSL_MAX (seed.r_star, GSL_DBL_MIN),
-                                   work->r_edges, work->theta_edges);
-
-    integral = ncm_spectral_polar_integrate (self->polar, self->kernel, &k, 1.0, a, b, work->r_edges, work->theta_edges,
-                                             self->reltol, 0.0, NULL, panels, &error);
-    ln_P = log (integral) - k.shift_c2;
+    if (delta < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA)
+      ln_P = _nc_galaxy_shape_factor_spectral_near_unit_ln (self, &k, std_noise, a, b, delta, lambda_inv, work, panels, &error);
+    else
+      ln_P = _nc_galaxy_shape_factor_spectral_integrate_ln (self, &k, std_noise, a, b, work, panels, &error);
 
     ncm_memory_pool_return (ptr);
 
@@ -464,6 +481,212 @@ _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcG
 
     return ln_P;
   }
+}
+
+/*
+ * 1 - g_1^2 - g_2^2 with the rounding errors of the two squares and of their sum removed:
+ * the squares are split into their rounded value and its error by fma(), the larger
+ * rounded square is subtracted from 1 first, and the errors last. Next to |g| = 1 both
+ * subtractions are exact, so the result keeps the digits of the inputs.
+ */
+static gdouble
+_nc_galaxy_shape_factor_spectral_one_minus_abs2 (const gdouble g_1, const gdouble g_2)
+{
+  const gdouble p   = g_1 * g_1;
+  const gdouble q   = g_2 * g_2;
+  const gdouble e_p = fma (g_1, g_1, -p);
+  const gdouble e_q = fma (g_2, g_2, -q);
+  const gdouble hi  = GSL_MAX (p, q);
+  const gdouble lo  = GSL_MIN (p, q);
+
+  return ((1.0 - hi) - lo) - (e_p + e_q);
+}
+
+static void _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, NcGalaxyShapeFactorSpectralSeed *seed);
+
+/*
+ * ln of the integral at the real shear k->t, by ncm_spectral_polar_integrate() on the
+ * panels placed by the seed, with the offset of the seed set in k->shift_c2. NaN with
+ * error set when a panel reaches the maximum depth.
+ */
+static gdouble
+_nc_galaxy_shape_factor_spectral_integrate_ln (NcGalaxyShapeFactorSpectralPrivate * const self, NcGalaxyShapeFactorSpectralKernel *k,
+                                               const gdouble std_noise, const gdouble a, const gdouble b,
+                                               NcGalaxyShapeFactorSpectralWork *work, NcmMatrix **panels, GError **error)
+{
+  NcGalaxyShapeFactorSpectralSeed seed;
+  gdouble L, integral;
+
+  k->shift_c2 = 0.0;
+  _nc_galaxy_shape_factor_spectral_seed (self, k, std_noise, a, b, &seed);
+  k->shift_c2 = seed.shift * k->c2;
+
+  L = std_noise * GSL_MIN (seed.J_1, seed.J_2);
+  ncm_spectral_polar_peak_edges (self->polar, 1.0, seed.r_star, seed.theta_0, L, L / GSL_MAX (seed.r_star, GSL_DBL_MIN),
+                                 work->r_edges, work->theta_edges);
+
+  integral = ncm_spectral_polar_integrate (self->polar, self->kernel, k, 1.0, a, b, work->r_edges, work->theta_edges,
+                                           self->reltol, 0.0, NULL, panels, error);
+
+  return log (integral) - k->shift_c2;
+}
+
+static gdouble _nc_galaxy_shape_factor_spectral_second_order_ln (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, const gdouble delta, NcGalaxyShapeFactorSpectralWork *work, GError **error);
+
+/*
+ * ln P at the real shear t = 1 - delta, delta < delta_s =
+ * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA, without an integral at t:
+ * P (t) = A (t) + B (t), with A the second-order term of
+ * _nc_galaxy_shape_factor_spectral_second_order_ln() and
+ * B (t) = lambda^-(b + 2) (k_0 + k_1 / lambda), lambda = (1 + t) / (1 - t) = 1 / lambda_inv.
+ * For TRACE k_1 = 0 and k_0 is set by B = P - A at 1 - delta_s, with P the integral there.
+ * For TRACE_DET k_0 and k_1 are set by B at 1 - delta_s and at 1 - 10 delta_s. Every
+ * quantity is divided by P (1 - delta_s), so that none leaves the double range. panels,
+ * when not NULL, receives the panels of the integral at 1 - delta_s. NaN when an integral
+ * fails or when A + B is not positive.
+ */
+static gdouble
+_nc_galaxy_shape_factor_spectral_near_unit_ln (NcGalaxyShapeFactorSpectralPrivate * const self, NcGalaxyShapeFactorSpectralKernel *k,
+                                               const gdouble std_noise, const gdouble a, const gdouble b,
+                                               const gdouble delta, const gdouble lambda_inv,
+                                               NcGalaxyShapeFactorSpectralWork *work, NcmMatrix **panels, GError **error)
+{
+  const gdouble t        = k->t;
+  const gdouble t_1      = 1.0 - NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA;
+  const gdouble delta_1  = 1.0 - t_1;
+  const gdouble linv_1   = delta_1 / (1.0 + t_1);
+  const gdouble exponent = b + 2.0;
+  gdouble ln_P_1, ln_A_1, ln_A, b_1, k_0, k_1;
+
+  k->t   = t_1;
+  ln_P_1 = _nc_galaxy_shape_factor_spectral_integrate_ln (self, k, std_noise, a, b, work, panels, error);
+
+  if (*error != NULL)
+    return GSL_NAN;
+
+  ln_A_1 = _nc_galaxy_shape_factor_spectral_second_order_ln (self, k, std_noise, a, b, delta_1, work, error);
+
+  if (*error != NULL)
+    return GSL_NAN;
+
+  b_1 = -expm1 (ln_A_1 - ln_P_1) * pow (linv_1, -exponent);
+
+  if (self->axis_ratio_var)
+  {
+    k_0 = b_1;
+    k_1 = 0.0;
+  }
+  else
+  {
+    const gdouble t_2     = 1.0 - 10.0 * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA;
+    const gdouble delta_2 = 1.0 - t_2;
+    const gdouble linv_2  = delta_2 / (1.0 + t_2);
+    gdouble ln_P_2, ln_A_2, b_2;
+
+    k->t   = t_2;
+    ln_P_2 = _nc_galaxy_shape_factor_spectral_integrate_ln (self, k, std_noise, a, b, work, NULL, error);
+
+    if (*error != NULL)
+      return GSL_NAN;
+
+    ln_A_2 = _nc_galaxy_shape_factor_spectral_second_order_ln (self, k, std_noise, a, b, delta_2, work, error);
+
+    if (*error != NULL)
+      return GSL_NAN;
+
+    b_2 = (exp (ln_P_2 - ln_P_1) - exp (ln_A_2 - ln_P_1)) * pow (linv_2, -exponent);
+    k_1 = (b_1 - b_2) / (linv_1 - linv_2);
+    k_0 = b_1 - k_1 * linv_1;
+  }
+
+  k->t = t;
+  ln_A = _nc_galaxy_shape_factor_spectral_second_order_ln (self, k, std_noise, a, b, delta, work, error);
+
+  if (*error != NULL)
+    return GSL_NAN;
+
+  return ln_P_1 + log (exp (ln_A - ln_P_1) + pow (lambda_inv, exponent) * (k_0 + k_1 * lambda_inv));
+}
+
+static void _nc_galaxy_shape_factor_spectral_var_kernel (gpointer user_data, gdouble v, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
+
+/* What the integrand of the variance needs */
+typedef struct _NcGalaxyShapeFactorSpectralVar
+{
+  NcGalaxyShapeFactorSpectralPrivate *self;
+  const NcGalaxyShapeFactorSpectralKernel *k;
+  gdouble delta; /* 1 - t */
+} NcGalaxyShapeFactorSpectralVar;
+
+/*
+ * ln of A (t) = Phi (t) + s (t) Lap Phi (t) / 2 at t = k->t = 1 - delta, the marginal to
+ * second order in the distance of the sheared ellipticity to its mean. w = m_t (z) is the
+ * TRACE_DET map of the variable of integration z, which has the mean t and the variance
+ * s (t) per component,
+ *   s (t) = (1 - t^2)^2 / 2 INT_0^1 (density of r) r^2 / (1 - t^2 r^2) dr,
+ * and Phi (w) = N_2 (eps_obs - C (w)), C the identity for TRACE_DET and T for TRACE. The
+ * integral is computed in v = 1 - r by ncm_spectral_polar_integrate(), where the factor
+ * 1 / (delta + t v) of 1 / (1 - t^2 r^2) varies on the scale delta, with radial edges
+ * placed for that scale at v = 0. Differences to 1 are formed from delta.
+ */
+static gdouble
+_nc_galaxy_shape_factor_spectral_second_order_ln (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k,
+                                                  const gdouble std_noise, const gdouble a, const gdouble b, const gdouble delta,
+                                                  NcGalaxyShapeFactorSpectralWork *work, GError **error)
+{
+  const gdouble t                    = k->t;
+  const gdouble noise_var            = gsl_pow_2 (std_noise);
+  const gdouble one_minus_t2         = delta * (1.0 + t);
+  NcGalaxyShapeFactorSpectralVar var = {self, k, delta};
+  gdouble s, d, lap_ratio;
+
+  ncm_spectral_polar_peak_edges (self->polar, 1.0, 0.0, 0.0, delta, M_PI, work->r_edges, work->theta_edges);
+  s = 0.5 * gsl_pow_2 (one_minus_t2) *
+      ncm_spectral_polar_integrate (self->polar, &_nc_galaxy_shape_factor_spectral_var_kernel, &var, 1.0, b, a,
+                                    work->r_edges, work->theta_edges, self->reltol, 0.0, NULL, NULL, error);
+
+  if (self->axis_ratio_var)
+  {
+    /* C (t) = 2 t / (1 + t^2) = 1 - delta^2 / (1 + t^2) */
+    const gdouble q     = 1.0 + t * t;
+    const gdouble d_1   = (k->e_1 - 1.0) + delta * delta / q;
+    const gdouble d_2   = k->e_2;
+    const gdouble gr_1  = -4.0 * d_1 * one_minus_t2 / (q * q);
+    const gdouble gr_2  = -4.0 * d_2 / q;
+    const gdouble lap_d = 8.0 * gsl_pow_2 (one_minus_t2 / (q * q)) + 8.0 / (q * q) + 32.0 * t * d_1 / gsl_pow_3 (q);
+
+    d         = d_1 * d_1 + d_2 * d_2;
+    lap_ratio = -0.5 * lap_d / noise_var + 0.25 * (gr_1 * gr_1 + gr_2 * gr_2) / gsl_pow_2 (noise_var);
+  }
+  else
+  {
+    const gdouble d_1 = (k->e_1 - 1.0) + delta;
+    const gdouble d_2 = k->e_2;
+
+    d         = d_1 * d_1 + d_2 * d_2;
+    lap_ratio = d / gsl_pow_2 (noise_var) - 2.0 / noise_var;
+  }
+
+  return -0.5 * d / noise_var - log (2.0 * M_PI * noise_var) + log1p (0.5 * s * lap_ratio);
+}
+
+/*
+ * The integrand of the variance for ncm_spectral_polar_integrate() in v = 1 - r, with the
+ * weight v^b (1 - v)^a: (reduced density of r) r^2 / ((delta + t v) (1 + t r)) / (2 pi).
+ * It does not depend on the angle.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_var_kernel (gpointer user_data, gdouble v, guint n, const gdouble *theta,
+                                             const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
+{
+  const NcGalaxyShapeFactorSpectralVar *var = user_data;
+  const gdouble t                           = var->k->t;
+  const gdouble r                           = 1.0 - v;
+  const gdouble val                         = var->self->p_reduced (var->k, r) * r * r / ((var->delta + t * v) * (1.0 + t * r)) / (2.0 * M_PI);
+  guint j;
+
+  for (j = 0; j < n; j++)
+    fval[j] = val;
 }
 
 static gdouble _nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble a, const gdouble b, const gdouble r, const gdouble cos_0, const gdouble sin_0, gdouble *d);
@@ -871,7 +1094,8 @@ nc_galaxy_shape_factor_spectral_eval_ln_direct (NcGalaxyShapeFactorSpectral *gsf
  * variable of integration in the frame of @g_1, @g_2 and of the observed ellipticity:
  * $\chi_I$ for %NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, and for
  * %NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE the variable with $|\chi_I| = 2 r / (1 + r^2)$ and
- * the angle of $\chi_I$. For $|g| > 1$ the
+ * the angle of $\chi_I$. For $1 - \min(|g|, 1 / |g|) < 10^{-5}$ the panels are those of
+ * the integral at $1 - 10^{-5}$. For $|g| > 1$ the
  * panels are those of the integral at $g / |g|^2$, and at $|g| = 1$ there is no integral
  * and the function returns %NULL.
  *
