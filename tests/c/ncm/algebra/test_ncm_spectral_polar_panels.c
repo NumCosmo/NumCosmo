@@ -221,8 +221,9 @@ _func (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdoub
 
   for (j = 0; j < n; j++)
   {
-    g_assert_cmpfloat (cos_theta[j], ==, cos (theta[j]));
-    g_assert_cmpfloat (sin_theta[j], ==, sin (theta[j]));
+    /* cos and sin of theta up to libm rounding: the pair may be computed by one sincos call */
+    g_assert_cmpfloat_with_epsilon (cos_theta[j], cos (theta[j]), 2.0 * GSL_DBL_EPSILON);
+    g_assert_cmpfloat_with_epsilon (sin_theta[j], sin (theta[j]), 2.0 * GSL_DBL_EPSILON);
 
     fval[j] = _func_at (f, r, theta[j]);
   }

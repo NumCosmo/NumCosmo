@@ -189,8 +189,9 @@ _gauss (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdou
     const gdouble dx = r * cos_theta[j] - g->cx;
     const gdouble dy = r * sin_theta[j] - g->cy;
 
-    g_assert_cmpfloat (cos_theta[j], ==, cos (theta[j]));
-    g_assert_cmpfloat (sin_theta[j], ==, sin (theta[j]));
+    /* cos and sin of theta up to libm rounding: the pair may be computed by one sincos call */
+    g_assert_cmpfloat_with_epsilon (cos_theta[j], cos (theta[j]), 2.0 * GSL_DBL_EPSILON);
+    g_assert_cmpfloat_with_epsilon (sin_theta[j], sin (theta[j]), 2.0 * GSL_DBL_EPSILON);
 
     fval[j] = exp (-0.5 * (dx * dx + dy * dy) / (g->s * g->s)) / (2.0 * M_PI * g->s * g->s);
   }
