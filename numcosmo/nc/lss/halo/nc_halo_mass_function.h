@@ -100,6 +100,7 @@ gdouble nc_halo_mass_function_sigma_lnR (NcHaloMassFunction *mfp, NcHICosmo *cos
 gdouble nc_halo_mass_function_sigma_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 
 gdouble nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z);
+gdouble nc_halo_mass_function_f_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z);
 gdouble nc_halo_mass_function_dn_dlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 
 gdouble nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z);

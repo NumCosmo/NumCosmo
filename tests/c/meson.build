@@ -742,6 +742,10 @@ lss_tests = [
         'sources': ['nc/lss/halo/test_nc_halo_bias.c'],
     },
     {
+        'name': 'nc_halo_mass_function',
+        'sources': ['nc/lss/halo/test_nc_halo_mass_function.c'],
+    },
+    {
         'name': 'nc_cluster_pseudo_counts',
         'sources': ['nc/lss/cluster/test_nc_cluster_pseudo_counts.c'],
     },
