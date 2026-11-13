@@ -61,6 +61,11 @@ Vendored subtrees (`class`, `levmar`, `libcuba`, `lintegrate`, `plc`, `sundials`
 `numcosmo_py/analysis`, `numcosmo_py/plotting`, … — one dir per `numcosmo_py` submodule.
 These test Python code, not the GI bindings, and live under `tests/python/numcosmo_py/`.
 
+The scripts in `tools/` are tested in `tests/python/devtools/`, which imports them as
+`from tools import <script>`. The directory is not named `tools`: under the import mode
+below pytest registers a module named after the test directory, and a test directory
+`tools` hides the `tools` package.
+
 ### Python import mode
 
 `tests/python/pytest.ini` sets `--import-mode=importlib`. This stops pytest from

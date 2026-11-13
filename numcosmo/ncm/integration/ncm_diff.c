@@ -80,8 +80,13 @@
 #include "build_cfg.h"
 
 #include "ncm/integration/ncm_diff.h"
+#include "ncm/algebra/ncm_spectral_private.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_cfg.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <fftw3.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmDiffPrivate
 {
@@ -1355,7 +1360,9 @@ struct _NcmDiffWork
   GArray *sc_d_prev;
   GArray *sc_w;
   GArray *sc_conv;
-  GArray *sc_cosm;
+  gdouble *sc_tr_vals;
+  gdouble *sc_tr_coeffs;
+  NcmSpectral *sc_spectral;
   GArray *sc_est;
 };
 
@@ -1441,7 +1448,9 @@ ncm_diff_work_unref (NcmDiffWork *work)
     g_clear_pointer (&work->sc_d_prev, g_array_unref);
     g_clear_pointer (&work->sc_w, g_array_unref);
     g_clear_pointer (&work->sc_conv, g_array_unref);
-    g_clear_pointer (&work->sc_cosm, g_array_unref);
+    g_clear_pointer (&work->sc_tr_vals, fftw_free);
+    g_clear_pointer (&work->sc_tr_coeffs, fftw_free);
+    ncm_spectral_clear (&work->sc_spectral);
     g_clear_pointer (&work->sc_est, g_array_unref);
     g_free (work);
   }
@@ -3249,8 +3258,10 @@ typedef struct _NcmDiffSCData
   NcmVector *x_v;
   guint a;
   gdouble coeff_abs;
-  gdouble *cosm; /* scratch of _ncm_diff_sc_dct, 2 (NCM_DIFF_SC_MAX_N - 1) entries */
-  gdouble *est;  /* scratch of _ncm_diff_sc_deriv_est, 4 NCM_DIFF_SC_MAX_N entries */
+  NcmSpectral *spectral; /* the transform of _ncm_diff_sc_dct */
+  gdouble *tr_vals;      /* its input, NCM_DIFF_SC_MAX_N entries from fftw_malloc */
+  gdouble *tr_coeffs;    /* its output, the same */
+  gdouble *est;          /* scratch of _ncm_diff_sc_deriv_est, 4 NCM_DIFF_SC_MAX_N entries */
 } NcmDiffSCData;
 
 /*
@@ -3264,13 +3275,14 @@ _ncm_diff_work_init_spectral (NcmDiffWork *work, const guint dim)
 {
   if (work->sc_d_prev == NULL)
   {
-    work->sc_d_prev = g_array_new (FALSE, FALSE, sizeof (gdouble));
-    work->sc_w      = g_array_new (FALSE, FALSE, sizeof (gdouble));
-    work->sc_conv   = g_array_new (FALSE, FALSE, sizeof (NcmDiffCrossControl));
-    work->sc_cosm   = g_array_new (FALSE, FALSE, sizeof (gdouble));
-    work->sc_est    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    work->sc_d_prev    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    work->sc_w         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    work->sc_conv      = g_array_new (FALSE, FALSE, sizeof (NcmDiffCrossControl));
+    work->sc_tr_vals   = fftw_malloc (sizeof (gdouble) * NCM_DIFF_SC_MAX_N);
+    work->sc_tr_coeffs = fftw_malloc (sizeof (gdouble) * NCM_DIFF_SC_MAX_N);
+    work->sc_spectral  = ncm_spectral_new ();
+    work->sc_est       = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
-    g_array_set_size (work->sc_cosm, 2 * (NCM_DIFF_SC_MAX_N - 1));
     g_array_set_size (work->sc_est, 4 * NCM_DIFF_SC_MAX_N);
   }
 
@@ -3357,37 +3369,32 @@ _ncm_diff_sc_eval_nodes (NcmDiffSCData *data, const gdouble x, const gdouble R,
 }
 
 /*
- * Direct DCT-I of the node values: coeffs[c][k] such that component c is
- * sum_k coeffs[c][k] T_k(s) on the window. O(N^2) per component, negligible
- * against the function evaluations for the N used here.
+ * Chebyshev coefficients of the node values: coeffs[c][k] such that component c is
+ * sum_k coeffs[c][k] T_k(s) on the window, by the transform of NcmSpectral on the scratch
+ * arrays of data, one component at a time.
  */
 static void
-_ncm_diff_sc_dct (NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *coeffs, gdouble *cosm)
+_ncm_diff_sc_dct (NcmDiffSCData *data, NcmMatrix *fvals, const guint dim, const guint N, NcmMatrix *coeffs)
 {
-  const guint two_Nm1 = 2 * (N - 1);
-  guint i, k, c;
-
-  for (i = 0; i < two_Nm1; i++)
-    cosm[i] = cos ((M_PI * i) / (N - 1.0));
+  gdouble *centered = data->tr_vals;
+  guint i, c;
 
   for (c = 0; c < dim; c++)
   {
-    /* The center value is subtracted before the transform, so the rounding
-     * of its products with the cosines does not enter every coefficient; it
-     * is added back to c_0, where the error model keeps its rounding error. */
-    const gdouble offset  = ncm_matrix_get (fvals, c, (N - 1) / 2);
-    const gdouble f_first = ncm_matrix_get (fvals, c, 0) - offset;
-    const gdouble f_last  = ncm_matrix_get (fvals, c, N - 1) - offset;
+    /*
+     * The center value is subtracted before the transform, so its rounding does not enter
+     * every coefficient; it is added back to c_0, where the error model keeps its rounding
+     * error.
+     */
+    const gdouble offset = ncm_matrix_get (fvals, c, (N - 1) / 2);
+    gdouble *ck          = ncm_matrix_ptr (coeffs, c, 0);
 
-    for (k = 0; k < N; k++)
-    {
-      gdouble sum = 0.5 * (f_first + (((k % 2) == 0) ? f_last : -f_last));
+    for (i = 0; i < N; i++)
+      centered[i] = ncm_matrix_get (fvals, c, i) - offset;
 
-      for (i = 1; i < N - 1; i++)
-        sum += (ncm_matrix_get (fvals, c, i) - offset) * cosm[(k * i) % two_Nm1];
-
-      ncm_matrix_set (coeffs, c, k, sum * (((k == 0) || (k == N - 1)) ? 1.0 : 2.0) / (N - 1.0) + ((k == 0) ? offset : 0.0));
-    }
+    _ncm_spectral_transform (data->spectral, N, 1, centered, data->tr_coeffs);
+    memcpy (ck, data->tr_coeffs, sizeof (gdouble) * N);
+    ck[0] += offset;
   }
 }
 
@@ -3549,7 +3556,7 @@ _ncm_diff_sc_probe (NcmDiffSCData *data, const gdouble x, const gdouble R, const
   if (!_ncm_diff_sc_eval_nodes (data, x, R, dim, y_v, fvals, 0, NCM_DIFF_SC_PROBE_N))
     return FALSE;
 
-  _ncm_diff_sc_dct (fvals, dim, NCM_DIFF_SC_PROBE_N, coeffs, data->cosm);
+  _ncm_diff_sc_dct (data, fvals, dim, NCM_DIFF_SC_PROBE_N, coeffs);
 
   for (c = 0; c < dim; c++)
   {
@@ -3600,7 +3607,7 @@ _ncm_diff_sc_find_scale (NcmDiffSCData *data, const gdouble x, const gdouble R0,
         || !_ncm_diff_sc_eval_nodes (data, x, R, dim, y_v, fvals, 3, 5))
       break;
 
-    _ncm_diff_sc_dct (fvals, dim, 5, coeffs, data->cosm);
+    _ncm_diff_sc_dct (data, fvals, dim, 5, coeffs);
 
     {
       gboolean round_off = FALSE;
@@ -3789,7 +3796,9 @@ _ncm_diff_sc_dn_work (NcmDiff *diff, NcmDiffWork *work, const guint order, GArra
   data.x_v       = work->x_v;
   data.a         = 0;
   data.coeff_abs = 2.0 * self->func_abs_prec;
-  data.cosm      = &g_array_index (work->sc_cosm, gdouble, 0);
+  data.spectral  = work->sc_spectral;
+  data.tr_vals   = work->sc_tr_vals;
+  data.tr_coeffs = work->sc_tr_coeffs;
   data.est       = &g_array_index (work->sc_est, gdouble, 0);
 
   for (a = 0; a < nvar; a++)
@@ -3864,7 +3873,7 @@ _ncm_diff_sc_dn_work (NcmDiff *diff, NcmDiffWork *work, const guint order, GArra
           N_cur = N;
         }
 
-        _ncm_diff_sc_dct (fvals, dim, N, coeffs, data.cosm);
+        _ncm_diff_sc_dct (&data, fvals, dim, N, coeffs);
 
         for (c = 0; c < dim; c++)
         {
