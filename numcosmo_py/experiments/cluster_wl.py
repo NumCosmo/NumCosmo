@@ -300,7 +300,6 @@ DEFAULT_SHAPE_C2_SIGMA = 0.01
 DEFAULT_SHAPE_M_SIGMA = 0.08
 
 
-DEFAULT_SHAPE_SERIES_TRUNC_ORDER = 4
 DEFAULT_SHAPE_MOMENTS_GAUSS_MOMENT_TOL = 1.0e-10
 DEFAULT_SHAPE_MOMENTS_TILT_ACCURACY_GATE = 1.0e-3
 
@@ -318,8 +317,8 @@ class GalaxyShapeFactorGenBase(BaseModel):
     scheme/population constraint that crosses the two.
 
     Each concrete scheme is its own subclass (own ``--shape-factor`` tag, own
-    ``help_text()``) so a scheme-specific option (e.g. SeriesLensed's
-    ``series_trunc_order``) is only ever shown/accepted for that scheme --
+    ``help_text()``) so a scheme-specific option (e.g. Spectral's
+    ``interp_g_max``) is only ever shown/accepted for that scheme --
     not a dead option under every other one.
     """
 
@@ -409,84 +408,6 @@ class GalaxyShapeFactorGenVarAdd(GalaxyShapeFactorGenBase):
         return Nc.GalaxyShapeFactorVarAdd.new(self.ellip_conv.genum)
 
 
-class GalaxyShapeFactorGenSeriesLensed(GalaxyShapeFactorGenBase):
-    """g-Taylor series around the lens (``NcGalaxyShapeFactorSeriesLensed``)."""
-
-    series_trunc_order: Annotated[int, Field(gt=0)] = DEFAULT_SHAPE_SERIES_TRUNC_ORDER
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return the help text for this scheme."""
-        return [
-            "GalaxyShapeFactorGenSeriesLensed",
-            (
-                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-                f"series_trunc_order={DEFAULT_SHAPE_SERIES_TRUNC_ORDER}"
-            ),
-        ]
-
-    def requires_sigma(self) -> bool:
-        """SeriesLensed works with any population (no Gaussian linearization)."""
-        return False
-
-    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorSeriesLensed.new(
-            self.ellip_conv.genum, self.series_trunc_order
-        )
-
-
-class GalaxyShapeFactorGenQuad(GalaxyShapeFactorGenBase):
-    """Direct source-domain quadrature (``NcGalaxyShapeFactorQuad``)."""
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return the help text for this scheme."""
-        return ["GalaxyShapeFactorGenQuad", _SHARED_SHAPE_FACTOR_HELP]
-
-    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorQuad.new(self.ellip_conv.genum)
-
-
-DEFAULT_SHAPE_USE_MARGINAL_SPLINE = False
-DEFAULT_SHAPE_SPLINE_G_MAX = 0.3
-DEFAULT_SHAPE_SPLINE_REL_ERR = 1.0e-4
-
-
-class GalaxyShapeFactorGenFixedQuad(GalaxyShapeFactorGenBase):
-    """Fixed lens-domain quadrature (``NcGalaxyShapeFactorFixedQuad``)."""
-
-    use_marginal_spline: Annotated[bool, Field()] = DEFAULT_SHAPE_USE_MARGINAL_SPLINE
-    spline_g_max: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPLINE_G_MAX
-    spline_rel_err: Annotated[float, Field(gt=0.0, le=1.0)] = (
-        DEFAULT_SHAPE_SPLINE_REL_ERR
-    )
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return the help text for this scheme."""
-        return [
-            "GalaxyShapeFactorGenFixedQuad",
-            (
-                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-                f"use_marginal_spline={DEFAULT_SHAPE_USE_MARGINAL_SPLINE}, "
-                f"spline_g_max={DEFAULT_SHAPE_SPLINE_G_MAX}, "
-                f"spline_rel_err={DEFAULT_SHAPE_SPLINE_REL_ERR}"
-            ),
-        ]
-
-    def requires_sigma(self) -> bool:
-        """FixedQuad works with any population (no Gaussian linearization)."""
-        return False
-
-    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorFixedQuad(
-            ellip_conv=self.ellip_conv.genum,
-            use_marginal_spline=self.use_marginal_spline,
-            spline_g_max=self.spline_g_max,
-            spline_rel_err=self.spline_rel_err,
-        )
-
-
 DEFAULT_SHAPE_SPECTRAL_RELTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_USE_INTERP = False
 DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX = 0.3
@@ -568,18 +489,6 @@ class GalaxyShapeFactorGenMomentsGauss(GalaxyShapeFactorGenBase):
         )
 
 
-class GalaxyShapeFactorGenLaplace(GalaxyShapeFactorGenBase):
-    """Laplace-approximation marginal (``NcGalaxyShapeFactorLaplace``)."""
-
-    @staticmethod
-    def help_text() -> list[str]:
-        """Return the help text for this scheme."""
-        return ["GalaxyShapeFactorGenLaplace", _SHARED_SHAPE_FACTOR_HELP]
-
-    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
-        return Nc.GalaxyShapeFactorLaplace.new(self.ellip_conv.genum)
-
-
 class GalaxyShapeFactorGenMomentsTilt(GalaxyShapeFactorGenBase):
     """Exact exponential tilt (``NcGalaxyShapeFactorMomentsTilt``)."""
 
@@ -611,11 +520,7 @@ class GalaxyShapeFactorGenMomentsTilt(GalaxyShapeFactorGenBase):
 
 GalaxyShapeFactorGenTypes = (
     GalaxyShapeFactorGenVarAdd
-    | GalaxyShapeFactorGenSeriesLensed
-    | GalaxyShapeFactorGenQuad
-    | GalaxyShapeFactorGenFixedQuad
     | GalaxyShapeFactorGenSpectral
-    | GalaxyShapeFactorGenLaplace
     | GalaxyShapeFactorGenMomentsGauss
     | GalaxyShapeFactorGenMomentsTilt
 )
@@ -625,11 +530,7 @@ class ShapeFactorGen(StrEnum):
     """Galaxy shape-marginalization factor types (``NcGalaxyShapeFactor*``)."""
 
     VAR_ADD = (auto(), GalaxyShapeFactorGenVarAdd)
-    SERIES_LENSED = (auto(), GalaxyShapeFactorGenSeriesLensed)
-    QUAD = (auto(), GalaxyShapeFactorGenQuad)
-    FIXED_QUAD = (auto(), GalaxyShapeFactorGenFixedQuad)
     SPECTRAL = (auto(), GalaxyShapeFactorGenSpectral)
-    LAPLACE = (auto(), GalaxyShapeFactorGenLaplace)
     MOMENTS_GAUSS = (auto(), GalaxyShapeFactorGenMomentsGauss)
     MOMENTS_TILT = (auto(), GalaxyShapeFactorGenMomentsTilt)
 

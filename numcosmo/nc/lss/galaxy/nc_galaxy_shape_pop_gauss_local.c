@@ -107,20 +107,19 @@ nc_galaxy_shape_pop_gauss_local_class_init (NcGalaxyShapePopGaussLocalClass *kla
   ncm_model_class_check_params_info (model_class);
 
   /*
-   * eval_p, gen, eval_p_rho2_g_series, moment_2k, exponent_at_one and eval_p_reduced are
+   * eval_p, gen, moment_2k, exponent_at_one and eval_p_reduced are
    * the functions of NcGalaxyShapePopGauss, used directly, not inherited: they read only
    * data->ldata, whose {norm, inv_2sigma2, sigma} layout and meaning are the same here.
    */
-  gsp_class->data_init            = &_nc_galaxy_shape_pop_gauss_local_data_init;
-  gsp_class->prepare              = &_nc_galaxy_shape_pop_gauss_local_prepare;
-  gsp_class->eval_p               = &_nc_galaxy_shape_pop_gauss_eval_p;
-  gsp_class->gen                  = &_nc_galaxy_shape_pop_gauss_gen;
-  gsp_class->e_rms                = &_nc_galaxy_shape_pop_gauss_local_e_rms;
-  gsp_class->exponent_at_origin   = &_nc_galaxy_shape_pop_gauss_local_exponent_at_origin;
-  gsp_class->eval_p_rho2_g_series = &_nc_galaxy_shape_pop_gauss_eval_p_rho2_g_series;
-  gsp_class->moment_2k            = &_nc_galaxy_shape_pop_gauss_moment_2k;
-  gsp_class->exponent_at_one      = &_nc_galaxy_shape_pop_gauss_exponent_at_one;
-  gsp_class->eval_p_reduced       = &_nc_galaxy_shape_pop_gauss_eval_p_reduced;
+  gsp_class->data_init          = &_nc_galaxy_shape_pop_gauss_local_data_init;
+  gsp_class->prepare            = &_nc_galaxy_shape_pop_gauss_local_prepare;
+  gsp_class->eval_p             = &_nc_galaxy_shape_pop_gauss_eval_p;
+  gsp_class->gen                = &_nc_galaxy_shape_pop_gauss_gen;
+  gsp_class->e_rms              = &_nc_galaxy_shape_pop_gauss_local_e_rms;
+  gsp_class->exponent_at_origin = &_nc_galaxy_shape_pop_gauss_local_exponent_at_origin;
+  gsp_class->moment_2k          = &_nc_galaxy_shape_pop_gauss_moment_2k;
+  gsp_class->exponent_at_one    = &_nc_galaxy_shape_pop_gauss_exponent_at_one;
+  gsp_class->eval_p_reduced     = &_nc_galaxy_shape_pop_gauss_eval_p_reduced;
 }
 
 static void

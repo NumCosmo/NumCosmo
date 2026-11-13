@@ -31,9 +31,7 @@ Each row is one value
 certified by ``nc_galaxy_shape_marginal_arb`` (polar coordinates, its default target
 radius) and rounded to the nearest double. The columns are the tool's input columns: the
 shear convention (``trace`` or ``trace_det``), the population (``gauss`` with sigma = p1,
-or ``beta`` with alpha = p1 and beta = p2), std_noise, g1, g2, e1, e2. The last two
-columns are for the NcGalaxyShapeFactorQuad tests: whether its unit tier checks the row
-(UNIT_ROWS) and whether its acceptance tier does (the first QUAD_ROWS rows). The
+or ``beta`` with alpha = p1 and beta = p2), std_noise, g1, g2, e1, e2. The
 NcGalaxyShapeFactorSpectral test checks every row.
 
 The output replaces the block between the BEGIN and END markers of
@@ -78,7 +76,7 @@ CASES = [
     ("trace", "beta", 1.57, 1.65, 0.1, 0.3, 0.0, 0.5, 0.0),
     ("trace_det", "beta", 1.92, 1.98, 0.03, 0.6, 0.0, 0.0, 0.5),
     ("trace_det", "beta", 1.57, 1.65, 0.05, -0.1, 0.25, 0.2, -0.3),
-    # Points where the default path was wrong (6.6), off by 7.5e-6, or did not return.
+    # Where a source-domain quadrature erred by 6.6, by 7.5e-6, or gave no value.
     ("trace_det", "gauss", 0.05, 0.0, 0.1, 0.005111126056639749, 0.0, 0.0, 0.9),
     ("trace_det", "beta", 1.57, 1.65, 0.1, 0.01, 0.0, 0.0, 0.02),
     ("trace", "beta", 4.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0),
@@ -142,15 +140,6 @@ CASES = [
     ),
 ]
 
-# The NcGalaxyShapeFactorQuad acceptance tier checks the first QUAD_ROWS rows.
-QUAD_ROWS = 17
-
-
-# Indices of CASES checked by the unit tier: six cases on which the default and log-polar
-# paths take about 1 s in total (|g| < 1 and > 1, |eps_obs| < 1 and >= 1, Gauss and Beta,
-# and two of the points where the default path had failed).
-UNIT_ROWS = {1, 2, 6, 11, 14, 16}
-
 
 def find_tool() -> pathlib.Path:
     """The Arb tool named by SHAPE_ARB_TOOL, else the one in NUMCOSMO_BUILD_DIR."""
@@ -198,14 +187,10 @@ def main() -> None:
 
     print("  /* BEGIN make_shape_marginal_arb_cases.py */")
 
-    for i, ((conv, pop, p1, p2, sn, g1, g2, e1, e2), value) in enumerate(
-        zip(CASES, values)
-    ):
+    for (conv, pop, p1, p2, sn, g1, g2, e1, e2), value in zip(CASES, values):
         print(
             f"  {{{C_CONV[conv]}, {C_POP[pop]}, {p1!r}, {p2!r}, {sn!r}, "
-            f"{g1!r}, {g2!r}, {e1!r}, {e2!r}, {float(value)!r}, "
-            f"{'TRUE' if i in UNIT_ROWS else 'FALSE'}, "
-            f"{'TRUE' if i < QUAD_ROWS else 'FALSE'}}},"
+            f"{g1!r}, {g2!r}, {e1!r}, {e2!r}, {float(value)!r}}},"
         )
 
     print("  /* END make_shape_marginal_arb_cases.py */")

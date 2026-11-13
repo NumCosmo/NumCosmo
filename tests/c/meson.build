@@ -127,10 +127,6 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_poly_roots.c'],
     },
     {
-        'name': 'ncm_laurent_series',
-        'sources': ['ncm/algebra/test_ncm_laurent_series.c'],
-    },
-    {
         'name': 'ncm_spectral',
         'sources': ['ncm/algebra/test_ncm_spectral.c'],
     },
@@ -707,12 +703,14 @@ data_tests = [
     # Truth-table validation of NcDataClusterWLFactor's integration methods:
     # regenerates a curated sample from a fixed seed (nothing stored) and
     # checks every method against a recomputed high-node self-converged
-    # reference. Curated matrix across shape schemes (VarAdd/SeriesLensed/
-    # Quad) and populations (Gauss/Beta), plus a direct SeriesLensed-vs-Quad
-    # cross-check. Deterministic and fast.
+    # reference. Curated matrix across shape schemes (VarAdd/Spectral) and
+    # populations (Gauss/Beta). Deterministic. The timeout follows the -O0 coverage
+    # build, where each Spectral subtest takes 77 to 98 s (23 to 35 s for the whole
+    # test in the optimized builds); 300 s is 900 s under the lane's multiplier of 3.
     {
         'name': 'nc_data_cluster_wl_factor_truth',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
+        'timeout': 300,
         'suite': ['c', 'omp'],
     },
     {
@@ -796,10 +794,6 @@ lss_tests = [
         'name': 'nc_wl_ellipticity',
         'sources': ['nc/lss/wl/test_nc_wl_ellipticity.c'],
     },
-    {
-        'name': 'nc_wl_ellipticity_series',
-        'sources': ['nc/lss/wl/test_nc_wl_ellipticity_series.c'],
-    },
 ]
 
 # Galaxy and weak lensing tests
@@ -813,16 +807,8 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
     },
     {
-        'name': 'nc_galaxy_shape_intrinsic_mode',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_intrinsic_mode.c'],
-    },
-    {
         'name': 'nc_galaxy_shape_pop',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop.c'],
-    },
-    {
-        'name': 'nc_galaxy_shape_pop_series',
-        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop_series.c'],
     },
     {
         'name': 'nc_galaxy_position_factor',
@@ -839,21 +825,6 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_shape_factor_spectral_cert',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral_cert.c'],
-        'suite': ['c-acceptance'],
-    },
-    {
-        'name': 'nc_galaxy_shape_factor_quad',
-        'sources': [
-            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad.c',
-            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad_common.c',
-        ],
-    },
-    {
-        'name': 'nc_galaxy_shape_factor_quad_arb',
-        'sources': [
-            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad_arb.c',
-            'nc/lss/galaxy/test_nc_galaxy_shape_factor_quad_common.c',
-        ],
         'suite': ['c-acceptance'],
     },
 ]

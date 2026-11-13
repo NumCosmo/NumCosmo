@@ -369,9 +369,8 @@ class InspectClusterNCounts(InspectExperiment):
 class GalaxyShapeIntegrandComponent(StrEnum):
     """Which term of the integrand to plot.
 
-    The noise kernel lives in chi_L-space alone and never depends on g (see
-    NcGalaxyShapeFactorFixedQuad's own class docs); only the population/
-    Jacobian term does. Its dynamic range is typically ~10x smaller than the
+    The noise kernel lives in chi_L-space alone and never depends on g; only the
+    population/Jacobian term does. Its dynamic range is typically ~10x smaller than the
     noise term's, so under TOTAL's shared linear color scale, moving g can
     look like it does nothing even though it visibly does once isolated.
     """
@@ -388,8 +387,7 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
 
     Evaluates, over a grid of the lens-plane variable chi_L,
     ln[ N_2(eps_obs - chi_L; sigma_noise^2) * |det J| * P_pop(r) / (2*pi*r) ]
-    (r = |chi_I(chi_L, g)|), i.e. the exact same quantity
-    NcGalaxyShapeFactorFixedQuad/Quad integrate over chi_L to get the
+    (r = |chi_I(chi_L, g)|), the integrand whose integral over chi_L is the
     marginal likelihood -- without going through any engine's own
     quadrature, so it cannot be biased by whichever grid that engine
     happens to use. Two markers show where each of the two competing pulls
@@ -469,22 +467,6 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
         int,
         typer.Option(help="Figure DPI when saving the file.", min=50),
     ] = 150
-
-    show_nodes: Annotated[
-        bool,
-        typer.Option(
-            "--show-nodes/--no-show-nodes",
-            help=(
-                "Overlay NcGalaxyShapeFactorFixedQuad's own quadrature "
-                "domain (nodes + boundary) for this galaxy, when the "
-                "engine is FixedQuad. Fetched directly via peek_domain() "
-                "(the engine's own real nodes at --g1/--g2, mapped to "
-                "chi_L-space -- no Python-side replication), so it also "
-                "shows which of the two-panel psi / native chi_I branches "
-                "the engine's own auto-switch picked for this galaxy."
-            ),
-        ),
-    ] = True
 
     show_panels: Annotated[
         bool,
@@ -603,25 +585,6 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
             ),
         }
 
-        if self.show_nodes and isinstance(shape_factor, Nc.GalaxyShapeFactorFixedQuad):
-            chi_l_mat, node_weights = shape_factor.peek_domain(
-                pop, data, self.g1, self.g2
-            )
-            nodes = chi_l_mat.to_numpy()
-            node_w = node_weights.to_numpy()
-        elif self.show_nodes and not isinstance(
-            shape_factor, Nc.GalaxyShapeFactorSpectral
-        ):
-            self.console.print(
-                "--show-nodes requested but the shape factor is "
-                f"{type(shape_factor).__name__}, not FixedQuad -- skipping."
-            )
-            nodes = None
-            node_w = None
-        else:
-            nodes = None
-            node_w = None
-
         panel_lines: list[np.ndarray] = []
         panel_refined: list[bool] = []
 
@@ -735,23 +698,6 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
                 s=120,
                 label="chi_I=0 image (pop pull)",
             )
-
-            if nodes is not None:
-                assert (
-                    node_w is not None
-                )  # set together with nodes, always both or neither
-                w_max = node_w.max() if node_w.size and node_w.max() > 0 else 1.0
-                ax.scatter(
-                    nodes[:, 0],
-                    nodes[:, 1],
-                    marker=".",
-                    color="white",
-                    edgecolors="black",
-                    linewidths=0.3,
-                    s=10.0 + 60.0 * (node_w / w_max),
-                    alpha=0.7,
-                    label=f"FixedQuad nodes (n={nodes.shape[0]})",
-                )
 
             if panel_lines:
                 ax.add_collection(

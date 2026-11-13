@@ -35,7 +35,7 @@ resolved in the original study). It is a from-model MC acceptance gate, not a
 tight numerical parity check like Tier 1 -- it only needs to confirm the new
 pipeline exhibits the *same known pathology* (a significant, negative bias
 of comparable order of magnitude) before ``VarAdd`` is ever swapped for
-``Quad``/``Laplace``/``FixedQuad`` to test whether that swap closes the gap.
+``Spectral`` to test whether that swap closes the gap.
 
 A single 3000-galaxy cluster gives a *very* weak individual mass constraint
 (the per-realization scatter in the fitted log10MDelta is order 0.5-1 dex),

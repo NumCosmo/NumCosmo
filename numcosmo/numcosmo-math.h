@@ -48,7 +48,6 @@
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
 #include <numcosmo/ncm/algebra/ncm_nnls.h>
 #include <numcosmo/ncm/algebra/ncm_poly_roots.h>
-#include <numcosmo/ncm/algebra/ncm_laurent_series.h>
 #include <numcosmo/ncm/algebra/ncm_spectral.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_panels.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_panels_builder.h>

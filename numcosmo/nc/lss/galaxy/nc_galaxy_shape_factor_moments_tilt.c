@@ -65,18 +65,12 @@
  * the exact marginal. At $g = 0$ the model is the exact zero-shear
  * marginal. Measured on the HSC-SSP PDR1 catalog HWL16a-002 (TRACE
  * convention, Gaussian population with $\sigma = 0.3$, the catalog's own
- * ellipticities and noise), against #NcGalaxyShapeFactorQuad at $g = 0.03$
- * on 188 galaxies with $|\chi_\mathrm{obs}| < 1$: $|\Delta\ln P|$ up to
- * $0.26$, median $0.016$. With the same redshift nodes, the best-fit
- * $\log_{10} M$ is below the one from #NcGalaxyShapeFactorSeriesLensed at
- * order 12 (which agrees with #NcGalaxyShapeFactorQuad to $6\times10^{-5}$
- * per galaxy) by $0.030$ dex on the 14161 galaxies of HWL16a-002 with
- * $|\chi_\mathrm{obs}| < 1$ ($0.32$ standard errors) and by $0.079$ dex on
- * the 10197 such galaxies of HWL16a-007 ($0.70$ standard errors); on the
- * full catalogs, $0.46$ and $0.98$ standard errors. For an exact marginal
- * use #NcGalaxyShapeFactorSeriesLensed
- * at order 12 or higher (Gauss and Beta populations) or
- * #NcGalaxyShapeFactorQuad ($|\chi_\mathrm{obs}| < 1$ only).
+ * ellipticities and noise), against the exact marginal at $g = 0.03$ on 188 galaxies
+ * with $|\chi_\mathrm{obs}| < 1$: $|\Delta\ln P|$ up to $0.26$, median $0.016$. On the
+ * HSC clusters HWL16a-094, 060, 007 and 002 (TRACE, Beta population fitted to each
+ * catalog), the posterior mean of $\log_{10} M$ differs from the one with
+ * #NcGalaxyShapeFactorSpectral by up to 0.4 posterior standard deviations. For an
+ * exact marginal use #NcGalaxyShapeFactorSpectral.
  *
  * ## The mesh
  *

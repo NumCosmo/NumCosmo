@@ -201,7 +201,6 @@
 #include "nc/lss/wl/nc_reduced_shear_cluster_mass.h"
 #include "nc/lss/wl/nc_reduced_shear_calib.h"
 #include "nc/lss/wl/nc_reduced_shear_calib_wtg.h"
-#include "nc/lss/wl/nc_wl_ellipticity_series.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor_flat.h"
@@ -216,11 +215,7 @@
 #include "nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h"
-#include "nc/lss/galaxy/nc_galaxy_shape_factor_laplace.h"
-#include "nc/lss/galaxy/nc_galaxy_shape_factor_quad.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
-#include "nc/lss/galaxy/nc_galaxy_shape_factor_fixed_quad.h"
-#include "nc/lss/galaxy/nc_galaxy_shape_factor_series_lensed.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
@@ -1010,8 +1005,6 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB);
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
-  ncm_cfg_register_obj (NC_TYPE_WL_ELLIPTICITY_SERIES_TRACE);
-  ncm_cfg_register_obj (NC_TYPE_WL_ELLIPTICITY_SERIES_TRACE_DET);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR);
@@ -1027,11 +1020,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_VAR_ADD);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_LAPLACE);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_QUAD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_SPECTRAL);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_FIXED_QUAD);
-  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_SERIES_LENSED);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_TILT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP);

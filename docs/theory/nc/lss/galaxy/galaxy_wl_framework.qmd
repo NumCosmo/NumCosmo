@@ -224,8 +224,8 @@ factor for it with `integ`.
 ## Current Status {#sec-status}
 
 As of this writing, the redshift (`Composed`, `Spline` schemes), position
-(`Flat` scheme), and shape (`VarAdd`, `SeriesLensed`, `Quad`, `FixedQuad`,
-`Laplace` marginalization schemes) factors are implemented, and
+(`Flat` scheme), and shape (`VarAdd`, `MomentsGauss`, `MomentsTilt`, `Spectral`
+marginalization schemes) factors are implemented, and
 [[numcosmo|NcDataClusterWLFactor]] wires them into a single orchestrator
 that resolves models from an [[numcosmo-math|NcmMSet]] and runs the per-galaxy
 $z$-integral automatically.

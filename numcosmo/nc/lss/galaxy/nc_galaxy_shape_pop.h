@@ -33,7 +33,6 @@
 #include <numcosmo/ncm/model/ncm_model.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
 #include <numcosmo/ncm/core/ncm_rng.h>
-#include <numcosmo/ncm/algebra/ncm_laurent_series.h>
 
 G_BEGIN_DECLS
 
@@ -58,27 +57,6 @@ struct _NcGalaxyShapePopClass
   gdouble (*exponent_at_origin) (NcGalaxyShapePop *gsp);
 
   /*
-   * Taylor-in-g x-space density series (x=|chi_I|^2) -- distinct from
-   * eval_p(r) above: r=sqrt(x) has a branch point at x=0 that breaks the
-   * series' own analyticity there (see nc_galaxy_shape_pop_beta.c's docs
-   * for the eval_p(r)/(2r) identity relating the two). Given x(g) =
-   * |chi_I(chi_L,g)|^2's own g-Taylor coefficients (population-independent
-   * shear-map output, @x_series, a #NcmLaurentSeriesTPS whose order is this
-   * call's truncation order), returns this population's own fully
-   * normalized x-space density's g-Taylor coefficients in @out (same order
-   * as @x_series, including the population's own normalization constant --
-   * see #NcGalaxyShapeFactorSeriesLensed's own pop_norm for the
-   * population-agnostic disk-measure factor left to the caller). No
-   * sensible generic default exists (the composition depends entirely on
-   * the population's own functional form), so the base class errors
-   * clearly if unimplemented. Consumed by #NcGalaxyShapeFactorSeriesLensed.
-   * #NcmLaurentSeriesTPS is boxed and introspectable, so this vfunc needs
-   * no native-only guard.
-   */
-  void (*eval_p_rho2_g_series) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
-
-  /*
    * Batched form of eval_p(): evaluates P_pop(r) at every element of @r in
    * one call, writing into @p (allocating it first if it points to NULL --
    * see nc_galaxy_shape_pop_eval_p_array()'s own doc comment). The generic
@@ -86,9 +64,7 @@ struct _NcGalaxyShapePopClass
    * callable through this vfunc; a subclass whose functional form batches
    * well (e.g. #NcGalaxyShapePopBeta, whose @data->ldata is invariant across
    * the whole call) can override it to amortize per-call overhead and let
-   * the compiler vectorize the straight-line loop. Consumed by
-   * #NcGalaxyShapeFactorFixedQuad, whose node positions are all known ahead
-   * of a single call.
+   * the compiler vectorize the straight-line loop.
    */
   void (*eval_p_array) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 
@@ -123,8 +99,8 @@ struct _NcGalaxyShapePopClass
    */
   gdouble (*eval_p_reduced) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 
-  /* Padding to allow adding up to 7 more virtual functions without breaking ABI. */
-  gpointer padding[7];
+  /* Padding to allow adding up to 8 more virtual functions without breaking ABI. */
+  gpointer padding[8];
 };
 
 /**
@@ -158,17 +134,6 @@ struct _NcGalaxyShapePopData
    */
   gdouble (*ldata_get_sigma) (NcGalaxyShapePopData *data);
 
-  /*
-   * Optional capability: NULL means the model is assumed radially symmetric
-   * about chi_I=0 (its own peak, e.g. the Gauss family), i.e. mode_r=0. A
-   * concrete model peaked away from the origin (e.g. NcGalaxyShapePopBeta)
-   * overrides this with the mode of r=|chi_I|, i.e. argmax of P_pop(r).
-   * Unlike ldata_get_sigma, 0 is always a meaningful default here, so
-   * consumers (nc_galaxy_shape_pop_get_mode_r()) never need to error on
-   * NULL.
-   */
-  gdouble (*ldata_get_mode_r) (NcGalaxyShapePopData *data);
-
   gatomicrefcount ref_count;
 };
 
@@ -195,10 +160,7 @@ gdouble nc_galaxy_shape_pop_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *
 gdouble nc_galaxy_shape_pop_exponent_at_origin (NcGalaxyShapePop *gsp);
 
 gdouble nc_galaxy_shape_pop_get_sigma (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
-gdouble nc_galaxy_shape_pop_get_mode_r (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 
-void nc_galaxy_shape_pop_eval_p_rho2_g_series (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data,
-                                               const NcmLaurentSeriesTPS *x_series, NcmLaurentSeriesTPS *out);
 void nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p);
 gdouble nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 gdouble nc_galaxy_shape_pop_exponent_at_one (NcGalaxyShapePop *gsp);

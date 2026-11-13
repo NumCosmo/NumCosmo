@@ -1083,3 +1083,30 @@ HWL16a-002, `FixedQuad`'s preparation went from 98 s on one thread to 15 s on
 sixteen, bitwise identical to serial, and
 a test prepares every shape factor on one and four threads from cold models and
 requires identical results.
+
+## `Quad`, `FixedQuad`, `SeriesLensed` and `Laplace`: removed (2026)
+
+`NcGalaxyShapeFactorSpectral` (adaptive Chebyshev panels in polar coordinates, see
+`wl_shape_marginalization_spectral.qmd`) replaced the four classes. Kept: `VarAdd`,
+`MomentsGauss`, `MomentsTilt`, `Spectral`.
+
+- `Quad` and `FixedQuad`: Spectral agrees with the Arb reference within 6.9e-9 (TRACE)
+  and 3.9e-9 (TRACE_DET) in $\ln P$ on the 20,062 certified points within eight noise
+  standard deviations of the disk. On HWL16a-094 (2,200 galaxies, MCMC of 150,000
+  points) the posterior of Spectral with its interpolant in $g$ agreed with the one of
+  `FixedQuad` within 0.002 posterior standard deviations in mass, in 943 s against
+  15,409 s on 12 threads.
+- `SeriesLensed`: its $g$-Taylor composition needs $\sqrt{x(g)}$ and diverges for a Beta
+  population with $\alpha < 2$; on HWL16a-094 with the Beta population fitted to the
+  catalog its MCMC ran to the upper bound of the mass.
+- `Laplace`: it requires `nc_galaxy_shape_pop_get_sigma` and refuses the Beta population.
+- The theory pages `wl_shape_marginalization_fixed_quad.qmd` and
+  `wl_shape_marginalization_series.qmd` were removed with the classes.
+- Removed with them, having no other user: the $g$-series of the populations
+  (`nc_galaxy_shape_pop_eval_p_rho2_g_series` and its Gauss and Beta implementations),
+  `NcWLEllipticitySeriesTrace` and `NcWLEllipticitySeriesTraceDet`, `NcmLaurentSeries`
+  and `NcmLaurentSeriesTPS`, the fused kernels of `nc_wl_ellipticity`
+  (`nc_wl_ellipticity_trace_kernel`, `_trace_kernel_prepare`, `_trace_kernel_apply`,
+  `_trace_det_kernel`, `NcWLEllipticityTraceKernelPrep`), the linear Jacobians
+  `nc_wl_ellipticity_det_jac_trace` and `_trace_det`, `nc_wl_ellipticity_shear_at_origin_*`,
+  and `NcGalaxyShapeIntrinsicMode`.
