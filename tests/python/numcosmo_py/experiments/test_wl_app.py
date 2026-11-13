@@ -507,6 +507,7 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
             f"--shape-factor={s_factor}",
             f"--pop-dist={p_dist}",
             "--summary",
+            "--seed=42",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -531,6 +532,7 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
 
     assert s_dist_model["sigma"] == pop_dist[1]["sigma"]
 
+    m_sigma = shape_factor[1]["m_sigma"]
     for i in range(obs.len()):
         std_noise = obs.get("std_noise", i)
         c1 = obs.get("c1", i)
@@ -539,7 +541,8 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
         assert std_noise <= 0.5
         assert abs(c1) <= 6.0 * shape_factor[1]["c1_sigma"]
         assert abs(c2) <= 6.0 * shape_factor[1]["c2_sigma"]
-        assert abs(obs.get("m", i)) <= 1.0 + 6.0 * shape_factor[1]["m_sigma"]
+        # m = exp(N(0, m_sigma)), so 6 sigma is exp(-6 m_sigma)..exp(6 m_sigma).
+        assert np.exp(-6.0 * m_sigma) <= obs.get("m", i) <= np.exp(6.0 * m_sigma)
 
         # The sheared intrinsic ellipticity has modulus at most 1; c enters
         # through the shear (background) or additively (foreground), and the
