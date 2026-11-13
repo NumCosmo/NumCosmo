@@ -212,9 +212,8 @@ class CCLParams:
         pyccl.spline_params.N_K = 1000
         pyccl.spline_params.K_MIN = 1.0e-6
         pyccl.spline_params.K_MAX = 1.0e3
-        pyccl.spline_params.A_SPLINE_NLOG_SM = 100
         pyccl.spline_params.A_SPLINE_NA_SM = 100
-        pyccl.spline_params.LOGM_SPLINE_NM = 300
+        pyccl.spline_params.LOGM_SPLINE_NM = 150
 
 
 # Missing function in CCL
