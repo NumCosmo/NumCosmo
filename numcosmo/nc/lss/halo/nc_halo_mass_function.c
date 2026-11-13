@@ -552,20 +552,42 @@ nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdoubl
 {
   NcHaloMassFunctionPrivate * const self = mfp->priv;
   const gdouble V                        = ncm_powspec_filter_volume_rm3 (self->psf) * exp (3.0 * lnR);
-  const gdouble sigma                    = ncm_powspec_filter_eval_sigma_lnr (self->psf, z, lnR);
   const gdouble dlnvar_dlnR              = ncm_powspec_filter_eval_dlnvar_dlnr (self->psf, z, lnR);
-  const gdouble f                        = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, lnR, z);
+  const gdouble f                        = nc_halo_mass_function_f_lnR (mfp, cosmo, lnR, z);
   const gdouble dn_dlnR                  = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
+
+  return dn_dlnR;
+}
+
+/**
+ * nc_halo_mass_function_f_lnR:
+ * @mfp: a #NcHaloMassFunction
+ * @cosmo: a #NcHICosmo
+ * @lnR: logarithm base e of the radius $\ln R$
+ * @z: redshift $z$
+ *
+ * Computes the multiplicity function $f(\sigma)$ at $\sigma = \sigma(R, z)$, multiplied
+ * by its correction factor when nc_multiplicity_func_has_correction_factor() is %TRUE.
+ * This is the $f$ that nc_halo_mass_function_dn_dlnR() uses.
+ *
+ * Returns: $f(\sigma)$ at $\ln R$ = @lnR and redshift @z.
+ */
+gdouble
+nc_halo_mass_function_f_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z)
+{
+  NcHaloMassFunctionPrivate * const self = mfp->priv;
+  const gdouble sigma                    = ncm_powspec_filter_eval_sigma_lnr (self->psf, z, lnR);
+  const gdouble f                        = nc_multiplicity_func_eval (self->mulf, cosmo, sigma, lnR, z);
 
   if (nc_multiplicity_func_has_correction_factor (self->mulf))
   {
     const gdouble lnM = nc_halo_mass_function_lnR_to_lnM (mfp, cosmo, lnR);
 
-    return dn_dlnR * nc_multiplicity_func_correction_factor (self->mulf, cosmo, sigma, z, lnM);
+    return f * nc_multiplicity_func_correction_factor (self->mulf, cosmo, sigma, z, lnM);
   }
   else
   {
-    return dn_dlnR;
+    return f;
   }
 }
 
