@@ -729,6 +729,43 @@ ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs)
 }
 
 /**
+ * ncm_spline_bspline_get_breakpoints:
+ * @sbs: a prepared #NcmSplineBSpline
+ *
+ * Gets the breakpoints of @sbs: the distinct knots from the first to the last sample,
+ * placed by gsl_bspline_init_interp(). Between two consecutive breakpoints the spline is
+ * one polynomial of degree #NcmSplineBSpline:order minus one.
+ *
+ * Returns: (transfer full): a newly allocated #NcmVector with the breakpoints in
+ * increasing order.
+ */
+NcmVector *
+ncm_spline_bspline_get_breakpoints (NcmSplineBSpline *sbs)
+{
+  const gsize k = sbs->order;
+  const gdouble *t;
+  GArray *brk;
+  NcmVector *v;
+  gsize i;
+
+  g_assert_nonnull (sbs->w);
+
+  t   = sbs->w->knots->data;
+  brk = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), sbs->alloc_len - k + 2);
+
+  for (i = k - 1; i <= sbs->alloc_len; i++)
+  {
+    if ((brk->len == 0) || (t[i] > g_array_index (brk, gdouble, brk->len - 1)))
+      g_array_append_val (brk, t[i]);
+  }
+
+  v = ncm_vector_new_array (brk);
+  g_array_unref (brk);
+
+  return v;
+}
+
+/**
  * ncm_spline_bspline_get_order:
  * @sbs: a #NcmSplineBSpline
  *

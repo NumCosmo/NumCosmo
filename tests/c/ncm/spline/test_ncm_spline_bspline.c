@@ -45,6 +45,7 @@ static void test_ncm_spline_bspline_accuracy (void);
 static void test_ncm_spline_bspline_deriv_integ (void);
 static void test_ncm_spline_bspline_integ_extrap (void);
 static void test_ncm_spline_bspline_deriv_nmax (void);
+static void test_ncm_spline_bspline_breakpoints (void);
 static void test_ncm_spline_bspline_reprepare (void);
 static void test_ncm_spline_bspline_serialize (void);
 static void test_ncm_spline_bspline_copy_empty (void);
@@ -69,6 +70,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spline_bspline/deriv_integ", &test_ncm_spline_bspline_deriv_integ);
   g_test_add_func ("/ncm/spline_bspline/integ_extrap", &test_ncm_spline_bspline_integ_extrap);
   g_test_add_func ("/ncm/spline_bspline/deriv_nmax", &test_ncm_spline_bspline_deriv_nmax);
+  g_test_add_func ("/ncm/spline_bspline/breakpoints", &test_ncm_spline_bspline_breakpoints);
   g_test_add_func ("/ncm/spline_bspline/reprepare", &test_ncm_spline_bspline_reprepare);
   g_test_add_func ("/ncm/spline_bspline/serialize", &test_ncm_spline_bspline_serialize);
   g_test_add_func ("/ncm/spline_bspline/copy_empty", &test_ncm_spline_bspline_copy_empty);
@@ -344,6 +346,43 @@ test_ncm_spline_bspline_deriv_nmax (void)
 
     ncm_spline_free (s2);
     ncm_spline_free (s3);
+  }
+}
+
+/* The breakpoints run from the first to the last sample, strictly increasing, one per
+ * control point beyond the order (n - order + 2). On uniform samples the averaged knots of
+ * an even order fall on samples. */
+static void
+test_ncm_spline_bspline_breakpoints (void)
+{
+  const guint orders[] = {4, 6, 8};
+  guint o;
+
+  for (o = 0; o < G_N_ELEMENTS (orders); o++)
+  {
+    NcmSpline *s  = _new_gauss (orders[o], 50);
+    NcmVector *xv = ncm_spline_peek_xv (s);
+    NcmVector *bv = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (s));
+    const guint n = ncm_vector_len (bv);
+    guint i;
+
+    g_assert_cmpuint (n, ==, 50 - orders[o] + 2);
+    g_assert_cmpfloat (ncm_vector_get (bv, 0), ==, ncm_vector_get (xv, 0));
+    g_assert_cmpfloat (ncm_vector_get (bv, n - 1), ==, ncm_vector_get (xv, 49));
+
+    for (i = 0; i + 1 < n; i++)
+      g_assert_cmpfloat (ncm_vector_get (bv, i), <, ncm_vector_get (bv, i + 1));
+
+    for (i = 1; i + 1 < n; i++)
+    {
+      const gdouble b = ncm_vector_get (bv, i);
+      const guint k   = (guint) lround (b / (GAUSS_XF / 49.0));
+
+      ncm_assert_cmpdouble_e (b, ==, ncm_vector_get (xv, k), 1.0e-14, 0.0);
+    }
+
+    ncm_vector_free (bv);
+    ncm_spline_free (s);
   }
 }
 
