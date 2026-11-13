@@ -58,6 +58,7 @@ static void test_nc_galaxy_wl_obs_bad_set (TestNcGalaxyWLObs *test, gconstpointe
 static void test_nc_galaxy_wl_obs_bad_set_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_pz_linear (TestNcGalaxyWLObs *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -126,6 +127,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/numcosmo/nc_galaxy_wl_obs/shape_interp", TestNcGalaxyWLObs, NULL,
               &test_nc_galaxy_wl_obs_new,
               &test_nc_galaxy_wl_obs_shape_interp,
+              &test_nc_galaxy_wl_obs_free);
+
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/pz_linear", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new_pz,
+              &test_nc_galaxy_wl_obs_pz_linear,
               &test_nc_galaxy_wl_obs_free);
 
   g_test_run ();
@@ -603,5 +609,61 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   ncm_spectral_polar_panels_free (spp_0);
   ncm_spectral_polar_panels_free (spp_3);
   ncm_serialize_free (ser);
+}
+
+/*
+ * A cubic P(z) through a table with zeros and a narrow peak takes negative values between
+ * knots; the linear interpolant keeps the knot values and is non-negative everywhere.
+ */
+static void
+test_nc_galaxy_wl_obs_pz_linear (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  const gdouble table[] = {0.0, 0.0, 0.1, 3.0, 0.2, 0.0, 0.0, 0.0, 1.0, 2.0, 1.0, 0.0};
+  const guint n         = G_N_ELEMENTS (table);
+  NcmVector *xv         = ncm_vector_new (n);
+  NcmVector *yv         = ncm_vector_new_data_dup ((gdouble *) table, n, 1);
+  NcmSpline *cubic      = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  gdouble cubic_min     = 0.0;
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+    ncm_vector_set (xv, i, 0.5 + 0.01 * i);
+
+  ncm_spline_set (cubic, xv, yv, TRUE);
+  nc_galaxy_wl_obs_set_pz (test->obs, 0, cubic);
+  nc_galaxy_wl_obs_set_pz (test->obs, 1, cubic);
+
+  for (j = 0; j <= 1000; j++)
+    cubic_min = MIN (cubic_min, ncm_spline_eval (cubic, 0.5 + 0.01 * (n - 1) * j / 1000.0));
+
+  g_assert_cmpfloat (cubic_min, <, 0.0);
+
+  nc_galaxy_wl_obs_set_pz_linear (test->obs);
+
+  for (i = 0; i < 2; i++)
+  {
+    NcmSpline *pz = nc_galaxy_wl_obs_peek_pz (test->obs, i);
+
+    g_assert_true (NCM_IS_SPLINE_GSL (pz));
+    g_assert_cmpint (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (pz)), ==, NCM_SPLINE_GSL_LINEAR);
+
+    for (j = 0; j < n; j++)
+      g_assert_cmpfloat (ncm_spline_eval (pz, ncm_vector_get (xv, j)), ==, table[j]);
+
+    for (j = 0; j <= 1000; j++)
+      g_assert_cmpfloat (ncm_spline_eval (pz, 0.5 + 0.01 * (n - 1) * j / 1000.0), >=, 0.0);
+  }
+
+  /* A second call leaves the linear splines as they are */
+  {
+    NcmSpline *pz = nc_galaxy_wl_obs_peek_pz (test->obs, 0);
+
+    nc_galaxy_wl_obs_set_pz_linear (test->obs);
+    g_assert_true (nc_galaxy_wl_obs_peek_pz (test->obs, 0) == pz);
+  }
+
+  ncm_spline_free (cubic);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 }
 
