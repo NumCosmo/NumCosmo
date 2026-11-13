@@ -747,9 +747,10 @@ typedef struct _NcGalaxyShapeFactorSpectralInterp
  * |g| <= NcGalaxyShapeFactorSpectral:interp-g-max, and records in the data of the galaxy
  * what it was built for. In the frame where eps_obs is on the positive real axis,
  * g = g_c + rho exp (i psi), with g_c the shear that maps chi_I = 0 to eps_obs:
- * e / (1 + sqrt (1 - e^2)) for TRACE (1 for e >= 1) and e for TRACE_DET, e = |eps_obs|.
- * ln P has its narrowest structure at g_c, of width std_noise / 2 (TRACE) or std_noise
- * (TRACE_DET), see _nc_galaxy_shape_factor_spectral_interp_center(). The region is [0, g_max + g_c] x [0, pi] for g_c < g_max and otherwise
+ * e / (1 + sqrt (1 - e^2)) for TRACE (1 for e >= 1) and e for TRACE_DET, e = |eps_obs|
+ * (_nc_galaxy_shape_factor_spectral_interp_center()). ln P has its narrowest structure at
+ * g_c, of width std_noise / 2 (TRACE) or std_noise (TRACE_DET). The region is
+ * [0, g_max + g_c] x [0, pi] for g_c < g_max and otherwise
  * [g_c - g_max, g_c + g_max] x [pi - asin (g_max / g_c), pi]; psi < 0 is covered by the
  * reflection. The radial edges are those of ncm_spectral_polar_peak_edges() for a peak at
  * rho = 0 of that width that are inside the region, and the angular panels span pi / 2 at
