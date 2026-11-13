@@ -1,0 +1,120 @@
+```{python}
+# | code-fold: true
+
+# Helpers shared by the CCL halo mass function pages. Each page defines, before
+# including this file: PAIRS, a list of (label, function returning a new pair);
+# ENTRY_LABEL, the table header for the labels; PLOT_GRID and PLOT_FIGSIZE, the
+# subplot grid and figure size of plot_entries; and m_arr, Z_ARR, Z_STYLES and
+# PRECISION_SETS. PARAMETERS_SET and COLORS come from _setup_models.qmd.
+
+
+def compare_entry(compare_func, pair_factory, model, name, z):
+    """Compare one entry in one cosmology at one redshift."""
+    ccl_hmf, nc_mulf = pair_factory()
+    return compare_func(
+        model["CCL"], model["NC"], ccl_hmf, nc_mulf, m_arr, z, model=name
+    )
+
+
+def compare_all(compare_func):
+    """Compare every entry, cosmology, redshift and precision setting."""
+    return {
+        (prec, z): [
+            [
+                compare_entry(compare_func, factory, m, name, z)
+                for m, name in zip(model_set, PARAMETERS_SET)
+            ]
+            for _, factory in PAIRS
+        ]
+        for prec, model_set in PRECISION_SETS
+        for z in Z_ARR
+    }
+
+
+def plot_entries(comparisons, prec, x_label, y_label):
+    """Plot the relative difference for each entry at one precision setting."""
+    fig, axs = plt.subplots(
+        *PLOT_GRID, sharex=True, figsize=PLOT_FIGSIZE, squeeze=False
+    )
+    for i, (ax, (label, _)) in enumerate(zip(axs.flat, PAIRS)):
+        ax.set_title(label, fontsize=9)
+        entry = [p for z in Z_ARR for p in comparisons[(prec, z)][i]]
+        if all(p.rel_diff_max == 0.0 for p in entry):
+            # A log scale cannot show a difference that is zero everywhere.
+            ax.text(
+                0.5,
+                0.5,
+                "relative difference 0\nat every point",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=8,
+            )
+            continue
+        for z, ls in zip(Z_ARR, Z_STYLES):
+            for p, c in zip(comparisons[(prec, z)][i], COLORS):
+                ax.plot(
+                    p.x,
+                    p.abs_diff,
+                    lw=0.8,
+                    color=c,
+                    linestyle=ls,
+                    label=p.model if z == Z_ARR[0] else None,
+                )
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.grid()
+
+    for ax in axs[-1, :]:
+        ax.set_xlabel(x_label)
+    axs[0, 0].legend(loc="best", fontsize=7)
+    fig.supylabel(y_label)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+
+def summary_table(comparisons, stat_header):
+    """Display one row per precision setting, entry, cosmology and redshift."""
+    table = []
+    for prec, _ in PRECISION_SETS:
+        for z in Z_ARR:
+            for (label, _), entry in zip(PAIRS, comparisons[(prec, z)]):
+                for p in entry:
+                    # row[0] is the cosmology, passed to the comparison as model=.
+                    row = p.summary_row(convert_g=False)
+                    table.append([prec, label, row[0], f"{z:g}"] + row[2:])
+
+    df = pd.DataFrame(
+        table, columns=["Precision", ENTRY_LABEL, "Cosmology", "$z$"] + stat_header
+    )
+    display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+
+
+def worst(comparisons, prec, i):
+    """Largest relative difference of entry i at one precision setting."""
+    return max(p.rel_diff_max for z in Z_ARR for p in comparisons[(prec, z)][i])
+
+
+def worst_table(mf_comparisons, fs_comparisons):
+    """Display the largest relative difference per entry, quantity and setting."""
+    rows = []
+    for i, (label, _) in enumerate(PAIRS):
+        row = [label]
+        for comparisons in (mf_comparisons, fs_comparisons):
+            for prec, _ in PRECISION_SETS:
+                value = latex_float(worst(comparisons, prec, i), convert_g=False)
+                row.append(f"${value}$")
+        rows.append(row)
+
+    df = pd.DataFrame(
+        rows,
+        columns=[ENTRY_LABEL]
+        + [
+            rf"{quantity}, {prec}"
+            for quantity in (r"$\mathrm{d}n/\mathrm{d}\ln M$", r"$f(\sigma)$")
+            for prec, _ in PRECISION_SETS
+        ],
+    )
+    display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```

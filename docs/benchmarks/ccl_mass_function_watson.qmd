@@ -4,7 +4,7 @@ date: "2026-10-20"
 abstract: |
     This document compares the halo mass function and the multiplicity function of
     Watson (2013) implemented in NumCosmo and CCL, at the mass definitions 200m, 500m
-    and friends-of-friends (FoF), at CCL's default and high-precision settings.
+    and friends-of-friends (FoF), at the CCL defaults and CCL high precision settings.
 
 format:
   html:
@@ -19,36 +19,43 @@ format-links: [ipynb]
 
 ## Introduction
 
-Compares the halo mass function and the multiplicity function of Watson (2013) from
-CCL and NumCosmo. Reports their relative differences in plots and tables, for each
-mass definition, cosmology, redshift and CCL precision setting.
+This page compares the halo mass function and the multiplicity function of Watson
+[-@Watson2013] from CCL and NumCosmo. It reports their relative differences in plots and
+tables, for each mass definition, cosmology, redshift and CCL precision setting.
 
-The physics behind these quantities -- the growth function, the transfer function,
-the filtered variance and the multiplicity function -- is worked through in
+The linear growth factor, the matter power spectrum, the filtered variance and the
+multiplicity function are computed step by step in
 [Halo Mass Function](../examples/intro/halo_mass_function.qmd).
 
 ### Scope of the comparison
 
-Two quantities are compared:
+Two quantities are compared. For a quantity $Q$, the plots and tables report the
+relative difference $|Q^{\mathrm{NumCosmo}}/Q^{\mathrm{CCL}} - 1|$.
 
-1. **The halo mass function** $\mathrm{d}n/\mathrm{d}\ln M$.
-   `compare_mass_function` returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for
-   both codes; the factor $M \ln 10$ is the same for both and cancels in their
-   relative difference.
+1. **The halo mass function** $\mathrm{d}n/\mathrm{d}\ln M$. The function
+   `compare_mass_function` returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for both
+   codes; the factor $M \ln 10$ is the same for both and cancels in the relative
+   difference.
 2. **The multiplicity function** $f(\sigma)$. Both codes evaluate it at the same
-   $\sigma$, NumCosmo's $\sigma(M, z)$, so the fitting formula is compared apart from
-   the filtered variance.
+   $\sigma$, NumCosmo's $\sigma(M, z)$, so differences in $\sigma(M, z)$ do not
+   enter. Where the family uses them, each code computes its own critical density
+   contrast $\delta_c$, overdensity $\Delta$ and matter density parameter
+   $\Omega_m(a)$ at scale factor $a = 1/(1 + z)$; their differences are part of the
+   comparison.
 
 Both are evaluated on 128 masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$,
 at $z = 0$, $0.5$, $1$ and $1.5$, for the five cosmologies defined below. Watson
 (2013) is compared at three mass definitions: 200 and 500 times the mean matter
 density (200m and 500m), and the friends-of-friends definition (FoF).
 
-Both CCL precision settings are reported: CCL's defaults, and the values selected by
+Two CCL precision settings are reported: CCL defaults, which are CCL's default
+parameters, and CCL high precision, which are the values selected by
 `CCLParams.set_high_prec_params()`.
-[CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) describes the
-parameters of CCL's tabulated mass variance and compares the halo mass function with
-one group of them raised at a time.
+[CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) compares the halo
+mass function at four CCL settings: CCL defaults; CCL defaults with the mass nodes of
+CCL's tabulated mass variance raised; CCL defaults with its scale-factor nodes raised;
+and CCL high precision, which also changes CCL's integration and ODE tolerances, its
+background and power-spectrum spline nodes and its wavenumber range.
 
 ```{python}
 import sys
@@ -81,10 +88,10 @@ set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
 ```
 {{< include _setup_models.qmd >}}
 
-The models are built twice, once per precision setting. `setup_models` switches
-CCL's global parameters to high precision when asked and does not switch them back,
-and a CCL cosmology copies the global parameters when it is created. The
-default-precision set is therefore built first.
+The models are built twice, once per precision setting. The function `setup_models`
+switches CCL's global parameters to the CCL high precision values when asked and does
+not switch them back, and a CCL cosmology copies the global parameters when it is
+created. The CCL defaults set is therefore built first.
 
 ```{python}
 parameters, models_def = setup_models(high_precision=False)
@@ -92,17 +99,17 @@ _, models_hp = setup_models(high_precision=True)
 
 PRECISION_SETS = [
     ("CCL defaults", models_def),
-    ("High precision", models_hp),
+    ("CCL high precision", models_hp),
 ]
 ```
 
 ### Parameter Overview
 
-The table below summarizes the parameters. There are five parameter sets.
+The table below gives the parameters of the five cosmologies.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-watson-params
-# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-cap: Parameters of the five cosmologies in CCL and NumCosmo
 # | tbl-colwidths: [10, 30, 60]
 # | code-fold: true
 
@@ -116,15 +123,15 @@ The pairings between CCL's mass functions and NumCosmo's multiplicity functions 
 from `numcosmo_py.ccl.multiplicity_func_pairing`, which the mass-function tests also
 use. Each entry below is one fit at one mass definition.
 
-A prepared `NcHaloMassFunction` keeps the multiplicity function it was given, so each
-comparison needs a new pair; the entries are therefore stored as constructors rather
-than as objects.
+Each `NcHaloMassFunction` sets its power-spectrum filter on the multiplicity function
+it is given, and each cosmology has its own filter. Each comparison therefore builds
+its own pair: the entries below are functions that return a new pair.
 
 ```{python}
 MEAN = Nc.MultiplicityFuncMassDef.MEAN
 FOF = Nc.MultiplicityFuncMassDef.FOF
 
-WATSON_PAIRS = [
+PAIRS = [
     ("Watson 200m", lambda: mfp.watson_pair("matter", MEAN, 200)),
     ("Watson FoF", lambda: mfp.watson_pair("matter", FOF, "fof")),
     ("Watson 500m", lambda: mfp.watson_pair("matter", MEAN, 500)),
@@ -133,6 +140,9 @@ WATSON_PAIRS = [
 m_arr = np.geomspace(1.0e11, 1.0e15, 128)
 Z_ARR = [0.0, 0.5, 1.0, 1.5]
 Z_STYLES = ["-", "--", "-.", ":"]
+ENTRY_LABEL = "Entry"
+PLOT_GRID = (1, 3)
+PLOT_FIGSIZE = (12.0, 4.0)
 ```
 
 ### Mass definitions
@@ -140,92 +150,10 @@ Z_STYLES = ["-", "--", "-.", ":"]
 Watson's fit has its own formula for the friends-of-friends definition. For a
 spherical-overdensity definition, its fit at $\Delta = 178$ times the mean matter
 density is multiplied by a factor $\Gamma(\Delta/178, \sigma)$, which also depends on
-$\Omega_m(a)$, the matter density relative to the critical density at scale factor
-$a$. Since $\Gamma$ depends on $\sigma$, it is compared through $f(\sigma)$ below.
+$\Omega_m(a)$. Since $\Gamma$ depends on $\sigma$, it has no separate table; the
+$f(\sigma)$ comparison below includes it.
 
-```{python}
-# | code-fold: true
-
-
-def compare_entry(compare_func, pair_factory, model, name, z):
-    """Compare one entry in one cosmology at one redshift."""
-    ccl_hmf, nc_mulf = pair_factory()
-    return compare_func(
-        model["CCL"], model["NC"], ccl_hmf, nc_mulf, m_arr, z, model=name
-    )
-
-
-def compare_all(compare_func):
-    """Compare every entry, cosmology, redshift and precision setting."""
-    return {
-        (prec, z): [
-            [
-                compare_entry(compare_func, factory, m, name, z)
-                for m, name in zip(model_set, PARAMETERS_SET)
-            ]
-            for _, factory in WATSON_PAIRS
-        ]
-        for prec, model_set in PRECISION_SETS
-        for z in Z_ARR
-    }
-
-
-def plot_entries(comparisons, prec, x_label, y_label):
-    """Plot the relative difference for each entry at one precision setting."""
-    fig, axs = plt.subplots(1, 3, sharex=True, figsize=(12.0, 4.0))
-    for i, (ax, (label, _)) in enumerate(zip(axs, WATSON_PAIRS)):
-        ax.set_title(label, fontsize=9)
-        ax.set_xlabel(x_label)
-        entry = [p for z in Z_ARR for p in comparisons[(prec, z)][i]]
-        if all(p.rel_diff_max == 0.0 for p in entry):
-            # A log scale cannot show a difference that is zero everywhere.
-            ax.text(
-                0.5,
-                0.5,
-                "relative difference 0\nat every point",
-                ha="center",
-                va="center",
-                transform=ax.transAxes,
-                fontsize=8,
-            )
-            continue
-        for z, ls in zip(Z_ARR, Z_STYLES):
-            for p, c in zip(comparisons[(prec, z)][i], COLORS):
-                ax.plot(
-                    p.x,
-                    p.abs_diff,
-                    lw=0.8,
-                    color=c,
-                    linestyle=ls,
-                    label=p.model if z == Z_ARR[0] else None,
-                )
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.grid()
-
-    axs[0].legend(loc="best", fontsize=7)
-    fig.supylabel(y_label)
-    fig.tight_layout()
-    plt.show()
-    plt.close()
-
-
-def summary_table(comparisons, stat_header):
-    """Display one row per precision setting, entry, cosmology and redshift."""
-    table = []
-    for prec, _ in PRECISION_SETS:
-        for z in Z_ARR:
-            for (label, _), entry in zip(WATSON_PAIRS, comparisons[(prec, z)]):
-                for p in entry:
-                    # row[0] is the cosmology, passed to the comparison as model=.
-                    row = p.summary_row(convert_g=False)
-                    table.append([prec, label, row[0], f"{z:g}"] + row[2:])
-
-    df = pd.DataFrame(
-        table, columns=["Precision", "Entry", "Cosmology", "$z$"] + stat_header
-    )
-    display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-```
+{{< include _mass_function_helpers.qmd >}}
 
 ## Halo mass function
 
@@ -239,7 +167,7 @@ mf_comparisons = compare_all(nc_cmp.compare_mass_function)
 
 ```{python}
 # | label: fig-ccl-vs-nc-watson-mf-def
-# | fig-cap: "Halo mass function: relative difference for each entry, at CCL's default precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
 # | fig-cap-location: top
 # | code-fold: true
 
@@ -252,11 +180,13 @@ plot_entries(mf_comparisons, "CCL defaults", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LA
 
 ```{python}
 # | label: fig-ccl-vs-nc-watson-mf-hp
-# | fig-cap: "Halo mass function: relative difference for each entry, at CCL's high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
 # | fig-cap-location: top
 # | code-fold: true
 
-plot_entries(mf_comparisons, "High precision", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+plot_entries(
+    mf_comparisons, "CCL high precision", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL
+)
 ```
 
 The table below gives the same information numerically. The last four columns are
@@ -286,8 +216,8 @@ summary_table(
 
 The following compares $f(\sigma)$ for each entry, in every cosmology, at every
 redshift and at both precision settings, through `compare_multiplicity_function`.
-For each mass, both codes receive NumCosmo's $\sigma$ at that mass and redshift, so
-the horizontal axis is $\sigma$.
+For each mass and redshift, both codes receive NumCosmo's $\sigma(M, z)$. The plots
+show the relative difference as a function of $\sigma$.
 
 ```{python}
 fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
@@ -295,7 +225,7 @@ fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
 
 ```{python}
 # | label: fig-ccl-vs-nc-watson-fsigma-def
-# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL's default precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
 # | fig-cap-location: top
 # | code-fold: true
 
@@ -307,11 +237,11 @@ plot_entries(fs_comparisons, "CCL defaults", r"$\sigma$", FS_Y_LABEL)
 
 ```{python}
 # | label: fig-ccl-vs-nc-watson-fsigma-hp
-# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL's high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
 # | fig-cap-location: top
 # | code-fold: true
 
-plot_entries(fs_comparisons, "High precision", r"$\sigma$", FS_Y_LABEL)
+plot_entries(fs_comparisons, "CCL high precision", r"$\sigma$", FS_Y_LABEL)
 ```
 
 The table below gives the same information numerically. The last four columns are
@@ -348,30 +278,5 @@ precision setting.
 # | tbl-colwidths: [20, 20, 20, 20, 20]
 # | code-fold: true
 
-
-def worst(comparisons, prec, i):
-    """Largest relative difference of entry i at one precision setting."""
-    return max(p.rel_diff_max for z in Z_ARR for p in comparisons[(prec, z)][i])
-
-
-rows = []
-for i, (label, _) in enumerate(WATSON_PAIRS):
-    row = [label]
-    for comparisons in (mf_comparisons, fs_comparisons):
-        for prec, _ in PRECISION_SETS:
-            value = latex_float(worst(comparisons, prec, i), convert_g=False)
-            row.append(f"${value}$")
-    rows.append(row)
-
-df = pd.DataFrame(
-    rows,
-    columns=[
-        "Entry",
-        r"$\mathrm{d}n/\mathrm{d}\ln M$, CCL defaults",
-        r"$\mathrm{d}n/\mathrm{d}\ln M$, high precision",
-        r"$f(\sigma)$, CCL defaults",
-        r"$f(\sigma)$, high precision",
-    ],
-)
-display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+worst_table(mf_comparisons, fs_comparisons)
 ```

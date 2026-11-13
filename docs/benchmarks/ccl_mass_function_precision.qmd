@@ -2,10 +2,10 @@
 title: "Benchmarking NumCosmo vs. CCL: Halo Mass Function Precision"
 date: "2026-10-19"
 abstract: |
-    This document describes the parameters of CCL's tabulated mass variance
-    and compares the halo mass function from NumCosmo and CCL at four CCL settings:
-    CCL's defaults, each of two groups of these parameters raised alone, and the
-    high-precision settings.
+    This page describes the parameters of CCL's tabulated mass variance and compares
+    the halo mass function from NumCosmo and CCL at four CCL settings: CCL defaults,
+    CCL defaults with each of two groups of these parameters raised, and CCL high
+    precision.
 
 format:
   html:
@@ -21,25 +21,36 @@ format-links: [ipynb]
 ## Introduction
 
 [CCL Halo Mass Function](ccl_mass_function.qmd) compares the halo mass function at
-two CCL settings: CCL's defaults, and the values selected by
-`CCLParams.set_high_prec_params()`. This page compares it at four settings, which
-differ in how CCL samples its tabulated mass variance $\sigma(M, a)$:
+two CCL settings: CCL defaults, which are CCL's default parameters, and CCL high
+precision, which are the values selected by `CCLParams.set_high_prec_params()`. This
+page compares it at four settings:
 
-1. CCL's defaults;
-2. the defaults, with the number of mass nodes raised to its high-precision value;
-3. the defaults, with the two numbers of scale-factor nodes raised to their
-   high-precision values;
-4. the values selected by `CCLParams.set_high_prec_params()`.
+1. CCL defaults;
+2. CCL defaults, with the number of mass nodes of CCL's tabulated mass variance
+   $\sigma(M, a)$ raised to its CCL high precision value;
+3. CCL defaults, with the two numbers of scale-factor nodes of $\sigma(M, a)$ raised
+   to their CCL high precision values;
+4. CCL high precision.
+
+Settings 2 and 3 change only the nodes of the $\sigma(M, a)$ table. Setting 4 also
+changes CCL's integration and ODE tolerances, its background and power-spectrum spline
+nodes and its wavenumber range. The change from settings 2 and 3 to setting 4 therefore
+includes the effect of these other parameters, which this page does not separate from
+that of the $\sigma(M, a)$ nodes.
 
 The quantity compared is the halo mass function $\mathrm{d}n/\mathrm{d}\ln M$ for the
-Tinker (2008) multiplicity function at 200 times the mean matter density (200m),
-through `compare_mass_function`, which returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$
-for both codes; the factor $M \ln 10$ is the same for both and cancels in their
-relative difference. NumCosmo's Tinker (2008) multiplicity
-function is built with `set_linear_interp(True)`, so its fit coefficients are
-interpolated linearly in the overdensity, as CCL does. The comparison uses 128
-masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$, the five cosmologies
-defined below, and $z = 0$, $0.05$, $0.5$, $1$ and $1.5$.
+Tinker [-@Tinker2008] multiplicity function at 200 times the mean matter density
+(200m). For a quantity $Q$, the plots and tables report the relative difference
+$|Q^{\mathrm{NumCosmo}}/Q^{\mathrm{CCL}} - 1|$. The function `compare_mass_function`
+returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for both codes; the factor $M \ln 10$
+is the same for both and cancels in the relative difference. NumCosmo's Tinker (2008)
+multiplicity function is built with `set_linear_interp(True)`, as on
+[CCL Tinker Mass Functions](ccl_mass_function_tinker.qmd); at 200m the overdensity
+$\Delta_m = 200$ is tabulated, so the interpolation does not enter. The comparison
+uses 128 masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$, the five cosmologies
+defined below, and $z = 0$, $0.05$, $0.5$, $1$ and $1.5$. At CCL defaults, $z = 0.05$
+is the only one of these redshifts between the last two scale-factor nodes of the
+$\sigma(M, a)$ table, $a = 0.925$ and $a = 1$.
 
 ```{python}
 import sys
@@ -63,7 +74,11 @@ from numcosmo_py.ccl import multiplicity_func_pairing as mfp
 ```{python}
 # | code-fold: true
 
-display(Markdown(f"The comparisons on this page were computed with pyccl {pyccl.__version__}."))
+display(
+    Markdown(
+        f"The comparisons on this page were computed with pyccl {pyccl.__version__}."
+    )
+)
 ```
 
 ### Initializing NumCosmo
@@ -84,7 +99,7 @@ A CCL cosmology copies CCL's global parameters when it is created, and computes 
 $\sigma(M, a)$ table with those copies when it is first needed. Each setting is
 therefore applied to the global parameters before its five cosmologies are built.
 
-The cosmologies for CCL's defaults are built first. The high-precision values are
+The cosmologies for CCL defaults are built first. The CCL high precision values are
 then read from CCL's global parameters after `CCLParams.set_high_prec_params()`.
 Before each later setting, the global parameters are set back to the values pyccl
 had when it was imported, with `pyccl.spline_params.reload()` and
@@ -136,17 +151,17 @@ RUNS = [
     ("CCL defaults", models_def),
     ("LOGM_SPLINE_NM raised", models_nm),
     ("A_SPLINE_NA_SM and A_SPLINE_NLOG_SM raised", models_a),
-    ("set_high_prec_params()", models_hp),
+    ("CCL high precision", models_hp),
 ]
 ```
 
 ### Parameter Overview
 
-The table below summarizes the parameters. There are five parameter sets.
+The table below gives the parameters of the five cosmologies.
 
 ```{python}
 # | label: tbl-ccl-mf-prec-params
-# | tbl-cap: Used cosmological parameters in CCL and NumCosmo
+# | tbl-cap: Parameters of the five cosmologies in CCL and NumCosmo
 # | tbl-colwidths: [10, 30, 60]
 # | code-fold: true
 
@@ -161,17 +176,17 @@ and evaluates $\sigma(M, a)$ between the nodes with a bicubic spline in
 $(\log_{10}M, a)$. The nodes are set by the parameters below, and do not depend on the
 cosmology.
 
-- `LOGM_SPLINE_NM` is the number of nodes in $\log_{10}M$, evenly spaced from
-  `LOGM_SPLINE_MIN` to `LOGM_SPLINE_MAX`.
-- `A_SPLINE_NLOG_SM` is the number of nodes in $a$ evenly spaced in $\ln a$, from
-  `A_SPLINE_MINLOG_SM` to `A_SPLINE_MIN_SM`.
-- `A_SPLINE_NA_SM` is the number of nodes evenly spaced in $a$, from
+- The parameter `LOGM_SPLINE_NM` is the number of nodes in $\log_{10}M$, evenly
+  spaced from `LOGM_SPLINE_MIN` to `LOGM_SPLINE_MAX`.
+- The parameter `A_SPLINE_NLOG_SM` is the number of nodes in $a$ evenly spaced in
+  $\ln a$, from `A_SPLINE_MINLOG_SM` to `A_SPLINE_MIN_SM`.
+- The parameter `A_SPLINE_NA_SM` is the number of nodes evenly spaced in $a$, from
   `A_SPLINE_MIN_SM` to `A_SPLINE_MAX`.
 - The node at `A_SPLINE_MIN_SM` belongs to both ranges, so the grid has
   `A_SPLINE_NA_SM + A_SPLINE_NLOG_SM - 1` nodes in $a$.
 
-The table gives each parameter at CCL's defaults and after
-`CCLParams.set_high_prec_params()`, read from CCL when this page is computed.
+The table gives each parameter at CCL defaults and at CCL high precision, read from
+CCL when this page is computed.
 
 ```{python}
 # | label: tbl-ccl-mf-prec-sigma-params
@@ -210,7 +225,7 @@ rows.append(
 )
 df = pd.DataFrame(
     rows,
-    columns=["Parameter", "Sets", "CCL default", "`set_high_prec_params()`"],
+    columns=["Parameter", "Sets", "CCL defaults", "CCL high precision"],
 )
 display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
 ```
@@ -218,8 +233,9 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 ## Halo mass function
 
 The following compares $\mathrm{d}n/\mathrm{d}\ln M$ at each setting,
-in every cosmology and at every redshift. A prepared `NcHaloMassFunction` keeps the
-multiplicity function it was given, so each comparison gets a new pair from
+in every cosmology and at every redshift. Each `NcHaloMassFunction` sets its
+power-spectrum filter on the multiplicity function it is given, and each cosmology has
+its own filter, so each comparison gets a new pair from
 `numcosmo_py.ccl.multiplicity_func_pairing`.
 
 ```{python}
@@ -241,7 +257,9 @@ def compare_tinker08(model, name, z):
 
 
 comparisons = {
-    (label, z): [compare_tinker08(m, name, z) for m, name in zip(models, PARAMETERS_SET)]
+    (label, z): [
+        compare_tinker08(m, name, z) for m, name in zip(models, PARAMETERS_SET)
+    ]
     for label, models in RUNS
     for z in Z_ARR
 }
@@ -341,10 +359,10 @@ def fmt(value):
 
 
 def by_setting(values, runs):
-    """Values of the settings as "v at CCL's defaults, ..., and v with <label>"."""
+    """Values of the settings as "v at CCL defaults, ..., and v with <label>"."""
     parts = [
         (
-            f"{fmt(v)} at CCL's defaults"
+            f"{fmt(v)} at CCL defaults"
             if label == RUNS[0][0]
             else f"{fmt(v)} with {label}"
         )
@@ -355,7 +373,7 @@ def by_setting(values, runs):
 
 base = WORST[RUNS[0][0]][0]
 RATIO_SENTENCE = (
-    "Relative to CCL's defaults, the largest relative difference over all "
+    "Relative to CCL defaults, the largest relative difference over all "
     "cosmologies, redshifts and masses is multiplied by "
     f"{by_setting([WORST[label][0] / base for label, _ in RUNS[1:]], RUNS[1:])}."
 )
