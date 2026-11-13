@@ -43,6 +43,8 @@ NcmSplineBSpline *ncm_spline_bspline_new_tol (gdouble reltol, gdouble abstol);
 void ncm_spline_bspline_set_order (NcmSplineBSpline *sbs, guint order);
 guint ncm_spline_bspline_get_order (NcmSplineBSpline *sbs);
 gdouble ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs);
+NcmVector *ncm_spline_bspline_get_breakpoints (NcmSplineBSpline *sbs);
+void ncm_spline_bspline_release_workspace (NcmSplineBSpline *sbs);
 
 /**
  * NCM_SPLINE_BSPLINE_DEFAULT_ORDER:

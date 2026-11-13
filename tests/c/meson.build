@@ -811,6 +811,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
     },
     {
+        'name': 'nc_galaxy_redshift_factor_spline',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_redshift_factor_spline.c'],
+    },
+    {
         'name': 'nc_galaxy_shape_pop',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop.c'],
     },

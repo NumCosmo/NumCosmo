@@ -29,17 +29,22 @@
 /**
  * NcGalaxyRedshiftFactorSpline:
  *
- * Spline redshift calculator scheme: a per-galaxy pre-tabulated $p(z)$.
+ * Spline redshift calculator scheme: a per-galaxy tabulated $p(z)$.
  *
- * Each galaxy carries its own $p(z)$ as an #NcmSpline (set via
+ * Each galaxy carries its own table of $p(z)$ as an #NcmSpline (set via
  * nc_galaxy_redshift_factor_spline_data_set(), stored on the #NcGalaxyWLObs row via
- * nc_galaxy_wl_obs_set_pz()/nc_galaxy_wl_obs_peek_pz()); the joint density this scheme
- * hands out is exactly that spline, evaluated (or its natural logarithm taken) at the
- * true redshift $z$.
+ * nc_galaxy_wl_obs_set_pz()/nc_galaxy_wl_obs_peek_pz()). The scheme uses only the knots
+ * $z_j$ and values $p_j \geq 0$ of that spline, not its interpolant: the density is
+ * $$
+ * p(z) = s(z)^2,
+ * $$
+ * where $s$ is the order-6 (degree 5) #NcmSplineBSpline through $(z_j, \sqrt{p_j})$.
+ * The density is non-negative and $C^4$ everywhere on the table; its logarithm is
+ * $2\ln\vert s(z)\vert$. The integration limits are the first and last knots, the
+ * normalization is the exact integral of $s^2$ (6-point Gauss-Legendre on each polynomial
+ * piece), and sampling inverts the same integral.
  *
- * Sampling draws from an #NcmStatsDist1dSpline built from @pz (lazily, on
- * the first nc_galaxy_redshift_factor_update_data() call after a fresh
- * @pz is set).
+ * Reading a row with a negative value, or with fewer than 6 knots, aborts.
  *
  */
 
@@ -49,12 +54,15 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h"
-#include "ncm/spline/ncm_spline_cubic_notaknot.h"
-#include "ncm/stats/ncm_stats_dist1d_spline.h"
+#include "ncm/spline/ncm_spline_bspline.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
+#include <gsl/gsl_integration.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+#define _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER (6)
+#define _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_GL_N (6)
 
 typedef struct _NcGalaxyRedshiftFactorSplinePrivate
 {
@@ -68,13 +76,20 @@ struct _NcGalaxyRedshiftFactorSpline
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftFactorSpline, nc_galaxy_redshift_factor_spline, NC_TYPE_GALAXY_REDSHIFT_FACTOR);
 
-/* Per-galaxy fragment: the spline itself, plus the sampler built from it (NULL until
- * the first update_data() call after @pz is set). */
+/* Per-galaxy fragment: the table @pz as given, the B-spline @s of sqrt(p) through its
+ * knots, the breakpoints @brk of @s, and @cum, the integral of s^2 from brk[0] to each
+ * breakpoint (cum[0] = 0, the last entry is the normalization). */
 typedef struct _SplineLData
 {
   NcmSpline *pz;
-  NcmStatsDist1d *dist;
+  NcmSpline *s;
+  NcmVector *brk;
+  GArray *cum;
 } SplineLData;
+
+static void _spline_ldata_set_pz (SplineLData *sldata, NcmSpline *pz);
+static gdouble _spline_s2_integ (NcmSpline *s, const gdouble a, const gdouble b);
+static const gsl_integration_glfixed_table *_spline_gl (void);
 
 static void
 nc_galaxy_redshift_factor_spline_init (NcGalaxyRedshiftFactorSpline *gsdrs)
@@ -111,16 +126,8 @@ nc_galaxy_redshift_factor_spline_class_init (NcGalaxyRedshiftFactorSplineClass *
   gsdr_class->norm             = &_nc_galaxy_redshift_factor_spline_norm;
   gsdr_class->make_fixed_nodes = &_nc_galaxy_redshift_factor_spline_make_fixed_nodes;
 
-  /* prepare/get_hash: base defaults (no-op / constant 0) are exactly right
-   * here -- this scheme has no NcmMSet model dependency, so its density
-   * only ever changes when the per-galaxy data (the spline itself) does,
-   * which the orchestrator's own obs_changed already covers.
-   *
-   * update_data: base default (no-op) is right too -- this scheme's only
-   * per-galaxy cache derived from update_data(), the resample-only
-   * inverse-CDF sampler, is now built lazily inside _gen() itself (see
-   * _nc_galaxy_redshift_factor_spline_ensure_dist()), not eagerly on every
-   * prepare() cycle. */
+  /* prepare, get_hash and update_data keep the base no-ops: the density depends on no
+   * model, and everything derived from the table is built when the row is read. */
 }
 
 /* Fragment vtable --------------------------------------------------------- */
@@ -131,7 +138,9 @@ _spline_ldata_free (gpointer ldata)
   SplineLData *sldata = (SplineLData *) ldata;
 
   ncm_spline_clear (&sldata->pz);
-  ncm_stats_dist1d_clear (&sldata->dist);
+  ncm_spline_clear (&sldata->s);
+  ncm_vector_clear (&sldata->brk);
+  g_clear_pointer (&sldata->cum, g_array_unref);
   g_free (sldata);
 }
 
@@ -140,10 +149,7 @@ _spline_ldata_read_row (NcGalaxyRedshiftFactorData *data, NcGalaxyWLObs *obs, co
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
 
-  ncm_spline_clear (&sldata->pz);
-  ncm_stats_dist1d_clear (&sldata->dist);
-
-  sldata->pz = ncm_spline_ref (nc_galaxy_wl_obs_peek_pz (obs, i));
+  _spline_ldata_set_pz (sldata, nc_galaxy_wl_obs_peek_pz (obs, i));
 }
 
 static void
@@ -173,65 +179,163 @@ _nc_galaxy_redshift_factor_spline_data_init (NcGalaxyRedshiftFactor *gsdr, NcmMS
   data->ldata_required_columns = &_spline_ldata_required_columns;
 }
 
-/* Sampling ----------------------------------------------------------------- */
+/* Density s^2 ---------------------------------------------------------------- */
 
-/* Builds sldata->dist (an inverse-CDF sampler over @pz) the first time a galaxy is
- * actually sampled -- resample()-only state, never read by
- * integ/norm/get_integ_lim/make_fixed_nodes (all of which use sldata->pz directly), so
- * building it eagerly for every galaxy on every prepare() cycle (as update_data() used
- * to do) paid its full cost -- dominated by ncm_stats_dist1d_prepare()'s own
- * inverse-CDF construction -- even for fits/MCMC runs that never call resample() at
- * all.
- */
+/* Sets @pz, builds @s through (z_j, sqrt(p_j)), its breakpoints and the cumulative
+ * integrals of s^2. Aborts on a negative value or fewer than ORDER knots. */
 static void
-_nc_galaxy_redshift_factor_spline_ensure_dist (SplineLData *sldata)
+_spline_ldata_set_pz (SplineLData *sldata, NcmSpline *pz)
 {
-  if (sldata->dist != NULL)
-    return;
+  NcmVector *xv = ncm_spline_peek_xv (pz);
+  NcmVector *yv = ncm_spline_peek_yv (pz);
+  const guint n = ncm_vector_len (yv);
+  NcmVector *sv;
+  gdouble total = 0.0;
+  guint j;
 
+  if (n < _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER)
+    g_error ("nc_galaxy_redshift_factor_spline: the P(z) table has %u knots, at least %d are required.",
+             n, _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER);
+
+  sv = ncm_vector_new (n);
+
+  for (j = 0; j < n; j++)
   {
-    NcmVector *xv     = ncm_spline_peek_xv (sldata->pz);
-    NcmVector *yv     = ncm_spline_peek_yv (sldata->pz);
-    NcmVector *m2lnyv = ncm_vector_new (ncm_vector_len (yv));
-    NcmSpline *m2lnp;
-    gdouble z_min, z_max;
-    guint j;
+    const gdouble p_j = ncm_vector_get (yv, j);
 
-    ncm_spline_get_bounds (sldata->pz, &z_min, &z_max);
+    if (!(p_j >= 0.0))
+      g_error ("nc_galaxy_redshift_factor_spline: the P(z) table value %u is %g at z = %g; values must be non-negative.",
+               j, p_j, ncm_vector_get (xv, j));
 
-    for (j = 0; j < ncm_vector_len (yv); j++)
-    {
-      const gdouble y = -2.0 * log (ncm_vector_fast_get (yv, j) + 1.0e-5);
-
-      ncm_vector_set (m2lnyv, j, y);
-    }
-
-    m2lnp = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, m2lnyv, TRUE));
-
-    sldata->dist = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (m2lnp));
-    g_object_set (G_OBJECT (sldata->dist), "reltol", 1.0e-5, NULL);
-    ncm_stats_dist1d_set_xi (sldata->dist, z_min);
-    ncm_stats_dist1d_set_xf (sldata->dist, z_max);
-    ncm_stats_dist1d_prepare (sldata->dist);
-
-    ncm_spline_free (m2lnp);
-    ncm_vector_free (m2lnyv);
+    ncm_vector_fast_set (sv, j, sqrt (p_j));
   }
+
+  ncm_spline_clear (&sldata->s);
+  ncm_vector_clear (&sldata->brk);
+  g_clear_pointer (&sldata->cum, g_array_unref);
+  ncm_spline_ref (pz);
+  ncm_spline_clear (&sldata->pz);
+
+  sldata->pz  = pz;
+  sldata->s   = NCM_SPLINE (ncm_spline_bspline_new_full (_NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER, xv, sv, TRUE));
+  sldata->brk = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (sldata->s));
+  ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (sldata->s));
+  sldata->cum = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), ncm_vector_len (sldata->brk));
+
+  g_array_append_val (sldata->cum, total);
+
+  for (j = 0; j + 1 < ncm_vector_len (sldata->brk); j++)
+  {
+    total += _spline_s2_integ (sldata->s, ncm_vector_get (sldata->brk, j), ncm_vector_get (sldata->brk, j + 1));
+    g_array_append_val (sldata->cum, total);
+  }
+
+  ncm_vector_free (sv);
 }
 
+/* Integral of s^2 over [a, b] inside one polynomial piece of s, where s^2 has degree 10
+ * and the 6-point Gauss-Legendre rule is exact. */
+static gdouble
+_spline_s2_integ (NcmSpline *s, const gdouble a, const gdouble b)
+{
+  const gsl_integration_glfixed_table *gl = _spline_gl ();
+  const gdouble c                         = 0.5 * (a + b);
+  const gdouble h                         = 0.5 * (b - a);
+  gdouble res                             = 0.0;
+  guint j;
+
+  for (j = 0; j < _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_GL_N / 2; j++)
+  {
+    const gdouble s_m = ncm_spline_eval (s, c - h * gl->x[j]);
+    const gdouble s_p = ncm_spline_eval (s, c + h * gl->x[j]);
+
+    res += gl->w[j] * (s_m * s_m + s_p * s_p);
+  }
+
+  return h * res;
+}
+
+static const gsl_integration_glfixed_table *
+_spline_gl (void)
+{
+  static gsize init                        = 0;
+  static gsl_integration_glfixed_table *gl = NULL;
+
+  if (g_once_init_enter (&init))
+  {
+    gl = gsl_integration_glfixed_table_alloc (_NC_GALAXY_REDSHIFT_FACTOR_SPLINE_GL_N);
+    g_once_init_leave (&init, 1);
+  }
+
+  return gl;
+}
+
+/* Sampling ----------------------------------------------------------------- */
+
+/* Draws z with density s^2 / norm: picks the polynomial piece by its share of the
+ * normalization, then solves int_{brk_j}^{z} s^2 = target in it by Newton steps kept
+ * inside a bisection bracket. */
 static void
 _nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng)
 {
-  SplineLData *sldata = (SplineLData *) data->ldata;
-  gdouble z_min, z_max, z;
+  SplineLData *sldata  = (SplineLData *) data->ldata;
+  const guint n_brk    = ncm_vector_len (sldata->brk);
+  const gdouble total  = g_array_index (sldata->cum, gdouble, n_brk - 1);
+  const gdouble target = ncm_rng_uniform_gen (rng, 0.0, total);
+  guint lo             = 0;
+  guint hi             = n_brk - 1;
+  gdouble a, b, z, rem;
+  guint iter;
 
-  g_assert_nonnull (sldata->pz);
-  _nc_galaxy_redshift_factor_spline_ensure_dist (sldata);
-  ncm_spline_get_bounds (sldata->pz, &z_min, &z_max);
+  g_assert_nonnull (sldata->s);
 
-  do {
-    z = ncm_stats_dist1d_gen (sldata->dist, rng);
-  } while ((z < z_min) || (z > z_max));
+  while (hi - lo > 1)
+  {
+    const guint mid = (lo + hi) / 2;
+
+    if (target < g_array_index (sldata->cum, gdouble, mid))
+      hi = mid;
+    else
+      lo = mid;
+  }
+
+  a   = ncm_vector_get (sldata->brk, lo);
+  b   = ncm_vector_get (sldata->brk, lo + 1);
+  rem = target - g_array_index (sldata->cum, gdouble, lo);
+
+  {
+    const gdouble x0 = a;
+    gdouble z_lo     = a;
+    gdouble z_hi     = b;
+
+    z = 0.5 * (a + b);
+
+    for (iter = 0; iter < 200; iter++)
+    {
+      const gdouble F  = _spline_s2_integ (sldata->s, x0, z) - rem;
+      const gdouble sz = ncm_spline_eval (sldata->s, z);
+      const gdouble dF = sz * sz;
+      gdouble z_new;
+
+      if (F > 0.0)
+        z_hi = z;
+      else
+        z_lo = z;
+
+      z_new = (dF > 0.0) ? z - F / dF : 0.5 * (z_lo + z_hi);
+
+      if (!((z_new > z_lo) && (z_new < z_hi)))
+        z_new = 0.5 * (z_lo + z_hi);
+
+      if (fabs (z_new - z) <= 4.0 * GSL_DBL_EPSILON * fabs (z))
+      {
+        z = z_new;
+        break;
+      }
+
+      z = z_new;
+    }
+  }
 
   data->z = z;
 }
@@ -250,8 +354,9 @@ static gdouble
 _spline_integ_f (gpointer callback_data, const gdouble z, NcGalaxyRedshiftFactorData *data)
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
+  const gdouble s_z   = ncm_spline_eval (sldata->s, z);
 
-  return ncm_spline_eval (sldata->pz, z);
+  return s_z * s_z;
 }
 
 static gdouble
@@ -259,7 +364,7 @@ _spline_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxyRedshiftFac
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
 
-  return log (ncm_spline_eval (sldata->pz, z));
+  return 2.0 * log (fabs (ncm_spline_eval (sldata->s, z)));
 }
 
 /* No closure payload needed. */
@@ -299,12 +404,10 @@ static gdouble
 _nc_galaxy_redshift_factor_spline_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data)
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
-  gdouble z_min, z_max;
 
-  g_assert_nonnull (sldata->pz);
-  ncm_spline_get_bounds (sldata->pz, &z_min, &z_max);
+  g_assert_nonnull (sldata->cum);
 
-  return ncm_spline_eval_integ (sldata->pz, z_min, z_max);
+  return g_array_index (sldata->cum, gdouble, sldata->cum->len - 1);
 }
 
 static gdouble
@@ -393,7 +496,8 @@ nc_galaxy_redshift_factor_spline_clear (NcGalaxyRedshiftFactorSpline **gsdrs)
  * @data: a #NcGalaxyRedshiftFactorData
  * @pz: an #NcmSpline
  *
- * Sets @data's per-galaxy $p(z)$ to @pz.
+ * Sets @data's per-galaxy $p(z)$ table to the knots and values of @pz, see
+ * #NcGalaxyRedshiftFactorSpline.
  *
  */
 void
@@ -401,10 +505,7 @@ nc_galaxy_redshift_factor_spline_data_set (NcGalaxyRedshiftFactorSpline *gsdrs, 
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
 
-  ncm_spline_clear (&sldata->pz);
-  ncm_stats_dist1d_clear (&sldata->dist);
-
-  sldata->pz = ncm_spline_ref (pz);
+  _spline_ldata_set_pz (sldata, pz);
 }
 
 /**
@@ -412,7 +513,7 @@ nc_galaxy_redshift_factor_spline_data_set (NcGalaxyRedshiftFactorSpline *gsdrs, 
  * @gsdrs: a #NcGalaxyRedshiftFactorSpline
  * @data: a #NcGalaxyRedshiftFactorData
  *
- * Returns: (transfer none): @data's per-galaxy $p(z)$.
+ * Returns: (transfer none): @data's per-galaxy $p(z)$ table, as set.
  */
 NcmSpline *
 nc_galaxy_redshift_factor_spline_data_peek (NcGalaxyRedshiftFactorSpline *gsdrs, NcGalaxyRedshiftFactorData *data)

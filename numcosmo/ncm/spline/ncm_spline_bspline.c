@@ -59,6 +59,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_bspline.h>
+#include <string.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_math.h>
@@ -68,9 +69,10 @@ struct _NcmSplineBSpline
 {
   /*< private >*/
   NcmSpline parent_instance;
-  gsl_bspline_workspace *w;
-  gsl_vector *c;  /* control points */
-  gsl_matrix *XB; /* banded collocation matrix, reused across prepares */
+  gsl_bspline_workspace *w; /* NULL after ncm_spline_bspline_release_workspace() */
+  GArray *knots;            /* copy of w->knots: with c, all that _eval reads */
+  gsl_vector *c;            /* control points */
+  gsl_matrix *XB;           /* banded collocation matrix, reused across prepares */
   gsl_vector_uint *piv;
   gsl_integration_glfixed_table *gl; /* exact for the edge polynomials, see _integ */
   guint order;
@@ -96,6 +98,7 @@ static void
 ncm_spline_bspline_init (NcmSplineBSpline *sbs)
 {
   sbs->w            = NULL;
+  sbs->knots        = NULL;
   sbs->c            = NULL;
   sbs->XB           = NULL;
   sbs->piv          = NULL;
@@ -114,6 +117,7 @@ static void
 _ncm_spline_bspline_free_workspace (NcmSplineBSpline *sbs)
 {
   g_clear_pointer (&sbs->w, gsl_bspline_free);
+  g_clear_pointer (&sbs->knots, g_array_unref);
   g_clear_pointer (&sbs->c, gsl_vector_free);
   g_clear_pointer (&sbs->XB, gsl_matrix_free);
   g_clear_pointer (&sbs->piv, gsl_vector_uint_free);
@@ -291,8 +295,11 @@ _ncm_spline_bspline_reset (NcmSpline *s)
   _ncm_spline_bspline_free_workspace (sbs);
 
   /* One control point per sample: the fit is an interpolation, not a smoothing. */
-  sbs->w   = gsl_bspline_alloc_ncontrol (sbs->order, s_len);
-  sbs->c   = gsl_vector_alloc (s_len);
+  sbs->w     = gsl_bspline_alloc_ncontrol (sbs->order, s_len);
+  sbs->knots = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), s_len + sbs->order);
+  sbs->c     = gsl_vector_alloc (s_len);
+
+  g_array_set_size (sbs->knots, s_len + sbs->order);
   sbs->XB  = gsl_matrix_alloc (s_len, 3 * (sbs->order - 1) + 1);
   sbs->piv = gsl_vector_uint_alloc (s_len);
   sbs->gl  = gsl_integration_glfixed_table_alloc ((sbs->order + 1) / 2);
@@ -436,12 +443,36 @@ _ncm_spline_bspline_prepare (NcmSpline *s)
     _ncm_spline_bspline_select_order (sbs, &xv.vector, &yv.vector);
 
   /* ncm_spline_prepare() does not call reset(), and a change of order frees the workspace */
-  if ((sbs->w == NULL) || (sbs->alloc_len != s_len))
+  if ((sbs->c == NULL) || (sbs->alloc_len != s_len))
     _ncm_spline_bspline_reset (s);
+
+  /* Released by ncm_spline_bspline_release_workspace() */
+  if (sbs->w == NULL)
+    sbs->w = gsl_bspline_alloc_ncontrol (sbs->order, s_len);
+
+  if (sbs->XB == NULL)
+  {
+    sbs->XB  = gsl_matrix_alloc (s_len, 3 * (sbs->order - 1) + 1);
+    sbs->piv = gsl_vector_uint_alloc (s_len);
+  }
 
   if (!_ncm_spline_bspline_fit (&xv.vector, &yv.vector, sbs->order, sbs->w, sbs->XB, sbs->piv, sbs->c))
     g_error ("_ncm_spline_bspline_prepare: order %u interpolation failed on %u samples.",
              sbs->order, (guint) s_len);
+
+  memcpy (sbs->knots->data, sbs->w->knots->data, sizeof (gdouble) * sbs->knots->len);
+}
+
+/* Recreates the GSL workspace freed by ncm_spline_bspline_release_workspace() from the
+ * stored knots, for the paths that call GSL. Called with the lock held. */
+static void
+_ncm_spline_bspline_ensure_workspace (NcmSplineBSpline *sbs)
+{
+  if (sbs->w != NULL)
+    return;
+
+  sbs->w = gsl_bspline_alloc_ncontrol (sbs->order, sbs->alloc_len);
+  memcpy (sbs->w->knots->data, sbs->knots->data, sizeof (gdouble) * sbs->knots->len);
 }
 
 static gsize
@@ -463,7 +494,7 @@ _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   const gsize k         = sbs->order;
   const gsize ncontrol  = sbs->alloc_len;
-  const gdouble *t      = sbs->w->knots->data; /* contiguous: allocated by gsl_bspline_alloc_ncontrol() */
+  const gdouble *t      = (const gdouble *) sbs->knots->data;
   const gdouble *c      = sbs->c->data;
   gdouble deltal[NCM_SPLINE_BSPLINE_MAX_ORDER];
   gdouble deltar[NCM_SPLINE_BSPLINE_MAX_ORDER];
@@ -535,6 +566,7 @@ _ncm_spline_bspline_deriv (const NcmSpline *s, const gdouble x)
   gdouble res           = 0.0;
 
   g_mutex_lock (&sbs->lock);
+  _ncm_spline_bspline_ensure_workspace (sbs);
   gsl_bspline_calc_deriv (x, sbs->c, 1, &res, sbs->w);
   g_mutex_unlock (&sbs->lock);
 
@@ -548,6 +580,7 @@ _ncm_spline_bspline_deriv2 (const NcmSpline *s, const gdouble x)
   gdouble res           = 0.0;
 
   g_mutex_lock (&sbs->lock);
+  _ncm_spline_bspline_ensure_workspace (sbs);
   gsl_bspline_calc_deriv (x, sbs->c, 2, &res, sbs->w);
   g_mutex_unlock (&sbs->lock);
 
@@ -562,6 +595,7 @@ _ncm_spline_bspline_deriv_nmax (const NcmSpline *s, const gdouble x)
 
   /* The derivative of order equal to the degree */
   g_mutex_lock (&sbs->lock);
+  _ncm_spline_bspline_ensure_workspace (sbs);
   gsl_bspline_calc_deriv (x, sbs->c, sbs->order - 1, &res, sbs->w);
   g_mutex_unlock (&sbs->lock);
 
@@ -594,7 +628,7 @@ static gdouble
 _ncm_spline_bspline_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
-  const gdouble *t      = sbs->w->knots->data;
+  const gdouble *t      = (const gdouble *) sbs->knots->data;
   const gdouble t_lo    = t[sbs->order - 1];
   const gdouble t_hi    = t[sbs->alloc_len];
   const gdouble lo      = GSL_MAX (x0, t_lo);
@@ -612,6 +646,7 @@ _ncm_spline_bspline_integ (const NcmSpline *s, const gdouble x0, const gdouble x
     gdouble inner = 0.0;
 
     g_mutex_lock (&sbs->lock);
+    _ncm_spline_bspline_ensure_workspace (sbs);
     gsl_bspline_calc_integ (lo, hi, sbs->c, &inner, sbs->w);
     g_mutex_unlock (&sbs->lock);
 
@@ -726,6 +761,62 @@ gdouble
 ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs)
 {
   return sbs->achieved_err;
+}
+
+/**
+ * ncm_spline_bspline_release_workspace:
+ * @sbs: a #NcmSplineBSpline
+ *
+ * Frees the memory that only preparation uses, the banded collocation matrix, its pivots
+ * and the GSL B-spline workspace, keeping the knots and the control points. For $n$
+ * samples this leaves about $8\,(2n + \mathrm{order})$ bytes. Evaluation does not need
+ * the freed memory; the derivatives and the integral recreate the GSL workspace on first
+ * use, and the next preparation allocates everything again. Must not be called
+ * concurrently with any other use of @sbs.
+ */
+void
+ncm_spline_bspline_release_workspace (NcmSplineBSpline *sbs)
+{
+  g_clear_pointer (&sbs->XB, gsl_matrix_free);
+  g_clear_pointer (&sbs->piv, gsl_vector_uint_free);
+  g_clear_pointer (&sbs->w, gsl_bspline_free);
+}
+
+/**
+ * ncm_spline_bspline_get_breakpoints:
+ * @sbs: a prepared #NcmSplineBSpline
+ *
+ * Gets the breakpoints of @sbs: the distinct knots from the first to the last sample,
+ * placed by gsl_bspline_init_interp(). Between two consecutive breakpoints the spline is
+ * one polynomial of degree #NcmSplineBSpline:order minus one.
+ *
+ * Returns: (transfer full): a newly allocated #NcmVector with the breakpoints in
+ * increasing order.
+ */
+NcmVector *
+ncm_spline_bspline_get_breakpoints (NcmSplineBSpline *sbs)
+{
+  const gsize k = sbs->order;
+  const gdouble *t;
+  GArray *brk;
+  NcmVector *v;
+  gsize i;
+
+  g_assert_nonnull (sbs->knots);
+
+  t   = (const gdouble *) sbs->knots->data;
+  brk = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), sbs->alloc_len - k + 2);
+
+  for (i = k - 1; i <= sbs->alloc_len; i++)
+  {
+    if ((brk->len == 0) || (t[i] > g_array_index (brk, gdouble, brk->len - 1)))
+      g_array_append_val (brk, t[i]);
+  }
+
+  v = ncm_vector_new_array (brk);
+  g_array_unref (brk);
+
+  return v;
 }
 
 /**

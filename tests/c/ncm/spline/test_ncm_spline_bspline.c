@@ -45,6 +45,8 @@ static void test_ncm_spline_bspline_accuracy (void);
 static void test_ncm_spline_bspline_deriv_integ (void);
 static void test_ncm_spline_bspline_integ_extrap (void);
 static void test_ncm_spline_bspline_deriv_nmax (void);
+static void test_ncm_spline_bspline_breakpoints (void);
+static void test_ncm_spline_bspline_release_workspace (void);
 static void test_ncm_spline_bspline_reprepare (void);
 static void test_ncm_spline_bspline_serialize (void);
 static void test_ncm_spline_bspline_copy_empty (void);
@@ -69,6 +71,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spline_bspline/deriv_integ", &test_ncm_spline_bspline_deriv_integ);
   g_test_add_func ("/ncm/spline_bspline/integ_extrap", &test_ncm_spline_bspline_integ_extrap);
   g_test_add_func ("/ncm/spline_bspline/deriv_nmax", &test_ncm_spline_bspline_deriv_nmax);
+  g_test_add_func ("/ncm/spline_bspline/breakpoints", &test_ncm_spline_bspline_breakpoints);
+  g_test_add_func ("/ncm/spline_bspline/release_workspace", &test_ncm_spline_bspline_release_workspace);
   g_test_add_func ("/ncm/spline_bspline/reprepare", &test_ncm_spline_bspline_reprepare);
   g_test_add_func ("/ncm/spline_bspline/serialize", &test_ncm_spline_bspline_serialize);
   g_test_add_func ("/ncm/spline_bspline/copy_empty", &test_ncm_spline_bspline_copy_empty);
@@ -345,6 +349,89 @@ test_ncm_spline_bspline_deriv_nmax (void)
     ncm_spline_free (s2);
     ncm_spline_free (s3);
   }
+}
+
+/* The breakpoints run from the first to the last sample, strictly increasing, one per
+ * control point beyond the order (n - order + 2). On uniform samples the averaged knots of
+ * an even order fall on samples. */
+static void
+test_ncm_spline_bspline_breakpoints (void)
+{
+  const guint orders[] = {4, 6, 8};
+  guint o;
+
+  for (o = 0; o < G_N_ELEMENTS (orders); o++)
+  {
+    NcmSpline *s  = _new_gauss (orders[o], 50);
+    NcmVector *xv = ncm_spline_peek_xv (s);
+    NcmVector *bv = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (s));
+    const guint n = ncm_vector_len (bv);
+    guint i;
+
+    g_assert_cmpuint (n, ==, 50 - orders[o] + 2);
+    g_assert_cmpfloat (ncm_vector_get (bv, 0), ==, ncm_vector_get (xv, 0));
+    g_assert_cmpfloat (ncm_vector_get (bv, n - 1), ==, ncm_vector_get (xv, 49));
+
+    for (i = 0; i + 1 < n; i++)
+      g_assert_cmpfloat (ncm_vector_get (bv, i), <, ncm_vector_get (bv, i + 1));
+
+    for (i = 1; i + 1 < n; i++)
+    {
+      const gdouble b = ncm_vector_get (bv, i);
+      const guint k   = (guint) lround (b / (GAUSS_XF / 49.0));
+
+      ncm_assert_cmpdouble_e (b, ==, ncm_vector_get (xv, k), 1.0e-14, 0.0);
+    }
+
+    ncm_vector_free (bv);
+    ncm_spline_free (s);
+  }
+}
+
+/* Releasing the workspace leaves the values, derivatives, integrals and breakpoints
+ * unchanged, and a later preparation allocates it again. */
+static void
+test_ncm_spline_bspline_release_workspace (void)
+{
+  NcmSpline *s    = _new_gauss (6, 100);
+  NcmSpline *ref  = _new_gauss (6, 100);
+  const gdouble x = 0.37 * GAUSS_XF;
+
+  ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (s));
+  ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (s));
+
+  g_assert_cmpfloat (ncm_spline_eval (s, x), ==, ncm_spline_eval (ref, x));
+  g_assert_cmpfloat (ncm_spline_eval_deriv (s, x), ==, ncm_spline_eval_deriv (ref, x));
+  g_assert_cmpfloat (ncm_spline_eval_integ (s, 0.0, x), ==, ncm_spline_eval_integ (ref, 0.0, x));
+  g_assert_cmpfloat (ncm_spline_eval_deriv2 (s, x), ==, ncm_spline_eval_deriv2 (ref, x));
+  g_assert_cmpfloat (ncm_spline_eval_deriv_nmax (s, x), ==, ncm_spline_eval_deriv_nmax (ref, x));
+  g_assert_cmpfloat (ncm_spline_eval (s, -0.1), ==, ncm_spline_eval (ref, -0.1));
+  g_assert_cmpfloat (ncm_spline_eval_integ (s, -0.1, GAUSS_XF + 0.1), ==, ncm_spline_eval_integ (ref, -0.1, GAUSS_XF + 0.1));
+
+  {
+    NcmVector *b_s   = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (s));
+    NcmVector *b_ref = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (ref));
+
+    g_assert_cmpuint (ncm_vector_len (b_s), ==, ncm_vector_len (b_ref));
+    g_assert_cmpfloat (ncm_vector_get (b_s, 1), ==, ncm_vector_get (b_ref, 1));
+    ncm_vector_free (b_s);
+    ncm_vector_free (b_ref);
+  }
+
+  /* Release again with the GSL workspace recreated by the derivative */
+  ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (s));
+  g_assert_cmpfloat (ncm_spline_eval (s, x), ==, ncm_spline_eval (ref, x));
+
+  _fill_gauss (s, 120, TRUE);
+  _fill_gauss (ref, 120, TRUE);
+  g_assert_cmpfloat (ncm_spline_eval (s, x), ==, ncm_spline_eval (ref, x));
+
+  ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (s));
+  _fill_gauss (s, 120, TRUE);
+  g_assert_cmpfloat (ncm_spline_eval (s, x), ==, ncm_spline_eval (ref, x));
+
+  ncm_spline_free (s);
+  ncm_spline_free (ref);
 }
 
 /* A change of order rebuilds the workspace before the next preparation. */
