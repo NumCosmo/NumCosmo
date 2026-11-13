@@ -86,6 +86,7 @@ guint nc_data_cluster_wl_factor_get_max_total_nodes (NcDataClusterWLFactor *dcwl
 guint nc_data_cluster_wl_factor_get_low_prob_count (NcDataClusterWLFactor *dcwlf);
 
 void nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *mset);
+void nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs);
 gboolean nc_data_cluster_wl_factor_is_data_prepared (NcDataClusterWLFactor *dcwlf);
 guint nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf);
 
