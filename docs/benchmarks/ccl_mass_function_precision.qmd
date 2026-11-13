@@ -130,7 +130,7 @@ def reset_ccl_params():
 
 
 DEFAULT = read_sigma_params()
-parameters, models_def = setup_models(high_precision=False)
+_, models_def = setup_models(high_precision=False)
 
 CCLParams.set_high_prec_params()
 HIGH = read_sigma_params()
@@ -155,19 +155,7 @@ RUNS = [
 ]
 ```
 
-### Parameter Overview
-
-The table below gives the parameters of the five cosmologies.
-
-```{python}
-# | label: tbl-ccl-mf-prec-params
-# | tbl-cap: Parameters of the five cosmologies in CCL and NumCosmo
-# | tbl-colwidths: [10, 30, 60]
-# | code-fold: true
-
-df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
-display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-```
+The parameters of the five cosmologies are tabulated on [CCL Halo Mass Function](ccl_mass_function.qmd).
 
 ## CCL's $\sigma(M, a)$ table
 

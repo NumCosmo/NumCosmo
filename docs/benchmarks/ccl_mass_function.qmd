@@ -3,8 +3,7 @@ title: "Benchmarking NumCosmo vs. CCL: Halo Mass Function"
 date: "2026-10-19"
 abstract: |
     This document compares the halo mass function and the multiplicity function
-    implemented in NumCosmo and CCL, for eight multiplicity-function families, at
-    the CCL defaults and CCL high precision settings.
+    implemented in NumCosmo and CCL, for eight multiplicity-function families, at CCL's default settings.
 
 format:
   html:
@@ -21,7 +20,7 @@ format-links: [ipynb]
 
 This page compares the halo mass function and the multiplicity function from CCL and
 NumCosmo. It reports their relative differences in plots and tables, for each
-multiplicity-function family, cosmology, redshift and CCL precision setting.
+multiplicity-function family, cosmology and redshift.
 
 The linear growth factor, the matter power spectrum, the filtered variance and the
 multiplicity function are computed step by step in
@@ -54,22 +53,15 @@ matter density, so the mass definition changes no value in either code. Tinker [
 calibration, Watson [-@Watson2013] and Despali [-@Despali2016] with its ellipsoidal correction are
 compared at 200 times the mean matter density (200m).
 
-Tinker (2008) tabulate their fit coefficients at nine overdensities and recommend
-interpolating them with a cubic spline in $\log_{10}\Delta$, built from the second
-derivatives in their Table B3 [@Tinker2008]. NumCosmo uses this spline by default,
-while CCL interpolates the coefficients linearly in $\log_{10}\Delta$. For this
-comparison, NumCosmo's Tinker (2008) multiplicity function is built with
-`set_linear_interp(True)`, which selects linear interpolation in $\log_{10}\Delta$,
-as in CCL.
+NumCosmo's Tinker (2008) multiplicity function is built with `set_linear_interp(True)`,
+which selects linear interpolation of the fit coefficients, as in CCL; [CCL Tinker Mass
+Functions](ccl_mass_function_tinker.qmd) explains the choice.
 
-Two CCL precision settings are reported: CCL defaults, which are CCL's default
-parameters, and CCL high precision, which are the values selected by
-`CCLParams.set_high_prec_params()`.
+CCL is run at its default parameters.
 [CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) compares the halo
-mass function at four CCL settings: CCL defaults; CCL defaults with the mass nodes of
-CCL's tabulated mass variance raised; CCL defaults with its scale-factor nodes raised;
-and CCL high precision, which also changes CCL's integration and ODE tolerances, its
-background and power-spectrum spline nodes and its wavenumber range.
+mass function at four CCL settings, from the defaults to the values selected by
+`CCLParams.set_high_prec_params()`, and shows how the differences at CCL defaults
+change when CCL's parameters are raised.
 
 [CCL Tinker Mass Functions](ccl_mass_function_tinker.qmd),
 [CCL Despali Mass Function](ccl_mass_function_despali.qmd),
@@ -108,19 +100,8 @@ set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
 ```
 {{< include _setup_models.qmd >}}
 
-The models are built twice, once per precision setting. The function `setup_models`
-switches CCL's global parameters to the CCL high precision values when asked and does
-not switch them back, and a CCL cosmology copies the global parameters when it is
-created. The CCL defaults set is therefore built first.
-
 ```{python}
 parameters, models_def = setup_models(high_precision=False)
-_, models_hp = setup_models(high_precision=True)
-
-PRECISION_SETS = [
-    ("CCL defaults", models_def),
-    ("CCL high precision", models_hp),
-]
 ```
 
 ### Parameter Overview
@@ -183,7 +164,7 @@ PLOT_FIGSIZE = (9.0, 11.0)
 ## Halo mass function
 
 The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each family,
-in every cosmology, at every redshift and at both precision settings, through
+in every cosmology and at every redshift, through
 `compare_mass_function`.
 
 ```{python}
@@ -200,18 +181,7 @@ MF_Y_LABEL = (
     r"$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}"
     r"/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$"
 )
-plot_entries(mf_comparisons, "CCL defaults", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
-```
-
-```{python}
-# | label: fig-ccl-vs-nc-mf-families-hp
-# | fig-cap: "Halo mass function: relative difference for each family, at CCL high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
-# | fig-cap-location: top
-# | code-fold: true
-
-plot_entries(
-    mf_comparisons, "CCL high precision", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL
-)
+plot_entries(mf_comparisons, r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
 ```
 
 The table below gives the same information numerically. The last four columns are
@@ -220,8 +190,8 @@ $\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}/(\mathrm{d}n/\mathrm{d}
 
 ```{python}
 # | label: tbl-ccl-vs-nc-mf-families
-# | tbl-cap: Halo mass function, all families, cosmologies, redshifts and precision settings
-# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | tbl-cap: Halo mass function, all families, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
 # | code-fold: true
 
 # CompareFunc1d.table_header() names the power spectrum and is shared with the other
@@ -239,8 +209,7 @@ summary_table(
 
 ## Multiplicity function
 
-The following compares $f(\sigma)$ for each family, in every cosmology, at every
-redshift and at both precision settings, through `compare_multiplicity_function`.
+The following compares $f(\sigma)$ for each family, in every cosmology and at every redshift, through `compare_multiplicity_function`.
 For each mass and redshift, both codes receive NumCosmo's $\sigma(M, z)$. The plots
 show the relative difference as a function of $\sigma$.
 
@@ -257,16 +226,7 @@ fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
 FS_Y_LABEL = (
     r"$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$"
 )
-plot_entries(fs_comparisons, "CCL defaults", r"$\sigma$", FS_Y_LABEL)
-```
-
-```{python}
-# | label: fig-ccl-vs-nc-fsigma-families-hp
-# | fig-cap: "Multiplicity function: relative difference for each family, at CCL high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
-# | fig-cap-location: top
-# | code-fold: true
-
-plot_entries(fs_comparisons, "CCL high precision", r"$\sigma$", FS_Y_LABEL)
+plot_entries(fs_comparisons, r"$\sigma$", FS_Y_LABEL)
 ```
 
 The table below gives the same information numerically. The last four columns are
@@ -276,8 +236,8 @@ mass range.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-fsigma-families
-# | tbl-cap: Multiplicity function, all families, cosmologies, redshifts and precision settings
-# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | tbl-cap: Multiplicity function, all families, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
 # | code-fold: true
 
 summary_table(
@@ -294,13 +254,12 @@ summary_table(
 ## Summary
 
 The table below gives, for each family, the largest relative difference over the
-five cosmologies, the four redshifts and the mass range, for each quantity at each
-precision setting.
+five cosmologies, the four redshifts and the mass range, for each quantity.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-mf-worst
 # | tbl-cap: Largest relative difference per family, over all cosmologies, redshifts and masses
-# | tbl-colwidths: [20, 20, 20, 20, 20]
+# | tbl-colwidths: [40, 30, 30]
 # | code-fold: true
 
 worst_table(mf_comparisons, fs_comparisons)

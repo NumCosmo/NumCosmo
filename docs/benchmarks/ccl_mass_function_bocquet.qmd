@@ -4,8 +4,7 @@ date: "2026-10-20"
 abstract: |
     This document compares the halo mass function and the multiplicity function of
     Bocquet (2016), in its hydrodynamical calibration, implemented in NumCosmo and
-    CCL, at the mass definitions 200m, 200c and 500c, at the CCL defaults and CCL high
-    precision settings.
+    CCL, at the mass definitions 200m, 200c and 500c, at CCL's default settings.
 
 format:
   html:
@@ -22,44 +21,15 @@ format-links: [ipynb]
 
 This page compares the halo mass function and the multiplicity function of Bocquet
 [-@Bocquet2016] from CCL and NumCosmo. It reports their relative differences in plots and
-tables, for each mass definition, cosmology, redshift and CCL precision setting.
+tables, for each mass definition, cosmology and redshift.
 
-The linear growth factor, the matter power spectrum, the filtered variance and the
-multiplicity function are computed step by step in
-[Halo Mass Function](../examples/intro/halo_mass_function.qmd).
+The quantities compared, the relative difference reported, the masses, the redshifts
+and the five cosmologies are those of
+[CCL Halo Mass Function](ccl_mass_function.qmd), "Scope of the comparison".
 
-### Scope of the comparison
-
-Two quantities are compared. For a quantity $Q$, the plots and tables report the
-relative difference $|Q^{\mathrm{NumCosmo}}/Q^{\mathrm{CCL}} - 1|$.
-
-1. **The halo mass function** $\mathrm{d}n/\mathrm{d}\ln M$. The function
-   `compare_mass_function` returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for both
-   codes; the factor $M \ln 10$ is the same for both and cancels in the relative
-   difference.
-2. **The multiplicity function** $f(\sigma)$. Both codes evaluate it at the same
-   $\sigma$, NumCosmo's $\sigma(M, z)$, so differences in $\sigma(M, z)$ do not
-   enter. Where the family uses them, each code computes its own critical density
-   contrast $\delta_c$, overdensity $\Delta$ and matter density parameter
-   $\Omega_m(a)$ at scale factor $a = 1/(1 + z)$; their differences are part of the
-   comparison. At 200c and 500c, both
-   codes also multiply $f(\sigma)$ by the mass-dependent correction factor of
-   Bocquet (2016).
-
-Both are evaluated on 128 masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$,
-at $z = 0$, $0.5$, $1$ and $1.5$, for the five cosmologies defined below. Bocquet
-(2016) is compared in its hydrodynamical calibration, at three mass definitions: 200
-times the mean matter density (200m), and 200 and 500 times the critical density (200c
-and 500c).
-
-Two CCL precision settings are reported: CCL defaults, which are CCL's default
-parameters, and CCL high precision, which are the values selected by
-`CCLParams.set_high_prec_params()`.
-[CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) compares the halo
-mass function at four CCL settings: CCL defaults; CCL defaults with the mass nodes of
-CCL's tabulated mass variance raised; CCL defaults with its scale-factor nodes raised;
-and CCL high precision, which also changes CCL's integration and ODE tolerances, its
-background and power-spectrum spline nodes and its wavenumber range.
+Bocquet (2016) is compared in its hydrodynamical calibration, at three mass definitions:
+200 times the mean matter density (200m), and 200 and 500 times the critical density
+(200c and 500c).
 
 ```{python}
 import sys
@@ -92,44 +62,15 @@ set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
 ```
 {{< include _setup_models.qmd >}}
 
-The models are built twice, once per precision setting. The function `setup_models`
-switches CCL's global parameters to the CCL high precision values when asked and does
-not switch them back, and a CCL cosmology copies the global parameters when it is
-created. The CCL defaults set is therefore built first.
-
 ```{python}
-parameters, models_def = setup_models(high_precision=False)
-_, models_hp = setup_models(high_precision=True)
-
-PRECISION_SETS = [
-    ("CCL defaults", models_def),
-    ("CCL high precision", models_hp),
-]
+_, models_def = setup_models(high_precision=False)
 ```
 
-### Parameter Overview
-
-The table below gives the parameters of the five cosmologies.
-
-```{python}
-# | label: tbl-ccl-vs-nc-bocquet-params
-# | tbl-cap: Parameters of the five cosmologies in CCL and NumCosmo
-# | tbl-colwidths: [10, 30, 60]
-# | code-fold: true
-
-df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
-display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
-```
+The parameters of the five cosmologies are tabulated on [CCL Halo Mass Function](ccl_mass_function.qmd).
 
 ### Configurations
 
-The pairings between CCL's mass functions and NumCosmo's multiplicity functions come
-from `numcosmo_py.ccl.multiplicity_func_pairing`, which the mass-function tests also
-use. Each entry below is one fit at one mass definition.
-
-Each `NcHaloMassFunction` sets its power-spectrum filter on the multiplicity function
-it is given, and each cosmology has its own filter. Each comparison therefore builds
-its own pair: the entries below are functions that return a new pair.
+Each entry below is one fit at one mass definition.
 
 ```{python}
 MEAN = Nc.MultiplicityFuncMassDef.MEAN
@@ -217,8 +158,7 @@ display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns)
 
 ## Halo mass function
 
-The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each entry, in
-every cosmology, at every redshift and at both precision settings, through
+The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each entry, in every cosmology and at every redshift, through
 `compare_mass_function`.
 
 ```{python}
@@ -235,18 +175,7 @@ MF_Y_LABEL = (
     r"$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}"
     r"/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$"
 )
-plot_entries(mf_comparisons, "CCL defaults", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
-```
-
-```{python}
-# | label: fig-ccl-vs-nc-bocquet-mf-hp
-# | fig-cap: "Halo mass function: relative difference for each entry, at CCL high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
-# | fig-cap-location: top
-# | code-fold: true
-
-plot_entries(
-    mf_comparisons, "CCL high precision", r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL
-)
+plot_entries(mf_comparisons, r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
 ```
 
 The table below gives the same information numerically. The last four columns are
@@ -255,8 +184,8 @@ $\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}/(\mathrm{d}n/\mathrm{d}
 
 ```{python}
 # | label: tbl-ccl-vs-nc-bocquet-mf
-# | tbl-cap: Halo mass function, all entries, cosmologies, redshifts and precision settings
-# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | tbl-cap: Halo mass function, all entries, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
 # | code-fold: true
 
 # CompareFunc1d.table_header() names the power spectrum and is shared with the other
@@ -274,8 +203,7 @@ summary_table(
 
 ## Multiplicity function
 
-The following compares $f(\sigma)$ for each entry, in every cosmology, at every
-redshift and at both precision settings, through `compare_multiplicity_function`.
+The following compares $f(\sigma)$ for each entry, in every cosmology and at every redshift, through `compare_multiplicity_function`.
 For each mass and redshift, both codes receive NumCosmo's $\sigma(M, z)$. The plots
 show the relative difference as a function of $\sigma$.
 
@@ -292,16 +220,7 @@ fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
 FS_Y_LABEL = (
     r"$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$"
 )
-plot_entries(fs_comparisons, "CCL defaults", r"$\sigma$", FS_Y_LABEL)
-```
-
-```{python}
-# | label: fig-ccl-vs-nc-bocquet-fsigma-hp
-# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL high precision. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
-# | fig-cap-location: top
-# | code-fold: true
-
-plot_entries(fs_comparisons, "CCL high precision", r"$\sigma$", FS_Y_LABEL)
+plot_entries(fs_comparisons, r"$\sigma$", FS_Y_LABEL)
 ```
 
 The table below gives the same information numerically. The last four columns are
@@ -311,8 +230,8 @@ mass range.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-bocquet-fsigma
-# | tbl-cap: Multiplicity function, all entries, cosmologies, redshifts and precision settings
-# | tbl-colwidths: [10, 12, 16, 6, 14, 14, 14, 14]
+# | tbl-cap: Multiplicity function, all entries, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
 # | code-fold: true
 
 summary_table(
@@ -329,13 +248,12 @@ summary_table(
 ## Summary
 
 The table below gives, for each entry, the largest relative difference over the
-five cosmologies, the four redshifts and the mass range, for each quantity at each
-precision setting.
+five cosmologies, the four redshifts and the mass range, for each quantity.
 
 ```{python}
 # | label: tbl-ccl-vs-nc-bocquet-worst
 # | tbl-cap: Largest relative difference per entry, over all cosmologies, redshifts and masses
-# | tbl-colwidths: [20, 20, 20, 20, 20]
+# | tbl-colwidths: [40, 30, 30]
 # | code-fold: true
 
 worst_table(mf_comparisons, fs_comparisons)
