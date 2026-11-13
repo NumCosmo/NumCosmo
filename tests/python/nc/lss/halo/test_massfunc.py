@@ -38,6 +38,16 @@ import numcosmo_py.cosmology as ncpy
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import duplicate_via_serialization
 from numcosmo_py.ccl.nc_ccl import create_nc_obj, CCLParams
+import numcosmo_py.ccl.multiplicity_func_pairing as mfp
+from numcosmo_py.ccl.multiplicity_func_pairing import (
+    BOCQUET_HYDRO,
+    BOCQUET_MDEFS,
+    DESPALI_OPTS,
+    TINKER08_DELTAS_CRITICAL,
+    TINKER08_DELTAS_MATTER,
+    TINKER10_DELTAS,
+    WATSON_OPTS,
+)
 
 pytestmark = pytest.mark.ccl
 Ncm.cfg_init()
@@ -93,16 +103,6 @@ def fixture_hmd_vir() -> pyccl.halos.MassDef:
     return pyccl.halos.MassDefVir
 
 
-@pytest.fixture(name="hmd_fof")
-def fixture_hmd_fof() -> pyccl.halos.MassDef:
-    """Fixture for FoF mass definition."""
-    return pyccl.halos.MassDefFof
-
-
-TINKER08_DELTAS_CRITICAL = [200, 300, 400, 500, 600, 800]
-TINKER08_DELTAS_MATTER = [200, 300, 400, 500, 600, 800, 1200, 1600, 2400, 3200]
-
-
 @pytest.fixture(
     name="tinker08_mdef",
     params=[
@@ -121,9 +121,6 @@ def fixture_tinker08_mdef(request) -> tuple[str, Nc.MultiplicityFuncMassDef, int
     return request.param
 
 
-TINKER10_DELTAS = [200, 300, 400, 600, 800, 1200, 1600, 2400, 3200]
-
-
 @pytest.fixture(
     name="tinker10_mdef",
     params=[
@@ -136,43 +133,24 @@ def fixture_tinker10_mdef(request) -> tuple[str, Nc.MultiplicityFuncMassDef, int
     return request.param
 
 
-BOCQUET_HYDRO = [
-    (True, Nc.MultiplicityFuncBocquetSim.HYDRO),
-    (False, Nc.MultiplicityFuncBocquetSim.DM),
-]
-
-
 @pytest.fixture(
     name="bocquet_mdef",
     params=[
-        ("matter", Nc.MultiplicityFuncMassDef.MEAN) + hydro_opt + (200,)
-        for hydro_opt in BOCQUET_HYDRO
-    ]
-    + [
-        ("critical", Nc.MultiplicityFuncMassDef.CRITICAL) + hydro_opt + (200,)
-        for hydro_opt in BOCQUET_HYDRO
-    ]
-    + [
-        ("critical", Nc.MultiplicityFuncMassDef.CRITICAL) + hydro_opt + (500,)
+        (rho_type, nc_mdef) + hydro_opt + (Delta,)
+        for rho_type, nc_mdef, Delta in BOCQUET_MDEFS
         for hydro_opt in BOCQUET_HYDRO
     ],
-    ids=[f"matter_hydro_{hydro_opt[0]}_200" for hydro_opt in BOCQUET_HYDRO]
-    + [f"critical_hydro_{hydro_opt[0]}_200" for hydro_opt in BOCQUET_HYDRO]
-    + [f"critical_hydro_{hydro_opt[0]}_500" for hydro_opt in BOCQUET_HYDRO],
+    ids=[
+        f"{rho_type}_hydro_{hydro_opt[0]}_{Delta}"
+        for rho_type, _, Delta in BOCQUET_MDEFS
+        for hydro_opt in BOCQUET_HYDRO
+    ],
 )
 def fixture_bocquet_mdef(
     request,
 ) -> tuple[str, Nc.MultiplicityFuncMassDef, bool, Nc.MultiplicityFuncBocquetSim, int]:
     """Fixture for mass functions and power spectra."""
     return request.param
-
-
-WATSON_OPTS = [
-    ("matter", Nc.MultiplicityFuncMassDef.MEAN, 178),
-    ("matter", Nc.MultiplicityFuncMassDef.MEAN, 200),
-    ("matter", Nc.MultiplicityFuncMassDef.MEAN, 500),
-    ("matter", Nc.MultiplicityFuncMassDef.FOF, "fof"),
-]
 
 
 @pytest.fixture(
@@ -185,35 +163,10 @@ def fixture_watson_mdef(request) -> tuple[str, Nc.MultiplicityFuncMassDef, int |
     return request.param
 
 
-DESPALI_DELTAS = [200, 300, 400, 500, 600]
-DESPALI_OPT = (
-    [
-        ("matter", Nc.MultiplicityFuncMassDef.MEAN, True, Delta)
-        for Delta in DESPALI_DELTAS
-    ]
-    + [
-        ("matter", Nc.MultiplicityFuncMassDef.MEAN, False, Delta)
-        for Delta in DESPALI_DELTAS
-    ]
-    + [
-        ("critical", Nc.MultiplicityFuncMassDef.CRITICAL, True, Delta)
-        for Delta in DESPALI_DELTAS
-    ]
-    + [
-        ("critical", Nc.MultiplicityFuncMassDef.CRITICAL, False, Delta)
-        for Delta in DESPALI_DELTAS
-    ]
-    + [
-        ("critical", Nc.MultiplicityFuncMassDef.VIRIAL, True, "vir"),
-        ("critical", Nc.MultiplicityFuncMassDef.VIRIAL, False, "vir"),
-    ]
-)
-
-
 @pytest.fixture(
     name="despali_mdef",
-    params=DESPALI_OPT,
-    ids=[f"{mdef}_Ellip_{ellip}_{Delta}" for mdef, _, ellip, Delta in DESPALI_OPT],
+    params=DESPALI_OPTS,
+    ids=[f"{mdef}_Ellip_{ellip}_{Delta}" for mdef, _, ellip, Delta in DESPALI_OPTS],
 )
 def fixture_despali_mdef(
     request,
@@ -224,12 +177,11 @@ def fixture_despali_mdef(
 
 @pytest.fixture(name="massfunc_ps")
 def fixture_massfunc_ps(
-    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology], hmd_fof: pyccl.halos.MassDef
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    ccl_hmf_PS = pyccl.halos.MassFuncPress74(mass_def=hmd_fof)
-    hmf_PS = Nc.MultiplicityFuncPS.new()
+    ccl_hmf_PS, hmf_PS = mfp.press74_pair()
     mf_PS = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_PS)
 
     return ccl_hmf_PS, mf_PS
@@ -237,12 +189,11 @@ def fixture_massfunc_ps(
 
 @pytest.fixture(name="massfunc_st")
 def fixture_massfunc_st(
-    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology], hmd_fof: pyccl.halos.MassDef
+    cosmologies: tuple[pyccl.Cosmology, ncpy.Cosmology],
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    ccl_hmf_ST = pyccl.halos.MassFuncSheth99(mass_def=hmd_fof)
-    hmf_ST = Nc.MultiplicityFuncST.new()
+    ccl_hmf_ST, hmf_ST = mfp.sheth99_pair()
     mf_ST = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_ST)
 
     return ccl_hmf_ST, mf_ST
@@ -254,8 +205,7 @@ def fixture_massfunc_jenkins(
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    ccl_hmf_jenkins = pyccl.halos.MassFuncJenkins01()
-    hmf_jenkins = Nc.MultiplicityFuncJenkins.new()
+    ccl_hmf_jenkins, hmf_jenkins = mfp.jenkins01_pair()
     mf_Jenkins = Nc.HaloMassFunction.new(
         cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_jenkins
     )
@@ -269,13 +219,7 @@ def fixture_massfunc_tinker08(
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    rho_type, nc_rho_type, Delta = tinker08_mdef
-    hmd = pyccl.halos.MassDef(Delta, rho_type)
-    ccl_hmf_tinker = pyccl.halos.MassFuncTinker08(mass_def=hmd)
-    hmf_tinker = Nc.MultiplicityFuncTinker.new()
-    hmf_tinker.set_mdef(nc_rho_type)
-    hmf_tinker.set_Delta(Delta)
-    hmf_tinker.set_linear_interp(True)
+    ccl_hmf_tinker, hmf_tinker = mfp.tinker08_pair(*tinker08_mdef)
     mf_tinker = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_tinker)
 
     return ccl_hmf_tinker, mf_tinker
@@ -288,12 +232,7 @@ def fixture_massfunc_tinker10(
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    rho_type, nc_rho_type, Delta = tinker10_mdef
-    hmd = pyccl.halos.MassDef(Delta, rho_type)
-    ccl_hmf_tinker = pyccl.halos.MassFuncTinker10(mass_def=hmd)
-    hmf_tinker = Nc.MultiplicityFuncTinkerMeanNormalized.new()
-    hmf_tinker.set_mdef(nc_rho_type)
-    hmf_tinker.set_Delta(Delta)
+    ccl_hmf_tinker, hmf_tinker = mfp.tinker10_pair(*tinker10_mdef)
     mf_tinker = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_tinker)
 
     return ccl_hmf_tinker, mf_tinker
@@ -308,10 +247,7 @@ def fixture_massfunc_bocquet(
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    rho_type, nc_rho_type, ccl_hydro, nc_hydro, Delta = bocquet_mdef
-    hmd = pyccl.halos.MassDef(Delta, rho_type)
-    ccl_hmf_bocquet = pyccl.halos.MassFuncBocquet16(hydro=ccl_hydro, mass_def=hmd)
-    hmf_bocquet = Nc.MultiplicityFuncBocquet.new_full(nc_rho_type, nc_hydro, Delta)
+    ccl_hmf_bocquet, hmf_bocquet = mfp.bocquet_pair(*bocquet_mdef)
     mf_bocquet = Nc.HaloMassFunction.new(
         cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_bocquet
     )
@@ -326,14 +262,7 @@ def fixture_massfunc_watson(
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    rho_type, nc_rho_type, Delta = watson_mdef
-    hmd = pyccl.halos.MassDef(Delta, rho_type)
-    ccl_hmf_watson = pyccl.halos.MassFuncWatson13(mass_def=hmd)
-    hmf_watson = Nc.MultiplicityFuncWatson.new()
-    hmf_watson.set_mdef(nc_rho_type)
-    if nc_rho_type != Nc.MultiplicityFuncMassDef.FOF:
-        assert isinstance(Delta, int)
-        hmf_watson.set_Delta(Delta)
+    ccl_hmf_watson, hmf_watson = mfp.watson_pair(*watson_mdef)
     mf_watson = Nc.HaloMassFunction.new(cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_watson)
 
     return ccl_hmf_watson, mf_watson
@@ -346,15 +275,7 @@ def fixture_massfunc_despali(
 ) -> tuple[pyccl.halos.MassFunc, Nc.HaloMassFunction]:
     """Fixture for mass functions and power spectra."""
     _, cosmo_nc = cosmologies
-    rho_type, nc_rho_type, ellip, Delta = despali_mdef
-    hmd = pyccl.halos.MassDef(Delta, rho_type)
-    ccl_hmf_despali = pyccl.halos.MassFuncDespali16(ellipsoidal=ellip, mass_def=hmd)
-    hmf_despali = Nc.MultiplicityFuncDespali.new()
-    hmf_despali.set_mdef(nc_rho_type)
-    hmf_despali.set_eo(ellip)
-    if nc_rho_type != Nc.MultiplicityFuncMassDef.VIRIAL:
-        assert isinstance(Delta, int)
-        hmf_despali.set_Delta(Delta)
+    ccl_hmf_despali, hmf_despali = mfp.despali_pair(*despali_mdef)
     mf_despali = Nc.HaloMassFunction.new(
         cosmo_nc.dist, cosmo_nc.psf_tophat, hmf_despali
     )
