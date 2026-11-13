@@ -58,6 +58,12 @@
 #define TEST_SPECTRAL_INTERP_TOL (1.0e-7)
 
 /*
+ * interp-abstol of the prepared-catalog tests, which check the record, the loading and the
+ * mismatch aborts, not accuracy; /interp and /interp/rebuild keep the default.
+ */
+#define TEST_SPECTRAL_OBS_INTERP_ABSTOL (1.0e-2)
+
+/*
  * Points with 1 - |g| from 1e-5 to 1e-8, certified by the Arb reference with --coords=uv
  * (radius of ln P below 1e-15): HWL16a-002 rows 475 and 7139 with the Beta population
  * fitted to that catalog. Below 1 - |g| = 1e-5 the class forms the value from integrals at
@@ -1017,6 +1023,8 @@ test_nc_galaxy_shape_factor_spectral_interp_obs (TestNcGalaxyShapeFactorSpectral
 
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs_w, TRUE);
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs_r, TRUE);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_w, TEST_SPECTRAL_OBS_INTERP_ABSTOL);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_r, TEST_SPECTRAL_OBS_INTERP_ABSTOL);
   obs = _test_obs_prepared_new (test, gsfs_w, g1, g2, ln_P);
 
   for (i = 0; i < G_N_ELEMENTS (test_spectral_obs_gal); i++)
@@ -1092,10 +1100,12 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpoint
 
   test_nc_galaxy_shape_factor_spectral_new (&test, NULL);
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs_w, TRUE);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_w, TEST_SPECTRAL_OBS_INTERP_ABSTOL);
   obs = _test_obs_prepared_new (&test, gsfs_w, 0.12, -0.07, ln_P);
 
   gsfs_r = nc_galaxy_shape_factor_spectral_new (g_str_equal (mismatch, "conv") ? NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET : NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs_r, !g_str_equal (mismatch, "use_interp"));
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_r, TEST_SPECTRAL_OBS_INTERP_ABSTOL);
 
   if (g_str_equal (mismatch, "pop"))
     ncm_model_param_set_by_name (NCM_MODEL (test.pop), "beta", 1.65 * (1.0 + 1.0e-12), NULL);
