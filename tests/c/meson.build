@@ -704,10 +704,13 @@ data_tests = [
     # regenerates a curated sample from a fixed seed (nothing stored) and
     # checks every method against a recomputed high-node self-converged
     # reference. Curated matrix across shape schemes (VarAdd/Spectral) and
-    # populations (Gauss/Beta). Deterministic and fast.
+    # populations (Gauss/Beta). Deterministic. The timeout follows the -O0 coverage
+    # build, where each Spectral subtest takes 77 to 98 s (23 to 35 s for the whole
+    # test in the optimized builds); 300 s is 900 s under the lane's multiplier of 3.
     {
         'name': 'nc_data_cluster_wl_factor_truth',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_truth.c'],
+        'timeout': 300,
         'suite': ['c', 'omp'],
     },
     {
