@@ -219,6 +219,7 @@ _spline_ldata_set_pz (SplineLData *sldata, NcmSpline *pz)
   sldata->pz  = pz;
   sldata->s   = NCM_SPLINE (ncm_spline_bspline_new_full (_NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER, xv, sv, TRUE));
   sldata->brk = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (sldata->s));
+  ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (sldata->s));
   sldata->cum = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), ncm_vector_len (sldata->brk));
 
   g_array_append_val (sldata->cum, total);
