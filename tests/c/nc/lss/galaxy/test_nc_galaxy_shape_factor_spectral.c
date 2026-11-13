@@ -96,6 +96,7 @@ void test_nc_galaxy_shape_factor_spectral_serialize (void);
 void test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_interp_data_prepare (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_g_max (void);
 void test_nc_galaxy_shape_factor_spectral_interp_g_max_subprocess (void);
 void test_nc_galaxy_shape_factor_spectral_invalid_noise (void);
@@ -128,6 +129,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_spectral/interp/rebuild", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_interp_rebuild,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/interp/data_prepare", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_interp_data_prepare,
               &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/g_max", &test_nc_galaxy_shape_factor_spectral_interp_g_max);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/g_max/subprocess", &test_nc_galaxy_shape_factor_spectral_interp_g_max_subprocess);
@@ -764,6 +769,66 @@ test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpec
 
   g_ptr_array_unref (data_array);
   nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+}
+
+/*
+ * nc_galaxy_shape_factor_data_prepare() builds the interpolant: its value is the one of a
+ * galaxy whose interpolant is built at the first evaluation. Without use-interp it builds
+ * nothing and the value is the integral.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_interp_data_prepare (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcGalaxyShapeFactorSpectral *gsfs  = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcGalaxyShapeFactor *gsf           = NC_GALAXY_SHAPE_FACTOR (gsfs);
+  NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  GPtrArray *data_array              = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_shape_factor_data_unref);
+  const gdouble g1                   = 0.12;
+  const gdouble g2                   = -0.07;
+  const gdouble e1                   = 0.3;
+  const gdouble e2                   = 0.2;
+  const gdouble s                    = 0.1;
+  NcGalaxyShapeFactorData *prepared, *lazy, *direct;
+  gdouble ln_P;
+  guint i;
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+
+  for (i = 0; i < 3; i++)
+  {
+    NcGalaxyShapeFactorData *data = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+
+    nc_galaxy_shape_factor_data_set (gsf, data, e1, e2, s, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+    g_ptr_array_add (data_array, data);
+  }
+
+  prepared = g_ptr_array_index (data_array, 0);
+  lazy     = g_ptr_array_index (data_array, 1);
+  direct   = g_ptr_array_index (data_array, 2);
+
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+
+  /* Without use-interp nothing is built */
+  nc_galaxy_shape_factor_data_prepare (gsf, test->mset, direct, 3.0);
+  g_assert_cmpfloat (nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, direct, g1, g2, e1, e2), ==,
+                     nc_galaxy_shape_factor_spectral_eval_ln_direct (gsfs, test->pop, direct->pop_data, g1, g2, e1, e2, s));
+
+  /* With use-interp; the second call finds the interpolant valid */
+  nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
+  nc_galaxy_shape_factor_data_prepare (gsf, test->mset, prepared, 3.0);
+  nc_galaxy_shape_factor_data_prepare (gsf, test->mset, prepared, 3.0);
+
+  ln_P = nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, prepared, g1, g2, e1, e2);
+  g_assert_cmpfloat (ln_P, ==, nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, lazy, g1, g2, e1, e2));
+  g_assert_cmpfloat_with_epsilon (ln_P, nc_galaxy_shape_factor_spectral_eval_ln_direct (gsfs, test->pop, prepared->pop_data, g1, g2, e1, e2, s),
+                                  TEST_SPECTRAL_INTERP_TOL);
+
+  g_ptr_array_unref (data_array);
   nc_galaxy_position_factor_data_unref (p_data);
   nc_galaxy_redshift_factor_data_unref (z_data);
   nc_galaxy_shape_factor_spectral_free (gsfs);
