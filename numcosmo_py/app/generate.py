@@ -891,9 +891,11 @@ def parse_shape_factor(shape_factor_str: str):
     """Parse a --shape-factor string into its type and generator.
 
     Raises:
-        typer.BadParameter: Unknown type or invalid arguments.
+        typer.BadParameter: Empty string, unknown type or invalid arguments.
     """
     shape_factor_list = shlex.split(shape_factor_str)
+    if not shape_factor_list:
+        raise typer.BadParameter("empty --shape-factor")
     shape_factor_type = shape_factor_list.pop(0)
     try:
         # Lookup by value; mypy checks it against the (value, model_cls)
@@ -913,9 +915,11 @@ def parse_pop_dist(pop_dist_str: str):
     """Parse a --pop-dist string into its type and generator.
 
     Raises:
-        typer.BadParameter: Unknown type or invalid arguments.
+        typer.BadParameter: Empty string, unknown type or invalid arguments.
     """
     pop_dist_list = shlex.split(pop_dist_str)
+    if not pop_dist_list:
+        raise typer.BadParameter("empty --pop-dist")
     pop_dist_type = pop_dist_list.pop(0)
     try:
         # Lookup by value; mypy checks it against the (value, model_cls)

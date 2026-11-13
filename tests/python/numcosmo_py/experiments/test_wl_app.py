@@ -1718,6 +1718,18 @@ def test_wl_catalog_shape_interp_bad_shape_factor(
     assert message in str(result.exception) or message in result.output
 
 
+@pytest.mark.parametrize(
+    "args", [["--pop-dist="], ["--pop-dist=gauss sigma=0.3", "--shape-factor="]]
+)
+def test_wl_catalog_shape_interp_empty_option(
+    tmp_path: Path, real_wl_obs_file_with_meta, args
+):
+    """An empty --pop-dist or --shape-factor is a usage error."""
+    result = _shape_interp(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
+    assert result.exit_code != 0
+    assert not isinstance(result.exception, IndexError)
+
+
 def test_wl_catalog_shape_interp_bad_suffix(tmp_path: Path, real_wl_obs_file_with_meta):
     """The output must be a .gvar file."""
     result = _shape_interp(
