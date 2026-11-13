@@ -54,6 +54,8 @@ void test_nc_data_cluster_wl_factor_shape_interp_free (TestNcDataClusterWLFactor
 void test_nc_data_cluster_wl_factor_shape_interp_write (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor (void);
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void);
+void test_nc_data_cluster_wl_factor_shape_interp_free_pop (void);
+void test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -69,6 +71,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/shape_factor", &test_nc_data_cluster_wl_factor_shape_interp_shape_factor);
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/shape_factor/subprocess",
                    &test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/free_pop", &test_nc_data_cluster_wl_factor_shape_interp_free_pop);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/free_pop/subprocess",
+                   &test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess);
 
   g_test_run ();
 
@@ -253,6 +258,25 @@ test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void)
   TestNcDataClusterWLFactorShapeInterp test;
 
   test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (FALSE));
+  nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, test.obs);
+}
+
+/* A free population parameter aborts */
+void
+test_nc_data_cluster_wl_factor_shape_interp_free_pop (void)
+{
+  g_test_trap_subprocess ("/nc/data_cluster_wl_factor/shape_interp/free_pop/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the population parameter sigma of NcGalaxyShapePopGauss is free*");
+}
+
+void
+test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess (void)
+{
+  TestNcDataClusterWLFactorShapeInterp test;
+
+  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (TRUE));
+  ncm_mset_param_set_ftype (test.mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
   nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, test.obs);
 }
 
