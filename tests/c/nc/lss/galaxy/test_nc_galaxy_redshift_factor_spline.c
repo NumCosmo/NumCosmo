@@ -59,6 +59,7 @@ void test_nc_galaxy_redshift_factor_spline_poly_norm (TestNcGalaxyRedshiftFactor
 void test_nc_galaxy_redshift_factor_spline_poly_gen (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 void test_nc_galaxy_redshift_factor_spline_zeros (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 void test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
+void test_nc_galaxy_redshift_factor_spline_table_changed (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 void test_nc_galaxy_redshift_factor_spline_errors (void);
 void test_nc_galaxy_redshift_factor_spline_negative_subprocess (void);
 void test_nc_galaxy_redshift_factor_spline_few_knots_subprocess (void);
@@ -95,6 +96,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_redshift_factor_spline/obs", TestNcGalaxyRedshiftFactorSpline, NULL,
               &test_nc_galaxy_redshift_factor_spline_new_poly,
               &test_nc_galaxy_redshift_factor_spline_obs,
+              &test_nc_galaxy_redshift_factor_spline_free);
+
+  g_test_add ("/nc/galaxy_redshift_factor_spline/table_changed", TestNcGalaxyRedshiftFactorSpline, NULL,
+              &test_nc_galaxy_redshift_factor_spline_new_poly,
+              &test_nc_galaxy_redshift_factor_spline_table_changed,
               &test_nc_galaxy_redshift_factor_spline_free);
 
   g_test_add_func ("/nc/galaxy_redshift_factor_spline/errors", &test_nc_galaxy_redshift_factor_spline_errors);
@@ -341,6 +347,35 @@ test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *tes
   nc_galaxy_redshift_factor_data_unref (data2);
   nc_galaxy_wl_obs_free (obs);
   g_strfreev (columns);
+}
+
+/* The data derived from a table is shared by every galaxy that reads the same spline,
+ * and is rebuilt, not reused, after the table's values are changed in place: scaling the
+ * values by 4 scales the normalization by 4, for a new galaxy and for one that reads the
+ * table again. The galaxy that keeps the old data keeps the old normalization. */
+void
+test_nc_galaxy_redshift_factor_spline_table_changed (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
+{
+  const gdouble exact               = _test_q2_antideriv (TEST_POLY_Z_MAX) - _test_q2_antideriv (TEST_POLY_Z_MIN);
+  NcGalaxyRedshiftFactorSpline *gs  = NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr);
+  NcGalaxyRedshiftFactorData *data2 = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
+  NcGalaxyRedshiftFactorData *data3 = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
+
+  nc_galaxy_redshift_factor_spline_data_set (gs, data2, test->pz);
+  ncm_assert_cmpdouble (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, data2), ==,
+                        nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, test->data));
+
+  ncm_vector_scale (ncm_spline_peek_yv (test->pz), 4.0);
+
+  nc_galaxy_redshift_factor_spline_data_set (gs, data2, test->pz);
+  nc_galaxy_redshift_factor_spline_data_set (gs, data3, test->pz);
+
+  ncm_assert_cmpdouble_e (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, data2), ==, 4.0 * exact, 1.0e-14, 0.0);
+  ncm_assert_cmpdouble_e (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, data3), ==, 4.0 * exact, 1.0e-14, 0.0);
+  ncm_assert_cmpdouble_e (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, test->data), ==, exact, 1.0e-14, 0.0);
+
+  nc_galaxy_redshift_factor_data_unref (data2);
+  nc_galaxy_redshift_factor_data_unref (data3);
 }
 
 void
