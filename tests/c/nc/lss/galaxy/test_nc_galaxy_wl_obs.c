@@ -57,6 +57,7 @@ static void test_nc_galaxy_wl_obs_coord (TestNcGalaxyWLObs *test, gconstpointer 
 static void test_nc_galaxy_wl_obs_bad_set (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_bad_set_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -120,6 +121,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/numcosmo/nc_galaxy_wl_obs/bad_get_pz", TestNcGalaxyWLObs, NULL,
               &test_nc_galaxy_wl_obs_new,
               &test_nc_galaxy_wl_obs_bad_get_pz,
+              &test_nc_galaxy_wl_obs_free);
+
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/shape_interp", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new,
+              &test_nc_galaxy_wl_obs_shape_interp,
               &test_nc_galaxy_wl_obs_free);
 
   g_test_run ();
@@ -519,5 +525,83 @@ test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
   _test_nc_galaxy_wl_obs_assert_column_not_found_error (&error, "pz");
 
   ncm_rng_free (rng);
+}
+
+/*
+ * The interpolants are visible only with a record and while the rows are those of the
+ * record; a serialized catalog carries them, and a stale one serializes none.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmSerialize *ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmSpectralPolarPanels *spp_0 = ncm_spectral_polar_panels_new ();
+  NcmSpectralPolarPanels *spp_3 = ncm_spectral_polar_panels_new ();
+  NcmObjDictStr *source         = ncm_obj_dict_str_new ();
+  NcGalaxyShapePopGauss *pop    = nc_galaxy_shape_pop_gauss_new ();
+  NcmObjDictInt *prop;
+  NcGalaxyWLObs *obs_dup;
+  GVariant *obs_ser;
+
+  ncm_obj_dict_str_add (source, "shape-pop", G_OBJECT (pop));
+  nc_galaxy_wl_obs_set (test->obs, "z", 0, 0.5, NULL);
+
+  nc_galaxy_wl_obs_set_shape_interp (test->obs, 0, spp_0);
+  nc_galaxy_wl_obs_set_shape_interp (test->obs, 3, spp_3);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (test->obs));
+
+  nc_galaxy_wl_obs_set_shape_interp_source (test->obs, source);
+  g_assert_true (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0) == spp_0);
+  g_assert_true (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 3) == spp_3);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 1));
+  g_assert_true (nc_galaxy_wl_obs_peek_shape_interp_source (test->obs) == source);
+
+  /* The round trip keeps the interpolants and the record */
+  obs_ser = ncm_serialize_to_variant (ser, G_OBJECT (test->obs));
+  ncm_serialize_reset (ser, FALSE);
+  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
+  g_variant_unref (obs_ser);
+  ncm_serialize_reset (ser, FALSE);
+
+  g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs_dup, "z", 0, NULL), ==, 0.5);
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 3)));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 1));
+  g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (ncm_obj_dict_str_peek (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup), "shape-pop")));
+
+  /* A change of the rows makes them stale, in both catalogs independently */
+  nc_galaxy_wl_obs_set (obs_dup, "z", 1, 1.0, NULL);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup));
+  g_assert_true (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0) == spp_0);
+
+  g_object_get (obs_dup, "shape-interp", &prop, NULL);
+  g_assert_cmpuint (ncm_obj_dict_int_len (prop), ==, 0);
+  ncm_obj_dict_int_unref (prop);
+
+  /* A stale catalog serializes no interpolants */
+  obs_ser = ncm_serialize_to_variant (ser, G_OBJECT (obs_dup));
+  ncm_serialize_reset (ser, FALSE);
+  nc_galaxy_wl_obs_free (obs_dup);
+  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
+  g_variant_unref (obs_ser);
+
+  g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs_dup, "z", 1, NULL), ==, 1.0);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup));
+
+  /* A new record makes the current rows the described ones */
+  nc_galaxy_wl_obs_set (test->obs, "z", 2, 2.0, NULL);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0));
+  nc_galaxy_wl_obs_set_shape_interp_source (test->obs, source);
+  g_assert_true (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0) == spp_0);
+
+  nc_galaxy_wl_obs_free (obs_dup);
+  nc_galaxy_shape_pop_gauss_free (pop);
+  ncm_obj_dict_str_unref (source);
+  ncm_spectral_polar_panels_free (spp_0);
+  ncm_spectral_polar_panels_free (spp_3);
+  ncm_serialize_free (ser);
 }
 
