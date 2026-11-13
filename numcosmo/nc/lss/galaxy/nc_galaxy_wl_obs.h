@@ -148,7 +148,6 @@ void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);
 
 gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i, GError **error);
 NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
-void nc_galaxy_wl_obs_set_pz_linear (NcGalaxyWLObs *obs);
 
 void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp);
 NcmSpectralPolarPanels *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);

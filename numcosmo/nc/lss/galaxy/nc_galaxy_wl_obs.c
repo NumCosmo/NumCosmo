@@ -53,7 +53,6 @@
 #include "ncm/algebra/ncm_matrix.h"
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/spline/ncm_spline.h"
-#include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/algebra/ncm_vector.h"
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "nc_enum_types.h"
@@ -436,9 +435,7 @@ nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id)
  * nc_galaxy_wl_obs_new_from_catalog_id: (constructor)
  * @id: a #NcGalaxyWLObsCatalogId
  *
- * Downloads (if necessary) and loads the catalog identified by @id. The P(z) of each galaxy
- * is the linear interpolant of its tabulated values (nc_galaxy_wl_obs_set_pz_linear()): the
- * cubic splines stored in these files take negative values between knots.
+ * Downloads (if necessary) and loads the catalog identified by @id.
  *
  * Returns: (transfer full): a new #NcGalaxyWLObs object.
  */
@@ -455,49 +452,7 @@ nc_galaxy_wl_obs_new_from_catalog_id (NcGalaxyWLObsCatalogId id)
   if (!NC_IS_GALAXY_WL_OBS (obj))
     g_error ("nc_galaxy_wl_obs_new_from_catalog_id: file for catalog id %d does not contain a NcGalaxyWLObs.", id);
 
-  nc_galaxy_wl_obs_set_pz_linear (NC_GALAXY_WL_OBS (obj));
-
   return NC_GALAXY_WL_OBS (obj);
-}
-
-/**
- * nc_galaxy_wl_obs_set_pz_linear:
- * @obs: a #NcGalaxyWLObs object
- *
- * Replaces the P(z) spline of every row of @obs by the linear interpolant of its knots
- * (#NcmSplineGsl, %NCM_SPLINE_GSL_LINEAR). A tabulated density has non-negative knot values;
- * the linear interpolant of non-negative values is non-negative, while a cubic spline through
- * a table with zeros or narrow peaks takes negative values between knots, whose logarithm
- * is not defined. Rows whose P(z) is already linear are left as they are.
- */
-void
-nc_galaxy_wl_obs_set_pz_linear (NcGalaxyWLObs *obs)
-{
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-  GArray *keys                      = ncm_obj_dict_int_keys (self->pz);
-  guint i;
-
-  for (i = 0; i < keys->len; i++)
-  {
-    const gint key = g_array_index (keys, gint, i);
-    NcmSpline *pz  = NCM_SPLINE (ncm_obj_dict_int_peek (self->pz, key));
-
-    if (!NCM_IS_SPLINE_GSL (pz) || (ncm_spline_gsl_get_type_id (NCM_SPLINE_GSL (pz)) != NCM_SPLINE_GSL_LINEAR))
-    {
-      NcmVector *xv = ncm_vector_dup (ncm_spline_peek_xv (pz));
-      NcmVector *yv = ncm_vector_dup (ncm_spline_peek_yv (pz));
-      NcmSpline *lz = NCM_SPLINE (ncm_spline_gsl_new_by_id (NCM_SPLINE_GSL_LINEAR));
-
-      ncm_spline_set (lz, xv, yv, TRUE);
-      ncm_obj_dict_int_set (self->pz, key, G_OBJECT (lz));
-
-      ncm_spline_free (lz);
-      ncm_vector_free (xv);
-      ncm_vector_free (yv);
-    }
-  }
-
-  g_array_unref (keys);
 }
 
 /**
