@@ -41,6 +41,7 @@ project:
     - benchmarks/ccl_two_point.qmd
     - benchmarks/xcor_certified_projection.qmd
     - benchmarks/xcor_derivatives.qmd
+    - benchmarks/wl_shape_marginal.qmd
     - tutorials/c/gobject.qmd
     - tutorials/c/curve_tutorial.qmd
     - tutorials/python/bounce.qmd
@@ -254,6 +255,8 @@ website:
             text: "Certified Radial Projection"
           - href: benchmarks/xcor_derivatives.qmd
             text: "Angular Power Spectrum Derivatives"
+          - href: benchmarks/wl_shape_marginal.qmd
+            text: "Certified Shape Marginal"
 
 resources:
   - reference/**
