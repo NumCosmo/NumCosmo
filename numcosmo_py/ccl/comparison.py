@@ -1236,3 +1236,146 @@ def compare_galaxy_number_count_auto(
         xscale="log",
         yscale="log",
     )
+
+
+# Halo mass function
+
+
+def compare_mass_function(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    ccl_hmf: pyccl.halos.MassFunc,
+    nc_mulf: Nc.MultiplicityFunc,
+    m: npt.NDArray[np.float64],
+    z: float,
+    *,
+    model: str = "unnamed",
+) -> CompareFunc1d:
+    r"""Compare the halo mass function from CCL and NumCosmo.
+
+    Returns a :class:`CompareFunc1d` with
+    :math:`M \, \mathrm{d}n/\mathrm{d}\log_{10}M`, in
+    :math:`M_\odot \, \mathrm{Mpc}^{-3}`, for CCL (``y1``) and NumCosmo (``y2``) at
+    each mass in ``m``, in solar masses, and at redshift ``z``. CCL's mass function
+    returns :math:`\mathrm{d}n/\mathrm{d}\log_{10}M`; NumCosmo's
+    :meth:`Nc.HaloMassFunction.dn_dlnM` is multiplied by :math:`\ln 10`. Both are
+    then multiplied by :math:`M`. ``model`` labels the comparison.
+
+    The caller supplies ``ccl_hmf`` and ``nc_mulf`` for the same mass definition, for
+    example from :mod:`numcosmo_py.ccl.multiplicity_func_pairing`; this function
+    does not check that they match.
+
+    NumCosmo's mass function is built from ``cosmology.dist``, the power-spectrum
+    filter ``cosmology.psf_tophat`` and ``nc_mulf``; building it sets that filter on
+    ``nc_mulf``. The filter tabulates :math:`\sigma(R, z)` and its derivative for
+    :math:`z` between its ``zi`` and ``zf`` properties and extrapolates them outside
+    that range. If ``z`` is outside that range, :class:`ValueError` is raised before
+    either code is evaluated.
+    """
+    cosmo = cosmology.cosmo
+    psf = cosmology.psf_tophat
+    _check_filter_redshift(psf, z)
+    a = 1.0 / (1.0 + z)
+
+    nc_hmf = Nc.HaloMassFunction.new(cosmology.dist, psf, nc_mulf)
+
+    ccl_nm = m * np.asarray(ccl_hmf(ccl_cosmo, m, a), dtype=np.float64)
+    nc_nm = m * np.array(
+        [nc_hmf.dn_dlnM(cosmo, lnm, z) * np.log(10.0) for lnm in np.log(m)],
+        dtype=np.float64,
+    )
+
+    return CompareFunc1d(
+        x=m,
+        y1=ccl_nm,
+        y2=nc_nm,
+        model=model,
+        x_symbol="M",
+        y_symbol=(
+            r"{\left[M\frac{\mathrm{d}n}{\mathrm{d}\log_{10}M}\right]_{z="
+            + latex_float(z)
+            + r"}}"
+        ),
+        x_unit=r"$M_\odot$",
+        y_unit=r"$M_\odot\,$Mpc${}^{-3}$",
+        xscale="log",
+        yscale="log",
+    )
+
+
+def compare_multiplicity_function(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    ccl_hmf: pyccl.halos.MassFunc,
+    nc_mulf: Nc.MultiplicityFunc,
+    m: npt.NDArray[np.float64],
+    z: float,
+    *,
+    model: str = "unnamed",
+) -> CompareFunc1d:
+    r"""Compare the multiplicity function f(sigma) from CCL and NumCosmo.
+
+    Returns a :class:`CompareFunc1d` with :math:`f(\sigma)` for CCL (``y1``) and
+    NumCosmo (``y2``) as a function of :math:`\sigma` (``x``), for the masses in
+    ``m``, in solar masses, at redshift ``z``. Both codes evaluate :math:`f` at the
+    same :math:`\sigma`, NumCosmo's :math:`\sigma(M, z)`, so differences in
+    :math:`\sigma(M, z)` do not enter. The caller supplies a matched pair, as for
+    :func:`compare_mass_function`.
+
+    For each mass, :meth:`Nc.HaloMassFunction.lnM_to_lnR` converts :math:`\ln M`
+    to :math:`\ln R`, and :meth:`Nc.HaloMassFunction.sigma_lnR` reads
+    :math:`\sigma` at that radius and ``z`` from ``cosmology.psf_tophat``; ``z``
+    must lie in the filter's redshift range, and the filter is set on ``nc_mulf``, as
+    for :func:`compare_mass_function`. CCL then receives :math:`\sigma`,
+    :math:`\ln M` and :math:`a = 1/(1 + z)`.
+    NumCosmo's side is :meth:`Nc.HaloMassFunction.f_lnR` at :math:`\ln R` and ``z``,
+    which reads the same :math:`\sigma` from the filter.
+
+    At 200c and 500c, Bocquet (2016) multiplies :math:`f` by a mass-dependent
+    correction factor. CCL's ``_get_fsigma`` includes it, and so does
+    :meth:`Nc.HaloMassFunction.f_lnR`, the :math:`f` that
+    :meth:`Nc.HaloMassFunction.dn_dlnR` uses. Where the family uses them, each code
+    computes its own :math:`\delta_c`, :math:`\Omega_m(z)` and :math:`\Delta`;
+    their differences are part of the comparison.
+
+    CCL's side is the private method ``_get_fsigma`` of
+    :class:`pyccl.halos.MassFunc`;
+    ``tests/python/numcosmo_py/ccl/test_comparison.py`` checks its signature.
+    """
+    cosmo = cosmology.cosmo
+    psf = cosmology.psf_tophat
+    _check_filter_redshift(psf, z)
+    a = 1.0 / (1.0 + z)
+
+    nc_hmf = Nc.HaloMassFunction.new(cosmology.dist, psf, nc_mulf)
+
+    lnM = np.log(m)
+    lnR = np.array([nc_hmf.lnM_to_lnR(cosmo, lnM_i) for lnM_i in lnM], dtype=np.float64)
+    sigma = np.array(
+        [nc_hmf.sigma_lnR(cosmo, lnR_i, z) for lnR_i in lnR], dtype=np.float64
+    )
+
+    ccl_f = np.asarray(ccl_hmf._get_fsigma(ccl_cosmo, sigma, a, lnM), dtype=np.float64)
+
+    nc_f = np.array([nc_hmf.f_lnR(cosmo, lnR_i, z) for lnR_i in lnR], dtype=np.float64)
+
+    return CompareFunc1d(
+        x=sigma,
+        y1=ccl_f,
+        y2=nc_f,
+        model=model,
+        x_symbol=r"\sigma",
+        y_symbol=r"{\left[f(\sigma)\right]_{z=" + latex_float(z) + r"}}",
+        xscale="log",
+        yscale="log",
+    )
+
+
+def _check_filter_redshift(psf: Ncm.PowspecFilter, z: float) -> None:
+    """Raise ValueError if z is outside the redshift range of the filter psf."""
+    zi = psf.props.zi
+    zf = psf.props.zf
+    if not zi <= z <= zf:
+        raise ValueError(
+            f"z = {z:g} is outside the filter's redshift range [{zi:g}, {zf:g}]."
+        )
