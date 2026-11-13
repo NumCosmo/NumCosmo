@@ -616,6 +616,9 @@ Added:
   reltol 1e-5, same `nc_galaxy_wl_obs_{peek,set}_pz` slot; the only difference is when
   the lazy distribution is built). This corrects the docstring of
   `test_galaxy_redshift_factor_spline.py`, which claimed no legacy class shares the math.
+  Removed in 2026-11 with the frozen tables it read: `NcGalaxyRedshiftFactorSpline` now
+  evaluates $s^2$, with $s$ the order-6 B-spline of $\sqrt{p}$ through the table, and no
+  longer shares the legacy cubic or its sampler.
 - `test_resample_matches_legacy` in `test_data_cluster_wl_factor_parity.py`: same-seed
   `resample ()` on both engines, raw regenerated columns compared bit for bit; every
   earlier resample test compared new against new.
