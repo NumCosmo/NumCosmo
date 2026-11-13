@@ -861,7 +861,8 @@ def shape_interp_gens(
     elif isinstance(pop, Nc.GalaxyShapePopGaussLocal):
         pop_gen = GalaxyPopGenGaussLocal()
     else:
-        raise ValueError(
+        # A wrong object in the record is a data error, not a TypeError.
+        raise ValueError(  # noqa: TRY004
             f"The catalog was prepared with the population {type(pop).__name__}, "
             "which has no generator."
         )
