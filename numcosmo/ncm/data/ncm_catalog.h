@@ -113,6 +113,8 @@ gboolean ncm_catalog_get_bool (NcmCatalog *catalog, const gchar *col, const guin
 
 GStrv ncm_catalog_peek_columns (NcmCatalog *catalog);
 NcmMatrix *ncm_catalog_peek_data (NcmCatalog *catalog);
+guint64 ncm_catalog_get_key (NcmCatalog *catalog);
+void ncm_catalog_mark_outdated (NcmCatalog *catalog);
 
 guint ncm_catalog_len (NcmCatalog *catalog);
 guint ncm_catalog_ncols (NcmCatalog *catalog);

@@ -50,6 +50,12 @@
  * (a survey field's known cluster redshift and position, say). It is %NULL
  * unless explicitly set.
  *
+ * Every change of the data through the setters of the catalog or through the data
+ * property increments the key returned by ncm_catalog_get_key(), as a parameter change
+ * does to the pkey of a #NcmModel; an object that caches something derived from the rows
+ * compares it with the key it recorded. A change written directly into the matrix of
+ * ncm_catalog_peek_data() must be followed by ncm_catalog_mark_outdated().
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -73,6 +79,7 @@ typedef struct _NcmCatalogPrivate
   guint ncols;
   guint len;
   NcmVarDict *meta;
+  guint64 key;
 } NcmCatalogPrivate;
 
 enum
@@ -98,6 +105,7 @@ ncm_catalog_init (NcmCatalog *catalog)
   self->col_types    = NULL;
   self->ncols        = 0;
   self->len          = 0;
+  self->key          = 1;
   self->meta         = NULL;
 }
 
@@ -355,6 +363,7 @@ _ncm_catalog_set_data (NcmCatalog *catalog, NcmMatrix *data)
   ncm_matrix_clear (&self->data);
   self->data = data;
   self->len  = ncm_matrix_nrows (self->data);
+  self->key++;
 }
 
 /**
@@ -583,7 +592,10 @@ ncm_catalog_set (NcmCatalog *catalog, const gchar *col, const guint i, gdouble v
   guint j;
 
   if (_ncm_catalog_locate (catalog, col, i, &j, error))
+  {
     ncm_matrix_set (self->data, i, j, val);
+    self->key++;
+  }
 }
 
 /**
@@ -712,7 +724,8 @@ ncm_catalog_peek_columns (NcmCatalog *catalog)
  * ncm_catalog_peek_data:
  * @catalog: a #NcmCatalog
  *
- * Gets the catalog data matrix.
+ * Gets the catalog data matrix. A change written into it must be followed by
+ * ncm_catalog_mark_outdated().
  *
  * Returns: (transfer none): the data #NcmMatrix.
  */
@@ -722,6 +735,39 @@ ncm_catalog_peek_data (NcmCatalog *catalog)
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
 
   return self->data;
+}
+
+/**
+ * ncm_catalog_get_key:
+ * @catalog: a #NcmCatalog
+ *
+ * Gets the key of the data of @catalog, which every change of the data increments (see
+ * ncm_catalog_mark_outdated()). The key is meaningful only within one process: a
+ * deserialized catalog has keys of its own.
+ *
+ * Returns: the current key of the data.
+ */
+guint64
+ncm_catalog_get_key (NcmCatalog *catalog)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+
+  return self->key;
+}
+
+/**
+ * ncm_catalog_mark_outdated:
+ * @catalog: a #NcmCatalog
+ *
+ * Increments the key of the data of @catalog. Call it after writing directly into the
+ * matrix of ncm_catalog_peek_data(); the setters of the catalog call it themselves.
+ */
+void
+ncm_catalog_mark_outdated (NcmCatalog *catalog)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+
+  self->key++;
 }
 
 /**

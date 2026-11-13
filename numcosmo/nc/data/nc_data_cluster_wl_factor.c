@@ -1224,6 +1224,7 @@ _obs_make_private (NcDataClusterWLFactorPrivate *self)
   guint i;
 
   ncm_matrix_memcpy (nc_galaxy_wl_obs_peek_data (copy), nc_galaxy_wl_obs_peek_data (shared));
+  ncm_catalog_mark_outdated (NCM_CATALOG (copy));
 
   for (i = 0; i < len; i++)
   {
