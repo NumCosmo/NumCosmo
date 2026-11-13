@@ -144,7 +144,8 @@ def _callable_get_arguments(
                 )
 
                 dict_return_args[i] = t
-            elif direction in (GI.Direction.IN, GI.Direction.INOUT):
+            # An inout argument is also an input.
+            if direction in (GI.Direction.IN, GI.Direction.INOUT):
                 arg_name = arg.get_name()
                 assert arg_name is not None
                 dict_names[i] = arg_name
