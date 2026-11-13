@@ -69,5 +69,6 @@ def catalog_from_table(table: Table) -> Ncm.Catalog:
 
     catalog = Ncm.Catalog.new_full(nrows, columns, col_types)
     catalog.peek_data().set_from_array(data.reshape(-1).tolist())
+    catalog.mark_outdated()
 
     return catalog

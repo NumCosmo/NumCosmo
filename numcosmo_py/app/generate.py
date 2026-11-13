@@ -71,6 +71,7 @@ from numcosmo_py.experiments.cluster_wl import (
     generate_lsst_cluster_wl,
     load_cluster_wl,
     resolve_resample_flag,
+    shape_interp_gens,
 )
 from numcosmo_py.experiments.curvature_weight import (
     qspline_curvature_weight,
@@ -625,6 +626,14 @@ class GenerateJpasForecast:
         )
 
 
+# Default --shape-factor and --pop-dist of the cluster weak lensing commands.
+DEFAULT_CLUSTER_WL_SHAPE_FACTOR = (
+    "var_add ellip_conv=trace-det ellip_coord=celestial "
+    "std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
+)
+DEFAULT_CLUSTER_WL_POP_DIST = "gauss sigma=0.3"
+
+
 @dataclasses.dataclass(kw_only=True)
 class ClusterWL(ABC):
     """Common options and orchestration for cluster weak lensing experiments.
@@ -665,27 +674,24 @@ class ClusterWL(ABC):
     ] = HaloProfileType.NFW
 
     shape_factor: Annotated[
-        str,
+        str | None,
         typer.Option(
             help=ShapeFactorGen.get_help_text(),
             show_default=True,
             metavar=ShapeFactorGen.get_help_metavar(),
             rich_help_panel="Galaxy shape-marginalization factor",
         ),
-    ] = (
-        "var_add ellip_conv=trace-det ellip_coord=celestial "
-        "std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
-    )
+    ] = DEFAULT_CLUSTER_WL_SHAPE_FACTOR
 
     pop_dist: Annotated[
-        str,
+        str | None,
         typer.Option(
             help=GalaxyPopGen.get_help_text(),
             show_default=True,
             metavar=GalaxyPopGen.get_help_metavar(),
             rich_help_panel="Galaxy intrinsic-ellipticity population distribution",
         ),
-    ] = "gauss sigma=0.3"
+    ] = DEFAULT_CLUSTER_WL_POP_DIST
 
     parameter_list: Annotated[
         list[str],
@@ -788,13 +794,7 @@ class ClusterWL(ABC):
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
-        _shape_factor, shape_gen = self.parse_shape_factor()
-        _pop_dist, pop_gen = self.parse_pop_dist()
-
-        try:
-            check_shape_pop_compat(shape_gen, pop_gen)
-        except ValueError as e:
-            raise typer.BadParameter(str(e)) from e
+        shape_gen, pop_gen = self._resolve_gens()
 
         exp = self._build_experiment(shape_gen, pop_gen)
 
@@ -835,43 +835,104 @@ class ClusterWL(ABC):
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
 
-    def parse_shape_factor(self):
-        """Parse the shape_factor string."""
-        shape_factor_list = shlex.split(self.shape_factor)
-        shape_factor_type = shape_factor_list.pop(0)
+    def _resolve_gens(self):
+        """Return the shape-factor and population generators of the options.
+
+        Raises:
+            typer.BadParameter: The shape factor and the population are
+                incompatible.
+        """
+        _shape_factor, shape_gen = parse_shape_factor(
+            self.shape_factor or DEFAULT_CLUSTER_WL_SHAPE_FACTOR
+        )
+        _pop_dist, pop_gen = parse_pop_dist(
+            self.pop_dist or DEFAULT_CLUSTER_WL_POP_DIST
+        )
+
         try:
-            # Lookup by value; mypy checks it against the (value, model_cls)
-            # signature that builds the members.
-            shape_factor = ShapeFactorGen(shape_factor_type)  # type: ignore[call-arg]
+            check_shape_pop_compat(shape_gen, pop_gen)
         except ValueError as e:
             raise typer.BadParameter(str(e)) from e
 
-        try:
-            shape_factor_args = shape_factor.model_cls.from_args(shape_factor_list)
-        except ValueError as e:
-            raise typer.BadParameter(str(e)) from e
-        return shape_factor, shape_factor_args
-
-    def parse_pop_dist(self):
-        """Parse the pop_dist string."""
-        pop_dist_list = shlex.split(self.pop_dist)
-        pop_dist_type = pop_dist_list.pop(0)
-        try:
-            # Lookup by value; mypy checks it against the (value, model_cls)
-            # signature that builds the members.
-            pop_dist = GalaxyPopGen(pop_dist_type)  # type: ignore[call-arg]
-        except ValueError as e:
-            raise typer.BadParameter(str(e)) from e
-
-        try:
-            pop_dist_args = pop_dist.model_cls.from_args(pop_dist_list)
-        except ValueError as e:
-            raise typer.BadParameter(str(e)) from e
-        return pop_dist, pop_dist_args
+        return shape_gen, pop_gen
 
     @abstractmethod
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Build (mock) or load (real data) the experiment's likelihood/model-set."""
+
+
+def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.GalaxyWLObs:
+    """Load a NcGalaxyWLObs from a curated catalog id or from a .gvar file.
+
+    Raises:
+        typer.BadParameter: Neither or both of catalog and data_file.
+        ValueError: The loaded file does not contain a NcGalaxyWLObs.
+    """
+    if (catalog is None) == (data_file is None):
+        raise typer.BadParameter("exactly one of --catalog or --data-file is required")
+
+    if catalog is not None:
+        obs = Nc.GalaxyWLObs.new_from_catalog_id(catalog.genum)
+    else:
+        assert data_file is not None
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        obs = cast(Nc.GalaxyWLObs, ser.from_binfile(data_file.absolute().as_posix()))
+
+    # A wrong object in the file is a data error, not a TypeError.
+    if not isinstance(obs, Nc.GalaxyWLObs):
+        raise ValueError(  # noqa: TRY004
+            f"File does not contain a NcGalaxyWLObs: {type(obs).__name__}"
+        )
+
+    return obs
+
+
+def parse_shape_factor(shape_factor_str: str):
+    """Parse a --shape-factor string into its type and generator.
+
+    Raises:
+        typer.BadParameter: Empty string, unknown type or invalid arguments.
+    """
+    shape_factor_list = shlex.split(shape_factor_str)
+    if not shape_factor_list:
+        raise typer.BadParameter("empty --shape-factor")
+    shape_factor_type = shape_factor_list.pop(0)
+    try:
+        # Lookup by value; mypy checks it against the (value, model_cls)
+        # signature that builds the members.
+        shape_factor = ShapeFactorGen(shape_factor_type)  # type: ignore[call-arg]
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+
+    try:
+        shape_factor_args = shape_factor.model_cls.from_args(shape_factor_list)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    return shape_factor, shape_factor_args
+
+
+def parse_pop_dist(pop_dist_str: str):
+    """Parse a --pop-dist string into its type and generator.
+
+    Raises:
+        typer.BadParameter: Empty string, unknown type or invalid arguments.
+    """
+    pop_dist_list = shlex.split(pop_dist_str)
+    if not pop_dist_list:
+        raise typer.BadParameter("empty --pop-dist")
+    pop_dist_type = pop_dist_list.pop(0)
+    try:
+        # Lookup by value; mypy checks it against the (value, model_cls)
+        # signature that builds the members.
+        pop_dist = GalaxyPopGen(pop_dist_type)  # type: ignore[call-arg]
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+
+    try:
+        pop_dist_args = pop_dist.model_cls.from_args(pop_dist_list)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    return pop_dist, pop_dist_args
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -992,7 +1053,39 @@ class LoadClusterWL(ClusterWL):
     scheme is fixed to the catalog's own per-galaxy p(z) spline, and the sky
     footprint is the bounding box of the catalog's RA/Dec. --shape-dist's
     ellip_conv/ellip_coord must match the catalog's own convention.
+
+    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
+    interpolants of its galaxies and the shape factor and population that
+    built them; the experiment takes both from the catalog, and giving
+    --shape-factor, --pop-dist or a population parameter in --parameter-list
+    is an error.
     """
+
+    shape_factor: Annotated[
+        str | None,
+        typer.Option(
+            help=(
+                ShapeFactorGen.get_help_text()
+                + f" Default: {DEFAULT_CLUSTER_WL_SHAPE_FACTOR}; taken from a "
+                "catalog prepared by wl-catalog shape-interp."
+            ),
+            metavar=ShapeFactorGen.get_help_metavar(),
+            rich_help_panel="Galaxy shape-marginalization factor",
+        ),
+    ] = None
+
+    pop_dist: Annotated[
+        str | None,
+        typer.Option(
+            help=(
+                GalaxyPopGen.get_help_text()
+                + f" Default: {DEFAULT_CLUSTER_WL_POP_DIST}; taken from a "
+                "catalog prepared by wl-catalog shape-interp."
+            ),
+            metavar=GalaxyPopGen.get_help_metavar(),
+            rich_help_panel="Galaxy intrinsic-ellipticity population distribution",
+        ),
+    ] = None
 
     catalog: Annotated[
         WLCatalogID | None,
@@ -1075,38 +1168,45 @@ class LoadClusterWL(ClusterWL):
         ),
     ]
 
-    def _load_obs(self) -> Nc.GalaxyWLObs:
-        """Load the real NcGalaxyWLObs catalog from --catalog or --data-file.
+    def _resolve_gens(self):
+        """Return the generators of the catalog's record, or of the options.
 
         Raises:
-            ValueError: The loaded file does not contain a NcGalaxyWLObs.
+            typer.BadParameter: The catalog carries a record and --shape-factor,
+                --pop-dist or a population parameter in --parameter-list is given.
         """
-        if self.catalog is not None:
-            obs = Nc.GalaxyWLObs.new_from_catalog_id(self.catalog.genum)
-        else:
-            assert self.data_file is not None
-            ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-            obs = cast(
-                Nc.GalaxyWLObs, ser.from_binfile(self.data_file.absolute().as_posix())
+        self._obs = self._load_obs()
+        gens = shape_interp_gens(self._obs)
+
+        if gens is None:
+            return super()._resolve_gens()
+
+        if (self.shape_factor is not None) or (self.pop_dist is not None):
+            raise typer.BadParameter(
+                "the catalog carries the interpolants of its galaxies; the shape "
+                "factor and the population are those that built them, so "
+                "--shape-factor and --pop-dist must not be given"
             )
 
-        # A wrong object in the file is a data error, not a TypeError.
-        if not isinstance(obs, Nc.GalaxyWLObs):
-            raise ValueError(  # noqa: TRY004
-                f"File does not contain a NcGalaxyWLObs: {type(obs).__name__}"
+        pop_params = [
+            p for p in self.parameter_list if p.startswith("NcGalaxyShapePop")
+        ]
+        if pop_params:
+            raise typer.BadParameter(
+                "the catalog carries interpolants built for fixed population "
+                f"parameters; they cannot be fitted: {', '.join(pop_params)}"
             )
 
-        return obs
+        return gens
+
+    def _load_obs(self) -> Nc.GalaxyWLObs:
+        """Load the real NcGalaxyWLObs catalog from --catalog or --data-file."""
+        return load_wl_obs(self.catalog, self.data_file)
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Load the real-data cluster weak lensing experiment."""
-        if (self.catalog is None) == (self.data_file is None):
-            raise typer.BadParameter(
-                "exactly one of --catalog or --data-file is required"
-            )
-
         return load_cluster_wl(
-            obs=self._load_obs(),
+            obs=self._obs,
             cluster_ra=self.cluster_ra,
             cluster_dec=self.cluster_dec,
             cluster_z=self.cluster_z,

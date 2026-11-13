@@ -6,6 +6,7 @@ src_site_benchmark_files = files(
     'ccl_two_point.qmd',
     'xcor_certified_projection.qmd',
     'xcor_derivatives.qmd',
+    'wl_shape_marginal.qmd',
 )
 
 if get_option('documentation')

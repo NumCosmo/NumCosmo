@@ -89,6 +89,7 @@ def dist_mu_obs_from_table(
     obs = Nc.DistMuObs.new_full(nrows, columns, col_types)
     data = np.column_stack(arrays)
     obs.peek_data().set_from_array(data.reshape(-1).tolist())
+    obs.mark_outdated()
 
     if meta is not None:
         var_dict = Ncm.VarDict.new()

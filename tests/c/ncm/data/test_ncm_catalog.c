@@ -54,6 +54,8 @@ void test_ncm_catalog_invalid_set (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_invalid_row (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_data_prop (TestNcmCatalog *test, gconstpointer pdata);
+void test_ncm_catalog_key (TestNcmCatalog *test, gconstpointer pdata);
+void test_ncm_catalog_key_saved (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_errors (void);
 void test_ncm_catalog_errors_subprocess (void);
 
@@ -111,6 +113,14 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/catalog/data_prop", TestNcmCatalog, NULL,
               &test_ncm_catalog_new,
               &test_ncm_catalog_data_prop,
+              &test_ncm_catalog_free);
+  g_test_add ("/ncm/catalog/key", TestNcmCatalog, NULL,
+              &test_ncm_catalog_new,
+              &test_ncm_catalog_key,
+              &test_ncm_catalog_free);
+  g_test_add ("/ncm/catalog/key/saved", TestNcmCatalog, NULL,
+              &test_ncm_catalog_new,
+              &test_ncm_catalog_key_saved,
               &test_ncm_catalog_free);
   g_test_add_func ("/ncm/catalog/errors", &test_ncm_catalog_errors);
   g_test_add_func ("/ncm/catalog/errors/subprocess", &test_ncm_catalog_errors_subprocess);
@@ -408,6 +418,66 @@ test_ncm_catalog_data_prop (TestNcmCatalog *test, gconstpointer pdata)
 
   g_assert_cmpuint (ncm_catalog_len (test->catalog), ==, 6);
   g_assert_cmpfloat (ncm_catalog_get (test->catalog, "z", 5, NULL), ==, 7.0);
+
+  ncm_matrix_free (data);
+}
+
+/* A saved key is current until the next write; a pending one takes the current key at the first check. */
+void
+test_ncm_catalog_key_saved (TestNcmCatalog *test, gconstpointer pdata)
+{
+  guint64 saved   = ncm_catalog_get_key (test->catalog);
+  guint64 pending = NCM_CATALOG_KEY_PENDING;
+
+  g_assert_cmpuint (saved, !=, NCM_CATALOG_KEY_PENDING);
+  g_assert_true (ncm_catalog_key_is_current (test->catalog, &saved));
+
+  ncm_catalog_set (test->catalog, "ra", 0, 1.5, NULL);
+  g_assert_false (ncm_catalog_key_is_current (test->catalog, &saved));
+  g_assert_cmpuint (saved, !=, ncm_catalog_get_key (test->catalog));
+
+  g_assert_true (ncm_catalog_key_is_current (test->catalog, &pending));
+  g_assert_cmpuint (pending, ==, ncm_catalog_get_key (test->catalog));
+
+  ncm_catalog_set (test->catalog, "ra", 1, 2.5, NULL);
+  g_assert_false (ncm_catalog_key_is_current (test->catalog, &pending));
+}
+
+/* Every write through the setters, the data property or mark_outdated changes the key; reads and failed writes do not. */
+void
+test_ncm_catalog_key (TestNcmCatalog *test, gconstpointer pdata)
+{
+  NcmMatrix *data = ncm_matrix_new (2, 3);
+  GError *error   = NULL;
+  guint64 key     = ncm_catalog_get_key (test->catalog);
+
+  ncm_catalog_get (test->catalog, "ra", 0, NULL);
+  g_assert_cmpuint (ncm_catalog_get_key (test->catalog), ==, key);
+
+  ncm_catalog_set (test->catalog, "ra", 0, 1.5, NULL);
+  g_assert_cmpuint (ncm_catalog_get_key (test->catalog), >, key);
+  key = ncm_catalog_get_key (test->catalog);
+
+  ncm_catalog_set_int (test->catalog, "z", 1, 3, NULL);
+  g_assert_cmpuint (ncm_catalog_get_key (test->catalog), >, key);
+  key = ncm_catalog_get_key (test->catalog);
+
+  ncm_catalog_set_bool (test->catalog, "dec", 2, TRUE, NULL);
+  g_assert_cmpuint (ncm_catalog_get_key (test->catalog), >, key);
+  key = ncm_catalog_get_key (test->catalog);
+
+  ncm_catalog_set (test->catalog, "nonexistent", 0, 1.0, &error);
+  g_assert_nonnull (error);
+  g_clear_error (&error);
+  g_assert_cmpuint (ncm_catalog_get_key (test->catalog), ==, key);
+
+  ncm_catalog_mark_outdated (test->catalog);
+  g_assert_cmpuint (ncm_catalog_get_key (test->catalog), >, key);
+  key = ncm_catalog_get_key (test->catalog);
+
+  ncm_matrix_set_zero (data);
+  g_object_set (test->catalog, "data", data, NULL);
+  g_assert_cmpuint (ncm_catalog_get_key (test->catalog), >, key);
 
   ncm_matrix_free (data);
 }

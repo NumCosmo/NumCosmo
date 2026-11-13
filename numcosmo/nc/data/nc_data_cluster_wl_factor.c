@@ -78,6 +78,7 @@
 
 #include "nc/data/nc_data_cluster_wl_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
@@ -1224,6 +1225,7 @@ _obs_make_private (NcDataClusterWLFactorPrivate *self)
   guint i;
 
   ncm_matrix_memcpy (nc_galaxy_wl_obs_peek_data (copy), nc_galaxy_wl_obs_peek_data (shared));
+  ncm_catalog_mark_outdated (NCM_CATALOG (copy));
 
   for (i = 0; i < len; i++)
   {
@@ -2999,6 +3001,61 @@ nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *m
   self->force_data_prepare = TRUE;
 
   ncm_data_prepare (NCM_DATA (dcwlf), mset);
+}
+
+/**
+ * nc_data_cluster_wl_factor_write_shape_interp:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @mset: a #NcmMSet
+ * @obs: a #NcGalaxyWLObs with the rows of the catalog of @dcwlf
+ *
+ * Builds the interpolant of every galaxy with nc_data_cluster_wl_factor_data_prepare(), in
+ * parallel, writes them into @obs (#NcGalaxyWLObs:shape-interp) and records the shape factor
+ * and the population of @mset that built them
+ * (nc_galaxy_shape_factor_spectral_set_obs_source()). The columns of @obs are not written;
+ * @obs may be the catalog of @dcwlf (nc_data_cluster_wl_factor_peek_obs()). A fit that reads
+ * the rows of @obs loads the interpolants instead of building them.
+ *
+ * The shape factor must be a #NcGalaxyShapeFactorSpectral with
+ * #NcGalaxyShapeFactorSpectral:use-interp, no parameter of the population may be free (the
+ * interpolants hold for its current values only), and @obs must have as many rows as the
+ * catalog of @dcwlf; otherwise the call aborts.
+ */
+void
+nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  NcmModel *pop                             = ncm_mset_peek (mset, nc_galaxy_shape_pop_id ());
+  guint gal_i, k;
+
+  for (k = 0; k < ncm_model_len (pop); k++)
+  {
+    if (ncm_model_param_get_ftype (pop, k) == NCM_PARAM_TYPE_FREE)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp: the population parameter %s of %s is free; "
+               "the interpolants hold for fixed population parameters.", ncm_model_param_name (pop, k), G_OBJECT_TYPE_NAME (pop));
+  }
+
+  if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor) ||
+      !nc_galaxy_shape_factor_spectral_get_use_interp (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor)))
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the shape factor %s is not a NcGalaxyShapeFactorSpectral with use-interp.",
+             G_OBJECT_TYPE_NAME (self->shape_factor));
+
+  nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
+
+  if (nc_galaxy_wl_obs_len (obs) != self->shape_data->len)
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the catalog has %u rows, the dataset %u galaxies.",
+             nc_galaxy_wl_obs_len (obs), self->shape_data->len);
+
+  for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
+
+    s_data->ldata_write_row (s_data, obs, gal_i);
+  }
+
+  nc_galaxy_shape_factor_spectral_set_obs_source (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor),
+                                                  NC_GALAXY_SHAPE_POP (pop),
+                                                  obs);
 }
 
 /**

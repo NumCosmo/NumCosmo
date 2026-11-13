@@ -38,6 +38,10 @@ logsubexp (double x, double y)
     b = x;
   }
 
+  /* exp(a) - exp(b) = 0, also for a = b = -inf (NumCosmo) */
+  if (a == b)
+    return -INFINITY;
+
   tmp = a - b;
 
   if (tmp > M_LN2)

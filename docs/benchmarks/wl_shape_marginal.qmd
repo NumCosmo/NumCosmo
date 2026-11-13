@@ -1,0 +1,461 @@
+---
+title: "Shape marginal against certified values"
+author: "Sandro Dias Pinto Vitenti"
+date: "2026-11-12"
+abstract: |
+    The marginal of the observed ellipticity over the intrinsic one, computed by the four
+    NcGalaxyShapeFactor classes, compared with 26,023 values certified in Arb ball
+    arithmetic: where each class is accurate, where it fails, and what it costs.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+
+---
+
+## What this page shows
+
+The weak-lensing likelihood of a galaxy needs the probability of its observed ellipticity
+$\epsilon_{\rm obs}$ at the shear $g$, marginalized over the intrinsic ellipticity
+$\chi_I$:
+$$
+P(\epsilon_{\rm obs} \mid g) = \int_{|\chi_I| < 1} P_{\rm 2D}(\chi_I)\, N_2\!\left(\epsilon_{\rm obs} - f_g(\chi_I)\right) \mathrm{d}^2\chi_I,
+$$
+where $P_{\rm 2D}$ is the intrinsic-ellipticity population, $N_2$ the isotropic Gaussian
+of per-component dispersion $\sigma_{\rm noise}$ (`std_noise`), and $f_g$ the shear map of
+the ellipticity convention (TRACE or TRACE_DET). The
+[framework page](../theory/nc/lss/galaxy/galaxy_wl_framework.qmd) defines both conventions.
+
+NumCosmo has four classes that compute or approximate this integral:
+
+- `NcGalaxyShapeFactorVarAdd`: the observed ellipticity pulled back through the inverse
+  shear map and evaluated on a Gaussian of variance $\sigma^2 + \sigma_{\rm noise}^2$; it
+  needs the dispersion $\sigma$ of a Gaussian population;
+- `NcGalaxyShapeFactorMomentsGauss`: a Gaussian with the exact mean and variances of the
+  sheared, noisy marginal;
+- `NcGalaxyShapeFactorMomentsTilt`: the exact zero-shear marginal with an exponential tilt
+  fixed by the same exact moments, interpolated in $\min(|g|, 1/|g|)$ from tables built
+  per population and noise;
+- `NcGalaxyShapeFactorSpectral`: the integral by adaptive Chebyshev panels in polar
+  coordinates ([theory page](../theory/nc/lss/galaxy/wl_shape_marginalization_spectral.qmd)).
+
+The reference is the release asset `nc_galaxy_shape_marginal_arb_cert.bin`, written by
+`tests/tools/make_shape_marginal_arb_table.py` from values certified by the Arb tool
+`tests/tools/nc_galaxy_shape_marginal_arb.c`. Each of its 26,023 points has a certified
+$\ln P$ rounded to the nearest double. The points cover both conventions; the truncated
+Gaussian with $\sigma \in \{0.05, 0.2, 0.3, 0.4\}$ and seven Beta populations in
+$r = |\chi_I|$; $\sigma_{\rm noise}$ from 0.005 to 1; $|g|$ from 0 to 3; and
+$|\epsilon_{\rm obs}|$ from 0 to 2. This page reads the table and evaluates every class at
+every point it supports, with the default settings of each class.
+
+```{python}
+# | code-fold: true
+import time
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+from IPython.display import Markdown, display
+
+from numcosmo_py import Nc, Ncm
+
+Ncm.cfg_init()
+
+plt.rcParams.update(
+    {
+        "figure.dpi": 110,
+        "font.size": 12,
+        "axes.titlesize": 12,
+        "axes.labelsize": 12,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+    }
+)
+
+COLS = ["conv", "pop", "p1", "p2", "std_noise", "g1", "g2", "e1", "e2", "lnP"]
+C = {name: i for i, name in enumerate(COLS)}
+CONV = {0: Nc.GalaxyWLObsEllipConv.TRACE, 1: Nc.GalaxyWLObsEllipConv.TRACE_DET}
+CONV_NAME = {0: "TRACE", 1: "TRACE_DET"}
+POP_NAME = {0: "Gauss", 1: "Beta"}
+CLASSES = {
+    "VarAdd": (Nc.GalaxyShapeFactorVarAdd, False),
+    "MomentsGauss": (Nc.GalaxyShapeFactorMomentsGauss, True),
+    "MomentsTilt": (Nc.GalaxyShapeFactorMomentsTilt, True),
+    "Spectral": (Nc.GalaxyShapeFactorSpectral, True),
+}
+FAIL = 0.5  # |Delta ln P| above which a point is marked as failing
+
+ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+table = ser.dict_str_from_binfile(
+    Nc.data_download_release_file("nc_galaxy_shape_marginal_arb_cert.bin")
+).get("points")
+points = np.array(table.dup_array()).reshape(table.nrows(), table.ncols())
+
+
+def build_mset(pop):
+    """The models a NcGalaxyShapeFactorData needs; only pop enters ln P here."""
+    cosmo = Nc.HICosmoDEXcdm.new()
+    dist = Nc.Distance.new(100.0)
+    hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
+    hp = Nc.HaloPosition.new(dist)
+    hp.param_set_by_name("z", 0.2)
+    hp.prepare(cosmo)
+    mset = Ncm.MSet.empty_new()
+    for model in (
+        cosmo,
+        Nc.HaloDensityProfileNFW.new(hms),
+        hp,
+        Nc.WLSurfaceMassDensity.new(dist),
+        pop,
+        Nc.GalaxyRedshiftPopLSSTSRD.new_y1_source(),
+        Nc.GalaxyRedshiftObsGauss.new(),
+    ):
+        mset.set(model)
+    return mset
+
+
+def new_pop(ip, p1, p2):
+    """The truncated Gaussian (ip = 0, sigma = p1) or the Beta population (ip = 1)."""
+    if ip == 0:
+        pop = Nc.GalaxyShapePopGauss.new()
+        pop["sigma"] = p1
+    else:
+        pop = Nc.GalaxyShapePopBeta.new()
+        pop["alpha"] = p1
+        pop["beta"] = p2
+    return pop
+
+
+def evaluate(cls):
+    """ln P of cls at every point (NaN where unsupported) and the time per point.
+
+    One data object per convention, population and noise; the first evaluation of each
+    includes what the class builds for them (the MomentsTilt tables).
+    """
+    lnp = np.full(len(points), np.nan)
+    sec = np.full(len(points), np.nan)
+    keys = np.unique(points[:, 0:5], axis=0)
+    for conv, ip, p1, p2, sn in keys:
+        if ip == 1 and not CLASSES[cls][1]:
+            continue
+        idx = np.flatnonzero(np.all(points[:, 0:5] == (conv, ip, p1, p2, sn), axis=1))
+        pop = new_pop(ip, p1, p2)
+        mset = build_mset(pop)
+        gsf = CLASSES[cls][0].new(CONV[int(conv)])
+        pos_data = Nc.GalaxyPositionFactorData.new(
+            Nc.GalaxyPositionFactorFlat.new(-1.0, 1.0, -1.0, 1.0), mset
+        )
+        z_data = Nc.GalaxyRedshiftFactorData.new(
+            Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0), mset
+        )
+        data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+        gsf.data_set(
+            data, 0.0, 0.0, sn, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
+        )
+        gsf.prepare_data_array(mset, [data], True, True)
+        for i in idx:
+            g1, g2, e1, e2 = points[i, C["g1"] : C["e2"] + 1]
+            t0 = time.perf_counter()
+            lnp[i] = gsf.eval_ln_marginal(pop, data, g1, g2, e1, e2)
+            sec[i] = time.perf_counter() - t0
+    return lnp, sec
+
+
+results = {cls: evaluate(cls) for cls in CLASSES}
+abs_g = np.round(np.hypot(points[:, C["g1"]], points[:, C["g2"]]), 6)
+abs_e = np.round(np.hypot(points[:, C["e1"]], points[:, C["e2"]]), 6)
+```
+
+## Accuracy
+
+The error of a class at a point is
+$$
+\Delta \ln P \equiv \ln P - \ln P_0,
+$$
+where $\ln P_0$ is the certified value. Where $|\Delta \ln P| \ll 1$ it is the relative
+error of $P$, since $\Delta P / P_0 = e^{\Delta \ln P} - 1$. A point fails when
+$|\Delta \ln P| > 0.5$, a factor $e^{0.5} \approx 1.65$ in $P$, or when the class returns a
+value that is not finite.
+
+Below that threshold no value is marked as acceptable. The likelihood of a catalog of $N$
+galaxies is a sum over galaxies, so an error of the same sign in every galaxy changes
+$-2 \ln L$ by up to $2N |\Delta \ln P|$. Its effect on the cluster parameters depends on how
+the error varies with $g$ across the catalog, and it is known only after it is propagated
+to the parameters.
+
+Each figure shows one class at the shears $|g| \le 0.3$. No galaxy of the curated HSC
+catalogs reaches $|g| = 0.3$ for an NFW halo of mass up to $10^{15.3}\,M_\odot$ at the
+catalog's own cluster position, redshift and concentration. A cell is one pair
+($\sigma_{\rm noise}$, $|\epsilon_{\rm obs}|$). Its color is the median $|\Delta \ln P|$ over
+the populations of the family, the shears and the directions in the cell, and its label is
+the percentage of failing points. A cell without a label has no failing point. The table
+below each figure gives the same counts for $|g| \le 0.3$ and for $|g| > 0.3$.
+
+```{python}
+# | code-fold: true
+SN = np.unique(points[:, C["std_noise"]])
+ES = np.unique(abs_e)
+G_MAX = 0.3
+VMIN, VMAX = -14.0, 2.0
+
+
+def cell_grid(cls, conv, ip):
+    """log10 of the median |Delta ln P| and the failing fraction per cell."""
+    d = np.abs(results[cls][0] - points[:, C["lnP"]])
+    d[~np.isfinite(d)] = np.inf
+    evaluated = CLASSES[cls][1] or ip == 0
+    median = np.full((len(SN), len(ES)), np.nan)
+    failing = np.full((len(SN), len(ES)), np.nan)
+    if not evaluated:
+        return median, failing
+    sel0 = (
+        (points[:, C["conv"]] == conv) & (points[:, C["pop"]] == ip) & (abs_g <= G_MAX)
+    )
+    for a, sn in enumerate(SN):
+        for b, e in enumerate(ES):
+            sel = sel0 & (points[:, C["std_noise"]] == sn) & (abs_e == e)
+            if np.any(sel):
+                median[a, b] = np.log10(max(np.median(d[sel]), 1.0e-16))
+                failing[a, b] = np.mean(d[sel] > FAIL)
+    return median, failing
+
+
+def plot_class(cls):
+    """Four panels: TRACE and TRACE_DET by Gauss and Beta."""
+    fig, axes = plt.subplots(2, 2, figsize=(9.0, 6.4), sharex=True, sharey=True)
+    cmap = plt.get_cmap("viridis").copy()
+    cmap.set_bad("0.85")
+    for row, conv in enumerate((0, 1)):
+        for col, ip in enumerate((0, 1)):
+            ax = axes[row, col]
+            median, failing = cell_grid(cls, conv, ip)
+            im = ax.imshow(
+                median, origin="lower", cmap=cmap, vmin=VMIN, vmax=VMAX, aspect="auto"
+            )
+            for a, b in zip(*np.nonzero(failing > 0.0)):
+                ax.text(
+                    b, a, f"{100.0 * failing[a, b]:.0f}", ha="center", va="center",
+                    color="red", fontsize=9,
+                )
+            if np.all(np.isnan(median)):
+                ax.text(
+                    0.5 * (len(ES) - 1), 0.5 * (len(SN) - 1), "not supported",
+                    ha="center", va="center",
+                )
+            ax.set_title(f"{CONV_NAME[conv]}, {POP_NAME[ip]}")
+            ax.set_xticks(range(len(ES)), [f"{e:g}" for e in ES], rotation=45)
+            ax.set_yticks(range(len(SN)), [f"{s:g}" for s in SN])
+    for ax in axes[1, :]:
+        ax.set_xlabel(r"$|\epsilon_{\rm obs}|$")
+    for ax in axes[:, 0]:
+        ax.set_ylabel(r"$\sigma_{\rm noise}$")
+    fig.colorbar(
+        im, ax=axes,
+        label=r"$\log_{10}$ median $|\Delta \ln P|$, $|g| \leq 0.3$",
+    )
+    plt.show()
+
+
+def failure_summary(cls):
+    """Points, failing points and median |Delta ln P| per family and shear range."""
+    d = np.abs(results[cls][0] - points[:, C["lnP"]])
+    d[~np.isfinite(d)] = np.inf
+    lines = [
+        "| convention | population | shears | points | failing | median $|\\Delta \\ln P|$ |",
+        "|---|---|---|---|---|---|",
+    ]
+    for conv in (0, 1):
+        for ip in (0, 1):
+            if not (CLASSES[cls][1] or ip == 0):
+                lines.append(
+                    f"| {CONV_NAME[conv]} | {POP_NAME[ip]} | all | not supported | | |"
+                )
+                continue
+            fam = (points[:, C["conv"]] == conv) & (points[:, C["pop"]] == ip)
+            for label, rng in (
+                (r"$|g| \le 0.3$", abs_g <= G_MAX),
+                (r"$|g| > 0.3$", abs_g > G_MAX),
+            ):
+                sel = fam & rng
+                bad = d[sel] > FAIL
+                lines.append(
+                    f"| {CONV_NAME[conv]} | {POP_NAME[ip]} | {label} | {sel.sum():,} | "
+                    f"{bad.sum():,} ({100.0 * bad.mean():.0f}%) | {np.median(d[sel]):.1e} |"
+                )
+    display(Markdown("\n".join(lines)))
+```
+
+### VarAdd
+
+```{python}
+# | code-fold: true
+# | fig-cap: "VarAdd at |g| <= 0.3: median |Delta ln P| per cell; the labels are the percentages of failing points. The Beta panels are empty: the class needs the dispersion of a Gaussian population."
+plot_class("VarAdd")
+failure_summary("VarAdd")
+```
+
+### MomentsGauss
+
+```{python}
+# | code-fold: true
+# | fig-cap: "MomentsGauss at |g| <= 0.3: median |Delta ln P| per cell; the labels are the percentages of failing points."
+plot_class("MomentsGauss")
+failure_summary("MomentsGauss")
+```
+
+### MomentsTilt
+
+```{python}
+# | code-fold: true
+# | fig-cap: "MomentsTilt at |g| <= 0.3: median |Delta ln P| per cell; the labels are the percentages of failing points."
+plot_class("MomentsTilt")
+failure_summary("MomentsTilt")
+```
+
+### Spectral
+
+```{python}
+# | code-fold: true
+# | fig-cap: "Spectral at its default reltol and |g| <= 0.3: median |Delta ln P| per cell, no failing point. Values below 1e-14 are drawn at 1e-14."
+plot_class("Spectral")
+failure_summary("Spectral")
+```
+
+## Speed
+
+The approximate classes evaluate $\ln P$ in closed form or from tables. Spectral integrates,
+which costs about two orders of magnitude more per evaluation. When the population is fixed,
+Spectral can instead build, once per galaxy, an interpolant of $\ln P$ in $g$ on
+$|g| \le 0.3$ (`NcGalaxyShapeFactorSpectral:use-interp`), and every later evaluation reads
+the interpolant. When the population varies, as in a fit of its parameters, the interpolant
+of every galaxy changes at every step, so each evaluation integrates.
+
+The first table gives the median time per evaluation of each class over the certified points
+above. The second gives, for 30 points of the fitted Beta population (TRACE,
+$\alpha = 1.92$, $\beta = 1.98$) with $|\epsilon_{\rm obs}| < 1$ and
+$\sigma_{\rm noise} \in \{0.03, 0.1, 0.3\}$, the time to build the interpolant, the time per
+evaluation from it and by integration, at 200 and 20 random shears with $|g| \le 0.3$, and the
+number of evaluations per galaxy above which building the interpolant costs less than
+integrating. All times are measured on the machine that renders this page, on one thread,
+through the Python bindings: a call through them costs of the order of half a microsecond,
+which is most of the time of the approximate classes and of the interpolant (an evaluation of
+the interpolant from C takes of the order of 0.1 µs).
+
+```{python}
+# | code-fold: true
+lines = ["| class | median time per evaluation |", "|---|---|"]
+for cls in CLASSES:
+    sec = results[cls][1]
+    lines.append(f"| {cls} | {np.nanmedian(sec) * 1.0e6:.1f} µs |")
+display(Markdown("\n".join(lines)))
+```
+
+```{python}
+# | code-fold: true
+SPEED_SN = (0.03, 0.1, 0.3)
+rng = np.random.default_rng(20261113)
+speed_sel = (
+    (points[:, C["conv"]] == 0)
+    & (points[:, C["pop"]] == 1)
+    & (points[:, C["p1"]] == 1.92)
+    & np.isin(points[:, C["std_noise"]], SPEED_SN)
+    & (abs_e < 1.0)
+)
+speed_gal = np.unique(points[speed_sel][:, [C["std_noise"], C["e1"], C["e2"]]], axis=0)
+speed_gal = speed_gal[rng.choice(len(speed_gal), size=30, replace=False)]
+
+
+def random_shears(n):
+    """n shears uniform in the disc |g| <= 0.3."""
+    r = 0.3 * np.sqrt(rng.uniform(size=n))
+    t = rng.uniform(0.0, 2.0 * np.pi, size=n)
+    return r * np.cos(t), r * np.sin(t)
+
+
+def time_galaxy(sn, e1, e2):
+    """Build time, time per interpolant evaluation and per integral, in seconds."""
+    pop = new_pop(1, 1.92, 1.98)
+    mset = build_mset(pop)
+    gsf = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE)
+    gsf.set_use_interp(True)
+    pos_data = Nc.GalaxyPositionFactorData.new(
+        Nc.GalaxyPositionFactorFlat.new(-1.0, 1.0, -1.0, 1.0), mset
+    )
+    z_data = Nc.GalaxyRedshiftFactorData.new(
+        Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0), mset
+    )
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+    gsf.data_set(data, e1, e2, sn, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    gsf.prepare_data_array(mset, [data], True, True)
+
+    t0 = time.perf_counter()
+    gsf.data_prepare(mset, data, 3.0)
+    t_build = time.perf_counter() - t0
+
+    g1, g2 = random_shears(200)
+    t0 = time.perf_counter()
+    for a, b in zip(g1, g2):
+        gsf.eval_ln_marginal(pop, data, a, b, e1, e2)
+    t_interp = (time.perf_counter() - t0) / len(g1)
+
+    gsf.set_use_interp(False)
+    g1, g2 = random_shears(20)
+    t0 = time.perf_counter()
+    for a, b in zip(g1, g2):
+        gsf.eval_ln_marginal(pop, data, a, b, e1, e2)
+    t_direct = (time.perf_counter() - t0) / len(g1)
+    return t_build, t_interp, t_direct
+
+
+speed = np.array([time_galaxy(*row) for row in speed_gal])
+break_even = speed[:, 0] / (speed[:, 2] - speed[:, 1])
+
+
+def quantiles(v, scale, fmt):
+    """Median, 90% and largest of v times scale."""
+    q = np.quantile(v, [0.5, 0.9, 1.0]) * scale
+    return " / ".join(fmt.format(x) for x in q)
+
+
+display(
+    Markdown(
+        "\n".join(
+            [
+                "| quantity (30 points) | median / 90% / largest |",
+                "|---|---|",
+                f"| build of the interpolant | {quantiles(speed[:, 0], 1.0, '{:.2f} s')} |",
+                f"| evaluation from the interpolant | {quantiles(speed[:, 1], 1.0e6, '{:.1f} µs')} |",
+                f"| evaluation by integration | {quantiles(speed[:, 2], 1.0e6, '{:.0f} µs')} |",
+                f"| evaluations per galaxy where the build pays | {quantiles(break_even, 1.0, '{:.0f}')} |",
+            ]
+        )
+    )
+)
+```
+
+An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
+$10^5$ times, far above the break-even count: with a fixed population the build pays even if
+it is repeated in every process of the run. The command `numcosmo wl-catalog shape-interp`
+does it once instead. It builds the interpolants of all the galaxies of a catalog in parallel
+and writes them with the catalog; `numcosmo generate cluster-wl-load --data-file` then builds
+an experiment that loads them. The table below gives the measurements on the HSC field
+HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE).
+
+| HWL16a-094, 2,200 galaxies | time |
+|---|---|
+| `wl-catalog shape-interp`, 12 threads | 44 s |
+| the same build on 1 thread (`nc_data_cluster_wl_factor_data_prepare()`) | 450 s |
+| first $-2\ln L$ of an experiment from the prepared catalog | 0.02 s |
+| first $-2\ln L$ of the same experiment from the original catalog (builds every interpolant) | 447 s |
+| MCMC, 1,000 walkers and 150,000 points, 12 threads, each thread building its interpolants | 736 s |
+| the same MCMC from the prepared catalog | 221 s |
+
+Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-12 and 2026-11-13, with fixed-node
+redshift integration. The two experiments give the same $-2\ln L$ to the last digit, and the
+two MCMCs the same posterior within the Monte Carlo error ($\log_{10} M_{200c}$ =
+$15.4785 \pm 0.1211$ and $15.4785 \pm 0.1208$).

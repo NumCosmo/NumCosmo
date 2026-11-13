@@ -57,6 +57,7 @@ void test_ncm_integral1d_x5_2_sinx_hermite (TestNcmIntegral1d *test, gconstpoint
 void test_ncm_integral1d_x5_2_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer pdata);
 
 void test_ncm_integral1d_m2_x2_lnint (TestNcmIntegral1d *test, gconstpointer pdata);
+void test_ncm_integral1d_lnint_zero_gap (void);
 
 void test_ncm_integral1d_traps (TestNcmIntegral1d *test, gconstpointer pdata);
 void test_ncm_integral1d_invalid_test (TestNcmIntegral1d *test, gconstpointer pdata);
@@ -115,6 +116,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_integral1d_m2_x2_lnint,
               &test_ncm_integral1d_free);
 
+  g_test_add_func ("/ncm/integral1d/lnint/zero_gap", &test_ncm_integral1d_lnint_zero_gap);
+
   g_test_add ("/ncm/integral1d/traps", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_traps,
@@ -146,6 +149,13 @@ static gdouble
 test_exp_mx2_2 (gpointer userdata, const gdouble x, const gdouble w)
 {
   return -0.5 * x * x;
+}
+
+/* ln of a Gaussian set to zero (ln = -inf) on |x| < 1 */
+static gdouble
+test_exp_mx2_2_gap (gpointer userdata, const gdouble x, const gdouble w)
+{
+  return (fabs (x) < 1.0) ? -GSL_POSINF : -0.5 * x * x;
 }
 
 void
@@ -386,6 +396,26 @@ test_ncm_integral1d_m2_x2_lnint (TestNcmIntegral1d *test, gconstpointer pdata)
   result = ncm_integral1d_eval_lnint (test->int1d, -10.0, 10.0, &err);
 
   NCM_INTEGRAL1D_TESTCMP (0.5 * ncm_c_ln2pi ());
+}
+
+/*
+ * An integrand that is zero on a subinterval, ln F = -inf there: the integral of the
+ * Gaussian over |x| >= 1, sqrt (2 pi) erfc (1 / sqrt (2)).
+ */
+void
+test_ncm_integral1d_lnint_zero_gap (void)
+{
+  NcmIntegral1d *int1d = NCM_INTEGRAL1D (ncm_integral1d_ptr_new (&test_exp_mx2_2_gap, NULL));
+  const gdouble prec   = 1.0e-10;
+  gdouble err, result;
+
+  ncm_integral1d_set_reltol (int1d, prec);
+  ncm_integral1d_set_abstol (int1d, 0.0);
+  result = ncm_integral1d_eval_lnint (int1d, -10.0, 10.0, &err);
+
+  NCM_INTEGRAL1D_TESTCMP (0.5 * ncm_c_ln2pi () + log (erfc (M_SQRT1_2)));
+
+  ncm_integral1d_free (int1d);
 }
 
 void

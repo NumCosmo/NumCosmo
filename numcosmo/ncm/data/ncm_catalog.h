@@ -79,6 +79,14 @@ typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
  * Error codes returned by the #NcmCatalog class.
  *
  */
+/**
+ * NCM_CATALOG_KEY_PENDING:
+ *
+ * A saved key that takes the current key of the catalog at the first
+ * ncm_catalog_key_is_current(); never a key of the catalog, which starts at one.
+ */
+#define NCM_CATALOG_KEY_PENDING (0)
+
 typedef enum _NcmCatalogError /*< enum,prefix=NCM_CATALOG_ERROR >*/
 {
   NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
@@ -113,6 +121,9 @@ gboolean ncm_catalog_get_bool (NcmCatalog *catalog, const gchar *col, const guin
 
 GStrv ncm_catalog_peek_columns (NcmCatalog *catalog);
 NcmMatrix *ncm_catalog_peek_data (NcmCatalog *catalog);
+guint64 ncm_catalog_get_key (NcmCatalog *catalog);
+void ncm_catalog_mark_outdated (NcmCatalog *catalog);
+gboolean ncm_catalog_key_is_current (NcmCatalog *catalog, guint64 *saved_key);
 
 guint ncm_catalog_len (NcmCatalog *catalog);
 guint ncm_catalog_ncols (NcmCatalog *catalog);

@@ -485,7 +485,10 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
   members = nc_halo_catalog_new (NC_HALO_CATALOG_KIND_MEMBER, "galaxy_id", "parent_id", galaxy_id, col_names, col_types, 6);
 
   if (galaxy_id > 0)
+  {
     ncm_matrix_set_from_array (ncm_catalog_peek_data (NCM_CATALOG (members)), rows);
+    ncm_catalog_mark_outdated (NCM_CATALOG (members));
+  }
 
   g_strfreev (col_names);
   g_array_unref (rows);

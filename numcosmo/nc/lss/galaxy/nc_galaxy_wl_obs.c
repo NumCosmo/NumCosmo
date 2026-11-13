@@ -34,6 +34,14 @@
  * A class to store galaxy weak lensing observation data and information about its
  * coordinate system.
  *
+ * A catalog may also carry the interpolants of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of its
+ * galaxies (#NcGalaxyWLObs:shape-interp) with the record of what built them
+ * (#NcGalaxyWLObs:shape-interp-source). They describe the rows as they were when the record
+ * was set, by the key of #NcmCatalog (ncm_catalog_key_is_current()): a later change of the
+ * rows makes nc_galaxy_wl_obs_peek_shape_interp() and
+ * nc_galaxy_wl_obs_peek_shape_interp_source() return %NULL and the two properties return
+ * empty dictionaries, so a serialized catalog never carries interpolants of other rows.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,6 +54,7 @@
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/spline/ncm_spline.h"
 #include "ncm/algebra/ncm_vector.h"
+#include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "nc_enum_types.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/background/nc_hicosmo.h"
@@ -68,6 +77,9 @@ struct _NcGalaxyWLObsPrivate
   NcmObjDictInt *pz;
   NcWLEllipticityFrame coord;
   NcGalaxyWLObsEllipConv ellip_conv;
+  NcmObjDictInt *shape_interp;
+  NcmObjDictStr *shape_interp_source;
+  guint64 shape_interp_key; /* catalog key of the rows the interpolants describe */
 };
 
 enum
@@ -75,6 +87,8 @@ enum
   PROP_PZ = 1000,
   PROP_COORD,
   PROP_ELLIP_CONV,
+  PROP_SHAPE_INTERP,
+  PROP_SHAPE_INTERP_SOURCE,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLObs, nc_galaxy_wl_obs, NCM_TYPE_CATALOG)
@@ -84,10 +98,15 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  self->pz         = ncm_obj_dict_int_new ();
-  self->coord      = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
-  self->ellip_conv = 0;
+  self->pz                  = ncm_obj_dict_int_new ();
+  self->coord               = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
+  self->ellip_conv          = 0;
+  self->shape_interp        = ncm_obj_dict_int_new ();
+  self->shape_interp_source = NULL;
+  self->shape_interp_key    = NCM_CATALOG_KEY_PENDING;
 }
+
+static gboolean _nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs);
 
 static void
 _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
@@ -105,6 +124,22 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_ELLIP_CONV:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_ellip_conv (obs));
+      break;
+    case PROP_SHAPE_INTERP:
+
+      if (_nc_galaxy_wl_obs_shape_interp_current (obs))
+        g_value_set_boxed (value, self->shape_interp);
+      else
+        g_value_take_boxed (value, ncm_obj_dict_int_new ());
+
+      break;
+    case PROP_SHAPE_INTERP_SOURCE:
+
+      if (_nc_galaxy_wl_obs_shape_interp_current (obs))
+        g_value_set_boxed (value, self->shape_interp_source);
+      else
+        g_value_take_boxed (value, ncm_obj_dict_str_new ());
+
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -132,6 +167,29 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_ELLIP_CONV:
       _nc_galaxy_wl_obs_set_ellip_conv (obs, g_value_get_enum (value));
       break;
+    case PROP_SHAPE_INTERP:
+    {
+      NcmObjDictInt *shape_interp = g_value_dup_boxed (value);
+
+      ncm_obj_dict_int_clear (&self->shape_interp);
+      self->shape_interp = (shape_interp != NULL) ? shape_interp : ncm_obj_dict_int_new ();
+      break;
+    }
+    case PROP_SHAPE_INTERP_SOURCE:
+    {
+      NcmObjDictStr *source = g_value_dup_boxed (value);
+
+      ncm_obj_dict_str_clear (&self->shape_interp_source);
+
+      /* An empty record is no record: it is what a stale catalog serializes */
+      if ((source != NULL) && (ncm_obj_dict_str_len (source) > 0))
+        self->shape_interp_source = source;
+      else if (source != NULL)
+        ncm_obj_dict_str_unref (source);
+
+      self->shape_interp_key = NCM_CATALOG_KEY_PENDING;
+      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -152,6 +210,8 @@ _nc_galaxy_wl_obs_dispose (GObject *object)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   ncm_obj_dict_int_clear (&self->pz);
+  ncm_obj_dict_int_clear (&self->shape_interp);
+  ncm_obj_dict_str_clear (&self->shape_interp_source);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->dispose (object);
@@ -225,6 +285,45 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                       NC_TYPE_GALAXY_WL_OBS_ELLIP_CONV,
                                                       NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyWLObs:shape-interp:
+   *
+   * The interpolants of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of the galaxies, a
+   * #NcmSpectralPolarPanels for each row that has one, keyed by the row; empty when the
+   * rows changed after #NcGalaxyWLObs:shape-interp-source was set.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SHAPE_INTERP,
+                                   g_param_spec_boxed ("shape-interp",
+                                                       "Shape interpolants",
+                                                       "Interpolants of ln P in g of the galaxies",
+                                                       NCM_TYPE_OBJ_DICT_INT,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyWLObs:shape-interp-source:
+   *
+   * The record of what built #NcGalaxyWLObs:shape-interp, objects keyed by their role (see
+   * nc_galaxy_shape_factor_spectral_set_obs_source()); empty when there is none or when the
+   * rows changed after it was set.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SHAPE_INTERP_SOURCE,
+                                   g_param_spec_boxed ("shape-interp-source",
+                                                       "Shape interpolants source",
+                                                       "Record of what built the interpolants",
+                                                       NCM_TYPE_OBJ_DICT_STR,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+}
+
+/* Whether the interpolants and their record describe the current rows */
+static gboolean
+_nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  return (self->shape_interp_source != NULL) && ncm_catalog_key_is_current (NCM_CATALOG (obs), &self->shape_interp_key);
 }
 
 void
@@ -493,6 +592,81 @@ nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   return NCM_SPLINE (ncm_obj_dict_int_peek (self->pz, i));
+}
+
+/**
+ * nc_galaxy_wl_obs_set_shape_interp:
+ * @obs: a #NcGalaxyWLObs
+ * @i: row index
+ * @spp: the interpolant of row @i
+ *
+ * Sets the interpolant of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of row @i, referencing
+ * @spp. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
+ * nc_galaxy_wl_obs_set_shape_interp_source() and while the rows are unchanged.
+ */
+void
+nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (spp));
+}
+
+/**
+ * nc_galaxy_wl_obs_peek_shape_interp:
+ * @obs: a #NcGalaxyWLObs
+ * @i: row index
+ *
+ * Returns: (transfer none) (nullable): the interpolant of row @i, or %NULL when the row has
+ * none, there is no record or the rows changed after the record was set.
+ */
+NcmSpectralPolarPanels *
+nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  if (!_nc_galaxy_wl_obs_shape_interp_current (obs))
+    return NULL;
+
+  return (NcmSpectralPolarPanels *) ncm_obj_dict_int_peek (self->shape_interp, i);
+}
+
+/**
+ * nc_galaxy_wl_obs_set_shape_interp_source:
+ * @obs: a #NcGalaxyWLObs
+ * @source: the record of what built the interpolants
+ *
+ * Sets the record of the interpolants set with nc_galaxy_wl_obs_set_shape_interp(),
+ * referencing @source, and records ncm_catalog_get_key(): the interpolants describe the rows
+ * as they are now. Set it after the last change of the rows.
+ */
+void
+nc_galaxy_wl_obs_set_shape_interp_source (NcGalaxyWLObs *obs, NcmObjDictStr *source)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  ncm_obj_dict_str_ref (source);
+  ncm_obj_dict_str_clear (&self->shape_interp_source);
+  self->shape_interp_source = source;
+  self->shape_interp_key    = ncm_catalog_get_key (NCM_CATALOG (obs));
+}
+
+/**
+ * nc_galaxy_wl_obs_peek_shape_interp_source:
+ * @obs: a #NcGalaxyWLObs
+ *
+ * Returns: (transfer none) (nullable): the record of the interpolants, or %NULL when there is
+ * none or the rows changed after it was set.
+ */
+NcmObjDictStr *
+nc_galaxy_wl_obs_peek_shape_interp_source (NcGalaxyWLObs *obs)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  if (!_nc_galaxy_wl_obs_shape_interp_current (obs))
+    return NULL;
+
+  return self->shape_interp_source;
 }
 
 /**

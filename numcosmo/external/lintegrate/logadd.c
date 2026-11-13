@@ -21,13 +21,13 @@
 #include <math.h>
 #include <float.h>
 
-/* Numerically stable log(exp(x) + exp(y)) */
+/* Numerically stable log(exp(x) + exp(y)); x == y also covers x = y = -inf (NumCosmo) */
 static inline double
 logaddexp (double x, double y)
 {
   double tmp = x - y;
 
-  if (fabs (tmp) < 1e-12)
+  if ((x == y) || (fabs (tmp) < 1e-12))
     return x + M_LN2;
   else if (tmp > 0)
     return x + log1p (exp (-tmp));

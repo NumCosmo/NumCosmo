@@ -532,6 +532,7 @@ nc_halo_catalog_generator_generate (NcHaloCatalogGenerator *gen, NcmMSet *mset, 
   {
     data = ncm_catalog_peek_data (NCM_CATALOG (hcat));
     ncm_matrix_set_from_array (data, rows);
+    ncm_catalog_mark_outdated (NCM_CATALOG (hcat));
   }
 
   g_strfreev (col_names);

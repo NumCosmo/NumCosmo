@@ -16,3 +16,6 @@ precision, which establish accuracy rather than agreement.
   clustering spectrum from UltraLevin and from CCL's FKEM, and its derivative
   with respect to $\Omega_c$ taken with `NcmDiff` on both: agreement on the
   spectrum does not carry over to the derivative.
+- [Certified Shape Marginal](wl_shape_marginal.qmd) --- the weak-lensing shape
+  marginal of the four `NcGalaxyShapeFactor` classes against Arb: where each
+  fails, its cost, and the interpolants of a fixed population.
