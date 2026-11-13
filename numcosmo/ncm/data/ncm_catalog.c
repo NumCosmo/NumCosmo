@@ -52,9 +52,16 @@
  *
  * Every change of the data through the setters of the catalog or through the data
  * property increments the key returned by ncm_catalog_get_key(), as a parameter change
- * does to the pkey of a #NcmModel; an object that caches something derived from the rows
- * compares it with the key it recorded. A change written directly into the matrix of
+ * does to the pkey of a #NcmModel. A change written directly into the matrix of
  * ncm_catalog_peek_data() must be followed by ncm_catalog_mark_outdated().
+ *
+ * Data derived from the rows and attached to the catalog, as by a subclass, saves the key of
+ * the rows it describes and checks it with ncm_catalog_key_is_current(). The key is
+ * meaningful only within one process, so such data set through a property, as by
+ * deserialization, saves %NCM_CATALOG_KEY_PENDING instead: the order in which deserialization
+ * sets the properties, the data matrix among them, is not fixed, and the first check takes
+ * the key of the rows as they are then. Serialized derived data must be empty when it is not
+ * current, so a file never carries data of other rows.
  *
  */
 
@@ -768,6 +775,27 @@ ncm_catalog_mark_outdated (NcmCatalog *catalog)
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
 
   self->key++;
+}
+
+/**
+ * ncm_catalog_key_is_current:
+ * @catalog: a #NcmCatalog
+ * @saved_key: (inout): the key saved with data derived from the rows
+ *
+ * Checks whether data saved with @saved_key describes the current rows of @catalog. A
+ * @saved_key equal to %NCM_CATALOG_KEY_PENDING takes the current key first.
+ *
+ * Returns: whether @saved_key equals ncm_catalog_get_key()
+ */
+gboolean
+ncm_catalog_key_is_current (NcmCatalog *catalog, guint64 *saved_key)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+
+  if (*saved_key == NCM_CATALOG_KEY_PENDING)
+    *saved_key = self->key;
+
+  return *saved_key == self->key;
 }
 
 /**

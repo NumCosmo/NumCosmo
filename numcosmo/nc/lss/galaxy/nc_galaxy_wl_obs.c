@@ -37,11 +37,10 @@
  * A catalog may also carry the interpolants of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of its
  * galaxies (#NcGalaxyWLObs:shape-interp) with the record of what built them
  * (#NcGalaxyWLObs:shape-interp-source). They describe the rows as they were when the record
- * was set: the catalog records ncm_catalog_get_key() then, and a later change of the rows
- * makes nc_galaxy_wl_obs_peek_shape_interp() and nc_galaxy_wl_obs_peek_shape_interp_source()
- * return %NULL and the two properties return empty dictionaries, so a serialized catalog never
- * carries interpolants of other rows. When the record is set through its property, as by
- * deserialization, the key is recorded at the first read of either.
+ * was set, by the key of #NcmCatalog (ncm_catalog_key_is_current()): a later change of the
+ * rows makes nc_galaxy_wl_obs_peek_shape_interp() and
+ * nc_galaxy_wl_obs_peek_shape_interp_source() return %NULL and the two properties return
+ * empty dictionaries, so a serialized catalog never carries interpolants of other rows.
  *
  */
 
@@ -80,7 +79,7 @@ struct _NcGalaxyWLObsPrivate
   NcGalaxyWLObsEllipConv ellip_conv;
   NcmObjDictInt *shape_interp;
   NcmObjDictStr *shape_interp_source;
-  guint64 shape_interp_key; /* catalog key of the rows the interpolants describe, 0 while pending */
+  guint64 shape_interp_key; /* catalog key of the rows the interpolants describe */
 };
 
 enum
@@ -104,7 +103,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
   self->ellip_conv          = 0;
   self->shape_interp        = ncm_obj_dict_int_new ();
   self->shape_interp_source = NULL;
-  self->shape_interp_key    = 0;
+  self->shape_interp_key    = NCM_CATALOG_KEY_PENDING;
 }
 
 static gboolean _nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs);
@@ -188,7 +187,7 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
       else if (source != NULL)
         ncm_obj_dict_str_unref (source);
 
-      self->shape_interp_key = 0;
+      self->shape_interp_key = NCM_CATALOG_KEY_PENDING;
       break;
     }
     default:                                                      /* LCOV_EXCL_LINE */
@@ -318,23 +317,13 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
-/*
- * Whether the interpolants and their record describe the current rows: a record exists and
- * the catalog key equals the one recorded with it. A record set through its property is
- * pending (key 0) and takes the current key here.
- */
+/* Whether the interpolants and their record describe the current rows */
 static gboolean
 _nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  if (self->shape_interp_source == NULL)
-    return FALSE;
-
-  if (self->shape_interp_key == 0)
-    self->shape_interp_key = ncm_catalog_get_key (NCM_CATALOG (obs));
-
-  return self->shape_interp_key == ncm_catalog_get_key (NCM_CATALOG (obs));
+  return (self->shape_interp_source != NULL) && ncm_catalog_key_is_current (NCM_CATALOG (obs), &self->shape_interp_key);
 }
 
 void
