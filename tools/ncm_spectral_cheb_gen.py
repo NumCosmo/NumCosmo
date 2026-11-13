@@ -64,6 +64,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import decimal
 import math
 import sys
 from collections.abc import Sequence
@@ -195,11 +196,35 @@ def odd_factors(n_points: int, scale: float) -> list[float]:
         ``n_points / 2``, or ``scale * cos(pi / 4)`` when ``n_points`` is two
     """
     if n_points == 2:
-        return [scale * math.cos(math.pi / 4.0)]
+        return [scale * cos_rounded(math.pi / 4.0)]
     return [
-        scale * 2.0 * math.cos(math.pi * (2 * i + 1) / (2.0 * n_points))
+        scale * 2.0 * cos_rounded(math.pi * (2 * i + 1) / (2.0 * n_points))
         for i in range(n_points // 2)
     ]
+
+
+def cos_rounded(x: float) -> float:
+    """Compute the cosine of a double rounded to the nearest double.
+
+    The Taylor series is summed in 60-digit decimal arithmetic, so the result does not
+    depend on the libm of the platform (the macOS ``math.cos`` differs from the correctly
+    rounded value in the last bit for some arguments of the generator).
+
+    :param x: the argument, in ``[0, pi / 2]``
+    :return: ``cos(x)`` rounded to the nearest double
+    """
+    with decimal.localcontext() as ctx:
+        ctx.prec = 60
+        x2 = decimal.Decimal(x) ** 2
+        term = decimal.Decimal(1)
+        total = term
+        k = 0
+        while True:
+            k += 2
+            term = -term * x2 / (k * (k - 1))
+            if total + term == total:
+                return float(total)
+            total += term
 
 
 def odd_outputs(program: Program, scaled_differences: list[Operand]) -> list[Operand]:

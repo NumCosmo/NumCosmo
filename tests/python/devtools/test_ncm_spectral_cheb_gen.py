@@ -110,11 +110,20 @@ def test_program_scale_by_one() -> None:
 
 def test_odd_factors() -> None:
     """The factors are the scaled cosines of the odd quarter angles."""
-    assert gen.odd_factors(2, 3.0) == [3.0 * math.cos(math.pi / 4.0)]
+    assert gen.odd_factors(2, 3.0) == [3.0 * gen.cos_rounded(math.pi / 4.0)]
     assert gen.odd_factors(4, 0.5) == [
-        math.cos(math.pi / 8.0),
-        math.cos(3.0 * math.pi / 8.0),
+        gen.cos_rounded(math.pi / 8.0),
+        gen.cos_rounded(3.0 * math.pi / 8.0),
     ]
+
+
+def test_cos_rounded() -> None:
+    """The cosine is exact at zero and within one ulp of the libm cosine elsewhere."""
+    assert gen.cos_rounded(0.0) == 1.0
+    for n_points in [2**level for level in range(1, gen.MAX_LEVEL + 1)]:
+        for i in range(n_points // 2):
+            x = math.pi * (2 * i + 1) / (2.0 * n_points)
+            assert abs(gen.cos_rounded(x) - math.cos(x)) <= math.ulp(math.cos(x))
 
 
 @pytest.mark.parametrize("n_points", [1, 2, 4, 8, 16, 32, 64])
