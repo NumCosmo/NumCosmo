@@ -63,6 +63,7 @@ from .inspect import (
 )
 from .run_fit import RunFit, RunTest
 from .run_mc import RunMC
+from .wl_catalog import ShapeInterpWLCatalog
 from .xcor import ComputeCls, ListKernels, ViewKernel
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
@@ -73,6 +74,7 @@ app_cat = typer.Typer(
 )
 app_generate = typer.Typer(no_args_is_help=True, help="Generate experiment files.")
 app_analysis = typer.Typer(no_args_is_help=True, help="Data analysis tools.")
+app_wl_catalog = typer.Typer(no_args_is_help=True, help="Write weak lensing catalogs.")
 app_inspect = typer.Typer(no_args_is_help=True, help="Inspect generated experiments.")
 app_xcor = typer.Typer(no_args_is_help=True, help="Cross-correlation kernel analysis.")
 app_xcor_kernel = typer.Typer(
@@ -84,6 +86,7 @@ app_run.add_typer(app_run_mcmc, name="mcmc")
 app.add_typer(app_cat, name="catalog")
 app.add_typer(app_generate, name="generate")
 app.add_typer(app_analysis, name="analysis")
+app.add_typer(app_wl_catalog, name="wl-catalog")
 app.add_typer(app_inspect, name="inspect")
 app.add_typer(app_xcor, name="xcor")
 app_xcor.add_typer(app_xcor_kernel, name="kernel")
@@ -248,6 +251,12 @@ GEN_CLUSTER_WL_CMD: CMDArg = {
     "help": "Generate mock cluster weak lensing experiments.",
 }
 
+WL_CATALOG_SHAPE_INTERP_CMD: CMDArg = {
+    "name": "shape-interp",
+    "no_args_is_help": True,
+    "help": "Write a WL catalog with the shape interpolants of its galaxies.",
+}
+
 LOAD_CLUSTER_WL_CMD: CMDArg = {
     "name": "cluster-wl-load",
     "no_args_is_help": True,
@@ -374,6 +383,7 @@ app_generate.command(**GEN_PLANCK_RELEASE_CMD)(BuildPlanckRelease)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
 app_generate.command(**LOAD_CLUSTER_WL_CMD)(LoadClusterWL)
+app_wl_catalog.command(**WL_CATALOG_SHAPE_INTERP_CMD)(ShapeInterpWLCatalog)
 app_generate.command(**GEN_CLUSTER_RICHNESS_COUNT_CMD)(GenerateClusterRichnessCount)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)

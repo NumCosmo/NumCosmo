@@ -54,6 +54,9 @@ from numcosmo_py.experiments.cluster_wl import (
     ClusterModel,
     HaloPositionData,
     GalaxyPopGenBeta,
+    GalaxyPopGenGaussLocal,
+    GalaxyShapeFactorGenSpectral,
+    shape_interp_gens,
 )
 
 pytestmark = pytest.mark.app
@@ -1591,3 +1594,218 @@ def test_cluster_wl_load_app_ellip_conv_mismatch(experiment_file, real_wl_obs_fi
         ],
     )
     assert result.exit_code != 0, result.output
+
+
+def _experiment_m2lnL(experiment_file: Path) -> float:
+    """-2 ln L of an experiment at its own model-set values."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    exp = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    likelihood = cast(Ncm.Likelihood, exp.get("likelihood"))
+    mset = cast(Ncm.MSet, exp.get("model-set"))
+    mset.prepare_fparam_map()
+    return likelihood.m2lnL_val(mset)
+
+
+def _shape_interp(output: Path, data_file: Path, *args: str):
+    """Run numcosmo wl-catalog shape-interp."""
+    return runner.invoke(
+        app,
+        [
+            "wl-catalog",
+            "shape-interp",
+            output.as_posix(),
+            f"--data-file={data_file.as_posix()}",
+            *args,
+        ],
+    )
+
+
+def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
+    """A prepared catalog carries the interpolants and the record, and an
+    experiment built from it, with the shape factor and population of the
+    record, gives the -2 ln L of one built from the original catalog."""
+    prepared = tmp_path / "prepared.gvar"
+    result = _shape_interp(
+        prepared, real_wl_obs_file_with_meta, "--pop-dist=beta alpha=1.8 beta=2.1"
+    )
+    assert result.exit_code == 0, result.output
+    assert "interpolants of 20 galaxies" in result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
+    source = obs.peek_shape_interp_source()
+    assert source is not None
+    assert isinstance(source.peek("shape-pop"), Nc.GalaxyShapePopBeta)
+    assert all(obs.peek_shape_interp(i) is not None for i in range(obs.len()))
+
+    exp_prepared = tmp_path / "exp_prepared.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_prepared.as_posix(),
+            f"--data-file={prepared.as_posix()}",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    exp_original = tmp_path / "exp_original.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_original.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral use_interp=true ellip_conv=trace ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.8 beta=2.1",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    assert _experiment_m2lnL(exp_prepared) == _experiment_m2lnL(exp_original)
+
+
+def test_wl_catalog_shape_interp_replaces_record(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A prepared catalog prepared again for another population carries the new record."""
+    first = tmp_path / "first.gvar"
+    second = tmp_path / "second.gvar"
+    assert (
+        _shape_interp(
+            first, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
+        ).exit_code
+        == 0
+    )
+    result = _shape_interp(second, first, "--pop-dist=gauss sigma=0.2")
+    assert result.exit_code == 0, result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(second.as_posix()))
+    source = obs.peek_shape_interp_source()
+    assert source is not None
+    assert cast(Nc.GalaxyShapePopGauss, source.peek("shape-pop"))["sigma"] == 0.2
+
+
+@pytest.mark.parametrize(
+    "args, message",
+    [
+        (
+            [
+                "--pop-dist=gauss sigma=0.3",
+                "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            ],
+            "spectral",
+        ),
+        (
+            [
+                "--pop-dist=gauss sigma=0.3",
+                "--shape-factor=spectral use_interp=false ellip_conv=trace ellip_coord=celestial",
+            ],
+            "spectral",
+        ),
+    ],
+)
+def test_wl_catalog_shape_interp_bad_shape_factor(
+    tmp_path: Path, real_wl_obs_file_with_meta, args, message
+):
+    """Only the spectral shape factor with use_interp=true is accepted."""
+    result = _shape_interp(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
+    assert result.exit_code != 0
+    assert message in str(result.exception) or message in result.output
+
+
+def test_wl_catalog_shape_interp_bad_suffix(tmp_path: Path, real_wl_obs_file_with_meta):
+    """The output must be a .gvar file."""
+    result = _shape_interp(
+        tmp_path / "out.yaml", real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
+    )
+    assert result.exit_code != 0
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--pop-dist=gauss sigma=0.3"],
+        [
+            "--shape-factor=spectral use_interp=true ellip_conv=trace ellip_coord=celestial"
+        ],
+        ["--parameter-list=NcGalaxyShapePop:sigma"],
+    ],
+)
+def test_cluster_wl_load_app_prepared_catalog_rejects(
+    tmp_path: Path, real_wl_obs_file_with_meta, args
+):
+    """With a prepared catalog the shape factor and the population come from its
+    record: giving them, or fitting a population parameter, is an error."""
+    prepared = tmp_path / "prepared.gvar"
+    assert (
+        _shape_interp(
+            prepared, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
+        ).exit_code
+        == 0
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            (tmp_path / "exp.yaml").as_posix(),
+            f"--data-file={prepared.as_posix()}",
+            *args,
+        ],
+    )
+    assert result.exit_code != 0
+
+
+def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
+    """A catalog whose record holds a spectral shape factor and pop."""
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["ra", "dec"],
+    )
+    gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
+    gsfs.set_use_interp(True)
+    gsfs.set_interp_abstol(2.0e-5)
+    source = Ncm.ObjDictStr.new()
+    source.add("shape-factor", gsfs)
+    source.add("shape-pop", pop)
+    obs.set_shape_interp_source(source)
+    return obs
+
+
+def test_shape_interp_gens():
+    """The generators reproduce the record's shape factor and population."""
+    beta = Nc.GalaxyShapePopBeta.new()
+    beta["alpha"] = 1.6
+    beta["beta"] = 2.4
+    gens = shape_interp_gens(_obs_with_source(beta))
+    assert gens is not None
+    shape_gen, pop_gen = gens
+    assert isinstance(shape_gen, GalaxyShapeFactorGenSpectral)
+    assert shape_gen.use_interp
+    assert shape_gen.ellip_conv.genum == Nc.GalaxyWLObsEllipConv.TRACE_DET
+    assert shape_gen.interp_abstol == 2.0e-5
+    assert isinstance(pop_gen, GalaxyPopGenBeta)
+    assert (pop_gen.alpha, pop_gen.beta) == (1.6, 2.4)
+
+    gens = shape_interp_gens(_obs_with_source(Nc.GalaxyShapePopGaussLocal.new()))
+    assert gens is not None
+    assert isinstance(gens[1], GalaxyPopGenGaussLocal)
+
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, ["ra"]
+    )
+    assert shape_interp_gens(obs) is None
+
+
+def test_shape_interp_gens_unknown_population():
+    """A record whose population has no generator is an error."""
+    with pytest.raises(ValueError, match="has no generator"):
+        shape_interp_gens(_obs_with_source(Ncm.Vector.new(2)))

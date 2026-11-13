@@ -815,6 +815,60 @@ def check_shape_pop_compat(
         )
 
 
+def shape_interp_gens(
+    obs: Nc.GalaxyWLObs,
+) -> tuple[GalaxyShapeFactorGenSpectral, GalaxyPopGenTypes] | None:
+    """Return the generators of the shape factor and population that prepared obs.
+
+    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
+    interpolants of its galaxies and the record of what built them
+    (``NcGalaxyWLObs:shape-interp-source``): a copy of the
+    ``NcGalaxyShapeFactorSpectral`` and of the population. The generators
+    returned here build the same objects, with ``use_interp`` set and the
+    ellipticity frame of obs, so an experiment built from them loads the
+    interpolants instead of building them.
+
+    Returns:
+        The shape-factor and population generators, or None when obs
+        carries no current record.
+
+    Raises:
+        ValueError: The record holds a population with no generator.
+    """
+    source = obs.peek_shape_interp_source()
+    if source is None:
+        return None
+
+    gsfs = source.peek("shape-factor")
+    pop = source.peek("shape-pop")
+    assert isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
+
+    shape_gen = GalaxyShapeFactorGenSpectral(
+        ellip_conv=EllipConv(gsfs.get_ellip_conv().value_nick),
+        ellip_coord=EllipCoord(obs.get_coord().value_nick),
+        reltol=gsfs.get_reltol(),
+        use_interp=True,
+        interp_g_max=gsfs.get_interp_g_max(),
+        interp_abstol=gsfs.get_interp_abstol(),
+        interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),
+    )
+
+    pop_gen: GalaxyPopGenTypes
+    if isinstance(pop, Nc.GalaxyShapePopGauss):
+        pop_gen = GalaxyPopGenGauss(sigma=pop["sigma"])
+    elif isinstance(pop, Nc.GalaxyShapePopBeta):
+        pop_gen = GalaxyPopGenBeta(alpha=pop["alpha"], beta=pop["beta"])
+    elif isinstance(pop, Nc.GalaxyShapePopGaussLocal):
+        pop_gen = GalaxyPopGenGaussLocal()
+    else:
+        raise ValueError(
+            f"The catalog was prepared with the population {type(pop).__name__}, "
+            "which has no generator."
+        )
+
+    return shape_gen, pop_gen
+
+
 class GalaxyPopGen(StrEnum):
     """Galaxy intrinsic-ellipticity population distribution types."""
 
