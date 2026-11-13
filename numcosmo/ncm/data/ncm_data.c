@@ -48,6 +48,7 @@
 #include "build_cfg.h"
 
 #include "ncm/data/ncm_data.h"
+#include "ncm/data/ncm_data_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 enum
@@ -700,6 +701,14 @@ ncm_data_is_resampling (NcmData *data)
   NcmDataPrivate * const self = ncm_data_get_instance_private (data);
 
   return self->is_resampling;
+}
+
+void
+_ncm_data_set_resampling (NcmData *data, gboolean resampling)
+{
+  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
+
+  self->is_resampling = resampling;
 }
 
 /**

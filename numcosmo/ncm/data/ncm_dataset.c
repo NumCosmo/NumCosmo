@@ -47,6 +47,7 @@
 #include "build_cfg.h"
 
 #include "ncm/data/ncm_dataset.h"
+#include "ncm/data/ncm_data_private.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
@@ -597,8 +598,16 @@ ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 
   /* Same reason as in the evaluation paths: a block must not be resampled against a
    * shared resource that the later blocks have not yet placed their requirements on.
+   * Every block is prepared as resampling, as ncm_data_resample() prepares it, so a
+   * block skips the work that holds only for the data about to be replaced.
    */
+  for (i = 0; i < dset->oa->len; i++)
+    _ncm_data_set_resampling (ncm_dataset_peek_data (dset, i), TRUE);
+
   _ncm_dataset_prepare_all (dset, mset);
+
+  for (i = 0; i < dset->oa->len; i++)
+    _ncm_data_set_resampling (ncm_dataset_peek_data (dset, i), FALSE);
 
   for (i = 0; i < dset->oa->len; i++)
   {
