@@ -173,7 +173,7 @@ class CCLParams:
             CCLParams.DEFAULT_INTEGRATION_DISTANCE_EPSREL
         )
         pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = (
-            CCLParams.DEFAULT_INTEGRATION_DISTANCE_EPSREL
+            CCLParams.DEFAULT_INTEGRATION_LIMBER_EPSREL
         )
         pyccl.gsl_params.EPS_SCALEFAC_GROWTH = CCLParams.DEFAULT_EPS_SCALEFAC_GROWTH
         pyccl.gsl_params.ODE_GROWTH_EPSREL = CCLParams.DEFAULT_ODE_GROWTH_EPSREL
@@ -202,18 +202,18 @@ class CCLParams:
         pyccl.gsl_params.EPS_SCALEFAC_GROWTH = 1.0e-30
         pyccl.gsl_params.ODE_GROWTH_EPSREL = 1.0e-8
         pyccl.gsl_params.N_ITERATION = 10000
-        pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-9
-        pyccl.spline_params.A_SPLINE_MINLOG = 5.0e-5
-        pyccl.spline_params.A_SPLINE_NLOG = 1000
+        pyccl.gsl_params.INTEGRATION_SIGMAR_EPSREL = 1.0e-8
+        # Log part below a = 0.1, linear part above: NA - 1 = 1.3 (NLOG - 1) keeps
+        # the spacing continuous at a = 0.1, where a jump costs more than either side gains.
+        pyccl.spline_params.A_SPLINE_NLOG = 6150
         pyccl.spline_params.A_SPLINE_NA = 8000
-        pyccl.spline_params.A_SPLINE_NA_PK = 1000
+        pyccl.spline_params.A_SPLINE_NA_PK = 250
         pyccl.spline_params.A_SPLINE_NLOG_PK = 1000
         pyccl.spline_params.N_K = 1000
         pyccl.spline_params.K_MIN = 1.0e-6
         pyccl.spline_params.K_MAX = 1.0e3
-        pyccl.spline_params.A_SPLINE_NLOG_SM = 100
         pyccl.spline_params.A_SPLINE_NA_SM = 100
-        pyccl.spline_params.LOGM_SPLINE_NM = 300
+        pyccl.spline_params.LOGM_SPLINE_NM = 150
 
 
 # Missing function in CCL

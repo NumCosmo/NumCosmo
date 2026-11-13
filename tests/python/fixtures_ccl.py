@@ -56,6 +56,35 @@ def fixture_z_high_a():
     return np.geomspace(0.01, 1100.0, 2000)
 
 
+def build_ccl_cosmo_eh_linear(index: int) -> pyccl.Cosmology:
+    """Build cosmology `index` (0, 1 or 2) of ccl_cosmo_eh_linear.
+
+    The cosmology copies CCL's global parameters as they are when it is built.
+    """
+    h, Omega_c, Omega_b, Neff = 0.7, 0.25, 0.05, 3.046
+    sigma8, n_s = 0.9, 0.96
+
+    Omega_v_vals = np.array([0.7, 0.65, 0.75])
+    w0_vals = np.array([-1.0, -0.9, -1.1])
+    wa_vals = np.array([0.0, 0.1, -0.1])
+    m_nu = [[0.0, 0.0, 0.0], [0.04, 0.0, 0.0], [0.02, 0.02, 0.0]]
+
+    return pyccl.Cosmology(
+        Omega_c=Omega_c,
+        Omega_b=Omega_b,
+        Neff=Neff,
+        h=h,
+        sigma8=sigma8,
+        n_s=n_s,
+        Omega_k=1.0 - Omega_c - Omega_b - Omega_v_vals[index],
+        w0=w0_vals[index],
+        wa=wa_vals[index],
+        m_nu=m_nu[index],
+        transfer_function="eisenstein_hu",
+        matter_power_spectrum="linear",
+    )
+
+
 @pytest.fixture(
     name="ccl_cosmo_eh_linear",
     params=product([False, True], range(3)),
@@ -64,38 +93,14 @@ def fixture_z_high_a():
 )
 def fixture_ccl_cosmo_eh_linear(request) -> pyccl.Cosmology:
     """Fixture for CCL Cosmology."""
-    h, Omega_c, Omega_b, Omega_k, Neff = 0.7, 0.25, 0.05, 0.0, 3.046
-    sigma8, n_s = 0.9, 0.96
-
-    Omega_v_vals = np.array([0.7, 0.65, 0.75])
-    w0_vals = np.array([-1.0, -0.9, -1.1])
-    wa_vals = np.array([0.0, 0.1, -0.1])
-    m_nu = [[0.0, 0.0, 0.0], [0.04, 0.0, 0.0], [0.02, 0.02, 0.0]]
-
     high_prec, index = request.param
-
-    Omega_k = 1.0 - Omega_c - Omega_b - Omega_v_vals[index]
 
     if high_prec:
         CCLParams.set_high_prec_params()
     else:
         CCLParams.set_default_params()
 
-    ccl_cosmo = pyccl.Cosmology(
-        Omega_c=Omega_c,
-        Omega_b=Omega_b,
-        Neff=Neff,
-        h=h,
-        sigma8=sigma8,
-        n_s=n_s,
-        Omega_k=Omega_k,
-        w0=w0_vals[index],
-        wa=wa_vals[index],
-        m_nu=m_nu[index],
-        transfer_function="eisenstein_hu",
-        matter_power_spectrum="linear",
-    )
-
+    ccl_cosmo = build_ccl_cosmo_eh_linear(index)
     ccl_cosmo.high_precision = high_prec
     return ccl_cosmo
 

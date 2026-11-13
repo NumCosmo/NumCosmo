@@ -41,6 +41,7 @@ import pyccl
 
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.cosmology import Cosmology
+from numcosmo_py.ccl.nc_ccl import CCLParams, create_nc_obj
 from numcosmo_py.ccl.two_point import compute_kernel
 import numcosmo_py.ccl.comparison as nc_cmp
 
@@ -55,7 +56,7 @@ pytestmark = [
 
 Ncm.cfg_init()
 pytest_plugins = ["python.fixtures_ccl", "python.fixtures_xcor"]
-
+from python.fixtures_ccl import build_ccl_cosmo_eh_linear
 
 # Kernel Window Function Comparison Tests
 
@@ -465,20 +466,58 @@ def test_compare_autocorrelation(
     )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-1)
 
+    # At its default Limber tolerance (1e-4) CCL's integration returns wrong values at
+    # isolated multipoles, measured up to 3.9e-3 (tSZ) and 6.3e-3 (weak lensing);
+    # test_limber_tolerance_approaches_numcosmo checks that they shrink at 1e-6.
+    limber_rtol = 1.0e-3 if ccl_cosmo_eh_linear.high_precision else 1.0e-2
+
     # tSZ auto
     cmp = nc_cmp.compare_tsz_auto(
         ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_chi=n_points
     )
-    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
+    assert_allclose(cmp.y1, cmp.y2, rtol=limber_rtol)
 
     # Weak lensing auto
     cmp = nc_cmp.compare_galaxy_weak_lensing_auto(
         ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells, n_samples=n_points
     )
-    assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-3)
+    assert_allclose(cmp.y1, cmp.y2, rtol=limber_rtol)
 
     # Galaxy number counts auto
     cmp = nc_cmp.compare_galaxy_number_count_auto(
         ccl_cosmo_eh_linear, nc_cosmo_eh_linear, ells
     )
     assert_allclose(cmp.y1, cmp.y2, rtol=1.0e-4)
+
+
+@pytest.mark.parametrize("n_points", [None, 400])
+@pytest.mark.parametrize("index", [0, 1, 2])
+def test_limber_tolerance_approaches_numcosmo(index: int, n_points: int | None) -> None:
+    """Check that tightening CCL's Limber tolerance brings its C_ell closer to NumCosmo.
+
+    The tSZ and weak lensing auto spectra are computed with CCL at its defaults, with
+    INTEGRATION_LIMBER_EPSREL at 1e-4 (CCL's default) and at 1e-6. At 1e-6 the largest
+    relative difference must be below 1e-3 and at most half of the one at 1e-4.
+    Measured: at 1e-4 up to 3.9e-3 (tSZ) and 6.3e-3 (weak lensing); at 1e-6 at most
+    2.7e-5 and 4.5e-4; the smallest reduction is 4.4x.
+    """
+    ells = np.arange(2, 1000)
+    largest: dict[str, list[float]] = {"tsz": [], "wl": []}
+    for epsrel in (1.0e-4, 1.0e-6):
+        CCLParams.set_default_params()
+        pyccl.gsl_params.INTEGRATION_LIMBER_EPSREL = epsrel
+        try:
+            ccl_cosmo = build_ccl_cosmo_eh_linear(index)
+        finally:
+            CCLParams.set_default_params()
+        nc_cosmo = create_nc_obj(ccl_cosmo, dist_z_max=2000.0)
+        tsz = nc_cmp.compare_tsz_auto(ccl_cosmo, nc_cosmo, ells, n_chi=n_points)
+        wl = nc_cmp.compare_galaxy_weak_lensing_auto(
+            ccl_cosmo, nc_cosmo, ells, n_samples=n_points
+        )
+        largest["tsz"].append(tsz.rel_diff_max)
+        largest["wl"].append(wl.rel_diff_max)
+
+    for name, (at_default, at_tight) in largest.items():
+        assert at_tight < 1.0e-3, name
+        assert at_tight <= 0.5 * at_default, name
