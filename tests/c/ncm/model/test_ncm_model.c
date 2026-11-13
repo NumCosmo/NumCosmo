@@ -64,6 +64,7 @@ void test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata);
 
 void test_ncm_model_reparam_current (void);
 void test_ncm_model_reparam_is_equal (void);
+void test_ncm_model_params_equal (void);
 void test_ncm_model_reparam_remove (void);
 void test_ncm_model_reparam_remove_subprocess (void);
 void test_ncm_model_set_default_desc (void);
@@ -153,6 +154,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/ncm/model/reparam/current", &test_ncm_model_reparam_current);
   g_test_add_func ("/ncm/model/reparam/is_equal", &test_ncm_model_reparam_is_equal);
+  g_test_add_func ("/ncm/model/params_equal", &test_ncm_model_params_equal);
   g_test_add_func ("/ncm/model/reparam/remove", &test_ncm_model_reparam_remove);
   g_test_add_func ("/ncm/model/reparam/remove/subprocess", &test_ncm_model_reparam_remove_subprocess);
   g_test_add_func ("/ncm/model/set_default_desc", &test_ncm_model_set_default_desc);
@@ -988,6 +990,39 @@ test_ncm_model_reparam_is_equal (void)
   g_assert_true (ncm_model_is_equal (a, b));
 
   ncm_reparam_free (reparam);
+  ncm_model_free (a);
+  ncm_model_free (b);
+  ncm_model_free (c);
+}
+
+/* params_equal compares the parameters within the tolerances, and only models equal in the sense of is_equal. */
+void
+test_ncm_model_params_equal (void)
+{
+  NcmModel *a = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmModel *b = NCM_MODEL (ncm_model_mvnd_new (2));
+  NcmModel *c = NCM_MODEL (ncm_model_mvnd_new (3));
+
+  ncm_model_orig_param_set (a, 0, 0.5);
+  ncm_model_orig_param_set (b, 0, 0.5);
+  ncm_model_orig_param_set (a, 1, 0.0);
+  ncm_model_orig_param_set (b, 1, 0.0);
+  g_assert_true (ncm_model_params_equal (a, b, 0.0, 0.0));
+  g_assert_false (ncm_model_params_equal (a, c, 1.0, 1.0));
+
+  /* A relative difference of 1e-12 in the first parameter */
+  ncm_model_orig_param_set (b, 0, 0.5 * (1.0 + 1.0e-12));
+  g_assert_false (ncm_model_params_equal (a, b, 0.0, 0.0));
+  g_assert_false (ncm_model_params_equal (b, a, 1.0e-13, 0.0));
+  g_assert_true (ncm_model_params_equal (a, b, 1.0e-11, 0.0));
+  g_assert_true (ncm_model_params_equal (a, b, 0.0, 1.0e-11));
+
+  /* A difference of 1e-12 from a parameter that is zero */
+  ncm_model_orig_param_set (b, 0, 0.5);
+  ncm_model_orig_param_set (b, 1, 1.0e-12);
+  g_assert_false (ncm_model_params_equal (a, b, 0.0, 0.0));
+  g_assert_true (ncm_model_params_equal (a, b, 0.0, 1.0e-11));
+
   ncm_model_free (a);
   ncm_model_free (b);
   ncm_model_free (c);

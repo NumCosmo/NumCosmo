@@ -147,6 +147,7 @@ void ncm_model_free (NcmModel *model);
 void ncm_model_clear (NcmModel **model);
 void ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam, GError **error);
 gboolean ncm_model_is_equal (NcmModel *model1, NcmModel *model2);
+gboolean ncm_model_params_equal (NcmModel *model1, NcmModel *model2, const gdouble reltol, const gdouble abstol);
 
 NcmModelID ncm_model_id (NcmModel *model);
 NcmModelID ncm_model_id_by_type (GType model_type, GError **error);

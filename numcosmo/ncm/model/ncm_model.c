@@ -1654,6 +1654,29 @@ ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
 }
 
 /**
+ * ncm_model_params_equal:
+ * @model1: a #NcmModel
+ * @model2: a #NcmModel
+ * @reltol: relative tolerance
+ * @abstol: absolute tolerance
+ *
+ * Compares the original parameters of @model1 and @model2 one by one with ncm_cmp() at
+ * @reltol and @abstol. Models that differ in the sense of ncm_model_is_equal() are not
+ * compared.
+ *
+ * Returns: whether @model1 and @model2 are equal in the sense of ncm_model_is_equal() and
+ * every original parameter of @model1 is equal to that of @model2 within the tolerances
+ */
+gboolean
+ncm_model_params_equal (NcmModel *model1, NcmModel *model2, const gdouble reltol, const gdouble abstol)
+{
+  if (!ncm_model_is_equal (model1, model2))
+    return FALSE;
+
+  return ncm_vector_cmp2 (ncm_model_orig_params_peek_vector (model1), ncm_model_orig_params_peek_vector (model2), reltol, abstol) == 0;
+}
+
+/**
  * ncm_model_params_set_default:
  * @model: a #NcmModel
  *
