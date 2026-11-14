@@ -79,6 +79,7 @@ void test_ncm_dataset_shared_fisher_bias (TestNcmDataset *test, gconstpointer pd
 void test_ncm_dataset_fisher_inout (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_fisher_no_fparams (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_resample_prepare (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_resample_uninit (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_copy_bootstrap (void);
 void test_ncm_dataset_bootstrap_total_empty (void);
 void test_ncm_dataset_errors (void);
@@ -99,6 +100,7 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/dataset/fisher/inout", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_inout, &test_ncm_dataset_free);
   g_test_add ("/ncm/dataset/fisher/no_fparams", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_no_fparams, &test_ncm_dataset_free);
   g_test_add ("/ncm/dataset/resample/prepare", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_resample_prepare, &test_ncm_dataset_free);
+  g_test_add ("/ncm/dataset/resample/uninit", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_resample_uninit, &test_ncm_dataset_free);
   g_test_add_func ("/ncm/dataset/copy/bootstrap", &test_ncm_dataset_copy_bootstrap);
   g_test_add_func ("/ncm/dataset/bootstrap/total_empty", &test_ncm_dataset_bootstrap_total_empty);
   g_test_add_func ("/ncm/dataset/errors", &test_ncm_dataset_errors);
@@ -474,6 +476,28 @@ test_ncm_dataset_resample_prepare (TestNcmDataset *test, gconstpointer pdata)
   g_assert_cmpuint (test->b2->req_at_resample, ==, 2);
   g_assert_false (ncm_data_is_resampling (NCM_DATA (test->b1)));
   g_assert_false (ncm_data_is_resampling (NCM_DATA (test->b2)));
+
+  ncm_rng_free (rng);
+}
+
+/*
+ * A dataset whose blocks hold no data yet is resampled like one that does, as
+ * ncm_data_resample() resamples a single such block; afterwards every block is
+ * initialized.
+ */
+void
+test_ncm_dataset_resample_uninit (TestNcmDataset *test, gconstpointer pdata)
+{
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, 1);
+
+  ncm_data_set_init (NCM_DATA (test->b1), FALSE);
+  ncm_data_set_init (NCM_DATA (test->b2), FALSE);
+
+  ncm_dataset_resample (test->dset, test->mset, rng);
+
+  g_assert_true (ncm_data_is_init (NCM_DATA (test->b1)));
+  g_assert_true (ncm_data_is_init (NCM_DATA (test->b2)));
+  g_assert_cmpuint (test->b1->req_at_resample, ==, 2);
 
   ncm_rng_free (rng);
 }
