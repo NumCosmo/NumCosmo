@@ -266,7 +266,11 @@ _ncm_model_constructed (GObject *object)
       self->total_len                           += g_array_index (self->vparam_len, guint, i);
     }
 
-    self->params     = ncm_vector_new (self->total_len == 0 ? 1 : self->total_len);
+    /* A model without parameters keeps a one-element placeholder. No parameter ever sets
+     * it, so it is zeroed here: ncm_model_params_equal() and every other reader of the
+     * whole vector would otherwise read uninitialized memory. */
+    self->params = ncm_vector_new (self->total_len == 0 ? 1 : self->total_len);
+    ncm_vector_set_zero (self->params);
     self->params_ptr = ncm_vector_data (self->params);
     self->p          = ncm_vector_ref (self->params);
     g_array_set_size (self->ptypes, self->total_len);
