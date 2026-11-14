@@ -83,6 +83,9 @@ static void test_ncm_vmath_atan2_random (void);
 static void test_ncm_vmath_atan2_special (void);
 static void test_ncm_vmath_exp_random (void);
 static void test_ncm_vmath_exp_special (void);
+static void test_ncm_vmath_log_random (void);
+static void test_ncm_vmath_log_special (void);
+static void test_ncm_vmath_pow_pos_random (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -92,8 +95,8 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   {
-    const gchar *paths[]     = {"/ncm/vmath/select", "/ncm/vmath/atan2/random", "/ncm/vmath/atan2/special", "/ncm/vmath/exp/random", "/ncm/vmath/exp/special"};
-    GTestFunc funcs[]        = {&test_ncm_vmath_select, &test_ncm_vmath_atan2_random, &test_ncm_vmath_atan2_special, &test_ncm_vmath_exp_random, &test_ncm_vmath_exp_special};
+    const gchar *paths[]     = {"/ncm/vmath/select", "/ncm/vmath/atan2/random", "/ncm/vmath/atan2/special", "/ncm/vmath/exp/random", "/ncm/vmath/exp/special", "/ncm/vmath/log/random", "/ncm/vmath/log/special", "/ncm/vmath/pow_pos/random"};
+    GTestFunc funcs[]        = {&test_ncm_vmath_select, &test_ncm_vmath_atan2_random, &test_ncm_vmath_atan2_special, &test_ncm_vmath_exp_random, &test_ncm_vmath_exp_special, &test_ncm_vmath_log_random, &test_ncm_vmath_log_special, &test_ncm_vmath_pow_pos_random};
     const gchar *missing_isa = _test_ncm_vmath_missing_isa ();
     guint i;
 
@@ -152,6 +155,28 @@ _exp_array (const guint n, const gdouble *x, gdouble *out)
 
   for (i = 0; i < n; i++)
     out[i] = ncm_vmath_exp (x[i]);
+}
+
+static void
+_log_array (const guint n, const gdouble *x, gdouble *out)
+{
+  guint i;
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+    out[i] = ncm_vmath_log (x[i]);
+}
+
+static void
+_pow_pos_array (const guint n, const gdouble *x, const gdouble *y, gdouble *out)
+{
+  guint i;
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+    out[i] = ncm_vmath_pow_pos (x[i], y[i]);
 }
 
 static void
@@ -309,5 +334,109 @@ test_ncm_vmath_exp_special (void)
   g_assert_true (isinf (ncm_vmath_exp (709.79)));
   g_assert_true (isinf (ncm_vmath_exp (INFINITY)));
   g_assert_true (isnan (ncm_vmath_exp (NAN)));
+}
+
+static void
+test_ncm_vmath_log_random (void)
+{
+  /* log10 of x: every scale, subnormals, and close to 1 */
+  const gdouble ranges[][2] = {
+    {
+      -300.0, 300.0
+    }, {
+      -1.0, 1.0
+    }, {
+      -1.0e-4, 1.0e-4
+    }, {
+      -323.0, -308.0
+    }, {
+      307.0, 308.2
+    }
+  };
+  NcmRNG *rng  = ncm_rng_seeded_new (NULL, 17);
+  gdouble *x   = g_new (gdouble, TEST_VMATH_N);
+  gdouble *out = g_new (gdouble, TEST_VMATH_N);
+  guint k, i;
+
+  for (k = 0; k < G_N_ELEMENTS (ranges); k++)
+  {
+    guint64 max_ulp = 0;
+
+    for (i = 0; i < TEST_VMATH_N; i++)
+      x[i] = pow (10.0, ncm_rng_uniform_gen (rng, ranges[k][0], ranges[k][1]));
+
+    _log_array (TEST_VMATH_N, x, out);
+
+    for (i = 0; i < TEST_VMATH_N; i++)
+    {
+      max_ulp = MAX (max_ulp, _ulp_diff (out[i], log (x[i])));
+      g_assert_cmpfloat (out[i], ==, ncm_vmath_log (x[i]));
+    }
+
+#ifdef NCM_VMATH_HAVE_FAST_EXP
+    g_assert_cmpuint (max_ulp, <=, 1);
+#else
+    g_assert_cmpuint (max_ulp, ==, 0);
+#endif
+  }
+
+  g_free (x);
+  g_free (out);
+  ncm_rng_free (rng);
+}
+
+static void
+test_ncm_vmath_log_special (void)
+{
+  const gdouble v[] = {1.0, 2.0, 0.5, M_SQRT1_2, M_SQRT2, DBL_MIN, 4.9e-324, 1.0e-310, DBL_MAX};
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (v); i++)
+    g_assert_cmpuint (_ulp_diff (ncm_vmath_log (v[i]), log (v[i])), <=, 1);
+
+  g_assert_cmpfloat (ncm_vmath_log (1.0), ==, 0.0);
+  g_assert_true (isinf (ncm_vmath_log (0.0)) && (ncm_vmath_log (0.0) < 0.0));
+  g_assert_true (isinf (ncm_vmath_log (-0.0)) && (ncm_vmath_log (-0.0) < 0.0));
+  g_assert_true (isinf (ncm_vmath_log (INFINITY)) && (ncm_vmath_log (INFINITY) > 0.0));
+  g_assert_true (isnan (ncm_vmath_log (-1.0)));
+  g_assert_true (isnan (ncm_vmath_log (-INFINITY)));
+  g_assert_true (isnan (ncm_vmath_log (NAN)));
+}
+
+static void
+test_ncm_vmath_pow_pos_random (void)
+{
+  NcmRNG *rng  = ncm_rng_seeded_new (NULL, 19);
+  gdouble *x   = g_new (gdouble, TEST_VMATH_N);
+  gdouble *y   = g_new (gdouble, TEST_VMATH_N);
+  gdouble *out = g_new (gdouble, TEST_VMATH_N);
+  guint i;
+
+  /* The ranges of the integrals: bases in (0, 2], exponents of a few units */
+  for (i = 0; i < TEST_VMATH_N; i++)
+  {
+    x[i] = pow (10.0, ncm_rng_uniform_gen (rng, -6.0, log10 (2.0)));
+    y[i] = ncm_rng_uniform_gen (rng, -8.0, 8.0);
+  }
+
+  _pow_pos_array (TEST_VMATH_N, x, y, out);
+
+  for (i = 0; i < TEST_VMATH_N; i++)
+  {
+    const gdouble ref = pow (x[i], y[i]);
+
+    g_assert_cmpfloat (out[i], ==, ncm_vmath_pow_pos (x[i], y[i]));
+#ifdef NCM_VMATH_HAVE_FAST_EXP
+    /* Within (2 + |y ln x|) ulp, with one more for the rounding of y ln x */
+    g_assert_cmpfloat (fabs (out[i] / ref - 1.0), <=, (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
+#else
+    g_assert_cmpfloat (out[i], ==, ref);
+#endif
+  }
+
+  g_free (x);
+  g_free (y);
+  g_free (out);
+  ncm_rng_free (rng);
 }
 

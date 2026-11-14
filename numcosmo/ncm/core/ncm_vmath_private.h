@@ -27,6 +27,7 @@
 #define _NCM_VMATH_PRIVATE_H_
 
 #include <glib.h>
+#include <float.h>
 #include <math.h>
 #include <string.h>
 
@@ -44,9 +45,10 @@ G_BEGIN_DECLS
  * control flow when floating-point exceptions trap (the default) and the target has no
  * masked instructions (SSE2 and AVX2), which leaves the loop scalar.
  *
- * ncm_vmath_atan2() is faster than libm with SSE2 already. ncm_vmath_exp() is faster
- * only with AVX2 or AVX-512 (two-wide division and no fma with SSE2): there
- * NCM_VMATH_HAVE_FAST_EXP is defined, and elsewhere ncm_vmath_exp() is exp().
+ * ncm_vmath_atan2() is faster than libm with SSE2 already. ncm_vmath_exp(),
+ * ncm_vmath_log() and ncm_vmath_pow_pos() are faster only with AVX2 or AVX-512 (two-wide
+ * division and no fma with SSE2): there NCM_VMATH_HAVE_FAST_EXP is defined, and elsewhere
+ * they are exp(), log() and pow().
  */
 
 /*
@@ -192,6 +194,98 @@ ncm_vmath_exp (const gdouble x)
 #else /* NCM_VMATH_HAVE_FAST_EXP */
 
   return exp (x);
+
+#endif /* NCM_VMATH_HAVE_FAST_EXP */
+}
+
+/*
+ * ncm_vmath_log:
+ * @x: a value
+ *
+ * The natural logarithm of @x. With NCM_VMATH_HAVE_FAST_EXP it is the rational
+ * approximation of Cephes (Moshier) on [sqrt(1/2) - 1, sqrt(2) - 1], with the exponent
+ * and the mantissa of @x taken from its bits (the exponent turned into a double through
+ * the mantissa of 2^52, since AVX2 has no conversion of 64-bit integers) and subnormals
+ * scaled by 2^54 first. It is within 1 ulp of log(), -inf at 0, +inf at +inf, and NaN for
+ * a negative @x or NaN. Otherwise it is log().
+ *
+ * Returns: log (@x).
+ */
+static inline gdouble
+ncm_vmath_log (const gdouble x)
+{
+#ifdef NCM_VMATH_HAVE_FAST_EXP
+  const gdouble P0    = 1.01875663804580931796e-4;
+  const gdouble P1    = 4.97494994976747001425e-1;
+  const gdouble P2    = 4.70579119878881725854e0;
+  const gdouble P3    = 1.44989225341610930846e1;
+  const gdouble P4    = 1.79368678507819816313e1;
+  const gdouble P5    = 7.70838733755885391666e0;
+  const gdouble Q0    = 1.12873587189167450590e1;
+  const gdouble Q1    = 4.52279145837532221105e1;
+  const gdouble Q2    = 8.29875266912776603211e1;
+  const gdouble Q3    = 7.11544750618563894466e1;
+  const gdouble Q4    = 2.31251620126765340583e1;
+  const gdouble SQRTH = 0.70710678118654752440;
+  const gboolean sub  = (x < DBL_MIN);
+  const gdouble xs    = ncm_vmath_select (sub, x * 18014398509481984.0, x);
+  guint64 u, eb, mb;
+  gdouble te, m;
+
+  memcpy (&u, &xs, sizeof (u));
+  eb = 0x4330000000000000ULL | ((u >> 52) & 0x7ffULL);
+  mb = (u & 0x000fffffffffffffULL) | 0x3fe0000000000000ULL;
+  memcpy (&te, &eb, sizeof (te));
+  memcpy (&m, &mb, sizeof (m));
+
+  {
+    /* x = 2^e m, m in [1/2, 1), moved to [sqrt(1/2), sqrt(2)) */
+    const gdouble e0 = (te - 4503599627370496.0) - ncm_vmath_select (sub, 1022.0 + 54.0, 1022.0);
+    const gboolean c = (m < SQRTH);
+    const gdouble e  = ncm_vmath_select (c, e0 - 1.0, e0);
+    const gdouble f  = ncm_vmath_select (c, (m + m) - 1.0, m - 1.0);
+    const gdouble z  = f * f;
+    const gdouble p  = ((((P0 * f + P1) * f + P2) * f + P3) * f + P4) * f + P5;
+    const gdouble q  = ((((f + Q0) * f + Q1) * f + Q2) * f + Q3) * f + Q4;
+    const gdouble y  = (f * (z * p / q) - e * 2.121944400546905827679e-4) - 0.5 * z;
+    gdouble r        = (f + y) + e * 0.693359375;
+
+    r = ncm_vmath_select (x == 0.0, -INFINITY, r);
+    r = ncm_vmath_select (x < 0.0, NAN, r);
+    r = ncm_vmath_select (x == INFINITY, INFINITY, r);
+    r = ncm_vmath_select (x != x, x, r);
+
+    return r;
+  }
+
+#else /* NCM_VMATH_HAVE_FAST_EXP */
+
+  return log (x);
+
+#endif /* NCM_VMATH_HAVE_FAST_EXP */
+}
+
+/*
+ * ncm_vmath_pow_pos:
+ * @x: a positive value
+ * @y: an exponent
+ *
+ * @x to the power @y for @x > 0. With NCM_VMATH_HAVE_FAST_EXP it is
+ * ncm_vmath_exp (@y ncm_vmath_log (@x)): the error of the logarithm is multiplied by @y,
+ * so the relative error is within about (2 + |@y ln @x|) ulp. Otherwise it is pow().
+ *
+ * Returns: @x^@y.
+ */
+static inline gdouble
+ncm_vmath_pow_pos (const gdouble x, const gdouble y)
+{
+#ifdef NCM_VMATH_HAVE_FAST_EXP
+
+  return ncm_vmath_exp (y * ncm_vmath_log (x));
+
+#else /* NCM_VMATH_HAVE_FAST_EXP */
+
+  return pow (x, y);
 
 #endif /* NCM_VMATH_HAVE_FAST_EXP */
 }
