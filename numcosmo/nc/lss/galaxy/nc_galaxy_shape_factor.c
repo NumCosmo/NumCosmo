@@ -123,7 +123,9 @@ typedef struct _NcGalaxyShapeFactorCData
   gdouble rot_re;
   gdouble rot_im;
   gdouble radius;
-  gdouble phi;
+  gdouble ra_v; /* the position of v, NaN before it is set */
+  gdouble dec_v;
+  NcmTriVec v; /* the unit vector of (ra_v, dec_v) */
   NcWLSurfaceMassDensityOptzs optzs;
   NcWLSurfaceMassDensityCritCache *crit_cache_arr;
   NcWLSurfaceMassDensitySigmaCache sigma_cache;
@@ -664,17 +666,50 @@ nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxySha
   NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
   const gdouble ra                        = data->pos_data->ra;
   const gdouble dec                       = data->pos_data->dec;
-  gdouble theta, phi;
+  NcmTriVec v;
 
-  nc_halo_position_polar_angles (self->halo_position, ra, dec, &theta, &phi);
+  /* The unit vector of the position is kept: a step of the halo center only rotates it */
+  if ((cdata->ra_v != ra) || (cdata->dec_v != dec))
+  {
+    ncm_trivec_set_astro_ra_dec (&cdata->v, 1.0, ra, dec);
+    cdata->ra_v  = ra;
+    cdata->dec_v = dec;
+  }
 
-  /* phi_C -> phi_E, see #NcWLEllipticityFrame. */
-  phi = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
+  v = cdata->v;
+  nc_halo_position_rotate (self->halo_position, &v);
 
-  cdata->radius = nc_halo_position_projected_radius_from_prefactor (theta, self->pr_prefactor);
-  cdata->phi    = phi;
-  cdata->rot_re = cos (2.0 * phi);
-  cdata->rot_im = sin (2.0 * phi);
+  /*
+   * With the halo on the z axis, the polar angle theta and the azimuth phi of
+   * nc_halo_position_polar_angles() are those of v: sin (theta) = rho / |v| and
+   * (cos (2 phi), sin (2 phi)) = (x^2 - y^2, 2 x y) / rho^2, rho^2 = x^2 + y^2, with
+   * phi = 0 at rho = 0 as there. The frame of data->coord takes phi to pi - phi in the
+   * CARTESIAN frame (nc_wl_ellipticity_celestial_to_frame_angle()), which changes the
+   * sign of sin (2 phi).
+   */
+  {
+    const gdouble x    = v.c[0];
+    const gdouble y    = v.c[1];
+    const gdouble z    = v.c[2];
+    const gdouble rho2 = x * x + y * y;
+    const gdouble rho  = sqrt (rho2);
+
+    cdata->radius = self->pr_prefactor * (rho / sqrt (rho2 + z * z));
+
+    if (rho2 > 0.0)
+    {
+      cdata->rot_re = (x * x - y * y) / rho2;
+      cdata->rot_im = 2.0 * x * y / rho2;
+    }
+    else
+    {
+      cdata->rot_re = 1.0;
+      cdata->rot_im = 0.0;
+    }
+
+    if (data->coord == NC_WL_ELLIPTICITY_FRAME_CARTESIAN)
+      cdata->rot_im = -cdata->rot_im;
+  }
 }
 
 /**
@@ -1029,6 +1064,9 @@ nc_galaxy_shape_factor_data_new (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGala
   data->coord    = NC_WL_ELLIPTICITY_FRAME_CELESTIAL;
   data->cdata    = g_new0 (NcGalaxyShapeFactorCData, 1);
 
+  ((NcGalaxyShapeFactorCData *) data->cdata)->ra_v  = GSL_NAN;
+  ((NcGalaxyShapeFactorCData *) data->cdata)->dec_v = GSL_NAN;
+
   data->ldata                  = NULL;
   data->ldata_destroy          = NULL;
   data->ldata_read_row         = NULL;
@@ -1194,7 +1232,6 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
   data->epsilon_obs_1 = creal (e_o);
   data->epsilon_obs_2 = cimag (e_o);
   cdata->radius       = radius;
-  cdata->phi          = phi;
   cdata->rot_re       = cos (2.0 * phi);
   cdata->rot_im       = sin (2.0 * phi);
 }

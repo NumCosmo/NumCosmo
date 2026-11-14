@@ -214,3 +214,36 @@ def test_data_get_radius():
     radius = data.get_radius()
 
     assert radius > 0.0
+
+
+def test_data_radius_follows_halo_and_position():
+    """The projected radius is that of the polar angle of
+    NcHaloPosition.polar_angles() after the halo center moves (the unit
+    vector of the galaxy is kept and rotated) and after the galaxy moves (the
+    vector is computed again)."""
+    mset = _build_mset()
+    gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
+    gsf.data_set(
+        data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL
+    )
+    cosmo = mset.peek(Nc.HICosmo.id())
+    hp = mset.peek(Nc.HaloPosition.id())
+
+    for ra_h, dec_h, ra, dec in [
+        (0.0, 0.0, 0.03, 0.02),
+        (0.01, -0.02, 0.03, 0.02),
+        (0.01, -0.02, -0.1, 0.15),
+        (-0.05, 0.05, -0.1, 0.15),
+    ]:
+        hp.param_set_by_name("ra", ra_h)
+        hp.param_set_by_name("dec", dec_h)
+        data.pos_data.ra = ra
+        data.pos_data.dec = dec
+
+        gsf.prepare(mset)
+        gsf.prepare_data_array(mset, [data], True, True)
+
+        theta, _ = hp.polar_angles(ra, dec)
+        assert_allclose(
+            data.get_radius(), hp.projected_radius(cosmo, theta), rtol=1.0e-13
+        )

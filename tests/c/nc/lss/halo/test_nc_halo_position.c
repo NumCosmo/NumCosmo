@@ -47,6 +47,7 @@ static void test_nc_halo_position_serialize (TestNcHaloPosition *test, gconstpoi
 static void test_nc_halo_position_model_id (TestNcHaloPosition *test, gconstpointer pdata);
 
 static void test_nc_halo_position_polar_angles (TestNcHaloPosition *test, gconstpointer pdata);
+static void test_nc_halo_position_rotate (TestNcHaloPosition *test, gconstpointer pdata);
 static void test_nc_halo_position_projected_radius (TestNcHaloPosition *test, gconstpointer pdata);
 static void test_nc_halo_position_shared_distance (TestNcHaloPosition *test, gconstpointer pdata);
 
@@ -70,6 +71,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_position/polar_angles", TestNcHaloPosition, NULL,
               &test_nc_halo_position_new,
               &test_nc_halo_position_polar_angles,
+              &test_nc_halo_position_free);
+
+  g_test_add ("/nc/halo_position/rotate", TestNcHaloPosition, NULL,
+              &test_nc_halo_position_new,
+              &test_nc_halo_position_rotate,
               &test_nc_halo_position_free);
 
   g_test_add ("/nc/halo_position/projected_radius", TestNcHaloPosition, NULL,
@@ -176,6 +182,42 @@ test_nc_halo_position_polar_angles (TestNcHaloPosition *test, gconstpointer pdat
   g_assert_cmpfloat (phi, <=, 2.0 * M_PI);
 
   nc_hicosmo_clear (&cosmo);
+}
+
+static void
+test_nc_halo_position_rotate (TestNcHaloPosition *test, gconstpointer pdata)
+{
+  NcHaloPosition *hp = test->hp;
+  guint i;
+
+  for (i = 0; i < 100; i++)
+  {
+    const gdouble ra_h  = g_test_rand_double_range (0.0, 360.0);
+    const gdouble dec_h = g_test_rand_double_range (-80.0, 80.0);
+    const gdouble ra    = ra_h + g_test_rand_double_range (-1.0, 1.0);
+    const gdouble dec   = dec_h + g_test_rand_double_range (-1.0, 1.0);
+    gdouble theta, phi, r, theta_v, phi_v;
+    NcmTriVec v;
+
+    ncm_model_param_set_by_name (NCM_MODEL (hp), "ra", ra_h, NULL);
+    ncm_model_param_set_by_name (NCM_MODEL (hp), "dec", dec_h, NULL);
+
+    /* The halo goes to the positive z axis */
+    ncm_trivec_set_astro_ra_dec (&v, 1.0, ra_h, dec_h);
+    nc_halo_position_rotate (hp, &v);
+    g_assert_cmpfloat (fabs (v.c[0]), <, 1.0e-14);
+    g_assert_cmpfloat (fabs (v.c[1]), <, 1.0e-14);
+    g_assert_cmpfloat (fabs (v.c[2] - 1.0), <, 1.0e-14);
+
+    /* The angles of a rotated position are those of nc_halo_position_polar_angles() */
+    nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
+    ncm_trivec_set_astro_ra_dec (&v, 1.0, ra, dec);
+    nc_halo_position_rotate (hp, &v);
+    ncm_trivec_get_spherical_coord (&v, &r, &theta_v, &phi_v);
+
+    g_assert_cmpfloat (theta_v, ==, theta);
+    g_assert_cmpfloat (phi_v, ==, phi);
+  }
 }
 
 static void
