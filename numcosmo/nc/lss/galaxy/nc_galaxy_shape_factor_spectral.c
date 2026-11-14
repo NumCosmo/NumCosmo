@@ -1499,20 +1499,21 @@ _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r
 
 /*
  * The TRACE map at the real shear t in the variable e_I = x + i y: T (m_t (e_I)), with
- * m_t the TRACE_DET map. It equals f_t (T (e_I)), f_t the TRACE map.
+ * m_t the TRACE_DET map. It equals f_t (T (e_I)), f_t the TRACE map. With
+ * m_t (e_I) = N / D, N = (x + t) + i y and D = (1 + t x) + i t y, and T (m) = 2 m / (1 + |m|^2),
+ * it is 2 N conj (D) / (|D|^2 + |N|^2): one division instead of the two of m_t followed by
+ * T, the slowest operations of the loop of the kernel.
  */
 static void
 _nc_galaxy_shape_factor_spectral_map_trace (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y)
 {
-  gdouble m_x, m_y;
+  const gdouble num_x = x + t;
+  const gdouble den_x = 1.0 + t * x;
+  const gdouble den_y = t * y;
+  const gdouble fac   = 2.0 / ((num_x * num_x + y * y) + (den_x * den_x + den_y * den_y));
 
-  nc_wl_ellipticity_apply_shear_trace_det_real (t, x, y, &m_x, &m_y);
-  {
-    const gdouble T_fac = 2.0 / (1.0 + m_x * m_x + m_y * m_y);
-
-    *f_x = T_fac * m_x;
-    *f_y = T_fac * m_y;
-  }
+  *f_x = (num_x * den_x + y * den_y) * fac;
+  *f_y = (y * den_x - num_x * den_y) * fac;
 }
 
 /* The inverse of the map above at the shear g: m_g^{-1} (T^{-1} (e_obs)), for |e_obs| <= 1 */
