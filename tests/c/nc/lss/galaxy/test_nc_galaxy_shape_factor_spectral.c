@@ -43,6 +43,7 @@
 #include "test_nc_galaxy_shape_marginal_arb_cases.h"
 
 #include <math.h>
+#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -122,6 +123,7 @@ void test_nc_galaxy_shape_factor_spectral_serialize (void);
 void test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -153,6 +155,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_spectral/eval_nodes", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_eval_nodes,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/eval_line", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_eval_line,
               &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/crit_hash", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
@@ -1304,6 +1310,161 @@ test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral
     nc_galaxy_shape_factor_free (gsf);
   }
 
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+}
+
+#define TEST_LINE_N 60
+
+/*
+ * One case of eval_line: n positions on [0, t_max] in a scrambled order, on the line
+ * b + t u. With exact, every value is that of eval_nodes at the same shear (to the rounding
+ * of the shear); otherwise ln P is within tol of the integral at each shear (P within tol
+ * relative).
+ */
+static void
+_test_eval_line_case (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble t_max,
+                      const gboolean exact, const gdouble tol)
+{
+  const gdouble u_1 = 1.05 * cos (0.7);
+  const gdouble u_2 = 1.05 * sin (0.7);
+  const gdouble b_1 = 0.004;
+  const gdouble b_2 = -0.003;
+  const gdouble e_1 = -0.25;
+  const gdouble e_2 = 0.35;
+  gdouble t[TEST_LINE_N], out[TEST_LINE_N], g1[TEST_LINE_N], g2[TEST_LINE_N], ref[TEST_LINE_N];
+  guint want_log, j;
+
+  g_assert_cmpuint (n, <=, TEST_LINE_N);
+
+  for (j = 0; j < n; j++)
+  {
+    /* 37 is prime to 60: a permutation of the n equally spaced points */
+    t[j]  = t_max * ((37 * j) % n) / (n - 1.0);
+    g1[j] = b_1 + t[j] * u_1;
+    g2[j] = b_2 + t[j] * u_2;
+  }
+
+  for (want_log = 0; want_log < 2; want_log++)
+  {
+    nc_galaxy_shape_factor_eval_line (gsf, pop, data, n, t, u_1, u_2, b_1, b_2, e_1, e_2, want_log, out);
+    nc_galaxy_shape_factor_eval_nodes (gsf, pop, data, n, g1, g2, e_1, e_2, want_log, ref);
+
+    for (j = 0; j < n; j++)
+    {
+      g_assert_true (gsl_finite (out[j]));
+
+      if (exact) /* the shears formed here may differ by an ulp from those of the library */
+        ncm_assert_cmpdouble_e (out[j], ==, ref[j], 1.0e-13, 0.0);
+      else if (want_log)
+        g_assert_cmpfloat (fabs (out[j] - ref[j]), <=, tol);
+      else
+        ncm_assert_cmpdouble_e (out[j], ==, ref[j], tol, 0.0);
+    }
+  }
+
+  /* In place: out is t */
+  {
+    gdouble tt[TEST_LINE_N];
+
+    memcpy (tt, t, sizeof (gdouble) * n);
+    nc_galaxy_shape_factor_eval_line (gsf, pop, data, n, tt, u_1, u_2, b_1, b_2, e_1, e_2, TRUE, tt);
+    nc_galaxy_shape_factor_eval_line (gsf, pop, data, n, t, u_1, u_2, b_1, b_2, e_1, e_2, TRUE, out);
+
+    for (j = 0; j < n; j++)
+      g_assert_cmpfloat (tt[j], ==, out[j]);
+  }
+}
+
+/*
+ * nc_galaxy_shape_factor_eval_line(): the table along the line agrees with the integral at
+ * each shear within line-abstol, for both conventions and both populations; without it
+ * (line-abstol zero, the interpolant, a line too short for a table, or one that reaches
+ * |g| > 0.9) every value equals that of eval_nodes.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcGalaxyPositionFactorData *p_data    = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data    = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  NcGalaxyShapePopData *gauss_data      = NULL;
+  NcGalaxyShapePop *gauss               = _test_pop_new (TEST_SHAPE_ARB_POP_GAUSS, 0.25, 0.0, &gauss_data);
+  const NcGalaxyWLObsEllipConv convs[2] = {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET};
+  guint ic;
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+
+  for (ic = 0; ic < 2; ic++)
+  {
+    NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (convs[ic]);
+    NcGalaxyShapeFactor *gsf          = NC_GALAXY_SHAPE_FACTOR (gsfs);
+    NcGalaxyShapeFactorData *data     = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+    NcGalaxyShapePop *pops[2]         = {test->pop, gauss};
+    guint ip;
+
+    g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_line_abstol (gsfs), ==, 1.0e-8);
+    nc_galaxy_shape_factor_data_set (gsf, data, -0.25, 0.35, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+
+    for (ip = 0; ip < 2; ip++)
+    {
+      NcGalaxyShapePopData *pop_data = (ip == 0) ? data->pop_data : gauss_data;
+
+      /* The population of the galaxy: eval_line passes data's pop_data to the integrals */
+      if (ip == 1)
+      {
+        NcGalaxyShapePopData *own = data->pop_data;
+
+        data->pop_data = pop_data;
+        _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.08, FALSE, 1.0e-8);
+        _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.3, FALSE, 1.0e-8);
+        data->pop_data = own;
+        continue;
+      }
+
+      nc_galaxy_shape_pop_prepare (pops[ip], pop_data);
+
+      /* The table */
+      _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.08, FALSE, 1.0e-8);
+      _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.3, FALSE, 1.0e-8);
+
+      /* Too short for a table: 17 nodes cannot hold two grids of 9 points */
+      _test_eval_line_case (gsf, pops[ip], data, 17, 0.3, TRUE, 0.0);
+
+      /* A line that leaves |g| <= 0.9 */
+      _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.92, TRUE, 0.0);
+
+      /* No table */
+      nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 0.0);
+      _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.3, TRUE, 0.0);
+      nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 1.0e-8);
+    }
+
+    nc_galaxy_shape_factor_data_unref (data);
+    nc_galaxy_shape_factor_free (gsf);
+  }
+
+  /* With the interpolant the default eval_line forms the shears for eval_nodes */
+  {
+    NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+    NcGalaxyShapeFactor *gsf          = NC_GALAXY_SHAPE_FACTOR (gsfs);
+    NcGalaxyShapeFactorData *data     = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+    GPtrArray *data_array             = g_ptr_array_new ();
+
+    nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
+    nc_galaxy_shape_factor_data_set (gsf, data, -0.25, 0.35, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+    g_ptr_array_add (data_array, data);
+    g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+
+    _test_eval_line_case (gsf, test->pop, data, TEST_LINE_N, 0.3, TRUE, 0.0);
+
+    g_ptr_array_unref (data_array);
+    nc_galaxy_shape_factor_data_unref (data);
+    nc_galaxy_shape_factor_free (gsf);
+  }
+
+  nc_galaxy_shape_pop_data_unref (gauss_data);
+  nc_galaxy_shape_pop_free (gauss);
   nc_galaxy_position_factor_data_unref (p_data);
   nc_galaxy_redshift_factor_data_unref (z_data);
 }

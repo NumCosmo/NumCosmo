@@ -873,6 +873,32 @@ def test_cluster_wl_app_generate_spectral_reltol(experiment_file):
     assert isinstance(factor, Nc.GalaxyShapeFactorSpectral)
     assert factor.props.reltol == pytest.approx(1e-4)
     assert factor.props.use_interp is False
+    assert factor.props.line_abstol == pytest.approx(1e-8)
+
+
+def test_cluster_wl_app_generate_spectral_line_abstol(experiment_file):
+    """spectral's line_abstol is reachable through --shape-factor's key=value parsing,
+    zero included (no table along the line)."""
+    for value in (1.0e-6, 0.0):
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl",
+                experiment_file.as_posix(),
+                f"--shape-factor=spectral line_abstol={value}",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        dataset_file = experiment_file.with_suffix(".dataset.gvar")
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+        cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+        factor = cluster_data.props.shape_factor
+
+        assert isinstance(factor, Nc.GalaxyShapeFactorSpectral)
+        assert factor.props.line_abstol == pytest.approx(value)
 
 
 def test_cluster_wl_app_generate_spectral_interp(experiment_file):

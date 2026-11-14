@@ -9659,6 +9659,24 @@ class GalaxyShapeFactorClass(GObject.GPointer):
         ],
         None,
     ] = ...
+    eval_line: typing.Callable[
+        [
+            GalaxyShapeFactor,
+            GalaxyShapePop,
+            GalaxyShapeFactorData,
+            int,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            float,
+            bool,
+            float,
+        ],
+        None,
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyShapeFactorData(GObject.GBoxed):
@@ -9917,6 +9935,8 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         Absolute tolerance on ln P of the interpolant
       interp-min-radial-panels -> guint: interp-min-radial-panels
         Minimum number of radial intervals of the interpolant
+      line-abstol -> gdouble: line-abstol
+        Absolute tolerance on ln P of the table along the line of the shears
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -9930,6 +9950,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         interp_abstol: float
         interp_g_max: float
         interp_min_radial_panels: int
+        line_abstol: float
         reltol: float
         use_interp: bool
         ellip_conv: GalaxyWLObsEllipConv
@@ -9940,6 +9961,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         interp_abstol: float = ...,
         interp_g_max: float = ...,
         interp_min_radial_panels: int = ...,
+        line_abstol: float = ...,
         reltol: float = ...,
         use_interp: bool = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
@@ -9970,6 +9992,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def get_interp_abstol(self) -> float: ...
     def get_interp_g_max(self) -> float: ...
     def get_interp_min_radial_panels(self) -> int: ...
+    def get_line_abstol(self) -> float: ...
     def get_reltol(self) -> float: ...
     def get_use_interp(self) -> bool: ...
     @classmethod
@@ -9978,6 +10001,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def set_interp_abstol(self, abstol: float) -> None: ...
     def set_interp_g_max(self, g_max: float) -> None: ...
     def set_interp_min_radial_panels(self, n: int) -> None: ...
+    def set_line_abstol(self, abstol: float) -> None: ...
     def set_obs_source(self, pop: GalaxyShapePop, obs: GalaxyWLObs) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_use_interp(self, use_interp: bool) -> None: ...

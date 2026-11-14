@@ -20,10 +20,11 @@
 """Tests of the node path of NcGalaxyShapeFactorSpectral.
 
 nc_galaxy_shape_factor_eval_at_nodes() and nc_galaxy_shape_factor_eval_ln_at_nodes()
-evaluate the nodes of a galaxy through the eval_nodes hook, which Spectral overrides to
-check its interpolant once per galaxy. The values must be those of the per-point hooks:
-the integrand path evaluates the same marginal at each redshift, with the shear computed
-by another route.
+evaluate the nodes of a galaxy through the eval_line and eval_nodes hooks, which Spectral
+overrides to check its interpolant once per galaxy and to tabulate ln P along the line of
+the shears of the galaxy. Without the table the values must be those of the per-point
+hooks: the integrand path evaluates the same marginal at each redshift, with the shear
+computed by another route.
 """
 
 import numpy as np
@@ -47,8 +48,10 @@ _GALAXIES = [
 _CONVS = [Nc.GalaxyWLObsEllipConv.TRACE, Nc.GalaxyWLObsEllipConv.TRACE_DET]
 
 
-def _build(ellip_conv, use_interp):
-    """A Spectral factor, its model set and the data of one galaxy."""
+def _build(ellip_conv, use_interp, line_abstol=0.0):
+    """A Spectral factor, its model set and the data of one galaxy. The table along the
+    line of the shears is off by default, so that the node values are those of the
+    per-point hooks exactly."""
     cosmo = Nc.HICosmoDEXcdm.new()
     dist = Nc.Distance.new(100.0)
     hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
@@ -74,6 +77,7 @@ def _build(ellip_conv, use_interp):
 
     gsf = Nc.GalaxyShapeFactorSpectral.new(ellip_conv)
     gsf.set_use_interp(use_interp)
+    gsf.set_line_abstol(line_abstol)
     pos_data = Nc.GalaxyPositionFactorData.new(
         Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2), mset
     )
@@ -169,3 +173,26 @@ def test_eval_at_nodes_g_max_fallback():
 
     assert 0 < np.count_nonzero(fallback) < len(z)
     assert_allclose(interp, direct, rtol=0.0, atol=1.0e-5)
+
+
+@pytest.mark.parametrize("ellip_conv", _CONVS)
+@pytest.mark.parametrize("galaxy", _GALAXIES)
+def test_eval_at_nodes_line_table(ellip_conv, galaxy):
+    """With the table along the line (line-abstol 1e-8) the node values agree with the
+    integrals at each node within the tolerance, in both forms, also for the galaxy
+    whose line leaves |g| <= 0.9 (which is integrated node by node)."""
+    z = np.linspace(0.25, 3.0, 70)
+    vals = {}
+    for line_abstol in (0.0, 1.0e-8):
+        gsf, mset, data, pos_data = _build(ellip_conv, False, line_abstol)
+        _set_galaxy(gsf, data, pos_data, galaxy)
+        vals[line_abstol] = (
+            _eval_nodes(gsf, mset, data, z, True),
+            _eval_nodes(gsf, mset, data, z, False),
+        )
+
+    (ln_direct, lin_direct), (ln_table, lin_table) = vals[0.0], vals[1.0e-8]
+
+    assert np.all(np.isfinite(ln_table))
+    assert_allclose(ln_table, ln_direct, rtol=0.0, atol=1.0e-8)
+    assert_allclose(lin_table, lin_direct, rtol=1.0e-8, atol=0.0)
