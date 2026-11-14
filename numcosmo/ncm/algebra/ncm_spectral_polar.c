@@ -147,6 +147,8 @@ typedef struct _NcmSpectralPolarEntry
   guint lx; /* the levels it was accepted at */
   guint ly;
   gboolean replaced; /* expanded again by the second pass: its panels are later entries */
+  gdouble Dr;        /* the radial and the angular changes of an initial panel */
+  gdouble Dt;
 } NcmSpectralPolarEntry;
 
 /*
@@ -770,7 +772,7 @@ ncm_spectral_polar_integrate_full (NcmSpectralPolar *sp, NcmSpectralPolarF G, Nc
   return res;
 }
 
-static void _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel panel, gboolean have_grid);
+static void _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel panel, const NcmSpectralPolarEntry *start);
 
 /**
  * ncm_spectral_polar_build:
@@ -843,7 +845,7 @@ ncm_spectral_polar_build (NcmSpectralPolar *sp, NcmSpectralPolarF F, gpointer us
         g_array_index (theta_edges, gdouble, j), g_array_index (theta_edges, gdouble, j + 1), 0
       };
 
-      _ncm_spectral_polar_expand (&call, panel, FALSE);
+      _ncm_spectral_polar_expand (&call, panel, NULL);
     }
   }
 
@@ -1059,6 +1061,8 @@ _ncm_spectral_polar_first_pass (NcmSpectralPolarCall *call, GArray *r_edges, GAr
 
       entry->vs  = _ncm_spectral_polar_coeffs (work, call->level_min, call->level_min);
       entry->D   = _ncm_spectral_polar_change (work, call->level_min, call->level_min, &Dr, &Dt);
+      entry->Dr  = Dr;
+      entry->Dt  = Dt;
       entry->val = _ncm_spectral_polar_panel_value (call, &entry->panel, call->level_min, call->level_min);
       I0        += entry->val;
 
@@ -1438,7 +1442,7 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
       _ncm_spectral_polar_nodes_theta (call, &entry->panel, call->level_min, 0, 1);
       memcpy (work->in, start, sizeof (gdouble) * ns * ns);
 
-      _ncm_spectral_polar_expand (call, entry->panel, TRUE);
+      _ncm_spectral_polar_expand (call, entry->panel, entry);
     }
   }
 }
@@ -1478,6 +1482,28 @@ _ncm_spectral_polar_spread_theta (NcmSpectralPolarWork *work, guint n, guint m)
   }
 }
 
+/* Doubles the level of the panel in r (in_r) or in theta, sampling F at the new nodes */
+static void
+_ncm_spectral_polar_double (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint *lx, guint *ly, gboolean in_r)
+{
+  NcmSpectralPolarWork *work = call->work;
+
+  if (in_r)
+  {
+    _ncm_spectral_polar_spread_r (work, 1u << *lx, 1u << *ly);
+    (*lx)++;
+    _ncm_spectral_polar_nodes_r (call, panel, *lx, 1, 2);
+    _ncm_spectral_polar_rows (call, *lx, *ly, 1, 2, 0, 1);
+  }
+  else
+  {
+    _ncm_spectral_polar_spread_theta (work, 1u << *lx, 1u << *ly);
+    (*ly)++;
+    _ncm_spectral_polar_nodes_theta (call, panel, *ly, 1, 2);
+    _ncm_spectral_polar_rows (call, *lx, *ly, 0, 1, 1, 2);
+  }
+}
+
 static gdouble _ncm_spectral_polar_predict (const gdouble *b, guint M);
 static void _ncm_spectral_polar_append (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint ly);
 
@@ -1485,12 +1511,13 @@ static void _ncm_spectral_polar_append (NcmSpectralPolarCall *call, const NcmSpe
  * Expands F on the panel from the starting level until the test passes, doubling the
  * direction with the larger change or, at the level cap, bisecting the panel in it. An
  * accepted panel is appended to work->accepted in an integral, and with its coefficients
- * to call->spp in a build. With have_grid the starting grid and its nodes are in the
- * workspace already. A panel at max_depth that needs a bisection sets
+ * to call->spp in a build. With start, an initial panel that failed its test in
+ * _ncm_spectral_polar_first_pass(), the starting grid and its nodes are in the workspace
+ * already, and so are its changes: its starting level is not transformed again. A panel at max_depth that needs a bisection sets
  * call->failed, after which nothing more is evaluated.
  */
 static void
-_ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel panel, gboolean have_grid)
+_ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel panel, const NcmSpectralPolarEntry *start)
 {
   NcmSpectralPolarWork *work = call->work;
   guint lx                   = call->level_min;
@@ -1499,8 +1526,16 @@ _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel pa
   if (call->failed)
     return;
 
-  if (!have_grid)
+  if (start == NULL)
     _ncm_spectral_polar_sample_start (call, &panel);
+  else if (call->level_min + 1 < call->level_cap)
+    /*
+     * The first pass of the loop below would transform the starting grid again and get
+     * the D, scale and tolerance the initial panel failed with, so it would not accept it,
+     * and below level-cap - 1 it would not split it either: it would double it, in the
+     * direction of the larger change. Doing that directly gives the same panels.
+     */
+    _ncm_spectral_polar_double (call, &panel, &lx, &ly, start->Dr >= start->Dt);
 
   while (TRUE)
   {
@@ -1554,26 +1589,13 @@ _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel pa
       else
         h1.tb = h2.ta = 0.5 * (panel.ta + panel.tb);
 
-      _ncm_spectral_polar_expand (call, h1, FALSE);
-      _ncm_spectral_polar_expand (call, h2, FALSE);
+      _ncm_spectral_polar_expand (call, h1, NULL);
+      _ncm_spectral_polar_expand (call, h2, NULL);
 
       return;
     }
 
-    if (Dr >= Dt)
-    {
-      _ncm_spectral_polar_spread_r (work, 1u << lx, 1u << ly);
-      lx++;
-      _ncm_spectral_polar_nodes_r (call, &panel, lx, 1, 2);
-      _ncm_spectral_polar_rows (call, lx, ly, 1, 2, 0, 1);
-    }
-    else
-    {
-      _ncm_spectral_polar_spread_theta (work, 1u << lx, 1u << ly);
-      ly++;
-      _ncm_spectral_polar_nodes_theta (call, &panel, ly, 1, 2);
-      _ncm_spectral_polar_rows (call, lx, ly, 0, 1, 1, 2);
-    }
+    _ncm_spectral_polar_double (call, &panel, &lx, &ly, Dr >= Dt);
   }
 }
 
@@ -1659,7 +1681,7 @@ _ncm_spectral_polar_retest (NcmSpectralPolarCall *call, gdouble abstol)
         entry->replaced = TRUE;
         expanded        = TRUE;
 
-        _ncm_spectral_polar_expand (call, panel, FALSE);
+        _ncm_spectral_polar_expand (call, panel, NULL);
       }
     }
 
