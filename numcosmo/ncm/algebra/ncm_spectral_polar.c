@@ -1193,13 +1193,14 @@ _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPo
     }
   }
 
+  #pragma omp simd
+
   for (j = j0; j <= m; j += step)
   {
     const gdouble t = mid + half * work->xc[j << sh];
 
     th[j] = t;
-    ct[j] = cos (t);
-    st[j] = sin (t);
+    ncm_vmath_sincos (t, &st[j], &ct[j]);
   }
 }
 

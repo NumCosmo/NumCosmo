@@ -86,6 +86,8 @@ static void test_ncm_vmath_exp_special (void);
 static void test_ncm_vmath_log_random (void);
 static void test_ncm_vmath_log_special (void);
 static void test_ncm_vmath_pow_pos_random (void);
+static void test_ncm_vmath_sincos_random (void);
+static void test_ncm_vmath_sincos_special (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -95,8 +97,8 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   {
-    const gchar *paths[]     = {"/ncm/vmath/select", "/ncm/vmath/atan2/random", "/ncm/vmath/atan2/special", "/ncm/vmath/exp/random", "/ncm/vmath/exp/special", "/ncm/vmath/log/random", "/ncm/vmath/log/special", "/ncm/vmath/pow_pos/random"};
-    GTestFunc funcs[]        = {&test_ncm_vmath_select, &test_ncm_vmath_atan2_random, &test_ncm_vmath_atan2_special, &test_ncm_vmath_exp_random, &test_ncm_vmath_exp_special, &test_ncm_vmath_log_random, &test_ncm_vmath_log_special, &test_ncm_vmath_pow_pos_random};
+    const gchar *paths[]     = {"/ncm/vmath/select", "/ncm/vmath/atan2/random", "/ncm/vmath/atan2/special", "/ncm/vmath/exp/random", "/ncm/vmath/exp/special", "/ncm/vmath/log/random", "/ncm/vmath/log/special", "/ncm/vmath/pow_pos/random", "/ncm/vmath/sincos/random", "/ncm/vmath/sincos/special"};
+    GTestFunc funcs[]        = {&test_ncm_vmath_select, &test_ncm_vmath_atan2_random, &test_ncm_vmath_atan2_special, &test_ncm_vmath_exp_random, &test_ncm_vmath_exp_special, &test_ncm_vmath_log_random, &test_ncm_vmath_log_special, &test_ncm_vmath_pow_pos_random, &test_ncm_vmath_sincos_random, &test_ncm_vmath_sincos_special};
     const gchar *missing_isa = _test_ncm_vmath_missing_isa ();
     guint i;
 
@@ -166,6 +168,17 @@ _log_array (const guint n, const gdouble *x, gdouble *out)
 
   for (i = 0; i < n; i++)
     out[i] = ncm_vmath_log (x[i]);
+}
+
+static void
+_sincos_array (const guint n, const gdouble *x, gdouble *s, gdouble *c)
+{
+  guint i;
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+    ncm_vmath_sincos (x[i], &s[i], &c[i]);
 }
 
 static void
@@ -438,5 +451,92 @@ test_ncm_vmath_pow_pos_random (void)
   g_free (y);
   g_free (out);
   ncm_rng_free (rng);
+}
+
+/*
+ * Within 2 ulp of sin() and cos() where |value| > 1e-3 and within 2.3e-16 elsewhere, on
+ * [-2 pi, 2 pi] and on ranges up to 1e5; the same values in and out of a vectorized loop.
+ */
+static void
+test_ncm_vmath_sincos_random (void)
+{
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 17);
+  gdouble *x        = g_new (gdouble, TEST_VMATH_N);
+  gdouble *s        = g_new (gdouble, TEST_VMATH_N);
+  gdouble *c        = g_new (gdouble, TEST_VMATH_N);
+  const gdouble R[] = {2.0 * M_PI, 100.0, 1.0e5};
+  guint k;
+
+  for (k = 0; k < G_N_ELEMENTS (R); k++)
+  {
+    guint64 max_ulp = 0;
+    gdouble max_abs = 0.0;
+    guint i;
+
+    for (i = 0; i < TEST_VMATH_N; i++)
+      x[i] = ncm_rng_uniform_gen (rng, -R[k], R[k]);
+
+    _sincos_array (TEST_VMATH_N, x, s, c);
+
+    for (i = 0; i < TEST_VMATH_N; i++)
+    {
+      const gdouble sl = sin (x[i]);
+      const gdouble cl = cos (x[i]);
+      gdouble s1, c1;
+
+      ncm_vmath_sincos (x[i], &s1, &c1);
+      g_assert_cmpfloat (s[i], ==, s1);
+      g_assert_cmpfloat (c[i], ==, c1);
+
+      if (fabs (sl) > 1.0e-3)
+        max_ulp = MAX (max_ulp, _ulp_diff (s[i], sl));
+
+      if (fabs (cl) > 1.0e-3)
+        max_ulp = MAX (max_ulp, _ulp_diff (c[i], cl));
+
+      max_abs = MAX (max_abs, MAX (fabs (s[i] - sl), fabs (c[i] - cl)));
+    }
+
+    g_assert_cmpuint (max_ulp, <=, 2);
+    g_assert_cmpfloat (max_abs, <=, 2.3e-16);
+  }
+
+  g_free (x);
+  g_free (s);
+  g_free (c);
+  ncm_rng_free (rng);
+}
+
+/* Exact values at 0 and -0, near the quadrant boundaries, and NaN for NaN and infinities */
+static void
+test_ncm_vmath_sincos_special (void)
+{
+  const gdouble xs[] = {0.0, -0.0, M_PI_2, M_PI, 3.0 * M_PI_2, -M_PI_2, -M_PI, M_PI_4, -M_PI_4};
+  gdouble s, c;
+  guint i;
+
+  ncm_vmath_sincos (0.0, &s, &c);
+  g_assert_cmpfloat (s, ==, 0.0);
+  g_assert_false (signbit (s));
+  g_assert_cmpfloat (c, ==, 1.0);
+
+  /* sin (-0) is +0, not -0 as in libm */
+  ncm_vmath_sincos (-0.0, &s, &c);
+  g_assert_cmpfloat (s, ==, 0.0);
+  g_assert_cmpfloat (c, ==, 1.0);
+
+  for (i = 0; i < G_N_ELEMENTS (xs); i++)
+  {
+    ncm_vmath_sincos (xs[i], &s, &c);
+    g_assert_cmpfloat (fabs (s - sin (xs[i])), <=, 2.3e-16);
+    g_assert_cmpfloat (fabs (c - cos (xs[i])), <=, 2.3e-16);
+  }
+
+  ncm_vmath_sincos (NAN, &s, &c);
+  g_assert_true (isnan (s) && isnan (c));
+  ncm_vmath_sincos (INFINITY, &s, &c);
+  g_assert_true (isnan (s) && isnan (c));
+  ncm_vmath_sincos (-INFINITY, &s, &c);
+  g_assert_true (isnan (s) && isnan (c));
 }
 
