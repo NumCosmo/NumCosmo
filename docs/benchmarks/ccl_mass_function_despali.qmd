@@ -1,0 +1,304 @@
+---
+title: "Benchmarking NumCosmo vs. CCL: Despali Halo Mass Function"
+date: "2026-10-20"
+abstract: |
+    This document compares the halo mass function and the multiplicity function of
+    Despali (2016), with the ellipsoidal correction, implemented in NumCosmo and CCL,
+    at the mass definitions 200m, 200c and 500c, at CCL's default settings.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+
+---
+
+## Introduction
+
+This page compares the halo mass function and the multiplicity function of Despali
+[-@Despali2016] from CCL and NumCosmo. It reports their relative differences in plots and
+tables, for each mass definition, cosmology and redshift.
+
+The quantities compared, the relative difference reported, the masses, the redshifts
+and the five cosmologies are those of
+[CCL Halo Mass Function](ccl_mass_function.qmd), "Scope of the comparison".
+
+Despali (2016) is compared with its ellipsoidal correction, at three mass definitions:
+200 times the mean matter density (200m), and 200 and 500 times the critical density
+(200c and 500c).
+
+```{python}
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import CCLParams
+
+from numcosmo_py.plotting.tools import set_rc_params_article, latex_float
+import numcosmo_py.ccl.comparison as nc_cmp
+from numcosmo_py.ccl import multiplicity_func_pairing as mfp
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the
+following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+```{python}
+_, models_def = setup_models(high_precision=False)
+```
+
+The parameters of the five cosmologies are tabulated on [CCL Halo Mass Function](ccl_mass_function.qmd).
+
+### Configurations
+
+Each entry below is one fit at one mass definition.
+
+```{python}
+MEAN = Nc.MultiplicityFuncMassDef.MEAN
+CRITICAL = Nc.MultiplicityFuncMassDef.CRITICAL
+
+PAIRS = [
+    ("Despali 200m", lambda: mfp.despali_pair("matter", MEAN, True, 200)),
+    ("Despali 200c", lambda: mfp.despali_pair("critical", CRITICAL, True, 200)),
+    ("Despali 500c", lambda: mfp.despali_pair("critical", CRITICAL, True, 500)),
+]
+
+m_arr = np.geomspace(1.0e11, 1.0e15, 128)
+Z_ARR = [0.0, 0.5, 1.0, 1.5]
+Z_STYLES = ["-", "--", "-.", ":"]
+ENTRY_LABEL = "Entry"
+PLOT_GRID = (1, 3)
+PLOT_FIGSIZE = (12.0, 4.0)
+```
+
+### Mass definitions
+
+Despali's fit coefficients are polynomials in
+$x = \log_{10}(\Delta/\Delta_\mathrm{vir})$, where $\Delta$ and $\Delta_\mathrm{vir}$
+are relative to the same density.
+The virial overdensity $\Delta_\mathrm{vir}$ of Bryan and Norman [-@Bryan1998] is a function
+of $\Omega_m(a)$. CCL computes $\Delta_\mathrm{vir}$ relative to the density of the mass definition,
+and NumCosmo relative to the critical density, so a mean overdensity enters
+NumCosmo's $x$ as $\Delta \, \Omega_m(a)$.
+
+The first table below gives $\Delta_\mathrm{vir}$ relative to the critical density as
+each code computes it, CCL through a critical mass definition and NumCosmo through
+`delta_vir`. It does not depend on the entry. The second table gives $x$ for each
+entry as each code's fit computes it. Its last column is the absolute difference,
+since $x$ is close to zero for some entries. Both are at CCL defaults.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-delta-vir
+# | tbl-cap: $\Delta_\mathrm{vir}$ relative to the critical density in CCL and NumCosmo
+# | tbl-colwidths: [24, 8, 22, 22, 24]
+# | code-fold: true
+
+# For a critical mass definition, CCL gives Delta_vir relative to the critical
+# density, as NumCosmo's delta_vir does.
+CRITICAL_MASS_DEF = pyccl.halos.MassDef(200, "critical")
+DESPALI_OBJECTS = [(label, *factory()) for label, factory in PAIRS]
+
+DELTA_VIR = {}
+X = {}
+for m, name in zip(models_def, PARAMETERS_SET):
+    ccl_cosmo, nc_cosmo = m["CCL"], m["NC"].cosmo
+    for z in Z_ARR:
+        a = 1.0 / (1.0 + z)
+        ccl_dv = CRITICAL_MASS_DEF.get_Delta_vir(ccl_cosmo, a)
+        nc_dv = DESPALI_OBJECTS[0][2].delta_vir(nc_cosmo, z)
+        DELTA_VIR[(name, z)] = (ccl_dv, nc_dv)
+        for label, ccl_hmf, nc_mulf in DESPALI_OBJECTS:
+            # The expression CCL's Despali (2016) fit evaluates.
+            mass_def = ccl_hmf.mass_def
+            ccl_x = np.log10(
+                mass_def.get_Delta(ccl_cosmo, a) / mass_def.get_Delta_vir(ccl_cosmo, a)
+            )
+            # The expressions NumCosmo's fit evaluates, in its order.
+            Delta = nc_mulf.get_Delta()
+            if nc_mulf.get_mdef() == MEAN:
+                Omega_m = nc_cosmo.E2Omega_m(z) / nc_cosmo.E2(z)
+                nc_x = np.log10(Delta * Omega_m / nc_dv)
+            else:
+                nc_x = np.log10(Delta / nc_dv)
+            X[(label, name, z)] = (ccl_x, nc_x)
+
+rows = [
+    [
+        name,
+        f"{z:g}",
+        f"${latex_float(ccl_dv, convert_g=False)}$",
+        f"${latex_float(nc_dv, convert_g=False)}$",
+        f"${latex_float(abs(nc_dv / ccl_dv - 1.0), convert_g=False)}$",
+    ]
+    for (name, z), (ccl_dv, nc_dv) in DELTA_VIR.items()
+]
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "Cosmology",
+        "$z$",
+        r"$\Delta_\mathrm{vir}^{\mathrm{CCL}}$",
+        r"$\Delta_\mathrm{vir}^{\mathrm{NumCosmo}}$",
+        r"$\left|\Delta_\mathrm{vir}^{\mathrm{NumCosmo}}"
+        r"/\Delta_\mathrm{vir}^{\mathrm{CCL}} - 1\right|$",
+    ],
+)
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-x
+# | tbl-cap: $x = \log_{10}(\Delta/\Delta_\mathrm{vir})$ for each entry in CCL and NumCosmo
+# | tbl-colwidths: [16, 24, 8, 16, 16, 20]
+# | code-fold: true
+
+rows = [
+    [
+        label,
+        name,
+        f"{z:g}",
+        f"${latex_float(ccl_x, convert_g=False)}$",
+        f"${latex_float(nc_x, convert_g=False)}$",
+        f"${latex_float(abs(nc_x - ccl_x), convert_g=False)}$",
+    ]
+    for label, _ in PAIRS
+    for (x_label, name, z), (ccl_x, nc_x) in X.items()
+    if x_label == label
+]
+df = pd.DataFrame(
+    rows,
+    columns=[
+        "Entry",
+        "Cosmology",
+        "$z$",
+        r"$x^{\mathrm{CCL}}$",
+        r"$x^{\mathrm{NumCosmo}}$",
+        r"$\left|x^{\mathrm{NumCosmo}} - x^{\mathrm{CCL}}\right|$",
+    ],
+)
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+{{< include _mass_function_helpers.qmd >}}
+
+## Halo mass function
+
+The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each entry, in every cosmology and at every redshift, through
+`compare_mass_function`.
+
+```{python}
+mf_comparisons = compare_all(nc_cmp.compare_mass_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-despali-mf-def
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+MF_Y_LABEL = (
+    r"$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}"
+    r"/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$"
+)
+plot_entries(mf_comparisons, r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$ over the mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-mf
+# | tbl-cap: Halo mass function, all entries, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
+# | code-fold: true
+
+# CompareFunc1d.table_header() names the power spectrum and is shared with the other
+# benchmark pages, so it is not used here.
+summary_table(
+    mf_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Multiplicity function
+
+The following compares $f(\sigma)$ for each entry, in every cosmology and at every redshift, through `compare_multiplicity_function`.
+For each mass and redshift, both codes receive NumCosmo's $\sigma(M, z)$. The plots
+show the relative difference as a function of $\sigma$.
+
+```{python}
+fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-despali-fsigma-def
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+FS_Y_LABEL = (
+    r"$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$"
+)
+plot_entries(fs_comparisons, r"$\sigma$", FS_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$ over the
+mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-fsigma
+# | tbl-cap: Multiplicity function, all entries, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
+# | code-fold: true
+
+summary_table(
+    fs_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Summary
+
+The table below gives, for each entry, the largest relative difference over the
+five cosmologies, the four redshifts and the mass range, for each quantity.
+
+```{python}
+# | label: tbl-ccl-vs-nc-despali-worst
+# | tbl-cap: Largest relative difference per entry, over all cosmologies, redshifts and masses
+# | tbl-colwidths: [40, 30, 30]
+# | code-fold: true
+
+worst_table(mf_comparisons, fs_comparisons)
+```

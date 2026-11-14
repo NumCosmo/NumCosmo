@@ -1,0 +1,266 @@
+---
+title: "Benchmarking NumCosmo vs. CCL: Halo Mass Function"
+date: "2026-10-19"
+abstract: |
+    This document compares the halo mass function and the multiplicity function
+    implemented in NumCosmo and CCL, for eight multiplicity-function families, at CCL's default settings.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+
+---
+
+## Introduction
+
+This page compares the halo mass function and the multiplicity function from CCL and
+NumCosmo. It reports their relative differences in plots and tables, for each
+multiplicity-function family, cosmology and redshift.
+
+The linear growth factor, the matter power spectrum, the filtered variance and the
+multiplicity function are computed step by step in
+[Halo Mass Function](../examples/intro/halo_mass_function.qmd).
+
+### Scope of the comparison
+
+Two quantities are compared. For a quantity $Q$, the plots and tables report the
+relative difference $|Q^{\mathrm{NumCosmo}}/Q^{\mathrm{CCL}} - 1|$.
+
+1. **The halo mass function** $\mathrm{d}n/\mathrm{d}\ln M$. The function
+   `compare_mass_function` returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for both
+   codes; the factor $M \ln 10$ is the same for both and cancels in the relative
+   difference.
+2. **The multiplicity function** $f(\sigma)$. Both codes evaluate it at the same
+   $\sigma$, NumCosmo's $\sigma(M, z)$, so differences in $\sigma(M, z)$ do not
+   enter. Where the family uses them, each code computes its own critical density
+   contrast $\delta_c$, overdensity $\Delta$ and matter density parameter
+   $\Omega_m(a)$ at scale factor $a = 1/(1 + z)$; their differences are part of the
+   comparison.
+
+Both are evaluated on 128 masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$,
+at $z = 0$, $0.5$, $1$ and $1.5$, for the five cosmologies defined below. Eight
+multiplicity-function families are covered. Jenkins [-@Jenkins2001] is compared with the
+friends-of-friends mass definition (FoF) in both codes. Press & Schechter [-@Press1974] and
+Sheth & Tormen [-@Sheth1999] are given FoF in CCL and `MEAN` in NumCosmo, the only mass
+definition each code accepts for them. Their $f(\sigma)$ depends only on
+$\delta_c/\sigma$, and both codes compute the radius from the mass with the mean
+matter density, so the mass definition changes no value in either code. Tinker [-@Tinker2008], Tinker [-@Tinker2010], Bocquet [-@Bocquet2016] in its hydrodynamical
+calibration, Watson [-@Watson2013] and Despali [-@Despali2016] with its ellipsoidal correction are
+compared at 200 times the mean matter density (200m).
+
+NumCosmo's Tinker (2008) multiplicity function is built with `set_linear_interp(True)`,
+which selects linear interpolation of the fit coefficients, as in CCL; [CCL Tinker Mass
+Functions](ccl_mass_function_tinker.qmd) explains the choice.
+
+CCL is run at its default parameters.
+[CCL Halo Mass Function Precision](ccl_mass_function_precision.qmd) compares the halo
+mass function at four CCL settings, from the defaults to the values selected by
+`CCLParams.set_high_prec_params()`, and shows how the differences at CCL defaults
+change when CCL's parameters are raised.
+
+[CCL Tinker Mass Functions](ccl_mass_function_tinker.qmd),
+[CCL Despali Mass Function](ccl_mass_function_despali.qmd),
+[CCL Bocquet Mass Function](ccl_mass_function_bocquet.qmd) and
+[CCL Watson Mass Function](ccl_mass_function_watson.qmd) each compare one family at
+further mass definitions.
+
+```{python}
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import CCLParams
+
+from numcosmo_py.plotting.tools import set_rc_params_article, latex_float
+import numcosmo_py.ccl.comparison as nc_cmp
+from numcosmo_py.ccl import multiplicity_func_pairing as mfp
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the
+following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+```{python}
+parameters, models_def = setup_models(high_precision=False)
+```
+
+### Parameter Overview
+
+The table below gives the parameters of the five cosmologies.
+
+```{python}
+# | label: tbl-ccl-vs-nc-mf-params
+# | tbl-cap: Parameters of the five cosmologies in CCL and NumCosmo
+# | tbl-colwidths: [10, 30, 60]
+# | code-fold: true
+
+df = pd.DataFrame(parameters, columns=["Symbol", "Description", "Value"])
+display(Markdown(df.to_markdown(index=False, colalign=["left"] * len(df.columns))))
+```
+
+### Configurations
+
+The pairings between CCL's mass functions and NumCosmo's multiplicity functions come
+from `numcosmo_py.ccl.multiplicity_func_pairing`, which the mass-function tests also
+use. Each entry below is one representative of a multiplicity-function family, at
+the mass definition the fit was calibrated on.
+
+Each `NcHaloMassFunction` sets its power-spectrum filter on the multiplicity function
+it is given, and each cosmology has its own filter. Each comparison therefore builds
+its own pair: the entries below are functions that return a new pair.
+
+```{python}
+MEAN = Nc.MultiplicityFuncMassDef.MEAN
+
+PAIRS = [
+    ("Press74 fof", mfp.press74_pair),
+    ("Sheth99 fof", mfp.sheth99_pair),
+    ("Jenkins01 fof", mfp.jenkins01_pair),
+    (
+        "Tinker08 200m",
+        lambda: mfp.tinker08_pair("matter", MEAN, 200, linear_interp=True),
+    ),
+    ("Tinker10 200m", lambda: mfp.tinker10_pair("matter", MEAN, 200)),
+    (
+        "Bocquet16 200m",
+        lambda: mfp.bocquet_pair(
+            "matter", MEAN, True, Nc.MultiplicityFuncBocquetSim.HYDRO, 200
+        ),
+    ),
+    ("Watson13 200m", lambda: mfp.watson_pair("matter", MEAN, 200)),
+    ("Despali16 200m", lambda: mfp.despali_pair("matter", MEAN, True, 200)),
+]
+
+m_arr = np.geomspace(1.0e11, 1.0e15, 128)
+Z_ARR = [0.0, 0.5, 1.0, 1.5]
+Z_STYLES = ["-", "--", "-.", ":"]
+ENTRY_LABEL = "Family"
+PLOT_GRID = (4, 2)
+PLOT_FIGSIZE = (9.0, 11.0)
+```
+
+{{< include _mass_function_helpers.qmd >}}
+
+## Halo mass function
+
+The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each family,
+in every cosmology and at every redshift, through
+`compare_mass_function`.
+
+```{python}
+mf_comparisons = compare_all(nc_cmp.compare_mass_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-mf-families-def
+# | fig-cap: "Halo mass function: relative difference for each family, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+MF_Y_LABEL = (
+    r"$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}"
+    r"/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$"
+)
+plot_entries(mf_comparisons, r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$ over the mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-mf-families
+# | tbl-cap: Halo mass function, all families, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
+# | code-fold: true
+
+# CompareFunc1d.table_header() names the power spectrum and is shared with the other
+# benchmark pages, so it is not used here.
+summary_table(
+    mf_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Multiplicity function
+
+The following compares $f(\sigma)$ for each family, in every cosmology and at every redshift, through `compare_multiplicity_function`.
+For each mass and redshift, both codes receive NumCosmo's $\sigma(M, z)$. The plots
+show the relative difference as a function of $\sigma$.
+
+```{python}
+fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-fsigma-families-def
+# | fig-cap: "Multiplicity function: relative difference for each family, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+FS_Y_LABEL = (
+    r"$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$"
+)
+plot_entries(fs_comparisons, r"$\sigma$", FS_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$ over the
+mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-fsigma-families
+# | tbl-cap: Multiplicity function, all families, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
+# | code-fold: true
+
+summary_table(
+    fs_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Summary
+
+The table below gives, for each family, the largest relative difference over the
+five cosmologies, the four redshifts and the mass range, for each quantity.
+
+```{python}
+# | label: tbl-ccl-vs-nc-mf-worst
+# | tbl-cap: Largest relative difference per family, over all cosmologies, redshifts and masses
+# | tbl-colwidths: [40, 30, 30]
+# | code-fold: true
+
+worst_table(mf_comparisons, fs_comparisons)
+```
