@@ -128,9 +128,14 @@ typedef struct _NcGalaxyShapeFactorCData
   gdouble dec_v;
   NcmTriVec v; /* the unit vector of (ra_v, dec_v) */
   NcWLSurfaceMassDensityOptzs optzs;
-  NcWLSurfaceMassDensityCritCache *crit_cache_arr;
   NcWLSurfaceMassDensitySigmaCache sigma_cache;
-  guint crit_cache_len;
+
+  /* The critical surface density at each redshift node, the data of crit (an
+   * immutable, possibly shared, block of crit_len doubles), or NULL. Only the
+   * nodes behind the lens read it, so the value alone is kept. */
+  GBytes *crit;
+  const gdouble *crit_sigma;
+  guint crit_len;
 } NcGalaxyShapeFactorCData;
 
 enum
@@ -635,7 +640,7 @@ nc_galaxy_shape_factor_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFac
       const NcGalaxyShapeFactorCData *cdata = (const NcGalaxyShapeFactorCData *) data->cdata;
 
       if (cdata != NULL)
-        ncm_prefetch_span (cdata->crit_cache_arr, cdata->crit_cache_len * sizeof (NcWLSurfaceMassDensityCritCache));
+        ncm_prefetch_span (cdata->crit_sigma, cdata->crit_len * sizeof (gdouble));
 
       break;
     }
@@ -946,7 +951,7 @@ nc_galaxy_shape_factor_data_unref (NcGalaxyShapeFactorData *data)
 
     g_assert_nonnull (data->ldata_destroy);
     data->ldata_destroy (data->ldata);
-    g_clear_pointer (&cdata->crit_cache_arr, g_free);
+    g_clear_pointer (&cdata->crit, g_bytes_unref);
     g_free (cdata);
     nc_galaxy_shape_pop_data_unref (data->pop_data);
     nc_galaxy_position_factor_data_unref (data->pos_data);
@@ -1549,25 +1554,76 @@ nc_galaxy_shape_factor_update_data_at_nodes_crit (NcGalaxyShapeFactor *gsf, NcGa
   const guint n_nodes                     = ncm_vector_len (z_nodes);
   guint j;
 
-  if (cdata->crit_cache_len != n_nodes)
-  {
-    g_free (cdata->crit_cache_arr);
-    cdata->crit_cache_arr = g_new0 (NcWLSurfaceMassDensityCritCache, n_nodes);
-    cdata->crit_cache_len = n_nodes;
-  }
+  /* A new block every time: a block may be shared (see
+   * nc_galaxy_shape_factor_data_share_crit()), so it is never written. */
+  gdouble *sigma_crit = g_new (gdouble, n_nodes);
 
   for (j = 0; j < n_nodes; j++)
   {
     const gdouble z_j = ncm_vector_get (z_nodes, j);
+    NcWLSurfaceMassDensityCritCache crit_cache;
 
     nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (
       self->surface_mass_density,
       self->cosmo,
       &self->lens_ctx,
       z_j,
-      &cdata->crit_cache_arr[j]
+      &crit_cache
     );
+
+    sigma_crit[j] = crit_cache.sigma_crit;
   }
+
+  g_clear_pointer (&cdata->crit, g_bytes_unref);
+  cdata->crit       = g_bytes_new_take (sigma_crit, sizeof (gdouble) * n_nodes);
+  cdata->crit_sigma = sigma_crit;
+  cdata->crit_len   = n_nodes;
+}
+
+/**
+ * nc_galaxy_shape_factor_data_peek_crit: (skip)
+ * @data: a #NcGalaxyShapeFactorData
+ *
+ * The critical surface densities at the redshift nodes of @data, computed by
+ * nc_galaxy_shape_factor_update_data_at_nodes_crit(): an immutable block of doubles, or
+ * %NULL before it.
+ *
+ * Returns: (transfer none) (nullable): the block of @data.
+ */
+GBytes *
+nc_galaxy_shape_factor_data_peek_crit (NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+
+  return cdata->crit;
+}
+
+/**
+ * nc_galaxy_shape_factor_data_share_crit: (skip)
+ * @data: a #NcGalaxyShapeFactorData
+ * @crit: the critical surface densities at the redshift nodes of @data, from
+ *   nc_galaxy_shape_factor_data_peek_crit() of another #NcGalaxyShapeFactorData of the same
+ *   galaxy and nodes at the same cosmology and lens redshift
+ *
+ * Makes @data read @crit instead of computing its own. The block is immutable: the next
+ * nc_galaxy_shape_factor_update_data_at_nodes_crit() of @data computes a new one.
+ */
+void
+nc_galaxy_shape_factor_data_share_crit (NcGalaxyShapeFactorData *data, GBytes *crit)
+{
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+  gsize size;
+
+  g_assert_nonnull (crit);
+
+  if (crit == cdata->crit)
+    return;
+
+  g_bytes_ref (crit);
+  g_clear_pointer (&cdata->crit, g_bytes_unref);
+  cdata->crit       = crit;
+  cdata->crit_sigma = g_bytes_get_data (crit, &size);
+  cdata->crit_len   = size / sizeof (gdouble);
 }
 
 /**
@@ -1641,7 +1697,7 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
     if (update_radius || (cdata_i->radius == 0.0))
       nc_galaxy_shape_factor_update_data_radius (gsf, data_i);
 
-    if (update_crit || (cdata_i->crit_cache_arr == NULL))
+    if (update_crit || (cdata_i->crit == NULL))
       nc_galaxy_shape_factor_update_data_at_nodes_crit (gsf, data_i, z_nodes_i);
 
     if (update_sigma)
@@ -1752,7 +1808,7 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
   guint j;
 
   g_assert_nonnull (pop);
-  g_assert_nonnull (cdata->crit_cache_arr);
+  g_assert_nonnull (cdata->crit);
 
   /* One more than the nodes for t = 0 */
   if (n_nodes + 1 > NC_GALAXY_SHAPE_FACTOR_NODE_STACK)
@@ -1767,7 +1823,8 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
 
     if (z_j > z_cl)
     {
-      const gdouble gt = nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
+      NcWLSurfaceMassDensityCritCache crit_cache = {TRUE, cdata->crit_sigma[j]};
+      const gdouble gt                           = nc_wl_surface_mass_density_reduced_shear_cache (&crit_cache, &cdata->sigma_cache);
 
       t[c]   = (1.0 + m) * gt;
       idx[c] = j;

@@ -261,6 +261,46 @@ def test_spectral_calibration_through_the_line_table():
     np.testing.assert_allclose(table[2], direct[2], rtol=1.0e-7, atol=1.0e-7)
 
 
+def _shared_clone(dcwlf, mset):
+    """A clone made as NcmFitESMCMC makes its workers': the dataset registered as shared
+    after it was prepared, then duplicated (with its own model set) through that
+    serializer."""
+    dset = Ncm.Dataset.new()
+    dset.append_data(dcwlf)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dset.register_shared(ser)
+    clone = ser.dup_obj(dcwlf)
+    mset_clone = ser.dup_obj(mset)
+    ser.reset(True)
+    assert clone.peek_obs() is dcwlf.peek_obs()
+    return clone, mset_clone
+
+
+def test_clone_takes_the_published_grid_and_critical_densities():
+    """A clone of a prepared dataset takes its redshift grid and the critical densities
+    at its nodes instead of calibrating and computing them, with the same -2lnP. A
+    clone at another cosmology computes its own critical densities, which equal those
+    of a dataset prepared there, and leaves the original's untouched."""
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    dcwlf.data_prepare(mset)
+    ref = _m2lnP(dcwlf, mset)
+
+    clone, mset_clone = _shared_clone(dcwlf, mset)
+    np.testing.assert_array_equal(_m2lnP(clone, mset_clone), ref)
+    assert clone.get_calib_count() == 0
+
+    # Another cosmology in the clone only
+    mset_clone.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
+    moved = _m2lnP(clone, mset_clone)
+    np.testing.assert_array_equal(_m2lnP(dcwlf, mset), ref)
+    assert not np.array_equal(moved, ref)
+
+    fresh, mset_fresh = _build("var-add", "nfw", "spline")
+    fresh.props.node_config = dcwlf.props.node_config
+    mset_fresh.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
+    np.testing.assert_array_equal(_m2lnP(fresh, mset_fresh), moved)
+
+
 def _reload(dcwlf):
     """A save and load: the node configuration travels as the node-config
     property, the per-galaxy state does not."""

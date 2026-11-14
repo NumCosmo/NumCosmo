@@ -1844,7 +1844,19 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error)
 
   self->started = TRUE;
 
-  ncm_dataset_register_shared (ncm_likelihood_peek_dataset (lh), self->ser);
+  /* Prepared before the shared objects are registered, so that what a data
+   * prepares once for every clone (the redshift grid of
+   * NcDataClusterWLFactor, for example) is built here and published to the
+   * clones instead of being built by each of them. */
+  {
+    NcmDataset *dset = ncm_likelihood_peek_dataset (lh);
+    guint i;
+
+    for (i = 0; i < ncm_dataset_get_length (dset); i++)
+      ncm_data_prepare (ncm_dataset_peek_data (dset, i), mset);
+
+    ncm_dataset_register_shared (dset, self->ser);
+  }
 
   g_object_set (ncm_mset_catalog_peek_storage (self->mcat),
                 "smode", NCM_MSET_CATALOG_SYNC_TIMED,

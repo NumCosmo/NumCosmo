@@ -134,6 +134,8 @@ typedef struct _NcDataClusterWLFactorSharedGrid
   GArray *n_total_per_galaxy;
   GArray *calib_n_nodes;
   GArray *calib_rule_n;
+  GPtrArray *crit;  /* the critical densities at the nodes of each galaxy (GBytes, see nc_galaxy_shape_factor_data_peek_crit()), or NULL */
+  GArray *crit_key; /* what they were computed for, see _crit_key_new(), or NULL */
 } NcDataClusterWLFactorSharedGrid;
 
 /* *INDENT-OFF* */
@@ -334,6 +336,11 @@ typedef struct _NcDataClusterWLFactorPrivate
    * its content no longer matches a grid published from it. */
   gboolean share_grid;
   gboolean has_resampled;
+
+  /* What the critical densities at the nodes of every galaxy were last
+   * computed for (see _crit_key_new()), published with the grid; NULL when
+   * they are not current for every galaxy. */
+  GArray *crit_key;
 
   /* Last z_cl the grid was actually built for (GSL_NAN forces the first
    * rebuild). The grid only depends on z_cl, not on halo_position as a
@@ -757,8 +764,45 @@ _shared_grid_unref (gpointer sg)
     g_array_unref (shared_grid->n_total_per_galaxy);
     g_array_unref (shared_grid->calib_n_nodes);
     g_array_unref (shared_grid->calib_rule_n);
+    g_clear_pointer (&shared_grid->crit, g_ptr_array_unref);
+    g_clear_pointer (&shared_grid->crit_key, g_array_unref);
     g_free (shared_grid);
   }
+}
+
+/*
+ * What the critical surface density at a redshift node depends on: the lens redshift, the
+ * parameters of the cosmology and the redshift up to which the distance is a spline (see
+ * _nc_data_cluster_wl_factor_require_zf()). Two datasets with equal keys compute the same
+ * critical densities at the same nodes.
+ */
+static GArray *
+_crit_key_new (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  NcmModel *cosmo             = NCM_MODEL (self->cosmo);
+  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  const guint len             = ncm_model_len (cosmo);
+  GArray *key                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len + 2);
+  const gdouble zf            = ((smd != NULL) && (smd->dist != NULL)) ? smd->dist->zf : GSL_NAN;
+  guint i;
+
+  g_array_append_val (key, self->z_cl);
+  g_array_append_val (key, zf);
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble p_i = ncm_model_orig_param_get (cosmo, i);
+
+    g_array_append_val (key, p_i);
+  }
+
+  return key;
+}
+
+static gboolean
+_crit_key_equal (const GArray *a, const GArray *b)
+{
+  return (a != NULL) && (b != NULL) && (a->len == b->len) && (memcmp (a->data, b->data, sizeof (gdouble) * a->len) == 0);
 }
 
 /* Whether the current grid was built from @obs as it is now, by a redshift
@@ -807,6 +851,23 @@ _fixed_nodes_grid_publish (NcDataClusterWLFactorPrivate *self)
 
   g_array_append_vals (shared_grid->calib_n_nodes, self->calib_n_nodes->data, self->calib_n_nodes->len);
   g_array_append_vals (shared_grid->calib_rule_n, self->calib_rule_n->data, self->calib_rule_n->len);
+
+  /* The critical densities at the nodes, when current for every galaxy (the
+   * blocks are immutable: a change of cosmology computes new ones). */
+  if (self->crit_key != NULL)
+  {
+    guint gal_i;
+
+    shared_grid->crit     = g_ptr_array_new_full (self->shape_data->len, (GDestroyNotify) g_bytes_unref);
+    shared_grid->crit_key = g_array_ref (self->crit_key);
+
+    for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+    {
+      GBytes *crit = nc_galaxy_shape_factor_data_peek_crit (g_ptr_array_index (self->shape_data, gal_i));
+
+      g_ptr_array_add (shared_grid->crit, (crit != NULL) ? g_bytes_ref (crit) : NULL);
+    }
+  }
 
   g_object_set_qdata_full (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark (),
                            shared_grid, &_shared_grid_unref);
@@ -912,6 +973,58 @@ _nc_data_cluster_wl_factor_require_zf (NcDataClusterWLFactorPrivate *self, NcmMS
   }
 }
 
+/*
+ * After _fixed_nodes_grid_adopt(): takes the critical densities published with the grid
+ * when they were computed for this dataset's key (_crit_key_new()), and returns whether it
+ * did. The blocks are immutable; a change of its cosmology computes its own
+ * (nc_galaxy_shape_factor_update_data_at_nodes_crit()).
+ */
+static gboolean
+_fixed_nodes_crit_adopt (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  NcDataClusterWLFactorSharedGrid *shared_grid;
+  gboolean match;
+
+  if (self->obs == NULL)
+    return FALSE;
+
+  shared_grid = g_object_dup_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark (),
+                                    &_shared_grid_dup, NULL);
+
+  if (shared_grid == NULL)
+    return FALSE;
+
+  match = (shared_grid->crit != NULL) && (shared_grid->crit->len == self->shape_data->len) &&
+          (shared_grid->z_nodes_per_galaxy == self->z_nodes_per_galaxy);
+
+  if (match)
+  {
+    GArray *key = _crit_key_new (self, mset);
+    guint gal_i;
+
+    match = _crit_key_equal (key, shared_grid->crit_key);
+
+    for (gal_i = 0; match && (gal_i < self->shape_data->len); gal_i++)
+      match = (g_ptr_array_index (shared_grid->crit, gal_i) != NULL);
+
+    if (match)
+    {
+      for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+        nc_galaxy_shape_factor_data_share_crit (g_ptr_array_index (self->shape_data, gal_i),
+                                                g_ptr_array_index (shared_grid->crit, gal_i));
+
+      g_clear_pointer (&self->crit_key, g_array_unref);
+      self->crit_key = g_array_ref (key);
+    }
+
+    g_array_unref (key);
+  }
+
+  _shared_grid_unref (shared_grid);
+
+  return match;
+}
+
 static void
 nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 {
@@ -969,6 +1082,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->node_config_valid = FALSE;
 
   self->share_grid    = FALSE;
+  self->crit_key      = NULL;
   self->has_resampled = FALSE;
 
   /* fixed_bg_nodes entries are nullable, see _fixed_bg_nodes_free_entry(). */
@@ -1287,6 +1401,7 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
 
   g_clear_pointer (&self->calib_n_nodes, g_array_unref);
   g_clear_pointer (&self->calib_rule_n, g_array_unref);
+  g_clear_pointer (&self->crit_key, g_array_unref);
   ncm_var_dict_clear (&self->node_config);
 
   _shared_obs_owner_clear (dcwlf, self->obs);
@@ -1400,6 +1515,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   NcDataClusterWLFactorStep steps[9];
   guint n_steps         = 0;
   gboolean grid_adopted = FALSE;
+  gboolean crit_built   = FALSE;
 
   self->resampling = ncm_data_is_resampling (data);
 
@@ -1618,8 +1734,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     if (fixed_grid_changed && !grid_adopted)
       steps[n_steps++] = &_step_fixed_nodes_grid;
 
-    if (fixed_grid_changed || crit_changed)
+    /* A clone that took the grid also takes the critical densities computed
+     * with it, when they were computed for its own cosmology and lens. */
+    if (!(grid_adopted && _fixed_nodes_crit_adopt (self, mset)) && (fixed_grid_changed || crit_changed))
+    {
       steps[n_steps++] = &_step_fixed_nodes_crit;
+      crit_built       = TRUE;
+    }
 
     /* fixed_grid_changed (not just radius_changed/optzs_changed) must gate
      * sigma too: its GSL_NAN-seeded fixed_nodes_zcl sentinel is what
@@ -1711,6 +1832,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   {
     g_array_set_size (self->calib_n_nodes, 0);
     g_array_set_size (self->calib_rule_n, 0);
+  }
+
+  /* The key of the critical densities the steps above computed for every galaxy */
+  if (crit_built)
+  {
+    g_clear_pointer (&self->crit_key, g_array_unref);
+    self->crit_key = _crit_key_new (self, mset);
   }
 
   /* A grid built in this cycle, as opposed to adopted, replaces the one this

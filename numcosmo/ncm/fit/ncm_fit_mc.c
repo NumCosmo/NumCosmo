@@ -886,6 +886,15 @@ ncm_fit_mc_start_run (NcmFitMC *mc, GError **error)
 
   mc->started = TRUE;
 
+  /* Prepared before the shared objects are registered, see
+   * ncm_fit_esmcmc_start_run(). */
+  {
+    guint i;
+
+    for (i = 0; i < ncm_dataset_get_length (dset); i++)
+      ncm_data_prepare (ncm_dataset_peek_data (dset, i), mset);
+  }
+
   ncm_dataset_register_shared (dset, mc->ser);
 
   g_object_set (ncm_mset_catalog_peek_storage (mc->mcat),
