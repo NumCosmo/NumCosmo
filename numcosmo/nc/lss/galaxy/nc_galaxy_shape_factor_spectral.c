@@ -110,6 +110,7 @@
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_vmath_private.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -675,6 +676,22 @@ _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGala
 }
 
 /*
+ * The coordinates of the interpolant of the galaxy of ldata at the shear (g_1, g_2): the
+ * shear in the frame where eps_obs is on the positive real axis, relative to g_c, in polar
+ * coordinates, with the angle in [0, pi] (the interpolant covers psi < 0 by reflection).
+ */
+static inline void
+_nc_galaxy_shape_factor_spectral_interp_coords (const NcGalaxyShapeFactorSpectralData *ldata, const gdouble g_1, const gdouble g_2,
+                                                gdouble *rho, gdouble *psi)
+{
+  const gdouble gf_1 = g_1 * ldata->cos_e + g_2 * ldata->sin_e - ldata->g_c;
+  const gdouble gf_2 = g_2 * ldata->cos_e - g_1 * ldata->sin_e;
+
+  *rho = sqrt (gf_1 * gf_1 + gf_2 * gf_2);
+  *psi = ncm_vmath_atan2 (fabs (gf_2), gf_1);
+}
+
+/*
  * ln P (eps_obs | g) for the galaxy of data. With NcGalaxyShapeFactorSpectral:use-interp
  * and |g| <= NcGalaxyShapeFactorSpectral:interp-g-max it is the value of the interpolant
  * of the galaxy in g, which is built first when the galaxy has none for these eps_obs,
@@ -707,19 +724,25 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
     }
 
     {
-      const gdouble gf_1 = g_1 * ldata->cos_e + g_2 * ldata->sin_e - ldata->g_c;
-      const gdouble gf_2 = g_2 * ldata->cos_e - g_1 * ldata->sin_e;
+      gdouble rho, psi;
 
-      return ncm_spectral_polar_panels_eval (ldata->spp, hypot (gf_1, gf_2), atan2 (fabs (gf_2), gf_1));
+      _nc_galaxy_shape_factor_spectral_interp_coords (ldata, g_1, g_2, &rho, &psi);
+
+      return ncm_spectral_polar_panels_eval (ldata->spp, rho, psi);
     }
   }
 }
+
+/* Points per pass of _nc_galaxy_shape_factor_spectral_eval_nodes() */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK 64
 
 /*
  * eval_nodes: ln P (or P) at n shears of one galaxy, the same values as
  * _nc_galaxy_shape_factor_spectral_eval_ln_marginal() at each shear. The interpolant is
  * checked (and built when it is not valid) once, at the first shear inside
- * interp-g-max, instead of once per shear.
+ * interp-g-max, instead of once per shear. The shears are taken in passes: the ones
+ * outside interp-g-max are integrated, the coordinates of the others are computed in one
+ * loop that vectorizes, and then the interpolant is evaluated at them.
  */
 static void
 _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
@@ -732,48 +755,71 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
   const gdouble g_max2                            = gsl_pow_2 (self->interp_g_max);
   gboolean checked                                = FALSE;
   guint panel                                     = G_MAXUINT;
-  guint j;
+  guint j0;
 
-  for (j = 0; j < n; j++)
+  for (j0 = 0; j0 < n; j0 += NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK)
   {
-    gdouble ln_P;
+    const guint j1 = MIN (n, j0 + NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK);
+    gdouble ig_1[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    gdouble ig_2[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    gdouble rho[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    gdouble psi[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    guint idx[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    guint c = 0;
+    guint j, k;
 
-    if (!self->use_interp || (g_1[j] * g_1[j] + g_2[j] * g_2[j] > g_max2))
+    for (j = j0; j < j1; j++)
     {
-      ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j], epsilon_obs_1, epsilon_obs_2, NULL);
-    }
-    else
-    {
-      if (!checked)
+      if (!self->use_interp || (g_1[j] * g_1[j] + g_2[j] * g_2[j] > g_max2))
       {
-        if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
-        {
-          if (ldata->loaded)
-            g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
-                     "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
-                     "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
+        const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
+                                                                       epsilon_obs_1, epsilon_obs_2, NULL);
 
-          _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
-        }
-
-        checked = TRUE;
+        out[j] = want_log ? ln_P : exp (ln_P);
       }
-
+      else
       {
-        const gdouble gf_1 = g_1[j] * ldata->cos_e + g_2[j] * ldata->sin_e - ldata->g_c;
-        const gdouble gf_2 = g_2[j] * ldata->cos_e - g_1[j] * ldata->sin_e;
-
-        const gdouble rho = hypot (gf_1, gf_2);
-        const gdouble psi = atan2 (fabs (gf_2), gf_1);
-
-        /* The shears of the nodes of a galaxy lie on a line, so a node is usually in the
-         * panel of the previous one */
-        panel = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho, psi);
-        ln_P  = ncm_spectral_polar_panels_eval_on (ldata->spp, panel, rho, psi);
+        ig_1[c] = g_1[j];
+        ig_2[c] = g_2[j];
+        idx[c]  = j;
+        c++;
       }
     }
 
-    out[j] = want_log ? ln_P : exp (ln_P);
+    if (c == 0)
+      continue;
+
+    if (!checked)
+    {
+      if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
+      {
+        if (ldata->loaded)
+          g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
+                   "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
+                   "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
+
+        _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
+      }
+
+      checked = TRUE;
+    }
+
+    #pragma omp simd
+
+    for (k = 0; k < c; k++)
+      _nc_galaxy_shape_factor_spectral_interp_coords (ldata, ig_1[k], ig_2[k], &rho[k], &psi[k]);
+
+    for (k = 0; k < c; k++)
+    {
+      gdouble ln_P;
+
+      /* The shears of the nodes of a galaxy lie on a line, so a node is usually in the
+       * panel of the previous one */
+      panel = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[k], psi[k]);
+      ln_P  = ncm_spectral_polar_panels_eval_on (ldata->spp, panel, rho[k], psi[k]);
+
+      out[idx[k]] = want_log ? ln_P : exp (ln_P);
+    }
   }
 }
 
