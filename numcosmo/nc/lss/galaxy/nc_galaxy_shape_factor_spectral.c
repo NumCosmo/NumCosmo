@@ -146,7 +146,8 @@ typedef struct _NcGalaxyShapeFactorSpectralKernel NcGalaxyShapeFactorSpectralKer
  */
 typedef struct _NcGalaxyShapeFactorSpectralPrivate
 {
-  NcmSpectralPolarF kernel; /* the integrand */
+  NcmSpectralPolarF kernel;       /* the integrand */
+  NcmSpectralPolarRadialF radial; /* its factor that depends only on r, or NULL */
 
   /* z to the sheared ellipticity, at the real shear t */
   void (*map) (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
@@ -258,6 +259,7 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   self->kernel         = NULL;
+  self->radial         = NULL;
   self->map            = NULL;
   self->map_inv        = NULL;
   self->p_reduced      = NULL;
@@ -331,6 +333,7 @@ _nc_galaxy_shape_factor_spectral_get_property (GObject *object, guint prop_id, G
 }
 
 static void _nc_galaxy_shape_factor_spectral_kernel_trace (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
+static void _nc_galaxy_shape_factor_spectral_radial_trace (gpointer user_data, guint n, const gdouble *r, gdouble *w);
 static void _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
 static void _nc_galaxy_shape_factor_spectral_map_trace (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
 
@@ -353,6 +356,7 @@ _nc_galaxy_shape_factor_spectral_constructed (GObject *object)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
         self->kernel         = &_nc_galaxy_shape_factor_spectral_kernel_trace;
+        self->radial         = &_nc_galaxy_shape_factor_spectral_radial_trace;
         self->map            = &_nc_galaxy_shape_factor_spectral_map_trace;
         self->map_inv        = &_nc_galaxy_shape_factor_spectral_map_inv_trace;
         self->p_reduced      = &_nc_galaxy_shape_factor_spectral_p_reduced_trace;
@@ -360,6 +364,7 @@ _nc_galaxy_shape_factor_spectral_constructed (GObject *object)
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
         self->kernel         = &_nc_galaxy_shape_factor_spectral_kernel_trace_det;
+        self->radial         = NULL;
         self->map            = &nc_wl_ellipticity_apply_shear_trace_det_real;
         self->map_inv        = &nc_wl_ellipticity_apply_shear_inv_trace_det;
         self->p_reduced      = &_nc_galaxy_shape_factor_spectral_p_reduced_trace_det;
@@ -1058,8 +1063,8 @@ _nc_galaxy_shape_factor_spectral_integrate_ln (NcGalaxyShapeFactorSpectralPrivat
   ncm_spectral_polar_peak_edges (self->polar, 1.0, seed.r_star, seed.theta_0, L, L / GSL_MAX (seed.r_star, GSL_DBL_MIN),
                                  work->r_edges, work->theta_edges);
 
-  integral = ncm_spectral_polar_integrate (self->polar, self->kernel, k, 1.0, a, b, work->r_edges, work->theta_edges,
-                                           self->reltol, 0.0, NULL, panels, error);
+  integral = ncm_spectral_polar_integrate_full (self->polar, self->kernel, self->radial, k, 1.0, a, b, work->r_edges, work->theta_edges,
+                                                self->reltol, 0.0, NULL, panels, error);
 
   return log (integral) - k->shift_c2;
 }
@@ -1405,17 +1410,18 @@ _nc_galaxy_shape_factor_spectral_sort (gdouble *x, const guint n)
 }
 
 /*
- * The integrand of ncm_spectral_polar_integrate() for the TRACE convention, in the polar
- * coordinates of e_I = T^{-1} (chi_I): G (r, theta) = (reduced density of r = |e_I|)
+ * The integrand of ncm_spectral_polar_integrate_full() for the TRACE convention, in the
+ * polar coordinates of e_I = T^{-1} (chi_I): G (r, theta) = (reduced density of r = |e_I|)
  * N_2 (eps_obs - T (m_t (e_I))) / (2 pi), with m_t the TRACE_DET map and the offset of the
- * kernel taken out of the exponent of N_2.
+ * kernel taken out of the exponent of N_2. The factor that depends only on r, the reduced
+ * density times norm, is _nc_galaxy_shape_factor_spectral_radial_trace(): here only the
+ * exponential.
  */
 static void
 _nc_galaxy_shape_factor_spectral_kernel_trace (gpointer user_data, gdouble r, guint n, const gdouble *theta,
                                                const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
 {
   const NcGalaxyShapeFactorSpectralKernel *k = user_data;
-  const gdouble pref                         = _nc_galaxy_shape_factor_spectral_p_reduced_trace (k, r) * k->norm;
   const gdouble t                            = k->t;
   const gdouble e_1                          = k->e_1;
   const gdouble e_2                          = k->e_2;
@@ -1431,8 +1437,35 @@ _nc_galaxy_shape_factor_spectral_kernel_trace (gpointer user_data, gdouble r, gu
     gdouble f_x, f_y;
 
     _nc_galaxy_shape_factor_spectral_map_trace (t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
-    fval[j] = pref * ncm_vmath_exp (shift_c2 - (gsl_pow_2 (e_1 - f_x) + gsl_pow_2 (e_2 - f_y)) * c2);
+    fval[j] = ncm_vmath_exp (shift_c2 - (gsl_pow_2 (e_1 - f_x) + gsl_pow_2 (e_2 - f_y)) * c2);
   }
+}
+
+/*
+ * The factor of the TRACE integrand that depends only on r, given to
+ * ncm_spectral_polar_integrate_full() so that it is computed once per radius, the power
+ * law in a loop that vectorizes: norm times the reduced density of r
+ * (_nc_galaxy_shape_factor_spectral_p_reduced_trace()).
+ */
+static void
+_nc_galaxy_shape_factor_spectral_radial_trace (gpointer user_data, guint n, const gdouble *r, gdouble *w)
+{
+  const NcGalaxyShapeFactorSpectralKernel *k = user_data;
+  const gdouble c                            = k->dens_norm * k->norm;
+  const gdouble mp                           = -k->dens_pow;
+  guint i;
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble q = 1.0 + r[i] * r[i];
+
+    w[i] *= c * (1.0 + r[i]) * ncm_vmath_pow_pos (q, mp);
+  }
+
+  for (i = 0; i < n; i++)
+    w[i] *= nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, 2.0 * r[i] / (1.0 + r[i] * r[i]));
 }
 
 /*

@@ -47,6 +47,17 @@ G_BEGIN_DECLS
  */
 typedef void (*NcmSpectralPolarF) (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
 
+/**
+ * NcmSpectralPolarRadialF:
+ * @user_data: user data
+ * @n: number of radii
+ * @r: (array length=n): the radii $r_i$
+ * @w: (array length=n): the weights at @r, multiplied in place by the factor at $r_i$
+ *
+ * A factor of the integrand that depends only on the radius, applied to @n radii at once.
+ */
+typedef void (*NcmSpectralPolarRadialF) (gpointer user_data, guint n, const gdouble *r, gdouble *w);
+
 #define NCM_TYPE_SPECTRAL_POLAR (ncm_spectral_polar_get_type ())
 #define NCM_SPECTRAL_POLAR_ERROR (ncm_spectral_polar_error_quark ())
 
@@ -84,6 +95,7 @@ gdouble ncm_spectral_polar_get_edge_ratio (NcmSpectralPolar *sp);
 guint ncm_spectral_polar_get_min_radial_panels (NcmSpectralPolar *sp);
 
 gdouble ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
+gdouble ncm_spectral_polar_integrate_full (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
 void ncm_spectral_polar_build (NcmSpectralPolar *sp, NcmSpectralPolarF F, gpointer user_data, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, NcmSpectralPolarPanels *spp, guint64 *n_eval, GError **error);
 void ncm_spectral_polar_peak_edges (NcmSpectralPolar *sp, gdouble R, gdouble r_peak, gdouble theta_peak, gdouble L_r, gdouble L_theta, GArray *r_edges, GArray *theta_edges);
 

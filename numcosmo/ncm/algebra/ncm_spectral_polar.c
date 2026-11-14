@@ -202,6 +202,7 @@ typedef struct _NcmSpectralPolarWork
 typedef struct _NcmSpectralPolarCall
 {
   NcmSpectralPolarF G;
+  NcmSpectralPolarRadialF radial; /* the factor of G that depends only on r, or NULL */
   gpointer user_data;
   gdouble R;
   gdouble a;
@@ -683,10 +684,45 @@ ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointe
                               gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
                               gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error)
 {
+  return ncm_spectral_polar_integrate_full (sp, G, NULL, user_data, R, a, b, r_edges, theta_edges, reltol, abstol, n_eval, panels, error);
+}
+
+/**
+ * ncm_spectral_polar_integrate_full: (skip)
+ * @sp: a #NcmSpectralPolar
+ * @G: the function $G$
+ * @radial: (nullable): the factor of $G$ that depends only on the radius, or %NULL
+ * @user_data: user data for @G and @radial
+ * @R: radius of the disk
+ * @a: exponent of the weight at $r = 0$
+ * @b: exponent of the weight at $r = R$
+ * @r_edges: (element-type gdouble): the radial edges $r_0, \dots, r_{n_r}$
+ * @theta_edges: (element-type gdouble): the angular edges $\theta_0, \dots, \theta_{n_\theta}$
+ * @reltol: relative tolerance
+ * @abstol: absolute tolerance, in units of the integral
+ * @n_eval: (out) (optional): number of values of $G$ computed
+ * @panels: (out) (optional) (transfer full): the accepted panels
+ * @error: a #GError
+ *
+ * As ncm_spectral_polar_integrate(), with the integrand $r^a (R - r)^b \rho (r) G (r,
+ * \theta)$, $\rho$ given by @radial. @radial is called with the radii of a panel where the
+ * integrand has no value yet, and multiplies the weights at them in place; the integral
+ * and the refinement are those of ncm_spectral_polar_integrate() with $\rho$ in $G$, up to
+ * rounding. A factor of $G$ that depends only on the radius is computed once per radius
+ * this way, for all of them in one call, instead of in every call of $G$.
+ *
+ * Returns: the integral.
+ */
+gdouble
+ncm_spectral_polar_integrate_full (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data,
+                                   gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
+                                   gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error)
+{
   NcmSpectralPolarWork **ptr = ncm_memory_pool_get (sp->work_pool);
   NcmSpectralPolarWork *work = *ptr;
   NcmSpectralPolarCall call  = {
     .G            = G,
+    .radial       = radial,
     .user_data    = user_data,
     .R            = R,
     .a            = a,
@@ -774,6 +810,7 @@ ncm_spectral_polar_build (NcmSpectralPolar *sp, NcmSpectralPolarF F, gpointer us
   NcmSpectralPolarWork *work = *ptr;
   NcmSpectralPolarCall call  = {
     .G            = F,
+    .radial       = NULL,
     .user_data    = user_data,
     .R            = 0.0,
     .a            = 0.0,
@@ -1116,6 +1153,9 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
     for (i = 0; i < c; i++)
       cw[i] *= ncm_vmath_pow_pos (R - cr[i], b);
   }
+
+  if (call->radial != NULL)
+    call->radial (call->user_data, c, cr, cw);
 
   for (c = 0, i = i0; i <= n; i += step, c++)
   {
