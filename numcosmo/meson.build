@@ -340,6 +340,7 @@ ncm_headers_internal = files(
     'ncm/algebra/ncm_spectral_cheb_private.h',
     'ncm/algebra/ncm_spectral_private.h',
     'ncm/core/ncm_prefetch_private.h',
+    'ncm/data/ncm_data_private.h',
     'ncm/mpi/ncm_mpi_slave.h',
     'ncm/stats/ncm_stats_dist_kde_private.h',
     'ncm/stats/ncm_stats_dist_kernel_private.h',

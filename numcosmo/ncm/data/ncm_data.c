@@ -48,6 +48,7 @@
 #include "build_cfg.h"
 
 #include "ncm/data/ncm_data.h"
+#include "ncm/data/ncm_data_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 enum
@@ -622,10 +623,14 @@ ncm_data_get_desc (NcmData *data)
   return g_strdup (ncm_data_peek_desc (data));
 }
 
-static void
-_ncm_data_prepare (NcmData *data, NcmMSet *mset)
+void
+_ncm_data_prepare_full (NcmData *data, NcmMSet *mset, const gboolean resampling)
 {
   NcmDataPrivate * const self = ncm_data_get_instance_private (data);
+
+  if (!resampling && !self->init)
+    g_error ("ncm_data_prepare: data `%s' is not initialized; set its data or resample it first.",
+             ncm_data_peek_desc (data));
 
   if ((NCM_DATA_GET_CLASS (data)->begin != NULL) && !self->begin)
   {
@@ -633,8 +638,12 @@ _ncm_data_prepare (NcmData *data, NcmMSet *mset)
     self->begin = TRUE;
   }
 
+  self->is_resampling = resampling;
+
   if (NCM_DATA_GET_CLASS (data)->prepare != NULL)
     NCM_DATA_GET_CLASS (data)->prepare (data, mset);
+
+  self->is_resampling = FALSE;
 }
 
 /**
@@ -648,13 +657,7 @@ _ncm_data_prepare (NcmData *data, NcmMSet *mset)
 void
 ncm_data_prepare (NcmData *data, NcmMSet *mset)
 {
-  NcmDataPrivate * const self = ncm_data_get_instance_private (data);
-
-  if (!self->init)
-    g_error ("ncm_data_prepare: data `%s' is not initialized; set its data or resample it first.",
-             ncm_data_peek_desc (data));
-
-  _ncm_data_prepare (data, mset);
+  _ncm_data_prepare_full (data, mset, FALSE);
 }
 
 /**
@@ -678,9 +681,9 @@ ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.",
              ncm_data_peek_desc (data));
 
-  self->is_resampling = TRUE;
-  _ncm_data_prepare (data, mset);
+  _ncm_data_prepare_full (data, mset, TRUE);
 
+  self->is_resampling = TRUE;
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
 
   self->is_resampling = FALSE;
