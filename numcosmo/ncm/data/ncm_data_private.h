@@ -32,10 +32,11 @@
 G_BEGIN_DECLS
 
 /*
- * Sets the value returned by ncm_data_is_resampling(). ncm_dataset_resample() uses it to
- * prepare every block as resampling before the blocks are resampled.
+ * Runs the prepare method of @data for an evaluation (@resampling FALSE), which requires
+ * @data to be initialized, or for a resampling (@resampling TRUE), which does not.
+ * ncm_data_is_resampling() returns @resampling while the method runs.
  */
-void _ncm_data_set_resampling (NcmData *data, gboolean resampling);
+void _ncm_data_prepare_full (NcmData *data, NcmMSet *mset, const gboolean resampling);
 
 G_END_DECLS
 
