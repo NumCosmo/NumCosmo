@@ -47,6 +47,7 @@
 #include "build_cfg.h"
 
 #include "ncm/data/ncm_dataset.h"
+#include "ncm/data/ncm_data_private.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
@@ -577,7 +578,7 @@ ncm_dataset_clear (NcmDataset **dset)
   g_clear_object (dset);
 }
 
-static void _ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset);
+static void _ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset, const gboolean resampling);
 static void _ncm_dataset_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_dataset_check_fisher_matrix (NcmMatrix **IM, const guint fparams_len);
 
@@ -597,8 +598,10 @@ ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 
   /* Same reason as in the evaluation paths: a block must not be resampled against a
    * shared resource that the later blocks have not yet placed their requirements on.
+   * Every block is prepared as resampling, as ncm_data_resample() prepares it, so a
+   * block skips the work that holds only for the data about to be replaced.
    */
-  _ncm_dataset_prepare_all (dset, mset);
+  _ncm_dataset_prepare_all (dset, mset, TRUE);
 
   for (i = 0; i < dset->oa->len; i++)
   {
@@ -861,12 +864,12 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
  * first evaluation of a fresh experiment by 0.0067 in -2lnL, after which every call agreed.
  */
 static void
-_ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset)
+_ncm_dataset_prepare_all (NcmDataset *dset, NcmMSet *mset, const gboolean resampling)
 {
   guint i;
 
   for (i = 0; i < dset->oa->len; i++)
-    ncm_data_prepare (ncm_dataset_peek_data (dset, i), mset);
+    _ncm_data_prepare_full (ncm_dataset_peek_data (dset, i), mset, resampling);
 }
 
 void
@@ -874,7 +877,7 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
 {
   guint pos = 0, i;
 
-  _ncm_dataset_prepare_all (dset, mset);
+  _ncm_dataset_prepare_all (dset, mset, FALSE);
 
   for (i = 0; i < dset->oa->len; i++)
   {
@@ -914,7 +917,7 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
 
   *m2lnL = 0.0;
 
-  _ncm_dataset_prepare_all (dset, mset);
+  _ncm_dataset_prepare_all (dset, mset, FALSE);
 
   for (i = 0; i < dset->oa->len; i++)
   {
@@ -942,7 +945,7 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 {
   guint i;
 
-  _ncm_dataset_prepare_all (dset, mset);
+  _ncm_dataset_prepare_all (dset, mset, FALSE);
 
   g_assert_cmpuint (ncm_vector_len (m2lnL_v), >=, dset->oa->len);
 
@@ -976,7 +979,7 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
   g_assert_cmpuint (i, <, dset->oa->len);
 
   /* Every block, not only the requested one: see _ncm_dataset_prepare_all. */
-  _ncm_dataset_prepare_all (dset, mset);
+  _ncm_dataset_prepare_all (dset, mset, FALSE);
   _ncm_dataset_data_m2lnL_val (ncm_dataset_peek_data (dset, i), mset, m2lnL_i);
 
   return;
@@ -1044,7 +1047,7 @@ ncm_dataset_mean_vector (NcmDataset *dset, NcmMSet *mset, NcmVector *mu)
     g_error ("ncm_dataset_mean_vector: the dataset has %u points, but the vector has %u.",
              total_n, ncm_vector_len (mu));
 
-  _ncm_dataset_prepare_all (dset, mset);
+  _ncm_dataset_prepare_all (dset, mset, FALSE);
 
   for (i = 0; i < dset->oa->len; i++)
   {
@@ -1088,7 +1091,7 @@ ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
     _ncm_dataset_check_fisher_matrix (IM, fparams_len);
     ncm_matrix_set_zero (*IM);
 
-    _ncm_dataset_prepare_all (dset, mset);
+    _ncm_dataset_prepare_all (dset, mset, FALSE);
 
     for (i = 0; i < dset->oa->len; i++)
     {
@@ -1151,7 +1154,7 @@ ncm_dataset_fisher_matrix_bias (NcmDataset *dset, NcmMSet *mset, NcmVector *f_tr
     ncm_matrix_set_zero (*IM);
     ncm_vector_set_zero (*delta_theta);
 
-    _ncm_dataset_prepare_all (dset, mset);
+    _ncm_dataset_prepare_all (dset, mset, FALSE);
 
     for (i = 0; i < dset->oa->len; i++)
     {
