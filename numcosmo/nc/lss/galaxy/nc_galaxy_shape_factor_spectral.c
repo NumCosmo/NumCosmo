@@ -1227,7 +1227,7 @@ _nc_galaxy_shape_factor_spectral_var_kernel (gpointer user_data, gdouble v, guin
     fval[j] = val;
 }
 
-static gdouble _nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble a, const gdouble b, const gdouble r, const gdouble cos_0, const gdouble sin_0, gdouble *d);
+static void _nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble a, const gdouble b, const guint n, const gdouble *r, const gdouble cos_0, const gdouble sin_0, gdouble *h, gdouble *d, gdouble *x);
 static void _nc_galaxy_shape_factor_spectral_sort (gdouble *x, const guint n);
 
 /*
@@ -1257,6 +1257,11 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
   const gdouble dh                                                           = 1.0e-6;
   const guint n_uniform                                                      = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_UNIFORM;
   gdouble extra[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_EXTRA];
+  gdouble scan_r[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_UNIFORM + NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_EXTRA];
+  gdouble scan_h[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_UNIFORM + NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_EXTRA];
+  gdouble scan_d[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_UNIFORM + NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_EXTRA];
+  gdouble scan_x[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_UNIFORM + NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SCAN_EXTRA];
+  guint n_scan     = 0;
   gdouble best_h   = GSL_NEGINF;
   gdouble r_before = 0.0;
   gdouble r_after  = 0.0;
@@ -1302,18 +1307,26 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
     const gdouble r_u = (iu < n_uniform) ? 1.0e-4 + (1.0 - 2.0e-4) * iu / (n_uniform - 1.0) : GSL_POSINF;
     const gdouble r_e = (ie < n_extra) ? extra[ie] : GSL_POSINF;
     const gdouble r   = GSL_MIN (r_u, r_e);
-    gdouble h, d;
 
     if (r_u <= r_e)
       iu++;
     else
       ie++;
 
-    if (!(r > 0.0) || !(r < 1.0) || (r == r_prev))
+    if (!(r > 0.0) || !(r < 1.0) || ((n_scan > 0) && (r == scan_r[n_scan - 1])))
       continue;
 
-    h     = _nc_galaxy_shape_factor_spectral_h (self, k, a, b, r, cos_0, sin_0, &d);
-    shift = GSL_MIN (shift, d);
+    scan_r[n_scan++] = r;
+  }
+
+  _nc_galaxy_shape_factor_spectral_h (self, k, a, b, n_scan, scan_r, cos_0, sin_0, scan_h, scan_d, scan_x);
+
+  for (i = 0; i < n_scan; i++)
+  {
+    const gdouble r = scan_r[i];
+    const gdouble h = scan_h[i];
+
+    shift = GSL_MIN (shift, scan_d[i]);
 
     if (pending)
     {
@@ -1339,9 +1352,10 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
     gdouble hi       = r_after;
     gdouble x1       = hi - gr * (hi - lo);
     gdouble x2       = lo + gr * (hi - lo);
-    gdouble d;
-    gdouble h1 = _nc_galaxy_shape_factor_spectral_h (self, k, a, b, x1, cos_0, sin_0, &d);
-    gdouble h2 = _nc_galaxy_shape_factor_spectral_h (self, k, a, b, x2, cos_0, sin_0, &d);
+    gdouble d, xs, h1, h2;
+
+    _nc_galaxy_shape_factor_spectral_h (self, k, a, b, 1, &x1, cos_0, sin_0, &h1, &d, &xs);
+    _nc_galaxy_shape_factor_spectral_h (self, k, a, b, 1, &x2, cos_0, sin_0, &h2, &d, &xs);
 
     for (i = 0; i < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_GOLDEN_STEPS; i++)
     {
@@ -1351,7 +1365,7 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
         x2 = x1;
         h2 = h1;
         x1 = hi - gr * (hi - lo);
-        h1 = _nc_galaxy_shape_factor_spectral_h (self, k, a, b, x1, cos_0, sin_0, &d);
+        _nc_galaxy_shape_factor_spectral_h (self, k, a, b, 1, &x1, cos_0, sin_0, &h1, &d, &xs);
       }
       else
       {
@@ -1359,7 +1373,7 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
         x1 = x2;
         h1 = h2;
         x2 = lo + gr * (hi - lo);
-        h2 = _nc_galaxy_shape_factor_spectral_h (self, k, a, b, x2, cos_0, sin_0, &d);
+        _nc_galaxy_shape_factor_spectral_h (self, k, a, b, 1, &x2, cos_0, sin_0, &h2, &d, &xs);
       }
     }
 
@@ -1369,23 +1383,71 @@ _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * cons
   seed->shift = shift;
 }
 
-/*
- * h (r) = ln (density of r) - d / (2 std_noise^2) at the radius r, 0 < r < 1, of the ray of
- * direction (cos_0, sin_0), with d the squared distance of eps_obs to the sheared
- * ellipticity, returned in *d. The logarithm of the density is the two end power laws,
- * of exponents a and b, plus the logarithm of the reduced density.
- */
-static gdouble
-_nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k,
-                                    const gdouble a, const gdouble b, const gdouble r, const gdouble cos_0, const gdouble sin_0,
-                                    gdouble *d)
+/* log1p (x) for x > -1, in a loop that vectorizes: Kahan's log (u) x / (u - 1), u = 1 + x */
+static inline gdouble
+_nc_galaxy_shape_factor_spectral_log1p (const gdouble x)
 {
-  gdouble f_x, f_y;
+  const gdouble u = 1.0 + x;
 
-  self->map (k->t, r * cos_0, r * sin_0, &f_x, &f_y);
-  *d = gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y);
+  return ncm_vmath_select (u == 1.0, x, ncm_vmath_log (u) * (x / (u - 1.0)));
+}
 
-  return a * log (r) + b * log1p (-r) + log (self->p_reduced (k, r)) - *d * k->c2;
+/*
+ * h (r) = ln (density of r) - d / (2 std_noise^2) at the n radii r[i], 0 < r < 1, of the
+ * ray of direction (cos_0, sin_0), in h[i], with d the squared distance of eps_obs to the
+ * sheared ellipticity, in d[i]. The logarithm of the density is the two end power laws,
+ * of exponents a and b, plus the logarithm of the reduced density. The terms of the
+ * convention are computed in a loop that vectorizes, the population at the n points of x
+ * (scratch) in another, and its logarithm in a third.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_h (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k,
+                                    const gdouble a, const gdouble b, const guint n, const gdouble *r, const gdouble cos_0, const gdouble sin_0,
+                                    gdouble *h, gdouble *d, gdouble *x)
+{
+  guint i;
+
+  if (self->axis_ratio_var)
+  {
+    /* ln of dens_norm (1 + r) q^-dens_pow, q = 1 + r^2, and x = T (r) = 2 r / q */
+    const gdouble ln_norm = log (k->dens_norm);
+
+    #pragma omp simd
+
+    for (i = 0; i < n; i++)
+    {
+      const gdouble q = 1.0 + r[i] * r[i];
+      gdouble f_x, f_y;
+
+      _nc_galaxy_shape_factor_spectral_map_trace (k->t, r[i] * cos_0, r[i] * sin_0, &f_x, &f_y);
+      d[i] = gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y);
+      h[i] = a * ncm_vmath_log (r[i]) + b * _nc_galaxy_shape_factor_spectral_log1p (-r[i]) +
+             (ln_norm + _nc_galaxy_shape_factor_spectral_log1p (r[i]) - k->dens_pow * ncm_vmath_log (q)) - d[i] * k->c2;
+      x[i] = 2.0 * r[i] / q;
+    }
+  }
+  else
+  {
+    #pragma omp simd
+
+    for (i = 0; i < n; i++)
+    {
+      gdouble f_x, f_y;
+
+      nc_wl_ellipticity_apply_shear_trace_det_real (k->t, r[i] * cos_0, r[i] * sin_0, &f_x, &f_y);
+      d[i] = gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y);
+      h[i] = a * ncm_vmath_log (r[i]) + b * _nc_galaxy_shape_factor_spectral_log1p (-r[i]) - d[i] * k->c2;
+      x[i] = r[i];
+    }
+  }
+
+  for (i = 0; i < n; i++)
+    x[i] = nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, x[i]);
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+    h[i] += ncm_vmath_log (x[i]);
 }
 
 /* Sorts x[0..n-1] in ascending order, by insertion */
