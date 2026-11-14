@@ -166,18 +166,18 @@ typedef struct _NcmSpectralPolarWork
 {
   guint level_cap;
   guint np;        /* 2^level_cap + 1 */
-  GArray *grid;    /* np^2: point (i, j) of level (lx, ly) at row i << (level_cap - lx),
-                    * column j << (level_cap - ly) */
-  gdouble *in;     /* the level grid, (n + 1) x (m + 1), row i = radius i */
+  gdouble *in;     /* the grid of the current level (lx, ly), (n + 1) x (m + 1), n = 2^lx
+                    * and m = 2^ly, contiguous with row i = radius i: the input of the
+                    * radial transform as it is; a doubling spreads it in place */
   gdouble *tmp;    /* its radial transform, same layout */
   gdouble *tmpT;   /* the transpose of tmp */
   gdouble *coeffs; /* the Chebyshev coefficients, (m + 1) x (n + 1): row l = angular index */
   GArray *lines;   /* the np-long arrays below, one after the other */
   gdouble *br;     /* l1 mass of the coefficients per radial index */
   gdouble *bt;     /* and per angular index */
-  gdouble *rr;     /* radii of the panel, at their stride positions */
+  gdouble *rr;     /* radii of the panel at the current level, rr[i], i = 0..n */
   gdouble *wr;     /* regular weight at rr */
-  gdouble *th;     /* angles of the panel, at their stride positions */
+  gdouble *th;     /* angles of the panel at the current level, th[j], j = 0..m */
   gdouble *ct;     /* their cosines */
   gdouble *st;     /* their sines */
   gdouble *gth;    /* the angles of one callback, contiguous */
@@ -404,7 +404,6 @@ _ncm_spectral_polar_work_new (gpointer userdata)
 
   work->level_cap    = 0;
   work->np           = 0;
-  work->grid         = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->in           = NULL;
   work->tmp          = NULL;
   work->tmpT         = NULL;
@@ -433,7 +432,6 @@ _ncm_spectral_polar_work_free (gpointer p)
   NcmSpectralPolarWork *work = p;
   guint i;
 
-  g_array_unref (work->grid);
   g_clear_pointer (&work->in, fftw_free);
   g_clear_pointer (&work->tmp, fftw_free);
   g_clear_pointer (&work->tmpT, fftw_free);
@@ -938,7 +936,6 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
   work->level_cap = level_cap;
   work->np        = np;
 
-  g_array_set_size (work->grid, (gsize) np * np);
   g_array_set_size (work->lines, (gsize) n_lines * np);
   g_array_set_size (work->mt, table_len);
 
@@ -1029,13 +1026,11 @@ _ncm_spectral_polar_first_pass (NcmSpectralPolarCall *call, GArray *r_edges, GAr
 {
   NcmSpectralPolarWork *work = call->work;
   const guint ns             = (1u << call->level_min) + 1;
-  const guint sh             = call->level_cap - call->level_min;
   const gsize nb             = (gsize) (r_edges->len - 1) * (theta_edges->len - 1);
-  const gdouble *grid        = &g_array_index (work->grid, gdouble, 0);
   gdouble I0                 = 0.0;
   gdouble A                  = 0.0;
   gsize ib                   = 0;
-  guint i, j, p, q;
+  guint i, j;
 
   g_array_set_size (work->initial, nb);
   g_array_set_size (work->initial_grid, nb * ns * ns);
@@ -1060,12 +1055,7 @@ _ncm_spectral_polar_first_pass (NcmSpectralPolarCall *call, GArray *r_edges, GAr
       entry->replaced    = FALSE;
 
       _ncm_spectral_polar_sample_start (call, &entry->panel);
-
-      for (p = 0; p < ns; p++)
-      {
-        for (q = 0; q < ns; q++)
-          start[p * ns + q] = grid[(gsize) (p << sh) * work->np + (q << sh)];
-      }
+      memcpy (start, work->in, sizeof (gdouble) * ns * ns);
 
       entry->vs  = _ncm_spectral_polar_coeffs (work, call->level_min, call->level_min);
       entry->D   = _ncm_spectral_polar_change (work, call->level_min, call->level_min, &Dr, &Dt);
@@ -1104,8 +1094,8 @@ _ncm_spectral_polar_sample_start (NcmSpectralPolarCall *call, const NcmSpectralP
 
 /*
  * Radii of the panel at level lx and the regular weight there, r^a unless the panel starts at
- * 0 and (R - r)^b unless it ends at R, at their stride positions: every point (i0 = 0,
- * step 1) or the points a doubling adds (i0 = 1, step 2).
+ * 0 and (R - r)^b unless it ends at R: every point (i0 = 0, step 1) or the points a doubling
+ * adds (i0 = 1, step 2), after the points of level lx - 1 are moved from i to 2 i.
  */
 static void
 _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint i0, guint step)
@@ -1115,6 +1105,8 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
   const guint sh             = call->level_cap - lx;
   const gdouble mid          = 0.5 * (panel->ra + panel->rb);
   const gdouble half         = 0.5 * (panel->rb - panel->ra);
+  gdouble *rr                = work->rr;
+  gdouble *wr                = work->wr;
   const gboolean wa          = (panel->ra != 0.0) && (call->a != 0.0);
   const gboolean wb          = (panel->rb != call->R) && (call->b != 0.0);
   const gdouble a            = call->a;
@@ -1124,8 +1116,17 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
   gdouble *cw                = work->cw;
   guint i, c;
 
+  if (step == 2)
+  {
+    for (i = n / 2; i > 0; i--)
+    {
+      rr[2 * i] = rr[i];
+      wr[2 * i] = wr[i];
+    }
+  }
+
   /* The radii contiguous, the weights in a loop that vectorizes, then both at their
-   * stride positions */
+   * positions */
   for (c = 0, i = i0; i <= n; i += step, c++)
     cr[c] = mid + half * work->xc[i << sh];
 
@@ -1159,12 +1160,12 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
 
   for (c = 0, i = i0; i <= n; i += step, c++)
   {
-    work->rr[i << sh] = cr[c];
-    work->wr[i << sh] = cw[c];
+    rr[i] = cr[c];
+    wr[i] = cw[c];
   }
 }
 
-/* Angles of the panel at level ly, with their cosines and sines, at their stride positions */
+/* Angles of the panel at level ly, with their cosines and sines, as the radii above */
 static void
 _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint ly, guint j0, guint step)
 {
@@ -1173,21 +1174,34 @@ _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPo
   const guint sh             = call->level_cap - ly;
   const gdouble mid          = 0.5 * (panel->ta + panel->tb);
   const gdouble half         = 0.5 * (panel->tb - panel->ta);
+  gdouble *th                = work->th;
+  gdouble *ct                = work->ct;
+  gdouble *st                = work->st;
   guint j;
+
+  if (step == 2)
+  {
+    for (j = m / 2; j > 0; j--)
+    {
+      th[2 * j] = th[j];
+      ct[2 * j] = ct[j];
+      st[2 * j] = st[j];
+    }
+  }
 
   for (j = j0; j <= m; j += step)
   {
     const gdouble t = mid + half * work->xc[j << sh];
 
-    work->th[j << sh] = t;
-    work->ct[j << sh] = cos (t);
-    work->st[j << sh] = sin (t);
+    th[j] = t;
+    ct[j] = cos (t);
+    st[j] = sin (t);
   }
 }
 
 /*
  * Calls G at the rows i0, i0 + istep, ... and the angles j0, j0 + jstep, ... of level
- * (lx, ly) and stores F, G times the regular weight, in the grid.
+ * (lx, ly) and stores F, G times the regular weight, in the grid of that level.
  */
 static void
 _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep)
@@ -1195,29 +1209,25 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
   NcmSpectralPolarWork *work = call->work;
   const guint n              = 1u << lx;
   const guint m              = 1u << ly;
-  const guint shx            = call->level_cap - lx;
-  const guint shy            = call->level_cap - ly;
-  gdouble *grid              = &g_array_index (work->grid, gdouble, 0);
   guint c                    = 0;
   guint i, j, q;
 
   for (j = j0; j <= m; j += jstep, c++)
   {
-    work->gth[c] = work->th[j << shy];
-    work->gct[c] = work->ct[j << shy];
-    work->gst[c] = work->st[j << shy];
+    work->gth[c] = work->th[j];
+    work->gct[c] = work->ct[j];
+    work->gst[c] = work->st[j];
   }
 
   for (i = i0; i <= n; i += istep)
   {
-    const guint is  = i << shx;
-    const gdouble w = work->wr[is];
-    gdouble *row    = grid + (gsize) is * work->np;
+    const gdouble w = work->wr[i];
+    gdouble *row    = work->in + (gsize) i * (m + 1);
 
-    call->G (call->user_data, work->rr[is], c, work->gth, work->gct, work->gst, work->gf);
+    call->G (call->user_data, work->rr[i], c, work->gth, work->gct, work->gst, work->gf);
 
     for (q = 0, j = j0; q < c; q++, j += jstep)
-      row[j << shy] = w * work->gf[q];
+      row[j] = w * work->gf[q];
   }
 
   call->n_eval += (guint64) c * ((n - i0) / istep + 1);
@@ -1231,28 +1241,16 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
 static gdouble
 _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
 {
-  const guint n       = 1u << lx;
-  const guint m       = 1u << ly;
-  const guint shx     = work->level_cap - lx;
-  const guint shy     = work->level_cap - ly;
-  const gdouble *grid = &g_array_index (work->grid, gdouble, 0);
-  gdouble vs          = 0.0;
-  guint i, j, k, l;
+  const guint n                 = 1u << lx;
+  const guint m                 = 1u << ly;
+  const gsize len               = (gsize) (n + 1) * (m + 1);
+  const gdouble * restrict grid = work->in;
+  gdouble vs                    = 0.0;
+  gsize q;
+  guint j, k, l;
 
-  for (i = 0; i <= n; i++)
-  {
-    const gdouble *row = grid + (gsize) (i << shx) * work->np;
-    gdouble *dst       = work->in + (gsize) i * (m + 1);
-
-    for (j = 0; j <= m; j++)
-    {
-      const gdouble v  = row[j << shy];
-      const gdouble av = fabs (v);
-
-      dst[j] = v;
-      vs     = MAX (vs, av);
-    }
-  }
+  for (q = 0; q < len; q++)
+    vs = MAX (vs, fabs (grid[q]));
 
   /*
    * Radial transform of the m + 1 columns of in, its transpose, then angular transform
@@ -1422,10 +1420,7 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
 {
   NcmSpectralPolarWork *work = call->work;
   const guint ns             = (1u << call->level_min) + 1;
-  const guint sh             = call->level_cap - call->level_min;
-  gdouble *grid              = &g_array_index (work->grid, gdouble, 0);
   gsize ib;
-  guint p, q;
 
   for (ib = 0; ib < work->initial->len; ib++)
   {
@@ -1441,15 +1436,45 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
 
       _ncm_spectral_polar_nodes_r (call, &entry->panel, call->level_min, 0, 1);
       _ncm_spectral_polar_nodes_theta (call, &entry->panel, call->level_min, 0, 1);
-
-      for (p = 0; p < ns; p++)
-      {
-        for (q = 0; q < ns; q++)
-          grid[(gsize) (p << sh) * work->np + (q << sh)] = start[p * ns + q];
-      }
+      memcpy (work->in, start, sizeof (gdouble) * ns * ns);
 
       _ncm_spectral_polar_expand (call, entry->panel, TRUE);
     }
+  }
+}
+
+/*
+ * The grid of level (lx, ly), n = 2^lx and m = 2^ly, moved in place to its positions in
+ * the grid of level (lx + 1, ly): row i to row 2 i, from the last row, so that no row is
+ * overwritten before it is moved.
+ */
+static void
+_ncm_spectral_polar_spread_r (NcmSpectralPolarWork *work, guint n, guint m)
+{
+  const gsize ld = m + 1;
+  guint i;
+
+  for (i = n; i > 0; i--)
+    memcpy (work->in + 2 * i * ld, work->in + i * ld, sizeof (gdouble) * ld);
+}
+
+/*
+ * The grid of level (lx, ly) moved in place to its positions in the grid of level
+ * (lx, ly + 1): point (i, j) from i (m + 1) + j to i (2 m + 1) + 2 j, from the last point,
+ * since every point moves to a position at or after its own.
+ */
+static void
+_ncm_spectral_polar_spread_theta (NcmSpectralPolarWork *work, guint n, guint m)
+{
+  gint i, j;
+
+  for (i = (gint) n; i >= 0; i--)
+  {
+    const gdouble *src = work->in + (gsize) i * (m + 1);
+    gdouble *dst       = work->in + (gsize) i * (2 * m + 1);
+
+    for (j = (gint) m; j >= 0; j--)
+      dst[2 * j] = src[j];
   }
 }
 
@@ -1537,12 +1562,14 @@ _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel pa
 
     if (Dr >= Dt)
     {
+      _ncm_spectral_polar_spread_r (work, 1u << lx, 1u << ly);
       lx++;
       _ncm_spectral_polar_nodes_r (call, &panel, lx, 1, 2);
       _ncm_spectral_polar_rows (call, lx, ly, 1, 2, 0, 1);
     }
     else
     {
+      _ncm_spectral_polar_spread_theta (work, 1u << lx, 1u << ly);
       ly++;
       _ncm_spectral_polar_nodes_theta (call, &panel, ly, 1, 2);
       _ncm_spectral_polar_rows (call, lx, ly, 0, 1, 1, 2);
