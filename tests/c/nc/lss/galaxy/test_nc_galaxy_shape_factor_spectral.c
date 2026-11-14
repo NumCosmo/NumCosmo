@@ -121,6 +121,7 @@ void test_nc_galaxy_shape_factor_spectral_panels (void);
 void test_nc_galaxy_shape_factor_spectral_serialize (void);
 void test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -149,6 +150,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/reltol", &test_nc_galaxy_shape_factor_spectral_reltol);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/panels", &test_nc_galaxy_shape_factor_spectral_panels);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/serialize", &test_nc_galaxy_shape_factor_spectral_serialize);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/eval_nodes", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_eval_nodes,
+              &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/crit_hash", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_crit_hash,
@@ -1240,5 +1245,65 @@ test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral 
   g_assert_cmpuint (nc_galaxy_shape_factor_get_crit_hash (gsf), !=, h0);
 
   nc_galaxy_shape_factor_free (gsf);
+}
+
+/* nc_galaxy_shape_factor_eval_nodes() gives, shear by shear, exactly what the per-point
+ * functions give, by integration and from the interpolant, inside and outside
+ * interp-g-max, in the linear and the logarithmic forms. */
+void
+test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  const guint n                      = 40;
+  NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  gdouble g1[40], g2[40], out[40];
+  guint i, use_interp, want_log;
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble abs_g = 0.45 * i / (n - 1.0);
+    const gdouble angle = 0.2 + 2.0 * M_PI * i / 9.0;
+
+    g1[i] = abs_g * cos (angle);
+    g2[i] = abs_g * sin (angle);
+  }
+
+  for (use_interp = 0; use_interp < 2; use_interp++)
+  {
+    NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+    NcGalaxyShapeFactor *gsf          = NC_GALAXY_SHAPE_FACTOR (gsfs);
+    NcGalaxyShapeFactorData *data     = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+    GPtrArray *data_array             = g_ptr_array_new ();
+
+    nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, use_interp);
+    nc_galaxy_shape_factor_data_set (gsf, data, -0.25, 0.35, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+    g_ptr_array_add (data_array, data);
+    g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+
+    for (want_log = 0; want_log < 2; want_log++)
+    {
+      nc_galaxy_shape_factor_eval_nodes (gsf, test->pop, data, n, g1, g2, -0.25, 0.35, want_log, out);
+
+      for (i = 0; i < n; i++)
+      {
+        const gdouble v = want_log ?
+                          nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g1[i], g2[i], -0.25, 0.35) :
+                          nc_galaxy_shape_factor_eval_marginal (gsf, test->pop, data, g1[i], g2[i], -0.25, 0.35);
+
+        g_assert_true (gsl_finite (v));
+        g_assert_cmpfloat (out[i], ==, v);
+      }
+    }
+
+    g_ptr_array_unref (data_array);
+    nc_galaxy_shape_factor_data_unref (data);
+    nc_galaxy_shape_factor_free (gsf);
+  }
+
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
 }
 

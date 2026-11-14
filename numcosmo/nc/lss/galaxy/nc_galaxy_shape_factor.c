@@ -1611,6 +1611,32 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
   return TRUE;
 }
 
+/**
+ * nc_galaxy_shape_factor_eval_nodes: (skip)
+ * @gsf: a #NcGalaxyShapeFactor
+ * @pop: the #NcGalaxyShapePop intrinsic-ellipticity model
+ * @data: a #NcGalaxyShapeFactorData
+ * @n: number of shears
+ * @g_1: real parts of the @n reduced shears (bias applied)
+ * @g_2: imaginary parts of the @n reduced shears (bias applied)
+ * @epsilon_obs_1: observed ellipticity component 1 (same frame as @g_1, @g_2)
+ * @epsilon_obs_2: observed ellipticity component 2 (same frame as @g_1, @g_2)
+ * @want_log: whether to compute the logarithms
+ * @out: the @n results
+ *
+ * Sets @out[j] to nc_galaxy_shape_factor_eval_ln_marginal() (when @want_log) or to
+ * nc_galaxy_shape_factor_eval_marginal() at (@g_1[j], @g_2[j]), for the galaxy of @data,
+ * in one call. A subclass may do once for the galaxy what the per-point functions do at
+ * each point; the values are the same.
+ */
+void
+nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                   const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                   const gboolean want_log, gdouble *out)
+{
+  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_nodes (gsf, pop, data, n, g_1, g_2, epsilon_obs_1, epsilon_obs_2, want_log, out);
+}
+
 /* Points per call of eval_nodes in the two functions below. */
 #define NC_GALAXY_SHAPE_FACTOR_NODE_CHUNK 64
 
