@@ -718,49 +718,104 @@ ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble
   const gdouble *c                         = &g_array_index (spp->coeffs, gdouble, panel->offset);
   const guint n                            = 1u << panel->l_r;
   const guint m                            = 1u << panel->l_theta;
+  const gsize ld                           = n + 1;
   const gdouble sr                         = (2.0 * r - panel->ra - panel->rb) / (panel->rb - panel->ra);
   const gdouble st                         = (2.0 * theta - panel->ta - panel->tb) / (panel->tb - panel->ta);
   const gdouble sr2                        = 2.0 * sr;
   const gdouble st2                        = 2.0 * st;
   gdouble B1                               = 0.0;
   gdouble B2                               = 0.0;
-  guint k, l;
+  gint l                                   = (gint) m;
+  guint k;
 
-  for (l = m; l > 0; l--)
+  /*
+   * Each step is written as 2 s b_1 + (c_k - b_2): c_k - b_2 does not depend
+   * on the previous step, so the chain of dependent operations is one
+   * multiply-add per step instead of a multiply-add followed by an add. The
+   * radial recurrences of different angular indices are independent, so
+   * they run four at a time, from the highest index down, and their results
+   * enter the angular recurrence in the same order.
+   */
+  for ( ; l >= 3; l -= 4)
   {
-    const gdouble *row = c + (gsize) l * (n + 1);
-    gdouble b1         = 0.0;
-    gdouble b2         = 0.0;
+    const gdouble *c0 = c + (gsize) l * ld;
+    const gdouble *c1 = c0 - ld;
+    const gdouble *c2 = c1 - ld;
+    const gdouble *c3 = c2 - ld;
+    gdouble a1 = 0.0, a2 = 0.0, b1 = 0.0, b2 = 0.0, d1 = 0.0, d2 = 0.0, e1 = 0.0, e2 = 0.0;
+    gdouble R[4];
+    guint q;
 
     for (k = n; k > 0; k--)
     {
-      const gdouble b0 = sr2 * b1 - b2 + row[k];
+      const gdouble a0 = sr2 * a1 + (c0[k] - a2);
+      const gdouble b0 = sr2 * b1 + (c1[k] - b2);
+      const gdouble d0 = sr2 * d1 + (c2[k] - d2);
+      const gdouble e0 = sr2 * e1 + (c3[k] - e2);
+
+      a2 = a1;
+      a1 = a0;
+      b2 = b1;
+      b1 = b0;
+      d2 = d1;
+      d1 = d0;
+      e2 = e1;
+      e1 = e0;
+    }
+
+    R[0] = sr * a1 + (c0[0] - a2);
+    R[1] = sr * b1 + (c1[0] - b2);
+    R[2] = sr * d1 + (c2[0] - d2);
+    R[3] = sr * e1 + (c3[0] - e2);
+
+    for (q = 0; q < 4; q++)
+    {
+      if (l - (gint) q > 0)
+      {
+        const gdouble B0 = st2 * B1 + (R[q] - B2);
+
+        B2 = B1;
+        B1 = B0;
+      }
+      else
+      {
+        return st * B1 + (R[q] - B2);
+      }
+    }
+  }
+
+  for ( ; l >= 0; l--)
+  {
+    const gdouble *row = c + (gsize) l * ld;
+    gdouble b1         = 0.0;
+    gdouble b2         = 0.0;
+    gdouble R;
+
+    for (k = n; k > 0; k--)
+    {
+      const gdouble b0 = sr2 * b1 + (row[k] - b2);
 
       b2 = b1;
       b1 = b0;
     }
 
+    R = sr * b1 + (row[0] - b2);
+
+    if (l > 0)
     {
-      const gdouble B0 = st2 * B1 - B2 + (sr * b1 - b2 + row[0]);
+      const gdouble B0 = st2 * B1 + (R - B2);
 
       B2 = B1;
       B1 = B0;
     }
-  }
-
-  {
-    gdouble b1 = 0.0;
-    gdouble b2 = 0.0;
-
-    for (k = n; k > 0; k--)
+    else
     {
-      const gdouble b0 = sr2 * b1 - b2 + c[k];
-
-      b2 = b1;
-      b1 = b0;
+      return st * B1 + (R - B2);
     }
-
-    return st * B1 - B2 + (sr * b1 - b2 + c[0]);
   }
+
+  g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+  return 0.0; /* LCOV_EXCL_LINE */
 }
 
