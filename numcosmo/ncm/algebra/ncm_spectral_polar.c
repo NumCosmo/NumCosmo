@@ -1254,6 +1254,9 @@ _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
   gsize q;
   guint j, k, l;
 
+  /* The maximum does not depend on the order, so the reduction may be reordered */
+  #pragma omp simd reduction(max:vs)
+
   for (q = 0; q < len; q++)
     vs = MAX (vs, fabs (grid[q]));
 
