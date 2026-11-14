@@ -65,6 +65,7 @@ void test_ncm_model_svparams_len (TestNcmModel *test, gconstpointer pdata);
 void test_ncm_model_reparam_current (void);
 void test_ncm_model_reparam_is_equal (void);
 void test_ncm_model_params_equal (void);
+void test_ncm_model_params_equal_empty (void);
 void test_ncm_model_reparam_remove (void);
 void test_ncm_model_reparam_remove_subprocess (void);
 void test_ncm_model_set_default_desc (void);
@@ -155,6 +156,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/model/reparam/current", &test_ncm_model_reparam_current);
   g_test_add_func ("/ncm/model/reparam/is_equal", &test_ncm_model_reparam_is_equal);
   g_test_add_func ("/ncm/model/params_equal", &test_ncm_model_params_equal);
+  g_test_add_func ("/ncm/model/params_equal/empty", &test_ncm_model_params_equal_empty);
   g_test_add_func ("/ncm/model/reparam/remove", &test_ncm_model_reparam_remove);
   g_test_add_func ("/ncm/model/reparam/remove/subprocess", &test_ncm_model_reparam_remove_subprocess);
   g_test_add_func ("/ncm/model/set_default_desc", &test_ncm_model_set_default_desc);
@@ -1026,6 +1028,50 @@ test_ncm_model_params_equal (void)
   ncm_model_free (a);
   ncm_model_free (b);
   ncm_model_free (c);
+}
+
+/* A model without parameters keeps a one-element placeholder vector. It is zero, so two
+ * such models, a new one and a serialized copy, compare equal. Freed one-element vectors
+ * holding NaN come first, so an uninitialized placeholder would likely reuse their memory. */
+void
+test_ncm_model_params_equal_empty (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmModel *a, *b, *c;
+  guint i;
+
+  for (i = 0; i < 16; i++)
+  {
+    NcmVector *v = ncm_vector_new (1);
+
+    ncm_vector_set (v, 0, GSL_NAN);
+    ncm_vector_free (v);
+  }
+
+  a = NCM_MODEL (nc_galaxy_shape_pop_gauss_local_new ());
+
+  for (i = 0; i < 16; i++)
+  {
+    NcmVector *v = ncm_vector_new (1);
+
+    ncm_vector_set (v, 0, GSL_NAN);
+    ncm_vector_free (v);
+  }
+
+  b = NCM_MODEL (nc_galaxy_shape_pop_gauss_local_new ());
+  c = NCM_MODEL (ncm_serialize_dup_obj (ser, G_OBJECT (a)));
+
+  g_assert_cmpuint (ncm_model_len (a), ==, 0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_model_orig_params_peek_vector (a), 0), ==, 0.0);
+  g_assert_cmpfloat (ncm_vector_get (ncm_model_orig_params_peek_vector (b), 0), ==, 0.0);
+  g_assert_true (ncm_model_params_equal (a, b, 0.0, 0.0));
+  g_assert_true (ncm_model_params_equal (a, c, 0.0, 0.0));
+  g_assert_true (ncm_model_params_equal (c, b, 0.0, 0.0));
+
+  ncm_model_free (a);
+  ncm_model_free (b);
+  ncm_model_free (c);
+  ncm_serialize_free (ser);
 }
 
 /* NULL does nothing on a model without a reparametrization; removing one aborts. */
