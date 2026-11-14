@@ -118,6 +118,7 @@ void test_nc_galaxy_shape_factor_spectral_panels (void);
 void test_nc_galaxy_shape_factor_spectral_serialize (void);
 void test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_data_prepare (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_obs (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -147,6 +148,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_spectral/hooks", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_hooks,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/eval_array", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_eval_array,
               &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/interp", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
@@ -1121,5 +1126,73 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpoint
   /* Passed the check: a change of the population afterwards is found by the evaluation */
   ncm_model_param_set_by_name (NCM_MODEL (test.pop), "beta", 2.0, NULL);
   nc_galaxy_shape_factor_eval_ln_marginal (NC_GALAXY_SHAPE_FACTOR (gsfs_r), test.pop, data, 0.12, -0.07, data->epsilon_obs_1, data->epsilon_obs_2);
+}
+
+/* nc_galaxy_shape_factor_eval_ln_marginal_array() gives, point by point, what
+ * nc_galaxy_shape_factor_eval_ln_marginal() gives, by integration and from the interpolant,
+ * for shears inside and outside interp-g-max and for two observed ellipticities. */
+void
+test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  const guint n                      = 24;
+  NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  NcmVector *g1                      = ncm_vector_new (n);
+  NcmVector *g2                      = ncm_vector_new (n);
+  NcmVector *e1                      = ncm_vector_new (n);
+  NcmVector *e2                      = ncm_vector_new (n);
+  NcmVector *out                     = ncm_vector_new (n);
+  guint j, i;
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble abs_g = 0.4 * i / (n - 1.0);
+    const gdouble angle = 0.3 + 2.0 * M_PI * i / 7.0;
+
+    ncm_vector_set (g1, i, abs_g * cos (angle));
+    ncm_vector_set (g2, i, abs_g * sin (angle));
+    ncm_vector_set (e1, i, (i < n / 2) ? 0.3 : -0.2);
+    ncm_vector_set (e2, i, (i < n / 2) ? 0.2 : 0.4);
+  }
+
+  for (j = 0; j < 2; j++)
+  {
+    NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+    NcGalaxyShapeFactor *gsf          = NC_GALAXY_SHAPE_FACTOR (gsfs);
+    NcGalaxyShapeFactorData *data     = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+    GPtrArray *data_array             = g_ptr_array_new ();
+
+    nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, j == 1);
+    nc_galaxy_shape_factor_data_set (gsf, data, 0.3, 0.2, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+    g_ptr_array_add (data_array, data);
+    g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+
+    nc_galaxy_shape_factor_eval_ln_marginal_array (gsf, test->pop, data, g1, g2, e1, e2, out);
+
+    for (i = 0; i < n; i++)
+    {
+      const gdouble ln_P = nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data,
+                                                                    ncm_vector_get (g1, i), ncm_vector_get (g2, i),
+                                                                    ncm_vector_get (e1, i), ncm_vector_get (e2, i));
+
+      g_assert_true (gsl_finite (ln_P));
+      g_assert_cmpfloat (ncm_vector_get (out, i), ==, ln_P);
+    }
+
+    g_ptr_array_unref (data_array);
+    nc_galaxy_shape_factor_data_unref (data);
+    nc_galaxy_shape_factor_free (gsf);
+  }
+
+  ncm_vector_free (g1);
+  ncm_vector_free (g2);
+  ncm_vector_free (e1);
+  ncm_vector_free (e2);
+  ncm_vector_free (out);
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
 }
 

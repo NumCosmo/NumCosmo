@@ -55,6 +55,7 @@ every point it supports, with the default settings of each class.
 
 ```{python}
 # | code-fold: true
+import platform
 import time
 
 import numpy as np
@@ -131,14 +132,30 @@ def new_pop(ip, p1, p2):
     return pop
 
 
-def evaluate(cls):
-    """ln P of cls at every point (NaN where unsupported) and the time per point.
+TIME_REPEAT = 3  # timed calls per batch; the fastest is kept
 
-    One data object per convention, population and noise; the first evaluation of each
-    includes what the class builds for them (the MomentsTilt tables).
+
+def eval_array(gsf, pop, data, g1, g2, e1, e2):
+    """ln P at every point, in one call evaluated in C, and the time per point.
+
+    nc_galaxy_shape_factor_eval_ln_marginal_array() loops over the points in C, so the
+    time per point excludes the cost of calling through the Python bindings. The call is
+    repeated TIME_REPEAT times and the fastest kept.
     """
+    vec = [Ncm.Vector.new_array(np.ascontiguousarray(v, dtype=float).tolist()) for v in (g1, g2, e1, e2)]
+    out = Ncm.Vector.new(len(g1))
+    best = np.inf
+    for _ in range(TIME_REPEAT):
+        t0 = time.perf_counter()
+        gsf.eval_ln_marginal_array(pop, data, *vec, out)
+        best = min(best, time.perf_counter() - t0)
+    return np.array(out.dup_array()), best / len(g1)
+
+
+def evaluate(cls):
+    """ln P of cls at every point (NaN where unsupported), one data object per convention,
+    population and noise."""
     lnp = np.full(len(points), np.nan)
-    sec = np.full(len(points), np.nan)
     keys = np.unique(points[:, 0:5], axis=0)
     for conv, ip, p1, p2, sn in keys:
         if ip == 1 and not CLASSES[cls][1]:
@@ -158,12 +175,9 @@ def evaluate(cls):
             data, 0.0, 0.0, sn, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
         )
         gsf.prepare_data_array(mset, [data], True, True)
-        for i in idx:
-            g1, g2, e1, e2 = points[i, C["g1"] : C["e2"] + 1]
-            t0 = time.perf_counter()
-            lnp[i] = gsf.eval_ln_marginal(pop, data, g1, g2, e1, e2)
-            sec[i] = time.perf_counter() - t0
-    return lnp, sec
+        g1, g2, e1, e2 = (points[idx, C[k]] for k in ("g1", "g2", "e1", "e2"))
+        lnp[idx], _ = eval_array(gsf, pop, data, g1, g2, e1, e2)
+    return lnp
 
 
 results = {cls: evaluate(cls) for cls in CLASSES}
@@ -206,7 +220,7 @@ VMIN, VMAX = -14.0, 2.0
 
 def cell_grid(cls, conv, ip):
     """log10 of the median |Delta ln P| and the failing fraction per cell."""
-    d = np.abs(results[cls][0] - points[:, C["lnP"]])
+    d = np.abs(results[cls] - points[:, C["lnP"]])
     d[~np.isfinite(d)] = np.inf
     evaluated = CLASSES[cls][1] or ip == 0
     median = np.full((len(SN), len(ES)), np.nan)
@@ -263,7 +277,7 @@ def plot_class(cls):
 
 def failure_summary(cls):
     """Points, failing points and median |Delta ln P| per family and shear range."""
-    d = np.abs(results[cls][0] - points[:, C["lnP"]])
+    d = np.abs(results[cls] - points[:, C["lnP"]])
     d[~np.isfinite(d)] = np.inf
     lines = [
         "| convention | population | shears | points | failing | median $|\\Delta \\ln P|$ |",
@@ -329,60 +343,40 @@ failure_summary("Spectral")
 ## Speed
 
 The approximate classes evaluate $\ln P$ in closed form or from tables. Spectral integrates,
-which costs about two orders of magnitude more per evaluation. When the population is fixed,
+which costs orders of magnitude more per evaluation. When the population is fixed,
 Spectral can instead build, once per galaxy, an interpolant of $\ln P$ in $g$ on
 $|g| \le 0.3$ (`NcGalaxyShapeFactorSpectral:use-interp`), and every later evaluation reads
 the interpolant. When the population varies, as in a fit of its parameters, the interpolant
 of every galaxy changes at every step, so each evaluation integrates.
 
-The first table gives the median time per evaluation of each class over the certified points
-above. The second gives, for 30 points of the fitted Beta population (TRACE,
-$\alpha = 1.92$, $\beta = 1.98$) with $|\epsilon_{\rm obs}| < 1$ and
-$\sigma_{\rm noise} \in \{0.03, 0.1, 0.3\}$, the time to build the interpolant, the time per
-evaluation from it and by integration, at 200 and 20 random shears with $|g| \le 0.3$, and the
-number of evaluations per galaxy above which building the interpolant costs less than
-integrating. All times are measured on the machine that renders this page, on one thread,
-through the Python bindings: a call through them costs of the order of half a microsecond,
-which is most of the time of the approximate classes and of the interpolant (an evaluation of
-the interpolant from C takes of the order of 0.1 µs).
-
-```{python}
-# | code-fold: true
-lines = ["| class | median time per evaluation |", "|---|---|"]
-for cls in CLASSES:
-    sec = results[cls][1]
-    lines.append(f"| {cls} | {np.nanmedian(sec) * 1.0e6:.1f} µs |")
-display(Markdown("\n".join(lines)))
-```
+The times below are those an MCMC fitting the mass and the center of a cluster sees, with the
+population fixed: each galaxy is prepared once and every step of the chain evaluates it at a
+new shear. They are medians over 30 galaxies of the truncated Gaussian population with
+$\sigma = 0.3$ (TRACE, $|\epsilon_{\rm obs}| < 1$,
+$\sigma_{\rm noise} \in \{0.03, 0.1, 0.3\}$), each evaluated at 2,000 shears around a shear
+$g_0$ with $|g_0|$ uniform in $[0.01, 0.25]$, its modulus scattered by 0.1 dex (the mass) and
+its direction by 0.05 rad (the center).
 
 ```{python}
 # | code-fold: true
 SPEED_SN = (0.03, 0.1, 0.3)
+N_GAL = 30
+N_STEP = 2000
+N_DIRECT = 20
 rng = np.random.default_rng(20261113)
-speed_sel = (
-    (points[:, C["conv"]] == 0)
-    & (points[:, C["pop"]] == 1)
-    & (points[:, C["p1"]] == 1.92)
-    & np.isin(points[:, C["std_noise"]], SPEED_SN)
-    & (abs_e < 1.0)
-)
-speed_gal = np.unique(points[speed_sel][:, [C["std_noise"], C["e1"], C["e2"]]], axis=0)
-speed_gal = speed_gal[rng.choice(len(speed_gal), size=30, replace=False)]
 
 
-def random_shears(n):
-    """n shears uniform in the disc |g| <= 0.3."""
-    r = 0.3 * np.sqrt(rng.uniform(size=n))
-    t = rng.uniform(0.0, 2.0 * np.pi, size=n)
-    return r * np.cos(t), r * np.sin(t)
+def chain_shears(n):
+    """n shears of one galaxy along a chain of the mass and the center."""
+    abs_g0 = rng.uniform(0.01, 0.25)
+    phi0 = rng.uniform(0.0, 2.0 * np.pi)
+    abs_g = np.minimum(abs_g0 * 10.0 ** rng.normal(0.0, 0.1, size=n), 0.29)
+    phi = phi0 + rng.normal(0.0, 0.05, size=n)
+    return abs_g * np.cos(phi), abs_g * np.sin(phi)
 
 
-def time_galaxy(sn, e1, e2):
-    """Build time, time per interpolant evaluation and per integral, in seconds."""
-    pop = new_pop(1, 1.92, 1.98)
-    mset = build_mset(pop)
-    gsf = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE)
-    gsf.set_use_interp(True)
+def galaxy_data(gsf, mset, sn, e1, e2):
+    """The data object of one galaxy for gsf, prepared."""
     pos_data = Nc.GalaxyPositionFactorData.new(
         Nc.GalaxyPositionFactorFlat.new(-1.0, 1.0, -1.0, 1.0), mset
     )
@@ -392,28 +386,63 @@ def time_galaxy(sn, e1, e2):
     data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
     gsf.data_set(data, e1, e2, sn, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
     gsf.prepare_data_array(mset, [data], True, True)
-
-    t0 = time.perf_counter()
-    gsf.data_prepare(mset, data, 3.0)
-    t_build = time.perf_counter() - t0
-
-    g1, g2 = random_shears(200)
-    t0 = time.perf_counter()
-    for a, b in zip(g1, g2):
-        gsf.eval_ln_marginal(pop, data, a, b, e1, e2)
-    t_interp = (time.perf_counter() - t0) / len(g1)
-
-    gsf.set_use_interp(False)
-    g1, g2 = random_shears(20)
-    t0 = time.perf_counter()
-    for a, b in zip(g1, g2):
-        gsf.eval_ln_marginal(pop, data, a, b, e1, e2)
-    t_direct = (time.perf_counter() - t0) / len(g1)
-    return t_build, t_interp, t_direct
+    return data
 
 
-speed = np.array([time_galaxy(*row) for row in speed_gal])
-break_even = speed[:, 0] / (speed[:, 2] - speed[:, 1])
+sel = (
+    (points[:, C["conv"]] == 0)
+    & (points[:, C["pop"]] == 0)
+    & (points[:, C["p1"]] == 0.3)
+    & np.isin(points[:, C["std_noise"]], SPEED_SN)
+    & (abs_e < 1.0)
+)
+speed_gal = np.unique(points[sel][:, [C["std_noise"], C["e1"], C["e2"]]], axis=0)
+speed_gal = speed_gal[rng.choice(len(speed_gal), size=N_GAL, replace=False)]
+
+SPEED_CLASSES = {
+    "VarAdd": Nc.GalaxyShapeFactorVarAdd,
+    "MomentsGauss": Nc.GalaxyShapeFactorMomentsGauss,
+    "MomentsTilt": Nc.GalaxyShapeFactorMomentsTilt,
+    "Spectral (interpolant)": Nc.GalaxyShapeFactorSpectral,
+}
+speed = {cname: [] for cname in SPEED_CLASSES}
+t_build, t_direct = [], []
+for sn, e1, e2 in speed_gal:
+    pop = new_pop(0, 0.3, 0.0)
+    mset = build_mset(pop)
+    g1, g2 = chain_shears(N_STEP)
+    e1v, e2v = np.full_like(g1, e1), np.full_like(g1, e2)
+    for cname, cls in SPEED_CLASSES.items():
+        gsf = cls.new(Nc.GalaxyWLObsEllipConv.TRACE)
+        spectral = cls is Nc.GalaxyShapeFactorSpectral
+        if spectral:
+            gsf.set_use_interp(True)
+        data = galaxy_data(gsf, mset, sn, e1, e2)
+        t0 = time.perf_counter()
+        gsf.data_prepare(mset, data, 3.0)
+        gsf.eval_ln_marginal(pop, data, g1[0], g2[0], e1, e2)
+        t_prep = time.perf_counter() - t0
+        speed[cname].append(eval_array(gsf, pop, data, g1, g2, e1v, e2v)[1])
+        if spectral:
+            gsf.set_use_interp(False)
+            t_build.append(t_prep)
+            n = N_DIRECT
+            t_direct.append(eval_array(gsf, pop, data, g1[:n], g2[:n], e1v[:n], e2v[:n])[1])
+
+lines = ["| class | median time per evaluation |", "|---|---|"]
+for cname, sec in speed.items():
+    lines.append(f"| {cname} | {np.median(sec) * 1.0e6:.3f} µs |")
+display(Markdown("\n".join(lines)))
+```
+
+The interpolant is built once per galaxy. The second table gives, for the same galaxies, the
+time of that build, of an evaluation from the interpolant and by integration, and the number
+of evaluations per galaxy above which building the interpolant costs less than integrating.
+
+```{python}
+# | code-fold: true
+t_interp = np.array(speed["Spectral (interpolant)"])
+break_even = np.array(t_build) / (np.array(t_direct) - t_interp)
 
 
 def quantiles(v, scale, fmt):
@@ -426,16 +455,31 @@ display(
     Markdown(
         "\n".join(
             [
-                "| quantity (30 points) | median / 90% / largest |",
+                "| quantity | median / 90% / largest |",
                 "|---|---|",
-                f"| build of the interpolant | {quantiles(speed[:, 0], 1.0, '{:.2f} s')} |",
-                f"| evaluation from the interpolant | {quantiles(speed[:, 1], 1.0e6, '{:.1f} µs')} |",
-                f"| evaluation by integration | {quantiles(speed[:, 2], 1.0e6, '{:.0f} µs')} |",
+                f"| build of the interpolant | {quantiles(t_build, 1.0, '{:.2f} s')} |",
+                f"| evaluation from the interpolant | {quantiles(t_interp, 1.0e6, '{:.3f} µs')} |",
+                f"| evaluation by integration | {quantiles(t_direct, 1.0e6, '{:.0f} µs')} |",
                 f"| evaluations per galaxy where the build pays | {quantiles(break_even, 1.0, '{:.0f}')} |",
             ]
         )
     )
 )
+
+
+def cpu_model():
+    """The CPU of the machine that renders this page."""
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or platform.machine()
+
+
+display(Markdown(f"Both tables were measured on one thread of an {cpu_model()}."))
 ```
 
 An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
