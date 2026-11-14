@@ -1433,8 +1433,11 @@ test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral 
       _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.08, FALSE, 1.0e-8);
       _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.3, FALSE, 1.0e-8);
 
-      /* Too short for a table: 17 nodes cannot hold two grids of 9 points */
-      _test_eval_line_case (gsf, pops[ip], data, 17, 0.3, TRUE, 0.0);
+      /* Too short for a table: 9 nodes cannot hold two grids of 5 points */
+      _test_eval_line_case (gsf, pops[ip], data, 9, 0.3, TRUE, 0.0);
+
+      /* The shortest line with a table: 10 nodes, grids of 3 and 5 points */
+      _test_eval_line_case (gsf, pops[ip], data, 10, 0.08, FALSE, 1.0e-8);
 
       /* A line that leaves |g| <= 0.9 */
       _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.92, TRUE, 0.0);
