@@ -83,6 +83,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <complex.h>
+#include <string.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcGalaxyShapeFactorPrivate
@@ -440,9 +441,20 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
                (ncm_model_state_get_pkey (NCM_MODEL (mass_summary)) * 41U) ^
                (ncm_model_state_get_pkey (NCM_MODEL (surface_mass_density)) * 37U) ^
                (ncm_model_state_get_pkey (NCM_MODEL (halo_position)) * 43U);
-  crit_hash = ncm_model_state_get_pkey (NCM_MODEL (cosmo)) ^
-              (ncm_model_state_get_pkey (NCM_MODEL (surface_mass_density)) * 37U) ^
-              (ncm_model_state_get_pkey (NCM_MODEL (halo_position)) * 43U);
+
+  /* The critical surface density depends on the lens redshift, not on the
+   * rest of halo_position: its pkey also moves with ra and dec, and hashing
+   * it would rebuild every galaxy's critical density at every step of a fit
+   * of the halo center. The redshift enters by value. */
+  {
+    const gdouble z_cl = nc_halo_position_get_redshift (halo_position);
+    guint64 z_cl_bits;
+
+    memcpy (&z_cl_bits, &z_cl, sizeof (z_cl_bits));
+    crit_hash = ncm_model_state_get_pkey (NCM_MODEL (cosmo)) ^
+                (ncm_model_state_get_pkey (NCM_MODEL (surface_mass_density)) * 37U) ^
+                (z_cl_bits * 43U);
+  }
   pop_hash = ncm_model_state_get_pkey (NCM_MODEL (pop));
 
   /* Refs kept current unconditionally (cheap): avoids a stale reference if
@@ -605,9 +617,10 @@ nc_galaxy_shape_factor_get_optzs_hash (NcGalaxyShapeFactor *gsf)
  * nc_galaxy_shape_factor_get_crit_hash:
  * @gsf: a #NcGalaxyShapeFactor
  *
- * Hash of the models the critical surface mass density depends on: the
- * cosmology, the surface-mass-density model and the lens redshift
- * (halo_position).
+ * Hash of what the critical surface mass density depends on: the
+ * cosmology, the surface-mass-density model and the value of the lens
+ * redshift of halo_position. A change of the halo center alone leaves it
+ * unchanged.
  *
  * Returns: the critical-surface-density hash.
  */
