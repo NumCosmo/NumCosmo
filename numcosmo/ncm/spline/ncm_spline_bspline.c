@@ -70,9 +70,10 @@ struct _NcmSplineBSpline
   /*< private >*/
   NcmSpline parent_instance;
   gsl_bspline_workspace *w; /* NULL after ncm_spline_bspline_release_workspace() */
-  GArray *knots;            /* copy of w->knots: with c, all that _eval reads */
-  gsl_vector *c;            /* control points */
-  gsl_matrix *XB;           /* banded collocation matrix, reused across prepares */
+  gdouble *knots;           /* copy of w->knots, knots_len entries: with c, all that _eval reads */
+  gsize knots_len;
+  gsl_vector *c;  /* control points */
+  gsl_matrix *XB; /* banded collocation matrix, reused across prepares */
   gsl_vector_uint *piv;
   gsl_integration_glfixed_table *gl; /* exact for the edge polynomials, see _integ */
   guint order;
@@ -99,6 +100,7 @@ ncm_spline_bspline_init (NcmSplineBSpline *sbs)
 {
   sbs->w            = NULL;
   sbs->knots        = NULL;
+  sbs->knots_len    = 0;
   sbs->c            = NULL;
   sbs->XB           = NULL;
   sbs->piv          = NULL;
@@ -117,7 +119,8 @@ static void
 _ncm_spline_bspline_free_workspace (NcmSplineBSpline *sbs)
 {
   g_clear_pointer (&sbs->w, gsl_bspline_free);
-  g_clear_pointer (&sbs->knots, g_array_unref);
+  g_clear_pointer (&sbs->knots, g_free);
+  sbs->knots_len = 0;
   g_clear_pointer (&sbs->c, gsl_vector_free);
   g_clear_pointer (&sbs->XB, gsl_matrix_free);
   g_clear_pointer (&sbs->piv, gsl_vector_uint_free);
@@ -295,11 +298,11 @@ _ncm_spline_bspline_reset (NcmSpline *s)
   _ncm_spline_bspline_free_workspace (sbs);
 
   /* One control point per sample: the fit is an interpolation, not a smoothing. */
-  sbs->w     = gsl_bspline_alloc_ncontrol (sbs->order, s_len);
-  sbs->knots = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), s_len + sbs->order);
-  sbs->c     = gsl_vector_alloc (s_len);
+  sbs->w         = gsl_bspline_alloc_ncontrol (sbs->order, s_len);
+  sbs->knots     = g_new (gdouble, s_len + sbs->order);
+  sbs->knots_len = s_len + sbs->order;
+  sbs->c         = gsl_vector_alloc (s_len);
 
-  g_array_set_size (sbs->knots, s_len + sbs->order);
   sbs->XB  = gsl_matrix_alloc (s_len, 3 * (sbs->order - 1) + 1);
   sbs->piv = gsl_vector_uint_alloc (s_len);
   sbs->gl  = gsl_integration_glfixed_table_alloc ((sbs->order + 1) / 2);
@@ -460,7 +463,7 @@ _ncm_spline_bspline_prepare (NcmSpline *s)
     g_error ("_ncm_spline_bspline_prepare: order %u interpolation failed on %u samples.",
              sbs->order, (guint) s_len);
 
-  memcpy (sbs->knots->data, sbs->w->knots->data, sizeof (gdouble) * sbs->knots->len);
+  memcpy (sbs->knots, sbs->w->knots->data, sizeof (gdouble) * sbs->knots_len);
 }
 
 /* Recreates the GSL workspace freed by ncm_spline_bspline_release_workspace() from the
@@ -472,7 +475,7 @@ _ncm_spline_bspline_ensure_workspace (NcmSplineBSpline *sbs)
     return;
 
   sbs->w = gsl_bspline_alloc_ncontrol (sbs->order, sbs->alloc_len);
-  memcpy (sbs->w->knots->data, sbs->knots->data, sizeof (gdouble) * sbs->knots->len);
+  memcpy (sbs->w->knots->data, sbs->knots, sizeof (gdouble) * sbs->knots_len);
 }
 
 static gsize
@@ -494,7 +497,7 @@ _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   const gsize k         = sbs->order;
   const gsize ncontrol  = sbs->alloc_len;
-  const gdouble *t      = (const gdouble *) sbs->knots->data;
+  const gdouble *t      = sbs->knots;
   const gdouble *c      = sbs->c->data;
   gdouble deltal[NCM_SPLINE_BSPLINE_MAX_ORDER];
   gdouble deltar[NCM_SPLINE_BSPLINE_MAX_ORDER];
@@ -628,7 +631,7 @@ static gdouble
 _ncm_spline_bspline_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
-  const gdouble *t      = (const gdouble *) sbs->knots->data;
+  const gdouble *t      = sbs->knots;
   const gdouble t_lo    = t[sbs->order - 1];
   const gdouble t_hi    = t[sbs->alloc_len];
   const gdouble lo      = GSL_MAX (x0, t_lo);
@@ -798,23 +801,35 @@ ncm_spline_bspline_get_breakpoints (NcmSplineBSpline *sbs)
 {
   const gsize k = sbs->order;
   const gdouble *t;
-  GArray *brk;
+  gdouble last = 0.0;
   NcmVector *v;
-  gsize i;
+  gsize i, n = 0;
 
   g_assert_nonnull (sbs->knots);
 
-  t   = (const gdouble *) sbs->knots->data;
-  brk = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), sbs->alloc_len - k + 2);
+  t = sbs->knots;
+
+  /* Counted first, so that the vector has exactly the breakpoints */
+  for (i = k - 1; i <= sbs->alloc_len; i++)
+  {
+    if ((n == 0) || (t[i] > last))
+    {
+      last = t[i];
+      n++;
+    }
+  }
+
+  v = ncm_vector_new (n);
+  n = 0;
 
   for (i = k - 1; i <= sbs->alloc_len; i++)
   {
-    if ((brk->len == 0) || (t[i] > g_array_index (brk, gdouble, brk->len - 1)))
-      g_array_append_val (brk, t[i]);
+    if ((n == 0) || (t[i] > ncm_vector_fast_get (v, n - 1)))
+    {
+      ncm_vector_fast_set (v, n, t[i]);
+      n++;
+    }
   }
-
-  v = ncm_vector_new_array (brk);
-  g_array_unref (brk);
 
   return v;
 }

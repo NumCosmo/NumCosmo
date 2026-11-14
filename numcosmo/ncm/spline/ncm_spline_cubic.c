@@ -127,8 +127,9 @@ _ncm_spline_cubic_alloc (NcmSplineCubic *sc, gsize n)
   self->c = ncm_vector_new (n);
   self->d = ncm_vector_new (n);
 
-  self->diag    = ncm_vector_new (n);
-  self->offdiag = ncm_vector_new (n);
+  /* Work space of a tridiagonal solve, made by the peek functions on demand */
+  self->diag    = NULL;
+  self->offdiag = NULL;
 
   self->init = TRUE;
   self->len  = n;
@@ -441,6 +442,9 @@ ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
 
+  if ((self->diag == NULL) && self->init)
+    self->diag = ncm_vector_new (self->len);
+
   return self->diag;
 }
 
@@ -456,6 +460,9 @@ NcmVector *
 ncm_spline_cubic_peek_offdiag_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
+
+  if ((self->offdiag == NULL) && self->init)
+    self->offdiag = ncm_vector_new (self->len);
 
   return self->offdiag;
 }

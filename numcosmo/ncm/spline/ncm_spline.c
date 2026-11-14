@@ -64,7 +64,8 @@ typedef struct _NcmSplinePrivate
   gsl_interp_accel *acc;
   gboolean init;
   gboolean empty;
-  GArray *bucket;
+  gsize *bucket; /* bucket_len entries, allocated to that length */
+  guint bucket_len;
   gdouble bucket_dx;
   gdouble one_over_dx;
   gdouble x_min;
@@ -98,7 +99,8 @@ ncm_spline_init (NcmSpline *s)
   self->empty       = TRUE;
   self->acc         = NULL;
   self->init        = FALSE;
-  self->bucket      = g_array_new (FALSE, FALSE, sizeof (gsize));
+  self->bucket      = NULL;
+  self->bucket_len  = 0;
   self->bucket_dx   = 0.0;
   self->one_over_dx = 0.0;
   self->x_min       = 0.0;
@@ -223,7 +225,8 @@ _ncm_spline_finalize (GObject *object)
   NcmSplinePrivate * const self = ncm_spline_get_instance_private (s);
 
   g_clear_pointer (&self->acc, gsl_interp_accel_free);
-  g_clear_pointer (&self->bucket, g_array_unref);
+  g_clear_pointer (&self->bucket, g_free);
+  self->bucket_len = 0;
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
@@ -808,7 +811,12 @@ ncm_spline_post_prepare (NcmSpline *s)
   guint i                       = 0;
   guint j                       = 0;
 
-  g_array_set_size (self->bucket, n_buckets + 1);
+  if (self->bucket_len != n_buckets + 1)
+  {
+    self->bucket     = g_renew (gsize, self->bucket, n_buckets + 1);
+    self->bucket_len = n_buckets + 1;
+  }
+
   self->bucket_dx   = dx;
   self->one_over_dx = 1.0 / dx;
   self->x_min       = x_min;
@@ -825,10 +833,10 @@ ncm_spline_post_prepare (NcmSpline *s)
     while ((j < self->len - 1) && (ncm_vector_get (xv, j + 1) < x_bucket))
       j++;
 
-    g_array_index (self->bucket, gsize, i) = j;
+    self->bucket[i] = j;
   }
 
-  g_array_index (self->bucket, gsize, n_buckets) = self->len - 2;
+  self->bucket[n_buckets] = self->len - 2;
 
   if (ncm_vector_stride (self->xv) == 1)
   {
@@ -1110,14 +1118,14 @@ _ncm_spline_get_index_no_stride (const NcmSpline *s, const gdouble x)
     return self->last_poly;
 
   {
-    const guint n_buckets = self->bucket->len - 1;
+    const guint n_buckets = self->bucket_len - 1;
     guint i_bucket        = (guint) ((x - self->x_min) * self->one_over_dx);
 
     if (i_bucket >= n_buckets)
       i_bucket = n_buckets - 1;
 
-    left  = g_array_index (self->bucket, gsize, i_bucket);
-    right = g_array_index (self->bucket, gsize, i_bucket + 1);
+    left  = self->bucket[i_bucket];
+    right = self->bucket[i_bucket + 1];
   }
 
   if (left == right)
@@ -1149,14 +1157,14 @@ _ncm_spline_get_index_stride (const NcmSpline *s, const gdouble x)
 
   if (TRUE)
   {
-    const guint n_buckets = self->bucket->len - 1;
+    const guint n_buckets = self->bucket_len - 1;
     guint i_bucket        = (guint) ((x - self->x_min) * self->one_over_dx);
 
     if (i_bucket >= n_buckets)
       i_bucket = n_buckets - 1;
 
-    left  = g_array_index (self->bucket, gsize, i_bucket);
-    right = g_array_index (self->bucket, gsize, i_bucket + 1);
+    left  = self->bucket[i_bucket];
+    right = self->bucket[i_bucket + 1];
   }
 
   if (left == right)

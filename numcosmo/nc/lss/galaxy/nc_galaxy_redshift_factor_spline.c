@@ -89,7 +89,7 @@ typedef struct _SplineSqrt
   guint64 hash;
   NcmSpline *s;
   NcmVector *brk;
-  GArray *cum;
+  NcmVector *cum;
 } SplineSqrt;
 
 /* Per-galaxy fragment: the table @pz as given and the derived data @sq of that table.
@@ -100,7 +100,7 @@ typedef struct _SplineLData
   SplineSqrt *sq;
   NcmSpline *s;
   NcmVector *brk;
-  GArray *cum;
+  NcmVector *cum;
 } SplineLData;
 
 static void _spline_ldata_set_pz (SplineLData *sldata, NcmSpline *pz);
@@ -223,7 +223,7 @@ _spline_sqrt_unref (gpointer p)
   {
     ncm_spline_clear (&sq->s);
     ncm_vector_clear (&sq->brk);
-    g_clear_pointer (&sq->cum, g_array_unref);
+    ncm_vector_clear (&sq->cum);
     g_free (sq);
   }
 }
@@ -286,14 +286,14 @@ _spline_sqrt_new (NcmVector *xv, NcmVector *yv, const guint64 hash)
   sq->s    = NCM_SPLINE (ncm_spline_bspline_new_full (_NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER, xv, sv, TRUE));
   sq->brk  = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (sq->s));
   ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (sq->s));
-  sq->cum = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), ncm_vector_len (sq->brk));
+  sq->cum = ncm_vector_new (ncm_vector_len (sq->brk));
 
-  g_array_append_val (sq->cum, total);
+  ncm_vector_fast_set (sq->cum, 0, total);
 
   for (j = 0; j + 1 < ncm_vector_len (sq->brk); j++)
   {
     total += _spline_s2_integ (sq->s, ncm_vector_get (sq->brk, j), ncm_vector_get (sq->brk, j + 1));
-    g_array_append_val (sq->cum, total);
+    ncm_vector_fast_set (sq->cum, j + 1, total);
   }
 
   ncm_vector_free (sv);
@@ -412,7 +412,7 @@ _nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *ms
 {
   SplineLData *sldata  = (SplineLData *) data->ldata;
   const guint n_brk    = ncm_vector_len (sldata->brk);
-  const gdouble total  = g_array_index (sldata->cum, gdouble, n_brk - 1);
+  const gdouble total  = ncm_vector_fast_get (sldata->cum, n_brk - 1);
   const gdouble target = ncm_rng_uniform_gen (rng, 0.0, total);
   guint lo             = 0;
   guint hi             = n_brk - 1;
@@ -425,7 +425,7 @@ _nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *ms
   {
     const guint mid = (lo + hi) / 2;
 
-    if (target < g_array_index (sldata->cum, gdouble, mid))
+    if (target < ncm_vector_fast_get (sldata->cum, mid))
       hi = mid;
     else
       lo = mid;
@@ -433,7 +433,7 @@ _nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *ms
 
   a   = ncm_vector_get (sldata->brk, lo);
   b   = ncm_vector_get (sldata->brk, lo + 1);
-  rem = target - g_array_index (sldata->cum, gdouble, lo);
+  rem = target - ncm_vector_fast_get (sldata->cum, lo);
 
   {
     const gdouble x0 = a;
@@ -539,7 +539,7 @@ _nc_galaxy_redshift_factor_spline_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *m
 
   g_assert_nonnull (sldata->cum);
 
-  return g_array_index (sldata->cum, gdouble, sldata->cum->len - 1);
+  return ncm_vector_fast_get (sldata->cum, ncm_vector_len (sldata->cum) - 1);
 }
 
 static gdouble
