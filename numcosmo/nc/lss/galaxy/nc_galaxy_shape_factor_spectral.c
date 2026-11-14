@@ -110,6 +110,7 @@
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_vmath_private.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
@@ -1415,14 +1416,22 @@ _nc_galaxy_shape_factor_spectral_kernel_trace (gpointer user_data, gdouble r, gu
 {
   const NcGalaxyShapeFactorSpectralKernel *k = user_data;
   const gdouble pref                         = _nc_galaxy_shape_factor_spectral_p_reduced_trace (k, r) * k->norm;
+  const gdouble t                            = k->t;
+  const gdouble e_1                          = k->e_1;
+  const gdouble e_2                          = k->e_2;
+  const gdouble shift_c2                     = k->shift_c2;
+  const gdouble c2                           = k->c2;
   guint j;
+
+  /* The fields of k in locals: fval might alias them, which keeps the loop scalar */
+  #pragma omp simd
 
   for (j = 0; j < n; j++)
   {
     gdouble f_x, f_y;
 
-    _nc_galaxy_shape_factor_spectral_map_trace (k->t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
-    fval[j] = pref * exp (k->shift_c2 - (gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y)) * k->c2);
+    _nc_galaxy_shape_factor_spectral_map_trace (t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
+    fval[j] = pref * ncm_vmath_exp (shift_c2 - (gsl_pow_2 (e_1 - f_x) + gsl_pow_2 (e_2 - f_y)) * c2);
   }
 }
 
@@ -1436,14 +1445,22 @@ _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r
 {
   const NcGalaxyShapeFactorSpectralKernel *k = user_data;
   const gdouble pref                         = _nc_galaxy_shape_factor_spectral_p_reduced_trace_det (k, r) * k->norm;
+  const gdouble t                            = k->t;
+  const gdouble e_1                          = k->e_1;
+  const gdouble e_2                          = k->e_2;
+  const gdouble shift_c2                     = k->shift_c2;
+  const gdouble c2                           = k->c2;
   guint j;
+
+  /* The fields of k in locals: fval might alias them, which keeps the loop scalar */
+  #pragma omp simd
 
   for (j = 0; j < n; j++)
   {
     gdouble f_x, f_y;
 
-    nc_wl_ellipticity_apply_shear_trace_det_real (k->t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
-    fval[j] = pref * exp (k->shift_c2 - (gsl_pow_2 (k->e_1 - f_x) + gsl_pow_2 (k->e_2 - f_y)) * k->c2);
+    nc_wl_ellipticity_apply_shear_trace_det_real (t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
+    fval[j] = pref * ncm_vmath_exp (shift_c2 - (gsl_pow_2 (e_1 - f_x) + gsl_pow_2 (e_2 - f_y)) * c2);
   }
 }
 
