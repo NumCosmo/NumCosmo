@@ -35,6 +35,49 @@
 
 #define TEST_VMATH_N (200000)
 
+/*
+ * Built once more per x86-64 level (tests/c/meson.build), with NCM_VMATH_TEST_LEVEL 1, 3
+ * or 4: the build must have generated the code of that level, and the tests are skipped
+ * on a CPU without its instructions.
+ */
+#if defined (NCM_VMATH_TEST_LEVEL)
+#  if (NCM_VMATH_TEST_LEVEL == 1) && defined (__AVX2__)
+#    error "the x86-64 variant of test_ncm_vmath was built with AVX2"
+#  elif (NCM_VMATH_TEST_LEVEL == 3) && (!defined (__AVX2__) || defined (__AVX512F__))
+#    error "the x86-64-v3 variant of test_ncm_vmath was not built for AVX2 alone"
+#  elif (NCM_VMATH_TEST_LEVEL == 4) && !defined (__AVX512F__)
+#    error "the x86-64-v4 variant of test_ncm_vmath was not built with AVX-512"
+#  endif
+#  if (NCM_VMATH_TEST_LEVEL > 1) && !defined (NCM_VMATH_HAVE_FAST_EXP)
+#    error "NCM_VMATH_HAVE_FAST_EXP is not defined with AVX2"
+#  endif
+#endif
+
+static const gchar *
+_test_ncm_vmath_missing_isa (void)
+{
+#if defined (NCM_VMATH_TEST_LEVEL) && (NCM_VMATH_TEST_LEVEL == 3)
+
+  if (!__builtin_cpu_supports ("avx2") || !__builtin_cpu_supports ("fma"))
+    return "the CPU does not have AVX2 and FMA";
+
+#elif defined (NCM_VMATH_TEST_LEVEL) && (NCM_VMATH_TEST_LEVEL == 4)
+
+  if (!__builtin_cpu_supports ("avx512f") || !__builtin_cpu_supports ("avx512vl") ||
+      !__builtin_cpu_supports ("avx512bw") || !__builtin_cpu_supports ("avx512dq"))
+    return "the CPU does not have AVX-512 (F, VL, BW and DQ)";
+
+#endif
+
+  return NULL;
+}
+
+static void
+_test_ncm_vmath_skipped (gconstpointer missing)
+{
+  g_test_skip (missing);
+}
+
 static void test_ncm_vmath_select (void);
 static void test_ncm_vmath_atan2_random (void);
 static void test_ncm_vmath_atan2_special (void);
@@ -48,11 +91,20 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add_func ("/ncm/vmath/select", &test_ncm_vmath_select);
-  g_test_add_func ("/ncm/vmath/atan2/random", &test_ncm_vmath_atan2_random);
-  g_test_add_func ("/ncm/vmath/atan2/special", &test_ncm_vmath_atan2_special);
-  g_test_add_func ("/ncm/vmath/exp/random", &test_ncm_vmath_exp_random);
-  g_test_add_func ("/ncm/vmath/exp/special", &test_ncm_vmath_exp_special);
+  {
+    const gchar *paths[]     = {"/ncm/vmath/select", "/ncm/vmath/atan2/random", "/ncm/vmath/atan2/special", "/ncm/vmath/exp/random", "/ncm/vmath/exp/special"};
+    GTestFunc funcs[]        = {&test_ncm_vmath_select, &test_ncm_vmath_atan2_random, &test_ncm_vmath_atan2_special, &test_ncm_vmath_exp_random, &test_ncm_vmath_exp_special};
+    const gchar *missing_isa = _test_ncm_vmath_missing_isa ();
+    guint i;
+
+    for (i = 0; i < G_N_ELEMENTS (paths); i++)
+    {
+      if (missing_isa == NULL)
+        g_test_add_func (paths[i], funcs[i]);
+      else
+        g_test_add_data_func (paths[i], missing_isa, &_test_ncm_vmath_skipped);
+    }
+  }
 
   g_test_run ();
 }

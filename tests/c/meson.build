@@ -986,6 +986,32 @@ if arb_dep.found()
     ]
 endif
 
+# ncm_vmath_private.h is header-only and chooses its code by the target: build its test
+# once per x86-64 level, whatever -march the library uses, so that every path runs
+# where the CPU has it (a variant skips its tests on a CPU without the instructions).
+# Without LTO, so that the -march given here is the one the code is generated for.
+if host_machine.cpu_family() == 'x86_64'
+    foreach vmath_isa : [
+        ['x86_64', 'x86-64', '1'],
+        ['x86_64_v3', 'x86-64-v3', '3'],
+        ['x86_64_v4', 'x86-64-v4', '4'],
+    ]
+        if cc.has_argument('-march=' + vmath_isa[1])
+            math_tests += [
+                {
+                    'name': 'ncm_vmath_' + vmath_isa[0],
+                    'sources': ['ncm/core/test_ncm_vmath.c'],
+                    'c_args': [
+                        '-march=' + vmath_isa[1],
+                        '-fno-lto',
+                        '-DNCM_VMATH_TEST_LEVEL=' + vmath_isa[2],
+                    ],
+                },
+            ]
+        endif
+    endforeach
+endif
+
 # Combine all test arrays
 all_c_tests = math_tests + model_tests + data_tests + lss_tests + galaxy_tests + xcor_tests
 
