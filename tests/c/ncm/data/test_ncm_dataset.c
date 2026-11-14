@@ -53,6 +53,9 @@ struct _TestBlock
   TestShared *shared;
   guint req;
   guint req_at_cov;
+  guint req_at_resample;
+  guint n_prepare;
+  guint n_prepare_resampling;
 };
 
 G_DEFINE_TYPE (TestBlock, test_block, NCM_TYPE_DATA)
@@ -75,6 +78,7 @@ void test_ncm_dataset_shared_fisher (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_shared_fisher_bias (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_fisher_inout (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_fisher_no_fparams (TestNcmDataset *test, gconstpointer pdata);
+void test_ncm_dataset_resample_prepare (TestNcmDataset *test, gconstpointer pdata);
 void test_ncm_dataset_copy_bootstrap (void);
 void test_ncm_dataset_bootstrap_total_empty (void);
 void test_ncm_dataset_errors (void);
@@ -94,6 +98,7 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/dataset/shared/fisher_bias", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_shared_fisher_bias, &test_ncm_dataset_free);
   g_test_add ("/ncm/dataset/fisher/inout", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_inout, &test_ncm_dataset_free);
   g_test_add ("/ncm/dataset/fisher/no_fparams", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_fisher_no_fparams, &test_ncm_dataset_free);
+  g_test_add ("/ncm/dataset/resample/prepare", TestNcmDataset, NULL, &test_ncm_dataset_new, &test_ncm_dataset_resample_prepare, &test_ncm_dataset_free);
   g_test_add_func ("/ncm/dataset/copy/bootstrap", &test_ncm_dataset_copy_bootstrap);
   g_test_add_func ("/ncm/dataset/bootstrap/total_empty", &test_ncm_dataset_bootstrap_total_empty);
   g_test_add_func ("/ncm/dataset/errors", &test_ncm_dataset_errors);
@@ -106,9 +111,12 @@ main (gint argc, gchar *argv[])
 static void
 test_block_init (TestBlock *tb)
 {
-  tb->shared     = NULL;
-  tb->req        = 0;
-  tb->req_at_cov = 0;
+  tb->shared               = NULL;
+  tb->req                  = 0;
+  tb->req_at_cov           = 0;
+  tb->req_at_resample      = 0;
+  tb->n_prepare            = 0;
+  tb->n_prepare_resampling = 0;
 }
 
 static guint
@@ -122,7 +130,20 @@ _test_block_prepare (NcmData *data, NcmMSet *mset)
 {
   TestBlock *tb = TEST_BLOCK (data);
 
+  if (ncm_data_is_resampling (data))
+    tb->n_prepare_resampling++;
+  else
+    tb->n_prepare++;
+
   tb->shared->req = MAX (tb->shared->req, tb->req);
+}
+
+static void
+_test_block_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
+{
+  TestBlock *tb = TEST_BLOCK (data);
+
+  tb->req_at_resample = tb->shared->req;
 }
 
 static void
@@ -169,6 +190,7 @@ test_block_class_init (TestBlockClass *klass)
   data_class->m2lnL_val   = &_test_block_m2lnL_val;
   data_class->inv_cov_UH  = &_test_block_inv_cov_UH;
   data_class->inv_cov_Uf  = &_test_block_inv_cov_Uf;
+  data_class->resample    = &_test_block_resample;
 }
 
 static TestBlock *
@@ -430,5 +452,29 @@ test_ncm_dataset_no_realization_subprocess (void)
 
   ncm_dataset_bootstrap_set (dset, NCM_DATASET_BSTRAP_PARTIAL);
   ncm_dataset_m2lnL_val (dset, mset, &m2lnL);
+}
+
+/*
+ * ncm_dataset_resample() prepares every block as resampling, so a block can skip the work
+ * that holds only for the data about to be replaced, and still before any block is
+ * resampled: the first block is resampled with the requirement of the second in force.
+ */
+void
+test_ncm_dataset_resample_prepare (TestNcmDataset *test, gconstpointer pdata)
+{
+  NcmRNG *rng = ncm_rng_seeded_new (NULL, 1);
+
+  ncm_dataset_resample (test->dset, test->mset, rng);
+
+  g_assert_cmpuint (test->b1->n_prepare, ==, 0);
+  g_assert_cmpuint (test->b2->n_prepare, ==, 0);
+  g_assert_cmpuint (test->b1->n_prepare_resampling, >, 0);
+  g_assert_cmpuint (test->b2->n_prepare_resampling, >, 0);
+  g_assert_cmpuint (test->b1->req_at_resample, ==, 2);
+  g_assert_cmpuint (test->b2->req_at_resample, ==, 2);
+  g_assert_false (ncm_data_is_resampling (NCM_DATA (test->b1)));
+  g_assert_false (ncm_data_is_resampling (NCM_DATA (test->b2)));
+
+  ncm_rng_free (rng);
 }
 
