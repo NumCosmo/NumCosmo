@@ -57,6 +57,7 @@ guint ncm_spectral_polar_panels_find_panel_near (NcmSpectralPolarPanels *spp, gu
 
 gdouble ncm_spectral_polar_panels_eval (NcmSpectralPolarPanels *spp, gdouble r, gdouble theta);
 gdouble ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble r, gdouble theta);
+void ncm_spectral_polar_panels_eval_on_array (NcmSpectralPolarPanels *spp, guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out);
 
 G_END_DECLS
 

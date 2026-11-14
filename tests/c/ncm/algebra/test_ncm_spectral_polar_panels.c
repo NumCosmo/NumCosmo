@@ -86,6 +86,7 @@ void test_ncm_spectral_polar_panels_build_peak (TestNcmSpectralPolarPanels *test
 void test_ncm_spectral_polar_panels_build_reltol (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_build_bisect (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_find_panel_near (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels_eval_on_array (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_build_reuse (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_build_threads (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_outside (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
@@ -141,6 +142,7 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/reltol", test_ncm_spectral_polar_panels_build_reltol);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/bisect", test_ncm_spectral_polar_panels_build_bisect);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("find_panel/near", test_ncm_spectral_polar_panels_find_panel_near);
+  TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("eval_on_array", test_ncm_spectral_polar_panels_eval_on_array);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/reuse", test_ncm_spectral_polar_panels_build_reuse);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/threads", test_ncm_spectral_polar_panels_build_threads);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("outside", test_ncm_spectral_polar_panels_outside);
@@ -657,6 +659,76 @@ test_ncm_spectral_polar_panels_find_panel_near (TestNcmSpectralPolarPanels *test
     g_assert_cmpuint (ncm_spectral_polar_panels_find_panel_near (test->spp, i, 0.0, 0.0), ==,
                       ncm_spectral_polar_panels_find_panel (test->spp, 0.0, 0.0));
   }
+}
+
+/* eval_on_array against eval_on at n random points of every panel, exactly */
+static void
+_test_eval_on_array_check (TestNcmSpectralPolarPanels *test, const guint n_max)
+{
+  const guint n_panels = ncm_spectral_polar_panels_get_n_panels (test->spp);
+  gdouble *r           = g_new (gdouble, n_max);
+  gdouble *theta       = g_new (gdouble, n_max);
+  gdouble *out         = g_new (gdouble, n_max);
+  gdouble *in_place    = g_new (gdouble, n_max);
+  guint i, n, j;
+
+  for (i = 0; i < n_panels; i++)
+  {
+    gdouble ra, rb, ta, tb;
+    guint n_r, n_theta;
+
+    ncm_spectral_polar_panels_peek_panel (test->spp, i, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+
+    for (n = 1; n <= n_max; n++)
+    {
+      for (j = 0; j < n; j++)
+      {
+        /* Inside the panel and, for the extrapolation, a little outside */
+        r[j]        = ra + (rb - ra) * ncm_rng_uniform_gen (test->rng, -0.1, 1.1);
+        theta[j]    = ta + (tb - ta) * ncm_rng_uniform_gen (test->rng, -0.1, 1.1);
+        in_place[j] = r[j];
+      }
+
+      ncm_spectral_polar_panels_eval_on_array (test->spp, i, n, r, theta, out);
+      ncm_spectral_polar_panels_eval_on_array (test->spp, i, n, in_place, theta, in_place);
+
+      for (j = 0; j < n; j++)
+      {
+        const gdouble ref = ncm_spectral_polar_panels_eval_on (test->spp, i, r[j], theta[j]);
+
+        g_assert_cmpfloat (out[j], ==, ref);
+        g_assert_cmpfloat (in_place[j], ==, ref);
+      }
+    }
+  }
+
+  g_free (r);
+  g_free (theta);
+  g_free (out);
+  g_free (in_place);
+}
+
+void
+test_ncm_spectral_polar_panels_eval_on_array (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
+{
+  const gdouble r_edges[] = {0.0, 0.5, 1.0};
+  const gdouble t_edges[] = {0.0, 1.0, M_PI};
+  TestFunc f              = { 1, 1.0, 0.4 * cos (0.7), 0.4 * sin (0.7), 0.05, 3.0, 0 };
+  GError *error           = NULL;
+
+  _set_edges (test->r_edges, r_edges, G_N_ELEMENTS (r_edges));
+  _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
+
+  ncm_spectral_polar_build (test->sp, &_func, &f, test->r_edges, test->theta_edges, 0.0, 1.0e-9, test->spp, NULL, &error);
+  g_assert_no_error (error);
+  g_assert_cmpuint (ncm_spectral_polar_panels_get_n_panels (test->spp), >=, 4);
+
+  /* Every count up to three passes of eight lanes and one more, so every rest is taken */
+  _test_eval_on_array_check (test, 25);
+
+  /* Trimmed panels have counts that are not 2^l + 1 */
+  ncm_spectral_polar_panels_trim (test->spp, 1.0e-6);
+  _test_eval_on_array_check (test, 25);
 }
 
 void

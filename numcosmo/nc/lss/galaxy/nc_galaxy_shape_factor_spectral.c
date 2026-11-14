@@ -810,13 +810,33 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
     for (k = 0; k < c; k++)
       _nc_galaxy_shape_factor_spectral_interp_coords (ldata, ig_1[k], ig_2[k], &rho[k], &psi[k]);
 
-    /* ln P, kept in rho, which is no longer needed */
-    for (k = 0; k < c; k++)
+    /*
+     * ln P, kept in rho, which is no longer needed. The shears of the nodes of a galaxy
+     * lie on a line, so consecutive nodes are usually in the same panel (a run of about 30
+     * on average): each run is evaluated in one call, which loads the coefficients of the
+     * panel once for several nodes.
+     */
+    k     = 0;
+    panel = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[0], psi[0]);
+
+    while (k < c)
     {
-      /* The shears of the nodes of a galaxy lie on a line, so a node is usually in the
-       * panel of the previous one */
-      panel  = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[k], psi[k]);
-      rho[k] = ncm_spectral_polar_panels_eval_on (ldata->spp, panel, rho[k], psi[k]);
+      guint k1   = k + 1;
+      guint next = panel;
+
+      while (k1 < c)
+      {
+        next = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[k1], psi[k1]);
+
+        if (next != panel)
+          break;
+
+        k1++;
+      }
+
+      ncm_spectral_polar_panels_eval_on_array (ldata->spp, panel, k1 - k, &rho[k], &psi[k], &rho[k]);
+      k     = k1;
+      panel = next;
     }
 
     if (!want_log)
