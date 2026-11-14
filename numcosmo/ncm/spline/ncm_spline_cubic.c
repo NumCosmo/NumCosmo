@@ -155,6 +155,18 @@ _ncm_spline_cubic_free (NcmSplineCubic *sc)
   }
 }
 
+/* The coefficients are allocated by the first peek of one of them, which the prepare of a
+ * subclass makes: a spline that is set and never prepared (the photo-z tables of a
+ * catalog, for example) holds its knots and values only. */
+static void
+_ncm_spline_cubic_ensure (NcmSplineCubic *sc)
+{
+  NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private (sc);
+
+  if (!self->init)
+    _ncm_spline_cubic_alloc (sc, self->len);
+}
+
 static void
 _ncm_spline_cubic_reset (NcmSpline *s)
 {
@@ -167,7 +179,7 @@ _ncm_spline_cubic_reset (NcmSpline *s)
     if (self->init)
       _ncm_spline_cubic_free (sc);
 
-    _ncm_spline_cubic_alloc (sc, s_len);
+    self->len = s_len;
   }
 
   self->xv = ncm_spline_peek_xv (s);
@@ -394,6 +406,8 @@ ncm_spline_cubic_peek_b_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
 
+  _ncm_spline_cubic_ensure ((NcmSplineCubic *) s);
+
   return self->b;
 }
 
@@ -409,6 +423,8 @@ NcmVector *
 ncm_spline_cubic_peek_c_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
+
+  _ncm_spline_cubic_ensure ((NcmSplineCubic *) s);
 
   return self->c;
 }
@@ -426,6 +442,8 @@ ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
 
+  _ncm_spline_cubic_ensure ((NcmSplineCubic *) s);
+
   return self->d;
 }
 
@@ -442,7 +460,7 @@ ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
 
-  if ((self->diag == NULL) && self->init)
+  if ((self->diag == NULL) && (self->len > 0))
     self->diag = ncm_vector_new (self->len);
 
   return self->diag;
@@ -461,7 +479,7 @@ ncm_spline_cubic_peek_offdiag_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
 
-  if ((self->offdiag == NULL) && self->init)
+  if ((self->offdiag == NULL) && (self->len > 0))
     self->offdiag = ncm_vector_new (self->len);
 
   return self->offdiag;

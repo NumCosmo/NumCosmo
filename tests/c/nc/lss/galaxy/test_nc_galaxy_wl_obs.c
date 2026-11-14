@@ -307,6 +307,10 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
     g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "ra", i, NULL), ==, nc_galaxy_wl_obs_get (obs_dup, "ra", i, NULL));
     g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "dec", i, NULL), ==, nc_galaxy_wl_obs_get (obs_dup, "dec", i, NULL));
 
+    /* The catalog keeps its P(z) splines unprepared (nc_galaxy_wl_obs_peek_pz()) */
+    ncm_spline_prepare (nc_galaxy_wl_obs_peek_pz (test->obs, i));
+    ncm_spline_prepare (nc_galaxy_wl_obs_peek_pz (obs_dup, i));
+
     for (l = 0; l < 100; l++)
     {
       g_assert_cmpfloat (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (test->obs, i), l), ==, ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (obs_dup, i), l));

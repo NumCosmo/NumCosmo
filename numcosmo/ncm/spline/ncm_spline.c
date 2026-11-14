@@ -88,6 +88,16 @@ enum
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmSpline, ncm_spline, G_TYPE_OBJECT)
 
+/* The interval lookup of a spline that was never prepared: an error, instead of a call
+ * through a NULL pointer, for the evaluations that look the interval up */
+static guint
+_ncm_spline_get_index_unprepared (const NcmSpline *s, const gdouble x)
+{
+  g_error ("ncm_spline: a %s was evaluated before ncm_spline_prepare().", G_OBJECT_TYPE_NAME (s));
+
+  return 0;
+}
+
 static void
 ncm_spline_init (NcmSpline *s)
 {
@@ -109,7 +119,7 @@ ncm_spline_init (NcmSpline *s)
   self->last_poly   = 0;
   self->x_data      = NULL;
   self->stride      = 0;
-  self->get_index   = NULL;
+  self->get_index   = &_ncm_spline_get_index_unprepared;
 }
 
 static void

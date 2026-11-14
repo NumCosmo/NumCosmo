@@ -245,7 +245,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
   /**
    * NcGalaxyWLObs:pz:
    *
-   * P(z) splines.
+   * P(z) splines, kept unprepared (see nc_galaxy_wl_obs_peek_pz()).
    *
    */
   g_object_class_install_property (object_class,
@@ -344,8 +344,9 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
       const gint key = g_array_index (keys, gint, i);
       GObject *obj   = ncm_obj_dict_int_peek (self->pz, key);
 
+      /* Not prepared: the likelihood reads the knots and values only (see
+       * nc_galaxy_wl_obs_peek_pz()) */
       g_assert (NCM_IS_SPLINE (obj));
-      ncm_spline_prepare (NCM_SPLINE (obj));
     }
 
     g_array_unref (keys);
@@ -581,7 +582,9 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
  *
- * Gets a P(z) spline from the observation data.
+ * Gets a P(z) spline from the observation data. The catalog keeps its knots and values
+ * only, which is what #NcGalaxyRedshiftFactorSpline reads: the spline is not prepared, so
+ * call ncm_spline_prepare() before evaluating it.
  *
  * Returns: (transfer none): the P(z) spline.
  *

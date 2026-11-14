@@ -77,35 +77,45 @@ struct _NcGalaxyRedshiftFactorSpline
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyRedshiftFactorSpline, nc_galaxy_redshift_factor_spline, NC_TYPE_GALAXY_REDSHIFT_FACTOR);
 
-/* What the scheme derives from one table: the B-spline @s of sqrt(p) through its knots,
- * the breakpoints @brk of @s, and @cum, the integral of s^2 from brk[0] to each
- * breakpoint (cum[0] = 0, the last entry is the normalization). It is read-only once
- * built (evaluating @s takes no lock and writes nothing), so every galaxy that reads the
- * same table shares one, across threads. @hash is the hash of the knots and values it was
- * built from. */
+/* What the scheme derives from one table: the B-spline s of sqrt(p) through its knots, kept
+ * as what evaluating it reads (its @order, the @n_control + @order @knots and the @c control
+ * points, ncm_spline_bspline_eval_basis()), and @norm, the integral of s^2 over the
+ * breakpoints. Sampling also needs the breakpoints @brk and @cum, the integral of s^2 from
+ * brk[0] to each of them (cum[0] = 0, the last entry is @norm): they are built on its first
+ * use (_spline_sqrt_ensure_cum()). It is read-only once built (evaluating s takes no lock
+ * and writes nothing), so every galaxy that reads the same table shares one, across
+ * threads. @hash is the hash of the knots and values it was built from. */
 typedef struct _SplineSqrt
 {
   gint ref;
   guint64 hash;
-  NcmSpline *s;
+  guint order;
+  gsize n_control;
+  gdouble *knots;
+  gdouble *c;
+  gdouble norm;
+  gsize cum_init;
   NcmVector *brk;
   NcmVector *cum;
 } SplineSqrt;
 
-/* Per-galaxy fragment: the table @pz as given and the derived data @sq of that table.
- * @s, @brk and @cum are borrowed from @sq. */
+/* Per-galaxy fragment: the table @pz as given and the derived data @sq of that table. */
 typedef struct _SplineLData
 {
   NcmSpline *pz;
   SplineSqrt *sq;
-  NcmSpline *s;
-  NcmVector *brk;
-  NcmVector *cum;
 } SplineLData;
+
+/* The value of s at @z */
+static inline gdouble
+_spline_sqrt_eval (const SplineSqrt *sq, const gdouble z)
+{
+  return ncm_spline_bspline_eval_basis (sq->order, sq->n_control, sq->knots, sq->c, z);
+}
 
 static void _spline_ldata_set_pz (SplineLData *sldata, NcmSpline *pz);
 static void _spline_sqrt_unref (gpointer p);
-static gdouble _spline_s2_integ (NcmSpline *s, const gdouble a, const gdouble b);
+static gdouble _spline_s2_integ (const SplineSqrt *sq, const gdouble a, const gdouble b);
 static const gsl_integration_glfixed_table *_spline_gl (void);
 
 static void
@@ -221,7 +231,8 @@ _spline_sqrt_unref (gpointer p)
 
   if (g_atomic_int_dec_and_test (&sq->ref))
   {
-    ncm_spline_clear (&sq->s);
+    g_free (sq->knots);
+    g_free (sq->c);
     ncm_vector_clear (&sq->brk);
     ncm_vector_clear (&sq->cum);
     g_free (sq);
@@ -253,14 +264,17 @@ _spline_sqrt_hash (NcmVector *xv, NcmVector *yv)
   return h;
 }
 
-/* Builds @s through (z_j, sqrt(p_j)), its breakpoints and the cumulative integrals of
- * s^2. Aborts on a negative value or fewer than ORDER knots. */
+/* Builds s through (z_j, sqrt(p_j)) and its normalization, keeping only what evaluating
+ * s reads (the fit itself is dropped). Aborts on a negative value or fewer than ORDER
+ * knots. */
 static SplineSqrt *
 _spline_sqrt_new (NcmVector *xv, NcmVector *yv, const guint64 hash)
 {
   SplineSqrt *sq = g_new0 (SplineSqrt, 1);
   const guint n  = ncm_vector_len (yv);
-  NcmVector *sv;
+  NcmSplineBSpline *sbs;
+  NcmVector *sv, *brk;
+  const gdouble *knots, *c;
   gdouble total = 0.0;
   guint j;
 
@@ -281,24 +295,74 @@ _spline_sqrt_new (NcmVector *xv, NcmVector *yv, const guint64 hash)
     ncm_vector_fast_set (sv, j, sqrt (p_j));
   }
 
-  sq->ref  = 1;
-  sq->hash = hash;
-  sq->s    = NCM_SPLINE (ncm_spline_bspline_new_full (_NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER, xv, sv, TRUE));
-  sq->brk  = ncm_spline_bspline_get_breakpoints (NCM_SPLINE_BSPLINE (sq->s));
-  ncm_spline_bspline_release_workspace (NCM_SPLINE_BSPLINE (sq->s));
-  sq->cum = ncm_vector_new (ncm_vector_len (sq->brk));
+  sbs = ncm_spline_bspline_new_full (_NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER, xv, sv, TRUE);
+  ncm_spline_bspline_peek_basis (sbs, &sq->n_control, &knots, &c);
 
-  ncm_vector_fast_set (sq->cum, 0, total);
+  sq->ref   = 1;
+  sq->hash  = hash;
+  sq->order = _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER;
+  sq->knots = g_new (gdouble, sq->n_control + sq->order);
+  sq->c     = g_new (gdouble, sq->n_control);
+  memcpy (sq->knots, knots, sizeof (gdouble) * (sq->n_control + sq->order));
+  memcpy (sq->c, c, sizeof (gdouble) * sq->n_control);
 
-  for (j = 0; j + 1 < ncm_vector_len (sq->brk); j++)
-  {
-    total += _spline_s2_integ (sq->s, ncm_vector_get (sq->brk, j), ncm_vector_get (sq->brk, j + 1));
-    ncm_vector_fast_set (sq->cum, j + 1, total);
-  }
+  /* The normalization, summed over the polynomial pieces in order, as the sampling's
+   * cumulative integrals (_spline_sqrt_ensure_cum()) */
+  brk = ncm_spline_bspline_get_breakpoints (sbs);
 
+  for (j = 0; j + 1 < ncm_vector_len (brk); j++)
+    total += _spline_s2_integ (sq, ncm_vector_get (brk, j), ncm_vector_get (brk, j + 1));
+
+  sq->norm = total;
+
+  ncm_vector_free (brk);
+  ncm_spline_free (NCM_SPLINE (sbs));
   ncm_vector_free (sv);
 
   return sq;
+}
+
+/* The breakpoints of s (the distinct knots from the first to the last sample) and the
+ * cumulative integrals of s^2 at them, built once on the first call, by any thread. */
+static void
+_spline_sqrt_ensure_cum (SplineSqrt *sq)
+{
+  if (g_once_init_enter (&sq->cum_init))
+  {
+    const gsize k    = sq->order;
+    const gdouble *t = sq->knots;
+    gdouble total    = 0.0;
+    gsize i, n = 0;
+
+    for (i = k - 1; i <= sq->n_control; i++)
+    {
+      if ((n == 0) || (t[i] > t[i - 1]))
+        n++;
+    }
+
+    sq->brk = ncm_vector_new (n);
+    n       = 0;
+
+    for (i = k - 1; i <= sq->n_control; i++)
+    {
+      if ((n == 0) || (t[i] > ncm_vector_fast_get (sq->brk, n - 1)))
+      {
+        ncm_vector_fast_set (sq->brk, n, t[i]);
+        n++;
+      }
+    }
+
+    sq->cum = ncm_vector_new (n);
+    ncm_vector_fast_set (sq->cum, 0, total);
+
+    for (i = 0; i + 1 < n; i++)
+    {
+      total += _spline_s2_integ (sq, ncm_vector_get (sq->brk, i), ncm_vector_get (sq->brk, i + 1));
+      ncm_vector_fast_set (sq->cum, i + 1, total);
+    }
+
+    g_once_init_leave (&sq->cum_init, 1);
+  }
 }
 
 /* Returns a reference to the derived data of @pz: the one attached to @pz when it was
@@ -358,17 +422,14 @@ _spline_ldata_set_pz (SplineLData *sldata, NcmSpline *pz)
   ncm_spline_ref (pz);
   ncm_spline_clear (&sldata->pz);
 
-  sldata->pz  = pz;
-  sldata->sq  = sq;
-  sldata->s   = sq->s;
-  sldata->brk = sq->brk;
-  sldata->cum = sq->cum;
+  sldata->pz = pz;
+  sldata->sq = sq;
 }
 
 /* Integral of s^2 over [a, b] inside one polynomial piece of s, where s^2 has degree 10
  * and the 6-point Gauss-Legendre rule is exact. */
 static gdouble
-_spline_s2_integ (NcmSpline *s, const gdouble a, const gdouble b)
+_spline_s2_integ (const SplineSqrt *sq, const gdouble a, const gdouble b)
 {
   const gsl_integration_glfixed_table *gl = _spline_gl ();
   const gdouble c                         = 0.5 * (a + b);
@@ -378,8 +439,8 @@ _spline_s2_integ (NcmSpline *s, const gdouble a, const gdouble b)
 
   for (j = 0; j < _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_GL_N / 2; j++)
   {
-    const gdouble s_m = ncm_spline_eval (s, c - h * gl->x[j]);
-    const gdouble s_p = ncm_spline_eval (s, c + h * gl->x[j]);
+    const gdouble s_m = _spline_sqrt_eval (sq, c - h * gl->x[j]);
+    const gdouble s_p = _spline_sqrt_eval (sq, c + h * gl->x[j]);
 
     res += gl->w[j] * (s_m * s_m + s_p * s_p);
   }
@@ -410,30 +471,33 @@ _spline_gl (void)
 static void
 _nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, NcmRNG *rng)
 {
-  SplineLData *sldata  = (SplineLData *) data->ldata;
-  const guint n_brk    = ncm_vector_len (sldata->brk);
-  const gdouble total  = ncm_vector_fast_get (sldata->cum, n_brk - 1);
-  const gdouble target = ncm_rng_uniform_gen (rng, 0.0, total);
-  guint lo             = 0;
-  guint hi             = n_brk - 1;
-  gdouble a, b, z, rem;
-  guint iter;
+  SplineLData *sldata = (SplineLData *) data->ldata;
+  SplineSqrt *sq      = sldata->sq;
+  guint n_brk, lo, hi, iter;
+  gdouble total, target, a, b, z, rem;
 
-  g_assert_nonnull (sldata->s);
+  g_assert_nonnull (sq);
+  _spline_sqrt_ensure_cum (sq);
+
+  n_brk  = ncm_vector_len (sq->brk);
+  total  = ncm_vector_fast_get (sq->cum, n_brk - 1);
+  target = ncm_rng_uniform_gen (rng, 0.0, total);
+  lo     = 0;
+  hi     = n_brk - 1;
 
   while (hi - lo > 1)
   {
     const guint mid = (lo + hi) / 2;
 
-    if (target < ncm_vector_fast_get (sldata->cum, mid))
+    if (target < ncm_vector_fast_get (sq->cum, mid))
       hi = mid;
     else
       lo = mid;
   }
 
-  a   = ncm_vector_get (sldata->brk, lo);
-  b   = ncm_vector_get (sldata->brk, lo + 1);
-  rem = target - ncm_vector_fast_get (sldata->cum, lo);
+  a   = ncm_vector_get (sq->brk, lo);
+  b   = ncm_vector_get (sq->brk, lo + 1);
+  rem = target - ncm_vector_fast_get (sq->cum, lo);
 
   {
     const gdouble x0 = a;
@@ -444,8 +508,8 @@ _nc_galaxy_redshift_factor_spline_gen (NcGalaxyRedshiftFactor *gsdr, NcmMSet *ms
 
     for (iter = 0; iter < 200; iter++)
     {
-      const gdouble F  = _spline_s2_integ (sldata->s, x0, z) - rem;
-      const gdouble sz = ncm_spline_eval (sldata->s, z);
+      const gdouble F  = _spline_s2_integ (sq, x0, z) - rem;
+      const gdouble sz = _spline_sqrt_eval (sq, z);
       const gdouble dF = sz * sz;
       gdouble z_new;
 
@@ -486,7 +550,7 @@ static gdouble
 _spline_integ_f (gpointer callback_data, const gdouble z, NcGalaxyRedshiftFactorData *data)
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
-  const gdouble s_z   = ncm_spline_eval (sldata->s, z);
+  const gdouble s_z   = _spline_sqrt_eval (sldata->sq, z);
 
   return s_z * s_z;
 }
@@ -496,7 +560,7 @@ _spline_ln_integ_f (gpointer callback_data, const gdouble z, NcGalaxyRedshiftFac
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
 
-  return 2.0 * log (fabs (ncm_spline_eval (sldata->s, z)));
+  return 2.0 * log (fabs (_spline_sqrt_eval (sldata->sq, z)));
 }
 
 /* No closure payload needed. */
@@ -537,9 +601,9 @@ _nc_galaxy_redshift_factor_spline_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *m
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
 
-  g_assert_nonnull (sldata->cum);
+  g_assert_nonnull (sldata->sq);
 
-  return ncm_vector_fast_get (sldata->cum, ncm_vector_len (sldata->cum) - 1);
+  return sldata->sq->norm;
 }
 
 static gdouble

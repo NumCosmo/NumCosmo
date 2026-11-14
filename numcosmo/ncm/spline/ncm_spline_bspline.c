@@ -491,14 +491,9 @@ _ncm_spline_bspline_min_size (const NcmSpline *s)
  * recursion (PPPACK bsplvb, as in GSL) on stack scratch instead, for concurrent callers
  * such as the xcor kernel integrands.
  */
-static gdouble
-_ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
+static inline gdouble
+_ncm_spline_bspline_eval_core (const gsize k, const gsize ncontrol, const gdouble * restrict t, const gdouble * restrict c, const gdouble x)
 {
-  NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
-  const gsize k         = sbs->order;
-  const gsize ncontrol  = sbs->alloc_len;
-  const gdouble *t      = sbs->knots;
-  const gdouble *c      = sbs->c->data;
   gdouble deltal[NCM_SPLINE_BSPLINE_MAX_ORDER];
   gdouble deltar[NCM_SPLINE_BSPLINE_MAX_ORDER];
   gdouble B[NCM_SPLINE_BSPLINE_MAX_ORDER];
@@ -560,6 +555,14 @@ _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
 
     return res;
   }
+}
+
+static gdouble
+_ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
+{
+  NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
+
+  return _ncm_spline_bspline_eval_core (sbs->order, sbs->alloc_len, sbs->knots, sbs->c->data, x);
 }
 
 static gdouble
@@ -846,5 +849,46 @@ guint
 ncm_spline_bspline_get_order (NcmSplineBSpline *sbs)
 {
   return sbs->order;
+}
+
+/**
+ * ncm_spline_bspline_peek_basis: (skip)
+ * @sbs: a prepared #NcmSplineBSpline
+ * @n_control: (out): the number of control points
+ * @knots: (out) (transfer none): the $n_\mathrm{control} + \mathrm{order}$ knots
+ * @c: (out) (transfer none): the $n_\mathrm{control}$ control points
+ *
+ * Gets what evaluating @sbs reads, owned by @sbs and valid until it is prepared again or
+ * freed. With ncm_spline_bspline_eval_basis() a caller can copy them and drop @sbs.
+ */
+void
+ncm_spline_bspline_peek_basis (NcmSplineBSpline *sbs, gsize *n_control, const gdouble **knots, const gdouble **c)
+{
+  g_assert_nonnull (sbs->knots);
+  g_assert_nonnull (sbs->c);
+
+  *n_control = sbs->alloc_len;
+  *knots     = sbs->knots;
+  *c         = sbs->c->data;
+}
+
+/**
+ * ncm_spline_bspline_eval_basis: (skip)
+ * @order: the order of the B-spline
+ * @n_control: the number of control points
+ * @knots: the $n_\mathrm{control} + \mathrm{order}$ knots
+ * @c: the control points
+ * @x: a point
+ *
+ * Evaluates at @x the B-spline of @order with @knots and @c, as ncm_spline_eval() does for
+ * the #NcmSplineBSpline they were taken from (ncm_spline_bspline_peek_basis()): the same
+ * operations, so the same value.
+ *
+ * Returns: the value of the B-spline at @x.
+ */
+gdouble
+ncm_spline_bspline_eval_basis (const guint order, const gsize n_control, const gdouble *knots, const gdouble *c, const gdouble x)
+{
+  return _ncm_spline_bspline_eval_core (order, n_control, knots, c, x);
 }
 

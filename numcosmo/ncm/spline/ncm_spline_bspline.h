@@ -44,6 +44,8 @@ void ncm_spline_bspline_set_order (NcmSplineBSpline *sbs, guint order);
 guint ncm_spline_bspline_get_order (NcmSplineBSpline *sbs);
 gdouble ncm_spline_bspline_get_achieved_error (NcmSplineBSpline *sbs);
 NcmVector *ncm_spline_bspline_get_breakpoints (NcmSplineBSpline *sbs);
+void ncm_spline_bspline_peek_basis (NcmSplineBSpline *sbs, gsize *n_control, const gdouble **knots, const gdouble **c);
+gdouble ncm_spline_bspline_eval_basis (const guint order, const gsize n_control, const gdouble *knots, const gdouble *c, const gdouble x);
 void ncm_spline_bspline_release_workspace (NcmSplineBSpline *sbs);
 
 /**
