@@ -136,10 +136,12 @@
 
 /*
  * The table along the line of the shears of a galaxy: the first grid has 2^LEVEL_MIN + 1
- * points, the finest 2^LEVEL_MAX + 1, and the largest |g| of the line it covers.
+ * points, the finest 2^LEVEL_MAX + 1 (at most the largest level with a generated kernel,
+ * NCM_SPECTRAL_CHEB_MAX_LEVEL, so that no FFTW plan is made inside the threaded
+ * likelihood), and the largest |g| of the line it covers.
  */
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN (2)
-#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX (8)
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX (7)
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX (0.9)
 
 /* Steps of the golden-section search of the maximum of the scan */
