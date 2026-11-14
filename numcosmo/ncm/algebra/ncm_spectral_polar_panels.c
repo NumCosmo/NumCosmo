@@ -799,6 +799,38 @@ ncm_spectral_polar_panels_find_panel (NcmSpectralPolarPanels *spp, gdouble r, gd
 }
 
 /**
+ * ncm_spectral_polar_panels_find_panel_near:
+ * @spp: a #NcmSpectralPolarPanels
+ * @hint: a panel index, usually the result of the previous search
+ * @r: a radius
+ * @theta: an angle
+ *
+ * Finds the panel holding $(r, \theta)$, the same panel as
+ * ncm_spectral_polar_panels_find_panel(), first checking whether the point is inside
+ * panel @hint, $r_a \le r < r_b$ and $\theta_a \le \theta < \theta_b$. Points evaluated
+ * in sequence along a curve usually fall in the same panel, and then the bisections are
+ * skipped. Any @hint is accepted: one that is not a panel index or that does not hold the
+ * point leads to the full search.
+ *
+ * Returns: the index of the panel.
+ */
+guint
+ncm_spectral_polar_panels_find_panel_near (NcmSpectralPolarPanels *spp, guint hint, gdouble r, gdouble theta)
+{
+  if (hint < spp->panels->len)
+  {
+    const NcmSpectralPolarPanelsPanel *panel = &g_array_index (spp->panels, NcmSpectralPolarPanelsPanel, hint);
+
+    /* Inside the box of the panel the full search returns it: the panels of an initial
+     * panel tile it, and the rules for the sides only apply outside it. */
+    if ((r >= panel->ra) && (r < panel->rb) && (theta >= panel->ta) && (theta < panel->tb))
+      return hint;
+  }
+
+  return ncm_spectral_polar_panels_find_panel (spp, r, theta);
+}
+
+/**
  * ncm_spectral_polar_panels_eval:
  * @spp: a #NcmSpectralPolarPanels
  * @r: a radius

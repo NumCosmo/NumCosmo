@@ -85,6 +85,7 @@ void test_ncm_spectral_polar_panels_build_smooth (TestNcmSpectralPolarPanels *te
 void test_ncm_spectral_polar_panels_build_peak (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_build_reltol (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_build_bisect (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels_find_panel_near (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_build_reuse (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_build_threads (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_outside (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
@@ -139,6 +140,7 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/peak", test_ncm_spectral_polar_panels_build_peak);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/reltol", test_ncm_spectral_polar_panels_build_reltol);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/bisect", test_ncm_spectral_polar_panels_build_bisect);
+  TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("find_panel/near", test_ncm_spectral_polar_panels_find_panel_near);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/reuse", test_ncm_spectral_polar_panels_build_reuse);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("build/threads", test_ncm_spectral_polar_panels_build_threads);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("outside", test_ncm_spectral_polar_panels_outside);
@@ -580,6 +582,80 @@ test_ncm_spectral_polar_panels_build_bisect (TestNcmSpectralPolarPanels *test, g
     g_assert_cmpuint (ncm_spectral_polar_panels_find_panel (test->spp, ra, ta), ==, i);
     g_assert_cmpuint (ncm_spectral_polar_panels_find_panel (test->spp, 0.5 * (ra + rb), 0.5 * (ta + tb)), ==, i);
     g_assert_cmpuint (ncm_spectral_polar_panels_find_panel (test->spp, rb - 1.0e-9 * (rb - ra), tb - 1.0e-9 * (tb - ta)), ==, i);
+  }
+}
+
+void
+test_ncm_spectral_polar_panels_find_panel_near (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
+{
+  const gdouble r_edges[] = {0.0, 0.5, 1.0};
+  const gdouble t_edges[] = {0.0, 1.0, M_PI};
+  TestFunc f              = { 1, 1.0, 0.4 * cos (0.7), 0.4 * sin (0.7), 0.05, 3.0, 0 };
+  GError *error           = NULL;
+  guint prev              = G_MAXUINT;
+  guint n_panels, i, q;
+
+  ncm_spectral_polar_set_level_cap (test->sp, 4);
+
+  _set_edges (test->r_edges, r_edges, G_N_ELEMENTS (r_edges));
+  _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
+
+  ncm_spectral_polar_build (test->sp, &_func, &f, test->r_edges, test->theta_edges, 0.0, 1.0e-7, test->spp, NULL, &error);
+  g_assert_no_error (error);
+
+  n_panels = ncm_spectral_polar_panels_get_n_panels (test->spp);
+  g_assert_cmpuint (n_panels, >, 4);
+
+  /* With any hint, the panel of the full search: points inside, on the edges of the panels
+   * and outside the range, with the hint of the previous point, every panel, and indices
+   * that are not panels */
+  for (q = 0; q < 2000; q++)
+  {
+    gdouble r, theta;
+
+    switch (q % 4)
+    {
+      case 0:
+      {
+        gdouble ra, rb, ta, tb;
+        guint n_r, n_theta;
+
+        ncm_spectral_polar_panels_peek_panel (test->spp, ncm_rng_uniform_int_gen (test->rng, n_panels), &ra, &rb, &ta, &tb, &n_r, &n_theta);
+        r     = (q % 8 == 0) ? ra : rb;
+        theta = (q % 16 < 8) ? ta : tb;
+        break;
+      }
+      case 1:
+        r     = ncm_rng_uniform_gen (test->rng, -0.5, 1.5);
+        theta = ncm_rng_uniform_gen (test->rng, -1.0, 4.0);
+        break;
+      default:
+        r     = ncm_rng_uniform_gen (test->rng, 0.0, 1.0);
+        theta = ncm_rng_uniform_gen (test->rng, 0.0, M_PI);
+        break;
+    }
+
+    {
+      const guint p = ncm_spectral_polar_panels_find_panel (test->spp, r, theta);
+
+      g_assert_cmpuint (ncm_spectral_polar_panels_find_panel_near (test->spp, prev, r, theta), ==, p);
+      g_assert_cmpuint (ncm_spectral_polar_panels_find_panel_near (test->spp, n_panels, r, theta), ==, p);
+      g_assert_cmpuint (ncm_spectral_polar_panels_find_panel_near (test->spp, p, r, theta), ==, p);
+
+      for (i = 0; i < n_panels; i++)
+        g_assert_cmpuint (ncm_spectral_polar_panels_find_panel_near (test->spp, i, r, theta), ==, p);
+
+      prev = p;
+    }
+  }
+
+  /* The ends of the range: theta = pi and r = 1 belong to the last panels */
+  for (i = 0; i < n_panels; i++)
+  {
+    g_assert_cmpuint (ncm_spectral_polar_panels_find_panel_near (test->spp, i, 1.0, M_PI), ==,
+                      ncm_spectral_polar_panels_find_panel (test->spp, 1.0, M_PI));
+    g_assert_cmpuint (ncm_spectral_polar_panels_find_panel_near (test->spp, i, 0.0, 0.0), ==,
+                      ncm_spectral_polar_panels_find_panel (test->spp, 0.0, 0.0));
   }
 }
 

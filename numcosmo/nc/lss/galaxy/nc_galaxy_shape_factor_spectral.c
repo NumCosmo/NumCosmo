@@ -731,6 +731,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
   NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
   const gdouble g_max2                            = gsl_pow_2 (self->interp_g_max);
   gboolean checked                                = FALSE;
+  guint panel                                     = G_MAXUINT;
   guint j;
 
   for (j = 0; j < n; j++)
@@ -762,7 +763,13 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
         const gdouble gf_1 = g_1[j] * ldata->cos_e + g_2[j] * ldata->sin_e - ldata->g_c;
         const gdouble gf_2 = g_2[j] * ldata->cos_e - g_1[j] * ldata->sin_e;
 
-        ln_P = ncm_spectral_polar_panels_eval (ldata->spp, hypot (gf_1, gf_2), atan2 (fabs (gf_2), gf_1));
+        const gdouble rho = hypot (gf_1, gf_2);
+        const gdouble psi = atan2 (fabs (gf_2), gf_1);
+
+        /* The shears of the nodes of a galaxy lie on a line, so a node is usually in the
+         * panel of the previous one */
+        panel = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho, psi);
+        ln_P  = ncm_spectral_polar_panels_eval_on (ldata->spp, panel, rho, psi);
       }
     }
 
