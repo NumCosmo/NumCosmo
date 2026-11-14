@@ -32,12 +32,16 @@
  * $[r_0, r_{n_r}] \times [\theta_0, \theta_{n_\theta}]$ into the $n_r n_\theta$ initial
  * panels $[r_i, r_{i+1}] \times [\theta_j, \theta_{j+1}]$. An initial panel holds one panel
  * or the panels that came from bisecting it, which cover it without overlap. On a panel
- * $[r_a, r_b] \times [\theta_a, \theta_b]$ of levels $l_r$ and $l_\theta$ the function is
- * $$F (r, \theta) = \sum_{k = 0}^{2^{l_r}} \sum_{l = 0}^{2^{l_\theta}} c^{kl} \, T_k (s_r) \, T_l (s_\theta),$$
+ * $[r_a, r_b] \times [\theta_a, \theta_b]$ with $N_r$ radial and $N_\theta$ angular
+ * coefficients the function is
+ * $$F (r, \theta) = \sum_{k = 0}^{N_r - 1} \sum_{l = 0}^{N_\theta - 1} c^{kl} \, T_k (s_r) \, T_l (s_\theta),$$
  * with $s_r = (2 r - r_a - r_b) / (r_b - r_a)$ and
  * $s_\theta = (2 \theta - \theta_a - \theta_b) / (\theta_b - \theta_a)$. The coefficients
  * of a panel are stored by angular index: row $l$ holds
- * $c^{0l}, c^{1l}, \dots, c^{2^{l_r} l}$, and the levels may differ between panels.
+ * $c^{0l}, c^{1l}, \dots, c^{(N_r - 1) l}$, and the numbers may differ between panels. A
+ * panel is appended with $N_r = 2^{l_r} + 1$ and $N_\theta = 2^{l_\theta} + 1$ for its
+ * levels $l_r$ and $l_\theta$; ncm_spectral_polar_panels_trim() then drops the trailing
+ * coefficients that do not matter, which leaves any numbers.
  *
  * ncm_spectral_polar_build() fills the object from a function. The same can be done by
  * hand: ncm_spectral_polar_panels_set_edges(), then ncm_spectral_polar_panels_append() for
@@ -78,15 +82,16 @@ enum
   PROP_PANELS,
 };
 
-/* A panel, its levels and the position of its coefficients in the coefficient array */
+/* A panel, its numbers of radial and angular coefficients and the position of its
+ * coefficients in the coefficient array */
 typedef struct _NcmSpectralPolarPanelsPanel
 {
   gdouble ra;
   gdouble rb;
   gdouble ta;
   gdouble tb;
-  guint l_r;
-  guint l_theta;
+  guint n_r;
+  guint n_theta;
   gsize offset;
 } NcmSpectralPolarPanelsPanel;
 
@@ -155,8 +160,9 @@ _ncm_spectral_polar_panels_get_property (GObject *object, guint prop_id, GValue 
 }
 
 /*
- * The edges and the panels as a (adada(dddduuad)). The arrays are copied: reset and append
- * rewrite them in place, and a variant must not change after it is made.
+ * The edges and the panels as a (adada(dddduuad)), each panel with its numbers of radial
+ * and angular coefficients. The arrays are copied: reset and append rewrite them in place,
+ * and a variant must not change after it is made.
  */
 static GVariant *
 _ncm_spectral_polar_panels_get_variant (NcmSpectralPolarPanels *spp)
@@ -173,21 +179,27 @@ _ncm_spectral_polar_panels_get_variant (NcmSpectralPolarPanels *spp)
   for (i = 0; i < spp->panels->len; i++)
   {
     const NcmSpectralPolarPanelsPanel *panel = &g_array_index (spp->panels, NcmSpectralPolarPanelsPanel, i);
-    const gsize len                          = (gsize) ((1u << panel->l_r) + 1) * ((1u << panel->l_theta) + 1);
+    const gsize len                          = (gsize) panel->n_r * panel->n_theta;
     GVariant *coeffs                         = g_variant_new_fixed_array (G_VARIANT_TYPE ("d"),
                                                                           &g_array_index (spp->coeffs, gdouble, panel->offset),
                                                                           len, sizeof (gdouble));
 
     g_variant_builder_add (&builder, "(dddduu@ad)", panel->ra, panel->rb, panel->ta, panel->tb,
-                           panel->l_r, panel->l_theta, coeffs);
+                           panel->n_r, panel->n_theta, coeffs);
   }
 
   return g_variant_ref_sink (g_variant_new ("(@ad@ad@a(dddduuad))", r_edges, theta_edges, g_variant_builder_end (&builder)));
 }
 
 static void _ncm_spectral_polar_panels_set_edges_data (NcmSpectralPolarPanels *spp, const gdouble *r_edges, guint n_r_edges, const gdouble *theta_edges, guint n_theta_edges);
+static void _ncm_spectral_polar_panels_append_sized (NcmSpectralPolarPanels *spp, gdouble ra, gdouble rb, gdouble ta, gdouble tb, guint n_r, guint n_theta, const gdouble *c);
 
-/* The edges and the panels given as a property, added in order so that each is checked as an appended one */
+/*
+ * The edges and the panels given as a property, added in order so that each is checked as
+ * an appended one. A panel holds its numbers of coefficients N_r and N_theta; a panel
+ * written by an earlier version holds its levels instead, which is recognized by the
+ * length of its coefficients: (2^a + 1) (2^b + 1) is never a b.
+ */
 static void
 _ncm_spectral_polar_panels_constructed (GObject *object)
 {
@@ -216,18 +228,22 @@ _ncm_spectral_polar_panels_constructed (GObject *object)
       GVariant *panel_var = g_variant_get_child_value (panels_var, i);
       GVariant *coeffs_var;
       gdouble ra, rb, ta, tb;
-      guint l_r, l_theta;
+      guint u_r, u_theta;
       const gdouble *c;
       gsize len = 0;
 
-      g_variant_get (panel_var, "(dddduu@ad)", &ra, &rb, &ta, &tb, &l_r, &l_theta, &coeffs_var);
+      g_variant_get (panel_var, "(dddduu@ad)", &ra, &rb, &ta, &tb, &u_r, &u_theta, &coeffs_var);
       c = g_variant_get_fixed_array (coeffs_var, &len, sizeof (gdouble));
 
-      if ((l_r > NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) || (l_theta > NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) ||
-          (len != (gsize) ((1u << l_r) + 1) * ((1u << l_theta) + 1)))
-        g_error ("ncm_spectral_polar_panels: panel %u has %zu coefficients at the levels %u and %u.", i, len, l_r, l_theta);
+      if ((u_r > 0) && (u_theta > 0) && (len == (gsize) u_r * u_theta))
+        _ncm_spectral_polar_panels_append_sized (spp, ra, rb, ta, tb, u_r, u_theta, c);
+      else if ((u_r <= NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) && (u_theta <= NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) &&
+               (len == (gsize) ((1u << u_r) + 1) * ((1u << u_theta) + 1)))
+        ncm_spectral_polar_panels_append_data (spp, ra, rb, ta, tb, u_r, u_theta, c);
+      else
+        g_error ("ncm_spectral_polar_panels: panel %u has %zu coefficients, neither %u by %u nor at the levels %u and %u.",
+                 i, len, u_theta, u_r, u_r, u_theta);
 
-      ncm_spectral_polar_panels_append_data (spp, ra, rb, ta, tb, l_r, l_theta, c);
       g_variant_unref (coeffs_var);
       g_variant_unref (panel_var);
     }
@@ -268,9 +284,11 @@ ncm_spectral_polar_panels_class_init (NcmSpectralPolarPanelsClass *klass)
    * NcmSpectralPolarPanels:panels:
    *
    * The edges and the panels as a #GVariant of type `(adada(dddduuad))`: the radial edges,
-   * the angular edges, and for each panel $r_a$, $r_b$, $\theta_a$, $\theta_b$, $l_r$,
-   * $l_\theta$ and its coefficients by angular index. The three arrays are empty when no
-   * edges are set.
+   * the angular edges, and for each panel $r_a$, $r_b$, $\theta_a$, $\theta_b$, $N_r$,
+   * $N_\theta$ and its $N_\theta N_r$ coefficients by angular index. The three arrays are
+   * empty when no edges are set. A panel given with its levels $l_r$ and $l_\theta$ and
+   * $(2^{l_\theta} + 1) (2^{l_r} + 1)$ coefficients, as earlier versions wrote it, is read
+   * as well.
    */
   g_object_class_install_property (object_class,
                                    PROP_PANELS,
@@ -472,7 +490,19 @@ static guint _ncm_spectral_polar_panels_edge_index (const GArray *edges, gdouble
 void
 ncm_spectral_polar_panels_append_data (NcmSpectralPolarPanels *spp, gdouble ra, gdouble rb, gdouble ta, gdouble tb, guint l_r, guint l_theta, const gdouble *c)
 {
-  NcmSpectralPolarPanelsPanel panel = { ra, rb, ta, tb, l_r, l_theta, spp->coeffs->len };
+  if ((l_r > NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) || (l_theta > NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX))
+    g_error ("ncm_spectral_polar_panels_append: the levels %u and %u are above %u.", l_r, l_theta,
+             NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX);
+
+  _ncm_spectral_polar_panels_append_sized (spp, ra, rb, ta, tb, (1u << l_r) + 1, (1u << l_theta) + 1, c);
+}
+
+/* Appends a panel with n_r radial and n_theta angular coefficients, after the checks of
+ * ncm_spectral_polar_panels_append() */
+static void
+_ncm_spectral_polar_panels_append_sized (NcmSpectralPolarPanels *spp, gdouble ra, gdouble rb, gdouble ta, gdouble tb, guint n_r, guint n_theta, const gdouble *c)
+{
+  NcmSpectralPolarPanelsPanel panel = { ra, rb, ta, tb, n_r, n_theta, spp->coeffs->len };
   guint *first                      = (guint *) spp->first->data;
   const guint n_cells               = spp->first->len - 1;
   guint i, j, cell, q;
@@ -483,10 +513,6 @@ ncm_spectral_polar_panels_append_data (NcmSpectralPolarPanels *spp, gdouble ra, 
 
   if (!(ra < rb) || !(ta < tb))
     g_error ("ncm_spectral_polar_panels_append: the panel [%.17g, %.17g] x [%.17g, %.17g] is empty.", ra, rb, ta, tb);
-
-  if ((l_r > NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) || (l_theta > NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX))
-    g_error ("ncm_spectral_polar_panels_append: the levels %u and %u are above %u.", l_r, l_theta,
-             NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX);
 
   i    = _ncm_spectral_polar_panels_edge_index (spp->r_edges, 0.5 * (ra + rb));
   j    = _ncm_spectral_polar_panels_edge_index (spp->theta_edges, 0.5 * (ta + tb));
@@ -501,7 +527,7 @@ ncm_spectral_polar_panels_append_data (NcmSpectralPolarPanels *spp, gdouble ra, 
     g_error ("ncm_spectral_polar_panels_append: the panel [%.17g, %.17g] x [%.17g, %.17g] is in the initial panel %u, "
              "and a later initial panel has panels already.", ra, rb, ta, tb, cell);
 
-  len = (gsize) ((1u << l_r) + 1) * ((1u << l_theta) + 1);
+  len = (gsize) n_r * n_theta;
   g_array_append_vals (spp->coeffs, c, len);
   g_array_append_val (spp->panels, panel);
 
@@ -575,17 +601,17 @@ ncm_spectral_polar_panels_get_range (NcmSpectralPolarPanels *spp, gdouble *ra, g
  * @rb: (out): last radial edge of the panel
  * @ta: (out): first angular edge of the panel
  * @tb: (out): last angular edge of the panel
- * @l_r: (out): radial level of the panel
- * @l_theta: (out): angular level of the panel
+ * @n_r: (out): number of radial coefficients of the panel
+ * @n_theta: (out): number of angular coefficients of the panel
  *
  * Gets panel @i, which must be below ncm_spectral_polar_panels_get_n_panels(). Its
- * $2^{l_\theta} + 1$ rows of $2^{l_r} + 1$ coefficients are contiguous, and the returned
- * pointer is valid until @spp is changed.
+ * @n_theta rows of @n_r coefficients are contiguous, and the returned pointer is valid
+ * until @spp is changed.
  *
  * Returns: (transfer none): the coefficients of panel @i.
  */
 const gdouble *
-ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb, guint *l_r, guint *l_theta)
+ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb, guint *n_r, guint *n_theta)
 {
   const NcmSpectralPolarPanelsPanel *panel;
 
@@ -597,8 +623,8 @@ ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdou
   *rb      = panel->rb;
   *ta      = panel->ta;
   *tb      = panel->tb;
-  *l_r     = panel->l_r;
-  *l_theta = panel->l_theta;
+  *n_r     = panel->n_r;
+  *n_theta = panel->n_theta;
 
   return &g_array_index (spp->coeffs, gdouble, panel->offset);
 }
@@ -614,20 +640,112 @@ ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdou
  *
  * Gets a copy of panel @i, which must be below ncm_spectral_polar_panels_get_n_panels().
  *
- * Returns: (transfer full): the $(2^{l_\theta} + 1)$ by $(2^{l_r} + 1)$ coefficients of panel @i.
+ * Returns: (transfer full): the $N_\theta$ by $N_r$ coefficients of panel @i.
  */
 NcmMatrix *
 ncm_spectral_polar_panels_get_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb)
 {
-  guint l_r, l_theta;
-  const gdouble *c  = ncm_spectral_polar_panels_peek_panel (spp, i, ra, rb, ta, tb, &l_r, &l_theta);
-  const guint n_r   = (1u << l_r) + 1;
-  const guint n_t   = (1u << l_theta) + 1;
+  guint n_r, n_t;
+  const gdouble *c  = ncm_spectral_polar_panels_peek_panel (spp, i, ra, rb, ta, tb, &n_r, &n_t);
   NcmMatrix *coeffs = ncm_matrix_new (n_t, n_r);
 
   memcpy (ncm_matrix_data (coeffs), c, sizeof (gdouble) * n_t * n_r);
 
   return coeffs;
+}
+
+/*
+ * The leading block of the n_theta by n_r coefficients c with the fewest coefficients
+ * whose complement has l1 norm at most tol: *keep_theta rows of *keep_r columns. sum is
+ * scratch of n_theta n_r entries, filled with the l1 norms of the leading blocks.
+ */
+static void
+_ncm_spectral_polar_panels_trim_block (const gdouble *c, guint n_r, guint n_theta, gdouble tol, gdouble *sum, guint *keep_r, guint *keep_theta)
+{
+  gdouble total;
+  guint best_r = n_r;
+  guint best_t = n_theta;
+  guint k, l;
+
+  /* sum[l n_r + k]: l1 norm of rows 0..l, columns 0..k */
+  for (l = 0; l < n_theta; l++)
+  {
+    gdouble row = 0.0;
+
+    for (k = 0; k < n_r; k++)
+    {
+      row             += fabs (c[(gsize) l * n_r + k]);
+      sum[l * n_r + k] = row + ((l > 0) ? sum[(l - 1) * n_r + k] : 0.0);
+    }
+  }
+
+  total = sum[(n_theta - 1) * n_r + (n_r - 1)];
+
+  for (l = 0; l < n_theta; l++)
+  {
+    for (k = 0; k < n_r; k++)
+    {
+      if (total - sum[l * n_r + k] <= tol)
+      {
+        if ((gsize) (l + 1) * (k + 1) < (gsize) best_t * best_r)
+        {
+          best_t = l + 1;
+          best_r = k + 1;
+        }
+
+        break;
+      }
+    }
+  }
+
+  *keep_r     = best_r;
+  *keep_theta = best_t;
+}
+
+/**
+ * ncm_spectral_polar_panels_trim:
+ * @spp: a #NcmSpectralPolarPanels
+ * @tol: largest l1 norm of the coefficients dropped from a panel
+ *
+ * Cuts each panel to the leading block of its coefficients, the lowest radial and angular
+ * indices, with the fewest coefficients among those whose dropped coefficients have l1
+ * norm at most @tol. Since $|T_k| \le 1$ on the panel, the function changes by at most
+ * @tol at any point of it. The coefficients of the panels that remain are packed, so the
+ * object takes less memory and its evaluation fewer operations; the serialized object
+ * keeps the trimmed panels.
+ */
+void
+ncm_spectral_polar_panels_trim (NcmSpectralPolarPanels *spp, gdouble tol)
+{
+  GArray *scratch = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble *c      = (gdouble *) spp->coeffs->data;
+  gsize cursor    = 0;
+  guint i;
+
+  g_assert_cmpfloat (tol, >=, 0.0);
+
+  for (i = 0; i < spp->panels->len; i++)
+  {
+    NcmSpectralPolarPanelsPanel *panel = &g_array_index (spp->panels, NcmSpectralPolarPanelsPanel, i);
+    const gdouble *src                 = c + panel->offset;
+    guint keep_r, keep_t, l;
+
+    g_array_set_size (scratch, (gsize) panel->n_r * panel->n_theta);
+    _ncm_spectral_polar_panels_trim_block (src, panel->n_r, panel->n_theta, tol, (gdouble *) scratch->data, &keep_r, &keep_t);
+
+    /* The block moves to cursor <= offset with a row stride keep_r <= n_r, so every row
+     * goes to an address at or below the one it is read from */
+    for (l = 0; l < keep_t; l++)
+      memmove (c + cursor + (gsize) l * keep_r, src + (gsize) l * panel->n_r, sizeof (gdouble) * keep_r);
+
+    panel->offset  = cursor;
+    panel->n_r     = keep_r;
+    panel->n_theta = keep_t;
+    cursor        += (gsize) keep_r * keep_t;
+  }
+
+  g_array_set_size (spp->coeffs, cursor);
+  g_array_unref (scratch);
 }
 
 /**
@@ -716,9 +834,9 @@ ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble
 {
   const NcmSpectralPolarPanelsPanel *panel = &g_array_index (spp->panels, NcmSpectralPolarPanelsPanel, i);
   const gdouble *c                         = &g_array_index (spp->coeffs, gdouble, panel->offset);
-  const guint n                            = 1u << panel->l_r;
-  const guint m                            = 1u << panel->l_theta;
-  const gsize ld                           = n + 1;
+  const guint n                            = panel->n_r - 1;
+  const guint m                            = panel->n_theta - 1;
+  const gsize ld                           = panel->n_r;
   const gdouble sr                         = (2.0 * r - panel->ra - panel->rb) / (panel->rb - panel->ra);
   const gdouble st                         = (2.0 * theta - panel->ta - panel->tb) / (panel->tb - panel->ta);
   const gdouble sr2                        = 2.0 * sr;

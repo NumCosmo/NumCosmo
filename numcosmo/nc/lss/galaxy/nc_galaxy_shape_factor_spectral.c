@@ -465,7 +465,9 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    *
    * The absolute tolerance on $\ln P$ of the interpolant, passed to
    * ncm_spectral_polar_build(): a panel is accepted when $\ln P$ changes by at most this
-   * value between its two grids.
+   * value between its two grids. Each panel of the interpolant is then trimmed
+   * (ncm_spectral_polar_panels_trim()) to the coefficients that change $\ln P$ by more than
+   * $10^{-4}$ times this value, in memory and in a catalog prepared with them.
    */
   g_object_class_install_property (object_class,
                                    PROP_INTERP_ABSTOL,
@@ -799,6 +801,13 @@ typedef struct _NcGalaxyShapeFactorSpectralInterp
 } NcGalaxyShapeFactorSpectralInterp;
 
 /*
+ * Largest change of ln P, relative to interp-abstol, of the coefficients trimmed from each
+ * panel of an interpolant: with the default interp-abstol (1e-5) the trimmed coefficients
+ * change ln P by at most 1e-9, against a measured interpolation error of 1e-8.
+ */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_TRIM (1.0e-4)
+
+/*
  * Builds the interpolant of ln P in g of the galaxy of data, for the observed ellipticity
  * (epsilon_obs_1, epsilon_obs_2), on a region that contains the disk
  * |g| <= NcGalaxyShapeFactorSpectral:interp-g-max, and records in the data of the galaxy
@@ -866,6 +875,9 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
   ldata->valid = FALSE;
   ncm_spectral_polar_build (self->polar_interp, &_nc_galaxy_shape_factor_spectral_interp_kernel, &interp, work->r_edges, work->theta_edges,
                             0.0, self->interp_abstol, ldata->spp, NULL, &error);
+
+  if (error == NULL)
+    ncm_spectral_polar_panels_trim (ldata->spp, NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_TRIM * self->interp_abstol);
 
   ncm_memory_pool_return (ptr);
 

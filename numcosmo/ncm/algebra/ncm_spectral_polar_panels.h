@@ -49,7 +49,8 @@ void ncm_spectral_polar_panels_append_data (NcmSpectralPolarPanels *spp, gdouble
 
 guint ncm_spectral_polar_panels_get_n_panels (NcmSpectralPolarPanels *spp);
 void ncm_spectral_polar_panels_get_range (NcmSpectralPolarPanels *spp, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb);
-const gdouble *ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb, guint *l_r, guint *l_theta);
+const gdouble *ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb, guint *n_r, guint *n_theta);
+void ncm_spectral_polar_panels_trim (NcmSpectralPolarPanels *spp, gdouble tol);
 NcmMatrix *ncm_spectral_polar_panels_get_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb);
 guint ncm_spectral_polar_panels_find_panel (NcmSpectralPolarPanels *spp, gdouble r, gdouble theta);
 

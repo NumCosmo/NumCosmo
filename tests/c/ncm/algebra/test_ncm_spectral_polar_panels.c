@@ -115,6 +115,10 @@ void test_ncm_spectral_polar_panels_append_across_subprocess (TestNcmSpectralPol
 void test_ncm_spectral_polar_panels_append_order (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_append_order_subprocess (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_variant_size (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels_trim (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels_trim_zero (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels_variant_counts (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels_variant_levels (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_variant_size_subprocess (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 
 #define TEST_NCM_SPECTRAL_POLAR_PANELS_ADD(name, func)                                    \
@@ -165,6 +169,10 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("append/order", test_ncm_spectral_polar_panels_append_order);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("append/order/subprocess", test_ncm_spectral_polar_panels_append_order_subprocess);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/size", test_ncm_spectral_polar_panels_variant_size);
+  TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("trim", test_ncm_spectral_polar_panels_trim);
+  TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("trim/zero", test_ncm_spectral_polar_panels_trim_zero);
+  TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/counts", test_ncm_spectral_polar_panels_variant_counts);
+  TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/levels", test_ncm_spectral_polar_panels_variant_levels);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/size/subprocess", test_ncm_spectral_polar_panels_variant_size_subprocess);
 
   g_test_run ();
@@ -393,16 +401,16 @@ test_ncm_spectral_polar_panels_append (TestNcmSpectralPolarPanels *test, gconstp
 
   for (i = 0; i < 5; i++)
   {
-    guint l_r, l_theta;
-    const gdouble *c = ncm_spectral_polar_panels_peek_panel (test->spp, i, &ra, &rb, &ta, &tb, &l_r, &l_theta);
+    guint n_r, n_theta;
+    const gdouble *c = ncm_spectral_polar_panels_peek_panel (test->spp, i, &ra, &rb, &ta, &tb, &n_r, &n_theta);
     NcmMatrix *copy  = ncm_spectral_polar_panels_get_panel (test->spp, i, &ra, &rb, &ta, &tb);
 
     g_assert_cmpfloat (ra, ==, panel[i][0]);
     g_assert_cmpfloat (rb, ==, panel[i][1]);
     g_assert_cmpfloat (ta, ==, panel[i][2]);
     g_assert_cmpfloat (tb, ==, panel[i][3]);
-    g_assert_cmpuint ((1u << l_r) + 1, ==, ncm_matrix_ncols (coeffs[i]));
-    g_assert_cmpuint ((1u << l_theta) + 1, ==, ncm_matrix_nrows (coeffs[i]));
+    g_assert_cmpuint (n_r, ==, ncm_matrix_ncols (coeffs[i]));
+    g_assert_cmpuint (n_theta, ==, ncm_matrix_nrows (coeffs[i]));
     g_assert_cmpfloat (c[1], ==, ncm_matrix_get (coeffs[i], 0, 1));
     g_assert_cmpfloat (ncm_matrix_cmp (copy, coeffs[i], 0.0), ==, 0.0);
 
@@ -563,12 +571,12 @@ test_ncm_spectral_polar_panels_build_bisect (TestNcmSpectralPolarPanels *test, g
   for (i = 0; i < n_panels; i++)
   {
     gdouble ra, rb, ta, tb;
-    guint l_r, l_theta;
+    guint n_r, n_theta;
 
-    ncm_spectral_polar_panels_peek_panel (test->spp, i, &ra, &rb, &ta, &tb, &l_r, &l_theta);
+    ncm_spectral_polar_panels_peek_panel (test->spp, i, &ra, &rb, &ta, &tb, &n_r, &n_theta);
 
-    g_assert_cmpuint (l_r, <=, 4);
-    g_assert_cmpuint (l_theta, <=, 4);
+    g_assert_cmpuint (n_r, <=, 17);
+    g_assert_cmpuint (n_theta, <=, 17);
     g_assert_cmpuint (ncm_spectral_polar_panels_find_panel (test->spp, ra, ta), ==, i);
     g_assert_cmpuint (ncm_spectral_polar_panels_find_panel (test->spp, 0.5 * (ra + rb), 0.5 * (ta + tb)), ==, i);
     g_assert_cmpuint (ncm_spectral_polar_panels_find_panel (test->spp, rb - 1.0e-9 * (rb - ra), tb - 1.0e-9 * (tb - ta)), ==, i);
@@ -961,7 +969,7 @@ test_ncm_spectral_polar_panels_variant_size (TestNcmSpectralPolarPanels *test, g
 {
   g_test_trap_subprocess ("/ncm/spectral_polar_panels/variant/size/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*panel 0 has 8 coefficients at the levels 1 and 1*");
+  g_test_trap_assert_stderr ("*panel 0 has 8 coefficients, neither 1 by 1 nor at the levels 1 and 1*");
 }
 
 void
@@ -982,5 +990,188 @@ test_ncm_spectral_polar_panels_variant_size_subprocess (TestNcmSpectralPolarPane
                           g_variant_builder_end (&builder));
 
   g_object_new (NCM_TYPE_SPECTRAL_POLAR_PANELS, "panels", panels, NULL);
+}
+
+/* The number of coefficients of every panel of spp */
+static gsize
+_n_coeffs (NcmSpectralPolarPanels *spp)
+{
+  const guint n_panels = ncm_spectral_polar_panels_get_n_panels (spp);
+  gsize n              = 0;
+  guint i;
+
+  for (i = 0; i < n_panels; i++)
+  {
+    gdouble ra, rb, ta, tb;
+    guint n_r, n_theta;
+
+    ncm_spectral_polar_panels_peek_panel (spp, i, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+    n += (gsize) n_r * n_theta;
+  }
+
+  return n;
+}
+
+/*
+ * Trimming changes the function by at most the tolerance at every point, drops
+ * coefficients, and the trimmed panels survive serialization unchanged.
+ */
+void
+test_ncm_spectral_polar_panels_trim (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
+{
+  const gdouble r_edges[]       = {0.0, 1.0};
+  const gdouble t_edges[]       = {-M_PI, 0.0, M_PI};
+  const gdouble tol             = 1.0e-10;
+  TestFunc f                    = { 1, 1.0, 0.4 * cos (0.7), 0.4 * sin (0.7), 0.05, 3.0, 0 };
+  NcmSpectralPolarPanels *whole = ncm_spectral_polar_panels_new ();
+  NcmSerialize *ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GError *error                 = NULL;
+  NcmSpectralPolarPanels *dup;
+  gdouble ra, rb, ta, tb;
+  gsize n_whole, n_trim;
+  guint i;
+
+  ncm_spectral_polar_set_level_cap (test->sp, 5);
+  _set_edges (test->r_edges, r_edges, G_N_ELEMENTS (r_edges));
+  _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
+
+  ncm_spectral_polar_build (test->sp, &_func, &f, test->r_edges, test->theta_edges, 0.0, 1.0e-12, whole, NULL, &error);
+  g_assert_no_error (error);
+  ncm_spectral_polar_build (test->sp, &_func, &f, test->r_edges, test->theta_edges, 0.0, 1.0e-12, test->spp, NULL, &error);
+  g_assert_no_error (error);
+
+  n_whole = _n_coeffs (test->spp);
+  ncm_spectral_polar_panels_trim (test->spp, tol);
+  n_trim = _n_coeffs (test->spp);
+
+  g_assert_cmpuint (ncm_spectral_polar_panels_get_n_panels (test->spp), ==, ncm_spectral_polar_panels_get_n_panels (whole));
+  g_assert_cmpuint (n_trim, <, n_whole);
+
+  ncm_spectral_polar_panels_get_range (test->spp, &ra, &rb, &ta, &tb);
+
+  for (i = 0; i < TEST_N_POINTS; i++)
+  {
+    const gdouble r     = ncm_rng_uniform_gen (test->rng, ra, rb);
+    const gdouble theta = ncm_rng_uniform_gen (test->rng, ta, tb);
+
+    g_assert_cmpfloat (fabs (ncm_spectral_polar_panels_eval (test->spp, r, theta) - ncm_spectral_polar_panels_eval (whole, r, theta)), <=, tol);
+  }
+
+  dup = NCM_SPECTRAL_POLAR_PANELS (ncm_serialize_dup_obj (ser, G_OBJECT (test->spp)));
+  g_assert_cmpuint (_n_coeffs (dup), ==, n_trim);
+
+  for (i = 0; i < 200; i++)
+  {
+    const gdouble r     = ncm_rng_uniform_gen (test->rng, ra, rb);
+    const gdouble theta = ncm_rng_uniform_gen (test->rng, ta, tb);
+
+    g_assert_cmpfloat (ncm_spectral_polar_panels_eval (dup, r, theta), ==, ncm_spectral_polar_panels_eval (test->spp, r, theta));
+  }
+
+  ncm_spectral_polar_panels_free (dup);
+  ncm_spectral_polar_panels_free (whole);
+  ncm_serialize_free (ser);
+}
+
+/* A zero tolerance keeps every coefficient that is not zero */
+void
+test_ncm_spectral_polar_panels_trim_zero (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
+{
+  const gdouble edges[] = {0.0, 1.0};
+  NcmMatrix *c          = ncm_matrix_new (3, 5);
+  gdouble ra, rb, ta, tb;
+  guint n_r, n_theta;
+
+  ncm_matrix_set_zero (c);
+  ncm_matrix_set (c, 0, 0, 1.0);
+  ncm_matrix_set (c, 1, 2, 0.5);
+
+  _set_edges (test->r_edges, edges, 2);
+  _set_edges (test->theta_edges, edges, 2);
+  ncm_spectral_polar_panels_set_edges (test->spp, test->r_edges, test->theta_edges);
+  ncm_spectral_polar_panels_append (test->spp, 0.0, 1.0, 0.0, 1.0, c);
+
+  ncm_spectral_polar_panels_trim (test->spp, 0.0);
+  ncm_spectral_polar_panels_peek_panel (test->spp, 0, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+
+  g_assert_cmpuint (n_r, ==, 3);
+  g_assert_cmpuint (n_theta, ==, 2);
+  g_assert_cmpfloat (ncm_spectral_polar_panels_eval (test->spp, 0.3, 0.6), ==,
+                     1.0 + 0.5 * _cheb (2, 2.0 * 0.3 - 1.0) * _cheb (1, 2.0 * 0.6 - 1.0));
+
+  ncm_matrix_free (c);
+}
+
+/* A variant of panels whose two numbers give n_r and n_theta, and whose coefficients are 1 / (1 + k + 2 l) */
+static GVariant *
+_panels_variant (guint u_r, guint u_theta, guint n_r, guint n_theta)
+{
+  const gdouble edges[2] = {0.0, 1.0};
+  gdouble *c             = g_new (gdouble, n_r * n_theta);
+  GVariantBuilder builder;
+  GVariant *panels;
+  guint k, l;
+
+  for (l = 0; l < n_theta; l++)
+    for (k = 0; k < n_r; k++)
+      c[l * n_r + k] = 1.0 / (1.0 + k + 2.0 * l);
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(dddduuad)"));
+  g_variant_builder_add (&builder, "(dddduu@ad)", 0.0, 1.0, 0.0, 1.0, u_r, u_theta,
+                         g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), c, n_r * n_theta, sizeof (gdouble)));
+
+  panels = g_variant_new ("(@ad@ad@a(dddduuad))",
+                          g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), edges, 2, sizeof (gdouble)),
+                          g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), edges, 2, sizeof (gdouble)),
+                          g_variant_builder_end (&builder));
+  g_free (c);
+
+  return panels;
+}
+
+/* The value at (r, theta) on [0, 1]^2 of the coefficients of _panels_variant() */
+static gdouble
+_panels_variant_value (guint n_r, guint n_theta, gdouble r, gdouble theta)
+{
+  gdouble v = 0.0;
+  guint k, l;
+
+  for (l = 0; l < n_theta; l++)
+    for (k = 0; k < n_r; k++)
+      v += _cheb (k, 2.0 * r - 1.0) * _cheb (l, 2.0 * theta - 1.0) / (1.0 + k + 2.0 * l);
+
+  return v;
+}
+
+/* A panel given with its numbers of coefficients, any of them */
+void
+test_ncm_spectral_polar_panels_variant_counts (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
+{
+  NcmSpectralPolarPanels *spp = g_object_new (NCM_TYPE_SPECTRAL_POLAR_PANELS, "panels", _panels_variant (4, 2, 4, 2), NULL);
+  gdouble ra, rb, ta, tb;
+  guint n_r, n_theta;
+
+  ncm_spectral_polar_panels_peek_panel (spp, 0, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+  g_assert_cmpuint (n_r, ==, 4);
+  g_assert_cmpuint (n_theta, ==, 2);
+  ncm_assert_cmpdouble_e (ncm_spectral_polar_panels_eval (spp, 0.3, 0.8), ==, _panels_variant_value (4, 2, 0.3, 0.8), 1.0e-14, 0.0);
+
+  ncm_spectral_polar_panels_free (spp);
+}
+
+/* A panel given with its levels, as earlier versions wrote it */
+void
+test_ncm_spectral_polar_panels_variant_levels (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
+{
+  NcmSpectralPolarPanels *spp = g_object_new (NCM_TYPE_SPECTRAL_POLAR_PANELS, "panels", _panels_variant (2, 0, 5, 2), NULL);
+  gdouble ra, rb, ta, tb;
+  guint n_r, n_theta;
+
+  ncm_spectral_polar_panels_peek_panel (spp, 0, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+  g_assert_cmpuint (n_r, ==, 5);
+  g_assert_cmpuint (n_theta, ==, 2);
+  ncm_assert_cmpdouble_e (ncm_spectral_polar_panels_eval (spp, 0.3, 0.8), ==, _panels_variant_value (5, 2, 0.3, 0.8), 1.0e-14, 0.0);
+
+  ncm_spectral_polar_panels_free (spp);
 }
 

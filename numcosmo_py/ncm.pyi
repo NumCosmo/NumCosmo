@@ -11533,6 +11533,7 @@ class SpectralPolarPanels(GObject.Object):
         r_edges: typing.Sequence[float] | npt.NDArray[np.float64],
         theta_edges: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> None: ...
+    def trim(self, tol: float) -> None: ...
 
 class SpectralPolarPanelsClass(GObject.GPointer):
     r"""
