@@ -645,7 +645,8 @@ test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral *tes
   ln_direct = nc_galaxy_shape_factor_spectral_eval_ln_direct (gsfs, test->pop, data->pop_data, g1, g2, e1, e2, s);
 
   g_assert_cmpfloat (nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g1, g2, e1, e2), ==, ln_direct);
-  g_assert_cmpfloat (nc_galaxy_shape_factor_eval_marginal (gsf, test->pop, data, g1, g2, e1, e2), ==, exp (ln_direct));
+  /* With AVX2 the exponential is ncm_vmath_exp(), within 2 ulp of exp() */
+  ncm_assert_cmpdouble_e (nc_galaxy_shape_factor_eval_marginal (gsf, test->pop, data, g1, g2, e1, e2), ==, exp (ln_direct), 1.0e-15, 0.0);
 
   g_ptr_array_unref (data_array);
   nc_galaxy_shape_factor_data_unref (data);
@@ -716,7 +717,7 @@ test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *te
 
           g_assert_cmpfloat_with_epsilon (ln_P, ln_int, TEST_SPECTRAL_INTERP_TOL);
           g_assert_cmpfloat_with_epsilon (nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g1_ref, g2_ref, e1, e2), ln_P, 1.0e-11);
-          g_assert_cmpfloat (nc_galaxy_shape_factor_eval_marginal (gsf, test->pop, data, g1, g2, e1, e2), ==, exp (ln_P));
+          ncm_assert_cmpdouble_e (nc_galaxy_shape_factor_eval_marginal (gsf, test->pop, data, g1, g2, e1, e2), ==, exp (ln_P), 1.0e-15, 0.0);
         }
       }
 

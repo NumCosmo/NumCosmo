@@ -672,7 +672,8 @@ _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
 static gdouble
 _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
 {
-  return exp (_nc_galaxy_shape_factor_spectral_eval_ln_marginal (gsf, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
+  /* The exponential of eval_nodes, so that both give the same values */
+  return ncm_vmath_exp (_nc_galaxy_shape_factor_spectral_eval_ln_marginal (gsf, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
 }
 
 /*
@@ -775,7 +776,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
         const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
                                                                        epsilon_obs_1, epsilon_obs_2, NULL);
 
-        out[j] = want_log ? ln_P : exp (ln_P);
+        out[j] = want_log ? ln_P : ncm_vmath_exp (ln_P);
       }
       else
       {
@@ -809,17 +810,25 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
     for (k = 0; k < c; k++)
       _nc_galaxy_shape_factor_spectral_interp_coords (ldata, ig_1[k], ig_2[k], &rho[k], &psi[k]);
 
+    /* ln P, kept in rho, which is no longer needed */
     for (k = 0; k < c; k++)
     {
-      gdouble ln_P;
-
       /* The shears of the nodes of a galaxy lie on a line, so a node is usually in the
        * panel of the previous one */
-      panel = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[k], psi[k]);
-      ln_P  = ncm_spectral_polar_panels_eval_on (ldata->spp, panel, rho[k], psi[k]);
-
-      out[idx[k]] = want_log ? ln_P : exp (ln_P);
+      panel  = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[k], psi[k]);
+      rho[k] = ncm_spectral_polar_panels_eval_on (ldata->spp, panel, rho[k], psi[k]);
     }
+
+    if (!want_log)
+    {
+      #pragma omp simd
+
+      for (k = 0; k < c; k++)
+        rho[k] = ncm_vmath_exp (rho[k]);
+    }
+
+    for (k = 0; k < c; k++)
+      out[idx[k]] = rho[k];
   }
 }
 
