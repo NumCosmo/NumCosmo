@@ -400,6 +400,7 @@ static void _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, 
 static void _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
+static void _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 
 static void
 nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *klass)
@@ -495,6 +496,7 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
   gsf_class->data_prepare     = &_nc_galaxy_shape_factor_spectral_data_prepare;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_spectral_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_spectral_eval_ln_marginal;
+  gsf_class->eval_nodes       = &_nc_galaxy_shape_factor_spectral_eval_nodes;
 }
 
 static gpointer
@@ -708,6 +710,61 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
 
       return ncm_spectral_polar_panels_eval (ldata->spp, hypot (gf_1, gf_2), atan2 (fabs (gf_2), gf_1));
     }
+  }
+}
+
+/*
+ * eval_nodes: ln P (or P) at n shears of one galaxy, the same values as
+ * _nc_galaxy_shape_factor_spectral_eval_ln_marginal() at each shear. The interpolant is
+ * checked (and built when it is not valid) once, at the first shear inside
+ * interp-g-max, instead of once per shear.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                             const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                             const gboolean want_log, gdouble *out)
+{
+  NcGalaxyShapeFactorSpectral *gsfs               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf);
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+  NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
+  const gdouble g_max2                            = gsl_pow_2 (self->interp_g_max);
+  gboolean checked                                = FALSE;
+  guint j;
+
+  for (j = 0; j < n; j++)
+  {
+    gdouble ln_P;
+
+    if (!self->use_interp || (g_1[j] * g_1[j] + g_2[j] * g_2[j] > g_max2))
+    {
+      ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j], epsilon_obs_1, epsilon_obs_2, NULL);
+    }
+    else
+    {
+      if (!checked)
+      {
+        if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
+        {
+          if (ldata->loaded)
+            g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
+                     "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
+                     "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
+
+          _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
+        }
+
+        checked = TRUE;
+      }
+
+      {
+        const gdouble gf_1 = g_1[j] * ldata->cos_e + g_2[j] * ldata->sin_e - ldata->g_c;
+        const gdouble gf_2 = g_2[j] * ldata->cos_e - g_1[j] * ldata->sin_e;
+
+        ln_P = ncm_spectral_polar_panels_eval (ldata->spp, hypot (gf_1, gf_2), atan2 (fabs (gf_2), gf_1));
+      }
+    }
+
+    out[j] = want_log ? ln_P : exp (ln_P);
   }
 }
 
