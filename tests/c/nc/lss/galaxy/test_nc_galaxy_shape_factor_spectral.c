@@ -124,6 +124,7 @@ void test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral
 void test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -159,6 +160,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_spectral/eval_line", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_eval_line,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/line", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_line,
               &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/crit_hash", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
@@ -1465,6 +1470,78 @@ test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral 
 
   nc_galaxy_shape_pop_data_unref (gauss_data);
   nc_galaxy_shape_pop_free (gauss);
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+}
+
+/*
+ * nc_galaxy_shape_factor_line_new() and _eval(): the values of the linear shape integrand
+ * at each redshift, from the table within line-abstol over [z_lo, z_hi] and exactly outside
+ * it (a redshift beyond z_hi) and without the table (line-abstol zero, the interpolant).
+ */
+void
+test_nc_galaxy_shape_factor_spectral_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcGalaxyPositionFactorData *p_data    = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data    = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  const NcGalaxyWLObsEllipConv convs[2] = {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET};
+  const gdouble z_lo                    = 0.25;
+  const gdouble z_hi                    = 3.0;
+  guint ic, mode;
+
+  p_data->ra  = 0.05;
+  p_data->dec = 0.02;
+
+  for (ic = 0; ic < 2; ic++)
+  {
+    /* mode 0: the table; 1: line-abstol zero; 2: the interpolant */
+    for (mode = 0; mode < 3; mode++)
+    {
+      NcGalaxyShapeFactorSpectral *gsfs   = nc_galaxy_shape_factor_spectral_new (convs[ic]);
+      NcGalaxyShapeFactor *gsf            = NC_GALAXY_SHAPE_FACTOR (gsfs);
+      NcGalaxyShapeFactorData *data       = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+      GPtrArray *data_array               = g_ptr_array_new ();
+      NcGalaxyShapeFactorIntegrand *integ = NULL;
+      NcGalaxyShapeFactorLine *line;
+      guint k;
+
+      if (mode == 1)
+        nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 0.0);
+
+      nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, mode == 2);
+      nc_galaxy_shape_factor_data_set (gsf, data, -0.25, 0.35, 0.1, 0.004, -0.003, 0.05, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+      g_ptr_array_add (data_array, data);
+      g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+      integ = nc_galaxy_shape_factor_integ (gsf, test->mset, FALSE);
+
+      line = nc_galaxy_shape_factor_line_new (gsf, data, z_lo, z_hi);
+      g_assert_true (nc_galaxy_shape_factor_line_has_table (line) == (mode == 0));
+
+      for (k = 0; k <= 40; k++)
+      {
+        const gdouble z   = z_lo + (z_hi - z_lo) * k / 40.0;
+        const gdouble ref = nc_galaxy_shape_factor_integrand_eval (integ, z, data);
+        const gdouble val = nc_galaxy_shape_factor_line_eval (line, z);
+
+        g_assert_true (gsl_finite (val) && (val > 0.0));
+
+        if (mode == 0)
+          ncm_assert_cmpdouble_e (val, ==, ref, 1.0e-8, 0.0);
+        else
+          ncm_assert_cmpdouble_e (val, ==, ref, 1.0e-14, 0.0);
+      }
+
+      /* Beyond the range of the table the integral is computed */
+      ncm_assert_cmpdouble_e (nc_galaxy_shape_factor_line_eval (line, 4.0), ==, nc_galaxy_shape_factor_integrand_eval (integ, 4.0, data), 1.0e-14, 0.0);
+
+      nc_galaxy_shape_factor_line_free (line);
+      nc_galaxy_shape_factor_integrand_free (integ);
+      g_ptr_array_unref (data_array);
+      nc_galaxy_shape_factor_data_unref (data);
+      nc_galaxy_shape_factor_free (gsf);
+    }
+  }
+
   nc_galaxy_position_factor_data_unref (p_data);
   nc_galaxy_redshift_factor_data_unref (z_data);
 }

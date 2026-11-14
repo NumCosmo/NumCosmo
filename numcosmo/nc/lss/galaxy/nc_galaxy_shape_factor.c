@@ -71,6 +71,7 @@
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "ncm/core/ncm_prefetch_private.h"
+#include "ncm/core/ncm_vmath_private.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
@@ -300,6 +301,16 @@ _nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *
       out[j] = klass->eval_marginal (gsf, pop, data, g_1[j], g_2[j], epsilon_obs_1, epsilon_obs_2);
 }
 
+/* Default line_table: no table */
+static gboolean
+_nc_galaxy_shape_factor_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                    const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2,
+                                    const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                    GArray **coeffs)
+{
+  return FALSE;
+}
+
 /* Points per call of eval_nodes in _nc_galaxy_shape_factor_eval_line(). */
 #define NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK 64
 
@@ -362,6 +373,7 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
   klass->get_desc         = &_nc_galaxy_shape_factor_get_desc;
   klass->eval_nodes       = &_nc_galaxy_shape_factor_eval_nodes;
   klass->eval_line        = &_nc_galaxy_shape_factor_eval_line;
+  klass->line_table       = &_nc_galaxy_shape_factor_line_table;
 }
 
 static void
@@ -1782,6 +1794,175 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
     g_free (t);
     g_free (idx);
   }
+}
+
+/*
+ * The galaxy of data along its line: t = (1 + m) g_t (z), where the shear is
+ * bias + t rot, the same value as the shape integrand
+ * (_nc_galaxy_shape_factor_integ_f) uses at z, from the models cached by
+ * nc_galaxy_shape_factor_prepare().
+ */
+static gdouble
+_nc_galaxy_shape_factor_line_t (NcGalaxyShapeFactorPrivate * const self, NcGalaxyShapeFactorData *data, const gdouble z)
+{
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+  const gdouble z_cl              = nc_halo_position_get_redshift (self->halo_position);
+  gdouble gt;
+
+  if (z > z_cl)
+  {
+    gt = nc_wl_surface_mass_density_reduced_shear_optzs (self->surface_mass_density, self->density_profile, self->cosmo,
+                                                         z, z_cl, &cdata->optzs);
+  }
+  else
+  {
+    const gdouble gt0 = nc_wl_surface_mass_density_reduced_shear_optzs (self->surface_mass_density, self->density_profile, self->cosmo,
+                                                                        z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, &cdata->optzs);
+    const gdouble step = exp ((z - z_cl) / 0.001);
+
+    gt = step * gt0;
+  }
+
+  return (1.0 + data->m) * gt;
+}
+
+/* Points of the scan of t over [z_lo, z_hi] in nc_galaxy_shape_factor_line_new() */
+#define NC_GALAXY_SHAPE_FACTOR_LINE_SCAN (64)
+
+struct _NcGalaxyShapeFactorLine
+{
+  NcGalaxyShapeFactor *gsf;
+  NcGalaxyShapeFactorData *data;
+  GArray *coeffs; /* ln P in t on [t_min, t_max], or NULL */
+  gdouble t_min;
+  gdouble t_max;
+};
+
+/**
+ * nc_galaxy_shape_factor_line_new: (skip)
+ * @gsf: a #NcGalaxyShapeFactor, prepared by nc_galaxy_shape_factor_prepare()
+ * @data: a #NcGalaxyShapeFactorData with its lens geometry and optzs prepared
+ * @z_lo: the lower end of the redshifts to be evaluated
+ * @z_hi: the upper end of the redshifts to be evaluated
+ *
+ * The shape likelihood of the galaxy of @data as a function of its redshift, for many
+ * evaluations at the current model, such as the calibration of its redshift nodes. The
+ * shears at all redshifts lie on one line, bias + t rot, with $t = (1 + m) g_t (z)$; the
+ * range of t over a scan of [@z_lo, @z_hi] is given to the line_table hook, and a
+ * subclass that returns a table there (#NcGalaxyShapeFactorSpectral) gives the values
+ * from it. The values are those of nc_galaxy_shape_factor_integ() (linear) at the same
+ * model, within the tolerance of the table.
+ *
+ * Returns: (transfer full): a new #NcGalaxyShapeFactorLine.
+ */
+NcGalaxyShapeFactorLine *
+nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const gdouble z_lo, const gdouble z_hi)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  NcGalaxyShapeFactorLine *line           = g_new0 (NcGalaxyShapeFactorLine, 1);
+  guint k;
+
+  g_assert_nonnull (self->pop);
+  g_assert_cmpfloat (z_hi, >=, z_lo);
+
+  line->gsf    = gsf;
+  line->data   = nc_galaxy_shape_factor_data_ref (data);
+  line->coeffs = NULL;
+  line->t_min  = GSL_POSINF;
+  line->t_max  = GSL_NEGINF;
+
+  for (k = 0; k <= NC_GALAXY_SHAPE_FACTOR_LINE_SCAN; k++)
+  {
+    const gdouble z = (k == NC_GALAXY_SHAPE_FACTOR_LINE_SCAN) ? z_hi : z_lo + (z_hi - z_lo) * k / (gdouble) NC_GALAXY_SHAPE_FACTOR_LINE_SCAN;
+    const gdouble t = _nc_galaxy_shape_factor_line_t (self, data, z);
+
+    line->t_min = GSL_MIN (line->t_min, t);
+    line->t_max = GSL_MAX (line->t_max, t);
+  }
+
+  if (!NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->line_table (gsf, self->pop, data, line->t_min, line->t_max,
+                                                           cdata->rot_re, cdata->rot_im, data->c1, data->c2,
+                                                           data->epsilon_obs_1, data->epsilon_obs_2, &line->coeffs))
+    g_clear_pointer (&line->coeffs, g_array_unref);
+
+  return line;
+}
+
+/**
+ * nc_galaxy_shape_factor_line_eval: (skip)
+ * @line: a #NcGalaxyShapeFactorLine
+ * @z: a redshift
+ *
+ * The shape likelihood $P(\epsilon_\mathrm{obs} \mid z)$ of the galaxy of @line: from the
+ * table when it has one and t (@z) is inside its range, otherwise by
+ * nc_galaxy_shape_factor_eval_nodes() at the shear of @z.
+ *
+ * Returns: $P(\epsilon_\mathrm{obs} \mid z)$.
+ */
+gdouble
+nc_galaxy_shape_factor_line_eval (NcGalaxyShapeFactorLine *line, const gdouble z)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (line->gsf);
+  NcGalaxyShapeFactorData *data           = line->data;
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  const gdouble t                         = _nc_galaxy_shape_factor_line_t (self, data, z);
+
+  if ((line->coeffs != NULL) && (t >= line->t_min) && (t <= line->t_max))
+  {
+    const gdouble *c = (const gdouble *) line->coeffs->data;
+    const gdouble s  = (2.0 * t - (line->t_max + line->t_min)) / (line->t_max - line->t_min);
+    gdouble b1       = 0.0;
+    gdouble b2       = 0.0;
+    guint l;
+
+    for (l = line->coeffs->len - 1; l >= 1; l--)
+    {
+      const gdouble b0 = 2.0 * s * b1 - b2 + c[l];
+
+      b2 = b1;
+      b1 = b0;
+    }
+
+    return ncm_vmath_exp (s * b1 - b2 + c[0]);
+  }
+  else
+  {
+    const gdouble g_1 = data->c1 + t * cdata->rot_re;
+    const gdouble g_2 = data->c2 + t * cdata->rot_im;
+    gdouble out;
+
+    NC_GALAXY_SHAPE_FACTOR_GET_CLASS (line->gsf)->eval_nodes (line->gsf, self->pop, data, 1, &g_1, &g_2,
+                                                              data->epsilon_obs_1, data->epsilon_obs_2, FALSE, &out);
+
+    return out;
+  }
+}
+
+/**
+ * nc_galaxy_shape_factor_line_has_table: (skip)
+ * @line: a #NcGalaxyShapeFactorLine
+ *
+ * Returns: whether @line gives its values from a table.
+ */
+gboolean
+nc_galaxy_shape_factor_line_has_table (NcGalaxyShapeFactorLine *line)
+{
+  return line->coeffs != NULL;
+}
+
+/**
+ * nc_galaxy_shape_factor_line_free: (skip)
+ * @line: a #NcGalaxyShapeFactorLine
+ *
+ * Frees @line.
+ */
+void
+nc_galaxy_shape_factor_line_free (NcGalaxyShapeFactorLine *line)
+{
+  g_clear_pointer (&line->coeffs, g_array_unref);
+  nc_galaxy_shape_factor_data_unref (line->data);
+  g_free (line);
 }
 
 /**
