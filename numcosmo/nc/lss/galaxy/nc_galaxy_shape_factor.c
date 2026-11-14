@@ -1817,3 +1817,42 @@ nc_galaxy_shape_factor_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShape
   return NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_ln_marginal (gsf, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2);
 }
 
+/**
+ * nc_galaxy_shape_factor_eval_ln_marginal_array:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @pop: the #NcGalaxyShapePop intrinsic-ellipticity model
+ * @data: a #NcGalaxyShapeFactorData
+ * @g_1: real parts of the reduced shears
+ * @g_2: imaginary parts of the reduced shears
+ * @epsilon_obs_1: observed ellipticities, component 1
+ * @epsilon_obs_2: observed ellipticities, component 2
+ * @out: a #NcmVector receiving the results
+ *
+ * Sets element $i$ of @out to nc_galaxy_shape_factor_eval_ln_marginal() at element $i$
+ * of @g_1, @g_2, @epsilon_obs_1 and @epsilon_obs_2, in order and in one call, for the
+ * galaxy of @data. The five vectors must have the same length. It evaluates many points
+ * without a call per point from the caller, for example to time the evaluation of a
+ * class from a language binding without the cost of the binding.
+ */
+void
+nc_galaxy_shape_factor_eval_ln_marginal_array (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                               const NcmVector *g_1, const NcmVector *g_2,
+                                               const NcmVector *epsilon_obs_1, const NcmVector *epsilon_obs_2,
+                                               NcmVector *out)
+{
+  NcGalaxyShapeFactorClass *klass = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+  const guint n                   = ncm_vector_len (out);
+  guint i;
+
+  g_assert_cmpuint (ncm_vector_len (g_1), ==, n);
+  g_assert_cmpuint (ncm_vector_len (g_2), ==, n);
+  g_assert_cmpuint (ncm_vector_len (epsilon_obs_1), ==, n);
+  g_assert_cmpuint (ncm_vector_len (epsilon_obs_2), ==, n);
+
+  for (i = 0; i < n; i++)
+    ncm_vector_set (out, i,
+                    klass->eval_ln_marginal (gsf, pop, data,
+                                             ncm_vector_get (g_1, i), ncm_vector_get (g_2, i),
+                                             ncm_vector_get (epsilon_obs_1, i), ncm_vector_get (epsilon_obs_2, i)));
+}
+

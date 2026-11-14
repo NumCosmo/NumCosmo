@@ -9535,6 +9535,16 @@ class GalaxyShapeFactor(GObject.Object):
         epsilon_obs_1: float,
         epsilon_obs_2: float,
     ) -> float: ...
+    def eval_ln_marginal_array(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        g_1: NumCosmoMath.Vector,
+        g_2: NumCosmoMath.Vector,
+        epsilon_obs_1: NumCosmoMath.Vector,
+        epsilon_obs_2: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
     def eval_marginal(
         self,
         pop: GalaxyShapePop,
