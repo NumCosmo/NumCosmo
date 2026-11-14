@@ -100,12 +100,12 @@ def _gauss_pz_spline(zp, sigma):
     return spline
 
 
-def _build(shape_name, profile_name, redshift_name, n_gal=None):
+def _build(shape_name, profile_name, redshift_name, n_gal=None, zf=100.0):
     """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset)."""
     if n_gal is None:
         n_gal = N_GAL_OF.get(shape_name, N_GAL)
     cosmo = Nc.HICosmoDEXcdm.new()
-    dist = Nc.Distance.new(100.0)
+    dist = Nc.Distance.new(zf)
     hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
     hms.param_set_by_name("log10MDelta", 14.5)
     dp = PROFILES[profile_name](hms)
@@ -220,6 +220,24 @@ def test_parallel_data_prepare_matches_serial(shape_name, profile_name, redshift
     assert serial[1] == parallel[1]
     assert np.all(np.isfinite(serial[2]))
     np.testing.assert_array_equal(serial[2], parallel[2])
+
+
+def test_distance_zf_covers_the_redshift_support():
+    """The comoving distance is a spline only up to the zf of NcDistance, and above it an
+    integral cached at every redshift: preparing the likelihood raises zf to the top of
+    the photo-z support of every galaxy, without changing the likelihood."""
+    ref, mset_ref = _build("var-add", "nfw", "spline")
+    dcwlf, mset = _build("var-add", "nfw", "spline", zf=0.5)
+    dist = mset.peek(Nc.WLSurfaceMassDensity.id()).props.distance
+
+    obs = dcwlf.peek_obs()
+    z_top = max(obs.peek_pz(i).get_bounds()[1] for i in range(obs.len()))
+    assert z_top > 0.5
+
+    m2lnP = _m2lnP(dcwlf, mset)
+
+    assert dist.props.zf >= z_top
+    np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
 
 
 def _reload(dcwlf):

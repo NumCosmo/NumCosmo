@@ -83,6 +83,8 @@
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
+#include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "nc/background/nc_distance.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/integration/ncm_integral_nd.h"
@@ -872,6 +874,41 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
   return match;
 }
 
+/*
+ * NcDistance gives the comoving distance from a spline up to its zf and, above it, from
+ * an integral cached at every redshift it was asked for, a cache that is never pruned.
+ * The critical surface density is computed at every redshift node, and the auto-node
+ * calibration probes many more redshifts, so a support of P(z) above zf fills the cache
+ * with an entry per redshift. This raises zf of the distance of the surface mass density
+ * to the largest redshift of the support of every galaxy, before anything is computed at
+ * those redshifts, and prepares the halo position again with the extended spline.
+ */
+static void
+_nc_data_cluster_wl_factor_require_zf (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  gdouble z_top               = 0.0;
+  guint gal_i;
+
+  if ((smd == NULL) || (smd->dist == NULL))
+    return;
+
+  for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
+    gdouble z_lo, z_hi;
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+    z_top = MAX (z_top, z_hi);
+  }
+
+  if (z_top > smd->dist->zf)
+  {
+    nc_distance_require_zf (smd->dist, z_top);
+    nc_halo_position_prepare (self->halo_position, self->cosmo);
+  }
+}
+
 static void
 nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 {
@@ -1396,6 +1433,10 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     _nc_data_cluster_wl_factor_load_obs (self, mset, self->obs);
     self->obs_changed = FALSE;
   }
+
+  /* Before the factors prepare the distances: see _nc_data_cluster_wl_factor_require_zf() */
+  if (obs_was_changed)
+    _nc_data_cluster_wl_factor_require_zf (self, mset);
 
   nc_galaxy_position_factor_prepare (self->position_factor, mset);
   nc_galaxy_redshift_factor_prepare (self->redshift_factor, mset);

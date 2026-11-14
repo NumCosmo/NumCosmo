@@ -1004,7 +1004,8 @@ class ClusterModel(BaseModel):
     r_min: Annotated[float, Field(gt=0.0)] = 0.3
     r_max: Annotated[float, Field(gt=0.0)] = 3.0
     cluster_mass: Annotated[float, Field(ge=1.0e10, le=1.0e17)] = 1.0e14
-    dist: Annotated[Nc.Distance, Field()] = Nc.Distance.new(5.0)
+    # A new NcDistance per model (a default object would be shared by every instance).
+    dist: Annotated[Nc.Distance, Field(default_factory=lambda: Nc.Distance.new(5.0))]
 
     _halo_mass_summary: Nc.HaloCMParam = PrivateAttr()
     _density_profile: Nc.HaloDensityProfile = PrivateAttr()
@@ -1517,6 +1518,17 @@ def load_cluster_wl(
         r_max=r_max,
         profile_type=profile_type,
     )
+    # The comoving distance is a spline up to zf and a cached integral above it, with an
+    # entry per redshift: zf must reach the photo-z support of every galaxy, which the
+    # likelihood also enforces when it is prepared (NcDataClusterWLFactor).
+    z_top = max(
+        (pz.get_bounds()[1] for pz in (obs.peek_pz(i) for i in range(obs.len())) if pz),
+        default=0.0,
+    )
+    if obs.has_column("z"):
+        z_top = max(z_top, float(data[:, columns.index("z")].max()))
+    cluster.dist.require_zf(z_top)
+
     cosmo = create_cosmo()
     cluster.prepare(cosmo)
 
