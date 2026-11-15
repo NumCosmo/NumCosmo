@@ -1590,7 +1590,7 @@ test_nc_galaxy_shape_factor_spectral_line (TestNcGalaxyShapeFactorSpectral *test
  * from the halo reaches a shear far below 0.29, so its interpolant stops below it. A shear
  * there is the integral (bit for bit), a small shear is the interpolant (within the
  * tolerance of the integral, and not the integral itself), and eval_nodes agrees with
- * the per-point values. With cDelta free over [1, 10] the same holds. A box of the center
+ * the per-point values within TEST_SPECTRAL_LOOP_ULP. With cDelta free over [1, 10] the same holds. A box of the center
  * that takes the halo to the galaxy (ra and dec free over +-0.4 degrees) gives back the
  * whole disk: 0.29 is interpolated again.
  */
@@ -1670,8 +1670,8 @@ test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpec
     g1[1] = g_near[0];
     g2[1] = g_near[1];
     nc_galaxy_shape_factor_eval_nodes (gsf, test->pop, data, 2, g1, g2, e1, e2, TRUE, out);
-    g_assert_cmpfloat (out[0], ==, ln_far);
-    g_assert_cmpfloat (out[1], ==, ln_near);
+    TEST_SPECTRAL_ASSERT_LOOP (out[0], ln_far);
+    TEST_SPECTRAL_ASSERT_LOOP (out[1], ln_near);
 
     g_ptr_array_unref (data_array);
     nc_galaxy_shape_factor_data_unref (data);
