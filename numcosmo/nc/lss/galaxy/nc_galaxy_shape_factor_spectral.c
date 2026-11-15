@@ -675,7 +675,7 @@ _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
 static gdouble
 _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
 {
-  /* The exponential of eval_nodes, so that both give the same values */
+  /* The exponential of eval_nodes, so that both take the exponential of the same function */
   return ncm_vmath_exp (_nc_galaxy_shape_factor_spectral_eval_ln_marginal (gsf, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
 }
 
@@ -741,8 +741,9 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK 64
 
 /*
- * eval_nodes: ln P (or P) at n shears of one galaxy, the same values as
- * _nc_galaxy_shape_factor_spectral_eval_ln_marginal() at each shear. The interpolant is
+ * eval_nodes: ln P (or P) at n shears of one galaxy, the values of
+ * _nc_galaxy_shape_factor_spectral_eval_ln_marginal() at each shear, within the few ulp by
+ * which a loop that vectorizes and a scalar computation can differ. The interpolant is
  * checked (and built when it is not valid) once, at the first shear inside
  * interp-g-max, instead of once per shear. The shears are taken in passes: the ones
  * outside interp-g-max are integrated, the coordinates of the others are computed in one

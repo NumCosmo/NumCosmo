@@ -43,6 +43,7 @@
 #include "test_nc_galaxy_shape_marginal_arb_cases.h"
 
 #include <math.h>
+#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -52,6 +53,32 @@
  * (|eps_obs| - 1) / std_noise <= 8.
  */
 #define TEST_SPECTRAL_TOL (1.0e-7)
+
+/*
+ * A loop that vectorizes and a scalar computation of the same value may differ by a few
+ * ulp: the compiler can contract a * b + c into an fma differently in each.
+ */
+#define TEST_SPECTRAL_LOOP_ULP (2)
+
+/* Distance in ulp between two finite doubles */
+static guint64
+_test_spectral_ulp_diff (const gdouble a, const gdouble b)
+{
+  gint64 ia, ib;
+
+  if (a == b)
+    return 0;
+
+  if ((a < 0.0) != (b < 0.0))
+    return G_MAXUINT64;
+
+  memcpy (&ia, &a, sizeof (ia));
+  memcpy (&ib, &b, sizeof (ib));
+
+  return (ia > ib) ? (guint64) (ia - ib) : (guint64) (ib - ia);
+}
+
+#define TEST_SPECTRAL_ASSERT_LOOP(loop, scalar) g_assert_cmpuint (_test_spectral_ulp_diff ((loop), (scalar)), <=, TEST_SPECTRAL_LOOP_ULP)
 
 /*
  * Largest |ln P (interpolant) - ln P (integral)| accepted at the default interp-abstol
@@ -1248,9 +1275,9 @@ test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral 
   nc_galaxy_shape_factor_free (gsf);
 }
 
-/* nc_galaxy_shape_factor_eval_nodes() gives, shear by shear, exactly what the per-point
- * functions give, by integration and from the interpolant, inside and outside
- * interp-g-max, in the linear and the logarithmic forms. */
+/* nc_galaxy_shape_factor_eval_nodes() gives, shear by shear, what the per-point functions
+ * give, within TEST_SPECTRAL_LOOP_ULP, by integration and from the interpolant, inside and
+ * outside interp-g-max, in the linear and the logarithmic forms. */
 void
 test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
 {
@@ -1295,7 +1322,7 @@ test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral
                           nc_galaxy_shape_factor_eval_marginal (gsf, test->pop, data, g1[i], g2[i], -0.25, 0.35);
 
         g_assert_true (gsl_finite (v));
-        g_assert_cmpfloat (out[i], ==, v);
+        TEST_SPECTRAL_ASSERT_LOOP (out[i], v);
       }
     }
 
