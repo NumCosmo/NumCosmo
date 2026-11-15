@@ -67,7 +67,7 @@ typedef struct _NcmSplinePrivate
   gsl_interp_accel *acc;
   gboolean init;
   gboolean empty;
-  gsize *bucket; /* bucket_len entries, allocated to that length */
+  gsize *bucket; /* bucket_len entries, allocated to bucket_len */
   guint bucket_len;
   gdouble bucket_dx;
   gdouble one_over_dx;
