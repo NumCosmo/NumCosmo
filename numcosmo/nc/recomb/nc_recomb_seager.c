@@ -54,6 +54,8 @@
 
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/spline/ncm_spline_func.h"
+#include "ncm/algebra/ncm_spectral_panels.h"
+#include "ncm/algebra/ncm_spectral_panels_builder.h"
 #include "ncm/core/ncm_util.h"
 #include "nc_enum_types.h"
 #include "nc/recomb/nc_recomb.h"
@@ -62,6 +64,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_hyperg.h>
+#include <gsl/gsl_sf_gamma.h>
 
 #include <cvode/cvode.h>
 #include <nvector/nvector_serial.h>
@@ -69,6 +72,19 @@
 #include <sunlinsol/sunlinsol_dense.h>
 #define SUN_DENSE_ACCESS SM_ELEMENT_D
 #endif /* NUMCOSMO_GIR_SCAN */
+
+/* largest BDF order of CVODE, so at most 6 Taylor coefficients per step */
+#define NC_RECOMB_SEAGER_QMAX 5
+
+/* The ODE starts with an initial layer (the Saha X_HeII relaxing to the ODE solution, 4e-11
+ * relative, within 2e-12 of the switch at prec 1e-12); the panels take the dense output from
+ * lambda_HeIII + NC_RECOMB_SEAGER_LAYER |lambda_HeIII| on, which moves X_e by about 2e-14. */
+#define NC_RECOMB_SEAGER_LAYER 1.0e-10
+
+/* The panels represent the CVODE solution and are not requested below this multiple of its
+ * relative tolerance: at the same tolerance the build aborts for some cosmologies (prec 1e-12). */
+#define NC_RECOMB_SEAGER_PANEL_ODE_FACTOR 10.0
+
 
 struct _NcRecombSeagerPrivate
 {
@@ -102,6 +118,11 @@ struct _NcRecombSeagerPrivate
   NcmSpline *Xe_recomb_s;
   NcmSpline *XHII_s;
   NcmSpline *XHeII_s;
+  N_Vector dky;
+  GArray *step_t;
+  GArray *step_c;
+  NcmSpectralPanelsBuilder *builder;
+  NcmSpectralPanels *Xe_recomb_panels;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB)
@@ -189,6 +210,14 @@ nc_recomb_seager_init (NcRecombSeager *recomb_seager)
   self->Xe_recomb_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->XHII_s      = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
   self->XHeII_s     = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+
+  self->dky     = N_VNew_Serial (self->n, self->sunctx);
+  self->step_t  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->step_c  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  self->builder = ncm_spectral_panels_builder_new ();
+  /* lambda = -ln(1 + z) is already logarithmic and negative: no geometric initial grid */
+  ncm_spectral_panels_builder_set_min_panels_per_efold (self->builder, 0.0);
+  self->Xe_recomb_panels = ncm_spectral_panels_new (1);
 }
 
 static void
@@ -248,6 +277,11 @@ _nc_recomb_seager_dispose (GObject *object)
   ncm_spline_clear (&self->XHII_s);
   ncm_spline_clear (&self->XHeII_s);
 
+  ncm_spectral_panels_builder_clear (&self->builder);
+  ncm_spectral_panels_clear (&self->Xe_recomb_panels);
+  g_clear_pointer (&self->step_t, g_array_unref);
+  g_clear_pointer (&self->step_c, g_array_unref);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_seager_parent_class)->dispose (object);
 }
@@ -261,6 +295,7 @@ _nc_recomb_seager_finalize (GObject *object)
   N_VDestroy (self->y);
   N_VDestroy (self->y0);
   N_VDestroy (self->abstol);
+  N_VDestroy (self->dky);
 
   if (self->A != NULL)
   {
@@ -634,6 +669,87 @@ _nc_recomb_Xe_reion (gdouble lambda, gpointer p)
   return Xe_reion;
 }
 
+static gdouble
+_nc_recomb_seager_ode_reltol (NcRecomb *recomb)
+{
+  return GSL_MIN (recomb->prec, 1.0e-11);
+}
+
+typedef struct _NcRecombSeagerXeData
+{
+  NcRecombSeagerPrivate *self;
+  NcHICosmo *cosmo;
+  gdouble lambda_layer;
+} NcRecombSeagerXeData;
+
+static gdouble
+_nc_recomb_seager_step_Xe (NcRecombSeagerPrivate *self, const gdouble lambda)
+{
+  const gdouble *t  = (const gdouble *) self->step_t->data;
+  const guint nstep = self->step_t->len;
+  guint lo          = 0;
+  guint hi          = nstep - 1;
+  const gdouble *c;
+  gdouble dl, Xe;
+  gint k;
+
+  /* first step whose end t_n is at or after lambda */
+  while (lo < hi)
+  {
+    const guint mid = (lo + hi) / 2;
+
+    if (t[mid] < lambda)
+      lo = mid + 1;
+    else
+      hi = mid;
+  }
+
+  c  = &g_array_index (self->step_c, gdouble, lo * (NC_RECOMB_SEAGER_QMAX + 1));
+  dl = lambda - t[lo];
+  Xe = c[NC_RECOMB_SEAGER_QMAX];
+
+  for (k = NC_RECOMB_SEAGER_QMAX - 1; k >= 0; k--)
+    Xe = Xe * dl + c[k];
+
+  return Xe;
+}
+
+static gdouble
+_nc_recomb_seager_step_max_jump (NcRecombSeagerPrivate *self)
+{
+  const gdouble *t  = (const gdouble *) self->step_t->data;
+  const guint nstep = self->step_t->len;
+  gdouble jump      = 0.0;
+  guint n;
+
+  for (n = 1; n < nstep; n++)
+  {
+    const gdouble *c_prev = &g_array_index (self->step_c, gdouble, (n - 1) * (NC_RECOMB_SEAGER_QMAX + 1));
+    const gdouble *c      = &g_array_index (self->step_c, gdouble, n * (NC_RECOMB_SEAGER_QMAX + 1));
+    const gdouble dl      = t[n - 1] - t[n];
+    gdouble Xe            = c[NC_RECOMB_SEAGER_QMAX];
+    gint k;
+
+    for (k = NC_RECOMB_SEAGER_QMAX - 1; k >= 0; k--)
+      Xe = Xe * dl + c[k];
+
+    jump = GSL_MAX (jump, fabs (Xe - c_prev[0]));
+  }
+
+  return jump;
+}
+
+static void
+_nc_recomb_seager_Xe_recomb_F (gpointer user_data, guint i, gdouble lambda, NcmVector *fval)
+{
+  NcRecombSeagerXeData *data = (NcRecombSeagerXeData *) user_data;
+
+  if (i == 0)
+    ncm_vector_set (fval, 0, nc_recomb_He_fully_ionized_Xe (data->cosmo, exp (-lambda)));
+  else
+    ncm_vector_set (fval, 0, _nc_recomb_seager_step_Xe (data->self, GSL_MAX (lambda, data->lambda_layer)));
+}
+
 static void
 _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 {
@@ -688,7 +804,7 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
   }
 
   {
-    const gdouble reltol = GSL_MIN (recomb->prec, 1e-11);
+    const gdouble reltol = _nc_recomb_seager_ode_reltol (recomb);
     gint flag;
 
     NV_Ith_S (self->abstol, 0) = GSL_MIN (reltol, recomb->prec * 1e-5);
@@ -773,12 +889,36 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
       }
     }
 
+    g_array_set_size (self->step_t, 0);
+    g_array_set_size (self->step_c, 0);
+
     while (TRUE)
     {
       gdouble lambda_i;
       gint flag = CVode (self->cvode, lambdaf, self->y, &lambda_i, CV_ONE_STEP);
 
       NCM_CVODE_CHECK (&flag, "CVode111", 1, );
+
+      /* dense output of this step: X_e^{(k)}(lambda_i) / k!, valid on [lambda_i - h_u, lambda_i] */
+      {
+        gdouble c[NC_RECOMB_SEAGER_QMAX + 1] = {0.0};
+        gint qu;
+        gint k;
+
+        flag = CVodeGetLastOrder (self->cvode, &qu);
+        NCM_CVODE_CHECK (&flag, "CVodeGetLastOrder", 1, );
+
+        for (k = 0; k <= qu; k++)
+        {
+          flag = CVodeGetDky (self->cvode, lambda_i, k, self->dky);
+          NCM_CVODE_CHECK (&flag, "CVodeGetDky", 1, );
+
+          c[k] = (NV_Ith_S (self->dky, 0) + NV_Ith_S (self->dky, 2)) / gsl_sf_fact (k);
+        }
+
+        g_array_append_val (self->step_t, lambda_i);
+        g_array_append_vals (self->step_c, c, NC_RECOMB_SEAGER_QMAX + 1);
+      }
 
       {
         const gdouble XHII  = NV_Ith_S (self->y, 0);
@@ -804,6 +944,21 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     ncm_spline_set_array (self->Xe_recomb_s, lambda_a, Xe_a, TRUE);
     ncm_spline_set_array (self->XHII_s,      lambda_a, XHII_a, TRUE);
     ncm_spline_set_array (self->XHeII_s,     lambda_a, XHeII_a, TRUE);
+
+    {
+      /* The dense output is continuous across step ends only to the CVODE error: the
+       * largest jump between consecutive step polynomials is the absolute tolerance. */
+      const gdouble jump        = _nc_recomb_seager_step_max_jump (self);
+      NcRecombSeagerXeData data = { self, cosmo, lambda_HeIII + NC_RECOMB_SEAGER_LAYER * fabs (lambda_HeIII) };
+      NcmVector *breakpoints    = ncm_vector_new (1);
+
+      ncm_vector_set (breakpoints, 0, lambda_HeIII);
+      ncm_spectral_panels_builder_build (self->builder, &_nc_recomb_seager_Xe_recomb_F, &data,
+                                         lambdai, lambdaf, breakpoints, NULL, NULL,
+                                         GSL_MAX (recomb->prec, NC_RECOMB_SEAGER_PANEL_ODE_FACTOR * _nc_recomb_seager_ode_reltol (recomb)),
+                                         jump, self->Xe_recomb_panels);
+      ncm_vector_free (breakpoints);
+    }
 
     if (reion != NULL)
     {
@@ -1322,6 +1477,31 @@ nc_recomb_seager_set_switch (NcRecombSeager *recomb_seager, guint H_switch, guin
   }
 
   nc_recomb_seager_set_options (recomb_seager, opts);
+}
+
+/**
+ * nc_recomb_seager_peek_Xe_recomb_panels:
+ * @recomb_seager: a #NcRecombSeager
+ *
+ * Gets the Chebyshev panels of the ionization fraction $X_e(\lambda)$ without reionization,
+ * $\lambda = -\ln(1 + z)$, from the last prepare. Before the switch to the ODE (where
+ * $X_\mathrm{HeIII}/X_\mathrm{He}$ = #NcRecomb:init-frac) the panels expand
+ * nc_recomb_He_fully_ionized_Xe(); after it, the CVODE dense output of each step. The switch is
+ * a breakpoint, so no panel straddles it. The initial layer of the ODE (the Saha
+ * $X_\mathrm{HeII}$ relaxing to the ODE solution within about $10^{-12}$ in $\lambda$) is below the
+ * resolution of any panel: the panels continue the dense output that follows it back to the
+ * switch. The relative tolerance is the larger of #NcRecomb:prec and ten times the CVODE
+ * relative tolerance $\min(\mathrm{prec}, 10^{-11})$, since the panels cannot be more accurate
+ * than the solution they represent. The dense output is continuous across step ends only to the
+ * CVODE error, so the absolute tolerance is the largest jump between consecutive step
+ * polynomials.
+ *
+ * Returns: (transfer none): the panels of $X_e$.
+ */
+NcmSpectralPanels *
+nc_recomb_seager_peek_Xe_recomb_panels (NcRecombSeager *recomb_seager)
+{
+  return recomb_seager->priv->Xe_recomb_panels;
 }
 
 /**
