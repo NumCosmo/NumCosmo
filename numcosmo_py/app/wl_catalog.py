@@ -132,6 +132,46 @@ class ShapeInterpWLCatalog:
         typer.Option(help="Cluster concentration. Falls back to catalog metadata."),
     ] = None
 
+    cluster_mass_max: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Upper bound of the cluster mass of the fits the catalog is for: the "
+                "shear range of restrict_range=true is bounded at this mass."
+            ),
+            show_default=True,
+        ),
+    ] = ClusterWL.cluster_mass_max
+
+    centre_box_deg: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Half-width in degrees of the box of the halo center (ra and dec) of the "
+                "fits the catalog is for. Zero: the center is fixed. Used by "
+                "restrict_range=true."
+            ),
+            min=0.0,
+            show_default=True,
+        ),
+    ] = 0.0
+
+    cluster_c_min: Annotated[
+        float | None,
+        typer.Option(
+            help=(
+                "Lower bound of the concentration of the fits the catalog is for, with "
+                "--cluster-c-max: the shear range of restrict_range=true is the largest "
+                "over the concentrations of the box. Default: the concentration is fixed."
+            ),
+        ),
+    ] = None
+
+    cluster_c_max: Annotated[
+        float | None,
+        typer.Option(help="Upper bound of the concentration, with --cluster-c-min."),
+    ] = None
+
     def __post_init__(self) -> None:
         """Build the interpolants and write the catalog.
 
@@ -172,7 +212,7 @@ class ShapeInterpWLCatalog:
             cluster_z=self.cluster_z,
             cluster_mass=ClusterWL.cluster_mass,
             cluster_mass_min=ClusterWL.cluster_mass_min,
-            cluster_mass_max=ClusterWL.cluster_mass_max,
+            cluster_mass_max=self.cluster_mass_max,
             cluster_c=self.cluster_c,
             r_min=ClusterWL.r_min,
             r_max=ClusterWL.r_max,
@@ -187,6 +227,7 @@ class ShapeInterpWLCatalog:
         assert isinstance(likelihood, Ncm.Likelihood)
         data = likelihood.peek_dataset().get_data(0)
         assert isinstance(data, Nc.DataClusterWLFactor)
+        self._set_box(mset)
 
         t_start = time.perf_counter()
         data.write_shape_interp(mset, obs)
@@ -199,3 +240,40 @@ class ShapeInterpWLCatalog:
             f"Wrote {self.output}: interpolants of {obs.len()} galaxies for "
             f"{pop_gen!r}, built in {t_build:.1f} s."
         )
+
+    def _set_box(self, mset: Ncm.MSet) -> None:
+        """Free the halo center and the concentration over the box of the fits.
+
+        Only the bound of restrict_range=true reads the box: the interpolants depend on the
+        population alone.
+
+        Raises:
+            typer.BadParameter: Only one of --cluster-c-min and --cluster-c-max.
+        """
+        hp = mset.peek(Nc.HaloPosition.id())
+        hms = mset.peek(Nc.HaloMassSummary.id())
+        assert isinstance(hp, Nc.HaloPosition)
+        assert isinstance(hms, Nc.HaloMassSummary)
+        if self.centre_box_deg > 0.0:
+            for name in ("ra", "dec"):
+                v = hp[name]
+                hp.param_set_desc(
+                    name,
+                    {
+                        "lower-bound": v - self.centre_box_deg,
+                        "upper-bound": v + self.centre_box_deg,
+                    },
+                )
+                _found, idx = hp.param_index_from_name(name)
+                hp.param_set_ftype(idx, Ncm.ParamType.FREE)
+        if (self.cluster_c_min is None) != (self.cluster_c_max is None):
+            raise typer.BadParameter(
+                "--cluster-c-min and --cluster-c-max must be given together"
+            )
+        if self.cluster_c_min is not None and self.cluster_c_max is not None:
+            hms.param_set_desc(
+                "cDelta",
+                {"lower-bound": self.cluster_c_min, "upper-bound": self.cluster_c_max},
+            )
+            _found, idx = hms.param_index_from_name("cDelta")
+            hms.param_set_ftype(idx, Ncm.ParamType.FREE)

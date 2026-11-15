@@ -108,6 +108,10 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_private.h"
+#include "nc/lss/halo/nc_halo_position.h"
+#include "nc/lss/halo/nc_halo_mass_summary.h"
+#include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "nc/lss/wl/nc_wl_ellipticity.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
@@ -143,6 +147,15 @@
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN (1)
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX (7)
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX (0.9)
+
+/*
+ * The reachable range of the interpolant of a galaxy (restrict-range): the concentrations at
+ * which the bound is taken when cDelta is free, the factor that covers the shear between
+ * them, and the smallest radius an interpolant is built for.
+ */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_REACH_NC (9)
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_REACH_MARGIN (1.05)
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_REACH_MIN (0.02)
 
 /* Steps of the golden-section search of the maximum of the scan */
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_GOLDEN_STEPS (40)
@@ -183,6 +196,26 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gdouble interp_g_max;
   gdouble interp_abstol;
   guint interp_min_radial_panels;
+
+  /*
+   * restrict-range: the models and the box of the bound of the reachable range, cached by
+   * prepare(). dp_box is a private copy of the density profile at the upper bound of the
+   * mass, shared by the galaxies, which data_prepare() bounds in parallel: it is used under
+   * range_lock. With cDelta free the bound is taken at REACH_NC concentrations in
+   * [c_lo, c_hi], otherwise at the concentration of the fit (c_lo = c_hi).
+   */
+  gboolean restrict_range;
+  gboolean range_ready;
+  NcHICosmo *cosmo;
+  NcWLSurfaceMassDensity *smd;
+  NcHaloDensityProfile *dp_box;
+  gdouble z_cl;
+  gdouble delta_R;
+  gdouble c_lo;
+  gdouble c_hi;
+  guint c_idx;
+  gboolean has_c;
+  GMutex range_lock;
 } NcGalaxyShapeFactorSpectralPrivate;
 
 /* The scratch space of one evaluation */
@@ -225,6 +258,13 @@ typedef struct _NcGalaxyShapeFactorSpectralData
   gdouble cos_e; /* direction of eps_obs */
   gdouble sin_e;
   gdouble g_c; /* center of the coordinates of the interpolant */
+
+  /*
+   * The radius in |g| the interpolant is built for: the reachable range of the galaxy that
+   * data_prepare() found with restrict-range, or a negative value for interp-g-max. g_max
+   * above is the radius of the interpolant held; shears beyond it are integrated.
+   */
+  gdouble g_reach;
 } NcGalaxyShapeFactorSpectralData;
 
 /* What the integrand needs, in the frame where the shear is the real number t */
@@ -261,6 +301,7 @@ enum
   PROP_INTERP_ABSTOL,
   PROP_INTERP_MIN_RADIAL_PANELS,
   PROP_LINE_ABSTOL,
+  PROP_RESTRICT_RANGE,
   PROP_LEN,
 };
 
@@ -294,6 +335,19 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->interp_abstol = 0.0;
 
   self->interp_min_radial_panels = 0;
+
+  self->restrict_range = FALSE;
+  self->range_ready    = FALSE;
+  self->cosmo          = NULL;
+  self->smd            = NULL;
+  self->dp_box         = NULL;
+  self->z_cl           = 0.0;
+  self->delta_R        = 0.0;
+  self->c_lo           = 0.0;
+  self->c_hi           = 0.0;
+  self->c_idx          = 0;
+  self->has_c          = FALSE;
+  g_mutex_init (&self->range_lock);
 }
 
 static void
@@ -320,6 +374,9 @@ _nc_galaxy_shape_factor_spectral_set_property (GObject *object, guint prop_id, c
       break;
     case PROP_LINE_ABSTOL:
       nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, g_value_get_double (value));
+      break;
+    case PROP_RESTRICT_RANGE:
+      nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs, g_value_get_boolean (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -351,6 +408,9 @@ _nc_galaxy_shape_factor_spectral_get_property (GObject *object, guint prop_id, G
       break;
     case PROP_LINE_ABSTOL:
       g_value_set_double (value, nc_galaxy_shape_factor_spectral_get_line_abstol (gsfs));
+      break;
+    case PROP_RESTRICT_RANGE:
+      g_value_set_boolean (value, nc_galaxy_shape_factor_spectral_get_restrict_range (gsfs));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -407,6 +467,9 @@ _nc_galaxy_shape_factor_spectral_dispose (GObject *object)
 
   ncm_spectral_polar_clear (&self->polar);
   ncm_spectral_polar_clear (&self->polar_interp);
+  nc_hicosmo_clear (&self->cosmo);
+  nc_wl_surface_mass_density_clear (&self->smd);
+  nc_halo_density_profile_clear (&self->dp_box);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_spectral_parent_class)->dispose (object);
@@ -420,6 +483,7 @@ _nc_galaxy_shape_factor_spectral_finalize (GObject *object)
 
   ncm_memory_pool_free (self->work_pool, TRUE);
   ncm_memory_pool_free (self->line_pool, TRUE);
+  g_mutex_clear (&self->range_lock);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_spectral_parent_class)->finalize (object);
@@ -545,6 +609,32 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
                                                         0.0, 1.0, 1.0e-8,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcGalaxyShapeFactorSpectral:restrict-range:
+   *
+   * With #NcGalaxyShapeFactorSpectral:use-interp, whether nc_galaxy_shape_factor_data_prepare()
+   * builds the interpolant of each galaxy only over the shears it can reach in the box of
+   * the fit, instead of the whole disk $|g| \le$ #NcGalaxyShapeFactorSpectral:interp-g-max.
+   * The bound is that of #NcGalaxyShapeFactorMomentsTilt:restrict-range: the reduced shear at
+   * the smallest radius the box of the halo center allows, the top of the redshift support
+   * of the galaxy and the upper bound of the mass, with the multiplicative and additive bias
+   * of the galaxy. With cDelta free it is the largest over the concentrations of its box.
+   * The interpolant of a galaxy covers $|g| \le$ min (bound, interp-g-max) (at least
+   * 0.02), or interp-g-max where the convergence reaches one at the corner of the box.
+   *
+   * A shear beyond the radius of the interpolant of its galaxy is integrated, as one beyond
+   * interp-g-max always is, so the values are those of the integrals there whatever the
+   * bound: a free parameter the bound does not cover (the cosmology, the redshift of the
+   * halo) costs time, not accuracy.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_RESTRICT_RANGE,
+                                   g_param_spec_boolean ("restrict-range",
+                                                         NULL,
+                                                         "Whether to build each interpolant only over the reachable shears",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   gsf_class->data_init        = &_nc_galaxy_shape_factor_spectral_data_init;
   gsf_class->prepare          = &_nc_galaxy_shape_factor_spectral_prepare;
   gsf_class->data_prepare     = &_nc_galaxy_shape_factor_spectral_data_prepare;
@@ -668,6 +758,7 @@ _nc_galaxy_shape_factor_spectral_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *m
   ldata->valid    = FALSE;
   ldata->loaded   = FALSE;
   ldata->src_gsfs = NULL;
+  ldata->g_reach  = -1.0;
   ldata->src_pop  = NULL;
 
   data->ldata                  = ldata;
@@ -688,9 +779,135 @@ _nc_galaxy_shape_factor_spectral_ldata_free (gpointer p)
   g_free (ldata);
 }
 
+/*
+ * With restrict-range and use-interp, caches the models and the box of the bound of the
+ * reachable range (_nc_galaxy_shape_factor_spectral_reach()): the cosmology, the surface
+ * mass density, a copy of the density profile at the upper bound of the mass, the redshift
+ * of the halo, the largest displacement of its center and the concentrations. Without all
+ * the models range_ready stays FALSE and every galaxy gets interp-g-max.
+ */
 static void
 _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf));
+
+  self->range_ready = FALSE;
+
+  if (self->restrict_range && self->use_interp)
+  {
+    NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+    NcHaloPosition *hp          = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
+    NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+    NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
+
+    if ((cosmo != NULL) && (hp != NULL) && (smd != NULL) && (dp != NULL))
+    {
+      NcmModel *hms_src = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp));
+      GError *error     = NULL;
+
+      if (self->dp_box == NULL)
+      {
+        NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+
+        self->dp_box = NC_HALO_DENSITY_PROFILE (ncm_model_dup (NCM_MODEL (dp), ser));
+        ncm_serialize_free (ser);
+      }
+
+      nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
+      nc_halo_position_prepare_if_needed (hp, cosmo);
+
+      nc_hicosmo_clear (&self->cosmo);
+      nc_wl_surface_mass_density_clear (&self->smd);
+      self->cosmo   = nc_hicosmo_ref (cosmo);
+      self->smd     = nc_wl_surface_mass_density_ref (smd);
+      self->z_cl    = nc_halo_position_get_redshift (hp);
+      self->delta_R = _nc_galaxy_shape_factor_moments_centre_delta (hp, cosmo);
+
+      self->has_c = ncm_model_param_index_from_name (hms_src, "cDelta", &self->c_idx, &error);
+      g_clear_error (&error);
+
+      if (self->has_c)
+      {
+        const gboolean c_free = ncm_model_param_get_ftype (hms_src, self->c_idx) == NCM_PARAM_TYPE_FREE;
+
+        self->c_lo = c_free ? ncm_model_param_get_lower_bound (hms_src, self->c_idx) : ncm_model_param_get (hms_src, self->c_idx);
+        self->c_hi = c_free ? ncm_model_param_get_upper_bound (hms_src, self->c_idx) : self->c_lo;
+      }
+
+      self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_box, dp);
+    }
+  }
+}
+
+/*
+ * The largest |g| the galaxy of data can reach in the box of the fit, for the redshift
+ * support of the galaxy up to z_max: the bound of
+ * NcGalaxyShapeFactorMomentsTilt:restrict-range (see
+ * _nc_galaxy_shape_factor_moments_tilt_data_prepare()), at the smallest radius R - delta_R,
+ * z_max and the upper bound of the mass, |1 + m| |g_t| + |c|. With cDelta free it is taken
+ * at REACH_NC concentrations log-spaced in its box, the largest times REACH_MARGIN (the
+ * shear is not monotonic in the concentration and peaks between the points). Returns
+ * G_MAXDOUBLE when there is nothing to bound: a radius the center can take to the halo, no
+ * upper end of the redshift support, or a convergence of one or more at the corner (|g|
+ * crossed one inside the box). Zero for a galaxy with no support behind the halo.
+ */
+static gdouble
+_nc_galaxy_shape_factor_spectral_reach (NcGalaxyShapeFactorSpectralPrivate * const self, NcGalaxyShapeFactorData *data, const gdouble z_max)
+{
+  const gdouble R     = nc_galaxy_shape_factor_data_get_radius (data);
+  const gdouble R_min = MAX (0.0, R - self->delta_R);
+  const guint n_c     = (self->has_c && (self->c_hi > self->c_lo)) ? NC_GALAXY_SHAPE_FACTOR_SPECTRAL_REACH_NC : 1;
+  NcmModel *hms_box   = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (self->dp_box));
+  gdouble g_t_max     = 0.0;
+  guint i;
+
+  if (z_max <= self->z_cl)
+    return 0.0;
+
+  if ((R_min <= 0.0) || !gsl_finite (z_max))
+    return G_MAXDOUBLE;
+
+  g_mutex_lock (&self->range_lock);
+
+  for (i = 0; i < n_c; i++)
+  {
+    gdouble kappa, g_t;
+
+    if (self->has_c)
+    {
+      const gdouble c = (n_c == 1) ? self->c_lo : self->c_lo * pow (self->c_hi / self->c_lo, i / (n_c - 1.0));
+
+      ncm_model_param_set (hms_box, self->c_idx, c);
+    }
+
+    kappa = nc_wl_surface_mass_density_convergence (self->smd, self->dp_box, self->cosmo, R_min, z_max, self->z_cl, self->z_cl);
+    g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_box, self->cosmo, R_min, z_max, self->z_cl, self->z_cl));
+
+    if (!gsl_finite (kappa) || !gsl_finite (g_t) || (kappa >= 1.0))
+    {
+      g_t_max = G_MAXDOUBLE;
+      break;
+    }
+
+    g_t_max = MAX (g_t_max, g_t);
+  }
+
+  g_mutex_unlock (&self->range_lock);
+
+  if (g_t_max == G_MAXDOUBLE)
+    return G_MAXDOUBLE;
+
+  if (n_c > 1)
+    g_t_max *= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_REACH_MARGIN;
+
+  return fabs (1.0 + data->m) * g_t_max + hypot (data->c1, data->c2);
+}
+
+/* The radius in |g| an interpolant of the galaxy of ldata is built for */
+static inline gdouble
+_nc_galaxy_shape_factor_spectral_target (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralData *ldata)
+{
+  return (ldata->g_reach >= 0.0) ? ldata->g_reach : self->interp_g_max;
 }
 
 static gdouble _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble std_noise, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, NcmMatrix **panels);
@@ -719,6 +936,16 @@ _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
   if (self->use_interp)
   {
     NcGalaxyShapePop *pop = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+
+    ldata->g_reach = -1.0;
+
+    if (self->range_ready)
+    {
+      const gdouble reach = _nc_galaxy_shape_factor_spectral_reach (self, data, z_max);
+
+      if (reach < self->interp_g_max)
+        ldata->g_reach = MAX (reach, MIN (NC_GALAXY_SHAPE_FACTOR_SPECTRAL_REACH_MIN, self->interp_g_max));
+    }
 
     if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, data->epsilon_obs_1, data->epsilon_obs_2))
     {
@@ -788,6 +1015,9 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
 
       _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
     }
+
+    if (g_1 * g_1 + g_2 * g_2 > gsl_pow_2 (ldata->g_max))
+      return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
 
     {
       gdouble rho, psi;
@@ -868,6 +1098,36 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
       }
 
       checked = TRUE;
+    }
+
+    /* Shears inside interp-g-max but beyond the interpolant of the galaxy (restrict-range) */
+    if (ldata->g_max < self->interp_g_max)
+    {
+      const gdouble g_reach2 = gsl_pow_2 (ldata->g_max);
+      guint c_in             = 0;
+
+      for (k = 0; k < c; k++)
+      {
+        if (ig_1[k] * ig_1[k] + ig_2[k] * ig_2[k] > g_reach2)
+        {
+          const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, ig_1[k], ig_2[k],
+                                                                         epsilon_obs_1, epsilon_obs_2, NULL);
+
+          out[idx[k]] = want_log ? ln_P : ncm_vmath_exp (ln_P);
+        }
+        else
+        {
+          ig_1[c_in] = ig_1[k];
+          ig_2[c_in] = ig_2[k];
+          idx[c_in]  = idx[k];
+          c_in++;
+        }
+      }
+
+      c = c_in;
+
+      if (c == 0)
+        continue;
     }
 
     #pragma omp simd
@@ -1097,7 +1357,7 @@ _nc_galaxy_shape_factor_spectral_interp_valid (NcGalaxyShapeFactorSpectral *gsfs
 
   return ldata->valid && (ldata->epsilon_obs_1 == epsilon_obs_1) && (ldata->epsilon_obs_2 == epsilon_obs_2) &&
          (ldata->std_noise == data->std_noise) && (ldata->pop_pkey == ncm_model_state_get_pkey (NCM_MODEL (pop))) &&
-         (ldata->g_max == self->interp_g_max) && (ldata->abstol == self->interp_abstol) && (ldata->reltol == self->reltol) &&
+         (ldata->loaded || (ldata->g_max == _nc_galaxy_shape_factor_spectral_target (self, ldata))) && (ldata->abstol == self->interp_abstol) && (ldata->reltol == self->reltol) &&
          (ldata->min_radial_panels == self->interp_min_radial_panels);
 }
 
@@ -1146,7 +1406,7 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
   NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
   NcGalaxyShapeFactorSpectralWork **ptr           = ncm_memory_pool_get (self->work_pool);
   NcGalaxyShapeFactorSpectralWork *work           = *ptr;
-  const gdouble g_max                             = self->interp_g_max;
+  const gdouble g_max                             = _nc_galaxy_shape_factor_spectral_target (self, ldata);
   const gdouble e                                 = hypot (epsilon_obs_1, epsilon_obs_2);
   const gdouble g_c                               = _nc_galaxy_shape_factor_spectral_interp_center (self, e);
   const gdouble L                                 = (self->axis_ratio_var ? 0.5 : 1.0) * data->std_noise;
@@ -1167,9 +1427,12 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
   {
     const gdouble rho = g_array_index (work->r_edges_all, gdouble, i);
 
-    if (rho > rho_min + 0.125 * data->std_noise)
+    if ((rho > rho_min + 0.125 * data->std_noise) && (rho < rho_max))
       g_array_append_val (work->r_edges, rho);
   }
+
+  /* The region ends at rho_max even when it is narrower than std_noise / 8 */
+  g_array_append_val (work->r_edges, rho_max);
 
   g_array_set_size (work->theta_edges, 0);
   g_array_append_val (work->theta_edges, psi_min);
@@ -1221,13 +1484,22 @@ _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsf
   ldata->epsilon_obs_2     = epsilon_obs_2;
   ldata->std_noise         = data->std_noise;
   ldata->pop_pkey          = ncm_model_state_get_pkey (NCM_MODEL (pop));
-  ldata->g_max             = self->interp_g_max;
+  ldata->g_max             = _nc_galaxy_shape_factor_spectral_target (self, ldata);
   ldata->abstol            = self->interp_abstol;
   ldata->reltol            = self->reltol;
   ldata->min_radial_panels = self->interp_min_radial_panels;
   ldata->cos_e             = (e > 0.0) ? epsilon_obs_1 / e : 1.0;
   ldata->sin_e             = (e > 0.0) ? epsilon_obs_2 / e : 0.0;
   ldata->g_c               = _nc_galaxy_shape_factor_spectral_interp_center (self, e);
+
+  /* A loaded interpolant covers |g| <= rho_max - g_c, whatever box built it */
+  if (ldata->loaded)
+  {
+    gdouble ra, rb, ta, tb;
+
+    ncm_spectral_polar_panels_get_range (ldata->spp, &ra, &rb, &ta, &tb);
+    ldata->g_max = MIN (rb - ldata->g_c, self->interp_g_max);
+  }
 }
 
 /*
@@ -2146,6 +2418,36 @@ nc_galaxy_shape_factor_spectral_get_line_abstol (NcGalaxyShapeFactorSpectral *gs
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   return self->line_abstol;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_set_restrict_range:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ * @restrict_range: whether to build each interpolant only over the reachable shears
+ *
+ * Sets #NcGalaxyShapeFactorSpectral:restrict-range. It applies from the next
+ * nc_galaxy_shape_factor_prepare() and nc_galaxy_shape_factor_data_prepare().
+ */
+void
+nc_galaxy_shape_factor_spectral_set_restrict_range (NcGalaxyShapeFactorSpectral *gsfs, const gboolean restrict_range)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  self->restrict_range = restrict_range;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_get_restrict_range:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ *
+ * Returns: #NcGalaxyShapeFactorSpectral:restrict-range.
+ */
+gboolean
+nc_galaxy_shape_factor_spectral_get_restrict_range (NcGalaxyShapeFactorSpectral *gsfs)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  return self->restrict_range;
 }
 
 /**

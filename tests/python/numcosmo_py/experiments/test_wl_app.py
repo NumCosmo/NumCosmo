@@ -1697,6 +1697,68 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     assert _experiment_m2lnL(exp_prepared) == _experiment_m2lnL(exp_original)
 
 
+def test_wl_catalog_shape_interp_restrict_range(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """With restrict_range=true and the box of the fits (mass bound, center box,
+    concentration range), each interpolant covers only the shears its galaxy
+    can reach: the catalog is smaller, and the likelihood is that of the
+    interpolants over the whole disk, the shears beyond the reach being
+    integrated."""
+    pop = "--pop-dist=beta alpha=1.8 beta=2.1"
+    full = tmp_path / "full.gvar"
+    result = _shape_interp(full, real_wl_obs_file_with_meta, pop)
+    assert result.exit_code == 0, result.output
+
+    restricted = tmp_path / "restricted.gvar"
+    result = _shape_interp(
+        restricted,
+        real_wl_obs_file_with_meta,
+        pop,
+        "--shape-factor=spectral use_interp=true restrict_range=true "
+        "ellip_conv=trace ellip_coord=celestial",
+        "--cluster-mass-max=1.0e15",
+        "--centre-box-deg=0.01",
+        "--cluster-c-min=2.0",
+        "--cluster-c-max=8.0",
+    )
+    assert result.exit_code == 0, result.output
+    assert restricted.stat().st_size < full.stat().st_size
+
+    m2lnL = {}
+    for name, catalog in (("full", full), ("restricted", restricted)):
+        exp = tmp_path / f"exp_{name}.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp.as_posix(),
+                f"--data-file={catalog.as_posix()}",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        m2lnL[name] = _experiment_m2lnL(exp)
+
+    assert m2lnL["restricted"] == pytest.approx(m2lnL["full"], rel=0.0, abs=1.0e-4)
+
+
+def test_wl_catalog_shape_interp_concentration_pair(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """--cluster-c-min and --cluster-c-max are given together."""
+    result = _shape_interp(
+        tmp_path / "out.gvar",
+        real_wl_obs_file_with_meta,
+        "--pop-dist=gauss sigma=0.3",
+        "--cluster-c-min=2.0",
+    )
+    assert result.exit_code != 0
+    assert "--cluster-c-min" in str(result.exception) or "--cluster-c-min" in (
+        result.output
+    )
+
+
 def test_wl_catalog_shape_interp_replaces_record(
     tmp_path: Path, real_wl_obs_file_with_meta
 ):
