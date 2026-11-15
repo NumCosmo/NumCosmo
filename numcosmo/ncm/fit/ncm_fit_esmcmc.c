@@ -4,10 +4,13 @@
  *  Tue January 20 16:59:36 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti & Mariana Penna-Lima
  *  <vitenti@uel.br>, <pennalima@gmail.com>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

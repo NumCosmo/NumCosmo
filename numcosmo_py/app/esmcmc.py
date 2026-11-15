@@ -4,9 +4,12 @@
 # Wed Feb 14 18:59:34 2024
 # Copyright  2024  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
+# Copyright  2026  Caio Lima de Oliveira
+# <caiolimadeoliveira@pm.me>
 #
 # esmcmc.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
