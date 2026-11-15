@@ -337,6 +337,7 @@ _nc_galaxy_shape_factor_spectral_get_property (GObject *object, guint prop_id, G
 
 static void _nc_galaxy_shape_factor_spectral_kernel_trace (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
 static void _nc_galaxy_shape_factor_spectral_radial_trace (gpointer user_data, guint n, const gdouble *r, gdouble *w);
+static void _nc_galaxy_shape_factor_spectral_radial_trace_det (gpointer user_data, guint n, const gdouble *r, gdouble *w);
 static void _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
 static void _nc_galaxy_shape_factor_spectral_map_trace (gdouble t, gdouble x, gdouble y, gdouble * restrict f_x, gdouble * restrict f_y);
 
@@ -367,7 +368,7 @@ _nc_galaxy_shape_factor_spectral_constructed (GObject *object)
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
         self->kernel         = &_nc_galaxy_shape_factor_spectral_kernel_trace_det;
-        self->radial         = NULL;
+        self->radial         = &_nc_galaxy_shape_factor_spectral_radial_trace_det;
         self->map            = &nc_wl_ellipticity_apply_shear_trace_det_real;
         self->map_inv        = &nc_wl_ellipticity_apply_shear_inv_trace_det;
         self->p_reduced      = &_nc_galaxy_shape_factor_spectral_p_reduced_trace_det;
@@ -1535,14 +1536,16 @@ _nc_galaxy_shape_factor_spectral_radial_trace (gpointer user_data, guint n, cons
 
 /*
  * The integrand for the TRACE_DET convention, in the polar coordinates of chi_I:
- * G (r, theta) = (P_pop (r) / (r^a (1 - r)^b)) N_2 (eps_obs - f_t (chi_I)) / (2 pi).
+ * G (r, theta) = (P_pop (r) / (r^a (1 - r)^b)) N_2 (eps_obs - f_t (chi_I)) / (2 pi), with the
+ * offset of the kernel taken out of the exponent of N_2. The factor that depends only on r,
+ * the reduced density times norm, is _nc_galaxy_shape_factor_spectral_radial_trace_det():
+ * here only the exponential.
  */
 static void
 _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r, guint n, const gdouble *theta,
                                                    const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
 {
   const NcGalaxyShapeFactorSpectralKernel *k = user_data;
-  const gdouble pref                         = _nc_galaxy_shape_factor_spectral_p_reduced_trace_det (k, r) * k->norm;
   const gdouble t                            = k->t;
   const gdouble e_1                          = k->e_1;
   const gdouble e_2                          = k->e_2;
@@ -1558,8 +1561,23 @@ _nc_galaxy_shape_factor_spectral_kernel_trace_det (gpointer user_data, gdouble r
     gdouble f_x, f_y;
 
     nc_wl_ellipticity_apply_shear_trace_det_real (t, r * cos_theta[j], r * sin_theta[j], &f_x, &f_y);
-    fval[j] = pref * ncm_vmath_exp (shift_c2 - (gsl_pow_2 (e_1 - f_x) + gsl_pow_2 (e_2 - f_y)) * c2);
+    fval[j] = ncm_vmath_exp (shift_c2 - (gsl_pow_2 (e_1 - f_x) + gsl_pow_2 (e_2 - f_y)) * c2);
   }
+}
+
+/*
+ * The factor of the TRACE_DET integrand that depends only on r, given to
+ * ncm_spectral_polar_integrate_full() so that it is computed once per radius: norm times
+ * the reduced density of the population at r = |chi_I|.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_radial_trace_det (gpointer user_data, guint n, const gdouble *r, gdouble *w)
+{
+  const NcGalaxyShapeFactorSpectralKernel *k = user_data;
+  guint i;
+
+  for (i = 0; i < n; i++)
+    w[i] *= k->norm * nc_galaxy_shape_pop_eval_p_reduced (k->pop, k->pop_data, r[i]);
 }
 
 /*
