@@ -53,7 +53,35 @@
 #  endif
 #endif
 
-static const gchar *
+/*
+ * The CPU check and main() run before any test, so a variant built for an x86-64 level must
+ * not execute an instruction of that level there: they are compiled for the baseline. The
+ * tests themselves run only after the check passed.
+ */
+#if defined (NCM_VMATH_TEST_LEVEL) && (NCM_VMATH_TEST_LEVEL > 1)
+#  define TEST_VMATH_BASELINE __attribute__ ((target ("arch=x86-64")))
+#else
+#  define TEST_VMATH_BASELINE
+#endif
+
+/*
+ * Without NCM_VMATH_HAVE_FAST_EXP, ncm_vmath_exp(), ncm_vmath_log() and
+ * ncm_vmath_pow_pos() are those of libm, and the compiler may call the vector variants of
+ * glibc (libmvec, within 4 ulp) in a loop it vectorizes: the loop and a scalar call then
+ * agree within that bound, not bit for bit. With it they are the code of
+ * ncm_vmath_private.h, the same in and out of a loop.
+ */
+#define TEST_VMATH_LIBMVEC_ULP (4)
+
+#ifdef NCM_VMATH_HAVE_FAST_EXP
+#  define TEST_VMATH_ASSERT_LOOP(loop, scalar) g_assert_cmpfloat ((loop), ==, (scalar))
+#else
+#  define TEST_VMATH_ASSERT_LOOP(loop, scalar) g_assert_cmpuint (_ulp_diff ((loop), (scalar)), <=, TEST_VMATH_LIBMVEC_ULP)
+#endif
+
+static guint64 _ulp_diff (const gdouble a, const gdouble b);
+
+TEST_VMATH_BASELINE static const gchar *
 _test_ncm_vmath_missing_isa (void)
 {
 #if defined (NCM_VMATH_TEST_LEVEL) && (NCM_VMATH_TEST_LEVEL == 3)
@@ -72,7 +100,7 @@ _test_ncm_vmath_missing_isa (void)
   return NULL;
 }
 
-static void
+TEST_VMATH_BASELINE static void
 _test_ncm_vmath_skipped (gconstpointer missing)
 {
   g_test_skip (missing);
@@ -87,7 +115,7 @@ static void test_ncm_vmath_log_random (void);
 static void test_ncm_vmath_log_special (void);
 static void test_ncm_vmath_pow_pos_random (void);
 
-gint
+TEST_VMATH_BASELINE gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
@@ -303,13 +331,13 @@ test_ncm_vmath_exp_random (void)
     for (i = 0; i < TEST_VMATH_N; i++)
     {
       max_ulp = MAX (max_ulp, _ulp_diff (out[i], exp (x[i])));
-      g_assert_cmpfloat (out[i], ==, ncm_vmath_exp (x[i]));
+      TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_exp (x[i]));
     }
 
 #ifdef NCM_VMATH_HAVE_FAST_EXP
     g_assert_cmpuint (max_ulp, <=, 2);
 #else
-    g_assert_cmpuint (max_ulp, ==, 0);
+    g_assert_cmpuint (max_ulp, <=, TEST_VMATH_LIBMVEC_ULP);
 #endif
   }
 
@@ -370,13 +398,13 @@ test_ncm_vmath_log_random (void)
     for (i = 0; i < TEST_VMATH_N; i++)
     {
       max_ulp = MAX (max_ulp, _ulp_diff (out[i], log (x[i])));
-      g_assert_cmpfloat (out[i], ==, ncm_vmath_log (x[i]));
+      TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_log (x[i]));
     }
 
 #ifdef NCM_VMATH_HAVE_FAST_EXP
     g_assert_cmpuint (max_ulp, <=, 1);
 #else
-    g_assert_cmpuint (max_ulp, ==, 0);
+    g_assert_cmpuint (max_ulp, <=, TEST_VMATH_LIBMVEC_ULP);
 #endif
   }
 
@@ -425,12 +453,12 @@ test_ncm_vmath_pow_pos_random (void)
   {
     const gdouble ref = pow (x[i], y[i]);
 
-    g_assert_cmpfloat (out[i], ==, ncm_vmath_pow_pos (x[i], y[i]));
+    TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_pow_pos (x[i], y[i]));
 #ifdef NCM_VMATH_HAVE_FAST_EXP
     /* Within (2 + |y ln x|) ulp, with one more for the rounding of y ln x */
     g_assert_cmpfloat (fabs (out[i] / ref - 1.0), <=, (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
 #else
-    g_assert_cmpfloat (out[i], ==, ref);
+    g_assert_cmpuint (_ulp_diff (out[i], ref), <=, TEST_VMATH_LIBMVEC_ULP);
 #endif
   }
 
