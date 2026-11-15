@@ -1719,7 +1719,10 @@ nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *po
  * the lens, g_j = bias + (1 + m) g_t (z_j) rot, lie on one line: they go to
  * eval_line in one call, with t_j = (1 + m) g_t (z_j) and u = rot, the same
  * products as the shears formed here before. Every node at or in front of
- * the lens has g = bias, so its value is computed once.
+ * the lens has g = bias, the point t = 0 of the line: when there are nodes
+ * on both sides, t = 0 goes to the same eval_line call, so that a subclass
+ * that tabulates the line (NcGalaxyShapeFactorSpectral) gives it from its
+ * table; with only nodes in front, it is computed once by eval_nodes.
  */
 static void
 _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out, const gboolean want_log)
@@ -1741,20 +1744,21 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
   const guint n_nodes             = ncm_vector_len (z_nodes);
   gdouble t_stack[NC_GALAXY_SHAPE_FACTOR_NODE_STACK];
   guint idx_stack[NC_GALAXY_SHAPE_FACTOR_NODE_STACK];
-  gdouble *t            = t_stack;
-  guint *idx            = idx_stack;
-  gboolean have_gt0_val = FALSE;
-  gdouble gt0_val       = 0.0;
-  guint c               = 0;
+  gdouble *t      = t_stack;
+  guint *idx      = idx_stack;
+  guint n_front   = 0;
+  gdouble gt0_val = 0.0;
+  guint c         = 0;
   guint j;
 
   g_assert_nonnull (pop);
   g_assert_nonnull (cdata->crit_cache_arr);
 
-  if (n_nodes > NC_GALAXY_SHAPE_FACTOR_NODE_STACK)
+  /* One more than the nodes for t = 0 */
+  if (n_nodes + 1 > NC_GALAXY_SHAPE_FACTOR_NODE_STACK)
   {
-    t   = g_new (gdouble, n_nodes);
-    idx = g_new (guint, n_nodes);
+    t   = g_new (gdouble, n_nodes + 1);
+    idx = g_new (guint, n_nodes + 1);
   }
 
   for (j = 0; j < n_nodes; j++)
@@ -1771,22 +1775,34 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
     }
     else
     {
-      if (!have_gt0_val)
-      {
-        klass->eval_nodes (gsf, pop, data, 1, &b_1, &b_2, et, ex, want_log, &gt0_val);
-        have_gt0_val = TRUE;
-      }
-
-      ncm_vector_set (out, j, gt0_val);
+      n_front++;
     }
   }
 
   if (c > 0)
   {
-    klass->eval_line (gsf, pop, data, c, t, cdata->rot_re, cdata->rot_im, b_1, b_2, et, ex, want_log, t);
+    const guint n_line = (n_front > 0) ? c + 1 : c;
+
+    t[c] = 0.0;
+    klass->eval_line (gsf, pop, data, n_line, t, cdata->rot_re, cdata->rot_im, b_1, b_2, et, ex, want_log, t);
 
     for (j = 0; j < c; j++)
       ncm_vector_set (out, idx[j], t[j]);
+
+    gt0_val = t[c];
+  }
+  else if (n_front > 0)
+  {
+    klass->eval_nodes (gsf, pop, data, 1, &b_1, &b_2, et, ex, want_log, &gt0_val);
+  }
+
+  if (n_front > 0)
+  {
+    for (j = 0; j < n_nodes; j++)
+    {
+      if (!(ncm_vector_get (z_nodes, j) > z_cl))
+        ncm_vector_set (out, j, gt0_val);
+    }
   }
 
   if (t != t_stack)
