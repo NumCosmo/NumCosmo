@@ -146,7 +146,7 @@ ncm_vmath_atan2 (const gdouble y, const gdouble x)
 static inline void
 ncm_vmath_sincos (const gdouble x, gdouble *s, gdouble *c)
 {
-  const gdouble MAGIC = 6755399441055744.0;
+  const gdouble ROUND = 6755399441055744.0;     /* 1.5 2^52: x + ROUND - ROUND rounds x to an integer */
   const gdouble TWOPI = 0.63661977236758134308; /* 2 / pi */
   const gdouble DP1   = 1.57079625129699707031e0;
   const gdouble DP2   = 7.54978941586159635335e-8;
@@ -163,8 +163,8 @@ ncm_vmath_sincos (const gdouble x, gdouble *s, gdouble *c)
   const gdouble C3    = 2.48015872888517045348e-5;
   const gdouble C4    = -1.38888888888730564116e-3;
   const gdouble C5    = 4.16666666666665929218e-2;
-  const gdouble tn    = x * TWOPI + MAGIC;
-  const gdouble n     = tn - MAGIC;
+  const gdouble tn    = x * TWOPI + ROUND;
+  const gdouble n     = tn - ROUND;
   const gdouble r     = ((x - n * DP1) - n * DP2) - n * DP3;
   const gdouble z     = r * r;
   const gdouble sr    = r + r * z * (((((S0 * z + S1) * z + S2) * z + S3) * z + S4) * z + S5);
