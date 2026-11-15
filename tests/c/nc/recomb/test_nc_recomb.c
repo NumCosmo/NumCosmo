@@ -83,16 +83,16 @@ _test_nc_recomb_seager_Xe_panels_check (NcRecomb *recomb, NcHICosmo *cosmo, gboo
 
   g_assert_true (edge_at_switch);
 
-  /* Saha phase: the expanded function itself, to the relative tolerance prec */
+  /* Saha phase: the expanded function (the Saha equilibrium), to the relative tolerance prec */
   for (i = 0; i < 200; i++)
   {
     const gdouble lambda = recomb->lambdai + (lambda_sw - recomb->lambdai) * (i + 0.5) / 200.0;
     const gdouble Xe     = ncm_spectral_panels_eval_row (sp, 0, lambda);
 
-    ncm_assert_cmpdouble_e (Xe, ==, nc_recomb_He_fully_ionized_Xe (cosmo, exp (-lambda)), recomb->prec, 0.0);
+    ncm_assert_cmpdouble_e (Xe, ==, nc_recomb_equilibrium_Xe (recomb, cosmo, exp (-lambda)), recomb->prec, 0.0);
   }
 
-  /* ODE phase: the CVODE solution, which the X_e spline interpolates to about prec */
+  /* ODE phase: the CVODE solution, which the X_HII and X_HeII splines interpolate to about prec */
   if (cmp_spline)
   {
     for (i = 0; i < 200; i++)
@@ -100,7 +100,7 @@ _test_nc_recomb_seager_Xe_panels_check (NcRecomb *recomb, NcHICosmo *cosmo, gboo
       const gdouble lambda = lambda_sw * (i + 0.5) / 200.0;
       const gdouble Xe     = ncm_spectral_panels_eval_row (sp, 0, lambda);
 
-      ncm_assert_cmpdouble_e (Xe, ==, nc_recomb_Xe (recomb, cosmo, lambda), recomb->prec, 0.0);
+      ncm_assert_cmpdouble_e (Xe, ==, nc_recomb_XHII (recomb, cosmo, lambda) + nc_recomb_XHeII (recomb, cosmo, lambda), recomb->prec, 0.0);
     }
   }
 }
@@ -174,7 +174,8 @@ test_nc_recomb_seager_Xe_ini (void)
   {
     const gdouble Xe_ini = nc_recomb_Xe (recomb, cosmo, recomb->lambdai);
 
-    ncm_assert_cmpdouble_e (Xe_ini, ==, 1.0 + 2.0 * nc_hicosmo_XHe (cosmo), recomb->prec * 1.0e2, 0.0);
+    /* the Saha equilibrium, which is not 1 + 2 X_He at z_i = 1e12 (see nc_recomb_equilibrium_Xe) */
+    ncm_assert_cmpdouble_e (Xe_ini, ==, nc_recomb_equilibrium_Xe (recomb, cosmo, exp (-recomb->lambdai)), recomb->prec, 0.0);
   }
 
   nc_hicosmo_free (cosmo);
