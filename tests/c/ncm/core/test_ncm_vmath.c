@@ -458,8 +458,9 @@ test_ncm_vmath_pow_pos_random (void)
 #ifdef NCM_VMATH_HAVE_FAST_EXP
 
     /* exp (y log x): a difference of the last bit of log x between the loop and the scalar
-     * call grows by |y ln x|, so they agree within the bound of the function itself */
-    g_assert_cmpfloat (fabs (out[i] / ncm_vmath_pow_pos (x[i], y[i]) - 1.0), <=, (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
+     * call grows by |y ln x|; each is within the bound of the function, so they agree within
+     * twice that bound */
+    g_assert_cmpfloat (fabs (out[i] / ncm_vmath_pow_pos (x[i], y[i]) - 1.0), <=, 2.0 * (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
 #else
     TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_pow_pos (x[i], y[i]));
 #endif
