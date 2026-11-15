@@ -65,16 +65,18 @@
 #endif
 
 /*
- * Without NCM_VMATH_HAVE_FAST_EXP, ncm_vmath_exp(), ncm_vmath_log() and
+ * A loop that vectorizes and a scalar call agree within a few ulp, not bit for bit. With
+ * NCM_VMATH_HAVE_FAST_EXP the functions are the code of ncm_vmath_private.h, which the
+ * compiler may contract (a * b + c into an fma) differently in vector and in scalar code
+ * (GCC of Ubuntu 24.04 does): 2 ulp. Without it ncm_vmath_exp(), ncm_vmath_log() and
  * ncm_vmath_pow_pos() are those of libm, and the compiler may call the vector variants of
- * glibc (libmvec, within 4 ulp) in a loop it vectorizes: the loop and a scalar call then
- * agree within that bound, not bit for bit. With it they are the code of
- * ncm_vmath_private.h, the same in and out of a loop.
+ * glibc (libmvec, within 4 ulp) in a loop it vectorizes: 4 ulp.
  */
+#define TEST_VMATH_LOOP_ULP (2)
 #define TEST_VMATH_LIBMVEC_ULP (4)
 
 #ifdef NCM_VMATH_HAVE_FAST_EXP
-#  define TEST_VMATH_ASSERT_LOOP(loop, scalar) g_assert_cmpfloat ((loop), ==, (scalar))
+#  define TEST_VMATH_ASSERT_LOOP(loop, scalar) g_assert_cmpuint (_ulp_diff ((loop), (scalar)), <=, TEST_VMATH_LOOP_ULP)
 #else
 #  define TEST_VMATH_ASSERT_LOOP(loop, scalar) g_assert_cmpuint (_ulp_diff ((loop), (scalar)), <=, TEST_VMATH_LIBMVEC_ULP)
 #endif
@@ -270,7 +272,7 @@ test_ncm_vmath_atan2_random (void)
   for (i = 0; i < TEST_VMATH_N; i++)
   {
     max_ulp = MAX (max_ulp, _ulp_diff (out[i], atan2 (y[i], x[i])));
-    g_assert_cmpfloat (out[i], ==, ncm_vmath_atan2 (y[i], x[i]));
+    g_assert_cmpuint (_ulp_diff (out[i], ncm_vmath_atan2 (y[i], x[i])), <=, TEST_VMATH_LOOP_ULP);
   }
 
   g_assert_cmpuint (max_ulp, <=, 2);
