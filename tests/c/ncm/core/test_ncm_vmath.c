@@ -455,7 +455,14 @@ test_ncm_vmath_pow_pos_random (void)
   {
     const gdouble ref = pow (x[i], y[i]);
 
+#ifdef NCM_VMATH_HAVE_FAST_EXP
+
+    /* exp (y log x): a difference of the last bit of log x between the loop and the scalar
+     * call grows by |y ln x|, so they agree within the bound of the function itself */
+    g_assert_cmpfloat (fabs (out[i] / ncm_vmath_pow_pos (x[i], y[i]) - 1.0), <=, (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
+#else
     TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_pow_pos (x[i], y[i]));
+#endif
 #ifdef NCM_VMATH_HAVE_FAST_EXP
     /* Within (2 + |y ln x|) ulp, with one more for the rounding of y ln x */
     g_assert_cmpfloat (fabs (out[i] / ref - 1.0), <=, (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
