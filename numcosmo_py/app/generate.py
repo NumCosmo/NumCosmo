@@ -1154,14 +1154,13 @@ class LoadClusterWL(ClusterWL):
         typer.Option(
             help=(
                 "Which per-galaxy inputs a later 'run mc --run-type "
-                "from_model' regenerates. Repeatable. For a real-catalog "
-                "mass-bias test pass 'shape' only: it conditions on the "
-                "catalog's real per-galaxy position/redshift/noise and "
-                "resamples just the intrinsic ellipticity. 'position'/"
-                "'redshift' instead redraw from the fitted parametric "
-                "position/redshift factor, discarding the catalog's own "
-                "empirical footprint/p(z) -- only meaningful for idealized "
-                "checks, not real-catalog bias tests."
+                "from_model' regenerates, besides the shape, which is always "
+                "redrawn. Repeatable. 'redshift' draws each galaxy's true "
+                "redshift from its own P(z); without it the shear uses the "
+                "catalog z column, a point estimate the likelihood does not "
+                "read. 'position' draws ra, dec from the sky footprint, the "
+                "catalog's bounding box. A mock consistent with the likelihood on a "
+                "real catalog: 'redshift' and 'shape'."
             ),
             show_default=True,
             default_factory=lambda: [ResampleFlagChoice.ALL],

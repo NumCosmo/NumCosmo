@@ -1343,15 +1343,15 @@ def generate_lsst_cluster_wl(
 class ResampleFlagChoice(StrEnum):
     """Which per-galaxy inputs ``ncm_data_resample()`` regenerates.
 
-    Only meaningful for :func:`load_cluster_wl`'s real-catalog experiments:
-    ``POSITION``/``REDSHIFT`` redraw from the (parametric) position/redshift
-    factor, not from the catalog's own empirical footprint/p(z), so leaving
-    them off is what keeps a real catalog's actual spatial/photo-z
-    heterogeneity intact across resamples -- ``SHAPE`` alone conditions on
-    the real per-galaxy (ra, dec, z, noise) and only redraws intrinsic
-    ellipticity, which is the appropriate choice for a real-catalog bias
-    test. ``ALL`` (the default) matches historical/mock-generation
-    behavior.
+    The shape is redrawn in every case. For :func:`load_cluster_wl`'s
+    real-catalog experiments, ``REDSHIFT`` draws the true redshift of each
+    galaxy from its own P(z) (``NcGalaxyRedshiftFactorSpline``), and
+    ``POSITION`` draws ra, dec from the sky footprint, the bounding box of the
+    catalog (``NcGalaxyPositionFactorFlat``), within the radial cut. Without
+    ``REDSHIFT`` the shear is computed at the catalog ``z`` column, a point
+    estimate that the likelihood, which integrates over P(z), never reads; a
+    mock consistent with the likelihood needs ``REDSHIFT | SHAPE``. ``ALL`` is
+    the default.
     """
 
     POSITION = "position"
@@ -1438,9 +1438,8 @@ def load_cluster_wl(
     only describes the observed background galaxies, not the lensing cluster.
 
     ``resample_flag`` is written onto the resulting ``NcDataClusterWLFactor``
-    as-is (default ``ALL``, matching historical behavior); see
-    ``ResampleFlagChoice`` for why a real-catalog bias test wants ``SHAPE``
-    only.
+    as-is (default ``ALL``); see ``ResampleFlagChoice`` for what each flag
+    redraws.
     """
     if not (obs.has_column("ra") and obs.has_column("dec")):
         raise ValueError("obs must have 'ra' and 'dec' columns")
