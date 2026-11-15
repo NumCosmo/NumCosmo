@@ -890,8 +890,9 @@ _nc_data_cluster_wl_factor_require_zf (NcDataClusterWLFactorPrivate *self, NcmMS
   gdouble z_top               = 0.0;
   guint gal_i;
 
-  if ((smd == NULL) || (smd->dist == NULL))
-    return;
+  /* The shape factor needs both, so a model set without them does not get here */
+  g_assert_nonnull (smd);
+  g_assert_nonnull (smd->dist);
 
   for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
   {

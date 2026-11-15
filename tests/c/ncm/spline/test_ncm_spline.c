@@ -125,6 +125,9 @@ static void test_ncm_spline_invalid_d2_len (void);
 static void test_ncm_spline_invalid_d2_len_subprocess (void);
 static void test_ncm_spline_gsl_unsupported_type (void);
 static void test_ncm_spline_gsl_unsupported_type_subprocess (void);
+static void test_ncm_spline_unprepared (void);
+static void test_ncm_spline_unprepared_subprocess (void);
+static void test_ncm_spline_cubic_tridiag_vecs (void);
 static void test_ncm_spline_gsl_steffen_monotone (void);
 static void test_ncm_spline_gsl_deriv_nmax (void);
 void _test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer pdata), void (*tfree) (TestNcmSpline *test, gconstpointer pdata), const gchar *name);
@@ -204,6 +207,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spline_cubic_d2/invalid_d2_len/subprocess", &test_ncm_spline_invalid_d2_len_subprocess);
   g_test_add_func ("/ncm/spline_gsl/unsupported_type", &test_ncm_spline_gsl_unsupported_type);
   g_test_add_func ("/ncm/spline_gsl/unsupported_type/subprocess", &test_ncm_spline_gsl_unsupported_type_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared", &test_ncm_spline_unprepared);
+  g_test_add_func ("/ncm/spline/unprepared/subprocess", &test_ncm_spline_unprepared_subprocess);
+  g_test_add_func ("/ncm/spline_cubic/tridiag_vecs", &test_ncm_spline_cubic_tridiag_vecs);
   g_test_add_func ("/ncm/spline_gsl/steffen/monotone", &test_ncm_spline_gsl_steffen_monotone);
   g_test_add_func ("/ncm/spline_gsl/deriv_nmax", &test_ncm_spline_gsl_deriv_nmax);
   g_test_run ();
@@ -2238,5 +2244,71 @@ test_ncm_spline_gsl_deriv_nmax (void)
 
   ncm_vector_free (xv);
   ncm_vector_free (yv);
+}
+
+/* A spline evaluated before ncm_spline_prepare() aborts, naming its type */
+static void
+test_ncm_spline_unprepared (void)
+{
+  g_test_trap_subprocess ("/ncm/spline/unprepared/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineCubicNotaknot was evaluated before ncm_spline_prepare()*");
+}
+
+static void
+test_ncm_spline_unprepared_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (6);
+  NcmVector *yv = ncm_vector_new (6);
+  NcmSpline *s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  guint i;
+
+  for (i = 0; i < 6; i++)
+  {
+    ncm_vector_set (xv, i, i);
+    ncm_vector_set (yv, i, i * i);
+  }
+
+  ncm_spline_set (s, xv, yv, FALSE);
+  ncm_spline_eval (s, 1.5);
+}
+
+/*
+ * The workspaces of the tridiagonal system of NcmSplineCubic are made on demand: none before
+ * the knots are set, then one entry per knot, the same vector at each call.
+ */
+static void
+test_ncm_spline_cubic_tridiag_vecs (void)
+{
+  NcmSplineCubic *sc = NCM_SPLINE_CUBIC (ncm_spline_cubic_notaknot_new ());
+  NcmVector *xv      = ncm_vector_new (6);
+  NcmVector *yv      = ncm_vector_new (6);
+  NcmVector *diag, *offdiag;
+  guint i;
+
+  g_assert_null (ncm_spline_cubic_peek_diag_vec (sc));
+  g_assert_null (ncm_spline_cubic_peek_offdiag_vec (sc));
+
+  for (i = 0; i < 6; i++)
+  {
+    ncm_vector_set (xv, i, i);
+    ncm_vector_set (yv, i, sin (i));
+  }
+
+  ncm_spline_set (NCM_SPLINE (sc), xv, yv, TRUE);
+
+  diag    = ncm_spline_cubic_peek_diag_vec (sc);
+  offdiag = ncm_spline_cubic_peek_offdiag_vec (sc);
+
+  g_assert_nonnull (diag);
+  g_assert_nonnull (offdiag);
+  g_assert_cmpuint (ncm_vector_len (diag), ==, 6);
+  g_assert_cmpuint (ncm_vector_len (offdiag), ==, 6);
+  g_assert_true (ncm_spline_cubic_peek_diag_vec (sc) == diag);
+  g_assert_true (ncm_spline_cubic_peek_offdiag_vec (sc) == offdiag);
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_spline_free (NCM_SPLINE (sc));
 }
 
