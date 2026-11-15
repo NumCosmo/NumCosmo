@@ -1008,7 +1008,7 @@ class ClusterModel(BaseModel):
     r_max: Annotated[float, Field(gt=0.0)] = 3.0
     cluster_mass: Annotated[float, Field(ge=1.0e10, le=1.0e17)] = 1.0e14
     # A new NcDistance per model (a default object would be shared by every instance).
-    dist: Annotated[Nc.Distance, Field(default_factory=lambda: Nc.Distance.new(5.0))]
+    dist: Nc.Distance = Field(default_factory=lambda: Nc.Distance.new(5.0))
 
     _halo_mass_summary: Nc.HaloCMParam = PrivateAttr()
     _density_profile: Nc.HaloDensityProfile = PrivateAttr()
