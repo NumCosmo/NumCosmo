@@ -39,10 +39,10 @@ G_BEGIN_DECLS
  * static inline so that the compiler sees their body inside the caller's loop (an
  * omp simd loop, for instance); a call to libm stops the vectorization of a loop when
  * -ffast-math is not used, as in NumCosmo, since glibc declares its vector variants only
- * under __FAST_MATH__. They are for hot loops, and libm is the reference for the rest.
+ * under __FAST_MATH__. They are for the loops that dominate a computation, and libm is the reference for the rest.
  *
  * ncm_vmath_select() is the blend: GCC keeps a conditional expression on doubles as
- * control flow when floating-point exceptions trap (the default) and the target has no
+ * control flow under -ftrapping-math (the default) and the target has no
  * masked instructions (SSE2 and AVX2), which leaves the loop scalar.
  *
  * ncm_vmath_atan2() is faster than libm with SSE2 already. ncm_vmath_exp(),
@@ -168,7 +168,7 @@ static inline gdouble
 ncm_vmath_exp (const gdouble x)
 {
 #ifdef NCM_VMATH_HAVE_FAST_EXP
-  const gdouble MAGIC = 6755399441055744.0;
+  const gdouble ROUND = 6755399441055744.0; /* 1.5 2^52: x + ROUND - ROUND rounds x to an integer */
   const gdouble LOG2E = 1.4426950408889634073599;
   const gdouble C1    = 6.93145751953125e-1;
   const gdouble C2    = 1.42860682030941723212e-6;
@@ -181,13 +181,13 @@ ncm_vmath_exp (const gdouble x)
   const gdouble Q3    = 2.00000000000000000009e0;
   const gdouble xl    = ncm_vmath_select (x < -746.0, -746.0, x);
   const gdouble xc    = ncm_vmath_select (x > 710.0, 710.0, xl);
-  const gdouble n     = (xc * LOG2E + MAGIC) - MAGIC;
+  const gdouble n     = (xc * LOG2E + ROUND) - ROUND;
   const gdouble r     = (xc - n * C1) - n * C2;
   const gdouble rr    = r * r;
   const gdouble px    = r * ((P0 * rr + P1) * rr + P2);
   const gdouble qx    = ((Q0 * rr + Q1) * rr + Q2) * rr + Q3;
   const gdouble e     = 1.0 + 2.0 * (px / (qx - px));
-  const gdouble h     = (0.5 * n + MAGIC) - MAGIC;
+  const gdouble h     = (0.5 * n + ROUND) - ROUND;
 
   return (e * _ncm_vmath_pow2i (h)) * _ncm_vmath_pow2i (n - h);
 
