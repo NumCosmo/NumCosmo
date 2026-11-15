@@ -762,11 +762,14 @@ nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxySha
       cdata->rot_re = (x * x - y * y) / rho2;
       cdata->rot_im = 2.0 * x * y / rho2;
     }
+    /* LCOV_EXCL_START: rho2 is zero only for a vector exactly on the z axis, which the rounding of the unit vector of (ra, dec) and of the rotation does not produce; it guards the division. */
     else
     {
       cdata->rot_re = 1.0;
       cdata->rot_im = 0.0;
     }
+
+    /* LCOV_EXCL_STOP */
 
     if (data->coord == NC_WL_ELLIPTICITY_FRAME_CARTESIAN)
       cdata->rot_im = -cdata->rot_im;
