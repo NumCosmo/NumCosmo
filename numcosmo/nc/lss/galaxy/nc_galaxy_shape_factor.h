@@ -145,20 +145,17 @@ struct _NcGalaxyShapeFactorClass
    * The default calls the per-point hook for each j. */
   void (*eval_nodes) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 
-  /* The values of eval_nodes at the n shears g_j = b + t_j u of one line,
-   * which is where the shears of the nodes of a galaxy lie. A subclass may
-   * approximate the values along the line within a tolerance of its own;
-   * out may alias t. The default forms the shears and calls eval_nodes. */
-  void (*eval_line) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
-
   /* A Chebyshev series in t of ln P at the shears b + t u, t in [t_min, t_max],
-   * within a tolerance of the subclass, in *coeffs (callee-allocated); FALSE
-   * when the subclass has none for this line. Used by
-   * nc_galaxy_shape_factor_line_new(). The default returns FALSE. */
-  gboolean (*line_table) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, GArray **coeffs);
+   * within a tolerance of the subclass, from at most max_points evaluations
+   * (G_MAXUINT for no limit), in *coeffs (callee-allocated); FALSE when the
+   * subclass has none for this line. The shears of the nodes of a galaxy lie
+   * on such a line: nc_galaxy_shape_factor_eval_line() and
+   * nc_galaxy_shape_factor_line_new() evaluate the series, or the per-point
+   * values when there is none. The default returns FALSE. */
+  gboolean (*line_table) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const guint max_points, GArray **coeffs);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[8];
+  gpointer padding[9];
 };
 
 /*

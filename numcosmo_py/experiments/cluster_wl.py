@@ -416,7 +416,8 @@ DEFAULT_SHAPE_SPECTRAL_USE_INTERP = False
 DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX = 0.3
 DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
-DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = 1.0e-8
+# Negative: reltol / 10 (NcGalaxyShapeFactorSpectral:line-abstol)
+DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = -1.0
 
 
 class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
@@ -433,7 +434,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     interp_min_radial_panels: Annotated[int, Field(ge=1)] = (
         DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS
     )
-    line_abstol: Annotated[float, Field(ge=0.0, le=1.0)] = (
+    line_abstol: Annotated[float, Field(ge=-1.0, le=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL
     )
 
