@@ -189,6 +189,7 @@ typedef struct _NcmSpectralPolarWork
   gdouble *xc;                /* cos (pi q / 2^level_cap), the Lobatto points of every level */
   gdouble *cr;                /* radii of one pass of _ncm_spectral_polar_nodes_r(), contiguous */
   gdouble *cw;                /* and their weights */
+  gdouble *crho;              /* and the radial factor there (NcmSpectralPolarRadialF) */
   GArray *mt;                 /* angular moments, every level */
   NcmSpectral *spectral;      /* the transforms from node values to Chebyshev coefficients */
   NcmSpectralPolarMom mom[4]; /* 0: weight 1, 1: r^a, 2: (R - r)^b, 3: both */
@@ -706,7 +707,8 @@ ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointe
  *
  * As ncm_spectral_polar_integrate(), with the integrand $r^a (R - r)^b \rho (r) G (r,
  * \theta)$, $\rho$ given by @radial. @radial is called with the radii of a panel where the
- * integrand has no value yet, and multiplies the weights at them in place; the integral
+ * integrand has no value yet and sets $\rho$ at them, which the weights are then multiplied
+ * by; the integral
  * and the refinement are those of ncm_spectral_polar_integrate() with $\rho$ in $G$, up to
  * rounding. A factor of $G$ that depends only on the radius is computed once per radius
  * this way, for all of them in one call, instead of in every call of $G$.
@@ -927,7 +929,7 @@ static void
 _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
 {
   const guint np        = (1u << level_cap) + 1;
-  const guint n_lines   = 14;
+  const guint n_lines   = 15;
   const gsize table_len = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 1);
   gdouble *lines, *mt;
   guint l, k;
@@ -950,21 +952,22 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
   work->tmpT   = fftw_malloc (sizeof (gdouble) * np * np);
   work->coeffs = fftw_malloc (sizeof (gdouble) * np * np);
 
-  lines     = &g_array_index (work->lines, gdouble, 0);
-  work->br  = lines + 0 * np;
-  work->bt  = lines + 1 * np;
-  work->rr  = lines + 2 * np;
-  work->wr  = lines + 3 * np;
-  work->th  = lines + 4 * np;
-  work->ct  = lines + 5 * np;
-  work->st  = lines + 6 * np;
-  work->gth = lines + 7 * np;
-  work->gct = lines + 8 * np;
-  work->gst = lines + 9 * np;
-  work->gf  = lines + 10 * np;
-  work->xc  = lines + 11 * np;
-  work->cr  = lines + 12 * np;
-  work->cw  = lines + 13 * np;
+  lines      = &g_array_index (work->lines, gdouble, 0);
+  work->br   = lines + 0 * np;
+  work->bt   = lines + 1 * np;
+  work->rr   = lines + 2 * np;
+  work->wr   = lines + 3 * np;
+  work->th   = lines + 4 * np;
+  work->ct   = lines + 5 * np;
+  work->st   = lines + 6 * np;
+  work->gth  = lines + 7 * np;
+  work->gct  = lines + 8 * np;
+  work->gst  = lines + 9 * np;
+  work->gf   = lines + 10 * np;
+  work->xc   = lines + 11 * np;
+  work->cr   = lines + 12 * np;
+  work->cw   = lines + 13 * np;
+  work->crho = lines + 14 * np;
 
   for (k = 0; k < np; k++)
     work->xc[k] = cos (M_PI * k / (np - 1.0));
@@ -1186,7 +1189,16 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
   }
 
   if (call->radial != NULL)
-    call->radial (call->user_data, c, cr, cw);
+  {
+    gdouble *crho = work->crho;
+
+    call->radial (call->user_data, c, cr, crho);
+
+    #pragma omp simd
+
+    for (i = 0; i < c; i++)
+      cw[i] *= crho[i];
+  }
 
   for (c = 0, i = i0; i <= n; i += step, c++)
   {

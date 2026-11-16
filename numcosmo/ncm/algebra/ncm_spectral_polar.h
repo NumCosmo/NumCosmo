@@ -55,11 +55,12 @@ typedef void (*NcmSpectralPolarF) (gpointer user_data, gdouble r, guint n, const
  * @user_data: user data
  * @n: number of radii
  * @r: (array length=n): the radii $r_i$
- * @w: (array length=n): the weights at @r, multiplied in place by the factor at $r_i$
+ * @rho: (array length=n) (out caller-allocates): set to the factor $\rho (r_i)$
  *
- * A factor of the integrand that depends only on the radius, applied to @n radii at once.
+ * A factor $\rho$ of the integrand that depends only on the radius, at @n radii at once.
+ * The integrator multiplies its weights by @rho, so the callback only sets its values.
  */
-typedef void (*NcmSpectralPolarRadialF) (gpointer user_data, guint n, const gdouble *r, gdouble *w);
+typedef void (*NcmSpectralPolarRadialF) (gpointer user_data, guint n, const gdouble *r, gdouble *rho);
 
 #define NCM_TYPE_SPECTRAL_POLAR (ncm_spectral_polar_get_type ())
 #define NCM_SPECTRAL_POLAR_ERROR (ncm_spectral_polar_error_quark ())
