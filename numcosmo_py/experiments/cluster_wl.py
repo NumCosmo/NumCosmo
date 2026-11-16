@@ -39,7 +39,7 @@ This module builds ``NcDataClusterWLFactor`` experiments, on the
   ``NcGalaxyRedshiftFactorSpline`` and the chosen ``shape_dist`` scheme.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import Annotated, Any, Self
@@ -883,102 +883,6 @@ def shape_interp_gens(
         )
 
     return shape_gen, pop_gen
-
-
-# Keys of the catalog metadata (ncm_catalog_peek_meta()) that record the box a catalog's
-# interpolants were built for with restrict_range=true: [lower, upper] of the halo
-# center and of the concentration, and the upper bound of log10MDelta.
-SHAPE_INTERP_BOX_RANGES: dict[str, tuple[Callable[[], int], str]] = {
-    "ra": (Nc.HaloPosition.id, "shape_interp_box_ra"),
-    "dec": (Nc.HaloPosition.id, "shape_interp_box_dec"),
-    "cDelta": (Nc.HaloMassSummary.id, "shape_interp_box_cDelta"),
-}
-SHAPE_INTERP_BOX_MASS_MAX = "shape_interp_box_log10MDelta_max"
-
-
-def record_shape_interp_box(obs: Nc.GalaxyWLObs, mset: Ncm.MSet) -> None:
-    """Record in the metadata of obs the box restrict_range builds for.
-
-    The halo center and the concentration over their bounds when free (their
-    values otherwise), and the upper bound of the mass:
-    apply_shape_interp_box() narrows the box of a fit to it.
-    """
-    meta = obs.peek_meta()
-    if meta is None:
-        meta = Ncm.VarDict.new()
-        obs.set_meta(meta)
-
-    for name, (model_id, key) in SHAPE_INTERP_BOX_RANGES.items():
-        model = mset.peek(model_id())
-        assert isinstance(model, Ncm.Model)
-        found, idx = model.param_index_from_name(name)
-        if not found:
-            continue
-        if model.param_get_ftype(idx) == Ncm.ParamType.FREE:
-            bounds = [
-                model.param_get_lower_bound(idx),
-                model.param_get_upper_bound(idx),
-            ]
-        else:
-            bounds = [model.param_get(idx), model.param_get(idx)]
-        meta.set_double_array(key, bounds)
-
-    hms = mset.peek(Nc.HaloMassSummary.id())
-    assert isinstance(hms, Nc.HaloMassSummary)
-    _, idx = hms.param_index_from_name("log10MDelta")
-    meta.set_double(SHAPE_INTERP_BOX_MASS_MAX, hms.param_get_upper_bound(idx))
-
-
-def apply_shape_interp_box(
-    obs: Nc.GalaxyWLObs, mset: Ncm.MSet
-) -> dict[str, tuple[float, float]]:
-    """Narrow the box of the fit in mset to the box recorded in obs.
-
-    A catalog prepared with restrict_range=true holds interpolants that cover
-    the shears its galaxies reach in that box only; a fit over a larger box
-    integrates the shears beyond it. The bounds of the halo center and of a
-    free concentration become their intersection with the recorded box, and
-    the upper bound of the mass its minimum with the recorded one. The bounds
-    are never widened.
-
-    Returns:
-        The bounds set, by parameter name; empty when obs records no box.
-    """
-    meta = obs.peek_meta()
-    applied: dict[str, tuple[float, float]] = {}
-    if meta is None:
-        return applied
-
-    for name, (model_id, key) in SHAPE_INTERP_BOX_RANGES.items():
-        found, box = meta.get_double_array(key)
-        model = mset.peek(model_id())
-        if not found or model is None:
-            continue
-        ok, idx = model.param_index_from_name(name)
-        if not ok or (
-            name == "cDelta" and model.param_get_ftype(idx) != Ncm.ParamType.FREE
-        ):
-            continue
-        lo = max(model.param_get_lower_bound(idx), box[0])
-        hi = min(model.param_get_upper_bound(idx), box[1])
-        if not lo <= hi:
-            continue
-        model.param_set_desc(name, {"lower-bound": lo, "upper-bound": hi})
-        model.param_set(idx, min(max(model.param_get(idx), lo), hi))
-        applied[name] = (lo, hi)
-
-    found, m_max = meta.get_double(SHAPE_INTERP_BOX_MASS_MAX)
-    hms = mset.peek(Nc.HaloMassSummary.id())
-    if found and hms is not None:
-        _, idx = hms.param_index_from_name("log10MDelta")
-        lo = hms.param_get_lower_bound(idx)
-        hi = min(hms.param_get_upper_bound(idx), m_max)
-        if lo <= hi:
-            hms.param_set_desc("log10MDelta", {"upper-bound": hi})
-            hms.param_set(idx, min(hms.param_get(idx), hi))
-            applied["log10MDelta"] = (lo, hi)
-
-    return applied
 
 
 class GalaxyPopGen(StrEnum):

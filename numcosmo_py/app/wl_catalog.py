@@ -38,7 +38,6 @@ from numcosmo_py.experiments.cluster_wl import (
     WLCatalogID,
     check_shape_pop_compat,
     load_cluster_wl,
-    record_shape_interp_box,
 )
 
 from .generate import (
@@ -229,8 +228,6 @@ class ShapeInterpWLCatalog:
         data = likelihood.peek_dataset().get_data(0)
         assert isinstance(data, Nc.DataClusterWLFactor)
         self._set_box(mset)
-        if shape_gen.restrict_range:
-            record_shape_interp_box(obs, mset)
 
         t_start = time.perf_counter()
         data.write_shape_interp(mset, obs)
