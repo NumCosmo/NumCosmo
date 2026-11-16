@@ -1746,27 +1746,91 @@ def test_wl_catalog_shape_interp_restrict_range(
 
     assert m2lnL["restricted"] == pytest.approx(m2lnL["full"], rel=0.0, abs=1.0e-4)
 
-    # The experiment of the restricted catalog has the box the catalog was prepared for,
-    # and every interpolant covers the shears its galaxy reaches in it
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    ser.from_binfile((tmp_path / "exp_restricted.dataset.gvar").as_posix())
-    exp_dict = ser.dict_str_from_yaml_file(
-        (tmp_path / "exp_restricted.yaml").as_posix()
+    # The fit keeps its own box (cluster-wl-load never changes a bound): the same bounds
+    # as the fit from the full catalog, the shears beyond the restricted interpolants
+    # integrated
+    bounds = {}
+    for name in ("full", "restricted"):
+        mset, likelihood = _experiment_load(tmp_path / f"exp_{name}.yaml")
+        bounds[name] = _experiment_bounds(mset)
+        if name == "restricted":
+            mset.prepare_fparam_map()
+            likelihood.m2lnL_val(mset)
+            gsfs = likelihood.peek_dataset().get_data(0).get_property("shape-factor")
+            assert cast(Nc.GalaxyShapeFactorSpectral, gsfs).get_restrict_range()
+    assert bounds["restricted"] == bounds["full"]
+
+
+def test_wl_catalog_shape_interp_restrict_range_default_box(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A catalog prepared with restrict_range=true for the default box (the halo
+    center fixed) loads into a fit with the halo center free: the fit has the
+    bounds cluster-wl-load gives any catalog, and the likelihood of the
+    interpolants over the whole disk."""
+    pop = "--pop-dist=beta alpha=1.8 beta=2.1"
+    full = tmp_path / "full.gvar"
+    result = _shape_interp(full, real_wl_obs_file_with_meta, pop)
+    assert result.exit_code == 0, result.output
+
+    restricted = tmp_path / "restricted.gvar"
+    result = _shape_interp(
+        restricted,
+        real_wl_obs_file_with_meta,
+        pop,
+        "--shape-factor=spectral use_interp=true restrict_range=true "
+        "ellip_conv=trace ellip_coord=celestial",
     )
-    mset = cast(Ncm.MSet, exp_dict.get("model-set"))
-    likelihood = cast(Ncm.Likelihood, exp_dict.get("likelihood"))
-    hp = mset.peek(Nc.HaloPosition.id())
-    hms = mset.peek(Nc.HaloMassSummary.id())
-    for name in ("ra", "dec"):
-        _, idx = hp.param_index_from_name(name)
-        width = hp.param_get_upper_bound(idx) - hp.param_get_lower_bound(idx)
-        assert width == pytest.approx(0.02, rel=1.0e-12)
-    _, idx = hms.param_index_from_name("log10MDelta")
-    assert hms.param_get_upper_bound(idx) == pytest.approx(15.0, rel=1.0e-12)
-    mset.prepare_fparam_map()
-    likelihood.m2lnL_val(mset)
-    data = likelihood.peek_dataset().get_data(0)
-    assert data.props.shape_factor.get_n_loaded_short() == 0
+    assert result.exit_code == 0, result.output
+
+    m2lnL = {}
+    bounds = {}
+    for name, catalog in (("full", full), ("restricted", restricted)):
+        exp = tmp_path / f"exp_{name}.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp.as_posix(),
+                f"--data-file={catalog.as_posix()}",
+                "--parameter-list=NcHaloMassSummary:log10MDelta",
+                "--parameter-list=NcHaloPosition:ra",
+                "--parameter-list=NcHaloPosition:dec",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        m2lnL[name] = _experiment_m2lnL(exp)
+        bounds[name] = _experiment_bounds(_experiment_load(exp)[0])
+
+    assert bounds["restricted"] == bounds["full"]
+    assert m2lnL["restricted"] == pytest.approx(m2lnL["full"], rel=0.0, abs=1.0e-4)
+
+
+def _experiment_load(experiment_file: Path) -> tuple[Ncm.MSet, Ncm.Likelihood]:
+    """The model set and the likelihood of an experiment."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    exp = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    return (
+        cast(Ncm.MSet, exp.get("model-set")),
+        cast(Ncm.Likelihood, exp.get("likelihood")),
+    )
+
+
+def _experiment_bounds(mset: Ncm.MSet) -> dict[str, tuple[float, float, bool]]:
+    """The bounds and ftype of every parameter of the halo models of mset."""
+    bounds = {}
+    for model_id in (Nc.HaloPosition.id(), Nc.HaloMassSummary.id()):
+        model = mset.peek(model_id)
+        assert model is not None
+        for idx in range(model.len()):
+            bounds[f"{type(model).__name__}:{model.param_name(idx)}"] = (
+                model.param_get_lower_bound(idx),
+                model.param_get_upper_bound(idx),
+                model.param_get_ftype(idx) == Ncm.ParamType.FREE,
+            )
+    return bounds
 
 
 def _experiment_m2lnL_at(experiment_file: Path, pop_values: dict[str, float]) -> float:
@@ -1787,9 +1851,10 @@ def _experiment_m2lnL_at(experiment_file: Path, pop_values: dict[str, float]) ->
 def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with_meta):
     """With pop_order and --pop-box, the catalog holds for each galaxy the modes
     of the expansion over the box of the population. An experiment built from it
-    has those parameters fixed at the values of the record, with the bounds of
-    the box, unless --parameter-list frees them; inside the box, fixed or free,
-    it has the likelihood of the integrals at the same population."""
+    has those parameters fixed at the values of the record, unless
+    --parameter-list frees them, and the bounds of the population, never those
+    of the box; fixed or free, inside the box or outside it (integrated), it has
+    the likelihood of the integrals at the same population."""
     expanded = tmp_path / "expanded.gvar"
     result = _shape_interp(
         expanded,
@@ -1867,7 +1932,7 @@ def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with
     )
     assert result.exit_code == 0, result.output
 
-    box = {"alpha": (1.75, 1.85), "beta": (2.05, 2.15)}
+    default = Nc.GalaxyShapePopBeta.new()
     free = {exp_expanded: set(), exp_alpha: {"alpha"}}
     for exp_file, free_names in free.items():
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
@@ -1878,16 +1943,20 @@ def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with
         pop = mset.peek(Nc.GalaxyShapePop.id())
         assert pop["alpha"] == pytest.approx(1.8)
         assert pop["beta"] == pytest.approx(2.1)
-        for name, (lo, hi) in box.items():
+        for name in ("alpha", "beta"):
             _, idx = pop.param_index_from_name(name)
-            assert pop.param_get_lower_bound(idx) == pytest.approx(lo)
-            assert pop.param_get_upper_bound(idx) == pytest.approx(hi)
+            assert pop.param_get_lower_bound(idx) == default.param_get_lower_bound(idx)
+            assert pop.param_get_upper_bound(idx) == default.param_get_upper_bound(idx)
             assert (pop.param_get_ftype(idx) == Ncm.ParamType.FREE) == (
                 name in free_names
             )
 
     for exp_file in (exp_expanded, exp_alpha):
-        for values in ({"alpha": 1.8, "beta": 2.1}, {"alpha": 1.78, "beta": 2.13}):
+        for values in (
+            {"alpha": 1.8, "beta": 2.1},
+            {"alpha": 1.78, "beta": 2.13},
+            {"alpha": 1.9, "beta": 2.1},
+        ):
             assert _experiment_m2lnL_at(exp_file, values) == pytest.approx(
                 _experiment_m2lnL_at(exp_integral, values), rel=0.0, abs=1.0e-3
             )

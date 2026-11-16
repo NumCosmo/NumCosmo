@@ -38,7 +38,6 @@ from numcosmo_py.experiments.cluster_wl import (
     WLCatalogID,
     check_shape_pop_compat,
     load_cluster_wl,
-    record_shape_interp_box,
 )
 
 from .generate import (
@@ -179,8 +178,9 @@ class ShapeInterpWLCatalog:
             help=(
                 "NAME=LO:HI, repeatable: frees the population parameter NAME over "
                 "[LO, HI]. With pop_order in the spectral shape factor, the catalog "
-                "holds the interpolants of the nodes of the expansion over that box, "
-                "and fits built from it have those parameters free."
+                "holds the interpolants of the nodes of the expansion over that box; "
+                "fits built from it may free those parameters (--parameter-list), "
+                "over their own bounds, and are integrated outside the box."
             ),
         ),
     ] = None
@@ -241,8 +241,6 @@ class ShapeInterpWLCatalog:
         data = likelihood.peek_dataset().get_data(0)
         assert isinstance(data, Nc.DataClusterWLFactor)
         self._set_box(mset)
-        if shape_gen.restrict_range:
-            record_shape_interp_box(obs, mset)
 
         t_start = time.perf_counter()
         data.write_shape_interp(mset, obs)
