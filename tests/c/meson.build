@@ -568,6 +568,7 @@ math_tests = [
     {
         'name': 'ncm_vmath',
         'sources': ['ncm/core/test_ncm_vmath.c'],
+        'dependencies': [mpfr_dep],
     },
     {
         'name': 'ncm_quaternion',
@@ -986,6 +987,17 @@ if arb_dep.found()
     ]
 endif
 
+# The code of ncm_vmath_private.h for exp, log and pow_pos on any target, SSE2 or NEON for
+# instance, where the build otherwise uses libm: checked against MPFR as on AVX2.
+math_tests += [
+    {
+        'name': 'ncm_vmath_vector',
+        'sources': ['ncm/core/test_ncm_vmath.c'],
+        'dependencies': [mpfr_dep],
+        'c_args': ['-DNCM_VMATH_FORCE_VECTOR_EXP_LOG'],
+    },
+]
+
 # ncm_vmath_private.h is header-only and chooses its code by the target: build its test
 # once per x86-64 level, whatever -march the library uses, so that every path runs
 # where the CPU has it (a variant skips its tests on a CPU without the instructions).
@@ -1001,6 +1013,7 @@ if host_machine.cpu_family() == 'x86_64'
                 {
                     'name': 'ncm_vmath_' + vmath_isa[0],
                     'sources': ['ncm/core/test_ncm_vmath.c'],
+                    'dependencies': [mpfr_dep],
                     'c_args': [
                         '-march=' + vmath_isa[1],
                         '-fno-lto',

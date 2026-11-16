@@ -140,7 +140,8 @@ struct _NcGalaxyShapeFactorClass
    * same observed ellipticity, as nc_galaxy_shape_factor_eval_at_nodes() and
    * nc_galaxy_shape_factor_eval_ln_at_nodes() need for the nodes of one
    * galaxy. A subclass overrides it to do once per galaxy what it would do
-   * once per point; the results must equal those of the per-point hooks.
+   * once per point; the results are those of the per-point hooks within
+   * rounding (see nc_galaxy_shape_factor_eval_nodes()).
    * The default calls the per-point hook for each j. */
   void (*eval_nodes) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 
