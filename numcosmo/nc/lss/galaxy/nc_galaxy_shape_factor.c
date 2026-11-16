@@ -1736,7 +1736,8 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
  * for bit: a loop that vectorizes and a scalar computation may contract a * b + c into an
  * fma differently, and a difference in the last bit of an intermediate is amplified by
  * the function (|ln P| times for P = exp (ln P), the slope of an interpolant for its
- * coordinates). They agree within 1e-13 of max (1, |ln P|) in ln P, and of P relative.
+ * coordinates), which depends on the slope of ln P. In the tests they agree within 1e-13
+ * of max (1, |ln P|) in ln P, and relative in P.
  */
 void
 nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
