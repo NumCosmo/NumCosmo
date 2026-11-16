@@ -568,6 +568,7 @@ math_tests = [
     {
         'name': 'ncm_vmath',
         'sources': ['ncm/core/test_ncm_vmath.c'],
+        'dependencies': [mpfr_dep],
     },
     {
         'name': 'ncm_quaternion',
@@ -1001,6 +1002,7 @@ if host_machine.cpu_family() == 'x86_64'
                 {
                     'name': 'ncm_vmath_' + vmath_isa[0],
                     'sources': ['ncm/core/test_ncm_vmath.c'],
+                    'dependencies': [mpfr_dep],
                     'c_args': [
                         '-march=' + vmath_isa[1],
                         '-fno-lto',
