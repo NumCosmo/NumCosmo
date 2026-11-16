@@ -42,16 +42,18 @@ The pairs are:
   :obj:`~Nc.HaloBiasSTEllip`;
 * Tinker et al. (2010): :class:`pyccl.halos.HaloBiasTinker10` and
   :obj:`~Nc.HaloBiasTinker`, at critical mass definitions, on the Tinker (2008)
-  multiplicity function with linear interpolation.
+  multiplicity function. Its linear interpolation matches
+  :func:`numcosmo_py.ccl.multiplicity_func_pairing.tinker08_pair` and has no effect on
+  :math:`b(\sigma)`.
 
 NumCosmo's :math:`\delta_c` is set to CCL's value, 1.68647019984, in all three
 pairs, and NumCosmo's :math:`a` to CCL's 0.707 in the Sheth & Tormen (1999) pair.
 Every other parameter is passed at the value both codes use by default.
 
-CCL accepts only the friends-of-friends mass definition for the two Sheth & Tormen
-models. On NumCosmo's side they are built on the Sheth & Tormen multiplicity
-function, whose only mass definition is MEAN. Neither code's :math:`b(\sigma)` for
-these models reads the mass definition.
+By default (``mass_def_strict=True``), CCL accepts only the friends-of-friends mass
+definition for the two Sheth & Tormen models. On NumCosmo's side they are built on
+the Sheth & Tormen multiplicity function, whose only mass definition is MEAN.
+Neither code's :math:`b(\sigma)` for these models reads the mass definition.
 
 Mean-density mass definitions of Tinker et al. (2010) are not included.
 """
@@ -160,8 +162,9 @@ def tinker10_pair(
     """Build a Tinker et al. (2010) pair for one critical mass definition.
 
     NumCosmo's side is built on the Tinker (2008) multiplicity function at the same
-    mass definition, with linear interpolation, as
-    :func:`numcosmo_py.ccl.multiplicity_func_pairing.tinker08_pair` builds it.
+    mass definition, with linear interpolation, to match
+    :func:`numcosmo_py.ccl.multiplicity_func_pairing.tinker08_pair`; the interpolation
+    has no effect on b(sigma).
     Raises :class:`ValueError` if ``rho_type`` is not ``"critical"``: only critical
     mass definitions are paired.
     """
