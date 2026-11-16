@@ -142,7 +142,9 @@ ncm_vmath_atan2 (const gdouble y, const gdouble x)
   return copysign (ncm_vmath_select (x_neg, b1, a), y);
 }
 
-#if defined (__AVX2__) || defined (__AVX512F__)
+/* NCM_VMATH_FORCE_VECTOR_EXP_LOG selects the code of this header on any target, for its
+ * tests and benchmarks there (tests/c/ncm/core) */
+#if defined (__AVX2__) || defined (__AVX512F__) || defined (NCM_VMATH_FORCE_VECTOR_EXP_LOG)
 #define NCM_VMATH_HAVE_VECTOR_EXP_LOG 1
 #endif
 
