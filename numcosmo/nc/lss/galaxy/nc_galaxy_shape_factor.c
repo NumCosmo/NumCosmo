@@ -1681,17 +1681,20 @@ nc_galaxy_shape_factor_data_peek_crit (NcGalaxyShapeFactorData *data)
  * @crit: the critical surface densities at the redshift nodes of @data, from
  *   nc_galaxy_shape_factor_data_peek_crit() of another #NcGalaxyShapeFactorData of the same
  *   galaxy and nodes at the same cosmology and lens redshift
+ * @n_nodes: the number of redshift nodes of @data, which @crit must hold
  *
  * Makes @data read @crit instead of computing its own. The block is immutable: the next
  * nc_galaxy_shape_factor_update_data_at_nodes_crit() of @data computes a new one.
  */
 void
-nc_galaxy_shape_factor_data_share_crit (NcGalaxyShapeFactorData *data, GBytes *crit)
+nc_galaxy_shape_factor_data_share_crit (NcGalaxyShapeFactorData *data, GBytes *crit, const guint n_nodes)
 {
   NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
   gsize size;
 
   g_assert_nonnull (crit);
+  /* The evaluation reads one value per node */
+  g_assert_cmpuint (g_bytes_get_size (crit), ==, sizeof (gdouble) * n_nodes);
 
   if (crit == cdata->crit)
     return;
@@ -1906,7 +1909,7 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
 
     if (z_j > z_cl)
     {
-      NcWLSurfaceMassDensityCritCache crit_cache = {TRUE, cdata->crit_sigma[j]};
+      NcWLSurfaceMassDensityCritCache crit_cache = {.is_source = TRUE, .sigma_crit = cdata->crit_sigma[j]};
       const gdouble gt                           = nc_wl_surface_mass_density_reduced_shear_cache (&crit_cache, &cdata->sigma_cache);
 
       t[c]   = (1.0 + m) * gt;

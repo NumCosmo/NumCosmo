@@ -253,7 +253,7 @@ gboolean nc_galaxy_shape_factor_line_has_table (NcGalaxyShapeFactorLine *line);
 void nc_galaxy_shape_factor_line_free (NcGalaxyShapeFactorLine *line);
 
 GBytes *nc_galaxy_shape_factor_data_peek_crit (NcGalaxyShapeFactorData *data);
-void nc_galaxy_shape_factor_data_share_crit (NcGalaxyShapeFactorData *data, GBytes *crit);
+void nc_galaxy_shape_factor_data_share_crit (NcGalaxyShapeFactorData *data, GBytes *crit, const guint n_nodes);
 
 #define NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1 "epsilon_int_1"
 #define NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2 "epsilon_int_2"

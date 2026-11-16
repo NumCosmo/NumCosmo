@@ -1853,11 +1853,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error)
    * clones instead of being built by each of them. */
   {
     NcmDataset *dset = ncm_likelihood_peek_dataset (lh);
-    guint i;
 
-    for (i = 0; i < ncm_dataset_get_length (dset); i++)
-      ncm_data_prepare (ncm_dataset_peek_data (dset, i), mset);
-
+    ncm_dataset_prepare (dset, mset);
     ncm_dataset_register_shared (dset, self->ser);
   }
 

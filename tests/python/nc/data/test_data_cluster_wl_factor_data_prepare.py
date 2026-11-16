@@ -316,13 +316,19 @@ def test_clone_takes_the_published_grid_and_critical_densities():
     dcwlf.data_prepare(mset)
     ref = _m2lnP(dcwlf, mset)
 
+    n_gal = dcwlf.peek_obs().len()
+    assert dcwlf.get_crit_count() == n_gal
+
     clone, mset_clone = _shared_clone(dcwlf, mset)
     np.testing.assert_array_equal(_m2lnP(clone, mset_clone), ref)
     assert clone.get_calib_count() == 0
+    # The critical densities were taken from the original, not computed
+    assert clone.get_crit_count() == 0
 
     # Another cosmology in the clone only
     mset_clone.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
     moved = _m2lnP(clone, mset_clone)
+    assert clone.get_crit_count() == n_gal
     np.testing.assert_array_equal(_m2lnP(dcwlf, mset), ref)
     assert not np.array_equal(moved, ref)
 

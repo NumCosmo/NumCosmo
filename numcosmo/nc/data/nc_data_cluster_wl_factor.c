@@ -294,6 +294,10 @@ typedef struct _NcDataClusterWLFactorPrivate
    * run that replays a stored node-config leaves it at zero. */
   guint calib_count;
 
+  /* Galaxies whose critical densities at the nodes this object computed, as opposed to
+   * taking them from the dataset it was cloned from (nc_data_cluster_wl_factor_get_crit_count()) */
+  gint crit_count;
+
   /* The (n_nodes, rule_n) pair the calibration chose for each galaxy, and
    * the node-config a load brought in, not yet validated. Only the pair is
    * carried: the grid is a deterministic function of it, rebuilt through
@@ -654,6 +658,7 @@ _step_fixed_nodes_crit (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
   NcmVector *z_nodes = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
 
   nc_galaxy_shape_factor_update_data_at_nodes_crit (self->shape_factor, s_data, z_nodes);
+  g_atomic_int_inc (&self->crit_count);
 }
 
 static void
@@ -777,7 +782,7 @@ _shared_grid_unref (gpointer sg)
 
 /*
  * What the critical surface density at a redshift node depends on: the lens redshift, the
- * parameters of the cosmology and the redshift up to which the distance is a spline (see
+ * type and the parameters of the cosmology and the redshift up to which the distance is a spline (see
  * _nc_data_cluster_wl_factor_check_zf()). Two datasets with equal keys compute the same
  * critical densities at the same nodes.
  */
@@ -787,10 +792,16 @@ _crit_key_new (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
   NcmModel *cosmo             = NCM_MODEL (self->cosmo);
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   const guint len             = ncm_model_len (cosmo);
-  GArray *key                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len + 2);
+  GArray *key                 = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len + 3);
   const gdouble zf            = ((smd != NULL) && (smd->dist != NULL)) ? smd->dist->zf : GSL_NAN;
+  const guint64 type          = G_OBJECT_TYPE (cosmo);
+  gdouble type_slot;
   guint i;
 
+  /* The type of the cosmology, as bits: two classes with the same parameter values differ */
+  G_STATIC_ASSERT (sizeof (type_slot) == sizeof (type));
+  memcpy (&type_slot, &type, sizeof (type_slot));
+  g_array_append_val (key, type_slot);
   g_array_append_val (key, self->z_cl);
   g_array_append_val (key, zf);
 
@@ -1068,14 +1079,21 @@ _fixed_nodes_crit_adopt (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
 
     match = _crit_key_equal (key, shared_grid->crit_key);
 
+    /* Every block holds one value per node of its galaxy */
     for (gal_i = 0; match && (gal_i < self->shape_data->len); gal_i++)
-      match = (g_ptr_array_index (shared_grid->crit, gal_i) != NULL);
+    {
+      GBytes *crit = g_ptr_array_index (shared_grid->crit, gal_i);
+
+      match = (crit != NULL) &&
+              (g_bytes_get_size (crit) == sizeof (gdouble) * ncm_vector_len (g_ptr_array_index (self->z_nodes_per_galaxy, gal_i)));
+    }
 
     if (match)
     {
       for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
         nc_galaxy_shape_factor_data_share_crit (g_ptr_array_index (self->shape_data, gal_i),
-                                                g_ptr_array_index (shared_grid->crit, gal_i));
+                                                g_ptr_array_index (shared_grid->crit, gal_i),
+                                                ncm_vector_len (g_ptr_array_index (self->z_nodes_per_galaxy, gal_i)));
 
       g_clear_pointer (&self->crit_key, g_array_unref);
       self->crit_key = g_array_ref (key);
@@ -1137,6 +1155,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->force_data_prepare = FALSE;
 
   self->calib_count = 0;
+  self->crit_count  = 0;
 
   self->calib_n_nodes = g_array_new (FALSE, TRUE, sizeof (gint));
 
@@ -1820,8 +1839,25 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
 
   {
-    const guint n_gal       = self->shape_data->len;
-    const gboolean parallel = self->force_data_prepare;
+    const guint n_gal = self->shape_data->len;
+
+    /*
+     * In parallel from nc_data_cluster_wl_factor_data_prepare(), and on the cycles that
+     * build the redshift grid or read a new catalog (the auto-node calibration, the shape
+     * factor's per-galaxy precomputation) when not already inside a parallel region: a fit
+     * or a Python call on the main thread calibrates on every thread, as does the prepare
+     * of a sampler before it makes its clones (ncm_dataset_prepare()). The per-cycle
+     * prepare() of a sampler runs inside its own threads, and stays serial.
+     */
+#ifdef _OPENMP
+    const gboolean in_parallel = omp_in_parallel ();
+
+#else
+    const gboolean in_parallel = TRUE;
+
+#endif /* _OPENMP */
+    const gboolean parallel = self->force_data_prepare ||
+                              (!in_parallel && !self->resampling && (obs_was_changed || (fixed_grid_changed && !grid_adopted)));
     guint gal_i;
 
     self->calib_unconverged  = 0;
@@ -1854,14 +1890,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
       }
     }
 
-    /* Parallel loop over the remaining galaxies, only from
-     * nc_data_cluster_wl_factor_data_prepare(). Every position, redshift and
+    /* Parallel loop over the remaining galaxies, when parallel (above). Every position, redshift and
      * shape factor supports this: their per-galaxy methods write only the
      * galaxy's own data (see the thread safety note of #NcGalaxyShapeFactor,
      * #NcGalaxyPositionFactor and #NcGalaxyRedshiftFactor). Each galaxy
      * writes only its own slots of the per-galaxy arrays, sized before this
      * loop, and the calibration statistics are written under calib_stats.
-     * The per-cycle prepare() of a fit is serial: it runs inside the
+     * The per-cycle prepare() of a sampler is serial: it runs inside the
      * sampler's own threads, where a nested region adds only overhead. */
     if (parallel && (gal_i < n_gal))
     {
@@ -3250,7 +3285,10 @@ nc_data_cluster_wl_factor_get_low_prob_count (NcDataClusterWLFactor *dcwlf)
  * from inside an existing parallel region, it runs serially.
  *
  * Calling it is not required: everything it builds is also built on demand
- * by prepare(), with the same results.
+ * by prepare(), with the same results, and the prepare() that builds the
+ * redshift grid or reads a new catalog runs in parallel the same way when it
+ * is not inside a parallel region (a fit, or a sampler preparing its data
+ * before it makes its copies, see ncm_dataset_prepare()).
  *
  */
 void
@@ -3359,6 +3397,26 @@ nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   return self->calib_count;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_crit_count:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * The number of galaxy updates in which this object computed the critical surface
+ * densities at the redshift nodes, since it was created. A clone made after its source was
+ * prepared takes those of the source (the redshift grid and the critical densities are
+ * shared, see ncm_data_register_shared()) and computes none until its cosmology or lens
+ * redshift changes.
+ *
+ * Returns: the number of computations of the critical densities of a galaxy.
+ */
+guint
+nc_data_cluster_wl_factor_get_crit_count (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return (guint) g_atomic_int_get (&self->crit_count);
 }
 
 /**
