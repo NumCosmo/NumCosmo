@@ -1,0 +1,130 @@
+name: Architecture Check
+
+# The library built for other targets than the baseline the other workflows use:
+# x86-64-v3 (AVX2, FMA) and x86-64-v4 (AVX-512), where ncm_vmath_private.h selects its
+# own code for exp, log and pow_pos, and Linux on arm64. Each job runs the C tests and
+# bench_ncm_vmath, the time of the functions of that header against libm in loops that
+# vectorize; the macOS job runs only the benchmark, with the two compilers of macOS, as
+# the build_check.yml jobs already test the library there.
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - '*'
+
+env:
+  CONDA_ENV: numcosmo_developer
+  DATA_CACHE_VERSION: 6
+  OMP_NUM_THREADS: 1
+  OMP_MAX_ACTIVE_LEVELS: 1
+  OMP_THREAD_LIMIT: 1
+  OPENBLAS_NUM_THREADS: 1
+  BLIS_NUM_THREADS: 1
+  MKL_NUM_THREADS: 1
+  OMPI_MCA_pml: "ob1"
+  UCX_TLS: "tcp,self,sm"
+  # The C unit tests: the acceptance and statistical tiers are run once, by build_check.yml
+  C_TEST_ARGS: "--suite c"
+  BENCH_FLAGS: "-O3 -fopenmp-simd -fno-math-errno -DNCM_VMATH_FORCE_VECTOR_EXP_LOG -I numcosmo tests/c/ncm/core/bench_ncm_vmath.c"
+
+jobs:
+
+  x86-level:
+    name: (ubuntu, ${{ matrix.level }})
+    # Pinned to 26.04 for GSL >= 2.8, as build-gcc-ubuntu
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - level: x86-64-v3
+            cpu_flags: "avx2 fma"
+          - level: x86-64-v4
+            cpu_flags: "avx512f avx512vl avx512bw avx512dq"
+    steps:
+    - uses: actions/checkout@v5
+    - name: Check the CPU
+      # A runner without the instructions of the level cannot run a build for it: the
+      # job then says so and stops, rather than failing on an illegal instruction
+      id: cpu
+      run: |
+        missing=""
+        for f in ${{ matrix.cpu_flags }}; do
+          grep -qw "$f" /proc/cpuinfo || missing="$missing $f"
+        done
+        grep -m1 "model name" /proc/cpuinfo
+        if [ -n "$missing" ]; then
+          echo "::notice title=${{ matrix.level }} not run::the runner's CPU lacks${missing}"
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+        fi
+    - name: Restore data cache
+      if: steps.cpu.outputs.ok == 'true'
+      uses: ./.github/actions/data-cache
+      with:
+        version: ${{ env.DATA_CACHE_VERSION }}
+    - name: Install pre-requisites
+      if: steps.cpu.outputs.ok == 'true'
+      uses: ./.github/actions/apt-deps
+    - name: Configure NumCosmo for ${{ matrix.level }}
+      if: steps.cpu.outputs.ok == 'true'
+      run: meson setup build -Dbuildtype=release -Dc_args=-march=${{ matrix.level }} -Dnumcosmo_py=false -Ddocumentation=false -Dfftw-planner=estimate --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
+    - name: Building NumCosmo
+      if: steps.cpu.outputs.ok == 'true'
+      run: meson compile -C build
+    - name: Check NumCosmo (C)
+      if: steps.cpu.outputs.ok == 'true'
+      run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.C_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
+    - name: Benchmark ncm_vmath
+      if: steps.cpu.outputs.ok == 'true'
+      run: |
+        gcc ${{ env.BENCH_FLAGS }} -march=${{ matrix.level }} $(pkg-config --cflags --libs glib-2.0) -lm -o bench_ncm_vmath
+        ./bench_ncm_vmath | tee -a "$GITHUB_STEP_SUMMARY"
+
+  linux-arm64:
+    name: (ubuntu, arm64, Miniforge)
+    runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Restore data cache
+        uses: ./.github/actions/data-cache
+        with:
+          version: ${{ env.DATA_CACHE_VERSION }}
+      - uses: ./.github/actions/setup-miniforge
+        with:
+          python-version: "3.13"
+      - name: Configure NumCosmo
+        run: meson setup build -Dbuildtype=release -Dnumcosmo_py=false -Ddocumentation=false -Dfftw-planner=estimate --libdir=$CONDA_PREFIX/lib --prefix=$CONDA_PREFIX || (cat build/meson-logs/meson-log.txt && exit 1)
+      - name: Building NumCosmo
+        run: meson compile -C build
+      - name: Check NumCosmo (C)
+        run: meson test -v -C build --num-processes=$(getconf _NPROCESSORS_ONLN) ${{ env.C_TEST_ARGS }} || (cat build/meson-logs/testlog.txt && exit 1)
+      - name: Benchmark ncm_vmath
+        run: |
+          ${CC:-cc} ${{ env.BENCH_FLAGS }} $(pkg-config --cflags --libs glib-2.0) -lm -o bench_ncm_vmath
+          ./bench_ncm_vmath | tee -a "$GITHUB_STEP_SUMMARY"
+
+  macos-arm64-bench:
+    name: (macos, arm64, benchmark)
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: Brew install pre-requisites
+      run: |
+        brew uninstall --ignore-dependencies --force pkg-config@0.29.2
+        brew install gcc@14 glib pkgconf
+    - name: Benchmark ncm_vmath (gcc-14)
+      run: |
+        gcc-14 ${{ env.BENCH_FLAGS }} $(pkg-config --cflags --libs glib-2.0) -lm -o bench_gcc
+        ./bench_gcc | tee -a "$GITHUB_STEP_SUMMARY"
+    - name: Benchmark ncm_vmath (Apple clang)
+      run: |
+        clang ${{ env.BENCH_FLAGS }} $(pkg-config --cflags --libs glib-2.0) -lm -o bench_clang
+        ./bench_clang | tee -a "$GITHUB_STEP_SUMMARY"

@@ -758,6 +758,28 @@ _nc_galaxy_shape_factor_spectral_interp_coords (const NcGalaxyShapeFactorSpectra
 }
 
 /*
+ * Makes the interpolant of the galaxy of data valid for these eps_obs: builds it when it is
+ * not, and aborts for a loaded one, which a fit does not rebuild
+ * (nc_galaxy_shape_factor_data_prepare() compares it with the fit first).
+ */
+static void
+_nc_galaxy_shape_factor_spectral_interp_ensure (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                                const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
+{
+  NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
+
+  if (_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
+    return;
+
+  if (ldata->loaded)
+    g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
+             "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
+             "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
+
+  _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
+}
+
+/*
  * ln P (eps_obs | g) for the galaxy of data. With NcGalaxyShapeFactorSpectral:use-interp
  * and |g| <= NcGalaxyShapeFactorSpectral:interp-g-max it is the value of the interpolant
  * of the galaxy in g, which is built first when the galaxy has none for these eps_obs,
@@ -779,15 +801,7 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
   {
     NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
 
-    if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
-    {
-      if (ldata->loaded)
-        g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
-                 "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
-                 "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
-
-      _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
-    }
+    _nc_galaxy_shape_factor_spectral_interp_ensure (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
 
     {
       gdouble rho, psi;
@@ -804,8 +818,8 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
 
 /*
  * eval_nodes: ln P (or P) at n shears of one galaxy, the values of
- * _nc_galaxy_shape_factor_spectral_eval_ln_marginal() at each shear, within the few ulp by
- * which a loop that vectorizes and a scalar computation can differ. The interpolant is
+ * _nc_galaxy_shape_factor_spectral_eval_ln_marginal() at each shear within rounding (see
+ * nc_galaxy_shape_factor_eval_nodes()). The interpolant is
  * checked (and built when it is not valid) once, at the first shear inside
  * interp-g-max, instead of once per shear. The shears are taken in passes: the ones
  * outside interp-g-max are integrated, the coordinates of the others are computed in one
@@ -858,16 +872,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
 
     if (!checked)
     {
-      if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
-      {
-        if (ldata->loaded)
-          g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
-                   "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
-                   "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
-
-        _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
-      }
-
+      _nc_galaxy_shape_factor_spectral_interp_ensure (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
       checked = TRUE;
     }
 

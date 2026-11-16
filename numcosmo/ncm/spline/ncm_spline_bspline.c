@@ -58,6 +58,7 @@
 #include "build_cfg.h"
 
 #include "ncm/spline/ncm_spline_bspline.h"
+#include "ncm/spline/ncm_spline_bspline_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -85,7 +86,8 @@ struct _NcmSplineBSpline
   gdouble abstol;
   gdouble achieved_err; /* estimated interpolation error of the chosen order */
   gchar *inst_name;
-  GMutex lock; /* serializes the paths that write gsl workspace scratch */
+  GMutex lock;    /* serializes the paths that write gsl workspace scratch */
+  gboolean ready; /* c and knots hold the fit of the current samples */
 };
 
 G_DEFINE_TYPE (NcmSplineBSpline, ncm_spline_bspline, NCM_TYPE_SPLINE)
@@ -105,6 +107,7 @@ ncm_spline_bspline_init (NcmSplineBSpline *sbs)
   sbs->knots        = NULL;
   sbs->knots_len    = 0;
   sbs->c            = NULL;
+  sbs->ready        = FALSE;
   sbs->XB           = NULL;
   sbs->piv          = NULL;
   sbs->gl           = NULL;
@@ -129,6 +132,7 @@ _ncm_spline_bspline_free_workspace (NcmSplineBSpline *sbs)
   g_clear_pointer (&sbs->piv, gsl_vector_uint_free);
   g_clear_pointer (&sbs->gl, gsl_integration_glfixed_table_free);
   sbs->alloc_len = 0;
+  sbs->ready     = FALSE;
 }
 
 static void
@@ -294,6 +298,9 @@ _ncm_spline_bspline_reset (NcmSpline *s)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE (s);
   const gsize s_len     = ncm_spline_get_len (s);
+
+  /* New samples: the fit is that of the old ones until the next prepare */
+  sbs->ready = FALSE;
 
   if (sbs->alloc_len == s_len)
     return;
@@ -467,6 +474,7 @@ _ncm_spline_bspline_prepare (NcmSpline *s)
              sbs->order, (guint) s_len);
 
   memcpy (sbs->knots, sbs->w->knots->data, sizeof (gdouble) * sbs->knots_len);
+  sbs->ready = TRUE;
 }
 
 /* Recreates the GSL workspace freed by ncm_spline_bspline_release_workspace() from the
@@ -560,10 +568,21 @@ _ncm_spline_bspline_eval_core (const gsize k, const gsize ncontrol, const gdoubl
   }
 }
 
+/* The evaluation of a spline that was set and not prepared: an error, instead of a read
+ * of control points that do not fit its samples, or are not yet allocated */
+static inline void
+_ncm_spline_bspline_check_ready (const NcmSplineBSpline *sbs)
+{
+  if (G_UNLIKELY (!sbs->ready))
+    g_error ("ncm_spline: a %s was evaluated before ncm_spline_prepare().", G_OBJECT_TYPE_NAME (sbs));
+}
+
 static gdouble
 _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
+
+  _ncm_spline_bspline_check_ready (sbs);
 
   return _ncm_spline_bspline_eval_core (sbs->order, sbs->alloc_len, sbs->knots, sbs->c->data, x);
 }
@@ -573,6 +592,8 @@ _ncm_spline_bspline_deriv (const NcmSpline *s, const gdouble x)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   gdouble res           = 0.0;
+
+  _ncm_spline_bspline_check_ready (sbs);
 
   g_mutex_lock (&sbs->lock);
   _ncm_spline_bspline_ensure_workspace (sbs);
@@ -588,6 +609,8 @@ _ncm_spline_bspline_deriv2 (const NcmSpline *s, const gdouble x)
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   gdouble res           = 0.0;
 
+  _ncm_spline_bspline_check_ready (sbs);
+
   g_mutex_lock (&sbs->lock);
   _ncm_spline_bspline_ensure_workspace (sbs);
   gsl_bspline_calc_deriv (x, sbs->c, 2, &res, sbs->w);
@@ -601,6 +624,8 @@ _ncm_spline_bspline_deriv_nmax (const NcmSpline *s, const gdouble x)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
   gdouble res           = 0.0;
+
+  _ncm_spline_bspline_check_ready (sbs);
 
   /* The derivative of order equal to the degree */
   g_mutex_lock (&sbs->lock);
@@ -637,12 +662,17 @@ static gdouble
 _ncm_spline_bspline_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
-  const gdouble *t      = sbs->knots;
-  const gdouble t_lo    = t[sbs->order - 1];
-  const gdouble t_hi    = t[sbs->alloc_len];
-  const gdouble lo      = GSL_MAX (x0, t_lo);
-  const gdouble hi      = GSL_MIN (x1, t_hi);
   gdouble res           = 0.0;
+  const gdouble *t;
+  gdouble t_lo, t_hi, lo, hi;
+
+  _ncm_spline_bspline_check_ready (sbs);
+
+  t    = sbs->knots;
+  t_lo = t[sbs->order - 1];
+  t_hi = t[sbs->alloc_len];
+  lo   = GSL_MAX (x0, t_lo);
+  hi   = GSL_MIN (x1, t_hi);
 
   if (x0 < t_lo)
     res += _ncm_spline_bspline_integ_extrap (s, x0, GSL_MIN (x1, t_lo));
@@ -854,12 +884,12 @@ ncm_spline_bspline_get_order (NcmSplineBSpline *sbs)
   return sbs->order;
 }
 
-/**
- * ncm_spline_bspline_peek_basis: (skip)
+/*
+ * ncm_spline_bspline_peek_basis (private, ncm_spline_bspline_private.h):
  * @sbs: a prepared #NcmSplineBSpline
  * @n_control: (out): the number of control points
- * @knots: (out) (transfer none): the $n_\mathrm{control} + \mathrm{order}$ knots
- * @c: (out) (transfer none): the $n_\mathrm{control}$ control points
+ * @knots: (out) (transfer none): the n_control + order knots
+ * @c: (out) (transfer none): the n_control control points
  *
  * Gets what evaluating @sbs reads, owned by @sbs and valid until it is prepared again or
  * freed. With ncm_spline_bspline_eval_basis() a caller can copy them and drop @sbs.
@@ -875,23 +905,26 @@ ncm_spline_bspline_peek_basis (NcmSplineBSpline *sbs, gsize *n_control, const gd
   *c         = sbs->c->data;
 }
 
-/**
- * ncm_spline_bspline_eval_basis: (skip)
+/*
+ * ncm_spline_bspline_eval_basis (private, ncm_spline_bspline_private.h):
  * @order: the order of the B-spline
  * @n_control: the number of control points
- * @knots: the $n_\mathrm{control} + \mathrm{order}$ knots
+ * @knots: the n_control + order knots
  * @c: the control points
  * @x: a point
  *
  * Evaluates at @x the B-spline of @order with @knots and @c, as ncm_spline_eval() does for
  * the #NcmSplineBSpline they were taken from (ncm_spline_bspline_peek_basis()): the same
- * operations, so the same value.
+ * operations, so the same value. @order is at most %NCM_SPLINE_BSPLINE_MAX_ORDER.
  *
  * Returns: the value of the B-spline at @x.
  */
 gdouble
 ncm_spline_bspline_eval_basis (const guint order, const gsize n_control, const gdouble *knots, const gdouble *c, const gdouble x)
 {
+  /* The evaluation keeps order values on the stack */
+  g_assert_cmpuint (order, <=, NCM_SPLINE_BSPLINE_MAX_ORDER);
+
   return _ncm_spline_bspline_eval_core (order, n_control, knots, c, x);
 }
 

@@ -4,10 +4,13 @@
  *  Tue Aug 15 17:22:45 2017
  *  Copyright  2017  Mariana Penna Lima
  *  <pennalima@gmail.com>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2017 <pennalima@gmail.com>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -288,14 +291,16 @@ nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosm
  * @smd: a #NcWLSurfaceMassDensity
  * @cosmo: a #NcHICosmo
  *
- * Prepares the #NcWLSurfaceMassDensity object @smd for computation if necessary.
+ * Prepares the #NcWLSurfaceMassDensity object @smd for computation if necessary: its
+ * distance is prepared when it is out of date, for a new @cosmo or after
+ * nc_distance_require_zf(), which the distance itself tracks.
  *
  */
 void
 nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
 {
-  if (ncm_model_ctrl_update (smd->ctrl_cosmo, NCM_MODEL (cosmo)))
-    nc_wl_surface_mass_density_prepare (smd, cosmo);
+  /* Not gated on the cosmology: the distance may also be out of date for its zf */
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
 }
 
 /**

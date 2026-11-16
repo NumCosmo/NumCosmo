@@ -91,6 +91,7 @@ gboolean nc_data_cluster_wl_factor_is_data_prepared (NcDataClusterWLFactor *dcwl
 guint nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf);
 
 NcGalaxyWLObs *nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf);
+gdouble nc_data_cluster_wl_factor_get_z_max (NcDataClusterWLFactor *dcwlf, NcmMSet *mset);
 
 void nc_data_cluster_wl_factor_set_resample_flag (NcDataClusterWLFactor *dcwlf, NcDataClusterWLResampleFlag resample_flag);
 NcDataClusterWLResampleFlag nc_data_cluster_wl_factor_get_resample_flag (NcDataClusterWLFactor *dcwlf);
