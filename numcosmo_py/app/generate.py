@@ -67,7 +67,6 @@ from numcosmo_py.experiments.cluster_wl import (
     ResampleFlagChoice,
     ShapeFactorGen,
     WLCatalogID,
-    apply_shape_interp_box,
     check_shape_pop_compat,
     generate_lsst_cluster_wl,
     load_cluster_wl,
@@ -1214,10 +1213,6 @@ class LoadClusterWL(ClusterWL):
         of its box take the bounds of the box and the values of the record,
         fixed: --parameter-list frees them. A fit may narrow their bounds
         inside the box.
-
-        With a catalog prepared with restrict_range=true, the box of the fit is
-        narrowed to the box the catalog was prepared for, so that its
-        interpolants cover every shear the fit reaches.
         """
         exp = load_cluster_wl(
             obs=self._obs,
@@ -1247,8 +1242,6 @@ class LoadClusterWL(ClusterWL):
             assert isinstance(pop, Nc.GalaxyShapePop)
             for name, (lo, hi) in box.items():
                 pop.param_set_desc(name, {"lower-bound": lo, "upper-bound": hi})
-
-        apply_shape_interp_box(self._obs, mset)
 
         return exp
 
