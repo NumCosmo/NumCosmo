@@ -4,10 +4,13 @@
  *  Mon April 23 23:15:46 2012
  *  Copyright  2012  Mariana Penna Lima
  *  <pennalima@gmail.com>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -125,6 +128,14 @@ static void test_ncm_spline_invalid_d2_len (void);
 static void test_ncm_spline_invalid_d2_len_subprocess (void);
 static void test_ncm_spline_gsl_unsupported_type (void);
 static void test_ncm_spline_gsl_unsupported_type_subprocess (void);
+static void test_ncm_spline_unprepared (void);
+static void test_ncm_spline_unprepared_subprocess (void);
+static void test_ncm_spline_unprepared_other (void);
+static void test_ncm_spline_unprepared_bspline_subprocess (void);
+static void test_ncm_spline_unprepared_gsl_subprocess (void);
+static void test_ncm_spline_unprepared_gsl_reset_subprocess (void);
+static void test_ncm_spline_cubic_tridiag_vecs (void);
+static void test_ncm_spline_cubic_peek_threads (void);
 static void test_ncm_spline_gsl_steffen_monotone (void);
 static void test_ncm_spline_gsl_deriv_nmax (void);
 void _test_ncm_spline_add_tests (void ( *tnew ) (TestNcmSpline *test, gconstpointer pdata), void (*tfree) (TestNcmSpline *test, gconstpointer pdata), const gchar *name);
@@ -204,6 +215,14 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spline_cubic_d2/invalid_d2_len/subprocess", &test_ncm_spline_invalid_d2_len_subprocess);
   g_test_add_func ("/ncm/spline_gsl/unsupported_type", &test_ncm_spline_gsl_unsupported_type);
   g_test_add_func ("/ncm/spline_gsl/unsupported_type/subprocess", &test_ncm_spline_gsl_unsupported_type_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared", &test_ncm_spline_unprepared);
+  g_test_add_func ("/ncm/spline/unprepared/subprocess", &test_ncm_spline_unprepared_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared/other", &test_ncm_spline_unprepared_other);
+  g_test_add_func ("/ncm/spline/unprepared/bspline/subprocess", &test_ncm_spline_unprepared_bspline_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared/gsl/subprocess", &test_ncm_spline_unprepared_gsl_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared/gsl_reset/subprocess", &test_ncm_spline_unprepared_gsl_reset_subprocess);
+  g_test_add_func ("/ncm/spline_cubic/tridiag_vecs", &test_ncm_spline_cubic_tridiag_vecs);
+  g_test_add_func ("/ncm/spline_cubic/peek_threads", &test_ncm_spline_cubic_peek_threads);
   g_test_add_func ("/ncm/spline_gsl/steffen/monotone", &test_ncm_spline_gsl_steffen_monotone);
   g_test_add_func ("/ncm/spline_gsl/deriv_nmax", &test_ncm_spline_gsl_deriv_nmax);
   g_test_run ();
@@ -2238,5 +2257,210 @@ test_ncm_spline_gsl_deriv_nmax (void)
 
   ncm_vector_free (xv);
   ncm_vector_free (yv);
+}
+
+/* A spline evaluated before ncm_spline_prepare() aborts, naming its type */
+static void
+test_ncm_spline_unprepared (void)
+{
+  g_test_trap_subprocess ("/ncm/spline/unprepared/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineCubicNotaknot was evaluated before ncm_spline_prepare()*");
+}
+
+static void
+test_ncm_spline_unprepared_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (6);
+  NcmVector *yv = ncm_vector_new (6);
+  NcmSpline *s  = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
+  guint i;
+
+  for (i = 0; i < 6; i++)
+  {
+    ncm_vector_set (xv, i, i);
+    ncm_vector_set (yv, i, i * i);
+  }
+
+  ncm_spline_set (s, xv, yv, FALSE);
+  ncm_spline_eval (s, 1.5);
+}
+
+/*
+ * The other types of spline with their own evaluation abort the same way: a B-spline and a
+ * GSL spline never prepared, and a GSL spline prepared and then set with new knots of
+ * another length without being prepared again.
+ */
+static void
+test_ncm_spline_unprepared_other (void)
+{
+  g_test_trap_subprocess ("/ncm/spline/unprepared/bspline/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineBSpline was evaluated before ncm_spline_prepare()*");
+
+  g_test_trap_subprocess ("/ncm/spline/unprepared/gsl/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineGsl was evaluated before ncm_spline_prepare()*");
+
+  g_test_trap_subprocess ("/ncm/spline/unprepared/gsl_reset/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineGsl was evaluated before ncm_spline_prepare()*");
+}
+
+static void
+_test_ncm_spline_unprepared_knots (NcmVector *xv, NcmVector *yv)
+{
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (xv); i++)
+  {
+    ncm_vector_set (xv, i, i);
+    ncm_vector_set (yv, i, i * i);
+  }
+}
+
+static void
+test_ncm_spline_unprepared_bspline_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (8);
+  NcmVector *yv = ncm_vector_new (8);
+  NcmSpline *s  = NCM_SPLINE (ncm_spline_bspline_new (4));
+
+  _test_ncm_spline_unprepared_knots (xv, yv);
+  ncm_spline_set (s, xv, yv, FALSE);
+  ncm_spline_eval (s, 1.5);
+}
+
+static void
+test_ncm_spline_unprepared_gsl_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (8);
+  NcmVector *yv = ncm_vector_new (8);
+  NcmSpline *s  = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
+
+  _test_ncm_spline_unprepared_knots (xv, yv);
+  ncm_spline_set (s, xv, yv, FALSE);
+  ncm_spline_eval_deriv (s, 1.5);
+}
+
+static void
+test_ncm_spline_unprepared_gsl_reset_subprocess (void)
+{
+  NcmVector *xv  = ncm_vector_new (8);
+  NcmVector *yv  = ncm_vector_new (8);
+  NcmVector *xv6 = ncm_vector_new (6);
+  NcmVector *yv6 = ncm_vector_new (6);
+  NcmSpline *s   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
+
+  _test_ncm_spline_unprepared_knots (xv, yv);
+  _test_ncm_spline_unprepared_knots (xv6, yv6);
+  ncm_spline_set (s, xv, yv, TRUE);
+  g_assert_cmpfloat (fabs (ncm_spline_eval (s, 2.0) - 4.0), <, 1.0e-12);
+  ncm_spline_set (s, xv6, yv6, FALSE);
+  ncm_spline_eval_integ (s, 0.5, 1.5);
+}
+
+/*
+ * The workspaces of the tridiagonal system of NcmSplineCubic (deprecated) are made on
+ * demand: none before the knots are set, then one entry per knot, the same vector at each
+ * call, and made again with the new length when the knots change in number.
+ */
+static void
+test_ncm_spline_cubic_tridiag_vecs (void)
+{
+  NcmSplineCubic *sc = NCM_SPLINE_CUBIC (ncm_spline_cubic_notaknot_new ());
+  NcmVector *xv      = ncm_vector_new (6);
+  NcmVector *yv      = ncm_vector_new (6);
+  NcmVector *xv8     = ncm_vector_new (8);
+  NcmVector *yv8     = ncm_vector_new (8);
+  NcmVector *diag, *offdiag;
+  guint i;
+
+  G_GNUC_BEGIN_IGNORE_DEPRECATIONS g_assert_null (ncm_spline_cubic_peek_diag_vec (sc));
+
+  g_assert_null (ncm_spline_cubic_peek_offdiag_vec (sc));
+
+  for (i = 0; i < 8; i++)
+  {
+    if (i < 6)
+    {
+      ncm_vector_set (xv, i, i);
+      ncm_vector_set (yv, i, sin (i));
+    }
+
+    ncm_vector_set (xv8, i, i);
+    ncm_vector_set (yv8, i, cos (i));
+  }
+
+  ncm_spline_set (NCM_SPLINE (sc), xv, yv, TRUE);
+
+  diag    = ncm_spline_cubic_peek_diag_vec (sc);
+  offdiag = ncm_spline_cubic_peek_offdiag_vec (sc);
+
+  g_assert_nonnull (diag);
+  g_assert_nonnull (offdiag);
+  g_assert_cmpuint (ncm_vector_len (diag), ==, 6);
+  g_assert_cmpuint (ncm_vector_len (offdiag), ==, 6);
+  g_assert_true (ncm_spline_cubic_peek_diag_vec (sc) == diag);
+  g_assert_true (ncm_spline_cubic_peek_offdiag_vec (sc) == offdiag);
+
+  ncm_spline_set (NCM_SPLINE (sc), xv8, yv8, TRUE);
+
+  g_assert_cmpuint (ncm_vector_len (ncm_spline_cubic_peek_diag_vec (sc)), ==, 8);
+  g_assert_cmpuint (ncm_vector_len (ncm_spline_cubic_peek_offdiag_vec (sc)), ==, 8);
+
+  G_GNUC_END_IGNORE_DEPRECATIONS ncm_vector_free (xv);
+
+  ncm_vector_free (yv);
+  ncm_vector_free (xv8);
+  ncm_vector_free (yv8);
+  ncm_spline_free (NCM_SPLINE (sc));
+}
+
+static gpointer
+_test_ncm_spline_cubic_peek_c (gpointer sc)
+{
+  return ncm_spline_cubic_peek_c_vec (sc);
+}
+
+/*
+ * The coefficients of a spline that was set but never prepared are allocated by the first
+ * peek: threads that peek it together get one and the same vector.
+ */
+static void
+test_ncm_spline_cubic_peek_threads (void)
+{
+  NcmSplineCubic *sc = NCM_SPLINE_CUBIC (ncm_spline_cubic_notaknot_new ());
+  NcmVector *xv      = ncm_vector_new (6);
+  NcmVector *yv      = ncm_vector_new (6);
+  GThread *threads[8];
+  gpointer c_vec[8];
+  guint i;
+
+  for (i = 0; i < 6; i++)
+  {
+    ncm_vector_set (xv, i, i);
+    ncm_vector_set (yv, i, sin (i));
+  }
+
+  ncm_spline_set (NCM_SPLINE (sc), xv, yv, FALSE);
+
+  for (i = 0; i < 8; i++)
+    threads[i] = g_thread_new ("peek", &_test_ncm_spline_cubic_peek_c, sc);
+
+  for (i = 0; i < 8; i++)
+    c_vec[i] = g_thread_join (threads[i]);
+
+  for (i = 0; i < 8; i++)
+  {
+    g_assert_nonnull (c_vec[i]);
+    g_assert_true (c_vec[i] == c_vec[0]);
+  }
+
+  g_assert_cmpuint (ncm_vector_len (c_vec[0]), ==, 6);
+
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  ncm_spline_free (NCM_SPLINE (sc));
 }
 

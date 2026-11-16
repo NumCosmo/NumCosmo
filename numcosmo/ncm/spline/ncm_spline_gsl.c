@@ -4,10 +4,13 @@
  *  Wed Nov 21 19:09:20 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -49,6 +52,7 @@ struct _NcmSplineGsl
   NcmSplineGslType type_id;
   gchar *inst_name;
   const gsl_interp_type *type;
+  gboolean ready; /* interp initialized for the current knots */
 };
 
 G_DEFINE_TYPE (NcmSplineGsl, ncm_spline_gsl, NCM_TYPE_SPLINE)
@@ -68,6 +72,7 @@ ncm_spline_gsl_init (NcmSplineGsl *sg)
   sg->type      = NULL;
   sg->type_id   = NCM_SPLINE_GSL_TYPES_LEN;
   sg->inst_name = NULL;
+  sg->ready     = FALSE;
 }
 
 static void
@@ -175,6 +180,8 @@ _ncm_spline_gsl_reset (NcmSpline *s)
   NcmSplineGsl *sg  = NCM_SPLINE_GSL (s);
   const guint s_len = ncm_spline_get_len (s);
 
+  sg->ready = FALSE;
+
   if (sg->interp != NULL)
   {
     if (sg->interp->size != s_len)
@@ -211,6 +218,7 @@ _ncm_spline_gsl_prepare (NcmSpline *s)
   g_assert_cmpint (ncm_vector_stride (s_yv), ==, 1);
 
   gsl_interp_init (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), s_len);
+  sg->ready = TRUE;
 }
 
 static gsize
@@ -221,6 +229,15 @@ _ncm_spline_gsl_min_size (const NcmSpline *s)
   return sg->type->min_size;
 }
 
+/* The interpolation of a spline that was set and not prepared: an error, instead of
+ * reading the uninitialized state of gsl */
+static inline void
+_ncm_spline_gsl_check_ready (NcmSplineGsl *sg)
+{
+  if (G_UNLIKELY (!sg->ready))
+    g_error ("ncm_spline: a %s was evaluated before ncm_spline_prepare().", G_OBJECT_TYPE_NAME (sg));
+}
+
 static gdouble
 _ncm_spline_gsl_eval (const NcmSpline *s, const gdouble x)
 {
@@ -228,6 +245,8 @@ _ncm_spline_gsl_eval (const NcmSpline *s, const gdouble x)
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
+
+  _ncm_spline_gsl_check_ready (sg);
 
   return gsl_interp_eval (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x, s_acc);
 }
@@ -240,6 +259,8 @@ _ncm_spline_gsl_deriv (const NcmSpline *s, const gdouble x)
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
 
+  _ncm_spline_gsl_check_ready (sg);
+
   return gsl_interp_eval_deriv (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x, s_acc);
 }
 
@@ -251,6 +272,8 @@ _ncm_spline_gsl_deriv2 (const NcmSpline *s, const gdouble x)
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
 
+  _ncm_spline_gsl_check_ready (sg);
+
   return gsl_interp_eval_deriv2 (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x, s_acc);
 }
 
@@ -261,6 +284,8 @@ _ncm_spline_gsl_deriv_nmax (const NcmSpline *s, const gdouble x)
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
+
+  _ncm_spline_gsl_check_ready (sg);
 
   if (sg->type == gsl_interp_linear)
   {
@@ -295,6 +320,8 @@ _ncm_spline_gsl_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
   NcmVector *s_xv         = ncm_spline_peek_xv ((NcmSpline *) s);
   NcmVector *s_yv         = ncm_spline_peek_yv ((NcmSpline *) s);
   gsl_interp_accel *s_acc = ncm_spline_peek_acc ((NcmSpline *) s);
+
+  _ncm_spline_gsl_check_ready (sg);
 
   return gsl_interp_eval_integ (sg->interp, ncm_vector_ptr (s_xv, 0), ncm_vector_ptr (s_yv, 0), x0, x1, s_acc);
 }

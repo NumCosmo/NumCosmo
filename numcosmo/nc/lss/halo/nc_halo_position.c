@@ -276,16 +276,16 @@ nc_halo_position_prepare (NcHaloPosition *hp, NcHICosmo *cosmo)
  * @hp: A #NcHaloPosition.
  * @cosmo: A #NcHICosmo.
  *
- * Prepares the #NcHaloPosition object @hp for computation if necessary.
+ * Prepares the #NcHaloPosition object @hp for computation if necessary: its distance is
+ * prepared when it is out of date, for a new @cosmo or after nc_distance_require_zf(),
+ * which the distance itself tracks.
  *
  */
 void
 nc_halo_position_prepare_if_needed (NcHaloPosition *hp, NcHICosmo *cosmo)
 {
-  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
-
-  if (ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo)))
-    nc_distance_prepare_if_needed (self->dist, cosmo);
+  /* Not gated on the cosmology: the distance may also be out of date for its zf */
+  nc_halo_position_prepare (hp, cosmo);
 }
 
 /**
