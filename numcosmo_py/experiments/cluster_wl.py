@@ -1521,9 +1521,6 @@ def load_cluster_wl(
         r_max=r_max,
         profile_type=profile_type,
     )
-    # NcDataClusterWLFactor raises zf of the distance to the redshift support of every
-    # galaxy when it is prepared: the comoving distance is a spline up to zf and an
-    # integral cached at every redshift above it.
     cosmo = create_cosmo()
     cluster.prepare(cosmo)
 
@@ -1570,6 +1567,10 @@ def load_cluster_wl(
     integ_options.apply(cluster_data)
     cluster_data.set_obs(obs)
     cluster_data.set_resample_flag(resample_flag)
+    # The comoving distance is a spline up to zf and an integral cached at every
+    # redshift above it: zf must reach the redshift integration of every galaxy.
+    cluster.dist.require_zf(cluster_data.get_z_max(mset))
+    cluster.prepare(cosmo)
 
     dset = Ncm.Dataset.new_array([cluster_data])
     likelihood = Ncm.Likelihood.new(dset)

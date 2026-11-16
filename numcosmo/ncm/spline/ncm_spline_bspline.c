@@ -58,6 +58,7 @@
 #include "build_cfg.h"
 
 #include "ncm/spline/ncm_spline_bspline.h"
+#include "ncm/spline/ncm_spline_bspline_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -854,12 +855,12 @@ ncm_spline_bspline_get_order (NcmSplineBSpline *sbs)
   return sbs->order;
 }
 
-/**
- * ncm_spline_bspline_peek_basis: (skip)
+/*
+ * ncm_spline_bspline_peek_basis (private, ncm_spline_bspline_private.h):
  * @sbs: a prepared #NcmSplineBSpline
  * @n_control: (out): the number of control points
- * @knots: (out) (transfer none): the $n_\mathrm{control} + \mathrm{order}$ knots
- * @c: (out) (transfer none): the $n_\mathrm{control}$ control points
+ * @knots: (out) (transfer none): the n_control + order knots
+ * @c: (out) (transfer none): the n_control control points
  *
  * Gets what evaluating @sbs reads, owned by @sbs and valid until it is prepared again or
  * freed. With ncm_spline_bspline_eval_basis() a caller can copy them and drop @sbs.
@@ -875,11 +876,11 @@ ncm_spline_bspline_peek_basis (NcmSplineBSpline *sbs, gsize *n_control, const gd
   *c         = sbs->c->data;
 }
 
-/**
- * ncm_spline_bspline_eval_basis: (skip)
+/*
+ * ncm_spline_bspline_eval_basis (private, ncm_spline_bspline_private.h):
  * @order: the order of the B-spline
  * @n_control: the number of control points
- * @knots: the $n_\mathrm{control} + \mathrm{order}$ knots
+ * @knots: the n_control + order knots
  * @c: the control points
  * @x: a point
  *

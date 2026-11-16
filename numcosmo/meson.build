@@ -342,6 +342,7 @@ ncm_headers_internal = files(
     'ncm/core/ncm_prefetch_private.h',
     'ncm/data/ncm_data_private.h',
     'ncm/mpi/ncm_mpi_slave.h',
+    'ncm/spline/ncm_spline_bspline_private.h',
     'ncm/stats/ncm_stats_dist_kde_private.h',
     'ncm/stats/ncm_stats_dist_kernel_private.h',
     'ncm/stats/ncm_stats_dist_private.h',

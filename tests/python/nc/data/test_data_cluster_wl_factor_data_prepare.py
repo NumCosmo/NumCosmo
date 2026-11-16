@@ -226,49 +226,45 @@ def test_parallel_data_prepare_matches_serial(shape_name, profile_name, redshift
     np.testing.assert_array_equal(serial[2], parallel[2])
 
 
-def test_distance_zf_covers_the_redshift_support():
-    """The comoving distance is a spline only up to the zf of NcDistance, and above it an
-    integral cached at every redshift: preparing the likelihood raises zf to the top of
-    the photo-z support of every galaxy, without changing the likelihood."""
-    ref, mset_ref = _build("var-add", "nfw", "spline")
-    dcwlf, mset = _build("var-add", "nfw", "spline", zf=0.5)
-    dist = mset.peek(Nc.WLSurfaceMassDensity.id()).props.distance
-
-    obs = dcwlf.peek_obs()
-    z_top = max(obs.peek_pz(i).get_bounds()[1] for i in range(obs.len()))
-    assert z_top > 0.5
-
-    m2lnP = _m2lnP(dcwlf, mset)
-
-    assert dist.props.zf >= z_top
-    np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
-
-
 def _z_top(dcwlf):
     obs = dcwlf.peek_obs()
     return max(obs.peek_pz(i).get_bounds()[1] for i in range(obs.len()))
 
 
-def test_distance_zf_separate_distances():
-    """With its own distance, the surface mass density already prepared for the
-    cosmology (as another data object of the model set would leave it) must still see
-    the spline extended to the raised zf, not an extrapolation of the old one."""
+ZF_WARNING = "above the final redshift zf"
+
+
+def test_distance_zf_get_z_max(capfd):
+    """The comoving distance is a spline only up to the zf of NcDistance, and above it an
+    integral cached at every redshift. The likelihood does not change the distance, a
+    model other data may share: it warns when the redshift integration of the galaxies
+    goes above zf, and nc_data_cluster_wl_factor_get_z_max() gives the zf to require."""
     ref, mset_ref = _build("var-add", "nfw", "spline")
-    dcwlf, mset = _build("var-add", "nfw", "spline", zf=0.5, separate_dist=True)
+    dcwlf, mset = _build("var-add", "nfw", "spline", zf=0.5)
     cosmo = mset.peek(Nc.HICosmo.id())
     smd = mset.peek(Nc.WLSurfaceMassDensity.id())
-    smd.prepare_if_needed(cosmo)
+    dist = smd.props.distance
 
+    z_max = dcwlf.get_z_max(mset)
+    assert z_max == _z_top(dcwlf) > 0.5
+
+    capfd.readouterr()
+    _m2lnP(dcwlf, mset)
+    assert ZF_WARNING in capfd.readouterr().err
+    assert dist.props.zf == 0.5
+
+    dist.require_zf(z_max)
+    smd.prepare(cosmo)
+    mset.peek(Nc.HaloPosition.id()).prepare(cosmo)
     m2lnP = _m2lnP(dcwlf, mset)
 
-    assert smd.props.distance.props.zf >= _z_top(dcwlf) > 0.5
+    assert ZF_WARNING not in capfd.readouterr().err
     np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
 
 
-def test_distance_zf_after_model_swap():
-    """A surface mass density swapped in after the first evaluation, with a distance
-    of low zf, is extended too, although the catalog did not change."""
-    ref, mset_ref = _build("var-add", "nfw", "spline")
+def test_distance_zf_after_model_swap(capfd):
+    """A surface mass density swapped in after the first evaluation, with a distance of
+    low zf, is warned about too, although the catalog did not change."""
     dcwlf, mset = _build("var-add", "nfw", "spline", separate_dist=True)
     cosmo = mset.peek(Nc.HICosmo.id())
     _m2lnP(dcwlf, mset)
@@ -277,10 +273,11 @@ def test_distance_zf_after_model_swap():
     smd.prepare_if_needed(cosmo)
     mset.set(smd)
 
-    m2lnP = _m2lnP(dcwlf, mset)
+    capfd.readouterr()
+    _m2lnP(dcwlf, mset)
 
-    assert smd.props.distance.props.zf >= _z_top(dcwlf) > 0.5
-    np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
+    assert ZF_WARNING in capfd.readouterr().err
+    assert smd.props.distance.props.zf == 0.5
 
 
 def test_peek_pz_is_usable():

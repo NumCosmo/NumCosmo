@@ -384,9 +384,11 @@ typedef struct _NcDataClusterWLFactorPrivate
    * shape_data, only refreshing what is cached in it). */
   gboolean obs_changed;
 
-  /* The largest redshift of the integration of every galaxy, set when obs is loaded
-   * (_nc_data_cluster_wl_factor_require_zf()) */
+  /* The largest redshift of the integration of every galaxy, set when obs is loaded,
+   * and the distance and zf last warned about (_nc_data_cluster_wl_factor_check_zf()) */
   gdouble z_top;
+  gconstpointer zf_warned_dist;
+  gdouble zf_warned_zf;
 
   /* Last-seen hashes, compared against each Factor's own get_hash() every
    * prepare() cycle. */
@@ -905,17 +907,14 @@ _nc_data_cluster_wl_factor_set_z_top (NcDataClusterWLFactorPrivate *self, NcmMSe
  * NcDistance gives the comoving distance from a spline up to its zf and, above it, from
  * an integral cached at every redshift it was asked for, a cache that is never pruned.
  * The critical surface density is computed at every redshift node, and the auto-node
- * calibration probes many more redshifts, so a support of P(z) above zf fills the cache
- * with an entry per redshift. At every prepare, before anything is computed at those
- * redshifts, this raises zf of the distance of the surface mass density to self->z_top
- * when it is below, so that a distance or a model set replaced under the same obs is
- * extended too. It then prepares the surface mass density, which rebuilds the spline of
- * its distance (nc_distance_require_zf() marks it out of date, but the surface mass
- * density prepares its distance only when the cosmology changes), and the halo
- * position, whose distance may be the same object.
+ * calibration probes many more redshifts, so a redshift integration above zf fills the
+ * cache with an entry per redshift. The distance is a model other data may share, so it
+ * is not changed here: at every prepare, this warns when self->z_top is above zf of the
+ * distance of the surface mass density, once for each distance and zf, so that a
+ * distance or a model set replaced under the same obs is checked too.
  */
 static void
-_nc_data_cluster_wl_factor_require_zf (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+_nc_data_cluster_wl_factor_check_zf (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
 {
   NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
 
@@ -923,11 +922,15 @@ _nc_data_cluster_wl_factor_require_zf (NcDataClusterWLFactorPrivate *self, NcmMS
   g_assert_nonnull (smd);
   g_assert_nonnull (smd->dist);
 
-  if (self->z_top > smd->dist->zf)
+  if ((self->z_top > smd->dist->zf) && ((self->zf_warned_dist != smd->dist) || (self->zf_warned_zf != smd->dist->zf)))
   {
-    nc_distance_require_zf (smd->dist, self->z_top);
-    nc_wl_surface_mass_density_prepare (smd, self->cosmo);
-    nc_halo_position_prepare (self->halo_position, self->cosmo);
+    g_warning ("nc_data_cluster_wl_factor: the redshift integration of the galaxies reaches z = %g, above the final "
+               "redshift zf = %g of the distance of the surface mass density. Above zf NcDistance computes each "
+               "distance by an integral it caches without bound, so memory grows with every redshift evaluated: "
+               "raise zf with nc_distance_require_zf() to nc_data_cluster_wl_factor_get_z_max().",
+               self->z_top, smd->dist->zf);
+    self->zf_warned_dist = smd->dist;
+    self->zf_warned_zf   = smd->dist->zf;
   }
 }
 
@@ -951,6 +954,8 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 
   self->obs_changed       = TRUE; /* the very first prepare() always rebuilds */
   self->z_top             = 0.0;
+  self->zf_warned_dist    = NULL;
+  self->zf_warned_zf      = 0.0;
   self->pos_hash          = 0;
   self->z_hash            = 0;
   self->shape_radius_hash = 0;
@@ -1458,8 +1463,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     self->obs_changed = FALSE;
   }
 
-  /* Before the factors prepare the distances: see _nc_data_cluster_wl_factor_require_zf() */
-  _nc_data_cluster_wl_factor_require_zf (self, mset);
+  _nc_data_cluster_wl_factor_check_zf (self, mset);
 
   nc_galaxy_position_factor_prepare (self->position_factor, mset);
   nc_galaxy_redshift_factor_prepare (self->redshift_factor, mset);
@@ -2783,6 +2787,45 @@ nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   return self->obs;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_z_max:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @mset: a #NcmMSet
+ *
+ * Computes the largest redshift of the redshift integration of the galaxies of the
+ * observables catalog, from the limits of the redshift factor for each galaxy with the
+ * models of @mset. NcDistance computes the distance above its final redshift by integrals
+ * it caches at every redshift, so the distance of the surface mass density should reach
+ * it (nc_distance_require_zf()) before the likelihood is evaluated; prepare warns when it
+ * does not. The catalog must be set (nc_data_cluster_wl_factor_set_obs()).
+ *
+ * Returns: the largest redshift of the integration, or 0 for an empty catalog.
+ */
+gdouble
+nc_data_cluster_wl_factor_get_z_max (NcDataClusterWLFactor *dcwlf, NcmMSet *mset)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  gdouble z_max                             = 0.0;
+  guint i, len;
+
+  g_assert_nonnull (self->obs);
+  len = nc_galaxy_wl_obs_len (self->obs);
+
+  for (i = 0; i < len; i++)
+  {
+    NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (self->redshift_factor, mset);
+    gdouble z_lo, z_hi;
+
+    nc_galaxy_redshift_factor_data_read_row (z_data, self->obs, i);
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, z_data, &z_lo, &z_hi);
+    nc_galaxy_redshift_factor_data_unref (z_data);
+
+    z_max = MAX (z_max, z_hi);
+  }
+
+  return z_max;
 }
 
 /**

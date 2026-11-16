@@ -55,6 +55,7 @@
 
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs_private.h"
+#include "ncm/spline/ncm_spline_bspline_private.h"
 #include "ncm/spline/ncm_spline_bspline.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
