@@ -1744,6 +1744,28 @@ def test_wl_catalog_shape_interp_restrict_range(
 
     assert m2lnL["restricted"] == pytest.approx(m2lnL["full"], rel=0.0, abs=1.0e-4)
 
+    # The experiment of the restricted catalog has the box the catalog was prepared for,
+    # and every interpolant covers the shears its galaxy reaches in it
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.from_binfile((tmp_path / "exp_restricted.dataset.gvar").as_posix())
+    exp_dict = ser.dict_str_from_yaml_file(
+        (tmp_path / "exp_restricted.yaml").as_posix()
+    )
+    mset = cast(Ncm.MSet, exp_dict.get("model-set"))
+    likelihood = cast(Ncm.Likelihood, exp_dict.get("likelihood"))
+    hp = mset.peek(Nc.HaloPosition.id())
+    hms = mset.peek(Nc.HaloMassSummary.id())
+    for name in ("ra", "dec"):
+        _, idx = hp.param_index_from_name(name)
+        width = hp.param_get_upper_bound(idx) - hp.param_get_lower_bound(idx)
+        assert width == pytest.approx(0.02, rel=1.0e-12)
+    _, idx = hms.param_index_from_name("log10MDelta")
+    assert hms.param_get_upper_bound(idx) == pytest.approx(15.0, rel=1.0e-12)
+    mset.prepare_fparam_map()
+    likelihood.m2lnL_val(mset)
+    data = likelihood.peek_dataset().get_data(0)
+    assert data.props.shape_factor.get_n_loaded_short() == 0
+
 
 def test_wl_catalog_shape_interp_concentration_pair(
     tmp_path: Path, real_wl_obs_file_with_meta
