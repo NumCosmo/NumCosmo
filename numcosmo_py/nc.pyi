@@ -9926,6 +9926,8 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         Absolute tolerance on ln P of the table along the line of the shears (negative: reltol / 10)
       restrict-range -> gboolean: restrict-range
         Whether to build each interpolant only over the reachable shears
+      pop-order -> guint: pop-order
+        Nodes per free population parameter of the expansion of the interpolants
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -9940,6 +9942,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         interp_g_max: float
         interp_min_radial_panels: int
         line_abstol: float
+        pop_order: int
         reltol: float
         restrict_range: bool
         use_interp: bool
@@ -9952,6 +9955,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         interp_g_max: float = ...,
         interp_min_radial_panels: int = ...,
         line_abstol: float = ...,
+        pop_order: int = ...,
         reltol: float = ...,
         restrict_range: bool = ...,
         use_interp: bool = ...,
@@ -9984,6 +9988,8 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def get_interp_g_max(self) -> float: ...
     def get_interp_min_radial_panels(self) -> int: ...
     def get_line_abstol(self) -> float: ...
+    def get_pop_n_unconverged(self) -> int: ...
+    def get_pop_order(self) -> int: ...
     def get_reltol(self) -> float: ...
     def get_restrict_range(self) -> bool: ...
     def get_use_interp(self) -> bool: ...
@@ -9995,6 +10001,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def set_interp_min_radial_panels(self, n: int) -> None: ...
     def set_line_abstol(self, abstol: float) -> None: ...
     def set_obs_source(self, pop: GalaxyShapePop, obs: GalaxyWLObs) -> None: ...
+    def set_pop_order(self, pop_order: int) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
     def set_restrict_range(self, restrict_range: bool) -> None: ...
     def set_use_interp(self, use_interp: bool) -> None: ...
@@ -10470,6 +10477,8 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         Weak lensing observables ellipticity convention
       shape-interp -> NcmObjDictInt: Shape interpolants
         Interpolants of ln P in g of the galaxies
+      shape-interp-modes -> NcmObjDictInt: Shape interpolant modes
+        Chebyshev modes over the population parameters of the interpolants of ln P in g
       shape-interp-source -> NcmObjDictStr: Shape interpolants source
         Record of what built the interpolants
 
@@ -10494,6 +10503,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         ellip_conv: GalaxyWLObsEllipConv
         pz: NumCosmoMath.ObjDictInt
         shape_interp: NumCosmoMath.ObjDictInt
+        shape_interp_modes: NumCosmoMath.ObjDictInt
         shape_interp_source: NumCosmoMath.ObjDictStr
         col_types: GLib.Variant
         columns: list[str]
@@ -10508,6 +10518,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         ellip_conv: GalaxyWLObsEllipConv = ...,
         pz: NumCosmoMath.ObjDictInt = ...,
         shape_interp: NumCosmoMath.ObjDictInt = ...,
+        shape_interp_modes: NumCosmoMath.ObjDictInt = ...,
         shape_interp_source: NumCosmoMath.ObjDictStr = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
@@ -10539,6 +10550,9 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def peek_shape_interp(
         self, i: int
     ) -> typing.Optional[NumCosmoMath.SpectralPolarPanels]: ...
+    def peek_shape_interp_modes(
+        self, i: int
+    ) -> typing.Optional[NumCosmoMath.SpectralPolarPanelsArray]: ...
     def peek_shape_interp_source(self) -> typing.Optional[NumCosmoMath.ObjDictStr]: ...
     def ref(self) -> GalaxyWLObs: ...
     def set(self, col: str, i: int, val: float) -> None: ...
@@ -10546,6 +10560,9 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def set_pz(self, i: int, pz: NumCosmoMath.Spline) -> None: ...
     def set_shape_interp(
         self, i: int, spp: NumCosmoMath.SpectralPolarPanels
+    ) -> None: ...
+    def set_shape_interp_modes(
+        self, i: int, modes: NumCosmoMath.SpectralPolarPanelsArray
     ) -> None: ...
     def set_shape_interp_source(self, source: NumCosmoMath.ObjDictStr) -> None: ...
 

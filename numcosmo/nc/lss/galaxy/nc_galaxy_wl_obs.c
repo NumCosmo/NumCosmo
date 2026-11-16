@@ -79,6 +79,7 @@ struct _NcGalaxyWLObsPrivate
   NcWLEllipticityFrame coord;
   NcGalaxyWLObsEllipConv ellip_conv;
   NcmObjDictInt *shape_interp;
+  NcmObjDictInt *shape_interp_modes;
   NcmObjDictStr *shape_interp_source;
   guint64 shape_interp_key; /* catalog key of the rows the interpolants describe */
 };
@@ -89,6 +90,7 @@ enum
   PROP_COORD,
   PROP_ELLIP_CONV,
   PROP_SHAPE_INTERP,
+  PROP_SHAPE_INTERP_MODES,
   PROP_SHAPE_INTERP_SOURCE,
 };
 
@@ -103,6 +105,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
   self->coord               = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   self->ellip_conv          = 0;
   self->shape_interp        = ncm_obj_dict_int_new ();
+  self->shape_interp_modes  = ncm_obj_dict_int_new ();
   self->shape_interp_source = NULL;
   self->shape_interp_key    = NCM_CATALOG_KEY_PENDING;
 }
@@ -130,6 +133,14 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
 
       if (_nc_galaxy_wl_obs_shape_interp_current (obs))
         g_value_set_boxed (value, self->shape_interp);
+      else
+        g_value_take_boxed (value, ncm_obj_dict_int_new ());
+
+      break;
+    case PROP_SHAPE_INTERP_MODES:
+
+      if (_nc_galaxy_wl_obs_shape_interp_current (obs))
+        g_value_set_boxed (value, self->shape_interp_modes);
       else
         g_value_take_boxed (value, ncm_obj_dict_int_new ());
 
@@ -176,6 +187,14 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
       self->shape_interp = (shape_interp != NULL) ? shape_interp : ncm_obj_dict_int_new ();
       break;
     }
+    case PROP_SHAPE_INTERP_MODES:
+    {
+      NcmObjDictInt *shape_interp_modes = g_value_dup_boxed (value);
+
+      ncm_obj_dict_int_clear (&self->shape_interp_modes);
+      self->shape_interp_modes = (shape_interp_modes != NULL) ? shape_interp_modes : ncm_obj_dict_int_new ();
+      break;
+    }
     case PROP_SHAPE_INTERP_SOURCE:
     {
       NcmObjDictStr *source = g_value_dup_boxed (value);
@@ -212,6 +231,7 @@ _nc_galaxy_wl_obs_dispose (GObject *object)
 
   ncm_obj_dict_int_clear (&self->pz);
   ncm_obj_dict_int_clear (&self->shape_interp);
+  ncm_obj_dict_int_clear (&self->shape_interp_modes);
   ncm_obj_dict_str_clear (&self->shape_interp_source);
 
   /* Chain up : end */
@@ -300,6 +320,22 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                    g_param_spec_boxed ("shape-interp",
                                                        "Shape interpolants",
                                                        "Interpolants of ln P in g of the galaxies",
+                                                       NCM_TYPE_OBJ_DICT_INT,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyWLObs:shape-interp-modes:
+   *
+   * The expansions of the interpolants over the population parameters
+   * (#NcGalaxyShapeFactorSpectral:pop-order), keyed by row: for each galaxy a
+   * #NcmSpectralPolarPanelsArray of the terms of its Chebyshev modes. Empty when there are
+   * none or when the rows changed after #NcGalaxyWLObs:shape-interp-source was set.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SHAPE_INTERP_MODES,
+                                   g_param_spec_boxed ("shape-interp-modes",
+                                                       "Shape interpolant modes",
+                                                       "Chebyshev modes over the population parameters of the interpolants of ln P in g",
                                                        NCM_TYPE_OBJ_DICT_INT,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
@@ -632,14 +668,17 @@ _nc_galaxy_wl_obs_peek_pz_unprepared (NcGalaxyWLObs *obs, const guint i)
  *
  * Sets the interpolant of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of row @i, referencing
  * @spp. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
- * nc_galaxy_wl_obs_set_shape_interp_source() and while the rows are unchanged.
+ * nc_galaxy_wl_obs_set_shape_interp_source() and while the rows are unchanged. It
+ * replaces the modes of row @i (nc_galaxy_wl_obs_set_shape_interp_modes()).
  */
 void
 nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  const gint key                    = i;
 
   ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (spp));
+  g_hash_table_remove ((GHashTable *) self->shape_interp_modes, &key);
 }
 
 /**
@@ -659,6 +698,47 @@ nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i)
     return NULL;
 
   return (NcmSpectralPolarPanels *) ncm_obj_dict_int_peek (self->shape_interp, i);
+}
+
+/**
+ * nc_galaxy_wl_obs_set_shape_interp_modes:
+ * @obs: a #NcGalaxyWLObs
+ * @i: row index
+ * @modes: the terms of the modes of the interpolant of row @i
+ *
+ * Sets the terms of the Chebyshev modes of the expansion over the population parameters of
+ * the interpolant of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of row @i, referencing
+ * @modes. They are returned by nc_galaxy_wl_obs_peek_shape_interp_modes() under the
+ * conditions of nc_galaxy_wl_obs_peek_shape_interp(). They replace the interpolant of row
+ * @i (nc_galaxy_wl_obs_set_shape_interp()).
+ */
+void
+nc_galaxy_wl_obs_set_shape_interp_modes (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanelsArray *modes)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  const gint key                    = i;
+
+  ncm_obj_dict_int_set (self->shape_interp_modes, i, G_OBJECT (modes));
+  g_hash_table_remove ((GHashTable *) self->shape_interp, &key);
+}
+
+/**
+ * nc_galaxy_wl_obs_peek_shape_interp_modes:
+ * @obs: a #NcGalaxyWLObs
+ * @i: row index
+ *
+ * Returns: (transfer none) (nullable): the terms of the modes of row @i, or %NULL as in
+ * nc_galaxy_wl_obs_peek_shape_interp().
+ */
+NcmSpectralPolarPanelsArray *
+nc_galaxy_wl_obs_peek_shape_interp_modes (NcGalaxyWLObs *obs, const guint i)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  if (!_nc_galaxy_wl_obs_shape_interp_current (obs))
+    return NULL;
+
+  return (NcmSpectralPolarPanelsArray *) ncm_obj_dict_int_peek (self->shape_interp_modes, i);
 }
 
 /**
