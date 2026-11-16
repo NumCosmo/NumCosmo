@@ -234,28 +234,37 @@ def _z_top(dcwlf):
 ZF_WARNING = "above the final redshift zf"
 
 
-def test_distance_zf_get_z_max(capfd):
+@pytest.mark.parametrize("separate_dist", [False, True])
+def test_distance_zf_get_z_max(capfd, separate_dist):
     """The comoving distance is a spline only up to the zf of NcDistance, and above it an
     integral cached at every redshift. The likelihood does not change the distance, a
     model other data may share: it warns when the redshift integration of the galaxies
-    goes above zf, and nc_data_cluster_wl_factor_get_z_max() gives the zf to require."""
-    ref, mset_ref = _build("var-add", "nfw", "spline")
-    dcwlf, mset = _build("var-add", "nfw", "spline", zf=0.5)
-    cosmo = mset.peek(Nc.HICosmo.id())
-    smd = mset.peek(Nc.WLSurfaceMassDensity.id())
-    dist = smd.props.distance
+    goes above zf, and nc_data_cluster_wl_factor_get_z_max() gives the zf to require.
+    Raising it after an evaluation, as the warning says and with nothing prepared by
+    hand, the models rebuild the distance: the likelihood matches that of a distance
+    built with a large zf, also after the cluster moves."""
+    zf = 0.5 if separate_dist else 0.55
+    ref, mset_ref = _build("var-add", "nfw", "spline", separate_dist=separate_dist)
+    dcwlf, mset = _build("var-add", "nfw", "spline", zf=zf, separate_dist=separate_dist)
+    dist = mset.peek(Nc.WLSurfaceMassDensity.id()).props.distance
 
     z_max = dcwlf.get_z_max(mset)
-    assert z_max == _z_top(dcwlf) > 0.5
+    assert z_max == _z_top(dcwlf) > zf
 
     capfd.readouterr()
+    _m2lnP(ref, mset_ref)
     _m2lnP(dcwlf, mset)
     assert ZF_WARNING in capfd.readouterr().err
-    assert dist.props.zf == 0.5
+    assert dist.props.zf == zf
 
     dist.require_zf(z_max)
-    smd.prepare(cosmo)
-    mset.peek(Nc.HaloPosition.id()).prepare(cosmo)
+    np.testing.assert_allclose(
+        _m2lnP(dcwlf, mset), _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0
+    )
+
+    for m in (mset, mset_ref):
+        m.peek(Nc.HaloPosition.id()).param_set_by_name("z", 0.3)
+
     m2lnP = _m2lnP(dcwlf, mset)
 
     assert ZF_WARNING not in capfd.readouterr().err
@@ -264,20 +273,25 @@ def test_distance_zf_get_z_max(capfd):
 
 def test_distance_zf_after_model_swap(capfd):
     """A surface mass density swapped in after the first evaluation, with a distance of
-    low zf, is warned about too, although the catalog did not change."""
+    low zf, is warned about too, although the catalog did not change. The warning is
+    given once in the process for a redshift and a zf (the zf here is used by no other
+    test), so the copies a sampler makes of the data do not repeat it."""
     dcwlf, mset = _build("var-add", "nfw", "spline", separate_dist=True)
     cosmo = mset.peek(Nc.HICosmo.id())
     _m2lnP(dcwlf, mset)
 
-    smd = Nc.WLSurfaceMassDensity.new(Nc.Distance.new(0.5))
+    smd = Nc.WLSurfaceMassDensity.new(Nc.Distance.new(0.6))
     smd.prepare_if_needed(cosmo)
     mset.set(smd)
 
     capfd.readouterr()
     _m2lnP(dcwlf, mset)
-
     assert ZF_WARNING in capfd.readouterr().err
-    assert smd.props.distance.props.zf == 0.5
+    assert smd.props.distance.props.zf == 0.6
+
+    copy = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).dup_obj(dcwlf)
+    _m2lnP(copy, mset)
+    assert ZF_WARNING not in capfd.readouterr().err
 
 
 def test_peek_pz_is_usable():

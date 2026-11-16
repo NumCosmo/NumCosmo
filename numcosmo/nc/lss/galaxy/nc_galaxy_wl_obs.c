@@ -76,7 +76,6 @@ struct _NcGalaxyWLObs
 struct _NcGalaxyWLObsPrivate
 {
   NcmObjDictInt *pz;
-  GMutex pz_lock; /* serializes the preparation of the splines by nc_galaxy_wl_obs_peek_pz() */
   NcWLEllipticityFrame coord;
   NcGalaxyWLObsEllipConv ellip_conv;
   NcmObjDictInt *shape_interp;
@@ -100,8 +99,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  self->pz = ncm_obj_dict_int_new ();
-  g_mutex_init (&self->pz_lock);
+  self->pz                  = ncm_obj_dict_int_new ();
   self->coord               = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   self->ellip_conv          = 0;
   self->shape_interp        = ncm_obj_dict_int_new ();
@@ -230,11 +228,6 @@ _nc_galaxy_wl_obs_dispose (GObject *object)
 static void
 _nc_galaxy_wl_obs_finalize (GObject *object)
 {
-  NcGalaxyWLObs *obs                = NC_GALAXY_WL_OBS (object);
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-
-  g_mutex_clear (&self->pz_lock);
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->finalize (object);
 }
@@ -586,6 +579,9 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
   return ncm_catalog_peek_data (NCM_CATALOG (obs));
 }
 
+/* Serializes the preparation of the P(z) splines by nc_galaxy_wl_obs_peek_pz() */
+G_LOCK_DEFINE_STATIC (nc_galaxy_wl_obs_pz);
+
 /**
  * nc_galaxy_wl_obs_peek_pz:
  * @obs: a #NcGalaxyWLObs object.
@@ -594,7 +590,9 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
  * Gets a P(z) spline from the observation data, prepared. The likelihood reads only the
  * knots and values of the splines, so a catalog leaves them unprepared, which saves the
  * memory of their coefficients; this prepares the spline of row @i on its first call,
- * under a lock, so that it can be evaluated.
+ * under a lock shared by every catalog (catalogs may hold the same spline), so that it
+ * can be evaluated. A prepared spline keeps its coefficients: peeking every row gives
+ * back that saving in the process.
  *
  * Returns: (transfer none) (nullable): the P(z) spline, or %NULL when row @i has none.
  *
@@ -602,17 +600,16 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
 NcmSpline *
 nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 {
-  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
-  NcmSpline *pz                     = _nc_galaxy_wl_obs_peek_pz_unprepared (obs, i);
+  NcmSpline *pz = _nc_galaxy_wl_obs_peek_pz_unprepared (obs, i);
 
   if (pz != NULL)
   {
-    g_mutex_lock (&self->pz_lock);
+    G_LOCK (nc_galaxy_wl_obs_pz);
 
     if (!ncm_spline_is_init (pz))
       ncm_spline_prepare (pz);
 
-    g_mutex_unlock (&self->pz_lock);
+    G_UNLOCK (nc_galaxy_wl_obs_pz);
   }
 
   return pz;

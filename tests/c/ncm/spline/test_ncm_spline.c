@@ -130,6 +130,10 @@ static void test_ncm_spline_gsl_unsupported_type (void);
 static void test_ncm_spline_gsl_unsupported_type_subprocess (void);
 static void test_ncm_spline_unprepared (void);
 static void test_ncm_spline_unprepared_subprocess (void);
+static void test_ncm_spline_unprepared_other (void);
+static void test_ncm_spline_unprepared_bspline_subprocess (void);
+static void test_ncm_spline_unprepared_gsl_subprocess (void);
+static void test_ncm_spline_unprepared_gsl_reset_subprocess (void);
 static void test_ncm_spline_cubic_tridiag_vecs (void);
 static void test_ncm_spline_cubic_peek_threads (void);
 static void test_ncm_spline_gsl_steffen_monotone (void);
@@ -213,6 +217,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spline_gsl/unsupported_type/subprocess", &test_ncm_spline_gsl_unsupported_type_subprocess);
   g_test_add_func ("/ncm/spline/unprepared", &test_ncm_spline_unprepared);
   g_test_add_func ("/ncm/spline/unprepared/subprocess", &test_ncm_spline_unprepared_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared/other", &test_ncm_spline_unprepared_other);
+  g_test_add_func ("/ncm/spline/unprepared/bspline/subprocess", &test_ncm_spline_unprepared_bspline_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared/gsl/subprocess", &test_ncm_spline_unprepared_gsl_subprocess);
+  g_test_add_func ("/ncm/spline/unprepared/gsl_reset/subprocess", &test_ncm_spline_unprepared_gsl_reset_subprocess);
   g_test_add_func ("/ncm/spline_cubic/tridiag_vecs", &test_ncm_spline_cubic_tridiag_vecs);
   g_test_add_func ("/ncm/spline_cubic/peek_threads", &test_ncm_spline_cubic_peek_threads);
   g_test_add_func ("/ncm/spline_gsl/steffen/monotone", &test_ncm_spline_gsl_steffen_monotone);
@@ -2276,6 +2284,80 @@ test_ncm_spline_unprepared_subprocess (void)
 
   ncm_spline_set (s, xv, yv, FALSE);
   ncm_spline_eval (s, 1.5);
+}
+
+/*
+ * The other types of spline with their own evaluation abort the same way: a B-spline and a
+ * GSL spline never prepared, and a GSL spline prepared and then set with new knots of
+ * another length without being prepared again.
+ */
+static void
+test_ncm_spline_unprepared_other (void)
+{
+  g_test_trap_subprocess ("/ncm/spline/unprepared/bspline/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineBSpline was evaluated before ncm_spline_prepare()*");
+
+  g_test_trap_subprocess ("/ncm/spline/unprepared/gsl/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineGsl was evaluated before ncm_spline_prepare()*");
+
+  g_test_trap_subprocess ("/ncm/spline/unprepared/gsl_reset/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*NcmSplineGsl was evaluated before ncm_spline_prepare()*");
+}
+
+static void
+_test_ncm_spline_unprepared_knots (NcmVector *xv, NcmVector *yv)
+{
+  guint i;
+
+  for (i = 0; i < ncm_vector_len (xv); i++)
+  {
+    ncm_vector_set (xv, i, i);
+    ncm_vector_set (yv, i, i * i);
+  }
+}
+
+static void
+test_ncm_spline_unprepared_bspline_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (8);
+  NcmVector *yv = ncm_vector_new (8);
+  NcmSpline *s  = NCM_SPLINE (ncm_spline_bspline_new (4));
+
+  _test_ncm_spline_unprepared_knots (xv, yv);
+  ncm_spline_set (s, xv, yv, FALSE);
+  ncm_spline_eval (s, 1.5);
+}
+
+static void
+test_ncm_spline_unprepared_gsl_subprocess (void)
+{
+  NcmVector *xv = ncm_vector_new (8);
+  NcmVector *yv = ncm_vector_new (8);
+  NcmSpline *s  = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
+
+  _test_ncm_spline_unprepared_knots (xv, yv);
+  ncm_spline_set (s, xv, yv, FALSE);
+  ncm_spline_eval_deriv (s, 1.5);
+}
+
+static void
+test_ncm_spline_unprepared_gsl_reset_subprocess (void)
+{
+  NcmVector *xv  = ncm_vector_new (8);
+  NcmVector *yv  = ncm_vector_new (8);
+  NcmVector *xv6 = ncm_vector_new (6);
+  NcmVector *yv6 = ncm_vector_new (6);
+  NcmSpline *s   = NCM_SPLINE (ncm_spline_gsl_new (gsl_interp_cspline));
+
+  _test_ncm_spline_unprepared_knots (xv, yv);
+  _test_ncm_spline_unprepared_knots (xv6, yv6);
+  ncm_spline_set (s, xv, yv, TRUE);
+  g_assert_cmpfloat (fabs (ncm_spline_eval (s, 2.0) - 4.0), <, 1.0e-12);
+  ncm_spline_set (s, xv6, yv6, FALSE);
+  ncm_spline_eval_integ (s, 0.5, 1.5);
 }
 
 /*
