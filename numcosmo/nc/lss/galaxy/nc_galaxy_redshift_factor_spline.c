@@ -101,11 +101,17 @@ typedef struct _SplineSqrt
   NcmVector *cum;
 } SplineSqrt;
 
-/* Per-galaxy fragment: the table @pz as given and the derived data @sq of that table. */
+/*
+ * Per-galaxy fragment: the table @pz as given, the derived data @sq of that table and the
+ * first and last knots of @pz, the integration limits, kept here so that reading them does
+ * not go through the spline (a chain of allocations that is cold in a loop over galaxies).
+ */
 typedef struct _SplineLData
 {
   NcmSpline *pz;
   SplineSqrt *sq;
+  gdouble z_min;
+  gdouble z_max;
 } SplineLData;
 
 /* The value of s at @z */
@@ -446,6 +452,7 @@ _spline_ldata_set_pz (SplineLData *sldata, NcmSpline *pz)
 
   sldata->pz = pz;
   sldata->sq = sq;
+  ncm_spline_get_bounds (pz, &sldata->z_min, &sldata->z_max);
 }
 
 /* Integral of s^2 over [a, b] inside one polynomial piece of s, where s^2 has degree 10
@@ -615,7 +622,8 @@ _nc_galaxy_redshift_factor_spline_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, N
   SplineLData *sldata = (SplineLData *) data->ldata;
 
   g_assert_nonnull (sldata->pz);
-  ncm_spline_get_bounds (sldata->pz, z_min, z_max);
+  *z_min = sldata->z_min;
+  *z_max = sldata->z_max;
 }
 
 static gdouble
