@@ -28,10 +28,12 @@ against CCL on the cosmologies of ccl_cosmo_eh_linear. compare_multiplicity_func
 evaluates CCL's f(sigma) through the private method MassFunc._get_fsigma, which every
 CCL mass function overrides; its signature is pinned on the base class and on each
 family the pairing module builds, so that a pyccl release changing it fails here.
-The halo bias comparisons, compare_halo_bias and compare_halo_bias_sigma, are checked
-the same way; the second evaluates CCL's b(sigma) through the private method
-HaloBias._get_bsigma, pinned on the base class and on each model the halo bias
-pairing module builds.
+The halo bias comparisons are checked against CCL on the same cosmologies, for every
+pair the halo bias pairing module builds: compare_halo_bias_sigma for the agreement
+of b(sigma) at the same sigma, and compare_halo_bias for the agreement of b(M, z),
+each code at its own sigma(M, z). compare_halo_bias_sigma evaluates CCL's b(sigma)
+through the private method HaloBias._get_bsigma, whose signature is pinned on the
+base class and on each of those models.
 """
 
 import inspect
@@ -422,22 +424,27 @@ BIAS_CONSTRUCTOR_CALLS: list[tuple[BiasPairConstructor, tuple[Any, ...]]] = [
 BIAS_PAIRS = [constructor(*args) for constructor, args in BIAS_CONSTRUCTOR_CALLS]
 CCL_BIAS_MODELS = [type(pair.ccl_bias) for pair in BIAS_PAIRS]
 
-# Bound on |b_CCL - b_NumCosmo| / b_NumCosmo for each model, at the same sigma and z,
-# on the cosmology high_prec=False, index=0 of ccl_cosmo_eh_linear, at
-# BSIGMA_MASSES and FSIGMA_Z, for every pair of the halo bias pairing module: the
-# smallest power of ten at least twice the largest difference measured there, and
-# 1.0e-13 where both codes evaluate the same expression, as for FSIGMA_RELTOL. The
-# largest differences measured are 0 (sheth99), 2.46e-12 (sheth01) and 2.2e-16
-# (tinker10, 200c and 500c). On cosmologies 1 and 2 of ccl_cosmo_eh_linear, which
-# differ from index 0 in m_nu, w0, wa and Omega_k, tinker10 reaches 3.7e-11; there the
-# two codes' Delta_m = Delta_c / Omega_m(z) differ by up to 3.0e-10, and the
-# difference in b follows that difference in Delta_m.
+# Bound on |b_NumCosmo / b_CCL - 1| for each model, at the same sigma and z: the
+# smallest power of ten at least twice the largest difference measured over the three
+# cosmologies of ccl_cosmo_eh_linear at both CCL precision settings, BSIGMA_MASSES,
+# z = 0, 0.5, 1, 1.5 and every pair of the model; 1.0e-13 where the measured difference
+# is at rounding level. The largest differences measured are 0 (sheth99), 2.461e-12
+# (sheth01) and 3.679e-11 (tinker10, 200c and 500c).
 BSIGMA_RELTOL = {
     "sheth99": 1.0e-13,
     "sheth01": 1.0e-11,
-    "tinker10": 1.0e-13,
+    "tinker10": 1.0e-10,
 }
 BSIGMA_MASSES = np.geomspace(1.0e12, 1.0e15, 8)
+
+# Bound on |b_NumCosmo / b_CCL - 1| at the same M and z, each code at its own
+# sigma(M, z), for each CCL precision setting: the smallest power of ten at least twice
+# the largest difference measured over the three cosmologies of ccl_cosmo_eh_linear at
+# that setting, BM_MASSES, z = 0, 0.5, 1, 1.5 and every pair of the halo bias pairing
+# module. The largest differences measured are 3.396e-6 at CCL's default precision and
+# 6.309e-9 at high precision.
+BM_RELTOL = {False: 1.0e-5, True: 1.0e-7}
+BM_MASSES = np.geomspace(1.0e11, 1.0e15, 64)
 
 # Every pair the halo bias pairing module enumerates, as (model, constructor, args).
 BIAS_CONFIGS = [
@@ -632,9 +639,6 @@ def test_compare_halo_bias_sigma_ccl_inputs(
         assert_array_equal(cmp.y1, bsigma)
 
 
-@pytest.mark.parametrize(
-    "ccl_cosmo_eh_linear", [(False, 0)], indirect=True, ids=["high_prec=False,index=0"]
-)
 @pytest.mark.parametrize("model, constructor, args", BIAS_CONFIGS)
 def test_compare_halo_bias_sigma_agreement(
     ccl_cosmo_eh_linear: pyccl.Cosmology,
@@ -647,7 +651,7 @@ def test_compare_halo_bias_sigma_agreement(
 
     Both codes evaluate b at the same sigma and z, so differences in sigma(M, z) do
     not enter. The pairs set NumCosmo's parameters to CCL's. Each model's bound is
-    BSIGMA_RELTOL's, on the one cosmology it was measured on.
+    BSIGMA_RELTOL's.
     """
     for z in FSIGMA_Z:
         cmp = nc_cmp.compare_halo_bias_sigma(
@@ -659,3 +663,32 @@ def test_compare_halo_bias_sigma_agreement(
         )
 
         assert_allclose(cmp.y1, cmp.y2, rtol=BSIGMA_RELTOL[model], atol=0.0)
+
+
+@pytest.mark.parametrize("model, constructor, args", BIAS_CONFIGS)
+def test_compare_halo_bias_agreement(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: Cosmology,
+    model: str,
+    constructor: BiasPairConstructor,
+    args: tuple[Any, ...],
+) -> None:
+    """Compare the halo bias b(M, z) of CCL and NumCosmo for every pair.
+
+    Each code evaluates b at its own sigma(M, z), so differences in sigma(M, z) are
+    part of the comparison. The bound is BM_RELTOL's for the cosmology's CCL precision
+    setting.
+    """
+    reltol = BM_RELTOL[ccl_cosmo_eh_linear.high_precision]
+
+    for z in FSIGMA_Z:
+        cmp = nc_cmp.compare_halo_bias(
+            ccl_cosmo_eh_linear,
+            nc_cosmo_eh_linear,
+            *constructor(*args),
+            BM_MASSES,
+            z,
+            model=model,
+        )
+
+        assert_allclose(cmp.y1, cmp.y2, rtol=reltol, atol=0.0)
