@@ -66,6 +66,7 @@ gboolean nc_galaxy_shape_factor_spectral_get_restrict_range (NcGalaxyShapeFactor
 void nc_galaxy_shape_factor_spectral_set_pop_order (NcGalaxyShapeFactorSpectral *gsfs, const guint pop_order);
 guint nc_galaxy_shape_factor_spectral_get_pop_order (NcGalaxyShapeFactorSpectral *gsfs);
 guint nc_galaxy_shape_factor_spectral_get_pop_n_unconverged (NcGalaxyShapeFactorSpectral *gsfs);
+guint nc_galaxy_shape_factor_spectral_get_n_loaded_short (NcGalaxyShapeFactorSpectral *gsfs);
 
 gdouble nc_galaxy_shape_factor_spectral_eval_ln_direct (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_noise);
 NcmMatrix *nc_galaxy_shape_factor_spectral_eval_panels (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_noise, gdouble *ln_marginal);

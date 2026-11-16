@@ -143,6 +143,8 @@ void test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch (void);
 void test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_g_max (void);
 void test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_restrict_range_stable (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_restrict_range_loaded_short (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_small_g_max (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_pop_order (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_pop_order_diverge (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -223,6 +225,14 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_spectral/interp/restrict_range", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_restrict_range,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/interp/restrict_range/stable", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_restrict_range_stable,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/interp/restrict_range/loaded_short", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_restrict_range_loaded_short,
               &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/interp/small_g_max", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
@@ -1703,6 +1713,191 @@ test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpec
   ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
   ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FIXED);
 
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+}
+
+/* A one-row catalog of the galaxy of data, written with the interpolant it holds */
+static NcGalaxyWLObs *
+_test_restrict_obs_new (TestNcGalaxyShapeFactorSpectral *test, NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapeFactorData *data)
+{
+  GList *columns  = nc_galaxy_shape_factor_data_required_columns (data);
+  GStrv col_names = g_new0 (gchar *, g_list_length (columns) + 1);
+  NcGalaxyWLObs *obs;
+  GList *l;
+  guint i = 0;
+
+  for (l = columns; l != NULL; l = l->next)
+    col_names[i++] = g_strdup (l->data);
+
+  obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 1, col_names);
+  nc_galaxy_shape_factor_data_write_row (data, obs, 0);
+  nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, test->pop, obs);
+
+  g_strfreev (col_names);
+  g_list_free_full (columns, g_free);
+
+  return obs;
+}
+
+/* The outer radius rho_max of the interpolant the galaxy of data holds, read from its catalog row */
+static gdouble
+_test_restrict_rho_max (TestNcGalaxyShapeFactorSpectral *test, NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyWLObs *obs = _test_restrict_obs_new (test, gsfs, data);
+  gdouble ra, rb, ta, tb;
+
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs, 0)));
+  ncm_spectral_polar_panels_get_range (nc_galaxy_wl_obs_peek_shape_interp (obs, 0), &ra, &rb, &ta, &tb);
+  nc_galaxy_wl_obs_free (obs);
+
+  return rb;
+}
+
+/*
+ * restrict-range: the bound depends on the box only. With the center free over +-0.05
+ * degrees, moving it inside the box leaves the interpolant of a galaxy 0.3 degrees away with
+ * the same radius, below interp-g-max. With the redshift of the halo free the bound does not
+ * hold and the interpolant covers interp-g-max.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_restrict_range_stable (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcHaloDensityProfile *dp           = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
+  NcmModel *hms                      = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp));
+  NcmModel *hp                       = ncm_mset_peek (test->mset, nc_halo_position_id ());
+  NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  NcGalaxyShapeFactorSpectral *gsfs  = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcGalaxyShapeFactor *gsf           = NC_GALAXY_SHAPE_FACTOR (gsfs);
+  NcGalaxyShapeFactorData *data      = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+  GPtrArray *data_array              = g_ptr_array_new ();
+  const gdouble e1                   = 0.3;
+  const gdouble e2                   = 0.2;
+  const gdouble e                    = hypot (e1, e2);
+  const gdouble g_c                  = e / (1.0 + sqrt (1.0 - e * e));
+  const gdouble ra0                  = ncm_model_param_get (hp, NC_HALO_POSITION_RA);
+  const gdouble dec0                 = ncm_model_param_get (hp, NC_HALO_POSITION_DEC);
+  gdouble rho_0, rho_moved, rho_z;
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+
+  ncm_model_param_set_upper_bound (hms, NC_HALO_CM_PARAM_LOG10M_DELTA, 14.0);
+  ncm_model_param_set_lower_bound (hp, NC_HALO_POSITION_RA, ra0 - 0.05);
+  ncm_model_param_set_upper_bound (hp, NC_HALO_POSITION_RA, ra0 + 0.05);
+  ncm_model_param_set_lower_bound (hp, NC_HALO_POSITION_DEC, dec0 - 0.05);
+  ncm_model_param_set_upper_bound (hp, NC_HALO_POSITION_DEC, dec0 + 0.05);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FREE);
+
+  nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
+  nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs, TRUE);
+  nc_galaxy_shape_factor_data_set (gsf, data, e1, e2, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+  g_ptr_array_add (data_array, data);
+
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+  nc_galaxy_shape_factor_data_prepare (gsf, test->mset, data, 20.0);
+  rho_0 = _test_restrict_rho_max (test, gsfs, data);
+  g_assert_cmpfloat (rho_0 - g_c, <, nc_galaxy_shape_factor_spectral_get_interp_g_max (gsfs));
+
+  ncm_model_param_set (hp, NC_HALO_POSITION_RA, ra0 + 0.03);
+  ncm_model_param_set (hp, NC_HALO_POSITION_DEC, dec0 - 0.02);
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+  nc_galaxy_shape_factor_data_prepare (gsf, test->mset, data, 20.0);
+  rho_moved = _test_restrict_rho_max (test, gsfs, data);
+  g_assert_cmpfloat (rho_moved, ==, rho_0);
+
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_Z, NCM_PARAM_TYPE_FREE);
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+  nc_galaxy_shape_factor_data_prepare (gsf, test->mset, data, 20.0);
+  rho_z = _test_restrict_rho_max (test, gsfs, data);
+  ncm_assert_cmpdouble_e (rho_z - g_c, ==, nc_galaxy_shape_factor_spectral_get_interp_g_max (gsfs), 1.0e-14, 0.0);
+
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_Z, NCM_PARAM_TYPE_FIXED);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FIXED);
+  ncm_model_param_set (hp, NC_HALO_POSITION_RA, ra0);
+  ncm_model_param_set (hp, NC_HALO_POSITION_DEC, dec0);
+
+  g_ptr_array_unref (data_array);
+  nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+}
+
+/*
+ * restrict-range: a catalog prepared with the center fixed, read by a fit whose box of the
+ * center takes the halo to the galaxy, does not cover the shears the galaxy reaches: one
+ * warning, the galaxy is counted, and a shear beyond the catalog is the integral.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_restrict_range_loaded_short (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcHaloDensityProfile *dp           = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
+  NcmModel *hms                      = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp));
+  NcmModel *hp                       = ncm_mset_peek (test->mset, nc_halo_position_id ());
+  NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  NcGalaxyShapeFactorSpectral *gsfs  = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcGalaxyShapeFactorSpectral *gsfs2 = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcGalaxyShapeFactorData *data      = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfs), test->mset, p_data, z_data);
+  NcGalaxyShapeFactorData *data2     = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfs2), test->mset, p_data, z_data);
+  GPtrArray *data_array              = g_ptr_array_new ();
+  GPtrArray *data_array2             = g_ptr_array_new ();
+  const gdouble e1                   = 0.3;
+  const gdouble e2                   = 0.2;
+  const gdouble g_far[2]             = {0.29 * cos (0.4), 0.29 * sin (0.4)};
+  const gdouble ra0                  = ncm_model_param_get (hp, NC_HALO_POSITION_RA);
+  const gdouble dec0                 = ncm_model_param_get (hp, NC_HALO_POSITION_DEC);
+  NcGalaxyWLObs *obs;
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+
+  ncm_model_param_set_upper_bound (hms, NC_HALO_CM_PARAM_LOG10M_DELTA, 14.0);
+
+  nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
+  nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs, TRUE);
+  nc_galaxy_shape_factor_data_set (NC_GALAXY_SHAPE_FACTOR (gsfs), data, e1, e2, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+  g_ptr_array_add (data_array, data);
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (NC_GALAXY_SHAPE_FACTOR (gsfs), test->mset, data_array, TRUE, TRUE));
+  nc_galaxy_shape_factor_data_prepare (NC_GALAXY_SHAPE_FACTOR (gsfs), test->mset, data, 20.0);
+  obs = _test_restrict_obs_new (test, gsfs, data);
+
+  ncm_model_param_set_lower_bound (hp, NC_HALO_POSITION_RA, ra0 - 0.4);
+  ncm_model_param_set_upper_bound (hp, NC_HALO_POSITION_RA, ra0 + 0.4);
+  ncm_model_param_set_lower_bound (hp, NC_HALO_POSITION_DEC, dec0 - 0.4);
+  ncm_model_param_set_upper_bound (hp, NC_HALO_POSITION_DEC, dec0 + 0.4);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FREE);
+
+  nc_galaxy_shape_factor_spectral_set_use_interp (gsfs2, TRUE);
+  nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs2, TRUE);
+  nc_galaxy_shape_factor_data_read_row (data2, obs, 0);
+  g_ptr_array_add (data_array2, data2);
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (NC_GALAXY_SHAPE_FACTOR (gsfs2), test->mset, data_array2, TRUE, TRUE));
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*do not cover the shears some galaxies reach in the box of this fit*");
+  nc_galaxy_shape_factor_data_prepare (NC_GALAXY_SHAPE_FACTOR (gsfs2), test->mset, data2, 20.0);
+  g_test_assert_expected_messages ();
+  g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_n_loaded_short (gsfs2), ==, 1);
+
+  g_assert_cmpfloat (nc_galaxy_shape_factor_eval_ln_marginal (NC_GALAXY_SHAPE_FACTOR (gsfs2), test->pop, data2, g_far[0], g_far[1], e1, e2),
+                     ==,
+                     nc_galaxy_shape_factor_spectral_eval_ln_direct (gsfs2, test->pop, data2->pop_data, g_far[0], g_far[1], e1, e2, 0.1));
+
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FIXED);
+
+  nc_galaxy_wl_obs_free (obs);
+  g_ptr_array_unref (data_array);
+  g_ptr_array_unref (data_array2);
+  nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_shape_factor_data_unref (data2);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+  nc_galaxy_shape_factor_spectral_free (gsfs2);
   nc_galaxy_position_factor_data_unref (p_data);
   nc_galaxy_redshift_factor_data_unref (z_data);
 }
