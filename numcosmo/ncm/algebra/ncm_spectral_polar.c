@@ -1065,6 +1065,10 @@ _ncm_spectral_polar_sample_start (NcmSpectralPolarCall *call, const NcmSpectralP
   _ncm_spectral_polar_rows (call, call->level_min, call->level_min, 0, 1, 0, 1);
 }
 
+/* Points of a pass of _ncm_spectral_polar_nodes_r() from which its weights are computed in
+ * loops that vectorize (ncm_vmath_pow_pos()); below it they are computed point by point */
+#define NCM_SPECTRAL_POLAR_SIMD_MIN (8)
+
 /*
  * Radii of the panel at level lx and the regular weight there, r^a unless the panel starts at
  * 0 and (R - r)^b unless it ends at R, at their stride positions: every point (i0 = 0,
@@ -1086,6 +1090,31 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
   gdouble *cr                = work->cr;
   gdouble *cw                = work->cw;
   guint i, c;
+
+  /*
+   * A pass of few points: one loop with the weights by pow(), as the vectorized loops
+   * below cost more than they save under NCM_SPECTRAL_POLAR_SIMD_MIN points (passes of
+   * 1 to 5 points occur from level_min 0)
+   */
+  if ((n - i0) / step + 1 < NCM_SPECTRAL_POLAR_SIMD_MIN)
+  {
+    for (i = i0; i <= n; i += step)
+    {
+      const gdouble r = mid + half * work->xc[i << sh];
+      gdouble w       = 1.0;
+
+      if (wa)
+        w *= (a == 1.0) ? r : pow (r, a);
+
+      if (wb)
+        w *= pow (R - r, b);
+
+      work->rr[i << sh] = r;
+      work->wr[i << sh] = w;
+    }
+
+    return;
+  }
 
   /* The radii contiguous, the weights in a loop that vectorizes, then both at their
    * stride positions */

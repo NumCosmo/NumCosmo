@@ -50,6 +50,7 @@
 #include "build_cfg.h"
 #include "stdarg.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_obs_private.h"
 #include "ncm/algebra/ncm_matrix.h"
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/spline/ncm_spline.h"
@@ -245,7 +246,8 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
   /**
    * NcGalaxyWLObs:pz:
    *
-   * P(z) splines, kept unprepared (see nc_galaxy_wl_obs_peek_pz()).
+   * P(z) splines. They are kept as given, unprepared when they come so from a
+   * serialized catalog: nc_galaxy_wl_obs_peek_pz() prepares the spline it returns.
    *
    */
   g_object_class_install_property (object_class,
@@ -344,8 +346,8 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
       const gint key = g_array_index (keys, gint, i);
       GObject *obj   = ncm_obj_dict_int_peek (self->pz, key);
 
-      /* Not prepared: the likelihood reads the knots and values only (see
-       * nc_galaxy_wl_obs_peek_pz()) */
+      /* Not prepared: the likelihood reads the knots and values only, and
+       * nc_galaxy_wl_obs_peek_pz() prepares a spline when it is asked for */
       g_assert (NCM_IS_SPLINE (obj));
     }
 
@@ -577,20 +579,45 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
   return ncm_catalog_peek_data (NCM_CATALOG (obs));
 }
 
+/* Serializes the preparation of the P(z) splines by nc_galaxy_wl_obs_peek_pz() */
+G_LOCK_DEFINE_STATIC (nc_galaxy_wl_obs_pz);
+
 /**
  * nc_galaxy_wl_obs_peek_pz:
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
  *
- * Gets a P(z) spline from the observation data. The catalog keeps its knots and values
- * only, which is what #NcGalaxyRedshiftFactorSpline reads: the spline is not prepared, so
- * call ncm_spline_prepare() before evaluating it.
+ * Gets a P(z) spline from the observation data, prepared. The likelihood reads only the
+ * knots and values of the splines, so a catalog leaves them unprepared, which saves the
+ * memory of their coefficients; this prepares the spline of row @i on its first call,
+ * under a lock shared by every catalog (catalogs may hold the same spline), so that it
+ * can be evaluated. A prepared spline keeps its coefficients: peeking every row gives
+ * back that saving in the process.
  *
- * Returns: (transfer none): the P(z) spline.
+ * Returns: (transfer none) (nullable): the P(z) spline, or %NULL when row @i has none.
  *
  */
 NcmSpline *
 nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
+{
+  NcmSpline *pz = _nc_galaxy_wl_obs_peek_pz_unprepared (obs, i);
+
+  if (pz != NULL)
+  {
+    G_LOCK (nc_galaxy_wl_obs_pz);
+
+    if (!ncm_spline_is_init (pz))
+      ncm_spline_prepare (pz);
+
+    G_UNLOCK (nc_galaxy_wl_obs_pz);
+  }
+
+  return pz;
+}
+
+/* See nc_galaxy_wl_obs_private.h */
+NcmSpline *
+_nc_galaxy_wl_obs_peek_pz_unprepared (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
