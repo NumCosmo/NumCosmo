@@ -1433,7 +1433,9 @@ test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral 
     NcGalaxyShapePop *pops[2]         = {test->pop, gauss};
     guint ip;
 
-    g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_line_abstol (gsfs), ==, 1.0e-8);
+    /* The default: reltol / 10; the cases below use 1e-8 */
+    g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_line_abstol (gsfs), <, 0.0);
+    nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 1.0e-8);
     nc_galaxy_shape_factor_data_set (gsf, data, -0.25, 0.35, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
 
     for (ip = 0; ip < 2; ip++)
@@ -1471,6 +1473,24 @@ test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral 
       nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 0.0);
       _test_eval_line_case (gsf, pops[ip], data, TEST_LINE_N, 0.3, TRUE, 0.0);
       nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 1.0e-8);
+    }
+
+    /*
+     * A table that cannot reach its tolerance: the first evaluation integrates every node
+     * after trying it, and records the failure; the next ones integrate without trying
+     * again. Every value is that of the integrals. A fresh galaxy, so that the cases above
+     * keep their tables.
+     */
+    {
+      NcGalaxyShapeFactorData *data2 = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+
+      nc_galaxy_shape_factor_data_set (gsf, data2, -0.25, 0.35, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+      nc_galaxy_shape_pop_prepare (test->pop, data2->pop_data);
+      nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 1.0e-16);
+      _test_eval_line_case (gsf, test->pop, data2, TEST_LINE_N, 0.3, TRUE, 0.0);
+      _test_eval_line_case (gsf, test->pop, data2, TEST_LINE_N, 0.3, TRUE, 0.0);
+      nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 1.0e-8);
+      nc_galaxy_shape_factor_data_unref (data2);
     }
 
     nc_galaxy_shape_factor_data_unref (data);

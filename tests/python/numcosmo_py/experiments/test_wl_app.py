@@ -873,7 +873,8 @@ def test_cluster_wl_app_generate_spectral_reltol(experiment_file):
     assert isinstance(factor, Nc.GalaxyShapeFactorSpectral)
     assert factor.props.reltol == pytest.approx(1e-4)
     assert factor.props.use_interp is False
-    assert factor.props.line_abstol == pytest.approx(1e-8)
+    # Negative: reltol / 10
+    assert factor.props.line_abstol == pytest.approx(-1.0)
 
 
 def test_cluster_wl_app_generate_spectral_line_abstol(experiment_file):
