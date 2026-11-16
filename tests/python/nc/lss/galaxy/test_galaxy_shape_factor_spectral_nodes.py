@@ -149,7 +149,10 @@ def test_eval_at_nodes_front_of_lens(use_interp):
         mset.peek_by_name("NcGalaxyShapePop"), data, c1, c2, e1, e2
     )
 
-    assert_allclose(nodes[:4], expected, rtol=0.0, atol=0.0)
+    # The four front nodes take one path with the same input: the same value; the
+    # per-point evaluation agrees within rounding (nc_galaxy_shape_factor_eval_nodes())
+    assert np.all(nodes[:4] == nodes[0])
+    assert_allclose(nodes[0], expected, rtol=1.0e-13 * max(1.0, abs(np.log(expected))))
     assert nodes[4] != nodes[0]
 
 
