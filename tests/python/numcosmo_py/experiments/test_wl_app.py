@@ -1851,9 +1851,10 @@ def _experiment_m2lnL_at(experiment_file: Path, pop_values: dict[str, float]) ->
 def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with_meta):
     """With pop_order and --pop-box, the catalog holds for each galaxy the modes
     of the expansion over the box of the population. An experiment built from it
-    has those parameters fixed at the values of the record, with the bounds of
-    the box, unless --parameter-list frees them; inside the box, fixed or free,
-    it has the likelihood of the integrals at the same population."""
+    has those parameters fixed at the values of the record, unless
+    --parameter-list frees them, and the bounds of the population, never those
+    of the box; fixed or free, inside the box or outside it (integrated), it has
+    the likelihood of the integrals at the same population."""
     expanded = tmp_path / "expanded.gvar"
     result = _shape_interp(
         expanded,
@@ -1931,7 +1932,7 @@ def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with
     )
     assert result.exit_code == 0, result.output
 
-    box = {"alpha": (1.75, 1.85), "beta": (2.05, 2.15)}
+    default = Nc.GalaxyShapePopBeta.new()
     free = {exp_expanded: set(), exp_alpha: {"alpha"}}
     for exp_file, free_names in free.items():
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
@@ -1942,16 +1943,20 @@ def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with
         pop = mset.peek(Nc.GalaxyShapePop.id())
         assert pop["alpha"] == pytest.approx(1.8)
         assert pop["beta"] == pytest.approx(2.1)
-        for name, (lo, hi) in box.items():
+        for name in ("alpha", "beta"):
             _, idx = pop.param_index_from_name(name)
-            assert pop.param_get_lower_bound(idx) == pytest.approx(lo)
-            assert pop.param_get_upper_bound(idx) == pytest.approx(hi)
+            assert pop.param_get_lower_bound(idx) == default.param_get_lower_bound(idx)
+            assert pop.param_get_upper_bound(idx) == default.param_get_upper_bound(idx)
             assert (pop.param_get_ftype(idx) == Ncm.ParamType.FREE) == (
                 name in free_names
             )
 
     for exp_file in (exp_expanded, exp_alpha):
-        for values in ({"alpha": 1.8, "beta": 2.1}, {"alpha": 1.78, "beta": 2.13}):
+        for values in (
+            {"alpha": 1.8, "beta": 2.1},
+            {"alpha": 1.78, "beta": 2.13},
+            {"alpha": 1.9, "beta": 2.1},
+        ):
             assert _experiment_m2lnL_at(exp_file, values) == pytest.approx(
                 _experiment_m2lnL_at(exp_integral, values), rel=0.0, abs=1.0e-3
             )

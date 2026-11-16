@@ -895,8 +895,9 @@ def shape_interp_pop_box(obs: Nc.GalaxyWLObs) -> dict[str, tuple[float, float]]:
 
     A catalog prepared with ``pop_order`` and ``--pop-box`` holds the
     interpolants of the nodes of an expansion over the free parameters of the
-    population of its record. An experiment built from it has those parameters
-    free over their bounds.
+    population of its record. An experiment built from it may free those
+    parameters (and no other parameter of the population), over its own
+    bounds: outside the box the galaxies are integrated.
 
     Returns:
         The free parameters of the population of the record and their bounds,

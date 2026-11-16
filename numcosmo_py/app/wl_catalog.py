@@ -178,8 +178,9 @@ class ShapeInterpWLCatalog:
             help=(
                 "NAME=LO:HI, repeatable: frees the population parameter NAME over "
                 "[LO, HI]. With pop_order in the spectral shape factor, the catalog "
-                "holds the interpolants of the nodes of the expansion over that box, "
-                "and fits built from it have those parameters free."
+                "holds the interpolants of the nodes of the expansion over that box; "
+                "fits built from it may free those parameters (--parameter-list), "
+                "over their own bounds, and are integrated outside the box."
             ),
         ),
     ] = None
