@@ -100,8 +100,12 @@ def _gauss_pz_spline(zp, sigma):
     return spline
 
 
-def _build(shape_name, profile_name, redshift_name, n_gal=None, zf=100.0):
-    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset)."""
+def _build(
+    shape_name, profile_name, redshift_name, n_gal=None, zf=100.0, separate_dist=False
+):
+    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset). The
+    surface mass density has a distance of final redshift zf; with separate_dist the
+    halo position has its own distance (zf = 100), otherwise it shares that one."""
     if n_gal is None:
         n_gal = N_GAL_OF.get(shape_name, N_GAL)
     cosmo = Nc.HICosmoDEXcdm.new()
@@ -109,7 +113,7 @@ def _build(shape_name, profile_name, redshift_name, n_gal=None, zf=100.0):
     hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
     hms.param_set_by_name("log10MDelta", 14.5)
     dp = PROFILES[profile_name](hms)
-    hp = Nc.HaloPosition.new(dist)
+    hp = Nc.HaloPosition.new(Nc.Distance.new(100.0) if separate_dist else dist)
     smd = Nc.WLSurfaceMassDensity.new(dist)
     hp.param_set_by_name("z", Z_CL)
     hp.prepare(cosmo)
@@ -238,6 +242,64 @@ def test_distance_zf_covers_the_redshift_support():
 
     assert dist.props.zf >= z_top
     np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
+
+
+def _z_top(dcwlf):
+    obs = dcwlf.peek_obs()
+    return max(obs.peek_pz(i).get_bounds()[1] for i in range(obs.len()))
+
+
+def test_distance_zf_separate_distances():
+    """With its own distance, the surface mass density already prepared for the
+    cosmology (as another data object of the model set would leave it) must still see
+    the spline extended to the raised zf, not an extrapolation of the old one."""
+    ref, mset_ref = _build("var-add", "nfw", "spline")
+    dcwlf, mset = _build("var-add", "nfw", "spline", zf=0.5, separate_dist=True)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    smd = mset.peek(Nc.WLSurfaceMassDensity.id())
+    smd.prepare_if_needed(cosmo)
+
+    m2lnP = _m2lnP(dcwlf, mset)
+
+    assert smd.props.distance.props.zf >= _z_top(dcwlf) > 0.5
+    np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
+
+
+def test_distance_zf_after_model_swap():
+    """A surface mass density swapped in after the first evaluation, with a distance
+    of low zf, is extended too, although the catalog did not change."""
+    ref, mset_ref = _build("var-add", "nfw", "spline")
+    dcwlf, mset = _build("var-add", "nfw", "spline", separate_dist=True)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    _m2lnP(dcwlf, mset)
+
+    smd = Nc.WLSurfaceMassDensity.new(Nc.Distance.new(0.5))
+    smd.prepare_if_needed(cosmo)
+    mset.set(smd)
+
+    m2lnP = _m2lnP(dcwlf, mset)
+
+    assert smd.props.distance.props.zf >= _z_top(dcwlf) > 0.5
+    np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
+
+
+def test_peek_pz_is_usable():
+    """The likelihood reads only the knots and values of the P(z) splines, so a catalog
+    keeps them unprepared; nc_galaxy_wl_obs_peek_pz() still returns a spline that
+    evaluates, here from a catalog loaded from its serialization, before and after the
+    likelihood read it."""
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    obs = ser.from_string(ser.to_string(dcwlf.peek_obs(), True))
+    dcwlf.set_obs(obs)
+    _, _, zp, sigma0, *_ = _galaxies(obs.len())
+
+    def peak(i):
+        return 1.0 / (np.sqrt(2.0 * np.pi) * sigma0[i] * (1.0 + zp[i]))
+
+    np.testing.assert_allclose(obs.peek_pz(5).eval(zp[5]), peak(5), rtol=1.0e-3)
+    _m2lnP(dcwlf, mset)
+    np.testing.assert_allclose(obs.peek_pz(6).eval(zp[6]), peak(6), rtol=1.0e-3)
 
 
 def _reload(dcwlf):

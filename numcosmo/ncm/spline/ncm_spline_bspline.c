@@ -885,13 +885,16 @@ ncm_spline_bspline_peek_basis (NcmSplineBSpline *sbs, gsize *n_control, const gd
  *
  * Evaluates at @x the B-spline of @order with @knots and @c, as ncm_spline_eval() does for
  * the #NcmSplineBSpline they were taken from (ncm_spline_bspline_peek_basis()): the same
- * operations, so the same value.
+ * operations, so the same value. @order is at most %NCM_SPLINE_BSPLINE_MAX_ORDER.
  *
  * Returns: the value of the B-spline at @x.
  */
 gdouble
 ncm_spline_bspline_eval_basis (const guint order, const gsize n_control, const gdouble *knots, const gdouble *c, const gdouble x)
 {
+  /* The evaluation keeps order values on the stack */
+  g_assert_cmpuint (order, <=, NCM_SPLINE_BSPLINE_MAX_ORDER);
+
   return _ncm_spline_bspline_eval_core (order, n_control, knots, c, x);
 }
 

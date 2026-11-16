@@ -349,6 +349,7 @@ ncm_headers_internal = files(
     'nc/perturbations/nc_hipert_private.h',
     'nc/data/nc_data_download_priv.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_private.h',
+    'nc/lss/galaxy/nc_galaxy_wl_obs_private.h',
     'nc/xcor/nc_xcor_priv.h',
     'nc/xcor/kernel/nc_xcor_kernel_private.h',
 )
