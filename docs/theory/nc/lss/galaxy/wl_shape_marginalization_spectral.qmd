@@ -371,6 +371,28 @@ faster evaluation. The nodes of the redshift integral of one galaxy are evaluate
 galaxy, and the shears that fall in one panel are evaluated several at a time. These values
 are those of the evaluation at one shear within rounding, not bit for bit.
 
+## The Nodes of a Galaxy: a Table Along its Line
+
+The likelihood of a galaxy needs $\ln P$ at the shears of its redshift nodes,
+$g_j = b + t_j u$ with $t_j = (1 + m) g_t (z_j)$, the bias $b$ and the direction $u$ of the
+tangential shear: they lie on one line. Without the approximation in $g$, the shape factor
+expands $\ln P$ in a Chebyshev series in $t$ on $[\min_j t_j, \max_j t_j]$, from integrals on
+nested Chebyshev-Lobatto grids, accepted when its coefficients change by at most
+[[numcosmo|NcGalaxyShapeFactorSpectral:line-abstol]] in $\ell_1$ norm between two grids, and
+evaluates the series at the nodes ([[numcosmo|nc_galaxy_shape_factor_eval_line]]). The
+calibration of the nodes evaluates the same kind of series over the whole redshift range of
+the galaxy ([[numcosmo|nc_galaxy_shape_factor_line_new]]).
+
+- Tolerance: each integral is accurate to about `reltol` relative, which is its accuracy in
+  $\ln P$. The default `line-abstol` (a negative value) is `reltol` / 10, so that the table
+  adds an error below that of the integrals; a positive value sets it, and zero integrates
+  every node.
+- When it is used: the series must need at most half as many integrals as there are nodes,
+  and every shear of the line must have $|g| \le 0.9$; otherwise each node is integrated. A
+  galaxy whose series does not reach the tolerance integrates its nodes until it is
+  prepared again, so that it does not pay for the attempt at every evaluation.
+- With `use-interp` the approximation in $g$ is used instead, and `line-abstol` is ignored.
+
 ## Measured Accuracy
 
 The reference is the Arb tool `tests/tools/nc_galaxy_shape_marginal_arb.c`, which

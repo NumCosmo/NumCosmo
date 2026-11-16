@@ -9660,24 +9660,6 @@ class GalaxyShapeFactorClass(GObject.GPointer):
         ],
         None,
     ] = ...
-    eval_line: typing.Callable[
-        [
-            GalaxyShapeFactor,
-            GalaxyShapePop,
-            GalaxyShapeFactorData,
-            int,
-            float,
-            float,
-            float,
-            float,
-            float,
-            float,
-            float,
-            bool,
-            float,
-        ],
-        None,
-    ] = ...
     line_table: None = ...
     padding: list[None] = ...
 
@@ -9940,7 +9922,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
       interp-min-radial-panels -> guint: interp-min-radial-panels
         Minimum number of radial intervals of the interpolant
       line-abstol -> gdouble: line-abstol
-        Absolute tolerance on ln P of the table along the line of the shears
+        Absolute tolerance on ln P of the table along the line of the shears (negative: reltol / 10)
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
