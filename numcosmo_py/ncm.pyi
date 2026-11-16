@@ -11553,16 +11553,19 @@ class SpectralPolarPanelsArray(GObject.Object):
     Properties from NcmSpectralPolarPanelsArray:
       panels -> NcmObjArray: panels
         The panel sets, in order
+      packed -> GVariant: packed
+        The packed sets
 
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
+        packed: GLib.Variant
         panels: ObjArray
 
     props: Props = ...
-    def __init__(self, panels: ObjArray = ...) -> None: ...
+    def __init__(self, packed: GLib.Variant = ..., panels: ObjArray = ...) -> None: ...
     def add(self, spp: SpectralPolarPanels) -> None: ...
     @staticmethod
     def clear(spa: SpectralPolarPanelsArray) -> None: ...
@@ -11596,6 +11599,7 @@ class SpectralPolarPanelsClass(GObject.GPointer):
     parent_class: GObject.ObjectClass = ...
 
 class SpectralPolarPanelsComb(GObject.GPointer): ...
+class SpectralPolarPanelsPack(GObject.GPointer): ...
 
 class SphereMap(GObject.Object):
     r"""
