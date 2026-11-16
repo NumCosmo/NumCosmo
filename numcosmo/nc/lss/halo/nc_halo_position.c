@@ -357,7 +357,7 @@ nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdou
 /**
  * nc_halo_position_rotate:
  * @hp: A #NcHaloPosition
- * @v: (inout): a vector
+ * @v: a vector, rotated in place
  *
  * Rotates @v by the rotation of nc_halo_position_polar_angles(), which takes the halo to
  * the positive z axis: the spherical angles of the rotated unit vector of a sky position
