@@ -53,9 +53,10 @@ G_BEGIN_DECLS
  * each function in a vectorized loop against libm (bench_ncm_vmath, run on x86-64 and
  * arm64 by .github/workflows/arch_check.yml):
  *
- * - ncm_vmath_atan2() is faster than libm with SSE2 already, and on arm64 with clang
- *   (2.3-3.6 times); on arm64 with GCC, which does not vectorize these loops, it is slower,
- *   and atan2() is used there (NCM_VMATH_HAVE_VECTOR_TRIG is not defined).
+ * - ncm_vmath_atan2() and ncm_vmath_sincos() are faster than libm with SSE2 already, and
+ *   ncm_vmath_atan2() on arm64 with clang (2.3-3.6 times); on arm64 with GCC, which does
+ *   not vectorize these loops, they are slower, and atan2(), sin() and cos() are used there
+ *   (NCM_VMATH_HAVE_VECTOR_TRIG is not defined).
  * - ncm_vmath_exp(), ncm_vmath_log() and ncm_vmath_pow_pos() are faster with AVX2 or AVX-512
  *   (two-wide division and no fma with SSE2) and on arm64 with clang (1.4-1.8 times for exp
  *   and pow_pos): there NCM_VMATH_HAVE_VECTOR_EXP_LOG is defined, and elsewhere they are
@@ -159,6 +160,76 @@ ncm_vmath_atan2 (const gdouble y, const gdouble x)
   const gboolean x_neg = (copysign (1.0, x) < 0.0);
 
   return copysign (ncm_vmath_select (x_neg, b1, a), y);
+
+#endif /* NCM_VMATH_HAVE_VECTOR_TRIG */
+}
+
+/*
+ * ncm_vmath_sincos:
+ * @x: a value, $|x| \le 2^{20}$
+ * @s: (out): sin (@x)
+ * @c: (out): cos (@x)
+ *
+ * The sine and the cosine of @x. @x is reduced to $r = x - n \pi / 2$, $|r| \le \pi / 4$,
+ * with n rounded by adding and subtracting $1.5 \times 2^{52}$ and $\pi / 2$ in three
+ * parts (Cody and Waite), of which the first two have products with n that are exact;
+ * sin r and cos r are the polynomials of Cephes (Moshier) on $[-\pi/4, \pi/4]$, and the
+ * last two bits of n choose and sign them by selects. Up to $|x| = 10^5$ both are within
+ * 2 ulp of sin() and cos() where their modulus exceeds $10^{-3}$ and within $2.3 \times
+ * 10^{-16}$ of them elsewhere; sin (-0) is +0. Beyond $|x| = 2^{20}$ the reduction loses
+ * digits; an infinite or NaN @x gives NaN. Without NCM_VMATH_HAVE_VECTOR_TRIG they are
+ * sin() and cos().
+ */
+static inline void
+ncm_vmath_sincos (const gdouble x, gdouble *s, gdouble *c)
+{
+#ifndef NCM_VMATH_HAVE_VECTOR_TRIG
+
+  *s = sin (x);
+  *c = cos (x);
+
+#else /* NCM_VMATH_HAVE_VECTOR_TRIG */
+  const gdouble ROUND = 6755399441055744.0;     /* 1.5 2^52: x + ROUND - ROUND rounds x to an integer */
+  const gdouble TWOPI = 0.63661977236758134308; /* 2 / pi */
+  const gdouble DP1   = 1.57079625129699707031e0;
+  const gdouble DP2   = 7.54978941586159635335e-8;
+  const gdouble DP3   = 5.39030285815811905290e-15;
+  const gdouble S0    = 1.58962301576546568060e-10;
+  const gdouble S1    = -2.50507477628578072866e-8;
+  const gdouble S2    = 2.75573136213857245213e-6;
+  const gdouble S3    = -1.98412698295895385996e-4;
+  const gdouble S4    = 8.33333333332211858878e-3;
+  const gdouble S5    = -1.66666666666666307295e-1;
+  const gdouble C0    = -1.13585365213876817300e-11;
+  const gdouble C1    = 2.08757008419747316778e-9;
+  const gdouble C2    = -2.75573141792967388112e-7;
+  const gdouble C3    = 2.48015872888517045348e-5;
+  const gdouble C4    = -1.38888888888730564116e-3;
+  const gdouble C5    = 4.16666666666665929218e-2;
+  const gdouble tn    = x * TWOPI + ROUND;
+  const gdouble n     = tn - ROUND;
+  const gdouble r     = ((x - n * DP1) - n * DP2) - n * DP3;
+  const gdouble z     = r * r;
+  const gdouble sr    = r + r * z * (((((S0 * z + S1) * z + S2) * z + S3) * z + S4) * z + S5);
+  const gdouble cr    = (1.0 - 0.5 * z) + z * z * (((((C0 * z + C1) * z + C2) * z + C3) * z + C4) * z + C5);
+  guint64 q, us, uc, ns, nc;
+  gdouble sv, cv;
+
+  /* n mod 4 is in the last two bits of the mantissa of tn (1.5 2^52 is a multiple of 4) */
+  memcpy (&q, &tn, sizeof (q));
+
+  /* Quadrant q: (sin, cos) = (sr, cr), (cr, -sr), (-sr, -cr), (-cr, sr) */
+  sv = ncm_vmath_select (q & 1, cr, sr);
+  cv = ncm_vmath_select (q & 1, sr, cr);
+  ns = (q & 2) << 62;
+  nc = ((q + 1) & 2) << 62;
+
+  memcpy (&us, &sv, sizeof (us));
+  memcpy (&uc, &cv, sizeof (uc));
+  us ^= ns;
+  uc ^= nc;
+  memcpy (s, &us, sizeof (us));
+  memcpy (c, &uc, sizeof (uc));
 
 #endif /* NCM_VMATH_HAVE_VECTOR_TRIG */
 }

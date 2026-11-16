@@ -64,6 +64,36 @@ BENCH_LOOP (_lm_pow, pow (y[i], x[i]))
 BENCH_LOOP (_vm_atan2, ncm_vmath_atan2 (x[i], y[i]))
 BENCH_LOOP (_lm_atan2, atan2 (x[i], y[i]))
 
+/* sin + cos of x: the sum keeps one output per value, as the loops above */
+static void __attribute__ ((noinline))
+
+_vm_sincos (const guint n, const gdouble *x, const gdouble *y, gdouble *out)
+{
+  guint i;
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+  {
+    gdouble s, c;
+
+    ncm_vmath_sincos (x[i], &s, &c);
+    out[i] = s + c;
+  }
+}
+
+static void __attribute__ ((noinline))
+
+_lm_sincos (const guint n, const gdouble *x, const gdouble *y, gdouble *out)
+{
+  guint i;
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+    out[i] = sin (x[i]) + cos (x[i]);
+}
+
 /* The least time per value, in ns, of BENCH_REPEAT passes of BENCH_TOTAL values */
 static gdouble
 _bench (BenchLoop f, const guint n, const gdouble *x, const gdouble *y, gdouble *out, gdouble *sink)
@@ -92,9 +122,9 @@ gint
 main (void)
 {
   const guint ns[]     = {2, 5, 9, 17, 33, 65, 257, 1025};
-  const gchar *names[] = {"exp", "log", "pow_pos", "atan2"};
-  const BenchLoop vm[] = {_vm_exp, _vm_log, _vm_pow, _vm_atan2};
-  const BenchLoop lm[] = {_lm_exp, _lm_log, _lm_pow, _lm_atan2};
+  const gchar *names[] = {"exp", "log", "pow_pos", "atan2", "sincos"};
+  const BenchLoop vm[] = {_vm_exp, _vm_log, _vm_pow, _vm_atan2, _vm_sincos};
+  const BenchLoop lm[] = {_lm_exp, _lm_log, _lm_pow, _lm_atan2, _lm_sincos};
   gdouble *x           = g_new (gdouble, 1025);
   gdouble *y           = g_new (gdouble, 1025);
   gdouble *out         = g_new (gdouble, 1025);

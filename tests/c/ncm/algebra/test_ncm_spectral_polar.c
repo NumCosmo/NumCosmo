@@ -4,10 +4,13 @@
  *  Wed Nov 11 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * test_ncm_spectral_polar.c
  * Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -89,6 +92,7 @@ void test_ncm_spectral_polar_peak_origin (TestNcmSpectralPolar *test, gconstpoin
 void test_ncm_spectral_polar_peak_wrong_seed (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_peak_edges (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_power_laws (TestNcmSpectralPolar *test, gconstpointer pdata);
+void test_ncm_spectral_polar_radial (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_retest (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_bisect (TestNcmSpectralPolar *test, gconstpointer pdata);
@@ -131,6 +135,7 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak_edges", test_ncm_spectral_polar_peak_edges);
   TEST_NCM_SPECTRAL_POLAR_ADD ("peak_edges/min_radial_panels", test_ncm_spectral_polar_peak_edges_min_radial_panels);
   TEST_NCM_SPECTRAL_POLAR_ADD ("power_laws", test_ncm_spectral_polar_power_laws);
+  TEST_NCM_SPECTRAL_POLAR_ADD ("radial", test_ncm_spectral_polar_radial);
   TEST_NCM_SPECTRAL_POLAR_ADD ("retest", test_ncm_spectral_polar_retest);
   TEST_NCM_SPECTRAL_POLAR_ADD ("panels", test_ncm_spectral_polar_panels);
   TEST_NCM_SPECTRAL_POLAR_ADD ("bisect", test_ncm_spectral_polar_bisect);
@@ -590,6 +595,92 @@ test_ncm_spectral_polar_power_laws (TestNcmSpectralPolar *test, gconstpointer pd
   }
 
   gsl_integration_workspace_free (ws);
+}
+
+/* rho (r) = (1 + 2 r^2) exp (-r), the radial factor of test_ncm_spectral_polar_radial() */
+static gdouble
+_rho (gdouble r)
+{
+  return (1.0 + 2.0 * r * r) * exp (-r);
+}
+
+static void
+_radial_rho (gpointer user_data, guint n, const gdouble *r, gdouble *rho)
+{
+  guint i;
+
+  for (i = 0; i < n; i++)
+    rho[i] = _rho (r[i]);
+}
+
+/* The Gaussian of a TestGauss times rho (r): what ncm_spectral_polar_integrate_full() integrates */
+static void
+_gauss_rho (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
+{
+  guint j;
+
+  _gauss (user_data, r, n, theta, cos_theta, sin_theta, fval);
+
+  for (j = 0; j < n; j++)
+    fval[j] *= _rho (r);
+}
+
+/*
+ * ncm_spectral_polar_integrate_full() with a radial factor is ncm_spectral_polar_integrate()
+ * of G times that factor, up to rounding, with power laws at both ends, for passes of every
+ * size (level-min 0 makes passes of 1 to 5 radii, below the vectorized weights) and for the
+ * peak edges and a single radial panel
+ */
+void
+test_ncm_spectral_polar_radial (TestNcmSpectralPolar *test, gconstpointer pdata)
+{
+  const gdouble exponents[][2] = {
+    {
+      0.0, 0.0
+    }, {
+      -0.43, 0.65
+    }, {
+      1.0, 0.0
+    }, {
+      2.5, 1.5
+    }
+  };
+  const gdouble r_edges_one[] = {0.0, 1.0};
+  const gdouble t_edges[]     = {-M_PI, 0.0, M_PI};
+  const gdouble reltol        = 1.0e-9;
+  guint i;
+
+  ncm_spectral_polar_set_level_min (test->sp, 0);
+
+  for (i = 0; i < 2 * G_N_ELEMENTS (exponents); i++)
+  {
+    const guint ie  = i % G_N_ELEMENTS (exponents);
+    const gdouble a = exponents[ie][0];
+    const gdouble b = exponents[ie][1];
+    TestGauss g     = { 0.4 * cos (0.7), 0.4 * sin (0.7), 0.2, 0 };
+    GError *error   = NULL;
+    gdouble res_full, res;
+
+    if (i < G_N_ELEMENTS (exponents))
+    {
+      ncm_spectral_polar_peak_edges (test->sp, 1.0, 0.4, 0.7, 0.2, 0.5, test->r_edges, test->theta_edges);
+    }
+    else
+    {
+      _set_edges (test->r_edges, r_edges_one, G_N_ELEMENTS (r_edges_one));
+      _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
+    }
+
+    res_full = ncm_spectral_polar_integrate_full (test->sp, &_gauss, &_radial_rho, &g, 1.0, a, b, test->r_edges, test->theta_edges,
+                                                  reltol, 0.0, NULL, NULL, &error);
+    g_assert_no_error (error);
+    res = ncm_spectral_polar_integrate (test->sp, &_gauss_rho, &g, 1.0, a, b, test->r_edges, test->theta_edges,
+                                        reltol, 0.0, NULL, NULL, &error);
+    g_assert_no_error (error);
+
+    g_assert_cmpfloat (res, >, 0.0);
+    ncm_assert_cmpdouble_e (res_full, ==, res, 1.0e-12, 0.0);
+  }
 }
 
 /*
