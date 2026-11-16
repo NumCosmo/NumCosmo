@@ -358,7 +358,9 @@ $\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, the parameters of the populati
 was built for. A build
 computes of the order of $10^3$ integrals, so the approximation reduces the cost when the
 parameters of the population are fixed, and increases it when they change at every step
-unless a galaxy is evaluated at more shears per step than the build computes.
+unless a galaxy is evaluated at more shears per step than the build computes. With free
+parameters of the population, [the expansion below](#expansion-over-the-population-parameters)
+builds it once over their box.
 
 Once built, each panel of the approximation is trimmed
 ([Trimming and Evaluation at Many Points](../../../ncm/algebra/spectral_polar.qmd#trimming-and-evaluation-at-many-points))
@@ -370,6 +372,62 @@ faster evaluation. The nodes of the redshift integral of one galaxy are evaluate
 ([[numcosmo|nc_galaxy_shape_factor_eval_nodes]]): the approximation is checked once per
 galaxy, and the shears that fall in one panel are evaluated several at a time. These values
 are those of the evaluation at one shear within rounding, not bit for bit.
+
+## Expansion over the Population Parameters
+
+With [[numcosmo|NcGalaxyShapeFactorSpectral:pop-order]] $K \ge 2$ and $d$ free parameters
+$\theta = (\theta_1, \dots, \theta_d)$ of the population, each between its lower and upper
+bound, the approximation in $g$ of a galaxy is built once for the whole box of $\theta$
+instead of once per value of $\theta$.
+
+- Nodes: the $K^d$ populations at the tensor Chebyshev--Lobatto points of the box,
+  $\theta_i = c_i + h_i \cos (\pi j / (K - 1))$, $j = 0, \dots, K - 1$, with $c_i$ and $h_i$
+  the center and half width of the box of $\theta_i$. They are made, with their prepared
+  data, when the box changes ([[numcosmo|nc_galaxy_shape_factor_prepare]]), not per galaxy:
+  they share one prepared [[numcosmo|NcGalaxyShapePopData]] each for every galaxy, so the
+  population must not depend on the galaxy.
+- Layout: the approximation in $g$ of the population at the center of the box is built as
+  in [Interpolation in $g$](#interpolation-in-g), its panels at their accepted levels. Every
+  node is expanded on those panels ([[numcosmo-math|ncm_spectral_polar_refit_multi]]); its
+  values at the points of the panels come from the integrals of the center, which give the
+  integrals of every node from the same samples of the integrand
+  ([[numcosmo-math|ncm_spectral_polar_integrate_full_multi]]): one adaptive integral per
+  point instead of $K^d$.
+- Modes: the values at the nodes are transformed, parameter by parameter, to the
+  coefficients of the Chebyshev interpolation over the box,
+  $$\ln P (\epsilon_\mathrm{obs} \mid g; \theta) = \sum_m T_m (x) \, L_m (g), \qquad
+  T_m (x) = \prod_{i = 1}^d T_{m_i} (x_i), \quad x_i = (\theta_i - c_i) / h_i,$$
+  each $L_m$ an approximation in $g$ on the panels of the layout. The modes are cut together
+  ([[numcosmo-math|ncm_spectral_polar_panels_trim_modes]]) so that $\ln P$ changes by at
+  most $10^{-4}$ `interp-abstol` anywhere in the box, as the approximation of one
+  population is cut.
+- Truncation: on each panel let $D_n$ be the sum of the absolute values of the coefficients
+  of the modes with $\max_i m_i = n$. The error of the expansion over the box is estimated
+  by $\max (D_{K - 1}, D_{K - 2}^2 / D_{K - 3})$ for $K \ge 4$ and by $D_{K - 1}$ below:
+  the last terms, as for a Chebyshev series, and their prediction from the two degrees
+  before, which does not vanish when $\ln P$ is even or odd in a parameter about the center
+  of the box (every other $D_n$ is then zero, and $D_{K - 3} = 0$ makes the prediction
+  infinite). A galaxy whose estimate exceeds `interp-abstol` on some panel keeps no
+  expansion: it is integrated, counted
+  ([[numcosmo|nc_galaxy_shape_factor_spectral_get_pop_n_unconverged]]), and the first such
+  galaxy is reported in a warning. A too low $K$ or a too wide box costs time, not accuracy.
+- Evaluation: the weights $T_m (x)$ of the current parameters are computed once per change of
+  the parameters, and for each panel the shears fall in the modes are combined into the
+  approximation of the current population on that panel only, kept for the next shears in
+  it. A population outside its box is integrated.
+
+Prepared catalogs store the modes of each galaxy ([[numcosmo|NcGalaxyWLObs:shape-interp-modes]],
+one [[numcosmo-math|NcmSpectralPolarPanelsArray]] per galaxy), and their record holds the
+population with its free parameters and their bounds: the box. A fit that reads them
+evaluates the expansion over the box of the record, whatever its own `pop-order`, and
+accepts any population that the box covers:
+
+- a parameter free in the record may be free in the fit, over bounds inside the box, or
+  fixed at a value inside it;
+- a parameter fixed in the record must be fixed in the fit, at the same value.
+
+The values are those of the expansion at the parameters of the fit, bit for bit the values
+of the fit that built the catalog. Anything else aborts with every difference in the message.
 
 ## The Nodes of a Galaxy: a Table Along its Line
 
@@ -479,6 +537,8 @@ four rows compute 4% to 16% fewer integrals.
 | $\ln A (t)$ | `_nc_galaxy_shape_factor_spectral_second_order_ln` |
 | $b + 2$, $k_0$, $k_1$, divided by $P (t_s)$ | `exponent`, `k_0`, `k_1` |
 | $G (r, \theta)$ | the two kernel functions, one per convention |
+| $K$, $c_i \pm h_i$, $T_m (x)$ | `K`, `lb` and `ub` of the box, the weights `w` of a galaxy |
+| $D_n$ | `D` of `_nc_galaxy_shape_factor_spectral_interp_build` |
 
 ## API Reference
 
