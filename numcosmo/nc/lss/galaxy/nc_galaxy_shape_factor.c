@@ -749,9 +749,9 @@ nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxySha
    * With the halo on the z axis, the polar angle theta and the azimuth phi of
    * nc_halo_position_polar_angles() are those of v: sin (theta) = rho / |v| and
    * (cos (2 phi), sin (2 phi)) = (x^2 - y^2, 2 x y) / rho^2, rho^2 = x^2 + y^2, with
-   * phi = 0 at rho = 0 as there. The frame of data->coord takes phi to pi - phi in the
-   * CARTESIAN frame (nc_wl_ellipticity_celestial_to_frame_angle()), which changes the
-   * sign of sin (2 phi).
+   * phi = 0 at rho = 0 as there. The frame of data->coord is applied as to any spin-2
+   * value (nc_wl_ellipticity_celestial_to_frame()): exp (2 i phi) at the angle of
+   * nc_wl_ellipticity_celestial_to_frame_angle() is its image, so both keep one convention.
    */
   {
     const gdouble x    = v.c[0];
@@ -776,8 +776,12 @@ nc_galaxy_shape_factor_update_data_radius (NcGalaxyShapeFactor *gsf, NcGalaxySha
 
     /* LCOV_EXCL_STOP */
 
-    if (data->coord == NC_WL_ELLIPTICITY_FRAME_CARTESIAN)
-      cdata->rot_im = -cdata->rot_im;
+    {
+      const NcmComplex rot = nc_wl_ellipticity_celestial_to_frame (data->coord, cdata->rot_re + I * cdata->rot_im);
+
+      cdata->rot_re = creal (rot);
+      cdata->rot_im = cimag (rot);
+    }
   }
 }
 
@@ -1728,8 +1732,11 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
  * Sets @out[j] to nc_galaxy_shape_factor_eval_ln_marginal() (when @want_log) or to
  * nc_galaxy_shape_factor_eval_marginal() at (@g_1[j], @g_2[j]), for the galaxy of @data,
  * in one call. A subclass may do once for the galaxy what the per-point functions do at
- * each point; the values are the same within the few ulp by which a loop that vectorizes
- * and a scalar computation can differ.
+ * each point; the values are those of the per-point functions within rounding, not bit
+ * for bit: a loop that vectorizes and a scalar computation may contract a * b + c into an
+ * fma differently, and a difference in the last bit of an intermediate is amplified by
+ * the function (|ln P| times for P = exp (ln P), the slope of an interpolant for its
+ * coordinates). They agree within 1e-13 of max (1, |ln P|) in ln P, and of P relative.
  */
 void
 nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,

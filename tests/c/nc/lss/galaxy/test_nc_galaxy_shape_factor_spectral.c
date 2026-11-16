@@ -55,30 +55,13 @@
 #define TEST_SPECTRAL_TOL (1.0e-7)
 
 /*
- * A loop that vectorizes and a scalar computation of the same value may differ by a few
- * ulp: the compiler can contract a * b + c into an fma differently in each.
+ * A loop that vectorizes and a scalar computation of the same ln P agree within rounding,
+ * not bit for bit (nc_galaxy_shape_factor_eval_nodes()): the compiler may contract
+ * a * b + c into an fma differently in each, and a difference in the last bit of an
+ * intermediate is amplified by what follows. They are compared within 1e-13 of
+ * max (1, |ln P|).
  */
-#define TEST_SPECTRAL_LOOP_ULP (2)
-
-/* Distance in ulp between two finite doubles */
-static guint64
-_test_spectral_ulp_diff (const gdouble a, const gdouble b)
-{
-  gint64 ia, ib;
-
-  if (a == b)
-    return 0;
-
-  if ((a < 0.0) != (b < 0.0))
-    return G_MAXUINT64;
-
-  memcpy (&ia, &a, sizeof (ia));
-  memcpy (&ib, &b, sizeof (ib));
-
-  return (ia > ib) ? (guint64) (ia - ib) : (guint64) (ib - ia);
-}
-
-#define TEST_SPECTRAL_ASSERT_LOOP(loop, scalar) g_assert_cmpuint (_test_spectral_ulp_diff ((loop), (scalar)), <=, TEST_SPECTRAL_LOOP_ULP)
+#define TEST_SPECTRAL_ASSERT_LOOP(loop, scalar) g_assert_cmpfloat (fabs ((loop) - (scalar)), <=, 1.0e-13 * MAX (1.0, fabs (scalar)))
 
 /*
  * Largest |ln P (interpolant) - ln P (integral)| accepted at the default interp-abstol
@@ -1296,7 +1279,7 @@ test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral 
 }
 
 /* nc_galaxy_shape_factor_eval_nodes() gives, shear by shear, what the per-point functions
- * give, within TEST_SPECTRAL_LOOP_ULP, by integration and from the interpolant, inside and
+ * give, within rounding (TEST_SPECTRAL_ASSERT_LOOP), by integration and from the interpolant, inside and
  * outside interp-g-max, in the linear and the logarithmic forms. */
 void
 test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
@@ -1342,7 +1325,13 @@ test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral
                           nc_galaxy_shape_factor_eval_marginal (gsf, test->pop, data, g1[i], g2[i], -0.25, 0.35);
 
         g_assert_true (gsl_finite (v));
-        TEST_SPECTRAL_ASSERT_LOOP (out[i], v);
+
+        /* ln P within TEST_SPECTRAL_ASSERT_LOOP, and P relative within the same, since the
+         * relative error of P is the error of ln P */
+        if (want_log)
+          TEST_SPECTRAL_ASSERT_LOOP (out[i], v);
+        else
+          g_assert_cmpfloat (fabs (out[i] / v - 1.0), <=, 1.0e-13 * MAX (1.0, fabs (log (v))));
       }
     }
 

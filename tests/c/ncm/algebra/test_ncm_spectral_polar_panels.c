@@ -664,7 +664,11 @@ test_ncm_spectral_polar_panels_find_panel_near (TestNcmSpectralPolarPanels *test
   }
 }
 
-/* eval_on_array against eval_on at n random points of every panel, exactly */
+/*
+ * eval_on_array against eval_on at n random points of every panel, within rounding: 1e-13
+ * of the sum of the moduli of the coefficients of the panel, the scale of the rounding
+ * of the Clenshaw sums (they may be contracted into fma differently)
+ */
 static void
 _test_eval_on_array_check (TestNcmSpectralPolarPanels *test, const guint n_max)
 {
@@ -678,9 +682,12 @@ _test_eval_on_array_check (TestNcmSpectralPolarPanels *test, const guint n_max)
   for (i = 0; i < n_panels; i++)
   {
     gdouble ra, rb, ta, tb;
-    guint n_r, n_theta;
+    guint n_r, n_theta, q;
+    const gdouble *c = ncm_spectral_polar_panels_peek_panel (test->spp, i, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+    gdouble l1       = 0.0;
 
-    ncm_spectral_polar_panels_peek_panel (test->spp, i, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+    for (q = 0; q < n_r * n_theta; q++)
+      l1 += fabs (c[q]);
 
     for (n = 1; n <= n_max; n++)
     {
@@ -699,8 +706,8 @@ _test_eval_on_array_check (TestNcmSpectralPolarPanels *test, const guint n_max)
       {
         const gdouble ref = ncm_spectral_polar_panels_eval_on (test->spp, i, r[j], theta[j]);
 
-        g_assert_cmpfloat (out[j], ==, ref);
-        g_assert_cmpfloat (in_place[j], ==, ref);
+        g_assert_cmpfloat (fabs (out[j] - ref), <=, 1.0e-13 * l1);
+        g_assert_cmpfloat (in_place[j], ==, out[j]);
       }
     }
   }

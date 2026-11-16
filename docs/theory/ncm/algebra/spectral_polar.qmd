@@ -255,6 +255,27 @@ A point on an edge belongs to the panel that starts there. A point outside the e
 assigned to the nearest panel, whose series is extrapolated. The angle is not wrapped: the
 caller gives $\theta$ inside $[\theta_0, \theta_{n_\theta}]$.
 
+### Trimming and Evaluation at Many Points
+
+A panel holds the $(N_r + 1) \times (N_\theta + 1)$ coefficients of its levels when it is
+accepted. The function [[numcosmo-math|ncm_spectral_polar_panels_trim]] cuts each panel to
+a leading block of $K_r \times K_\theta$ coefficients, $K_r \le N_r + 1$ and
+$K_\theta \le N_\theta + 1$: the smallest block such that the coefficients dropped have
+$\ell_1$ norm at most a tolerance $\varepsilon_t$. Since $|T_k| \le 1$ on the panel, the
+approximation then changes by at most $\varepsilon_t$ at any point of it, and one
+evaluation takes $K_r K_\theta$ multiplications. A panel is therefore described by its
+numbers of coefficients $K_r$ and $K_\theta$, which
+[[numcosmo-math|ncm_spectral_polar_panels_peek_panel]] returns, and no longer by its levels;
+an object serialized before trimming existed gives its panels by their levels, and is
+read untrimmed.
+
+The function [[numcosmo-math|ncm_spectral_polar_panels_eval_on_array]] evaluates one panel
+at several points: the recurrences of step 2 run for four (eight with AVX-512) points at
+once, each coefficient loaded once for all of them. It performs the operations of the
+evaluation at one point in the same order, but a compiler may contract them into fused
+multiply-adds differently in the two, so the values agree within about $10^{-13}$ of the
+$\ell_1$ norm of the coefficients rather than bit for bit.
+
 The remark below Eq. (5) applies to the approximation directly: $D_r + D_\theta$ is the
 change between grids, so a maximum of $F$ that is below $\varepsilon_F$ at every node of
 a panel is absent from its coefficients, and the panel is accepted without it. The edges
@@ -267,6 +288,8 @@ must therefore be placed from the known position and width of such a maximum, as
 |---|---|
 | $r_a, r_b, \theta_a, \theta_b$ | `ra`, `rb`, `ta`, `tb` of a panel |
 | $l_r, l_\theta$; $N_r, N_\theta$ | `lx`, `ly`; `n`, `m` |
+| $K_r, K_\theta$ of a stored panel | `n_r`, `n_theta` of `NcmSpectralPolarPanels` |
+| $\varepsilon_t$ of a trim | `tol` of `ncm_spectral_polar_panels_trim` |
 | $r^{a - c_a} (R - r)^{b - c_b}$ at the radial nodes | `wr` |
 | $c^{kl}$ | `coeffs`, row $l$, column $k$ |
 | $b_r^k$, $b_\theta^l$ | `br`, `bt` |

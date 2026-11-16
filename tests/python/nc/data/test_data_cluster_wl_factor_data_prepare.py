@@ -100,8 +100,12 @@ def _gauss_pz_spline(zp, sigma):
     return spline
 
 
-def _build(shape_name, profile_name, redshift_name, n_gal=None, zf=100.0):
-    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset)."""
+def _build(
+    shape_name, profile_name, redshift_name, n_gal=None, zf=100.0, separate_dist=False
+):
+    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset). The
+    surface mass density has a distance of final redshift zf; with separate_dist the
+    halo position has its own distance (zf = 100), otherwise it shares that one."""
     if n_gal is None:
         n_gal = N_GAL_OF.get(shape_name, N_GAL)
     cosmo = Nc.HICosmoDEXcdm.new()
@@ -109,7 +113,7 @@ def _build(shape_name, profile_name, redshift_name, n_gal=None, zf=100.0):
     hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
     hms.param_set_by_name("log10MDelta", 14.5)
     dp = PROFILES[profile_name](hms)
-    hp = Nc.HaloPosition.new(dist)
+    hp = Nc.HaloPosition.new(Nc.Distance.new(100.0) if separate_dist else dist)
     smd = Nc.WLSurfaceMassDensity.new(dist)
     hp.param_set_by_name("z", Z_CL)
     hp.prepare(cosmo)
@@ -222,21 +226,48 @@ def test_parallel_data_prepare_matches_serial(shape_name, profile_name, redshift
     np.testing.assert_array_equal(serial[2], parallel[2])
 
 
-def test_distance_zf_covers_the_redshift_support():
+def _z_top(dcwlf):
+    obs = dcwlf.peek_obs()
+    return max(obs.peek_pz(i).get_bounds()[1] for i in range(obs.len()))
+
+
+ZF_WARNING = "above the final redshift zf"
+
+
+@pytest.mark.parametrize("separate_dist", [False, True])
+def test_distance_zf_get_z_max(capfd, separate_dist):
     """The comoving distance is a spline only up to the zf of NcDistance, and above it an
-    integral cached at every redshift: preparing the likelihood raises zf to the top of
-    the photo-z support of every galaxy, without changing the likelihood."""
-    ref, mset_ref = _build("var-add", "nfw", "spline")
-    dcwlf, mset = _build("var-add", "nfw", "spline", zf=0.5)
+    integral cached at every redshift. The likelihood does not change the distance, a
+    model other data may share: it warns when the redshift integration of the galaxies
+    goes above zf, and nc_data_cluster_wl_factor_get_z_max() gives the zf to require.
+    Raising it after an evaluation, as the warning says and with nothing prepared by
+    hand, the models rebuild the distance: the likelihood matches that of a distance
+    built with a large zf, also after the cluster moves."""
+    zf = 0.5 if separate_dist else 0.55
+    ref, mset_ref = _build("var-add", "nfw", "spline", separate_dist=separate_dist)
+    dcwlf, mset = _build("var-add", "nfw", "spline", zf=zf, separate_dist=separate_dist)
     dist = mset.peek(Nc.WLSurfaceMassDensity.id()).props.distance
 
-    obs = dcwlf.peek_obs()
-    z_top = max(obs.peek_pz(i).get_bounds()[1] for i in range(obs.len()))
-    assert z_top > 0.5
+    z_max = dcwlf.get_z_max(mset)
+    assert z_max == _z_top(dcwlf) > zf
+
+    capfd.readouterr()
+    _m2lnP(ref, mset_ref)
+    _m2lnP(dcwlf, mset)
+    assert ZF_WARNING in capfd.readouterr().err
+    assert dist.props.zf == zf
+
+    dist.require_zf(z_max)
+    np.testing.assert_allclose(
+        _m2lnP(dcwlf, mset), _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0
+    )
+
+    for m in (mset, mset_ref):
+        m.peek(Nc.HaloPosition.id()).param_set_by_name("z", 0.3)
 
     m2lnP = _m2lnP(dcwlf, mset)
 
-    assert dist.props.zf >= z_top
+    assert ZF_WARNING not in capfd.readouterr().err
     np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
 
 
@@ -299,6 +330,48 @@ def test_clone_takes_the_published_grid_and_critical_densities():
     fresh.props.node_config = dcwlf.props.node_config
     mset_fresh.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
     np.testing.assert_array_equal(_m2lnP(fresh, mset_fresh), moved)
+
+
+def test_distance_zf_after_model_swap(capfd):
+    """A surface mass density swapped in after the first evaluation, with a distance of
+    low zf, is warned about too, although the catalog did not change. The warning is
+    given once in the process for a redshift and a zf (the zf here is used by no other
+    test), so the copies a sampler makes of the data do not repeat it."""
+    dcwlf, mset = _build("var-add", "nfw", "spline", separate_dist=True)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    _m2lnP(dcwlf, mset)
+
+    smd = Nc.WLSurfaceMassDensity.new(Nc.Distance.new(0.6))
+    smd.prepare_if_needed(cosmo)
+    mset.set(smd)
+
+    capfd.readouterr()
+    _m2lnP(dcwlf, mset)
+    assert ZF_WARNING in capfd.readouterr().err
+    assert smd.props.distance.props.zf == 0.6
+
+    copy = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).dup_obj(dcwlf)
+    _m2lnP(copy, mset)
+    assert ZF_WARNING not in capfd.readouterr().err
+
+
+def test_peek_pz_is_usable():
+    """The likelihood reads only the knots and values of the P(z) splines, so a catalog
+    keeps them unprepared; nc_galaxy_wl_obs_peek_pz() still returns a spline that
+    evaluates, here from a catalog loaded from its serialization, before and after the
+    likelihood read it."""
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    obs = ser.from_string(ser.to_string(dcwlf.peek_obs(), True))
+    dcwlf.set_obs(obs)
+    _, _, zp, sigma0, *_ = _galaxies(obs.len())
+
+    def peak(i):
+        return 1.0 / (np.sqrt(2.0 * np.pi) * sigma0[i] * (1.0 + zp[i]))
+
+    np.testing.assert_allclose(obs.peek_pz(5).eval(zp[5]), peak(5), rtol=1.0e-3)
+    _m2lnP(dcwlf, mset)
+    np.testing.assert_allclose(obs.peek_pz(6).eval(zp[6]), peak(6), rtol=1.0e-3)
 
 
 def _reload(dcwlf):

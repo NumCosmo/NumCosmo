@@ -4,11 +4,14 @@
  *  Wed Aug 13 21:13:59 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -50,7 +53,9 @@ NcmVector *ncm_spline_cubic_peek_b_vec (const NcmSplineCubic *s);
 NcmVector *ncm_spline_cubic_peek_c_vec (const NcmSplineCubic *s);
 NcmVector *ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s);
 
+G_DEPRECATED
 NcmVector *ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s);
+G_DEPRECATED
 NcmVector *ncm_spline_cubic_peek_offdiag_vec (const NcmSplineCubic *s);
 
 G_END_DECLS
