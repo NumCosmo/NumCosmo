@@ -33,7 +33,7 @@ from typing import Annotated
 
 import typer
 
-from .. import Nc, Ncm
+from .. import Ncm
 from ..interpolation.stats_dist import (
     CrossValidationMethod,
     InterpolationKernel,
@@ -466,14 +466,6 @@ class RunMCMC(RunCommonOptions):
 
         if self.seed is not None:
             esmcmc.set_rng(Ncm.RNG.seeded_new(None, self.seed))
-
-        # A cluster WL dataset builds its redshift grid (and calibrates it) here on
-        # every thread at once; start_run() then shares it with the walkers' clones.
-        dset = self.fit.peek_likelihood().peek_dataset()
-        for i in range(dset.get_length()):
-            data = dset.get_data(i)
-            if isinstance(data, Nc.DataClusterWLFactor):
-                data.data_prepare(self.mset)
 
         esmcmc.start_run()
         esmcmc.run(self.nsamples)

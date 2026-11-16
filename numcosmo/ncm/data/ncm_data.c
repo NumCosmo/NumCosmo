@@ -4,10 +4,13 @@
  *  Sat Mar 29 15:51:46 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -717,6 +720,11 @@ ncm_data_is_resampling (NcmData *data)
  * payload that would otherwise be duplicated once per parallel worker.
  * Subclasses only need to override this when they hold such a payload; the
  * default implementation does nothing.
+ *
+ * What @data shares is what it holds when this is called, so a payload built
+ * by ncm_data_prepare() is shared only if @data was prepared first: the
+ * samplers call ncm_dataset_prepare() before ncm_dataset_register_shared().
+ * A data that is not prepared shares nothing of it, and each copy builds its own.
  *
  */
 void
