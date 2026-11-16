@@ -30,6 +30,7 @@ Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
+import re
 import pytest
 from typer.testing import CliRunner
 
@@ -1864,9 +1865,10 @@ def test_wl_catalog_shape_interp_concentration_pair(
         "--cluster-c-min=2.0",
     )
     assert result.exit_code != 0
-    assert "--cluster-c-min" in str(result.exception) or "--cluster-c-min" in (
-        result.output
-    )
+    # On GitHub Actions typer forces a colored panel of 80 columns: compare the plain words
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", plain).split())
+    assert "--cluster-c-min" in plain
 
 
 def test_wl_catalog_shape_interp_replaces_record(
