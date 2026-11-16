@@ -453,7 +453,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
                 f"interp_abstol={DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL}, "
                 "interp_min_radial_panels="
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS}, "
-                f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL}, "
+                f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL} (negative: reltol / 10), "
                 f"restrict_range={DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE}"
             ),
         ]
