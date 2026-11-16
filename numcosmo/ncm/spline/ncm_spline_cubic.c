@@ -63,6 +63,9 @@ typedef struct _NcmSplineCubicPrivate
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcmSplineCubic, ncm_spline_cubic, NCM_TYPE_SPLINE)
 
+/* Serializes the allocations the peek functions make (_ncm_spline_cubic_ensure()) */
+G_LOCK_DEFINE_STATIC (ncm_spline_cubic_alloc);
+
 static void
 ncm_spline_cubic_init (NcmSplineCubic *sc)
 {
@@ -126,16 +129,13 @@ _ncm_spline_cubic_alloc (NcmSplineCubic *sc, gsize n)
 
   g_assert (!self->init);
 
-  self->b = ncm_vector_new (n);
-  self->c = ncm_vector_new (n);
-  self->d = ncm_vector_new (n);
+  self->b   = ncm_vector_new (n);
+  self->c   = ncm_vector_new (n);
+  self->d   = ncm_vector_new (n);
+  self->len = n;
 
-  /* Work space of a tridiagonal solve, made by the peek functions on demand */
-  self->diag    = NULL;
-  self->offdiag = NULL;
-
-  self->init = TRUE;
-  self->len  = n;
+  /* Last, so that a thread that reads init TRUE sees the vectors */
+  g_atomic_int_set (&self->init, TRUE);
 
   return;
 }
@@ -151,23 +151,52 @@ _ncm_spline_cubic_free (NcmSplineCubic *sc)
     ncm_vector_clear (&self->c);
     ncm_vector_clear (&self->d);
 
-    ncm_vector_clear (&self->diag);
-    ncm_vector_clear (&self->offdiag);
-
     self->init = FALSE;
   }
+
+  /* Allocated apart from the coefficients, by the deprecated peek functions */
+  ncm_vector_clear (&self->diag);
+  ncm_vector_clear (&self->offdiag);
 }
 
 /* The coefficients are allocated by the first peek of one of them, which the prepare of a
  * subclass makes: a spline that is set and never prepared (the photo-z tables of a
- * catalog, for example) holds its knots and values only. */
+ * catalog, for example) holds its knots and values only. The peek functions take a const
+ * spline, so the allocation is made under a lock, and init is set last, so that threads
+ * that peek the same spline allocate once. */
 static void
 _ncm_spline_cubic_ensure (NcmSplineCubic *sc)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private (sc);
 
-  if (!self->init)
-    _ncm_spline_cubic_alloc (sc, self->len);
+  if (!g_atomic_int_get (&self->init))
+  {
+    G_LOCK (ncm_spline_cubic_alloc);
+
+    if (!self->init)
+      _ncm_spline_cubic_alloc (sc, self->len);
+
+    G_UNLOCK (ncm_spline_cubic_alloc);
+  }
+}
+
+/* A tridiagonal work vector of the length of the spline, allocated on the first call, under
+ * the lock of the coefficients */
+static NcmVector *
+_ncm_spline_cubic_ensure_work (NcmVector **v, const gsize len)
+{
+  NcmVector *ret;
+
+  G_LOCK (ncm_spline_cubic_alloc);
+
+  if ((*v == NULL) && (len > 0))
+    *v = ncm_vector_new (len);
+
+  ret = *v;
+
+  G_UNLOCK (ncm_spline_cubic_alloc);
+
+  return ret;
 }
 
 static void
@@ -400,7 +429,9 @@ _ncm_spline_cubic_integ_idx (const NcmSpline *s, const gdouble xi, const gsize i
  * ncm_spline_cubic_peek_b_vec:
  * @s: a #NcmSplineCubic
  *
- * For subclasses implementing the prepare method.
+ * For subclasses implementing the prepare method. The coefficients are allocated by the
+ * first call of this function, ncm_spline_cubic_peek_c_vec() or
+ * ncm_spline_cubic_peek_d_vec(), which is safe from several threads.
  *
  * Returns: (transfer none): the coefficients $b_i$.
  */
@@ -418,7 +449,7 @@ ncm_spline_cubic_peek_b_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_c_vec:
  * @s: a #NcmSplineCubic
  *
- * For subclasses implementing the prepare method.
+ * For subclasses implementing the prepare method. See ncm_spline_cubic_peek_b_vec().
  *
  * Returns: (transfer none): the coefficients $c_i$.
  */
@@ -436,7 +467,7 @@ ncm_spline_cubic_peek_c_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_d_vec:
  * @s: a #NcmSplineCubic
  *
- * For subclasses implementing the prepare method.
+ * For subclasses implementing the prepare method. See ncm_spline_cubic_peek_b_vec().
  *
  * Returns: (transfer none): the coefficients $d_i$.
  */
@@ -454,37 +485,41 @@ ncm_spline_cubic_peek_d_vec (const NcmSplineCubic *s)
  * ncm_spline_cubic_peek_diag_vec:
  * @s: a #NcmSplineCubic
  *
- * For subclasses implementing the prepare method.
+ * For subclasses implementing the prepare method: a work vector of the length of the
+ * spline, allocated on the first call.
  *
- * Returns: (transfer none): workspace for the diagonal of the tridiagonal system.
+ * Returns: (transfer none) (nullable): workspace for the diagonal of the tridiagonal
+ * system, %NULL for a spline without knots.
+ *
+ * Deprecated: 0.29.0: no subclass of the library uses it; a subclass should keep the
+ * work space of its solve itself.
  */
 NcmVector *
 ncm_spline_cubic_peek_diag_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
 
-  if ((self->diag == NULL) && (self->len > 0))
-    self->diag = ncm_vector_new (self->len);
-
-  return self->diag;
+  return _ncm_spline_cubic_ensure_work (&self->diag, self->len);
 }
 
 /**
  * ncm_spline_cubic_peek_offdiag_vec:
  * @s: a #NcmSplineCubic
  *
- * For subclasses implementing the prepare method.
+ * For subclasses implementing the prepare method: a work vector of the length of the
+ * spline, allocated on the first call.
  *
- * Returns: (transfer none): workspace for the off-diagonal of the tridiagonal system.
+ * Returns: (transfer none) (nullable): workspace for the off-diagonal of the tridiagonal
+ * system, %NULL for a spline without knots.
+ *
+ * Deprecated: 0.29.0: no subclass of the library uses it; a subclass should keep the
+ * work space of its solve itself.
  */
 NcmVector *
 ncm_spline_cubic_peek_offdiag_vec (const NcmSplineCubic *s)
 {
   NcmSplineCubicPrivate * const self = ncm_spline_cubic_get_instance_private ((NcmSplineCubic *) s);
 
-  if ((self->offdiag == NULL) && (self->len > 0))
-    self->offdiag = ncm_vector_new (self->len);
-
-  return self->offdiag;
+  return _ncm_spline_cubic_ensure_work (&self->offdiag, self->len);
 }
 
