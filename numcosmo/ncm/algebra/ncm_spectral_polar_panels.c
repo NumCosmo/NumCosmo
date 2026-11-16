@@ -713,9 +713,10 @@ _ncm_spectral_polar_panels_trim_block (const gdouble *c, guint n_r, guint n_thet
  * Cuts each panel to the leading block of its coefficients, the lowest radial and angular
  * indices, with the fewest coefficients among those whose dropped coefficients have l1
  * norm at most @tol. Since $|T_k| \le 1$ on the panel, the function changes by at most
- * @tol at any point of it. The coefficients of the panels that remain are packed, so the
- * object takes less memory and its evaluation fewer operations; the serialized object
- * keeps the trimmed panels.
+ * @tol at any point of it. The coefficients of the panels that remain are packed into an
+ * array of their size, so the object takes less memory and its evaluation fewer
+ * operations; the serialized object keeps the trimmed panels. Objects serialized before
+ * panels could be trimmed (each panel given by its levels) are read as they were, untrimmed.
  */
 void
 ncm_spectral_polar_panels_trim (NcmSpectralPolarPanels *spp, gdouble tol)
@@ -747,7 +748,15 @@ ncm_spectral_polar_panels_trim (NcmSpectralPolarPanels *spp, gdouble tol)
     cursor        += (gsize) keep_r * keep_t;
   }
 
-  g_array_set_size (spp->coeffs, cursor);
+  /* A new array of the trimmed size: g_array_set_size() would keep the allocation */
+  {
+    GArray *packed = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), cursor);
+
+    g_array_append_vals (packed, spp->coeffs->data, cursor);
+    g_array_unref (spp->coeffs);
+    spp->coeffs = packed;
+  }
+
   g_array_unref (scratch);
 }
 
@@ -857,7 +866,8 @@ ncm_spectral_polar_panels_eval (NcmSpectralPolarPanels *spp, gdouble r, gdouble 
  * loops over the points vectorize. Each coefficient is loaded once and used by every
  * point, and two angular rows run together, so that each point has two independent
  * radial recurrences. Every point goes through the operations of
- * ncm_spectral_polar_panels_eval_on() in the same order, so the values are the same.
+ * ncm_spectral_polar_panels_eval_on() in the same order, so the two differ only where the
+ * compiler contracts them into fma differently (ncm_spectral_polar_panels_eval_on_array()).
  * r and theta are read before out is written, so out may be r or theta.
  */
 #define NCM_SPECTRAL_POLAR_PANELS_LANES_MAX 8
@@ -1033,12 +1043,14 @@ _ncm_spectral_polar_panels_eval_lanes_tail (const NcmSpectralPolarPanelsPanel *p
  * @theta: (array length=n): the angles
  * @out: (array length=n): the values
  *
- * Evaluates the series of panel @i at the @n points ($r_j$, $\theta_j$), the same values
- * as ncm_spectral_polar_panels_eval_on() at each point. The points are taken several at a
- * time, each coefficient being loaded once for all of them, so that evaluating points
- * that share a panel together costs less than evaluating them one by one. @out may be
- * @r or @theta. @i must be below ncm_spectral_polar_panels_get_n_panels(), which is not
- * checked.
+ * Evaluates the series of panel @i at the @n points ($r_j$, $\theta_j$), the values of
+ * ncm_spectral_polar_panels_eval_on() at each point within rounding: the two do the same
+ * operations in the same order but may contract them into fma differently, so they agree
+ * within about 1e-13 of the sum of the moduli of the coefficients, not bit for bit. The
+ * points are taken several at a time, each coefficient being loaded once for all of them,
+ * so that evaluating points that share a panel together costs less than evaluating them
+ * one by one. @out may be @r or @theta. @i must be below
+ * ncm_spectral_polar_panels_get_n_panels(), which is not checked.
  */
 void
 ncm_spectral_polar_panels_eval_on_array (NcmSpectralPolarPanels *spp, guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out)

@@ -1634,8 +1634,11 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
  * Sets @out[j] to nc_galaxy_shape_factor_eval_ln_marginal() (when @want_log) or to
  * nc_galaxy_shape_factor_eval_marginal() at (@g_1[j], @g_2[j]), for the galaxy of @data,
  * in one call. A subclass may do once for the galaxy what the per-point functions do at
- * each point; the values are the same within the few ulp by which a loop that vectorizes
- * and a scalar computation can differ.
+ * each point; the values are those of the per-point functions within rounding, not bit
+ * for bit: a loop that vectorizes and a scalar computation may contract a * b + c into an
+ * fma differently, and a difference in the last bit of an intermediate is amplified by
+ * the function (|ln P| times for P = exp (ln P), the slope of an interpolant for its
+ * coordinates). They agree within 1e-13 of max (1, |ln P|) in ln P, and of P relative.
  */
 void
 nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
