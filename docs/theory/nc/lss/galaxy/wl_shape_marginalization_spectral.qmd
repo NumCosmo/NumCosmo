@@ -419,15 +419,16 @@ instead of once per value of $\theta$.
 Prepared catalogs store the modes of each galaxy ([[numcosmo|NcGalaxyWLObs:shape-interp-modes]],
 one [[numcosmo-math|NcmSpectralPolarPanelsArray]] per galaxy), and their record holds the
 population with its free parameters and their bounds: the box. A fit that reads them
-evaluates the expansion over the box of the record, whatever its own `pop-order`, and
-accepts any population that the box covers:
+evaluates the expansion over the box of the record, whatever its own `pop-order`:
 
-- a parameter free in the record may be free in the fit, over bounds inside the box, or
-  fixed at a value inside it;
+- a parameter free in the record may be free in the fit, over any bounds, or fixed at any
+  value;
 - a parameter fixed in the record must be fixed in the fit, at the same value.
 
-The values are those of the expansion at the parameters of the fit, bit for bit the values
-of the fit that built the catalog. Anything else aborts with every difference in the message.
+Inside the box the values are those of the expansion at the parameters of the fit, bit for
+bit the values of the fit that built the catalog. The bounds of the fit are its prior and are
+never changed to the box: outside it the galaxies are integrated, at the cost of the
+integrals, with a warning. Anything else aborts with every difference in the message.
 
 ## The Nodes of a Galaxy: a Table Along its Line
 

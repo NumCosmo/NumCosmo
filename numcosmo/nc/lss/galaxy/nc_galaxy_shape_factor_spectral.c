@@ -237,7 +237,9 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
    * prepare() when the box changes, pop_box_key). pop_fit_key is the key of the free
    * parameters, their bounds and the values of the fixed ones, the state a loaded expansion
    * was compared with. pop_n_unconverged counts the galaxies whose expansion did not
-   * converge since the box was set; they are integrated.
+   * converge since the box was set; they are integrated. pop_outside_warned: a loaded
+   * expansion was compared with a fit whose population reaches outside its box, warned about
+   * once.
    */
   guint pop_order;
   gboolean pop_expand;
@@ -248,6 +250,7 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gdouble *pop_T; /* the modes from the values at the nodes, n_nodes x n_nodes */
   gint pop_n_unconverged;
   gint pop_warned;
+  gint pop_outside_warned;
 } NcGalaxyShapeFactorSpectralPrivate;
 
 /* The scratch space of one evaluation */
@@ -620,15 +623,16 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->short_warned   = 0;
   _nc_galaxy_shape_factor_reach_init (&self->reach, TRUE);
 
-  self->pop_order         = 0;
-  self->pop_expand        = FALSE;
-  self->pop_box           = NULL;
-  self->pop_box_key       = 0;
-  self->pop_fit_key       = 0;
-  self->pop_nodes         = NULL;
-  self->pop_T             = NULL;
-  self->pop_n_unconverged = 0;
-  self->pop_warned        = 0;
+  self->pop_order          = 0;
+  self->pop_expand         = FALSE;
+  self->pop_box            = NULL;
+  self->pop_box_key        = 0;
+  self->pop_fit_key        = 0;
+  self->pop_nodes          = NULL;
+  self->pop_T              = NULL;
+  self->pop_n_unconverged  = 0;
+  self->pop_warned         = 0;
+  self->pop_outside_warned = 0;
 }
 
 static void
@@ -979,9 +983,10 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    *
    * The modes are written to prepared catalogs (#NcGalaxyWLObs:shape-interp-modes), with the
    * box in the record of the catalog. A fit that reads them evaluates the expansion over that
-   * box, whatever its own pop-order: it may free any of the parameters of the box over
-   * bounds inside it, or fix them at values inside it, and must fix the other parameters at
-   * the values of the record.
+   * box, whatever its own pop-order: it may free any of the parameters of the box, over any
+   * bounds, or fix them at any value, and must fix the other parameters at the values of the
+   * record. The bounds of the fit are its prior and are never changed: a population outside
+   * the box is integrated, at the cost of the integrals, and a warning is given once.
    */
   g_object_class_install_property (object_class,
                                    PROP_POP_ORDER,
@@ -2274,13 +2279,14 @@ _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsf
  * Compares a loaded expansion over the population parameters with the population of the fit,
  * appending the differences to diff. The box of the expansion is that of the record: the
  * free parameters of src_pop and their bounds, at the pop-order of src. The fit may free
- * any of those parameters over bounds inside the box and fix the others at values inside
- * it; the parameters fixed in the record must be fixed at the same values. Returns the box,
- * or NULL with a difference.
+ * any of those parameters, over any bounds, or fix them at any value; outside the box the
+ * galaxy is integrated (_nc_galaxy_shape_factor_spectral_weights()), and outside is set
+ * when the fit reaches there. The parameters fixed in the record must be fixed at the same
+ * values. Returns the box, or NULL with a difference.
  */
 static NcGalaxyShapeFactorSpectralBox *
 _nc_galaxy_shape_factor_spectral_check_loaded_box (NcGalaxyShapePop *pop, NcGalaxyShapePop *src_pop, const guint src_K,
-                                                   NcmSpectralPolarPanelsArray *modes, GString *diff)
+                                                   NcmSpectralPolarPanelsArray *modes, GString *diff, gboolean *outside)
 {
   const gdouble tol = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SOURCE_RELTOL;
   NcmModel *fit     = NCM_MODEL (pop);
@@ -2321,14 +2327,7 @@ _nc_galaxy_shape_factor_spectral_check_loaded_box (NcGalaxyShapePop *pop, NcGala
       const gdouble f_ub = f_free ? ncm_model_param_get_upper_bound (fit, pid) : v;
 
       if ((ncm_cmp (f_lb, lb, tol, 0.0) < 0) || (ncm_cmp (f_ub, ub, tol, 0.0) > 0))
-      {
-        if (f_free)
-          g_string_append_printf (diff, " the bounds [% 22.15g, % 22.15g] of the free population parameter %s are not inside "
-                                        "the box of the expansion, [% 22.15g, % 22.15g];", f_lb, f_ub, name, lb, ub);
-        else
-          g_string_append_printf (diff, " the population parameter %s (% 22.15g) is not inside the box of the expansion, "
-                                        "[% 22.15g, % 22.15g];", name, v, lb, ub);
-      }
+        *outside = TRUE;
     }
     else if (f_free)
     {
@@ -2366,6 +2365,7 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
   const gdouble tol                               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SOURCE_RELTOL;
   GString *diff                                   = g_string_new (NULL);
   NcGalaxyShapeFactorSpectralBox *box             = NULL;
+  gboolean outside                                = FALSE;
   guint k;
 
   if (nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (gsfs)) != nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (ldata->src_gsfs)))
@@ -2385,7 +2385,7 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
 
   if (ldata->mode_spp != NULL)
   {
-    box = _nc_galaxy_shape_factor_spectral_check_loaded_box (pop, ldata->src_pop, src->pop_order, ldata->mode_spp, diff);
+    box = _nc_galaxy_shape_factor_spectral_check_loaded_box (pop, ldata->src_pop, src->pop_order, ldata->mode_spp, diff, &outside);
   }
   else
   {
@@ -2407,6 +2407,13 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
   g_string_free (diff, TRUE);
 
   _nc_galaxy_shape_factor_spectral_interp_record (gsfs, pop, data, data->epsilon_obs_1, data->epsilon_obs_2);
+
+  /* The bounds of the fit are its prior: a population outside the box is integrated */
+  if (outside && g_atomic_int_compare_and_exchange (&self->pop_outside_warned, 0, 1))
+    g_warning ("nc_galaxy_shape_factor_spectral: the population of this fit reaches outside the box of the expansion of the "
+               "catalog (its free parameters over their bounds, or a fixed value outside it); there the galaxies are "
+               "integrated instead: the values are those of the integrals, at their cost. Prepare the catalog over a box "
+               "that covers the fit (wl-catalog shape-interp --pop-box).");
 
   if (box != NULL)
   {
