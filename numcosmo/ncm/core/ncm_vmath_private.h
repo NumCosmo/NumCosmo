@@ -49,20 +49,34 @@ G_BEGIN_DECLS
  * control flow, which leaves the loop scalar, except the forms it recognizes as a minimum
  * or a maximum; with AVX-512 it vectorizes them.
  *
- * ncm_vmath_atan2() is faster than libm with SSE2 already. ncm_vmath_exp(),
- * ncm_vmath_log() and ncm_vmath_pow_pos() are faster only with AVX2 or AVX-512 (two-wide
- * division and no fma with SSE2): there NCM_VMATH_HAVE_VECTOR_EXP_LOG is defined, and
- * elsewhere they are exp(), log() and pow(). The code is chosen when it is compiled, with
- * no dispatch at run time: these three are faster only in a build for AVX2 or AVX-512
- * (-Dmarch-native=enabled, or an -march that has them). The default build and the conda
- * packages (-march=nocona) use libm for them. Results then depend on the build in the
- * last bits.
+ * The code is chosen when it is compiled, with no dispatch at run time, from the speed of
+ * each function in a vectorized loop against libm (bench_ncm_vmath, run on x86-64 and
+ * arm64 by .github/workflows/arch_check.yml):
+ *
+ * - ncm_vmath_atan2() is faster than libm with SSE2 already, and on arm64 with clang
+ *   (2.3-3.6 times); on arm64 with GCC, which does not vectorize these loops, it is slower,
+ *   and atan2() is used there (NCM_VMATH_HAVE_VECTOR_TRIG is not defined).
+ * - ncm_vmath_exp(), ncm_vmath_log() and ncm_vmath_pow_pos() are faster with AVX2 or AVX-512
+ *   (two-wide division and no fma with SSE2) and on arm64 with clang (1.4-1.8 times for exp
+ *   and pow_pos): there NCM_VMATH_HAVE_VECTOR_EXP_LOG is defined, and elsewhere they are
+ *   exp(), log() and pow(). On x86-64 they are faster only in a build for AVX2 or AVX-512
+ *   (-Dmarch-native=enabled, or an -march that has them): the default build and the conda
+ *   packages (-march=nocona) use libm for them, as builds with GCC on arm64 do; the conda
+ *   packages for macOS on arm64, built with clang, use the code of this header.
+ *
+ * Results then depend on the build in the last bits.
  */
 
 /* x + ROUND - ROUND rounds x to an integer (ncm_vmath_exp()) and the blends rely on IEEE
  * semantics, which -ffast-math lets the compiler drop */
 #ifdef __FAST_MATH__
 #error "ncm_vmath_private.h needs IEEE arithmetic: do not build with -ffast-math"
+#endif
+
+/* NCM_VMATH_FORCE_VECTOR_EXP_LOG selects the code of this header on any target, for its
+ * tests and benchmarks there (tests/c/ncm/core) */
+#if !(defined (__aarch64__) && !defined (__clang__)) || defined (NCM_VMATH_FORCE_VECTOR_EXP_LOG)
+#define NCM_VMATH_HAVE_VECTOR_TRIG 1
 #endif
 
 /*
@@ -98,13 +112,18 @@ ncm_vmath_select (const gboolean cond, const gdouble a, const gdouble b)
  * Cephes (Moshier), applied to min (|x|, |y|) / max (|x|, |y|) and folded back by selects.
  * It is within 2 ulp of atan2(), with the same values at zeros and when one argument is
  * infinite; with both arguments infinite it returns NaN instead of an odd multiple of
- * $\pi/4$, and a NaN argument gives NaN.
+ * $\pi/4$, and a NaN argument gives NaN. Without NCM_VMATH_HAVE_VECTOR_TRIG it is atan2().
  *
  * Returns: atan2 (@y, @x).
  */
 static inline gdouble
 ncm_vmath_atan2 (const gdouble y, const gdouble x)
 {
+#ifndef NCM_VMATH_HAVE_VECTOR_TRIG
+
+  return atan2 (y, x);
+
+#else /* NCM_VMATH_HAVE_VECTOR_TRIG */
   const gdouble P0       = -8.750608600031904122785e-1;
   const gdouble P1       = -1.615753718733365076637e1;
   const gdouble P2       = -7.500855792314704667340e1;
@@ -140,11 +159,12 @@ ncm_vmath_atan2 (const gdouble y, const gdouble x)
   const gboolean x_neg = (copysign (1.0, x) < 0.0);
 
   return copysign (ncm_vmath_select (x_neg, b1, a), y);
+
+#endif /* NCM_VMATH_HAVE_VECTOR_TRIG */
 }
 
-/* NCM_VMATH_FORCE_VECTOR_EXP_LOG selects the code of this header on any target, for its
- * tests and benchmarks there (tests/c/ncm/core) */
-#if defined (__AVX2__) || defined (__AVX512F__) || defined (NCM_VMATH_FORCE_VECTOR_EXP_LOG)
+#if defined (__AVX2__) || defined (__AVX512F__) || (defined (__aarch64__) && defined (__clang__)) || \
+  defined (NCM_VMATH_FORCE_VECTOR_EXP_LOG)
 #define NCM_VMATH_HAVE_VECTOR_EXP_LOG 1
 #endif
 
