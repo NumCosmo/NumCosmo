@@ -389,10 +389,14 @@ test_ncm_vmath_atan2_special (void)
       const gdouble y = v[i];
       const gdouble x = v[j];
 
+#ifdef NCM_VMATH_HAVE_VECTOR_TRIG
+
+      /* The code of the header: NaN for two infinities (libm gives an odd multiple of pi / 4) */
       if (isinf (y) && isinf (x))
         g_assert_true (isnan (ncm_vmath_atan2 (y, x)));
       else
-        g_assert_cmpuint (_ulp_diff (ncm_vmath_atan2 (y, x), _ref_atan2 (y, x)), <=, TEST_VMATH_ATAN2_ULP);
+#endif /* NCM_VMATH_HAVE_VECTOR_TRIG */
+      g_assert_cmpuint (_ulp_diff (ncm_vmath_atan2 (y, x), _ref_atan2 (y, x)), <=, TEST_VMATH_ATAN2_ULP);
     }
   }
 
@@ -692,7 +696,7 @@ test_ncm_vmath_sincos_special (void)
   g_assert_false (signbit (s));
   g_assert_cmpfloat (c, ==, 1.0);
 
-  /* sin (-0) is +0, not -0 as in libm */
+  /* sin (-0) is +0 with the code of the header, -0 with libm */
   ncm_vmath_sincos (-0.0, &s, &c);
   g_assert_cmpfloat (s, ==, 0.0);
   g_assert_cmpfloat (c, ==, 1.0);
