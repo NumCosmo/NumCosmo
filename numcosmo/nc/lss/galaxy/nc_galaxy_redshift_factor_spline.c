@@ -54,6 +54,8 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_obs_private.h"
+#include "ncm/spline/ncm_spline_bspline_private.h"
 #include "ncm/spline/ncm_spline_bspline.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -174,7 +176,7 @@ _spline_ldata_read_row (NcGalaxyRedshiftFactorData *data, NcGalaxyWLObs *obs, co
 {
   SplineLData *sldata = (SplineLData *) data->ldata;
 
-  _spline_ldata_set_pz (sldata, nc_galaxy_wl_obs_peek_pz (obs, i));
+  _spline_ldata_set_pz (sldata, _nc_galaxy_wl_obs_peek_pz_unprepared (obs, i));
 }
 
 static void
@@ -264,6 +266,59 @@ _spline_sqrt_hash (NcmVector *xv, NcmVector *yv)
   return h;
 }
 
+/* The breakpoints of s: its distinct knots from the first to the last sample */
+static NcmVector *
+_spline_sqrt_breakpoints (const SplineSqrt *sq)
+{
+  const gsize k    = sq->order;
+  const gdouble *t = sq->knots;
+  NcmVector *brk;
+  gsize i, n = 0;
+
+  for (i = k - 1; i <= sq->n_control; i++)
+  {
+    if ((n == 0) || (t[i] > t[i - 1]))
+      n++;
+  }
+
+  brk = ncm_vector_new (n);
+  n   = 0;
+
+  for (i = k - 1; i <= sq->n_control; i++)
+  {
+    if ((n == 0) || (t[i] > ncm_vector_fast_get (brk, n - 1)))
+    {
+      ncm_vector_fast_set (brk, n, t[i]);
+      n++;
+    }
+  }
+
+  return brk;
+}
+
+/* The integral of s^2 over the breakpoints brk, summed piece by piece in order, and, when
+ * cum is not NULL, the partial sums at each breakpoint in cum (cum[0] = 0) */
+static gdouble
+_spline_sqrt_cumulate (const SplineSqrt *sq, NcmVector *brk, NcmVector *cum)
+{
+  const guint n = ncm_vector_len (brk);
+  gdouble total = 0.0;
+  guint i;
+
+  if (cum != NULL)
+    ncm_vector_fast_set (cum, 0, total);
+
+  for (i = 0; i + 1 < n; i++)
+  {
+    total += _spline_s2_integ (sq, ncm_vector_get (brk, i), ncm_vector_get (brk, i + 1));
+
+    if (cum != NULL)
+      ncm_vector_fast_set (cum, i + 1, total);
+  }
+
+  return total;
+}
+
 /* Builds s through (z_j, sqrt(p_j)) and its normalization, keeping only what evaluating
  * s reads (the fit itself is dropped). Aborts on a negative value or fewer than ORDER
  * knots. */
@@ -275,7 +330,6 @@ _spline_sqrt_new (NcmVector *xv, NcmVector *yv, const guint64 hash)
   NcmSplineBSpline *sbs;
   NcmVector *sv, *brk;
   const gdouble *knots, *c;
-  gdouble total = 0.0;
   guint j;
 
   if (n < _NC_GALAXY_REDSHIFT_FACTOR_SPLINE_ORDER)
@@ -306,14 +360,10 @@ _spline_sqrt_new (NcmVector *xv, NcmVector *yv, const guint64 hash)
   memcpy (sq->knots, knots, sizeof (gdouble) * (sq->n_control + sq->order));
   memcpy (sq->c, c, sizeof (gdouble) * sq->n_control);
 
-  /* The normalization, summed over the polynomial pieces in order, as the sampling's
-   * cumulative integrals (_spline_sqrt_ensure_cum()) */
-  brk = ncm_spline_bspline_get_breakpoints (sbs);
-
-  for (j = 0; j + 1 < ncm_vector_len (brk); j++)
-    total += _spline_s2_integ (sq, ncm_vector_get (brk, j), ncm_vector_get (brk, j + 1));
-
-  sq->norm = total;
+  /* The normalization, by the loops of the sampling's cumulative integrals
+   * (_spline_sqrt_ensure_cum()), so that it is their last value */
+  brk      = _spline_sqrt_breakpoints (sq);
+  sq->norm = _spline_sqrt_cumulate (sq, brk, NULL);
 
   ncm_vector_free (brk);
   ncm_spline_free (NCM_SPLINE (sbs));
@@ -329,37 +379,9 @@ _spline_sqrt_ensure_cum (SplineSqrt *sq)
 {
   if (g_once_init_enter (&sq->cum_init))
   {
-    const gsize k    = sq->order;
-    const gdouble *t = sq->knots;
-    gdouble total    = 0.0;
-    gsize i, n = 0;
-
-    for (i = k - 1; i <= sq->n_control; i++)
-    {
-      if ((n == 0) || (t[i] > t[i - 1]))
-        n++;
-    }
-
-    sq->brk = ncm_vector_new (n);
-    n       = 0;
-
-    for (i = k - 1; i <= sq->n_control; i++)
-    {
-      if ((n == 0) || (t[i] > ncm_vector_fast_get (sq->brk, n - 1)))
-      {
-        ncm_vector_fast_set (sq->brk, n, t[i]);
-        n++;
-      }
-    }
-
-    sq->cum = ncm_vector_new (n);
-    ncm_vector_fast_set (sq->cum, 0, total);
-
-    for (i = 0; i + 1 < n; i++)
-    {
-      total += _spline_s2_integ (sq, ncm_vector_get (sq->brk, i), ncm_vector_get (sq->brk, i + 1));
-      ncm_vector_fast_set (sq->cum, i + 1, total);
-    }
+    sq->brk = _spline_sqrt_breakpoints (sq);
+    sq->cum = ncm_vector_new (ncm_vector_len (sq->brk));
+    _spline_sqrt_cumulate (sq, sq->brk, sq->cum);
 
     g_once_init_leave (&sq->cum_init, 1);
   }

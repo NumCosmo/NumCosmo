@@ -37,19 +37,34 @@ G_BEGIN_DECLS
  * Elementary functions written so that a loop calling them vectorizes: no branch, every
  * candidate value is computed and the result is chosen by a bitwise blend. They are
  * static inline so that the compiler sees their body inside the caller's loop (an
- * omp simd loop, for instance); a call to libm stops the vectorization of a loop when
- * -ffast-math is not used, as in NumCosmo, since glibc declares its vector variants only
- * under __FAST_MATH__. They are for the loops that dominate a computation, and libm is the reference for the rest.
+ * omp simd loop, for instance). Without -ffast-math, as in NumCosmo, glibc declares its
+ * vector variants (libmvec) only under __FAST_MATH__, so with GCC 14.3 and glibc 2.44 a
+ * loop that calls exp() or log() stays scalar; other toolchains may differ (on the system
+ * GCC of the Ubuntu CI image, a loop of log() and scalar calls of it differed in the last
+ * bit). They are for the loops that dominate a computation, and libm is the reference for
+ * the rest.
  *
- * ncm_vmath_select() is the blend: GCC keeps a conditional expression on doubles as
- * control flow under -ftrapping-math (the default) and the target has no
- * masked instructions (SSE2 and AVX2), which leaves the loop scalar.
+ * ncm_vmath_select() is the blend. Under -ftrapping-math (the default) and without masked
+ * instructions (SSE2 and AVX2), GCC 14.3 keeps a conditional expression on doubles as
+ * control flow, which leaves the loop scalar, except the forms it recognizes as a minimum
+ * or a maximum; with AVX-512 it vectorizes them.
  *
- * ncm_vmath_atan2() and ncm_vmath_sincos() are faster than libm with SSE2 already. ncm_vmath_exp(),
- * ncm_vmath_log() and ncm_vmath_pow_pos() are faster only with AVX2 or AVX-512 (two-wide
- * division and no fma with SSE2): there NCM_VMATH_HAVE_FAST_EXP is defined, and elsewhere
- * they are exp(), log() and pow().
+ * ncm_vmath_atan2() and ncm_vmath_sincos() are faster than libm with SSE2 already.
+ * ncm_vmath_exp(), ncm_vmath_log() and ncm_vmath_pow_pos() are faster only with AVX2 or
+ * AVX-512 (two-wide division and no fma with SSE2): there NCM_VMATH_HAVE_VECTOR_EXP_LOG
+ * is defined, and
+ * elsewhere they are exp(), log() and pow(). The code is chosen when it is compiled, with
+ * no dispatch at run time: these three are faster only in a build for AVX2 or AVX-512
+ * (-Dmarch-native=enabled, or an -march that has them). The default build and the conda
+ * packages (-march=nocona) use libm for them. Results then depend on the build in the
+ * last bits.
  */
+
+/* x + ROUND - ROUND rounds x to an integer (ncm_vmath_exp()) and the blends rely on IEEE
+ * semantics, which -ffast-math lets the compiler drop */
+#ifdef __FAST_MATH__
+#error "ncm_vmath_private.h needs IEEE arithmetic: do not build with -ffast-math"
+#endif
 
 /*
  * ncm_vmath_select:
@@ -190,10 +205,10 @@ ncm_vmath_sincos (const gdouble x, gdouble *s, gdouble *c)
 }
 
 #if defined (__AVX2__) || defined (__AVX512F__)
-#define NCM_VMATH_HAVE_FAST_EXP 1
+#define NCM_VMATH_HAVE_VECTOR_EXP_LOG 1
 #endif
 
-#ifdef NCM_VMATH_HAVE_FAST_EXP
+#ifdef NCM_VMATH_HAVE_VECTOR_EXP_LOG
 
 /* 2^k for an integer k in [-1022, 1023]: k + 1023 is in the low bits of the mantissa of
  * 1.5 2^52 + k + 1023, and is shifted to the exponent field. */
@@ -211,13 +226,13 @@ _ncm_vmath_pow2i (const gdouble k)
   return r;
 }
 
-#endif /* NCM_VMATH_HAVE_FAST_EXP */
+#endif /* NCM_VMATH_HAVE_VECTOR_EXP_LOG */
 
 /*
  * ncm_vmath_exp:
  * @x: a value
  *
- * The exponential of @x. With NCM_VMATH_HAVE_FAST_EXP it is the Pade form of Cephes
+ * The exponential of @x. With NCM_VMATH_HAVE_VECTOR_EXP_LOG it is the Pade form of Cephes
  * (Moshier) on $|r| \le \ln 2 / 2$, with $x = n \ln 2 + r$, n rounded by adding and
  * subtracting $1.5 \times 2^{52}$, and $2^n$ applied in two halves so that results below
  * the smallest normal are rounded once, as subnormals. It is within 2 ulp of exp(), 0 and
@@ -228,7 +243,7 @@ _ncm_vmath_pow2i (const gdouble k)
 static inline gdouble
 ncm_vmath_exp (const gdouble x)
 {
-#ifdef NCM_VMATH_HAVE_FAST_EXP
+#ifdef NCM_VMATH_HAVE_VECTOR_EXP_LOG
   const gdouble ROUND = 6755399441055744.0; /* 1.5 2^52: x + ROUND - ROUND rounds x to an integer */
   const gdouble LOG2E = 1.4426950408889634073599;
   const gdouble C1    = 6.93145751953125e-1;
@@ -252,18 +267,18 @@ ncm_vmath_exp (const gdouble x)
 
   return (e * _ncm_vmath_pow2i (h)) * _ncm_vmath_pow2i (n - h);
 
-#else /* NCM_VMATH_HAVE_FAST_EXP */
+#else /* NCM_VMATH_HAVE_VECTOR_EXP_LOG */
 
   return exp (x);
 
-#endif /* NCM_VMATH_HAVE_FAST_EXP */
+#endif /* NCM_VMATH_HAVE_VECTOR_EXP_LOG */
 }
 
 /*
  * ncm_vmath_log:
  * @x: a value
  *
- * The natural logarithm of @x. With NCM_VMATH_HAVE_FAST_EXP it is the rational
+ * The natural logarithm of @x. With NCM_VMATH_HAVE_VECTOR_EXP_LOG it is the rational
  * approximation of Cephes (Moshier) on [sqrt(1/2) - 1, sqrt(2) - 1], with the exponent
  * and the mantissa of @x taken from its bits (the exponent turned into a double through
  * the mantissa of 2^52, since AVX2 has no conversion of 64-bit integers) and subnormals
@@ -275,7 +290,7 @@ ncm_vmath_exp (const gdouble x)
 static inline gdouble
 ncm_vmath_log (const gdouble x)
 {
-#ifdef NCM_VMATH_HAVE_FAST_EXP
+#ifdef NCM_VMATH_HAVE_VECTOR_EXP_LOG
   const gdouble P0    = 1.01875663804580931796e-4;
   const gdouble P1    = 4.97494994976747001425e-1;
   const gdouble P2    = 4.70579119878881725854e0;
@@ -319,11 +334,11 @@ ncm_vmath_log (const gdouble x)
     return r;
   }
 
-#else /* NCM_VMATH_HAVE_FAST_EXP */
+#else /* NCM_VMATH_HAVE_VECTOR_EXP_LOG */
 
   return log (x);
 
-#endif /* NCM_VMATH_HAVE_FAST_EXP */
+#endif /* NCM_VMATH_HAVE_VECTOR_EXP_LOG */
 }
 
 /*
@@ -331,24 +346,25 @@ ncm_vmath_log (const gdouble x)
  * @x: a positive value
  * @y: an exponent
  *
- * @x to the power @y for @x > 0. With NCM_VMATH_HAVE_FAST_EXP it is
+ * @x to the power @y for @x > 0. With NCM_VMATH_HAVE_VECTOR_EXP_LOG it is
  * ncm_vmath_exp (@y ncm_vmath_log (@x)): the error of the logarithm is multiplied by @y,
- * so the relative error is within about (2 + |@y ln @x|) ulp. Otherwise it is pow().
+ * so the relative error is within about (2 + |@y ln @x|) ulp. Otherwise it is pow(). On
+ * both paths it is NaN for @x <= 0 or NaN.
  *
  * Returns: @x^@y.
  */
 static inline gdouble
 ncm_vmath_pow_pos (const gdouble x, const gdouble y)
 {
-#ifdef NCM_VMATH_HAVE_FAST_EXP
+#ifdef NCM_VMATH_HAVE_VECTOR_EXP_LOG
 
-  return ncm_vmath_exp (y * ncm_vmath_log (x));
+  return ncm_vmath_select (x > 0.0, ncm_vmath_exp (y * ncm_vmath_log (x)), NAN);
 
-#else /* NCM_VMATH_HAVE_FAST_EXP */
+#else /* NCM_VMATH_HAVE_VECTOR_EXP_LOG */
 
-  return pow (x, y);
+  return (x > 0.0) ? pow (x, y) : NAN;
 
-#endif /* NCM_VMATH_HAVE_FAST_EXP */
+#endif /* NCM_VMATH_HAVE_VECTOR_EXP_LOG */
 }
 
 G_END_DECLS

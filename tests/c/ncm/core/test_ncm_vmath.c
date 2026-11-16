@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -32,6 +32,7 @@
 #include <math.h>
 #include <float.h>
 #include <glib.h>
+#include <mpfr.h>
 
 #define TEST_VMATH_N (200000)
 
@@ -48,8 +49,8 @@
 #  elif (NCM_VMATH_TEST_LEVEL == 4) && !defined (__AVX512F__)
 #    error "the x86-64-v4 variant of test_ncm_vmath was not built with AVX-512"
 #  endif
-#  if (NCM_VMATH_TEST_LEVEL > 1) && !defined (NCM_VMATH_HAVE_FAST_EXP)
-#    error "NCM_VMATH_HAVE_FAST_EXP is not defined with AVX2"
+#  if (NCM_VMATH_TEST_LEVEL > 1) && !defined (NCM_VMATH_HAVE_VECTOR_EXP_LOG)
+#    error "NCM_VMATH_HAVE_VECTOR_EXP_LOG is not defined with AVX2"
 #  endif
 #endif
 
@@ -65,21 +66,24 @@
 #endif
 
 /*
- * A loop that vectorizes and a scalar call agree within a few ulp, not bit for bit. With
- * NCM_VMATH_HAVE_FAST_EXP the functions are the code of ncm_vmath_private.h, which the
- * compiler may contract (a * b + c into an fma) differently in vector and in scalar code
- * (GCC of Ubuntu 24.04 does): 2 ulp. Without it ncm_vmath_exp(), ncm_vmath_log() and
- * ncm_vmath_pow_pos() are those of libm, and the compiler may call the vector variants of
- * glibc (libmvec, within 4 ulp) in a loop it vectorizes: 4 ulp.
+ * Every function is compared with the correctly rounded value, computed by MPFR at 128
+ * bits and rounded to the nearest double, so that the bounds are those of the functions
+ * and not of the libm of the platform. The values are those of loops that vectorize, as
+ * the functions are meant to be used. Bounds, in ulp of the correctly rounded value:
+ * with NCM_VMATH_HAVE_VECTOR_EXP_LOG, the code of ncm_vmath_private.h (exp 2, log 1,
+ * atan2 2, pow_pos (3 + |y ln x|) relative); without it exp, log and pow_pos are those
+ * of libm, bounded by 4 ulp, the largest error glibc documents for its scalar and vector
+ * (libmvec) variants on x86-64.
  */
-#define TEST_VMATH_LOOP_ULP (2)
-#define TEST_VMATH_LIBMVEC_ULP (4)
-
-#ifdef NCM_VMATH_HAVE_FAST_EXP
-#  define TEST_VMATH_ASSERT_LOOP(loop, scalar) g_assert_cmpuint (_ulp_diff ((loop), (scalar)), <=, TEST_VMATH_LOOP_ULP)
+#define TEST_VMATH_ATAN2_ULP (2)
+#ifdef NCM_VMATH_HAVE_VECTOR_EXP_LOG
+#  define TEST_VMATH_EXP_ULP (2)
+#  define TEST_VMATH_LOG_ULP (1)
 #else
-#  define TEST_VMATH_ASSERT_LOOP(loop, scalar) g_assert_cmpuint (_ulp_diff ((loop), (scalar)), <=, TEST_VMATH_LIBMVEC_ULP)
+#  define TEST_VMATH_EXP_ULP (4)
+#  define TEST_VMATH_LOG_ULP (4)
 #endif
+#define TEST_VMATH_LIBM_ULP (4)
 
 static guint64 _ulp_diff (const gdouble a, const gdouble b);
 
@@ -116,6 +120,8 @@ static void test_ncm_vmath_exp_special (void);
 static void test_ncm_vmath_log_random (void);
 static void test_ncm_vmath_log_special (void);
 static void test_ncm_vmath_pow_pos_random (void);
+static void test_ncm_vmath_pow_pos_special (void);
+static void test_ncm_vmath_libm_loop (void);
 static void test_ncm_vmath_sincos_random (void);
 static void test_ncm_vmath_sincos_special (void);
 
@@ -127,8 +133,16 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   {
-    const gchar *paths[]     = {"/ncm/vmath/select", "/ncm/vmath/atan2/random", "/ncm/vmath/atan2/special", "/ncm/vmath/exp/random", "/ncm/vmath/exp/special", "/ncm/vmath/log/random", "/ncm/vmath/log/special", "/ncm/vmath/pow_pos/random", "/ncm/vmath/sincos/random", "/ncm/vmath/sincos/special"};
-    GTestFunc funcs[]        = {&test_ncm_vmath_select, &test_ncm_vmath_atan2_random, &test_ncm_vmath_atan2_special, &test_ncm_vmath_exp_random, &test_ncm_vmath_exp_special, &test_ncm_vmath_log_random, &test_ncm_vmath_log_special, &test_ncm_vmath_pow_pos_random, &test_ncm_vmath_sincos_random, &test_ncm_vmath_sincos_special};
+    const gchar *paths[] = {
+      "/ncm/vmath/select", "/ncm/vmath/atan2/random", "/ncm/vmath/atan2/special", "/ncm/vmath/exp/random",
+      "/ncm/vmath/exp/special", "/ncm/vmath/log/random", "/ncm/vmath/log/special", "/ncm/vmath/pow_pos/random",
+      "/ncm/vmath/pow_pos/special", "/ncm/vmath/libm_loop", "/ncm/vmath/sincos/random", "/ncm/vmath/sincos/special"
+    };
+    GTestFunc funcs[] = {
+      &test_ncm_vmath_select, &test_ncm_vmath_atan2_random, &test_ncm_vmath_atan2_special, &test_ncm_vmath_exp_random,
+      &test_ncm_vmath_exp_special, &test_ncm_vmath_log_random, &test_ncm_vmath_log_special, &test_ncm_vmath_pow_pos_random,
+      &test_ncm_vmath_pow_pos_special, &test_ncm_vmath_libm_loop, &test_ncm_vmath_sincos_random, &test_ncm_vmath_sincos_special
+    };
     const gchar *missing_isa = _test_ncm_vmath_missing_isa ();
     guint i;
 
@@ -166,6 +180,87 @@ _ulp_diff (const gdouble a, const gdouble b)
   return (ia > ib) ? (guint64) (ia - ib) : (guint64) (ib - ia);
 }
 
+/*
+ * The correctly rounded values: MPFR at 128 bits, rounded to the nearest double (to a
+ * subnormal or to zero below the normal range, and to infinity above it, as libm does)
+ */
+#define TEST_VMATH_MPFR_PREC (128)
+
+static gdouble
+_ref_exp (const gdouble x)
+{
+  mpfr_t a;
+  gdouble r;
+
+  mpfr_init2 (a, TEST_VMATH_MPFR_PREC);
+  mpfr_set_d (a, x, MPFR_RNDN);
+  mpfr_exp (a, a, MPFR_RNDN);
+  r = mpfr_get_d (a, MPFR_RNDN);
+  mpfr_clear (a);
+
+  return r;
+}
+
+static gdouble
+_ref_log (const gdouble x)
+{
+  mpfr_t a;
+  gdouble r;
+
+  mpfr_init2 (a, TEST_VMATH_MPFR_PREC);
+  mpfr_set_d (a, x, MPFR_RNDN);
+  mpfr_log (a, a, MPFR_RNDN);
+  r = mpfr_get_d (a, MPFR_RNDN);
+  mpfr_clear (a);
+
+  return r;
+}
+
+static gdouble
+_ref_atan2 (const gdouble y, const gdouble x)
+{
+  mpfr_t a, b;
+  gdouble r;
+
+  mpfr_inits2 (TEST_VMATH_MPFR_PREC, a, b, (mpfr_ptr) 0);
+  mpfr_set_d (a, y, MPFR_RNDN);
+  mpfr_set_d (b, x, MPFR_RNDN);
+  mpfr_atan2 (a, a, b, MPFR_RNDN);
+  r = mpfr_get_d (a, MPFR_RNDN);
+  mpfr_clears (a, b, (mpfr_ptr) 0);
+
+  return r;
+}
+
+static gdouble
+_ref_pow (const gdouble x, const gdouble y)
+{
+  mpfr_t a, b;
+  gdouble r;
+
+  mpfr_inits2 (TEST_VMATH_MPFR_PREC, a, b, (mpfr_ptr) 0);
+  mpfr_set_d (a, x, MPFR_RNDN);
+  mpfr_set_d (b, y, MPFR_RNDN);
+  mpfr_pow (a, a, b, MPFR_RNDN);
+  r = mpfr_get_d (a, MPFR_RNDN);
+  mpfr_clears (a, b, (mpfr_ptr) 0);
+
+  return r;
+}
+
+static void
+_ref_sincos (const gdouble x, gdouble *s, gdouble *c)
+{
+  mpfr_t a, sa, ca;
+
+  mpfr_inits2 (TEST_VMATH_MPFR_PREC, a, sa, ca, (mpfr_ptr) 0);
+  mpfr_set_d (a, x, MPFR_RNDN);
+  mpfr_sin_cos (sa, ca, a, MPFR_RNDN);
+  *s = mpfr_get_d (sa, MPFR_RNDN);
+  *c = mpfr_get_d (ca, MPFR_RNDN);
+  mpfr_clears (a, sa, ca, (mpfr_ptr) 0);
+}
+
 /* Through loops that vectorize, as the functions are meant to be used */
 static void
 _atan2_array (const guint n, const gdouble *y, const gdouble *x, gdouble *out)
@@ -201,17 +296,6 @@ _log_array (const guint n, const gdouble *x, gdouble *out)
 }
 
 static void
-_sincos_array (const guint n, const gdouble *x, gdouble *s, gdouble *c)
-{
-  guint i;
-
-  #pragma omp simd
-
-  for (i = 0; i < n; i++)
-    ncm_vmath_sincos (x[i], &s[i], &c[i]);
-}
-
-static void
 _pow_pos_array (const guint n, const gdouble *x, const gdouble *y, gdouble *out)
 {
   guint i;
@@ -220,6 +304,17 @@ _pow_pos_array (const guint n, const gdouble *x, const gdouble *y, gdouble *out)
 
   for (i = 0; i < n; i++)
     out[i] = ncm_vmath_pow_pos (x[i], y[i]);
+}
+
+static void
+_sincos_array (const guint n, const gdouble *x, gdouble *s, gdouble *c)
+{
+  guint i;
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+    ncm_vmath_sincos (x[i], &s[i], &c[i]);
 }
 
 static void
@@ -270,12 +365,10 @@ test_ncm_vmath_atan2_random (void)
   _atan2_array (TEST_VMATH_N, y, x, out);
 
   for (i = 0; i < TEST_VMATH_N; i++)
-  {
-    max_ulp = MAX (max_ulp, _ulp_diff (out[i], atan2 (y[i], x[i])));
-    g_assert_cmpuint (_ulp_diff (out[i], ncm_vmath_atan2 (y[i], x[i])), <=, TEST_VMATH_LOOP_ULP);
-  }
+    max_ulp = MAX (max_ulp, _ulp_diff (out[i], _ref_atan2 (y[i], x[i])));
 
-  g_assert_cmpuint (max_ulp, <=, 2);
+  g_test_message ("atan2: %" G_GUINT64_FORMAT " ulp", max_ulp);
+  g_assert_cmpuint (max_ulp, <=, TEST_VMATH_ATAN2_ULP);
 
   g_free (y);
   g_free (x);
@@ -299,7 +392,7 @@ test_ncm_vmath_atan2_special (void)
       if (isinf (y) && isinf (x))
         g_assert_true (isnan (ncm_vmath_atan2 (y, x)));
       else
-        g_assert_cmpuint (_ulp_diff (ncm_vmath_atan2 (y, x), atan2 (y, x)), <=, 2);
+        g_assert_cmpuint (_ulp_diff (ncm_vmath_atan2 (y, x), _ref_atan2 (y, x)), <=, TEST_VMATH_ATAN2_ULP);
     }
   }
 
@@ -344,16 +437,10 @@ test_ncm_vmath_exp_random (void)
     _exp_array (TEST_VMATH_N, x, out);
 
     for (i = 0; i < TEST_VMATH_N; i++)
-    {
-      max_ulp = MAX (max_ulp, _ulp_diff (out[i], exp (x[i])));
-      TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_exp (x[i]));
-    }
+      max_ulp = MAX (max_ulp, _ulp_diff (out[i], _ref_exp (x[i])));
 
-#ifdef NCM_VMATH_HAVE_FAST_EXP
-    g_assert_cmpuint (max_ulp, <=, 2);
-#else
-    g_assert_cmpuint (max_ulp, <=, TEST_VMATH_LIBMVEC_ULP);
-#endif
+    g_test_message ("exp on [%g, %g]: %" G_GUINT64_FORMAT " ulp", ranges[k][0], ranges[k][1], max_ulp);
+    g_assert_cmpuint (max_ulp, <=, TEST_VMATH_EXP_ULP);
   }
 
   g_free (x);
@@ -368,10 +455,10 @@ test_ncm_vmath_exp_special (void)
   guint i;
 
   for (i = 0; i < G_N_ELEMENTS (v); i++)
-    g_assert_cmpuint (_ulp_diff (ncm_vmath_exp (v[i]), exp (v[i])), <=, 2);
+    g_assert_cmpuint (_ulp_diff (ncm_vmath_exp (v[i]), _ref_exp (v[i])), <=, TEST_VMATH_EXP_ULP);
 
   g_assert_cmpfloat (ncm_vmath_exp (0.0), ==, 1.0);
-  g_assert_cmpfloat (ncm_vmath_exp (-745.13), ==, exp (-745.13)); /* smallest subnormal */
+  g_assert_cmpfloat (ncm_vmath_exp (-745.13), ==, 4.9406564584124654e-324); /* smallest subnormal */
   g_assert_cmpfloat (ncm_vmath_exp (-745.14), ==, 0.0);
   g_assert_cmpfloat (ncm_vmath_exp (-INFINITY), ==, 0.0);
   g_assert_true (isinf (ncm_vmath_exp (709.79)));
@@ -411,16 +498,10 @@ test_ncm_vmath_log_random (void)
     _log_array (TEST_VMATH_N, x, out);
 
     for (i = 0; i < TEST_VMATH_N; i++)
-    {
-      max_ulp = MAX (max_ulp, _ulp_diff (out[i], log (x[i])));
-      TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_log (x[i]));
-    }
+      max_ulp = MAX (max_ulp, _ulp_diff (out[i], _ref_log (x[i])));
 
-#ifdef NCM_VMATH_HAVE_FAST_EXP
-    g_assert_cmpuint (max_ulp, <=, 1);
-#else
-    g_assert_cmpuint (max_ulp, <=, TEST_VMATH_LIBMVEC_ULP);
-#endif
+    g_test_message ("log on 10^[%g, %g]: %" G_GUINT64_FORMAT " ulp", ranges[k][0], ranges[k][1], max_ulp);
+    g_assert_cmpuint (max_ulp, <=, TEST_VMATH_LOG_ULP);
   }
 
   g_free (x);
@@ -435,7 +516,7 @@ test_ncm_vmath_log_special (void)
   guint i;
 
   for (i = 0; i < G_N_ELEMENTS (v); i++)
-    g_assert_cmpuint (_ulp_diff (ncm_vmath_log (v[i]), log (v[i])), <=, 1);
+    g_assert_cmpuint (_ulp_diff (ncm_vmath_log (v[i]), _ref_log (v[i])), <=, TEST_VMATH_LOG_ULP);
 
   g_assert_cmpfloat (ncm_vmath_log (1.0), ==, 0.0);
   g_assert_true (isinf (ncm_vmath_log (0.0)) && (ncm_vmath_log (0.0) < 0.0));
@@ -449,10 +530,11 @@ test_ncm_vmath_log_special (void)
 static void
 test_ncm_vmath_pow_pos_random (void)
 {
-  NcmRNG *rng  = ncm_rng_seeded_new (NULL, 19);
-  gdouble *x   = g_new (gdouble, TEST_VMATH_N);
-  gdouble *y   = g_new (gdouble, TEST_VMATH_N);
-  gdouble *out = g_new (gdouble, TEST_VMATH_N);
+  NcmRNG *rng     = ncm_rng_seeded_new (NULL, 19);
+  gdouble *x      = g_new (gdouble, TEST_VMATH_N);
+  gdouble *y      = g_new (gdouble, TEST_VMATH_N);
+  gdouble *out    = g_new (gdouble, TEST_VMATH_N);
+  gdouble max_rel = 0.0;
   guint i;
 
   /* The ranges of the integrals: bases in (0, 2], exponents of a few units */
@@ -466,24 +548,24 @@ test_ncm_vmath_pow_pos_random (void)
 
   for (i = 0; i < TEST_VMATH_N; i++)
   {
-    const gdouble ref = pow (x[i], y[i]);
+    const gdouble ref = _ref_pow (x[i], y[i]);
 
-#ifdef NCM_VMATH_HAVE_FAST_EXP
+#ifdef NCM_VMATH_HAVE_VECTOR_EXP_LOG
 
-    /* exp (y log x): a difference of the last bit of log x between the loop and the scalar
-     * call grows by |y ln x|; each is within the bound of the function, so they agree within
-     * twice that bound */
-    g_assert_cmpfloat (fabs (out[i] / ncm_vmath_pow_pos (x[i], y[i]) - 1.0), <=, 2.0 * (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
+    /* exp (y log x): within (2 + |y ln x|) ulp, with one more for the rounding of y ln x */
+    const gdouble bound = (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON;
+
 #else
-    TEST_VMATH_ASSERT_LOOP (out[i], ncm_vmath_pow_pos (x[i], y[i]));
+    const gdouble bound = TEST_VMATH_LIBM_ULP * DBL_EPSILON;
+
 #endif
-#ifdef NCM_VMATH_HAVE_FAST_EXP
-    /* Within (2 + |y ln x|) ulp, with one more for the rounding of y ln x */
-    g_assert_cmpfloat (fabs (out[i] / ref - 1.0), <=, (3.0 + fabs (y[i] * log (x[i]))) * DBL_EPSILON);
-#else
-    g_assert_cmpuint (_ulp_diff (out[i], ref), <=, TEST_VMATH_LIBMVEC_ULP);
-#endif
+    const gdouble rel = fabs (out[i] / ref - 1.0);
+
+    max_rel = MAX (max_rel, rel / bound);
+    g_assert_cmpfloat (rel, <=, bound);
   }
+
+  g_test_message ("pow_pos: %.3g of the bound", max_rel);
 
   g_free (x);
   g_free (y);
@@ -491,14 +573,69 @@ test_ncm_vmath_pow_pos_random (void)
   ncm_rng_free (rng);
 }
 
+/* pow_pos is NaN for a base that is not positive, on both paths */
+static void
+test_ncm_vmath_pow_pos_special (void)
+{
+  const gdouble x[] = {0.0, -0.0, -1.0, -INFINITY, NAN};
+  const gdouble y[] = {0.0, 1.0, -1.0, 2.0, 0.5};
+  guint i, j;
+
+  for (i = 0; i < G_N_ELEMENTS (x); i++)
+    for (j = 0; j < G_N_ELEMENTS (y); j++)
+      g_assert_true (isnan (ncm_vmath_pow_pos (x[i], y[j])));
+
+  g_assert_cmpfloat (ncm_vmath_pow_pos (1.0, 3.7), ==, 1.0);
+  g_assert_cmpfloat (ncm_vmath_pow_pos (4.0, 0.5), ==, 2.0);
+}
+
 /*
- * Within 2 ulp of sin() and cos() where |value| > 1e-3 and within 2.3e-16 elsewhere, on
- * [-2 pi, 2 pi] and on ranges up to 1e5; the same values in and out of a vectorized loop.
+ * Not a check: reports whether a loop of libm log() that the compiler may vectorize gives
+ * the bits of scalar calls of it. With glibc, a vector variant (libmvec) can only replace
+ * log() under __FAST_MATH__, so a difference means the toolchain substitutes something
+ * else in the loop.
+ */
+static void
+test_ncm_vmath_libm_loop (void)
+{
+  NcmRNG *rng  = ncm_rng_seeded_new (NULL, 23);
+  gdouble *x   = g_new (gdouble, TEST_VMATH_N);
+  gdouble *out = g_new (gdouble, TEST_VMATH_N);
+  volatile gdouble s;
+  guint differ = 0;
+  guint i;
+
+  for (i = 0; i < TEST_VMATH_N; i++)
+    x[i] = pow (10.0, ncm_rng_uniform_gen (rng, -300.0, 300.0));
+
+  #pragma omp simd
+
+  for (i = 0; i < TEST_VMATH_N; i++)
+    out[i] = log (x[i]);
+
+  for (i = 0; i < TEST_VMATH_N; i++)
+  {
+    s = x[i];
+
+    if (out[i] != log (s))
+      differ++;
+  }
+
+  g_test_message ("a loop of libm log() differs from scalar calls at %u of %d points", differ, TEST_VMATH_N);
+
+  g_free (x);
+  g_free (out);
+  ncm_rng_free (rng);
+}
+
+/*
+ * Within 2 ulp of the correctly rounded sine and cosine where their modulus exceeds 1e-3,
+ * and within 2.3e-16 of them elsewhere, on [-2 pi, 2 pi] and on ranges up to 1e5
  */
 static void
 test_ncm_vmath_sincos_random (void)
 {
-  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 17);
+  NcmRNG *rng       = ncm_rng_seeded_new (NULL, 29);
   gdouble *x        = g_new (gdouble, TEST_VMATH_N);
   gdouble *s        = g_new (gdouble, TEST_VMATH_N);
   gdouble *c        = g_new (gdouble, TEST_VMATH_N);
@@ -518,23 +655,20 @@ test_ncm_vmath_sincos_random (void)
 
     for (i = 0; i < TEST_VMATH_N; i++)
     {
-      const gdouble sl = sin (x[i]);
-      const gdouble cl = cos (x[i]);
-      gdouble s1, c1;
+      gdouble sr, cr;
 
-      ncm_vmath_sincos (x[i], &s1, &c1);
-      g_assert_cmpfloat (s[i], ==, s1);
-      g_assert_cmpfloat (c[i], ==, c1);
+      _ref_sincos (x[i], &sr, &cr);
 
-      if (fabs (sl) > 1.0e-3)
-        max_ulp = MAX (max_ulp, _ulp_diff (s[i], sl));
+      if (fabs (sr) > 1.0e-3)
+        max_ulp = MAX (max_ulp, _ulp_diff (s[i], sr));
 
-      if (fabs (cl) > 1.0e-3)
-        max_ulp = MAX (max_ulp, _ulp_diff (c[i], cl));
+      if (fabs (cr) > 1.0e-3)
+        max_ulp = MAX (max_ulp, _ulp_diff (c[i], cr));
 
-      max_abs = MAX (max_abs, MAX (fabs (s[i] - sl), fabs (c[i] - cl)));
+      max_abs = MAX (max_abs, MAX (fabs (s[i] - sr), fabs (c[i] - cr)));
     }
 
+    g_test_message ("sincos on [-%g, %g]: %" G_GUINT64_FORMAT " ulp, %.3g absolute", R[k], R[k], max_ulp, max_abs);
     g_assert_cmpuint (max_ulp, <=, 2);
     g_assert_cmpfloat (max_abs, <=, 2.3e-16);
   }
@@ -565,9 +699,12 @@ test_ncm_vmath_sincos_special (void)
 
   for (i = 0; i < G_N_ELEMENTS (xs); i++)
   {
+    gdouble sr, cr;
+
+    _ref_sincos (xs[i], &sr, &cr);
     ncm_vmath_sincos (xs[i], &s, &c);
-    g_assert_cmpfloat (fabs (s - sin (xs[i])), <=, 2.3e-16);
-    g_assert_cmpfloat (fabs (c - cos (xs[i])), <=, 2.3e-16);
+    g_assert_cmpfloat (fabs (s - sr), <=, 2.3e-16);
+    g_assert_cmpfloat (fabs (c - cr), <=, 2.3e-16);
   }
 
   ncm_vmath_sincos (NAN, &s, &c);

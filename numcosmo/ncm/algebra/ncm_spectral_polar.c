@@ -1096,6 +1096,10 @@ _ncm_spectral_polar_sample_start (NcmSpectralPolarCall *call, const NcmSpectralP
   _ncm_spectral_polar_rows (call, call->level_min, call->level_min, 0, 1, 0, 1);
 }
 
+/* Points of a pass of _ncm_spectral_polar_nodes_r() from which its weights are computed in
+ * loops that vectorize (ncm_vmath_pow_pos()); below it they are computed point by point */
+#define NCM_SPECTRAL_POLAR_SIMD_MIN (8)
+
 /*
  * Radii of the panel at level lx and the regular weight there, r^a unless the panel starts at
  * 0 and (R - r)^b unless it ends at R: every point (i0 = 0, step 1) or the points a doubling
@@ -1129,34 +1133,56 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
     }
   }
 
-  /* The radii contiguous, the weights in a loop that vectorizes, then both at their
-   * positions */
+  /* The radii contiguous, the weights, then both at their positions */
   for (c = 0, i = i0; i <= n; i += step, c++)
     cr[c] = mid + half * work->xc[i << sh];
 
-  for (i = 0; i < c; i++)
-    cw[i] = 1.0;
-
-  /* r >= ra > 0 here, and R - r >= R - rb > 0 below: the bases are positive */
-  if (wa && (a == 1.0))
+  if (c < NCM_SPECTRAL_POLAR_SIMD_MIN)
   {
+    /*
+     * A pass of few points: the weights point by point with pow(), as the vectorized
+     * loops below cost more than they save under NCM_SPECTRAL_POLAR_SIMD_MIN points
+     * (passes of 1 to 5 points occur from level_min 0)
+     */
     for (i = 0; i < c; i++)
-      cw[i] = cr[i];
+    {
+      gdouble w = 1.0;
+
+      if (wa)
+        w *= (a == 1.0) ? cr[i] : pow (cr[i], a);
+
+      if (wb)
+        w *= pow (R - cr[i], b);
+
+      cw[i] = w;
+    }
   }
-  else if (wa)
+  else
   {
-    #pragma omp simd
-
     for (i = 0; i < c; i++)
-      cw[i] = ncm_vmath_pow_pos (cr[i], a);
-  }
+      cw[i] = 1.0;
 
-  if (wb)
-  {
-    #pragma omp simd
+    /* r >= ra > 0 here, and R - r >= R - rb > 0 below: the bases are positive */
+    if (wa && (a == 1.0))
+    {
+      for (i = 0; i < c; i++)
+        cw[i] = cr[i];
+    }
+    else if (wa)
+    {
+      #pragma omp simd
 
-    for (i = 0; i < c; i++)
-      cw[i] *= ncm_vmath_pow_pos (R - cr[i], b);
+      for (i = 0; i < c; i++)
+        cw[i] = ncm_vmath_pow_pos (cr[i], a);
+    }
+
+    if (wb)
+    {
+      #pragma omp simd
+
+      for (i = 0; i < c; i++)
+        cw[i] *= ncm_vmath_pow_pos (R - cr[i], b);
+    }
   }
 
   if (call->radial != NULL)
