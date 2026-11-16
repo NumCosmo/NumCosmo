@@ -414,7 +414,8 @@ test_nc_data_cluster_wl_factor_shape_interp_expand (TestNcDataClusterWLFactorSha
 /*
  * A fit whose box is wider than that of the catalog keeps its bounds, the prior of the fit:
  * a warning is given once, inside the box of the catalog the values are those of the
- * expansion, bit for bit, and outside it those of the integrals.
+ * expansion, bit for bit, and outside it those without the expansion, bit for bit: each
+ * galaxy is computed as without use-interp (the table along its line of shears).
  */
 void
 test_nc_data_cluster_wl_factor_shape_interp_expand_wide (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
@@ -447,7 +448,7 @@ test_nc_data_cluster_wl_factor_shape_interp_expand_wide (TestNcDataClusterWLFact
   nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs_plain);
   nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
   m2lnL_out_integ = _shape_interp_m2lnL_at (test, 0.265);
-  ncm_assert_cmpdouble_e (m2lnL_out, ==, m2lnL_out_integ, 0.0, 1.0e-6);
+  g_assert_cmpfloat (m2lnL_out, ==, m2lnL_out_integ);
 
   nc_galaxy_wl_obs_free (obs_plain);
   nc_galaxy_wl_obs_free (obs_dup);
