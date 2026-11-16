@@ -35,14 +35,14 @@
  * $[r_0, r_{n_r}] \times [\theta_0, \theta_{n_\theta}]$ into the $n_r n_\theta$ initial
  * panels $[r_i, r_{i+1}] \times [\theta_j, \theta_{j+1}]$. An initial panel holds one panel
  * or the panels that came from bisecting it, which cover it without overlap. On a panel
- * $[r_a, r_b] \times [\theta_a, \theta_b]$ with $N_r$ radial and $N_\theta$ angular
+ * $[r_a, r_b] \times [\theta_a, \theta_b]$ with $K_r$ radial and $K_\theta$ angular
  * coefficients the function is
- * $$F (r, \theta) = \sum_{k = 0}^{N_r - 1} \sum_{l = 0}^{N_\theta - 1} c^{kl} \, T_k (s_r) \, T_l (s_\theta),$$
+ * $$F (r, \theta) = \sum_{k = 0}^{K_r - 1} \sum_{l = 0}^{K_\theta - 1} c^{kl} \, T_k (s_r) \, T_l (s_\theta),$$
  * with $s_r = (2 r - r_a - r_b) / (r_b - r_a)$ and
  * $s_\theta = (2 \theta - \theta_a - \theta_b) / (\theta_b - \theta_a)$. The coefficients
  * of a panel are stored by angular index: row $l$ holds
- * $c^{0l}, c^{1l}, \dots, c^{(N_r - 1) l}$, and the numbers may differ between panels. A
- * panel is appended with $N_r = 2^{l_r} + 1$ and $N_\theta = 2^{l_\theta} + 1$ for its
+ * $c^{0l}, c^{1l}, \dots, c^{(K_r - 1) l}$, and the numbers may differ between panels. A
+ * panel is appended with $K_r = 2^{l_r} + 1$ and $K_\theta = 2^{l_\theta} + 1$ for its
  * levels $l_r$ and $l_\theta$; ncm_spectral_polar_panels_trim() then drops the trailing
  * coefficients that do not matter, which leaves any numbers.
  *
@@ -199,7 +199,7 @@ static void _ncm_spectral_polar_panels_append_sized (NcmSpectralPolarPanels *spp
 
 /*
  * The edges and the panels given as a property, added in order so that each is checked as
- * an appended one. A panel holds its numbers of coefficients N_r and N_theta; a panel
+ * an appended one. A panel holds its numbers of coefficients K_r and K_theta; a panel
  * written by an earlier version holds its levels instead, which is recognized by the
  * length of its coefficients: (2^a + 1) (2^b + 1) is never a b.
  */
@@ -287,8 +287,8 @@ ncm_spectral_polar_panels_class_init (NcmSpectralPolarPanelsClass *klass)
    * NcmSpectralPolarPanels:panels:
    *
    * The edges and the panels as a #GVariant of type `(adada(dddduuad))`: the radial edges,
-   * the angular edges, and for each panel $r_a$, $r_b$, $\theta_a$, $\theta_b$, $N_r$,
-   * $N_\theta$ and its $N_\theta N_r$ coefficients by angular index. The three arrays are
+   * the angular edges, and for each panel $r_a$, $r_b$, $\theta_a$, $\theta_b$, $K_r$,
+   * $K_\theta$ and its $K_\theta K_r$ coefficients by angular index. The three arrays are
    * empty when no edges are set. A panel given with its levels $l_r$ and $l_\theta$ and
    * $(2^{l_\theta} + 1) (2^{l_r} + 1)$ coefficients, as earlier versions wrote it, is read
    * as well.
@@ -643,7 +643,7 @@ ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdou
  *
  * Gets a copy of panel @i, which must be below ncm_spectral_polar_panels_get_n_panels().
  *
- * Returns: (transfer full): the $N_\theta$ by $N_r$ coefficients of panel @i.
+ * Returns: (transfer full): the $K_\theta$ by $K_r$ coefficients of panel @i.
  */
 NcmMatrix *
 ncm_spectral_polar_panels_get_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb)
@@ -1046,10 +1046,10 @@ _ncm_spectral_polar_panels_eval_lanes_tail (const NcmSpectralPolarPanelsPanel *p
  * Evaluates the series of panel @i at the @n points ($r_j$, $\theta_j$), the values of
  * ncm_spectral_polar_panels_eval_on() at each point within rounding: the two do the same
  * operations in the same order but may contract them into fma differently, so they agree
- * within about 1e-13 of the sum of the moduli of the coefficients, not bit for bit. The
- * points are taken several at a time, each coefficient being loaded once for all of them,
- * so that evaluating points that share a panel together costs less than evaluating them
- * one by one. @out may be @r or @theta. @i must be below
+ * within rounding of the sum of the moduli of the coefficients (1e-13 of it in the tests),
+ * not bit for bit. The points are taken several at a time, each coefficient being loaded
+ * once for all of them, so that evaluating points that share a panel together costs less
+ * than evaluating them one by one. @out may be @r or @theta. @i must be below
  * ncm_spectral_polar_panels_get_n_panels(), which is not checked.
  */
 void
