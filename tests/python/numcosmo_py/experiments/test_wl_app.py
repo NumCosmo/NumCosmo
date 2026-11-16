@@ -31,6 +31,8 @@ from typing import cast
 from filecmp import cmp
 from pathlib import Path
 import re
+import subprocess
+import sys
 import pytest
 from typer.testing import CliRunner
 
@@ -1786,6 +1788,21 @@ def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with
         assert modes is not None
         assert modes.len() == 25
         assert obs.peek_shape_interp(i) is None
+
+    # A new process, which has not made the types of the catalog, reads it
+    load = (
+        "import sys; from numcosmo_py import Ncm, Nc; Ncm.cfg_init(); "
+        "obs = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).from_binfile(sys.argv[1]); "
+        "print(obs.peek_shape_interp_modes(0).len())"
+    )
+    loaded = subprocess.run(
+        [sys.executable, "-c", load, expanded.as_posix()],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    assert loaded.stdout.split()[-1] == "25"
 
     exp_expanded = tmp_path / "exp_expanded.yaml"
     result = runner.invoke(
