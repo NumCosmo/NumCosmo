@@ -224,8 +224,7 @@ typedef struct _NcGalaxyShapeFactorSpectralData
   guint min_radial_panels;
   gdouble cos_e; /* direction of eps_obs */
   gdouble sin_e;
-  gdouble g_c;           /* center of the coordinates of the interpolant */
-  guint line_failed_cap; /* the level cap at which the table of the line did not converge, or 0 */
+  gdouble g_c; /* center of the coordinates of the interpolant */
 } NcGalaxyShapeFactorSpectralData;
 
 /* What the integrand needs, in the frame where the shear is the real number t */
@@ -536,8 +535,8 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * and accepted when its coefficients change by at most this value in $\ell_1$ norm
    * between two grids. The table is built only when it needs at most half as many integrals
    * as there are nodes and every shear of the line has $|g| \le 0.9$; otherwise each node
-   * is integrated, and a galaxy whose table did not converge integrates its nodes until it
-   * is prepared again. Each integral is accurate to about
+   * is integrated, as when the table does not reach the tolerance. Each integral is
+   * accurate to about
    * #NcGalaxyShapeFactorSpectral:reltol relative, which is its accuracy in $\ln P$: a
    * negative value, the default, takes reltol / 10, so that the table adds an error below
    * that of the integrals. Zero integrates every node.
@@ -674,8 +673,6 @@ _nc_galaxy_shape_factor_spectral_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *m
   ldata->src_gsfs = NULL;
   ldata->src_pop  = NULL;
 
-  ldata->line_failed_cap = 0;
-
   data->ldata                  = ldata;
   data->ldata_destroy          = &_nc_galaxy_shape_factor_spectral_ldata_free;
   data->ldata_read_row         = &_nc_galaxy_shape_factor_spectral_ldata_read_row;
@@ -721,9 +718,6 @@ _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
   NcGalaxyShapeFactorSpectral *gsfs               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf);
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
   NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
-
-  /* A new preparation tries the table of the line again */
-  ldata->line_failed_cap = 0;
 
   if (self->use_interp)
   {
@@ -964,7 +958,8 @@ _nc_galaxy_shape_factor_spectral_line_ln_P (gpointer user_data, gdouble t)
  * negative). FALSE, with *coeffs NULL, with the interpolant, without line-abstol, for a
  * level_cap too low or a single point, when the line leaves
  * |g| <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX, or when the series does not reach the
- * tolerance, which is then recorded for the galaxy at this level_cap.
+ * tolerance. Nothing is kept from one call to the next, so the values depend only on the
+ * line given.
  */
 static gboolean
 _nc_galaxy_shape_factor_spectral_line_expand (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
@@ -973,14 +968,12 @@ _nc_galaxy_shape_factor_spectral_line_expand (NcGalaxyShapeFactorSpectral *gsfs,
                                               const guint level_cap, GArray **coeffs)
 {
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
-  NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
   const gdouble line_abstol                       = (self->line_abstol < 0.0) ? 0.1 * self->reltol : self->line_abstol;
 
   *coeffs = NULL;
 
-  /* |b + t u| is largest at an end of the segment; a table that did not converge at this
-   * level cap is not tried again until the galaxy is prepared again */
-  if (!self->use_interp && (line_abstol > 0.0) && (ldata->line_failed_cap != level_cap) &&
+  /* |b + t u| is largest at an end of the segment */
+  if (!self->use_interp && (line_abstol > 0.0) &&
       (level_cap > NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN) && (t_max > t_min) &&
       (gsl_hypot (b_1 + t_min * u_1, b_2 + t_min * u_2) <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX) &&
       (gsl_hypot (b_1 + t_max * u_1, b_2 + t_max * u_2) <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX))
@@ -998,7 +991,6 @@ _nc_galaxy_shape_factor_spectral_line_expand (NcGalaxyShapeFactorSpectral *gsfs,
       return TRUE;
 
     g_clear_pointer (coeffs, g_array_unref);
-    ldata->line_failed_cap = level_cap;
   }
 
   return FALSE;
@@ -2060,8 +2052,8 @@ nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (NcGalaxyShapeFacto
 /**
  * nc_galaxy_shape_factor_spectral_set_line_abstol:
  * @gsfs: a #NcGalaxyShapeFactorSpectral
- * @abstol: the absolute tolerance on $\ln P$, zero to integrate every node, negative for
- *   #NcGalaxyShapeFactorSpectral:reltol / 10
+ * @abstol: the absolute tolerance on $\ln P$ in [-1, 1], zero to integrate every node,
+ *   negative for #NcGalaxyShapeFactorSpectral:reltol / 10
  *
  * Sets #NcGalaxyShapeFactorSpectral:line-abstol.
  */
@@ -2069,6 +2061,9 @@ void
 nc_galaxy_shape_factor_spectral_set_line_abstol (NcGalaxyShapeFactorSpectral *gsfs, const gdouble abstol)
 {
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  g_assert_cmpfloat (abstol, >=, -1.0);
+  g_assert_cmpfloat (abstol, <=, 1.0);
 
   self->line_abstol = abstol;
 }
