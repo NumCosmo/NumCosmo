@@ -70,6 +70,13 @@ jobs:
     - name: Install pre-requisites
       if: steps.cpu.outputs.ok == 'true'
       uses: ./.github/actions/apt-deps
+    - uses: actions/setup-python@v6
+      if: steps.cpu.outputs.ok == 'true'
+      with:
+        python-version: '3.13'
+    - name: Pip install meson
+      if: steps.cpu.outputs.ok == 'true'
+      run: pip install meson ninja
     - name: Configure NumCosmo for ${{ matrix.level }}
       if: steps.cpu.outputs.ok == 'true'
       run: meson setup build -Dbuildtype=release -Dc_args=-march=${{ matrix.level }} -Dnumcosmo_py=false -Ddocumentation=false -Dfftw-planner=estimate --prefix=/usr || (cat build/meson-logs/meson-log.txt && exit 1)
