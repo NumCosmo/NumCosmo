@@ -388,9 +388,10 @@ the galaxy ([[numcosmo|nc_galaxy_shape_factor_line_new]]).
   adds an error below that of the integrals; a positive value sets it, and zero integrates
   every node.
 - When it is used: the series must need at most half as many integrals as there are nodes,
-  and every shear of the line must have $|g| \le 0.9$; otherwise each node is integrated. A
-  galaxy whose series does not reach the tolerance integrates its nodes until it is
-  prepared again, so that it does not pay for the attempt at every evaluation.
+  and every shear of the line must have $|g| \le 0.9$; otherwise each node is integrated,
+  as when the series does not reach the tolerance. The integrals of that attempt are then
+  lost: a galaxy whose table does not converge costs up to 1.5 times its integrals. Nothing
+  is kept between evaluations, so the values depend only on the point evaluated.
 - With `use-interp` the approximation in $g$ is used instead, and `line-abstol` is ignored.
 
 ## Measured Accuracy
