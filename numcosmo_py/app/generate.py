@@ -72,6 +72,7 @@ from numcosmo_py.experiments.cluster_wl import (
     load_cluster_wl,
     resolve_resample_flag,
     shape_interp_gens,
+    shape_interp_pop_box,
 )
 from numcosmo_py.experiments.curvature_weight import (
     qspline_curvature_weight,
@@ -1187,8 +1188,11 @@ class LoadClusterWL(ClusterWL):
                 "--shape-factor and --pop-dist must not be given"
             )
 
+        box = shape_interp_pop_box(self._obs)
         pop_params = [
-            p for p in self.parameter_list if p.startswith("NcGalaxyShapePop")
+            p
+            for p in self.parameter_list
+            if p.startswith("NcGalaxyShapePop") and p.split(":", 1)[-1] not in box
         ]
         if pop_params:
             raise typer.BadParameter(
@@ -1203,8 +1207,14 @@ class LoadClusterWL(ClusterWL):
         return load_wl_obs(self.catalog, self.data_file)
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
-        """Load the real-data cluster weak lensing experiment."""
-        return load_cluster_wl(
+        """Load the real-data cluster weak lensing experiment.
+
+        With a catalog holding an expansion over the population, the parameters
+        of its box take the bounds of the box and the values of the record,
+        fixed: --parameter-list frees them. A fit may narrow their bounds
+        inside the box.
+        """
+        exp = load_cluster_wl(
             obs=self._obs,
             cluster_ra=self.cluster_ra,
             cluster_dec=self.cluster_dec,
@@ -1222,6 +1232,17 @@ class LoadClusterWL(ClusterWL):
             summary=self.summary,
             resample_flag=resolve_resample_flag(self.resample_flag),
         )
+
+        box = shape_interp_pop_box(self._obs)
+        if box:
+            mset = exp.peek("model-set")
+            assert isinstance(mset, Ncm.MSet)
+            pop = mset.peek(Nc.GalaxyShapePop.id())
+            assert isinstance(pop, Nc.GalaxyShapePop)
+            for name, (lo, hi) in box.items():
+                pop.param_set_desc(name, {"lower-bound": lo, "upper-bound": hi})
+
+        return exp
 
 
 @dataclasses.dataclass(kw_only=True)

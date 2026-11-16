@@ -419,6 +419,7 @@ DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
 # Negative: reltol / 10 (NcGalaxyShapeFactorSpectral:line-abstol)
 DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = -1.0
 DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE = False
+DEFAULT_SHAPE_SPECTRAL_POP_ORDER = 0
 
 
 class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
@@ -439,6 +440,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
         DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL
     )
     restrict_range: Annotated[bool, Field()] = DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE
+    pop_order: Annotated[int, Field(ge=0, le=64)] = DEFAULT_SHAPE_SPECTRAL_POP_ORDER
 
     @staticmethod
     def help_text() -> list[str]:
@@ -454,7 +456,8 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
                 "interp_min_radial_panels="
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS}, "
                 f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL} (negative: reltol / 10), "
-                f"restrict_range={DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE}"
+                f"restrict_range={DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE}, "
+                f"pop_order={DEFAULT_SHAPE_SPECTRAL_POP_ORDER}"
             ),
         ]
 
@@ -473,6 +476,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
             interp_min_radial_panels=self.interp_min_radial_panels,
             line_abstol=self.line_abstol,
             restrict_range=self.restrict_range,
+            pop_order=self.pop_order,
         )
 
 
@@ -865,6 +869,8 @@ def shape_interp_gens(
         interp_g_max=gsfs.get_interp_g_max(),
         interp_abstol=gsfs.get_interp_abstol(),
         interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),
+        restrict_range=gsfs.get_restrict_range(),
+        pop_order=gsfs.get_pop_order(),
     )
 
     pop_gen: GalaxyPopGenTypes
@@ -882,6 +888,42 @@ def shape_interp_gens(
         )
 
     return shape_gen, pop_gen
+
+
+def shape_interp_pop_box(obs: Nc.GalaxyWLObs) -> dict[str, tuple[float, float]]:
+    """Return the box of the expansion over the population of a prepared catalog.
+
+    A catalog prepared with ``pop_order`` and ``--pop-box`` holds the
+    interpolants of the nodes of an expansion over the free parameters of the
+    population of its record. An experiment built from it has those parameters
+    free over their bounds.
+
+    Returns:
+        The free parameters of the population of the record and their bounds,
+        or an empty dict when obs carries no current record or the record has
+        no expansion.
+    """
+    source = obs.peek_shape_interp_source()
+    if source is None:
+        return {}
+
+    gsfs = source.peek("shape-factor")
+    pop = source.peek("shape-pop")
+    assert isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
+    assert isinstance(pop, Nc.GalaxyShapePop)
+
+    if gsfs.get_pop_order() < 2:
+        return {}
+
+    box: dict[str, tuple[float, float]] = {}
+    for idx in range(pop.len()):
+        if pop.param_get_ftype(idx) == Ncm.ParamType.FREE:
+            box[pop.param_name(idx)] = (
+                pop.param_get_lower_bound(idx),
+                pop.param_get_upper_bound(idx),
+            )
+
+    return box
 
 
 class GalaxyPopGen(StrEnum):

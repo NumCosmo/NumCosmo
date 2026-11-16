@@ -172,6 +172,18 @@ class ShapeInterpWLCatalog:
         typer.Option(help="Upper bound of the concentration, with --cluster-c-min."),
     ] = None
 
+    pop_box: Annotated[
+        list[str] | None,
+        typer.Option(
+            help=(
+                "NAME=LO:HI, repeatable: frees the population parameter NAME over "
+                "[LO, HI]. With pop_order in the spectral shape factor, the catalog "
+                "holds the interpolants of the nodes of the expansion over that box, "
+                "and fits built from it have those parameters free."
+            ),
+        ),
+    ] = None
+
     def __post_init__(self) -> None:
         """Build the interpolants and write the catalog.
 
@@ -242,16 +254,39 @@ class ShapeInterpWLCatalog:
         )
 
     def _set_box(self, mset: Ncm.MSet) -> None:
-        """Free the halo center and the concentration over the box of the fits.
+        """Free the halo center, the concentration and the population over the box.
 
-        Only the bound of restrict_range=true reads the box: the interpolants depend on the
-        population alone.
+        The box of the center and of the concentration feeds the bound of
+        restrict_range=true; the box of the population is that of the expansion of
+        pop_order, and the record of the catalog keeps it.
 
         Raises:
-            typer.BadParameter: Only one of --cluster-c-min and --cluster-c-max.
+            typer.BadParameter: Only one of --cluster-c-min and --cluster-c-max, or
+                a --pop-box that is not NAME=LO:HI for a parameter of the
+                population.
         """
         hp = mset.peek(Nc.HaloPosition.id())
         hms = mset.peek(Nc.HaloMassSummary.id())
+        pop = mset.peek(Nc.GalaxyShapePop.id())
+        assert isinstance(pop, Nc.GalaxyShapePop)
+        for item in self.pop_box or []:
+            try:
+                name, bounds = item.split("=", 1)
+                lo, hi = (float(v) for v in bounds.split(":", 1))
+            except ValueError as exc:
+                raise typer.BadParameter(
+                    f"--pop-box {item!r}: expected NAME=LO:HI"
+                ) from exc
+            found, idx = pop.param_index_from_name(name)
+            if not found:
+                raise typer.BadParameter(
+                    f"--pop-box: {type(pop).__name__} has no parameter {name!r}"
+                )
+            if not lo < hi:
+                raise typer.BadParameter(f"--pop-box {item!r}: LO must be below HI")
+            pop.param_set_desc(name, {"lower-bound": lo, "upper-bound": hi})
+            pop.param_set_ftype(idx, Ncm.ParamType.FREE)
+            pop[name] = 0.5 * (lo + hi)
         assert isinstance(hp, Nc.HaloPosition)
         assert isinstance(hms, Nc.HaloMassSummary)
         if self.centre_box_deg > 0.0:

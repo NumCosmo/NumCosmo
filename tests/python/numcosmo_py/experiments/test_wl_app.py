@@ -1744,6 +1744,115 @@ def test_wl_catalog_shape_interp_restrict_range(
     assert m2lnL["restricted"] == pytest.approx(m2lnL["full"], rel=0.0, abs=1.0e-4)
 
 
+def _experiment_m2lnL_at(experiment_file: Path, pop_values: dict[str, float]) -> float:
+    """-2 ln L of an experiment with the population parameters set to pop_values."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    exp = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    likelihood = cast(Ncm.Likelihood, exp.get("likelihood"))
+    mset = cast(Ncm.MSet, exp.get("model-set"))
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+    assert pop is not None
+    for name, value in pop_values.items():
+        pop[name] = value
+    mset.prepare_fparam_map()
+    return likelihood.m2lnL_val(mset)
+
+
+def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with_meta):
+    """With pop_order and --pop-box, the catalog holds for each galaxy the modes
+    of the expansion over the box of the population. An experiment built from it
+    has those parameters fixed at the values of the record, with the bounds of
+    the box, unless --parameter-list frees them; inside the box, fixed or free,
+    it has the likelihood of the integrals at the same population."""
+    expanded = tmp_path / "expanded.gvar"
+    result = _shape_interp(
+        expanded,
+        real_wl_obs_file_with_meta,
+        "--pop-dist=beta alpha=1.8 beta=2.1",
+        "--shape-factor=spectral use_interp=true pop_order=5 "
+        "ellip_conv=trace ellip_coord=celestial",
+        "--pop-box=alpha=1.75:1.85",
+        "--pop-box=beta=2.05:2.15",
+    )
+    assert result.exit_code == 0, result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(expanded.as_posix()))
+    # Every expansion converged: a galaxy whose expansion does not has no modes
+    for i in range(obs.len()):
+        modes = obs.peek_shape_interp_modes(i)
+        assert modes is not None
+        assert modes.len() == 25
+        assert obs.peek_shape_interp(i) is None
+
+    exp_expanded = tmp_path / "exp_expanded.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_expanded.as_posix(),
+            f"--data-file={expanded.as_posix()}",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    exp_alpha = tmp_path / "exp_alpha.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_alpha.as_posix(),
+            f"--data-file={expanded.as_posix()}",
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    exp_integral = tmp_path / "exp_integral.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_integral.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral use_interp=false ellip_conv=trace "
+            "ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.8 beta=2.1",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    box = {"alpha": (1.75, 1.85), "beta": (2.05, 2.15)}
+    free = {exp_expanded: set(), exp_alpha: {"alpha"}}
+    for exp_file, free_names in free.items():
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.from_binfile(exp_file.with_suffix(".dataset.gvar").as_posix())
+        mset = cast(
+            Ncm.MSet, ser.dict_str_from_yaml_file(exp_file.as_posix()).get("model-set")
+        )
+        pop = mset.peek(Nc.GalaxyShapePop.id())
+        assert pop["alpha"] == pytest.approx(1.8)
+        assert pop["beta"] == pytest.approx(2.1)
+        for name, (lo, hi) in box.items():
+            _, idx = pop.param_index_from_name(name)
+            assert pop.param_get_lower_bound(idx) == pytest.approx(lo)
+            assert pop.param_get_upper_bound(idx) == pytest.approx(hi)
+            assert (pop.param_get_ftype(idx) == Ncm.ParamType.FREE) == (
+                name in free_names
+            )
+
+    for exp_file in (exp_expanded, exp_alpha):
+        for values in ({"alpha": 1.8, "beta": 2.1}, {"alpha": 1.78, "beta": 2.13}):
+            assert _experiment_m2lnL_at(exp_file, values) == pytest.approx(
+                _experiment_m2lnL_at(exp_integral, values), rel=0.0, abs=1.0e-3
+            )
+
+
 def test_wl_catalog_shape_interp_concentration_pair(
     tmp_path: Path, real_wl_obs_file_with_meta
 ):
