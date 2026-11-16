@@ -32,8 +32,8 @@
  * (#NcGalaxyShapeFactorMomentsTilt and #NcGalaxyShapeFactorMomentsGauss):
  * the closed-form target moments, the dyadic Chebyshev mesh in
  * ghat = min(|g|, 1/|g|) and its interleaved coefficient tables, the
- * instance-cache key, the tables' serialized form, and the reachable-range
- * bound. Not public API.
+ * instance-cache key and the tables' serialized form. The reachable-range
+ * bound is in nc_galaxy_shape_factor_reach_private.h. Not public API.
  */
 #ifndef _NC_GALAXY_SHAPE_FACTOR_MOMENTS_PRIVATE_H_
 #define _NC_GALAXY_SHAPE_FACTOR_MOMENTS_PRIVATE_H_
@@ -129,8 +129,6 @@ guint _nc_galaxy_shape_factor_moments_key_hash (gconstpointer p);
 gboolean _nc_galaxy_shape_factor_moments_key_equal (gconstpointer a, gconstpointer b);
 NcmVector *_nc_galaxy_shape_factor_moments_table_to_vector (const NcGalaxyShapeFactorMomentsKey *key, const NcGalaxyShapeFactorMomentsTable *table);
 gboolean _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFactorMomentsKey *key, NcGalaxyShapeFactorMomentsTable **table_out);
-gdouble _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cosmo);
-gboolean _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src);
 
 /*
  * Panel index of @ghat, in O(1) and without a search: panel j covers
