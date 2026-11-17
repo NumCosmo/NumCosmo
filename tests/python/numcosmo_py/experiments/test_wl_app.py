@@ -2520,7 +2520,7 @@ def test_wl_catalog_upgrade_and_info(tmp_path: Path, real_wl_obs_file_with_meta)
     ):
         result = runner.invoke(app, ["wl-catalog", "info", path.as_posix()])
         assert result.exit_code == 0, result.output
-        plain[name] = " ".join(result.output.split())
+        plain[name] = " ".join(re.sub(r"\x1b\[[0-9;]*m", "", result.output).split())
     assert "carries interpolants itself: 0 fixed, 20 expansions" in plain["legacy"]
     assert "names the cache" in plain["upgraded"]
     assert "matches the rows" in plain["upgraded"]
