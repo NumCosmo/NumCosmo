@@ -1719,6 +1719,7 @@ def apply_prior(mset: Ncm.MSet, name: str, lo: float, hi: float) -> None:
     if pindex is None:
         raise ValueError(f"the prior names an unknown parameter: {name}")
     model = mset.peek(pindex.mid)
+    assert model is not None
     pid = pindex.pid
     value = model.param_get(pid)
     if not lo <= value <= hi:
