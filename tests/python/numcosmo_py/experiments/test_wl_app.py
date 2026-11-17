@@ -51,6 +51,7 @@ from numcosmo_py import (
 )
 from numcosmo_py.app import app
 from numcosmo_py.app.loading import LoadExperiment
+from numcosmo_py.experiments.wl_interp_cache import _sub_catalog
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
     ShapeFactorGen,
@@ -2572,3 +2573,132 @@ def test_cluster_wl_load_default_pop_coverage(
         "alpha": [1.25, 2.75],
         "beta": [1.25, 2.75],
     }
+
+
+def _masked_and_subset_m2lnL(experiment: Path) -> tuple[float, float]:
+    """-2lnL of a masked experiment, and of the same likelihood on the catalog of the rows
+    of its mask alone (unmasked), their interpolants included.
+
+    The rest of the experiment, the sky footprint of the position factor among it, is
+    that of the whole catalog, as a mask keeps it.
+    """
+    loaded = LoadExperiment(experiment=experiment)
+    loaded.mset.prepare_fparam_map()
+    data = cast(Nc.DataClusterWLFactor, loaded.likelihood.peek_dataset().get_data(0))
+    masked = loaded.likelihood.m2lnL_val(loaded.mset)
+
+    obs = data.peek_obs()
+    rows = list(data.get_mask())
+    sub = _sub_catalog(obs, rows)
+    for k, i in enumerate(rows):
+        modes = obs.peek_shape_interp_modes(i)
+        if modes is not None:
+            sub.set_shape_interp_modes(k, modes)
+        elif obs.peek_shape_interp(i) is not None:
+            sub.set_shape_interp(k, obs.peek_shape_interp(i))
+    if obs.peek_shape_interp_source() is not None:
+        sub.props.shape_interp_source = obs.peek_shape_interp_source()
+    data.set_mask(None)
+    data.set_obs(sub)
+    return masked, loaded.likelihood.m2lnL_val(loaded.mset)
+
+
+def test_cluster_wl_load_mask_file(tmp_path: Path, real_wl_obs_file_with_meta):
+    """--mask-file restricts the likelihood to some rows of the catalog: the likelihood
+    is that of the catalog of those rows, bit for bit, in either format."""
+    rows = [0, 3, 4, 7, 11, 12, 18]
+    keep = np.zeros(20, dtype=bool)
+    keep[rows] = True
+    np.save(tmp_path / "keep.npy", keep)
+    (tmp_path / "keep.txt").write_text("\n".join(str(int(k)) for k in keep) + "\n")
+    np.save(tmp_path / "rows.npy", np.array(rows))
+    base = [
+        f"--data-file={real_wl_obs_file_with_meta}",
+        "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        "--integ-method=fixed-nodes",
+    ]
+    values = set()
+    for name in ("keep.npy", "keep.txt", "rows.npy"):
+        exp = tmp_path / f"exp_{name.replace('.', '_')}.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp.as_posix(),
+                *base,
+                f"--mask-file={tmp_path / name}",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        masked, subset = _masked_and_subset_m2lnL(exp)
+        assert masked == subset
+        values.add(masked)
+    assert len(values) == 1
+
+    result = runner.invoke(
+        app,
+        ["wl-catalog", "info", (tmp_path / "exp_keep_npy.dataset.gvar").as_posix()],
+    )
+    assert result.exit_code == 0, result.output
+    assert "uses 7 of the rows" in " ".join(result.output.split())
+
+
+@pytest.mark.parametrize(
+    "content, name",
+    [("1\n0\n", "short.txt"), ("1 2 x\n", "words.txt")],
+)
+def test_cluster_wl_load_mask_file_bad(
+    tmp_path: Path, real_wl_obs_file_with_meta, content, name
+):
+    """A mask that is not one entry per row is an error, and nothing is written."""
+    (tmp_path / name).write_text(content)
+    exp = tmp_path / "exp.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--mask-file={tmp_path / name}",
+        ],
+    )
+    assert result.exit_code != 0
+    assert not exp.exists()
+
+
+def test_cluster_wl_load_mask_one_cache(tmp_path: Path, real_wl_obs_file_with_meta):
+    """Experiments with two masks share one cache of interpolants: the second builds only
+    the rows the first did not, and its likelihood is that of its rows alone."""
+    first, second = [1, 2, 5, 8, 9], [2, 5, 6, 13, 19]
+    np.save(tmp_path / "first.npy", np.array(first))
+    np.save(tmp_path / "second.npy", np.array(second))
+    cov = [
+        "--pop-coverage=alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+    ]
+    result = _cache_experiment(
+        tmp_path / "first.yaml",
+        real_wl_obs_file_with_meta,
+        *cov,
+        f"--mask-file={tmp_path / 'first.npy'}",
+    )
+    assert result.exit_code == 0, result.output
+    assert "5 built, 0 reused" in result.output
+    result = _cache_experiment(
+        tmp_path / "second.yaml",
+        real_wl_obs_file_with_meta,
+        *cov,
+        f"--mask-file={tmp_path / 'second.npy'}",
+    )
+    assert result.exit_code == 0, result.output
+    assert "3 built, 2 reused" in result.output
+    assert (
+        len(list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.gvar"))) == 1
+    )
+
+    masked, subset = _masked_and_subset_m2lnL(tmp_path / "second.yaml")
+    values = [masked, subset]
+    assert values[0] == values[1]

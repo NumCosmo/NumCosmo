@@ -475,6 +475,13 @@ cache files, one per configuration, apart from the catalog
 and saves the catalog without approximations, naming the cache relative to the experiment
 and the coverage; loading the experiment (`numcosmo run ...`) attaches the cache and builds
 what it misses for the priors of the experiment, unless `--no-interp-build`.
+A mask ([[numcosmo|NcDataClusterWLFactor:mask]], `generate cluster-wl-load --mask-file`)
+restricts the likelihood to some rows of the catalog, which keeps every row: the likelihood of
+a mask is, bit for bit, that of its rows alone, and one cache serves every mask of its
+catalog, each building only the rows the cache does not hold yet. The other models of the
+experiment, the sky footprint of the position factor among them, are those of the whole
+catalog.
+
 `numcosmo wl-catalog info` describes a catalog, a cache or a dataset, and
 `numcosmo wl-catalog upgrade` moves the approximations of a catalog written before the
 caches into one.
