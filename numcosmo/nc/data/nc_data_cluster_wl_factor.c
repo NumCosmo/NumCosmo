@@ -120,6 +120,7 @@ typedef struct _NcDataClusterWLFactorSharedGrid
 {
   gint ref;
   guint n_gal;
+  guint64 mask_key;
   gdouble z_cl;
   guint n_nodes;
   guint rule_n;
@@ -243,6 +244,11 @@ _nc_data_cluster_wl_factor_calib_shape (gdouble z, gpointer user_data)
 typedef struct _NcDataClusterWLFactorPrivate
 {
   NcGalaxyWLObs *obs;
+
+  /* The rows of obs the likelihood uses, strictly increasing (guint), or NULL for every
+   * row; mask_key: their FNV-1a hash, 0 for NULL (see NcDataClusterWLFactor:mask). */
+  GArray *mask;
+  guint64 mask_key;
   NcGalaxyPositionFactor *position_factor;
   NcGalaxyRedshiftFactor *redshift_factor;
   NcGalaxyShapeFactor *shape_factor;
@@ -458,6 +464,7 @@ enum
   PROP_NODE_RELTOL,
   PROP_MAX_TOTAL_NODES,
   PROP_NODE_CONFIG,
+  PROP_MASK,
 };
 
 struct _NcDataClusterWLFactor
@@ -815,6 +822,37 @@ _crit_key_new (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
   return key;
 }
 
+/* The number of galaxies of the likelihood: the rows of the mask, or of obs */
+static guint
+_nc_data_cluster_wl_factor_n_rows (NcDataClusterWLFactorPrivate *self)
+{
+  if (self->mask != NULL)
+    return self->mask->len;
+
+  return (self->obs != NULL) ? nc_galaxy_wl_obs_len (self->obs) : 0;
+}
+
+/* The row of obs of galaxy gal_i */
+static inline guint
+_nc_data_cluster_wl_factor_row (NcDataClusterWLFactorPrivate *self, const guint gal_i)
+{
+  return (self->mask != NULL) ? g_array_index (self->mask, guint, gal_i) : gal_i;
+}
+
+/* Aborts unless every row of the mask is a row of obs */
+static void
+_nc_data_cluster_wl_factor_check_mask (NcDataClusterWLFactorPrivate *self)
+{
+  if ((self->mask != NULL) && (self->obs != NULL) && (self->mask->len > 0))
+  {
+    const guint last = g_array_index (self->mask, guint, self->mask->len - 1);
+
+    if (last >= nc_galaxy_wl_obs_len (self->obs))
+      g_error ("nc_data_cluster_wl_factor: the mask keeps row %u, but the catalog has %u rows.",
+               last, nc_galaxy_wl_obs_len (self->obs));
+  }
+}
+
 static gboolean
 _crit_key_equal (const GArray *a, const GArray *b)
 {
@@ -849,6 +887,7 @@ _fixed_nodes_grid_publish (NcDataClusterWLFactorPrivate *self)
   shared_grid->ref = 1;
 
   shared_grid->n_gal              = self->shape_data->len;
+  shared_grid->mask_key           = self->mask_key;
   shared_grid->z_cl               = self->fixed_nodes_zcl;
   shared_grid->n_nodes            = self->fixed_nodes_n_nodes_seen;
   shared_grid->rule_n             = self->fixed_nodes_rule_n_seen;
@@ -924,6 +963,7 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
             (memcmp (self->calib_n_nodes->data, shared_grid->calib_n_nodes->data, sizeof (gint) * self->calib_n_nodes->len) == 0) &&
             (memcmp (self->calib_rule_n->data, shared_grid->calib_rule_n->data, sizeof (gint) * self->calib_rule_n->len) == 0))) &&
           (shared_grid->n_gal == self->shape_data->len) &&
+          (shared_grid->mask_key == self->mask_key) &&
           (shared_grid->z_cl == self->z_cl) &&
           (shared_grid->n_nodes == self->n_nodes) &&
           (shared_grid->rule_n == self->rule_n) &&
@@ -963,7 +1003,7 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
 static gdouble
 _nc_data_cluster_wl_factor_z_top (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
 {
-  const guint len       = nc_galaxy_wl_obs_len (self->obs);
+  const guint len       = _nc_data_cluster_wl_factor_n_rows (self);
   const gboolean loaded = !self->obs_changed && (self->shape_data->len == len);
   gdouble z_top         = 0.0;
   guint i;
@@ -980,7 +1020,7 @@ _nc_data_cluster_wl_factor_z_top (NcDataClusterWLFactorPrivate *self, NcmMSet *m
     else
     {
       z_data = nc_galaxy_redshift_factor_data_new (self->redshift_factor, mset);
-      nc_galaxy_redshift_factor_data_read_row (z_data, self->obs, i);
+      nc_galaxy_redshift_factor_data_read_row (z_data, self->obs, _nc_data_cluster_wl_factor_row (self, i));
     }
 
     nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, z_data, &z_lo, &z_hi);
@@ -1166,6 +1206,8 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->obs             = NULL;
+  self->mask            = NULL;
+  self->mask_key        = 0;
   self->position_factor = NULL;
   self->redshift_factor = NULL;
   self->shape_factor    = NULL;
@@ -1411,6 +1453,24 @@ _nc_data_cluster_wl_factor_set_property (GObject *object, guint prop_id, const G
       self->node_config_valid = FALSE;
       break;
     }
+    case PROP_MASK:
+    {
+      GVariant *var = g_value_get_variant (value);
+
+      if (var == NULL)
+      {
+        nc_data_cluster_wl_factor_set_mask (dcwlf, NULL, 0);
+      }
+      else
+      {
+        gsize n_rows      = 0;
+        const guint *rows = g_variant_get_fixed_array (var, &n_rows, sizeof (guint));
+
+        nc_data_cluster_wl_factor_set_mask (dcwlf, rows, n_rows);
+      }
+
+      break;
+    }
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -1481,6 +1541,14 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
         g_value_take_boxed (value, _node_config_pack (self));
       else
         g_value_set_boxed (value, self->node_config);
+
+      break;
+    case PROP_MASK:
+
+      if (self->mask == NULL)
+        g_value_set_variant (value, NULL);
+      else
+        g_value_set_variant (value, g_variant_new_fixed_array (G_VARIANT_TYPE_UINT32, self->mask->data, self->mask->len, sizeof (guint)));
 
       break;
     default:                                                      /* LCOV_EXCL_LINE */
@@ -1583,6 +1651,11 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
 static void
 _nc_data_cluster_wl_factor_finalize (GObject *object)
 {
+  NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (object);
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  g_clear_pointer (&self->mask, g_array_unref);
+
   /* Chain up: end */
   G_OBJECT_CLASS (nc_data_cluster_wl_factor_parent_class)->finalize (object);
 }
@@ -1616,14 +1689,15 @@ _nc_data_cluster_wl_factor_load_obs (NcDataClusterWLFactorPrivate * const self, 
   guint i;
 
   g_ptr_array_set_size (self->shape_data, 0);
+  _nc_data_cluster_wl_factor_check_mask (self);
 
-  for (i = 0; i < nc_galaxy_wl_obs_len (obs); i++)
+  for (i = 0; i < _nc_data_cluster_wl_factor_n_rows (self); i++)
   {
     NcGalaxyPositionFactorData *pos_data = nc_galaxy_position_factor_data_new (self->position_factor, mset);
     NcGalaxyRedshiftFactorData *z_data   = nc_galaxy_redshift_factor_data_new (self->redshift_factor, mset);
     NcGalaxyShapeFactorData *s_data      = nc_galaxy_shape_factor_data_new (self->shape_factor, mset, pos_data, z_data);
 
-    nc_galaxy_shape_factor_data_read_row (s_data, obs, i);
+    nc_galaxy_shape_factor_data_read_row (s_data, obs, _nc_data_cluster_wl_factor_row (self, i));
     g_ptr_array_add (self->shape_data, s_data);
 
     nc_galaxy_position_factor_data_unref (pos_data);
@@ -2525,7 +2599,7 @@ _nc_data_cluster_wl_factor_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     }
 
     nc_galaxy_shape_factor_gen (self->shape_factor, mset, s_data, rng);
-    nc_galaxy_shape_factor_data_write_row (s_data, self->obs, gal_i);
+    nc_galaxy_shape_factor_data_write_row (s_data, self->obs, _nc_data_cluster_wl_factor_row (self, gal_i));
   }
 
   /* ncm_data_resample() calls prepare() *before* this function runs, using
@@ -2549,7 +2623,7 @@ _nc_data_cluster_wl_factor_get_len (NcmData *data)
   NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (data);
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
-  return (self->obs != NULL) ? nc_galaxy_wl_obs_len (self->obs) : 0;
+  return _nc_data_cluster_wl_factor_n_rows (self);
 }
 
 static void
@@ -2852,6 +2926,22 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                        NCM_TYPE_VAR_DICT,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcDataClusterWLFactor:mask:
+   *
+   * The rows of #NcDataClusterWLFactor:obs the likelihood uses, as an array of
+   * unsigned integers ("au") strictly increasing, or %NULL for every row (see
+   * nc_data_cluster_wl_factor_set_mask()).
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_MASK,
+                                   g_param_spec_variant ("mask",
+                                                         NULL,
+                                                         "Rows of the catalog the likelihood uses",
+                                                         G_VARIANT_TYPE ("au"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   data_class->bootstrap       = TRUE;
   data_class->resample        = &_nc_data_cluster_wl_factor_resample;
   data_class->m2lnL_val       = &_nc_data_cluster_wl_factor_m2lnL_val;
@@ -3002,8 +3092,8 @@ nc_data_cluster_wl_factor_set_obs (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *
   g_array_set_size (self->calib_rule_n, 0);
 
   nc_galaxy_wl_obs_clear (&self->obs);
-  self->len           = nc_galaxy_wl_obs_len (obs);
   self->obs           = nc_galaxy_wl_obs_ref (obs);
+  self->len           = _nc_data_cluster_wl_factor_n_rows (self);
   self->obs_changed   = TRUE;
   self->has_resampled = FALSE;
 
@@ -3044,6 +3134,96 @@ nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   return self->obs;
+}
+
+/**
+ * nc_data_cluster_wl_factor_set_mask:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @rows: (array length=n_rows) (nullable): the rows of the catalog to use, strictly increasing
+ * @n_rows: the number of rows
+ *
+ * Restricts the likelihood to the rows @rows of the catalog
+ * (#NcDataClusterWLFactor:obs): only those galaxies are loaded, evaluated,
+ * bootstrapped and resampled, galaxy $i$ being row @rows[$i$]. The other rows
+ * are kept in the catalog, untouched, so that one catalog and the caches of
+ * its rows serve several selections. %NULL or @n_rows = 0 uses every row.
+ * The rows must be strictly increasing; each must be a row of the catalog
+ * when the catalog is loaded, at the next prepare. Setting the mask, like
+ * setting the catalog, makes the next prepare rebuild every galaxy.
+ *
+ * The likelihood of a mask equals, bit for bit, that of the catalog made of
+ * its rows alone.
+ */
+void
+nc_data_cluster_wl_factor_set_mask (NcDataClusterWLFactor *dcwlf, const guint *rows, const guint n_rows)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  guint64 key                               = 0;
+  guint i;
+
+  for (i = 1; i < n_rows; i++)
+  {
+    if (rows[i] <= rows[i - 1])
+      g_error ("nc_data_cluster_wl_factor_set_mask: the rows must be strictly increasing, row %u is %u after %u.",
+               i, rows[i], rows[i - 1]);
+  }
+
+  g_clear_pointer (&self->mask, g_array_unref);
+
+  if ((rows != NULL) && (n_rows > 0))
+  {
+    self->mask = g_array_sized_new (FALSE, FALSE, sizeof (guint), n_rows);
+    g_array_append_vals (self->mask, rows, n_rows);
+
+    /* FNV-1a over the rows, never 0 for a mask */
+    key = 14695981039346656037ULL;
+
+    for (i = 0; i < n_rows; i++)
+    {
+      key ^= rows[i];
+      key *= 1099511628211ULL;
+    }
+
+    key = (key == 0) ? 1 : key;
+  }
+
+  self->mask_key = key;
+  self->len      = _nc_data_cluster_wl_factor_n_rows (self);
+
+  /* As set_obs(): every galaxy is rebuilt, the calibrated pairs described
+   * other galaxies */
+  g_array_set_size (self->calib_n_nodes, 0);
+  g_array_set_size (self->calib_rule_n, 0);
+  self->obs_changed = TRUE;
+
+  if (self->obs != NULL)
+  {
+    ncm_data_set_init (NCM_DATA (dcwlf), TRUE);
+    ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
+  }
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_mask:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Gets the rows of the catalog the likelihood uses (nc_data_cluster_wl_factor_set_mask()).
+ *
+ * Returns: (transfer full) (element-type guint) (nullable): a copy of the rows, or %NULL for every row
+ */
+GArray *
+nc_data_cluster_wl_factor_get_mask (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  GArray *rows;
+
+  if (self->mask == NULL)
+    return NULL;
+
+  rows = g_array_sized_new (FALSE, FALSE, sizeof (guint), self->mask->len);
+  g_array_append_vals (rows, self->mask->data, self->mask->len);
+
+  return rows;
 }
 
 /**
@@ -3400,15 +3580,16 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
 
   nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
 
-  if (nc_galaxy_wl_obs_len (obs) != self->shape_data->len)
-    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the catalog has %u rows, the dataset %u galaxies.",
-             nc_galaxy_wl_obs_len (obs), self->shape_data->len);
+  if (nc_galaxy_wl_obs_len (obs) != nc_galaxy_wl_obs_len (self->obs))
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the catalog has %u rows, that of the dataset %u.",
+             nc_galaxy_wl_obs_len (obs), nc_galaxy_wl_obs_len (self->obs));
 
+  /* Each galaxy goes to its own row: with a mask the other rows are left as they are */
   for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
   {
     NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
 
-    s_data->ldata_write_row (s_data, obs, gal_i);
+    s_data->ldata_write_row (s_data, obs, _nc_data_cluster_wl_factor_row (self, gal_i));
   }
 
   nc_galaxy_shape_factor_spectral_set_obs_source (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor),
