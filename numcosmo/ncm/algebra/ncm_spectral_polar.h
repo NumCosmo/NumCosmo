@@ -4,13 +4,10 @@
  *  Wed Nov 11 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
- *  Copyright  2026  Caio Lima de Oliveira
- *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2026 <vitenti@uel.br>
- * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -50,18 +47,6 @@ G_BEGIN_DECLS
  */
 typedef void (*NcmSpectralPolarF) (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
 
-/**
- * NcmSpectralPolarRadialF:
- * @user_data: user data
- * @n: number of radii
- * @r: (array length=n): the radii $r_i$
- * @rho: (array length=n) (out caller-allocates): set to the factor $\rho (r_i)$
- *
- * A factor $\rho$ of the integrand that depends only on the radius, at @n radii at once.
- * The integrator multiplies its weights by @rho, so the callback only sets its values.
- */
-typedef void (*NcmSpectralPolarRadialF) (gpointer user_data, guint n, const gdouble *r, gdouble *rho);
-
 #define NCM_TYPE_SPECTRAL_POLAR (ncm_spectral_polar_get_type ())
 #define NCM_SPECTRAL_POLAR_ERROR (ncm_spectral_polar_error_quark ())
 
@@ -99,7 +84,6 @@ gdouble ncm_spectral_polar_get_edge_ratio (NcmSpectralPolar *sp);
 guint ncm_spectral_polar_get_min_radial_panels (NcmSpectralPolar *sp);
 
 gdouble ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
-gdouble ncm_spectral_polar_integrate_full (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
 void ncm_spectral_polar_build (NcmSpectralPolar *sp, NcmSpectralPolarF F, gpointer user_data, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, NcmSpectralPolarPanels *spp, guint64 *n_eval, GError **error);
 void ncm_spectral_polar_peak_edges (NcmSpectralPolar *sp, gdouble R, gdouble r_peak, gdouble theta_peak, gdouble L_r, gdouble L_theta, GArray *r_edges, GArray *theta_edges);
 

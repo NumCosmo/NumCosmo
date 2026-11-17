@@ -62,7 +62,7 @@ The function $F$ is expanded on the panel. The contribution of the panel to Eq. 
 integral of $r^{c_a} (R - r)^{c_b} F$ over it.
 
 A factor of $G$ that depends only on the radius, $G (r, \theta) = \rho (r) \, \tilde{G} (r, \theta)$,
-can be given apart to [[numcosmo-math|ncm_spectral_polar_integrate_full]]: $\rho$ is then
+can be given apart to the internal `_ncm_spectral_polar_integrate_radial()`: $\rho$ is then
 computed once per radius, at all the new radii of a panel in one call, and multiplies the
 smooth weight of Eq. (2) there, while $\tilde{G}$ is called for the angles. The panels and the
 integral are those of $G$ given whole, up to rounding. This pays when $\rho$ is costly
@@ -299,9 +299,8 @@ next.
 ## API Reference
 
 See [[numcosmo-math|NcmSpectralPolar]] for the full class reference:
-[[numcosmo-math|ncm_spectral_polar_integrate]], with
-[[numcosmo-math|ncm_spectral_polar_integrate_full]] for a radial factor given apart (C only),
-and [[numcosmo-math|ncm_spectral_polar_peak_edges]], with the properties `level-min`,
+[[numcosmo-math|ncm_spectral_polar_integrate]] and
+[[numcosmo-math|ncm_spectral_polar_peak_edges]], with the properties `level-min`,
 `level-cap`, `max-depth`, `edge-ratio` and `min-radial-panels`. On request,
 [[numcosmo-math|ncm_spectral_polar_integrate]] also returns the accepted panels, one row
 per panel with $r_a$, $r_b$, $\theta_a$, $\theta_b$, $l_r$, $l_\theta$, the value of

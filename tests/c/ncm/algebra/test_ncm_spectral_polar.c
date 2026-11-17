@@ -31,6 +31,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include "ncm/algebra/ncm_spectral_polar_private.h"
 
 #include <math.h>
 #include <glib.h>
@@ -615,7 +616,7 @@ _radial_rho (gpointer user_data, guint n, const gdouble *r, gdouble *rho)
     rho[i] = _rho (r[i]);
 }
 
-/* The Gaussian of a TestGauss times rho (r): what ncm_spectral_polar_integrate_full() integrates */
+/* The Gaussian of a TestGauss times rho (r): what _ncm_spectral_polar_integrate_radial() integrates */
 static void
 _gauss_rho (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
 {
@@ -628,7 +629,7 @@ _gauss_rho (gpointer user_data, gdouble r, guint n, const gdouble *theta, const 
 }
 
 /*
- * ncm_spectral_polar_integrate_full() with a radial factor is ncm_spectral_polar_integrate()
+ * _ncm_spectral_polar_integrate_radial() with a radial factor is ncm_spectral_polar_integrate()
  * of G times that factor, up to rounding, with power laws at both ends, for passes of every
  * size (level-min 0 makes passes of 1 to 5 radii, below the vectorized weights) and for the
  * peak edges and a single radial panel
@@ -673,8 +674,8 @@ test_ncm_spectral_polar_radial (TestNcmSpectralPolar *test, gconstpointer pdata)
       _set_edges (test->theta_edges, t_edges, G_N_ELEMENTS (t_edges));
     }
 
-    res_full = ncm_spectral_polar_integrate_full (test->sp, &_gauss, &_radial_rho, &g, 1.0, a, b, test->r_edges, test->theta_edges,
-                                                  reltol, 0.0, NULL, NULL, &error);
+    res_full = _ncm_spectral_polar_integrate_radial (test->sp, &_gauss, &_radial_rho, &g, 1.0, a, b, test->r_edges, test->theta_edges,
+                                                     reltol, 0.0, NULL, NULL, &error);
     g_assert_no_error (error);
     res = ncm_spectral_polar_integrate (test->sp, &_gauss_rho, &g, 1.0, a, b, test->r_edges, test->theta_edges,
                                         reltol, 0.0, NULL, NULL, &error);

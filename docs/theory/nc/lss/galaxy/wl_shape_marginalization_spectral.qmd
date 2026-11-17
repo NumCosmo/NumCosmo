@@ -226,7 +226,7 @@ For $1 - t \ge 10^{-5}$ the class computes
 $$
 \ln P = \ln I - \frac{d_0}{2 \sigma_\mathrm{noise}^2} ,
 $$
-with $I$ the integral of Eq. (5) from [[numcosmo-math|ncm_spectral_polar_integrate_full]] at
+with $I$ the integral of Eq. (5) from the internal `_ncm_spectral_polar_integrate_radial()` at
 the relative tolerance `reltol` and absolute tolerance zero. The factor of the integrand
 that depends only on $r$, the reduced density times the normalization, is given to it
 apart, so it is computed once per radius rather than at every call of the integrand.
@@ -273,7 +273,7 @@ At $w = t$:
   $\nabla D = \big( -4 \Delta_1 (1 - t^2) / q^2 , \, -4 \Delta_2 / q \big)$ and
   $\nabla^2 D = 8 (1 - t^2)^2 / q^4 + 8 / q^2 + 32 \, t \, \Delta_1 / q^3$.
 
-The integral of Eq. (6) is computed by [[numcosmo-math|ncm_spectral_polar_integrate_full]] in
+The integral of Eq. (6) is computed by the internal `_ncm_spectral_polar_integrate_radial()` in
 $v \equiv 1 - r$, its whole integrand given as the radial factor since it does not depend
 on the angle, in which $1 - t^2 r^2 = (\delta + t v) (1 + t r)$ is formed without a
 difference of numbers close to 1, with the radial edges of

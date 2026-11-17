@@ -111,6 +111,7 @@
 #include "nc/lss/wl/nc_wl_ellipticity.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
+#include "ncm/algebra/ncm_spectral_polar_private.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/core/ncm_vmath_private.h"
@@ -1036,7 +1037,7 @@ _nc_galaxy_shape_factor_spectral_one_minus_abs2 (const gdouble g_1, const gdoubl
 static void _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, NcGalaxyShapeFactorSpectralSeed *seed);
 
 /*
- * ln of the integral at the real shear k->t, by ncm_spectral_polar_integrate_full() on the
+ * ln of the integral at the real shear k->t, by _ncm_spectral_polar_integrate_radial() on the
  * panels placed by the seed, with the offset of the seed set in k->shift_c2. NaN with
  * error set when a panel reaches the maximum depth.
  */
@@ -1056,8 +1057,8 @@ _nc_galaxy_shape_factor_spectral_integrate_ln (NcGalaxyShapeFactorSpectralPrivat
   ncm_spectral_polar_peak_edges (self->polar, 1.0, seed.r_star, seed.theta_0, L, L / GSL_MAX (seed.r_star, GSL_DBL_MIN),
                                  work->r_edges, work->theta_edges);
 
-  integral = ncm_spectral_polar_integrate_full (self->polar, &_nc_galaxy_shape_factor_spectral_kernel, &_nc_galaxy_shape_factor_spectral_radial,
-                                                k, 1.0, a, b, work->r_edges, work->theta_edges, self->reltol, 0.0, NULL, panels, error);
+  integral = _ncm_spectral_polar_integrate_radial (self->polar, &_nc_galaxy_shape_factor_spectral_kernel, &_nc_galaxy_shape_factor_spectral_radial,
+                                                   k, 1.0, a, b, work->r_edges, work->theta_edges, self->reltol, 0.0, NULL, panels, error);
 
   return log (integral) - k->shift_c2;
 }
@@ -1157,7 +1158,7 @@ typedef struct _NcGalaxyShapeFactorSpectralVar
  * s (t) per component,
  *   s (t) = (1 - t^2)^2 / 2 INT_0^1 (density of r) r^2 / (1 - t^2 r^2) dr,
  * and Phi (w) = N_2 (eps_obs - C (w)), C the identity for TRACE_DET and T for TRACE. The
- * integral is computed in v = 1 - r by ncm_spectral_polar_integrate_full(), where the factor
+ * integral is computed in v = 1 - r by _ncm_spectral_polar_integrate_radial(), where the factor
  * 1 / (delta + t v) of 1 / (1 - t^2 r^2) varies on the scale delta, with radial edges
  * placed for that scale at v = 0. The integrand depends only on r, so all of it is the
  * radial factor, computed once per radius. Differences to 1 are formed from delta.
@@ -1175,8 +1176,8 @@ _nc_galaxy_shape_factor_spectral_second_order_ln (NcGalaxyShapeFactorSpectralPri
 
   ncm_spectral_polar_peak_edges (self->polar, 1.0, 0.0, 0.0, delta, M_PI, work->r_edges, work->theta_edges);
   s = 0.5 * gsl_pow_2 (one_minus_t2) *
-      ncm_spectral_polar_integrate_full (self->polar, &_nc_galaxy_shape_factor_spectral_var_kernel, &_nc_galaxy_shape_factor_spectral_var_radial,
-                                         &var, 1.0, b, a, work->r_edges, work->theta_edges, self->reltol, 0.0, NULL, NULL, error);
+      _ncm_spectral_polar_integrate_radial (self->polar, &_nc_galaxy_shape_factor_spectral_var_kernel, &_nc_galaxy_shape_factor_spectral_var_radial,
+                                            &var, 1.0, b, a, work->r_edges, work->theta_edges, self->reltol, 0.0, NULL, NULL, error);
   g_free (var.r);
 
   if (self->axis_ratio_var)
@@ -1205,7 +1206,7 @@ _nc_galaxy_shape_factor_spectral_second_order_ln (NcGalaxyShapeFactorSpectralPri
 }
 
 /*
- * The integrand of the variance for ncm_spectral_polar_integrate_full() in v = 1 - r, with
+ * The integrand of the variance for _ncm_spectral_polar_integrate_radial() in v = 1 - r, with
  * the weight v^b (1 - v)^a, is (reduced density of r) r^2 / ((delta + t v) (1 + t r)) / (2 pi):
  * it does not depend on the angle, and all of it is the radial factor
  * (_nc_galaxy_shape_factor_spectral_var_radial()). The rest is 1.
@@ -1489,7 +1490,7 @@ _nc_galaxy_shape_factor_spectral_kernel_loop (const NcGalaxyShapeFactorSpectralK
 }
 
 /*
- * The integrand of ncm_spectral_polar_integrate_full(), in the polar coordinates of the
+ * The integrand of _ncm_spectral_polar_integrate_radial(), in the polar coordinates of the
  * variable of integration z: G (r, theta) = (reduced density of r = |z|)
  * N_2 (eps_obs - F_t (z)) / (2 pi), F_t the map of the convention
  * (_nc_galaxy_shape_factor_spectral_map()), with the offset of the kernel taken out of the
@@ -1510,7 +1511,7 @@ _nc_galaxy_shape_factor_spectral_kernel (gpointer user_data, gdouble r, guint n,
 
 /*
  * The factor of the integrand that depends only on r, given to
- * ncm_spectral_polar_integrate_full() so that it is computed once per radius: norm times
+ * _ncm_spectral_polar_integrate_radial() so that it is computed once per radius: norm times
  * the density of the convention (_nc_galaxy_shape_factor_spectral_density()).
  */
 static void

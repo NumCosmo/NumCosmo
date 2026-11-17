@@ -83,6 +83,7 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral_polar.h"
+#include "ncm/algebra/ncm_spectral_polar_private.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/algebra/ncm_spectral_private.h"
 #include "ncm/core/ncm_cfg.h"
@@ -690,43 +691,29 @@ ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointe
                                         reltol, abstol, n_eval, panels, error);
 }
 
-/**
- * ncm_spectral_polar_integrate_full: (skip)
- * @sp: a #NcmSpectralPolar
- * @G: the function $G$
- * @radial: (nullable): the factor of $G$ that depends only on the radius, or %NULL
- * @user_data: user data for @G and @radial
- * @R: radius of the disk
- * @a: exponent of the weight at $r = 0$
- * @b: exponent of the weight at $r = R$
- * @r_edges: (element-type gdouble): the radial edges $r_0, \dots, r_{n_r}$
- * @theta_edges: (element-type gdouble): the angular edges $\theta_0, \dots, \theta_{n_\theta}$
- * @reltol: relative tolerance
- * @abstol: absolute tolerance, in units of the integral
- * @n_eval: (out) (optional): number of values of $G$ computed
- * @panels: (out) (optional) (transfer full): the accepted panels
- * @error: a #GError
+/*
+ * _ncm_spectral_polar_integrate_radial:
  *
- * As ncm_spectral_polar_integrate(), with the integrand $r^a (R - r)^b \rho (r) G (r,
- * \theta)$, $\rho$ given by @radial. @radial is called with the radii of a panel where the
- * integrand has no value yet and sets $\rho$ at them, which the weights are then multiplied
- * by; the integral and the refinement are those of ncm_spectral_polar_integrate() with
- * $\rho$ in $G$, up to rounding. A factor of $G$ that depends only on the radius is computed
- * once per radius this way, for all of them in one call, instead of in every call of $G$.
- * With @radial %NULL it is ncm_spectral_polar_integrate().
+ * As ncm_spectral_polar_integrate(), with the integrand r^a (R - r)^b rho (r) G (r, theta),
+ * rho given by radial (NcmSpectralPolarRadialF). radial is called with the radii of a panel
+ * where the integrand has no value yet and sets rho at them, which the weights are then
+ * multiplied by; the integral and the refinement are those of
+ * ncm_spectral_polar_integrate() with rho in G, up to rounding. A factor of G that depends
+ * only on the radius is computed once per radius this way, for all of them in one call,
+ * instead of in every call of G. With radial NULL it is ncm_spectral_polar_integrate().
  *
- * Returns: the integral.
+ * Declared in ncm_spectral_polar_private.h, for the other classes of the library.
  */
 gdouble
-ncm_spectral_polar_integrate_full (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data,
-                                   gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
-                                   gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error)
+_ncm_spectral_polar_integrate_radial (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data,
+                                      gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
+                                      gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error)
 {
-  return _ncm_spectral_polar_integrate (sp, "ncm_spectral_polar_integrate_full", G, radial, user_data, R, a, b, r_edges, theta_edges,
+  return _ncm_spectral_polar_integrate (sp, "_ncm_spectral_polar_integrate_radial", G, radial, user_data, R, a, b, r_edges, theta_edges,
                                         reltol, abstol, n_eval, panels, error);
 }
 
-/* The integral of ncm_spectral_polar_integrate_full(), with name the function called, for its messages */
+/* The integral of _ncm_spectral_polar_integrate_radial(), with name the function called, for its messages */
 static gdouble
 _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial,
                                gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
