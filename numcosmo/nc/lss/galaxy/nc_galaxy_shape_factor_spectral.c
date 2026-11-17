@@ -1716,14 +1716,16 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
       return _nc_galaxy_shape_factor_spectral_fallback_eval_ln (gsfs, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2,
                                                                 NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_RANGE);
 
-    /* The modes combined on the panel of the point only */
-    ptr = ncm_memory_pool_get (self->work_pool);
+    /* The modes combined on the panel of the point only; the single mode of a fixed population needs no cache */
+    ptr = (ldata->box != NULL) ? ncm_memory_pool_get (self->work_pool) : NULL;
     _nc_galaxy_shape_factor_spectral_interp_coords (ldata, g_1, g_2, &rho, &psi);
     ncm_spectral_polar_panels_pack_eval_on_array_combine (ldata->mode_pack, w,
-                                                          _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, w_gen),
+                                                          (ptr != NULL) ? _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, w_gen) : NULL,
                                                           ncm_spectral_polar_panels_pack_find_panel_near (ldata->mode_pack, G_MAXUINT, rho, psi),
                                                           1, &rho, &psi, &val);
-    ncm_memory_pool_return (ptr);
+
+    if (ptr != NULL)
+      ncm_memory_pool_return (ptr);
 
     return val;
   }
@@ -1740,7 +1742,8 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
  * data_prefetch: stage 1 the state of the galaxy, stage 2 the pack of its modes, what
  * _nc_galaxy_shape_factor_spectral_eval_nodes() reads for a pop-order expansion (the
  * weights are those of the box, shared by the galaxies). The pack is one allocation, so
- * that it is reached from the state in one step.
+ * that it is reached from the state in one step. The single mode of a fixed population is
+ * not prefetched: there it doubled the cache references and cost time on HWL16a-094.
  */
 static void
 _nc_galaxy_shape_factor_spectral_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage)
@@ -1749,7 +1752,7 @@ _nc_galaxy_shape_factor_spectral_data_prefetch (NcGalaxyShapeFactor *gsf, NcGala
 
   if (stage == 1)
     ncm_prefetch_span (ldata, sizeof (NcGalaxyShapeFactorSpectralData));
-  else if ((stage == 2) && (ldata->mode_pack != NULL))
+  else if ((stage == 2) && (ldata->box != NULL))
     ncm_prefetch_span (ldata->mode_pack, MIN (NC_GALAXY_SHAPE_FACTOR_SPECTRAL_PREFETCH_CAP,
                                               ncm_spectral_polar_panels_pack_get_size (ldata->mode_pack)));
 }
@@ -1893,9 +1896,10 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
      * panel once for several nodes and combines the modes on that panel only.
      */
     {
+      /* The single mode of a fixed population is evaluated as it is: no cache of combined panels */
       const NcmSpectralPolarPanelsPack *pack = ldata->mode_pack;
-      NcGalaxyShapeFactorSpectralWork **ptr  = ncm_memory_pool_get (self->work_pool);
-      NcmSpectralPolarPanelsComb *comb       = _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, w_gen);
+      NcGalaxyShapeFactorSpectralWork **ptr  = (ldata->box != NULL) ? ncm_memory_pool_get (self->work_pool) : NULL;
+      NcmSpectralPolarPanelsComb *comb       = (ptr != NULL) ? _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, w_gen) : NULL;
 
       k     = 0;
       panel = ncm_spectral_polar_panels_pack_find_panel_near (pack, panel, rho[0], psi[0]);
@@ -1921,7 +1925,8 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
         panel = next;
       }
 
-      ncm_memory_pool_return (ptr);
+      if (ptr != NULL)
+        ncm_memory_pool_return (ptr);
     }
 
     if (!want_log)
