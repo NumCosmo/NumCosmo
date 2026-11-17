@@ -117,8 +117,8 @@ def test_beta_concentrated_no_overflow(alpha, beta):
     (large alpha, beta).
 
     Evaluating norm=1/B(alpha,beta) and r**(alpha-1) as separate factors
-    overflows/underflows for alpha/beta of a few hundred or more (already
-    reachable within the class's own declared range, e.g. alpha=beta=500
+    overflows/underflows for alpha/beta of a few hundred or more (values a
+    fit can reach with a wider prior than the default [1, 4], e.g. alpha=beta=500
     pushes -ln B(alpha,beta) to ~695, right at exp()'s overflow edge),
     silently producing NaN (0*inf). eval_p must instead accumulate in
     log-space.
@@ -223,3 +223,18 @@ def test_beta_mset_func_list():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_default_population_bounds():
+    """The default priors of the population parameters: alpha and beta in
+    [1, 4] for Beta, sigma in [0.1, 1] for Gauss."""
+    beta = Nc.GalaxyShapePopBeta.new()
+    for name in ("alpha", "beta"):
+        _, i = beta.param_index_from_name(name)
+        assert beta.param_get_lower_bound(i) == 1.0
+        assert beta.param_get_upper_bound(i) == 4.0
+
+    gauss = Nc.GalaxyShapePopGauss.new()
+    _, i = gauss.param_index_from_name("sigma")
+    assert gauss.param_get_lower_bound(i) == 0.1
+    assert gauss.param_get_upper_bound(i) == 1.0

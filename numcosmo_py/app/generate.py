@@ -54,11 +54,14 @@ from numcosmo_py.experiments.cluster_richness_count import (
     load_cluster_richness_count,
 )
 from numcosmo_py.experiments.cluster_wl import (
+    DEFAULT_CENTRE_BOX_MPC,
+    DEFAULT_COSMOLOGY,
     DEFAULT_INTEG_AUTO_NODES,
     DEFAULT_INTEG_MAX_TOTAL_NODES,
     DEFAULT_INTEG_N_NODES,
     DEFAULT_INTEG_NODE_RELTOL,
     DEFAULT_INTEG_RULE_N,
+    CosmologyOptions,
     GalaxyPopGen,
     GalaxyZGen,
     HaloProfileType,
@@ -67,9 +70,13 @@ from numcosmo_py.experiments.cluster_wl import (
     ResampleFlagChoice,
     ShapeFactorGen,
     WLCatalogID,
+    apply_prior,
+    centre_box_bounds,
     check_shape_pop_compat,
     generate_lsst_cluster_wl,
     load_cluster_wl,
+    parse_prior,
+    print_free_parameters,
     resolve_resample_flag,
     shape_interp_gens,
 )
@@ -766,8 +773,103 @@ class ClusterWL(ABC):
     ] = DEFAULT_INTEG_MAX_TOTAL_NODES
 
     summary: Annotated[
-        bool, typer.Option(help="Print experiment summary.", show_default=True)
+        bool,
+        typer.Option(
+            help="Print experiment summary, with the free parameters and their priors.",
+            show_default=True,
+        ),
     ] = False
+
+    prior: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "NAME=LO:HI, repeatable: the prior of the parameter NAME (a full "
+                "name, as in --parameter-list) is the interval [LO, HI], its fit "
+                "bounds. Applied after --centre-box-deg/--centre-box-mpc. The value "
+                "of the parameter must lie inside it."
+            ),
+            show_default=True,
+            default_factory=list,
+            rich_help_panel="Priors",
+        ),
+    ]
+
+    centre_box_deg: Annotated[
+        float | None,
+        typer.Option(
+            help=(
+                "Half-width in degrees of the prior of the halo centre, in ra and "
+                "in dec, around the cluster position. Mutually exclusive with "
+                "--centre-box-mpc; without either the box is "
+                f"{DEFAULT_CENTRE_BOX_MPC} h^-1 Mpc (--centre-box-mpc)."
+            ),
+            show_default=True,
+            rich_help_panel="Priors",
+        ),
+    ] = None
+
+    centre_box_mpc: Annotated[
+        float | None,
+        typer.Option(
+            help=(
+                "Half-width in h^-1 Mpc, projected at the cluster redshift, of the "
+                "prior of the halo centre around the cluster position: square on "
+                "the sky, its ra half-width larger by about 1 / cos(dec). "
+                "Mutually exclusive with --centre-box-deg. Default: "
+                f"{DEFAULT_CENTRE_BOX_MPC}. A --prior on NcHaloPosition:ra or "
+                "NcHaloPosition:dec replaces it on that axis."
+            ),
+            show_default=True,
+            rich_help_panel="Priors",
+        ),
+    ] = None
+
+    cosmo_h0: Annotated[
+        float,
+        typer.Option(
+            help="Hubble constant H0 in km/s/Mpc (flat XCDM, fixed).",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.H0
+
+    cosmo_omegab: Annotated[
+        float,
+        typer.Option(
+            help="Baryon density Omegab.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.Omegab
+
+    cosmo_omegac: Annotated[
+        float,
+        typer.Option(
+            help="Cold dark matter density Omegac.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.Omegac
+
+    cosmo_w: Annotated[
+        float,
+        typer.Option(
+            help="Dark energy equation of state w.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.w
+
+    @property
+    def cosmology(self) -> CosmologyOptions:
+        """Return the background cosmology of the options."""
+        return CosmologyOptions(
+            H0=self.cosmo_h0,
+            Omegab=self.cosmo_omegab,
+            Omegac=self.cosmo_omegac,
+            w=self.cosmo_w,
+        )
 
     @property
     def integ_options(self) -> IntegMethodOptions:
@@ -809,6 +911,8 @@ class ClusterWL(ABC):
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
+        self._apply_priors(mset)
+
         for param in self.parameter_list:
             pindex = mset.param_get_by_full_name(param)
             if pindex is None:
@@ -816,6 +920,9 @@ class ClusterWL(ABC):
             mset.param_set_ftype(pindex.mid, pindex.pid, Ncm.ParamType.FREE)
 
         mset.prepare_fparam_map()
+
+        if self.summary:
+            print_free_parameters(mset)
 
         ser.to_binfile(
             dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
@@ -834,6 +941,30 @@ class ClusterWL(ABC):
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+    def _apply_priors(self, mset: Ncm.MSet) -> None:
+        """Set the priors of the options: the centre box, then each --prior.
+
+        The centre box is --centre-box-deg or --centre-box-mpc, and
+        DEFAULT_CENTRE_BOX_MPC h^-1 Mpc when neither is given.
+
+        Raises:
+            typer.BadParameter: Both centre boxes, a malformed prior, an unknown
+                parameter, or a value outside its prior.
+        """
+        half_mpc_h = self.centre_box_mpc
+        if (self.centre_box_deg is None) and (half_mpc_h is None):
+            half_mpc_h = DEFAULT_CENTRE_BOX_MPC
+        try:
+            ra_lo, ra_hi, dec_lo, dec_hi = centre_box_bounds(
+                mset, half_deg=self.centre_box_deg, half_mpc_h=half_mpc_h
+            )
+            apply_prior(mset, "NcHaloPosition:ra", ra_lo, ra_hi)
+            apply_prior(mset, "NcHaloPosition:dec", dec_lo, dec_hi)
+            for spec in self.prior:
+                apply_prior(mset, *parse_prior(spec))
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
 
     def _resolve_gens(self):
         """Return the shape-factor and population generators of the options.
@@ -864,6 +995,9 @@ class ClusterWL(ABC):
 def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.GalaxyWLObs:
     """Load a NcGalaxyWLObs from a curated catalog id or from a .gvar file.
 
+    The file holds a NcGalaxyWLObs, or a NcmDataset (e.g. the .dataset.gvar of an
+    experiment) whose NcDataClusterWLFactor holds one.
+
     Raises:
         typer.BadParameter: Neither or both of catalog and data_file.
         ValueError: The loaded file does not contain a NcGalaxyWLObs.
@@ -877,6 +1011,16 @@ def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.Galax
         assert data_file is not None
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         obs = cast(Nc.GalaxyWLObs, ser.from_binfile(data_file.absolute().as_posix()))
+        if isinstance(obs, Ncm.Dataset):
+            dset = obs
+            obs = None
+            for i in range(dset.get_length()):
+                data = dset.get_data(i)
+                if isinstance(data, Nc.DataClusterWLFactor):
+                    obs = data.peek_obs()
+                    break
+            if obs is None:
+                raise ValueError("The dataset in the file has no NcDataClusterWLFactor")
 
     # A wrong object in the file is a data error, not a TypeError.
     if not isinstance(obs, Nc.GalaxyWLObs):
@@ -1041,6 +1185,7 @@ class GenerateClusterWL(ClusterWL):
             seed=self.seed,
             integ_options=self.integ_options,
             summary=self.summary,
+            cosmology=self.cosmology,
         )
 
 
@@ -1105,7 +1250,8 @@ class LoadClusterWL(ClusterWL):
         typer.Option(
             help=(
                 "Path to a local NcGalaxyWLObs (.gvar) file with real galaxy "
-                "shape/position/redshift data. Mutually exclusive with "
+                "shape/position/redshift data, or to the dataset of an experiment "
+                "(.dataset.gvar), whose catalog is taken. Mutually exclusive with "
                 "--catalog; exactly one of the two is required."
             ),
             exists=True,
@@ -1221,6 +1367,7 @@ class LoadClusterWL(ClusterWL):
             integ_options=self.integ_options,
             summary=self.summary,
             resample_flag=resolve_resample_flag(self.resample_flag),
+            cosmology=self.cosmology,
         )
 
 
