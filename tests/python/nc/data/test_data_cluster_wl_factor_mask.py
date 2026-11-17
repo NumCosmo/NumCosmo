@@ -122,18 +122,26 @@ def _data(rows: list[int], mset: Ncm.MSet, method=METHODS[0]) -> Nc.DataClusterW
 ALL = list(range(len(GALAXIES)))
 
 
+def _keep(rows: list[int]) -> list[bool]:
+    """The mask of the rows of GALAXIES: one boolean per row."""
+    return [i in rows for i in ALL]
+
+
+KEEP = _keep(MASK)
+
+
 @pytest.mark.parametrize("method", METHODS)
 def test_mask_equals_subset_catalog(method):
     """The likelihood of the masked catalog, and of each of its galaxies, is that of the
     catalog of the rows of the mask, bit for bit."""
     mset = _mset()
     masked = _data(ALL, mset, method)
-    masked.set_mask(MASK)
+    masked.set_mask(KEEP)
     subset = _data(MASK, mset, method)
 
     assert masked.get_length() == len(MASK)
     assert masked.props.len == len(MASK)
-    assert list(masked.get_mask()) == MASK
+    assert list(masked.get_mask()) == KEEP
     assert masked.m2lnL_val(mset) == subset.m2lnL_val(mset)
 
     gal_masked = Ncm.Vector.new(len(MASK))
@@ -153,9 +161,9 @@ def test_mask_serialized():
     """The mask is a property of the likelihood, kept by serialization."""
     mset = _mset()
     masked = _data(ALL, mset)
-    masked.set_mask(MASK)
+    masked.set_mask(KEEP)
     dup = duplicate_via_serialization(masked)
-    assert list(dup.get_mask()) == MASK
+    assert list(dup.get_mask()) == KEEP
     assert dup.peek_obs().len() == len(ALL)
     assert dup.m2lnL_val(mset) == masked.m2lnL_val(mset)
 
@@ -168,7 +176,7 @@ def test_mask_resample_writes_its_rows_only():
     """A resample draws the galaxies of the mask and writes their rows only."""
     mset = _mset()
     data = _data(ALL, mset)
-    data.set_mask(MASK)
+    data.set_mask(KEEP)
     obs = data.peek_obs()
     before = obs.peek_data().to_numpy().copy()
 
@@ -186,7 +194,7 @@ def test_mask_bootstrap():
     """A bootstrap resamples the galaxies of the mask, as it would those of the subset."""
     mset = _mset()
     masked = _data(ALL, mset, METHODS[1])
-    masked.set_mask(MASK)
+    masked.set_mask(KEEP)
     subset = _data(MASK, mset, METHODS[1])
     for data in (masked, subset):
         data.bootstrap_create()
@@ -200,7 +208,7 @@ def test_shared_clones_with_other_masks():
     mset = _mset()
     method = (Nc.DataClusterWLIntegMethod.FIXED_NODES, False)
     data = _data(ALL, mset, method)
-    data.set_mask(MASK)
+    data.set_mask(KEEP)
     dset = Ncm.Dataset.new()
     dset.append_data(data)
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
@@ -208,7 +216,7 @@ def test_shared_clones_with_other_masks():
     clone = duplicate_via_serialization(data, ser)
     assert clone.peek_obs() is data.peek_obs()
     other = [1, 2, 4, 6, 7]
-    clone.set_mask(other)
+    clone.set_mask(_keep(other))
 
     assert data.m2lnL_val(mset) == _data(MASK, mset, method).m2lnL_val(mset)
     assert clone.m2lnL_val(mset) == _data(other, mset, method).m2lnL_val(mset)
@@ -222,7 +230,7 @@ sys.path.insert(0, sys.argv[1])
 import test_data_cluster_wl_factor_mask as t
 mset = t._mset()
 data = t._data(t.ALL, mset)
-data.set_mask([int(x) for x in sys.argv[2].split(",")])
+data.set_mask([x == "1" for x in sys.argv[2].split(",")])
 data.m2lnL_val(mset)
 """
 
@@ -230,13 +238,13 @@ data.m2lnL_val(mset)
 @pytest.mark.parametrize(
     "mask, message",
     [
-        ("0,3,3", "strictly increasing"),
-        ("2,1", "strictly increasing"),
-        ("0,8", "row 8"),
+        ("1,0,1", "the mask has 3 entries, but the catalog has 8 rows"),
+        ("1,0,1,1,0,1,0,1,1", "the mask has 9 entries"),
+        ("0,0,0,0,0,0,0,0", "keeps none of the 8 rows"),
     ],
 )
 def test_bad_mask_aborts(mask, message):
-    """A mask that is not strictly increasing, or keeps a row the catalog does not have,
+    """A mask without one entry per row of the catalog, or that keeps no row,
     aborts with the reason."""
     run = subprocess.run(
         [

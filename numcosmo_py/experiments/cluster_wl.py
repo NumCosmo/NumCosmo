@@ -1688,19 +1688,23 @@ def load_cluster_wl(
     return experiment
 
 
-def load_mask(path: Path, n_rows: int) -> list[int]:
-    """Read the mask of a catalog of n_rows rows: the rows a likelihood uses.
+def load_mask(path: Path, n_rows: int) -> list[bool]:
+    """Read the mask of a catalog of n_rows rows: whether a likelihood uses each row.
 
-    The file is either a NumPy .npy array, boolean with one entry per row or of integers
-    giving the rows (strictly increasing), or a text file with one entry per row, 1/0 or
-    true/false. Returns the rows kept, strictly increasing.
+    The file is a NumPy .npy boolean array, or a text file of 1/0 (true/false), with one
+    entry per row of the catalog.
 
     Raises:
-        ValueError: The file does not describe rows of the catalog, or keeps none.
+        ValueError: The file does not hold one boolean per row, or keeps no row.
     """
     path = Path(path)
     if path.suffix == ".npy":
-        arr = np.load(path, allow_pickle=False)
+        arr = np.asarray(np.load(path, allow_pickle=False))
+        if arr.dtype != bool:
+            raise ValueError(
+                f"the mask {path} must be a boolean array with one entry per row, "
+                f"not {arr.dtype}"
+            )
     else:
         words = path.read_text().split()
         table = {"1": True, "0": False, "true": True, "false": False}
@@ -1710,28 +1714,13 @@ def load_mask(path: Path, n_rows: int) -> list[int]:
             raise ValueError(
                 f"the mask {path} must hold one 1/0 or true/false per row: {e}"
             ) from e
-    arr = np.asarray(arr)
-    if arr.ndim != 1:
-        raise ValueError(f"the mask {path} must be one-dimensional")
-    if arr.dtype == bool:
-        if arr.size != n_rows:
-            raise ValueError(
-                f"the mask {path} has {arr.size} entries, the catalog {n_rows} rows"
-            )
-        rows = np.flatnonzero(arr)
-    elif np.issubdtype(arr.dtype, np.integer):
-        rows = arr.astype(np.int64)
-        if np.any(np.diff(rows) <= 0):
-            raise ValueError(f"the rows of the mask {path} must be strictly increasing")
-        if rows.size and (rows[0] < 0 or rows[-1] >= n_rows):
-            raise ValueError(
-                f"the mask {path} keeps rows outside the catalog of {n_rows} rows"
-            )
-    else:
-        raise ValueError(f"the mask {path} must be boolean or integer, not {arr.dtype}")
-    if rows.size == 0:
+    if arr.ndim != 1 or arr.size != n_rows:
+        raise ValueError(
+            f"the mask {path} has {arr.size} entries, the catalog {n_rows} rows"
+        )
+    if not arr.any():
         raise ValueError(f"the mask {path} keeps no row")
-    return [int(r) for r in rows]
+    return [bool(k) for k in arr]
 
 
 def parse_prior(spec: str) -> tuple[str, float, float]:

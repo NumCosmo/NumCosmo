@@ -394,7 +394,7 @@ def _read_wl_obs_file(path: Path) -> tuple[Nc.GalaxyWLObs | None, str]:
     return None, type(obj).__name__
 
 
-def _dataset_mask(path: Path) -> list[int]:
+def _dataset_mask(path: Path) -> list[bool]:
     """Return the mask of the NcDataClusterWLFactor of the dataset in path, [] for none."""
     dset = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).from_binfile(
         path.absolute().as_posix()
@@ -448,7 +448,7 @@ class InfoWLCatalog:
         if kind == "dataset":
             mask = _dataset_mask(self.file)
             if mask:
-                console.print(f"  the likelihood uses {len(mask)} of the rows (mask)")
+                console.print(f"  the likelihood uses {sum(mask)} of the rows (mask)")
         if kind == "cache":
             cache = read_shape_interp_cache(self.file)
             info = shape_interp_cache_info(cache.holder, cache.fingerprint)

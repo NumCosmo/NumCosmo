@@ -2590,7 +2590,7 @@ def _masked_and_subset_m2lnL(experiment: Path) -> tuple[float, float]:
     masked = loaded.likelihood.m2lnL_val(loaded.mset)
 
     obs = data.peek_obs()
-    rows = list(data.get_mask())
+    rows = [int(i) for i in np.flatnonzero(data.get_mask())]
     sub = _sub_catalog(obs, rows)
     for k, i in enumerate(rows):
         modes = obs.peek_shape_interp_modes(i)
@@ -2607,20 +2607,19 @@ def _masked_and_subset_m2lnL(experiment: Path) -> tuple[float, float]:
 
 def test_cluster_wl_load_mask_file(tmp_path: Path, real_wl_obs_file_with_meta):
     """--mask-file restricts the likelihood to some rows of the catalog: the likelihood
-    is that of the catalog of those rows, bit for bit, in either format."""
+    is that of the catalog of those rows, bit for bit, in both formats."""
     rows = [0, 3, 4, 7, 11, 12, 18]
     keep = np.zeros(20, dtype=bool)
     keep[rows] = True
     np.save(tmp_path / "keep.npy", keep)
     (tmp_path / "keep.txt").write_text("\n".join(str(int(k)) for k in keep) + "\n")
-    np.save(tmp_path / "rows.npy", np.array(rows))
     base = [
         f"--data-file={real_wl_obs_file_with_meta}",
         "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
         "--integ-method=fixed-nodes",
     ]
     values = set()
-    for name in ("keep.npy", "keep.txt", "rows.npy"):
+    for name in ("keep.npy", "keep.txt"):
         exp = tmp_path / f"exp_{name.replace('.', '_')}.yaml"
         result = runner.invoke(
             app,
@@ -2649,13 +2648,23 @@ def test_cluster_wl_load_mask_file(tmp_path: Path, real_wl_obs_file_with_meta):
 
 @pytest.mark.parametrize(
     "content, name",
-    [("1\n0\n", "short.txt"), ("1 2 x\n", "words.txt")],
+    [
+        ("1\n0\n", "short.txt"),
+        ("1 2 x\n", "words.txt"),
+        ("0\n" * 20, "none.txt"),
+        (np.array([0, 3, 4]), "rows.npy"),
+        (np.ones(21, dtype=bool), "long.npy"),
+    ],
 )
 def test_cluster_wl_load_mask_file_bad(
     tmp_path: Path, real_wl_obs_file_with_meta, content, name
 ):
-    """A mask that is not one entry per row is an error, and nothing is written."""
-    (tmp_path / name).write_text(content)
+    """A mask that is not one boolean per row of the catalog, or keeps no row, is an
+    error, and nothing is written."""
+    if isinstance(content, str):
+        (tmp_path / name).write_text(content)
+    else:
+        np.save(tmp_path / name, content)
     exp = tmp_path / "exp.yaml"
     result = runner.invoke(
         app,
@@ -2675,9 +2684,10 @@ def test_cluster_wl_load_mask_file_bad(
 def test_cluster_wl_load_mask_one_cache(tmp_path: Path, real_wl_obs_file_with_meta):
     """Experiments with two masks share one cache of interpolants: the second builds only
     the rows the first did not, and its likelihood is that of its rows alone."""
-    first, second = [1, 2, 5, 8, 9], [2, 5, 6, 13, 19]
-    np.save(tmp_path / "first.npy", np.array(first))
-    np.save(tmp_path / "second.npy", np.array(second))
+    for name, rows in (("first", [1, 2, 5, 8, 9]), ("second", [2, 5, 6, 13, 19])):
+        keep = np.zeros(20, dtype=bool)
+        keep[rows] = True
+        np.save(tmp_path / f"{name}.npy", keep)
     cov = [
         "--pop-coverage=alpha=1.55:1.65",
         "--pop-coverage=beta=1.65:1.75",

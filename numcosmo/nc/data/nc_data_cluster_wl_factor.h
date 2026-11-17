@@ -92,7 +92,7 @@ guint nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf);
 guint nc_data_cluster_wl_factor_get_crit_count (NcDataClusterWLFactor *dcwlf);
 
 NcGalaxyWLObs *nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf);
-void nc_data_cluster_wl_factor_set_mask (NcDataClusterWLFactor *dcwlf, const guint *rows, const guint n_rows);
+void nc_data_cluster_wl_factor_set_mask (NcDataClusterWLFactor *dcwlf, const gboolean *keep, const guint n_rows);
 GArray *nc_data_cluster_wl_factor_get_mask (NcDataClusterWLFactor *dcwlf);
 gdouble nc_data_cluster_wl_factor_get_z_max (NcDataClusterWLFactor *dcwlf, NcmMSet *mset);
 

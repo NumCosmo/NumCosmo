@@ -1389,10 +1389,9 @@ class LoadClusterWL(ClusterWL):
         Path | None,
         typer.Option(
             help=(
-                "The rows of the catalog the likelihood uses: a .npy array, boolean "
-                "with one entry per row or of the rows themselves (strictly "
-                "increasing), or a text file with one 1/0 (true/false) per row. The "
-                "catalog keeps every row, so one catalog and its cache of "
+                "Whether the likelihood uses each row of the catalog: a boolean .npy "
+                "array, or a text file of 1/0 (true/false), with one entry per row. "
+                "The catalog keeps every row, so one catalog and its cache of "
                 "interpolants serve several selections."
             ),
             exists=True,
@@ -1412,11 +1411,11 @@ class LoadClusterWL(ClusterWL):
         assert isinstance(data, Nc.DataClusterWLFactor)
         n_rows = data.peek_obs().len()
         try:
-            rows = load_mask(self.mask_file, n_rows)
+            keep = load_mask(self.mask_file, n_rows)
         except ValueError as e:
             raise typer.BadParameter(str(e)) from e
-        data.set_mask(rows)
-        print(f"# Mask {self.mask_file}: {len(rows)} of {n_rows} rows.")
+        data.set_mask(keep)
+        print(f"# Mask {self.mask_file}: {sum(keep)} of {n_rows} rows.")
 
     def _interp_cache_dir(self) -> Path:
         """Return the directory of the shape interpolant caches of the options."""

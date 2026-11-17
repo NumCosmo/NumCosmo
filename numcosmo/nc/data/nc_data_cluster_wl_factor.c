@@ -245,8 +245,10 @@ typedef struct _NcDataClusterWLFactorPrivate
 {
   NcGalaxyWLObs *obs;
 
-  /* The rows of obs the likelihood uses, strictly increasing (guint), or NULL for every
-   * row; mask_key: their FNV-1a hash, 0 for NULL (see NcDataClusterWLFactor:mask). */
+  /* keep: one gboolean per row of obs, whether the likelihood uses it, or NULL for every
+   * row (NcDataClusterWLFactor:mask); mask: the rows it keeps, increasing (guint), derived
+   * from keep; mask_key: their FNV-1a hash, 0 without a mask. */
+  GArray *keep;
   GArray *mask;
   guint64 mask_key;
   NcGalaxyPositionFactor *position_factor;
@@ -839,18 +841,13 @@ _nc_data_cluster_wl_factor_row (NcDataClusterWLFactorPrivate *self, const guint 
   return (self->mask != NULL) ? g_array_index (self->mask, guint, gal_i) : gal_i;
 }
 
-/* Aborts unless every row of the mask is a row of obs */
+/* Aborts unless the mask has one entry per row of obs */
 static void
 _nc_data_cluster_wl_factor_check_mask (NcDataClusterWLFactorPrivate *self)
 {
-  if ((self->mask != NULL) && (self->obs != NULL) && (self->mask->len > 0))
-  {
-    const guint last = g_array_index (self->mask, guint, self->mask->len - 1);
-
-    if (last >= nc_galaxy_wl_obs_len (self->obs))
-      g_error ("nc_data_cluster_wl_factor: the mask keeps row %u, but the catalog has %u rows.",
-               last, nc_galaxy_wl_obs_len (self->obs));
-  }
+  if ((self->keep != NULL) && (self->obs != NULL) && (self->keep->len != nc_galaxy_wl_obs_len (self->obs)))
+    g_error ("nc_data_cluster_wl_factor: the mask has %u entries, but the catalog has %u rows.",
+             self->keep->len, nc_galaxy_wl_obs_len (self->obs));
 }
 
 static gboolean
@@ -1206,6 +1203,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   self->obs             = NULL;
+  self->keep            = NULL;
   self->mask            = NULL;
   self->mask_key        = 0;
   self->position_factor = NULL;
@@ -1463,10 +1461,17 @@ _nc_data_cluster_wl_factor_set_property (GObject *object, guint prop_id, const G
       }
       else
       {
-        gsize n_rows      = 0;
-        const guint *rows = g_variant_get_fixed_array (var, &n_rows, sizeof (guint));
+        /* The booleans of a GVariant array are one byte each */
+        gsize n_rows        = 0;
+        const guchar *bytes = g_variant_get_fixed_array (var, &n_rows, sizeof (guchar));
+        gboolean *keep      = g_new (gboolean, MAX (n_rows, 1));
+        gsize i;
 
-        nc_data_cluster_wl_factor_set_mask (dcwlf, rows, n_rows);
+        for (i = 0; i < n_rows; i++)
+          keep[i] = (bytes[i] != 0);
+
+        nc_data_cluster_wl_factor_set_mask (dcwlf, keep, n_rows);
+        g_free (keep);
       }
 
       break;
@@ -1545,10 +1550,21 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
       break;
     case PROP_MASK:
 
-      if (self->mask == NULL)
+      if (self->keep == NULL)
+      {
         g_value_set_variant (value, NULL);
+      }
       else
-        g_value_set_variant (value, g_variant_new_fixed_array (G_VARIANT_TYPE_UINT32, self->mask->data, self->mask->len, sizeof (guint)));
+      {
+        guchar *bytes = g_new (guchar, MAX (self->keep->len, 1));
+        guint i;
+
+        for (i = 0; i < self->keep->len; i++)
+          bytes[i] = g_array_index (self->keep, gboolean, i) ? 1 : 0;
+
+        g_value_set_variant (value, g_variant_new_fixed_array (G_VARIANT_TYPE_BOOLEAN, bytes, self->keep->len, sizeof (guchar)));
+        g_free (bytes);
+      }
 
       break;
     default:                                                      /* LCOV_EXCL_LINE */
@@ -1654,6 +1670,7 @@ _nc_data_cluster_wl_factor_finalize (GObject *object)
   NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (object);
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
+  g_clear_pointer (&self->keep, g_array_unref);
   g_clear_pointer (&self->mask, g_array_unref);
 
   /* Chain up: end */
@@ -2929,17 +2946,17 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
   /**
    * NcDataClusterWLFactor:mask:
    *
-   * The rows of #NcDataClusterWLFactor:obs the likelihood uses, as an array of
-   * unsigned integers ("au") strictly increasing, or %NULL for every row (see
-   * nc_data_cluster_wl_factor_set_mask()).
+   * Whether the likelihood uses each row of #NcDataClusterWLFactor:obs, as an
+   * array of booleans ("ab") with one entry per row, or %NULL for every row
+   * (see nc_data_cluster_wl_factor_set_mask()).
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_MASK,
                                    g_param_spec_variant ("mask",
                                                          NULL,
-                                                         "Rows of the catalog the likelihood uses",
-                                                         G_VARIANT_TYPE ("au"), NULL,
+                                                         "Whether the likelihood uses each row of the catalog",
+                                                         G_VARIANT_TYPE ("ab"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->bootstrap       = TRUE;
@@ -3139,50 +3156,56 @@ nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf)
 /**
  * nc_data_cluster_wl_factor_set_mask:
  * @dcwlf: a #NcDataClusterWLFactor
- * @rows: (array length=n_rows) (nullable): the rows of the catalog to use, strictly increasing
- * @n_rows: the number of rows
+ * @keep: (array length=n_rows) (nullable): whether the likelihood uses each row of the catalog
+ * @n_rows: the number of entries of @keep, the number of rows of the catalog
  *
- * Restricts the likelihood to the rows @rows of the catalog
- * (#NcDataClusterWLFactor:obs): only those galaxies are loaded, evaluated,
- * bootstrapped and resampled, galaxy $i$ being row @rows[$i$]. The other rows
- * are kept in the catalog, untouched, so that one catalog and the caches of
- * its rows serve several selections. %NULL or @n_rows = 0 uses every row.
- * The rows must be strictly increasing; each must be a row of the catalog
- * when the catalog is loaded, at the next prepare. Setting the mask, like
- * setting the catalog, makes the next prepare rebuild every galaxy.
+ * Restricts the likelihood to the rows of the catalog (#NcDataClusterWLFactor:obs)
+ * whose entry of @keep is %TRUE: only those galaxies are loaded, evaluated,
+ * bootstrapped and resampled, in the order of their rows. The other rows are
+ * kept in the catalog, untouched, so that one catalog and the caches of its rows
+ * serve several selections. %NULL or @n_rows = 0 uses every row.
+ *
+ * @keep has one entry per row of the catalog, checked when the catalog is
+ * loaded, at the next prepare; it must keep at least one row. Setting the
+ * mask, like setting the catalog, makes the next prepare rebuild every galaxy.
  *
  * The likelihood of a mask equals, bit for bit, that of the catalog made of
  * its rows alone.
  */
 void
-nc_data_cluster_wl_factor_set_mask (NcDataClusterWLFactor *dcwlf, const guint *rows, const guint n_rows)
+nc_data_cluster_wl_factor_set_mask (NcDataClusterWLFactor *dcwlf, const gboolean *keep, const guint n_rows)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   guint64 key                               = 0;
   guint i;
 
-  for (i = 1; i < n_rows; i++)
-  {
-    if (rows[i] <= rows[i - 1])
-      g_error ("nc_data_cluster_wl_factor_set_mask: the rows must be strictly increasing, row %u is %u after %u.",
-               i, rows[i], rows[i - 1]);
-  }
-
+  g_clear_pointer (&self->keep, g_array_unref);
   g_clear_pointer (&self->mask, g_array_unref);
 
-  if ((rows != NULL) && (n_rows > 0))
+  if ((keep != NULL) && (n_rows > 0))
   {
-    self->mask = g_array_sized_new (FALSE, FALSE, sizeof (guint), n_rows);
-    g_array_append_vals (self->mask, rows, n_rows);
+    self->keep = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), n_rows);
+    self->mask = g_array_new (FALSE, FALSE, sizeof (guint));
 
-    /* FNV-1a over the rows, never 0 for a mask */
+    /* FNV-1a over the rows kept, never 0 for a mask */
     key = 14695981039346656037ULL;
 
     for (i = 0; i < n_rows; i++)
     {
-      key ^= rows[i];
-      key *= 1099511628211ULL;
+      const gboolean keep_i = (keep[i] != FALSE);
+
+      g_array_append_val (self->keep, keep_i);
+
+      if (keep_i)
+      {
+        g_array_append_val (self->mask, i);
+        key ^= i;
+        key *= 1099511628211ULL;
+      }
     }
+
+    if (self->mask->len == 0)
+      g_error ("nc_data_cluster_wl_factor_set_mask: the mask keeps none of the %u rows.", n_rows);
 
     key = (key == 0) ? 1 : key;
   }
@@ -3207,23 +3230,24 @@ nc_data_cluster_wl_factor_set_mask (NcDataClusterWLFactor *dcwlf, const guint *r
  * nc_data_cluster_wl_factor_get_mask:
  * @dcwlf: a #NcDataClusterWLFactor
  *
- * Gets the rows of the catalog the likelihood uses (nc_data_cluster_wl_factor_set_mask()).
+ * Gets whether the likelihood uses each row of the catalog
+ * (nc_data_cluster_wl_factor_set_mask()).
  *
- * Returns: (transfer full) (element-type guint) (nullable): a copy of the rows, or %NULL for every row
+ * Returns: (transfer full) (element-type gboolean) (nullable): a copy of the mask, one entry per row, or %NULL for every row
  */
 GArray *
 nc_data_cluster_wl_factor_get_mask (NcDataClusterWLFactor *dcwlf)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
-  GArray *rows;
+  GArray *keep;
 
-  if (self->mask == NULL)
+  if (self->keep == NULL)
     return NULL;
 
-  rows = g_array_sized_new (FALSE, FALSE, sizeof (guint), self->mask->len);
-  g_array_append_vals (rows, self->mask->data, self->mask->len);
+  keep = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), self->keep->len);
+  g_array_append_vals (keep, self->keep->data, self->keep->len);
 
-  return rows;
+  return keep;
 }
 
 /**

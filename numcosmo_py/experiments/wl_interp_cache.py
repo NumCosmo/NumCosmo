@@ -639,7 +639,8 @@ def choose_pop_order(
         obs.peek_data().to_numpy()[:, columns.index("epsilon_obs_2")],
     )
     # The galaxies of the fit: the rows of the mask of data, or every row
-    kept = np.asarray(list(data.get_mask() or range(obs.len())), dtype=int)
+    mask = data.get_mask()
+    kept = np.flatnonzero(mask) if mask else np.arange(obs.len())
     order = kept[np.argsort(eps[kept])]
     n = min(n_sample, len(kept))
     rows = sorted({int(order[i]) for i in np.linspace(0, len(kept) - 1, n).astype(int)})
