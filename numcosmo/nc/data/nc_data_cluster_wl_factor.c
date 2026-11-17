@@ -3317,7 +3317,7 @@ nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *m
  * @dcwlf; otherwise the call aborts. Without #NcGalaxyShapeFactorSpectral:pop-order no
  * parameter of the population may be free: the interpolants hold for its current values
  * only. With it, the free parameters and their bounds are the box of the expansion, and @obs
- * receives the interpolants of its nodes (#NcGalaxyWLObs:shape-interp-modes).
+ * receives the interpolants of its nodes (#NcGalaxyWLObs:shape-interp).
  */
 void
 nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs)

@@ -114,6 +114,7 @@
 #include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
+#include "ncm/algebra/ncm_spectral_polar_panels_array.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
 #include "nc/bbn/nc_bbn_parametrized.h"

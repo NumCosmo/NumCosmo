@@ -648,11 +648,11 @@ test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  NcmSerialize *ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcmSpectralPolarPanels *spp_0 = ncm_spectral_polar_panels_new ();
-  NcmSpectralPolarPanels *spp_3 = ncm_spectral_polar_panels_new ();
-  NcmObjDictStr *source         = ncm_obj_dict_str_new ();
-  NcGalaxyShapePopGauss *pop    = nc_galaxy_shape_pop_gauss_new ();
+  NcmSerialize *ser                  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmSpectralPolarPanelsArray *spp_0 = ncm_spectral_polar_panels_array_new ();
+  NcmSpectralPolarPanelsArray *spp_3 = ncm_spectral_polar_panels_array_new ();
+  NcmObjDictStr *source              = ncm_obj_dict_str_new ();
+  NcGalaxyShapePopGauss *pop         = nc_galaxy_shape_pop_gauss_new ();
   NcmObjDictInt *prop;
   NcGalaxyWLObs *obs_dup;
   GVariant *obs_ser;
@@ -679,8 +679,8 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   ncm_serialize_reset (ser, FALSE);
 
   g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs_dup, "z", 0, NULL), ==, 0.5);
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 3)));
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 3)));
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 1));
   g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (ncm_obj_dict_str_peek (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup), "shape-pop")));
 
@@ -714,8 +714,8 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   nc_galaxy_wl_obs_free (obs_dup);
   nc_galaxy_shape_pop_gauss_free (pop);
   ncm_obj_dict_str_unref (source);
-  ncm_spectral_polar_panels_free (spp_0);
-  ncm_spectral_polar_panels_free (spp_3);
+  ncm_spectral_polar_panels_array_free (spp_0);
+  ncm_spectral_polar_panels_array_free (spp_3);
   ncm_serialize_free (ser);
 }
 

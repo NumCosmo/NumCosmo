@@ -1113,7 +1113,7 @@ test_nc_galaxy_shape_factor_spectral_interp_obs (TestNcGalaxyShapeFactorSpectral
   obs = _test_obs_prepared_new (test, gsfs_w, g1, g2, ln_P);
 
   for (i = 0; i < G_N_ELEMENTS (test_spectral_obs_gal); i++)
-    g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs, i)));
+    g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (nc_galaxy_wl_obs_peek_shape_interp (obs, i)));
 
   data_array = _test_obs_read (test, gsf_r, obs);
 
@@ -1758,8 +1758,8 @@ _test_restrict_rho_max (TestNcGalaxyShapeFactorSpectral *test, NcGalaxyShapeFact
   NcGalaxyWLObs *obs = _test_restrict_obs_new (test, gsfs, data);
   gdouble ra, rb, ta, tb;
 
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs, 0)));
-  ncm_spectral_polar_panels_get_range (nc_galaxy_wl_obs_peek_shape_interp (obs, 0), &ra, &rb, &ta, &tb);
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (nc_galaxy_wl_obs_peek_shape_interp (obs, 0)));
+  ncm_spectral_polar_panels_pack_get_range (ncm_spectral_polar_panels_array_peek_pack (nc_galaxy_wl_obs_peek_shape_interp (obs, 0)), &ra, &rb, &ta, &tb);
   nc_galaxy_wl_obs_free (obs);
 
   return rb;

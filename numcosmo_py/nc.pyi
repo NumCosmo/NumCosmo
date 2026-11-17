@@ -10486,8 +10486,6 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         Weak lensing observables ellipticity convention
       shape-interp -> NcmObjDictInt: Shape interpolants
         Interpolants of ln P in g of the galaxies
-      shape-interp-modes -> NcmObjDictInt: Shape interpolant modes
-        Chebyshev modes over the population parameters of the interpolants of ln P in g
       shape-interp-source -> NcmObjDictStr: Shape interpolants source
         Record of what built the interpolants
 
@@ -10512,7 +10510,6 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         ellip_conv: GalaxyWLObsEllipConv
         pz_table: NumCosmoMath.ObjDictInt
         shape_interp: NumCosmoMath.ObjDictInt
-        shape_interp_modes: NumCosmoMath.ObjDictInt
         shape_interp_source: NumCosmoMath.ObjDictStr
         col_types: GLib.Variant
         columns: list[str]
@@ -10529,7 +10526,6 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         pz: NumCosmoMath.ObjDictInt = ...,
         pz_table: NumCosmoMath.ObjDictInt = ...,
         shape_interp: NumCosmoMath.ObjDictInt = ...,
-        shape_interp_modes: NumCosmoMath.ObjDictInt = ...,
         shape_interp_source: NumCosmoMath.ObjDictStr = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
@@ -10561,9 +10557,6 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def peek_pz(self, i: int) -> typing.Optional[NumCosmoMath.Spline]: ...
     def peek_shape_interp(
         self, i: int
-    ) -> typing.Optional[NumCosmoMath.SpectralPolarPanels]: ...
-    def peek_shape_interp_modes(
-        self, i: int
     ) -> typing.Optional[NumCosmoMath.SpectralPolarPanelsArray]: ...
     def peek_shape_interp_source(self) -> typing.Optional[NumCosmoMath.ObjDictStr]: ...
     def ref(self) -> GalaxyWLObs: ...
@@ -10571,9 +10564,6 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def set_coord(self, coord: WLEllipticityFrame) -> None: ...
     def set_pz(self, i: int, pz: NumCosmoMath.Spline) -> None: ...
     def set_shape_interp(
-        self, i: int, spp: NumCosmoMath.SpectralPolarPanels
-    ) -> None: ...
-    def set_shape_interp_modes(
         self, i: int, modes: NumCosmoMath.SpectralPolarPanelsArray
     ) -> None: ...
     def set_shape_interp_source(self, source: NumCosmoMath.ObjDictStr) -> None: ...

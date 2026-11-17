@@ -1667,7 +1667,8 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     source = obs.peek_shape_interp_source()
     assert source is not None
     assert isinstance(source.peek("shape-pop"), Nc.GalaxyShapePopBeta)
-    assert all(obs.peek_shape_interp(i) is not None for i in range(obs.len()))
+    # A fixed population: one mode per galaxy
+    assert all(obs.peek_shape_interp(i).len() == 1 for i in range(obs.len()))
 
     exp_prepared = tmp_path / "exp_prepared.yaml"
     result = runner.invoke(
