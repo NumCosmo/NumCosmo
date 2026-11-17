@@ -123,9 +123,9 @@ class ShapeInterpCache:
 
     @property
     def n_modes(self) -> int:
-        """Return the number of modes of an expansion over the population, 0 for none."""
+        """Return the number of modes of each galaxy, 1 for a fixed population, 0 for none."""
         for i in range(self.holder.len()):
-            modes = self.holder.peek_shape_interp_modes(i)
+            modes = self.holder.peek_shape_interp(i)
             if modes is not None:
                 return modes.len()
         return 0
@@ -151,7 +151,6 @@ def shape_interp_cache_info(holder: Nc.GalaxyWLObs, fingerprint: str) -> dict[st
         1
         for i in range(holder.len())
         if holder.peek_shape_interp(i) is not None
-        or holder.peek_shape_interp_modes(i) is not None
     )
     return {
         "format": SHAPE_INTERP_CACHE_FORMAT,
@@ -206,13 +205,9 @@ def write_shape_interp_cache(obs: Nc.GalaxyWLObs, path: Path) -> Path:
 
     holder = Nc.GalaxyWLObs.new(obs.get_ellip_conv(), obs.get_coord(), obs.len(), [])
     for i in range(obs.len()):
-        modes = obs.peek_shape_interp_modes(i)
+        modes = obs.peek_shape_interp(i)
         if modes is not None:
-            holder.set_shape_interp_modes(i, modes)
-            continue
-        spp = obs.peek_shape_interp(i)
-        if spp is not None:
-            holder.set_shape_interp(i, spp)
+            holder.set_shape_interp(i, modes)
     holder.props.shape_interp_source = source
 
     fingerprint = wl_obs_fingerprint(obs)
@@ -312,13 +307,9 @@ def attach_shape_interp_cache(
 
     holder = cache.holder
     for i in range(holder.len()):
-        modes = holder.peek_shape_interp_modes(i)
+        modes = holder.peek_shape_interp(i)
         if modes is not None:
-            obs.set_shape_interp_modes(i, modes)
-            continue
-        spp = holder.peek_shape_interp(i)
-        if spp is not None:
-            obs.set_shape_interp(i, spp)
+            obs.set_shape_interp(i, modes)
     source = cache.source
     assert source is not None
     obs.props.shape_interp_source = source
@@ -362,7 +353,6 @@ def resolve_shape_interp_cache(obs: Nc.GalaxyWLObs, base_dir: Path) -> Path | No
 def strip_shape_interp(obs: Nc.GalaxyWLObs) -> None:
     """Remove the interpolants and their record from obs, keeping its rows and metadata."""
     obs.props.shape_interp = Ncm.ObjDictInt.new()
-    obs.props.shape_interp_modes = Ncm.ObjDictInt.new()
     obs.props.shape_interp_source = Ncm.ObjDictStr.new()
 
 
@@ -664,7 +654,7 @@ def choose_pop_order(
 
 def _same_coverage(cache: ShapeInterpCache, pop: Nc.GalaxyShapePop) -> bool:
     """Return whether the expansion of cache spans the free parameters of pop over their bounds."""
-    if cache.n_modes == 0:
+    if cache.n_modes <= 1:
         return True
     source = cache.source
     assert source is not None
