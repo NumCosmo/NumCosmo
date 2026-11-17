@@ -586,7 +586,7 @@ def update_shape_interp_cache(
     return ShapeInterpCacheUpdate(
         rows=obs.len(),
         built=built,
-        reused=obs.len() - built,
+        reused=data.get_length() - built,
         unconverged=max(unconverged, 0),
         path=path,
     )
@@ -599,9 +599,7 @@ def _sub_catalog(obs: Nc.GalaxyWLObs, rows: list[int]) -> Nc.GalaxyWLObs:
     for k, i in enumerate(rows):
         for c in cols:
             sub.set(c, k, obs.get(c, i))
-        pz = obs.peek_pz(i)
-        assert pz is not None
-        sub.set_pz(k, pz)
+        sub.copy_pz(k, obs, i)
     if obs.peek_meta() is not None:
         sub.set_meta(obs.peek_meta())
     return sub
@@ -638,9 +636,12 @@ def choose_pop_order(
         obs.peek_data().to_numpy()[:, columns.index("epsilon_obs_1")],
         obs.peek_data().to_numpy()[:, columns.index("epsilon_obs_2")],
     )
-    order = np.argsort(eps)
-    n = min(n_sample, obs.len())
-    rows = sorted({int(order[i]) for i in np.linspace(0, obs.len() - 1, n).astype(int)})
+    # The galaxies of the fit: the rows of the mask of data, or every row
+    mask = data.get_mask()
+    kept = np.flatnonzero(mask) if mask else np.arange(obs.len())
+    order = kept[np.argsort(eps[kept])]
+    n = min(n_sample, len(kept))
+    rows = sorted({int(order[i]) for i in np.linspace(0, len(kept) - 1, n).astype(int)})
     sub = _sub_catalog(obs, rows)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
@@ -651,6 +652,7 @@ def choose_pop_order(
         gsfs = probe.props.shape_factor
         assert isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
         gsfs.set_pop_order(k)
+        probe.set_mask(None)
         probe.set_obs(_sub_catalog(sub, list(range(sub.len()))))
         builder = _builder_mset(mset, coverage)
         probe.write_shape_interp(builder, probe.peek_obs())

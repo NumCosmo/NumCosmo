@@ -394,6 +394,19 @@ def _read_wl_obs_file(path: Path) -> tuple[Nc.GalaxyWLObs | None, str]:
     return None, type(obj).__name__
 
 
+def _dataset_mask(path: Path) -> list[bool]:
+    """Return the mask of the NcDataClusterWLFactor of the dataset in path, [] for none."""
+    dset = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).from_binfile(
+        path.absolute().as_posix()
+    )
+    assert isinstance(dset, Ncm.Dataset)
+    for i in range(dset.get_length()):
+        data = dset.get_data(i)
+        if isinstance(data, Nc.DataClusterWLFactor):
+            return list(data.get_mask() or [])
+    return []
+
+
 def _interp_summary(obs: Nc.GalaxyWLObs) -> tuple[int, int]:
     """Return the number of rows of obs with a fixed interpolant and with modes."""
     n_fixed = sum(1 for i in range(obs.len()) if obs.peek_shape_interp(i) is not None)
@@ -432,6 +445,10 @@ class InfoWLCatalog:
 
         size = self.file.stat().st_size / 2**20
         console.print(f"{self.file}: {kind}, {size:.1f} MiB, {obs.len()} rows")
+        if kind == "dataset":
+            mask = _dataset_mask(self.file)
+            if mask:
+                console.print(f"  the likelihood uses {sum(mask)} of the rows (mask)")
         if kind == "cache":
             cache = read_shape_interp_cache(self.file)
             info = shape_interp_cache_info(cache.holder, cache.fingerprint)
