@@ -1207,12 +1207,12 @@ _shared_obs_owner_clear (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *obs)
     g_object_set_qdata (G_OBJECT (obs), _nc_data_cluster_wl_factor_shared_obs_quark (), NULL);
 }
 
-/* Replaces @obs by a copy of its columns that references its P(z) splines.
+/*
+ * Replaces @obs by a copy of its columns that references its p(z) objects.
  * The columns are the rows resample() writes (about 100 bytes per galaxy);
- * the splines are most of the catalog and are only read. The splines are
- * added with nc_galaxy_wl_obs_set_pz(), which only references them: setting
- * the "pz" property would prepare each one again while other clones
- * evaluate it. */
+ * the p(z) objects are most of the catalog and are only read, so they are
+ * added with nc_galaxy_wl_obs_set_pz(), which references them.
+ */
 static void
 _obs_make_private (NcDataClusterWLFactorPrivate *self)
 {
@@ -1229,7 +1229,7 @@ _obs_make_private (NcDataClusterWLFactorPrivate *self)
 
   for (i = 0; i < len; i++)
   {
-    NcmSpline *pz = nc_galaxy_wl_obs_peek_pz (shared, i);
+    NcGalaxyPz *pz = nc_galaxy_wl_obs_peek_pz (shared, i);
 
     if (pz != NULL)
       nc_galaxy_wl_obs_set_pz (copy, i, pz);

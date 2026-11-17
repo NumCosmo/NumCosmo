@@ -245,14 +245,15 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
   /**
    * NcGalaxyWLObs:pz:
    *
-   * P(z) splines.
+   * The redshift densities of the galaxies: a #NcGalaxyPz for each row that has one,
+   * keyed by the row.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_PZ,
                                    g_param_spec_boxed ("pz",
                                                        "P(z)",
-                                                       "P(z) splines",
+                                                       "Redshift density of each galaxy",
                                                        NCM_TYPE_OBJ_DICT_INT,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
@@ -344,8 +345,14 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
       const gint key = g_array_index (keys, gint, i);
       GObject *obj   = ncm_obj_dict_int_peek (self->pz, key);
 
-      g_assert (NCM_IS_SPLINE (obj));
-      ncm_spline_prepare (NCM_SPLINE (obj));
+      /* Catalogs written by NumCosmo 0.x before NcGalaxyPz: this check is dropped in 1.0 */
+      if (NCM_IS_SPLINE (obj))
+        g_error ("nc_galaxy_wl_obs: the catalog holds the p(z) of row %d as a %s, the format written before NcGalaxyPz. "
+                 "Update the file with tools/nc_galaxy_pz_update_catalog.py. A catalog downloaded by NumCosmo "
+                 "(wl_obs_*.gvar in the NumCosmo data directory) can instead be removed, so that it is downloaded again.",
+                 key, G_OBJECT_TYPE_NAME (obj));
+
+      g_assert (NC_IS_GALAXY_PZ (obj));
     }
 
     g_array_unref (keys);
@@ -532,13 +539,14 @@ nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdoub
  * nc_galaxy_wl_obs_set_pz:
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
- * @pz: a #NcmSpline.
+ * @pz: a #NcGalaxyPz.
  *
- * Sets a P(z) spline in the observation data.
+ * Sets the redshift density of row @i to @pz, which is referenced. A #NcGalaxyPz does
+ * not change after construction, so one object may be set in several rows and catalogs.
  *
  */
 void
-nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz)
+nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyPz *pz)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
@@ -581,17 +589,18 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
  *
- * Gets a P(z) spline from the observation data.
+ * Gets the redshift density of row @i.
  *
- * Returns: (transfer none): the P(z) spline.
+ * Returns: (transfer none) (nullable): the #NcGalaxyPz of row @i, or %NULL when the row
+ * has none.
  *
  */
-NcmSpline *
+NcGalaxyPz *
 nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  return NCM_SPLINE (ncm_obj_dict_int_peek (self->pz, i));
+  return (NcGalaxyPz *) ncm_obj_dict_int_peek (self->pz, i);
 }
 
 /**

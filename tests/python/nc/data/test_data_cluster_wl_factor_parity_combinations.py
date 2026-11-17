@@ -94,8 +94,8 @@ def _build_lens_mset():
     return cosmo, dp, hp, smd, hms
 
 
-def _pz_spline(zp, sigma0, n=200):
-    """A per-galaxy p(z) spline for the Spline/Pz combos; domain scaled to
+def _pz_table(zp, sigma0, n=200):
+    """A per-galaxy p(z) table for the Spline/Pz combos; domain scaled to
     sigma0 to avoid a near-delta-function integrand (see
     adaptive-spline-degenerate-integrand-oom)."""
     z_min = max(1.0e-3, zp - PZ_HALF_WIDTH_SIGMAS * sigma0)
@@ -105,9 +105,7 @@ def _pz_spline(zp, sigma0, n=200):
 
     xv = Ncm.Vector.new_array(zs.tolist())
     yv = Ncm.Vector.new_array(pz_vals.tolist())
-    spline = Ncm.SplineCubicNotaknot.new()
-    spline.set(xv, yv, True)
-    return spline
+    return Nc.GalaxyPzBSplineSqrt.new_from_table(xv, yv)
 
 
 def _build_mset(shape_kind, z_kind):
@@ -186,7 +184,7 @@ def _build_new_obs(mset, shape_kind, z_kind):
             obs.set("zp", i, zp)
             obs.set("sigma0", i, sigma0)
         else:
-            obs.set_pz(i, _pz_spline(zp, sigma0))
+            obs.set_pz(i, _pz_table(zp, sigma0))
 
         if shape_kind == "local":
             obs.set("e_rms", i, e_rms)

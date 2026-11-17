@@ -47,7 +47,9 @@ typedef struct _TestNcGalaxyRedshiftFactorSpline
   NcGalaxyRedshiftFactor *gsdr;
   NcGalaxyRedshiftFactorData *data;
   NcmMSet *mset;
-  NcmSpline *pz;
+  NcmVector *zv;
+  NcmVector *pv;
+  NcGalaxyPz *pz;
 } TestNcGalaxyRedshiftFactorSpline;
 
 void test_nc_galaxy_redshift_factor_spline_new_poly (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
@@ -59,11 +61,6 @@ void test_nc_galaxy_redshift_factor_spline_poly_norm (TestNcGalaxyRedshiftFactor
 void test_nc_galaxy_redshift_factor_spline_poly_gen (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 void test_nc_galaxy_redshift_factor_spline_zeros (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 void test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
-void test_nc_galaxy_redshift_factor_spline_table_changed (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
-void test_nc_galaxy_redshift_factor_spline_threads (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
-void test_nc_galaxy_redshift_factor_spline_errors (void);
-void test_nc_galaxy_redshift_factor_spline_negative_subprocess (void);
-void test_nc_galaxy_redshift_factor_spline_few_knots_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -98,22 +95,6 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_redshift_factor_spline_new_poly,
               &test_nc_galaxy_redshift_factor_spline_obs,
               &test_nc_galaxy_redshift_factor_spline_free);
-
-  g_test_add ("/nc/galaxy_redshift_factor_spline/table_changed", TestNcGalaxyRedshiftFactorSpline, NULL,
-              &test_nc_galaxy_redshift_factor_spline_new_poly,
-              &test_nc_galaxy_redshift_factor_spline_table_changed,
-              &test_nc_galaxy_redshift_factor_spline_free);
-
-  g_test_add ("/nc/galaxy_redshift_factor_spline/threads", TestNcGalaxyRedshiftFactorSpline, NULL,
-              &test_nc_galaxy_redshift_factor_spline_new_poly,
-              &test_nc_galaxy_redshift_factor_spline_threads,
-              &test_nc_galaxy_redshift_factor_spline_free);
-
-  g_test_add_func ("/nc/galaxy_redshift_factor_spline/errors", &test_nc_galaxy_redshift_factor_spline_errors);
-  g_test_add_func ("/nc/galaxy_redshift_factor_spline/errors/negative/subprocess",
-                   &test_nc_galaxy_redshift_factor_spline_negative_subprocess);
-  g_test_add_func ("/nc/galaxy_redshift_factor_spline/errors/few_knots/subprocess",
-                   &test_nc_galaxy_redshift_factor_spline_few_knots_subprocess);
 
   g_test_run ();
 
@@ -162,17 +143,18 @@ _test_cmp_double (gconstpointer a, gconstpointer b)
   return (x > y) - (x < y);
 }
 
-static NcmSpline *
-_test_table_spline (const gdouble *z, const gdouble *p, const guint n)
+/* Creates the scheme and a galaxy whose density is that of the table (z_j, p_j) */
+static void
+_test_set_table (TestNcGalaxyRedshiftFactorSpline *test, const gdouble *z, const gdouble *p, const guint n)
 {
-  NcmVector *xv = ncm_vector_new_data_dup ((gdouble *) z, n, 1);
-  NcmVector *yv = ncm_vector_new_data_dup ((gdouble *) p, n, 1);
-  NcmSpline *pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  test->gsdr = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
+  test->mset = ncm_mset_empty_new ();
+  test->data = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
+  test->zv   = ncm_vector_new_data_dup ((gdouble *) z, n, 1);
+  test->pv   = ncm_vector_new_data_dup ((gdouble *) p, n, 1);
+  test->pz   = NC_GALAXY_PZ (nc_galaxy_pz_bspline_sqrt_new_from_table (test->zv, test->pv));
 
-  ncm_vector_free (xv);
-  ncm_vector_free (yv);
-
-  return pz;
+  nc_galaxy_redshift_factor_spline_data_set (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr), test->data, test->pz);
 }
 
 /* Non-uniform knots, so the breakpoints of the B-spline are not the knots. */
@@ -188,12 +170,7 @@ test_nc_galaxy_redshift_factor_spline_new_poly (TestNcGalaxyRedshiftFactorSpline
     p[j] = gsl_pow_2 (_test_q (z[j]));
   }
 
-  test->gsdr = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
-  test->mset = ncm_mset_empty_new ();
-  test->data = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
-  test->pz   = _test_table_spline (z, p, TEST_POLY_N);
-
-  nc_galaxy_redshift_factor_spline_data_set (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr), test->data, test->pz);
+  _test_set_table (test, z, p, TEST_POLY_N);
 }
 
 /* A cut table as written by a photo-z code: zeros at interior knots and a narrow peak. */
@@ -208,19 +185,16 @@ test_nc_galaxy_redshift_factor_spline_new_zeros (TestNcGalaxyRedshiftFactorSplin
   for (j = 0; j < n; j++)
     z[j] = 0.5 + 0.01 * j;
 
-  test->gsdr = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
-  test->mset = ncm_mset_empty_new ();
-  test->data = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
-  test->pz   = _test_table_spline (z, p, n);
-
-  nc_galaxy_redshift_factor_spline_data_set (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr), test->data, test->pz);
+  _test_set_table (test, z, p, n);
 }
 
 void
 test_nc_galaxy_redshift_factor_spline_free (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
 {
   nc_galaxy_redshift_factor_data_unref (test->data);
-  ncm_spline_free (test->pz);
+  nc_galaxy_pz_free (test->pz);
+  ncm_vector_free (test->zv);
+  ncm_vector_free (test->pv);
   ncm_mset_free (test->mset);
   nc_galaxy_redshift_factor_free (test->gsdr);
 }
@@ -310,8 +284,8 @@ void
 test_nc_galaxy_redshift_factor_spline_zeros (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
 {
   NcGalaxyRedshiftFactorIntegrand *integ = nc_galaxy_redshift_factor_integ (test->gsdr, test->mset, FALSE);
-  NcmVector *xv                          = ncm_spline_peek_xv (test->pz);
-  NcmVector *yv                          = ncm_spline_peek_yv (test->pz);
+  NcmVector *xv                          = test->zv;
+  NcmVector *yv                          = test->pv;
   const guint n                          = ncm_vector_len (xv);
   guint i;
 
@@ -333,7 +307,7 @@ test_nc_galaxy_redshift_factor_spline_zeros (TestNcGalaxyRedshiftFactorSpline *t
   nc_galaxy_redshift_factor_integrand_free (integ);
 }
 
-/* A row is read from and written to the NcGalaxyWLObs P(z) slot as the same spline. */
+/* A row is read from and written to the pz slot of the NcGalaxyWLObs as the same object. */
 void
 test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
 {
@@ -353,169 +327,5 @@ test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *tes
   nc_galaxy_redshift_factor_data_unref (data2);
   nc_galaxy_wl_obs_free (obs);
   g_strfreev (columns);
-}
-
-/* The data derived from a table is shared by every galaxy that reads the same spline,
- * and is rebuilt, not reused, after the table's values are changed in place: scaling the
- * values by 4 scales the normalization by 4, for a new galaxy and for one that reads the
- * table again. The galaxy that keeps the old data keeps the old normalization. */
-void
-test_nc_galaxy_redshift_factor_spline_table_changed (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
-{
-  const gdouble exact               = _test_q2_antideriv (TEST_POLY_Z_MAX) - _test_q2_antideriv (TEST_POLY_Z_MIN);
-  NcGalaxyRedshiftFactorSpline *gs  = NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr);
-  NcGalaxyRedshiftFactorData *data2 = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
-  NcGalaxyRedshiftFactorData *data3 = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
-
-  nc_galaxy_redshift_factor_spline_data_set (gs, data2, test->pz);
-  ncm_assert_cmpdouble (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, data2), ==,
-                        nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, test->data));
-
-  ncm_vector_scale (ncm_spline_peek_yv (test->pz), 4.0);
-
-  nc_galaxy_redshift_factor_spline_data_set (gs, data2, test->pz);
-  nc_galaxy_redshift_factor_spline_data_set (gs, data3, test->pz);
-
-  ncm_assert_cmpdouble_e (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, data2), ==, 4.0 * exact, 1.0e-14, 0.0);
-  ncm_assert_cmpdouble_e (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, data3), ==, 4.0 * exact, 1.0e-14, 0.0);
-  ncm_assert_cmpdouble_e (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, test->data), ==, exact, 1.0e-14, 0.0);
-
-  nc_galaxy_redshift_factor_data_unref (data2);
-  nc_galaxy_redshift_factor_data_unref (data3);
-}
-
-void
-test_nc_galaxy_redshift_factor_spline_errors (void)
-{
-  g_test_trap_subprocess ("/nc/galaxy_redshift_factor_spline/errors/negative/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*the P(z) table value 2 is -0.1 at z = 0.52; values must be non-negative*");
-
-  g_test_trap_subprocess ("/nc/galaxy_redshift_factor_spline/errors/few_knots/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*the P(z) table has 5 knots, at least 6 are required*");
-}
-
-void
-test_nc_galaxy_redshift_factor_spline_negative_subprocess (void)
-{
-  const gdouble z[]                = {0.5, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56};
-  const gdouble p[]                = {0.1, 0.5, -0.1, 0.5, 1.0, 0.5, 0.1};
-  NcGalaxyRedshiftFactor *gsdr     = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
-  NcmMSet *mset                    = ncm_mset_empty_new ();
-  NcGalaxyRedshiftFactorData *data = nc_galaxy_redshift_factor_data_new (gsdr, mset);
-  NcmSpline *pz                    = _test_table_spline (z, p, G_N_ELEMENTS (p));
-
-  nc_galaxy_redshift_factor_spline_data_set (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (gsdr), data, pz);
-}
-
-void
-test_nc_galaxy_redshift_factor_spline_few_knots_subprocess (void)
-{
-  const gdouble z[]                = {0.5, 0.51, 0.52, 0.53, 0.54};
-  const gdouble p[]                = {0.1, 0.5, 1.0, 0.5, 0.1};
-  NcGalaxyRedshiftFactor *gsdr     = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
-  NcmMSet *mset                    = ncm_mset_empty_new ();
-  NcGalaxyRedshiftFactorData *data = nc_galaxy_redshift_factor_data_new (gsdr, mset);
-  NcmSpline *pz                    = NCM_SPLINE (ncm_spline_gsl_new_by_id (NCM_SPLINE_GSL_LINEAR));
-  NcmVector *xv                    = ncm_vector_new_data_dup ((gdouble *) z, G_N_ELEMENTS (z), 1);
-  NcmVector *yv                    = ncm_vector_new_data_dup ((gdouble *) p, G_N_ELEMENTS (p), 1);
-
-  ncm_spline_set (pz, xv, yv, TRUE);
-
-  nc_galaxy_redshift_factor_spline_data_set (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (gsdr), data, pz);
-}
-
-#define TEST_THREADS_N (8)
-#define TEST_THREADS_ROUNDS (40)
-#define TEST_THREADS_KNOTS (4000)
-
-typedef struct _TestThreadsArg
-{
-  NcGalaxyRedshiftFactorSpline *gs;
-  NcGalaxyRedshiftFactorData *data;
-  NcmSpline *pz;
-  gint *ready;
-  gint *go;
-} TestThreadsArg;
-
-/* Waits until every thread is ready and the start is given, then reads the table. */
-static gpointer
-_test_threads_read (gpointer userdata)
-{
-  TestThreadsArg *arg = (TestThreadsArg *) userdata;
-
-  g_atomic_int_inc (arg->ready);
-
-  while (!g_atomic_int_get (arg->go))
-    ;
-
-  nc_galaxy_redshift_factor_spline_data_set (arg->gs, arg->data, arg->pz);
-
-  return NULL;
-}
-
-/* Threads that read the same new table at the same time all get the density of that
- * table: each round starts TEST_THREADS_N threads on a new table of q^2 at once, so
- * several of them build its data together and all but one drop their build. */
-void
-test_nc_galaxy_redshift_factor_spline_threads (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
-{
-  const gdouble exact              = _test_q2_antideriv (TEST_POLY_Z_MAX) - _test_q2_antideriv (TEST_POLY_Z_MIN);
-  NcGalaxyRedshiftFactorSpline *gs = NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr);
-  gdouble *z                       = g_new (gdouble, TEST_THREADS_KNOTS);
-  gdouble *p                       = g_new (gdouble, TEST_THREADS_KNOTS);
-  guint round, t, j;
-
-  for (j = 0; j < TEST_THREADS_KNOTS; j++)
-  {
-    z[j] = TEST_POLY_Z_MIN + (TEST_POLY_Z_MAX - TEST_POLY_Z_MIN) * pow (j / (TEST_THREADS_KNOTS - 1.0), 1.3);
-    p[j] = gsl_pow_2 (_test_q (z[j]));
-  }
-
-  for (round = 0; round < TEST_THREADS_ROUNDS; round++)
-  {
-    NcmSpline *pz = _test_table_spline (z, p, TEST_THREADS_KNOTS);
-    TestThreadsArg arg[TEST_THREADS_N];
-    GThread *th[TEST_THREADS_N];
-    gint ready = 0;
-    gint go    = 0;
-
-    for (t = 0; t < TEST_THREADS_N; t++)
-    {
-      arg[t].gs    = gs;
-      arg[t].data  = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
-      arg[t].pz    = pz;
-      arg[t].ready = &ready;
-      arg[t].go    = &go;
-      th[t]        = g_thread_new ("read", &_test_threads_read, &arg[t]);
-    }
-
-    while (g_atomic_int_get (&ready) < TEST_THREADS_N)
-      ;
-
-    g_atomic_int_set (&go, 1);
-
-    for (t = 0; t < TEST_THREADS_N; t++)
-      g_thread_join (th[t]);
-
-    {
-      const gdouble norm0 = nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, arg[0].data);
-
-      ncm_assert_cmpdouble_e (norm0, ==, exact, 1.0e-13, 0.0);
-
-      for (t = 0; t < TEST_THREADS_N; t++)
-      {
-        g_assert_true (nc_galaxy_redshift_factor_spline_data_peek (gs, arg[t].data) == pz);
-        ncm_assert_cmpdouble (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, arg[t].data), ==, norm0);
-        nc_galaxy_redshift_factor_data_unref (arg[t].data);
-      }
-    }
-
-    ncm_spline_free (pz);
-  }
-
-  g_free (z);
-  g_free (p);
 }
 

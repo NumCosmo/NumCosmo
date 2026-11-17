@@ -90,14 +90,12 @@ def _galaxies(n_gal):
     return ra, dec, zp, sigma0, e1, e2, std_noise
 
 
-def _gauss_pz_spline(zp, sigma):
+def _gauss_pz(zp, sigma):
     z = np.linspace(max(1.0e-3, zp - 6.0 * sigma), zp + 6.0 * sigma, 64)
     pz = np.exp(-0.5 * ((z - zp) / sigma) ** 2) / (np.sqrt(2.0 * np.pi) * sigma)
-    spline = Ncm.SplineCubicNotaknot.new()
-    spline.set(
-        Ncm.Vector.new_array(z.tolist()), Ncm.Vector.new_array(pz.tolist()), True
+    return Nc.GalaxyPzBSplineSqrt.new_from_table(
+        Ncm.Vector.new_array(z.tolist()), Ncm.Vector.new_array(pz.tolist())
     )
-    return spline
 
 
 def _build(shape_name, profile_name, redshift_name, n_gal=None):
@@ -160,8 +158,8 @@ def _build(shape_name, profile_name, redshift_name, n_gal=None):
         for col in cols:
             obs.set(col, i, float(values[col][i]))
         if redshift_name == "spline":
-            # One spline object per row, never shared between rows.
-            obs.set_pz(i, _gauss_pz_spline(zp[i], sigma0[i] * (1.0 + zp[i])))
+            # One p(z) object per row, never shared between rows.
+            obs.set_pz(i, _gauss_pz(zp[i], sigma0[i] * (1.0 + zp[i])))
 
     dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
