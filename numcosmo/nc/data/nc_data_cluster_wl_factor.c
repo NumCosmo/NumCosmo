@@ -1036,6 +1036,59 @@ _nc_data_cluster_wl_factor_z_top (NcDataClusterWLFactorPrivate *self, NcmMSet *m
   return z_top;
 }
 
+/*
+ * The key of the catalog metadata (ncm_catalog_peek_meta()) naming the cache of interpolants
+ * of its galaxies, a file kept apart from the catalog that numcosmo_py attaches to it.
+ */
+#define NC_DATA_CLUSTER_WL_FACTOR_META_INTERP_CACHE "shape_interp_cache"
+
+G_LOCK_DEFINE_STATIC (nc_data_cluster_wl_factor_cache_warned);
+
+/*
+ * A catalog whose metadata names a cache of interpolants, read with a shape factor that uses
+ * interpolants, but without them attached: every interpolant would be built at the first
+ * prepare, which takes minutes for a large catalog. Warned about once per catalog (the copies
+ * of a likelihood share it).
+ */
+static void
+_nc_data_cluster_wl_factor_check_interp_cache (NcDataClusterWLFactorPrivate *self)
+{
+  NcmVarDict *meta = ncm_catalog_peek_meta (NCM_CATALOG (self->obs));
+  GVariant *name   = NULL;
+
+  if (meta != NULL)
+    ncm_var_dict_get_variant (meta, NC_DATA_CLUSTER_WL_FACTOR_META_INTERP_CACHE, &name);
+
+  if ((name != NULL) && g_variant_is_of_type (name, G_VARIANT_TYPE_STRING) &&
+      NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor) &&
+      nc_galaxy_shape_factor_spectral_get_use_interp (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor)) &&
+      (nc_galaxy_wl_obs_peek_shape_interp_source (self->obs) == NULL))
+  {
+    static GQuark quark = 0;
+    gboolean first;
+
+    G_LOCK (nc_data_cluster_wl_factor_cache_warned);
+
+    if (G_UNLIKELY (quark == 0))
+      quark = g_quark_from_static_string ("nc-data-cluster-wl-factor-cache-warned");
+
+    first = (g_object_get_qdata (G_OBJECT (self->obs), quark) == NULL);
+
+    if (first)
+      g_object_set_qdata (G_OBJECT (self->obs), quark, GINT_TO_POINTER (1));
+
+    G_UNLOCK (nc_data_cluster_wl_factor_cache_warned);
+
+    if (first)
+      g_warning ("nc_data_cluster_wl_factor: the catalog names the cache of interpolants `%s', which is not attached: "
+                 "every interpolant will be built, which may take minutes. Load the experiment with numcosmo_py "
+                 "(numcosmo run, or attach_shape_interp_cache()), which attaches it.",
+                 g_variant_get_string (name, NULL));
+  }
+
+  g_clear_pointer (&name, g_variant_unref);
+}
+
 /* The (z_top, zf) pairs warned about by _nc_data_cluster_wl_factor_check_zf() in this process */
 G_LOCK_DEFINE_STATIC (nc_data_cluster_wl_factor_zf_warned);
 
@@ -1678,6 +1731,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     _nc_data_cluster_wl_factor_load_obs (self, mset, self->obs);
     self->obs_changed = FALSE;
     self->z_top       = _nc_data_cluster_wl_factor_z_top (self, mset);
+    _nc_data_cluster_wl_factor_check_interp_cache (self);
   }
 
   _nc_data_cluster_wl_factor_check_zf (self, mset);

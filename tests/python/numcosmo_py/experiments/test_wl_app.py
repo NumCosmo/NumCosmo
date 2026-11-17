@@ -30,6 +30,10 @@ Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
+import json
+import re
+import subprocess
+import sys
 import pytest
 from typer.testing import CliRunner
 
@@ -46,6 +50,7 @@ from numcosmo_py import (
     Nc,
 )
 from numcosmo_py.app import app
+from numcosmo_py.app.loading import LoadExperiment
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
     ShapeFactorGen,
@@ -1699,6 +1704,283 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     assert _experiment_m2lnL(exp_prepared) == _experiment_m2lnL(exp_original)
 
 
+def test_wl_catalog_shape_interp_restrict_range(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """With restrict_range=true and the box of the fits (mass bound, center box,
+    concentration range), each interpolant covers only the shears its galaxy
+    can reach: the catalog is smaller, and the likelihood is that of the
+    interpolants over the whole disk, the shears beyond the reach being
+    integrated."""
+    pop = "--pop-dist=beta alpha=1.8 beta=2.1"
+    full = tmp_path / "full.gvar"
+    result = _shape_interp(full, real_wl_obs_file_with_meta, pop)
+    assert result.exit_code == 0, result.output
+
+    restricted = tmp_path / "restricted.gvar"
+    result = _shape_interp(
+        restricted,
+        real_wl_obs_file_with_meta,
+        pop,
+        "--shape-factor=spectral use_interp=true restrict_range=true "
+        "ellip_conv=trace ellip_coord=celestial",
+        "--cluster-mass-max=1.0e15",
+        "--centre-box-deg=0.01",
+        "--cluster-c-min=2.0",
+        "--cluster-c-max=8.0",
+    )
+    assert result.exit_code == 0, result.output
+    assert restricted.stat().st_size < full.stat().st_size
+
+    m2lnL = {}
+    for name, catalog in (("full", full), ("restricted", restricted)):
+        exp = tmp_path / f"exp_{name}.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp.as_posix(),
+                f"--data-file={catalog.as_posix()}",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        m2lnL[name] = _experiment_m2lnL(exp)
+
+    assert m2lnL["restricted"] == pytest.approx(m2lnL["full"], rel=0.0, abs=1.0e-4)
+
+    # The fit keeps its own box (cluster-wl-load never changes a bound): the same bounds
+    # as the fit from the full catalog, the shears beyond the restricted interpolants
+    # integrated
+    bounds = {}
+    for name in ("full", "restricted"):
+        mset, likelihood = _experiment_load(tmp_path / f"exp_{name}.yaml")
+        bounds[name] = _experiment_bounds(mset)
+        if name == "restricted":
+            mset.prepare_fparam_map()
+            likelihood.m2lnL_val(mset)
+            gsfs = likelihood.peek_dataset().get_data(0).get_property("shape-factor")
+            assert cast(Nc.GalaxyShapeFactorSpectral, gsfs).get_restrict_range()
+    assert bounds["restricted"] == bounds["full"]
+
+
+def test_wl_catalog_shape_interp_restrict_range_default_box(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A catalog prepared with restrict_range=true for the default box (the halo
+    center fixed) loads into a fit with the halo center free: the fit has the
+    bounds cluster-wl-load gives any catalog, and the likelihood of the
+    interpolants over the whole disk."""
+    pop = "--pop-dist=beta alpha=1.8 beta=2.1"
+    full = tmp_path / "full.gvar"
+    result = _shape_interp(full, real_wl_obs_file_with_meta, pop)
+    assert result.exit_code == 0, result.output
+
+    restricted = tmp_path / "restricted.gvar"
+    result = _shape_interp(
+        restricted,
+        real_wl_obs_file_with_meta,
+        pop,
+        "--shape-factor=spectral use_interp=true restrict_range=true "
+        "ellip_conv=trace ellip_coord=celestial",
+    )
+    assert result.exit_code == 0, result.output
+
+    m2lnL = {}
+    bounds = {}
+    for name, catalog in (("full", full), ("restricted", restricted)):
+        exp = tmp_path / f"exp_{name}.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp.as_posix(),
+                f"--data-file={catalog.as_posix()}",
+                "--parameter-list=NcHaloMassSummary:log10MDelta",
+                "--parameter-list=NcHaloPosition:ra",
+                "--parameter-list=NcHaloPosition:dec",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        m2lnL[name] = _experiment_m2lnL(exp)
+        bounds[name] = _experiment_bounds(_experiment_load(exp)[0])
+
+    assert bounds["restricted"] == bounds["full"]
+    assert m2lnL["restricted"] == pytest.approx(m2lnL["full"], rel=0.0, abs=1.0e-4)
+
+
+def _experiment_load(experiment_file: Path) -> tuple[Ncm.MSet, Ncm.Likelihood]:
+    """The model set and the likelihood of an experiment."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    exp = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    return (
+        cast(Ncm.MSet, exp.get("model-set")),
+        cast(Ncm.Likelihood, exp.get("likelihood")),
+    )
+
+
+def _experiment_bounds(mset: Ncm.MSet) -> dict[str, tuple[float, float, bool]]:
+    """The bounds and ftype of every parameter of the halo models of mset."""
+    bounds = {}
+    for model_id in (Nc.HaloPosition.id(), Nc.HaloMassSummary.id()):
+        model = mset.peek(model_id)
+        assert model is not None
+        for idx in range(model.len()):
+            bounds[f"{type(model).__name__}:{model.param_name(idx)}"] = (
+                model.param_get_lower_bound(idx),
+                model.param_get_upper_bound(idx),
+                model.param_get_ftype(idx) == Ncm.ParamType.FREE,
+            )
+    return bounds
+
+
+def _experiment_m2lnL_at(experiment_file: Path, pop_values: dict[str, float]) -> float:
+    """-2 ln L of an experiment with the population parameters set to pop_values."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    exp = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    likelihood = cast(Ncm.Likelihood, exp.get("likelihood"))
+    mset = cast(Ncm.MSet, exp.get("model-set"))
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+    assert pop is not None
+    for name, value in pop_values.items():
+        pop[name] = value
+    mset.prepare_fparam_map()
+    return likelihood.m2lnL_val(mset)
+
+
+def test_wl_catalog_shape_interp_pop_order(tmp_path: Path, real_wl_obs_file_with_meta):
+    """With pop_order and --pop-box, the catalog holds for each galaxy the modes
+    of the expansion over the box of the population. An experiment built from it
+    has those parameters fixed at the values of the record, unless
+    --parameter-list frees them, and the bounds of the population, never those
+    of the box; fixed or free, inside the box or outside it (integrated), it has
+    the likelihood of the integrals at the same population."""
+    expanded = tmp_path / "expanded.gvar"
+    result = _shape_interp(
+        expanded,
+        real_wl_obs_file_with_meta,
+        "--pop-dist=beta alpha=1.8 beta=2.1",
+        "--shape-factor=spectral use_interp=true pop_order=5 "
+        "ellip_conv=trace ellip_coord=celestial",
+        "--pop-box=alpha=1.75:1.85",
+        "--pop-box=beta=2.05:2.15",
+    )
+    assert result.exit_code == 0, result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(expanded.as_posix()))
+    # Every expansion converged: a galaxy whose expansion does not has no modes
+    for i in range(obs.len()):
+        modes = obs.peek_shape_interp(i)
+        assert modes is not None
+        assert modes.len() == 25
+
+    # A new process, which has not made the types of the catalog, reads it
+    load = (
+        "import sys; from numcosmo_py import Ncm, Nc; Ncm.cfg_init(); "
+        "obs = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP).from_binfile(sys.argv[1]); "
+        "print(obs.peek_shape_interp(0).len())"
+    )
+    loaded = subprocess.run(
+        [sys.executable, "-c", load, expanded.as_posix()],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    assert loaded.stdout.split()[-1] == "25"
+
+    exp_expanded = tmp_path / "exp_expanded.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_expanded.as_posix(),
+            f"--data-file={expanded.as_posix()}",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    exp_alpha = tmp_path / "exp_alpha.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_alpha.as_posix(),
+            f"--data-file={expanded.as_posix()}",
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    exp_integral = tmp_path / "exp_integral.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_integral.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral use_interp=false ellip_conv=trace "
+            "ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.8 beta=2.1",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    default = Nc.GalaxyShapePopBeta.new()
+    free = {exp_expanded: set(), exp_alpha: {"alpha"}}
+    for exp_file, free_names in free.items():
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.from_binfile(exp_file.with_suffix(".dataset.gvar").as_posix())
+        mset = cast(
+            Ncm.MSet, ser.dict_str_from_yaml_file(exp_file.as_posix()).get("model-set")
+        )
+        pop = mset.peek(Nc.GalaxyShapePop.id())
+        assert pop["alpha"] == pytest.approx(1.8)
+        assert pop["beta"] == pytest.approx(2.1)
+        for name in ("alpha", "beta"):
+            _, idx = pop.param_index_from_name(name)
+            assert pop.param_get_lower_bound(idx) == default.param_get_lower_bound(idx)
+            assert pop.param_get_upper_bound(idx) == default.param_get_upper_bound(idx)
+            assert (pop.param_get_ftype(idx) == Ncm.ParamType.FREE) == (
+                name in free_names
+            )
+
+    for exp_file in (exp_expanded, exp_alpha):
+        for values in (
+            {"alpha": 1.8, "beta": 2.1},
+            {"alpha": 1.78, "beta": 2.13},
+            {"alpha": 1.9, "beta": 2.1},
+        ):
+            assert _experiment_m2lnL_at(exp_file, values) == pytest.approx(
+                _experiment_m2lnL_at(exp_integral, values), rel=0.0, abs=1.0e-3
+            )
+
+
+def test_wl_catalog_shape_interp_concentration_pair(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """--cluster-c-min and --cluster-c-max are given together."""
+    result = _shape_interp(
+        tmp_path / "out.gvar",
+        real_wl_obs_file_with_meta,
+        "--pop-dist=gauss sigma=0.3",
+        "--cluster-c-min=2.0",
+    )
+    assert result.exit_code != 0
+    # On GitHub Actions typer forces a colored panel of 80 columns: compare the plain words
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", plain).split())
+    assert "--cluster-c-min" in plain
+
+
 def test_wl_catalog_shape_interp_replaces_record(
     tmp_path: Path, real_wl_obs_file_with_meta
 ):
@@ -2047,3 +2329,248 @@ def test_cluster_wl_load_app_dataset_data_file(
         ser.from_binfile(experiment_file_copy.with_suffix(".dataset.gvar").as_posix()),
     )
     assert cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs().len() == 20
+
+
+def _cache_experiment(experiment: Path, data_file: Path, *args: str):
+    """Run generate cluster-wl-load with interpolants over a Beta population."""
+    return runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment.as_posix(),
+            f"--data-file={data_file.as_posix()}",
+            (
+                "--shape-factor=spectral use_interp=true restrict_range=true "
+                "ellip_conv=trace ellip_coord=celestial"
+            ),
+            "--pop-dist=beta alpha=1.6 beta=1.7",
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--parameter-list=NcGalaxyShapePop:beta",
+            "--centre-box-deg=0.01",
+            "--prior=NcHaloMassSummary:log10MDelta=13:15",
+            *args,
+        ],
+    )
+
+
+def test_cluster_wl_load_interp_cache(tmp_path: Path, real_wl_obs_file_with_meta):
+    """generate builds the cache of interpolants beside the catalog and the dataset
+    names it; loading the experiment attaches it, builds it again when missing, and
+    with --no-interp-build a missing cache is an error."""
+    exp = tmp_path / "exp.yaml"
+    coverage = [
+        "--pop-coverage=NcGalaxyShapePop:alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+    ]
+    result = _cache_experiment(exp, real_wl_obs_file_with_meta, *coverage)
+    assert result.exit_code == 0, result.output
+
+    cache_dir = real_wl_obs_file_with_meta.with_suffix(".interp")
+    caches = sorted(cache_dir.glob("*.gvar"))
+    assert len(caches) == 1
+    assert caches[0].with_suffix(".json").exists()
+
+    # The dataset holds the catalog without interpolants, naming the cache relatively
+    _, likelihood = _experiment_load(exp)
+    obs = cast(Nc.DataClusterWLFactor, likelihood.peek_dataset().get_data(0)).peek_obs()
+    assert obs.peek_shape_interp_source() is None
+    ok, name = obs.peek_meta().get_string("shape_interp_cache")
+    assert ok and not Path(name).is_absolute()
+    assert (tmp_path / name).resolve() == caches[0].resolve()
+
+    loaded = LoadExperiment(experiment=exp)
+    data = cast(Nc.DataClusterWLFactor, loaded.likelihood.peek_dataset().get_data(0))
+    assert data.peek_obs().peek_shape_interp_source() is not None
+    gsfs = cast(Nc.GalaxyShapeFactorSpectral, data.props.shape_factor)
+    assert gsfs.get_pop_order() >= 2
+    loaded.mset.prepare_fparam_map()
+    m2lnL = loaded.likelihood.m2lnL_val(loaded.mset)
+
+    exp_int = tmp_path / "exp_int.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_int.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.6 beta=1.7",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert m2lnL == pytest.approx(_experiment_m2lnL(exp_int), rel=0.0, abs=1.0e-3)
+
+    for path in cache_dir.glob("*"):
+        path.unlink()
+    with pytest.raises(ValueError, match="building is off"):
+        LoadExperiment(experiment=exp, interp_build=False)
+    rebuilt = LoadExperiment(experiment=exp)
+    assert [p.name for p in cache_dir.glob("*.gvar")] == [caches[0].name]
+    rebuilt.mset.prepare_fparam_map()
+    assert rebuilt.likelihood.m2lnL_val(rebuilt.mset) == m2lnL
+
+
+def test_cluster_wl_load_interp_cache_no_build(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """With --no-interp-build generate names the cache without building it, and a cache
+    directory can be given."""
+    exp = tmp_path / "exp.yaml"
+    cache_dir = tmp_path / "caches"
+    result = _cache_experiment(
+        exp,
+        real_wl_obs_file_with_meta,
+        "--pop-coverage=alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+        "--no-interp-build",
+        f"--interp-cache-dir={cache_dir.as_posix()}",
+    )
+    assert result.exit_code == 0, result.output
+    assert not list(cache_dir.glob("*.gvar"))
+    LoadExperiment(experiment=exp)
+    assert len(list(cache_dir.glob("*.gvar"))) == 1
+
+
+def test_cluster_wl_load_pop_coverage_needs_interp(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """--pop-coverage without interpolants is an error."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            (tmp_path / "exp.yaml").as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-coverage=alpha=1.5:1.7",
+        ],
+    )
+    assert result.exit_code != 0
+
+
+def test_wl_catalog_upgrade_and_info(tmp_path: Path, real_wl_obs_file_with_meta):
+    """upgrade moves the interpolants of a catalog into a cache beside the output, which
+    generate reuses with the same settings and coverage; info describes the three files.
+    """
+    legacy = tmp_path / "legacy.gvar"
+    shape = (
+        "--shape-factor=spectral use_interp=true pop_order=5 "
+        "ellip_conv=trace ellip_coord=celestial"
+    )
+    pop = "--pop-dist=beta alpha=1.8 beta=2.1"
+    result = _shape_interp(
+        legacy,
+        real_wl_obs_file_with_meta,
+        pop,
+        shape,
+        "--pop-box=alpha=1.75:1.85",
+        "--pop-box=beta=2.05:2.15",
+    )
+    assert result.exit_code == 0, result.output
+
+    upgraded = tmp_path / "upgraded.gvar"
+    result = runner.invoke(
+        app, ["wl-catalog", "upgrade", legacy.as_posix(), upgraded.as_posix()]
+    )
+    assert result.exit_code == 0, result.output
+    caches = list(upgraded.with_suffix(".interp").glob("*.gvar"))
+    assert len(caches) == 1
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(upgraded.as_posix()))
+    assert obs.peek_shape_interp_source() is None
+    assert upgraded.stat().st_size < legacy.stat().st_size
+
+    result = runner.invoke(
+        app, ["wl-catalog", "upgrade", upgraded.as_posix(), upgraded.as_posix()]
+    )
+    assert result.exit_code != 0
+
+    exp = tmp_path / "exp.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp.as_posix(),
+            f"--data-file={upgraded.as_posix()}",
+            shape,
+            pop,
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--parameter-list=NcGalaxyShapePop:beta",
+            "--pop-coverage=alpha=1.75:1.85",
+            "--pop-coverage=beta=2.05:2.15",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert " 0 built" in result.output
+    assert list(upgraded.with_suffix(".interp").glob("*.gvar")) == caches
+
+    plain = {}
+    for name, path in (
+        ("legacy", legacy),
+        ("upgraded", upgraded),
+        ("cache", caches[0]),
+        ("dataset", exp.with_suffix(".dataset.gvar")),
+    ):
+        result = runner.invoke(app, ["wl-catalog", "info", path.as_posix()])
+        assert result.exit_code == 0, result.output
+        plain[name] = " ".join(re.sub(r"\x1b\[[0-9;]*m", "", result.output).split())
+    assert "carries interpolants itself: 0 fixed, 20 expansions" in plain["legacy"]
+    assert "names the cache" in plain["upgraded"]
+    assert "matches the rows" in plain["upgraded"]
+    assert '"pop_order": 5' in plain["cache"]
+    assert "matches the rows" in plain["dataset"]
+
+
+def test_cluster_wl_load_pop_coverage_unconverged(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A coverage over which no candidate order converges is an error, not a build whose
+    galaxies are integrated at every step."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            (tmp_path / "exp.yaml").as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            (
+                "--shape-factor=spectral use_interp=true restrict_range=true "
+                "ellip_conv=trace ellip_coord=celestial"
+            ),
+            "--pop-dist=gauss sigma=0.3",
+            "--parameter-list=NcGalaxyShapePop:sigma",
+            "--pop-coverage=sigma=0.1:1.0",
+            "--centre-box-deg=0.01",
+        ],
+    )
+    assert result.exit_code != 0
+    # On GitHub Actions typer forces a colored panel: compare the plain words
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", plain).split())
+    assert "does not converge" in plain
+    assert not (tmp_path / "exp.yaml").exists()
+
+
+def test_cluster_wl_load_default_pop_coverage(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """With alpha and beta free over their default prior [1, 4] and no --pop-coverage,
+    the interpolants cover [1.25, 2.75]^2, and generate says the prior is wider."""
+    exp = tmp_path / "exp.yaml"
+    result = _cache_experiment(exp, real_wl_obs_file_with_meta)
+    assert result.exit_code == 0, result.output
+    plain = " ".join(result.output.split())
+    assert "cover alpha in [1.25, 2.75], its prior is [1.0, 4.0]" in plain
+    jsons = list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.json"))
+    assert len(jsons) == 1
+    info = json.loads(jsons[0].read_text())
+    assert info["population"]["coverage"] == {
+        "alpha": [1.25, 2.75],
+        "beta": [1.25, 2.75],
+    }
