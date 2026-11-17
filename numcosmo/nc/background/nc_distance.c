@@ -118,7 +118,7 @@ _nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, 
   switch (prop_id)
   {
     case PROP_ZF:
-      dist->zf = g_value_get_double (value);
+      dist->zf_req = g_value_get_double (value);
       ncm_model_ctrl_force_update (dist->ctrl);
       break;
     case PROP_RECOMB:
@@ -146,7 +146,7 @@ _nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParam
   switch (prop_id)
   {
     case PROP_ZF:
-      g_value_set_double (value, dist->zf);
+      g_value_set_double (value, dist->zf_req);
       break;
     case PROP_RECOMB:
       g_value_set_object (value, dist->recomb);
@@ -174,7 +174,7 @@ _nc_distance_constructed (GObject *object)
   {
     NcDistance *dist = NC_DISTANCE (object);
 
-    dist->comoving_distance_spline = ncm_ode_spline_new_hermite (_dcddz, _d2cddz2, 0.0, 0.0, dist->zf);
+    dist->comoving_distance_spline = ncm_ode_spline_new_hermite (_dcddz, _d2cddz2, 0.0, 0.0, dist->zf_req);
     ncm_ode_spline_auto_abstol (dist->comoving_distance_spline, TRUE);
   }
 }
@@ -223,7 +223,11 @@ nc_distance_class_init (NcDistanceClass *klass)
   /**
    * NcDistance:zf:
    *
-   * The final redshift to compute cosmological distances and related quantities.
+   * The final redshift requested for the spline of the comoving distance: up to it the
+   * distances are evaluated from the spline, above it from an integral for each redshift.
+   * A value set after construction, or raised by nc_distance_require_zf(), takes effect
+   * at the next nc_distance_prepare(); until then the distances are evaluated with the
+   * final redshift of the last prepare.
    *
    */
   g_object_class_install_property (object_class,
@@ -336,16 +340,18 @@ nc_distance_clear (NcDistance **dist)
  * @dist: a #NcDistance
  * @zf: maximum redshift required
  *
- * Requires the final redshift of at least @zf.
+ * Requires a final redshift #NcDistance:zf of at least @zf. A larger @zf replaces the
+ * requested one and marks @dist as not prepared; it takes effect at the next
+ * nc_distance_prepare(), and until then the distances are evaluated with the final
+ * redshift of the last prepare. A @zf not above the requested one changes nothing.
  *
  */
 void
 nc_distance_require_zf (NcDistance *dist, const gdouble zf)
 {
-  if (zf > dist->zf)
+  if (zf > dist->zf_req)
   {
-    ncm_ode_spline_set_xf (dist->comoving_distance_spline, zf);
-    dist->zf = zf;
+    dist->zf_req = zf;
 
     ncm_model_ctrl_force_update (dist->ctrl);
   }
@@ -429,6 +435,9 @@ nc_distance_compute_inv_comoving (NcDistance *dist, gboolean cpu_inv_xi)
 void
 nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 {
+  /* The only place that writes the final redshift the evaluations read */
+  dist->zf = dist->zf_req;
+
   ncm_function_cache_empty_cache (dist->comoving_distance_cache);
   ncm_function_cache_empty_cache (dist->comoving_infinity);
   ncm_function_cache_empty_cache (dist->time_cache);
@@ -442,6 +451,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   }
   else
   {
+    ncm_ode_spline_set_xf (dist->comoving_distance_spline, dist->zf);
     ncm_ode_spline_prepare (dist->comoving_distance_spline, cosmo);
     dist->cmethod = NC_DISTANCE_COMOVING_METHOD_INT_E;
   }
