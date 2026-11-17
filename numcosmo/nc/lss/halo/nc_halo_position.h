@@ -33,6 +33,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/model/ncm_model.h>
+#include <numcosmo/ncm/algebra/ncm_quaternion.h>
 #include <numcosmo/nc/background/nc_distance.h>
 #include <numcosmo/nc/background/nc_hicosmo.h>
 
@@ -84,6 +85,7 @@ gdouble nc_halo_position_get_redshift (NcHaloPosition *hp);
 void nc_halo_position_get_ra_dec (NcHaloPosition *hp, gdouble *ra, gdouble *dec);
 
 void nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi);
+void nc_halo_position_rotate (NcHaloPosition *hp, NcmTriVec *v);
 gdouble nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble theta);
 gdouble nc_halo_position_projected_radius_prefactor (NcHaloPosition *hp, NcHICosmo *cosmo);
 gdouble nc_halo_position_projected_radius_from_prefactor (gdouble theta, gdouble prefactor);
