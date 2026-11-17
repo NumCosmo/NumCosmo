@@ -108,6 +108,7 @@ from numcosmo_py.experiments.planck18 import (
 from numcosmo_py.experiments.wl_interp_cache import (
     choose_pop_order,
     default_coverage,
+    format_coverage,
     record_shape_interp_cache,
     shape_interp_cache_name,
     update_shape_interp_cache,
@@ -1433,12 +1434,18 @@ class LoadClusterWL(ClusterWL):
         try:
             if coverage and gsfs.get_pop_order() < 2:
                 order, unconv = choose_pop_order(data, mset, coverage)
-                gsfs.set_pop_order(order)
                 if unconv > 0:
-                    print(
-                        f"# Population order {order}: the expansion of {unconv} "
-                        "galaxies of the sample did not converge over the coverage."
+                    raise ValueError(
+                        f"the expansion over the population coverage "
+                        f"{format_coverage(coverage)} does not converge for {unconv} "
+                        f"of the galaxies of the sample even at pop_order={order}: "
+                        "those galaxies would be integrated at every step. Give a "
+                        "narrower --pop-coverage (e.g. around the expected values; a "
+                        "Gauss sigma in [0.25, 0.75] needs 19), or pop_order in "
+                        "--shape-factor to build at that order anyway."
                     )
+                gsfs.set_pop_order(order)
+                print(f"# Population order {order} over {format_coverage(coverage)}.")
             if self.interp_build:
                 upd = update_shape_interp_cache(
                     data, mset, cache_dir, coverage=coverage

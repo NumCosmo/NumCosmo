@@ -2524,3 +2524,30 @@ def test_wl_catalog_upgrade_and_info(tmp_path: Path, real_wl_obs_file_with_meta)
     assert "matches the rows" in plain["upgraded"]
     assert '"pop_order": 5' in plain["cache"]
     assert "matches the rows" in plain["dataset"]
+
+
+def test_cluster_wl_load_pop_coverage_unconverged(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A coverage over which no candidate order converges is an error, not a build whose
+    galaxies are integrated at every step."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            (tmp_path / "exp.yaml").as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            (
+                "--shape-factor=spectral use_interp=true restrict_range=true "
+                "ellip_conv=trace ellip_coord=celestial"
+            ),
+            "--pop-dist=gauss sigma=0.3",
+            "--parameter-list=NcGalaxyShapePop:sigma",
+            "--centre-box-deg=0.01",
+        ],
+    )
+    assert result.exit_code != 0
+    plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", result.output).split())
+    assert "does not converge" in plain
+    assert not (tmp_path / "exp.yaml").exists()
