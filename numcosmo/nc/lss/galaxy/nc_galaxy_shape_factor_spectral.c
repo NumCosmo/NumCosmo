@@ -212,14 +212,13 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
    * prepare() (_nc_galaxy_shape_factor_reach_prepare(), with a free cDelta sampled). It
    * applies when range_on: restrict-range and use-interp are set, the models are in the fit
    * and the box covers every free parameter. n_short counts the galaxies whose loaded
-   * interpolant does not cover their reach in the box of the fit, warned about once
-   * (short_warned).
+   * interpolant does not cover their reach in the box of the fit, warned about once per
+   * catalog (_nc_galaxy_shape_factor_spectral_warn_once()).
    */
   gboolean restrict_range;
   gboolean range_on;
   NcGalaxyShapeFactorReach reach;
   gint n_short;
-  gint short_warned;
 
   /*
    * pop-order: the galaxies built by this object expand ln P over the box of the free
@@ -227,9 +226,9 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
    * prepare() when the box changes, pop_box_key). pop_fit_key is the key of the free
    * parameters, their bounds and the values of the fixed ones, the state a loaded expansion
    * was compared with. pop_n_unconverged counts the galaxies whose expansion did not
-   * converge since the box was set; they are integrated. pop_outside_warned: a loaded
-   * expansion was compared with a fit whose population reaches outside its box, warned about
-   * once.
+   * converge since the box was set; they are integrated. A loaded expansion compared with a
+   * fit whose population reaches outside its box is warned about once per catalog
+   * (_nc_galaxy_shape_factor_spectral_warn_once()).
    */
   guint pop_order;
   gboolean pop_expand;
@@ -240,7 +239,6 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gdouble *pop_T; /* the modes from the values at the nodes, n_nodes x n_nodes */
   gint pop_n_unconverged;
   gint pop_warned;
-  gint pop_outside_warned;
 } NcGalaxyShapeFactorSpectralPrivate;
 
 /* The scratch space of one evaluation */
@@ -617,19 +615,17 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->restrict_range = FALSE;
   self->range_on       = FALSE;
   self->n_short        = 0;
-  self->short_warned   = 0;
   _nc_galaxy_shape_factor_reach_init (&self->reach, TRUE);
 
-  self->pop_order          = 0;
-  self->pop_expand         = FALSE;
-  self->pop_box            = NULL;
-  self->pop_box_key        = 0;
-  self->pop_fit_key        = 0;
-  self->pop_nodes          = NULL;
-  self->pop_T              = NULL;
-  self->pop_n_unconverged  = 0;
-  self->pop_warned         = 0;
-  self->pop_outside_warned = 0;
+  self->pop_order         = 0;
+  self->pop_expand        = FALSE;
+  self->pop_box           = NULL;
+  self->pop_box_key       = 0;
+  self->pop_fit_key       = 0;
+  self->pop_nodes         = NULL;
+  self->pop_T             = NULL;
+  self->pop_n_unconverged = 0;
+  self->pop_warned        = 0;
 }
 
 static void
@@ -876,7 +872,8 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * The absolute tolerance on $\ln P$ of the table along the line of the shears of the
    * nodes of a galaxy (see nc_galaxy_shape_factor_eval_line()). The nodes of a galaxy whose
    * shears are integrated (without #NcGalaxyShapeFactorSpectral:use-interp; with it the
-   * interpolant is used and this property is ignored) take $\ln P$ from a Chebyshev series
+   * interpolant is used, except for a galaxy that cannot use it anywhere on the line, see
+   * nc_galaxy_shape_factor_spectral_get_fallback_stats()) take $\ln P$ from a Chebyshev series
    * in the position on that line, built from integrals on nested Chebyshev-Lobatto grids
    * and accepted when its coefficients change by at most this value in $\ell_1$ norm
    * between two grids. The table is built only when it needs at most half as many integrals
@@ -1523,6 +1520,95 @@ _nc_galaxy_shape_factor_spectral_interp_ensure (NcGalaxyShapeFactorSpectral *gsf
 }
 
 /*
+ * The evaluations made without the interpolant of a galaxy while use-interp is set, by
+ * reason, for nc_galaxy_shape_factor_spectral_get_fallback_stats(): lines tabulated
+ * (nc_galaxy_shape_factor_eval_line()), shears integrated one by one, and the time they took,
+ * in microseconds. They are counted for the process, since each copy of a likelihood a
+ * sampler makes has its own shape factor; atomics, since the copies run in threads. The
+ * first fallback outside the coverage of the interpolants (POPULATION or RANGE) is reported
+ * once with g_message(): CAP, the shears above interp-g-max, happens at ordinary points.
+ */
+typedef struct _NcGalaxyShapeFactorSpectralFallbackStats
+{
+  gsize lines;
+  gsize shears;
+  gsize usec;
+} NcGalaxyShapeFactorSpectralFallbackStats;
+
+G_STATIC_ASSERT (sizeof (gsize) == sizeof (gpointer));
+
+static NcGalaxyShapeFactorSpectralFallbackStats _nc_galaxy_shape_factor_spectral_fallback_stats[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_LEN];
+static gint _nc_galaxy_shape_factor_spectral_fallback_noted = 0;
+
+static void
+_nc_galaxy_shape_factor_spectral_fallback_record (const NcGalaxyShapeFactorSpectralFallback reason, const gsize lines, const gsize shears,
+                                                  const gint64 usec)
+{
+  NcGalaxyShapeFactorSpectralFallbackStats *st = &_nc_galaxy_shape_factor_spectral_fallback_stats[reason];
+
+  g_atomic_pointer_add (&st->lines, (gssize) lines);
+  g_atomic_pointer_add (&st->shears, (gssize) shears);
+  g_atomic_pointer_add (&st->usec, (gssize) MAX (usec, 0));
+
+  if ((reason != NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_CAP) &&
+      g_atomic_int_compare_and_exchange (&_nc_galaxy_shape_factor_spectral_fallback_noted, 0, 1))
+    g_message ("# nc_galaxy_shape_factor_spectral: ln P of some galaxies is computed without their interpolants, %s: "
+               "from a table along their line of shears where possible, otherwise by the integrals, at a higher cost. "
+               "nc_galaxy_shape_factor_spectral_get_fallback_stats() counts them.\n",
+               (reason == NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION) ?
+               "with the population outside the box of their expansion (or an expansion that did not converge)" :
+               "at shears beyond the range of their interpolants");
+}
+
+/* ln P by the integral, at a shear the interpolant does not cover, counted */
+static gdouble
+_nc_galaxy_shape_factor_spectral_fallback_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                                   const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                                   const NcGalaxyShapeFactorSpectralFallback reason)
+{
+  const gint64 t0    = g_get_monotonic_time ();
+  const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
+
+  _nc_galaxy_shape_factor_spectral_fallback_record (reason, 0, 1, g_get_monotonic_time () - t0);
+
+  return ln_P;
+}
+
+/* Flags of _nc_galaxy_shape_factor_spectral_warn_once() */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_WARNED_SHORT (1u << 0)
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_WARNED_OUTSIDE (1u << 1)
+
+G_LOCK_DEFINE_STATIC (nc_galaxy_shape_factor_spectral_warned);
+
+/*
+ * Whether the warning flag has not been given yet for the catalog whose record is record, and
+ * marks it given. The flags are kept on the record, which the copies of a likelihood share
+ * with the catalog, so each catalog is warned about once in a process.
+ */
+static gboolean
+_nc_galaxy_shape_factor_spectral_warn_once (gpointer record, const guint flag)
+{
+  static GQuark quark = 0;
+  gboolean first;
+  guint flags;
+
+  G_LOCK (nc_galaxy_shape_factor_spectral_warned);
+
+  if (G_UNLIKELY (quark == 0))
+    quark = g_quark_from_static_string ("nc-galaxy-shape-factor-spectral-warned");
+
+  flags = GPOINTER_TO_UINT (g_object_get_qdata (G_OBJECT (record), quark));
+  first = !(flags & flag);
+
+  if (first)
+    g_object_set_qdata (G_OBJECT (record), quark, GUINT_TO_POINTER (flags | flag));
+
+  G_UNLOCK (nc_galaxy_shape_factor_spectral_warned);
+
+  return first;
+}
+
+/*
  * ln P (eps_obs | g) for the galaxy of data. With NcGalaxyShapeFactorSpectral:use-interp
  * and |g| <= NcGalaxyShapeFactorSpectral:interp-g-max it is the value of the interpolant
  * of the galaxy in g, which is built first when the galaxy has none for these eps_obs,
@@ -1538,8 +1624,12 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
   NcGalaxyShapeFactorSpectral *gsfs               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf);
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
-  if (!self->use_interp || (g_1 * g_1 + g_2 * g_2 > gsl_pow_2 (self->interp_g_max)))
+  if (!self->use_interp)
     return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
+
+  if (g_1 * g_1 + g_2 * g_2 > gsl_pow_2 (self->interp_g_max))
+    return _nc_galaxy_shape_factor_spectral_fallback_eval_ln (gsfs, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2,
+                                                              NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_CAP);
 
   {
     NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
@@ -1547,9 +1637,13 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
     _nc_galaxy_shape_factor_spectral_interp_ensure (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
 
     /* pop-order: a galaxy whose expansion did not converge, or a population outside the box of the expansion, is integrated */
-    if (ldata->expand_failed || (g_1 * g_1 + g_2 * g_2 > gsl_pow_2 (ldata->g_max)) ||
-        ((ldata->mode_spp != NULL) && !_nc_galaxy_shape_factor_spectral_weights (ldata, pop)))
-      return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
+    if (ldata->expand_failed || ((ldata->mode_spp != NULL) && !_nc_galaxy_shape_factor_spectral_weights (ldata, pop)))
+      return _nc_galaxy_shape_factor_spectral_fallback_eval_ln (gsfs, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2,
+                                                                NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION);
+
+    if (g_1 * g_1 + g_2 * g_2 > gsl_pow_2 (ldata->g_max))
+      return _nc_galaxy_shape_factor_spectral_fallback_eval_ln (gsfs, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2,
+                                                                NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_RANGE);
 
     if (ldata->mode_spp != NULL)
     {
@@ -1649,8 +1743,13 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
     {
       if (!use_interp || (g_1[j] * g_1[j] + g_2[j] * g_2[j] > g_max2))
       {
-        const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
-                                                                       epsilon_obs_1, epsilon_obs_2, NULL);
+        /* With use-interp: above interp-g-max, or every shear of a galaxy outside the box of its expansion */
+        const gdouble ln_P = !self->use_interp ?
+                             _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
+                                                                       epsilon_obs_1, epsilon_obs_2, NULL) :
+                             _nc_galaxy_shape_factor_spectral_fallback_eval_ln (gsfs, pop, data, g_1[j], g_2[j], epsilon_obs_1, epsilon_obs_2,
+                                                                                use_interp ? NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_CAP :
+                                                                                NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION);
 
         out[j] = want_log ? ln_P : ncm_vmath_exp (ln_P);
       }
@@ -1678,8 +1777,8 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
 
         for (k = 0; k < c; k++)
         {
-          const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, ig_1[k], ig_2[k],
-                                                                         epsilon_obs_1, epsilon_obs_2, NULL);
+          const gdouble ln_P = _nc_galaxy_shape_factor_spectral_fallback_eval_ln (gsfs, pop, data, ig_1[k], ig_2[k], epsilon_obs_1, epsilon_obs_2,
+                                                                                  NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION);
 
           out[idx[k]] = want_log ? ln_P : ncm_vmath_exp (ln_P);
         }
@@ -1698,8 +1797,8 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
       {
         if (ig_1[k] * ig_1[k] + ig_2[k] * ig_2[k] > g_reach2)
         {
-          const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, ig_1[k], ig_2[k],
-                                                                         epsilon_obs_1, epsilon_obs_2, NULL);
+          const gdouble ln_P = _nc_galaxy_shape_factor_spectral_fallback_eval_ln (gsfs, pop, data, ig_1[k], ig_2[k], epsilon_obs_1, epsilon_obs_2,
+                                                                                  NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_RANGE);
 
           out[idx[k]] = want_log ? ln_P : ncm_vmath_exp (ln_P);
         }
@@ -1820,13 +1919,14 @@ _nc_galaxy_shape_factor_spectral_line_ln_P (gpointer user_data, gdouble t)
  * level_cap too low or a single point, when the line leaves
  * |g| <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX, or when the series does not reach the
  * tolerance. Nothing is kept from one call to the next, so the values depend only on the
- * line given.
+ * line given. With fallback the table is built with the interpolant too, for a galaxy that
+ * cannot use it on this line.
  */
 static gboolean
 _nc_galaxy_shape_factor_spectral_line_expand (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
                                               const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2,
                                               const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
-                                              const guint level_cap, GArray **coeffs)
+                                              const guint level_cap, const gboolean fallback, GArray **coeffs)
 {
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
   const gdouble line_abstol                       = (self->line_abstol < 0.0) ? 0.1 * self->reltol : self->line_abstol;
@@ -1834,7 +1934,7 @@ _nc_galaxy_shape_factor_spectral_line_expand (NcGalaxyShapeFactorSpectral *gsfs,
   *coeffs = NULL;
 
   /* |b + t u| is largest at an end of the segment */
-  if (!self->use_interp && (line_abstol > 0.0) &&
+  if ((fallback || !self->use_interp) && (line_abstol > 0.0) &&
       (level_cap > NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN) && (t_max > t_min) &&
       (gsl_hypot (b_1 + t_min * u_1, b_2 + t_min * u_2) <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX) &&
       (gsl_hypot (b_1 + t_max * u_1, b_2 + t_max * u_2) <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX))
@@ -1860,7 +1960,11 @@ _nc_galaxy_shape_factor_spectral_line_expand (NcGalaxyShapeFactorSpectral *gsfs,
 /*
  * line_table: the series of _nc_galaxy_shape_factor_spectral_line_expand() up to the
  * largest level whose grid has at most max_points points, and at most
- * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX
+ * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX. With use-interp the interpolant is used,
+ * and there is no table, except for a galaxy that cannot use it anywhere on the line: a
+ * population outside the box of its expansion, or an expansion that did not converge. Its
+ * line is then tabulated as without use-interp, and counted
+ * (nc_galaxy_shape_factor_spectral_get_fallback_stats()).
  */
 static gboolean
 _nc_galaxy_shape_factor_spectral_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
@@ -1868,13 +1972,36 @@ _nc_galaxy_shape_factor_spectral_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyS
                                              const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
                                              const guint max_points, GArray **coeffs)
 {
-  guint level_cap = 0;
+  NcGalaxyShapeFactorSpectral *gsfs               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf);
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+  guint level_cap                                 = 0;
 
   while ((level_cap < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX) && ((1u << (level_cap + 1)) + 1 <= max_points))
     level_cap++;
 
-  return _nc_galaxy_shape_factor_spectral_line_expand (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf), pop, data, t_min, t_max, u_1, u_2, b_1, b_2,
-                                                       epsilon_obs_1, epsilon_obs_2, level_cap, coeffs);
+  if (self->use_interp)
+  {
+    NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
+    gboolean done;
+    gint64 t0;
+
+    *coeffs = NULL;
+    _nc_galaxy_shape_factor_spectral_interp_ensure (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
+
+    if (!ldata->expand_failed && ((ldata->mode_spp == NULL) || _nc_galaxy_shape_factor_spectral_weights (ldata, pop)))
+      return FALSE;
+
+    t0   = g_get_monotonic_time ();
+    done = _nc_galaxy_shape_factor_spectral_line_expand (gsfs, pop, data, t_min, t_max, u_1, u_2, b_1, b_2,
+                                                         epsilon_obs_1, epsilon_obs_2, level_cap, TRUE, coeffs);
+    _nc_galaxy_shape_factor_spectral_fallback_record (NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION, done ? 1 : 0, 0,
+                                                      g_get_monotonic_time () - t0);
+
+    return done;
+  }
+
+  return _nc_galaxy_shape_factor_spectral_line_expand (gsfs, pop, data, t_min, t_max, u_1, u_2, b_1, b_2,
+                                                       epsilon_obs_1, epsilon_obs_2, level_cap, FALSE, coeffs);
 }
 
 /*
@@ -2393,11 +2520,12 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
   _nc_galaxy_shape_factor_spectral_interp_record (gsfs, pop, data, data->epsilon_obs_1, data->epsilon_obs_2);
 
   /* The bounds of the fit are its prior: a population outside the box is integrated */
-  if (outside && g_atomic_int_compare_and_exchange (&self->pop_outside_warned, 0, 1))
+  if (outside && _nc_galaxy_shape_factor_spectral_warn_once (ldata->src_gsfs, NC_GALAXY_SHAPE_FACTOR_SPECTRAL_WARNED_OUTSIDE))
     g_warning ("nc_galaxy_shape_factor_spectral: the population of this fit reaches outside the box of the expansion of the "
                "catalog (its free parameters over their bounds, or a fixed value outside it); there the galaxies are "
-               "integrated instead: the values are those of the integrals, at their cost. Prepare the catalog over a box "
-               "that covers the fit (wl-catalog shape-interp --pop-box).");
+               "computed without the expansion (from a table along their line of shears where possible, otherwise by the "
+               "integrals), at a higher cost. Prepare the catalog over a box that covers the fit (wl-catalog shape-interp "
+               "--pop-box).");
 
   if (box != NULL)
   {
@@ -2419,7 +2547,7 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
   {
     g_atomic_int_inc (&self->n_short);
 
-    if (g_atomic_int_compare_and_exchange (&self->short_warned, 0, 1))
+    if (_nc_galaxy_shape_factor_spectral_warn_once (ldata->src_gsfs, NC_GALAXY_SHAPE_FACTOR_SPECTRAL_WARNED_SHORT))
       g_warning ("nc_galaxy_shape_factor_spectral: the interpolants of the catalog do not cover the shears some galaxies "
                  "reach in the box of this fit (for the first, |g| <= % 22.15g against % 22.15g), which are integrated "
                  "instead: the values are those of the integrals, at their cost. Prepare the catalog for the box of the "
@@ -3542,6 +3670,63 @@ nc_galaxy_shape_factor_spectral_get_n_loaded_short (NcGalaxyShapeFactorSpectral 
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   return (guint) g_atomic_int_get (&self->n_short);
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_get_fallback_stats:
+ * @reason: a #NcGalaxyShapeFactorSpectralFallback
+ * @lines: (out) (optional): the lines of shears tabulated
+ * @shears: (out) (optional): the shears integrated one by one
+ * @seconds: (out) (optional): the time spent on them, in seconds
+ *
+ * The evaluations of $\ln P$ that could not use the interpolant of their galaxy, with
+ * #NcGalaxyShapeFactorSpectral:use-interp set, for @reason, since the process started or
+ * nc_galaxy_shape_factor_spectral_reset_fallback_stats() was called. A galaxy that cannot use
+ * its interpolant anywhere on the line of its shears (nc_galaxy_shape_factor_eval_line()) is
+ * tabulated along it, from integrals on at most half as many points as it has shears, as
+ * without use-interp (#NcGalaxyShapeFactorSpectral:line-abstol); any other shear the
+ * interpolant does not cover is integrated. The counts are summed over every
+ * #NcGalaxyShapeFactorSpectral of the process, so that they include each copy of a likelihood
+ * a sampler makes.
+ */
+void
+nc_galaxy_shape_factor_spectral_get_fallback_stats (NcGalaxyShapeFactorSpectralFallback reason, guint64 *lines, guint64 *shears, gdouble *seconds)
+{
+  NcGalaxyShapeFactorSpectralFallbackStats *st;
+
+  g_assert_cmpint (reason, <, NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_LEN);
+  st = &_nc_galaxy_shape_factor_spectral_fallback_stats[reason];
+
+  if (lines != NULL)
+    *lines = GPOINTER_TO_SIZE (g_atomic_pointer_get (&st->lines));
+
+  if (shears != NULL)
+    *shears = GPOINTER_TO_SIZE (g_atomic_pointer_get (&st->shears));
+
+  if (seconds != NULL)
+    *seconds = 1.0e-6 * GPOINTER_TO_SIZE (g_atomic_pointer_get (&st->usec));
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_reset_fallback_stats:
+ *
+ * Sets the counts of nc_galaxy_shape_factor_spectral_get_fallback_stats() to zero, for
+ * every reason, and lets the next fallback outside the coverage of the interpolants be
+ * reported again.
+ */
+void
+nc_galaxy_shape_factor_spectral_reset_fallback_stats (void)
+{
+  guint i;
+
+  for (i = 0; i < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_LEN; i++)
+  {
+    g_atomic_pointer_and (&_nc_galaxy_shape_factor_spectral_fallback_stats[i].lines, 0);
+    g_atomic_pointer_and (&_nc_galaxy_shape_factor_spectral_fallback_stats[i].shears, 0);
+    g_atomic_pointer_and (&_nc_galaxy_shape_factor_spectral_fallback_stats[i].usec, 0);
+  }
+
+  g_atomic_int_set (&_nc_galaxy_shape_factor_spectral_fallback_noted, 0);
 }
 
 /**
