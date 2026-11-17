@@ -487,9 +487,7 @@ catalog, each building only the rows the cache does not hold yet. The other mode
 experiment, the sky footprint of the position factor among them, are those of the whole
 catalog.
 
-`numcosmo wl-catalog info` describes a catalog, a cache or a dataset, and
-`numcosmo wl-catalog upgrade` moves the approximations of a catalog written before the
-caches into one.
+`numcosmo wl-catalog info` describes a catalog, a cache or a dataset.
 
 ## The Nodes of a Galaxy: a Table Along its Line
 

@@ -79,7 +79,6 @@ from numcosmo_py.experiments.cluster_wl import (
     parse_prior,
     print_free_parameters,
     resolve_resample_flag,
-    shape_interp_gens,
 )
 from numcosmo_py.experiments.curvature_weight import (
     qspline_curvature_weight,
@@ -112,6 +111,7 @@ from numcosmo_py.experiments.wl_interp_cache import (
     format_coverage,
     record_shape_interp_cache,
     shape_interp_cache_name,
+    strip_shape_interp,
     update_shape_interp_cache,
 )
 
@@ -1224,12 +1224,6 @@ class LoadClusterWL(ClusterWL):
     prior of each free population parameter), or reused from it; the dataset keeps
     the catalog without them, naming the cache, which loading the experiment
     attaches.
-
-    A catalog prepared by ``numcosmo wl-catalog shape-interp`` (deprecated) carries
-    the interpolants of its galaxies and the shape factor and population that
-    built them; the experiment takes both from the catalog, and giving
-    --shape-factor, --pop-dist or a population parameter in --parameter-list
-    is an error. ``numcosmo wl-catalog upgrade`` moves them to a cache.
     """
 
     shape_factor: Annotated[
@@ -1237,8 +1231,7 @@ class LoadClusterWL(ClusterWL):
         typer.Option(
             help=(
                 ShapeFactorGen.get_help_text()
-                + f" Default: {DEFAULT_CLUSTER_WL_SHAPE_FACTOR}; taken from a "
-                "catalog prepared by wl-catalog shape-interp."
+                + f" Default: {DEFAULT_CLUSTER_WL_SHAPE_FACTOR}."
             ),
             metavar=ShapeFactorGen.get_help_metavar(),
             rich_help_panel="Galaxy shape-marginalization factor",
@@ -1250,8 +1243,7 @@ class LoadClusterWL(ClusterWL):
         typer.Option(
             help=(
                 GalaxyPopGen.get_help_text()
-                + f" Default: {DEFAULT_CLUSTER_WL_POP_DIST}; taken from a "
-                "catalog prepared by wl-catalog shape-interp."
+                + f" Default: {DEFAULT_CLUSTER_WL_POP_DIST}."
             ),
             metavar=GalaxyPopGen.get_help_metavar(),
             rich_help_panel="Galaxy intrinsic-ellipticity population distribution",
@@ -1448,9 +1440,9 @@ class LoadClusterWL(ClusterWL):
     def _prepare_shape_interp(self, dataset: Ncm.Dataset, mset: Ncm.MSet) -> None:
         """Build or update the interpolant cache of the catalog, and name it.
 
-        Only for a Spectral shape factor with use_interp and a catalog that does not
-        carry interpolants itself. The dataset saved keeps the catalog without its
-        interpolants, naming the cache relative to the experiment, and the coverage.
+        Only for a Spectral shape factor with use_interp. The dataset saved keeps the
+        catalog without its interpolants, naming the cache relative to the experiment,
+        and the coverage.
 
         Raises:
             typer.BadParameter: A malformed --pop-coverage, or a coverage of a parameter
@@ -1464,7 +1456,6 @@ class LoadClusterWL(ClusterWL):
         if (
             not isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
             or not gsfs.get_use_interp()
-            or obs.peek_shape_interp_source() is not None
         ):
             if self.pop_coverage:
                 raise typer.BadParameter(
@@ -1516,39 +1507,19 @@ class LoadClusterWL(ClusterWL):
         )
 
     def _resolve_gens(self):
-        """Return the generators of the catalog's record, or of the options.
-
-        Raises:
-            typer.BadParameter: The catalog carries a record and --shape-factor,
-                --pop-dist or a population parameter in --parameter-list is given.
-        """
+        """Return the generators of the options, after loading the catalog."""
         self._obs = self._load_obs()
-        gens = shape_interp_gens(self._obs)
-
-        if gens is None:
-            return super()._resolve_gens()
-
-        if (self.shape_factor is not None) or (self.pop_dist is not None):
-            raise typer.BadParameter(
-                "the catalog carries the interpolants of its galaxies; the shape "
-                "factor and the population are those that built them, so "
-                "--shape-factor and --pop-dist must not be given"
-            )
-
-        pop_params = [
-            p for p in self.parameter_list if p.startswith("NcGalaxyShapePop")
-        ]
-        if pop_params:
-            raise typer.BadParameter(
-                "the catalog carries interpolants built for fixed population "
-                f"parameters; they cannot be fitted: {', '.join(pop_params)}"
-            )
-
-        return gens
+        return super()._resolve_gens()
 
     def _load_obs(self) -> Nc.GalaxyWLObs:
-        """Load the real NcGalaxyWLObs catalog from --catalog or --data-file."""
-        return load_wl_obs(self.catalog, self.data_file)
+        """Load the real NcGalaxyWLObs catalog from --catalog or --data-file.
+
+        Interpolants are kept in caches beside the catalog, never in it: any the
+        catalog carries are dropped.
+        """
+        obs = load_wl_obs(self.catalog, self.data_file)
+        strip_shape_interp(obs)
+        return obs
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Load the real-data cluster weak lensing experiment."""

@@ -148,9 +148,7 @@ def shape_interp_cache_info(holder: Nc.GalaxyWLObs, fingerprint: str) -> dict[st
                 pop.param_get_upper_bound(i),
             ]
     n_interp = sum(
-        1
-        for i in range(holder.len())
-        if holder.peek_shape_interp(i) is not None
+        1 for i in range(holder.len()) if holder.peek_shape_interp(i) is not None
     )
     return {
         "format": SHAPE_INTERP_CACHE_FORMAT,

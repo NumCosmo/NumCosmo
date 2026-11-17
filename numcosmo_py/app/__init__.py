@@ -63,7 +63,7 @@ from .inspect import (
 )
 from .run_fit import RunFit, RunTest
 from .run_mc import RunMC
-from .wl_catalog import InfoWLCatalog, ShapeInterpWLCatalog, UpgradeWLCatalog
+from .wl_catalog import InfoWLCatalog
 from .xcor import ComputeCls, ListKernels, ViewKernel
 
 app = typer.Typer(no_args_is_help=True, help="NumCosmo command line interface.")
@@ -251,25 +251,10 @@ GEN_CLUSTER_WL_CMD: CMDArg = {
     "help": "Generate mock cluster weak lensing experiments.",
 }
 
-WL_CATALOG_SHAPE_INTERP_CMD: CMDArg = {
-    "name": "shape-interp",
-    "no_args_is_help": True,
-    "help": (
-        "Write a WL catalog with the shape interpolants of its galaxies "
-        "(deprecated: generate cluster-wl-load keeps them in a cache)."
-    ),
-}
-
 WL_CATALOG_INFO_CMD: CMDArg = {
     "name": "info",
     "no_args_is_help": True,
     "help": "Describe a WL catalog, a cache of its interpolants or a dataset.",
-}
-
-WL_CATALOG_UPGRADE_CMD: CMDArg = {
-    "name": "upgrade",
-    "no_args_is_help": True,
-    "help": "Move the interpolants a WL catalog carries into a cache file.",
 }
 
 LOAD_CLUSTER_WL_CMD: CMDArg = {
@@ -398,9 +383,7 @@ app_generate.command(**GEN_PLANCK_RELEASE_CMD)(BuildPlanckRelease)
 app_generate.command(**GEN_JPAS_FORECAST_CMD)(GenerateJpasForecast)
 app_generate.command(**GEN_CLUSTER_WL_CMD)(GenerateClusterWL)
 app_generate.command(**LOAD_CLUSTER_WL_CMD)(LoadClusterWL)
-app_wl_catalog.command(**WL_CATALOG_SHAPE_INTERP_CMD)(ShapeInterpWLCatalog)
 app_wl_catalog.command(**WL_CATALOG_INFO_CMD)(InfoWLCatalog)
-app_wl_catalog.command(**WL_CATALOG_UPGRADE_CMD)(UpgradeWLCatalog)
 app_generate.command(**GEN_CLUSTER_RICHNESS_COUNT_CMD)(GenerateClusterRichnessCount)
 app_generate.command(**GEN_QSPLINE_CMD)(GenerateQSpline)
 app_generate.command(**GEN_XCDM_CMD)(GenerateXCDM)
