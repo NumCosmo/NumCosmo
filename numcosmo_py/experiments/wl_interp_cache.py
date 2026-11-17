@@ -608,7 +608,7 @@ def _sub_catalog(obs: Nc.GalaxyWLObs, rows: list[int]) -> Nc.GalaxyWLObs:
 
 
 # Orders tried by choose_pop_order(), and the galaxies of the sample it builds
-POP_ORDER_CANDIDATES = (7, 11, 15, 19, 23)
+POP_ORDER_CANDIDATES = (7, 9, 11, 13, 15, 19, 23)
 POP_ORDER_SAMPLE = 48
 
 
@@ -625,8 +625,8 @@ def choose_pop_order(
     The expansions of a sample of n_sample galaxies, spread in |eps_obs| from the smallest
     to the largest, are built at each order in turn, in parallel, until none fails to
     converge; their accuracy is then within interp-abstol. The width of the coverage, not
-    the catalog, sets the order: the population parameters of the HSC clusters, alpha and
-    beta in [1, 4], need 15 where a box of +-0.2 needs 7.
+    the catalog, sets the order: on s19a HWL16a-002, Beta alpha and beta in [1, 4] need
+    15, in [1.25, 2.75] 9, and a box of +-0.2 needs 7.
 
     Returns:
         The order and the number of galaxies of the sample whose expansion did not
@@ -702,21 +702,62 @@ def parse_coverage(text: str) -> dict[str, tuple[float, float]]:
     return coverage
 
 
-def default_coverage(mset: Ncm.MSet) -> dict[str, tuple[float, float]] | None:
-    """Return the free population parameters of mset over their priors, or None.
+# Default population coverage, by population type: the box the expansion spans when
+# --pop-coverage does not give one, intersected with the prior of each free parameter.
+# Measured on 48 galaxies of s19a HWL16a-002 (2026-11-16): Beta [1.25, 2.75]^2 converges
+# at pop-order 9 (the whole default prior [1, 4]^2 needs 15, ~2.4x the size), Gauss
+# sigma in [0.25, 0.75] at 19, while its prior [0.1, 1] does not converge at 47. They cover
+# the 5th-95th percentiles of the HSC cluster and strata fits.
+DEFAULT_POP_COVERAGE: dict[str, dict[str, tuple[float, float]]] = {
+    "GalaxyShapePopBeta": {"alpha": (1.25, 2.75), "beta": (1.25, 2.75)},
+    "GalaxyShapePopGauss": {"sigma": (0.25, 0.75)},
+}
 
-    The population coverage defaults to the prior: an expansion over the bounds of each
-    free parameter of the population, none when the population is fixed.
+
+def default_coverage(mset: Ncm.MSet) -> dict[str, tuple[float, float]] | None:
+    """Return the default coverage of the free population parameters of mset, or None.
+
+    Each free parameter of the population is covered over its prior, intersected with
+    DEFAULT_POP_COVERAGE for its population type when that intersection is not empty: a
+    prior narrower than the default box is covered whole, a wider one only over the box
+    (outside it the galaxies fall back, with a warning). None when the population is
+    fixed.
     """
     pop = mset.peek(Nc.GalaxyShapePop.id())
     if pop is None:
         return None
-    coverage = {
-        pop.param_name(i): (pop.param_get_lower_bound(i), pop.param_get_upper_bound(i))
-        for i in range(pop.len())
-        if pop.param_get_ftype(i) == Ncm.ParamType.FREE
-    }
+    box = DEFAULT_POP_COVERAGE.get(type(pop).__name__, {})
+    coverage = {}
+    for i in range(pop.len()):
+        if pop.param_get_ftype(i) != Ncm.ParamType.FREE:
+            continue
+        name = pop.param_name(i)
+        lo, hi = pop.param_get_lower_bound(i), pop.param_get_upper_bound(i)
+        if name in box:
+            blo, bhi = max(lo, box[name][0]), min(hi, box[name][1])
+            if blo < bhi:
+                lo, hi = blo, bhi
+        coverage[name] = (lo, hi)
     return coverage or None
+
+
+def coverage_short_of_prior(
+    mset: Ncm.MSet, coverage: dict[str, tuple[float, float]] | None
+) -> dict[str, tuple[float, float]]:
+    """Return the priors of the free population parameters coverage does not span."""
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+    short: dict[str, tuple[float, float]] = {}
+    if pop is None:
+        return short
+    for i in range(pop.len()):
+        if pop.param_get_ftype(i) != Ncm.ParamType.FREE:
+            continue
+        name = pop.param_name(i)
+        lo, hi = pop.param_get_lower_bound(i), pop.param_get_upper_bound(i)
+        clo, chi = (coverage or {}).get(name, (hi, lo))
+        if clo > lo or chi < hi:
+            short[name] = (lo, hi)
+    return short
 
 
 def record_shape_interp_cache(

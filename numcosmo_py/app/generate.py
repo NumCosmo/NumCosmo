@@ -107,6 +107,7 @@ from numcosmo_py.experiments.planck18 import (
 )
 from numcosmo_py.experiments.wl_interp_cache import (
     choose_pop_order,
+    coverage_short_of_prior,
     default_coverage,
     format_coverage,
     record_shape_interp_cache,
@@ -1341,8 +1342,11 @@ class LoadClusterWL(ClusterWL):
                 "NAME=LO:HI, repeatable: the interpolants of a Spectral shape factor "
                 "with use_interp expand ln P over the population parameter NAME (e.g. "
                 "alpha or NcGalaxyShapePop:alpha) in [LO, HI]. Default: each free "
-                "population parameter over its prior. Without pop_order in "
-                "--shape-factor the order is chosen from a sample of galaxies."
+                "population parameter over its prior, within Beta alpha, beta in "
+                "[1.25, 2.75] and Gauss sigma in [0.25, 0.75]; where a fit leaves the "
+                "coverage, the galaxies are computed without the expansion (slower, "
+                "warned). Without pop_order in --shape-factor the order is chosen "
+                "from a sample of galaxies."
             ),
             show_default=True,
             default_factory=list,
@@ -1388,7 +1392,10 @@ class LoadClusterWL(ClusterWL):
         return self.experiment.parent / f"{self.catalog.value}.interp"
 
     def _coverage(self, mset: Ncm.MSet) -> dict[str, tuple[float, float]] | None:
-        """Return the population coverage: the free parameters' priors, then --pop-coverage.
+        """Return the population coverage: the default one, then --pop-coverage.
+
+        The default covers each free population parameter over its prior within the
+        default box of its population (DEFAULT_POP_COVERAGE).
 
         Raises:
             typer.BadParameter: A malformed --pop-coverage.
@@ -1431,6 +1438,13 @@ class LoadClusterWL(ClusterWL):
 
         coverage = self._coverage(mset)
         cache_dir = self._interp_cache_dir()
+        for name, (lo, hi) in coverage_short_of_prior(mset, coverage).items():
+            clo, chi = (coverage or {}).get(name, (lo, hi))
+            print(
+                f"# The interpolants cover {name} in [{clo}, {chi}], its prior is "
+                f"[{lo}, {hi}]: outside the coverage a fit computes the galaxies "
+                "without them, at a higher cost (--pop-coverage widens it)."
+            )
         try:
             if coverage and gsfs.get_pop_order() < 2:
                 order, unconv = choose_pop_order(data, mset, coverage)

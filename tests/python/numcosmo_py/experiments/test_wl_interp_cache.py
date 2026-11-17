@@ -41,6 +41,8 @@ from numcosmo_py.experiments.wl_interp_cache import (
     attach_shape_interp_cache,
     check_shape_interp_cache,
     choose_pop_order,
+    coverage_short_of_prior,
+    default_coverage,
     find_shape_interp_cache,
     name_shape_interp_cache,
     read_shape_interp_cache,
@@ -369,3 +371,46 @@ def test_strip_and_bad_files(tmp_path: Path):
     with pytest.raises(ValueError, match="no current interpolants"):
         write_shape_interp_cache(_catalog(), tmp_path / "x.gvar")
     assert json.loads(upd.path.with_suffix(".json").read_text())["rows"] == 12
+
+
+def _free_pop(mset: Ncm.MSet, bounds: dict[str, tuple[float, float]]) -> None:
+    """Free the population parameters of bounds over them."""
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+    for name, (lo, hi) in bounds.items():
+        _, pid = pop.param_index_from_name(name)
+        pop.param_set_lower_bound(pid, lo)
+        pop.param_set_upper_bound(pid, hi)
+        pop.param_set_ftype(pid, Ncm.ParamType.FREE)
+
+
+@pytest.mark.parametrize(
+    "pop, prior, expected",
+    [
+        ("beta alpha=1.58 beta=1.69", None, None),
+        (
+            "beta alpha=1.58 beta=1.69",
+            {"alpha": (1.0, 4.0), "beta": (1.0, 4.0)},
+            {"alpha": (1.25, 2.75), "beta": (1.25, 2.75)},
+        ),
+        (
+            "beta alpha=1.58 beta=1.69",
+            {"alpha": (1.5, 1.7), "beta": (1.0, 2.0)},
+            {"alpha": (1.5, 1.7), "beta": (1.25, 2.0)},
+        ),
+        ("gauss sigma=0.3", {"sigma": (0.1, 1.0)}, {"sigma": (0.25, 0.75)}),
+        # A prior that misses the default box is covered whole
+        ("gauss sigma=0.9", {"sigma": (0.8, 1.0)}, {"sigma": (0.8, 1.0)}),
+    ],
+)
+def test_default_coverage(pop, prior, expected):
+    """The default coverage is the prior of each free parameter within the default box of
+    its population; coverage_short_of_prior() names the priors it does not span."""
+    _, mset, _ = _experiment(_catalog(), pop=pop)
+    if prior is not None:
+        _free_pop(mset, prior)
+    coverage = default_coverage(mset)
+    assert coverage == expected
+    short = coverage_short_of_prior(mset, coverage)
+    assert set(short) == {
+        k for k in (prior or {}) if (prior or {})[k] != (expected or {})[k]
+    }

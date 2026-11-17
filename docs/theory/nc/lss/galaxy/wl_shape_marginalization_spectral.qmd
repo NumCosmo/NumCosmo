@@ -445,12 +445,18 @@ cache files, one per configuration, apart from the catalog
   hashes the fingerprint, the settings, the population and its coverage, so that two
   configurations never share a file; an existing file that does not match is never
   overwritten.
-- Coverage: the box of the expansion over the population. It defaults to the prior of each
-  free parameter of the population and can be set apart from it; without `pop_order` the
-  order is the lowest of 7, 11, 15, 19 and 23 whose expansions of a sample of galaxies,
-  spread in $|\epsilon_\mathrm{obs}|$, converge over the coverage. A population outside the
-  coverage is integrated (see the fallback below), never clipped to it: the coverage never
-  narrows the prior.
+- Coverage: the box of the expansion over the population, set apart from the prior. By
+  default each free parameter of the population is covered over its prior within a box
+  per population: $\alpha, \beta \in [1.25, 2.75]$ for Beta and $\sigma \in [0.25, 0.75]$
+  for Gauss, which hold the 5th to 95th percentiles of the fits of the HSC clusters and
+  their strata. The default priors are wider ($[1, 4]$ and $[0.1, 1]$): over $[1, 4]^2$ the
+  Beta expansion needs order 15 instead of 9 and 2.4 times the size, and over $[0.1, 1]$
+  the Gauss one does not converge even at order 47, since $\ln P$ varies ever faster in
+  $\sigma$ as it decreases. Without `pop_order` the order is the lowest of 7, 9, 11, 13,
+  15, 19 and 23 whose expansions of a sample of galaxies, spread in
+  $|\epsilon_\mathrm{obs}|$, converge over the coverage; when none does, the coverage is
+  refused. A population outside the coverage is integrated (see the fallback below), never
+  clipped to it: the coverage never narrows the prior.
 - Range: with [[numcosmo|NcGalaxyShapeFactorSpectral:restrict-range]] each galaxy is
   approximated only over the shears it reaches under the priors of the fit (mass, centre,
   concentration), the cosmology and the redshift of the cluster. A cache built for other

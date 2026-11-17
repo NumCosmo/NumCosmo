@@ -30,6 +30,7 @@ Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
+import json
 import re
 import subprocess
 import sys
@@ -2544,6 +2545,7 @@ def test_cluster_wl_load_pop_coverage_unconverged(
             ),
             "--pop-dist=gauss sigma=0.3",
             "--parameter-list=NcGalaxyShapePop:sigma",
+            "--pop-coverage=sigma=0.1:1.0",
             "--centre-box-deg=0.01",
         ],
     )
@@ -2551,3 +2553,22 @@ def test_cluster_wl_load_pop_coverage_unconverged(
     plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", result.output).split())
     assert "does not converge" in plain
     assert not (tmp_path / "exp.yaml").exists()
+
+
+def test_cluster_wl_load_default_pop_coverage(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """With alpha and beta free over their default prior [1, 4] and no --pop-coverage,
+    the interpolants cover [1.25, 2.75]^2, and generate says the prior is wider."""
+    exp = tmp_path / "exp.yaml"
+    result = _cache_experiment(exp, real_wl_obs_file_with_meta)
+    assert result.exit_code == 0, result.output
+    plain = " ".join(result.output.split())
+    assert "cover alpha in [1.25, 2.75], its prior is [1.0, 4.0]" in plain
+    jsons = list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.json"))
+    assert len(jsons) == 1
+    info = json.loads(jsons[0].read_text())
+    assert info["population"]["coverage"] == {
+        "alpha": [1.25, 2.75],
+        "beta": [1.25, 2.75],
+    }
