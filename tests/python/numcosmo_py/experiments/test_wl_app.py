@@ -2643,7 +2643,8 @@ def test_cluster_wl_load_mask_file(tmp_path: Path, real_wl_obs_file_with_meta):
         ["wl-catalog", "info", (tmp_path / "exp_keep_npy.dataset.gvar").as_posix()],
     )
     assert result.exit_code == 0, result.output
-    assert "uses 7 of the rows" in " ".join(result.output.split())
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    assert "uses 7 of the rows" in " ".join(plain.split())
 
 
 @pytest.mark.parametrize(
