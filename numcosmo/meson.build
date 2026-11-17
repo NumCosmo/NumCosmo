@@ -340,6 +340,7 @@ ncm_headers_nogi = files(
 
 ncm_headers_internal = files(
     'ncm/algebra/ncm_spectral_cheb_private.h',
+    'ncm/algebra/ncm_spectral_polar_private.h',
     'ncm/algebra/ncm_spectral_private.h',
     'ncm/core/ncm_prefetch_private.h',
     'ncm/core/ncm_vmath_private.h',
