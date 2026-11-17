@@ -20,7 +20,6 @@
 
 """Tests of the caches of shape interpolants kept apart from the catalog."""
 
-import json
 from pathlib import Path
 from typing import cast
 
@@ -43,11 +42,11 @@ from numcosmo_py.experiments.wl_interp_cache import (
     choose_pop_order,
     coverage_short_of_prior,
     default_coverage,
-    find_shape_interp_cache,
     name_shape_interp_cache,
     read_shape_interp_cache,
-    read_shape_interp_cache_info,
     resolve_shape_interp_cache,
+    shape_interp_cache_info,
+    shape_interp_cache_name,
     strip_shape_interp,
     update_shape_interp_cache,
     wl_obs_fingerprint,
@@ -169,7 +168,8 @@ def test_update_and_attach(tmp_path: Path):
     assert upd.path.name.startswith("gauss-fixed-")
     m2lnL = dataset.m2lnL_val(mset)
 
-    info = read_shape_interp_cache_info(upd.path)
+    cache = read_shape_interp_cache(upd.path)
+    info = shape_interp_cache_info(cache.holder, cache.fingerprint)
     assert info["format"] == SHAPE_INTERP_CACHE_FORMAT
     assert info["rows_with_interpolants"] == 12
     assert info["shape_factor"]["restrict_range"] is True
@@ -177,8 +177,7 @@ def test_update_and_attach(tmp_path: Path):
     obs2 = _catalog()
     data2, mset2, dataset2 = _experiment(obs2)
     gsfs2, pop2 = _gsfs_pop(data2, mset2)
-    cache = find_shape_interp_cache(tmp_path, obs2, gsfs2, pop2)
-    assert cache is not None
+    assert upd.path.name == shape_interp_cache_name(obs2, gsfs2, pop2, None)
     attach_shape_interp_cache(cache, obs2, gsfs2, pop2)
     data2.set_obs(obs2)
     assert dataset2.m2lnL_val(mset2) == m2lnL
@@ -319,7 +318,7 @@ def test_choose_pop_order():
 
 def test_cache_refused(tmp_path: Path):
     """Other rows (the fingerprint) or other settings (the record) are refused,
-    without aborting, and lookup finds nothing."""
+    without aborting, and give other cache names."""
     data, mset, _dataset = _experiment(_catalog())
     upd = update_shape_interp_cache(data, mset, tmp_path)
     cache = read_shape_interp_cache(upd.path)
@@ -332,14 +331,14 @@ def test_cache_refused(tmp_path: Path):
     assert "fingerprint" in check_shape_interp_cache(cache, other, gsfs_o, pop_o)
     with pytest.raises(ValueError, match="fingerprint"):
         attach_shape_interp_cache(cache, other, gsfs_o, pop_o)
-    assert find_shape_interp_cache(tmp_path, other, gsfs_o, pop_o) is None
+    assert shape_interp_cache_name(other, gsfs_o, pop_o, None) != upd.path.name
 
     obs_s = _catalog()
     data_s, mset_s, _ = _experiment(obs_s, shape=SPECTRAL + " interp_abstol=1e-6")
     gsfs_s, pop_s = _gsfs_pop(data_s, mset_s)
     reason = check_shape_interp_cache(cache, obs_s, gsfs_s, pop_s)
     assert reason is not None and "interp-abstol" in reason
-    assert find_shape_interp_cache(tmp_path, obs_s, gsfs_s, pop_s) is None
+    assert shape_interp_cache_name(obs_s, gsfs_s, pop_s, None) != upd.path.name
 
 
 def test_check_record_without_record():
@@ -370,7 +369,7 @@ def test_strip_and_bad_files(tmp_path: Path):
         read_shape_interp_cache(not_cache)
     with pytest.raises(ValueError, match="no current interpolants"):
         write_shape_interp_cache(_catalog(), tmp_path / "x.gvar")
-    assert json.loads(upd.path.with_suffix(".json").read_text())["rows"] == 12
+    assert read_shape_interp_cache(upd.path).n_rows == 12
 
 
 def _free_pop(mset: Ncm.MSet, bounds: dict[str, tuple[float, float]]) -> None:

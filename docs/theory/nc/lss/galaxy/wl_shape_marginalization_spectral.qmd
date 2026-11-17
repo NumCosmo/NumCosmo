@@ -445,10 +445,10 @@ cache files, one per configuration, apart from the catalog
 - File: a [[numcosmo|NcGalaxyWLObs]] with the rows of the catalog and no columns, holding
   the approximations, their record ([[numcosmo|NcGalaxyWLObs:shape-interp-source]]), the
   format and a fingerprint of the catalog (SHA-256 of its rows, convention and the columns
-  the approximations depend on), with a JSON description beside it. The name of the file
-  hashes the fingerprint, the settings, the population and its coverage, so that two
-  configurations never share a file; an existing file that does not match is never
-  overwritten.
+  the approximations depend on). The name of the file hashes the fingerprint, the
+  settings, the population and its coverage, so that two configurations never share a
+  file and finding the cache of a configuration is checking that its file exists; an
+  existing file that does not match is never overwritten.
 - Coverage: the box of the expansion over the population, set apart from the prior. By
   default each free parameter of the population is covered over its prior within a box
   per population: $\alpha, \beta \in [1.25, 2.75]$ for Beta and $\sigma \in [0.25, 0.75]$

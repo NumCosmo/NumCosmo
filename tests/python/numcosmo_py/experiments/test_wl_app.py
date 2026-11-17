@@ -30,7 +30,6 @@ Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
-import json
 import re
 import pytest
 from typer.testing import CliRunner
@@ -49,7 +48,11 @@ from numcosmo_py import (
 )
 from numcosmo_py.app import app
 from numcosmo_py.app.loading import LoadExperiment
-from numcosmo_py.experiments.wl_interp_cache import _sub_catalog
+from numcosmo_py.experiments.wl_interp_cache import (
+    _sub_catalog,
+    read_shape_interp_cache,
+    shape_interp_cache_info,
+)
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
     ShapeFactorGen,
@@ -1883,7 +1886,6 @@ def test_cluster_wl_load_interp_cache(tmp_path: Path, real_wl_obs_file_with_meta
     cache_dir = real_wl_obs_file_with_meta.with_suffix(".interp")
     caches = sorted(cache_dir.glob("*.gvar"))
     assert len(caches) == 1
-    assert caches[0].with_suffix(".json").exists()
 
     # The dataset holds the catalog without interpolants, naming the cache relatively
     _, likelihood = _experiment_load(exp)
@@ -2033,9 +2035,10 @@ def test_cluster_wl_load_default_pop_coverage(
     assert result.exit_code == 0, result.output
     plain = " ".join(result.output.split())
     assert "cover alpha in [1.25, 2.75], its prior is [1.0, 4.0]" in plain
-    jsons = list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.json"))
-    assert len(jsons) == 1
-    info = json.loads(jsons[0].read_text())
+    caches = list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.gvar"))
+    assert len(caches) == 1
+    cache = read_shape_interp_cache(caches[0])
+    info = shape_interp_cache_info(cache.holder, cache.fingerprint)
     assert info["population"]["coverage"] == {
         "alpha": [1.25, 2.75],
         "beta": [1.25, 2.75],

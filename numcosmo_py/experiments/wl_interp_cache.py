@@ -28,8 +28,9 @@ beside the catalog, one per configuration, instead of inside it:
 * the cache file is a NcGalaxyWLObs with the rows of the catalog and no columns, holding the
   interpolants of its rows, the record of what built them (shape-interp-source) and, in its
   metadata, the format and the fingerprint of the catalog;
-* a JSON file beside it repeats what lookup needs (the fingerprint, the population and the
-  settings), so that caches can be listed without reading them;
+* its name hashes the fingerprint, the settings, the population and its coverage
+  (:func:`shape_interp_cache_name`), so finding the cache of a configuration is checking that
+  the file exists;
 * :func:`attach_shape_interp_cache` copies the interpolants of a cache into a catalog after
   checking that the rows are those the cache was built for (the fingerprint) and that the
   record agrees with the fit (nc_galaxy_shape_factor_spectral_check_record(), which never
@@ -45,7 +46,6 @@ import contextlib
 import dataclasses
 import fcntl
 import hashlib
-import json
 import os
 from pathlib import Path
 from typing import Any, cast
@@ -132,7 +132,7 @@ class ShapeInterpCache:
 
 
 def shape_interp_cache_info(holder: Nc.GalaxyWLObs, fingerprint: str) -> dict[str, Any]:
-    """Return what lookup needs of a cache, for its JSON file."""
+    """Return the description of a cache: its format, rows, settings and population."""
     source = holder.peek_shape_interp_source()
     assert source is not None
     gsfs = cast(Nc.GalaxyShapeFactorSpectral, source.peek("shape-factor"))
@@ -188,11 +188,10 @@ def _replace_atomically(path: Path, write) -> None:
 def write_shape_interp_cache(obs: Nc.GalaxyWLObs, path: Path) -> Path:
     """Write the interpolants of obs and their record to the cache file path.
 
-    obs must carry current interpolants (a record). The JSON file of the cache is written
-    beside it, with the suffix .json, after the cache file itself.
+    obs must carry current interpolants (a record).
 
     Returns:
-        The path of the JSON file.
+        The path of the cache file.
 
     Raises:
         ValueError: obs carries no current interpolants.
@@ -215,19 +214,13 @@ def write_shape_interp_cache(obs: Nc.GalaxyWLObs, path: Path) -> Path:
     holder.set_meta(meta)
 
     path = Path(path)
-    json_path = path.with_suffix(".json")
-    info = shape_interp_cache_info(holder, fingerprint)
-
     _replace_atomically(
         path,
         lambda part: Ncm.Serialize.new(Ncm.SerializeOpt.NONE).to_binfile(
             holder, part.as_posix()
         ),
     )
-    _replace_atomically(
-        json_path, lambda part: part.write_text(json.dumps(info, indent=2) + "\n")
-    )
-    return json_path
+    return path
 
 
 def read_shape_interp_cache(path: Path) -> ShapeInterpCache:
@@ -256,11 +249,6 @@ def read_shape_interp_cache(path: Path) -> ShapeInterpCache:
     return ShapeInterpCache(
         path=Path(path), holder=holder, fingerprint=str(fingerprint)
     )
-
-
-def read_shape_interp_cache_info(path: Path) -> dict[str, Any]:
-    """Return the JSON description of the cache file path."""
-    return json.loads(Path(path).with_suffix(".json").read_text())
 
 
 def check_shape_interp_cache(
@@ -352,43 +340,6 @@ def strip_shape_interp(obs: Nc.GalaxyWLObs) -> None:
     """Remove the interpolants and their record from obs, keeping its rows and metadata."""
     obs.props.shape_interp = Ncm.ObjDictInt.new()
     obs.props.shape_interp_source = Ncm.ObjDictStr.new()
-
-
-def find_shape_interp_cache(
-    directory: Path,
-    obs: Nc.GalaxyWLObs,
-    gsfs: Nc.GalaxyShapeFactorSpectral,
-    pop: Nc.GalaxyShapePop,
-) -> ShapeInterpCache | None:
-    """Return the first cache in directory that can be attached to obs, or None.
-
-    The JSON files select the candidates (format, fingerprint, population type and
-    pop-order); each candidate is then read and checked by
-    :func:`check_shape_interp_cache`.
-    """
-    directory = Path(directory)
-    if not directory.is_dir():
-        return None
-    fingerprint = wl_obs_fingerprint(obs)
-    for json_path in sorted(directory.glob("*.json")):
-        try:
-            info = json.loads(json_path.read_text())
-        except (OSError, ValueError):
-            continue
-        if (
-            info.get("format") != SHAPE_INTERP_CACHE_FORMAT
-            or info.get("fingerprint") != fingerprint
-            or info.get("population", {}).get("type") != type(pop).__name__
-            or info.get("shape_factor", {}).get("pop_order") != gsfs.get_pop_order()
-        ):
-            continue
-        gvar = json_path.with_suffix(".gvar")
-        if not gvar.exists():
-            continue
-        cache = read_shape_interp_cache(gvar)
-        if check_shape_interp_cache(cache, obs, gsfs, pop) is None:
-            return cache
-    return None
 
 
 @dataclasses.dataclass(frozen=True)
