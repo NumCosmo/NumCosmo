@@ -116,6 +116,7 @@
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "ncm/algebra/ncm_spectral_polar_private.h"
 #include "ncm/core/ncm_memory_pool.h"
+#include "ncm/core/ncm_prefetch_private.h"
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/core/ncm_vmath_private.h"
 
@@ -305,10 +306,12 @@ typedef struct _NcGalaxyShapeFactorSpectralData
    * box they span: that of the fit for a built expansion, that of the record for a loaded
    * one. box_key is the pop_box_key (built) or the pop_fit_key (loaded) they were made or
    * compared for. w are the weights of the modes at the parameters of w_pop at its pkey
-   * w_pkey, w_inside whether those are in the box, w_gen a value unique to those weights.
+   * w_pkey, w_inside whether those are in the box, w_gen a value unique to those weights among
+   * those of modes_id (w_count of them so far).
    * expand_failed: the expansion of the galaxy did not converge, and it is integrated.
    */
   NcmSpectralPolarPanelsArray *mode_spp;
+  const NcmSpectralPolarPanelsPack *mode_pack; /* the pack of mode_spp, which owns it */
   NcGalaxyShapeFactorSpectralBox *box;
   guint64 box_key;
   guint64 modes_id; /* unique to the modes in mode_spp, never 0 once they are set */
@@ -316,6 +319,7 @@ typedef struct _NcGalaxyShapeFactorSpectralData
   gconstpointer w_pop;
   guint64 w_pkey;
   guint64 w_gen;
+  guint64 w_count; /* the weights made so far for the modes of modes_id */
   gboolean w_inside;
   gboolean expand_failed;
   gboolean box_is_fit; /* a loaded expansion over the box and order the fit expands over */
@@ -333,7 +337,7 @@ typedef struct _NcGalaxyShapeFactorSpectralData
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INLINE static inline
 #endif
 
-/* A new value of NcGalaxyShapeFactorSpectralData:modes_id or w_gen, never 0 nor repeated */
+/* A new value of NcGalaxyShapeFactorSpectralData:modes_id, never 0 nor repeated */
 static guint64
 _nc_galaxy_shape_factor_spectral_id_new (void)
 {
@@ -466,9 +470,14 @@ _nc_galaxy_shape_factor_spectral_weights (NcGalaxyShapeFactorSpectralData *ldata
       ldata->w[q] = w;
     }
 
+    /*
+     * Unique with modes_id, which the caches of combined panels are keyed by too: a count
+     * of the galaxy instead of a global one, which every thread would write for every
+     * galaxy. It restarts only with new modes, and so with a new modes_id.
+     */
     ldata->w_pop  = pop;
     ldata->w_pkey = pkey;
-    ldata->w_gen  = _nc_galaxy_shape_factor_spectral_id_new ();
+    ldata->w_gen  = ++ldata->w_count;
   }
 
   return ldata->w_inside;
@@ -482,8 +491,10 @@ _nc_galaxy_shape_factor_spectral_ldata_set_modes (NcGalaxyShapeFactorSpectralDat
   if (modes != ldata->mode_spp)
   {
     ncm_spectral_polar_panels_array_clear (&ldata->mode_spp);
-    ldata->mode_spp = (modes != NULL) ? ncm_spectral_polar_panels_array_ref (modes) : NULL;
-    ldata->modes_id = (modes != NULL) ? _nc_galaxy_shape_factor_spectral_id_new () : 0;
+    ldata->mode_spp  = (modes != NULL) ? ncm_spectral_polar_panels_array_ref (modes) : NULL;
+    ldata->mode_pack = (modes != NULL) ? ncm_spectral_polar_panels_array_peek_pack (modes) : NULL;
+    ldata->modes_id  = (modes != NULL) ? _nc_galaxy_shape_factor_spectral_id_new () : 0;
+    ldata->w_count   = 0;
   }
 
   if (box != ldata->box)
@@ -764,6 +775,7 @@ static void _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, 
 static void _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
+static void _nc_galaxy_shape_factor_spectral_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage);
 static void _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 static gboolean _nc_galaxy_shape_factor_spectral_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const guint max_points, GArray **coeffs);
 
@@ -974,6 +986,7 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_spectral_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_spectral_eval_ln_marginal;
   gsf_class->eval_nodes       = &_nc_galaxy_shape_factor_spectral_eval_nodes;
+  gsf_class->data_prefetch    = &_nc_galaxy_shape_factor_spectral_data_prefetch;
   gsf_class->line_table       = &_nc_galaxy_shape_factor_spectral_line_table;
 }
 
@@ -1130,6 +1143,7 @@ _nc_galaxy_shape_factor_spectral_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *m
   ldata->g_reach  = -1.0;
 
   ldata->mode_spp       = NULL;
+  ldata->mode_pack      = NULL;
   ldata->box            = NULL;
   ldata->box_key        = 0;
   ldata->modes_id       = 0;
@@ -1137,6 +1151,7 @@ _nc_galaxy_shape_factor_spectral_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *m
   ldata->w_pop          = NULL;
   ldata->w_pkey         = 0;
   ldata->w_gen          = 0;
+  ldata->w_count        = 0;
   ldata->w_inside       = FALSE;
   ldata->expand_failed  = FALSE;
   ldata->box_is_fit     = FALSE;
@@ -1539,14 +1554,14 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
     if (ldata->mode_spp != NULL)
     {
       /* The modes combined on the panel of the point only */
-      NcmSpectralPolarPanels **modes        = ncm_spectral_polar_panels_array_peek_data (ldata->mode_spp);
       NcGalaxyShapeFactorSpectralWork **ptr = ncm_memory_pool_get (self->work_pool);
       gdouble rho, psi, val;
 
       _nc_galaxy_shape_factor_spectral_interp_coords (ldata, g_1, g_2, &rho, &psi);
-      ncm_spectral_polar_panels_eval_on_array_combine (ncm_spectral_polar_panels_array_len (ldata->mode_spp), modes, ldata->w,
-                                                       _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, ldata->w_gen),
-                                                       ncm_spectral_polar_panels_find_panel (modes[0], rho, psi), 1, &rho, &psi, &val);
+      ncm_spectral_polar_panels_pack_eval_on_array_combine (ldata->mode_pack, ldata->w,
+                                                            _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, ldata->w_gen),
+                                                            ncm_spectral_polar_panels_pack_find_panel_near (ldata->mode_pack, G_MAXUINT, rho, psi),
+                                                            1, &rho, &psi, &val);
       ncm_memory_pool_return (ptr);
 
       return val;
@@ -1559,6 +1574,37 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
 
       return ncm_spectral_polar_panels_eval (ldata->spp, rho, psi);
     }
+  }
+}
+
+/*
+ * Most bytes of the pack of a galaxy data_prefetch() fetches: the structure, the panels, the
+ * edges and the first terms. On HWL16a-002 (about 20 kB a galaxy) the whole pack is no
+ * faster, and one line of it 8% slower; the hardware prefetcher follows the rest.
+ */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_PREFETCH_CAP 8192
+
+/*
+ * data_prefetch: stage 1 the state of the galaxy, stage 2 the pack of its modes and their
+ * weights, what _nc_galaxy_shape_factor_spectral_eval_nodes() reads for a pop-order
+ * expansion. The pack is one allocation, so that it is reached from the state in one step.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage)
+{
+  const NcGalaxyShapeFactorSpectralData *ldata = (const NcGalaxyShapeFactorSpectralData *) data->ldata;
+
+  if (stage == 1)
+  {
+    ncm_prefetch_span (ldata, sizeof (NcGalaxyShapeFactorSpectralData));
+  }
+  else if ((stage == 2) && (ldata->mode_pack != NULL))
+  {
+    ncm_prefetch_span (ldata->mode_pack, MIN (NC_GALAXY_SHAPE_FACTOR_SPECTRAL_PREFETCH_CAP,
+                                              ncm_spectral_polar_panels_pack_get_size (ldata->mode_pack)));
+
+    if (ldata->box != NULL)
+      ncm_prefetch_span (ldata->w, sizeof (gdouble) * ldata->box->n_nodes);
   }
 }
 
@@ -1685,14 +1731,18 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
      */
     {
       /* pop-order: the panels are those of every mode; a run combines the modes on its panel only */
-      const gboolean expanded               = (ldata->mode_spp != NULL);
-      NcmSpectralPolarPanels **modes        = expanded ? ncm_spectral_polar_panels_array_peek_data (ldata->mode_spp) : NULL;
-      NcmSpectralPolarPanels *spp           = expanded ? modes[0] : ldata->spp;
-      NcGalaxyShapeFactorSpectralWork **ptr = expanded ? ncm_memory_pool_get (self->work_pool) : NULL;
-      NcmSpectralPolarPanelsComb *comb      = expanded ? _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, ldata->w_gen) : NULL;
+      const NcmSpectralPolarPanelsPack *pack = ldata->mode_pack;
+      const gboolean expanded                = (pack != NULL);
+      NcmSpectralPolarPanels *spp            = ldata->spp;
+      NcGalaxyShapeFactorSpectralWork **ptr  = expanded ? ncm_memory_pool_get (self->work_pool) : NULL;
+      NcmSpectralPolarPanelsComb *comb       = expanded ? _nc_galaxy_shape_factor_spectral_work_comb (*ptr, ldata->modes_id, ldata->w_gen) : NULL;
+
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FIND(hint, r, t)                                      \
+        (expanded ? ncm_spectral_polar_panels_pack_find_panel_near (pack, (hint), (r), (t)) : \
+         ncm_spectral_polar_panels_find_panel_near (spp, (hint), (r), (t)))
 
       k     = 0;
-      panel = ncm_spectral_polar_panels_find_panel_near (spp, panel, rho[0], psi[0]);
+      panel = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FIND (panel, rho[0], psi[0]);
 
       while (k < c)
       {
@@ -1701,7 +1751,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
 
         while (k1 < c)
         {
-          next = ncm_spectral_polar_panels_find_panel_near (spp, panel, rho[k1], psi[k1]);
+          next = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FIND (panel, rho[k1], psi[k1]);
 
           if (next != panel)
             break;
@@ -1710,8 +1760,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
         }
 
         if (expanded)
-          ncm_spectral_polar_panels_eval_on_array_combine (ncm_spectral_polar_panels_array_len (ldata->mode_spp), modes, ldata->w, comb,
-                                                           panel, k1 - k, &rho[k], &psi[k], &rho[k]);
+          ncm_spectral_polar_panels_pack_eval_on_array_combine (pack, ldata->w, comb, panel, k1 - k, &rho[k], &psi[k], &rho[k]);
         else
           ncm_spectral_polar_panels_eval_on_array (spp, panel, k1 - k, &rho[k], &psi[k], &rho[k]);
 
@@ -1721,6 +1770,8 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
 
       if (ptr != NULL)
         ncm_memory_pool_return (ptr);
+
+#undef NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FIND
     }
 
     if (!want_log)
@@ -2138,6 +2189,9 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
       for (q = 0; q < n_nodes; q++)
         ncm_spectral_polar_panels_array_add (mode_spp, modes[q]);
 
+      /* The coefficients are kept once, packed; the array is not yet shared */
+      ncm_spectral_polar_panels_array_pack (mode_spp);
+
       _nc_galaxy_shape_factor_spectral_ldata_set_modes (ldata, mode_spp, self->pop_box);
       ncm_spectral_polar_panels_array_free (mode_spp);
     }
@@ -2196,7 +2250,11 @@ _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsf
   {
     gdouble ra, rb, ta, tb;
 
-    ncm_spectral_polar_panels_get_range ((ldata->mode_spp != NULL) ? ncm_spectral_polar_panels_array_peek (ldata->mode_spp, 0) : ldata->spp, &ra, &rb, &ta, &tb);
+    if (ldata->mode_pack != NULL)
+      ncm_spectral_polar_panels_pack_get_range (ldata->mode_pack, &ra, &rb, &ta, &tb);
+    else
+      ncm_spectral_polar_panels_get_range (ldata->spp, &ra, &rb, &ta, &tb);
+
     ldata->g_max = MIN (rb - ldata->g_c, self->interp_g_max);
   }
 }
