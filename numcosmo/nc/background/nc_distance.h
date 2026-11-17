@@ -101,6 +101,7 @@ struct _NcDistance
   NcmFunctionCache *conformal_time_cache;
   NcmFunctionCache *sound_horizon_cache;
   NcmModelCtrl *ctrl;
+  gdouble zf_req;
   gdouble zf;
   gboolean use_cache;
   gboolean cpu_inv_comoving;
