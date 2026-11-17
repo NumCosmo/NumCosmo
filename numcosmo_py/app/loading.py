@@ -35,7 +35,11 @@ from typing import Annotated, cast
 import typer
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.experiments.wl_interp_cache import load_shape_interp_cache
+from numcosmo_py.experiments.wl_interp_cache import (
+    load_shape_interp_cache,
+    resolve_shape_interp_cache,
+    update_node_config_cache,
+)
 
 from .logging import AppLogging
 
@@ -207,7 +211,10 @@ class LoadExperiment(AppLogging):
 
         A cache is resolved against the directory of the experiment; what it misses
         for the priors of the experiment is built and saved (see
-        :func:`numcosmo_py.experiments.wl_interp_cache.load_shape_interp_cache`).
+        :func:`numcosmo_py.experiments.wl_interp_cache.load_shape_interp_cache`). With
+        auto-nodes, the redshift-node configuration is taken from its cache beside it, or
+        calibrated and saved there, and the data is prepared at the starting point (see
+        :func:`numcosmo_py.experiments.wl_interp_cache.update_node_config_cache`).
         """
         dataset = self.likelihood.peek_dataset()
         base_dir = self.experiment.absolute().parent
@@ -222,6 +229,22 @@ class LoadExperiment(AppLogging):
                 print(
                     f"# Shape interpolant cache {upd.path}: {upd.built} built "
                     f"and saved, {upd.reused} reused."
+                )
+            # The redshift-node configuration (auto-nodes) beside the interpolant cache,
+            # or beside the experiment when the catalog names none
+            interp_path = (
+                upd.path
+                if upd is not None
+                else resolve_shape_interp_cache(data.peek_obs(), base_dir)
+            )
+            cache_dir = interp_path.parent if interp_path is not None else base_dir
+            nupd = update_node_config_cache(
+                data, self.mset, cache_dir, prepare=self.interp_build
+            )
+            if nupd is not None and nupd.calibrated > 0:
+                print(
+                    f"# Redshift-node cache {nupd.path}: {nupd.calibrated} galaxies "
+                    "calibrated and saved."
                 )
 
     def _load_saved_mset(self) -> Ncm.MSet | None:

@@ -758,3 +758,200 @@ def load_shape_interp_cache(
     return update_shape_interp_cache(
         data, mset, path.parent, coverage=recorded_coverage(obs), build=build
     )
+
+
+# ---------------------------------------------------------------------------------------
+# Caches of the redshift-node configuration (auto-nodes)
+#
+# The calibration of the redshift nodes of each galaxy (NcDataClusterWLFactor:auto-nodes)
+# depends on the cluster (its redshift), the rows of the catalog with their p(z), the mask
+# and the settings of the factors and of the nodes, unlike the interpolants, which do not
+# depend on the cluster. It is kept in its own file beside the interpolant cache, named by
+# a hash of all of these. The file holds NcDataClusterWLFactor:node-config, which the
+# library checks again when it adopts it (its galaxy count, cluster redshift and node
+# settings), recalibrating with a warning on any difference.
+# ---------------------------------------------------------------------------------------
+
+# Format of the node-config cache file, kept in its metadata
+NODE_CONFIG_CACHE_FORMAT = "nc-node-config-cache-v1"
+_NODE_META_KEY = "key"
+# Prefix of the entries of the node-config in the metadata of the cache file
+_NODE_META_PREFIX = "node-config:"
+
+
+def wl_obs_full_fingerprint(obs: Nc.GalaxyWLObs) -> str:
+    """Return a SHA-256 of every column and every p(z) table of obs.
+
+    The calibration of the redshift nodes reads the positions, the shapes, the biases and
+    the p(z) of each galaxy, so the fingerprint covers all of them (as little-endian
+    float64), unlike :func:`wl_obs_fingerprint`.
+    """
+    h = hashlib.sha256()
+    h.update(f"rows={obs.len()};".encode())
+    h.update(f"conv={obs.get_ellip_conv().value_nick};".encode())
+    h.update(f"coord={obs.get_coord().value_nick};".encode())
+    columns = list(obs.peek_columns())
+    if obs.len() > 0 and columns:
+        data = obs.peek_data().to_numpy()
+        for k, name in enumerate(columns):
+            h.update(f"{name}:".encode())
+            h.update(np.ascontiguousarray(data[:, k], dtype="<f8").tobytes())
+    pz_table = obs.props.pz_table
+    if pz_table is not None:
+        for i in range(obs.len()):
+            tab = pz_table.peek(i)
+            h.update(f"pz{i}:".encode())
+            if tab is not None:
+                mat = cast(Ncm.Matrix, tab)
+                h.update(np.ascontiguousarray(mat.to_numpy(), dtype="<f8").tobytes())
+    return h.hexdigest()
+
+
+def node_config_cache_name(data: Nc.DataClusterWLFactor, mset: Ncm.MSet) -> str:
+    """Return the file name of the node-config cache of data at the cluster of mset.
+
+    A hash of what the calibration depends on: every column and p(z) of the catalog
+    (:func:`wl_obs_full_fingerprint`), the mask, the radial cuts, the node settings, the
+    cluster redshift and the settings of the redshift, position and shape factors. The
+    model point the calibration runs at is not part of it: any calibration reaching the
+    tolerance is valid at every point.
+    """
+    obs = data.peek_obs()
+    hp = mset.peek(Nc.HaloPosition.id())
+    assert isinstance(hp, Nc.HaloPosition)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.NONE)
+    h = hashlib.sha256()
+    h.update(wl_obs_full_fingerprint(obs).encode())
+    mask = data.get_mask()
+    h.update(
+        f"mask={'' if mask is None else ''.join('1' if k else '0' for k in mask)};".encode()
+    )
+    h.update(
+        (
+            f"r=[{data.props.r_min!r},{data.props.r_max!r}];"
+            f"method={data.get_integ_method().value_nick};auto={data.get_auto_nodes()};"
+            f"reltol={data.get_node_reltol()!r};max={data.get_max_total_nodes()};"
+            f"n={data.get_n_nodes()};rule={data.get_rule_n()};z_cl={hp['z']!r};"
+        ).encode()
+    )
+    for factor in (
+        data.props.redshift_factor,
+        data.props.position_factor,
+        data.props.shape_factor,
+    ):
+        h.update(ser.to_string(factor, True).encode())
+        ser.reset(True)
+    return f"nodes-{h.hexdigest()[:16]}.gvar"
+
+
+def write_node_config_cache(
+    obs: Nc.GalaxyWLObs, node_config: Ncm.VarDict, key: str, path: Path
+) -> Path:
+    """Write node_config to the cache file path, under key (its file name).
+
+    The file is an NcGalaxyWLObs of one row and no columns (one with no rows cannot be
+    read back) whose metadata holds the node-config.
+    """
+    holder = Nc.GalaxyWLObs.new(obs.get_ellip_conv(), obs.get_coord(), 1, [])
+    meta = Ncm.VarDict.new()
+    meta.set_string(_CACHE_META_FORMAT, NODE_CONFIG_CACHE_FORMAT)
+    meta.set_string(_NODE_META_KEY, key)
+    for name in node_config.keys():  # noqa: SIM118 (an NcmVarDict, not a dict)
+        ok, value = node_config.get_variant(name)
+        assert ok
+        meta.set_variant(_NODE_META_PREFIX + name, value)
+    holder.set_meta(meta)
+    path = Path(path)
+    _replace_atomically(
+        path,
+        lambda part: Ncm.Serialize.new(Ncm.SerializeOpt.NONE).to_binfile(
+            holder, part.as_posix()
+        ),
+    )
+    return path
+
+
+def read_node_config_cache(path: Path) -> Ncm.VarDict:
+    """Return the node-config of a file written by :func:`write_node_config_cache`.
+
+    Raises:
+        ValueError: The file is not a node-config cache of a known format, or was written
+            under another name (another configuration).
+    """
+    path = Path(path)
+    holder = Ncm.Serialize.new(Ncm.SerializeOpt.NONE).from_binfile(path.as_posix())
+    meta = holder.peek_meta() if isinstance(holder, Nc.GalaxyWLObs) else None
+    if meta is None:
+        raise ValueError(f"{path} is not a node-config cache")
+    ok_format, fmt = meta.get_string(_CACHE_META_FORMAT)
+    ok_key, key = meta.get_string(_NODE_META_KEY)
+    if not ok_format or fmt != NODE_CONFIG_CACHE_FORMAT:
+        raise ValueError(
+            f"{path} is not a node-config cache of format {NODE_CONFIG_CACHE_FORMAT} "
+            f"(format: {fmt})"
+        )
+    if not ok_key or key != path.name:
+        raise ValueError(f"{path} was written for another configuration ({key})")
+    node_config = Ncm.VarDict.new()
+    for name in meta.keys():  # noqa: SIM118 (an NcmVarDict, not a dict)
+        if name.startswith(_NODE_META_PREFIX):
+            ok, value = meta.get_variant(name)
+            assert ok
+            node_config.set_variant(name.removeprefix(_NODE_META_PREFIX), value)
+    return node_config
+
+
+@dataclasses.dataclass
+class NodeConfigCacheUpdate:
+    """What :func:`update_node_config_cache` did."""
+
+    path: Path
+    loaded: bool
+    calibrated: int
+
+
+def update_node_config_cache(
+    data: Nc.DataClusterWLFactor,
+    mset: Ncm.MSet,
+    cache_dir: Path,
+    *,
+    prepare: bool = True,
+) -> NodeConfigCacheUpdate | None:
+    """Give data the node-config cached for this configuration, calibrating it if needed.
+
+    The cache is the file :func:`node_config_cache_name` names in cache_dir. When it exists
+    its node-config is given to data. With prepare, data is then prepared at mset
+    (nc_data_cluster_wl_factor_data_prepare(), in parallel): that adopts the loaded
+    configuration, or calibrates, in which case the result is written to the cache. A
+    prepared dataset is also what a sampler shares with its copies, so preparing here
+    avoids every copy of an MCMC calibrating. The update holds a lock beside the file, so
+    that jobs started together calibrate once.
+
+    Returns:
+        None when data does not use auto-nodes (FIXED_NODES with auto-nodes), otherwise
+        what was done.
+    """
+    if (
+        data.get_integ_method() != Nc.DataClusterWLIntegMethod.FIXED_NODES
+        or not data.get_auto_nodes()
+    ):
+        return None
+    path = Path(cache_dir) / node_config_cache_name(data, mset)
+    loaded = False
+    with _locked(path):
+        if path.exists():
+            try:
+                data.props.node_config = read_node_config_cache(path)
+                loaded = True
+            except ValueError as e:
+                print(f"# Ignoring the node-config cache {path}: {e}")
+        if not prepare:
+            return NodeConfigCacheUpdate(path=path, loaded=loaded, calibrated=0)
+        calib0 = data.get_calib_count()
+        data.data_prepare(mset)
+        calibrated = data.get_calib_count() - calib0
+        if calibrated > 0:
+            node_config = data.props.node_config
+            assert node_config is not None
+            write_node_config_cache(data.peek_obs(), node_config, path.name, path)
+    return NodeConfigCacheUpdate(path=path, loaded=loaded, calibrated=calibrated)

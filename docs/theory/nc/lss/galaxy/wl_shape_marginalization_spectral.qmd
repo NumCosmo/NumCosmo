@@ -487,6 +487,18 @@ catalog, each building only the rows the cache does not hold yet. The other mode
 experiment, the sky footprint of the position factor among them, are those of the whole
 catalog.
 
+The redshift nodes of each galaxy, which the likelihood selects by default
+([[numcosmo|NcDataClusterWLFactor:auto-nodes]], to the relative tolerance
+[[numcosmo|NcDataClusterWLFactor:node-reltol]], whose documentation gives the error each
+setting leaves in $-2\ln L$), are kept in a second file beside the interpolant cache
+(`nodes-<hash>.gvar`, or beside the experiment when the catalog names no interpolant
+cache). Unlike the interpolants they depend on the cluster: the name hashes every column
+and $P(z)$ of the catalog, the mask, the radial cuts, the node settings, the redshift of
+the cluster and the settings of the factors. Loading an experiment gives the data the
+configuration of its file and prepares it at the starting point, in parallel; when there
+is none it calibrates and saves it (6.6 s on HSC s19a HWL16a-002 with a fixed population,
+44 s with a free one, against 2.4 s to load it).
+
 `numcosmo wl-catalog info` describes a catalog, a cache or a dataset.
 
 ## The Nodes of a Galaxy: a Table Along its Line

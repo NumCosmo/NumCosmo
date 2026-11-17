@@ -43,6 +43,9 @@ from numcosmo_py.experiments.wl_interp_cache import (
     coverage_short_of_prior,
     default_coverage,
     name_shape_interp_cache,
+    node_config_cache_name,
+    read_node_config_cache,
+    update_node_config_cache,
     read_shape_interp_cache,
     resolve_shape_interp_cache,
     shape_interp_cache_info,
@@ -413,3 +416,112 @@ def test_default_coverage(pop, prior, expected):
     assert set(short) == {
         k for k in (prior or {}) if (prior or {})[k] != (expected or {})[k]
     }
+
+
+def _fixed_nodes(data: Nc.DataClusterWLFactor) -> Nc.DataClusterWLFactor:
+    """data with FIXED_NODES redshift integrals, whose auto-nodes is on by default."""
+    data.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    assert data.get_auto_nodes()
+    return data
+
+
+def test_node_config_cache(tmp_path: Path):
+    """The redshift-node configuration calibrated for a fit is saved and, for a fresh copy
+    of the experiment, adopted without calibrating, with the same -2lnL bit for bit."""
+    data, mset, dataset = _experiment(_catalog())
+    _fixed_nodes(data)
+    upd = update_node_config_cache(data, mset, tmp_path)
+    assert upd is not None
+    assert (upd.loaded, upd.calibrated) == (False, data.get_length())
+    assert upd.path.parent == tmp_path and upd.path.name.startswith("nodes-")
+    assert upd.path.exists()
+    assert data.is_data_prepared()
+    m2lnL = dataset.m2lnL_val(mset)
+
+    data2, mset2, dataset2 = _experiment(_catalog())
+    _fixed_nodes(data2)
+    upd2 = update_node_config_cache(data2, mset2, tmp_path)
+    assert upd2 is not None
+    assert (upd2.loaded, upd2.calibrated, upd2.path) == (True, 0, upd.path)
+    assert dataset2.m2lnL_val(mset2) == m2lnL
+    assert data2.get_calib_count() == 0
+
+    # Without preparing, the configuration is only given to the data
+    data3, mset3, dataset3 = _experiment(_catalog())
+    _fixed_nodes(data3)
+    upd3 = update_node_config_cache(data3, mset3, tmp_path, prepare=False)
+    assert upd3 is not None and (upd3.loaded, upd3.calibrated) == (True, 0)
+    assert dataset3.m2lnL_val(mset3) == m2lnL
+    assert data3.get_calib_count() == 0
+
+    # Not auto-nodes, or not FIXED_NODES: nothing to cache
+    data4, mset4, _ = _experiment(_catalog())
+    assert update_node_config_cache(data4, mset4, tmp_path) is None
+    _fixed_nodes(data4).set_auto_nodes(False)
+    assert update_node_config_cache(data4, mset4, tmp_path) is None
+
+
+def test_node_config_cache_names(tmp_path: Path):
+    """What the calibration depends on names another file: the node settings, the cluster
+    redshift, the mask and the p(z) of a galaxy."""
+    data, mset, _ = _experiment(_catalog())
+    _fixed_nodes(data)
+    name = node_config_cache_name(data, mset)
+    assert name == node_config_cache_name(data, mset)
+
+    data.set_node_reltol(1.0e-5)
+    assert node_config_cache_name(data, mset) != name
+    data.set_node_reltol(1.0e-4)
+    assert node_config_cache_name(data, mset) == name
+
+    hp = mset.peek(Nc.HaloPosition.id())
+    hp["z"] = 0.31
+    assert node_config_cache_name(data, mset) != name
+    hp["z"] = 0.3
+
+    data.set_mask([i != 3 for i in range(data.peek_obs().len())])
+    assert node_config_cache_name(data, mset) != name
+    data.set_mask(None)
+    assert node_config_cache_name(data, mset) == name
+
+    obs = _catalog()
+    zs = np.linspace(0.5, 1.1, 16)
+    spline = Ncm.SplineCubicNotaknot.new()
+    spline.set(
+        Ncm.Vector.new_array(zs.tolist()),
+        Ncm.Vector.new_array(np.exp(-0.5 * ((zs - 0.8) / 0.06) ** 2).tolist()),
+        True,
+    )
+    obs.set_pz(5, spline)
+    data2, mset2, _ = _experiment(obs)
+    _fixed_nodes(data2)
+    assert node_config_cache_name(data2, mset2) != name
+
+
+def test_node_config_cache_refused(tmp_path: Path):
+    """A file of another configuration under the name of this one, or a file that is not
+    a cache, is ignored: the data calibrates and the file is written again."""
+    data, mset, _ = _experiment(_catalog())
+    _fixed_nodes(data)
+    upd = update_node_config_cache(data, mset, tmp_path)
+    assert upd is not None
+
+    data2, mset2, _ = _experiment(_catalog())
+    _fixed_nodes(data2).set_node_reltol(1.0e-5)
+    other = tmp_path / node_config_cache_name(data2, mset2)
+    other.write_bytes(upd.path.read_bytes())
+    with pytest.raises(ValueError, match="another configuration"):
+        read_node_config_cache(other)
+    upd2 = update_node_config_cache(data2, mset2, tmp_path)
+    assert upd2 is not None
+    assert (upd2.path, upd2.loaded, upd2.calibrated) == (
+        other,
+        False,
+        data2.get_length(),
+    )
+    assert read_node_config_cache(other) is not None
+
+    bad = tmp_path / "nodes-bad.gvar"
+    Ncm.Serialize.new(Ncm.SerializeOpt.NONE).to_binfile(_catalog(), bad.as_posix())
+    with pytest.raises(ValueError, match="not a node-config cache"):
+        read_node_config_cache(bad)
