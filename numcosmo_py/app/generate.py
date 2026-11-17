@@ -75,6 +75,7 @@ from numcosmo_py.experiments.cluster_wl import (
     check_shape_pop_compat,
     generate_lsst_cluster_wl,
     load_cluster_wl,
+    load_mask,
     parse_prior,
     print_free_parameters,
     resolve_resample_flag,
@@ -930,6 +931,7 @@ class ClusterWL(ABC):
 
         mset.prepare_fparam_map()
 
+        self._apply_mask(dataset)
         self._prepare_shape_interp(dataset, mset)
 
         if self.summary:
@@ -997,6 +999,9 @@ class ClusterWL(ABC):
             raise typer.BadParameter(str(e)) from e
 
         return shape_gen, pop_gen
+
+    def _apply_mask(self, dataset: Ncm.Dataset) -> None:
+        """Restrict the likelihood to some rows of its catalog; nothing by default."""
 
     def _prepare_shape_interp(self, dataset: Ncm.Dataset, mset: Ncm.MSet) -> None:
         """Prepare the shape interpolants of the experiment; nothing by default."""
@@ -1378,6 +1383,38 @@ class LoadClusterWL(ClusterWL):
             rich_help_panel="Shape interpolant cache",
         ),
     ] = True
+
+    mask_file: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "Whether the likelihood uses each row of the catalog: a boolean .npy "
+                "array, or a text file of 1/0 (true/false), with one entry per row. "
+                "The catalog keeps every row, so one catalog and its cache of "
+                "interpolants serve several selections."
+            ),
+            exists=True,
+            readable=True,
+        ),
+    ] = None
+
+    def _apply_mask(self, dataset: Ncm.Dataset) -> None:
+        """Set the mask of --mask-file on the likelihood.
+
+        Raises:
+            typer.BadParameter: The file does not describe rows of the catalog.
+        """
+        if self.mask_file is None:
+            return
+        data = dataset.get_data(0)
+        assert isinstance(data, Nc.DataClusterWLFactor)
+        n_rows = data.peek_obs().len()
+        try:
+            keep = load_mask(self.mask_file, n_rows)
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
+        data.set_mask(keep)
+        print(f"# Mask {self.mask_file}: {sum(keep)} of {n_rows} rows.")
 
     def _interp_cache_dir(self) -> Path:
         """Return the directory of the shape interpolant caches of the options."""

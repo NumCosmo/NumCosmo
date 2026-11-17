@@ -42,6 +42,7 @@ This module builds ``NcDataClusterWLFactor`` experiments, on the
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum, auto
+from pathlib import Path
 from typing import Annotated, Any, Self
 
 import numpy as np
@@ -1648,6 +1649,41 @@ def load_cluster_wl(
         console.print(table)
 
     return experiment
+
+
+def load_mask(path: Path, n_rows: int) -> list[bool]:
+    """Read the mask of a catalog of n_rows rows: whether a likelihood uses each row.
+
+    The file is a NumPy .npy boolean array, or a text file of 1/0 (true/false), with one
+    entry per row of the catalog.
+
+    Raises:
+        ValueError: The file does not hold one boolean per row, or keeps no row.
+    """
+    path = Path(path)
+    if path.suffix == ".npy":
+        arr = np.asarray(np.load(path, allow_pickle=False))
+        if arr.dtype != bool:
+            raise ValueError(
+                f"the mask {path} must be a boolean array with one entry per row, "
+                f"not {arr.dtype}"
+            )
+    else:
+        words = path.read_text().split()
+        table = {"1": True, "0": False, "true": True, "false": False}
+        try:
+            arr = np.array([table[w.lower()] for w in words], dtype=bool)
+        except KeyError as e:
+            raise ValueError(
+                f"the mask {path} must hold one 1/0 or true/false per row: {e}"
+            ) from e
+    if arr.ndim != 1 or arr.size != n_rows:
+        raise ValueError(
+            f"the mask {path} has {arr.size} entries, the catalog {n_rows} rows"
+        )
+    if not arr.any():
+        raise ValueError(f"the mask {path} keeps no row")
+    return [bool(k) for k in arr]
 
 
 def parse_prior(spec: str) -> tuple[str, float, float]:
