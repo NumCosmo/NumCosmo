@@ -2215,7 +2215,8 @@ def test_cluster_wl_load_app_prior_bad(
 
 def test_cluster_wl_load_app_centre_box(experiment_file, real_wl_obs_file_with_meta):
     """--centre-box-deg and --centre-box-mpc set the prior of the halo centre
-    around the cluster (0, 0); both together are an error."""
+    around the cluster (0, 0), 0.8 h^-1 Mpc without either; both together are
+    an error."""
     base = [
         "generate",
         "cluster-wl-load",
@@ -2248,6 +2249,19 @@ def test_cluster_wl_load_app_centre_box(experiment_file, real_wl_obs_file_with_m
     assert hp.projected_radius_from_ra_dec(cosmo, 0.0, dec_hi) == pytest.approx(
         radius, rel=1.0e-9
     )
+
+    # Without either option: 0.8 h^-1 Mpc
+    result = runner.invoke(app, base + ["--centre-box-mpc=0.8"])
+    assert result.exit_code == 0, result.output
+    box_08 = (
+        _bounds(_load_experiment_mset(experiment_file), "NcHaloPosition:ra"),
+        _bounds(_load_experiment_mset(experiment_file), "NcHaloPosition:dec"),
+    )
+    result = runner.invoke(app, base)
+    assert result.exit_code == 0, result.output
+    mset = _load_experiment_mset(experiment_file)
+    assert _bounds(mset, "NcHaloPosition:ra") == box_08[0]
+    assert _bounds(mset, "NcHaloPosition:dec") == box_08[1]
 
     experiment_file.unlink()
     result = runner.invoke(

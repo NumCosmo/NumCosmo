@@ -54,6 +54,7 @@ from numcosmo_py.experiments.cluster_richness_count import (
     load_cluster_richness_count,
 )
 from numcosmo_py.experiments.cluster_wl import (
+    DEFAULT_CENTRE_BOX_MPC,
     DEFAULT_COSMOLOGY,
     DEFAULT_INTEG_AUTO_NODES,
     DEFAULT_INTEG_MAX_TOTAL_NODES,
@@ -800,8 +801,9 @@ class ClusterWL(ABC):
         typer.Option(
             help=(
                 "Half-width in degrees of the prior of the halo centre, in ra and "
-                "in dec, around the cluster position. Default: the bounding box of "
-                "the galaxies. Mutually exclusive with --centre-box-mpc."
+                "in dec, around the cluster position. Mutually exclusive with "
+                "--centre-box-mpc; without either the box is "
+                f"{DEFAULT_CENTRE_BOX_MPC} h^-1 Mpc (--centre-box-mpc)."
             ),
             show_default=True,
             rich_help_panel="Priors",
@@ -815,7 +817,9 @@ class ClusterWL(ABC):
                 "Half-width in h^-1 Mpc, projected at the cluster redshift, of the "
                 "prior of the halo centre around the cluster position: square on "
                 "the sky, its ra half-width larger by about 1 / cos(dec). "
-                "Mutually exclusive with --centre-box-deg."
+                "Mutually exclusive with --centre-box-deg. Default: "
+                f"{DEFAULT_CENTRE_BOX_MPC}. A --prior on NcHaloPosition:ra or "
+                "NcHaloPosition:dec replaces it on that axis."
             ),
             show_default=True,
             rich_help_panel="Priors",
@@ -942,17 +946,22 @@ class ClusterWL(ABC):
     def _apply_priors(self, mset: Ncm.MSet) -> None:
         """Set the priors of the options: the centre box, then each --prior.
 
+        The centre box is --centre-box-deg or --centre-box-mpc, and
+        DEFAULT_CENTRE_BOX_MPC h^-1 Mpc when neither is given.
+
         Raises:
             typer.BadParameter: Both centre boxes, a malformed prior, an unknown
                 parameter, or a value outside its prior.
         """
+        half_mpc_h = self.centre_box_mpc
+        if (self.centre_box_deg is None) and (half_mpc_h is None):
+            half_mpc_h = DEFAULT_CENTRE_BOX_MPC
         try:
-            if (self.centre_box_deg is not None) or (self.centre_box_mpc is not None):
-                ra_lo, ra_hi, dec_lo, dec_hi = centre_box_bounds(
-                    mset, half_deg=self.centre_box_deg, half_mpc_h=self.centre_box_mpc
-                )
-                apply_prior(mset, "NcHaloPosition:ra", ra_lo, ra_hi)
-                apply_prior(mset, "NcHaloPosition:dec", dec_lo, dec_hi)
+            ra_lo, ra_hi, dec_lo, dec_hi = centre_box_bounds(
+                mset, half_deg=self.centre_box_deg, half_mpc_h=half_mpc_h
+            )
+            apply_prior(mset, "NcHaloPosition:ra", ra_lo, ra_hi)
+            apply_prior(mset, "NcHaloPosition:dec", dec_lo, dec_hi)
             for spec in self.prior:
                 apply_prior(mset, *parse_prior(spec))
         except ValueError as e:

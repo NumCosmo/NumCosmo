@@ -1253,6 +1253,10 @@ class CosmologyOptions:
 
 DEFAULT_COSMOLOGY = CosmologyOptions()
 
+# Default half-width in h^-1 Mpc of the prior of the halo centre (centre_box_bounds()):
+# the centre box of the Subaru HSC cluster fits, about 0.09 deg at z = 0.23.
+DEFAULT_CENTRE_BOX_MPC = 0.8
+
 
 def create_cosmo(cosmology: CosmologyOptions = DEFAULT_COSMOLOGY) -> Nc.HICosmo:
     """Create the cosmology of the cluster model from cosmology."""
