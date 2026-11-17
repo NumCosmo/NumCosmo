@@ -83,6 +83,8 @@
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
+#include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "nc/background/nc_distance.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/integration/ncm_integral_nd.h"
@@ -380,6 +382,13 @@ typedef struct _NcDataClusterWLFactorPrivate
    * Factor's model-derived state changing never requires reallocating
    * shape_data, only refreshing what is cached in it). */
   gboolean obs_changed;
+
+  /*
+   * The largest upper limit of the redshift integration over the galaxies of obs, set
+   * when obs is loaded and required of the distance of the surface mass density at every
+   * prepare (_nc_data_cluster_wl_factor_require_zf()).
+   */
+  gdouble z_top;
 
   /* Last-seen hashes, compared against each Factor's own get_hash() every
    * prepare() cycle. */
@@ -872,6 +881,50 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
   return match;
 }
 
+/*
+ * Requires of the distance of the surface mass density a final redshift of at least
+ * self->z_top, so that NcDistance evaluates the distance to every source redshift from
+ * its spline. It is called at every prepare, before the prepare of the factors: a raised
+ * final redshift takes effect when the shape factor prepares the surface mass density,
+ * and a distance that already reaches self->z_top is not changed. Calling it at every
+ * prepare covers a surface mass density replaced in the model set under the same obs.
+ */
+static void
+_nc_data_cluster_wl_factor_require_zf (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+
+  g_assert_nonnull (smd);
+  g_assert_nonnull (smd->dist);
+
+  nc_distance_require_zf (smd->dist, self->z_top);
+}
+
+/*
+ * Returns the largest upper limit of the redshift integration over the galaxies of obs,
+ * from the redshift data that _nc_data_cluster_wl_factor_load_obs() read. The limits come
+ * from the rows of obs and from the limits of the population, so prepare computes it once,
+ * when obs is loaded. A redshift above it is still evaluated, by the integral of
+ * NcDistance above its final redshift.
+ */
+static gdouble
+_nc_data_cluster_wl_factor_z_top (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  gdouble z_top = 0.0;
+  guint i;
+
+  for (i = 0; i < self->shape_data->len; i++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, i);
+    gdouble z_lo, z_hi;
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+    z_top = MAX (z_top, z_hi);
+  }
+
+  return z_top;
+}
+
 static void
 nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 {
@@ -891,6 +944,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->shape_data = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_shape_factor_data_unref);
 
   self->obs_changed       = TRUE; /* the very first prepare() always rebuilds */
+  self->z_top             = 0.0;
   self->pos_hash          = 0;
   self->z_hash            = 0;
   self->shape_radius_hash = 0;
@@ -1395,7 +1449,10 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   {
     _nc_data_cluster_wl_factor_load_obs (self, mset, self->obs);
     self->obs_changed = FALSE;
+    self->z_top       = _nc_data_cluster_wl_factor_z_top (self, mset);
   }
+
+  _nc_data_cluster_wl_factor_require_zf (self, mset);
 
   nc_galaxy_position_factor_prepare (self->position_factor, mset);
   nc_galaxy_redshift_factor_prepare (self->redshift_factor, mset);
