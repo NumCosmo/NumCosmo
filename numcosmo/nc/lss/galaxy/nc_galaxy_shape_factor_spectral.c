@@ -173,6 +173,7 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
   GArray *theta_edges;
   GArray *r_edges_all; /* edges of a peak before those outside a region are left out */
   GArray *theta_edges_all;
+  GArray *var_r; /* the radii of a call of the radial factor of the variance */
 } NcGalaxyShapeFactorSpectralWork;
 
 /*
@@ -505,6 +506,7 @@ _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata)
   work->theta_edges     = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->r_edges_all     = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->theta_edges_all = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->var_r           = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   return work;
 }
@@ -518,6 +520,7 @@ _nc_galaxy_shape_factor_spectral_work_free (gpointer p)
   g_array_unref (work->theta_edges);
   g_array_unref (work->r_edges_all);
   g_array_unref (work->theta_edges_all);
+  g_array_unref (work->var_r);
 
   g_free (work);
 }
@@ -1037,7 +1040,7 @@ _nc_galaxy_shape_factor_spectral_one_minus_abs2 (const gdouble g_1, const gdoubl
 static void _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, NcGalaxyShapeFactorSpectralSeed *seed);
 
 /*
- * ln of the integral at the real shear k->t, by ncm_spectral_polar_integrate() on the
+ * ln of the integral at the real shear k->t, by _ncm_spectral_polar_integrate_radial() on the
  * panels placed by the seed, with the offset of the seed set in k->shift_c2. NaN with
  * error set when a panel reaches the maximum depth.
  */
@@ -1141,12 +1144,14 @@ _nc_galaxy_shape_factor_spectral_near_unit_ln (NcGalaxyShapeFactorSpectralPrivat
 }
 
 static void _nc_galaxy_shape_factor_spectral_var_kernel (gpointer user_data, gdouble v, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval);
+static void _nc_galaxy_shape_factor_spectral_var_radial (gpointer user_data, guint n, const gdouble *v, gdouble *rho);
 
 /* What the integrand of the variance needs */
 typedef struct _NcGalaxyShapeFactorSpectralVar
 {
   const NcGalaxyShapeFactorSpectralKernel *k;
   gdouble delta; /* 1 - t */
+  gdouble *r;    /* the radii r = 1 - v of a call of the radial factor, in the workspace */
 } NcGalaxyShapeFactorSpectralVar;
 
 /*
@@ -1156,9 +1161,10 @@ typedef struct _NcGalaxyShapeFactorSpectralVar
  * s (t) per component,
  *   s (t) = (1 - t^2)^2 / 2 INT_0^1 (density of r) r^2 / (1 - t^2 r^2) dr,
  * and Phi (w) = N_2 (eps_obs - C (w)), C the identity for TRACE_DET and T for TRACE. The
- * integral is computed in v = 1 - r by ncm_spectral_polar_integrate(), where the factor
+ * integral is computed in v = 1 - r by _ncm_spectral_polar_integrate_radial(), where the factor
  * 1 / (delta + t v) of 1 / (1 - t^2 r^2) varies on the scale delta, with radial edges
- * placed for that scale at v = 0. Differences to 1 are formed from delta.
+ * placed for that scale at v = 0. The integrand depends only on r, so all of it is the
+ * radial factor, computed once per radius. Differences to 1 are formed from delta.
  */
 static gdouble
 _nc_galaxy_shape_factor_spectral_second_order_ln (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k,
@@ -1168,13 +1174,17 @@ _nc_galaxy_shape_factor_spectral_second_order_ln (NcGalaxyShapeFactorSpectralPri
   const gdouble t                    = k->t;
   const gdouble noise_var            = gsl_pow_2 (std_noise);
   const gdouble one_minus_t2         = delta * (1.0 + t);
-  NcGalaxyShapeFactorSpectralVar var = {k, delta};
+  NcGalaxyShapeFactorSpectralVar var = {k, delta, NULL};
   gdouble s, d, lap_ratio;
+
+  /* A call of the radial factor has at most 2^level-cap + 1 radii */
+  g_array_set_size (work->var_r, (1u << ncm_spectral_polar_get_level_cap (self->polar)) + 1);
+  var.r = &g_array_index (work->var_r, gdouble, 0);
 
   ncm_spectral_polar_peak_edges (self->polar, 1.0, 0.0, 0.0, delta, M_PI, work->r_edges, work->theta_edges);
   s = 0.5 * gsl_pow_2 (one_minus_t2) *
-      ncm_spectral_polar_integrate (self->polar, &_nc_galaxy_shape_factor_spectral_var_kernel, &var, 1.0, b, a,
-                                    work->r_edges, work->theta_edges, self->reltol, 0.0, NULL, NULL, error);
+      _ncm_spectral_polar_integrate_radial (self->polar, &_nc_galaxy_shape_factor_spectral_var_kernel, &_nc_galaxy_shape_factor_spectral_var_radial,
+                                            &var, 1.0, b, a, work->r_edges, work->theta_edges, self->reltol, 0.0, NULL, NULL, error);
 
   if (self->axis_ratio_var)
   {
@@ -1202,25 +1212,41 @@ _nc_galaxy_shape_factor_spectral_second_order_ln (NcGalaxyShapeFactorSpectralPri
 }
 
 /*
- * The integrand of the variance for ncm_spectral_polar_integrate() in v = 1 - r, with the
- * weight v^b (1 - v)^a: (reduced density of r) r^2 / ((delta + t v) (1 + t r)) / (2 pi).
- * It does not depend on the angle.
+ * The integrand of the variance for _ncm_spectral_polar_integrate_radial() in v = 1 - r, with
+ * the weight v^b (1 - v)^a, is (reduced density of r) r^2 / ((delta + t v) (1 + t r)) / (2 pi):
+ * it does not depend on the angle, and all of it is the radial factor
+ * (_nc_galaxy_shape_factor_spectral_var_radial()). The rest is 1.
  */
 static void
 _nc_galaxy_shape_factor_spectral_var_kernel (gpointer user_data, gdouble v, guint n, const gdouble *theta,
                                              const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
 {
-  const NcGalaxyShapeFactorSpectralVar *var = user_data;
-  const gdouble t                           = var->k->t;
-  const gdouble r                           = 1.0 - v;
-  gdouble val;
   guint j;
 
-  _nc_galaxy_shape_factor_spectral_density (var->k, 1, &r, &val);
-  val *= r * r / ((var->delta + t * v) * (1.0 + t * r)) / (2.0 * M_PI);
-
   for (j = 0; j < n; j++)
-    fval[j] = val;
+    fval[j] = 1.0;
+}
+
+/*
+ * The integrand of the variance at the n values v[i] of v = 1 - r, in rho[i]. All of it
+ * is a radial factor because the population is isotropic: its density depends on r alone.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_var_radial (gpointer user_data, guint n, const gdouble *v, gdouble *rho)
+{
+  const NcGalaxyShapeFactorSpectralVar *var = user_data;
+  const gdouble t                           = var->k->t;
+  const gdouble delta                       = var->delta;
+  gdouble *r                                = var->r;
+  guint i;
+
+  for (i = 0; i < n; i++)
+    r[i] = 1.0 - v[i];
+
+  _nc_galaxy_shape_factor_spectral_density (var->k, n, r, rho);
+
+  for (i = 0; i < n; i++)
+    rho[i] *= r[i] * r[i] / ((delta + t * v[i]) * (1.0 + t * r[i])) / (2.0 * M_PI);
 }
 
 static void _nc_galaxy_shape_factor_spectral_h (const NcGalaxyShapeFactorSpectralKernel *k, const gdouble a, const gdouble b, const guint n, const gdouble *r, const gdouble cos_0, const gdouble sin_0, gdouble *h, gdouble *d, gdouble *x);
