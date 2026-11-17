@@ -125,6 +125,7 @@ void test_nc_xcor_component_table_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
+void test_nc_galaxy_pz_bspline_sqrt_basic (void);
 void test_nc_galaxy_redshift_factor_spline_basic (void);
 void test_nc_galaxy_redshift_binning_basic (void);
 void test_nc_galaxy_redshift_pop_basic (void);
@@ -238,6 +239,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
+  g_test_add_func ("/nc/galaxy/pz_bspline_sqrt/basic", test_nc_galaxy_pz_bspline_sqrt_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_spline/basic", test_nc_galaxy_redshift_factor_spline_basic);
   g_test_add_func ("/nc/galaxy/redshift_binning/basic", test_nc_galaxy_redshift_binning_basic);
   g_test_add_func ("/nc/galaxy/redshift_pop/basic", test_nc_galaxy_redshift_pop_basic);
@@ -1997,6 +1999,39 @@ test_nc_galaxy_redshift_factor_composed_basic (void)
   g_assert_true (NC_IS_GALAXY_REDSHIFT_FACTOR_COMPOSED (gsdrc));
 
   NCM_TEST_FREE (nc_galaxy_redshift_factor_composed_free, gsdrc);
+}
+
+void
+test_nc_galaxy_pz_bspline_sqrt_basic (void)
+{
+  NcmVector *zv = ncm_vector_new (8);
+  NcmVector *pv = ncm_vector_new (8);
+  NcGalaxyPzBSplineSqrt *gpzs;
+  NcGalaxyPz *gpz2;
+  guint i;
+
+  for (i = 0; i < 8; i++)
+  {
+    ncm_vector_set (zv, i, 0.1 * i);
+    ncm_vector_set (pv, i, 1.0 + i);
+  }
+
+  gpzs = nc_galaxy_pz_bspline_sqrt_new_from_table (zv, pv);
+
+  ncm_vector_free (zv);
+  ncm_vector_free (pv);
+
+  g_assert_true (gpzs != NULL);
+  g_assert_true (NC_IS_GALAXY_PZ_BSPLINE_SQRT (gpzs));
+  g_assert_true (NC_IS_GALAXY_PZ (gpzs));
+
+  gpz2 = nc_galaxy_pz_ref (NC_GALAXY_PZ (gpzs));
+  nc_galaxy_pz_clear (&gpz2);
+  g_assert_true (gpz2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_PZ_BSPLINE_SQRT (gpzs));
+
+  NCM_TEST_FREE (nc_galaxy_pz_free, NC_GALAXY_PZ (gpzs));
 }
 
 void

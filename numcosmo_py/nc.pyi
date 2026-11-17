@@ -102,6 +102,7 @@ GALAXY_HOD_ZHENG07_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_HOD_ZHENG07_DEFAULT_SIGMA_LOG_M: float = 0.26
 GALAXY_POSITION_FACTOR_COL_DEC: str = r"dec"
 GALAXY_POSITION_FACTOR_COL_RA: str = r"ra"
+GALAXY_PZ_BSPLINE_SQRT_ORDER: int = 6
 GALAXY_REDSHIFT_FACTOR_COL_Z: str = r"z"
 GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0: str = r"sigma0"
 GALAXY_REDSHIFT_OBS_GAUSS_COL_ZP: str = r"zp"
@@ -8452,6 +8453,97 @@ class GalaxyPositionFactorIntegrand(GObject.GBoxed):
     def eval(self, data: GalaxyPositionFactorData) -> float: ...
     def free(self) -> None: ...
     def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+
+class GalaxyPz(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyPz(**properties)
+
+    Object NcGalaxyPz
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    parent_instance: GObject.Object = ...
+    @staticmethod
+    def clear(gpz: GalaxyPz) -> None: ...
+    def do_eval_ln_p(self, z: float) -> float: ...
+    def do_eval_p(self, z: float) -> float: ...
+    def do_gen(self, rng: NumCosmoMath.RNG) -> float: ...
+    def do_get_norm(self) -> float: ...
+    def do_get_range(self) -> typing.Tuple[float, float]: ...
+    def eval_ln_p(self, z: float) -> float: ...
+    def eval_p(self, z: float) -> float: ...
+    def free(self) -> None: ...
+    def gen(self, rng: NumCosmoMath.RNG) -> float: ...
+    def get_norm(self) -> float: ...
+    def get_range(self) -> typing.Tuple[float, float]: ...
+    def ref(self) -> GalaxyPz: ...
+
+class GalaxyPzBSplineSqrt(GalaxyPz):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyPzBSplineSqrt(**properties)
+        new(s:NumCosmoMath.BSpline) -> NumCosmo.GalaxyPzBSplineSqrt
+        new_from_table(zv:NumCosmoMath.Vector, pv:NumCosmoMath.Vector) -> NumCosmo.GalaxyPzBSplineSqrt
+
+    Object NcGalaxyPzBSplineSqrt
+
+    Properties from NcGalaxyPzBSplineSqrt:
+      bspline -> NcmBSpline: bspline
+        B-spline whose square is the density
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        bspline: NumCosmoMath.BSpline
+
+    props: Props = ...
+    def __init__(self, bspline: NumCosmoMath.BSpline = ...) -> None: ...
+    @classmethod
+    def new(cls, s: NumCosmoMath.BSpline) -> GalaxyPzBSplineSqrt: ...
+    @classmethod
+    def new_from_table(
+        cls, zv: NumCosmoMath.Vector, pv: NumCosmoMath.Vector
+    ) -> GalaxyPzBSplineSqrt: ...
+    def peek_bspline(self) -> NumCosmoMath.BSpline: ...
+
+class GalaxyPzBSplineSqrtClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyPzBSplineSqrtClass()
+    """
+
+    parent_class: GalaxyPzClass = ...
+
+class GalaxyPzClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyPzClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    get_range: typing.Callable[[GalaxyPz], typing.Tuple[float, float]] = ...
+    eval_p: typing.Callable[[GalaxyPz, float], float] = ...
+    eval_ln_p: typing.Callable[[GalaxyPz, float], float] = ...
+    get_norm: typing.Callable[[GalaxyPz], float] = ...
+    gen: typing.Callable[[GalaxyPz, NumCosmoMath.RNG], float] = ...
+    padding: list[None] = ...
 
 class GalaxyRedshiftBinning(GObject.Object):
     r"""

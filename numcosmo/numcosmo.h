@@ -184,6 +184,8 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_hod_zheng07.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_pz.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_pz_bspline_sqrt.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor_composed.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h>
