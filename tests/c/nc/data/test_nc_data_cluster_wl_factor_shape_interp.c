@@ -77,6 +77,7 @@ void test_nc_data_cluster_wl_factor_shape_interp_expand (TestNcDataClusterWLFact
 void test_nc_data_cluster_wl_factor_shape_interp_expand_wide (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite (void);
 void test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite_subprocess (void);
+void test_nc_data_cluster_wl_factor_shape_interp_record_cache (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -106,6 +107,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/expand/rewrite", &test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite);
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/expand/rewrite/subprocess",
                    &test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite_subprocess);
+  g_test_add ("/nc/data_cluster_wl_factor/shape_interp/record_cache", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (SHAPE_INTERP_SPECTRAL),
+              &test_nc_data_cluster_wl_factor_shape_interp_new,
+              &test_nc_data_cluster_wl_factor_shape_interp_record_cache,
+              &test_nc_data_cluster_wl_factor_shape_interp_free);
 
   g_test_run ();
 
@@ -480,5 +485,59 @@ test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite_subprocess (void)
   nc_data_cluster_wl_factor_set_obs (test.dcwlf, obs_dup);
   ncm_model_param_set_upper_bound (ncm_mset_peek (test.mset, nc_galaxy_shape_pop_id ()), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.255);
   nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, obs_dup);
+}
+
+/*
+ * nc_galaxy_shape_factor_spectral_check_record() compares the record of a catalog with a
+ * fit without aborting: it agrees with the shape factor and population that wrote it, and
+ * not with another interp-abstol, an expansion the record does not hold, or an empty record.
+ * A catalog whose metadata names a cache of interpolants that is not attached is warned
+ * about when it is read.
+ */
+void
+test_nc_data_cluster_wl_factor_shape_interp_record_cache (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
+{
+  NcGalaxyShapePop *pop              = NC_GALAXY_SHAPE_POP (ncm_mset_peek (test->mset, nc_galaxy_shape_pop_id ()));
+  NcGalaxyShapeFactorSpectral *other = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcmObjDictStr *empty               = ncm_obj_dict_str_new ();
+  NcGalaxyWLObs *obs_plain           = _shape_interp_round_trip (test->obs);
+  NcmVarDict *meta                   = ncm_var_dict_new ();
+  NcGalaxyShapeFactorSpectral *gsfs;
+  NcmObjDictStr *source;
+  gchar *diff = NULL;
+
+  nc_data_cluster_wl_factor_write_shape_interp (test->dcwlf, test->mset, test->obs);
+  g_object_get (test->dcwlf, "shape-factor", &gsfs, NULL);
+  source = nc_galaxy_wl_obs_peek_shape_interp_source (test->obs);
+  g_assert_nonnull (source);
+
+  g_assert_true (nc_galaxy_shape_factor_spectral_check_record (gsfs, pop, source, 0, &diff));
+  g_assert_null (diff);
+
+  nc_galaxy_shape_factor_spectral_set_use_interp (other, TRUE);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (other, 1.0e-6);
+  g_assert_false (nc_galaxy_shape_factor_spectral_check_record (other, pop, source, 0, &diff));
+  g_assert_nonnull (strstr (diff, "interp-abstol"));
+  g_clear_pointer (&diff, g_free);
+
+  g_assert_false (nc_galaxy_shape_factor_spectral_check_record (gsfs, pop, source, 5, &diff));
+  g_assert_nonnull (strstr (diff, "expansion"));
+  g_clear_pointer (&diff, g_free);
+
+  g_assert_false (nc_galaxy_shape_factor_spectral_check_record (gsfs, pop, empty, 0, NULL));
+
+  /* A catalog naming a cache that is not attached */
+  ncm_var_dict_set_string (meta, "shape_interp_cache", "galaxies.interp.gvar");
+  ncm_catalog_set_meta (NCM_CATALOG (obs_plain), meta);
+  nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs_plain);
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*names the cache of interpolants `galaxies.interp.gvar', which is not attached*");
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+  g_test_assert_expected_messages ();
+
+  ncm_var_dict_unref (meta);
+  nc_galaxy_wl_obs_free (obs_plain);
+  ncm_obj_dict_str_unref (empty);
+  nc_galaxy_shape_factor_spectral_free (other);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
 }
 
