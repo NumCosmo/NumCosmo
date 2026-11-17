@@ -363,6 +363,17 @@ computes of the order of $10^3$ integrals, so the approximation reduces the cost
 parameters of the population are fixed, and increases it when they change at every step
 unless a galaxy is evaluated at more shears per step than the build computes.
 
+Once built, each panel of the approximation is trimmed
+([Trimming and Evaluation at Many Points](../../../ncm/algebra/spectral_polar.qmd#trimming-and-evaluation-at-many-points))
+with the tolerance $10^{-4}$ times `interp-abstol`, so that $\ln P$ changes by at most
+$10^{-4}$ `interp-abstol` at any point, well below the error of the approximation itself;
+prepared catalogs store the trimmed panels. Catalogs written before panels could be trimmed
+load untrimmed: they give the same values, and are regenerated for the smaller size and the
+faster evaluation. The nodes of the redshift integral of one galaxy are evaluated together
+([[numcosmo|nc_galaxy_shape_factor_eval_nodes]]): the approximation is checked once per
+galaxy, and the shears that fall in one panel are evaluated several at a time. These values
+are those of the evaluation at one shear within rounding, not bit for bit.
+
 ## Measured Accuracy
 
 The reference is the Arb tool `tests/tools/nc_galaxy_shape_marginal_arb.c`, which

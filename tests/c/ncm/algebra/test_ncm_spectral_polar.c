@@ -768,18 +768,19 @@ test_ncm_spectral_polar_first_doubling (TestNcmSpectralPolar *test, gconstpointe
       for (p = 0; p < ncm_matrix_nrows (panels); p++)
       {
         gdouble ra, rb, ta, tb;
-        guint l_r, l_theta;
+        guint n_r, n_theta;
 
-        ncm_spectral_polar_panels_peek_panel (spp, p, &ra, &rb, &ta, &tb, &l_r, &l_theta);
+        ncm_spectral_polar_panels_peek_panel (spp, p, &ra, &rb, &ta, &tb, &n_r, &n_theta);
         g_assert_cmpfloat (ncm_matrix_get (panels, p, 0), ==, ra);
         g_assert_cmpfloat (ncm_matrix_get (panels, p, 1), ==, rb);
         g_assert_cmpfloat (ncm_matrix_get (panels, p, 2), ==, ta);
         g_assert_cmpfloat (ncm_matrix_get (panels, p, 3), ==, tb);
-        g_assert_cmpuint ((guint) ncm_matrix_get (panels, p, 4), ==, l_r);
-        g_assert_cmpuint ((guint) ncm_matrix_get (panels, p, 5), ==, l_theta);
+        /* The build stores the coefficient counts 2^l + 1 of the levels l */
+        g_assert_cmpuint ((1u << (guint) ncm_matrix_get (panels, p, 4)) + 1, ==, n_r);
+        g_assert_cmpuint ((1u << (guint) ncm_matrix_get (panels, p, 5)) + 1, ==, n_theta);
 
-        r_above_min = r_above_min || (l_r > mins[i]);
-        t_above_min = t_above_min || (l_theta > mins[i]);
+        r_above_min = r_above_min || (n_r > (1u << mins[i]) + 1);
+        t_above_min = t_above_min || (n_theta > (1u << mins[i]) + 1);
       }
 
       /* Refined in the directions of the function, and only in them */

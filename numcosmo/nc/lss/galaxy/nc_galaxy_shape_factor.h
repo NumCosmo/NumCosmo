@@ -134,8 +134,18 @@ struct _NcGalaxyShapeFactorClass
    * prefetches nothing. */
   void (*data_prefetch) (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage);
 
+  /* Writes to @out[j], for j < @n, eval_ln_marginal (when @want_log) or
+   * eval_marginal at (@g_1[j], @g_2[j]), all for the galaxy of @data and the
+   * same observed ellipticity, as nc_galaxy_shape_factor_eval_at_nodes() and
+   * nc_galaxy_shape_factor_eval_ln_at_nodes() need for the nodes of one
+   * galaxy. A subclass overrides it to do once per galaxy what it would do
+   * once per point; the results are those of the per-point hooks within
+   * rounding (see nc_galaxy_shape_factor_eval_nodes()).
+   * The default calls the per-point hook for each j. */
+  void (*eval_nodes) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[11];
+  gpointer padding[10];
 };
 
 /*
@@ -224,6 +234,7 @@ void nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *
 gdouble nc_galaxy_shape_factor_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 gdouble nc_galaxy_shape_factor_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 void nc_galaxy_shape_factor_eval_ln_marginal_array (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const NcmVector *g_1, const NcmVector *g_2, const NcmVector *epsilon_obs_1, const NcmVector *epsilon_obs_2, NcmVector *out);
+void nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 
 #define NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1 "epsilon_int_1"
 #define NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2 "epsilon_int_2"

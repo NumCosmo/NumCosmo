@@ -4,10 +4,13 @@
  *  Wed Nov 11 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2026 <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -49,12 +52,15 @@ void ncm_spectral_polar_panels_append_data (NcmSpectralPolarPanels *spp, gdouble
 
 guint ncm_spectral_polar_panels_get_n_panels (NcmSpectralPolarPanels *spp);
 void ncm_spectral_polar_panels_get_range (NcmSpectralPolarPanels *spp, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb);
-const gdouble *ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb, guint *l_r, guint *l_theta);
+const gdouble *ncm_spectral_polar_panels_peek_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb, guint *n_r, guint *n_theta);
+void ncm_spectral_polar_panels_trim (NcmSpectralPolarPanels *spp, gdouble tol);
 NcmMatrix *ncm_spectral_polar_panels_get_panel (NcmSpectralPolarPanels *spp, guint i, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb);
 guint ncm_spectral_polar_panels_find_panel (NcmSpectralPolarPanels *spp, gdouble r, gdouble theta);
+guint ncm_spectral_polar_panels_find_panel_near (NcmSpectralPolarPanels *spp, guint hint, gdouble r, gdouble theta);
 
 gdouble ncm_spectral_polar_panels_eval (NcmSpectralPolarPanels *spp, gdouble r, gdouble theta);
 gdouble ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble r, gdouble theta);
+void ncm_spectral_polar_panels_eval_on_array (NcmSpectralPolarPanels *spp, guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out);
 
 G_END_DECLS
 

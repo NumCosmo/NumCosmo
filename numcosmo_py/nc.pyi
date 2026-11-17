@@ -9645,6 +9645,21 @@ class GalaxyShapeFactorClass(GObject.GPointer):
     data_prefetch: typing.Callable[
         [GalaxyShapeFactor, GalaxyShapeFactorData, int], None
     ] = ...
+    eval_nodes: typing.Callable[
+        [
+            GalaxyShapeFactor,
+            GalaxyShapePop,
+            GalaxyShapeFactorData,
+            int,
+            float,
+            float,
+            float,
+            float,
+            bool,
+            float,
+        ],
+        None,
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyShapeFactorData(GObject.GBoxed):
