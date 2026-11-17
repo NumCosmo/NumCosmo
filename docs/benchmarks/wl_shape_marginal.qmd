@@ -489,13 +489,12 @@ instead, when the shape factor is Spectral with `use_interp=true`: it builds the
 of all the galaxies of the catalog in parallel and keeps them in a cache file beside the
 catalog, which the experiment names and every run attaches (see the caches of interpolants
 in the theory page of the Spectral factor). The table below gives the measurements on the
-HSC field HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE), made with the former
-command `wl-catalog shape-interp`, which builds the same interpolants into the catalog
-itself.
+HSC field HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE), made with a former
+command that built the same interpolants into the catalog itself.
 
 | HWL16a-094, 2,200 galaxies | time |
 |---|---|
-| `wl-catalog shape-interp`, 12 threads | 44 s |
+| the build of every interpolant, 12 threads | 44 s |
 | the same build on 1 thread (`nc_data_cluster_wl_factor_data_prepare()`) | 450 s |
 | first $-2\ln L$ of an experiment from the prepared catalog | 0.02 s |
 | first $-2\ln L$ of the same experiment from the original catalog (builds every interpolant) | 447 s |
