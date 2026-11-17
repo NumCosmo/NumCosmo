@@ -35,6 +35,7 @@
 #include "nc/lss/halo/nc_halo_mass_summary.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "ncm/algebra/ncm_matrix.h"
+#include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -287,25 +288,10 @@ _nc_galaxy_shape_factor_moments_node (const gdouble lo, const gdouble hi, const 
 void
 _nc_galaxy_shape_factor_moments_clenshaw_raw (const guint n_comp, const gdouble *coef, const guint d, const gdouble t, gdouble *out)
 {
-  const gdouble t2 = 2.0 * t;
   guint a;
 
   for (a = 0; a < n_comp; a++)
-  {
-    gdouble b1 = 0.0;
-    gdouble b2 = 0.0;
-    guint k;
-
-    for (k = d; k >= 1; k--)
-    {
-      const gdouble b0 = t2 * b1 - b2 + coef[n_comp * k + a];
-
-      b2 = b1;
-      b1 = b0;
-    }
-
-    out[a] = t * b1 - b2 + coef[a];
-  }
+    out[a] = ncm_spectral_clenshaw (&coef[a], d + 1, n_comp, t);
 }
 
 /* Grows *@table to hold @n_coef coefficients right after the header and

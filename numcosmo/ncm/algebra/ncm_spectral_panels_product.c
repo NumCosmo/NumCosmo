@@ -58,6 +58,7 @@
 
 #include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "ncm/algebra/ncm_spectral.h"
+#include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 #include "ncm/core/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -627,7 +628,6 @@ _ncm_spectral_panels_product_group (NcmSpectralPanelsProduct *prod, NcmSpectralP
 }
 
 static const gdouble *_ncm_spectral_panels_product_gl (NcmSpectralPanelsProductWork *work, const guint M);
-static void _ncm_spectral_panels_product_clenshaw_nodes (const gdouble *c, const guint N, const gdouble *s, const guint M, gdouble *b1, gdouble *b2, gdouble *f);
 
 /*
  * Integrates the one row r0 of a group on the cells of work->edges by Gauss-Legendre
@@ -683,8 +683,8 @@ _ncm_spectral_panels_product_row (NcmSpectralPanelsProduct *prod, NcmSpectralPan
       s2[ig] = ncm_spectral_x_to_s (pa2, pb2, group->c2 * x);
     }
 
-    _ncm_spectral_panels_product_clenshaw_nodes (c1 + (gsize) row1 * n1, n1, s1, M, b1, b2, f1);
-    _ncm_spectral_panels_product_clenshaw_nodes (c2 + (gsize) row2 * n2, n2, s2, M, b1, b2, f2);
+    ncm_spectral_clenshaw_points (c1 + (gsize) row1 * n1, n1, M, s1, b1, b2, f1);
+    ncm_spectral_clenshaw_points (c2 + (gsize) row2 * n2, n2, M, s2, b1, b2, f2);
 
     for (ig = 0; ig < M; ig++)
     {
@@ -699,39 +699,6 @@ _ncm_spectral_panels_product_row (NcmSpectralPanelsProduct *prod, NcmSpectralPan
 
     g_array_index (work->sum, gdouble, r) += s_p1 * half * acc;
   }
-}
-
-/*
- * Evaluates the Chebyshev series c of N terms at the M points s into f, with b1 and b2 of
- * M entries as scratch: one pass over the coefficients carries the M recurrences, which are
- * independent of each other.
- */
-static void
-_ncm_spectral_panels_product_clenshaw_nodes (const gdouble *c, const guint N, const gdouble *s, const guint M, gdouble *b1, gdouble *b2, gdouble *f)
-{
-  guint g, n;
-
-  for (g = 0; g < M; g++)
-  {
-    b1[g] = 0.0;
-    b2[g] = 0.0;
-  }
-
-  for (n = N - 1; n >= 1; n--)
-  {
-    const gdouble cn = c[n];
-
-    for (g = 0; g < M; g++)
-    {
-      const gdouble b0 = 2.0 * s[g] * b1[g] - b2[g] + cn;
-
-      b2[g] = b1[g];
-      b1[g] = b0;
-    }
-  }
-
-  for (g = 0; g < M; g++)
-    f[g] = s[g] * b1[g] - b2[g] + c[0];
 }
 
 /* The M Gauss-Legendre nodes and weights on [-1, 1], interleaved, made once per work space */

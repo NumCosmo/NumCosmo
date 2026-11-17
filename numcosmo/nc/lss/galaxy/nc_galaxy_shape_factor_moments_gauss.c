@@ -87,6 +87,7 @@
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_private.h"
+#include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 #include "ncm/core/ncm_memory_pool.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -447,31 +448,8 @@ _nc_galaxy_shape_factor_moments_gauss_moments (const NcGalaxyShapeFactorMomentsT
   const guint j       = _nc_galaxy_shape_factor_moments_panel_index (table, ghat);
   const gdouble t     = _nc_galaxy_shape_factor_moments_panel_arg (table, j, ghat);
   const gdouble *coef = &table->coef[table->off[j]];
-  const guint d       = table->deg[j];
-  const gdouble t2    = 2.0 * t;
-  gdouble a1 = 0.0, a2 = 0.0, b1 = 0.0, b2 = 0.0, c1 = 0.0, c2 = 0.0;
-  guint k;
 
-  /* x0 = t2 x1 + (ck - x2): ck and x2 are known before x1 is, so each
-   * loop-carried chain contains only the multiply-add. */
-  for (k = d; k >= 1; k--)
-  {
-    const gdouble *ck = &coef[NC_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS_N_COMP * k];
-    const gdouble a0  = t2 * a1 + (ck[0] - a2);
-    const gdouble b0  = t2 * b1 + (ck[1] - b2);
-    const gdouble c0  = t2 * c1 + (ck[2] - c2);
-
-    a2 = a1;
-    a1 = a0;
-    b2 = b1;
-    b1 = b0;
-    c2 = c1;
-    c1 = c0;
-  }
-
-  m[0] = t * a1 - a2 + coef[0];
-  m[1] = t * b1 - b2 + coef[1];
-  m[2] = t * c1 - c2 + coef[2];
+  ncm_spectral_clenshaw_series (coef, table->deg[j] + 1, NC_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS_N_COMP, t, m);
 }
 
 /*

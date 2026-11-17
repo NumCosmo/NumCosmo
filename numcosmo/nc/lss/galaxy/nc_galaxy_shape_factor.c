@@ -71,6 +71,7 @@
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "ncm/core/ncm_prefetch_private.h"
+#include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 #include "ncm/core/ncm_vmath_private.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/background/nc_hicosmo.h"
@@ -319,24 +320,11 @@ _nc_galaxy_shape_factor_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *
 /* Points per call of eval_nodes in _nc_galaxy_shape_factor_eval_line(). */
 #define NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK 64
 
-/* The Chebyshev series coeffs of a line table on [t_min, t_max] at t, by Clenshaw's recurrence */
+/* The Chebyshev series coeffs of a line table on [t_min, t_max] at t */
 static inline gdouble
 _nc_galaxy_shape_factor_line_series (const gdouble *c, const guint nc, const gdouble t_min, const gdouble t_max, const gdouble t)
 {
-  const gdouble s = (2.0 * t - (t_max + t_min)) / (t_max - t_min);
-  gdouble b1      = 0.0;
-  gdouble b2      = 0.0;
-  guint l;
-
-  for (l = nc - 1; l >= 1; l--)
-  {
-    const gdouble b0 = 2.0 * s * b1 - b2 + c[l];
-
-    b2 = b1;
-    b1 = b0;
-  }
-
-  return s * b1 - b2 + c[0];
+  return ncm_spectral_clenshaw (c, nc, 1, (2.0 * t - (t_max + t_min)) / (t_max - t_min));
 }
 
 /*

@@ -46,6 +46,7 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral_panels.h"
+#include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include <math.h>
 #include <float.h>
@@ -239,8 +240,6 @@ ncm_spectral_panels_class_init (NcmSpectralPanelsClass *klass)
                                                          G_VARIANT_TYPE ("(adaad)"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
-
-static gdouble _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s);
 
 /**
  * ncm_spectral_panels_new:
@@ -534,7 +533,7 @@ ncm_spectral_panels_eval (NcmSpectralPanels *sp, gdouble x, NcmVector *fval)
   const gdouble s  = ncm_spectral_x_to_s (a, b, x);
 
   for (r = 0; r < sp->fdim; r++)
-    ncm_vector_set (fval, r, _ncm_spectral_panels_clenshaw (c + (gsize) r * N, N, s));
+    ncm_vector_set (fval, r, ncm_spectral_clenshaw (c + (gsize) r * N, N, 1, s));
 }
 
 /**
@@ -573,27 +572,7 @@ ncm_spectral_panels_eval_row_on (NcmSpectralPanels *sp, guint i, guint r, gdoubl
   guint N;
   const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
 
-  return _ncm_spectral_panels_clenshaw (c + (gsize) r * N, N, ncm_spectral_x_to_s (a, b, x));
-}
-
-/* The series of N coefficients c at s in [-1, 1] by the Clenshaw recurrence */
-static gdouble
-_ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
-{
-  const gdouble two_s = 2.0 * s;
-  gdouble b_1         = 0.0;
-  gdouble b_2         = 0.0;
-  gint n;
-
-  for (n = (gint) N - 1; n >= 1; n--)
-  {
-    const gdouble b_0 = two_s * b_1 - b_2 + c[n];
-
-    b_2 = b_1;
-    b_1 = b_0;
-  }
-
-  return s * b_1 - b_2 + c[0];
+  return ncm_spectral_clenshaw (c + (gsize) r * N, N, 1, ncm_spectral_x_to_s (a, b, x));
 }
 
 /**

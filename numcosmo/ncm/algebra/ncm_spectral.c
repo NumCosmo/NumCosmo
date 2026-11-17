@@ -58,6 +58,7 @@
 
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/algebra/ncm_spectral_private.h"
+#include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 #include <math.h>
@@ -2061,24 +2062,9 @@ ncm_spectral_chebyshev_eval (GArray *c, gdouble s)
     return sum;
   }
 
+  /* Clenshaw recurrence for interior points */
   if (fabs (s) < threshold)
-  {
-    /* Clenshaw recurrence for interior points */
-    gdouble b_kplus1 = 0.0;
-    gdouble b_kplus2 = 0.0;
-    gdouble two_s    = s + s;
-    gint k;
-
-    for (k = (gint) N - 1; k >= 1; k--)
-    {
-      gdouble b_k = two_s * b_kplus1 - b_kplus2 + c_data[k];
-
-      b_kplus2 = b_kplus1;
-      b_kplus1 = b_k;
-    }
-
-    return s * b_kplus1 - b_kplus2 + c_data[0];
-  }
+    return ncm_spectral_clenshaw (c_data, N, 1, s);
 
   /* Near +1 : Reinsch modification */
   if (s > 0.0)

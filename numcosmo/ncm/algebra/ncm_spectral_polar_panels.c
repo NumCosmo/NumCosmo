@@ -861,16 +861,20 @@ ncm_spectral_polar_panels_eval (NcmSpectralPolarPanels *spp, gdouble r, gdouble 
 }
 
 /*
- * Lanes of ncm_spectral_polar_panels_eval_on_array(): the series of one panel at W points
- * at once, W a constant at each call site (the function is always inlined), so that the
- * loops over the points vectorize. Each coefficient is loaded once and used by every
- * point, and two angular rows run together, so that each point has two independent
- * radial recurrences. Every point goes through the operations of
- * ncm_spectral_polar_panels_eval_on() in the same order, so the two differ only where the
- * compiler contracts them into fma differently (ncm_spectral_polar_panels_eval_on_array()).
- * r and theta are read before out is written, so out may be r or theta.
+ * The series of one panel at W points, R angular rows at a time: the kernel of both
+ * ncm_spectral_polar_panels_eval_on() (W = 1) and ncm_spectral_polar_panels_eval_on_array()
+ * (W points). W and R are constants at each call site (the function is always inlined),
+ * so the loops over them unroll and the loop over the points vectorizes. Each step of a
+ * recurrence is 2 s b_1 + (c_k - b_2), see ncm_spectral_clenshaw_private.h. The radial
+ * recurrences of different angular rows are independent: R of them run together, which
+ * gives each point R independent chains, and each coefficient is loaded once for the W
+ * points. Their results enter the angular recurrence one at a time, from the highest row
+ * down, so the operations on a point do not depend on W or R; the two entry points then
+ * differ only where the compiler contracts them into fma differently. r and theta are
+ * read before out is written, so out may be r or theta.
  */
 #define NCM_SPECTRAL_POLAR_PANELS_LANES_MAX 8
+#define NCM_SPECTRAL_POLAR_PANELS_ROWS_MAX 4
 
 /* G_ALWAYS_INLINE is GLib 2.74; NumCosmo needs 2.54 */
 #if defined (__GNUC__) || defined (__clang__)
@@ -879,122 +883,61 @@ ncm_spectral_polar_panels_eval (NcmSpectralPolarPanels *spp, gdouble r, gdouble 
 #define NCM_SPECTRAL_POLAR_PANELS_ALWAYS_INLINE
 #endif
 
+/*
+ * Rows l down to l - Q + 1 of the kernel below, Q a constant: their radial recurrences at
+ * the W points, together, then their results into the angular recurrence (B1, B2), one
+ * row at a time; at row 0 the angular recurrence ends and out is written.
+ */
 NCM_SPECTRAL_POLAR_PANELS_ALWAYS_INLINE static inline void
-_ncm_spectral_polar_panels_eval_lanes (const NcmSpectralPolarPanelsPanel *panel, const gdouble *c, const guint W,
-                                       const gdouble *r, const gdouble *theta, gdouble *out)
+_ncm_spectral_polar_panels_eval_rows (const gdouble *c, const gsize ld, const guint n, const guint W, const guint Q, const gint l,
+                                      const gdouble *sr, const gdouble *sr2, const gdouble *st, const gdouble *st2,
+                                      gdouble *B1, gdouble *B2, gdouble *out)
 {
-  const guint n    = panel->n_r - 1;
-  const gsize ld   = panel->n_r;
-  const gdouble ra = panel->ra;
-  const gdouble rb = panel->rb;
-  const gdouble ta = panel->ta;
-  const gdouble tb = panel->tb;
-  gdouble sr[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], st[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
-  gdouble sr2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], st2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
-  gdouble B1[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], B2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
-  gdouble a1[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], a2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
-  gdouble b1[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], b2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
-  gint l = (gint) panel->n_theta - 1;
-  guint k, w;
+  gdouble b1[NCM_SPECTRAL_POLAR_PANELS_ROWS_MAX][NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
+  gdouble b2[NCM_SPECTRAL_POLAR_PANELS_ROWS_MAX][NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
+  guint k, q, w;
 
-  #pragma omp simd
-
-  for (w = 0; w < W; w++)
+  for (q = 0; q < Q; q++)
   {
-    /* As in ncm_spectral_polar_panels_eval_on(), operation by operation */
-    sr[w]  = (2.0 * r[w] - ra - rb) / (rb - ra);
-    st[w]  = (2.0 * theta[w] - ta - tb) / (tb - ta);
-    sr2[w] = 2.0 * sr[w];
-    st2[w] = 2.0 * st[w];
-    B1[w]  = 0.0;
-    B2[w]  = 0.0;
-  }
-
-  /* Two rows, l and l - 1, while both enter the angular recurrence before its last step */
-  for ( ; l >= 2; l -= 2)
-  {
-    const gdouble *c0 = c + (gsize) l * ld;
-    const gdouble *c1 = c0 - ld;
-
     #pragma omp simd
 
     for (w = 0; w < W; w++)
     {
-      a1[w] = 0.0;
-      a2[w] = 0.0;
-      b1[w] = 0.0;
-      b2[w] = 0.0;
-    }
-
-    for (k = n; k > 0; k--)
-    {
-      const gdouble x0 = c0[k];
-      const gdouble x1 = c1[k];
-
-      #pragma omp simd
-
-      for (w = 0; w < W; w++)
-      {
-        const gdouble a0 = sr2[w] * a1[w] + (x0 - a2[w]);
-        const gdouble b0 = sr2[w] * b1[w] + (x1 - b2[w]);
-
-        a2[w] = a1[w];
-        a1[w] = a0;
-        b2[w] = b1[w];
-        b1[w] = b0;
-      }
-    }
-
-    #pragma omp simd
-
-    for (w = 0; w < W; w++)
-    {
-      const gdouble R0  = sr[w] * a1[w] + (c0[0] - a2[w]);
-      const gdouble R1  = sr[w] * b1[w] + (c1[0] - b2[w]);
-      const gdouble B0  = st2[w] * B1[w] + (R0 - B2[w]);
-      const gdouble B0m = st2[w] * B0 + (R1 - B1[w]);
-
-      B2[w] = B0;
-      B1[w] = B0m;
+      b1[q][w] = 0.0;
+      b2[q][w] = 0.0;
     }
   }
 
-  /* The last one or two rows, ending with row 0 */
-  for ( ; l >= 0; l--)
+  for (k = n; k > 0; k--)
   {
-    const gdouble *row = c + (gsize) l * ld;
-
-    #pragma omp simd
-
-    for (w = 0; w < W; w++)
+    for (q = 0; q < Q; q++)
     {
-      b1[w] = 0.0;
-      b2[w] = 0.0;
-    }
-
-    for (k = n; k > 0; k--)
-    {
-      const gdouble x = row[k];
+      const gdouble x = c[(gsize) (l - (gint) q) * ld + k];
 
       #pragma omp simd
 
       for (w = 0; w < W; w++)
       {
-        const gdouble b0 = sr2[w] * b1[w] + (x - b2[w]);
+        const gdouble b0 = sr2[w] * b1[q][w] + (x - b2[q][w]);
 
-        b2[w] = b1[w];
-        b1[w] = b0;
+        b2[q][w] = b1[q][w];
+        b1[q][w] = b0;
       }
     }
+  }
 
-    if (l > 0)
+  for (q = 0; q < Q; q++)
+  {
+    const gdouble x0 = c[(gsize) (l - (gint) q) * ld];
+
+    if (l - (gint) q > 0)
     {
       #pragma omp simd
 
       for (w = 0; w < W; w++)
       {
-        const gdouble R  = sr[w] * b1[w] + (row[0] - b2[w]);
-        const gdouble B0 = st2[w] * B1[w] + (R - B2[w]);
+        const gdouble Rl = sr[w] * b1[q][w] + (x0 - b2[q][w]);
+        const gdouble B0 = st2[w] * B1[w] + (Rl - B2[w]);
 
         B2[w] = B1[w];
         B1[w] = B0;
@@ -1006,18 +949,55 @@ _ncm_spectral_polar_panels_eval_lanes (const NcmSpectralPolarPanelsPanel *panel,
 
       for (w = 0; w < W; w++)
       {
-        const gdouble R = sr[w] * b1[w] + (row[0] - b2[w]);
+        const gdouble Rl = sr[w] * b1[q][w] + (x0 - b2[q][w]);
 
-        out[w] = st[w] * B1[w] + (R - B2[w]);
+        out[w] = st[w] * B1[w] + (Rl - B2[w]);
       }
     }
   }
 }
 
-/* W lanes for the last nl < W points: the missing lanes repeat the last point */
 NCM_SPECTRAL_POLAR_PANELS_ALWAYS_INLINE static inline void
-_ncm_spectral_polar_panels_eval_lanes_tail (const NcmSpectralPolarPanelsPanel *panel, const gdouble *c, const guint W, const guint nl,
-                                            const gdouble *r, const gdouble *theta, gdouble *out)
+_ncm_spectral_polar_panels_eval_kernel (const NcmSpectralPolarPanelsPanel *panel, const gdouble *c, const guint W, const guint R,
+                                        const gdouble *r, const gdouble *theta, gdouble *out)
+{
+  const guint n    = panel->n_r - 1;
+  const gsize ld   = panel->n_r;
+  const gdouble ra = panel->ra;
+  const gdouble rb = panel->rb;
+  const gdouble ta = panel->ta;
+  const gdouble tb = panel->tb;
+  gdouble sr[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], st[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
+  gdouble sr2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], st2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
+  gdouble B1[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], B2[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
+  gint l = (gint) panel->n_theta - 1;
+  guint w;
+
+  #pragma omp simd
+
+  for (w = 0; w < W; w++)
+  {
+    sr[w]  = (2.0 * r[w] - ra - rb) / (rb - ra);
+    st[w]  = (2.0 * theta[w] - ta - tb) / (tb - ta);
+    sr2[w] = 2.0 * sr[w];
+    st2[w] = 2.0 * st[w];
+    B1[w]  = 0.0;
+    B2[w]  = 0.0;
+  }
+
+  /* Blocks of R rows, the last one possibly ending with row 0, then the rows left one at
+   * a time */
+  for ( ; l + 1 >= (gint) R; l -= (gint) R)
+    _ncm_spectral_polar_panels_eval_rows (c, ld, n, W, R, l, sr, sr2, st, st2, B1, B2, out);
+
+  for ( ; l >= 0; l--)
+    _ncm_spectral_polar_panels_eval_rows (c, ld, n, W, 1, l, sr, sr2, st, st2, B1, B2, out);
+}
+
+/* W points for the last nl < W: the missing lanes repeat the last point */
+NCM_SPECTRAL_POLAR_PANELS_ALWAYS_INLINE static inline void
+_ncm_spectral_polar_panels_eval_kernel_tail (const NcmSpectralPolarPanelsPanel *panel, const gdouble *c, const guint W, const guint nl,
+                                             const gdouble *r, const gdouble *theta, gdouble *out)
 {
   gdouble rr[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], tt[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX], oo[NCM_SPECTRAL_POLAR_PANELS_LANES_MAX];
   guint w;
@@ -1028,7 +1008,7 @@ _ncm_spectral_polar_panels_eval_lanes_tail (const NcmSpectralPolarPanelsPanel *p
     tt[w] = theta[MIN (w, nl - 1)];
   }
 
-  _ncm_spectral_polar_panels_eval_lanes (panel, c, W, rr, tt, oo);
+  _ncm_spectral_polar_panels_eval_kernel (panel, c, W, 2, rr, tt, oo);
 
   for (w = 0; w < nl; w++)
     out[w] = oo[w];
@@ -1044,13 +1024,14 @@ _ncm_spectral_polar_panels_eval_lanes_tail (const NcmSpectralPolarPanelsPanel *p
  * @out: (array length=n): the values
  *
  * Evaluates the series of panel @i at the @n points ($r_j$, $\theta_j$), the values of
- * ncm_spectral_polar_panels_eval_on() at each point within rounding: the two do the same
- * operations in the same order but may contract them into fma differently, so they agree
- * within rounding of the sum of the moduli of the coefficients (1e-13 of it in the tests),
- * not bit for bit. The points are taken several at a time, each coefficient being loaded
- * once for all of them, so that evaluating points that share a panel together costs less
- * than evaluating them one by one. @out may be @r or @theta. @i must be below
- * ncm_spectral_polar_panels_get_n_panels(), which is not checked.
+ * ncm_spectral_polar_panels_eval_on() at each point within rounding: both run the same
+ * kernel, with the same operations in the same order, but the compiler may contract them
+ * into fma differently, so they agree within rounding of the sum of the moduli of the
+ * coefficients (1e-13 of it in the tests), not bit for bit. The points are taken several
+ * at a time, each coefficient being loaded once for all of them, so that evaluating points
+ * that share a panel together costs less than evaluating them one by one. @out may be @r
+ * or @theta. @i must be below ncm_spectral_polar_panels_get_n_panels(), which is not
+ * checked.
  */
 void
 ncm_spectral_polar_panels_eval_on_array (NcmSpectralPolarPanels *spp, guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out)
@@ -1060,24 +1041,25 @@ ncm_spectral_polar_panels_eval_on_array (NcmSpectralPolarPanels *spp, guint i, g
   guint j                                  = 0;
 
   /*
-   * Eight points per pass with AVX-512 and four otherwise, then four for a rest of two or
-   * more and the scalar recurrence for a last point, where the lanes cost more: at one
-   * point four lanes take 1.3 times the scalar time, at two they already take less.
+   * Eight points per pass with AVX-512 and four otherwise, two rows at a time, then four
+   * for a rest of two or more and the one-point kernel for a last point, where the lanes
+   * cost more: at one point four lanes take 1.3 times the scalar time, at two they
+   * already take less.
    */
 #ifdef __AVX512F__
 
   for ( ; j + 8 <= n; j += 8)
-    _ncm_spectral_polar_panels_eval_lanes (panel, c, 8, &r[j], &theta[j], &out[j]);
+    _ncm_spectral_polar_panels_eval_kernel (panel, c, 8, 2, &r[j], &theta[j], &out[j]);
 
 #endif /* __AVX512F__ */
 
   for ( ; j + 4 <= n; j += 4)
-    _ncm_spectral_polar_panels_eval_lanes (panel, c, 4, &r[j], &theta[j], &out[j]);
+    _ncm_spectral_polar_panels_eval_kernel (panel, c, 4, 2, &r[j], &theta[j], &out[j]);
 
   if (n - j >= 2)
-    _ncm_spectral_polar_panels_eval_lanes_tail (panel, c, 4, n - j, &r[j], &theta[j], &out[j]);
+    _ncm_spectral_polar_panels_eval_kernel_tail (panel, c, 4, n - j, &r[j], &theta[j], &out[j]);
   else if (n - j == 1)
-    out[j] = ncm_spectral_polar_panels_eval_on (spp, i, r[j], theta[j]);
+    _ncm_spectral_polar_panels_eval_kernel (panel, c, 1, 4, &r[j], &theta[j], &out[j]);
 }
 
 /**
@@ -1097,107 +1079,11 @@ gdouble
 ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble r, gdouble theta)
 {
   const NcmSpectralPolarPanelsPanel *panel = &g_array_index (spp->panels, NcmSpectralPolarPanelsPanel, i);
-  const gdouble *c                         = &g_array_index (spp->coeffs, gdouble, panel->offset);
-  const guint n                            = panel->n_r - 1;
-  const guint m                            = panel->n_theta - 1;
-  const gsize ld                           = panel->n_r;
-  const gdouble sr                         = (2.0 * r - panel->ra - panel->rb) / (panel->rb - panel->ra);
-  const gdouble st                         = (2.0 * theta - panel->ta - panel->tb) / (panel->tb - panel->ta);
-  const gdouble sr2                        = 2.0 * sr;
-  const gdouble st2                        = 2.0 * st;
-  gdouble B1                               = 0.0;
-  gdouble B2                               = 0.0;
-  gint l                                   = (gint) m;
-  guint k;
+  gdouble out;
 
-  /*
-   * Each step is written as 2 s b_1 + (c_k - b_2): c_k - b_2 does not depend
-   * on the previous step, so the chain of dependent operations is one
-   * multiply-add per step instead of a multiply-add followed by an add. The
-   * radial recurrences of different angular indices are independent, so
-   * they run four at a time, from the highest index down, and their results
-   * enter the angular recurrence in the same order.
-   */
-  for ( ; l >= 3; l -= 4)
-  {
-    const gdouble *c0 = c + (gsize) l * ld;
-    const gdouble *c1 = c0 - ld;
-    const gdouble *c2 = c1 - ld;
-    const gdouble *c3 = c2 - ld;
-    gdouble a1 = 0.0, a2 = 0.0, b1 = 0.0, b2 = 0.0, d1 = 0.0, d2 = 0.0, e1 = 0.0, e2 = 0.0;
-    gdouble R[4];
-    guint q;
+  /* Four radial recurrences at a time, the independent chains of one point */
+  _ncm_spectral_polar_panels_eval_kernel (panel, &g_array_index (spp->coeffs, gdouble, panel->offset), 1, 4, &r, &theta, &out);
 
-    for (k = n; k > 0; k--)
-    {
-      const gdouble a0 = sr2 * a1 + (c0[k] - a2);
-      const gdouble b0 = sr2 * b1 + (c1[k] - b2);
-      const gdouble d0 = sr2 * d1 + (c2[k] - d2);
-      const gdouble e0 = sr2 * e1 + (c3[k] - e2);
-
-      a2 = a1;
-      a1 = a0;
-      b2 = b1;
-      b1 = b0;
-      d2 = d1;
-      d1 = d0;
-      e2 = e1;
-      e1 = e0;
-    }
-
-    R[0] = sr * a1 + (c0[0] - a2);
-    R[1] = sr * b1 + (c1[0] - b2);
-    R[2] = sr * d1 + (c2[0] - d2);
-    R[3] = sr * e1 + (c3[0] - e2);
-
-    for (q = 0; q < 4; q++)
-    {
-      if (l - (gint) q > 0)
-      {
-        const gdouble B0 = st2 * B1 + (R[q] - B2);
-
-        B2 = B1;
-        B1 = B0;
-      }
-      else
-      {
-        return st * B1 + (R[q] - B2);
-      }
-    }
-  }
-
-  for ( ; l >= 0; l--)
-  {
-    const gdouble *row = c + (gsize) l * ld;
-    gdouble b1         = 0.0;
-    gdouble b2         = 0.0;
-    gdouble R;
-
-    for (k = n; k > 0; k--)
-    {
-      const gdouble b0 = sr2 * b1 + (row[k] - b2);
-
-      b2 = b1;
-      b1 = b0;
-    }
-
-    R = sr * b1 + (row[0] - b2);
-
-    if (l > 0)
-    {
-      const gdouble B0 = st2 * B1 + (R - B2);
-
-      B2 = B1;
-      B1 = B0;
-    }
-    else
-    {
-      return st * B1 + (R - B2);
-    }
-  }
-
-  g_assert_not_reached (); /* LCOV_EXCL_LINE */
-
-  return 0.0; /* LCOV_EXCL_LINE */
+  return out;
 }
 
