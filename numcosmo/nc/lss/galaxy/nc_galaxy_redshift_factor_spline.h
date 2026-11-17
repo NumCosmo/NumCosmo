@@ -33,7 +33,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor.h>
-#include <numcosmo/ncm/spline/ncm_spline.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_pz.h>
 
 G_BEGIN_DECLS
 
@@ -47,8 +47,8 @@ NcGalaxyRedshiftFactorSpline *nc_galaxy_redshift_factor_spline_ref (NcGalaxyReds
 void nc_galaxy_redshift_factor_spline_free (NcGalaxyRedshiftFactorSpline *gsdrs);
 void nc_galaxy_redshift_factor_spline_clear (NcGalaxyRedshiftFactorSpline **gsdrs);
 
-void nc_galaxy_redshift_factor_spline_data_set (NcGalaxyRedshiftFactorSpline *gsdrs, NcGalaxyRedshiftFactorData *data, NcmSpline *pz);
-NcmSpline *nc_galaxy_redshift_factor_spline_data_peek (NcGalaxyRedshiftFactorSpline *gsdrs, NcGalaxyRedshiftFactorData *data);
+void nc_galaxy_redshift_factor_spline_data_set (NcGalaxyRedshiftFactorSpline *gsdrs, NcGalaxyRedshiftFactorData *data, NcGalaxyPz *pz);
+NcGalaxyPz *nc_galaxy_redshift_factor_spline_data_peek (NcGalaxyRedshiftFactorSpline *gsdrs, NcGalaxyRedshiftFactorData *data);
 
 G_END_DECLS
 

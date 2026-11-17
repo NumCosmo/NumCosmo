@@ -61,6 +61,7 @@ void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_spline_bspline_basic (void);
+void test_ncm_bspline_basic (void);
 void test_ncm_spline_hermite_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_powspec_analytic_basic (void);
@@ -124,6 +125,7 @@ void test_nc_xcor_component_table_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
+void test_nc_galaxy_pz_bspline_sqrt_basic (void);
 void test_nc_galaxy_redshift_factor_spline_basic (void);
 void test_nc_galaxy_redshift_binning_basic (void);
 void test_nc_galaxy_redshift_pop_basic (void);
@@ -170,6 +172,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
   g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
+  g_test_add_func ("/ncm/bspline/basic", test_ncm_bspline_basic);
   g_test_add_func ("/ncm/spline_hermite/basic", test_ncm_spline_hermite_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
@@ -236,6 +239,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
+  g_test_add_func ("/nc/galaxy/pz_bspline_sqrt/basic", test_nc_galaxy_pz_bspline_sqrt_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_spline/basic", test_nc_galaxy_redshift_factor_spline_basic);
   g_test_add_func ("/nc/galaxy/redshift_binning/basic", test_nc_galaxy_redshift_binning_basic);
   g_test_add_func ("/nc/galaxy/redshift_pop/basic", test_nc_galaxy_redshift_pop_basic);
@@ -808,6 +812,38 @@ test_ncm_spline_bspline_basic (void)
   g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
 
   NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
+}
+
+void
+test_ncm_bspline_basic (void)
+{
+  NcmVector *knots          = ncm_vector_new (5);
+  NcmVector *control_points = ncm_vector_new (3);
+  NcmBSpline *bs, *bs2;
+
+  ncm_vector_set (knots, 0, 0.0);
+  ncm_vector_set (knots, 1, 0.0);
+  ncm_vector_set (knots, 2, 1.0);
+  ncm_vector_set (knots, 3, 2.0);
+  ncm_vector_set (knots, 4, 2.0);
+  ncm_vector_set_all (control_points, 1.0);
+
+  bs = ncm_bspline_new (2, knots, control_points);
+
+  ncm_vector_free (knots);
+  ncm_vector_free (control_points);
+
+  g_assert_true (bs != NULL);
+  g_assert_true (NCM_IS_BSPLINE (bs));
+  g_assert_cmpuint (ncm_bspline_get_order (bs), ==, 2);
+
+  bs2 = ncm_bspline_ref (bs);
+  ncm_bspline_clear (&bs2);
+  g_assert_true (bs2 == NULL);
+
+  g_assert_true (NCM_IS_BSPLINE (bs));
+
+  NCM_TEST_FREE (ncm_bspline_free, bs);
 }
 
 void
@@ -1963,6 +1999,39 @@ test_nc_galaxy_redshift_factor_composed_basic (void)
   g_assert_true (NC_IS_GALAXY_REDSHIFT_FACTOR_COMPOSED (gsdrc));
 
   NCM_TEST_FREE (nc_galaxy_redshift_factor_composed_free, gsdrc);
+}
+
+void
+test_nc_galaxy_pz_bspline_sqrt_basic (void)
+{
+  NcmVector *zv = ncm_vector_new (8);
+  NcmVector *pv = ncm_vector_new (8);
+  NcGalaxyPzBSplineSqrt *gpzs;
+  NcGalaxyPz *gpz2;
+  guint i;
+
+  for (i = 0; i < 8; i++)
+  {
+    ncm_vector_set (zv, i, 0.1 * i);
+    ncm_vector_set (pv, i, 1.0 + i);
+  }
+
+  gpzs = nc_galaxy_pz_bspline_sqrt_new_from_table (zv, pv);
+
+  ncm_vector_free (zv);
+  ncm_vector_free (pv);
+
+  g_assert_true (gpzs != NULL);
+  g_assert_true (NC_IS_GALAXY_PZ_BSPLINE_SQRT (gpzs));
+  g_assert_true (NC_IS_GALAXY_PZ (gpzs));
+
+  gpz2 = nc_galaxy_pz_ref (NC_GALAXY_PZ (gpzs));
+  nc_galaxy_pz_clear (&gpz2);
+  g_assert_true (gpz2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_PZ_BSPLINE_SQRT (gpzs));
+
+  NCM_TEST_FREE (nc_galaxy_pz_free, NC_GALAXY_PZ (gpzs));
 }
 
 void

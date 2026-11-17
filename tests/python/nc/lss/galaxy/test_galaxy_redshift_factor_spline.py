@@ -103,12 +103,17 @@ def _spline_from_composed(variant, zp, sigma0, zp_min, zp_max, n=_N_GRID):
     return spline, zs, pz_vals
 
 
-def _build_spline_scheme(spline):
-    """Spline scheme + a per-galaxy data carrying @spline, fully prepared."""
+def _pz_from_spline(spline):
+    """The NcGalaxyPz of the table of @spline, its knots and values."""
+    return Nc.GalaxyPzBSplineSqrt.new_from_table(spline.peek_xv(), spline.peek_yv())
+
+
+def _build_spline_scheme(spline, gpz=None):
+    """Spline scheme + a per-galaxy data carrying the p(z) of @spline's table."""
     gsdrs = Nc.GalaxyRedshiftFactorSpline.new()
     mset = Ncm.MSet.empty_new()
     data = Nc.GalaxyRedshiftFactorData.new(gsdrs, mset)
-    gsdrs.data_set(data, spline)
+    gsdrs.data_set(data, _pz_from_spline(spline) if gpz is None else gpz)
     gsdrs.update_data(data)
     return gsdrs, mset, data
 
@@ -221,11 +226,12 @@ def test_gen_respects_bounds_and_matches_first_moment(
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
 def test_data_peek_matches_data_set(variant, zp, sigma0, zp_min, zp_max):
-    """data_peek() returns exactly the spline passed to data_set()."""
+    """data_peek() returns exactly the NcGalaxyPz passed to data_set()."""
     spline, _zs, _pz = _spline_from_composed(variant, zp, sigma0, zp_min, zp_max)
-    gsdrs, mset, data = _build_spline_scheme(spline)
+    gpz = _pz_from_spline(spline)
+    gsdrs, mset, data = _build_spline_scheme(spline, gpz)
 
-    assert gsdrs.data_peek(data) == spline
+    assert gsdrs.data_peek(data) == gpz
 
 
 @pytest.mark.parametrize("variant,zp,sigma0,zp_min,zp_max", _CASES)
@@ -258,7 +264,7 @@ def test_read_row_write_row_round_trip(variant, zp, sigma0, zp_min, zp_max):
         Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, ["z"]
     )
     wlobs.set("z", 0, 0.0)
-    wlobs.set_pz(0, spline)
+    wlobs.set_pz(0, _pz_from_spline(spline))
 
     data.read_row(wlobs, 0)
     assert gsdrs.data_peek(data) == wlobs.peek_pz(0)
@@ -270,7 +276,7 @@ def test_read_row_write_row_round_trip(variant, zp, sigma0, zp_min, zp_max):
     data.write_row(other_wlobs, 0)
 
     z_min, z_max = spline.get_bounds()
-    other_z_min, other_z_max = other_wlobs.peek_pz(0).get_bounds()
+    other_z_min, other_z_max = other_wlobs.peek_pz(0).get_range()
     assert_allclose([other_z_min, other_z_max], [z_min, z_max])
 
 

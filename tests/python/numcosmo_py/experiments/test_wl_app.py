@@ -134,13 +134,13 @@ def _build_real_wl_obs(tmp_path: Path, filename: str, with_meta: bool) -> Path:
 
         zs = np.linspace(max(z[i] - 0.3, 0.01), z[i] + 0.3, 16)
         pz_vals = np.exp(-0.5 * ((zs - z[i]) / 0.05) ** 2)
-        spline = Ncm.SplineCubicNotaknot.new()
-        spline.set(
-            Ncm.Vector.new_array(zs.tolist()),
-            Ncm.Vector.new_array(pz_vals.tolist()),
-            True,
+        obs.set_pz(
+            i,
+            Nc.GalaxyPzBSplineSqrt.new_from_table(
+                Ncm.Vector.new_array(zs.tolist()),
+                Ncm.Vector.new_array(pz_vals.tolist()),
+            ),
         )
-        obs.set_pz(i, spline)
 
     if with_meta:
         meta = Ncm.VarDict.new()

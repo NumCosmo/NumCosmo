@@ -250,6 +250,10 @@ math_tests = [
         'sources': ['ncm/spline/test_ncm_spline_bspline.c'],
     },
     {
+        'name': 'ncm_bspline',
+        'sources': ['ncm/spline/test_ncm_bspline.c'],
+    },
+    {
         'name': 'ncm_spline_hermite',
         'sources': ['ncm/spline/test_ncm_spline_hermite.c'],
     },
@@ -813,6 +817,10 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_wl_obs',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
+    },
+    {
+        'name': 'nc_galaxy_pz_bspline_sqrt',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_pz_bspline_sqrt.c'],
     },
     {
         'name': 'nc_galaxy_redshift_factor_spline',

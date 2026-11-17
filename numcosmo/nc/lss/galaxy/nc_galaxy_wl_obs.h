@@ -38,6 +38,7 @@
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_pz.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_polar_panels.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
 #include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
@@ -118,7 +119,7 @@ typedef enum _NcGalaxyWLObsEllipConv /*< prefix=NC_GALAXY_WL_OBS_ELLIP_CONV >*/
  * catalogs shipped in the NumCosmo data file release. Each catalog is a
  * serialized #NcGalaxyWLObs holding one cluster field's background galaxy
  * shape, calibration and photometric redshift (point estimate plus
- * per-galaxy $p(z)$ spline) measurements.
+ * per-galaxy $p(z)$) measurements.
  *
  */
 typedef enum _NcGalaxyWLObsCatalogId /*< prefix=NC_GALAXY_WL_OBS_CATALOG >*/
@@ -144,10 +145,10 @@ void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
 gboolean nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i);
 
 void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val, GError **error);
-void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz);
+void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyPz *pz);
 
 gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i, GError **error);
-NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
+NcGalaxyPz *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 
 void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp);
 NcmSpectralPolarPanels *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);
