@@ -171,9 +171,8 @@ typedef struct _NcDataClusterWLFactorIntArg
 typedef struct _NcDataClusterWLFactorCalibArg
 {
   NcGalaxyRedshiftFactorIntegrand *integ_z_lin;
-  NcGalaxyShapeFactorIntegrand *integ_shape_lin;
+  NcGalaxyShapeFactorLine *line;
   NcGalaxyRedshiftFactorData *z_data;
-  NcGalaxyShapeFactorData *s_data;
 } NcDataClusterWLFactorCalibArg;
 
 /* Linear-domain argument for the cubature product integrand. */
@@ -228,13 +227,15 @@ _nc_data_cluster_wl_factor_calib_pz (gdouble z, gpointer user_data)
 }
 
 /* gsl_function G(z) = P(eps_obs|z): the slowly-varying shape factor probed
- * at the candidate nodes. */
+ * at the candidate nodes, through the galaxy's line (the values of the
+ * linear shape integrand, from a table along the shears when the shape
+ * factor gives one, see nc_galaxy_shape_factor_line_new()). */
 static gdouble
 _nc_data_cluster_wl_factor_calib_shape (gdouble z, gpointer user_data)
 {
   NcDataClusterWLFactorCalibArg *a = (NcDataClusterWLFactorCalibArg *) user_data;
 
-  return nc_galaxy_shape_factor_integrand_eval (a->integ_shape_lin, z, a->s_data);
+  return nc_galaxy_shape_factor_line_eval (a->line, z);
 }
 
 typedef struct _NcDataClusterWLFactorPrivate
@@ -562,7 +563,8 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
        * the grid built from it would be discarded with that data. The
        * resampling path falls through to the global pair, which still builds
        * every structure the rest of prepare() and gen() read. */
-      NcDataClusterWLFactorCalibArg calib_arg = { self->integ_z_lin, self->integ_shape_lin, s_data->z_data, s_data };
+      NcGalaxyShapeFactorLine *line           = nc_galaxy_shape_factor_line_new (self->shape_factor, s_data, bg_lo, z_hi);
+      NcDataClusterWLFactorCalibArg calib_arg = { self->integ_z_lin, line, s_data->z_data };
       gsl_function F                          = { &_nc_data_cluster_wl_factor_calib_pz, &calib_arg };
       gsl_function G                          = { &_nc_data_cluster_wl_factor_calib_shape, &calib_arg };
       const gdouble exact_bg_norm             = (z_lo >= self->z_cl) ? norm : GSL_NAN;
@@ -570,6 +572,7 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
       NcmIntegralFixed *cal                   = ncm_integral_fixed_calibrate (&F, &G, bg_lo, z_hi, self->node_reltol, exact_bg_norm, self->max_total_nodes, &n_nodes_i, &rule_n_i, &relerr);
 
       ncm_integral_fixed_free (cal);
+      nc_galaxy_shape_factor_line_free (line);
 
       /* Accumulate rather than warn: summarised once per prepare() below. */
       G_LOCK (calib_stats);

@@ -271,6 +271,27 @@ def test_distance_zf_get_z_max(capfd, separate_dist):
     np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
 
 
+def test_spectral_calibration_through_the_line_table():
+    """Spectral's calibration evaluates P(eps_obs | z) from the table along the shears of
+    each galaxy (line-abstol, default 1e-8) instead of an integral at every probe: the node
+    pairs are those of the integrals (line-abstol zero), and so is -2lnP within the
+    tolerance of the table."""
+    results = {}
+    for line_abstol in (0.0, 1.0e-8):
+        dcwlf, mset = _build("spectral", "nfw", "composed")
+        dcwlf.props.shape_factor.props.line_abstol = line_abstol
+        dcwlf.data_prepare(mset)
+        assert dcwlf.get_calib_count() > 0
+        results[line_abstol] = (*_node_config(dcwlf), _m2lnP(dcwlf, mset))
+
+    direct, table = results[0.0], results[1.0e-8]
+
+    assert table[0] == direct[0]
+    assert table[1] == direct[1]
+    assert np.all(np.isfinite(table[2]))
+    np.testing.assert_allclose(table[2], direct[2], rtol=1.0e-7, atol=1.0e-7)
+
+
 def test_distance_zf_after_model_swap(capfd):
     """A surface mass density swapped in after the first evaluation, with a distance of
     low zf, is warned about too, although the catalog did not change. The warning is
