@@ -433,7 +433,7 @@ four rows compute 4% to 16% fewer integrals.
 | $a$, $b$ | `a`, `b` |
 | $\alpha_1$ | `b_pop` |
 | $2^{\alpha_o + 1}$, $\alpha_o + \alpha_1 + 2$ of Eq. (4) | `dens_norm`, `dens_pow` of the kernel |
-| $F_t$, $F_t^{-1}$, $\hat{P}_\zeta$ | `map`, `map_inv`, `p_reduced` |
+| $F_t$, $F_t^{-1}$, $\hat{P}_\zeta$ | `_nc_galaxy_shape_factor_spectral_map`, `map_inv`, `_nc_galaxy_shape_factor_spectral_density` |
 | $1 / 2 \sigma_\mathrm{noise}^2$ | `c2` |
 | $d_0$, $d_0 / 2 \sigma_\mathrm{noise}^2$ | `shift` of the seed, `shift_c2` |
 | $1 / (2 \pi \sigma_\mathrm{noise}^2) / (2 \pi)$ | `norm` |
