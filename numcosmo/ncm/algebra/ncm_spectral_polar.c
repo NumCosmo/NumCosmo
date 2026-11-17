@@ -4,10 +4,13 @@
  *  Wed Nov 11 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2026 <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -85,6 +88,7 @@
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_util.h"
+#include "ncm/core/ncm_vmath_private.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -181,6 +185,8 @@ typedef struct _NcmSpectralPolarWork
   gdouble *gst;
   gdouble *gf;                /* the values it returns */
   gdouble *xc;                /* cos (pi q / 2^level_cap), the Lobatto points of every level */
+  gdouble *cr;                /* radii of one pass of _ncm_spectral_polar_nodes_r(), contiguous */
+  gdouble *cw;                /* and their weights */
   GArray *mt;                 /* angular moments, every level */
   NcmSpectral *spectral;      /* the transforms from node values to Chebyshev coefficients */
   NcmSpectralPolarMom mom[4]; /* 0: weight 1, 1: r^a, 2: (R - r)^b, 3: both */
@@ -884,7 +890,7 @@ static void
 _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
 {
   const guint np        = (1u << level_cap) + 1;
-  const guint n_lines   = 12;
+  const guint n_lines   = 14;
   const gsize table_len = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 1);
   gdouble *lines, *mt;
   guint l, k;
@@ -921,6 +927,8 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
   work->gst = lines + 9 * np;
   work->gf  = lines + 10 * np;
   work->xc  = lines + 11 * np;
+  work->cr  = lines + 12 * np;
+  work->cw  = lines + 13 * np;
 
   for (k = 0; k < np; k++)
     work->xc[k] = cos (M_PI * k / (np - 1.0));
@@ -1057,6 +1065,10 @@ _ncm_spectral_polar_sample_start (NcmSpectralPolarCall *call, const NcmSpectralP
   _ncm_spectral_polar_rows (call, call->level_min, call->level_min, 0, 1, 0, 1);
 }
 
+/* Points of a pass of _ncm_spectral_polar_nodes_r() from which its weights are computed in
+ * loops that vectorize (ncm_vmath_pow_pos()); below it they are computed point by point */
+#define NCM_SPECTRAL_POLAR_SIMD_MIN (8)
+
 /*
  * Radii of the panel at level lx and the regular weight there, r^a unless the panel starts at
  * 0 and (R - r)^b unless it ends at R, at their stride positions: every point (i0 = 0,
@@ -1072,21 +1084,72 @@ _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarP
   const gdouble half         = 0.5 * (panel->rb - panel->ra);
   const gboolean wa          = (panel->ra != 0.0) && (call->a != 0.0);
   const gboolean wb          = (panel->rb != call->R) && (call->b != 0.0);
-  guint i;
+  const gdouble a            = call->a;
+  const gdouble b            = call->b;
+  const gdouble R            = call->R;
+  gdouble *cr                = work->cr;
+  gdouble *cw                = work->cw;
+  guint i, c;
 
-  for (i = i0; i <= n; i += step)
+  /*
+   * A pass of few points: one loop with the weights by pow(), as the vectorized loops
+   * below cost more than they save under NCM_SPECTRAL_POLAR_SIMD_MIN points (passes of
+   * 1 to 5 points occur from level_min 0)
+   */
+  if ((n - i0) / step + 1 < NCM_SPECTRAL_POLAR_SIMD_MIN)
   {
-    const gdouble r = mid + half * work->xc[i << sh];
-    gdouble w       = 1.0;
+    for (i = i0; i <= n; i += step)
+    {
+      const gdouble r = mid + half * work->xc[i << sh];
+      gdouble w       = 1.0;
 
-    if (wa)
-      w *= (call->a == 1.0) ? r : pow (r, call->a);
+      if (wa)
+        w *= (a == 1.0) ? r : pow (r, a);
 
-    if (wb)
-      w *= pow (call->R - r, call->b);
+      if (wb)
+        w *= pow (R - r, b);
 
-    work->rr[i << sh] = r;
-    work->wr[i << sh] = w;
+      work->rr[i << sh] = r;
+      work->wr[i << sh] = w;
+    }
+
+    return;
+  }
+
+  /* The radii contiguous, the weights in a loop that vectorizes, then both at their
+   * stride positions */
+  for (c = 0, i = i0; i <= n; i += step, c++)
+    cr[c] = mid + half * work->xc[i << sh];
+
+  for (i = 0; i < c; i++)
+    cw[i] = 1.0;
+
+  /* r >= ra > 0 here, and R - r >= R - rb > 0 below: the bases are positive */
+  if (wa && (a == 1.0))
+  {
+    for (i = 0; i < c; i++)
+      cw[i] = cr[i];
+  }
+  else if (wa)
+  {
+    #pragma omp simd
+
+    for (i = 0; i < c; i++)
+      cw[i] = ncm_vmath_pow_pos (cr[i], a);
+  }
+
+  if (wb)
+  {
+    #pragma omp simd
+
+    for (i = 0; i < c; i++)
+      cw[i] *= ncm_vmath_pow_pos (R - cr[i], b);
+  }
+
+  for (c = 0, i = i0; i <= n; i += step, c++)
+  {
+    work->rr[i << sh] = cr[c];
+    work->wr[i << sh] = cw[c];
   }
 }
 
