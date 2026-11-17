@@ -1364,7 +1364,7 @@ struct _NcmSpectralPolarPanelsComb
  * ncm_spectral_polar_panels_comb_new: (skip)
  *
  * Creates an empty cache of combined panels for
- * ncm_spectral_polar_panels_eval_on_array_combine().
+ * ncm_spectral_polar_panels_pack_eval_on_array_combine().
  *
  * Returns: (transfer full): a new #NcmSpectralPolarPanelsComb.
  */
@@ -1397,106 +1397,14 @@ ncm_spectral_polar_panels_comb_free (NcmSpectralPolarPanelsComb *comb)
  * ncm_spectral_polar_panels_comb_reset: (skip)
  * @comb: a #NcmSpectralPolarPanelsComb
  *
- * Forgets every panel @comb holds. It must be called whenever the panel sets or the
- * weights passed to ncm_spectral_polar_panels_eval_on_array_combine() change.
+ * Forgets every panel @comb holds. It must be called whenever the pack or the weights
+ * passed to ncm_spectral_polar_panels_pack_eval_on_array_combine() change.
  */
 void
 ncm_spectral_polar_panels_comb_reset (NcmSpectralPolarPanelsComb *comb)
 {
   g_array_set_size (comb->index, 0);
   g_array_set_size (comb->coeffs, 0);
-}
-
-/**
- * ncm_spectral_polar_panels_eval_on_array_combine: (skip)
- * @n_sets: the number of panel sets
- * @spp: (array length=n_sets): the panel sets, with the same panels
- * @w: (array length=n_sets): the weights
- * @comb: the panels combined so far for these @spp and @w
- * @i: panel index
- * @n: number of points
- * @r: (array length=n): the radii
- * @theta: (array length=n): the angles
- * @out: (array length=n): the values, set
- *
- * Evaluates at the @n points of panel @i the series of $\sum_q w_q F_q$, @spp[q] the
- * expansion of $F_q$, as ncm_spectral_polar_panels_eval_on_array() would on the set
- * ncm_spectral_polar_panels_combine() makes, combining only the coefficients of panel @i
- * instead of those of every panel. The combined panel is kept in @comb, so that later calls
- * on panel @i do not combine it again: @comb must be reset
- * (ncm_spectral_polar_panels_comb_reset()) when @spp or @w change.
- */
-void
-ncm_spectral_polar_panels_eval_on_array_combine (guint n_sets, NcmSpectralPolarPanels **spp, const gdouble *w, NcmSpectralPolarPanelsComb *comb,
-                                                 guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out)
-{
-  NcmSpectralPolarPanelsPanel panel;
-  const gdouble *c;
-
-  if (comb->index->len <= i)
-  {
-    const NcmSpectralPolarPanelsPanel none = {0.0, 0.0, 0.0, 0.0, 0, 0, NCM_SPECTRAL_POLAR_PANELS_COMB_NONE};
-    const guint len                        = spp[0]->panels->len;
-
-    g_assert_cmpuint (i, <, len);
-
-    while (comb->index->len < len)
-      g_array_append_val (comb->index, none);
-  }
-
-  panel = g_array_index (comb->index, NcmSpectralPolarPanelsPanel, i);
-
-  if (panel.offset == NCM_SPECTRAL_POLAR_PANELS_COMB_NONE)
-  {
-    gdouble *cc;
-    guint q;
-
-    panel         = g_array_index (spp[0]->panels, NcmSpectralPolarPanelsPanel, i);
-    panel.n_r     = 0;
-    panel.n_theta = 0;
-    panel.offset  = comb->coeffs->len;
-
-    for (q = 0; q < n_sets; q++)
-    {
-      const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
-
-      panel.n_r     = MAX (panel.n_r, pq->n_r);
-      panel.n_theta = MAX (panel.n_theta, pq->n_theta);
-    }
-
-    g_array_set_size (comb->coeffs, panel.offset + (gsize) panel.n_r * panel.n_theta);
-    cc = (gdouble *) comb->coeffs->data + panel.offset;
-    memset (cc, 0, sizeof (gdouble) * panel.n_r * panel.n_theta);
-
-    for (q = 0; q < n_sets; q++)
-    {
-      const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
-      const gdouble *cq                     = (const gdouble *) spp[q]->coeffs->data + pq->offset;
-      const gdouble wq                      = w[q];
-      guint l, k;
-
-      if (wq == 0.0)
-        continue;
-
-      for (l = 0; l < pq->n_theta; l++)
-      {
-        gdouble *row_o       = cc + (gsize) l * panel.n_r;
-        const gdouble *row_q = cq + (gsize) l * pq->n_r;
-
-        #pragma omp simd
-
-        for (k = 0; k < pq->n_r; k++)
-          row_o[k] += wq * row_q[k];
-      }
-    }
-
-    g_array_index (comb->index, NcmSpectralPolarPanelsPanel, i) = panel;
-  }
-
-  c            = (const gdouble *) comb->coeffs->data + panel.offset;
-  panel.offset = 0;
-
-  _ncm_spectral_polar_panels_eval_points (&panel, c, n, r, theta, out);
 }
 
 /*
@@ -1537,8 +1445,7 @@ G_STATIC_ASSERT (sizeof (NcmSpectralPolarPanelsPackSlot) == sizeof (gdouble));
 
 /*
  * Whether the block of a term is a single +0.0, the block of a term trim_modes() drops. A -0.0
- * is kept, so that the sets remade from a pack (_ncm_spectral_polar_panels_pack_unpack())
- * are those it was made from, bit for bit.
+ * is kept as any other coefficient.
  */
 static gboolean
 _ncm_spectral_polar_panels_pack_dropped (const NcmSpectralPolarPanelsPanel *pq, const gdouble *c)
@@ -1731,11 +1638,13 @@ ncm_spectral_polar_panels_pack_find_panel_near (const NcmSpectralPolarPanelsPack
  * @theta: (array length=n): the angles
  * @out: (array length=n): the values, set
  *
- * ncm_spectral_polar_panels_eval_on_array_combine() on the sets of @pack, with the same
- * values: the coefficients are added in the same order, and only the sets whose block on
- * panel @i is a single zero, which add nothing, are skipped. Reading one span instead of
- * the arrays of every set, it waits less on memory. @comb must be reset
- * (ncm_spectral_polar_panels_comb_reset()) when @pack or @w change.
+ * Evaluates at the @n points of panel @i the series of $\sum_q w_q F_q$, set $q$ of @pack
+ * the expansion of $F_q$, as ncm_spectral_polar_panels_eval_on_array() would on the set
+ * ncm_spectral_polar_panels_combine() makes, combining only the coefficients of panel @i
+ * instead of those of every panel: the coefficients are added in the order of the sets, and
+ * the sets whose block on panel @i is a single zero, which add nothing, are skipped. The
+ * combined panel is kept in @comb, so that later calls on panel @i do not combine it again:
+ * @comb must be reset (ncm_spectral_polar_panels_comb_reset()) when @pack or @w change.
  */
 void
 ncm_spectral_polar_panels_pack_eval_on_array_combine (const NcmSpectralPolarPanelsPack *pack, const gdouble *w, NcmSpectralPolarPanelsComb *comb,
@@ -1864,68 +1773,6 @@ ncm_spectral_polar_panels_pack_get_range (const NcmSpectralPolarPanelsPack *pack
   *rb = pack->r_edges[pack->n_r_edges - 1];
   *ta = pack->theta_edges[0];
   *tb = pack->theta_edges[pack->n_theta_edges - 1];
-}
-
-/* The sets pack was made from, made again: a dropped term is a single +0.0 on its panel */
-static NcmObjArray *
-_ncm_spectral_polar_panels_pack_unpack (const NcmSpectralPolarPanelsPack *pack)
-{
-  NcmObjArray *sets  = ncm_obj_array_sized_new (pack->n_sets);
-  const gdouble zero = 0.0;
-  guint q, i;
-
-  for (q = 0; q < pack->n_sets; q++)
-  {
-    NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
-
-    _ncm_spectral_polar_panels_set_edges_data (spp, pack->r_edges, pack->n_r_edges, pack->theta_edges, pack->n_theta_edges);
-    ncm_obj_array_add (sets, G_OBJECT (spp));
-    ncm_spectral_polar_panels_free (spp);
-  }
-
-  for (i = 0; i < pack->n_panels; i++)
-  {
-    const NcmSpectralPolarPanelsPanel *panel = &pack->panels[i];
-    const gdouble *t                         = pack->data + panel->offset;
-    NcmSpectralPolarPanelsPackSlot slot;
-    guint m, n_kept;
-
-    memcpy (&slot, t, sizeof (gdouble));
-    n_kept = slot.u[0];
-    t++;
-
-    for (q = 0, m = 0; q < pack->n_sets; q++)
-    {
-      NcmSpectralPolarPanels *spp = NCM_SPECTRAL_POLAR_PANELS (ncm_obj_array_peek (sets, q));
-      guint tq                    = G_MAXUINT;
-
-      if (m < n_kept)
-      {
-        memcpy (&slot, t, sizeof (gdouble));
-        tq = slot.u[0];
-      }
-
-      if (tq == q)
-      {
-        guint n_r, n_theta;
-
-        memcpy (&slot, t + 1, sizeof (gdouble));
-        n_r     = slot.u[0];
-        n_theta = slot.u[1];
-        _ncm_spectral_polar_panels_append_sized (spp, panel->ra, panel->rb, panel->ta, panel->tb, n_r, n_theta, t + 2);
-        t += 2 + (gsize) n_r * n_theta;
-        m++;
-      }
-      else
-      {
-        _ncm_spectral_polar_panels_append_sized (spp, panel->ra, panel->rb, panel->ta, panel->tb, 1, 1, &zero);
-      }
-    }
-
-    g_assert_cmpuint (m, ==, n_kept);
-  }
-
-  return sets;
 }
 
 /* The pack as NcmSpectralPolarPanelsArray:packed holds it */
@@ -2171,23 +2018,19 @@ _ncm_spectral_polar_panels_pack_from_variant (GVariant *var)
  *
  * An ordered set of #NcmSpectralPolarPanels kept and serialized as one object, such as the
  * terms of an expansion of a function over parameters, one #NcmSpectralPolarPanels per
- * term (see ncm_spectral_polar_panels_eval_on_array_combine()).
+ * term (see ncm_spectral_polar_panels_pack_eval_on_array_combine()).
  *
  * The sets are added with ncm_spectral_polar_panels_array_add(), and
- * ncm_spectral_polar_panels_array_pack() then keeps them in one allocation only (see
- * ncm_spectral_polar_panels_pack_eval_on_array_combine()), releasing the sets: an array read
- * from #NcmSpectralPolarPanelsArray:panels is packed at once, and one read from
- * #NcmSpectralPolarPanelsArray:packed, the form an array is serialized in, is never anything
- * else, so that reading a serialization makes no #NcmSpectralPolarPanels. A packed array no
- * longer grows; the sets are made again from the pack, the same bit for bit, when
- * ncm_spectral_polar_panels_array_peek() or ncm_spectral_polar_panels_array_peek_data() asks
- * for them, and then kept.
+ * ncm_spectral_polar_panels_array_pack() then keeps them in one allocation only, releasing
+ * them: a packed array no longer grows, and its sets are read through its pack
+ * (ncm_spectral_polar_panels_array_peek_pack()). The array is serialized packed
+ * (#NcmSpectralPolarPanelsArray:packed), so that reading a serialization makes no
+ * #NcmSpectralPolarPanels.
  */
 
 enum
 {
   PROP_ARRAY_0,
-  PROP_ARRAY_PANELS,
   PROP_ARRAY_PACKED,
 };
 
@@ -2200,8 +2043,7 @@ struct _NcmSpectralPolarPanelsArray
   GObject parent_instance;
   NcmObjArray *panels;              /* the sets as added, NULL once packed */
   guint n_sets;                     /* the number of sets */
-  NcmSpectralPolarPanelsPack *pack; /* made once, by ncm_spectral_polar_panels_array_pack() or _peek_pack() */
-  NcmObjArray *unpacked;            /* the sets made again from the pack, by ncm_spectral_polar_panels_array_peek() */
+  NcmSpectralPolarPanelsPack *pack; /* made by ncm_spectral_polar_panels_array_pack() */
 };
 
 G_DEFINE_TYPE (NcmSpectralPolarPanelsArray, ncm_spectral_polar_panels_array, G_TYPE_OBJECT)
@@ -2209,42 +2051,9 @@ G_DEFINE_TYPE (NcmSpectralPolarPanelsArray, ncm_spectral_polar_panels_array, G_T
 static void
 ncm_spectral_polar_panels_array_init (NcmSpectralPolarPanelsArray *spa)
 {
-  spa->panels   = ncm_obj_array_new ();
-  spa->n_sets   = 0;
-  spa->pack     = NULL;
-  spa->unpacked = NULL;
-}
-
-/* Back to an empty array that is not packed */
-static void
-_ncm_spectral_polar_panels_array_reset (NcmSpectralPolarPanelsArray *spa)
-{
-  ncm_obj_array_clear (&spa->panels);
-  ncm_obj_array_clear (&spa->unpacked);
-  g_clear_pointer (&spa->pack, g_free);
-
   spa->panels = ncm_obj_array_new ();
   spa->n_sets = 0;
-}
-
-/* The sets made again from the pack, made once even from several threads */
-static NcmObjArray *
-_ncm_spectral_polar_panels_array_peek_unpacked (NcmSpectralPolarPanelsArray *spa)
-{
-  NcmObjArray *sets = g_atomic_pointer_get (&spa->unpacked);
-
-  if (sets == NULL)
-  {
-    sets = _ncm_spectral_polar_panels_pack_unpack (spa->pack);
-
-    if (!g_atomic_pointer_compare_and_exchange (&spa->unpacked, NULL, sets))
-    {
-      ncm_obj_array_unref (sets);
-      sets = g_atomic_pointer_get (&spa->unpacked);
-    }
-  }
-
-  return sets;
+  spa->pack   = NULL;
 }
 
 static void
@@ -2256,33 +2065,22 @@ _ncm_spectral_polar_panels_array_set_property (GObject *object, guint prop_id, c
 
   switch (prop_id)
   {
-    case PROP_ARRAY_PANELS:
-    {
-      NcmObjArray *panels = g_value_get_boxed (value);
-      guint i;
-
-      _ncm_spectral_polar_panels_array_reset (spa);
-
-      for (i = 0; (panels != NULL) && (i < ncm_obj_array_len (panels)); i++)
-        ncm_spectral_polar_panels_array_add (spa, NCM_SPECTRAL_POLAR_PANELS (ncm_obj_array_peek (panels, i)));
-
-      /* Read sets are not changed, so that they are kept packed only */
-      if (spa->n_sets > 0)
-        ncm_spectral_polar_panels_array_pack (spa);
-
-      break;
-    }
     case PROP_ARRAY_PACKED:
     {
       GVariant *var = g_value_get_variant (value);
 
-      _ncm_spectral_polar_panels_array_reset (spa);
+      ncm_obj_array_clear (&spa->panels);
+      g_clear_pointer (&spa->pack, g_free);
 
       if (var != NULL)
       {
-        ncm_obj_array_clear (&spa->panels);
         spa->pack   = _ncm_spectral_polar_panels_pack_from_variant (var);
         spa->n_sets = spa->pack->n_sets;
+      }
+      else
+      {
+        spa->panels = ncm_obj_array_new ();
+        spa->n_sets = 0;
       }
 
       break;
@@ -2308,7 +2106,7 @@ _ncm_spectral_polar_panels_array_get_property (GObject *object, guint prop_id, G
       {
         g_value_set_variant (value, NULL);
       }
-      else if (g_atomic_pointer_get (&spa->pack) != NULL)
+      else if (spa->pack != NULL)
       {
         g_value_take_variant (value, _ncm_spectral_polar_panels_pack_to_variant (spa->pack));
       }
@@ -2334,7 +2132,6 @@ _ncm_spectral_polar_panels_array_dispose (GObject *object)
   NcmSpectralPolarPanelsArray *spa = NCM_SPECTRAL_POLAR_PANELS_ARRAY (object);
 
   ncm_obj_array_clear (&spa->panels);
-  ncm_obj_array_clear (&spa->unpacked);
   g_clear_pointer (&spa->pack, g_free);
 
   /* Chain up : end */
@@ -2351,22 +2148,6 @@ ncm_spectral_polar_panels_array_class_init (NcmSpectralPolarPanelsArrayClass *kl
   object_class->dispose      = &_ncm_spectral_polar_panels_array_dispose;
 
   /**
-   * NcmSpectralPolarPanelsArray:panels:
-   *
-   * The #NcmSpectralPolarPanels of the set, in order, which are packed
-   * (ncm_spectral_polar_panels_array_pack()). Write-only: an array is serialized as
-   * #NcmSpectralPolarPanelsArray:packed, and this property reads the serializations written
-   * as the sets.
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_ARRAY_PANELS,
-                                   g_param_spec_boxed ("panels",
-                                                       NULL,
-                                                       "The panel sets, in order",
-                                                       NCM_TYPE_OBJ_ARRAY,
-                                                       G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
    * NcmSpectralPolarPanelsArray:packed:
    *
    * The sets packed, as a #GVariant of type `(uadadaua(dddduua(uuuad)))`: the number of
@@ -2374,7 +2155,8 @@ ncm_spectral_polar_panels_array_class_init (NcmSpectralPolarPanelsArrayClass *kl
    * (as ncm_spectral_polar_panels_find_panel() reads them), and for each panel $r_a$, $r_b$,
    * $\theta_a$, $\theta_b$, the largest $K_r$ and $K_\theta$ of the sets there and the terms
    * of the sets whose block is not a single zero, in ascending sets: the set, its $K_r$ and
-   * $K_\theta$ and its $K_\theta K_r$ coefficients by angular index. %NULL for no sets.
+   * $K_\theta$ and its $K_\theta K_r$ coefficients by angular index. %NULL for no sets. An
+   * array set from it is packed.
    */
   g_object_class_install_property (object_class,
                                    PROP_ARRAY_PACKED,
@@ -2441,15 +2223,14 @@ ncm_spectral_polar_panels_array_clear (NcmSpectralPolarPanelsArray **spa)
  * @spa: a #NcmSpectralPolarPanelsArray
  * @spp: a #NcmSpectralPolarPanels
  *
- * Appends @spp to @spa, referencing it. @spa must not have been packed
- * (ncm_spectral_polar_panels_array_pack(), ncm_spectral_polar_panels_array_peek_pack()).
+ * Appends @spp to @spa, referencing it. @spa must not be packed
+ * (ncm_spectral_polar_panels_array_pack()).
  */
 void
 ncm_spectral_polar_panels_array_add (NcmSpectralPolarPanelsArray *spa, NcmSpectralPolarPanels *spp)
 {
   g_assert (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
   g_assert_nonnull (spa->panels);
-  g_assert_null (g_atomic_pointer_get (&spa->pack));
   ncm_obj_array_add (spa->panels, G_OBJECT (spp));
   spa->n_sets++;
 }
@@ -2467,93 +2248,40 @@ ncm_spectral_polar_panels_array_len (NcmSpectralPolarPanelsArray *spa)
 }
 
 /**
- * ncm_spectral_polar_panels_array_peek:
- * @spa: a #NcmSpectralPolarPanelsArray
- * @i: an index below ncm_spectral_polar_panels_array_len()
- *
- * A packed array makes its sets again at the first call, and keeps them.
- *
- * Returns: (transfer none): the #NcmSpectralPolarPanels @i of @spa.
- */
-NcmSpectralPolarPanels *
-ncm_spectral_polar_panels_array_peek (NcmSpectralPolarPanelsArray *spa, guint i)
-{
-  g_assert_cmpuint (i, <, spa->n_sets);
-
-  if (spa->panels != NULL)
-    return g_ptr_array_index (spa->panels, i);
-
-  return NCM_SPECTRAL_POLAR_PANELS (ncm_obj_array_peek (_ncm_spectral_polar_panels_array_peek_unpacked (spa), i));
-}
-
-/**
- * ncm_spectral_polar_panels_array_peek_data: (skip)
+ * ncm_spectral_polar_panels_array_pack:
  * @spa: a #NcmSpectralPolarPanelsArray
  *
- * A packed array makes its sets again at the first call, and keeps them.
- *
- * Returns: (transfer none): the C array of the ncm_spectral_polar_panels_array_len()
- * #NcmSpectralPolarPanels of @spa, valid until @spa changes.
- */
-NcmSpectralPolarPanels **
-ncm_spectral_polar_panels_array_peek_data (NcmSpectralPolarPanelsArray *spa)
-{
-  if (spa->panels != NULL)
-    return (NcmSpectralPolarPanels **) spa->panels->pdata;
-
-  return (NcmSpectralPolarPanels **) _ncm_spectral_polar_panels_array_peek_unpacked (spa)->pdata;
-}
-
-/**
- * ncm_spectral_polar_panels_array_pack: (skip)
- * @spa: a #NcmSpectralPolarPanelsArray
- *
- * Packs the sets of @spa (ncm_spectral_polar_panels_array_peek_pack()) and releases them, so
- * that @spa keeps its coefficients once. The sets must have the same edges and panels. This
- * changes @spa: it must be called before @spa is shared with other threads. Packing a packed
- * array does nothing.
+ * Packs the sets of @spa in one allocation (ncm_spectral_polar_panels_array_peek_pack())
+ * and releases them, so that @spa keeps its coefficients once. The sets must have the same
+ * edges and panels, and there must be at least one. This changes @spa: it must be called
+ * before @spa is shared with other threads. Packing a packed array does nothing.
  */
 void
 ncm_spectral_polar_panels_array_pack (NcmSpectralPolarPanelsArray *spa)
 {
-  if (spa->panels == NULL)
+  if (spa->pack != NULL)
     return;
 
-  ncm_spectral_polar_panels_array_peek_pack (spa);
+  g_assert_cmpuint (spa->n_sets, >, 0);
+
+  spa->pack = _ncm_spectral_polar_panels_pack_new (spa->n_sets, (NcmSpectralPolarPanels **) spa->panels->pdata);
   ncm_obj_array_clear (&spa->panels);
 }
 
 /**
  * ncm_spectral_polar_panels_array_peek_pack: (skip)
- * @spa: a #NcmSpectralPolarPanelsArray
+ * @spa: a packed #NcmSpectralPolarPanelsArray
  *
- * Gets the sets of @spa packed in one allocation for
- * ncm_spectral_polar_panels_pack_eval_on_array_combine(), making it at the first call when
- * @spa is not packed (ncm_spectral_polar_panels_array_pack()), without releasing its sets:
- * the sets must have the same edges and panels, and neither @spa nor its sets may change
- * afterwards. The pack is made once even when several threads call this at the same time,
- * and it is freed with @spa.
+ * Gets the sets of @spa packed in one allocation, for
+ * ncm_spectral_polar_panels_pack_eval_on_array_combine(). @spa must be packed
+ * (ncm_spectral_polar_panels_array_pack()); the pack is freed with @spa.
  *
  * Returns: (transfer none): the pack of @spa.
  */
 const NcmSpectralPolarPanelsPack *
 ncm_spectral_polar_panels_array_peek_pack (NcmSpectralPolarPanelsArray *spa)
 {
-  NcmSpectralPolarPanelsPack *pack = g_atomic_pointer_get (&spa->pack);
+  g_assert_nonnull (spa->pack);
 
-  if (pack == NULL)
-  {
-    g_assert_cmpuint (spa->n_sets, >, 0);
-
-    pack = _ncm_spectral_polar_panels_pack_new (spa->n_sets, (NcmSpectralPolarPanels **) spa->panels->pdata);
-
-    if (!g_atomic_pointer_compare_and_exchange (&spa->pack, NULL, pack))
-    {
-      g_free (pack);
-      pack = g_atomic_pointer_get (&spa->pack);
-    }
-  }
-
-  return pack;
+  return spa->pack;
 }
-

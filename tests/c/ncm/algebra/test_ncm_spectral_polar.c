@@ -1301,15 +1301,15 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
   }
 
   /*
-   * The pack of the terms finds the panels of the first and combines as
-   * ncm_spectral_polar_panels_eval_on_array_combine() does, with the dropped term left out;
-   * it is made once and kept by the array. Both add the same products in the same order, but
-   * in loops a compiler may contract into fma differently, so they are compared within a few
+   * The pack of the terms finds the panels of the first and evaluates their combination as
+   * ncm_spectral_polar_panels_combine() and ncm_spectral_polar_panels_eval_on_array() do,
+   * with the dropped term left out. Both add the same products in the same order, but in
+   * loops a compiler may contract into fma differently, so they are compared within a few
    * ulps of the coefficients (about one here) instead of bit for bit.
    */
   {
     NcmSpectralPolarPanelsArray *spa      = ncm_spectral_polar_panels_array_new ();
-    NcmSpectralPolarPanelsComb *comb_sets = ncm_spectral_polar_panels_comb_new ();
+    NcmSpectralPolarPanels *comb_sets     = ncm_spectral_polar_panels_new ();
     NcmSpectralPolarPanelsComb *comb_pack = ncm_spectral_polar_panels_comb_new ();
     const gdouble *weights[]              = {w, NULL};
     const gdouble w2[]                    = {-1.0, 0.5, 0.0};
@@ -1321,6 +1321,7 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
     for (k = 0; k < 3; k++)
       ncm_spectral_polar_panels_array_add (spa, out[k]);
 
+    ncm_spectral_polar_panels_array_pack (spa);
     pack = ncm_spectral_polar_panels_array_peek_pack (spa);
     g_assert_true (pack == ncm_spectral_polar_panels_array_peek_pack (spa));
     g_assert_cmpuint (ncm_spectral_polar_panels_pack_get_size (pack), >, 0);
@@ -1329,7 +1330,7 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
     {
       guint hint = G_MAXUINT;
 
-      ncm_spectral_polar_panels_comb_reset (comb_sets);
+      ncm_spectral_polar_panels_combine (comb_sets, 3, out, weights[k]);
       ncm_spectral_polar_panels_comb_reset (comb_pack);
 
       for (i = 0; i < 9; i++)
@@ -1348,12 +1349,12 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
           hint = n_near;
 
           /* Two points (lanes) and one (the scalar recurrence), the second point on the panel of the first */
-          ncm_spectral_polar_panels_eval_on_array_combine (3, out, weights[k], comb_sets, panel, 2, r, t, v_sets);
+          ncm_spectral_polar_panels_eval_on_array (comb_sets, panel, 2, r, t, v_sets);
           ncm_spectral_polar_panels_pack_eval_on_array_combine (pack, weights[k], comb_pack, panel, 2, r, t, v_pack);
           ncm_assert_cmpdouble_e (v_pack[0], ==, v_sets[0], 0.0, 1.0e-14);
           ncm_assert_cmpdouble_e (v_pack[1], ==, v_sets[1], 0.0, 1.0e-14);
 
-          ncm_spectral_polar_panels_eval_on_array_combine (3, out, weights[k], comb_sets, panel, 1, r, t, v_sets);
+          ncm_spectral_polar_panels_eval_on_array (comb_sets, panel, 1, r, t, v_sets);
           ncm_spectral_polar_panels_pack_eval_on_array_combine (pack, weights[k], comb_pack, panel, 1, r, t, v_pack);
           ncm_assert_cmpdouble_e (v_pack[0], ==, v_sets[0], 0.0, 1.0e-14);
           ncm_assert_cmpdouble_e (v_pack[0], ==, (k == 0) ? _refit_f (r[0], cos (t[0])) + 0.25 : 0.5, 0.0, 2.0e-9);
@@ -1361,21 +1362,23 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
       }
     }
 
-    ncm_spectral_polar_panels_comb_free (comb_sets);
+    ncm_spectral_polar_panels_free (comb_sets);
     ncm_spectral_polar_panels_comb_free (comb_pack);
     ncm_spectral_polar_panels_array_free (spa);
   }
 
   /*
-   * A packed array releases its sets and makes them again, bit for bit, when they are
-   * peeked. It is serialized packed, without the sets, and read back packed; an array given
-   * the sets (NcmSpectralPolarPanelsArray:panels, the earlier serialization) packs them.
+   * A packed array is serialized packed, without the sets, and read back packed: the copy
+   * evaluates every set (weight one on it, zero on the others) bit for bit as the array
+   * does, and as the set itself within the rounding of the loops above.
    */
   {
     NcmSpectralPolarPanelsArray *spa = ncm_spectral_polar_panels_array_new ();
     NcmSerialize *ser                = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-    NcmObjArray *sets_in             = ncm_obj_array_new ();
-    NcmSpectralPolarPanelsArray *dup, *old;
+    NcmSpectralPolarPanelsComb *c0   = ncm_spectral_polar_panels_comb_new ();
+    NcmSpectralPolarPanelsComb *c1   = ncm_spectral_polar_panels_comb_new ();
+    NcmSpectralPolarPanelsArray *dup;
+    const NcmSpectralPolarPanelsPack *p0, *p1;
     guint k;
 
     for (k = 0; k < 2; k++)
@@ -1395,7 +1398,10 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
 
     dup = NCM_SPECTRAL_POLAR_PANELS_ARRAY (ncm_serialize_dup_obj (ser, G_OBJECT (spa)));
     g_assert_cmpuint (ncm_spectral_polar_panels_array_len (dup), ==, 3);
-    g_assert_true (ncm_spectral_polar_panels_array_peek_pack (dup) != NULL);
+
+    p0 = ncm_spectral_polar_panels_array_peek_pack (spa);
+    p1 = ncm_spectral_polar_panels_array_peek_pack (dup);
+    g_assert_cmpuint (ncm_spectral_polar_panels_pack_get_size (p1), ==, ncm_spectral_polar_panels_pack_get_size (p0));
 
     {
       gchar *str     = ncm_serialize_to_string (ser, G_OBJECT (spa), TRUE);
@@ -1410,43 +1416,28 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
     }
 
     for (k = 0; k < 3; k++)
-      ncm_obj_array_add (sets_in, G_OBJECT (out[k]));
-
-    old = g_object_new (NCM_TYPE_SPECTRAL_POLAR_PANELS_ARRAY, "panels", sets_in, NULL);
-    g_assert_cmpuint (ncm_spectral_polar_panels_array_len (old), ==, 3);
-    g_assert_cmpuint (ncm_spectral_polar_panels_pack_get_size (ncm_spectral_polar_panels_array_peek_pack (old)), ==,
-                      ncm_spectral_polar_panels_pack_get_size (ncm_spectral_polar_panels_array_peek_pack (dup)));
-
-    for (k = 0; k < 3; k++)
     {
-      NcmSpectralPolarPanels *sets[] = {
-        ncm_spectral_polar_panels_array_peek (spa, k),
-        ncm_spectral_polar_panels_array_peek (dup, k),
-        ncm_spectral_polar_panels_array_peek (old, k)
-      };
-      guint s;
+      gdouble e[3] = {0.0, 0.0, 0.0};
 
-      g_assert_true (ncm_spectral_polar_panels_array_peek_data (spa)[k] == sets[0]);
+      e[k] = 1.0;
+      ncm_spectral_polar_panels_comb_reset (c0);
+      ncm_spectral_polar_panels_comb_reset (c1);
 
-      for (s = 0; s < 3; s++)
+      for (i = 0; i < 9; i++)
       {
-        g_assert_true (sets[s] != out[k]);
-        g_assert_cmpuint (ncm_spectral_polar_panels_get_n_panels (sets[s]), ==, ncm_spectral_polar_panels_get_n_panels (out[k]));
-
-        for (i = 0; i < ncm_spectral_polar_panels_get_n_panels (out[k]); i++)
+        for (j = 0; j < 9; j++)
         {
-          gdouble ra0, rb0, ta0, tb0, ra1, rb1, ta1, tb1;
-          guint nr0, nt0, nr1, nt1;
-          const gdouble *c0 = ncm_spectral_polar_panels_peek_panel (out[k], i, &ra0, &rb0, &ta0, &tb0, &nr0, &nt0);
-          const gdouble *c1 = ncm_spectral_polar_panels_peek_panel (sets[s], i, &ra1, &rb1, &ta1, &tb1, &nr1, &nt1);
+          const gdouble r   = 0.01 + 0.98 * i / 8.0;
+          const gdouble t   = 0.005 + (M_PI - 0.01) * j / 8.0;
+          const guint panel = ncm_spectral_polar_panels_find_panel (out[k], r, t);
+          gdouble v0, v1, v;
 
-          g_assert_cmpfloat (ra1, ==, ra0);
-          g_assert_cmpfloat (rb1, ==, rb0);
-          g_assert_cmpfloat (ta1, ==, ta0);
-          g_assert_cmpfloat (tb1, ==, tb0);
-          g_assert_cmpuint (nr1, ==, nr0);
-          g_assert_cmpuint (nt1, ==, nt0);
-          g_assert_cmpmem (c1, sizeof (gdouble) * nr1 * nt1, c0, sizeof (gdouble) * nr0 * nt0);
+          ncm_spectral_polar_panels_pack_eval_on_array_combine (p0, e, c0, panel, 1, &r, &t, &v0);
+          ncm_spectral_polar_panels_pack_eval_on_array_combine (p1, e, c1, panel, 1, &r, &t, &v1);
+          ncm_spectral_polar_panels_eval_on_array (out[k], panel, 1, &r, &t, &v);
+
+          g_assert_cmpfloat (v1, ==, v0);
+          ncm_assert_cmpdouble_e (v0, ==, v, 0.0, 1.0e-14);
         }
       }
     }
@@ -1454,7 +1445,7 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
     {
       gdouble ra, rb, ta, tb, ra0, rb0, ta0, tb0;
 
-      ncm_spectral_polar_panels_pack_get_range (ncm_spectral_polar_panels_array_peek_pack (spa), &ra, &rb, &ta, &tb);
+      ncm_spectral_polar_panels_pack_get_range (p0, &ra, &rb, &ta, &tb);
       ncm_spectral_polar_panels_get_range (out[0], &ra0, &rb0, &ta0, &tb0);
       g_assert_cmpfloat (ra, ==, ra0);
       g_assert_cmpfloat (rb, ==, rb0);
@@ -1462,10 +1453,10 @@ test_ncm_spectral_polar_refit_multi (TestNcmSpectralPolar *test, gconstpointer p
       g_assert_cmpfloat (tb, ==, tb0);
     }
 
-    ncm_spectral_polar_panels_array_free (old);
+    ncm_spectral_polar_panels_comb_free (c0);
+    ncm_spectral_polar_panels_comb_free (c1);
     ncm_spectral_polar_panels_array_free (dup);
     ncm_spectral_polar_panels_array_free (spa);
-    ncm_obj_array_unref (sets_in);
     ncm_serialize_free (ser);
   }
 
