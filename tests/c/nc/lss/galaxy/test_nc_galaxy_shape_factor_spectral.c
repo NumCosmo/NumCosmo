@@ -2330,6 +2330,8 @@ test_nc_galaxy_shape_factor_spectral_pop_order_fallback_line (TestNcGalaxyShapeF
 
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
   nc_galaxy_shape_factor_spectral_set_pop_order (gsfs, 5);
+  /* The whole disk, so that only the population box sends the galaxy to the fallback */
+  nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs, FALSE);
   nc_galaxy_shape_factor_data_set (gsf, data, e_1, e_2, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
   nc_galaxy_shape_factor_data_set (gsf_int, data_int, e_1, e_2, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
   g_ptr_array_add (data_array, data);

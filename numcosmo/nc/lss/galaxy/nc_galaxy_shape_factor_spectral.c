@@ -694,7 +694,7 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
 
   self->interp_min_radial_panels = 0;
 
-  self->restrict_range = FALSE;
+  self->restrict_range = TRUE;
   self->range_on       = FALSE;
   self->n_short        = 0;
   self->rebuild_short  = FALSE;
@@ -1013,14 +1013,16 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * (nc_galaxy_shape_factor_spectral_get_n_loaded_short()).
    *
    * #NcGalaxyShapeFactorMomentsTilt:restrict-range takes the same bound
-   * at a fixed concentration only, since its tables have no integral to fall back on.
+   * at a fixed concentration only, since its tables have no integral to fall back on. Both
+   * are on by default: the integrals beyond the bound keep the values right, so turning it
+   * off only matters to compare with the whole disk.
    */
   g_object_class_install_property (object_class,
                                    PROP_RESTRICT_RANGE,
                                    g_param_spec_boolean ("restrict-range",
                                                          NULL,
                                                          "Whether to build each interpolant only over the reachable shears",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
