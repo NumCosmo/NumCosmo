@@ -226,8 +226,10 @@ For $1 - t \ge 10^{-5}$ the class computes
 $$
 \ln P = \ln I - \frac{d_0}{2 \sigma_\mathrm{noise}^2} ,
 $$
-with $I$ the integral of Eq. (5) from [[numcosmo-math|ncm_spectral_polar_integrate]] at
-the relative tolerance `reltol` and absolute tolerance zero.
+with $I$ the integral of Eq. (5) from the internal `_ncm_spectral_polar_integrate_radial()` at
+the relative tolerance `reltol` and absolute tolerance zero. The factor of the integrand
+that depends only on $r$, the reduced density times the normalization, is given to it
+separately, so it is computed once per radius, not at every call of the integrand.
 The function [[numcosmo|nc_galaxy_shape_factor_eval_marginal]] returns $e^{\ln P}$. An
 integral that fails with `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, or a non-finite $\ln P$,
 aborts with the population, $\sigma_\mathrm{noise}$, $g$ and $\epsilon_\mathrm{obs}$ in
@@ -271,8 +273,9 @@ At $w = t$:
   $\nabla D = \big( -4 \Delta_1 (1 - t^2) / q^2 , \, -4 \Delta_2 / q \big)$ and
   $\nabla^2 D = 8 (1 - t^2)^2 / q^4 + 8 / q^2 + 32 \, t \, \Delta_1 / q^3$.
 
-The integral of Eq. (6) is computed by [[numcosmo-math|ncm_spectral_polar_integrate]] in
-$v \equiv 1 - r$, in which $1 - t^2 r^2 = (\delta + t v) (1 + t r)$ is formed without a
+The integral of Eq. (6) is computed by the internal `_ncm_spectral_polar_integrate_radial()` in
+$v \equiv 1 - r$, its whole integrand given as the radial factor since it does not depend
+on the angle, in which $1 - t^2 r^2 = (\delta + t v) (1 + t r)$ is formed without a
 difference of numbers close to 1, with the radial edges of
 [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at $v = 0$ of half width
 $\delta$. The term $A$ is accurate when the next order is small, which requires
@@ -433,7 +436,7 @@ four rows compute 4% to 16% fewer integrals.
 | $a$, $b$ | `a`, `b` |
 | $\alpha_1$ | `b_pop` |
 | $2^{\alpha_o + 1}$, $\alpha_o + \alpha_1 + 2$ of Eq. (4) | `dens_norm`, `dens_pow` of the kernel |
-| $F_t$, $F_t^{-1}$, $\hat{P}_\zeta$ | `map`, `map_inv`, `p_reduced` |
+| $F_t$, $F_t^{-1}$, $\hat{P}_\zeta$ | `_nc_galaxy_shape_factor_spectral_map`, `map_inv`, `_nc_galaxy_shape_factor_spectral_density` |
 | $1 / 2 \sigma_\mathrm{noise}^2$ | `c2` |
 | $d_0$, $d_0 / 2 \sigma_\mathrm{noise}^2$ | `shift` of the seed, `shift_c2` |
 | $1 / (2 \pi \sigma_\mathrm{noise}^2) / (2 \pi)$ | `norm` |
