@@ -39,6 +39,7 @@
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_polar_panels.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_polar_panels_array.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
 #include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
 
@@ -150,8 +151,8 @@ void nc_galaxy_wl_obs_copy_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyWLObs 
 gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i, GError **error);
 NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 
-void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp);
-NcmSpectralPolarPanels *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);
+void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanelsArray *modes);
+NcmSpectralPolarPanelsArray *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_wl_obs_set_shape_interp_source (NcGalaxyWLObs *obs, NcmObjDictStr *source);
 NcmObjDictStr *nc_galaxy_wl_obs_peek_shape_interp_source (NcGalaxyWLObs *obs);
 

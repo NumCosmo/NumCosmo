@@ -11537,6 +11537,51 @@ class SpectralPolarPanels(GObject.Object):
     ) -> None: ...
     def trim(self, tol: float) -> None: ...
 
+class SpectralPolarPanelsArray(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPolarPanelsArray(**properties)
+        new() -> NumCosmoMath.SpectralPolarPanelsArray
+
+    Object NcmSpectralPolarPanelsArray
+
+    Properties from NcmSpectralPolarPanelsArray:
+      packed -> GVariant: packed
+        The packed sets
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        packed: GLib.Variant
+
+    props: Props = ...
+    def __init__(self, packed: GLib.Variant = ...) -> None: ...
+    def add(self, spp: SpectralPolarPanels) -> None: ...
+    @staticmethod
+    def clear(spa: SpectralPolarPanelsArray) -> None: ...
+    def free(self) -> None: ...
+    def len(self) -> int: ...
+    @classmethod
+    def new(cls) -> SpectralPolarPanelsArray: ...
+    def pack(self) -> None: ...
+    def ref(self) -> SpectralPolarPanelsArray: ...
+
+class SpectralPolarPanelsArrayClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        SpectralPolarPanelsArrayClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class SpectralPolarPanelsClass(GObject.GPointer):
     r"""
     :Constructors:
@@ -11547,6 +11592,9 @@ class SpectralPolarPanelsClass(GObject.GPointer):
     """
 
     parent_class: GObject.ObjectClass = ...
+
+class SpectralPolarPanelsComb(GObject.GPointer): ...
+class SpectralPolarPanelsPack(GObject.GPointer): ...
 
 class SphereMap(GObject.Object):
     r"""

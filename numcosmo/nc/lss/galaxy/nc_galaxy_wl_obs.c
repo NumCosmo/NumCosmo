@@ -57,6 +57,7 @@
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/algebra/ncm_vector.h"
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
+#include "ncm/algebra/ncm_spectral_polar_panels_array.h"
 #include "nc_enum_types.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/background/nc_hicosmo.h"
@@ -324,9 +325,11 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
   /**
    * NcGalaxyWLObs:shape-interp:
    *
-   * The interpolants of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of the galaxies, a
-   * #NcmSpectralPolarPanels for each row that has one, keyed by the row; empty when the
-   * rows changed after #NcGalaxyWLObs:shape-interp-source was set.
+   * The interpolants of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of the galaxies, keyed by
+   * the row, for each row that has one: a packed #NcmSpectralPolarPanelsArray of the
+   * Chebyshev modes of its expansion over the population parameters
+   * (#NcGalaxyShapeFactorSpectral:pop-order), one mode when the population is fixed. Empty
+   * when the rows changed after #NcGalaxyWLObs:shape-interp-source was set.
    */
   g_object_class_install_property (object_class,
                                    PROP_SHAPE_INTERP,
@@ -737,18 +740,19 @@ _nc_galaxy_wl_obs_set_pz_table (NcGalaxyWLObs *obs, const guint i, NcmMatrix *ta
  * nc_galaxy_wl_obs_set_shape_interp:
  * @obs: a #NcGalaxyWLObs
  * @i: row index
- * @spp: the interpolant of row @i
+ * @modes: the interpolant of row @i, packed
  *
- * Sets the interpolant of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of row @i, referencing
- * @spp. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
+ * Sets the interpolant of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of row @i, the modes of
+ * its expansion over the population parameters (#NcGalaxyWLObs:shape-interp), referencing
+ * @modes. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
  * nc_galaxy_wl_obs_set_shape_interp_source() and while the rows are unchanged.
  */
 void
-nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp)
+nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanelsArray *modes)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (spp));
+  ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (modes));
 }
 
 /**
@@ -759,7 +763,7 @@ nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectra
  * Returns: (transfer none) (nullable): the interpolant of row @i, or %NULL when the row has
  * none, there is no record or the rows changed after the record was set.
  */
-NcmSpectralPolarPanels *
+NcmSpectralPolarPanelsArray *
 nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
@@ -767,7 +771,7 @@ nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i)
   if (!_nc_galaxy_wl_obs_shape_interp_current (obs))
     return NULL;
 
-  return (NcmSpectralPolarPanels *) ncm_obj_dict_int_peek (self->shape_interp, i);
+  return (NcmSpectralPolarPanelsArray *) ncm_obj_dict_int_peek (self->shape_interp, i);
 }
 
 /**

@@ -33,12 +33,32 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
+#include <numcosmo/ncm/core/ncm_obj_array.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_GALAXY_SHAPE_FACTOR_SPECTRAL (nc_galaxy_shape_factor_spectral_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcGalaxyShapeFactorSpectral, nc_galaxy_shape_factor_spectral, NC, GALAXY_SHAPE_FACTOR_SPECTRAL, NcGalaxyShapeFactor)
+
+/**
+ * NcGalaxyShapeFactorSpectralFallback:
+ * @NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION: the population is outside the box of the expansion of the galaxy, or its expansion did not converge
+ * @NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_RANGE: the shear is beyond the range the interpolant of the galaxy covers
+ * @NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_CAP: the shear is above #NcGalaxyShapeFactorSpectral:interp-g-max
+ *
+ * Why $\ln P$ of a galaxy was computed without its interpolant, with
+ * #NcGalaxyShapeFactorSpectral:use-interp set (see
+ * nc_galaxy_shape_factor_spectral_get_fallback_stats()).
+ */
+typedef enum _NcGalaxyShapeFactorSpectralFallback /*< prefix=NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK >*/
+{
+  NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION,
+  NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_RANGE,
+  NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_CAP,
+  /*< private >*/
+  NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_LEN, /*< skip >*/
+} NcGalaxyShapeFactorSpectralFallback;
 
 NcGalaxyShapeFactorSpectral *nc_galaxy_shape_factor_spectral_new (NcGalaxyWLObsEllipConv ellip_conv);
 NcGalaxyShapeFactorSpectral *nc_galaxy_shape_factor_spectral_ref (NcGalaxyShapeFactorSpectral *gsfs);
@@ -62,7 +82,13 @@ void nc_galaxy_shape_factor_spectral_set_line_abstol (NcGalaxyShapeFactorSpectra
 gdouble nc_galaxy_shape_factor_spectral_get_line_abstol (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_restrict_range (NcGalaxyShapeFactorSpectral *gsfs, const gboolean restrict_range);
 gboolean nc_galaxy_shape_factor_spectral_get_restrict_range (NcGalaxyShapeFactorSpectral *gsfs);
+void nc_galaxy_shape_factor_spectral_set_pop_order (NcGalaxyShapeFactorSpectral *gsfs, const guint pop_order);
+guint nc_galaxy_shape_factor_spectral_get_pop_order (NcGalaxyShapeFactorSpectral *gsfs);
+guint nc_galaxy_shape_factor_spectral_get_pop_n_unconverged (NcGalaxyShapeFactorSpectral *gsfs);
 guint nc_galaxy_shape_factor_spectral_get_n_loaded_short (NcGalaxyShapeFactorSpectral *gsfs);
+
+void nc_galaxy_shape_factor_spectral_get_fallback_stats (NcGalaxyShapeFactorSpectralFallback reason, guint64 *lines, guint64 *shears, gdouble *seconds);
+void nc_galaxy_shape_factor_spectral_reset_fallback_stats (void);
 
 gdouble nc_galaxy_shape_factor_spectral_eval_ln_direct (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_noise);
 NcmMatrix *nc_galaxy_shape_factor_spectral_eval_panels (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gdouble std_noise, gdouble *ln_marginal);

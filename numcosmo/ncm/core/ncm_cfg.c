@@ -4,10 +4,13 @@
  *  Wed Aug 13 20:59:22 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -111,6 +114,7 @@
 #include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
+#include "ncm/algebra/ncm_spectral_polar_panels_array.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
 #include "nc/bbn/nc_bbn_parametrized.h"
@@ -826,6 +830,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_PANELS_PRODUCT);
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_POLAR);
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_POLAR_PANELS);
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_POLAR_PANELS_ARRAY);
 
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
