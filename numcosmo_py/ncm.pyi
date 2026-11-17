@@ -534,6 +534,61 @@ def util_smooth_trans_get_theta(
 def util_sqrt1px_m1(x: float) -> float: ...
 def var_dict_clear(vd: VarDict) -> None: ...
 
+class BSpline(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        BSpline(**properties)
+        new(order:int, knots:NumCosmoMath.Vector, control_points:NumCosmoMath.Vector) -> NumCosmoMath.BSpline
+
+    Object NcmBSpline
+
+    Properties from NcmBSpline:
+      order -> guint: order
+        B-spline order (degree + 1)
+      knots -> NcmVector: knots
+        B-spline knots
+      control-points -> NcmVector: control-points
+        B-spline control points
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        control_points: Vector
+        knots: Vector
+        order: int
+
+    props: Props = ...
+    def __init__(
+        self, control_points: Vector = ..., knots: Vector = ..., order: int = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(bs: BSpline) -> None: ...
+    def eval(self, x: float) -> float: ...
+    def free(self) -> None: ...
+    def get_order(self) -> int: ...
+    def get_range(self) -> typing.Tuple[float, float]: ...
+    @classmethod
+    def new(cls, order: int, knots: Vector, control_points: Vector) -> BSpline: ...
+    def peek_control_points(self) -> Vector: ...
+    def peek_knots(self) -> Vector: ...
+    def ref(self) -> BSpline: ...
+
+class BSplineClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        BSplineClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class BinSplit(GObject.GPointer):
     r"""
     :Constructors:
@@ -12305,6 +12360,7 @@ class SplineBSpline(Spline):
         x: Vector = ...,
         y: Vector = ...,
     ) -> None: ...
+    def dup_bspline(self) -> BSpline: ...
     def get_achieved_error(self) -> float: ...
     def get_breakpoints(self) -> Vector: ...
     def get_order(self) -> int: ...

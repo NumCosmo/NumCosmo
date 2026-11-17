@@ -79,6 +79,7 @@
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/spline/ncm_spline_func.h>
 #include <numcosmo/ncm/spline/ncm_spline_bspline.h>
+#include <numcosmo/ncm/spline/ncm_bspline.h>
 #include <numcosmo/ncm/spline/ncm_spline_gsl.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>

@@ -250,6 +250,10 @@ math_tests = [
         'sources': ['ncm/spline/test_ncm_spline_bspline.c'],
     },
     {
+        'name': 'ncm_bspline',
+        'sources': ['ncm/spline/test_ncm_bspline.c'],
+    },
+    {
         'name': 'ncm_spline_hermite',
         'sources': ['ncm/spline/test_ncm_spline_hermite.c'],
     },
