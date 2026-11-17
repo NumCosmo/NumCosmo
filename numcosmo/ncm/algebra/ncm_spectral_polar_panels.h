@@ -32,15 +32,12 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
-#include <numcosmo/ncm/core/ncm_obj_array.h>
 
 G_BEGIN_DECLS
 
 #define NCM_TYPE_SPECTRAL_POLAR_PANELS (ncm_spectral_polar_panels_get_type ())
-#define NCM_TYPE_SPECTRAL_POLAR_PANELS_ARRAY (ncm_spectral_polar_panels_array_get_type ())
 
 G_DECLARE_FINAL_TYPE (NcmSpectralPolarPanels, ncm_spectral_polar_panels, NCM, SPECTRAL_POLAR_PANELS, GObject)
-G_DECLARE_FINAL_TYPE (NcmSpectralPolarPanelsArray, ncm_spectral_polar_panels_array, NCM, SPECTRAL_POLAR_PANELS_ARRAY, GObject)
 
 NcmSpectralPolarPanels *ncm_spectral_polar_panels_new (void);
 NcmSpectralPolarPanels *ncm_spectral_polar_panels_ref (NcmSpectralPolarPanels *spp);
@@ -67,30 +64,6 @@ guint ncm_spectral_polar_panels_find_panel_near (NcmSpectralPolarPanels *spp, gu
 gdouble ncm_spectral_polar_panels_eval (NcmSpectralPolarPanels *spp, gdouble r, gdouble theta);
 gdouble ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble r, gdouble theta);
 void ncm_spectral_polar_panels_eval_on_array (NcmSpectralPolarPanels *spp, guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out);
-
-typedef struct _NcmSpectralPolarPanelsComb NcmSpectralPolarPanelsComb;
-
-NcmSpectralPolarPanelsComb *ncm_spectral_polar_panels_comb_new (void);
-void ncm_spectral_polar_panels_comb_free (NcmSpectralPolarPanelsComb *comb);
-void ncm_spectral_polar_panels_comb_reset (NcmSpectralPolarPanelsComb *comb);
-
-typedef struct _NcmSpectralPolarPanelsPack NcmSpectralPolarPanelsPack;
-
-gsize ncm_spectral_polar_panels_pack_get_size (const NcmSpectralPolarPanelsPack *pack);
-void ncm_spectral_polar_panels_pack_get_range (const NcmSpectralPolarPanelsPack *pack, gdouble *ra, gdouble *rb, gdouble *ta, gdouble *tb);
-guint ncm_spectral_polar_panels_pack_find_panel_near (const NcmSpectralPolarPanelsPack *pack, guint hint, gdouble r, gdouble theta);
-void ncm_spectral_polar_panels_pack_eval_on_array_combine (const NcmSpectralPolarPanelsPack *pack, const gdouble *w, NcmSpectralPolarPanelsComb *comb, guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out);
-
-NcmSpectralPolarPanelsArray *ncm_spectral_polar_panels_array_new (void);
-NcmSpectralPolarPanelsArray *ncm_spectral_polar_panels_array_ref (NcmSpectralPolarPanelsArray *spa);
-
-void ncm_spectral_polar_panels_array_free (NcmSpectralPolarPanelsArray *spa);
-void ncm_spectral_polar_panels_array_clear (NcmSpectralPolarPanelsArray **spa);
-
-void ncm_spectral_polar_panels_array_add (NcmSpectralPolarPanelsArray *spa, NcmSpectralPolarPanels *spp);
-guint ncm_spectral_polar_panels_array_len (NcmSpectralPolarPanelsArray *spa);
-void ncm_spectral_polar_panels_array_pack (NcmSpectralPolarPanelsArray *spa);
-const NcmSpectralPolarPanelsPack *ncm_spectral_polar_panels_array_peek_pack (NcmSpectralPolarPanelsArray *spa);
 
 G_END_DECLS
 

@@ -419,7 +419,7 @@ instead of once per value of $\theta$.
   approximation of the current population on that panel only, kept for the next shears in
   it. A population outside its box is integrated.
 
-Prepared catalogs store the modes of each galaxy ([[numcosmo|NcGalaxyWLObs:shape-interp-modes]],
+Prepared catalogs store the modes of each galaxy ([[numcosmo|NcGalaxyWLObs:shape-interp]],
 one [[numcosmo-math|NcmSpectralPolarPanelsArray]] per galaxy), and their record holds the
 population with its free parameters and their bounds: the box. A fit that reads them
 evaluates the expansion over the box of the record, whatever its own `pop-order`:
