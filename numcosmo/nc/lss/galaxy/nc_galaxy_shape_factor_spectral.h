@@ -86,6 +86,10 @@ void nc_galaxy_shape_factor_spectral_set_pop_order (NcGalaxyShapeFactorSpectral 
 guint nc_galaxy_shape_factor_spectral_get_pop_order (NcGalaxyShapeFactorSpectral *gsfs);
 guint nc_galaxy_shape_factor_spectral_get_pop_n_unconverged (NcGalaxyShapeFactorSpectral *gsfs);
 guint nc_galaxy_shape_factor_spectral_get_n_loaded_short (NcGalaxyShapeFactorSpectral *gsfs);
+void nc_galaxy_shape_factor_spectral_set_rebuild_short (NcGalaxyShapeFactorSpectral *gsfs, const gboolean rebuild_short);
+gboolean nc_galaxy_shape_factor_spectral_get_rebuild_short (NcGalaxyShapeFactorSpectral *gsfs);
+guint nc_galaxy_shape_factor_spectral_get_n_built (NcGalaxyShapeFactorSpectral *gsfs);
+gboolean nc_galaxy_shape_factor_spectral_check_record (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcmObjDictStr *source, const guint n_modes, gchar **diff);
 
 void nc_galaxy_shape_factor_spectral_get_fallback_stats (NcGalaxyShapeFactorSpectralFallback reason, guint64 *lines, guint64 *shears, gdouble *seconds);
 void nc_galaxy_shape_factor_spectral_reset_fallback_stats (void);

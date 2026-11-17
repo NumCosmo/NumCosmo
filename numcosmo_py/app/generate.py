@@ -104,6 +104,15 @@ from numcosmo_py.experiments.planck18 import (
     generate_planck18_ttteee,
     mset_set_parameters,
 )
+from numcosmo_py.experiments.wl_interp_cache import (
+    choose_pop_order,
+    coverage_short_of_prior,
+    default_coverage,
+    format_coverage,
+    record_shape_interp_cache,
+    shape_interp_cache_name,
+    update_shape_interp_cache,
+)
 
 
 class KnotPlacement(StrEnum):
@@ -921,6 +930,8 @@ class ClusterWL(ABC):
 
         mset.prepare_fparam_map()
 
+        self._prepare_shape_interp(dataset, mset)
+
         if self.summary:
             print_free_parameters(mset)
 
@@ -986,6 +997,9 @@ class ClusterWL(ABC):
             raise typer.BadParameter(str(e)) from e
 
         return shape_gen, pop_gen
+
+    def _prepare_shape_interp(self, dataset: Ncm.Dataset, mset: Ncm.MSet) -> None:
+        """Prepare the shape interpolants of the experiment; nothing by default."""
 
     @abstractmethod
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
@@ -1199,11 +1213,18 @@ class LoadClusterWL(ClusterWL):
     footprint is the bounding box of the catalog's RA/Dec. --shape-dist's
     ellip_conv/ellip_coord must match the catalog's own convention.
 
-    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
-    interpolants of its galaxies and the shape factor and population that
+    With a Spectral --shape-factor and use_interp=true, the interpolants of the
+    galaxies are built (in parallel) into a cache file beside the catalog, one per
+    configuration, over the population coverage (--pop-coverage, default the
+    prior of each free population parameter), or reused from it; the dataset keeps
+    the catalog without them, naming the cache, which loading the experiment
+    attaches.
+
+    A catalog prepared by ``numcosmo wl-catalog shape-interp`` (deprecated) carries
+    the interpolants of its galaxies and the shape factor and population that
     built them; the experiment takes both from the catalog, and giving
     --shape-factor, --pop-dist or a population parameter in --parameter-list
-    is an error.
+    is an error. ``numcosmo wl-catalog upgrade`` moves them to a cache.
     """
 
     shape_factor: Annotated[
@@ -1312,6 +1333,150 @@ class LoadClusterWL(ClusterWL):
             default_factory=lambda: [ResampleFlagChoice.ALL],
         ),
     ]
+
+    pop_coverage: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "NAME=LO:HI, repeatable: the interpolants of a Spectral shape factor "
+                "with use_interp expand ln P over the population parameter NAME (e.g. "
+                "alpha or NcGalaxyShapePop:alpha) in [LO, HI]. Default: each free "
+                "population parameter over its prior, within Beta alpha, beta in "
+                "[1.25, 2.75] and Gauss sigma in [0.25, 0.75]; where a fit leaves the "
+                "coverage, the galaxies are computed without the expansion (slower, "
+                "warned). Without pop_order in --shape-factor the order is chosen "
+                "from a sample of galaxies."
+            ),
+            show_default=True,
+            default_factory=list,
+            rich_help_panel="Shape interpolant cache",
+        ),
+    ]
+
+    interp_cache_dir: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "Directory of the caches of shape interpolants (one file per "
+                "configuration, shared by the experiments of a catalog). Default: "
+                "beside --data-file, named after it with the suffix .interp, or "
+                "beside the experiment for --catalog."
+            ),
+            show_default=True,
+            rich_help_panel="Shape interpolant cache",
+        ),
+    ] = None
+
+    interp_build: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Build the interpolants missing from the cache now. Without it the "
+                "experiment only names the cache, built when it is first run."
+            ),
+            show_default=True,
+            rich_help_panel="Shape interpolant cache",
+        ),
+    ] = True
+
+    def _interp_cache_dir(self) -> Path:
+        """Return the directory of the shape interpolant caches of the options."""
+        if self.interp_cache_dir is not None:
+            return self.interp_cache_dir
+        if self.data_file is not None:
+            stem = self.data_file.with_suffix("")
+            stem = stem.with_suffix("") if stem.suffix == ".dataset" else stem
+            return stem.with_suffix(".interp")
+        assert self.catalog is not None
+        return self.experiment.parent / f"{self.catalog.value}.interp"
+
+    def _coverage(self, mset: Ncm.MSet) -> dict[str, tuple[float, float]] | None:
+        """Return the population coverage: the default one, then --pop-coverage.
+
+        The default covers each free population parameter over its prior within the
+        default box of its population (DEFAULT_POP_COVERAGE).
+
+        Raises:
+            typer.BadParameter: A malformed --pop-coverage.
+        """
+        coverage = default_coverage(mset) or {}
+        try:
+            for spec in self.pop_coverage:
+                name, lo, hi = parse_prior(spec)
+                coverage[name.rpartition(":")[2]] = (lo, hi)
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
+        return coverage or None
+
+    def _prepare_shape_interp(self, dataset: Ncm.Dataset, mset: Ncm.MSet) -> None:
+        """Build or update the interpolant cache of the catalog, and name it.
+
+        Only for a Spectral shape factor with use_interp and a catalog that does not
+        carry interpolants itself. The dataset saved keeps the catalog without its
+        interpolants, naming the cache relative to the experiment, and the coverage.
+
+        Raises:
+            typer.BadParameter: A malformed --pop-coverage, or a coverage of a parameter
+                the population does not have.
+        """
+        data = dataset.get_data(0)
+        if not isinstance(data, Nc.DataClusterWLFactor):
+            return
+        obs = data.peek_obs()
+        gsfs = data.props.shape_factor
+        if (
+            not isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
+            or not gsfs.get_use_interp()
+            or obs.peek_shape_interp_source() is not None
+        ):
+            if self.pop_coverage:
+                raise typer.BadParameter(
+                    "--pop-coverage needs a spectral --shape-factor with use_interp"
+                )
+            return
+
+        coverage = self._coverage(mset)
+        cache_dir = self._interp_cache_dir()
+        for name, (lo, hi) in coverage_short_of_prior(mset, coverage).items():
+            clo, chi = (coverage or {}).get(name, (lo, hi))
+            print(
+                f"# The interpolants cover {name} in [{clo}, {chi}], its prior is "
+                f"[{lo}, {hi}]: outside the coverage a fit computes the galaxies "
+                "without them, at a higher cost (--pop-coverage widens it)."
+            )
+        try:
+            if coverage and gsfs.get_pop_order() < 2:
+                order, unconv = choose_pop_order(data, mset, coverage)
+                if unconv > 0:
+                    raise ValueError(
+                        f"the expansion over the population coverage "
+                        f"{format_coverage(coverage)} does not converge for {unconv} "
+                        f"of the galaxies of the sample even at pop_order={order}: "
+                        "those galaxies would be integrated at every step. Give a "
+                        "narrower --pop-coverage (e.g. around the expected values; a "
+                        "Gauss sigma in [0.25, 0.75] needs 19), or pop_order in "
+                        "--shape-factor to build at that order anyway."
+                    )
+                gsfs.set_pop_order(order)
+                print(f"# Population order {order} over {format_coverage(coverage)}.")
+            if self.interp_build:
+                upd = update_shape_interp_cache(
+                    data, mset, cache_dir, coverage=coverage
+                )
+                print(
+                    f"# Shape interpolant cache {upd.path}: {upd.built} built, "
+                    f"{upd.reused} reused, {upd.unconverged} unconverged."
+                )
+                path = upd.path
+            else:
+                pop = mset.peek(Nc.GalaxyShapePop.id())
+                assert isinstance(pop, Nc.GalaxyShapePop)
+                path = cache_dir / shape_interp_cache_name(obs, gsfs, pop, coverage)
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
+        record_shape_interp_cache(
+            obs, path, coverage, self.experiment.absolute().parent
+        )
 
     def _resolve_gens(self):
         """Return the generators of the catalog's record, or of the options.
