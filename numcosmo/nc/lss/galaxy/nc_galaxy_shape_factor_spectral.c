@@ -2581,8 +2581,9 @@ _nc_galaxy_shape_factor_spectral_check_loaded_box (NcGalaxyShapePop *pop, NcGala
 /*
  * The differences between a record (src_gsfs, src_pop) and the fit (gsfs, pop), appended to
  * diff, as _nc_galaxy_shape_factor_spectral_check_loaded() compares them: n_modes is the
- * number of modes of each galaxy, 1 (or 0 when unknown) for a fixed population. *box is the box of the expansion when it agrees (box may be NULL), and
- * *outside whether the population of the fit reaches outside it.
+ * number of modes of each galaxy, 1 (or 0 when unknown) for a fixed population. *box is the
+ * box of the expansion when it agrees (box may be NULL), and *outside whether the population
+ * of the fit reaches outside it.
  */
 static void
 _nc_galaxy_shape_factor_spectral_record_diff (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorSpectral *src_gsfs,

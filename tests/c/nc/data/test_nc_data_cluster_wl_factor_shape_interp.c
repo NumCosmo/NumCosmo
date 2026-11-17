@@ -492,7 +492,7 @@ test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite_subprocess (void)
 /*
  * nc_galaxy_shape_factor_spectral_check_record() compares the record of a catalog with a
  * fit without aborting: it agrees with the shape factor and population that wrote it, and
- * not with another interp-abstol, an expansion the record does not hold, or an empty record.
+ * not with another interp-abstol, modes of an expansion the record does not hold, or an empty record.
  * A catalog whose metadata names a cache of interpolants that is not attached is warned
  * about when it is read.
  */
@@ -523,7 +523,7 @@ test_nc_data_cluster_wl_factor_shape_interp_record_cache (TestNcDataClusterWLFac
   g_clear_pointer (&diff, g_free);
 
   g_assert_false (nc_galaxy_shape_factor_spectral_check_record (gsfs, pop, source, 5, &diff));
-  g_assert_nonnull (strstr (diff, "expansion"));
+  g_assert_nonnull (strstr (diff, "fixed population has 5 modes"));
   g_clear_pointer (&diff, g_free);
 
   g_assert_false (nc_galaxy_shape_factor_spectral_check_record (gsfs, pop, empty, 0, NULL));

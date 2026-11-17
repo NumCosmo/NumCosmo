@@ -2593,11 +2593,9 @@ def _masked_and_subset_m2lnL(experiment: Path) -> tuple[float, float]:
     rows = [int(i) for i in np.flatnonzero(data.get_mask())]
     sub = _sub_catalog(obs, rows)
     for k, i in enumerate(rows):
-        modes = obs.peek_shape_interp_modes(i)
+        modes = obs.peek_shape_interp(i)
         if modes is not None:
-            sub.set_shape_interp_modes(k, modes)
-        elif obs.peek_shape_interp(i) is not None:
-            sub.set_shape_interp(k, obs.peek_shape_interp(i))
+            sub.set_shape_interp(k, modes)
     if obs.peek_shape_interp_source() is not None:
         sub.props.shape_interp_source = obs.peek_shape_interp_source()
     data.set_mask(None)

@@ -409,10 +409,9 @@ def _dataset_mask(path: Path) -> list[bool]:
 
 def _interp_summary(obs: Nc.GalaxyWLObs) -> tuple[int, int]:
     """Return the number of rows of obs with a fixed interpolant and with modes."""
-    n_fixed = sum(1 for i in range(obs.len()) if obs.peek_shape_interp(i) is not None)
-    n_modes = sum(
-        1 for i in range(obs.len()) if obs.peek_shape_interp_modes(i) is not None
-    )
+    lens = [m.len() for m in map(obs.peek_shape_interp, range(obs.len())) if m]
+    n_fixed = sum(1 for n in lens if n == 1)
+    n_modes = sum(1 for n in lens if n > 1)
     return n_fixed, n_modes
 
 
