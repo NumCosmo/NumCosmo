@@ -4,10 +4,13 @@
  *  Tue January 20 16:59:36 2015
  *  Copyright  2015  Sandro Dias Pinto Vitenti & Mariana Penna-Lima
  *  <vitenti@uel.br>, <pennalima@gmail.com>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2015 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1844,7 +1847,16 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc, GError **error)
 
   self->started = TRUE;
 
-  ncm_dataset_register_shared (ncm_likelihood_peek_dataset (lh), self->ser);
+  /* Prepared before the shared objects are registered, so that what a data
+   * prepares once for every clone (the redshift grid of
+   * NcDataClusterWLFactor, for example) is built here and published to the
+   * clones instead of being built by each of them. */
+  {
+    NcmDataset *dset = ncm_likelihood_peek_dataset (lh);
+
+    ncm_dataset_prepare (dset, mset);
+    ncm_dataset_register_shared (dset, self->ser);
+  }
 
   g_object_set (ncm_mset_catalog_peek_storage (self->mcat),
                 "smode", NCM_MSET_CATALOG_SYNC_TIMED,
