@@ -2601,8 +2601,14 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
                         (_nc_galaxy_shape_factor_spectral_pop_box_key (ldata->src_pop, src->pop_order) == self->pop_box_key);
   }
 
-  /* A catalog built for a smaller box than that of the fit: the shears beyond it are integrated */
-  if (ldata->g_max < (1.0 - NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SOURCE_RELTOL) * _nc_galaxy_shape_factor_spectral_target (self, ldata))
+  /*
+   * A catalog built for a smaller box than that of the fit: the shears beyond it are
+   * integrated. The range of a loaded interpolant is (g_c + g_max) - g_c, rounded at the
+   * scale of g_c + g_max: a few of its ulps are allowed besides the relative tolerance, or a
+   * galaxy with a small reach and a large g_c would be short of its own reach.
+   */
+  if (ldata->g_max < (1.0 - NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SOURCE_RELTOL) * _nc_galaxy_shape_factor_spectral_target (self, ldata) -
+      4.0 * GSL_DBL_EPSILON * (ldata->g_c + _nc_galaxy_shape_factor_spectral_target (self, ldata)))
   {
     g_atomic_int_inc (&self->n_short);
 
