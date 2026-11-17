@@ -89,6 +89,7 @@ void nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMS
 void nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs);
 gboolean nc_data_cluster_wl_factor_is_data_prepared (NcDataClusterWLFactor *dcwlf);
 guint nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf);
+guint nc_data_cluster_wl_factor_get_crit_count (NcDataClusterWLFactor *dcwlf);
 
 NcGalaxyWLObs *nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf);
 gdouble nc_data_cluster_wl_factor_get_z_max (NcDataClusterWLFactor *dcwlf, NcmMSet *mset);

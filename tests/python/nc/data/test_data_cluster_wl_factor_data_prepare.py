@@ -271,6 +271,73 @@ def test_distance_zf_get_z_max(capfd, separate_dist):
     np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=1.0e-8, atol=0.0)
 
 
+def test_spectral_calibration_through_the_line_table():
+    """Spectral's calibration evaluates P(eps_obs | z) from the table along the shears of
+    each galaxy (line-abstol, default 1e-8) instead of an integral at every probe: the node
+    pairs are those of the integrals (line-abstol zero), and so is -2lnP within the
+    tolerance of the table."""
+    results = {}
+    for line_abstol in (0.0, 1.0e-8):
+        dcwlf, mset = _build("spectral", "nfw", "composed")
+        dcwlf.props.shape_factor.props.line_abstol = line_abstol
+        dcwlf.data_prepare(mset)
+        assert dcwlf.get_calib_count() > 0
+        results[line_abstol] = (*_node_config(dcwlf), _m2lnP(dcwlf, mset))
+
+    direct, table = results[0.0], results[1.0e-8]
+
+    assert table[0] == direct[0]
+    assert table[1] == direct[1]
+    assert np.all(np.isfinite(table[2]))
+    np.testing.assert_allclose(table[2], direct[2], rtol=1.0e-7, atol=1.0e-7)
+
+
+def _shared_clone(dcwlf, mset):
+    """A clone made as NcmFitESMCMC makes its workers': the dataset registered as shared
+    after it was prepared, then duplicated (with its own model set) through that
+    serializer."""
+    dset = Ncm.Dataset.new()
+    dset.append_data(dcwlf)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dset.register_shared(ser)
+    clone = ser.dup_obj(dcwlf)
+    mset_clone = ser.dup_obj(mset)
+    ser.reset(True)
+    assert clone.peek_obs() is dcwlf.peek_obs()
+    return clone, mset_clone
+
+
+def test_clone_takes_the_published_grid_and_critical_densities():
+    """A clone of a prepared dataset takes its redshift grid and the critical densities
+    at its nodes instead of calibrating and computing them, with the same -2lnP. A
+    clone at another cosmology computes its own critical densities, which equal those
+    of a dataset prepared there, and leaves the original's untouched."""
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    dcwlf.data_prepare(mset)
+    ref = _m2lnP(dcwlf, mset)
+
+    n_gal = dcwlf.peek_obs().len()
+    assert dcwlf.get_crit_count() == n_gal
+
+    clone, mset_clone = _shared_clone(dcwlf, mset)
+    np.testing.assert_array_equal(_m2lnP(clone, mset_clone), ref)
+    assert clone.get_calib_count() == 0
+    # The critical densities were taken from the original, not computed
+    assert clone.get_crit_count() == 0
+
+    # Another cosmology in the clone only
+    mset_clone.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
+    moved = _m2lnP(clone, mset_clone)
+    assert clone.get_crit_count() == n_gal
+    np.testing.assert_array_equal(_m2lnP(dcwlf, mset), ref)
+    assert not np.array_equal(moved, ref)
+
+    fresh, mset_fresh = _build("var-add", "nfw", "spline")
+    fresh.props.node_config = dcwlf.props.node_config
+    mset_fresh.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
+    np.testing.assert_array_equal(_m2lnP(fresh, mset_fresh), moved)
+
+
 def test_distance_zf_after_model_swap(capfd):
     """A surface mass density swapped in after the first evaluation, with a distance of
     low zf, is warned about too, although the catalog did not change. The warning is

@@ -65,6 +65,7 @@ typedef enum _NcGalaxyShapeFactorError /*< prefix=NC_GALAXY_SHAPE_FACTOR_ERROR_E
 GQuark nc_galaxy_shape_factor_error_quark (void);
 
 typedef struct _NcGalaxyShapeFactorData NcGalaxyShapeFactorData;
+typedef struct _NcGalaxyShapeFactorLine NcGalaxyShapeFactorLine;
 
 /*
  * Integrand callback: the per-galaxy shape likelihood factor
@@ -134,8 +135,27 @@ struct _NcGalaxyShapeFactorClass
    * prefetches nothing. */
   void (*data_prefetch) (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage);
 
+  /* Writes to @out[j], for j < @n, eval_ln_marginal (when @want_log) or
+   * eval_marginal at (@g_1[j], @g_2[j]), all for the galaxy of @data and the
+   * same observed ellipticity, as nc_galaxy_shape_factor_eval_at_nodes() and
+   * nc_galaxy_shape_factor_eval_ln_at_nodes() need for the nodes of one
+   * galaxy. A subclass overrides it to do once per galaxy what it would do
+   * once per point; the results are those of the per-point hooks within
+   * rounding (see nc_galaxy_shape_factor_eval_nodes()).
+   * The default calls the per-point hook for each j. */
+  void (*eval_nodes) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+
+  /* A Chebyshev series in t of ln P at the shears b + t u, t in [t_min, t_max],
+   * within a tolerance of the subclass, from at most max_points evaluations
+   * (G_MAXUINT for no limit), in *coeffs (callee-allocated); FALSE when the
+   * subclass has none for this line. The shears of the nodes of a galaxy lie
+   * on such a line: nc_galaxy_shape_factor_eval_line() and
+   * nc_galaxy_shape_factor_line_new() evaluate the series, or the per-point
+   * values when there is none. The default returns FALSE. */
+  gboolean (*line_table) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const guint max_points, GArray **coeffs);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[11];
+  gpointer padding[9];
 };
 
 /*
@@ -224,6 +244,16 @@ void nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *
 gdouble nc_galaxy_shape_factor_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 gdouble nc_galaxy_shape_factor_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 void nc_galaxy_shape_factor_eval_ln_marginal_array (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const NcmVector *g_1, const NcmVector *g_2, const NcmVector *epsilon_obs_1, const NcmVector *epsilon_obs_2, NcmVector *out);
+void nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+void nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+
+NcGalaxyShapeFactorLine *nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const gdouble z_lo, const gdouble z_hi);
+gdouble nc_galaxy_shape_factor_line_eval (NcGalaxyShapeFactorLine *line, const gdouble z);
+gboolean nc_galaxy_shape_factor_line_has_table (NcGalaxyShapeFactorLine *line);
+void nc_galaxy_shape_factor_line_free (NcGalaxyShapeFactorLine *line);
+
+GBytes *nc_galaxy_shape_factor_data_peek_crit (NcGalaxyShapeFactorData *data);
+void nc_galaxy_shape_factor_data_share_crit (NcGalaxyShapeFactorData *data, GBytes *crit, const guint n_nodes);
 
 #define NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1 "epsilon_int_1"
 #define NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2 "epsilon_int_2"

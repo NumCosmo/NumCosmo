@@ -71,6 +71,7 @@
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "ncm/core/ncm_prefetch_private.h"
+#include "ncm/core/ncm_vmath_private.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
@@ -127,9 +128,14 @@ typedef struct _NcGalaxyShapeFactorCData
   gdouble dec_v;
   NcmTriVec v; /* the unit vector of (ra_v, dec_v) */
   NcWLSurfaceMassDensityOptzs optzs;
-  NcWLSurfaceMassDensityCritCache *crit_cache_arr;
   NcWLSurfaceMassDensitySigmaCache sigma_cache;
-  guint crit_cache_len;
+
+  /* The critical surface density at each redshift node, the data of crit (an
+   * immutable, possibly shared, block of crit_len doubles), or NULL. Only the
+   * nodes behind the lens read it, so the value alone is kept. */
+  GBytes *crit;
+  const gdouble *crit_sigma;
+  guint crit_len;
 } NcGalaxyShapeFactorCData;
 
 enum
@@ -282,6 +288,127 @@ _nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
   return g_strdup_printf ("%s (ellip_conv=%s)", G_OBJECT_TYPE_NAME (gsf), ellip_val->value_nick);
 }
 
+/* Default eval_nodes: the per-point hook at each point. */
+static void
+_nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                    const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                    const gboolean want_log, gdouble *out)
+{
+  NcGalaxyShapeFactorClass *klass = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+  guint j;
+
+  if (want_log)
+    for (j = 0; j < n; j++)
+      out[j] = klass->eval_ln_marginal (gsf, pop, data, g_1[j], g_2[j], epsilon_obs_1, epsilon_obs_2);
+
+  else
+    for (j = 0; j < n; j++)
+      out[j] = klass->eval_marginal (gsf, pop, data, g_1[j], g_2[j], epsilon_obs_1, epsilon_obs_2);
+}
+
+/* Default line_table: no table */
+static gboolean
+_nc_galaxy_shape_factor_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                    const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2,
+                                    const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                    const guint max_points, GArray **coeffs)
+{
+  return FALSE;
+}
+
+/* Points per call of eval_nodes in _nc_galaxy_shape_factor_eval_line(). */
+#define NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK 64
+
+/* The Chebyshev series coeffs of a line table on [t_min, t_max] at t, by Clenshaw's recurrence */
+static inline gdouble
+_nc_galaxy_shape_factor_line_series (const gdouble *c, const guint nc, const gdouble t_min, const gdouble t_max, const gdouble t)
+{
+  const gdouble s = (2.0 * t - (t_max + t_min)) / (t_max - t_min);
+  gdouble b1      = 0.0;
+  gdouble b2      = 0.0;
+  guint l;
+
+  for (l = nc - 1; l >= 1; l--)
+  {
+    const gdouble b0 = 2.0 * s * b1 - b2 + c[l];
+
+    b2 = b1;
+    b1 = b0;
+  }
+
+  return s * b1 - b2 + c[0];
+}
+
+/*
+ * The values of eval_nodes at the n shears b + t_j u of one line: from the table of the
+ * line_table hook on [min t_j, max t_j] with at most n / 2 evaluations, when the subclass
+ * gives one, otherwise by eval_nodes at the shears, in chunks. out may be t.
+ */
+static void
+_nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                   const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2,
+                                   const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out)
+{
+  NcGalaxyShapeFactorClass *klass = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+  GArray *coeffs                  = NULL;
+  guint j0;
+
+  if (n >= 2)
+  {
+    gdouble t_min = t[0];
+    gdouble t_max = t[0];
+    guint j;
+
+    for (j = 1; j < n; j++)
+    {
+      t_min = GSL_MIN (t_min, t[j]);
+      t_max = GSL_MAX (t_max, t[j]);
+    }
+
+    if ((t_max > t_min) &&
+        klass->line_table (gsf, pop, data, t_min, t_max, u_1, u_2, b_1, b_2, epsilon_obs_1, epsilon_obs_2, n / 2, &coeffs))
+    {
+      const gdouble *c = (const gdouble *) coeffs->data;
+      const guint nc   = coeffs->len;
+
+      #pragma omp simd
+
+      for (j = 0; j < n; j++)
+        out[j] = _nc_galaxy_shape_factor_line_series (c, nc, t_min, t_max, t[j]);
+
+      if (!want_log)
+      {
+        #pragma omp simd
+
+        for (j = 0; j < n; j++)
+          out[j] = ncm_vmath_exp (out[j]);
+      }
+
+      g_array_unref (coeffs);
+
+      return;
+    }
+
+    g_clear_pointer (&coeffs, g_array_unref);
+  }
+
+  for (j0 = 0; j0 < n; j0 += NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK)
+  {
+    const guint c = MIN (n - j0, NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK);
+    gdouble g_1[NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK];
+    gdouble g_2[NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK];
+    guint k;
+
+    for (k = 0; k < c; k++)
+    {
+      g_1[k] = b_1 + t[j0 + k] * u_1;
+      g_2[k] = b_2 + t[j0 + k] * u_2;
+    }
+
+    klass->eval_nodes (gsf, pop, data, c, g_1, g_2, epsilon_obs_1, epsilon_obs_2, want_log, &out[j0]);
+  }
+}
+
 static void
 nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
 {
@@ -313,6 +440,8 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
   klass->eval_marginal    = &_nc_galaxy_shape_factor_eval_marginal;
   klass->eval_ln_marginal = &_nc_galaxy_shape_factor_eval_ln_marginal;
   klass->get_desc         = &_nc_galaxy_shape_factor_get_desc;
+  klass->eval_nodes       = &_nc_galaxy_shape_factor_eval_nodes;
+  klass->line_table       = &_nc_galaxy_shape_factor_line_table;
 }
 
 static void
@@ -574,7 +703,7 @@ nc_galaxy_shape_factor_data_prefetch (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFac
       const NcGalaxyShapeFactorCData *cdata = (const NcGalaxyShapeFactorCData *) data->cdata;
 
       if (cdata != NULL)
-        ncm_prefetch_span (cdata->crit_cache_arr, cdata->crit_cache_len * sizeof (NcWLSurfaceMassDensityCritCache));
+        ncm_prefetch_span (cdata->crit_sigma, cdata->crit_len * sizeof (gdouble));
 
       break;
     }
@@ -892,7 +1021,7 @@ nc_galaxy_shape_factor_data_unref (NcGalaxyShapeFactorData *data)
 
     g_assert_nonnull (data->ldata_destroy);
     data->ldata_destroy (data->ldata);
-    g_clear_pointer (&cdata->crit_cache_arr, g_free);
+    g_clear_pointer (&cdata->crit, g_bytes_unref);
     g_free (cdata);
     nc_galaxy_shape_pop_data_unref (data->pop_data);
     nc_galaxy_position_factor_data_unref (data->pos_data);
@@ -1320,6 +1449,29 @@ _integ_data_prepare (gpointer user_data, NcmMSet *mset)
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 }
 
+/*
+ * The tangential reduced shear of the galaxy of cdata at the source redshift z, for the
+ * lens at z_cl: the one of the surface mass density behind the lens, and in front of it
+ * that just behind the lens tapered by exp ((z - z_cl) / 0.001), so that the integrand is
+ * continuous in z. The shape integrand (_nc_galaxy_shape_factor_integ_f()) and the line of
+ * a galaxy (_nc_galaxy_shape_factor_line_t()) both use it, so that the calibration of the
+ * nodes and the likelihood see the same function.
+ */
+static gdouble
+_nc_galaxy_shape_factor_gt (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo,
+                            NcGalaxyShapeFactorCData *cdata, const gdouble z, const gdouble z_cl)
+{
+  if (z > z_cl)
+    return nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cl, &cdata->optzs);
+
+  {
+    const gdouble gt0  = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, &cdata->optzs);
+    const gdouble step = exp ((z - z_cl) / 0.001);
+
+    return step * gt0;
+  }
+}
+
 static gdouble
 _nc_galaxy_shape_factor_integ_f (gpointer callback_data, const gdouble z, NcGalaxyShapeFactorData *data)
 {
@@ -1330,23 +1482,7 @@ _nc_galaxy_shape_factor_integ_f (gpointer callback_data, const gdouble z, NcGala
 
   /* gt is tangential-native and rotates via cdata->rot_re/rot_im; the bias
    * (data->c1/c2) is already in data->coord and is added unrotated. */
-  if (z > z_cl)
-  {
-    gt = nc_wl_surface_mass_density_reduced_shear_optzs (int_data->surface_mass_density,
-                                                         int_data->density_profile,
-                                                         int_data->cosmo,
-                                                         z, z_cl, &cdata->optzs);
-  }
-  else
-  {
-    const gdouble gt0 = nc_wl_surface_mass_density_reduced_shear_optzs (int_data->surface_mass_density,
-                                                                        int_data->density_profile,
-                                                                        int_data->cosmo,
-                                                                        z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, &cdata->optzs);
-    const gdouble step = exp ((z - z_cl) / 0.001);
-
-    gt = step * gt0;
-  }
+  gt = _nc_galaxy_shape_factor_gt (int_data->surface_mass_density, int_data->density_profile, int_data->cosmo, cdata, z, z_cl);
 
   {
     const complex double g = (1.0 + data->m) * gt * (cdata->rot_re + I * cdata->rot_im) + (data->c1 + I * data->c2);
@@ -1495,25 +1631,79 @@ nc_galaxy_shape_factor_update_data_at_nodes_crit (NcGalaxyShapeFactor *gsf, NcGa
   const guint n_nodes                     = ncm_vector_len (z_nodes);
   guint j;
 
-  if (cdata->crit_cache_len != n_nodes)
-  {
-    g_free (cdata->crit_cache_arr);
-    cdata->crit_cache_arr = g_new0 (NcWLSurfaceMassDensityCritCache, n_nodes);
-    cdata->crit_cache_len = n_nodes;
-  }
+  /* A new block every time: a block may be shared (see
+   * nc_galaxy_shape_factor_data_share_crit()), so it is never written. */
+  gdouble *sigma_crit = g_new (gdouble, n_nodes);
 
   for (j = 0; j < n_nodes; j++)
   {
     const gdouble z_j = ncm_vector_get (z_nodes, j);
+    NcWLSurfaceMassDensityCritCache crit_cache;
 
     nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (
       self->surface_mass_density,
       self->cosmo,
       &self->lens_ctx,
       z_j,
-      &cdata->crit_cache_arr[j]
+      &crit_cache
     );
+
+    sigma_crit[j] = crit_cache.sigma_crit;
   }
+
+  g_clear_pointer (&cdata->crit, g_bytes_unref);
+  cdata->crit       = g_bytes_new_take (sigma_crit, sizeof (gdouble) * n_nodes);
+  cdata->crit_sigma = sigma_crit;
+  cdata->crit_len   = n_nodes;
+}
+
+/**
+ * nc_galaxy_shape_factor_data_peek_crit: (skip)
+ * @data: a #NcGalaxyShapeFactorData
+ *
+ * The critical surface densities at the redshift nodes of @data, computed by
+ * nc_galaxy_shape_factor_update_data_at_nodes_crit(): an immutable block of doubles, or
+ * %NULL before it.
+ *
+ * Returns: (transfer none) (nullable): the block of @data.
+ */
+GBytes *
+nc_galaxy_shape_factor_data_peek_crit (NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+
+  return cdata->crit;
+}
+
+/**
+ * nc_galaxy_shape_factor_data_share_crit: (skip)
+ * @data: a #NcGalaxyShapeFactorData
+ * @crit: the critical surface densities at the redshift nodes of @data, from
+ *   nc_galaxy_shape_factor_data_peek_crit() of another #NcGalaxyShapeFactorData of the same
+ *   galaxy and nodes at the same cosmology and lens redshift
+ * @n_nodes: the number of redshift nodes of @data, which @crit must hold
+ *
+ * Makes @data read @crit instead of computing its own. The block is immutable: the next
+ * nc_galaxy_shape_factor_update_data_at_nodes_crit() of @data computes a new one.
+ */
+void
+nc_galaxy_shape_factor_data_share_crit (NcGalaxyShapeFactorData *data, GBytes *crit, const guint n_nodes)
+{
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+  gsize size;
+
+  g_assert_nonnull (crit);
+  /* The evaluation reads one value per node */
+  g_assert_cmpuint (g_bytes_get_size (crit), ==, sizeof (gdouble) * n_nodes);
+
+  if (crit == cdata->crit)
+    return;
+
+  g_bytes_ref (crit);
+  g_clear_pointer (&cdata->crit, g_bytes_unref);
+  cdata->crit       = crit;
+  cdata->crit_sigma = g_bytes_get_data (crit, &size);
+  cdata->crit_len   = size / sizeof (gdouble);
 }
 
 /**
@@ -1587,7 +1777,7 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
     if (update_radius || (cdata_i->radius == 0.0))
       nc_galaxy_shape_factor_update_data_radius (gsf, data_i);
 
-    if (update_crit || (cdata_i->crit_cache_arr == NULL))
+    if (update_crit || (cdata_i->crit == NULL))
       nc_galaxy_shape_factor_update_data_at_nodes_crit (gsf, data_i, z_nodes_i);
 
     if (update_sigma)
@@ -1597,6 +1787,317 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
   }
 
   return TRUE;
+}
+
+/**
+ * nc_galaxy_shape_factor_eval_nodes: (skip)
+ * @gsf: a #NcGalaxyShapeFactor
+ * @pop: the #NcGalaxyShapePop intrinsic-ellipticity model
+ * @data: a #NcGalaxyShapeFactorData
+ * @n: number of shears
+ * @g_1: real parts of the @n reduced shears (bias applied)
+ * @g_2: imaginary parts of the @n reduced shears (bias applied)
+ * @epsilon_obs_1: observed ellipticity component 1 (same frame as @g_1, @g_2)
+ * @epsilon_obs_2: observed ellipticity component 2 (same frame as @g_1, @g_2)
+ * @want_log: whether to compute the logarithms
+ * @out: the @n results
+ *
+ * Sets @out[j] to nc_galaxy_shape_factor_eval_ln_marginal() (when @want_log) or to
+ * nc_galaxy_shape_factor_eval_marginal() at (@g_1[j], @g_2[j]), for the galaxy of @data,
+ * in one call. A subclass may do once for the galaxy what the per-point functions do at
+ * each point; the values are those of the per-point functions within rounding, not bit
+ * for bit: a loop that vectorizes and a scalar computation may contract a * b + c into an
+ * fma differently, and a difference in the last bit of an intermediate is amplified by
+ * the function (|ln P| times for P = exp (ln P), the slope of an interpolant for its
+ * coordinates), which depends on the slope of ln P. In the tests they agree within 1e-13
+ * of max (1, |ln P|) in ln P, and relative in P.
+ */
+void
+nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                   const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                   const gboolean want_log, gdouble *out)
+{
+  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_nodes (gsf, pop, data, n, g_1, g_2, epsilon_obs_1, epsilon_obs_2, want_log, out);
+}
+
+/**
+ * nc_galaxy_shape_factor_eval_line: (skip)
+ * @gsf: a #NcGalaxyShapeFactor
+ * @pop: the #NcGalaxyShapePop intrinsic-ellipticity model
+ * @data: a #NcGalaxyShapeFactorData
+ * @n: number of shears
+ * @t: the @n positions on the line
+ * @u_1: real part of the direction of the line
+ * @u_2: imaginary part of the direction of the line
+ * @b_1: real part of the point of the line at $t = 0$
+ * @b_2: imaginary part of the point of the line at $t = 0$
+ * @epsilon_obs_1: observed ellipticity component 1 (same frame as the shears)
+ * @epsilon_obs_2: observed ellipticity component 2 (same frame as the shears)
+ * @want_log: whether to compute the logarithms
+ * @out: the @n results, may be @t
+ *
+ * Sets @out[j] to the value of nc_galaxy_shape_factor_eval_nodes() at the shear
+ * $g_j = b + t_j u$, for the galaxy of @data, in one call. The shears of the nodes of a
+ * galaxy lie on such a line: when the subclass gives a table of ln P along it (the
+ * line_table hook, from at most @n / 2 evaluations), the values come from that table,
+ * within a tolerance of the subclass (see #NcGalaxyShapeFactorSpectral:line-abstol);
+ * otherwise the shears are formed and nc_galaxy_shape_factor_eval_nodes() is called.
+ */
+void
+nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                  const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2,
+                                  const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out)
+{
+  _nc_galaxy_shape_factor_eval_line (gsf, pop, data, n, t, u_1, u_2, b_1, b_2, epsilon_obs_1, epsilon_obs_2, want_log, out);
+}
+
+/* Nodes behind the lens whose shears are gathered on the stack; more go to the heap. */
+#define NC_GALAXY_SHAPE_FACTOR_NODE_STACK 256
+
+/*
+ * The shape likelihood (want_log FALSE) or its logarithm at every node, for
+ * nc_galaxy_shape_factor_eval_at_nodes() and
+ * nc_galaxy_shape_factor_eval_ln_at_nodes(). The shears of the nodes behind
+ * the lens, g_j = bias + (1 + m) g_t (z_j) rot, lie on one line: they go to
+ * _nc_galaxy_shape_factor_eval_line() in one call, with t_j = (1 + m) g_t (z_j) and u = rot, the same
+ * products as the shears formed here before. Every node at or in front of
+ * the lens has g = bias, the point t = 0 of the line: when there are nodes
+ * on both sides, t = 0 goes to the same call, so that a subclass
+ * that tabulates the line (NcGalaxyShapeFactorSpectral) gives it from its
+ * table; with only nodes in front, it is computed once by eval_nodes.
+ */
+static void
+_nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out, const gboolean want_log)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorClass *klass         = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+
+  /* Read from the cache instead of re-peeking mset: this runs once per
+   * galaxy, not once per prepare() cycle. */
+  NcHaloPosition *halo_position   = self->halo_position;
+  NcGalaxyShapePop *pop           = self->pop;
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+  const gdouble z_cl              = nc_halo_position_get_redshift (halo_position);
+  const gdouble et                = data->epsilon_obs_1;
+  const gdouble ex                = data->epsilon_obs_2;
+  const gdouble b_1               = data->c1;
+  const gdouble b_2               = data->c2;
+  const gdouble m                 = data->m;
+  const guint n_nodes             = ncm_vector_len (z_nodes);
+  gdouble t_stack[NC_GALAXY_SHAPE_FACTOR_NODE_STACK];
+  guint idx_stack[NC_GALAXY_SHAPE_FACTOR_NODE_STACK];
+  gdouble *t      = t_stack;
+  guint *idx      = idx_stack;
+  guint n_front   = 0;
+  gdouble gt0_val = 0.0;
+  guint c         = 0;
+  guint j;
+
+  g_assert_nonnull (pop);
+  g_assert_nonnull (cdata->crit);
+
+  /* One more than the nodes for t = 0 */
+  if (n_nodes + 1 > NC_GALAXY_SHAPE_FACTOR_NODE_STACK)
+  {
+    t   = g_new (gdouble, n_nodes + 1);
+    idx = g_new (guint, n_nodes + 1);
+  }
+
+  for (j = 0; j < n_nodes; j++)
+  {
+    const gdouble z_j = ncm_vector_get (z_nodes, j);
+
+    if (z_j > z_cl)
+    {
+      NcWLSurfaceMassDensityCritCache crit_cache = {.is_source = TRUE, .sigma_crit = cdata->crit_sigma[j]};
+      const gdouble gt                           = nc_wl_surface_mass_density_reduced_shear_cache (&crit_cache, &cdata->sigma_cache);
+
+      t[c]   = (1.0 + m) * gt;
+      idx[c] = j;
+      c++;
+    }
+    else
+    {
+      n_front++;
+    }
+  }
+
+  if (c > 0)
+  {
+    const guint n_line = (n_front > 0) ? c + 1 : c;
+
+    t[c] = 0.0;
+    _nc_galaxy_shape_factor_eval_line (gsf, pop, data, n_line, t, cdata->rot_re, cdata->rot_im, b_1, b_2, et, ex, want_log, t);
+
+    for (j = 0; j < c; j++)
+      ncm_vector_set (out, idx[j], t[j]);
+
+    gt0_val = t[c];
+  }
+  else if (n_front > 0)
+  {
+    klass->eval_nodes (gsf, pop, data, 1, &b_1, &b_2, et, ex, want_log, &gt0_val);
+  }
+
+  if (n_front > 0)
+  {
+    for (j = 0; j < n_nodes; j++)
+    {
+      if (!(ncm_vector_get (z_nodes, j) > z_cl))
+        ncm_vector_set (out, j, gt0_val);
+    }
+  }
+
+  if (t != t_stack)
+  {
+    g_free (t);
+    g_free (idx);
+  }
+}
+
+/*
+ * The galaxy of data along its line: t = (1 + m) g_t (z), where the shear is
+ * bias + t rot, with the tangential shear of the shape integrand
+ * (_nc_galaxy_shape_factor_gt()), from the models cached by
+ * nc_galaxy_shape_factor_prepare().
+ */
+static gdouble
+_nc_galaxy_shape_factor_line_t (NcGalaxyShapeFactorPrivate * const self, NcGalaxyShapeFactorData *data, const gdouble z)
+{
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+  const gdouble z_cl              = nc_halo_position_get_redshift (self->halo_position);
+  const gdouble gt                = _nc_galaxy_shape_factor_gt (self->surface_mass_density, self->density_profile, self->cosmo,
+                                                                cdata, z, z_cl);
+
+  return (1.0 + data->m) * gt;
+}
+
+/* Points of the scan of t over [z_lo, z_hi] in nc_galaxy_shape_factor_line_new() */
+#define NC_GALAXY_SHAPE_FACTOR_LINE_SCAN (64)
+
+struct _NcGalaxyShapeFactorLine
+{
+  NcGalaxyShapeFactor *gsf;
+  NcGalaxyShapeFactorData *data;
+  GArray *coeffs; /* ln P in t on [t_min, t_max], or NULL */
+  gdouble t_min;
+  gdouble t_max;
+};
+
+/**
+ * nc_galaxy_shape_factor_line_new: (skip)
+ * @gsf: a #NcGalaxyShapeFactor, prepared by nc_galaxy_shape_factor_prepare()
+ * @data: a #NcGalaxyShapeFactorData with its lens geometry and optzs prepared
+ * @z_lo: the lower end of the redshifts to be evaluated
+ * @z_hi: the upper end of the redshifts to be evaluated
+ *
+ * The shape likelihood of the galaxy of @data as a function of its redshift, for many
+ * evaluations at the current model, such as the calibration of its redshift nodes. The
+ * shears at all redshifts lie on one line, bias + t rot, with $t = (1 + m) g_t (z)$; the
+ * range of t over a scan of [@z_lo, @z_hi] is given to the line_table hook, and a
+ * subclass that returns a table there (#NcGalaxyShapeFactorSpectral) gives the values
+ * from it. The values are those of nc_galaxy_shape_factor_integ() (linear) at the same
+ * model, within the tolerance of the table. The object is valid only for the current
+ * state of the models and of @data: it holds a reference to @data but not to @gsf, which
+ * must outlive it, and its table is not rebuilt when the models change.
+ *
+ * Returns: (transfer full): a new #NcGalaxyShapeFactorLine.
+ */
+NcGalaxyShapeFactorLine *
+nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const gdouble z_lo, const gdouble z_hi)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  NcGalaxyShapeFactorLine *line           = g_new0 (NcGalaxyShapeFactorLine, 1);
+  guint k;
+
+  g_assert_nonnull (self->pop);
+  g_assert_cmpfloat (z_hi, >=, z_lo);
+
+  line->gsf    = gsf;
+  line->data   = nc_galaxy_shape_factor_data_ref (data);
+  line->coeffs = NULL;
+  line->t_min  = GSL_POSINF;
+  line->t_max  = GSL_NEGINF;
+
+  for (k = 0; k <= NC_GALAXY_SHAPE_FACTOR_LINE_SCAN; k++)
+  {
+    const gdouble z = (k == NC_GALAXY_SHAPE_FACTOR_LINE_SCAN) ? z_hi : z_lo + (z_hi - z_lo) * k / (gdouble) NC_GALAXY_SHAPE_FACTOR_LINE_SCAN;
+    const gdouble t = _nc_galaxy_shape_factor_line_t (self, data, z);
+
+    line->t_min = GSL_MIN (line->t_min, t);
+    line->t_max = GSL_MAX (line->t_max, t);
+  }
+
+  if (!NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->line_table (gsf, self->pop, data, line->t_min, line->t_max,
+                                                           cdata->rot_re, cdata->rot_im, data->c1, data->c2,
+                                                           data->epsilon_obs_1, data->epsilon_obs_2, G_MAXUINT, &line->coeffs))
+    g_clear_pointer (&line->coeffs, g_array_unref);
+
+  return line;
+}
+
+/**
+ * nc_galaxy_shape_factor_line_eval: (skip)
+ * @line: a #NcGalaxyShapeFactorLine
+ * @z: a redshift
+ *
+ * The shape likelihood $P(\epsilon_\mathrm{obs} \mid z)$ of the galaxy of @line: from the
+ * table when it has one and t (@z) is inside its range, otherwise by
+ * nc_galaxy_shape_factor_eval_nodes() at the shear of @z.
+ *
+ * Returns: $P(\epsilon_\mathrm{obs} \mid z)$.
+ */
+gdouble
+nc_galaxy_shape_factor_line_eval (NcGalaxyShapeFactorLine *line, const gdouble z)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (line->gsf);
+  NcGalaxyShapeFactorData *data           = line->data;
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  const gdouble t                         = _nc_galaxy_shape_factor_line_t (self, data, z);
+
+  if ((line->coeffs != NULL) && (t >= line->t_min) && (t <= line->t_max))
+  {
+    return ncm_vmath_exp (_nc_galaxy_shape_factor_line_series ((const gdouble *) line->coeffs->data, line->coeffs->len,
+                                                               line->t_min, line->t_max, t));
+  }
+  else
+  {
+    const gdouble g_1 = data->c1 + t * cdata->rot_re;
+    const gdouble g_2 = data->c2 + t * cdata->rot_im;
+    gdouble out;
+
+    NC_GALAXY_SHAPE_FACTOR_GET_CLASS (line->gsf)->eval_nodes (line->gsf, self->pop, data, 1, &g_1, &g_2,
+                                                              data->epsilon_obs_1, data->epsilon_obs_2, FALSE, &out);
+
+    return out;
+  }
+}
+
+/**
+ * nc_galaxy_shape_factor_line_has_table: (skip)
+ * @line: a #NcGalaxyShapeFactorLine
+ *
+ * Returns: whether @line gives its values from a table.
+ */
+gboolean
+nc_galaxy_shape_factor_line_has_table (NcGalaxyShapeFactorLine *line)
+{
+  return line->coeffs != NULL;
+}
+
+/**
+ * nc_galaxy_shape_factor_line_free: (skip)
+ * @line: a #NcGalaxyShapeFactorLine
+ *
+ * Frees @line.
+ */
+void
+nc_galaxy_shape_factor_line_free (NcGalaxyShapeFactorLine *line)
+{
+  g_clear_pointer (&line->coeffs, g_array_unref);
+  nc_galaxy_shape_factor_data_unref (line->data);
+  g_free (line);
 }
 
 /**
@@ -1615,53 +2116,7 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
 void
 nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out)
 {
-  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
-  NcGalaxyShapeFactorClass *klass         = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
-
-  /* Read from the cache instead of re-peeking mset: this runs once per
-   * galaxy, not once per prepare() cycle. */
-  NcHaloPosition *halo_position   = self->halo_position;
-  NcGalaxyShapePop *pop           = self->pop;
-  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
-  const gdouble z_cl              = nc_halo_position_get_redshift (halo_position);
-  const gdouble et                = data->epsilon_obs_1;
-  const gdouble ex                = data->epsilon_obs_2;
-  const complex double bias       = data->c1 + I * data->c2;
-  const gdouble m                 = data->m;
-  const guint n_nodes             = ncm_vector_len (z_nodes);
-  gboolean have_gt0_val           = FALSE;
-  gdouble gt0_val                 = 0.0;
-  guint j;
-
-  g_assert_nonnull (pop);
-  g_assert_nonnull (cdata->crit_cache_arr);
-
-  for (j = 0; j < n_nodes; j++)
-  {
-    const gdouble z_j = ncm_vector_get (z_nodes, j);
-
-    if (z_j > z_cl)
-    {
-      const gdouble gt       = nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
-      const complex double g = (1.0 + m) * gt * (cdata->rot_re + I * cdata->rot_im) + bias;
-
-      ncm_vector_set (out, j, klass->eval_marginal (gsf, pop, data, creal (g), cimag (g), et, ex));
-    }
-    else
-    {
-      /* z_j <= z_cl always gives g = bias (gt=0): the same eval_marginal()
-       * result for every such node, so compute it once. */
-      if (!have_gt0_val)
-      {
-        const complex double g = bias;
-
-        gt0_val      = klass->eval_marginal (gsf, pop, data, creal (g), cimag (g), et, ex);
-        have_gt0_val = TRUE;
-      }
-
-      ncm_vector_set (out, j, gt0_val);
-    }
-  }
+  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, out, FALSE);
 }
 
 /**
@@ -1683,46 +2138,7 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
 void
 nc_galaxy_shape_factor_eval_ln_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out)
 {
-  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
-  NcGalaxyShapeFactorClass *klass         = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
-  NcHaloPosition *halo_position           = self->halo_position;
-  NcGalaxyShapePop *pop                   = self->pop;
-  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
-  const gdouble z_cl                      = nc_halo_position_get_redshift (halo_position);
-  const gdouble et                        = data->epsilon_obs_1;
-  const gdouble ex                        = data->epsilon_obs_2;
-  const complex double bias               = data->c1 + I * data->c2;
-  const gdouble m                         = data->m;
-  const guint n_nodes                     = ncm_vector_len (z_nodes);
-  gboolean have_gt0_val                   = FALSE;
-  gdouble gt0_val                         = 0.0;
-  guint j;
-
-  g_assert_nonnull (pop);
-  g_assert_nonnull (cdata->crit_cache_arr);
-
-  for (j = 0; j < n_nodes; j++)
-  {
-    const gdouble z_j = ncm_vector_get (z_nodes, j);
-
-    if (z_j > z_cl)
-    {
-      const gdouble gt       = nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
-      const complex double g = (1.0 + m) * gt * (cdata->rot_re + I * cdata->rot_im) + bias;
-
-      ncm_vector_set (out, j, klass->eval_ln_marginal (gsf, pop, data, creal (g), cimag (g), et, ex));
-    }
-    else
-    {
-      if (!have_gt0_val)
-      {
-        gt0_val      = klass->eval_ln_marginal (gsf, pop, data, creal (bias), cimag (bias), et, ex);
-        have_gt0_val = TRUE;
-      }
-
-      ncm_vector_set (out, j, gt0_val);
-    }
-  }
+  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, out, TRUE);
 }
 
 /**

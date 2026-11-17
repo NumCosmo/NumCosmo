@@ -109,6 +109,7 @@
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
 #include "nc/lss/wl/nc_wl_ellipticity.h"
+#include "ncm/algebra/ncm_spectral.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "ncm/algebra/ncm_spectral_polar_private.h"
@@ -133,6 +134,16 @@
  * reference hold for this value.
  */
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA (1.0e-5)
+
+/*
+ * The table along the line of the shears of a galaxy: the first grid has 2^LEVEL_MIN + 1
+ * points, the finest 2^LEVEL_MAX + 1 (at most the largest level with a generated kernel,
+ * NCM_SPECTRAL_CHEB_MAX_LEVEL, so that no FFTW plan is made inside the threaded
+ * likelihood), and the largest |g| of the line it covers.
+ */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN (1)
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX (7)
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX (0.9)
 
 /* Steps of the golden-section search of the maximum of the scan */
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_GOLDEN_STEPS (40)
@@ -159,7 +170,9 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   NcmSpectralPolar *polar;        /* the integrals */
   NcmSpectralPolar *polar_interp; /* the build of the interpolant in g */
   NcmMemoryPool *work_pool;       /* NcGalaxyShapeFactorSpectralWork, one per concurrent evaluation */
+  NcmMemoryPool *line_pool;       /* NcmSpectral of the tables along a line, one per concurrent eval_line */
   gdouble reltol;
+  gdouble line_abstol;
   gboolean use_interp;
   gdouble interp_g_max;
   gdouble interp_abstol;
@@ -252,6 +265,7 @@ enum
   PROP_INTERP_G_MAX,
   PROP_INTERP_ABSTOL,
   PROP_INTERP_MIN_RADIAL_PANELS,
+  PROP_LINE_ABSTOL,
   PROP_LEN,
 };
 
@@ -259,6 +273,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyShapeFactorSpectral, nc_galaxy_shape_factor_
 
 static gpointer _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata);
 static void _nc_galaxy_shape_factor_spectral_work_free (gpointer p);
+static gpointer _nc_galaxy_shape_factor_spectral_line_new (gpointer userdata);
+static void _nc_galaxy_shape_factor_spectral_line_free (gpointer p);
 
 static void
 nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
@@ -271,7 +287,10 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->polar_interp   = ncm_spectral_polar_new ();
   self->work_pool      = ncm_memory_pool_new (_nc_galaxy_shape_factor_spectral_work_new, NULL,
                                               _nc_galaxy_shape_factor_spectral_work_free);
+  self->line_pool = ncm_memory_pool_new (_nc_galaxy_shape_factor_spectral_line_new, NULL,
+                                         _nc_galaxy_shape_factor_spectral_line_free);
   self->reltol        = 0.0;
+  self->line_abstol   = 0.0;
   self->use_interp    = FALSE;
   self->interp_g_max  = 0.0;
   self->interp_abstol = 0.0;
@@ -301,6 +320,9 @@ _nc_galaxy_shape_factor_spectral_set_property (GObject *object, guint prop_id, c
     case PROP_INTERP_MIN_RADIAL_PANELS:
       nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (gsfs, g_value_get_uint (value));
       break;
+    case PROP_LINE_ABSTOL:
+      nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, g_value_get_double (value));
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -328,6 +350,9 @@ _nc_galaxy_shape_factor_spectral_get_property (GObject *object, guint prop_id, G
       break;
     case PROP_INTERP_MIN_RADIAL_PANELS:
       g_value_set_uint (value, nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (gsfs));
+      break;
+    case PROP_LINE_ABSTOL:
+      g_value_set_double (value, nc_galaxy_shape_factor_spectral_get_line_abstol (gsfs));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -389,6 +414,7 @@ _nc_galaxy_shape_factor_spectral_finalize (GObject *object)
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   ncm_memory_pool_free (self->work_pool, TRUE);
+  ncm_memory_pool_free (self->line_pool, TRUE);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_spectral_parent_class)->finalize (object);
@@ -399,6 +425,8 @@ static void _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, 
 static void _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
+static void _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+static gboolean _nc_galaxy_shape_factor_spectral_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const guint max_points, GArray **coeffs);
 
 static void
 nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *klass)
@@ -463,7 +491,9 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    *
    * The absolute tolerance on $\ln P$ of the interpolant, passed to
    * ncm_spectral_polar_build(): a panel is accepted when $\ln P$ changes by at most this
-   * value between its two grids.
+   * value between its two grids. Each panel of the interpolant is then trimmed
+   * (ncm_spectral_polar_panels_trim()) to the coefficients that change $\ln P$ by more than
+   * $10^{-4}$ times this value, in memory and in a catalog prepared with them.
    */
   g_object_class_install_property (object_class,
                                    PROP_INTERP_ABSTOL,
@@ -489,11 +519,38 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
                                                       1, G_MAXUINT, 2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcGalaxyShapeFactorSpectral:line-abstol:
+   *
+   * The absolute tolerance on $\ln P$ of the table along the line of the shears of the
+   * nodes of a galaxy (see nc_galaxy_shape_factor_eval_line()). The nodes of a galaxy whose
+   * shears are integrated (without #NcGalaxyShapeFactorSpectral:use-interp; with it the
+   * interpolant is used and this property is ignored) take $\ln P$ from a Chebyshev series
+   * in the position on that line, built from integrals on nested Chebyshev-Lobatto grids
+   * and accepted when its coefficients change by at most this value in $\ell_1$ norm
+   * between two grids. The table is built only when it needs at most half as many integrals
+   * as there are nodes and every shear of the line has $|g| \le 0.9$; otherwise each node
+   * is integrated, as when the table does not reach the tolerance. Each integral is
+   * accurate to about
+   * #NcGalaxyShapeFactorSpectral:reltol relative, which is its accuracy in $\ln P$: a
+   * negative value, the default, takes reltol / 10, so that the table adds an error below
+   * that of the integrals. Zero integrates every node.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LINE_ABSTOL,
+                                   g_param_spec_double ("line-abstol",
+                                                        NULL,
+                                                        "Absolute tolerance on ln P of the table along the line of the shears (negative: reltol / 10)",
+                                                        -1.0, 1.0, -1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   gsf_class->data_init        = &_nc_galaxy_shape_factor_spectral_data_init;
   gsf_class->prepare          = &_nc_galaxy_shape_factor_spectral_prepare;
   gsf_class->data_prepare     = &_nc_galaxy_shape_factor_spectral_data_prepare;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_spectral_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_spectral_eval_ln_marginal;
+  gsf_class->eval_nodes       = &_nc_galaxy_shape_factor_spectral_eval_nodes;
+  gsf_class->line_table       = &_nc_galaxy_shape_factor_spectral_line_table;
 }
 
 static gpointer
@@ -507,6 +564,18 @@ _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata)
   work->theta_edges_all = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   return work;
+}
+
+static gpointer
+_nc_galaxy_shape_factor_spectral_line_new (gpointer userdata)
+{
+  return ncm_spectral_new_with_max_level (NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX);
+}
+
+static void
+_nc_galaxy_shape_factor_spectral_line_free (gpointer p)
+{
+  ncm_spectral_free (p);
 }
 
 static void
@@ -666,7 +735,46 @@ _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet
 static gdouble
 _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
 {
-  return exp (_nc_galaxy_shape_factor_spectral_eval_ln_marginal (gsf, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
+  /* The exponential of eval_nodes, so that both take the exponential of the same function */
+  return ncm_vmath_exp (_nc_galaxy_shape_factor_spectral_eval_ln_marginal (gsf, pop, data, g_1, g_2, epsilon_obs_1, epsilon_obs_2));
+}
+
+/*
+ * The coordinates of the interpolant of the galaxy of ldata at the shear (g_1, g_2): the
+ * shear in the frame where eps_obs is on the positive real axis, relative to g_c, in polar
+ * coordinates, with the angle in [0, pi] (the interpolant covers psi < 0 by reflection).
+ */
+static inline void
+_nc_galaxy_shape_factor_spectral_interp_coords (const NcGalaxyShapeFactorSpectralData *ldata, const gdouble g_1, const gdouble g_2,
+                                                gdouble *rho, gdouble *psi)
+{
+  const gdouble gf_1 = g_1 * ldata->cos_e + g_2 * ldata->sin_e - ldata->g_c;
+  const gdouble gf_2 = g_2 * ldata->cos_e - g_1 * ldata->sin_e;
+
+  *rho = sqrt (gf_1 * gf_1 + gf_2 * gf_2);
+  *psi = ncm_vmath_atan2 (fabs (gf_2), gf_1);
+}
+
+/*
+ * Makes the interpolant of the galaxy of data valid for these eps_obs: builds it when it is
+ * not, and aborts for a loaded one, which a fit does not rebuild
+ * (nc_galaxy_shape_factor_data_prepare() compares it with the fit first).
+ */
+static void
+_nc_galaxy_shape_factor_spectral_interp_ensure (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                                const gdouble epsilon_obs_1, const gdouble epsilon_obs_2)
+{
+  NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
+
+  if (_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
+    return;
+
+  if (ldata->loaded)
+    g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
+             "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
+             "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
+
+  _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
 }
 
 /*
@@ -691,23 +799,216 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
   {
     NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
 
-    if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
-    {
-      if (ldata->loaded)
-        g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
-                 "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
-                 "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
-
-      _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
-    }
+    _nc_galaxy_shape_factor_spectral_interp_ensure (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
 
     {
-      const gdouble gf_1 = g_1 * ldata->cos_e + g_2 * ldata->sin_e - ldata->g_c;
-      const gdouble gf_2 = g_2 * ldata->cos_e - g_1 * ldata->sin_e;
+      gdouble rho, psi;
 
-      return ncm_spectral_polar_panels_eval (ldata->spp, hypot (gf_1, gf_2), atan2 (fabs (gf_2), gf_1));
+      _nc_galaxy_shape_factor_spectral_interp_coords (ldata, g_1, g_2, &rho, &psi);
+
+      return ncm_spectral_polar_panels_eval (ldata->spp, rho, psi);
     }
   }
+}
+
+/* Points per pass of _nc_galaxy_shape_factor_spectral_eval_nodes() */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK 64
+
+/*
+ * eval_nodes: ln P (or P) at n shears of one galaxy, the values of
+ * _nc_galaxy_shape_factor_spectral_eval_ln_marginal() at each shear within rounding (see
+ * nc_galaxy_shape_factor_eval_nodes()). The interpolant is
+ * checked (and built when it is not valid) once, at the first shear inside
+ * interp-g-max, instead of once per shear. The shears are taken in passes: the ones
+ * outside interp-g-max are integrated, the coordinates of the others are computed in one
+ * loop that vectorizes, and then the interpolant is evaluated at them.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                             const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                             const gboolean want_log, gdouble *out)
+{
+  NcGalaxyShapeFactorSpectral *gsfs               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf);
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+  NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
+  const gdouble g_max2                            = gsl_pow_2 (self->interp_g_max);
+  gboolean checked                                = FALSE;
+  guint panel                                     = G_MAXUINT;
+  guint j0;
+
+  for (j0 = 0; j0 < n; j0 += NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK)
+  {
+    const guint j1 = MIN (n, j0 + NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK);
+    gdouble ig_1[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    gdouble ig_2[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    gdouble rho[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    gdouble psi[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    guint idx[NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NODE_CHUNK];
+    guint c = 0;
+    guint j, k;
+
+    for (j = j0; j < j1; j++)
+    {
+      if (!self->use_interp || (g_1[j] * g_1[j] + g_2[j] * g_2[j] > g_max2))
+      {
+        const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
+                                                                       epsilon_obs_1, epsilon_obs_2, NULL);
+
+        out[j] = want_log ? ln_P : ncm_vmath_exp (ln_P);
+      }
+      else
+      {
+        ig_1[c] = g_1[j];
+        ig_2[c] = g_2[j];
+        idx[c]  = j;
+        c++;
+      }
+    }
+
+    if (c == 0)
+      continue;
+
+    if (!checked)
+    {
+      _nc_galaxy_shape_factor_spectral_interp_ensure (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
+      checked = TRUE;
+    }
+
+    #pragma omp simd
+
+    for (k = 0; k < c; k++)
+      _nc_galaxy_shape_factor_spectral_interp_coords (ldata, ig_1[k], ig_2[k], &rho[k], &psi[k]);
+
+    /*
+     * ln P, kept in rho, which is no longer needed. The shears of the nodes of a galaxy
+     * lie on a line, so consecutive nodes are usually in the same panel (a run of about 30
+     * on average): each run is evaluated in one call, which loads the coefficients of the
+     * panel once for several nodes.
+     */
+    k     = 0;
+    panel = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[0], psi[0]);
+
+    while (k < c)
+    {
+      guint k1   = k + 1;
+      guint next = panel;
+
+      while (k1 < c)
+      {
+        next = ncm_spectral_polar_panels_find_panel_near (ldata->spp, panel, rho[k1], psi[k1]);
+
+        if (next != panel)
+          break;
+
+        k1++;
+      }
+
+      ncm_spectral_polar_panels_eval_on_array (ldata->spp, panel, k1 - k, &rho[k], &psi[k], &rho[k]);
+      k     = k1;
+      panel = next;
+    }
+
+    if (!want_log)
+    {
+      #pragma omp simd
+
+      for (k = 0; k < c; k++)
+        rho[k] = ncm_vmath_exp (rho[k]);
+    }
+
+    for (k = 0; k < c; k++)
+      out[idx[k]] = rho[k];
+  }
+}
+
+/* What the table along a line needs */
+typedef struct _NcGalaxyShapeFactorSpectralLine
+{
+  NcGalaxyShapeFactorSpectral *gsfs;
+  NcGalaxyShapePop *pop;
+  NcGalaxyShapeFactorData *data;
+  gdouble u_1;
+  gdouble u_2;
+  gdouble b_1;
+  gdouble b_2;
+  gdouble epsilon_obs_1;
+  gdouble epsilon_obs_2;
+} NcGalaxyShapeFactorSpectralLine;
+
+/* ln P at the position t of the line, by the integral */
+static gdouble
+_nc_galaxy_shape_factor_spectral_line_ln_P (gpointer user_data, gdouble t)
+{
+  const NcGalaxyShapeFactorSpectralLine *line = user_data;
+
+  return _nc_galaxy_shape_factor_spectral_eval_ln (line->gsfs, line->pop, line->data->pop_data, line->data->std_noise,
+                                                   line->b_1 + t * line->u_1, line->b_2 + t * line->u_2,
+                                                   line->epsilon_obs_1, line->epsilon_obs_2, NULL);
+}
+
+/*
+ * The Chebyshev series of ln P at b + t u in t on [t_min, t_max], in *coeffs, expanded from
+ * integrals on nested Chebyshev-Lobatto grids from level NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN
+ * to level_cap and accepted at NcGalaxyShapeFactorSpectral:line-abstol (reltol / 10 when
+ * negative). FALSE, with *coeffs NULL, with the interpolant, without line-abstol, for a
+ * level_cap too low or a single point, when the line leaves
+ * |g| <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX, or when the series does not reach the
+ * tolerance. Nothing is kept from one call to the next, so the values depend only on the
+ * line given.
+ */
+static gboolean
+_nc_galaxy_shape_factor_spectral_line_expand (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                              const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2,
+                                              const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                              const guint level_cap, GArray **coeffs)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+  const gdouble line_abstol                       = (self->line_abstol < 0.0) ? 0.1 * self->reltol : self->line_abstol;
+
+  *coeffs = NULL;
+
+  /* |b + t u| is largest at an end of the segment */
+  if (!self->use_interp && (line_abstol > 0.0) &&
+      (level_cap > NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN) && (t_max > t_min) &&
+      (gsl_hypot (b_1 + t_min * u_1, b_2 + t_min * u_2) <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX) &&
+      (gsl_hypot (b_1 + t_max * u_1, b_2 + t_max * u_2) <= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX))
+  {
+    NcGalaxyShapeFactorSpectralLine line = {gsfs, pop, data, u_1, u_2, b_1, b_2, epsilon_obs_1, epsilon_obs_2};
+    NcmSpectral **spectral               = ncm_memory_pool_get (self->line_pool);
+    gboolean converged                   = FALSE;
+
+    ncm_spectral_compute_chebyshev_coeffs_adaptive_try (*spectral, &_nc_galaxy_shape_factor_spectral_line_ln_P, t_min, t_max,
+                                                        NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN, level_cap,
+                                                        0.0, line_abstol, coeffs, &line, &converged);
+    ncm_memory_pool_return (spectral);
+
+    if (converged)
+      return TRUE;
+
+    g_clear_pointer (coeffs, g_array_unref);
+  }
+
+  return FALSE;
+}
+
+/*
+ * line_table: the series of _nc_galaxy_shape_factor_spectral_line_expand() up to the
+ * largest level whose grid has at most max_points points, and at most
+ * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX
+ */
+static gboolean
+_nc_galaxy_shape_factor_spectral_line_table (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
+                                             const gdouble t_min, const gdouble t_max, const gdouble u_1, const gdouble u_2,
+                                             const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                             const guint max_points, GArray **coeffs)
+{
+  guint level_cap = 0;
+
+  while ((level_cap < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX) && ((1u << (level_cap + 1)) + 1 <= max_points))
+    level_cap++;
+
+  return _nc_galaxy_shape_factor_spectral_line_expand (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf), pop, data, t_min, t_max, u_1, u_2, b_1, b_2,
+                                                       epsilon_obs_1, epsilon_obs_2, level_cap, coeffs);
 }
 
 /*
@@ -739,6 +1040,13 @@ typedef struct _NcGalaxyShapeFactorSpectralInterp
   gdouble e;   /* |eps_obs| */
   gdouble g_c; /* center of the coordinates */
 } NcGalaxyShapeFactorSpectralInterp;
+
+/*
+ * Largest change of ln P, relative to interp-abstol, of the coefficients trimmed from each
+ * panel of an interpolant: with the default interp-abstol (1e-5) the trimmed coefficients
+ * change ln P by at most 1e-9, against a measured interpolation error of 1e-8.
+ */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_TRIM (1.0e-4)
 
 /*
  * Builds the interpolant of ln P in g of the galaxy of data, for the observed ellipticity
@@ -808,6 +1116,9 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
   ldata->valid = FALSE;
   ncm_spectral_polar_build (self->polar_interp, &_nc_galaxy_shape_factor_spectral_interp_kernel, &interp, work->r_edges, work->theta_edges,
                             0.0, self->interp_abstol, ldata->spp, NULL, &error);
+
+  if (error == NULL)
+    ncm_spectral_polar_panels_trim (ldata->spp, NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_TRIM * self->interp_abstol);
 
   ncm_memory_pool_return (ptr);
 
@@ -1860,6 +2171,39 @@ nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (NcGalaxyShapeFacto
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   return self->interp_min_radial_panels;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_set_line_abstol:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ * @abstol: the absolute tolerance on $\ln P$ in [-1, 1], zero to integrate every node,
+ *   negative for #NcGalaxyShapeFactorSpectral:reltol / 10
+ *
+ * Sets #NcGalaxyShapeFactorSpectral:line-abstol.
+ */
+void
+nc_galaxy_shape_factor_spectral_set_line_abstol (NcGalaxyShapeFactorSpectral *gsfs, const gdouble abstol)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  g_assert_cmpfloat (abstol, >=, -1.0);
+  g_assert_cmpfloat (abstol, <=, 1.0);
+
+  self->line_abstol = abstol;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_get_line_abstol:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ *
+ * Returns: #NcGalaxyShapeFactorSpectral:line-abstol.
+ */
+gdouble
+nc_galaxy_shape_factor_spectral_get_line_abstol (NcGalaxyShapeFactorSpectral *gsfs)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  return self->line_abstol;
 }
 
 /**
