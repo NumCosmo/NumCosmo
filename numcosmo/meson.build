@@ -342,6 +342,7 @@ ncm_headers_internal = files(
     'ncm/core/ncm_prefetch_private.h',
     'ncm/data/ncm_data_private.h',
     'ncm/mpi/ncm_mpi_slave.h',
+    'ncm/spline/ncm_spline_bspline_private.h',
     'ncm/stats/ncm_stats_dist_kde_private.h',
     'ncm/stats/ncm_stats_dist_kernel_private.h',
     'ncm/stats/ncm_stats_dist_private.h',
@@ -349,6 +350,7 @@ ncm_headers_internal = files(
     'nc/perturbations/nc_hipert_private.h',
     'nc/data/nc_data_download_priv.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_private.h',
+    'nc/lss/galaxy/nc_galaxy_wl_obs_private.h',
     'nc/xcor/nc_xcor_priv.h',
     'nc/xcor/kernel/nc_xcor_kernel_private.h',
 )

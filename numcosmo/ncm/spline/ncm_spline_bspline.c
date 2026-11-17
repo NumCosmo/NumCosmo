@@ -4,10 +4,13 @@
  *  Wed Aug 20 10:00:00 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2026 <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -55,6 +58,7 @@
 #include "build_cfg.h"
 
 #include "ncm/spline/ncm_spline_bspline.h"
+#include "ncm/spline/ncm_spline_bspline_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -488,14 +492,9 @@ _ncm_spline_bspline_min_size (const NcmSpline *s)
  * recursion (PPPACK bsplvb, as in GSL) on stack scratch instead, for concurrent callers
  * such as the xcor kernel integrands.
  */
-static gdouble
-_ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
+static inline gdouble
+_ncm_spline_bspline_eval_core (const gsize k, const gsize ncontrol, const gdouble * restrict t, const gdouble * restrict c, const gdouble x)
 {
-  NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
-  const gsize k         = sbs->order;
-  const gsize ncontrol  = sbs->alloc_len;
-  const gdouble *t      = (const gdouble *) sbs->knots->data;
-  const gdouble *c      = sbs->c->data;
   gdouble deltal[NCM_SPLINE_BSPLINE_MAX_ORDER];
   gdouble deltar[NCM_SPLINE_BSPLINE_MAX_ORDER];
   gdouble B[NCM_SPLINE_BSPLINE_MAX_ORDER];
@@ -557,6 +556,14 @@ _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
 
     return res;
   }
+}
+
+static gdouble
+_ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
+{
+  NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
+
+  return _ncm_spline_bspline_eval_core (sbs->order, sbs->alloc_len, (const gdouble *) sbs->knots->data, sbs->c->data, x);
 }
 
 static gdouble
@@ -831,5 +838,46 @@ guint
 ncm_spline_bspline_get_order (NcmSplineBSpline *sbs)
 {
   return sbs->order;
+}
+
+/*
+ * ncm_spline_bspline_peek_basis (private, ncm_spline_bspline_private.h):
+ * @sbs: a prepared #NcmSplineBSpline
+ * @n_control: (out): the number of control points
+ * @knots: (out) (transfer none): the n_control + order knots
+ * @c: (out) (transfer none): the n_control control points
+ *
+ * Gets what evaluating @sbs reads, owned by @sbs and valid until it is prepared again or
+ * freed. With ncm_spline_bspline_eval_basis() a caller can copy them and drop @sbs.
+ */
+void
+ncm_spline_bspline_peek_basis (NcmSplineBSpline *sbs, gsize *n_control, const gdouble **knots, const gdouble **c)
+{
+  g_assert_nonnull (sbs->knots);
+  g_assert_nonnull (sbs->c);
+
+  *n_control = sbs->alloc_len;
+  *knots     = (const gdouble *) sbs->knots->data;
+  *c         = sbs->c->data;
+}
+
+/*
+ * ncm_spline_bspline_eval_basis (private, ncm_spline_bspline_private.h):
+ * @order: the order of the B-spline
+ * @n_control: the number of control points
+ * @knots: the n_control + order knots
+ * @c: the control points
+ * @x: a point
+ *
+ * Evaluates at @x the B-spline of @order with @knots and @c, as ncm_spline_eval() does for
+ * the #NcmSplineBSpline they were taken from (ncm_spline_bspline_peek_basis()): the same
+ * operations, so the same value. @order is at most %NCM_SPLINE_BSPLINE_MAX_ORDER.
+ *
+ * Returns: the value of the B-spline at @x.
+ */
+gdouble
+ncm_spline_bspline_eval_basis (const guint order, const gsize n_control, const gdouble *knots, const gdouble *c, const gdouble x)
+{
+  return _ncm_spline_bspline_eval_core (order, n_control, knots, c, x);
 }
 

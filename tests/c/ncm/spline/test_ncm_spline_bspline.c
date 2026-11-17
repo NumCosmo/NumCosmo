@@ -4,10 +4,13 @@
  *  Sat September 26 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * test_ncm_spline_bspline.c
  * Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -505,7 +508,8 @@ test_ncm_spline_bspline_copy_empty (void)
 }
 
 /* The chosen order is the lowest even one meeting the tolerance, and the estimated error
- * agrees with the true one within a factor of two. */
+ * agrees with the true one within a factor of two, or within rounding (1e-15) where both
+ * are at the rounding level of the interpolation (reltol 1e-14). */
 static void
 test_ncm_spline_bspline_tol (void)
 {
@@ -537,7 +541,7 @@ test_ncm_spline_bspline_tol (void)
 
     g_assert_cmpuint (ncm_spline_bspline_get_order (sbs), ==, cases[c].order);
     g_assert_cmpfloat (err, <=, cases[c].reltol);
-    ncm_assert_cmpdouble_e (ncm_spline_bspline_get_achieved_error (sbs), ==, err, 0.5, 0.0);
+    ncm_assert_cmpdouble_e (ncm_spline_bspline_get_achieved_error (sbs), ==, err, 0.5, 1.0e-15);
 
     ncm_spline_free (s);
   }

@@ -4,9 +4,12 @@
 # Tue Oct 22 12:50:10 2024
 # Copyright  2024  Sandro Dias Pinto Vitenti
 # <vitenti@uel.br>
+# Copyright  2026  Caio Lima de Oliveira
+# <caiolimadeoliveira@pm.me>
 #
 # cluster_wl.py
 # Copyright (C) 2024 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -1004,7 +1007,8 @@ class ClusterModel(BaseModel):
     r_min: Annotated[float, Field(gt=0.0)] = 0.3
     r_max: Annotated[float, Field(gt=0.0)] = 3.0
     cluster_mass: Annotated[float, Field(ge=1.0e10, le=1.0e17)] = 1.0e14
-    dist: Annotated[Nc.Distance, Field()] = Nc.Distance.new(5.0)
+    # A new NcDistance per model (a default object would be shared by every instance).
+    dist: Nc.Distance = Field(default_factory=lambda: Nc.Distance.new(5.0))
 
     _halo_mass_summary: Nc.HaloCMParam = PrivateAttr()
     _density_profile: Nc.HaloDensityProfile = PrivateAttr()
@@ -1563,6 +1567,10 @@ def load_cluster_wl(
     integ_options.apply(cluster_data)
     cluster_data.set_obs(obs)
     cluster_data.set_resample_flag(resample_flag)
+    # The comoving distance is a spline up to zf and an integral cached at every
+    # redshift above it: zf must reach the redshift integration of every galaxy.
+    cluster.dist.require_zf(cluster_data.get_z_max(mset))
+    cluster.prepare(cosmo)
 
     dset = Ncm.Dataset.new_array([cluster_data])
     likelihood = Ncm.Likelihood.new(dset)
