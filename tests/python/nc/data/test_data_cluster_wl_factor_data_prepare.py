@@ -356,6 +356,47 @@ def test_calibration_bounds_ln_p_of_every_galaxy(node_reltol):
     assert np.all(np.abs(0.5 * (m2lnP - m2lnP_ref)) <= node_reltol)
 
 
+def _free_mass(mset, upper):
+    """Frees log10MDelta of mset in [13, upper]."""
+    hms = mset.peek(Nc.HaloMassSummary.id())
+    hms.param_set_desc(
+        "log10MDelta", {"lower-bound": 13.0, "upper-bound": upper, "fit": True}
+    )
+    mset.prepare_fparam_map()
+    return hms
+
+
+def test_calibration_at_the_upper_bound_of_the_mass():
+    """With the mass free, the nodes are calibrated at the upper bound of its prior, where
+    the shear is largest: at that mass ln P of every galaxy agrees with that of a
+    converged calibration to node_reltol, although the calibration ran from another
+    point; with the mass fixed, the calibration is the one at the current point."""
+    upper = 15.5
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    hms = _free_mass(mset, upper)
+    _m2lnP(dcwlf, mset)  # calibrates, at log10MDelta = 14.5
+    hms["log10MDelta"] = upper
+    m2lnP = _m2lnP(dcwlf, mset)
+    assert dcwlf.get_calib_count() == dcwlf.peek_obs().len()
+
+    ref, mset_ref = _build("var-add", "nfw", "spline")
+    ref.set_node_reltol(1.0e-12)
+    ref.set_max_total_nodes(20000)
+    _free_mass(mset_ref, upper)["log10MDelta"] = upper
+    m2lnP_ref = _m2lnP(ref, mset_ref)
+
+    assert np.all(np.abs(0.5 * (m2lnP - m2lnP_ref)) <= dcwlf.get_node_reltol())
+
+    # Fixed mass: the configuration of the current point, not that of the upper bound
+    fixed, mset_fixed = _build("var-add", "nfw", "spline")
+    _m2lnP(fixed, mset_fixed)
+    at_upper, mset_upper = _build("var-add", "nfw", "spline")
+    mset_upper.peek(Nc.HaloMassSummary.id())["log10MDelta"] = upper
+    _m2lnP(at_upper, mset_upper)
+    assert _node_config(dcwlf) == _node_config(at_upper)
+    assert _node_config(dcwlf) != _node_config(fixed)
+
+
 def _shared_clones(dcwlf, mset, n):
     """n clones made as NcmFitESMCMC makes its workers', each with its own model set,
     after the dataset was registered as shared (prepared or not)."""

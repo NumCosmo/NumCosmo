@@ -496,7 +496,7 @@ cache). Unlike the interpolants they depend on the cluster: the name hashes ever
 and $P(z)$ of the catalog, the mask, the radial cuts, the node settings, the redshift of
 the cluster and the settings of the factors. Loading an experiment gives the data the
 configuration of its file and prepares it at the starting point, in parallel; when there
-is none it calibrates and saves it (4.8 s on HSC s19a HWL16a-002, with a fixed or a free
+is none it calibrates and saves it (6.3 s on HSC s19a HWL16a-002, with a fixed or a free
 population, against 2.4 s to load it).
 
 `numcosmo wl-catalog info` describes a catalog, a cache or a dataset.

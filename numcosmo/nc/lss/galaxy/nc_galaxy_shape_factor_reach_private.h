@@ -105,6 +105,11 @@ void _nc_galaxy_shape_factor_reach_clear (NcGalaxyShapeFactorReach *reach);
 void _nc_galaxy_shape_factor_reach_prepare (NcGalaxyShapeFactorReach *reach, NcmMSet *mset);
 gdouble _nc_galaxy_shape_factor_reach_eval (NcGalaxyShapeFactorReach *reach, NcGalaxyShapeFactorReachMemo *memo, NcGalaxyShapeFactorData *data, const gdouble z_max);
 
+/* The line of the shears of a galaxy for another profile (nc_galaxy_shape_factor.c), such as
+ * dp_box: the calibration of its redshift nodes at the upper bound of the mass */
+void nc_galaxy_shape_factor_data_prep_optzs (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, NcHaloDensityProfile *dp, const gdouble r_s, const gdouble rho_s, NcWLSurfaceMassDensityOptzs *optzs);
+NcGalaxyShapeFactorLine *nc_galaxy_shape_factor_line_new_full (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcWLSurfaceMassDensityOptzs *optzs, const gdouble z_lo, const gdouble z_hi);
+
 G_END_DECLS
 
 #endif /* NUMCOSMO_GIR_SCAN */

@@ -70,6 +70,7 @@
 #include "nc_enum_types.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_reach_private.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 #include "ncm/core/ncm_vmath_private.h"
@@ -1447,13 +1448,13 @@ _integ_data_prepare (gpointer user_data, NcmMSet *mset)
  */
 static gdouble
 _nc_galaxy_shape_factor_gt (NcWLSurfaceMassDensity *smd, NcHaloDensityProfile *dp, NcHICosmo *cosmo,
-                            NcGalaxyShapeFactorCData *cdata, const gdouble z, const gdouble z_cl)
+                            NcWLSurfaceMassDensityOptzs *optzs, const gdouble z, const gdouble z_cl)
 {
   if (z > z_cl)
-    return nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cl, &cdata->optzs);
+    return nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z, z_cl, optzs);
 
   {
-    const gdouble gt0  = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, &cdata->optzs);
+    const gdouble gt0  = nc_wl_surface_mass_density_reduced_shear_optzs (smd, dp, cosmo, z_cl * (1.0 + GSL_DBL_EPSILON), z_cl, optzs);
     const gdouble step = exp ((z - z_cl) / 0.001);
 
     return step * gt0;
@@ -1470,7 +1471,7 @@ _nc_galaxy_shape_factor_integ_f (gpointer callback_data, const gdouble z, NcGala
 
   /* gt is tangential-native and rotates via cdata->rot_re/rot_im; the bias
    * (data->c1/c2) is already in data->coord and is added unrotated. */
-  gt = _nc_galaxy_shape_factor_gt (int_data->surface_mass_density, int_data->density_profile, int_data->cosmo, cdata, z, z_cl);
+  gt = _nc_galaxy_shape_factor_gt (int_data->surface_mass_density, int_data->density_profile, int_data->cosmo, &cdata->optzs, z, z_cl);
 
   {
     const complex double g = (1.0 + data->m) * gt * (cdata->rot_re + I * cdata->rot_im) + (data->c1 + I * data->c2);
@@ -1950,12 +1951,10 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
  * nc_galaxy_shape_factor_prepare().
  */
 static gdouble
-_nc_galaxy_shape_factor_line_t (NcGalaxyShapeFactorPrivate * const self, NcGalaxyShapeFactorData *data, const gdouble z)
+_nc_galaxy_shape_factor_line_t (NcGalaxyShapeFactorPrivate * const self, NcGalaxyShapeFactorData *data, NcWLSurfaceMassDensityOptzs *optzs, const gdouble z)
 {
-  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
-  const gdouble z_cl              = nc_halo_position_get_redshift (self->halo_position);
-  const gdouble gt                = _nc_galaxy_shape_factor_gt (self->surface_mass_density, self->density_profile, self->cosmo,
-                                                                cdata, z, z_cl);
+  const gdouble z_cl = nc_halo_position_get_redshift (self->halo_position);
+  const gdouble gt   = _nc_galaxy_shape_factor_gt (self->surface_mass_density, self->density_profile, self->cosmo, optzs, z, z_cl);
 
   return (1.0 + data->m) * gt;
 }
@@ -1967,7 +1966,8 @@ struct _NcGalaxyShapeFactorLine
 {
   NcGalaxyShapeFactor *gsf;
   NcGalaxyShapeFactorData *data;
-  GArray *coeffs; /* ln P in t on [t_min, t_max], or NULL */
+  NcWLSurfaceMassDensityOptzs optzs; /* the lens geometry and profile of the shears of the line */
+  GArray *coeffs;                    /* ln P in t on [t_min, t_max], or NULL */
   gdouble t_min;
   gdouble t_max;
 };
@@ -1994,6 +1994,51 @@ struct _NcGalaxyShapeFactorLine
 NcGalaxyShapeFactorLine *
 nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const gdouble z_lo, const gdouble z_hi)
 {
+  return nc_galaxy_shape_factor_line_new_full (gsf, data, NULL, z_lo, z_hi);
+}
+
+/*
+ * nc_galaxy_shape_factor_data_prep_optzs:
+ * @gsf: a #NcGalaxyShapeFactor, prepared by nc_galaxy_shape_factor_prepare()
+ * @data: a #NcGalaxyShapeFactorData with its radius prepared
+ * @dp: a #NcHaloDensityProfile
+ * @r_s: the scale radius of @dp at the redshift of the lens
+ * @rho_s: the scale density of @dp at the redshift of the lens
+ * @optzs: (out): the lens geometry and profile of the shears of @data
+ *
+ * Computes, for the galaxy of @data, what nc_galaxy_shape_factor_update_data_optzs()
+ * computes but for the profile @dp instead of the one of the model set, for
+ * nc_galaxy_shape_factor_line_new_full(): the shears of the galaxy at another mass. A
+ * profile updates state lazily: a @dp shared between threads must be used under lock.
+ */
+void
+nc_galaxy_shape_factor_data_prep_optzs (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, NcHaloDensityProfile *dp,
+                                        const gdouble r_s, const gdouble rho_s, NcWLSurfaceMassDensityOptzs *optzs)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+
+  nc_wl_surface_mass_density_reduced_shear_optzs_prep_with_lens_ctx (dp, &self->lens_ctx, cdata->radius, r_s, rho_s, optzs);
+}
+
+/*
+ * nc_galaxy_shape_factor_line_new_full:
+ * @gsf: a #NcGalaxyShapeFactor, prepared by nc_galaxy_shape_factor_prepare()
+ * @data: a #NcGalaxyShapeFactorData with its lens geometry and optzs prepared
+ * @optzs: (nullable): the lens geometry and profile of the shears, or %NULL for those of @data
+ * @z_lo: the lower end of the redshifts to be evaluated
+ * @z_hi: the upper end of the redshifts to be evaluated
+ *
+ * As nc_galaxy_shape_factor_line_new(), with the shears of @optzs
+ * (nc_galaxy_shape_factor_data_prep_optzs()) instead of those of the current model: the
+ * line of the galaxy for another profile, such as the mass at the upper bound of its prior.
+ *
+ * Returns: (transfer full): a new #NcGalaxyShapeFactorLine.
+ */
+NcGalaxyShapeFactorLine *
+nc_galaxy_shape_factor_line_new_full (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcWLSurfaceMassDensityOptzs *optzs,
+                                      const gdouble z_lo, const gdouble z_hi)
+{
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
   NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
   NcGalaxyShapeFactorLine *line           = g_new0 (NcGalaxyShapeFactorLine, 1);
@@ -2004,6 +2049,7 @@ nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorDa
 
   line->gsf    = gsf;
   line->data   = nc_galaxy_shape_factor_data_ref (data);
+  line->optzs  = (optzs != NULL) ? *optzs : cdata->optzs;
   line->coeffs = NULL;
   line->t_min  = GSL_POSINF;
   line->t_max  = GSL_NEGINF;
@@ -2011,7 +2057,7 @@ nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorDa
   for (k = 0; k <= NC_GALAXY_SHAPE_FACTOR_LINE_SCAN; k++)
   {
     const gdouble z = (k == NC_GALAXY_SHAPE_FACTOR_LINE_SCAN) ? z_hi : z_lo + (z_hi - z_lo) * k / (gdouble) NC_GALAXY_SHAPE_FACTOR_LINE_SCAN;
-    const gdouble t = _nc_galaxy_shape_factor_line_t (self, data, z);
+    const gdouble t = _nc_galaxy_shape_factor_line_t (self, data, &line->optzs, z);
 
     line->t_min = GSL_MIN (line->t_min, t);
     line->t_max = GSL_MAX (line->t_max, t);
@@ -2042,7 +2088,7 @@ nc_galaxy_shape_factor_line_eval (NcGalaxyShapeFactorLine *line, const gdouble z
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (line->gsf);
   NcGalaxyShapeFactorData *data           = line->data;
   NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
-  const gdouble t                         = _nc_galaxy_shape_factor_line_t (self, data, z);
+  const gdouble t                         = _nc_galaxy_shape_factor_line_t (self, data, &line->optzs, z);
 
   if ((line->coeffs != NULL) && (t >= line->t_min) && (t <= line->t_max))
   {
@@ -2098,7 +2144,7 @@ nc_galaxy_shape_factor_line_eval_array (NcGalaxyShapeFactorLine *line, const gui
 
     for (k = 0; k < c; k++)
     {
-      const gdouble t = _nc_galaxy_shape_factor_line_t (self, data, z[j0 + k]);
+      const gdouble t = _nc_galaxy_shape_factor_line_t (self, data, &line->optzs, z[j0 + k]);
 
       if ((line->coeffs != NULL) && (t >= line->t_min) && (t <= line->t_max))
       {

@@ -79,6 +79,7 @@
 #include "nc/data/nc_data_cluster_wl_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_reach_private.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs_private.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "nc_enum_types.h"
@@ -599,6 +600,17 @@ typedef struct _NcDataClusterWLFactorPrivate
    * run that replays a stored node-config leaves it at zero. */
   guint calib_count;
 
+  /* The calibration runs at the upper bound of the mass of the fit, where the
+   * shear, and the redshift structure the nodes must resolve, is largest:
+   * calib_reach.dp_box is the profile of the fit with the mass there (see
+   * NcGalaxyShapeFactorReach), and calib_r_s / calib_rho_s its scale radius and
+   * density at the lens. calib_at_upper: whether the cycle calibrates with it
+   * (a free mass and the models it needs); otherwise at the current point. */
+  NcGalaxyShapeFactorReach calib_reach;
+  gboolean calib_at_upper;
+  gdouble calib_r_s;
+  gdouble calib_rho_s;
+
   /* Galaxies whose critical densities at the nodes this object computed, as opposed to
    * taking them from the dataset it was cloned from (nc_data_cluster_wl_factor_get_crit_count()) */
   gint crit_count;
@@ -831,6 +843,27 @@ _step_shape_pop (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShap
  * may bake in a scheme-specific construction (e.g. bypassing the generic
  * integrand-eval path) that the calibration's generic F closure cannot
  * reproduce. */
+
+/* The line of the shears of the galaxy of s_data the calibration reads: at the upper bound
+ * of the mass (calib_at_upper), otherwise at the current point. The profile at the upper
+ * bound is shared by the galaxies, calibrated in parallel, and a profile updates state
+ * lazily: it is used under the lock of the reach. */
+static NcGalaxyShapeFactorLine *
+_calib_line (NcDataClusterWLFactorPrivate *self, NcGalaxyShapeFactorData *s_data, const gdouble z_lo, const gdouble z_hi)
+{
+  NcWLSurfaceMassDensityOptzs optzs;
+
+  if (!self->calib_at_upper)
+    return nc_galaxy_shape_factor_line_new (self->shape_factor, s_data, z_lo, z_hi);
+
+  g_mutex_lock (&self->calib_reach.lock);
+  nc_galaxy_shape_factor_data_prep_optzs (self->shape_factor, s_data, self->calib_reach.dp_box,
+                                          self->calib_r_s, self->calib_rho_s, &optzs);
+  g_mutex_unlock (&self->calib_reach.lock);
+
+  return nc_galaxy_shape_factor_line_new_full (self->shape_factor, s_data, &optzs, z_lo, z_hi);
+}
+
 static void
 _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShapeFactorData *s_data, guint gal_i)
 {
@@ -875,7 +908,7 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
        * the grid built from it would be discarded with that data. The
        * resampling path falls through to the global pair, which still builds
        * every structure the rest of prepare() and gen() read. */
-      NcGalaxyShapeFactorLine *line           = nc_galaxy_shape_factor_line_new (self->shape_factor, s_data, bg_lo, z_hi);
+      NcGalaxyShapeFactorLine *line           = _calib_line (self, s_data, bg_lo, z_hi);
       NcDataClusterWLFactorCalibArg calib_arg = { self->integ_z_lin, line, s_data->z_data };
       gsl_function F                          = { &_nc_data_cluster_wl_factor_calib_pz, &calib_arg };
       NcDataClusterWLFactorCalib calib        = {
@@ -1571,7 +1604,12 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->force_data_prepare = FALSE;
 
   self->calib_count = 0;
-  self->crit_count  = 0;
+
+  _nc_galaxy_shape_factor_reach_init (&self->calib_reach, FALSE);
+  self->calib_at_upper = FALSE;
+  self->calib_r_s      = 0.0;
+  self->calib_rho_s    = 0.0;
+  self->crit_count     = 0;
 
   self->calib_n_nodes = g_array_new (FALSE, TRUE, sizeof (gint));
 
@@ -1993,6 +2031,7 @@ _nc_data_cluster_wl_factor_finalize (GObject *object)
 
   g_clear_pointer (&self->keep, g_array_unref);
   g_clear_pointer (&self->mask, g_array_unref);
+  _nc_galaxy_shape_factor_reach_clear (&self->calib_reach);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_data_cluster_wl_factor_parent_class)->finalize (object);
@@ -2305,7 +2344,32 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES)
   {
     if (fixed_grid_changed && !grid_adopted)
+    {
       steps[n_steps++] = &_step_fixed_nodes_grid;
+
+      /* The profile of the calibration: the one of the fit with the mass at its upper
+       * bound, when the mass is free (see calib_at_upper) */
+      self->calib_at_upper = FALSE;
+
+      if (self->auto_nodes && !self->node_config_valid && !self->resampling)
+      {
+        NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
+        NcmModel *hms            = (dp != NULL) ? NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp)) : NULL;
+        guint m_idx;
+
+        if ((hms != NULL) && ncm_model_param_index_from_name (hms, "log10MDelta", &m_idx, NULL) &&
+            (ncm_model_param_get_ftype (hms, m_idx) == NCM_PARAM_TYPE_FREE))
+        {
+          _nc_galaxy_shape_factor_reach_prepare (&self->calib_reach, mset);
+
+          if (self->calib_reach.models_ready)
+          {
+            nc_halo_density_profile_r_s_rho_s (self->calib_reach.dp_box, self->cosmo, self->z_cl, &self->calib_r_s, &self->calib_rho_s);
+            self->calib_at_upper = TRUE;
+          }
+        }
+      }
+    }
 
     /* A clone that took the grid also takes the critical densities computed
      * with it, when they were computed for its own cosmology and lens. */
@@ -3244,30 +3308,31 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
    *
    * Target relative tolerance for the per-galaxy fixed-node selection (see
    * #NcDataClusterWLFactor:auto-nodes): the error the nodes of a galaxy may leave
-   * in its $\ln P$, the quantity $-2\ln L$ sums, at the model point of the
-   * calibration. The errors of the galaxies largely add up, so the error in
-   * $-2\ln L$ grows with their number and with the structure of their
-   * photometric redshifts, and with the distance from the point of the
-   * calibration (it grows with the mass).
+   * in its $\ln P$, the quantity $-2\ln L$ sums. The calibration runs at the upper
+   * bound of the mass of the fit when the mass is free, where the shear, and the
+   * redshift structure the nodes must resolve, is largest, so that the nodes hold
+   * over the whole range of the mass. The errors of the galaxies largely add up,
+   * so the error in $-2\ln L$ grows with their number and with the structure of
+   * their photometric redshifts.
    *
    * The default is 1e-6. Largest error in $-2\ln L$ against a converged
-   * reference, over a scan of $\log_{10} M$ (13.8 to 15.0, calibrated at 14.0)
-   * and centre offsets, with the interpolated Spectral shape factor; the median
+   * reference, over a scan of $\log_{10} M$ (13.8 to 15.0, prior up to 15.0) and
+   * centre offsets, with the interpolated Spectral shape factor; the median
    * number of nodes per galaxy and the time of one evaluation on one thread
    * (AMD Ryzen AI 7 350, Zen 5) are given for each catalog:
    *
    * |node-reltol     |HSC s19a HWL16a-002, 12460 galaxies|HSC PDR1 HWL16a-094, 2200 galaxies|
    * |:--------------|:----------------------------------|:---------------------------------|
    * |fixed 10 x 5   |0.12 (45 nodes, 18 ms)             |2.9e-3 (45 nodes, 2.5 ms)         |
-   * |1e-4           |9.3e-3 (192 nodes, 43 ms)          |1.3e-2 (12 nodes, 1.3 ms)         |
-   * |1e-5           |7.1e-3 (220 nodes, 47 ms)          |3.5e-3 (12 nodes, 1.4 ms)         |
-   * |1e-6 (default) |5.8e-4 (305 nodes, 59 ms)          |4.4e-4 (18 nodes, 1.8 ms)         |
-   * |1e-7           |2.7e-4 (427 nodes, 82 ms)          |3.5e-5 (27 nodes, 2.6 ms)         |
-   * |1e-8           |2.4e-5 (640 nodes, 114 ms)         |1.2e-5 (33 nodes, 3.6 ms)         |
+   * |1e-4           |6.1e-3 (203 nodes, 44 ms)          |4.0e-3 (12 nodes, 1.3 ms)         |
+   * |1e-5           |1.2e-3 (280 nodes, 55 ms)          |6.0e-4 (15 nodes, 1.6 ms)         |
+   * |1e-6 (default) |1.6e-4 (399 nodes, 76 ms)          |1.8e-4 (24 nodes, 2.3 ms)         |
+   * |1e-7           |7.9e-5 (595 nodes, 107 ms)         |2.6e-5 (30 nodes, 3.2 ms)         |
+   * |1e-8           |6.2e-6 (846 nodes, 143 ms)         |6.8e-6 (42 nodes, 4.1 ms)         |
    *
    * The best-fit $\log_{10} M$ of HWL16a-002 (standard error 0.11) moves by
-   * $3\times10^{-5}$ standard errors at 1e-6 and by $5\times10^{-3}$ with the
-   * fixed 10 x 5 nodes. The calibration takes 4.8 s on HWL16a-002 at 1e-6 (8
+   * $4\times10^{-6}$ standard errors at 1e-6 and by $5\times10^{-3}$ with the
+   * fixed 10 x 5 nodes. The calibration takes 6.3 s on HWL16a-002 at 1e-6 (8
    * threads). With a free population the errors and the nodes are the same, an
    * evaluation costs 1.2 to 1.6 times more and the calibration about the same.
    * The shape factor itself (its interpolant or its line table) contributes
@@ -3289,7 +3354,7 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
    * selection. If the tolerance is not met within this budget the best
    * configuration found is used and a warning is emitted. The default, 8000,
    * leaves the tolerances down to 1e-8 uncapped on HSC s19a HWL16a-002, whose
-   * largest galaxy needs 954 nodes at the default node-reltol and 1595 at
+   * largest galaxy needs 1071 nodes at the default node-reltol and 1939 at
    * 1e-8 (see #NcDataClusterWLFactor:node-reltol).
    */
   g_object_class_install_property (object_class,
