@@ -276,16 +276,16 @@ nc_halo_position_prepare (NcHaloPosition *hp, NcHICosmo *cosmo)
  * @hp: A #NcHaloPosition.
  * @cosmo: A #NcHICosmo.
  *
- * Prepares the #NcHaloPosition object @hp for computation if necessary.
+ * Prepares the #NcHaloPosition object @hp for computation if necessary: its distance is
+ * prepared when it is out of date, for a new @cosmo or after nc_distance_require_zf(),
+ * which the distance itself tracks.
  *
  */
 void
 nc_halo_position_prepare_if_needed (NcHaloPosition *hp, NcHICosmo *cosmo)
 {
-  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
-
-  if (ncm_model_ctrl_update (self->ctrl_cosmo, NCM_MODEL (cosmo)))
-    nc_distance_prepare_if_needed (self->dist, cosmo);
+  /* Not gated on the cosmology: the distance may also be out of date for its zf */
+  nc_halo_position_prepare (hp, cosmo);
 }
 
 /**
@@ -346,25 +346,44 @@ nc_halo_position_get_ra_dec (NcHaloPosition *hp, gdouble *ra, gdouble *dec)
 void
 nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdouble *theta, gdouble *phi)
 {
-  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
-  NcmModel *model             = NCM_MODEL (hp);
   NcmTriVec v;
   gdouble r;
+
+  ncm_trivec_set_astro_ra_dec (&v, 1.0, ra, dec);
+  nc_halo_position_rotate (hp, &v);
+  ncm_trivec_get_spherical_coord (&v, &r, theta, phi);
+}
+
+/**
+ * nc_halo_position_rotate:
+ * @hp: A #NcHaloPosition
+ * @v: a vector, rotated in place
+ *
+ * Rotates @v by the rotation of nc_halo_position_polar_angles(), which takes the halo to
+ * the positive z axis: the spherical angles of the rotated unit vector of a sky position
+ * are the angles that function returns. Rotating a unit vector kept for each position
+ * avoids computing it again from the right ascension and declination when the halo
+ * moves.
+ */
+void
+nc_halo_position_rotate (NcHaloPosition *hp, NcmTriVec *v)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+  NcmModel *model             = NCM_MODEL (hp);
 
   if (!ncm_model_state_is_update (model))
   {
     const gdouble ra_halo  = RA;
     const gdouble dec_halo = DEC;
+    NcmTriVec h;
 
-    ncm_trivec_set_astro_ra_dec (&v, 1.0, ra_halo, dec_halo);
-    ncm_quaternion_set_to_rotate_to_z (&self->q, &v);
+    ncm_trivec_set_astro_ra_dec (&h, 1.0, ra_halo, dec_halo);
+    ncm_quaternion_set_to_rotate_to_z (&self->q, &h);
 
     ncm_model_state_set_update (model);
   }
 
-  ncm_trivec_set_astro_ra_dec (&v, 1.0, ra, dec);
-  ncm_quaternion_rotate (&self->q, &v);
-  ncm_trivec_get_spherical_coord (&v, &r, theta, phi);
+  ncm_quaternion_rotate (&self->q, v);
 }
 
 /**

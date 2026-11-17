@@ -79,10 +79,13 @@
 #include "nc/data/nc_data_cluster_wl_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_obs_private.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
+#include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "nc/background/nc_distance.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/integration/ncm_integral_nd.h"
@@ -380,6 +383,10 @@ typedef struct _NcDataClusterWLFactorPrivate
    * Factor's model-derived state changing never requires reallocating
    * shape_data, only refreshing what is cached in it). */
   gboolean obs_changed;
+
+  /* The largest redshift of the integration of every galaxy, set when obs is loaded
+   * (_nc_data_cluster_wl_factor_check_zf()) */
+  gdouble z_top;
 
   /* Last-seen hashes, compared against each Factor's own get_hash() every
    * prepare() cycle. */
@@ -872,6 +879,100 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
   return match;
 }
 
+/*
+ * The largest redshift of the integration of every galaxy of obs: from the data of the
+ * galaxies when obs is loaded, otherwise from data read row by row. The limits of the
+ * redshift factors depend on the rows of obs and on properties of the models, not on
+ * their parameters, so prepare computes it when obs is loaded (self->z_top).
+ */
+static gdouble
+_nc_data_cluster_wl_factor_z_top (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  const guint len       = nc_galaxy_wl_obs_len (self->obs);
+  const gboolean loaded = !self->obs_changed && (self->shape_data->len == len);
+  gdouble z_top         = 0.0;
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    NcGalaxyRedshiftFactorData *z_data;
+    gdouble z_lo, z_hi;
+
+    if (loaded)
+    {
+      z_data = ((NcGalaxyShapeFactorData *) g_ptr_array_index (self->shape_data, i))->z_data;
+    }
+    else
+    {
+      z_data = nc_galaxy_redshift_factor_data_new (self->redshift_factor, mset);
+      nc_galaxy_redshift_factor_data_read_row (z_data, self->obs, i);
+    }
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, z_data, &z_lo, &z_hi);
+    z_top = MAX (z_top, z_hi);
+
+    if (!loaded)
+      nc_galaxy_redshift_factor_data_unref (z_data);
+  }
+
+  return z_top;
+}
+
+/* The (z_top, zf) pairs warned about by _nc_data_cluster_wl_factor_check_zf() in this process */
+G_LOCK_DEFINE_STATIC (nc_data_cluster_wl_factor_zf_warned);
+
+static GArray *_nc_data_cluster_wl_factor_zf_warned = NULL;
+
+/*
+ * NcDistance gives the comoving distance from a spline up to its zf and, above it, from
+ * an integral cached at every redshift it was asked for, a cache that is never pruned.
+ * The critical surface density is computed at every redshift node, and the auto-node
+ * calibration probes many more redshifts, so a redshift integration above zf fills the
+ * cache with an entry per redshift. The distance is a model other data may share, so it
+ * is not changed here: at every prepare, so that a distance or a model set replaced under
+ * the same obs is checked too, this warns when self->z_top is above zf of the distance of
+ * the surface mass density, once in the process for each z_top and zf (the copies of the
+ * data a sampler makes share both).
+ */
+static void
+_nc_data_cluster_wl_factor_check_zf (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+
+  /* The shape factor needs both, so a model set without them does not get here */
+  g_assert_nonnull (smd);
+  g_assert_nonnull (smd->dist);
+
+  if (self->z_top > smd->dist->zf)
+  {
+    const gdouble pair[2] = {self->z_top, smd->dist->zf};
+    gboolean seen         = FALSE;
+    guint i;
+
+    G_LOCK (nc_data_cluster_wl_factor_zf_warned);
+
+    if (_nc_data_cluster_wl_factor_zf_warned == NULL)
+      _nc_data_cluster_wl_factor_zf_warned = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+    for (i = 0; !seen && (i + 1 < _nc_data_cluster_wl_factor_zf_warned->len); i += 2)
+      seen = (g_array_index (_nc_data_cluster_wl_factor_zf_warned, gdouble, i) == pair[0]) &&
+             (g_array_index (_nc_data_cluster_wl_factor_zf_warned, gdouble, i + 1) == pair[1]);
+
+    if (!seen)
+      g_array_append_vals (_nc_data_cluster_wl_factor_zf_warned, pair, 2);
+
+    G_UNLOCK (nc_data_cluster_wl_factor_zf_warned);
+
+    if (!seen)
+      g_warning ("nc_data_cluster_wl_factor: the redshift integration of the galaxies reaches z = %g, above the final "
+                 "redshift zf = %g of the distance of the surface mass density. Above zf NcDistance computes each "
+                 "distance by an integral it caches without bound, so memory grows with every redshift evaluated: "
+                 "raise zf with nc_distance_require_zf() to nc_data_cluster_wl_factor_get_z_max(); the models "
+                 "that hold the distance rebuild it at their next prepare.",
+                 self->z_top, smd->dist->zf);
+  }
+}
+
 static void
 nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 {
@@ -891,6 +992,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->shape_data = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_shape_factor_data_unref);
 
   self->obs_changed       = TRUE; /* the very first prepare() always rebuilds */
+  self->z_top             = 0.0;
   self->pos_hash          = 0;
   self->z_hash            = 0;
   self->shape_radius_hash = 0;
@@ -1207,12 +1309,10 @@ _shared_obs_owner_clear (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *obs)
     g_object_set_qdata (G_OBJECT (obs), _nc_data_cluster_wl_factor_shared_obs_quark (), NULL);
 }
 
-/* Replaces @obs by a copy of its columns that references its P(z) splines.
+/* Replaces @obs by a copy of its columns that shares its P(z) tables.
  * The columns are the rows resample() writes (about 100 bytes per galaxy);
- * the splines are most of the catalog and are only read. The splines are
- * added with nc_galaxy_wl_obs_set_pz(), which only references them: setting
- * the "pz" property would prepare each one again while other clones
- * evaluate it. */
+ * the tables are most of the catalog and are only read, so the copy
+ * references them (and the data derived from them) instead of copying. */
 static void
 _obs_make_private (NcDataClusterWLFactorPrivate *self)
 {
@@ -1229,10 +1329,10 @@ _obs_make_private (NcDataClusterWLFactorPrivate *self)
 
   for (i = 0; i < len; i++)
   {
-    NcmSpline *pz = nc_galaxy_wl_obs_peek_pz (shared, i);
+    NcmMatrix *tab = _nc_galaxy_wl_obs_peek_pz_table (shared, i);
 
-    if (pz != NULL)
-      nc_galaxy_wl_obs_set_pz (copy, i, pz);
+    if (tab != NULL)
+      _nc_galaxy_wl_obs_set_pz_table (copy, i, tab);
   }
 
   nc_galaxy_wl_obs_free (shared);
@@ -1395,7 +1495,10 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   {
     _nc_data_cluster_wl_factor_load_obs (self, mset, self->obs);
     self->obs_changed = FALSE;
+    self->z_top       = _nc_data_cluster_wl_factor_z_top (self, mset);
   }
+
+  _nc_data_cluster_wl_factor_check_zf (self, mset);
 
   nc_galaxy_position_factor_prepare (self->position_factor, mset);
   nc_galaxy_redshift_factor_prepare (self->redshift_factor, mset);
@@ -2719,6 +2822,30 @@ nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf)
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
   return self->obs;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_z_max:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @mset: a #NcmMSet
+ *
+ * Computes the largest redshift of the redshift integration of the galaxies of the
+ * observables catalog, from the limits of the redshift factor for each galaxy with the
+ * models of @mset. NcDistance computes the distance above its final redshift by integrals
+ * it caches at every redshift, so the distance of the surface mass density should reach
+ * it (nc_distance_require_zf()) before the likelihood is evaluated; prepare warns when it
+ * does not. The models that hold the distance rebuild it at their next prepare. The catalog must be set (nc_data_cluster_wl_factor_set_obs()).
+ *
+ * Returns: the largest redshift of the integration, or 0 for an empty catalog.
+ */
+gdouble
+nc_data_cluster_wl_factor_get_z_max (NcDataClusterWLFactor *dcwlf, NcmMSet *mset)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  g_assert_nonnull (self->obs);
+
+  return _nc_data_cluster_wl_factor_z_top (self, mset);
 }
 
 /**

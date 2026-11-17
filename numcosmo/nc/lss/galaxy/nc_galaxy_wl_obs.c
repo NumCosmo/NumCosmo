@@ -50,9 +50,11 @@
 #include "build_cfg.h"
 #include "stdarg.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_obs_private.h"
 #include "ncm/algebra/ncm_matrix.h"
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/spline/ncm_spline.h"
+#include "ncm/spline/ncm_spline_cubic_notaknot.h"
 #include "ncm/algebra/ncm_vector.h"
 #include "ncm/algebra/ncm_spectral_polar_panels.h"
 #include "nc_enum_types.h"
@@ -74,7 +76,8 @@ struct _NcGalaxyWLObs
 
 struct _NcGalaxyWLObsPrivate
 {
-  NcmObjDictInt *pz;
+  NcmObjDictInt *pz;     /* splines built by nc_galaxy_wl_obs_peek_pz(), on demand */
+  NcmObjDictInt *pz_tab; /* row -> 2 x n NcmMatrix: knots (row 0) and values (row 1) */
   NcWLEllipticityFrame coord;
   NcGalaxyWLObsEllipConv ellip_conv;
   NcmObjDictInt *shape_interp;
@@ -85,6 +88,7 @@ struct _NcGalaxyWLObsPrivate
 enum
 {
   PROP_PZ = 1000,
+  PROP_PZ_TABLE,
   PROP_COORD,
   PROP_ELLIP_CONV,
   PROP_SHAPE_INTERP,
@@ -99,6 +103,7 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   self->pz                  = ncm_obj_dict_int_new ();
+  self->pz_tab              = ncm_obj_dict_int_new ();
   self->coord               = NC_GALAXY_WL_OBS_COORD_EUCLIDEAN;
   self->ellip_conv          = 0;
   self->shape_interp        = ncm_obj_dict_int_new ();
@@ -116,8 +121,8 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
 
   switch (prop_id)
   {
-    case PROP_PZ:
-      g_value_set_boxed (value, self->pz);
+    case PROP_PZ_TABLE:
+      g_value_set_boxed (value, self->pz_tab);
       break;
     case PROP_COORD:
       g_value_set_enum (value, nc_galaxy_wl_obs_get_coord (obs));
@@ -161,6 +166,18 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_PZ:
       _nc_galaxy_wl_obs_take_pz (self, g_value_dup_boxed (value));
       break;
+    case PROP_PZ_TABLE:
+    {
+      NcmObjDictInt *tab = g_value_dup_boxed (value);
+
+      if (tab != NULL)
+      {
+        ncm_obj_dict_int_clear (&self->pz_tab);
+        self->pz_tab = tab;
+      }
+
+      break;
+    }
     case PROP_COORD:
       nc_galaxy_wl_obs_set_coord (obs, g_value_get_enum (value));
       break;
@@ -210,6 +227,7 @@ _nc_galaxy_wl_obs_dispose (GObject *object)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   ncm_obj_dict_int_clear (&self->pz);
+  ncm_obj_dict_int_clear (&self->pz_tab);
   ncm_obj_dict_int_clear (&self->shape_interp);
   ncm_obj_dict_str_clear (&self->shape_interp_source);
 
@@ -245,14 +263,31 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
   /**
    * NcGalaxyWLObs:pz:
    *
-   * P(z) splines.
+   * P(z) splines, as files written before #NcGalaxyWLObs:pz-table hold them: each is
+   * converted to a table, see nc_galaxy_wl_obs_set_pz(). Write-only.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_PZ,
                                    g_param_spec_boxed ("pz",
                                                        "P(z)",
-                                                       "P(z) splines",
+                                                       "P(z) splines (read from older files only)",
+                                                       NCM_TYPE_OBJ_DICT_INT,
+                                                       G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyWLObs:pz-table:
+   *
+   * P(z) tables: for each row index, a 2 x n #NcmMatrix with the knots (first row) and
+   * the values (second row) of the P(z) of the galaxy. This is all the likelihood reads,
+   * so a catalog keeps no spline (nc_galaxy_wl_obs_peek_pz() builds one on demand).
+   *
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_PZ_TABLE,
+                                   g_param_spec_boxed ("pz-table",
+                                                       "P(z) tables",
+                                                       "P(z) tables",
                                                        NCM_TYPE_OBJ_DICT_INT,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
@@ -326,33 +361,48 @@ _nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs)
   return (self->shape_interp_source != NULL) && ncm_catalog_key_is_current (NCM_CATALOG (obs), &self->shape_interp_key);
 }
 
+static NcmMatrix *
+_nc_galaxy_wl_obs_table_from_spline (NcmSpline *pz)
+{
+  NcmVector *xv  = ncm_spline_peek_xv (pz);
+  NcmVector *yv  = ncm_spline_peek_yv (pz);
+  const guint n  = ncm_vector_len (xv);
+  NcmMatrix *tab = ncm_matrix_new (2, n);
+  guint j;
+
+  for (j = 0; j < n; j++)
+  {
+    ncm_matrix_set (tab, 0, j, ncm_vector_get (xv, j));
+    ncm_matrix_set (tab, 1, j, ncm_vector_get (yv, j));
+  }
+
+  return tab;
+}
+
 void
 _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
 {
-  guint i;
-
-  ncm_obj_dict_int_clear (&self->pz);
-  self->pz = pz;
-
-  if (self->pz != NULL)
+  /* Older files: the splines are converted to tables and dropped */
+  if (pz != NULL)
   {
-    GArray *keys  = ncm_obj_dict_int_keys (self->pz);
+    GArray *keys  = ncm_obj_dict_int_keys (pz);
     const guint n = keys->len;
+    guint i;
 
     for (i = 0; i < n; i++)
     {
       const gint key = g_array_index (keys, gint, i);
-      GObject *obj   = ncm_obj_dict_int_peek (self->pz, key);
+      GObject *obj   = ncm_obj_dict_int_peek (pz, key);
+      NcmMatrix *tab;
 
       g_assert (NCM_IS_SPLINE (obj));
-      ncm_spline_prepare (NCM_SPLINE (obj));
+      tab = _nc_galaxy_wl_obs_table_from_spline (NCM_SPLINE (obj));
+      ncm_obj_dict_int_add (self->pz_tab, key, G_OBJECT (tab));
+      ncm_matrix_free (tab);
     }
 
     g_array_unref (keys);
-  }
-  else
-  {
-    self->pz = ncm_obj_dict_int_new ();
+    ncm_obj_dict_int_clear (&pz);
   }
 }
 
@@ -534,15 +584,46 @@ nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdoub
  * @i: row index.
  * @pz: a #NcmSpline.
  *
- * Sets a P(z) spline in the observation data.
+ * Sets the P(z) of row @i to the knots and values of @pz, copied: the catalog keeps
+ * them as a table, not @pz itself (see nc_galaxy_wl_obs_peek_pz()).
  *
  */
 void
 nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  NcmMatrix *tab                    = _nc_galaxy_wl_obs_table_from_spline (pz);
 
-  ncm_obj_dict_int_add (self->pz, i, G_OBJECT (pz));
+  ncm_obj_dict_int_add (self->pz_tab, i, G_OBJECT (tab));
+  ncm_matrix_free (tab);
+  {
+    const gint key = i;
+
+    g_hash_table_remove ((GHashTable *) self->pz, &key);
+  }
+}
+
+/**
+ * nc_galaxy_wl_obs_copy_pz:
+ * @obs: a #NcGalaxyWLObs object.
+ * @i: row index of @obs.
+ * @src: a #NcGalaxyWLObs object.
+ * @j: row index of @src.
+ *
+ * Sets the P(z) of row @i of @obs to that of row @j of @src. The two catalogs share the
+ * table, which is never changed in place. Unlike nc_galaxy_wl_obs_peek_pz() followed by
+ * nc_galaxy_wl_obs_set_pz(), this builds no spline. Row @j of @src must have a P(z).
+ *
+ */
+void
+nc_galaxy_wl_obs_copy_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyWLObs *src, const guint j)
+{
+  NcmMatrix *tab = _nc_galaxy_wl_obs_peek_pz_table (src, j);
+
+  if (tab == NULL)
+    g_error ("nc_galaxy_wl_obs_copy_pz: row %u of the source catalog has no P(z).", j);
+
+  _nc_galaxy_wl_obs_set_pz_table (obs, i, tab);
 }
 
 /**
@@ -576,22 +657,80 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
   return ncm_catalog_peek_data (NCM_CATALOG (obs));
 }
 
+/* Serializes the splines built by nc_galaxy_wl_obs_peek_pz() */
+G_LOCK_DEFINE_STATIC (nc_galaxy_wl_obs_pz);
+
 /**
  * nc_galaxy_wl_obs_peek_pz:
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
  *
- * Gets a P(z) spline from the observation data.
+ * Gets the P(z) of row @i as a prepared #NcmSplineCubicNotaknot through its knots and
+ * values. The catalog holds only the tables (#NcGalaxyWLObs:pz-table): the spline is
+ * built on the first call for row @i and kept until the row is set again, so peeking
+ * every row costs the memory of every spline's coefficients.
  *
- * Returns: (transfer none): the P(z) spline.
+ * Returns: (transfer none) (nullable): the P(z) spline, or %NULL when row @i has none.
  *
  */
 NcmSpline *
 nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  NcmMatrix *tab                    = _nc_galaxy_wl_obs_peek_pz_table (obs, i);
+  NcmSpline *pz;
 
-  return NCM_SPLINE (ncm_obj_dict_int_peek (self->pz, i));
+  if (tab == NULL)
+    return NULL;
+
+  G_LOCK (nc_galaxy_wl_obs_pz);
+  pz = (NcmSpline *) ncm_obj_dict_int_peek (self->pz, i);
+
+  if (pz == NULL)
+  {
+    const guint n = ncm_matrix_ncols (tab);
+    NcmVector *xv = ncm_vector_new (n);
+    NcmVector *yv = ncm_vector_new (n);
+    guint j;
+
+    for (j = 0; j < n; j++)
+    {
+      ncm_vector_set (xv, j, ncm_matrix_get (tab, 0, j));
+      ncm_vector_set (yv, j, ncm_matrix_get (tab, 1, j));
+    }
+
+    pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+    ncm_obj_dict_int_add (self->pz, i, G_OBJECT (pz));
+    ncm_spline_free (pz);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+  }
+
+  G_UNLOCK (nc_galaxy_wl_obs_pz);
+
+  return pz;
+}
+
+/* See nc_galaxy_wl_obs_private.h */
+NcmMatrix *
+_nc_galaxy_wl_obs_peek_pz_table (NcGalaxyWLObs *obs, const guint i)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  return (NcmMatrix *) ncm_obj_dict_int_peek (self->pz_tab, i);
+}
+
+/* See nc_galaxy_wl_obs_private.h */
+void
+_nc_galaxy_wl_obs_set_pz_table (NcGalaxyWLObs *obs, const guint i, NcmMatrix *tab)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  const gint key                    = i;
+
+  ncm_obj_dict_int_add (self->pz_tab, i, G_OBJECT (tab));
+  G_LOCK (nc_galaxy_wl_obs_pz);
+  g_hash_table_remove ((GHashTable *) self->pz, &key);
+  G_UNLOCK (nc_galaxy_wl_obs_pz);
 }
 
 /**

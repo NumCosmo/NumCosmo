@@ -3,6 +3,7 @@
 # test_galaxy_redshift_factor_spline.py
 #
 # Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+# Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
 #
 # numcosmo is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -261,7 +262,14 @@ def test_read_row_write_row_round_trip(variant, zp, sigma0, zp_min, zp_max):
     wlobs.set_pz(0, spline)
 
     data.read_row(wlobs, 0)
-    assert gsdrs.data_peek(data) == wlobs.peek_pz(0)
+    # The catalog keeps the knots and values of the spline, not the spline itself
+    for got in (gsdrs.data_peek(data), wlobs.peek_pz(0)):
+        assert_allclose(
+            got.peek_xv().dup_array(), spline.peek_xv().dup_array(), rtol=0.0
+        )
+        assert_allclose(
+            got.peek_yv().dup_array(), spline.peek_yv().dup_array(), rtol=0.0
+        )
 
     other_wlobs = Nc.GalaxyWLObs.new(
         Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, ["z"]

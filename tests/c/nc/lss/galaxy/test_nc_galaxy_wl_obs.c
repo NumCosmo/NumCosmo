@@ -48,6 +48,8 @@ static void test_nc_galaxy_wl_obs_free (TestNcGalaxyWLObs *test, gconstpointer p
 
 static void test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_legacy_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_copy_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_setget (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_data (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
@@ -76,6 +78,14 @@ main (gint argc, gchar *argv[])
   g_test_add ("/numcosmo/nc_galaxy_wl_obs/serialize_pz", TestNcGalaxyWLObs, NULL,
               &test_nc_galaxy_wl_obs_new_pz,
               &test_nc_galaxy_wl_obs_serialize_pz,
+              &test_nc_galaxy_wl_obs_free);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/legacy_pz", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new_pz,
+              &test_nc_galaxy_wl_obs_legacy_pz,
+              &test_nc_galaxy_wl_obs_free);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/copy_pz", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new_pz,
+              &test_nc_galaxy_wl_obs_copy_pz,
               &test_nc_galaxy_wl_obs_free);
 
   g_test_add ("/numcosmo/nc_galaxy_wl_obs/setget", TestNcGalaxyWLObs, NULL,
@@ -317,6 +327,110 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
   ncm_serialize_free (ser);
   ncm_rng_free (rng);
   nc_galaxy_wl_obs_free (obs_dup);
+}
+
+/* A catalog written before NcGalaxyWLObs:pz-table carries its P(z) as splines in the
+ * write-only "pz" property: they are read as tables, the same knots and values. */
+static void
+test_nc_galaxy_wl_obs_legacy_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  const guint len    = nc_galaxy_wl_obs_len (test->obs);
+  NcmObjDictInt *odi = ncm_obj_dict_int_new ();
+  GStrv columns      = nc_galaxy_wl_obs_peek_columns (test->obs);
+  NcGalaxyWLObs *obs;
+  guint i;
+
+  for (i = 0; i < len; i += 2)
+  {
+    NcmVector *xv = ncm_vector_new (10);
+    NcmVector *yv = ncm_vector_new (10);
+    NcmSpline *pz;
+    guint l;
+
+    for (l = 0; l < 10; l++)
+    {
+      ncm_vector_set (xv, l, 0.1 * l);
+      ncm_vector_set (yv, l, (i + 1.0) * l * l);
+    }
+
+    pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, FALSE));
+    ncm_obj_dict_int_add (odi, i, G_OBJECT (pz));
+
+    ncm_spline_free (pz);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
+  }
+
+  obs = g_object_new (NC_TYPE_GALAXY_WL_OBS,
+                      "ellip-conv", nc_galaxy_wl_obs_get_ellip_conv (test->obs),
+                      "columns", columns,
+                      "coord", nc_galaxy_wl_obs_get_coord (test->obs),
+                      "len", len,
+                      "pz", odi,
+                      NULL);
+
+  for (i = 0; i < len; i++)
+  {
+    NcmSpline *pz = nc_galaxy_wl_obs_peek_pz (obs, i);
+
+    if (i % 2 == 1)
+    {
+      g_assert_null (pz);
+    }
+    else
+    {
+      NcmSpline *pz0 = NCM_SPLINE (ncm_obj_dict_int_peek (odi, i));
+      guint l;
+
+      g_assert_nonnull (pz);
+      g_assert_true (pz != pz0);
+      g_assert_true (ncm_spline_is_init (pz));
+
+      for (l = 0; l < 10; l++)
+      {
+        g_assert_cmpfloat (ncm_vector_get (ncm_spline_peek_xv (pz), l), ==, ncm_vector_get (ncm_spline_peek_xv (pz0), l));
+        g_assert_cmpfloat (ncm_vector_get (ncm_spline_peek_yv (pz), l), ==, ncm_vector_get (ncm_spline_peek_yv (pz0), l));
+      }
+    }
+  }
+
+  ncm_obj_dict_int_unref (odi);
+  nc_galaxy_wl_obs_free (obs);
+}
+
+/* nc_galaxy_wl_obs_copy_pz() gives the row of another catalog the same P(z) */
+static void
+test_nc_galaxy_wl_obs_copy_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmVector *xv  = ncm_vector_new (10);
+  NcmVector *yv  = ncm_vector_new (10);
+  GStrv columns  = nc_galaxy_wl_obs_peek_columns (test->obs);
+  NcGalaxyWLObs *dst;
+  NcmSpline *pz;
+  guint l;
+
+  for (l = 0; l < 10; l++)
+  {
+    ncm_vector_set (xv, l, 0.1 * l);
+    ncm_vector_set (yv, l, 1.0 + l * l);
+  }
+
+  pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  nc_galaxy_wl_obs_set_pz (test->obs, 3, pz);
+
+  dst = nc_galaxy_wl_obs_new (nc_galaxy_wl_obs_get_ellip_conv (test->obs), nc_galaxy_wl_obs_get_coord (test->obs), 2, columns);
+  nc_galaxy_wl_obs_copy_pz (dst, 1, test->obs, 3);
+
+  g_assert_null (nc_galaxy_wl_obs_peek_pz (dst, 0));
+  g_assert_nonnull (nc_galaxy_wl_obs_peek_pz (dst, 1));
+
+  for (l = 0; l < 20; l++)
+    g_assert_cmpfloat (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (dst, 1), 0.045 * l), ==, ncm_spline_eval (pz, 0.045 * l));
+
+  ncm_spline_free (pz);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
+  nc_galaxy_wl_obs_free (dst);
 }
 
 static void

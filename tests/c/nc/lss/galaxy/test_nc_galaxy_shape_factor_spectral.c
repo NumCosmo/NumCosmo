@@ -4,10 +4,13 @@
  *  Wed Nov 11 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * test_nc_galaxy_shape_factor_spectral.c
  * Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -117,6 +120,7 @@ void test_nc_galaxy_shape_factor_spectral_reltol (void);
 void test_nc_galaxy_shape_factor_spectral_panels (void);
 void test_nc_galaxy_shape_factor_spectral_serialize (void);
 void test_nc_galaxy_shape_factor_spectral_hooks (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -145,6 +149,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/reltol", &test_nc_galaxy_shape_factor_spectral_reltol);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/panels", &test_nc_galaxy_shape_factor_spectral_panels);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/serialize", &test_nc_galaxy_shape_factor_spectral_serialize);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/crit_hash", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_crit_hash,
+              &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/hooks", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_hooks,
@@ -1194,5 +1202,43 @@ test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral
   ncm_vector_free (out);
   nc_galaxy_position_factor_data_unref (p_data);
   nc_galaxy_redshift_factor_data_unref (z_data);
+}
+
+/* The critical-density hash follows the cosmology and the lens redshift but not the halo
+ * center: moving ra and dec leaves it unchanged, moving z changes it, and setting z back
+ * restores it. */
+void
+test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcGalaxyShapeFactor *gsf = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE));
+  NcmModel *hp             = ncm_mset_peek (test->mset, nc_halo_position_id ());
+  NcmModel *cosmo          = ncm_mset_peek (test->mset, nc_hicosmo_id ());
+  const gdouble z          = ncm_model_param_get (hp, NC_HALO_POSITION_Z);
+  guint64 h0, h_center, h_z, h_back;
+
+  nc_galaxy_shape_factor_prepare (gsf, test->mset);
+  h0 = nc_galaxy_shape_factor_get_crit_hash (gsf);
+
+  ncm_model_param_set (hp, NC_HALO_POSITION_RA, ncm_model_param_get (hp, NC_HALO_POSITION_RA) + 0.01);
+  ncm_model_param_set (hp, NC_HALO_POSITION_DEC, ncm_model_param_get (hp, NC_HALO_POSITION_DEC) - 0.01);
+  nc_galaxy_shape_factor_prepare (gsf, test->mset);
+  h_center = nc_galaxy_shape_factor_get_crit_hash (gsf);
+  g_assert_cmpuint (h_center, ==, h0);
+
+  ncm_model_param_set (hp, NC_HALO_POSITION_Z, z + 0.05);
+  nc_galaxy_shape_factor_prepare (gsf, test->mset);
+  h_z = nc_galaxy_shape_factor_get_crit_hash (gsf);
+  g_assert_cmpuint (h_z, !=, h0);
+
+  ncm_model_param_set (hp, NC_HALO_POSITION_Z, z);
+  nc_galaxy_shape_factor_prepare (gsf, test->mset);
+  h_back = nc_galaxy_shape_factor_get_crit_hash (gsf);
+  g_assert_cmpuint (h_back, ==, h0);
+
+  ncm_model_param_set (cosmo, 0, ncm_model_param_get (cosmo, 0) * 1.01);
+  nc_galaxy_shape_factor_prepare (gsf, test->mset);
+  g_assert_cmpuint (nc_galaxy_shape_factor_get_crit_hash (gsf), !=, h0);
+
+  nc_galaxy_shape_factor_free (gsf);
 }
 

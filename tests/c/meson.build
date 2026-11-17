@@ -833,6 +833,9 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_shape_factor_spectral',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral.c'],
+        # Its integrals take about 160 s under coverage without the vector math
+        # library, close to the limit of 180 s the other tests get.
+        'timeout': 360,
     },
     {
         'name': 'nc_galaxy_shape_factor_spectral_cert',

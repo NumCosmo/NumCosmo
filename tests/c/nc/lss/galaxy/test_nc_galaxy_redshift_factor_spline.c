@@ -4,10 +4,13 @@
  *  Fri Nov 13 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * test_nc_galaxy_redshift_factor_spline.c
  * Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -333,7 +336,28 @@ test_nc_galaxy_redshift_factor_spline_zeros (TestNcGalaxyRedshiftFactorSpline *t
   nc_galaxy_redshift_factor_integrand_free (integ);
 }
 
-/* A row is read from and written to the NcGalaxyWLObs P(z) slot as the same spline. */
+/* @a has the knots and values of @b */
+static void
+_test_assert_same_table (NcmSpline *a, NcmSpline *b)
+{
+  NcmVector *xa = ncm_spline_peek_xv (a);
+  NcmVector *ya = ncm_spline_peek_yv (a);
+  NcmVector *xb = ncm_spline_peek_xv (b);
+  NcmVector *yb = ncm_spline_peek_yv (b);
+  guint j;
+
+  g_assert_cmpuint (ncm_vector_len (xa), ==, ncm_vector_len (xb));
+
+  for (j = 0; j < ncm_vector_len (xb); j++)
+  {
+    g_assert_cmpfloat (ncm_vector_get (xa, j), ==, ncm_vector_get (xb, j));
+    g_assert_cmpfloat (ncm_vector_get (ya, j), ==, ncm_vector_get (yb, j));
+  }
+}
+
+/* A row is read from and written to the NcGalaxyWLObs P(z) table: the knots and values
+ * of the spline set on the row, which nc_galaxy_redshift_factor_spline_data_peek() and
+ * nc_galaxy_wl_obs_peek_pz() give back as a prepared spline. */
 void
 test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
 {
@@ -343,20 +367,22 @@ test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *tes
 
   nc_galaxy_wl_obs_set_pz (obs, 1, test->pz);
   nc_galaxy_redshift_factor_data_read_row (data2, obs, 1);
-  g_assert_true (nc_galaxy_redshift_factor_spline_data_peek (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr), data2) == test->pz);
+  _test_assert_same_table (nc_galaxy_redshift_factor_spline_data_peek (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (test->gsdr), data2), test->pz);
   ncm_assert_cmpdouble (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, data2), ==,
                         nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, test->data));
 
   nc_galaxy_redshift_factor_data_write_row (data2, obs, 0);
-  g_assert_true (nc_galaxy_wl_obs_peek_pz (obs, 0) == test->pz);
+  _test_assert_same_table (nc_galaxy_wl_obs_peek_pz (obs, 0), test->pz);
+  g_assert_true (nc_galaxy_wl_obs_peek_pz (obs, 0) == nc_galaxy_wl_obs_peek_pz (obs, 0));
+  ncm_assert_cmpdouble (ncm_spline_eval (nc_galaxy_wl_obs_peek_pz (obs, 0), 0.5 * (TEST_POLY_Z_MIN + TEST_POLY_Z_MAX)), ==,
+                        ncm_spline_eval (test->pz, 0.5 * (TEST_POLY_Z_MIN + TEST_POLY_Z_MAX)));
 
   nc_galaxy_redshift_factor_data_unref (data2);
   nc_galaxy_wl_obs_free (obs);
   g_strfreev (columns);
 }
 
-/* The data derived from a table is shared by every galaxy that reads the same spline,
- * and is rebuilt, not reused, after the table's values are changed in place: scaling the
+/* The data derived from a table is rebuilt, not reused, after the table's values are changed in place: scaling the
  * values by 4 scales the normalization by 4, for a new galaxy and for one that reads the
  * table again. The galaxy that keeps the old data keeps the old normalization. */
 void
@@ -434,7 +460,7 @@ typedef struct _TestThreadsArg
 {
   NcGalaxyRedshiftFactorSpline *gs;
   NcGalaxyRedshiftFactorData *data;
-  NcmSpline *pz;
+  NcGalaxyWLObs *obs;
   gint *ready;
   gint *go;
 } TestThreadsArg;
@@ -450,14 +476,15 @@ _test_threads_read (gpointer userdata)
   while (!g_atomic_int_get (arg->go))
     ;
 
-  nc_galaxy_redshift_factor_spline_data_set (arg->gs, arg->data, arg->pz);
+  nc_galaxy_redshift_factor_data_read_row (arg->data, arg->obs, 0);
 
   return NULL;
 }
 
-/* Threads that read the same new table at the same time all get the density of that
- * table: each round starts TEST_THREADS_N threads on a new table of q^2 at once, so
- * several of them build its data together and all but one drop their build. */
+/* Threads that read the same new catalog row at the same time all get the density of its
+ * table, and share its data: each round starts TEST_THREADS_N threads on the row of a new
+ * table of q^2 at once, so several of them build its data together and all but one drop
+ * their build. */
 void
 test_nc_galaxy_redshift_factor_spline_threads (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
 {
@@ -475,17 +502,21 @@ test_nc_galaxy_redshift_factor_spline_threads (TestNcGalaxyRedshiftFactorSpline 
 
   for (round = 0; round < TEST_THREADS_ROUNDS; round++)
   {
-    NcmSpline *pz = _test_table_spline (z, p, TEST_THREADS_KNOTS);
+    NcmSpline *pz      = _test_table_spline (z, p, TEST_THREADS_KNOTS);
+    GStrv columns      = g_strsplit ("z", " ", -1);
+    NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, 1, columns);
     TestThreadsArg arg[TEST_THREADS_N];
     GThread *th[TEST_THREADS_N];
     gint ready = 0;
     gint go    = 0;
 
+    nc_galaxy_wl_obs_set_pz (obs, 0, pz);
+
     for (t = 0; t < TEST_THREADS_N; t++)
     {
       arg[t].gs    = gs;
       arg[t].data  = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
-      arg[t].pz    = pz;
+      arg[t].obs   = obs;
       arg[t].ready = &ready;
       arg[t].go    = &go;
       th[t]        = g_thread_new ("read", &_test_threads_read, &arg[t]);
@@ -506,12 +537,14 @@ test_nc_galaxy_redshift_factor_spline_threads (TestNcGalaxyRedshiftFactorSpline 
 
       for (t = 0; t < TEST_THREADS_N; t++)
       {
-        g_assert_true (nc_galaxy_redshift_factor_spline_data_peek (gs, arg[t].data) == pz);
+        _test_assert_same_table (nc_galaxy_redshift_factor_spline_data_peek (gs, arg[t].data), pz);
         ncm_assert_cmpdouble (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, arg[t].data), ==, norm0);
         nc_galaxy_redshift_factor_data_unref (arg[t].data);
       }
     }
 
+    nc_galaxy_wl_obs_free (obs);
+    g_strfreev (columns);
     ncm_spline_free (pz);
   }
 
