@@ -767,7 +767,10 @@ class ClusterWL(ABC):
     node_reltol: Annotated[
         float,
         typer.Option(
-            help="Target relative tolerance for --auto-nodes selection.",
+            help=(
+                "Target relative tolerance for --auto-nodes selection, per galaxy "
+                "(errors in -2lnL at each setting: NcDataClusterWLFactor:node-reltol)."
+            ),
             show_default=True,
             rich_help_panel="Redshift integration method",
         ),

@@ -1283,9 +1283,9 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->integ_method    = NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT;
   self->n_nodes         = 10;
   self->rule_n          = 5;
-  self->auto_nodes      = FALSE;
+  self->auto_nodes      = TRUE;
   self->node_reltol     = 1.0e-4;
-  self->max_total_nodes = 2000;
+  self->max_total_nodes = 8000;
   self->low_prob_count  = 0;
 
   self->force_data_prepare = FALSE;
@@ -2945,16 +2945,18 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
    *
    * Whether to automatically select, per galaxy, the minimal fixed
    * Gauss-Legendre configuration reaching #NcDataClusterWLFactor:node-reltol
-   * (`FIXED_NODES` only, ignored otherwise). When disabled (the default),
+   * (`FIXED_NODES` only, ignored otherwise); the default. When disabled,
    * every galaxy uses the global #NcDataClusterWLFactor:n-nodes /
-   * #NcDataClusterWLFactor:rule-n.
+   * #NcDataClusterWLFactor:rule-n, whose error depends on the photometric
+   * redshifts of the catalog and is not controlled (see
+   * #NcDataClusterWLFactor:node-reltol).
    */
   g_object_class_install_property (object_class,
                                    PROP_AUTO_NODES,
                                    g_param_spec_boolean ("auto-nodes",
                                                          NULL,
                                                          "Automatically select the per-galaxy fixed-node configuration (FIXED_NODES only)",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -2963,14 +2965,30 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
    * Target relative tolerance for the per-galaxy fixed-node selection (see
    * #NcDataClusterWLFactor:auto-nodes).
    *
-   * The default is 1e-4. On the HSC-SSP PDR1 catalog HWL16a-002 (15011
-   * galaxies, pairs calibrated at $\log_{10} M = 14$), against a 320x7 grid
-   * over $\log_{10} M \in [13.4, 14.8]$: at 1e-4 the error in $-2\ln L$ is
-   * at most $2.4\times10^{-4}$ and the best-fit $\log_{10} M$ moves by
-   * $8\times10^{-7}$; at 1e-2 they are $3.5\times10^{-2}$ and
-   * $1.6\times10^{-4}$ (standard error $0.084$), at 2.7 times fewer
-   * redshift nodes (9 against 24 per galaxy, 5.5 against 11.2 ms per
-   * evaluation on one thread).
+   * The default is 1e-4. The tolerance is relative, per galaxy; the error it
+   * leaves in $-2\ln L$ grows with the number of galaxies and with the
+   * structure of their photometric redshifts. Largest error in $-2\ln L$
+   * against node-reltol 1e-10, over a scan of $\log_{10} M$ (13.8 to 15.0) and
+   * centre offsets, with the interpolated Spectral shape factor; the median
+   * number of nodes per galaxy and the time of one evaluation on one thread
+   * (AMD Ryzen AI 7 350, Zen 5) are given for each catalog:
+   *
+   * |node-reltol     |HSC s19a HWL16a-002, 12460 galaxies|HSC PDR1 HWL16a-094, 2200 galaxies|
+   * |:--------------|:----------------------------------|:---------------------------------|
+   * |fixed 10 x 5   |0.12 (50 nodes, 18 ms)             |3.6e-3 (50 nodes, 3.7 ms)         |
+   * |1e-2           |0.16 (75 nodes, 23 ms)             |4.1e-2 (14 nodes, 1.4 ms)         |
+   * |1e-3           |4.9e-2 (288 nodes, 59 ms)          |1.6e-2 (21 nodes, 1.8 ms)         |
+   * |1e-4 (default) |1.5e-3 (518 nodes, 92 ms)          |2.5e-3 (28 nodes, 2.9 ms)         |
+   * |1e-5           |1.6e-4 (735 nodes, 127 ms)         |1.7e-4 (35 nodes, 3.9 ms)         |
+   * |1e-6           |3.2e-5 (1050 nodes, 175 ms)        |3.1e-6 (45 nodes, 5.0 ms)         |
+   * |1e-7           |6.8e-7 (1470 nodes, 236 ms)        |4.2e-7 (65 nodes, 6.8 ms)         |
+   * |1e-8           |4.9e-8 (2100 nodes, 326 ms)        |1.1e-7 (95 nodes, 9.5 ms)         |
+   *
+   * The best-fit $\log_{10} M$ of HWL16a-002 (standard error 0.11) moves by
+   * $7\times10^{-5}$ standard errors at 1e-4 and by $5\times10^{-3}$ with the
+   * fixed 10 x 5 nodes. With a free population the errors are the same and an
+   * evaluation costs 1.2 to 1.6 times more. The shape factor itself (its
+   * interpolant or its line table) contributes about $10^{-7}$.
    */
   g_object_class_install_property (object_class,
                                    PROP_NODE_RELTOL,
@@ -2986,14 +3004,17 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
    * Safety ceiling on the total background node count $(n_\mathrm{nodes}-1)\,
    * \mathrm{rule}_n$ explored by the #NcDataClusterWLFactor:auto-nodes
    * selection. If the tolerance is not met within this budget the best
-   * configuration found is used and a warning is emitted.
+   * configuration found is used and a warning is emitted. The default, 8000,
+   * leaves the tolerances down to 1e-9 uncapped on HSC s19a HWL16a-002, whose
+   * largest galaxy needs 1510 nodes at the default node-reltol and 5929 at
+   * 1e-9 (see #NcDataClusterWLFactor:node-reltol).
    */
   g_object_class_install_property (object_class,
                                    PROP_MAX_TOTAL_NODES,
                                    g_param_spec_uint ("max-total-nodes",
                                                       NULL,
                                                       "Safety ceiling on the total background node count for auto-nodes selection",
-                                                      2, G_MAXUINT, 2000,
+                                                      2, G_MAXUINT, 8000,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
