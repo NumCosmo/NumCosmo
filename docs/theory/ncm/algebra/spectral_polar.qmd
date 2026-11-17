@@ -61,6 +61,14 @@ $$
 The function $F$ is expanded on the panel. The contribution of the panel to Eq. (1) is the
 integral of $r^{c_a} (R - r)^{c_b} F$ over it.
 
+A factor of $G$ that depends only on the radius, $G (r, \theta) = \rho (r) \, \tilde{G} (r, \theta)$,
+can be given apart to the internal `_ncm_spectral_polar_integrate_radial()`: $\rho$ is then
+computed once per radius, at all the new radii of a panel in one call, and multiplies the
+smooth weight of Eq. (2) there, while $\tilde{G}$ is called for the angles. The panels and the
+integral are those of $G$ given whole, up to rounding. This pays when $\rho$ is costly
+compared to $\tilde{G}$ at a few angles: a doubling in $\theta$ calls $\tilde{G}$ again at every
+radius of the panel, but leaves the values of $\rho$ unchanged.
+
 ## Expansion on a Panel
 
 With the Chebyshev variables $s_r, s_\theta \in [-1, 1]$,
@@ -178,7 +186,10 @@ three steps.
 1. Every panel given by the edges is sampled on its starting grid. The sum $I_0$ of the
    values of Eq. (7) on those grids replaces $I$ in Eq. (6).
 2. Each panel is accepted or refined with that $\varepsilon_F$, starting from the samples
-   of step 1.
+   of step 1. A panel that fails is doubled right away in the direction of its larger
+   change: its first test in this step would repeat the one it failed, with the same
+   $D_r$, $D_\theta$, $V$ and $\varepsilon_F$, and below one level under `level-cap` that
+   test cannot lead to a bisection.
 3. The values of the accepted panels are summed. If the sum gives a smaller
    $\varepsilon_F$, the accepted panels are tested again with it, from the $D_r + D_\theta$
    and $V$ they were accepted with; those that fail are expanded again from `level-min`.
@@ -267,7 +278,8 @@ must therefore be placed from the known position and width of such a maximum, as
 |---|---|
 | $r_a, r_b, \theta_a, \theta_b$ | `ra`, `rb`, `ta`, `tb` of a panel |
 | $l_r, l_\theta$; $N_r, N_\theta$ | `lx`, `ly`; `n`, `m` |
-| $r^{a - c_a} (R - r)^{b - c_b}$ at the radial nodes | `wr` |
+| $r^{a - c_a} (R - r)^{b - c_b} \rho (r)$ at the radial nodes | `wr` (`crho` holds $\rho$) |
+| the samples of the current level $(l_r, l_\theta)$ | `in`, row $i$ the radius $i$; a doubling spreads it in place |
 | $c^{kl}$ | `coeffs`, row $l$, column $k$ |
 | $b_r^k$, $b_\theta^l$ | `br`, `bt` |
 | $D_r$, $D_\theta$, $V$ | `Dr`, `Dt`, `vs` |
@@ -280,7 +292,9 @@ The transform of a grid is two one-dimensional passes, each over all the lines o
 other direction at once. A direction with up to 129 nodes is transformed by the functions
 of [Transform on the Nested Grids](spectral.qmd#transform-on-the-nested-grids); a
 direction with more nodes by an FFTW `REDFT00` plan and the normalization of
-[Spectral Methods](spectral.qmd#computing-the-coefficients).
+[Spectral Methods](spectral.qmd#computing-the-coefficients). Both leave their input
+unchanged, which the doublings rely on: the samples stay in `in` from one level to the
+next.
 
 ## API Reference
 
