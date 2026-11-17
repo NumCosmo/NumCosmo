@@ -126,6 +126,8 @@ void test_ncm_spectral_polar_panels_variant_counts (TestNcmSpectralPolarPanels *
 void test_ncm_spectral_polar_panels_variant_levels (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_variant_size_subprocess (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 
+void test_ncm_spectral_polar_panels_registered (void);
+
 #define TEST_NCM_SPECTRAL_POLAR_PANELS_ADD(name, func)                                    \
         g_test_add ("/ncm/spectral_polar_panels/" name, TestNcmSpectralPolarPanels, NULL, \
                     &test_ncm_spectral_polar_panels_new, &func, &test_ncm_spectral_polar_panels_free)
@@ -137,6 +139,8 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
+  /* First, so that no other test has made the types */
+  g_test_add_func ("/ncm/spectral_polar_panels/registered", &test_ncm_spectral_polar_panels_registered);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("empty", test_ncm_spectral_polar_panels_empty);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("append", test_ncm_spectral_polar_panels_append);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("append/submatrix", test_ncm_spectral_polar_panels_append_submatrix);
@@ -1331,5 +1335,26 @@ test_ncm_spectral_polar_panels_variant_levels (TestNcmSpectralPolarPanels *test,
   ncm_assert_cmpdouble_e (ncm_spectral_polar_panels_eval (spp, 0.3, 0.8), ==, _panels_variant_value (5, 2, 0.3, 0.8), 1.0e-14, 0.0);
 
   ncm_spectral_polar_panels_free (spp);
+}
+
+/*
+ * ncm_cfg_init() registers both types, so that a process that has not made them reads them
+ * by name (a catalog of expansions read in a new process)
+ */
+void
+test_ncm_spectral_polar_panels_registered (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GObject *obj;
+
+  g_assert_cmpuint (g_type_from_name ("NcmSpectralPolarPanels"), !=, 0);
+  g_assert_cmpuint (g_type_from_name ("NcmSpectralPolarPanelsArray"), !=, 0);
+
+  obj = ncm_serialize_from_string (ser, "NcmSpectralPolarPanelsArray");
+  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (obj));
+  g_assert_cmpuint (ncm_spectral_polar_panels_array_len (NCM_SPECTRAL_POLAR_PANELS_ARRAY (obj)), ==, 0);
+
+  g_object_unref (obj);
+  ncm_serialize_free (ser);
 }
 

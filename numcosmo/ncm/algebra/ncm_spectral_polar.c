@@ -223,6 +223,14 @@ typedef struct _NcmSpectralPolarCall
   gboolean failed;
   NcmSpectralPolarPanel failed_panel;
   NcmSpectralPolarWork *work;
+
+  /*
+   * _ncm_spectral_polar_integrate_radial_multi(): the weights integrated with the samples of
+   * the panels accepted, and their n_w values for each entry of work->accepted
+   */
+  NcmSpectralPolarMulti *multi;
+  NcmSpectralPolarMultiRadialF mradial;
+  GArray *mvals;
 } NcmSpectralPolarCall;
 
 /* *INDENT-OFF* */
@@ -774,6 +782,420 @@ _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpect
 }
 
 static void _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel panel, const NcmSpectralPolarEntry *start);
+
+static void _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint i0, guint step);
+static void _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint ly, guint j0, guint step);
+static void _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep);
+static gdouble _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly);
+static gdouble _ncm_spectral_polar_panel_value (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint ly);
+
+/*
+ * The weights and the quadrature rules of _ncm_spectral_polar_integrate_radial_multi():
+ * n_w pairs of exponents (a_k, b_k), and for each, each kind of panel (which power laws are
+ * left out of F, see _ncm_spectral_polar_panel_kind()) and each level l up to level_cap, the
+ * weights of the 2^l + 1 Chebyshev-Lobatto points of the rule exact on the interpolant
+ * there: W_i = sum_k m_k (2 / n) h_i h_k cos (pi k i / n), m_k the moments of T_k against the
+ * weight left out, h = 1/2 at the two ends. The angular rule (weight 1) is wt. Everything is
+ * computed at creation, so that the object is read-only and threads may share it.
+ */
+struct _NcmSpectralPolarMulti
+{
+  guint n_w;
+  guint level_cap;
+  gsize table_len;
+  gdouble *a;
+  gdouble *b;
+  gdouble *wq; /* n_w x 4 x table_len */
+  gdouble *wt; /* table_len */
+};
+
+static const gdouble *_ncm_spectral_polar_moments (NcmSpectralPolarMom *mom, guint l);
+
+/* The Lobatto rule at level l from the moments mt of T_0, ..., T_n */
+static void
+_ncm_spectral_polar_multi_rule (const gdouble *mom, guint l, gdouble *w)
+{
+  const guint n = 1u << l;
+  guint i, k;
+
+  for (i = 0; i <= n; i++)
+  {
+    const gdouble h_i = ((i == 0) || (i == n)) ? 0.5 : 1.0;
+    gdouble acc       = 0.0;
+
+    for (k = 0; k <= n; k++)
+    {
+      const gdouble h_k = ((k == 0) || (k == n)) ? 0.5 : 1.0;
+
+      acc += mom[k] * h_k *cos (M_PI *(gdouble) ((k * i) % (2 * n)) / n);
+    }
+
+    w[i] = 2.0 / n * h_i * acc;
+  }
+}
+
+/*
+ * _ncm_spectral_polar_multi_new:
+ * @level_cap: the largest level of the panels it integrates on
+ * @n_w: the number of weights
+ * @a: (array length=n_w): the exponents of $r$
+ * @b: (array length=n_w): the exponents of $R - r$
+ *
+ * Creates the quadrature rules of _ncm_spectral_polar_integrate_radial_multi() for the
+ * @n_w weights $r^{a_k} (R - r)^{b_k} \rho_k (r)$, every exponent above $-1$.
+ *
+ * Returns: (transfer full): a new NcmSpectralPolarMulti.
+ */
+NcmSpectralPolarMulti *
+_ncm_spectral_polar_multi_new (guint level_cap, guint n_w, const gdouble *a, const gdouble *b)
+{
+  NcmSpectralPolarMulti *multi = g_new0 (NcmSpectralPolarMulti, 1);
+  NcmSpectralPolarMom mom;
+  guint k, kind, l;
+
+  multi->n_w       = n_w;
+  multi->level_cap = level_cap;
+  multi->table_len = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 1);
+  multi->a         = g_new (gdouble, n_w);
+  multi->b         = g_new (gdouble, n_w);
+  multi->wq        = g_new0 (gdouble, (gsize) n_w * 4 * multi->table_len);
+  multi->wt        = g_new0 (gdouble, multi->table_len);
+
+  mom.m = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), multi->table_len);
+  g_array_set_size (mom.m, multi->table_len);
+
+  for (k = 0; k < n_w; k++)
+  {
+    if (!(a[k] > -1.0) || !(b[k] > -1.0))
+      g_error ("_ncm_spectral_polar_multi_new: the exponents a = %g and b = %g must be above -1.", a[k], b[k]);
+
+    multi->a[k] = a[k];
+    multi->b[k] = b[k];
+
+    for (kind = 0; kind < 4; kind++)
+    {
+      mom.ca   = (kind & 1) ? a[k] : 0.0;
+      mom.cb   = (kind & 2) ? b[k] : 0.0;
+      mom.have = 0;
+
+      for (l = 0; l <= level_cap; l++)
+        _ncm_spectral_polar_multi_rule (_ncm_spectral_polar_moments (&mom, l), l,
+                                        multi->wq + ((gsize) k * 4 + kind) * multi->table_len + NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l));
+    }
+  }
+
+  mom.ca   = 0.0;
+  mom.cb   = 0.0;
+  mom.have = 0;
+
+  for (l = 0; l <= level_cap; l++)
+    _ncm_spectral_polar_multi_rule (_ncm_spectral_polar_moments (&mom, l), l, multi->wt + NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l));
+
+  g_array_unref (mom.m);
+
+  return multi;
+}
+
+/*
+ * _ncm_spectral_polar_multi_free:
+ * @multi: a NcmSpectralPolarMulti
+ *
+ * Frees @multi.
+ */
+void
+_ncm_spectral_polar_multi_free (NcmSpectralPolarMulti *multi)
+{
+  g_free (multi->a);
+  g_free (multi->b);
+  g_free (multi->wq);
+  g_free (multi->wt);
+  g_free (multi);
+}
+
+/*
+ * The n_w integrals on the panel at level (lx, ly) of the weights of call->multi, from the
+ * grid of samples of that level, at the radii and angles of work: the grid holds F = wr G,
+ * the samples of the integral with its regular weight, and G is taken back from it.
+ */
+static void
+_ncm_spectral_polar_multi_values (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint ly,
+                                  const gdouble *grid, gdouble *vals)
+{
+  NcmSpectralPolarWork *work         = call->work;
+  const NcmSpectralPolarMulti *multi = call->multi;
+  const guint n_w                    = multi->n_w;
+  const guint n                      = 1u << lx;
+  const guint m                      = 1u << ly;
+  const gdouble half_r               = 0.5 * (panel->rb - panel->ra);
+  const gdouble half_t               = 0.5 * (panel->tb - panel->ta);
+  const gdouble *wt                  = multi->wt + NCM_SPECTRAL_POLAR_LEVEL_OFFSET (ly);
+  gdouble *v                         = g_newa (gdouble, n + 1);
+  gdouble *rho                       = g_new (gdouble, (gsize) n_w * (n + 1));
+  guint j, k;
+
+  /* The angular rule at each radius */
+  for (j = 0; j <= n; j++)
+  {
+    const gdouble *row = grid + (gsize) j * (m + 1);
+    gdouble acc        = 0.0;
+    guint q;
+
+    for (q = 0; q <= m; q++)
+      acc += wt[q] * row[q];
+
+    v[j] = (work->wr[j] != 0.0) ? half_t * acc / work->wr[j] : 0.0;
+  }
+
+  call->mradial (call->user_data, n + 1, work->rr, n_w, rho);
+
+  for (k = 0; k < n_w; k++)
+  {
+    const gdouble a_k    = multi->a[k];
+    const gdouble b_k    = multi->b[k];
+    const guint kind     = (((panel->ra == 0.0) && (a_k != 0.0)) ? 1 : 0) | (((panel->rb == call->R) && (b_k != 0.0)) ? 2 : 0);
+    const gdouble ex     = 1.0 + ((kind & 1) ? a_k : 0.0) + ((kind & 2) ? b_k : 0.0);
+    const gdouble *wq    = multi->wq + ((gsize) k * 4 + kind) * multi->table_len + NCM_SPECTRAL_POLAR_LEVEL_OFFSET (lx);
+    const gdouble *rho_k = rho + (gsize) k * (n + 1);
+    const gboolean pw_a  = !(kind & 1) && (a_k != 0.0);
+    const gboolean pw_b  = !(kind & 2) && (b_k != 0.0);
+    gdouble acc          = 0.0;
+
+    for (j = 0; j <= n; j++)
+    {
+      const gdouble r = work->rr[j];
+      gdouble w       = wq[j] * rho_k[j] * v[j];
+
+      if (pw_a)
+        w *= pow (r, a_k);
+
+      if (pw_b)
+        w *= pow (call->R - r, b_k);
+
+      acc += w;
+    }
+
+    vals[k] = pow (half_r, ex) * acc;
+  }
+
+  g_free (rho);
+}
+
+/*
+ * _ncm_spectral_polar_refit_multi:
+ * @sp: a #NcmSpectralPolar
+ * @src: a panel set filled by ncm_spectral_polar_build(), not trimmed
+ * @F: (scope call) (closure user_data): the @n_out functions, at one radius and several angles
+ * @user_data: user data for @F
+ * @n_out: the number of functions
+ * @out: (array length=n_out): the panel sets to fill
+ * @n_eval: (out) (optional): the number of points at which @F was called
+ *
+ * Fills each @out[q] with the expansion of the function $F_q$ on the panels of @src, at
+ * their levels: each panel of @src, of $(2^{l_r} + 1) \times (2^{l_\theta} + 1)$
+ * coefficients, is sampled once on its Chebyshev-Lobatto grid, where @F gives the @n_out
+ * values, and each function is transformed there. The sets have the layout of @src, so
+ * that they can be cut together (ncm_spectral_polar_panels_trim_modes()) and combined
+ * (ncm_spectral_polar_panels_combine()). The panels of @src are not tested again: the
+ * expansion of $F_q$ is as accurate as the layout of @src is for it.
+ *
+ * @F is called as @F (@user_data, r, n, theta, cos_theta, sin_theta, @n_out, fval) and
+ * sets fval[q n + j] to $F_q (r, \theta_j)$.
+ */
+void
+_ncm_spectral_polar_refit_multi (NcmSpectralPolar *sp, NcmSpectralPolarPanels *src, NcmSpectralPolarMultiF F, gpointer user_data,
+                                 guint n_out, NcmSpectralPolarPanels **out, guint64 *n_eval)
+{
+  NcmSpectralPolarWork **ptr = ncm_memory_pool_get (sp->work_pool);
+  NcmSpectralPolarWork *work = *ptr;
+  NcmSpectralPolarCall call  = {
+    .G            = NULL,
+    .radial       = NULL,
+    .user_data    = user_data,
+    .R            = 0.0,
+    .a            = 0.0,
+    .b            = 0.0,
+    .reltol       = 0.0,
+    .abstol_F     = 0.0,
+    .A            = 0.0,
+    .spp          = NULL,
+    .level_min    = sp->level_min,
+    .level_cap    = sp->level_cap,
+    .max_depth    = sp->max_depth,
+    .n_eval       = 0,
+    .failed       = FALSE,
+    .failed_panel = {0.0, 0.0, 0.0, 0.0, 0},
+    .work         = work
+  };
+  const guint np = (1u << sp->level_cap) + 1;
+  gdouble *grids = g_new (gdouble, (gsize) n_out * np * np);
+  gdouble *fval  = g_new (gdouble, (gsize) n_out * np);
+  GArray *r_edges, *theta_edges;
+  guint i, q;
+
+  _ncm_spectral_polar_work_prepare (work, sp->level_cap);
+  ncm_spectral_polar_panels_peek_edges (src, &r_edges, &theta_edges);
+
+  for (q = 0; q < n_out; q++)
+  {
+    ncm_spectral_polar_panels_reset (out[q]);
+    ncm_spectral_polar_panels_set_edges (out[q], r_edges, theta_edges);
+  }
+
+  for (i = 0; i < ncm_spectral_polar_panels_get_n_panels (src); i++)
+  {
+    gdouble ra, rb, ta, tb;
+    guint n_r, n_theta, lx, ly, j, k;
+
+    ncm_spectral_polar_panels_peek_panel (src, i, &ra, &rb, &ta, &tb, &n_r, &n_theta);
+    lx = g_bit_storage (n_r - 1) - 1;
+    ly = g_bit_storage (n_theta - 1) - 1;
+
+    if (((1u << lx) + 1 != n_r) || ((1u << ly) + 1 != n_theta) || (lx > sp->level_cap) || (ly > sp->level_cap))
+      g_error ("_ncm_spectral_polar_refit_multi: the panel %u has %u x %u coefficients, not those of a level up to %u "
+               "(was the panel set trimmed?).", i, n_r, n_theta, sp->level_cap);
+
+    {
+      const NcmSpectralPolarPanel panel = {ra, rb, ta, tb, 0};
+      const guint n                     = 1u << lx;
+      const guint m                     = 1u << ly;
+      const gsize glen                  = (gsize) (n + 1) * (m + 1);
+
+      _ncm_spectral_polar_nodes_r (&call, &panel, lx, 0, 1);
+      _ncm_spectral_polar_nodes_theta (&call, &panel, ly, 0, 1);
+
+      for (j = 0; j <= n; j++)
+      {
+        F (user_data, work->rr[j], m + 1, work->th, work->ct, work->st, n_out, fval);
+
+        for (q = 0; q < n_out; q++)
+          for (k = 0; k <= m; k++)
+            grids[q * glen + (gsize) j * (m + 1) + k] = fval[(gsize) q * (m + 1) + k];
+      }
+
+      call.n_eval += glen;
+
+      for (q = 0; q < n_out; q++)
+      {
+        memcpy (work->in, grids + q * glen, sizeof (gdouble) * glen);
+        _ncm_spectral_polar_coeffs (work, lx, ly);
+        ncm_spectral_polar_panels_append_data (out[q], ra, rb, ta, tb, lx, ly, work->coeffs);
+      }
+    }
+  }
+
+  g_free (grids);
+  g_free (fval);
+  ncm_memory_pool_return (ptr);
+
+  if (n_eval != NULL)
+    *n_eval = call.n_eval;
+}
+
+/*
+ * _ncm_spectral_polar_integrate_radial_multi:
+ * @sp: a #NcmSpectralPolar
+ * @G: (scope call) (closure user_data): the function $G$
+ * @radial: (scope call) (nullable): the factor of the integrand that depends only on $r$, or %NULL
+ * @user_data: user data for @G, @radial and @mradial
+ * @R: the radius of the end of the power law $(R - r)^b$
+ * @a: the exponent of $r$
+ * @b: the exponent of $R - r$
+ * @r_edges: (element-type gdouble): the radial edges
+ * @theta_edges: (element-type gdouble): the angular edges
+ * @reltol: relative tolerance
+ * @abstol: absolute tolerance
+ * @multi: the weights, from _ncm_spectral_polar_multi_new()
+ * @mradial: (scope call): the factors $\rho_k$ of the weights of @multi
+ * @out: (array): the n_w integrals of the weights of @multi
+ * @n_eval: (out) (optional): number of values of $G$ computed
+ * @error: a #GError
+ *
+ * The integral of _ncm_spectral_polar_integrate_radial(), and in @out those of the weights of
+ * @multi, $r^{a_k} (R - r)^{b_k} \rho_k (r) G (r, \theta)$, on its accepted panels at their
+ * accepted levels, from the same samples: each accepted panel is integrated for every
+ * weight from the samples of $G$ its test used, so that $G$ is sampled once. @mradial is
+ * called as @mradial (@user_data, n, r, n_w, w) and sets w[k n + i] to $\rho_k (r_i)$.
+ *
+ * Returns: the integral, or NaN with @error set as _ncm_spectral_polar_integrate_radial().
+ */
+gdouble
+_ncm_spectral_polar_integrate_radial_multi (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data,
+                                            gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
+                                            gdouble reltol, gdouble abstol, NcmSpectralPolarMulti *multi,
+                                            NcmSpectralPolarMultiRadialF mradial, gdouble *out, guint64 *n_eval, GError **error)
+{
+  NcmSpectralPolarWork **ptr = ncm_memory_pool_get (sp->work_pool);
+  NcmSpectralPolarWork *work = *ptr;
+  const guint n_w            = multi->n_w;
+  NcmSpectralPolarCall call  = {
+    .G            = G,
+    .radial       = radial,
+    .user_data    = user_data,
+    .R            = R,
+    .a            = a,
+    .b            = b,
+    .reltol       = reltol,
+    .abstol_F     = 0.0,
+    .A            = 0.0,
+    .spp          = NULL,
+    .level_min    = sp->level_min,
+    .level_cap    = sp->level_cap,
+    .max_depth    = sp->max_depth,
+    .n_eval       = 0,
+    .failed       = FALSE,
+    .failed_panel = {0.0, 0.0, 0.0, 0.0, 0},
+    .work         = work,
+    .multi        = multi,
+    .mradial      = mradial,
+    .mvals        = g_array_new (FALSE, FALSE, sizeof (gdouble))
+  };
+  gdouble I0, res;
+  guint i, k;
+
+  g_assert_cmpuint (multi->level_cap, >=, sp->level_cap);
+  _ncm_spectral_polar_check (sp, "_ncm_spectral_polar_integrate_radial_multi", R, a, b, r_edges, theta_edges, reltol, abstol);
+  _ncm_spectral_polar_work_prepare (work, sp->level_cap);
+  _ncm_spectral_polar_work_set_exponents (work, a, b);
+
+  I0            = _ncm_spectral_polar_first_pass (&call, r_edges, theta_edges);
+  call.abstol_F = MAX (reltol * fabs (I0), abstol) / call.A;
+  _ncm_spectral_polar_expand_initial (&call);
+  res = _ncm_spectral_polar_retest (&call, abstol);
+
+  for (k = 0; k < n_w; k++)
+    out[k] = 0.0;
+
+  /* The panels the second pass expanded again are replaced by later entries */
+  g_assert_cmpuint (call.mvals->len, ==, (gsize) work->accepted->len * n_w);
+
+  for (i = 0; i < work->accepted->len; i++)
+  {
+    if (g_array_index (work->accepted, NcmSpectralPolarEntry, i).replaced)
+      continue;
+
+    for (k = 0; k < n_w; k++)
+      out[k] += g_array_index (call.mvals, gdouble, (gsize) i * n_w + k);
+  }
+
+  g_array_unref (call.mvals);
+  ncm_memory_pool_return (ptr);
+
+  if (n_eval != NULL)
+    *n_eval = call.n_eval;
+
+  if (call.failed)
+  {
+    ncm_util_set_or_call_error (error, NCM_SPECTRAL_POLAR_ERROR, NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH,
+                                "_ncm_spectral_polar_integrate_radial_multi: the panel r in [% 22.15g, % 22.15g], "
+                                "theta in [% 22.15g, % 22.15g] does not pass the test after %u bisections.",
+                                call.failed_panel.ra, call.failed_panel.rb, call.failed_panel.ta, call.failed_panel.tb,
+                                call.failed_panel.depth);
+
+    return GSL_NAN;
+  }
+
+  return res;
+}
 
 /**
  * ncm_spectral_polar_build:
@@ -1476,6 +1898,17 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
     if (entry->D <= MAX (call->reltol * entry->vs, call->abstol_F))
     {
       g_array_append_val (work->accepted, *entry);
+
+      if (call->multi != NULL)
+      {
+        /* The weights of call->multi from the starting grid the panel was accepted with */
+        _ncm_spectral_polar_nodes_r (call, &entry->panel, call->level_min, 0, 1);
+        _ncm_spectral_polar_nodes_theta (call, &entry->panel, call->level_min, 0, 1);
+        g_array_set_size (call->mvals, call->mvals->len + call->multi->n_w);
+        _ncm_spectral_polar_multi_values (call, &entry->panel, call->level_min, call->level_min,
+                                          &g_array_index (work->initial_grid, gdouble, ib * ns * ns),
+                                          &g_array_index (call->mvals, gdouble, call->mvals->len - call->multi->n_w));
+      }
     }
     else
     {
@@ -1600,6 +2033,14 @@ _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel pa
         NcmSpectralPolarEntry entry = { panel, _ncm_spectral_polar_panel_value (call, &panel, lx, ly), D, vs, lx, ly, FALSE };
 
         g_array_append_val (work->accepted, entry);
+
+        if (call->multi != NULL)
+        {
+          /* The weights of call->multi from the same samples */
+          g_array_set_size (call->mvals, call->mvals->len + call->multi->n_w);
+          _ncm_spectral_polar_multi_values (call, &panel, lx, ly, work->in,
+                                            &g_array_index (call->mvals, gdouble, call->mvals->len - call->multi->n_w));
+        }
       }
 
       return;

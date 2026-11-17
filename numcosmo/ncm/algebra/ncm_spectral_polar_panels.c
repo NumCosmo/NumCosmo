@@ -113,6 +113,8 @@ struct _NcmSpectralPolarPanels
 
 G_DEFINE_TYPE (NcmSpectralPolarPanels, ncm_spectral_polar_panels, G_TYPE_OBJECT)
 
+static gdouble _ncm_spectral_polar_panels_eval_on_c (const NcmSpectralPolarPanelsPanel *panel, const gdouble *c, gdouble r, gdouble theta);
+
 static void
 ncm_spectral_polar_panels_init (NcmSpectralPolarPanels *spp)
 {
@@ -760,6 +762,274 @@ ncm_spectral_polar_panels_trim (NcmSpectralPolarPanels *spp, gdouble tol)
   g_array_unref (scratch);
 }
 
+/* Index sort of the l1 norms, ascending (insertion: a few tens of sets) */
+static void
+_ncm_spectral_polar_panels_sort_l1 (const gdouble *l1, guint n, guint *idx)
+{
+  guint i, j;
+
+  for (i = 0; i < n; i++)
+    idx[i] = i;
+
+  for (i = 1; i < n; i++)
+  {
+    const guint k = idx[i];
+
+    for (j = i; (j > 0) && (l1[idx[j - 1]] > l1[k]); j--)
+      idx[j] = idx[j - 1];
+
+    idx[j] = k;
+  }
+}
+
+/**
+ * ncm_spectral_polar_panels_trim_modes: (skip)
+ * @n: the number of panel sets
+ * @spp: (array length=n): the panel sets, with the same panels and, in each panel, the same numbers of coefficients
+ * @tol: the largest change of $\sum_q w_q F_q$ at any point, for any weights with $|w_q| \le 1$
+ *
+ * Cuts the @n sets, the terms $F_q$ of an expansion combined with weights of modulus at most
+ * one (ncm_spectral_polar_panels_combine()), so that the combination changes by at most @tol
+ * at any point. In each panel the terms with the smallest l1 norms are dropped while the sum
+ * of their norms stays within @tol / 2 (each keeps one coefficient, zero), and each term kept
+ * is cut to its leading block as in ncm_spectral_polar_panels_trim(), with an equal share of
+ * the other half. The sets keep their panels; their numbers of coefficients then differ.
+ */
+void
+ncm_spectral_polar_panels_trim_modes (guint n, NcmSpectralPolarPanels **spp, gdouble tol)
+{
+  GArray *scratch = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble *l1     = g_new (gdouble, n);
+  guint *idx      = g_new (guint, n);
+  guint *keep_r   = g_new (guint, n);
+  guint *keep_t   = g_new (guint, n);
+  gsize *cursor   = g_new0 (gsize, n);
+  guint i, q;
+
+  g_assert_cmpuint (n, >, 0);
+  g_assert_cmpfloat (tol, >=, 0.0);
+
+  for (q = 1; q < n; q++)
+    g_assert_cmpuint (spp[q]->panels->len, ==, spp[0]->panels->len);
+
+  for (i = 0; i < spp[0]->panels->len; i++)
+  {
+    const NcmSpectralPolarPanelsPanel *p0 = &g_array_index (spp[0]->panels, NcmSpectralPolarPanelsPanel, i);
+    const guint n_r                       = p0->n_r;
+    const guint n_theta                   = p0->n_theta;
+    const gsize len                       = (gsize) n_r * n_theta;
+    gdouble dropped                       = 0.0;
+    guint n_drop                          = 0;
+    guint k, l;
+
+    g_array_set_size (scratch, len);
+
+    for (q = 0; q < n; q++)
+    {
+      const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
+      const gdouble *c                      = (const gdouble *) spp[q]->coeffs->data + pq->offset;
+
+      g_assert_cmpuint (pq->n_r, ==, n_r);
+      g_assert_cmpuint (pq->n_theta, ==, n_theta);
+
+      l1[q] = 0.0;
+
+      for (k = 0; k < len; k++)
+        l1[q] += fabs (c[k]);
+    }
+
+    _ncm_spectral_polar_panels_sort_l1 (l1, n, idx);
+
+    while ((n_drop < n) && (dropped + l1[idx[n_drop]] <= 0.5 * tol))
+    {
+      dropped += l1[idx[n_drop]];
+      n_drop++;
+    }
+
+    for (k = 0; k < n; k++)
+    {
+      const guint qq = idx[k];
+
+      if (k < n_drop)
+      {
+        keep_r[qq] = 0;
+        keep_t[qq] = 0;
+      }
+      else
+      {
+        const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[qq]->panels, NcmSpectralPolarPanelsPanel, i);
+
+        _ncm_spectral_polar_panels_trim_block ((const gdouble *) spp[qq]->coeffs->data + pq->offset, n_r, n_theta,
+                                               0.5 * tol / (n - n_drop), (gdouble *) scratch->data, &keep_r[qq], &keep_t[qq]);
+      }
+    }
+
+    for (q = 0; q < n; q++)
+    {
+      NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
+      gdouble *c                      = (gdouble *) spp[q]->coeffs->data;
+      const gsize offset              = pq->offset;
+
+      if (keep_r[q] == 0)
+      {
+        /* A dropped term keeps one coefficient, zero */
+        c[cursor[q]] = 0.0;
+        pq->n_r      = 1;
+        pq->n_theta  = 1;
+        pq->offset   = cursor[q];
+        cursor[q]   += 1;
+        continue;
+      }
+
+      /* As in ncm_spectral_polar_panels_trim(): every row moves to an address at or below its own */
+      for (l = 0; l < keep_t[q]; l++)
+        memmove (c + cursor[q] + (gsize) l * keep_r[q], c + offset + (gsize) l * n_r, sizeof (gdouble) * keep_r[q]);
+
+      pq->offset  = cursor[q];
+      pq->n_r     = keep_r[q];
+      pq->n_theta = keep_t[q];
+      cursor[q]  += (gsize) keep_r[q] * keep_t[q];
+    }
+  }
+
+  for (q = 0; q < n; q++)
+    g_array_set_size (spp[q]->coeffs, cursor[q]);
+
+  g_array_unref (scratch);
+  g_free (l1);
+  g_free (idx);
+  g_free (keep_r);
+  g_free (keep_t);
+  g_free (cursor);
+}
+
+/**
+ * ncm_spectral_polar_panels_combine: (skip)
+ * @out: the panel set to fill
+ * @n: the number of panel sets
+ * @spp: (array length=n): the panel sets, with the same panels
+ * @w: (array length=n): the weights
+ *
+ * Sets @out to the expansion of $\sum_q w_q F_q$, with @spp[q] that of $F_q$: the panels of
+ * the sets, each with the largest numbers of radial and angular coefficients of the sets
+ * there, and $\sum_q w_q c_q$ with the coefficients of each set added to the leading block
+ * they fill. The layout of @out is made only when it differs, so that a set combined again
+ * with other weights only writes its coefficients.
+ */
+void
+ncm_spectral_polar_panels_combine (NcmSpectralPolarPanels *out, guint n, NcmSpectralPolarPanels **spp, const gdouble *w)
+{
+  const guint n_panels = spp[0]->panels->len;
+  gboolean same_layout = (out->panels->len == n_panels) && (out->r_edges->len == spp[0]->r_edges->len) &&
+                         (out->theta_edges->len == spp[0]->theta_edges->len);
+  gdouble *c;
+  guint i, q;
+
+  g_assert_cmpuint (n, >, 0);
+
+  for (q = 1; q < n; q++)
+    g_assert_cmpuint (spp[q]->panels->len, ==, n_panels);
+
+  /* The largest block of each panel */
+  for (i = 0; same_layout && (i < n_panels); i++)
+  {
+    const NcmSpectralPolarPanelsPanel *po = &g_array_index (out->panels, NcmSpectralPolarPanelsPanel, i);
+    guint n_r                             = 0;
+    guint n_theta                         = 0;
+
+    for (q = 0; q < n; q++)
+    {
+      const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
+
+      n_r     = MAX (n_r, pq->n_r);
+      n_theta = MAX (n_theta, pq->n_theta);
+    }
+
+    same_layout = (po->n_r == n_r) && (po->n_theta == n_theta);
+  }
+
+  if (!same_layout)
+  {
+    gsize cursor = 0;
+
+    g_array_set_size (out->r_edges, 0);
+    g_array_append_vals (out->r_edges, spp[0]->r_edges->data, spp[0]->r_edges->len);
+    g_array_set_size (out->theta_edges, 0);
+    g_array_append_vals (out->theta_edges, spp[0]->theta_edges->data, spp[0]->theta_edges->len);
+    g_array_set_size (out->first, 0);
+    g_array_append_vals (out->first, spp[0]->first->data, spp[0]->first->len);
+    g_array_set_size (out->panels, 0);
+    g_array_append_vals (out->panels, spp[0]->panels->data, n_panels);
+
+    for (i = 0; i < n_panels; i++)
+    {
+      NcmSpectralPolarPanelsPanel *po = &g_array_index (out->panels, NcmSpectralPolarPanelsPanel, i);
+
+      po->n_r     = 0;
+      po->n_theta = 0;
+
+      for (q = 0; q < n; q++)
+      {
+        const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
+
+        po->n_r     = MAX (po->n_r, pq->n_r);
+        po->n_theta = MAX (po->n_theta, pq->n_theta);
+      }
+
+      po->offset = cursor;
+      cursor    += (gsize) po->n_r * po->n_theta;
+    }
+
+    g_array_set_size (out->coeffs, cursor);
+  }
+
+  c = (gdouble *) out->coeffs->data;
+  memset (c, 0, sizeof (gdouble) * out->coeffs->len);
+
+  for (i = 0; i < n_panels; i++)
+  {
+    const NcmSpectralPolarPanelsPanel *po = &g_array_index (out->panels, NcmSpectralPolarPanelsPanel, i);
+    gdouble *co                           = c + po->offset;
+
+    for (q = 0; q < n; q++)
+    {
+      const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
+      const gdouble *cq                     = (const gdouble *) spp[q]->coeffs->data + pq->offset;
+      const gdouble wq                      = w[q];
+      guint l, k;
+
+      if (wq == 0.0)
+        continue;
+
+      for (l = 0; l < pq->n_theta; l++)
+      {
+        gdouble *row_o       = co + (gsize) l * po->n_r;
+        const gdouble *row_q = cq + (gsize) l * pq->n_r;
+
+        #pragma omp simd
+
+        for (k = 0; k < pq->n_r; k++)
+          row_o[k] += wq * row_q[k];
+      }
+    }
+  }
+}
+
+/**
+ * ncm_spectral_polar_panels_peek_edges: (skip)
+ * @spp: a #NcmSpectralPolarPanels
+ * @r_edges: (out) (transfer none): the radial edges of the initial panels
+ * @theta_edges: (out) (transfer none): their angular edges
+ *
+ * Peeks the edges set by ncm_spectral_polar_panels_set_edges().
+ */
+void
+ncm_spectral_polar_panels_peek_edges (NcmSpectralPolarPanels *spp, GArray **r_edges, GArray **theta_edges)
+{
+  *r_edges     = spp->r_edges;
+  *theta_edges = spp->theta_edges;
+}
+
 /**
  * ncm_spectral_polar_panels_find_panel:
  * @spp: a #NcmSpectralPolarPanels
@@ -1080,6 +1350,173 @@ ncm_spectral_polar_panels_eval_on_array (NcmSpectralPolarPanels *spp, guint i, g
     out[j] = ncm_spectral_polar_panels_eval_on (spp, i, r[j], theta[j]);
 }
 
+/*
+ * The panels combined so far for one set of weights: index[i] is panel i with the offset of
+ * its combined coefficients in coeffs, or NCM_SPECTRAL_POLAR_PANELS_COMB_NONE.
+ */
+struct _NcmSpectralPolarPanelsComb
+{
+  GArray *index;  /* NcmSpectralPolarPanelsPanel */
+  GArray *coeffs; /* gdouble */
+};
+
+#define NCM_SPECTRAL_POLAR_PANELS_COMB_NONE G_MAXSIZE
+
+/**
+ * ncm_spectral_polar_panels_comb_new: (skip)
+ *
+ * Creates an empty cache of combined panels for
+ * ncm_spectral_polar_panels_eval_on_array_combine().
+ *
+ * Returns: (transfer full): a new #NcmSpectralPolarPanelsComb.
+ */
+NcmSpectralPolarPanelsComb *
+ncm_spectral_polar_panels_comb_new (void)
+{
+  NcmSpectralPolarPanelsComb *comb = g_new (NcmSpectralPolarPanelsComb, 1);
+
+  comb->index  = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarPanelsPanel));
+  comb->coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  return comb;
+}
+
+/**
+ * ncm_spectral_polar_panels_comb_free: (skip)
+ * @comb: a #NcmSpectralPolarPanelsComb
+ *
+ * Frees @comb.
+ */
+void
+ncm_spectral_polar_panels_comb_free (NcmSpectralPolarPanelsComb *comb)
+{
+  g_array_unref (comb->index);
+  g_array_unref (comb->coeffs);
+  g_free (comb);
+}
+
+/**
+ * ncm_spectral_polar_panels_comb_reset: (skip)
+ * @comb: a #NcmSpectralPolarPanelsComb
+ *
+ * Forgets every panel @comb holds. It must be called whenever the panel sets or the
+ * weights passed to ncm_spectral_polar_panels_eval_on_array_combine() change.
+ */
+void
+ncm_spectral_polar_panels_comb_reset (NcmSpectralPolarPanelsComb *comb)
+{
+  g_array_set_size (comb->index, 0);
+  g_array_set_size (comb->coeffs, 0);
+}
+
+/**
+ * ncm_spectral_polar_panels_eval_on_array_combine: (skip)
+ * @n_sets: the number of panel sets
+ * @spp: (array length=n_sets): the panel sets, with the same panels
+ * @w: (array length=n_sets): the weights
+ * @comb: the panels combined so far for these @spp and @w
+ * @i: panel index
+ * @n: number of points
+ * @r: (array length=n): the radii
+ * @theta: (array length=n): the angles
+ * @out: (array length=n): the values, set
+ *
+ * Evaluates at the @n points of panel @i the series of $\sum_q w_q F_q$, @spp[q] the
+ * expansion of $F_q$, as ncm_spectral_polar_panels_eval_on_array() would on the set
+ * ncm_spectral_polar_panels_combine() makes, combining only the coefficients of panel @i
+ * instead of those of every panel. The combined panel is kept in @comb, so that later calls
+ * on panel @i do not combine it again: @comb must be reset
+ * (ncm_spectral_polar_panels_comb_reset()) when @spp or @w change.
+ */
+void
+ncm_spectral_polar_panels_eval_on_array_combine (guint n_sets, NcmSpectralPolarPanels **spp, const gdouble *w, NcmSpectralPolarPanelsComb *comb,
+                                                 guint i, guint n, const gdouble *r, const gdouble *theta, gdouble *out)
+{
+  NcmSpectralPolarPanelsPanel panel;
+  const gdouble *c;
+  guint j;
+
+  if (comb->index->len <= i)
+  {
+    const NcmSpectralPolarPanelsPanel none = {0.0, 0.0, 0.0, 0.0, 0, 0, NCM_SPECTRAL_POLAR_PANELS_COMB_NONE};
+    const guint len                        = spp[0]->panels->len;
+
+    g_assert_cmpuint (i, <, len);
+
+    while (comb->index->len < len)
+      g_array_append_val (comb->index, none);
+  }
+
+  panel = g_array_index (comb->index, NcmSpectralPolarPanelsPanel, i);
+
+  if (panel.offset == NCM_SPECTRAL_POLAR_PANELS_COMB_NONE)
+  {
+    gdouble *cc;
+    guint q;
+
+    panel         = g_array_index (spp[0]->panels, NcmSpectralPolarPanelsPanel, i);
+    panel.n_r     = 0;
+    panel.n_theta = 0;
+    panel.offset  = comb->coeffs->len;
+
+    for (q = 0; q < n_sets; q++)
+    {
+      const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
+
+      panel.n_r     = MAX (panel.n_r, pq->n_r);
+      panel.n_theta = MAX (panel.n_theta, pq->n_theta);
+    }
+
+    g_array_set_size (comb->coeffs, panel.offset + (gsize) panel.n_r * panel.n_theta);
+    cc = (gdouble *) comb->coeffs->data + panel.offset;
+    memset (cc, 0, sizeof (gdouble) * panel.n_r * panel.n_theta);
+
+    for (q = 0; q < n_sets; q++)
+    {
+      const NcmSpectralPolarPanelsPanel *pq = &g_array_index (spp[q]->panels, NcmSpectralPolarPanelsPanel, i);
+      const gdouble *cq                     = (const gdouble *) spp[q]->coeffs->data + pq->offset;
+      const gdouble wq                      = w[q];
+      guint l, k;
+
+      if (wq == 0.0)
+        continue;
+
+      for (l = 0; l < pq->n_theta; l++)
+      {
+        gdouble *row_o       = cc + (gsize) l * panel.n_r;
+        const gdouble *row_q = cq + (gsize) l * pq->n_r;
+
+        #pragma omp simd
+
+        for (k = 0; k < pq->n_r; k++)
+          row_o[k] += wq * row_q[k];
+      }
+    }
+
+    g_array_index (comb->index, NcmSpectralPolarPanelsPanel, i) = panel;
+  }
+
+  c            = (const gdouble *) comb->coeffs->data + panel.offset;
+  panel.offset = 0;
+
+  j = 0;
+
+#ifdef __AVX512F__
+
+  for ( ; j + 8 <= n; j += 8)
+    _ncm_spectral_polar_panels_eval_lanes (&panel, c, 8, &r[j], &theta[j], &out[j]);
+
+#endif /* __AVX512F__ */
+
+  for ( ; j + 4 <= n; j += 4)
+    _ncm_spectral_polar_panels_eval_lanes (&panel, c, 4, &r[j], &theta[j], &out[j]);
+
+  if (n - j >= 2)
+    _ncm_spectral_polar_panels_eval_lanes_tail (&panel, c, 4, n - j, &r[j], &theta[j], &out[j]);
+  else if (n - j == 1)
+    out[j] = _ncm_spectral_polar_panels_eval_on_c (&panel, c, r[j], theta[j]);
+}
+
 /**
  * ncm_spectral_polar_panels_eval_on:
  * @spp: a #NcmSpectralPolarPanels
@@ -1097,17 +1534,24 @@ gdouble
 ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble r, gdouble theta)
 {
   const NcmSpectralPolarPanelsPanel *panel = &g_array_index (spp->panels, NcmSpectralPolarPanelsPanel, i);
-  const gdouble *c                         = &g_array_index (spp->coeffs, gdouble, panel->offset);
-  const guint n                            = panel->n_r - 1;
-  const guint m                            = panel->n_theta - 1;
-  const gsize ld                           = panel->n_r;
-  const gdouble sr                         = (2.0 * r - panel->ra - panel->rb) / (panel->rb - panel->ra);
-  const gdouble st                         = (2.0 * theta - panel->ta - panel->tb) / (panel->tb - panel->ta);
-  const gdouble sr2                        = 2.0 * sr;
-  const gdouble st2                        = 2.0 * st;
-  gdouble B1                               = 0.0;
-  gdouble B2                               = 0.0;
-  gint l                                   = (gint) m;
+
+  return _ncm_spectral_polar_panels_eval_on_c (panel, &g_array_index (spp->coeffs, gdouble, panel->offset), r, theta);
+}
+
+/* The series of panel with the coefficients c at (r, theta), see ncm_spectral_polar_panels_eval_on() */
+static gdouble
+_ncm_spectral_polar_panels_eval_on_c (const NcmSpectralPolarPanelsPanel *panel, const gdouble *c, gdouble r, gdouble theta)
+{
+  const guint n     = panel->n_r - 1;
+  const guint m     = panel->n_theta - 1;
+  const gsize ld    = panel->n_r;
+  const gdouble sr  = (2.0 * r - panel->ra - panel->rb) / (panel->rb - panel->ra);
+  const gdouble st  = (2.0 * theta - panel->ta - panel->tb) / (panel->tb - panel->ta);
+  const gdouble sr2 = 2.0 * sr;
+  const gdouble st2 = 2.0 * st;
+  gdouble B1        = 0.0;
+  gdouble B2        = 0.0;
+  gint l            = (gint) m;
   guint k;
 
   /*
@@ -1199,5 +1643,218 @@ ncm_spectral_polar_panels_eval_on (NcmSpectralPolarPanels *spp, guint i, gdouble
   g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
   return 0.0; /* LCOV_EXCL_LINE */
+}
+
+/**
+ * NcmSpectralPolarPanelsArray:
+ *
+ * An ordered set of #NcmSpectralPolarPanels kept and serialized as one object, such as the
+ * terms of an expansion of a function over parameters, one #NcmSpectralPolarPanels per
+ * term (see ncm_spectral_polar_panels_eval_on_array_combine()).
+ */
+
+enum
+{
+  PROP_ARRAY_0,
+  PROP_ARRAY_PANELS,
+};
+
+struct _NcmSpectralPolarPanelsArray
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmObjArray *panels;
+};
+
+G_DEFINE_TYPE (NcmSpectralPolarPanelsArray, ncm_spectral_polar_panels_array, G_TYPE_OBJECT)
+
+static void
+ncm_spectral_polar_panels_array_init (NcmSpectralPolarPanelsArray *spa)
+{
+  spa->panels = ncm_obj_array_new ();
+}
+
+static void
+_ncm_spectral_polar_panels_array_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmSpectralPolarPanelsArray *spa = NCM_SPECTRAL_POLAR_PANELS_ARRAY (object);
+
+  g_return_if_fail (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (object));
+
+  switch (prop_id)
+  {
+    case PROP_ARRAY_PANELS:
+    {
+      NcmObjArray *panels = g_value_get_boxed (value);
+      guint i;
+
+      g_ptr_array_set_size (spa->panels, 0);
+
+      for (i = 0; (panels != NULL) && (i < ncm_obj_array_len (panels)); i++)
+        ncm_spectral_polar_panels_array_add (spa, NCM_SPECTRAL_POLAR_PANELS (ncm_obj_array_peek (panels, i)));
+
+      break;
+    }
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_ncm_spectral_polar_panels_array_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmSpectralPolarPanelsArray *spa = NCM_SPECTRAL_POLAR_PANELS_ARRAY (object);
+
+  g_return_if_fail (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (object));
+
+  switch (prop_id)
+  {
+    case PROP_ARRAY_PANELS:
+      g_value_set_boxed (value, spa->panels);
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_ncm_spectral_polar_panels_array_dispose (GObject *object)
+{
+  NcmSpectralPolarPanelsArray *spa = NCM_SPECTRAL_POLAR_PANELS_ARRAY (object);
+
+  ncm_obj_array_clear (&spa->panels);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spectral_polar_panels_array_parent_class)->dispose (object);
+}
+
+static void
+ncm_spectral_polar_panels_array_class_init (NcmSpectralPolarPanelsArrayClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->set_property = &_ncm_spectral_polar_panels_array_set_property;
+  object_class->get_property = &_ncm_spectral_polar_panels_array_get_property;
+  object_class->dispose      = &_ncm_spectral_polar_panels_array_dispose;
+
+  /**
+   * NcmSpectralPolarPanelsArray:panels:
+   *
+   * The #NcmSpectralPolarPanels of the set, in order.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_ARRAY_PANELS,
+                                   g_param_spec_boxed ("panels",
+                                                       NULL,
+                                                       "The panel sets, in order",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+/**
+ * ncm_spectral_polar_panels_array_new:
+ *
+ * Creates an empty set of #NcmSpectralPolarPanels.
+ *
+ * Returns: (transfer full): a new #NcmSpectralPolarPanelsArray.
+ */
+NcmSpectralPolarPanelsArray *
+ncm_spectral_polar_panels_array_new (void)
+{
+  return g_object_new (NCM_TYPE_SPECTRAL_POLAR_PANELS_ARRAY, NULL);
+}
+
+/**
+ * ncm_spectral_polar_panels_array_ref:
+ * @spa: a #NcmSpectralPolarPanelsArray
+ *
+ * Increases the reference count of @spa by one.
+ *
+ * Returns: (transfer full): @spa.
+ */
+NcmSpectralPolarPanelsArray *
+ncm_spectral_polar_panels_array_ref (NcmSpectralPolarPanelsArray *spa)
+{
+  return g_object_ref (spa);
+}
+
+/**
+ * ncm_spectral_polar_panels_array_free:
+ * @spa: a #NcmSpectralPolarPanelsArray
+ *
+ * Decreases the reference count of @spa by one.
+ */
+void
+ncm_spectral_polar_panels_array_free (NcmSpectralPolarPanelsArray *spa)
+{
+  g_object_unref (spa);
+}
+
+/**
+ * ncm_spectral_polar_panels_array_clear:
+ * @spa: a #NcmSpectralPolarPanelsArray
+ *
+ * Decreases the reference count of *@spa by one and sets *@spa to %NULL.
+ */
+void
+ncm_spectral_polar_panels_array_clear (NcmSpectralPolarPanelsArray **spa)
+{
+  g_clear_object (spa);
+}
+
+/**
+ * ncm_spectral_polar_panels_array_add:
+ * @spa: a #NcmSpectralPolarPanelsArray
+ * @spp: a #NcmSpectralPolarPanels
+ *
+ * Appends @spp to @spa, referencing it.
+ */
+void
+ncm_spectral_polar_panels_array_add (NcmSpectralPolarPanelsArray *spa, NcmSpectralPolarPanels *spp)
+{
+  g_assert (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
+  ncm_obj_array_add (spa->panels, G_OBJECT (spp));
+}
+
+/**
+ * ncm_spectral_polar_panels_array_len:
+ * @spa: a #NcmSpectralPolarPanelsArray
+ *
+ * Returns: the number of #NcmSpectralPolarPanels in @spa.
+ */
+guint
+ncm_spectral_polar_panels_array_len (NcmSpectralPolarPanelsArray *spa)
+{
+  return spa->panels->len;
+}
+
+/**
+ * ncm_spectral_polar_panels_array_peek:
+ * @spa: a #NcmSpectralPolarPanelsArray
+ * @i: an index below ncm_spectral_polar_panels_array_len()
+ *
+ * Returns: (transfer none): the #NcmSpectralPolarPanels @i of @spa.
+ */
+NcmSpectralPolarPanels *
+ncm_spectral_polar_panels_array_peek (NcmSpectralPolarPanelsArray *spa, guint i)
+{
+  g_assert_cmpuint (i, <, spa->panels->len);
+
+  return g_ptr_array_index (spa->panels, i);
+}
+
+/**
+ * ncm_spectral_polar_panels_array_peek_data: (skip)
+ * @spa: a #NcmSpectralPolarPanelsArray
+ *
+ * Returns: (transfer none): the C array of the ncm_spectral_polar_panels_array_len()
+ * #NcmSpectralPolarPanels of @spa, valid until @spa changes.
+ */
+NcmSpectralPolarPanels **
+ncm_spectral_polar_panels_array_peek_data (NcmSpectralPolarPanelsArray *spa)
+{
+  return (NcmSpectralPolarPanels **) spa->panels->pdata;
 }
 

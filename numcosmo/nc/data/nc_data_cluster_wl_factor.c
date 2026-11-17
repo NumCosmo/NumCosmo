@@ -3313,9 +3313,11 @@ nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *m
  * the rows of @obs loads the interpolants instead of building them.
  *
  * The shape factor must be a #NcGalaxyShapeFactorSpectral with
- * #NcGalaxyShapeFactorSpectral:use-interp, no parameter of the population may be free (the
- * interpolants hold for its current values only), and @obs must have as many rows as the
- * catalog of @dcwlf; otherwise the call aborts.
+ * #NcGalaxyShapeFactorSpectral:use-interp, and @obs must have as many rows as the catalog of
+ * @dcwlf; otherwise the call aborts. Without #NcGalaxyShapeFactorSpectral:pop-order no
+ * parameter of the population may be free: the interpolants hold for its current values
+ * only. With it, the free parameters and their bounds are the box of the expansion, and @obs
+ * receives the interpolants of its nodes (#NcGalaxyWLObs:shape-interp-modes).
  */
 void
 nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs)
@@ -3324,17 +3326,21 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
   NcmModel *pop                             = ncm_mset_peek (mset, nc_galaxy_shape_pop_id ());
   guint gal_i, k;
 
-  for (k = 0; k < ncm_model_len (pop); k++)
-  {
-    if (ncm_model_param_get_ftype (pop, k) == NCM_PARAM_TYPE_FREE)
-      g_error ("nc_data_cluster_wl_factor_write_shape_interp: the population parameter %s of %s is free; "
-               "the interpolants hold for fixed population parameters.", ncm_model_param_name (pop, k), G_OBJECT_TYPE_NAME (pop));
-  }
-
   if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor) ||
       !nc_galaxy_shape_factor_spectral_get_use_interp (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor)))
     g_error ("nc_data_cluster_wl_factor_write_shape_interp: the shape factor %s is not a NcGalaxyShapeFactorSpectral with use-interp.",
              G_OBJECT_TYPE_NAME (self->shape_factor));
+
+  if (nc_galaxy_shape_factor_spectral_get_pop_order (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor)) < 2)
+  {
+    for (k = 0; k < ncm_model_len (pop); k++)
+    {
+      if (ncm_model_param_get_ftype (pop, k) == NCM_PARAM_TYPE_FREE)
+        g_error ("nc_data_cluster_wl_factor_write_shape_interp: the population parameter %s of %s is free; "
+                 "the interpolants hold for fixed population parameters unless they are expanded over them "
+                 "(NcGalaxyShapeFactorSpectral:pop-order).", ncm_model_param_name (pop, k), G_OBJECT_TYPE_NAME (pop));
+    }
+  }
 
   nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
 
