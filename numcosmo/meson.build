@@ -643,6 +643,7 @@ nc_sources = files(
     'nc/lss/galaxy/nc_galaxy_shape_factor_spectral.c',
     'nc/lss/galaxy/nc_galaxy_shape_factor_var_add.c',
     'nc/lss/galaxy/nc_galaxy_shape_factor_moments_private.c',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_reach_private.c',
     'nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.c',
     'nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.c',
     'nc/lss/galaxy/nc_galaxy_shape_pop.c',
