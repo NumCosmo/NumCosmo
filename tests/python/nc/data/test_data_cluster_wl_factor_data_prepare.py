@@ -338,6 +338,42 @@ def test_clone_takes_the_published_grid_and_critical_densities():
     np.testing.assert_array_equal(_m2lnP(fresh, mset_fresh), moved)
 
 
+def _shared_clones(dcwlf, mset, n):
+    """n clones made as NcmFitESMCMC makes its workers', each with its own model set,
+    after the dataset was registered as shared (prepared or not)."""
+    dset = Ncm.Dataset.new()
+    dset.append_data(dcwlf)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dset.register_shared(ser)
+    clones = []
+    for _ in range(n):
+        clones.append((ser.dup_obj(dcwlf), ser.dup_obj(mset)))
+        ser.reset(True)
+    return clones
+
+
+def test_clones_of_an_unprepared_dataset_build_the_grid_once():
+    """The clones of a dataset that was not prepared before they were made build the
+    redshift grid once: the first calibrates and computes the critical densities, and
+    publishes them; the second takes the grid, its pairs of nodes and the critical
+    densities, with the same -2lnP bit for bit, as does the original prepared after."""
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    n_gal = dcwlf.peek_obs().len()
+    (first, mset_first), (second, mset_second) = _shared_clones(dcwlf, mset, 2)
+
+    ref = _m2lnP(first, mset_first)
+    assert first.get_calib_count() == n_gal
+    assert first.get_crit_count() == n_gal
+
+    np.testing.assert_array_equal(_m2lnP(second, mset_second), ref)
+    assert second.get_calib_count() == 0
+    assert second.get_crit_count() == 0
+    assert _node_config(second) == _node_config(first)
+
+    np.testing.assert_array_equal(_m2lnP(dcwlf, mset), ref)
+    assert dcwlf.get_calib_count() == 0
+
+
 def test_distance_zf_after_model_swap(capfd):
     """A surface mass density swapped in after the first evaluation, with a distance of
     low zf, is warned about too, although the catalog did not change. The warning is

@@ -4,13 +4,10 @@
  *  Sat December 01 17:19:10 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
- *  Copyright  2026  Caio Lima de Oliveira
- *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -889,9 +886,6 @@ ncm_fit_mc_start_run (NcmFitMC *mc, GError **error)
 
   mc->started = TRUE;
 
-  /* Prepared before the shared objects are registered, see
-   * ncm_fit_esmcmc_start_run(). */
-  ncm_dataset_prepare (dset, mset);
   ncm_dataset_register_shared (dset, mc->ser);
 
   g_object_set (ncm_mset_catalog_peek_storage (mc->mcat),

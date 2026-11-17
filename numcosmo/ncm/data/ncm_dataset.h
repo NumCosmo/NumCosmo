@@ -4,13 +4,10 @@
  *  Mon Jul 16 18:04:45 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
- *  Copyright  2026  Caio Lima de Oliveira
- *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -82,7 +79,6 @@ NcmObjArray *ncm_dataset_get_data_array (NcmDataset *dset);
 NcmObjArray *ncm_dataset_peek_data_array (NcmDataset *dset);
 
 void ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng);
-void ncm_dataset_prepare (NcmDataset *dset, NcmMSet *mset);
 void ncm_dataset_register_shared (NcmDataset *dset, NcmSerialize *ser);
 void ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype);
 void ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng);

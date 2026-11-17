@@ -153,6 +153,31 @@ G_DEFINE_QUARK (nc-data-cluster-wl-factor-shared-grid, _nc_data_cluster_wl_facto
 G_DEFINE_QUARK (nc-data-cluster-wl-factor-shared-obs, _nc_data_cluster_wl_factor_shared_obs)
 /* *INDENT-ON* */
 
+/*
+ * The lock of the redshift grid of an #NcGalaxyWLObs registered as shared, stored as qdata
+ * on that @obs by register_shared() before any clone exists, and freed with it. The clones
+ * of a dataset that was not prepared before they were made would each calibrate and build
+ * the same grid: the first to need it builds it under this lock and publishes it, and the
+ * others, waiting on the lock, take it (see _nc_data_cluster_wl_factor_prepare()).
+ */
+typedef struct _NcDataClusterWLFactorGridLock
+{
+  GMutex lock;
+} NcDataClusterWLFactorGridLock;
+
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (nc-data-cluster-wl-factor-grid-lock, _nc_data_cluster_wl_factor_grid_lock)
+/* *INDENT-ON* */
+
+static void
+_grid_lock_free (gpointer p)
+{
+  NcDataClusterWLFactorGridLock *grid_lock = p;
+
+  g_mutex_clear (&grid_lock->lock);
+  g_free (grid_lock);
+}
+
 /* Fallback -2lnP for a non-positive fixed-nodes P_gal. */
 #define NC_GALAXY_LOW_PROB 1.0e6
 
@@ -896,15 +921,19 @@ _fixed_nodes_grid_publish (NcDataClusterWLFactorPrivate *self)
  *
  * Under auto-nodes the per-galaxy pairs come from a calibration that probes
  * the shape integrand at the model point it ran at, and neither the shape
- * factor nor the model point is in the key. The grid is therefore taken
- * only by a dataset whose calib_n_nodes/calib_rule_n, loaded from a stored
- * node-config by _node_config_adopt(), equal the published pairs. A clone
- * inherits node-config from the dataset it was made from and qualifies; any
- * other dataset on the same @obs calibrates for itself. */
+ * factor nor the model point is in the key. A dataset with a stored
+ * node-config (validated by _node_config_adopt()) takes the grid only when
+ * its pairs equal the published ones: a clone inherits node-config from the
+ * dataset it was made from and qualifies. With take_pairs, a dataset without
+ * one takes the published pairs with the grid; prepare() passes it to the
+ * clones of a shared @obs, which may otherwise each calibrate (any
+ * calibration reaching node-reltol holds at every point). Any other dataset
+ * on the same @obs calibrates for itself. */
 static gboolean
-_fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
+_fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self, const gboolean take_pairs)
 {
   NcDataClusterWLFactorSharedGrid *shared_grid;
+  gboolean pairs_match;
   gboolean match;
 
   if ((self->obs == NULL) || self->resampling || self->has_resampled ||
@@ -917,12 +946,18 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
   if (shared_grid == NULL)
     return FALSE;
 
-  match = (!self->auto_nodes ||
-           (self->node_config_valid &&
-            (self->calib_n_nodes->len == shared_grid->calib_n_nodes->len) &&
-            (self->calib_rule_n->len == shared_grid->calib_rule_n->len) &&
-            (memcmp (self->calib_n_nodes->data, shared_grid->calib_n_nodes->data, sizeof (gint) * self->calib_n_nodes->len) == 0) &&
-            (memcmp (self->calib_rule_n->data, shared_grid->calib_rule_n->data, sizeof (gint) * self->calib_rule_n->len) == 0))) &&
+  /* A dataset with a stored configuration takes only the grid of the same pairs; one
+   * without, sharing @obs with the dataset that published the grid (take_pairs), takes
+   * the pairs with it: a calibration reaching the tolerance holds at every point. */
+  if (self->node_config_valid)
+    pairs_match = (self->calib_n_nodes->len == shared_grid->calib_n_nodes->len) &&
+                  (self->calib_rule_n->len == shared_grid->calib_rule_n->len) &&
+                  (memcmp (self->calib_n_nodes->data, shared_grid->calib_n_nodes->data, sizeof (gint) * self->calib_n_nodes->len) == 0) &&
+                  (memcmp (self->calib_rule_n->data, shared_grid->calib_rule_n->data, sizeof (gint) * self->calib_rule_n->len) == 0);
+  else
+    pairs_match = take_pairs && (shared_grid->calib_n_nodes->len == self->shape_data->len);
+
+  match = (!self->auto_nodes || pairs_match) &&
           (shared_grid->n_gal == self->shape_data->len) &&
           (shared_grid->z_cl == self->z_cl) &&
           (shared_grid->n_nodes == self->n_nodes) &&
@@ -947,6 +982,14 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
     self->fixed_bg_norm      = g_array_ref (shared_grid->fixed_bg_norm);
     self->fixed_fg_norm      = g_array_ref (shared_grid->fixed_fg_norm);
     self->n_total_per_galaxy = g_array_ref (shared_grid->n_total_per_galaxy);
+
+    if (self->auto_nodes && !self->node_config_valid)
+    {
+      g_array_set_size (self->calib_n_nodes, 0);
+      g_array_set_size (self->calib_rule_n, 0);
+      g_array_append_vals (self->calib_n_nodes, shared_grid->calib_n_nodes->data, shared_grid->calib_n_nodes->len);
+      g_array_append_vals (self->calib_rule_n, shared_grid->calib_rule_n->data, shared_grid->calib_rule_n->len);
+    }
   }
 
   _shared_grid_unref (shared_grid);
@@ -1598,6 +1641,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   guint n_steps         = 0;
   gboolean grid_adopted = FALSE;
   gboolean crit_built   = FALSE;
+  GMutex *grid_lock     = NULL;
 
   self->resampling = ncm_data_is_resampling (data);
 
@@ -1754,7 +1798,30 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     /* A clone of a dataset whose grid was published on the shared @obs
      * takes that grid, built under these settings, and skips
      * _step_fixed_nodes_grid; the steps that depend on the model still run. */
-    grid_adopted = _fixed_nodes_grid_adopt (self);
+    grid_adopted = _fixed_nodes_grid_adopt (self, FALSE);
+
+    /* The clones of a dataset that published no grid (it was not prepared before
+     * they were made) build it once: the first takes the lock of @obs, builds and
+     * publishes the grid at the end of this prepare(), and releases the lock; the
+     * others, waiting on it, take what it published, pairs of nodes included. */
+    if (!grid_adopted && (self->obs != NULL) && !self->resampling && !self->has_resampled &&
+        (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) == 0))
+    {
+      NcDataClusterWLFactorGridLock *lock = g_object_get_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_grid_lock_quark ());
+
+      if (lock != NULL)
+      {
+        grid_lock = &lock->lock;
+        g_mutex_lock (grid_lock);
+        grid_adopted = _fixed_nodes_grid_adopt (self, TRUE);
+
+        if (grid_adopted)
+        {
+          g_mutex_unlock (grid_lock);
+          grid_lock = NULL;
+        }
+      }
+    }
 
     self->fixed_nodes_zcl                  = self->z_cl;
     self->fixed_nodes_n_nodes_seen         = self->n_nodes;
@@ -1843,9 +1910,9 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
      * In parallel from nc_data_cluster_wl_factor_data_prepare(), and on the cycles that
      * build the redshift grid or read a new catalog (the auto-node calibration, the shape
      * factor's per-galaxy precomputation) when not already inside a parallel region: a fit
-     * or a Python call on the main thread calibrates on every thread, as does the prepare
-     * of a sampler before it makes its clones (ncm_dataset_prepare()). The per-cycle
-     * prepare() of a sampler runs inside its own threads, and stays serial.
+     * or a Python call on the main thread calibrates on every thread, as does a prepare
+     * before a sampler makes its clones. The per-cycle prepare() of a sampler runs
+     * inside its own threads, and stays serial.
      */
 #ifdef _OPENMP
     const gboolean in_parallel = omp_in_parallel ();
@@ -1940,9 +2007,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
   /* A grid built in this cycle, as opposed to adopted, replaces the one this
    * dataset published before, so clones made from now on take the current
-   * one. */
-  if (self->share_grid && fixed_grid_changed && !grid_adopted)
+   * one. A clone that built it under the lock of @obs publishes it for the
+   * clones waiting there, then releases the lock. */
+  if ((self->share_grid || (grid_lock != NULL)) && fixed_grid_changed && !grid_adopted)
     _fixed_nodes_grid_publish (self);
+
+  if (grid_lock != NULL)
+    g_mutex_unlock (grid_lock);
 
   /* One line per prepare() instead of one per galaxy. */
   if (self->calib_unconverged > 0)
@@ -2513,6 +2584,17 @@ _nc_data_cluster_wl_factor_register_shared (NcmData *data, NcmSerialize *ser)
     ncm_serialize_set (ser, self->obs, name, FALSE);
     g_object_set_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_obs_quark (), dcwlf);
     g_free (name);
+
+    /* The lock under which the clones build the grid once, when this dataset
+     * has none to publish (it was not prepared): created here, before any
+     * clone exists, and kept with @obs */
+    if (g_object_get_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_grid_lock_quark ()) == NULL)
+    {
+      NcDataClusterWLFactorGridLock *lock = g_new0 (NcDataClusterWLFactorGridLock, 1);
+
+      g_mutex_init (&lock->lock);
+      g_object_set_qdata_full (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_grid_lock_quark (), lock, &_grid_lock_free);
+    }
   }
 
   /* Registers the tables of an #NcGalaxyShapeFactorMomentsTilt shape factor
@@ -3285,8 +3367,8 @@ nc_data_cluster_wl_factor_get_low_prob_count (NcDataClusterWLFactor *dcwlf)
  * Calling it is not required: everything it builds is also built on demand
  * by prepare(), with the same results, and the prepare() that builds the
  * redshift grid or reads a new catalog runs in parallel the same way when it
- * is not inside a parallel region (a fit, or a sampler preparing its data
- * before it makes its copies, see ncm_dataset_prepare()).
+ * is not inside a parallel region (a fit, or an evaluation before a sampler
+ * makes its copies: the copies then take what it built).
  *
  */
 void

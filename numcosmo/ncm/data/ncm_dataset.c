@@ -4,13 +4,10 @@
  *  Tue May 29 19:28:48 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
- *  Copyright  2026  Caio Lima de Oliveira
- *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <vitenti@uel.br>
- * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -615,33 +612,11 @@ ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 }
 
 /**
- * ncm_dataset_prepare:
- * @dset: a #NcmDataset
- * @mset: a #NcmMSet
- *
- * Calls ncm_data_prepare() on every #NcmData in @dset with @mset. The samplers
- * (#NcmFitESMCMC, #NcmFitMC) call it before ncm_dataset_register_shared() when they start
- * a run, so that what a data builds once and shares with its copies (see
- * ncm_data_register_shared()) is built there, on the main thread, and not by each copy.
- *
- */
-void
-ncm_dataset_prepare (NcmDataset *dset, NcmMSet *mset)
-{
-  guint i;
-
-  for (i = 0; i < ncm_dataset_get_length (dset); i++)
-    ncm_data_prepare (ncm_dataset_peek_data (dset, i), mset);
-}
-
-/**
  * ncm_dataset_register_shared:
  * @dset: a #NcmDataset
  * @ser: a #NcmSerialize
  *
- * Calls ncm_data_register_shared() on every #NcmData in @dset. What a data shares can
- * only be what it holds when this is called: prepare the data first
- * (ncm_dataset_prepare()).
+ * Calls ncm_data_register_shared() on every #NcmData in @dset.
  *
  */
 void

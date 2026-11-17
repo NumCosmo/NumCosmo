@@ -467,6 +467,14 @@ class RunMCMC(RunCommonOptions):
         if self.seed is not None:
             esmcmc.set_rng(Ncm.RNG.seeded_new(None, self.seed))
 
+        # Prepared here, on the main thread (in parallel where a data supports it), before
+        # the sampler copies the dataset for its threads: the copies then share what the
+        # preparation built, for NcDataClusterWLFactor the redshift grid and the critical
+        # densities, instead of each building its own.
+        dataset = self.likelihood.peek_dataset()
+        for i in range(dataset.get_length()):
+            dataset.get_data(i).prepare(self.mset)
+
         esmcmc.start_run()
         esmcmc.run(self.nsamples)
         esmcmc.end_run()
