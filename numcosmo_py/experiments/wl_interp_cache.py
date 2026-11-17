@@ -525,8 +525,8 @@ def update_shape_interp_cache(
     for wider priors is reused whole. coverage gives the population parameters the
     expansion spans (pop-order) and their bounds; the other population parameters are
     fixed. The update holds a lock beside the file, so that jobs started together build
-    once. Afterwards obs carries the interpolants and names the cache, and data reads them
-    again as loaded ones.
+    once. Afterwards obs carries the interpolants and names the cache, and data holds them
+    as loaded ones.
 
     Raises:
         ValueError: The shape factor of data does not use interpolants; the file of this
@@ -577,7 +577,12 @@ def update_shape_interp_cache(
         if built > 0 or not path.exists():
             write_shape_interp_cache(obs, path)
     name_shape_interp_cache(obs, path, wl_obs_fingerprint(obs))
-    data.set_obs(obs)
+    # Galaxies built here hold the interpolants of the coverage as built ones: obs is set
+    # again so that every galaxy is a loaded one, as in any later load of the cache. With
+    # nothing built they all are already, and setting obs would check every galaxy again
+    # at the next prepare (10 s for the 12,460 expansions of s19a HWL16a-002).
+    if built > 0:
+        data.set_obs(obs)
     return ShapeInterpCacheUpdate(
         rows=obs.len(),
         built=built,

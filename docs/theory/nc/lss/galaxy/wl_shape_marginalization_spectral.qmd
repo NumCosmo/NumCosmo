@@ -456,7 +456,10 @@ cache files, one per configuration, apart from the catalog
   concentration), the cosmology and the redshift of the cluster. A cache built for other
   priors is reused: only the galaxies whose range is too short for the fit are built again
   ([[numcosmo|nc_galaxy_shape_factor_spectral_set_rebuild_short]]), and the file is
-  written again.
+  written again. A galaxy approximated over a wider range than its own reach agrees with
+  the one built for its reach within `interp-abstol`, not bit for bit: the values of a fit
+  can then depend, at that level, on the priors of the fits that built the cache before.
+  A fresh cache directory gives values that depend on the fit alone.
 - Fallback: a galaxy that cannot use its approximation for a call (population outside the
   coverage, an expansion that did not converge, or a shear beyond its range) takes the
   [table along its line](#the-nodes-of-a-galaxy-a-table-along-its-line) instead, counted by

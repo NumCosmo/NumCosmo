@@ -2589,8 +2589,8 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
     g_warning ("nc_galaxy_shape_factor_spectral: the population of this fit reaches outside the box of the expansion of the "
                "catalog (its free parameters over their bounds, or a fixed value outside it); there the galaxies are "
                "computed without the expansion (from a table along their line of shears where possible, otherwise by the "
-               "integrals), at a higher cost. Prepare the catalog over a box that covers the fit (wl-catalog shape-interp "
-               "--pop-box).");
+               "integrals), at a higher cost. Build the interpolants over a population coverage that covers the "
+               "fit (numcosmo generate cluster-wl-load --pop-coverage, which defaults to the priors).");
 
   if (box != NULL)
   {
