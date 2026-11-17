@@ -374,7 +374,7 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->interp_pop_level_cap     = 0;
   self->interp_pop_one_integral  = FALSE;
   self->interp_compress_frac     = 0.0;
-  self->restrict_range           = FALSE;
+  self->restrict_range           = TRUE;
   self->cosmo                    = NULL;
   self->smd                      = NULL;
   self->dp_box                   = NULL;
@@ -728,14 +728,15 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * center and the parameters of the shape population are free; otherwise, and when the models
    * of the bound are not in the fit, the interpolant covers interp-g-max. A shear above the
    * range of the interpolant takes the integral. An interpolant loaded from a catalog keeps the
-   * range it was built with.
+   * range it was built with. It is on by default: the integrals beyond the range keep the
+   * values right, so turning it off only matters to compare with the whole disk.
    */
   g_object_class_install_property (object_class,
                                    PROP_RESTRICT_RANGE,
                                    g_param_spec_boolean ("restrict-range",
                                                          NULL,
                                                          "Whether the interpolant covers only the shears a galaxy reaches",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**

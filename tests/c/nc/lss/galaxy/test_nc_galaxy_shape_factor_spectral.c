@@ -1065,7 +1065,8 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_range (TestNcGalaxyShapeFactorSp
 
   gsfs_r = _restrict_range_build (test, TRUE, 0.8, &data_r);
   gsfs_f = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
-  g_assert_false (nc_galaxy_shape_factor_spectral_get_restrict_range (gsfs_f));
+  g_assert_true (nc_galaxy_shape_factor_spectral_get_restrict_range (gsfs_f));
+  nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs_f, FALSE);
 
   {
     GList *columns = nc_galaxy_shape_factor_data_required_columns (data_r);

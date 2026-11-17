@@ -352,7 +352,7 @@ of the catalog, as a resample, drops its tables.
   It reaches $|g| = g_\mathrm{max} + 2 g_c < 3 g_\mathrm{max}$, so $g_\mathrm{max} < 1/3$
   keeps it inside $|g| < 1$, where $\ln P$ is smooth in $g$.
 - Restricted range: with [[numcosmo|NcGalaxyShapeFactorSpectral:restrict-range]] (default
-  off), the region of a galaxy contains the disk $|g| \le g_\mathrm{reach}$ in place of
+  on), the region of a galaxy contains the disk $|g| \le g_\mathrm{reach}$ in place of
   $|g| \le g_\mathrm{max}$, where
   $g_\mathrm{reach} \equiv \min (g_\mathrm{max}, |1 + m| |g_t| + |c|)$, $m$ and $c$ are the
   multiplicative and additive shear biases of the galaxy, and $g_t$ is the reduced tangential
@@ -365,7 +365,10 @@ of the catalog, as a resample, drops its tables.
   other parameters are free, when the box of the halo center reaches the projected position
   of the galaxy, when the largest source redshift is not finite or not above the lens, and
   when the convergence at the corner is at least 1. A shear with
-  $|g| > g_\mathrm{reach}$ takes the integral.
+  $|g| > g_\mathrm{reach}$ takes the integral, so the restriction changes the cost and
+  not the values beyond $g_\mathrm{reach}$. `numcosmo wl-catalog tables --shape-interp`
+  builds its tables over $g_\mathrm{max}$ unless `restrict_range=true` is given: the
+  build does not know the priors of the fits that will use the catalog.
 - First grid: the split of the region that the builder refines. The candidate radial
   edges are 0, $R$, $k R / n$ for $0 < k < n$, and $L_g w^j$ below $R$ for $j \ge 0$,
   where $R$ is the upper end of the region in $\rho$, $n$ is

@@ -2234,3 +2234,26 @@ def test_shape_interp_gens_unknown_population():
     """A record whose population has no generator is an error."""
     with pytest.raises(ValueError, match="has no generator"):
         shape_interp_gens(_obs_with_source(Ncm.Vector.new(2)))
+
+
+@pytest.mark.parametrize("restrict", ["no-shape-factor", None, "true"])
+def test_wl_catalog_shape_interp_restrict_range(
+    tmp_path: Path, real_wl_obs_file_with_meta, restrict
+):
+    """wl-catalog tables --shape-interp builds tables over interp-g-max by default, with
+    or without --shape-factor, as it cannot know the priors of the fits that will use
+    them; restrict_range=true is honoured."""
+    args = ["--pop-dist=beta alpha=1.8 beta=2.1"]
+    if restrict != "no-shape-factor":
+        sf = "spectral ellip_conv=trace ellip_coord=celestial"
+        if restrict is not None:
+            sf += f" restrict_range={restrict}"
+        args.append(f"--shape-factor={sf}")
+    prepared = tmp_path / "prepared.gvar"
+    result = _shape_interp(prepared, real_wl_obs_file_with_meta, *args)
+    assert result.exit_code == 0, result.output
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
+    gsfs = obs.props.shape_interp.peek_source().peek("shape-factor")
+    assert isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
+    assert gsfs.get_restrict_range() == (restrict == "true")
