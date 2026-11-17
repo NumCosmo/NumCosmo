@@ -54,11 +54,14 @@ from numcosmo_py.experiments.cluster_richness_count import (
     load_cluster_richness_count,
 )
 from numcosmo_py.experiments.cluster_wl import (
+    DEFAULT_CENTRE_BOX_MPC,
+    DEFAULT_COSMOLOGY,
     DEFAULT_INTEG_AUTO_NODES,
     DEFAULT_INTEG_MAX_TOTAL_NODES,
     DEFAULT_INTEG_N_NODES,
     DEFAULT_INTEG_NODE_RELTOL,
     DEFAULT_INTEG_RULE_N,
+    CosmologyOptions,
     GalaxyPopGen,
     GalaxyZGen,
     HaloProfileType,
@@ -67,11 +70,15 @@ from numcosmo_py.experiments.cluster_wl import (
     ResampleFlagChoice,
     ShapeFactorGen,
     WLCatalogID,
+    apply_prior,
+    centre_box_bounds,
     check_shape_pop_compat,
     generate_lsst_cluster_wl,
     load_cluster_wl,
+    load_mask,
+    parse_prior,
+    print_free_parameters,
     resolve_resample_flag,
-    shape_interp_gens,
 )
 from numcosmo_py.experiments.curvature_weight import (
     qspline_curvature_weight,
@@ -96,6 +103,16 @@ from numcosmo_py.experiments.planck18 import (
     generate_planck18_tt,
     generate_planck18_ttteee,
     mset_set_parameters,
+)
+from numcosmo_py.experiments.wl_interp_cache import (
+    choose_pop_order,
+    coverage_short_of_prior,
+    default_coverage,
+    format_coverage,
+    record_shape_interp_cache,
+    shape_interp_cache_name,
+    strip_shape_interp,
+    update_shape_interp_cache,
 )
 
 
@@ -766,8 +783,103 @@ class ClusterWL(ABC):
     ] = DEFAULT_INTEG_MAX_TOTAL_NODES
 
     summary: Annotated[
-        bool, typer.Option(help="Print experiment summary.", show_default=True)
+        bool,
+        typer.Option(
+            help="Print experiment summary, with the free parameters and their priors.",
+            show_default=True,
+        ),
     ] = False
+
+    prior: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "NAME=LO:HI, repeatable: the prior of the parameter NAME (a full "
+                "name, as in --parameter-list) is the interval [LO, HI], its fit "
+                "bounds. Applied after --centre-box-deg/--centre-box-mpc. The value "
+                "of the parameter must lie inside it."
+            ),
+            show_default=True,
+            default_factory=list,
+            rich_help_panel="Priors",
+        ),
+    ]
+
+    centre_box_deg: Annotated[
+        float | None,
+        typer.Option(
+            help=(
+                "Half-width in degrees of the prior of the halo centre, in ra and "
+                "in dec, around the cluster position. Mutually exclusive with "
+                "--centre-box-mpc; without either the box is "
+                f"{DEFAULT_CENTRE_BOX_MPC} h^-1 Mpc (--centre-box-mpc)."
+            ),
+            show_default=True,
+            rich_help_panel="Priors",
+        ),
+    ] = None
+
+    centre_box_mpc: Annotated[
+        float | None,
+        typer.Option(
+            help=(
+                "Half-width in h^-1 Mpc, projected at the cluster redshift, of the "
+                "prior of the halo centre around the cluster position: square on "
+                "the sky, its ra half-width larger by about 1 / cos(dec). "
+                "Mutually exclusive with --centre-box-deg. Default: "
+                f"{DEFAULT_CENTRE_BOX_MPC}. A --prior on NcHaloPosition:ra or "
+                "NcHaloPosition:dec replaces it on that axis."
+            ),
+            show_default=True,
+            rich_help_panel="Priors",
+        ),
+    ] = None
+
+    cosmo_h0: Annotated[
+        float,
+        typer.Option(
+            help="Hubble constant H0 in km/s/Mpc (flat XCDM, fixed).",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.H0
+
+    cosmo_omegab: Annotated[
+        float,
+        typer.Option(
+            help="Baryon density Omegab.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.Omegab
+
+    cosmo_omegac: Annotated[
+        float,
+        typer.Option(
+            help="Cold dark matter density Omegac.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.Omegac
+
+    cosmo_w: Annotated[
+        float,
+        typer.Option(
+            help="Dark energy equation of state w.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.w
+
+    @property
+    def cosmology(self) -> CosmologyOptions:
+        """Return the background cosmology of the options."""
+        return CosmologyOptions(
+            H0=self.cosmo_h0,
+            Omegab=self.cosmo_omegab,
+            Omegac=self.cosmo_omegac,
+            w=self.cosmo_w,
+        )
 
     @property
     def integ_options(self) -> IntegMethodOptions:
@@ -809,6 +921,8 @@ class ClusterWL(ABC):
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
+        self._apply_priors(mset)
+
         for param in self.parameter_list:
             pindex = mset.param_get_by_full_name(param)
             if pindex is None:
@@ -816,6 +930,12 @@ class ClusterWL(ABC):
             mset.param_set_ftype(pindex.mid, pindex.pid, Ncm.ParamType.FREE)
 
         mset.prepare_fparam_map()
+
+        self._apply_mask(dataset)
+        self._prepare_shape_interp(dataset, mset)
+
+        if self.summary:
+            print_free_parameters(mset)
 
         ser.to_binfile(
             dataset, self.experiment.with_suffix(".dataset.gvar").absolute().as_posix()
@@ -834,6 +954,30 @@ class ClusterWL(ABC):
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+    def _apply_priors(self, mset: Ncm.MSet) -> None:
+        """Set the priors of the options: the centre box, then each --prior.
+
+        The centre box is --centre-box-deg or --centre-box-mpc, and
+        DEFAULT_CENTRE_BOX_MPC h^-1 Mpc when neither is given.
+
+        Raises:
+            typer.BadParameter: Both centre boxes, a malformed prior, an unknown
+                parameter, or a value outside its prior.
+        """
+        half_mpc_h = self.centre_box_mpc
+        if (self.centre_box_deg is None) and (half_mpc_h is None):
+            half_mpc_h = DEFAULT_CENTRE_BOX_MPC
+        try:
+            ra_lo, ra_hi, dec_lo, dec_hi = centre_box_bounds(
+                mset, half_deg=self.centre_box_deg, half_mpc_h=half_mpc_h
+            )
+            apply_prior(mset, "NcHaloPosition:ra", ra_lo, ra_hi)
+            apply_prior(mset, "NcHaloPosition:dec", dec_lo, dec_hi)
+            for spec in self.prior:
+                apply_prior(mset, *parse_prior(spec))
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
 
     def _resolve_gens(self):
         """Return the shape-factor and population generators of the options.
@@ -856,6 +1000,12 @@ class ClusterWL(ABC):
 
         return shape_gen, pop_gen
 
+    def _apply_mask(self, dataset: Ncm.Dataset) -> None:
+        """Restrict the likelihood to some rows of its catalog; nothing by default."""
+
+    def _prepare_shape_interp(self, dataset: Ncm.Dataset, mset: Ncm.MSet) -> None:
+        """Prepare the shape interpolants of the experiment; nothing by default."""
+
     @abstractmethod
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Build (mock) or load (real data) the experiment's likelihood/model-set."""
@@ -863,6 +1013,9 @@ class ClusterWL(ABC):
 
 def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.GalaxyWLObs:
     """Load a NcGalaxyWLObs from a curated catalog id or from a .gvar file.
+
+    The file holds a NcGalaxyWLObs, or a NcmDataset (e.g. the .dataset.gvar of an
+    experiment) whose NcDataClusterWLFactor holds one.
 
     Raises:
         typer.BadParameter: Neither or both of catalog and data_file.
@@ -877,6 +1030,16 @@ def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.Galax
         assert data_file is not None
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         obs = cast(Nc.GalaxyWLObs, ser.from_binfile(data_file.absolute().as_posix()))
+        if isinstance(obs, Ncm.Dataset):
+            dset = obs
+            obs = None
+            for i in range(dset.get_length()):
+                data = dset.get_data(i)
+                if isinstance(data, Nc.DataClusterWLFactor):
+                    obs = data.peek_obs()
+                    break
+            if obs is None:
+                raise ValueError("The dataset in the file has no NcDataClusterWLFactor")
 
     # A wrong object in the file is a data error, not a TypeError.
     if not isinstance(obs, Nc.GalaxyWLObs):
@@ -1041,6 +1204,7 @@ class GenerateClusterWL(ClusterWL):
             seed=self.seed,
             integ_options=self.integ_options,
             summary=self.summary,
+            cosmology=self.cosmology,
         )
 
 
@@ -1054,11 +1218,12 @@ class LoadClusterWL(ClusterWL):
     footprint is the bounding box of the catalog's RA/Dec. --shape-dist's
     ellip_conv/ellip_coord must match the catalog's own convention.
 
-    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
-    interpolants of its galaxies and the shape factor and population that
-    built them; the experiment takes both from the catalog, and giving
-    --shape-factor, --pop-dist or a population parameter in --parameter-list
-    is an error.
+    With a Spectral --shape-factor and use_interp=true, the interpolants of the
+    galaxies are built (in parallel) into a cache file beside the catalog, one per
+    configuration, over the population coverage (--pop-coverage, default the
+    prior of each free population parameter), or reused from it; the dataset keeps
+    the catalog without them, naming the cache, which loading the experiment
+    attaches.
     """
 
     shape_factor: Annotated[
@@ -1066,8 +1231,7 @@ class LoadClusterWL(ClusterWL):
         typer.Option(
             help=(
                 ShapeFactorGen.get_help_text()
-                + f" Default: {DEFAULT_CLUSTER_WL_SHAPE_FACTOR}; taken from a "
-                "catalog prepared by wl-catalog shape-interp."
+                + f" Default: {DEFAULT_CLUSTER_WL_SHAPE_FACTOR}."
             ),
             metavar=ShapeFactorGen.get_help_metavar(),
             rich_help_panel="Galaxy shape-marginalization factor",
@@ -1079,8 +1243,7 @@ class LoadClusterWL(ClusterWL):
         typer.Option(
             help=(
                 GalaxyPopGen.get_help_text()
-                + f" Default: {DEFAULT_CLUSTER_WL_POP_DIST}; taken from a "
-                "catalog prepared by wl-catalog shape-interp."
+                + f" Default: {DEFAULT_CLUSTER_WL_POP_DIST}."
             ),
             metavar=GalaxyPopGen.get_help_metavar(),
             rich_help_panel="Galaxy intrinsic-ellipticity population distribution",
@@ -1105,7 +1268,8 @@ class LoadClusterWL(ClusterWL):
         typer.Option(
             help=(
                 "Path to a local NcGalaxyWLObs (.gvar) file with real galaxy "
-                "shape/position/redshift data. Mutually exclusive with "
+                "shape/position/redshift data, or to the dataset of an experiment "
+                "(.dataset.gvar), whose catalog is taken. Mutually exclusive with "
                 "--catalog; exactly one of the two is required."
             ),
             exists=True,
@@ -1167,40 +1331,195 @@ class LoadClusterWL(ClusterWL):
         ),
     ]
 
-    def _resolve_gens(self):
-        """Return the generators of the catalog's record, or of the options.
+    pop_coverage: Annotated[
+        list[str],
+        typer.Option(
+            help=(
+                "NAME=LO:HI, repeatable: the interpolants of a Spectral shape factor "
+                "with use_interp expand ln P over the population parameter NAME (e.g. "
+                "alpha or NcGalaxyShapePop:alpha) in [LO, HI]. Default: each free "
+                "population parameter over its prior, within Beta alpha, beta in "
+                "[1.25, 2.75] and Gauss sigma in [0.25, 0.75]; where a fit leaves the "
+                "coverage, the galaxies are computed without the expansion (slower, "
+                "warned). Without pop_order in --shape-factor the order is chosen "
+                "from a sample of galaxies."
+            ),
+            show_default=True,
+            default_factory=list,
+            rich_help_panel="Shape interpolant cache",
+        ),
+    ]
+
+    interp_cache_dir: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "Directory of the caches of shape interpolants (one file per "
+                "configuration, shared by the experiments of a catalog). Default: "
+                "beside --data-file, named after it with the suffix .interp, or "
+                "beside the experiment for --catalog."
+            ),
+            show_default=True,
+            rich_help_panel="Shape interpolant cache",
+        ),
+    ] = None
+
+    interp_build: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Build the interpolants missing from the cache now. Without it the "
+                "experiment only names the cache, built when it is first run."
+            ),
+            show_default=True,
+            rich_help_panel="Shape interpolant cache",
+        ),
+    ] = True
+
+    mask_file: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "Whether the likelihood uses each row of the catalog: a boolean .npy "
+                "array, or a text file of 1/0 (true/false), with one entry per row. "
+                "The catalog keeps every row, so one catalog and its cache of "
+                "interpolants serve several selections."
+            ),
+            exists=True,
+            readable=True,
+        ),
+    ] = None
+
+    def _apply_mask(self, dataset: Ncm.Dataset) -> None:
+        """Set the mask of --mask-file on the likelihood.
 
         Raises:
-            typer.BadParameter: The catalog carries a record and --shape-factor,
-                --pop-dist or a population parameter in --parameter-list is given.
+            typer.BadParameter: The file does not describe rows of the catalog.
         """
+        if self.mask_file is None:
+            return
+        data = dataset.get_data(0)
+        assert isinstance(data, Nc.DataClusterWLFactor)
+        n_rows = data.peek_obs().len()
+        try:
+            keep = load_mask(self.mask_file, n_rows)
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
+        data.set_mask(keep)
+        print(f"# Mask {self.mask_file}: {sum(keep)} of {n_rows} rows.")
+
+    def _interp_cache_dir(self) -> Path:
+        """Return the directory of the shape interpolant caches of the options."""
+        if self.interp_cache_dir is not None:
+            return self.interp_cache_dir
+        if self.data_file is not None:
+            stem = self.data_file.with_suffix("")
+            stem = stem.with_suffix("") if stem.suffix == ".dataset" else stem
+            return stem.with_suffix(".interp")
+        assert self.catalog is not None
+        return self.experiment.parent / f"{self.catalog.value}.interp"
+
+    def _coverage(self, mset: Ncm.MSet) -> dict[str, tuple[float, float]] | None:
+        """Return the population coverage: the default one, then --pop-coverage.
+
+        The default covers each free population parameter over its prior within the
+        default box of its population (DEFAULT_POP_COVERAGE).
+
+        Raises:
+            typer.BadParameter: A malformed --pop-coverage.
+        """
+        coverage = default_coverage(mset) or {}
+        try:
+            for spec in self.pop_coverage:
+                name, lo, hi = parse_prior(spec)
+                coverage[name.rpartition(":")[2]] = (lo, hi)
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
+        return coverage or None
+
+    def _prepare_shape_interp(self, dataset: Ncm.Dataset, mset: Ncm.MSet) -> None:
+        """Build or update the interpolant cache of the catalog, and name it.
+
+        Only for a Spectral shape factor with use_interp. The dataset saved keeps the
+        catalog without its interpolants, naming the cache relative to the experiment,
+        and the coverage.
+
+        Raises:
+            typer.BadParameter: A malformed --pop-coverage, or a coverage of a parameter
+                the population does not have.
+        """
+        data = dataset.get_data(0)
+        if not isinstance(data, Nc.DataClusterWLFactor):
+            return
+        obs = data.peek_obs()
+        gsfs = data.props.shape_factor
+        if (
+            not isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
+            or not gsfs.get_use_interp()
+        ):
+            if self.pop_coverage:
+                raise typer.BadParameter(
+                    "--pop-coverage needs a spectral --shape-factor with use_interp"
+                )
+            return
+
+        coverage = self._coverage(mset)
+        cache_dir = self._interp_cache_dir()
+        for name, (lo, hi) in coverage_short_of_prior(mset, coverage).items():
+            clo, chi = (coverage or {}).get(name, (lo, hi))
+            print(
+                f"# The interpolants cover {name} in [{clo}, {chi}], its prior is "
+                f"[{lo}, {hi}]: outside the coverage a fit computes the galaxies "
+                "without them, at a higher cost (--pop-coverage widens it)."
+            )
+        try:
+            if coverage and gsfs.get_pop_order() < 2:
+                order, unconv = choose_pop_order(data, mset, coverage)
+                if unconv > 0:
+                    raise ValueError(
+                        f"the expansion over the population coverage "
+                        f"{format_coverage(coverage)} does not converge for {unconv} "
+                        f"of the galaxies of the sample even at pop_order={order}: "
+                        "those galaxies would be integrated at every step. Give a "
+                        "narrower --pop-coverage (e.g. around the expected values; a "
+                        "Gauss sigma in [0.25, 0.75] needs 19), or pop_order in "
+                        "--shape-factor to build at that order anyway."
+                    )
+                gsfs.set_pop_order(order)
+                print(f"# Population order {order} over {format_coverage(coverage)}.")
+            if self.interp_build:
+                upd = update_shape_interp_cache(
+                    data, mset, cache_dir, coverage=coverage
+                )
+                print(
+                    f"# Shape interpolant cache {upd.path}: {upd.built} built, "
+                    f"{upd.reused} reused, {upd.unconverged} unconverged."
+                )
+                path = upd.path
+            else:
+                pop = mset.peek(Nc.GalaxyShapePop.id())
+                assert isinstance(pop, Nc.GalaxyShapePop)
+                path = cache_dir / shape_interp_cache_name(obs, gsfs, pop, coverage)
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
+        record_shape_interp_cache(
+            obs, path, coverage, self.experiment.absolute().parent
+        )
+
+    def _resolve_gens(self):
+        """Return the generators of the options, after loading the catalog."""
         self._obs = self._load_obs()
-        gens = shape_interp_gens(self._obs)
-
-        if gens is None:
-            return super()._resolve_gens()
-
-        if (self.shape_factor is not None) or (self.pop_dist is not None):
-            raise typer.BadParameter(
-                "the catalog carries the interpolants of its galaxies; the shape "
-                "factor and the population are those that built them, so "
-                "--shape-factor and --pop-dist must not be given"
-            )
-
-        pop_params = [
-            p for p in self.parameter_list if p.startswith("NcGalaxyShapePop")
-        ]
-        if pop_params:
-            raise typer.BadParameter(
-                "the catalog carries interpolants built for fixed population "
-                f"parameters; they cannot be fitted: {', '.join(pop_params)}"
-            )
-
-        return gens
+        return super()._resolve_gens()
 
     def _load_obs(self) -> Nc.GalaxyWLObs:
-        """Load the real NcGalaxyWLObs catalog from --catalog or --data-file."""
-        return load_wl_obs(self.catalog, self.data_file)
+        """Load the real NcGalaxyWLObs catalog from --catalog or --data-file.
+
+        Interpolants are kept in caches beside the catalog, never in it: any the
+        catalog carries are dropped.
+        """
+        obs = load_wl_obs(self.catalog, self.data_file)
+        strip_shape_interp(obs)
+        return obs
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Load the real-data cluster weak lensing experiment."""
@@ -1221,6 +1540,7 @@ class LoadClusterWL(ClusterWL):
             integ_options=self.integ_options,
             summary=self.summary,
             resample_flag=resolve_resample_flag(self.resample_flag),
+            cosmology=self.cosmology,
         )
 
 

@@ -30,6 +30,7 @@ Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
+import re
 import pytest
 from typer.testing import CliRunner
 
@@ -46,6 +47,12 @@ from numcosmo_py import (
     Nc,
 )
 from numcosmo_py.app import app
+from numcosmo_py.app.loading import LoadExperiment
+from numcosmo_py.experiments.wl_interp_cache import (
+    _sub_catalog,
+    read_shape_interp_cache,
+    shape_interp_cache_info,
+)
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
     ShapeFactorGen,
@@ -54,9 +61,6 @@ from numcosmo_py.experiments.cluster_wl import (
     ClusterModel,
     HaloPositionData,
     GalaxyPopGenBeta,
-    GalaxyPopGenGaussLocal,
-    GalaxyShapeFactorGenSpectral,
-    shape_interp_gens,
 )
 
 pytestmark = pytest.mark.app
@@ -1637,218 +1641,543 @@ def _experiment_m2lnL(experiment_file: Path) -> float:
     return likelihood.m2lnL_val(mset)
 
 
-def _shape_interp(output: Path, data_file: Path, *args: str):
-    """Run numcosmo wl-catalog shape-interp."""
+def _experiment_load(experiment_file: Path) -> tuple[Ncm.MSet, Ncm.Likelihood]:
+    """The model set and the likelihood of an experiment."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    exp = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    return (
+        cast(Ncm.MSet, exp.get("model-set")),
+        cast(Ncm.Likelihood, exp.get("likelihood")),
+    )
+
+
+def _load_experiment_mset(experiment_file: Path) -> Ncm.MSet:
+    """The model set of the experiment written by generate."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    mset = ser.dict_str_from_yaml_file(experiment_file.as_posix()).get("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    return mset
+
+
+def _bounds(mset: Ncm.MSet, name: str) -> tuple[float, float]:
+    """The bounds of the parameter name of mset."""
+    pindex = mset.param_get_by_full_name(name)
+    assert pindex is not None
+    return (
+        mset.param_get_lower_bound(pindex.mid, pindex.pid),
+        mset.param_get_upper_bound(pindex.mid, pindex.pid),
+    )
+
+
+def test_cluster_wl_load_app_prior(experiment_file, real_wl_obs_file_with_meta):
+    """--prior sets the bounds of a parameter, and --summary prints the free
+    parameters with their priors."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.58 beta=1.69",
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--prior=NcHaloMassSummary:log10MDelta=13.5:15.5",
+            "--prior=NcGalaxyShapePop:alpha=1.2:2.5",
+            "--summary",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Free parameters and their priors" in result.output
+
+    mset = _load_experiment_mset(experiment_file)
+    assert _bounds(mset, "NcHaloMassSummary:log10MDelta") == (13.5, 15.5)
+    assert _bounds(mset, "NcGalaxyShapePop:alpha") == (1.2, 2.5)
+    # The default prior of beta, a parameter not given
+    assert _bounds(mset, "NcGalaxyShapePop:beta") == (1.0, 4.0)
+
+
+@pytest.mark.parametrize(
+    "prior",
+    [
+        "NcHaloMassSummary:log10MDelta=15.5",
+        "NcHaloMassSummary:log10MDelta=15.5:13.5",
+        "NcHaloMassSummary:log10MDelta=a:b",
+        "NcHaloMassSummary:nothere=13.0:15.0",
+        "NcHaloMassSummary:log10MDelta=15.5:16.0",
+    ],
+)
+def test_cluster_wl_load_app_prior_bad(
+    experiment_file, real_wl_obs_file_with_meta, prior
+):
+    """A malformed prior, an unknown parameter, or a prior that excludes the
+    value of its parameter (log10MDelta = 14) is an error, and nothing is
+    written."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--prior={prior}",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert not experiment_file.exists()
+
+
+def test_cluster_wl_load_app_centre_box(experiment_file, real_wl_obs_file_with_meta):
+    """--centre-box-deg and --centre-box-mpc set the prior of the halo centre
+    around the cluster (0, 0), 0.8 h^-1 Mpc without either; both together are
+    an error."""
+    base = [
+        "generate",
+        "cluster-wl-load",
+        experiment_file.as_posix(),
+        f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+        "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+    ]
+
+    result = runner.invoke(app, base + ["--centre-box-deg=0.02"])
+    assert result.exit_code == 0, result.output
+    mset = _load_experiment_mset(experiment_file)
+    assert _bounds(mset, "NcHaloPosition:ra") == pytest.approx((-0.02, 0.02))
+    assert _bounds(mset, "NcHaloPosition:dec") == pytest.approx((-0.02, 0.02))
+
+    result = runner.invoke(app, base + ["--centre-box-mpc=0.5"])
+    assert result.exit_code == 0, result.output
+    mset = _load_experiment_mset(experiment_file)
+    ra_lo, ra_hi = _bounds(mset, "NcHaloPosition:ra")
+    dec_lo, dec_hi = _bounds(mset, "NcHaloPosition:dec")
+    assert ra_hi == pytest.approx(-ra_lo)
+    assert dec_hi == pytest.approx(-dec_lo)
+    # 0.5 h^-1 Mpc projected at the cluster redshift, along each axis
+    hp = cast(Nc.HaloPosition, mset.peek_by_name("NcHaloPosition"))
+    cosmo = cast(Nc.HICosmo, mset.peek_by_name("NcHICosmo"))
+    hp.prepare(cosmo)
+    radius = 0.5 / cosmo.h()
+    assert hp.projected_radius_from_ra_dec(cosmo, ra_hi, 0.0) == pytest.approx(
+        radius, rel=1.0e-9
+    )
+    assert hp.projected_radius_from_ra_dec(cosmo, 0.0, dec_hi) == pytest.approx(
+        radius, rel=1.0e-9
+    )
+
+    # Without either option: 0.8 h^-1 Mpc
+    result = runner.invoke(app, base + ["--centre-box-mpc=0.8"])
+    assert result.exit_code == 0, result.output
+    box_08 = (
+        _bounds(_load_experiment_mset(experiment_file), "NcHaloPosition:ra"),
+        _bounds(_load_experiment_mset(experiment_file), "NcHaloPosition:dec"),
+    )
+    result = runner.invoke(app, base)
+    assert result.exit_code == 0, result.output
+    mset = _load_experiment_mset(experiment_file)
+    assert _bounds(mset, "NcHaloPosition:ra") == box_08[0]
+    assert _bounds(mset, "NcHaloPosition:dec") == box_08[1]
+
+    experiment_file.unlink()
+    result = runner.invoke(
+        app, base + ["--centre-box-deg=0.02", "--centre-box-mpc=0.5"]
+    )
+    assert result.exit_code != 0, result.output
+    assert not experiment_file.exists()
+
+
+def test_cluster_wl_load_app_cosmology(experiment_file, real_wl_obs_file_with_meta):
+    """The --cosmo-* options set the cosmology of the experiment."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            "--cosmo-h0=67.27",
+            "--cosmo-omegab=0.0494",
+            "--cosmo-omegac=0.2672",
+            "--cosmo-w=-0.9",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    cosmo = cast(
+        Nc.HICosmo, _load_experiment_mset(experiment_file).peek_by_name("NcHICosmo")
+    )
+    assert cosmo["H0"] == 67.27
+    assert cosmo["Omegab"] == 0.0494
+    assert cosmo["Omegac"] == 0.2672
+    assert cosmo["w"] == -0.9
+
+
+def test_cluster_wl_load_app_dataset_data_file(
+    experiment_file, experiment_file_copy, real_wl_obs_file_with_meta
+):
+    """--data-file also takes the dataset of an experiment, whose catalog is used."""
+    args = [
+        "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+    ]
+    result = runner.invoke(
+        app,
+        ["generate", "cluster-wl-load", experiment_file.as_posix()]
+        + [f"--data-file={real_wl_obs_file_with_meta.as_posix()}"]
+        + args,
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    result = runner.invoke(
+        app,
+        ["generate", "cluster-wl-load", experiment_file_copy.as_posix()]
+        + [f"--data-file={dataset_file.as_posix()}"]
+        + args,
+    )
+    assert result.exit_code == 0, result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(
+        Ncm.Dataset,
+        ser.from_binfile(experiment_file_copy.with_suffix(".dataset.gvar").as_posix()),
+    )
+    assert cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs().len() == 20
+
+
+def _cache_experiment(experiment: Path, data_file: Path, *args: str):
+    """Run generate cluster-wl-load with interpolants over a Beta population."""
     return runner.invoke(
         app,
         [
-            "wl-catalog",
-            "shape-interp",
-            output.as_posix(),
+            "generate",
+            "cluster-wl-load",
+            experiment.as_posix(),
             f"--data-file={data_file.as_posix()}",
+            (
+                "--shape-factor=spectral use_interp=true restrict_range=true "
+                "ellip_conv=trace ellip_coord=celestial"
+            ),
+            "--pop-dist=beta alpha=1.6 beta=1.7",
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--parameter-list=NcGalaxyShapePop:beta",
+            "--centre-box-deg=0.01",
+            "--prior=NcHaloMassSummary:log10MDelta=13:15",
             *args,
         ],
     )
 
 
-def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
-    """A prepared catalog carries the interpolants and the record, and an
-    experiment built from it, with the shape factor and population of the
-    record, gives the -2 ln L of one built from the original catalog."""
-    prepared = tmp_path / "prepared.gvar"
-    result = _shape_interp(
-        prepared, real_wl_obs_file_with_meta, "--pop-dist=beta alpha=1.8 beta=2.1"
-    )
+def test_cluster_wl_load_interp_cache(tmp_path: Path, real_wl_obs_file_with_meta):
+    """generate builds the cache of interpolants beside the catalog and the dataset
+    names it; loading the experiment attaches it, builds it again when missing, and
+    with --no-interp-build a missing cache is an error."""
+    exp = tmp_path / "exp.yaml"
+    coverage = [
+        "--pop-coverage=NcGalaxyShapePop:alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+    ]
+    result = _cache_experiment(exp, real_wl_obs_file_with_meta, *coverage)
     assert result.exit_code == 0, result.output
-    assert "interpolants of 20 galaxies" in result.output
 
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
-    source = obs.peek_shape_interp_source()
-    assert source is not None
-    assert isinstance(source.peek("shape-pop"), Nc.GalaxyShapePopBeta)
-    # A fixed population: one mode per galaxy
-    assert all(obs.peek_shape_interp(i).len() == 1 for i in range(obs.len()))
+    cache_dir = real_wl_obs_file_with_meta.with_suffix(".interp")
+    caches = sorted(cache_dir.glob("*.gvar"))
+    assert len(caches) == 1
 
-    exp_prepared = tmp_path / "exp_prepared.yaml"
+    # The dataset holds the catalog without interpolants, naming the cache relatively
+    _, likelihood = _experiment_load(exp)
+    obs = cast(Nc.DataClusterWLFactor, likelihood.peek_dataset().get_data(0)).peek_obs()
+    assert obs.peek_shape_interp_source() is None
+    ok, name = obs.peek_meta().get_string("shape_interp_cache")
+    assert ok and not Path(name).is_absolute()
+    assert (tmp_path / name).resolve() == caches[0].resolve()
+
+    loaded = LoadExperiment(experiment=exp)
+    data = cast(Nc.DataClusterWLFactor, loaded.likelihood.peek_dataset().get_data(0))
+    assert data.peek_obs().peek_shape_interp_source() is not None
+    gsfs = cast(Nc.GalaxyShapeFactorSpectral, data.props.shape_factor)
+    assert gsfs.get_pop_order() >= 2
+    loaded.mset.prepare_fparam_map()
+    m2lnL = loaded.likelihood.m2lnL_val(loaded.mset)
+
+    exp_int = tmp_path / "exp_int.yaml"
     result = runner.invoke(
         app,
         [
             "generate",
             "cluster-wl-load",
-            exp_prepared.as_posix(),
-            f"--data-file={prepared.as_posix()}",
-        ],
-    )
-    assert result.exit_code == 0, result.output
-
-    exp_original = tmp_path / "exp_original.yaml"
-    result = runner.invoke(
-        app,
-        [
-            "generate",
-            "cluster-wl-load",
-            exp_original.as_posix(),
+            exp_int.as_posix(),
             f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
-            "--shape-factor=spectral use_interp=true ellip_conv=trace ellip_coord=celestial",
-            "--pop-dist=beta alpha=1.8 beta=2.1",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.6 beta=1.7",
         ],
     )
     assert result.exit_code == 0, result.output
+    assert m2lnL == pytest.approx(_experiment_m2lnL(exp_int), rel=0.0, abs=1.0e-3)
 
-    assert _experiment_m2lnL(exp_prepared) == _experiment_m2lnL(exp_original)
+    for path in cache_dir.glob("*"):
+        path.unlink()
+    with pytest.raises(ValueError, match="building is off"):
+        LoadExperiment(experiment=exp, interp_build=False)
+    rebuilt = LoadExperiment(experiment=exp)
+    assert [p.name for p in cache_dir.glob("*.gvar")] == [caches[0].name]
+    rebuilt.mset.prepare_fparam_map()
+    assert rebuilt.likelihood.m2lnL_val(rebuilt.mset) == m2lnL
 
 
-def test_wl_catalog_shape_interp_replaces_record(
+def test_cluster_wl_load_interp_cache_no_build(
     tmp_path: Path, real_wl_obs_file_with_meta
 ):
-    """A prepared catalog prepared again for another population carries the new record."""
-    first = tmp_path / "first.gvar"
-    second = tmp_path / "second.gvar"
-    assert (
-        _shape_interp(
-            first, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
-        ).exit_code
-        == 0
+    """With --no-interp-build generate names the cache without building it, and a cache
+    directory can be given."""
+    exp = tmp_path / "exp.yaml"
+    cache_dir = tmp_path / "caches"
+    result = _cache_experiment(
+        exp,
+        real_wl_obs_file_with_meta,
+        "--pop-coverage=alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+        "--no-interp-build",
+        f"--interp-cache-dir={cache_dir.as_posix()}",
     )
-    result = _shape_interp(second, first, "--pop-dist=gauss sigma=0.2")
     assert result.exit_code == 0, result.output
-
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(second.as_posix()))
-    source = obs.peek_shape_interp_source()
-    assert source is not None
-    assert cast(Nc.GalaxyShapePopGauss, source.peek("shape-pop"))["sigma"] == 0.2
+    assert not list(cache_dir.glob("*.gvar"))
+    LoadExperiment(experiment=exp)
+    assert len(list(cache_dir.glob("*.gvar"))) == 1
 
 
-@pytest.mark.parametrize(
-    "args, message",
-    [
-        (
-            [
-                "--pop-dist=gauss sigma=0.3",
-                "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
-            ],
-            "spectral",
-        ),
-        (
-            [
-                "--pop-dist=gauss sigma=0.3",
-                "--shape-factor=spectral use_interp=false ellip_conv=trace ellip_coord=celestial",
-            ],
-            "spectral",
-        ),
-    ],
-)
-def test_wl_catalog_shape_interp_bad_shape_factor(
-    tmp_path: Path, real_wl_obs_file_with_meta, args, message
+def test_cluster_wl_load_pop_coverage_needs_interp(
+    tmp_path: Path, real_wl_obs_file_with_meta
 ):
-    """Only the spectral shape factor with use_interp=true is accepted."""
-    result = _shape_interp(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
-    assert result.exit_code != 0
-    assert message in str(result.exception) or message in result.output
-
-
-@pytest.mark.parametrize(
-    "args", [["--pop-dist="], ["--pop-dist=gauss sigma=0.3", "--shape-factor="]]
-)
-def test_wl_catalog_shape_interp_empty_option(
-    tmp_path: Path, real_wl_obs_file_with_meta, args
-):
-    """An empty --pop-dist or --shape-factor is a usage error."""
-    result = _shape_interp(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
-    assert result.exit_code != 0
-    assert not isinstance(result.exception, IndexError)
-
-
-def test_wl_catalog_shape_interp_bad_suffix(tmp_path: Path, real_wl_obs_file_with_meta):
-    """The output must be a .gvar file."""
-    result = _shape_interp(
-        tmp_path / "out.yaml", real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
-    )
-    assert result.exit_code != 0
-
-
-@pytest.mark.parametrize(
-    "args",
-    [
-        ["--pop-dist=gauss sigma=0.3"],
-        [
-            "--shape-factor=spectral use_interp=true ellip_conv=trace ellip_coord=celestial"
-        ],
-        ["--parameter-list=NcGalaxyShapePop:sigma"],
-    ],
-)
-def test_cluster_wl_load_app_prepared_catalog_rejects(
-    tmp_path: Path, real_wl_obs_file_with_meta, args
-):
-    """With a prepared catalog the shape factor and the population come from its
-    record: giving them, or fitting a population parameter, is an error."""
-    prepared = tmp_path / "prepared.gvar"
-    assert (
-        _shape_interp(
-            prepared, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
-        ).exit_code
-        == 0
-    )
-
+    """--pop-coverage without interpolants is an error."""
     result = runner.invoke(
         app,
         [
             "generate",
             "cluster-wl-load",
             (tmp_path / "exp.yaml").as_posix(),
-            f"--data-file={prepared.as_posix()}",
-            *args,
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-coverage=alpha=1.5:1.7",
         ],
     )
     assert result.exit_code != 0
 
 
-def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
-    """A catalog whose record holds a spectral shape factor and pop."""
-    obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET,
-        Nc.WLEllipticityFrame.CELESTIAL,
-        1,
-        ["ra", "dec"],
+def test_wl_catalog_info(tmp_path: Path, real_wl_obs_file_with_meta):
+    """info describes a catalog naming no cache, the cache and the dataset naming it."""
+    exp = tmp_path / "exp.yaml"
+    result = _cache_experiment(
+        exp,
+        real_wl_obs_file_with_meta,
+        "--pop-coverage=alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
     )
-    gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
-    gsfs.set_use_interp(True)
-    gsfs.set_interp_abstol(2.0e-5)
-    source = Ncm.ObjDictStr.new()
-    source.add("shape-factor", gsfs)
-    source.add("shape-pop", pop)
-    obs.set_shape_interp_source(source)
-    return obs
+    assert result.exit_code == 0, result.output
+    caches = list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.gvar"))
+    assert len(caches) == 1
+
+    plain = {}
+    for name, path in (
+        ("catalog", real_wl_obs_file_with_meta),
+        ("cache", caches[0]),
+        ("dataset", exp.with_suffix(".dataset.gvar")),
+    ):
+        result = runner.invoke(app, ["wl-catalog", "info", path.as_posix()])
+        assert result.exit_code == 0, result.output
+        plain[name] = " ".join(re.sub(r"\x1b\[[0-9;]*m", "", result.output).split())
+    assert "names no cache of interpolants" in plain["catalog"]
+    assert '"rows_with_interpolants"' in plain["cache"]
+    assert "names the cache" in plain["dataset"]
+    assert "matches the rows" in plain["dataset"]
 
 
-def test_shape_interp_gens():
-    """The generators reproduce the record's shape factor and population."""
-    beta = Nc.GalaxyShapePopBeta.new()
-    beta["alpha"] = 1.6
-    beta["beta"] = 2.4
-    gens = shape_interp_gens(_obs_with_source(beta))
-    assert gens is not None
-    shape_gen, pop_gen = gens
-    assert isinstance(shape_gen, GalaxyShapeFactorGenSpectral)
-    assert shape_gen.use_interp
-    assert shape_gen.ellip_conv.genum == Nc.GalaxyWLObsEllipConv.TRACE_DET
-    assert shape_gen.interp_abstol == 2.0e-5
-    assert isinstance(pop_gen, GalaxyPopGenBeta)
-    assert (pop_gen.alpha, pop_gen.beta) == (1.6, 2.4)
-
-    gens = shape_interp_gens(_obs_with_source(Nc.GalaxyShapePopGaussLocal.new()))
-    assert gens is not None
-    assert isinstance(gens[1], GalaxyPopGenGaussLocal)
-
-    obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, ["ra"]
+def test_cluster_wl_load_pop_coverage_unconverged(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A coverage over which no candidate order converges is an error, not a build whose
+    galaxies are integrated at every step."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            (tmp_path / "exp.yaml").as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            (
+                "--shape-factor=spectral use_interp=true restrict_range=true "
+                "ellip_conv=trace ellip_coord=celestial"
+            ),
+            "--pop-dist=gauss sigma=0.3",
+            "--parameter-list=NcGalaxyShapePop:sigma",
+            "--pop-coverage=sigma=0.1:1.0",
+            "--centre-box-deg=0.01",
+        ],
     )
-    assert shape_interp_gens(obs) is None
+    assert result.exit_code != 0
+    # On GitHub Actions typer forces a colored panel: compare the plain words
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", plain).split())
+    assert "does not converge" in plain
+    assert not (tmp_path / "exp.yaml").exists()
 
 
-def test_shape_interp_gens_unknown_population():
-    """A record whose population has no generator is an error."""
-    with pytest.raises(ValueError, match="has no generator"):
-        shape_interp_gens(_obs_with_source(Ncm.Vector.new(2)))
+def test_cluster_wl_load_default_pop_coverage(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """With alpha and beta free over their default prior [1, 4] and no --pop-coverage,
+    the interpolants cover [1.25, 2.75]^2, and generate says the prior is wider."""
+    exp = tmp_path / "exp.yaml"
+    result = _cache_experiment(exp, real_wl_obs_file_with_meta)
+    assert result.exit_code == 0, result.output
+    plain = " ".join(result.output.split())
+    assert "cover alpha in [1.25, 2.75], its prior is [1.0, 4.0]" in plain
+    caches = list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.gvar"))
+    assert len(caches) == 1
+    cache = read_shape_interp_cache(caches[0])
+    info = shape_interp_cache_info(cache.holder, cache.fingerprint)
+    assert info["population"]["coverage"] == {
+        "alpha": [1.25, 2.75],
+        "beta": [1.25, 2.75],
+    }
+
+
+def _masked_and_subset_m2lnL(experiment: Path) -> tuple[float, float]:
+    """-2lnL of a masked experiment, and of the same likelihood on the catalog of the rows
+    of its mask alone (unmasked), their interpolants included.
+
+    The rest of the experiment, the sky footprint of the position factor among it, is
+    that of the whole catalog, as a mask keeps it.
+    """
+    loaded = LoadExperiment(experiment=experiment)
+    loaded.mset.prepare_fparam_map()
+    data = cast(Nc.DataClusterWLFactor, loaded.likelihood.peek_dataset().get_data(0))
+    masked = loaded.likelihood.m2lnL_val(loaded.mset)
+
+    obs = data.peek_obs()
+    rows = [int(i) for i in np.flatnonzero(data.get_mask())]
+    sub = _sub_catalog(obs, rows)
+    for k, i in enumerate(rows):
+        modes = obs.peek_shape_interp(i)
+        if modes is not None:
+            sub.set_shape_interp(k, modes)
+    if obs.peek_shape_interp_source() is not None:
+        sub.props.shape_interp_source = obs.peek_shape_interp_source()
+    data.set_mask(None)
+    data.set_obs(sub)
+    return masked, loaded.likelihood.m2lnL_val(loaded.mset)
+
+
+def test_cluster_wl_load_mask_file(tmp_path: Path, real_wl_obs_file_with_meta):
+    """--mask-file restricts the likelihood to some rows of the catalog: the likelihood
+    is that of the catalog of those rows, bit for bit, in both formats."""
+    rows = [0, 3, 4, 7, 11, 12, 18]
+    keep = np.zeros(20, dtype=bool)
+    keep[rows] = True
+    np.save(tmp_path / "keep.npy", keep)
+    (tmp_path / "keep.txt").write_text("\n".join(str(int(k)) for k in keep) + "\n")
+    base = [
+        f"--data-file={real_wl_obs_file_with_meta}",
+        "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        "--integ-method=fixed-nodes",
+    ]
+    values = set()
+    for name in ("keep.npy", "keep.txt"):
+        exp = tmp_path / f"exp_{name.replace('.', '_')}.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp.as_posix(),
+                *base,
+                f"--mask-file={tmp_path / name}",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        masked, subset = _masked_and_subset_m2lnL(exp)
+        assert masked == subset
+        values.add(masked)
+    assert len(values) == 1
+
+    result = runner.invoke(
+        app,
+        ["wl-catalog", "info", (tmp_path / "exp_keep_npy.dataset.gvar").as_posix()],
+    )
+    assert result.exit_code == 0, result.output
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    assert "uses 7 of the rows" in " ".join(plain.split())
+
+
+@pytest.mark.parametrize(
+    "content, name",
+    [
+        ("1\n0\n", "short.txt"),
+        ("1 2 x\n", "words.txt"),
+        ("0\n" * 20, "none.txt"),
+        (np.array([0, 3, 4]), "rows.npy"),
+        (np.ones(21, dtype=bool), "long.npy"),
+    ],
+)
+def test_cluster_wl_load_mask_file_bad(
+    tmp_path: Path, real_wl_obs_file_with_meta, content, name
+):
+    """A mask that is not one boolean per row of the catalog, or keeps no row, is an
+    error, and nothing is written."""
+    if isinstance(content, str):
+        (tmp_path / name).write_text(content)
+    else:
+        np.save(tmp_path / name, content)
+    exp = tmp_path / "exp.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--mask-file={tmp_path / name}",
+        ],
+    )
+    assert result.exit_code != 0
+    assert not exp.exists()
+
+
+def test_cluster_wl_load_mask_one_cache(tmp_path: Path, real_wl_obs_file_with_meta):
+    """Experiments with two masks share one cache of interpolants: the second builds only
+    the rows the first did not, and its likelihood is that of its rows alone."""
+    for name, rows in (("first", [1, 2, 5, 8, 9]), ("second", [2, 5, 6, 13, 19])):
+        keep = np.zeros(20, dtype=bool)
+        keep[rows] = True
+        np.save(tmp_path / f"{name}.npy", keep)
+    cov = [
+        "--pop-coverage=alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+    ]
+    result = _cache_experiment(
+        tmp_path / "first.yaml",
+        real_wl_obs_file_with_meta,
+        *cov,
+        f"--mask-file={tmp_path / 'first.npy'}",
+    )
+    assert result.exit_code == 0, result.output
+    assert "5 built, 0 reused" in result.output
+    result = _cache_experiment(
+        tmp_path / "second.yaml",
+        real_wl_obs_file_with_meta,
+        *cov,
+        f"--mask-file={tmp_path / 'second.npy'}",
+    )
+    assert result.exit_code == 0, result.output
+    assert "3 built, 2 reused" in result.output
+    assert (
+        len(list(real_wl_obs_file_with_meta.with_suffix(".interp").glob("*.gvar"))) == 1
+    )
+
+    masked, subset = _masked_and_subset_m2lnL(tmp_path / "second.yaml")
+    values = [masked, subset]
+    assert values[0] == values[1]

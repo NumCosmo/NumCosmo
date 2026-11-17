@@ -725,6 +725,9 @@ data_tests = [
     {
         'name': 'nc_data_cluster_wl_factor_shape_interp',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_shape_interp.c'],
+        # 105-111 s in the coverage build of CI with six subtests, close to the
+        # default 180 s; record_cache adds a seventh
+        'timeout': 360,
     },
 ]
 

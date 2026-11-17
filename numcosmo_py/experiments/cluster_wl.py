@@ -42,6 +42,7 @@ This module builds ``NcDataClusterWLFactor`` experiments, on the
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum, auto
+from pathlib import Path
 from typing import Annotated, Any, Self
 
 import numpy as np
@@ -418,7 +419,7 @@ DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
 # Negative: reltol / 10 (NcGalaxyShapeFactorSpectral:line-abstol)
 DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = -1.0
-DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE = False
+DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE = True
 DEFAULT_SHAPE_SPECTRAL_POP_ORDER = 0
 
 
@@ -833,63 +834,6 @@ def check_shape_pop_compat(
         )
 
 
-def shape_interp_gens(
-    obs: Nc.GalaxyWLObs,
-) -> tuple[GalaxyShapeFactorGenSpectral, GalaxyPopGenTypes] | None:
-    """Return the generators of the shape factor and population that prepared obs.
-
-    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
-    interpolants of its galaxies and the record of what built them
-    (``NcGalaxyWLObs:shape-interp-source``): a copy of the
-    ``NcGalaxyShapeFactorSpectral`` and of the population. The generators
-    returned here build the same objects, with ``use_interp`` set and the
-    ellipticity frame of obs, so an experiment built from them loads the
-    interpolants instead of building them.
-
-    Returns:
-        The shape-factor and population generators, or None when obs
-        carries no current record.
-
-    Raises:
-        ValueError: The record holds a population with no generator.
-    """
-    source = obs.peek_shape_interp_source()
-    if source is None:
-        return None
-
-    gsfs = source.peek("shape-factor")
-    pop = source.peek("shape-pop")
-    assert isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
-
-    shape_gen = GalaxyShapeFactorGenSpectral(
-        ellip_conv=EllipConv(gsfs.get_ellip_conv().value_nick),
-        ellip_coord=EllipCoord(obs.get_coord().value_nick),
-        reltol=gsfs.get_reltol(),
-        use_interp=True,
-        interp_g_max=gsfs.get_interp_g_max(),
-        interp_abstol=gsfs.get_interp_abstol(),
-        interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),
-        restrict_range=gsfs.get_restrict_range(),
-        pop_order=gsfs.get_pop_order(),
-    )
-
-    pop_gen: GalaxyPopGenTypes
-    if isinstance(pop, Nc.GalaxyShapePopGauss):
-        pop_gen = GalaxyPopGenGauss(sigma=pop["sigma"])
-    elif isinstance(pop, Nc.GalaxyShapePopBeta):
-        pop_gen = GalaxyPopGenBeta(alpha=pop["alpha"], beta=pop["beta"])
-    elif isinstance(pop, Nc.GalaxyShapePopGaussLocal):
-        pop_gen = GalaxyPopGenGaussLocal()
-    else:
-        # A wrong object in the record is a data error, not a TypeError.
-        raise ValueError(  # noqa: TRY004
-            f"The catalog was prepared with the population {type(pop).__name__}, "
-            "which has no generator."
-        )
-
-    return shape_gen, pop_gen
-
-
 class GalaxyPopGen(StrEnum):
     """Galaxy intrinsic-ellipticity population distribution types."""
 
@@ -1199,8 +1143,30 @@ class GalaxyDistributionModel:
         return cluster_data, mset
 
 
-def create_cosmo() -> Nc.HICosmo:
-    """Create a cosmology for the cluster model."""
+@dataclass(frozen=True, kw_only=True)
+class CosmologyOptions:
+    """Background cosmology of the cluster weak-lensing experiments.
+
+    A flat XCDM cosmology: the Hubble constant H0 (km/s/Mpc), the baryon and cold
+    dark matter densities Omegab and Omegac, and the equation of state w of the
+    dark energy. All are fixed in the experiment.
+    """
+
+    H0: float = 67.81
+    Omegab: float = 0.0486
+    Omegac: float = 0.2612
+    w: float = -1.0
+
+
+DEFAULT_COSMOLOGY = CosmologyOptions()
+
+# Default half-width in h^-1 Mpc of the prior of the halo centre (centre_box_bounds()):
+# the centre box of the Subaru HSC cluster fits, about 0.09 deg at z = 0.23.
+DEFAULT_CENTRE_BOX_MPC = 0.8
+
+
+def create_cosmo(cosmology: CosmologyOptions = DEFAULT_COSMOLOGY) -> Nc.HICosmo:
+    """Create the cosmology of the cluster model from cosmology."""
     prim = Nc.HIPrimPowerLaw.new()
     prim["ln10e10ASA"] = 3.02745
     prim["n_SA"] = 0.9660
@@ -1211,10 +1177,10 @@ def create_cosmo() -> Nc.HICosmo:
 
     cosmo.params_set_default_ftype()
     cosmo.omega_x2omega_k()
-    cosmo["H0"] = 67.81
-    cosmo["Omegab"] = 0.0486
-    cosmo["Omegac"] = 0.2612
-    cosmo["w"] = -1.0
+    cosmo["H0"] = cosmology.H0
+    cosmo["Omegab"] = cosmology.Omegab
+    cosmo["Omegac"] = cosmology.Omegac
+    cosmo["w"] = cosmology.w
     cosmo["Omegak"] = 0.00
 
     cosmo.param_set_desc("H0", {"fit": False})
@@ -1252,6 +1218,7 @@ def generate_lsst_cluster_wl(
     seed: None | int,
     integ_options: IntegMethodOptions,
     summary: bool,
+    cosmology: CosmologyOptions = DEFAULT_COSMOLOGY,
 ) -> Ncm.ObjDictStr:
     """Generate a cluster weak lensing experiment.
 
@@ -1309,7 +1276,7 @@ def generate_lsst_cluster_wl(
     )
 
     cluster_data, mset = galaxy_model.generate_data(
-        create_cosmo(), cluster, rng, integ_options=integ_options
+        create_cosmo(cosmology), cluster, rng, integ_options=integ_options
     )
 
     dset = Ncm.Dataset.new_array([cluster_data])
@@ -1444,6 +1411,7 @@ def load_cluster_wl(
     integ_options: IntegMethodOptions,
     summary: bool,
     resample_flag: Nc.DataClusterWLResampleFlag = Nc.DataClusterWLResampleFlag.ALL,
+    cosmology: CosmologyOptions = DEFAULT_COSMOLOGY,
 ) -> Ncm.ObjDictStr:
     """Build a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.
 
@@ -1538,7 +1506,7 @@ def load_cluster_wl(
         r_max=r_max,
         profile_type=profile_type,
     )
-    cosmo = create_cosmo()
+    cosmo = create_cosmo(cosmology)
     cluster.prepare(cosmo)
 
     cluster.halo_position.param_set_desc(
@@ -1624,3 +1592,165 @@ def load_cluster_wl(
         console.print(table)
 
     return experiment
+
+
+def load_mask(path: Path, n_rows: int) -> list[bool]:
+    """Read the mask of a catalog of n_rows rows: whether a likelihood uses each row.
+
+    The file is a NumPy .npy boolean array, or a text file of 1/0 (true/false), with one
+    entry per row of the catalog.
+
+    Raises:
+        ValueError: The file does not hold one boolean per row, or keeps no row.
+    """
+    path = Path(path)
+    if path.suffix == ".npy":
+        arr = np.asarray(np.load(path, allow_pickle=False))
+        if arr.dtype != bool:
+            raise ValueError(
+                f"the mask {path} must be a boolean array with one entry per row, "
+                f"not {arr.dtype}"
+            )
+    else:
+        words = path.read_text().split()
+        table = {"1": True, "0": False, "true": True, "false": False}
+        try:
+            arr = np.array([table[w.lower()] for w in words], dtype=bool)
+        except KeyError as e:
+            raise ValueError(
+                f"the mask {path} must hold one 1/0 or true/false per row: {e}"
+            ) from e
+    if arr.ndim != 1 or arr.size != n_rows:
+        raise ValueError(
+            f"the mask {path} has {arr.size} entries, the catalog {n_rows} rows"
+        )
+    if not arr.any():
+        raise ValueError(f"the mask {path} keeps no row")
+    return [bool(k) for k in arr]
+
+
+def parse_prior(spec: str) -> tuple[str, float, float]:
+    """Parse a prior NAME=LO:HI into the full parameter name and its bounds.
+
+    NAME is a full parameter name, as in --parameter-list (e.g.
+    ``NcGalaxyShapePop:alpha``), and LO < HI are finite.
+
+    Raises:
+        ValueError: The prior is not of the form NAME=LO:HI with LO < HI.
+    """
+    name, sep, bounds = spec.rpartition("=")
+    lo_str, sep2, hi_str = bounds.partition(":")
+    if not (sep and sep2 and name):
+        raise ValueError(f"the prior {spec!r} is not of the form NAME=LO:HI")
+    try:
+        lo, hi = float(lo_str), float(hi_str)
+    except ValueError as e:
+        raise ValueError(f"the bounds of the prior {spec!r} are not numbers") from e
+    if not (np.isfinite(lo) and np.isfinite(hi) and lo < hi):
+        raise ValueError(f"the prior {spec!r} needs finite bounds with LO < HI")
+    return name, lo, hi
+
+
+def apply_prior(mset: Ncm.MSet, name: str, lo: float, hi: float) -> None:
+    """Set the bounds of the parameter name of mset to [lo, hi], its prior.
+
+    Raises:
+        ValueError: mset has no parameter name, or its value is outside [lo, hi].
+    """
+    pindex = mset.param_get_by_full_name(name)
+    if pindex is None:
+        raise ValueError(f"the prior names an unknown parameter: {name}")
+    model = mset.peek(pindex.mid)
+    assert model is not None
+    pid = pindex.pid
+    value = model.param_get(pid)
+    if not lo <= value <= hi:
+        raise ValueError(
+            f"the value of {name}, {value}, is outside its prior [{lo}, {hi}]"
+        )
+    # Each step keeps lower < upper
+    if lo >= model.param_get_upper_bound(pid):
+        model.param_set_upper_bound(pid, hi)
+        model.param_set_lower_bound(pid, lo)
+    else:
+        model.param_set_lower_bound(pid, lo)
+        model.param_set_upper_bound(pid, hi)
+
+
+def centre_box_bounds(
+    mset: Ncm.MSet,
+    *,
+    half_deg: float | None = None,
+    half_mpc_h: float | None = None,
+) -> tuple[float, float, float, float]:
+    """Return the bounds (ra_lo, ra_hi, dec_lo, dec_hi) of a box around the halo centre.
+
+    The box is centred on the current ra and dec of the NcHaloPosition of mset.
+    With half_deg its half-width is half_deg degrees in ra and in dec. With
+    half_mpc_h it is the angle whose projected length at the cluster redshift is
+    half_mpc_h h^-1 Mpc, along ra and along dec separately, so that the box is
+    square on the sky (its ra half-width is larger by about 1 / cos(dec)).
+
+    Raises:
+        ValueError: Neither or both half widths, or one not positive.
+    """
+    if (half_deg is None) == (half_mpc_h is None):
+        raise ValueError("give exactly one of the half widths in degrees or h^-1 Mpc")
+    hp = mset.peek_by_name("NcHaloPosition")
+    cosmo = mset.peek_by_name("NcHICosmo")
+    assert isinstance(hp, Nc.HaloPosition)
+    assert isinstance(cosmo, Nc.HICosmo)
+    ra, dec = hp["ra"], hp["dec"]
+
+    if half_deg is not None:
+        if not half_deg > 0.0:
+            raise ValueError(
+                f"the half width of the centre box must be positive: {half_deg}"
+            )
+        return ra - half_deg, ra + half_deg, dec - half_deg, dec + half_deg
+
+    assert half_mpc_h is not None
+    if not half_mpc_h > 0.0:
+        raise ValueError(
+            f"the half width of the centre box must be positive: {half_mpc_h}"
+        )
+    hp.prepare(cosmo)
+    radius = half_mpc_h / cosmo.h()
+
+    def _half(offset) -> float:
+        """Return the angle t > 0 at which the projected radius at offset(t) is radius."""
+        lo, hi = 0.0, 1.0
+        while hp.projected_radius_from_ra_dec(cosmo, *offset(hi)) < radius:
+            hi *= 2.0
+            if hi > 90.0:
+                raise ValueError("the centre box is wider than the sky")
+        for _ in range(200):
+            mid = 0.5 * (lo + hi)
+            if hp.projected_radius_from_ra_dec(cosmo, *offset(mid)) < radius:
+                lo = mid
+            else:
+                hi = mid
+            if hi - lo <= 1.0e-12 * hi:
+                break
+        return 0.5 * (lo + hi)
+
+    half_ra = _half(lambda t: (ra + t, dec))
+    half_dec = _half(lambda t: (ra, dec + t))
+    return ra - half_ra, ra + half_ra, dec - half_dec, dec + half_dec
+
+
+def print_free_parameters(mset: Ncm.MSet, console: Console | None = None) -> None:
+    """Print the free parameters of mset with their values and priors (bounds)."""
+    table = Table(title="Free parameters and their priors")
+    table.add_column("Parameter")
+    table.add_column("Value", justify="right")
+    table.add_column("Lower bound", justify="right")
+    table.add_column("Upper bound", justify="right")
+    for i in range(mset.fparams_len()):
+        table.add_row(
+            mset.fparam_full_name(i),
+            f"{mset.fparam_get(i):.6g}",
+            f"{mset.fparam_get_lower_bound(i):.6g}",
+            f"{mset.fparam_get_upper_bound(i):.6g}",
+        )
+    (console or Console()).print(table)

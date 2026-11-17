@@ -233,6 +233,14 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gint n_short;
 
   /*
+   * rebuild_short: a loaded interpolant short of the reach of the fit is built again
+   * instead of kept (nc_galaxy_shape_factor_spectral_set_rebuild_short()). n_built counts the
+   * interpolants built, loaded ones not included.
+   */
+  gboolean rebuild_short;
+  gint n_built;
+
+  /*
    * pop-order: the galaxies built by this object expand ln P over the box of the free
    * parameters of the population, pop_box (pop_order^n_free nodes, pop_nodes, made by
    * prepare() when the box changes, pop_box_key). pop_fit_key is the key of the free
@@ -686,9 +694,11 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
 
   self->interp_min_radial_panels = 0;
 
-  self->restrict_range = FALSE;
+  self->restrict_range = TRUE;
   self->range_on       = FALSE;
   self->n_short        = 0;
+  self->rebuild_short  = FALSE;
+  self->n_built        = 0;
   _nc_galaxy_shape_factor_reach_init (&self->reach, TRUE);
 
   self->pop_order         = 0;
@@ -1003,14 +1013,16 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * (nc_galaxy_shape_factor_spectral_get_n_loaded_short()).
    *
    * #NcGalaxyShapeFactorMomentsTilt:restrict-range takes the same bound
-   * at a fixed concentration only, since its tables have no integral to fall back on.
+   * at a fixed concentration only, since its tables have no integral to fall back on. Both
+   * are on by default: the integrals beyond the bound keep the values right, so turning it
+   * off only matters to compare with the whole disk.
    */
   g_object_class_install_property (object_class,
                                    PROP_RESTRICT_RANGE,
                                    g_param_spec_boolean ("restrict-range",
                                                          NULL,
                                                          "Whether to build each interpolant only over the reachable shears",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -2185,6 +2197,8 @@ _nc_galaxy_shape_factor_spectral_interp_region (NcGalaxyShapeFactorSpectralPriva
   const gdouble psi_max = M_PI;
   guint i;
 
+  g_atomic_int_inc (&self->n_built);
+
   ncm_spectral_polar_peak_edges (self->polar_interp, rho_max, 0.0, 0.5 * M_PI, L, M_PI, work->r_edges_all, work->theta_edges_all);
 
   g_array_set_size (work->r_edges, 0);
@@ -2510,7 +2524,7 @@ _nc_galaxy_shape_factor_spectral_box_intern (NcGalaxyShapeFactorSpectralPrivate 
  */
 static NcGalaxyShapeFactorSpectralBox *
 _nc_galaxy_shape_factor_spectral_check_loaded_box (NcGalaxyShapePop *pop, NcGalaxyShapePop *src_pop, const guint src_K,
-                                                   NcmSpectralPolarPanelsArray *modes, GString *diff, gboolean *outside)
+                                                   const guint n_modes, GString *diff, gboolean *outside)
 {
   const gdouble tol = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SOURCE_RELTOL;
   NcmModel *fit     = NCM_MODEL (pop);
@@ -2528,10 +2542,10 @@ _nc_galaxy_shape_factor_spectral_check_loaded_box (NcGalaxyShapePop *pop, NcGala
 
   box = (src_K >= 2) ? _nc_galaxy_shape_factor_spectral_box_new (src_pop, src_K) : NULL;
 
-  if ((box == NULL) || (box->n_nodes != ncm_spectral_polar_panels_array_len (modes)))
+  if ((box == NULL) || (box->n_nodes != n_modes))
   {
     g_string_append_printf (diff, " the record of the expansion over the population parameters (pop-order %u, %u modes);",
-                            src_K, ncm_spectral_polar_panels_array_len (modes));
+                            src_K, n_modes);
     g_clear_pointer (&box, _nc_galaxy_shape_factor_spectral_box_unref);
 
     return NULL;
@@ -2572,27 +2586,24 @@ _nc_galaxy_shape_factor_spectral_check_loaded_box (NcGalaxyShapePop *pop, NcGala
 }
 
 /*
- * Compares the record of the loaded interpolant of the galaxy of data with the fit: the
- * convention, reltol and the three interp-* settings of the class, and the population: for
- * the interpolant of one population its parameters (ncm_model_params_equal()), none of them
- * free; for an expansion over the population parameters, see
- * _nc_galaxy_shape_factor_spectral_check_loaded_box(). When all agree the interpolant is
- * recorded as valid for the current state of pop; otherwise the call aborts with every
- * difference in the message.
+ * The differences between a record (src_gsfs, src_pop) and the fit (gsfs, pop), appended to
+ * diff, as _nc_galaxy_shape_factor_spectral_check_loaded() compares them: n_modes is the
+ * number of modes of each galaxy, 1 (or 0 when unknown) for a fixed population. *box is the
+ * box of the expansion when it agrees (box may be NULL), and *outside whether the population
+ * of the fit reaches outside it.
  */
 static void
-_nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data)
+_nc_galaxy_shape_factor_spectral_record_diff (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorSpectral *src_gsfs,
+                                              NcGalaxyShapePop *src_pop, const guint n_modes, GString *diff,
+                                              NcGalaxyShapeFactorSpectralBox **box, gboolean *outside)
 {
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
-  NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
-  NcGalaxyShapeFactorSpectralPrivate * const src  = nc_galaxy_shape_factor_spectral_get_instance_private (ldata->src_gsfs);
+  NcGalaxyShapeFactorSpectralPrivate * const src  = nc_galaxy_shape_factor_spectral_get_instance_private (src_gsfs);
   const gdouble tol                               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SOURCE_RELTOL;
-  GString *diff                                   = g_string_new (NULL);
-  NcGalaxyShapeFactorSpectralBox *box             = NULL;
-  gboolean outside                                = FALSE;
+  NcGalaxyShapeFactorSpectralBox *b               = NULL;
   guint k;
 
-  if (nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (gsfs)) != nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (ldata->src_gsfs)))
+  if (nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (gsfs)) != nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (src_gsfs)))
     g_string_append (diff, " the ellipticity convention;");
 
   if (ncm_cmp (self->reltol, src->reltol, tol, 0.0) != 0)
@@ -2608,18 +2619,18 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
     g_string_append_printf (diff, " interp-min-radial-panels (%u, built with %u);", self->interp_min_radial_panels, src->interp_min_radial_panels);
 
   /* An expansion when the record expands over free population parameters, otherwise the one mode of a fixed population */
-  if ((src->pop_order >= 2) && _nc_galaxy_shape_factor_spectral_pop_has_free (ldata->src_pop))
+  if ((src->pop_order >= 2) && _nc_galaxy_shape_factor_spectral_pop_has_free (src_pop))
   {
-    box = _nc_galaxy_shape_factor_spectral_check_loaded_box (pop, ldata->src_pop, src->pop_order, ldata->mode_spp, diff, &outside);
+    b = _nc_galaxy_shape_factor_spectral_check_loaded_box (pop, src_pop, src->pop_order, n_modes, diff, outside);
   }
   else
   {
-    if (ncm_spectral_polar_panels_array_len (ldata->mode_spp) != 1)
-      g_string_append_printf (diff, " the interpolant of a fixed population has %u modes;", ncm_spectral_polar_panels_array_len (ldata->mode_spp));
+    if (n_modes > 1)
+      g_string_append_printf (diff, " the interpolant of a fixed population has %u modes;", n_modes);
 
-    if (!ncm_model_params_equal (NCM_MODEL (pop), NCM_MODEL (ldata->src_pop), tol, 0.0))
+    if (!ncm_model_params_equal (NCM_MODEL (pop), NCM_MODEL (src_pop), tol, 0.0))
       g_string_append_printf (diff, " the population (%s, built with %s or other parameter values);",
-                              G_OBJECT_TYPE_NAME (pop), G_OBJECT_TYPE_NAME (ldata->src_pop));
+                              G_OBJECT_TYPE_NAME (pop), G_OBJECT_TYPE_NAME (src_pop));
 
     for (k = 0; k < ncm_model_len (NCM_MODEL (pop)); k++)
     {
@@ -2627,6 +2638,46 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
         g_string_append_printf (diff, " the population parameter %s is free;", ncm_model_param_name (NCM_MODEL (pop), k));
     }
   }
+
+  if (box != NULL)
+    *box = b;
+  else
+    g_clear_pointer (&b, _nc_galaxy_shape_factor_spectral_box_unref);
+}
+
+/* Forgets the loaded interpolant of ldata, so that it is built */
+static void
+_nc_galaxy_shape_factor_spectral_ldata_unload (NcGalaxyShapeFactorSpectralData *ldata)
+{
+  ldata->loaded     = FALSE;
+  ldata->valid      = FALSE;
+  ldata->box_is_fit = FALSE;
+  g_clear_object (&ldata->src_gsfs);
+  g_clear_pointer (&ldata->src_pop, nc_galaxy_shape_pop_free);
+}
+
+/*
+ * Compares the record of the loaded interpolant of the galaxy of data with the fit: the
+ * convention, reltol and the three interp-* settings of the class, and the population: for
+ * the interpolant of one population its parameters (ncm_model_params_equal()), none of them
+ * free; for an expansion over the population parameters, see
+ * _nc_galaxy_shape_factor_spectral_check_loaded_box(). When all agree the interpolant is
+ * recorded as valid for the current state of pop; otherwise the call aborts with every
+ * difference in the message.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+  NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
+  NcGalaxyShapeFactorSpectralPrivate * const src  = nc_galaxy_shape_factor_spectral_get_instance_private (ldata->src_gsfs);
+  GString *diff                                   = g_string_new (NULL);
+  NcGalaxyShapeFactorSpectralBox *box             = NULL;
+  gboolean outside                                = FALSE;
+
+  _nc_galaxy_shape_factor_spectral_record_diff (gsfs, pop, ldata->src_gsfs, ldata->src_pop,
+                                                (ldata->mode_spp != NULL) ? ncm_spectral_polar_panels_array_len (ldata->mode_spp) : 0,
+                                                diff, &box, &outside);
 
   if (diff->len > 0)
     g_error ("nc_galaxy_shape_factor_spectral: the interpolants of the catalog were built for other settings:%s "
@@ -2641,7 +2692,8 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
     g_warning ("nc_galaxy_shape_factor_spectral: the population of this fit reaches outside the box of the expansion of the "
                "catalog (its free parameters over their bounds, or a fixed value outside it); there the galaxies are "
                "computed without the expansion (from a table along their line of shears where possible, otherwise by the "
-               "integrals), at a higher cost. Prepare the catalog over a box that covers the fit.");
+               "integrals), at a higher cost. Build the interpolants over a population coverage that covers the "
+               "fit (numcosmo generate cluster-wl-load --pop-coverage, which defaults to the priors).");
 
   if (box != NULL)
   {
@@ -2663,6 +2715,16 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
       4.0 * GSL_DBL_EPSILON * (ldata->g_c + _nc_galaxy_shape_factor_spectral_target (self, ldata)))
   {
     g_atomic_int_inc (&self->n_short);
+
+    /* Or built again for the box of the fit */
+    if (self->rebuild_short)
+    {
+      _nc_galaxy_shape_factor_spectral_ldata_unload (ldata);
+      _nc_galaxy_shape_factor_spectral_ldata_set_modes (ldata, NULL, NULL);
+      _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, data->epsilon_obs_1, data->epsilon_obs_2);
+
+      return;
+    }
 
     if (_nc_galaxy_shape_factor_spectral_warn_once (ldata->src_gsfs, NC_GALAXY_SHAPE_FACTOR_SPECTRAL_WARNED_SHORT))
       g_warning ("nc_galaxy_shape_factor_spectral: the interpolants of the catalog do not cover the shears some galaxies "
@@ -3787,6 +3849,99 @@ nc_galaxy_shape_factor_spectral_get_n_loaded_short (NcGalaxyShapeFactorSpectral 
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   return (guint) g_atomic_int_get (&self->n_short);
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_set_rebuild_short:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ * @rebuild_short: whether to build short interpolants again
+ *
+ * Sets whether an interpolant loaded from a catalog that does not cover the shears its galaxy
+ * reaches in the box of the fit (see nc_galaxy_shape_factor_spectral_get_n_loaded_short()) is
+ * built again for that box when the galaxy is prepared, instead of kept with its shears beyond
+ * it computed without the interpolant. It is still counted as short. Used to bring a catalog
+ * of interpolants up to date for a fit; the default is FALSE. This is a setting of the object,
+ * not a property: it is not serialized.
+ */
+void
+nc_galaxy_shape_factor_spectral_set_rebuild_short (NcGalaxyShapeFactorSpectral *gsfs, const gboolean rebuild_short)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  self->rebuild_short = rebuild_short;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_get_rebuild_short:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ *
+ * Returns: whether short loaded interpolants are built again (nc_galaxy_shape_factor_spectral_set_rebuild_short()).
+ */
+gboolean
+nc_galaxy_shape_factor_spectral_get_rebuild_short (NcGalaxyShapeFactorSpectral *gsfs)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  return self->rebuild_short;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_get_n_built:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ *
+ * The number of interpolants @gsfs has built, for one population or expanded over the
+ * population parameters, since it was created; interpolants loaded from a catalog are not
+ * counted, and one built again (nc_galaxy_shape_factor_spectral_set_rebuild_short()) is.
+ *
+ * Returns: the number of interpolants built.
+ */
+guint
+nc_galaxy_shape_factor_spectral_get_n_built (NcGalaxyShapeFactorSpectral *gsfs)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  return (guint) g_atomic_int_get (&self->n_built);
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_check_record:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ * @pop: the #NcGalaxyShapePop of the fit
+ * @source: the record of a catalog of interpolants (#NcGalaxyWLObs:shape-interp-source)
+ * @n_modes: the number of modes of each galaxy, 1 (or 0) for a fixed population
+ * @diff: (out) (optional) (nullable) (transfer full): the differences, or %NULL when there are none
+ *
+ * Compares the record @source of a catalog of interpolants with @gsfs and @pop as loading the
+ * catalog does (the convention, reltol and the interp-* settings, and the population), but
+ * returns the result instead of aborting, so that a catalog can be chosen among several.
+ * A record without the shape factor and the population is incompatible.
+ *
+ * Returns: whether the interpolants of the record can be loaded for @gsfs and @pop.
+ */
+gboolean
+nc_galaxy_shape_factor_spectral_check_record (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcmObjDictStr *source,
+                                              const guint n_modes, gchar **diff)
+{
+  GObject *src_gsfs = (source != NULL) ? ncm_obj_dict_str_peek (source, "shape-factor") : NULL;
+  GObject *src_pop  = (source != NULL) ? ncm_obj_dict_str_peek (source, "shape-pop") : NULL;
+  GString *d        = g_string_new (NULL);
+  gboolean outside  = FALSE;
+  gboolean ok;
+
+  if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (src_gsfs) || !NC_IS_GALAXY_SHAPE_POP (src_pop))
+    g_string_append (d, " the record lacks the NcGalaxyShapeFactorSpectral `shape-factor' or the NcGalaxyShapePop `shape-pop';");
+  else
+    _nc_galaxy_shape_factor_spectral_record_diff (gsfs, pop, NC_GALAXY_SHAPE_FACTOR_SPECTRAL (src_gsfs), NC_GALAXY_SHAPE_POP (src_pop),
+                                                  n_modes, d, NULL, &outside);
+
+  ok = (d->len == 0);
+
+  if (diff != NULL)
+    *diff = ok ? NULL : g_strdup (d->str);
+
+  g_string_free (d, TRUE);
+
+  return ok;
 }
 
 /**

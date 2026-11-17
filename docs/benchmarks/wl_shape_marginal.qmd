@@ -484,15 +484,17 @@ display(Markdown(f"Both tables were measured on one thread of an {cpu_model()}."
 
 An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
 $10^5$ times, far above the break-even count: with a fixed population the build pays even if
-it is repeated in every process of the run. The command `numcosmo wl-catalog shape-interp`
-does it once instead. It builds the interpolants of all the galaxies of a catalog in parallel
-and writes them with the catalog; `numcosmo generate cluster-wl-load --data-file` then builds
-an experiment that loads them. The table below gives the measurements on the HSC field
-HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE).
+it is repeated in every process of the run. `numcosmo generate cluster-wl-load` does it once
+instead, when the shape factor is Spectral with `use_interp=true`: it builds the interpolants
+of all the galaxies of the catalog in parallel and keeps them in a cache file beside the
+catalog, which the experiment names and every run attaches (see the caches of interpolants
+in the theory page of the Spectral factor). The table below gives the measurements on the
+HSC field HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE), made with a former
+command that built the same interpolants into the catalog itself.
 
 | HWL16a-094, 2,200 galaxies | time |
 |---|---|
-| `wl-catalog shape-interp`, 12 threads | 44 s |
+| the build of every interpolant, 12 threads | 44 s |
 | the same build on 1 thread (`nc_data_cluster_wl_factor_data_prepare()`) | 450 s |
 | first $-2\ln L$ of an experiment from the prepared catalog | 0.02 s |
 | first $-2\ln L$ of the same experiment from the original catalog (builds every interpolant) | 447 s |
