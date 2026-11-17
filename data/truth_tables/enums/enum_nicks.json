@@ -1719,6 +1719,18 @@
     "nick": "mismatch",
     "type": "Nc.GalaxyShapeFactorError"
   },
+  "NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_CAP": {
+    "nick": "cap",
+    "type": "Nc.GalaxyShapeFactorSpectralFallback"
+  },
+  "NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_POPULATION": {
+    "nick": "population",
+    "type": "Nc.GalaxyShapeFactorSpectralFallback"
+  },
+  "NC_GALAXY_SHAPE_FACTOR_SPECTRAL_FALLBACK_RANGE": {
+    "nick": "range",
+    "type": "Nc.GalaxyShapeFactorSpectralFallback"
+  },
   "NC_GALAXY_SHAPE_POP_BETA_ALPHA": {
     "nick": "alpha",
     "type": "Nc.GalaxyShapePopBetaParams"
