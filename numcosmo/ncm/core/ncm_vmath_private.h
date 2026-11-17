@@ -33,6 +33,7 @@
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
+#include <string.h>
 
 G_BEGIN_DECLS
 
@@ -87,6 +88,33 @@ double atan2 (double, double);
 #endif /* __GLIBC_PREREQ (2, 35) */
 
 #endif /* GCC, x86-64, glibc and OpenMP */
+
+/*
+ * ncm_vmath_select:
+ * @cond: a condition
+ * @a: value for a true @cond
+ * @b: value for a false @cond
+ *
+ * Returns @cond ? @a : @b as a bitwise blend of the two values, both of which are
+ * computed. GCC keeps a conditional expression on doubles as control flow when one of its
+ * branches can raise a floating-point exception (a division, for instance), which leaves
+ * the loop scalar; with the blend the loop vectorizes. The value not chosen may be
+ * infinity or NaN, and the blend discards it.
+ */
+static inline gdouble
+ncm_vmath_select (const gboolean cond, const gdouble a, const gdouble b)
+{
+  const guint64 mask = -(guint64) (cond != 0);
+  guint64 ua, ub, ur;
+  gdouble r;
+
+  memcpy (&ua, &a, sizeof (ua));
+  memcpy (&ub, &b, sizeof (ub));
+  ur = (ua &mask) | (ub & ~mask);
+  memcpy (&r, &ur, sizeof (r));
+
+  return r;
+}
 
 G_END_DECLS
 
