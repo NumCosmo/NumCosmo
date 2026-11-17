@@ -2551,7 +2551,9 @@ def test_cluster_wl_load_pop_coverage_unconverged(
         ],
     )
     assert result.exit_code != 0
-    plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", result.output).split())
+    # On GitHub Actions typer forces a colored panel: compare the plain words
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    plain = " ".join(re.sub(r"[│╭╮╰╯─]", " ", plain).split())
     assert "does not converge" in plain
     assert not (tmp_path / "exp.yaml").exists()
 
