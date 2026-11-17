@@ -31,7 +31,9 @@ from rich.console import Console
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.experiments.cluster_wl import (
+    DEFAULT_COSMOLOGY,
     DEFAULT_INTEG_OPTIONS,
+    CosmologyOptions,
     GalaxyPopGen,
     GalaxyShapeFactorGenSpectral,
     ShapeFactorGen,
@@ -185,6 +187,45 @@ class ShapeInterpWLCatalog:
         ),
     ] = None
 
+    cosmo_h0: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Hubble constant H0 in km/s/Mpc (flat XCDM), of the shears the "
+                "galaxies reach (restrict_range=true)."
+            ),
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.H0
+
+    cosmo_omegab: Annotated[
+        float,
+        typer.Option(
+            help="Baryon density Omegab.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.Omegab
+
+    cosmo_omegac: Annotated[
+        float,
+        typer.Option(
+            help="Cold dark matter density Omegac.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.Omegac
+
+    cosmo_w: Annotated[
+        float,
+        typer.Option(
+            help="Dark energy equation of state w.",
+            show_default=True,
+            rich_help_panel="Cosmology",
+        ),
+    ] = DEFAULT_COSMOLOGY.w
+
     def __post_init__(self) -> None:
         """Build the interpolants and write the catalog.
 
@@ -233,6 +274,12 @@ class ShapeInterpWLCatalog:
             pop_gen=pop_gen,
             integ_options=DEFAULT_INTEG_OPTIONS,
             summary=False,
+            cosmology=CosmologyOptions(
+                H0=self.cosmo_h0,
+                Omegab=self.cosmo_omegab,
+                Omegac=self.cosmo_omegac,
+                w=self.cosmo_w,
+            ),
         )
         mset = exp.peek("model-set")
         likelihood = exp.peek("likelihood")
