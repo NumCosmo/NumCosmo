@@ -4,10 +4,13 @@
  *  Tue Jun 24 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * nc_wl_ellipticity.h
  * Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -170,7 +173,19 @@ G_BEGIN_DECLS
 NCM_INLINE gdouble
 nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble phi)
 {
-  return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? (M_PI - phi) : phi;
+  switch (frame)
+  {
+    case NC_WL_ELLIPTICITY_FRAME_CELESTIAL:
+      return phi;
+
+    case NC_WL_ELLIPTICITY_FRAME_CARTESIAN:
+      return M_PI - phi;
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return phi; /* LCOV_EXCL_LINE */
+  }
 }
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -180,7 +195,19 @@ nc_wl_ellipticity_celestial_to_frame_angle (NcWLEllipticityFrame frame, gdouble 
 NCM_INLINE NcmComplex
 nc_wl_ellipticity_celestial_to_frame (NcWLEllipticityFrame frame, NcmComplex e)
 {
-  return (frame == NC_WL_ELLIPTICITY_FRAME_CARTESIAN) ? conj (e) : e;
+  switch (frame)
+  {
+    case NC_WL_ELLIPTICITY_FRAME_CELESTIAL:
+      return e;
+
+    case NC_WL_ELLIPTICITY_FRAME_CARTESIAN:
+      return conj (e);
+
+    default:                   /* LCOV_EXCL_LINE */
+      g_assert_not_reached (); /* LCOV_EXCL_LINE */
+
+      return e; /* LCOV_EXCL_LINE */
+  }
 }
 
 /* TRACE convention (distortion chi). */
