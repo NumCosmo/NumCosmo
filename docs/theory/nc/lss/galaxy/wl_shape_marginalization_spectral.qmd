@@ -416,8 +416,9 @@ instead of once per value of $\theta$.
   approximation of the current population on that panel only, kept for the next shears in
   it. A population outside its box is integrated.
 
-Prepared catalogs store the modes of each galaxy ([[numcosmo|NcGalaxyWLObs:shape-interp-modes]],
-one [[numcosmo-math|NcmSpectralPolarPanelsArray]] per galaxy), and their record holds the
+The modes of each galaxy ([[numcosmo|NcGalaxyWLObs:shape-interp-modes]], one
+[[numcosmo-math|NcmSpectralPolarPanelsArray]] per galaxy) are kept in a cache file beside the
+catalog (see [Caches of interpolants](#caches-of-interpolants)), whose record holds the
 population with its free parameters and their bounds: the box. A fit that reads them
 evaluates the expansion over the box of the record, whatever its own `pop-order`:
 
@@ -429,6 +430,45 @@ Inside the box the values are those of the expansion at the parameters of the fi
 bit the values of the fit that built the catalog. The bounds of the fit are its prior and are
 never changed to the box: outside it the galaxies are integrated, at the cost of the
 integrals, with a warning. Anything else aborts with every difference in the message.
+
+## Caches of Interpolants
+
+The approximations of a galaxy depend on its observed ellipticity and noise, on the
+population and on the settings of the shape factor, not on the cluster. They are kept in
+cache files, one per configuration, apart from the catalog
+(`numcosmo_py.experiments.wl_interp_cache`):
+
+- File: a [[numcosmo|NcGalaxyWLObs]] with the rows of the catalog and no columns, holding
+  the approximations, their record ([[numcosmo|NcGalaxyWLObs:shape-interp-source]]), the
+  format and a fingerprint of the catalog (SHA-256 of its rows, convention and the columns
+  the approximations depend on), with a JSON description beside it. The name of the file
+  hashes the fingerprint, the settings, the population and its coverage, so that two
+  configurations never share a file; an existing file that does not match is never
+  overwritten.
+- Coverage: the box of the expansion over the population. It defaults to the prior of each
+  free parameter of the population and can be set apart from it; without `pop_order` the
+  order is the lowest of 7, 11, 15, 19 and 23 whose expansions of a sample of galaxies,
+  spread in $|\epsilon_\mathrm{obs}|$, converge over the coverage. A population outside the
+  coverage is integrated (see the fallback below), never clipped to it: the coverage never
+  narrows the prior.
+- Range: with [[numcosmo|NcGalaxyShapeFactorSpectral:restrict-range]] each galaxy is
+  approximated only over the shears it reaches under the priors of the fit (mass, centre,
+  concentration), the cosmology and the redshift of the cluster. A cache built for other
+  priors is reused: only the galaxies whose range is too short for the fit are built again
+  ([[numcosmo|nc_galaxy_shape_factor_spectral_set_rebuild_short]]), and the file is
+  written again.
+- Fallback: a galaxy that cannot use its approximation for a call (population outside the
+  coverage, an expansion that did not converge, or a shear beyond its range) takes the
+  [table along its line](#the-nodes-of-a-galaxy-a-table-along-its-line) instead, counted by
+  reason ([[numcosmo|nc_galaxy_shape_factor_spectral_get_fallback_stats]]) and warned once.
+
+`numcosmo generate cluster-wl-load` builds or updates the cache of an experiment (in parallel)
+and saves the catalog without approximations, naming the cache relative to the experiment
+and the coverage; loading the experiment (`numcosmo run ...`) attaches the cache and builds
+what it misses for the priors of the experiment, unless `--no-interp-build`.
+`numcosmo wl-catalog info` describes a catalog, a cache or a dataset, and
+`numcosmo wl-catalog upgrade` moves the approximations of a catalog written before the
+caches into one.
 
 ## The Nodes of a Galaxy: a Table Along its Line
 

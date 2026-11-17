@@ -49,6 +49,7 @@ from numcosmo_py import (
     Nc,
 )
 from numcosmo_py.app import app
+from numcosmo_py.app.loading import LoadExperiment
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
     ShapeFactorGen,
@@ -2327,3 +2328,199 @@ def test_cluster_wl_load_app_dataset_data_file(
         ser.from_binfile(experiment_file_copy.with_suffix(".dataset.gvar").as_posix()),
     )
     assert cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs().len() == 20
+
+
+def _cache_experiment(experiment: Path, data_file: Path, *args: str):
+    """Run generate cluster-wl-load with interpolants over a Beta population."""
+    return runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment.as_posix(),
+            f"--data-file={data_file.as_posix()}",
+            (
+                "--shape-factor=spectral use_interp=true restrict_range=true "
+                "ellip_conv=trace ellip_coord=celestial"
+            ),
+            "--pop-dist=beta alpha=1.6 beta=1.7",
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--parameter-list=NcGalaxyShapePop:beta",
+            "--centre-box-deg=0.01",
+            "--prior=NcHaloMassSummary:log10MDelta=13:15",
+            *args,
+        ],
+    )
+
+
+def test_cluster_wl_load_interp_cache(tmp_path: Path, real_wl_obs_file_with_meta):
+    """generate builds the cache of interpolants beside the catalog and the dataset
+    names it; loading the experiment attaches it, builds it again when missing, and
+    with --no-interp-build a missing cache is an error."""
+    exp = tmp_path / "exp.yaml"
+    coverage = [
+        "--pop-coverage=NcGalaxyShapePop:alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+    ]
+    result = _cache_experiment(exp, real_wl_obs_file_with_meta, *coverage)
+    assert result.exit_code == 0, result.output
+
+    cache_dir = real_wl_obs_file_with_meta.with_suffix(".interp")
+    caches = sorted(cache_dir.glob("*.gvar"))
+    assert len(caches) == 1
+    assert caches[0].with_suffix(".json").exists()
+
+    # The dataset holds the catalog without interpolants, naming the cache relatively
+    _, likelihood = _experiment_load(exp)
+    obs = cast(Nc.DataClusterWLFactor, likelihood.peek_dataset().get_data(0)).peek_obs()
+    assert obs.peek_shape_interp_source() is None
+    ok, name = obs.peek_meta().get_string("shape_interp_cache")
+    assert ok and not Path(name).is_absolute()
+    assert (tmp_path / name).resolve() == caches[0].resolve()
+
+    loaded = LoadExperiment(experiment=exp)
+    data = cast(Nc.DataClusterWLFactor, loaded.likelihood.peek_dataset().get_data(0))
+    assert data.peek_obs().peek_shape_interp_source() is not None
+    gsfs = cast(Nc.GalaxyShapeFactorSpectral, data.props.shape_factor)
+    assert gsfs.get_pop_order() >= 2
+    loaded.mset.prepare_fparam_map()
+    m2lnL = loaded.likelihood.m2lnL_val(loaded.mset)
+
+    exp_int = tmp_path / "exp_int.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_int.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.6 beta=1.7",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert m2lnL == pytest.approx(_experiment_m2lnL(exp_int), rel=0.0, abs=1.0e-3)
+
+    for path in cache_dir.glob("*"):
+        path.unlink()
+    with pytest.raises(ValueError, match="building is off"):
+        LoadExperiment(experiment=exp, interp_build=False)
+    rebuilt = LoadExperiment(experiment=exp)
+    assert [p.name for p in cache_dir.glob("*.gvar")] == [caches[0].name]
+    rebuilt.mset.prepare_fparam_map()
+    assert rebuilt.likelihood.m2lnL_val(rebuilt.mset) == m2lnL
+
+
+def test_cluster_wl_load_interp_cache_no_build(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """With --no-interp-build generate names the cache without building it, and a cache
+    directory can be given."""
+    exp = tmp_path / "exp.yaml"
+    cache_dir = tmp_path / "caches"
+    result = _cache_experiment(
+        exp,
+        real_wl_obs_file_with_meta,
+        "--pop-coverage=alpha=1.55:1.65",
+        "--pop-coverage=beta=1.65:1.75",
+        "--no-interp-build",
+        f"--interp-cache-dir={cache_dir.as_posix()}",
+    )
+    assert result.exit_code == 0, result.output
+    assert not list(cache_dir.glob("*.gvar"))
+    LoadExperiment(experiment=exp)
+    assert len(list(cache_dir.glob("*.gvar"))) == 1
+
+
+def test_cluster_wl_load_pop_coverage_needs_interp(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """--pop-coverage without interpolants is an error."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            (tmp_path / "exp.yaml").as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-coverage=alpha=1.5:1.7",
+        ],
+    )
+    assert result.exit_code != 0
+
+
+def test_wl_catalog_upgrade_and_info(tmp_path: Path, real_wl_obs_file_with_meta):
+    """upgrade moves the interpolants of a catalog into a cache beside the output, which
+    generate reuses with the same settings and coverage; info describes the three files.
+    """
+    legacy = tmp_path / "legacy.gvar"
+    shape = (
+        "--shape-factor=spectral use_interp=true pop_order=5 "
+        "ellip_conv=trace ellip_coord=celestial"
+    )
+    pop = "--pop-dist=beta alpha=1.8 beta=2.1"
+    result = _shape_interp(
+        legacy,
+        real_wl_obs_file_with_meta,
+        pop,
+        shape,
+        "--pop-box=alpha=1.75:1.85",
+        "--pop-box=beta=2.05:2.15",
+    )
+    assert result.exit_code == 0, result.output
+
+    upgraded = tmp_path / "upgraded.gvar"
+    result = runner.invoke(
+        app, ["wl-catalog", "upgrade", legacy.as_posix(), upgraded.as_posix()]
+    )
+    assert result.exit_code == 0, result.output
+    caches = list(upgraded.with_suffix(".interp").glob("*.gvar"))
+    assert len(caches) == 1
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(upgraded.as_posix()))
+    assert obs.peek_shape_interp_source() is None
+    assert upgraded.stat().st_size < legacy.stat().st_size
+
+    result = runner.invoke(
+        app, ["wl-catalog", "upgrade", upgraded.as_posix(), upgraded.as_posix()]
+    )
+    assert result.exit_code != 0
+
+    exp = tmp_path / "exp.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp.as_posix(),
+            f"--data-file={upgraded.as_posix()}",
+            shape,
+            pop,
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--parameter-list=NcGalaxyShapePop:beta",
+            "--pop-coverage=alpha=1.75:1.85",
+            "--pop-coverage=beta=2.05:2.15",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert " 0 built" in result.output
+    assert list(upgraded.with_suffix(".interp").glob("*.gvar")) == caches
+
+    plain = {}
+    for name, path in (
+        ("legacy", legacy),
+        ("upgraded", upgraded),
+        ("cache", caches[0]),
+        ("dataset", exp.with_suffix(".dataset.gvar")),
+    ):
+        result = runner.invoke(app, ["wl-catalog", "info", path.as_posix()])
+        assert result.exit_code == 0, result.output
+        plain[name] = " ".join(result.output.split())
+    assert "carries interpolants itself: 0 fixed, 20 expansions" in plain["legacy"]
+    assert "names the cache" in plain["upgraded"]
+    assert "matches the rows" in plain["upgraded"]
+    assert '"pop_order": 5' in plain["cache"]
+    assert "matches the rows" in plain["dataset"]

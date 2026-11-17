@@ -34,7 +34,8 @@ from typing import Annotated, cast
 
 import typer
 
-from numcosmo_py import Ncm
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.experiments.wl_interp_cache import load_shape_interp_cache
 
 from .logging import AppLogging
 
@@ -84,6 +85,17 @@ class LoadExperiment(AppLogging):
             "to this file, otherwise they are not saved.",
         ),
     ] = None
+    interp_build: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Build the shape interpolants missing from the cache a cluster WL "
+                "experiment names, and save them. Without it a missing cache is an "
+                "error."
+            ),
+            show_default=True,
+        ),
+    ] = True
 
     def __post_init__(self) -> None:
         """Load the experiment file and prepare the experiment."""
@@ -188,6 +200,29 @@ class LoadExperiment(AppLogging):
 
         self.likelihood = likelihood
         self.mset = mset
+        self._attach_shape_interp_caches()
+
+    def _attach_shape_interp_caches(self) -> None:
+        """Attach the shape interpolant caches the cluster WL catalogs name.
+
+        A cache is resolved against the directory of the experiment; what it misses
+        for the priors of the experiment is built and saved (see
+        :func:`numcosmo_py.experiments.wl_interp_cache.load_shape_interp_cache`).
+        """
+        dataset = self.likelihood.peek_dataset()
+        base_dir = self.experiment.absolute().parent
+        for i in range(dataset.get_length()):
+            data = dataset.get_data(i)
+            if not isinstance(data, Nc.DataClusterWLFactor):
+                continue
+            upd = load_shape_interp_cache(
+                data, self.mset, base_dir, build=self.interp_build
+            )
+            if upd is not None and upd.built > 0:
+                print(
+                    f"# Shape interpolant cache {upd.path}: {upd.built} built "
+                    f"and saved, {upd.reused} reused."
+                )
 
     def _load_saved_mset(self) -> Ncm.MSet | None:
         """Load the saved model.

@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import time
 from pathlib import Path
 from typing import Annotated
@@ -40,6 +41,18 @@ from numcosmo_py.experiments.cluster_wl import (
     WLCatalogID,
     check_shape_pop_compat,
     load_cluster_wl,
+    shape_interp_pop_box,
+)
+from numcosmo_py.experiments.wl_interp_cache import (
+    format_coverage,
+    read_shape_interp_cache,
+    record_shape_interp_cache,
+    recorded_coverage,
+    resolve_shape_interp_cache,
+    shape_interp_cache_info,
+    shape_interp_cache_name,
+    wl_obs_fingerprint,
+    write_shape_interp_cache,
 )
 
 from .generate import (
@@ -360,3 +373,173 @@ class ShapeInterpWLCatalog:
             )
             _found, idx = hms.param_index_from_name("cDelta")
             hms.param_set_ftype(idx, Ncm.ParamType.FREE)
+
+
+def _read_wl_obs_file(path: Path) -> tuple[Nc.GalaxyWLObs | None, str]:
+    """Return the NcGalaxyWLObs of path and what the file is: catalog, cache or dataset."""
+    obj = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).from_binfile(
+        path.absolute().as_posix()
+    )
+    if isinstance(obj, Ncm.Dataset):
+        for i in range(obj.get_length()):
+            data = obj.get_data(i)
+            if isinstance(data, Nc.DataClusterWLFactor):
+                return data.peek_obs(), "dataset"
+        return None, "dataset"
+    if isinstance(obj, Nc.GalaxyWLObs):
+        meta = obj.peek_meta()
+        if meta is not None and meta.get_string("format")[0]:
+            return obj, "cache"
+        return obj, "catalog"
+    return None, type(obj).__name__
+
+
+def _interp_summary(obs: Nc.GalaxyWLObs) -> tuple[int, int]:
+    """Return the number of rows of obs with a fixed interpolant and with modes."""
+    n_fixed = sum(1 for i in range(obs.len()) if obs.peek_shape_interp(i) is not None)
+    n_modes = sum(
+        1 for i in range(obs.len()) if obs.peek_shape_interp_modes(i) is not None
+    )
+    return n_fixed, n_modes
+
+
+@dataclasses.dataclass(kw_only=True)
+class InfoWLCatalog:
+    """Describe a WL catalog, a cache of its shape interpolants, or an experiment dataset.
+
+    For a catalog (or the catalog of a .dataset.gvar): its rows, columns, ellipticity
+    convention, cluster metadata, the interpolants it carries itself (a catalog written
+    before the caches) and the cache it names, whether that cache exists and matches.
+    For a cache: the settings, population, coverage and order that built it.
+    """
+
+    file: Annotated[
+        Path,
+        typer.Argument(
+            help="A catalog, a cache of interpolants or a .dataset.gvar.",
+            exists=True,
+            readable=True,
+        ),
+    ]
+
+    def __post_init__(self) -> None:
+        """Print the description."""
+        Ncm.cfg_init()
+        console = Console()
+        obs, kind = _read_wl_obs_file(self.file)
+        if obs is None:
+            raise typer.BadParameter(f"{self.file} holds no WL catalog ({kind})")
+
+        size = self.file.stat().st_size / 2**20
+        console.print(f"{self.file}: {kind}, {size:.1f} MiB, {obs.len()} rows")
+        if kind == "cache":
+            cache = read_shape_interp_cache(self.file)
+            info = shape_interp_cache_info(cache.holder, cache.fingerprint)
+            info["numcosmo_version_reading"] = info.pop("numcosmo_version")
+            console.print_json(json.dumps(info))
+            return
+
+        console.print(
+            f"  convention {obs.get_ellip_conv().value_nick}, frame "
+            f"{obs.get_coord().value_nick}"
+        )
+        console.print(f"  columns: {', '.join(obs.peek_columns())}")
+        meta = obs.peek_meta()
+        if meta is not None:
+            for key in ("cluster_ra", "cluster_dec", "cluster_z", "cluster_c"):
+                ok, value = meta.get_double(key)
+                if ok:
+                    console.print(f"  {key} = {value}")
+
+        n_fixed, n_modes = _interp_summary(obs)
+        source = obs.peek_shape_interp_source()
+        if source is not None:
+            console.print(
+                f"  carries interpolants itself: {n_fixed} fixed, {n_modes} expansions "
+                "(written before the caches; `numcosmo wl-catalog upgrade` moves them "
+                "to a cache)"
+            )
+            box = shape_interp_pop_box(obs)
+            pop = source.peek("shape-pop")
+            console.print(
+                f"  population {type(pop).__name__}"
+                + (f", coverage {format_coverage(box)}" if box else ", fixed")
+            )
+
+        path = resolve_shape_interp_cache(obs, self.file.absolute().parent)
+        if path is None:
+            if source is None:
+                console.print("  names no cache of interpolants")
+            return
+        coverage = recorded_coverage(obs)
+        console.print(
+            f"  names the cache {path}"
+            + (f", coverage {format_coverage(coverage)}" if coverage else "")
+        )
+        if not path.exists():
+            console.print("  the cache does not exist yet: running builds it")
+            return
+        cache = read_shape_interp_cache(path)
+        ok = cache.fingerprint == wl_obs_fingerprint(obs)
+        n_fixed, n_modes = _interp_summary(cache.holder)
+        console.print(
+            f"  the cache exists: {n_fixed} fixed, {n_modes} expansions, "
+            + ("matches the rows" if ok else "built for OTHER rows (fingerprint)")
+        )
+
+
+@dataclasses.dataclass(kw_only=True)
+class UpgradeWLCatalog:
+    """Move the interpolants a catalog carries itself into a cache file.
+
+    A catalog written by ``wl-catalog shape-interp`` holds the interpolants of its
+    galaxies. The upgrade writes the catalog without them to OUTPUT, naming the cache, and
+    the interpolants to a cache in the directory of OUTPUT's caches (OUTPUT with the
+    suffix .interp), where ``generate cluster-wl-load --data-file OUTPUT`` looks for them.
+    """
+
+    input: Annotated[
+        Path,
+        typer.Argument(
+            help="The catalog carrying interpolants.", exists=True, readable=True
+        ),
+    ]
+    output: Annotated[Path, typer.Argument(help="The catalog to write.")]
+
+    def __post_init__(self) -> None:
+        """Split the catalog."""
+        Ncm.cfg_init()
+        console = Console()
+        obs, kind = _read_wl_obs_file(self.input)
+        if obs is None or kind != "catalog":
+            raise typer.BadParameter(f"{self.input} is not a WL catalog ({kind})")
+        source = obs.peek_shape_interp_source()
+        if source is None:
+            raise typer.BadParameter(f"{self.input} carries no interpolants")
+        if self.output.absolute() == self.input.absolute():
+            raise typer.BadParameter("OUTPUT must differ from INPUT")
+
+        gsfs = source.peek("shape-factor")
+        pop = source.peek("shape-pop")
+        assert isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
+        assert isinstance(pop, Nc.GalaxyShapePop)
+        coverage = shape_interp_pop_box(obs) or None
+        cache_dir = self.output.with_suffix(".interp")
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        path = cache_dir / shape_interp_cache_name(obs, gsfs, pop, coverage)
+        write_shape_interp_cache(obs, path)
+        record_shape_interp_cache(obs, path, coverage, self.output.absolute().parent)
+        Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).to_binfile(
+            obs, self.output.absolute().as_posix()
+        )
+
+        console.print(f"Wrote {self.output} and the cache {path}.")
+        if coverage:
+            console.print(
+                "generate cluster-wl-load reuses it with the same shape factor "
+                f"(pop_order={gsfs.get_pop_order()}) and population, and "
+                + " ".join(
+                    f"--pop-coverage={k}={lo!r}:{hi!r}"
+                    for k, (lo, hi) in coverage.items()
+                )
+            )

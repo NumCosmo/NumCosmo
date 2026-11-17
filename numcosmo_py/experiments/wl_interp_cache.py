@@ -41,7 +41,9 @@ beside the catalog, one per configuration, instead of inside it:
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
+import fcntl
 import hashlib
 import json
 import os
@@ -59,6 +61,7 @@ SHAPE_INTERP_CACHE_FORMAT = "nc-shape-interp-cache-v1"
 # also read by NcDataClusterWLFactor, which warns when it names a cache that is not attached.
 CATALOG_META_INTERP_CACHE = "shape_interp_cache"
 CATALOG_META_INTERP_FINGERPRINT = "shape_interp_cache_fingerprint"
+CATALOG_META_INTERP_COVERAGE = "shape_interp_cache_coverage"
 
 # Keys of the metadata of a cache file
 _CACHE_META_FORMAT = "format"
@@ -128,7 +131,7 @@ class ShapeInterpCache:
         return 0
 
 
-def _cache_info(holder: Nc.GalaxyWLObs, fingerprint: str) -> dict[str, Any]:
+def shape_interp_cache_info(holder: Nc.GalaxyWLObs, fingerprint: str) -> dict[str, Any]:
     """Return what lookup needs of a cache, for its JSON file."""
     source = holder.peek_shape_interp_source()
     assert source is not None
@@ -220,7 +223,7 @@ def write_shape_interp_cache(obs: Nc.GalaxyWLObs, path: Path) -> Path:
 
     path = Path(path)
     json_path = path.with_suffix(".json")
-    info = _cache_info(holder, fingerprint)
+    info = shape_interp_cache_info(holder, fingerprint)
 
     _replace_atomically(
         path,
@@ -283,7 +286,10 @@ def check_shape_interp_cache(
         return f"the cache has {cache.n_rows} rows, the catalog {obs.len()}"
     if cache.fingerprint != wl_obs_fingerprint(obs):
         return "the cache was built for other rows (its fingerprint differs)"
-    ok, diff = gsfs.check_record(pop, cache.source, cache.n_modes)
+    source = cache.source
+    if source is None:
+        return "the cache holds no record of what built it"
+    ok, diff = gsfs.check_record(pop, source, cache.n_modes)
     if not ok:
         return f"the cache was built for other settings:{diff}"
     return None
@@ -313,16 +319,44 @@ def attach_shape_interp_cache(
         spp = holder.peek_shape_interp(i)
         if spp is not None:
             obs.set_shape_interp(i, spp)
-    obs.props.shape_interp_source = cache.source
+    source = cache.source
+    assert source is not None
+    obs.props.shape_interp_source = source
     name_shape_interp_cache(obs, cache.path, cache.fingerprint)
 
 
-def name_shape_interp_cache(obs: Nc.GalaxyWLObs, path: Path, fingerprint: str) -> None:
-    """Name the cache of obs in its metadata (the path and the fingerprint)."""
+def name_shape_interp_cache(
+    obs: Nc.GalaxyWLObs,
+    path: Path,
+    fingerprint: str,
+    *,
+    base_dir: Path | None = None,
+) -> None:
+    """Name the cache of obs in its metadata: its path and the fingerprint of obs.
+
+    With base_dir the path is kept relative to it (the directory of the file that will
+    hold obs), so that the files can be moved together; :func:`resolve_shape_interp_cache`
+    resolves it against the same directory.
+    """
+    path = Path(path)
+    if base_dir is not None:
+        path = Path(os.path.relpath(path.absolute(), Path(base_dir).absolute()))
     meta = obs.peek_meta() or Ncm.VarDict.new()
-    meta.set_string(CATALOG_META_INTERP_CACHE, Path(path).as_posix())
+    meta.set_string(CATALOG_META_INTERP_CACHE, path.as_posix())
     meta.set_string(CATALOG_META_INTERP_FINGERPRINT, fingerprint)
     obs.set_meta(meta)
+
+
+def resolve_shape_interp_cache(obs: Nc.GalaxyWLObs, base_dir: Path) -> Path | None:
+    """Return the path of the cache obs names, resolved against base_dir, or None."""
+    meta = obs.peek_meta()
+    if meta is None:
+        return None
+    ok, name = meta.get_string(CATALOG_META_INTERP_CACHE)
+    if not ok:
+        return None
+    path = Path(name)
+    return path if path.is_absolute() else Path(base_dir) / path
 
 
 def strip_shape_interp(obs: Nc.GalaxyWLObs) -> None:
@@ -376,51 +410,128 @@ class ShapeInterpCacheUpdate:
     rows: int
     built: int
     reused: int
+    unconverged: int
     path: Path
+
+
+# Relative tolerance of the comparison of bounds, as the library compares a record
+_COVERAGE_RELTOL = 1.0e-15
+
+
+def _close(a: float, b: float) -> bool:
+    """Return whether a and b agree within _COVERAGE_RELTOL relative."""
+    return abs(a - b) <= _COVERAGE_RELTOL * max(abs(a), abs(b))
 
 
 def _builder_mset(
     mset: Ncm.MSet, coverage: dict[str, tuple[float, float]] | None
 ) -> Ncm.MSet:
-    """Return mset, or a copy whose population parameters have the bounds of coverage."""
-    if not coverage:
-        return mset
+    """Return a copy of mset whose population parameters of coverage span it.
+
+    The parameters of coverage are free over its bounds; their values are kept when
+    inside, and set to the centre otherwise. The other parameters of mset, the priors of
+    the fit, are unchanged: they decide the shears each galaxy reaches.
+    """
     builder = mset.dup(Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP))
     pop = builder.peek(Nc.GalaxyShapePop.id())
     assert isinstance(pop, Nc.GalaxyShapePop)
-    for name, (lo, hi) in coverage.items():
+    for pid in range(pop.len()):
+        if pop.param_get_ftype(pid) == Ncm.ParamType.FREE and pop.param_name(
+            pid
+        ) not in (coverage or {}):
+            pop.param_set_ftype(pid, Ncm.ParamType.FIXED)
+    for name, (lo, hi) in (coverage or {}).items():
         found, pid = pop.param_index_from_name(name)
         if not found:
             raise ValueError(f"the population has no parameter {name}")
+        if not lo < hi:
+            raise ValueError(f"the coverage of {name} needs LO < HI: [{lo}, {hi}]")
         if not lo <= pop.param_get(pid) <= hi:
             pop.param_set(pid, 0.5 * (lo + hi))
-        pop.param_set_lower_bound(pid, lo)
-        pop.param_set_upper_bound(pid, hi)
+        if lo >= pop.param_get_upper_bound(pid):
+            pop.param_set_upper_bound(pid, hi)
+            pop.param_set_lower_bound(pid, lo)
+        else:
+            pop.param_set_lower_bound(pid, lo)
+            pop.param_set_upper_bound(pid, hi)
         pop.param_set_ftype(pid, Ncm.ParamType.FREE)
     builder.prepare_fparam_map()
     return builder
 
 
+def shape_interp_cache_name(
+    obs: Nc.GalaxyWLObs,
+    gsfs: Nc.GalaxyShapeFactorSpectral,
+    pop: Nc.GalaxyShapePop,
+    coverage: dict[str, tuple[float, float]] | None,
+) -> str:
+    """Return the file name of the cache of obs for this configuration.
+
+    A hash of everything the interpolants depend on: the rows of obs (their fingerprint),
+    the settings of gsfs the record compares, restrict-range and pop-order, the type of the
+    population, the values of its parameters outside coverage and the bounds of those in
+    it. Two configurations never share a file.
+    """
+    h = hashlib.sha256()
+    h.update(wl_obs_fingerprint(obs).encode())
+    h.update(
+        (
+            f"conv={gsfs.get_ellip_conv().value_nick};reltol={gsfs.get_reltol()!r};"
+            f"g_max={gsfs.get_interp_g_max()!r};abstol={gsfs.get_interp_abstol()!r};"
+            f"panels={gsfs.get_interp_min_radial_panels()};"
+            f"restrict={gsfs.get_restrict_range()};order={gsfs.get_pop_order()};"
+            f"pop={type(pop).__name__};"
+        ).encode()
+    )
+    cov = coverage or {}
+    for pid in range(pop.len()):
+        name = pop.param_name(pid)
+        if name in cov:
+            h.update(f"{name}=[{cov[name][0]!r},{cov[name][1]!r}];".encode())
+        else:
+            h.update(f"{name}={pop.param_get(pid)!r};".encode())
+    nick = type(pop).__name__.removeprefix("GalaxyShapePop").lower() or "pop"
+    kind = f"k{gsfs.get_pop_order()}" if cov else "fixed"
+    return f"{nick}-{kind}-{h.hexdigest()[:16]}.gvar"
+
+
+@contextlib.contextmanager
+def _locked(path: Path):
+    """Hold an exclusive lock on a file beside path, for jobs updating it at once."""
+    lock_path = path.with_name(f".{path.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock_path, "a", encoding="utf-8") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
 def update_shape_interp_cache(
     data: Nc.DataClusterWLFactor,
     mset: Ncm.MSet,
-    path: Path,
+    cache_dir: Path,
     *,
     coverage: dict[str, tuple[float, float]] | None = None,
+    build: bool = True,
 ) -> ShapeInterpCacheUpdate:
-    """Bring the cache file path up to date for the fit of data and mset, and attach it.
+    """Bring the cache of the fit of data and mset up to date in cache_dir, and attach it.
 
-    The interpolants a galaxy reaches under the priors of mset (restrict-range) are those
-    the cache must hold. The cache at path, when it exists, can be attached and was built
-    over coverage, is attached; then the galaxies without an interpolant, and those whose
-    interpolant does not cover the shears they reach under the priors of mset, are built,
-    in parallel, and the cache is written again. coverage gives the bounds of the
-    population parameters the expansion spans (pop-order), when they are not the priors of
-    mset. Afterwards obs carries the interpolants and names the cache, and data reads them
-    again, so that the fit loads them.
+    The cache is the file :func:`shape_interp_cache_name` names in cache_dir. When it
+    exists it is attached; then the galaxies without an interpolant, and those whose
+    interpolant does not cover the shears they reach under the priors of mset
+    (restrict-range), are built, in parallel, and the cache is written again: a cache built
+    for wider priors is reused whole. coverage gives the population parameters the
+    expansion spans (pop-order) and their bounds; the other population parameters are
+    fixed. The update holds a lock beside the file, so that jobs started together build
+    once. Afterwards obs carries the interpolants and names the cache, and data reads them
+    again as loaded ones.
 
     Raises:
-        ValueError: The shape factor of data does not use interpolants.
+        ValueError: The shape factor of data does not use interpolants; the file of this
+            configuration exists but cannot be attached (it is never overwritten); or
+            there is no cache and build is False.
     """
     obs = data.peek_obs()
     gsfs = data.props.shape_factor
@@ -432,32 +543,116 @@ def update_shape_interp_cache(
     builder = _builder_mset(mset, coverage)
     pop = builder.peek(Nc.GalaxyShapePop.id())
     assert isinstance(pop, Nc.GalaxyShapePop)
+    path = Path(cache_dir) / shape_interp_cache_name(obs, gsfs, pop, coverage)
 
-    strip_shape_interp(obs)
-    path = Path(path)
-    if path.exists():
-        cache = read_shape_interp_cache(path)
-        if check_shape_interp_cache(cache, obs, gsfs, pop) is None and _same_coverage(
-            cache, pop
-        ):
+    with _locked(path):
+        strip_shape_interp(obs)
+        if path.exists():
+            cache = read_shape_interp_cache(path)
+            reason = check_shape_interp_cache(cache, obs, gsfs, pop)
+            if reason is None and not _same_coverage(cache, pop):
+                reason = "its coverage of the population differs"
+            if reason is not None:
+                raise ValueError(f"refusing to overwrite {path}: {reason}")
             attach_shape_interp_cache(cache, obs, gsfs, pop)
-    data.set_obs(obs)
+        data.set_obs(obs)
 
-    n0 = gsfs.get_n_built()
-    gsfs.set_rebuild_short(True)
-    try:
-        data.write_shape_interp(builder, obs)
-    finally:
-        gsfs.set_rebuild_short(False)
-    built = gsfs.get_n_built() - n0
+        n0 = gsfs.get_n_built()
+        u0 = gsfs.get_pop_n_unconverged()
+        if not build:
+            # Attached as it is: shears it does not cover are computed without it, counted
+            if obs.peek_shape_interp_source() is None:
+                raise ValueError(
+                    f"there is no cache {path} for this fit, and building is off"
+                )
+        else:
+            gsfs.set_rebuild_short(True)
+            try:
+                data.write_shape_interp(builder, obs)
+            finally:
+                gsfs.set_rebuild_short(False)
+        built = gsfs.get_n_built() - n0
+        unconverged = gsfs.get_pop_n_unconverged() - u0
 
-    write_shape_interp_cache(obs, path)
+        if built > 0 or not path.exists():
+            write_shape_interp_cache(obs, path)
     name_shape_interp_cache(obs, path, wl_obs_fingerprint(obs))
-    # The fit reads the interpolants again as loaded ones, for its own priors
     data.set_obs(obs)
     return ShapeInterpCacheUpdate(
-        rows=obs.len(), built=built, reused=obs.len() - built, path=path
+        rows=obs.len(),
+        built=built,
+        reused=obs.len() - built,
+        unconverged=max(unconverged, 0),
+        path=path,
     )
+
+
+def _sub_catalog(obs: Nc.GalaxyWLObs, rows: list[int]) -> Nc.GalaxyWLObs:
+    """Return the catalog of the rows of obs, with their p(z) and the metadata of obs."""
+    cols = list(obs.peek_columns())
+    sub = Nc.GalaxyWLObs.new(obs.get_ellip_conv(), obs.get_coord(), len(rows), cols)
+    for k, i in enumerate(rows):
+        for c in cols:
+            sub.set(c, k, obs.get(c, i))
+        pz = obs.peek_pz(i)
+        assert pz is not None
+        sub.set_pz(k, pz)
+    if obs.peek_meta() is not None:
+        sub.set_meta(obs.peek_meta())
+    return sub
+
+
+# Orders tried by choose_pop_order(), and the galaxies of the sample it builds
+POP_ORDER_CANDIDATES = (7, 11, 15, 19, 23)
+POP_ORDER_SAMPLE = 48
+
+
+def choose_pop_order(
+    data: Nc.DataClusterWLFactor,
+    mset: Ncm.MSet,
+    coverage: dict[str, tuple[float, float]],
+    *,
+    candidates: tuple[int, ...] = POP_ORDER_CANDIDATES,
+    n_sample: int = POP_ORDER_SAMPLE,
+) -> tuple[int, int]:
+    """Return the lowest order of candidates whose expansions over coverage converge.
+
+    The expansions of a sample of n_sample galaxies, spread in |eps_obs| from the smallest
+    to the largest, are built at each order in turn, in parallel, until none fails to
+    converge; their accuracy is then within interp-abstol. The width of the coverage, not
+    the catalog, sets the order: the population parameters of the HSC clusters, alpha and
+    beta in [1, 4], need 15 where a box of +-0.2 needs 7.
+
+    Returns:
+        The order and the number of galaxies of the sample whose expansion did not
+        converge at it (non-zero only when no candidate converges).
+    """
+    obs = data.peek_obs()
+    columns = list(obs.peek_columns())
+    eps = np.hypot(
+        obs.peek_data().to_numpy()[:, columns.index("epsilon_obs_1")],
+        obs.peek_data().to_numpy()[:, columns.index("epsilon_obs_2")],
+    )
+    order = np.argsort(eps)
+    n = min(n_sample, obs.len())
+    rows = sorted({int(order[i]) for i in np.linspace(0, obs.len() - 1, n).astype(int)})
+    sub = _sub_catalog(obs, rows)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    unconverged = n
+    for k in candidates:
+        probe = cast(Nc.DataClusterWLFactor, ser.dup_obj(data))
+        ser.reset(True)
+        gsfs = probe.props.shape_factor
+        assert isinstance(gsfs, Nc.GalaxyShapeFactorSpectral)
+        gsfs.set_pop_order(k)
+        probe.set_obs(_sub_catalog(sub, list(range(sub.len()))))
+        builder = _builder_mset(mset, coverage)
+        probe.write_shape_interp(builder, probe.peek_obs())
+        unconverged = gsfs.get_pop_n_unconverged()
+        if unconverged == 0:
+            return k, 0
+    return candidates[-1], unconverged
 
 
 def _same_coverage(cache: ShapeInterpCache, pop: Nc.GalaxyShapePop) -> bool:
@@ -471,9 +666,108 @@ def _same_coverage(cache: ShapeInterpCache, pop: Nc.GalaxyShapePop) -> bool:
         free = pop.param_get_ftype(i) == Ncm.ParamType.FREE
         if free != (src.param_get_ftype(i) == Ncm.ParamType.FREE):
             return False
-        if free and (
-            pop.param_get_lower_bound(i) != src.param_get_lower_bound(i)
-            or pop.param_get_upper_bound(i) != src.param_get_upper_bound(i)
+        if free and not (
+            _close(pop.param_get_lower_bound(i), src.param_get_lower_bound(i))
+            and _close(pop.param_get_upper_bound(i), src.param_get_upper_bound(i))
         ):
             return False
     return True
+
+
+def format_coverage(coverage: dict[str, tuple[float, float]] | None) -> str:
+    """Return coverage as NAME=LO:HI;..., exact (repr) and sorted by name."""
+    return ";".join(
+        f"{k}={lo!r}:{hi!r}" for k, (lo, hi) in sorted((coverage or {}).items())
+    )
+
+
+def parse_coverage(text: str) -> dict[str, tuple[float, float]]:
+    """Return the coverage of a string written by :func:`format_coverage`.
+
+    Raises:
+        ValueError: A malformed entry.
+    """
+    coverage: dict[str, tuple[float, float]] = {}
+    for item in filter(None, text.split(";")):
+        name, sep, bounds = item.partition("=")
+        lo, sep2, hi = bounds.partition(":")
+        if not (sep and sep2 and name):
+            raise ValueError(f"malformed coverage {item!r}: expected NAME=LO:HI")
+        coverage[name.strip()] = (float(lo), float(hi))
+    return coverage
+
+
+def default_coverage(mset: Ncm.MSet) -> dict[str, tuple[float, float]] | None:
+    """Return the free population parameters of mset over their priors, or None.
+
+    The population coverage defaults to the prior: an expansion over the bounds of each
+    free parameter of the population, none when the population is fixed.
+    """
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+    if pop is None:
+        return None
+    coverage = {
+        pop.param_name(i): (pop.param_get_lower_bound(i), pop.param_get_upper_bound(i))
+        for i in range(pop.len())
+        if pop.param_get_ftype(i) == Ncm.ParamType.FREE
+    }
+    return coverage or None
+
+
+def record_shape_interp_cache(
+    obs: Nc.GalaxyWLObs,
+    path: Path,
+    coverage: dict[str, tuple[float, float]] | None,
+    base_dir: Path,
+) -> None:
+    """Name the cache of obs, relative to base_dir, and its coverage, then strip obs.
+
+    What an experiment saves: the catalog without interpolants, naming the cache that
+    :func:`load_shape_interp_cache` attaches (or builds) when the experiment is loaded.
+    """
+    name_shape_interp_cache(obs, path, wl_obs_fingerprint(obs), base_dir=base_dir)
+    meta = obs.peek_meta()
+    assert meta is not None
+    meta.set_string(CATALOG_META_INTERP_COVERAGE, format_coverage(coverage))
+    obs.set_meta(meta)
+    strip_shape_interp(obs)
+
+
+def recorded_coverage(obs: Nc.GalaxyWLObs) -> dict[str, tuple[float, float]] | None:
+    """Return the coverage recorded by :func:`record_shape_interp_cache`, or None."""
+    meta = obs.peek_meta()
+    if meta is None:
+        return None
+    ok, text = meta.get_string(CATALOG_META_INTERP_COVERAGE)
+    return (parse_coverage(text) or None) if ok else None
+
+
+def load_shape_interp_cache(
+    data: Nc.DataClusterWLFactor,
+    mset: Ncm.MSet,
+    base_dir: Path,
+    *,
+    build: bool = True,
+) -> ShapeInterpCacheUpdate | None:
+    """Attach the cache the catalog of data names, building what it misses.
+
+    The cache is resolved against base_dir (the directory of the experiment) and brought up
+    to date for the priors of mset by :func:`update_shape_interp_cache`, with the coverage
+    recorded beside its name: a missing file, or galaxies the priors take beyond it, are
+    built and saved, unless build is False, which makes a missing file an error. Returns
+    None when the catalog names no cache, or carries its interpolants itself (a catalog
+    written before the caches).
+
+    Raises:
+        ValueError: See :func:`update_shape_interp_cache`.
+    """
+    obs = data.peek_obs()
+    path = resolve_shape_interp_cache(obs, base_dir)
+    if path is None or obs.peek_shape_interp_source() is not None:
+        return None
+    gsfs = data.props.shape_factor
+    if not isinstance(gsfs, Nc.GalaxyShapeFactorSpectral) or not gsfs.get_use_interp():
+        return None
+    return update_shape_interp_cache(
+        data, mset, path.parent, coverage=recorded_coverage(obs), build=build
+    )
