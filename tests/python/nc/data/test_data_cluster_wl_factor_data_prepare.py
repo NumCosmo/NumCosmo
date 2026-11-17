@@ -338,6 +338,24 @@ def test_clone_takes_the_published_grid_and_critical_densities():
     np.testing.assert_array_equal(_m2lnP(fresh, mset_fresh), moved)
 
 
+@pytest.mark.parametrize("node_reltol", [1.0e-4, 1.0e-6])
+def test_calibration_bounds_ln_p_of_every_galaxy(node_reltol):
+    """At the point of the calibration, ln P of every galaxy on its calibrated nodes
+    agrees with that of a converged calibration to node_reltol: the tolerance bounds
+    what -2 ln L sums."""
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    dcwlf.set_node_reltol(node_reltol)
+    m2lnP = _m2lnP(dcwlf, mset)
+    assert dcwlf.get_calib_count() == dcwlf.peek_obs().len()
+
+    ref, mset_ref = _build("var-add", "nfw", "spline")
+    ref.set_node_reltol(1.0e-12)
+    ref.set_max_total_nodes(20000)
+    m2lnP_ref = _m2lnP(ref, mset_ref)
+
+    assert np.all(np.abs(0.5 * (m2lnP - m2lnP_ref)) <= node_reltol)
+
+
 def _shared_clones(dcwlf, mset, n):
     """n clones made as NcmFitESMCMC makes its workers', each with its own model set,
     after the dataset was registered as shared (prepared or not)."""
@@ -452,19 +470,25 @@ def test_node_config_mismatch_recalibrates():
     dcwlf, mset = _build("var-add", "nfw", "composed")
     dcwlf.data_prepare(mset)
 
+    tighter = 0.1 * dcwlf.get_node_reltol()
     dup = _reload(dcwlf)
-    dup.set_node_reltol(1.0e-5)
+    dup.set_node_reltol(tighter)
     dup.data_prepare(mset)
     assert dup.get_calib_count() > 0
 
     fresh, mset2 = _build("var-add", "nfw", "composed")
-    fresh.set_node_reltol(1.0e-5)
+    fresh.set_node_reltol(tighter)
     fresh.data_prepare(mset2)
 
     assert _node_config(dup) == _node_config(fresh)
     np.testing.assert_array_equal(_m2lnP(dup, mset), _m2lnP(fresh, mset2))
-    # A tighter tolerance never selects a coarser grid.
-    assert sum(_node_config(dup)[0]) >= sum(_node_config(dcwlf)[0])
+
+    # A tighter tolerance never selects fewer nodes in all.
+    def total_nodes(d):
+        n_nodes, rule_n = _node_config(d)
+        return sum((n - 1) * r for n, r in zip(n_nodes, rule_n))
+
+    assert total_nodes(dup) >= total_nodes(dcwlf)
 
 
 def test_node_config_cleared_and_prepared_state():

@@ -249,6 +249,7 @@ void nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePo
 
 NcGalaxyShapeFactorLine *nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const gdouble z_lo, const gdouble z_hi);
 gdouble nc_galaxy_shape_factor_line_eval (NcGalaxyShapeFactorLine *line, const gdouble z);
+void nc_galaxy_shape_factor_line_eval_array (NcGalaxyShapeFactorLine *line, const guint n, const gdouble *z, const gboolean want_log, gdouble *out);
 gboolean nc_galaxy_shape_factor_line_has_table (NcGalaxyShapeFactorLine *line);
 void nc_galaxy_shape_factor_line_free (NcGalaxyShapeFactorLine *line);
 

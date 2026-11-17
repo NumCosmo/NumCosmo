@@ -469,9 +469,10 @@ def test_node_config_cache_names(tmp_path: Path):
     name = node_config_cache_name(data, mset)
     assert name == node_config_cache_name(data, mset)
 
-    data.set_node_reltol(1.0e-5)
+    reltol = data.get_node_reltol()
+    data.set_node_reltol(reltol * 10.0)
     assert node_config_cache_name(data, mset) != name
-    data.set_node_reltol(1.0e-4)
+    data.set_node_reltol(reltol)
     assert node_config_cache_name(data, mset) == name
 
     hp = mset.peek(Nc.HaloPosition.id())
@@ -507,7 +508,7 @@ def test_node_config_cache_refused(tmp_path: Path):
     assert upd is not None
 
     data2, mset2, _ = _experiment(_catalog())
-    _fixed_nodes(data2).set_node_reltol(1.0e-5)
+    _fixed_nodes(data2).set_node_reltol(data2.get_node_reltol() * 10.0)
     other = tmp_path / node_config_cache_name(data2, mset2)
     other.write_bytes(upd.path.read_bytes())
     with pytest.raises(ValueError, match="another configuration"):

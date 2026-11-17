@@ -473,8 +473,8 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   _truth_cmp ("LNINT vs reference", vL, test->ref, 1.0e-6, abstol);
   _truth_cmp ("CUBATURE vs reference", vC, test->ref, 1.0e-6, abstol);
 
-  /* Auto-nodes targets node-reltol per galaxy (1e-4 by default, and the
-   * calibration may stop short of it), so it is held to a bar set by that
+  /* Auto-nodes targets node-reltol per galaxy in ln P (1e-6 by default, and
+   * the calibration may stop short of it), so it is held to a bar set by that
    * tolerance, not by the 1e-6 the three pinned arms above meet. It is here
    * to prove the calibrated configuration integrates the right thing at all,
    * not to re-prove convergence. */

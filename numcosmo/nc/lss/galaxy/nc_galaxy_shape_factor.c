@@ -2063,6 +2063,70 @@ nc_galaxy_shape_factor_line_eval (NcGalaxyShapeFactorLine *line, const gdouble z
 }
 
 /**
+ * nc_galaxy_shape_factor_line_eval_array: (skip)
+ * @line: a #NcGalaxyShapeFactorLine
+ * @n: the number of redshifts
+ * @z: the @n redshifts
+ * @want_log: whether to compute the logarithms
+ * @out: the @n values of $P(\epsilon_\mathrm{obs} \mid z)$, or of their logarithms
+ *
+ * Sets @out[j] to nc_galaxy_shape_factor_line_eval() at @z[j] (its logarithm when
+ * @want_log, which stays finite where the likelihood underflows), with the points outside the
+ * table, or all of them when @line has none, evaluated together by
+ * nc_galaxy_shape_factor_eval_nodes() in chunks: the shears of a galaxy lie on one line,
+ * so a subclass does once per chunk what it does once per call (for
+ * #NcGalaxyShapeFactorSpectral, take a work space and combine the panels it reads).
+ */
+void
+nc_galaxy_shape_factor_line_eval_array (NcGalaxyShapeFactorLine *line, const guint n, const gdouble *z, const gboolean want_log, gdouble *out)
+{
+  NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (line->gsf);
+  NcGalaxyShapeFactorClass *klass         = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (line->gsf);
+  NcGalaxyShapeFactorData *data           = line->data;
+  NcGalaxyShapeFactorCData *cdata         = (NcGalaxyShapeFactorCData *) data->cdata;
+  guint j0;
+
+  for (j0 = 0; j0 < n; j0 += NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK)
+  {
+    const guint c = MIN (n - j0, NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK);
+    gdouble g_1[NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK];
+    gdouble g_2[NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK];
+    gdouble val[NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK];
+    guint idx[NC_GALAXY_SHAPE_FACTOR_LINE_CHUNK];
+    guint m = 0;
+    guint k;
+
+    for (k = 0; k < c; k++)
+    {
+      const gdouble t = _nc_galaxy_shape_factor_line_t (self, data, z[j0 + k]);
+
+      if ((line->coeffs != NULL) && (t >= line->t_min) && (t <= line->t_max))
+      {
+        const gdouble ln_P = _nc_galaxy_shape_factor_line_series ((const gdouble *) line->coeffs->data, line->coeffs->len,
+                                                                  line->t_min, line->t_max, t);
+
+        out[j0 + k] = want_log ? ln_P : ncm_vmath_exp (ln_P);
+      }
+      else
+      {
+        g_1[m] = data->c1 + t * cdata->rot_re;
+        g_2[m] = data->c2 + t * cdata->rot_im;
+        idx[m] = j0 + k;
+        m++;
+      }
+    }
+
+    if (m > 0)
+    {
+      klass->eval_nodes (line->gsf, self->pop, data, m, g_1, g_2, data->epsilon_obs_1, data->epsilon_obs_2, want_log, val);
+
+      for (k = 0; k < m; k++)
+        out[idx[k]] = val[k];
+    }
+  }
+}
+
+/**
  * nc_galaxy_shape_factor_line_has_table: (skip)
  * @line: a #NcGalaxyShapeFactorLine
  *
