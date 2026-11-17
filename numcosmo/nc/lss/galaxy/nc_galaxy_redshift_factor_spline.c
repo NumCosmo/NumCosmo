@@ -102,15 +102,21 @@ typedef struct _SplineSqrt
   NcmVector *cum;
 } SplineSqrt;
 
-/* Per-galaxy fragment: the table @tab (2 x n: knots, values), the derived data @sq of
- * that table and @pz, the spline given to nc_galaxy_redshift_factor_spline_data_set() or
+/*
+ * Per-galaxy fragment: the table @tab (2 x n: knots, values), the derived data @sq of that
+ * table, the first and last knots of @tab, the integration limits, kept here so that
+ * reading them does not go through the table (an allocation that is cold in a loop over
+ * galaxies), and @pz, the spline given to nc_galaxy_redshift_factor_spline_data_set() or
  * built by nc_galaxy_redshift_factor_spline_data_peek(), NULL for a row read from a
- * catalog until then. */
+ * catalog until then.
+ */
 typedef struct _SplineLData
 {
   NcmMatrix *tab;
   SplineSqrt *sq;
   NcmSpline *pz;
+  gdouble z_min;
+  gdouble z_max;
 } SplineLData;
 
 /* The value of s at @z */
@@ -457,8 +463,10 @@ _spline_ldata_set_tab (SplineLData *sldata, NcmMatrix *tab)
   ncm_matrix_clear (&sldata->tab);
   ncm_spline_clear (&sldata->pz);
 
-  sldata->tab = tab;
-  sldata->sq  = sq;
+  sldata->tab   = tab;
+  sldata->sq    = sq;
+  sldata->z_min = ncm_matrix_get (tab, 0, 0);
+  sldata->z_max = ncm_matrix_get (tab, 0, ncm_matrix_ncols (tab) - 1);
 }
 
 /* Integral of s^2 over [a, b] inside one polynomial piece of s, where s^2 has degree 10
@@ -628,8 +636,8 @@ _nc_galaxy_redshift_factor_spline_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, N
   SplineLData *sldata = (SplineLData *) data->ldata;
 
   g_assert_nonnull (sldata->tab);
-  *z_min = ncm_matrix_get (sldata->tab, 0, 0);
-  *z_max = ncm_matrix_get (sldata->tab, 0, ncm_matrix_ncols (sldata->tab) - 1);
+  *z_min = sldata->z_min;
+  *z_max = sldata->z_max;
 }
 
 static gdouble
