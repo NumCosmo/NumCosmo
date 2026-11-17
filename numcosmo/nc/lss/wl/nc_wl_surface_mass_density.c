@@ -21,6 +21,11 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+/*
+ * Minor contributions:
+ * Caio Lima de Oliveira <caiolimadeoliveira@pm.me> (2026)
+ * - nc_wl_surface_mass_density_prepare_if_needed() prepares the distance at every call.
+ */
 
 /**
  * NcWLSurfaceMassDensity:
@@ -78,9 +83,8 @@ enum
 static void
 nc_wl_surface_mass_density_init (NcWLSurfaceMassDensity *smd)
 {
-  smd->dist       = NULL;
-  smd->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-  smd->ctrl_dp    = ncm_model_ctrl_new (NULL);
+  smd->dist    = NULL;
+  smd->ctrl_dp = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -137,7 +141,6 @@ _nc_wl_surface_mass_density_dispose (GObject *object)
   nc_distance_clear (&smd->dist);
 
   ncm_model_ctrl_clear (&smd->ctrl_dp);
-  ncm_model_ctrl_clear (&smd->ctrl_cosmo);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_wl_surface_mass_density_parent_class)->dispose (object);
@@ -288,14 +291,16 @@ nc_wl_surface_mass_density_prepare (NcWLSurfaceMassDensity *smd, NcHICosmo *cosm
  * @smd: a #NcWLSurfaceMassDensity
  * @cosmo: a #NcHICosmo
  *
- * Prepares the #NcWLSurfaceMassDensity object @smd for computation if necessary.
+ * Prepares the #NcWLSurfaceMassDensity object @smd for computation if necessary: its
+ * distance is prepared when it is out of date, for a new @cosmo or after
+ * nc_distance_require_zf(), which the distance itself tracks.
  *
  */
 void
 nc_wl_surface_mass_density_prepare_if_needed (NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo)
 {
-  if (ncm_model_ctrl_update (smd->ctrl_cosmo, NCM_MODEL (cosmo)))
-    nc_wl_surface_mass_density_prepare (smd, cosmo);
+  /* Not gated on the cosmology: the distance may also be out of date for its zf */
+  nc_wl_surface_mass_density_prepare (smd, cosmo);
 }
 
 /**

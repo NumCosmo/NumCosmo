@@ -82,7 +82,6 @@ struct _NcWLSurfaceMassDensity
   /*< private >*/
   NcmModel parent_instance;
   NcDistance *dist;
-  NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_dp;
 };
 
