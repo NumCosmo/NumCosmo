@@ -152,6 +152,8 @@ NcmSpline *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
 
 void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp);
 NcmSpectralPolarPanels *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);
+void nc_galaxy_wl_obs_set_shape_interp_modes (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanelsArray *modes);
+NcmSpectralPolarPanelsArray *nc_galaxy_wl_obs_peek_shape_interp_modes (NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_wl_obs_set_shape_interp_source (NcGalaxyWLObs *obs, NcmObjDictStr *source);
 NcmObjDictStr *nc_galaxy_wl_obs_peek_shape_interp_source (NcGalaxyWLObs *obs);
 

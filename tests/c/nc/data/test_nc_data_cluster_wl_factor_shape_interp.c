@@ -4,10 +4,13 @@
  *  Thu Nov 12 2026
  *  Copyright  2026  Sandro Dias Pinto Vitenti
  *  <vitenti@uel.br>
+ *  Copyright  2026  Caio Lima de Oliveira
+ *  <caiolimadeoliveira@pm.me>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2026 <vitenti@uel.br>
+ * Copyright (C) 2026 Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -25,7 +28,10 @@
 /*
  * Tests of nc_data_cluster_wl_factor_write_shape_interp(): a catalog prepared with the
  * interpolants of a NcGalaxyShapeFactorSpectral gives, after a serialization round trip, the
- * -2 ln L of the dataset that prepared it; another shape factor aborts.
+ * -2 ln L of the dataset that prepared it; another shape factor aborts. With pop-order the
+ * catalog holds the expansion of each galaxy over the box of the population, which a fit
+ * reads with the population free over a box inside it or fixed inside it, and a box wider
+ * than that of the catalog aborts.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,6 +47,17 @@
 #define SHAPE_INTERP_NROWS (6)
 #define SHAPE_INTERP_Z_CL (0.5)
 #define SHAPE_INTERP_SEED (20261112)
+#define SHAPE_INTERP_POP_ORDER (7)
+#define SHAPE_INTERP_SIGMA_LB (0.24)
+#define SHAPE_INTERP_SIGMA_UB (0.26)
+
+/* The kinds of shape factor of the fixture */
+enum
+{
+  SHAPE_INTERP_VAR_ADD = 0,
+  SHAPE_INTERP_SPECTRAL,
+  SHAPE_INTERP_SPECTRAL_EXPAND,
+};
 
 typedef struct _TestNcDataClusterWLFactorShapeInterp
 {
@@ -56,6 +73,10 @@ void test_nc_data_cluster_wl_factor_shape_interp_shape_factor (void);
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void);
 void test_nc_data_cluster_wl_factor_shape_interp_free_pop (void);
 void test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess (void);
+void test_nc_data_cluster_wl_factor_shape_interp_expand (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_shape_interp_expand_wide (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite (void);
+void test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -64,7 +85,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/nc/data_cluster_wl_factor/shape_interp/write", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (TRUE),
+  g_test_add ("/nc/data_cluster_wl_factor/shape_interp/write", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (SHAPE_INTERP_SPECTRAL),
               &test_nc_data_cluster_wl_factor_shape_interp_new,
               &test_nc_data_cluster_wl_factor_shape_interp_write,
               &test_nc_data_cluster_wl_factor_shape_interp_free);
@@ -74,6 +95,17 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/free_pop", &test_nc_data_cluster_wl_factor_shape_interp_free_pop);
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/free_pop/subprocess",
                    &test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess);
+  g_test_add ("/nc/data_cluster_wl_factor/shape_interp/expand", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (SHAPE_INTERP_SPECTRAL_EXPAND),
+              &test_nc_data_cluster_wl_factor_shape_interp_new,
+              &test_nc_data_cluster_wl_factor_shape_interp_expand,
+              &test_nc_data_cluster_wl_factor_shape_interp_free);
+  g_test_add ("/nc/data_cluster_wl_factor/shape_interp/expand/wide", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (SHAPE_INTERP_SPECTRAL_EXPAND),
+              &test_nc_data_cluster_wl_factor_shape_interp_new,
+              &test_nc_data_cluster_wl_factor_shape_interp_expand_wide,
+              &test_nc_data_cluster_wl_factor_shape_interp_free);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/expand/rewrite", &test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/expand/rewrite/subprocess",
+                   &test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite_subprocess);
 
   g_test_run ();
 
@@ -82,8 +114,9 @@ main (gint argc, gchar *argv[])
 
 /*
  * A dataset of SHAPE_INTERP_NROWS generated galaxies around a halo at SHAPE_INTERP_Z_CL,
- * with a NcGalaxyShapeFactorSpectral using its interpolants when pdata is TRUE and a
- * NcGalaxyShapeFactorVarAdd otherwise.
+ * with, by pdata, a NcGalaxyShapeFactorVarAdd, a NcGalaxyShapeFactorSpectral using its
+ * interpolants, or one expanding them over the width of the population, free in
+ * [SHAPE_INTERP_SIGMA_LB, SHAPE_INTERP_SIGMA_UB], with SHAPE_INTERP_POP_ORDER nodes.
  */
 void
 test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
@@ -113,11 +146,15 @@ test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeI
   GStrv columns_strv;
   guint i;
 
-  if (GPOINTER_TO_INT (pdata))
+  if (GPOINTER_TO_INT (pdata) != SHAPE_INTERP_VAR_ADD)
   {
     NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (ec);
 
     nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
+
+    if (GPOINTER_TO_INT (pdata) == SHAPE_INTERP_SPECTRAL_EXPAND)
+      nc_galaxy_shape_factor_spectral_set_pop_order (gsfs, SHAPE_INTERP_POP_ORDER);
+
     shape_factor = NC_GALAXY_SHAPE_FACTOR (gsfs);
   }
   else
@@ -131,6 +168,13 @@ test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeI
   ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_Z, SHAPE_INTERP_Z_CL);
   nc_halo_position_prepare (hp, cosmo);
   ncm_model_param_set (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.25);
+
+  if (GPOINTER_TO_INT (pdata) == SHAPE_INTERP_SPECTRAL_EXPAND)
+  {
+    ncm_model_param_set_lower_bound (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, SHAPE_INTERP_SIGMA_LB);
+    ncm_model_param_set_upper_bound (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, SHAPE_INTERP_SIGMA_UB);
+    ncm_model_param_set_ftype (NCM_MODEL (pop_shape), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
+  }
 
   test->mset = ncm_mset_empty_new ();
   ncm_mset_set (test->mset, NCM_MODEL (cosmo), NULL);
@@ -257,7 +301,7 @@ test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void)
 {
   TestNcDataClusterWLFactorShapeInterp test;
 
-  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (FALSE));
+  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (SHAPE_INTERP_VAR_ADD));
   nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, test.obs);
 }
 
@@ -275,8 +319,165 @@ test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess (void)
 {
   TestNcDataClusterWLFactorShapeInterp test;
 
-  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (TRUE));
+  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (SHAPE_INTERP_SPECTRAL));
   ncm_mset_param_set_ftype (test.mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
   nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, test.obs);
+}
+
+/* The catalog of the fixture written and read back through its serialization */
+static NcGalaxyWLObs *
+_shape_interp_round_trip (NcGalaxyWLObs *obs)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GVariant *obs_ser = ncm_serialize_to_variant (ser, G_OBJECT (obs));
+  NcGalaxyWLObs *obs_dup;
+
+  ncm_serialize_reset (ser, FALSE);
+  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
+
+  g_variant_unref (obs_ser);
+  ncm_serialize_free (ser);
+
+  return obs_dup;
+}
+
+/* -2 ln L of the fixture at the width sigma of the population */
+static gdouble
+_shape_interp_m2lnL_at (TestNcDataClusterWLFactorShapeInterp *test, const gdouble sigma)
+{
+  gdouble m2lnL;
+
+  ncm_mset_param_set (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, sigma);
+  ncm_data_m2lnL_val (NCM_DATA (test->dcwlf), test->mset, &m2lnL);
+
+  return m2lnL;
+}
+
+/*
+ * The catalog holds for each galaxy the SHAPE_INTERP_POP_ORDER modes of its expansion and no
+ * interpolant of one population, every expansion converged, and the catalog read back gives
+ * the -2 ln L of the expansions built, bit for bit: with the width free over the box of the
+ * catalog, free over a box inside it, and fixed inside it.
+ */
+void
+test_nc_data_cluster_wl_factor_shape_interp_expand (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
+{
+  NcmModel *pop = ncm_mset_peek (test->mset, nc_galaxy_shape_pop_id ());
+  NcGalaxyShapeFactorSpectral *gsfs;
+  NcGalaxyWLObs *obs_dup;
+  gdouble m2lnL_a, m2lnL_b;
+  guint i;
+
+  nc_data_cluster_wl_factor_write_shape_interp (test->dcwlf, test->mset, test->obs);
+  g_object_get (test->dcwlf, "shape-factor", &gsfs, NULL);
+  g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_pop_n_unconverged (gsfs), ==, 0);
+
+  for (i = 0; i < SHAPE_INTERP_NROWS; i++)
+  {
+    NcmSpectralPolarPanelsArray *modes = nc_galaxy_wl_obs_peek_shape_interp_modes (test->obs, i);
+
+    g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS_ARRAY (modes));
+    g_assert_cmpuint (ncm_spectral_polar_panels_array_len (modes), ==, SHAPE_INTERP_POP_ORDER);
+    g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (test->obs, i));
+  }
+
+  m2lnL_a = _shape_interp_m2lnL_at (test, 0.25);
+  m2lnL_b = _shape_interp_m2lnL_at (test, 0.252);
+  g_assert_true (gsl_finite (m2lnL_a) && gsl_finite (m2lnL_b));
+  g_assert_cmpfloat (m2lnL_a, !=, m2lnL_b);
+
+  obs_dup = _shape_interp_round_trip (test->obs);
+  nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs_dup);
+
+  /* The box of the catalog */
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+  g_assert_cmpfloat (_shape_interp_m2lnL_at (test, 0.25), ==, m2lnL_a);
+  g_assert_cmpfloat (_shape_interp_m2lnL_at (test, 0.252), ==, m2lnL_b);
+
+  /* A box inside it */
+  ncm_model_param_set_lower_bound (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.245);
+  ncm_model_param_set_upper_bound (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.255);
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+  g_assert_cmpfloat (_shape_interp_m2lnL_at (test, 0.25), ==, m2lnL_a);
+  g_assert_cmpfloat (_shape_interp_m2lnL_at (test, 0.252), ==, m2lnL_b);
+
+  /* Fixed inside it */
+  ncm_model_param_set_ftype (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_param_set (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.252);
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+  g_assert_cmpfloat (_shape_interp_m2lnL_at (test, 0.252), ==, m2lnL_b);
+
+  nc_galaxy_wl_obs_free (obs_dup);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+}
+
+/*
+ * A fit whose box is wider than that of the catalog keeps its bounds, the prior of the fit:
+ * a warning is given once, inside the box of the catalog the values are those of the
+ * expansion, bit for bit, and outside it those of the integrals.
+ */
+void
+test_nc_data_cluster_wl_factor_shape_interp_expand_wide (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
+{
+  NcmModel *pop            = ncm_mset_peek (test->mset, nc_galaxy_shape_pop_id ());
+  NcGalaxyWLObs *obs_plain = _shape_interp_round_trip (test->obs);
+  NcGalaxyShapeFactorSpectral *gsfs;
+  NcGalaxyWLObs *obs_dup;
+  gdouble m2lnL_in, m2lnL_out, m2lnL_out_integ;
+
+  nc_data_cluster_wl_factor_write_shape_interp (test->dcwlf, test->mset, test->obs);
+  g_object_get (test->dcwlf, "shape-factor", &gsfs, NULL);
+  m2lnL_in = _shape_interp_m2lnL_at (test, 0.25);
+
+  obs_dup = _shape_interp_round_trip (test->obs);
+  nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs_dup);
+  ncm_model_param_set_upper_bound (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.27);
+
+  g_test_expect_message ("NUMCOSMO", G_LOG_LEVEL_WARNING, "*reaches outside the box of the expansion of the catalog*");
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+  g_test_assert_expected_messages ();
+
+  g_assert_cmpfloat (ncm_model_param_get_upper_bound (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA), ==, 0.27);
+  g_assert_cmpfloat (_shape_interp_m2lnL_at (test, 0.25), ==, m2lnL_in);
+  m2lnL_out = _shape_interp_m2lnL_at (test, 0.265);
+  g_assert_true (gsl_finite (m2lnL_out));
+
+  /* The integrals, from the rows without interpolants */
+  nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, FALSE);
+  nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs_plain);
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+  m2lnL_out_integ = _shape_interp_m2lnL_at (test, 0.265);
+  ncm_assert_cmpdouble_e (m2lnL_out, ==, m2lnL_out_integ, 0.0, 1.0e-6);
+
+  nc_galaxy_wl_obs_free (obs_plain);
+  nc_galaxy_wl_obs_free (obs_dup);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+}
+
+/*
+ * A catalog read with a box inside its own is not written again: its modes span the box of
+ * its record, and the record written would be that of the narrower box
+ */
+void
+test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite (void)
+{
+  g_test_trap_subprocess ("/nc/data_cluster_wl_factor/shape_interp/expand/rewrite/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*holds an expansion loaded over a box other than the one the fit expands over*");
+}
+
+void
+test_nc_data_cluster_wl_factor_shape_interp_expand_rewrite_subprocess (void)
+{
+  TestNcDataClusterWLFactorShapeInterp test;
+  NcGalaxyWLObs *obs_dup;
+
+  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (SHAPE_INTERP_SPECTRAL_EXPAND));
+  nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, test.obs);
+
+  obs_dup = _shape_interp_round_trip (test.obs);
+  nc_data_cluster_wl_factor_set_obs (test.dcwlf, obs_dup);
+  ncm_model_param_set_upper_bound (ncm_mset_peek (test.mset, nc_galaxy_shape_pop_id ()), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.255);
+  nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, obs_dup);
 }
 
