@@ -109,13 +109,16 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
   /**
    * NcGalaxyShapePopGauss:sigma:
    *
-   * The width $\sigma$ of the truncated Gaussian intrinsic ellipticity.
+   * The width $\sigma$ of the truncated Gaussian intrinsic ellipticity. Bounded to
+   * $[0.1, 1]$ by default, the prior of a fit that frees it: fits of Subaru HSC s19a
+   * clusters give $\sigma$ between 0.41 and 0.47 for every cluster, and between 0.32 and
+   * 0.64 for galaxies split by magnitude, colour or redshift.
    *
    */
   ncm_model_class_set_sparam (model_class,
                               NC_GALAXY_SHAPE_POP_GAUSS_SIGMA,
                               "\\sigma",
-                              "sigma", 1.0e-2, 1.0, 1.0e-1,
+                              "sigma", 1.0e-1, 1.0, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_GAUSS_DEFAULT_PARAMS_ABSTOL,
                               NC_GALAXY_SHAPE_POP_GAUSS_DEFAULT_SIGMA,
                               NCM_PARAM_TYPE_FIXED);

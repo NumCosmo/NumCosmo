@@ -1852,3 +1852,198 @@ def test_shape_interp_gens_unknown_population():
     """A record whose population has no generator is an error."""
     with pytest.raises(ValueError, match="has no generator"):
         shape_interp_gens(_obs_with_source(Ncm.Vector.new(2)))
+
+
+def _load_experiment_mset(experiment_file: Path) -> Ncm.MSet:
+    """The model set of the experiment written by generate."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix())
+    mset = ser.dict_str_from_yaml_file(experiment_file.as_posix()).get("model-set")
+    assert isinstance(mset, Ncm.MSet)
+    return mset
+
+
+def _bounds(mset: Ncm.MSet, name: str) -> tuple[float, float]:
+    """The bounds of the parameter name of mset."""
+    pindex = mset.param_get_by_full_name(name)
+    assert pindex is not None
+    return (
+        mset.param_get_lower_bound(pindex.mid, pindex.pid),
+        mset.param_get_upper_bound(pindex.mid, pindex.pid),
+    )
+
+
+def test_cluster_wl_load_app_prior(experiment_file, real_wl_obs_file_with_meta):
+    """--prior sets the bounds of a parameter, and --summary prints the free
+    parameters with their priors."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+            "--pop-dist=beta alpha=1.58 beta=1.69",
+            "--parameter-list=NcHaloMassSummary:log10MDelta",
+            "--parameter-list=NcGalaxyShapePop:alpha",
+            "--prior=NcHaloMassSummary:log10MDelta=13.5:15.5",
+            "--prior=NcGalaxyShapePop:alpha=1.2:2.5",
+            "--summary",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Free parameters and their priors" in result.output
+
+    mset = _load_experiment_mset(experiment_file)
+    assert _bounds(mset, "NcHaloMassSummary:log10MDelta") == (13.5, 15.5)
+    assert _bounds(mset, "NcGalaxyShapePop:alpha") == (1.2, 2.5)
+    # The default prior of beta, a parameter not given
+    assert _bounds(mset, "NcGalaxyShapePop:beta") == (1.0, 4.0)
+
+
+@pytest.mark.parametrize(
+    "prior",
+    [
+        "NcHaloMassSummary:log10MDelta=15.5",
+        "NcHaloMassSummary:log10MDelta=15.5:13.5",
+        "NcHaloMassSummary:log10MDelta=a:b",
+        "NcHaloMassSummary:nothere=13.0:15.0",
+        "NcHaloMassSummary:log10MDelta=15.5:16.0",
+    ],
+)
+def test_cluster_wl_load_app_prior_bad(
+    experiment_file, real_wl_obs_file_with_meta, prior
+):
+    """A malformed prior, an unknown parameter, or a prior that excludes the
+    value of its parameter (log10MDelta = 14) is an error, and nothing is
+    written."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--prior={prior}",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert not experiment_file.exists()
+
+
+def test_cluster_wl_load_app_centre_box(experiment_file, real_wl_obs_file_with_meta):
+    """--centre-box-deg and --centre-box-mpc set the prior of the halo centre
+    around the cluster (0, 0), 0.8 h^-1 Mpc without either; both together are
+    an error."""
+    base = [
+        "generate",
+        "cluster-wl-load",
+        experiment_file.as_posix(),
+        f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+        "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+    ]
+
+    result = runner.invoke(app, base + ["--centre-box-deg=0.02"])
+    assert result.exit_code == 0, result.output
+    mset = _load_experiment_mset(experiment_file)
+    assert _bounds(mset, "NcHaloPosition:ra") == pytest.approx((-0.02, 0.02))
+    assert _bounds(mset, "NcHaloPosition:dec") == pytest.approx((-0.02, 0.02))
+
+    result = runner.invoke(app, base + ["--centre-box-mpc=0.5"])
+    assert result.exit_code == 0, result.output
+    mset = _load_experiment_mset(experiment_file)
+    ra_lo, ra_hi = _bounds(mset, "NcHaloPosition:ra")
+    dec_lo, dec_hi = _bounds(mset, "NcHaloPosition:dec")
+    assert ra_hi == pytest.approx(-ra_lo)
+    assert dec_hi == pytest.approx(-dec_lo)
+    # 0.5 h^-1 Mpc projected at the cluster redshift, along each axis
+    hp = cast(Nc.HaloPosition, mset.peek_by_name("NcHaloPosition"))
+    cosmo = cast(Nc.HICosmo, mset.peek_by_name("NcHICosmo"))
+    hp.prepare(cosmo)
+    radius = 0.5 / cosmo.h()
+    assert hp.projected_radius_from_ra_dec(cosmo, ra_hi, 0.0) == pytest.approx(
+        radius, rel=1.0e-9
+    )
+    assert hp.projected_radius_from_ra_dec(cosmo, 0.0, dec_hi) == pytest.approx(
+        radius, rel=1.0e-9
+    )
+
+    # Without either option: 0.8 h^-1 Mpc
+    result = runner.invoke(app, base + ["--centre-box-mpc=0.8"])
+    assert result.exit_code == 0, result.output
+    box_08 = (
+        _bounds(_load_experiment_mset(experiment_file), "NcHaloPosition:ra"),
+        _bounds(_load_experiment_mset(experiment_file), "NcHaloPosition:dec"),
+    )
+    result = runner.invoke(app, base)
+    assert result.exit_code == 0, result.output
+    mset = _load_experiment_mset(experiment_file)
+    assert _bounds(mset, "NcHaloPosition:ra") == box_08[0]
+    assert _bounds(mset, "NcHaloPosition:dec") == box_08[1]
+
+    experiment_file.unlink()
+    result = runner.invoke(
+        app, base + ["--centre-box-deg=0.02", "--centre-box-mpc=0.5"]
+    )
+    assert result.exit_code != 0, result.output
+    assert not experiment_file.exists()
+
+
+def test_cluster_wl_load_app_cosmology(experiment_file, real_wl_obs_file_with_meta):
+    """The --cosmo-* options set the cosmology of the experiment."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            "--cosmo-h0=67.27",
+            "--cosmo-omegab=0.0494",
+            "--cosmo-omegac=0.2672",
+            "--cosmo-w=-0.9",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    cosmo = cast(
+        Nc.HICosmo, _load_experiment_mset(experiment_file).peek_by_name("NcHICosmo")
+    )
+    assert cosmo["H0"] == 67.27
+    assert cosmo["Omegab"] == 0.0494
+    assert cosmo["Omegac"] == 0.2672
+    assert cosmo["w"] == -0.9
+
+
+def test_cluster_wl_load_app_dataset_data_file(
+    experiment_file, experiment_file_copy, real_wl_obs_file_with_meta
+):
+    """--data-file also takes the dataset of an experiment, whose catalog is used."""
+    args = [
+        "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+    ]
+    result = runner.invoke(
+        app,
+        ["generate", "cluster-wl-load", experiment_file.as_posix()]
+        + [f"--data-file={real_wl_obs_file_with_meta.as_posix()}"]
+        + args,
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    result = runner.invoke(
+        app,
+        ["generate", "cluster-wl-load", experiment_file_copy.as_posix()]
+        + [f"--data-file={dataset_file.as_posix()}"]
+        + args,
+    )
+    assert result.exit_code == 0, result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(
+        Ncm.Dataset,
+        ser.from_binfile(experiment_file_copy.with_suffix(".dataset.gvar").as_posix()),
+    )
+    assert cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs().len() == 20
