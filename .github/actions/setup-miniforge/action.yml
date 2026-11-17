@@ -39,6 +39,7 @@ runs:
         set -eu
         case "$RUNNER_OS-$RUNNER_ARCH" in
           Linux-X64)   subdir=linux-64  ;;
+          Linux-ARM64) subdir=linux-aarch64 ;;
           macOS-ARM64) subdir=osx-arm64 ;;
           macOS-X64)   subdir=osx-64    ;;
           *)           subdir=unknown   ;;
