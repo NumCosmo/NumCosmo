@@ -418,6 +418,7 @@ DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
 # Negative: reltol / 10 (NcGalaxyShapeFactorSpectral:line-abstol)
 DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = -1.0
+DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE = False
 
 
 class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
@@ -437,6 +438,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     line_abstol: Annotated[float, Field(ge=-1.0, le=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL
     )
+    restrict_range: Annotated[bool, Field()] = DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE
 
     @staticmethod
     def help_text() -> list[str]:
@@ -451,7 +453,8 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
                 f"interp_abstol={DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL}, "
                 "interp_min_radial_panels="
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS}, "
-                f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL} (negative: reltol / 10)"
+                f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL} (negative: reltol / 10), "
+                f"restrict_range={DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE}"
             ),
         ]
 
@@ -469,6 +472,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
             interp_abstol=self.interp_abstol,
             interp_min_radial_panels=self.interp_min_radial_panels,
             line_abstol=self.line_abstol,
+            restrict_range=self.restrict_range,
         )
 
 
@@ -861,6 +865,7 @@ def shape_interp_gens(
         interp_g_max=gsfs.get_interp_g_max(),
         interp_abstol=gsfs.get_interp_abstol(),
         interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),
+        restrict_range=gsfs.get_restrict_range(),
     )
 
     pop_gen: GalaxyPopGenTypes
