@@ -31,6 +31,7 @@
 #include "ncm/core/ncm_vmath_private.h"
 
 #include <math.h>
+#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 
@@ -73,6 +74,7 @@ void test_ncm_vmath_new (TestNcmVMath *test, gconstpointer pdata);
 void test_ncm_vmath_free (TestNcmVMath *test, gconstpointer pdata);
 void test_ncm_vmath_loop (TestNcmVMath *test, gconstpointer pdata);
 void test_ncm_vmath_special (TestNcmVMath *test, gconstpointer pdata);
+void test_ncm_vmath_select (TestNcmVMath *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -97,6 +99,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_vmath_new, &test_ncm_vmath_loop, &test_ncm_vmath_free);
   g_test_add ("/ncm/vmath/special", TestNcmVMath, NULL,
               &test_ncm_vmath_new, &test_ncm_vmath_special, &test_ncm_vmath_free);
+  g_test_add ("/ncm/vmath/select", TestNcmVMath, NULL,
+              &test_ncm_vmath_new, &test_ncm_vmath_select, &test_ncm_vmath_free);
 
   g_test_run ();
 }
@@ -318,6 +322,37 @@ test_ncm_vmath_special (TestNcmVMath *test, gconstpointer pdata)
         }
       }
     }
+  }
+}
+
+/*
+ * ncm_vmath_select() returns its second argument for a true condition and its third for
+ * a false one, bit for bit, also when the other one is infinity or NaN, in a loop.
+ */
+void
+test_ncm_vmath_select (TestNcmVMath *test, gconstpointer pdata)
+{
+  const gdouble sx[] = {0.0, -0.0, 1.5, -2.5, GSL_POSINF, GSL_NEGINF, GSL_NAN, 1.0e-320};
+  const guint n_s    = G_N_ELEMENTS (sx);
+  const guint n      = 64;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    test->x[i] = sx[i % n_s];
+    test->y[i] = sx[(i * 3 + 1) % n_s];
+  }
+
+  #pragma omp simd
+
+  for (i = 0; i < n; i++)
+    test->r[i] = ncm_vmath_select (i % 3 == 0, test->x[i], test->y[i]);
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble expected = (i % 3 == 0) ? test->x[i] : test->y[i];
+
+    g_assert_cmpint (memcmp (&test->r[i], &expected, sizeof (gdouble)), ==, 0);
   }
 }
 

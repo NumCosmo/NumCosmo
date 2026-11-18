@@ -842,9 +842,13 @@ galaxy_tests = [
         'name': 'nc_galaxy_shape_factor_moments_tilt',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
     },
+    # The timeout follows the -O0 coverage build, where the test takes 100 to 140 s on
+    # the CI runners and a job can run 3.6 times slower; 240 s is 720 s under the lane's
+    # multiplier of 3.
     {
         'name': 'nc_galaxy_shape_factor_spectral',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral.c'],
+        'timeout': 240,
     },
     {
         'name': 'nc_galaxy_shape_factor_spectral_cert',
