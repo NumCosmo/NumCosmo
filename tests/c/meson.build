@@ -570,6 +570,10 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_util.c'],
     },
     {
+        'name': 'ncm_vmath',
+        'sources': ['ncm/core/test_ncm_vmath.c'],
+    },
+    {
         'name': 'ncm_quaternion',
         'sources': ['ncm/algebra/test_ncm_quaternion.c'],
     },
