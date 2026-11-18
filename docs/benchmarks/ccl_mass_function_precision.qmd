@@ -45,7 +45,7 @@ $|Q^{\mathrm{NumCosmo}}/Q^{\mathrm{CCL}} - 1|$. The function `compare_mass_funct
 returns $M \, \mathrm{d}n/\mathrm{d}\log_{10}M$ for both codes; the factor $M \ln 10$
 is the same for both and cancels in the relative difference. NumCosmo's Tinker (2008)
 multiplicity function is built with `set_linear_interp(True)`, as on
-[CCL Tinker Mass Functions](ccl_mass_function_tinker.qmd); at 200m the overdensity
+[CCL Halo Mass Function](ccl_mass_function.qmd#tinker); at 200m the overdensity
 $\Delta_m = 200$ is tabulated, so the interpolation does not enter. The comparison
 uses 128 masses between $10^{11}$ and $10^{15}\,\mathrm{M}_\odot$, the five cosmologies
 defined below, and $z = 0$, $0.05$, $0.5$, $1$ and $1.5$. At CCL defaults, $z = 0.05$
