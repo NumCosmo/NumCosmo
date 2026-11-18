@@ -125,6 +125,7 @@ void test_ncm_spectral_polar_panels_trim_zero (TestNcmSpectralPolarPanels *test,
 void test_ncm_spectral_polar_panels_variant_counts (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_variant_levels (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels_variant_size_subprocess (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
+void test_ncm_spectral_polar_panels_variant_levels_subprocess (TestNcmSpectralPolarPanels *test, gconstpointer pdata);
 
 #define TEST_NCM_SPECTRAL_POLAR_PANELS_ADD(name, func)                                    \
         g_test_add ("/ncm/spectral_polar_panels/" name, TestNcmSpectralPolarPanels, NULL, \
@@ -181,6 +182,7 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/counts", test_ncm_spectral_polar_panels_variant_counts);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/levels", test_ncm_spectral_polar_panels_variant_levels);
   TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/size/subprocess", test_ncm_spectral_polar_panels_variant_size_subprocess);
+  TEST_NCM_SPECTRAL_POLAR_PANELS_ADD ("variant/levels/subprocess", test_ncm_spectral_polar_panels_variant_levels_subprocess);
 
   g_test_run ();
 
@@ -1127,7 +1129,7 @@ test_ncm_spectral_polar_panels_variant_size (TestNcmSpectralPolarPanels *test, g
 {
   g_test_trap_subprocess ("/ncm/spectral_polar_panels/variant/size/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*panel 0 has 8 coefficients, neither 1 by 1 nor at the levels 1 and 1*");
+  g_test_trap_assert_stderr ("*panel 0 has 8 coefficients, not 1 by 1*");
 }
 
 void
@@ -1317,18 +1319,19 @@ test_ncm_spectral_polar_panels_variant_counts (TestNcmSpectralPolarPanels *test,
   ncm_spectral_polar_panels_free (spp);
 }
 
-/* A panel given with its levels, as earlier versions wrote it */
+/* A panel given with its levels (2^l + 1 coefficients), a layout that was never released, is refused */
 void
 test_ncm_spectral_polar_panels_variant_levels (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
 {
-  NcmSpectralPolarPanels *spp = g_object_new (NCM_TYPE_SPECTRAL_POLAR_PANELS, "panels", _panels_variant (2, 0, 5, 2), NULL);
-  gdouble ra, rb, ta, tb;
-  guint n_r, n_theta;
+  g_test_trap_subprocess ("/ncm/spectral_polar_panels/variant/levels/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*panel 0 has 10 coefficients, not 0 by 2*");
+}
 
-  ncm_spectral_polar_panels_peek_panel (spp, 0, &ra, &rb, &ta, &tb, &n_r, &n_theta);
-  g_assert_cmpuint (n_r, ==, 5);
-  g_assert_cmpuint (n_theta, ==, 2);
-  ncm_assert_cmpdouble_e (ncm_spectral_polar_panels_eval (spp, 0.3, 0.8), ==, _panels_variant_value (5, 2, 0.3, 0.8), 1.0e-14, 0.0);
+void
+test_ncm_spectral_polar_panels_variant_levels_subprocess (TestNcmSpectralPolarPanels *test, gconstpointer pdata)
+{
+  NcmSpectralPolarPanels *spp = g_object_new (NCM_TYPE_SPECTRAL_POLAR_PANELS, "panels", _panels_variant (2, 0, 5, 2), NULL);
 
   ncm_spectral_polar_panels_free (spp);
 }

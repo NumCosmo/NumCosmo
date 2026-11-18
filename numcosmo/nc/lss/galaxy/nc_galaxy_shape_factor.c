@@ -70,6 +70,7 @@
 #include "nc_enum_types.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_private.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "ncm/algebra/ncm_spectral_clenshaw_private.h"
 #include "ncm/core/ncm_vmath_private.h"
@@ -1645,8 +1646,8 @@ nc_galaxy_shape_factor_update_data_at_nodes_crit (NcGalaxyShapeFactor *gsf, NcGa
   cdata->crit_len   = n_nodes;
 }
 
-/**
- * nc_galaxy_shape_factor_data_peek_crit: (skip)
+/*
+ * nc_galaxy_shape_factor_data_peek_crit:
  * @data: a #NcGalaxyShapeFactorData
  *
  * The critical surface densities at the redshift nodes of @data, computed by
@@ -1663,8 +1664,8 @@ nc_galaxy_shape_factor_data_peek_crit (NcGalaxyShapeFactorData *data)
   return cdata->crit;
 }
 
-/**
- * nc_galaxy_shape_factor_data_share_crit: (skip)
+/*
+ * nc_galaxy_shape_factor_data_share_crit:
  * @data: a #NcGalaxyShapeFactorData
  * @crit: the critical surface densities at the redshift nodes of @data, from
  *   nc_galaxy_shape_factor_data_peek_crit() of another #NcGalaxyShapeFactorData of the same
@@ -1777,8 +1778,8 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
   return TRUE;
 }
 
-/**
- * nc_galaxy_shape_factor_eval_nodes: (skip)
+/*
+ * nc_galaxy_shape_factor_eval_nodes:
  * @gsf: a #NcGalaxyShapeFactor
  * @pop: the #NcGalaxyShapePop intrinsic-ellipticity model
  * @data: a #NcGalaxyShapeFactorData
@@ -1808,8 +1809,8 @@ nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *p
   NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_nodes (gsf, pop, data, n, g_1, g_2, epsilon_obs_1, epsilon_obs_2, want_log, out);
 }
 
-/**
- * nc_galaxy_shape_factor_eval_line: (skip)
+/*
+ * nc_galaxy_shape_factor_eval_line:
  * @gsf: a #NcGalaxyShapeFactor
  * @pop: the #NcGalaxyShapePop intrinsic-ellipticity model
  * @data: a #NcGalaxyShapeFactorData
@@ -1972,8 +1973,8 @@ struct _NcGalaxyShapeFactorLine
   gdouble t_max;
 };
 
-/**
- * nc_galaxy_shape_factor_line_new: (skip)
+/*
+ * nc_galaxy_shape_factor_line_new:
  * @gsf: a #NcGalaxyShapeFactor, prepared by nc_galaxy_shape_factor_prepare()
  * @data: a #NcGalaxyShapeFactorData with its lens geometry and optzs prepared
  * @z_lo: the lower end of the redshifts to be evaluated
@@ -2025,8 +2026,8 @@ nc_galaxy_shape_factor_line_new (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorDa
   return line;
 }
 
-/**
- * nc_galaxy_shape_factor_line_eval: (skip)
+/*
+ * nc_galaxy_shape_factor_line_eval:
  * @line: a #NcGalaxyShapeFactorLine
  * @z: a redshift
  *
@@ -2062,8 +2063,8 @@ nc_galaxy_shape_factor_line_eval (NcGalaxyShapeFactorLine *line, const gdouble z
   }
 }
 
-/**
- * nc_galaxy_shape_factor_line_has_table: (skip)
+/*
+ * nc_galaxy_shape_factor_line_has_table:
  * @line: a #NcGalaxyShapeFactorLine
  *
  * Returns: whether @line gives its values from a table.
@@ -2074,8 +2075,8 @@ nc_galaxy_shape_factor_line_has_table (NcGalaxyShapeFactorLine *line)
   return line->coeffs != NULL;
 }
 
-/**
- * nc_galaxy_shape_factor_line_free: (skip)
+/*
+ * nc_galaxy_shape_factor_line_free:
  * @line: a #NcGalaxyShapeFactorLine
  *
  * Frees @line.

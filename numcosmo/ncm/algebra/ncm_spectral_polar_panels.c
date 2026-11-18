@@ -199,9 +199,7 @@ static void _ncm_spectral_polar_panels_append_sized (NcmSpectralPolarPanels *spp
 
 /*
  * The edges and the panels given as a property, added in order so that each is checked as
- * an appended one. A panel holds its numbers of coefficients K_r and K_theta; a panel
- * written by an earlier version holds its levels instead, which is recognized by the
- * length of its coefficients: (2^a + 1) (2^b + 1) is never a b.
+ * an appended one. A panel holds its numbers of coefficients K_r and K_theta.
  */
 static void
 _ncm_spectral_polar_panels_constructed (GObject *object)
@@ -231,21 +229,17 @@ _ncm_spectral_polar_panels_constructed (GObject *object)
       GVariant *panel_var = g_variant_get_child_value (panels_var, i);
       GVariant *coeffs_var;
       gdouble ra, rb, ta, tb;
-      guint u_r, u_theta;
+      guint n_r, n_theta;
       const gdouble *c;
       gsize len = 0;
 
-      g_variant_get (panel_var, "(dddduu@ad)", &ra, &rb, &ta, &tb, &u_r, &u_theta, &coeffs_var);
+      g_variant_get (panel_var, "(dddduu@ad)", &ra, &rb, &ta, &tb, &n_r, &n_theta, &coeffs_var);
       c = g_variant_get_fixed_array (coeffs_var, &len, sizeof (gdouble));
 
-      if ((u_r > 0) && (u_theta > 0) && (len == (gsize) u_r * u_theta))
-        _ncm_spectral_polar_panels_append_sized (spp, ra, rb, ta, tb, u_r, u_theta, c);
-      else if ((u_r <= NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) && (u_theta <= NCM_SPECTRAL_POLAR_PANELS_LEVEL_MAX) &&
-               (len == (gsize) ((1u << u_r) + 1) * ((1u << u_theta) + 1)))
-        ncm_spectral_polar_panels_append_data (spp, ra, rb, ta, tb, u_r, u_theta, c);
-      else
-        g_error ("ncm_spectral_polar_panels: panel %u has %zu coefficients, neither %u by %u nor at the levels %u and %u.",
-                 i, len, u_theta, u_r, u_r, u_theta);
+      if ((n_r == 0) || (n_theta == 0) || (len != (gsize) n_r * n_theta))
+        g_error ("ncm_spectral_polar_panels: panel %u has %zu coefficients, not %u by %u.", i, len, n_theta, n_r);
+
+      _ncm_spectral_polar_panels_append_sized (spp, ra, rb, ta, tb, n_r, n_theta, c);
 
       g_variant_unref (coeffs_var);
       g_variant_unref (panel_var);
@@ -289,9 +283,7 @@ ncm_spectral_polar_panels_class_init (NcmSpectralPolarPanelsClass *klass)
    * The edges and the panels as a #GVariant of type `(adada(dddduuad))`: the radial edges,
    * the angular edges, and for each panel $r_a$, $r_b$, $\theta_a$, $\theta_b$, $K_r$,
    * $K_\theta$ and its $K_\theta K_r$ coefficients by angular index. The three arrays are
-   * empty when no edges are set. A panel given with its levels $l_r$ and $l_\theta$ and
-   * $(2^{l_\theta} + 1) (2^{l_r} + 1)$ coefficients, as earlier versions wrote it, is read
-   * as well.
+   * empty when no edges are set.
    */
   g_object_class_install_property (object_class,
                                    PROP_PANELS,
@@ -715,8 +707,7 @@ _ncm_spectral_polar_panels_trim_block (const gdouble *c, guint n_r, guint n_thet
  * norm at most @tol. Since $|T_k| \le 1$ on the panel, the function changes by at most
  * @tol at any point of it. The coefficients of the panels that remain are packed into an
  * array of their size, so the object takes less memory and its evaluation fewer
- * operations; the serialized object keeps the trimmed panels. Objects serialized before
- * panels could be trimmed (each panel given by its levels) are read as they were, untrimmed.
+ * operations; the serialized object keeps the trimmed panels.
  */
 void
 ncm_spectral_polar_panels_trim (NcmSpectralPolarPanels *spp, gdouble tol)

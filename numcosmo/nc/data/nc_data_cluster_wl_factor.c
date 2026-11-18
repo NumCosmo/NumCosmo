@@ -80,6 +80,7 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs_private.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_private.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"

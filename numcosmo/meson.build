@@ -352,6 +352,7 @@ ncm_headers_internal = files(
     'ncm/stats/ncm_stats_dist_vkde_private.h',
     'nc/perturbations/nc_hipert_private.h',
     'nc/data/nc_data_download_priv.h',
+    'nc/lss/galaxy/nc_galaxy_shape_factor_private.h',
     'nc/lss/galaxy/nc_galaxy_shape_pop_gauss_private.h',
     'nc/lss/galaxy/nc_galaxy_wl_obs_private.h',
     'nc/xcor/nc_xcor_priv.h',

@@ -370,7 +370,7 @@ $10^{-4}$ `interp-abstol` at any point, well below the error of the approximatio
 prepared catalogs store the trimmed panels. Catalogs written before panels could be trimmed
 load untrimmed: they give the same values, and are regenerated for the smaller size and the
 faster evaluation. The nodes of the redshift integral of one galaxy are evaluated together
-([[numcosmo|nc_galaxy_shape_factor_eval_nodes]]): the approximation is checked once per
+(`nc_galaxy_shape_factor_eval_nodes()`): the approximation is checked once per
 galaxy, and the shears that fall in one panel are evaluated several at a time. These values
 are those of the evaluation at one shear within rounding, not bit for bit.
 
@@ -382,9 +382,9 @@ tangential shear: they lie on one line. Without the approximation in $g$, the sh
 expands $\ln P$ in a Chebyshev series in $t$ on $[\min_j t_j, \max_j t_j]$, from integrals on
 nested Chebyshev-Lobatto grids, accepted when its coefficients change by at most
 [[numcosmo|NcGalaxyShapeFactorSpectral:line-abstol]] in $\ell_1$ norm between two grids, and
-evaluates the series at the nodes ([[numcosmo|nc_galaxy_shape_factor_eval_line]]). The
+evaluates the series at the nodes (`nc_galaxy_shape_factor_eval_line()`). The
 calibration of the nodes evaluates the same kind of series over the whole redshift range of
-the galaxy ([[numcosmo|nc_galaxy_shape_factor_line_new]]).
+the galaxy (`nc_galaxy_shape_factor_line_new()`).
 
 - Tolerance: each integral is accurate to about `reltol` relative, which is its accuracy in
   $\ln P$. The default `line-abstol` (a negative value) is `reltol` / 10, so that the table

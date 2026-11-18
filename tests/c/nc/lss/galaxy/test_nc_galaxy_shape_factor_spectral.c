@@ -39,6 +39,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_private.h"
 
 #include "test_nc_galaxy_shape_marginal_arb_cases.h"
 
