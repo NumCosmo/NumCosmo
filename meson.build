@@ -310,6 +310,7 @@ headers = [
   'stdint.h',
   'stdio.h',
   'stdlib.h',
+  'xlocale.h',
 ]
 
 foreach h : headers
@@ -350,6 +351,7 @@ functions = [
   'shmget',
   'sin',
   'sincos',
+  'uselocale',
 ]
 
 foreach f : functions
