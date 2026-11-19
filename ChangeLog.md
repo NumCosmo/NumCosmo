@@ -3,7 +3,2751 @@ CHANGELOG
 
 [Current]
 
+[v0.30.0]
+ * Build clik likelihoods with LC_NUMERIC set to C (#484)
+
+     * Fix the clik segfault when LC_NUMERIC uses a decimal comma (#484)
+     * Parse clik data files in _nc_data_planck_lkl_set_filename with a thread
+     locale whose LC_NUMERIC is C
+     * Restore the caller's thread locale at the end of the clik initialization
+     * Check for uselocale and xlocale.h in meson.build; without uselocale the
+     locale is not changed
+     * Add test_nc_data_planck_lkl.c: builds BASELINE_18_LOWL_EE under a
+     decimal-comma locale, skipped if none
+
+ * Document how the numcosmo commands report errors in CONTRIBUTING.md
+
+     * Add the section Command-line errors: typer.BadParameter for inputs,
+     console and typer.Exit(1) for runtime failures
+
+ * Reject MCMC catalogs with no row left after the burn-in with a CLI message
+
+     * Fix catalog analyze/plot-corner on a catalog with no row left:
+     plot-corner raised IndexError
+     * Raise typer.BadParameter in _resolve_burnin_rows for an empty catalog
+     * Raise it when --burnin, --tail or the Markovian start leaves no
+     iteration, naming the cause
+     * Remove the "Empty catalog!" branch of catalog analyze, unreachable after
+     this check
+     * Raise ValueError in mcat_to_catalog_data for a catalog with no rows
+     * Add tests for the empty catalog, --burnin equal to the length, --tail 0
+     and a 1-iteration run
+     * Match CLI messages in tests without ANSI codes, box borders and line
+     breaks (_plain_output)
+
+ * Set the timeout of the nc_galaxy_shape_factor_spectral test to 240 s
+
+     * Set 'timeout': 240 for nc_galaxy_shape_factor_spectral in
+     tests/c/meson.build
+     * The -O0 coverage lane multiplies it by 3, to 720 s; the test takes 100 to
+     140 s there
+     * One Cov-c job ran other tests up to 3.6 times slower and the test reached
+     the 180 s limit
+
+ * Update the Spectral theory pages for the radial factor and the contiguous grid
+
+     * spectral_polar.qmd describes the radial factor of the integral and names
+     _ncm_spectral_polar_integrate_radial() as internal
+     * wl_shape_marginalization_spectral.qmd describes the kernels and the
+     variance integral with the radial factor
+     * Originally #490
+
+ * Compute the Spectral variance integral as a radial factor
+
+     * The variance integral near |g| = 1 depends only on the radius: all of it
+     is the radial factor of _ncm_spectral_polar_integrate_radial()
+     * It is computed for all the radii of a panel in one call
+     * Originally #490
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Select the Spectral convention once per call instead of per convention function
+
+     * The integrand, its radial factor, the density and the squared distance
+     are one function each
+     * Each branches on the convention of NcGalaxyShapeFactorSpectralKernel once
+     per call and runs a loop inlined with the convention as a constant
+     * The private struct keeps only map_inv
+     * Originally #490
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Compute the Spectral kernels in loops that vectorize, with the density as a
+     radial factor
+
+     * The integrands of NcGalaxyShapeFactorSpectral compute only the
+     exponential, in an omp simd loop over the angles
+     * The density of the convention times the norm is the radial factor of
+     _ncm_spectral_polar_integrate_radial(), computed once per radius
+     * _nc_galaxy_shape_factor_spectral_seed() evaluates h at all the points of
+     its scan in one call
+     * Results change: nc_galaxy_shape_factor_spectral.c includes
+     ncm_vmath_private.h, so ln P differs in the last bits where GCC calls the
+     vector functions of glibc
+     * Originally #490
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Add ncm_vmath_select() to ncm_vmath_private.h
+
+     * Add ncm_vmath_select(), the bitwise blend of two values by a condition
+     * GCC keeps a conditional expression on doubles as control flow when a
+     branch can raise a floating-point exception, which leaves the loop scalar
+     * Add /ncm/vmath/select
+     * Originally #489
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Test the first doubling of NcmSpectralPolar and name the called function in its
+     messages
+
+     * Add /ncm/spectral_polar/first_doubling: the panels and the number of
+     values of an integral equal those of ncm_spectral_polar_build() with the
+     same test
+     * The messages of ncm_spectral_polar_integrate() and
+     _ncm_spectral_polar_integrate_radial() name the function that was called
+     * Originally #490
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Keep the grid of NcmSpectralPolar contiguous and add a radial factor to its
+     integral
+
+     * The grid of the current level is contiguous in the workspace and a
+     doubling spreads it in place; the np x np grid at stride positions is
+     removed
+     * Add _ncm_spectral_polar_integrate_radial() and NcmSpectralPolarRadialF in
+     ncm_spectral_polar_private.h
+     * The radial factor is the part of the integrand that depends only on r: it
+     is computed once per radius, for the radii of a pass in one call
+     * _ncm_spectral_polar_nodes_r() computes the weights of a pass of 8 points
+     or more with pow() in omp simd loops
+     * _ncm_spectral_polar_nodes_theta() computes sin() and cos() in an omp simd
+     loop
+     * An initial panel that failed its test is doubled directly in the
+     direction of its larger change, without a second transform of its starting
+     grid
+     * Results change: ncm_spectral_polar.c includes ncm_vmath_private.h, so its
+     integrals differ in the last bits where GCC calls the vector functions of
+     glibc
+     * Add /ncm/spectral_polar/radial
+     * Originally #490
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Add ncm_vmath_private.h: declarations of the vector math functions of glibc
+
+     * Add ncm_vmath_private.h, which declares the vector variants of exp, log,
+     pow, sin, cos and atan2 of glibc (libmvec) under their own names
+     * A file that includes it lets GCC call the variants in the loops it
+     vectorizes; no file of the library includes it yet
+     * Nothing is declared without GCC, x86-64, OpenMP and glibc 2.22 (2.35 for
+     atan2), and the calls are then those of libm
+     * Add test_ncm_vmath.c: each function in an omp simd loop against libm one
+     value at a time
+     * The largest difference from libm in test_ncm_vmath_loop is 3 spacings of
+     doubles (sin and cos), which is the tolerance of the test
+     * /ncm/vmath/special checks the values at which libm returns zero, infinity
+     or NaN
+     * Originally #489; replaces the implementations of the first version of
+     #505
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Stop recomputing per-galaxy geometry when the halo center moves
+
+     * nc_galaxy_shape_factor_prepare() hashes the value of the lens redshift in
+     crit_hash, not the pkey of NcHaloPosition
+     * A change of ra or dec of NcHaloPosition no longer rebuilds the critical
+     surface density of every galaxy
+     * nc_galaxy_shape_factor_update_data_radius() keeps the unit vector of each
+     galaxy and rotates it with nc_halo_position_rotate()
+     * The projected radius and exp(2 i phi) are computed from the components of
+     the rotated vector, without the angles
+     * Results change: test_data_radius_follows_halo_and_position compares the
+     radius with the one from the angles at rtol 1e-13
+     * Add nc_halo_position_rotate(); nc_halo_position_polar_angles() uses it
+     * Remove phi from NcGalaxyShapeFactorCData, which nothing read
+     * Add tests of crit_hash, of nc_halo_position_rotate(), and of the radius
+     and rotation for both ellipticity frames
+     * Originally #488
+
+ * Require a zf of the distance that reaches the redshift integration of the
+     galaxies
+
+     * Behavior change: _nc_data_cluster_wl_factor_prepare() calls
+     nc_distance_require_zf() on the distance of NcWLSurfaceMassDensity
+     * The required zf is the largest upper limit of the redshift integration
+     over the galaxies, computed when the catalog is loaded
+     * A distance with a lower zf is prepared once more with the raised zf; a
+     distance that reaches it is not changed
+     * Behavior change: nc_halo_position_prepare_if_needed() and
+     nc_wl_surface_mass_density_prepare_if_needed() call
+     nc_distance_prepare_if_needed() at every call
+     * API change: remove ctrl_cosmo from NcHaloPosition and from the struct of
+     NcWLSurfaceMassDensity, no longer read
+     * Add test_distance_zf_required and
+     test_distance_zf_required_after_model_swap
+     * Originally #487; the zf part of c68127ae4 of #504, with its warning
+     replaced by the nc_distance_require_zf() call
+
+ * Make nc_distance_require_zf() and the zf property take effect at the next
+     prepare
+
+     * Behavior change: a zf raised by nc_distance_require_zf() or set by the zf
+     property is used from the next nc_distance_prepare()
+     * Until that prepare the distances keep the zf and the spline of the last
+     one; call nc_distance_prepare_if_needed() to use the new zf at once
+     * Add NcDistance.zf_req, the requested zf; nc_distance_prepare() alone
+     writes zf and the end of the ODE spline
+     * Fix the zf property setter, which never changed the end of the ODE spline
+     after construction
+     * The zf property returns the requested value
+     * Add /nc/distance/require_zf and /nc/distance/set_zf to test_nc_distance.c
+     * Regenerate nc.pyi
+
+ * Record the NcGalaxyPz change in the WL shape factor history page
+
+     * Add the section on the pz column of NcGalaxyWLObs to
+     wl_shape_factor_history.md
+
+ * Rebuild the P(z) tables in make_hsc_pz_test_data.py from NcGalaxyPz
+
+     * Rebuild each table on the equally spaced redshifts of its
+     NcGalaxyPzBSplineSqrt
+     * Write rebuilt values below 1e-20 of the largest as zero, the zeros of the
+     table
+     * Add --check, which compares the rebuilt fixture with the committed one
+     and writes nothing
+
+ * Bump DATA_CACHE_VERSION for the WL catalogs replaced in the datafile release
+
+     * Set DATA_CACHE_VERSION to 7 in build_check.yml and weekly_flaky.yml
+
+ * Store NcGalaxyPz in the pz column of NcGalaxyWLObs
+
+     * Behavior change: a catalog whose pz property holds NcmSpline objects
+     aborts on load
+     * Update such a catalog with tools/nc_galaxy_pz_update_catalog.py to load
+     it again
+     * nc_galaxy_wl_obs_set_pz() and nc_galaxy_wl_obs_peek_pz() take and return
+     NcGalaxyPz
+     * NcGalaxyRedshiftFactorSpline reads the NcGalaxyPz of each row in
+     data_set, data_peek and its integrand
+     * Remove the per-table fit, qdata, hash and lock from
+     NcGalaxyRedshiftFactorSpline
+     * Results unchanged: the spline cases of
+     test_data_cluster_wl_factor_parity_combinations.py keep their values
+     * Remove the table_changed, threads and table error tests of the factor
+     with their mechanisms
+     * Add the C test of the abort on an old catalog and update the tests that
+     set p(z)
+     * Regenerate nc.pyi
+
+ * Add tools/nc_galaxy_pz_update_catalog.py to update the p(z) objects of WL
+     catalogs
+
+     * Replace each NcmSpline of the pz property of a serialized NcGalaxyWLObs
+     by its NcGalaxyPzBSplineSqrt
+     * Copy every other property unchanged and check the written file against
+     the input
+     * Copy entries that already are NcGalaxyPz, so a second run writes the same
+     bytes
+     * Add tests/python/devtools/test_nc_galaxy_pz_update_catalog.py
+
+ * Add NcGalaxyPz and NcGalaxyPzBSplineSqrt, the redshift density of one galaxy
+
+     * Add the abstract NcGalaxyPz with get_range, eval_p, eval_ln_p, get_norm
+     and gen
+     * Add NcGalaxyPzBSplineSqrt, the density s^2 of an order-6 NcmBSpline s
+     * Add nc_galaxy_pz_bspline_sqrt_new_from_table(), fitting s through (z_j,
+     sqrt p_j)
+     * Abort at construction when the normalization is not positive
+     * Register both types in meson.build, numcosmo.h and ncm_cfg.c
+     * Add test_nc_galaxy_pz_bspline_sqrt.c and
+     test_nc_galaxy_pz_bspline_sqrt_basic in test_ncm_generic.c
+     * Regenerate nc.pyi
+
+ * Add NcmBSpline, a read-only B-spline of order, knots and control points
+
+     * Add NcmBSpline with construct-only order, knots and control-points
+     properties
+     * Move the recursion of _ncm_spline_bspline_eval to a static inline in
+     ncm_bspline_private.h
+     * Add ncm_spline_bspline_dup_bspline(), which copies the knots and control
+     points to a NcmBSpline
+     * Register NcmBSpline in meson.build, numcosmo-math.h and ncm_cfg.c
+     * Add test_ncm_bspline.c and test_ncm_bspline_basic in test_ncm_generic.c
+     * Regenerate ncm.pyi
+
+ * Declare run fit --restart as an optional tuple for typer 0.29
+
+     * Change RunFit.restart from tuple[float, float] with default (None, None)
+     to tuple[float, float] | None = None
+     * Branch on self.restart is None in RunFit.__post_init__ before unpacking
+     abstol, reltol
+     * Fix the --restart help text ("until the given the value" -> "until the
+     value")
+     * typer 0.29.1 validates defaults with pydantic and exits with code 2 on
+     (None, None), failing the app lane in #497
+
+ * CI: update conda lock files
+
+ * Evaluate the Seager X_e from its panels and integrate tau with Hermite splines
+
+     * Behavior change: the Saha phase of X_e is nc_recomb_equilibrium_Xe (Saha
+     HI, HeI and HeII)
+     * Behavior change: X_e at z_i = 1e12 is 1.7e-5 below 1 + 2 X_He; no option
+     restores it
+     * Behavior change: X_e and dtau/dlambda at z = 3560 change by -1.9e-3 (old
+     spline overshoot)
+     * Results change: tau at z = 3560 and 5000 by up to -1.5e-5
+     * Results change: z_star, z_drag, z_vmax and z_cut by at most 1.5e-10
+     * Results change: X_e, dtau/dlambda and tau at z <= 2000 by at most 3.7e-9
+     (prec 1e-7)
+     * Evaluate nc_recomb_Xe of NcRecombSeager from the Chebyshev panels, with
+     the NcHIReion X_e on top
+     * Remove the reionization X_e spline of NcRecombSeager
+     * Start the Seager ODE from the Saha equilibrium; the X_e jump at the
+     switch is 7.5e-13
+     * Document in nc_recomb_equilibrium_Xe that its Saha equations fail above z
+     = 2e9
+     * Integrate tau and tau_drag with NcmOdeSpline Hermite splines
+     * Reduce the tau and tau_drag knots from 282,409 and 452,842 to 4,026 and
+     6,129 (prec 1e-7)
+     * Reduce the tau error against quadrature from 8.3e-12 to 1.5e-13
+     * Reduce the tau_drag error against quadrature from 2.9e-11 to 2.1e-13
+     * Compute XHe, n_H0, T0 and the dtau prefactor once per prepare
+     * Compute H once per right-hand side call of the Seager ODE, not once per
+     rate
+     * Reduce the NcRecombSeager prepare from 197 ms to 9.2 ms (prec 1e-7, one
+     CPU)
+     * Test Xe_ini against the Saha equilibrium
+     * Test the Saha-phase panels against nc_recomb_equilibrium_Xe
+
+ * Add Chebyshev panels of the recombination X_e to NcRecombSeager
+
+     * Add nc_recomb_seager_peek_Xe_recomb_panels: X_e(lambda) as
+     NcmSpectralPanels, reionization excluded
+     * Record the CVODE dense output (CVodeGetDky Taylor coefficients) of every
+     step in prepare
+     * Expand the Saha phase from nc_recomb_He_fully_ionized_Xe and the ODE
+     phase from the step polynomials
+     * Make the Saha-to-ODE switch a breakpoint; skip the ODE initial layer
+     within 1e-10 |lambda| of it
+     * Panel reltol: max(prec, 10 times the CVODE reltol); abstol: largest jump
+     between step polynomials
+     * The existing X_e, XHII, XHeII and reionization splines are unchanged
+     * Add Xe_panels and Xe_panels/tight to test_nc_recomb.c, against Saha, the
+     spline and prec 1e-11 panels
+     * Regenerate nc.pyi
+
+ * Test that ncm_dataset_resample accepts blocks without data
+
+     * Add /ncm/dataset/resample/uninit: blocks without data are resampled and
+     initialized
+     * Fails before the change with an abort in ncm_data_prepare
+
+ * Pass the prepare intent as an argument instead of setting the flag
+
+     * Behavior change: ncm_dataset_resample() accepts blocks without data, as
+     ncm_data_resample() did
+     * Replace _ncm_data_set_resampling() with _ncm_data_prepare_full(), which
+     takes the intent
+     * Pass the intent to _ncm_dataset_prepare_all(): resampling in
+     ncm_dataset_resample(), evaluation elsewhere
+
+ * Test that ncm_dataset_resample prepares every block as resampling
+
+     * Add /ncm/dataset/resample/prepare: no prepare runs with
+     ncm_data_is_resampling() FALSE
+     * Check that the first block is resampled with the requirement of the
+     second in force
+     * Fails on the previous ncm_dataset_resample (one prepare without the flag
+     per block)
+
+ * Prepare every block as resampling in ncm_dataset_resample
+
+     * Add the internal _ncm_data_set_resampling in the new
+     ncm/data/ncm_data_private.h
+     * Mark every block as resampling during the prepare_all of
+     ncm_dataset_resample
+     * Fix NcmFitMC threads waiting on NcDataClusterWLFactor building shape
+     interpolants for replaced data
+
+ * Correct the description of the cluster WL resample flags
+
+     * Fix ResampleFlagChoice: REDSHIFT draws from each galaxy's own P(z), not a
+     parametric factor
+     * State that the shape is always redrawn and that SHAPE alone lenses at the
+     catalog z point estimate
+     * Fix the --resample-flag help of generate cluster-wl-load the same way
+
+ * Zero the parameter placeholder of models without parameters
+
+     * A model without parameters allocates a one-element vector that no
+     parameter ever sets
+     * ncm_model_params_equal() compared that uninitialized element, so two such
+     models were unequal
+     * NcGalaxyShapeFactorSpectral checks loaded interpolants with
+     ncm_model_params_equal()
+     * With NcGalaxyShapePopGaussLocal every NcmFitESMCMC clone aborted on its
+     first evaluation
+     * Add /ncm/model/params_equal/empty: a new model and a serialized copy
+     compare equal
+
+ * Time the WL shape marginal benchmark as an analysis sees it
+
+     * Speed section: per-galaxy evaluation times of a mass and center MCMC with
+     a fixed population
+     * 30 galaxies of the Gaussian population, each prepared once and evaluated
+     at 2000 shears of a chain
+     * Times from nc_galaxy_shape_factor_eval_ln_marginal_array, without the
+     per-call Python overhead
+     * The Python overhead (about 0.4 us per call) hid the differences between
+     the approximate classes
+     * Table of the Spectral interpolant: build, evaluation from it and by
+     integration, break-even count
+     * Note the CPU of the rendering machine, read at render time
+     * Accuracy section evaluates the certified points through the same array
+     call
+
+ * Add nc_galaxy_shape_factor_eval_ln_marginal_array
+
+     * Evaluate ln P at many (g, eps_obs) points of one galaxy in one call,
+     looping in C
+     * Lets a binding time the evaluation of a class without the cost of one
+     call per point
+     * Add /nc/galaxy_shape_factor_spectral/eval_array: equal to per-point
+     calls, by integration and from the interpolant
+     * Regenerate the Python stubs
+
+ * Test concurrent reads of one P(z) table in NcGalaxyRedshiftFactorSpline
+
+     * Add /nc/galaxy_redshift_factor_spline/threads: 8 threads read each of 40
+     new tables at once
+     * Covers the path where a thread drops its build for the one another thread
+     attached
+     * Every thread gets the same table and the exact normalization of q^2
+
+ * Share the P(z) B-spline of NcGalaxyRedshiftFactorSpline between clones
+
+     * Since 136d534d every read row built the sqrt(p) B-spline, its breakpoints
+     and cumulative integrals
+     * The NcmFitESMCMC/NcmFitMC clones share the NcGalaxyWLObs, but each
+     rebuilt them for every galaxy
+     * Keep them in a refcounted bundle attached as qdata to the row's
+     NcmSpline, shared across threads
+     * Validate the bundle by a hash of the knots and values, so a table changed
+     in place is rebuilt
+     * Add /nc/galaxy_redshift_factor_spline/table_changed
+     * HWL16a-002 (12,460 galaxies), 16 threads: 382 to 28 MB per clone, peak
+     RSS 7.1 to 1.5 GB
+     * Same -2lnL to the last digit in every clone; ESMCMC start_run 5.9 to 1.3
+     s
+
+ * Test that tightening CCL's Limber tolerance brings its C_ell closer to NumCosmo
+
+     * Add test_limber_tolerance_approaches_numcosmo: tSZ and WL at Limber 1e-4
+     and 1e-6
+     * At 1e-6 the difference must be below 1e-3 and at most half the one at
+     1e-4
+     * Measured at 1e-6: 2.7e-5 (tSZ), 4.5e-4 (WL); the smallest reduction is
+     4.4x
+     * Move the construction of the ccl_cosmo_eh_linear cosmologies into
+     build_ccl_cosmo_eh_linear
+
+ * Apply the massless bounds in test_powspec_transfer_lowz and highz
+
+     * Test the neutrino mass sum; CCL returns m_nu as a list, so m_nu != 0.0
+     was always true
+     * Set the bounds from measured values: z <= 5 at 1e-6 (preset) and 2e-3
+     (defaults)
+     * Set z <= 1100 at 5e-4 massless, 5e-7 massive (preset) and 2e-2 (defaults)
+
+ * Set the CCL sigma(M, a) preset entries to what the mass function needs
+
+     * Lower LOGM_SPLINE_NM from 300 to 150: dn/dlnM 8.8e-8 against NumCosmo,
+     1e-11..1e15 Msun
+     * Leave A_SPLINE_NLOG_SM at its default; it does not change sigma(M, a) at
+     z <= 1.5
+     * Results change: CCL's sigma table build drops from 17-20 s to 5-9 s per
+     cosmology
+
+ * Fix and trim the CCL high-precision preset
+
+     * Reset INTEGRATION_LIMBER_EPSREL to its own default in
+     CCLParams.set_default_params
+     * Set A_SPLINE_NLOG to 6150 so the background table spacing is continuous
+     at a = 0.1
+     * Drop A_SPLINE_MINLOG = 5e-5 from set_high_prec_params, leaving the
+     default 1e-4
+     * Loosen INTEGRATION_SIGMAR_EPSREL to 1e-8 and A_SPLINE_NA_PK to 250
+     * Both keep P_lin and sigma_R within 1e-8 of NumCosmo
+     * Bound tSZ and weak lensing C_ell by 1e-2 at CCL defaults
+     * At its default Limber tolerance CCL gives up to 3.9e-3 (tSZ) and 6.3e-3
+     (WL) at some ells
+
+ * Add REVIEWING.md and CI.md and rewrite the second half of CONTRIBUTING.md
+
+     * Add REVIEWING.md: the principles of review, each with its reason and its
+     checks
+     * Move the conda locks, data-file cache and Read the Docs check sections to
+     CI.md
+     * Add "Adding a dependency" to CONTRIBUTING.md with the dependency table
+     and lock commands
+     * Rewrite "Submitting contributions": one concern per commit, checks to run
+     * Add the commit message format, with bullets under about 100 characters
+     * Add the rules for numbers, stated causes and responsibility for the
+     content
+     * Replace inline arXiv links in API docs by the theory-page citation rule
+     * Remove em-dashes, development history, British spelling and dev-notes/
+     paths
+
+ * Fix the multiplicative bias bound in test_cluster_wl_app_generate_shape
+
+     * Bound m by exp(-6 m_sigma)..exp(6 m_sigma), the 6 sigma interval of m =
+     exp(N(0, m_sigma)); the old 1 + 6 m_sigma was a 4.7 sigma bound at m_sigma
+     = 0.1 and failed on CI (m = 1.608 at m_sigma = 0.0966)
+     * Generate the catalog with --seed=42: the largest |ln m| / m_sigma is 3.6
+     over the 23712 galaxies of the four schemes
+
+ * Add compare_mass_function and compare_multiplicity_function to the CCL
+     comparison helpers
+
+     * Add compare_mass_function: M dn/dlog10M from CCL and NumCosmo as a
+     CompareFunc1d over the masses
+     * Add compare_multiplicity_function: f(sigma) from CCL's
+     MassFunc._get_fsigma and nc_halo_mass_function_f_lnR at NumCosmo's sigma(M,
+     z), as a CompareFunc1d over sigma
+     * Both raise ValueError when z is outside the filter's zi..zf range
+     * Add tests/python/numcosmo_py/ccl/test_comparison.py (ccl lane): Tinker
+     (2008) 200m mass function against CCL (bounds 5e-3 at CCL defaults, 1e-6 at
+     high precision; measured 1.1e-3 at z = 0.05, 3.2e-8), f(sigma) of every
+     pairing configuration against per-family bounds, the arguments CCL
+     receives, the redshift check, and the CompareFunc1d fields
+     * Pin the signature of the private MassFunc._get_fsigma on the base class
+     and on every CCL family the pairing module builds
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Add multiplicity_func_pairing for the CCL/NumCosmo mass-function pairings
+
+     * Add numcosmo_py/ccl/multiplicity_func_pairing.py: the overdensity lists
+     and option tuples of the covered configurations, and one constructor per
+     family returning a (CCL mass function, NumCosmo multiplicity function) pair
+     * Build the test_massfunc.py fixtures from the pairing constructors; the
+     186 collected test ids are unchanged
+     * Drop the unused hmd_fof fixture from test_massfunc.py
+     * Add test_multiplicity_func_pairing.py: both sides of every configuration
+     carry the same mass definition, overdensity and family options (Bocquet
+     simulation set, Despali ellipsoidal correction, Tinker interpolation)
+
+     Co-authored-by: Sandro Dias Pinto Vitenti <vitenti@uel.br>
+
+ * Add nc_halo_mass_function_f_lnR
+
+     * Add nc_halo_mass_function_f_lnR, the f(sigma) times its correction factor
+     that nc_halo_mass_function_dn_dlnR uses
+     * Results change: Bocquet 200c/500c dn_dlnR differs at rounding level, the
+     correction factor now multiplies f before the other factors; other
+     multiplicity functions are bit-identical
+     * Add test_nc_halo_mass_function.c: f_lnR against eval times
+     correction_factor (Tinker 200m, Bocquet 200c), against the analytic
+     Press-Schechter f(sigma), and dn_dlnR against f_lnR
+     * Regenerate nc.pyi
+
+ * Build the prepared-catalog test interpolants at interp-abstol 1e-2
+
+     * test_nc_galaxy_shape_factor_spectral.c: /interp/obs and
+     /interp/obs/mismatch set TEST_SPECTRAL_OBS_INTERP_ABSTOL (1e-2) on the
+     writer and reader shape factors; they check the record, loading and
+     mismatch aborts, not accuracy; /interp and /interp/rebuild keep the default
+     * Why: the test took 139.5 s of its 180 s Cov-c limit in #472 and timed out
+     on #467's runner
+     * Whole test, optimized build, one thread: 13.7 s -> 8.3 s
+
+ * Release the B-spline workspace in NcGalaxyRedshiftFactorSpline
+
+     * _spline_ldata_set_pz calls ncm_spline_bspline_release_workspace after the
+     breakpoints are taken
+     * Prepared HWL16a-094 MCMC (APES, 1000 walkers x 150, 12 threads): peak RSS
+     1077.0 -> 574.5 MiB (master 439.5 MiB); wall 227.1 s (master 220.7 s, one
+     run each)
+
+ * Add ncm_spline_bspline_release_workspace and keep the knots in NcmSplineBSpline
+
+     * NcmSplineBSpline stores a copy of the knots; _eval reads only the knots
+     and the control points
+     * New ncm_spline_bspline_release_workspace frees the collocation matrix,
+     its pivots and the GSL workspace; derivatives and integrals recreate the
+     GSL workspace under the lock, the next preparation allocates everything
+     again
+     * Memory per table of HWL16a-094 (mean 72 knots, order 6): 23.7 kB -> 4.1
+     kB after the release; eval unchanged (29.9 ns)
+     * test_ncm_spline_bspline.c: new /ncm/spline_bspline/release_workspace
+     (values, derivatives, extrapolated integrals and breakpoints unchanged,
+     release twice, re-preparation)
+     * ncm.pyi: update_pyi.sh output
+
+ * Evaluate the tabulated P(z) as s^2 with s a quintic B-spline of sqrt(p)
+
+     * Behavior change: NcGalaxyRedshiftFactorSpline uses only the knots and
+     values of the P(z) spline and evaluates p = s^2, with s the order-6
+     NcmSplineBSpline through (z_j, sqrt(p_j)); before it evaluated the stored
+     spline (cubic not-a-knot in the curated catalogs), which is negative
+     between knots in 668 of 2200 HWL16a-094 galaxies; no option restores the
+     old evaluation
+     * The log integrand is 2 ln|s|, the norm is the exact integral of s^2
+     (6-point Gauss-Legendre per polynomial piece), and gen inverts the same
+     integral; the sampler no longer uses the cubic of -2 ln(p + 1e-5)
+     * A negative table value or fewer than 6 knots aborts with the value and
+     position
+     * Results change: prepared HWL16a-094 (fixed nodes) -2 ln L -4070.5889 ->
+     -4070.6005; LNINT now runs on it (-4070.5998, master aborted on the log of
+     negative values)
+     * Cost: B-spline build 10-13 us per table, +20 kB per table (293 MB for
+     HWL16a-002), eval 29 ns against 4.1 ns; FIXED_NODES evaluates P(z) only
+     when the grid is built; LNINT on HWL16a-094 spends 12.6% of its time in
+     _ncm_spline_bspline_eval
+     * New test_nc_galaxy_redshift_factor_spline.c: exact reproduction, norm,
+     fixed nodes and KS test of gen for sqrt(p) a degree-5 polynomial on
+     non-uniform knots, a cut table with zeros, the NcGalaxyWLObs row round
+     trip, and both aborts
+     * Remove test_galaxy_redshift_factor_spline_legacy_parity.py and its three
+     truth tables: they froze the legacy cubic and its sampler, which this class
+     no longer reproduces
+     * test_data_cluster_wl_factor_parity_combinations.py: regenerate the
+     z=spline resample entries (ra/dec unchanged, shapes move by 4.5e-8
+     relative, m2lnL by 3e-8 relative)
+
+ * Add ncm_spline_bspline_get_breakpoints
+
+     * NcmSplineBSpline: ncm_spline_bspline_get_breakpoints returns the distinct
+     knots from the first to the last sample; the spline is one polynomial
+     between consecutive breakpoints
+     * test_ncm_spline_bspline.c: new /ncm/spline_bspline/breakpoints (count n -
+     order + 2, ends at the samples, strictly increasing, on samples for uniform
+     data)
+     * ncm.pyi: update_pyi.sh output, one new method
+
+ * Keep the stored cubic HSC P(z) and drop nc_galaxy_wl_obs_set_pz_linear
+
+     * Behavior change reverted: nc_galaxy_wl_obs_new_from_catalog_id returns
+     the catalog's cubic not-a-knot P(z) as on master; HWL16a-094 -2 ln L is
+     again -4070.5889 at the experiment's point
+     * Why: the linear interpolant is C0, so polynomial quadrature converges
+     slowly across the knots (LNINT stopped with GSL_EROUND); the choice of a
+     smooth non-negative P(z) moves to a separate PR
+     * Remove nc_galaxy_wl_obs_set_pz_linear, its /pz_linear test and its nc.pyi
+     entry
+     * Keep the lintegrate logaddexp/logsubexp fix and
+     /ncm/integral1d/lnint/zero_gap
+
+ * Add the benchmark page of the WL shape marginal
+
+     * docs/benchmarks/wl_shape_marginal.qmd: the four NcGalaxyShapeFactor
+     classes against the 26,023 Arb-certified points of
+     nc_galaxy_shape_marginal_arb_cert.bin, evaluated at render time; heatmaps
+     of the median |Delta ln P| over (std_noise, |eps_obs|) at |g| <= 0.3 with
+     the percentage of failing points (|Delta ln P| > 0.5 or not finite), tables
+     for |g| <= 0.3 and > 0.3
+     * Speed section: time per evaluation of each class, build and evaluation of
+     the Spectral interpolant and the break-even count on 30 points (render
+     time), and the HWL16a-094 measurements of wl-catalog shape-interp and the
+     MCMC from a prepared catalog
+     * Registered in docs/benchmarks/meson.build, the render list and sidebar of
+     docs/_quarto.yml.in, and docs/benchmarks/index.qmd
+
+ * Rewrap the interpolant build comment of NcGalaxyShapeFactorSpectral
+
+     * nc_galaxy_shape_factor_spectral.c: the line naming
+     _nc_galaxy_shape_factor_spectral_interp_center ran past 90 columns
+
+ * Reject empty --shape-factor and --pop-dist as usage errors
+
+     * generate.py: parse_shape_factor and parse_pop_dist raise
+     typer.BadParameter on an empty string instead of IndexError
+     * test_wl_app.py: new test_wl_catalog_shape_interp_empty_option
+
+ * Regenerate nc.pyi for nc_galaxy_wl_obs_set_pz_linear
+
+     * nc.pyi: update_pyi.sh output, one new method
+
+ * Interpolate the HSC P(z) linearly and let lintegrate sum zero densities
+
+     * Behavior change: nc_galaxy_wl_obs_new_from_catalog_id replaces each
+     galaxy's cubic not-a-knot P(z) by the linear interpolant of the same knots
+     (new nc_galaxy_wl_obs_set_pz_linear); a --data-file catalog keeps its own
+     splines
+     * Why: the stored cubic splines are negative between knots in 668 of 2200
+     HWL16a-094 galaxies (down to -8.5e-3); LNINT took their log and aborted,
+     FIXED_NODES and CUBATURE summed negative densities. Linear has no negative
+     value; Steffen leaves -1e-17 next to zero knots, the B-spline cannot reach
+     2e-8 on these tables
+     * Results change: HWL16a-094, fixed nodes, Beta (1.921, 1.980), -2 ln L
+     -4070.5889 -> -4070.2283 at the experiment's point
+     * lintegrate logadd.c, logsub.c: logaddexp and logsubexp of two -inf return
+     -inf instead of NaN, so an integrand that is zero on a subinterval no
+     longer ends with GSL_EFAILED
+     * Known limitation: LNINT on HWL16a-094 with the linear P(z) now stops with
+     GSL_EROUND (QUADPACK round-off heuristic, roundoff_type1 = 6 on galaxy 0,
+     set off by the knots); FIXED_NODES is unaffected
+     * test_ncm_integral1d.c: new /ncm/integral1d/lnint/zero_gap (fails with the
+     previous lintegrate)
+     * test_nc_galaxy_wl_obs.c: new /pz_linear
+
+ * Treat inout arguments as inputs in the stub generator
+
+     * generate_stubs.py: an INOUT argument was only a return value (if/elif);
+     it is now also a parameter
+     * ncm.pyi, nc.pyi: regenerated with update_pyi.sh; inout arguments appear
+     as parameters (ncm_catalog_key_is_current, the Fisher matrix methods and
+     others)
+
+ * Mark the record population error as a data error for ruff
+
+     * cluster_wl.py: shape_interp_gens keeps ValueError for a record population
+     without generator, with the TRY004 noqa used by load_wl_obs
+
+ * Add numcosmo wl-catalog shape-interp and load prepared catalogs
+
+     * New command group wl-catalog with shape-interp: reads a WL catalog,
+     builds every galaxy's interpolant for --pop-dist with the spectral shape
+     factor (use_interp=true, default convention and frame of the catalog) in
+     parallel, and writes the catalog with the interpolants and their record; a
+     previous record is replaced
+     * cluster_wl.py: new shape_interp_gens maps a catalog's record to the
+     spectral shape-factor and population generators (Gauss, Beta, GaussLocal)
+     * generate.py: cluster-wl-load takes the shape factor and population from a
+     prepared catalog's record; --shape-factor, --pop-dist or a NcGalaxyShapePop
+     parameter in --parameter-list are then errors
+     * generate.py: --shape-factor and --pop-dist of the WL commands are str |
+     None with the old defaults; load_wl_obs, parse_shape_factor and
+     parse_pop_dist are module functions shared with wl_catalog.py
+     * Measured on HWL16a-094 (12 threads, fixed nodes): shape-interp 44 s, 24.0
+     MB catalog; the experiment from it gives -2 ln L -4070.5888514339777 in
+     0.02 s, the unprepared one the same value in 446.7 s
+     * nc.pyi, ncm.pyi: regenerated for the new C API
+     * test_wl_app.py: round trip against an unprepared experiment, record
+     replacement, bad shape factors and suffix, cluster-wl-load rejections,
+     shape_interp_gens mapping and unknown population
+
+ * Refuse free population parameters when writing the shape interpolants
+
+     * nc_data_cluster_wl_factor.c: nc_data_cluster_wl_factor_write_shape_interp
+     aborts, naming the parameter, when a population parameter is free
+     * test_nc_data_cluster_wl_factor_shape_interp.c: new /free_pop
+
+ * Add nc_data_cluster_wl_factor_write_shape_interp to prepare a WL catalog
+
+     * nc_data_cluster_wl_factor.c: new
+     nc_data_cluster_wl_factor_write_shape_interp builds every galaxy's
+     interpolant with data_prepare (in parallel), writes them into a catalog
+     with the dataset's rows (columns untouched) and records the shape factor
+     and population
+     * Measured on HWL16a-094 (12 threads): build and write 43.0 s, prepared
+     catalog 23.9 MB (original 3.2 MB); a new process loads it in 0.05 s,
+     data_prepare only compares, and -2 ln L is -4070.5888514339777 in both
+     * test_nc_data_cluster_wl_factor_shape_interp.c: new /write (columns and
+     key unchanged, same -2 ln L after a serialization round trip) and
+     /shape_factor (VarAdd aborts)
+
+ * Move the saved-key rule of derived row data into NcmCatalog
+
+     * ncm_catalog.c: new ncm_catalog_key_is_current (catalog, &saved_key) and
+     NCM_CATALOG_KEY_PENDING, which takes the current key at the first check
+     (data set by deserialization); the class doc states the rule for subclasses
+     * nc_galaxy_wl_obs.c: the shape-interp validity uses
+     ncm_catalog_key_is_current instead of its own pending logic
+     * test_ncm_catalog.c: new /ncm/catalog/key/saved (current, stale after a
+     write, pending taking the current key)
+
+ * Store the spectral interpolants in the catalog and load them in a fit
+
+     * nc_galaxy_wl_obs.c: new properties shape-interp (NcmSpectralPolarPanels
+     per row) and shape-interp-source (record of what built them), with set/peek
+     functions; they describe the rows as they were when the record was set
+     (ncm_catalog_get_key), and a later change makes peek return NULL and the
+     properties empty, so a stale catalog serializes none
+     * nc_galaxy_shape_factor_spectral.c: ldata_write_row writes a galaxy's
+     valid interpolant; ldata_read_row loads the row's interpolant with the
+     record; new nc_galaxy_shape_factor_spectral_set_obs_source records copies
+     of the shape factor and the population
+     * nc_galaxy_shape_factor_spectral.c: data_prepare compares a loaded
+     interpolant's record with the fit (convention, reltol, interp-* settings,
+     ncm_model_params_equal on the population at reltol 1e-15, no free
+     parameter) and aborts on any difference; a loaded interpolant is never
+     rebuilt, and an invalid one at evaluation or use-interp off aborts
+     * nc_galaxy_shape_factor_spectral.c:
+     _nc_galaxy_shape_factor_spectral_interp_record and _interp_center shared by
+     the build and the loaded check
+     * test_nc_galaxy_wl_obs.c: new /shape_interp (visibility, round trip, stale
+     rows, stale serialization, new record)
+     * test_nc_galaxy_shape_factor_spectral.c: new /interp/obs (round trip gives
+     the prepared values, values come from the stored interpolants, changed rows
+     rebuild) and /interp/obs/mismatch (population, free parameter,
+     interp-abstol, convention, use-interp, population changed after the check)
+
+ * Add a data key to NcmCatalog, incremented on every change of the rows
+
+     * ncm_catalog.c: new ncm_catalog_get_key and ncm_catalog_mark_outdated;
+     ncm_catalog_set (and so set_int, set_bool) and the data property increment
+     the key, as a parameter change does to the model pkey
+     * Direct writes into ncm_catalog_peek_data now call
+     ncm_catalog_mark_outdated: the two halo catalog generators,
+     _obs_make_private in nc_data_cluster_wl_factor.c, catalog_from_table and
+     the DistMuObs table reader
+     * test_ncm_catalog.c: new /ncm/catalog/key (setters, failed write, read,
+     mark_outdated, data property)
+
+ * Add ncm_model_params_equal to compare models by parameter values
+
+     * ncm_model.c: ncm_model_params_equal (model1, model2, reltol, abstol) is
+     ncm_model_is_equal plus ncm_cmp on every original parameter
+     * test_ncm_model.c: new /ncm/model/params_equal (exact, relative and
+     absolute tolerances, a zero parameter, different lengths)
+
+ * Build the spectral interpolants in nc_galaxy_shape_factor_data_prepare
+
+     * nc_galaxy_shape_factor_spectral.c: new data_prepare hook builds the
+     galaxy's interpolant when use-interp is set and it has none valid, so
+     nc_data_cluster_wl_factor_data_prepare() builds a catalog in its OpenMP
+     loop
+     * nc_galaxy_shape_factor_spectral.c: the validity test moves to
+     _nc_galaxy_shape_factor_spectral_interp_valid, shared by data_prepare and
+     eval_ln_marginal
+     * Results unchanged: HWL16a-094 gives -2 ln L = -4070.5888514339777 with
+     and without data_prepare; data_prepare takes 450 s on 1 thread and 43 s on
+     12
+     * test_nc_galaxy_shape_factor_spectral.c: new /interp/data_prepare (same
+     value as a build at the first evaluation; nothing built without use-interp)
+
+ * Make the Chebyshev kernel generator independent of the platform libm
+
+     * tools/ncm_spectral_cheb_gen.py: compute the cosine factors with
+     cos_rounded (60-digit decimal Taylor sum, rounded to the nearest double)
+     instead of math.cos, whose macOS value differs in the last bit
+     * The committed ncm_spectral_cheb_private.h is unchanged: glibc math.cos
+     equals cos_rounded on all 127 arguments of the generator
+     * test_ncm_spectral_cheb_gen.py: test_odd_factors compares with
+     cos_rounded; new test_cos_rounded (exact at 0, within one ulp of math.cos)
+
+ * Document the devtools test directory in TESTING.md
+
+     * Add to the directory layout section where the scripts of tools/ are
+     tested and why the directory is not named tools
+
+ * Compute the NcmDiff spectral coefficients with the NcmSpectral kernels
+
+     * Results change: the Chebyshev coefficients of the ncm_diff_sc_ methods
+     come from the generated kernels instead of the direct O(N^2) sum; on the 30
+     spectral results of diff_benchmark.py the derivatives move by at most
+     1.1e-12 of the exact value, the function evaluation counts and the error
+     estimates' coverage are unchanged
+     * Replace the sum of _ncm_diff_sc_dct by _ncm_spectral_transform on the
+     centered values of each component, keeping the subtraction of the center
+     value
+     * Hold an NcmSpectral and two FFTW-allocated arrays of NCM_DIFF_SC_MAX_N
+     values in NcmDiffWork for that transform, in place of the cosine table
+     sc_cosm
+     * A call of ncm_diff_sc_d1_1_to_1 or ncm_diff_sc_d2_1_to_1 on exp or sin
+     takes 2.36 us instead of 7.66 us
+
+ * Transform the NcmSpectralPolar grids with the NcmSpectral kernels
+
+     * Results change: the coefficients of a grid come from the generated
+     kernels of NcmSpectral for up to 129 nodes per direction; ln P of
+     NcGalaxyShapeFactorSpectral changes by at most 4.4e-16 on 1600 evaluations
+     and the integral is 1.385 times faster (466.7 to 336.9 us per evaluation,
+     40 HSC galaxies)
+     * Add numcosmo/ncm/algebra/ncm_spectral_private.h declaring
+     _ncm_spectral_transform for the other classes of the library
+     * Hold an NcmSpectral in the NcmSpectralPolar workspace and call
+     _ncm_spectral_transform for both directions in _ncm_spectral_polar_coeffs
+     * Remove _ncm_spectral_polar_dct_dense, _ncm_spectral_polar_dct_fftw,
+     _ncm_spectral_polar_get_plan, the DCT-I matrices and the plan table of the
+     workspace
+     * Remove the normalization factors from the mt table,
+     _ncm_spectral_polar_moments, the l1 sums and _ncm_spectral_polar_append,
+     since work->coeffs now holds Chebyshev coefficients
+     * Update docs/theory/ncm/algebra/spectral_polar.qmd for the transform of a
+     grid and the code table
+
+ * Compute the NcmSpectral coefficients with generated Chebyshev kernels
+
+     * Results change: for 2 to 129 nodes (levels 0 to 7) the Chebyshev
+     coefficients come from generated straight-line kernels instead of FFTW
+     REDFT00 and differ from the previous ones by at most 1.8e-16 of their l1
+     norm; other sizes are unchanged
+     * Add tools/ncm_spectral_cheb_gen.py, the generator of
+     numcosmo/ncm/algebra/ncm_spectral_cheb_private.h, with a --check mode; the
+     build does not run it
+     * Add _ncm_spectral_transform in ncm_spectral.c, which calls the kernel of
+     the level or the FFTW plan with its normalization, and use it at the five
+     transform call sites
+     * Replace _ncm_spectral_normalize_coeffs and
+     _ncm_spectral_batch_normalize_coeffs by _ncm_spectral_coeffs_from_nodes and
+     _ncm_spectral_batch_coeffs_from_nodes
+     * Add the C tests /ncm/spectral/fixed/transform and
+     /ncm/spectral/batch/transform against a long double direct sum and against
+     FFTW
+     * Add tests/python/devtools/test_ncm_spectral_cheb_gen.py, which also
+     checks that the committed header is the output of the generator
+     * Document the method in the section Transform on the Nested Grids of
+     docs/theory/ncm/algebra/spectral.qmd
+     * Known limit: a column count that is a multiple of 64 at 129 nodes, or of
+     128 at 65 nodes, is 1.6 to 4 times slower through L1 set conflicts
+
+ * Raise the nc_data_cluster_wl_factor_truth timeout for the coverage build
+
+     * Set 'timeout': 300 on nc_data_cluster_wl_factor_truth in
+     tests/c/meson.build (900 s under the Cov-c multiplier of 3; the default 60
+     s timed out at 180 s)
+     * State the measured -O0 coverage cost of the Spectral subtests (77 to 98 s
+     each) in the test's meson.build comment
+
+ * Fail the app lane on a crashed worker and keep halo_position off the poles
+
+     * Behavior change: pass --max-worker-restart 0 to every xdist lane in
+     tests/python/meson.build; a crashed worker fails the lane at once and the
+     tests queued on it do not run (remove the flag to restore worker
+     replacement)
+     * Fix the hang: xdist 3.8.0 under --dist loadgroup stops making progress
+     after it replaces a crashed worker (Cov-py-app hung 33 min after a crash)
+     * Draw the halo_position declination in [-89, 89] in test_wl_app.py;
+     uniform(-90, 90) put dec ± 0.2 outside [-90, 90] in about 0.7% of runs and
+     ncm_sky_footprint_rectangular_set_dec_lim aborted the worker
+     * Add test_cluster_wl_app_halo_position_pole_edge at dec = ±89.8, where the
+     declination limit is exactly ±90 and the RA span is 114.6 degrees
+     * Move the body of test_cluster_wl_app_halo_position into
+     _check_halo_position, shared by both tests
+
+ * Credit Gustavo Barreto de Oliveira for the curvature operators
+
+     * Record GBbarreto as co-author of the s^n d/ds and s^n d^2/ds^2 Gegenbauer
+     operators
+
+     Co-authored-by: Gustavo Barreto de Oliveira <gustavo.barreto@uel.br>
+
+ * Remove the shape factors Quad, FixedQuad, SeriesLensed and Laplace and the code
+     only they used
+
+     * Behavior change: remove NcGalaxyShapeFactorQuad,
+     NcGalaxyShapeFactorFixedQuad, NcGalaxyShapeFactorSeriesLensed and
+     NcGalaxyShapeFactorLaplace; use NcGalaxyShapeFactorSpectral for the exact
+     marginal
+     * Remove the shape factors quad, fixed_quad, series_lensed and laplace of
+     the cluster WL experiment (GalaxyShapeFactorGen*) and the --show-nodes
+     option of inspect galaxy-shape-integrand
+     * Remove the theory pages wl_shape_marginalization_fixed_quad.qmd and
+     wl_shape_marginalization_series.qmd
+     * Remove nc_galaxy_shape_pop_eval_p_rho2_g_series and its Gauss and Beta
+     implementations, and nc_galaxy_shape_pop_get_mode_r
+     * Remove NcWLEllipticitySeriesTrace, NcWLEllipticitySeriesTraceDet,
+     NcmLaurentSeries and NcmLaurentSeriesTPS
+     * Remove the fused kernels of nc_wl_ellipticity (trace_kernel,
+     trace_kernel_prepare, trace_kernel_apply, trace_det_kernel,
+     NcWLEllipticityTraceKernelPrep), det_jac_trace, det_jac_trace_det and
+     shear_at_origin_*
+     * Remove NcGalaxyShapeIntrinsicMode
+     * Move the references of the remaining tests to Spectral: the truth test of
+     NcDataClusterWLFactor, the generic ref/free tests, the data-prepare,
+     MomentsTilt, inspect and cluster WL app tests
+     * Drop the Quad columns of the shared Arb case table and its generator
+     * State the accuracy of MomentsGauss and MomentsTilt against Spectral
+     * Record the removal in wl_shape_factor_history.md
+     * Regenerate nc.pyi and ncm.pyi
+
+ * Compare the angles passed to the NcmSpectralPolar callbacks within rounding
+
+     * The test callbacks checked cos_theta and sin_theta bitwise against cos
+     and sin; with clang on macOS the library's cos/sin pair can be one sincos
+     call that differs by one unit in the last place
+     * Compare within 2 GSL_DBL_EPSILON in test_ncm_spectral_polar.c and
+     test_ncm_spectral_polar_panels.c
+
+ * Test NcGalaxyShapeFactorSpectral against every certified Arb value
+
+     * Add the acceptance test nc_galaxy_shape_factor_spectral_cert: the 26,023
+     certified points of the Arb grid within 1e-7 in ln P, 7.6 s on one core
+     * Add tests/tools/make_shape_marginal_arb_table.py, which writes the table
+     nc_galaxy_shape_marginal_arb_cert.bin (NcmObjDictStr with one NcmMatrix)
+     from the certified points
+     * The table is an asset of the data-file release, downloaded with
+     nc_data_download_release_file and prefetched by prefetch_data.py
+     * Bump DATA_CACHE_VERSION to 6 in build_check.yml and weekly_flaky.yml for
+     the new asset
+     * State the measured differences beyond eight noise standard deviations
+     (2.5e-10) and at |g| = 1 (2.9e-11) on the theory page
+
+ * Add NcmSpectralPolar:min-radial-panels and a separate interpolant setting in
+     NcGalaxyShapeFactorSpectral
+
+     * Add NcmSpectralPolar:min-radial-panels: ncm_spectral_polar_peak_edges
+     adds the radial edges k R / n; the default 2 gives the previous edges (R /
+     2)
+     * Add NcGalaxyShapeFactorSpectral:interp-min-radial-panels (default 2),
+     applied to a separate NcmSpectralPolar for the interpolant build; 4 makes
+     evaluations 1.5 to 1.8 times faster for 11% to 13% more integrals
+     * Rebuild the interpolant of a galaxy when interp-min-radial-panels changes
+     * Add interp_min_radial_panels to GalaxyShapeFactorGenSpectral of the
+     cluster WL experiment
+     * Test min-radial-panels in peak_edges, its defaults, serialization and
+     error; test the power laws on one radial panel that carries both exponents
+     * Document min-radial-panels on both theory pages, with the error of the
+     shape marginal for n = 1
+     * Regenerate nc.pyi and ncm.pyi
+
+ * Restructure the opening of the spectral polar theory page
+
+     * Rewrite the opening of spectral_polar.qmd: purpose, supported cases, use,
+     then the method in steps
+     * State the disk radius, the range of r, the angular interval of length 2
+     pi and the annular-sector domain
+     * Define the symbols of Eq. (1) in a where clause after the equation
+     * State where the weight is not infinitely differentiable and which panels
+     keep a power law
+     * Rename the weight integral A to W, the Beta function to roman B, the edge
+     ratio to omega and its exponent to nu
+     * Use omega and nu in the gtk-doc of NcmSpectralPolar:edge-ratio and
+     ncm_spectral_polar_peak_edges
+     * State that ncm_spectral_polar_panels_eval extrapolates the nearest panel
+     outside the edges
+     * Start every sentence of the two spectral theory pages with a word, not a
+     symbol or API link
+     * Use American spelling in the files of the branch: disk, parameterized,
+     behavior
+
+ * Add the interpolation of ln P in g to NcGalaxyShapeFactorSpectral
+
+     * Add the properties use-interp, interp-g-max and interp-abstol with their
+     setters and getters
+     * Build for each galaxy an NcmSpectralPolarPanels of ln P in g with
+     ncm_spectral_polar_build, centered at the shear that maps chi_I = 0 to
+     eps_obs
+     * Keep it in the ldata of NcGalaxyShapeFactorData and rebuild it when
+     eps_obs, std_noise, the population pkey or a tolerance differs
+     * Evaluate the marginal from it for |g| <= interp-g-max and from the
+     integral otherwise
+     * Limit interp-g-max below 1/3 so that the region of the interpolant stays
+     inside |g| < 1
+     * Add the options use_interp, interp_g_max and interp_abstol to
+     GalaxyShapeFactorGenSpectral
+     * Add the tests interp, interp/rebuild and interp/g_max, the properties to
+     serialize, and test_cluster_wl_app_generate_spectral_interp
+     * Add the section Interpolation in g and its measured accuracy to the
+     theory page
+     * Regenerate nc.pyi
+
+ * Form the values of NcGalaxyShapeFactorSpectral next to |g| = 1 from integrals
+     at 1 - 1e-5
+
+     * Add NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA: below 1 - min (|g|,
+     1 / |g|) = 1e-5 no integral is computed at the shear
+     * Add the second-order term: the noise factor at the mean of the sheared
+     ellipticity plus half its variance times the Laplacian
+     * Add the term lambda^-(b + 2) (k_0 + k_1 / lambda), lambda = (1 + t) / (1
+     - t), from the integral at 1 - 1e-5 and, for TRACE_DET, at 1 - 1e-4
+     * Compute 1 - |g|^2 with the rounding errors of the squares removed by fma
+     * Move the integral at one real shear to
+     _nc_galaxy_shape_factor_spectral_integrate_ln
+     * Results change: a value at |g| = 1 -+ 10^-k, k = 6 to 15, on 32 galaxies
+     in both conventions, where the integral gave no value from 1e-9
+     * Results change: difference to Arb at 1 - |g| = 1e-8 of -1.7e-10 for TRACE
+     and -1.9e-9 for TRACE_DET, from -6.0e-8 and -9.5e-8
+     * Add two Arb points at 1 - |g| = 1e-8 to the test near_unit, the test
+     near_unit/sides and the panels below 1e-5 to the test panels
+     * Add the section Shears Next to |g| = 1 and its measured accuracy to the
+     theory page
+
+ * State in the theory page that the TRACE population stays a density of the trace
+     ellipticity
+
+     * Write Eq. (1) in the polar coordinates of chi_I before the substitution
+     |chi_I| = u (r)
+     * State that P_pop (u (r)) u' (r) is the density of r for the same
+     population
+     * Add the step f_t (T (e_I)) = T (m_t (e_I)) of the noise factor
+
+ * Integrate the TRACE convention of NcGalaxyShapeFactorSpectral in the
+     trace-determinant ellipticity
+
+     * Integrate TRACE over T^{-1} (chi_I), T (e) = 2 e / (1 + |e|^2), with the
+     map T (m_t (e)) and the exponent 2 alpha_1 + 1 at r = 1
+     * Add the map, its inverse and the reduced density of the variable of
+     integration as functions of the convention
+     * Results change: a value down to |g| = 1 - 1e-8 on 20 HSC galaxies, where
+     the integral in chi_I failed from 1 - 1e-5
+     * Results change: largest error on the 10,024 certified TRACE points
+     5.5e-6, 8.6e-8 and 6.9e-9 at reltol 1e-3, 1e-4 and 1e-5
+     * Add the test near_unit with five points certified by Arb at 1 - |g| from
+     1e-5 to 1e-7
+     * Add the section The Variable of Integration to the theory page and write
+     the following sections in that variable
+     * Document the variable of the panels of
+     nc_galaxy_shape_factor_spectral_eval_panels and convert their radius in
+     inspect galaxy-shape-integrand
+
+ * Add NcmSpectralPolarPanels and ncm_spectral_polar_build, the approximation on
+     polar panels
+
+     * Add NcmSpectralPolarPanels, the edges and the Chebyshev coefficients of
+     the accepted panels, with ncm_spectral_polar_panels_eval
+     * Add ncm_spectral_polar_build, which expands a function on the panels and
+     accepts a panel when D_r + D_theta <= max (reltol V, abstol)
+     * Share the edge checks of ncm_spectral_polar_integrate and
+     ncm_spectral_polar_build in _ncm_spectral_polar_check_edges
+     * Serialize the panel set through the construct-only GVariant property
+     panels
+     * Add tests/c/ncm/algebra/test_ncm_spectral_polar_panels.c and the
+     ref/free/clear test in test_ncm_generic.c
+     * Add the section Approximation on the Panels to
+     docs/theory/ncm/algebra/spectral_polar.qmd
+     * Regenerate numcosmo_py/ncm.pyi
+
+ * Add the Spectral shape factor to the cluster WL experiment and the inspect app
+
+     * Add GalaxyShapeFactorGenSpectral and ShapeFactorGen.SPECTRAL with the
+     option reltol
+     * Add --show-panels to inspect galaxy-shape-integrand: the accepted panels
+     of NcGalaxyShapeFactorSpectral drawn through the shear map in the chi_L
+     plane
+     * Print the number of accepted and refined panels and ln P, and a message
+     at |g| = 1
+     * Print the FixedQuad skip message only for an engine with no overlay
+     * Test the scheme's reltol through generate cluster-wl and the overlay
+     through the inspect command
+
+ * Add the theory page of NcGalaxyShapeFactorSpectral
+
+     * Add docs/theory/nc/lss/galaxy/wl_shape_marginalization_spectral.qmd: the
+     shear cases, the integral in polar coordinates, the scan that places the
+     panels, the result and the measured accuracy
+     * Register the page in docs/theory/nc/lss/galaxy/meson.build,
+     docs/_quarto.yml.in and docs/theory/index.qmd
+
+ * Add NcGalaxyShapeFactorSpectral, the shape marginal on NcmSpectralPolar
+
+     * Add NcGalaxyShapeFactorSpectral: ln P (eps_obs | g) by
+     ncm_spectral_polar_integrate in the polar coordinates of chi_I
+     * Use the closed form at |g| = 1, the integral at g / |g|^2 for |g| > 1,
+     and the frame where the shear is real
+     * Place the panels with ncm_spectral_polar_peak_edges from a scan of the
+     ray through the preimage of eps_obs
+     * Add the property reltol, default 1e-5
+     * Add nc_galaxy_shape_factor_spectral_eval_ln_direct and
+     nc_galaxy_shape_factor_spectral_eval_panels
+     * Abort with the population, the noise, g and eps_obs when the integral
+     fails or ln P is not finite
+     * Move the certified table of the Quad tests to
+     test_nc_galaxy_shape_marginal_arb_cases.h and add six points at complex g
+     * Add tests/c/nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral.c and the
+     ref/free/clear test in test_ncm_generic.c
+     * Regenerate nc.pyi
+
+ * Add the shear maps for a real reduced shear in real arithmetic
+
+     * Add nc_wl_ellipticity_apply_shear_trace_real and
+     nc_wl_ellipticity_apply_shear_trace_det_real
+     * Test them against the complex maps at g = t and at a rotated complex g
+
+ * Return the accepted panels of ncm_spectral_polar_integrate on request
+
+     * Add the optional output panels: one row per accepted panel with its
+     edges, levels, value and change
+     * Keep the levels of each accepted panel and mark the ones expanded again
+     by the second pass
+     * Set the output to NULL on NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH
+     * Test that the values add up to the integral and the areas to the domain
+     * Regenerate ncm.pyi
+
+ * Add exponent_at_one and eval_p_reduced to NcGalaxyShapePop
+
+     * Add the virtual function exponent_at_one: the exponent of P_pop (r) ~ (1
+     - r)^alpha_1 as r -> 1
+     * Add the virtual function eval_p_reduced: P_pop (r) over its two end power
+     laws, finite at r = 0 and r = 1
+     * Implement both for NcGalaxyShapePopGauss, NcGalaxyShapePopGaussLocal and
+     NcGalaxyShapePopBeta
+     * Reduce the class padding of NcGalaxyShapePopClass from 9 to 7
+     * Add tests/c/nc/lss/galaxy/test_nc_galaxy_shape_pop.c
+     * Regenerate nc.pyi
+
+ * Add the theory page of NcmSpectralPolar
+
+     * Add docs/theory/ncm/algebra/spectral_polar.qmd: the integral, the panels,
+     the test, the refinement, the moments, the estimate of the integral and the
+     edges for one peak
+     * Register the page in docs/theory/ncm/algebra/meson.build,
+     docs/_quarto.yml.in and docs/theory/index.qmd
+     * Link the page from the NcmSpectralPolar class documentation
+     * Name the numbers of radial and angular panels n_r and n_theta in the
+     class documentation
+
+ * Add NcmSpectralPolar, adaptive integration on a disc in polar coordinates
+
+     * Add NcmSpectralPolar: integral of r^a (R - r)^b G (r, theta) over panels
+     on tensor Chebyshev-Lobatto grids
+     * Accept a panel by the l1 change of its Chebyshev coefficients, as
+     NcmSpectral, with one scale per panel
+     * Double the direction with the larger change, or bisect the panel in it at
+     level-cap
+     * Integrate the end power laws exactly with Gauss-Jacobi moments of the
+     weight
+     * Test the accepted panels again when the final sum is below the sum of the
+     starting grids
+     * Add ncm_spectral_polar_peak_edges for the edges of an integrand with one
+     peak
+     * Report a panel at max-depth as NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH
+     * Add tests/c/ncm/algebra/test_ncm_spectral_polar.c and the ref/free/clear
+     test in test_ncm_generic.c
+     * Regenerate enum_nicks.json and ncm.pyi
+
+ * Fix the Quad default-path regressions of #463
+
+     * Behavior change: the default path no longer subtracts the noise kernel at
+     f_g (0) from the peak-scaled integrand; with it Divonne returned ln P off
+     by 6.6, did not return, or crashed at ordinary points
+     * Remove the peak-ratio rule for the subtraction and its constant
+     * State in the class doc that Divonne's convergence flag is not checked, as
+     before #463 (it is false at points where the result is accurate)
+     * Add the three failing points to make_shape_marginal_arb_cases.py and the
+     certified table; two of them in the unit tier
+
+ * Remove NcGalaxyShapeFactorCGF
+
+     * API removal: NcGalaxyShapeFactorCGF is gone;
+     NcGalaxyShapeFactorMomentsGauss has the same cost and the same or a smaller
+     error in every measured cell
+     * Drop its sources from numcosmo/meson.build, numcosmo.h and the type
+     registration in ncm_cfg.c
+     * Delete test_galaxy_shape_factor_cgf.py and the cgf entry of
+     test_data_cluster_wl_factor_data_prepare.py
+     * Use NcGalaxyShapeFactorVarAdd as the class without a prefetch hook in
+     test_galaxy_shape_factor_moments_tilt.py
+     * Drop the references to the removed test from two test docstrings and the
+     CGF passages from wl_shape_factor_history.md
+     * Regenerate nc.pyi
+
+ * Test the curvature operators and fix their docs, formatting and stubs
+
+     * Add the s^2 d, s^3 d, s^3 d^2 and s^4 d^2 matrices and rows to
+     test_ncm_spectral_operators
+     * Fix the column k-2 entry in the ncm_spectral_compute_s3_d_row doc:
+     (k-2)/(8(k+1)) for k >= 3
+     * Fix the column k entry in the ncm_spectral_compute_s4_d2_row doc:
+     (k+1)^2-6
+     * Fix the entry counts and the signs in the comments of the four row
+     functions
+     * Apply uncrustify to ncm_spectral.c and ncm_spectral.h
+     * Regenerate numcosmo_py/ncm.pyi with update_pyi.sh
+
+ * Compute NcGalaxyShapeFactorQuad relative to its peak and add a log-polar path
+
+     * Behavior change: Quad now integrates at |eps_obs| >= 1 (it used to
+     g_error), centering psi at the depth std_noise^2 / (|eps_obs| - 1 +
+     std_noise) inside the circle
+     * Scale the integrand by its peak, found on a 24 x 48 grid in psi and at
+     the hints, and compute ln P directly, so P below the double range is
+     returned as ln P
+     * Use the N0 subtraction only when N0 is below 1e4 times the integrand's
+     peak
+     * Return the |g| = 1 closed form ln N_2 (eps_obs - g) on every path
+     * Add the temporary property use-lp: log-polar coordinates around the noise
+     peak, with chi_I = 0 cut out by a square of four triangles for Beta
+     * Rewrite the class doc for the current default path; it described a plane
+     map no longer used
+     * Add tests/tools/make_shape_marginal_arb_cases.py, which prints 14
+     certified values from nc_galaxy_shape_marginal_arb
+     * Add test_nc_galaxy_shape_factor_quad (unit, 0.8 s: 4 rows per path, |g| =
+     1, properties) and test_nc_galaxy_shape_factor_quad_arb (c-acceptance, 6 s:
+     14 rows); measured max |d ln P| 1.2e-8 (default) and 5.0e-9 (use-lp),
+     tolerances 1e-6 and 5e-7
+     * Remove the Python test expecting a g_error at |eps_obs| >= 1
+     * Regenerate nc.pyi for use-lp
+
+ * Add the Arb reference for the WL shape marginal
+
+     * Add tests/tools/nc_galaxy_shape_marginal_arb.c: certified ln P (eps_obs |
+     g) for TRACE and TRACE_DET with the Gauss and Beta populations, in polar or
+     uv coordinates
+     * Reduce |g| > 1 to h = g / |g|^2 and evaluate |g| = 1 in closed form, in
+     ball arithmetic from the input g
+     * Integrate Beta in uv on two patches (a square of half-side 0.375 around
+     chi_I = 0 split into four triangles), with a disc enclosure for powers of
+     balls containing 0
+     * Search the end pieces for the integrand minimum L0 and repeat pass 1 with
+     L0 shifted by ln I when |ln I| > 64, so a peak at a fixed point of the map
+     no longer overflows I_est
+     * Build it with the other Arb generators in tests/tools/meson.build
+
+ * Remove the unused HAVE_FFTW3 define
+
+     * Remove numcosmo_conf.set('HAVE_FFTW3', true) from meson.build; FFTW3 is a
+     required dependency and no source reads the macro
+
+ * Make cfitsio a required dependency
+
+     * Behavior change: the build fails without cfitsio >= 3.25; before, it
+     built without the FITS code
+     * Remove the HAVE_CFITSIO guards from the library, the C tests and
+     tools/data_cluster.c
+     * Remove the "CFITSIO not available" g_error branches of
+     ncm_sphere_map_load_fits, ncm_sphere_map_save_fits and
+     ncm_sphere_map_load_from_fits_catalog
+     * Remove the no-cfitsio stubs of NcmMSetCatalogStorageFits and
+     NCM_MSET_CATALOG_STORAGE_ERROR_NO_CFITSIO (unreleased API)
+     * Regenerate enum_nicks.json and ncm.pyi for the removed enum member
+     * Remove the unused fitsio.h includes of nc_data_xcor.c and
+     nc_data_cluster_ncounts_gauss.c
+     * Reduce the tools/cmb_maps.c guard to HAVE_CHEALPIX
+
+ * Remove the libcuba version guards
+
+     * Remove HAVE_LIBCUBA and HAVE_LIBCUBA_4_0 from meson.build; libcuba is
+     vendored and always built
+     * Keep only the Cuba 4.0 Cuhre call in ncm_integrate_2dim
+     * Remove the "Needs libcuba > 4.0" g_error branches of
+     ncm_integrate_2dim_divonne and ncm_integrate_3dim_divonne
+     * Call cubaaccel and cubacores unconditionally in ncm_cfg_init_full_ptr
+
+ * Update the vendored SUNDIALS from 7.3.0 to 7.9.0
+
+     * Behavior change: libnumcosmo no longer exports SUNDIALS symbols (952 with
+     7.3.0); code that calls SUNDIALS links its own copy
+     * Copy the 7.9.0 release files unchanged into numcosmo/external/sundials
+     * Regenerate sundials_config.h, sundials_export.h and
+     sundials_lapack_defs.h with a static-library CMake configure
+     * Add the 7.9.0 solver modules sunnonlinsol_auto, sundomeigest,
+     sunadjointcheckpointscheme and sunmemory_system
+     * Leave out arkode_cli.c, cvode_cli.c and the Fortran modules
+     * Remove the pre-7.0 cvode_direct.c, cvode_spils.c, their headers and
+     sundials_lapack.h
+     * Remove the unused MPI and GPU files, cvode_fused_stubs.c and
+     sundials_types_deprecated.h
+     * Regenerate the meson.build source lists and drop the duplicated
+     sundials_version.c
+     * Add sundials_dep and link test_nc_hcosmo_bi against it
+
+ * Tighten the NcmPowspecFilter:reltol default to 1e-8
+
+     * Behavior change: NcmPowspecFilter:reltol default 1e-3 -> 1e-8; sigma8
+     error 2.9e-6 -> 2.6e-11, re-prepare 13 -> 28 ms; set reltol 1e-3 for the
+     previous behavior
+     * Compare test_nc_powspec_filter_tophat within 10 reltol of the peak of
+     sigma^2, as the property states
+     * Bound the sigma check by the variance tolerance divided by sigma0 +
+     sigma1
+     * Report the maximum variance difference relative to the peak
+
+ * Adding curvature terms
+
+ * CI: update conda lock files
+
+ * Store only the supported window weights in NcXcorCovGauss
+
+     * Each band power keeps its weights from the first to the last nonzero one,
+     concatenated in one GArray; the dense window copies are gone
+     * The spectra property rebuilds the dense rows for serialization; the round
+     trip is unchanged
+     * Forecast layout: stored weights 0.43 MB against 8.6 MB dense; compute 1.1
+     ms and the TJPCov agreement (1.4e-15) unchanged
+
+ * Compute NcXcorCovGauss over band supports into an owned matrix
+
+     * nc_xcor_cov_gauss_compute sums w_L w_L' times the per-ell term over the
+     overlap of the two band supports only; no BLAS, no GSL views
+     * Band supports (first and last nonzero ell) stored by
+     nc_xcor_cov_gauss_add_spectrum, which aborts on a band with no nonzero
+     weight
+     * The covariance is owned by the object, nc_xcor_cov_gauss_peek_matrix;
+     compute allocates only when nc_xcor_cov_gauss_get_n_data changes
+     * The lower triangle is copied from the upper one, so the result is
+     symmetric to the bit
+     * Forecast layout (540 band powers, ell 0..2000): compute 1.1 ms against 48
+     ms with the dense products; agreement with TJPCov's effective weights
+     1.4e-15
+     * test_nc_xcor_cov_gauss.c: spectrum added after a compute, zero-weight
+     band abort
+
+ * Add NcXcorCovGauss, the Gaussian f_sky covariance of band-power C_ell
+
+     * NcXcorCovGauss: spectra as tracer pairs with window blocks over a common
+     ell range, f-sky, serializable through the spectra property (a(uuaad))
+     * nc_xcor_cov_gauss_compute: covariance from the signal of every tracer
+     pair (rows from nc_xcor_cov_gauss_get_pair_index) and the per-tracer noise,
+     added to the auto spectra only
+     * The per-ell term (Ct^ac Ct^bd + Ct^ad Ct^bc) / ((2 ell + 1) f_sky) is one
+     internal function, summed with the windows by dgemm per pair of spectra
+     * test_nc_xcor_cov_gauss.c: formula against a term-by-term sum, negative
+     cross term, noise only, exact f_sky scaling, positive definiteness,
+     serialization, abort paths
+     * test_ncm_generic.c: ref/clear/free and the instance built with no
+     properties
+     * Register the type in ncm_cfg.c, numcosmo.h and meson; regenerate nc.pyi
+
+ * Add power_exp_ia_mid to the certified xcor window vocabulary
+
+     * numcosmo_py/certified/xcor/windows.py: power_exp_ia_mid, the generator's
+     NLA case (power_exp, alpha = 0), so test_window_vocabulary.py resolves it
+
+ * Fix the PKEqual root solve of NcPowspecMNLHaloFit and test it
+
+     * Behavior change: with use-pkequal on a CPL cosmology with w_a != 0, P_nl
+     moves by up to 17% (w0 = -0.9, w_a = 0.1, z <= 2, k <= 3 Mpc^-1); the
+     previous values came from a solve stopped at the iteration cap
+     * _nc_powspec_mnl_halofit_xi_cmp re-prepares cpl_dist after setting w0, so
+     the root solve converges
+     * g_error when no constant w in [-2, 0] brackets the root or the solve
+     reaches the iteration cap (was g_warning)
+     * Prepare with use-pkequal takes 0.43 s against 0.05 s without (one run on
+     the laptop, 46 Rsigma nodes)
+     * test_nc_powspec_mnl_halofit.c: PKEqual fixture (CPL, w0 = -0.9, w_a =
+     0.1) for the concurrent eval and eval_vec tests
+     * test_nc_powspec_mnl_halofit.c: P_nl with PKEqual minus P_nl without is
+     linear in w_a (slope 0.0760 at w_a = 1e-3 and 1e-4)
+     * Multi-line comments of nc_powspec_mnl_halofit.c and its test in the block
+     form
+
+ * Regenerate ncm.pyi for NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY
+
+     * Add the MSET_CATALOG_HDU0_MSET_BUILDERS_KEY constant to the stubs
+
+ * Test numcosmo catalog analyze on a catalog of a builder model in a new process
+
+     * Move the builder_experiment fixture to
+     tests/python/numcosmo_py/app/conftest.py
+     * Add test_run_mcmc_apes_analyze_builder_model: run apes, then catalog
+     analyze in a process without the builder type
+
+ * Store the model builders of the catalog model set in HDU0
+
+     * Write the NcmModelBuilder objects of the builder model types of the mset,
+     parents first, under model-builders in the HDU0 vardict
+     * Create those types from model-builders before deserializing model-set,
+     forwarding the builder errors
+     * Add the NCM_MSET_CATALOG_HDU0_MSET_BUILDERS_KEY define
+     * Add the C test builders: HDU0 content, order and the reopened model
+     * Add test_mset_catalog_storage_fits.py: the catalog read in a new process
+     without the builder types, and the name clash error
+
+ * Add GError to ncm_model_builder_create and the builder lookup from a type
+
+     * Resolve the parent type in ncm_model_builder_create, not in the
+     parent-type-string setter, so a builder deserializes before its parent type
+     is created
+     * Add NcmModelBuilderError (PARENT_NOT_REGISTERED, PARENT_NOT_MODEL,
+     NAME_CLASH); a name clash sets the error instead of aborting
+     * Compare the stackable flag in the name clash check
+     * Store the builder as GType qdata and add ncm_model_builder_peek_from_type
+     * Update test_ncm_model_builder.c: GError cases, builder chain
+     deserialization, peek_from_type
+     * Add Python tests for the errors, peek_from_type and the builder chain
+     * Regenerate enum_nicks.json and ncm.pyi
+
+ * Test the serialization of the NLA kernel with a growth-powspec in C
+
+     * /nc/xcor/kernel/weak_lensing/ia_serialize: doia, ia_A/ia_eta/ia_z_piv by
+     name and growth-powspec survive ncm_serialize_dup_obj
+     * Copy's Limber windows and both components' kernels bit for bit against
+     the original
+     * Completes the C counterpart of the Python serialization and properties
+     tests removed earlier
+
+ * Certify the NLA window power_exp_ia_mid in the d = 0 window table
+
+     * xcor_window_ilk.json.gz: power_exp_ia_mid at ell 2 to 1000, worst
+     relative radius 1.43e-26; other shapes unchanged
+     * xcor_window_ilk.bin regenerated by make_xcor_window_bin.py sparse: 17
+     shapes, 102 (shape, ell) tables
+     * Generation: 9463 s, the ell = 1000 cell nearly all of it (ell = 500: 347
+     s)
+
+ * Stop initializing NumCosmo when numcosmo_py modules are imported
+
+     * Remove the module-level Ncm.cfg_init() from app/xcor/common.py and
+     catalog/sky_match.py
+     * Call Ncm.cfg_init() in XcorKernelCommon.__post_init__
+     * Move Ncm.cfg_init() in experiments/mass_calibration_planck_clash.py into
+     the main guard
+     * Add test_import_no_init.py: no numcosmo_py module calls cfg_init at
+     import time
+     * Add test_numcosmo_app_mpi.py: run mcmc apes --parallel mpi under mpiexec
+     -n 2 with a builders file
+     * Set NUMCOSMO_TEST_MPIEXEC in tests/python/meson.build when the library is
+     built with MPI
+     * Document the NUMCOSMO_TEST_MPIEXEC gate in TESTING.md section 3
+
+ * Add the NLA window power_exp_ia_mid to the d = 0 window cases
+
+     * power_exp_ia_mid: power_exp_mid with alpha lowered by 2 (alpha = 0), the
+     1 / chi^2 weight of the NLA term on that source distribution
+     * Table and xcor_window_ilk.bin not regenerated yet: the ell = 1000 cell is
+     being certified
+
+ * Test the NLA intrinsic alignment in the C kernel suite
+
+     * weak_lensing_ia row in the kernel table (A_IA 1.5, eta_IA 1.1): the nine
+     interface checks and the cross with gal
+     * limber check: with doia the window at z = 0 is its limit, compared with z
+     = 1e-12, instead of 0
+     * /nc/xcor/kernel/weak_lensing/ia_null: doia adds one component, defaults,
+     A_IA = 0 bit for bit, term linear in A_IA
+     * /nc/xcor/kernel/weak_lensing/ia_redshift_law: A_IA(z) power law in (1 +
+     z) / (1 + z_piv)
+     * /nc/xcor/kernel/weak_lensing/ia_growth: growth-powspec without growth
+     scales the term by the analytic D(z)
+     * test_kernel_weak_lensing_ia.py: drop the component, property and
+     serialization tests, now in C; the CCL comparisons stay
+
+ * Fix the NLA Limber window at z = 0 and the IA component k range
+
+     * eval_limber_z: D = 1 at chi = 0 instead of sqrt (P(inf, 0) / P(inf, 0)),
+     which was NaN whenever dn/dz(0) != 0
+     * _ia_component_get_limits: k range is the intersection of the kernel's and
+     the growth-powspec ranges
+     * _ia_component_eval_kernel: parenthesize the product so uncrustify spaces
+     it as arithmetic
+
+ * Make NcPowspecMNLHaloFit evaluation reentrant
+
+     * eval and eval_vec no longer write the object: the coefficients at a
+     redshift go to a per-thread cache (static GPrivate) keyed by a prepare id
+     that every prepare takes from one global atomic counter
+     * the PKEqual root solve moves from eval to prepare: solved on the Rsigma
+     nodes, Omega_de (1 + w) / E^2 interpolated by a spline
+     * fixes concurrent evaluation, as in NcXcorSolver's OpenMP blocks, where
+     threads at different redshifts overwrote each other's coefficients
+     * test_nc_powspec_mnl_halofit.c: eval and eval_vec from four GThreads bit
+     for bit against serial, and a re-prepare after a parameter change against a
+     fresh object
+
+ * Add the NLA intrinsic alignment to NcXcorKernelWeakLensing
+
+     * NcXcorKernelWeakLensing:doia: an IA component, -A_IA(z) C1 rho_crit
+     Omega_m E(z) dn/dz / D(k, z) weighted by j_l(k chi) / (k chi)^2 and the
+     spin-2 factor, the convention of CCL's WeakLensingTracer with use_A_ia
+     * ia_A, ia_eta, ia_z_piv: A_IA(z) = A_IA ((1 + z) / (1 + z_piv))^eta_IA,
+     fixed by default (1, 0, 0.62)
+     * NcXcorKernelWeakLensing:growth-powspec: the spectrum D(k, z) = sqrt
+     (P_D(k, z) / P_D(k, 0)) is read from; NULL uses the kernel's powspec; the
+     linear one with a nonlinear powspec
+     * the IA term in eval_limber_z and in the component, so the redshift-space
+     Limber methods and the kernel-space tiers both include it
+     * NcXcorKernelWeakLensingSParams: prefix NC_XCOR_KERNEL_WEAK_LENSING,
+     SPARAM_LEN skipped as in NcXcorKernelGal; enum nicks and nc.pyi regenerated
+     * test_kernel_weak_lensing_ia.py: both Limber paths against CCL with linear
+     P and with halofit and the linear growth-powspec, the exact tier against
+     the CCL-kernel bridge, components and properties, serialization
+
+ * Suppress the free_sized size mismatches GLib's g_free macro produces
+
+     * With glibc 2.43 or later GLib's g_free macro calls g_free_sized with
+     __builtin_object_size (mem, 0), an upper bound: a pointer from either of
+     two constant-size g_strdup calls is freed with the larger size
+     * glibc's free_sized ignores the size, so the mismatch is harmless; the
+     entry suppresses only the SizeMismatch kind at free_sized
+     * Reproduced with plain GLib; found in _ncm_fit_esmcmc_walker_apes_desc
+     ("KDE" or "VKDE")
+
+ * Release the objects four tests leaked, found by AddressSanitizer
+
+     * test_ncm_serialize.c: the two YAML special-type tests release the object
+     they read
+     * test_ncm_fit_esmcmc_common.c: the parity and phase helpers release the
+     RNG they give the sampler
+
+ * Let plot-corner --auto-thin thin chains shorter than 50 tau
+
+     * Behavior change: --auto-thin accepts a SHORT_CHAIN estimate when the
+     chain has at least 10 autocorrelation times in every plotted column; it
+     chose thin 1 for any flag before
+     * Any other tau flag, or a chain under 10 autocorrelation times, still
+     gives thin 1, with the reason printed
+     * At 10 tau, 95% of AR(1) tau estimates are below 1.56 tau, so the variance
+     factor stays under 1.05; the measured envelope is in the _auto_thin
+     docstring
+     * Test one catalog per branch: no flag, SHORT_CHAIN accepted, under 10 tau,
+     a variance shift
+
+ * CI: update conda lock files
+
+ * Follow the test layout and move the settled reparam tests to C
+
+     * test_nc_hicosmo_de.c: the two helpers after main, before the fixtures, as
+     the layout requires; the refused cases compare the whole error message
+     * test_model.py and test_bbn_migration.py: remove the five reparam tests
+     whose assertions the C test now has; the modified pre-existing ones stay
+
+ * Test the reparam remapping in C, where codecov counts it
+
+     * test_nc_hicosmo_de.c: a length-8 Ok reparam moves key 7 to 6, an empty
+     params-desc resizes, the 2024 Planck CMB case lands omegac at 1 and omegab
+     at 5
+     * test_nc_hicosmo_de.c: the four refused keys with their messages
+     * ncm_model.c: the resize comment states the one input the length rule
+     cannot tell from an old file
+
+ * Test the int32-keyed old dictionary and a key past the model in a reparam of
+     neither length
+
+     * test_ncm_serialize.c: sparam-array in the old form a{i{sa{sv}}}
+     * test_model.py: a length matching neither layout with a key past the
+     model's end
+
+ * ncm_model_set_reparam: document the moved descriptions
+
+     * The doc states that a reparametrization written before a removal has its
+     descriptions moved
+
+ * Read model sets written before 2024-01-21 and reparams written before Yp moved
+
+     * Behavior change: a stored reparam written with Yp at index 4 (length 8 on
+     NcHICosmoDE) now has its descriptions moved to the current indices; before,
+     omegab's description landed on w
+     * Behavior change: a reparam whose length matches neither layout aborts
+     when it describes a parameter at or after a removed index
+     * API change: ncm_model_class_add_removed_param takes the index the
+     parameter had; NcHICosmoDE and NcHICosmoLCDM declare Yp at 4 instead of
+     NcHICosmo
+     * ncm_serialize reads objects in the format before 2024-01-21 ({sa{sv}})
+     where the property is an object, NcmObjArray or NcmObjDictInt; the variant
+     type alone is not used, so NcmVarDict values are untouched
+     * Old NcmModel:sparam-array arrays become dictionaries keyed by position,
+     placed by name as before
+     * Test the old formats in test_ncm_serialize.c and the reparam remapping in
+     test_model.py and test_bbn_migration.py
+     * Regenerate ncm.pyi
+
+ * Test the two remaining branches of the plot-corner automatic thinning
+
+     * Write long and short AR(1) catalogs to file and check the choice of
+     _auto_thin: half the smallest tau, or 1 when tau is flagged
+
+ * Thin MCMC catalogs in the catalog only, from the command line
+
+     * Behavior change: plot-corner --auto-thin now thins by floor(tau_min / 2)
+     instead of ceil(tau_max), so plots keep about twice as many rows or more;
+     pass --thin N to choose N
+     * plot-corner --auto-thin (default on, used when --thin is not given) reads
+     each catalog once to estimate tau, keeping no rows, then loads it thinned;
+     no thinning with fewer than 10 iterations or a flagged tau, and the choice
+     is printed
+     * Add --thin (iterations) to every LoadCatalog command and to plot-corner;
+     load_catalog passes it to new_from_storage_full
+     * analyze shows the thinning and reports the suggested burn-in in
+     iterations of the file
+     * Remove the burnin and thin arguments of mcat_to_catalog_data; the
+     catalog's rows are already the kept ones
+     * Test --thin in analyze, load_catalog and plot-corner, and the automatic
+     thinning with its overrides
+
+ * Split new_from_storage into a writing and an analysis constructor
+
+     * ncm_mset_catalog_new_from_storage (storage) builds a catalog on every
+     row, for writers and whole-file reads
+     * Add ncm_mset_catalog_new_from_storage_full (storage, burnin, thin) for
+     analysis
+     * Callers that passed 0, 1 drop both arguments; callers with a burn-in or
+     thin use the _full constructor
+     * Regenerate ncm.pyi
+
+ * Add NcmMSetCatalog:thin, thinning a read-only catalog at load
+
+     * Add NcmMSetCatalog:thin (construct-only, default 1) and
+     ncm_mset_catalog_get_thin
+     * Add the thin argument to ncm_mset_catalog_new_from_storage; every caller
+     passes 1
+     * Abort at construction when thin > 1 and the storage is not read-only
+     * Load every thin-th iteration after the burn-in with all its chains;
+     peek_row and get_row map through it
+     * The stored Markovian id becomes the number of kept rows before it
+     * Test rows, Markovian id and every analysis against a file holding only
+     the kept rows (one and four chains, read-block 1 and larger)
+     * Test the abort on a writable storage
+     * Regenerate ncm.pyi
+
+ * Move read-only to the NcmMSetCatalogStorage base class
+
+     * Add NcmMSetCatalogStorage:read-only (construct-only) and
+     ncm_mset_catalog_storage_get_read_only
+     * Refuse writes with READ_ONLY in set_desc (storing), set_rng,
+     start_recording and erase
+     * Remove NcmMSetCatalogStorageFits:read-only, its seven checks and
+     ncm_mset_catalog_storage_fits_get_read_only
+     * The FITS storage reads the base property for the open mode, the missing
+     file, close and sync
+     * NcmMSetCatalog checks read-only on any storage, not only FITS
+     * Test a read-only memory storage built holding rows, and set_rng on a
+     read-only FITS file
+     * Regenerate ncm.pyi
+
+ * Remove auto-trim: NcmFitESMCMC trims nothing during a run, the catalog is
+     append-only
+
+     * Behavior change: ncm_fit_esmcmc_run_lre and run_burnin no longer trim the
+     catalog between runs; burn-in and thinning are applied at read time
+     (--burnin and --tail of numcosmo catalog analyze, the burnin of
+     ncm_mset_catalog_new_from_storage)
+     * Removed: NcmFitESMCMC:auto-trim, auto-trim-div, trim-type and
+     ncm_fit_esmcmc_set_auto_trim, set_auto_trim_div, set_auto_trim_type
+     * Removed: ncm_mset_catalog_trim_by_type and NcmMSetCatalogTrimType;
+     calc_max_ess_time, calc_heidel_diag, calc_const_break, trim, trim_oob and
+     remove_last_ensemble stay
+     * mcat_analyze: --auto-trim removed; --trim and --thin, which rewrote the
+     read-only catalog in place and aborted since the storage, exit with a
+     message pointing to --burn-in
+     * Tests: the ESMCMC cases trim at the constant break of -2ln(L) after the
+     run where the auto-trim did it; run/lre/auto_trim removed,
+     run/lre/auto_trim/vol becomes run/lre/vol; the MPI exploration case the
+     same; the catalog case trim_by_type/short becomes diag/short
+     * The commented auto-trim lines of four examples and five notebooks
+     removed; notebooks/snia/simulation.ipynb no longer calls them
+     * enum_nicks.json and ncm.pyi regenerated
+
+ * Tests: a FITS table with a float column, trim_oob and remove_last_ensemble on
+     70000 rows
+
+     * test_ncm_mset_catalog_storage_fits: a table whose last column is a single
+     float is read and appended one column at a time (raw_rows off), the values
+     intact
+     * test_ncm_mset_catalog: trim_oob and remove_last_ensemble on a file of
+     70000 rows, more than the rewrite writes between two syncs
+
+ * NcmMSetCatalogStorageFits: raw row-major block reads and writes; the rewrites
+     sync every 65536 rows
+
+     * When every column of the table is one double (TFORM 1D or D, NAXIS1 eight
+     bytes per column), the block read is one fits_read_tblbytes per 4096 rows
+     decoded from big-endian, and the pending rows are encoded and appended with
+     fits_insert_rows and fits_write_tblbytes per 4096 rows; other tables keep
+     the per-column path
+     * Measured on 960000 rows of 31 columns: the read of every row forward,
+     backward and strided with read-block 1024 falls from 25 s and 73 million
+     read calls to 10 s and 124 thousand; the run falls from 3.3 s to 2.6 s; the
+     table bytes equal the file written by the library before the storage
+     * _ncm_mset_catalog_rewrite and ncm_mset_catalog_trim_oob sync the storage
+     every NCM_MSET_CATALOG_REWRITE_SYNC_ROWS rows, so the tail no longer holds
+     a copy of the whole catalog during a trim (6.9 GB for 9.6 million rows of
+     31 columns before)
+
+ * NcmMSetCatalogStorageFits: write the pending rows row by row
+
+     * _ncm_mset_catalog_storage_fits_write_pending writes every column of a row
+     before the next row, as the catalog did before the storage; the column pass
+     over the pending rows loaded every file record once per column
+     * Measured on a Stretch run of 960000 rows with 31 columns: write system
+     calls 4.2 million to 58 thousand, system time 1.83 s to 0.21 s, wall 5.0 s
+     to 3.3 s, the wall of the library before the storage
+     (NumCosmoDevNotes/benches/catalog_memory)
+
+ * NcmFitESMCMC tests: read-block identity, resume from the file, MPI run on a
+     file
+
+     * test_ncm_fit_esmcmc_common: the same run written with read-block 1 and
+     with one larger than the catalog gives byte-identical files and the same
+     mean
+     * test_ncm_fit_esmcmc_common: a run stopped after four iterations and
+     continued by a second sampler on the file gives the rows of the
+     uninterrupted run, in one more segment
+     * test_ncm_fit_esmcmc_mpi: the fixtures put the catalog on a FITS storage
+     in a temporary directory
+
+ * NcmMSetCatalog: construction from a storage only, the file paths removed
+
+     * Behavior change: ncm_mset_catalog_new and new_array build a
+     NcmMSetCatalogDesc and a NcmMSetCatalogStorageMemory; a FITS catalog is
+     ncm_mset_catalog_new_from_storage on a NcmMSetCatalogStorageFits (read-only
+     for analysis)
+     * Removed: ncm_mset_catalog_new_from_file, new_from_file_ro, set_file,
+     set_sync_mode, set_sync_interval, set_read_block, get_read_block
+     * Removed the properties mset, nadd-vals, nadd-val-names, nadd-val-symbols,
+     m2lnp-var, weighted, nchains, rng, filename, read-only, read-block, smode,
+     sync-interval, run-type-string; the property form of construction aborts
+     * The sync mode, sync interval, read block and read-only flag are read from
+     the storage; the trims and the rebuilds copy them into the new storage
+     * The samplers set smode and sync-interval on the catalog's storage
+     * mcat_join reads each input through a read-only FITS storage, refuses a
+     description that is not compatible or not in the same order, and writes the
+     joined rows to a FITS storage in one segment named mcat_join
+     * mcat_analyze and mcat_trim_oob open a read-only FITS storage
+     * numcosmo_py (app loading, catalog, esmcmc, experiments), the examples,
+     the notebooks and the Python tests build the storage and call
+     new_from_storage; the plotting tests use new_array
+     * test_ncm_mset_catalog: files built through a Desc and a FITS storage; the
+     detach half of file/read_block/restore removed with set_file
+     * ncm.pyi regenerated
+
+ * Samplers take a NcmMSetCatalogStorage: set_storage replaces set_data_file
+
+     * NcmFitESMCMC, NcmFitMC, NcmFitMCMC, NcmFitMCBS: ncm_fit_*_set_storage and
+     the property storage, set before the first start_run (run for MCBS);
+     without one the catalog is built on a NcmMSetCatalogStorageMemory
+     * The sampler sets the catalog description on the given storage at the
+     first start_run and reports its errors as before
+     * NcmFitMCBS takes the base name of the bootstrap files from a FITS
+     storage's file name (ncm_util_basename_fits); memory storages give memory
+     bootstrap catalogs
+     * Removed: ncm_fit_*_set_data_file, ncm_fit_mcbs_set_filename, the
+     data-file and filename properties, NcmFitESMCMC:read-block and
+     ncm_fit_esmcmc_set_read_block
+     * darkenergy --mc-data builds a NcmMSetCatalogStorageFits for the chosen
+     sampler
+     * numcosmo_py (app esmcmc and run_mc, sampling, cluster richness analysis,
+     experiments), the examples and the notebooks build a
+     NcmMSetCatalogStorageFits and call set_storage
+     * Tests: the C sampler tests and the Python NcmFitMC test use set_storage;
+     the storage property is checked
+     * ncm.pyi regenerated
+
+ * Samplers: tests of the data-file paths, NcmFitMCBS seeds the resampler once
+
+     * NcmFitMCBS: the resampling NcmFitMC is seeded in
+     _ncm_fit_mcbs_build_catalog, once; a second ncm_fit_mcbs_run aborted on
+     ncm_fit_mc_set_rng with rows in its catalog
+     * NcmFitMCBS: ncm_fit_mcbs_set_filename frees the match info on a name
+     without the .fits extension (leak)
+     * test_ncm_fit_mc: data_file case, a run continued by a second NcmFitMC on
+     the file, the RNG mismatch error and reset
+     * test_ncm_fit_mcmc: data_file case, reset, kernel and RNG set on the built
+     catalog, the RNG mismatch error
+     * test_ncm_fit_mcbs: filename case, both extension branches, two runs on
+     the file
+     * test_ncm_fit_esmcmc_common: data-file and read-block properties, has_rng,
+     set_read_block on the built catalog, the RNG mismatch error
+     * test_ncm_mset_catalog: the storage property
+
+ * Samplers: GError on start_run and ncm_fit_mcbs_run, row-order check of
+     NcmMSetTransKernCat
+
+     * Behavior change: ncm_fit_esmcmc_start_run, ncm_fit_mc_start_run,
+     ncm_fit_mcmc_start_run and ncm_fit_mcbs_run take a GError and report the
+     storage's errors (file not readable, incompatible description, an RNG of
+     another algorithm or seed, a recording that cannot open) instead of
+     aborting; a NULL error keeps the abort
+     * NcmMSetTransKernCat refuses a model set whose free parameters are not the
+     catalog's in the catalog's order, since rows are copied by position
+     * test_ncm_fit_mc: start_run on a file of another description reports
+     INCOMPATIBLE and does not start the run
+     * test_ncm_mset_trans_kern_cat: a model set with one free parameter fewer
+     is refused
+     * C callers pass NULL
+
+ * NcmFitMC, NcmFitMCBS, NcmFitMCMC: the catalog built at the first run, recorded
+     on the storage
+
+     * Behavior change: the catalogs are built by the first start_run (NcmFitMC,
+     NcmFitMCMC) or run (NcmFitMCBS), on a FITS storage of the data file or a
+     memory storage; peek_catalog and get_catalog before it abort, set_data_file
+     and set_filename after it abort
+     * NcmFitMC:rtype construct-only, ncm_fit_mc_set_rtype removed; the
+     resampling nick names the run's segment
+     * NcmFitMCMC records each run in a segment named by the kernel; NcmFitMCBS
+     records in a segment "from-model" with the bootstrap nick as options
+     * NcmFitMCBS builds one NcmFitMC per realization for the bootstrap fits,
+     each on its own file
+     * set_rng before the catalog exists keeps the RNG for it; on a file holding
+     an RNG of another algorithm or seed the run aborts
+     * ncm.pyi regenerated
+
+ * NcmFitESMCMC: the catalog built in start_run, runs recorded on the storage
+
+     * Behavior change: the catalog is built by the first
+     ncm_fit_esmcmc_start_run, on a FITS storage of the data file or a memory
+     storage; peek_catalog and get_catalog before it abort, set_data_file after
+     it aborts
+     * ncm_fit_esmcmc_set_rng before start_run keeps the RNG for the catalog; on
+     a file holding an RNG of another algorithm or seed start_run aborts
+     * NcmFitESMCMC:read-block and ncm_fit_esmcmc_set_read_block, the read block
+     of the storage built
+     * The initial ensemble is recorded in the initial sampler's segment, each
+     run in a segment named by the walker's description and options; end_run
+     closes the recording
+     * NcmMSetCatalog: a pending Markovian id is written into a recording opened
+     on the storage by the sampler
+     * numcosmo_py/sampling/apes.py: the first run draws its initial ensemble
+     from the sample through an NcmMSetTransKernCat with CHOOSE
+     * test_ncm_fit_esmcmc_common: the catalog peeked after start_run, the read
+     block set on the sampler
+     * ncm.pyi regenerated
+
+ * Remove first_id: row ids are row indices
+
+     * Behavior change: ncm_mset_catalog_set_first_id and get_first_id removed;
+     the current id is the index of the last row, -1 when empty, and the
+     Markovian id a row index
+     * ncm_mset_catalog_peek_info_from_file loses its first_id output;
+     peek_markovian_id_from_file returns a row index (FIRST_ID of a legacy file
+     is read by the storage only to convert MARKID)
+     * ncm_fit_mc_set_first_sample_id and ncm_fit_mcmc_set_first_sample_id
+     removed; the first_id check of ncm_fit_esmcmc_start_run removed
+     * ncm_fit_mcbs_run loses its ni argument: the realizations run from 0 to nf
+     - 1
+     * darkenergy: the --mc-ni option removed
+     * numcosmo_py/app/loading.py: the Markovian burn-in from the row index
+     * test_ncm_mset_catalog: the first_id_chains cases removed;
+     test_ncm_mset_catalog_fixtures: a file with FIRST_ID 6 reads ids from 0
+     with MARKID shifted
+     * ncm.pyi regenerated
+
+ * NcmMSetCatalog: new_from_storage and the storage property
+
+     * ncm_mset_catalog_new_from_storage (storage, burnin): a catalog on a
+     storage that holds a description, taking its rows and run metadata
+     * NcmMSetCatalog:storage, construct-only; given, the catalog takes no mset
+     and no file, and its sync mode, sync interval and read block are the
+     storage's
+     * ncm_mset_catalog_peek_storage
+     * test_ncm_mset_catalog: storage/memory and storage/fits, a catalog on a
+     filled storage, rows added through it reach a segment of their own, burn-in
+     on a storage
+     * ncm.pyi regenerated
+
+ * NcmMSetCatalog: rows, description and run metadata on the storage
+
+     * Behavior change: the catalog holds a NcmMSetCatalogStorage (memory, or
+     FITS for a file) and no CFITSIO code or row buffer; one code path for both
+     * Rows added open a recording on the storage: the initial sampler's segment
+     on an empty storage, then the sampler and options segment; a sampler change
+     starts a new segment at its first row
+     * Statistics are rebuilt by a scan of the storage at construction and at
+     attach; the acceptance count keeps a copy of the last row of each chain
+     * set_file with rows writes them to a new file inside one recording;
+     attaching to a file with rows requires an empty catalog; set_file (NULL)
+     keeps the rows in a memory storage
+     * The file/memory id merge, the stored functions array, the HISTORY cards
+     and the rows kept by erase_data are removed; erase_data is reset
+     * set_run_type, set_m2lnp_var and a second set_rng on an empty constructed
+     catalog rebuild the storage with the new description or RNG; they abort on
+     a non-empty one
+     * The trims and remove_last_ensemble rewrite through one recording; a FITS
+     file is renamed to .n.bak and recreated; trim_oob builds a one-chain
+     description
+     * peek_info_from_file and peek_markovian_id_from_file read through a
+     read-only FITS storage
+     * ncm_mset_catalog_storage_sync added: writes inside the open recording
+     without closing it
+     * ncm_mset_catalog_storage_fits_get_first_id added: FIRST_ID of a legacy
+     file; new files have 0 and the catalog's first id is not written
+     * The samplers set the class run types (NCM_MSET_CATALOG_RTYPE_ESMCMC, _MC,
+     _MCBS, _MCMC) and record the resampling nick or kernel name as sampler
+     * test_ncm_mset_catalog: sampler_history checks the segments,
+     functions_array asserts the array stays in memory, read_block/restore
+     asserts erase empties the catalog; prepend_chain_order and write_front
+     removed
+     * test_ncm_mset_catalog_fixtures: class run types; no RNG_ALGO reads with
+     the default algorithm; no M2LNP_ID reads -1 without a warning
+     * numcosmo_py/app/loading.py: LoadedCatalog.functions removed;
+     test_numcosmo_app asserts no functions array on a loaded catalog
+     * ncm.pyi regenerated
+
+ * NcmMSetCatalogStorage: peek_row and erase
+
+     * Add the peek_row virtual function and ncm_mset_catalog_storage_peek_row,
+     a borrowed row valid until the next row read, add_row, sync, erase,
+     set_desc or disposal
+     * Add the erase virtual function and ncm_mset_catalog_storage_erase,
+     removing rows, sampler segments and Markovian id and keeping the
+     description and the RNG
+     * Fail erase with UNINITIALIZED without a description and RECORDING inside
+     a recording
+     * NcmMSetCatalogStorageMemory: peek_row returns the stored vector, erase
+     clears rows, segments and the Markovian id
+     * NcmMSetCatalogStorageFits: get_row is a reference to peek_row, which
+     returns the tail or block element
+     * NcmMSetCatalogStorageFits: erase deletes the table rows, the segment keys
+     and SAMPLER, SAMPOPT and INITSMP, writes NSEGS 0 and MARKID, and writes the
+     translated RTYPE of a legacy file
+     * Reduce the class padding to 9
+     * Tests: memory peek_row and erase; FITS peek_row on the fixture for three
+     block sizes, erase with reopen and the previous reader, erase of a legacy
+     copy
+     * Regenerate the Python stubs
+
+ * make_catalog_fixtures.py: make it executable
+
+     * Set the executable bit, the shebang was already there
+     * Drop the unused Nc import
+
+ * test_ncm_mset_catalog_fixtures: rewrap the comments
+
+     * Rewrap the test comments near 90 columns in the multi-line form
+
+ * test_ncm_mset_catalog_storage_fits: rewrap the comments
+
+     * Rewrap the test comments near 90 columns
+     * Convert the fixture comment to the multi-line form
+
+ * NcmMSetCatalogStorage: state where write failures of a recording are reported
+
+     * Document on ncm_mset_catalog_storage_end_recording that it reports the
+     write failures, that dispose can only warn and that any holder may call it
+     * Make the FITS dispose warning give the number of unwritten rows and name
+     the protocol
+
+ * NcmMSetCatalogStorageFits: rewrap the comments
+
+     * Rewrap the class, property and helper comments near 90 columns
+     * Convert the remaining one-line-opening block comments to the multi-line
+     form
+
+ * test_ncm_mset_catalog_storage_memory: rewrap the comments
+
+     * Rewrap the test comments near 90 columns in the multi-line form
+
+ * NcmMSetCatalogStorageMemory: rewrap the comments
+
+     * Rewrap the class, property and function comments near 90 columns
+     * Convert the permute-and-bind comment to the multi-line form
+
+ * NcmMSetCatalogStorage: rewrap two comments
+
+ * NcmMSetCatalogDesc: the input check and constructor in the error pattern
+
+     * _check_input originates with ncm_util_set_or_call_error and returns at
+     the first failure
+     * ncm_mset_catalog_desc_new passes its GError to the check and forwards
+     with NCM_UTIL_ON_ERROR_FORWARD
+
+ * NcmMSetCatalogStorageFits: return at the first error with the NCM_UTIL_ON_ERROR
+     macros
+
+     * Every CFITSIO status and callee error is followed by
+     NCM_UTIL_ON_ERROR_RETURN with the release of what was allocated; errors
+     originate with ncm_util_set_or_call_error
+     * Split _open_existing into _read_desc_keys, _read_segments and _read_rng
+     over a header struct cleared by one helper
+     * Split _create into _write_hdu0, _create_table and _write_desc_keys; write
+     each segment through _write_segment
+     * _discard_open drops what a failed open read
+
+ * NcmMSetCatalogStorage: return at the first error with the NCM_UTIL_ON_ERROR
+     macros
+
+     * Callees receive the caller's GError and every call is followed by
+     NCM_UTIL_ON_ERROR_FORWARD (public functions, with the function name as
+     prefix) or NCM_UTIL_ON_ERROR_RETURN (static helpers)
+     * Errors originate with ncm_util_set_or_call_error and return at once; no
+     local_error chains
+     * Cleanup of what was allocated goes in the macro body (stored_algo, state,
+     the RNG record strings)
+
+ * NcmMSetCatalogStorage: rewrap the comments
+
+     * Multi-line comments open with /* alone and close with */ alone, text
+     wrapped near 90 columns
+     * Initialize smode to NCM_MSET_CATALOG_SYNC_LEN until the property is set
+
+ * NcmMSetCatalogDesc: is_compatible and has_same_order predicates
+
+     * Replace check_compatible (GError) by gboolean
+     ncm_mset_catalog_desc_is_compatible (desc, other, gchar **reason); reason
+     receives the first difference
+     * Replace check_same_order (GError) by gboolean
+     ncm_mset_catalog_desc_has_same_order (desc, other)
+     * Remove the Desc error codes INCOMPATIBLE and ORDER: incompatibility is a
+     property of two descriptions, not a failure
+     * Add NCM_MSET_CATALOG_STORAGE_ERROR_INCOMPATIBLE: set_desc fails with it,
+     carrying the reason, when the description to bind is not compatible
+     * Update the Desc, memory storage and FITS storage tests
+     * Regenerate enum_nicks.json and the Python stubs
+
+ * NcmMSetCatalogDesc: rewrap the comments
+
+     * Multi-line comments open with /* alone and close with */ alone, text
+     wrapped near 90 columns
+     * Align the local_error declaration in the constructor
+
+ * NcmMSetCatalogDesc: an empty additional-value name is INVALID_ADD_VALS
+
+     * DUPLICATE_NAME covers repeated and reserved names only; the enum
+     documentation says so
+
+ * NcmMSetCatalogDesc: check the additional-value names with a hash set
+
+     * One set holds the weight column name and the free-parameter full names;
+     each name is added once, a second add is the error
+     * One error message for a repeated or reserved name
+
+ * Document every property of NcmMSetCatalogDesc and NcmMSetCatalogStorageMemory
+
+     * NcmMSetCatalogDesc: nchains, weighted and run-type-string blocks
+     * NcmMSetCatalogStorageMemory: desc, rng-algo, rng-seed, rng-inis, rng-stat
+     and markovian-id blocks
+
+ * NcmMSetCatalogDesc: refuse repeated and reserved additional-value names
+
+     * Add NCM_MSET_CATALOG_DESC_ERROR_DUPLICATE_NAME: an additional-value name
+     that is empty, repeated, the weight column name or the full name of a free
+     parameter
+     * Column names address the columns (FITS fits_get_colnum, col_by_name);
+     symbols are labels and may repeat
+     * Test the four refused cases and the accepted ones (names differing in
+     case, repeated symbols)
+     * Regenerate enum_nicks.json and the Python stubs
+
+ * NcmMSetCatalogDesc: name the constructor in the property-path abort message
+
+     * The abort prefix of _ncm_mset_catalog_desc_constructed is the function
+     name, as at every other call of ncm_util_forward_or_call_error
+
+ * NcmMSetCatalogStorageFits: the FITS file storage
+
+     * Add NcmMSetCatalogStorageFits: NcmMSetCatalogStorage on the
+     NcmMSetCatalog FITS format; properties filename and read-only
+     (construct-only), keep-last (rows per chain kept in memory, default 2) and
+     read-block (default 1024)
+     * Open the file at the first call that needs it;
+     ncm_mset_catalog_storage_fits_new (filename, read_only, &error) opens at
+     once and returns NULL on failure
+     * Read the Desc from the header and the HDU0 mset (vardict, bare object or
+     .mset sidecar); M2LNP_ID missing gives -1, ASYMB<n> missing gives
+     "no-symbol"
+     * Read the run metadata: RNG_ALGO/RNG_SEED/RNG_INIS/RNG_STAT (default
+     algorithm when RNG_ALGO is missing), MARKID converted from the FIRST_ID
+     numbering, segments from NSEGS/SEGS<n>/SEGN<n>/SEGO<n>
+     * Translate files without NSEGS: the old run type values become the class
+     names and the segments are rebuilt from INITSMP, SAMPLER and SAMPOPT; a
+     writable file is migrated at its first recording
+     * Write pending rows at each sync with one fits_write_col_dbl per column;
+     keep the last keep-last rows per chain in memory and read older rows in
+     blocks
+     * Every write through a read-only storage fails with READ_ONLY; CFITSIO
+     failures are BACKEND errors; without CFITSIO every method fails with
+     NO_CFITSIO
+     * Add error codes NCM_MSET_CATALOG_STORAGE_ERROR_READ_ONLY and _NO_CFITSIO
+     * Add test_ncm_mset_catalog_storage_fits.c: every fixture, rows against the
+     previous reader, read-only refusal, errors, write and reopen read by the
+     previous reader, bind order, legacy migration, serialization; valgrind
+     clean
+     * Add the FITS storage ref/free/clear case to test_ncm_generic.c; register
+     the type in ncm_cfg.c and numcosmo-math.h
+     * Fix the weighted fixture: rows were written with the weight in the last
+     column instead of after m2lnL
+     * Regenerate enum_nicks.json and the Python stubs
+
+ * Catalog fixture collection and its C test
+
+     * Add tests/tools/make_catalog_fixtures.py writing
+     data/truth_tables/catalog: one file per producer (NcmFitESMCMC, NcmFitMC,
+     NcmFitMCBS, NcmFitMCMC) with the run type and sampler strings each writes
+     today
+     * Add weighted.fits and functions.fits (a functions key in HDU0) written
+     through NcmMSetCatalog
+     * Add header variants of esmcmc.fits: no RNG keys, no RNG_ALGO, no
+     M2LNP_ID, FIRST_ID 6, no MARKID, no rows
+     * Add test_ncm_mset_catalog_fixtures.c reading each file with
+     ncm_mset_catalog_new_from_file_ro and asserting its state
+     * Fix the _ncm_fits_update_key_* helpers: a missing key is written only on
+     a file opened READWRITE, so a read-only open of a file without M2LNP_ID or
+     FIRST_ID no longer aborts
+     * The MCBS fixture sets the catalog file after the run:
+     ncm_fit_mcbs_set_filename detaches the file through ncm_mset_catalog_reset
+     * Document the catalog directory in data/truth_tables/README.md
+
+ * NcmMSetCatalogStorage and NcmMSetCatalogStorageMemory
+
+     * NcmMSetCatalogStorage: abstract storage of the rows, the Desc and the run
+     metadata; 16 typed virtual functions, padding[11]
+     * Desc protocol: peek_desc, and set_desc storing a Desc on an uninitialized
+     storage or binding a compatible one
+     * Recording protocol: start_recording (sampler, options), add_row,
+     end_recording; rows, sampler segments and the Markovian id are written only
+     inside a recording, one at a time
+     * start_recording opens a sampler segment at the current row count,
+     replacing a last segment without rows
+     * The storage owns the run's RNG: set_rng records algorithm, seed and
+     initial state on a storage with no rows and no RNG; get_rng rebuilds it
+     from the stored state
+     * A storage with rows and no RNG never gets one (error code RNG)
+     * The current RNG state is written only at syncs inside add_row (smode,
+     sync-interval) and in end_recording
+     * Run metadata rules in the base class: Markovian id never backwards and
+     never beyond the rows
+     * The function array is not stored: it belongs to the experiment, next to
+     the likelihood, so shared calculators are deserialized once; the Desc
+     records its column names and symbols
+     * Functions and virtual functions that report failure through a GError
+     return void; the caller checks the GError
+     * NcmMSetCatalogDesc: check_compatible and check_same_order return void
+     * Error domain NCM_MSET_CATALOG_STORAGE_ERROR; the memory storage's
+     property path aborts on inconsistent properties
+     * NcmMSetCatalogStorageMemory: rows, Desc and run metadata as
+     construct-only properties, so serialization keeps the rows; binding a Desc
+     in another order replaces every row by a permuted copy
+     * NcmMSetCatalogDesc: run type macros NCM_MSET_CATALOG_RTYPE_ESMCMC, _MC,
+     _MCBS, _MCMC and the run type and sampler segment conventions in the type
+     documentation
+     * Test test_ncm_mset_catalog_storage_memory: uninitialized storage,
+     set_desc, recording, sampler segments, RNG, RNG after rows, Markovian id,
+     bind order, serialization round trip, property-path abort; valgrind clean
+     * Register the memory storage in ncm_cfg.c; ref/free/clear in
+     test_ncm_generic.c
+     * Regenerate enum_nicks.json and the Python stubs
+
+ * NcmMSetCatalogStorage: work in progress, not built
+
+     * Add ncm_mset_catalog_storage.{c,h}: the abstract storage, Desc protocol,
+     recording protocol, rows and typed run-metadata virtual functions
+     * Add ncm_mset_catalog_storage_memory.h: the memory storage declaration, no
+     source yet
+     * Not in meson.build yet: the files are not compiled
+
+ * NcmMSetCatalogDesc: the immutable description of a catalog
+
+     * Add NcmMSetCatalogDesc (ncm_mset_catalog_desc.{c,h}), a final object with
+     every input construct-only: mset, nchains, weighted, nadd-val-names,
+     nadd-val-symbols, m2lnp-var, run-type-string
+     * The Desc holds an ncm_mset_dup copy of the mset; peek_mset returns that
+     copy
+     * The name and symbol properties hold the user's values; nadd_vals and the
+     column accessors add the weight column, so a serialized copy adds it once
+     * Column accessors mirror the catalog's: nadd_vals, ncols, col_name,
+     col_full_name, col_symb, col_by_name
+     * check_compatible: same chains, weighting, m2lnp-var, run type, additional
+     values in order, free-parameter full names as a set
+     * check_same_order: the same free-parameter full names in the same order
+     * Error domain NCM_MSET_CATALOG_DESC_ERROR; ncm_mset_catalog_desc_new
+     reports invalid input through GError, the property path aborts
+     * Test test_ncm_mset_catalog_desc: columns, mset copy, serialization round
+     trip, col_by_name, input errors, incompatibilities, order, property-path
+     abort
+     * Register the type in ncm_cfg.c; ref/free/clear in test_ncm_generic.c
+     * Regenerate enum_nicks.json and the Python stubs
+
+ * Register the threaded validation test only with CFITSIO
+
+     * Guard `/ncm/fit/esmcmc/validate/threaded_read_block` with `HAVE_CFITSIO`:
+     it writes a catalog file, which aborts without CFITSIO
+
+ * Read catalog rows under a lock in the threaded ESMCMC validation
+
+     * Fix concurrent block reloads in `_ncm_fit_esmcmc_validate_interval`:
+     threads freed the rows other threads were reading, aborting in `realloc`
+     * Add `ncm_mset_catalog_get_row`: reads the row under a lock and returns a
+     new reference
+     * `_ncm_fit_esmcmc_validate_interval` uses `ncm_mset_catalog_get_row` and
+     frees the row after each iteration
+     * Document that `ncm_mset_catalog_peek_row` is not safe while another
+     thread reads rows
+     * Add `/ncm/fit/esmcmc/validate/threaded_read_block`: validates 4200 rows
+     with threads at `read-block` 7
+     * Regenerate `ncm.pyi` for `ncm_mset_catalog_get_row`
+
+ * Keep only the -2lnp values for the NcmMSetCatalog ordering
+
+     * Fix rows dropped from memory staying alive: with `m2lnp-var` set,
+     `order_cat` held a reference to every row
+     * Replace `order_cat` by `order_m2lnp`, an array of the `m2lnp-var` values,
+     and `order_cat_sort` by `order_sorted`
+     * `ncm_mset_catalog_get_post_lnvol` and
+     `ncm_mset_catalog_get_nth_m2lnL_percentile` read the sorted values; results
+     unchanged
+     * Add `/ncm/mset/catalog/file/read_block/release`: a row dropped by the
+     sync is freed
+
+ * Test NcmMSetCatalog:read-block against a catalog held in memory
+
+     * Add `/ncm/mset/catalog/file/read_block/one_chain` and `/four_chains`:
+     rows read forward, backward and with stride 37 equal the rows written at
+     `read-block` 1, 7 and 201
+     * Require bitwise equal mean, covariance, tau, ESS, Heidelberger-Welch,
+     constant-break, by-chain, `param_pdf`, `calc_ci_direct` and `trim_oob`
+     results at the three block sizes
+     * Add `/ncm/mset/catalog/file/read_block/restore`: `set_file (NULL)` and
+     `erase_data` keep every row, and the next sync writes them back
+
+ * Regenerate the stubs for NcmMSetCatalog:read-block
+
+     * Add the `read-block` property and `ncm_mset_catalog_set_read_block` /
+     `ncm_mset_catalog_get_read_block` to `ncm.pyi`
+
+ * Abort with a message when NcmMSetCatalog has neither an NcmMSet nor a file
+
+     * `_ncm_mset_catalog_constructed` stops with `g_error` before calling
+     `g_file_test (NULL)`, which raised a GLib critical
+     * Add `/ncm/mset/catalog/no_mset_no_file/traps`, which checks the message
+
+ * Rename local names in NcmMSetCatalog
+
+     * Rename `_ncm_mset_catalog_get_post_lnnorm_elipsoid` to
+     `_ncm_mset_catalog_get_post_lnnorm_ellipsoid`
+     * Rename `_fonempval` to `_f_one_m_pval`
+     * Rename `tbindex` to `tb_index` in
+     `ncm_mset_catalog_max_ess_time_by_chain` and
+     `ncm_mset_catalog_heidel_diag_by_chain`
+
+ * Count the NcmMSetCatalog columns once
+
+     * Fix loading a weighted catalog from its file: the weight column was
+     counted twice and the load aborted
+     * Add the private `ncols`, equal to `fparams_len + nadd_vals`, set in
+     `constructed` after the file is open
+     * `nadd_vals` includes the weight column; remove the five `+ (weighted ? 1
+     : 0)` terms
+     * Allocate the statistics after opening the file, which can fix free
+     parameters missing from it
+     * Use `ncols` in `ncm_mset_catalog_ncols`, the row allocations,
+     `_ncm_mset_catalog_read_rows` and `log_full_covar`
+     * `ncm_mset_catalog_set_file` aborts when the file changes the number of
+     columns of an existing catalog
+     * Assert the row length in `add_from_mset`, `add_from_mset_array`,
+     `add_from_vector` and `add_from_vector_array`
+     * Add `/ncm/mset/catalog/file/weighted_roundtrip`: write a weighted
+     catalog, load it, compare every row
+
+ * Read NcmMSetCatalog rows from the file in blocks
+
+     * Behavior change: a row from `ncm_mset_catalog_peek_row` is valid until
+     the next block is read; hold it with `ncm_vector_ref`, or set `read-block`
+     to at least the number of rows to keep every row in memory
+     * Route every row read through `ncm_mset_catalog_peek_row`
+     * Add `_ncm_mset_catalog_collect_rows` and
+     `_ncm_mset_catalog_get_diag_series` for the diagnostics, trims and chain
+     rows
+     * Remove the `chain_rows` field; `_ncm_mset_catalog_set_chain_rows`
+     collects the rows of one chain
+     * Drop the rows already in the file from memory, keeping the last two
+     ensembles
+     * Read the dropped rows back through one block of
+     `NcmMSetCatalog:read-block` rows (default 1024)
+     * Add `ncm_mset_catalog_set_read_block` and
+     `ncm_mset_catalog_get_read_block`
+     * Add `_ncm_mset_catalog_read_rows`, one cfitsio call per column; loading a
+     file uses it
+     * Read the dropped rows back before `ncm_mset_catalog_set_file` detaches
+     the file and before `erase_data`
+     * Detach the file in `trim`, `trim_oob` and `remove_last_ensemble` before
+     collecting the rows
+     * Close the file at the start of dispose; finalize ran the last sync after
+     dispose had freed the rows
+     * Catalogs, trims and diagnostics are byte-identical to master at
+     `read-block` 1, 7, 1024 and 10^6 (HISTORY timestamps masked)
+
+ * Keep the compared value, not the row, in NcmMSetTransKernCat
+
+     * Store element 0 of the previous row instead of the pointer returned by
+     `ncm_mset_catalog_peek_row`
+     * The pointer is not kept across another `ncm_mset_catalog_peek_row` call
+
+ * Test the nearPD-maxiter deprecation and regenerate the stubs
+
+     * Add /ncm/stats/dist/nd/kde/gauss/nearPD_maxiter/deprecated: one warning,
+     then silent, value stored
+     * State in the NcmStatsDistKDE:nearPD-maxiter blurb that it is ignored and
+     deprecated
+     * Regenerate ncm.pyi for the cholesky_decomp_nearPD signature and the blurb
+
+ * Repair non positive definite covariances by an eigenvalue clip
+
+     * Behavior change: ncm_matrix_cholesky_decomp_nearPD clips the eigenvalues
+     of the correlation form at sqrt(eps) lambda_max instead of iterating
+     ncm_matrix_nearPD with the diagonal held fixed
+     * Drop the maxiter argument of ncm_matrix_cholesky_decomp_nearPD and
+     _ncm_stats_dist_cholesky
+     * Refuse the repair when a variance is not positive
+     * Deprecate NcmStatsDistKDE:nearPD-maxiter (ignored, warned once when set
+     off its default)
+     * Test the repaired matrix against an independent GSL clip and under
+     rescaling of the variables
+     * Redraw rows of B in the nearPD test so B B^T - eps I keeps positive
+     variances
+
+ * Test generate bianchi --heliocentric
+
+     * The shift z_cmb - z_hel is v . p for one vector v of modulus 369.82 km/s
+     over c toward the Planck 2018 apex (RA 167.94, Dec -6.94)
+
+ * Bianchi I Orientation page: 2e6 draws in the histograms
+
+ * Bianchi I Orientation page: the draws colored by symmetry class
+
+     * Stacked histograms of u1, u2, u3 and of alpha, beta, gamma by the group
+     element g of each draw
+     * The classes partition the box and overlap in the angles
+
+ * Bianchi I Orientation page: reflections are excluded by the quaternion
+     parametrization
+
+ * Bianchi I Orientation page: the axis symmetry as the left product
+
+     * The symmetry of the likelihood is q -> g q (rotation by pi about an
+     axis); the right product rotates the sky direction and is not a symmetry
+     * The eight images on the box from z1, z2: (u1, u2 - m/4, u3 + m/4) and (1
+     - u1, u3 + 1/4 - m/4, u2 + 1/4 + m/4)
+     * Proof of the fundamental domain and the rule reading the family, m and
+     the group element from (u1, u2, u3)
+     * A cut on the right products keeps one to three of the eight images; the
+     chunk checks the moduli, the representative and the count
+
+ * Bianchi I Orientation page: histograms of the parameters and of the angles
+
+     * 2e5 uniform draws on the box: histograms of u1, u2, u3 and of the axis-3
+     component, all flat
+     * Histograms of alpha, beta, gamma from nc_hcosmo_bi_get_angles() against
+     4/pi sin^2 alpha, sin beta / 2 and 1/(2 pi)
+     * The angle domain alpha in [0, pi/2] stated directly; three sentences
+     rewritten by the writing rules
+
+ * Add the Bianchi I Orientation theory page
+
+     * docs/theory/nc/background/hcosmo_bi.qmd: the (u1, u2, u3) quaternion, the
+     constant volume element 2 pi^2 (uniform box = Haar on rotations), the
+     hyperspherical angles and their weight sin^2 alpha sin beta, the eight
+     axis-flip images and the fundamental domain
+     * Chunks check the volume element, the angle round trip and the symmetry
+     maps from the library
+     * Registered in meson.build, _quarto.yml.in (render list and sidebar) and
+     the theory index
+     * NcHCosmoBI doc links to the page
+
+ * Add the quaternion setter and the hyperspherical angles of the NcHCosmoBI
+     orientation
+
+     * nc_hcosmo_bi_set_quaternion(): u1 = a^2 + d^2, 2 pi u2 = arg(c + ib), 2
+     pi u3 = arg(a + id)
+     * nc_hcosmo_bi_get_angles() and nc_hcosmo_bi_set_angles(): (alpha, beta,
+     gamma) with alpha in [0, pi/2], the parametrization of
+     cluster_sampler_v2.py
+     * Test /nc/hcosmo_bi/orientation: round trips and equal rotations on 100
+     random orientations
+     * Stubs regenerated
+
+ * Add the heliocentric option to the Bianchi experiment
+
+     * build_bianchi_experiment(heliocentric=True) turns the CMB-frame redshifts
+     back into heliocentric ones with the linear correction, 369.82 km/s toward
+     the Planck 2018 apex
+     * generate bianchi --heliocentric
+
+ * Check the generated WL shapes against each galaxy's own noise
+
+     * Bound |epsilon_obs_j| by 1 + |c_j| + 6 std_noise per galaxy in
+     test_cluster_wl_app_generate_shape
+     * Replace the global bound 1 + 6 sqrt(sigma^2 + std_noise^2), which used
+     the mean std_noise while a galaxy's std_noise reaches 0.5 (seeds 9 and 48
+     exceed it)
+     * Remove the separate VarAdd check: the per-galaxy bound holds for every
+     shape factor
+
+ * CI: update conda lock files
+
+ * Cover the remaining lines of the Bianchi nuisance code
+
+     * Remove the property functions of NcDistMuNuisance and NcObserverVelocity:
+     neither has properties, NcmModel dispatches nothing to them
+     * Test nc_data_hcosmo_bi_dist_mu_peek_sigma_mu() and the error for a
+     missing sample column
+     * Test the reference sample given by name (hemisphere rule, south fixed,
+     north free)
+
+ * State what is measured about the CF4 eDM_X columns
+
+     * edd_cf4_snia_to_dist_mu_obs: some eDM_X columns grow toward low redshift,
+     others are a constant; the export does not state their content
+
+ * Document what sigma_v, the per-sample dispersion and the sample groups measure
+
+     * NcDistMuNuisance: sigma_v is the dispersion beyond a velocity term
+     already in the catalog uncertainties
+     * NcDistMuNuisance: the per-sample dispersion tests whether the samples
+     need different uncertainty models
+     * samples_by_rule: a smallest_error group is not the sample of its survey;
+     its offsets are not survey zero points
+     * edd_cf4_snia_to_dist_mu_obs: eDM is the smallest eDM_X, and the eDM_X
+     columns differ in their velocity term
+     * generate bianchi: the same statements in the --sample-rule and
+     --sigma-v-per-sample help
+
+ * Fix the mypy errors in the Bianchi tests
+
+     * Check peek_meta() for None before reading the catalog metadata in
+     test_dist_mu_obs.py
+     * Use finite.__getitem__ as the min key for the smallest_error sample check
+     * Check the NcHCosmoBIDist of the data object for None in test_generate.py
+
+ * distrib/short: stratified theta_0 and limits outside the range, checked every
+     run
+
+     * Draw theta_0 of row i uniform in [i/40, (i+1)/40): the limits 0.5 and 0.9
+     are inside the range of x theta_0 for every seed, so the strict assertions
+     hold without branches
+     * Give calc_pvalue its own limits {-0.5, 0.5, 0.9, 2.5}: zero below the
+     range and one above it are asserted on every run
+     * Replace the previous seed-dependent branches; 0 failures in 3000 seeds
+     for both fixtures
+
+ * Fix the random failure of the catalog distrib/short test
+
+     * The p-value at a limit is zero at or below the smallest value of x
+     theta_0 and one at or above the largest; the test assumed the limits always
+     inside, and the limit 0.9 is above all 40 draws with probability 0.9^40
+     (1.6% of seeds failed: 48 of 3000)
+     * Assert the documented value for each limit: 0, 1, or strictly between
+     them inside the range
+     * 0 failures in the same 3000 seeds
+
+ * Test the catalog rows written in front of a file and peek_current_row
+
+     * Add /ncm/mset/catalog/file/write_front: a catalog whose rows start before
+     its file's writes them in front, and the file reads back as the whole
+     catalog
+     * Add the peek_current_row fixture test: the last added row, NULL when
+     empty and after reset
+
+ * Test gauss_constraint.sample_with_tmvn
+
+     * Add test_gauss_constraint_sample_with_tmvn: the sample count, one row of
+     -2lnL and parameters per draw, and the header mean equal to the mean of the
+     rows
+     * Build the covariance with reshape; setting the shape of a NumPy array is
+     deprecated in NumPy 2.5
+
+ * ncm_data_gauss_cov_mvnd_stats_vec: save_realizations is deprecated with save-x
+
+     * Document that save_realizations TRUE uses the deprecated
+     NcmStatsVec:save-x and is dropped in 1.0
+     * test_ncm_data_gauss_cov: expect the save-x warning on the
+     save_realizations TRUE call
+     * test_ncm_data_gauss_cov: fix six leaks found by valgrind (the replaced
+     mean, four NcmRNG, the bulk matrix and the second NcmStatsVec)
+
+ * NcmStatsVec: deprecate save-x and require the quantiles before the first row
+
+     * Behavior change: the first NcmStatsVec created with save-x in a process
+     warns that save-x is deprecated and dropped in 1.0; no library code creates
+     one any more
+     * Mark save-x, the save_x argument of ncm_stats_vec_new, peek_row,
+     get_param_at, nrows and dup_saved_x as deprecated, dropped in 1.0
+     * Behavior change: ncm_stats_vec_enable_quantile aborts when rows were
+     already added without save-x; before it warned and left them out of the
+     quantiles. With save-x it still replays the saved rows
+     * The NcmStatsVec class doc points to NcmStatsRows for the row analyses
+     * gauss_constraint.py keeps the sampled rows in a list instead of a save-x
+     NcmStatsVec, and prints the sample count (it printed the bound method)
+     * Tests: main expects the warning once; a second save-x NcmStatsVec is
+     silent; enable_quantile after a row aborts
+
+ * Fix the NcmVarDict object setters leak and a catalog test leak
+
+     * ncm_var_dict_set_object and ncm_var_dict_set_object_array stored the
+     serializer's full reference with g_variant_ref_sink, adding a second one
+     never released; every catalog file header leaked its serialized NcmMSet (17
+     of the 18 valgrind records in the catalog tests)
+     * test_ncm_mset_catalog_cov: free the matrix from
+     ncm_mset_catalog_get_covar
+     * valgrind memcheck clean on ncm_mset_catalog, ncm_obj_array and
+     ncm_catalog
+
+ * numcosmo_py app: catalog diagnostics from ncm_mset_catalog_get_diag_rows
+
+     * LoadedCatalog and LoadCatalog carry diag_rows, the catalog's NcmStatsRows
+     * catalog analyze and catalog visual-hw call estimate_const_break,
+     max_ess_time, heidel_diag and visual_heidel_diag on diag_rows instead of
+     the catalog's NcmStatsVec
+
+ * NcmMSetCatalog: keep its own rows and run the diagnostics through NcmStatsRows
+
+     * pstats, chain_pstats and e_mean_stats are accumulators only (save_x
+     FALSE)
+     * The catalog keeps its rows (references) and the ensemble means (copies)
+     in its own GPtrArrays, with the same reset rules as before
+     * The burn-in diagnostics and the by-chain diagnostics run through one
+     NcmStatsRows; a chain's rows are refilled into one kept GPtrArray
+     * Add ncm_mset_catalog_get_diag_rows: a NcmStatsRows given the series the
+     burn-in diagnostics read, holding references to its rows
+     * Behavior change: peek_pstats, peek_e_mean_stats and peek_chain_pstats no
+     longer keep rows; read them with ncm_mset_catalog_peek_row, peek_e_mean_t
+     or get_diag_rows
+     * Behavior change: a catalog attached to a file whose rows start earlier
+     now keeps each chain's prepended rows in time order (they were reversed),
+     which changes the by-chain diagnostics in that case
+     * Results unchanged otherwise: diagnostics, rows, ensemble means, tau and
+     statistics bit-identical to master for one and four chains, loaded with
+     burn-in, trimmed and after remove_last_ensemble
+     * Add tests: get_diag_rows against the catalog's own diagnostics and after
+     reset, and the prepend case against the same file loaded whole
+     * Regenerate ncm.pyi
+
+ * NcmMSetCatalog: first id and burn-in are multiples of the number of chains
+
+     * Behavior change: ncm_mset_catalog_set_first_id aborts when first_id is
+     not a multiple of nchains; before, the rows were assigned to the wrong
+     chains and ensembles
+     * Behavior change: loading aborts when the file's FIRST_ID or the burn-in
+     is not a multiple of nchains, for the same reason; pass the burn-in as
+     iterations times nchains
+     * Document the condition in ncm_mset_catalog_set_burnin,
+     ncm_mset_catalog_new_from_file and ncm_mset_catalog_set_first_id
+     * Add subprocess tests for the three aborts
+
+ * Test the KDE/VKDE robust covariances against NcmStatsRows
+
+     * Add /ncm/stats/dist/nd/kde/gauss/robust_rows: the KDE scale matrix equals
+     the robust covariance of the first n_kernels rows, with a split so
+     n_kernels < sample size
+     * Add /ncm/stats/dist/nd/vkde/gauss/robust_rows: each VKDE factor equals
+     the factor of the robust covariance of its k nearest neighbors found by
+     brute force
+     * Fix the test_ncm_stats_dist_sanity leak: compare with peek_kernel and
+     free the new Gauss kernel
+     * Fix the test_ncm_stats_vec_diag_visual leak: free the vector returned by
+     ncm_stats_vec_visual_heidel_diag
+
+ * NcmStatsDistKDE/VKDE: robust covariances from NcmStatsRows on their own rows
+
+     * NcmStatsDistKDE: the NcmStatsVec sample keeps no rows (save_x FALSE), it
+     gives the plain covariance only
+     * NcmStatsDistKDE: new private NcmStatsRows given sample_array and
+     n_kernels, writes the robust covariance into cov
+     * NcmStatsDistVKDE: the neighbors of each kernel go in one kept GPtrArray,
+     given once to the KDE NcmStatsRows
+     * NcmStatsDistVKDE: the robust local covariance goes into one kept matrix,
+     no matrix allocated per kernel
+     * NcmStatsDistVKDE: the pooled NcmStatsVec keeps no rows (save_x FALSE)
+     * Results unchanged: bit-identical factors, weights and m2lnp against
+     master for KDE and VKDE, three covariance types, CV none and split
+
+ * NcmStatsRows: robust covariances written into a matrix the caller gives
+
+     * ncm_stats_rows_cov_robust_diag and ncm_stats_rows_cov_robust_ogk take the
+     output NcmMatrix (ncols x ncols) instead of allocating one per call
+     * Keep the NcmLapackWS of the OGK eigendecomposition in the object, created
+     once in constructed
+     * ncm_stats_vec_compute_cov_robust_diag/ogk allocate their result and call
+     the new form
+     * Update test_ncm_stats_rows.c and regenerate ncm.pyi
+
+ * NcmStatsRows: reset, and row-sized buffers allocated on demand
+
+     * Add ncm_stats_rows_reset: releases the reference to the sample, frees the
+     work buffers sized by the number of rows, and sets nrows to zero; the
+     intended use is set_rows, the analyses, reset
+     * The buffers sized by nrows are NcmVector and NcmMatrix objects allocated
+     by the first analysis that needs them, never in its loops; the OGK matrices
+     only by cov_robust_ogk; set_nrows no longer allocates
+     * The NcmStatsVec wrappers reset their NcmStatsRows after each analysis
+     * Test reset: the object is given an array only it references; reset frees
+     every row, and set_rows afterwards gives the reference results again
+     * Regenerate the Python stubs
+
+ * NcmStatsRows: the row analyses on rows given to an object
+
+     * Add NcmStatsRows (ncm_stats_rows.{c,h}), a final object: ncols
+     (construct-only), ncm_stats_rows_set_rows (rows, GPtrArray of NcmVector),
+     set_nrows to analyze fewer rows, peek_row, and max_ess_time, heidel_diag,
+     visual_heidel_diag, estimate_const_break, cov_robust_diag and
+     cov_robust_ogk as methods; registered, serializable through ncols
+     * The work buffers are allocated once for ncols and grown with nrows; the
+     analyses allocate nothing but their results and the GSL robust workspace,
+     which GSL sizes to each fit
+     * NcmStatsVec: the six saved-row analyses become wrappers over one
+     NcmStatsRows given the saved rows, documented as deprecated with save-x and
+     dropped in 1.0
+     * Test test_ncm_stats_rows: on a 1500 x 3 AR(1) sample from NcmRNG seed
+     12345, the object, a serialized copy of it given the same rows, and the
+     NcmStatsVec wrappers reproduce the values captured from the replaced
+     implementation to 1e-10, indices, AR orders and break counts exactly;
+     set_nrows and the property
+     * Add tests/tools/make_stats_rows_cases.py, which prints the reference
+     table between the markers of the test; the committed values were printed at
+     701a5314
+     * ref/free/clear in test_ncm_generic.c; regenerate the Python stubs
+
+ * NcDistMuNuisance: a velocity dispersion per sample
+
+     * vector parameter sigmav_s, length nsamples with
+     nc_dist_mu_nuisance_new_full;
+      an object of a sample within it uses its value, the others sigma_v
+     * NcDataHCosmoBIDistMu tracks the nuisance model with a NcmModelCtrl and
+     fills
+      the per-sample dispersion
+     * build_bianchi_experiment and generate bianchi get sigma-v-per-sample; the
+      common dispersion stays fixed unless objects without a sample exist
+     * tests in C and Python; stubs and enum nick table regenerated
+
+ * Add NcObserverVelocity: the observer's motion relative to the model rest frame
+
+     * three Cartesian components [km/s] in the frame of the sky directions,
+     fixed by
+      default; Doppler factor, rest-frame redshift and beta . n
+     * NcDataHCosmoBIDistMu takes the rest-frame modulus at z_rest minus 5 log10
+     D
+      when the model set holds one; z_rest <= 0 is an error
+     * build_bianchi_experiment and generate bianchi get fit-velocity, which
+      requires z_min above the velocity bound over c and extends the table
+     * C tests of the class and of the data mean, generic ref test, Python test
+     * stubs and enum nick table regenerated
+
+ * Bound the Bianchi orientation to one fundamental domain
+
+     * the moduli see each axis up to sign: eight points of the (u1, u2, u3) box
+      give the same likelihood, the four translations (u2 + k/4, u3 - k/4) and
+      their images under u1 -> 1 - u1
+     * build_bianchi_experiment and generate bianchi get fundamental-domain
+      (default on): u1 <= 1/2, u2 <= 1/4
+     * test of the stored bounds with and without the restriction
+
+ * Fix one offset at a reference sample
+
+     * build_bianchi_experiment(): reference_sample, by name or index, whose
+     offset stays fixed; a common shift of the offsets is degenerate with the
+     scale of H1, H2 and H3
+     * Only the samples with objects get an offset, compacted in the order of
+     their names
+     * generate bianchi: --reference-sample, required with --fit-offsets
+     * test_generate.py: the reference and its error paths
+
+ * Add NcDistMuNuisance: velocity dispersion and per-sample offsets
+
+     * nc_dist_mu_nuisance.{c,h}: NcmModel with sigmav [km/s] and the vector
+     parameter dmu, one offset per sample
+     * nc_dist_mu_nuisance_sigma_mu_v(): 5/ln10 (sigma_v/c) (1 + z)/(z (1 +
+     z/2)), the NcSNIADistCov form
+     * NcDataHCosmoBIDistMu: sigma-mu and sample properties, sigma_func adding
+     sigma_mu_v in quadrature, the offset of each object's sample in the mean
+     * nc_data_hcosmo_bi_dist_mu_set_obs(): a sample column, and objects with an
+     empty modulus or uncertainty skipped, so a per-survey column selects that
+     survey
+     * nc_data_hcosmo_bi_dist_mu_set_samples(), peek_sigma_mu(), peek_samples();
+     get_obs() writes the sample column
+     * NC_DIST_MU_OBS_COL_SAMPLE as the optional sample column of NcDistMuObs
+     * numcosmo_py.datasets.dist_mu_obs: survey_names(), samples_by_rule() with
+     the smallest-error and hemisphere rules
+     * build_bianchi_experiment() and generate bianchi: --sigma-v,
+     --fit-sigma-v, --sample-rule, --sample-col, --fit-offsets
+     * Register the type; enum nicks and nc.pyi regenerated
+     * test_nc_dist_mu_nuisance.c, the data test with the nuisance in the model
+     set, ref/free in test_ncm_generic.c; Python tests of the rules and the
+     command
+
+
 [v0.29.0]
+ * Fix the public header set and the pip instructions
+
+     * Include nc_galaxy_shape_intrinsic_mode.h in numcosmo.h: it was installed
+     but not reachable from the umbrella
+     * Move nc_galaxy_shape_pop_gauss_private.h to ncm_headers_internal so it is
+     no longer installed
+     * Drop the pip line from the conda route of install.qmd: environment.yml
+     has the type stubs and pytest-tap is unused
+     * Install the Python side with pip install -e ".[test]" in the non-conda
+     route, as CI does
+
+ * Fix the ChangeLog generator's tag handling
+
+     * List the sections from the v* tags in version order with git tag
+     --sort=-v:refname, lightweight tags included: v0.26.0 was missing and its
+     commits were listed under v0.27.0
+     * End with the commits up to the oldest version tag (v0.12.1): the empty
+     first tag listed the whole history under a [] heading (about 3400 lines)
+     * Take an optional version argument that lists the commits since the last
+     tag under [vX.Y.Z]
+     * Remove carriage returns from old commit messages
+     * Regenerate ChangeLog.md with generate-changelog.sh 0.29.0
+     * Use the version argument in RELEASE_INSTRUCTIONS.md
+
  * Release version 0.29.0
 
      * Bump the version to 0.29.0 in meson.build, pyproject.toml and test_cfg.py
