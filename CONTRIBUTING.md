@@ -264,6 +264,28 @@ configured in `pyproject.toml`. CI also regenerates the stubs `numcosmo_py/nc.py
 and `numcosmo_py/ncm.pyi` and fails if they differ from the committed ones; after
 changing the C API, build and run `numcosmo_py/update_pyi.sh`, then commit the stubs.
 
+## Command-line errors
+
+The `numcosmo` commands (`numcosmo_py/app`) report errors with a message, never a
+Python traceback. Typer prints a traceback for any exception other than its own.
+
+- An input the user can correct (an option value, a missing or empty file) raises
+  `typer.BadParameter` before the computation starts. Typer prints the message in an
+  error box after the usage line and exits with code 2.
+- A failure found during the computation (a column missing from an input table) prints
+  the message with `self.console` and raises `typer.Exit(code=1)`.
+- The message names the option or file, the value given, and what the data allow:
+  "--burnin 5 discards every iteration of catalog c.mcmc.fits: it has 5 iteration(s)
+  (20 rows, 4 chains), so no row is left to analyze."
+- Library code called by the commands, such as `numcosmo_py.plotting`, raises
+  `ValueError`; the command validates its inputs before calling it.
+
+A test runs the command through `typer.testing.CliRunner` and checks the exit code and
+the message. Rich wraps the message at the terminal width and may add ANSI color codes, so
+the test matches it after removing those codes, the box borders and the line breaks
+(`_plain_output` in `tests/python/numcosmo_py/app/test_numcosmo_app.py`), and never
+matches across a file path, which Rich may break at any character.
+
 ## Adding a dependency
 
 A third-party Python module is declared in up to three lists, and
