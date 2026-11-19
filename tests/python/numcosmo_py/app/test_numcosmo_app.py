@@ -24,6 +24,7 @@
 
 """Test NumCosmo app."""
 
+import re
 import subprocess
 import sys
 from typing import Tuple
@@ -54,6 +55,15 @@ from numcosmo_py.interpolation.stats_dist import (
 
 pytestmark = pytest.mark.app
 runner = CliRunner()
+
+
+def _plain_output(output: str) -> str:
+    """Return a command's output without ANSI codes, Rich box borders and line breaks,
+    so a message can be matched whatever the terminal width."""
+    output = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    output = re.sub(r"[\u2500-\u257f]", " ", output)
+    return " ".join(output.split())
+
 
 Ncm.cfg_init()
 
@@ -964,8 +974,8 @@ def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
     result = runner.invoke(
         app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "1000000"]
     )
-    assert result.exit_code != 0
-    assert "exceeds catalog" in result.output
+    assert result.exit_code == 2
+    assert "--burnin 1000000 discards every iteration" in _plain_output(result.output)
 
 
 def test_run_mcmc_apes_analyze_thin(simple_experiment):
@@ -1171,8 +1181,7 @@ def test_run_mcmc_apes_analyze_include_and_exclude(simple_experiment):
 
 
 def test_run_mcmc_apes_analyze_empty_catalog(simple_experiment):
-    """--burnin consuming the whole catalog leaves an empty catalog, handled
-    cleanly instead of crashing."""
+    """--burnin consuming the whole catalog is rejected with a message."""
     filename, _ = simple_experiment
     output = filename.with_suffix(".out.yaml")
     result = runner.invoke(
@@ -1189,9 +1198,10 @@ def test_run_mcmc_apes_analyze_empty_catalog(simple_experiment):
     result = runner.invoke(
         app, ["catalog", "analyze", catalog.as_posix(), "--burnin", str(n_iterations)]
     )
-    if result.exit_code != 0:
-        raise result.exception
-    assert "Empty catalog" in result.output
+    assert result.exit_code == 2
+    assert f"--burnin {n_iterations} discards every iteration" in _plain_output(
+        result.output
+    )
 
 
 def test_run_mcmc_apes_plot_corner_too_many_plot_names(simple_experiment):
@@ -1647,6 +1657,60 @@ def test_auto_thin_choice(tmp_path):
     thin, reason = _auto_thin(load_catalog(burnin_file))
     assert thin == 1
     assert reason.startswith("autocorrelation time flagged")
+
+
+def test_load_catalog_rejects_empty_catalog(tmp_path):
+    """load_catalog() rejects a catalog with no rows."""
+    path = tmp_path / "empty.mcmc.fits"
+    _write_ar1_catalog(path, 4, 0)
+    with pytest.raises(typer.BadParameter, match="is empty"):
+        load_catalog(path)
+
+
+def test_load_catalog_rejects_burnin_or_tail_leaving_no_row(tmp_path):
+    """load_catalog() rejects a --burnin equal to the number of iterations and a
+    --tail of 0, both of which leave no row."""
+    path = tmp_path / "short.mcmc.fits"
+    _write_ar1_catalog(path, 4, 5)
+    with pytest.raises(typer.BadParameter, match="--burnin 5 discards every iteration"):
+        load_catalog(path, burnin=5)
+    with pytest.raises(typer.BadParameter, match="--tail 0 keeps no iteration"):
+        load_catalog(path, tail=0)
+    assert load_catalog(path, burnin=4).nitems == 1
+
+
+def test_run_mcmc_apes_analyze_markovian_start_leaves_no_row(simple_experiment):
+    """A catalog whose Markovian chain starts after its last iteration is rejected by
+    analyze and plot-corner with a message instead of a traceback."""
+    filename, _ = simple_experiment
+    output = filename.with_suffix(".out.yaml")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "mcmc",
+            "apes",
+            filename.as_posix(),
+            "--output",
+            output.as_posix(),
+            "--nsamples",
+            "1",
+        ],
+    )
+    if result.exit_code != 0:
+        raise result.exception
+
+    catalog = output.absolute().with_suffix(".mcmc.fits")
+    nrows, nchains = Ncm.MSetCatalog.peek_info_from_file(catalog.as_posix())
+    assert Ncm.MSetCatalog.peek_markovian_id_from_file(catalog.as_posix()) == nrows
+    assert nrows == nchains
+
+    for command in (["analyze"], ["plot-corner", "--no-show"]):
+        result = runner.invoke(app, ["catalog", *command, catalog.as_posix()])
+        assert result.exit_code == 2
+        output = _plain_output(result.output)
+        assert "Markovian chain" in output
+        assert "no row is left to analyze" in output
 
 
 def test_run_mcmc_apes_plot_corner_multi_catalog(simple_experiment):
