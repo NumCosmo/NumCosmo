@@ -163,6 +163,8 @@ def mcat_to_catalog_data(
             for j in range(nchains)
         ]
     )
+    if rows.size == 0:
+        raise ValueError(f"Catalog {name} has no rows.")
 
     if indices is not None:
         indices_array = np.array(indices)
