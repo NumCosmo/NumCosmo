@@ -99,6 +99,18 @@ def test_mcat_catalog_data(mcat):
     assert_allclose(cd.rows, np.delete(rows, excluded_indices, axis=1))
 
 
+def test_mcat_catalog_data_empty():
+    """mcat_to_catalog_data() rejects a catalog with no rows."""
+    model = Ncm.ModelMVND.new(dim=2)
+    mset = Ncm.MSet.new_array([model])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+    mcat = Ncm.MSetCatalog.new_array(mset, 1, NCHAINS, False, ["a"], ["a"])
+    mcat.set_m2lnp_var(0)
+    with pytest.raises(ValueError, match="Catalog empty has no rows."):
+        mcat_to_catalog_data(mcat, "empty")
+
+
 def test_catalog_data_to_mcsamples(mcat):
     """Test log_current_stats()."""
     cd = mcat_to_catalog_data(mcat, "test")

@@ -335,6 +335,7 @@ def _resolve_burnin_rows(
     actually opened. The catalog's markovian-id (first row of the Markovian
     chain) is a floor on `burnin`: rows before it were produced by the
     initial ensemble or by an exploration phase and are never analysed.
+    Raises typer.BadParameter when the catalog is empty or when no row is left.
 
     Returns the row count, the iterations it corresponds to, the value the
     request was raised from (None when the request stood), and the iteration
@@ -362,11 +363,25 @@ def _resolve_burnin_rows(
         raised_from = burnin_iterations
         burnin_iterations = markovian_iterations
 
-    if burnin_iterations > n_iterations:
+    size = f"{n_iterations} iteration(s) ({nrows} rows, {nchains} chains)"
+    if n_iterations == 0:
+        raise typer.BadParameter(f"Catalog {mcmc_file} is empty: it has {size}.")
+
+    if burnin_iterations >= n_iterations:
+        if raised_from is not None:
+            request = (
+                f"The Markovian chain of catalog {mcmc_file} starts at iteration "
+                f"{markovian_iterations}"
+            )
+        elif tail is not None:
+            request = f"--tail {tail} keeps no iteration of catalog {mcmc_file}"
+        else:
+            request = (
+                f"--burnin {burnin_iterations} discards every iteration of catalog "
+                f"{mcmc_file}"
+            )
         raise typer.BadParameter(
-            f"--burnin of {burnin_iterations} iteration(s) exceeds catalog "
-            f"{mcmc_file}: it only has {n_iterations} iteration(s) "
-            f"({nrows} rows, {nchains} chains)."
+            f"{request}: it has {size}, so no row is left to analyze."
         )
 
     return (
