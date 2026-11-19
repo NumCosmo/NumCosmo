@@ -700,6 +700,10 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_hubble_cov.c'],
     },
     {
+        'name': 'nc_data_planck_lkl',
+        'sources': ['nc/data/test_nc_data_planck_lkl.c'],
+    },
+    {
         'name': 'nc_data_snia_cov',
         'sources': ['nc/data/test_nc_data_snia_cov.c'],
     },

@@ -49,7 +49,11 @@
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <errno.h>
+#include <locale.h>
 #include <unistd.h>
+#ifdef HAVE_XLOCALE_H
+#include <xlocale.h>
+#endif /* HAVE_XLOCALE_H */
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include "external/plc/clik.h"
@@ -603,6 +607,25 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
     gint data_params_len = 0;
     guint i;
 
+#ifdef HAVE_USELOCALE
+
+    /*
+     * clik parses the numbers of its data files with sscanf and atof, which read the
+     * decimal separator from LC_NUMERIC: until the end of the block this thread uses a
+     * copy of its locale with LC_NUMERIC set to C (issue #484).
+     */
+    locale_t c_numeric     = duplocale (uselocale ((locale_t) 0));
+    locale_t caller_locale = (locale_t) 0;
+
+    if (c_numeric != (locale_t) 0)
+      c_numeric = newlocale (LC_NUMERIC_MASK, "C", c_numeric);
+
+    if (c_numeric == (locale_t) 0)
+      g_error ("_nc_data_planck_lkl_set_filename: cannot create the C numeric locale.");
+
+    caller_locale = uselocale (c_numeric);
+#endif /* HAVE_USELOCALE */
+
     plik->is_lensing = (clik_try_lensing (plik->filename, &err) == 1);
     CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_try_lensing]", err);
 
@@ -794,6 +817,11 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 
     g_clear_pointer (&names, g_free);
     endError (&err);
+
+#ifdef HAVE_USELOCALE
+    uselocale (caller_locale);
+    freelocale (c_numeric);
+#endif /* HAVE_USELOCALE */
   }
 
   ncm_data_set_init (NCM_DATA (plik), TRUE);
