@@ -26,30 +26,18 @@
 /**
  * NcmMSetPreset:
  *
- * Parameter values, scales, bounds, absolute tolerances and fit flags taken from a
- * publication, applied to the parameters of an #NcmMSet.
+ * Published parameters for starting an analysis. A forecast around a published
+ * cosmology, or a fit started at a published best fit, needs the experiment's values
+ * and uncertainties on the models of the analysis. A preset holds them for one
+ * publication and one data combination.
  *
- * A preset describes one publication and one data combination: #NcmMSetPreset:desc
- * gives the reference and the table the numbers come from,
- * #NcmMSetPreset:data-combination the data used and #NcmMSetPreset:statistic the
- * statistic the values are (for example "best fit" or "mean").
+ * The method ncm_mset_preset_apply() sets the listed attributes of the parameters of
+ * an #NcmMSet. Each attribute is a dictionary keyed on full parameter names. The
+ * preset requires the reparametrizations named in #NcmMSetPreset:reparam, since
+ * parameter names depend on them.
  *
- * The entries are six dictionaries, one per parameter attribute, each keyed on the
- * full parameter names of ncm_mset_param_get_by_full_name() ("NcHICosmo:H0"):
- * #NcmMSetPreset:value, #NcmMSetPreset:scale, #NcmMSetPreset:lower-bound,
- * #NcmMSetPreset:upper-bound, #NcmMSetPreset:abstol (doubles) and #NcmMSetPreset:fit
- * (booleans). A parameter may appear in any subset of them; the attributes it does not
- * appear in are left unchanged.
- *
- * Parameter names depend on the reparametrization in force. #NcmMSetPreset:reparam maps
- * a model name (as in ncm_mset_peek_by_name()) to the type name of the
- * #NcmReparam that model must have. A model that has parameters in the preset and no
- * entry in #NcmMSetPreset:reparam must have no reparametrization.
- *
- * The data directory holds the distributed presets in its #NCM_MSET_PRESET_DATA_DIR
- * subdirectory, one YAML file per preset, written in the form of
- * ncm_serialize_to_yaml(). ncm_mset_preset_new_from_name() loads one by its file name
- * without the ".yaml" suffix and ncm_mset_preset_list_names() lists them.
+ * The distributed presets, their sources and conventions are described in
+ * <a href="../../examples/data_analysis/parameter_presets.html">Published Parameter Presets</a>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -398,7 +386,7 @@ ncm_mset_preset_class_init (NcmMSetPresetClass *klass)
  * ncm_mset_preset_new:
  * @desc: (nullable): the publication and table the entries come from
  *
- * Creates a preset with no entries.
+ * For a preset built in code, creates one with no entries.
  *
  * Returns: (transfer full): a new #NcmMSetPreset.
  */
@@ -417,9 +405,10 @@ ncm_mset_preset_new (const gchar *desc)
  * @filename: path of a YAML file
  * @error: a #GError
  *
- * Loads the preset serialized in @filename by ncm_serialize_to_yaml_file(). A missing
- * file sets %NCM_MSET_PRESET_ERROR_NOT_FOUND and a file holding another object
- * %NCM_MSET_PRESET_ERROR_INVALID_FILE; malformed YAML aborts in the deserializer.
+ * For a preset outside the distributed set, loads the preset serialized in @filename
+ * by ncm_serialize_to_yaml_file(). A missing file sets
+ * %NCM_MSET_PRESET_ERROR_NOT_FOUND. A file holding another object sets
+ * %NCM_MSET_PRESET_ERROR_INVALID_FILE. Malformed YAML aborts in the deserializer.
  *
  * Returns: (transfer full) (nullable): the preset, or %NULL on error.
  */
@@ -459,9 +448,9 @@ ncm_mset_preset_new_from_file (const gchar *filename, GError **error)
  * @name: a preset name, as listed by ncm_mset_preset_list_names()
  * @error: a #GError
  *
- * Loads the preset @name from the #NCM_MSET_PRESET_DATA_DIR subdirectory of the data
- * directory, searched as in ncm_cfg_get_data_filename(). A name with a directory
- * separator, or with no preset file, sets %NCM_MSET_PRESET_ERROR_NOT_FOUND.
+ * Loads the distributed preset @name from the #NCM_MSET_PRESET_DATA_DIR subdirectory
+ * of the data directory, searched as in ncm_cfg_get_data_filename(). A name with a
+ * directory separator, or with no preset file, sets %NCM_MSET_PRESET_ERROR_NOT_FOUND.
  *
  * Returns: (transfer full) (nullable): the preset, or %NULL on error.
  */
@@ -523,7 +512,6 @@ ncm_mset_preset_ref (NcmMSetPreset *preset)
  * @preset: a #NcmMSetPreset
  *
  * Decreases the reference count of @preset by one.
- *
  */
 void
 ncm_mset_preset_free (NcmMSetPreset *preset)
@@ -537,7 +525,6 @@ ncm_mset_preset_free (NcmMSetPreset *preset)
  *
  * If *@preset is not %NULL, decreases its reference count by one and sets *@preset to
  * %NULL.
- *
  */
 void
 ncm_mset_preset_clear (NcmMSetPreset **preset)
@@ -554,10 +541,10 @@ _ncm_mset_preset_cmp_str (gconstpointer a, gconstpointer b)
 /**
  * ncm_mset_preset_list_names:
  *
- * Lists the presets in the #NCM_MSET_PRESET_DATA_DIR subdirectory of the first data
- * directory, searched as in ncm_cfg_get_data_filename(), that has one: the names of
- * its ".yaml" files without the suffix, sorted. The list is empty when no data
- * directory has the subdirectory.
+ * Lists the distributed presets: the names of the ".yaml" files, without the suffix
+ * and sorted, in the #NCM_MSET_PRESET_DATA_DIR subdirectory. The subdirectory is the
+ * one of the first data directory, searched as in ncm_cfg_get_data_filename(), that
+ * has it. The list is empty when no data directory has it.
  *
  * Returns: (transfer full) (array zero-terminated=1): the preset names.
  */
@@ -635,8 +622,7 @@ ncm_mset_preset_peek_statistic (NcmMSetPreset *preset)
  * @model_name: a model name, as in ncm_mset_peek_by_name()
  * @reparam_type: the type name of the #NcmReparam the model must have
  *
- * Sets the reparametrization required for @model_name.
- *
+ * For a preset built in code, sets the reparametrization required for @model_name.
  */
 void
 ncm_mset_preset_set_reparam (NcmMSetPreset *preset, const gchar *model_name, const gchar *reparam_type)
@@ -650,8 +636,8 @@ ncm_mset_preset_set_reparam (NcmMSetPreset *preset, const gchar *model_name, con
  * @fullname: a full parameter name
  * @value: the parameter value
  *
- * Sets the value of @fullname in #NcmMSetPreset:value.
- *
+ * For a preset built in code, sets the value of @fullname in
+ * #NcmMSetPreset:value.
  */
 void
 ncm_mset_preset_set_value (NcmMSetPreset *preset, const gchar *fullname, gdouble value)
@@ -665,8 +651,8 @@ ncm_mset_preset_set_value (NcmMSetPreset *preset, const gchar *fullname, gdouble
  * @fullname: a full parameter name
  * @scale: the parameter scale
  *
- * Sets the scale of @fullname in #NcmMSetPreset:scale.
- *
+ * For a preset built in code, sets the scale of @fullname in
+ * #NcmMSetPreset:scale.
  */
 void
 ncm_mset_preset_set_scale (NcmMSetPreset *preset, const gchar *fullname, gdouble scale)
@@ -680,8 +666,8 @@ ncm_mset_preset_set_scale (NcmMSetPreset *preset, const gchar *fullname, gdouble
  * @fullname: a full parameter name
  * @lower_bound: the parameter lower bound
  *
- * Sets the lower bound of @fullname in #NcmMSetPreset:lower-bound.
- *
+ * For a preset built in code, sets the lower bound of @fullname in
+ * #NcmMSetPreset:lower-bound.
  */
 void
 ncm_mset_preset_set_lower_bound (NcmMSetPreset *preset, const gchar *fullname, gdouble lower_bound)
@@ -695,8 +681,8 @@ ncm_mset_preset_set_lower_bound (NcmMSetPreset *preset, const gchar *fullname, g
  * @fullname: a full parameter name
  * @upper_bound: the parameter upper bound
  *
- * Sets the upper bound of @fullname in #NcmMSetPreset:upper-bound.
- *
+ * For a preset built in code, sets the upper bound of @fullname in
+ * #NcmMSetPreset:upper-bound.
  */
 void
 ncm_mset_preset_set_upper_bound (NcmMSetPreset *preset, const gchar *fullname, gdouble upper_bound)
@@ -710,8 +696,8 @@ ncm_mset_preset_set_upper_bound (NcmMSetPreset *preset, const gchar *fullname, g
  * @fullname: a full parameter name
  * @abstol: the parameter absolute tolerance
  *
- * Sets the absolute tolerance of @fullname in #NcmMSetPreset:abstol.
- *
+ * For a preset built in code, sets the absolute tolerance of @fullname in
+ * #NcmMSetPreset:abstol.
  */
 void
 ncm_mset_preset_set_abstol (NcmMSetPreset *preset, const gchar *fullname, gdouble abstol)
@@ -725,8 +711,8 @@ ncm_mset_preset_set_abstol (NcmMSetPreset *preset, const gchar *fullname, gdoubl
  * @fullname: a full parameter name
  * @fit: whether the parameter is free
  *
- * Sets the fit flag of @fullname in #NcmMSetPreset:fit.
- *
+ * For a preset built in code, sets the fit flag of @fullname in
+ * #NcmMSetPreset:fit.
  */
 void
 ncm_mset_preset_set_fit (NcmMSetPreset *preset, const gchar *fullname, gboolean fit)
@@ -739,8 +725,9 @@ ncm_mset_preset_set_fit (NcmMSetPreset *preset, const gchar *fullname, gboolean 
  * @preset: a #NcmMSetPreset
  * @fullname: a full parameter name
  *
- * Removes @fullname from every attribute dictionary of @preset, so that
- * ncm_mset_preset_apply() leaves that parameter unchanged.
+ * To apply a preset to a model without one of its parameters, removes @fullname from
+ * every attribute dictionary of @preset. The function ncm_mset_preset_apply() then
+ * leaves that parameter unchanged.
  *
  * Returns: whether @preset had an entry for @fullname.
  */
@@ -767,20 +754,22 @@ static void _ncm_mset_preset_check_entries (GArray *entries, GError **error);
  * @mset: a #NcmMSet
  * @error: a #GError
  *
- * Sets, for every parameter in the preset, the attributes the preset gives. The
- * whole preset is checked before any parameter changes, so on error @mset is
- * unchanged. The checks are, in order: every model in #NcmMSetPreset:reparam is in
+ * Sets a preset on the parameters of an analysis: each listed parameter of @mset takes
+ * the attributes the preset gives, and every other parameter is unchanged. The whole
+ * preset is checked before any parameter changes, so on error @mset is unchanged.
+ *
+ * The checks, in order, are the following. Every model in #NcmMSetPreset:reparam is in
  * @mset (%NCM_MSET_PRESET_ERROR_PARAM_NOT_FOUND) and has the required
- * reparametrization (%NCM_MSET_PRESET_ERROR_REPARAM_MISMATCH); every full name is a
- * parameter of @mset (%NCM_MSET_PRESET_ERROR_PARAM_NOT_FOUND) and every entry has its
- * type (%NCM_MSET_PRESET_ERROR_INVALID_ENTRY); every other model with parameters in the
- * preset has no reparametrization (%NCM_MSET_PRESET_ERROR_REPARAM_MISMATCH); and, with
- * the preset applied, each
- * parameter has lower bound < upper bound, its value within the bounds, a positive
- * scale and a non-negative absolute tolerance (%NCM_MSET_PRESET_ERROR_INVALID_ENTRY).
+ * reparametrization (%NCM_MSET_PRESET_ERROR_REPARAM_MISMATCH). Every full name is a
+ * parameter of @mset (%NCM_MSET_PRESET_ERROR_PARAM_NOT_FOUND), and every entry has its
+ * type (%NCM_MSET_PRESET_ERROR_INVALID_ENTRY). Every other model with parameters in the
+ * preset has no reparametrization (%NCM_MSET_PRESET_ERROR_REPARAM_MISMATCH). With the
+ * preset applied, each parameter has lower bound < upper bound, its value within the
+ * bounds, a positive scale and a non-negative absolute tolerance
+ * (%NCM_MSET_PRESET_ERROR_INVALID_ENTRY).
+ *
  * As with ncm_model_param_set_ftype(), a changed fit flag takes effect in @mset at the
  * next ncm_mset_prepare_fparam_map().
- *
  */
 void
 ncm_mset_preset_apply (NcmMSetPreset *preset, NcmMSet *mset, GError **error)

@@ -50,7 +50,6 @@ G_DECLARE_FINAL_TYPE (NcmMSetPreset, ncm_mset_preset, NCM, MSET_PRESET, GObject)
  *   value, bounds, scale or absolute tolerance are inconsistent
  *
  * Error codes returned by the #NcmMSetPreset class.
- *
  */
 typedef enum _NcmMSetPresetError /*< prefix=NCM_MSET_PRESET_ERROR >*/
 {

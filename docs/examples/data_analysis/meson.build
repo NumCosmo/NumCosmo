@@ -4,6 +4,7 @@ src_site_examples_data_analysis_files = files(
     'hz.qmd',
     'bao_sdss_dr16.qmd',
     'rg_snia_bao.qmd',
+    'parameter_presets.qmd',
 )
 
 if get_option('documentation')
