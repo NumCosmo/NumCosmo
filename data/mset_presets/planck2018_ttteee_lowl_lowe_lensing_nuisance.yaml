@@ -1,0 +1,75 @@
+# Planck 2018 TT,TE,EE+lowE+lensing, plik high-ell likelihood, base LCDM.
+# value: best fit of base_plikHM_TTTEEE_lowl_lowE_lensing.minimum; scale: sddev of its .margestats.
+# Checked against the PLA 68% tables (2018, v2), section 2.17, and
+# Planck 2018 VI Tables 1 and 2.
+# Foreground and calibration parameters of the plik likelihood.
+NcmMSetPreset:
+  desc: 'Planck 2018 results VI, A&A 641, A6 (2020), arXiv:1807.06209; PLA chains COM_CosmoParams_base-plikHM_R3.01, base_plikHM_TTTEEE_lowl_lowE_lensing'
+  data-combination: 'Planck 2018 TT,TE,EE+lowE+lensing'
+  statistic: 'best fit'
+  value:
+    NcPlanckFI:A_planck: 1.000442  # calPlanck
+    NcPlanckFI:A_cib_217: 46.05402  # acib217
+    NcPlanckFI:xi_sz_cib: 0.6567009  # xi
+    NcPlanckFI:A_sz: 7.083803  # asz143
+    NcPlanckFI:ps_A_100_100: 248.2123  # aps100
+    NcPlanckFI:ps_A_143_143: 50.67985  # aps143
+    NcPlanckFI:ps_A_143_217: 53.30959  # aps143217
+    NcPlanckFI:ps_A_217_217: 121.8608  # aps217
+    NcPlanckFI:ksz_norm: 0.00384693  # aksz
+    NcPlanckFI:gal545_A_100: 8.802494  # kgal100
+    NcPlanckFI:gal545_A_143: 11.00657  # kgal143
+    NcPlanckFI:gal545_A_143_217: 20.15894  # kgal143217
+    NcPlanckFI:gal545_A_217: 95.45041  # kgal217
+    NcPlanckFI:calib_100T: 0.9997421  # cal0
+    NcPlanckFI:calib_217T: 0.9981871  # cal2
+    NcPlanckFI:galf_TE_A_100: 0.1138247  # galfTE100
+    NcPlanckFI:galf_TE_A_100_143: 0.1345639  # galfTE100143
+    NcPlanckFI:galf_TE_A_100_217: 0.4787342  # galfTE100217
+    NcPlanckFI:galf_TE_A_143: 0.2248485  # galfTE143
+    NcPlanckFI:galf_TE_A_143_217: 0.6649451  # galfTE143217
+    NcPlanckFI:galf_TE_A_217: 2.082494  # galfTE217
+  scale:
+    NcPlanckFI:A_planck: 0.0024451015
+    NcPlanckFI:A_cib_217: 6.5910661
+    NcPlanckFI:xi_sz_cib: 0.28494856
+    NcPlanckFI:A_sz: 1.9757624
+    NcPlanckFI:ps_A_100_100: 28.090682
+    NcPlanckFI:ps_A_143_143: 7.7480826
+    NcPlanckFI:ps_A_143_217: 9.1634375
+    NcPlanckFI:ps_A_217_217: 10.056421
+    NcPlanckFI:ksz_norm: 2.4371841
+    NcPlanckFI:gal545_A_100: 1.8299832
+    NcPlanckFI:gal545_A_143: 1.7631326
+    NcPlanckFI:gal545_A_143_217: 3.2695225
+    NcPlanckFI:gal545_A_217: 7.2351034
+    NcPlanckFI:calib_100T: 0.00061255608
+    NcPlanckFI:calib_217T: 0.00062227722
+    NcPlanckFI:galf_TE_A_100: 0.037916589
+    NcPlanckFI:galf_TE_A_100_143: 0.029419399
+    NcPlanckFI:galf_TE_A_100_217: 0.085085216
+    NcPlanckFI:galf_TE_A_143: 0.053789492
+    NcPlanckFI:galf_TE_A_143_217: 0.079915352
+    NcPlanckFI:galf_TE_A_217: 0.27193306
+  fit:
+    NcPlanckFI:A_planck: true
+    NcPlanckFI:A_cib_217: true
+    NcPlanckFI:xi_sz_cib: true
+    NcPlanckFI:A_sz: true
+    NcPlanckFI:ps_A_100_100: true
+    NcPlanckFI:ps_A_143_143: true
+    NcPlanckFI:ps_A_143_217: true
+    NcPlanckFI:ps_A_217_217: true
+    NcPlanckFI:ksz_norm: true
+    NcPlanckFI:gal545_A_100: true
+    NcPlanckFI:gal545_A_143: true
+    NcPlanckFI:gal545_A_143_217: true
+    NcPlanckFI:gal545_A_217: true
+    NcPlanckFI:calib_100T: true
+    NcPlanckFI:calib_217T: true
+    NcPlanckFI:galf_TE_A_100: true
+    NcPlanckFI:galf_TE_A_100_143: true
+    NcPlanckFI:galf_TE_A_100_217: true
+    NcPlanckFI:galf_TE_A_143: true
+    NcPlanckFI:galf_TE_A_143_217: true
+    NcPlanckFI:galf_TE_A_217: true

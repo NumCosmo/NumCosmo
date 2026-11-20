@@ -41,8 +41,17 @@ Regenerate the truth table (only when an intentional change moves the values)::
     python tests/python/nc/data/test_planck_truth_table.py
 """
 
+import os
+import sys
+
 import pytest
 
+# Run as a script (to regenerate the reference) this file's own directory is what
+# lands on sys.path, not the tests root the shared fixtures are imported from.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+# flake8: noqa: E402
+from python.fixtures_planck import mset_set_truth_table_point
 from numcosmo_py import Ncm, Nc
 from numcosmo_py.experiments.planck_lite import (
     find_baseline_file,
@@ -91,7 +100,6 @@ _KEYS = [c[0] for c in _CASES]
 def _make(name, relpath, builder):
     """Build one native likelihood + its mset at the fixed fiducial cosmology."""
     from numcosmo_py.cosmology import create_cosmo, HIPrimModel
-    from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 
     # Each native likelihood self-configures the Boltzmann targets/lmax in
     # prepare(), so a bare CBE is enough.
@@ -104,14 +112,14 @@ def _make(name, relpath, builder):
 
     if name == "smica_ttteee":
         planck = Nc.PlanckFICorTTTEEE()
-        ptype = Planck18Types.TTTEEE
+        ptype = "TTTEEE"
     else:
         planck = Nc.PlanckFICorTT()
-        ptype = Planck18Types.TT
+        ptype = "TT"
 
     planck.params_set_default_ftype()
     mset = Ncm.MSet.new_array([planck, cosmo])
-    mset_set_parameters(mset, ptype, HIPrimModel.POWER_LAW)
+    mset_set_truth_table_point(mset, ptype)
     mset.prepare_fparam_map()
 
     native = builder(find_baseline_file(relpath), cbe)

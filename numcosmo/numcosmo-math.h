@@ -124,6 +124,7 @@
 #include <numcosmo/ncm/model/ncm_mset_func.h>
 #include <numcosmo/ncm/model/ncm_mset_func1.h>
 #include <numcosmo/ncm/model/ncm_mset_func_list.h>
+#include <numcosmo/ncm/model/ncm_mset_preset.h>
 #include <numcosmo/ncm/spline/ncm_ode_spline.h>
 #include <numcosmo/ncm/core/ncm_pln1d.h>
 #include <numcosmo/ncm/model/ncm_reparam_linear.h>

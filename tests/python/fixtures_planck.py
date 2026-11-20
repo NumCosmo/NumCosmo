@@ -45,7 +45,7 @@ import struct
 import numpy as np
 from astropy.io import fits
 
-from numcosmo_py import Nc
+from numcosmo_py import Nc, Ncm
 
 # ---------------------------------------------------------------------------
 # cldf primitives
@@ -645,3 +645,86 @@ class FixedClBoltzmann(Nc.HIPertBoltzmann):
     def do_get_PHIPHI_Cls(self, cls_vec):
         """Fill @cls_vec with the stored phi-phi spectrum."""
         self._fill("PHIPHI", cls_vec)
+
+
+# The fixed point of the Planck m2lnL truth tables: the Planck 2018 best fits of
+# plikHM_TT_lowl_lowE and plikHM_TTTEEE_lowl_lowE as printed in the PLA 68% tables
+# (2018, v2), sections 2.1 and 2.5. The stored truth-table values are m2lnL at this
+# point; the distributed presets carry the unrounded best fits instead.
+TRUTH_TABLE_POINT: dict[str, dict[str, float]] = {
+    "TT": {
+        "NcHICosmo:H0": 66.86,
+        "NcHICosmo:omegac": 0.12068,
+        "NcHICosmo:omegab": 0.022126,
+        "NcHICosmo:Omegak": 0.0,
+        "NcHICosmo:w": -1.0,
+        "NcHIPrim:ln10e10ASA": 3.0413,
+        "NcHIPrim:n_SA": 0.9635,
+        "NcHIReion:z_re": 7.54,
+        "NcPlanckFI:A_cib_217": 48.5,
+        "NcPlanckFI:xi_sz_cib": 0.32,
+        "NcPlanckFI:A_sz": 7.03,
+        "NcPlanckFI:ps_A_100_100": 254.9,
+        "NcPlanckFI:ps_A_143_143": 49.8,
+        "NcPlanckFI:ps_A_143_217": 47.3,
+        "NcPlanckFI:ps_A_217_217": 119.9,
+        "NcPlanckFI:ksz_norm": 0.00,
+        "NcPlanckFI:gal545_A_100": 8.86,
+        "NcPlanckFI:gal545_A_143": 10.80,
+        "NcPlanckFI:gal545_A_143_217": 19.43,
+        "NcPlanckFI:gal545_A_217": 94.8,
+        "NcPlanckFI:calib_100T": 0.99965,
+        "NcPlanckFI:calib_217T": 0.99825,
+        "NcPlanckFI:A_planck": 1.00046,
+    },
+    "TTTEEE": {
+        "NcHICosmo:H0": 67.32,
+        "NcHICosmo:omegac": 0.12010,
+        "NcHICosmo:omegab": 0.022377,
+        "NcHICosmo:Omegak": 0.0,
+        "NcHICosmo:w": -1.0,
+        "NcHIPrim:ln10e10ASA": 3.0447,
+        "NcHIPrim:n_SA": 0.96589,
+        "NcHIReion:z_re": 7.68,
+        "NcPlanckFI:A_cib_217": 47.2,
+        "NcPlanckFI:xi_sz_cib": 0.42,
+        "NcPlanckFI:A_sz": 7.23,
+        "NcPlanckFI:ps_A_100_100": 250.5,
+        "NcPlanckFI:ps_A_143_143": 47.4,
+        "NcPlanckFI:ps_A_143_217": 47.3,
+        "NcPlanckFI:ps_A_217_217": 119.8,
+        "NcPlanckFI:ksz_norm": 0.01,
+        "NcPlanckFI:gal545_A_100": 8.86,
+        "NcPlanckFI:gal545_A_143": 11.10,
+        "NcPlanckFI:gal545_A_143_217": 19.83,
+        "NcPlanckFI:gal545_A_217": 95.1,
+        "NcPlanckFI:calib_100T": 0.99969,
+        "NcPlanckFI:calib_217T": 0.99816,
+        "NcPlanckFI:A_planck": 1.00061,
+        "NcPlanckFI:galf_TE_A_100": 0.1142,
+        "NcPlanckFI:galf_TE_A_100_143": 0.1345,
+        "NcPlanckFI:galf_TE_A_100_217": 0.482,
+        "NcPlanckFI:galf_TE_A_143": 0.224,
+        "NcPlanckFI:galf_TE_A_143_217": 0.664,
+        "NcPlanckFI:galf_TE_A_217": 2.081,
+    },
+}
+
+
+def mset_set_truth_table_point(mset: Ncm.MSet, ptype: str) -> None:
+    """Set the parameters of `mset` to the truth-table point of `ptype` ("TT" or "TTTEEE")."""
+    for fullname, value in TRUTH_TABLE_POINT[ptype].items():
+        model, pname = fullname.split(":")
+        mset[model][pname] = value
+
+
+def round_to_clik_precision(model: Ncm.Model) -> None:
+    """Round every parameter of `model` to the 6 significant digits clik evaluates.
+
+    clik's parametric foreground components store each parameter as a string written
+    with "%40g" (numcosmo/external/plc/plik/clik_parametric.c, parametric_compute) and
+    read it back with atof; the native likelihoods use the full double. A clik-match
+    test at a point with more digits compares two different points.
+    """
+    for i in range(model.len()):
+        model.param_set(i, float(f"{model.param_get(i):g}"))
