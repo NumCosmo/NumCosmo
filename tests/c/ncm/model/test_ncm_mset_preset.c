@@ -218,6 +218,17 @@ test_ncm_mset_preset_apply (TestNcmMSetPreset *test, gconstpointer pdata)
   g_assert_cmpfloat (ncm_model_param_get_upper_bound (test->model, NCM_MODEL_ROSENBROCK_X2), ==, 800.0);
   g_assert_cmpint (ncm_model_param_get_ftype (test->model, NCM_MODEL_ROSENBROCK_X2), ==, NCM_PARAM_TYPE_FREE);
 
+  /* Removing x1 leaves it unchanged by the next application; x2 is still set. */
+  ncm_mset_preset_set_value (preset, TEST_X1, 3.0);
+  ncm_mset_preset_set_scale (preset, TEST_X2, 4.0);
+  g_assert_true (ncm_mset_preset_remove (preset, TEST_X1));
+  g_assert_false (ncm_mset_preset_remove (preset, TEST_X1));
+
+  ncm_mset_preset_apply (preset, test->mset, &error);
+  g_assert_no_error (error);
+  g_assert_cmpfloat (ncm_model_param_get (test->model, NCM_MODEL_ROSENBROCK_X1), ==, 2.0);
+  g_assert_cmpfloat (ncm_model_param_get_scale (test->model, NCM_MODEL_ROSENBROCK_X2), ==, 4.0);
+
   NCM_TEST_FREE (ncm_mset_preset_free, preset);
 }
 

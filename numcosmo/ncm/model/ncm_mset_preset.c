@@ -734,6 +734,28 @@ ncm_mset_preset_set_fit (NcmMSetPreset *preset, const gchar *fullname, gboolean 
   ncm_var_dict_set_boolean (preset->attr[NCM_MSET_PRESET_ATTR_FIT], fullname, fit);
 }
 
+/**
+ * ncm_mset_preset_remove:
+ * @preset: a #NcmMSetPreset
+ * @fullname: a full parameter name
+ *
+ * Removes @fullname from every attribute dictionary of @preset, so that
+ * ncm_mset_preset_apply() leaves that parameter unchanged.
+ *
+ * Returns: whether @preset had an entry for @fullname.
+ */
+gboolean
+ncm_mset_preset_remove (NcmMSetPreset *preset, const gchar *fullname)
+{
+  gboolean found = FALSE;
+  guint a;
+
+  for (a = 0; a < NCM_MSET_PRESET_ATTR_LEN; a++)
+    found = g_hash_table_remove ((GHashTable *) preset->attr[a], fullname) || found;
+
+  return found;
+}
+
 static void _ncm_mset_preset_check_named_reparam (NcmMSetPreset *preset, NcmMSet *mset, GHashTable *checked, GError **error);
 static void _ncm_mset_preset_collect (NcmMSetPreset *preset, NcmMSet *mset, GArray *entries, GError **error);
 static void _ncm_mset_preset_check_unnamed_reparam (GArray *entries, GHashTable *checked, GError **error);

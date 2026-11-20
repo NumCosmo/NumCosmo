@@ -93,6 +93,8 @@ void ncm_mset_preset_set_upper_bound (NcmMSetPreset *preset, const gchar *fullna
 void ncm_mset_preset_set_abstol (NcmMSetPreset *preset, const gchar *fullname, gdouble abstol);
 void ncm_mset_preset_set_fit (NcmMSetPreset *preset, const gchar *fullname, gboolean fit);
 
+gboolean ncm_mset_preset_remove (NcmMSetPreset *preset, const gchar *fullname);
+
 void ncm_mset_preset_apply (NcmMSetPreset *preset, NcmMSet *mset, GError **error);
 
 G_END_DECLS
