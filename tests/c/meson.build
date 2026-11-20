@@ -341,6 +341,10 @@ math_tests = [
         'sources': ['ncm/model/test_ncm_mset_func.c'],
     },
     {
+        'name': 'ncm_mset_preset',
+        'sources': ['ncm/model/test_ncm_mset_preset.c'],
+    },
+    {
         'name': 'ncm_model_builder',
         'sources': ['ncm/model/test_ncm_model_builder.c'],
     },

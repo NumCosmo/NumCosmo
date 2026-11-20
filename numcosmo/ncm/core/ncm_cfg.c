@@ -76,6 +76,7 @@
 #include "ncm/model/ncm_model_rosenbrock.h"
 #include "ncm/model/ncm_model_funnel.h"
 #include "ncm/model/ncm_reparam_linear.h"
+#include "ncm/model/ncm_mset_preset.h"
 #include "ncm/data/ncm_data.h"
 #include "ncm/data/ncm_data_gauss_cov_mvnd.h"
 #include "ncm/data/ncm_data_rosenbrock.h"
@@ -853,6 +854,8 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NCM_TYPE_REPARAM);
   ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
+
+  ncm_cfg_register_obj (NCM_TYPE_MSET_PRESET);
 
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
   ncm_cfg_register_obj (NCM_TYPE_STATS_ACORR);
