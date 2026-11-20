@@ -1,0 +1,57 @@
+# Planck 2018 TT+lowE, plik high-ell likelihood, base LCDM.
+# value: best fit of base_plikHM_TT_lowl_lowE.minimum; scale: sddev of its .margestats.
+# Checked against the PLA 68% tables (2018, v2), section 2.1, and
+# Planck 2018 VI Tables 1 and 2.
+# Foreground and calibration parameters of the plik likelihood.
+NcmMSetPreset:
+  desc: 'Planck 2018 results VI, A&A 641, A6 (2020), arXiv:1807.06209; PLA chains COM_CosmoParams_base-plikHM_R3.01, base_plikHM_TT_lowl_lowE'
+  data-combination: 'Planck 2018 TT+lowE'
+  statistic: 'best fit'
+  value:
+    NcPlanckFI:A_planck: 1.000457  # calPlanck
+    NcPlanckFI:A_cib_217: 48.49951  # acib217
+    NcPlanckFI:xi_sz_cib: 0.3183026  # xi
+    NcPlanckFI:A_sz: 7.034982  # asz143
+    NcPlanckFI:ps_A_100_100: 254.8764  # aps100
+    NcPlanckFI:ps_A_143_143: 49.79878  # aps143
+    NcPlanckFI:ps_A_143_217: 47.27792  # aps143217
+    NcPlanckFI:ps_A_217_217: 119.8659  # aps217
+    NcPlanckFI:ksz_norm: 0.000393066  # aksz
+    NcPlanckFI:gal545_A_100: 8.863538  # kgal100
+    NcPlanckFI:gal545_A_143: 10.80088  # kgal143
+    NcPlanckFI:gal545_A_143_217: 19.43455  # kgal143217
+    NcPlanckFI:gal545_A_217: 94.79529  # kgal217
+    NcPlanckFI:calib_100T: 0.9996548  # cal0
+    NcPlanckFI:calib_217T: 0.9982463  # cal2
+  scale:
+    NcPlanckFI:A_planck: 0.0025165012
+    NcPlanckFI:A_cib_217: 6.728272
+    NcPlanckFI:xi_sz_cib: 0.28613032
+    NcPlanckFI:A_sz: 1.9969209
+    NcPlanckFI:ps_A_100_100: 28.165051
+    NcPlanckFI:ps_A_143_143: 8.044771
+    NcPlanckFI:ps_A_143_217: 9.2276866
+    NcPlanckFI:ps_A_217_217: 10.266406
+    NcPlanckFI:ksz_norm: 2.5454448
+    NcPlanckFI:gal545_A_100: 1.8480508
+    NcPlanckFI:gal545_A_143: 1.7968368
+    NcPlanckFI:gal545_A_143_217: 3.3222785
+    NcPlanckFI:gal545_A_217: 7.3763444
+    NcPlanckFI:calib_100T: 0.00061446429
+    NcPlanckFI:calib_217T: 0.00062654279
+  fit:
+    NcPlanckFI:A_planck: true
+    NcPlanckFI:A_cib_217: true
+    NcPlanckFI:xi_sz_cib: true
+    NcPlanckFI:A_sz: true
+    NcPlanckFI:ps_A_100_100: true
+    NcPlanckFI:ps_A_143_143: true
+    NcPlanckFI:ps_A_143_217: true
+    NcPlanckFI:ps_A_217_217: true
+    NcPlanckFI:ksz_norm: true
+    NcPlanckFI:gal545_A_100: true
+    NcPlanckFI:gal545_A_143: true
+    NcPlanckFI:gal545_A_143_217: true
+    NcPlanckFI:gal545_A_217: true
+    NcPlanckFI:calib_100T: true
+    NcPlanckFI:calib_217T: true

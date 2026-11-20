@@ -71,6 +71,7 @@ static void test_ncm_mset_preset_reparam (TestNcmMSetPreset *test, gconstpointer
 static void test_ncm_mset_preset_error_param_not_found (TestNcmMSetPreset *test, gconstpointer pdata);
 static void test_ncm_mset_preset_error_invalid_entry (TestNcmMSetPreset *test, gconstpointer pdata);
 static void test_ncm_mset_preset_from_name (TestNcmMSetPreset *test, gconstpointer pdata);
+static void test_ncm_mset_preset_shipped (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -113,6 +114,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_preset_new,
               &test_ncm_mset_preset_from_name,
               &test_ncm_mset_preset_free);
+
+  g_test_add_func ("/ncm/mset_preset/shipped", &test_ncm_mset_preset_shipped);
 
   g_test_run ();
 }
@@ -496,5 +499,85 @@ test_ncm_mset_preset_from_name (TestNcmMSetPreset *test, gconstpointer pdata)
   g_free (preset_dir);
   g_free (tmp_dir);
   g_free (saved_data_dir);
+}
+
+/*
+ * Applies every distributed preset to the model it is written for: the CMB
+ * parametrization of NcHICosmoDEXcdm with one massive neutrino, NcHIPrimPowerLaw and
+ * NcHIReionCamb, plus the plik NcPlanckFI model for the nuisance presets. Each value
+ * in the preset must then be the parameter value.
+ */
+static void
+test_ncm_mset_preset_shipped (void)
+{
+  GStrv names = ncm_mset_preset_list_names ();
+  guint i;
+
+  g_assert_true (g_strv_contains ((const gchar * const *) names, "planck2018_tt_lowl_lowe"));
+  g_assert_true (g_strv_contains ((const gchar * const *) names, "planck2018_ttteee_lowl_lowe_lensing_nuisance"));
+  g_assert_true (g_strv_contains ((const gchar * const *) names, "desi_dr2_bao_cmb"));
+
+  for (i = 0; names[i] != NULL; i++)
+  {
+    NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
+    NcHIPrim *prim   = NC_HIPRIM (nc_hiprim_power_law_new ());
+    NcHICosmo *cosmo = g_object_new (NC_TYPE_HICOSMO_DE_XCDM,
+                                     "massnu-length", 1,
+                                     "reion", reion,
+                                     "prim", prim,
+                                     NULL);
+    NcmModel *fi  = NULL;
+    GError *error = NULL;
+    NcmMSet *mset;
+    NcmMSetPreset *preset;
+    NcmVarDict *values;
+    GStrv keys;
+    guint k;
+
+    nc_hicosmo_de_cmb_params (NC_HICOSMO_DE (cosmo), &error);
+    g_assert_no_error (error);
+
+    if (g_str_has_suffix (names[i], "_nuisance"))
+      fi = NCM_MODEL (g_object_new ((strstr (names[i], "ttteee") != NULL) ? NC_TYPE_PLANCK_FI_COR_TTTEEE : NC_TYPE_PLANCK_FI_COR_TT, NULL));
+
+    mset = ncm_mset_new (NCM_MODEL (cosmo), &error, fi, NULL);
+    g_assert_no_error (error);
+
+    preset = ncm_mset_preset_new_from_name (names[i], &error);
+    g_assert_no_error (error);
+
+    ncm_mset_preset_apply (preset, mset, &error);
+    g_assert_no_error (error);
+
+    g_object_get (preset, "value", &values, NULL);
+    keys = ncm_var_dict_keys (values);
+    g_assert_cmpuint (g_strv_length (keys), >, 0);
+
+    for (k = 0; keys[k] != NULL; k++)
+    {
+      NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mset, keys[k], &error);
+      gdouble value;
+
+      g_assert_no_error (error);
+      g_assert_nonnull (pi);
+      g_assert_true (ncm_var_dict_get_double (values, keys[k], &value));
+      g_assert_cmpfloat (ncm_mset_param_get (mset, pi->mid, pi->pid), ==, value);
+      ncm_mset_pindex_free (pi);
+    }
+
+    g_free (keys);
+    ncm_var_dict_unref (values);
+    ncm_mset_preset_free (preset);
+    ncm_mset_free (mset);
+
+    if (fi != NULL)
+      ncm_model_free (fi);
+
+    nc_hicosmo_free (cosmo);
+    nc_hiprim_free (prim);
+    nc_hireion_free (reion);
+  }
+
+  g_strfreev (names);
 }
 
