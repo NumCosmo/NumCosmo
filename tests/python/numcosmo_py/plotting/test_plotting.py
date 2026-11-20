@@ -33,6 +33,7 @@ pytest.importorskip("getdist")
 # flake8: noqa: E402
 
 from getdist import MCSamples
+from getdist.mcsamples import MCSamplesError
 
 from numcosmo_py import Ncm
 from numcosmo_py.plotting import mcat_to_catalog_data, plot_mcsamples, CatalogData
@@ -168,6 +169,32 @@ def test_catalog_data_to_mcsamples_collapse(mcat):
     assert mcsample.numrows == cd.rows.shape[0]
     assert mcsample.n == cd.rows.shape[1]
     assert_allclose(mcsample.samples, cd.rows)
+
+
+def test_catalog_data_to_mcsamples_constant_first_chain(mcat):
+    """to_mcsamples() keeps every parameter when the first chain is constant."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    # Row i belongs to chain i % nchains.
+    cd.rows[:: cd.nchains, :] = cd.rows[0, :]
+    mcsample = cd.to_mcsamples()
+
+    assert mcsample.getParamNames().list() == cd.params_names
+    assert mcsample.n == cd.rows.shape[1]
+    assert_allclose(mcsample.samples[:NSTEPS, :], cd.rows[:: cd.nchains, :])
+    assert mcsample.getMargeStats() is not None
+
+
+@pytest.mark.parametrize("collapse", [False, True], ids=["chains", "collapse"])
+def test_catalog_data_to_mcsamples_constant_column(mcat, collapse):
+    """to_mcsamples() keeps a column that is constant in all rows."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    cd.rows[:, 0] = 1.0
+    mcsample = cd.to_mcsamples(collapse=collapse)
+
+    assert mcsample.getParamNames().list() == cd.params_names
+    assert mcsample.n == cd.rows.shape[1]
+    with pytest.raises(MCSamplesError, match="Parameter range is <= 0"):
+        mcsample.getMargeStats()
 
 
 def test_asinh_transform(mcat):
