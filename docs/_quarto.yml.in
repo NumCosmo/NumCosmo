@@ -37,6 +37,12 @@ project:
     - theory/ncm/spline/spline_func.qmd
     - theory/ncm/spline/hermite.qmd
     - benchmarks/ccl_background.qmd
+    - benchmarks/ccl_mass_function.qmd
+    - benchmarks/ccl_mass_function_bocquet.qmd
+    - benchmarks/ccl_mass_function_despali.qmd
+    - benchmarks/ccl_mass_function_precision.qmd
+    - benchmarks/ccl_mass_function_tinker.qmd
+    - benchmarks/ccl_mass_function_watson.qmd
     - benchmarks/ccl_power_spectrum.qmd
     - benchmarks/ccl_two_point.qmd
     - benchmarks/xcor_certified_projection.qmd
@@ -247,6 +253,20 @@ website:
         contents:
           - href: benchmarks/ccl_background.qmd
             text: "CCL Background"
+          - section: "Halo Mass Function"
+            contents:
+              - href: benchmarks/ccl_mass_function.qmd
+                text: "CCL Halo Mass Function"
+              - href: benchmarks/ccl_mass_function_precision.qmd
+                text: "CCL Halo Mass Function Precision"
+              - href: benchmarks/ccl_mass_function_tinker.qmd
+                text: "CCL Tinker Mass Functions"
+              - href: benchmarks/ccl_mass_function_despali.qmd
+                text: "CCL Despali Mass Function"
+              - href: benchmarks/ccl_mass_function_bocquet.qmd
+                text: "CCL Bocquet Mass Function"
+              - href: benchmarks/ccl_mass_function_watson.qmd
+                text: "CCL Watson Mass Function"
           - href: benchmarks/ccl_power_spectrum.qmd
             text: "CCL Power Spectrum"
           - href: benchmarks/ccl_two_point.qmd

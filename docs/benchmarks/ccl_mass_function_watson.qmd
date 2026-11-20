@@ -1,0 +1,203 @@
+---
+title: "Benchmarking NumCosmo vs. CCL: Watson Halo Mass Function"
+date: "2026-10-20"
+abstract: |
+    This document compares the halo mass function and the multiplicity function of
+    Watson (2013) implemented in NumCosmo and CCL, at the mass definitions 200m, 500m
+    and friends-of-friends (FoF), at CCL's default settings.
+
+format:
+  html:
+    tbl-cap-location: margin
+    fig-cap-location: margin
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+
+---
+
+## Introduction
+
+This page compares the halo mass function and the multiplicity function of Watson
+[-@Watson2013] from CCL and NumCosmo. It reports their relative differences in plots and
+tables, for each mass definition, cosmology and redshift.
+
+The quantities compared, the relative difference reported, the masses, the redshifts
+and the five cosmologies are those of
+[CCL Halo Mass Function](ccl_mass_function.qmd), "Scope of the comparison".
+
+Watson (2013) is compared at three mass definitions: 200 and 500 times the mean matter
+density (200m and 500m), and the friends-of-friends definition (FoF).
+
+```{python}
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import Markdown, display
+
+# CCL
+import pyccl
+import pandas as pd
+
+# NumCosmo
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.ccl.nc_ccl import CCLParams
+
+from numcosmo_py.plotting.tools import set_rc_params_article, latex_float
+import numcosmo_py.ccl.comparison as nc_cmp
+from numcosmo_py.ccl import multiplicity_func_pairing as mfp
+```
+
+### Initializing NumCosmo
+
+To begin, we configure NumCosmo and redirect its output to this notebook using the
+following code:
+
+```{python}
+Ncm.cfg_init()
+Ncm.cfg_set_log_handler(lambda msg: sys.stdout.write(msg) and sys.stdout.flush())
+set_rc_params_article(ncol=2, fontsize=12, use_tex=False)
+```
+{{< include _setup_models.qmd >}}
+
+```{python}
+_, models_def = setup_models(high_precision=False)
+```
+
+The parameters of the five cosmologies are tabulated on [CCL Halo Mass Function](ccl_mass_function.qmd).
+
+### Configurations
+
+Each entry below is one fit at one mass definition.
+
+```{python}
+MEAN = Nc.MultiplicityFuncMassDef.MEAN
+FOF = Nc.MultiplicityFuncMassDef.FOF
+
+PAIRS = [
+    ("Watson 200m", lambda: mfp.watson_pair("matter", MEAN, 200)),
+    ("Watson FoF", lambda: mfp.watson_pair("matter", FOF, "fof")),
+    ("Watson 500m", lambda: mfp.watson_pair("matter", MEAN, 500)),
+]
+
+m_arr = np.geomspace(1.0e11, 1.0e15, 128)
+Z_ARR = [0.0, 0.5, 1.0, 1.5]
+Z_STYLES = ["-", "--", "-.", ":"]
+ENTRY_LABEL = "Entry"
+PLOT_GRID = (1, 3)
+PLOT_FIGSIZE = (12.0, 4.0)
+```
+
+### Mass definitions
+
+Watson's fit has its own formula for the friends-of-friends definition. For a
+spherical-overdensity definition, its fit at $\Delta = 178$ times the mean matter
+density is multiplied by a factor $\Gamma(\Delta/178, \sigma)$, which also depends on
+$\Omega_m(a)$. Since $\Gamma$ depends on $\sigma$, it has no separate table; the
+$f(\sigma)$ comparison below includes it.
+
+{{< include _mass_function_helpers.qmd >}}
+
+## Halo mass function
+
+The following compares $\mathrm{d}n/\mathrm{d}\ln M$ for each entry, in every cosmology and at every redshift, through
+`compare_mass_function`.
+
+```{python}
+mf_comparisons = compare_all(nc_cmp.compare_mass_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-watson-mf-def
+# | fig-cap: "Halo mass function: relative difference for each entry, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+MF_Y_LABEL = (
+    r"$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}"
+    r"/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$"
+)
+plot_entries(mf_comparisons, r"$M\,[\mathrm{M}_\odot]$", MF_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{NumCosmo}}/(\mathrm{d}n/\mathrm{d}\ln M)^{\mathrm{CCL}} - 1\right|$ over the mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-watson-mf
+# | tbl-cap: Halo mass function, all entries, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
+# | code-fold: true
+
+# CompareFunc1d.table_header() names the power spectrum and is shared with the other
+# benchmark pages, so it is not used here.
+summary_table(
+    mf_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Multiplicity function
+
+The following compares $f(\sigma)$ for each entry, in every cosmology and at every redshift, through `compare_multiplicity_function`.
+For each mass and redshift, both codes receive NumCosmo's $\sigma(M, z)$. The plots
+show the relative difference as a function of $\sigma$.
+
+```{python}
+fs_comparisons = compare_all(nc_cmp.compare_multiplicity_function)
+```
+
+```{python}
+# | label: fig-ccl-vs-nc-watson-fsigma-def
+# | fig-cap: "Multiplicity function: relative difference for each entry, at CCL defaults. Colors are the five cosmologies; solid, dashed, dash-dotted and dotted are $z = 0$, $0.5$, $1$ and $1.5$."
+# | fig-cap-location: top
+# | code-fold: true
+
+FS_Y_LABEL = (
+    r"$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$"
+)
+plot_entries(fs_comparisons, r"$\sigma$", FS_Y_LABEL)
+```
+
+The table below gives the same information numerically. The last four columns are
+the smallest, largest, mean and standard deviation of
+$\left|f^{\mathrm{NumCosmo}}(\sigma)/f^{\mathrm{CCL}}(\sigma) - 1\right|$ over the
+mass range.
+
+```{python}
+# | label: tbl-ccl-vs-nc-watson-fsigma
+# | tbl-cap: Multiplicity function, all entries, cosmologies and redshifts
+# | tbl-colwidths: [12, 20, 6, 15, 15, 16, 16]
+# | code-fold: true
+
+summary_table(
+    fs_comparisons,
+    [
+        "Smallest",
+        "Largest",
+        "Mean",
+        "Std. dev.",
+    ],
+)
+```
+
+## Summary
+
+The table below gives, for each entry, the largest relative difference over the
+five cosmologies, the four redshifts and the mass range, for each quantity.
+
+```{python}
+# | label: tbl-ccl-vs-nc-watson-worst
+# | tbl-cap: Largest relative difference per entry, over all cosmologies, redshifts and masses
+# | tbl-colwidths: [40, 30, 30]
+# | code-fold: true
+
+worst_table(mf_comparisons, fs_comparisons)
+```
