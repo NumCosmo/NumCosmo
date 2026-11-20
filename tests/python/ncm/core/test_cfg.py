@@ -33,7 +33,7 @@ from numcosmo_py import Ncm, GLib
 Ncm.cfg_init()
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 29
+VERSION_MINOR = 30
 VERSION_MICRO = 0
 
 
