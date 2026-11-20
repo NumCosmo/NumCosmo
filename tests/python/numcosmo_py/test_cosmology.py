@@ -28,7 +28,7 @@
 import pytest
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.cosmology import Cosmology, create_cosmo, HIPrimModel
+from numcosmo_py.cosmology import Cosmology, HIPrimModel, ParameterDesc, create_cosmo
 
 Ncm.cfg_init()
 
@@ -123,6 +123,25 @@ def test_create_cosmo_massless_nu():
     cosmo = create_cosmo(massive_nu=False)
     assert cosmo.NMassNu() == 0
     assert cosmo["ENnu"] == 3.046
+
+
+def test_parameter_desc_keys_accepted_by_param_set_desc():
+    """Every declared ParameterDesc key is accepted by param_set_desc and read back."""
+    cosmo = create_cosmo()
+    values = {
+        "scale": 0.5,
+        "lower-bound": 50.0,
+        "upper-bound": 90.0,
+        "abstol": 1.0e-3,
+        "fit": True,
+        "value": 68.0,
+    }
+    assert set(ParameterDesc.__annotations__) == set(values)
+    desc = {key: values[key] for key in ParameterDesc.__annotations__}
+    cosmo.param_set_desc("H0", desc)
+    read_back = cosmo.param_get_desc("H0")
+    for key, value in desc.items():
+        assert read_back[key] == value
 
 
 def test_create_cosmo_invalid_prim():

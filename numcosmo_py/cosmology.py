@@ -28,18 +28,19 @@ from typing import TypedDict
 
 from . import Nc, Ncm
 
-
-class ParameterDesc(TypedDict, total=False):
-    """Parameter description."""
-
-    name: str
-    symbol: str
-    scale: float
-    lower_bound: float
-    upper_bound: float
-    abstol: float
-    fit: bool
-    value: float
+# The keys accepted by Ncm.Model.param_set_desc(); the bounds need the functional syntax.
+ParameterDesc = TypedDict(
+    "ParameterDesc",
+    {
+        "scale": float,
+        "lower-bound": float,
+        "upper-bound": float,
+        "abstol": float,
+        "fit": bool,
+        "value": float,
+    },
+    total=False,
+)
 
 
 class HIPrimModel(StrEnum):
