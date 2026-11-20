@@ -47,6 +47,7 @@ from numcosmo_py.catalog import (
     SkyMatch,
     Coordinates,
     IDs,
+    LinkingMethod,
     SharedFractionMethod,
 )
 
@@ -260,8 +261,16 @@ plt.show()
 ## Probability-Weighted Membership {#sec-pmem}
 
 The Jaccard index counts members equally. When a probability of membership `pmem` is
-available, `match_ID(use_shared_fraction=True, ...)` weights the shared and total members
-by their `pmem`. The `shared_fraction_method` controls how the shared fraction is formed:
+available, the `linking_method` argument of `match_ID` selects a coefficient that weights
+the members by it:
+
+- `LinkingMethod.JACCARD_PMEM`: the Jaccard index times the mean `pmem` of the shared
+  members. With `pmem` in both catalogs, each shared member contributes the product of
+  its two probabilities.
+- `LinkingMethod.SHARED_FRACTION`: a combination of the shared fractions of the two
+  objects, formed as `shared_fraction_method` prescribes.
+
+The `shared_fraction_method` controls how the shared fraction is formed:
 
 - `NO_PMEM`: shared member counts (no weighting);
 - `QUERY_PMEM`: weight the shared fraction by the query object's `pmem`;
@@ -269,21 +278,26 @@ by their `pmem`. The `shared_fraction_method` controls how the shared fraction i
 - `PMEM`: weight by both.
 
 The table below contrasts the linking coefficient of a single matched pair under each
-method:
+linking method:
 
 ```{python}
 # | label: tbl-id-pmem
-# | tbl-cap: Linking coefficient of one matched pair under each shared-fraction method.
+# | tbl-cap: Linking coefficient of one matched pair under each linking method.
 # | tbl-cap-location: margin
 # | tbl-width: 100%
 # | code-fold: true
 
 rows = []
-for method in SharedFractionMethod:
-    weighted = method != SharedFractionMethod.NO_PMEM
-    method_result = sm.match_ID(use_shared_fraction=weighted, shared_fraction_method=method)
+for linking in (LinkingMethod.JACCARD, LinkingMethod.JACCARD_PMEM):
+    method_result = sm.match_ID(linking_method=linking)
     coeff = float(method_result.candidate_coefficients[0][0])
-    rows.append({"method": str(method), "linking coefficient (halo 0)": coeff})
+    rows.append({"method": str(linking), "linking coefficient (halo 0)": coeff})
+for method in SharedFractionMethod:
+    method_result = sm.match_ID(
+        linking_method=LinkingMethod.SHARED_FRACTION, shared_fraction_method=method
+    )
+    coeff = float(method_result.candidate_coefficients[0][0])
+    rows.append({"method": f"shared_fraction, {method}", "linking coefficient (halo 0)": coeff})
 
 HTML(pd.DataFrame(rows).to_html(index=False, float_format="%.4f"))
 ```
