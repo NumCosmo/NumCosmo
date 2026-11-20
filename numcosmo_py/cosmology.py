@@ -105,6 +105,27 @@ class Cosmology:
         return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf_tophat=psf)
 
     @classmethod
+    def from_preset(
+        cls,
+        preset: str,
+        dist_max_z: float = 10.0,
+        halofit_max_z: float = 5.0,
+        halofit_reltol: float = 1.0e-7,
+    ) -> "Cosmology":
+        """Create the cosmology of the distributed Ncm.MSetPreset `preset`.
+
+        The cosmology is create_cosmo(preset=preset): the CMB parametrization of
+        Nc.HICosmoDEXcdm with one massive neutrino, a power-law primordial spectrum and
+        CAMB reionization. Distances and power spectra are those of default().
+        """
+        cosmo = create_cosmo(preset=preset)
+        dist = Nc.Distance.new(dist_max_z)
+        ps_ml = Nc.PowspecMLTransfer.new(Nc.TransferFuncEH())
+        ps_mnl = Nc.PowspecMNLHaloFit.new(ps_ml, halofit_max_z, halofit_reltol)
+        psf = Ncm.PowspecFilter.new(ps_ml, Ncm.PowspecFilterType.TOPHAT)
+        return cls(cosmo=cosmo, dist=dist, ps_ml=ps_ml, ps_mnl=ps_mnl, psf_tophat=psf)
+
+    @classmethod
     def default_minimal(cls, dist_max_z: float = 10.0) -> "Cosmology":
         """Create a minimal default cosmology."""
         cosmo = Nc.HICosmoDEXcdm(
@@ -160,6 +181,7 @@ def create_cosmo(
     massive_nu: bool = True,
     fit_nu_mass: bool = False,
     prim_model: HIPrimModel = HIPrimModel.POWER_LAW,
+    preset: str | None = None,
 ) -> Nc.HICosmo:
     """Create a cosmology for CMB experiments.
 
@@ -167,7 +189,17 @@ def create_cosmo(
     species plus one neutrino of 0.06 eV with its mass fixed, and T_CMB = 2.7255 K. `massive_nu=False` drops
     the massive neutrino (3.046 massless, not the baseline); `fit_nu_mass=True` frees
     the mass, which is the LCDM + sum m_nu extension, not the baseline either.
+
+    `preset` names a distributed Ncm.MSetPreset (see Ncm.MSetPreset.list_names()),
+    applied last to the cosmology and its submodels: its values, scales and fit flags
+    replace the defaults above. The distributed cosmology presets fix the neutrino
+    mass, so `preset` with `fit_nu_mass=True` raises ValueError; a preset for another
+    model (for example `massive_nu=False`, or a primordial model without its
+    parameters) raises GLib.Error.
     """
+    if preset is not None and fit_nu_mass:
+        raise ValueError("create_cosmo: preset and fit_nu_mass both set the fit flags.")
+
     prim: Nc.HIPrim
     match prim_model:
         case HIPrimModel.ATAN:
@@ -218,4 +250,18 @@ def create_cosmo(
     cosmo.param_set_desc("Omegak", {"fit": False})
     cosmo.param_set_desc("w", {"fit": False})
 
+    if preset is not None:
+        apply_preset(Ncm.MSet.new_array([cosmo]), preset)
+
     return cosmo
+
+
+def apply_preset(mset: Ncm.MSet, preset: str) -> None:
+    """Apply the distributed Ncm.MSetPreset named `preset` to the models of `mset`.
+
+    The preset sets values, scales and fit flags and checks the parametrization (see
+    Ncm.MSetPreset.apply()); on error it raises GLib.Error and leaves `mset` unchanged.
+    """
+    mset_preset = Ncm.MSetPreset.new_from_name(preset)
+    assert mset_preset is not None  # a failed lookup raises GLib.Error
+    mset_preset.apply(mset)

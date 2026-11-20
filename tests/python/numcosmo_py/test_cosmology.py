@@ -26,9 +26,16 @@
 """Tests for the cosmology module."""
 
 import pytest
+from gi.repository import GLib
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.cosmology import Cosmology, HIPrimModel, ParameterDesc, create_cosmo
+from numcosmo_py.cosmology import (
+    Cosmology,
+    HIPrimModel,
+    ParameterDesc,
+    apply_preset,
+    create_cosmo,
+)
 
 Ncm.cfg_init()
 
@@ -142,6 +149,62 @@ def test_parameter_desc_keys_accepted_by_param_set_desc():
     read_back = cosmo.param_get_desc("H0")
     for key, value in desc.items():
         assert read_back[key] == value
+
+
+def _assert_preset_values(mset: Ncm.MSet, name: str) -> None:
+    """Assert that every value of the preset `name` is the parameter value in `mset`."""
+    mset_preset = Ncm.MSetPreset.new_from_name(name)
+    assert mset_preset is not None
+    values = mset_preset.props.value
+    keys = values.keys()
+    assert len(keys) > 0
+    for key in keys:
+        found, value = values.get_double(key)
+        assert found
+        assert mset.param_get_by_full_name(key) is not None
+        model_name, pname = key.split(":")
+        model = mset.peek_by_name(model_name)
+        assert model is not None
+        assert model[pname] == value
+
+
+@pytest.mark.parametrize(
+    "preset",
+    [
+        "planck2018_tt_lowl_lowe",
+        "planck2018_ttteee_lowl_lowe_lensing",
+        "desi_dr2_bao_cmb",
+    ],
+)
+def test_create_cosmo_preset(preset: str):
+    """create_cosmo(preset=...) sets the preset values on the cosmology."""
+    cosmo = create_cosmo(preset=preset)
+    _assert_preset_values(Ncm.MSet.new_array([cosmo]), preset)
+
+
+def test_create_cosmo_preset_and_fit_nu_mass():
+    """A preset and fit_nu_mass both set the fit flags: ValueError."""
+    with pytest.raises(ValueError, match="preset and fit_nu_mass"):
+        _ = create_cosmo(preset="desi_dr2_bao_cmb", fit_nu_mass=True)
+
+
+def test_create_cosmo_preset_wrong_model():
+    """A cosmology preset needs the massive neutrino: GLib.Error without it."""
+    with pytest.raises(GLib.Error, match="massnu_0"):
+        _ = create_cosmo(preset="desi_dr2_bao_cmb", massive_nu=False)
+
+
+def test_apply_preset_missing():
+    """An unknown preset name raises GLib.Error."""
+    with pytest.raises(GLib.Error, match="not found"):
+        apply_preset(Ncm.MSet.new_array([create_cosmo()]), "no_such_preset")
+
+
+def test_cosmology_from_preset():
+    """Cosmology.from_preset builds the preset cosmology with distances."""
+    cosmology = Cosmology.from_preset("planck2018_ttteee_lowl_lowe_lensing")
+    _assert_preset_values(cosmology.mset, "planck2018_ttteee_lowl_lowe_lensing")
+    assert cosmology.dist.comoving(cosmology.cosmo, 1.0) > 0.0
 
 
 def test_create_cosmo_invalid_prim():
