@@ -531,6 +531,26 @@
     "nick": "submodel",
     "type": "Ncm.MSetError"
   },
+  "NCM_MSET_PRESET_ERROR_INVALID_ENTRY": {
+    "nick": "invalid-entry",
+    "type": "Ncm.MSetPresetError"
+  },
+  "NCM_MSET_PRESET_ERROR_INVALID_FILE": {
+    "nick": "invalid-file",
+    "type": "Ncm.MSetPresetError"
+  },
+  "NCM_MSET_PRESET_ERROR_NOT_FOUND": {
+    "nick": "not-found",
+    "type": "Ncm.MSetPresetError"
+  },
+  "NCM_MSET_PRESET_ERROR_PARAM_NOT_FOUND": {
+    "nick": "param-not-found",
+    "type": "Ncm.MSetPresetError"
+  },
+  "NCM_MSET_PRESET_ERROR_REPARAM_MISMATCH": {
+    "nick": "reparam-mismatch",
+    "type": "Ncm.MSetPresetError"
+  },
   "NCM_MSET_TRANS_KERN_CAT_SAMPLING_CHOOSE": {
     "nick": "choose",
     "type": "Ncm.MSetTransKernCatSampling"

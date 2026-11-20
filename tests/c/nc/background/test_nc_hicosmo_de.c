@@ -49,6 +49,7 @@ void test_nc_hicosmo_de_jbp_new_full (void);
 void test_nc_hicosmo_de_param_by_name_submodel (void);
 void test_nc_hicosmo_de_reparam_old_layout (void);
 void test_nc_hicosmo_de_reparam_old_layout_refused (void);
+void test_nc_hicosmo_de_reparam_cmb_omegab_in_bbn_domain (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -73,6 +74,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/hicosmo_de/param_by_name/submodel", &test_nc_hicosmo_de_param_by_name_submodel);
   g_test_add_func ("/nc/hicosmo_de/reparam/old_layout", &test_nc_hicosmo_de_reparam_old_layout);
   g_test_add_func ("/nc/hicosmo_de/reparam/old_layout/refused", &test_nc_hicosmo_de_reparam_old_layout_refused);
+  g_test_add_func ("/nc/hicosmo_de/reparam/cmb_omegab_in_bbn_domain", &test_nc_hicosmo_de_reparam_cmb_omegab_in_bbn_domain);
 
   g_test_run ();
 }
@@ -503,5 +505,33 @@ test_nc_hicosmo_de_reparam_old_layout_refused (void)
   _test_nc_hicosmo_de_reparam_refused (9, 8, "it reparametrizes parameter 8, which no longer exists");
   _test_nc_hicosmo_de_reparam_refused (9, 5, "it reparametrizes parameter 5, at or after the removed parameter 4, "
                                              "and its length is not the 8 the model had before the removal");
+}
+
+/*
+ * The CMB reparametrization bounds omegab within the domain of the default BBN table, so
+ * the Helium fraction is computable over the whole range; it is computed at the upper
+ * bound.
+ */
+void
+test_nc_hicosmo_de_reparam_cmb_omegab_in_bbn_domain (void)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  GError *error    = NULL;
+  gdouble wb_lb, wb_ub, DNeff_lb, DNeff_ub;
+  guint i;
+
+  nc_hicosmo_de_cmb_params (NC_HICOSMO_DE (cosmo), &error);
+  g_assert_no_error (error);
+  g_assert_true (ncm_model_param_index_from_name (NCM_MODEL (cosmo), "omegab", &i, &error));
+  g_assert_no_error (error);
+
+  nc_bbn_get_domain (nc_hicosmo_peek_bbn (cosmo), &wb_lb, &wb_ub, &DNeff_lb, &DNeff_ub);
+  g_assert_cmpfloat (ncm_model_param_get_lower_bound (NCM_MODEL (cosmo), i), >=, wb_lb);
+  g_assert_cmpfloat (ncm_model_param_get_upper_bound (NCM_MODEL (cosmo), i), <=, wb_ub);
+
+  ncm_model_param_set (NCM_MODEL (cosmo), i, ncm_model_param_get_upper_bound (NCM_MODEL (cosmo), i));
+  g_assert_true (isfinite (nc_hicosmo_Yp_4He (cosmo)));
+
+  nc_hicosmo_free (cosmo);
 }
 

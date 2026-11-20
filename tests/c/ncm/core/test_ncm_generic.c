@@ -44,6 +44,7 @@ void test_ncm_stats_rows_basic (void);
 void test_ncm_mset_catalog_desc_basic (void);
 void test_ncm_mset_catalog_storage_memory_basic (void);
 void test_ncm_mset_catalog_storage_fits_basic (void);
+void test_ncm_mset_preset_basic (void);
 void test_ncm_sphere_nn (void);
 void test_ncm_sphere_xi (void);
 void test_ncm_timer_basic (void);
@@ -155,6 +156,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset_catalog_desc/basic", test_ncm_mset_catalog_desc_basic);
   g_test_add_func ("/ncm/mset_catalog_storage_memory/basic", test_ncm_mset_catalog_storage_memory_basic);
   g_test_add_func ("/ncm/mset_catalog_storage_fits/basic", test_ncm_mset_catalog_storage_fits_basic);
+  g_test_add_func ("/ncm/mset_preset/basic", test_ncm_mset_preset_basic);
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
@@ -2340,5 +2342,23 @@ test_ncm_spectral_polar_panels_basic (void)
   g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
 
   NCM_TEST_FREE (ncm_spectral_polar_panels_free, spp);
+}
+
+void
+test_ncm_mset_preset_basic (void)
+{
+  NcmMSetPreset *preset = ncm_mset_preset_new (NULL);
+  NcmMSetPreset *preset2;
+
+  g_assert_true (preset != NULL);
+  g_assert_true (NCM_IS_MSET_PRESET (preset));
+
+  preset2 = ncm_mset_preset_ref (preset);
+  ncm_mset_preset_clear (&preset2);
+  g_assert_true (preset2 == NULL);
+
+  g_assert_true (NCM_IS_MSET_PRESET (preset));
+
+  NCM_TEST_FREE (ncm_mset_preset_free, preset);
 }
 

@@ -35,6 +35,7 @@ from python.fixtures_planck import (
     make_smica_cldf,
     model_vector,
     planck_mset,
+    round_to_clik_precision,
     smica_binning,
     smica_mask_and_ordering,
     theory_cls,
@@ -109,6 +110,7 @@ def test_matches_clik_reference():
     planck.params_set_default_ftype()
     mset = Ncm.MSet.new_array([planck, cosmo])
     mset_set_parameters(mset, Planck18Types.TT, HIPrimModel.POWER_LAW)
+    round_to_clik_precision(planck)
     mset.prepare_fparam_map()
 
     ref = Nc.DataPlanckLKL.full_new_id(Nc.DataPlanckLKLType.BASELINE_18_HIGHL_TT, cbe)
@@ -163,6 +165,7 @@ def test_ttteee_matches_clik_reference():
     planck.params_set_default_ftype()
     mset = Ncm.MSet.new_array([planck, cosmo])
     mset_set_parameters(mset, Planck18Types.TTTEEE, HIPrimModel.POWER_LAW)
+    round_to_clik_precision(planck)
     mset.prepare_fparam_map()
 
     ref = Nc.DataPlanckLKL.full_new_id(
