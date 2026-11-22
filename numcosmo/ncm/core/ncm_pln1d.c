@@ -52,6 +52,7 @@
 #include "ncm/core/ncm_pln1d.h"
 #include "ncm/core/ncm_c.h"
 #include "ncm/core/ncm_util.h"
+#include "ncm/core/ncm_vmath_private.h"
 #include "external/lintegrate/logadd.c"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -325,27 +326,37 @@ ncm_pln1d_mode (gdouble R, gdouble mu, gdouble sigma)
 static gdouble
 _ncm_pln1d_eval_gh_lnp (NcmPLN1D *pln, gdouble R, gdouble mu, gdouble sigma)
 {
-  NcmPLN1DPrivate * const self = ncm_pln1d_get_instance_private (pln);
-  const guint n                = self->gh_order;
-  const gdouble z              = ncm_pln1d_mode (R, mu, sigma);
-  const gdouble u              = mu / sigma + R * sigma;
-  const gdouble zmu            = z - u;
-  const gdouble scale          = 1.0 / sqrt (1.0 - sigma * zmu);
-  const gdouble ln_const       = log (scale) + R * mu + 0.5 * gsl_pow_2 (R * sigma) - lgamma (R + 1.0) - 0.5 * ncm_c_ln2pi ();
-  gdouble ln_sum               = -INFINITY;
+  NcmPLN1DPrivate * const self        = ncm_pln1d_get_instance_private (pln);
+  const guint n                       = self->gh_order;
+  const gdouble z                     = ncm_pln1d_mode (R, mu, sigma);
+  const gdouble u                     = mu / sigma + R * sigma;
+  const gdouble zmu                   = z - u;
+  const gdouble scale                 = 1.0 / sqrt (1.0 - sigma * zmu);
+  const gdouble ln_const              = log (scale) + R * mu + 0.5 * gsl_pow_2 (R * sigma) - lgamma (R + 1.0) - 0.5 * ncm_c_ln2pi ();
+  const gdouble ln_f0                 = -0.5 * zmu * zmu - exp (sigma * z);
+  const gdouble * restrict nodes      = self->nodes;
+  const gdouble * restrict ln_weights = self->ln_weights;
+  gdouble sum                         = 0.0;
   guint i;
 
-  /* Nodes at x = z + scale y, with scale the width of the peak of I(x) */
+  /*
+   * Sums the integrand at the nodes x = z + scale y, with scale the width of the peak of
+   * I(x), relative to its value e^{ln_f0} at the mode. The exponent without the weight is
+   * concave in y with its maximum at y = 0, so no term exceeds e^{ln_weights[i]} and the
+   * sum needs no logarithm per node. The iterations depend on each other only through
+   * the sum and call only exp(), which vectorizes (see ncm_vmath_private.h).
+   */
+  #pragma omp simd reduction(+:sum)
+
   for (i = 0; i < n; i++)
   {
-    const gdouble y    = self->nodes[i];
-    const gdouble t    = zmu + scale * y;
-    const gdouble logf = self->ln_weights[i] - 0.5 * t * t - exp (sigma * (z + scale * y));
+    const gdouble y = nodes[i];
+    const gdouble t = zmu + scale * y;
 
-    ln_sum = logaddexp (ln_sum, logf);
+    sum += exp (ln_weights[i] - 0.5 * t * t - exp (sigma * (z + scale * y)) - ln_f0);
   }
 
-  return ln_sum + ln_const;
+  return log (sum) + ln_f0 + ln_const;
 }
 
 static gdouble
