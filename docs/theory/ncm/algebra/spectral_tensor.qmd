@@ -234,7 +234,12 @@ coordinate below every interior edge of a split node leads to the first child, a
 coordinate at or above every interior edge leads to the last child. A point outside
 $\Omega$ therefore reaches the panel that contains the point of $\Omega$ obtained by
 clamping each coordinate $x_i$ to $[a_i, b_i]$, and the series of that panel is
-extrapolated. A search that reaches an empty node aborts with an error.
+extrapolated. The tolerance of the table does not apply to an extrapolated value, and the
+evaluation does not report it. A point that may be outside $\Omega$ is therefore compared
+with the intervals $[a_i, b_i]$ before the evaluation, and the function is computed
+directly at a point outside. The ends $a_i$ and $b_i$ are read with
+[[numcosmo-math|ncm_spectral_tensor_get_range]]. A search that reaches an empty node
+aborts with an error.
 
 For several points of one panel, the panel is found once, and its series is summed at
 each point with [[numcosmo-math|ncm_spectral_tensor_eval_on]]. The search and
