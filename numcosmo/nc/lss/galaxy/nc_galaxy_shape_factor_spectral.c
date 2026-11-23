@@ -158,7 +158,6 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gboolean axis_ratio_var; /* TRUE for TRACE: z = T^{-1} (chi_I) */
 
   NcmSpectralPolar *polar;                  /* the integrals */
-  NcmSpectralPolar *polar_interp;           /* the edge rule of the interpolant in g */
   NcmSpectralTensorBuilder *builder_interp; /* the build of the interpolant in g */
   NcmMemoryPool *work_pool;                 /* NcGalaxyShapeFactorSpectralWork, one per concurrent evaluation */
   gdouble reltol;
@@ -174,9 +173,8 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
 {
   GArray *r_edges;
   GArray *theta_edges;
-  GArray *r_edges_all; /* edges of a peak before those outside a region are left out */
-  GArray *theta_edges_all;
-  GArray *var_r; /* the radii of a call of the radial factor of the variance */
+  GArray *r_edges_all; /* radial edges of the interpolant before those below its range are left out */
+  GArray *var_r;       /* the radii of a call of the radial factor of the variance */
 } NcGalaxyShapeFactorSpectralWork;
 
 /*
@@ -185,6 +183,9 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
  * change; a parameter difference this small changes ln P far below interp-abstol.
  */
 #define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_SOURCE_RELTOL (1.0e-15)
+
+/* Ratio between consecutive radial edge distances of the interpolant in g */
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_EDGE_RATIO (4.0)
 
 /*
  * The interpolant of ln P in g of one galaxy and what it was built for. It is rebuilt when
@@ -274,7 +275,6 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->map_inv        = NULL;
   self->axis_ratio_var = FALSE;
   self->polar          = ncm_spectral_polar_new ();
-  self->polar_interp   = ncm_spectral_polar_new ();
   self->builder_interp = ncm_spectral_tensor_builder_new ();
   self->work_pool      = ncm_memory_pool_new (_nc_galaxy_shape_factor_spectral_work_new, NULL,
                                               _nc_galaxy_shape_factor_spectral_work_free);
@@ -390,7 +390,6 @@ _nc_galaxy_shape_factor_spectral_dispose (GObject *object)
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   ncm_spectral_polar_clear (&self->polar);
-  ncm_spectral_polar_clear (&self->polar_interp);
   ncm_spectral_tensor_builder_clear (&self->builder_interp);
 
   /* Chain up: end */
@@ -491,8 +490,9 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
   /**
    * NcGalaxyShapeFactorSpectral:interp-min-radial-panels:
    *
-   * The #NcmSpectralPolar:min-radial-panels of the build of the interpolant: the radial
-   * range of the interpolant is split into at least this many equal intervals. More
+   * The number $n \ge 1$ of equal intervals of the radial range of the interpolant: their
+   * inner edges are radial edges of the interpolant, so the range is split into at least
+   * $n$ intervals. More
    * intervals give panels of lower degree, so a faster evaluation of the interpolant, at the
    * cost of more integrals in the build.
    */
@@ -532,11 +532,10 @@ _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata)
 {
   NcGalaxyShapeFactorSpectralWork *work = g_new0 (NcGalaxyShapeFactorSpectralWork, 1);
 
-  work->r_edges         = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  work->theta_edges     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  work->r_edges_all     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  work->theta_edges_all = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  work->var_r           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->r_edges     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->theta_edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->r_edges_all = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->var_r       = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   return work;
 }
@@ -549,7 +548,6 @@ _nc_galaxy_shape_factor_spectral_work_free (gpointer p)
   g_array_unref (work->r_edges);
   g_array_unref (work->theta_edges);
   g_array_unref (work->r_edges_all);
-  g_array_unref (work->theta_edges_all);
   g_array_unref (work->var_r);
 
   g_free (work);
@@ -763,6 +761,8 @@ _nc_galaxy_shape_factor_spectral_interp_valid (NcGalaxyShapeFactorSpectral *gsfs
 }
 
 static void _nc_galaxy_shape_factor_spectral_interp_kernel (guint n_vars, const guint *n, const gdouble * const *x, gdouble *fval, gpointer user_data);
+static void _nc_galaxy_shape_factor_spectral_interp_r_edges (const gdouble R, const gdouble L, const guint n, GArray *r_edges);
+static gint _nc_galaxy_shape_factor_spectral_cmp_double (gconstpointer a, gconstpointer b);
 
 /* What the function approximated in g needs */
 typedef struct _NcGalaxyShapeFactorSpectralInterp
@@ -786,9 +786,8 @@ typedef struct _NcGalaxyShapeFactorSpectralInterp
  * g_c, of width std_noise / 2 (TRACE) or std_noise (TRACE_DET). The region is
  * [0, g_max + g_c] x [0, pi] for g_c < g_max and otherwise
  * [g_c - g_max, g_c + g_max] x [pi - asin (g_max / g_c), pi]; psi < 0 is covered by the
- * reflection. The radial edges are those of ncm_spectral_polar_peak_edges() for a peak at
- * rho = 0 of that width that are inside the region, and the angular panels span pi / 2 at
- * most. ncm_spectral_tensor_builder_build() makes a node a panel node when the change of ln P
+ * reflection. The radial edges are those of _nc_galaxy_shape_factor_spectral_interp_r_edges()
+ * for that width that are inside the region, and the angular panels span pi / 2 at most. ncm_spectral_tensor_builder_build() makes a node a panel node when the change of ln P
  * between its two grids is at most NcGalaxyShapeFactorSpectral:interp-abstol. A build that reaches the
  * maximum depth aborts with the galaxy in the message.
  */
@@ -812,7 +811,7 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
   GError *error                                   = NULL;
   guint i;
 
-  ncm_spectral_polar_peak_edges (self->polar_interp, rho_max, 0.0, 0.5 * M_PI, L, M_PI, work->r_edges_all, work->theta_edges_all);
+  _nc_galaxy_shape_factor_spectral_interp_r_edges (rho_max, L, self->interp_min_radial_panels, work->r_edges_all);
 
   g_array_set_size (work->r_edges, 0);
   g_array_append_val (work->r_edges, rho_min);
@@ -861,6 +860,61 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
              error->message, G_OBJECT_TYPE_NAME (pop), data->std_noise, epsilon_obs_1, epsilon_obs_2, g_max);
 
   _nc_galaxy_shape_factor_spectral_interp_record (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
+}
+
+/*
+ * The radial edges of the interpolant in g on [0, R], in ascending order, for the narrowest
+ * structure of ln P, of width L, at rho = 0: 0 and R, the inner edges k R / n of n equal
+ * intervals, and the distances L w^k below R, w = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_EDGE_RATIO.
+ * An edge at most L / 4 above the edge kept before it is left out, except R. These are the
+ * radial edges of ncm_spectral_polar_peak_edges() for a peak at r = 0 with
+ * edge-ratio w and min-radial-panels n.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_interp_r_edges (const gdouble R, const gdouble L, const guint n, GArray *r_edges)
+{
+  const gdouble org = 0.0;
+  gdouble w;
+  guint i, m;
+
+  g_array_set_size (r_edges, 0);
+  g_array_append_val (r_edges, org);
+  g_array_append_val (r_edges, R);
+
+  for (i = 1; i < n; i++)
+  {
+    const gdouble x = R * i / n;
+
+    g_array_append_val (r_edges, x);
+  }
+
+  for (w = L; w < 2.0 * R; w *= NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_EDGE_RATIO)
+  {
+    if (w < R)
+      g_array_append_val (r_edges, w);
+  }
+
+  g_array_sort (r_edges, &_nc_galaxy_shape_factor_spectral_cmp_double);
+
+  for (i = 1, m = 1; i < r_edges->len; i++)
+  {
+    const gdouble x = g_array_index (r_edges, gdouble, i);
+
+    if ((x - g_array_index (r_edges, gdouble, m - 1) > 0.25 * L) || (i + 1 == r_edges->len))
+      g_array_index (r_edges, gdouble, m++) = x;
+  }
+
+  g_array_set_size (r_edges, m);
+}
+
+/* Orders two doubles for g_array_sort() */
+static gint
+_nc_galaxy_shape_factor_spectral_cmp_double (gconstpointer a, gconstpointer b)
+{
+  const gdouble x = *(const gdouble *) a;
+  const gdouble y = *(const gdouble *) b;
+
+  return (x > y) - (x < y);
 }
 
 /*
@@ -1905,7 +1959,8 @@ nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (NcGalaxyShapeFacto
 {
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
-  ncm_spectral_polar_set_min_radial_panels (self->polar_interp, n);
+  if (n < 1)
+    g_error ("nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels: interp-min-radial-panels must be at least 1.");
 
   self->interp_min_radial_panels = n;
 }
