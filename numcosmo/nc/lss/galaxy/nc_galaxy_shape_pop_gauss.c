@@ -92,6 +92,8 @@ void _nc_galaxy_shape_pop_gauss_gen (NcGalaxyShapePop *gsp, NcGalaxyShapePopData
 static void _nc_galaxy_shape_pop_gauss_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_e_rms (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data);
 static gdouble _nc_galaxy_shape_pop_gauss_exponent_at_origin (NcGalaxyShapePop *gsp);
+static gboolean _nc_galaxy_shape_pop_gauss_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1);
+static gdouble _nc_galaxy_shape_pop_gauss_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1);
 gdouble _nc_galaxy_shape_pop_gauss_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 
 static void
@@ -133,6 +135,9 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
   gsp_class->moment_2k          = &_nc_galaxy_shape_pop_gauss_moment_2k;
   gsp_class->exponent_at_one    = &_nc_galaxy_shape_pop_gauss_exponent_at_one;
   gsp_class->eval_p_reduced     = &_nc_galaxy_shape_pop_gauss_eval_p_reduced;
+
+  gsp_class->reduced_factor_params  = &_nc_galaxy_shape_pop_gauss_reduced_factor_params;
+  gsp_class->eval_p_reduced_factors = &_nc_galaxy_shape_pop_gauss_eval_p_reduced_factors;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -257,6 +262,28 @@ _nc_galaxy_shape_pop_gauss_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapeP
   NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
 
   return 2.0 * ldata->norm * exp (-ldata->inv_2sigma2 * r * r);
+}
+
+/* sigma sets the factor at the origin; the exponents and the factor at 1 depend on no parameter */
+static gboolean
+_nc_galaxy_shape_pop_gauss_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1)
+{
+  *param_o = NC_GALAXY_SHAPE_POP_GAUSS_SIGMA;
+  *param_1 = -1;
+
+  return TRUE;
+}
+
+/* N = 2 norm, f_o = exp (-r^2 / 2 sigma^2) and f_1 = 1, see _nc_galaxy_shape_pop_gauss_eval_p_reduced() */
+static gdouble
+_nc_galaxy_shape_pop_gauss_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1)
+{
+  NcGalaxyShapePopGaussLData *ldata = (NcGalaxyShapePopGaussLData *) data->ldata;
+
+  *f_o = exp (-ldata->inv_2sigma2 * r * r);
+  *f_1 = 1.0;
+
+  return 2.0 * ldata->norm;
 }
 
 /* M_2k = <r^2k> = (2sigma^2)^k k! P(k+1,a)/(1-e^-a), a = inv_2sigma2, in
