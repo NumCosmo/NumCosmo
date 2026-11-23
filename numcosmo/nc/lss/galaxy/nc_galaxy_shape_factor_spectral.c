@@ -514,15 +514,16 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    *
    * The #NcmSpectralTensorBuilder:trim-frac of the build of the interpolant: the fraction $f$
    * of #NcGalaxyShapeFactorSpectral:interp-abstol that the stored coefficients may give away.
-   * With 0 every coefficient is stored. A positive value makes the evaluation faster and
-   * changes $\ln P$ by at most $f$ times #NcGalaxyShapeFactorSpectral:interp-abstol.
+   * The removed coefficients change $\ln P$ by at most $f$ times
+   * #NcGalaxyShapeFactorSpectral:interp-abstol, $10^{-9}$ at the defaults. With 0 every
+   * coefficient is stored.
    */
   g_object_class_install_property (object_class,
                                    PROP_INTERP_TRIM_FRAC,
                                    g_param_spec_double ("interp-trim-frac",
                                                         NULL,
                                                         "Fraction of interp-abstol given to the removed coefficients",
-                                                        0.0, 1.0, 0.0,
+                                                        0.0, 1.0, 1.0e-4,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   gsf_class->data_init        = &_nc_galaxy_shape_factor_spectral_data_init;

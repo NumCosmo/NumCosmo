@@ -595,14 +595,14 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_g_max (gsfs), ==, 0.3);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (gsfs), ==, 1.0e-5);
   g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (gsfs), ==, 2);
-  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (gsfs), ==, 0.0);
+  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (gsfs), ==, 1.0e-4);
 
   nc_galaxy_shape_factor_spectral_set_reltol (gsfs, 1.0e-4);
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
   nc_galaxy_shape_factor_spectral_set_interp_g_max (gsfs, 0.2);
   nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, 1.0e-4);
   nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (gsfs, 4);
-  nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs, 1.0e-4);
+  nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs, 1.0e-3);
   dup = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (ncm_serialize_dup_obj (ser, G_OBJECT (gsfs)));
 
   g_assert_cmpint (nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (dup)), ==, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
@@ -611,7 +611,7 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_g_max (dup), ==, 0.2);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (dup), ==, 1.0e-4);
   g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (dup), ==, 4);
-  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (dup), ==, 1.0e-4);
+  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (dup), ==, 1.0e-3);
 
   ncm_serialize_free (ser);
   nc_galaxy_shape_factor_spectral_free (dup);
@@ -1145,7 +1145,7 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpoint
   else if (g_str_equal (mismatch, "abstol"))
     nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_r, 1.0e-4);
   else if (g_str_equal (mismatch, "trim_frac"))
-    nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs_r, 1.0e-4);
+    nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs_r, 0.0);
 
   data_array = _test_obs_read (&test, NC_GALAXY_SHAPE_FACTOR (gsfs_r), obs);
   data       = g_ptr_array_index (data_array, 0);

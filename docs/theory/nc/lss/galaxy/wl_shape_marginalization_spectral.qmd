@@ -360,11 +360,12 @@ computes the integral.
   [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]], the absolute tolerance of the
   construction, in the units of $\ln P$. The relative tolerance is zero. The values at the
   points are those of the integral at `reltol`.
-- Stored coefficients: all of them by default. With
-  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-trim-frac]] $f > 0$, the coefficients of
-  highest index are removed from each panel while their $\ell_1$ norm is at most $f$ times
-  `interp-abstol`
-  ([Stored Coefficients](../../../ncm/algebra/spectral_tensor.qmd#stored-coefficients)).
+- Stored coefficients: the coefficients of highest index are removed from each panel while
+  their $\ell_1$ norm is at most $f$ times `interp-abstol`
+  ([Stored Coefficients](../../../ncm/algebra/spectral_tensor.qmd#stored-coefficients)),
+  where $f$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-trim-frac]] (default
+  $10^{-4}$). The removed coefficients change $\ln P$ by at most $10^{-9}$ at the default
+  `interp-abstol`. With $f = 0$ every coefficient is stored.
 
 The table of a galaxy is built at its first evaluation with
 $|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
@@ -432,6 +433,11 @@ difference in $\ln P$ are:
 | `TRACE` | Gaussian, 0.3 | $10^{-5}$ | 1,166 / 1,923 / 2,586 | $2.2 \times 10^{-9}$ |
 | `TRACE_DET` | Beta, fitted | $10^{-5}$ | 523 / 1,502 / 3,010 | $6.5 \times 10^{-9}$ |
 | `TRACE_DET` | Gaussian, 0.3 | $10^{-5}$ | 451 / 1,211 / 2,530 | $8.1 \times 10^{-9}$ |
+
+These tables stored every coefficient (`interp-trim-frac` 0). On the 11,616 certified
+points with $|g| \le 0.3$, the table at the default `interp-trim-frac` $10^{-4}$ differs
+from the untrimmed one by at most $10^{-9}$, and its largest difference from Arb is
+$3.6 \times 10^{-8}$, as for the untrimmed table.
 
 One evaluation of the approximation takes 0.11 to 0.13 microseconds (median over the
 galaxies) at the default tolerance, against 0.25 to 0.6 milliseconds for the integral at
