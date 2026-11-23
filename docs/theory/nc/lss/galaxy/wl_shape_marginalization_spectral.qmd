@@ -322,11 +322,12 @@ and $\lambda$ from it. A bracket that is not positive aborts as a non-finite $\l
 
 In a likelihood one galaxy is evaluated at many shears with the same
 $\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$. With
-[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] the class approximates
-$\ln P (\epsilon_\mathrm{obs} \mid g)$ as a function of $g$ for each galaxy with
-[[numcosmo-math|ncm_spectral_polar_build]], described in
-[Approximation on the Panels](../../../ncm/algebra/spectral_polar.qmd#approximation-on-the-panels),
-and evaluates that approximation for $|g| \le g_\mathrm{max}$
+[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] the class tabulates
+$\ln P (\epsilon_\mathrm{obs} \mid g)$ as a function of $g$ for each galaxy in an
+[[numcosmo-math|NcmSpectralTensor]] built by an
+[[numcosmo-math|NcmSpectralTensorBuilder]], both described in
+[Tensor-Product Chebyshev Tables](../../../ncm/algebra/spectral_tensor.qmd),
+and evaluates that table for $|g| \le g_\mathrm{max}$
 ([[numcosmo|NcGalaxyShapeFactorSpectral:interp-g-max]]). For $|g| > g_\mathrm{max}$ it
 computes the integral.
 
@@ -350,18 +351,25 @@ computes the integral.
   equal to [[numcosmo|NcGalaxyShapeFactorSpectral:interp-min-radial-panels]] (default 2),
   and angular panels of $\pi / 2$ at most. The integrals use a separate
   [[numcosmo-math|NcmSpectralPolar]] with the default `min-radial-panels`, 2.
-- Test: a panel is accepted when $\ln P$ changes by at most
-  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]] between its two grids. The
-  values at the nodes are those of the integral at `reltol`.
+- Test: a node becomes a panel node when the estimate $D$ of
+  [The Test](../../../ncm/algebra/spectral_tensor.qmd#the-test) is at most
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]], the absolute tolerance of the
+  construction, in the units of $\ln P$. The relative tolerance is zero. The values at the
+  points are those of the integral at `reltol`.
+- Stored coefficients: all of them by default. With
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-trim-frac]] $f > 0$, the coefficients of
+  highest index are removed from each panel while their $\ell_1$ norm is at most $f$ times
+  `interp-abstol`
+  ([Stored Coefficients](../../../ncm/algebra/spectral_tensor.qmd#stored-coefficients)).
 
-The approximation of a galaxy is built at its first evaluation with
+The table of a galaxy is built at its first evaluation with
 $|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
 $\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, the parameters of the population,
-`reltol`, $g_\mathrm{max}$, the tolerance or `interp-min-radial-panels` differ from those it
-was built for. A build
-computes of the order of $10^3$ integrals, so the approximation reduces the cost when the
-parameters of the population are fixed, and increases it when they change at every step
-unless a galaxy is evaluated at more shears per step than the build computes.
+`reltol`, $g_\mathrm{max}$, `interp-abstol`, `interp-min-radial-panels` or
+`interp-trim-frac` differ from those it was built for. A build computes of the order of
+$10^3$ integrals, so the table reduces the cost when the parameters of the population are
+fixed, and increases it when they change at every step unless a galaxy is evaluated at
+more shears per step than the build computes.
 
 ## Measured Accuracy
 
