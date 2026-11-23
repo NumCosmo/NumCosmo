@@ -39,13 +39,13 @@
  * by a constant barrier that depends on the collapse. For an elliptical collapse,
  * the bias is given by
  * \begin{align}
- * b(\nu)=1+\frac{1}{\delta_{\mathrm{sc}}(z)} \left[a \nu^2+ b\left(a \nu^2\right)^{1-c} -\frac{\left(a \nu^2\right)^c}{\sqrt{a}\left(a \nu^2\right)^c+b(1-c)(1-c / 2)}\right]
+ * b(\nu)=1+\frac{1}{\delta_{\mathrm{sc}}(z)} \left[a \nu^2+ b\left(a \nu^2\right)^{1-c} -\frac{\left(a \nu^2\right)^c}{\sqrt{a}\left[\left(a \nu^2\right)^c+b(1-c)(1-c / 2)\right]}\right]
  * \end{align}
  * where $b(\nu)$ is the bias, $\delta_c$ is the critical threshold,
  * $\nu = \frac{\delta_c}{\sigma}$ and $(a, b, c)$ are free parameters
  * of the mass function that dictates the shape of the barrier.
  *
- * The user must provide input the values: @NcHaloMassFunction, @delta_c, @a, @p - nc_halo_bias_st_spher_new_full().
+ * The user must provide input the values: @NcHaloMassFunction, @delta_c, @a, @b, @c - nc_halo_bias_st_ellip_new_full().
  *
  */
 
@@ -372,5 +372,5 @@ nc_halo_bias_st_ellip_get_c (const NcHaloBiasSTEllip *biasf_st_ellip)
   return biasf_st_ellip->c;
 }
 
-/* _NC_BIAS_FUNCTION_ST_ELLIP_DATASET_1001_3162 = {1.68647, 0.707, 0.5, 0.6}; */
+/* _NC_BIAS_FUNCTION_ST_ELLIP_DATASET_9907024 = {1.68647, 0.707, 0.5, 0.6}; */
 

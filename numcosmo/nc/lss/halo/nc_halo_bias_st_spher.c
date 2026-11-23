@@ -38,7 +38,7 @@
  * density contrast. This bias has a significant impact on less massive halos, and  for
  * a spherical collapse is given by
  * \begin{align}
- * b(\nu)=1+\frac{a \nu^2-1}{\delta_c}+\frac{2 p}{\delta_c\left[1+\left(a_c \nu^2\right)^p\right]}
+ * b(\nu)=1+\frac{a \nu^2-1}{\delta_c}+\frac{2 p}{\delta_c\left[1+\left(a \nu^2\right)^p\right]}
  * \end{align}
  * where $b(\nu)$ is the bias, $\delta_c$ is the critical threshold,
  * $\nu = \frac{\delta_c}{\sigma}$, and $(a, p)$ are free parameters

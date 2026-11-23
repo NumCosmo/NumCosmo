@@ -41,7 +41,7 @@
  * critical threshold, $\nu = \frac{\delta_c}{\sigma}$ and the free parameters
  * $(A,a,B,b,C,c)$ depend on the value of the overdensity chosen.
  *
- * The user must provide input the values: @NcHaloMassFunction, @delta_c, @B, @b and @c @delta_c  - nc_halo_bias_ps_new_full().
+ * The user must provide input the values: @NcHaloMassFunction, @delta_c, @B, @b and @c - nc_halo_bias_tinker_new_full().
  *
  */
 
