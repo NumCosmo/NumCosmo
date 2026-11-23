@@ -390,7 +390,13 @@ computes the integral.
   $l_\mathrm{cap}$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-level-cap]]
   (default 5); the first grid has no edge inside the range. The value at a point is the
   integral for the population with those parameter values. A free parameter outside its
-  bounds is an error.
+  bounds is an error. The bounds of a free parameter should contain only populations that
+  can describe a galaxy sample, since the table covers all of them. Where the density of
+  the population changes by many orders of magnitude over the bounds, $\ln P$ is not
+  finite for part of the galaxies and the build aborts: the truncated Gaussian with
+  $\sigma$ of a few hundredths is such a case. The default bounds are chosen for this,
+  $[1, 4]$ for $\alpha$ and $\beta$ of the Beta population and $[0.2, 1]$ for $\sigma$ of
+  the truncated Gaussian, where the mean of $|\chi_I|$ goes from 0.25 to 0.63.
 
 The table of a galaxy is built at its first evaluation with
 $|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
