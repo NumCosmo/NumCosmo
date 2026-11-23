@@ -89,6 +89,7 @@ static const gchar *test_spectral_obs_mismatch_cases[][2] = {
   {"pop",        "*built for other settings:*the population (NcGalaxyShapePopBeta*"},
   {"free",       "*built for other settings:*the population parameter * is free*"},
   {"abstol",     "*built for other settings:*interp-abstol*"},
+  {"trim_frac",  "*built for other settings:*interp-trim-frac*"},
   {"conv",       "*built for other settings:*the ellipticity convention*"},
   {"use_interp", "*the catalog carries interpolants, but use-interp is not set*"},
   {"eval",       "*the interpolant loaded from the catalog is not valid for this evaluation*"},
@@ -589,12 +590,14 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_g_max (gsfs), ==, 0.3);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (gsfs), ==, 1.0e-5);
   g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (gsfs), ==, 2);
+  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (gsfs), ==, 0.0);
 
   nc_galaxy_shape_factor_spectral_set_reltol (gsfs, 1.0e-4);
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
   nc_galaxy_shape_factor_spectral_set_interp_g_max (gsfs, 0.2);
   nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, 1.0e-4);
   nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (gsfs, 4);
+  nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs, 1.0e-4);
   dup = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (ncm_serialize_dup_obj (ser, G_OBJECT (gsfs)));
 
   g_assert_cmpint (nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (dup)), ==, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
@@ -603,6 +606,7 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_g_max (dup), ==, 0.2);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (dup), ==, 1.0e-4);
   g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (dup), ==, 4);
+  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (dup), ==, 1.0e-4);
 
   ncm_serialize_free (ser);
   nc_galaxy_shape_factor_spectral_free (dup);
@@ -818,6 +822,13 @@ test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpec
   ln_P = nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g1, g2, e1, e2);
   g_assert_cmpfloat (ln_P, !=, ln_P_prev);
   g_assert_cmpfloat_with_epsilon (ln_P, ln_P_prev, 2.0 * TEST_SPECTRAL_INTERP_TOL);
+
+  /* The trim: the stored series differs from the full one by at most trim-frac interp-abstol */
+  ln_P_prev = ln_P;
+  nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs, 0.1);
+  ln_P = nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g1, g2, e1, e2);
+  g_assert_cmpfloat (ln_P, !=, ln_P_prev);
+  g_assert_cmpfloat_with_epsilon (ln_P, ln_P_prev, 0.1 * nc_galaxy_shape_factor_spectral_get_interp_abstol (gsfs));
 
   /* Without the interpolant the value is the integral */
   nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, FALSE);
@@ -1043,7 +1054,7 @@ test_nc_galaxy_shape_factor_spectral_interp_obs (TestNcGalaxyShapeFactorSpectral
   obs = _test_obs_prepared_new (test, gsfs_w, g1, g2, ln_P);
 
   for (i = 0; i < G_N_ELEMENTS (test_spectral_obs_gal); i++)
-    g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs, i)));
+    g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs, i)));
 
   data_array = _test_obs_read (test, gsf_r, obs);
 
@@ -1128,6 +1139,8 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpoint
     ncm_model_param_set_ftype (NCM_MODEL (test.pop), 0, NCM_PARAM_TYPE_FREE);
   else if (g_str_equal (mismatch, "abstol"))
     nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_r, 1.0e-4);
+  else if (g_str_equal (mismatch, "trim_frac"))
+    nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs_r, 1.0e-4);
 
   data_array = _test_obs_read (&test, NC_GALAXY_SHAPE_FACTOR (gsfs_r), obs);
   data       = g_ptr_array_index (data_array, 0);

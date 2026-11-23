@@ -224,7 +224,7 @@ test_nc_data_cluster_wl_factor_shape_interp_write (TestNcDataClusterWLFactorShap
   g_assert_nonnull (nc_galaxy_wl_obs_peek_shape_interp_source (test->obs));
 
   for (i = 0; i < SHAPE_INTERP_NROWS; i++)
-    g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (test->obs, i)));
+    g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (test->obs, i)));
 
   ncm_data_m2lnL_val (data, test->mset, &m2lnL);
   g_assert_true (gsl_finite (m2lnL));
