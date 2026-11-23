@@ -225,3 +225,34 @@ def test_node_kind_enum() -> None:
     assert Ncm.SpectralTensorNodeKind.EMPTY.value_nick == "empty"
     assert Ncm.SpectralTensorNodeKind.SPLIT.value_nick == "split"
     assert Ncm.SpectralTensorNodeKind.PANEL.value_nick == "panel"
+
+
+def test_builder_properties() -> None:
+    """The builder properties through their accessors and as GObject properties."""
+    builder = Ncm.SpectralTensorBuilder.new()
+
+    assert builder.get_level_min() == 3
+    assert builder.get_level_cap() == 7
+    assert builder.get_max_depth() == 30
+    assert builder.get_trim_frac() == 0.0
+
+    builder.set_level_min(4)
+    builder.set_level_cap(8)
+    builder.set_max_depth(12)
+    builder.set_trim_frac(1.0e-4)
+
+    assert builder.props.level_min == 4
+    assert builder.props.level_cap == 8
+    assert builder.props.max_depth == 12
+    assert builder.props.trim_frac == 1.0e-4
+
+    builder2 = Ncm.SpectralTensorBuilder(level_min=2, level_cap=5, trim_frac=0.5)
+    assert builder2.get_level_min() == 2
+    assert builder2.get_level_cap() == 5
+    assert builder2.get_trim_frac() == 0.5
+
+
+def test_builder_error_enum() -> None:
+    """The error domain and its member are introspected."""
+    assert Ncm.SpectralTensorBuilderError.MAX_DEPTH.value_nick == "max-depth"
+    assert Ncm.SpectralTensorBuilderError.quark() != 0

@@ -155,6 +155,10 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_spectral_tensor.c'],
     },
     {
+        'name': 'ncm_spectral_tensor_builder',
+        'sources': ['ncm/algebra/test_ncm_spectral_tensor_builder.c'],
+    },
+    {
         'name': 'ncm_nnls',
         'sources': ['ncm/algebra/test_ncm_nnls.c'],
     },
