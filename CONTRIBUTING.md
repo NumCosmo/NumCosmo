@@ -44,6 +44,58 @@ its concrete subclasses. Vendored third-party code is quarantined under
    `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`. (`ncm_cfg.h` includes only what its
    own public API needs; do not add registration includes there.)
 
+## C API and the Python bindings
+
+The Python API is generated from the C API. GObject introspection records the signature
+of each public function and the annotations of its doc comment, and PyGObject builds the
+Python call from that record. The rules below keep the arguments of the C call and of the
+Python call the same and in the same order.
+
+### Callbacks and `user_data`
+
+A function that takes a callback takes the `gpointer user_data` of that callback as its
+last input parameter. Only out parameters, `GError **error` and a `GDestroyNotify` for
+`user_data` follow it. A callback typedef takes `user_data` as its last argument, as the
+GLib callbacks do:
+
+```c
+typedef gdouble (*NcmMyObjectF) (gdouble x, gpointer user_data);
+
+gdouble ncm_my_object_integrate (NcmMyObject *obj, NcmMyObjectF F, gdouble a, gdouble b,
+                                 gpointer user_data, gdouble *err, GError **error);
+```
+
+The Python binding takes `user_data` at its C position, and the generated stubs
+`numcosmo_py/ncm.pyi` and `numcosmo_py/nc.pyi` list it last. A function with `user_data`
+at another position is therefore called from Python with an argument order that differs
+from its stub.
+
+### Arrays of values
+
+A function that takes an array of values and returns an array of values takes the input
+as one flattened `GArray *` and returns the output through a `GArray **`. The function
+allocates the output array when the `GArray *` it points to is `NULL`, and resizes that
+array otherwise. The annotations are those of `ncm_spectral_tensor_eval_array ()`:
+
+```c
+/**
+ * ncm_spectral_tensor_eval_array:
+ * @st: a #NcmSpectralTensor
+ * @x: (element-type gdouble): the points, the variables of a point together
+ * @fval: (out callee-allocates) (transfer full) (element-type gdouble): the values at the points
+ */
+void ncm_spectral_tensor_eval_array (NcmSpectralTensor *st, GArray *x, GArray **fval);
+```
+
+A C caller passes a pointer to `NULL` to receive a new array, or the array of the
+previous call to reuse it. A Python caller passes a sequence or a numpy array and
+receives a list: `values = st.eval_array (points.ravel ())`.
+
+An output array allocated by the caller, annotated `(out caller-allocates) (array
+length=n)`, fails in PyGObject with "Could not caller allocate argument". Write one
+function for both languages, not a second one for the bindings, and call a new function
+from Python before writing its tests.
+
 ## Unit testing
 
 Tests follow their sources as a hard invariant: a class in

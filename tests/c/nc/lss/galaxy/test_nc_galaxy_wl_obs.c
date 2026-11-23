@@ -60,6 +60,8 @@ static void test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpoi
 static void test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_pz_spline (void);
 static void test_nc_galaxy_wl_obs_pz_spline_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_polar (void);
+static void test_nc_galaxy_wl_obs_shape_interp_polar_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -131,6 +133,8 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_wl_obs_free);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_spline", &test_nc_galaxy_wl_obs_pz_spline);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_spline/subprocess", &test_nc_galaxy_wl_obs_pz_spline_subprocess);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/polar", &test_nc_galaxy_wl_obs_shape_interp_polar);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/polar/subprocess", &test_nc_galaxy_wl_obs_shape_interp_polar_subprocess);
 
   g_test_run ();
 
@@ -534,11 +538,11 @@ test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 static void
 test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
-  NcmSerialize *ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcmSpectralPolarPanels *spp_0 = ncm_spectral_polar_panels_new ();
-  NcmSpectralPolarPanels *spp_3 = ncm_spectral_polar_panels_new ();
-  NcmObjDictStr *source         = ncm_obj_dict_str_new ();
-  NcGalaxyShapePopGauss *pop    = nc_galaxy_shape_pop_gauss_new ();
+  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmSpectralTensor *spp_0   = ncm_spectral_tensor_new (2);
+  NcmSpectralTensor *spp_3   = ncm_spectral_tensor_new (2);
+  NcmObjDictStr *source      = ncm_obj_dict_str_new ();
+  NcGalaxyShapePopGauss *pop = nc_galaxy_shape_pop_gauss_new ();
   NcmObjDictInt *prop;
   NcGalaxyWLObs *obs_dup;
   GVariant *obs_ser;
@@ -565,8 +569,8 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   ncm_serialize_reset (ser, FALSE);
 
   g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs_dup, "z", 0, NULL), ==, 0.5);
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 3)));
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 3)));
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 1));
   g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (ncm_obj_dict_str_peek (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup), "shape-pop")));
 
@@ -600,8 +604,8 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   nc_galaxy_wl_obs_free (obs_dup);
   nc_galaxy_shape_pop_gauss_free (pop);
   ncm_obj_dict_str_unref (source);
-  ncm_spectral_polar_panels_free (spp_0);
-  ncm_spectral_polar_panels_free (spp_3);
+  ncm_spectral_tensor_free (spp_0);
+  ncm_spectral_tensor_free (spp_3);
   ncm_serialize_free (ser);
 }
 
@@ -645,5 +649,43 @@ test_nc_galaxy_wl_obs_pz_spline_subprocess (void)
                 "len", 10,
                 "pz", pz,
                 NULL);
+}
+
+/*
+ * A catalog whose interpolants are NcmSpectralPolarPanels, as written before they became
+ * NcmSpectralTensor: reading an interpolant aborts with a message that names the type and
+ * the command that writes the catalog again. The test builds such an interpolant with
+ * NcmSpectralPolarPanels, so it is removed together with that class.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_polar (void)
+{
+  g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/shape_interp/polar/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the interpolant of row 2 is a NcmSpectralPolarPanels, not a NcmSpectralTensor*");
+  g_test_trap_assert_stderr ("*numcosmo wl-catalog shape-interp*");
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_polar_subprocess (void)
+{
+  GStrv col_names             = g_strsplit ("ra dec", " ", -1);
+  NcmObjDictInt *interp       = ncm_obj_dict_int_new ();
+  NcmObjDictStr *source       = ncm_obj_dict_str_new ();
+  NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
+  NcGalaxyWLObs *obs;
+
+  ncm_obj_dict_int_add (interp, 2, G_OBJECT (spp));
+
+  obs = g_object_new (NC_TYPE_GALAXY_WL_OBS,
+                      "ellip-conv", NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,
+                      "columns", col_names,
+                      "coord", NC_GALAXY_WL_OBS_COORD_CELESTIAL,
+                      "len", 10,
+                      NULL);
+
+  g_object_set (obs, "shape-interp", interp, NULL);
+  nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
+  nc_galaxy_wl_obs_peek_shape_interp (obs, 2);
 }
 

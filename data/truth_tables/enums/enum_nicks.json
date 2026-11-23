@@ -659,6 +659,22 @@
     "nick": "max-depth",
     "type": "Ncm.SpectralPolarError"
   },
+  "NCM_SPECTRAL_TENSOR_BUILDER_ERROR_MAX_DEPTH": {
+    "nick": "max-depth",
+    "type": "Ncm.SpectralTensorBuilderError"
+  },
+  "NCM_SPECTRAL_TENSOR_NODE_KIND_EMPTY": {
+    "nick": "empty",
+    "type": "Ncm.SpectralTensorNodeKind"
+  },
+  "NCM_SPECTRAL_TENSOR_NODE_KIND_PANEL": {
+    "nick": "panel",
+    "type": "Ncm.SpectralTensorNodeKind"
+  },
+  "NCM_SPECTRAL_TENSOR_NODE_KIND_SPLIT": {
+    "nick": "split",
+    "type": "Ncm.SpectralTensorNodeKind"
+  },
   "NCM_SPHERE_MAP_COORD_SYS_CELESTIAL": {
     "nick": "celestial",
     "type": "Ncm.SphereMapCoordSys"

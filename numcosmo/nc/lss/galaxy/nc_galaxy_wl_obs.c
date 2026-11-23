@@ -54,7 +54,7 @@
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/spline/ncm_spline.h"
 #include "ncm/algebra/ncm_vector.h"
-#include "ncm/algebra/ncm_spectral_polar_panels.h"
+#include "ncm/algebra/ncm_spectral_tensor.h"
 #include "nc_enum_types.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/background/nc_hicosmo.h"
@@ -291,7 +291,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
    * NcGalaxyWLObs:shape-interp:
    *
    * The interpolants of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of the galaxies, a
-   * #NcmSpectralPolarPanels for each row that has one, keyed by the row; empty when the
+   * #NcmSpectralTensor for each row that has one, keyed by the row; empty when the
    * rows changed after #NcGalaxyWLObs:shape-interp-source was set.
    */
   g_object_class_install_property (object_class,
@@ -607,18 +607,18 @@ nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
  * nc_galaxy_wl_obs_set_shape_interp:
  * @obs: a #NcGalaxyWLObs
  * @i: row index
- * @spp: the interpolant of row @i
+ * @st: the interpolant of row @i
  *
  * Sets the interpolant of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of row @i, referencing
- * @spp. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
+ * @st. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
  * nc_galaxy_wl_obs_set_shape_interp_source() and while the rows are unchanged.
  */
 void
-nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp)
+nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralTensor *st)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (spp));
+  ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (st));
 }
 
 /**
@@ -626,18 +626,30 @@ nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectra
  * @obs: a #NcGalaxyWLObs
  * @i: row index
  *
+ * An interpolant of another type, as the NcmSpectralPolarPanels of a catalog written by an
+ * earlier version, aborts with a message asking to write the catalog again with
+ * `numcosmo wl-catalog shape-interp`.
+ *
  * Returns: (transfer none) (nullable): the interpolant of row @i, or %NULL when the row has
  * none, there is no record or the rows changed after the record was set.
  */
-NcmSpectralPolarPanels *
+NcmSpectralTensor *
 nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  GObject *interp;
 
   if (!_nc_galaxy_wl_obs_shape_interp_current (obs))
     return NULL;
 
-  return (NcmSpectralPolarPanels *) ncm_obj_dict_int_peek (self->shape_interp, i);
+  interp = ncm_obj_dict_int_peek (self->shape_interp, i);
+
+  if ((interp != NULL) && !NCM_IS_SPECTRAL_TENSOR (interp))
+    g_error ("nc_galaxy_wl_obs_peek_shape_interp: the interpolant of row %u is a %s, not a NcmSpectralTensor; "
+             "the catalog was written by an earlier version, write it again with `numcosmo wl-catalog shape-interp'.",
+             i, G_OBJECT_TYPE_NAME (interp));
+
+  return (NcmSpectralTensor *) interp;
 }
 
 /**
