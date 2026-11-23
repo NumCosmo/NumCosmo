@@ -18,9 +18,9 @@ out of the polynomial, and the polynomial is integrated against it. The degree i
 on nested grids until the convergence test of [Spectral Methods](spectral.qmd) holds in
 both variables; a panel whose degree reaches the limit is bisected. For an integrand with
 one narrow maximum the edges of the panels are placed around it
-([Edges for One Peak](#edges-for-one-peak)). The polynomials of the panels also
-approximate the function itself
-([Approximation on the Panels](#approximation-on-the-panels)).
+([Edges for One Peak](#edges-for-one-peak)). A table of the function itself on panels is
+the object of [Tensor-Product Chebyshev Tables](spectral_tensor.qmd), and the same edges
+can divide its domain.
 
 ## The Integral and its Panels
 
@@ -228,50 +228,10 @@ the error of a panel from the change between two grids, and a wide panel far fro
 maximum can pass it with a larger error: for the shape marginal of
 [Shape Marginalization by Spectral Panels](../../nc/lss/galaxy/wl_shape_marginalization_spectral.qmd)
 at `reltol` $10^{-4}$, the largest error with $n = 1$ is 25 times the one with the default
-$n = 2$. A larger $n$ gives more panels of lower degree, which is also cheaper for an
-approximation that is evaluated many times
-([Approximation on the Panels](#approximation-on-the-panels)): one evaluation costs
-$(N_r + 1) (N_\theta + 1)$ multiplications.
-
-## Approximation on the Panels
-
-The function [[numcosmo-math|ncm_spectral_polar_build]] expands a function $F (r, \theta)$
-on the panels of the edges and keeps the coefficients $c^{kl}$ of Eq. (3) of every
-accepted panel in an [[numcosmo-math|NcmSpectralPolarPanels]]. It differs from the
-integral in three points.
-
-- There is no weight: $F$ is expanded as given on every panel, and Eq. (2) is not used.
-- The test is Eq. (5) with $\varepsilon_F$ given by the caller, the argument `abstol` in
-  the units of $F$, instead of Eq. (6). It is the $\varepsilon_\mathrm{abs}$ of
-  [Spectral Methods](spectral.qmd#adaptive-refinement). One of `reltol` and `abstol` may be
-  zero.
-- Each panel is tested once: the three steps of
-  [The Estimate of the Integral](#the-estimate-of-the-integral) are needed only because
-  Eq. (6) depends on $I$.
-
-The grids, the doubling and the bisection are those of [Refinement](#refinement). The
-panels given by the edges are the initial panels; an initial panel that was bisected holds
-several panels, which cover it without overlap.
-
-The function [[numcosmo-math|ncm_spectral_polar_panels_eval]] evaluates the approximation
-at a point $(r, \theta)$.
-
-1. The initial panel is found by bisection over the radial edges and over the angular edges.
-   The panels of that initial panel are then searched in the order they were accepted.
-2. On the panel, with $s_r$ and $s_\theta$ of the point, a Clenshaw recurrence in $s_r$
-   gives $u^l \equiv \sum_k c^{kl} T_k (s_r)$ for each angular index $l$, and a Clenshaw
-   recurrence in $s_\theta$ over the $u^l$ gives Eq. (3). This takes
-   $(N_r + 1) (N_\theta + 1)$ multiplications.
-
-A point on an edge belongs to the panel that starts there. A point outside the edges is
-assigned to the nearest panel, whose series is extrapolated. The angle is not wrapped: the
-caller gives $\theta$ inside $[\theta_0, \theta_{n_\theta}]$.
-
-The remark below Eq. (5) applies to the approximation directly: $D_r + D_\theta$ is the
-change between grids, so a maximum of $F$ that is below $\varepsilon_F$ at every node of
-a panel is absent from its coefficients, and the panel is accepted without it. The edges
-must therefore be placed from the known position and width of such a maximum, as
-[Edges for One Peak](#edges-for-one-peak) does.
+$n = 2$. A larger $n$ gives more panels of lower degree. A table whose domain is divided by
+these edges ([Tensor-Product Chebyshev Tables](spectral_tensor.qmd)) is then also cheaper
+to evaluate: one evaluation on a panel with $K_r$ by $K_\theta$ coefficients takes
+$K_r K_\theta$ multiplications.
 
 ## Symbols and the Code
 
@@ -286,8 +246,6 @@ must therefore be placed from the known position and width of such a maximum, as
 | $D_r$, $D_\theta$, $V$ | `Dr`, `Dt`, `vs` |
 | $\varepsilon_F$, $W$ | `abstol_F`, `A` of the call |
 | $M^r_k$, $M^\theta_l$ | the tables of `mom`, `mt` |
-| $\varepsilon_F$ of a build | `abstol_F` of the call, equal to `abstol` |
-| $c^{kl}$ of an accepted panel of a build | `coeffs` of `NcmSpectralPolarPanels`, row $l$, column $k$ |
 
 The transform of a grid is two one-dimensional passes, each over all the lines of the
 other direction at once. A direction with up to 129 nodes is transformed by the functions
@@ -306,9 +264,3 @@ See [[numcosmo-math|NcmSpectralPolar]] for the full class reference:
 [[numcosmo-math|ncm_spectral_polar_integrate]] also returns the accepted panels, one row
 per panel with $r_a$, $r_b$, $\theta_a$, $\theta_b$, $l_r$, $l_\theta$, the value of
 Eq. (7) and $D_r + D_\theta$, for inspecting where the panels were refined.
-
-See [[numcosmo-math|NcmSpectralPolarPanels]] for the approximation:
-[[numcosmo-math|ncm_spectral_polar_build]] fills it, and
-[[numcosmo-math|ncm_spectral_polar_panels_eval]],
-[[numcosmo-math|ncm_spectral_polar_panels_find_panel]] and
-[[numcosmo-math|ncm_spectral_polar_panels_peek_panel]] read it.

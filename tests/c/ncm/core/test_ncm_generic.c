@@ -73,7 +73,6 @@ void test_ncm_spectral_panels_basic (void);
 void test_ncm_spectral_panels_builder_basic (void);
 void test_ncm_spectral_panels_product_basic (void);
 void test_ncm_spectral_polar_basic (void);
-void test_ncm_spectral_polar_panels_basic (void);
 void test_ncm_spectral_tensor_basic (void);
 void test_ncm_spectral_tensor_builder_basic (void);
 
@@ -187,7 +186,6 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels_builder/basic", test_ncm_spectral_panels_builder_basic);
   g_test_add_func ("/ncm/spectral_panels_product/basic", test_ncm_spectral_panels_product_basic);
   g_test_add_func ("/ncm/spectral_polar/basic", test_ncm_spectral_polar_basic);
-  g_test_add_func ("/ncm/spectral_polar_panels/basic", test_ncm_spectral_polar_panels_basic);
   g_test_add_func ("/ncm/spectral_tensor/basic", test_ncm_spectral_tensor_basic);
   g_test_add_func ("/ncm/spectral_tensor_builder/basic", test_ncm_spectral_tensor_builder_basic);
 
@@ -2329,23 +2327,6 @@ test_ncm_spectral_polar_basic (void)
   g_assert_true (NCM_IS_SPECTRAL_POLAR (sp));
 
   NCM_TEST_FREE (ncm_spectral_polar_free, sp);
-}
-
-void
-test_ncm_spectral_polar_panels_basic (void)
-{
-  NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
-  NcmSpectralPolarPanels *spp2;
-
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
-
-  spp2 = ncm_spectral_polar_panels_ref (spp);
-  ncm_spectral_polar_panels_clear (&spp2);
-  g_assert_true (spp2 == NULL);
-
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
-
-  NCM_TEST_FREE (ncm_spectral_polar_panels_free, spp);
 }
 
 void

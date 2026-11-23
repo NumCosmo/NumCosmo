@@ -62,11 +62,6 @@
  * the final sum is smaller, the accepted panels are tested again with it and those that
  * fail are expanded again.
  *
- * ncm_spectral_polar_build() expands a function $F (r, \theta)$ on the panels in the same
- * way, with no weight, and keeps the coefficients of every accepted panel in an
- * #NcmSpectralPolarPanels, which evaluates the expansion at a point. Its test is the one
- * above with $\varepsilon_F$ given by the caller, in the units of $F$.
- *
  * ncm_spectral_polar_peak_edges() gives the edges for an integrand with one peak. The
  * position and widths given to it change the number of evaluations, not the test.
  *
@@ -175,6 +170,7 @@ typedef struct _NcmSpectralPolarWork
   gdouble *tmp;    /* its radial transform, same layout */
   gdouble *tmpT;   /* the transpose of tmp */
   gdouble *coeffs; /* the Chebyshev coefficients, (m + 1) x (n + 1): row l = angular index */
+  gdouble vs;      /* the largest |F| of the samples in in */
   GArray *lines;   /* the np-long arrays below, one after the other */
   gdouble *br;     /* l1 mass of the coefficients per radial index */
   gdouble *bt;     /* and per angular index */
@@ -199,10 +195,7 @@ typedef struct _NcmSpectralPolarWork
   GArray *accepted;           /* NcmSpectralPolarEntry, the accepted panels */
 } NcmSpectralPolarWork;
 
-/*
- * The arguments and the state of one call of ncm_spectral_polar_integrate() or of
- * ncm_spectral_polar_build()
- */
+/* The arguments and the state of one call of ncm_spectral_polar_integrate() */
 typedef struct _NcmSpectralPolarCall
 {
   NcmSpectralPolarF G;
@@ -212,10 +205,8 @@ typedef struct _NcmSpectralPolarCall
   gdouble a;
   gdouble b;
   gdouble reltol;
-  gdouble abstol_F;            /* the absolute term of the test: MAX (reltol |I|, abstol) / A in an
-                                * integral, abstol in a build */
-  gdouble A;                   /* integral over the panels of the weight left out of F */
-  NcmSpectralPolarPanels *spp; /* the panel set a build fills, NULL in an integral */
+  gdouble abstol_F; /* the absolute term of the test, MAX (reltol |I|, abstol) / A */
+  gdouble A;        /* integral over the panels of the weight left out of F */
   guint level_min;
   guint level_cap;
   guint max_depth;
@@ -731,7 +722,6 @@ _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpect
     .reltol       = reltol,
     .abstol_F     = 0.0,
     .A            = 0.0,
-    .spp          = NULL,
     .level_min    = sp->level_min,
     .level_cap    = sp->level_cap,
     .max_depth    = sp->max_depth,
@@ -774,97 +764,6 @@ _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpect
 }
 
 static void _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel panel, const NcmSpectralPolarEntry *start);
-
-/**
- * ncm_spectral_polar_build:
- * @sp: a #NcmSpectralPolar
- * @F: (scope call) (closure user_data): the function $F$
- * @user_data: user data for @F
- * @r_edges: (element-type gdouble): the radial edges $r_0, \dots, r_{n_r}$
- * @theta_edges: (element-type gdouble): the angular edges $\theta_0, \dots, \theta_{n_\theta}$
- * @reltol: relative tolerance of a panel
- * @abstol: absolute tolerance of a panel, in units of $F$
- * @spp: the panel set to fill
- * @n_eval: (out) (optional): number of values of $F$ computed
- * @error: a #GError
- *
- * Resets @spp and fills it with the expansion of $F (r, \theta)$ on the panels of @r_edges
- * times @theta_edges, as described in #NcmSpectralPolar: each panel is expanded on nested
- * grids from #NcmSpectralPolar:level-min, doubled or bisected as in
- * ncm_spectral_polar_integrate(), and accepted when
- * $D_r + D_\theta \le \max (@reltol \, V, @abstol)$, the test of the integral with
- * $\varepsilon_F = @abstol$. @r_edges is ascending from 0 or above, @theta_edges is
- * ascending and spans at most $2\pi$, each with two entries or more. @reltol and @abstol
- * are non-negative and not both zero.
- *
- * @F is called as the function of ncm_spectral_polar_integrate().
- *
- * A panel that needs more than #NcmSpectralPolar:max-depth bisections sets @error to
- * %NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH, and @spp is left with no edges and no panels.
- */
-void
-ncm_spectral_polar_build (NcmSpectralPolar *sp, NcmSpectralPolarF F, gpointer user_data,
-                          GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol,
-                          NcmSpectralPolarPanels *spp, guint64 *n_eval, GError **error)
-{
-  NcmSpectralPolarWork **ptr = ncm_memory_pool_get (sp->work_pool);
-  NcmSpectralPolarWork *work = *ptr;
-  NcmSpectralPolarCall call  = {
-    .G            = F,
-    .radial       = NULL,
-    .user_data    = user_data,
-    .R            = 0.0,
-    .a            = 0.0,
-    .b            = 0.0,
-    .reltol       = reltol,
-    .abstol_F     = abstol,
-    .A            = 0.0,
-    .spp          = spp,
-    .level_min    = sp->level_min,
-    .level_cap    = sp->level_cap,
-    .max_depth    = sp->max_depth,
-    .n_eval       = 0,
-    .failed       = FALSE,
-    .failed_panel = {0.0, 0.0, 0.0, 0.0, 0},
-    .work         = work
-  };
-  guint i, j;
-
-  if (!(reltol >= 0.0) || !(abstol >= 0.0) || ((reltol == 0.0) && (abstol == 0.0)))
-    g_error ("ncm_spectral_polar_build: reltol %g and abstol %g must be non-negative and not both zero.", reltol, abstol);
-
-  _ncm_spectral_polar_check_edges (sp, "ncm_spectral_polar_build", r_edges, theta_edges);
-  _ncm_spectral_polar_work_prepare (work, sp->level_cap);
-  ncm_spectral_polar_panels_set_edges (spp, r_edges, theta_edges);
-
-  for (i = 0; i + 1 < r_edges->len; i++)
-  {
-    for (j = 0; j + 1 < theta_edges->len; j++)
-    {
-      const NcmSpectralPolarPanel panel = {
-        g_array_index (r_edges, gdouble, i), g_array_index (r_edges, gdouble, i + 1),
-        g_array_index (theta_edges, gdouble, j), g_array_index (theta_edges, gdouble, j + 1), 0
-      };
-
-      _ncm_spectral_polar_expand (&call, panel, NULL);
-    }
-  }
-
-  ncm_memory_pool_return (ptr);
-
-  if (n_eval != NULL)
-    *n_eval = call.n_eval;
-
-  if (call.failed)
-  {
-    ncm_spectral_polar_panels_reset (spp);
-    ncm_util_set_or_call_error (error, NCM_SPECTRAL_POLAR_ERROR, NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH,
-                                "ncm_spectral_polar_build: the panel r in [% 22.15g, % 22.15g], "
-                                "theta in [% 22.15g, % 22.15g] does not pass the test after %u bisections.",
-                                call.failed_panel.ra, call.failed_panel.rb, call.failed_panel.ta, call.failed_panel.tb,
-                                call.failed_panel.depth);
-  }
-}
 
 /* The arguments of an integral, checked before anything is evaluated */
 static void
@@ -1089,12 +988,13 @@ static void _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSp
 static void _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint ly, guint j0, guint step);
 static void _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep);
 
-/* Samples F on the starting grid of the panel */
+/* Samples F on the starting grid of the panel; work->vs restarts from these samples */
 static void
 _ncm_spectral_polar_sample_start (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel)
 {
   _ncm_spectral_polar_nodes_r (call, panel, call->level_min, 0, 1);
   _ncm_spectral_polar_nodes_theta (call, panel, call->level_min, 0, 1);
+  call->work->vs = 0.0;
   _ncm_spectral_polar_rows (call, call->level_min, call->level_min, 0, 1, 0, 1);
 }
 
@@ -1244,7 +1144,9 @@ _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPo
 
 /*
  * Calls G at the rows i0, i0 + istep, ... and the angles j0, j0 + jstep, ... of level
- * (lx, ly) and stores F, G times the regular weight, in the grid of that level.
+ * (lx, ly) and stores F, G times the regular weight, in the grid of that level. Updates
+ * work->vs, the largest |F| of the samples in the grid, with the values it stores. Four
+ * running maxima per row: with one, each comparison waits for the one before.
  */
 static void
 _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep)
@@ -1266,11 +1168,40 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
   {
     const gdouble w = work->wr[i];
     gdouble *row    = work->in + (gsize) i * (m + 1);
+    gdouble v0      = work->vs;
+    gdouble v1      = 0.0;
+    gdouble v2      = 0.0;
+    gdouble v3      = 0.0;
 
     call->G (call->user_data, work->rr[i], c, work->gth, work->gct, work->gst, work->gf);
 
-    for (q = 0, j = j0; q < c; q++, j += jstep)
-      row[j] = w * work->gf[q];
+    for (q = 0, j = j0; q + 4 <= c; q += 4, j += 4 * jstep)
+    {
+      const gdouble f0 = w * work->gf[q];
+      const gdouble f1 = w * work->gf[q + 1];
+      const gdouble f2 = w * work->gf[q + 2];
+      const gdouble f3 = w * work->gf[q + 3];
+
+      row[j]             = f0;
+      row[j + jstep]     = f1;
+      row[j + 2 * jstep] = f2;
+      row[j + 3 * jstep] = f3;
+
+      v0 = MAX (v0, fabs (f0));
+      v1 = MAX (v1, fabs (f1));
+      v2 = MAX (v2, fabs (f2));
+      v3 = MAX (v3, fabs (f3));
+    }
+
+    for ( ; q < c; q++, j += jstep)
+    {
+      const gdouble f = w * work->gf[q];
+
+      row[j] = f;
+      v0     = MAX (v0, fabs (f));
+    }
+
+    work->vs = MAX (MAX (v0, v1), MAX (v2, v3));
   }
 
   call->n_eval += (guint64) c * ((n - i0) / istep + 1);
@@ -1279,24 +1210,15 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
 /*
  * Transforms the grid of level (lx, ly) into its Chebyshev coefficients in work->coeffs,
  * with the angular index first, and fills work->br and work->bt with the l1 masses of the
- * coefficients per radial and per angular index. Returns the largest |F| on the grid.
+ * coefficients per radial and per angular index. Returns work->vs, the largest |F| on the
+ * grid, which the functions that write the samples keep.
  */
 static gdouble
 _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
 {
-  const guint n                 = 1u << lx;
-  const guint m                 = 1u << ly;
-  const gsize len               = (gsize) (n + 1) * (m + 1);
-  const gdouble * restrict grid = work->in;
-  gdouble vs                    = 0.0;
-  gsize q;
+  const guint n = 1u << lx;
+  const guint m = 1u << ly;
   guint j, k, l;
-
-  /* The maximum does not depend on the order, so the reduction may be reordered */
-  #pragma omp simd reduction(max:vs)
-
-  for (q = 0; q < len; q++)
-    vs = MAX (vs, fabs (grid[q]));
 
   /*
    * Radial transform of the m + 1 columns of in, its transpose, then angular transform
@@ -1334,7 +1256,7 @@ _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
     work->bt[l] = acc;
   }
 
-  return vs;
+  return work->vs;
 }
 
 /*
@@ -1485,6 +1407,7 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
       _ncm_spectral_polar_nodes_r (call, &entry->panel, call->level_min, 0, 1);
       _ncm_spectral_polar_nodes_theta (call, &entry->panel, call->level_min, 0, 1);
       memcpy (work->in, start, sizeof (gdouble) * ns * ns);
+      work->vs = entry->vs;
 
       _ncm_spectral_polar_expand (call, entry->panel, entry);
     }
@@ -1549,13 +1472,11 @@ _ncm_spectral_polar_double (NcmSpectralPolarCall *call, const NcmSpectralPolarPa
 }
 
 static gdouble _ncm_spectral_polar_predict (const gdouble *b, guint M);
-static void _ncm_spectral_polar_append (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint ly);
 
 /*
  * Expands F on the panel from the starting level until the test passes, doubling the
  * direction with the larger change or, at the level cap, bisecting the panel in it. An
- * accepted panel is appended to work->accepted in an integral, and with its coefficients
- * to call->spp in a build. With start, an initial panel that failed its test in
+ * accepted panel is appended to work->accepted. With start, an initial panel that failed its test in
  * _ncm_spectral_polar_first_pass(), the starting grid and its nodes are in the workspace
  * already, and so are its changes: its starting level is not transformed again. A panel at max_depth that needs a bisection sets
  * call->failed, after which nothing more is evaluated.
@@ -1592,16 +1513,9 @@ _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel pa
 
     if (D <= tol)
     {
-      if (call->spp != NULL)
-      {
-        _ncm_spectral_polar_append (call, &panel, lx, ly);
-      }
-      else
-      {
-        NcmSpectralPolarEntry entry = { panel, _ncm_spectral_polar_panel_value (call, &panel, lx, ly), D, vs, lx, ly, FALSE, Dr, Dt };
+      NcmSpectralPolarEntry entry = { panel, _ncm_spectral_polar_panel_value (call, &panel, lx, ly), D, vs, lx, ly, FALSE, Dr, Dt };
 
-        g_array_append_val (work->accepted, entry);
-      }
+      g_array_append_val (work->accepted, entry);
 
       return;
     }
@@ -1674,13 +1588,6 @@ _ncm_spectral_polar_predict (const gdouble *b, guint M)
 
     return 2.0 * B2 * q * q * (1.0 + q * q);
   }
-}
-
-/* Appends the panel at level (lx, ly) to call->spp with its Chebyshev coefficients */
-static void
-_ncm_spectral_polar_append (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint ly)
-{
-  ncm_spectral_polar_panels_append_data (call->spp, panel->ra, panel->rb, panel->ta, panel->tb, lx, ly, call->work->coeffs);
 }
 
 /*

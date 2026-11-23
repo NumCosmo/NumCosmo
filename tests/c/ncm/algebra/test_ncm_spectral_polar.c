@@ -84,6 +84,15 @@ typedef struct _TestThread
   gdouble result;
 } TestThread;
 
+/* A NcmSpectralPolarF G with its user data, and the cosines and sines of the angles */
+typedef struct _TestPolarAsTensor
+{
+  NcmSpectralPolarF G;
+  gpointer G_data;
+  GArray *cos_theta;
+  GArray *sin_theta;
+} TestPolarAsTensor;
+
 void test_ncm_spectral_polar_new (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_free (TestNcmSpectralPolar *test, gconstpointer pdata);
 
@@ -183,6 +192,30 @@ _one (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdoubl
 
   for (j = 0; j < n; j++)
     fval[j] = 1.0;
+}
+
+/*
+ * The NcmSpectralTensorF of a TestPolarAsTensor: G at the tensor product of the radii x[0]
+ * and the angles x[1], the angle running fastest, with the cosines and sines from libm.
+ */
+static void
+_polar_as_tensor (guint n_vars, const guint *n, const gdouble * const *x, gdouble *fval, gpointer user_data)
+{
+  TestPolarAsTensor *pt = user_data;
+  guint i, j;
+
+  g_array_set_size (pt->cos_theta, n[1]);
+  g_array_set_size (pt->sin_theta, n[1]);
+
+  for (j = 0; j < n[1]; j++)
+  {
+    g_array_index (pt->cos_theta, gdouble, j) = cos (x[1][j]);
+    g_array_index (pt->sin_theta, gdouble, j) = sin (x[1][j]);
+  }
+
+  for (i = 0; i < n[0]; i++)
+    pt->G (pt->G_data, x[0][i], n[1], x[1], &g_array_index (pt->cos_theta, gdouble, 0),
+           &g_array_index (pt->sin_theta, gdouble, 0), &fval[i * n[1]]);
 }
 
 /* The Gaussian of a TestGauss; checks the cosines and sines it is given */
@@ -710,10 +743,10 @@ _wedge (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdou
 }
 
 /*
- * The panels of an integral are those of ncm_spectral_polar_build() for the same function and
- * test, after as many values. The build expands every initial panel from its starting grid,
- * while the integral doubles an initial panel that failed in its first pass directly from
- * the grid of that pass, without testing it again. With a = b = 0 the weight is 1 and F = G,
+ * The panels of an integral are those of ncm_spectral_tensor_builder_build() for the same
+ * function and test, after as many values. The builder expands every initial panel from its
+ * starting grid, while the integral doubles an initial panel that failed in its first pass
+ * directly from the grid of that pass, without testing it again. With a = b = 0 the weight is 1 and F = G,
  * reltol is below every scale, so both test D <= eps_F, and the second pass of the integral
  * keeps eps_F. abstol = eps_F W, W the weight of the panels as the integral computes it, and
  * eps_F a power of 2, give the same eps_F to the bit. Level-min below level-cap - 1 takes the
@@ -724,16 +757,20 @@ _wedge (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdou
 void
 test_ncm_spectral_polar_first_doubling (TestNcmSpectralPolar *test, gconstpointer pdata)
 {
-  const guint caps[]      = {6, 6, 7, 5, 4};
-  const guint mins[]      = {2, 3, 2, 4, 3};
-  const gdouble r_edges[] = {0.0, 0.3, 0.6, 1.0};
-  const gdouble t_edges[] = {-M_PI, -1.0, 0.5, M_PI};
-  const gdouble reltol    = 1.0e-300;
-  const gdouble eps_F     = ldexp (1.0, -24);
-  NcmSpectralPolarF fs[]  = {&_gauss, &_ring, &_wedge};
-  const gboolean in_r[]   = {TRUE, TRUE, FALSE}; /* refined in r */
-  const gboolean in_t[]   = {TRUE, FALSE, TRUE}; /* refined in theta */
-  gdouble W               = 0.0;
+  const guint caps[]                = {6, 6, 7, 5, 4};
+  const guint mins[]                = {2, 3, 2, 4, 3};
+  const gdouble r_edges[]           = {0.0, 0.3, 0.6, 1.0};
+  const gdouble t_edges[]           = {-M_PI, -1.0, 0.5, M_PI};
+  const gdouble reltol              = 1.0e-300;
+  const gdouble eps_F               = ldexp (1.0, -24);
+  NcmSpectralPolarF fs[]            = {&_gauss, &_ring, &_wedge};
+  const gboolean in_r[]             = {TRUE, TRUE, FALSE}; /* refined in r */
+  const gboolean in_t[]             = {TRUE, FALSE, TRUE}; /* refined in theta */
+  const gdouble lower[2]            = {r_edges[0], t_edges[0]};
+  const gdouble upper[2]            = {r_edges[G_N_ELEMENTS (r_edges) - 1], t_edges[G_N_ELEMENTS (t_edges) - 1]};
+  NcmSpectralTensorBuilder *builder = ncm_spectral_tensor_builder_new ();
+  TestPolarAsTensor pt              = {NULL, NULL, g_array_new (FALSE, FALSE, sizeof (gdouble)), g_array_new (FALSE, FALSE, sizeof (gdouble))};
+  gdouble W                         = 0.0;
   guint i, f, p, q;
 
   _set_edges (test->r_edges, r_edges, G_N_ELEMENTS (r_edges));
@@ -745,41 +782,51 @@ test_ncm_spectral_polar_first_doubling (TestNcmSpectralPolar *test, gconstpointe
 
   for (i = 0; i < G_N_ELEMENTS (caps); i++)
   {
+    const guint l_min[2] = {mins[i], mins[i]};
+    const guint l_cap[2] = {caps[i], caps[i]};
+
     ncm_spectral_polar_set_level_cap (test->sp, caps[i]);
     ncm_spectral_polar_set_level_min (test->sp, mins[i]);
 
     for (f = 0; f < G_N_ELEMENTS (fs); f++)
     {
-      NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
-      TestGauss g_int             = { 0.45 * cos (0.7), 0.45 * sin (0.7), 0.06, 0 };
-      TestGauss g_build           = g_int;
-      NcmMatrix *panels           = NULL;
-      GError *error               = NULL;
-      gboolean r_above_min        = FALSE;
-      gboolean t_above_min        = FALSE;
+      NcmSpectralTensor *st = ncm_spectral_tensor_new (2);
+      TestGauss g_int       = { 0.45 * cos (0.7), 0.45 * sin (0.7), 0.06, 0 };
+      TestGauss g_build     = g_int;
+      NcmMatrix *panels     = NULL;
+      GError *error         = NULL;
+      gboolean r_above_min  = FALSE;
+      gboolean t_above_min  = FALSE;
       guint64 n_int, n_build;
 
       ncm_spectral_polar_integrate (test->sp, fs[f], &g_int, 1.0, 0.0, 0.0, test->r_edges, test->theta_edges,
                                     reltol, eps_F * W, &n_int, &panels, &error);
       g_assert_no_error (error);
-      ncm_spectral_polar_build (test->sp, fs[f], &g_build, test->r_edges, test->theta_edges, reltol, eps_F, spp, &n_build, &error);
+      pt.G      = fs[f];
+      pt.G_data = &g_build;
+      ncm_spectral_tensor_set_domain (st, 2, lower, 2, upper);
+      ncm_spectral_tensor_split_empty (st, 0, G_N_ELEMENTS (r_edges), r_edges);
+      ncm_spectral_tensor_split_empty (st, 1, G_N_ELEMENTS (t_edges), t_edges);
+      ncm_spectral_tensor_builder_build (builder, &_polar_as_tensor, st, l_min, l_cap, reltol, eps_F, &pt, &n_build, &error);
       g_assert_no_error (error);
 
       g_assert_cmpuint (n_int, ==, n_build);
-      g_assert_cmpuint (ncm_matrix_nrows (panels), ==, ncm_spectral_polar_panels_get_n_panels (spp));
+      g_assert_cmpuint (ncm_matrix_nrows (panels), ==, ncm_spectral_tensor_get_n_panels (st));
 
       for (p = 0; p < ncm_matrix_nrows (panels); p++)
       {
-        gdouble ra, rb, ta, tb;
-        guint l_r, l_theta;
+        const guint l_r     = (guint) ncm_matrix_get (panels, p, 4);
+        const guint l_theta = (guint) ncm_matrix_get (panels, p, 5);
+        const gdouble *lo, *up;
+        const guint *K;
 
-        ncm_spectral_polar_panels_peek_panel (spp, p, &ra, &rb, &ta, &tb, &l_r, &l_theta);
-        g_assert_cmpfloat (ncm_matrix_get (panels, p, 0), ==, ra);
-        g_assert_cmpfloat (ncm_matrix_get (panels, p, 1), ==, rb);
-        g_assert_cmpfloat (ncm_matrix_get (panels, p, 2), ==, ta);
-        g_assert_cmpfloat (ncm_matrix_get (panels, p, 3), ==, tb);
-        g_assert_cmpuint ((guint) ncm_matrix_get (panels, p, 4), ==, l_r);
-        g_assert_cmpuint ((guint) ncm_matrix_get (panels, p, 5), ==, l_theta);
+        ncm_spectral_tensor_peek_panel (st, p, &lo, &up, &K);
+        g_assert_cmpfloat (ncm_matrix_get (panels, p, 0), ==, lo[0]);
+        g_assert_cmpfloat (ncm_matrix_get (panels, p, 1), ==, up[0]);
+        g_assert_cmpfloat (ncm_matrix_get (panels, p, 2), ==, lo[1]);
+        g_assert_cmpfloat (ncm_matrix_get (panels, p, 3), ==, up[1]);
+        g_assert_cmpuint (K[0], ==, (1u << l_r) + 1);
+        g_assert_cmpuint (K[1], ==, (1u << l_theta) + 1);
 
         r_above_min = r_above_min || (l_r > mins[i]);
         t_above_min = t_above_min || (l_theta > mins[i]);
@@ -790,9 +837,13 @@ test_ncm_spectral_polar_first_doubling (TestNcmSpectralPolar *test, gconstpointe
       g_assert_true (t_above_min == in_t[f]);
 
       ncm_matrix_free (panels);
-      ncm_spectral_polar_panels_free (spp);
+      ncm_spectral_tensor_free (st);
     }
   }
+
+  g_array_unref (pt.cos_theta);
+  g_array_unref (pt.sin_theta);
+  ncm_spectral_tensor_builder_free (builder);
 }
 
 /*

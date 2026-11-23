@@ -40,8 +40,7 @@
 
 /*
  * The functions tabulated by the tests, of x_0, ..., x_{n-1}: kind 0 is
- * exp (0.5 x_0 cos (x_1)) sin (x_0 sin (x_1) + 0.3), the function of
- * test_ncm_spectral_polar_panels.c in the variables (r, theta), with x_1 = 0 when n = 1;
+ * exp (0.5 x_0 cos (x_1)) sin (x_0 sin (x_1) + 0.3), with x_1 = 0 when n = 1;
  * kind 1 is exp (sum_i (i + 1) x_i / 4) cos (sum_i x_i); kind 2 is a Gaussian of width
  * 0.05 at x_i = 0.3 plus 1; kind 3 is 1 for x_0 < 0.4 and 2 otherwise; kind 4 is T_4 of
  * x_0 on [0, 1] rounded to its values 1 and -1 at the five Chebyshev-Lobatto points, exactly
@@ -80,7 +79,6 @@ void test_ncm_spectral_tensor_builder_new (TestNcmSpectralTensorBuilder *test, g
 void test_ncm_spectral_tensor_builder_free (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 
 void test_ncm_spectral_tensor_builder_properties (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
-void test_ncm_spectral_tensor_builder_polar (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_accuracy (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_large_values (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_trim (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
@@ -122,7 +120,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("properties", test_ncm_spectral_tensor_builder_properties);
-  TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("polar", test_ncm_spectral_tensor_builder_polar);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("accuracy", test_ncm_spectral_tensor_builder_accuracy);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("large_values", test_ncm_spectral_tensor_builder_large_values);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("trim", test_ncm_spectral_tensor_builder_trim);
@@ -244,23 +241,6 @@ _func (guint n_vars, const guint *n, const gdouble * const *x, gdouble *fval, gp
   }
 
   f->n_values += total;
-}
-
-/* The NcmSpectralPolarF of f, kind 0, with the cosines and sines of theta computed as _func_at() does */
-static void
-_polar_func (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
-{
-  TestFunc *f = user_data;
-  guint j;
-
-  for (j = 0; j < n; j++)
-  {
-    const gdouble x[2] = {r, theta[j]};
-
-    fval[j] = _func_at (f, 2, x);
-  }
-
-  f->n_values += n;
 }
 
 /*
@@ -423,87 +403,6 @@ test_ncm_spectral_tensor_builder_properties (TestNcmSpectralTensorBuilder *test,
 }
 
 /*
- * With two variables and no trim the builder repeats ncm_spectral_polar_build(): the same
- * panels, levels and number of values, and the same coefficients up to 4 ulp of the largest
- * one of each panel. The coefficients are not bit-identical: GCC computes part of the node
- * table of ncm_spectral_polar.c with the vector cosine of libmvec, 1 to 2 ulp from cos().
- */
-void
-test_ncm_spectral_tensor_builder_polar (TestNcmSpectralTensorBuilder *test, gconstpointer pdata)
-{
-  const gdouble r_edges[]     = {0.0, 0.5, 1.2};
-  const gdouble t_edges[]     = {0.0, 1.0, 2.5, 3.1};
-  const gdouble *e[2]         = {r_edges, t_edges};
-  const guint n_e[2]          = {G_N_ELEMENTS (r_edges), G_N_ELEMENTS (t_edges)};
-  const gdouble abstol[]      = {1.0e-6, 1.0e-10};
-  NcmSpectralPolar *sp        = ncm_spectral_polar_new ();
-  NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
-  GArray *r_arr               = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *t_arr               = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  guint a;
-
-  g_array_append_vals (r_arr, r_edges, G_N_ELEMENTS (r_edges));
-  g_array_append_vals (t_arr, t_edges, G_N_ELEMENTS (t_edges));
-
-  for (a = 0; a < G_N_ELEMENTS (abstol); a++)
-  {
-    NcmSpectralTensor *st = _table_new (2, e, n_e);
-    TestFunc f_polar      = {0, 0};
-    TestFunc f_tensor     = {0, 0};
-    GError *error         = NULL;
-    guint64 n_polar, n_tensor;
-    guint p;
-
-    ncm_spectral_polar_build (sp, &_polar_func, &f_polar, r_arr, t_arr, 0.0, abstol[a], spp, &n_polar, &error);
-    g_assert_no_error (error);
-    ncm_spectral_tensor_builder_build (test->builder, &_func, st, NULL, NULL, 0.0, abstol[a], &f_tensor, &n_tensor, &error);
-    g_assert_no_error (error);
-
-    g_assert_cmpuint (n_tensor, ==, n_polar);
-    g_assert_cmpuint (f_tensor.n_values, ==, f_polar.n_values);
-    g_assert_cmpuint (ncm_spectral_tensor_get_n_panels (st), ==, ncm_spectral_polar_panels_get_n_panels (spp));
-    g_assert_cmpuint (ncm_spectral_tensor_get_n_panels (st), >=, (n_e[0] - 1) * (n_e[1] - 1));
-
-    for (p = 0; p < ncm_spectral_tensor_get_n_panels (st); p++)
-    {
-      const gdouble *lower, *upper;
-      const guint *K;
-      const gdouble *c = ncm_spectral_tensor_peek_panel (st, p, &lower, &upper, &K);
-      gdouble ra, rb, ta, tb;
-      guint l_r, l_t;
-      const gdouble *cp = ncm_spectral_polar_panels_peek_panel (spp, p, &ra, &rb, &ta, &tb, &l_r, &l_t);
-
-      g_assert_cmpfloat (lower[0], ==, ra);
-      g_assert_cmpfloat (upper[0], ==, rb);
-      g_assert_cmpfloat (lower[1], ==, ta);
-      g_assert_cmpfloat (upper[1], ==, tb);
-      g_assert_cmpuint (K[0], ==, (1u << l_r) + 1);
-      g_assert_cmpuint (K[1], ==, (1u << l_t) + 1);
-      {
-        gdouble cmax = 0.0;
-        gdouble dmax = 0.0;
-        guint q;
-
-        for (q = 0; q < K[0] * K[1]; q++)
-        {
-          cmax = GSL_MAX (cmax, fabs (cp[q]));
-          dmax = GSL_MAX (dmax, fabs (c[q] - cp[q]));
-        }
-
-        g_assert_cmpfloat (dmax, <=, 4.0 * GSL_DBL_EPSILON * cmax);
-      }
-    }
-
-    ncm_spectral_tensor_free (st);
-  }
-
-  g_array_unref (r_arr);
-  g_array_unref (t_arr);
-  ncm_spectral_polar_panels_free (spp);
-  ncm_spectral_polar_free (sp);
-}
-
-/*
  * The table agrees with F within the tolerance at random points, for one, two and three
  * variables and for the smooth function and the peak.
  */
@@ -515,7 +414,7 @@ test_ncm_spectral_tensor_builder_accuracy (TestNcmSpectralTensorBuilder *test, g
   const gdouble e2[]   = {-0.5, 0.5, 1.0};
   const gdouble *e[3]  = {e0, e1, e2};
   const guint n_e[3]   = {G_N_ELEMENTS (e0), G_N_ELEMENTS (e1), G_N_ELEMENTS (e2)};
-  const guint kinds[]  = {1, 2};
+  const guint kinds[]  = {0, 1, 2};
   const gdouble abstol = 1.0e-8;
   guint n_vars, k;
 
