@@ -45,7 +45,8 @@
  * kind 1 is exp (sum_i (i + 1) x_i / 4) cos (sum_i x_i); kind 2 is a Gaussian of width
  * 0.05 at x_i = 0.3 plus 1; kind 3 is 1 for x_0 < 0.4 and 2 otherwise; kind 4 is T_4 of
  * x_0 on [0, 1] rounded to its values 1 and -1 at the five Chebyshev-Lobatto points, exactly
- * 1, -1, 1, -1, 1 there. n_values counts the values asked for.
+ * 1, -1, 1, -1, 1 there; kind 5 is -1.6e4 exp (sum_i (x_i - 1)), with |F| up to 1.6e4.
+ * n_values counts the values asked for.
  */
 typedef struct _TestFunc
 {
@@ -81,6 +82,7 @@ void test_ncm_spectral_tensor_builder_free (TestNcmSpectralTensorBuilder *test, 
 void test_ncm_spectral_tensor_builder_properties (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_polar (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_accuracy (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_builder_large_values (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_trim (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_fixed (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_builder_levels (TestNcmSpectralTensorBuilder *test, gconstpointer pdata);
@@ -122,6 +124,7 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("properties", test_ncm_spectral_tensor_builder_properties);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("polar", test_ncm_spectral_tensor_builder_polar);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("accuracy", test_ncm_spectral_tensor_builder_accuracy);
+  TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("large_values", test_ncm_spectral_tensor_builder_large_values);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("trim", test_ncm_spectral_tensor_builder_trim);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("fixed", test_ncm_spectral_tensor_builder_fixed);
   TEST_NCM_SPECTRAL_TENSOR_BUILDER_ADD ("levels", test_ncm_spectral_tensor_builder_levels);
@@ -190,6 +193,16 @@ _func_at (const TestFunc *f, guint n_vars, const gdouble *x)
 
       return (lround (4.0 * acos (CLAMP (2.0 * x[0] - 1.0, -1.0, 1.0)) / M_PI) % 2 == 0) ? 1.0 : -1.0;
 
+    case 5:
+    {
+      gdouble e = 0.0;
+      guint i;
+
+      for (i = 0; i < n_vars; i++)
+        e += x[i] - 1.0;
+
+      return -1.6e4 * exp (e);
+    }
     default: /* LCOV_EXCL_LINE */
       g_assert_not_reached ();
 
@@ -522,6 +535,48 @@ test_ncm_spectral_tensor_builder_accuracy (TestNcmSpectralTensorBuilder *test, g
 
       ncm_spectral_tensor_free (st);
     }
+  }
+}
+
+/*
+ * A function with |F| up to 1.6e4, kind 5, on a domain with no splits, for 1 to 3
+ * variables. The tolerance 1e-12 is below the spacing of the doubles at 1.6e4, 1.8e-12. As a
+ * relative tolerance it is multiplied by V, the largest |F| on the panel: the build ends and
+ * the error at random points is at most reltol V. As an absolute tolerance it is not
+ * reached: the build ends in NCM_SPECTRAL_TENSOR_BUILDER_ERROR_MAX_DEPTH.
+ */
+void
+test_ncm_spectral_tensor_builder_large_values (TestNcmSpectralTensorBuilder *test, gconstpointer pdata)
+{
+  const gdouble e0[]    = {-1.0, 1.0};
+  const gdouble e1[]    = {0.0, 0.7};
+  const gdouble e2[]    = {-0.5, 1.0};
+  const gdouble *e[3]   = {e0, e1, e2};
+  const guint n_e[3]    = {G_N_ELEMENTS (e0), G_N_ELEMENTS (e1), G_N_ELEMENTS (e2)};
+  const gdouble upper[] = {1.0, 0.7, 1.0};
+  const gdouble tol     = 1.0e-12;
+  guint n_vars;
+
+  for (n_vars = 1; n_vars <= TEST_MAX_N_VARS; n_vars++)
+  {
+    NcmSpectralTensor *st = _table_new (n_vars, e, n_e);
+    TestFunc f            = {5, 0};
+    const gdouble V       = fabs (_func_at (&f, n_vars, upper));
+    GError *error         = NULL;
+
+    ncm_spectral_tensor_builder_build (test->builder, &_func, st, NULL, NULL, tol, 0.0, &f, NULL, &error);
+    g_assert_no_error (error);
+    g_assert_cmpuint (ncm_spectral_tensor_get_n_panels (st), ==, 1);
+    g_assert_cmpfloat (_max_error (test, st, &f, TEST_N_POINTS), <=, tol * V);
+
+    _table_set (st, n_vars, e, n_e);
+    ncm_spectral_tensor_builder_build (test->builder, &_func, st, NULL, NULL, 0.0, tol, &f, NULL, &error);
+    g_assert_error (error, NCM_SPECTRAL_TENSOR_BUILDER_ERROR, NCM_SPECTRAL_TENSOR_BUILDER_ERROR_MAX_DEPTH);
+    g_assert_cmpuint (ncm_spectral_tensor_get_n_panels (st), ==, 0);
+    g_assert_cmpuint (ncm_spectral_tensor_get_n_empty (st), ==, 1);
+
+    g_clear_error (&error);
+    ncm_spectral_tensor_free (st);
   }
 }
 
