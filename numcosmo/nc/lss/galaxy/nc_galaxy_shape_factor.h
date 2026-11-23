@@ -134,8 +134,14 @@ struct _NcGalaxyShapeFactorClass
    * prefetches nothing. */
   void (*data_prefetch) (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const guint stage);
 
+  /* The values of eval_marginal (want_log FALSE) or eval_ln_marginal (want_log TRUE) of one
+   * galaxy at the n shears (g_1[j], g_2[j]), written to out[j]. The default calls them at
+   * each shear; a subclass overrides it to evaluate the shears together. Used by
+   * nc_galaxy_shape_factor_eval_at_nodes() and nc_galaxy_shape_factor_eval_ln_at_nodes(). */
+  void (*eval_nodes) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[11];
+  gpointer padding[10];
 };
 
 /*

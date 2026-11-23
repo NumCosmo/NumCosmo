@@ -886,7 +886,7 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
             "cluster-wl",
             experiment_file.as_posix(),
             "--shape-factor=spectral use_interp=true interp_g_max=0.2 interp_abstol=1e-4 "
-            "interp_min_radial_panels=4",
+            "interp_min_radial_panels=4 interp_trim_frac=1e-3",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -902,6 +902,7 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
     assert factor.props.interp_g_max == pytest.approx(0.2)
     assert factor.props.interp_abstol == pytest.approx(1e-4)
     assert factor.props.interp_min_radial_panels == 4
+    assert factor.props.interp_trim_frac == pytest.approx(1e-3)
 
 
 def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):
@@ -1788,6 +1789,7 @@ def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
     gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     gsfs.set_use_interp(True)
     gsfs.set_interp_abstol(2.0e-5)
+    gsfs.set_interp_trim_frac(0.0)
     source = Ncm.ObjDictStr.new()
     source.add("shape-factor", gsfs)
     source.add("shape-pop", pop)
@@ -1807,6 +1809,7 @@ def test_shape_interp_gens():
     assert shape_gen.use_interp
     assert shape_gen.ellip_conv.genum == Nc.GalaxyWLObsEllipConv.TRACE_DET
     assert shape_gen.interp_abstol == 2.0e-5
+    assert shape_gen.interp_trim_frac == 0.0
     assert isinstance(pop_gen, GalaxyPopGenBeta)
     assert (pop_gen.alpha, pop_gen.beta) == (1.6, 2.4)
 
