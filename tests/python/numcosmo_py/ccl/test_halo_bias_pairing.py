@@ -189,3 +189,21 @@ def test_pairs_cover_every_constructor() -> None:
     missing = sorted(module_constructors - called)
 
     assert not missing, f"CONSTRUCTOR_CALLS does not call: {', '.join(missing)}"
+
+
+def test_halo_bias_pair() -> None:
+    """Check HaloBiasPair's fields and that every constructor returns one.
+
+    compare_halo_bias and compare_halo_bias_sigma take the three fields positionally,
+    in the order of HaloBiasPair._fields.
+    """
+    ccl_bias, nc_mulf, nc_bias_new = hbp.sheth99_pair()
+    pair = hbp.HaloBiasPair(ccl_bias, nc_mulf, nc_bias_new)
+
+    assert hbp.HaloBiasPair._fields == ("ccl_bias", "nc_mulf", "nc_bias_new")
+    assert pair.ccl_bias is ccl_bias
+    assert pair.nc_mulf is nc_mulf
+    assert pair.nc_bias_new is nc_bias_new
+
+    for constructor, args in CONSTRUCTOR_CALLS:
+        assert isinstance(constructor(*args), hbp.HaloBiasPair)
