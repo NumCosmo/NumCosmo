@@ -290,6 +290,15 @@ _nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *
       out[j] = klass->eval_marginal (gsf, pop, data, g_1[j], g_2[j], epsilon_obs_1, epsilon_obs_2);
 }
 
+/* Default eval_line: no evaluation along the line */
+static gboolean
+_nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                   const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2,
+                                   const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out)
+{
+  return FALSE;
+}
+
 static gchar *
 _nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
 {
@@ -332,6 +341,7 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
   klass->eval_ln_marginal = &_nc_galaxy_shape_factor_eval_ln_marginal;
   klass->get_desc         = &_nc_galaxy_shape_factor_get_desc;
   klass->eval_nodes       = &_nc_galaxy_shape_factor_eval_nodes;
+  klass->eval_line        = &_nc_galaxy_shape_factor_eval_line;
 }
 
 static void
@@ -1666,10 +1676,12 @@ nc_galaxy_shape_factor_eval_ln_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset
 
 /*
  * The values of nc_galaxy_shape_factor_eval_at_nodes() (want_log FALSE) and
- * nc_galaxy_shape_factor_eval_ln_at_nodes() (want_log TRUE). The shears of the nodes behind
- * the lens, (1 + m) g_t (z_j) times the rotation plus the additive bias, go to eval_nodes in
- * chunks of NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK; every node at or in front of the lens has the
- * shear of the bias alone, whose value is computed once.
+ * nc_galaxy_shape_factor_eval_ln_at_nodes() (want_log TRUE). Every node at or in front of the
+ * lens has the shear of the additive bias b alone, whose value is computed once. The nodes
+ * behind the lens have the shears b + t_j u on one line, t_j = (1 + m) g_t (z_j) and u the
+ * rotation. When they are consecutive and out is contiguous, the t_j are written to out and
+ * eval_line is offered all of them at once; otherwise, or when it declines, their shears go to
+ * eval_nodes in chunks of NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK.
  */
 static void
 _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out,
@@ -1682,19 +1694,63 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
   const gdouble z_cl                      = nc_halo_position_get_redshift (self->halo_position);
   const gdouble et                        = data->epsilon_obs_1;
   const gdouble ex                        = data->epsilon_obs_2;
-  const complex double bias               = data->c1 + I * data->c2;
+  const gdouble b_1                       = data->c1;
+  const gdouble b_2                       = data->c2;
   const gdouble m                         = data->m;
   const guint n_nodes                     = ncm_vector_len (z_nodes);
   gboolean have_gt0_val                   = FALSE;
   gdouble gt0_val                         = 0.0;
+  guint n_behind                          = 0;
+  guint j_first                           = 0;
+  guint j_last                            = 0;
   gdouble g_1[NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK];
   gdouble g_2[NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK];
   gdouble vals[NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK];
   guint idx[NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK];
-  guint j = 0;
+  guint j;
 
   g_assert_nonnull (pop);
   g_assert_nonnull (cdata->crit_cache_arr);
+
+  for (j = 0; j < n_nodes; j++)
+  {
+    if (ncm_vector_get (z_nodes, j) > z_cl)
+    {
+      if (n_behind == 0)
+        j_first = j;
+
+      j_last = j;
+      n_behind++;
+    }
+    else
+    {
+      if (!have_gt0_val)
+      {
+        gt0_val = want_log ?
+                  klass->eval_ln_marginal (gsf, pop, data, b_1, b_2, et, ex) :
+                  klass->eval_marginal (gsf, pop, data, b_1, b_2, et, ex);
+        have_gt0_val = TRUE;
+      }
+
+      ncm_vector_set (out, j, gt0_val);
+    }
+  }
+
+  if (n_behind == 0)
+    return;
+
+  if ((j_last + 1 - j_first == n_behind) && (ncm_vector_stride (out) == 1))
+  {
+    gdouble *t = ncm_vector_data (out) + j_first;
+
+    for (j = 0; j < n_behind; j++)
+      t[j] = (1.0 + m) * nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j_first + j], &cdata->sigma_cache);
+
+    if (klass->eval_line (gsf, pop, data, n_behind, t, cdata->rot_re, cdata->rot_im, b_1, b_2, et, ex, want_log, t))
+      return;
+  }
+
+  j = 0;
 
   while (j < n_nodes)
   {
@@ -1703,29 +1759,14 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
 
     for ( ; (j < n_nodes) && (c < NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK); j++)
     {
-      const gdouble z_j = ncm_vector_get (z_nodes, j);
-
-      if (z_j > z_cl)
+      if (ncm_vector_get (z_nodes, j) > z_cl)
       {
-        const gdouble gt       = nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
-        const complex double g = (1.0 + m) * gt * (cdata->rot_re + I * cdata->rot_im) + bias;
+        const gdouble t_j = (1.0 + m) * nc_wl_surface_mass_density_reduced_shear_cache (&cdata->crit_cache_arr[j], &cdata->sigma_cache);
 
-        g_1[c] = creal (g);
-        g_2[c] = cimag (g);
+        g_1[c] = b_1 + t_j * cdata->rot_re;
+        g_2[c] = b_2 + t_j * cdata->rot_im;
         idx[c] = j;
         c++;
-      }
-      else
-      {
-        if (!have_gt0_val)
-        {
-          gt0_val = want_log ?
-                    klass->eval_ln_marginal (gsf, pop, data, creal (bias), cimag (bias), et, ex) :
-                    klass->eval_marginal (gsf, pop, data, creal (bias), cimag (bias), et, ex);
-          have_gt0_val = TRUE;
-        }
-
-        ncm_vector_set (out, j, gt0_val);
       }
     }
 
