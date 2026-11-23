@@ -55,6 +55,7 @@ void test_nc_halo_bias_free (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_set_get (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_integrand (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_tinker_mean_delta (TestNcHaloBias *test, gconstpointer pdata);
+void test_nc_halo_bias_st_spher_default_a (TestNcHaloBias *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -79,6 +80,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_bias/tinker/mean_delta", TestNcHaloBias, NULL,
               &test_nc_halo_bias_new,
               &test_nc_halo_bias_tinker_mean_delta,
+              &test_nc_halo_bias_free);
+  g_test_add ("/nc/halo_bias/st_spher/default_a", TestNcHaloBias, NULL,
+              &test_nc_halo_bias_new,
+              &test_nc_halo_bias_st_spher_default_a,
               &test_nc_halo_bias_free);
 
 
@@ -312,5 +317,12 @@ test_nc_halo_bias_tinker_mean_delta (TestNcHaloBias *test, gconstpointer pdata)
   nc_powspec_ml_free (ps_ml);
   nc_transfer_func_free (tf);
   nc_distance_free (dist);
+}
+
+void
+test_nc_halo_bias_st_spher_default_a (TestNcHaloBias *test, gconstpointer pdata)
+{
+  /* Sheth & Tormen (1999), below eq. (10). */
+  g_assert_cmpfloat (nc_halo_bias_st_spher_get_a (test->bsts), ==, 0.707);
 }
 
