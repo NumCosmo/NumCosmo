@@ -886,7 +886,7 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
             "cluster-wl",
             experiment_file.as_posix(),
             "--shape-factor=spectral use_interp=true interp_g_max=0.2 interp_abstol=1e-4 "
-            "interp_min_radial_panels=4 interp_trim_frac=1e-3",
+            "interp_min_radial_panels=4 interp_trim_frac=1e-3 line_abstol=1e-6",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -903,6 +903,7 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
     assert factor.props.interp_abstol == pytest.approx(1e-4)
     assert factor.props.interp_min_radial_panels == 4
     assert factor.props.interp_trim_frac == pytest.approx(1e-3)
+    assert factor.props.line_abstol == pytest.approx(1e-6)
 
 
 def test_cluster_wl_app_generate_redshift_dist_bogus_type(experiment_file):

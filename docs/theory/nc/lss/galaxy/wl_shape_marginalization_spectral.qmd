@@ -392,6 +392,30 @@ $10^3$ integrals, so the table reduces the cost when the parameters of the popul
 fixed, and increases it when they change at every step unless a galaxy is evaluated at
 more shears per step than the build computes.
 
+## Interpolation Along the Shears of a Galaxy
+
+The likelihood evaluates a galaxy at one shear per redshift node behind the lens, and these
+shears lie on one line in $g$:
+$$
+g_j = c + t_j u, \qquad t_j \equiv (1 + m) \, g_t (z_j),
+$$
+where $c$ and $m$ are the additive and multiplicative shear biases of the galaxy, $g_t (z_j)$
+is the reduced tangential shear of the halo at the projected position of the galaxy for a
+source at the node $z_j$, and $u \equiv e^{2 i \phi}$, with $\phi$ the position angle of the
+galaxy around the halo center, in the frame of the ellipticities of the galaxy. Without
+[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] and with a positive
+[[numcosmo|NcGalaxyShapeFactorSpectral:line-abstol]] (default 0), the class expands
+$\ln P$ at $c + t u$ in a Chebyshev series in $t$ on $[\min_j t_j, \max_j t_j]$, from
+integrals on nested Chebyshev--Lobatto grids of levels 1 up to the largest level whose grid
+has at most $n / 2$ points, $n$ being the number of nodes behind the lens, and at most 7. The
+series is accepted when its coefficients change by at most `line-abstol` in $\ell_1$ norm
+between two grids, and gives $\ln P$ at the $n$ shears. Each shear is integrated instead when
+the nodes behind the lens are not consecutive, when $n / 2$ points allow no grid above level
+1, when an end of the line has $|g| > 0.9$, or when the series is not accepted. The series is
+expanded again at every evaluation, so it follows the line when the halo center, the mass or
+the cosmology change; a build costs at most $n / 2$ integrals in place of $n$, and a series
+that is not accepted adds its integrals to the $n$.
+
 ## Measured Accuracy
 
 The reference is the Arb tool `tests/tools/nc_galaxy_shape_marginal_arb.c`, which
@@ -462,6 +486,14 @@ One integral takes 118 to 164 microseconds at the default `reltol`. With
 most 6%, and through `eval_nodes` from 9% faster (1) to 13% slower (4). With 1 the builds
 of the four rows at $10^{-5}$ compute 14% to 18% fewer integrals (median), and with 4, 5%
 to 21% more.
+
+The series along the shears of a galaxy was measured on the 10,706 galaxies of HWL16a-007
+(Beta population fitted to the catalog, fixed redshift nodes, halo center and
+$\log_{10} M_\Delta$ free), without `use-interp`, at the values of the experiment and at
+five random points of its prior box. With `line-abstol` $10^{-6}$ every series was accepted,
+with 46 nodes per galaxy on average; one evaluation of $-2 \ln L$ took 5.7 seconds against
+51.5 seconds with every shear integrated (four threads), and the two differ by at most
+$3.0 \times 10^{-9}$.
 
 ## Symbols and the Code
 
