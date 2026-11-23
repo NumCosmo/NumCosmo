@@ -974,7 +974,7 @@ class CBEPrecision(GObject.Object):
       tol-tau-eq -> gdouble: tol-tau-eq
         parameter controlling precision with which tau_eq (conformal time at radiation/matter equality) is found (units: Mpc)
       sBBN-file -> gchararray: sBBN-file
-        SBBN filename (unused: NumCosmo always supplies YHe)
+        SBBN filename, NULL for the one in the NumCosmo data directory (unused: NumCosmo always supplies YHe)
       recfast-z-initial -> gdouble: recfast-z-initial
         initial redshift in recfast
       recfast-Nz0 -> gint: recfast-Nz0
@@ -1030,11 +1030,11 @@ class CBEPrecision(GObject.Object):
       recfast-H-frac -> gdouble: recfast-H-frac
         governs time at which full equation of evolution for Tmat is used
       hyrec-Alpha-inf-file -> gchararray: hyrec-Alpha-inf-file
-        Hyrec Alpha inf file
+        Hyrec Alpha inf file, NULL for the one in the NumCosmo data directory
       hyrec-R-inf-file -> gchararray: hyrec-R-inf-file
-        Hyrec R inf file
+        Hyrec R inf file, NULL for the one in the NumCosmo data directory
       hyrec-two-photon-tables-file -> gchararray: hyrec-two-photon-tables-file
-        Hyrec two photon tables file
+        Hyrec two photon tables file, NULL for the one in the NumCosmo data directory
       reionization-z-start-max -> gdouble: reionization-z-start-max
         maximum redshift at which reionization should start. If not, return an error
       reionization-sampling -> gdouble: reionization-sampling
