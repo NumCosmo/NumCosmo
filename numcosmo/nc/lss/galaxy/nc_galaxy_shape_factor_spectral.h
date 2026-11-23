@@ -61,6 +61,8 @@ void nc_galaxy_shape_factor_spectral_set_interp_pop_level_min (NcGalaxyShapeFact
 guint nc_galaxy_shape_factor_spectral_get_interp_pop_level_min (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (NcGalaxyShapeFactorSpectral *gsfs, const guint level_cap);
 guint nc_galaxy_shape_factor_spectral_get_interp_pop_level_cap (NcGalaxyShapeFactorSpectral *gsfs);
+void nc_galaxy_shape_factor_spectral_set_interp_pop_one_integral (NcGalaxyShapeFactorSpectral *gsfs, const gboolean one_integral);
+gboolean nc_galaxy_shape_factor_spectral_get_interp_pop_one_integral (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_restrict_range (NcGalaxyShapeFactorSpectral *gsfs, const gboolean restrict_range);
 gboolean nc_galaxy_shape_factor_spectral_get_restrict_range (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_line_abstol (NcGalaxyShapeFactorSpectral *gsfs, const gdouble abstol);

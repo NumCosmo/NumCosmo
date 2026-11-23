@@ -85,7 +85,9 @@
  * the population is one more variable of the approximation, over the bounds of the
  * parameter (#NcGalaxyShapeFactorSpectral:interp-pop-level-min,
  * #NcGalaxyShapeFactorSpectral:interp-pop-level-cap): a change of a free parameter inside
- * its bounds uses the same approximation, and a value outside them aborts.
+ * its bounds uses the same approximation, and a value outside them aborts. With
+ * #NcGalaxyShapeFactorSpectral:interp-pop-one-integral the populations of a call of the
+ * builder share one integral per shear.
  *
  * The interpolants can be stored in the catalog: nc_galaxy_shape_factor_data_write_row()
  * writes them (#NcGalaxyWLObs:shape-interp) and
@@ -179,6 +181,7 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gdouble interp_trim_frac;
   guint interp_pop_level_min;
   guint interp_pop_level_cap;
+  gboolean interp_pop_one_integral;
 
   /*
    * restrict-range: the models of the bound of the shear a galaxy reaches over the box of the
@@ -213,6 +216,8 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
   GArray *upper;
   GArray *level_min; /* guint, the levels of its build, one value per variable */
   GArray *level_cap;
+  GArray *series;        /* NcmSpectralPolarRadialSeries, the radial series of a reference integral */
+  GArray *series_coeffs; /* and their coefficients */
 } NcGalaxyShapeFactorSpectralWork;
 
 /* The scratch space of one eval_line: the 1D expansion and its coefficients */
@@ -267,6 +272,7 @@ typedef struct _NcGalaxyShapeFactorSpectralData
   GArray *x;          /* gdouble, a point of st: rho, psi and the free parameters */
   guint pop_level_min;
   guint pop_level_cap;
+  gboolean pop_one_integral;
   gdouble g_max;
   gdouble abstol;
   gdouble reltol;
@@ -325,6 +331,7 @@ enum
   PROP_INTERP_TRIM_FRAC,
   PROP_INTERP_POP_LEVEL_MIN,
   PROP_INTERP_POP_LEVEL_CAP,
+  PROP_INTERP_POP_ONE_INTEGRAL,
   PROP_RESTRICT_RANGE,
   PROP_LINE_ABSTOL,
   PROP_LEN,
@@ -357,6 +364,7 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->interp_trim_frac         = 0.0;
   self->interp_pop_level_min     = 0;
   self->interp_pop_level_cap     = 0;
+  self->interp_pop_one_integral  = FALSE;
   self->restrict_range           = FALSE;
   self->cosmo                    = NULL;
   self->smd                      = NULL;
@@ -403,6 +411,9 @@ _nc_galaxy_shape_factor_spectral_set_property (GObject *object, guint prop_id, c
     case PROP_INTERP_POP_LEVEL_CAP:
       nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs, g_value_get_uint (value));
       break;
+    case PROP_INTERP_POP_ONE_INTEGRAL:
+      nc_galaxy_shape_factor_spectral_set_interp_pop_one_integral (gsfs, g_value_get_boolean (value));
+      break;
     case PROP_RESTRICT_RANGE:
       nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs, g_value_get_boolean (value));
       break;
@@ -445,6 +456,9 @@ _nc_galaxy_shape_factor_spectral_get_property (GObject *object, guint prop_id, G
       break;
     case PROP_INTERP_POP_LEVEL_CAP:
       g_value_set_uint (value, nc_galaxy_shape_factor_spectral_get_interp_pop_level_cap (gsfs));
+      break;
+    case PROP_INTERP_POP_ONE_INTEGRAL:
+      g_value_set_boolean (value, nc_galaxy_shape_factor_spectral_get_interp_pop_one_integral (gsfs));
       break;
     case PROP_RESTRICT_RANGE:
       g_value_set_boolean (value, nc_galaxy_shape_factor_spectral_get_restrict_range (gsfs));
@@ -668,6 +682,29 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
+   * NcGalaxyShapeFactorSpectral:interp-pop-one-integral:
+   *
+   * Whether the build of an interpolant with population variables computes, at each shear,
+   * one integral for all the populations of a call of its builder. The integral is the one
+   * of the population at the center of those populations, and the values of the others
+   * follow from the radial series of its accepted panels and the factors of each
+   * population, with no further value of the noise kernel. It applies to a population whose
+   * reduced density has the separated form of nc_galaxy_shape_pop_reduced_factor_params(),
+   * with each free parameter the parameter of one of the two factors. Otherwise, and when
+   * this is %FALSE, each population takes its own integral. The reference integral resolves
+   * the integrand of the population at the center, so the bounds of the free parameters
+   * should contain only populations whose densities do not differ by many orders of
+   * magnitude.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_INTERP_POP_ONE_INTEGRAL,
+                                   g_param_spec_boolean ("interp-pop-one-integral",
+                                                         NULL,
+                                                         "Whether the populations of a call share one integral per shear",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
    * NcGalaxyShapeFactorSpectral:restrict-range:
    *
    * Whether the interpolant of a galaxy covers only the shears it can reach over the box of
@@ -738,6 +775,9 @@ _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata)
   work->level_min   = g_array_new (FALSE, FALSE, sizeof (guint));
   work->level_cap   = g_array_new (FALSE, FALSE, sizeof (guint));
 
+  work->series        = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarRadialSeries));
+  work->series_coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
   return work;
 }
 
@@ -758,6 +798,8 @@ _nc_galaxy_shape_factor_spectral_work_free (gpointer p)
   g_array_unref (work->upper);
   g_array_unref (work->level_min);
   g_array_unref (work->level_cap);
+  g_array_unref (work->series);
+  g_array_unref (work->series_coeffs);
 
   g_free (work);
 }
@@ -1311,7 +1353,8 @@ _nc_galaxy_shape_factor_spectral_interp_valid (NcGalaxyShapeFactorSpectral *gsfs
         (ldata->g_max == _nc_galaxy_shape_factor_spectral_interp_range (self, ldata)) && (ldata->abstol == self->interp_abstol) &&
         (ldata->reltol == self->reltol) &&
         (ldata->min_radial_panels == self->interp_min_radial_panels) && (ldata->trim_frac == self->interp_trim_frac) &&
-        ((n_pop == 0) || ((ldata->pop_level_min == self->interp_pop_level_min) && (ldata->pop_level_cap == self->interp_pop_level_cap)))))
+        ((n_pop == 0) || ((ldata->pop_level_min == self->interp_pop_level_min) && (ldata->pop_level_cap == self->interp_pop_level_cap) &&
+                          (ldata->pop_one_integral == self->interp_pop_one_integral)))))
     return FALSE;
 
   if (ldata->pop_pkey == ncm_model_state_get_pkey (NCM_MODEL (pop)))
@@ -1447,6 +1490,24 @@ typedef struct _NcGalaxyShapeFactorSpectralInterp
   gdouble e;             /* |eps_obs| */
   gdouble g_c;           /* center of the coordinates */
   const GArray *pop_idx; /* guint, the parameters of pop that are variables 2, 3, ... */
+
+  /*
+   * interp-pop-one-integral, for the populations of one call of the kernel: the Ka values of
+   * the parameter of the factor at the origin times the Kb values of the one at 1. side_pops
+   * holds one copy of pop per value, the Ka of the origin first, with side_datas their data.
+   */
+  GPtrArray *side_pops;
+  GPtrArray *side_datas;
+  GArray *grid_a;    /* gdouble, the exponent at the origin of each of the Ka */
+  GArray *grid_bpop; /* gdouble, the exponent at 1 of the population of each of the Kb */
+  GArray *grid_b;    /* gdouble, the exponent at 1 of the variable of integration of each of the Kb */
+  GArray *grid_ln_N; /* gdouble, ln of the constant of each pair, Ka x Kb */
+  GArray *grid_res;  /* gdouble, the integrals of a shear, Ka x Kb */
+  NcmSpectralPolarWeightGrid *wg;
+  guint Ka;
+  guint Kb;
+  gint var_o; /* the population variable that is the parameter of the origin, or -1 */
+  gint var_1; /* the one of the parameter at 1, or -1 */
 } NcGalaxyShapeFactorSpectralInterp;
 
 /*
@@ -1463,7 +1524,7 @@ typedef struct _NcGalaxyShapeFactorSpectralInterp
  * reflection. The radial edges are those of _nc_galaxy_shape_factor_spectral_interp_r_edges()
  * for that width that are inside the region, and the angular panels span pi / 2 at most. Each
  * free parameter of pop is one more variable, over its bounds, with the levels
- * interp-pop-level-min and interp-pop-level-cap; its values are computed on a copy of pop, so
+ * interp-pop-level-min and interp-pop-level-cap; its values are computed on copies of pop, so
  * that the builds of several galaxies may run in parallel. ncm_spectral_tensor_builder_build()
  * makes a node a panel node when the change of ln P between its two grids is at most
  * NcGalaxyShapeFactorSpectral:interp-abstol. A build that reaches the maximum depth aborts
@@ -1485,8 +1546,11 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
   const gdouble rho_max                           = g_c + g_max;
   const gdouble psi_min                           = (g_c < g_max) ? 0.0 : M_PI - asin (g_max / g_c);
   const gdouble psi_max                           = M_PI;
-  NcGalaxyShapeFactorSpectralInterp interp        = {gsfs, pop, data->pop_data, data->std_noise, e, g_c, ldata->pop_idx};
-  GError *error                                   = NULL;
+  NcGalaxyShapeFactorSpectralInterp interp        = {
+    gsfs, pop, data->pop_data, data->std_noise, e, g_c, ldata->pop_idx,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, -1, -1
+  };
+  GError *error = NULL;
   guint i, n_pop, n_vars;
 
   _nc_galaxy_shape_factor_spectral_interp_r_edges (rho_max, L, self->interp_min_radial_panels, work->r_edges_all);
@@ -1570,14 +1634,29 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
-    interp.pop      = NC_GALAXY_SHAPE_POP (ncm_model_dup (NCM_MODEL (pop), ser));
-    interp.pop_data = nc_galaxy_shape_pop_data_new (interp.pop);
+    interp.pop        = NC_GALAXY_SHAPE_POP (ncm_model_dup (NCM_MODEL (pop), ser));
+    interp.pop_data   = nc_galaxy_shape_pop_data_new (interp.pop);
+    interp.side_pops  = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_shape_pop_free);
+    interp.side_datas = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_shape_pop_data_unref);
+    interp.grid_a     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    interp.grid_bpop  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    interp.grid_b     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    interp.grid_ln_N  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    interp.grid_res   = g_array_new (FALSE, FALSE, sizeof (gdouble));
     ncm_serialize_free (ser);
 
     ncm_spectral_tensor_builder_build (self->builder_interp, &_nc_galaxy_shape_factor_spectral_interp_pop_kernel, ldata->st,
                                        &g_array_index (work->level_min, guint, 0), &g_array_index (work->level_cap, guint, 0),
                                        0.0, self->interp_abstol, &interp, NULL, &error);
 
+    g_clear_pointer (&interp.wg, _ncm_spectral_polar_weight_grid_free);
+    g_ptr_array_unref (interp.side_pops);
+    g_ptr_array_unref (interp.side_datas);
+    g_array_unref (interp.grid_a);
+    g_array_unref (interp.grid_bpop);
+    g_array_unref (interp.grid_b);
+    g_array_unref (interp.grid_ln_N);
+    g_array_unref (interp.grid_res);
     nc_galaxy_shape_pop_data_unref (interp.pop_data);
     nc_galaxy_shape_pop_free (interp.pop);
   }
@@ -1666,6 +1745,7 @@ _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsf
   ldata->std_noise         = data->std_noise;
   ldata->pop_level_min     = self->interp_pop_level_min;
   ldata->pop_level_cap     = self->interp_pop_level_cap;
+  ldata->pop_one_integral  = self->interp_pop_one_integral;
   ldata->g_max             = _nc_galaxy_shape_factor_spectral_interp_range (self, ldata);
   ldata->abstol            = self->interp_abstol;
   ldata->reltol            = self->reltol;
@@ -1763,6 +1843,9 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
 
       if (self->interp_pop_level_cap != src->interp_pop_level_cap)
         g_string_append_printf (diff, " interp-pop-level-cap (%u, built with %u);", self->interp_pop_level_cap, src->interp_pop_level_cap);
+
+      if (self->interp_pop_one_integral != src->interp_pop_one_integral)
+        g_string_append_printf (diff, " interp-pop-one-integral (%d, built with %d);", self->interp_pop_one_integral, src->interp_pop_one_integral);
     }
   }
 
@@ -1812,23 +1895,59 @@ _nc_galaxy_shape_factor_spectral_interp_kernel (guint n_vars, const guint *n, co
   }
 }
 
+static gboolean _nc_galaxy_shape_factor_spectral_interp_pop_grid_setup (NcGalaxyShapeFactorSpectralInterp *interp, guint n_vars, const guint *n, const gdouble * const *x);
+static void _nc_galaxy_shape_factor_spectral_interp_pop_grid_shear (NcGalaxyShapeFactorSpectralInterp *interp, const gdouble g_1, const gdouble g_2);
+
 /*
  * The function approximated with population variables: ln P at the shear
  * g_c + rho exp (i psi) for the observed ellipticity (e, 0) and the population whose free
- * parameters are the values of the variables 2, 3, ..., by the integral, on the tensor
- * product of the points of every variable, the last running fastest. The parameters are set
- * on the copy interp->pop once per population point.
+ * parameters are the values of the variables 2, 3, ..., on the tensor product of the points
+ * of every variable, the last running fastest. With interp-pop-one-integral, for a
+ * population with the separated form whose free parameters are those of its two factors
+ * (_nc_galaxy_shape_factor_spectral_interp_pop_grid_setup()), each shear takes one integral
+ * for all the populations of the call (_nc_galaxy_shape_factor_spectral_interp_pop_grid_shear()).
+ * Otherwise each population takes its own integral, its parameters set on the copy
+ * interp->pop once per population point.
  */
 static void
 _nc_galaxy_shape_factor_spectral_interp_pop_kernel (guint n_vars, const guint *n, const gdouble * const *x, gdouble *fval, gpointer user_data)
 {
-  const NcGalaxyShapeFactorSpectralInterp *interp = user_data;
-  const guint n_pop                               = n_vars - 2;
-  guint n_p                                       = 1;
+  NcGalaxyShapeFactorSpectralInterp *interp = user_data;
+  const guint n_pop                         = n_vars - 2;
+  guint n_p                                 = 1;
   guint i, j, p, v;
 
   for (v = 0; v < n_pop; v++)
     n_p *= n[2 + v];
+
+  if (_nc_galaxy_shape_factor_spectral_interp_pop_grid_setup (interp, n_vars, n, x))
+  {
+    const gdouble *res   = &g_array_index (interp->grid_res, gdouble, 0);
+    const guint Ka       = interp->Ka;
+    const guint Kb       = interp->Kb;
+    const gboolean o_1st = (interp->var_o < interp->var_1) || (interp->var_1 < 0);
+
+    for (j = 0; j < n[1]; j++)
+    {
+      const gdouble cos_psi = cos (x[1][j]);
+      const gdouble sin_psi = sin (x[1][j]);
+
+      for (i = 0; i < n[0]; i++)
+      {
+        gdouble *out = &fval[(gsize) (i * n[1] + j) * n_p];
+        guint ja, kb;
+
+        _nc_galaxy_shape_factor_spectral_interp_pop_grid_shear (interp, interp->g_c + x[0][i] * cos_psi, x[0][i] * sin_psi);
+
+        /* The variable of lower index runs slowest in fval */
+        for (ja = 0; ja < Ka; ja++)
+          for (kb = 0; kb < Kb; kb++)
+            out[o_1st ? ja * Kb + kb : kb * Ka + ja] = res[ja * Kb + kb];
+      }
+    }
+
+    return;
+  }
 
   for (p = 0; p < n_p; p++)
   {
@@ -1852,6 +1971,294 @@ _nc_galaxy_shape_factor_spectral_interp_pop_kernel (guint n_vars, const guint *n
                                                                                    interp->g_c + x[0][i] * cos_psi, x[0][i] * sin_psi,
                                                                                    interp->e, 0.0, NULL);
     }
+  }
+}
+
+/*
+ * Prepares interp for the populations of one call of the kernel, for
+ * interp-pop-one-integral. FALSE, with nothing prepared, when the property is off, when the
+ * population has no separated form, or when a population variable is not the parameter of
+ * one of its two factors. Otherwise: one copy of the population per value of each of the
+ * two parameters, with its exponent; the constant of each pair; the reference population,
+ * at the center of the values of each parameter, in interp->pop; and the weight grid of the
+ * exponents. A parameter that is not a variable keeps the value of the fit.
+ */
+static gboolean
+_nc_galaxy_shape_factor_spectral_interp_pop_grid_setup (NcGalaxyShapeFactorSpectralInterp *interp, guint n_vars, const guint *n, const gdouble * const *x)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (interp->gsfs);
+  const guint n_pop                               = n_vars - 2;
+  gint param_o                                    = -1;
+  gint param_1                                    = -1;
+  gint var_o                                      = -1;
+  gint var_1                                      = -1;
+  guint Ka, Kb, k, l, v;
+
+  if (!self->interp_pop_one_integral || !nc_galaxy_shape_pop_reduced_factor_params (interp->pop, &param_o, &param_1))
+    return FALSE;
+
+  for (v = 0; v < n_pop; v++)
+  {
+    const gint idx = g_array_index (interp->pop_idx, guint, v);
+
+    if (idx == param_o)
+      var_o = v;
+    else if (idx == param_1)
+      var_1 = v;
+    else
+      return FALSE;
+  }
+
+  Ka = (var_o >= 0) ? n[2 + var_o] : 1;
+  Kb = (var_1 >= 0) ? n[2 + var_1] : 1;
+
+  interp->Ka    = Ka;
+  interp->Kb    = Kb;
+  interp->var_o = var_o;
+  interp->var_1 = var_1;
+
+  while (interp->side_pops->len < Ka + Kb)
+  {
+    NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    NcGalaxyShapePop *pop = NC_GALAXY_SHAPE_POP (ncm_model_dup (NCM_MODEL (interp->pop), ser));
+
+    g_ptr_array_add (interp->side_pops, pop);
+    g_ptr_array_add (interp->side_datas, nc_galaxy_shape_pop_data_new (pop));
+    ncm_serialize_free (ser);
+  }
+
+  g_array_set_size (interp->grid_a, Ka);
+  g_array_set_size (interp->grid_bpop, Kb);
+  g_array_set_size (interp->grid_b, Kb);
+  g_array_set_size (interp->grid_ln_N, Ka * Kb);
+  g_array_set_size (interp->grid_res, Ka * Kb);
+
+  for (k = 0; k < Ka; k++)
+  {
+    NcGalaxyShapePop *pop = g_ptr_array_index (interp->side_pops, k);
+
+    if (var_o >= 0)
+      ncm_model_param_set (NCM_MODEL (pop), param_o, x[2 + var_o][k]);
+
+    nc_galaxy_shape_pop_prepare (pop, g_ptr_array_index (interp->side_datas, k));
+    g_array_index (interp->grid_a, gdouble, k) = nc_galaxy_shape_pop_exponent_at_origin (pop);
+  }
+
+  for (l = 0; l < Kb; l++)
+  {
+    NcGalaxyShapePop *pop = g_ptr_array_index (interp->side_pops, Ka + l);
+    gdouble b_pop;
+
+    if (var_1 >= 0)
+      ncm_model_param_set (NCM_MODEL (pop), param_1, x[2 + var_1][l]);
+
+    nc_galaxy_shape_pop_prepare (pop, g_ptr_array_index (interp->side_datas, Ka + l));
+    b_pop = nc_galaxy_shape_pop_exponent_at_one (pop);
+
+    g_array_index (interp->grid_bpop, gdouble, l) = b_pop;
+    g_array_index (interp->grid_b, gdouble, l)    = self->axis_ratio_var ? 2.0 * b_pop + 1.0 : b_pop;
+  }
+
+  /* The constant of each pair, then the reference at the center of the values */
+  {
+    gdouble lo_o = 0.0, hi_o = 0.0, lo_1 = 0.0, hi_1 = 0.0;
+
+    for (k = 0; k < Ka; k++)
+    {
+      if (var_o >= 0)
+      {
+        const gdouble val = x[2 + var_o][k];
+
+        ncm_model_param_set (NCM_MODEL (interp->pop), param_o, val);
+        lo_o = (k == 0) ? val : MIN (lo_o, val);
+        hi_o = (k == 0) ? val : MAX (hi_o, val);
+      }
+
+      for (l = 0; l < Kb; l++)
+      {
+        gdouble f_o, f_1;
+
+        if (var_1 >= 0)
+        {
+          const gdouble val = x[2 + var_1][l];
+
+          ncm_model_param_set (NCM_MODEL (interp->pop), param_1, val);
+          lo_1 = (l == 0) ? val : MIN (lo_1, val);
+          hi_1 = (l == 0) ? val : MAX (hi_1, val);
+        }
+
+        nc_galaxy_shape_pop_prepare (interp->pop, interp->pop_data);
+        g_array_index (interp->grid_ln_N, gdouble, k * Kb + l) =
+          log (nc_galaxy_shape_pop_eval_p_reduced_factors (interp->pop, interp->pop_data, 0.0, &f_o, &f_1));
+      }
+    }
+
+    if (var_o >= 0)
+      ncm_model_param_set (NCM_MODEL (interp->pop), param_o, 0.5 * (lo_o + hi_o));
+
+    if (var_1 >= 0)
+      ncm_model_param_set (NCM_MODEL (interp->pop), param_1, 0.5 * (lo_1 + hi_1));
+
+    nc_galaxy_shape_pop_prepare (interp->pop, interp->pop_data);
+  }
+
+  g_clear_pointer (&interp->wg, _ncm_spectral_polar_weight_grid_free);
+  interp->wg = _ncm_spectral_polar_weight_grid_new (self->polar, 1.0, Ka, &g_array_index (interp->grid_a, gdouble, 0),
+                                                    Kb, &g_array_index (interp->grid_b, gdouble, 0));
+
+  return TRUE;
+}
+
+/*
+ * The factor of the population of index k among the Ka of the origin, at the radii of the
+ * variable of integration: f_o at chi (r), and for TRACE, chi = 2 r / (1 + r^2), times the
+ * factor of the convention of the exponent a at the origin, 2^(a + 1) (1 + r^2)^-a.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_interp_pop_fa (guint k, guint n, const gdouble *r, gdouble *f, gpointer user_data)
+{
+  NcGalaxyShapeFactorSpectralInterp *interp       = user_data;
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (interp->gsfs);
+  NcGalaxyShapePop *pop                           = g_ptr_array_index (interp->side_pops, k);
+  NcGalaxyShapePopData *pop_data                  = g_ptr_array_index (interp->side_datas, k);
+  const gdouble a                                 = g_array_index (interp->grid_a, gdouble, k);
+  const gdouble c                                 = exp2 (a + 1.0);
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    gdouble f_1;
+
+    nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, self->axis_ratio_var ? 2.0 * r[i] / (1.0 + r[i] * r[i]) : r[i], &f[i], &f_1);
+  }
+
+  if (self->axis_ratio_var)
+  {
+    #pragma omp simd
+
+    for (i = 0; i < n; i++)
+      f[i] *= c * exp (-a * log (1.0 + r[i] * r[i]));
+  }
+}
+
+/*
+ * The factor of the population of index l among the Kb of the end at 1: f_1 at chi (r), and
+ * for TRACE times the factor of the convention of the exponent b of the population at 1 and
+ * of the change of variable, (1 + r) (1 + r^2)^-(b + 2).
+ */
+static void
+_nc_galaxy_shape_factor_spectral_interp_pop_fb (guint l, guint n, const gdouble *r, gdouble *f, gpointer user_data)
+{
+  NcGalaxyShapeFactorSpectralInterp *interp       = user_data;
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (interp->gsfs);
+  NcGalaxyShapePop *pop                           = g_ptr_array_index (interp->side_pops, interp->Ka + l);
+  NcGalaxyShapePopData *pop_data                  = g_ptr_array_index (interp->side_datas, interp->Ka + l);
+  const gdouble b_pop                             = g_array_index (interp->grid_bpop, gdouble, l);
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    gdouble f_o;
+
+    nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, self->axis_ratio_var ? 2.0 * r[i] / (1.0 + r[i] * r[i]) : r[i], &f_o, &f[i]);
+  }
+
+  if (self->axis_ratio_var)
+  {
+    #pragma omp simd
+
+    for (i = 0; i < n; i++)
+      f[i] *= (1.0 + r[i]) * exp (-(b_pop + 2.0) * log (1.0 + r[i] * r[i]));
+  }
+}
+
+static gdouble _nc_galaxy_shape_factor_spectral_one_minus_abs2 (const gdouble g_1, const gdouble g_2);
+static void _nc_galaxy_shape_factor_spectral_seed (NcGalaxyShapeFactorSpectralPrivate * const self, const NcGalaxyShapeFactorSpectralKernel *k, const gdouble std_noise, const gdouble a, const gdouble b, NcGalaxyShapeFactorSpectralSeed *seed);
+
+/*
+ * ln P at the shear g, |g| < 1, for the populations that
+ * _nc_galaxy_shape_factor_spectral_interp_pop_grid_setup() prepared, in interp->grid_res,
+ * the value of the pair (k, l) at k Kb + l: the integral of the reference population, in
+ * interp->pop, as _nc_galaxy_shape_factor_spectral_eval_ln() computes it, with the radial
+ * series of its accepted panels; then the integrals of the weights of the populations
+ * against those series, by the weight grid. The seed, the edges and the offset are those of
+ * the reference. A shear within NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA of |g| = 1,
+ * which the region of an interpolant does not reach, a failed integral and a non-finite
+ * ln P abort with the point in the message.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_interp_pop_grid_shear (NcGalaxyShapeFactorSpectralInterp *interp, const gdouble g_1, const gdouble g_2)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (interp->gsfs);
+  const gdouble noise_var                         = gsl_pow_2 (interp->std_noise);
+  const gdouble abs_g2                            = g_1 * g_1 + g_2 * g_2;
+  const gdouble abs_g                             = sqrt (abs_g2);
+  const gdouble u                                 = fabs (_nc_galaxy_shape_factor_spectral_one_minus_abs2 (g_1, g_2));
+  const gdouble delta                             = u / (1.0 + abs_g);
+  const gdouble phase                             = (abs_g2 > 0.0) ? atan2 (g_2, g_1) : 0.0;
+  const gdouble a_ref                             = nc_galaxy_shape_pop_exponent_at_origin (interp->pop);
+  const gdouble b_pop                             = nc_galaxy_shape_pop_exponent_at_one (interp->pop);
+  const gdouble b_ref                             = self->axis_ratio_var ? 2.0 * b_pop + 1.0 : b_pop;
+  NcGalaxyShapeFactorSpectralWork **ptr           = ncm_memory_pool_get (self->work_pool);
+  NcGalaxyShapeFactorSpectralWork *work           = *ptr;
+  NcGalaxyShapeFactorSpectralKernel k             = {
+    .pop       = interp->pop,
+    .pop_data  = interp->pop_data,
+    .t         = abs_g,
+    .e_1       = interp->e * cos (phase),
+    .e_2       = -interp->e * sin (phase),
+    .c2        = 0.5 / noise_var,
+    .norm      = 1.0 / (2.0 * M_PI * noise_var) / (2.0 * M_PI),
+    .shift_c2  = 0.0,
+    .dens_norm = exp2 (a_ref + 1.0),
+    .dens_pow  = a_ref + b_pop + 2.0,
+    .trace     = self->axis_ratio_var
+  };
+  const guint Ka      = interp->Ka;
+  const guint Kb      = interp->Kb;
+  gdouble *res        = &g_array_index (interp->grid_res, gdouble, 0);
+  const gdouble *ln_N = &g_array_index (interp->grid_ln_N, gdouble, 0);
+  NcGalaxyShapeFactorSpectralSeed seed;
+  GError *error = NULL;
+  gdouble L, ln_norm;
+  guint q;
+
+  if (!(abs_g2 < 1.0) || (delta < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA))
+    g_error ("nc_galaxy_shape_factor_spectral: the interpolant asks for the shear g = (% 22.15g, % 22.15g), "
+             "which is not inside |g| < 1 by at least %g.", g_1, g_2, NC_GALAXY_SHAPE_FACTOR_SPECTRAL_NEAR_UNIT_DELTA);
+
+  _nc_galaxy_shape_factor_spectral_seed (self, &k, interp->std_noise, a_ref, b_ref, &seed);
+  k.shift_c2 = seed.shift * k.c2;
+
+  L = interp->std_noise * GSL_MIN (seed.J_1, seed.J_2);
+  ncm_spectral_polar_peak_edges (self->polar, 1.0, seed.r_star, seed.theta_0, L, L / GSL_MAX (seed.r_star, GSL_DBL_MIN),
+                                 work->r_edges, work->theta_edges);
+
+  _ncm_spectral_polar_integrate_radial_series (self->polar, &_nc_galaxy_shape_factor_spectral_kernel, &_nc_galaxy_shape_factor_spectral_radial,
+                                               &k, 1.0, a_ref, b_ref, work->r_edges, work->theta_edges, self->reltol, 0.0, NULL,
+                                               work->series, work->series_coeffs, &error);
+
+  if (error != NULL)
+    g_error ("nc_galaxy_shape_factor_spectral: %s for the population %s, std_noise = % 22.15g, "
+             "g = (% 22.15g, % 22.15g), eps_obs = (% 22.15g, % 22.15g).",
+             error->message, G_OBJECT_TYPE_NAME (interp->pop), interp->std_noise, g_1, g_2, interp->e, 0.0);
+
+  _ncm_spectral_polar_weight_grid_integrate (interp->wg, work->series, work->series_coeffs,
+                                             &_nc_galaxy_shape_factor_spectral_interp_pop_fa, &_nc_galaxy_shape_factor_spectral_interp_pop_fb,
+                                             interp, res);
+
+  ncm_memory_pool_return (ptr);
+
+  ln_norm = log (k.norm) - k.shift_c2;
+
+  for (q = 0; q < Ka * Kb; q++)
+  {
+    res[q] = log (res[q]) + ln_N[q] + ln_norm;
+
+    if (!gsl_finite (res[q]))
+      g_error ("nc_galaxy_shape_factor_spectral: non-finite ln P for the population %s of index %u of a call of the interpolant, "
+               "std_noise = % 22.15g, g = (% 22.15g, % 22.15g), eps_obs = (% 22.15g, % 22.15g).",
+               G_OBJECT_TYPE_NAME (interp->pop), q, interp->std_noise, g_1, g_2, interp->e, 0.0);
   }
 }
 
@@ -2885,6 +3292,35 @@ nc_galaxy_shape_factor_spectral_get_interp_pop_level_cap (NcGalaxyShapeFactorSpe
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   return self->interp_pop_level_cap;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_set_interp_pop_one_integral:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ * @one_integral: whether the populations of a call share one integral per shear
+ *
+ * Sets #NcGalaxyShapeFactorSpectral:interp-pop-one-integral.
+ */
+void
+nc_galaxy_shape_factor_spectral_set_interp_pop_one_integral (NcGalaxyShapeFactorSpectral *gsfs, const gboolean one_integral)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  self->interp_pop_one_integral = one_integral;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_get_interp_pop_one_integral:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ *
+ * Returns: #NcGalaxyShapeFactorSpectral:interp-pop-one-integral.
+ */
+gboolean
+nc_galaxy_shape_factor_spectral_get_interp_pop_one_integral (NcGalaxyShapeFactorSpectral *gsfs)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  return self->interp_pop_one_integral;
 }
 
 /**

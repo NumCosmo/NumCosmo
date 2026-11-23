@@ -73,6 +73,7 @@ void test_nc_galaxy_shape_pop_exponent_at_one (TestNcGalaxyShapePop *test, gcons
 void test_nc_galaxy_shape_pop_reduced_interior (TestNcGalaxyShapePop *test, gconstpointer pdata);
 void test_nc_galaxy_shape_pop_reduced_ends (TestNcGalaxyShapePop *test, gconstpointer pdata);
 void test_nc_galaxy_shape_pop_reduced_norm (TestNcGalaxyShapePop *test, gconstpointer pdata);
+void test_nc_galaxy_shape_pop_reduced_factors (TestNcGalaxyShapePop *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -102,6 +103,10 @@ main (gint argc, gchar *argv[])
 
     path = g_strdup_printf ("/nc/galaxy_shape_pop/%s/reduced/norm", tc->name);
     g_test_add (path, TestNcGalaxyShapePop, tc, &test_nc_galaxy_shape_pop_new, &test_nc_galaxy_shape_pop_reduced_norm, &test_nc_galaxy_shape_pop_free);
+    g_free (path);
+
+    path = g_strdup_printf ("/nc/galaxy_shape_pop/%s/reduced/factors", tc->name);
+    g_test_add (path, TestNcGalaxyShapePop, tc, &test_nc_galaxy_shape_pop_new, &test_nc_galaxy_shape_pop_reduced_factors, &test_nc_galaxy_shape_pop_free);
     g_free (path);
   }
 
@@ -222,5 +227,85 @@ test_nc_galaxy_shape_pop_reduced_norm (TestNcGalaxyShapePop *test, gconstpointer
 
   gsl_integration_qaws_table_free (tab);
   gsl_integration_workspace_free (ws);
+}
+
+/*
+ * The separated form of the reduced density. GaussLocal has none. For Gauss and Beta the
+ * constant times the two factors is the reduced density; a change of the parameter of one
+ * factor changes neither the other factor nor the exponent of the other end; and a factor
+ * without a parameter (-1) is the same for every value of the parameters.
+ */
+void
+test_nc_galaxy_shape_pop_reduced_factors (TestNcGalaxyShapePop *test, gconstpointer pdata)
+{
+  const TestPopCase *tc = pdata;
+  const gdouble radii[] = {0.0, 0.01, 0.3, 0.5, 0.77, 0.999, 1.0};
+  gint param_o          = -7;
+  gint param_1          = -7;
+  gdouble f_o[G_N_ELEMENTS (radii)], f_1[G_N_ELEMENTS (radii)];
+  guint i, side;
+
+  if (tc->kind == TEST_POP_GAUSS_LOCAL)
+  {
+    g_assert_false (nc_galaxy_shape_pop_reduced_factor_params (test->pop, &param_o, &param_1));
+    g_assert_cmpint (param_o, ==, -7);
+    g_assert_cmpint (param_1, ==, -7);
+
+    return;
+  }
+
+  g_assert_true (nc_galaxy_shape_pop_reduced_factor_params (test->pop, &param_o, &param_1));
+
+  if (tc->kind == TEST_POP_GAUSS)
+  {
+    g_assert_cmpint (param_o, ==, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA);
+    g_assert_cmpint (param_1, ==, -1);
+  }
+  else
+  {
+    g_assert_cmpint (param_o, ==, NC_GALAXY_SHAPE_POP_BETA_ALPHA);
+    g_assert_cmpint (param_1, ==, NC_GALAXY_SHAPE_POP_BETA_BETA);
+  }
+
+  for (i = 0; i < G_N_ELEMENTS (radii); i++)
+  {
+    const gdouble N = nc_galaxy_shape_pop_eval_p_reduced_factors (test->pop, test->data, radii[i], &f_o[i], &f_1[i]);
+
+    ncm_assert_cmpdouble_e (N * f_o[i] * f_1[i], ==, nc_galaxy_shape_pop_eval_p_reduced (test->pop, test->data, radii[i]), 1.0e-15, 0.0);
+  }
+
+  /* The parameter of each side changed: the factor and the exponent of the other side stay */
+  for (side = 0; side < 2; side++)
+  {
+    const gint param       = (side == 0) ? param_o : param_1;
+    const gdouble alpha_o  = nc_galaxy_shape_pop_exponent_at_origin (test->pop);
+    const gdouble alpha_1  = nc_galaxy_shape_pop_exponent_at_one (test->pop);
+    const gdouble *f_other = (side == 0) ? f_1 : f_o;
+    gdouble value;
+
+    if (param < 0)
+      continue;
+
+    value = ncm_model_param_get (NCM_MODEL (test->pop), param);
+    ncm_model_param_set (NCM_MODEL (test->pop), param, 1.3 * value);
+    nc_galaxy_shape_pop_prepare (test->pop, test->data);
+
+    if (side == 0)
+      g_assert_cmpfloat (nc_galaxy_shape_pop_exponent_at_one (test->pop), ==, alpha_1);
+    else
+      g_assert_cmpfloat (nc_galaxy_shape_pop_exponent_at_origin (test->pop), ==, alpha_o);
+
+    for (i = 0; i < G_N_ELEMENTS (radii); i++)
+    {
+      gdouble g_o, g_1;
+      const gdouble N = nc_galaxy_shape_pop_eval_p_reduced_factors (test->pop, test->data, radii[i], &g_o, &g_1);
+
+      g_assert_cmpfloat ((side == 0) ? g_1 : g_o, ==, f_other[i]);
+      ncm_assert_cmpdouble_e (N * g_o * g_1, ==, nc_galaxy_shape_pop_eval_p_reduced (test->pop, test->data, radii[i]), 1.0e-15, 0.0);
+    }
+
+    ncm_model_param_set (NCM_MODEL (test->pop), param, value);
+    nc_galaxy_shape_pop_prepare (test->pop, test->data);
+  }
 }
 

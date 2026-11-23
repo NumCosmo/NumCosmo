@@ -99,8 +99,25 @@ struct _NcGalaxyShapePopClass
    */
   gdouble (*eval_p_reduced) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
 
-  /* Padding to allow adding up to 8 more virtual functions without breaking ABI. */
-  gpointer padding[8];
+  /*
+   * The parameters of the separated form of the reduced density,
+   * P_pop (r) / (r^alpha_o (1 - r)^alpha_1) = N f_o (r) f_1 (r): @param_o is the index of the
+   * parameter that f_o and alpha_o depend on, @param_1 the index of the one that f_1 and
+   * alpha_1 depend on, and -1 stands for a factor and an exponent that depend on no
+   * parameter. N may depend on both. Returns FALSE, the base class default, for a
+   * population without that form.
+   */
+  gboolean (*reduced_factor_params) (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1);
+
+  /*
+   * The separated form of the reduced density at r: returns N and sets @f_o and @f_1.
+   * Reads the resolved parameters from @data as eval_p() does. The base class default is an
+   * error.
+   */
+  gdouble (*eval_p_reduced_factors) (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1);
+
+  /* Padding to allow adding up to 6 more virtual functions without breaking ABI. */
+  gpointer padding[6];
 };
 
 /**
@@ -165,6 +182,8 @@ void nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopDa
 gdouble nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 gdouble nc_galaxy_shape_pop_exponent_at_one (NcGalaxyShapePop *gsp);
 gdouble nc_galaxy_shape_pop_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
+gboolean nc_galaxy_shape_pop_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1);
+gdouble nc_galaxy_shape_pop_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1);
 
 G_END_DECLS
 
