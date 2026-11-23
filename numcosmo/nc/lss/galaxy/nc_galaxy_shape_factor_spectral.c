@@ -778,6 +778,9 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
   NcGalaxyShapeFactorSpectralWork **ptr;
   NcGalaxyShapeFactorSpectralWork *work;
   gboolean checked = FALSE;
+  guint m_in       = 0;
+  gdouble *g_buf;
+  guint *j_buf;
   guint j, q;
 
   if (!self->use_interp)
@@ -795,8 +798,10 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
 
   ptr  = ncm_memory_pool_get (self->work_pool);
   work = *ptr;
-  g_array_set_size (work->g_arr, 0);
-  g_array_set_size (work->j_arr, 0);
+  g_array_set_size (work->g_arr, 2 * n);
+  g_array_set_size (work->j_arr, n);
+  g_buf = &g_array_index (work->g_arr, gdouble, 0);
+  j_buf = &g_array_index (work->j_arr, guint, 0);
 
   for (j = 0; j < n; j++)
   {
@@ -822,17 +827,15 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
       checked = TRUE;
     }
 
-    {
-      const gdouble g[2] = {g_1[j], g_2[j]};
-
-      g_array_append_vals (work->g_arr, g, 2);
-      g_array_append_val (work->j_arr, j);
-    }
+    g_buf[2 * m_in]     = g_1[j];
+    g_buf[2 * m_in + 1] = g_2[j];
+    j_buf[m_in]         = j;
+    m_in++;
   }
 
-  if (work->j_arr->len > 0)
+  if (m_in > 0)
   {
-    const guint m       = work->j_arr->len;
+    const guint m       = m_in;
     const gdouble cos_e = ldata->cos_e;
     const gdouble sin_e = ldata->sin_e;
     const gdouble g_c   = ldata->g_c;
@@ -855,8 +858,8 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
 
     ncm_spectral_tensor_eval_array (ldata->st, work->x_arr, &work->f_arr);
 
-    for (q = 0; q < work->j_arr->len; q++)
-      out[g_array_index (work->j_arr, guint, q)] = g_array_index (work->f_arr, gdouble, q);
+    for (q = 0; q < m; q++)
+      out[j_buf[q]] = g_array_index (work->f_arr, gdouble, q);
   }
 
   ncm_memory_pool_return (ptr);
