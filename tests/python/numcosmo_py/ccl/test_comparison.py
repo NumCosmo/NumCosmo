@@ -429,7 +429,7 @@ CCL_BIAS_MODELS = [type(pair.ccl_bias) for pair in BIAS_PAIRS]
 # cosmologies of ccl_cosmo_eh_linear at both CCL precision settings, BSIGMA_MASSES,
 # z = 0, 0.5, 1, 1.5 and every pair of the model; 1.0e-13 where the measured difference
 # is at rounding level. The largest differences measured are 0 (sheth99), 2.461e-12
-# (sheth01) and 3.679e-11 (tinker10, 200c and 500c).
+# (sheth01) and 3.679e-11 (tinker10, over 200m, 200c and 500c; 200m alone 2.220e-16).
 BSIGMA_RELTOL = {
     "sheth99": 1.0e-13,
     "sheth01": 1.0e-11,
@@ -441,8 +441,8 @@ BSIGMA_MASSES = np.geomspace(1.0e12, 1.0e15, 8)
 # sigma(M, z), for each CCL precision setting: the smallest power of ten at least twice
 # the largest difference measured over the three cosmologies of ccl_cosmo_eh_linear at
 # that setting, BM_MASSES, z = 0, 0.5, 1, 1.5 and every pair of the halo bias pairing
-# module. The largest differences measured are 3.396e-6 at CCL's default precision and
-# 6.309e-9 at high precision.
+# module, Tinker et al. (2010) at 200m included. The largest differences measured are
+# 3.396e-6 at CCL's default precision and 6.309e-9 at high precision.
 BM_RELTOL = {False: 1.0e-5, True: 1.0e-7}
 BM_MASSES = np.geomspace(1.0e11, 1.0e15, 64)
 

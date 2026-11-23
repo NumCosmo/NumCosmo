@@ -41,8 +41,9 @@ The pairs are:
 * Sheth, Mo & Tormen (2001): :class:`pyccl.halos.HaloBiasSheth01` and
   :obj:`~Nc.HaloBiasSTEllip`;
 * Tinker et al. (2010): :class:`pyccl.halos.HaloBiasTinker10` and
-  :obj:`~Nc.HaloBiasTinker`, at critical mass definitions, on the Tinker (2008)
-  multiplicity function. Its linear interpolation matches
+  :obj:`~Nc.HaloBiasTinker`, at the mean-density definition 200m and the critical
+  definitions 200c and 500c, on the Tinker (2008) multiplicity function. Its linear
+  interpolation matches
   :func:`numcosmo_py.ccl.multiplicity_func_pairing.tinker08_pair` and has no effect on
   :math:`b(\sigma)`.
 
@@ -54,8 +55,6 @@ By default (``mass_def_strict=True``), CCL accepts only the friends-of-friends m
 definition for the two Sheth & Tormen models. On NumCosmo's side they are built on
 the Sheth & Tormen multiplicity function, whose only mass definition is MEAN.
 Neither code's :math:`b(\sigma)` for these models reads the mass definition.
-
-Mean-density mass definitions of Tinker et al. (2010) are not included.
 """
 
 from collections.abc import Callable
@@ -101,12 +100,19 @@ TINKER10_B_UPPER = 0.183
 TINKER10_B = 1.5
 TINKER10_C = 2.4
 
-# Tinker et al. (2010): the critical mass definitions paired. The model takes
-# Delta_m = Delta_c / Omega_m(z) in both codes.
+# Tinker et al. (2010): the mass definitions paired. Both codes take Delta_m = Delta
+# at a mean-density definition and Delta_m = Delta / Omega_m(z) at a critical one.
 TINKER10_BIAS_MDEFS: list[tuple[str, Nc.MultiplicityFuncMassDef, int]] = [
+    ("matter", Nc.MultiplicityFuncMassDef.MEAN, 200),
     ("critical", Nc.MultiplicityFuncMassDef.CRITICAL, 200),
     ("critical", Nc.MultiplicityFuncMassDef.CRITICAL, 500),
 ]
+
+# NumCosmo's mass definition for each CCL rho_type that tinker10_pair accepts.
+_TINKER10_NC_MDEF: dict[str, Nc.MultiplicityFuncMassDef] = {
+    "matter": Nc.MultiplicityFuncMassDef.MEAN,
+    "critical": Nc.MultiplicityFuncMassDef.CRITICAL,
+}
 
 
 def _st_spher_new(hmf: Nc.HaloMassFunction) -> Nc.HaloBias:
@@ -159,19 +165,25 @@ def sheth01_pair() -> HaloBiasPair:
 def tinker10_pair(
     rho_type: str, nc_mdef: Nc.MultiplicityFuncMassDef, Delta: int
 ) -> HaloBiasPair:
-    """Build a Tinker et al. (2010) pair for one critical mass definition.
+    """Build a Tinker et al. (2010) pair for one mean-density or critical definition.
 
     NumCosmo's side is built on the Tinker (2008) multiplicity function at the same
     mass definition, with linear interpolation, to match
     :func:`numcosmo_py.ccl.multiplicity_func_pairing.tinker08_pair`; the interpolation
     has no effect on b(sigma).
-    Raises :class:`ValueError` if ``rho_type`` is not ``"critical"``: only critical
-    mass definitions are paired.
+    Raises :class:`ValueError` if ``rho_type`` is neither ``"matter"`` nor
+    ``"critical"``, or if ``nc_mdef`` is not its NumCosmo definition (``MEAN``,
+    ``CRITICAL``).
     """
-    if rho_type != "critical":
+    if rho_type not in _TINKER10_NC_MDEF:
         raise ValueError(
-            f"rho_type = {rho_type!r}: only critical mass definitions are paired "
-            "for Tinker et al. (2010)."
+            f"rho_type = {rho_type!r}: only mean-density and critical mass definitions "
+            "are paired for Tinker et al. (2010)."
+        )
+    if nc_mdef != _TINKER10_NC_MDEF[rho_type]:
+        raise ValueError(
+            f"nc_mdef = {nc_mdef!r} does not match rho_type = {rho_type!r}: expected "
+            f"{_TINKER10_NC_MDEF[rho_type]!r}."
         )
     _, nc_mulf = mfp.tinker08_pair(rho_type, nc_mdef, Delta)
 

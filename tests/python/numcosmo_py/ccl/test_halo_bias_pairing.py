@@ -164,18 +164,29 @@ def test_unaligned_parameters_are_numcosmo_defaults() -> None:
     assert tinker.get_c() == default_tinker.get_c()
 
 
-def test_tinker10_bias_mdefs_are_critical() -> None:
-    """Check that every Tinker et al. (2010) definition paired is critical."""
-    assert hbp.TINKER10_BIAS_MDEFS
+def test_tinker10_bias_mdefs() -> None:
+    """Check the Tinker et al. (2010) definitions paired.
+
+    200m is paired, and each entry's NumCosmo definition is its rho_type's: MEAN for
+    "matter", CRITICAL for "critical".
+    """
+    nc_mdef_of = {"matter": MDef.MEAN, "critical": MDef.CRITICAL}
+
+    assert ("matter", MDef.MEAN, 200) in hbp.TINKER10_BIAS_MDEFS
     for rho_type, nc_mdef, _ in hbp.TINKER10_BIAS_MDEFS:
-        assert rho_type == "critical"
-        assert nc_mdef == MDef.CRITICAL
+        assert nc_mdef == nc_mdef_of[rho_type]
 
 
-def test_tinker10_pair_rejects_matter() -> None:
-    """Check that tinker10_pair raises ValueError for a mean mass definition."""
-    with pytest.raises(ValueError, match="only critical mass definitions"):
-        hbp.tinker10_pair("matter", MDef.MEAN, 200)
+def test_tinker10_pair_rejects_unpaired_rho_type() -> None:
+    """Check that tinker10_pair raises ValueError for a rho_type it does not pair."""
+    with pytest.raises(ValueError, match="only mean-density and critical"):
+        hbp.tinker10_pair("virial", MDef.VIRIAL, 200)
+
+
+def test_tinker10_pair_rejects_mismatched_mdef() -> None:
+    """Check that tinker10_pair raises ValueError when nc_mdef does not match."""
+    with pytest.raises(ValueError, match="does not match rho_type"):
+        hbp.tinker10_pair("matter", MDef.CRITICAL, 200)
 
 
 def test_pairs_cover_every_constructor() -> None:
