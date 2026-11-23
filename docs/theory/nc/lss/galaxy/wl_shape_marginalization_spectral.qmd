@@ -382,15 +382,34 @@ computes the integral.
   where $f$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-trim-frac]] (default
   $10^{-4}$). The removed coefficients change $\ln P$ by at most $10^{-9}$ at the default
   `interp-abstol`. With $f = 0$ every coefficient is stored.
+- Population variables: each free parameter of the population is one more variable of the
+  table, after $\rho$ and $\psi$, with the bounds of the parameter as its range. Its first
+  grid has $2^{l_\mathrm{min}} + 1$ points and a panel has at most
+  $2^{l_\mathrm{cap}} + 1$, where $l_\mathrm{min}$ is
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-level-min]] (default 2) and
+  $l_\mathrm{cap}$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-level-cap]]
+  (default 5); the first grid has no edge inside the range. The value at a point is the
+  integral for the population with those parameter values. A free parameter outside its
+  bounds is an error. The bounds of a free parameter should contain only populations that
+  can describe a galaxy sample, since the table covers all of them. Where the density of
+  the population changes by many orders of magnitude over the bounds, $\ln P$ is not
+  finite for part of the galaxies and the build aborts: the truncated Gaussian with
+  $\sigma$ of a few hundredths is such a case. The default bounds are chosen for this,
+  $[1, 4]$ for $\alpha$ and $\beta$ of the Beta population and $[0.2, 1]$ for $\sigma$ of
+  the truncated Gaussian, where the mean of $|\chi_I|$ goes from 0.25 to 0.63.
 
 The table of a galaxy is built at its first evaluation with
 $|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
-$\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, the parameters of the population,
-`reltol`, $g_\mathrm{max}$, `interp-abstol`, `interp-min-radial-panels` or
-`interp-trim-frac` differ from those it was built for. A build computes of the order of
-$10^3$ integrals, so the table reduces the cost when the parameters of the population are
-fixed, and increases it when they change at every step unless a galaxy is evaluated at
-more shears per step than the build computes.
+$\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, `reltol`, $g_\mathrm{max}$,
+`interp-abstol`, `interp-min-radial-panels`, `interp-trim-frac`, the values of the fixed
+parameters of the population, the set of its free parameters or their bounds differ from
+those it was built for, and, with population variables, when `interp-pop-level-min` or
+`interp-pop-level-cap` differ. A change of a free parameter inside its bounds uses the same
+table. A table without population variables computes of the order of $10^3$ integrals; one
+with population variables computes that number at each point of their grids, at least
+$5^d$ points for $d$ free parameters at the default `interp-pop-level-min`. A table
+replaces the integrals of the shears at which the galaxy is evaluated while it holds, so it
+reduces the cost when these outnumber the integrals of its build.
 
 ## Interpolation Along the Shears of a Galaxy
 

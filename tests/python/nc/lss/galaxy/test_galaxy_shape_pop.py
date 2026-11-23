@@ -117,9 +117,9 @@ def test_beta_concentrated_no_overflow(alpha, beta):
     (large alpha, beta).
 
     Evaluating norm=1/B(alpha,beta) and r**(alpha-1) as separate factors
-    overflows/underflows for alpha/beta of a few hundred or more (already
-    reachable within the class's own declared range, e.g. alpha=beta=500
-    pushes -ln B(alpha,beta) to ~695, right at exp()'s overflow edge),
+    overflows/underflows for alpha/beta of a few hundred or more (e.g.
+    alpha=beta=500 pushes -ln B(alpha,beta) to ~695, right at exp()'s overflow
+    edge),
     silently producing NaN (0*inf). eval_p must instead accumulate in
     log-space.
     """

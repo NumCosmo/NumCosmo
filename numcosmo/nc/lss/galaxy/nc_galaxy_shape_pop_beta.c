@@ -129,13 +129,14 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
    * NcGalaxyShapePopBeta:alpha:
    *
    * The shape parameter $\alpha$ of the Beta distribution of $r = |\chi_I|$.
-   * Bounded to $\ge 1$ (see the class documentation).
+   * Its fit bounds are $[1, 4]$; values below 1 are outside the class (see the
+   * class documentation).
    *
    */
   ncm_model_class_set_sparam (model_class,
                               NC_GALAXY_SHAPE_POP_BETA_ALPHA,
                               "\\alpha",
-                              "alpha", 1.0, 1.0e2, 1.0e-1,
+                              "alpha", 1.0, 4.0, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
@@ -144,13 +145,14 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
    * NcGalaxyShapePopBeta:beta:
    *
    * The shape parameter $\beta$ of the Beta distribution of $r = |\chi_I|$.
-   * Bounded to $\ge 1$ (see the class documentation).
+   * Its fit bounds are $[1, 4]$; values below 1 are outside the class (see the
+   * class documentation).
    *
    */
   ncm_model_class_set_sparam (model_class,
                               NC_GALAXY_SHAPE_POP_BETA_BETA,
                               "\\beta",
-                              "beta", 1.0, 1.0e2, 1.0e-1,
+                              "beta", 1.0, 4.0, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);

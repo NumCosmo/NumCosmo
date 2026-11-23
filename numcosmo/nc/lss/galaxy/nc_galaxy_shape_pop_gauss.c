@@ -109,13 +109,15 @@ nc_galaxy_shape_pop_gauss_class_init (NcGalaxyShapePopGaussClass *klass)
   /**
    * NcGalaxyShapePopGauss:sigma:
    *
-   * The width $\sigma$ of the truncated Gaussian intrinsic ellipticity.
+   * The width $\sigma$ of the truncated Gaussian intrinsic ellipticity. Its fit bounds
+   * are $[0.2, 1]$, over which the mean of $r$ goes from 0.25 to 0.63; the mean of $r$ of
+   * a galaxy sample is near 0.5, at $\sigma$ near 0.44.
    *
    */
   ncm_model_class_set_sparam (model_class,
                               NC_GALAXY_SHAPE_POP_GAUSS_SIGMA,
                               "\\sigma",
-                              "sigma", 1.0e-2, 1.0, 1.0e-1,
+                              "sigma", 2.0e-1, 1.0, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_GAUSS_DEFAULT_PARAMS_ABSTOL,
                               NC_GALAXY_SHAPE_POP_GAUSS_DEFAULT_SIGMA,
                               NCM_PARAM_TYPE_FIXED);

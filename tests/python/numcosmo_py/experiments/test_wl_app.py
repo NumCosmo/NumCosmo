@@ -791,7 +791,7 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
             "cluster-wl",
             experiment_file.as_posix(),
             "--shape-factor=spectral",
-            "--pop-dist=beta alpha=2.0 beta=5.0",
+            "--pop-dist=beta alpha=2.0 beta=3.0",
             "--parameter-list=NcGalaxyShapePop:alpha",
             "--parameter-list=NcGalaxyShapePop:beta",
         ],
@@ -812,7 +812,7 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     pop_model = cast(Nc.GalaxyShapePopBeta, mset.peek_by_name("NcGalaxyShapePop"))
 
     assert pop_model["alpha"] == 2.0
-    assert pop_model["beta"] == 5.0
+    assert pop_model["beta"] == 3.0
 
     mfunc_oa = cast(Ncm.ObjArray, ser.array_from_yaml_file(functions_file.as_posix()))
     funcs = [cast(Ncm.MSetFuncList, mfunc_oa.get(i)) for i in range(mfunc_oa.len())]
