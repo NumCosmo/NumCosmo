@@ -76,10 +76,13 @@
  * node. A point on an interior edge belongs to the child whose interval starts at that
  * edge. The point is not checked to be in $\Omega$: a point outside $\Omega$ reaches the
  * panel that contains the point obtained by clamping each coordinate $x_i$ to
- * $[a_i, b_i]$, and the series of that panel is extrapolated. A search that reaches an
- * empty node aborts with an error. The function ncm_spectral_tensor_eval_array() evaluates
- * several points in one call and sums consecutive points on the same panel together, which
- * takes less time per point.
+ * $[a_i, b_i]$, and the series of that panel is extrapolated. The tolerance of the table
+ * does not apply to an extrapolated value, and the evaluation does not report it. A caller
+ * whose points may be outside $\Omega$ compares each coordinate with the range given by
+ * ncm_spectral_tensor_get_range() before the call, and computes the function directly for
+ * a point outside. A search that reaches an empty node aborts with an error. The function
+ * ncm_spectral_tensor_eval_array() evaluates several points in one call and sums
+ * consecutive points on the same panel together, which takes less time per point.
  *
  * The functions ncm_spectral_tensor_set_domain() and ncm_spectral_tensor_reset() keep the
  * arrays, so a table refilled many times stops allocating once it has grown. Reading and
@@ -1045,7 +1048,8 @@ ncm_spectral_tensor_find_panel (NcmSpectralTensor *st, guint n_vars, const gdoub
  * In a filled table, evaluates the function at @x on the panel given by
  * ncm_spectral_tensor_find_panel(), with its errors. Outside the domain the series of the
  * panel that contains the point obtained by clamping each coordinate to the domain is
- * extrapolated.
+ * extrapolated, without an error and outside the tolerance of the table: the caller
+ * compares the point with the range of ncm_spectral_tensor_get_range() before the call.
  *
  * Returns: $F (x)$.
  */
@@ -1733,7 +1737,8 @@ _ncm_spectral_tensor_eval_on_array (NcmSpectralTensor *st, guint p, guint n, con
  * #NcmSpectralTensor:n-vars entries of @x that start at $j$ times that number, and its
  * value is entry $j$ of @fval. A C caller may pass in @fval an array to reuse, or a pointer
  * to %NULL for a new one. The panel of each point is the one of
- * ncm_spectral_tensor_find_panel(), with its errors. Consecutive points on the same panel
+ * ncm_spectral_tensor_find_panel(), with its errors, and a point outside the domain is
+ * extrapolated as in ncm_spectral_tensor_eval(). Consecutive points on the same panel
  * are summed together, 8 points at a time, which takes less time per point than
  * ncm_spectral_tensor_eval(): points ordered along a line, or grouped by panel, gain the
  * most. The values agree with those of ncm_spectral_tensor_eval() to rounding, not bit by
