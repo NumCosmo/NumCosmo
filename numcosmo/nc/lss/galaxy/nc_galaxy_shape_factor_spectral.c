@@ -175,6 +175,9 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
   GArray *theta_edges;
   GArray *r_edges_all; /* radial edges of the interpolant before those below its range are left out */
   GArray *var_r;       /* the radii of a call of the radial factor of the variance */
+  GArray *x_arr;       /* the points of the interpolant of a call of eval_nodes, two values per point */
+  GArray *f_arr;       /* their values */
+  GArray *j_arr;       /* guint, the index of each of those points among the shears of the call */
 } NcGalaxyShapeFactorSpectralWork;
 
 /*
@@ -412,6 +415,7 @@ static void _nc_galaxy_shape_factor_spectral_data_init (NcGalaxyShapeFactor *gsf
 static void _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
 static void _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
+static void _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 
 static void
@@ -525,6 +529,7 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
   gsf_class->data_prepare     = &_nc_galaxy_shape_factor_spectral_data_prepare;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_spectral_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_spectral_eval_ln_marginal;
+  gsf_class->eval_nodes       = &_nc_galaxy_shape_factor_spectral_eval_nodes;
 }
 
 static gpointer
@@ -536,6 +541,9 @@ _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata)
   work->theta_edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->r_edges_all = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->var_r       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->x_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->f_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->j_arr       = g_array_new (FALSE, FALSE, sizeof (guint));
 
   return work;
 }
@@ -549,6 +557,9 @@ _nc_galaxy_shape_factor_spectral_work_free (gpointer p)
   g_array_unref (work->theta_edges);
   g_array_unref (work->r_edges_all);
   g_array_unref (work->var_r);
+  g_array_unref (work->x_arr);
+  g_array_unref (work->f_arr);
+  g_array_unref (work->j_arr);
 
   g_free (work);
 }
@@ -741,6 +752,95 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
       return ncm_spectral_tensor_eval (ldata->st, 2, x);
     }
   }
+}
+
+/*
+ * eval_nodes of the class: with use-interp, the shears with |g| <= interp-g-max are evaluated
+ * in one call of ncm_spectral_tensor_eval_array() on the interpolant of the galaxy, which is
+ * checked, and built if needed, once per call; their points are those of
+ * _nc_galaxy_shape_factor_spectral_eval_ln_marginal(). The other shears, and every shear
+ * without use-interp, take the integral. The values of the interpolant agree with those of
+ * the evaluation one shear at a time to rounding, not bit by bit.
+ */
+static void
+_nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+                                             const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+                                             const gboolean want_log, gdouble *out)
+{
+  NcGalaxyShapeFactorSpectral *gsfs               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf);
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+  const gdouble g_max2                            = gsl_pow_2 (self->interp_g_max);
+  NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
+  NcGalaxyShapeFactorSpectralWork **ptr;
+  NcGalaxyShapeFactorSpectralWork *work;
+  gboolean checked = FALSE;
+  guint j, q;
+
+  if (!self->use_interp)
+  {
+    for (j = 0; j < n; j++)
+    {
+      const gdouble lnP = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
+                                                                    epsilon_obs_1, epsilon_obs_2, NULL);
+
+      out[j] = want_log ? lnP : exp (lnP);
+    }
+
+    return;
+  }
+
+  ptr  = ncm_memory_pool_get (self->work_pool);
+  work = *ptr;
+  g_array_set_size (work->x_arr, 0);
+  g_array_set_size (work->j_arr, 0);
+
+  for (j = 0; j < n; j++)
+  {
+    if (g_1[j] * g_1[j] + g_2[j] * g_2[j] > g_max2)
+    {
+      out[j] = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
+                                                         epsilon_obs_1, epsilon_obs_2, NULL);
+      continue;
+    }
+
+    if (!checked)
+    {
+      if (!_nc_galaxy_shape_factor_spectral_interp_valid (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2))
+      {
+        if (ldata->loaded)
+          g_error ("nc_galaxy_shape_factor_spectral: the interpolant loaded from the catalog is not valid for this evaluation "
+                   "(eps_obs = (% 22.15g, % 22.15g)); nc_galaxy_shape_factor_data_prepare() compares it with the fit and "
+                   "a loaded interpolant is not rebuilt.", epsilon_obs_1, epsilon_obs_2);
+
+        _nc_galaxy_shape_factor_spectral_interp_build (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
+      }
+
+      checked = TRUE;
+    }
+
+    {
+      const gdouble gf_1 = g_1[j] * ldata->cos_e + g_2[j] * ldata->sin_e - ldata->g_c;
+      const gdouble gf_2 = g_2[j] * ldata->cos_e - g_1[j] * ldata->sin_e;
+      const gdouble x[2] = {hypot (gf_1, gf_2), atan2 (fabs (gf_2), gf_1)};
+
+      g_array_append_vals (work->x_arr, x, 2);
+      g_array_append_val (work->j_arr, j);
+    }
+  }
+
+  if (work->j_arr->len > 0)
+  {
+    ncm_spectral_tensor_eval_array (ldata->st, work->x_arr, &work->f_arr);
+
+    for (q = 0; q < work->j_arr->len; q++)
+      out[g_array_index (work->j_arr, guint, q)] = g_array_index (work->f_arr, gdouble, q);
+  }
+
+  ncm_memory_pool_return (ptr);
+
+  if (!want_log)
+    for (j = 0; j < n; j++)
+      out[j] = exp (out[j]);
 }
 
 /*

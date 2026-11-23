@@ -9601,6 +9601,18 @@ class GalaxyShapeFactor(GObject.Object):
         epsilon_obs_1: float,
         epsilon_obs_2: float,
     ) -> float: ...
+    def do_eval_nodes(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        n: int,
+        g_1: float,
+        g_2: float,
+        epsilon_obs_1: float,
+        epsilon_obs_2: float,
+        want_log: bool,
+        out: float,
+    ) -> None: ...
     def do_get_desc(self) -> str: ...
     def do_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def eval_at_nodes(
@@ -9734,6 +9746,21 @@ class GalaxyShapeFactorClass(GObject.GPointer):
     ] = ...
     data_prefetch: typing.Callable[
         [GalaxyShapeFactor, GalaxyShapeFactorData, int], None
+    ] = ...
+    eval_nodes: typing.Callable[
+        [
+            GalaxyShapeFactor,
+            GalaxyShapePop,
+            GalaxyShapeFactorData,
+            int,
+            float,
+            float,
+            float,
+            float,
+            bool,
+            float,
+        ],
+        None,
     ] = ...
     padding: list[None] = ...
 
