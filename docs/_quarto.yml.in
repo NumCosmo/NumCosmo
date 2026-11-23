@@ -24,6 +24,7 @@ project:
     - theory/ncm/fftlog/fftlog.qmd
     - theory/ncm/algebra/spectral.qmd
     - theory/ncm/algebra/spectral_polar.qmd
+    - theory/ncm/algebra/spectral_tensor.qmd
     - theory/ncm/specfunc/sbessel_ode_solver.qmd
     - theory/ncm/specfunc/sbessel_projection.qmd
     - theory/nc/xcor/limber.qmd
@@ -189,6 +190,8 @@ website:
                 text: "Spectral Methods"
               - href: theory/ncm/algebra/spectral_polar.qmd
                 text: "Spectral Integration on a Disk"
+              - href: theory/ncm/algebra/spectral_tensor.qmd
+                text: "Tensor-Product Chebyshev Tables"
               - href: theory/ncm/fftlog/fftlog.qmd
                 text: "FFTLog"
               - href: theory/ncm/spline/spline_func.qmd
