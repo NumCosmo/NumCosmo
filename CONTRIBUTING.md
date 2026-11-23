@@ -44,6 +44,13 @@ its concrete subclasses. Vendored third-party code is quarantined under
    `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`. (`ncm_cfg.h` includes only what its
    own public API needs; do not add registration includes there.)
 
+5. Keep `class_init` to the class description: the vtable, the properties with their
+   parameter descriptions, and class-level tables. It runs at the first
+   `g_type_class_ref` (deserialization, PyGObject, `ncm_cfg_init`), where no caller can
+   receive a failure, so it does not read files, data paths or environment variables.
+   A default that needs them (a data file path) is `NULL` in the pspec and is resolved
+   in `set_property` or `constructed`.
+
 ## C API and the Python bindings
 
 The Python API is generated from the C API. GObject introspection records the signature
