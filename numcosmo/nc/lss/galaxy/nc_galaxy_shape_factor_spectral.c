@@ -863,12 +863,11 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
 }
 
 /*
- * The radial edges of the interpolant in g on [0, R], in ascending order, for the narrowest
- * structure of ln P, of width L, at rho = 0: 0 and R, the inner edges k R / n of n equal
- * intervals, and the distances L w^k below R, w = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_EDGE_RATIO.
- * An edge at most L / 4 above the edge kept before it is left out, except R. These are the
- * radial edges of ncm_spectral_polar_peak_edges() for a peak at r = 0 with
- * edge-ratio w and min-radial-panels n.
+ * The first radial grid of the interpolant in g on [0, R], in ascending order, for the
+ * narrowest structure of ln P, of width L, at rho = 0; ncm_spectral_tensor_builder_build()
+ * refines it. The edges are 0 and R, the inner edges k R / n of n equal intervals, and the
+ * distances L w^k below R, w = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_INTERP_EDGE_RATIO. An edge
+ * at most L / 4 above the edge kept before it is left out, except R.
  */
 static void
 _nc_galaxy_shape_factor_spectral_interp_r_edges (const gdouble R, const gdouble L, const guint n, GArray *r_edges)
