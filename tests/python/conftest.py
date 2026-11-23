@@ -57,7 +57,9 @@ def _stderr_fileno() -> int:
 # the capture is reported, and all CI shows is "Fatal Python error: Aborted"
 # with no reason at all. Routing fatal messages to the duplicated fd -- the same
 # one the faulthandler dumps use, and for the same reason -- puts them where
-# they survive.
+# they survive. The meson lanes also pass --capture=sys (tests/python/meson.build),
+# which leaves fd 2 uncaptured for messages that bypass this handler (a failed
+# g_assert, a malloc abort); a direct pytest run still captures at fd level.
 #
 # ncm_cfg_set_error_log_handler() is the library's own hook for this;
 # GLib.log_set_writer_func() does not see these messages, because a legacy
