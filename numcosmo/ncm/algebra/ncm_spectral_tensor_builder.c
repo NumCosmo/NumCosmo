@@ -35,6 +35,13 @@
  * be set before the construction, and nodes may be split beforehand, for example at a kink
  * of $F$.
  *
+ * The variables of the table are those the callback receives: the builder applies no
+ * change of variable. A function that varies on a logarithmic scale in one of its
+ * arguments is tabulated in the logarithm of that argument, and the callback converts the
+ * points it receives. For example, a function of a width $\sigma \in [0.02, 1.5]$ that
+ * varies most at small $\sigma$ is tabulated in $x = \ln \sigma$, and the callback
+ * computes $\sigma = e^x$. The caller evaluates the table at the same variables.
+ *
  * The function ncm_spectral_tensor_builder_build() expands $F$ on each empty node of the
  * table, in the order of the node numbers. On a node with the interval $[p_i, q_i]$ in
  * variable $i$, the points of variable $i$ are the $N_i + 1$ Chebyshev-Lobatto points of
