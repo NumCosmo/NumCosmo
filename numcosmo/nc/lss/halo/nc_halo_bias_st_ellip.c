@@ -163,7 +163,7 @@ nc_halo_bias_st_ellip_class_init (NcHaloBiasSTEllipClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.686,
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -372,5 +372,5 @@ nc_halo_bias_st_ellip_get_c (const NcHaloBiasSTEllip *biasf_st_ellip)
   return biasf_st_ellip->c;
 }
 
-/* _NC_BIAS_FUNCTION_ST_ELLIP_DATASET_1001_3162 = {1.686, 0.707, 0.5, 0.6}; */
+/* _NC_BIAS_FUNCTION_ST_ELLIP_DATASET_1001_3162 = {1.68647, 0.707, 0.5, 0.6}; */
 

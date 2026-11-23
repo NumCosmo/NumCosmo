@@ -155,7 +155,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        0.0, G_MAXDOUBLE, 1.686,
+                                                        0.0, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -320,5 +320,5 @@ nc_halo_bias_st_spher_get_p (const NcHaloBiasSTSpher *biasf_st_spher)
   return biasf_st_spher->p;
 }
 
-/* _NC_BIAS_FUNCTION_ST_SPHER_DATASET_9901122 = {1.686, 0.707, 0.3}; */
+/* _NC_BIAS_FUNCTION_ST_SPHER_DATASET_9901122 = {1.68647, 0.707, 0.3}; */
 

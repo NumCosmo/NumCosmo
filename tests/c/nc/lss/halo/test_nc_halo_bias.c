@@ -56,6 +56,7 @@ void test_nc_halo_bias_set_get (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_integrand (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_tinker_mean_delta (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_st_spher_default_a (TestNcHaloBias *test, gconstpointer pdata);
+void test_nc_halo_bias_st_default_delta_c (TestNcHaloBias *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -84,6 +85,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_bias/st_spher/default_a", TestNcHaloBias, NULL,
               &test_nc_halo_bias_new,
               &test_nc_halo_bias_st_spher_default_a,
+              &test_nc_halo_bias_free);
+  g_test_add ("/nc/halo_bias/st/default_delta_c", TestNcHaloBias, NULL,
+              &test_nc_halo_bias_new,
+              &test_nc_halo_bias_st_default_delta_c,
               &test_nc_halo_bias_free);
 
 
@@ -324,5 +329,12 @@ test_nc_halo_bias_st_spher_default_a (TestNcHaloBias *test, gconstpointer pdata)
 {
   /* Sheth & Tormen (1999), below eq. (10). */
   g_assert_cmpfloat (nc_halo_bias_st_spher_get_a (test->bsts), ==, 0.707);
+}
+
+void
+test_nc_halo_bias_st_default_delta_c (TestNcHaloBias *test, gconstpointer pdata)
+{
+  g_assert_cmpfloat (nc_halo_bias_st_spher_get_delta_c (test->bsts), ==, NC_MULTIPLICITY_FUNC_DELTA_C0);
+  g_assert_cmpfloat (nc_halo_bias_st_ellip_get_delta_c (test->bste), ==, NC_MULTIPLICITY_FUNC_DELTA_C0);
 }
 
