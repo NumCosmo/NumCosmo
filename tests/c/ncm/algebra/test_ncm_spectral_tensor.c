@@ -37,6 +37,8 @@
 #define TEST_N_POINTS (1000)
 #define TEST_K_MAX (6)
 #define TEST_MAX_N_VARS (5)
+#define TEST_N_THREADS (4)
+#define TEST_N_PASSES (20)
 
 /*
  * A table filled by hand and the panels it was filled with. The domain is the product of
@@ -72,6 +74,16 @@ typedef struct _TestTrap
   const gchar *stderr_pattern;
 } TestTrap;
 
+/* The table and the points one thread evaluates, and the values computed in one thread */
+typedef struct _TestThread
+{
+  NcmSpectralTensor *st;
+  GArray *x;        /* gdouble, n_vars per point */
+  GArray *fval;     /* gdouble, ncm_spectral_tensor_eval() at each point */
+  GArray *fval_arr; /* gdouble, ncm_spectral_tensor_eval_array() at the points */
+  guint n_diff;     /* number of values of the thread that differ from fval and fval_arr */
+} TestThread;
+
 void test_ncm_spectral_tensor_new (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_free (TestNcmSpectralTensor *test, gconstpointer pdata);
 
@@ -81,6 +93,7 @@ void test_ncm_spectral_tensor_eval (TestNcmSpectralTensor *test, gconstpointer p
 void test_ncm_spectral_tensor_eval_long (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_eval_rows (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_eval_array (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_threads (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_edges_rule (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_serialize (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_reset (TestNcmSpectralTensor *test, gconstpointer pdata);
@@ -149,6 +162,7 @@ static const struct
   {"eval_long", &test_ncm_spectral_tensor_eval_long},
   {"eval_rows", &test_ncm_spectral_tensor_eval_rows},
   {"eval_array", &test_ncm_spectral_tensor_eval_array},
+  {"threads", &test_ncm_spectral_tensor_threads},
   {"edges_rule", &test_ncm_spectral_tensor_edges_rule},
   {"serialize", &test_ncm_spectral_tensor_serialize},
   {"reset", &test_ncm_spectral_tensor_reset},
@@ -413,6 +427,43 @@ _assert_same_tables (TestNcmSpectralTensor *test, NcmSpectralTensor *st, NcmSpec
     _random_point (test, x);
     g_assert_cmpfloat (ncm_spectral_tensor_eval (st2, n_vars, x), ==, ncm_spectral_tensor_eval (st, n_vars, x));
   }
+}
+
+/*
+ * TEST_N_PASSES evaluations of every point of th->x with ncm_spectral_tensor_eval() and
+ * with ncm_spectral_tensor_eval_array(); th->n_diff receives the number of values that
+ * differ from th->fval and th->fval_arr.
+ */
+static gpointer
+_thread_eval (gpointer data)
+{
+  TestThread *th       = data;
+  const guint n_vars   = ncm_spectral_tensor_get_n_vars (th->st);
+  const guint n_points = th->x->len / n_vars;
+  GArray *fval_arr     = NULL;
+  guint pass, q;
+
+  th->n_diff = 0;
+
+  for (pass = 0; pass < TEST_N_PASSES; pass++)
+  {
+    ncm_spectral_tensor_eval_array (th->st, th->x, &fval_arr);
+
+    for (q = 0; q < n_points; q++)
+    {
+      const gdouble f = ncm_spectral_tensor_eval (th->st, n_vars, &g_array_index (th->x, gdouble, n_vars * q));
+
+      if (f != g_array_index (th->fval, gdouble, q))
+        th->n_diff++;
+
+      if (g_array_index (fval_arr, gdouble, q) != g_array_index (th->fval_arr, gdouble, q))
+        th->n_diff++;
+    }
+  }
+
+  g_array_unref (fval_arr);
+
+  return NULL;
 }
 
 /* A table of two variables with the domain of the fixture and the root empty */
@@ -906,6 +957,82 @@ test_ncm_spectral_tensor_eval_array (TestNcmSpectralTensor *test, gconstpointer 
   g_array_unref (xs);
   g_array_unref (fval);
   g_array_unref (fval_s);
+}
+
+/*
+ * One table evaluated from TEST_N_THREADS threads at the same time with
+ * ncm_spectral_tensor_eval() and ncm_spectral_tensor_eval_array(): every value equals the
+ * one computed in one thread. The points are 500 random points followed by the same points
+ * grouped by panel, so the array evaluation takes its sums of one point and of several.
+ */
+void
+test_ncm_spectral_tensor_threads (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  const guint n_vars   = test->n_vars;
+  const guint n_random = 500;
+  const guint n_points = 2 * n_random;
+  const guint n_panels = ncm_spectral_tensor_get_n_panels (test->st);
+  GArray *x            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *fval         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *fval_arr     = NULL;
+  TestThread th[TEST_N_THREADS];
+  GThread *threads[TEST_N_THREADS];
+  gdouble pt[TEST_MAX_N_VARS];
+  guint p, q, t;
+
+  for (q = 0; q < n_random; q++)
+  {
+    _random_point (test, pt);
+    g_array_append_vals (x, pt, n_vars);
+  }
+
+  for (p = 0; p < n_panels; p++)
+  {
+    for (q = 0; q < n_random; q++)
+    {
+      memcpy (pt, &g_array_index (x, gdouble, n_vars * q), sizeof (gdouble) * n_vars);
+
+      if (_ref_panel (test, pt) == p)
+        g_array_append_vals (x, pt, n_vars);
+    }
+  }
+
+  g_assert_cmpuint (x->len, ==, n_vars * n_points);
+
+  for (q = 0; q < n_points; q++)
+  {
+    const gdouble f = ncm_spectral_tensor_eval (test->st, n_vars, &g_array_index (x, gdouble, n_vars * q));
+
+    g_array_append_val (fval, f);
+  }
+
+  ncm_spectral_tensor_eval_array (test->st, x, &fval_arr);
+
+  for (t = 0; t < TEST_N_THREADS; t++)
+  {
+    th[t].st       = test->st;
+    th[t].x        = x;
+    th[t].fval     = fval;
+    th[t].fval_arr = fval_arr;
+    th[t].n_diff   = 0;
+  }
+
+  /* In one thread the values repeat bit by bit */
+  _thread_eval (&th[0]);
+  g_assert_cmpuint (th[0].n_diff, ==, 0);
+
+  for (t = 0; t < TEST_N_THREADS; t++)
+    threads[t] = g_thread_new ("eval", &_thread_eval, &th[t]);
+
+  for (t = 0; t < TEST_N_THREADS; t++)
+  {
+    g_thread_join (threads[t]);
+    g_assert_cmpuint (th[t].n_diff, ==, 0);
+  }
+
+  g_array_unref (x);
+  g_array_unref (fval);
+  g_array_unref (fval_arr);
 }
 
 void
