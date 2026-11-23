@@ -54,6 +54,7 @@ void test_nc_halo_bias_eval (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_free (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_set_get (TestNcHaloBias *test, gconstpointer pdata);
 void test_nc_halo_bias_integrand (TestNcHaloBias *test, gconstpointer pdata);
+void test_nc_halo_bias_tinker_mean_delta (TestNcHaloBias *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -74,6 +75,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_bias/integrand", TestNcHaloBias, NULL,
               &test_nc_halo_bias_new,
               &test_nc_halo_bias_integrand,
+              &test_nc_halo_bias_free);
+  g_test_add ("/nc/halo_bias/tinker/mean_delta", TestNcHaloBias, NULL,
+              &test_nc_halo_bias_new,
+              &test_nc_halo_bias_tinker_mean_delta,
               &test_nc_halo_bias_free);
 
 
@@ -255,5 +260,57 @@ test_nc_halo_bias_integrand (TestNcHaloBias *test, gconstpointer pdata)
 
   /* The integrand is the mass function weighted by the bias, by definition. */
   g_assert_cmpfloat (d2n_dzdlnM * bias, ==, bias_integrand);
+}
+
+void
+test_nc_halo_bias_tinker_mean_delta (TestNcHaloBias *test, gconstpointer pdata)
+{
+  NcDistance *dist          = nc_distance_new (3.0);
+  NcTransferFunc *tf        = NC_TRANSFER_FUNC (ncm_serialize_global_from_string ("NcTransferFuncEH"));
+  NcPowspecML *ps_ml        = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf     = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  const gdouble Delta       = 200.0;
+  const gdouble lnM         = log (1.0e14);
+  const gdouble z_a[]       = {0.0, 0.5, 1.0, 2.0};
+  const gdouble sigma_a[]   = {0.5, 1.0, 2.0};
+  NcMultiplicityFunc *mulf  = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new_full (NC_MULTIPLICITY_FUNC_MASS_DEF_MEAN, Delta));
+  NcHaloMassFunction *mfp   = nc_halo_mass_function_new (dist, psf, mulf);
+  NcHaloBiasTinker *bt_mean = nc_halo_bias_tinker_new (mfp);
+  guint i;
+
+  /* A MEAN definition with Delta and a CRITICAL definition with Delta Omega_m(z) give
+   * the same Delta relative to the mean matter density, so the Tinker bias is the same
+   * on both. Measured at these points: equal to the last bit. The tolerance,
+   * 100 GSL_DBL_EPSILON, allows for the rounding of Delta Omega_m(z) / Omega_m(z).
+   * Taking Delta / Omega_m(z) at the MEAN definition instead differs by 0.63% to 16%. */
+  for (i = 0; i < G_N_ELEMENTS (z_a); i++)
+  {
+    const gdouble z               = z_a[i];
+    const gdouble Omega_m         = nc_hicosmo_E2Omega_m (test->cosmo, z) / nc_hicosmo_E2 (test->cosmo, z);
+    NcMultiplicityFunc *mulf_crit = NC_MULTIPLICITY_FUNC (nc_multiplicity_func_tinker_new_full (NC_MULTIPLICITY_FUNC_MASS_DEF_CRITICAL, Delta * Omega_m));
+    NcHaloMassFunction *mfp_crit  = nc_halo_mass_function_new (dist, psf, mulf_crit);
+    NcHaloBiasTinker *bt_crit     = nc_halo_bias_tinker_new (mfp_crit);
+    guint j;
+
+    for (j = 0; j < G_N_ELEMENTS (sigma_a); j++)
+    {
+      const gdouble b_mean = nc_halo_bias_eval (NC_HALO_BIAS (bt_mean), test->cosmo, sigma_a[j], lnM, z);
+      const gdouble b_crit = nc_halo_bias_eval (NC_HALO_BIAS (bt_crit), test->cosmo, sigma_a[j], lnM, z);
+
+      ncm_assert_cmpdouble_e (b_mean, ==, b_crit, 100.0 * GSL_DBL_EPSILON, 0.0);
+    }
+
+    nc_halo_bias_free (NC_HALO_BIAS (bt_crit));
+    nc_halo_mass_function_free (mfp_crit);
+    nc_multiplicity_func_free (mulf_crit);
+  }
+
+  nc_halo_bias_free (NC_HALO_BIAS (bt_mean));
+  nc_halo_mass_function_free (mfp);
+  nc_multiplicity_func_free (mulf);
+  ncm_powspec_filter_free (psf);
+  nc_powspec_ml_free (ps_ml);
+  nc_transfer_func_free (tf);
+  nc_distance_free (dist);
 }
 

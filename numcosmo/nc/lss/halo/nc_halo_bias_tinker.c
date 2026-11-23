@@ -243,18 +243,13 @@ nc_halo_bias_tinker_new_full (NcHaloMassFunction *mfp, gdouble delta_c, gdouble 
                        NULL);
 }
 
-/* TODO: Here we are using the Delta definition of in terms of the matter density.
- * Instead of calling nc_multiplicity_func_get_matter_Delta which would use the
- * appropriate matter density definition. This needs a better justification.
- */
+/* Tinker et al. (2010) fit Delta relative to the mean matter density. */
 static gdouble
 _nc_halo_bias_tinker_eval (NcHaloBias *biasf, NcHICosmo *cosmo, gdouble sigma, gdouble lnM, gdouble z)
 {
   NcHaloBiasTinker *bias_tinker = NC_HALO_BIAS_TINKER (biasf);
   NcMultiplicityFunc *mulf      = nc_halo_mass_function_peek_multiplicity_function (nc_halo_bias_peek_mass_function (biasf));
-  const gdouble E2              = nc_hicosmo_E2 (cosmo, z);
-  const gdouble Omega_m         = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
-  const gdouble Delta           = nc_multiplicity_func_get_Delta (mulf) / Omega_m;
+  const gdouble Delta           = nc_multiplicity_func_get_matter_Delta (mulf, cosmo, z);
   const gdouble y               = log10 (Delta);
   const gdouble u               = exp (-pow (4.0 / y, 4.0));
   const gdouble A               = 1.0 + 0.24 * y * u;
