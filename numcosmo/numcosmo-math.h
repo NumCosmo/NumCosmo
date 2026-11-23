@@ -53,7 +53,6 @@
 #include <numcosmo/ncm/algebra/ncm_spectral_panels_builder.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_panels_product.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_polar.h>
-#include <numcosmo/ncm/algebra/ncm_spectral_polar_panels.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_tensor.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_tensor_builder.h>
 #include <numcosmo/ncm/core/ncm_serialize.h>

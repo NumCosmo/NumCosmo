@@ -60,8 +60,8 @@ static void test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpoi
 static void test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_pz_spline (void);
 static void test_nc_galaxy_wl_obs_pz_spline_subprocess (void);
-static void test_nc_galaxy_wl_obs_shape_interp_polar (void);
-static void test_nc_galaxy_wl_obs_shape_interp_polar_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_type (void);
+static void test_nc_galaxy_wl_obs_shape_interp_type_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -133,8 +133,8 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_wl_obs_free);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_spline", &test_nc_galaxy_wl_obs_pz_spline);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_spline/subprocess", &test_nc_galaxy_wl_obs_pz_spline_subprocess);
-  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/polar", &test_nc_galaxy_wl_obs_shape_interp_polar);
-  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/polar/subprocess", &test_nc_galaxy_wl_obs_shape_interp_polar_subprocess);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/type", &test_nc_galaxy_wl_obs_shape_interp_type);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/type/subprocess", &test_nc_galaxy_wl_obs_shape_interp_type_subprocess);
 
   g_test_run ();
 
@@ -652,30 +652,27 @@ test_nc_galaxy_wl_obs_pz_spline_subprocess (void)
 }
 
 /*
- * A catalog whose interpolants are NcmSpectralPolarPanels, as written before they became
- * NcmSpectralTensor: reading an interpolant aborts with a message that names the type and
- * the command that writes the catalog again. The test builds such an interpolant with
- * NcmSpectralPolarPanels, so it is removed together with that class.
+ * An interpolant property holding an object that is not a NcmSpectralTensor: reading the
+ * interpolant aborts with a message that names the row and the type.
  */
 static void
-test_nc_galaxy_wl_obs_shape_interp_polar (void)
+test_nc_galaxy_wl_obs_shape_interp_type (void)
 {
-  g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/shape_interp/polar/subprocess", 0, 0);
+  g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/shape_interp/type/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*the interpolant of row 2 is a NcmSpectralPolarPanels, not a NcmSpectralTensor*");
-  g_test_trap_assert_stderr ("*numcosmo wl-catalog shape-interp*");
+  g_test_trap_assert_stderr ("*the interpolant of row 2 is a NcmVector, not a NcmSpectralTensor*");
 }
 
 static void
-test_nc_galaxy_wl_obs_shape_interp_polar_subprocess (void)
+test_nc_galaxy_wl_obs_shape_interp_type_subprocess (void)
 {
-  GStrv col_names             = g_strsplit ("ra dec", " ", -1);
-  NcmObjDictInt *interp       = ncm_obj_dict_int_new ();
-  NcmObjDictStr *source       = ncm_obj_dict_str_new ();
-  NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
+  GStrv col_names       = g_strsplit ("ra dec", " ", -1);
+  NcmObjDictInt *interp = ncm_obj_dict_int_new ();
+  NcmObjDictStr *source = ncm_obj_dict_str_new ();
+  NcmVector *v          = ncm_vector_new (1);
   NcGalaxyWLObs *obs;
 
-  ncm_obj_dict_int_add (interp, 2, G_OBJECT (spp));
+  ncm_obj_dict_int_add (interp, 2, G_OBJECT (v));
 
   obs = g_object_new (NC_TYPE_GALAXY_WL_OBS,
                       "ellip-conv", NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET,

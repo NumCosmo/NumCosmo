@@ -147,10 +147,6 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_spectral_polar.c'],
     },
     {
-        'name': 'ncm_spectral_polar_panels',
-        'sources': ['ncm/algebra/test_ncm_spectral_polar_panels.c'],
-    },
-    {
         'name': 'ncm_spectral_tensor',
         'sources': ['ncm/algebra/test_ncm_spectral_tensor.c'],
     },
