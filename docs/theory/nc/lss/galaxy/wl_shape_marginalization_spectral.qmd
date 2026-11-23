@@ -423,28 +423,29 @@ values next to $|g| = 1$ were not measured for $\sigma_\mathrm{noise}$ below 0.0
 The interpolation in $g$ was measured on 150 galaxies of HWL16a-002 and HWL16a-064, 100 of
 them with $\sigma_\mathrm{noise} < 0.1$, with $g_\mathrm{max} = 0.3$, against the integral
 at `reltol` $10^{-8}$ on 200 random shears of the disk per galaxy, with
-`interp-min-radial-panels` 2. No build failed. The integrals of a build and the largest
-difference in $\ln P$ are:
+`interp-min-radial-panels` 2 and `interp-trim-frac` $10^{-4}$. No build failed. The
+integrals of a build and the largest difference in $\ln P$ are:
 
 | convention | population | `interp-abstol` | integrals, median / 90% / largest | largest difference |
 |---|---|---|---|---|
-| `TRACE` | Beta, fitted | $10^{-4}$ | 927 / 1,858 / 2,372 | $4.4 \times 10^{-7}$ |
-| `TRACE` | Beta, fitted | $10^{-5}$ (default) | 1,694 / 2,818 / 3,876 | $1.0 \times 10^{-8}$ |
-| `TRACE` | Gaussian, 0.3 | $10^{-5}$ | 1,166 / 1,923 / 2,586 | $2.2 \times 10^{-9}$ |
-| `TRACE_DET` | Beta, fitted | $10^{-5}$ | 523 / 1,502 / 3,010 | $6.5 \times 10^{-9}$ |
-| `TRACE_DET` | Gaussian, 0.3 | $10^{-5}$ | 451 / 1,211 / 2,530 | $8.1 \times 10^{-9}$ |
+| `TRACE` | Beta, fitted | $10^{-4}$ | 927 / 1,858 / 2,372 | $4.2 \times 10^{-7}$ |
+| `TRACE` | Beta, fitted | $10^{-5}$ (default) | 1,694 / 2,818 / 3,876 | $1.1 \times 10^{-8}$ |
+| `TRACE` | Gaussian, 0.3 | $10^{-5}$ | 1,166 / 1,923 / 2,586 | $2.3 \times 10^{-9}$ |
+| `TRACE_DET` | Beta, fitted | $10^{-5}$ | 523 / 1,502 / 3,010 | $6.4 \times 10^{-9}$ |
+| `TRACE_DET` | Gaussian, 0.3 | $10^{-5}$ | 451 / 1,211 / 2,530 | $7.9 \times 10^{-9}$ |
 
-These tables stored every coefficient (`interp-trim-frac` 0). On the 11,616 certified
-points with $|g| \le 0.3$, the table at the default `interp-trim-frac` $10^{-4}$ differs
-from the untrimmed one by at most $10^{-9}$, and its largest difference from Arb is
-$3.6 \times 10^{-8}$, as for the untrimmed table.
+On the 11,616 certified points with $|g| \le 0.3$, the table at `interp-trim-frac`
+$10^{-4}$ differs from the untrimmed one by at most $10^{-9}$, and its largest difference
+from Arb is $3.6 \times 10^{-8}$, as for the untrimmed table.
 
-One evaluation of the approximation takes 0.11 to 0.13 microseconds (median over the
-galaxies) at the default tolerance, against 0.25 to 0.6 milliseconds for the integral at
-$|g| \le 0.3$. For the Beta populations, `interp-min-radial-panels` 4 makes the evaluation
-1.5 (`TRACE`) and 1.8 (`TRACE_DET`) times faster, for 13% and 11% more integrals in the
-builds; with 1 the evaluation of `TRACE` Beta is 1.7 times slower, and the builds of the
-four rows compute 4% to 16% fewer integrals.
+At the default tolerance, one evaluation of the table takes 43 to 55 nanoseconds per shear
+(median over the galaxies of each row), and 32 to 42 nanoseconds per shear through the
+`eval_nodes` virtual function of [[numcosmo|NcGalaxyShapeFactor]] in calls of 50 shears.
+One integral takes 118 to 164 microseconds at the default `reltol`. With
+`interp-min-radial-panels` 1 or 4 in place of 2, the evaluation per shear changes by at
+most 6%, and through `eval_nodes` from 9% faster (1) to 13% slower (4). With 1 the builds
+of the four rows at $10^{-5}$ compute 14% to 18% fewer integrals (median), and with 4, 5%
+to 21% more.
 
 ## Symbols and the Code
 
