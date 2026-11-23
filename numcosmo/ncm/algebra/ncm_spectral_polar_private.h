@@ -42,7 +42,31 @@ G_BEGIN_DECLS
  */
 typedef void (*NcmSpectralPolarRadialF) (gpointer user_data, guint n, const gdouble *r, gdouble *rho);
 
+/*
+ * NcmSpectralPolarRadialSeries:
+ * @ra: lower radial end of the panel
+ * @rb: upper radial end of the panel
+ * @ta: lower angular end of the panel
+ * @tb: upper angular end of the panel
+ * @n_coeffs: number of coefficients of the series
+ * @offset: index of the first coefficient in the array of coefficients
+ *
+ * The Chebyshev series in r of the angular integral of G on one accepted panel: with
+ * r = (ra + rb) / 2 + x (rb - ra) / 2, the integral of G (r, theta) over [ta, tb] is the sum
+ * of c^k T_k (x), k < n_coeffs, with c^k at offset + k of the array of coefficients.
+ */
+typedef struct _NcmSpectralPolarRadialSeries
+{
+  gdouble ra;
+  gdouble rb;
+  gdouble ta;
+  gdouble tb;
+  guint n_coeffs;
+  gsize offset;
+} NcmSpectralPolarRadialSeries;
+
 gdouble _ncm_spectral_polar_integrate_radial (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
+gdouble _ncm_spectral_polar_integrate_radial_series (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, GArray *series, GArray *coeffs, GError **error);
 
 G_END_DECLS
 
