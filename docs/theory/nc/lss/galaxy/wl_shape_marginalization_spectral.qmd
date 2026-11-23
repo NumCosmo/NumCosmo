@@ -397,19 +397,39 @@ computes the integral.
   $\sigma$ of a few hundredths is such a case. The default bounds are chosen for this,
   $[1, 4]$ for $\alpha$ and $\beta$ of the Beta population and $[0.2, 1]$ for $\sigma$ of
   the truncated Gaussian, where the mean of $|\chi_I|$ goes from 0.25 to 0.63.
+- One integral per shear: with
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-one-integral]] (default on), the values
+  at the population points of one call of the builder come from one integral per shear. In
+  Eq. (5) the population enters through the exponents $a$ and $b$ and through
+  $\hat{P}_\zeta$; the noise factor of $G$ holds no population. The integral is computed for
+  the population at the center of the population points of the call, and on each of its
+  accepted panels the integral of the noise factor over $\theta$ is kept as a Chebyshev
+  series in $r$. The integral of another population of the call is the integral of its
+  $r^a (1 - r)^b \hat{P}_\zeta (r)$ against those series: by a Gauss-Legendre rule on a
+  panel that touches neither end of $[0, 1]$, and, on a panel that touches one end, by the
+  moments of the power law of that end against products of Chebyshev polynomials, which
+  hold no quadrature error for two series. This requires $\hat{P}_\zeta$ to be a constant
+  times one factor for each free parameter, as for the Beta population and the truncated
+  Gaussian ([[numcosmo|nc_galaxy_shape_pop_reduced_factor_params]]); otherwise, and with
+  the property off, each population point takes its own integral. The accepted panels are
+  those of the population at the center. They do not resolve the integrand of a population
+  whose density differs from it by many orders of magnitude, so the bounds must not contain
+  such populations.
 
 The table of a galaxy is built at its first evaluation with
 $|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
 $\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, `reltol`, $g_\mathrm{max}$,
 `interp-abstol`, `interp-min-radial-panels`, `interp-trim-frac`, the values of the fixed
 parameters of the population, the set of its free parameters or their bounds differ from
-those it was built for, and, with population variables, when `interp-pop-level-min` or
-`interp-pop-level-cap` differ. A change of a free parameter inside its bounds uses the same
-table. A table without population variables computes of the order of $10^3$ integrals; one
-with population variables computes that number at each point of their grids, at least
-$5^d$ points for $d$ free parameters at the default `interp-pop-level-min`. A table
-replaces the integrals of the shears at which the galaxy is evaluated while it holds, so it
-reduces the cost when these outnumber the integrals of its build.
+those it was built for, and, with population variables, when `interp-pop-level-min`,
+`interp-pop-level-cap` or `interp-pop-one-integral` differ. A change of a free parameter
+inside its bounds uses the same table. A table without population variables computes of
+the order of $10^3$ integrals. One with population variables needs that number of values at
+each point of the grids of the population, at least $5^d$ points for $d$ free parameters at
+the default `interp-pop-level-min`; with `interp-pop-one-integral` the population points of
+a call take one integral per shear, and without it one integral each. A table replaces the
+integrals of the shears at which the galaxy is evaluated while it holds, so it reduces the
+cost when these outnumber the integrals of its build.
 
 ## Interpolation Along the Shears of a Galaxy
 
