@@ -2056,6 +2056,7 @@ struct _NcmSpectralPolarWeightGrid
   gdouble *sv;           /* the series there */
   gdouble *gv;           /* the contraction of one factor with the table of an exponent */
   gdouble *fv;           /* the values a factor callback returns */
+  gdouble *pw;           /* the power law of an end at the points */
   GArray *U;             /* gdouble, Ka x np: the factors of index j at the points */
   GArray *V;             /* gdouble, Kb x np: the factors of index l at the points */
   gdouble *av;           /* np x Ka, the values whose coefficients are in ac */
@@ -2086,7 +2087,7 @@ _ncm_spectral_polar_weight_grid_new (NcmSpectralPolar *sp, gdouble R, guint Ka, 
   NcmSpectralPolarWeightGrid *wg = g_new0 (NcmSpectralPolarWeightGrid, 1);
   const guint level_cap          = sp->level_cap;
   const guint np                 = (1u << level_cap) + 1;
-  const guint n_lines            = 8;
+  const guint n_lines            = 9;
   const gsize table_len          = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 1);
   const gsize mom_len            = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 2);
   gdouble *lines;
@@ -2161,6 +2162,7 @@ _ncm_spectral_polar_weight_grid_new (NcmSpectralPolar *sp, gdouble R, guint Ka, 
   wg->sv  = lines + 5 * np;
   wg->gv  = lines + 6 * np;
   wg->fv  = lines + 7 * np;
+  wg->pw  = lines + 8 * np;
 
   for (k = 0; k < np; k++)
     wg->xc[k] = cos (M_PI * k / (np - 1.0));
@@ -2346,6 +2348,8 @@ _ncm_spectral_polar_weight_grid_panel (NcmSpectralPolarWeightGrid *wg, const gdo
     _ncm_spectral_polar_weight_grid_gl (wg, l, &x, &w);
     _ncm_spectral_polar_weight_grid_eval (c, n, nq, x, wg->sv);
 
+    #pragma omp simd
+
     for (q = 0; q < nq; q++)
     {
       const gdouble r = mid + half * x[q];
@@ -2421,6 +2425,8 @@ _ncm_spectral_polar_weight_grid_panel (NcmSpectralPolarWeightGrid *wg, const gdo
   if (at_0)
   {
     /* (R - r)^b_l v_l and the series times u_j, then their coefficients */
+    #pragma omp simd
+
     for (i = 0; i <= n; i++)
       wg->lnq[i] = log (R - wg->rr[i]);
 
@@ -2429,8 +2435,13 @@ _ncm_spectral_polar_weight_grid_panel (NcmSpectralPolarWeightGrid *wg, const gdo
       if (fb != NULL)
         fb (k, n + 1, wg->rr, wg->fv, user_data);
 
+      #pragma omp simd
+
       for (i = 0; i <= n; i++)
-        wg->bv[(gsize) i * Kb + k] = exp (b[k] * wg->lnq[i]) * ((fb != NULL) ? wg->fv[i] : 1.0);
+        wg->pw[i] = exp (b[k] * wg->lnq[i]);
+
+      for (i = 0; i <= n; i++)
+        wg->bv[(gsize) i * Kb + k] = wg->pw[i] * ((fb != NULL) ? wg->fv[i] : 1.0);
     }
 
     for (j = 0; j < Ka; j++)
@@ -2474,6 +2485,8 @@ _ncm_spectral_polar_weight_grid_panel (NcmSpectralPolarWeightGrid *wg, const gdo
   else
   {
     /* r^a_j u_j and the series times v_l, then their coefficients */
+    #pragma omp simd
+
     for (i = 0; i <= n; i++)
       wg->lnr[i] = log (wg->rr[i]);
 
@@ -2482,8 +2495,13 @@ _ncm_spectral_polar_weight_grid_panel (NcmSpectralPolarWeightGrid *wg, const gdo
       if (fa != NULL)
         fa (j, n + 1, wg->rr, wg->fv, user_data);
 
+      #pragma omp simd
+
       for (i = 0; i <= n; i++)
-        wg->av[(gsize) i * Ka + j] = exp (a[j] * wg->lnr[i]) * ((fa != NULL) ? wg->fv[i] : 1.0);
+        wg->pw[i] = exp (a[j] * wg->lnr[i]);
+
+      for (i = 0; i <= n; i++)
+        wg->av[(gsize) i * Ka + j] = wg->pw[i] * ((fa != NULL) ? wg->fv[i] : 1.0);
     }
 
     for (k = 0; k < Kb; k++)

@@ -2127,18 +2127,17 @@ _nc_galaxy_shape_factor_spectral_interp_pop_fa (guint k, guint n, const gdouble 
 
   for (i = 0; i < n; i++)
   {
-    gdouble f_o, f_1;
+    gdouble f_1;
 
-    if (self->axis_ratio_var)
-    {
-      nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, 2.0 * r[i] / (1.0 + r[i] * r[i]), &f_o, &f_1);
-      f[i] = f_o * c * exp (-a * log1p (r[i] * r[i]));
-    }
-    else
-    {
-      nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, r[i], &f_o, &f_1);
-      f[i] = f_o;
-    }
+    nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, self->axis_ratio_var ? 2.0 * r[i] / (1.0 + r[i] * r[i]) : r[i], &f[i], &f_1);
+  }
+
+  if (self->axis_ratio_var)
+  {
+    #pragma omp simd
+
+    for (i = 0; i < n; i++)
+      f[i] *= c * exp (-a * log (1.0 + r[i] * r[i]));
   }
 }
 
@@ -2159,18 +2158,17 @@ _nc_galaxy_shape_factor_spectral_interp_pop_fb (guint l, guint n, const gdouble 
 
   for (i = 0; i < n; i++)
   {
-    gdouble f_o, f_1;
+    gdouble f_o;
 
-    if (self->axis_ratio_var)
-    {
-      nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, 2.0 * r[i] / (1.0 + r[i] * r[i]), &f_o, &f_1);
-      f[i] = f_1 * (1.0 + r[i]) * exp (-(b_pop + 2.0) * log1p (r[i] * r[i]));
-    }
-    else
-    {
-      nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, r[i], &f_o, &f_1);
-      f[i] = f_1;
-    }
+    nc_galaxy_shape_pop_eval_p_reduced_factors (pop, pop_data, self->axis_ratio_var ? 2.0 * r[i] / (1.0 + r[i] * r[i]) : r[i], &f_o, &f[i]);
+  }
+
+  if (self->axis_ratio_var)
+  {
+    #pragma omp simd
+
+    for (i = 0; i < n; i++)
+      f[i] *= (1.0 + r[i]) * exp (-(b_pop + 2.0) * log (1.0 + r[i] * r[i]));
   }
 }
 

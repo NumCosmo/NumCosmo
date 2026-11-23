@@ -79,6 +79,7 @@ struct _NcGalaxyShapePopBeta
 typedef struct _NcGalaxyShapePopBetaLData
 {
   gdouble lnnorm_r; /* -ln B(alpha,beta): eval_p()/eval_p_array()'s own P_pop(r) normalization */
+  gdouble norm_r;   /* 1 / B(alpha,beta), the reduced density */
   gdouble alpha;    /* cached copy of the alpha model param */
   gdouble beta;     /* cached copy of the beta model param */
 } NcGalaxyShapePopBetaLData;
@@ -211,6 +212,7 @@ _nc_galaxy_shape_pop_beta_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *
 
   /* lnnorm_r: -ln B(alpha,beta), the normalization of P_pop(r) */
   ldata->lnnorm_r = -gsl_sf_lnbeta (alpha, beta);
+  ldata->norm_r   = exp (ldata->lnnorm_r);
   ldata->alpha    = alpha;
   ldata->beta     = beta;
 }
@@ -301,7 +303,7 @@ _nc_galaxy_shape_pop_beta_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePo
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  return exp (ldata->lnnorm_r);
+  return ldata->norm_r;
 }
 
 /* alpha sets the exponent at the origin and beta the one at 1; both factors are 1 */
@@ -323,7 +325,7 @@ _nc_galaxy_shape_pop_beta_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalax
   *f_o = 1.0;
   *f_1 = 1.0;
 
-  return exp (ldata->lnnorm_r);
+  return ldata->norm_r;
 }
 
 /* M_2k = <r^2k> = B(alpha+2k,beta)/B(alpha,beta) = prod_{j=0}^{2k-1}
