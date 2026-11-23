@@ -225,6 +225,8 @@ nc_cbe_precision_init (NcCBEPrecision *cbe_prec)
   cbe_prec->priv = nc_cbe_precision_get_instance_private (cbe_prec);
 }
 
+static void _nc_cbe_precision_set_data_file (gchar *dest, const GValue *value, const gchar *data_name);
+
 static void
 nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
@@ -271,27 +273,9 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       cbe_prec->priv->ppr.tol_tau_eq = g_value_get_double (value);
       break;
     case PROP_SBBN_FILE:
-    {
-      gchar *sBBN_file    = g_value_dup_string (value);
-      guint sBBN_file_len = strlen (sBBN_file);
-
-      g_assert_cmpuint (sBBN_file_len, <, _FILENAMESIZE_);
-
-      if (!g_file_test (sBBN_file, G_FILE_TEST_EXISTS))
-      {
-        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", sBBN_file);
-        g_free (sBBN_file);
-
-        sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "bbn"G_DIR_SEPARATOR_S "sBBN_2017.dat", TRUE);
-        sBBN_file_len = strlen (sBBN_file);
-        g_assert_cmpuint (sBBN_file_len, <, _FILENAMESIZE_);
-      }
-
-      memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len + 1);
-      g_free (sBBN_file);
-
+      _nc_cbe_precision_set_data_file (cbe_prec->priv->ppr.sBBN_file, value,
+                                       "class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN_2017.dat");
       break;
-    }
     case PROP_RECFAST_Z_INI:
       cbe_prec->priv->ppr.recfast_z_initial = g_value_get_double (value);
       break;
@@ -374,73 +358,17 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       cbe_prec->priv->ppr.recfast_H_frac = g_value_get_double (value);
       break;
     case PROP_HYREC_ALPHA_INF_FILE:
-    {
-      gchar *Alpha_inf_file    = g_value_dup_string (value);
-      guint Alpha_inf_file_len = strlen (Alpha_inf_file);
-
-      g_assert_cmpuint (Alpha_inf_file_len, <, _FILENAMESIZE_);
-
-      if (!g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS))
-      {
-        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
-        g_free (Alpha_inf_file);
-
-        Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
-        Alpha_inf_file_len = strlen (Alpha_inf_file);
-        g_assert_cmpuint (Alpha_inf_file_len, <, _FILENAMESIZE_);
-      }
-
-      memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len + 1);
-      g_free (Alpha_inf_file);
-
+      _nc_cbe_precision_set_data_file (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, value,
+                                       "class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat");
       break;
-    }
     case PROP_HYREC_R_INF_FILE:
-    {
-      gchar *R_inf_file    = g_value_dup_string (value);
-      guint R_inf_file_len = strlen (R_inf_file);
-
-      g_assert_cmpuint (R_inf_file_len, <, _FILENAMESIZE_);
-
-      if (!g_file_test (R_inf_file, G_FILE_TEST_EXISTS))
-      {
-        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
-        g_free (R_inf_file);
-
-        R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
-        R_inf_file_len = strlen (R_inf_file);
-
-        g_assert_cmpuint (R_inf_file_len, <, _FILENAMESIZE_);
-      }
-
-      memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len + 1);
-      g_free (R_inf_file);
-
+      _nc_cbe_precision_set_data_file (cbe_prec->priv->ppr.hyrec_R_inf_file, value,
+                                       "class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat");
       break;
-    }
     case PROP_HYREC_TWO_PHOTON_TABLES_FILE:
-    {
-      gchar *two_photon_tables_file    = g_value_dup_string (value);
-      guint two_photon_tables_file_len = strlen (two_photon_tables_file);
-
-      g_assert_cmpuint (two_photon_tables_file_len, <, _FILENAMESIZE_);
-
-      if (!g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS))
-      {
-        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", two_photon_tables_file);
-        g_free (two_photon_tables_file);
-
-        two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S "hyrec"G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
-        two_photon_tables_file_len = strlen (two_photon_tables_file);
-
-        g_assert_cmpuint (two_photon_tables_file_len, <, _FILENAMESIZE_);
-      }
-
-      memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
-
-      g_free (two_photon_tables_file);
+      _nc_cbe_precision_set_data_file (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, value,
+                                       "class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat");
       break;
-    }
     case PROP_REION_Z_START_MAX:
       cbe_prec->priv->ppr.reionization_z_start_max = g_value_get_double (value);
       break;
@@ -769,6 +697,38 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
   }
+}
+
+/*
+ * Copies into @dest the file named by @value. A NULL @value (the property default)
+ * selects @data_name in the NumCosmo data directory; a file that does not exist selects
+ * it too, with a warning. Aborts when the data file is missing or a name does not fit
+ * in _FILENAMESIZE_.
+ */
+static void
+_nc_cbe_precision_set_data_file (gchar *dest, const GValue *value, const gchar *data_name)
+{
+  const gchar *file = g_value_get_string (value);
+  gchar *path;
+
+  if (file != NULL)
+    g_assert_cmpuint (strlen (file), <, _FILENAMESIZE_);
+
+  if ((file != NULL) && g_file_test (file, G_FILE_TEST_EXISTS))
+  {
+    path = g_strdup (file);
+  }
+  else
+  {
+    if (file != NULL)
+      g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", file);
+
+    path = ncm_cfg_get_data_filename (data_name, TRUE);
+    g_assert_cmpuint (strlen (path), <, _FILENAMESIZE_);
+  }
+
+  memcpy (dest, path, strlen (path) + 1);
+  g_free (path);
 }
 
 static void
@@ -1346,18 +1306,13 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
   /*
    * Thermodynamics related parameters
    */
-  {
-    gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN_2017.dat", TRUE);
-
-    g_object_class_install_property (object_class,
-                                     PROP_SBBN_FILE,
-                                     g_param_spec_string ("sBBN-file",
-                                                          NULL,
-                                                          "SBBN filename (unused: NumCosmo always supplies YHe)",
-                                                          sBBN_file,
-                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-    g_free (sBBN_file);
-  }
+  g_object_class_install_property (object_class,
+                                   PROP_SBBN_FILE,
+                                   g_param_spec_string ("sBBN-file",
+                                                        NULL,
+                                                        "SBBN filename, NULL for the one in the NumCosmo data directory (unused: NumCosmo always supplies YHe)",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_RECFAST_Z_INI,
                                    g_param_spec_double ("recfast-z-initial",
@@ -1547,42 +1502,27 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "governs time at which full equation of evolution for Tmat is used",
                                                         0.0, G_MAXDOUBLE, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  {
-    gchar *hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
-
-    g_object_class_install_property (object_class,
-                                     PROP_HYREC_ALPHA_INF_FILE,
-                                     g_param_spec_string ("hyrec-Alpha-inf-file",
-                                                          NULL,
-                                                          "Hyrec Alpha inf file",
-                                                          hyrec_Alpha_inf_file,
-                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-    g_free (hyrec_Alpha_inf_file);
-  }
-  {
-    gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
-
-    g_object_class_install_property (object_class,
-                                     PROP_HYREC_R_INF_FILE,
-                                     g_param_spec_string ("hyrec-R-inf-file",
-                                                          NULL,
-                                                          "Hyrec R inf file",
-                                                          hyrec_R_inf_file,
-                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-    g_free (hyrec_R_inf_file);
-  }
-  {
-    gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
-
-    g_object_class_install_property (object_class,
-                                     PROP_HYREC_TWO_PHOTON_TABLES_FILE,
-                                     g_param_spec_string ("hyrec-two-photon-tables-file",
-                                                          NULL,
-                                                          "Hyrec two photon tables file",
-                                                          hyrec_two_photon_tables_file,
-                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-    g_free (hyrec_two_photon_tables_file);
-  }
+  g_object_class_install_property (object_class,
+                                   PROP_HYREC_ALPHA_INF_FILE,
+                                   g_param_spec_string ("hyrec-Alpha-inf-file",
+                                                        NULL,
+                                                        "Hyrec Alpha inf file, NULL for the one in the NumCosmo data directory",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_HYREC_R_INF_FILE,
+                                   g_param_spec_string ("hyrec-R-inf-file",
+                                                        NULL,
+                                                        "Hyrec R inf file, NULL for the one in the NumCosmo data directory",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_HYREC_TWO_PHOTON_TABLES_FILE,
+                                   g_param_spec_string ("hyrec-two-photon-tables-file",
+                                                        NULL,
+                                                        "Hyrec two photon tables file, NULL for the one in the NumCosmo data directory",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /* for reionization */
   g_object_class_install_property (object_class,
                                    PROP_REION_Z_START_MAX,
