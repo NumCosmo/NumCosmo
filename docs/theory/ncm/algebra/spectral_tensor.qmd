@@ -292,6 +292,13 @@ and $F$ is evaluated at every point of their tensor product. The values are stor
 the last variable running fastest. A part of $F$ that depends on one variable only can
 therefore be computed once per point of that variable, instead of once per grid point.
 
+The variables $x_i$ of the table are those the callback receives, and the construction
+applies no change of variable. A function that varies on a logarithmic scale in one of its
+arguments is tabulated in the logarithm of that argument, and the callback converts the
+points it receives. For example, a function of a width $\sigma \in [0.02, 1.5]$ that
+varies most at small $\sigma$ is tabulated in $x_0 = \ln \sigma$, and the callback
+computes $\sigma = e^{x_0}$. The table is then evaluated at $x_0 = \ln \sigma$.
+
 ## The Test
 
 A node becomes a panel node when its series passes the test of this section, and is
