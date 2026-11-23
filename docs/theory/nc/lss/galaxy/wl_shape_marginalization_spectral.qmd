@@ -212,8 +212,8 @@ $\sigma_\mathrm{noise}$ is small. The peak is searched on one ray.
 
 The edges are those of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
 $(r_*, \theta_0)$ with the radial half width
-$L \equiv \sigma_\mathrm{noise} \min (J_1, J_2)$ and the angular half width $L / r_*$. They
-cover the whole disk.
+$L \equiv \sigma_\mathrm{noise} \min (J_1, J_2)$ and the angular half width $L / r_*$, with
+the default `min-radial-panels`, 2. They cover the whole disk.
 
 The scan places the panels and sets $d_0$. It does not decide what is integrated: every
 panel is accepted by the test of [[numcosmo-math|NcmSpectralPolar]], and a panel where
@@ -346,11 +346,15 @@ computes the integral.
   $[g_c - g_\mathrm{max}, g_c + g_\mathrm{max}] \times [\pi - \arcsin (g_\mathrm{max} / g_c), \pi]$.
   It reaches $|g| = g_\mathrm{max} + 2 g_c < 3 g_\mathrm{max}$, so $g_\mathrm{max} < 1/3$
   keeps it inside $|g| < 1$, where $\ln P$ is smooth in $g$.
-- Edges: the radial edges of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
-  $\rho = 0$ of half width $L_g$ that are inside the region, with `min-radial-panels`
-  equal to [[numcosmo|NcGalaxyShapeFactorSpectral:interp-min-radial-panels]] (default 2),
-  and angular panels of $\pi / 2$ at most. The integrals use a separate
-  [[numcosmo-math|NcmSpectralPolar]] with the default `min-radial-panels`, 2.
+- First grid: the split of the region that the builder refines. The candidate radial
+  edges are 0, $R$, $k R / n$ for $0 < k < n$, and $L_g w^j$ below $R$ for $j \ge 0$,
+  where $R$ is the upper end of the region in $\rho$, $n$ is
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-min-radial-panels]] (default 2), and
+  $w = 4$. In ascending order, a candidate at most $L_g / 4$ above the edge kept before it
+  is left out, except $R$. The radial edges are the lower end of the region and the kept
+  candidates more than $\sigma_\mathrm{noise} / 8$ above it. The edges $L_g w^j$ are
+  closest together near $g_c$, where $\ln P$ is narrowest. The angular edges are the ends
+  of the region and, when it spans more than $\pi / 2$, its midpoint.
 - Test: a node becomes a panel node when the estimate $D$ of
   [The Test](../../../ncm/algebra/spectral_tensor.qmd#the-test) is at most
   [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]], the absolute tolerance of the
