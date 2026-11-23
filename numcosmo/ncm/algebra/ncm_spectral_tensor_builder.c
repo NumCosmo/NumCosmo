@@ -65,6 +65,19 @@
  * every variable. A variable whose level-min equals its level-cap has a fixed number of
  * points: it is never chosen for refinement, and its $D_i$ is part of $D$.
  *
+ * The tolerance $\varepsilon$ must be above the error of the values of $F$. The sum $D$
+ * adds the absolute values of many coefficients, and each coefficient carries the error of
+ * the values given by the callback, which is at least their rounding, of order
+ * $10^{-16} |F|$. A node whose $\varepsilon$ is below the value of $D$ produced by that
+ * error does not pass the test at any level. It is bisected until
+ * #NcmSpectralTensorBuilder:max-depth is reached, and the build ends with the error
+ * %NCM_SPECTRAL_TENSOR_BUILDER_ERROR_MAX_DEPTH. A build that fails in this way may
+ * evaluate $F$ many times before the error. For a function of large $|F|$ the limit is
+ * reached first by the absolute tolerance: with $|F|$ of order $10^4$,
+ * $\varepsilon_\mathrm{abs} = 10^{-12}$ is below the rounding of the values and the build
+ * fails, while $\varepsilon_\mathrm{rel} = 10^{-12}$ gives $\varepsilon = 10^{-12} V$ on
+ * each node and the build ends.
+ *
  * A node whose series passes the test becomes a panel node, which stores all its
  * coefficients by default. With #NcmSpectralTensorBuilder:trim-frac $f > 0$, slices of
  * highest index are removed one at a time, each time the slice with the smallest $\ell_1$
