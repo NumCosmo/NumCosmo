@@ -170,6 +170,7 @@ typedef struct _NcmSpectralPolarWork
   gdouble *tmp;    /* its radial transform, same layout */
   gdouble *tmpT;   /* the transpose of tmp */
   gdouble *coeffs; /* the Chebyshev coefficients, (m + 1) x (n + 1): row l = angular index */
+  gdouble vs;      /* the largest |F| of the samples in in */
   GArray *lines;   /* the np-long arrays below, one after the other */
   gdouble *br;     /* l1 mass of the coefficients per radial index */
   gdouble *bt;     /* and per angular index */
@@ -987,12 +988,13 @@ static void _ncm_spectral_polar_nodes_r (NcmSpectralPolarCall *call, const NcmSp
 static void _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint ly, guint j0, guint step);
 static void _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep);
 
-/* Samples F on the starting grid of the panel */
+/* Samples F on the starting grid of the panel; work->vs restarts from these samples */
 static void
 _ncm_spectral_polar_sample_start (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel)
 {
   _ncm_spectral_polar_nodes_r (call, panel, call->level_min, 0, 1);
   _ncm_spectral_polar_nodes_theta (call, panel, call->level_min, 0, 1);
+  call->work->vs = 0.0;
   _ncm_spectral_polar_rows (call, call->level_min, call->level_min, 0, 1, 0, 1);
 }
 
@@ -1142,7 +1144,9 @@ _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPo
 
 /*
  * Calls G at the rows i0, i0 + istep, ... and the angles j0, j0 + jstep, ... of level
- * (lx, ly) and stores F, G times the regular weight, in the grid of that level.
+ * (lx, ly) and stores F, G times the regular weight, in the grid of that level. Updates
+ * work->vs, the largest |F| of the samples in the grid, with the values it stores. Four
+ * running maxima per row: with one, each comparison waits for the one before.
  */
 static void
 _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep)
@@ -1164,11 +1168,40 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
   {
     const gdouble w = work->wr[i];
     gdouble *row    = work->in + (gsize) i * (m + 1);
+    gdouble v0      = work->vs;
+    gdouble v1      = 0.0;
+    gdouble v2      = 0.0;
+    gdouble v3      = 0.0;
 
     call->G (call->user_data, work->rr[i], c, work->gth, work->gct, work->gst, work->gf);
 
-    for (q = 0, j = j0; q < c; q++, j += jstep)
-      row[j] = w * work->gf[q];
+    for (q = 0, j = j0; q + 4 <= c; q += 4, j += 4 * jstep)
+    {
+      const gdouble f0 = w * work->gf[q];
+      const gdouble f1 = w * work->gf[q + 1];
+      const gdouble f2 = w * work->gf[q + 2];
+      const gdouble f3 = w * work->gf[q + 3];
+
+      row[j]             = f0;
+      row[j + jstep]     = f1;
+      row[j + 2 * jstep] = f2;
+      row[j + 3 * jstep] = f3;
+
+      v0 = MAX (v0, fabs (f0));
+      v1 = MAX (v1, fabs (f1));
+      v2 = MAX (v2, fabs (f2));
+      v3 = MAX (v3, fabs (f3));
+    }
+
+    for ( ; q < c; q++, j += jstep)
+    {
+      const gdouble f = w * work->gf[q];
+
+      row[j] = f;
+      v0     = MAX (v0, fabs (f));
+    }
+
+    work->vs = MAX (MAX (v0, v1), MAX (v2, v3));
   }
 
   call->n_eval += (guint64) c * ((n - i0) / istep + 1);
@@ -1177,24 +1210,15 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
 /*
  * Transforms the grid of level (lx, ly) into its Chebyshev coefficients in work->coeffs,
  * with the angular index first, and fills work->br and work->bt with the l1 masses of the
- * coefficients per radial and per angular index. Returns the largest |F| on the grid.
+ * coefficients per radial and per angular index. Returns work->vs, the largest |F| on the
+ * grid, which the functions that write the samples keep.
  */
 static gdouble
 _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
 {
-  const guint n                 = 1u << lx;
-  const guint m                 = 1u << ly;
-  const gsize len               = (gsize) (n + 1) * (m + 1);
-  const gdouble * restrict grid = work->in;
-  gdouble vs                    = 0.0;
-  gsize q;
+  const guint n = 1u << lx;
+  const guint m = 1u << ly;
   guint j, k, l;
-
-  /* The maximum does not depend on the order, so the reduction may be reordered */
-  #pragma omp simd reduction(max:vs)
-
-  for (q = 0; q < len; q++)
-    vs = MAX (vs, fabs (grid[q]));
 
   /*
    * Radial transform of the m + 1 columns of in, its transpose, then angular transform
@@ -1232,7 +1256,7 @@ _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly)
     work->bt[l] = acc;
   }
 
-  return vs;
+  return work->vs;
 }
 
 /*
@@ -1383,6 +1407,7 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
       _ncm_spectral_polar_nodes_r (call, &entry->panel, call->level_min, 0, 1);
       _ncm_spectral_polar_nodes_theta (call, &entry->panel, call->level_min, 0, 1);
       memcpy (work->in, start, sizeof (gdouble) * ns * ns);
+      work->vs = entry->vs;
 
       _ncm_spectral_polar_expand (call, entry->panel, entry);
     }
