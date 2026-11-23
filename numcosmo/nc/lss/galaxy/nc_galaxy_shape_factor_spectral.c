@@ -175,7 +175,8 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
   GArray *theta_edges;
   GArray *r_edges_all; /* radial edges of the interpolant before those below its range are left out */
   GArray *var_r;       /* the radii of a call of the radial factor of the variance */
-  GArray *x_arr;       /* the points of the interpolant of a call of eval_nodes, two values per point */
+  GArray *g_arr;       /* the shears of a call of eval_nodes that the interpolant takes, two values per shear */
+  GArray *x_arr;       /* their points of the interpolant, two values per point */
   GArray *f_arr;       /* their values */
   GArray *j_arr;       /* guint, the index of each of those points among the shears of the call */
 } NcGalaxyShapeFactorSpectralWork;
@@ -541,6 +542,7 @@ _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata)
   work->theta_edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->r_edges_all = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->var_r       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->g_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->x_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->f_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->j_arr       = g_array_new (FALSE, FALSE, sizeof (guint));
@@ -557,6 +559,7 @@ _nc_galaxy_shape_factor_spectral_work_free (gpointer p)
   g_array_unref (work->theta_edges);
   g_array_unref (work->r_edges_all);
   g_array_unref (work->var_r);
+  g_array_unref (work->g_arr);
   g_array_unref (work->x_arr);
   g_array_unref (work->f_arr);
   g_array_unref (work->j_arr);
@@ -757,9 +760,10 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
 /*
  * eval_nodes of the class: with use-interp, the shears with |g| <= interp-g-max are evaluated
  * in one call of ncm_spectral_tensor_eval_array() on the interpolant of the galaxy, which is
- * checked, and built if needed, once per call; their points are those of
- * _nc_galaxy_shape_factor_spectral_eval_ln_marginal(). The other shears, and every shear
- * without use-interp, take the integral. The values of the interpolant agree with those of
+ * checked, and built if needed, once per call. Their points are those of
+ * _nc_galaxy_shape_factor_spectral_eval_ln_marginal(), computed in one loop that vectorizes:
+ * rho by sqrt in place of hypot (rho < 2 here) and psi by the vector atan2. The other shears,
+ * and every shear without use-interp, take the integral. The values of the interpolant agree with those of
  * the evaluation one shear at a time to rounding, not bit by bit.
  */
 static void
@@ -791,7 +795,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
 
   ptr  = ncm_memory_pool_get (self->work_pool);
   work = *ptr;
-  g_array_set_size (work->x_arr, 0);
+  g_array_set_size (work->g_arr, 0);
   g_array_set_size (work->j_arr, 0);
 
   for (j = 0; j < n; j++)
@@ -819,17 +823,36 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
     }
 
     {
-      const gdouble gf_1 = g_1[j] * ldata->cos_e + g_2[j] * ldata->sin_e - ldata->g_c;
-      const gdouble gf_2 = g_2[j] * ldata->cos_e - g_1[j] * ldata->sin_e;
-      const gdouble x[2] = {hypot (gf_1, gf_2), atan2 (fabs (gf_2), gf_1)};
+      const gdouble g[2] = {g_1[j], g_2[j]};
 
-      g_array_append_vals (work->x_arr, x, 2);
+      g_array_append_vals (work->g_arr, g, 2);
       g_array_append_val (work->j_arr, j);
     }
   }
 
   if (work->j_arr->len > 0)
   {
+    const guint m       = work->j_arr->len;
+    const gdouble cos_e = ldata->cos_e;
+    const gdouble sin_e = ldata->sin_e;
+    const gdouble g_c   = ldata->g_c;
+    const gdouble *g    = &g_array_index (work->g_arr, gdouble, 0);
+    gdouble *x;
+
+    g_array_set_size (work->x_arr, 2 * m);
+    x = &g_array_index (work->x_arr, gdouble, 0);
+
+    #pragma omp simd
+
+    for (q = 0; q < m; q++)
+    {
+      const gdouble gf_1 = g[2 * q] * cos_e + g[2 * q + 1] * sin_e - g_c;
+      const gdouble gf_2 = g[2 * q + 1] * cos_e - g[2 * q] * sin_e;
+
+      x[2 * q]     = sqrt (gf_1 * gf_1 + gf_2 * gf_2);
+      x[2 * q + 1] = atan2 (fabs (gf_2), gf_1);
+    }
+
     ncm_spectral_tensor_eval_array (ldata->st, work->x_arr, &work->f_arr);
 
     for (q = 0; q < work->j_arr->len; q++)
