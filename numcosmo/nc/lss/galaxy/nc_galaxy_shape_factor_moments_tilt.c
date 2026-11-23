@@ -1237,7 +1237,7 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
 
   /* Whether the per-galaxy bound holds for the current free parameters:
    * only the mass, the halo center and the shape population may be free
-   * (see _moments_tilt_range_holds). @range_gen is incremented when it
+   * (see _nc_galaxy_shape_factor_moments_range_holds). @range_gen is incremented when it
    * changes, so tables cut to a bound are refreshed. */
   gboolean range_holds;
   guint range_gen;
@@ -1609,55 +1609,6 @@ _nc_galaxy_shape_factor_moments_tilt_data_init (NcGalaxyShapeFactor *gsf, NcmMSe
   data->ldata_required_columns = &_nc_galaxy_shape_factor_moments_tilt_ldata_required_columns;
 }
 
-/*
- * Whether the reachable-range bound of data_prepare() holds for the free
- * parameters of @mset: TRUE when only log10MDelta, the halo center (ra,
- * dec) and shape-population parameters are free. The bound covers
- * log10MDelta up to its upper bound and the halo center over its box; the
- * shape population changes only the tables, which are keyed on it. Every
- * other free parameter (cosmology, z_cl, cDelta and the other profile and
- * mass-summary parameters, the surface mass density, the redshift models)
- * moves the shear or the redshift support outside what the bound covers.
- */
-static gboolean
-_moments_tilt_range_holds (NcmMSet *mset)
-{
-  const guint n_models = ncm_mset_nmodels (mset);
-  guint i, pid;
-
-  /* Read from the models, not from the free-parameter map, which the
-   * caller may not have prepared. */
-  for (i = 0; i < n_models; i++)
-  {
-    NcmModel *model = ncm_mset_peek (mset, ncm_mset_get_mid_array_pos (mset, i));
-    const guint len = ncm_model_len (model);
-
-    if (NC_IS_GALAXY_SHAPE_POP (model))
-      continue;
-
-    for (pid = 0; pid < len; pid++)
-    {
-      if (ncm_model_param_get_ftype (model, pid) != NCM_PARAM_TYPE_FREE)
-        continue;
-
-      if (NC_IS_HALO_POSITION (model) && ((pid == NC_HALO_POSITION_RA) || (pid == NC_HALO_POSITION_DEC)))
-        continue;
-
-      if (NC_IS_HALO_MASS_SUMMARY (model))
-      {
-        const gchar *name = ncm_model_param_name (model, pid);
-
-        if (g_strcmp0 (name, "log10MDelta") == 0)
-          continue;
-      }
-
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
 static void
 _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 {
@@ -1772,7 +1723,7 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
   }
 
   {
-    const gboolean holds = self->restrict_range && _moments_tilt_range_holds (mset);
+    const gboolean holds = self->restrict_range && _nc_galaxy_shape_factor_moments_range_holds (mset);
 
     if (holds != self->range_holds)
     {
@@ -1798,7 +1749,7 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
  * the full mesh is kept. The shear is not monotonic in the concentration
  * (outside the scale radius a higher concentration lowers it), so the bound
  * is not taken over a concentration range: a free cDelta disables the
- * restriction (see _moments_tilt_range_holds).
+ * restriction (see _nc_galaxy_shape_factor_moments_range_holds).
  *
  * The inner radial cut is not used as a floor on R: no r_min weighting is
  * applied at fit time, so a galaxy selected at the fiducial center is

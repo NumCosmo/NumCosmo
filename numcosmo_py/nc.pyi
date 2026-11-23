@@ -10022,6 +10022,8 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         Minimum number of radial intervals of the interpolant
       interp-trim-frac -> gdouble: interp-trim-frac
         Fraction of interp-abstol given to the removed coefficients
+      restrict-range -> gboolean: restrict-range
+        Whether the interpolant covers only the shears a galaxy reaches
 
     Properties from NcGalaxyShapeFactor:
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
@@ -10037,6 +10039,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         interp_min_radial_panels: int
         interp_trim_frac: float
         reltol: float
+        restrict_range: bool
         use_interp: bool
         ellip_conv: GalaxyWLObsEllipConv
 
@@ -10048,6 +10051,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
         interp_min_radial_panels: int = ...,
         interp_trim_frac: float = ...,
         reltol: float = ...,
+        restrict_range: bool = ...,
         use_interp: bool = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
     ) -> None: ...
@@ -10079,6 +10083,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def get_interp_min_radial_panels(self) -> int: ...
     def get_interp_trim_frac(self) -> float: ...
     def get_reltol(self) -> float: ...
+    def get_restrict_range(self) -> bool: ...
     def get_use_interp(self) -> bool: ...
     @classmethod
     def new(cls, ellip_conv: GalaxyWLObsEllipConv) -> GalaxyShapeFactorSpectral: ...
@@ -10089,6 +10094,7 @@ class GalaxyShapeFactorSpectral(GalaxyShapeFactor):
     def set_interp_trim_frac(self, f: float) -> None: ...
     def set_obs_source(self, pop: GalaxyShapePop, obs: GalaxyWLObs) -> None: ...
     def set_reltol(self, reltol: float) -> None: ...
+    def set_restrict_range(self, restrict_range: bool) -> None: ...
     def set_use_interp(self, use_interp: bool) -> None: ...
 
 class GalaxyShapeFactorSpectralClass(GObject.GPointer):

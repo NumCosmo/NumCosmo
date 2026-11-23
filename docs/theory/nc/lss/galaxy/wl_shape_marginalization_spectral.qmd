@@ -346,13 +346,29 @@ computes the integral.
   $[g_c - g_\mathrm{max}, g_c + g_\mathrm{max}] \times [\pi - \arcsin (g_\mathrm{max} / g_c), \pi]$.
   It reaches $|g| = g_\mathrm{max} + 2 g_c < 3 g_\mathrm{max}$, so $g_\mathrm{max} < 1/3$
   keeps it inside $|g| < 1$, where $\ln P$ is smooth in $g$.
+- Restricted range: with [[numcosmo|NcGalaxyShapeFactorSpectral:restrict-range]] (default
+  off), the region of a galaxy contains the disk $|g| \le g_\mathrm{reach}$ in place of
+  $|g| \le g_\mathrm{max}$, where
+  $g_\mathrm{reach} \equiv \min (g_\mathrm{max}, |1 + m| |g_t| + |c|)$, $m$ and $c$ are the
+  multiplicative and additive shear biases of the galaxy, and $g_t$ is the reduced tangential
+  shear at the corner of the box of the fit: the smallest projected radius that the box of
+  the halo center allows, the upper bound of $\log_{10} M_\Delta$, and the largest source
+  redshift of the galaxy. At a fixed radius, source redshift and concentration, $|g_t|$ grows
+  with the mass and the source redshift while the convergence is below 1, so the corner gives
+  its largest value. The bound holds when only $\log_{10} M_\Delta$, the halo center and
+  the parameters of the population are free. The region is that of $g_\mathrm{max}$ when
+  other parameters are free, when the box of the halo center reaches the projected position
+  of the galaxy, when the largest source redshift is not finite or not above the lens, and
+  when the convergence at the corner is at least 1. A shear with
+  $|g| > g_\mathrm{reach}$ takes the integral.
 - First grid: the split of the region that the builder refines. The candidate radial
   edges are 0, $R$, $k R / n$ for $0 < k < n$, and $L_g w^j$ below $R$ for $j \ge 0$,
   where $R$ is the upper end of the region in $\rho$, $n$ is
   [[numcosmo|NcGalaxyShapeFactorSpectral:interp-min-radial-panels]] (default 2), and
   $w = 4$. In ascending order, a candidate at most $L_g / 4$ above the edge kept before it
   is left out, except $R$. The radial edges are the lower end of the region and the kept
-  candidates more than $\sigma_\mathrm{noise} / 8$ above it. The edges $L_g w^j$ are
+  candidates more than $\sigma_\mathrm{noise} / 8$ above it, or the upper end of the region
+  when no candidate is kept. The edges $L_g w^j$ are
   closest together near $g_c$, where $\ln P$ is narrowest. The angular edges are the ends
   of the region and, when it spans more than $\pi / 2$, its midpoint.
 - Test: a node becomes a panel node when the estimate $D$ of
