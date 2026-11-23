@@ -351,6 +351,17 @@ strictly inside $[p_i, q_i]$ in floating point. The construction then stops with
 error `NCM_SPECTRAL_TENSOR_BUILDER_ERROR_MAX_DEPTH`, and the table is reset to its domain
 and an empty root.
 
+The tolerance $\varepsilon$ must be above the error of the values of $F$. Each coefficient
+of Eq. (3) carries the error of those values, which is at least their rounding, of order
+$10^{-16} |F|$, and $D$ sums the absolute values of many coefficients. A node whose
+$\varepsilon$ is below the value of $D$ produced by that error does not pass the test at
+any level, and its bisections end in the error above. The construction may evaluate $F$
+many times before that error. For a function of large $|F|$, the absolute tolerance
+reaches this limit first. With $|F|$ of order $10^4$, the tolerance
+$\varepsilon_\mathrm{abs} = 10^{-12}$ is below the rounding of the values and the
+construction fails, while $\varepsilon_\mathrm{rel} = 10^{-12}$ gives
+$\varepsilon = 10^{-12} V$ on each node and the construction ends.
+
 A variable whose `level_min` equals its `level_cap` has a fixed number of points,
 $2^{l_i} + 1$. It is never chosen for refinement, but its $D_i$ is part of $D$ in
 Eq. (6). The node is then refined only in the other variables, and at least one variable
