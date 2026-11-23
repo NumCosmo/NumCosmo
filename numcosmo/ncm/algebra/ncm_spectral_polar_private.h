@@ -68,6 +68,32 @@ typedef struct _NcmSpectralPolarRadialSeries
 gdouble _ncm_spectral_polar_integrate_radial (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
 gdouble _ncm_spectral_polar_integrate_radial_series (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, GArray *series, GArray *coeffs, GError **error);
 
+/*
+ * NcmSpectralPolarFactorF:
+ * @idx: index of the factor
+ * @n: number of radii
+ * @r: the radii r_i
+ * @f: set to the factor at the radii
+ * @user_data: user data
+ *
+ * One of the factors u_j or v_l of the weights of a NcmSpectralPolarWeightGrid, at n radii
+ * at once, without the power law of its end.
+ */
+typedef void (*NcmSpectralPolarFactorF) (guint idx, guint n, const gdouble *r, gdouble *f, gpointer user_data);
+
+/*
+ * NcmSpectralPolarWeightGrid:
+ *
+ * The radial weights w_jl (r) = r^a_j (R - r)^b_l u_j (r) v_l (r), j < Ka and l < Kb, and the
+ * tables to integrate them against the radial series of
+ * _ncm_spectral_polar_integrate_radial_series(). One object serves one thread at a time.
+ */
+typedef struct _NcmSpectralPolarWeightGrid NcmSpectralPolarWeightGrid;
+
+NcmSpectralPolarWeightGrid *_ncm_spectral_polar_weight_grid_new (NcmSpectralPolar *sp, gdouble R, guint Ka, const gdouble *a, guint Kb, const gdouble *b);
+void _ncm_spectral_polar_weight_grid_free (NcmSpectralPolarWeightGrid *wg);
+void _ncm_spectral_polar_weight_grid_integrate (NcmSpectralPolarWeightGrid *wg, GArray *series, GArray *coeffs, NcmSpectralPolarFactorF fa, NcmSpectralPolarFactorF fb, gpointer user_data, gdouble *res);
+
 G_END_DECLS
 
 #endif /* _NCM_SPECTRAL_POLAR_PRIVATE_H_ */

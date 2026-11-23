@@ -106,6 +106,8 @@ void test_ncm_spectral_polar_peak_edges (TestNcmSpectralPolar *test, gconstpoint
 void test_ncm_spectral_polar_power_laws (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_radial (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_radial_series (TestNcmSpectralPolar *test, gconstpointer pdata);
+void test_ncm_spectral_polar_weight_grid (TestNcmSpectralPolar *test, gconstpointer pdata);
+void test_ncm_spectral_polar_weight_grid_integral (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_first_doubling (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_retest (TestNcmSpectralPolar *test, gconstpointer pdata);
 void test_ncm_spectral_polar_panels (TestNcmSpectralPolar *test, gconstpointer pdata);
@@ -151,6 +153,8 @@ main (gint argc, gchar *argv[])
   TEST_NCM_SPECTRAL_POLAR_ADD ("power_laws", test_ncm_spectral_polar_power_laws);
   TEST_NCM_SPECTRAL_POLAR_ADD ("radial", test_ncm_spectral_polar_radial);
   TEST_NCM_SPECTRAL_POLAR_ADD ("radial/series", test_ncm_spectral_polar_radial_series);
+  TEST_NCM_SPECTRAL_POLAR_ADD ("weight_grid", test_ncm_spectral_polar_weight_grid);
+  TEST_NCM_SPECTRAL_POLAR_ADD ("weight_grid/integral", test_ncm_spectral_polar_weight_grid_integral);
   TEST_NCM_SPECTRAL_POLAR_ADD ("first_doubling", test_ncm_spectral_polar_first_doubling);
   TEST_NCM_SPECTRAL_POLAR_ADD ("retest", test_ncm_spectral_polar_retest);
   TEST_NCM_SPECTRAL_POLAR_ADD ("panels", test_ncm_spectral_polar_panels);
@@ -805,6 +809,94 @@ _series_integral (GArray *series, GArray *coeffs, gdouble R, gdouble a, gdouble 
   return sum;
 }
 
+/* The polynomial 1 + 2 r - r^2 + r^3 / 2 of /ncm/spectral_polar/weight_grid, in powers of r */
+static const gdouble test_wg_poly[] = {1.0, 2.0, -1.0, 0.5};
+
+/* The factor u_j (r) = 1 + j r of /ncm/spectral_polar/weight_grid */
+static void
+_wg_fa (guint j, guint n, const gdouble *r, gdouble *f, gpointer user_data)
+{
+  guint i;
+
+  for (i = 0; i < n; i++)
+    f[i] = 1.0 + j * r[i];
+}
+
+/* The factor v_l (r) = 1 + l r^2 of /ncm/spectral_polar/weight_grid */
+static void
+_wg_fb (guint l, guint n, const gdouble *r, gdouble *f, gpointer user_data)
+{
+  guint i;
+
+  for (i = 0; i < n; i++)
+    f[i] = 1.0 + l * r[i] * r[i];
+}
+
+/* The factors of /ncm/spectral_polar/weight_grid/integral: u_0 = 1 and u_1 = rho of _rho() */
+static void
+_wg_fa_rho (guint j, guint n, const gdouble *r, gdouble *f, gpointer user_data)
+{
+  guint i;
+
+  for (i = 0; i < n; i++)
+    f[i] = (j == 0) ? 1.0 : _rho (r[i]);
+}
+
+/*
+ * Appends to series and coeffs the panel [ra, rb] with the Chebyshev coefficients of the
+ * polynomial test_wg_poly, N = 2^l + 1 of them, from its values at the Lobatto points.
+ */
+static void
+_wg_append_poly (GArray *series, GArray *coeffs, gdouble ra, gdouble rb, guint l)
+{
+  const guint n                        = 1u << l;
+  const NcmSpectralPolarRadialSeries s = {ra, rb, 0.0, 1.0, n + 1, coeffs->len};
+  guint j, k;
+
+  g_array_append_val (series, s);
+
+  for (k = 0; k <= n; k++)
+  {
+    gdouble c = 0.0;
+
+    for (j = 0; j <= n; j++)
+    {
+      const gdouble r = 0.5 * (ra + rb) + 0.5 * (rb - ra) * cos (M_PI * j / n);
+      const gdouble P = test_wg_poly[0] + r * (test_wg_poly[1] + r * (test_wg_poly[2] + r * test_wg_poly[3]));
+
+      c += (((j == 0) || (j == n)) ? 0.5 : 1.0) * P * cos (M_PI * j * k / n);
+    }
+
+    c *= (((k == 0) || (k == n)) ? 1.0 : 2.0) / n;
+    g_array_append_val (coeffs, c);
+  }
+}
+
+/*
+ * The integral over [0, 1] of r^a (1 - r)^b (1 + j r) (1 + l r^2) times the polynomial
+ * test_wg_poly: the sum of its coefficients in powers of r times B (a + k + 1, b + 1).
+ */
+static gdouble
+_wg_exact (gdouble a, gdouble b, guint j, guint l)
+{
+  gdouble q[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  gdouble sum  = 0.0;
+  guint k;
+
+  for (k = 0; k < 4; k++)
+  {
+    q[k]     += test_wg_poly[k];
+    q[k + 1] += j * test_wg_poly[k];
+    q[k + 2] += l * test_wg_poly[k];
+    q[k + 3] += j * l * test_wg_poly[k];
+  }
+
+  for (k = 0; k < 7; k++)
+    sum += q[k] * gsl_sf_beta (a + k + 1.0, b + 1.0);
+
+  return sum;
+}
+
 /* A ring exp (-(r - 0.45)^2 / (2 0.02^2)), which needs refinement in r only */
 static void
 _ring (gpointer user_data, gdouble r, guint n, const gdouble *theta, const gdouble *cos_theta, const gdouble *sin_theta, gdouble *fval)
@@ -923,6 +1015,111 @@ test_ncm_spectral_polar_radial_series (TestNcmSpectralPolar *test, gconstpointer
     g_assert_cmpfloat_with_epsilon (sum, 2.0 * M_PI * exp (-0.5 * gsl_pow_2 ((r - 0.45) / 0.02)), 1.0e-12);
   }
 
+  g_array_unref (series);
+  g_array_unref (coeffs);
+}
+
+/*
+ * The weight grid against closed forms: for a series that is the polynomial test_wg_poly
+ * on three panels, [0, 0.3], [0.3, 0.7] and [0.7, 1], and on the single panel [0, 1], the
+ * integrals of r^a_j (1 - r)^b_l (1 + j r) (1 + l r^2) times the series are sums of Beta
+ * functions. The exponents include 0 at each end, and one case has no factors (NULL
+ * callbacks), so that the weights are the power laws alone. The largest relative difference
+ * measured in the 36 values is 4.0e-15.
+ */
+void
+test_ncm_spectral_polar_weight_grid (TestNcmSpectralPolar *test, gconstpointer pdata)
+{
+  const gdouble a[]              = {0.0, 0.57, 1.5, 3.0};
+  const gdouble b[]              = {0.0, 0.65, 2.3};
+  const guint Ka                 = G_N_ELEMENTS (a);
+  const guint Kb                 = G_N_ELEMENTS (b);
+  GArray *series                 = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarRadialSeries));
+  GArray *coeffs                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmSpectralPolarWeightGrid *wg = _ncm_spectral_polar_weight_grid_new (test->sp, 1.0, Ka, a, Kb, b);
+  gdouble res[G_N_ELEMENTS (a) * G_N_ELEMENTS (b)];
+  guint c, j, l;
+
+  for (c = 0; c < 3; c++)
+  {
+    g_array_set_size (series, 0);
+    g_array_set_size (coeffs, 0);
+
+    if (c < 2)
+    {
+      _wg_append_poly (series, coeffs, 0.0, 0.3, 4);
+      _wg_append_poly (series, coeffs, 0.3, 0.7, 4);
+      _wg_append_poly (series, coeffs, 0.7, 1.0, 4);
+    }
+    else
+    {
+      _wg_append_poly (series, coeffs, 0.0, 1.0, 5);
+    }
+
+    if (c == 1)
+      _ncm_spectral_polar_weight_grid_integrate (wg, series, coeffs, NULL, NULL, NULL, res);
+    else
+      _ncm_spectral_polar_weight_grid_integrate (wg, series, coeffs, &_wg_fa, &_wg_fb, NULL, res);
+
+    for (j = 0; j < Ka; j++)
+    {
+      for (l = 0; l < Kb; l++)
+      {
+        const gdouble exact = (c == 1) ? _wg_exact (a[j], b[l], 0, 0) : _wg_exact (a[j], b[l], j, l);
+
+        ncm_assert_cmpdouble_e (res[j * Kb + l], ==, exact, 1.0e-13, 0.0);
+      }
+    }
+  }
+
+  _ncm_spectral_polar_weight_grid_free (wg);
+  g_array_unref (series);
+  g_array_unref (coeffs);
+}
+
+/*
+ * The weight grid on the series of an integral: for the Gaussian with the peak edges and
+ * the reference weight r (1 - r)^0.5 rho (r), the integrals of
+ * r^a_j (1 - r)^b_l u_j (r), u_0 = 1 and u_1 = rho, against the series agree with the
+ * integrals computed for each of those weights, at reltol 1e-9 (largest relative difference
+ * measured in the six values: 8.9e-16).
+ */
+void
+test_ncm_spectral_polar_weight_grid_integral (TestNcmSpectralPolar *test, gconstpointer pdata)
+{
+  const gdouble a[]              = {1.0, 0.57};
+  const gdouble b[]              = {0.0, 1.2, 2.5};
+  const guint Ka                 = G_N_ELEMENTS (a);
+  const guint Kb                 = G_N_ELEMENTS (b);
+  const gdouble reltol           = 1.0e-9;
+  GArray *series                 = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarRadialSeries));
+  GArray *coeffs                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmSpectralPolarWeightGrid *wg = _ncm_spectral_polar_weight_grid_new (test->sp, 1.0, Ka, a, Kb, b);
+  TestGauss g                    = { 0.4 * cos (0.7), 0.4 * sin (0.7), 0.2, 0 };
+  GError *error                  = NULL;
+  gdouble res[G_N_ELEMENTS (a) * G_N_ELEMENTS (b)];
+  guint j, l;
+
+  ncm_spectral_polar_peak_edges (test->sp, 1.0, 0.4, 0.7, 0.2, 0.5, test->r_edges, test->theta_edges);
+  _ncm_spectral_polar_integrate_radial_series (test->sp, &_gauss, &_radial_rho, &g, 1.0, 1.0, 0.5, test->r_edges, test->theta_edges,
+                                               reltol, 0.0, NULL, series, coeffs, &error);
+  g_assert_no_error (error);
+
+  _ncm_spectral_polar_weight_grid_integrate (wg, series, coeffs, &_wg_fa_rho, NULL, NULL, res);
+
+  for (j = 0; j < Ka; j++)
+  {
+    for (l = 0; l < Kb; l++)
+    {
+      const gdouble ref = _ncm_spectral_polar_integrate_radial (test->sp, &_gauss, (j == 0) ? NULL : &_radial_rho, &g, 1.0, a[j], b[l],
+                                                                test->r_edges, test->theta_edges, reltol, 0.0, NULL, NULL, &error);
+
+      g_assert_no_error (error);
+      ncm_assert_cmpdouble_e (res[j * Kb + l], ==, ref, 1.0e-12, 0.0);
+    }
+  }
+
+  _ncm_spectral_polar_weight_grid_free (wg);
   g_array_unref (series);
   g_array_unref (coeffs);
 }
