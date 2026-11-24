@@ -872,7 +872,6 @@ def test_cluster_wl_app_generate_spectral_reltol(experiment_file):
 
     assert isinstance(factor, Nc.GalaxyShapeFactorSpectral)
     assert factor.props.reltol == pytest.approx(1e-4)
-    assert factor.props.use_interp is False
 
 
 def test_cluster_wl_app_generate_spectral_interp(experiment_file):
@@ -885,7 +884,7 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
             "generate",
             "cluster-wl",
             experiment_file.as_posix(),
-            "--shape-factor=spectral use_interp=true interp_g_max=0.2 interp_abstol=1e-4 "
+            "--shape-factor=spectral interp_g_max=0.2 interp_abstol=1e-4 "
             "interp_min_radial_panels=4 interp_trim_frac=1e-3 line_abstol=1e-6",
         ],
     )
@@ -898,7 +897,6 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
     factor = cluster_data.props.shape_factor
 
     assert isinstance(factor, Nc.GalaxyShapeFactorSpectral)
-    assert factor.props.use_interp is True
     assert factor.props.interp_g_max == pytest.approx(0.2)
     assert factor.props.interp_abstol == pytest.approx(1e-4)
     assert factor.props.interp_min_radial_panels == 4
@@ -1418,7 +1416,7 @@ def test_cluster_wl_load_app_spectral_interp(
             experiment_file.as_posix(),
             f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
             "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial "
-            "use_interp=true interp_g_max=0.2 interp_abstol=1e-4",
+            "interp_g_max=0.2 interp_abstol=1e-4",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -1429,7 +1427,6 @@ def test_cluster_wl_load_app_spectral_interp(
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
     factor = cast(Nc.GalaxyShapeFactorSpectral, cluster_data.props.shape_factor)
 
-    assert factor.props.use_interp is True
     assert factor.props.interp_g_max == pytest.approx(0.2)
     assert factor.props.interp_abstol == pytest.approx(1e-4)
 
@@ -1629,7 +1626,8 @@ def _shape_interp(output: Path, data_file: Path, *args: str):
 def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     """A prepared catalog carries the interpolants and the record, and an
     experiment built from it, with the shape factor and population of the
-    record, gives the -2 ln L of one built from the original catalog."""
+    record, gives the -2 ln L of one built from the original catalog, which takes
+    the integrals, within the tolerance of the interpolants."""
     prepared = tmp_path / "prepared.gvar"
     result = _shape_interp(
         prepared, real_wl_obs_file_with_meta, "--pop-dist=beta alpha=1.8 beta=2.1"
@@ -1664,13 +1662,17 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
             "cluster-wl-load",
             exp_original.as_posix(),
             f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
-            "--shape-factor=spectral use_interp=true ellip_conv=trace ellip_coord=celestial",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
             "--pop-dist=beta alpha=1.8 beta=2.1",
         ],
     )
     assert result.exit_code == 0, result.output
 
-    assert _experiment_m2lnL(exp_prepared) == _experiment_m2lnL(exp_original)
+    # The original catalog has no interpolants, so its fit takes the integrals; each
+    # galaxy's ln P differs by at most interp-abstol (1e-5) from the interpolant's.
+    assert _experiment_m2lnL(exp_prepared) == pytest.approx(
+        _experiment_m2lnL(exp_original), rel=0.0, abs=2.0 * 20 * 1.0e-5
+    )
 
 
 def test_wl_catalog_shape_interp_replaces_record(
@@ -1705,19 +1707,12 @@ def test_wl_catalog_shape_interp_replaces_record(
             ],
             "spectral",
         ),
-        (
-            [
-                "--pop-dist=gauss sigma=0.3",
-                "--shape-factor=spectral use_interp=false ellip_conv=trace ellip_coord=celestial",
-            ],
-            "spectral",
-        ),
     ],
 )
 def test_wl_catalog_shape_interp_bad_shape_factor(
     tmp_path: Path, real_wl_obs_file_with_meta, args, message
 ):
-    """Only the spectral shape factor with use_interp=true is accepted."""
+    """Only the spectral shape factor is accepted."""
     result = _shape_interp(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
     assert result.exit_code != 0
     assert message in str(result.exception) or message in result.output
@@ -1747,9 +1742,7 @@ def test_wl_catalog_shape_interp_bad_suffix(tmp_path: Path, real_wl_obs_file_wit
     "args",
     [
         ["--pop-dist=gauss sigma=0.3"],
-        [
-            "--shape-factor=spectral use_interp=true ellip_conv=trace ellip_coord=celestial"
-        ],
+        ["--shape-factor=spectral ellip_conv=trace ellip_coord=celestial"],
         ["--parameter-list=NcGalaxyShapePop:sigma"],
     ],
 )
@@ -1788,7 +1781,6 @@ def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
         ["ra", "dec"],
     )
     gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
-    gsfs.set_use_interp(True)
     gsfs.set_interp_abstol(2.0e-5)
     gsfs.set_interp_trim_frac(0.0)
     source = Ncm.ObjDictStr.new()
@@ -1807,7 +1799,6 @@ def test_shape_interp_gens():
     assert gens is not None
     shape_gen, pop_gen = gens
     assert isinstance(shape_gen, GalaxyShapeFactorGenSpectral)
-    assert shape_gen.use_interp
     assert shape_gen.ellip_conv.genum == Nc.GalaxyWLObsEllipConv.TRACE_DET
     assert shape_gen.interp_abstol == 2.0e-5
     assert shape_gen.interp_trim_frac == 0.0

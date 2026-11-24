@@ -54,13 +54,14 @@ class ShapeInterpWLCatalog:
 
     Reads a NcGalaxyWLObs (--catalog or --data-file), builds the interpolant of
     every galaxy for the population --pop-dist with the
-    NcGalaxyShapeFactorSpectral of --shape-factor (use_interp=true), in
-    parallel with OMP_NUM_THREADS threads, and writes the catalog with the
-    interpolants and the record of what built them to OUTPUT. The rows are
-    unchanged. ``numcosmo generate cluster-wl-load --data-file OUTPUT`` then
-    builds an experiment that loads the interpolants instead of building them,
-    with the shape factor and the population of the record. The population
-    parameters are fixed: the interpolants hold for their values only.
+    NcGalaxyShapeFactorSpectral of --shape-factor, in parallel with
+    OMP_NUM_THREADS threads, and writes the catalog with the interpolants and
+    the record of what built them to OUTPUT. The rows are unchanged. The
+    interpolants are built only here: ``numcosmo generate cluster-wl-load
+    --data-file OUTPUT`` builds an experiment that uses them, with the shape
+    factor and the population of the record, and a fit never builds them. The
+    population parameters are fixed: the interpolants hold for their values
+    only.
     """
 
     output: Annotated[
@@ -81,9 +82,8 @@ class ShapeInterpWLCatalog:
         typer.Option(
             help=(
                 ShapeFactorGen.get_help_text()
-                + " Must be spectral with use_interp=true. Default: spectral "
-                "use_interp=true with the catalog's ellipticity convention and "
-                "frame."
+                + " Must be spectral. Default: spectral with the catalog's "
+                "ellipticity convention and frame."
             ),
             metavar=ShapeFactorGen.get_help_metavar(),
             rich_help_panel="Galaxy shape-marginalization factor",
@@ -137,7 +137,7 @@ class ShapeInterpWLCatalog:
 
         Raises:
             typer.BadParameter: Invalid output suffix, or a shape factor other
-                than spectral with use_interp=true.
+                than spectral.
         """
         Ncm.cfg_init()
 
@@ -150,19 +150,15 @@ class ShapeInterpWLCatalog:
 
         if self.shape_factor is None:
             self.shape_factor = (
-                f"spectral use_interp=true "
+                f"spectral "
                 f"ellip_conv={obs.get_ellip_conv().value_nick} "
                 f"ellip_coord={obs.get_coord().value_nick}"
             )
         _shape_factor, shape_gen = parse_shape_factor(self.shape_factor)
         _pop_dist, pop_gen = parse_pop_dist(self.pop_dist)
 
-        if not (
-            isinstance(shape_gen, GalaxyShapeFactorGenSpectral) and shape_gen.use_interp
-        ):
-            raise typer.BadParameter(
-                "the shape factor must be spectral with use_interp=true"
-            )
+        if not isinstance(shape_gen, GalaxyShapeFactorGenSpectral):
+            raise typer.BadParameter("the shape factor must be spectral")
         check_shape_pop_compat(shape_gen, pop_gen)
 
         exp = load_cluster_wl(
