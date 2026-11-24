@@ -2202,6 +2202,343 @@ ncm_spectral_tensor_eval_array (NcmSpectralTensor *st, GArray *x, GArray **fval)
   }
 }
 
+/* Per-thread scratch of ncm_spectral_tensor_eval_slice_array(), kept between calls */
+static GPrivate _ncm_spectral_tensor_slice_scratch = G_PRIVATE_INIT ((GDestroyNotify) g_array_unref);
+
+static void _ncm_spectral_tensor_slice_reduce (NcmSpectralTensor *st, guint p, const guint nf, const gdouble *x_fixed, GArray *scratch, gdouble **block);
+static void _ncm_spectral_tensor_block_run (const gdouble *c, const guint *K, const gdouble *lower, const gdouble *upper, const guint nf, guint n, const gdouble *x, gdouble *fval);
+
+/**
+ * ncm_spectral_tensor_eval_slice_array:
+ * @st: a #NcmSpectralTensor
+ * @x_fixed: (element-type gdouble): the values of the last variables, the same for every point
+ * @x: (element-type gdouble): the points, the other variables of a point together
+ * @fval: (out callee-allocates) (transfer full) (element-type gdouble): the values at the points
+ *
+ * In a filled table, evaluates the function at several points that share the values of
+ * their last $m$ variables, $m$ the length of @x_fixed, from 1 to
+ * #NcmSpectralTensor:n-vars minus one: point $j$ is the $n - m$ entries of @x that start at
+ * $j (n - m)$ followed by @x_fixed, and its value is entry $j$ of @fval. A C caller may pass
+ * in @fval an array to reuse, or a pointer to %NULL for a new one. With @x_fixed empty the
+ * call is ncm_spectral_tensor_eval_array(). The panel of each point is the one of
+ * ncm_spectral_tensor_find_panel(), and a point outside the domain is extrapolated as in
+ * ncm_spectral_tensor_eval(). For each run of consecutive points on the same panel, the
+ * series of the panel is first summed over its last $m$ variables at @x_fixed, which gives
+ * the coefficients of a series in the first $n - m$ variables: for a panel of format
+ * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER, the core is summed with the vectors
+ * $\sum_k U_i^{k a} T_k (s_i)$ of the fixed variables and multiplied by the factors of the
+ * others. The points of the run are then summed on that series, 8 at a time. The values
+ * agree with those of ncm_spectral_tensor_eval() to rounding, not bit by bit. The call is
+ * an error when @x_fixed has #NcmSpectralTensor:n-vars entries or more, or when the length
+ * of @x is not a multiple of the number of other variables.
+ */
+void
+ncm_spectral_tensor_eval_slice_array (NcmSpectralTensor *st, GArray *x_fixed, GArray *x, GArray **fval)
+{
+  const guint n_vars = st->n_vars;
+  const guint m      = x_fixed->len;
+  GArray *scratch;
+  const gdouble *xf, *xd;
+  gdouble full[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  gdouble *fd;
+  guint nf, n_points;
+  guint j = 0;
+  guint p;
+
+  if (m == 0)
+  {
+    ncm_spectral_tensor_eval_array (st, x, fval);
+
+    return;
+  }
+
+  if (m >= n_vars)
+    g_error ("ncm_spectral_tensor_eval_slice_array: %u fixed values for %u variables.", m, n_vars);
+
+  nf       = n_vars - m;
+  n_points = x->len / nf;
+
+  if (x->len != n_points * nf)
+    g_error ("ncm_spectral_tensor_eval_slice_array: %u values are not points of %u variables.", x->len, nf);
+
+  if (*fval == NULL)
+    *fval = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*fval, n_points);
+
+  if (n_points == 0)
+    return;
+
+  scratch = g_private_get (&_ncm_spectral_tensor_slice_scratch);
+
+  if (scratch == NULL)
+  {
+    scratch = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    g_private_set (&_ncm_spectral_tensor_slice_scratch, scratch);
+  }
+
+  xf = &g_array_index (x_fixed, gdouble, 0);
+  xd = &g_array_index (x, gdouble, 0);
+  fd = &g_array_index (*fval, gdouble, 0);
+
+  memcpy (full + nf, xf, sizeof (gdouble) * m);
+  memcpy (full, xd, sizeof (gdouble) * nf);
+  p = ncm_spectral_tensor_find_panel (st, n_vars, full);
+
+  while (j < n_points)
+  {
+    const NcmSpectralTensorPanel *pn = &g_array_index (st->panels, NcmSpectralTensorPanel, p);
+    const gdouble *lower             = &g_array_index (st->node_bounds, gdouble, (gsize) 2 * n_vars * pn->node);
+    guint p_next                     = p;
+    guint run                        = 1;
+    gdouble *block;
+
+    while (j + run < n_points)
+    {
+      memcpy (full, &xd[(gsize) nf * (j + run)], sizeof (gdouble) * nf);
+      p_next = ncm_spectral_tensor_find_panel (st, n_vars, full);
+
+      if (p_next != p)
+        break;
+
+      run++;
+    }
+
+    _ncm_spectral_tensor_slice_reduce (st, p, nf, xf, scratch, &block);
+    _ncm_spectral_tensor_block_run (block, &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p), lower, lower + n_vars, nf, run,
+                                    &xd[(gsize) nf * j], &fd[j]);
+
+    j += run;
+    p  = p_next;
+  }
+}
+
+/*
+ * The coefficients, in the first nf variables, of the series of panel p summed over its
+ * other variables at x_fixed: *block points to them in scratch, the first variable fastest,
+ * K_0 ... K_{nf - 1} of them. DENSE: block[q] = sum_{q'} c[q + F q'] w[q'], with F the size
+ * of the block and w[q'] the product of T_k (s_i) over the fixed variables. TUCKER: the core
+ * summed the same way with the vectors u_i^a = sum_k U_i^{k a} T_k (s_i) of the fixed
+ * variables, then the mode products with U_0, ..., U_{nf - 1}.
+ */
+static void
+_ncm_spectral_tensor_slice_reduce (NcmSpectralTensor *st, guint p, const guint nf, const gdouble *x_fixed, GArray *scratch, gdouble **block)
+{
+  const guint n_vars               = st->n_vars;
+  const NcmSpectralTensorPanel *pn = &g_array_index (st->panels, NcmSpectralTensorPanel, p);
+  const gdouble *lower             = &g_array_index (st->node_bounds, gdouble, (gsize) 2 * n_vars * pn->node);
+  const gdouble *upper             = lower + n_vars;
+  const guint *K                   = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p);
+  const guint *r                   = &g_array_index (st->ranks, guint, (gsize) n_vars * p);
+  const gboolean tucker            = (pn->format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER);
+  const gdouble *data              = &g_array_index (st->coeffs, gdouble, pn->offset);
+  const guint *D                   = tucker ? r : K; /* the sizes of the stored tensor */
+  gsize F                          = 1;              /* the block, prod_{i < nf} K_i */
+  gsize Fd                         = 1;              /* the stored tensor in the free variables */
+  gsize P                          = 1;              /* the stored tensor in the fixed variables */
+  gsize T_max                      = 1;
+  gsize u_len                      = 0;
+  gdouble *out, *tmp1, *tmp2, *w, *T, *u;
+  const gdouble *stored;
+  gsize q, qf;
+  guint i;
+
+  for (i = 0; i < nf; i++)
+  {
+    F  *= K[i];
+    Fd *= D[i];
+  }
+
+  for (i = nf; i < n_vars; i++)
+  {
+    P     *= D[i];
+    T_max  = MAX (T_max, K[i]);
+    u_len += D[i];
+  }
+
+  g_array_set_size (scratch, 3 * F + P + T_max + 3 + u_len);
+  out  = &g_array_index (scratch, gdouble, 0);
+  tmp1 = out + F;
+  tmp2 = tmp1 + F;
+  w    = tmp2 + F;
+  T    = w + P;
+  u    = T + T_max + 3;
+
+  /* The vectors of the fixed variables: T_k (s_i) for DENSE, u_i for TUCKER */
+  {
+    const gdouble *U = data;
+    gdouble *ui      = u;
+
+    if (tucker)
+      for (i = 0; i < nf; i++)
+        U += (gsize) K[i] * r[i];
+
+    for (i = nf; i < n_vars; i++)
+    {
+      const gdouble s = (2.0 * x_fixed[i - nf] - lower[i] - upper[i]) / (upper[i] - lower[i]);
+      guint k, a;
+
+      _ncm_spectral_tensor_cheb_T (T, K[i], s);
+
+      if (tucker)
+      {
+        for (a = 0; a < r[i]; a++)
+          ui[a] = 0.0;
+
+        for (k = 0; k < K[i]; k++)
+          for (a = 0; a < r[i]; a++)
+            ui[a] += U[(gsize) k * r[i] + a] * T[k];
+
+        U += (gsize) K[i] * r[i];
+      }
+      else
+      {
+        memcpy (ui, T, sizeof (gdouble) * K[i]);
+      }
+
+      ui += D[i];
+    }
+
+    stored = tucker ? U : data;
+  }
+
+  /* w: the products over the fixed variables, the first of them fastest */
+  {
+    const gdouble *ui = u;
+    gsize len         = 1;
+
+    w[0] = 1.0;
+
+    for (i = nf; i < n_vars; i++)
+    {
+      guint a;
+
+      for (a = D[i]; a-- > 0; )
+        for (q = 0; q < len; q++)
+          w[a * len + q] = ui[a] * w[q];
+
+      len *= D[i];
+      ui  += D[i];
+    }
+  }
+
+  /* The stored tensor summed over the fixed variables */
+  {
+    gdouble *dst = tucker ? tmp1 : out;
+
+    for (q = 0; q < Fd; q++)
+      dst[q] = 0.0;
+
+    for (qf = 0; qf < P; qf++)
+    {
+      const gdouble wq   = w[qf];
+      const gdouble *src = stored + qf * Fd;
+
+      for (q = 0; q < Fd; q++)
+        dst[q] += wq * src[q];
+    }
+  }
+
+  if (tucker)
+  {
+    gsize dims[NCM_SPECTRAL_TENSOR_MAX_VARS];
+    const gdouble *U = data;
+    gdouble *cur     = tmp1;
+    gdouble *next    = (nf == 1) ? out : tmp2;
+
+    for (i = 0; i < nf; i++)
+      dims[i] = r[i];
+
+    for (i = 0; i < nf; i++)
+    {
+      _ncm_spectral_tensor_mode_product (cur, dims, nf, i, U, K[i], r[i], 1, next);
+      U += (gsize) K[i] * r[i];
+
+      if (i + 2 == nf)
+      {
+        cur  = next;
+        next = out;
+      }
+      else
+      {
+        gdouble *t = cur;
+
+        cur  = next;
+        next = t;
+      }
+    }
+  }
+
+  *block = out;
+}
+
+/*
+ * The series with coefficients c (K_0 ... K_{nf - 1}, the first fastest) on the box
+ * [lower, upper] at the n points of x (nf values each): passes of 8 points and one of the
+ * remaining ones by _ncm_spectral_tensor_lanes() for nf <= 4 and every K_i at most
+ * NCM_SPECTRAL_TENSOR_LANES_K_MAX, otherwise Clenshaw recurrences point by point.
+ */
+static void
+_ncm_spectral_tensor_block_run (const gdouble *c, const guint *K, const gdouble *lower, const gdouble *upper, const guint nf, guint n, const gdouble *x, gdouble *fval)
+{
+  gboolean lanes = (nf <= 4);
+  guint i, j;
+
+  for (i = 0; lanes && (i < nf); i++)
+    lanes = (K[i] <= NCM_SPECTRAL_TENSOR_LANES_K_MAX);
+
+  if (!lanes)
+  {
+    gsize stride[NCM_SPECTRAL_TENSOR_MAX_VARS];
+    gdouble s[NCM_SPECTRAL_TENSOR_MAX_VARS];
+
+    stride[0] = 1;
+
+    for (i = 1; i < nf; i++)
+      stride[i] = stride[i - 1] * K[i - 1];
+
+    for (j = 0; j < n; j++)
+    {
+      for (i = 0; i < nf; i++)
+        s[i] = (2.0 * x[nf * j + i] - lower[i] - upper[i]) / (upper[i] - lower[i]);
+
+      fval[j] = (nf == 1) ? _ncm_spectral_tensor_clenshaw_1 (c, K[0], s[0]) : _ncm_spectral_tensor_clenshaw (c, K, stride, s, nf - 1);
+    }
+
+    return;
+  }
+
+  while (n > 0)
+  {
+    const guint M = MIN (n, 8);
+    gdouble s[4][8];
+
+    for (i = 0; i < nf; i++)
+      for (j = 0; j < M; j++)
+        s[i][j] = (2.0 * x[nf * j + i] - lower[i] - upper[i]) / (upper[i] - lower[i]);
+
+    switch (nf)
+    {
+      case 1:
+        _ncm_spectral_tensor_lanes (c, 1, M, K, s, fval);
+        break;
+      case 2:
+        _ncm_spectral_tensor_lanes (c, 2, M, K, s, fval);
+        break;
+      case 3:
+        _ncm_spectral_tensor_lanes (c, 3, M, K, s, fval);
+        break;
+      default:
+        _ncm_spectral_tensor_lanes (c, 4, M, K, s, fval);
+        break;
+    }
+
+    x    += (gsize) nf * M;
+    fval += M;
+    n    -= M;
+  }
+}
+
 /*
  * The truncated higher-order SVD of a DENSE panel, for ncm_spectral_tensor_compress(): U[i]
  * holds the left singular vectors of the unfolding of variable i (K_i rows, column-major,

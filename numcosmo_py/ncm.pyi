@@ -11688,6 +11688,11 @@ class SpectralTensor(GObject.Object):
     def eval_on(
         self, p: int, x: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> float: ...
+    def eval_slice_array(
+        self,
+        x_fixed: typing.Sequence[float] | npt.NDArray[np.float64],
+        x: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> list[float]: ...
     def find_panel(
         self, x: typing.Sequence[float] | npt.NDArray[np.float64]
     ) -> int: ...

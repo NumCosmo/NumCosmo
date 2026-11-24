@@ -102,6 +102,7 @@ guint ncm_spectral_tensor_find_panel (NcmSpectralTensor *st, guint n_vars, const
 gdouble ncm_spectral_tensor_eval (NcmSpectralTensor *st, guint n_vars, const gdouble *x);
 gdouble ncm_spectral_tensor_eval_on (NcmSpectralTensor *st, guint p, guint n_vars, const gdouble *x);
 void ncm_spectral_tensor_eval_array (NcmSpectralTensor *st, GArray *x, GArray **fval);
+void ncm_spectral_tensor_eval_slice_array (NcmSpectralTensor *st, GArray *x_fixed, GArray *x, GArray **fval);
 
 G_END_DECLS
 
