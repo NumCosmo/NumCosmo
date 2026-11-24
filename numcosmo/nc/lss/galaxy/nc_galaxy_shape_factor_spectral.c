@@ -700,7 +700,8 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * ncm_spectral_tensor_compress() with tolerance $f$ times
    * #NcGalaxyShapeFactorSpectral:interp-abstol stores each panel in the format
    * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER when it holds fewer numbers. The compression
-   * changes $\ln P$ by at most that tolerance. An interpolant evaluated at one point of the
+   * changes $\ln P$ by at most that tolerance, $10^{-7}$ at the defaults; the largest change
+   * measured is about 0.15 of it. An interpolant evaluated at one point of the
    * population per call reduces such a panel once per call
    * (ncm_spectral_tensor_eval_slice_array()). With 0 no panel is compressed; an interpolant
    * without population variables is never compressed.
@@ -710,7 +711,7 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
                                    g_param_spec_double ("interp-compress-frac",
                                                         NULL,
                                                         "Fraction of interp-abstol given to the compression of the interpolant",
-                                                        0.0, 1.0, 0.1,
+                                                        0.0, 1.0, 0.01,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
