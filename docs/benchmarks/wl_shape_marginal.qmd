@@ -343,11 +343,11 @@ failure_summary("Spectral")
 ## Speed
 
 The approximate classes evaluate $\ln P$ in closed form or from tables. Spectral integrates,
-which costs orders of magnitude more per evaluation. When the population is fixed,
-Spectral can instead build, once per galaxy, an interpolant of $\ln P$ in $g$ on
-$|g| \le 0.3$ (`NcGalaxyShapeFactorSpectral:use-interp`), and every later evaluation reads
-the interpolant. When the population varies, as in a fit of its parameters, the interpolant
-of every galaxy changes at every step, so each evaluation integrates.
+which costs orders of magnitude more per evaluation. Spectral can instead build, once per
+galaxy in a pre-computation
+([[numcosmo|nc_galaxy_shape_factor_spectral_build_interp]]), an interpolant of $\ln P$
+in $g$ on $|g| \le 0.3$, and every later evaluation reads the interpolant. Each free
+parameter of the population is one more variable of the interpolant, over its bounds.
 
 The times below are those an MCMC fitting the mass and the center of a cluster sees, with the
 population fixed: each galaxy is prepared once and every step of the chain evaluates it at a
@@ -415,19 +415,19 @@ for sn, e1, e2 in speed_gal:
     for cname, cls in SPEED_CLASSES.items():
         gsf = cls.new(Nc.GalaxyWLObsEllipConv.TRACE)
         spectral = cls is Nc.GalaxyShapeFactorSpectral
-        if spectral:
-            gsf.set_use_interp(True)
         data = galaxy_data(gsf, mset, sn, e1, e2)
         t0 = time.perf_counter()
+        if spectral:
+            gsf.build_interp(mset, data, 3.0)
         gsf.data_prepare(mset, data, 3.0)
         gsf.eval_ln_marginal(pop, data, g1[0], g2[0], e1, e2)
         t_prep = time.perf_counter() - t0
         speed[cname].append(eval_array(gsf, pop, data, g1, g2, e1v, e2v)[1])
         if spectral:
-            gsf.set_use_interp(False)
             t_build.append(t_prep)
             n = N_DIRECT
-            t_direct.append(eval_array(gsf, pop, data, g1[:n], g2[:n], e1v[:n], e2v[:n])[1])
+            plain = galaxy_data(gsf, mset, sn, e1, e2)
+            t_direct.append(eval_array(gsf, pop, plain, g1[:n], g2[:n], e1v[:n], e2v[:n])[1])
 
 lines = ["| class | median time per evaluation |", "|---|---|"]
 for cname, sec in speed.items():
@@ -483,8 +483,8 @@ display(Markdown(f"Both tables were measured on one thread of an {cpu_model()}."
 ```
 
 An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
-$10^5$ times, far above the break-even count: with a fixed population the build pays even if
-it is repeated in every process of the run. The command `numcosmo wl-catalog shape-interp`
+$10^5$ times, far above the break-even count: with a fixed population the build of the
+interpolants costs a small fraction of the integrals they replace. The command `numcosmo wl-catalog shape-interp`
 does it once instead. It builds the interpolants of all the galaxies of a catalog in parallel
 and writes them with the catalog; `numcosmo generate cluster-wl-load --data-file` then builds
 an experiment that loads them. The table below gives the measurements on the HSC field

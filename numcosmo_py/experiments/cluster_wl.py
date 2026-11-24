@@ -409,7 +409,6 @@ class GalaxyShapeFactorGenVarAdd(GalaxyShapeFactorGenBase):
 
 
 DEFAULT_SHAPE_SPECTRAL_RELTOL = 1.0e-5
-DEFAULT_SHAPE_SPECTRAL_USE_INTERP = False
 DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX = 0.3
 DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
@@ -421,7 +420,6 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     """Adaptive Chebyshev panels in polar coordinates (``NcGalaxyShapeFactorSpectral``)."""
 
     reltol: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPECTRAL_RELTOL
-    use_interp: Annotated[bool, Field()] = DEFAULT_SHAPE_SPECTRAL_USE_INTERP
     interp_g_max: Annotated[float, Field(ge=1.0e-3, le=0.33)] = (
         DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX
     )
@@ -446,7 +444,6 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
             (
                 f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
                 f"reltol={DEFAULT_SHAPE_SPECTRAL_RELTOL}, "
-                f"use_interp={DEFAULT_SHAPE_SPECTRAL_USE_INTERP}, "
                 f"interp_g_max={DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX}, "
                 f"interp_abstol={DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL}, "
                 "interp_min_radial_panels="
@@ -465,7 +462,6 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
         return Nc.GalaxyShapeFactorSpectral(
             ellip_conv=self.ellip_conv.genum,
             reltol=self.reltol,
-            use_interp=self.use_interp,
             interp_g_max=self.interp_g_max,
             interp_abstol=self.interp_abstol,
             interp_min_radial_panels=self.interp_min_radial_panels,
@@ -836,9 +832,8 @@ def shape_interp_gens(
     interpolants of its galaxies and the record of what built them
     (``NcGalaxyWLObs:shape-interp-source``): a copy of the
     ``NcGalaxyShapeFactorSpectral`` and of the population. The generators
-    returned here build the same objects, with ``use_interp`` set and the
-    ellipticity frame of obs, so an experiment built from them loads the
-    interpolants instead of building them.
+    returned here build the same objects, with the ellipticity frame of obs, so
+    an experiment built from them uses the interpolants of the catalog.
 
     Returns:
         The shape-factor and population generators, or None when obs
@@ -859,7 +854,6 @@ def shape_interp_gens(
         ellip_conv=EllipConv(gsfs.get_ellip_conv().value_nick),
         ellip_coord=EllipCoord(obs.get_coord().value_nick),
         reltol=gsfs.get_reltol(),
-        use_interp=True,
         interp_g_max=gsfs.get_interp_g_max(),
         interp_abstol=gsfs.get_interp_abstol(),
         interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),

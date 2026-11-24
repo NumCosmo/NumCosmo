@@ -161,7 +161,7 @@ comment. Put it on a theory page and link to it. The pattern is established by
 - From the theory page, link back to the API with wiki-style symbol references:
   `[[numcosmo-math|NcmCSQ1D]]`, `[[numcosmo|NcDistance]]`,
   `[[numcosmo-math|ncm_csq1d_prepare]]`, and a property as
-  `[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]]` under the class that defines it.
+  `[[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]]` under the class that defines it.
   An unresolved reference aborts the render with its name and page.
 
 A single inline `$x$` in a doc comment is fine; a multi-line `\begin{align}`

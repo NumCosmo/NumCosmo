@@ -3,7 +3,7 @@
 --   [[numcosmo|NcHIPertAdiab]]
 --   [[numcosmo-math|NcmCSQ1D]]
 --   [[ncm_csq1d_eval_delta_theta_at]]
---   [[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] (property of the class or interface)
+--   [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]] (property of the class or interface)
 
 local namespaces = {
     ["numcosmo"] = {

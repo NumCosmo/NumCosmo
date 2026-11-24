@@ -47,8 +47,7 @@ void nc_galaxy_shape_factor_spectral_set_reltol (NcGalaxyShapeFactorSpectral *gs
 gdouble nc_galaxy_shape_factor_spectral_get_reltol (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_obs_source (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyWLObs *obs);
 
-void nc_galaxy_shape_factor_spectral_set_use_interp (NcGalaxyShapeFactorSpectral *gsfs, const gboolean use_interp);
-gboolean nc_galaxy_shape_factor_spectral_get_use_interp (NcGalaxyShapeFactorSpectral *gsfs);
+void nc_galaxy_shape_factor_spectral_build_interp (NcGalaxyShapeFactorSpectral *gsfs, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
 void nc_galaxy_shape_factor_spectral_set_interp_g_max (NcGalaxyShapeFactorSpectral *gsfs, const gdouble g_max);
 gdouble nc_galaxy_shape_factor_spectral_get_interp_g_max (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_interp_abstol (NcGalaxyShapeFactorSpectral *gsfs, const gdouble abstol);

@@ -3066,42 +3066,48 @@ nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *m
  * @mset: a #NcmMSet
  * @obs: a #NcGalaxyWLObs with the rows of the catalog of @dcwlf
  *
- * Builds the interpolant of every galaxy with nc_data_cluster_wl_factor_data_prepare(), in
+ * Prepares the per-galaxy data with nc_data_cluster_wl_factor_data_prepare(), builds the
+ * interpolant of every galaxy with nc_galaxy_shape_factor_spectral_build_interp(), in
  * parallel, writes them into @obs (#NcGalaxyWLObs:shape-interp) and records the shape factor
  * and the population of @mset that built them
  * (nc_galaxy_shape_factor_spectral_set_obs_source()). The columns of @obs are not written;
  * @obs may be the catalog of @dcwlf (nc_data_cluster_wl_factor_peek_obs()). A fit that reads
- * the rows of @obs loads the interpolants instead of building them.
+ * the rows of @obs uses the interpolants; it never builds them. The free parameters of the
+ * population are variables of the interpolants, over their bounds.
  *
- * The shape factor must be a #NcGalaxyShapeFactorSpectral with
- * #NcGalaxyShapeFactorSpectral:use-interp, no parameter of the population may be free (the
- * interpolants hold for its current values only), and @obs must have as many rows as the
- * catalog of @dcwlf; otherwise the call aborts.
+ * The shape factor must be a #NcGalaxyShapeFactorSpectral and @obs must have as many rows as
+ * the catalog of @dcwlf; otherwise the call aborts.
  */
 void
 nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   NcmModel *pop                             = ncm_mset_peek (mset, nc_galaxy_shape_pop_id ());
-  guint gal_i, k;
+  NcGalaxyShapeFactorSpectral *gsfs;
+  gint gal_s;
+  guint gal_i;
 
-  for (k = 0; k < ncm_model_len (pop); k++)
-  {
-    if (ncm_model_param_get_ftype (pop, k) == NCM_PARAM_TYPE_FREE)
-      g_error ("nc_data_cluster_wl_factor_write_shape_interp: the population parameter %s of %s is free; "
-               "the interpolants hold for fixed population parameters.", ncm_model_param_name (pop, k), G_OBJECT_TYPE_NAME (pop));
-  }
-
-  if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor) ||
-      !nc_galaxy_shape_factor_spectral_get_use_interp (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor)))
-    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the shape factor %s is not a NcGalaxyShapeFactorSpectral with use-interp.",
+  if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor))
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the shape factor %s is not a NcGalaxyShapeFactorSpectral.",
              G_OBJECT_TYPE_NAME (self->shape_factor));
 
+  gsfs = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor);
   nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
 
   if (nc_galaxy_wl_obs_len (obs) != self->shape_data->len)
     g_error ("nc_data_cluster_wl_factor_write_shape_interp: the catalog has %u rows, the dataset %u galaxies.",
              nc_galaxy_wl_obs_len (obs), self->shape_data->len);
+
+  #pragma omp parallel for schedule(dynamic, 1) if (!omp_in_parallel ())
+
+  for (gal_s = 0; gal_s < (gint) self->shape_data->len; gal_s++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_s);
+    gdouble z_lo, z_hi;
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+    nc_galaxy_shape_factor_spectral_build_interp (gsfs, mset, s_data, z_hi);
+  }
 
   for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
   {
@@ -3110,9 +3116,7 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
     s_data->ldata_write_row (s_data, obs, gal_i);
   }
 
-  nc_galaxy_shape_factor_spectral_set_obs_source (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor),
-                                                  NC_GALAXY_SHAPE_POP (pop),
-                                                  obs);
+  nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, NC_GALAXY_SHAPE_POP (pop), obs);
 }
 
 /**
