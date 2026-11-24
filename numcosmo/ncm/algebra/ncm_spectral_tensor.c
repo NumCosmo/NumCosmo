@@ -2584,42 +2584,38 @@ _ncm_spectral_tensor_hosvd_error (NcmSpectralTensorHOSVD *h, const guint *r)
 {
   const guint n_vars = h->n_vars;
   gsize dims[NCM_SPECTRAL_TENSOR_MAX_VARS];
-  const gdouble *cur = h->c;
-  gdouble *next      = h->work1;
-  gdouble *spare     = h->work2;
-  gdouble err        = 0.0;
+  gdouble * const buf[2] = {h->work1, h->work2};
+  const gdouble *cur     = h->c;
+  gdouble err            = 0.0;
+  guint b                = 0;
   gsize q;
   guint i;
 
   for (i = 0; i < n_vars; i++)
     dims[i] = h->K[i];
 
-  /* The core: the transposed factors, M^{a k} = U_i[k + K_i a] */
+  /* The core: the transposed factors, M^{a k} = U_i[k + K_i a]; the last product writes h->core */
   for (i = 0; i < n_vars; i++)
   {
-    gdouble *dst = (i == n_vars - 1) ? h->core : next;
+    gdouble *dst = (i == n_vars - 1) ? h->core : buf[b];
 
     _ncm_spectral_tensor_mode_product (cur, dims, n_vars, i, h->U[i], r[i], h->K[i], 1, dst);
-    cur   = dst;
-    next  = spare;
-    spare = dst;
+    cur = dst;
+    b   = 1 - b;
   }
 
-  /* The approximation: M^{k a} = U_i[k + K_i a] */
-  next  = h->work1;
-  spare = h->work2;
-
+  /* The approximation: M^{k a} = U_i[k + K_i a]; source and destination alternate between the scratch tensors */
   for (i = 0; i < n_vars; i++)
   {
-    _ncm_spectral_tensor_mode_product (cur, dims, n_vars, i, h->U[i], h->K[i], 1, h->K[i], next);
-    cur  = next;
-    next = (next == h->work1) ? h->work2 : h->work1;
+    gdouble *dst = buf[b];
+
+    _ncm_spectral_tensor_mode_product (cur, dims, n_vars, i, h->U[i], h->K[i], 1, h->K[i], dst);
+    cur = dst;
+    b   = 1 - b;
   }
 
   for (q = 0; q < h->len; q++)
     err += fabs (h->c[q] - cur[q]);
-
-  (void) spare;
 
   return err;
 }
@@ -2715,10 +2711,11 @@ _ncm_spectral_tensor_tucker_from_dense (const guint n_vars, const guint *K, cons
 
     if (_ncm_spectral_tensor_tucker_len (K, r, n_vars) < len)
     {
+      /* h.core holds the core of the last ranks tried: compute it for the chosen ones */
+      const gdouble err = _ncm_spectral_tensor_hosvd_error (&h, r);
       gdouble *d;
 
-      /* The core of the chosen ranks; the bound was checked for them */
-      g_assert_cmpfloat (_ncm_spectral_tensor_hosvd_error (&h, r), <=, tol);
+      g_assert_cmpfloat (err, <=, tol);
 
       g_array_set_size (data, _ncm_spectral_tensor_tucker_len (K, r, n_vars));
       d = &g_array_index (data, gdouble, 0);
@@ -2772,7 +2769,8 @@ _ncm_spectral_tensor_tucker_from_dense (const guint n_vars, const guint *K, cons
  * differs by at most @tol from the original there. A panel stays DENSE when no Tucker form
  * meets @tol with fewer numbers; a table of one variable is not changed. The singular value
  * decompositions use LAPACK DGESDD (ncm_lapack_dgesdd()); the call is an error without
- * LAPACK, for a negative @tol, or when DGESDD fails.
+ * LAPACK, for a negative @tol, or when DGESDD fails. The call rewrites the data of @st, so
+ * no other thread may read or evaluate @st during it.
  *
  * Returns: the number of panels converted.
  */
@@ -2792,7 +2790,8 @@ ncm_spectral_tensor_compress (NcmSpectralTensor *st, gdouble tol)
   if ((n_vars < 2) || (st->panels->len == 0))
     return 0;
 
-  coeffs = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), st->coeffs->len);
+  /* Not reserved at the DENSE size: an array keeps its allocation, and the new one is smaller */
+  coeffs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   data   = g_array_new (FALSE, FALSE, sizeof (gdouble));
   ws     = ncm_lapack_ws_new ();
 
@@ -2800,14 +2799,16 @@ ncm_spectral_tensor_compress (NcmSpectralTensor *st, gdouble tol)
   {
     NcmSpectralTensorPanel *pn = &g_array_index (st->panels, NcmSpectralTensorPanel, p);
     const guint *K             = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p);
-    guint *r                   = &g_array_index (st->ranks, guint, (gsize) n_vars * p);
     const gdouble *c           = &g_array_index (st->coeffs, gdouble, pn->offset);
     const gsize offset         = coeffs->len;
+    guint r[NCM_SPECTRAL_TENSOR_MAX_VARS];
 
+    /* The ranks of the table change only for a converted panel: a DENSE panel keeps r_i = K_i */
     if ((pn->format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE) &&
         _ncm_spectral_tensor_tucker_from_dense (n_vars, K, c, tol, ws, r, data))
     {
       g_array_append_vals (coeffs, data->data, data->len);
+      memcpy (&g_array_index (st->ranks, guint, (gsize) n_vars * p), r, sizeof (guint) * n_vars);
       pn->format = NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER;
       n_conv++;
     }
