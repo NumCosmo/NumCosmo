@@ -66,6 +66,8 @@ void nc_galaxy_shape_pop_beta_clear (NcGalaxyShapePopBeta **gspb);
 
 gdouble nc_galaxy_shape_pop_beta_get_e_rms (NcGalaxyShapePopBeta *gspb);
 gdouble nc_galaxy_shape_pop_beta_get_mode (NcGalaxyShapePopBeta *gspb);
+gdouble nc_galaxy_shape_pop_beta_get_mean (NcGalaxyShapePopBeta *gspb);
+gdouble nc_galaxy_shape_pop_beta_get_std (NcGalaxyShapePopBeta *gspb);
 
 G_END_DECLS
 

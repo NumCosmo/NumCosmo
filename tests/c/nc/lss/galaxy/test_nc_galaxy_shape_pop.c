@@ -74,6 +74,7 @@ void test_nc_galaxy_shape_pop_reduced_interior (TestNcGalaxyShapePop *test, gcon
 void test_nc_galaxy_shape_pop_reduced_ends (TestNcGalaxyShapePop *test, gconstpointer pdata);
 void test_nc_galaxy_shape_pop_reduced_norm (TestNcGalaxyShapePop *test, gconstpointer pdata);
 void test_nc_galaxy_shape_pop_reduced_factors (TestNcGalaxyShapePop *test, gconstpointer pdata);
+void test_nc_galaxy_shape_pop_beta_moments (TestNcGalaxyShapePop *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -108,6 +109,13 @@ main (gint argc, gchar *argv[])
     path = g_strdup_printf ("/nc/galaxy_shape_pop/%s/reduced/factors", tc->name);
     g_test_add (path, TestNcGalaxyShapePop, tc, &test_nc_galaxy_shape_pop_new, &test_nc_galaxy_shape_pop_reduced_factors, &test_nc_galaxy_shape_pop_free);
     g_free (path);
+
+    if (tc->kind == TEST_POP_BETA)
+    {
+      path = g_strdup_printf ("/nc/galaxy_shape_pop/%s/moments", tc->name);
+      g_test_add (path, TestNcGalaxyShapePop, tc, &test_nc_galaxy_shape_pop_new, &test_nc_galaxy_shape_pop_beta_moments, &test_nc_galaxy_shape_pop_free);
+      g_free (path);
+    }
   }
 
   g_test_run ();
@@ -122,6 +130,19 @@ _reduced (gdouble r, gpointer user_data)
   TestNcGalaxyShapePop *test = user_data;
 
   return nc_galaxy_shape_pop_eval_p_reduced (test->pop, test->data, r);
+}
+
+/* The reduced density times r and times r^2: with the QAWS weights, the first two moments of r */
+static gdouble
+_reduced_r (gdouble r, gpointer user_data)
+{
+  return r * _reduced (r, user_data);
+}
+
+static gdouble
+_reduced_r2 (gdouble r, gpointer user_data)
+{
+  return r * r * _reduced (r, user_data);
 }
 
 void
@@ -307,5 +328,59 @@ test_nc_galaxy_shape_pop_reduced_factors (TestNcGalaxyShapePop *test, gconstpoin
     ncm_model_param_set (NCM_MODEL (test->pop), param, value);
     nc_galaxy_shape_pop_prepare (test->pop, test->data);
   }
+}
+
+/*
+ * The mean, the standard deviation and e_rms of the Beta population against the first two
+ * moments of its density, integrated by the QAWS rule with the power laws of the two ends
+ * as weights; the entries mean, std, e_rms and mode of NcmMSetFuncList return the values of
+ * the accessors.
+ */
+void
+test_nc_galaxy_shape_pop_beta_moments (TestNcGalaxyShapePop *test, gconstpointer pdata)
+{
+  NcGalaxyShapePopBeta *gspb      = NC_GALAXY_SHAPE_POP_BETA (test->pop);
+  const gdouble alpha_o           = nc_galaxy_shape_pop_exponent_at_origin (test->pop);
+  const gdouble alpha_1           = nc_galaxy_shape_pop_exponent_at_one (test->pop);
+  gsl_integration_workspace *ws   = gsl_integration_workspace_alloc (1000);
+  gsl_integration_qaws_table *tab = gsl_integration_qaws_table_alloc (alpha_o, alpha_1, 0, 0);
+  gsl_function F1                 = { &_reduced_r, test };
+  gsl_function F2                 = { &_reduced_r2, test };
+  NcmMSet *mset                   = ncm_mset_empty_new ();
+
+  const struct
+  {
+    const gchar *name;
+    gdouble value;
+  } funcs[] = {
+    {"NcGalaxyShapePopBeta:mean", nc_galaxy_shape_pop_beta_get_mean (gspb)},
+    {"NcGalaxyShapePopBeta:std", nc_galaxy_shape_pop_beta_get_std (gspb)},
+    {"NcGalaxyShapePopBeta:e_rms", nc_galaxy_shape_pop_beta_get_e_rms (gspb)},
+    {"NcGalaxyShapePopBeta:mode", nc_galaxy_shape_pop_beta_get_mode (gspb)},
+  };
+
+  gdouble m1, m2, err;
+  guint i;
+
+  gsl_integration_qaws (&F1, 0.0, 1.0, tab, 0.0, 1.0e-12, 1000, ws, &m1, &err);
+  gsl_integration_qaws (&F2, 0.0, 1.0, tab, 0.0, 1.0e-12, 1000, ws, &m2, &err);
+
+  ncm_assert_cmpdouble_e (nc_galaxy_shape_pop_beta_get_mean (gspb), ==, m1, 1.0e-11, 0.0);
+  ncm_assert_cmpdouble_e (nc_galaxy_shape_pop_beta_get_std (gspb), ==, sqrt (m2 - m1 * m1), 1.0e-10, 0.0);
+  ncm_assert_cmpdouble_e (nc_galaxy_shape_pop_beta_get_e_rms (gspb), ==, sqrt (0.5 * m2), 1.0e-11, 0.0);
+
+  ncm_mset_set (mset, NCM_MODEL (test->pop), NULL);
+
+  for (i = 0; i < G_N_ELEMENTS (funcs); i++)
+  {
+    NcmMSetFuncList *flist = ncm_mset_func_list_new (funcs[i].name, NULL);
+
+    g_assert_cmpfloat (ncm_mset_func_eval0 (NCM_MSET_FUNC (flist), mset), ==, funcs[i].value);
+    ncm_mset_func_free (NCM_MSET_FUNC (flist));
+  }
+
+  ncm_mset_free (mset);
+  gsl_integration_qaws_table_free (tab);
+  gsl_integration_workspace_free (ws);
 }
 
