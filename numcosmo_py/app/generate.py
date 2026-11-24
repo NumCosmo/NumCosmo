@@ -29,12 +29,12 @@ import shlex
 from abc import ABC, abstractmethod
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated
 
 import numpy as np
 import typer
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import GLib, Nc, Ncm
 from numcosmo_py.datasets.dist_mu_obs import (
     DistMuObsCatalogID,
     SampleRule,
@@ -866,6 +866,10 @@ class ClusterWL(ABC):
 def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.GalaxyWLObs:
     """Load a NcGalaxyWLObs from a curated catalog id or from a .gvar file.
 
+    A catalog read from a file that holds interpolants refers to that file
+    (NcGalaxyWLObs:shape-interp-file): an experiment built from it stores the
+    name of the file, not the interpolants.
+
     Raises:
         typer.BadParameter: Neither or both of catalog and data_file.
         ValueError: The loaded file does not contain a NcGalaxyWLObs.
@@ -874,19 +878,13 @@ def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.Galax
         raise typer.BadParameter("exactly one of --catalog or --data-file is required")
 
     if catalog is not None:
-        obs = Nc.GalaxyWLObs.new_from_catalog_id(catalog.genum)
-    else:
-        assert data_file is not None
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-        obs = cast(Nc.GalaxyWLObs, ser.from_binfile(data_file.absolute().as_posix()))
+        return Nc.GalaxyWLObs.new_from_catalog_id(catalog.genum)
 
-    # A wrong object in the file is a data error, not a TypeError.
-    if not isinstance(obs, Nc.GalaxyWLObs):
-        raise ValueError(  # noqa: TRY004
-            f"File does not contain a NcGalaxyWLObs: {type(obs).__name__}"
-        )
-
-    return obs
+    assert data_file is not None
+    try:
+        return Nc.GalaxyWLObs.new_from_file(data_file.absolute().as_posix())
+    except GLib.Error as e:
+        raise ValueError(f"File does not contain a NcGalaxyWLObs: {e.message}") from e
 
 
 def parse_shape_factor(shape_factor_str: str):

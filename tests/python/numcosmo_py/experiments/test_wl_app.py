@@ -1687,6 +1687,21 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     )
     assert result.exit_code == 0, result.output
 
+    # The experiment refers to the prepared catalog: its dataset file holds the name of
+    # the catalog file, not the interpolants, which are read from that file.
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(
+        Ncm.Dataset,
+        ser.from_binfile(exp_prepared.with_suffix(".dataset.gvar").as_posix()),
+    )
+    exp_obs = cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs()
+    assert exp_obs.peek_shape_interp_file() == prepared.as_posix()
+    assert all(exp_obs.peek_shape_interp(i) is not None for i in range(exp_obs.len()))
+    assert (
+        exp_prepared.with_suffix(".dataset.gvar").stat().st_size
+        < exp_original.with_suffix(".dataset.gvar").stat().st_size + 1024
+    )
+
     # The original catalog has no interpolants, so its fit takes the integrals; each
     # galaxy's ln P differs by at most interp-abstol (1e-5) from the interpolant's.
     assert _experiment_m2lnL(exp_prepared) == pytest.approx(
