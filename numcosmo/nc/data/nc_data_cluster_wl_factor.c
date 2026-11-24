@@ -99,6 +99,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <glib/gstdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
 #endif /* _OPENMP */
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -3142,8 +3145,8 @@ static void _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs
  * and freed; the galaxies are built in parallel and the records are written one at a time.
  * The file @filename is then assembled from the rows of @obs and from the records, and the
  * temporary file is removed. The call keeps in memory the interpolants being built, one per
- * thread, and at the end the bytes of @filename; @obs is not changed and receives no
- * interpolant, so a fit loads @filename to use them.
+ * thread; the records and @filename are read and written as mapped files. @obs is not
+ * changed and receives no interpolant, so a fit loads @filename to use them.
  *
  * An existing temporary file is overwritten: an interrupted call starts again. The shape
  * factor must be a #NcGalaxyShapeFactorSpectral and @obs must have as many rows as the
@@ -3227,8 +3230,9 @@ nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf,
  * Writes filename, the binary GVariant of a copy of obs with the record of gsfs and pop and
  * with the interpolants of the records of rec_name as its property shape-interp. The records
  * (row, byte length, the GVariant of the interpolant padded to 8 bytes) are memory-mapped and
- * become the entries of that property, in row order, without being parsed: only the bytes of
- * filename are in memory. A record that does not fit the file aborts.
+ * become the entries of that property, in row order, without being parsed, and the variant is
+ * serialized into filename through a second mapping: neither the interpolants nor the bytes
+ * of the catalog are allocated. A record that does not fit the file aborts.
  */
 static void
 _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs, NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, const gchar *rec_name, const gchar *filename)
@@ -3314,8 +3318,32 @@ _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs, NcGalaxySh
   g_variant_builder_add (&props, "{sv}", "shape-interp", g_variant_builder_end (&dict));
   final = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, type_name, g_variant_builder_end (&props)));
 
-  if (!g_file_set_contents (filename, g_variant_get_data (final), g_variant_get_size (final), &error))
-    g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot save to file %s: %s.", filename, error->message);
+  /*
+   * The variant is serialized into the file itself, mapped at its final size: the records are
+   * copied from one mapped file to the other, and no buffer with the bytes of the catalog is
+   * allocated (g_variant_get_data() would hold all of them at once).
+   */
+  {
+    const gsize out_size = g_variant_get_size (final);
+    const gint fd        = g_open (filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    gpointer out;
+
+    if (fd < 0)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot create %s: %s.", filename, g_strerror (errno));
+
+    if (ftruncate (fd, (off_t) out_size) != 0)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot set the size of %s: %s.", filename, g_strerror (errno));
+
+    out = mmap (NULL, out_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+    if (out == MAP_FAILED)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot map %s: %s.", filename, g_strerror (errno));
+
+    g_variant_store (final, out);
+
+    if ((msync (out, out_size, MS_SYNC) != 0) || (munmap (out, out_size) != 0) || (close (fd) != 0))
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot write %s: %s.", filename, g_strerror (errno));
+  }
 
   g_variant_unref (final);
   g_variant_unref (props_old);
