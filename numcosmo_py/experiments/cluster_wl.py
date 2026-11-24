@@ -414,6 +414,9 @@ DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
 DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC = 1.0e-4
 DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC = 1.0e-2
+DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_MIN = 2
+DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP = 5
+DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL = True
 DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = 0.0
 
 
@@ -436,6 +439,13 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     interp_compress_frac: Annotated[float, Field(ge=0.0, le=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC
     )
+    interp_pop_level_min: Annotated[int, Field(ge=1, le=10)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_MIN
+    )
+    interp_pop_level_cap: Annotated[int, Field(ge=1, le=10)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP
+    )
+    interp_pop_one_integral: bool = DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL
     line_abstol: Annotated[float, Field(ge=0.0, le=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL
     )
@@ -455,6 +465,12 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
                 f"interp_trim_frac={DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC}, "
                 "interp_compress_frac="
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC}, "
+                "interp_pop_level_min="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_MIN}, "
+                "interp_pop_level_cap="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP}, "
+                "interp_pop_one_integral="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL}, "
                 f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL}"
             ),
         ]
@@ -473,6 +489,9 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
             interp_min_radial_panels=self.interp_min_radial_panels,
             interp_trim_frac=self.interp_trim_frac,
             interp_compress_frac=self.interp_compress_frac,
+            interp_pop_level_min=self.interp_pop_level_min,
+            interp_pop_level_cap=self.interp_pop_level_cap,
+            interp_pop_one_integral=self.interp_pop_one_integral,
             line_abstol=self.line_abstol,
         )
 
@@ -866,6 +885,9 @@ def shape_interp_gens(
         interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),
         interp_trim_frac=gsfs.get_interp_trim_frac(),
         interp_compress_frac=gsfs.get_interp_compress_frac(),
+        interp_pop_level_min=gsfs.get_interp_pop_level_min(),
+        interp_pop_level_cap=gsfs.get_interp_pop_level_cap(),
+        interp_pop_one_integral=gsfs.get_interp_pop_one_integral(),
     )
 
     pop_gen: GalaxyPopGenTypes
@@ -909,6 +931,31 @@ def shape_interp_free_params(obs: Nc.GalaxyWLObs) -> list[str]:
         for k in range(pop.len())
         if pop.param_get_ftype(k) == Ncm.ParamType.FREE
     ]
+
+
+def apply_shape_interp_bounds(obs: Nc.GalaxyWLObs, mset: Ncm.MSet) -> None:
+    """Give the population of mset the bounds of the population of the record of obs.
+
+    The free parameters of the population of the record are variables of the
+    interpolants of obs, over the bounds they had in the build: a fit that frees
+    one of them with other bounds aborts when it reads the catalog. The
+    generators of ``shape_interp_gens()`` carry the values of the parameters,
+    not their bounds, so the bounds of those parameters are copied here to the
+    population of mset. Nothing changes when obs carries no record.
+    """
+    source = obs.peek_shape_interp_source()
+    if source is None:
+        return
+
+    src_pop = source.peek("shape-pop")
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+    assert isinstance(src_pop, Nc.GalaxyShapePop)
+    assert isinstance(pop, Nc.GalaxyShapePop)
+
+    for k in range(src_pop.len()):
+        if src_pop.param_get_ftype(k) == Ncm.ParamType.FREE:
+            pop.param_set_lower_bound(k, src_pop.param_get_lower_bound(k))
+            pop.param_set_upper_bound(k, src_pop.param_get_upper_bound(k))
 
 
 class GalaxyPopGen(StrEnum):

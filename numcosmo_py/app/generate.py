@@ -67,6 +67,7 @@ from numcosmo_py.experiments.cluster_wl import (
     ResampleFlagChoice,
     ShapeFactorGen,
     WLCatalogID,
+    apply_shape_interp_bounds,
     check_shape_pop_compat,
     generate_lsst_cluster_wl,
     load_cluster_wl,
@@ -1209,7 +1210,7 @@ class LoadClusterWL(ClusterWL):
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Load the real-data cluster weak lensing experiment."""
-        return load_cluster_wl(
+        exp = load_cluster_wl(
             obs=self._obs,
             cluster_ra=self.cluster_ra,
             cluster_dec=self.cluster_dec,
@@ -1227,6 +1228,11 @@ class LoadClusterWL(ClusterWL):
             summary=self.summary,
             resample_flag=resolve_resample_flag(self.resample_flag),
         )
+        mset = exp.peek("model-set")
+        assert isinstance(mset, Ncm.MSet)
+        apply_shape_interp_bounds(self._obs, mset)
+
+        return exp
 
 
 @dataclasses.dataclass(kw_only=True)

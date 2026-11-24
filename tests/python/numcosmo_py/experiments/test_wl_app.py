@@ -56,8 +56,16 @@ from numcosmo_py.experiments.cluster_wl import (
     GalaxyPopGenBeta,
     GalaxyPopGenGaussLocal,
     GalaxyShapeFactorGenSpectral,
+    DEFAULT_INTEG_OPTIONS,
+    load_cluster_wl,
     shape_interp_free_params,
     shape_interp_gens,
+)
+from numcosmo_py.app.generate import (
+    ClusterWL,
+    load_wl_obs,
+    parse_pop_dist,
+    parse_shape_factor,
 )
 
 pytestmark = pytest.mark.app
@@ -887,7 +895,8 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
             experiment_file.as_posix(),
             "--shape-factor=spectral interp_g_max=0.2 interp_abstol=1e-4 "
             "interp_min_radial_panels=4 interp_trim_frac=1e-3 "
-            "interp_compress_frac=0.05 line_abstol=1e-6",
+            "interp_compress_frac=0.05 interp_pop_level_min=1 interp_pop_level_cap=4 "
+            "interp_pop_one_integral=false line_abstol=1e-6",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -904,6 +913,9 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
     assert factor.props.interp_min_radial_panels == 4
     assert factor.props.interp_trim_frac == pytest.approx(1e-3)
     assert factor.props.interp_compress_frac == pytest.approx(0.05)
+    assert factor.props.interp_pop_level_min == 1
+    assert factor.props.interp_pop_level_cap == 4
+    assert not factor.props.interp_pop_one_integral
     assert factor.props.line_abstol == pytest.approx(1e-6)
 
 
@@ -1763,6 +1775,75 @@ def test_wl_catalog_shape_interp_free_pop(tmp_path: Path, real_wl_obs_file_with_
     assert m2lnL["fixed"] == m2lnL["prepared"]
 
 
+def test_cluster_wl_load_record_settings(tmp_path: Path, real_wl_obs_file_with_meta):
+    """An experiment generated from a prepared catalog has every setting of the record:
+    the bounds of the free population parameter and the levels of the population
+    variable, here other than the defaults, so that its -2 ln L reads the catalog
+    without the abort of a mismatch."""
+    obs = load_wl_obs(None, real_wl_obs_file_with_meta)
+    _s, shape_gen = parse_shape_factor(
+        "spectral ellip_conv=trace ellip_coord=celestial interp_abstol=1e-3 "
+        "interp_pop_level_cap=3"
+    )
+    _p, pop_gen = parse_pop_dist("gauss sigma=0.3")
+    exp = load_cluster_wl(
+        obs=obs,
+        cluster_ra=None,
+        cluster_dec=None,
+        cluster_z=None,
+        cluster_mass=ClusterWL.cluster_mass,
+        cluster_mass_min=ClusterWL.cluster_mass_min,
+        cluster_mass_max=ClusterWL.cluster_mass_max,
+        cluster_c=None,
+        r_min=ClusterWL.r_min,
+        r_max=ClusterWL.r_max,
+        shape_gen=shape_gen,
+        pop_gen=pop_gen,
+        integ_options=DEFAULT_INTEG_OPTIONS,
+        summary=False,
+    )
+    mset = cast(Ncm.MSet, exp.peek("model-set"))
+    data = cast(
+        Nc.DataClusterWLFactor,
+        cast(Ncm.Likelihood, exp.peek("likelihood")).peek_dataset().get_data(0),
+    )
+    pop = cast(Nc.GalaxyShapePop, mset.peek(Nc.GalaxyShapePop.id()))
+    pop.param_set_ftype(0, Ncm.ParamType.FREE)
+    pop.param_set_lower_bound(0, 0.25)
+    pop.param_set_upper_bound(0, 0.45)
+
+    prepared = tmp_path / "prepared.gvar"
+    data.write_shape_interp_file(mset, obs, prepared.as_posix())
+
+    exp_file = tmp_path / "exp.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_file.as_posix(),
+            f"--data-file={prepared.as_posix()}",
+            "--parameter-list=NcGalaxyShapePop:sigma",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(
+        Ncm.Dataset, ser.from_binfile(exp_file.with_suffix(".dataset.gvar").as_posix())
+    )
+    exp_loaded = ser.dict_str_from_yaml_file(exp_file.as_posix())
+    mset_loaded = cast(Ncm.MSet, exp_loaded.get("model-set"))
+    pop_loaded = cast(Nc.GalaxyShapePop, mset_loaded.peek(Nc.GalaxyShapePop.id()))
+    factor = cast(Nc.DataClusterWLFactor, dataset.get_data(0)).props.shape_factor
+
+    assert pop_loaded.param_get_lower_bound(0) == 0.25
+    assert pop_loaded.param_get_upper_bound(0) == 0.45
+    assert factor.props.interp_pop_level_cap == 3
+    assert factor.props.interp_abstol == pytest.approx(1e-3)
+    assert np.isfinite(_experiment_m2lnL(exp_file))
+
+
 def test_wl_catalog_shape_interp_replaces_record(
     tmp_path: Path, real_wl_obs_file_with_meta
 ):
@@ -1872,6 +1953,9 @@ def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
     gsfs.set_interp_abstol(2.0e-5)
     gsfs.set_interp_trim_frac(0.0)
     gsfs.set_interp_compress_frac(0.05)
+    gsfs.set_interp_pop_level_min(1)
+    gsfs.set_interp_pop_level_cap(4)
+    gsfs.set_interp_pop_one_integral(False)
     source = Ncm.ObjDictStr.new()
     source.add("shape-factor", gsfs)
     source.add("shape-pop", pop)
@@ -1892,6 +1976,9 @@ def test_shape_interp_gens():
     assert shape_gen.interp_abstol == 2.0e-5
     assert shape_gen.interp_trim_frac == 0.0
     assert shape_gen.interp_compress_frac == 0.05
+    assert shape_gen.interp_pop_level_min == 1
+    assert shape_gen.interp_pop_level_cap == 4
+    assert not shape_gen.interp_pop_one_integral
     assert isinstance(pop_gen, GalaxyPopGenBeta)
     assert (pop_gen.alpha, pop_gen.beta) == (1.6, 2.4)
 
