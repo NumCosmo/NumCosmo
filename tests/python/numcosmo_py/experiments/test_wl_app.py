@@ -56,6 +56,7 @@ from numcosmo_py.experiments.cluster_wl import (
     GalaxyPopGenBeta,
     GalaxyPopGenGaussLocal,
     GalaxyShapeFactorGenSpectral,
+    shape_interp_free_params,
     shape_interp_gens,
 )
 
@@ -1673,6 +1674,83 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     assert _experiment_m2lnL(exp_prepared) == pytest.approx(
         _experiment_m2lnL(exp_original), rel=0.0, abs=2.0 * 20 * 1.0e-5
     )
+
+
+def test_wl_catalog_shape_interp_free_pop(tmp_path: Path, real_wl_obs_file_with_meta):
+    """With --free-pop the population parameters are variables of the interpolants: the
+    record has them free, an experiment built from the catalog may fit them, and its -2 ln L
+    at two values of sigma agrees with the integrals within the tolerance of the
+    interpolants; an experiment that does not list sigma holds it fixed."""
+    prepared = tmp_path / "prepared.gvar"
+    result = _shape_interp(
+        prepared, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3", "--free-pop"
+    )
+    assert result.exit_code == 0, result.output
+    assert "sigma free" in result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
+    assert shape_interp_free_params(obs) == ["NcGalaxyShapePop:sigma"]
+    assert all(
+        cast(Ncm.SpectralTensor, obs.peek_shape_interp(i)).get_n_vars() == 3
+        for i in range(obs.len())
+    )
+
+    exp_prepared = tmp_path / "exp_prepared.yaml"
+    exp_original = tmp_path / "exp_original.yaml"
+    exp_fixed = tmp_path / "exp_fixed.yaml"
+    for exp_file, data_file, args in [
+        (exp_prepared, prepared, ["--parameter-list=NcGalaxyShapePop:sigma"]),
+        (exp_fixed, prepared, []),
+        (
+            exp_original,
+            real_wl_obs_file_with_meta,
+            [
+                "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+                "--pop-dist=gauss sigma=0.3",
+                "--parameter-list=NcGalaxyShapePop:sigma",
+            ],
+        ),
+    ]:
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp_file.as_posix(),
+                f"--data-file={data_file.as_posix()}",
+                *args,
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+    m2lnL = {}
+    for name, exp_file in [
+        ("prepared", exp_prepared),
+        ("original", exp_original),
+        ("fixed", exp_fixed),
+    ]:
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.from_binfile(exp_file.with_suffix(".dataset.gvar").as_posix())
+        exp = ser.dict_str_from_yaml_file(exp_file.as_posix())
+        likelihood = cast(Ncm.Likelihood, exp.get("likelihood"))
+        mset = cast(Ncm.MSet, exp.get("model-set"))
+        pindex = mset.param_get_by_full_name("NcGalaxyShapePop:sigma")
+        assert pindex is not None
+        expected = Ncm.ParamType.FIXED if name == "fixed" else Ncm.ParamType.FREE
+        assert mset.param_get_ftype(pindex.mid, pindex.pid) == expected
+        mset.prepare_fparam_map()
+        m2lnL[name] = []
+        for sigma in [0.3, 0.6]:
+            mset.param_set(pindex.mid, pindex.pid, sigma)
+            m2lnL[name].append(likelihood.m2lnL_val(mset))
+
+    # Each galaxy's ln P differs by at most interp-abstol (1e-5) from the integral's.
+    assert m2lnL["prepared"] == pytest.approx(
+        m2lnL["original"], rel=0.0, abs=2.0 * 20 * 1.0e-5
+    )
+    # The same table at the same points: free or fixed gives the same values.
+    assert m2lnL["fixed"] == m2lnL["prepared"]
 
 
 def test_wl_catalog_shape_interp_replaces_record(

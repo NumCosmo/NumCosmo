@@ -71,6 +71,7 @@ from numcosmo_py.experiments.cluster_wl import (
     generate_lsst_cluster_wl,
     load_cluster_wl,
     resolve_resample_flag,
+    shape_interp_free_params,
     shape_interp_gens,
 )
 from numcosmo_py.experiments.curvature_weight import (
@@ -1187,13 +1188,17 @@ class LoadClusterWL(ClusterWL):
                 "--shape-factor and --pop-dist must not be given"
             )
 
+        free = shape_interp_free_params(self._obs)
         pop_params = [
             p for p in self.parameter_list if p.startswith("NcGalaxyShapePop")
         ]
-        if pop_params:
+        fixed = [p for p in pop_params if p not in free]
+        if fixed:
             raise typer.BadParameter(
-                "the catalog carries interpolants built for fixed population "
-                f"parameters; they cannot be fitted: {', '.join(pop_params)}"
+                "the catalog carries interpolants built for fixed values of these "
+                f"population parameters; they cannot be fitted: {', '.join(fixed)}. "
+                "Prepare the catalog with numcosmo wl-catalog shape-interp "
+                "--free-pop to fit them."
             )
 
         return gens

@@ -877,6 +877,32 @@ def shape_interp_gens(
     return shape_gen, pop_gen
 
 
+def shape_interp_free_params(obs: Nc.GalaxyWLObs) -> list[str]:
+    """Return the population parameters that are variables of the interpolants of obs.
+
+    The interpolants of a catalog prepared by ``numcosmo wl-catalog shape-interp
+    --free-pop`` have the free parameters of the population of the record as
+    variables: a fit may free them or hold them fixed at any value in their
+    ranges.
+
+    Returns:
+        The full names (``NcGalaxyShapePop:<name>``) of the free parameters of
+        the population of the record; empty when obs carries no record.
+    """
+    source = obs.peek_shape_interp_source()
+    if source is None:
+        return []
+
+    pop = source.peek("shape-pop")
+    assert isinstance(pop, Nc.GalaxyShapePop)
+
+    return [
+        f"NcGalaxyShapePop:{pop.param_name(k)}"
+        for k in range(pop.len())
+        if pop.param_get_ftype(k) == Ncm.ParamType.FREE
+    ]
+
+
 class GalaxyPopGen(StrEnum):
     """Galaxy intrinsic-ellipticity population distribution types."""
 
