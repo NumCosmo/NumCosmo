@@ -1727,12 +1727,12 @@ test_nc_galaxy_shape_factor_spectral_interp_pop_one_integral (TestNcGalaxyShapeF
 
 /*
  * The eval_line of the class at 50 shears b + t u, for two observed ellipticities, with
- * line-abstol 1e-6, for a galaxy without an interpolant. For t from 0.002 to 0.102 it returns TRUE, and
- * ln P and P agree with the integral at each shear within line-abstol (largest difference
- * measured: 1.2e-10 and 2.9e-11). For t up to 0.292 and e_obs = (-0.25, 0.35) the series does not
- * reach the tolerance within the grids allowed, and it returns FALSE with out unchanged. It also
- * returns FALSE with line-abstol 0, for a galaxy with an interpolant, for 5 shears, and for a line that reaches
- * |g| > 0.9.
+ * line-abstol 1e-6, for a galaxy without an interpolant. For t from 0.002 to 0.102 it
+ * returns TRUE, and ln P and P agree with the integral at each shear within line-abstol
+ * (largest difference measured: 1.2e-10 and 2.9e-11). For t up to 0.292 and
+ * e_obs = (-0.25, 0.35) the series does not reach the tolerance within the grids allowed, and it returns
+ * FALSE with out unchanged. It also returns FALSE with line-abstol 0, for a galaxy with an
+ * interpolant, for 5 shears, and for a line that reaches |g| > 0.9.
  */
 void
 test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
@@ -1921,10 +1921,11 @@ _restrict_range_build (TestNcGalaxyShapeFactorSpectral *test, const gboolean res
 
 /*
  * restrict-range on a galaxy 0.8 degrees from the halo center, log10MDelta below 14.5: the
- * interpolant covers less than interp-g-max (0.3). At |g| = 0.29 the restricted factor gives the
- * integral, also through eval_nodes, and the unrestricted one the interpolant; at |g| = 0.001
- * both agree with the integral within interp-abstol. With Omega_c free the bound does not hold, and a new build of the
- * restricted factor covers interp-g-max again and gives the unrestricted value at |g| = 0.29; fixed again, the integral.
+ * interpolant covers less than interp-g-max (0.3). At |g| = 0.29 the restricted factor
+ * gives the integral, also through eval_nodes, and the unrestricted one the interpolant; at
+ * |g| = 0.001 both agree with the integral within interp-abstol. With Omega_c free the
+ * bound does not hold, and a new build of the restricted factor covers interp-g-max again
+ * and gives the unrestricted value at |g| = 0.29; fixed again, the integral.
  */
 void
 test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)

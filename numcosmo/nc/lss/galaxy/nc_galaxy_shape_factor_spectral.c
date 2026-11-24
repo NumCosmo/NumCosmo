@@ -1209,13 +1209,14 @@ _nc_galaxy_shape_factor_spectral_line_ln_P (gpointer user_data, gdouble t)
 }
 
 /*
- * eval_line of the class: for a galaxy without an interpolant and with a positive line-abstol, the Chebyshev
- * series of ln P at b + t u in t on [min t, max t], expanded from integrals on nested grids
- * from level NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN up to the largest level whose grid
- * has at most n / 2 points (and at most NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX), and
- * accepted at line-abstol. FALSE, with out unchanged, for a galaxy with an interpolant, with line-abstol 0, for
- * fewer than 6 shears or a single position, when an end of the line has
- * |g| > NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX, or when the series does not reach the
+ * eval_line of the class: for a galaxy without an interpolant and with a positive
+ * line-abstol, the Chebyshev series of ln P at b + t u in t on [min t, max t], expanded
+ * from integrals on nested grids from level NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN
+ * up to the largest level whose grid has at most n / 2 points (and at most
+ * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MAX), and accepted at line-abstol. FALSE, with
+ * out unchanged, for a galaxy with an interpolant, with line-abstol 0, for fewer than 6
+ * shears or a single position, when an end of the line has |g| >
+ * NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_G_MAX, or when the series does not reach the
  * tolerance. Nothing is kept between calls.
  */
 static gboolean
