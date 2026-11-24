@@ -886,7 +886,8 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
             "cluster-wl",
             experiment_file.as_posix(),
             "--shape-factor=spectral interp_g_max=0.2 interp_abstol=1e-4 "
-            "interp_min_radial_panels=4 interp_trim_frac=1e-3 line_abstol=1e-6",
+            "interp_min_radial_panels=4 interp_trim_frac=1e-3 "
+            "interp_compress_frac=0.05 line_abstol=1e-6",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -902,6 +903,7 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
     assert factor.props.interp_abstol == pytest.approx(1e-4)
     assert factor.props.interp_min_radial_panels == 4
     assert factor.props.interp_trim_frac == pytest.approx(1e-3)
+    assert factor.props.interp_compress_frac == pytest.approx(0.05)
     assert factor.props.line_abstol == pytest.approx(1e-6)
 
 
@@ -1635,6 +1637,8 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     )
     assert result.exit_code == 0, result.output
     assert "interpolants of 20 galaxies" in result.output
+    # The temporary records of the build are removed
+    assert not list(tmp_path.glob("*.records"))
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
@@ -1691,9 +1695,15 @@ def test_wl_catalog_shape_interp_free_pop(tmp_path: Path, real_wl_obs_file_with_
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
     assert shape_interp_free_params(obs) == ["NcGalaxyShapePop:sigma"]
-    assert all(
-        cast(Ncm.SpectralTensor, obs.peek_shape_interp(i)).get_n_vars() == 3
-        for i in range(obs.len())
+    tables = [
+        cast(Ncm.SpectralTensor, obs.peek_shape_interp(i)) for i in range(obs.len())
+    ]
+    assert all(st.get_n_vars() == 3 for st in tables)
+    # The interpolants with a population variable are compressed (interp-compress-frac)
+    assert any(
+        st.get_panel_format(p) == Ncm.SpectralTensorPanelFormat.TUCKER
+        for st in tables
+        for p in range(st.get_n_panels())
     )
 
     exp_prepared = tmp_path / "exp_prepared.yaml"
@@ -1861,6 +1871,7 @@ def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
     gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     gsfs.set_interp_abstol(2.0e-5)
     gsfs.set_interp_trim_frac(0.0)
+    gsfs.set_interp_compress_frac(0.05)
     source = Ncm.ObjDictStr.new()
     source.add("shape-factor", gsfs)
     source.add("shape-pop", pop)
@@ -1880,6 +1891,7 @@ def test_shape_interp_gens():
     assert shape_gen.ellip_conv.genum == Nc.GalaxyWLObsEllipConv.TRACE_DET
     assert shape_gen.interp_abstol == 2.0e-5
     assert shape_gen.interp_trim_frac == 0.0
+    assert shape_gen.interp_compress_frac == 0.05
     assert isinstance(pop_gen, GalaxyPopGenBeta)
     assert (pop_gen.alpha, pop_gen.beta) == (1.6, 2.4)
 

@@ -208,12 +208,11 @@ class ShapeInterpWLCatalog:
                 + " free"
             )
 
+        # Each interpolant goes to a temporary records file as it is built, and the
+        # catalog is assembled from them: they are never all in memory.
         t_start = time.perf_counter()
-        data.write_shape_interp(mset, obs)
+        data.write_shape_interp_file(mset, obs, self.output.absolute().as_posix())
         t_build = time.perf_counter() - t_start
-
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-        ser.to_binfile(obs, self.output.absolute().as_posix())
 
         Console().print(
             f"Wrote {self.output}: interpolants of {obs.len()} galaxies for "

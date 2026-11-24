@@ -413,6 +413,7 @@ DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX = 0.3
 DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
 DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC = 1.0e-4
+DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC = 1.0e-2
 DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = 0.0
 
 
@@ -432,6 +433,9 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     interp_trim_frac: Annotated[float, Field(ge=0.0, lt=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC
     )
+    interp_compress_frac: Annotated[float, Field(ge=0.0, le=1.0)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC
+    )
     line_abstol: Annotated[float, Field(ge=0.0, le=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL
     )
@@ -449,6 +453,8 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
                 "interp_min_radial_panels="
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS}, "
                 f"interp_trim_frac={DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC}, "
+                "interp_compress_frac="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC}, "
                 f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL}"
             ),
         ]
@@ -466,6 +472,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
             interp_abstol=self.interp_abstol,
             interp_min_radial_panels=self.interp_min_radial_panels,
             interp_trim_frac=self.interp_trim_frac,
+            interp_compress_frac=self.interp_compress_frac,
             line_abstol=self.line_abstol,
         )
 
@@ -858,6 +865,7 @@ def shape_interp_gens(
         interp_abstol=gsfs.get_interp_abstol(),
         interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),
         interp_trim_frac=gsfs.get_interp_trim_frac(),
+        interp_compress_frac=gsfs.get_interp_compress_frac(),
     )
 
     pop_gen: GalaxyPopGenTypes
