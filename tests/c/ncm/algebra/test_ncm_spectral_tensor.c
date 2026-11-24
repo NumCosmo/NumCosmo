@@ -109,6 +109,8 @@ void test_ncm_spectral_tensor_tucker_serialize (TestNcmSpectralTensor *test, gco
 void test_ncm_spectral_tensor_compress (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_compress_keep (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_eval_slice (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_eval_slice_recurrence (void);
+void test_ncm_spectral_tensor_tucker_large_ranks (void);
 
 void test_ncm_spectral_tensor_traps (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_set_domain_length_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
@@ -225,6 +227,9 @@ main (gint argc, gchar *argv[])
       g_free (path);
     }
   }
+
+  g_test_add_func ("/ncm/spectral_tensor/eval_slice/recurrence", &test_ncm_spectral_tensor_eval_slice_recurrence);
+  g_test_add_func ("/ncm/spectral_tensor/tucker/large_ranks", &test_ncm_spectral_tensor_tucker_large_ranks);
 
   g_test_add ("/ncm/spectral_tensor/traps", TestNcmSpectralTensor, GUINT_TO_POINTER (2),
               &test_ncm_spectral_tensor_new, &test_ncm_spectral_tensor_traps, &test_ncm_spectral_tensor_free);
@@ -1806,6 +1811,251 @@ test_ncm_spectral_tensor_eval_slice (TestNcmSpectralTensor *test, gconstpointer 
   g_array_unref (f_arr);
   ncm_spectral_tensor_free (st_t);
   ncm_spectral_tensor_free (st_d);
+}
+
+/*
+ * The slices whose free variables are evaluated by Clenshaw recurrences point by point:
+ * five free variables of a panel of six, in the formats TUCKER and DENSE, and one free
+ * variable with 130 coefficients. ncm_spectral_tensor_eval_slice_array() agrees with
+ * ncm_spectral_tensor_eval() at the full points within the rounding of the sums. With two
+ * fixed variables the same six-variable panels are evaluated by the passes of 8 points.
+ */
+void
+test_ncm_spectral_tensor_eval_slice_recurrence (void)
+{
+  const guint K6[6]       = {3, 2, 3, 2, 2, 3};
+  const guint r6[6]       = {2, 1, 2, 2, 1, 2};
+  const gdouble lower6[6] = {-1.0, 0.0, 0.5, -2.0, 1.0, -0.5};
+  const gdouble upper6[6] = {1.0, 2.0, 1.5, -1.0, 4.0, 0.5};
+  const guint K2[2]       = {130, 3};
+  const gdouble lower2[2] = {-1.0, 0.0};
+  const gdouble upper2[2] = {1.0, 2.0};
+  const guint n_points    = 40;
+  NcmRNG *rng             = ncm_rng_seeded_new (NULL, 2032);
+  NcmSpectralTensor *st_t = ncm_spectral_tensor_new (6);
+  NcmSpectralTensor *st_d = ncm_spectral_tensor_new (6);
+  NcmSpectralTensor *st_2 = ncm_spectral_tensor_new (2);
+  GArray *data            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *x_fixed         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *x               = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *f_t             = NULL;
+  GArray *f_d             = NULL;
+  GArray *lower_a, *upper_a, *K_a, *c;
+  gdouble scale_t = 1.0;
+  gdouble l1      = 0.0;
+  gsize n_data    = 0;
+  gsize n_core    = 1;
+  gsize off       = 0;
+  gsize q;
+  guint i, j, m, a, k;
+
+  for (i = 0; i < 6; i++)
+  {
+    n_data += (gsize) K6[i] * r6[i];
+    n_core *= r6[i];
+  }
+
+  for (q = 0; q < n_data + n_core; q++)
+  {
+    const gdouble v = ncm_rng_uniform_gen (rng, -1.0, 1.0);
+
+    g_array_append_val (data, v);
+  }
+
+  /* The scale of the rounding of the TUCKER sums: the largest column sum of each factor times the sum of the core */
+  for (i = 0; i < 6; i++)
+  {
+    gdouble col_max = 0.0;
+
+    for (a = 0; a < r6[i]; a++)
+    {
+      gdouble col = 0.0;
+
+      for (k = 0; k < K6[i]; k++)
+        col += fabs (g_array_index (data, gdouble, off + (gsize) k * r6[i] + a));
+
+      col_max = MAX (col_max, col);
+    }
+
+    scale_t *= col_max;
+    off     += (gsize) K6[i] * r6[i];
+  }
+
+  {
+    gdouble core_l1 = 0.0;
+
+    for (q = 0; q < n_core; q++)
+      core_l1 += fabs (g_array_index (data, gdouble, n_data + q));
+
+    scale_t *= core_l1;
+  }
+
+  ncm_spectral_tensor_set_domain (st_t, 6, lower6, 6, upper6);
+  ncm_spectral_tensor_set_domain (st_d, 6, lower6, 6, upper6);
+  g_assert_cmpuint (ncm_spectral_tensor_set_panel_tucker (st_t, 0, 6, K6, 6, r6, data->len, (gdouble *) data->data), ==, 0);
+
+  c = ncm_spectral_tensor_get_panel (st_t, 0, &lower_a, &upper_a, &K_a);
+  g_assert_cmpuint (ncm_spectral_tensor_set_panel (st_d, 0, 6, K6, c->len, (gdouble *) c->data), ==, 0);
+
+  for (m = 1; m <= 2; m++)
+  {
+    const guint nf = 6 - m;
+
+    g_array_set_size (x_fixed, 0);
+    g_array_set_size (x, 0);
+
+    for (i = nf; i < 6; i++)
+    {
+      const gdouble v = ncm_rng_uniform_gen (rng, lower6[i], upper6[i]);
+
+      g_array_append_val (x_fixed, v);
+    }
+
+    for (j = 0; j < n_points; j++)
+    {
+      for (i = 0; i < nf; i++)
+      {
+        const gdouble v = ncm_rng_uniform_gen (rng, lower6[i], upper6[i]);
+
+        g_array_append_val (x, v);
+      }
+    }
+
+    ncm_spectral_tensor_eval_slice_array (st_t, x_fixed, x, &f_t);
+    ncm_spectral_tensor_eval_slice_array (st_d, x_fixed, x, &f_d);
+    g_assert_cmpuint (f_t->len, ==, n_points);
+    g_assert_cmpuint (f_d->len, ==, n_points);
+
+    for (j = 0; j < n_points; j++)
+    {
+      gdouble full[6];
+      gdouble ref;
+
+      for (i = 0; i < nf; i++)
+        full[i] = g_array_index (x, gdouble, nf * j + i);
+
+      for (i = nf; i < 6; i++)
+        full[i] = g_array_index (x_fixed, gdouble, i - nf);
+
+      ref = ncm_spectral_tensor_eval (st_d, 6, full);
+      g_assert_cmpfloat (fabs (g_array_index (f_d, gdouble, j) - ref), <=, 1.0e-13 * scale_t);
+      g_assert_cmpfloat (fabs (g_array_index (f_t, gdouble, j) - ref), <=, 1.0e-13 * scale_t);
+    }
+  }
+
+  /* One free variable with 130 coefficients */
+  g_array_set_size (data, 0);
+
+  for (q = 0; q < (gsize) K2[0] * K2[1]; q++)
+  {
+    const gdouble v = ncm_rng_uniform_gen (rng, -1.0, 1.0);
+
+    g_array_append_val (data, v);
+    l1 += fabs (v);
+  }
+
+  ncm_spectral_tensor_set_domain (st_2, 2, lower2, 2, upper2);
+  g_assert_cmpuint (ncm_spectral_tensor_set_panel (st_2, 0, 2, K2, data->len, (gdouble *) data->data), ==, 0);
+
+  g_array_set_size (x_fixed, 1);
+  g_array_index (x_fixed, gdouble, 0) = ncm_rng_uniform_gen (rng, lower2[1], upper2[1]);
+  g_array_set_size (x, 0);
+
+  for (j = 0; j < n_points; j++)
+  {
+    const gdouble v = ncm_rng_uniform_gen (rng, lower2[0], upper2[0]);
+
+    g_array_append_val (x, v);
+  }
+
+  ncm_spectral_tensor_eval_slice_array (st_2, x_fixed, x, &f_d);
+  g_assert_cmpuint (f_d->len, ==, n_points);
+
+  for (j = 0; j < n_points; j++)
+  {
+    const gdouble full[2] = {g_array_index (x, gdouble, j), g_array_index (x_fixed, gdouble, 0)};
+
+    g_assert_cmpfloat (fabs (g_array_index (f_d, gdouble, j) - ncm_spectral_tensor_eval (st_2, 2, full)), <=, 1.0e-13 * l1);
+  }
+
+  g_array_unref (lower_a);
+  g_array_unref (upper_a);
+  g_array_unref (K_a);
+  g_array_unref (c);
+  g_array_unref (data);
+  g_array_unref (x_fixed);
+  g_array_unref (x);
+  g_array_unref (f_t);
+  g_array_unref (f_d);
+  ncm_spectral_tensor_free (st_t);
+  ncm_spectral_tensor_free (st_d);
+  ncm_spectral_tensor_free (st_2);
+  ncm_rng_free (rng);
+}
+
+/*
+ * A TUCKER panel of two variables with ranks 2049 and 2049, whose sum is larger than the
+ * number of vector entries ncm_spectral_tensor_eval() keeps on the stack. The factors are
+ * identities and the core has four entries, so the series is the sum of four products
+ * T_a (s_0) T_b (s_1), compared with cos (a arccos s_0) cos (b arccos s_1).
+ */
+void
+test_ncm_spectral_tensor_tucker_large_ranks (void)
+{
+  const guint K[2]       = {2049, 2049};
+  const gdouble lower[2] = {-1.0, -1.0};
+  const gdouble upper[2] = {1.0, 1.0};
+  const guint idx[4][2]  = {
+    {
+      0, 0
+    }, {
+      1, 2
+    }, {
+      2048, 3
+    }, {
+      7, 2048
+    }
+  };
+  const gdouble g[4]     = {0.5, -0.25, 0.125, 1.0};
+  const gdouble xs[3][2] = {
+    {
+      0.3, -0.7
+    }, {
+      0.05, 0.6
+    }, {
+      -0.45, 0.11
+    }
+  };
+  const gsize n_factor  = (gsize) K[0] * K[0];
+  const gsize len       = 3 * n_factor;
+  gdouble *data         = g_new0 (gdouble, len);
+  NcmSpectralTensor *st = ncm_spectral_tensor_new (2);
+  guint j, t, k;
+
+  for (k = 0; k < K[0]; k++)
+  {
+    data[(gsize) k * K[0] + k]            = 1.0;
+    data[n_factor + (gsize) k * K[1] + k] = 1.0;
+  }
+
+  for (t = 0; t < 4; t++)
+    data[2 * n_factor + idx[t][0] + (gsize) K[0] * idx[t][1]] = g[t];
+
+  ncm_spectral_tensor_set_domain (st, 2, lower, 2, upper);
+  g_assert_cmpuint (ncm_spectral_tensor_set_panel_tucker (st, 0, 2, K, 2, K, len, data), ==, 0);
+  g_free (data);
+
+  for (j = 0; j < 3; j++)
+  {
+    gdouble ref = 0.0;
+
+    for (t = 0; t < 4; t++)
+      ref += g[t] * cos (idx[t][0] * acos (xs[j][0])) * cos (idx[t][1] * acos (xs[j][1]));
+
+    g_assert_cmpfloat (fabs (ncm_spectral_tensor_eval (st, 2, xs[j]) - ref), <=, 1.0e-9);
+  }
+
+  ncm_spectral_tensor_free (st);
 }
 
 void

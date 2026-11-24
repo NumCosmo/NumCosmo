@@ -58,6 +58,10 @@ void test_nc_data_cluster_wl_factor_shape_interp_shape_factor (void);
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void);
 void test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_shape_interp_file (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_shape_interp_file_traps (void);
+void test_nc_data_cluster_wl_factor_shape_interp_file_shape_factor_subprocess (void);
+void test_nc_data_cluster_wl_factor_shape_interp_file_rows_subprocess (void);
+void test_nc_data_cluster_wl_factor_shape_interp_file_create_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -81,6 +85,13 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_wl_factor_shape_interp_new,
               &test_nc_data_cluster_wl_factor_shape_interp_file,
               &test_nc_data_cluster_wl_factor_shape_interp_free);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/file/traps", &test_nc_data_cluster_wl_factor_shape_interp_file_traps);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/file/shape_factor/subprocess",
+                   &test_nc_data_cluster_wl_factor_shape_interp_file_shape_factor_subprocess);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/file/rows/subprocess",
+                   &test_nc_data_cluster_wl_factor_shape_interp_file_rows_subprocess);
+  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/file/create/subprocess",
+                   &test_nc_data_cluster_wl_factor_shape_interp_file_create_subprocess);
 
   g_test_run ();
 
@@ -394,5 +405,57 @@ test_nc_data_cluster_wl_factor_shape_interp_file (TestNcDataClusterWLFactorShape
   g_free (rec_name);
   g_free (filename);
   g_free (dir);
+}
+
+/*
+ * nc_data_cluster_wl_factor_write_shape_interp_file() aborts, before it builds any
+ * interpolant, when the shape factor is not a NcGalaxyShapeFactorSpectral, when the catalog
+ * has another number of rows than the dataset, and when the records file cannot be created.
+ */
+void
+test_nc_data_cluster_wl_factor_shape_interp_file_traps (void)
+{
+  g_test_trap_subprocess ("/nc/data_cluster_wl_factor/shape_interp/file/shape_factor/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the shape factor NcGalaxyShapeFactorVarAdd is not a NcGalaxyShapeFactorSpectral.*");
+
+  g_test_trap_subprocess ("/nc/data_cluster_wl_factor/shape_interp/file/rows/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the catalog has 3 rows, the dataset 6 galaxies.*");
+
+  g_test_trap_subprocess ("/nc/data_cluster_wl_factor/shape_interp/file/create/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*cannot create *catalog.gvar.records*");
+}
+
+void
+test_nc_data_cluster_wl_factor_shape_interp_file_shape_factor_subprocess (void)
+{
+  TestNcDataClusterWLFactorShapeInterp test;
+
+  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (FALSE));
+  nc_data_cluster_wl_factor_write_shape_interp_file (test.dcwlf, test.mset, test.obs, "catalog.gvar");
+}
+
+void
+test_nc_data_cluster_wl_factor_shape_interp_file_rows_subprocess (void)
+{
+  TestNcDataClusterWLFactorShapeInterp test;
+  NcGalaxyWLObs *obs;
+
+  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (TRUE));
+  obs = nc_galaxy_wl_obs_new (nc_galaxy_wl_obs_get_ellip_conv (test.obs), nc_galaxy_wl_obs_get_coord (test.obs), 3,
+                              nc_galaxy_wl_obs_peek_columns (test.obs));
+  nc_data_cluster_wl_factor_write_shape_interp_file (test.dcwlf, test.mset, obs, "catalog.gvar");
+}
+
+void
+test_nc_data_cluster_wl_factor_shape_interp_file_create_subprocess (void)
+{
+  TestNcDataClusterWLFactorShapeInterp test;
+  gchar *filename = g_build_filename (g_get_tmp_dir (), "nc_shape_interp_no_such_directory", "catalog.gvar", NULL);
+
+  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (TRUE));
+  nc_data_cluster_wl_factor_write_shape_interp_file (test.dcwlf, test.mset, test.obs, filename);
 }
 
