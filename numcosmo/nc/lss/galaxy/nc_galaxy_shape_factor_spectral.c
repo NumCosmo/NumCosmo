@@ -97,9 +97,11 @@
  * nc_galaxy_shape_factor_spectral_set_obs_source() records the shape factor and the
  * population that built them. Reading the rows of such a catalog loads the interpolants,
  * and an interpolant that is present is always used. The first use compares the record with
- * the fit (the convention, reltol, the interp-* settings, the fixed population parameters
- * within a relative tolerance of $10^{-15}$, and the free ones, which must be variables of
- * the stored interpolants with the same bounds) and aborts on any difference. An
+ * the fit (the convention, reltol, the interp-* settings, the population parameters that
+ * are not variables of the stored interpolants, which must be fixed at the recorded values
+ * within a relative tolerance of $10^{-15}$, and the free ones, which must be variables with
+ * the same bounds; a variable fixed in the fit holds any value in its range) and aborts on
+ * any difference. An
  * interpolant, loaded or built, that no longer holds for an evaluation (another observed
  * ellipticity, noise, setting or population) aborts. A change of the rows of the catalog, as
  * a resample, drops its interpolants.
@@ -1336,10 +1338,11 @@ _nc_galaxy_shape_factor_spectral_interp_valid (NcGalaxyShapeFactorSpectral *gsfs
 
 /*
  * Whether the table of a galaxy with population variables holds for the current state of
- * pop: the free parameters are its variables, their bounds are the ranges recorded, and the
- * fixed parameters have the values recorded. Then the free values become the population
- * part of the point of the table (ldata->x) and the state is recorded. A free value outside
- * its bounds aborts.
+ * pop: every free parameter is a variable of the table with the bounds recorded, and every
+ * parameter that is not a variable is fixed at the value recorded. A variable may also be
+ * fixed. Then the values of the variables become the population part of the point of the
+ * table (ldata->x) and the state is recorded. A value outside the range of its variable
+ * aborts.
  */
 static gboolean
 _nc_galaxy_shape_factor_spectral_pop_inside (NcGalaxyShapePop *pop, NcGalaxyShapeFactorSpectralData *ldata)
@@ -1354,16 +1357,18 @@ _nc_galaxy_shape_factor_spectral_pop_inside (NcGalaxyShapePop *pop, NcGalaxyShap
 
   for (k = 0; k < len; k++)
   {
-    if (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE)
+    const gboolean free = (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE);
+
+    if ((v < n_pop) && (g_array_index (ldata->pop_idx, guint, v) == k))
     {
-      if ((v == n_pop) || (g_array_index (ldata->pop_idx, guint, v) != k) ||
-          (g_array_index (ldata->pop_bounds, gdouble, 2 * v) != ncm_model_param_get_lower_bound (model, k)) ||
-          (g_array_index (ldata->pop_bounds, gdouble, 2 * v + 1) != ncm_model_param_get_upper_bound (model, k)))
+      if (free &&
+          ((g_array_index (ldata->pop_bounds, gdouble, 2 * v) != ncm_model_param_get_lower_bound (model, k)) ||
+           (g_array_index (ldata->pop_bounds, gdouble, 2 * v + 1) != ncm_model_param_get_upper_bound (model, k))))
         return FALSE;
 
       v++;
     }
-    else if (ncm_model_param_get (model, k) != g_array_index (ldata->pop_params, gdouble, k))
+    else if (free || (ncm_model_param_get (model, k) != g_array_index (ldata->pop_params, gdouble, k)))
     {
       return FALSE;
     }
@@ -1739,12 +1744,14 @@ _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsf
 
 /*
  * Compares the record of the loaded interpolant of the galaxy of data with the fit: the
- * convention, reltol and the interp-* settings of the class, the type of the population, its
- * fixed parameters, and its free parameters against the population variables of the
- * interpolant, which must be free in the record and span the bounds of the fit. When all
- * agree the interpolant is recorded as valid for the current state of pop, with the bounds
- * of the fit as the ranges of its variables; otherwise the call aborts with every difference
- * in the message.
+ * convention, reltol and the interp-* settings of the class, the type of the population, and
+ * its parameters against the population variables of the interpolant, the parameters free
+ * in the record. A free parameter of the fit must be a variable whose range is its bounds; a
+ * variable fixed in the fit holds any value in its range; a parameter that is not a variable
+ * must be fixed at the value of the record. When all agree the interpolant is recorded as
+ * valid for the current state of pop, with the bounds of the fit as the ranges of its free
+ * variables and the ranges of the table for the fixed ones; otherwise the call aborts with
+ * every difference in the message.
  */
 static void
 _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data)
@@ -1774,44 +1781,63 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
   if (ncm_cmp (self->interp_trim_frac, src->interp_trim_frac, tol, 0.0) != 0)
     g_string_append_printf (diff, " interp-trim-frac (% 22.15g, built with % 22.15g);", self->interp_trim_frac, src->interp_trim_frac);
 
-  _nc_galaxy_shape_factor_spectral_pop_vars (pop, ldata);
-
   if ((G_OBJECT_TYPE (pop) != G_OBJECT_TYPE (ldata->src_pop)) || (ncm_model_len (NCM_MODEL (pop)) != ncm_model_len (NCM_MODEL (ldata->src_pop))))
   {
     g_string_append_printf (diff, " the population (%s, built with %s);", G_OBJECT_TYPE_NAME (pop), G_OBJECT_TYPE_NAME (ldata->src_pop));
   }
-  else if (ncm_spectral_tensor_get_n_vars (ldata->st) != ldata->x->len)
-  {
-    g_string_append_printf (diff, " the free population parameters (%u, the interpolants have %u population variables);",
-                            ldata->pop_idx->len, ncm_spectral_tensor_get_n_vars (ldata->st) - 2);
-  }
   else
   {
-    NcmModel *model = NCM_MODEL (pop);
-    guint v         = 0;
+    NcmModel *model     = NCM_MODEL (pop);
+    NcmModel *src_model = NCM_MODEL (ldata->src_pop);
+    guint n_src_free    = 0;
+    guint v             = 0;
 
-    for (k = 0; k < ncm_model_len (model); k++)
+    for (k = 0; k < ncm_model_len (src_model); k++)
+      n_src_free += (ncm_model_param_get_ftype (src_model, k) == NCM_PARAM_TYPE_FREE) ? 1 : 0;
+
+    g_array_set_size (ldata->pop_idx, 0);
+    g_array_set_size (ldata->pop_bounds, 0);
+    g_array_set_size (ldata->x, 2 + n_src_free);
+
+    if (ncm_spectral_tensor_get_n_vars (ldata->st) != 2 + n_src_free)
+      g_string_append_printf (diff, " the record (%u free population parameters, the interpolants have %u population variables);",
+                              n_src_free, ncm_spectral_tensor_get_n_vars (ldata->st) - 2);
+
+    for (k = 0; (k < ncm_model_len (model)) && (ncm_spectral_tensor_get_n_vars (ldata->st) == 2 + n_src_free); k++)
     {
-      if (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE)
+      const gboolean free = (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE);
+
+      if (ncm_model_param_get_ftype (src_model, k) == NCM_PARAM_TYPE_FREE)
       {
         gdouble a, b;
 
         ncm_spectral_tensor_get_range (ldata->st, 2 + v, &a, &b);
 
-        if (ncm_model_param_get_ftype (NCM_MODEL (ldata->src_pop), k) != NCM_PARAM_TYPE_FREE)
-          g_string_append_printf (diff, " the population parameter %s is free, not a variable of the interpolants;", ncm_model_param_name (model, k));
-        else if ((ncm_cmp (a, ncm_model_param_get_lower_bound (model, k), tol, 0.0) != 0) ||
-                 (ncm_cmp (b, ncm_model_param_get_upper_bound (model, k), tol, 0.0) != 0))
-          g_string_append_printf (diff, " the bounds of %s ([% 22.15g, % 22.15g], built for [% 22.15g, % 22.15g]);",
-                                  ncm_model_param_name (model, k), ncm_model_param_get_lower_bound (model, k),
-                                  ncm_model_param_get_upper_bound (model, k), a, b);
+        if (free)
+        {
+          if ((ncm_cmp (a, ncm_model_param_get_lower_bound (model, k), tol, 0.0) != 0) ||
+              (ncm_cmp (b, ncm_model_param_get_upper_bound (model, k), tol, 0.0) != 0))
+            g_string_append_printf (diff, " the bounds of %s ([% 22.15g, % 22.15g], built for [% 22.15g, % 22.15g]);",
+                                    ncm_model_param_name (model, k), ncm_model_param_get_lower_bound (model, k),
+                                    ncm_model_param_get_upper_bound (model, k), a, b);
 
+          a = ncm_model_param_get_lower_bound (model, k);
+          b = ncm_model_param_get_upper_bound (model, k);
+        }
+
+        g_array_append_val (ldata->pop_idx, k);
+        g_array_append_val (ldata->pop_bounds, a);
+        g_array_append_val (ldata->pop_bounds, b);
         v++;
       }
-      else if (ncm_cmp (ncm_model_param_get (model, k), ncm_model_param_get (NCM_MODEL (ldata->src_pop), k), tol, 0.0) != 0)
+      else if (free)
+      {
+        g_string_append_printf (diff, " the population parameter %s is free, not a variable of the interpolants;", ncm_model_param_name (model, k));
+      }
+      else if (ncm_cmp (ncm_model_param_get (model, k), ncm_model_param_get (src_model, k), tol, 0.0) != 0)
       {
         g_string_append_printf (diff, " the population parameter %s (% 22.15g, built with % 22.15g);", ncm_model_param_name (model, k),
-                                ncm_model_param_get (model, k), ncm_model_param_get (NCM_MODEL (ldata->src_pop), k));
+                                ncm_model_param_get (model, k), ncm_model_param_get (src_model, k));
       }
     }
 
