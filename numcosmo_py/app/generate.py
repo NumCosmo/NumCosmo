@@ -1106,7 +1106,10 @@ class LoadClusterWL(ClusterWL):
             help=(
                 "Path to a local NcGalaxyWLObs (.gvar) file with real galaxy "
                 "shape/position/redshift data. Mutually exclusive with "
-                "--catalog; exactly one of the two is required."
+                "--catalog; exactly one of the two is required. An experiment "
+                "built from a file with interpolants (numcosmo wl-catalog "
+                "shape-interp) stores the absolute path of the file, not the "
+                "interpolants, and needs the file at that path when it is loaded."
             ),
             exists=True,
             readable=True,

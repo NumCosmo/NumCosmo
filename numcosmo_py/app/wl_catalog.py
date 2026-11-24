@@ -60,6 +60,8 @@ class ShapeInterpWLCatalog:
     interpolants are built only here: ``numcosmo generate cluster-wl-load
     --data-file OUTPUT`` builds an experiment that uses them, with the shape
     factor and the population of the record, and a fit never builds them.
+    The experiment stores the absolute path of OUTPUT, not the interpolants,
+    and reads them from OUTPUT when it is loaded: OUTPUT must stay at that path.
     Without --free-pop the population parameters are fixed and the interpolants
     hold for their values only. With --free-pop every population parameter is
     one more variable of the interpolants, over its bounds: an experiment built
