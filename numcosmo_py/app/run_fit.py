@@ -176,28 +176,24 @@ class RunFit(RunCommonOptions):
     """Computes the best fit of the model to the data."""
 
     restart: Annotated[
-        tuple[float, float],
+        tuple[float, float] | None,
         typer.Option(
             help=(
-                "Restart the fit until the given the value of m2lnL varies less"
+                "Restart the fit until the value of m2lnL varies less"
                 " than the given tolerance (abstol, reltol)."
             ),
         ),
-    ] = (
-        None,
-        None,
-    )  # type: ignore
+    ] = None
 
     def __post_init__(self) -> None:
         """Compute the best fit of the model to the data."""
         super().__post_init__()
         self.fit.log_info()
 
-        abstol, reltol = self.restart
-
-        if abstol is None or reltol is None:
+        if self.restart is None:
             self.fit.run(self.run_messages.genum)
         else:
+            abstol, reltol = self.restart
             if abstol <= 0.0 and reltol <= 0.0:
                 raise RuntimeError(f"Invalid tolerance for restart {self.restart}.")
             output_filename = (

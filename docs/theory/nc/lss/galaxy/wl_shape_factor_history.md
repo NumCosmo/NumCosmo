@@ -1113,3 +1113,29 @@ requires identical results.
   `_trace_det_kernel`, `NcWLEllipticityTraceKernelPrep`), the linear Jacobians
   `nc_wl_ellipticity_det_jac_trace` and `_trace_det`, `nc_wl_ellipticity_shear_at_origin_*`,
   and `NcGalaxyShapeIntrinsicMode`.
+
+## The $p(z)$ of a galaxy becomes `NcGalaxyPz` (2026)
+
+Until 2026-11 the `pz` column of `NcGalaxyWLObs` held one `NcmSplineCubicNotaknot` per
+galaxy, the table $(z_j, p_j)$ of its photometric redshift density. The likelihood had
+stopped evaluating that spline when `NcGalaxyRedshiftFactorSpline` changed to the
+density $s^2$, with $s$ the order-6 B-spline through $(z_j, \sqrt{p_j})$: from then on it
+read the knots and values only, and the catalog kept, for every galaxy, the coefficients
+of a cubic spline that nothing evaluated. The redshift factor fitted $s$ for each table
+when it read the rows, and shared the fit between the copies of a dataset through data
+attached to the spline, a hash of the table and a lock.
+
+The column now holds a `NcGalaxyPz`, the density itself. `NcGalaxyPzBSplineSqrt` is the
+density $s^2$: it holds $s$ as a `NcmBSpline` (order, knots and control points) and
+computes the normalization and the integrals used for sampling when it is built. A
+`NcGalaxyPz` does not change after construction, so the copies of a dataset reference
+the same objects, and `NcGalaxyRedshiftFactorSpline` only reads the object of each row.
+
+- The density of a catalog is unchanged: the spline cases of
+  `tests/python/nc/data/test_data_cluster_wl_factor_parity_combinations.py` keep their
+  values.
+- A catalog written before the change holds `NcmSpline` objects and aborts on load.
+  `tools/nc_galaxy_pz_update_catalog.py` rewrites its `pz` property. The five catalogs of
+  the data file release were replaced by updated files.
+- A catalog no longer holds the tables. `tests/tools/make_hsc_pz_test_data.py` rebuilds
+  them from the densities.

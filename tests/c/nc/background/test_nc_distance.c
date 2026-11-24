@@ -71,6 +71,7 @@ void test_nc_distance_new_no_lambda_hyperbolic (TestNcDistance *test, gconstpoin
 void test_nc_distance_new_recomb (TestNcDistance *test, gconstpointer pdata);
 
 void test_nc_distance_comoving (TestNcDistance *test, gconstpointer pdata);
+void test_nc_distance_zf_next_prepare (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_transverse (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_angular_diameter (TestNcDistance *test, gconstpointer pdata);
 void test_nc_distance_DH_r (TestNcDistance *test, gconstpointer pdata);
@@ -128,6 +129,14 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/distance/comoving", TestNcDistance, NULL,
               &test_nc_distance_new,
               &test_nc_distance_comoving,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/require_zf", TestNcDistance, GINT_TO_POINTER (FALSE),
+              &test_nc_distance_new,
+              &test_nc_distance_zf_next_prepare,
+              &test_nc_distance_free);
+  g_test_add ("/nc/distance/set_zf", TestNcDistance, GINT_TO_POINTER (TRUE),
+              &test_nc_distance_new,
+              &test_nc_distance_zf_next_prepare,
               &test_nc_distance_free);
   g_test_add ("/nc/distance/transverse", TestNcDistance, NULL,
               &test_nc_distance_new,
@@ -833,6 +842,61 @@ test_nc_distance_comoving (TestNcDistance *test, gconstpointer pdata)
   ncm_assert_cmpdouble_e (d1, ==, 0.440963874582, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (d2, ==, 1.36043818854, 1.0e-5, 0.0);
   ncm_assert_cmpdouble_e (d3, ==, 1.81495826687, 1.0e-5, 0.0);
+}
+
+/*
+ * A final redshift raised after a prepare, by nc_distance_require_zf() or by the zf
+ * property (pdata TRUE), takes effect at the next prepare. Before it the comoving
+ * distance at every redshift is the one of the last prepare; after it the distance is
+ * that of a NcDistance built with the new final redshift. The redshifts are below the
+ * final redshift of the fixture (6), between it and the new one (20), and above both.
+ */
+void
+test_nc_distance_zf_next_prepare (TestNcDistance *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo            = test->cosmo;
+  NcDistance *dist            = test->dist;
+  NcDistance *ref             = nc_distance_new (20.0);
+  const gboolean use_property = GPOINTER_TO_INT (pdata);
+  const gdouble z[5]          = {3.0, 8.0, 12.0, 18.0, 25.0};
+  gdouble d[5], zf;
+  guint i;
+
+  nc_distance_prepare (ref, cosmo);
+
+  for (i = 0; i < 5; i++)
+    d[i] = nc_distance_comoving (dist, cosmo, z[i]);
+
+  /* A requirement not above the requested final redshift changes nothing */
+  nc_distance_require_zf (dist, 5.0);
+  g_object_get (dist, "zf", &zf, NULL);
+  g_assert_cmpfloat (zf, ==, 6.0);
+
+  if (use_property)
+    g_object_set (dist, "zf", 20.0, NULL);
+  else
+    nc_distance_require_zf (dist, 20.0);
+
+  g_object_get (dist, "zf", &zf, NULL);
+  g_assert_cmpfloat (zf, ==, 20.0);
+
+  for (i = 0; i < 5; i++)
+    g_assert_cmpfloat (nc_distance_comoving (dist, cosmo, z[i]), ==, d[i]);
+
+  nc_distance_prepare_if_needed (dist, cosmo);
+
+  for (i = 0; i < 4; i++)
+    g_assert_cmpfloat (nc_distance_comoving (dist, cosmo, z[i]), ==, nc_distance_comoving (ref, cosmo, z[i]));
+
+  /*
+   * Above both final redshifts the distance is the integral before and after the
+   * prepare, computed on other subintervals with relative tolerance NCM_INTEGRAL_ERROR
+   * (1e-13). The measured difference is 0; the tolerance is ten times that of the
+   * integral.
+   */
+  ncm_assert_cmpdouble_e (nc_distance_comoving (dist, cosmo, z[4]), ==, d[4], 1.0e-12, 0.0);
+
+  nc_distance_free (ref);
 }
 
 void

@@ -55,6 +55,7 @@
 #include "build_cfg.h"
 
 #include "ncm/spline/ncm_spline_bspline.h"
+#include "ncm/spline/ncm_bspline_private.h"
 #include "ncm/core/ncm_cfg.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -485,78 +486,15 @@ _ncm_spline_bspline_min_size (const NcmSpline *s)
 
 /*
  * gsl_bspline_calc() writes scratch into the workspace, so evaluation runs de Boor's
- * recursion (PPPACK bsplvb, as in GSL) on stack scratch instead, for concurrent callers
- * such as the xcor kernel integrands.
+ * recursion on stack scratch instead (_ncm_bspline_eval()), for concurrent callers such
+ * as the xcor kernel integrands.
  */
 static gdouble
 _ncm_spline_bspline_eval (const NcmSpline *s, const gdouble x)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
-  const gsize k         = sbs->order;
-  const gsize ncontrol  = sbs->alloc_len;
-  const gdouble *t      = (const gdouble *) sbs->knots->data;
-  const gdouble *c      = sbs->c->data;
-  gdouble deltal[NCM_SPLINE_BSPLINE_MAX_ORDER];
-  gdouble deltar[NCM_SPLINE_BSPLINE_MAX_ORDER];
-  gdouble B[NCM_SPLINE_BSPLINE_MAX_ORDER];
-  gsize l, i, j;
 
-  /* Largest span index l in [k - 1, ncontrol - 1] with t[l] <= x. Outside the range the
-   * clamped edge span extrapolates its polynomial, matching gsl_bspline_calc(). */
-  if (x < t[k - 1])
-  {
-    l = k - 1;
-  }
-  else if (x >= t[ncontrol])
-  {
-    l = ncontrol - 1;
-  }
-  else
-  {
-    gsize lo = k - 1;
-    gsize hi = ncontrol;
-
-    while (hi - lo > 1)
-    {
-      const gsize mid = (lo + hi) / 2;
-
-      if (x < t[mid])
-        hi = mid;
-      else
-        lo = mid;
-    }
-
-    l = lo;
-  }
-
-  B[0] = 1.0;
-
-  for (j = 0; j + 1 < k; j++)
-  {
-    gdouble saved = 0.0;
-
-    deltar[j] = t[l + j + 1] - x;
-    deltal[j] = x - t[l - j];
-
-    for (i = 0; i <= j; i++)
-    {
-      const gdouble term = B[i] / (deltar[i] + deltal[j - i]);
-
-      B[i]  = saved + deltar[i] * term;
-      saved = deltal[j - i] * term;
-    }
-
-    B[j + 1] = saved;
-  }
-
-  {
-    gdouble res = 0.0;
-
-    for (i = 0; i < k; i++)
-      res += B[i] * c[l - (k - 1) + i];
-
-    return res;
-  }
+  return _ncm_bspline_eval (sbs->order, sbs->alloc_len, (const gdouble *) sbs->knots->data, sbs->c->data, x);
 }
 
 static gdouble
@@ -831,5 +769,37 @@ guint
 ncm_spline_bspline_get_order (NcmSplineBSpline *sbs)
 {
   return sbs->order;
+}
+
+/**
+ * ncm_spline_bspline_dup_bspline:
+ * @sbs: a prepared #NcmSplineBSpline
+ *
+ * Creates the #NcmBSpline with the order, the B-spline knots and the control points of
+ * @sbs, copied. The two evaluate to the same value at every point; the #NcmBSpline keeps
+ * no samples or workspace and does not change when @sbs is prepared again.
+ *
+ * Returns: (transfer full): a newly allocated #NcmBSpline.
+ */
+NcmBSpline *
+ncm_spline_bspline_dup_bspline (NcmSplineBSpline *sbs)
+{
+  NcmVector *knots, *control_points;
+  NcmBSpline *bs;
+
+  g_assert_nonnull (sbs->knots);
+
+  knots          = ncm_vector_new (sbs->knots->len);
+  control_points = ncm_vector_new (sbs->alloc_len);
+
+  memcpy (ncm_vector_data (knots), sbs->knots->data, sizeof (gdouble) * sbs->knots->len);
+  memcpy (ncm_vector_data (control_points), sbs->c->data, sizeof (gdouble) * sbs->alloc_len);
+
+  bs = ncm_bspline_new (sbs->order, knots, control_points);
+
+  ncm_vector_free (knots);
+  ncm_vector_free (control_points);
+
+  return bs;
 }
 

@@ -3,6 +3,7 @@
 --   [[numcosmo|NcHIPertAdiab]]
 --   [[numcosmo-math|NcmCSQ1D]]
 --   [[ncm_csq1d_eval_delta_theta_at]]
+--   [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]] (property of the class or interface)
 
 local namespaces = {
     ["numcosmo"] = {
@@ -242,6 +243,8 @@ local function load_namespace(key)
         by_ident = {},
         by_ctype = {},
         by_name = {},
+        type_name = {},
+        by_property = {},
     }
 
     local p = index_path(lookup_base)
@@ -269,6 +272,15 @@ local function load_namespace(key)
             if sym.name ~= nil then
                 add_unique(idx.by_name, sym.name, href)
             end
+            if sym.type == "property" then
+                add_unique(idx.by_property, sym.type_name .. ":" .. sym.name, href)
+            end
+        end
+        if (sym.type == "class" or sym.type == "interface") and sym.name ~= nil then
+            add_unique(idx.type_name, sym.name, sym.name)
+            if sym.ctype ~= nil then
+                add_unique(idx.type_name, sym.ctype, sym.name)
+            end
         end
     end
 
@@ -295,6 +307,20 @@ end
 local function resolve_in_ns(ns, symbol)
     local idx = load_namespace(ns)
     if idx == nil then
+        return nil
+    end
+
+    -- Class:property, where Class is the C type (NcHICosmo) or the GIR name (HICosmo).
+    local owner, property = symbol:match("^([%w_]+):([%w-]+)$")
+    if owner ~= nil then
+        local type_name = idx.type_name[owner]
+        if type(type_name) ~= "string" then
+            return nil
+        end
+        local by_property = idx.by_property[type_name .. ":" .. property]
+        if type(by_property) == "string" then
+            return by_property
+        end
         return nil
     end
 
@@ -433,6 +459,14 @@ local function parse_token(text)
     return nil
 end
 
+local function input_file()
+    if PANDOC_STATE ~= nil and PANDOC_STATE.input_files ~= nil and PANDOC_STATE.input_files[1] ~= nil then
+        return PANDOC_STATE.input_files[1]
+    end
+    return "(stdin)"
+end
+
+-- Replaces every [[...]] token of a Str by its link; an unresolved token aborts the render.
 return {
     {
         Inline = function(el)
@@ -440,25 +474,33 @@ return {
                 return el
             end
 
-            local prefix, target, symbol, suffix = parse_token(el.text)
-            if symbol == nil then
-                return el
-            end
-
-            local link = build_link(target, symbol)
-            if link == nil then
-                return el
-            end
-
             local out = {}
-            if prefix ~= "" then
-                table.insert(out, pandoc.Str(prefix))
+            local text = el.text
+
+            while true do
+                local prefix, target, symbol, suffix = parse_token(text)
+                if symbol == nil then
+                    break
+                end
+
+                local link = build_link(target, symbol)
+                if link == nil then
+                    local token = target ~= nil and (target .. "|" .. symbol) or symbol
+                    error(string.format("linkgen.lua: %s: unresolved API reference [[%s]]", input_file(), token))
+                end
+
+                if prefix ~= "" then
+                    table.insert(out, pandoc.Str(prefix))
+                end
+                table.insert(out, link)
+                text = suffix
             end
 
-            table.insert(out, link)
-
-            if suffix ~= "" then
-                table.insert(out, pandoc.Str(suffix))
+            if #out == 0 then
+                return el
+            end
+            if text ~= "" then
+                table.insert(out, pandoc.Str(text))
             end
 
             return out

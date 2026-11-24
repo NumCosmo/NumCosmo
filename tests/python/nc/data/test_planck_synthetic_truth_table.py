@@ -62,6 +62,7 @@ from python.fixtures_planck import (
     make_plik_lite_cldf,
     make_simall_cldf,
     make_smica_cldf,
+    mset_set_truth_table_point,
     PLIK_LITE_LMAX,
 )
 from numcosmo_py import Ncm, Nc
@@ -71,7 +72,6 @@ from numcosmo_py.experiments.planck_lensing import build_lensing
 from numcosmo_py.experiments.planck_lite import build_plik_lite
 from numcosmo_py.experiments.planck_simall import build_simall
 from numcosmo_py.experiments.planck_smica import build_smica_tt, build_smica_ttteee
-from numcosmo_py.experiments.planck18 import mset_set_parameters, Planck18Types
 
 Ncm.cfg_init()
 
@@ -139,11 +139,7 @@ def _compute_all(root):
         # come from the fixed Boltzmann, so nothing is solved from it.
         cosmo = create_cosmo(prim_model=HIPrimModel.POWER_LAW)
         mset = Ncm.MSet.new_array([planck, cosmo])
-        mset_set_parameters(
-            mset,
-            Planck18Types.TTTEEE if pol else Planck18Types.TT,
-            HIPrimModel.POWER_LAW,
-        )
+        mset_set_truth_table_point(mset, "TTTEEE" if pol else "TT")
         mset.prepare_fparam_map()
 
         data = builder(root, pb)

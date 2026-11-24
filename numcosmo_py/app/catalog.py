@@ -226,13 +226,6 @@ class AnalyzeMCMC(LoadCatalog):
 
         main_table.add_row(details)
 
-        if self.nitems == 0:
-            self.console.print(main_table)
-            self.console.print("#  Empty catalog!")
-
-            self.close_logging()
-            return
-
         # Global diagnostics
 
         # Two tables, because these are two kinds of quantity. A diagnostic that proposes a

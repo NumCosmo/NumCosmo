@@ -44,6 +44,65 @@ its concrete subclasses. Vendored third-party code is quarantined under
    `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`. (`ncm_cfg.h` includes only what its
    own public API needs; do not add registration includes there.)
 
+5. Keep `class_init` to the class description: the vtable, the properties with their
+   parameter descriptions, and class-level tables. It runs at the first
+   `g_type_class_ref` (deserialization, PyGObject, `ncm_cfg_init`), where no caller can
+   receive a failure, so it does not read files, data paths or environment variables.
+   A default that needs them (a data file path) is `NULL` in the pspec and is resolved
+   in `set_property` or `constructed`.
+
+## C API and the Python bindings
+
+The Python API is generated from the C API. GObject introspection records the signature
+of each public function and the annotations of its doc comment, and PyGObject builds the
+Python call from that record. The rules below keep the arguments of the C call and of the
+Python call the same and in the same order.
+
+### Callbacks and `user_data`
+
+A function that takes a callback takes the `gpointer user_data` of that callback as its
+last input parameter. Only out parameters, `GError **error` and a `GDestroyNotify` for
+`user_data` follow it. A callback typedef takes `user_data` as its last argument, as the
+GLib callbacks do:
+
+```c
+typedef gdouble (*NcmMyObjectF) (gdouble x, gpointer user_data);
+
+gdouble ncm_my_object_integrate (NcmMyObject *obj, NcmMyObjectF F, gdouble a, gdouble b,
+                                 gpointer user_data, gdouble *err, GError **error);
+```
+
+The Python binding takes `user_data` at its C position, and the generated stubs
+`numcosmo_py/ncm.pyi` and `numcosmo_py/nc.pyi` list it last. A function with `user_data`
+at another position is therefore called from Python with an argument order that differs
+from its stub.
+
+### Arrays of values
+
+A function that takes an array of values and returns an array of values takes the input
+as one flattened `GArray *` and returns the output through a `GArray **`. The function
+allocates the output array when the `GArray *` it points to is `NULL`, and resizes that
+array otherwise. The annotations are those of `ncm_spectral_tensor_eval_array ()`:
+
+```c
+/**
+ * ncm_spectral_tensor_eval_array:
+ * @st: a #NcmSpectralTensor
+ * @x: (element-type gdouble): the points, the variables of a point together
+ * @fval: (out callee-allocates) (transfer full) (element-type gdouble): the values at the points
+ */
+void ncm_spectral_tensor_eval_array (NcmSpectralTensor *st, GArray *x, GArray **fval);
+```
+
+A C caller passes a pointer to `NULL` to receive a new array, or the array of the
+previous call to reuse it. A Python caller passes a sequence or a numpy array and
+receives a list: `values = st.eval_array (points.ravel ())`.
+
+An output array allocated by the caller, annotated `(out caller-allocates) (array
+length=n)`, fails in PyGObject with "Could not caller allocate argument". Write one
+function for both languages, not a second one for the bindings, and call a new function
+from Python before writing its tests.
+
 ## Unit testing
 
 Tests follow their sources as a hard invariant: a class in
@@ -101,8 +160,9 @@ comment. Put it on a theory page and link to it. The pattern is established by
   `<a href="../../theory/ncm/dynamics/csq1d.html">CSQ1D Formalism</a>`.
 - From the theory page, link back to the API with wiki-style symbol references:
   `[[numcosmo-math|NcmCSQ1D]]`, `[[numcosmo|NcDistance]]`,
-  `[[numcosmo-math|ncm_csq1d_prepare]]`. Unresolved references degrade to plain
-  text, so verify the symbol name.
+  `[[numcosmo-math|ncm_csq1d_prepare]]`, and a property as
+  `[[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]]` under the class that defines it.
+  An unresolved reference aborts the render with its name and page.
 
 A single inline `$x$` in a doc comment is fine; a multi-line `\begin{align}`
 derivation belongs on a theory page.
@@ -263,6 +323,28 @@ Python code is formatted with `black` and checked with `ruff` and `mypy`, both
 configured in `pyproject.toml`. CI also regenerates the stubs `numcosmo_py/nc.pyi`
 and `numcosmo_py/ncm.pyi` and fails if they differ from the committed ones; after
 changing the C API, build and run `numcosmo_py/update_pyi.sh`, then commit the stubs.
+
+## Command-line errors
+
+The `numcosmo` commands (`numcosmo_py/app`) report errors with a message, never a
+Python traceback. Typer prints a traceback for any exception other than its own.
+
+- An input the user can correct (an option value, a missing or empty file) raises
+  `typer.BadParameter` before the computation starts. Typer prints the message in an
+  error box after the usage line and exits with code 2.
+- A failure found during the computation (a column missing from an input table) prints
+  the message with `self.console` and raises `typer.Exit(code=1)`.
+- The message names the option or file, the value given, and what the data allow:
+  "--burnin 5 discards every iteration of catalog c.mcmc.fits: it has 5 iteration(s)
+  (20 rows, 4 chains), so no row is left to analyze."
+- Library code called by the commands, such as `numcosmo_py.plotting`, raises
+  `ValueError`; the command validates its inputs before calling it.
+
+A test runs the command through `typer.testing.CliRunner` and checks the exit code and
+the message. Rich wraps the message at the terminal width and may add ANSI color codes, so
+the test matches it after removing those codes, the box borders and the line breaks
+(`_plain_output` in `tests/python/numcosmo_py/app/test_numcosmo_app.py`), and never
+matches across a file path, which Rich may break at any character.
 
 ## Adding a dependency
 

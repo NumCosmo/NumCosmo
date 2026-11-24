@@ -34,8 +34,10 @@
  * and nothing else.
  *
  * Outside the tabulated range the model errors rather than extrapolating -- see
- * nc_bbn_check_domain(). All shipped tables cover $\omega_b \in [0.005, 0.04]$
- * and $\Delta N_\mathrm{eff} \in [-3, 7]$.
+ * nc_bbn_check_domain(). The tables %NC_BBN_PARTHENOPE_TABLE_PLANCK2017 and
+ * %NC_BBN_PARTHENOPE_TABLE_PLANCK2017_MARCUCCI cover $\omega_b \in [0.00499, 0.03993]$;
+ * the table %NC_BBN_PARTHENOPE_TABLE_LEGACY covers $\omega_b \in [0.005, 0.04]$. All
+ * cover $\Delta N_\mathrm{eff} \in [-3, 7]$.
  *
  * The interpolating splines are deserialized once per table and shared by every
  * instance for the lifetime of the process: a fit or a Monte Carlo run creates

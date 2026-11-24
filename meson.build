@@ -1,7 +1,7 @@
 project(
   'numcosmo',
   ['c', 'fortran'],
-  version: '0.29.0',
+  version: '0.30.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.3.0',
   default_options: [
@@ -310,6 +310,7 @@ headers = [
   'stdint.h',
   'stdio.h',
   'stdlib.h',
+  'xlocale.h',
 ]
 
 foreach h : headers
@@ -350,6 +351,7 @@ functions = [
   'shmget',
   'sin',
   'sincos',
+  'uselocale',
 ]
 
 foreach f : functions

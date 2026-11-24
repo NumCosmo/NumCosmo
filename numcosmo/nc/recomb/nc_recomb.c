@@ -81,9 +81,6 @@ static gdouble _nc_recomb_mdtau_drag_dlambda (gdouble y, gdouble x, gpointer use
 static void
 nc_recomb_init (NcRecomb *recomb)
 {
-  NcmSpline *tau_s      = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-  NcmSpline *tau_drag_s = NCM_SPLINE (ncm_spline_cubic_notaknot_new ());
-
   recomb->zi             = 0.0;
   recomb->prec           = 0.0;
   recomb->lambdai        = 0.0;
@@ -93,8 +90,8 @@ nc_recomb_init (NcRecomb *recomb)
   recomb->fmin           = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
   recomb->dtau_dlambda_s = NULL;
   recomb->tau_s          = NULL;
-  recomb->tau_ode_s      = ncm_ode_spline_new (tau_s, &_nc_recomb_mdtau_dlambda);
-  recomb->tau_drag_ode_s = ncm_ode_spline_new (tau_drag_s, &_nc_recomb_mdtau_drag_dlambda);
+  recomb->tau_ode_s      = ncm_ode_spline_new_hermite (&_nc_recomb_mdtau_dlambda, NULL, 0.0, 0.0, 1.0);
+  recomb->tau_drag_ode_s = ncm_ode_spline_new_hermite (&_nc_recomb_mdtau_drag_dlambda, NULL, 0.0, 0.0, 1.0);
   recomb->ctrl_cosmo     = ncm_model_ctrl_new (NULL);
   recomb->ctrl_reion     = ncm_model_ctrl_new (NULL);
 
@@ -106,9 +103,6 @@ nc_recomb_init (NcRecomb *recomb)
   recomb->v_tau_reion_min_z      = 0.0;
   recomb->v_tau_reion_min_lambda = 0.0;
   recomb->v_tau_reion_min_up     = FALSE;
-
-  ncm_spline_free (tau_s);
-  ncm_spline_free (tau_drag_s);
 }
 
 static void
@@ -596,6 +590,12 @@ _nc_recomb_XHe_XHI (gdouble XHI, gpointer p)
  * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
  * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
  * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * These Saha equations assume non-relativistic electrons and no electron-positron pairs,
+ * which fails above $z \approx 2\times10^9$, where $k_\mathrm{B}T \approx m_\e c^2$. There
+ * the neutral hydrogen they give grows as $(1+z)^{3/2}$, of order $10^{-5}$ at $z = 10^{12}$,
+ * and is not physical. Using $X_\e$ at those redshifts to that accuracy requires a model of
+ * that regime.
  *
  * Returns: $X_\e$
  */
@@ -1118,6 +1118,7 @@ typedef struct __nc_recomb_func
   NcRecomb *recomb;
   NcHICosmo *cosmo;
   gdouble ref;
+  gdouble mc_sigmaT_n_0; /* -c sigma_T n_0, set for the tau integrand only */
 } _nc_recomb_func;
 
 static gdouble
@@ -1292,8 +1293,11 @@ _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) p;
   const gdouble Xe      = nc_recomb_Xe (func->recomb, func->cosmo, lambda);
+  const gdouble x       = exp (-lambda);
+  const gdouble H       = nc_hicosmo_H (func->cosmo, x - 1.0) / ncm_c_kpc ();
 
-  return Xe * nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
+  /* nc_recomb_dtau_dlambda_Xe() with its cosmology constant hoisted */
+  return Xe * (func->mc_sigmaT_n_0 * gsl_pow_3 (x) / H);
 }
 
 static gdouble
@@ -1329,6 +1333,12 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
 
   func.recomb = recomb;
   func.cosmo  = cosmo;
+
+  {
+    const gdouble n_b0 = nc_hicosmo_Omega_b0 (cosmo) * ncm_c_crit_number_density_p () * nc_hicosmo_h2 (cosmo);
+
+    func.mc_sigmaT_n_0 = -ncm_c_c () * ncm_c_thomson_cs () * (nc_hicosmo_Yp_1H (cosmo) * n_b0);
+  }
 
   F.params = &func;
 

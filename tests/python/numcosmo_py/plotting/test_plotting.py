@@ -33,6 +33,7 @@ pytest.importorskip("getdist")
 # flake8: noqa: E402
 
 from getdist import MCSamples
+from getdist.mcsamples import MCSamplesError
 
 from numcosmo_py import Ncm
 from numcosmo_py.plotting import mcat_to_catalog_data, plot_mcsamples, CatalogData
@@ -99,6 +100,18 @@ def test_mcat_catalog_data(mcat):
     assert_allclose(cd.rows, np.delete(rows, excluded_indices, axis=1))
 
 
+def test_mcat_catalog_data_empty():
+    """mcat_to_catalog_data() rejects a catalog with no rows."""
+    model = Ncm.ModelMVND.new(dim=2)
+    mset = Ncm.MSet.new_array([model])
+    mset.param_set_all_ftype(Ncm.ParamType.FREE)
+    mset.prepare_fparam_map()
+    mcat = Ncm.MSetCatalog.new_array(mset, 1, NCHAINS, False, ["a"], ["a"])
+    mcat.set_m2lnp_var(0)
+    with pytest.raises(ValueError, match="Catalog empty has no rows."):
+        mcat_to_catalog_data(mcat, "empty")
+
+
 def test_catalog_data_to_mcsamples(mcat):
     """Test log_current_stats()."""
     cd = mcat_to_catalog_data(mcat, "test")
@@ -156,6 +169,32 @@ def test_catalog_data_to_mcsamples_collapse(mcat):
     assert mcsample.numrows == cd.rows.shape[0]
     assert mcsample.n == cd.rows.shape[1]
     assert_allclose(mcsample.samples, cd.rows)
+
+
+def test_catalog_data_to_mcsamples_constant_first_chain(mcat):
+    """to_mcsamples() keeps every parameter when the first chain is constant."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    # Row i belongs to chain i % nchains.
+    cd.rows[:: cd.nchains, :] = cd.rows[0, :]
+    mcsample = cd.to_mcsamples()
+
+    assert mcsample.getParamNames().list() == cd.params_names
+    assert mcsample.n == cd.rows.shape[1]
+    assert_allclose(mcsample.samples[:NSTEPS, :], cd.rows[:: cd.nchains, :])
+    assert mcsample.getMargeStats() is not None
+
+
+@pytest.mark.parametrize("collapse", [False, True], ids=["chains", "collapse"])
+def test_catalog_data_to_mcsamples_constant_column(mcat, collapse):
+    """to_mcsamples() keeps a column that is constant in all rows."""
+    cd = mcat_to_catalog_data(mcat, "test")
+    cd.rows[:, 0] = 1.0
+    mcsample = cd.to_mcsamples(collapse=collapse)
+
+    assert mcsample.getParamNames().list() == cd.params_names
+    assert mcsample.n == cd.rows.shape[1]
+    with pytest.raises(MCSamplesError, match="Parameter range is <= 0"):
+        mcsample.getMargeStats()
 
 
 def test_asinh_transform(mcat):

@@ -1,0 +1,471 @@
+---
+title: Tensor-Product Chebyshev Tables
+---
+
+A smooth scalar function of several variables that is expensive to evaluate can be
+tabulated once and recomputed from the table. The table described on this page divides the
+domain of the function into panels and stores, for each panel, the coefficients of a
+tensor product of Chebyshev series. The value of the function at a point is approximated
+by the sum of the series of the panel that contains the point. The table is efficient for
+a smooth function, because its Chebyshev series converge quickly and each panel then
+stores few coefficients. The class [[numcosmo-math|NcmSpectralTensor]] is the table. The
+class [[numcosmo-math|NcmSpectralTensorBuilder]] computes the table from the function,
+with an estimated error below a requested tolerance.
+
+The caller sets the domain of the table, one interval per variable, and may split it at
+chosen values of a variable, for example where the function has a kink. The builder then
+expands the function on each subdomain that is not yet filled. It evaluates the function
+on Chebyshev--Lobatto grids and estimates the error of the series from its coefficients of
+highest order. When the estimate is below the tolerance, the series is stored as a panel.
+Otherwise the builder adds points along one variable, or bisects the subdomain along it,
+and repeats.
+
+```{python}
+#| echo: false
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.patches import Rectangle
+from numcosmo_py import Ncm
+
+Ncm.cfg_init()
+```
+
+## The Domain and its Tree
+
+The table approximates a real function $F (x_0, \dots, x_{n - 1})$ of $n$ variables,
+$1 \le n \le 16$, on the domain
+$$
+\Omega \equiv [a_0, b_0] \times [a_1, b_1] \times \dots \times [a_{n - 1}, b_{n - 1}] ,
+\tag{1}
+$$
+where $a_i < b_i$ are the ends of the range of variable $i$. The table divides $\Omega$
+recursively, and the subdomains form a tree. Each node of the tree has a subdomain, the
+Cartesian product of one interval per variable. The interval of a node in variable $i$
+is $[p_i, q_i]$. The subdomain of the root is $\Omega$, so for the root $p_i = a_i$ and
+$q_i = b_i$. A node is of one of three kinds, and only a split node has children.
+
+- A split node divides its subdomain along one variable $i$. It has the interior edges
+  $p_i < e_1 < \dots < e_{m - 1} < q_i$, with $m \ge 2$, and $m$ children. The intervals
+  of the children in variable $i$ are $[p_i, e_1], [e_1, e_2], \dots, [e_{m - 1}, q_i]$.
+  In the other variables, the intervals of the children are those of the node.
+- A panel node is not divided and holds a series
+  ([The Series on a Panel](#the-series-on-a-panel)).
+- An empty node is not divided and holds no series. It becomes a split node or a panel
+  node when the table is filled.
+
+The children of a split node cover its subdomain, and two children intersect only on the
+face at their common edge. The panels of a table with no empty node therefore cover
+$\Omega$ and intersect only on their boundaries. The bounds $p_i$, $q_i$ of a node follow
+from Eq. (1) and from the split nodes between the root and the node. The caller does not
+give them.
+
+Nodes are numbered in the order they are created, and the root is node 0. The children of
+a split node have consecutive numbers. A panel node also has a panel number, from 0, in
+the order the series are set. A table is filled by four operations.
+
+- The domain $\Omega$ is set, and the root becomes an empty node. The function
+  [[numcosmo-math|ncm_spectral_tensor_set_domain]] implements this operation.
+- An empty node becomes a split node, given the variable and the interior edges. The
+  function [[numcosmo-math|ncm_spectral_tensor_split]] implements this operation.
+- Every empty node is split along one variable, at the edges of a given list that are
+  strictly inside the interval of the node in that variable. One such operation per
+  variable divides $\Omega$ into a grid. The function
+  [[numcosmo-math|ncm_spectral_tensor_split_empty]] implements this operation.
+- An empty node becomes a panel node, given the coefficients of its series. The function
+  [[numcosmo-math|ncm_spectral_tensor_set_panel]] implements this operation.
+
+A table of two variables divided by these operations is shown in @fig-tree.
+
+```{python}
+#| label: fig-tree
+#| fig-cap: >
+#|   A table on $[0, 1]^2$ filled by the four operations, without the builder. The
+#|   domain is divided into a grid at $x_0 = 0.5$ and $x_1 = 0.5$. The subdomain that
+#|   contains the point $(0.30, 0.14)$, drawn as a dot, is then bisected six times, in
+#|   $x_0$ and in $x_1$ alternately, each time on the half that contains the point. The
+#|   table has 19 nodes: 9 split nodes and 10 panel nodes. Each rectangle is a panel,
+#|   labeled with its panel number and colored by the number of split nodes between the
+#|   root and its panel node, from 2 to 8. The outlined panel is the one that
+#|   `ncm_spectral_tensor_find_panel` returns for the point.
+#| code-fold: true
+EMPTY = Ncm.SpectralTensorNodeKind.EMPTY
+SPLIT = Ncm.SpectralTensorNodeKind.SPLIT
+
+point = np.array([0.30, 0.14])
+st = Ncm.SpectralTensor.new(2)
+st.set_domain([0.0, 0.0], [1.0, 1.0])
+st.split_empty(0, [0.5])
+st.split_empty(1, [0.5])
+
+
+
+def holds_point(k):
+    """Whether the subdomain of node k holds the point."""
+    lower, upper = st.get_node_bounds(k)
+    return all(lo <= x < up for lo, x, up in zip(lower, point, upper))
+
+
+# The empty node that holds the point, bisected six times toward it.
+node = next(
+    k
+    for k in range(st.get_n_nodes())
+    if st.get_node_kind(k) == EMPTY and holds_point(k)
+)
+for step in range(6):
+    lower, upper = st.get_node_bounds(node)
+    i = step % 2
+    mid = 0.5 * (lower[i] + upper[i])
+    node = st.split(node, i, [mid]) + (1 if point[i] >= mid else 0)
+
+# Every empty node becomes a panel node with one coefficient.
+for k in range(st.get_n_nodes()):
+    if st.get_node_kind(k) == EMPTY:
+        st.set_panel(k, [1, 1], [1.0])
+
+# The number of split nodes above each node; a child has a larger number than its parent.
+depth = np.zeros(st.get_n_nodes(), dtype=int)
+n_splits = 0
+for k in range(st.get_n_nodes()):
+    if st.get_node_kind(k) == SPLIT:
+        edges, _, first_child = st.get_node_split(k)
+        depth[first_child : first_child + len(edges) + 1] = depth[k] + 1
+        n_splits += 1
+
+assert (st.get_n_nodes(), n_splits, st.get_n_panels(), st.get_n_empty()) == (19, 9, 10, 0)
+
+found = st.find_panel(point)
+fig, ax = plt.subplots(figsize=(6.0, 6.0))
+cmap = plt.get_cmap("viridis_r")
+for k in range(st.get_n_nodes()):
+    if st.get_node_kind(k) in (EMPTY, SPLIT):
+        continue
+    p = st.get_node_panel(k)
+    lower, upper = st.get_node_bounds(k)
+    width, height = upper[0] - lower[0], upper[1] - lower[1]
+    ax.add_patch(
+        Rectangle(
+            (lower[0], lower[1]),
+            width,
+            height,
+            facecolor=cmap((depth[k] - 2) / 6.0),
+            edgecolor="red" if p == found else "black",
+            linewidth=2.5 if p == found else 0.8,
+            zorder=3 if p == found else 2,
+        )
+    )
+    if min(width, height) > 0.05:
+        ax.text(
+            lower[0] + 0.5 * width,
+            lower[1] + 0.5 * height,
+            str(p),
+            ha="center",
+            va="center",
+            color="white" if depth[k] > 4 else "black",
+        )
+ax.plot(*point, "o", color="red", markersize=4, zorder=4)
+ax.set_xlim(0.0, 1.0)
+ax.set_ylim(0.0, 1.0)
+ax.set_aspect("equal")
+ax.set_xlabel("$x_0$")
+ax.set_ylabel("$x_1$")
+plt.show()
+```
+
+## The Series on a Panel
+
+A panel is the subdomain of a panel node,
+$$
+\mathcal{P} \equiv [p_0, q_0] \times [p_1, q_1] \times \dots \times [p_{n - 1}, q_{n - 1}] ,
+\tag{2}
+$$
+where $[p_i, q_i]$ is the interval of the panel node in variable $i$, together with the
+series that approximates $F$ on it. On $\mathcal{P}$ the table approximates $F$ by
+$$
+F (x_0, \dots, x_{n - 1}) \approx \sum_{k_0 = 0}^{K_0 - 1} \dots \sum_{k_{n - 1} = 0}^{K_{n - 1} - 1} c^{k_0 \dots k_{n - 1}} \prod_{i = 0}^{n - 1} T_{k_i} (s_i) ,
+\qquad
+s_i \equiv \frac{2 x_i - p_i - q_i}{q_i - p_i} ,
+\tag{3}
+$$
+where $T_k$ is the Chebyshev polynomial of the first kind and degree $k$,
+$s_i \in [-1, 1]$ is the Chebyshev variable of $x_i$ on the panel, $K_i \ge 1$ is the
+number of coefficients of the panel in variable $i$, and $c^{k_0 \dots k_{n - 1}}$ are the
+coefficients of the panel. The numbers $K_i$ may differ between variables and between
+panels. For $n = 1$, Eq. (3) reduces to Eq. (1) of
+[Spectral Methods](spectral.qmd#chebyshev-representation), with $N = K_0$.
+
+The coefficients of a panel are stored with the first variable running fastest: the
+coefficient $c^{k_0 \dots k_{n - 1}}$ is at position $k_0 + K_0 (k_1 + K_1 (k_2 + \dots))$.
+
+## Evaluation
+
+The table is evaluated at a point $(x_0, \dots, x_{n - 1})$ in two steps. The function
+[[numcosmo-math|ncm_spectral_tensor_eval]] implements both.
+
+1. The tree is searched for the panel that contains the point. The search starts at the
+   root. At a split node of variable $i$ with interior edges $e_1 < \dots < e_{m - 1}$,
+   the interior edges at or below $x_i$ are counted by bisection. The count, from 0 to
+   $m - 1$, is the position of a child among the $m$ children of the split node, and the
+   search continues at that child. The search ends at a panel node. The function
+   [[numcosmo-math|ncm_spectral_tensor_find_panel]] implements this search.
+2. The series of the panel, Eq. (3), is summed. With two to four variables, the values
+   $T_k (s_i)$, $k < K_i$, are computed first for each variable. Up to 33 values are
+   computed in few dependent steps: for the first variable by the product formulas
+   $T_{2 k} = 2 T_k^2 - 1$ and $T_{2 k + 1} = 2 T_k T_{k + 1} - s$, and for the other
+   variables in four chains $T_{k + 4} = 2 T_4 T_k - T_{k - 4}$. More than 33 values are
+   computed by the recurrence $T_{k + 1} = 2 s T_k - T_{k - 1}$, whose error near
+   $s = \pm 1$ is the smallest of the three: the errors are equal up to 17 values, and
+   those of the other two are twice as large at 33. The sum over $k_0$,
+   $u^{k_1 \dots k_{n - 1}} \equiv \sum_{k_0} c^{k_0 \dots k_{n - 1}} T_{k_0} (s_0)$, is
+   then the dot product of one row of coefficients with the values $T_{k_0} (s_0)$, and
+   four rows are summed in one pass. A row of up to 33 coefficients is summed by code
+   compiled for its length. The sums over $k_1, \dots, k_{n - 1}$ weight these values
+   with $T_{k_i} (s_i)$. The dot products do not depend on each other, so the processor
+   computes several at once, while each step of a Clenshaw recurrence depends on the step
+   before. With one variable the series is summed by a Clenshaw recurrence, which is
+   faster for one series of up to about 100 coefficients. With five variables or more, or
+   with more than 1025 coefficients in one variable, the series is summed by Clenshaw
+   recurrences nested from $s_{n - 1}$ to $s_0$. In every case the sum takes
+   $\prod_i K_i$ multiplications by coefficients. The function
+   [[numcosmo-math|ncm_spectral_tensor_eval_on]] implements this sum.
+
+By the rule of step 1, a point on an interior edge belongs to the child whose interval
+starts at that edge. The search does not check that the point is in $\Omega$. A
+coordinate below every interior edge of a split node leads to the first child, and a
+coordinate at or above every interior edge leads to the last child. A point outside
+$\Omega$ therefore reaches the panel that contains the point of $\Omega$ obtained by
+clamping each coordinate $x_i$ to $[a_i, b_i]$, and the series of that panel is
+extrapolated. The tolerance of the table does not apply to an extrapolated value, and the
+evaluation does not report it. A point that may be outside $\Omega$ is therefore compared
+with the intervals $[a_i, b_i]$ before the evaluation, and the function is computed
+directly at a point outside. The ends $a_i$ and $b_i$ are read with
+[[numcosmo-math|ncm_spectral_tensor_get_range]]. A search that reaches an empty node
+aborts with an error.
+
+For several points of one panel, the panel is found once, and its series is summed at
+each point with [[numcosmo-math|ncm_spectral_tensor_eval_on]]. The search and
+the sum do not change the table, so one table may be evaluated in several threads at
+once.
+
+Several points can also be evaluated in one operation. The panel of each point is found
+as in step 1, and consecutive points on the same panel are summed together, 8 points at a
+time. With two to four variables, the values $T_k (s_i)$ of the 8 points are computed by
+the recurrence $T_{k + 1} (s) = 2 s T_k (s) - T_{k - 1} (s)$, and each coefficient is then
+multiplied into the 8 points at once. With one variable, the 8 points are summed by 8
+Clenshaw recurrences. Every sum over an index runs from the last index to the first, so
+the terms of a decaying series are added from the smallest, and the rounding error is that
+of the Clenshaw recurrences. The values agree with those of the evaluation of one point
+to rounding, not bit by bit. Points ordered along a line, or grouped by panel, form the
+longest runs of points on one panel. A panel with more than 129 coefficients in one
+variable, and any panel of a table of five variables or more, is summed point by point as
+in step 2. The function [[numcosmo-math|ncm_spectral_tensor_eval_array]] implements this
+operation.
+
+## Expansion on a Node
+
+The table is built by expanding $F$ on each empty node, in the order of the node numbers.
+The domain must be set before the construction, and nodes may be split beforehand, for
+example at a kink of $F$. A node whose series does not reach the tolerance is split
+further ([Refinement](#refinement)). The function
+[[numcosmo-math|ncm_spectral_tensor_builder_build]] implements this construction.
+
+On a node with the subdomain of Eq. (2), the points of variable $i$ are the
+Chebyshev--Lobatto points
+$$
+x_{i, j} = \frac{p_i + q_i}{2} + \frac{q_i - p_i}{2} \cos \left( \frac{j \pi}{N_i} \right) ,
+\qquad j = 0, \dots, N_i , \qquad N_i \equiv 2^{l_i} ,
+\tag{4}
+$$
+where the level $l_i$ fixes the number $N_i + 1$ of points. The function $F$ is evaluated
+on the grid formed by the tensor product of the points of all variables. A type-I discrete
+cosine transform along each variable gives the coefficients of Eq. (3) with
+$K_i = N_i + 1$, normalized in each variable as in
+[Spectral Methods](spectral.qmd#computing-the-coefficients). The level of each variable
+starts at its `level_min`. The points of level $l_i$ are a subset of the points of level
+$l_i + 1$. Raising the level of variable $i$ by one therefore keeps every value of $F$
+already computed, and $F$ is evaluated only at the
+$2^{l_i} \prod_{k \ne i} (N_k + 1)$ new grid points, where $l_i$ is the level before the
+increase.
+
+The function $F$ is supplied to the construction as a callback of type
+[[numcosmo-math|NcmSpectralTensorF]]. Each call receives one array of points per variable,
+and $F$ is evaluated at every point of their tensor product. The values are stored with
+the last variable running fastest. A part of $F$ that depends on one variable only can
+therefore be computed once per point of that variable, instead of once per grid point.
+
+The variables $x_i$ of the table are those the callback receives, and the construction
+applies no change of variable. A function that varies on a logarithmic scale in one of its
+arguments is tabulated in the logarithm of that argument, and the callback converts the
+points it receives. For example, a function of a width $\sigma \in [0.02, 1.5]$ that
+varies most at small $\sigma$ is tabulated in $x_0 = \ln \sigma$, and the callback
+computes $\sigma = e^{x_0}$. The table is then evaluated at $x_0 = \ln \sigma$.
+
+## The Test
+
+A node becomes a panel node when its series passes the test of this section, and is
+refined otherwise ([Refinement](#refinement)). The test is on the change of the
+coefficients when the grid of one variable is replaced by the grid of the level below,
+which keeps every other point. This change needs no new evaluation of $F$.
+
+The $\ell_1$ norm of the coefficients at a fixed index $k$ of variable $i$ is
+$$
+b_i^k \equiv \sum_{k_{i'} , \, i' \ne i} \left| c^{k_0 \dots k_{n - 1}} \right|_{k_i = k} ,
+$$
+where the sum runs over the indices of every variable other than $i$. The coefficients of
+the grid of level $l_i - 1$ in variable $i$ are those of Eq. (3) folded in $k_i$, as in
+[Spectral Methods](spectral.qmd#adaptive-refinement). The $\ell_1$ change of the
+coefficients between the two grids is therefore exactly
+$$
+D_i \equiv 2 \sum_{k > N_i / 2} b_i^k .
+\tag{5}
+$$
+The series of the node passes the test when
+$$
+D \equiv \sum_{i = 0}^{n - 1} D_i \le \varepsilon \equiv \max \left( \varepsilon_\mathrm{rel} V, \; \varepsilon_\mathrm{abs} \right) ,
+\tag{6}
+$$
+where $V$ is the largest $|F|$ on the current grid of the node, $\varepsilon_\mathrm{rel}$
+is the relative tolerance, and $\varepsilon_\mathrm{abs}$ is the absolute tolerance, in
+the units of $F$. Both tolerances must be non-negative, and at least one must be positive;
+otherwise the construction aborts with an error.
+
+Since $|T_k| \le 1$ on $[-1, 1]$, $D_i$ bounds the largest change of the series on the
+node when the grid of variable $i$ is replaced by the grid of the level below. The sum $D$
+is the estimate of the error of the series. It is the change between two grids, not the
+distance to $F$, and it is not a bound on that distance. A peak of $F$ narrower than the
+spacing of the grid and located between two points is absent from the values of $F$ on
+the grid. The coefficients are then those of $F$ without the peak, and the series can
+pass the test without representing it. When the position and the width of such a peak
+are known, the domain is split there before the construction.
+
+## Refinement
+
+A node whose series fails the test of Eq. (6) is refined in one variable $i$. The
+variable $i$ has the largest $D_i$ among the variables whose `level_min` is below their
+`level_cap`, and is the first of them when several have the same $D_i$. The node is
+either split in variable $i$ or its level $l_i$ is raised by one.
+
+- When $l_i$ equals the `level_cap` of variable $i$, the node is split.
+- When $l_i$ is one below the `level_cap` and the value of $D_i$ predicted for level
+  $l_i + 1$ is above $\varepsilon$, the node is split. The prediction is that of
+  [Spectral Methods](spectral.qmd#batch-expansions), applied to $b_i^k$.
+- Otherwise the level $l_i$ is raised by one, and the test is repeated.
+
+The split is a bisection, with the single interior edge $(p_i + q_i) / 2$. The two
+children are then expanded one after the other, each starting from the `level_min` of
+every variable. A split is not made when the node is already `max-depth` bisections below
+the node that was empty when the construction started, or when the midpoint is not
+strictly inside $[p_i, q_i]$ in floating point. The construction then stops with the
+error `NCM_SPECTRAL_TENSOR_BUILDER_ERROR_MAX_DEPTH`, and the table is reset to its domain
+and an empty root.
+
+The tolerance $\varepsilon$ must be above the error of the values of $F$. Each coefficient
+of Eq. (3) carries the error of those values, which is at least their rounding, of order
+$10^{-16} |F|$, and $D$ sums the absolute values of many coefficients. A node whose
+$\varepsilon$ is below the value of $D$ produced by that error does not pass the test at
+any level, and its bisections end in the error above. The construction may evaluate $F$
+many times before that error. For a function of large $|F|$, the absolute tolerance
+reaches this limit first. With $|F|$ of order $10^4$, the tolerance
+$\varepsilon_\mathrm{abs} = 10^{-12}$ is below the rounding of the values and the
+construction fails, while $\varepsilon_\mathrm{rel} = 10^{-12}$ gives
+$\varepsilon = 10^{-12} V$ on each node and the construction ends.
+
+A variable whose `level_min` equals its `level_cap` has a fixed number of points,
+$2^{l_i} + 1$. It is never chosen for refinement, but its $D_i$ is part of $D$ in
+Eq. (6). The node is then refined only in the other variables, and at least one variable
+must have its `level_min` below its `level_cap`. When splits in the other variables do
+not bring $D$ below $\varepsilon$, the construction stops with the error above.
+
+## Stored Coefficients
+
+A node whose series passes the test becomes a panel node. By default the panel stores all
+the coefficients, $K_i = N_i + 1$. With the property `trim-frac` $f > 0$, the panel stores
+a leading block of $K_0 \times \dots \times K_{n - 1}$ coefficients instead, obtained by
+removing slices of highest index one at a time. At each step, the $\ell_1$ norm of the
+slice $k_i = K_i - 1$ of the current block is computed for every variable with $K_i > 1$.
+The slice with the smallest norm is removed, that of the first variable when several have
+the same norm. The removal continues while
+$$
+S \le f \varepsilon ,
+\tag{7}
+$$
+where $S$ is the $\ell_1$ norm of all the coefficients removed and $f \in [0, 1)$, and
+stops at the first slice that would violate Eq. (7). Since $|T_k| \le 1$, the stored
+series differs from the full series by at most $S$ at every point of the panel. The
+estimated error of the stored series is therefore at most
+$D + S \le (1 + f) \varepsilon$. The number of operations of an evaluation is
+proportional to the number of stored coefficients ([Evaluation](#evaluation)), so the
+removal reduces it. The removal is greedy, and the block it stores need not be the
+smallest that satisfies Eq. (7).
+
+## Continuity between Panels
+
+Each panel is expanded on its own grid, and the series of two panels that share a
+boundary are not constrained to agree on it. If the error of each series is at most
+$\varepsilon$, the two series differ by at most $2 \varepsilon$ at a point of the
+boundary. The table is then continuous across panel boundaries up to $2 \varepsilon$.
+This holds only as far as $D$ estimates the error, since $D$ is not a bound
+([The Test](#the-test)). Inside a panel, the derivatives of the table are those of one
+series. Across a boundary, the derivatives of the two series are not related. A
+difference quotient of the table between two points a distance $h$ apart has an error of
+up to $2 \varepsilon / h$. Between two points of one panel, the error of the table is one
+smooth function, and the error of the quotient tends to its derivative as $h \to 0$.
+Between two points on opposite sides of a boundary, the error of the table can jump at
+the boundary, and the error of the quotient can grow as $2 \varepsilon / h$ when
+$h \to 0$.
+
+The adaptive partition of unity of @Aiton2018 also bisects subdomains at the midpoint, in
+every variable that its algorithm marks as unfinished, so a subdomain may be split in
+several variables at once. Its neighboring subdomains overlap. Their polynomials are
+combined with weights built from infinitely differentiable bump functions of compact
+support, normalized to sum to one, and the approximation is infinitely differentiable
+across subdomain boundaries. The table described here splits one variable per split and
+has no overlap and no weights.
+
+## Symbols and the Code
+
+| Symbol | Code |
+|---|---|
+| $n$ | `NcmSpectralTensor:n-vars` |
+| $a_i$, $b_i$ | arguments `lower`, `upper` of `ncm_spectral_tensor_set_domain`; the bounds of node 0 |
+| interior edges $e_1, \dots, e_{m - 1}$ of a split node | argument `edges` of `ncm_spectral_tensor_split`; `edges` of the table, at `edges_offset` of the node |
+| $m$, the number of children of a split node | `n_edges` of the node, plus one |
+| $p_i$, $q_i$ | `node_bounds` of the table: the lower ends of a node, then its upper ends |
+| $K_i$ | argument `n_coeffs` of `ncm_spectral_tensor_set_panel` |
+| $c^{k_0 \dots k_{n - 1}}$ | argument `coeffs` of `ncm_spectral_tensor_set_panel`; `work->coeffs` during a build |
+| $s_i$ | `s[i]` in `ncm_spectral_tensor_eval_on` |
+| $u^{k_1 \dots k_{n - 1}}$ | `d0`, ..., `d3` and `d` in `_ncm_spectral_tensor_basis_2` |
+| $T_k (s_i)$ | `T0`, ..., `T3` in `_ncm_spectral_tensor_eval_on_basis`, from `_ncm_spectral_tensor_cheb_T_prod`, `_ncm_spectral_tensor_cheb_T_chains` and `_ncm_spectral_tensor_cheb_T` |
+| $l_i$, $N_i$ | `l[i]` and `1u << l[i]` in `_ncm_spectral_tensor_builder_expand` |
+| $x_{i, 0}, \dots, x_{i, N_i}$ | the array `work->nodes[i]`, in the order of $j$, filled by `_ncm_spectral_tensor_builder_nodes` |
+| refined variable $i$ in [Refinement](#refinement) | `j` in `_ncm_spectral_tensor_builder_expand` |
+| $b_i^k$ | `work->b[i]`, from `_ncm_spectral_tensor_builder_coeffs` |
+| $D_i$, $D$ | `Di[i]` and the value returned by `_ncm_spectral_tensor_builder_change` |
+| $V$ | value returned by `_ncm_spectral_tensor_builder_coeffs` |
+| $\varepsilon_\mathrm{rel}$, $\varepsilon_\mathrm{abs}$ | arguments `reltol`, `abstol` of `ncm_spectral_tensor_builder_build` |
+| $\varepsilon$ | `tol` in `_ncm_spectral_tensor_builder_expand` |
+| $f$ | `NcmSpectralTensorBuilder:trim-frac` |
+| $S$, $f \varepsilon$ | `S` and `budget` in `_ncm_spectral_tensor_builder_set_panel` |
+
+## API Reference
+
+The class [[numcosmo-math|NcmSpectralTensor]] implements the table, and the class
+[[numcosmo-math|NcmSpectralTensorBuilder]] implements its construction. Their pages list
+every function. The operations described on this page are implemented by the following
+functions.
+
+- Filling the table: [[numcosmo-math|ncm_spectral_tensor_set_domain]],
+  [[numcosmo-math|ncm_spectral_tensor_split]],
+  [[numcosmo-math|ncm_spectral_tensor_split_empty]] and
+  [[numcosmo-math|ncm_spectral_tensor_set_panel]].
+- Evaluating the table: [[numcosmo-math|ncm_spectral_tensor_find_panel]],
+  [[numcosmo-math|ncm_spectral_tensor_eval]],
+  [[numcosmo-math|ncm_spectral_tensor_eval_on]] and
+  [[numcosmo-math|ncm_spectral_tensor_eval_array]].
+- Reading the tree: [[numcosmo-math|ncm_spectral_tensor_get_node_kind]],
+  [[numcosmo-math|ncm_spectral_tensor_get_node_bounds]],
+  [[numcosmo-math|ncm_spectral_tensor_get_node_split]] and
+  [[numcosmo-math|ncm_spectral_tensor_get_node_panel]].
+- Building the table from $F$: [[numcosmo-math|ncm_spectral_tensor_builder_build]].
+
+The one-variable transforms and the prediction of [Refinement](#refinement) are described
+in [Spectral Methods](spectral.qmd).

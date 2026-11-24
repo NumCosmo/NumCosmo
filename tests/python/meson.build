@@ -42,7 +42,10 @@ if enable_gir and python_for_tests.found()
 
     # --durations surfaces the slowest tests in every run, so tier/speed regressions are
     # visible in CI logs instead of needing a dedicated profiling pass.
-    pytest_base_args = ['-ra', '--tb=short', '--durations=25']
+    # --capture=sys captures only Python's sys.stdout/sys.stderr: what C writes to fd 2
+    # (a failed g_assert, a malloc or libc abort message) reaches the test log, while
+    # pytest's default fd capture loses it when the process aborts.
+    pytest_base_args = ['-ra', '--tb=short', '--durations=25', '--capture=sys']
     pytest_protocol = 'exitcode'
     # We are using xdist for parallel test execution, so we set this to false to avoid
     # conflicts with pytest's internal parallelization mechanisms.

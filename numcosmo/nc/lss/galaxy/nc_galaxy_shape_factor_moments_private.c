@@ -32,7 +32,9 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_private.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/lss/halo/nc_halo_mass_summary.h"
+#include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "ncm/algebra/ncm_matrix.h"
 
@@ -468,6 +470,55 @@ _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFa
 }
 
 /*
+ * Whether the reachable-range bound of a shape factor holds for the free
+ * parameters of @mset: TRUE when only log10MDelta, the halo center (ra,
+ * dec) and shape-population parameters are free. The bound covers
+ * log10MDelta up to its upper bound and the halo center over its box; the
+ * shape population changes only the tables, which are keyed on it. Every
+ * other free parameter (cosmology, z_cl, cDelta and the other profile and
+ * mass-summary parameters, the surface mass density, the redshift models)
+ * moves the shear or the redshift support outside what the bound covers.
+ */
+gboolean
+_nc_galaxy_shape_factor_moments_range_holds (NcmMSet *mset)
+{
+  const guint n_models = ncm_mset_nmodels (mset);
+  guint i, pid;
+
+  /* Read from the models, not from the free-parameter map, which the
+   * caller may not have prepared. */
+  for (i = 0; i < n_models; i++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, ncm_mset_get_mid_array_pos (mset, i));
+    const guint len = ncm_model_len (model);
+
+    if (NC_IS_GALAXY_SHAPE_POP (model))
+      continue;
+
+    for (pid = 0; pid < len; pid++)
+    {
+      if (ncm_model_param_get_ftype (model, pid) != NCM_PARAM_TYPE_FREE)
+        continue;
+
+      if (NC_IS_HALO_POSITION (model) && ((pid == NC_HALO_POSITION_RA) || (pid == NC_HALO_POSITION_DEC)))
+        continue;
+
+      if (NC_IS_HALO_MASS_SUMMARY (model))
+      {
+        const gchar *name = ncm_model_param_name (model, pid);
+
+        if (g_strcmp0 (name, "log10MDelta") == 0)
+          continue;
+      }
+
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/*
  * Largest displacement the halo center's prior permits, as a physical
  * transverse length at the cluster redshift. Zero when the center is fixed.
  * The four corners of the prior box are mapped through
@@ -512,7 +563,7 @@ _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cos
  * when the mass summary has one, to the value in @dp_src, leaving the
  * profile in the mset untouched. The shear is not monotonic in the
  * concentration, so the bound is taken at a fixed concentration only; a
- * free cDelta is excluded by _moments_tilt_range_holds. Returns FALSE when
+ * free cDelta is excluded by _nc_galaxy_shape_factor_moments_range_holds(). Returns FALSE when
  * the mass cannot be resolved by name, which is not an error: the caller
  * then skips the restriction and builds the full mesh. */
 gboolean

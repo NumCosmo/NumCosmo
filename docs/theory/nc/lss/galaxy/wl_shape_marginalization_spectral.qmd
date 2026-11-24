@@ -212,8 +212,8 @@ $\sigma_\mathrm{noise}$ is small. The peak is searched on one ray.
 
 The edges are those of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
 $(r_*, \theta_0)$ with the radial half width
-$L \equiv \sigma_\mathrm{noise} \min (J_1, J_2)$ and the angular half width $L / r_*$. They
-cover the whole disk.
+$L \equiv \sigma_\mathrm{noise} \min (J_1, J_2)$ and the angular half width $L / r_*$, with
+the default `min-radial-panels`, 2. They cover the whole disk.
 
 The scan places the panels and sets $d_0$. It does not decide what is integrated: every
 panel is accepted by the test of [[numcosmo-math|NcmSpectralPolar]], and a panel where
@@ -226,8 +226,10 @@ For $1 - t \ge 10^{-5}$ the class computes
 $$
 \ln P = \ln I - \frac{d_0}{2 \sigma_\mathrm{noise}^2} ,
 $$
-with $I$ the integral of Eq. (5) from [[numcosmo-math|ncm_spectral_polar_integrate]] at
-the relative tolerance `reltol` and absolute tolerance zero.
+with $I$ the integral of Eq. (5) from the internal `_ncm_spectral_polar_integrate_radial()` at
+the relative tolerance `reltol` and absolute tolerance zero. The factor of the integrand
+that depends only on $r$, the reduced density times the normalization, is given to it
+separately, so it is computed once per radius, not at every call of the integrand.
 The function [[numcosmo|nc_galaxy_shape_factor_eval_marginal]] returns $e^{\ln P}$. An
 integral that fails with `NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH`, or a non-finite $\ln P$,
 aborts with the population, $\sigma_\mathrm{noise}$, $g$ and $\epsilon_\mathrm{obs}$ in
@@ -271,8 +273,9 @@ At $w = t$:
   $\nabla D = \big( -4 \Delta_1 (1 - t^2) / q^2 , \, -4 \Delta_2 / q \big)$ and
   $\nabla^2 D = 8 (1 - t^2)^2 / q^4 + 8 / q^2 + 32 \, t \, \Delta_1 / q^3$.
 
-The integral of Eq. (6) is computed by [[numcosmo-math|ncm_spectral_polar_integrate]] in
-$v \equiv 1 - r$, in which $1 - t^2 r^2 = (\delta + t v) (1 + t r)$ is formed without a
+The integral of Eq. (6) is computed by the internal `_ncm_spectral_polar_integrate_radial()` in
+$v \equiv 1 - r$, its whole integrand given as the radial factor since it does not depend
+on the angle, in which $1 - t^2 r^2 = (\delta + t v) (1 + t r)$ is formed without a
 difference of numbers close to 1, with the radial edges of
 [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at $v = 0$ of half width
 $\delta$. The term $A$ is accurate when the next order is small, which requires
@@ -318,14 +321,19 @@ and $\lambda$ from it. A bracket that is not positive aborts as a non-finite $\l
 ## Interpolation in $g$
 
 In a likelihood one galaxy is evaluated at many shears with the same
-$\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$. With
-[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] the class approximates
-$\ln P (\epsilon_\mathrm{obs} \mid g)$ as a function of $g$ for each galaxy with
-[[numcosmo-math|ncm_spectral_polar_build]], described in
-[Approximation on the Panels](../../../ncm/algebra/spectral_polar.qmd#approximation-on-the-panels),
-and evaluates that approximation for $|g| \le g_\mathrm{max}$
-([[numcosmo|NcGalaxyShapeFactorSpectral:interp-g-max]]). For $|g| > g_\mathrm{max}$ it
-computes the integral.
+$\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$. A galaxy may therefore hold a table of
+$\ln P (\epsilon_\mathrm{obs} \mid g)$ as a function of $g$, an
+[[numcosmo-math|NcmSpectralTensor]] built by an
+[[numcosmo-math|NcmSpectralTensorBuilder]], both described in
+[Tensor-Product Chebyshev Tables](../../../ncm/algebra/spectral_tensor.qmd). The class
+evaluates that table for $|g|$ in its range, at most $g_\mathrm{max}$
+([[numcosmo|NcGalaxyShapeFactorSpectral:interp-g-max]]), and computes the integral
+elsewhere. The tables are built only by a pre-computation,
+[[numcosmo|nc_galaxy_shape_factor_spectral_build_interp]], which
+[[numcosmo|nc_data_cluster_wl_factor_write_shape_interp]] calls for every galaxy of a
+catalog and stores in it; a likelihood never builds them. A galaxy that holds a table always
+uses it, and a table that does not hold for the fit aborts. A change of the rows of the
+catalog, as a resample, drops its tables.
 
 - Frame: rotated by the phase of $\epsilon_\mathrm{obs}$, so that
   $\epsilon_\mathrm{obs} = e > 0$. In this frame $\ln P$ does not change under
@@ -342,23 +350,114 @@ computes the integral.
   $[g_c - g_\mathrm{max}, g_c + g_\mathrm{max}] \times [\pi - \arcsin (g_\mathrm{max} / g_c), \pi]$.
   It reaches $|g| = g_\mathrm{max} + 2 g_c < 3 g_\mathrm{max}$, so $g_\mathrm{max} < 1/3$
   keeps it inside $|g| < 1$, where $\ln P$ is smooth in $g$.
-- Edges: the radial edges of [[numcosmo-math|ncm_spectral_polar_peak_edges]] for a peak at
-  $\rho = 0$ of half width $L_g$ that are inside the region, with `min-radial-panels`
-  equal to [[numcosmo|NcGalaxyShapeFactorSpectral:interp-min-radial-panels]] (default 2),
-  and angular panels of $\pi / 2$ at most. The integrals use a separate
-  [[numcosmo-math|NcmSpectralPolar]] with the default `min-radial-panels`, 2.
-- Test: a panel is accepted when $\ln P$ changes by at most
-  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]] between its two grids. The
-  values at the nodes are those of the integral at `reltol`.
+- Restricted range: with [[numcosmo|NcGalaxyShapeFactorSpectral:restrict-range]] (default
+  off), the region of a galaxy contains the disk $|g| \le g_\mathrm{reach}$ in place of
+  $|g| \le g_\mathrm{max}$, where
+  $g_\mathrm{reach} \equiv \min (g_\mathrm{max}, |1 + m| |g_t| + |c|)$, $m$ and $c$ are the
+  multiplicative and additive shear biases of the galaxy, and $g_t$ is the reduced tangential
+  shear at the corner of the box of the fit: the smallest projected radius that the box of
+  the halo center allows, the upper bound of $\log_{10} M_\Delta$, and the largest source
+  redshift of the galaxy. At a fixed radius, source redshift and concentration, $|g_t|$ grows
+  with the mass and the source redshift while the convergence is below 1, so the corner gives
+  its largest value. The bound holds when only $\log_{10} M_\Delta$, the halo center and
+  the parameters of the population are free. The region is that of $g_\mathrm{max}$ when
+  other parameters are free, when the box of the halo center reaches the projected position
+  of the galaxy, when the largest source redshift is not finite or not above the lens, and
+  when the convergence at the corner is at least 1. A shear with
+  $|g| > g_\mathrm{reach}$ takes the integral.
+- First grid: the split of the region that the builder refines. The candidate radial
+  edges are 0, $R$, $k R / n$ for $0 < k < n$, and $L_g w^j$ below $R$ for $j \ge 0$,
+  where $R$ is the upper end of the region in $\rho$, $n$ is
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-min-radial-panels]] (default 2), and
+  $w = 4$. In ascending order, a candidate at most $L_g / 4$ above the edge kept before it
+  is left out, except $R$. The radial edges are the lower end of the region and the kept
+  candidates more than $\sigma_\mathrm{noise} / 8$ above it, or the upper end of the region
+  when no candidate is kept. The edges $L_g w^j$ are
+  closest together near $g_c$, where $\ln P$ is narrowest. The angular edges are the ends
+  of the region and, when it spans more than $\pi / 2$, its midpoint.
+- Test: a node becomes a panel node when the estimate $D$ of
+  [The Test](../../../ncm/algebra/spectral_tensor.qmd#the-test) is at most
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-abstol]], the absolute tolerance of the
+  construction, in the units of $\ln P$. The relative tolerance is zero. The values at the
+  points are those of the integral at `reltol`.
+- Stored coefficients: the coefficients of highest index are removed from each panel while
+  their $\ell_1$ norm is at most $f$ times `interp-abstol`
+  ([Stored Coefficients](../../../ncm/algebra/spectral_tensor.qmd#stored-coefficients)),
+  where $f$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-trim-frac]] (default
+  $10^{-4}$). The removed coefficients change $\ln P$ by at most $10^{-9}$ at the default
+  `interp-abstol`. With $f = 0$ every coefficient is stored.
+- Population variables: each free parameter of the population is one more variable of the
+  table, after $\rho$ and $\psi$, with the bounds of the parameter as its range. Its first
+  grid has $2^{l_\mathrm{min}} + 1$ points and a panel has at most
+  $2^{l_\mathrm{cap}} + 1$, where $l_\mathrm{min}$ is
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-level-min]] (default 2) and
+  $l_\mathrm{cap}$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-level-cap]]
+  (default 5); the first grid has no edge inside the range. The value at a point is the
+  integral for the population with those parameter values. A free parameter outside its
+  bounds is an error. The bounds of a free parameter should contain only populations that
+  can describe a galaxy sample, since the table covers all of them. Where the density of
+  the population changes by many orders of magnitude over the bounds, $\ln P$ is not
+  finite for part of the galaxies and the build aborts: the truncated Gaussian with
+  $\sigma$ of a few hundredths is such a case. The default bounds are chosen for this,
+  $[1, 4]$ for $\alpha$ and $\beta$ of the Beta population and $[0.2, 1]$ for $\sigma$ of
+  the truncated Gaussian, where the mean of $|\chi_I|$ goes from 0.25 to 0.63.
+- One integral per shear: with
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-one-integral]] (default on), the values
+  at the population points of one call of the builder come from one integral per shear. In
+  Eq. (5) the population enters through the exponents $a$ and $b$ and through
+  $\hat{P}_\zeta$; the noise factor of $G$ holds no population. The integral is computed for
+  the population at the center of the population points of the call, and on each of its
+  accepted panels the integral of the noise factor over $\theta$ is kept as a Chebyshev
+  series in $r$. The integral of another population of the call is the integral of its
+  $r^a (1 - r)^b \hat{P}_\zeta (r)$ against those series: by a Gauss-Legendre rule on a
+  panel that touches neither end of $[0, 1]$, and, on a panel that touches one end, by the
+  moments of the power law of that end against products of Chebyshev polynomials, which
+  hold no quadrature error for two series. This requires $\hat{P}_\zeta$ to be a constant
+  times one factor for each free parameter, as for the Beta population and the truncated
+  Gaussian ([[numcosmo|nc_galaxy_shape_pop_reduced_factor_params]]); otherwise, and with
+  the property off, each population point takes its own integral. The accepted panels are
+  those of the population at the center. They do not resolve the integrand of a population
+  whose density differs from it by many orders of magnitude, so the bounds must not contain
+  such populations.
 
-The approximation of a galaxy is built at its first evaluation with
-$|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
-$\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, the parameters of the population,
-`reltol`, $g_\mathrm{max}$, the tolerance or `interp-min-radial-panels` differ from those it
-was built for. A build
-computes of the order of $10^3$ integrals, so the approximation reduces the cost when the
-parameters of the population are fixed, and increases it when they change at every step
-unless a galaxy is evaluated at more shears per step than the build computes.
+A table holds for the $\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$ of its galaxy and
+for the `reltol`, `interp-abstol`, `interp-min-radial-panels`, `interp-trim-frac`, the
+values of the fixed parameters of the population, the set of its free parameters and their
+bounds it was built with, and, with population variables, for `interp-pop-level-min`,
+`interp-pop-level-cap` and `interp-pop-one-integral`. A change of a free parameter inside
+its bounds uses the same table; any other difference aborts the evaluation, and the table
+must be built again. Its range is the one it was built with, also when it was read from a
+catalog by a fit with other range settings. A table without population variables computes of
+the order of $10^3$ integrals. One with population variables needs that number of values at
+each point of the grids of the population, at least $5^d$ points for $d$ free parameters at
+the default `interp-pop-level-min`; with `interp-pop-one-integral` the population points of
+a call take one integral per shear, and without it one integral each. A table replaces the
+integrals of the shears at which the galaxy is evaluated while it holds, so it reduces the
+cost when these outnumber the integrals of its build.
+
+## Interpolation Along the Shears of a Galaxy
+
+The likelihood evaluates a galaxy at one shear per redshift node behind the lens, and these
+shears lie on one line in $g$:
+$$
+g_j = c + t_j u, \qquad t_j \equiv (1 + m) \, g_t (z_j),
+$$
+where $c$ and $m$ are the additive and multiplicative shear biases of the galaxy, $g_t (z_j)$
+is the reduced tangential shear of the halo at the projected position of the galaxy for a
+source at the node $z_j$, and $u \equiv e^{2 i \phi}$, with $\phi$ the position angle of the
+galaxy around the halo center, in the frame of the ellipticities of the galaxy. For a galaxy
+that holds no table, and with a positive
+[[numcosmo|NcGalaxyShapeFactorSpectral:line-abstol]] (default 0), the class expands
+$\ln P$ at $c + t u$ in a Chebyshev series in $t$ on $[\min_j t_j, \max_j t_j]$, from
+integrals on nested Chebyshev--Lobatto grids of levels 1 up to the largest level whose grid
+has at most $n / 2$ points, $n$ being the number of nodes behind the lens, and at most 7. The
+series is accepted when its coefficients change by at most `line-abstol` in $\ell_1$ norm
+between two grids, and gives $\ln P$ at the $n$ shears. Each shear is integrated instead when
+the nodes behind the lens are not consecutive, when $n / 2$ points allow no grid above level
+1, when an end of the line has $|g| > 0.9$, or when the series is not accepted. The series is
+expanded again at every evaluation, so it follows the line when the halo center, the mass or
+the cosmology change; a build costs at most $n / 2$ integrals in place of $n$, and a series
+that is not accepted adds its integrals to the $n$.
 
 ## Measured Accuracy
 
@@ -407,23 +506,37 @@ values next to $|g| = 1$ were not measured for $\sigma_\mathrm{noise}$ below 0.0
 The interpolation in $g$ was measured on 150 galaxies of HWL16a-002 and HWL16a-064, 100 of
 them with $\sigma_\mathrm{noise} < 0.1$, with $g_\mathrm{max} = 0.3$, against the integral
 at `reltol` $10^{-8}$ on 200 random shears of the disk per galaxy, with
-`interp-min-radial-panels` 2. No build failed. The integrals of a build and the largest
-difference in $\ln P$ are:
+`interp-min-radial-panels` 2 and `interp-trim-frac` $10^{-4}$. No build failed. The
+integrals of a build and the largest difference in $\ln P$ are:
 
 | convention | population | `interp-abstol` | integrals, median / 90% / largest | largest difference |
 |---|---|---|---|---|
-| `TRACE` | Beta, fitted | $10^{-4}$ | 927 / 1,858 / 2,372 | $4.4 \times 10^{-7}$ |
-| `TRACE` | Beta, fitted | $10^{-5}$ (default) | 1,694 / 2,818 / 3,876 | $1.0 \times 10^{-8}$ |
-| `TRACE` | Gaussian, 0.3 | $10^{-5}$ | 1,166 / 1,923 / 2,586 | $2.2 \times 10^{-9}$ |
-| `TRACE_DET` | Beta, fitted | $10^{-5}$ | 523 / 1,502 / 3,010 | $6.5 \times 10^{-9}$ |
-| `TRACE_DET` | Gaussian, 0.3 | $10^{-5}$ | 451 / 1,211 / 2,530 | $8.1 \times 10^{-9}$ |
+| `TRACE` | Beta, fitted | $10^{-4}$ | 927 / 1,858 / 2,372 | $4.2 \times 10^{-7}$ |
+| `TRACE` | Beta, fitted | $10^{-5}$ (default) | 1,694 / 2,818 / 3,876 | $1.1 \times 10^{-8}$ |
+| `TRACE` | Gaussian, 0.3 | $10^{-5}$ | 1,166 / 1,923 / 2,586 | $2.3 \times 10^{-9}$ |
+| `TRACE_DET` | Beta, fitted | $10^{-5}$ | 523 / 1,502 / 3,010 | $6.4 \times 10^{-9}$ |
+| `TRACE_DET` | Gaussian, 0.3 | $10^{-5}$ | 451 / 1,211 / 2,530 | $7.9 \times 10^{-9}$ |
 
-One evaluation of the approximation takes 0.11 to 0.13 microseconds (median over the
-galaxies) at the default tolerance, against 0.25 to 0.6 milliseconds for the integral at
-$|g| \le 0.3$. For the Beta populations, `interp-min-radial-panels` 4 makes the evaluation
-1.5 (`TRACE`) and 1.8 (`TRACE_DET`) times faster, for 13% and 11% more integrals in the
-builds; with 1 the evaluation of `TRACE` Beta is 1.7 times slower, and the builds of the
-four rows compute 4% to 16% fewer integrals.
+On the 11,616 certified points with $|g| \le 0.3$, the table at `interp-trim-frac`
+$10^{-4}$ differs from the untrimmed one by at most $10^{-9}$, and its largest difference
+from Arb is $3.6 \times 10^{-8}$, as for the untrimmed table.
+
+At the default tolerance, one evaluation of the table takes 43 to 55 nanoseconds per shear
+(median over the galaxies of each row), and 32 to 42 nanoseconds per shear through the
+`eval_nodes` virtual function of [[numcosmo|NcGalaxyShapeFactor]] in calls of 50 shears.
+One integral takes 118 to 164 microseconds at the default `reltol`. With
+`interp-min-radial-panels` 1 or 4 in place of 2, the evaluation per shear changes by at
+most 6%, and through `eval_nodes` from 9% faster (1) to 13% slower (4). With 1 the builds
+of the four rows at $10^{-5}$ compute 14% to 18% fewer integrals (median), and with 4, 5%
+to 21% more.
+
+The series along the shears of a galaxy was measured on the 10,706 galaxies of HWL16a-007
+(Beta population fitted to the catalog, fixed redshift nodes, halo center and
+$\log_{10} M_\Delta$ free), without tables, at the values of the experiment and at
+five random points of its prior box. With `line-abstol` $10^{-6}$ every series was accepted,
+with 46 nodes per galaxy on average; one evaluation of $-2 \ln L$ took 5.7 seconds against
+51.5 seconds with every shear integrated (four threads), and the two differ by at most
+$3.0 \times 10^{-9}$.
 
 ## Symbols and the Code
 
@@ -433,7 +546,7 @@ four rows compute 4% to 16% fewer integrals.
 | $a$, $b$ | `a`, `b` |
 | $\alpha_1$ | `b_pop` |
 | $2^{\alpha_o + 1}$, $\alpha_o + \alpha_1 + 2$ of Eq. (4) | `dens_norm`, `dens_pow` of the kernel |
-| $F_t$, $F_t^{-1}$, $\hat{P}_\zeta$ | `map`, `map_inv`, `p_reduced` |
+| $F_t$, $F_t^{-1}$, $\hat{P}_\zeta$ | `_nc_galaxy_shape_factor_spectral_map`, `map_inv`, `_nc_galaxy_shape_factor_spectral_density` |
 | $1 / 2 \sigma_\mathrm{noise}^2$ | `c2` |
 | $d_0$, $d_0 / 2 \sigma_\mathrm{noise}^2$ | `shift` of the seed, `shift_c2` |
 | $1 / (2 \pi \sigma_\mathrm{noise}^2) / (2 \pi)$ | `norm` |

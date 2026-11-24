@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc/recomb/nc_recomb.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_panels.h>
 
 G_BEGIN_DECLS
 
@@ -98,6 +99,7 @@ void nc_recomb_seager_clear (NcRecombSeager **recomb_seager);
 void nc_recomb_seager_set_options (NcRecombSeager *recomb_seager, NcRecombSeagerOpt opts);
 void nc_recomb_seager_set_switch (NcRecombSeager *recomb_seager, guint H_switch, guint He_switch);
 NcRecombSeagerOpt nc_recomb_seager_get_options (NcRecombSeager *recomb_seager);
+NcmSpectralPanels *nc_recomb_seager_peek_Xe_recomb_panels (NcRecombSeager *recomb_seager);
 
 gdouble nc_recomb_seager_pequignot_HI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
 gdouble nc_recomb_seager_pequignot_HI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);

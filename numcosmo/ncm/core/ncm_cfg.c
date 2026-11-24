@@ -49,6 +49,7 @@
 #include "ncm/mpi/ncm_mpi_slave.h"
 #include "ncm/algebra/ncm_vector.h"
 #include "ncm/spline/ncm_spline_bspline.h"
+#include "ncm/spline/ncm_bspline.h"
 #include "ncm/spline/ncm_spline_gsl.h"
 #include "ncm/spline/ncm_spline_cubic.h"
 #include "ncm/spline/ncm_spline_cubic_notaknot.h"
@@ -75,6 +76,7 @@
 #include "ncm/model/ncm_model_rosenbrock.h"
 #include "ncm/model/ncm_model_funnel.h"
 #include "ncm/model/ncm_reparam_linear.h"
+#include "ncm/model/ncm_mset_preset.h"
 #include "ncm/data/ncm_data.h"
 #include "ncm/data/ncm_data_gauss_cov_mvnd.h"
 #include "ncm/data/ncm_data_rosenbrock.h"
@@ -110,7 +112,8 @@
 #include "ncm/algebra/ncm_spectral_panels_builder.h"
 #include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
-#include "ncm/algebra/ncm_spectral_polar_panels.h"
+#include "ncm/algebra/ncm_spectral_tensor.h"
+#include "ncm/algebra/ncm_spectral_tensor_builder.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/bbn/nc_bbn.h"
 #include "nc/bbn/nc_bbn_parametrized.h"
@@ -204,6 +207,8 @@
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor_flat.h"
+#include "nc/lss/galaxy/nc_galaxy_pz.h"
+#include "nc/lss/galaxy/nc_galaxy_pz_bspline_sqrt.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor_composed.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor_spline.h"
@@ -806,6 +811,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_D2);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_HERMITE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_BSPLINE);
+  ncm_cfg_register_obj (NCM_TYPE_BSPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_VEC);
   ncm_cfg_register_obj (NCM_TYPE_FUNCTION_SAMPLE_SET);
@@ -825,7 +831,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_PANELS_BUILDER);
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_PANELS_PRODUCT);
   ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_POLAR);
-  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_POLAR_PANELS);
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_TENSOR);
+  ncm_cfg_register_obj (NCM_TYPE_SPECTRAL_TENSOR_BUILDER);
 
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_GL);
   ncm_cfg_register_obj (NCM_TYPE_SBESSEL_INTEGRATOR_LEVIN);
@@ -849,6 +856,8 @@ ncm_cfg_register_objects (void)
 
   ncm_cfg_register_obj (NCM_TYPE_REPARAM);
   ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
+
+  ncm_cfg_register_obj (NCM_TYPE_MSET_PRESET);
 
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
   ncm_cfg_register_obj (NCM_TYPE_STATS_ACORR);
@@ -1009,6 +1018,8 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR_FLAT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_PZ);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_PZ_BSPLINE_SQRT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR_COMPOSED);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_FACTOR_SPLINE);

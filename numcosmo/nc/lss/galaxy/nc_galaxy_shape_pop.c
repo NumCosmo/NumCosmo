@@ -145,6 +145,20 @@ _nc_galaxy_shape_pop_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData
   return 0.0;
 }
 
+static gboolean
+_nc_galaxy_shape_pop_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1)
+{
+  return FALSE;
+}
+
+static gdouble
+_nc_galaxy_shape_pop_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1)
+{
+  g_error ("_nc_galaxy_shape_pop_eval_p_reduced_factors: method not implemented.");
+
+  return 0.0;
+}
+
 /* LCOV_EXCL_STOP */
 
 /* Real (non-stub) default: plain loop calling eval_p() through the class
@@ -246,6 +260,9 @@ nc_galaxy_shape_pop_class_init (NcGalaxyShapePopClass *klass)
   klass->moment_2k       = &_nc_galaxy_shape_pop_moment_2k;
   klass->exponent_at_one = &_nc_galaxy_shape_pop_exponent_at_one;
   klass->eval_p_reduced  = &_nc_galaxy_shape_pop_eval_p_reduced;
+
+  klass->reduced_factor_params  = &_nc_galaxy_shape_pop_reduced_factor_params;
+  klass->eval_p_reduced_factors = &_nc_galaxy_shape_pop_eval_p_reduced_factors;
 }
 
 /**
@@ -596,5 +613,51 @@ gdouble
 nc_galaxy_shape_pop_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r)
 {
   return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_reduced (gsp, data, r);
+}
+
+/**
+ * nc_galaxy_shape_pop_reduced_factor_params: (virtual reduced_factor_params)
+ * @gsp: a #NcGalaxyShapePop
+ * @param_o: (out): the parameter of the factor at the origin, or -1
+ * @param_1: (out): the parameter of the factor at one, or -1
+ *
+ * For a population whose reduced density, the one of
+ * nc_galaxy_shape_pop_eval_p_reduced(), has the separated form $N f_o(r) f_1(r)$, sets
+ * @param_o to the index of the parameter that $f_o$ and the exponent of
+ * nc_galaxy_shape_pop_exponent_at_origin() depend on, and @param_1 to the index of the one
+ * that $f_1$ and the exponent of nc_galaxy_shape_pop_exponent_at_one() depend on. An index of
+ * -1 stands for a factor and an exponent that depend on no parameter. The constant $N$ may
+ * depend on both parameters. A quadrature over a grid of the two parameters computes each
+ * factor once per parameter value in place of once per pair.
+ *
+ * Returns: whether the population has the separated form; when it does not, @param_o and
+ *   @param_1 are unchanged.
+ */
+gboolean
+nc_galaxy_shape_pop_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1)
+{
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->reduced_factor_params (gsp, param_o, param_1);
+}
+
+/**
+ * nc_galaxy_shape_pop_eval_p_reduced_factors: (virtual eval_p_reduced_factors)
+ * @gsp: a #NcGalaxyShapePop
+ * @data: a resolved #NcGalaxyShapePopData
+ * @r: the ellipticity modulus $r = |\chi_I| \in [0,1]$
+ * @f_o: (out): the factor $f_o(r)$
+ * @f_1: (out): the factor $f_1(r)$
+ *
+ * Evaluates the separated form of the reduced density at @r: the value of
+ * nc_galaxy_shape_pop_eval_p_reduced() is the returned $N$ times @f_o times @f_1. It reads
+ * the resolved parameters from @data, as nc_galaxy_shape_pop_eval_p() does. The call is an
+ * error for a population for which nc_galaxy_shape_pop_reduced_factor_params() returns
+ * %FALSE.
+ *
+ * Returns: the constant $N$.
+ */
+gdouble
+nc_galaxy_shape_pop_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1)
+{
+  return NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_reduced_factors (gsp, data, r, f_o, f_1);
 }
 

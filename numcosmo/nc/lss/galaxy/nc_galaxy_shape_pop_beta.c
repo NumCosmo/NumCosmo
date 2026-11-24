@@ -79,6 +79,7 @@ struct _NcGalaxyShapePopBeta
 typedef struct _NcGalaxyShapePopBetaLData
 {
   gdouble lnnorm_r; /* -ln B(alpha,beta): eval_p()/eval_p_array()'s own P_pop(r) normalization */
+  gdouble norm_r;   /* 1 / B(alpha,beta), the reduced density */
   gdouble alpha;    /* cached copy of the alpha model param */
   gdouble beta;     /* cached copy of the beta model param */
 } NcGalaxyShapePopBetaLData;
@@ -111,6 +112,8 @@ static gdouble _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyS
 static gdouble _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp);
 static gdouble _nc_galaxy_shape_pop_beta_exponent_at_one (NcGalaxyShapePop *gsp);
 static gdouble _nc_galaxy_shape_pop_beta_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
+static gboolean _nc_galaxy_shape_pop_beta_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1);
+static gdouble _nc_galaxy_shape_pop_beta_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1);
 static gdouble _nc_galaxy_shape_pop_beta_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 
 static void
@@ -129,13 +132,14 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
    * NcGalaxyShapePopBeta:alpha:
    *
    * The shape parameter $\alpha$ of the Beta distribution of $r = |\chi_I|$.
-   * Bounded to $\ge 1$ (see the class documentation).
+   * Its fit bounds are $[1, 4]$; values below 1 are outside the class (see the
+   * class documentation).
    *
    */
   ncm_model_class_set_sparam (model_class,
                               NC_GALAXY_SHAPE_POP_BETA_ALPHA,
                               "\\alpha",
-                              "alpha", 1.0, 1.0e2, 1.0e-1,
+                              "alpha", 1.0, 4.0, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
@@ -144,13 +148,14 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
    * NcGalaxyShapePopBeta:beta:
    *
    * The shape parameter $\beta$ of the Beta distribution of $r = |\chi_I|$.
-   * Bounded to $\ge 1$ (see the class documentation).
+   * Its fit bounds are $[1, 4]$; values below 1 are outside the class (see the
+   * class documentation).
    *
    */
   ncm_model_class_set_sparam (model_class,
                               NC_GALAXY_SHAPE_POP_BETA_BETA,
                               "\\beta",
-                              "beta", 1.0, 1.0e2, 1.0e-1,
+                              "beta", 1.0, 4.0, 1.0e-1,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL,
                               NC_GALAXY_SHAPE_POP_BETA_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
@@ -167,6 +172,9 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
   gsp_class->moment_2k          = &_nc_galaxy_shape_pop_beta_moment_2k;
   gsp_class->exponent_at_one    = &_nc_galaxy_shape_pop_beta_exponent_at_one;
   gsp_class->eval_p_reduced     = &_nc_galaxy_shape_pop_beta_eval_p_reduced;
+
+  gsp_class->reduced_factor_params  = &_nc_galaxy_shape_pop_beta_reduced_factor_params;
+  gsp_class->eval_p_reduced_factors = &_nc_galaxy_shape_pop_beta_eval_p_reduced_factors;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -204,6 +212,7 @@ _nc_galaxy_shape_pop_beta_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *
 
   /* lnnorm_r: -ln B(alpha,beta), the normalization of P_pop(r) */
   ldata->lnnorm_r = -gsl_sf_lnbeta (alpha, beta);
+  ldata->norm_r   = exp (ldata->lnnorm_r);
   ldata->alpha    = alpha;
   ldata->beta     = beta;
 }
@@ -294,7 +303,29 @@ _nc_galaxy_shape_pop_beta_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePo
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  return exp (ldata->lnnorm_r);
+  return ldata->norm_r;
+}
+
+/* alpha sets the exponent at the origin and beta the one at 1; both factors are 1 */
+static gboolean
+_nc_galaxy_shape_pop_beta_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1)
+{
+  *param_o = NC_GALAXY_SHAPE_POP_BETA_ALPHA;
+  *param_1 = NC_GALAXY_SHAPE_POP_BETA_BETA;
+
+  return TRUE;
+}
+
+/* The reduced density is the constant N = 1 / B (alpha, beta) */
+static gdouble
+_nc_galaxy_shape_pop_beta_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1)
+{
+  NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
+
+  *f_o = 1.0;
+  *f_1 = 1.0;
+
+  return ldata->norm_r;
 }
 
 /* M_2k = <r^2k> = B(alpha+2k,beta)/B(alpha,beta) = prod_{j=0}^{2k-1}

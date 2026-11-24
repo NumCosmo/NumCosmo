@@ -53,7 +53,8 @@
 #include <numcosmo/ncm/algebra/ncm_spectral_panels_builder.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_panels_product.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_polar.h>
-#include <numcosmo/ncm/algebra/ncm_spectral_polar_panels.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_tensor.h>
+#include <numcosmo/ncm/algebra/ncm_spectral_tensor_builder.h>
 #include <numcosmo/ncm/core/ncm_serialize.h>
 #include <numcosmo/ncm/core/ncm_obj_array.h>
 #include <numcosmo/ncm/integration/ncm_integral1d.h>
@@ -79,6 +80,7 @@
 #include <numcosmo/ncm/spline/ncm_spline.h>
 #include <numcosmo/ncm/spline/ncm_spline_func.h>
 #include <numcosmo/ncm/spline/ncm_spline_bspline.h>
+#include <numcosmo/ncm/spline/ncm_bspline.h>
 #include <numcosmo/ncm/spline/ncm_spline_gsl.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic.h>
 #include <numcosmo/ncm/spline/ncm_spline_cubic_notaknot.h>
@@ -123,6 +125,7 @@
 #include <numcosmo/ncm/model/ncm_mset_func.h>
 #include <numcosmo/ncm/model/ncm_mset_func1.h>
 #include <numcosmo/ncm/model/ncm_mset_func_list.h>
+#include <numcosmo/ncm/model/ncm_mset_preset.h>
 #include <numcosmo/ncm/spline/ncm_ode_spline.h>
 #include <numcosmo/ncm/core/ncm_pln1d.h>
 #include <numcosmo/ncm/model/ncm_reparam_linear.h>

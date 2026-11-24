@@ -44,6 +44,7 @@ void test_ncm_stats_rows_basic (void);
 void test_ncm_mset_catalog_desc_basic (void);
 void test_ncm_mset_catalog_storage_memory_basic (void);
 void test_ncm_mset_catalog_storage_fits_basic (void);
+void test_ncm_mset_preset_basic (void);
 void test_ncm_sphere_nn (void);
 void test_ncm_sphere_xi (void);
 void test_ncm_timer_basic (void);
@@ -61,6 +62,7 @@ void test_ncm_mpi_job_fit_basic (void);
 void test_ncm_mpi_job_mcmc_basic (void);
 void test_ncm_mpi_job_feval_basic (void);
 void test_ncm_spline_bspline_basic (void);
+void test_ncm_bspline_basic (void);
 void test_ncm_spline_hermite_basic (void);
 void test_ncm_powspec_spline2d_basic (void);
 void test_ncm_powspec_analytic_basic (void);
@@ -71,7 +73,8 @@ void test_ncm_spectral_panels_basic (void);
 void test_ncm_spectral_panels_builder_basic (void);
 void test_ncm_spectral_panels_product_basic (void);
 void test_ncm_spectral_polar_basic (void);
-void test_ncm_spectral_polar_panels_basic (void);
+void test_ncm_spectral_tensor_basic (void);
+void test_ncm_spectral_tensor_builder_basic (void);
 
 void test_nc_data_cluster_mass_rich_basic (void);
 void test_nc_data_cluster_mass_rich_count_basic (void);
@@ -124,6 +127,7 @@ void test_nc_xcor_component_table_basic (void);
 
 void test_nc_galaxy_position_factor_flat_basic (void);
 void test_nc_galaxy_redshift_factor_composed_basic (void);
+void test_nc_galaxy_pz_bspline_sqrt_basic (void);
 void test_nc_galaxy_redshift_factor_spline_basic (void);
 void test_nc_galaxy_redshift_binning_basic (void);
 void test_nc_galaxy_redshift_pop_basic (void);
@@ -153,6 +157,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mset_catalog_desc/basic", test_ncm_mset_catalog_desc_basic);
   g_test_add_func ("/ncm/mset_catalog_storage_memory/basic", test_ncm_mset_catalog_storage_memory_basic);
   g_test_add_func ("/ncm/mset_catalog_storage_fits/basic", test_ncm_mset_catalog_storage_fits_basic);
+  g_test_add_func ("/ncm/mset_preset/basic", test_ncm_mset_preset_basic);
   g_test_add_func ("/ncm/sphere/nn", test_ncm_sphere_nn);
   g_test_add_func ("/ncm/sphere/xi", test_ncm_sphere_xi);
   g_test_add_func ("/ncm/timer/basic", test_ncm_timer_basic);
@@ -170,6 +175,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/mpi_job_mcmc/basic", test_ncm_mpi_job_mcmc_basic);
   g_test_add_func ("/ncm/mpi_job_feval/basic", test_ncm_mpi_job_feval_basic);
   g_test_add_func ("/ncm/spline_bspline/basic", test_ncm_spline_bspline_basic);
+  g_test_add_func ("/ncm/bspline/basic", test_ncm_bspline_basic);
   g_test_add_func ("/ncm/spline_hermite/basic", test_ncm_spline_hermite_basic);
   g_test_add_func ("/ncm/powspec_spline2d/basic", test_ncm_powspec_spline2d_basic);
   g_test_add_func ("/ncm/powspec_analytic/basic", test_ncm_powspec_analytic_basic);
@@ -180,7 +186,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels_builder/basic", test_ncm_spectral_panels_builder_basic);
   g_test_add_func ("/ncm/spectral_panels_product/basic", test_ncm_spectral_panels_product_basic);
   g_test_add_func ("/ncm/spectral_polar/basic", test_ncm_spectral_polar_basic);
-  g_test_add_func ("/ncm/spectral_polar_panels/basic", test_ncm_spectral_polar_panels_basic);
+  g_test_add_func ("/ncm/spectral_tensor/basic", test_ncm_spectral_tensor_basic);
+  g_test_add_func ("/ncm/spectral_tensor_builder/basic", test_ncm_spectral_tensor_builder_basic);
 
   g_test_add_func ("/nc/data/cluster_mass_rich/basic", test_nc_data_cluster_mass_rich_basic);
   g_test_add_func ("/nc/data/cluster_mass_rich_count/basic", test_nc_data_cluster_mass_rich_count_basic);
@@ -236,6 +243,7 @@ main (gint argc, gchar *argv[])
 
   g_test_add_func ("/nc/galaxy/position_factor_flat/basic", test_nc_galaxy_position_factor_flat_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_composed/basic", test_nc_galaxy_redshift_factor_composed_basic);
+  g_test_add_func ("/nc/galaxy/pz_bspline_sqrt/basic", test_nc_galaxy_pz_bspline_sqrt_basic);
   g_test_add_func ("/nc/galaxy/redshift_factor_spline/basic", test_nc_galaxy_redshift_factor_spline_basic);
   g_test_add_func ("/nc/galaxy/redshift_binning/basic", test_nc_galaxy_redshift_binning_basic);
   g_test_add_func ("/nc/galaxy/redshift_pop/basic", test_nc_galaxy_redshift_pop_basic);
@@ -808,6 +816,38 @@ test_ncm_spline_bspline_basic (void)
   g_assert_true (NCM_IS_SPLINE_BSPLINE (sbs));
 
   NCM_TEST_FREE (ncm_spline_free, NCM_SPLINE (sbs));
+}
+
+void
+test_ncm_bspline_basic (void)
+{
+  NcmVector *knots          = ncm_vector_new (5);
+  NcmVector *control_points = ncm_vector_new (3);
+  NcmBSpline *bs, *bs2;
+
+  ncm_vector_set (knots, 0, 0.0);
+  ncm_vector_set (knots, 1, 0.0);
+  ncm_vector_set (knots, 2, 1.0);
+  ncm_vector_set (knots, 3, 2.0);
+  ncm_vector_set (knots, 4, 2.0);
+  ncm_vector_set_all (control_points, 1.0);
+
+  bs = ncm_bspline_new (2, knots, control_points);
+
+  ncm_vector_free (knots);
+  ncm_vector_free (control_points);
+
+  g_assert_true (bs != NULL);
+  g_assert_true (NCM_IS_BSPLINE (bs));
+  g_assert_cmpuint (ncm_bspline_get_order (bs), ==, 2);
+
+  bs2 = ncm_bspline_ref (bs);
+  ncm_bspline_clear (&bs2);
+  g_assert_true (bs2 == NULL);
+
+  g_assert_true (NCM_IS_BSPLINE (bs));
+
+  NCM_TEST_FREE (ncm_bspline_free, bs);
 }
 
 void
@@ -1966,6 +2006,39 @@ test_nc_galaxy_redshift_factor_composed_basic (void)
 }
 
 void
+test_nc_galaxy_pz_bspline_sqrt_basic (void)
+{
+  NcmVector *zv = ncm_vector_new (8);
+  NcmVector *pv = ncm_vector_new (8);
+  NcGalaxyPzBSplineSqrt *gpzs;
+  NcGalaxyPz *gpz2;
+  guint i;
+
+  for (i = 0; i < 8; i++)
+  {
+    ncm_vector_set (zv, i, 0.1 * i);
+    ncm_vector_set (pv, i, 1.0 + i);
+  }
+
+  gpzs = nc_galaxy_pz_bspline_sqrt_new_from_table (zv, pv);
+
+  ncm_vector_free (zv);
+  ncm_vector_free (pv);
+
+  g_assert_true (gpzs != NULL);
+  g_assert_true (NC_IS_GALAXY_PZ_BSPLINE_SQRT (gpzs));
+  g_assert_true (NC_IS_GALAXY_PZ (gpzs));
+
+  gpz2 = nc_galaxy_pz_ref (NC_GALAXY_PZ (gpzs));
+  nc_galaxy_pz_clear (&gpz2);
+  g_assert_true (gpz2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_PZ_BSPLINE_SQRT (gpzs));
+
+  NCM_TEST_FREE (nc_galaxy_pz_free, NC_GALAXY_PZ (gpzs));
+}
+
+void
 test_nc_galaxy_redshift_factor_spline_basic (void)
 {
   NcGalaxyRedshiftFactorSpline *gsdrs = nc_galaxy_redshift_factor_spline_new ();
@@ -2257,19 +2330,54 @@ test_ncm_spectral_polar_basic (void)
 }
 
 void
-test_ncm_spectral_polar_panels_basic (void)
+test_ncm_mset_preset_basic (void)
 {
-  NcmSpectralPolarPanels *spp = ncm_spectral_polar_panels_new ();
-  NcmSpectralPolarPanels *spp2;
+  NcmMSetPreset *preset = ncm_mset_preset_new (NULL);
+  NcmMSetPreset *preset2;
 
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
+  g_assert_true (preset != NULL);
+  g_assert_true (NCM_IS_MSET_PRESET (preset));
 
-  spp2 = ncm_spectral_polar_panels_ref (spp);
-  ncm_spectral_polar_panels_clear (&spp2);
-  g_assert_true (spp2 == NULL);
+  preset2 = ncm_mset_preset_ref (preset);
+  ncm_mset_preset_clear (&preset2);
+  g_assert_true (preset2 == NULL);
 
-  g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (spp));
+  g_assert_true (NCM_IS_MSET_PRESET (preset));
 
-  NCM_TEST_FREE (ncm_spectral_polar_panels_free, spp);
+  NCM_TEST_FREE (ncm_mset_preset_free, preset);
+}
+
+void
+test_ncm_spectral_tensor_basic (void)
+{
+  NcmSpectralTensor *st = ncm_spectral_tensor_new (3);
+  NcmSpectralTensor *st2;
+
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (st));
+
+  st2 = ncm_spectral_tensor_ref (st);
+  ncm_spectral_tensor_clear (&st2);
+  g_assert_true (st2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (st));
+
+  NCM_TEST_FREE (ncm_spectral_tensor_free, st);
+}
+
+void
+test_ncm_spectral_tensor_builder_basic (void)
+{
+  NcmSpectralTensorBuilder *builder = ncm_spectral_tensor_builder_new ();
+  NcmSpectralTensorBuilder *builder2;
+
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR_BUILDER (builder));
+
+  builder2 = ncm_spectral_tensor_builder_ref (builder);
+  ncm_spectral_tensor_builder_clear (&builder2);
+  g_assert_true (builder2 == NULL);
+
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR_BUILDER (builder));
+
+  NCM_TEST_FREE (ncm_spectral_tensor_builder_free, builder);
 }
 

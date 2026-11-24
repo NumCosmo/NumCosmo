@@ -83,6 +83,8 @@
 #include "nc_enum_types.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
+#include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "nc/background/nc_distance.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/integration/ncm_integral_nd.h"
@@ -380,6 +382,13 @@ typedef struct _NcDataClusterWLFactorPrivate
    * Factor's model-derived state changing never requires reallocating
    * shape_data, only refreshing what is cached in it). */
   gboolean obs_changed;
+
+  /*
+   * The largest upper limit of the redshift integration over the galaxies of obs, set
+   * when obs is loaded and required of the distance of the surface mass density at every
+   * prepare (_nc_data_cluster_wl_factor_require_zf()).
+   */
+  gdouble z_top;
 
   /* Last-seen hashes, compared against each Factor's own get_hash() every
    * prepare() cycle. */
@@ -872,6 +881,50 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
   return match;
 }
 
+/*
+ * Requires of the distance of the surface mass density a final redshift of at least
+ * self->z_top, so that NcDistance evaluates the distance to every source redshift from
+ * its spline. It is called at every prepare, before the prepare of the factors: a raised
+ * final redshift takes effect when the shape factor prepares the surface mass density,
+ * and a distance that already reaches self->z_top is not changed. Calling it at every
+ * prepare covers a surface mass density replaced in the model set under the same obs.
+ */
+static void
+_nc_data_cluster_wl_factor_require_zf (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+
+  g_assert_nonnull (smd);
+  g_assert_nonnull (smd->dist);
+
+  nc_distance_require_zf (smd->dist, self->z_top);
+}
+
+/*
+ * Returns the largest upper limit of the redshift integration over the galaxies of obs,
+ * from the redshift data that _nc_data_cluster_wl_factor_load_obs() read. The limits come
+ * from the rows of obs and from the limits of the population, so prepare computes it once,
+ * when obs is loaded. A redshift above it is still evaluated, by the integral of
+ * NcDistance above its final redshift.
+ */
+static gdouble
+_nc_data_cluster_wl_factor_z_top (NcDataClusterWLFactorPrivate *self, NcmMSet *mset)
+{
+  gdouble z_top = 0.0;
+  guint i;
+
+  for (i = 0; i < self->shape_data->len; i++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, i);
+    gdouble z_lo, z_hi;
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+    z_top = MAX (z_top, z_hi);
+  }
+
+  return z_top;
+}
+
 static void
 nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
 {
@@ -891,6 +944,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->shape_data = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_shape_factor_data_unref);
 
   self->obs_changed       = TRUE; /* the very first prepare() always rebuilds */
+  self->z_top             = 0.0;
   self->pos_hash          = 0;
   self->z_hash            = 0;
   self->shape_radius_hash = 0;
@@ -1207,12 +1261,12 @@ _shared_obs_owner_clear (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *obs)
     g_object_set_qdata (G_OBJECT (obs), _nc_data_cluster_wl_factor_shared_obs_quark (), NULL);
 }
 
-/* Replaces @obs by a copy of its columns that references its P(z) splines.
+/*
+ * Replaces @obs by a copy of its columns that references its p(z) objects.
  * The columns are the rows resample() writes (about 100 bytes per galaxy);
- * the splines are most of the catalog and are only read. The splines are
- * added with nc_galaxy_wl_obs_set_pz(), which only references them: setting
- * the "pz" property would prepare each one again while other clones
- * evaluate it. */
+ * the p(z) objects are most of the catalog and are only read, so they are
+ * added with nc_galaxy_wl_obs_set_pz(), which references them.
+ */
 static void
 _obs_make_private (NcDataClusterWLFactorPrivate *self)
 {
@@ -1229,7 +1283,7 @@ _obs_make_private (NcDataClusterWLFactorPrivate *self)
 
   for (i = 0; i < len; i++)
   {
-    NcmSpline *pz = nc_galaxy_wl_obs_peek_pz (shared, i);
+    NcGalaxyPz *pz = nc_galaxy_wl_obs_peek_pz (shared, i);
 
     if (pz != NULL)
       nc_galaxy_wl_obs_set_pz (copy, i, pz);
@@ -1395,7 +1449,10 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   {
     _nc_data_cluster_wl_factor_load_obs (self, mset, self->obs);
     self->obs_changed = FALSE;
+    self->z_top       = _nc_data_cluster_wl_factor_z_top (self, mset);
   }
+
+  _nc_data_cluster_wl_factor_require_zf (self, mset);
 
   nc_galaxy_position_factor_prepare (self->position_factor, mset);
   nc_galaxy_redshift_factor_prepare (self->redshift_factor, mset);
@@ -3009,42 +3066,48 @@ nc_data_cluster_wl_factor_data_prepare (NcDataClusterWLFactor *dcwlf, NcmMSet *m
  * @mset: a #NcmMSet
  * @obs: a #NcGalaxyWLObs with the rows of the catalog of @dcwlf
  *
- * Builds the interpolant of every galaxy with nc_data_cluster_wl_factor_data_prepare(), in
+ * Prepares the per-galaxy data with nc_data_cluster_wl_factor_data_prepare(), builds the
+ * interpolant of every galaxy with nc_galaxy_shape_factor_spectral_build_interp(), in
  * parallel, writes them into @obs (#NcGalaxyWLObs:shape-interp) and records the shape factor
  * and the population of @mset that built them
  * (nc_galaxy_shape_factor_spectral_set_obs_source()). The columns of @obs are not written;
  * @obs may be the catalog of @dcwlf (nc_data_cluster_wl_factor_peek_obs()). A fit that reads
- * the rows of @obs loads the interpolants instead of building them.
+ * the rows of @obs uses the interpolants; it never builds them. The free parameters of the
+ * population are variables of the interpolants, over their bounds.
  *
- * The shape factor must be a #NcGalaxyShapeFactorSpectral with
- * #NcGalaxyShapeFactorSpectral:use-interp, no parameter of the population may be free (the
- * interpolants hold for its current values only), and @obs must have as many rows as the
- * catalog of @dcwlf; otherwise the call aborts.
+ * The shape factor must be a #NcGalaxyShapeFactorSpectral and @obs must have as many rows as
+ * the catalog of @dcwlf; otherwise the call aborts.
  */
 void
 nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   NcmModel *pop                             = ncm_mset_peek (mset, nc_galaxy_shape_pop_id ());
-  guint gal_i, k;
+  NcGalaxyShapeFactorSpectral *gsfs;
+  gint gal_s;
+  guint gal_i;
 
-  for (k = 0; k < ncm_model_len (pop); k++)
-  {
-    if (ncm_model_param_get_ftype (pop, k) == NCM_PARAM_TYPE_FREE)
-      g_error ("nc_data_cluster_wl_factor_write_shape_interp: the population parameter %s of %s is free; "
-               "the interpolants hold for fixed population parameters.", ncm_model_param_name (pop, k), G_OBJECT_TYPE_NAME (pop));
-  }
-
-  if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor) ||
-      !nc_galaxy_shape_factor_spectral_get_use_interp (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor)))
-    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the shape factor %s is not a NcGalaxyShapeFactorSpectral with use-interp.",
+  if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor))
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp: the shape factor %s is not a NcGalaxyShapeFactorSpectral.",
              G_OBJECT_TYPE_NAME (self->shape_factor));
 
+  gsfs = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor);
   nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
 
   if (nc_galaxy_wl_obs_len (obs) != self->shape_data->len)
     g_error ("nc_data_cluster_wl_factor_write_shape_interp: the catalog has %u rows, the dataset %u galaxies.",
              nc_galaxy_wl_obs_len (obs), self->shape_data->len);
+
+  #pragma omp parallel for schedule(dynamic, 1) if (!omp_in_parallel ())
+
+  for (gal_s = 0; gal_s < (gint) self->shape_data->len; gal_s++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_s);
+    gdouble z_lo, z_hi;
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+    nc_galaxy_shape_factor_spectral_build_interp (gsfs, mset, s_data, z_hi);
+  }
 
   for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
   {
@@ -3053,9 +3116,7 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
     s_data->ldata_write_row (s_data, obs, gal_i);
   }
 
-  nc_galaxy_shape_factor_spectral_set_obs_source (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor),
-                                                  NC_GALAXY_SHAPE_POP (pop),
-                                                  obs);
+  nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, NC_GALAXY_SHAPE_POP (pop), obs);
 }
 
 /**

@@ -493,16 +493,26 @@ ncm_util_lambert_W0_ln (const gdouble ln_y)
   {
     const guint max_iter = 100;
     gdouble W            = ln_y - log (ln_y);
+    gdouble abs_dW_prev  = GSL_POSINF;
     guint i;
 
+    /*
+     * W + ln(W) - ln_y is concave and increasing, so the Newton steps decrease until they
+     * reach the rounding error of the residual, a few units of GSL_DBL_EPSILON * ln_y, which
+     * for some ln_y stays above GSL_DBL_EPSILON * W. The iteration stops at the first step
+     * that is below that bound or not smaller than the previous one.
+     */
     for (i = 0; i < max_iter; i++)
     {
-      const gdouble dW = (W + log (W) - ln_y) / (1.0 + 1.0 / W);
+      const gdouble dW     = (W + log (W) - ln_y) / (1.0 + 1.0 / W);
+      const gdouble abs_dW = fabs (dW);
 
       W -= dW;
 
-      if (fabs (dW) <= GSL_DBL_EPSILON * W)
+      if ((abs_dW <= GSL_DBL_EPSILON * W) || (abs_dW >= abs_dW_prev))
         return W;
+
+      abs_dW_prev = abs_dW;
     }
 
     g_error ("ncm_util_lambert_W0_ln: Newton's method did not converge for ln_y = %g.", ln_y);

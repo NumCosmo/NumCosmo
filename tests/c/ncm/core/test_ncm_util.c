@@ -4,10 +4,13 @@
  *  Tue July 30 19:54:22 2024
  *  Copyright  2024  Caio Lima de Oliveira
  *  <caiolimadeoliveira@pm.me>
+ *  Copyright  2026  Sandro Dias Pinto Vitenti
+ *  <vitenti@uel.br>
  ****************************************************************************/
 /*
  * numcosmo
  * Copyright (C) Caio Lima de Oliveira <caiolimadeoliveira@pm.me>
+ * Copyright (C) 2026 Sandro Dias Pinto Vitenti <vitenti@uel.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -254,7 +257,8 @@ test_ncm_util_gaussian_int_nonunit (void)
 void
 test_ncm_util_lambert_W0_ln (void)
 {
-  const gdouble ln_y[] = {-30.0, -1.0, 0.0, 1.0, 10.0, 300.0, 700.0, 709.0, 709.78, 710.0, 1.0e3, 1.0e5, 1.0e10, 1.0e300};
+  /* At 2051.1870601640053 the Newton step stays above one rounding unit of W */
+  const gdouble ln_y[] = {-30.0, -1.0, 0.0, 1.0, 10.0, 300.0, 700.0, 709.0, 709.78, 710.0, 1.0e3, 2051.1870601640053, 1.0e5, 1.0e10, 1.0e300};
   guint i;
 
   /* W e^W = y, written as W + ln(W) = ln(y) for y > 0 */

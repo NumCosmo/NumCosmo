@@ -25,7 +25,8 @@
 /*
  * Tests of nc_data_cluster_wl_factor_write_shape_interp(): a catalog prepared with the
  * interpolants of a NcGalaxyShapeFactorSpectral gives, after a serialization round trip, the
- * -2 ln L of the dataset that prepared it; another shape factor aborts.
+ * -2 ln L of the dataset that prepared it, also with a free population parameter; another
+ * shape factor aborts.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -54,8 +55,7 @@ void test_nc_data_cluster_wl_factor_shape_interp_free (TestNcDataClusterWLFactor
 void test_nc_data_cluster_wl_factor_shape_interp_write (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor (void);
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void);
-void test_nc_data_cluster_wl_factor_shape_interp_free_pop (void);
-void test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess (void);
+void test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -71,9 +71,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/shape_factor", &test_nc_data_cluster_wl_factor_shape_interp_shape_factor);
   g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/shape_factor/subprocess",
                    &test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess);
-  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/free_pop", &test_nc_data_cluster_wl_factor_shape_interp_free_pop);
-  g_test_add_func ("/nc/data_cluster_wl_factor/shape_interp/free_pop/subprocess",
-                   &test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess);
+  g_test_add ("/nc/data_cluster_wl_factor/shape_interp/free_pop", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (TRUE),
+              &test_nc_data_cluster_wl_factor_shape_interp_new,
+              &test_nc_data_cluster_wl_factor_shape_interp_free_pop,
+              &test_nc_data_cluster_wl_factor_shape_interp_free);
 
   g_test_run ();
 
@@ -114,16 +115,9 @@ test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeI
   guint i;
 
   if (GPOINTER_TO_INT (pdata))
-  {
-    NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (ec);
-
-    nc_galaxy_shape_factor_spectral_set_use_interp (gsfs, TRUE);
-    shape_factor = NC_GALAXY_SHAPE_FACTOR (gsfs);
-  }
+    shape_factor = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_spectral_new (ec));
   else
-  {
     shape_factor = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_var_add_new (ec));
-  }
 
   ncm_model_param_set (NCM_MODEL (hms), NC_HALO_CM_PARAM_LOG10M_DELTA, 14.5);
   ncm_model_param_set (NCM_MODEL (hp), NC_HALO_POSITION_RA, 0.0);
@@ -224,7 +218,7 @@ test_nc_data_cluster_wl_factor_shape_interp_write (TestNcDataClusterWLFactorShap
   g_assert_nonnull (nc_galaxy_wl_obs_peek_shape_interp_source (test->obs));
 
   for (i = 0; i < SHAPE_INTERP_NROWS; i++)
-    g_assert_true (NCM_IS_SPECTRAL_POLAR_PANELS (nc_galaxy_wl_obs_peek_shape_interp (test->obs, i)));
+    g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (test->obs, i)));
 
   ncm_data_m2lnL_val (data, test->mset, &m2lnL);
   g_assert_true (gsl_finite (m2lnL));
@@ -243,13 +237,13 @@ test_nc_data_cluster_wl_factor_shape_interp_write (TestNcDataClusterWLFactorShap
   ncm_serialize_free (ser);
 }
 
-/* A shape factor other than NcGalaxyShapeFactorSpectral with use-interp aborts */
+/* A shape factor other than NcGalaxyShapeFactorSpectral aborts */
 void
 test_nc_data_cluster_wl_factor_shape_interp_shape_factor (void)
 {
   g_test_trap_subprocess ("/nc/data_cluster_wl_factor/shape_interp/shape_factor/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*the shape factor NcGalaxyShapeFactorVarAdd is not a NcGalaxyShapeFactorSpectral with use-interp*");
+  g_test_trap_assert_stderr ("*the shape factor NcGalaxyShapeFactorVarAdd is not a NcGalaxyShapeFactorSpectral.*");
 }
 
 void
@@ -261,22 +255,59 @@ test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void)
   nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, test.obs);
 }
 
-/* A free population parameter aborts */
+/*
+ * With sigma free on its default bounds, [0.2, 1], at interp-abstol 1e-3, the interpolants
+ * written into the catalog have sigma as a third variable, and -2 ln L of the dataset at
+ * sigma 0.25 and 0.5 agrees with the one of the same catalog without interpolants (the
+ * integrals) within 2 times the number of galaxies times interp-abstol, the bound of the
+ * change of each galaxy's ln P.
+ */
 void
-test_nc_data_cluster_wl_factor_shape_interp_free_pop (void)
+test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
 {
-  g_test_trap_subprocess ("/nc/data_cluster_wl_factor/shape_interp/free_pop/subprocess", 0, 0);
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr ("*the population parameter sigma of NcGalaxyShapePopGauss is free*");
-}
+  const gdouble sigmas[] = {0.25, 0.5};
+  NcmSerialize *ser      = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmData *data          = NCM_DATA (test->dcwlf);
+  const gdouble abstol   = 1.0e-3;
+  NcGalaxyShapeFactorSpectral *gsfs;
+  NcGalaxyWLObs *obs_plain;
+  GVariant *obs_ser;
+  guint i, k;
 
-void
-test_nc_data_cluster_wl_factor_shape_interp_free_pop_subprocess (void)
-{
-  TestNcDataClusterWLFactorShapeInterp test;
+  g_object_get (test->dcwlf, "shape-factor", &gsfs, NULL);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, abstol);
+  nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs, 3);
+  ncm_mset_param_set_ftype (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
 
-  test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (TRUE));
-  ncm_mset_param_set_ftype (test.mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
-  nc_data_cluster_wl_factor_write_shape_interp (test.dcwlf, test.mset, test.obs);
+  obs_ser = ncm_serialize_to_variant (ser, G_OBJECT (test->obs));
+  ncm_serialize_reset (ser, FALSE);
+  obs_plain = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
+
+  nc_data_cluster_wl_factor_write_shape_interp (test->dcwlf, test->mset, test->obs);
+
+  for (i = 0; i < SHAPE_INTERP_NROWS; i++)
+    g_assert_cmpuint (ncm_spectral_tensor_get_n_vars (nc_galaxy_wl_obs_peek_shape_interp (test->obs, i)), ==, 3);
+
+  for (k = 0; k < G_N_ELEMENTS (sigmas); k++)
+  {
+    gdouble m2lnL, m2lnL_plain;
+
+    ncm_mset_param_set (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, sigmas[k]);
+
+    nc_data_cluster_wl_factor_set_obs (test->dcwlf, test->obs);
+    ncm_data_m2lnL_val (data, test->mset, &m2lnL);
+    nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs_plain);
+    ncm_data_m2lnL_val (data, test->mset, &m2lnL_plain);
+
+    g_assert_true (gsl_finite (m2lnL));
+    g_test_message ("sigma %g: -2lnL %.15g, without interpolants %.15g, difference %.3e", sigmas[k], m2lnL, m2lnL_plain, m2lnL - m2lnL_plain);
+    g_assert_cmpfloat (fabs (m2lnL - m2lnL_plain), <=, 2.0 * SHAPE_INTERP_NROWS * abstol);
+  }
+
+  g_variant_unref (obs_ser);
+  nc_galaxy_wl_obs_free (obs_plain);
+  ncm_serialize_free (ser);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
 }
 

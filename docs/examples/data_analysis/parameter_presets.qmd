@@ -1,0 +1,181 @@
+---
+title: "Published Parameter Presets"
+
+format:
+  html: default
+  ipynb:
+    echo: true
+
+format-links: [ipynb]
+---
+
+{{< include /_functions.qmd >}}
+
+{{< include /notes/_numcosmo_py.qmd >}}
+
+## Introduction
+
+Analyses often start from the parameters an experiment has published. A forecast
+around the Planck 2018 cosmology needs the Planck 2018 best fit; a fit started there
+needs steps of the size of the published uncertainties. NumCosmo distributes these
+published values as parameter presets. A preset holds the values, uncertainties and
+fit flags of one publication and one data combination, and sets them on the models of
+an analysis.
+
+In the API a preset is an `Ncm.MSetPreset`. Its `apply()` method sets the value, the
+scale and the fit flag of each parameter the preset lists, and leaves every other
+parameter of the model set unchanged. NumCosmo distributes presets for Planck 2018
+[@2018arXiv180706209P] and DESI DR2 [@2025PhRvD.112h3515A]. This example lists them,
+applies them through `numcosmo_py`[^numcosmo_py], and shows the values they set.
+
+## Distributed presets
+
+The presets are YAML files in the `mset_presets` subdirectory of the NumCosmo data
+directory. `Ncm.MSetPreset.list_names()` lists them and
+`Ncm.MSetPreset.new_from_name()` loads one.
+
+```{python}
+# | code-fold: true
+
+import pandas as pd
+from IPython.display import HTML, display
+
+from numcosmo_py import Nc, Ncm
+from numcosmo_py.cosmology import Cosmology, apply_preset, create_cosmo
+
+Ncm.cfg_init()
+
+rows = []
+for name in Ncm.MSetPreset.list_names():
+    preset = Ncm.MSetPreset.new_from_name(name)
+    rows.append(
+        {
+            "name": name,
+            "data combination": preset.peek_data_combination(),
+            "statistic": preset.peek_statistic(),
+            "parameters": len(preset.props.value.keys()),
+        }
+    )
+
+display(HTML(pd.DataFrame(rows).to_html(index=False)))
+```
+
+Each Planck 2018 data combination has two presets. The first sets the cosmological
+parameters. The one with the `_nuisance` suffix sets the foreground and calibration
+parameters of the plik likelihood, which are parameters of `Nc.PlanckFI`. A model set
+without the Planck likelihood uses the first preset alone.
+
+## What a preset sets
+
+Every distributed preset follows the same conventions:
+
+- **Value.** The best fit of the publication's chains: the `.minimum` file of the
+  Planck Legacy Archive chains (release R3.01) for Planck, and the posterior maximum
+  of the DESI release for DESI.
+- **Scale.** The marginalized standard deviation of the chains. The scale is the
+  initial step of `Ncm.FitNLOpt`, the width that
+  `Ncm.MSetTransKernGauss.set_cov_from_rescale()` multiplies, and the lower limit of
+  the step scale in the numerical derivatives of `Ncm.Fit`.
+- **Fit flag.** Free for the parameters the publication varies; fixed for the ones it
+  holds constant. The fixed ones are $\Omega_k = 0$, $w = -1$, $T_\gamma = 2.7255\,\mathrm{K}$,
+  one massive neutrino of $0.06\,\mathrm{eV}$, and the number of massless neutrino
+  species `ENnu`.
+- **No bounds.** The model bounds give the range where NumCosmo computes the model.
+  Each analysis narrows them as it needs, so no preset changes them.
+
+Every value and scale was checked against the tables of its publication, and the
+YAML file records the source file of each number. `tools/make_mset_presets.py`
+regenerates the files from the downloaded chains.
+
+## Parametrization and model
+
+A preset is written in the parametrization of its publication. The cosmological
+presets set $\Omega_b h^2$ and $\Omega_c h^2$, which are the parameters `omegab` and
+`omegac` of the reparametrization `Nc.HICosmoDEReparamCMB` of `Nc.HICosmoDEXcdm`.
+The preset requires that reparametrization: applying it to a model without it raises
+an error and changes nothing.
+
+The cosmological presets also need one massive neutrino, the power-law primordial
+spectrum `Nc.HIPrimPowerLaw` and the reionization model `Nc.HIReionCamb`. This is the
+model that `create_cosmo()` builds.
+
+The effective number of neutrinos is $N_{\rm eff} = 3.046$ in Planck 2018 and
+$N_{\rm eff} = 3.044$ in DESI DR2. NumCosmo writes $N_{\rm eff}$ as the number of
+massless species `ENnu` plus the contribution of the massive neutrino. At the
+neutrino temperature $T_\nu = 0.71611\,T_\gamma$, one massive neutrino contributes
+$1.0132$. The Planck presets therefore set `ENnu` $= 2.0328$ and the DESI preset sets
+`ENnu` $= 2.0308$.
+
+The DESI preset sets only cosmological parameters. Its CMB likelihoods are the Planck
+PR3 low-$\ell$ TT and EE likelihoods, the Planck PR4 CamSpec TT, TE, EE likelihood and
+the Planck PR4 and ACT DR6 lensing likelihood. NumCosmo has no CamSpec likelihood, so
+the preset omits its nuisance parameters.
+
+## Creating a cosmology from a preset
+
+`create_cosmo(preset=...)` builds the model and applies the preset last.
+`Cosmology.from_preset()` does the same and adds the distance and power-spectrum
+objects of `Cosmology.default()`.
+
+```{python}
+cosmo = create_cosmo(preset="planck2018_ttteee_lowl_lowe_lensing")
+mset = Ncm.MSet.new_array([cosmo])
+mset.prepare_fparam_map()
+mset.pretty_log()
+```
+
+```{python}
+cosmology = Cosmology.from_preset("desi_dr2_bao_cmb")
+print(f"H0 = {cosmology.cosmo['H0']:.4f} km/s/Mpc")
+print(f"D_C(z = 1) = {cosmology.dist.comoving(cosmology.cosmo, 1.0):.6f} c/H0")
+```
+
+## Values and scales of the presets
+
+The table shows, for each cosmological preset, the value and the scale of every free
+parameter.
+
+```{python}
+# | code-fold: true
+
+rows = []
+for name in ["planck2018_tt_lowl_lowe", "planck2018_ttteee_lowl_lowe",
+             "planck2018_ttteee_lowl_lowe_lensing", "desi_dr2_bao_cmb"]:
+    preset = Ncm.MSetPreset.new_from_name(name)
+    values, scales = preset.props.value, preset.props.scale
+    for key in sorted(scales.keys()):
+        rows.append(
+            {
+                "preset": name,
+                "parameter": key,
+                "value": values.get_double(key)[1],
+                "scale": scales.get_double(key)[1],
+            }
+        )
+
+table = pd.DataFrame(rows).pivot(index="parameter", columns="preset", values=["value", "scale"])
+display(HTML(table.to_html(float_format=lambda x: f"{x:.6g}")))
+```
+
+## Applying a preset to a model set
+
+A preset applies to any model set that holds its parameters. The Planck likelihoods
+need both presets of a data combination: the cosmological one, and the `_nuisance`
+one for `Nc.PlanckFI`. `apply_preset()` loads a preset by name and applies it.
+
+```{python}
+cosmo = create_cosmo()
+planck = Nc.PlanckFICorTTTEEE()
+mset = Ncm.MSet.new_array([planck, cosmo])
+
+apply_preset(mset, "planck2018_ttteee_lowl_lowe")
+apply_preset(mset, "planck2018_ttteee_lowl_lowe_nuisance")
+mset.prepare_fparam_map()
+
+print(f"free parameters: {mset.fparams_len()}")
+print(f"A_planck = {planck['A_planck']}")
+```
+
+`numcosmo_py.experiments.planck18.mset_set_parameters()` applies the same two presets
+for the Planck 2018 experiments.
+

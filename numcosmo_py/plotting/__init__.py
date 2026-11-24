@@ -48,6 +48,20 @@ if original_display is not None:
     os.environ["DISPLAY"] = original_display
 
 
+class _MCSamplesKeepFixed(getdist.MCSamples):
+    """A getdist.MCSamples that keeps every column of the samples it loads.
+
+    While loading, getdist.MCSamples deletes the columns it finds constant. With separate
+    chains it tests only the first chain, so every parameter is deleted when the rows of
+    the first chain are all equal, as when walker 0 rejects every proposal. This class
+    skips the deletion. A column that is constant in all rows is therefore kept, and
+    getdist raises MCSamplesError when its marginal statistics or its plot are requested.
+    """
+
+    def deleteFixedParams(self) -> None:
+        """Keep every column."""
+
+
 @dataclasses.dataclass(frozen=True, kw_only=True)
 class CatalogData:
     """Data for a catalog."""
@@ -114,10 +128,13 @@ class CatalogData:
     def to_mcsamples(self, collapse: bool = False) -> getdist.MCSamples:
         """Convert the catalog data to a getdist.MCSamples object.
 
+        No column is removed. For a column that is constant in all rows, getdist raises
+        MCSamplesError when its marginal statistics or its plot are requested.
+
         :param collapse: If True, collapse the samples into a single chain.
         """
         if collapse:
-            return getdist.MCSamples(
+            return _MCSamplesKeepFixed(
                 samples=self.rows,
                 loglikes=self.posterior,
                 names=self.params_names,
@@ -130,7 +147,7 @@ class CatalogData:
         assert self.rows.shape[0] % self.nchains == 0
         ncols = self.rows.shape[1]
 
-        return getdist.MCSamples(
+        return _MCSamplesKeepFixed(
             samples=self.rows.reshape(-1, self.nchains, ncols).transpose(1, 0, 2),
             loglikes=self.posterior.reshape(-1, self.nchains).T,
             names=self.params_names,
@@ -163,6 +180,8 @@ def mcat_to_catalog_data(
             for j in range(nchains)
         ]
     )
+    if rows.size == 0:
+        raise ValueError(f"Catalog {name} has no rows.")
 
     if indices is not None:
         indices_array = np.array(indices)

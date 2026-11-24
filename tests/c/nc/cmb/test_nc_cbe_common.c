@@ -395,7 +395,9 @@ test_nc_cbe_prec (TestNcCBE *test, gconstpointer pdata)
 
   nc_cbe_precision_assert_default (cbe_prec);
 
-  /* A data file that does not exist is replaced, with a warning, by the default one. */
+  /* The pspec default of a data file is NULL, which selects the existing file in the
+   * NumCosmo data directory; NULL set later and a file that does not exist (with a
+   * warning) select the same file. */
   {
     const gchar *file_props[] = {
       "sBBN-file", "hyrec-Alpha-inf-file", "hyrec-R-inf-file", "hyrec-two-photon-tables-file"
@@ -404,15 +406,25 @@ test_nc_cbe_prec (TestNcCBE *test, gconstpointer pdata)
 
     for (i = 0; i < G_N_ELEMENTS (file_props); i++)
     {
+      GParamSpec *pspec   = g_object_class_find_property (G_OBJECT_GET_CLASS (cbe_prec), file_props[i]);
       gchar *default_file = NULL;
       gchar *file         = NULL;
 
+      g_assert_nonnull (pspec);
+      g_assert_null (G_PARAM_SPEC_STRING (pspec)->default_value);
+
       g_object_get (cbe_prec, file_props[i], &default_file, NULL);
+      g_assert_true (g_file_test (default_file, G_FILE_TEST_EXISTS));
 
       g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*not found, using default.*");
       g_object_set (cbe_prec, file_props[i], "/nonexistent/numcosmo/test_nc_cbe.dat", NULL);
       g_test_assert_expected_messages ();
 
+      g_object_get (cbe_prec, file_props[i], &file, NULL);
+      g_assert_cmpstr (file, ==, default_file);
+      g_free (file);
+
+      g_object_set (cbe_prec, file_props[i], NULL, NULL);
       g_object_get (cbe_prec, file_props[i], &file, NULL);
       g_assert_cmpstr (file, ==, default_file);
 

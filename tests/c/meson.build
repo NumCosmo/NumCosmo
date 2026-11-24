@@ -147,8 +147,12 @@ math_tests = [
         'sources': ['ncm/algebra/test_ncm_spectral_polar.c'],
     },
     {
-        'name': 'ncm_spectral_polar_panels',
-        'sources': ['ncm/algebra/test_ncm_spectral_polar_panels.c'],
+        'name': 'ncm_spectral_tensor',
+        'sources': ['ncm/algebra/test_ncm_spectral_tensor.c'],
+    },
+    {
+        'name': 'ncm_spectral_tensor_builder',
+        'sources': ['ncm/algebra/test_ncm_spectral_tensor_builder.c'],
     },
     {
         'name': 'ncm_nnls',
@@ -250,6 +254,10 @@ math_tests = [
         'sources': ['ncm/spline/test_ncm_spline_bspline.c'],
     },
     {
+        'name': 'ncm_bspline',
+        'sources': ['ncm/spline/test_ncm_bspline.c'],
+    },
+    {
         'name': 'ncm_spline_hermite',
         'sources': ['ncm/spline/test_ncm_spline_hermite.c'],
     },
@@ -335,6 +343,10 @@ math_tests = [
     {
         'name': 'ncm_mset_func',
         'sources': ['ncm/model/test_ncm_mset_func.c'],
+    },
+    {
+        'name': 'ncm_mset_preset',
+        'sources': ['ncm/model/test_ncm_mset_preset.c'],
     },
     {
         'name': 'ncm_model_builder',
@@ -566,6 +578,10 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_util.c'],
     },
     {
+        'name': 'ncm_vmath',
+        'sources': ['ncm/core/test_ncm_vmath.c'],
+    },
+    {
         'name': 'ncm_quaternion',
         'sources': ['ncm/algebra/test_ncm_quaternion.c'],
     },
@@ -692,6 +708,10 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_hubble_cov.c'],
     },
     {
+        'name': 'nc_data_planck_lkl',
+        'sources': ['nc/data/test_nc_data_planck_lkl.c'],
+    },
+    {
         'name': 'nc_data_snia_cov',
         'sources': ['nc/data/test_nc_data_snia_cov.c'],
     },
@@ -815,6 +835,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
     },
     {
+        'name': 'nc_galaxy_pz_bspline_sqrt',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_pz_bspline_sqrt.c'],
+    },
+    {
         'name': 'nc_galaxy_redshift_factor_spline',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_redshift_factor_spline.c'],
     },
@@ -830,9 +854,13 @@ galaxy_tests = [
         'name': 'nc_galaxy_shape_factor_moments_tilt',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_moments_tilt.c'],
     },
+    # The timeout follows the -O0 coverage build, where the test takes 100 to 140 s on
+    # the CI runners and a job can run 3.6 times slower; 240 s is 720 s under the lane's
+    # multiplier of 3.
     {
         'name': 'nc_galaxy_shape_factor_spectral',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral.c'],
+        'timeout': 240,
     },
     {
         'name': 'nc_galaxy_shape_factor_spectral_cert',

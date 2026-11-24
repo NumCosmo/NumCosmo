@@ -179,13 +179,13 @@ _truth_eval_auto (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows)
   return v;
 }
 
-/* Builds a cubic-notaknot pz spline of a Gaussian bump: STRADDLE_ZAVG[straddle_i]
+/*
+ * Builds the NcGalaxyPz of a table of a Gaussian bump: STRADDLE_ZAVG[straddle_i]
  * when @straddle_i >= 0 (deliberately centred near z_cl), otherwise a random
- * centre away from the domain edges. Mirrors
- * test_nc_data_cluster_wl_truth.c's pz-branch construction exactly, just
- * standalone (the Spline scheme takes the spline directly, no SD wrapper). */
-static NcmSpline *
-_truth_make_pz_spline (NcmRNG *rng, gint straddle_i)
+ * centre away from the domain edges.
+ */
+static NcGalaxyPz *
+_truth_make_pz (NcmRNG *rng, gint straddle_i)
 {
   const guint npoints = 20;
   const gdouble z_min = 0.01;
@@ -196,7 +196,7 @@ _truth_make_pz_spline (NcmRNG *rng, gint straddle_i)
   const gdouble x_max = MIN (z_avg + 5.0 * z_sd, z_max);
   NcmVector *xv       = ncm_vector_new (npoints);
   NcmVector *yv       = ncm_vector_new (npoints);
-  NcmSpline *pz;
+  NcGalaxyPz *pz;
   guint j;
 
   for (j = 0; j < npoints; j++)
@@ -208,7 +208,7 @@ _truth_make_pz_spline (NcmRNG *rng, gint straddle_i)
     ncm_vector_set (yv, j, y);
   }
 
-  pz = NCM_SPLINE (ncm_spline_cubic_notaknot_new_full (xv, yv, TRUE));
+  pz = NC_GALAXY_PZ (nc_galaxy_pz_bspline_sqrt_new_from_table (xv, yv));
 
   ncm_vector_free (xv);
   ncm_vector_free (yv);
@@ -223,11 +223,11 @@ _truth_gen_redshift (const gchar *redshift, NcGalaxyRedshiftFactor *z_dist, NcmM
 {
   if (g_strcmp0 (redshift, "spline") == 0)
   {
-    NcmSpline *pz = _truth_make_pz_spline (rng, straddle_i);
+    NcGalaxyPz *pz = _truth_make_pz (rng, straddle_i);
 
     nc_galaxy_redshift_factor_spline_data_set (NC_GALAXY_REDSHIFT_FACTOR_SPLINE (z_dist), z_data, pz);
     nc_galaxy_redshift_factor_gen (z_dist, mset, z_data, rng);
-    ncm_spline_free (pz);
+    nc_galaxy_pz_free (pz);
   }
   else /* composed */
   {

@@ -29,7 +29,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/ncm/algebra/ncm_matrix.h>
-#include <numcosmo/ncm/algebra/ncm_spectral_polar_panels.h>
 
 G_BEGIN_DECLS
 
@@ -56,7 +55,7 @@ G_DECLARE_FINAL_TYPE (NcmSpectralPolar, ncm_spectral_polar, NCM, SPECTRAL_POLAR,
  * NcmSpectralPolarError:
  * @NCM_SPECTRAL_POLAR_ERROR_MAX_DEPTH: a panel reached #NcmSpectralPolar:max-depth bisections without passing the test
  *
- * Error codes of ncm_spectral_polar_integrate() and ncm_spectral_polar_build().
+ * Error codes of ncm_spectral_polar_integrate().
  */
 typedef enum _NcmSpectralPolarError /*< prefix=NCM_SPECTRAL_POLAR_ERROR >*/
 {
@@ -84,7 +83,6 @@ gdouble ncm_spectral_polar_get_edge_ratio (NcmSpectralPolar *sp);
 guint ncm_spectral_polar_get_min_radial_panels (NcmSpectralPolar *sp);
 
 gdouble ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
-void ncm_spectral_polar_build (NcmSpectralPolar *sp, NcmSpectralPolarF F, gpointer user_data, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, NcmSpectralPolarPanels *spp, guint64 *n_eval, GError **error);
 void ncm_spectral_polar_peak_edges (NcmSpectralPolar *sp, gdouble R, gdouble r_peak, gdouble theta_peak, gdouble L_r, gdouble L_theta, GArray *r_edges, GArray *theta_edges);
 
 G_END_DECLS

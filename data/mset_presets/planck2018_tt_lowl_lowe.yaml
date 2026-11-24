@@ -1,0 +1,41 @@
+# Planck 2018 TT+lowE, plik high-ell likelihood, base LCDM.
+# value: best fit of base_plikHM_TT_lowl_lowE.minimum; scale: sddev of its .margestats.
+# Checked against the PLA 68% tables (2018, v2), section 2.1, and
+# Planck 2018 VI Tables 1 and 2.
+NcmMSetPreset:
+  desc: 'Planck 2018 results VI, A&A 641, A6 (2020), arXiv:1807.06209; PLA chains COM_CosmoParams_base-plikHM_R3.01, base_plikHM_TT_lowl_lowE'
+  data-combination: 'Planck 2018 TT+lowE'
+  statistic: 'best fit'
+  reparam:
+    NcHICosmo: 'NcHICosmoDEReparamCMB'
+  value:
+    NcHICosmo:H0: 66.85791  # H0
+    NcHICosmo:omegac: 0.1206815  # omegach2
+    NcHICosmo:omegab: 0.0221258  # omegabh2
+    NcHIPrim:ln10e10ASA: 3.041305  # logA
+    NcHIPrim:n_SA: 0.963515  # ns
+    NcHIReion:z_re: 7.542419  # zrei
+    NcHICosmo:Omegak: 0.0  # omegak, base_plikHM_TT_lowl_lowE.ranges
+    NcHICosmo:w: -1.0  # w, base_plikHM_TT_lowl_lowE.ranges
+    NcHICosmo:Tgamma0: 2.7255  # T_CMB [K], Planck 2018 VI (Fixsen 2009)
+    NcHICosmo:massnu_0: 0.06  # mnu [eV], base_plikHM_TT_lowl_lowE.ranges
+    NcHICosmo:ENnu: 2.0328  # nnu = 3.046 minus 1.0132 of the massive nu, base_plikHM_TT_lowl_lowE.ranges
+  scale:
+    NcHICosmo:H0: 0.91651165
+    NcHICosmo:omegac: 0.0020883835
+    NcHICosmo:omegab: 0.00022097838
+    NcHIPrim:ln10e10ASA: 0.016436048
+    NcHIPrim:n_SA: 0.0056746939
+    NcHIReion:z_re: 0.82391926
+  fit:
+    NcHICosmo:H0: true
+    NcHICosmo:omegac: true
+    NcHICosmo:omegab: true
+    NcHIPrim:ln10e10ASA: true
+    NcHIPrim:n_SA: true
+    NcHIReion:z_re: true
+    NcHICosmo:Omegak: false
+    NcHICosmo:w: false
+    NcHICosmo:Tgamma0: false
+    NcHICosmo:massnu_0: false
+    NcHICosmo:ENnu: false

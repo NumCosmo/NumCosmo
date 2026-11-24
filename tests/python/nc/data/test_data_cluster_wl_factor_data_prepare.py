@@ -90,26 +90,28 @@ def _galaxies(n_gal):
     return ra, dec, zp, sigma0, e1, e2, std_noise
 
 
-def _gauss_pz_spline(zp, sigma):
+def _gauss_pz(zp, sigma):
     z = np.linspace(max(1.0e-3, zp - 6.0 * sigma), zp + 6.0 * sigma, 64)
     pz = np.exp(-0.5 * ((z - zp) / sigma) ** 2) / (np.sqrt(2.0 * np.pi) * sigma)
-    spline = Ncm.SplineCubicNotaknot.new()
-    spline.set(
-        Ncm.Vector.new_array(z.tolist()), Ncm.Vector.new_array(pz.tolist()), True
+    return Nc.GalaxyPzBSplineSqrt.new_from_table(
+        Ncm.Vector.new_array(z.tolist()), Ncm.Vector.new_array(pz.tolist())
     )
-    return spline
 
 
-def _build(shape_name, profile_name, redshift_name, n_gal=None):
-    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset)."""
+def _build(
+    shape_name, profile_name, redshift_name, n_gal=None, zf=100.0, separate_dist=False
+):
+    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset). The
+    surface mass density has a distance of final redshift zf; with separate_dist the
+    halo position has its own distance (zf = 100), otherwise it shares that one."""
     if n_gal is None:
         n_gal = N_GAL_OF.get(shape_name, N_GAL)
     cosmo = Nc.HICosmoDEXcdm.new()
-    dist = Nc.Distance.new(100.0)
+    dist = Nc.Distance.new(zf)
     hms = Nc.HaloCMParam.new(Nc.HaloMassSummaryMassDef.MEAN, 200.0)
     hms.param_set_by_name("log10MDelta", 14.5)
     dp = PROFILES[profile_name](hms)
-    hp = Nc.HaloPosition.new(dist)
+    hp = Nc.HaloPosition.new(Nc.Distance.new(100.0) if separate_dist else dist)
     smd = Nc.WLSurfaceMassDensity.new(dist)
     hp.param_set_by_name("z", Z_CL)
     hp.prepare(cosmo)
@@ -160,8 +162,8 @@ def _build(shape_name, profile_name, redshift_name, n_gal=None):
         for col in cols:
             obs.set(col, i, float(values[col][i]))
         if redshift_name == "spline":
-            # One spline object per row, never shared between rows.
-            obs.set_pz(i, _gauss_pz_spline(zp[i], sigma0[i] * (1.0 + zp[i])))
+            # One p(z) object per row, never shared between rows.
+            obs.set_pz(i, _gauss_pz(zp[i], sigma0[i] * (1.0 + zp[i])))
 
     dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
@@ -220,6 +222,60 @@ def test_parallel_data_prepare_matches_serial(shape_name, profile_name, redshift
     assert serial[1] == parallel[1]
     assert np.all(np.isfinite(serial[2]))
     np.testing.assert_array_equal(serial[2], parallel[2])
+
+
+# Relative tolerance of the per-galaxy -2 ln P between distances of different zf; the
+# largest difference measured in these tests is 3.2e-15.
+ZF_RTOL = 1.0e-13
+
+
+def _z_top(dcwlf):
+    obs = dcwlf.peek_obs()
+    return max(obs.peek_pz(i).get_range()[1] for i in range(obs.len()))
+
+
+@pytest.mark.parametrize("separate_dist", [False, True])
+def test_distance_zf_required(separate_dist):
+    """The prepare requires of the distance of the surface mass density a final redshift
+    that reaches the redshift integration of every galaxy (nc_distance_require_zf()). A
+    distance built with a low zf then has the largest upper limit of the P(z) as its zf,
+    and the likelihood matches that of a distance built with a large zf, also after the
+    cluster moves."""
+    zf = 0.5
+    ref, mset_ref = _build("var-add", "nfw", "spline", separate_dist=separate_dist)
+    dcwlf, mset = _build("var-add", "nfw", "spline", zf=zf, separate_dist=separate_dist)
+    dist = mset.peek(Nc.WLSurfaceMassDensity.id()).props.distance
+    z_top = _z_top(dcwlf)
+
+    assert dist.props.zf == zf < z_top
+
+    m2lnP = _m2lnP(dcwlf, mset)
+
+    assert dist.props.zf == z_top
+    np.testing.assert_allclose(m2lnP, _m2lnP(ref, mset_ref), rtol=ZF_RTOL, atol=0.0)
+
+    for m in (mset, mset_ref):
+        m.peek(Nc.HaloPosition.id()).param_set_by_name("z", 0.3)
+
+    np.testing.assert_allclose(
+        _m2lnP(dcwlf, mset), _m2lnP(ref, mset_ref), rtol=ZF_RTOL, atol=0.0
+    )
+
+
+def test_distance_zf_required_after_model_swap():
+    """A surface mass density set in the model set after the first evaluation, with a
+    distance of low zf, has its zf raised at the next prepare although the catalog did
+    not change, and the likelihood matches the one before the swap."""
+    dcwlf, mset = _build("var-add", "nfw", "spline", separate_dist=True)
+    cosmo = mset.peek(Nc.HICosmo.id())
+    m2lnP = _m2lnP(dcwlf, mset)
+
+    smd = Nc.WLSurfaceMassDensity.new(Nc.Distance.new(0.6))
+    smd.prepare_if_needed(cosmo)
+    mset.set(smd)
+
+    np.testing.assert_allclose(_m2lnP(dcwlf, mset), m2lnP, rtol=ZF_RTOL, atol=0.0)
+    assert smd.props.distance.props.zf == _z_top(dcwlf)
 
 
 def _reload(dcwlf):

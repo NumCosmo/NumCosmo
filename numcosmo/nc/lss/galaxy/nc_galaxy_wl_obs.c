@@ -54,7 +54,7 @@
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/spline/ncm_spline.h"
 #include "ncm/algebra/ncm_vector.h"
-#include "ncm/algebra/ncm_spectral_polar_panels.h"
+#include "ncm/algebra/ncm_spectral_tensor.h"
 #include "nc_enum_types.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/background/nc_hicosmo.h"
@@ -245,14 +245,15 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
   /**
    * NcGalaxyWLObs:pz:
    *
-   * P(z) splines.
+   * The redshift densities of the galaxies: a #NcGalaxyPz for each row that has one,
+   * keyed by the row.
    *
    */
   g_object_class_install_property (object_class,
                                    PROP_PZ,
                                    g_param_spec_boxed ("pz",
                                                        "P(z)",
-                                                       "P(z) splines",
+                                                       "Redshift density of each galaxy",
                                                        NCM_TYPE_OBJ_DICT_INT,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
@@ -290,7 +291,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
    * NcGalaxyWLObs:shape-interp:
    *
    * The interpolants of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of the galaxies, a
-   * #NcmSpectralPolarPanels for each row that has one, keyed by the row; empty when the
+   * #NcmSpectralTensor for each row that has one, keyed by the row; empty when the
    * rows changed after #NcGalaxyWLObs:shape-interp-source was set.
    */
   g_object_class_install_property (object_class,
@@ -344,8 +345,14 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
       const gint key = g_array_index (keys, gint, i);
       GObject *obj   = ncm_obj_dict_int_peek (self->pz, key);
 
-      g_assert (NCM_IS_SPLINE (obj));
-      ncm_spline_prepare (NCM_SPLINE (obj));
+      /* Catalogs written by NumCosmo 0.x before NcGalaxyPz: this check is dropped in 1.0 */
+      if (NCM_IS_SPLINE (obj))
+        g_error ("nc_galaxy_wl_obs: the catalog holds the p(z) of row %d as a %s, the format written before NcGalaxyPz. "
+                 "Update the file with tools/nc_galaxy_pz_update_catalog.py. A catalog downloaded by NumCosmo "
+                 "(wl_obs_*.gvar in the NumCosmo data directory) can instead be removed, so that it is downloaded again.",
+                 key, G_OBJECT_TYPE_NAME (obj));
+
+      g_assert (NC_IS_GALAXY_PZ (obj));
     }
 
     g_array_unref (keys);
@@ -532,13 +539,14 @@ nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdoub
  * nc_galaxy_wl_obs_set_pz:
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
- * @pz: a #NcmSpline.
+ * @pz: a #NcGalaxyPz.
  *
- * Sets a P(z) spline in the observation data.
+ * Sets the redshift density of row @i to @pz, which is referenced. A #NcGalaxyPz does
+ * not change after construction, so one object may be set in several rows and catalogs.
  *
  */
 void
-nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcmSpline *pz)
+nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyPz *pz)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
@@ -581,35 +589,36 @@ nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
  *
- * Gets a P(z) spline from the observation data.
+ * Gets the redshift density of row @i.
  *
- * Returns: (transfer none): the P(z) spline.
+ * Returns: (transfer none) (nullable): the #NcGalaxyPz of row @i, or %NULL when the row
+ * has none.
  *
  */
-NcmSpline *
+NcGalaxyPz *
 nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  return NCM_SPLINE (ncm_obj_dict_int_peek (self->pz, i));
+  return (NcGalaxyPz *) ncm_obj_dict_int_peek (self->pz, i);
 }
 
 /**
  * nc_galaxy_wl_obs_set_shape_interp:
  * @obs: a #NcGalaxyWLObs
  * @i: row index
- * @spp: the interpolant of row @i
+ * @st: the interpolant of row @i
  *
  * Sets the interpolant of $\ln P(\epsilon_\mathrm{obs} \mid g)$ of row @i, referencing
- * @spp. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
+ * @st. It is returned by nc_galaxy_wl_obs_peek_shape_interp() only after
  * nc_galaxy_wl_obs_set_shape_interp_source() and while the rows are unchanged.
  */
 void
-nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralPolarPanels *spp)
+nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralTensor *st)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (spp));
+  ncm_obj_dict_int_set (self->shape_interp, i, G_OBJECT (st));
 }
 
 /**
@@ -617,18 +626,27 @@ nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectra
  * @obs: a #NcGalaxyWLObs
  * @i: row index
  *
+ * An object of another type in #NcGalaxyWLObs:shape-interp aborts with an error.
+ *
  * Returns: (transfer none) (nullable): the interpolant of row @i, or %NULL when the row has
  * none, there is no record or the rows changed after the record was set.
  */
-NcmSpectralPolarPanels *
+NcmSpectralTensor *
 nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+  GObject *interp;
 
   if (!_nc_galaxy_wl_obs_shape_interp_current (obs))
     return NULL;
 
-  return (NcmSpectralPolarPanels *) ncm_obj_dict_int_peek (self->shape_interp, i);
+  interp = ncm_obj_dict_int_peek (self->shape_interp, i);
+
+  if ((interp != NULL) && !NCM_IS_SPECTRAL_TENSOR (interp))
+    g_error ("nc_galaxy_wl_obs_peek_shape_interp: the interpolant of row %u is a %s, not a NcmSpectralTensor.",
+             i, G_OBJECT_TYPE_NAME (interp));
+
+  return (NcmSpectralTensor *) interp;
 }
 
 /**

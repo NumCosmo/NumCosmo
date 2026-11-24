@@ -1,0 +1,44 @@
+# DESI DR2 BAO + CMB (Planck PR3 low-ell TT and EE, Planck PR4 CamSpec TTTEEE,
+# Planck PR4 + ACT DR6 lensing), base LCDM. Cosmological parameters only: the
+# CamSpec nuisance parameters have no NumCosmo likelihood.
+# value: best fit (posterior maximum) of iminuit/.../bestfit.minimum; scale:
+# standard deviation of the cobaya chains (GetDist, ignore_rows 0.3).
+# Checked against the paper's Table tab:cosmo_constraints and chain.margestats.
+# N_eff = 3.044 (DESI), not the Planck 2018 3.046; T_CMB is the CAMB default.
+NcmMSetPreset:
+  desc: 'DESI DR2 results II, Phys. Rev. D 112, 083515 (2025), arXiv:2503.14738; chains data.desi.lbl.gov/public/papers/y3/bao-cosmo-params, base/desi-bao-all_planck2018-lowl-TT-clik_planck2018-lowl-EE-clik_planck-NPIPE-highl-CamSpec-TTTEEE_planck-act-dr6-lensing'
+  data-combination: 'DESI DR2 BAO + CMB'
+  statistic: 'best fit'
+  reparam:
+    NcHICosmo: 'NcHICosmoDEReparamCMB'
+  value:
+    NcHICosmo:H0: 68.18328506  # H0
+    NcHICosmo:omegac: 0.1176214859  # omch2
+    NcHICosmo:omegab: 0.02233570898  # ombh2
+    NcHIPrim:ln10e10ASA: 3.059475643  # logA
+    NcHIPrim:n_SA: 0.9692218438  # ns
+    NcHIReion:z_re: 8.595638445  # zrei
+    NcHICosmo:Omegak: 0.0  # omegak, cobaya chain.updated.yaml
+    NcHICosmo:w: -1.0  # w, cobaya chain.updated.yaml
+    NcHICosmo:Tgamma0: 2.7255  # T_CMB [K], CAMB default
+    NcHICosmo:massnu_0: 0.06  # mnu [eV], cobaya chain.updated.yaml
+    NcHICosmo:ENnu: 2.0308  # nnu = 3.044 minus 1.0132 of the massive nu, cobaya chain.updated.yaml
+  scale:
+    NcHICosmo:H0: 0.28308830381256816
+    NcHICosmo:omegac: 0.0006288758672094349
+    NcHICosmo:omegab: 0.00012095924821108026
+    NcHIPrim:ln10e10ASA: 0.013551420603739026
+    NcHIPrim:n_SA: 0.003302942610848072
+    NcHIReion:z_re: 0.7202654284062767
+  fit:
+    NcHICosmo:H0: true
+    NcHICosmo:omegac: true
+    NcHICosmo:omegab: true
+    NcHIPrim:ln10e10ASA: true
+    NcHIPrim:n_SA: true
+    NcHIReion:z_re: true
+    NcHICosmo:Omegak: false
+    NcHICosmo:w: false
+    NcHICosmo:Tgamma0: false
+    NcHICosmo:massnu_0: false
+    NcHICosmo:ENnu: false
