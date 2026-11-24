@@ -68,9 +68,9 @@
  * A panel stores its series in one of the formats #NcmSpectralTensorPanelFormat. A panel of
  * format %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE stores the coefficients. A panel of format
  * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER stores a Tucker decomposition of them, a core
- * $g^{a_0 \dots a_{n - 1}}$ with $r_i \le K_i$ entries in variable $i$ and one factor
+ * $g^{\nu_0 \dots \nu_{n - 1}}$ with $r_i \le K_i$ entries in variable $i$ and one factor
  * $U_i$ of $K_i \times r_i$ entries per variable,
- * $$c^{k_0 \dots k_{n - 1}} = \sum_{a_0 = 0}^{r_0 - 1} \dots \sum_{a_{n - 1} = 0}^{r_{n - 1} - 1} g^{a_0 \dots a_{n - 1}} \prod_{i = 0}^{n - 1} U_i^{k_i a_i},$$
+ * $$c^{k_0 \dots k_{n - 1}} = \sum_{\nu_0 = 0}^{r_0 - 1} \dots \sum_{\nu_{n - 1} = 0}^{r_{n - 1} - 1} g^{\nu_0 \dots \nu_{n - 1}} \prod_{i = 0}^{n - 1} U_i{}^{k_i}{}_{\nu_i},$$
  * which holds $\sum_i K_i r_i + \prod_i r_i$ numbers instead of $\prod_i K_i$. The
  * ranks $r_i$ may differ between variables and between panels. The function
  * ncm_spectral_tensor_set_panel_tucker() fills a panel in this format.
@@ -807,12 +807,12 @@ _ncm_spectral_tensor_tucker_len (const guint *n_coeffs, const guint *ranks, guin
  * @ranks: (array length=n_r): the ranks $r_i$ of the panel
  * @len: number of data of the panel, $\sum_i K_i r_i + \prod_i r_i$
  * @data: (array length=len): the factors $U_i$, $i = 0, \dots, n - 1$, each $K_i \times r_i$
- *   with $U_i^{k a}$ at position $k r_i + a$, followed by the core $g^{a_0 \dots a_{n - 1}}$,
+ *   with $U_i{}^{k}{}_{\nu}$ at position $k r_i + \nu$, followed by the core $g^{\nu_0 \dots \nu_{n - 1}}$,
  *   the first index running fastest
  *
  * To give a subdomain a series stored in the format %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER,
  * makes the empty node @node a panel node, copying @data. The coefficients of the panel are
- * $$c^{k_0 \dots k_{n - 1}} = \sum_{a_0 = 0}^{r_0 - 1} \dots \sum_{a_{n - 1} = 0}^{r_{n - 1} - 1} g^{a_0 \dots a_{n - 1}} \prod_{i = 0}^{n - 1} U_i^{k_i a_i}.$$
+ * $$c^{k_0 \dots k_{n - 1}} = \sum_{\nu_0 = 0}^{r_0 - 1} \dots \sum_{\nu_{n - 1} = 0}^{r_{n - 1} - 1} g^{\nu_0 \dots \nu_{n - 1}} \prod_{i = 0}^{n - 1} U_i{}^{k_i}{}_{\nu_i}.$$
  * The call is an error unless @node is an empty node, @n_K and @n_r are
  * #NcmSpectralTensor:n-vars, every $K_i \ge 1$, every $1 \le r_i \le K_i$ and @len is
  * $\sum_i K_i r_i + \prod_i r_i$.
@@ -1779,7 +1779,7 @@ _ncm_spectral_tensor_eval_on_basis (NcmSpectralTensor *st, guint p, const guint 
  * recurrences of the Chebyshev polynomials. Otherwise it is summed by Clenshaw recurrences,
  * nested from the last variable, outermost, to the first. A panel of format
  * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER is summed from its factors and its core: the
- * vectors $\sum_k U_i^{k a} T_k (s_i)$ by Clenshaw recurrences, then their products with the
+ * vectors $\sum_k U_i{}^{k}{}_{\nu} T_k (s_i)$ by Clenshaw recurrences, then their products with the
  * core. The index @p must be below ncm_spectral_tensor_get_n_panels() and @n_vars must be
  * #NcmSpectralTensor:n-vars; neither is checked.
  *
@@ -2226,7 +2226,7 @@ static void _ncm_spectral_tensor_block_run (const gdouble *c, const guint *K, co
  * series of the panel is first summed over its last $m$ variables at @x_fixed, which gives
  * the coefficients of a series in the first $n - m$ variables: for a panel of format
  * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER, the core is summed with the vectors
- * $\sum_k U_i^{k a} T_k (s_i)$ of the fixed variables and multiplied by the factors of the
+ * $\sum_k U_i{}^{k}{}_{\nu} T_k (s_i)$ of the fixed variables and multiplied by the factors of the
  * others. The points of the run are then summed on that series, 8 at a time. The values
  * agree with those of ncm_spectral_tensor_eval() to rounding, not bit by bit. The call is
  * an error when @x_fixed has #NcmSpectralTensor:n-vars entries or more, or when the length
