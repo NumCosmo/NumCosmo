@@ -65,6 +65,16 @@
  * panel are stored with the first variable running fastest: the coefficient
  * $c^{k_0 \dots k_{n - 1}}$ is at position $k_0 + K_0 (k_1 + K_1 (k_2 + \dots))$.
  *
+ * A panel stores its series in one of the formats #NcmSpectralTensorPanelFormat. A panel of
+ * format %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE stores the coefficients. A panel of format
+ * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER stores a Tucker decomposition of them, a core
+ * $g^{a_0 \dots a_{n - 1}}$ with $r_i \le K_i$ entries in variable $i$ and one factor
+ * $U_i$ of $K_i \times r_i$ entries per variable,
+ * $$c^{k_0 \dots k_{n - 1}} = \sum_{a_0 = 0}^{r_0 - 1} \dots \sum_{a_{n - 1} = 0}^{r_{n - 1} - 1} g^{a_0 \dots a_{n - 1}} \prod_{i = 0}^{n - 1} U_i^{k_i a_i},$$
+ * which holds $\sum_i K_i r_i + \prod_i r_i$ numbers instead of $\prod_i K_i$. The
+ * ranks $r_i$ may differ between variables and between panels. The function
+ * ncm_spectral_tensor_set_panel_tucker() fills a panel in this format.
+ *
  * Nodes are numbered from 0, the root, in the order they are created, and the children of
  * a split node have consecutive numbers. A panel node also has a panel number, from 0, in
  * the order the series are set. To fill the table by hand,
@@ -131,10 +141,14 @@ typedef struct _NcmSpectralTensorNode
   gsize edges_offset;
 } NcmSpectralTensorNode;
 
-/* A panel: its panel node and the position of its coefficients in coeffs */
+/*
+ * A panel: its panel node, its NcmSpectralTensorPanelFormat and the position in coeffs of its
+ * coefficients (DENSE) or of its factors followed by its core (TUCKER)
+ */
 typedef struct _NcmSpectralTensorPanel
 {
   guint node;
+  guint format;
   gsize offset;
 } NcmSpectralTensorPanel;
 
@@ -150,7 +164,8 @@ struct _NcmSpectralTensor
   GArray *edges;       /* gdouble, the interior edges of all split nodes in sequence */
   GArray *panels;      /* NcmSpectralTensorPanel, in creation order */
   GArray *n_coeffs;    /* guint, n_vars per panel */
-  GArray *coeffs;      /* gdouble, the coefficients of every panel one after the other */
+  GArray *ranks;       /* guint, n_vars per panel: the Tucker ranks, n_coeffs for a DENSE panel */
+  GArray *coeffs;      /* gdouble, the data of every panel one after the other */
   GVariant *init_tree; /* the construct-only property, consumed by constructed() */
 };
 
@@ -167,6 +182,7 @@ ncm_spectral_tensor_init (NcmSpectralTensor *st)
   st->edges       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   st->panels      = g_array_new (FALSE, FALSE, sizeof (NcmSpectralTensorPanel));
   st->n_coeffs    = g_array_new (FALSE, FALSE, sizeof (guint));
+  st->ranks       = g_array_new (FALSE, FALSE, sizeof (guint));
   st->coeffs      = g_array_new (FALSE, FALSE, sizeof (gdouble));
   st->init_tree   = NULL;
 }
@@ -186,6 +202,7 @@ _ncm_spectral_tensor_set_property (GObject *object, guint prop_id, const GValue 
     case PROP_TREE:
       st->init_tree = g_value_dup_variant (value);
       break;
+
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -209,6 +226,7 @@ _ncm_spectral_tensor_get_property (GObject *object, guint prop_id, GValue *value
     case PROP_TREE:
       g_value_take_variant (value, _ncm_spectral_tensor_get_variant (st));
       break;
+
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -216,10 +234,15 @@ _ncm_spectral_tensor_get_property (GObject *object, guint prop_id, GValue *value
 }
 
 static gsize _ncm_spectral_tensor_block_len (const guint *n_coeffs, guint n_vars);
+static gsize _ncm_spectral_tensor_panel_len (NcmSpectralTensor *st, guint p);
+static void _ncm_spectral_tensor_tucker_expand (const guint n_vars, const guint *K, const guint *r, const gdouble *data, gdouble *c);
+static gdouble _ncm_spectral_tensor_eval_on_tucker (NcmSpectralTensor *st, guint p, guint n_vars, const gdouble *x);
 
 /*
- * The tree as a (adada(uuad)a(uauad)): the lower and the upper ends of the domain, the
- * split nodes in creation order and the panel nodes in creation order. The arrays are
+ * The tree as a (adada(uuad)a(uuauauad)): the lower and the upper ends of the domain, the
+ * split nodes in creation order and the panel nodes in creation order, each with its format,
+ * its numbers of coefficients, its ranks (empty for DENSE) and its data (the coefficients of
+ * a DENSE panel, the factors and the core of a TUCKER one). The arrays are
  * copied: the functions that fill the table rewrite them in place, and a variant must not
  * change after it is made. The four arrays are empty when the domain is not set.
  */
@@ -244,20 +267,23 @@ _ncm_spectral_tensor_get_variant (NcmSpectralTensor *st)
                                                       nd->n_edges, sizeof (gdouble)));
   }
 
-  g_variant_builder_init (&panels_builder, G_VARIANT_TYPE ("a(uauad)"));
+  g_variant_builder_init (&panels_builder, G_VARIANT_TYPE ("a(uuauauad)"));
 
   for (q = 0; q < st->panels->len; q++)
   {
     const NcmSpectralTensorPanel *pn = &g_array_index (st->panels, NcmSpectralTensorPanel, q);
     const guint *K                   = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * q);
+    const guint n_r                  = (pn->format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER) ? n_vars : 0;
 
-    g_variant_builder_add (&panels_builder, "(u@au@ad)", pn->node,
+    g_variant_builder_add (&panels_builder, "(uu@au@au@ad)", pn->node, pn->format,
                            g_variant_new_fixed_array (G_VARIANT_TYPE ("u"), K, n_vars, sizeof (guint)),
+                           g_variant_new_fixed_array (G_VARIANT_TYPE ("u"), &g_array_index (st->ranks, guint, (gsize) n_vars * q),
+                                                      n_r, sizeof (guint)),
                            g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), &g_array_index (st->coeffs, gdouble, pn->offset),
-                                                      _ncm_spectral_tensor_block_len (K, n_vars), sizeof (gdouble)));
+                                                      _ncm_spectral_tensor_panel_len (st, q), sizeof (gdouble)));
   }
 
-  return g_variant_ref_sink (g_variant_new ("(@ad@ad@a(uuad)@a(uauad))",
+  return g_variant_ref_sink (g_variant_new ("(@ad@ad@a(uuad)@a(uuauauad))",
                                             g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), st->node_bounds->data, n_dom, sizeof (gdouble)),
                                             g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), st->node_bounds->data + sizeof (gdouble) * n_vars, n_dom, sizeof (gdouble)),
                                             g_variant_builder_end (&splits_builder), g_variant_builder_end (&panels_builder)));
@@ -266,7 +292,9 @@ _ncm_spectral_tensor_get_variant (NcmSpectralTensor *st)
 /*
  * The tree given as a property: the domain, then the split nodes and the panel nodes in
  * their creation order, each through the public function, so that node and panel indices
- * are those of the original and every entry is checked as one made by hand.
+ * are those of the original and every entry is checked as one made by hand. A panel of
+ * format TUCKER is set by ncm_spectral_tensor_set_panel_tucker(), a DENSE one, whose ranks
+ * must be empty, by ncm_spectral_tensor_set_panel().
  */
 static void
 _ncm_spectral_tensor_constructed (GObject *object)
@@ -313,20 +341,39 @@ _ncm_spectral_tensor_constructed (GObject *object)
     for (q = 0; q < n_panels; q++)
     {
       GVariant *panel_var = g_variant_get_child_value (panels_var, q);
-      GVariant *K_var, *c_var;
-      guint node;
+      GVariant *K_var, *r_var, *c_var;
+      guint node, format;
       gsize n_K = 0;
+      gsize n_r = 0;
       gsize len = 0;
       const guint *K;
+      const guint *r;
       const gdouble *c;
 
-      g_variant_get (panel_var, "(u@au@ad)", &node, &K_var, &c_var);
+      g_variant_get (panel_var, "(uu@au@au@ad)", &node, &format, &K_var, &r_var, &c_var);
       K = g_variant_get_fixed_array (K_var, &n_K, sizeof (guint));
+      r = g_variant_get_fixed_array (r_var, &n_r, sizeof (guint));
       c = g_variant_get_fixed_array (c_var, &len, sizeof (gdouble));
 
-      ncm_spectral_tensor_set_panel (st, node, n_K, K, len, c);
+      switch (format)
+      {
+        case NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE:
+
+          if (n_r != 0)
+            g_error ("ncm_spectral_tensor: the DENSE panel %u has %zu ranks.", q, n_r);
+
+          ncm_spectral_tensor_set_panel (st, node, n_K, K, len, c);
+          break;
+        case NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER:
+          ncm_spectral_tensor_set_panel_tucker (st, node, n_K, K, n_r, r, len, c);
+          break;
+        default:
+          g_error ("ncm_spectral_tensor: panel %u has the unknown format %u.", q, format);
+          break;
+      }
 
       g_variant_unref (K_var);
+      g_variant_unref (r_var);
       g_variant_unref (c_var);
       g_variant_unref (panel_var);
     }
@@ -350,6 +397,7 @@ _ncm_spectral_tensor_finalize (GObject *object)
   g_array_unref (st->edges);
   g_array_unref (st->panels);
   g_array_unref (st->n_coeffs);
+  g_array_unref (st->ranks);
   g_array_unref (st->coeffs);
 
   /* Chain up : end */
@@ -382,11 +430,13 @@ ncm_spectral_tensor_class_init (NcmSpectralTensorClass *klass)
   /**
    * NcmSpectralTensor:tree:
    *
-   * The table as a #GVariant of type `(adada(uuad)a(uauad))`: the lower ends $a_i$ and the
-   * upper ends $b_i$ of the domain, then for each split node, in creation order, its node,
-   * its variable and its interior edges, then for each panel node, in creation order, its
-   * node, its numbers of coefficients $K_i$ and its coefficients, the first variable
-   * running fastest.
+   * The table as a #GVariant of type `(adada(uuad)a(uuauauad))`: the lower ends $a_i$ and
+   * the upper ends $b_i$ of the domain, then for each split node, in creation order, its
+   * node, its variable and its interior edges, then for each panel node, in creation order,
+   * its node, its #NcmSpectralTensorPanelFormat, its numbers of coefficients $K_i$, its ranks
+   * $r_i$ (empty for %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE) and its data: the coefficients,
+   * the first variable running fastest, or the factors and the core in the layout of
+   * ncm_spectral_tensor_set_panel_tucker().
    * The four arrays are empty when the domain is not set.
    */
   g_object_class_install_property (object_class,
@@ -394,7 +444,7 @@ ncm_spectral_tensor_class_init (NcmSpectralTensorClass *klass)
                                    g_param_spec_variant ("tree",
                                                          NULL,
                                                          "Domain, split nodes and panel nodes",
-                                                         G_VARIANT_TYPE ("(adada(uuad)a(uauad))"), NULL,
+                                                         G_VARIANT_TYPE ("(adada(uuad)a(uuauauad))"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -465,6 +515,7 @@ _ncm_spectral_tensor_root_only (NcmSpectralTensor *st)
   g_array_set_size (st->edges, 0);
   g_array_set_size (st->panels, 0);
   g_array_set_size (st->n_coeffs, 0);
+  g_array_set_size (st->ranks, 0);
   g_array_set_size (st->coeffs, 0);
 
   st->n_empty = 1;
@@ -696,7 +747,7 @@ ncm_spectral_tensor_split_empty (NcmSpectralTensor *st, guint i, guint n_edges, 
 guint
 ncm_spectral_tensor_set_panel (NcmSpectralTensor *st, guint node, guint n_K, const guint *n_coeffs, gsize len, const gdouble *coeffs)
 {
-  const NcmSpectralTensorPanel pn = {node, st->coeffs->len};
+  const NcmSpectralTensorPanel pn = {node, NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE, st->coeffs->len};
   guint i;
 
   _ncm_spectral_tensor_check_empty (st, "ncm_spectral_tensor_set_panel", node);
@@ -717,6 +768,84 @@ ncm_spectral_tensor_set_panel (NcmSpectralTensor *st, guint node, guint n_K, con
 
   g_array_append_vals (st->coeffs, coeffs, len);
   g_array_append_vals (st->n_coeffs, n_coeffs, n_K);
+  g_array_append_vals (st->ranks, n_coeffs, n_K);
+  g_array_append_val (st->panels, pn);
+
+  g_array_index (st->nodes, NcmSpectralTensorNode, node).kind  = NCM_SPECTRAL_TENSOR_NODE_KIND_PANEL;
+  g_array_index (st->nodes, NcmSpectralTensorNode, node).index = st->panels->len - 1;
+
+  st->n_empty--;
+
+  return st->panels->len - 1;
+}
+
+/* The number of data of a Tucker panel: sum_i K_i r_i + prod_i r_i */
+static gsize
+_ncm_spectral_tensor_tucker_len (const guint *n_coeffs, const guint *ranks, guint n_vars)
+{
+  gsize len  = 0;
+  gsize core = 1;
+  guint i;
+
+  for (i = 0; i < n_vars; i++)
+  {
+    len  += (gsize) n_coeffs[i] * ranks[i];
+    core *= ranks[i];
+  }
+
+  return len + core;
+}
+
+/**
+ * ncm_spectral_tensor_set_panel_tucker:
+ * @st: a #NcmSpectralTensor
+ * @node: node index
+ * @n_K: number of entries of @n_coeffs
+ * @n_coeffs: (array length=n_K): the numbers of coefficients $K_i$ of the panel
+ * @n_r: number of entries of @ranks
+ * @ranks: (array length=n_r): the ranks $r_i$ of the panel
+ * @len: number of data of the panel, $\sum_i K_i r_i + \prod_i r_i$
+ * @data: (array length=len): the factors $U_i$, $i = 0, \dots, n - 1$, each $K_i \times r_i$
+ *   with $U_i^{k a}$ at position $k r_i + a$, followed by the core $g^{a_0 \dots a_{n - 1}}$,
+ *   the first index running fastest
+ *
+ * To give a subdomain a series stored in the format %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER,
+ * makes the empty node @node a panel node, copying @data. The coefficients of the panel are
+ * $$c^{k_0 \dots k_{n - 1}} = \sum_{a_0 = 0}^{r_0 - 1} \dots \sum_{a_{n - 1} = 0}^{r_{n - 1} - 1} g^{a_0 \dots a_{n - 1}} \prod_{i = 0}^{n - 1} U_i^{k_i a_i}.$$
+ * The call is an error unless @node is an empty node, @n_K and @n_r are
+ * #NcmSpectralTensor:n-vars, every $K_i \ge 1$, every $1 \le r_i \le K_i$ and @len is
+ * $\sum_i K_i r_i + \prod_i r_i$.
+ *
+ * Returns: the index of the panel.
+ */
+guint
+ncm_spectral_tensor_set_panel_tucker (NcmSpectralTensor *st, guint node, guint n_K, const guint *n_coeffs, guint n_r, const guint *ranks, gsize len, const gdouble *data)
+{
+  const NcmSpectralTensorPanel pn = {node, NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER, st->coeffs->len};
+  guint i;
+
+  _ncm_spectral_tensor_check_empty (st, "ncm_spectral_tensor_set_panel_tucker", node);
+
+  if ((n_K != st->n_vars) || (n_r != st->n_vars))
+    g_error ("ncm_spectral_tensor_set_panel_tucker: %u numbers of coefficients and %u ranks for %u variables.", n_K, n_r, st->n_vars);
+
+  for (i = 0; i < n_K; i++)
+  {
+    if ((n_coeffs[i] < 1) || (n_coeffs[i] > NCM_SPECTRAL_TENSOR_N_COEFFS_MAX))
+      g_error ("ncm_spectral_tensor_set_panel_tucker: %u coefficients in variable %u, outside [1, %u].",
+               n_coeffs[i], i, NCM_SPECTRAL_TENSOR_N_COEFFS_MAX);
+
+    if ((ranks[i] < 1) || (ranks[i] > n_coeffs[i]))
+      g_error ("ncm_spectral_tensor_set_panel_tucker: rank %u in variable %u, outside [1, %u].", ranks[i], i, n_coeffs[i]);
+  }
+
+  if (len != _ncm_spectral_tensor_tucker_len (n_coeffs, ranks, n_K))
+    g_error ("ncm_spectral_tensor_set_panel_tucker: %zu data, the numbers of coefficients and the ranks give %zu.",
+             len, _ncm_spectral_tensor_tucker_len (n_coeffs, ranks, n_K));
+
+  g_array_append_vals (st->coeffs, data, len);
+  g_array_append_vals (st->n_coeffs, n_coeffs, n_K);
+  g_array_append_vals (st->ranks, ranks, n_K);
   g_array_append_val (st->panels, pn);
 
   g_array_index (st->nodes, NcmSpectralTensorNode, node).kind  = NCM_SPECTRAL_TENSOR_NODE_KIND_PANEL;
@@ -738,6 +867,19 @@ _ncm_spectral_tensor_block_len (const guint *n_coeffs, guint n_vars)
     len *= n_coeffs[i];
 
   return len;
+}
+
+/* The number of data of panel p in coeffs: its coefficients or its factors and core */
+static gsize
+_ncm_spectral_tensor_panel_len (NcmSpectralTensor *st, guint p)
+{
+  const guint n_vars = st->n_vars;
+  const guint *K     = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p);
+
+  if (g_array_index (st->panels, NcmSpectralTensorPanel, p).format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER)
+    return _ncm_spectral_tensor_tucker_len (K, &g_array_index (st->ranks, guint, (gsize) n_vars * p), n_vars);
+
+  return _ncm_spectral_tensor_block_len (K, n_vars);
 }
 
 /**
@@ -929,6 +1071,8 @@ ncm_spectral_tensor_get_node_panel (NcmSpectralTensor *st, guint node)
  * To read a panel without copies, gets panel @p, which must be below
  * ncm_spectral_tensor_get_n_panels(). Its $\prod_i K_i$ coefficients are contiguous, the
  * first variable running fastest. The returned pointers are valid until @st is changed.
+ * The call is an error for a panel of format %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER,
+ * which stores no coefficients: ncm_spectral_tensor_get_panel() computes them.
  *
  * Returns: (transfer none): the coefficients of panel @p.
  */
@@ -941,6 +1085,9 @@ ncm_spectral_tensor_peek_panel (NcmSpectralTensor *st, guint p, const gdouble **
   g_assert_cmpuint (p, <, st->panels->len);
 
   pn = &g_array_index (st->panels, NcmSpectralTensorPanel, p);
+
+  if (pn->format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER)
+    g_error ("ncm_spectral_tensor_peek_panel: panel %u is TUCKER and stores no coefficients.", p);
 
   *lower    = &g_array_index (st->node_bounds, gdouble, (gsize) 2 * n_vars * pn->node);
   *upper    = *lower + n_vars;
@@ -958,7 +1105,10 @@ ncm_spectral_tensor_peek_panel (NcmSpectralTensor *st, guint p, const gdouble **
  * @n_coeffs: (out) (transfer full) (element-type guint): the numbers of coefficients $K_i$ of the panel
  *
  * As ncm_spectral_tensor_peek_panel(), with copies in new arrays. The coefficients have
- * the first variable running fastest.
+ * the first variable running fastest. For a panel of format
+ * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER they are computed from its factors and its core
+ * (ncm_spectral_tensor_set_panel_tucker()), equal to the coefficients the panel represents
+ * up to rounding.
  *
  * Returns: (transfer full) (element-type gdouble): the coefficients of panel @p.
  */
@@ -966,22 +1116,175 @@ GArray *
 ncm_spectral_tensor_get_panel (NcmSpectralTensor *st, guint p, GArray **lower, GArray **upper, GArray **n_coeffs)
 {
   const guint n_vars = st->n_vars;
-  const gdouble *lo, *up;
+  const NcmSpectralTensorPanel *pn;
+  const gdouble *lo;
   const guint *K;
-  const gdouble *c = ncm_spectral_tensor_peek_panel (st, p, &lo, &up, &K);
-  const gsize len  = _ncm_spectral_tensor_block_len (K, n_vars);
-  GArray *coeffs   = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+  GArray *coeffs;
+  gsize len;
+
+  g_assert_cmpuint (p, <, st->panels->len);
+
+  pn     = &g_array_index (st->panels, NcmSpectralTensorPanel, p);
+  lo     = &g_array_index (st->node_bounds, gdouble, (gsize) 2 * n_vars * pn->node);
+  K      = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p);
+  len    = _ncm_spectral_tensor_block_len (K, n_vars);
+  coeffs = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
 
   *lower    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_vars);
   *upper    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_vars);
   *n_coeffs = g_array_sized_new (FALSE, FALSE, sizeof (guint), n_vars);
 
   g_array_append_vals (*lower, lo, n_vars);
-  g_array_append_vals (*upper, up, n_vars);
+  g_array_append_vals (*upper, lo + n_vars, n_vars);
   g_array_append_vals (*n_coeffs, K, n_vars);
-  g_array_append_vals (coeffs, c, len);
+
+  if (pn->format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER)
+  {
+    g_array_set_size (coeffs, len);
+    _ncm_spectral_tensor_tucker_expand (n_vars, K, &g_array_index (st->ranks, guint, (gsize) n_vars * p),
+                                        &g_array_index (st->coeffs, gdouble, pn->offset), &g_array_index (coeffs, gdouble, 0));
+  }
+  else
+  {
+    g_array_append_vals (coeffs, &g_array_index (st->coeffs, gdouble, pn->offset), len);
+  }
 
   return coeffs;
+}
+
+/*
+ * The coefficients c of a Tucker panel from its data (factors, then core): the mode
+ * products of the core with U_0, ..., U_{n - 1} in turn. Before product i the tensor has
+ * K_j entries in the variables j < i and r_j in the others, the first index fastest; the
+ * product replaces r_i by K_i. Two scratch tensors of the largest intermediate size.
+ */
+static void
+_ncm_spectral_tensor_tucker_expand (const guint n_vars, const guint *K, const guint *r, const gdouble *data, gdouble *c)
+{
+  const gdouble *U[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  gsize dims[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  gsize max_size = 1;
+  gsize size     = 1;
+  gsize off      = 0;
+  gdouble *cur, *next;
+  guint i;
+
+  for (i = 0; i < n_vars; i++)
+  {
+    U[i]    = data + off;
+    off    += (gsize) K[i] * r[i];
+    dims[i] = r[i];
+    size   *= r[i];
+  }
+
+  max_size = size;
+
+  for (i = 0; i < n_vars; i++)
+  {
+    size     = size / r[i] * K[i];
+    max_size = MAX (max_size, size);
+  }
+
+  cur  = g_new (gdouble, max_size);
+  next = g_new (gdouble, max_size);
+  memcpy (cur, data + off, sizeof (gdouble) * _ncm_spectral_tensor_block_len (r, n_vars));
+
+  for (i = 0; i < n_vars; i++)
+  {
+    gsize inner = 1;
+    gsize outer = 1;
+    gsize o, in;
+    guint j, k, a;
+
+    for (j = 0; j < i; j++)
+      inner *= dims[j];
+
+    for (j = i + 1; j < n_vars; j++)
+      outer *= dims[j];
+
+    for (o = 0; o < outer; o++)
+    {
+      for (k = 0; k < K[i]; k++)
+      {
+        gdouble *dst = next + (o * K[i] + k) * inner;
+
+        for (in = 0; in < inner; in++)
+          dst[in] = 0.0;
+
+        for (a = 0; a < r[i]; a++)
+        {
+          const gdouble u    = U[i][(gsize) k * r[i] + a];
+          const gdouble *src = cur + (o * r[i] + a) * inner;
+
+          for (in = 0; in < inner; in++)
+            dst[in] += u * src[in];
+        }
+      }
+    }
+
+    dims[i] = K[i];
+
+    {
+      gdouble *tmp = cur;
+
+      cur  = next;
+      next = tmp;
+    }
+  }
+
+  memcpy (c, cur, sizeof (gdouble) * _ncm_spectral_tensor_block_len (K, n_vars));
+  g_free (cur);
+  g_free (next);
+}
+
+/**
+ * ncm_spectral_tensor_get_panel_format:
+ * @st: a #NcmSpectralTensor
+ * @p: panel index, below ncm_spectral_tensor_get_n_panels()
+ *
+ * Returns: the storage format of panel @p.
+ */
+NcmSpectralTensorPanelFormat
+ncm_spectral_tensor_get_panel_format (NcmSpectralTensor *st, guint p)
+{
+  g_assert_cmpuint (p, <, st->panels->len);
+
+  return g_array_index (st->panels, NcmSpectralTensorPanel, p).format;
+}
+
+/**
+ * ncm_spectral_tensor_get_panel_tucker:
+ * @st: a #NcmSpectralTensor
+ * @p: panel index, below ncm_spectral_tensor_get_n_panels()
+ * @ranks: (out) (transfer full) (element-type guint): the ranks $r_i$ of the panel
+ *
+ * Gets the data of panel @p, of format %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER, in the
+ * layout of ncm_spectral_tensor_set_panel_tucker(); ncm_spectral_tensor_get_panel() gives
+ * its bounds and its numbers of coefficients. The call is an error for a panel of format
+ * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE.
+ *
+ * Returns: (transfer full) (element-type gdouble): the factors and the core of panel @p.
+ */
+GArray *
+ncm_spectral_tensor_get_panel_tucker (NcmSpectralTensor *st, guint p, GArray **ranks)
+{
+  const guint n_vars = st->n_vars;
+  GArray *data;
+  gsize len;
+
+  g_assert_cmpuint (p, <, st->panels->len);
+
+  if (g_array_index (st->panels, NcmSpectralTensorPanel, p).format != NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER)
+    g_error ("ncm_spectral_tensor_get_panel_tucker: panel %u is DENSE.", p);
+
+  len  = _ncm_spectral_tensor_panel_len (st, p);
+  data = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
+  g_array_append_vals (data, &g_array_index (st->coeffs, gdouble, g_array_index (st->panels, NcmSpectralTensorPanel, p).offset), len);
+
+  *ranks = g_array_sized_new (FALSE, FALSE, sizeof (guint), n_vars);
+  g_array_append_vals (*ranks, &g_array_index (st->ranks, guint, (gsize) n_vars * p), n_vars);
+
+  return data;
 }
 
 /**
@@ -1473,15 +1776,20 @@ _ncm_spectral_tensor_eval_on_basis (NcmSpectralTensor *st, guint p, const guint 
  * variable the series is summed by the Clenshaw recurrence. With two to four variables and
  * at most 1025 coefficients in each, it is summed from the values $T_k (s_i)$, computed by
  * recurrences of the Chebyshev polynomials. Otherwise it is summed by Clenshaw recurrences,
- * nested from the last variable, outermost, to the first. The index @p must be below
- * ncm_spectral_tensor_get_n_panels() and @n_vars must be #NcmSpectralTensor:n-vars;
- * neither is checked.
+ * nested from the last variable, outermost, to the first. A panel of format
+ * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER is summed from its factors and its core: the
+ * vectors $\sum_k U_i^{k a} T_k (s_i)$ by Clenshaw recurrences, then their products with the
+ * core. The index @p must be below ncm_spectral_tensor_get_n_panels() and @n_vars must be
+ * #NcmSpectralTensor:n-vars; neither is checked.
  *
  * Returns: the series of panel @p at @x.
  */
 gdouble
 ncm_spectral_tensor_eval_on (NcmSpectralTensor *st, guint p, guint n_vars, const gdouble *x)
 {
+  if (g_array_index (st->panels, NcmSpectralTensorPanel, p).format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER)
+    return _ncm_spectral_tensor_eval_on_tucker (st, p, n_vars, x);
+
   switch (n_vars)
   {
     case 1:
@@ -1505,6 +1813,103 @@ ncm_spectral_tensor_eval_on (NcmSpectralTensor *st, guint p, guint n_vars, const
     default:
       return _ncm_spectral_tensor_eval_on_clenshaw (st, p, n_vars, x);
   }
+}
+
+/*
+ * The core of a Tucker panel contracted with the vectors u[i] (r[i] entries) of the variables
+ * 0, ..., d: the dot product with u[0] for d = 0, otherwise the sum over the index of variable
+ * d of u[d] times the contraction of the block at core + a stride[d].
+ */
+static gdouble
+_ncm_spectral_tensor_tucker_contract (const gdouble *core, const guint *r, const gsize *stride, const gdouble * const *u, guint d)
+{
+  gdouble acc = 0.0;
+  guint a;
+
+  if (d == 0)
+    for (a = 0; a < r[0]; a++)
+      acc += core[a] * u[0][a];
+
+  else
+    for (a = 0; a < r[d]; a++)
+      acc += u[d][a] * _ncm_spectral_tensor_tucker_contract (core + (gsize) a * stride[d], r, stride, u, d - 1);
+
+
+
+  return acc;
+}
+
+/*
+ * Largest sum of the ranks of a Tucker panel whose vectors u_i are on the stack; a larger
+ * panel takes them from the heap.
+ */
+#define NCM_SPECTRAL_TENSOR_TUCKER_STACK (4096)
+
+/*
+ * The series of the Tucker panel p at x: for each variable i, u_i^a = sum_k U_i^{k a} T_k (s_i)
+ * by one Clenshaw recurrence per column a of U_i, then the contraction of the core with
+ * u_0, ..., u_{n - 1}.
+ */
+static gdouble
+_ncm_spectral_tensor_eval_on_tucker (NcmSpectralTensor *st, guint p, guint n_vars, const gdouble *x)
+{
+  const NcmSpectralTensorPanel *pn = &g_array_index (st->panels, NcmSpectralTensorPanel, p);
+  const gdouble *lower             = &g_array_index (st->node_bounds, gdouble, (gsize) 2 * n_vars * pn->node);
+  const gdouble *upper             = lower + n_vars;
+  const guint *K                   = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p);
+  const guint *r                   = &g_array_index (st->ranks, guint, (gsize) n_vars * p);
+  const gdouble *U                 = &g_array_index (st->coeffs, gdouble, pn->offset);
+  gdouble ustack[NCM_SPECTRAL_TENSOR_TUCKER_STACK];
+  const gdouble *u[NCM_SPECTRAL_TENSOR_MAX_VARS] = {NULL};
+  gsize stride[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  gdouble *ubuf, *ui;
+  gsize r_sum = 0;
+  gdouble val;
+  guint i, a, k;
+
+  for (i = 0; i < n_vars; i++)
+    r_sum += r[i];
+
+  ubuf = (r_sum <= NCM_SPECTRAL_TENSOR_TUCKER_STACK) ? ustack : g_new (gdouble, r_sum);
+  ui   = ubuf;
+
+  for (i = 0; i < n_vars; i++)
+  {
+    const gdouble s  = (2.0 * x[i] - lower[i] - upper[i]) / (upper[i] - lower[i]);
+    const gdouble s2 = 2.0 * s;
+
+    for (a = 0; a < r[i]; a++)
+    {
+      gdouble b1 = 0.0;
+      gdouble b2 = 0.0;
+
+      for (k = K[i] - 1; k > 0; k--)
+      {
+        const gdouble b0 = s2 * b1 - b2 + U[(gsize) k * r[i] + a];
+
+        b2 = b1;
+        b1 = b0;
+      }
+
+      ui[a] = s * b1 - b2 + U[a];
+    }
+
+    u[i] = ui;
+    ui  += r[i];
+    U   += (gsize) K[i] * r[i];
+  }
+
+  stride[0] = 1;
+
+  for (i = 1; i < n_vars; i++)
+    stride[i] = stride[i - 1] * r[i - 1];
+
+  val = _ncm_spectral_tensor_tucker_contract (U, r, stride, u, n_vars - 1);
+
+  if (ubuf != ustack)
+    g_free (ubuf);
+
+  return val;
 }
 
 /*
@@ -1696,7 +2101,8 @@ _ncm_spectral_tensor_eval_on_array (NcmSpectralTensor *st, guint p, guint n, con
 {
   const guint n_vars = st->n_vars;
   const guint *K     = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p);
-  gboolean lanes     = (n_vars <= 4) && (n >= 4);
+  gboolean lanes     = (n_vars <= 4) && (n >= 4) &&
+                       (g_array_index (st->panels, NcmSpectralTensorPanel, p).format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE);
   guint i, j;
 
   for (i = 0; lanes && (i < n_vars); i++)

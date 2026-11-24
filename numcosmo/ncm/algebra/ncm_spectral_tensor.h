@@ -54,6 +54,20 @@ typedef enum _NcmSpectralTensorNodeKind /*< prefix=NCM_SPECTRAL_TENSOR_NODE_KIND
   NCM_SPECTRAL_TENSOR_NODE_KIND_PANEL,
 } NcmSpectralTensorNodeKind;
 
+/**
+ * NcmSpectralTensorPanelFormat:
+ * @NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE: the panel stores its coefficients
+ * @NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER: the panel stores the factors and the core of a
+ *   Tucker decomposition of its coefficients
+ *
+ * The storage formats of a panel of an #NcmSpectralTensor.
+ */
+typedef enum _NcmSpectralTensorPanelFormat /*< prefix=NCM_SPECTRAL_TENSOR_PANEL_FORMAT >*/
+{
+  NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE,
+  NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER,
+} NcmSpectralTensorPanelFormat;
+
 NcmSpectralTensor *ncm_spectral_tensor_new (guint n_vars);
 NcmSpectralTensor *ncm_spectral_tensor_ref (NcmSpectralTensor *st);
 void ncm_spectral_tensor_free (NcmSpectralTensor *st);
@@ -64,6 +78,7 @@ void ncm_spectral_tensor_reset (NcmSpectralTensor *st);
 guint ncm_spectral_tensor_split (NcmSpectralTensor *st, guint node, guint i, guint n_edges, const gdouble *edges);
 guint ncm_spectral_tensor_split_empty (NcmSpectralTensor *st, guint i, guint n_edges, const gdouble *edges);
 guint ncm_spectral_tensor_set_panel (NcmSpectralTensor *st, guint node, guint n_K, const guint *n_coeffs, gsize len, const gdouble *coeffs);
+guint ncm_spectral_tensor_set_panel_tucker (NcmSpectralTensor *st, guint node, guint n_K, const guint *n_coeffs, guint n_r, const guint *ranks, gsize len, const gdouble *data);
 
 guint ncm_spectral_tensor_get_n_vars (NcmSpectralTensor *st);
 guint ncm_spectral_tensor_get_n_nodes (NcmSpectralTensor *st);
@@ -79,6 +94,8 @@ guint ncm_spectral_tensor_get_node_panel (NcmSpectralTensor *st, guint node);
 
 const gdouble *ncm_spectral_tensor_peek_panel (NcmSpectralTensor *st, guint p, const gdouble **lower, const gdouble **upper, const guint **n_coeffs);
 GArray *ncm_spectral_tensor_get_panel (NcmSpectralTensor *st, guint p, GArray **lower, GArray **upper, GArray **n_coeffs);
+NcmSpectralTensorPanelFormat ncm_spectral_tensor_get_panel_format (NcmSpectralTensor *st, guint p);
+GArray *ncm_spectral_tensor_get_panel_tucker (NcmSpectralTensor *st, guint p, GArray **ranks);
 
 guint ncm_spectral_tensor_find_panel (NcmSpectralTensor *st, guint n_vars, const gdouble *x);
 gdouble ncm_spectral_tensor_eval (NcmSpectralTensor *st, guint n_vars, const gdouble *x);

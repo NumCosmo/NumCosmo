@@ -100,6 +100,8 @@ void test_ncm_spectral_tensor_reset (TestNcmSpectralTensor *test, gconstpointer 
 void test_ncm_spectral_tensor_set_domain (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_incomplete (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_split_empty (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_tucker (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_tucker_serialize (TestNcmSpectralTensor *test, gconstpointer pdata);
 
 void test_ncm_spectral_tensor_traps (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_set_domain_length_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
@@ -124,6 +126,13 @@ void test_ncm_spectral_tensor_node_not_split_subprocess (TestNcmSpectralTensor *
 void test_ncm_spectral_tensor_node_not_panel_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_variant_length_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
 void test_ncm_spectral_tensor_variant_no_domain_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_set_panel_tucker_n_K_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_set_panel_tucker_rank_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_set_panel_tucker_length_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_peek_panel_tucker_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_get_panel_tucker_dense_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_variant_dense_ranks_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
+void test_ncm_spectral_tensor_variant_format_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata);
 
 static const TestTrap traps[] = {
   {"set_domain/length", &test_ncm_spectral_tensor_set_domain_length_subprocess, "*1 lower ends and 2 upper ends for 2 variables*"},
@@ -148,6 +157,13 @@ static const TestTrap traps[] = {
   {"node/not_panel", &test_ncm_spectral_tensor_node_not_panel_subprocess, "*node 0 is not a panel*"},
   {"variant/length", &test_ncm_spectral_tensor_variant_length_subprocess, "*3 coefficients, the numbers of coefficients give 4*"},
   {"variant/no_domain", &test_ncm_spectral_tensor_variant_no_domain_subprocess, "*0 lower ends and 0 upper ends for 2 variables*"},
+  {"set_panel_tucker/n_K", &test_ncm_spectral_tensor_set_panel_tucker_n_K_subprocess, "*3 numbers of coefficients and 2 ranks for 2 variables*"},
+  {"set_panel_tucker/rank", &test_ncm_spectral_tensor_set_panel_tucker_rank_subprocess, "*rank 4 in variable 1, outside [1, 3]*"},
+  {"set_panel_tucker/length", &test_ncm_spectral_tensor_set_panel_tucker_length_subprocess, "*9 data, the numbers of coefficients and the ranks give 10*"},
+  {"peek_panel/tucker", &test_ncm_spectral_tensor_peek_panel_tucker_subprocess, "*panel 0 is TUCKER and stores no coefficients*"},
+  {"get_panel_tucker/dense", &test_ncm_spectral_tensor_get_panel_tucker_dense_subprocess, "*ncm_spectral_tensor_get_panel_tucker: panel 0 is DENSE*"},
+  {"variant/dense_ranks", &test_ncm_spectral_tensor_variant_dense_ranks_subprocess, "*the DENSE panel 0 has 2 ranks*"},
+  {"variant/format", &test_ncm_spectral_tensor_variant_format_subprocess, "*panel 0 has the unknown format 7*"},
 };
 
 static const struct
@@ -169,6 +185,8 @@ static const struct
   {"set_domain", &test_ncm_spectral_tensor_set_domain},
   {"incomplete", &test_ncm_spectral_tensor_incomplete},
   {"split_empty", &test_ncm_spectral_tensor_split_empty},
+  {"tucker", &test_ncm_spectral_tensor_tucker},
+  {"tucker_serialize", &test_ncm_spectral_tensor_tucker_serialize},
 };
 
 gint
@@ -363,6 +381,123 @@ _ref_eval (TestNcmSpectralTensor *test, guint p, const gdouble *x, gdouble *l1)
     sum += prod;
     *l1 += fabs (c[q]);
   }
+
+  return sum;
+}
+
+/*
+ * Two tables with the tree of _make_tree() and the recorded nodes and numbers of
+ * coefficients: in st_d every panel is DENSE, with the coefficients of a random Tucker
+ * decomposition (ranks in [1, K_i], factors and core in [-1, 1]) summed term by term into
+ * c_exp; in st_t the even panels are TUCKER with that decomposition and the odd panels are
+ * DENSE with c_exp. c_abs receives the sums of the absolute values of the terms, the scale
+ * of the rounding error of each coefficient. The ranks are appended to ranks, n_vars per
+ * panel.
+ */
+static void
+_fill_tucker (TestNcmSpectralTensor *test, NcmSpectralTensor *st_t, NcmSpectralTensor *st_d, GArray *c_exp, GArray *c_abs, GArray *ranks)
+{
+  const guint n_vars = test->n_vars;
+  guint p, i;
+
+  _make_tree (test, st_t);
+  _make_tree (test, st_d);
+  g_array_set_size (c_exp, test->c->len);
+  g_array_set_size (c_abs, test->c->len);
+  g_array_set_size (ranks, 0);
+
+  for (p = 0; p < test->offset->len; p++)
+  {
+    const guint *K   = &g_array_index (test->K, guint, n_vars * p);
+    const guint node = g_array_index (test->node, guint, p);
+    gdouble *ce      = &g_array_index (c_exp, gdouble, g_array_index (test->offset, gsize, p));
+    gdouble *ca      = &g_array_index (c_abs, gdouble, g_array_index (test->offset, gsize, p));
+    gsize len        = 1;
+    gsize core_len   = 1;
+    gsize data_len   = 0;
+    const gdouble *U[TEST_MAX_N_VARS];
+    guint r[TEST_MAX_N_VARS];
+    gdouble *data;
+    gsize q, cq, off;
+
+    for (i = 0; i < n_vars; i++)
+    {
+      r[i]      = 1 + ncm_rng_uniform_int_gen (test->rng, K[i]);
+      len      *= K[i];
+      core_len *= r[i];
+      data_len += (gsize) K[i] * r[i];
+    }
+
+    data_len += core_len;
+    data      = g_new (gdouble, data_len);
+
+    for (q = 0; q < data_len; q++)
+      data[q] = ncm_rng_uniform_gen (test->rng, -1.0, 1.0);
+
+    for (i = 0, off = 0; i < n_vars; i++)
+    {
+      U[i] = data + off;
+      off += (gsize) K[i] * r[i];
+    }
+
+    for (q = 0; q < len; q++)
+    {
+      guint k[TEST_MAX_N_VARS];
+      gsize rem = q;
+
+      for (i = 0; i < n_vars; i++)
+      {
+        k[i] = rem % K[i];
+        rem /= K[i];
+      }
+
+      ce[q] = 0.0;
+      ca[q] = 0.0;
+
+      for (cq = 0; cq < core_len; cq++)
+      {
+        gdouble term = data[off + cq];
+        gsize crem   = cq;
+
+        for (i = 0; i < n_vars; i++)
+        {
+          term *= U[i][(gsize) k[i] * r[i] + crem % r[i]];
+          crem /= r[i];
+        }
+
+        ce[q] += term;
+        ca[q] += fabs (term);
+      }
+    }
+
+    g_array_append_vals (ranks, r, n_vars);
+    g_assert_cmpuint (ncm_spectral_tensor_set_panel (st_d, node, n_vars, K, len, ce), ==, p);
+
+    if (p % 2 == 0)
+      g_assert_cmpuint (ncm_spectral_tensor_set_panel_tucker (st_t, node, n_vars, K, n_vars, r, data_len, data), ==, p);
+    else
+      g_assert_cmpuint (ncm_spectral_tensor_set_panel (st_t, node, n_vars, K, len, ce), ==, p);
+
+    g_free (data);
+  }
+}
+
+/* The sum of c_abs over the coefficients of recorded panel p: the scale of the rounding error of its series */
+static gdouble
+_panel_scale (TestNcmSpectralTensor *test, GArray *c_abs, guint p)
+{
+  const guint *K   = &g_array_index (test->K, guint, test->n_vars * p);
+  const gdouble *a = &g_array_index (c_abs, gdouble, g_array_index (test->offset, gsize, p));
+  gdouble sum      = 0.0;
+  gsize len        = 1;
+  gsize q;
+  guint i;
+
+  for (i = 0; i < test->n_vars; i++)
+    len *= K[i];
+
+  for (q = 0; q < len; q++)
+    sum += a[q];
 
   return sum;
 }
@@ -1211,6 +1346,165 @@ test_ncm_spectral_tensor_split_empty (TestNcmSpectralTensor *test, gconstpointer
   ncm_spectral_tensor_free (st);
 }
 
+/*
+ * A table with TUCKER and DENSE panels against the table with the same coefficients in DENSE
+ * panels: the formats, the coefficients of ncm_spectral_tensor_get_panel(), the data and the
+ * ranks of ncm_spectral_tensor_get_panel_tucker(), and the values of
+ * ncm_spectral_tensor_eval() and ncm_spectral_tensor_eval_array() at random points agree
+ * within the rounding of the sums.
+ */
+void
+test_ncm_spectral_tensor_tucker (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  const guint n_vars      = test->n_vars;
+  NcmSpectralTensor *st_t = ncm_spectral_tensor_new (n_vars);
+  NcmSpectralTensor *st_d = ncm_spectral_tensor_new (n_vars);
+  GArray *c_exp           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *c_abs           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *ranks           = g_array_new (FALSE, FALSE, sizeof (guint));
+  GArray *x_arr           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *f_arr           = NULL;
+  guint p, j;
+
+  _fill_tucker (test, st_t, st_d, c_exp, c_abs, ranks);
+  g_assert_cmpuint (ncm_spectral_tensor_get_n_panels (st_t), ==, test->offset->len);
+
+  for (p = 0; p < test->offset->len; p++)
+  {
+    const guint *K    = &g_array_index (test->K, guint, n_vars * p);
+    const gdouble *ce = &g_array_index (c_exp, gdouble, g_array_index (test->offset, gsize, p));
+    const gdouble *ca = &g_array_index (c_abs, gdouble, g_array_index (test->offset, gsize, p));
+    GArray *lower, *upper, *K_a;
+    GArray *c = ncm_spectral_tensor_get_panel (st_t, p, &lower, &upper, &K_a);
+    gsize q;
+
+    g_assert_cmpint (ncm_spectral_tensor_get_panel_format (st_t, p), ==,
+                     (p % 2 == 0) ? NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER : NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE);
+    g_assert_cmpint (ncm_spectral_tensor_get_panel_format (st_d, p), ==, NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE);
+    g_assert_cmpmem (K_a->data, sizeof (guint) * n_vars, K, sizeof (guint) * n_vars);
+    g_assert_cmpmem (lower->data, sizeof (gdouble) * n_vars, &g_array_index (test->lower, gdouble, n_vars * p), sizeof (gdouble) * n_vars);
+    g_assert_cmpmem (upper->data, sizeof (gdouble) * n_vars, &g_array_index (test->upper, gdouble, n_vars * p), sizeof (gdouble) * n_vars);
+
+    for (q = 0; q < c->len; q++)
+      g_assert_cmpfloat (fabs (g_array_index (c, gdouble, q) - ce[q]), <=, 1.0e-14 * ca[q]);
+
+    if (p % 2 == 0)
+    {
+      GArray *r_a;
+      GArray *data   = ncm_spectral_tensor_get_panel_tucker (st_t, p, &r_a);
+      gsize data_len = 0;
+      gsize core_len = 1;
+      guint i;
+
+      g_assert_cmpmem (r_a->data, sizeof (guint) * n_vars, &g_array_index (ranks, guint, n_vars * p), sizeof (guint) * n_vars);
+
+      for (i = 0; i < n_vars; i++)
+      {
+        data_len += (gsize) K[i] * g_array_index (r_a, guint, i);
+        core_len *= g_array_index (r_a, guint, i);
+      }
+
+      g_assert_cmpuint (data->len, ==, data_len + core_len);
+      g_array_unref (r_a);
+      g_array_unref (data);
+    }
+
+    g_array_unref (lower);
+    g_array_unref (upper);
+    g_array_unref (K_a);
+    g_array_unref (c);
+  }
+
+  for (j = 0; j < TEST_N_POINTS; j++)
+  {
+    gdouble x[TEST_MAX_N_VARS];
+
+    _random_point (test, x);
+    g_array_append_vals (x_arr, x, n_vars);
+  }
+
+  ncm_spectral_tensor_eval_array (st_t, x_arr, &f_arr);
+
+  for (j = 0; j < TEST_N_POINTS; j++)
+  {
+    const gdouble *x    = &g_array_index (x_arr, gdouble, n_vars * j);
+    const guint p_x     = ncm_spectral_tensor_find_panel (st_d, n_vars, x);
+    const gdouble scale = _panel_scale (test, c_abs, p_x);
+    const gdouble f_d   = ncm_spectral_tensor_eval (st_d, n_vars, x);
+    const gdouble f_t   = ncm_spectral_tensor_eval (st_t, n_vars, x);
+
+    g_assert_cmpuint (ncm_spectral_tensor_find_panel (st_t, n_vars, x), ==, p_x);
+    g_assert_cmpfloat (fabs (f_t - f_d), <=, 1.0e-13 * scale);
+    g_assert_cmpfloat (fabs (g_array_index (f_arr, gdouble, j) - f_t), <=, 1.0e-13 * scale);
+  }
+
+  g_array_unref (c_exp);
+  g_array_unref (c_abs);
+  g_array_unref (ranks);
+  g_array_unref (x_arr);
+  g_array_unref (f_arr);
+  ncm_spectral_tensor_free (st_t);
+  ncm_spectral_tensor_free (st_d);
+}
+
+/*
+ * The serialized copy of a table with TUCKER and DENSE panels has the same formats, the same
+ * data and ranks bit for bit, and the same values at random points.
+ */
+void
+test_ncm_spectral_tensor_tucker_serialize (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  const guint n_vars      = test->n_vars;
+  NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmSpectralTensor *st_t = ncm_spectral_tensor_new (n_vars);
+  NcmSpectralTensor *st_d = ncm_spectral_tensor_new (n_vars);
+  GArray *c_exp           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *c_abs           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *ranks           = g_array_new (FALSE, FALSE, sizeof (guint));
+  NcmSpectralTensor *dup;
+  guint p, j;
+
+  _fill_tucker (test, st_t, st_d, c_exp, c_abs, ranks);
+  dup = NCM_SPECTRAL_TENSOR (ncm_serialize_dup_obj (ser, G_OBJECT (st_t)));
+
+  g_assert_cmpuint (ncm_spectral_tensor_get_n_panels (dup), ==, ncm_spectral_tensor_get_n_panels (st_t));
+
+  for (p = 0; p < ncm_spectral_tensor_get_n_panels (st_t); p++)
+  {
+    g_assert_cmpint (ncm_spectral_tensor_get_panel_format (dup, p), ==, ncm_spectral_tensor_get_panel_format (st_t, p));
+
+    if (ncm_spectral_tensor_get_panel_format (st_t, p) == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER)
+    {
+      GArray *r1, *r2;
+      GArray *d1 = ncm_spectral_tensor_get_panel_tucker (st_t, p, &r1);
+      GArray *d2 = ncm_spectral_tensor_get_panel_tucker (dup, p, &r2);
+
+      g_assert_cmpmem (r2->data, sizeof (guint) * r2->len, r1->data, sizeof (guint) * r1->len);
+      g_assert_cmpmem (d2->data, sizeof (gdouble) * d2->len, d1->data, sizeof (gdouble) * d1->len);
+      g_array_unref (r1);
+      g_array_unref (r2);
+      g_array_unref (d1);
+      g_array_unref (d2);
+    }
+  }
+
+  for (j = 0; j < TEST_N_POINTS; j++)
+  {
+    gdouble x[TEST_MAX_N_VARS];
+
+    _random_point (test, x);
+    g_assert_cmpfloat (ncm_spectral_tensor_eval (dup, n_vars, x), ==, ncm_spectral_tensor_eval (st_t, n_vars, x));
+  }
+
+  g_array_unref (c_exp);
+  g_array_unref (c_abs);
+  g_array_unref (ranks);
+  ncm_spectral_tensor_free (dup);
+  ncm_spectral_tensor_free (st_t);
+  ncm_spectral_tensor_free (st_d);
+  ncm_serialize_free (ser);
+}
+
 void
 test_ncm_spectral_tensor_traps (TestNcmSpectralTensor *test, gconstpointer pdata)
 {
@@ -1388,7 +1682,7 @@ test_ncm_spectral_tensor_node_not_panel_subprocess (TestNcmSpectralTensor *test,
 void
 test_ncm_spectral_tensor_variant_length_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
 {
-  GVariant *tree = g_variant_new_parsed ("([0.0, 0.0], [1.0, 1.0], @a(uuad) [], [(@u 0, @au [2, 2], [1.0, 2.0, 3.0])])");
+  GVariant *tree = g_variant_new_parsed ("([0.0, 0.0], [1.0, 1.0], @a(uuad) [], [(@u 0, @u 0, @au [2, 2], @au [], [1.0, 2.0, 3.0])])");
   GObject *obj   = g_object_new (NCM_TYPE_SPECTRAL_TENSOR, "n-vars", 2, "tree", tree, NULL);
 
   g_object_unref (obj);
@@ -1397,7 +1691,77 @@ test_ncm_spectral_tensor_variant_length_subprocess (TestNcmSpectralTensor *test,
 void
 test_ncm_spectral_tensor_variant_no_domain_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
 {
-  GVariant *tree = g_variant_new_parsed ("(@ad [], @ad [], [(@u 0, @u 0, [0.5])], @a(uauad) [])");
+  GVariant *tree = g_variant_new_parsed ("(@ad [], @ad [], [(@u 0, @u 0, [0.5])], @a(uuauauad) [])");
+  GObject *obj   = g_object_new (NCM_TYPE_SPECTRAL_TENSOR, "n-vars", 2, "tree", tree, NULL);
+
+  g_object_unref (obj);
+}
+
+void
+test_ncm_spectral_tensor_set_panel_tucker_n_K_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  const guint K[3]   = {1, 1, 1};
+  const guint r[2]   = {1, 1};
+  const gdouble d[3] = {1.0, 1.0, 1.0};
+
+  ncm_spectral_tensor_set_panel_tucker (_domain_table (test), 0, 3, K, 2, r, 3, d);
+}
+
+void
+test_ncm_spectral_tensor_set_panel_tucker_rank_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  const guint K[2]    = {2, 3};
+  const guint r[2]    = {1, 4};
+  const gdouble d[18] = {0.0};
+
+  ncm_spectral_tensor_set_panel_tucker (_domain_table (test), 0, 2, K, 2, r, 18, d);
+}
+
+void
+test_ncm_spectral_tensor_set_panel_tucker_length_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  const guint K[2]   = {2, 3};
+  const guint r[2]   = {1, 2};
+  const gdouble d[9] = {0.0};
+
+  ncm_spectral_tensor_set_panel_tucker (_domain_table (test), 0, 2, K, 2, r, 9, d);
+}
+
+void
+test_ncm_spectral_tensor_peek_panel_tucker_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  NcmSpectralTensor *st = _domain_table (test);
+  const guint K[2]      = {2, 2};
+  const guint r[2]      = {1, 1};
+  const gdouble d[5]    = {1.0, 0.5, 1.0, 0.25, 2.0};
+  const gdouble *lo, *up;
+  const guint *K_p;
+
+  ncm_spectral_tensor_set_panel_tucker (st, 0, 2, K, 2, r, 5, d);
+  ncm_spectral_tensor_peek_panel (st, 0, &lo, &up, &K_p);
+}
+
+void
+test_ncm_spectral_tensor_get_panel_tucker_dense_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  GArray *r;
+
+  ncm_spectral_tensor_get_panel_tucker (test->st, 0, &r);
+}
+
+void
+test_ncm_spectral_tensor_variant_dense_ranks_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  GVariant *tree = g_variant_new_parsed ("([0.0, 0.0], [1.0, 1.0], @a(uuad) [], [(@u 0, @u 0, @au [1, 1], @au [1, 1], [1.0])])");
+  GObject *obj   = g_object_new (NCM_TYPE_SPECTRAL_TENSOR, "n-vars", 2, "tree", tree, NULL);
+
+  g_object_unref (obj);
+}
+
+void
+test_ncm_spectral_tensor_variant_format_subprocess (TestNcmSpectralTensor *test, gconstpointer pdata)
+{
+  GVariant *tree = g_variant_new_parsed ("([0.0, 0.0], [1.0, 1.0], @a(uuad) [], [(@u 0, @u 7, @au [1, 1], @au [], [1.0])])");
   GObject *obj   = g_object_new (NCM_TYPE_SPECTRAL_TENSOR, "n-vars", 2, "tree", tree, NULL);
 
   g_object_unref (obj);

@@ -675,6 +675,14 @@
     "nick": "split",
     "type": "Ncm.SpectralTensorNodeKind"
   },
+  "NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE": {
+    "nick": "dense",
+    "type": "Ncm.SpectralTensorPanelFormat"
+  },
+  "NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER": {
+    "nick": "tucker",
+    "type": "Ncm.SpectralTensorPanelFormat"
+  },
   "NCM_SPHERE_MAP_COORD_SYS_CELESTIAL": {
     "nick": "celestial",
     "type": "Ncm.SphereMapCoordSys"
