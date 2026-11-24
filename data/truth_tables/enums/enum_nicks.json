@@ -1803,6 +1803,10 @@
     "nick": "trace-det",
     "type": "Nc.GalaxyWLObsEllipConv"
   },
+  "NC_GALAXY_WL_OBS_ERROR_WRONG_TYPE": {
+    "nick": "wrong-type",
+    "type": "Nc.GalaxyWLObsError"
+  },
   "NC_HALO_CATALOG_ERROR_NO_LINKAGE": {
     "nick": "no-linkage",
     "type": "Nc.HaloCatalogError"

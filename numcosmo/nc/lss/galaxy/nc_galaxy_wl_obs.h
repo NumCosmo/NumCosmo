@@ -108,6 +108,22 @@ typedef enum _NcGalaxyWLObsEllipConv /*< prefix=NC_GALAXY_WL_OBS_ELLIP_CONV >*/
 } NcGalaxyWLObsEllipConv;
 
 /**
+ * NcGalaxyWLObsError:
+ * @NC_GALAXY_WL_OBS_ERROR_WRONG_TYPE: The file holds an object that is not a #NcGalaxyWLObs.
+ *
+ * Error codes returned by the #NcGalaxyWLObs class.
+ *
+ */
+typedef enum _NcGalaxyWLObsError /*< enum,prefix=NC_GALAXY_WL_OBS_ERROR >*/
+{
+  NC_GALAXY_WL_OBS_ERROR_WRONG_TYPE,
+} NcGalaxyWLObsError;
+
+GQuark nc_galaxy_wl_obs_error_quark (void);
+
+#define NC_GALAXY_WL_OBS_ERROR (nc_galaxy_wl_obs_error_quark ())
+
+/**
  * NcGalaxyWLObsCatalogId:
  * @NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002: Subaru HSC-SSP PDR1 cluster field HWL16a-002
  * @NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_007: Subaru HSC-SSP PDR1 cluster field HWL16a-007
@@ -138,6 +154,7 @@ NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
 
 gchar *nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id);
 NcGalaxyWLObs *nc_galaxy_wl_obs_new_from_catalog_id (NcGalaxyWLObsCatalogId id);
+NcGalaxyWLObs *nc_galaxy_wl_obs_new_from_file (const gchar *filename, GError **error);
 
 void nc_galaxy_wl_obs_free (NcGalaxyWLObs *obs);
 void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
@@ -154,6 +171,7 @@ void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSp
 NcmSpectralTensor *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_wl_obs_set_shape_interp_source (NcGalaxyWLObs *obs, NcmObjDictStr *source);
 NcmObjDictStr *nc_galaxy_wl_obs_peek_shape_interp_source (NcGalaxyWLObs *obs);
+const gchar *nc_galaxy_wl_obs_peek_shape_interp_file (NcGalaxyWLObs *obs);
 
 GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
 NcmMatrix *nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs);

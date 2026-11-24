@@ -34,6 +34,8 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
+#include <string.h>
 
 typedef struct _TestNcGalaxyWLObs
 {
@@ -58,10 +60,16 @@ static void test_nc_galaxy_wl_obs_bad_set (TestNcGalaxyWLObs *test, gconstpointe
 static void test_nc_galaxy_wl_obs_bad_set_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_shape_interp_file (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_shape_interp_file_other (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_pz_spline (void);
 static void test_nc_galaxy_wl_obs_pz_spline_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_type (void);
 static void test_nc_galaxy_wl_obs_shape_interp_type_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_type (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_type_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_empty (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -131,10 +139,22 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_wl_obs_new,
               &test_nc_galaxy_wl_obs_shape_interp,
               &test_nc_galaxy_wl_obs_free);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new,
+              &test_nc_galaxy_wl_obs_shape_interp_file,
+              &test_nc_galaxy_wl_obs_free);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/other", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new,
+              &test_nc_galaxy_wl_obs_shape_interp_file_other,
+              &test_nc_galaxy_wl_obs_free);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_spline", &test_nc_galaxy_wl_obs_pz_spline);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_spline/subprocess", &test_nc_galaxy_wl_obs_pz_spline_subprocess);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/type", &test_nc_galaxy_wl_obs_shape_interp_type);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/type/subprocess", &test_nc_galaxy_wl_obs_shape_interp_type_subprocess);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/type", &test_nc_galaxy_wl_obs_shape_interp_file_type);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/type/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_type_subprocess);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/empty", &test_nc_galaxy_wl_obs_shape_interp_file_empty);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/empty/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess);
 
   g_test_run ();
 
@@ -609,6 +629,210 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   ncm_serialize_free (ser);
 }
 
+/* Sets two interpolants and a record on obs and writes it to a new file of a new directory */
+static gchar *
+_test_nc_galaxy_wl_obs_write_shape_interp_file (NcGalaxyWLObs *obs, gchar **dir)
+{
+  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmSpectralTensor *spp_0   = ncm_spectral_tensor_new (2);
+  NcmSpectralTensor *spp_3   = ncm_spectral_tensor_new (2);
+  NcmObjDictStr *source      = ncm_obj_dict_str_new ();
+  NcGalaxyShapePopGauss *pop = nc_galaxy_shape_pop_gauss_new ();
+  GError *error              = NULL;
+  gchar *filename;
+
+  *dir = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", &error);
+  g_assert_no_error (error);
+  filename = g_build_filename (*dir, "catalog.gvar", NULL);
+
+  ncm_obj_dict_str_add (source, "shape-pop", G_OBJECT (pop));
+  nc_galaxy_wl_obs_set (obs, "z", 0, 0.5, NULL);
+  nc_galaxy_wl_obs_set_shape_interp (obs, 0, spp_0);
+  nc_galaxy_wl_obs_set_shape_interp (obs, 3, spp_3);
+  nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
+  ncm_serialize_to_binfile (ser, G_OBJECT (obs), filename);
+
+  nc_galaxy_shape_pop_gauss_free (pop);
+  ncm_obj_dict_str_unref (source);
+  ncm_spectral_tensor_free (spp_0);
+  ncm_spectral_tensor_free (spp_3);
+  ncm_serialize_free (ser);
+
+  return filename;
+}
+
+/* Whether the serialized object obs_ser has the property name */
+static gboolean
+_test_nc_galaxy_wl_obs_ser_has (GVariant *obs_ser, const gchar *name)
+{
+  GVariant *props = g_variant_get_child_value (obs_ser, 1);
+  GVariant *val   = g_variant_lookup_value (props, name, NULL);
+  gboolean has    = (val != NULL);
+
+  g_clear_pointer (&val, g_variant_unref);
+  g_variant_unref (props);
+
+  return has;
+}
+
+/*
+ * A catalog read from a file with interpolants serializes the name of the file in place of
+ * the interpolants and their record, and its copy reads them from the file.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_file (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmSpectralTensor *st = ncm_spectral_tensor_new (2);
+  gchar *dir            = NULL;
+  gchar *filename       = _test_nc_galaxy_wl_obs_write_shape_interp_file (test->obs, &dir);
+  gchar *filename_ref   = g_build_filename (dir, "reference.gvar", NULL);
+  gchar *abs_name       = g_canonicalize_filename (filename, NULL);
+  NcGalaxyWLObs *obs    = nc_galaxy_wl_obs_new_from_file (filename, NULL);
+  NcmObjDictInt *prop   = NULL;
+  NcmObjDictStr *sprop  = NULL;
+  gchar *fprop          = NULL;
+  NcGalaxyWLObs *obs_dup, *obs_ref;
+  GVariant *obs_ser;
+
+  /* The catalog written from memory has no file; the one read from the file refers to it */
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (test->obs));
+  g_assert_cmpstr (nc_galaxy_wl_obs_peek_shape_interp_file (obs), ==, abs_name);
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs, 0)));
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs, 3)));
+
+  g_object_get (obs, "shape-interp", &prop, "shape-interp-source", &sprop, "shape-interp-file", &fprop, NULL);
+  g_assert_null (prop);
+  g_assert_null (sprop);
+  g_assert_cmpstr (fprop, ==, abs_name);
+  g_clear_pointer (&fprop, g_free);
+
+  obs_ser = ncm_serialize_to_variant (ser, G_OBJECT (obs));
+  ncm_serialize_reset (ser, FALSE);
+  g_assert_true (_test_nc_galaxy_wl_obs_ser_has (obs_ser, "shape-interp-file"));
+  g_assert_false (_test_nc_galaxy_wl_obs_ser_has (obs_ser, "shape-interp"));
+  g_assert_false (_test_nc_galaxy_wl_obs_ser_has (obs_ser, "shape-interp-source"));
+
+  /* The copy reads the interpolants and the record from the file */
+  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
+  ncm_serialize_reset (ser, FALSE);
+
+  g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs_dup, "z", 0, NULL), ==, 0.5);
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 3)));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 1));
+  g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (ncm_obj_dict_str_peek (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup), "shape-pop")));
+  g_assert_cmpstr (nc_galaxy_wl_obs_peek_shape_interp_file (obs_dup), ==, abs_name);
+
+  /* A change of the rows after the file was read makes the interpolants and the file stale */
+  nc_galaxy_wl_obs_set (obs_dup, "z", 1, 1.0, NULL);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (obs_dup));
+  g_object_get (obs_dup, "shape-interp", &prop, "shape-interp-file", &fprop, NULL);
+  g_assert_cmpuint (ncm_obj_dict_int_len (prop), ==, 0);
+  g_assert_null (fprop);
+  g_clear_pointer (&prop, ncm_obj_dict_int_unref);
+  nc_galaxy_wl_obs_free (obs_dup);
+
+  /* Rows that differ from those of the file when it is read: no interpolants are taken */
+  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
+  ncm_serialize_reset (ser, FALSE);
+  nc_galaxy_wl_obs_set (obs_dup, "z", 1, 1.0, NULL);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (obs_dup));
+  nc_galaxy_wl_obs_free (obs_dup);
+
+  /* A file written from a catalog that refers to a file has no interpolants: the reference is kept */
+  ncm_serialize_to_binfile (ser, G_OBJECT (obs), filename_ref);
+  ncm_serialize_reset (ser, FALSE);
+  obs_ref = nc_galaxy_wl_obs_new_from_file (filename_ref, NULL);
+  g_assert_cmpstr (nc_galaxy_wl_obs_peek_shape_interp_file (obs_ref), ==, abs_name);
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_ref, 3)));
+
+  /* An unset file leaves the interpolants read from it, which the catalog then serializes */
+  g_object_set (obs_ref, "shape-interp-file", NULL, NULL);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (obs_ref));
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_ref, 3)));
+  g_object_get (obs_ref, "shape-interp", &prop, "shape-interp-source", &sprop, NULL);
+  g_assert_cmpuint (ncm_obj_dict_int_len (prop), ==, 2);
+  g_assert_cmpuint (ncm_obj_dict_str_len (sprop), ==, 1);
+  g_clear_pointer (&prop, ncm_obj_dict_int_unref);
+  g_clear_pointer (&sprop, ncm_obj_dict_str_unref);
+
+  /* A file set on a catalog replaces its interpolants by those of the file */
+  g_object_set (obs_ref, "shape-interp", NULL, "shape-interp-file", filename, NULL);
+  g_assert_cmpstr (nc_galaxy_wl_obs_peek_shape_interp_file (obs_ref), ==, filename);
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_ref, 0)));
+
+  /* Setting an interpolant, or a record, unsets the file */
+  nc_galaxy_wl_obs_set_shape_interp (obs, 5, st);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (obs));
+  g_assert_true (nc_galaxy_wl_obs_peek_shape_interp (obs, 5) == st);
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs, 0)));
+
+  nc_galaxy_wl_obs_set_shape_interp_source (obs_ref, nc_galaxy_wl_obs_peek_shape_interp_source (obs));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (obs_ref));
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_ref, 0)));
+
+  g_assert_cmpint (g_remove (filename), ==, 0);
+  g_assert_cmpint (g_remove (filename_ref), ==, 0);
+  g_assert_cmpint (g_rmdir (dir), ==, 0);
+
+  g_variant_unref (obs_ser);
+  nc_galaxy_wl_obs_free (obs_ref);
+  nc_galaxy_wl_obs_free (obs);
+  ncm_spectral_tensor_free (st);
+  ncm_serialize_free (ser);
+  g_free (abs_name);
+  g_free (filename_ref);
+  g_free (filename);
+  g_free (dir);
+}
+
+/*
+ * nc_galaxy_wl_obs_new_from_file() on a file of a catalog without interpolants sets no file,
+ * and on a file of another type of object sets NC_GALAXY_WL_OBS_ERROR_WRONG_TYPE.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_other (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVector *v      = ncm_vector_new (1);
+  GError *error     = NULL;
+  gchar *dir        = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", &error);
+  gchar *filename;
+  NcGalaxyWLObs *obs;
+
+  g_assert_no_error (error);
+  filename = g_build_filename (dir, "catalog.gvar", NULL);
+
+  nc_galaxy_wl_obs_set (test->obs, "z", 0, 0.5, NULL);
+  ncm_serialize_to_binfile (ser, G_OBJECT (test->obs), filename);
+  ncm_serialize_reset (ser, FALSE);
+
+  obs = nc_galaxy_wl_obs_new_from_file (filename, NULL);
+  g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs, "z", 0, NULL), ==, 0.5);
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (obs));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs, 0));
+  nc_galaxy_wl_obs_free (obs);
+
+  ncm_vector_set (v, 0, 1.0);
+  ncm_serialize_to_binfile (ser, G_OBJECT (v), filename);
+  g_assert_null (nc_galaxy_wl_obs_new_from_file (filename, &error));
+  g_assert_error (error, NC_GALAXY_WL_OBS_ERROR, NC_GALAXY_WL_OBS_ERROR_WRONG_TYPE);
+  g_assert_nonnull (strstr (error->message, "holds a NcmVector, not a NcGalaxyWLObs"));
+  g_clear_error (&error);
+
+  g_assert_cmpint (g_remove (filename), ==, 0);
+  g_assert_cmpint (g_rmdir (dir), ==, 0);
+
+  ncm_vector_free (v);
+  ncm_serialize_free (ser);
+  g_free (filename);
+  g_free (dir);
+}
+
 /*
  * A catalog written before NcGalaxyPz holds a NcmSpline in its pz property: building
  * it aborts with a message that names the update tool. This test is dropped in 1.0, with
@@ -684,5 +908,61 @@ test_nc_galaxy_wl_obs_shape_interp_type_subprocess (void)
   g_object_set (obs, "shape-interp", interp, NULL);
   nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
   nc_galaxy_wl_obs_peek_shape_interp (obs, 2);
+}
+
+/*
+ * A shape-interp-file that holds another type of object: the first read of the interpolants
+ * aborts with a message that names the file and the type.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_type (void)
+{
+  g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/type/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*of shape-interp-file holds a NcmVector, not a NcGalaxyWLObs*");
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_type_subprocess (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GStrv col_names   = g_strsplit ("ra dec", " ", -1);
+  NcmVector *v      = ncm_vector_new (1);
+  gchar *dir        = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", NULL);
+  gchar *filename   = g_build_filename (dir, "vector.gvar", NULL);
+  NcGalaxyWLObs *obs;
+
+  ncm_vector_set (v, 0, 1.0);
+  ncm_serialize_to_binfile (ser, G_OBJECT (v), filename);
+
+  obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
+  g_object_set (obs, "shape-interp-file", filename, NULL);
+  nc_galaxy_wl_obs_peek_shape_interp (obs, 0);
+}
+
+/*
+ * A shape-interp-file of a catalog without interpolants: the first read of the interpolants
+ * aborts with a message that names the file.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_empty (void)
+{
+  g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/empty/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*of shape-interp-file has no interpolants*");
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess (void)
+{
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GStrv col_names    = g_strsplit ("ra dec", " ", -1);
+  gchar *dir         = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", NULL);
+  gchar *filename    = g_build_filename (dir, "catalog.gvar", NULL);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
+
+  ncm_serialize_to_binfile (ser, G_OBJECT (obs), filename);
+  g_object_set (obs, "shape-interp-file", filename, NULL);
+  nc_galaxy_wl_obs_peek_shape_interp (obs, 0);
 }
 
