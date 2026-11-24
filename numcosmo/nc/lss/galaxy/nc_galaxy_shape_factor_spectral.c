@@ -195,14 +195,20 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
    * fit, cached by prepare(), with a copy of the density profile at the upper bound of the
    * mass (used under range_lock, since the galaxies may be prepared in parallel). range_ready:
    * the models are in the fit; range_holds: only the mass, the halo center and the shape
-   * population are free (_nc_galaxy_shape_factor_moments_range_holds()).
+   * population are free (_nc_galaxy_shape_factor_moments_range_holds()). The box of the halo
+   * center: the center and half width of its right ascensions, its declinations [deg], and
+   * the prefactor of the projected radius of an angle.
    */
   gboolean restrict_range;
   NcHICosmo *cosmo;
   NcWLSurfaceMassDensity *smd;
   NcHaloDensityProfile *dp_box;
   gdouble z_cl;
-  gdouble delta_R;
+  gdouble box_ra_c;
+  gdouble box_ra_hw;
+  gdouble box_dec_lo;
+  gdouble box_dec_hi;
+  gdouble prefactor;
   gboolean range_ready;
   gboolean range_holds;
   GMutex range_lock;
@@ -379,7 +385,11 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->smd                      = NULL;
   self->dp_box                   = NULL;
   self->z_cl                     = 0.0;
-  self->delta_R                  = 0.0;
+  self->box_ra_c                 = 0.0;
+  self->box_ra_hw                = 0.0;
+  self->box_dec_lo               = 0.0;
+  self->box_dec_hi               = 0.0;
+  self->prefactor                = 0.0;
   self->range_ready              = FALSE;
   self->range_holds              = FALSE;
   g_mutex_init (&self->range_lock);
@@ -957,7 +967,24 @@ _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mse
       self->smd   = nc_wl_surface_mass_density_ref (smd);
 
       self->z_cl        = nc_halo_position_get_redshift (hp);
-      self->delta_R     = _nc_galaxy_shape_factor_moments_centre_delta (hp, cosmo);
+      {
+        NcmModel *hp_model      = NCM_MODEL (hp);
+        const gboolean ra_free  = ncm_model_param_get_ftype (hp_model, NC_HALO_POSITION_RA) == NCM_PARAM_TYPE_FREE;
+        const gboolean dec_free = ncm_model_param_get_ftype (hp_model, NC_HALO_POSITION_DEC) == NCM_PARAM_TYPE_FREE;
+        const gdouble ra        = ncm_model_param_get (hp_model, NC_HALO_POSITION_RA);
+        const gdouble dec       = ncm_model_param_get (hp_model, NC_HALO_POSITION_DEC);
+        const gdouble ra_lo     = ra_free ? ncm_model_param_get_lower_bound (hp_model, NC_HALO_POSITION_RA) : ra;
+        const gdouble ra_hi     = ra_free ? ncm_model_param_get_upper_bound (hp_model, NC_HALO_POSITION_RA) : ra;
+        const gdouble dec_lo    = dec_free ? ncm_model_param_get_lower_bound (hp_model, NC_HALO_POSITION_DEC) : dec;
+        const gdouble dec_hi    = dec_free ? ncm_model_param_get_upper_bound (hp_model, NC_HALO_POSITION_DEC) : dec;
+
+        self->box_ra_c   = 0.5 * (ra_lo + ra_hi);
+        self->box_ra_hw  = 0.5 * fabs (ra_hi - ra_lo);
+        self->box_dec_lo = MIN (dec_lo, dec_hi);
+        self->box_dec_hi = MAX (dec_lo, dec_hi);
+        self->prefactor  = nc_halo_position_projected_radius_prefactor (hp, cosmo);
+      }
+
       self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_box, dp);
       self->range_holds = self->range_ready && _nc_galaxy_shape_factor_moments_range_holds (mset);
     }
@@ -967,7 +994,8 @@ _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mse
 /*
  * The |g| range data_prepare() asks of the interpolant of a galaxy with restrict-range: the
  * bound of |g| = |(1 + m) g_t e^{2 i phi} + c| at the corner of the box, |1 + m| |g_t| + |c|,
- * with g_t at the smallest projected radius the box of the halo center allows, the source
+ * with g_t at the smallest projected radius the box of the halo center allows (the smallest
+ * angle between the galaxy and the box, _nc_galaxy_shape_factor_spectral_box_min_angle()), the source
  * redshift z_max and the mass at its upper bound, when it is below interp-g-max. At fixed
  * radius, source redshift and concentration, the convergence and the shear grow with the
  * mass and the source redshift, so with kappa < 1 at the corner |g_t| is largest there.
@@ -975,15 +1003,47 @@ _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mse
  * itself, without a finite source redshift behind the lens, when kappa >= 1 at the corner,
  * and when the bound is 0.
  */
+/*
+ * The smallest angle [rad] between the direction (ra, dec) [deg] and the box of the halo
+ * center. With ra inside the right ascensions of the box (modulo 360) the nearest point is
+ * on the meridian of the galaxy, at its declination clamped to the box. Otherwise it is on
+ * the nearer edge meridian, a great circle, at the declination that maximizes
+ * sin(dec) sin(d) + cos(dec) cos(d) cos(Delta), Delta the difference of right ascension:
+ * d = atan2 (sin dec, cos dec cos Delta), clamped to the box.
+ */
+static gdouble
+_nc_galaxy_shape_factor_spectral_box_min_angle (NcGalaxyShapeFactorSpectralPrivate *self, const gdouble ra, const gdouble dec)
+{
+  const gdouble d_ra = fabs (remainder (ra - self->box_ra_c, 360.0));
+  const gdouble dr   = dec * M_PI / 180.0;
+
+  if (d_ra <= self->box_ra_hw)
+  {
+    const gdouble d = GSL_MAX (self->box_dec_lo, GSL_MIN (self->box_dec_hi, dec));
+
+    return fabs (dec - d) * M_PI / 180.0;
+  }
+  else
+  {
+    const gdouble Delta = (d_ra - self->box_ra_hw) * M_PI / 180.0;
+    const gdouble d_opt = atan2 (sin (dr), cos (dr) * cos (Delta)) * 180.0 / M_PI;
+    const gdouble d     = GSL_MAX (self->box_dec_lo, GSL_MIN (self->box_dec_hi, d_opt)) * M_PI / 180.0;
+    const gdouble h     = gsl_pow_2 (sin (0.5 * (dr - d))) + cos (dr) * cos (d) * gsl_pow_2 (sin (0.5 * Delta));
+
+    return 2.0 * asin (GSL_MIN (1.0, sqrt (h)));
+  }
+}
+
 static gdouble
 _nc_galaxy_shape_factor_spectral_reach (NcGalaxyShapeFactorSpectralPrivate *self, NcGalaxyShapeFactorData *data, const gdouble z_max)
 {
-  const gdouble R     = nc_galaxy_shape_factor_data_get_radius (data);
-  const gdouble R_min = R - self->delta_R;
-  gdouble kappa, g_t, g_cal;
+  gdouble R_min, kappa, g_t, g_cal;
 
   if (!self->restrict_range || !self->range_ready || !self->range_holds)
     return 0.0;
+
+  R_min = ncm_util_projected_radius (_nc_galaxy_shape_factor_spectral_box_min_angle (self, data->pos_data->ra, data->pos_data->dec),
+                                     self->prefactor);
 
   if (!(R_min > 0.0) || !gsl_finite (z_max) || !(z_max > self->z_cl))
     return 0.0;

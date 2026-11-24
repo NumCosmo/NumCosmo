@@ -357,7 +357,8 @@ of the catalog, as a resample, drops its tables.
   $g_\mathrm{reach} \equiv \min (g_\mathrm{max}, |1 + m| |g_t| + |c|)$, $m$ and $c$ are the
   multiplicative and additive shear biases of the galaxy, and $g_t$ is the reduced tangential
   shear at the corner of the box of the fit: the smallest projected radius that the box of
-  the halo center allows, the upper bound of $\log_{10} M_\Delta$, and the largest source
+  the halo center allows (that of the smallest angle between the galaxy and the box), the
+  upper bound of $\log_{10} M_\Delta$, and the largest source
   redshift of the galaxy. At a fixed radius, source redshift and concentration, $|g_t|$ grows
   with the mass and the source redshift while the convergence is below 1, so the corner gives
   its largest value. The bound holds when only $\log_{10} M_\Delta$, the halo center and
