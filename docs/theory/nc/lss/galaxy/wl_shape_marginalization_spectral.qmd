@@ -419,21 +419,37 @@ catalog, as a resample, drops its tables.
   those of the population at the center. They do not resolve the integrand of a population
   whose density differs from it by many orders of magnitude, so the bounds must not contain
   such populations.
+- Compression: a table with population variables is compressed after its build. Each of
+  its panels is replaced by a Tucker panel when one holds fewer numbers and changes
+  $\ln P$ by at most $f_\mathrm{c}$ times `interp-abstol`
+  ([Compressed Panels](../../../ncm/algebra/spectral_tensor.qmd#compressed-panels)),
+  where $f_\mathrm{c}$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-compress-frac]]
+  (default $10^{-2}$). The bound is $10^{-7}$ at the default `interp-abstol`, and the
+  largest change measured is about 0.15 of the bound. The likelihood evaluates a galaxy at
+  one value of the population parameters per call, so the population variables are the
+  same at every shear of the galaxy, and each Tucker panel is summed over them once per
+  call
+  ([Evaluation at Fixed Last Variables](../../../ncm/algebra/spectral_tensor.qmd#evaluation-at-fixed-last-variables)).
+  With $\alpha$ and $\beta$ of the Beta population free over the default bounds, the
+  compressed tables of the HSC catalog HWL16a-094 hold 14 times fewer numbers than the
+  dense ones. With $f_\mathrm{c} = 0$ no panel is compressed, and a table without
+  population variables is never compressed.
 
 A table holds for the $\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$ of its galaxy and
 for the `reltol`, `interp-abstol`, `interp-min-radial-panels`, `interp-trim-frac`, the
 values of the fixed parameters of the population, the set of its free parameters and their
 bounds it was built with, and, with population variables, for `interp-pop-level-min`,
-`interp-pop-level-cap` and `interp-pop-one-integral`. A change of a free parameter inside
-its bounds uses the same table; any other difference aborts the evaluation, and the table
-must be built again. Its range is the one it was built with, also when it was read from a
-catalog by a fit with other range settings. A table without population variables computes of
-the order of $10^3$ integrals. One with population variables needs that number of values at
-each point of the grids of the population, at least $5^d$ points for $d$ free parameters at
-the default `interp-pop-level-min`; with `interp-pop-one-integral` the population points of
-a call take one integral per shear, and without it one integral each. A table replaces the
-integrals of the shears at which the galaxy is evaluated while it holds, so it reduces the
-cost when these outnumber the integrals of its build.
+`interp-pop-level-cap`, `interp-pop-one-integral` and `interp-compress-frac`. A change of a
+free parameter inside its bounds uses the same table; any other difference aborts the
+evaluation, and the table must be built again. Its range is the one it was built with, also
+when it was read from a catalog by a fit with other range settings. A table without
+population variables computes of the order of $10^3$ integrals. One with population
+variables needs that number of values at each point of the grids of the population, at least
+$5^d$ points for $d$ free parameters at the default `interp-pop-level-min`; with
+`interp-pop-one-integral` the population points of a call take one integral per shear, and
+without it one integral each. A table replaces the integrals of the shears at which the
+galaxy is evaluated while it holds, so it reduces the cost when these outnumber the
+integrals of its build.
 
 ## Interpolation Along the Shears of a Galaxy
 
