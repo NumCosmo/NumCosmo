@@ -483,8 +483,8 @@ display(Markdown(f"Both tables were measured on one thread of an {cpu_model()}."
 ```
 
 An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
-$10^5$ times, far above the break-even count: with a fixed population the build pays even if
-it is repeated in every process of the run. The command `numcosmo wl-catalog shape-interp`
+$10^5$ times, far above the break-even count: with a fixed population the build of the
+interpolants costs a small fraction of the integrals they replace. The command `numcosmo wl-catalog shape-interp`
 does it once instead. It builds the interpolants of all the galaxies of a catalog in parallel
 and writes them with the catalog; `numcosmo generate cluster-wl-load --data-file` then builds
 an experiment that loads them. The table below gives the measurements on the HSC field
