@@ -1848,31 +1848,34 @@ GObject *
 ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
 {
   GError *error = NULL;
-  gchar *file   = NULL;
-  gsize length  = 0;
   GObject *obj  = NULL;
+  GMappedFile *mfile;
 
   g_assert (filename != NULL);
 
-  if (!g_file_get_contents (filename, &file, &length, &error))
-    g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
+  /*
+   * The file is mapped, not read: the objects are built from the mapped bytes, so the
+   * resident memory of the call is that of the objects, not of the objects and the file.
+   */
+  mfile = g_mapped_file_new (filename, FALSE, &error);
+
+  if (mfile == NULL)
+    g_error ("ncm_serialize_from_binfile: cannot open file %s: %s",
              filename, error->message);
 
-  g_assert_cmpint (length, >, 0);
+  g_assert_cmpint (g_mapped_file_get_length (mfile), >, 0);
 
   {
-    GVariant *obj_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
-                                                 file,
-                                                 length,
-                                                 TRUE,
-                                                 g_free,
-                                                 file
-    );
+    GBytes *bytes     = g_mapped_file_get_bytes (mfile);
+    GVariant *obj_ser = g_variant_ref_sink (g_variant_new_from_bytes (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), bytes, TRUE));
 
     obj = ncm_serialize_from_variant (ser, obj_ser);
 
     g_variant_unref (obj_ser);
+    g_bytes_unref (bytes);
   }
+
+  g_mapped_file_unref (mfile);
 
   return obj;
 }
