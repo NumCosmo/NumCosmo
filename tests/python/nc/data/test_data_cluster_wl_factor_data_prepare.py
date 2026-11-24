@@ -262,6 +262,96 @@ def test_distance_zf_required(separate_dist):
     )
 
 
+def _shared_clone(dcwlf, mset):
+    """A clone made as NcmFitESMCMC makes its workers': the dataset registered as shared
+    after it was prepared, then duplicated (with its own model set) through that
+    serializer."""
+    dset = Ncm.Dataset.new()
+    dset.append_data(dcwlf)
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dset.register_shared(ser)
+    clone = ser.dup_obj(dcwlf)
+    mset_clone = ser.dup_obj(mset)
+    ser.reset(True)
+    assert clone.peek_obs() is dcwlf.peek_obs()
+    return clone, mset_clone
+
+
+@pytest.mark.parametrize("method", ["fixed-nodes", "cheb-weights"])
+def test_clone_takes_the_published_grid_and_critical_densities(method):
+    """A clone of a prepared dataset takes its redshift grid and the critical densities
+    at its nodes instead of calibrating and computing them, with the same -2lnP. A
+    clone at another cosmology computes its own critical densities, which equal those
+    of a dataset prepared there, and leaves the original's untouched."""
+    integ = {
+        "fixed-nodes": Nc.DataClusterWLIntegMethod.FIXED_NODES,
+        "cheb-weights": Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
+    }[method]
+    dcwlf, mset = _build("var-add", "nfw", "spline")
+    dcwlf.set_integ_method(integ)
+    dcwlf.data_prepare(mset)
+    ref = _m2lnP(dcwlf, mset)
+
+    n_gal = dcwlf.peek_obs().len()
+    assert dcwlf.get_crit_count() == n_gal
+
+    clone, mset_clone = _shared_clone(dcwlf, mset)
+    np.testing.assert_array_equal(_m2lnP(clone, mset_clone), ref)
+    assert clone.get_calib_count() == 0
+    # The critical densities were taken from the original, not computed
+    assert clone.get_crit_count() == 0
+
+    # Another cosmology in the clone only
+    mset_clone.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
+    moved = _m2lnP(clone, mset_clone)
+    assert clone.get_crit_count() == n_gal
+    np.testing.assert_array_equal(_m2lnP(dcwlf, mset), ref)
+    assert not np.array_equal(moved, ref)
+
+    fresh, mset_fresh = _build("var-add", "nfw", "spline")
+    fresh.set_integ_method(integ)
+    fresh.props.node_config = dcwlf.props.node_config
+    mset_fresh.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
+    np.testing.assert_array_equal(_m2lnP(fresh, mset_fresh), moved)
+
+
+def test_copies_share_the_critical_densities_of_a_stored_grid():
+    """Over a catalog that stores its CHEB_WEIGHTS grid, the source and its copies all adopt
+    that grid, so none of them builds a grid and publishes critical densities with it. The
+    first to prepare computes them and publishes them on the grid; every later one at the
+    same cosmology takes them, with the -2lnP of a dataset that computed its own. A copy at
+    another cosmology computes its own and leaves the published ones in place."""
+    writer, mset = _build("var-add", "nfw", "spline")
+    writer.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
+    writer.write_cheb_grid(mset, writer.peek_obs())
+    ref = _m2lnP(writer, mset)
+    n_gal = writer.peek_obs().len()
+
+    # A source that has not prepared: its catalog carries the stored grid
+    source = Ncm.Serialize.new(Ncm.SerializeOpt.NONE).dup_obj(writer)
+    assert source.peek_obs().peek_cheb_grid() is not None
+    first, mset_first = _shared_clone(source, mset)
+    second, mset_second = _shared_clone(source, mset)
+
+    np.testing.assert_array_equal(_m2lnP(first, mset_first), ref)
+    assert first.get_crit_count() == n_gal
+
+    np.testing.assert_array_equal(_m2lnP(second, mset_second), ref)
+    assert second.get_crit_count() == 0
+    np.testing.assert_array_equal(_m2lnP(source, mset), ref)
+    assert source.get_crit_count() == 0
+
+    other, mset_other = _shared_clone(source, mset)
+    mset_other.peek(Nc.HICosmo.id()).param_set_by_name("H0", 72.0)
+    moved = _m2lnP(other, mset_other)
+    assert other.get_crit_count() == n_gal
+    assert not np.array_equal(moved, ref)
+
+    last, mset_last = _shared_clone(source, mset)
+    np.testing.assert_array_equal(_m2lnP(last, mset_last), ref)
+    assert last.get_crit_count() == 0
+
+
 def test_distance_zf_required_after_model_swap():
     """A surface mass density set in the model set after the first evaluation, with a
     distance of low zf, has its zf raised at the next prepare although the catalog did
