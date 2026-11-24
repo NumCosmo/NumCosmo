@@ -79,6 +79,7 @@ guint ncm_spectral_tensor_split (NcmSpectralTensor *st, guint node, guint i, gui
 guint ncm_spectral_tensor_split_empty (NcmSpectralTensor *st, guint i, guint n_edges, const gdouble *edges);
 guint ncm_spectral_tensor_set_panel (NcmSpectralTensor *st, guint node, guint n_K, const guint *n_coeffs, gsize len, const gdouble *coeffs);
 guint ncm_spectral_tensor_set_panel_tucker (NcmSpectralTensor *st, guint node, guint n_K, const guint *n_coeffs, guint n_r, const guint *ranks, gsize len, const gdouble *data);
+guint ncm_spectral_tensor_compress (NcmSpectralTensor *st, gdouble tol);
 
 guint ncm_spectral_tensor_get_n_vars (NcmSpectralTensor *st);
 guint ncm_spectral_tensor_get_n_nodes (NcmSpectralTensor *st);

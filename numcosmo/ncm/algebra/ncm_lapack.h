@@ -86,6 +86,7 @@ gint ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p
 
 gint ncm_lapack_dgels (gchar trans, const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, double *work, const gint lwork);
 gint ncm_lapack_dgelsd (const gint m, const gint n, const gint nrhs, gdouble *a, const gint lda, gdouble *b, const gint ldb, gdouble *s, gdouble *rcond, gint *rank, NcmLapackWS *ws);
+gint ncm_lapack_dgesdd (gchar jobz, const gint m, const gint n, gdouble *a, const gint lda, gdouble *s, gdouble *u, const gint ldu, gdouble *vt, const gint ldvt, NcmLapackWS *ws);
 
 /**
  * NCM_LAPACK_CHECK_INFO:

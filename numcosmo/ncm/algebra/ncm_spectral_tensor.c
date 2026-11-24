@@ -111,6 +111,7 @@
 #include "build_cfg.h"
 
 #include "ncm/algebra/ncm_spectral_tensor.h"
+#include "ncm/algebra/ncm_lapack.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -1153,86 +1154,86 @@ ncm_spectral_tensor_get_panel (NcmSpectralTensor *st, guint p, GArray **lower, G
 }
 
 /*
+ * The mode product of the tensor in, with dims[j] entries in variable j and the first index
+ * fastest, with the m_rows x dims[i] matrix M in variable i: out has m_rows entries in
+ * variable i and the entries of in in the others, out[.., k, ..] = sum_a M^{k a} in[.., a, ..]
+ * with M^{k a} at M[k rs + a cs]. Sets dims[i] to m_rows.
+ */
+static void
+_ncm_spectral_tensor_mode_product (const gdouble *in, gsize *dims, const guint n_vars, const guint i, const gdouble *M, const gsize m_rows, const gsize rs, const gsize cs, gdouble *out)
+{
+  const gsize n_in = dims[i];
+  gsize inner      = 1;
+  gsize outer      = 1;
+  gsize o, k, a, in_i;
+  guint j;
+
+  for (j = 0; j < i; j++)
+    inner *= dims[j];
+
+  for (j = i + 1; j < n_vars; j++)
+    outer *= dims[j];
+
+  for (o = 0; o < outer; o++)
+  {
+    for (k = 0; k < m_rows; k++)
+    {
+      gdouble *dst = out + (o * m_rows + k) * inner;
+
+      for (in_i = 0; in_i < inner; in_i++)
+        dst[in_i] = 0.0;
+
+      for (a = 0; a < n_in; a++)
+      {
+        const gdouble m    = M[k * rs + a * cs];
+        const gdouble *src = in + (o * n_in + a) * inner;
+
+        for (in_i = 0; in_i < inner; in_i++)
+          dst[in_i] += m * src[in_i];
+      }
+    }
+  }
+
+  dims[i] = m_rows;
+}
+
+/*
  * The coefficients c of a Tucker panel from its data (factors, then core): the mode
- * products of the core with U_0, ..., U_{n - 1} in turn. Before product i the tensor has
- * K_j entries in the variables j < i and r_j in the others, the first index fastest; the
- * product replaces r_i by K_i. Two scratch tensors of the largest intermediate size.
+ * products of the core with U_0, ..., U_{n - 1} in turn, each replacing r_i by K_i. Two
+ * scratch tensors of the size of c, the largest of the chain since r_i <= K_i.
  */
 static void
 _ncm_spectral_tensor_tucker_expand (const guint n_vars, const guint *K, const guint *r, const gdouble *data, gdouble *c)
 {
-  const gdouble *U[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  const gsize len = _ncm_spectral_tensor_block_len (K, n_vars);
+  gdouble *cur    = g_new (gdouble, len);
+  gdouble *next   = g_new (gdouble, len);
   gsize dims[NCM_SPECTRAL_TENSOR_MAX_VARS];
-  gsize max_size = 1;
-  gsize size     = 1;
-  gsize off      = 0;
-  gdouble *cur, *next;
+  const gdouble *U = data;
   guint i;
 
   for (i = 0; i < n_vars; i++)
   {
-    U[i]    = data + off;
-    off    += (gsize) K[i] * r[i];
     dims[i] = r[i];
-    size   *= r[i];
+    U      += (gsize) K[i] * r[i];
   }
 
-  max_size = size;
+  memcpy (cur, U, sizeof (gdouble) * _ncm_spectral_tensor_block_len (r, n_vars));
+  U = data;
 
   for (i = 0; i < n_vars; i++)
   {
-    size     = size / r[i] * K[i];
-    max_size = MAX (max_size, size);
+    gdouble *tmp;
+
+    _ncm_spectral_tensor_mode_product (cur, dims, n_vars, i, U, K[i], r[i], 1, next);
+    U += (gsize) K[i] * r[i];
+
+    tmp  = cur;
+    cur  = next;
+    next = tmp;
   }
 
-  cur  = g_new (gdouble, max_size);
-  next = g_new (gdouble, max_size);
-  memcpy (cur, data + off, sizeof (gdouble) * _ncm_spectral_tensor_block_len (r, n_vars));
-
-  for (i = 0; i < n_vars; i++)
-  {
-    gsize inner = 1;
-    gsize outer = 1;
-    gsize o, in;
-    guint j, k, a;
-
-    for (j = 0; j < i; j++)
-      inner *= dims[j];
-
-    for (j = i + 1; j < n_vars; j++)
-      outer *= dims[j];
-
-    for (o = 0; o < outer; o++)
-    {
-      for (k = 0; k < K[i]; k++)
-      {
-        gdouble *dst = next + (o * K[i] + k) * inner;
-
-        for (in = 0; in < inner; in++)
-          dst[in] = 0.0;
-
-        for (a = 0; a < r[i]; a++)
-        {
-          const gdouble u    = U[i][(gsize) k * r[i] + a];
-          const gdouble *src = cur + (o * r[i] + a) * inner;
-
-          for (in = 0; in < inner; in++)
-            dst[in] += u * src[in];
-        }
-      }
-    }
-
-    dims[i] = K[i];
-
-    {
-      gdouble *tmp = cur;
-
-      cur  = next;
-      next = tmp;
-    }
-  }
-
-  memcpy (c, cur, sizeof (gdouble) * _ncm_spectral_tensor_block_len (K, n_vars));
+  memcpy (c, cur, sizeof (gdouble) * len);
   g_free (cur);
   g_free (next);
 }
@@ -2199,5 +2200,294 @@ ncm_spectral_tensor_eval_array (NcmSpectralTensor *st, GArray *x, GArray **fval)
     j += run;
     p  = p_next;
   }
+}
+
+/*
+ * The truncated higher-order SVD of a DENSE panel, for ncm_spectral_tensor_compress(): U[i]
+ * holds the left singular vectors of the unfolding of variable i (K_i rows, column-major,
+ * m[i] columns) and sv[i] its singular values, decreasing.
+ */
+typedef struct _NcmSpectralTensorHOSVD
+{
+  guint n_vars;
+  const guint *K;
+  const gdouble *c;
+  gsize len;
+  gdouble *U[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  gdouble *sv[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  guint m[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  gdouble *core;  /* the core of the last ranks given to _ncm_spectral_tensor_hosvd_error() */
+  gdouble *work1; /* scratch tensors of len entries */
+  gdouble *work2;
+} NcmSpectralTensorHOSVD;
+
+/* The ranks for the relative threshold eps: the singular values above eps sv[0], at least one */
+static void
+_ncm_spectral_tensor_hosvd_ranks (NcmSpectralTensorHOSVD *h, const gdouble eps, guint *r)
+{
+  guint i;
+
+  for (i = 0; i < h->n_vars; i++)
+  {
+    guint k = 1;
+
+    while ((k < h->m[i]) && (h->sv[i][k] > eps * h->sv[i][0]))
+      k++;
+
+    r[i] = k;
+  }
+}
+
+/*
+ * For the ranks r, the core g = c x_i U_i^T (truncated factors) in h->core, and the sum of
+ * |c - g x_i U_i| over the coefficients: the bound of the error of the series on the panel.
+ */
+static gdouble
+_ncm_spectral_tensor_hosvd_error (NcmSpectralTensorHOSVD *h, const guint *r)
+{
+  const guint n_vars = h->n_vars;
+  gsize dims[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  const gdouble *cur = h->c;
+  gdouble *next      = h->work1;
+  gdouble *spare     = h->work2;
+  gdouble err        = 0.0;
+  gsize q;
+  guint i;
+
+  for (i = 0; i < n_vars; i++)
+    dims[i] = h->K[i];
+
+  /* The core: the transposed factors, M^{a k} = U_i[k + K_i a] */
+  for (i = 0; i < n_vars; i++)
+  {
+    gdouble *dst = (i == n_vars - 1) ? h->core : next;
+
+    _ncm_spectral_tensor_mode_product (cur, dims, n_vars, i, h->U[i], r[i], h->K[i], 1, dst);
+    cur   = dst;
+    next  = spare;
+    spare = dst;
+  }
+
+  /* The approximation: M^{k a} = U_i[k + K_i a] */
+  next  = h->work1;
+  spare = h->work2;
+
+  for (i = 0; i < n_vars; i++)
+  {
+    _ncm_spectral_tensor_mode_product (cur, dims, n_vars, i, h->U[i], h->K[i], 1, h->K[i], next);
+    cur  = next;
+    next = (next == h->work1) ? h->work2 : h->work1;
+  }
+
+  for (q = 0; q < h->len; q++)
+    err += fabs (h->c[q] - cur[q]);
+
+  (void) spare;
+
+  return err;
+}
+
+/*
+ * The Tucker data (factors U_i^{k a} at k r_i + a, then the core) of the DENSE coefficients c
+ * whose bound of the error is at most tol, written to data with the ranks in r, when it
+ * holds fewer numbers than c; FALSE otherwise. The ranks follow one relative threshold eps
+ * on the singular values of every unfolding: the largest eps in [1e-16, 1], by bisection on
+ * log10 (eps) in 16 steps, whose error bound is at most tol.
+ */
+static gboolean
+_ncm_spectral_tensor_tucker_from_dense (const guint n_vars, const guint *K, const gdouble *c, const gdouble tol, NcmLapackWS *ws, guint *r, GArray *data)
+{
+  const gsize len = _ncm_spectral_tensor_block_len (K, n_vars);
+  NcmSpectralTensorHOSVD h;
+  gdouble *unfold = g_new (gdouble, len);
+  gdouble *vt     = g_new (gdouble, len);
+  gboolean found  = FALSE;
+  gdouble lo      = -16.0;
+  gdouble hi      = 0.0;
+  guint r_try[NCM_SPECTRAL_TENSOR_MAX_VARS];
+  guint i, step;
+
+  h.n_vars = n_vars;
+  h.K      = K;
+  h.c      = c;
+  h.len    = len;
+  h.core   = g_new (gdouble, len);
+  h.work1  = g_new (gdouble, len);
+  h.work2  = g_new (gdouble, len);
+
+  for (i = 0; i < n_vars; i++)
+  {
+    const gsize Ki   = K[i];
+    const gsize cols = len / Ki;
+    gsize inner      = 1;
+    guint j;
+    gsize q;
+    gint info;
+
+    for (j = 0; j < i; j++)
+      inner *= K[j];
+
+    /* Unfolding of variable i: row k_i, column the other indices, column-major */
+    for (q = 0; q < len; q++)
+    {
+      const gsize k   = (q / inner) % Ki;
+      const gsize col = (q % inner) + inner * (q / (inner * Ki));
+
+      unfold[k + Ki * col] = c[q];
+    }
+
+    h.m[i]  = (guint) MIN (Ki, cols);
+    h.U[i]  = g_new (gdouble, Ki * h.m[i]);
+    h.sv[i] = g_new (gdouble, h.m[i]);
+
+    info = ncm_lapack_dgesdd ('S', Ki, cols, unfold, Ki, h.sv[i], h.U[i], Ki, vt, h.m[i], ws);
+
+    if (info != 0)
+      g_error ("ncm_spectral_tensor_compress: DGESDD returned %d for variable %u.", info, i);
+  }
+
+  _ncm_spectral_tensor_hosvd_ranks (&h, pow (10.0, lo), r);
+
+  if (_ncm_spectral_tensor_hosvd_error (&h, r) <= tol)
+  {
+    _ncm_spectral_tensor_hosvd_ranks (&h, pow (10.0, hi), r_try);
+
+    if (_ncm_spectral_tensor_hosvd_error (&h, r_try) <= tol)
+    {
+      memcpy (r, r_try, sizeof (guint) * n_vars);
+    }
+    else
+    {
+      for (step = 0; step < 16; step++)
+      {
+        const gdouble mid = 0.5 * (lo + hi);
+
+        _ncm_spectral_tensor_hosvd_ranks (&h, pow (10.0, mid), r_try);
+
+        if (_ncm_spectral_tensor_hosvd_error (&h, r_try) <= tol)
+        {
+          lo = mid;
+          memcpy (r, r_try, sizeof (guint) * n_vars);
+        }
+        else
+        {
+          hi = mid;
+        }
+      }
+    }
+
+    if (_ncm_spectral_tensor_tucker_len (K, r, n_vars) < len)
+    {
+      gdouble *d;
+
+      /* The core of the chosen ranks; the bound was checked for them */
+      g_assert_cmpfloat (_ncm_spectral_tensor_hosvd_error (&h, r), <=, tol);
+
+      g_array_set_size (data, _ncm_spectral_tensor_tucker_len (K, r, n_vars));
+      d = &g_array_index (data, gdouble, 0);
+
+      for (i = 0; i < n_vars; i++)
+      {
+        guint k, a;
+
+        for (k = 0; k < K[i]; k++)
+          for (a = 0; a < r[i]; a++)
+            d[(gsize) k * r[i] + a] = h.U[i][k + (gsize) K[i] * a];
+
+        d += (gsize) K[i] * r[i];
+      }
+
+      memcpy (d, h.core, sizeof (gdouble) * _ncm_spectral_tensor_block_len (r, n_vars));
+      found = TRUE;
+    }
+  }
+
+  for (i = 0; i < n_vars; i++)
+  {
+    g_free (h.U[i]);
+    g_free (h.sv[i]);
+  }
+
+  g_free (h.core);
+  g_free (h.work1);
+  g_free (h.work2);
+  g_free (unfold);
+  g_free (vt);
+
+  return found;
+}
+
+/**
+ * ncm_spectral_tensor_compress:
+ * @st: a #NcmSpectralTensor
+ * @tol: the bound of the error of the series of each converted panel, $\ge 0$
+ *
+ * Replaces each panel of format %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE by a panel of format
+ * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER when one holds fewer numbers within @tol. The
+ * Tucker form of a panel is the truncated higher-order singular value decomposition of its
+ * coefficients: the factor $U_i$ is made of the leading left singular vectors of the matrix
+ * whose rows are the index $k_i$ and whose columns are the other indices, and the core is
+ * the coefficients multiplied by every $U_i^T$. The ranks keep, in every variable, the
+ * singular values above $\epsilon$ times the largest, with the largest $\epsilon$ in
+ * $[10^{-16}, 1]$ (bisection on $\log_{10} \epsilon$) for which the sum of the absolute
+ * values of the differences between the coefficients and those of the Tucker form is at
+ * most @tol. Since $|T_k (s)| \le 1$ inside the panel, the series of a converted panel
+ * differs by at most @tol from the original there. A panel stays DENSE when no Tucker form
+ * meets @tol with fewer numbers; a table of one variable is not changed. The singular value
+ * decompositions use LAPACK DGESDD (ncm_lapack_dgesdd()); the call is an error without
+ * LAPACK, for a negative @tol, or when DGESDD fails.
+ *
+ * Returns: the number of panels converted.
+ */
+guint
+ncm_spectral_tensor_compress (NcmSpectralTensor *st, gdouble tol)
+{
+  const guint n_vars = st->n_vars;
+  GArray *coeffs;
+  GArray *data;
+  NcmLapackWS *ws;
+  guint n_conv = 0;
+  guint p;
+
+  if (!(tol >= 0.0))
+    g_error ("ncm_spectral_tensor_compress: the tolerance %g is negative or not a number.", tol);
+
+  if ((n_vars < 2) || (st->panels->len == 0))
+    return 0;
+
+  coeffs = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), st->coeffs->len);
+  data   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  ws     = ncm_lapack_ws_new ();
+
+  for (p = 0; p < st->panels->len; p++)
+  {
+    NcmSpectralTensorPanel *pn = &g_array_index (st->panels, NcmSpectralTensorPanel, p);
+    const guint *K             = &g_array_index (st->n_coeffs, guint, (gsize) n_vars * p);
+    guint *r                   = &g_array_index (st->ranks, guint, (gsize) n_vars * p);
+    const gdouble *c           = &g_array_index (st->coeffs, gdouble, pn->offset);
+    const gsize offset         = coeffs->len;
+
+    if ((pn->format == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_DENSE) &&
+        _ncm_spectral_tensor_tucker_from_dense (n_vars, K, c, tol, ws, r, data))
+    {
+      g_array_append_vals (coeffs, data->data, data->len);
+      pn->format = NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER;
+      n_conv++;
+    }
+    else
+    {
+      g_array_append_vals (coeffs, c, _ncm_spectral_tensor_panel_len (st, p));
+    }
+
+    pn->offset = offset;
+  }
+
+  g_array_unref (st->coeffs);
+  st->coeffs = coeffs;
+
+  g_array_unref (data);
+  ncm_lapack_ws_free (ws);
+
+  return n_conv;
 }
 

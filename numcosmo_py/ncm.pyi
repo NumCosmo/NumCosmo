@@ -342,6 +342,19 @@ def lapack_dgeqrf(
 def lapack_dgerqf(
     m: int, n: int, a: float, lda: int, tau: float, ws: LapackWS
 ) -> int: ...
+def lapack_dgesdd(
+    jobz: int,
+    m: int,
+    n: int,
+    a: float,
+    lda: int,
+    s: float,
+    u: float,
+    ldu: int,
+    vt: float,
+    ldvt: int,
+    ws: LapackWS,
+) -> int: ...
 def lapack_dgesv(
     n: int, nrhs: int, a: float, lda: int, ipiv: int, b: float, ldb: int
 ) -> int: ...
@@ -11667,6 +11680,7 @@ class SpectralTensor(GObject.Object):
     def __init__(self, n_vars: int = ..., tree: GLib.Variant = ...) -> None: ...
     @staticmethod
     def clear(st: SpectralTensor) -> None: ...
+    def compress(self, tol: float) -> int: ...
     def eval(self, x: typing.Sequence[float] | npt.NDArray[np.float64]) -> float: ...
     def eval_array(
         self, x: typing.Sequence[float] | npt.NDArray[np.float64]

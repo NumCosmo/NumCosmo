@@ -772,6 +772,7 @@ if have_lapack
     'dgeqlf_',
     'dgeqrf_',
     'dgerqf_',
+    'dgesdd_',
     'dgesv_',
     'dggglm_',
     'dposv_',
