@@ -792,8 +792,10 @@ class GalaxyPopGenBeta(BaseModel):
     def get_mfuncs(self) -> list[Ncm.MSetFuncList]:
         """Derived NcmMSetFuncList entries worth recording in an MC/MCMC catalog.
 
-        alpha/beta are the fitted parameters, but e_rms/mode of x =
-        |chi_I|^2 are the physically meaningful reported quantities --
+        alpha/beta are the fitted parameters, but the mean, the standard
+        deviation and the mode of r = |chi_I| and e_rms are the physically
+        meaningful reported quantities: alpha and beta are strongly correlated
+        in a fit, the mean and the standard deviation are not --
         recorded as catalog columns via NcmFitESMCMC.new_funcs_array()/an MC
         run's own equivalent, the same convention every other generate
         command in this CLI uses for its own derived quantities (see e.g.
@@ -816,6 +818,8 @@ class GalaxyPopGenBeta(BaseModel):
         return [
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:e_rms", None),
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mode", None),
+            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mean", None),
+            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:std", None),
         ]
 
     def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:

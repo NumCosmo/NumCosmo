@@ -829,6 +829,8 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     assert names == {
         ("NcGalaxyShapePopBeta", "mode"),
         ("NcGalaxyShapePopBeta", "e_rms"),
+        ("NcGalaxyShapePopBeta", "mean"),
+        ("NcGalaxyShapePopBeta", "std"),
     }
     for func in funcs:
         func.eval0(mset)
