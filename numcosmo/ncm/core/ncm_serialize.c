@@ -957,7 +957,21 @@ ncm_serialize_var_dict_from_variant (NcmSerialize *ser, GVariant *var)
       GVariant *val_var = g_variant_get_child_value (cvar, 1);
       GVariant *val     = g_variant_get_variant (val_var);
 
-      ncm_var_dict_set_variant (vd, g_variant_get_string (key, NULL), val);
+      /*
+       * A child of a serialized variant shares the buffer of the whole variant, and the
+       * dictionary keeps its values: stored as it is, one value would keep that buffer, e.g.
+       * every byte of a file, in memory. The dictionary receives a variant over a copy of the
+       * bytes of the value alone.
+       */
+      {
+        GBytes *bytes = g_bytes_new (g_variant_get_data (val), g_variant_get_size (val));
+        GVariant *own = g_variant_ref_sink (g_variant_new_from_bytes (g_variant_get_type (val), bytes, g_variant_is_normal_form (val)));
+
+        ncm_var_dict_set_variant (vd, g_variant_get_string (key, NULL), own);
+
+        g_variant_unref (own);
+        g_bytes_unref (bytes);
+      }
 
       g_variant_unref (key);
       g_variant_unref (val_var);
