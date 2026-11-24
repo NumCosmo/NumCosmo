@@ -48,6 +48,7 @@ gdouble nc_galaxy_shape_factor_spectral_get_reltol (NcGalaxyShapeFactorSpectral 
 void nc_galaxy_shape_factor_spectral_set_obs_source (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyWLObs *obs);
 
 void nc_galaxy_shape_factor_spectral_build_interp (NcGalaxyShapeFactorSpectral *gsfs, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
+NcmSpectralTensor *nc_galaxy_shape_factor_spectral_data_take_interp (NcGalaxyShapeFactorData *data);
 void nc_galaxy_shape_factor_spectral_set_interp_g_max (NcGalaxyShapeFactorSpectral *gsfs, const gdouble g_max);
 gdouble nc_galaxy_shape_factor_spectral_get_interp_g_max (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_interp_abstol (NcGalaxyShapeFactorSpectral *gsfs, const gdouble abstol);

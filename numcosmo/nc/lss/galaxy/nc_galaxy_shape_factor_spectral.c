@@ -3094,6 +3094,34 @@ nc_galaxy_shape_factor_spectral_get_reltol (NcGalaxyShapeFactorSpectral *gsfs)
 }
 
 /**
+ * nc_galaxy_shape_factor_spectral_data_take_interp:
+ * @data: a #NcGalaxyShapeFactorData of a #NcGalaxyShapeFactorSpectral
+ *
+ * To store the interpolant of a galaxy without keeping it in memory, takes the interpolant
+ * that nc_galaxy_shape_factor_spectral_build_interp() built for the row of @data and leaves
+ * the galaxy without one: until the next build, the galaxy is evaluated by the integrals.
+ *
+ * Returns: (transfer full) (nullable): the interpolant, or %NULL when the galaxy holds none
+ * built for its row.
+ */
+NcmSpectralTensor *
+nc_galaxy_shape_factor_spectral_data_take_interp (NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
+  NcmSpectralTensor *st;
+
+  if (ldata->loaded || !ldata->valid || (ldata->epsilon_obs_1 != data->epsilon_obs_1) || (ldata->epsilon_obs_2 != data->epsilon_obs_2) ||
+      (ldata->std_noise != data->std_noise))
+    return NULL;
+
+  st           = ldata->st;
+  ldata->st    = NULL;
+  ldata->valid = FALSE;
+
+  return st;
+}
+
+/**
  * nc_galaxy_shape_factor_spectral_set_obs_source:
  * @gsfs: a #NcGalaxyShapeFactorSpectral
  * @pop: the #NcGalaxyShapePop that built the interpolants

@@ -38,6 +38,7 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gstdio.h>
 
 #define SHAPE_INTERP_NROWS (6)
 #define SHAPE_INTERP_Z_CL (0.5)
@@ -56,6 +57,7 @@ void test_nc_data_cluster_wl_factor_shape_interp_write (TestNcDataClusterWLFacto
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor (void);
 void test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void);
 void test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_shape_interp_file (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -74,6 +76,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_cluster_wl_factor/shape_interp/free_pop", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (TRUE),
               &test_nc_data_cluster_wl_factor_shape_interp_new,
               &test_nc_data_cluster_wl_factor_shape_interp_free_pop,
+              &test_nc_data_cluster_wl_factor_shape_interp_free);
+  g_test_add ("/nc/data_cluster_wl_factor/shape_interp/file", TestNcDataClusterWLFactorShapeInterp, GINT_TO_POINTER (TRUE),
+              &test_nc_data_cluster_wl_factor_shape_interp_new,
+              &test_nc_data_cluster_wl_factor_shape_interp_file,
               &test_nc_data_cluster_wl_factor_shape_interp_free);
 
   g_test_run ();
@@ -309,5 +315,84 @@ test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorS
   nc_galaxy_wl_obs_free (obs_plain);
   ncm_serialize_free (ser);
   nc_galaxy_shape_factor_spectral_free (gsfs);
+}
+
+/*
+ * nc_data_cluster_wl_factor_write_shape_interp_file() against
+ * nc_data_cluster_wl_factor_write_shape_interp() and ncm_serialize_to_binfile(), with sigma a
+ * variable of the interpolants: the file loads as a catalog with the record and with an
+ * interpolant per row whose tree equals the one built in memory, the catalog given to the
+ * call receives no interpolant, the temporary records file is removed, a records file left
+ * by an earlier call is overwritten, and -2 ln L of the loaded catalog equals the one of the
+ * catalog prepared in memory.
+ */
+void
+test_nc_data_cluster_wl_factor_shape_interp_file (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmData *data     = NCM_DATA (test->dcwlf);
+  GError *error     = NULL;
+  gchar *dir        = g_dir_make_tmp ("nc_shape_interp_XXXXXX", &error);
+  gchar *filename;
+  gchar *rec_name;
+  NcGalaxyWLObs *obs_file;
+  gdouble m2lnL, m2lnL_file;
+  guint i;
+
+  g_assert_no_error (error);
+  filename = g_build_filename (dir, "catalog.gvar", NULL);
+  rec_name = g_strconcat (filename, ".records", NULL);
+
+  ncm_mset_param_set_ftype (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+
+  /* A file left by an interrupted call is not read */
+  g_assert_true (g_file_set_contents (rec_name, "leftover", -1, &error));
+  g_assert_no_error (error);
+
+  nc_data_cluster_wl_factor_write_shape_interp_file (test->dcwlf, test->mset, test->obs, filename);
+  g_assert_false (g_file_test (rec_name, G_FILE_TEST_EXISTS));
+  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (test->obs));
+
+  obs_file = NC_GALAXY_WL_OBS (ncm_serialize_from_binfile (ser, filename));
+  ncm_serialize_reset (ser, TRUE);
+  g_assert_cmpuint (nc_galaxy_wl_obs_len (obs_file), ==, SHAPE_INTERP_NROWS);
+  g_assert_nonnull (nc_galaxy_wl_obs_peek_shape_interp_source (obs_file));
+
+  nc_data_cluster_wl_factor_write_shape_interp (test->dcwlf, test->mset, test->obs);
+
+  for (i = 0; i < SHAPE_INTERP_NROWS; i++)
+  {
+    NcmSpectralTensor *st_file = nc_galaxy_wl_obs_peek_shape_interp (obs_file, i);
+    NcmSpectralTensor *st_mem  = nc_galaxy_wl_obs_peek_shape_interp (test->obs, i);
+    GVariant *tree_file, *tree_mem;
+
+    g_assert_true (NCM_IS_SPECTRAL_TENSOR (st_file));
+    g_assert_true (NCM_IS_SPECTRAL_TENSOR (st_mem));
+    g_assert_cmpuint (ncm_spectral_tensor_get_n_vars (st_file), ==, 3);
+
+    g_object_get (st_file, "tree", &tree_file, NULL);
+    g_object_get (st_mem, "tree", &tree_mem, NULL);
+    g_assert_true (g_variant_equal (tree_file, tree_mem));
+    g_variant_unref (tree_file);
+    g_variant_unref (tree_mem);
+  }
+
+  ncm_data_m2lnL_val (data, test->mset, &m2lnL);
+  g_assert_true (gsl_finite (m2lnL));
+
+  nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs_file);
+  nc_data_cluster_wl_factor_data_prepare (test->dcwlf, test->mset);
+  ncm_data_m2lnL_val (data, test->mset, &m2lnL_file);
+  g_assert_cmpfloat (m2lnL_file, ==, m2lnL);
+
+  g_assert_cmpint (g_remove (filename), ==, 0);
+  g_assert_cmpint (g_rmdir (dir), ==, 0);
+
+  nc_galaxy_wl_obs_free (obs_file);
+  ncm_serialize_free (ser);
+  g_free (rec_name);
+  g_free (filename);
+  g_free (dir);
 }
 
