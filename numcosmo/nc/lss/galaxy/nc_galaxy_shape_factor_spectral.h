@@ -56,6 +56,8 @@ void nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (NcGalaxyShape
 guint nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_interp_trim_frac (NcGalaxyShapeFactorSpectral *gsfs, const gdouble f);
 gdouble nc_galaxy_shape_factor_spectral_get_interp_trim_frac (NcGalaxyShapeFactorSpectral *gsfs);
+void nc_galaxy_shape_factor_spectral_set_interp_compress_frac (NcGalaxyShapeFactorSpectral *gsfs, const gdouble f);
+gdouble nc_galaxy_shape_factor_spectral_get_interp_compress_frac (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_interp_pop_level_min (NcGalaxyShapeFactorSpectral *gsfs, const guint level_min);
 guint nc_galaxy_shape_factor_spectral_get_interp_pop_level_min (NcGalaxyShapeFactorSpectral *gsfs);
 void nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (NcGalaxyShapeFactorSpectral *gsfs, const guint level_cap);
