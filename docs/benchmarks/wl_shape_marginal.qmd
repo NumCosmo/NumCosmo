@@ -343,11 +343,11 @@ failure_summary("Spectral")
 ## Speed
 
 The approximate classes evaluate $\ln P$ in closed form or from tables. Spectral integrates,
-which costs orders of magnitude more per evaluation. When the population is fixed,
-Spectral can instead build, once per galaxy, an interpolant of $\ln P$ in $g$ on
-$|g| \le 0.3$ (`nc_galaxy_shape_factor_spectral_build_interp()`), and every later evaluation
-reads the interpolant. When the population varies, as in a fit of its parameters, the interpolant
-of every galaxy changes at every step, so each evaluation integrates.
+which costs orders of magnitude more per evaluation. Spectral can instead build, once per
+galaxy in a pre-computation
+([[numcosmo|nc_galaxy_shape_factor_spectral_build_interp]]), an interpolant of $\ln P$
+in $g$ on $|g| \le 0.3$, and every later evaluation reads the interpolant. Each free
+parameter of the population is one more variable of the interpolant, over its bounds.
 
 The times below are those an MCMC fitting the mass and the center of a cluster sees, with the
 population fixed: each galaxy is prepared once and every step of the chain evaluates it at a
