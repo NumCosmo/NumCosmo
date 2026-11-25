@@ -551,8 +551,8 @@ test_nc_galaxy_pz_bspline_sqrt_missing_subprocess (void)
 
 /*
  * The mass m_0 of the whole range is the normalization, and masses add over two
- * intervals: both are exact integrals of the same s^2, equal to rounding. Measured 2.7e-15
- * and 2.4e-15 relative; 1e-14 is asserted.
+ * intervals: both are exact integrals of the same s^2, equal to rounding. Measured 1.3e-15
+ * and 2.2e-16 relative; 1e-14 is asserted.
  */
 void
 test_nc_galaxy_pz_bspline_sqrt_moments_norm (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata)
@@ -581,8 +581,8 @@ test_nc_galaxy_pz_bspline_sqrt_moments_norm (TestNcGalaxyPzBSplineSqrt *test, gc
  * sqrt (p) a degree-5 polynomial on non-uniform knots: the B-spline reproduces it, and the
  * moments up to TEST_PZ_POLY_KMAX equal those of the Gauss-Legendre rule on the whole
  * interval, for the whole range, an interval inside one piece, and an interval across
- * pieces with ends between knots. The difference is rounding: measured 5.8e-15, 8.9e-14 and
- * 4.8e-15 of m_0 (the interval inside one piece has the least mass); 1e-12 of m_0 is
+ * pieces with ends between knots. The difference is rounding: measured 5.4e-15, 5.0e-14 and
+ * 4.6e-15 of m_0 (the interval inside one piece has the least mass); 1e-12 of m_0 is
  * asserted. A reused array is resized to n + 1, also to a single value.
  */
 void

@@ -32,6 +32,7 @@
 #include <string.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_integration.h>
 
 /* Three panels with a different number of coefficients each */
 #define TEST_N_PANELS 3
@@ -56,6 +57,11 @@ static void test_ncm_spectral_panels_properties_rows (void);
 static void test_ncm_spectral_panels_properties_rows_subprocess (void);
 static void test_ncm_spectral_panels_sum_rows (void);
 static void test_ncm_spectral_panels_sum_rows_truncate (void);
+static void test_ncm_spectral_panels_square_cheb_moments (void);
+static void test_ncm_spectral_panels_square_cheb_moments_row (void);
+static void test_ncm_spectral_panels_square_cheb_moments_row_subprocess (void);
+static void test_ncm_spectral_panels_square_cheb_moments_range (void);
+static void test_ncm_spectral_panels_square_cheb_moments_range_subprocess (void);
 static NcmSpectralPanels *_poly_panels_new (NcmSpectral *spectral, NcmSpectralF f, gpointer data, const gdouble *edges, guint n_panels, guint N);
 
 static const gdouble test_edges[TEST_N_PANELS + 1] = {0.0, 1.0, 2.5, 4.0};
@@ -89,6 +95,11 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels/properties/rows/subprocess", &test_ncm_spectral_panels_properties_rows_subprocess);
   g_test_add_func ("/ncm/spectral_panels/sum_rows", &test_ncm_spectral_panels_sum_rows);
   g_test_add_func ("/ncm/spectral_panels/sum_rows/truncate", &test_ncm_spectral_panels_sum_rows_truncate);
+  g_test_add_func ("/ncm/spectral_panels/square_cheb_moments", &test_ncm_spectral_panels_square_cheb_moments);
+  g_test_add_func ("/ncm/spectral_panels/square_cheb_moments/row", &test_ncm_spectral_panels_square_cheb_moments_row);
+  g_test_add_func ("/ncm/spectral_panels/square_cheb_moments/row/subprocess", &test_ncm_spectral_panels_square_cheb_moments_row_subprocess);
+  g_test_add_func ("/ncm/spectral_panels/square_cheb_moments/range", &test_ncm_spectral_panels_square_cheb_moments_range);
+  g_test_add_func ("/ncm/spectral_panels/square_cheb_moments/range/subprocess", &test_ncm_spectral_panels_square_cheb_moments_range_subprocess);
 
   g_test_run ();
 
@@ -752,5 +763,126 @@ test_ncm_spectral_panels_sum_rows_truncate (void)
   ncm_spectral_panels_free (sp_x8);
   ncm_spectral_panels_free (sp_1);
   ncm_spectral_free (spectral);
+}
+
+/*
+ * The moments of the square of row r of the panel set of _panels_new() on [a, b], k <= n,
+ * by Gauss-Legendre with 40 points on each part of [a, b] between the panel edges, the
+ * function from _exact(): exact for x^6 T_k and for the constant squares of the step.
+ */
+static void
+_square_moments_ref (guint r, gdouble a, gdouble b, guint n, gdouble *m)
+{
+  gsl_integration_glfixed_table *glt = gsl_integration_glfixed_table_alloc (40);
+  guint i, j, k;
+
+  for (k = 0; k <= n; k++)
+    m[k] = 0.0;
+
+  for (i = 0; i < TEST_N_PANELS; i++)
+  {
+    const gdouble z0 = GSL_MAX (a, test_edges[i]);
+    const gdouble z1 = GSL_MIN (b, test_edges[i + 1]);
+
+    if (!(z1 > z0))
+      continue;
+
+    for (j = 0; j < 40; j++)
+    {
+      gdouble zq, wq;
+
+      gsl_integration_glfixed_point (z0, z1, j, &zq, &wq, glt);
+      {
+        const gdouble t = GSL_MAX (-1.0, GSL_MIN (1.0, (2.0 * zq - (a + b)) / (b - a)));
+        const gdouble f = _exact (r, i, zq);
+
+        for (k = 0; k <= n; k++)
+          m[k] += wq * f * f * cos (k * acos (t));
+      }
+    }
+  }
+
+  gsl_integration_glfixed_table_free (glt);
+}
+
+/*
+ * The moments of the square of both rows, the cubic and the step, on the whole range, on an
+ * interval across edges with ends inside panels and on an interval inside one panel, for
+ * n = 12 and n = 0, against _square_moments_ref(). The difference is rounding: measured
+ * at most 7.5e-15 of m_0; 1e-13 of m_0 is asserted. A reused array is resized.
+ */
+static void
+test_ncm_spectral_panels_square_cheb_moments (void)
+{
+  const gdouble intervals[3][2] = {
+    {
+      0.0, 4.0
+    }, {
+      0.3, 3.1
+    }, {
+      1.2, 2.0
+    }
+  };
+  const guint orders[2] = {12, 0};
+  NcmSpectralPanels *sp = _panels_new ();
+  GArray *m             = NULL;
+  gdouble m_ref[13];
+  guint r, l, o, k;
+
+  for (r = 0; r < 2; r++)
+  {
+    for (l = 0; l < 3; l++)
+    {
+      for (o = 0; o < 2; o++)
+      {
+        const gdouble a = intervals[l][0];
+        const gdouble b = intervals[l][1];
+        const guint n   = orders[o];
+
+        ncm_spectral_panels_square_cheb_moments (sp, r, a, b, n, &m);
+        _square_moments_ref (r, a, b, n, m_ref);
+
+        g_assert_cmpuint (m->len, ==, n + 1);
+
+        for (k = 0; k <= n; k++)
+          ncm_assert_cmpdouble_e (g_array_index (m, gdouble, k), ==, m_ref[k], 0.0, 1.0e-13 * m_ref[0]);
+      }
+    }
+  }
+
+  g_array_unref (m);
+  ncm_spectral_panels_free (sp);
+}
+
+static void
+test_ncm_spectral_panels_square_cheb_moments_row (void)
+{
+  g_test_trap_subprocess ("/ncm/spectral_panels/square_cheb_moments/row/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*row 2 is outside the 2 rows*");
+}
+
+static void
+test_ncm_spectral_panels_square_cheb_moments_row_subprocess (void)
+{
+  GArray *m = NULL;
+
+  ncm_spectral_panels_square_cheb_moments (_panels_new (), 2, 0.0, 1.0, 3, &m);
+}
+
+static void
+test_ncm_spectral_panels_square_cheb_moments_range (void)
+{
+  g_test_trap_subprocess ("/ncm/spectral_panels/square_cheb_moments/range/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the interval [0.5, 4.5] is empty or not inside the range [0, 4]*");
+}
+
+static void
+test_ncm_spectral_panels_square_cheb_moments_range_subprocess (void)
+{
+  GArray *m = NULL;
+
+  ncm_spectral_panels_square_cheb_moments (_panels_new (), 0, 0.5, 4.5, 3, &m);
 }
 

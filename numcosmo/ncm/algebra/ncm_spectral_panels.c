@@ -51,6 +51,11 @@
 #include <float.h>
 #include <string.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+
 enum
 {
   PROP_0,
@@ -594,6 +599,115 @@ _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
   }
 
   return s * b_1 - b_2 + c[0];
+}
+
+/**
+ * ncm_spectral_panels_square_cheb_moments:
+ * @sp: a #NcmSpectralPanels
+ * @r: the row
+ * @a: the lower end of the interval
+ * @b: the upper end of the interval
+ * @n: the highest order
+ * @moments: (out callee-allocates) (transfer full) (element-type gdouble): the moments
+ *
+ * Computes the Chebyshev moments of the square of row @r on $[a, b]$,
+ * $$
+ * m_k = \int_a^b F_r(x)^2\, T_k\!\left(\frac{2x - a - b}{b - a}\right) \mathrm{d}x,
+ * \qquad k = 0, \dots, n,
+ * $$
+ * where $T_k$ is the Chebyshev polynomial of degree $k$. Each panel contributes the
+ * integral over its part of $[a, b]$, by the Gauss-Legendre rule of $q$ points with
+ * $2q - 1 \geq 2 N_{\max} - 2 + n$, $N_{\max}$ the largest number of coefficients of a
+ * panel: the integrand is a polynomial of degree at most $2 N_i - 2 + n$ on panel $i$, so
+ * the moments carry no quadrature error. A C caller may pass in @moments an array to
+ * reuse, or a pointer to %NULL for a new one; it receives $n + 1$ values. A row outside
+ * #NcmSpectralPanels:fdim, an empty interval or one not inside the range of the panels
+ * aborts.
+ */
+void
+ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble a, gdouble b, guint n, GArray **moments)
+{
+  gsl_integration_glfixed_table *glt;
+  gdouble x_lo, x_hi;
+  guint N_max = 0;
+  gdouble *m;
+  guint i, j, k;
+
+  if (r >= sp->fdim)
+    g_error ("ncm_spectral_panels_square_cheb_moments: row %u is outside the %u rows.", r, sp->fdim);
+
+  ncm_spectral_panels_get_range (sp, &x_lo, &x_hi);
+
+  if (!((x_lo <= a) && (a < b) && (b <= x_hi)))
+    g_error ("ncm_spectral_panels_square_cheb_moments: the interval [%g, %g] is empty or not inside the range [%g, %g].",
+             a, b, x_lo, x_hi);
+
+  if (*moments == NULL)
+    *moments = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*moments, n + 1);
+  m = &g_array_index (*moments, gdouble, 0);
+
+  for (k = 0; k <= n; k++)
+    m[k] = 0.0;
+
+  for (i = 0; i < sp->n_panels; i++)
+  {
+    gdouble lo, hi;
+    guint N;
+
+    ncm_spectral_panels_peek_panel (sp, i, &lo, &hi, &N);
+    N_max = GSL_MAX (N_max, N);
+  }
+
+  glt = gsl_integration_glfixed_table_alloc ((2 * N_max + n) / 2);
+
+  for (i = ncm_spectral_panels_find_panel (sp, a); i < sp->n_panels; i++)
+  {
+    gdouble lo, hi;
+    guint N;
+    const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &lo, &hi, &N);
+    const gdouble z0 = GSL_MAX (a, lo);
+    const gdouble z1 = GSL_MIN (b, hi);
+
+    if (lo >= b)
+      break;
+
+    if (!(z1 > z0))
+      continue;
+
+    for (j = 0; j < glt->n; j++)
+    {
+      gdouble zq, wq;
+
+      gsl_integration_glfixed_point (z0, z1, j, &zq, &wq, glt);
+      {
+        const gdouble f  = _ncm_spectral_panels_clenshaw (c + (gsize) r * N, N, ncm_spectral_x_to_s (lo, hi, zq));
+        const gdouble t  = (2.0 * zq - (a + b)) / (b - a);
+        const gdouble pw = wq * f * f;
+        gdouble T0       = 1.0;
+        gdouble T1       = t;
+
+        m[0] += pw;
+
+        if (n == 0)
+          continue;
+
+        m[1] += pw * t;
+
+        for (k = 2; k <= n; k++)
+        {
+          const gdouble T2 = 2.0 * t * T1 - T0;
+
+          m[k] += pw * T2;
+          T0    = T1;
+          T1    = T2;
+        }
+      }
+    }
+  }
+
+  gsl_integration_glfixed_table_free (glt);
 }
 
 /**

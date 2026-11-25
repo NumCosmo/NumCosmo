@@ -11419,6 +11419,9 @@ class SpectralPanels(GObject.Object):
     def restrict_rows(
         self, spectral: Spectral, a: float, b: float, r0: int, n: int
     ) -> typing.Tuple[bool, Matrix]: ...
+    def square_cheb_moments(
+        self, r: int, a: float, b: float, n: int
+    ) -> list[float]: ...
 
 class SpectralPanelsBuilder(GObject.Object):
     r"""
