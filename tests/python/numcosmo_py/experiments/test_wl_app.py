@@ -1626,6 +1626,11 @@ def _experiment_m2lnL(experiment_file: Path) -> float:
     return likelihood.m2lnL_val(mset)
 
 
+def _unwrapped(text: str) -> str:
+    """The text with every run of whitespace, line breaks of the console included, as one space."""
+    return " ".join(text.split())
+
+
 def _shape_interp(output: Path, data_file: Path, *args: str):
     """Run numcosmo wl-catalog shape-interp."""
     return runner.invoke(
@@ -1650,7 +1655,7 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
         prepared, real_wl_obs_file_with_meta, "--pop-dist=beta alpha=1.8 beta=2.1"
     )
     assert result.exit_code == 0, result.output
-    assert "interpolants of 20 galaxies" in result.output
+    assert "interpolants of 20 galaxies" in _unwrapped(result.output)
     # The temporary records of the build are removed
     assert not list(tmp_path.glob("*.records"))
 
@@ -1719,7 +1724,7 @@ def test_wl_catalog_shape_interp_free_pop(tmp_path: Path, real_wl_obs_file_with_
         prepared, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3", "--free-pop"
     )
     assert result.exit_code == 0, result.output
-    assert "sigma free" in result.output
+    assert "sigma free" in _unwrapped(result.output)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
