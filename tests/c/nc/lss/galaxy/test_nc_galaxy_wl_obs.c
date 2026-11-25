@@ -71,6 +71,8 @@ static void test_nc_galaxy_wl_obs_shape_interp_file_type_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_file_empty (void);
 static void test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_file_relative (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_rows (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_rows_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_file_relative_subprocess (void);
 
 gint
@@ -158,6 +160,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/empty", &test_nc_galaxy_wl_obs_shape_interp_file_empty);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/empty/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/relative", &test_nc_galaxy_wl_obs_shape_interp_file_relative);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/rows", &test_nc_galaxy_wl_obs_shape_interp_file_rows);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/rows/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_rows_subprocess);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/relative/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_relative_subprocess);
 
   g_test_run ();
@@ -738,15 +742,6 @@ test_nc_galaxy_wl_obs_shape_interp_file (TestNcGalaxyWLObs *test, gconstpointer 
   g_clear_pointer (&prop, ncm_obj_dict_int_unref);
   nc_galaxy_wl_obs_free (obs_dup);
 
-  /* Rows that differ from those of the file when it is read: no interpolants are taken */
-  obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
-  ncm_serialize_reset (ser, FALSE);
-  nc_galaxy_wl_obs_set (obs_dup, "z", 1, 1.0, NULL);
-  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
-  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup));
-  g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_file (obs_dup));
-  nc_galaxy_wl_obs_free (obs_dup);
-
   /* A file written from a catalog that refers to a file has no interpolants: the reference is kept */
   ncm_serialize_to_binfile (ser, G_OBJECT (obs), filename_ref);
   ncm_serialize_reset (ser, FALSE);
@@ -1019,5 +1014,43 @@ test_nc_galaxy_wl_obs_shape_interp_file_relative_subprocess (void)
   NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
 
   g_object_set (obs, "shape-interp-file", "catalog.gvar", NULL);
+}
+
+/*
+ * A catalog whose rows differ, at the first read, from those of its shape-interp-file: the
+ * read aborts with a message that names the file.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_rows (void)
+{
+  GStrv col_names            = g_strsplit ("ra dec z", " ", -1);
+  NcGalaxyWLObs *obs         = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
+  NcmSpectralTensor *st      = ncm_spectral_tensor_new (2);
+  NcmObjDictStr *source      = ncm_obj_dict_str_new ();
+  NcGalaxyShapePopGauss *pop = nc_galaxy_shape_pop_gauss_new ();
+
+  /* An empty record is no record: the file needs one to hold interpolants */
+  ncm_obj_dict_str_add (source, "shape-pop", G_OBJECT (pop));
+  nc_galaxy_wl_obs_set_shape_interp (obs, 0, st);
+  nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
+  _test_nc_galaxy_wl_obs_shape_interp_file_trap (G_OBJECT (obs), "/numcosmo/nc_galaxy_wl_obs/shape_interp/file/rows/subprocess",
+                                                 "*the columns or the rows of the catalog of the file * of shape-interp-file differ*");
+
+  nc_galaxy_shape_pop_gauss_free (pop);
+  ncm_obj_dict_str_unref (source);
+  ncm_spectral_tensor_free (st);
+  nc_galaxy_wl_obs_free (obs);
+  g_strfreev (col_names);
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_rows_subprocess (void)
+{
+  GStrv col_names    = g_strsplit ("ra dec z", " ", -1);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
+
+  g_object_set (obs, "shape-interp-file", g_getenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV), NULL);
+  nc_galaxy_wl_obs_set (obs, "z", 1, 1.0, NULL);
+  nc_galaxy_wl_obs_peek_shape_interp (obs, 0);
 }
 

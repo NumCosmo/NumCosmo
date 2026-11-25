@@ -48,9 +48,8 @@
  * of the interpolants and their record, and a deserialized one reads them from the file at
  * the first call of nc_galaxy_wl_obs_peek_shape_interp() or
  * nc_galaxy_wl_obs_peek_shape_interp_source() or the first read of one of the three
- * properties. They are taken only when the columns and the rows of the file equal those of
- * the catalog; otherwise the catalog has no interpolants. Setting an interpolant or a record
- * unsets the file.
+ * properties. The columns and the rows of the file must equal those of the catalog at that
+ * read, or the read aborts with an error. Setting an interpolant or a record unsets the file.
  *
  */
 
@@ -374,7 +373,8 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
    * place of #NcGalaxyWLObs:shape-interp and #NcGalaxyWLObs:shape-interp-source. Setting it
    * replaces the interpolants and the record by those of the file, read at the first use.
    * A name that is not an absolute path aborts with an error, and so does a file that cannot
-   * be read, that holds another type of object or that has no interpolants.
+   * be read, that holds another type of object, that has no interpolants or whose columns or
+   * rows differ from those of this catalog when it is read.
    */
   g_object_class_install_property (object_class,
                                    PROP_SHAPE_INTERP_FILE,
@@ -406,9 +406,8 @@ static gboolean _nc_galaxy_wl_obs_same_rows (NcGalaxyWLObs *obs, NcGalaxyWLObs *
 
 /*
  * Reads the catalog of shape_interp_file and takes its interpolants and its record, shared
- * with no other object, as those of the current rows of obs. They are taken only when the
- * columns and the rows of the file equal those of obs; otherwise obs is left without
- * interpolants, record and file.
+ * with no other object, as those of the current rows of obs. Columns or rows of the file that
+ * differ from those of obs abort.
  */
 static void
 _nc_galaxy_wl_obs_read_shape_interp_file (NcGalaxyWLObs *obs)
@@ -431,20 +430,16 @@ _nc_galaxy_wl_obs_read_shape_interp_file (NcGalaxyWLObs *obs)
       g_error ("nc_galaxy_wl_obs: the catalog of the file %s of shape-interp-file has no interpolants.",
                self->shape_interp_file);
 
+    if (!_nc_galaxy_wl_obs_same_rows (obs, file_obs))
+      g_error ("nc_galaxy_wl_obs: the columns or the rows of the catalog of the file %s of "
+               "shape-interp-file differ from those of this catalog.", self->shape_interp_file);
+
     ncm_obj_dict_int_clear (&self->shape_interp);
     ncm_obj_dict_str_clear (&self->shape_interp_source);
 
-    if (_nc_galaxy_wl_obs_same_rows (obs, file_obs))
-    {
-      self->shape_interp        = ncm_obj_dict_int_ref (file_self->shape_interp);
-      self->shape_interp_source = ncm_obj_dict_str_ref (file_self->shape_interp_source);
-      self->shape_interp_key    = ncm_catalog_get_key (NCM_CATALOG (obs));
-    }
-    else
-    {
-      self->shape_interp = ncm_obj_dict_int_new ();
-      g_clear_pointer (&self->shape_interp_file, g_free);
-    }
+    self->shape_interp        = ncm_obj_dict_int_ref (file_self->shape_interp);
+    self->shape_interp_source = ncm_obj_dict_str_ref (file_self->shape_interp_source);
+    self->shape_interp_key    = ncm_catalog_get_key (NCM_CATALOG (obs));
 
     nc_galaxy_wl_obs_clear (&file_obs);
   }
