@@ -1311,6 +1311,10 @@
     "nick": "z",
     "type": "Nc.DataClusterPseudoCountsObs"
   },
+  "NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS": {
+    "nick": "cheb-weights",
+    "type": "Nc.DataClusterWLIntegMethod"
+  },
   "NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE": {
     "nick": "cubature",
     "type": "Nc.DataClusterWLIntegMethod"

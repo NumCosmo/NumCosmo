@@ -738,6 +738,10 @@ data_tests = [
         'suite': ['c', 'omp'],
     },
     {
+        'name': 'nc_data_cluster_wl_factor_cheb',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_cheb.c'],
+    },
+    {
         'name': 'nc_data_cluster_wl_factor_node_config',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_node_config.c'],
     },
