@@ -67,6 +67,7 @@ from numcosmo_py.app.generate import (
     parse_pop_dist,
     parse_shape_factor,
 )
+from numcosmo_py.app.wl_catalog import shape_interp_tables_path
 
 pytestmark = pytest.mark.app
 
@@ -1647,8 +1648,8 @@ def _shape_interp(output: Path, data_file: Path, *args: str):
 
 
 def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
-    """A prepared catalog carries the interpolants and the record, and an
-    experiment built from it, with the shape factor and population of the
+    """A prepared catalog refers to its interpolants file and carries the record,
+    and an experiment built from it, with the shape factor and population of the
     record, gives the -2 ln L of one built from the original catalog, which takes
     the integrals, within the tolerance of the interpolants."""
     prepared = tmp_path / "prepared.gvar"
@@ -1659,6 +1660,9 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     assert "interpolants of 20 galaxies" in _unwrapped(result.output)
     # The temporary records of the build are removed
     assert not list(tmp_path.glob("*.records"))
+    tables = shape_interp_tables_path(prepared)
+    assert tables.name == "prepared.shape_interp.gvar"
+    assert tables.exists()
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
@@ -1693,15 +1697,15 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     )
     assert result.exit_code == 0, result.output
 
-    # The experiment refers to the prepared catalog: its dataset file holds the name of
-    # the catalog file, not the interpolants, which are read from that file.
+    # The experiment refers to the interpolants file: its dataset file holds the bare
+    # name of that file, not the interpolants, which are read from it.
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
     dataset = cast(
         Ncm.Dataset,
         ser.from_binfile(exp_prepared.with_suffix(".dataset.gvar").as_posix()),
     )
     exp_obs = cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs()
-    assert exp_obs.peek_shape_interp_file() == prepared.as_posix()
+    assert exp_obs.props.shape_interp.peek_filename() == tables.as_posix()
     assert all(exp_obs.peek_shape_interp(i) is not None for i in range(exp_obs.len()))
     assert (
         exp_prepared.with_suffix(".dataset.gvar").stat().st_size
@@ -1847,7 +1851,10 @@ def test_cluster_wl_load_record_settings(tmp_path: Path):
     pop.param_set_upper_bound(0, 0.45)
 
     prepared = tmp_path / "prepared.gvar"
-    data.write_shape_interp_file(mset, obs, prepared.as_posix())
+    data.write_shape_interp_file(
+        mset, obs, shape_interp_tables_path(prepared).as_posix()
+    )
+    Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED).to_binfile(obs, prepared.as_posix())
 
     exp_file = tmp_path / "exp.yaml"
     result = runner.invoke(
@@ -1973,6 +1980,35 @@ def test_cluster_wl_load_app_prepared_catalog_rejects(
         ],
     )
     assert result.exit_code != 0
+
+
+def test_cluster_wl_load_app_prepared_catalog_other_dir(tmp_path: Path):
+    """An experiment from a prepared catalog stores the bare name of the
+    interpolants file, so it must be written in the directory of that file."""
+    small_obs_file = _build_real_wl_obs(
+        tmp_path, "small_wl_obs.gvar", with_meta=True, n=_FREE_POP_N_GALAXIES
+    )
+    prepared = tmp_path / "prepared.gvar"
+    assert (
+        _shape_interp(prepared, small_obs_file, "--pop-dist=gauss sigma=0.3").exit_code
+        == 0
+    )
+    other = tmp_path / "other"
+    other.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            (other / "exp.yaml").as_posix(),
+            f"--data-file={prepared.as_posix()}",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "the experiment must be written in" in _unwrapped(
+        result.output + str(result.exception)
+    )
 
 
 def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:

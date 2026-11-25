@@ -860,7 +860,7 @@ def shape_interp_gens(
 
     A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
     interpolants of its galaxies and the record of what built them
-    (``NcGalaxyWLObs:shape-interp-source``): a copy of the
+    (``NcGalaxyWLObs:shape-interp``): a copy of the
     ``NcGalaxyShapeFactorSpectral`` and of the population. The generators
     returned here build the same objects, with the ellipticity frame of obs, so
     an experiment built from them uses the interpolants of the catalog.
