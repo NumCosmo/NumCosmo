@@ -847,6 +847,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_pz_bspline_sqrt.c'],
     },
     {
+        'name': 'nc_galaxy_redshift_factor_composed',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_redshift_factor_composed.c'],
+    },
+    {
         'name': 'nc_galaxy_redshift_factor_spline',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_redshift_factor_spline.c'],
     },

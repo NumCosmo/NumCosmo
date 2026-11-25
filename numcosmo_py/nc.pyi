@@ -8639,13 +8639,38 @@ class GalaxyRedshiftFactor(GObject.Object):
 
     Object NcGalaxyRedshiftFactor
 
+    Properties from NcGalaxyRedshiftFactor:
+      cheb-reltol -> gdouble: cheb-reltol
+        Relative tolerance of the Chebyshev panels of sqrt(p)
+
     Signals from GObject:
       notify (GParam)
     """
 
+    class Props:
+        cheb_reltol: float
+
+    props: Props = ...
     parent_instance: GObject.Object = ...
+    def __init__(self, cheb_reltol: float = ...) -> None: ...
+    def cheb_moments(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyRedshiftFactorData,
+        a: float,
+        b: float,
+        n: int,
+    ) -> list[float]: ...
     @staticmethod
     def clear(gsdr: GalaxyRedshiftFactor) -> None: ...
+    def do_cheb_moments(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyRedshiftFactorData,
+        a: float,
+        b: float,
+        n: int,
+    ) -> list[float]: ...
     def do_data_init(
         self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
     ) -> None: ...
@@ -8687,6 +8712,7 @@ class GalaxyRedshiftFactor(GObject.Object):
         data: GalaxyRedshiftFactorData,
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
+    def get_cheb_reltol(self) -> float: ...
     def get_desc(self) -> str: ...
     def get_hash(self) -> int: ...
     def get_integ_lim(
@@ -8700,6 +8726,7 @@ class GalaxyRedshiftFactor(GObject.Object):
     ) -> float: ...
     def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def ref(self) -> GalaxyRedshiftFactor: ...
+    def set_cheb_reltol(self, cheb_reltol: float) -> None: ...
     def update_data(self, data: GalaxyRedshiftFactorData) -> None: ...
 
 class GalaxyRedshiftFactorClass(GObject.GPointer):
@@ -8750,6 +8777,17 @@ class GalaxyRedshiftFactorClass(GObject.GPointer):
         [GalaxyRedshiftFactor, GalaxyRedshiftFactorData], None
     ] = ...
     get_desc: typing.Callable[[GalaxyRedshiftFactor], str] = ...
+    cheb_moments: typing.Callable[
+        [
+            GalaxyRedshiftFactor,
+            NumCosmoMath.MSet,
+            GalaxyRedshiftFactorData,
+            float,
+            float,
+            int,
+        ],
+        list[float],
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyRedshiftFactorComposed(GalaxyRedshiftFactor):
@@ -8767,15 +8805,22 @@ class GalaxyRedshiftFactorComposed(GalaxyRedshiftFactor):
       zp-lim -> NcmDTuple2: zp-lim
         Photometric selection window
 
+    Properties from NcGalaxyRedshiftFactor:
+      cheb-reltol -> gdouble: cheb-reltol
+        Relative tolerance of the Chebyshev panels of sqrt(p)
+
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
         zp_lim: NumCosmoMath.DTuple2
+        cheb_reltol: float
 
     props: Props = ...
-    def __init__(self, zp_lim: NumCosmoMath.DTuple2 = ...) -> None: ...
+    def __init__(
+        self, zp_lim: NumCosmoMath.DTuple2 = ..., cheb_reltol: float = ...
+    ) -> None: ...
     @staticmethod
     def clear(gsdrc: GalaxyRedshiftFactorComposed) -> None: ...
     def free(self) -> None: ...
@@ -8857,10 +8902,19 @@ class GalaxyRedshiftFactorSpline(GalaxyRedshiftFactor):
 
     Object NcGalaxyRedshiftFactorSpline
 
+    Properties from NcGalaxyRedshiftFactor:
+      cheb-reltol -> gdouble: cheb-reltol
+        Relative tolerance of the Chebyshev panels of sqrt(p)
+
     Signals from GObject:
       notify (GParam)
     """
 
+    class Props:
+        cheb_reltol: float
+
+    props: Props = ...
+    def __init__(self, cheb_reltol: float = ...) -> None: ...
     @staticmethod
     def clear(gsdrs: GalaxyRedshiftFactorSpline) -> None: ...
     def data_peek(self, data: GalaxyRedshiftFactorData) -> GalaxyPz: ...

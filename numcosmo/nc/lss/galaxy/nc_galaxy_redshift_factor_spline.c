@@ -89,6 +89,7 @@ static NcGalaxyRedshiftFactorIntegrand *_nc_galaxy_redshift_factor_spline_integ 
 static void _nc_galaxy_redshift_factor_spline_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
 static gdouble _nc_galaxy_redshift_factor_spline_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
 static NcmIntegralFixed *_nc_galaxy_redshift_factor_spline_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
+static void _nc_galaxy_redshift_factor_spline_cheb_moments (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
 static void
 nc_galaxy_redshift_factor_spline_class_init (NcGalaxyRedshiftFactorSplineClass *klass)
@@ -105,6 +106,7 @@ nc_galaxy_redshift_factor_spline_class_init (NcGalaxyRedshiftFactorSplineClass *
   gsdr_class->get_integ_lim    = &_nc_galaxy_redshift_factor_spline_get_integ_lim;
   gsdr_class->norm             = &_nc_galaxy_redshift_factor_spline_norm;
   gsdr_class->make_fixed_nodes = &_nc_galaxy_redshift_factor_spline_make_fixed_nodes;
+  gsdr_class->cheb_moments     = &_nc_galaxy_redshift_factor_spline_cheb_moments;
 
   /*
    * prepare, get_hash and update_data keep the base no-ops: the density depends on no
@@ -267,6 +269,15 @@ _nc_galaxy_redshift_factor_spline_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr
   ncm_integral_fixed_calc_nodes (intf, &F);
 
   return intf;
+}
+
+/* The moments of the NcGalaxyPz of the galaxy, whose own representation gives them */
+static void
+_nc_galaxy_redshift_factor_spline_cheb_moments (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray *moments)
+{
+  SplineLData *sldata = (SplineLData *) data->ldata;
+
+  nc_galaxy_pz_cheb_moments (sldata->pz, a, b, n, &moments);
 }
 
 /* Public API ----------------------------------------------------------------- */

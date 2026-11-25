@@ -53,6 +53,12 @@
  * the rest. Per-row objects read from the catalog, such as a galaxy's $p(z)$
  * spline, are never shared between rows, so they are per-galaxy state.
  *
+ * The Chebyshev moments of $p$ on an interval (nc_galaxy_redshift_factor_cheb_moments())
+ * come by default from the Chebyshev panels of $s = \sqrt{p}$, built from the integrand of
+ * nc_galaxy_redshift_factor_integ() to the relative tolerance
+ * #NcGalaxyRedshiftFactor:cheb-reltol; a scheme that holds $p$ in another form may compute
+ * them from it.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -62,12 +68,25 @@
 
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor.h"
 #include "ncm/algebra/ncm_vector.h"
+#include "ncm/algebra/ncm_spectral_panels.h"
+#include "ncm/algebra/ncm_spectral_panels_builder.h"
 #include "ncm/core/ncm_rng.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <math.h>
+#include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcGalaxyRedshiftFactorPrivate
 {
-  gint placeholder;
+  gdouble cheb_reltol;
 } NcGalaxyRedshiftFactorPrivate;
+
+enum
+{
+  PROP_0,
+  PROP_CHEB_RELTOL,
+};
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (NcGalaxyRedshiftFactor, nc_galaxy_redshift_factor, G_TYPE_OBJECT);
 G_DEFINE_BOXED_TYPE (NcGalaxyRedshiftFactorData, nc_galaxy_redshift_factor_data, nc_galaxy_redshift_factor_data_ref, nc_galaxy_redshift_factor_data_unref);
@@ -81,6 +100,41 @@ NCM_UTIL_DEFINE_CALLBACK (NcGalaxyRedshiftFactorIntegrand,
 static void
 nc_galaxy_redshift_factor_init (NcGalaxyRedshiftFactor *gsdr)
 {
+  NcGalaxyRedshiftFactorPrivate * const self = nc_galaxy_redshift_factor_get_instance_private (gsdr);
+
+  self->cheb_reltol = 0.0;
+}
+
+static void
+_nc_galaxy_redshift_factor_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcGalaxyRedshiftFactor *gsdr = NC_GALAXY_REDSHIFT_FACTOR (object);
+
+  switch (prop_id)
+  {
+    case PROP_CHEB_RELTOL:
+      nc_galaxy_redshift_factor_set_cheb_reltol (gsdr, g_value_get_double (value));
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
+}
+
+static void
+_nc_galaxy_redshift_factor_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcGalaxyRedshiftFactor *gsdr = NC_GALAXY_REDSHIFT_FACTOR (object);
+
+  switch (prop_id)
+  {
+    case PROP_CHEB_RELTOL:
+      g_value_set_double (value, nc_galaxy_redshift_factor_get_cheb_reltol (gsdr));
+      break;
+    default:                                                      /* LCOV_EXCL_LINE */
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
+      break;                                                      /* LCOV_EXCL_LINE */
+  }
 }
 
 static void
@@ -171,12 +225,31 @@ _nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr)
   return g_strdup (G_OBJECT_TYPE_NAME (gsdr));
 }
 
+static void _nc_galaxy_redshift_factor_cheb_moments (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray *moments);
+
 static void
 nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = &_nc_galaxy_redshift_factor_finalize;
+  object_class->set_property = &_nc_galaxy_redshift_factor_set_property;
+  object_class->get_property = &_nc_galaxy_redshift_factor_get_property;
+  object_class->finalize     = &_nc_galaxy_redshift_factor_finalize;
+
+  /**
+   * NcGalaxyRedshiftFactor:cheb-reltol:
+   *
+   * The relative tolerance of the Chebyshev panels of $s = \sqrt{p}$ from which the default
+   * nc_galaxy_redshift_factor_cheb_moments() computes the moments; the absolute tolerance
+   * is this value times the largest $s$ on the interval.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CHEB_RELTOL,
+                                   g_param_spec_double ("cheb-reltol",
+                                                        NULL,
+                                                        "Relative tolerance of the Chebyshev panels of sqrt(p)",
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-10,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->data_init        = &_nc_galaxy_redshift_factor_data_init;
   klass->gen              = &_nc_galaxy_redshift_factor_gen;
@@ -189,6 +262,76 @@ nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
   klass->get_hash         = &_nc_galaxy_redshift_factor_get_hash;
   klass->update_data      = &_nc_galaxy_redshift_factor_update_data;
   klass->get_desc         = &_nc_galaxy_redshift_factor_get_desc;
+  klass->cheb_moments     = &_nc_galaxy_redshift_factor_cheb_moments;
+}
+
+/* The integrand and the galaxy of the panel builder, and the first negative p it met */
+typedef struct _NcGalaxyRedshiftFactorSqrtArg
+{
+  NcGalaxyRedshiftFactorIntegrand *integ;
+  NcGalaxyRedshiftFactorData *data;
+  gdouble z_neg;
+  gdouble p_neg;
+} NcGalaxyRedshiftFactorSqrtArg;
+
+static void
+_nc_galaxy_redshift_factor_sqrt_p_f (gpointer user_data, guint i, gdouble z, NcmVector *fval)
+{
+  NcGalaxyRedshiftFactorSqrtArg *arg = (NcGalaxyRedshiftFactorSqrtArg *) user_data;
+  const gdouble p                    = nc_galaxy_redshift_factor_integrand_eval (arg->integ, z, arg->data);
+
+  if ((p < 0.0) && (arg->p_neg == 0.0))
+  {
+    arg->z_neg = z;
+    arg->p_neg = p;
+  }
+
+  ncm_vector_set (fval, 0, sqrt (GSL_MAX (p, 0.0)));
+}
+
+/*
+ * The default moments: the panels of s = sqrt (p) on [a, b], p from the integrand of the
+ * scheme, to cheb-reltol and an absolute tolerance of cheb-reltol times the largest s at
+ * the 33 Chebyshev-Lobatto nodes of [a, b]; then the moments of their square. A negative p
+ * aborts.
+ */
+static void
+_nc_galaxy_redshift_factor_cheb_moments (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray *moments)
+{
+  NcGalaxyRedshiftFactorPrivate * const self = nc_galaxy_redshift_factor_get_instance_private (gsdr);
+  NcmSpectralPanelsBuilder *builder          = ncm_spectral_panels_builder_new ();
+  NcmSpectralPanels *sp                      = ncm_spectral_panels_new (1);
+  NcmVector *fval                            = ncm_vector_new (1);
+  NcGalaxyRedshiftFactorSqrtArg arg;
+  gdouble s_scale = 0.0;
+  guint j;
+
+  arg.integ = nc_galaxy_redshift_factor_integ (gsdr, mset, FALSE);
+  arg.data  = data;
+  arg.z_neg = 0.0;
+  arg.p_neg = 0.0;
+  nc_galaxy_redshift_factor_integrand_prepare (arg.integ, mset);
+
+  for (j = 0; j <= 32; j++)
+  {
+    _nc_galaxy_redshift_factor_sqrt_p_f (&arg, 0, 0.5 * (a + b) + 0.5 * (b - a) * cos (M_PI * j / 32.0), fval);
+    s_scale = GSL_MAX (s_scale, ncm_vector_get (fval, 0));
+  }
+
+  ncm_spectral_panels_builder_set_min_panels_per_efold (builder, 0.0);
+  ncm_spectral_panels_builder_build (builder, &_nc_galaxy_redshift_factor_sqrt_p_f, &arg, a, b, NULL, NULL, NULL,
+                                     self->cheb_reltol, self->cheb_reltol * s_scale, sp);
+
+  if (arg.p_neg < 0.0)
+    g_error ("nc_galaxy_redshift_factor_cheb_moments: %s gives p(z) = %g < 0 at z = %g.",
+             G_OBJECT_TYPE_NAME (gsdr), arg.p_neg, arg.z_neg);
+
+  ncm_spectral_panels_square_cheb_moments (sp, 0, a, b, n, &moments);
+
+  nc_galaxy_redshift_factor_integrand_free (arg.integ);
+  ncm_vector_free (fval);
+  ncm_spectral_panels_free (sp);
+  ncm_spectral_panels_builder_free (builder);
 }
 
 /**
@@ -531,5 +674,69 @@ NcmIntegralFixed *
 nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n)
 {
   return NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->make_fixed_nodes (gsdr, mset, data, z_lo, z_hi, n_nodes, rule_n);
+}
+
+/**
+ * nc_galaxy_redshift_factor_cheb_moments:
+ * @gsdr: a #NcGalaxyRedshiftFactor
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxyRedshiftFactorData
+ * @a: the lower end of the interval
+ * @b: the upper end of the interval
+ * @n: the highest order
+ * @moments: (out callee-allocates) (transfer full) (element-type gdouble): the moments
+ *
+ * Computes the Chebyshev moments of the density of the galaxy of @data on $[a, b]$,
+ * $$
+ * m_k = \int_a^b p(z)\, T_k\!\left(\frac{2z - a - b}{b - a}\right) \mathrm{d}z, \qquad
+ * k = 0, \dots, n,
+ * $$
+ * where $p$ is the integrand of nc_galaxy_redshift_factor_integ() and $T_k$ the Chebyshev
+ * polynomial of degree $k$. The default computes them from the Chebyshev panels of
+ * $\sqrt{p}$ to #NcGalaxyRedshiftFactor:cheb-reltol; #NcGalaxyRedshiftFactorSpline takes
+ * them from the #NcGalaxyPz of the galaxy (nc_galaxy_pz_cheb_moments()). A C caller may pass
+ * in @moments an array to reuse, or a pointer to %NULL for a new one; it receives $n + 1$
+ * values. An empty interval aborts, and so does a negative $p$.
+ */
+void
+nc_galaxy_redshift_factor_cheb_moments (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray **moments)
+{
+  if (!(a < b))
+    g_error ("nc_galaxy_redshift_factor_cheb_moments: the interval [%g, %g] is empty.", a, b);
+
+  if (*moments == NULL)
+    *moments = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*moments, n + 1);
+  NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->cheb_moments (gsdr, mset, data, a, b, n, *moments);
+}
+
+/**
+ * nc_galaxy_redshift_factor_set_cheb_reltol:
+ * @gsdr: a #NcGalaxyRedshiftFactor
+ * @cheb_reltol: the relative tolerance
+ *
+ * Sets #NcGalaxyRedshiftFactor:cheb-reltol.
+ */
+void
+nc_galaxy_redshift_factor_set_cheb_reltol (NcGalaxyRedshiftFactor *gsdr, const gdouble cheb_reltol)
+{
+  NcGalaxyRedshiftFactorPrivate * const self = nc_galaxy_redshift_factor_get_instance_private (gsdr);
+
+  self->cheb_reltol = cheb_reltol;
+}
+
+/**
+ * nc_galaxy_redshift_factor_get_cheb_reltol:
+ * @gsdr: a #NcGalaxyRedshiftFactor
+ *
+ * Returns: #NcGalaxyRedshiftFactor:cheb-reltol.
+ */
+gdouble
+nc_galaxy_redshift_factor_get_cheb_reltol (NcGalaxyRedshiftFactor *gsdr)
+{
+  NcGalaxyRedshiftFactorPrivate * const self = nc_galaxy_redshift_factor_get_instance_private (gsdr);
+
+  return self->cheb_reltol;
 }
 
