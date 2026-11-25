@@ -35,7 +35,10 @@
  * density. The evaluation functions check nothing: the caller keeps $z$ inside the
  * range.
  *
- * A subclass implements all five virtual functions.
+ * A subclass implements the virtual functions of nc_galaxy_pz_get_range(),
+ * nc_galaxy_pz_eval_p(), nc_galaxy_pz_eval_ln_p(), nc_galaxy_pz_get_norm() and
+ * nc_galaxy_pz_gen(). The one of nc_galaxy_pz_cheb_moments() is optional: without it the
+ * call aborts.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -53,8 +56,15 @@ nc_galaxy_pz_init (NcGalaxyPz *gpz)
 }
 
 static void
+_nc_galaxy_pz_cheb_moments_not_implemented (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments)
+{
+  g_error ("nc_galaxy_pz_cheb_moments: %s does not implement the Chebyshev moments.", G_OBJECT_TYPE_NAME (gpz));
+}
+
+static void
 nc_galaxy_pz_class_init (NcGalaxyPzClass *klass)
 {
+  klass->cheb_moments = &_nc_galaxy_pz_cheb_moments_not_implemented;
 }
 
 /**
@@ -169,5 +179,41 @@ gdouble
 nc_galaxy_pz_gen (NcGalaxyPz *gpz, NcmRNG *rng)
 {
   return NC_GALAXY_PZ_GET_CLASS (gpz)->gen (gpz, rng);
+}
+
+/**
+ * nc_galaxy_pz_cheb_moments:
+ * @gpz: a #NcGalaxyPz
+ * @a: the lower end of the interval
+ * @b: the upper end of the interval
+ * @n: the highest order
+ * @moments: (out callee-allocates) (transfer full) (element-type gdouble): the moments
+ *
+ * Computes the Chebyshev moments of the density on $[a, b]$,
+ * $$
+ * m_k = \int_a^b p(z)\, T_k\!\left(\frac{2z - a - b}{b - a}\right) \mathrm{d}z, \qquad k = 0, \dots, n,
+ * $$
+ * where $T_k$ is the Chebyshev polynomial of degree $k$, so $m_0$ is the mass of $p$ on
+ * $[a, b]$. A C caller may pass in @moments an array to reuse, or a pointer to %NULL for a
+ * new one; it receives $n + 1$ values. An interval that is empty or not inside the range
+ * of nc_galaxy_pz_get_range() aborts, and so does a subclass that does not implement the
+ * moments.
+ */
+void
+nc_galaxy_pz_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray **moments)
+{
+  gdouble z_min, z_max;
+
+  nc_galaxy_pz_get_range (gpz, &z_min, &z_max);
+
+  if (!((z_min <= a) && (a < b) && (b <= z_max)))
+    g_error ("nc_galaxy_pz_cheb_moments: the interval [%g, %g] is empty or not inside the range [%g, %g].",
+             a, b, z_min, z_max);
+
+  if (*moments == NULL)
+    *moments = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*moments, n + 1);
+  NC_GALAXY_PZ_GET_CLASS (gpz)->cheb_moments (gpz, a, b, n, *moments);
 }
 

@@ -36,7 +36,9 @@
  * #NcGalaxyPzBSplineSqrt:bspline. It is non-negative and $C^4$, and its logarithm is
  * $2\ln\vert s(z)\vert$. The range is that of $s$. The normalization is the exact
  * integral of $s^2$ (6-point Gauss-Legendre on each polynomial piece), computed at
- * construction, and sampling inverts the same integral.
+ * construction, and sampling inverts the same integral. The Chebyshev moments of
+ * nc_galaxy_pz_cheb_moments() are exact as well: $p\,T_k$ is a polynomial of degree
+ * $10 + k$ on each piece, integrated by Gauss-Legendre with enough points.
  *
  * nc_galaxy_pz_bspline_sqrt_new_from_table() builds the object from a table
  * $(z_j, p_j)$: $s$ is then the interpolating B-spline through $(z_j, \sqrt{p_j})$.
@@ -54,6 +56,7 @@
 #include <math.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_machine.h>
+#include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcGalaxyPzBSplineSqrt
@@ -195,6 +198,7 @@ static gdouble _nc_galaxy_pz_bspline_sqrt_eval_p (NcGalaxyPz *gpz, const gdouble
 static gdouble _nc_galaxy_pz_bspline_sqrt_eval_ln_p (NcGalaxyPz *gpz, const gdouble z);
 static gdouble _nc_galaxy_pz_bspline_sqrt_get_norm (NcGalaxyPz *gpz);
 static gdouble _nc_galaxy_pz_bspline_sqrt_gen (NcGalaxyPz *gpz, NcmRNG *rng);
+static void _nc_galaxy_pz_bspline_sqrt_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
 static void
 nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
@@ -221,11 +225,12 @@ nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
                                                         NCM_TYPE_BSPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  gpz_class->get_range = &_nc_galaxy_pz_bspline_sqrt_get_range;
-  gpz_class->eval_p    = &_nc_galaxy_pz_bspline_sqrt_eval_p;
-  gpz_class->eval_ln_p = &_nc_galaxy_pz_bspline_sqrt_eval_ln_p;
-  gpz_class->get_norm  = &_nc_galaxy_pz_bspline_sqrt_get_norm;
-  gpz_class->gen       = &_nc_galaxy_pz_bspline_sqrt_gen;
+  gpz_class->get_range    = &_nc_galaxy_pz_bspline_sqrt_get_range;
+  gpz_class->eval_p       = &_nc_galaxy_pz_bspline_sqrt_eval_p;
+  gpz_class->eval_ln_p    = &_nc_galaxy_pz_bspline_sqrt_eval_ln_p;
+  gpz_class->get_norm     = &_nc_galaxy_pz_bspline_sqrt_get_norm;
+  gpz_class->gen          = &_nc_galaxy_pz_bspline_sqrt_gen;
+  gpz_class->cheb_moments = &_nc_galaxy_pz_bspline_sqrt_cheb_moments;
 
   _nc_galaxy_pz_bspline_sqrt_gl = gsl_integration_glfixed_table_alloc (NC_GALAXY_PZ_BSPLINE_SQRT_GL_N);
 }
@@ -352,6 +357,76 @@ _nc_galaxy_pz_bspline_sqrt_gen (NcGalaxyPz *gpz, NcmRNG *rng)
   }
 
   return z;
+}
+
+/*
+ * The moments of s^2 on [a, b] (nc_galaxy_pz_cheb_moments() checked the interval and sized
+ * moments to n + 1): on each polynomial piece of s that meets [a, b], the Gauss-Legendre rule
+ * of q points with 2 q - 1 >= 10 + n integrates s^2 T_k exactly for every k <= n.
+ */
+static void
+_nc_galaxy_pz_bspline_sqrt_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments)
+{
+  NcGalaxyPzBSplineSqrt *gpzs        = NC_GALAXY_PZ_BSPLINE_SQRT (gpz);
+  const guint q                      = (n + 12) / 2;
+  gsl_integration_glfixed_table *glt = gsl_integration_glfixed_table_alloc (q);
+  gdouble *m                         = &g_array_index (moments, gdouble, 0);
+  guint lo                           = 0;
+  guint hi                           = gpzs->n_brk - 1;
+  guint j, k, i;
+
+  for (k = 0; k <= n; k++)
+    m[k] = 0.0;
+
+  /* The piece [brk[lo], brk[lo + 1]] that holds a */
+  while (hi - lo > 1)
+  {
+    const guint mid = (lo + hi) / 2;
+
+    if (a < gpzs->brk[mid])
+      hi = mid;
+    else
+      lo = mid;
+  }
+
+  for (j = lo; (j + 1 < gpzs->n_brk) && (gpzs->brk[j] < b); j++)
+  {
+    const gdouble z_lo = GSL_MAX (a, gpzs->brk[j]);
+    const gdouble z_hi = GSL_MIN (b, gpzs->brk[j + 1]);
+
+    if (!(z_hi > z_lo))
+      continue;
+
+    for (i = 0; i < q; i++)
+    {
+      gdouble zq, wq, t, T0, T1, s_z, pw;
+
+      gsl_integration_glfixed_point (z_lo, z_hi, i, &zq, &wq, glt);
+
+      s_z   = ncm_bspline_eval (gpzs->s, zq);
+      pw    = wq * s_z * s_z;
+      t     = (2.0 * zq - (a + b)) / (b - a);
+      T0    = 1.0;
+      T1    = t;
+      m[0] += pw;
+
+      if (n == 0)
+        continue;
+
+      m[1] += pw * t;
+
+      for (k = 2; k <= n; k++)
+      {
+        const gdouble T2 = 2.0 * t * T1 - T0;
+
+        m[k] += pw * T2;
+        T0    = T1;
+        T1    = T2;
+      }
+    }
+  }
+
+  gsl_integration_glfixed_table_free (glt);
 }
 
 /**
