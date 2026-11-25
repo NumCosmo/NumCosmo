@@ -109,6 +109,7 @@ void test_ncm_serialize_set_property (void);
 void test_ncm_serialize_global (void);
 void test_ncm_serialize_remove_ser (void);
 void test_ncm_serialize_named_no_autosave (void);
+void test_ncm_serialize_var_dict_own_bytes (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -211,6 +212,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/serialize/api/global", &test_ncm_serialize_global);
   g_test_add_func ("/ncm/serialize/api/remove_ser", &test_ncm_serialize_remove_ser);
   g_test_add_func ("/ncm/serialize/api/named_no_autosave", &test_ncm_serialize_named_no_autosave);
+  g_test_add_func ("/ncm/serialize/api/var_dict_own_bytes", &test_ncm_serialize_var_dict_own_bytes);
   g_test_add_func ("/ncm/serialize/api/set_taken/subprocess", &test_ncm_serialize_set_taken_subprocess);
   g_test_add_func ("/ncm/serialize/legacy/objects", &test_ncm_serialize_legacy_objects);
 
@@ -1255,6 +1257,57 @@ test_ncm_serialize_legacy_objects (void)
     g_free (int32_str);
   }
 
+  ncm_serialize_free (ser);
+}
+
+static void
+_test_ncm_serialize_bytes_freed (gpointer data)
+{
+  gboolean *freed = data;
+
+  *freed = TRUE;
+}
+
+/*
+ * A dictionary deserialized from a variant over a buffer does not keep the buffer: once the
+ * variant is released the buffer is freed while the dictionary still returns its values. A
+ * value stored as a child of the variant would hold the whole buffer, e.g. a file.
+ */
+void
+test_ncm_serialize_var_dict_own_bytes (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVarDict *vd    = ncm_var_dict_new ();
+  gboolean freed    = FALSE;
+  GVariant *var, *var_buf;
+  NcmVarDict *vd2;
+  GBytes *bytes;
+  gdouble x = 0.0;
+  gint n    = 0;
+
+  ncm_var_dict_set_double (vd, "x", 1.5);
+  ncm_var_dict_set_int (vd, "n", 7);
+
+  var   = ncm_serialize_var_dict_to_variant (ser, vd);
+  bytes = g_bytes_new_with_free_func (g_memdup2 (g_variant_get_data (var), g_variant_get_size (var)), g_variant_get_size (var),
+                                      &_test_ncm_serialize_bytes_freed, &freed);
+  var_buf = g_variant_ref_sink (g_variant_new_from_bytes (G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE), bytes, TRUE));
+  g_bytes_unref (bytes);
+
+  vd2 = ncm_serialize_var_dict_from_variant (ser, var_buf);
+  g_assert_false (freed);
+
+  g_variant_unref (var_buf);
+  g_assert_true (freed);
+
+  g_assert_true (ncm_var_dict_get_double (vd2, "x", &x));
+  g_assert_true (ncm_var_dict_get_int (vd2, "n", &n));
+  g_assert_cmpfloat (x, ==, 1.5);
+  g_assert_cmpint (n, ==, 7);
+
+  g_variant_unref (var);
+  ncm_var_dict_unref (vd);
+  ncm_var_dict_unref (vd2);
   ncm_serialize_free (ser);
 }
 

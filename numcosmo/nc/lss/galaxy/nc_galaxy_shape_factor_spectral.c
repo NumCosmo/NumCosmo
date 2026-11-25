@@ -97,9 +97,11 @@
  * nc_galaxy_shape_factor_spectral_set_obs_source() records the shape factor and the
  * population that built them. Reading the rows of such a catalog loads the interpolants,
  * and an interpolant that is present is always used. The first use compares the record with
- * the fit (the convention, reltol, the interp-* settings, the fixed population parameters
- * within a relative tolerance of $10^{-15}$, and the free ones, which must be variables of
- * the stored interpolants with the same bounds) and aborts on any difference. An
+ * the fit (the convention, reltol, the interp-* settings, the population parameters that
+ * are not variables of the stored interpolants, which must be fixed at the recorded values
+ * within a relative tolerance of $10^{-15}$, and the free ones, which must be variables with
+ * the same bounds; a variable fixed in the fit holds any value in its range) and aborts on
+ * any difference. An
  * interpolant, loaded or built, that no longer holds for an evaluation (another observed
  * ellipticity, noise, setting or population) aborts. A change of the rows of the catalog, as
  * a resample, drops its interpolants.
@@ -184,6 +186,7 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   guint interp_pop_level_min;
   guint interp_pop_level_cap;
   gboolean interp_pop_one_integral;
+  gdouble interp_compress_frac;
 
   /*
    * restrict-range: the models of the bound of the shear a galaxy reaches over the box of the
@@ -211,7 +214,8 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
   GArray *r_edges_all; /* radial edges of the interpolant before those below its range are left out */
   GArray *var_r;       /* the radii of a call of the radial factor of the variance */
   GArray *g_arr;       /* the shears of a call of eval_nodes that the interpolant takes, two values per shear */
-  GArray *x_arr;       /* their points of the interpolant, two values per point */
+  GArray *x_arr;       /* their points of the interpolant without the population variables, two values per point */
+  GArray *x_pop;       /* the population variables of those points, the same for all of them */
   GArray *f_arr;       /* their values */
   GArray *j_arr;       /* guint, the index of each of those points among the shears of the call */
   GArray *lower;       /* the domain of the interpolant, one value per variable */
@@ -275,6 +279,7 @@ typedef struct _NcGalaxyShapeFactorSpectralData
   guint pop_level_min;
   guint pop_level_cap;
   gboolean pop_one_integral;
+  gdouble compress_frac;
   gdouble g_max;
   gdouble abstol;
   gdouble reltol;
@@ -333,6 +338,7 @@ enum
   PROP_INTERP_POP_LEVEL_MIN,
   PROP_INTERP_POP_LEVEL_CAP,
   PROP_INTERP_POP_ONE_INTEGRAL,
+  PROP_INTERP_COMPRESS_FRAC,
   PROP_RESTRICT_RANGE,
   PROP_LINE_ABSTOL,
   PROP_LEN,
@@ -365,6 +371,7 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->interp_pop_level_min     = 0;
   self->interp_pop_level_cap     = 0;
   self->interp_pop_one_integral  = FALSE;
+  self->interp_compress_frac     = 0.0;
   self->restrict_range           = FALSE;
   self->cosmo                    = NULL;
   self->smd                      = NULL;
@@ -411,6 +418,9 @@ _nc_galaxy_shape_factor_spectral_set_property (GObject *object, guint prop_id, c
     case PROP_INTERP_POP_ONE_INTEGRAL:
       nc_galaxy_shape_factor_spectral_set_interp_pop_one_integral (gsfs, g_value_get_boolean (value));
       break;
+    case PROP_INTERP_COMPRESS_FRAC:
+      nc_galaxy_shape_factor_spectral_set_interp_compress_frac (gsfs, g_value_get_double (value));
+      break;
     case PROP_RESTRICT_RANGE:
       nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs, g_value_get_boolean (value));
       break;
@@ -453,6 +463,9 @@ _nc_galaxy_shape_factor_spectral_get_property (GObject *object, guint prop_id, G
       break;
     case PROP_INTERP_POP_ONE_INTEGRAL:
       g_value_set_boolean (value, nc_galaxy_shape_factor_spectral_get_interp_pop_one_integral (gsfs));
+      break;
+    case PROP_INTERP_COMPRESS_FRAC:
+      g_value_set_double (value, nc_galaxy_shape_factor_spectral_get_interp_compress_frac (gsfs));
       break;
     case PROP_RESTRICT_RANGE:
       g_value_set_boolean (value, nc_galaxy_shape_factor_spectral_get_restrict_range (gsfs));
@@ -680,6 +693,28 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
+   * NcGalaxyShapeFactorSpectral:interp-compress-frac:
+   *
+   * The fraction $f$ of #NcGalaxyShapeFactorSpectral:interp-abstol given to the compression
+   * of an interpolant with population variables: after the build,
+   * ncm_spectral_tensor_compress() with tolerance $f$ times
+   * #NcGalaxyShapeFactorSpectral:interp-abstol stores each panel in the format
+   * %NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER when it holds fewer numbers. The compression
+   * changes $\ln P$ by at most that tolerance, $10^{-7}$ at the defaults; the largest change
+   * measured is about 0.15 of it. An interpolant evaluated at one point of the
+   * population per call reduces such a panel once per call
+   * (ncm_spectral_tensor_eval_slice_array()). With 0 no panel is compressed; an interpolant
+   * without population variables is never compressed.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_INTERP_COMPRESS_FRAC,
+                                   g_param_spec_double ("interp-compress-frac",
+                                                        NULL,
+                                                        "Fraction of interp-abstol given to the compression of the interpolant",
+                                                        0.0, 1.0, 0.01,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
    * NcGalaxyShapeFactorSpectral:restrict-range:
    *
    * Whether the interpolant of a galaxy covers only the shears it can reach over the box of
@@ -743,6 +778,7 @@ _nc_galaxy_shape_factor_spectral_work_new (gpointer userdata)
   work->var_r       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->g_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->x_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->x_pop       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->f_arr       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->j_arr       = g_array_new (FALSE, FALSE, sizeof (guint));
   work->lower       = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -767,6 +803,7 @@ _nc_galaxy_shape_factor_spectral_work_free (gpointer p)
   g_array_unref (work->var_r);
   g_array_unref (work->g_arr);
   g_array_unref (work->x_arr);
+  g_array_unref (work->x_pop);
   g_array_unref (work->f_arr);
   g_array_unref (work->j_arr);
   g_array_unref (work->lower);
@@ -1077,7 +1114,8 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
 
 /*
  * eval_nodes of the class: for a galaxy that holds an interpolant, checked once per call, the
- * shears with |g| in its range are evaluated in one call of ncm_spectral_tensor_eval_array().
+ * shears with |g| in its range are evaluated in one call of
+ * ncm_spectral_tensor_eval_slice_array(), with the population variables fixed.
  * Their points are those of _nc_galaxy_shape_factor_spectral_eval_ln_marginal(), computed in
  * one loop that vectorizes: rho by sqrt in place of hypot (rho < 2 here) and psi by the
  * vector atan2. The other shears, and every shear of a galaxy without an interpolant, take
@@ -1148,7 +1186,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
     const gdouble *g    = &g_array_index (work->g_arr, gdouble, 0);
     gdouble *x;
 
-    g_array_set_size (work->x_arr, d * m);
+    g_array_set_size (work->x_arr, 2 * m);
     x = &g_array_index (work->x_arr, gdouble, 0);
 
     #pragma omp simd
@@ -1158,19 +1196,16 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
       const gdouble gf_1 = g[2 * q] * cos_e + g[2 * q + 1] * sin_e - g_c;
       const gdouble gf_2 = g[2 * q + 1] * cos_e - g[2 * q] * sin_e;
 
-      x[d * q]     = sqrt (gf_1 * gf_1 + gf_2 * gf_2);
-      x[d * q + 1] = atan2 (fabs (gf_2), gf_1);
+      x[2 * q]     = sqrt (gf_1 * gf_1 + gf_2 * gf_2);
+      x[2 * q + 1] = atan2 (fabs (gf_2), gf_1);
     }
+
+    g_array_set_size (work->x_pop, d - 2);
 
     if (d > 2)
-    {
-      const gdouble *x_pop = &g_array_index (ldata->x, gdouble, 2);
+      memcpy (&g_array_index (work->x_pop, gdouble, 0), &g_array_index (ldata->x, gdouble, 2), sizeof (gdouble) * (d - 2));
 
-      for (q = 0; q < m; q++)
-        memcpy (&x[d * q + 2], x_pop, sizeof (gdouble) * (d - 2));
-    }
-
-    ncm_spectral_tensor_eval_array (ldata->st, work->x_arr, &work->f_arr);
+    ncm_spectral_tensor_eval_slice_array (ldata->st, work->x_pop, work->x_arr, &work->f_arr);
 
     for (q = 0; q < m; q++)
       out[j_buf[q]] = g_array_index (work->f_arr, gdouble, q);
@@ -1325,7 +1360,8 @@ _nc_galaxy_shape_factor_spectral_interp_valid (NcGalaxyShapeFactorSpectral *gsfs
         (ldata->reltol == self->reltol) &&
         (ldata->min_radial_panels == self->interp_min_radial_panels) && (ldata->trim_frac == self->interp_trim_frac) &&
         ((n_pop == 0) || ((ldata->pop_level_min == self->interp_pop_level_min) && (ldata->pop_level_cap == self->interp_pop_level_cap) &&
-                          (ldata->pop_one_integral == self->interp_pop_one_integral)))))
+                          (ldata->pop_one_integral == self->interp_pop_one_integral) &&
+                          (ldata->compress_frac == self->interp_compress_frac)))))
     return FALSE;
 
   if (ldata->pop_pkey == ncm_model_state_get_pkey (NCM_MODEL (pop)))
@@ -1336,10 +1372,11 @@ _nc_galaxy_shape_factor_spectral_interp_valid (NcGalaxyShapeFactorSpectral *gsfs
 
 /*
  * Whether the table of a galaxy with population variables holds for the current state of
- * pop: the free parameters are its variables, their bounds are the ranges recorded, and the
- * fixed parameters have the values recorded. Then the free values become the population
- * part of the point of the table (ldata->x) and the state is recorded. A free value outside
- * its bounds aborts.
+ * pop: every free parameter is a variable of the table with the bounds recorded, and every
+ * parameter that is not a variable is fixed at the value recorded. A variable may also be
+ * fixed. Then the values of the variables become the population part of the point of the
+ * table (ldata->x) and the state is recorded. A value outside the range of its variable
+ * aborts.
  */
 static gboolean
 _nc_galaxy_shape_factor_spectral_pop_inside (NcGalaxyShapePop *pop, NcGalaxyShapeFactorSpectralData *ldata)
@@ -1354,16 +1391,18 @@ _nc_galaxy_shape_factor_spectral_pop_inside (NcGalaxyShapePop *pop, NcGalaxyShap
 
   for (k = 0; k < len; k++)
   {
-    if (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE)
+    const gboolean free = (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE);
+
+    if ((v < n_pop) && (g_array_index (ldata->pop_idx, guint, v) == k))
     {
-      if ((v == n_pop) || (g_array_index (ldata->pop_idx, guint, v) != k) ||
-          (g_array_index (ldata->pop_bounds, gdouble, 2 * v) != ncm_model_param_get_lower_bound (model, k)) ||
-          (g_array_index (ldata->pop_bounds, gdouble, 2 * v + 1) != ncm_model_param_get_upper_bound (model, k)))
+      if (free &&
+          ((g_array_index (ldata->pop_bounds, gdouble, 2 * v) != ncm_model_param_get_lower_bound (model, k)) ||
+           (g_array_index (ldata->pop_bounds, gdouble, 2 * v + 1) != ncm_model_param_get_upper_bound (model, k))))
         return FALSE;
 
       v++;
     }
-    else if (ncm_model_param_get (model, k) != g_array_index (ldata->pop_params, gdouble, k))
+    else if (free || (ncm_model_param_get (model, k) != g_array_index (ldata->pop_params, gdouble, k)))
     {
       return FALSE;
     }
@@ -1620,6 +1659,9 @@ _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs
                                        &g_array_index (work->level_min, guint, 0), &g_array_index (work->level_cap, guint, 0),
                                        0.0, self->interp_abstol, &interp, NULL, &error);
 
+    if ((error == NULL) && (self->interp_compress_frac > 0.0))
+      ncm_spectral_tensor_compress (ldata->st, self->interp_compress_frac * self->interp_abstol);
+
     g_clear_pointer (&interp.wg, _ncm_spectral_polar_weight_grid_free);
     g_ptr_array_unref (interp.side_pops);
     g_ptr_array_unref (interp.side_datas);
@@ -1719,6 +1761,7 @@ _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsf
   ldata->pop_level_min     = self->interp_pop_level_min;
   ldata->pop_level_cap     = self->interp_pop_level_cap;
   ldata->pop_one_integral  = self->interp_pop_one_integral;
+  ldata->compress_frac     = self->interp_compress_frac;
   ldata->abstol            = self->interp_abstol;
   ldata->reltol            = self->reltol;
   ldata->min_radial_panels = self->interp_min_radial_panels;
@@ -1739,12 +1782,14 @@ _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsf
 
 /*
  * Compares the record of the loaded interpolant of the galaxy of data with the fit: the
- * convention, reltol and the interp-* settings of the class, the type of the population, its
- * fixed parameters, and its free parameters against the population variables of the
- * interpolant, which must be free in the record and span the bounds of the fit. When all
- * agree the interpolant is recorded as valid for the current state of pop, with the bounds
- * of the fit as the ranges of its variables; otherwise the call aborts with every difference
- * in the message.
+ * convention, reltol and the interp-* settings of the class, the type of the population, and
+ * its parameters against the population variables of the interpolant, the parameters free
+ * in the record. A free parameter of the fit must be a variable whose range is its bounds; a
+ * variable fixed in the fit holds any value in its range; a parameter that is not a variable
+ * must be fixed at the value of the record. When all agree the interpolant is recorded as
+ * valid for the current state of pop, with the bounds of the fit as the ranges of its free
+ * variables and the ranges of the table for the fixed ones; otherwise the call aborts with
+ * every difference in the message.
  */
 static void
 _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data)
@@ -1774,44 +1819,63 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
   if (ncm_cmp (self->interp_trim_frac, src->interp_trim_frac, tol, 0.0) != 0)
     g_string_append_printf (diff, " interp-trim-frac (% 22.15g, built with % 22.15g);", self->interp_trim_frac, src->interp_trim_frac);
 
-  _nc_galaxy_shape_factor_spectral_pop_vars (pop, ldata);
-
   if ((G_OBJECT_TYPE (pop) != G_OBJECT_TYPE (ldata->src_pop)) || (ncm_model_len (NCM_MODEL (pop)) != ncm_model_len (NCM_MODEL (ldata->src_pop))))
   {
     g_string_append_printf (diff, " the population (%s, built with %s);", G_OBJECT_TYPE_NAME (pop), G_OBJECT_TYPE_NAME (ldata->src_pop));
   }
-  else if (ncm_spectral_tensor_get_n_vars (ldata->st) != ldata->x->len)
-  {
-    g_string_append_printf (diff, " the free population parameters (%u, the interpolants have %u population variables);",
-                            ldata->pop_idx->len, ncm_spectral_tensor_get_n_vars (ldata->st) - 2);
-  }
   else
   {
-    NcmModel *model = NCM_MODEL (pop);
-    guint v         = 0;
+    NcmModel *model     = NCM_MODEL (pop);
+    NcmModel *src_model = NCM_MODEL (ldata->src_pop);
+    guint n_src_free    = 0;
+    guint v             = 0;
 
-    for (k = 0; k < ncm_model_len (model); k++)
+    for (k = 0; k < ncm_model_len (src_model); k++)
+      n_src_free += (ncm_model_param_get_ftype (src_model, k) == NCM_PARAM_TYPE_FREE) ? 1 : 0;
+
+    g_array_set_size (ldata->pop_idx, 0);
+    g_array_set_size (ldata->pop_bounds, 0);
+    g_array_set_size (ldata->x, 2 + n_src_free);
+
+    if (ncm_spectral_tensor_get_n_vars (ldata->st) != 2 + n_src_free)
+      g_string_append_printf (diff, " the record (%u free population parameters, the interpolants have %u population variables);",
+                              n_src_free, ncm_spectral_tensor_get_n_vars (ldata->st) - 2);
+
+    for (k = 0; (k < ncm_model_len (model)) && (ncm_spectral_tensor_get_n_vars (ldata->st) == 2 + n_src_free); k++)
     {
-      if (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE)
+      const gboolean free = (ncm_model_param_get_ftype (model, k) == NCM_PARAM_TYPE_FREE);
+
+      if (ncm_model_param_get_ftype (src_model, k) == NCM_PARAM_TYPE_FREE)
       {
         gdouble a, b;
 
         ncm_spectral_tensor_get_range (ldata->st, 2 + v, &a, &b);
 
-        if (ncm_model_param_get_ftype (NCM_MODEL (ldata->src_pop), k) != NCM_PARAM_TYPE_FREE)
-          g_string_append_printf (diff, " the population parameter %s is free, not a variable of the interpolants;", ncm_model_param_name (model, k));
-        else if ((ncm_cmp (a, ncm_model_param_get_lower_bound (model, k), tol, 0.0) != 0) ||
-                 (ncm_cmp (b, ncm_model_param_get_upper_bound (model, k), tol, 0.0) != 0))
-          g_string_append_printf (diff, " the bounds of %s ([% 22.15g, % 22.15g], built for [% 22.15g, % 22.15g]);",
-                                  ncm_model_param_name (model, k), ncm_model_param_get_lower_bound (model, k),
-                                  ncm_model_param_get_upper_bound (model, k), a, b);
+        if (free)
+        {
+          if ((ncm_cmp (a, ncm_model_param_get_lower_bound (model, k), tol, 0.0) != 0) ||
+              (ncm_cmp (b, ncm_model_param_get_upper_bound (model, k), tol, 0.0) != 0))
+            g_string_append_printf (diff, " the bounds of %s ([% 22.15g, % 22.15g], built for [% 22.15g, % 22.15g]);",
+                                    ncm_model_param_name (model, k), ncm_model_param_get_lower_bound (model, k),
+                                    ncm_model_param_get_upper_bound (model, k), a, b);
 
+          a = ncm_model_param_get_lower_bound (model, k);
+          b = ncm_model_param_get_upper_bound (model, k);
+        }
+
+        g_array_append_val (ldata->pop_idx, k);
+        g_array_append_val (ldata->pop_bounds, a);
+        g_array_append_val (ldata->pop_bounds, b);
         v++;
       }
-      else if (ncm_cmp (ncm_model_param_get (model, k), ncm_model_param_get (NCM_MODEL (ldata->src_pop), k), tol, 0.0) != 0)
+      else if (free)
+      {
+        g_string_append_printf (diff, " the population parameter %s is free, not a variable of the interpolants;", ncm_model_param_name (model, k));
+      }
+      else if (ncm_cmp (ncm_model_param_get (model, k), ncm_model_param_get (src_model, k), tol, 0.0) != 0)
       {
         g_string_append_printf (diff, " the population parameter %s (% 22.15g, built with % 22.15g);", ncm_model_param_name (model, k),
-                                ncm_model_param_get (model, k), ncm_model_param_get (NCM_MODEL (ldata->src_pop), k));
+                                ncm_model_param_get (model, k), ncm_model_param_get (src_model, k));
       }
     }
 
@@ -1825,6 +1889,9 @@ _nc_galaxy_shape_factor_spectral_check_loaded (NcGalaxyShapeFactorSpectral *gsfs
 
       if (self->interp_pop_one_integral != src->interp_pop_one_integral)
         g_string_append_printf (diff, " interp-pop-one-integral (%d, built with %d);", self->interp_pop_one_integral, src->interp_pop_one_integral);
+
+      if (ncm_cmp (self->interp_compress_frac, src->interp_compress_frac, tol, 0.0) != 0)
+        g_string_append_printf (diff, " interp-compress-frac (% 22.15g, built with % 22.15g);", self->interp_compress_frac, src->interp_compress_frac);
     }
   }
 
@@ -3028,6 +3095,34 @@ nc_galaxy_shape_factor_spectral_get_reltol (NcGalaxyShapeFactorSpectral *gsfs)
 }
 
 /**
+ * nc_galaxy_shape_factor_spectral_data_take_interp:
+ * @data: a #NcGalaxyShapeFactorData of a #NcGalaxyShapeFactorSpectral
+ *
+ * To store the interpolant of a galaxy without keeping it in memory, takes the interpolant
+ * that nc_galaxy_shape_factor_spectral_build_interp() built for the row of @data and leaves
+ * the galaxy without one: until the next build, the galaxy is evaluated by the integrals.
+ *
+ * Returns: (transfer full) (nullable): the interpolant, or %NULL when the galaxy holds none
+ * built for its row.
+ */
+NcmSpectralTensor *
+nc_galaxy_shape_factor_spectral_data_take_interp (NcGalaxyShapeFactorData *data)
+{
+  NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
+  NcmSpectralTensor *st;
+
+  if (ldata->loaded || !ldata->valid || (ldata->epsilon_obs_1 != data->epsilon_obs_1) || (ldata->epsilon_obs_2 != data->epsilon_obs_2) ||
+      (ldata->std_noise != data->std_noise))
+    return NULL;
+
+  st           = ldata->st;
+  ldata->st    = NULL;
+  ldata->valid = FALSE;
+
+  return st;
+}
+
+/**
  * nc_galaxy_shape_factor_spectral_set_obs_source:
  * @gsfs: a #NcGalaxyShapeFactorSpectral
  * @pop: the #NcGalaxyShapePop that built the interpolants
@@ -3223,6 +3318,38 @@ nc_galaxy_shape_factor_spectral_get_interp_trim_frac (NcGalaxyShapeFactorSpectra
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   return self->interp_trim_frac;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_set_interp_compress_frac:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ * @f: fraction of interp-abstol given to the compression, in $[0, 1]$
+ *
+ * Sets #NcGalaxyShapeFactorSpectral:interp-compress-frac. A value outside $[0, 1]$ aborts.
+ */
+void
+nc_galaxy_shape_factor_spectral_set_interp_compress_frac (NcGalaxyShapeFactorSpectral *gsfs, const gdouble f)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  if (!((f >= 0.0) && (f <= 1.0)))
+    g_error ("nc_galaxy_shape_factor_spectral_set_interp_compress_frac: %g is outside [0, 1].", f);
+
+  self->interp_compress_frac = f;
+}
+
+/**
+ * nc_galaxy_shape_factor_spectral_get_interp_compress_frac:
+ * @gsfs: a #NcGalaxyShapeFactorSpectral
+ *
+ * Returns: #NcGalaxyShapeFactorSpectral:interp-compress-frac.
+ */
+gdouble
+nc_galaxy_shape_factor_spectral_get_interp_compress_frac (NcGalaxyShapeFactorSpectral *gsfs)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
+
+  return self->interp_compress_frac;
 }
 
 /**

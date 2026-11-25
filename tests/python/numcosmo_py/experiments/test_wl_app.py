@@ -56,7 +56,16 @@ from numcosmo_py.experiments.cluster_wl import (
     GalaxyPopGenBeta,
     GalaxyPopGenGaussLocal,
     GalaxyShapeFactorGenSpectral,
+    DEFAULT_INTEG_OPTIONS,
+    load_cluster_wl,
+    shape_interp_free_params,
     shape_interp_gens,
+)
+from numcosmo_py.app.generate import (
+    ClusterWL,
+    load_wl_obs,
+    parse_pop_dist,
+    parse_shape_factor,
 )
 
 pytestmark = pytest.mark.app
@@ -85,7 +94,9 @@ def fixture_experiment_file_copy(tmp_path: Path) -> Path:
     return tmp_file
 
 
-def _build_real_wl_obs(tmp_path: Path, filename: str, with_meta: bool) -> Path:
+def _build_real_wl_obs(
+    tmp_path: Path, filename: str, with_meta: bool, n: int = 20
+) -> Path:
     """A small synthetic NcGalaxyWLObs, standing in for a real catalog.
 
     Mirrors the column schema (and per-galaxy pz spline) of the curated
@@ -95,7 +106,6 @@ def _build_real_wl_obs(tmp_path: Path, filename: str, with_meta: bool) -> Path:
     catalogs are expected to ship with.
     """
     rng = np.random.default_rng(20260720)
-    n = 20
     cols = [
         "epsilon_int_1",
         "epsilon_int_2",
@@ -820,6 +830,8 @@ def test_cluster_wl_app_generate_pop_beta(experiment_file):
     assert names == {
         ("NcGalaxyShapePopBeta", "mode"),
         ("NcGalaxyShapePopBeta", "e_rms"),
+        ("NcGalaxyShapePopBeta", "mean"),
+        ("NcGalaxyShapePopBeta", "std"),
     }
     for func in funcs:
         func.eval0(mset)
@@ -885,7 +897,9 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
             "cluster-wl",
             experiment_file.as_posix(),
             "--shape-factor=spectral interp_g_max=0.2 interp_abstol=1e-4 "
-            "interp_min_radial_panels=4 interp_trim_frac=1e-3 line_abstol=1e-6",
+            "interp_min_radial_panels=4 interp_trim_frac=1e-3 "
+            "interp_compress_frac=0.05 interp_pop_level_min=1 interp_pop_level_cap=4 "
+            "interp_pop_one_integral=false line_abstol=1e-6",
         ],
     )
     assert result.exit_code == 0, result.output
@@ -901,6 +915,10 @@ def test_cluster_wl_app_generate_spectral_interp(experiment_file):
     assert factor.props.interp_abstol == pytest.approx(1e-4)
     assert factor.props.interp_min_radial_panels == 4
     assert factor.props.interp_trim_frac == pytest.approx(1e-3)
+    assert factor.props.interp_compress_frac == pytest.approx(0.05)
+    assert factor.props.interp_pop_level_min == 1
+    assert factor.props.interp_pop_level_cap == 4
+    assert not factor.props.interp_pop_one_integral
     assert factor.props.line_abstol == pytest.approx(1e-6)
 
 
@@ -1609,6 +1627,11 @@ def _experiment_m2lnL(experiment_file: Path) -> float:
     return likelihood.m2lnL_val(mset)
 
 
+def _unwrapped(text: str) -> str:
+    """The text with every run of whitespace, line breaks of the console included, as one space."""
+    return " ".join(text.split())
+
+
 def _shape_interp(output: Path, data_file: Path, *args: str):
     """Run numcosmo wl-catalog shape-interp."""
     return runner.invoke(
@@ -1633,7 +1656,9 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
         prepared, real_wl_obs_file_with_meta, "--pop-dist=beta alpha=1.8 beta=2.1"
     )
     assert result.exit_code == 0, result.output
-    assert "interpolants of 20 galaxies" in result.output
+    assert "interpolants of 20 galaxies" in _unwrapped(result.output)
+    # The temporary records of the build are removed
+    assert not list(tmp_path.glob("*.records"))
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
@@ -1668,11 +1693,189 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     )
     assert result.exit_code == 0, result.output
 
+    # The experiment refers to the prepared catalog: its dataset file holds the name of
+    # the catalog file, not the interpolants, which are read from that file.
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(
+        Ncm.Dataset,
+        ser.from_binfile(exp_prepared.with_suffix(".dataset.gvar").as_posix()),
+    )
+    exp_obs = cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs()
+    assert exp_obs.peek_shape_interp_file() == prepared.as_posix()
+    assert all(exp_obs.peek_shape_interp(i) is not None for i in range(exp_obs.len()))
+    assert (
+        exp_prepared.with_suffix(".dataset.gvar").stat().st_size
+        < exp_original.with_suffix(".dataset.gvar").stat().st_size + 1024
+    )
+
     # The original catalog has no interpolants, so its fit takes the integrals; each
     # galaxy's ln P differs by at most interp-abstol (1e-5) from the interpolant's.
     assert _experiment_m2lnL(exp_prepared) == pytest.approx(
         _experiment_m2lnL(exp_original), rel=0.0, abs=2.0 * 20 * 1.0e-5
     )
+
+
+_FREE_POP_N_GALAXIES = 4
+
+
+def test_wl_catalog_shape_interp_free_pop(tmp_path: Path):
+    """With --free-pop the population parameters are variables of the interpolants: the
+    record has them free, an experiment built from the catalog may fit them, and its -2 ln L
+    at two values of sigma agrees with the integrals within the tolerance of the
+    interpolants; an experiment that does not list sigma holds it fixed. The catalog has
+    _FREE_POP_N_GALAXIES galaxies: the build of tables over the default range of sigma takes
+    about a second per galaxy."""
+    small_obs_file = _build_real_wl_obs(
+        tmp_path, "small_wl_obs.gvar", with_meta=True, n=_FREE_POP_N_GALAXIES
+    )
+    prepared = tmp_path / "prepared.gvar"
+    result = _shape_interp(
+        prepared, small_obs_file, "--pop-dist=gauss sigma=0.3", "--free-pop"
+    )
+    assert result.exit_code == 0, result.output
+    assert "sigma free" in _unwrapped(result.output)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
+    assert shape_interp_free_params(obs) == ["NcGalaxyShapePop:sigma"]
+    tables = [
+        cast(Ncm.SpectralTensor, obs.peek_shape_interp(i)) for i in range(obs.len())
+    ]
+    assert all(st.get_n_vars() == 3 for st in tables)
+    # The interpolants with a population variable are compressed (interp-compress-frac)
+    assert any(
+        st.get_panel_format(p) == Ncm.SpectralTensorPanelFormat.TUCKER
+        for st in tables
+        for p in range(st.get_n_panels())
+    )
+
+    exp_prepared = tmp_path / "exp_prepared.yaml"
+    exp_original = tmp_path / "exp_original.yaml"
+    exp_fixed = tmp_path / "exp_fixed.yaml"
+    for exp_file, data_file, args in [
+        (exp_prepared, prepared, ["--parameter-list=NcGalaxyShapePop:sigma"]),
+        (exp_fixed, prepared, []),
+        (
+            exp_original,
+            small_obs_file,
+            [
+                "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
+                "--pop-dist=gauss sigma=0.3",
+                "--parameter-list=NcGalaxyShapePop:sigma",
+            ],
+        ),
+    ]:
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                "cluster-wl-load",
+                exp_file.as_posix(),
+                f"--data-file={data_file.as_posix()}",
+                *args,
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+    m2lnL = {}
+    for name, exp_file in [
+        ("prepared", exp_prepared),
+        ("original", exp_original),
+        ("fixed", exp_fixed),
+    ]:
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+        ser.from_binfile(exp_file.with_suffix(".dataset.gvar").as_posix())
+        exp = ser.dict_str_from_yaml_file(exp_file.as_posix())
+        likelihood = cast(Ncm.Likelihood, exp.get("likelihood"))
+        mset = cast(Ncm.MSet, exp.get("model-set"))
+        pindex = mset.param_get_by_full_name("NcGalaxyShapePop:sigma")
+        assert pindex is not None
+        expected = Ncm.ParamType.FIXED if name == "fixed" else Ncm.ParamType.FREE
+        assert mset.param_get_ftype(pindex.mid, pindex.pid) == expected
+        mset.prepare_fparam_map()
+        m2lnL[name] = []
+        for sigma in [0.3, 0.6]:
+            mset.param_set(pindex.mid, pindex.pid, sigma)
+            m2lnL[name].append(likelihood.m2lnL_val(mset))
+
+    # Each galaxy's ln P differs by at most interp-abstol (1e-5) from the integral's.
+    assert m2lnL["prepared"] == pytest.approx(
+        m2lnL["original"], rel=0.0, abs=2.0 * _FREE_POP_N_GALAXIES * 1.0e-5
+    )
+    # The same table at the same points: free or fixed gives the same values.
+    assert m2lnL["fixed"] == m2lnL["prepared"]
+
+
+def test_cluster_wl_load_record_settings(tmp_path: Path):
+    """An experiment generated from a prepared catalog has every setting of the record:
+    the bounds of the free population parameter and the levels of the population
+    variable, here other than the defaults, so that its -2 ln L reads the catalog
+    without the abort of a mismatch. The catalog has _FREE_POP_N_GALAXIES galaxies."""
+    small_obs_file = _build_real_wl_obs(
+        tmp_path, "small_wl_obs.gvar", with_meta=True, n=_FREE_POP_N_GALAXIES
+    )
+    obs = load_wl_obs(None, small_obs_file)
+    _s, shape_gen = parse_shape_factor(
+        "spectral ellip_conv=trace ellip_coord=celestial interp_abstol=1e-3 "
+        "interp_pop_level_cap=3"
+    )
+    _p, pop_gen = parse_pop_dist("gauss sigma=0.3")
+    exp = load_cluster_wl(
+        obs=obs,
+        cluster_ra=None,
+        cluster_dec=None,
+        cluster_z=None,
+        cluster_mass=ClusterWL.cluster_mass,
+        cluster_mass_min=ClusterWL.cluster_mass_min,
+        cluster_mass_max=ClusterWL.cluster_mass_max,
+        cluster_c=None,
+        r_min=ClusterWL.r_min,
+        r_max=ClusterWL.r_max,
+        shape_gen=shape_gen,
+        pop_gen=pop_gen,
+        integ_options=DEFAULT_INTEG_OPTIONS,
+        summary=False,
+    )
+    mset = cast(Ncm.MSet, exp.peek("model-set"))
+    data = cast(
+        Nc.DataClusterWLFactor,
+        cast(Ncm.Likelihood, exp.peek("likelihood")).peek_dataset().get_data(0),
+    )
+    pop = cast(Nc.GalaxyShapePop, mset.peek(Nc.GalaxyShapePop.id()))
+    pop.param_set_ftype(0, Ncm.ParamType.FREE)
+    pop.param_set_lower_bound(0, 0.25)
+    pop.param_set_upper_bound(0, 0.45)
+
+    prepared = tmp_path / "prepared.gvar"
+    data.write_shape_interp_file(mset, obs, prepared.as_posix())
+
+    exp_file = tmp_path / "exp.yaml"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            exp_file.as_posix(),
+            f"--data-file={prepared.as_posix()}",
+            "--parameter-list=NcGalaxyShapePop:sigma",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
+    dataset = cast(
+        Ncm.Dataset, ser.from_binfile(exp_file.with_suffix(".dataset.gvar").as_posix())
+    )
+    exp_loaded = ser.dict_str_from_yaml_file(exp_file.as_posix())
+    mset_loaded = cast(Ncm.MSet, exp_loaded.get("model-set"))
+    pop_loaded = cast(Nc.GalaxyShapePop, mset_loaded.peek(Nc.GalaxyShapePop.id()))
+    factor = cast(Nc.DataClusterWLFactor, dataset.get_data(0)).props.shape_factor
+
+    assert pop_loaded.param_get_lower_bound(0) == 0.25
+    assert pop_loaded.param_get_upper_bound(0) == 0.45
+    assert factor.props.interp_pop_level_cap == 3
+    assert factor.props.interp_abstol == pytest.approx(1e-3)
+    assert np.isfinite(_experiment_m2lnL(exp_file))
 
 
 def test_wl_catalog_shape_interp_replaces_record(
@@ -1783,6 +1986,10 @@ def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
     gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     gsfs.set_interp_abstol(2.0e-5)
     gsfs.set_interp_trim_frac(0.0)
+    gsfs.set_interp_compress_frac(0.05)
+    gsfs.set_interp_pop_level_min(1)
+    gsfs.set_interp_pop_level_cap(4)
+    gsfs.set_interp_pop_one_integral(False)
     source = Ncm.ObjDictStr.new()
     source.add("shape-factor", gsfs)
     source.add("shape-pop", pop)
@@ -1802,6 +2009,10 @@ def test_shape_interp_gens():
     assert shape_gen.ellip_conv.genum == Nc.GalaxyWLObsEllipConv.TRACE_DET
     assert shape_gen.interp_abstol == 2.0e-5
     assert shape_gen.interp_trim_frac == 0.0
+    assert shape_gen.interp_compress_frac == 0.05
+    assert shape_gen.interp_pop_level_min == 1
+    assert shape_gen.interp_pop_level_cap == 4
+    assert not shape_gen.interp_pop_one_integral
     assert isinstance(pop_gen, GalaxyPopGenBeta)
     assert (pop_gen.alpha, pop_gen.beta) == (1.6, 2.4)
 

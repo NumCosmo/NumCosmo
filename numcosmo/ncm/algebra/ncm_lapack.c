@@ -1169,6 +1169,63 @@ ncm_lapack_dgelsd (const gint m, const gint n, const gint nrhs, gdouble *a, cons
 
 #else /* No fall back */
   g_error ("ncm_lapack_dgelsd: lapack not present, no fallback implemented.");
+
+#endif
+}
+
+/**
+ * ncm_lapack_dgesdd:
+ * @jobz: 'A', 'S', 'O' or 'N', which singular vectors to compute (LAPACK DGESDD)
+ * @m: number of rows seen by LAPACK
+ * @n: number of columns seen by LAPACK
+ * @a: the matrix, overwritten
+ * @lda: its leading dimension
+ * @s: the $\min (m, n)$ singular values, in decreasing order
+ * @u: the left singular vectors, by column
+ * @ldu: their leading dimension
+ * @vt: the right singular vectors, by row
+ * @ldvt: their leading dimension
+ * @ws: a #NcmLapackWS
+ *
+ * Computes the singular value decomposition $A = U \Sigma V^T$ of the $m \times n$
+ * matrix @a by divide and conquer, with LAPACK DGESDD, passing the arguments unchanged, so
+ * @a, @u and @vt are read and written in column-major order. The workspace is taken from
+ * @ws, which grows to the size LAPACK asks for. Aborts without LAPACK.
+ *
+ * Returns: the LAPACK `info`: zero on success, $-i$ if argument $i$ is invalid, positive
+ * when the iteration did not converge.
+ */
+gint
+ncm_lapack_dgesdd (gchar jobz, const gint m, const gint n, gdouble *a, const gint lda, gdouble *s, gdouble *u, const gint ldu, gdouble *vt, const gint ldvt, NcmLapackWS *ws)
+{
+#if defined (HAVE_LAPACK) && defined (HAVE_DGESDD_)
+  const gint liwork = 8 * MIN (m, n);
+  gint lwork        = -1;
+  gint info         = 0;
+  gdouble lwork_size;
+
+  if (ws->iwork->len < (guint) liwork)
+    g_array_set_size (ws->iwork, liwork);
+
+  dgesdd_ (&jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt, &lwork_size, &lwork, &g_array_index (ws->iwork, gint, 0), &info);
+
+  if (info != 0)
+    return info;
+
+  if (ws->work->len < lwork_size)
+    g_array_set_size (ws->work, lwork_size);
+
+  lwork = lwork_size;
+  dgesdd_ (&jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+           &g_array_index (ws->work, gdouble, 0),
+           &lwork,
+           &g_array_index (ws->iwork, gint, 0),
+           &info);
+
+  return info;
+
+#else /* No fall back */
+  g_error ("ncm_lapack_dgesdd: lapack not present, no fallback implemented.");
 #endif
 }
 

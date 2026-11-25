@@ -59,9 +59,14 @@ class ShapeInterpWLCatalog:
     the record of what built them to OUTPUT. The rows are unchanged. The
     interpolants are built only here: ``numcosmo generate cluster-wl-load
     --data-file OUTPUT`` builds an experiment that uses them, with the shape
-    factor and the population of the record, and a fit never builds them. The
-    population parameters are fixed: the interpolants hold for their values
-    only.
+    factor and the population of the record, and a fit never builds them.
+    The experiment stores the absolute path of OUTPUT, not the interpolants,
+    and reads them from OUTPUT when it is loaded: OUTPUT must stay at that path.
+    Without --free-pop the population parameters are fixed and the interpolants
+    hold for their values only. With --free-pop every population parameter is
+    one more variable of the interpolants, over its bounds: an experiment built
+    from OUTPUT may fit it (--parameter-list) or hold it fixed at any value in
+    its range.
     """
 
     output: Annotated[
@@ -131,6 +136,15 @@ class ShapeInterpWLCatalog:
         float | None,
         typer.Option(help="Cluster concentration. Falls back to catalog metadata."),
     ] = None
+    free_pop: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Make every parameter of the population a variable of the "
+                "interpolants, over its bounds, so that a fit may vary it."
+            ),
+        ),
+    ] = False
 
     def __post_init__(self) -> None:
         """Build the interpolants and write the catalog.
@@ -184,14 +198,25 @@ class ShapeInterpWLCatalog:
         data = likelihood.peek_dataset().get_data(0)
         assert isinstance(data, Nc.DataClusterWLFactor)
 
-        t_start = time.perf_counter()
-        data.write_shape_interp(mset, obs)
-        t_build = time.perf_counter() - t_start
+        pop = mset.peek(Nc.GalaxyShapePop.id())
+        assert isinstance(pop, Nc.GalaxyShapePop)
+        free = ""
+        if self.free_pop:
+            for k in range(pop.len()):
+                pop.param_set_ftype(k, Ncm.ParamType.FREE)
+            free = (
+                " with "
+                + ", ".join(pop.param_name(k) for k in range(pop.len()))
+                + " free"
+            )
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-        ser.to_binfile(obs, self.output.absolute().as_posix())
+        # Each interpolant goes to a temporary records file as it is built, and the
+        # catalog is assembled from them: they are never all in memory.
+        t_start = time.perf_counter()
+        data.write_shape_interp_file(mset, obs, self.output.absolute().as_posix())
+        t_build = time.perf_counter() - t_start
 
         Console().print(
             f"Wrote {self.output}: interpolants of {obs.len()} galaxies for "
-            f"{pop_gen!r}, built in {t_build:.1f} s."
+            f"{pop_gen!r}{free}, built in {t_build:.1f} s."
         )

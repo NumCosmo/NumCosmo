@@ -101,11 +101,11 @@ static const TestShapeArbCell test_spectral_near_unit_cells[] = {
 /* The changes of the fit after a catalog is prepared, and the message each aborts with */
 static const gchar *test_spectral_obs_mismatch_cases[][2] = {
   {"pop",         "*built for other settings:*the population parameter beta (*"},
-  {"free",        "*built for other settings:*the free population parameters (1, the interpolants have 0 population variables)*"},
+  {"free",        "*built for other settings:*the population parameter alpha is free, not a variable of the interpolants*"},
   {"pop_bounds",  "*built for other settings:*the bounds of beta*"},
-  {"pop_fixed",   "*built for other settings:*the free population parameters (0, the interpolants have 1 population variables)*"},
   {"pop_level",   "*built for other settings:*interp-pop-level-cap (4, built with 3)*"},
   {"pop_one",     "*built for other settings:*interp-pop-one-integral (0, built with 1)*"},
+  {"pop_compress", "*built for other settings:*interp-compress-frac*"},
   {"pop_outside", "*the population parameter beta =*is outside the range*of the interpolant*"},
   {"abstol",     "*built for other settings:*interp-abstol*"},
   {"trim_frac",  "*built for other settings:*interp-trim-frac*"},
@@ -159,8 +159,12 @@ void test_nc_galaxy_shape_factor_spectral_interp_pop_obs (TestNcGalaxyShapeFacto
 void test_nc_galaxy_shape_factor_spectral_interp_pop_gauss (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_pop_one_integral (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch (void);
+void test_nc_galaxy_shape_factor_spectral_interp_obs_pop_fixed (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_g_max (void);
+void test_nc_galaxy_shape_factor_spectral_interp_pop_compress (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_interp_compress_frac (void);
+void test_nc_galaxy_shape_factor_spectral_interp_compress_frac_subprocess (void);
 void test_nc_galaxy_shape_factor_spectral_interp_g_max_subprocess (void);
 void test_nc_galaxy_shape_factor_spectral_invalid_noise (void);
 void test_nc_galaxy_shape_factor_spectral_invalid_noise_subprocess (void);
@@ -249,12 +253,22 @@ main (gint argc, gchar *argv[])
       g_free (path);
     }
   }
+  g_test_add ("/nc/galaxy_shape_factor_spectral/interp/obs/pop_fixed", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_interp_obs_pop_fixed,
+              &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/stale", &test_nc_galaxy_shape_factor_spectral_interp_stale);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/stale/subprocess", &test_nc_galaxy_shape_factor_spectral_interp_stale_subprocess);
   g_test_add ("/nc/galaxy_shape_factor_spectral/interp/obs/range", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_interp_obs_range,
               &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/interp/pop/compress", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_interp_pop_compress,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/compress_frac", &test_nc_galaxy_shape_factor_spectral_interp_compress_frac);
+  g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/compress_frac/subprocess", &test_nc_galaxy_shape_factor_spectral_interp_compress_frac_subprocess);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/g_max", &test_nc_galaxy_shape_factor_spectral_interp_g_max);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/g_max/subprocess", &test_nc_galaxy_shape_factor_spectral_interp_g_max_subprocess);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/invalid_noise", &test_nc_galaxy_shape_factor_spectral_invalid_noise);
@@ -662,12 +676,14 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (gsfs), ==, 1.0e-5);
   g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (gsfs), ==, 2);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (gsfs), ==, 1.0e-4);
+  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_compress_frac (gsfs), ==, 1.0e-2);
 
   nc_galaxy_shape_factor_spectral_set_reltol (gsfs, 1.0e-4);
   nc_galaxy_shape_factor_spectral_set_interp_g_max (gsfs, 0.2);
   nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, 1.0e-4);
   nc_galaxy_shape_factor_spectral_set_interp_min_radial_panels (gsfs, 4);
   nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs, 1.0e-3);
+  nc_galaxy_shape_factor_spectral_set_interp_compress_frac (gsfs, 0.25);
   dup = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (ncm_serialize_dup_obj (ser, G_OBJECT (gsfs)));
 
   g_assert_cmpint (nc_galaxy_shape_factor_get_ellip_conv (NC_GALAXY_SHAPE_FACTOR (dup)), ==, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
@@ -676,6 +692,7 @@ test_nc_galaxy_shape_factor_spectral_serialize (void)
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_abstol (dup), ==, 1.0e-4);
   g_assert_cmpuint (nc_galaxy_shape_factor_spectral_get_interp_min_radial_panels (dup), ==, 4);
   g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_trim_frac (dup), ==, 1.0e-3);
+  g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_interp_compress_frac (dup), ==, 0.25);
 
   ncm_serialize_free (ser);
   nc_galaxy_shape_factor_spectral_free (dup);
@@ -1091,6 +1108,189 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_range (TestNcGalaxyShapeFactorSp
 }
 
 /* An interpolation range of 1/3 or more aborts */
+
+/* The numbers a table stores, and how many of its panels are TUCKER */
+static gsize
+_test_table_stored (NcmSpectralTensor *st, guint *n_tucker)
+{
+  gsize stored = 0;
+  guint p;
+
+  *n_tucker = 0;
+
+  for (p = 0; p < ncm_spectral_tensor_get_n_panels (st); p++)
+  {
+    if (ncm_spectral_tensor_get_panel_format (st, p) == NCM_SPECTRAL_TENSOR_PANEL_FORMAT_TUCKER)
+    {
+      GArray *ranks;
+      GArray *d = ncm_spectral_tensor_get_panel_tucker (st, p, &ranks);
+
+      stored += d->len;
+      (*n_tucker)++;
+      g_array_unref (ranks);
+      g_array_unref (d);
+    }
+    else
+    {
+      GArray *lower, *upper, *K;
+      GArray *c = ncm_spectral_tensor_get_panel (st, p, &lower, &upper, &K);
+
+      stored += c->len;
+      g_array_unref (lower);
+      g_array_unref (upper);
+      g_array_unref (K);
+      g_array_unref (c);
+    }
+  }
+
+  return stored;
+}
+
+/*
+ * The compression of a table over alpha and beta, at interp-abstol 1e-3: built with
+ * interp-compress-frac 0 the table has DENSE panels only; built with the default fraction it
+ * has TUCKER panels and stores fewer numbers, and ln P of
+ * nc_galaxy_shape_factor_eval_ln_marginal() and of eval_nodes differs from the DENSE values
+ * by at most the fraction times interp-abstol, at the ends and inside the ranges of both
+ * parameters. nc_galaxy_shape_factor_spectral_data_take_interp() gives each table and
+ * leaves the galaxy without one.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_interp_pop_compress (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  const gdouble shears[][2] = {
+    {
+      0.0, 0.0
+    }, {
+      0.12, -0.07
+    }, {
+      -0.2, 0.15
+    }, {
+      0.05, 0.28
+    }
+  };
+  const gdouble betas[]              = {TEST_SPECTRAL_POP_BETA_LB, 1.63, TEST_SPECTRAL_POP_BETA_UB};
+  const gdouble alphas[]             = {TEST_SPECTRAL_POP_ALPHA_LB, 1.55, TEST_SPECTRAL_POP_ALPHA_UB};
+  const gdouble abstol               = 1.0e-3;
+  NcGalaxyShapeFactorSpectral *gsfs  = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  const gdouble frac                 = nc_galaxy_shape_factor_spectral_get_interp_compress_frac (gsfs);
+  NcGalaxyShapeFactor *gsf           = NC_GALAXY_SHAPE_FACTOR (gsfs);
+  NcGalaxyShapeFactorClass *klass    = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
+  NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  NcGalaxyShapeFactorData *data      = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+  GPtrArray *data_array              = g_ptr_array_new ();
+  const gdouble e1                   = 0.3;
+  const gdouble e2                   = 0.2;
+  gdouble g_1[G_N_ELEMENTS (shears)], g_2[G_N_ELEMENTS (shears)], out[G_N_ELEMENTS (shears)];
+  gdouble ln_dense[G_N_ELEMENTS (alphas)][G_N_ELEMENTS (betas)][G_N_ELEMENTS (shears)];
+  NcmSpectralTensor *st_dense, *st_comp;
+  guint n_tucker_dense, n_tucker_comp;
+  gsize stored_dense, stored_comp;
+  guint pass, a, b, l;
+
+  g_assert_cmpfloat (frac, >, 0.0);
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+
+  for (l = 0; l < G_N_ELEMENTS (shears); l++)
+  {
+    g_1[l] = shears[l][0];
+    g_2[l] = shears[l][1];
+  }
+
+  nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs, 3);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, abstol);
+  _test_pop_free (test->pop, NC_GALAXY_SHAPE_POP_BETA_BETA, TEST_SPECTRAL_POP_BETA_LB, TEST_SPECTRAL_POP_BETA_UB);
+  _test_pop_free (test->pop, NC_GALAXY_SHAPE_POP_BETA_ALPHA, TEST_SPECTRAL_POP_ALPHA_LB, TEST_SPECTRAL_POP_ALPHA_UB);
+  nc_galaxy_shape_factor_data_set (gsf, data, e1, e2, 0.2, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+  g_ptr_array_add (data_array, data);
+
+  st_dense = st_comp = NULL;
+
+  /* Pass 0: no compression; pass 1: the default fraction */
+  for (pass = 0; pass < 2; pass++)
+  {
+    nc_galaxy_shape_factor_spectral_set_interp_compress_frac (gsfs, (pass == 0) ? 0.0 : frac);
+
+    for (a = 0; a < G_N_ELEMENTS (alphas); a++)
+    {
+      for (b = 0; b < G_N_ELEMENTS (betas); b++)
+      {
+        ncm_model_param_set (NCM_MODEL (test->pop), NC_GALAXY_SHAPE_POP_BETA_ALPHA, alphas[a]);
+        ncm_model_param_set (NCM_MODEL (test->pop), NC_GALAXY_SHAPE_POP_BETA_BETA, betas[b]);
+        g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array, TRUE, TRUE));
+
+        if ((a == 0) && (b == 0))
+          nc_galaxy_shape_factor_spectral_build_interp (gsfs, test->mset, data, 3.0);
+
+        klass->eval_nodes (gsf, test->pop, data, G_N_ELEMENTS (shears), g_1, g_2, e1, e2, TRUE, out);
+
+        for (l = 0; l < G_N_ELEMENTS (shears); l++)
+        {
+          const gdouble ln_P = nc_galaxy_shape_factor_eval_ln_marginal (gsf, test->pop, data, g_1[l], g_2[l], e1, e2);
+
+          g_assert_cmpfloat_with_epsilon (out[l], ln_P, 1.0e-12);
+
+          if (pass == 0)
+          {
+            ln_dense[a][b][l] = ln_P;
+          }
+          else
+          {
+            g_assert_cmpfloat (fabs (ln_P - ln_dense[a][b][l]), <=, frac * abstol);
+            g_assert_cmpfloat (fabs (out[l] - ln_dense[a][b][l]), <=, frac * abstol);
+          }
+        }
+      }
+    }
+
+    if (pass == 0)
+      st_dense = nc_galaxy_shape_factor_spectral_data_take_interp (data);
+    else
+      st_comp = nc_galaxy_shape_factor_spectral_data_take_interp (data);
+
+    g_assert_null (nc_galaxy_shape_factor_spectral_data_take_interp (data));
+  }
+
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (st_dense));
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (st_comp));
+
+  stored_dense = _test_table_stored (st_dense, &n_tucker_dense);
+  stored_comp  = _test_table_stored (st_comp, &n_tucker_comp);
+
+  g_assert_cmpuint (n_tucker_dense, ==, 0);
+  g_assert_cmpuint (n_tucker_comp, >, 0);
+  g_assert_cmpuint (stored_comp, <, stored_dense);
+  g_test_message ("stored numbers: %zu DENSE, %zu compressed, %u TUCKER panels of %u", stored_dense, stored_comp, n_tucker_comp,
+                  ncm_spectral_tensor_get_n_panels (st_comp));
+
+  ncm_spectral_tensor_free (st_dense);
+  ncm_spectral_tensor_free (st_comp);
+  g_ptr_array_unref (data_array);
+  nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+}
+
+void
+test_nc_galaxy_shape_factor_spectral_interp_compress_frac (void)
+{
+  g_test_trap_subprocess ("/nc/galaxy_shape_factor_spectral/interp/compress_frac/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*nc_galaxy_shape_factor_spectral_set_interp_compress_frac: 1.5 is outside*");
+}
+
+void
+test_nc_galaxy_shape_factor_spectral_interp_compress_frac_subprocess (void)
+{
+  NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+
+  nc_galaxy_shape_factor_spectral_set_interp_compress_frac (gsfs, 1.5);
+}
+
 void
 test_nc_galaxy_shape_factor_spectral_interp_g_max (void)
 {
@@ -1337,12 +1537,12 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpoint
     nc_galaxy_shape_factor_spectral_set_interp_trim_frac (gsfs_r, 0.0);
   else if (g_str_equal (mismatch, "pop_bounds"))
     ncm_model_param_set_upper_bound (NCM_MODEL (test.pop), NC_GALAXY_SHAPE_POP_BETA_BETA, 1.8);
-  else if (g_str_equal (mismatch, "pop_fixed"))
-    ncm_model_param_set_ftype (NCM_MODEL (test.pop), NC_GALAXY_SHAPE_POP_BETA_BETA, NCM_PARAM_TYPE_FIXED);
   else if (g_str_equal (mismatch, "pop_level"))
     nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs_r, 4);
   else if (g_str_equal (mismatch, "pop_one"))
     nc_galaxy_shape_factor_spectral_set_interp_pop_one_integral (gsfs_r, FALSE);
+  else if (g_str_equal (mismatch, "pop_compress"))
+    nc_galaxy_shape_factor_spectral_set_interp_compress_frac (gsfs_r, 0.5);
 
   data_array = _test_obs_read (&test, NC_GALAXY_SHAPE_FACTOR (gsfs_r), obs);
   data       = g_ptr_array_index (data_array, 0);
@@ -1351,6 +1551,69 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_mismatch_subprocess (gconstpoint
   /* Passed the check: a change of the population afterwards is found by the evaluation (beta outside the table for pop_outside) */
   ncm_model_param_set_by_name (NCM_MODEL (test.pop), "beta", 2.0, NULL);
   nc_galaxy_shape_factor_eval_ln_marginal (NC_GALAXY_SHAPE_FACTOR (gsfs_r), test.pop, data, 0.12, -0.07, data->epsilon_obs_1, data->epsilon_obs_2);
+}
+
+/*
+ * A catalog prepared with beta a variable on [TEST_SPECTRAL_POP_BETA_LB,
+ * TEST_SPECTRAL_POP_BETA_UB], read by a fit that holds beta fixed at 1.63: the check accepts
+ * it, and ln P of each galaxy equals, bit for bit, the value of a fit with beta free at 1.63
+ * (both evaluate the same table at the same point) and agrees with the integral within
+ * TEST_SPECTRAL_OBS_INTERP_ABSTOL.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_interp_obs_pop_fixed (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcGalaxyShapeFactorSpectral *gsfs_w = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcGalaxyShapeFactorSpectral *gsfs_r = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcGalaxyShapeFactor *gsf_r          = NC_GALAXY_SHAPE_FACTOR (gsfs_r);
+  const gdouble g1                    = 0.12;
+  const gdouble g2                    = -0.07;
+  gdouble ln_P[G_N_ELEMENTS (test_spectral_obs_gal)];
+  gdouble ln_fixed[G_N_ELEMENTS (test_spectral_obs_gal)];
+  GPtrArray *data_fixed, *data_free;
+  NcGalaxyWLObs *obs;
+  guint i;
+
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_w, TEST_SPECTRAL_OBS_INTERP_ABSTOL);
+  nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs_w, 3);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs_r, TEST_SPECTRAL_OBS_INTERP_ABSTOL);
+  nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs_r, 3);
+
+  _test_pop_free (test->pop, NC_GALAXY_SHAPE_POP_BETA_BETA, TEST_SPECTRAL_POP_BETA_LB, TEST_SPECTRAL_POP_BETA_UB);
+  obs = _test_obs_prepared_new (test, gsfs_w, g1, g2, ln_P);
+
+  ncm_model_param_set_ftype (NCM_MODEL (test->pop), NC_GALAXY_SHAPE_POP_BETA_BETA, NCM_PARAM_TYPE_FIXED);
+  ncm_model_param_set (NCM_MODEL (test->pop), NC_GALAXY_SHAPE_POP_BETA_BETA, 1.63);
+  data_fixed = _test_obs_read (test, gsf_r, obs);
+
+  for (i = 0; i < data_fixed->len; i++)
+  {
+    NcGalaxyShapeFactorData *data = g_ptr_array_index (data_fixed, i);
+
+    nc_galaxy_shape_factor_data_prepare (gsf_r, test->mset, data, 3.0);
+    ln_fixed[i] = nc_galaxy_shape_factor_eval_ln_marginal (gsf_r, test->pop, data, g1, g2, data->epsilon_obs_1, data->epsilon_obs_2);
+    g_assert_cmpfloat_with_epsilon (ln_fixed[i],
+                                    nc_galaxy_shape_factor_spectral_eval_ln_direct (gsfs_r, test->pop, data->pop_data, g1, g2,
+                                                                                    data->epsilon_obs_1, data->epsilon_obs_2, data->std_noise),
+                                    TEST_SPECTRAL_OBS_INTERP_ABSTOL);
+  }
+
+  ncm_model_param_set_ftype (NCM_MODEL (test->pop), NC_GALAXY_SHAPE_POP_BETA_BETA, NCM_PARAM_TYPE_FREE);
+  data_free = _test_obs_read (test, gsf_r, obs);
+
+  for (i = 0; i < data_free->len; i++)
+  {
+    NcGalaxyShapeFactorData *data = g_ptr_array_index (data_free, i);
+
+    nc_galaxy_shape_factor_data_prepare (gsf_r, test->mset, data, 3.0);
+    g_assert_cmpfloat (nc_galaxy_shape_factor_eval_ln_marginal (gsf_r, test->pop, data, g1, g2, data->epsilon_obs_1, data->epsilon_obs_2), ==, ln_fixed[i]);
+  }
+
+  g_ptr_array_unref (data_fixed);
+  g_ptr_array_unref (data_free);
+  nc_galaxy_wl_obs_free (obs);
+  nc_galaxy_shape_factor_spectral_free (gsfs_w);
+  nc_galaxy_shape_factor_spectral_free (gsfs_r);
 }
 
 /*
@@ -1398,6 +1661,8 @@ test_nc_galaxy_shape_factor_spectral_interp_pop (TestNcGalaxyShapeFactorSpectral
     g_2[l] = shears[l][1];
   }
 
+  /* The build against the integral: no compression, tested in /interp/pop/compress */
+  nc_galaxy_shape_factor_spectral_set_interp_compress_frac (gsfs, 0.0);
   nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs, 3);
   _test_pop_free (test->pop, NC_GALAXY_SHAPE_POP_BETA_BETA, TEST_SPECTRAL_POP_BETA_LB, TEST_SPECTRAL_POP_BETA_UB);
 
@@ -1573,6 +1838,8 @@ test_nc_galaxy_shape_factor_spectral_interp_pop_gauss (TestNcGalaxyShapeFactorSp
     if (j == 1)
       _test_pop_free (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, 0.3, 0.6);
 
+    /* The build against the integral: no compression, tested in /interp/pop/compress */
+    nc_galaxy_shape_factor_spectral_set_interp_compress_frac (gsfs, 0.0);
     nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, 1.0e-3);
     nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs, 3);
     nc_galaxy_shape_factor_data_set (gsf, data, e1, e2, s, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);

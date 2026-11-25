@@ -86,6 +86,7 @@
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "nc/background/nc_distance.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_serialize.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/integration/ncm_integral_nd.h"
 #include "ncm/integration/ncm_integrate.h"
@@ -94,6 +95,13 @@
 #include <gsl/gsl_math.h>
 #ifdef _OPENMP
 #include <omp.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <glib/gstdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
 #endif /* _OPENMP */
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -3117,6 +3125,243 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
   }
 
   nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, NC_GALAXY_SHAPE_POP (pop), obs);
+}
+
+static void _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs, NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, const gchar *rec_name, const gchar *filename);
+
+/**
+ * nc_data_cluster_wl_factor_write_shape_interp_file:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @mset: a #NcmMSet
+ * @obs: a #NcGalaxyWLObs with the rows of the catalog of @dcwlf
+ * @filename: the file of the catalog with the interpolants
+ *
+ * For a catalog whose interpolants should not be held in memory together, writes to
+ * @filename the catalog that nc_data_cluster_wl_factor_write_shape_interp() followed by
+ * ncm_serialize_to_binfile() gives: the rows of @obs, the interpolant of every galaxy and
+ * the record of the shape factor and of the population of @mset that built them. Each
+ * interpolant is serialized as soon as it is built, appended as one record (its row, its
+ * byte length and its #GVariant) to a temporary file, @filename with the suffix `.records`,
+ * and freed; the galaxies are built in parallel and the records are written one at a time.
+ * The file @filename is then assembled from the rows of @obs and from the records, and the
+ * temporary file is removed. The call keeps in memory the interpolants being built, one per
+ * thread; the records and @filename are read and written as mapped files. @obs is not
+ * changed and receives no interpolant, so a fit loads @filename to use them.
+ *
+ * An existing temporary file is overwritten: an interrupted call starts again. The shape
+ * factor must be a #NcGalaxyShapeFactorSpectral and @obs must have as many rows as the
+ * catalog of @dcwlf; otherwise, or when a file cannot be written, the call aborts.
+ */
+void
+nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs, const gchar *filename)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  NcmModel *pop                             = ncm_mset_peek (mset, nc_galaxy_shape_pop_id ());
+  gchar *rec_name                           = g_strconcat (filename, ".records", NULL);
+  gboolean write_failed                     = FALSE;
+  NcGalaxyShapeFactorSpectral *gsfs;
+  FILE *rec;
+  gint gal_s;
+
+  if (!NC_IS_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor))
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: the shape factor %s is not a NcGalaxyShapeFactorSpectral.",
+             G_OBJECT_TYPE_NAME (self->shape_factor));
+
+  gsfs = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor);
+  nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
+
+  if (nc_galaxy_wl_obs_len (obs) != self->shape_data->len)
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: the catalog has %u rows, the dataset %u galaxies.",
+             nc_galaxy_wl_obs_len (obs), self->shape_data->len);
+
+  rec = g_fopen (rec_name, "wb");
+
+  if (rec == NULL)
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot create %s: %s.", rec_name, g_strerror (errno));
+
+  #pragma omp parallel for schedule(dynamic, 1) if (!omp_in_parallel ())
+
+  for (gal_s = 0; gal_s < (gint) self->shape_data->len; gal_s++)
+  {
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_s);
+    NcmSpectralTensor *st;
+    gdouble z_lo, z_hi;
+
+    nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+    nc_galaxy_shape_factor_spectral_build_interp (gsfs, mset, s_data, z_hi);
+
+    st = nc_galaxy_shape_factor_spectral_data_take_interp (s_data);
+
+    if (st != NULL)
+    {
+      /* Serialized outside the critical section: only the write is one thread at a time */
+      NcmSerialize *ser       = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+      GVariant *var           = ncm_serialize_to_variant (ser, G_OBJECT (st));
+      const guint64 head[2]   = {(guint64) gal_s, (guint64) g_variant_get_size (var)};
+      const gsize pad         = (8 - head[1] % 8) % 8;
+      const gchar zeros[8]    = {0};
+      const gconstpointer buf = g_variant_get_data (var);
+
+      #pragma omp critical (nc_data_cluster_wl_factor_shape_interp_records)
+      {
+        if ((fwrite (head, sizeof (guint64), 2, rec) != 2) || (fwrite (buf, 1, head[1], rec) != head[1]) ||
+            (fwrite (zeros, 1, pad, rec) != pad))
+          write_failed = TRUE;
+      }
+
+      g_variant_unref (var);
+      ncm_serialize_free (ser);
+      ncm_spectral_tensor_free (st);
+    }
+  }
+
+  if ((fclose (rec) != 0) || write_failed)
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot write %s.", rec_name);
+
+  _nc_data_cluster_wl_factor_assemble_shape_interp (obs, gsfs, NC_GALAXY_SHAPE_POP (pop), rec_name, filename);
+
+  if (g_remove (rec_name) != 0)
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot remove %s: %s.", rec_name, g_strerror (errno));
+
+  g_free (rec_name);
+}
+
+/*
+ * Writes filename, the binary GVariant of a copy of obs with the record of gsfs and pop and
+ * with the interpolants of the records of rec_name as its property shape-interp. The records
+ * (row, byte length, the GVariant of the interpolant padded to 8 bytes) are memory-mapped and
+ * become the entries of that property, in row order, without being parsed, and the variant is
+ * serialized into filename through a second mapping: neither the interpolants nor the bytes
+ * of the catalog are allocated. A record that does not fit the file aborts.
+ */
+static void
+_nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs, NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, const gchar *rec_name, const gchar *filename)
+{
+  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcGalaxyWLObs *copy = NC_GALAXY_WL_OBS (ncm_serialize_dup_obj (ser, G_OBJECT (obs)));
+  const guint n_rows  = nc_galaxy_wl_obs_len (obs);
+  gsize *rec_off      = g_new0 (gsize, n_rows);
+  gsize *rec_len      = g_new0 (gsize, n_rows);
+  gboolean *rec_has   = g_new0 (gboolean, n_rows);
+  GError *error       = NULL;
+  GMappedFile *map    = g_mapped_file_new (rec_name, FALSE, &error);
+  GVariantBuilder dict, props;
+  GVariant *obs_var, *props_old, *final;
+  const gchar *type_name;
+  const guint8 *base;
+  GBytes *all;
+  gsize size = 0;
+  gsize off  = 0;
+  guint i;
+
+  if (map == NULL)
+    g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot read %s: %s.", rec_name, error->message);
+
+  all  = g_mapped_file_get_bytes (map);
+  base = g_bytes_get_data (all, &size);
+
+  while (off < size)
+  {
+    guint64 head[2];
+
+    if (size - off < sizeof (head))
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: %s ends inside a record.", rec_name);
+
+    memcpy (head, base + off, sizeof (head));
+    off += sizeof (head);
+
+    if ((head[0] >= n_rows) || (head[1] > size - off))
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: %s has a record of row %" G_GUINT64_FORMAT " and %" G_GUINT64_FORMAT " bytes, "
+               "outside the %u rows or the file.", rec_name, head[0], head[1], n_rows);
+
+    rec_off[head[0]] = off;
+    rec_len[head[0]] = head[1];
+    rec_has[head[0]] = TRUE;
+    off             += head[1] + (8 - head[1] % 8) % 8;
+  }
+
+  g_variant_builder_init (&dict, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
+
+  for (i = 0; i < n_rows; i++)
+  {
+    if (rec_has[i])
+    {
+      GBytes *bytes   = g_bytes_new_from_bytes (all, rec_off[i], rec_len[i]);
+      GVariant *child = g_variant_new_from_bytes (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), bytes, TRUE);
+
+      g_variant_builder_add_value (&dict, g_variant_new_dict_entry (g_variant_new_int32 ((gint32) i), child));
+      g_bytes_unref (bytes);
+    }
+  }
+
+  nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, pop, copy);
+  ncm_serialize_reset (ser, TRUE);
+  obs_var   = ncm_serialize_to_variant (ser, G_OBJECT (copy));
+  props_old = g_variant_get_child_value (obs_var, 1);
+  g_variant_get_child (obs_var, 0, "&s", &type_name);
+
+  g_variant_builder_init (&props, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE));
+
+  for (i = 0; i < g_variant_n_children (props_old); i++)
+  {
+    GVariant *entry = g_variant_get_child_value (props_old, i);
+    const gchar *name;
+
+    g_variant_get_child (entry, 0, "&s", &name);
+
+    if (!g_str_equal (name, "shape-interp"))
+      g_variant_builder_add_value (&props, entry);
+
+    g_variant_unref (entry);
+  }
+
+  g_variant_builder_add (&props, "{sv}", "shape-interp", g_variant_builder_end (&dict));
+  final = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, type_name, g_variant_builder_end (&props)));
+
+  /*
+   * The variant is serialized into a file mapped at its final size, filename with the suffix
+   * .part: the records are copied from one mapped file to the other, and no buffer with the
+   * bytes of the catalog is allocated (g_variant_get_data() would hold all of them at once).
+   */
+  {
+    const gsize out_size = g_variant_get_size (final);
+    gchar *part_name     = g_strconcat (filename, ".part", NULL);
+    const gint fd        = g_open (part_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    gpointer out;
+
+    if (fd < 0)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot create %s: %s.", part_name, g_strerror (errno));
+
+    if (ftruncate (fd, (off_t) out_size) != 0)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot set the size of %s: %s.", part_name, g_strerror (errno));
+
+    out = mmap (NULL, out_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+    if (out == MAP_FAILED)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot map %s: %s.", part_name, g_strerror (errno));
+
+    g_variant_store (final, out);
+
+    if ((msync (out, out_size, MS_SYNC) != 0) || (munmap (out, out_size) != 0) || (close (fd) != 0))
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot write %s: %s.", part_name, g_strerror (errno));
+
+    /* An existing filename is replaced, never truncated: it may be mapped by a loaded catalog */
+    if (g_rename (part_name, filename) != 0)
+      g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: cannot rename %s to %s: %s.", part_name, filename, g_strerror (errno));
+
+    g_free (part_name);
+  }
+
+  g_variant_unref (final);
+  g_variant_unref (props_old);
+  g_variant_unref (obs_var);
+  g_bytes_unref (all);
+  g_mapped_file_unref (map);
+  g_free (rec_off);
+  g_free (rec_len);
+  g_free (rec_has);
+  nc_galaxy_wl_obs_free (copy);
+  ncm_serialize_free (ser);
 }
 
 /**

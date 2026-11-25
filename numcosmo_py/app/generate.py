@@ -29,12 +29,12 @@ import shlex
 from abc import ABC, abstractmethod
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated
 
 import numpy as np
 import typer
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import GLib, Nc, Ncm
 from numcosmo_py.datasets.dist_mu_obs import (
     DistMuObsCatalogID,
     SampleRule,
@@ -67,10 +67,12 @@ from numcosmo_py.experiments.cluster_wl import (
     ResampleFlagChoice,
     ShapeFactorGen,
     WLCatalogID,
+    apply_shape_interp_bounds,
     check_shape_pop_compat,
     generate_lsst_cluster_wl,
     load_cluster_wl,
     resolve_resample_flag,
+    shape_interp_free_params,
     shape_interp_gens,
 )
 from numcosmo_py.experiments.curvature_weight import (
@@ -864,6 +866,10 @@ class ClusterWL(ABC):
 def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.GalaxyWLObs:
     """Load a NcGalaxyWLObs from a curated catalog id or from a .gvar file.
 
+    A catalog read from a file that holds interpolants refers to that file
+    (NcGalaxyWLObs:shape-interp-file): an experiment built from it stores the
+    name of the file, not the interpolants.
+
     Raises:
         typer.BadParameter: Neither or both of catalog and data_file.
         ValueError: The loaded file does not contain a NcGalaxyWLObs.
@@ -872,19 +878,13 @@ def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.Galax
         raise typer.BadParameter("exactly one of --catalog or --data-file is required")
 
     if catalog is not None:
-        obs = Nc.GalaxyWLObs.new_from_catalog_id(catalog.genum)
-    else:
-        assert data_file is not None
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-        obs = cast(Nc.GalaxyWLObs, ser.from_binfile(data_file.absolute().as_posix()))
+        return Nc.GalaxyWLObs.new_from_catalog_id(catalog.genum)
 
-    # A wrong object in the file is a data error, not a TypeError.
-    if not isinstance(obs, Nc.GalaxyWLObs):
-        raise ValueError(  # noqa: TRY004
-            f"File does not contain a NcGalaxyWLObs: {type(obs).__name__}"
-        )
-
-    return obs
+    assert data_file is not None
+    try:
+        return Nc.GalaxyWLObs.new_from_file(data_file.absolute().as_posix())
+    except GLib.Error as e:
+        raise ValueError(f"File does not contain a NcGalaxyWLObs: {e.message}") from e
 
 
 def parse_shape_factor(shape_factor_str: str):
@@ -1106,7 +1106,10 @@ class LoadClusterWL(ClusterWL):
             help=(
                 "Path to a local NcGalaxyWLObs (.gvar) file with real galaxy "
                 "shape/position/redshift data. Mutually exclusive with "
-                "--catalog; exactly one of the two is required."
+                "--catalog; exactly one of the two is required. An experiment "
+                "built from a file with interpolants (numcosmo wl-catalog "
+                "shape-interp) stores the absolute path of the file, not the "
+                "interpolants, and needs the file at that path when it is loaded."
             ),
             exists=True,
             readable=True,
@@ -1187,13 +1190,17 @@ class LoadClusterWL(ClusterWL):
                 "--shape-factor and --pop-dist must not be given"
             )
 
+        free = shape_interp_free_params(self._obs)
         pop_params = [
             p for p in self.parameter_list if p.startswith("NcGalaxyShapePop")
         ]
-        if pop_params:
+        fixed = [p for p in pop_params if p not in free]
+        if fixed:
             raise typer.BadParameter(
-                "the catalog carries interpolants built for fixed population "
-                f"parameters; they cannot be fitted: {', '.join(pop_params)}"
+                "the catalog carries interpolants built for fixed values of these "
+                f"population parameters; they cannot be fitted: {', '.join(fixed)}. "
+                "Prepare the catalog with numcosmo wl-catalog shape-interp "
+                "--free-pop to fit them."
             )
 
         return gens
@@ -1204,7 +1211,7 @@ class LoadClusterWL(ClusterWL):
 
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Load the real-data cluster weak lensing experiment."""
-        return load_cluster_wl(
+        exp = load_cluster_wl(
             obs=self._obs,
             cluster_ra=self.cluster_ra,
             cluster_dec=self.cluster_dec,
@@ -1222,6 +1229,11 @@ class LoadClusterWL(ClusterWL):
             summary=self.summary,
             resample_flag=resolve_resample_flag(self.resample_flag),
         )
+        mset = exp.peek("model-set")
+        assert isinstance(mset, Ncm.MSet)
+        apply_shape_interp_bounds(self._obs, mset)
+
+        return exp
 
 
 @dataclasses.dataclass(kw_only=True)

@@ -220,6 +220,14 @@ def test_beta_mset_func_list():
     assert_allclose(e_rms_func.eval0(mset), model.get_e_rms())
     assert_allclose(mode_func.eval0(mset), model.get_mode())
 
+    # alpha = 3, beta = 7: mean 3/10, variance 21/(100 x 11)
+    mean_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mean", None)
+    std_func = Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:std", None)
+    assert_allclose(mean_func.eval0(mset), 0.3)
+    assert_allclose(std_func.eval0(mset), np.sqrt(21.0 / 1100.0))
+    assert_allclose(model.get_mean(), 0.3)
+    assert_allclose(model.get_std(), np.sqrt(21.0 / 1100.0))
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
