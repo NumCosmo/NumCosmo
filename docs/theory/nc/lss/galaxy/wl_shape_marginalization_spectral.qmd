@@ -361,8 +361,11 @@ of the catalog, as a resample, drops its tables.
   upper bound of $\log_{10} M_\Delta$, and the largest source
   redshift of the galaxy. At a fixed radius, source redshift and concentration, $|g_t|$ grows
   with the mass and the source redshift while the convergence is below 1, so the corner gives
-  its largest value. The bound holds when only $\log_{10} M_\Delta$, the halo center and
-  the parameters of the population are free. The region is that of $g_\mathrm{max}$ when
+  its largest value. The shear is not monotonic in the concentration: with a free
+  $c_\Delta$, $|g_t|$ is the largest over the box of $c_\Delta$, found on a grid in
+  $\ln c_\Delta$ refined by a golden-section search. The bound holds when only
+  $\log_{10} M_\Delta$, $c_\Delta$, the halo center and the parameters of the population
+  are free. The region is that of $g_\mathrm{max}$ when
   other parameters are free, when the box of the halo center reaches the projected position
   of the galaxy, when the largest source redshift is not finite or not above the lens, and
   when the convergence at the corner is at least 1. A shear with

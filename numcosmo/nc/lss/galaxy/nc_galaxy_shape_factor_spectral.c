@@ -194,10 +194,12 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
    * restrict-range: the models of the bound of the shear a galaxy reaches over the box of the
    * fit, cached by prepare(), with a copy of the density profile at the upper bound of the
    * mass (used under range_lock, since the galaxies may be prepared in parallel). range_ready:
-   * the models are in the fit; range_holds: only the mass, the halo center and the shape
-   * population are free (_nc_galaxy_shape_factor_moments_range_holds()). The box of the halo
-   * center: the center and half width of its right ascensions, its declinations [deg], and
-   * the prefactor of the projected radius of an angle.
+   * the models are in the fit; range_holds: only the mass, the concentration, the halo center
+   * and the shape population are free (_nc_galaxy_shape_factor_moments_range_holds()). The box
+   * of the halo center: the center and half width of its right ascensions, its declinations
+   * [deg], and the prefactor of the projected radius of an angle. c_box: the bound is taken
+   * over the box [c_lo, c_hi] of the concentration (free cDelta, index c_idx in the mass
+   * summary of dp_box); otherwise dp_box keeps the concentration of the fit.
    */
   gboolean restrict_range;
   NcHICosmo *cosmo;
@@ -211,6 +213,10 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gdouble prefactor;
   gboolean range_ready;
   gboolean range_holds;
+  gboolean c_box;
+  guint c_idx;
+  gdouble c_lo;
+  gdouble c_hi;
   GMutex range_lock;
 } NcGalaxyShapeFactorSpectralPrivate;
 
@@ -392,6 +398,10 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->prefactor                = 0.0;
   self->range_ready              = FALSE;
   self->range_holds              = FALSE;
+  self->c_box                    = FALSE;
+  self->c_idx                    = 0;
+  self->c_lo                     = 0.0;
+  self->c_hi                     = 0.0;
   g_mutex_init (&self->range_lock);
 
   self->line_pool = ncm_memory_pool_new (_nc_galaxy_shape_factor_spectral_line_work_new, NULL,
@@ -732,10 +742,11 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * Whether the interpolant of a galaxy covers only the shears it can reach over the box of
    * the fit. nc_galaxy_shape_factor_spectral_build_interp() bounds $|g|$ at the corner of the
    * box (the smallest projected radius the box of the halo
-   * center allows, the upper bound of log10MDelta, the largest source redshift of the galaxy),
+   * center allows, the upper bound of log10MDelta, the largest source redshift of the galaxy,
+   * and the concentration of the largest shear over the box of cDelta when it is free),
    * $|1 + m| |g_t| + |c|$, and the interpolant covers $|g|$ up to the smaller of that bound and
-   * #NcGalaxyShapeFactorSpectral:interp-g-max. The bound holds when only log10MDelta, the halo
-   * center and the parameters of the shape population are free; otherwise, and when the models
+   * #NcGalaxyShapeFactorSpectral:interp-g-max. The bound holds when only log10MDelta, cDelta,
+   * the halo center and the parameters of the shape population are free; otherwise, and when the models
    * of the bound are not in the fit, the interpolant covers interp-g-max. A shear above the
    * range of the interpolant takes the integral. An interpolant loaded from a catalog keeps the
    * range it was built with. It is on by default: the integrals beyond the range keep the
@@ -966,7 +977,7 @@ _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mse
       self->cosmo = nc_hicosmo_ref (cosmo);
       self->smd   = nc_wl_surface_mass_density_ref (smd);
 
-      self->z_cl        = nc_halo_position_get_redshift (hp);
+      self->z_cl = nc_halo_position_get_redshift (hp);
       {
         NcmModel *hp_model      = NCM_MODEL (hp);
         const gboolean ra_free  = ncm_model_param_get_ftype (hp_model, NC_HALO_POSITION_RA) == NCM_PARAM_TYPE_FREE;
@@ -986,7 +997,9 @@ _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mse
       }
 
       self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_box, dp);
-      self->range_holds = self->range_ready && _nc_galaxy_shape_factor_moments_range_holds (mset);
+      self->range_holds = self->range_ready && _nc_galaxy_shape_factor_moments_range_holds (mset, TRUE);
+      self->c_box       = _nc_galaxy_shape_factor_moments_cdelta_box (dp, &self->c_idx, &self->c_lo, &self->c_hi) &&
+                          (self->c_hi > self->c_lo);
     }
   }
 }
@@ -999,10 +1012,108 @@ _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mse
  * redshift z_max and the mass at its upper bound, when it is below interp-g-max. At fixed
  * radius, source redshift and concentration, the convergence and the shear grow with the
  * mass and the source redshift, so with kappa < 1 at the corner |g_t| is largest there.
+ * The shear is not monotonic in the concentration: with a free cDelta, g_t is the largest
+ * over its box, found on a grid in ln c refined by a golden-section search about the best
+ * node (_nc_galaxy_shape_factor_spectral_corner_g_t()). A maximum the search misses by a
+ * little only sends the few shears beyond the interpolant to the integrals, which
+ * _nc_galaxy_shape_factor_spectral_eval_ln() computes for any shear past a galaxy's range.
  * 0 (the whole interp-g-max) when the bound does not hold, when the radius can reach the halo
- * itself, without a finite source redshift behind the lens, when kappa >= 1 at the corner,
- * and when the bound is 0.
+ * itself, without a finite source redshift behind the lens, when kappa >= 1 at the corner
+ * (at any concentration evaluated), and when the bound is 0.
  */
+
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_C_GRID 17
+#define NC_GALAXY_SHAPE_FACTOR_SPECTRAL_C_GOLDEN 24
+
+/* |g_t| at the corner at concentration c (when c_box) under range_lock; FALSE when kappa >= 1 */
+static gboolean
+_nc_galaxy_shape_factor_spectral_corner_eval (NcGalaxyShapeFactorSpectralPrivate *self, const gdouble R, const gdouble z, const gdouble c, gdouble *g_t)
+{
+  gdouble kappa, g;
+
+  if (self->c_box)
+    ncm_model_param_set (NCM_MODEL (nc_halo_density_profile_peek_mass_summary (self->dp_box)), self->c_idx, c);
+
+  kappa = nc_wl_surface_mass_density_convergence (self->smd, self->dp_box, self->cosmo, R, z, self->z_cl, self->z_cl);
+  g     = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_box, self->cosmo, R, z, self->z_cl, self->z_cl));
+
+  if (!gsl_finite (kappa) || !gsl_finite (g) || !(kappa < 1.0))
+    return FALSE;
+
+  g_t[0] = g;
+
+  return TRUE;
+}
+
+/* The largest |g_t| at the corner over the concentrations of the fit; FALSE when kappa >= 1 at
+ * any of the concentrations evaluated */
+static gboolean
+_nc_galaxy_shape_factor_spectral_corner_g_t (NcGalaxyShapeFactorSpectralPrivate *self, const gdouble R, const gdouble z, gdouble *g_t)
+{
+  const guint n         = NC_GALAXY_SHAPE_FACTOR_SPECTRAL_C_GRID;
+  const gdouble lc_lo   = log (self->c_lo);
+  const gdouble dlc     = (log (self->c_hi) - lc_lo) / (n - 1.0);
+  const gdouble inv_phi = 0.5 * (sqrt (5.0) - 1.0);
+  gdouble best          = 0.0, a, b, x1, x2, g1, g2;
+  guint k, k_best       = 0, i;
+
+  if (!self->c_box)
+    return _nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, 0.0, g_t);
+
+  for (k = 0; k < n; k++)
+  {
+    gdouble g;
+
+    if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (lc_lo + dlc * k), &g))
+      return FALSE;
+
+    if (g > best)
+    {
+      best   = g;
+      k_best = k;
+    }
+  }
+
+  a  = lc_lo + dlc * ((k_best > 0) ? k_best - 1.0 : 0.0);
+  b  = lc_lo + dlc * ((k_best + 1 < n) ? k_best + 1.0 : n - 1.0);
+  x1 = b - inv_phi * (b - a);
+  x2 = a + inv_phi * (b - a);
+
+  if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x1), &g1) ||
+      !_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x2), &g2))
+    return FALSE;
+
+  for (i = 0; i < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_C_GOLDEN; i++)
+  {
+    best = GSL_MAX (best, GSL_MAX (g1, g2));
+
+    if (g1 > g2)
+    {
+      b  = x2;
+      x2 = x1;
+      g2 = g1;
+      x1 = b - inv_phi * (b - a);
+
+      if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x1), &g1))
+        return FALSE;
+    }
+    else
+    {
+      a  = x1;
+      x1 = x2;
+      g1 = g2;
+      x2 = a + inv_phi * (b - a);
+
+      if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x2), &g2))
+        return FALSE;
+    }
+  }
+
+  g_t[0] = GSL_MAX (best, GSL_MAX (g1, g2));
+
+  return TRUE;
+}
+
 /*
  * The smallest angle [rad] between the direction (ra, dec) [deg] and the box of the halo
  * center. With ra inside the right ascensions of the box (modulo 360) the nearest point is
@@ -1037,7 +1148,8 @@ _nc_galaxy_shape_factor_spectral_box_min_angle (NcGalaxyShapeFactorSpectralPriva
 static gdouble
 _nc_galaxy_shape_factor_spectral_reach (NcGalaxyShapeFactorSpectralPrivate *self, NcGalaxyShapeFactorData *data, const gdouble z_max)
 {
-  gdouble R_min, kappa, g_t, g_cal;
+  gdouble R_min, g_t, g_cal;
+  gboolean ok;
 
   if (!self->restrict_range || !self->range_ready || !self->range_holds)
     return 0.0;
@@ -1049,11 +1161,10 @@ _nc_galaxy_shape_factor_spectral_reach (NcGalaxyShapeFactorSpectralPrivate *self
     return 0.0;
 
   g_mutex_lock (&self->range_lock);
-  kappa = nc_wl_surface_mass_density_convergence (self->smd, self->dp_box, self->cosmo, R_min, z_max, self->z_cl, self->z_cl);
-  g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_box, self->cosmo, R_min, z_max, self->z_cl, self->z_cl));
+  ok = _nc_galaxy_shape_factor_spectral_corner_g_t (self, R_min, z_max, &g_t);
   g_mutex_unlock (&self->range_lock);
 
-  if (!gsl_finite (kappa) || !gsl_finite (g_t) || !(kappa < 1.0))
+  if (!ok)
     return 0.0;
 
   g_cal = fabs (1.0 + data->m) * g_t + hypot (data->c1, data->c2);
