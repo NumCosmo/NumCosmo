@@ -5,6 +5,10 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_cfg.c'],
     },
     {
+        'name': 'ncm_cfg_load',
+        'sources': ['ncm/core/test_ncm_cfg_load.c'],
+    },
+    {
         'name': 'ncm_generic',
         'sources': ['ncm/core/test_ncm_generic.c'],
     },

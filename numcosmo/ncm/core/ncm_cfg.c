@@ -30,6 +30,12 @@
  * Initialization, log output, thread counts of the linear algebra libraries, FFTW
  * planning and wisdom, data-file lookup, and helpers for #GOptionEntry, #GKeyFile and
  * enumeration types.
+ *
+ * Loading the library registers its types (ncm_cfg_register_objects()) and the
+ * #NcmMSetFuncList functions of its models (ncm_cfg_register_functions()), and creates the
+ * base #NcmSerializeContext with the working directory of that moment, before main() or the
+ * first call from a binding; ncm_cfg_check_register() verifies it. ncm_cfg_init() then
+ * configures the library and MPI.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -506,7 +512,6 @@ _ncm_cfg_exit (void)
  * - installs the NumCosmo log handlers;
  * - warns when `OMP_NUM_THREADS` exceeds `OMP_THREAD_LIMIT`, since an OpenMP-threaded
  *   BLAS can then deadlock;
- * - registers the library objects and functions;
  * - under an MPI launcher, initializes MPI; every rank except the master then runs the
  *   worker loop and never returns.
  *
@@ -605,6 +610,41 @@ _ncm_cfg_mpi_launched (void)
 
 #endif /* HAVE_MPI */
 
+/* Whether _ncm_cfg_library_init() ran, read by ncm_cfg_check_register() */
+static gboolean _ncm_cfg_library_initialized = FALSE;
+
+/*
+ * Runs when the library is loaded, after GLib and GObject and before main() or the first
+ * call from a binding: creates the base #NcmSerializeContext and registers the types and the
+ * #NcmMSetFuncList functions of the library. The class initializers it runs use no setting of
+ * ncm_cfg_init().
+ */
+__attribute__ ((constructor)) static void
+
+_ncm_cfg_library_init (void)
+{
+  _ncm_serialize_context_init_base ();
+  ncm_cfg_register_objects ();
+  ncm_cfg_register_functions ();
+
+  _ncm_cfg_library_initialized = TRUE;
+}
+
+/**
+ * ncm_cfg_check_register:
+ *
+ * Aborts with an error if the initialization at library load did not run, which leaves the
+ * types and functions of the library unregistered. Bindings call it once after loading the
+ * library: the call itself makes the dynamic loader load it.
+ */
+void
+ncm_cfg_check_register (void)
+{
+  if (!_ncm_cfg_library_initialized)
+    g_error ("ncm_cfg_check_register: the initialization at library load did not run; "
+             "the types and functions of NumCosmo are not registered.");
+}
+
 /**
  * ncm_cfg_init_full_ptr:
  * @argc: a pointer to the number of arguments
@@ -626,7 +666,6 @@ _ncm_cfg_mpi_launched (void)
  * - installs the NumCosmo log handlers;
  * - warns when `OMP_NUM_THREADS` exceeds `OMP_THREAD_LIMIT`, since an OpenMP-threaded
  *   BLAS can then deadlock;
- * - registers the library objects and functions;
  * - under an MPI launcher, initializes MPI; every rank except the master then runs the
  *   worker loop and never returns.
  *
@@ -676,10 +715,6 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
                omp_get_max_threads (), omp_get_thread_limit ());
 
 #endif /* _OPENMP */
-
-  _ncm_serialize_context_init_base ();
-  ncm_cfg_register_objects ();
-  ncm_cfg_register_functions ();
 
   numcosmo_init = TRUE;
 
@@ -791,7 +826,8 @@ _ncm_cfg_data_dir (void)
 /**
  * ncm_cfg_register_objects:
  *
- * Registers the library types with ncm_cfg_register_obj(). Called by ncm_cfg_init().
+ * Registers the library types with ncm_cfg_register_obj(). Called when the library is
+ * loaded; a later call registers them again, which changes nothing.
  */
 void
 ncm_cfg_register_objects (void)
@@ -1145,7 +1181,7 @@ static gsize _functions_initialized = 0;
  * ncm_cfg_register_functions:
  *
  * Registers, once per process, the #NcmMSetFuncList functions of the library models.
- * Called by ncm_cfg_init().
+ * Called when the library is loaded; a later call returns immediately.
  */
 void
 ncm_cfg_register_functions (void)

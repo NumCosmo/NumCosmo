@@ -59,7 +59,8 @@
  * #NcmSerializeContext of the calling thread holds the absolute directory of that file, so
  * that an object can resolve a relative file name in one of its properties against it
  * (ncm_serialize_context_peek_current()). Outside such a function the current context is
- * the base context, created by ncm_cfg_init() with the working directory of that call.
+ * the base context, created when the library is loaded with the working directory of that
+ * moment.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -116,7 +117,7 @@ struct _NcmSerializeContext
 
 G_DEFINE_BOXED_TYPE (NcmSerializeContext, ncm_serialize_context, ncm_serialize_context_ref, ncm_serialize_context_unref)
 
-/* The context outside the file functions, created once by ncm_cfg_init() and read only afterwards */
+/* The context outside the file functions, created once when the library is loaded and read only afterwards */
 static NcmSerializeContext *_ncm_serialize_context_base = NULL;
 
 /* The context of the file function running in this thread, NULL outside one; owned by that function */
@@ -4710,8 +4711,8 @@ ncm_serialize_context_clear (NcmSerializeContext **ctx)
  * ncm_serialize_context_peek_dir:
  * @ctx: a #NcmSerializeContext
  *
- * Gets the absolute directory of @ctx: the directory of the file read or written, or the
- * working directory of ncm_cfg_init() for the base context.
+ * Gets the absolute directory of @ctx: the directory of the file read or written, or, for
+ * the base context, the working directory when the library was loaded.
  *
  * Returns: (transfer none): the directory.
  */
@@ -4727,7 +4728,7 @@ ncm_serialize_context_peek_dir (NcmSerializeContext *ctx)
  * Gets the current context of the calling thread: the context of the file that a function
  * of #NcmSerialize reads or writes in this thread, or the base context outside such a
  * function. It stays valid while that function runs, for instance during the construction
- * of the objects it reads. Calling it before ncm_cfg_init() aborts with an error.
+ * of the objects it reads.
  *
  * Returns: (transfer none): the current context.
  */
@@ -4740,14 +4741,14 @@ ncm_serialize_context_peek_current (void)
     return ctx;
 
   if (_ncm_serialize_context_base == NULL)
-    g_error ("ncm_serialize_context_peek_current: ncm_cfg_init() was not called.");
+    g_error ("ncm_serialize_context_peek_current: the base context was not created at library load.");
 
   return _ncm_serialize_context_base;
 }
 
 /*
- * Creates the base context with the working directory of the call. Called once by
- * ncm_cfg_init(), before any other thread uses NumCosmo.
+ * Creates the base context with the working directory of the call. Called once when the
+ * library is loaded, before any other thread uses NumCosmo.
  */
 void
 _ncm_serialize_context_init_base (void)

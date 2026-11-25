@@ -30,7 +30,7 @@
 
 G_BEGIN_DECLS
 
-/* Creates the base #NcmSerializeContext with the working directory; called once by ncm_cfg_init() */
+/* Creates the base #NcmSerializeContext with the working directory; called once at library load */
 void _ncm_serialize_context_init_base (void);
 
 G_END_DECLS
