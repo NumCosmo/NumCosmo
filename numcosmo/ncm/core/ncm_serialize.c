@@ -1057,7 +1057,8 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
 }
 
 static const GVariantType *_ncm_serialize_gtype_to_gvariant_type (GType t);
-static GVariant *_ncm_serialize_legacy_objects (GType gtype, const gchar *prop_name, GVariant *val);
+static GVariant *_ncm_serialize_legacy_objects (GParamSpec *pspec, GVariant *val);
+static void _ncm_serialize_variant_to_value (NcmSerialize *ser, const gchar *obj_name, GParamSpec *pspec, GVariant *val, GValue *value);
 
 GObject *
 _ncm_serialize_from_node (NcmSerialize *ser, struct fy_node *root)
@@ -2278,125 +2279,28 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
 
   if (params != NULL)
   {
-    GVariantIter *p_iter  = g_variant_iter_new (params);
-    const gchar **names   = g_new (const gchar *, nprop);
-    GValue *values        = g_new (GValue, nprop);
-    GVariant *var         = NULL;
-    gboolean is_NcmVector = g_type_is_a (gtype, NCM_TYPE_VECTOR);
-    gboolean is_NcmMatrix = g_type_is_a (gtype, NCM_TYPE_MATRIX);
-    guint i               = 0;
+    GVariantIter *p_iter = g_variant_iter_new (params);
+    const gchar **names  = g_new (const gchar *, nprop);
+    GValue *values       = g_new0 (GValue, nprop);
+    GObjectClass *klass  = g_type_class_ref (gtype);
+    GVariant *var        = NULL;
+    guint i              = 0;
 
     while ((var = g_variant_iter_next_value (p_iter)))
     {
       GVariant *var_key = g_variant_get_child_value (var, 0);
       GVariant *var_val = g_variant_get_child_value (var, 1);
       GVariant *val     = g_variant_get_variant (var_val);
+      GParamSpec *pspec;
 
       names[i] = g_variant_get_string (var_key, NULL);
-      val      = _ncm_serialize_legacy_objects (gtype, names[i], val);
+      pspec    = g_object_class_find_property (klass, names[i]);
 
-      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_DTUPLE2_TYPE)))
-      {
-        NcmDTuple2 *dtuple2 = ncm_dtuple2_new_from_variant (val);
-        GValue lval         = G_VALUE_INIT;
+      if (pspec == NULL)
+        g_error ("ncm_serialize_from_name_params: object `%s' has no property `%s'.", obj_name, names[i]);
 
-        g_value_init (&lval, NCM_TYPE_DTUPLE2);
-        values[i] = lval;
-        g_value_take_boxed (&values[i], dtuple2);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_DTUPLE3_TYPE)))
-      {
-        NcmDTuple3 *dtuple3 = ncm_dtuple3_new_from_variant (val);
-        GValue lval         = G_VALUE_INIT;
-
-        g_value_init (&lval, NCM_TYPE_DTUPLE3);
-        values[i] = lval;
-        g_value_take_boxed (&values[i], dtuple3);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE)) && !is_NcmVector)
-      {
-        NcmVector *vec = ncm_vector_new_variant (val);
-        GValue lval    = G_VALUE_INIT;
-
-        g_value_init (&lval, G_TYPE_OBJECT);
-        values[i] = lval;
-        g_value_take_object (&values[i], vec);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_MATRIX_TYPE)) && !is_NcmMatrix)
-      {
-        NcmMatrix *mat = ncm_matrix_new_variant (val);
-        GValue lval    = G_VALUE_INIT;
-
-        g_value_init (&lval, G_TYPE_OBJECT);
-        values[i] = lval;
-        g_value_take_object (&values[i], mat);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_STRV_TYPE)))
-      {
-        gchar **strv = g_variant_dup_strv (val, NULL);
-        GValue lval  = G_VALUE_INIT;
-
-        g_value_init (&lval, G_TYPE_STRV);
-        values[i] = lval;
-        g_value_take_boxed (&values[i], strv);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE)))
-      {
-        NcmObjArray *oa = ncm_serialize_array_from_variant (ser, val);
-        GValue lval     = G_VALUE_INIT;
-
-        g_value_init (&lval, NCM_TYPE_OBJ_ARRAY);
-        values[i] = lval;
-        g_value_take_boxed (&values[i], oa);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE)))
-      {
-        NcmObjDictStr *dict = ncm_serialize_dict_str_from_variant (ser, val);
-        GValue lval         = G_VALUE_INIT;
-
-        g_value_init (&lval, NCM_TYPE_OBJ_DICT_STR);
-        values[i] = lval;
-        g_value_take_boxed (&values[i], dict);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE)))
-      {
-        NcmObjDictInt *dict = ncm_serialize_dict_int_from_variant (ser, val);
-        GValue lval         = G_VALUE_INIT;
-
-        g_value_init (&lval, NCM_TYPE_OBJ_DICT_INT);
-        values[i] = lval;
-        g_value_take_boxed (&values[i], dict);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VAR_DICT_TYPE)))
-      {
-        NcmVarDict *dict = ncm_serialize_var_dict_from_variant (ser, val);
-        GValue lval      = G_VALUE_INIT;
-
-        g_value_init (&lval, NCM_TYPE_VAR_DICT);
-        values[i] = lval;
-        g_value_take_boxed (&values[i], dict);
-      }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
-      {
-        GVariant *nest_obj_key    = g_variant_get_child_value (val, 0);
-        GVariant *nest_obj_params = g_variant_get_child_value (val, 1);
-        GValue lval               = G_VALUE_INIT;
-        GObject *nest_obj         =
-          ncm_serialize_from_name_params (ser,
-                                          g_variant_get_string (nest_obj_key, NULL),
-                                          nest_obj_params);
-
-        g_value_init (&lval, G_TYPE_OBJECT);
-        values[i] = lval;
-
-        g_value_take_object (&values[i], nest_obj);
-        g_variant_unref (nest_obj_key);
-        g_variant_unref (nest_obj_params);
-      }
-      else
-      {
-        g_dbus_gvariant_to_gvalue (val, &values[i]);
-      }
+      val = _ncm_serialize_legacy_objects (pspec, val);
+      _ncm_serialize_variant_to_value (ser, obj_name, pspec, val, &values[i]);
 
       i++;
       g_variant_unref (var_key);
@@ -2410,6 +2314,7 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
     for (i = 0; i < nprop; i++)
       g_value_unset (&values[i]);
 
+    g_type_class_unref (klass);
     g_free (names);
     g_free (values);
     g_variant_iter_free (p_iter);
@@ -2441,7 +2346,112 @@ _ncm_serialize_legacy_object (GVariant *entry)
 }
 
 /*
- * Returns the value of property prop_name of gtype in the current format, taking val.
+ * Sets value, unset on entry, to the value of the property of pspec held by val, in the
+ * current format. The declared type of the property selects the family and the type of val
+ * its form: an object property takes a nested object, an #NcmVector from `ad` or an
+ * #NcmMatrix from `aad`; a #GVariant property takes val as it is; each boxed type of
+ * NumCosmo takes its own form; any other property is converted by
+ * g_dbus_gvariant_to_gvalue(). A form that does not belong to the family aborts.
+ */
+static void
+_ncm_serialize_variant_to_value (NcmSerialize *ser, const gchar *obj_name, GParamSpec *pspec, GVariant *val, GValue *value)
+{
+  const GType vtype = pspec->value_type;
+
+#define _NCM_SERIALIZE_FORM_CHECK(form)                                                                                             \
+        G_STMT_START {                                                                                                              \
+          if (!g_variant_is_of_type (val, G_VARIANT_TYPE (form)))                                                                   \
+          g_error ("ncm_serialize_from_name_params: property `%s' of `%s' is a %s and cannot be read from a variant of type `%s'.", \
+                   pspec->name, obj_name, g_type_name (vtype), g_variant_get_type_string (val));                                    \
+        } G_STMT_END
+
+  if (g_type_is_a (vtype, G_TYPE_VARIANT))
+  {
+    g_value_init (value, G_TYPE_VARIANT);
+    g_value_set_variant (value, val);
+  }
+  else if (G_TYPE_IS_OBJECT (vtype) || G_TYPE_IS_INTERFACE (vtype))
+  {
+    GObject *nest_obj;
+
+    if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE)))
+    {
+      nest_obj = G_OBJECT (ncm_vector_new_variant (val));
+    }
+    else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_MATRIX_TYPE)))
+    {
+      nest_obj = G_OBJECT (ncm_matrix_new_variant (val));
+    }
+    else
+    {
+      GVariant *nest_obj_key;
+      GVariant *nest_obj_params;
+
+      _NCM_SERIALIZE_FORM_CHECK (NCM_SERIALIZE_OBJECT_TYPE);
+
+      nest_obj_key    = g_variant_get_child_value (val, 0);
+      nest_obj_params = g_variant_get_child_value (val, 1);
+      nest_obj        = ncm_serialize_from_name_params (ser, g_variant_get_string (nest_obj_key, NULL), nest_obj_params);
+
+      g_variant_unref (nest_obj_key);
+      g_variant_unref (nest_obj_params);
+    }
+
+    g_value_init (value, G_TYPE_OBJECT);
+    g_value_take_object (value, nest_obj);
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_DTUPLE2))
+  {
+    _NCM_SERIALIZE_FORM_CHECK (NCM_DTUPLE2_TYPE);
+    g_value_init (value, NCM_TYPE_DTUPLE2);
+    g_value_take_boxed (value, ncm_dtuple2_new_from_variant (val));
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_DTUPLE3))
+  {
+    _NCM_SERIALIZE_FORM_CHECK (NCM_DTUPLE3_TYPE);
+    g_value_init (value, NCM_TYPE_DTUPLE3);
+    g_value_take_boxed (value, ncm_dtuple3_new_from_variant (val));
+  }
+  else if (g_type_is_a (vtype, G_TYPE_STRV))
+  {
+    _NCM_SERIALIZE_FORM_CHECK (NCM_SERIALIZE_STRV_TYPE);
+    g_value_init (value, G_TYPE_STRV);
+    g_value_take_boxed (value, g_variant_dup_strv (val, NULL));
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_OBJ_ARRAY))
+  {
+    _NCM_SERIALIZE_FORM_CHECK (NCM_SERIALIZE_OBJECT_ARRAY_TYPE);
+    g_value_init (value, NCM_TYPE_OBJ_ARRAY);
+    g_value_take_boxed (value, ncm_serialize_array_from_variant (ser, val));
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_STR))
+  {
+    _NCM_SERIALIZE_FORM_CHECK (NCM_SERIALIZE_OBJECT_DICT_STR_TYPE);
+    g_value_init (value, NCM_TYPE_OBJ_DICT_STR);
+    g_value_take_boxed (value, ncm_serialize_dict_str_from_variant (ser, val));
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_INT))
+  {
+    _NCM_SERIALIZE_FORM_CHECK (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE);
+    g_value_init (value, NCM_TYPE_OBJ_DICT_INT);
+    g_value_take_boxed (value, ncm_serialize_dict_int_from_variant (ser, val));
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_VAR_DICT))
+  {
+    _NCM_SERIALIZE_FORM_CHECK (NCM_SERIALIZE_VAR_DICT_TYPE);
+    g_value_init (value, NCM_TYPE_VAR_DICT);
+    g_value_take_boxed (value, ncm_serialize_var_dict_from_variant (ser, val));
+  }
+  else
+  {
+    g_dbus_gvariant_to_gvalue (val, value);
+  }
+
+#undef _NCM_SERIALIZE_FORM_CHECK
+}
+
+/*
+ * Returns the value of the property of pspec in the current format, taking val.
  * Files written before 2024-01-21 (b31b4893) store an object as the dict entry
  * `{sa{sv}}`, arrays and dictionaries of objects with such entries, a reparam's
  * `params-desc` (before 2024-01-16) as `a{u{sa{sv}}}`, and NcmModel:sparam-array as an
@@ -2451,92 +2461,84 @@ _ncm_serialize_legacy_object (GVariant *entry)
  * nested objects are converted when their own properties are read.
  */
 static GVariant *
-_ncm_serialize_legacy_objects (GType gtype, const gchar *prop_name, GVariant *val)
+_ncm_serialize_legacy_objects (GParamSpec *pspec, GVariant *val)
 {
-  GObjectClass *klass = g_type_class_ref (gtype);
-  GParamSpec *pspec   = g_object_class_find_property (klass, prop_name);
-  GVariant *res       = NULL;
+  const GType vtype = pspec->value_type;
+  GVariant *res     = NULL;
 
-  if (pspec != NULL)
+  if (g_type_is_a (vtype, G_TYPE_OBJECT) && g_variant_is_of_type (val, G_VARIANT_TYPE ("{sa{sv}}")))
   {
-    const GType vtype = pspec->value_type;
-
-    if (g_type_is_a (vtype, G_TYPE_OBJECT) && g_variant_is_of_type (val, G_VARIANT_TYPE ("{sa{sv}}")))
-    {
-      res = _ncm_serialize_legacy_object (val);
-    }
-    else if (g_type_is_a (vtype, NCM_TYPE_OBJ_ARRAY) && g_variant_is_of_type (val, G_VARIANT_TYPE ("a{sa{sv}}")))
-    {
-      GVariantBuilder builder;
-      const gsize n = g_variant_n_children (val);
-      gsize k;
-
-      g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE));
-
-      for (k = 0; k < n; k++)
-      {
-        GVariant *entry = g_variant_get_child_value (val, k);
-
-        g_variant_builder_add_value (&builder, _ncm_serialize_legacy_object (entry));
-        g_variant_unref (entry);
-      }
-
-      res = g_variant_builder_end (&builder);
-    }
-    else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_INT) && g_variant_is_of_type (val, G_VARIANT_TYPE ("a{sa{sv}}")))
-    {
-      /* An array, as NcmModel:sparam-array was: keyed by position. */
-      GVariantBuilder builder;
-      const gsize n = g_variant_n_children (val);
-      gsize k;
-
-      g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
-
-      for (k = 0; k < n; k++)
-      {
-        GVariant *entry = g_variant_get_child_value (val, k);
-
-        g_variant_builder_add_value (&builder, g_variant_new_dict_entry (g_variant_new_int32 ((gint32) k),
-                                                                         _ncm_serialize_legacy_object (entry)));
-        g_variant_unref (entry);
-      }
-
-      res = g_variant_builder_end (&builder);
-    }
-    else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_INT) && (g_variant_is_of_type (val, G_VARIANT_TYPE ("a{i{sa{sv}}}")) ||
-                                                            g_variant_is_of_type (val, G_VARIANT_TYPE ("a{u{sa{sv}}}"))))
-    {
-      GVariantBuilder builder;
-      const gsize n = g_variant_n_children (val);
-      gsize k;
-
-      g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
-
-      for (k = 0; k < n; k++)
-      {
-        GVariant *item  = g_variant_get_child_value (val, k);
-        GVariant *key   = g_variant_get_child_value (item, 0);
-        GVariant *entry = g_variant_get_child_value (item, 1);
-        GVariant *nkey;
-
-        /* Floating, so that the dict entry takes it. */
-        if (g_variant_is_of_type (key, G_VARIANT_TYPE_UINT32))
-          nkey = g_variant_new_int32 ((gint32) g_variant_get_uint32 (key));
-        else
-          nkey = g_variant_new_int32 (g_variant_get_int32 (key));
-
-        g_variant_builder_add_value (&builder, g_variant_new_dict_entry (nkey, _ncm_serialize_legacy_object (entry)));
-
-        g_variant_unref (item);
-        g_variant_unref (key);
-        g_variant_unref (entry);
-      }
-
-      res = g_variant_builder_end (&builder);
-    }
+    res = _ncm_serialize_legacy_object (val);
   }
+  else if (g_type_is_a (vtype, NCM_TYPE_OBJ_ARRAY) && g_variant_is_of_type (val, G_VARIANT_TYPE ("a{sa{sv}}")))
+  {
+    GVariantBuilder builder;
+    const gsize n = g_variant_n_children (val);
+    gsize k;
 
-  g_type_class_unref (klass);
+    g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_ARRAY_TYPE));
+
+    for (k = 0; k < n; k++)
+    {
+      GVariant *entry = g_variant_get_child_value (val, k);
+
+      g_variant_builder_add_value (&builder, _ncm_serialize_legacy_object (entry));
+      g_variant_unref (entry);
+    }
+
+    res = g_variant_builder_end (&builder);
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_INT) && g_variant_is_of_type (val, G_VARIANT_TYPE ("a{sa{sv}}")))
+  {
+    /* An array, as NcmModel:sparam-array was: keyed by position. */
+    GVariantBuilder builder;
+    const gsize n = g_variant_n_children (val);
+    gsize k;
+
+    g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
+
+    for (k = 0; k < n; k++)
+    {
+      GVariant *entry = g_variant_get_child_value (val, k);
+
+      g_variant_builder_add_value (&builder, g_variant_new_dict_entry (g_variant_new_int32 ((gint32) k),
+                                                                       _ncm_serialize_legacy_object (entry)));
+      g_variant_unref (entry);
+    }
+
+    res = g_variant_builder_end (&builder);
+  }
+  else if (g_type_is_a (vtype, NCM_TYPE_OBJ_DICT_INT) && (g_variant_is_of_type (val, G_VARIANT_TYPE ("a{i{sa{sv}}}")) ||
+                                                          g_variant_is_of_type (val, G_VARIANT_TYPE ("a{u{sa{sv}}}"))))
+  {
+    GVariantBuilder builder;
+    const gsize n = g_variant_n_children (val);
+    gsize k;
+
+    g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
+
+    for (k = 0; k < n; k++)
+    {
+      GVariant *item  = g_variant_get_child_value (val, k);
+      GVariant *key   = g_variant_get_child_value (item, 0);
+      GVariant *entry = g_variant_get_child_value (item, 1);
+      GVariant *nkey;
+
+      /* Floating, so that the dict entry takes it. */
+      if (g_variant_is_of_type (key, G_VARIANT_TYPE_UINT32))
+        nkey = g_variant_new_int32 ((gint32) g_variant_get_uint32 (key));
+      else
+        nkey = g_variant_new_int32 (g_variant_get_int32 (key));
+
+      g_variant_builder_add_value (&builder, g_variant_new_dict_entry (nkey, _ncm_serialize_legacy_object (entry)));
+
+      g_variant_unref (item);
+      g_variant_unref (key);
+      g_variant_unref (entry);
+    }
+
+    res = g_variant_builder_end (&builder);
+  }
 
   if (res == NULL)
     return val;

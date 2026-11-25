@@ -28,6 +28,7 @@
 #undef GSL_RANGE_CHECK_OFF
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
+#include <glib/gstdio.h>
 
 G_DECLARE_FINAL_TYPE (NcmObjectTest, ncm_object_test, NCM, OBJECT_TEST, GObject)
 
@@ -39,6 +40,7 @@ struct _NcmObjectTest
   NcmDTuple3 *dt3;
   NcmVector *vector;
   NcmMatrix *matrix;
+  GVariant *payload;
 };
 
 enum
@@ -48,6 +50,7 @@ enum
   PROP_DT3,
   PROP_VECTOR,
   PROP_MATRIX,
+  PROP_PAYLOAD,
   PROP_LEN,
 };
 
@@ -110,6 +113,10 @@ void test_ncm_serialize_global (void);
 void test_ncm_serialize_remove_ser (void);
 void test_ncm_serialize_named_no_autosave (void);
 void test_ncm_serialize_var_dict_own_bytes (void);
+void test_ncm_serialize_property_variant (void);
+void test_ncm_serialize_property_traps (void);
+void test_ncm_serialize_property_unknown_subprocess (void);
+void test_ncm_serialize_property_form_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -215,6 +222,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/serialize/api/var_dict_own_bytes", &test_ncm_serialize_var_dict_own_bytes);
   g_test_add_func ("/ncm/serialize/api/set_taken/subprocess", &test_ncm_serialize_set_taken_subprocess);
   g_test_add_func ("/ncm/serialize/legacy/objects", &test_ncm_serialize_legacy_objects);
+  g_test_add_func ("/ncm/serialize/property/variant", &test_ncm_serialize_property_variant);
+  g_test_add_func ("/ncm/serialize/property/traps", &test_ncm_serialize_property_traps);
+  g_test_add_func ("/ncm/serialize/property/unknown/subprocess", &test_ncm_serialize_property_unknown_subprocess);
+  g_test_add_func ("/ncm/serialize/property/form/subprocess", &test_ncm_serialize_property_form_subprocess);
 
   g_test_run ();
 }
@@ -235,6 +246,7 @@ ncm_object_test_finalize (GObject *object)
   ncm_dtuple3_clear (&self->dt3);
   ncm_vector_clear (&self->vector);
   ncm_matrix_clear (&self->matrix);
+  g_clear_pointer (&self->payload, g_variant_unref);
 
   /* Chain up to the parent class */
   G_OBJECT_CLASS (ncm_object_test_parent_class)->finalize (object);
@@ -263,6 +275,10 @@ ncm_object_test_set_property (GObject *object, guint prop_id, const GValue *valu
       ncm_matrix_clear (&self->matrix);
       self->matrix = g_value_dup_object (value);
       break;
+    case PROP_PAYLOAD:
+      g_clear_pointer (&self->payload, g_variant_unref);
+      self->payload = g_value_dup_variant (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -287,6 +303,9 @@ ncm_object_test_get_property (GObject *object, guint prop_id, GValue *value, GPa
       break;
     case PROP_MATRIX:
       g_value_set_object (value, self->matrix);
+      break;
+    case PROP_PAYLOAD:
+      g_value_set_variant (value, self->payload);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -332,6 +351,14 @@ ncm_object_test_class_init (NcmObjectTestClass *klass)
                                                         "matrix",
                                                         NCM_TYPE_MATRIX,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PAYLOAD,
+                                   g_param_spec_variant ("payload",
+                                                         NULL,
+                                                         "payload",
+                                                         G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE),
+                                                         NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 void
@@ -1309,5 +1336,96 @@ test_ncm_serialize_var_dict_own_bytes (void)
   ncm_var_dict_unref (vd);
   ncm_var_dict_unref (vd2);
   ncm_serialize_free (ser);
+}
+
+/*
+ * A GVariant property whose value has the type of a dictionary of objects receives the
+ * variant as it is: the round trip through a variant and through a binary file gives an
+ * equal variant of the same type, not an #NcmObjDictInt.
+ */
+void
+test_ncm_serialize_property_variant (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmVector *v      = ncm_vector_new (3);
+  GError *error     = NULL;
+  gchar *dir        = g_dir_make_tmp ("ncm_serialize_XXXXXX", &error);
+  gchar *filename;
+  GVariantBuilder b;
+  GVariant *payload, *got, *obj_ser;
+  GObject *obj, *dup;
+
+  g_assert_no_error (error);
+  filename = g_build_filename (dir, "object.gvar", NULL);
+
+  ncm_vector_set_all (v, 1.5);
+  g_variant_builder_init (&b, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
+  g_variant_builder_add_value (&b, g_variant_new_dict_entry (g_variant_new_int32 (3), ncm_serialize_to_variant (ser, G_OBJECT (v))));
+  payload = g_variant_ref_sink (g_variant_builder_end (&b));
+  ncm_serialize_reset (ser, TRUE);
+
+  obj = g_object_new (ncm_object_test_get_type (), "payload", payload, NULL);
+
+  obj_ser = ncm_serialize_to_variant (ser, obj);
+  ncm_serialize_reset (ser, TRUE);
+  dup = ncm_serialize_from_variant (ser, obj_ser);
+  ncm_serialize_reset (ser, TRUE);
+  g_object_get (dup, "payload", &got, NULL);
+  g_assert_cmpstr (g_variant_get_type_string (got), ==, NCM_SERIALIZE_OBJECT_DICT_INT_TYPE);
+  g_assert_true (g_variant_equal (got, payload));
+  g_variant_unref (got);
+  g_object_unref (dup);
+
+  ncm_serialize_to_binfile (ser, obj, filename);
+  ncm_serialize_reset (ser, TRUE);
+  dup = ncm_serialize_from_binfile (ser, filename);
+  g_object_get (dup, "payload", &got, NULL);
+  g_assert_true (g_variant_equal (got, payload));
+  g_variant_unref (got);
+  g_object_unref (dup);
+
+  g_assert_cmpint (g_remove (filename), ==, 0);
+  g_assert_cmpint (g_rmdir (dir), ==, 0);
+
+  g_variant_unref (obj_ser);
+  g_variant_unref (payload);
+  g_object_unref (obj);
+  ncm_vector_free (v);
+  ncm_serialize_free (ser);
+  g_free (filename);
+  g_free (dir);
+}
+
+/*
+ * A serialized object with a property its type does not have, and one with a value whose
+ * variant type does not fit the type of the property: both abort with a message that names
+ * the property and the type.
+ */
+void
+test_ncm_serialize_property_traps (void)
+{
+  g_test_trap_subprocess ("/ncm/serialize/property/unknown/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*object `NcmObjectTest' has no property `nonexistent'*");
+
+  g_test_trap_subprocess ("/ncm/serialize/property/form/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*property `dt2' of `NcmObjectTest' is a NcmDTuple2 and cannot be read from a variant of type `ad'*");
+}
+
+void
+test_ncm_serialize_property_unknown_subprocess (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+
+  ncm_serialize_from_string (ser, "NcmObjectTest{'nonexistent':<1>}");
+}
+
+void
+test_ncm_serialize_property_form_subprocess (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+
+  ncm_serialize_from_string (ser, "NcmObjectTest{'dt2':<[1.0, 2.0]>}");
 }
 
