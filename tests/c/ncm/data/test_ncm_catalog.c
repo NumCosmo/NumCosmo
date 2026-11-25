@@ -31,6 +31,7 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <string.h>
 
 typedef struct _TestNcmCatalog
 {
@@ -54,6 +55,7 @@ void test_ncm_catalog_invalid_set (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_invalid_col_type (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_invalid_row (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_data_prop (TestNcmCatalog *test, gconstpointer pdata);
+void test_ncm_catalog_data_hash (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_key (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_key_saved (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_errors (void);
@@ -121,6 +123,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/ncm/catalog/key/saved", TestNcmCatalog, NULL,
               &test_ncm_catalog_new,
               &test_ncm_catalog_key_saved,
+              &test_ncm_catalog_free);
+  g_test_add ("/ncm/catalog/data_hash", TestNcmCatalog, NULL,
+              &test_ncm_catalog_new,
+              &test_ncm_catalog_data_hash,
               &test_ncm_catalog_free);
   g_test_add_func ("/ncm/catalog/errors", &test_ncm_catalog_errors);
   g_test_add_func ("/ncm/catalog/errors/subprocess", &test_ncm_catalog_errors_subprocess);
@@ -543,5 +549,58 @@ test_ncm_catalog_errors_subprocess (void)
   {
     g_object_new (NCM_TYPE_CATALOG, NULL);
   }
+}
+
+/*
+ * The data hash is 64 hexadecimal digits, equal for a serialized copy and for a change of
+ * the metadata, and different after a change of one value or with other column names.
+ */
+void
+test_ncm_catalog_data_hash (TestNcmCatalog *test, gconstpointer pdata)
+{
+  const gchar *other_names[] = {"ra", "dec", "zz", NULL};
+  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmCatalog *other          = ncm_catalog_new (4, (GStrv) other_names);
+  NcmVarDict *meta           = ncm_var_dict_new ();
+  gchar *hash, *hash_b;
+  GVariant *var;
+  NcmCatalog *dup;
+  guint k;
+
+  ncm_catalog_set (test->catalog, "z", 2, 0.5, NULL);
+  hash = ncm_catalog_get_data_hash (test->catalog);
+  g_assert_cmpuint (strlen (hash), ==, 64);
+
+  for (k = 0; k < 64; k++)
+    g_assert_true (g_ascii_isxdigit (hash[k]));
+
+  var    = ncm_serialize_to_variant (ser, G_OBJECT (test->catalog));
+  dup    = NCM_CATALOG (ncm_serialize_from_variant (ser, var));
+  hash_b = ncm_catalog_get_data_hash (dup);
+  g_assert_cmpstr (hash_b, ==, hash);
+  g_free (hash_b);
+
+  ncm_var_dict_set_double (meta, "cluster_ra", 30.4273);
+  ncm_catalog_set_meta (dup, meta);
+  hash_b = ncm_catalog_get_data_hash (dup);
+  g_assert_cmpstr (hash_b, ==, hash);
+  g_free (hash_b);
+
+  ncm_catalog_set (dup, "z", 2, 0.5 + 1.0e-15, NULL);
+  hash_b = ncm_catalog_get_data_hash (dup);
+  g_assert_cmpstr (hash_b, !=, hash);
+  g_free (hash_b);
+
+  ncm_catalog_set (other, "zz", 2, 0.5, NULL);
+  hash_b = ncm_catalog_get_data_hash (other);
+  g_assert_cmpstr (hash_b, !=, hash);
+  g_free (hash_b);
+
+  g_free (hash);
+  g_variant_unref (var);
+  ncm_var_dict_unref (meta);
+  ncm_serialize_free (ser);
+  NCM_TEST_FREE (ncm_catalog_free, dup);
+  NCM_TEST_FREE (ncm_catalog_free, other);
 }
 

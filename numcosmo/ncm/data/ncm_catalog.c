@@ -73,6 +73,8 @@
 #include "ncm/algebra/ncm_matrix.h"
 #include "ncm/core/ncm_cfg.h"
 
+#include <string.h>
+
 /* *INDENT-OFF* */
 G_DEFINE_QUARK (ncm-catalog-error, ncm_catalog_error) 
 /* *INDENT-ON* */
@@ -796,6 +798,41 @@ ncm_catalog_key_is_current (NcmCatalog *catalog, guint64 *saved_key)
     *saved_key = self->key;
 
   return *saved_key == self->key;
+}
+
+/**
+ * ncm_catalog_get_data_hash:
+ * @catalog: a #NcmCatalog
+ *
+ * Computes the SHA-256 of the column names, the column types and the rows of @catalog, in
+ * this order: each name followed by a zero byte, the types as 32-bit integers, then the
+ * values of each row as doubles, in the byte order of the machine. Two catalogs with the
+ * same columns and the same values give the same hash on machines of the same byte order;
+ * #NcmCatalog:meta does not enter it.
+ *
+ * Returns: (transfer full): the hash as a string of 64 hexadecimal digits.
+ */
+gchar *
+ncm_catalog_get_data_hash (NcmCatalog *catalog)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  GChecksum *sum                 = g_checksum_new (G_CHECKSUM_SHA256);
+  const guint nrows              = ncm_matrix_nrows (self->data);
+  gchar *hash;
+  guint i;
+
+  for (i = 0; i < self->ncols; i++)
+    g_checksum_update (sum, (const guchar *) self->columns[i], strlen (self->columns[i]) + 1);
+
+  g_checksum_update (sum, (const guchar *) self->col_types->data, sizeof (guint32) * self->ncols);
+
+  for (i = 0; i < nrows; i++)
+    g_checksum_update (sum, (const guchar *) ncm_matrix_ptr (self->data, i, 0), sizeof (gdouble) * self->ncols);
+
+  hash = g_strdup (g_checksum_get_string (sum));
+  g_checksum_free (sum);
+
+  return hash;
 }
 
 /**

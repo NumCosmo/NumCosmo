@@ -113,6 +113,7 @@ struct _NcmSerializeContext
   /*< private >*/
   gint ref_count;
   gchar *dir;
+  gboolean has_file;
 };
 
 G_DEFINE_BOXED_TYPE (NcmSerializeContext, ncm_serialize_context, ncm_serialize_context_ref, ncm_serialize_context_unref)
@@ -4651,14 +4652,15 @@ ncm_serialize_global_variant_to_yaml (GVariant *var_obj)
  * once it is current; an object that needs it after its construction takes a reference.
  */
 
-/* Creates a context with the absolute directory dir, taking dir */
+/* Creates a context with the absolute directory dir, taking dir, of a file when has_file */
 static NcmSerializeContext *
-_ncm_serialize_context_new (gchar *dir)
+_ncm_serialize_context_new (gchar *dir, gboolean has_file)
 {
   NcmSerializeContext *ctx = g_new0 (NcmSerializeContext, 1);
 
   ctx->ref_count = 1;
   ctx->dir       = dir;
+  ctx->has_file  = has_file;
 
   return ctx;
 }
@@ -4723,6 +4725,23 @@ ncm_serialize_context_peek_dir (NcmSerializeContext *ctx)
 }
 
 /**
+ * ncm_serialize_context_has_file:
+ * @ctx: a #NcmSerializeContext
+ *
+ * Whether @ctx is the context of a file read or written by a function of #NcmSerialize,
+ * rather than the base context. An object whose property names a file writes that name
+ * relative to the directory of such a context, and as an absolute path otherwise, as for a
+ * copy made by ncm_serialize_dup_obj().
+ *
+ * Returns: %TRUE for the context of a file, %FALSE for the base context.
+ */
+gboolean
+ncm_serialize_context_has_file (NcmSerializeContext *ctx)
+{
+  return ctx->has_file;
+}
+
+/**
  * ncm_serialize_context_peek_current:
  *
  * Gets the current context of the calling thread: the context of the file that a function
@@ -4754,7 +4773,7 @@ void
 _ncm_serialize_context_init_base (void)
 {
   if (_ncm_serialize_context_base == NULL)
-    _ncm_serialize_context_base = _ncm_serialize_context_new (g_get_current_dir ());
+    _ncm_serialize_context_base = _ncm_serialize_context_new (g_get_current_dir (), FALSE);
 }
 
 /*
@@ -4772,7 +4791,7 @@ _ncm_serialize_context_push (const gchar *filename)
   g_assert (filename != NULL);
 
   dir = g_path_get_dirname (filename);
-  g_private_set (&_ncm_serialize_context_current, _ncm_serialize_context_new (g_canonicalize_filename (dir, NULL)));
+  g_private_set (&_ncm_serialize_context_current, _ncm_serialize_context_new (g_canonicalize_filename (dir, NULL), TRUE));
   g_free (dir);
 
   return prev_ctx;

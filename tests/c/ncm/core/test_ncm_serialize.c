@@ -68,6 +68,7 @@ struct _NcmObjectCtxTest
   GObject parent_instance;
 
   gchar *seen_dir;
+  gboolean seen_file;
   gchar *after_dir;
   gchar *written_dir;
   gchar *inner_file;
@@ -419,7 +420,8 @@ ncm_object_ctx_test_constructed (GObject *object)
 
   G_OBJECT_CLASS (ncm_object_ctx_test_parent_class)->constructed (object);
 
-  self->seen_dir = g_strdup (ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()));
+  self->seen_dir  = g_strdup (ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()));
+  self->seen_file = ncm_serialize_context_has_file (ncm_serialize_context_peek_current ());
 
   if (self->inner_file != NULL)
   {
@@ -1618,6 +1620,7 @@ test_ncm_serialize_context (void)
 
   /* Outside the file functions: the base context */
   g_assert_cmpstr (ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()), ==, cwd);
+  g_assert_false (ncm_serialize_context_has_file (ncm_serialize_context_peek_current ()));
   obj = g_object_new (ncm_object_ctx_test_get_type (), NULL);
   val = _test_ncm_serialize_ctx_get (obj, "seen-dir");
   g_assert_cmpstr (val, ==, cwd);
@@ -1671,6 +1674,8 @@ test_ncm_serialize_context (void)
   read = ncm_serialize_from_binfile (ser, file_a);
   val  = _test_ncm_serialize_ctx_get (read, "seen-dir");
   g_assert_cmpstr (val, ==, dir_a);
+  g_assert_true (NCM_OBJECT_CTX_TEST (read)->seen_file);
+  g_assert_false (NCM_OBJECT_CTX_TEST (obj)->seen_file);
   g_free (val);
   val = _test_ncm_serialize_ctx_get (read, "after-dir");
   g_assert_cmpstr (val, ==, dir_a);

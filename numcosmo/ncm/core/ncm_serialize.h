@@ -83,6 +83,7 @@ NcmSerializeContext *ncm_serialize_context_ref (NcmSerializeContext *ctx);
 void ncm_serialize_context_unref (NcmSerializeContext *ctx);
 void ncm_serialize_context_clear (NcmSerializeContext **ctx);
 const gchar *ncm_serialize_context_peek_dir (NcmSerializeContext *ctx);
+gboolean ncm_serialize_context_has_file (NcmSerializeContext *ctx);
 NcmSerializeContext *ncm_serialize_context_peek_current (void);
 
 gboolean ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj);

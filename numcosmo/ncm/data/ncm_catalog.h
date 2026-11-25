@@ -123,6 +123,7 @@ GStrv ncm_catalog_peek_columns (NcmCatalog *catalog);
 NcmMatrix *ncm_catalog_peek_data (NcmCatalog *catalog);
 guint64 ncm_catalog_get_key (NcmCatalog *catalog);
 void ncm_catalog_mark_outdated (NcmCatalog *catalog);
+gchar *ncm_catalog_get_data_hash (NcmCatalog *catalog);
 gboolean ncm_catalog_key_is_current (NcmCatalog *catalog, guint64 *saved_key);
 
 guint ncm_catalog_len (NcmCatalog *catalog);
