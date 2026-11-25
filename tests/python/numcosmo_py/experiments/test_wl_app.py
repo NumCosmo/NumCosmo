@@ -94,7 +94,9 @@ def fixture_experiment_file_copy(tmp_path: Path) -> Path:
     return tmp_file
 
 
-def _build_real_wl_obs(tmp_path: Path, filename: str, with_meta: bool) -> Path:
+def _build_real_wl_obs(
+    tmp_path: Path, filename: str, with_meta: bool, n: int = 20
+) -> Path:
     """A small synthetic NcGalaxyWLObs, standing in for a real catalog.
 
     Mirrors the column schema (and per-galaxy pz spline) of the curated
@@ -104,7 +106,6 @@ def _build_real_wl_obs(tmp_path: Path, filename: str, with_meta: bool) -> Path:
     catalogs are expected to ship with.
     """
     rng = np.random.default_rng(20260720)
-    n = 20
     cols = [
         "epsilon_int_1",
         "epsilon_int_2",
@@ -1714,14 +1715,22 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     )
 
 
-def test_wl_catalog_shape_interp_free_pop(tmp_path: Path, real_wl_obs_file_with_meta):
+_FREE_POP_N_GALAXIES = 4
+
+
+def test_wl_catalog_shape_interp_free_pop(tmp_path: Path):
     """With --free-pop the population parameters are variables of the interpolants: the
     record has them free, an experiment built from the catalog may fit them, and its -2 ln L
     at two values of sigma agrees with the integrals within the tolerance of the
-    interpolants; an experiment that does not list sigma holds it fixed."""
+    interpolants; an experiment that does not list sigma holds it fixed. The catalog has
+    _FREE_POP_N_GALAXIES galaxies: the build of tables over the default range of sigma takes
+    about a second per galaxy."""
+    small_obs_file = _build_real_wl_obs(
+        tmp_path, "small_wl_obs.gvar", with_meta=True, n=_FREE_POP_N_GALAXIES
+    )
     prepared = tmp_path / "prepared.gvar"
     result = _shape_interp(
-        prepared, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3", "--free-pop"
+        prepared, small_obs_file, "--pop-dist=gauss sigma=0.3", "--free-pop"
     )
     assert result.exit_code == 0, result.output
     assert "sigma free" in _unwrapped(result.output)
@@ -1748,7 +1757,7 @@ def test_wl_catalog_shape_interp_free_pop(tmp_path: Path, real_wl_obs_file_with_
         (exp_fixed, prepared, []),
         (
             exp_original,
-            real_wl_obs_file_with_meta,
+            small_obs_file,
             [
                 "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial",
                 "--pop-dist=gauss sigma=0.3",
@@ -1791,18 +1800,21 @@ def test_wl_catalog_shape_interp_free_pop(tmp_path: Path, real_wl_obs_file_with_
 
     # Each galaxy's ln P differs by at most interp-abstol (1e-5) from the integral's.
     assert m2lnL["prepared"] == pytest.approx(
-        m2lnL["original"], rel=0.0, abs=2.0 * 20 * 1.0e-5
+        m2lnL["original"], rel=0.0, abs=2.0 * _FREE_POP_N_GALAXIES * 1.0e-5
     )
     # The same table at the same points: free or fixed gives the same values.
     assert m2lnL["fixed"] == m2lnL["prepared"]
 
 
-def test_cluster_wl_load_record_settings(tmp_path: Path, real_wl_obs_file_with_meta):
+def test_cluster_wl_load_record_settings(tmp_path: Path):
     """An experiment generated from a prepared catalog has every setting of the record:
     the bounds of the free population parameter and the levels of the population
     variable, here other than the defaults, so that its -2 ln L reads the catalog
-    without the abort of a mismatch."""
-    obs = load_wl_obs(None, real_wl_obs_file_with_meta)
+    without the abort of a mismatch. The catalog has _FREE_POP_N_GALAXIES galaxies."""
+    small_obs_file = _build_real_wl_obs(
+        tmp_path, "small_wl_obs.gvar", with_meta=True, n=_FREE_POP_N_GALAXIES
+    )
+    obs = load_wl_obs(None, small_obs_file)
     _s, shape_gen = parse_shape_factor(
         "spectral ellip_conv=trace ellip_coord=celestial interp_abstol=1e-3 "
         "interp_pop_level_cap=3"
