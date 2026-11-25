@@ -93,7 +93,9 @@
  * builder share one integral per shear.
  *
  * The interpolants can be stored in the catalog: nc_galaxy_shape_factor_data_write_row()
- * writes them (#NcGalaxyWLObs:shape-interp) and
+ * writes them (#NcGalaxyWLObs:shape-interp), or
+ * nc_data_cluster_wl_factor_write_shape_interp_file() writes them to a file the catalog
+ * refers to (#NcGalaxyWLObsShapeInterp), and
  * nc_galaxy_shape_factor_spectral_set_obs_source() records the shape factor and the
  * population that built them. Reading the rows of such a catalog loads the interpolants,
  * and an interpolant that is present is always used. The first use compares the record with
