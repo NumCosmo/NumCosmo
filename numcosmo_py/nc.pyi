@@ -10651,12 +10651,8 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         Coordinate system used to store the data
       ellip-conv -> NcGalaxyWLObsEllipConv: Ellipticity convention
         Weak lensing observables ellipticity convention
-      shape-interp -> NcmObjDictInt: Shape interpolants
+      shape-interp -> NcGalaxyWLObsShapeInterp: Shape interpolants
         Interpolants of ln P in g of the galaxies
-      shape-interp-source -> NcmObjDictStr: Shape interpolants source
-        Record of what built the interpolants
-      shape-interp-file -> gchararray: Shape interpolants file
-        Catalog file that holds the interpolants and their record
 
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
@@ -10678,9 +10674,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         coord: WLEllipticityFrame
         ellip_conv: GalaxyWLObsEllipConv
         pz: NumCosmoMath.ObjDictInt
-        shape_interp: NumCosmoMath.ObjDictInt
-        shape_interp_file: str
-        shape_interp_source: NumCosmoMath.ObjDictStr
+        shape_interp: GalaxyWLObsShapeInterp
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
@@ -10693,9 +10687,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         coord: WLEllipticityFrame = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
         pz: NumCosmoMath.ObjDictInt = ...,
-        shape_interp: NumCosmoMath.ObjDictInt = ...,
-        shape_interp_file: str = ...,
-        shape_interp_source: NumCosmoMath.ObjDictStr = ...,
+        shape_interp: GalaxyWLObsShapeInterp = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
@@ -10728,7 +10720,6 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def peek_shape_interp(
         self, i: int
     ) -> typing.Optional[NumCosmoMath.SpectralTensor]: ...
-    def peek_shape_interp_file(self) -> typing.Optional[str]: ...
     def peek_shape_interp_source(self) -> typing.Optional[NumCosmoMath.ObjDictStr]: ...
     def ref(self) -> GalaxyWLObs: ...
     def set(self, col: str, i: int, val: float) -> None: ...
@@ -10749,6 +10740,75 @@ class GalaxyWLObsClass(GObject.GPointer):
     parent_class: NumCosmoMath.CatalogClass = ...
 
 class GalaxyWLObsPrivate(GObject.GPointer): ...
+
+class GalaxyWLObsShapeInterp(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLObsShapeInterp(**properties)
+        new() -> NumCosmo.GalaxyWLObsShapeInterp
+        new_from_file(filename:str, data_hash:str, source:NumCosmoMath.ObjDictStr) -> NumCosmo.GalaxyWLObsShapeInterp
+
+    Object NcGalaxyWLObsShapeInterp
+
+    Properties from NcGalaxyWLObsShapeInterp:
+      interp -> NcmObjDictInt: Interpolants
+        Interpolants of ln P in g of the galaxies
+      source -> NcmObjDictStr: Source
+        Record of what built the interpolants
+      data-hash -> gchararray: Data hash
+        Data hash of the rows the interpolants describe
+      filename -> gchararray: File name
+        File that holds the interpolants
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        data_hash: str
+        filename: str
+        interp: NumCosmoMath.ObjDictInt
+        source: NumCosmoMath.ObjDictStr
+
+    props: Props = ...
+    def __init__(
+        self,
+        data_hash: str = ...,
+        filename: str = ...,
+        interp: NumCosmoMath.ObjDictInt = ...,
+        source: NumCosmoMath.ObjDictStr = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(si: GalaxyWLObsShapeInterp) -> None: ...
+    def free(self) -> None: ...
+    @classmethod
+    def new(cls) -> GalaxyWLObsShapeInterp: ...
+    @classmethod
+    def new_from_file(
+        cls, filename: str, data_hash: str, source: NumCosmoMath.ObjDictStr
+    ) -> GalaxyWLObsShapeInterp: ...
+    def peek_data_hash(self) -> typing.Optional[str]: ...
+    def peek_filename(self) -> typing.Optional[str]: ...
+    def peek_interp(self, i: int) -> typing.Optional[NumCosmoMath.SpectralTensor]: ...
+    def peek_source(self) -> typing.Optional[NumCosmoMath.ObjDictStr]: ...
+    def ref(self) -> GalaxyWLObsShapeInterp: ...
+    def set_data_hash(self, data_hash: str) -> None: ...
+    def set_interp(self, i: int, st: NumCosmoMath.SpectralTensor) -> None: ...
+    def set_source(self, source: NumCosmoMath.ObjDictStr) -> None: ...
+
+class GalaxyWLObsShapeInterpClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLObsShapeInterpClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class GrowthFunc(GObject.Object):
     r"""

@@ -3134,19 +3134,21 @@ static void _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs
  * @dcwlf: a #NcDataClusterWLFactor
  * @mset: a #NcmMSet
  * @obs: a #NcGalaxyWLObs with the rows of the catalog of @dcwlf
- * @filename: the file of the catalog with the interpolants
+ * @filename: the file of the interpolants
  *
  * For a catalog whose interpolants should not be held in memory together, writes to
- * @filename the catalog that nc_data_cluster_wl_factor_write_shape_interp() followed by
- * ncm_serialize_to_binfile() gives: the rows of @obs, the interpolant of every galaxy and
- * the record of the shape factor and of the population of @mset that built them. Each
- * interpolant is serialized as soon as it is built, appended as one record (its row, its
- * byte length and its #GVariant) to a temporary file, @filename with the suffix `.records`,
- * and freed; the galaxies are built in parallel and the records are written one at a time.
- * The file @filename is then assembled from the rows of @obs and from the records, and the
- * temporary file is removed. The call keeps in memory the interpolants being built, one per
- * thread; the records and @filename are read and written as mapped files. @obs is not
- * changed and receives no interpolant, so a fit loads @filename to use them.
+ * @filename a #NcGalaxyWLObsShapeInterp in memory with the interpolant of every galaxy, the
+ * record of the shape factor and of the population of @mset that built them, and the data
+ * hash of the rows of @obs (ncm_catalog_get_data_hash()), and sets on @obs, as its
+ * #NcGalaxyWLObs:shape-interp, a #NcGalaxyWLObsShapeInterp backed by @filename
+ * (nc_galaxy_wl_obs_shape_interp_new_from_file()). Serializing @obs then writes the name of
+ * @filename and the record, not the interpolants. Each interpolant is serialized as soon as
+ * it is built, appended as one record (its row, its byte length and its #GVariant) to a
+ * temporary file, @filename with the suffix `.records`, and freed; the galaxies are built in
+ * parallel and the records are written one at a time. The file @filename is then assembled
+ * from the records and the temporary file is removed. The call keeps in memory the
+ * interpolants being built, one per thread; the records and @filename are read and written
+ * as mapped files.
  *
  * An existing temporary file is overwritten: an interrupted call starts again. The shape
  * factor must be a #NcGalaxyShapeFactorSpectral and @obs must have as many rows as the
@@ -3227,27 +3229,29 @@ nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf,
 }
 
 /*
- * Writes filename, the binary GVariant of a copy of obs with the record of gsfs and pop and
- * with the interpolants of the records of rec_name as its property shape-interp. The records
+ * Writes filename, the binary GVariant of a NcGalaxyWLObsShapeInterp in memory with the
+ * interpolants of the records of rec_name, the record of gsfs and pop and the data hash of
+ * the rows of obs, and sets on obs a NcGalaxyWLObsShapeInterp backed by filename. The records
  * (row, byte length, the GVariant of the interpolant padded to 8 bytes) are memory-mapped and
- * become the entries of that property, in row order, without being parsed, and the variant is
- * serialized into filename through a second mapping: neither the interpolants nor the bytes
- * of the catalog are allocated. A record that does not fit the file aborts.
+ * become the entries of its property interp, in row order, without being parsed, and the
+ * variant is serialized into filename through a second mapping: neither the interpolants nor
+ * the bytes of the file are allocated. A record that does not fit the file aborts.
  */
 static void
 _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs, NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, const gchar *rec_name, const gchar *filename)
 {
-  NcmSerialize *ser   = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  NcGalaxyWLObs *copy = NC_GALAXY_WL_OBS (ncm_serialize_dup_obj (ser, G_OBJECT (obs)));
-  const guint n_rows  = nc_galaxy_wl_obs_len (obs);
-  gsize *rec_off      = g_new0 (gsize, n_rows);
-  gsize *rec_len      = g_new0 (gsize, n_rows);
-  gboolean *rec_has   = g_new0 (gboolean, n_rows);
-  GError *error       = NULL;
-  GMappedFile *map    = g_mapped_file_new (rec_name, FALSE, &error);
+  NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  const guint n_rows = nc_galaxy_wl_obs_len (obs);
+  gsize *rec_off     = g_new0 (gsize, n_rows);
+  gsize *rec_len     = g_new0 (gsize, n_rows);
+  gboolean *rec_has  = g_new0 (gboolean, n_rows);
+  GError *error      = NULL;
+  GMappedFile *map   = g_mapped_file_new (rec_name, FALSE, &error);
   GVariantBuilder dict, props;
-  GVariant *obs_var, *props_old, *final;
-  const gchar *type_name;
+  GVariant *final, *source_var;
+  NcmObjDictStr *source;
+  NcGalaxyWLObsShapeInterp *si;
+  const gchar *data_hash;
   const guint8 *base;
   GBytes *all;
   gsize size = 0;
@@ -3294,29 +3298,20 @@ _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs, NcGalaxySh
     }
   }
 
-  nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, pop, copy);
-  ncm_serialize_reset (ser, TRUE);
-  obs_var   = ncm_serialize_to_variant (ser, G_OBJECT (copy));
-  props_old = g_variant_get_child_value (obs_var, 1);
-  g_variant_get_child (obs_var, 0, "&s", &type_name);
+  /* The record and the data hash, set on obs by the shape factor */
+  nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, pop, obs);
+  g_object_get (obs, "shape-interp", &si, NULL);
+  source    = nc_galaxy_wl_obs_shape_interp_peek_source (si);
+  data_hash = nc_galaxy_wl_obs_shape_interp_peek_data_hash (si);
+
+  source_var = ncm_serialize_dict_str_to_variant (ser, source);
 
   g_variant_builder_init (&props, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE));
-
-  for (i = 0; i < g_variant_n_children (props_old); i++)
-  {
-    GVariant *entry = g_variant_get_child_value (props_old, i);
-    const gchar *name;
-
-    g_variant_get_child (entry, 0, "&s", &name);
-
-    if (!g_str_equal (name, "shape-interp"))
-      g_variant_builder_add_value (&props, entry);
-
-    g_variant_unref (entry);
-  }
-
-  g_variant_builder_add (&props, "{sv}", "shape-interp", g_variant_builder_end (&dict));
-  final = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, type_name, g_variant_builder_end (&props)));
+  g_variant_builder_add (&props, "{sv}", "interp", g_variant_builder_end (&dict));
+  g_variant_builder_add (&props, "{sv}", "source", source_var);
+  g_variant_builder_add (&props, "{sv}", "data-hash", g_variant_new_string (data_hash));
+  final = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, G_OBJECT_TYPE_NAME (si), g_variant_builder_end (&props)));
+  g_variant_unref (source_var);
 
   /*
    * The variant is serialized into a file mapped at its final size, filename with the suffix
@@ -3352,15 +3347,23 @@ _nc_data_cluster_wl_factor_assemble_shape_interp (NcGalaxyWLObs *obs, NcGalaxySh
     g_free (part_name);
   }
 
+  /* obs refers to the file; the name is absolute against the directory where it was written */
+  {
+    gchar *abs_name                   = g_canonicalize_filename (filename, NULL);
+    NcGalaxyWLObsShapeInterp *file_si = nc_galaxy_wl_obs_shape_interp_new_from_file (abs_name, data_hash, source);
+
+    g_object_set (obs, "shape-interp", file_si, NULL);
+    nc_galaxy_wl_obs_shape_interp_free (file_si);
+    g_free (abs_name);
+  }
+
   g_variant_unref (final);
-  g_variant_unref (props_old);
-  g_variant_unref (obs_var);
   g_bytes_unref (all);
   g_mapped_file_unref (map);
   g_free (rec_off);
   g_free (rec_len);
   g_free (rec_has);
-  nc_galaxy_wl_obs_free (copy);
+  nc_galaxy_wl_obs_shape_interp_free (si);
   ncm_serialize_free (ser);
 }
 

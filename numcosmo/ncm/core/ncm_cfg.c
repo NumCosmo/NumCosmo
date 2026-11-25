@@ -212,6 +212,7 @@
 #include "nc/lss/wl/nc_reduced_shear_calib.h"
 #include "nc/lss/wl/nc_reduced_shear_calib_wtg.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_obs_shape_interp.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor_flat.h"
 #include "nc/lss/galaxy/nc_galaxy_pz.h"
@@ -1054,6 +1055,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CALIB_WTG);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS_SHAPE_INTERP);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR_FLAT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_PZ);
