@@ -56,6 +56,43 @@ enum
 
 G_DEFINE_TYPE (NcmObjectTest, ncm_object_test, G_TYPE_OBJECT)
 
+/*
+ * A type that records the directory of the current NcmSerializeContext: at construction
+ * (seen-dir), after reading the file of inner-file during its construction (after-dir), and
+ * when its property write-dir is read, which is what a writer serializes.
+ */
+G_DECLARE_FINAL_TYPE (NcmObjectCtxTest, ncm_object_ctx_test, NCM, OBJECT_CTX_TEST, GObject)
+
+struct _NcmObjectCtxTest
+{
+  GObject parent_instance;
+
+  gchar *seen_dir;
+  gchar *after_dir;
+  gchar *written_dir;
+  gchar *inner_file;
+};
+
+enum
+{
+  PROP_CTX_0,
+  PROP_CTX_SEEN_DIR,
+  PROP_CTX_AFTER_DIR,
+  PROP_CTX_WRITE_DIR,
+  PROP_CTX_INNER_FILE,
+};
+
+G_DEFINE_TYPE (NcmObjectCtxTest, ncm_object_ctx_test, G_TYPE_OBJECT)
+
+/* Two threads that read files of different directories, each n_reads times */
+typedef struct _TestNcmSerializeCtxThread
+{
+  gchar *filename;
+  gchar *dir;
+  guint n_reads;
+  guint n_wrong;
+} TestNcmSerializeCtxThread;
+
 typedef struct _TestNcmObjectTest
 {
   NcmObjectTest *obj;
@@ -117,12 +154,15 @@ void test_ncm_serialize_property_variant (void);
 void test_ncm_serialize_property_traps (void);
 void test_ncm_serialize_property_unknown_subprocess (void);
 void test_ncm_serialize_property_form_subprocess (void);
+void test_ncm_serialize_context (void);
+void test_ncm_serialize_context_threads (void);
 
 gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init_full_ptr (&argc, &argv);
+  ncm_cfg_register_obj (ncm_object_ctx_test_get_type ());
   ncm_cfg_enable_gsl_err_handler ();
   ncm_cfg_register_obj (ncm_object_test_get_type ());
 
@@ -223,6 +263,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/serialize/api/set_taken/subprocess", &test_ncm_serialize_set_taken_subprocess);
   g_test_add_func ("/ncm/serialize/legacy/objects", &test_ncm_serialize_legacy_objects);
   g_test_add_func ("/ncm/serialize/property/variant", &test_ncm_serialize_property_variant);
+  g_test_add_func ("/ncm/serialize/context", &test_ncm_serialize_context);
+  g_test_add_func ("/ncm/serialize/context/threads", &test_ncm_serialize_context_threads);
   g_test_add_func ("/ncm/serialize/property/traps", &test_ncm_serialize_property_traps);
   g_test_add_func ("/ncm/serialize/property/unknown/subprocess", &test_ncm_serialize_property_unknown_subprocess);
   g_test_add_func ("/ncm/serialize/property/form/subprocess", &test_ncm_serialize_property_form_subprocess);
@@ -359,6 +401,119 @@ ncm_object_test_class_init (NcmObjectTestClass *klass)
                                                          G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE),
                                                          NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+static void
+ncm_object_ctx_test_init (NcmObjectCtxTest *self)
+{
+  self->seen_dir    = NULL;
+  self->after_dir   = NULL;
+  self->written_dir = NULL;
+  self->inner_file  = NULL;
+}
+
+static void
+ncm_object_ctx_test_constructed (GObject *object)
+{
+  NcmObjectCtxTest *self = NCM_OBJECT_CTX_TEST (object);
+
+  G_OBJECT_CLASS (ncm_object_ctx_test_parent_class)->constructed (object);
+
+  self->seen_dir = g_strdup (ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()));
+
+  if (self->inner_file != NULL)
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    GObject *inner    = ncm_serialize_from_binfile (ser, self->inner_file);
+
+    g_object_unref (inner);
+    ncm_serialize_free (ser);
+  }
+
+  self->after_dir = g_strdup (ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()));
+}
+
+static void
+ncm_object_ctx_test_finalize (GObject *object)
+{
+  NcmObjectCtxTest *self = NCM_OBJECT_CTX_TEST (object);
+
+  g_free (self->seen_dir);
+  g_free (self->after_dir);
+  g_free (self->written_dir);
+  g_free (self->inner_file);
+
+  G_OBJECT_CLASS (ncm_object_ctx_test_parent_class)->finalize (object);
+}
+
+static void
+ncm_object_ctx_test_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmObjectCtxTest *self = NCM_OBJECT_CTX_TEST (object);
+
+  switch (prop_id)
+  {
+    case PROP_CTX_WRITE_DIR:
+      g_free (self->written_dir);
+      self->written_dir = g_value_dup_string (value);
+      break;
+    case PROP_CTX_INNER_FILE:
+      g_free (self->inner_file);
+      self->inner_file = g_value_dup_string (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_object_ctx_test_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmObjectCtxTest *self = NCM_OBJECT_CTX_TEST (object);
+
+  switch (prop_id)
+  {
+    case PROP_CTX_SEEN_DIR:
+      g_value_set_string (value, self->seen_dir);
+      break;
+    case PROP_CTX_AFTER_DIR:
+      g_value_set_string (value, self->after_dir);
+      break;
+    case PROP_CTX_WRITE_DIR:
+      g_value_set_string (value, ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()));
+      break;
+    case PROP_CTX_INNER_FILE:
+      g_value_set_string (value, self->inner_file);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_object_ctx_test_class_init (NcmObjectCtxTestClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->constructed  = ncm_object_ctx_test_constructed;
+  object_class->finalize     = ncm_object_ctx_test_finalize;
+  object_class->set_property = ncm_object_ctx_test_set_property;
+  object_class->get_property = ncm_object_ctx_test_get_property;
+
+  g_object_class_install_property (object_class, PROP_CTX_SEEN_DIR,
+                                   g_param_spec_string ("seen-dir", NULL, "seen-dir", NULL,
+                                                        G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class, PROP_CTX_AFTER_DIR,
+                                   g_param_spec_string ("after-dir", NULL, "after-dir", NULL,
+                                                        G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class, PROP_CTX_WRITE_DIR,
+                                   g_param_spec_string ("write-dir", NULL, "write-dir", NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class, PROP_CTX_INNER_FILE,
+                                   g_param_spec_string ("inner-file", NULL, "inner-file", NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 void
@@ -1427,5 +1582,187 @@ test_ncm_serialize_property_form_subprocess (void)
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
 
   ncm_serialize_from_string (ser, "NcmObjectTest{'dt2':<[1.0, 2.0]>}");
+}
+
+/* The string property name of obj */
+static gchar *
+_test_ncm_serialize_ctx_get (GObject *obj, const gchar *name)
+{
+  gchar *val = NULL;
+
+  g_object_get (obj, name, &val, NULL);
+
+  return val;
+}
+
+/*
+ * The current NcmSerializeContext: the working directory of ncm_cfg_init() outside the file
+ * functions; the directory of the file while it is read, for an object built from it and
+ * after a nested read of a file of another directory during its construction; the directory
+ * of the file while it is written, for the value a property gives to the writer.
+ */
+void
+test_ncm_serialize_context (void)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GError *error     = NULL;
+  gchar *cwd        = g_get_current_dir ();
+  gchar *dir_a      = g_dir_make_tmp ("ncm_serialize_ctx_a_XXXXXX", &error);
+  gchar *dir_b      = g_dir_make_tmp ("ncm_serialize_ctx_b_XXXXXX", &error);
+  gchar *file_a     = g_build_filename (dir_a, "outer.gvar", NULL);
+  gchar *file_b     = g_build_filename (dir_b, "inner.gvar", NULL);
+  GObject *obj, *inner, *outer, *read;
+  gchar *val;
+
+  g_assert_no_error (error);
+
+  /* Outside the file functions: the base context */
+  g_assert_cmpstr (ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()), ==, cwd);
+  obj = g_object_new (ncm_object_ctx_test_get_type (), NULL);
+  val = _test_ncm_serialize_ctx_get (obj, "seen-dir");
+  g_assert_cmpstr (val, ==, cwd);
+  g_free (val);
+
+  /* Writing: the property gives the directory of the file written */
+  ncm_serialize_to_binfile (ser, obj, file_b);
+  ncm_serialize_reset (ser, TRUE);
+  read = ncm_serialize_from_binfile (ser, file_b);
+  ncm_serialize_reset (ser, TRUE);
+  val = _test_ncm_serialize_ctx_get (read, "write-dir");
+  g_assert_cmpstr (val, ==, cwd);
+  g_free (val);
+  g_object_get (read, "seen-dir", &val, NULL);
+  g_assert_cmpstr (val, ==, dir_b);
+  g_free (val);
+  g_object_unref (read);
+
+  {
+    /* The serialized write-dir of the file of dir_b, read back */
+    NcmSerialize *ser_r = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    GVariant *var;
+    gchar *data;
+    gsize len;
+
+    g_assert_true (g_file_get_contents (file_b, &data, &len, &error));
+    g_assert_no_error (error);
+    var = g_variant_ref_sink (g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), data, len, TRUE, g_free, data));
+
+    {
+      GVariant *props = g_variant_get_child_value (var, 1);
+      const gchar *written;
+
+      g_assert_true (g_variant_lookup (props, "write-dir", "&s", &written));
+      g_assert_cmpstr (written, ==, dir_b);
+      g_variant_unref (props);
+    }
+
+    g_variant_unref (var);
+    ncm_serialize_free (ser_r);
+  }
+
+  /* Reading with a nested read of another directory during construction */
+  inner = g_object_new (ncm_object_ctx_test_get_type (), NULL);
+  ncm_serialize_to_binfile (ser, inner, file_b);
+  ncm_serialize_reset (ser, TRUE);
+  outer = g_object_new (ncm_object_ctx_test_get_type (), "inner-file", file_b, NULL);
+  ncm_serialize_to_binfile (ser, outer, file_a);
+  ncm_serialize_reset (ser, TRUE);
+
+  read = ncm_serialize_from_binfile (ser, file_a);
+  val  = _test_ncm_serialize_ctx_get (read, "seen-dir");
+  g_assert_cmpstr (val, ==, dir_a);
+  g_free (val);
+  val = _test_ncm_serialize_ctx_get (read, "after-dir");
+  g_assert_cmpstr (val, ==, dir_a);
+  g_free (val);
+
+  /* A relative name resolves against the working directory at the call */
+  g_assert_cmpstr (ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()), ==, cwd);
+
+  g_assert_cmpint (g_remove (file_a), ==, 0);
+  g_assert_cmpint (g_remove (file_b), ==, 0);
+  g_assert_cmpint (g_rmdir (dir_a), ==, 0);
+  g_assert_cmpint (g_rmdir (dir_b), ==, 0);
+
+  g_object_unref (read);
+  g_object_unref (outer);
+  g_object_unref (inner);
+  g_object_unref (obj);
+  ncm_serialize_free (ser);
+  g_free (file_a);
+  g_free (file_b);
+  g_free (dir_a);
+  g_free (dir_b);
+  g_free (cwd);
+}
+
+/* Reads td->filename td->n_reads times and counts the objects that saw another directory */
+static gpointer
+_test_ncm_serialize_ctx_thread (gpointer user_data)
+{
+  TestNcmSerializeCtxThread *td = user_data;
+  NcmSerialize *ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  guint k;
+
+  for (k = 0; k < td->n_reads; k++)
+  {
+    GObject *obj = ncm_serialize_from_binfile (ser, td->filename);
+    gchar *val   = _test_ncm_serialize_ctx_get (obj, "seen-dir");
+
+    if (g_strcmp0 (val, td->dir) != 0)
+      td->n_wrong++;
+
+    g_free (val);
+    g_object_unref (obj);
+  }
+
+  ncm_serialize_free (ser);
+
+  return NULL;
+}
+
+/*
+ * Two threads read, at the same time, files of two directories: every object sees the
+ * directory of its own file.
+ */
+void
+test_ncm_serialize_context_threads (void)
+{
+  NcmSerialize *ser               = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GObject *obj                    = g_object_new (ncm_object_ctx_test_get_type (), NULL);
+  TestNcmSerializeCtxThread td[2] = {
+    {
+      0
+    }
+  };
+  GThread *threads[2];
+  GError *error = NULL;
+  guint t;
+
+  for (t = 0; t < 2; t++)
+  {
+    td[t].dir = g_dir_make_tmp ("ncm_serialize_ctx_XXXXXX", &error);
+    g_assert_no_error (error);
+    td[t].filename = g_build_filename (td[t].dir, "object.gvar", NULL);
+    td[t].n_reads  = 200;
+    ncm_serialize_to_binfile (ser, obj, td[t].filename);
+    ncm_serialize_reset (ser, TRUE);
+  }
+
+  for (t = 0; t < 2; t++)
+    threads[t] = g_thread_new ("ctx", _test_ncm_serialize_ctx_thread, &td[t]);
+
+  for (t = 0; t < 2; t++)
+  {
+    g_thread_join (threads[t]);
+    g_assert_cmpuint (td[t].n_wrong, ==, 0);
+    g_assert_cmpint (g_remove (td[t].filename), ==, 0);
+    g_assert_cmpint (g_rmdir (td[t].dir), ==, 0);
+    g_free (td[t].filename);
+    g_free (td[t].dir);
+  }
+
+  g_object_unref (obj);
+  ncm_serialize_free (ser);
 }
 

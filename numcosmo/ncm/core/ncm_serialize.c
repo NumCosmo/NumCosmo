@@ -54,6 +54,12 @@
  *
  * ncm_serialize_global() returns a process-wide serializer without options, and the
  * ncm_serialize_global functions use it.
+ *
+ * While a function of NcmSerialize reads or writes a file, the current
+ * #NcmSerializeContext of the calling thread holds the absolute directory of that file, so
+ * that an object can resolve a relative file name in one of its properties against it
+ * (ncm_serialize_context_peek_current()). Outside such a function the current context is
+ * the base context, created by ncm_cfg_init() with the working directory of that call.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -62,6 +68,7 @@
 #include "build_cfg.h"
 
 #include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_serialize_private.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/core/ncm_dtuple.h"
@@ -99,6 +106,24 @@ struct _NcmSerialize
 };
 
 G_DEFINE_TYPE (NcmSerialize, ncm_serialize, G_TYPE_OBJECT)
+
+struct _NcmSerializeContext
+{
+  /*< private >*/
+  gint ref_count;
+  gchar *dir;
+};
+
+G_DEFINE_BOXED_TYPE (NcmSerializeContext, ncm_serialize_context, ncm_serialize_context_ref, ncm_serialize_context_unref)
+
+/* The context outside the file functions, created once by ncm_cfg_init() and read only afterwards */
+static NcmSerializeContext *_ncm_serialize_context_base = NULL;
+
+/* The context of the file function running in this thread, NULL outside one; owned by that function */
+static GPrivate _ncm_serialize_context_current = G_PRIVATE_INIT (NULL);
+
+static NcmSerializeContext *_ncm_serialize_context_push (const gchar *filename);
+static void _ncm_serialize_context_pop (NcmSerializeContext *prev_ctx);
 
 static void
 ncm_serialize_init (NcmSerialize *ser)
@@ -734,9 +759,10 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 void
 ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const gchar *prop_file)
 {
-  GKeyFile *key_file = g_key_file_new ();
-  GError *error      = NULL;
-  GString *prop_ser  = g_string_sized_new (200);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (prop_file);
+  GKeyFile *key_file            = g_key_file_new ();
+  GError *error                 = NULL;
+  GString *prop_ser             = g_string_sized_new (200);
 
   if (!g_key_file_load_from_file (key_file, prop_file, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
   {
@@ -750,6 +776,8 @@ ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const
     {
       g_error ("ncm_serialize_set_property_from_key_file: Invalid mset configuration file: %s %s", prop_file, error->message);
 
+      _ncm_serialize_context_pop (prev_ctx);
+
       return;
     }
     else
@@ -761,6 +789,8 @@ ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const
       if (!g_key_file_load_from_data (key_file, gcontents, strlen (gcontents), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
       {
         g_error ("ncm_serialize_set_property_from_key_file: Invalid mset configuration file: %s %s", prop_file, error->message);
+
+        _ncm_serialize_context_pop (prev_ctx);
 
         return;
       }
@@ -799,6 +829,8 @@ ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const
   ncm_serialize_set_property (ser, obj, prop_ser->str);
   g_key_file_unref (key_file);
   g_string_free (prop_ser, TRUE);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -1815,10 +1847,11 @@ ncm_serialize_var_dict_from_yaml (NcmSerialize *ser, const gchar *yaml_obj)
 GObject *
 ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error = NULL;
-  gchar *file   = NULL;
-  gsize length  = 0;
-  GObject *obj  = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  GObject *obj                  = NULL;
 
   g_assert (filename != NULL);
 
@@ -1831,6 +1864,8 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
   obj = ncm_serialize_from_string (ser, file);
 
   g_free (file);
+
+  _ncm_serialize_context_pop (prev_ctx);
 
   return obj;
 }
@@ -1848,8 +1883,9 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
 GObject *
 ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error = NULL;
-  GObject *obj  = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  GObject *obj                  = NULL;
   GMappedFile *mfile;
 
   g_assert (filename != NULL);
@@ -1878,6 +1914,8 @@ ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
 
   g_mapped_file_unref (mfile);
 
+  _ncm_serialize_context_pop (prev_ctx);
+
   return obj;
 }
 
@@ -1894,10 +1932,11 @@ ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
 NcmVarDict *
 ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filename, gboolean binary)
 {
-  GError *error  = NULL;
-  gchar *file    = NULL;
-  gsize length   = 0;
-  NcmVarDict *vd = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  NcmVarDict *vd                = NULL;
 
   g_assert (filename != NULL);
 
@@ -1939,6 +1978,8 @@ ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filena
     g_free (file);
   }
 
+  _ncm_serialize_context_pop (prev_ctx);
+
   return vd;
 }
 
@@ -1954,10 +1995,11 @@ ncm_serialize_var_dict_from_variant_file (NcmSerialize *ser, const gchar *filena
 GObject *
 ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error = NULL;
-  gchar *file   = NULL;
-  gsize length  = 0;
-  GObject *obj  = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  GObject *obj                  = NULL;
 
   g_assert (filename != NULL);
 
@@ -1970,6 +2012,8 @@ ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename)
   obj = ncm_serialize_from_yaml (ser, file);
 
   g_free (file);
+
+  _ncm_serialize_context_pop (prev_ctx);
 
   return obj;
 }
@@ -1987,16 +2031,19 @@ ncm_serialize_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 NcmObjArray *
 ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename)
 {
-  NcmObjArray *oa  = ncm_obj_array_new ();
-  GKeyFile *oafile = g_key_file_new ();
-  GError *error    = NULL;
-  gchar **groups   = NULL;
-  gsize ngroups    = 0;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  NcmObjArray *oa               = ncm_obj_array_new ();
+  GKeyFile *oafile              = g_key_file_new ();
+  GError *error                 = NULL;
+  gchar **groups                = NULL;
+  gsize ngroups                 = 0;
   guint i;
 
   if (!g_key_file_load_from_file (oafile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
   {
     g_error ("ncm_obj_array_load: Invalid GObject array file: %s %s", filename, error->message);
+
+    _ncm_serialize_context_pop (prev_ctx);
 
     return NULL;
   }
@@ -2083,6 +2130,8 @@ ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename)
   g_key_file_unref (oafile);
   g_strfreev (groups);
 
+  _ncm_serialize_context_pop (prev_ctx);
+
   return oa;
 }
 
@@ -2098,10 +2147,11 @@ ncm_serialize_array_from_key_file (NcmSerialize *ser, const gchar *filename)
 NcmObjArray *
 ncm_serialize_array_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error      = NULL;
-  gchar *file        = NULL;
-  gsize length       = 0;
-  NcmObjArray *array = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  NcmObjArray *array            = NULL;
 
   g_assert (filename != NULL);
 
@@ -2114,6 +2164,8 @@ ncm_serialize_array_from_yaml_file (NcmSerialize *ser, const gchar *filename)
   array = ncm_serialize_array_from_yaml (ser, file);
 
   g_free (file);
+
+  _ncm_serialize_context_pop (prev_ctx);
 
   return array;
 }
@@ -2130,10 +2182,11 @@ ncm_serialize_array_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 NcmObjDictStr *
 ncm_serialize_dict_str_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error       = NULL;
-  gchar *file         = NULL;
-  gsize length        = 0;
-  NcmObjDictStr *dict = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  NcmObjDictStr *dict           = NULL;
 
   g_assert (filename != NULL);
 
@@ -2146,6 +2199,8 @@ ncm_serialize_dict_str_from_yaml_file (NcmSerialize *ser, const gchar *filename)
   dict = ncm_serialize_dict_str_from_yaml (ser, file);
 
   g_free (file);
+
+  _ncm_serialize_context_pop (prev_ctx);
 
   return dict;
 }
@@ -2162,10 +2217,11 @@ ncm_serialize_dict_str_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 NcmObjDictInt *
 ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error       = NULL;
-  gchar *file         = NULL;
-  gsize length        = 0;
-  NcmObjDictInt *dict = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  NcmObjDictInt *dict           = NULL;
 
   g_assert (filename != NULL);
 
@@ -2178,6 +2234,8 @@ ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename)
   dict = ncm_serialize_dict_int_from_yaml (ser, file);
 
   g_free (file);
+
+  _ncm_serialize_context_pop (prev_ctx);
 
   return dict;
 }
@@ -2194,10 +2252,11 @@ ncm_serialize_dict_int_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 NcmVarDict *
 ncm_serialize_var_dict_from_yaml_file (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error    = NULL;
-  gchar *file      = NULL;
-  gsize length     = 0;
-  NcmVarDict *dict = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  NcmVarDict *dict              = NULL;
 
   g_assert (filename != NULL);
 
@@ -2210,6 +2269,8 @@ ncm_serialize_var_dict_from_yaml_file (NcmSerialize *ser, const gchar *filename)
   dict = ncm_serialize_var_dict_from_yaml (ser, file);
 
   g_free (file);
+
+  _ncm_serialize_context_pop (prev_ctx);
 
   return dict;
 }
@@ -3005,9 +3066,10 @@ ncm_serialize_dict_str_to_variant (NcmSerialize *ser, NcmObjDictStr *ods)
 void
 ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename)
 {
-  GError *error     = NULL;
-  GVariant *var_ser = ncm_serialize_dict_str_to_variant (ser, ods);
-  gsize length      = g_variant_get_size (var_ser);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  GVariant *var_ser             = ncm_serialize_dict_str_to_variant (ser, ods);
+  gsize length                  = g_variant_get_size (var_ser);
 
   g_assert (filename != NULL);
 
@@ -3016,6 +3078,8 @@ ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const 
              filename, error->message);
 
   g_variant_unref (var_ser);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3031,10 +3095,11 @@ ncm_serialize_dict_str_to_binfile (NcmSerialize *ser, NcmObjDictStr *ods, const 
 NcmObjDictStr *
 ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
 {
-  GError *error      = NULL;
-  gchar *file        = NULL;
-  gsize length       = 0;
-  NcmObjDictStr *ods = NULL;
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *file                   = NULL;
+  gsize length                  = 0;
+  NcmObjDictStr *ods            = NULL;
 
   g_assert (filename != NULL);
 
@@ -3046,6 +3111,8 @@ ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
   {
     /* Empty dictionary case */
     g_free (file);
+
+    _ncm_serialize_context_pop (prev_ctx);
 
     return ncm_obj_dict_str_new ();
   }
@@ -3063,6 +3130,8 @@ ncm_serialize_dict_str_from_binfile (NcmSerialize *ser, const gchar *filename)
 
     g_variant_unref (var_ser);
   }
+
+  _ncm_serialize_context_pop (prev_ctx);
 
   return ods;
 }
@@ -3619,9 +3688,10 @@ ncm_serialize_var_dict_to_yaml (NcmSerialize *ser, NcmVarDict *dict)
 void
 ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
 {
-  GError *error  = NULL;
-  gchar *obj_ser = ncm_serialize_to_string (ser, obj, TRUE);
-  gsize length   = strlen (obj_ser);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *obj_ser                = ncm_serialize_to_string (ser, obj, TRUE);
+  gsize length                  = strlen (obj_ser);
 
   g_assert (filename != NULL);
 
@@ -3630,6 +3700,8 @@ ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
              filename, error->message);
 
   g_free (obj_ser);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3643,9 +3715,10 @@ ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
 void
 ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename)
 {
-  GError *error     = NULL;
-  GVariant *obj_ser = ncm_serialize_to_variant (ser, obj);
-  gsize length      = g_variant_get_size (obj_ser);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  GVariant *obj_ser             = ncm_serialize_to_variant (ser, obj);
+  gsize length                  = g_variant_get_size (obj_ser);
 
   g_assert (filename != NULL);
 
@@ -3654,6 +3727,8 @@ ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename
              filename, error->message);
 
   g_variant_unref (obj_ser);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3668,9 +3743,10 @@ ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename
 void
 ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename, gboolean binary)
 {
-  GError *error = NULL;
-  GVariant *var = ncm_serialize_var_dict_to_variant (ser, vd);
-  gsize length  = g_variant_get_size (var);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  GVariant *var                 = ncm_serialize_var_dict_to_variant (ser, vd);
+  gsize length                  = g_variant_get_size (var);
 
   g_assert (filename != NULL);
 
@@ -3692,6 +3768,8 @@ ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const
   }
 
   g_variant_unref (var);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3705,9 +3783,10 @@ ncm_serialize_var_dict_to_variant_file (NcmSerialize *ser, NcmVarDict *vd, const
 void
 ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
 {
-  GError *error = NULL;
-  gchar *yaml   = ncm_serialize_to_yaml (ser, obj);
-  gsize length  = strlen (yaml);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *yaml                   = ncm_serialize_to_yaml (ser, obj);
+  gsize length                  = strlen (yaml);
 
   g_assert (filename != NULL);
 
@@ -3716,6 +3795,8 @@ ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filena
              filename, error->message);
 
   g_free (yaml);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3732,7 +3813,8 @@ ncm_serialize_to_yaml_file (NcmSerialize *ser, GObject *obj, const gchar *filena
 void
 ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename, gboolean save_comment)
 {
-  GKeyFile *oafile = g_key_file_new ();
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GKeyFile *oafile              = g_key_file_new ();
   guint i;
 
   {
@@ -3825,6 +3907,8 @@ ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar
     g_free (oa_data);
     g_key_file_free (oafile);
   }
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3838,9 +3922,10 @@ ncm_serialize_array_to_key_file (NcmSerialize *ser, NcmObjArray *oa, const gchar
 void
 ncm_serialize_array_to_yaml_file (NcmSerialize *ser, NcmObjArray *oa, const gchar *filename)
 {
-  GError *error = NULL;
-  gchar *yaml   = ncm_serialize_array_to_yaml (ser, oa);
-  gsize length  = strlen (yaml);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *yaml                   = ncm_serialize_array_to_yaml (ser, oa);
+  gsize length                  = strlen (yaml);
 
   g_assert (filename != NULL);
 
@@ -3849,6 +3934,8 @@ ncm_serialize_array_to_yaml_file (NcmSerialize *ser, NcmObjArray *oa, const gcha
              filename, error->message);
 
   g_free (yaml);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3862,9 +3949,10 @@ ncm_serialize_array_to_yaml_file (NcmSerialize *ser, NcmObjArray *oa, const gcha
 void
 ncm_serialize_dict_str_to_yaml_file (NcmSerialize *ser, NcmObjDictStr *ods, const gchar *filename)
 {
-  GError *error = NULL;
-  gchar *yaml   = ncm_serialize_dict_str_to_yaml (ser, ods);
-  gsize length  = strlen (yaml);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *yaml                   = ncm_serialize_dict_str_to_yaml (ser, ods);
+  gsize length                  = strlen (yaml);
 
   g_assert (filename != NULL);
 
@@ -3873,6 +3961,8 @@ ncm_serialize_dict_str_to_yaml_file (NcmSerialize *ser, NcmObjDictStr *ods, cons
              filename, error->message);
 
   g_free (yaml);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3886,9 +3976,10 @@ ncm_serialize_dict_str_to_yaml_file (NcmSerialize *ser, NcmObjDictStr *ods, cons
 void
 ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, const gchar *filename)
 {
-  GError *error = NULL;
-  gchar *yaml   = ncm_serialize_dict_int_to_yaml (ser, odi);
-  gsize length  = strlen (yaml);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *yaml                   = ncm_serialize_dict_int_to_yaml (ser, odi);
+  gsize length                  = strlen (yaml);
 
   g_assert (filename != NULL);
 
@@ -3897,6 +3988,8 @@ ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, cons
              filename, error->message);
 
   g_free (yaml);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -3910,9 +4003,10 @@ ncm_serialize_dict_int_to_yaml_file (NcmSerialize *ser, NcmObjDictInt *odi, cons
 void
 ncm_serialize_var_dict_to_yaml_file (NcmSerialize *ser, NcmVarDict *vd, const gchar *filename)
 {
-  GError *error = NULL;
-  gchar *yaml   = ncm_serialize_var_dict_to_yaml (ser, vd);
-  gsize length  = strlen (yaml);
+  NcmSerializeContext *prev_ctx = _ncm_serialize_context_push (filename);
+  GError *error                 = NULL;
+  gchar *yaml                   = ncm_serialize_var_dict_to_yaml (ser, vd);
+  gsize length                  = strlen (yaml);
 
   g_assert (filename != NULL);
 
@@ -3921,6 +4015,8 @@ ncm_serialize_var_dict_to_yaml_file (NcmSerialize *ser, NcmVarDict *vd, const gc
              filename, error->message);
 
   g_free (yaml);
+
+  _ncm_serialize_context_pop (prev_ctx);
 }
 
 /**
@@ -4543,5 +4639,151 @@ ncm_serialize_global_variant_to_yaml (GVariant *var_obj)
   ncm_serialize_unref (ser);
 
   return ret;
+}
+
+/**
+ * NcmSerializeContext:
+ *
+ * The context in which serialized objects are read or written: for now the absolute
+ * directory of the file that a function of #NcmSerialize reads or writes, against which an
+ * object resolves the relative file names of its properties. A context does not change
+ * once it is current; an object that needs it after its construction takes a reference.
+ */
+
+/* Creates a context with the absolute directory dir, taking dir */
+static NcmSerializeContext *
+_ncm_serialize_context_new (gchar *dir)
+{
+  NcmSerializeContext *ctx = g_new0 (NcmSerializeContext, 1);
+
+  ctx->ref_count = 1;
+  ctx->dir       = dir;
+
+  return ctx;
+}
+
+/**
+ * ncm_serialize_context_ref:
+ * @ctx: a #NcmSerializeContext
+ *
+ * Increases the reference count of @ctx.
+ *
+ * Returns: (transfer full): @ctx.
+ */
+NcmSerializeContext *
+ncm_serialize_context_ref (NcmSerializeContext *ctx)
+{
+  g_atomic_int_inc (&ctx->ref_count);
+
+  return ctx;
+}
+
+/**
+ * ncm_serialize_context_unref:
+ * @ctx: a #NcmSerializeContext
+ *
+ * Decreases the reference count of @ctx and frees it when the count reaches zero.
+ */
+void
+ncm_serialize_context_unref (NcmSerializeContext *ctx)
+{
+  if (g_atomic_int_dec_and_test (&ctx->ref_count))
+  {
+    g_free (ctx->dir);
+    g_free (ctx);
+  }
+}
+
+/**
+ * ncm_serialize_context_clear:
+ * @ctx: a #NcmSerializeContext
+ *
+ * Decreases the reference count of *@ctx when it is not %NULL, and sets *@ctx to %NULL.
+ */
+void
+ncm_serialize_context_clear (NcmSerializeContext **ctx)
+{
+  g_clear_pointer (ctx, ncm_serialize_context_unref);
+}
+
+/**
+ * ncm_serialize_context_peek_dir:
+ * @ctx: a #NcmSerializeContext
+ *
+ * Gets the absolute directory of @ctx: the directory of the file read or written, or the
+ * working directory of ncm_cfg_init() for the base context.
+ *
+ * Returns: (transfer none): the directory.
+ */
+const gchar *
+ncm_serialize_context_peek_dir (NcmSerializeContext *ctx)
+{
+  return ctx->dir;
+}
+
+/**
+ * ncm_serialize_context_peek_current:
+ *
+ * Gets the current context of the calling thread: the context of the file that a function
+ * of #NcmSerialize reads or writes in this thread, or the base context outside such a
+ * function. It stays valid while that function runs, for instance during the construction
+ * of the objects it reads. Calling it before ncm_cfg_init() aborts with an error.
+ *
+ * Returns: (transfer none): the current context.
+ */
+NcmSerializeContext *
+ncm_serialize_context_peek_current (void)
+{
+  NcmSerializeContext *ctx = g_private_get (&_ncm_serialize_context_current);
+
+  if (ctx != NULL)
+    return ctx;
+
+  if (_ncm_serialize_context_base == NULL)
+    g_error ("ncm_serialize_context_peek_current: ncm_cfg_init() was not called.");
+
+  return _ncm_serialize_context_base;
+}
+
+/*
+ * Creates the base context with the working directory of the call. Called once by
+ * ncm_cfg_init(), before any other thread uses NumCosmo.
+ */
+void
+_ncm_serialize_context_init_base (void)
+{
+  if (_ncm_serialize_context_base == NULL)
+    _ncm_serialize_context_base = _ncm_serialize_context_new (g_get_current_dir ());
+}
+
+/*
+ * Makes the context of filename, its absolute directory, current in the calling thread and
+ * returns the context it replaces, NULL outside a file function. Every file function calls
+ * it on entry and gives the returned context to _ncm_serialize_context_pop() on each exit,
+ * so a nested call restores the context of the outer one.
+ */
+static NcmSerializeContext *
+_ncm_serialize_context_push (const gchar *filename)
+{
+  NcmSerializeContext *prev_ctx = g_private_get (&_ncm_serialize_context_current);
+  gchar *dir;
+
+  g_assert (filename != NULL);
+
+  dir = g_path_get_dirname (filename);
+  g_private_set (&_ncm_serialize_context_current, _ncm_serialize_context_new (g_canonicalize_filename (dir, NULL)));
+  g_free (dir);
+
+  return prev_ctx;
+}
+
+/* Frees the current context of the calling thread and makes prev_ctx current again */
+static void
+_ncm_serialize_context_pop (NcmSerializeContext *prev_ctx)
+{
+  NcmSerializeContext *ctx = g_private_get (&_ncm_serialize_context_current);
+
+  g_private_set (&_ncm_serialize_context_current, prev_ctx);
+  ncm_serialize_context_unref (ctx);
 }
 

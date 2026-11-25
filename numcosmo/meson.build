@@ -347,6 +347,7 @@ ncm_headers_internal = files(
     'ncm/algebra/ncm_spectral_polar_private.h',
     'ncm/algebra/ncm_spectral_private.h',
     'ncm/core/ncm_prefetch_private.h',
+    'ncm/core/ncm_serialize_private.h',
     'ncm/core/ncm_vmath_private.h',
     'ncm/data/ncm_data_private.h',
     'ncm/mpi/ncm_mpi_slave.h',

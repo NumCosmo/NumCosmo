@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/core/ncm_serialize_private.h"
 #include "ncm/core/ncm_rng.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/algebra/ncm_complex.h"
@@ -676,6 +677,7 @@ ncm_cfg_init_full_ptr (gint *argc, gchar ***argv)
 
 #endif /* _OPENMP */
 
+  _ncm_serialize_context_init_base ();
   ncm_cfg_register_objects ();
   ncm_cfg_register_functions ();
 

@@ -38,6 +38,12 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcmSerialize, ncm_serialize, NCM, SERIALIZE, GObject)
 
+#define NCM_TYPE_SERIALIZE_CONTEXT (ncm_serialize_context_get_type ())
+
+typedef struct _NcmSerializeContext NcmSerializeContext;
+
+GType ncm_serialize_context_get_type (void) G_GNUC_CONST;
+
 /**
  * NcmSerializeOpt:
  * @NCM_SERIALIZE_OPT_NONE: no option
@@ -72,6 +78,12 @@ void ncm_serialize_reset (NcmSerialize *ser, gboolean autosave_only);
 void ncm_serialize_clear_instances (NcmSerialize *ser, gboolean autosave_only);
 
 void ncm_serialize_log_stats (NcmSerialize *ser);
+
+NcmSerializeContext *ncm_serialize_context_ref (NcmSerializeContext *ctx);
+void ncm_serialize_context_unref (NcmSerializeContext *ctx);
+void ncm_serialize_context_clear (NcmSerializeContext **ctx);
+const gchar *ncm_serialize_context_peek_dir (NcmSerializeContext *ctx);
+NcmSerializeContext *ncm_serialize_context_peek_current (void);
 
 gboolean ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj);
 gboolean ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name);
