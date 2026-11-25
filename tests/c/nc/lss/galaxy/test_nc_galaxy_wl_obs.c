@@ -37,12 +37,19 @@
 #include <glib/gstdio.h>
 #include <string.h>
 
+/* The environment variable that gives the abort tests of shape-interp-file their file */
+#define TEST_NC_GALAXY_WL_OBS_FILE_ENV "NC_GALAXY_WL_OBS_TEST_FILE"
+
 typedef struct _TestNcGalaxyWLObs
 {
   NcGalaxyWLObs *obs;
 } TestNcGalaxyWLObs;
 
 static void _test_nc_galaxy_wl_obs_assert_column_not_found_error (GError **error, const gchar *col);
+static gchar *_test_nc_galaxy_wl_obs_write_shape_interp_file (NcGalaxyWLObs *obs, gchar **dir);
+static gboolean _test_nc_galaxy_wl_obs_ser_has (GVariant *obs_ser, const gchar *name);
+static void _test_nc_galaxy_wl_obs_shape_interp_file_trap (GObject *obj, const gchar *subprocess, const gchar *pattern);
+static void _test_nc_galaxy_wl_obs_shape_interp_file_read (void);
 
 static void test_nc_galaxy_wl_obs_new (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_new_pz (TestNcGalaxyWLObs *test, gconstpointer pdata);
@@ -181,6 +188,95 @@ _test_nc_galaxy_wl_obs_assert_column_not_found_error (GError **error, const gcha
   g_clear_error (error);
   g_assert_null (*error);
   g_free (expected_message);
+}
+
+/* Sets two interpolants and a record on obs and writes it to a new file of a new directory */
+static gchar *
+_test_nc_galaxy_wl_obs_write_shape_interp_file (NcGalaxyWLObs *obs, gchar **dir)
+{
+  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmSpectralTensor *spp_0   = ncm_spectral_tensor_new (2);
+  NcmSpectralTensor *spp_3   = ncm_spectral_tensor_new (2);
+  NcmObjDictStr *source      = ncm_obj_dict_str_new ();
+  NcGalaxyShapePopGauss *pop = nc_galaxy_shape_pop_gauss_new ();
+  GError *error              = NULL;
+  gchar *filename;
+
+  *dir = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", &error);
+  g_assert_no_error (error);
+  filename = g_build_filename (*dir, "catalog.gvar", NULL);
+
+  ncm_obj_dict_str_add (source, "shape-pop", G_OBJECT (pop));
+  nc_galaxy_wl_obs_set (obs, "z", 0, 0.5, NULL);
+  nc_galaxy_wl_obs_set_shape_interp (obs, 0, spp_0);
+  nc_galaxy_wl_obs_set_shape_interp (obs, 3, spp_3);
+  nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
+  ncm_serialize_to_binfile (ser, G_OBJECT (obs), filename);
+
+  nc_galaxy_shape_pop_gauss_free (pop);
+  ncm_obj_dict_str_unref (source);
+  ncm_spectral_tensor_free (spp_0);
+  ncm_spectral_tensor_free (spp_3);
+  ncm_serialize_free (ser);
+
+  return filename;
+}
+
+/* Whether the serialized object obs_ser has the property name */
+static gboolean
+_test_nc_galaxy_wl_obs_ser_has (GVariant *obs_ser, const gchar *name)
+{
+  GVariant *props = g_variant_get_child_value (obs_ser, 1);
+  GVariant *val   = g_variant_lookup_value (props, name, NULL);
+  gboolean has    = (val != NULL);
+
+  g_clear_pointer (&val, g_variant_unref);
+  g_variant_unref (props);
+
+  return has;
+}
+
+/*
+ * Writes obj to a file of a new directory, runs the test subprocess with the name of the
+ * file in TEST_NC_GALAXY_WL_OBS_FILE_ENV, asserts that it aborts with a message that matches
+ * pattern, and removes the file and the directory.
+ */
+static void
+_test_nc_galaxy_wl_obs_shape_interp_file_trap (GObject *obj, const gchar *subprocess, const gchar *pattern)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GError *error     = NULL;
+  gchar *dir        = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", &error);
+  gchar *filename;
+
+  g_assert_no_error (error);
+  filename = g_build_filename (dir, "object.gvar", NULL);
+  ncm_serialize_to_binfile (ser, obj, filename);
+
+  g_setenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV, filename, TRUE);
+  g_test_trap_subprocess (subprocess, 0, 0);
+  g_unsetenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV);
+
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr (pattern);
+
+  g_assert_cmpint (g_remove (filename), ==, 0);
+  g_assert_cmpint (g_rmdir (dir), ==, 0);
+
+  ncm_serialize_free (ser);
+  g_free (filename);
+  g_free (dir);
+}
+
+/* Sets the file of TEST_NC_GALAXY_WL_OBS_FILE_ENV as shape-interp-file and reads an interpolant */
+static void
+_test_nc_galaxy_wl_obs_shape_interp_file_read (void)
+{
+  GStrv col_names    = g_strsplit ("ra dec", " ", -1);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
+
+  g_object_set (obs, "shape-interp-file", g_getenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV), NULL);
+  nc_galaxy_wl_obs_peek_shape_interp (obs, 0);
 }
 
 static void
@@ -637,52 +733,6 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   ncm_serialize_free (ser);
 }
 
-/* Sets two interpolants and a record on obs and writes it to a new file of a new directory */
-static gchar *
-_test_nc_galaxy_wl_obs_write_shape_interp_file (NcGalaxyWLObs *obs, gchar **dir)
-{
-  NcmSerialize *ser          = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcmSpectralTensor *spp_0   = ncm_spectral_tensor_new (2);
-  NcmSpectralTensor *spp_3   = ncm_spectral_tensor_new (2);
-  NcmObjDictStr *source      = ncm_obj_dict_str_new ();
-  NcGalaxyShapePopGauss *pop = nc_galaxy_shape_pop_gauss_new ();
-  GError *error              = NULL;
-  gchar *filename;
-
-  *dir = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", &error);
-  g_assert_no_error (error);
-  filename = g_build_filename (*dir, "catalog.gvar", NULL);
-
-  ncm_obj_dict_str_add (source, "shape-pop", G_OBJECT (pop));
-  nc_galaxy_wl_obs_set (obs, "z", 0, 0.5, NULL);
-  nc_galaxy_wl_obs_set_shape_interp (obs, 0, spp_0);
-  nc_galaxy_wl_obs_set_shape_interp (obs, 3, spp_3);
-  nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
-  ncm_serialize_to_binfile (ser, G_OBJECT (obs), filename);
-
-  nc_galaxy_shape_pop_gauss_free (pop);
-  ncm_obj_dict_str_unref (source);
-  ncm_spectral_tensor_free (spp_0);
-  ncm_spectral_tensor_free (spp_3);
-  ncm_serialize_free (ser);
-
-  return filename;
-}
-
-/* Whether the serialized object obs_ser has the property name */
-static gboolean
-_test_nc_galaxy_wl_obs_ser_has (GVariant *obs_ser, const gchar *name)
-{
-  GVariant *props = g_variant_get_child_value (obs_ser, 1);
-  GVariant *val   = g_variant_lookup_value (props, name, NULL);
-  gboolean has    = (val != NULL);
-
-  g_clear_pointer (&val, g_variant_unref);
-  g_variant_unref (props);
-
-  return has;
-}
-
 /*
  * A catalog read from a file with interpolants serializes the name of the file in place of
  * the interpolants and their record, and its copy reads them from the file.
@@ -907,52 +957,6 @@ test_nc_galaxy_wl_obs_shape_interp_type_subprocess (void)
   g_object_set (obs, "shape-interp", interp, NULL);
   nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
   nc_galaxy_wl_obs_peek_shape_interp (obs, 2);
-}
-
-/* The environment variable that gives the abort tests of shape-interp-file their file */
-#define TEST_NC_GALAXY_WL_OBS_FILE_ENV "NC_GALAXY_WL_OBS_TEST_FILE"
-
-/*
- * Writes obj to a file of a new directory, runs the test subprocess with the name of the
- * file in TEST_NC_GALAXY_WL_OBS_FILE_ENV, asserts that it aborts with a message that matches
- * pattern, and removes the file and the directory.
- */
-static void
-_test_nc_galaxy_wl_obs_shape_interp_file_trap (GObject *obj, const gchar *subprocess, const gchar *pattern)
-{
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  GError *error     = NULL;
-  gchar *dir        = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", &error);
-  gchar *filename;
-
-  g_assert_no_error (error);
-  filename = g_build_filename (dir, "object.gvar", NULL);
-  ncm_serialize_to_binfile (ser, obj, filename);
-
-  g_setenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV, filename, TRUE);
-  g_test_trap_subprocess (subprocess, 0, 0);
-  g_unsetenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV);
-
-  g_test_trap_assert_failed ();
-  g_test_trap_assert_stderr (pattern);
-
-  g_assert_cmpint (g_remove (filename), ==, 0);
-  g_assert_cmpint (g_rmdir (dir), ==, 0);
-
-  ncm_serialize_free (ser);
-  g_free (filename);
-  g_free (dir);
-}
-
-/* Sets the file of TEST_NC_GALAXY_WL_OBS_FILE_ENV as shape-interp-file and reads an interpolant */
-static void
-_test_nc_galaxy_wl_obs_shape_interp_file_read (void)
-{
-  GStrv col_names    = g_strsplit ("ra dec", " ", -1);
-  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
-
-  g_object_set (obs, "shape-interp-file", g_getenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV), NULL);
-  nc_galaxy_wl_obs_peek_shape_interp (obs, 0);
 }
 
 /*
