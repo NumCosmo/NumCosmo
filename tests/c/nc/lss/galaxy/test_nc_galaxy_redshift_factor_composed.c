@@ -32,7 +32,6 @@
 #include <math.h>
 #include <glib.h>
 #include <glib-object.h>
-#include <gsl/gsl_integration.h>
 
 /* The highest order of the moments, and the panels and points of the reference rule */
 #define TEST_MOM_N 32
@@ -221,10 +220,11 @@ static void
 _test_moments_ref (TestNcGalaxyRedshiftFactorComposed *test, const gdouble a, const gdouble b, gdouble *m)
 {
   NcGalaxyRedshiftFactorIntegrand *integ = nc_galaxy_redshift_factor_integ (test->gsdr, test->mset, FALSE);
-  gsl_integration_glfixed_table *glt     = gsl_integration_glfixed_table_alloc (TEST_REF_GL);
   const gdouble h                        = (b - a) / TEST_REF_PANELS;
+  const gdouble *gl_x, *gl_w;
   guint i, j, k;
 
+  ncm_integral_gauss_legendre_rule (TEST_REF_GL, &gl_x, &gl_w);
   nc_galaxy_redshift_factor_integrand_prepare (integ, test->mset);
 
   for (k = 0; k <= TEST_MOM_N; k++)
@@ -234,9 +234,9 @@ _test_moments_ref (TestNcGalaxyRedshiftFactorComposed *test, const gdouble a, co
   {
     for (j = 0; j < TEST_REF_GL; j++)
     {
-      gdouble zq, wq;
+      const gdouble zq = a + (i + 0.5) * h + 0.5 * h * gl_x[j];
+      const gdouble wq = 0.5 * h * gl_w[j];
 
-      gsl_integration_glfixed_point (a + i * h, a + (i + 1) * h, j, &zq, &wq, glt);
       {
         const gdouble t  = GSL_MAX (-1.0, GSL_MIN (1.0, (2.0 * zq - (a + b)) / (b - a)));
         const gdouble pw = wq * nc_galaxy_redshift_factor_integrand_eval (integ, zq, test->data);
@@ -247,7 +247,6 @@ _test_moments_ref (TestNcGalaxyRedshiftFactorComposed *test, const gdouble a, co
     }
   }
 
-  gsl_integration_glfixed_table_free (glt);
   nc_galaxy_redshift_factor_integrand_free (integ);
 }
 

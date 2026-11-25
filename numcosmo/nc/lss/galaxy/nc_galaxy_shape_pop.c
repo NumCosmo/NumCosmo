@@ -66,6 +66,7 @@
 #include "build_cfg.h"
 
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -204,7 +205,7 @@ _nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *dat
   }
   else
   {
-    gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (n_nodes);
+    const gdouble *gl_x, *gl_w;
     gdouble weight[NC_GALAXY_SHAPE_POP_MOMENT_2K_DEFAULT_NNODES];
     GArray *r_arr  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), n_nodes);
     GArray *p_arr  = NULL;
@@ -216,8 +217,13 @@ _nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *dat
     {
       gdouble * const r_data = (gdouble *) r_arr->data;
 
+      ncm_integral_gauss_legendre_rule (n_nodes, &gl_x, &gl_w);
+
       for (i = 0; i < n_nodes; i++)
-        gsl_integration_glfixed_point (0.0, 1.0, i, &r_data[i], &weight[i], table);
+      {
+        r_data[i] = 0.5 + 0.5 * gl_x[i];
+        weight[i] = 0.5 * gl_w[i];
+      }
     }
 
     nc_galaxy_shape_pop_eval_p_array (gsp, data, r_arr, &p_arr);
@@ -232,7 +238,6 @@ _nc_galaxy_shape_pop_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *dat
 
     g_array_unref (r_arr);
     g_array_unref (p_arr);
-    gsl_integration_glfixed_table_free (table);
 
     return moment;
   }

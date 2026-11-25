@@ -54,6 +54,7 @@
 #include "ncm/spline/ncm_spline_bspline.h"
 #include "ncm/algebra/ncm_spectral_panels.h"
 #include "ncm/algebra/ncm_spectral_panels_builder.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -90,9 +91,6 @@ enum
  */
 #define NC_GALAXY_PZ_BSPLINE_SQRT_PANEL_LEVEL (3)
 #define NC_GALAXY_PZ_BSPLINE_SQRT_PANEL_TOL (1.0e-13)
-
-/* The Gauss-Legendre rule, allocated once in class_init */
-static gsl_integration_glfixed_table *_nc_galaxy_pz_bspline_sqrt_gl = NULL;
 
 static void
 nc_galaxy_pz_bspline_sqrt_init (NcGalaxyPzBSplineSqrt *gpzs)
@@ -242,8 +240,6 @@ nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
   gpz_class->get_norm     = &_nc_galaxy_pz_bspline_sqrt_get_norm;
   gpz_class->gen          = &_nc_galaxy_pz_bspline_sqrt_gen;
   gpz_class->cheb_moments = &_nc_galaxy_pz_bspline_sqrt_cheb_moments;
-
-  _nc_galaxy_pz_bspline_sqrt_gl = gsl_integration_glfixed_table_alloc (NC_GALAXY_PZ_BSPLINE_SQRT_GL_N);
 }
 
 /*
@@ -253,18 +249,19 @@ nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
 static gdouble
 _nc_galaxy_pz_bspline_sqrt_s2_integ (NcGalaxyPzBSplineSqrt *gpzs, const gdouble a, const gdouble b)
 {
-  const gsl_integration_glfixed_table *gl = _nc_galaxy_pz_bspline_sqrt_gl;
-  const gdouble c                         = 0.5 * (a + b);
-  const gdouble h                         = 0.5 * (b - a);
-  gdouble res                             = 0.0;
+  const gdouble c = 0.5 * (a + b);
+  const gdouble h = 0.5 * (b - a);
+  gdouble res     = 0.0;
+  const gdouble *gl_x, *gl_w;
   guint j;
 
-  for (j = 0; j < NC_GALAXY_PZ_BSPLINE_SQRT_GL_N / 2; j++)
-  {
-    const gdouble s_m = ncm_bspline_eval (gpzs->s, c - h * gl->x[j]);
-    const gdouble s_p = ncm_bspline_eval (gpzs->s, c + h * gl->x[j]);
+  ncm_integral_gauss_legendre_rule (NC_GALAXY_PZ_BSPLINE_SQRT_GL_N, &gl_x, &gl_w);
 
-    res += gl->w[j] * (s_m * s_m + s_p * s_p);
+  for (j = 0; j < NC_GALAXY_PZ_BSPLINE_SQRT_GL_N; j++)
+  {
+    const gdouble s_z = ncm_bspline_eval (gpzs->s, c + h * gl_x[j]);
+
+    res += gl_w[j] * s_z * s_z;
   }
 
   return h * res;

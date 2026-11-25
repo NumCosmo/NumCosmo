@@ -57,6 +57,7 @@
 #include "ncm/spline/ncm_spline_bspline.h"
 #include "ncm/spline/ncm_bspline_private.h"
 #include "ncm/core/ncm_cfg.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_bspline.h>
@@ -75,7 +76,6 @@ struct _NcmSplineBSpline
   gsl_vector *c;            /* control points */
   gsl_matrix *XB;           /* banded collocation matrix, reused across prepares */
   gsl_vector_uint *piv;
-  gsl_integration_glfixed_table *gl; /* exact for the edge polynomials, see _integ */
   guint order;
   gsize alloc_len; /* length the workspace was allocated for */
   gdouble reltol;  /* > 0 selects the order automatically */
@@ -103,7 +103,6 @@ ncm_spline_bspline_init (NcmSplineBSpline *sbs)
   sbs->c            = NULL;
   sbs->XB           = NULL;
   sbs->piv          = NULL;
-  sbs->gl           = NULL;
   sbs->order        = 0;
   sbs->alloc_len    = 0;
   sbs->reltol       = 0.0;
@@ -122,7 +121,6 @@ _ncm_spline_bspline_free_workspace (NcmSplineBSpline *sbs)
   g_clear_pointer (&sbs->c, gsl_vector_free);
   g_clear_pointer (&sbs->XB, gsl_matrix_free);
   g_clear_pointer (&sbs->piv, gsl_vector_uint_free);
-  g_clear_pointer (&sbs->gl, gsl_integration_glfixed_table_free);
   sbs->alloc_len = 0;
 }
 
@@ -303,7 +301,6 @@ _ncm_spline_bspline_reset (NcmSpline *s)
   g_array_set_size (sbs->knots, s_len + sbs->order);
   sbs->XB  = gsl_matrix_alloc (s_len, 3 * (sbs->order - 1) + 1);
   sbs->piv = gsl_vector_uint_alloc (s_len);
-  sbs->gl  = gsl_integration_glfixed_table_alloc ((sbs->order + 1) / 2);
 
   sbs->alloc_len = s_len;
 }
@@ -546,16 +543,15 @@ static gdouble
 _ncm_spline_bspline_integ_extrap (const NcmSpline *s, const gdouble a, const gdouble b)
 {
   NcmSplineBSpline *sbs = NCM_SPLINE_BSPLINE ((NcmSpline *) s);
+  const guint n         = (sbs->order + 1) / 2;
   gdouble res           = 0.0;
-  gsize i;
+  const gdouble *gl_x, *gl_w;
+  guint i;
 
-  for (i = 0; i < sbs->gl->n; i++)
-  {
-    gdouble xi, wi;
+  ncm_integral_gauss_legendre_rule (n, &gl_x, &gl_w);
 
-    gsl_integration_glfixed_point (a, b, i, &xi, &wi, sbs->gl);
-    res += wi * _ncm_spline_bspline_eval (s, xi);
-  }
+  for (i = 0; i < n; i++)
+    res += 0.5 * (b - a) * gl_w[i] * _ncm_spline_bspline_eval (s, 0.5 * (a + b) + 0.5 * (b - a) * gl_x[i]);
 
   return res;
 }

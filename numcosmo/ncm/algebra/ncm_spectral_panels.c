@@ -47,12 +47,12 @@
 
 #include "ncm/algebra/ncm_spectral_panels.h"
 #include "ncm/core/ncm_memory_pool.h"
+#include "ncm/integration/ncm_integrate.h"
 #include <math.h>
 #include <float.h>
 #include <string.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <gsl/gsl_integration.h>
 #include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -627,7 +627,6 @@ _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
 void
 ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble a, gdouble b, guint n, GArray **moments)
 {
-  gsl_integration_fixed_workspace *glw;
   const gdouble *glx, *glwt;
   gdouble x_lo, x_hi;
   guint q;
@@ -662,14 +661,8 @@ ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble
     N_max = GSL_MAX (N_max, N);
   }
 
-  /*
-   * The rule of gsl_integration_fixed_legendre: gsl_integration_glfixed_table_alloc()
-   * computes the rules it has no table for with errors near 1e-11 from about 48 points.
-   */
-  q    = (2 * N_max + n) / 2;
-  glw  = gsl_integration_fixed_alloc (gsl_integration_fixed_legendre, q, -1.0, 1.0, 0.0, 0.0);
-  glx  = gsl_integration_fixed_nodes (glw);
-  glwt = gsl_integration_fixed_weights (glw);
+  q = (2 * N_max + n) / 2;
+  ncm_integral_gauss_legendre_rule (q, &glx, &glwt);
 
   for (i = ncm_spectral_panels_find_panel (sp, a); i < sp->n_panels; i++)
   {
@@ -715,8 +708,6 @@ ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble
       }
     }
   }
-
-  gsl_integration_fixed_free (glw);
 }
 
 /**

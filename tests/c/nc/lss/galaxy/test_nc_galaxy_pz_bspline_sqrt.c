@@ -33,7 +33,6 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gsl/gsl_sf_erf.h>
-#include <gsl/gsl_integration.h>
 
 /*
  * The table of the tests: a Gaussian of mean TEST_PZ_MU and standard deviation
@@ -222,17 +221,19 @@ _test_pz_poly (const gdouble z)
 static void
 _test_pz_poly_moments (const gdouble a, const gdouble b, const guint n, gdouble *m)
 {
-  gsl_integration_glfixed_table *glt = gsl_integration_glfixed_table_alloc (TEST_PZ_POLY_GL);
+  const gdouble *gl_x, *gl_w;
   guint i, k;
+
+  ncm_integral_gauss_legendre_rule (TEST_PZ_POLY_GL, &gl_x, &gl_w);
 
   for (k = 0; k <= n; k++)
     m[k] = 0.0;
 
   for (i = 0; i < TEST_PZ_POLY_GL; i++)
   {
-    gdouble zq, wq;
+    const gdouble zq = 0.5 * (a + b) + 0.5 * (b - a) * gl_x[i];
+    const gdouble wq = 0.5 * (b - a) * gl_w[i];
 
-    gsl_integration_glfixed_point (a, b, i, &zq, &wq, glt);
     {
       const gdouble t  = (2.0 * zq - (a + b)) / (b - a);
       const gdouble pw = wq * gsl_pow_2 (_test_pz_poly (zq));
@@ -241,8 +242,6 @@ _test_pz_poly_moments (const gdouble a, const gdouble b, const guint n, gdouble 
         m[k] += pw * cos (k * acos (GSL_MAX (-1.0, GSL_MIN (1.0, t))));
     }
   }
-
-  gsl_integration_glfixed_table_free (glt);
 }
 
 /* The n redshifts from TEST_PZ_Z0 in steps of TEST_PZ_DZ, and scale times the Gaussian at them */

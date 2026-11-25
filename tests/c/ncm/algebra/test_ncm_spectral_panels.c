@@ -32,7 +32,6 @@
 #include <string.h>
 #include <glib.h>
 #include <glib-object.h>
-#include <gsl/gsl_integration.h>
 
 /* Three panels with a different number of coefficients each */
 #define TEST_N_PANELS 3
@@ -773,8 +772,10 @@ test_ncm_spectral_panels_sum_rows_truncate (void)
 static void
 _square_moments_ref (guint r, gdouble a, gdouble b, guint n, gdouble *m)
 {
-  gsl_integration_glfixed_table *glt = gsl_integration_glfixed_table_alloc (40);
+  const gdouble *gl_x, *gl_w;
   guint i, j, k;
+
+  ncm_integral_gauss_legendre_rule (40, &gl_x, &gl_w);
 
   for (k = 0; k <= n; k++)
     m[k] = 0.0;
@@ -789,9 +790,9 @@ _square_moments_ref (guint r, gdouble a, gdouble b, guint n, gdouble *m)
 
     for (j = 0; j < 40; j++)
     {
-      gdouble zq, wq;
+      const gdouble zq = 0.5 * (z0 + z1) + 0.5 * (z1 - z0) * gl_x[j];
+      const gdouble wq = 0.5 * (z1 - z0) * gl_w[j];
 
-      gsl_integration_glfixed_point (z0, z1, j, &zq, &wq, glt);
       {
         const gdouble t = GSL_MAX (-1.0, GSL_MIN (1.0, (2.0 * zq - (a + b)) / (b - a)));
         const gdouble f = _exact (r, i, zq);
@@ -801,8 +802,6 @@ _square_moments_ref (guint r, gdouble a, gdouble b, guint n, gdouble *m)
       }
     }
   }
-
-  gsl_integration_glfixed_table_free (glt);
 }
 
 /*
