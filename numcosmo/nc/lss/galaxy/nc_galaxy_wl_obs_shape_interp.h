@@ -40,6 +40,7 @@ G_DECLARE_FINAL_TYPE (NcGalaxyWLObsShapeInterp, nc_galaxy_wl_obs_shape_interp, N
 
 NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_new (void);
 NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_new_from_file (const gchar *filename, const gchar *data_hash, NcmObjDictStr *source);
+NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_create_empty (const gchar *filename);
 NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_ref (NcGalaxyWLObsShapeInterp *si);
 void nc_galaxy_wl_obs_shape_interp_free (NcGalaxyWLObsShapeInterp *si);
 void nc_galaxy_wl_obs_shape_interp_clear (NcGalaxyWLObsShapeInterp **si);
@@ -51,6 +52,8 @@ NcmObjDictStr *nc_galaxy_wl_obs_shape_interp_peek_source (NcGalaxyWLObsShapeInte
 void nc_galaxy_wl_obs_shape_interp_set_data_hash (NcGalaxyWLObsShapeInterp *si, const gchar *data_hash);
 const gchar *nc_galaxy_wl_obs_shape_interp_peek_data_hash (NcGalaxyWLObsShapeInterp *si);
 const gchar *nc_galaxy_wl_obs_shape_interp_peek_filename (NcGalaxyWLObsShapeInterp *si);
+
+void nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si);
 
 G_END_DECLS
 

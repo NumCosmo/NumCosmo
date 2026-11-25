@@ -56,13 +56,19 @@ static void test_nc_galaxy_wl_obs_shape_interp_free (TestNcGalaxyWLObsShapeInter
 static void test_nc_galaxy_wl_obs_shape_interp_memory (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_shape_interp_file (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_shape_interp_lazy (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_shape_interp_write (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_shape_interp_traps (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_shape_interp_write_traps (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_shape_interp_other_dir_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_hash_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_type_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_refers_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_both_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_no_hash_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_writing_peek_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_writing_serialize_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_close_no_hash_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_close_not_writing_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -83,9 +89,17 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_wl_obs_shape_interp_new,
               &test_nc_galaxy_wl_obs_shape_interp_lazy,
               &test_nc_galaxy_wl_obs_shape_interp_free);
+  g_test_add ("/nc/galaxy_wl_obs_shape_interp/write", TestNcGalaxyWLObsShapeInterp, NULL,
+              &test_nc_galaxy_wl_obs_shape_interp_new,
+              &test_nc_galaxy_wl_obs_shape_interp_write,
+              &test_nc_galaxy_wl_obs_shape_interp_free);
   g_test_add ("/nc/galaxy_wl_obs_shape_interp/traps", TestNcGalaxyWLObsShapeInterp, NULL,
               &test_nc_galaxy_wl_obs_shape_interp_new,
               &test_nc_galaxy_wl_obs_shape_interp_traps,
+              &test_nc_galaxy_wl_obs_shape_interp_free);
+  g_test_add ("/nc/galaxy_wl_obs_shape_interp/write_traps", TestNcGalaxyWLObsShapeInterp, NULL,
+              &test_nc_galaxy_wl_obs_shape_interp_new,
+              &test_nc_galaxy_wl_obs_shape_interp_write_traps,
               &test_nc_galaxy_wl_obs_shape_interp_free);
   g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/other_dir/subprocess", &test_nc_galaxy_wl_obs_shape_interp_other_dir_subprocess);
   g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/hash/subprocess", &test_nc_galaxy_wl_obs_shape_interp_hash_subprocess);
@@ -93,6 +107,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/refers/subprocess", &test_nc_galaxy_wl_obs_shape_interp_refers_subprocess);
   g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/both/subprocess", &test_nc_galaxy_wl_obs_shape_interp_both_subprocess);
   g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/no_hash/subprocess", &test_nc_galaxy_wl_obs_shape_interp_no_hash_subprocess);
+  g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/writing_peek/subprocess", &test_nc_galaxy_wl_obs_shape_interp_writing_peek_subprocess);
+  g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/writing_serialize/subprocess", &test_nc_galaxy_wl_obs_shape_interp_writing_serialize_subprocess);
+  g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/close_no_hash/subprocess", &test_nc_galaxy_wl_obs_shape_interp_close_no_hash_subprocess);
+  g_test_add_func ("/nc/galaxy_wl_obs_shape_interp/close_not_writing/subprocess", &test_nc_galaxy_wl_obs_shape_interp_close_not_writing_subprocess);
 
   g_test_run ();
 
@@ -289,6 +307,80 @@ test_nc_galaxy_wl_obs_shape_interp_lazy (TestNcGalaxyWLObsShapeInterp *test, gco
 }
 
 /*
+ * Written through create_empty: the records file exists until close; the last interpolant
+ * of a row set twice is written; after close the records file is gone and the object is
+ * backed by the file, which another object reads with the same interpolants, record and
+ * data hash. An object freed before close removes its records file and writes nothing.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_write (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata)
+{
+  gchar *written_name          = g_build_filename (test->dir, "written.gvar", NULL);
+  gchar *records_name          = g_strconcat (written_name, ".records", NULL);
+  gchar *unclosed_name         = g_build_filename (test->dir, "unclosed.gvar", NULL);
+  gchar *unclosed_records      = g_strconcat (unclosed_name, ".records", NULL);
+  NcmSpectralTensor *spp_1     = ncm_spectral_tensor_new (1);
+  NcmSpectralTensor *spp_2     = ncm_spectral_tensor_new (2);
+  NcmSpectralTensor *spp_3     = ncm_spectral_tensor_new (3);
+  NcGalaxyWLObsShapeInterp *si = nc_galaxy_wl_obs_shape_interp_create_empty (written_name);
+  NcGalaxyWLObsShapeInterp *reader;
+
+  g_assert_true (g_file_test (records_name, G_FILE_TEST_EXISTS));
+  g_assert_cmpstr (nc_galaxy_wl_obs_shape_interp_peek_filename (si), ==, written_name);
+
+  nc_galaxy_wl_obs_shape_interp_set_interp (si, 3, spp_1);
+  nc_galaxy_wl_obs_shape_interp_set_interp (si, 0, spp_2);
+  nc_galaxy_wl_obs_shape_interp_set_interp (si, 3, spp_3);
+  nc_galaxy_wl_obs_shape_interp_set_source (si, test->source);
+  nc_galaxy_wl_obs_shape_interp_set_data_hash (si, TEST_SHAPE_INTERP_HASH);
+  nc_galaxy_wl_obs_shape_interp_close (si);
+
+  g_assert_false (g_file_test (records_name, G_FILE_TEST_EXISTS));
+  g_assert_cmpstr (nc_galaxy_wl_obs_shape_interp_peek_filename (si), ==, written_name);
+  g_assert_cmpuint (ncm_spectral_tensor_get_n_vars (nc_galaxy_wl_obs_shape_interp_peek_interp (si, 3)), ==, 3);
+  g_assert_cmpuint (ncm_spectral_tensor_get_n_vars (nc_galaxy_wl_obs_shape_interp_peek_interp (si, 0)), ==, 2);
+  g_assert_null (nc_galaxy_wl_obs_shape_interp_peek_interp (si, 1));
+
+  reader = nc_galaxy_wl_obs_shape_interp_new_from_file (written_name, TEST_SHAPE_INTERP_HASH, NULL);
+  g_assert_cmpuint (ncm_spectral_tensor_get_n_vars (nc_galaxy_wl_obs_shape_interp_peek_interp (reader, 3)), ==, 3);
+  g_assert_cmpuint (ncm_spectral_tensor_get_n_vars (nc_galaxy_wl_obs_shape_interp_peek_interp (reader, 0)), ==, 2);
+  nc_galaxy_wl_obs_shape_interp_free (reader);
+
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    GObject *obj      = ncm_serialize_from_binfile (ser, written_name);
+
+    g_assert_true (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (obj));
+    g_assert_cmpstr (nc_galaxy_wl_obs_shape_interp_peek_data_hash (NC_GALAXY_WL_OBS_SHAPE_INTERP (obj)), ==, TEST_SHAPE_INTERP_HASH);
+    g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (ncm_obj_dict_str_peek (nc_galaxy_wl_obs_shape_interp_peek_source (NC_GALAXY_WL_OBS_SHAPE_INTERP (obj)), "shape-pop")));
+    g_object_unref (obj);
+    ncm_serialize_free (ser);
+  }
+
+  /* Freed before close: nothing written */
+  {
+    NcGalaxyWLObsShapeInterp *unclosed = nc_galaxy_wl_obs_shape_interp_create_empty (unclosed_name);
+
+    nc_galaxy_wl_obs_shape_interp_set_interp (unclosed, 0, spp_1);
+    g_assert_true (g_file_test (unclosed_records, G_FILE_TEST_EXISTS));
+    nc_galaxy_wl_obs_shape_interp_free (unclosed);
+    g_assert_false (g_file_test (unclosed_records, G_FILE_TEST_EXISTS));
+    g_assert_false (g_file_test (unclosed_name, G_FILE_TEST_EXISTS));
+  }
+
+  g_assert_cmpint (g_remove (written_name), ==, 0);
+
+  nc_galaxy_wl_obs_shape_interp_free (si);
+  ncm_spectral_tensor_free (spp_1);
+  ncm_spectral_tensor_free (spp_2);
+  ncm_spectral_tensor_free (spp_3);
+  g_free (unclosed_records);
+  g_free (unclosed_name);
+  g_free (records_name);
+  g_free (written_name);
+}
+
+/*
  * Each of these aborts with a message that names the cause: writing an object backed by a
  * file into a file of another directory; reading a file of another data hash, of another
  * type of object, or that refers to another file; constructing an object with both a file
@@ -343,6 +435,33 @@ test_nc_galaxy_wl_obs_shape_interp_traps (TestNcGalaxyWLObsShapeInterp *test, gc
   g_free (other_dir);
 }
 
+/*
+ * Each of these aborts with a message that names the cause: reading an interpolant or
+ * serializing an object being written; closing one without a data hash; closing an object
+ * that is not being written. The parent removes the records file each subprocess leaves.
+ */
+static void
+test_nc_galaxy_wl_obs_shape_interp_write_traps (TestNcGalaxyWLObsShapeInterp *test, gconstpointer pdata)
+{
+  gchar *writing_name = g_build_filename (test->dir, "writing.gvar", NULL);
+  gchar *records_name = g_strconcat (writing_name, ".records", NULL);
+
+  _test_nc_galaxy_wl_obs_shape_interp_trap (writing_name, NULL, "/nc/galaxy_wl_obs_shape_interp/writing_peek/subprocess",
+                                            "*the file *writing.gvar is being written*");
+  g_assert_cmpint (g_remove (records_name), ==, 0);
+  _test_nc_galaxy_wl_obs_shape_interp_trap (writing_name, NULL, "/nc/galaxy_wl_obs_shape_interp/writing_serialize/subprocess",
+                                            "*the file *writing.gvar is being written*");
+  g_assert_cmpint (g_remove (records_name), ==, 0);
+  _test_nc_galaxy_wl_obs_shape_interp_trap (writing_name, NULL, "/nc/galaxy_wl_obs_shape_interp/close_no_hash/subprocess",
+                                            "*the object writing *writing.gvar has no data hash*");
+  g_assert_cmpint (g_remove (records_name), ==, 0);
+  _test_nc_galaxy_wl_obs_shape_interp_trap (writing_name, NULL, "/nc/galaxy_wl_obs_shape_interp/close_not_writing/subprocess",
+                                            "*the object is not being written*");
+
+  g_free (records_name);
+  g_free (writing_name);
+}
+
 static void
 test_nc_galaxy_wl_obs_shape_interp_other_dir_subprocess (void)
 {
@@ -392,5 +511,39 @@ static void
 test_nc_galaxy_wl_obs_shape_interp_no_hash_subprocess (void)
 {
   g_object_new (NC_TYPE_GALAXY_WL_OBS_SHAPE_INTERP, "filename", g_getenv (TEST_SHAPE_INTERP_FILE_ENV), NULL);
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_writing_peek_subprocess (void)
+{
+  NcGalaxyWLObsShapeInterp *si = nc_galaxy_wl_obs_shape_interp_create_empty (g_getenv (TEST_SHAPE_INTERP_FILE_ENV));
+
+  nc_galaxy_wl_obs_shape_interp_peek_interp (si, 0);
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_writing_serialize_subprocess (void)
+{
+  NcmSerialize *ser            = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcGalaxyWLObsShapeInterp *si = nc_galaxy_wl_obs_shape_interp_create_empty (g_getenv (TEST_SHAPE_INTERP_FILE_ENV));
+
+  nc_galaxy_wl_obs_shape_interp_set_data_hash (si, TEST_SHAPE_INTERP_HASH);
+  ncm_serialize_to_variant (ser, G_OBJECT (si));
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_close_no_hash_subprocess (void)
+{
+  NcGalaxyWLObsShapeInterp *si = nc_galaxy_wl_obs_shape_interp_create_empty (g_getenv (TEST_SHAPE_INTERP_FILE_ENV));
+
+  nc_galaxy_wl_obs_shape_interp_close (si);
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_close_not_writing_subprocess (void)
+{
+  NcGalaxyWLObsShapeInterp *si = nc_galaxy_wl_obs_shape_interp_new ();
+
+  nc_galaxy_wl_obs_shape_interp_close (si);
 }
 
