@@ -63,6 +63,7 @@
 
 #include "nc/lss/galaxy/nc_galaxy_wl_obs_shape_interp.h"
 #include "ncm/core/ncm_serialize.h"
+#include "ncm/core/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <errno.h>
@@ -73,6 +74,10 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #endif /* NUMCOSMO_GIR_SCAN */
+
+/* *INDENT-OFF* */
+G_DEFINE_QUARK (nc-galaxy-wl-obs-shape-interp-error, nc_galaxy_wl_obs_shape_interp_error)
+/* *INDENT-ON* */
 
 struct _NcGalaxyWLObsShapeInterp
 {
@@ -343,44 +348,97 @@ _nc_galaxy_wl_obs_shape_interp_written_name (NcGalaxyWLObsShapeInterp *si)
 
 /*
  * Reads the interpolants from the file of si, once: the file must hold an object of this
- * type in memory with the data hash of si.
+ * type in memory with the data hash of si. An object in memory has nothing to read.
  */
 static void
-_nc_galaxy_wl_obs_shape_interp_load (NcGalaxyWLObsShapeInterp *si)
+_nc_galaxy_wl_obs_shape_interp_load (NcGalaxyWLObsShapeInterp *si, GError **error)
 {
   if ((si->filename == NULL) || g_atomic_int_get (&si->loaded))
     return;
 
   if (si->records != NULL)
-    g_error ("nc_galaxy_wl_obs_shape_interp: the file %s is being written; "
-             "nc_galaxy_wl_obs_shape_interp_close() must run first.", si->filename);
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE,
+                                "the file %s is being written; nc_galaxy_wl_obs_shape_interp_close() must run first.",
+                                si->filename);
+
+    return;
+  }
 
   g_mutex_lock (&si->lock);
 
   if (!g_atomic_int_get (&si->loaded))
   {
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
-    GObject *obj      = ncm_serialize_from_binfile (ser, si->filename);
+    GError *local_error = NULL;
+    GMappedFile *mfile  = g_mapped_file_new (si->filename, FALSE, &local_error);
     NcGalaxyWLObsShapeInterp *file_si;
+    NcmSerialize *ser;
+    GObject *obj;
+
+    /* Mapped first: NcmSerialize aborts on a file it cannot open */
+    if (mfile == NULL)
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                  "cannot read %s: %s.", si->filename, local_error->message);
+      g_error_free (local_error);
+      g_mutex_unlock (&si->lock);
+
+      return;
+    }
+
+    if (g_mapped_file_get_length (mfile) == 0)
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT,
+                                  "the file %s is empty.", si->filename);
+      g_mapped_file_unref (mfile);
+      g_mutex_unlock (&si->lock);
+
+      return;
+    }
+
+    g_mapped_file_unref (mfile);
+
+    ser = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+    obj = ncm_serialize_from_binfile (ser, si->filename);
+    ncm_serialize_free (ser);
 
     if (!NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (obj))
-      g_error ("nc_galaxy_wl_obs_shape_interp: the file %s holds a %s, not a NcGalaxyWLObsShapeInterp.",
-               si->filename, G_OBJECT_TYPE_NAME (obj));
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT,
+                                  "the file %s holds a %s, not a NcGalaxyWLObsShapeInterp.",
+                                  si->filename, G_OBJECT_TYPE_NAME (obj));
+      g_object_unref (obj);
+      g_mutex_unlock (&si->lock);
+
+      return;
+    }
 
     file_si = NC_GALAXY_WL_OBS_SHAPE_INTERP (obj);
 
     if (file_si->filename != NULL)
-      g_error ("nc_galaxy_wl_obs_shape_interp: the file %s refers to the file %s instead of holding the interpolants.",
-               si->filename, file_si->filename);
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT,
+                                  "the file %s refers to the file %s instead of holding the interpolants.",
+                                  si->filename, file_si->filename);
+      nc_galaxy_wl_obs_shape_interp_free (file_si);
+      g_mutex_unlock (&si->lock);
+
+      return;
+    }
 
     if (g_strcmp0 (file_si->data_hash, si->data_hash) != 0)
-      g_error ("nc_galaxy_wl_obs_shape_interp: the file %s holds the interpolants of the data hash %s, not %s.",
-               si->filename, file_si->data_hash, si->data_hash);
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_DATA_HASH,
+                                  "the file %s holds the interpolants of the data hash %s, not %s.",
+                                  si->filename, file_si->data_hash, si->data_hash);
+      nc_galaxy_wl_obs_shape_interp_free (file_si);
+      g_mutex_unlock (&si->lock);
+
+      return;
+    }
 
     si->interp = ncm_obj_dict_int_ref (file_si->interp);
-
     nc_galaxy_wl_obs_shape_interp_free (file_si);
-    ncm_serialize_free (ser);
 
     g_atomic_int_set (&si->loaded, TRUE);
   }
@@ -393,12 +451,13 @@ _nc_galaxy_wl_obs_shape_interp_load (NcGalaxyWLObsShapeInterp *si)
  * being written stays in that state.
  */
 static void
-_nc_galaxy_wl_obs_shape_interp_to_memory (NcGalaxyWLObsShapeInterp *si)
+_nc_galaxy_wl_obs_shape_interp_to_memory (NcGalaxyWLObsShapeInterp *si, GError **error)
 {
   if (si->records != NULL)
     return;
 
-  _nc_galaxy_wl_obs_shape_interp_load (si);
+  _nc_galaxy_wl_obs_shape_interp_load (si, error);
+  NCM_UTIL_ON_ERROR_RETURN (error, , );
 
   g_mutex_lock (&si->lock);
   g_clear_pointer (&si->filename, g_free);
@@ -422,7 +481,7 @@ nc_galaxy_wl_obs_shape_interp_new (void)
  * nc_galaxy_wl_obs_shape_interp_new_from_file:
  * @filename: the file that holds the interpolants
  * @data_hash: the data hash of the rows they describe
- * @source: the record of what built them
+ * @source: (nullable): the record of what built them
  *
  * Creates an object backed by the file @filename, the binary serialization of a
  * #NcGalaxyWLObsShapeInterp in memory with the data hash @data_hash. The file is read at
@@ -434,6 +493,9 @@ nc_galaxy_wl_obs_shape_interp_new (void)
 NcGalaxyWLObsShapeInterp *
 nc_galaxy_wl_obs_shape_interp_new_from_file (const gchar *filename, const gchar *data_hash, NcmObjDictStr *source)
 {
+  g_return_val_if_fail (filename != NULL, NULL);
+  g_return_val_if_fail (data_hash != NULL, NULL);
+
   return g_object_new (NC_TYPE_GALAXY_WL_OBS_SHAPE_INTERP,
                        "filename", filename,
                        "data-hash", data_hash,
@@ -444,6 +506,7 @@ nc_galaxy_wl_obs_shape_interp_new_from_file (const gchar *filename, const gchar 
 /**
  * nc_galaxy_wl_obs_shape_interp_create_empty:
  * @filename: the file to write
+ * @error: a #GError
  *
  * Creates an object that writes its interpolants to @filename, for interpolants that should
  * not be held in memory together. Each nc_galaxy_wl_obs_shape_interp_set_interp() appends
@@ -453,26 +516,44 @@ nc_galaxy_wl_obs_shape_interp_new_from_file (const gchar *filename, const gchar 
  * nc_galaxy_wl_obs_shape_interp_set_source() and
  * nc_galaxy_wl_obs_shape_interp_set_data_hash(), and
  * nc_galaxy_wl_obs_shape_interp_close() writes @filename. Until then, reading an
- * interpolant or serializing the object aborts with an error. An object freed before
- * nc_galaxy_wl_obs_shape_interp_close() removes the temporary file and writes nothing. A
- * relative @filename is resolved against the directory of
- * ncm_serialize_context_peek_current(). A temporary file that cannot be created aborts
- * with an error.
+ * interpolant fails with #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE and serializing the
+ * object aborts. An object freed before nc_galaxy_wl_obs_shape_interp_close() removes the
+ * temporary file and writes nothing. A relative @filename is resolved against the directory
+ * of ncm_serialize_context_peek_current(). An empty @filename or a temporary file that
+ * cannot be created fails with #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE.
  *
- * Returns: (transfer full): a new #NcGalaxyWLObsShapeInterp.
+ * Returns: (transfer full): a new #NcGalaxyWLObsShapeInterp, or %NULL on error.
  */
 NcGalaxyWLObsShapeInterp *
-nc_galaxy_wl_obs_shape_interp_create_empty (const gchar *filename)
+nc_galaxy_wl_obs_shape_interp_create_empty (const gchar *filename, GError **error)
 {
-  NcGalaxyWLObsShapeInterp *si = nc_galaxy_wl_obs_shape_interp_new ();
+  NcGalaxyWLObsShapeInterp *si;
 
+  g_return_val_if_fail (filename != NULL, NULL);
+
+  if (filename[0] == '\0')
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "nc_galaxy_wl_obs_shape_interp_create_empty: the file name is empty.");
+
+    return NULL;
+  }
+
+  si = nc_galaxy_wl_obs_shape_interp_new ();
   ncm_obj_dict_int_clear (&si->interp);
   si->filename     = g_canonicalize_filename (filename, ncm_serialize_context_peek_dir (ncm_serialize_context_peek_current ()));
   si->records_name = g_strconcat (si->filename, ".records", NULL);
   si->records      = g_fopen (si->records_name, "wb");
 
   if (si->records == NULL)
-    g_error ("nc_galaxy_wl_obs_shape_interp_create_empty: cannot create %s: %s.", si->records_name, g_strerror (errno));
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "nc_galaxy_wl_obs_shape_interp_create_empty: cannot create %s: %s.",
+                                si->records_name, g_strerror (errno));
+    nc_galaxy_wl_obs_shape_interp_free (si);
+
+    return NULL;
+  }
 
   return si;
 }
@@ -497,56 +578,145 @@ _nc_galaxy_wl_obs_shape_interp_record_cmp (gconstpointer a, gconstpointer b)
   return (ra->seq < rb->seq) ? -1 : ((ra->seq > rb->seq) ? 1 : 0);
 }
 
+static void _nc_galaxy_wl_obs_shape_interp_drop_file (NcGalaxyWLObsShapeInterp *si);
+static GVariant *_nc_galaxy_wl_obs_shape_interp_assemble (NcGalaxyWLObsShapeInterp *si, GBytes *all, GError **error);
+static void _nc_galaxy_wl_obs_shape_interp_store (GVariant *final, const gchar *filename, GError **error);
+
 /**
  * nc_galaxy_wl_obs_shape_interp_close:
  * @si: a #NcGalaxyWLObsShapeInterp created by nc_galaxy_wl_obs_shape_interp_create_empty()
+ * @error: a #GError
  *
  * Writes the file of @si, the binary serialization of a #NcGalaxyWLObsShapeInterp in memory
  * with the interpolants of the records, the record of what built them and the data hash of
  * @si, and removes the temporary file. For a row set more than once, the last interpolant
  * is written. @si is then backed by the file (nc_galaxy_wl_obs_shape_interp_new_from_file()).
  * The records are mapped and become the entries of the interpolants, in row order, without
- * being parsed, and the file is written through a second mapping, as @filename with the
- * suffix `.part` renamed to @filename: neither the interpolants nor the bytes of the file are
- * allocated, and an existing @filename is replaced, never truncated. Every
- * nc_galaxy_wl_obs_shape_interp_set_interp() must have returned. An object not created by
- * nc_galaxy_wl_obs_shape_interp_create_empty() or already closed, an object without a data
- * hash, a records file that does not hold whole records and a file that cannot be written
- * abort with an error.
+ * being parsed, and the file is written through a second mapping, as the file name with the
+ * suffix `.part` renamed to the file name: neither the interpolants nor the bytes of the file
+ * are allocated, and an existing file is replaced, never truncated. Every
+ * nc_galaxy_wl_obs_shape_interp_set_interp() must have returned.
+ *
+ * An object not being written, or without a data hash, fails with
+ * #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE and stays as it was. A records file that does
+ * not hold whole records fails with #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT, and a file
+ * that cannot be read, written, renamed or removed with
+ * #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE; after these the object holds no interpolants and
+ * no file is written, except when only the removal of the temporary file fails: the object is
+ * then backed by the written file.
  */
 void
-nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si)
+nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si, GError **error)
 {
-  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  GArray *recs      = g_array_new (FALSE, FALSE, sizeof (NcGalaxyWLObsShapeInterpRecord));
-  GError *error     = NULL;
-  GVariantBuilder dict, props;
+  GError *local_error = NULL;
+  gboolean failed;
   GMappedFile *map;
   GVariant *final;
-  const guint8 *base;
-  gchar *part_name;
   GBytes *all;
-  gsize size = 0;
-  gsize off  = 0;
+
+  g_return_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si));
+
+  if (si->records == NULL)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE,
+                                "nc_galaxy_wl_obs_shape_interp_close: the object is not being written.");
+
+    return;
+  }
+
+  if (si->data_hash == NULL)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE,
+                                "nc_galaxy_wl_obs_shape_interp_close: the object writing %s has no data hash.",
+                                si->filename);
+
+    return;
+  }
+
+  /* From here on a failure leaves an object with no interpolants and no file */
+  failed      = (fclose (si->records) != 0) || si->write_failed;
+  si->records = NULL;
+
+  if (failed)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "nc_galaxy_wl_obs_shape_interp_close: cannot write %s.", si->records_name);
+    _nc_galaxy_wl_obs_shape_interp_drop_file (si);
+
+    return;
+  }
+
+  map = g_mapped_file_new (si->records_name, FALSE, &local_error);
+
+  if (map == NULL)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "nc_galaxy_wl_obs_shape_interp_close: cannot read %s: %s.",
+                                si->records_name, local_error->message);
+    g_error_free (local_error);
+    _nc_galaxy_wl_obs_shape_interp_drop_file (si);
+
+    return;
+  }
+
+  all   = g_mapped_file_get_bytes (map);
+  final = _nc_galaxy_wl_obs_shape_interp_assemble (si, all, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, { g_bytes_unref (all);
+                                      g_mapped_file_unref (map);
+                                      _nc_galaxy_wl_obs_shape_interp_drop_file (si);
+                             }, ,
+                             "nc_galaxy_wl_obs_shape_interp_close: ");
+
+  _nc_galaxy_wl_obs_shape_interp_store (final, si->filename, error);
+  g_variant_unref (final);
+  g_bytes_unref (all);
+  g_mapped_file_unref (map);
+  NCM_UTIL_ON_ERROR_FORWARD (error, _nc_galaxy_wl_obs_shape_interp_drop_file (si), ,
+                             "nc_galaxy_wl_obs_shape_interp_close: ");
+
+  if (g_remove (si->records_name) != 0)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "nc_galaxy_wl_obs_shape_interp_close: cannot remove %s: %s.",
+                                si->records_name, g_strerror (errno));
+    g_clear_pointer (&si->records_name, g_free);
+
+    return;
+  }
+
+  g_clear_pointer (&si->records_name, g_free);
+}
+
+/*
+ * After a failed close: removes the records file, forgets the file name and leaves si in
+ * memory with no interpolants.
+ */
+static void
+_nc_galaxy_wl_obs_shape_interp_drop_file (NcGalaxyWLObsShapeInterp *si)
+{
+  g_remove (si->records_name);
+  g_clear_pointer (&si->records_name, g_free);
+  g_clear_pointer (&si->filename, g_free);
+  si->interp = ncm_obj_dict_int_new ();
+}
+
+/*
+ * The variant of a NcGalaxyWLObsShapeInterp in memory with the interpolants of the records
+ * in all (row, byte length, the GVariant of the interpolant padded to 8 bytes), the record
+ * and the data hash of si. The records become its entries in row order without being parsed;
+ * of the records of one row, the last written is kept.
+ */
+static GVariant *
+_nc_galaxy_wl_obs_shape_interp_assemble (NcGalaxyWLObsShapeInterp *si, GBytes *all, GError **error)
+{
+  GArray *recs = g_array_new (FALSE, FALSE, sizeof (NcGalaxyWLObsShapeInterpRecord));
+  gsize size   = 0;
+  gsize off    = 0;
+  GVariantBuilder dict, props;
+  const guint8 *base;
   guint64 seq;
   guint i;
 
-  if (si->records == NULL)
-    g_error ("nc_galaxy_wl_obs_shape_interp_close: the object is not being written.");
-
-  if (si->data_hash == NULL)
-    g_error ("nc_galaxy_wl_obs_shape_interp_close: the object writing %s has no data hash.", si->filename);
-
-  if ((fclose (si->records) != 0) || si->write_failed)
-    g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot write %s.", si->records_name);
-
-  si->records = NULL;
-  map         = g_mapped_file_new (si->records_name, FALSE, &error);
-
-  if (map == NULL)
-    g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot read %s: %s.", si->records_name, error->message);
-
-  all  = g_mapped_file_get_bytes (map);
   base = g_bytes_get_data (all, &size);
 
   for (seq = 0; off < size; seq++)
@@ -555,14 +725,26 @@ nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si)
     guint64 head[2];
 
     if (size - off < sizeof (head))
-      g_error ("nc_galaxy_wl_obs_shape_interp_close: %s ends inside a record.", si->records_name);
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT,
+                                  "%s ends inside a record.", si->records_name);
+      g_array_unref (recs);
+
+      return NULL;
+    }
 
     memcpy (head, base + off, sizeof (head));
     off += sizeof (head);
 
     if ((head[0] > G_MAXINT32) || (head[1] > size - off))
-      g_error ("nc_galaxy_wl_obs_shape_interp_close: %s has a record of row %" G_GUINT64_FORMAT " and %" G_GUINT64_FORMAT " bytes, "
-               "outside the rows or the file.", si->records_name, head[0], head[1]);
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT,
+                                  "%s has a record of row %" G_GUINT64_FORMAT " and %" G_GUINT64_FORMAT " bytes, "
+                                  "outside the rows or the file.", si->records_name, head[0], head[1]);
+      g_array_unref (recs);
+
+      return NULL;
+    }
 
     rec.row = head[0];
     rec.seq = seq;
@@ -573,7 +755,6 @@ nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si)
     off += head[1] + (8 - head[1] % 8) % 8;
   }
 
-  /* Row order; of the records of one row, the last written is kept */
   g_array_sort (recs, &_nc_galaxy_wl_obs_shape_interp_record_cmp);
   g_variant_builder_init (&dict, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_DICT_INT_TYPE));
 
@@ -596,57 +777,96 @@ nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si)
 
   if (si->source != NULL)
   {
+    NcmSerialize *ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     GVariant *source_var = ncm_serialize_dict_str_to_variant (ser, si->source);
 
     g_variant_builder_add (&props, "{sv}", "source", source_var);
     g_variant_unref (source_var);
+    ncm_serialize_free (ser);
   }
 
   g_variant_builder_add (&props, "{sv}", "data-hash", g_variant_new_string (si->data_hash));
-  final = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, G_OBJECT_TYPE_NAME (si), g_variant_builder_end (&props)));
+  g_array_unref (recs);
 
-  /*
-   * The variant is serialized into a file mapped at its final size: the records are copied
-   * from one mapped file to the other (g_variant_get_data() would allocate all the bytes).
-   */
-  part_name = g_strconcat (si->filename, ".part", NULL);
+  return g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, G_OBJECT_TYPE_NAME (si), g_variant_builder_end (&props)));
+}
+
+/*
+ * Writes final into filename through a file mapped at its final size, filename with the
+ * suffix .part, renamed to filename: the bytes are copied from the mapped records to the
+ * mapped output (g_variant_get_data() would allocate them all), and an existing filename is
+ * replaced, never truncated, since another object may have it mapped.
+ */
+static void
+_nc_galaxy_wl_obs_shape_interp_store (GVariant *final, const gchar *filename, GError **error)
+{
+  const gsize out_size = g_variant_get_size (final);
+  gchar *part_name     = g_strconcat (filename, ".part", NULL);
+  const gint fd        = g_open (part_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
+  gpointer out;
+
+  if (fd < 0)
   {
-    const gsize out_size = g_variant_get_size (final);
-    const gint fd        = g_open (part_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
-    gpointer out;
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "cannot create %s: %s.", part_name, g_strerror (errno));
+    g_free (part_name);
 
-    if (fd < 0)
-      g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot create %s: %s.", part_name, g_strerror (errno));
-
-    if (ftruncate (fd, (off_t) out_size) != 0)
-      g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot set the size of %s: %s.", part_name, g_strerror (errno));
-
-    out = mmap (NULL, out_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-    if (out == MAP_FAILED)
-      g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot map %s: %s.", part_name, g_strerror (errno));
-
-    g_variant_store (final, out);
-
-    if ((msync (out, out_size, MS_SYNC) != 0) || (munmap (out, out_size) != 0) || (close (fd) != 0))
-      g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot write %s: %s.", part_name, g_strerror (errno));
+    return;
   }
 
-  /* An existing file is replaced, never truncated: another object may have it mapped */
-  if (g_rename (part_name, si->filename) != 0)
-    g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot rename %s to %s: %s.", part_name, si->filename, g_strerror (errno));
+  if (ftruncate (fd, (off_t) out_size) != 0)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "cannot set the size of %s: %s.", part_name, g_strerror (errno));
+    close (fd);
+    g_remove (part_name);
+    g_free (part_name);
 
-  g_variant_unref (final);
-  g_bytes_unref (all);
-  g_mapped_file_unref (map);
+    return;
+  }
 
-  if (g_remove (si->records_name) != 0)
-    g_error ("nc_galaxy_wl_obs_shape_interp_close: cannot remove %s: %s.", si->records_name, g_strerror (errno));
+  out = mmap (NULL, out_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-  g_clear_pointer (&si->records_name, g_free);
-  g_array_unref (recs);
+  if (out == MAP_FAILED)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "cannot map %s: %s.", part_name, g_strerror (errno));
+    close (fd);
+    g_remove (part_name);
+    g_free (part_name);
+
+    return;
+  }
+
+  g_variant_store (final, out);
+
+  {
+    const gboolean synced   = (msync (out, out_size, MS_SYNC) == 0);
+    const gboolean unmapped = (munmap (out, out_size) == 0);
+    const gboolean closed   = (close (fd) == 0);
+
+    if (!(synced && unmapped && closed))
+    {
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                  "cannot write %s: %s.", part_name, g_strerror (errno));
+      g_remove (part_name);
+      g_free (part_name);
+
+      return;
+    }
+  }
+
+  if (g_rename (part_name, filename) != 0)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                "cannot rename %s to %s: %s.", part_name, filename, g_strerror (errno));
+    g_remove (part_name);
+    g_free (part_name);
+
+    return;
+  }
+
   g_free (part_name);
-  ncm_serialize_free (ser);
 }
 
 /**
@@ -692,16 +912,33 @@ nc_galaxy_wl_obs_shape_interp_clear (NcGalaxyWLObsShapeInterp **si)
  * @si: a #NcGalaxyWLObsShapeInterp
  * @i: row index
  * @st: the interpolant of row @i
+ * @error: a #GError
  *
  * Sets the interpolant of row @i, replacing the one it had. An object in memory references
- * @st. An object backed by a file reads it first and then holds the interpolants in memory.
- * An object created by nc_galaxy_wl_obs_shape_interp_create_empty() appends the
- * serialization of @st to its records file and does not keep @st. Calls on the same object
- * may run in parallel.
+ * @st. An object backed by a file reads it first and then holds the interpolants in memory;
+ * a file that cannot be read fails as nc_galaxy_wl_obs_shape_interp_peek_interp() does, and
+ * the object stays as it was. An object created by
+ * nc_galaxy_wl_obs_shape_interp_create_empty() appends the serialization of @st to its
+ * records file and does not keep @st; a failed write fails with
+ * #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE, and so does the later
+ * nc_galaxy_wl_obs_shape_interp_close(). A row above %G_MAXINT32 fails with
+ * #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE. Calls on the same object may run in parallel.
  */
 void
-nc_galaxy_wl_obs_shape_interp_set_interp (NcGalaxyWLObsShapeInterp *si, const guint i, NcmSpectralTensor *st)
+nc_galaxy_wl_obs_shape_interp_set_interp (NcGalaxyWLObsShapeInterp *si, const guint i, NcmSpectralTensor *st, GError **error)
 {
+  g_return_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si));
+  g_return_if_fail (NCM_IS_SPECTRAL_TENSOR (st));
+
+  /* Rows are serialized as gint32 keys */
+  if (i > G_MAXINT32)
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE,
+                                "nc_galaxy_wl_obs_shape_interp_set_interp: the row %u is above %d.", i, G_MAXINT32);
+
+    return;
+  }
+
   if (si->records != NULL)
   {
     /* Serialized outside the lock: only the write is one thread at a time */
@@ -711,21 +948,30 @@ nc_galaxy_wl_obs_shape_interp_set_interp (NcGalaxyWLObsShapeInterp *si, const gu
     const gsize pad         = (8 - head[1] % 8) % 8;
     const gchar zeros[8]    = {0};
     const gconstpointer buf = g_variant_get_data (var);
+    gboolean written;
 
     g_mutex_lock (&si->lock);
 
-    if ((fwrite (head, sizeof (guint64), 2, si->records) != 2) || (fwrite (buf, 1, head[1], si->records) != head[1]) ||
-        (fwrite (zeros, 1, pad, si->records) != pad))
+    written = (fwrite (head, sizeof (guint64), 2, si->records) == 2) && (fwrite (buf, 1, head[1], si->records) == head[1]) &&
+              (fwrite (zeros, 1, pad, si->records) == pad);
+
+    if (!written)
       si->write_failed = TRUE;
 
     g_mutex_unlock (&si->lock);
 
     g_variant_unref (var);
     ncm_serialize_free (ser);
+
+    if (!written)
+      ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+                                  "nc_galaxy_wl_obs_shape_interp_set_interp: cannot write the record of row %u to %s.",
+                                  i, si->records_name);
   }
   else
   {
-    _nc_galaxy_wl_obs_shape_interp_to_memory (si);
+    _nc_galaxy_wl_obs_shape_interp_to_memory (si, error);
+    NCM_UTIL_ON_ERROR_FORWARD (error, , , "nc_galaxy_wl_obs_shape_interp_set_interp: ");
 
     g_mutex_lock (&si->lock);
     ncm_obj_dict_int_set (si->interp, i, G_OBJECT (st));
@@ -737,27 +983,40 @@ nc_galaxy_wl_obs_shape_interp_set_interp (NcGalaxyWLObsShapeInterp *si, const gu
  * nc_galaxy_wl_obs_shape_interp_peek_interp:
  * @si: a #NcGalaxyWLObsShapeInterp
  * @i: row index
+ * @error: a #GError
  *
  * Gets the interpolant of row @i, reading the file of @si at the first call. A file that
- * cannot be read, that holds another type of object, that refers to another file or whose
- * data hash differs from the one of @si aborts with an error, and so does an object of
- * another type stored for row @i.
+ * cannot be read fails with #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE; an empty file, a file
+ * that holds another type of object or refers to another file, and an object of another type
+ * stored for row @i fail with #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT; a file of another
+ * data hash fails with #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_DATA_HASH; an object being
+ * written fails with #NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE. A file that is not a
+ * binary serialization aborts in #NcmSerialize. After a failure the file is read again at the
+ * next call.
  *
  * Returns: (transfer none) (nullable): the interpolant of row @i, or %NULL when the row has
- * none.
+ * none or on error.
  */
 NcmSpectralTensor *
-nc_galaxy_wl_obs_shape_interp_peek_interp (NcGalaxyWLObsShapeInterp *si, const guint i)
+nc_galaxy_wl_obs_shape_interp_peek_interp (NcGalaxyWLObsShapeInterp *si, const guint i, GError **error)
 {
   GObject *interp;
 
-  _nc_galaxy_wl_obs_shape_interp_load (si);
+  g_return_val_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si), NULL);
+
+  _nc_galaxy_wl_obs_shape_interp_load (si, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , NULL, "nc_galaxy_wl_obs_shape_interp_peek_interp: ");
 
   interp = ncm_obj_dict_int_peek (si->interp, i);
 
   if ((interp != NULL) && !NCM_IS_SPECTRAL_TENSOR (interp))
-    g_error ("nc_galaxy_wl_obs_shape_interp_peek_interp: the interpolant of row %u is a %s, not a NcmSpectralTensor.",
-             i, G_OBJECT_TYPE_NAME (interp));
+  {
+    ncm_util_set_or_call_error (error, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR, NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT,
+                                "nc_galaxy_wl_obs_shape_interp_peek_interp: the interpolant of row %u is a %s, not a NcmSpectralTensor.",
+                                i, G_OBJECT_TYPE_NAME (interp));
+
+    return NULL;
+  }
 
   return (NcmSpectralTensor *) interp;
 }
@@ -766,14 +1025,21 @@ nc_galaxy_wl_obs_shape_interp_peek_interp (NcGalaxyWLObsShapeInterp *si, const g
  * nc_galaxy_wl_obs_shape_interp_set_source:
  * @si: a #NcGalaxyWLObsShapeInterp
  * @source: the record of what built the interpolants
+ * @error: a #GError
  *
  * Sets the record, referencing @source. An object backed by a file reads it first and then
- * holds the interpolants in memory.
+ * holds the interpolants in memory; a file that cannot be read fails as
+ * nc_galaxy_wl_obs_shape_interp_peek_interp() does, and the object stays as it was.
  */
 void
-nc_galaxy_wl_obs_shape_interp_set_source (NcGalaxyWLObsShapeInterp *si, NcmObjDictStr *source)
+nc_galaxy_wl_obs_shape_interp_set_source (NcGalaxyWLObsShapeInterp *si, NcmObjDictStr *source, GError **error)
 {
-  _nc_galaxy_wl_obs_shape_interp_to_memory (si);
+  g_return_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si));
+  g_return_if_fail (source != NULL);
+
+  _nc_galaxy_wl_obs_shape_interp_to_memory (si, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "nc_galaxy_wl_obs_shape_interp_set_source: ");
+
   ncm_obj_dict_str_ref (source);
   ncm_obj_dict_str_clear (&si->source);
   si->source = source;
@@ -790,6 +1056,8 @@ nc_galaxy_wl_obs_shape_interp_set_source (NcGalaxyWLObsShapeInterp *si, NcmObjDi
 NcmObjDictStr *
 nc_galaxy_wl_obs_shape_interp_peek_source (NcGalaxyWLObsShapeInterp *si)
 {
+  g_return_val_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si), NULL);
+
   return si->source;
 }
 
@@ -797,14 +1065,21 @@ nc_galaxy_wl_obs_shape_interp_peek_source (NcGalaxyWLObsShapeInterp *si)
  * nc_galaxy_wl_obs_shape_interp_set_data_hash:
  * @si: a #NcGalaxyWLObsShapeInterp
  * @data_hash: the data hash of the rows the interpolants describe
+ * @error: a #GError
  *
  * Sets the data hash (ncm_catalog_get_data_hash()). An object backed by a file reads it
- * first and then holds the interpolants in memory.
+ * first and then holds the interpolants in memory; a file that cannot be read fails as
+ * nc_galaxy_wl_obs_shape_interp_peek_interp() does, and the object stays as it was.
  */
 void
-nc_galaxy_wl_obs_shape_interp_set_data_hash (NcGalaxyWLObsShapeInterp *si, const gchar *data_hash)
+nc_galaxy_wl_obs_shape_interp_set_data_hash (NcGalaxyWLObsShapeInterp *si, const gchar *data_hash, GError **error)
 {
-  _nc_galaxy_wl_obs_shape_interp_to_memory (si);
+  g_return_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si));
+  g_return_if_fail (data_hash != NULL);
+
+  _nc_galaxy_wl_obs_shape_interp_to_memory (si, error);
+  NCM_UTIL_ON_ERROR_FORWARD (error, , , "nc_galaxy_wl_obs_shape_interp_set_data_hash: ");
+
   g_free (si->data_hash);
   si->data_hash = g_strdup (data_hash);
 }
@@ -819,6 +1094,8 @@ nc_galaxy_wl_obs_shape_interp_set_data_hash (NcGalaxyWLObsShapeInterp *si, const
 const gchar *
 nc_galaxy_wl_obs_shape_interp_peek_data_hash (NcGalaxyWLObsShapeInterp *si)
 {
+  g_return_val_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si), NULL);
+
   return si->data_hash;
 }
 
@@ -827,11 +1104,13 @@ nc_galaxy_wl_obs_shape_interp_peek_data_hash (NcGalaxyWLObsShapeInterp *si)
  * @si: a #NcGalaxyWLObsShapeInterp
  *
  * Returns: (transfer none) (nullable): the absolute name of the file that holds the
- * interpolants, or %NULL when they are in memory.
+ * interpolants, or of the file being written, or %NULL when they are in memory.
  */
 const gchar *
 nc_galaxy_wl_obs_shape_interp_peek_filename (NcGalaxyWLObsShapeInterp *si)
 {
+  g_return_val_if_fail (NC_IS_GALAXY_WL_OBS_SHAPE_INTERP (si), NULL);
+
   return si->filename;
 }
 

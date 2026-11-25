@@ -3159,7 +3159,7 @@ nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf,
     g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: the catalog has %u rows, the dataset %u galaxies.",
              nc_galaxy_wl_obs_len (obs), self->shape_data->len);
 
-  si = nc_galaxy_wl_obs_shape_interp_create_empty (filename);
+  si = nc_galaxy_wl_obs_shape_interp_create_empty (filename, NULL);
 
   #pragma omp parallel for schedule(dynamic, 1) if (!omp_in_parallel ())
 
@@ -3176,7 +3176,7 @@ nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf,
 
     if (st != NULL)
     {
-      nc_galaxy_wl_obs_shape_interp_set_interp (si, gal_s, st);
+      nc_galaxy_wl_obs_shape_interp_set_interp (si, gal_s, st, NULL);
       ncm_spectral_tensor_free (st);
     }
   }
@@ -3184,7 +3184,7 @@ nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf,
   /* The record and the data hash are set on si by the shape factor, through obs */
   g_object_set (obs, "shape-interp", si, NULL);
   nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, NC_GALAXY_SHAPE_POP (pop), obs);
-  nc_galaxy_wl_obs_shape_interp_close (si);
+  nc_galaxy_wl_obs_shape_interp_close (si, NULL);
   nc_galaxy_wl_obs_shape_interp_free (si);
 }
 

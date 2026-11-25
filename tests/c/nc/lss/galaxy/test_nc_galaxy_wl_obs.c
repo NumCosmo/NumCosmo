@@ -740,8 +740,8 @@ test_nc_galaxy_wl_obs_shape_interp_file (TestNcGalaxyWLObs *test, gconstpointer 
   nc_galaxy_wl_obs_set_shape_interp (obs_file, 5, st);
   g_object_get (obs_file, "shape-interp", &si, NULL);
   g_assert_null (nc_galaxy_wl_obs_shape_interp_peek_filename (si));
-  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_shape_interp_peek_interp (si, 0)));
-  g_assert_true (nc_galaxy_wl_obs_shape_interp_peek_interp (si, 5) == st);
+  g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_shape_interp_peek_interp (si, 0, NULL)));
+  g_assert_true (nc_galaxy_wl_obs_shape_interp_peek_interp (si, 5, NULL) == st);
   nc_galaxy_wl_obs_shape_interp_free (si);
 
   g_assert_cmpint (g_remove (tables), ==, 0);

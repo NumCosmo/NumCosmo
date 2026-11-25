@@ -38,22 +38,44 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (NcGalaxyWLObsShapeInterp, nc_galaxy_wl_obs_shape_interp, NC, GALAXY_WL_OBS_SHAPE_INTERP, GObject)
 
+/**
+ * NcGalaxyWLObsShapeInterpError:
+ * @NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE: A file cannot be created, read, written, renamed or removed, or its name is empty.
+ * @NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT: A file does not hold what it should: it is empty, holds another type of object, refers to another file, or its records are truncated.
+ * @NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_DATA_HASH: The file holds the interpolants of another data hash.
+ * @NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE: The call is not valid in the state of the object.
+ *
+ * Error codes returned by the #NcGalaxyWLObsShapeInterp class.
+ *
+ */
+typedef enum _NcGalaxyWLObsShapeInterpError /*< enum,prefix=NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR >*/
+{
+  NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE,
+  NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT,
+  NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_DATA_HASH,
+  NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE,
+} NcGalaxyWLObsShapeInterpError;
+
+GQuark nc_galaxy_wl_obs_shape_interp_error_quark (void);
+
+#define NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR (nc_galaxy_wl_obs_shape_interp_error_quark ())
+
 NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_new (void);
 NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_new_from_file (const gchar *filename, const gchar *data_hash, NcmObjDictStr *source);
-NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_create_empty (const gchar *filename);
+NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_create_empty (const gchar *filename, GError **error);
 NcGalaxyWLObsShapeInterp *nc_galaxy_wl_obs_shape_interp_ref (NcGalaxyWLObsShapeInterp *si);
 void nc_galaxy_wl_obs_shape_interp_free (NcGalaxyWLObsShapeInterp *si);
 void nc_galaxy_wl_obs_shape_interp_clear (NcGalaxyWLObsShapeInterp **si);
 
-void nc_galaxy_wl_obs_shape_interp_set_interp (NcGalaxyWLObsShapeInterp *si, const guint i, NcmSpectralTensor *st);
-NcmSpectralTensor *nc_galaxy_wl_obs_shape_interp_peek_interp (NcGalaxyWLObsShapeInterp *si, const guint i);
-void nc_galaxy_wl_obs_shape_interp_set_source (NcGalaxyWLObsShapeInterp *si, NcmObjDictStr *source);
+void nc_galaxy_wl_obs_shape_interp_set_interp (NcGalaxyWLObsShapeInterp *si, const guint i, NcmSpectralTensor *st, GError **error);
+NcmSpectralTensor *nc_galaxy_wl_obs_shape_interp_peek_interp (NcGalaxyWLObsShapeInterp *si, const guint i, GError **error);
+void nc_galaxy_wl_obs_shape_interp_set_source (NcGalaxyWLObsShapeInterp *si, NcmObjDictStr *source, GError **error);
 NcmObjDictStr *nc_galaxy_wl_obs_shape_interp_peek_source (NcGalaxyWLObsShapeInterp *si);
-void nc_galaxy_wl_obs_shape_interp_set_data_hash (NcGalaxyWLObsShapeInterp *si, const gchar *data_hash);
+void nc_galaxy_wl_obs_shape_interp_set_data_hash (NcGalaxyWLObsShapeInterp *si, const gchar *data_hash, GError **error);
 const gchar *nc_galaxy_wl_obs_shape_interp_peek_data_hash (NcGalaxyWLObsShapeInterp *si);
 const gchar *nc_galaxy_wl_obs_shape_interp_peek_filename (NcGalaxyWLObsShapeInterp *si);
 
-void nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si);
+void nc_galaxy_wl_obs_shape_interp_close (NcGalaxyWLObsShapeInterp *si, GError **error);
 
 G_END_DECLS
 

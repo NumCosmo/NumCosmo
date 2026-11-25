@@ -644,7 +644,7 @@ nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectra
 {
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
-  nc_galaxy_wl_obs_shape_interp_set_interp (_nc_galaxy_wl_obs_peek_or_new_shape_interp (self), i, st);
+  nc_galaxy_wl_obs_shape_interp_set_interp (_nc_galaxy_wl_obs_peek_or_new_shape_interp (self), i, st, NULL);
 }
 
 /**
@@ -653,7 +653,8 @@ nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectra
  * @i: row index
  *
  * Gets the interpolant of row @i (nc_galaxy_wl_obs_shape_interp_peek_interp(), which reads
- * the file of #NcGalaxyWLObs:shape-interp at the first call).
+ * the file of #NcGalaxyWLObs:shape-interp at the first call). A failure to read the file
+ * aborts with the error of nc_galaxy_wl_obs_shape_interp_peek_interp().
  *
  * Returns: (transfer none) (nullable): the interpolant of row @i, or %NULL when the row has
  * none, there is no record or the rows changed after the record was set.
@@ -666,7 +667,7 @@ nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i)
   if (!_nc_galaxy_wl_obs_shape_interp_current (obs))
     return NULL;
 
-  return nc_galaxy_wl_obs_shape_interp_peek_interp (self->shape_interp, i);
+  return nc_galaxy_wl_obs_shape_interp_peek_interp (self->shape_interp, i, NULL);
 }
 
 /**
@@ -686,8 +687,8 @@ nc_galaxy_wl_obs_set_shape_interp_source (NcGalaxyWLObs *obs, NcmObjDictStr *sou
   NcGalaxyWLObsShapeInterp *si      = _nc_galaxy_wl_obs_peek_or_new_shape_interp (self);
   gchar *data_hash                  = ncm_catalog_get_data_hash (NCM_CATALOG (obs));
 
-  nc_galaxy_wl_obs_shape_interp_set_source (si, source);
-  nc_galaxy_wl_obs_shape_interp_set_data_hash (si, data_hash);
+  nc_galaxy_wl_obs_shape_interp_set_source (si, source, NULL);
+  nc_galaxy_wl_obs_shape_interp_set_data_hash (si, data_hash, NULL);
   self->shape_interp_key = ncm_catalog_get_key (NCM_CATALOG (obs));
 
   g_free (data_hash);
