@@ -809,7 +809,7 @@ _square_moments_ref (guint r, gdouble a, gdouble b, guint n, gdouble *m)
  * The moments of the square of both rows, the cubic and the step, on the whole range, on an
  * interval across edges with ends inside panels and on an interval inside one panel, for
  * n = 12 and n = 0, against _square_moments_ref(). The difference is rounding: measured
- * at most 7.5e-15 of m_0; 1e-13 of m_0 is asserted. A reused array is resized.
+ * at most 6.6e-15 of m_0; 1e-13 of m_0 is asserted. A reused array is resized.
  */
 static void
 test_ncm_spectral_panels_square_cheb_moments (void)

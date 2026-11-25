@@ -627,8 +627,10 @@ _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
 void
 ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble a, gdouble b, guint n, GArray **moments)
 {
-  gsl_integration_glfixed_table *glt;
+  gsl_integration_fixed_workspace *glw;
+  const gdouble *glx, *glwt;
   gdouble x_lo, x_hi;
+  guint q;
   guint N_max = 0;
   gdouble *m;
   guint i, j, k;
@@ -660,7 +662,14 @@ ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble
     N_max = GSL_MAX (N_max, N);
   }
 
-  glt = gsl_integration_glfixed_table_alloc ((2 * N_max + n) / 2);
+  /*
+   * The rule of gsl_integration_fixed_legendre: gsl_integration_glfixed_table_alloc()
+   * computes the rules it has no table for with errors near 1e-11 from about 48 points.
+   */
+  q    = (2 * N_max + n) / 2;
+  glw  = gsl_integration_fixed_alloc (gsl_integration_fixed_legendre, q, -1.0, 1.0, 0.0, 0.0);
+  glx  = gsl_integration_fixed_nodes (glw);
+  glwt = gsl_integration_fixed_weights (glw);
 
   for (i = ncm_spectral_panels_find_panel (sp, a); i < sp->n_panels; i++)
   {
@@ -676,11 +685,11 @@ ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble
     if (!(z1 > z0))
       continue;
 
-    for (j = 0; j < glt->n; j++)
+    for (j = 0; j < q; j++)
     {
-      gdouble zq, wq;
+      const gdouble zq = 0.5 * (z0 + z1) + 0.5 * (z1 - z0) * glx[j];
+      const gdouble wq = 0.5 * (z1 - z0) * glwt[j];
 
-      gsl_integration_glfixed_point (z0, z1, j, &zq, &wq, glt);
       {
         const gdouble f  = _ncm_spectral_panels_clenshaw (c + (gsize) r * N, N, ncm_spectral_x_to_s (lo, hi, zq));
         const gdouble t  = (2.0 * zq - (a + b)) / (b - a);
@@ -707,7 +716,7 @@ ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble
     }
   }
 
-  gsl_integration_glfixed_table_free (glt);
+  gsl_integration_fixed_free (glw);
 }
 
 /**
