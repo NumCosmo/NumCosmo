@@ -43,6 +43,9 @@
 #define SHAPE_INTERP_NROWS (6)
 #define SHAPE_INTERP_Z_CL (0.5)
 #define SHAPE_INTERP_SEED (20261112)
+#define SHAPE_INTERP_SIGMA_LB (0.24)
+#define SHAPE_INTERP_SIGMA_UB (0.30)
+#define SHAPE_INTERP_POP_ABSTOL (1.0e-3)
 
 typedef struct _TestNcDataClusterWLFactorShapeInterp
 {
@@ -59,6 +62,7 @@ void test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void);
 void test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_shape_interp_file (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_shape_interp_file_traps (void);
+static void _test_nc_data_cluster_wl_factor_shape_interp_free_sigma (TestNcDataClusterWLFactorShapeInterp *test);
 void test_nc_data_cluster_wl_factor_shape_interp_file_shape_factor_subprocess (void);
 void test_nc_data_cluster_wl_factor_shape_interp_file_rows_subprocess (void);
 void test_nc_data_cluster_wl_factor_shape_interp_file_create_subprocess (void);
@@ -96,6 +100,29 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 
   return 0;
+}
+
+/*
+ * Makes sigma a variable of the interpolants on [SHAPE_INTERP_SIGMA_LB, SHAPE_INTERP_SIGMA_UB],
+ * at interp-abstol 1e-3 and level cap 3. A table over this range builds in about a seventh of
+ * the time of one over the default bounds; the accuracy over wide ranges is tested in
+ * test_nc_galaxy_shape_factor_spectral.c.
+ */
+static void
+_test_nc_data_cluster_wl_factor_shape_interp_free_sigma (TestNcDataClusterWLFactorShapeInterp *test)
+{
+  NcmModel *pop = ncm_mset_peek (test->mset, nc_galaxy_shape_pop_id ());
+  NcGalaxyShapeFactorSpectral *gsfs;
+
+  g_object_get (test->dcwlf, "shape-factor", &gsfs, NULL);
+  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, SHAPE_INTERP_POP_ABSTOL);
+  nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs, 3);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+
+  ncm_model_param_set_lower_bound (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, SHAPE_INTERP_SIGMA_LB);
+  ncm_model_param_set_upper_bound (pop, NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, SHAPE_INTERP_SIGMA_UB);
+  ncm_mset_param_set_ftype (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
 }
 
 /*
@@ -273,29 +300,23 @@ test_nc_data_cluster_wl_factor_shape_interp_shape_factor_subprocess (void)
 }
 
 /*
- * With sigma free on its default bounds, [0.2, 1], at interp-abstol 1e-3, the interpolants
- * written into the catalog have sigma as a third variable, and -2 ln L of the dataset at
- * sigma 0.25 and 0.5 agrees with the one of the same catalog without interpolants (the
- * integrals) within 2 times the number of galaxies times interp-abstol, the bound of the
+ * With sigma a variable (_test_nc_data_cluster_wl_factor_shape_interp_free_sigma()), the
+ * interpolants written into the catalog have sigma as a third variable, and -2 ln L of the
+ * dataset at sigma 0.25 and 0.29 agrees with the one of the same catalog without interpolants
+ * (the integrals) within 2 times the number of galaxies times interp-abstol, the bound of the
  * change of each galaxy's ln P.
  */
 void
 test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorShapeInterp *test, gconstpointer pdata)
 {
-  const gdouble sigmas[] = {0.25, 0.5};
+  const gdouble sigmas[] = {0.25, 0.29};
   NcmSerialize *ser      = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcmData *data          = NCM_DATA (test->dcwlf);
-  const gdouble abstol   = 1.0e-3;
-  NcGalaxyShapeFactorSpectral *gsfs;
   NcGalaxyWLObs *obs_plain;
   GVariant *obs_ser;
   guint i, k;
 
-  g_object_get (test->dcwlf, "shape-factor", &gsfs, NULL);
-  nc_galaxy_shape_factor_spectral_set_interp_abstol (gsfs, abstol);
-  nc_galaxy_shape_factor_spectral_set_interp_pop_level_cap (gsfs, 3);
-  ncm_mset_param_set_ftype (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (test->mset);
+  _test_nc_data_cluster_wl_factor_shape_interp_free_sigma (test);
 
   obs_ser = ncm_serialize_to_variant (ser, G_OBJECT (test->obs));
   ncm_serialize_reset (ser, FALSE);
@@ -319,19 +340,18 @@ test_nc_data_cluster_wl_factor_shape_interp_free_pop (TestNcDataClusterWLFactorS
 
     g_assert_true (gsl_finite (m2lnL));
     g_test_message ("sigma %g: -2lnL %.15g, without interpolants %.15g, difference %.3e", sigmas[k], m2lnL, m2lnL_plain, m2lnL - m2lnL_plain);
-    g_assert_cmpfloat (fabs (m2lnL - m2lnL_plain), <=, 2.0 * SHAPE_INTERP_NROWS * abstol);
+    g_assert_cmpfloat (fabs (m2lnL - m2lnL_plain), <=, 2.0 * SHAPE_INTERP_NROWS * SHAPE_INTERP_POP_ABSTOL);
   }
 
   g_variant_unref (obs_ser);
   nc_galaxy_wl_obs_free (obs_plain);
   ncm_serialize_free (ser);
-  nc_galaxy_shape_factor_spectral_free (gsfs);
 }
 
 /*
  * nc_data_cluster_wl_factor_write_shape_interp_file() against
  * nc_data_cluster_wl_factor_write_shape_interp() and ncm_serialize_to_binfile(), with sigma a
- * variable of the interpolants: the file loads as a catalog with the record and with an
+ * variable of the interpolants (_test_nc_data_cluster_wl_factor_shape_interp_free_sigma()): the file loads as a catalog with the record and with an
  * interpolant per row whose tree equals the one built in memory, the catalog given to the
  * call receives no interpolant, the temporary records file is removed, a records file left
  * by an earlier call is overwritten, and -2 ln L of the loaded catalog equals the one of the
@@ -354,8 +374,7 @@ test_nc_data_cluster_wl_factor_shape_interp_file (TestNcDataClusterWLFactorShape
   filename = g_build_filename (dir, "catalog.gvar", NULL);
   rec_name = g_strconcat (filename, ".records", NULL);
 
-  ncm_mset_param_set_ftype (test->mset, nc_galaxy_shape_pop_id (), NC_GALAXY_SHAPE_POP_GAUSS_SIGMA, NCM_PARAM_TYPE_FREE);
-  ncm_mset_prepare_fparam_map (test->mset);
+  _test_nc_data_cluster_wl_factor_shape_interp_free_sigma (test);
 
   /* A file left by an interrupted call is not read */
   g_assert_true (g_file_set_contents (rec_name, "leftover", -1, &error));
