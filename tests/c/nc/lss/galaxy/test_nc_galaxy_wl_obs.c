@@ -70,6 +70,8 @@ static void test_nc_galaxy_wl_obs_shape_interp_file_type (void);
 static void test_nc_galaxy_wl_obs_shape_interp_file_type_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_file_empty (void);
 static void test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_relative (void);
+static void test_nc_galaxy_wl_obs_shape_interp_file_relative_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -155,6 +157,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/type/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_type_subprocess);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/empty", &test_nc_galaxy_wl_obs_shape_interp_file_empty);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/empty/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/relative", &test_nc_galaxy_wl_obs_shape_interp_file_relative);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/relative/subprocess", &test_nc_galaxy_wl_obs_shape_interp_file_relative_subprocess);
 
   g_test_run ();
 
@@ -997,5 +1001,23 @@ static void
 test_nc_galaxy_wl_obs_shape_interp_file_empty_subprocess (void)
 {
   _test_nc_galaxy_wl_obs_shape_interp_file_read ();
+}
+
+/* A relative shape-interp-file aborts when it is set, with a message that names it */
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_relative (void)
+{
+  g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/shape_interp/file/relative/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*shape-interp-file must be an absolute path, not `catalog.gvar'*");
+}
+
+static void
+test_nc_galaxy_wl_obs_shape_interp_file_relative_subprocess (void)
+{
+  GStrv col_names    = g_strsplit ("ra dec", " ", -1);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
+
+  g_object_set (obs, "shape-interp-file", "catalog.gvar", NULL);
 }
 

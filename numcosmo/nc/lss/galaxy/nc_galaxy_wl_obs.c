@@ -225,6 +225,10 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
       /* The file is read at the first check: the rows it is compared with may not be set yet */
       if ((filename != NULL) && (filename[0] != '\0'))
       {
+        /* A relative name would be resolved against the working directory of the later read */
+        if (!g_path_is_absolute (filename))
+          g_error ("nc_galaxy_wl_obs: shape-interp-file must be an absolute path, not `%s'.", filename);
+
         self->shape_interp_file         = g_strdup (filename);
         self->shape_interp_file_pending = TRUE;
       }
@@ -369,8 +373,8 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
    * when the rows changed after it was read. While it is set, the catalog serializes it in
    * place of #NcGalaxyWLObs:shape-interp and #NcGalaxyWLObs:shape-interp-source. Setting it
    * replaces the interpolants and the record by those of the file, read at the first use.
-   * A file that cannot be read, that holds another type of object or that has no
-   * interpolants aborts with an error.
+   * A name that is not an absolute path aborts with an error, and so does a file that cannot
+   * be read, that holds another type of object or that has no interpolants.
    */
   g_object_class_install_property (object_class,
                                    PROP_SHAPE_INTERP_FILE,
