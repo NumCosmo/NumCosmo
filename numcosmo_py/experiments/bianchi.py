@@ -29,12 +29,12 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 
 from numcosmo_py import Nc, Ncm
-from numcosmo_py.catalog.table import catalog_column
 from numcosmo_py.datasets.dist_mu_obs import (
     SPEED_OF_LIGHT_KM_S,
     SampleRule,
     samples_by_rule,
 )
+from numcosmo_py.helper import catalog_column
 
 
 def build_bianchi_experiment(

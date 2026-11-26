@@ -25,7 +25,7 @@ from astropy.table import Table
 
 from numcosmo_py import Ncm
 from numcosmo_py.catalog import catalog_from_table, catalog_to_table
-from numcosmo_py.catalog.table import catalog_column, fill_catalog
+from numcosmo_py.helper import catalog_column, fill_catalog
 
 Ncm.cfg_init()
 

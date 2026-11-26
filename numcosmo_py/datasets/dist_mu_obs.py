@@ -35,7 +35,7 @@ from astropy.io import ascii
 from astropy.table import Table
 
 from numcosmo_py import GEnum, Nc, Ncm
-from numcosmo_py.catalog.table import catalog_column, col_type_of, fill_catalog
+from numcosmo_py.helper import catalog_column, col_type_of, fill_catalog
 
 SPEED_OF_LIGHT_KM_S = 299792.458
 

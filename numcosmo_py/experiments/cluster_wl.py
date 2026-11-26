@@ -49,7 +49,7 @@ from rich.table import Table
 from tabulate import tabulate
 
 from numcosmo_py import GEnum, Nc, Ncm, parse_options_strict
-from numcosmo_py.catalog.table import catalog_column
+from numcosmo_py.helper import catalog_column
 
 DEFAULT_TABLE_FMT = "rounded_grid"
 
