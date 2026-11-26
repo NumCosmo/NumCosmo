@@ -1684,18 +1684,23 @@ def _unwrapped(text: str) -> str:
     return " ".join(text.split())
 
 
-def _shape_interp(output: Path, data_file: Path, *args: str):
-    """Run numcosmo wl-catalog shape-interp."""
+def _tables(output: Path, data_file: Path, *args: str):
+    """Run numcosmo wl-catalog tables."""
     return runner.invoke(
         app,
         [
             "wl-catalog",
-            "shape-interp",
+            "tables",
             output.as_posix(),
             f"--data-file={data_file.as_posix()}",
             *args,
         ],
     )
+
+
+def _shape_interp(output: Path, data_file: Path, *args: str):
+    """Run numcosmo wl-catalog tables --shape-interp."""
+    return _tables(output, data_file, "--shape-interp", *args)
 
 
 def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
@@ -1771,17 +1776,8 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
 
 
 def _cheb_grid(output: Path, data_file: Path, *args: str):
-    """Run numcosmo wl-catalog cheb-grid."""
-    return runner.invoke(
-        app,
-        [
-            "wl-catalog",
-            "cheb-grid",
-            output.as_posix(),
-            f"--data-file={data_file.as_posix()}",
-            *args,
-        ],
-    )
+    """Run numcosmo wl-catalog tables --cheb-grid."""
+    return _tables(output, data_file, "--cheb-grid", *args)
 
 
 def _cheb_experiment(experiment: Path, data_file: Path) -> float:
@@ -1827,9 +1823,17 @@ def test_wl_catalog_cheb_grid(tmp_path: Path, real_wl_obs_file_with_meta):
 def test_wl_catalog_cheb_grid_and_shape_interp(
     tmp_path: Path, real_wl_obs_file_with_meta
 ):
-    """The grid and the interpolants are independent: either command may run first, and
-    the catalog keeps both."""
+    """The grid and the interpolants are independent: one call builds both, either may be
+    built first, and the catalog keeps both."""
     pop = "--pop-dist=gauss sigma=0.3"
+
+    both = tmp_path / "both.gvar"
+    result = _tables(
+        both, real_wl_obs_file_with_meta, "--cheb-grid", "--shape-interp", pop
+    )
+    assert result.exit_code == 0, result.output
+    assert "interpolants of 20 galaxies" in _unwrapped(result.output)
+    assert "Chebyshev grid of 20 galaxies" in _unwrapped(result.output)
 
     interp_first = tmp_path / "interp_first.gvar"
     both_a = tmp_path / "both_a.gvar"
@@ -1843,11 +1847,30 @@ def test_wl_catalog_cheb_grid_and_shape_interp(
     result = _shape_interp(both_b, grid_first, pop)
     assert result.exit_code == 0, result.output
 
-    for path in (both_a, both_b):
+    for path in (both, both_a, both_b):
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         obs = cast(Nc.GalaxyWLObs, ser.from_binfile(path.as_posix()))
         assert obs.peek_cheb_grid() is not None, path
         assert obs.peek_shape_interp_source() is not None, path
+
+
+@pytest.mark.parametrize(
+    "args, message",
+    [
+        ([], "choose at least one table"),
+        (["--cheb-grid", "--pop-dist=gauss sigma=0.3"], "--free-pop apply only to"),
+        (["--cheb-grid", "--free-pop"], "--free-pop apply only to"),
+        (["--shape-interp"], "--shape-interp needs --pop-dist"),
+    ],
+)
+def test_wl_catalog_tables_options(
+    tmp_path: Path, real_wl_obs_file_with_meta, args, message
+):
+    """No table, an option of the interpolants without them, or the interpolants without a
+    population are CLI errors."""
+    result = _tables(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
+    assert result.exit_code == 2, result.output
+    assert message in _unwrapped(result.output)
 
 
 def test_wl_catalog_cheb_grid_other_directory(

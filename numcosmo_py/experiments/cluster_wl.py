@@ -863,7 +863,7 @@ def shape_interp_gens(
 ) -> tuple[GalaxyShapeFactorGenSpectral, GalaxyPopGenTypes] | None:
     """Return the generators of the shape factor and population that prepared obs.
 
-    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
+    A catalog prepared by ``numcosmo wl-catalog tables --shape-interp`` carries the
     interpolants of its galaxies and the record of what built them
     (``NcGalaxyWLObs:shape-interp``): a copy of the
     ``NcGalaxyShapeFactorSpectral`` and of the population. The generators
@@ -920,7 +920,7 @@ def shape_interp_gens(
 def shape_interp_free_params(obs: Nc.GalaxyWLObs) -> list[str]:
     """Return the population parameters that are variables of the interpolants of obs.
 
-    The interpolants of a catalog prepared by ``numcosmo wl-catalog shape-interp
+    The interpolants of a catalog prepared by ``numcosmo wl-catalog tables --shape-interp
     --free-pop`` have the free parameters of the population of the record as
     variables: a fit may free them or hold them fixed at any value in their
     ranges.
@@ -1048,7 +1048,7 @@ class IntegMethodOptions:
     point.
     """
 
-    integ_method: IntegMethod = IntegMethod.LNINT
+    integ_method: IntegMethod = IntegMethod.CHEB_WEIGHTS
     cheb_tol: float = DEFAULT_INTEG_CHEB_TOL
     cheb_level_min: int = DEFAULT_INTEG_CHEB_LEVEL_MIN
     auto_nodes: bool = DEFAULT_INTEG_AUTO_NODES

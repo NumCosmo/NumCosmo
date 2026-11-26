@@ -485,7 +485,7 @@ display(Markdown(f"Both tables were measured on one thread of an {cpu_model()}."
 An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
 $10^5$ times, far above the break-even count: with a fixed population the build of the
 interpolants costs a small fraction of the integrals they replace. The command
-`numcosmo wl-catalog shape-interp` builds them once. It builds the interpolants of all the
+`numcosmo wl-catalog tables --shape-interp` builds them once. It builds the interpolants of all the
 galaxies of a catalog in parallel. It writes them to a second file in the directory of the
 catalog, named after the catalog with the suffix `.shape_interp.gvar`, and writes the catalog
 with the name of that file. `numcosmo generate cluster-wl-load --data-file` then builds an
@@ -499,7 +499,7 @@ the HSC field HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE).
 
 | HWL16a-094, 2,200 galaxies | prepared catalog | `line-abstol` $10^{-7}$ |
 |---|---|---|
-| `wl-catalog shape-interp`, 12 threads | 25.8 s | |
+| `wl-catalog tables --shape-interp`, 12 threads | 25.8 s | |
 | the same build on 1 thread | 266 s | |
 | $-2\ln L$, 1 thread | 0.004 s | 1.08 s |
 | MCMC, 1,000 walkers and 150,000 points, 12 threads | 63 s | not run |
@@ -518,7 +518,7 @@ default settings.
 
 | HWL16a-094, 2,200 galaxies, $\alpha$ and $\beta$ free | prepared catalog | `line-abstol` $10^{-7}$ |
 |---|---|---|
-| `wl-catalog shape-interp --free-pop`, 12 threads | 524 s | |
+| `wl-catalog tables --shape-interp --free-pop`, 12 threads | 524 s | |
 | size of the catalog | 0.52 GB | |
 | $-2\ln L$ at a new population, 1 thread | 0.021 s | 1.11 s |
 | fit of the halo center, $\log_{10} M_{200c}$, $\alpha$ and $\beta$: 701 evaluations | 15.6 s | 1251 s |
