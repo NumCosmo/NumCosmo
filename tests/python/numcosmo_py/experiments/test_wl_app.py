@@ -1770,6 +1770,104 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     )
 
 
+def _cheb_grid(output: Path, data_file: Path, *args: str):
+    """Run numcosmo wl-catalog cheb-grid."""
+    return runner.invoke(
+        app,
+        [
+            "wl-catalog",
+            "cheb-grid",
+            output.as_posix(),
+            f"--data-file={data_file.as_posix()}",
+            *args,
+        ],
+    )
+
+
+def _cheb_experiment(experiment: Path, data_file: Path) -> float:
+    """Generate a CHEB_WEIGHTS experiment from data_file and return its -2 ln L."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment.as_posix(),
+            f"--data-file={data_file.as_posix()}",
+            "--integ-method=cheb-weights",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return _experiment_m2lnL(experiment)
+
+
+def test_wl_catalog_cheb_grid(tmp_path: Path, real_wl_obs_file_with_meta):
+    """The catalog written by cheb-grid holds the grid for the cluster redshift of its
+    metadata, and a CHEB_WEIGHTS experiment built from it gives the -2 ln L of one built
+    from the original catalog, which builds the grid itself."""
+    with_grid = tmp_path / "with_grid.gvar"
+    result = _cheb_grid(with_grid, real_wl_obs_file_with_meta)
+    assert result.exit_code == 0, result.output
+    assert "Chebyshev grid of 20 galaxies" in _unwrapped(result.output)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(with_grid.as_posix()))
+    grid = obs.peek_cheb_grid()
+    assert grid is not None
+    assert grid.len() == obs.len()
+    meta = obs.peek_meta()
+    assert meta is not None
+    assert grid.get_z_cl() == meta.get_double("cluster_z")[1]
+
+    assert _cheb_experiment(tmp_path / "exp_grid.yaml", with_grid) == _cheb_experiment(
+        tmp_path / "exp_original.yaml", real_wl_obs_file_with_meta
+    )
+
+
+def test_wl_catalog_cheb_grid_and_shape_interp(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """The grid and the interpolants are independent: either command may run first, and
+    the catalog keeps both."""
+    pop = "--pop-dist=gauss sigma=0.3"
+
+    interp_first = tmp_path / "interp_first.gvar"
+    both_a = tmp_path / "both_a.gvar"
+    assert _shape_interp(interp_first, real_wl_obs_file_with_meta, pop).exit_code == 0
+    result = _cheb_grid(both_a, interp_first)
+    assert result.exit_code == 0, result.output
+
+    grid_first = tmp_path / "grid_first.gvar"
+    both_b = tmp_path / "both_b.gvar"
+    assert _cheb_grid(grid_first, real_wl_obs_file_with_meta).exit_code == 0
+    result = _shape_interp(both_b, grid_first, pop)
+    assert result.exit_code == 0, result.output
+
+    for path in (both_a, both_b):
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        obs = cast(Nc.GalaxyWLObs, ser.from_binfile(path.as_posix()))
+        assert obs.peek_cheb_grid() is not None, path
+        assert obs.peek_shape_interp_source() is not None, path
+
+
+def test_wl_catalog_cheb_grid_other_directory(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A catalog that refers to an interpolants file is written only in its directory."""
+    prepared = tmp_path / "prepared.gvar"
+    assert (
+        _shape_interp(
+            prepared, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
+        ).exit_code
+        == 0
+    )
+    other = tmp_path / "other"
+    other.mkdir()
+    result = _cheb_grid(other / "with_grid.gvar", prepared)
+    assert result.exit_code != 0
+    assert "write the output in" in _unwrapped(result.output)
+
+
 _FREE_POP_N_GALAXIES = 4
 
 

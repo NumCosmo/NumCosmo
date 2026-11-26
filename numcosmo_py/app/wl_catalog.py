@@ -34,6 +34,8 @@ from numcosmo_py.experiments.cluster_wl import (
     DEFAULT_INTEG_OPTIONS,
     GalaxyPopGen,
     GalaxyShapeFactorGenSpectral,
+    IntegMethod,
+    IntegMethodOptions,
     ShapeFactorGen,
     WLCatalogID,
     check_shape_pop_compat,
@@ -232,4 +234,132 @@ class ShapeInterpWLCatalog:
         Console().print(
             f"Wrote {self.output} and {tables}: interpolants of {obs.len()} "
             f"galaxies for {pop_gen!r}{free}, built in {t_build:.1f} s."
+        )
+
+
+@dataclasses.dataclass(kw_only=True)
+class ChebGridWLCatalog:
+    """Write a catalog with the CHEB_WEIGHTS redshift grid of its galaxies.
+
+    Reads a NcGalaxyWLObs (--catalog or --data-file), builds the grid of every
+    galaxy for the cluster redshift of the catalog metadata or --cluster-z, in
+    parallel with OMP_NUM_THREADS threads, and writes to OUTPUT the catalog with
+    the grid (NcGalaxyWLObs:cheb-grid). The grid depends only on the p(z) of the
+    galaxies, their integration limits and the cluster redshift; it is
+    independent of the shape factor and of the population, so a catalog may hold
+    it, the interpolants of ``numcosmo wl-catalog shape-interp``, or both. The
+    rows are unchanged. A dataset under ``--integ-method cheb-weights`` takes the
+    grid from the catalog instead of building it, and every copy made by a
+    sampler shares it; a dataset with another cluster redshift aborts. A catalog
+    that refers to an interpolants file must be written in the directory of that
+    file.
+    """
+
+    output: Annotated[
+        Path, typer.Argument(help="Path of the catalog to write (.gvar).")
+    ]
+
+    catalog: Annotated[
+        WLCatalogID | None,
+        typer.Option(
+            help=(
+                "Curated catalog of the NumCosmo data file release. Mutually "
+                "exclusive with --data-file; exactly one of the two is required."
+            ),
+        ),
+    ] = None
+
+    data_file: Annotated[
+        Path | None,
+        typer.Option(
+            help=(
+                "Path to a NcGalaxyWLObs (.gvar) file. Mutually exclusive with "
+                "--catalog; exactly one of the two is required."
+            ),
+            exists=True,
+            readable=True,
+        ),
+    ] = None
+
+    cluster_ra: Annotated[
+        float | None,
+        typer.Option(help="Cluster right ascension. Falls back to catalog metadata."),
+    ] = None
+
+    cluster_dec: Annotated[
+        float | None,
+        typer.Option(help="Cluster declination. Falls back to catalog metadata."),
+    ] = None
+
+    cluster_z: Annotated[
+        float | None,
+        typer.Option(help="Cluster redshift. Falls back to catalog metadata."),
+    ] = None
+
+    def __post_init__(self) -> None:
+        """Build the grid and write the catalog.
+
+        Raises:
+            typer.BadParameter: Invalid output suffix, or an output outside the
+                directory of the interpolants file of the catalog.
+        """
+        Ncm.cfg_init()
+
+        if self.output.suffix != ".gvar":
+            raise typer.BadParameter(f"Invalid output suffix: {self.output.suffix}")
+
+        obs = load_wl_obs(self.catalog, self.data_file)
+
+        shape_interp = obs.get_property("shape-interp")
+        if shape_interp is not None and shape_interp.peek_filename() is not None:
+            tables = Path(shape_interp.peek_filename())
+            if tables.parent != self.output.absolute().parent:
+                raise typer.BadParameter(
+                    f"the catalog refers to the interpolants file {tables}; "
+                    f"write the output in {tables.parent}"
+                )
+
+        # The grid does not depend on the shape factor or the population: the
+        # cheapest pair builds the dataset.
+        _shape_factor, shape_gen = parse_shape_factor(
+            f"var_add "
+            f"ellip_conv={obs.get_ellip_conv().value_nick} "
+            f"ellip_coord={obs.get_coord().value_nick}"
+        )
+        _pop_dist, pop_gen = parse_pop_dist("gauss")
+
+        exp = load_cluster_wl(
+            obs=obs,
+            cluster_ra=self.cluster_ra,
+            cluster_dec=self.cluster_dec,
+            cluster_z=self.cluster_z,
+            cluster_mass=ClusterWL.cluster_mass,
+            cluster_mass_min=ClusterWL.cluster_mass_min,
+            cluster_mass_max=ClusterWL.cluster_mass_max,
+            r_min=ClusterWL.r_min,
+            r_max=ClusterWL.r_max,
+            shape_gen=shape_gen,
+            pop_gen=pop_gen,
+            integ_options=IntegMethodOptions(integ_method=IntegMethod.CHEB_WEIGHTS),
+            summary=False,
+        )
+        mset = exp.peek("model-set")
+        likelihood = exp.peek("likelihood")
+        assert isinstance(mset, Ncm.MSet)
+        assert isinstance(likelihood, Ncm.Likelihood)
+        data = likelihood.peek_dataset().get_data(0)
+        assert isinstance(data, Nc.DataClusterWLFactor)
+
+        t_start = time.perf_counter()
+        data.write_cheb_grid(mset, obs)
+        t_build = time.perf_counter() - t_start
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        ser.to_binfile(obs, self.output.absolute().as_posix())
+
+        grid = obs.peek_cheb_grid()
+        assert grid is not None
+        Console().print(
+            f"Wrote {self.output}: Chebyshev grid of {grid.len()} galaxies for "
+            f"z_cl = {grid.get_z_cl()}, built in {t_build:.1f} s."
         )
