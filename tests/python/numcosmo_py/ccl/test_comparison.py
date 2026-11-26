@@ -28,6 +28,12 @@ against CCL on the cosmologies of ccl_cosmo_eh_linear. compare_multiplicity_func
 evaluates CCL's f(sigma) through the private method MassFunc._get_fsigma, which every
 CCL mass function overrides; its signature is pinned on the base class and on each
 family the pairing module builds, so that a pyccl release changing it fails here.
+The halo bias comparisons are checked against CCL on the same cosmologies, for every
+pair the halo bias pairing module builds: compare_halo_bias_sigma for the agreement
+of b(sigma) at the same sigma, and compare_halo_bias for the agreement of b(M, z),
+each code at its own sigma(M, z). compare_halo_bias_sigma evaluates CCL's b(sigma)
+through the private method HaloBias._get_bsigma, whose signature is pinned on the
+base class and on each of those models.
 """
 
 import inspect
@@ -43,6 +49,7 @@ pytest.importorskip("pyccl")
 import pyccl
 
 import numcosmo_py.ccl.comparison as nc_cmp
+import numcosmo_py.ccl.halo_bias_pairing as hbp
 import numcosmo_py.ccl.multiplicity_func_pairing as mfp
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.cosmology import Cosmology
@@ -398,3 +405,290 @@ def test_compare_multiplicity_function_reporting(
     assert cmp.model == "Tinker08 200m"
     assert cmp.rel_diff_max >= cmp.rel_diff_min
     assert len(cmp.summary_row()) == len(nc_cmp.CompareFunc1d.table_header())
+
+
+# Halo bias
+
+BiasPairConstructor = Callable[..., hbp.HaloBiasPair]
+
+# The parameters compare_halo_bias_sigma passes to _get_bsigma, in this order.
+GET_BSIGMA_PARAMETERS = ["self", "cosmo", "sigM", "a"]
+
+# One call of each constructor of the halo bias pairing module; the CCL classes are
+# read from the pairs built, so they are the ones the comparison actually calls.
+BIAS_CONSTRUCTOR_CALLS: list[tuple[BiasPairConstructor, tuple[Any, ...]]] = [
+    (hbp.sheth99_pair, ()),
+    (hbp.sheth01_pair, ()),
+    (hbp.tinker10_pair, ("critical", MDef.CRITICAL, 200)),
+]
+BIAS_PAIRS = [constructor(*args) for constructor, args in BIAS_CONSTRUCTOR_CALLS]
+CCL_BIAS_MODELS = [type(pair.ccl_bias) for pair in BIAS_PAIRS]
+
+# Bound on |b_NumCosmo / b_CCL - 1| for each model, at the same sigma and z: the
+# smallest power of ten at least twice the largest difference measured over the three
+# cosmologies of ccl_cosmo_eh_linear at both CCL precision settings, BSIGMA_MASSES,
+# z = 0, 0.5, 1, 1.5 and every pair of the model; 1.0e-13 where the measured difference
+# is at rounding level. The largest differences measured are 0 (sheth99), 2.461e-12
+# (sheth01) and 3.679e-11 (tinker10, over 200m, 200c and 500c; 200m alone 2.220e-16).
+BSIGMA_RELTOL = {
+    "sheth99": 1.0e-13,
+    "sheth01": 1.0e-11,
+    "tinker10": 1.0e-10,
+}
+BSIGMA_MASSES = np.geomspace(1.0e12, 1.0e15, 8)
+
+# Bound on |b_NumCosmo / b_CCL - 1| at the same M and z, each code at its own
+# sigma(M, z), for each CCL precision setting: the smallest power of ten at least twice
+# the largest difference measured over the three cosmologies of ccl_cosmo_eh_linear at
+# that setting, BM_MASSES, z = 0, 0.5, 1, 1.5 and every pair of the halo bias pairing
+# module, Tinker et al. (2010) at 200m included. The largest differences measured are
+# 3.396e-6 at CCL's default precision and 6.309e-9 at high precision.
+BM_RELTOL = {False: 1.0e-5, True: 1.0e-7}
+BM_MASSES = np.geomspace(1.0e11, 1.0e15, 64)
+
+# Every pair the halo bias pairing module enumerates, as (model, constructor, args).
+BIAS_CONFIGS = [
+    pytest.param("sheth99", hbp.sheth99_pair, (), id="sheth99"),
+    pytest.param("sheth01", hbp.sheth01_pair, (), id="sheth01"),
+] + [
+    pytest.param(
+        "tinker10",
+        hbp.tinker10_pair,
+        (rho_type, nc_mdef, Delta),
+        id=f"tinker10-{rho_type}_{Delta}",
+    )
+    for rho_type, nc_mdef, Delta in hbp.TINKER10_BIAS_MDEFS
+]
+
+
+def test_ccl_get_bsigma_signature() -> None:
+    """Check that HaloBias._get_bsigma takes the parameters the comparison passes."""
+    assert hasattr(pyccl.halos.HaloBias, "_get_bsigma")
+    assert callable(pyccl.halos.HaloBias._get_bsigma)
+    parameters = inspect.signature(pyccl.halos.HaloBias._get_bsigma).parameters
+
+    assert list(parameters) == GET_BSIGMA_PARAMETERS
+
+
+@pytest.mark.parametrize("ccl_model", CCL_BIAS_MODELS, ids=lambda cls: cls.__name__)
+def test_ccl_bias_model_get_bsigma_signature(
+    ccl_model: type[pyccl.halos.HaloBias],
+) -> None:
+    """Check each model's _get_bsigma, the override the comparison calls."""
+    assert issubclass(ccl_model, pyccl.halos.HaloBias)
+    parameters = inspect.signature(ccl_model._get_bsigma).parameters
+
+    assert list(parameters) == GET_BSIGMA_PARAMETERS
+
+
+def test_bias_pairs_cover_every_constructor() -> None:
+    """Check that BIAS_PAIRS builds every *_pair constructor of the bias module.
+
+    A constructor added to the module must be added to BIAS_CONSTRUCTOR_CALLS, so that
+    its CCL model's _get_bsigma is pinned too.
+    """
+    module_constructors = {
+        name
+        for name, value in vars(hbp).items()
+        if name.endswith("_pair") and callable(value)
+    }
+    built = {constructor.__name__ for constructor, _ in BIAS_CONSTRUCTOR_CALLS}
+    missing = sorted(module_constructors - built)
+
+    assert not missing, f"BIAS_PAIRS does not build: {', '.join(missing)}"
+
+
+def test_compare_halo_bias_reporting(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: Cosmology,
+) -> None:
+    """Check that compare_halo_bias reports through CompareFunc1d.
+
+    The returned object must carry the masses as its abscissa, finite positive biases
+    from both codes, and a summary row matching the shared table header.
+    """
+    m = np.geomspace(1.0e11, 1.0e15, 32)
+
+    cmp = nc_cmp.compare_halo_bias(
+        ccl_cosmo_eh_linear,
+        nc_cosmo_eh_linear,
+        *hbp.sheth99_pair(),
+        m,
+        0.0,
+        model="Sheth99",
+    )
+
+    assert isinstance(cmp, nc_cmp.CompareFunc1d)
+    assert_allclose(cmp.x, m, rtol=0.0, atol=0.0)
+    assert cmp.y1.shape == m.shape
+    assert cmp.y2.shape == m.shape
+    assert np.all(np.isfinite(cmp.y1))
+    assert np.all(np.isfinite(cmp.y2))
+    assert np.all(cmp.y1 > 0.0)
+    assert np.all(cmp.y2 > 0.0)
+    assert cmp.model == "Sheth99"
+    assert cmp.rel_diff_max >= cmp.rel_diff_min
+    assert len(cmp.summary_row()) == len(nc_cmp.CompareFunc1d.table_header())
+
+
+def test_compare_halo_bias_sigma_reporting(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: Cosmology,
+) -> None:
+    """Check that compare_halo_bias_sigma reports through CompareFunc1d.
+
+    The returned object must carry sigma as its abscissa, decreasing with mass, finite
+    positive biases from both codes, and a summary row matching the shared table
+    header.
+    """
+    m = np.geomspace(1.0e11, 1.0e15, 32)
+
+    cmp = nc_cmp.compare_halo_bias_sigma(
+        ccl_cosmo_eh_linear,
+        nc_cosmo_eh_linear,
+        *hbp.sheth99_pair(),
+        m,
+        0.0,
+        model="Sheth99",
+    )
+
+    assert isinstance(cmp, nc_cmp.CompareFunc1d)
+    assert cmp.x.shape == m.shape
+    assert cmp.y1.shape == m.shape
+    assert cmp.y2.shape == m.shape
+    assert np.all(cmp.x > 0.0)
+    assert np.all(np.diff(cmp.x) < 0.0)
+    assert np.all(np.isfinite(cmp.y1))
+    assert np.all(np.isfinite(cmp.y2))
+    assert np.all(cmp.y1 > 0.0)
+    assert np.all(cmp.y2 > 0.0)
+    assert cmp.model == "Sheth99"
+    assert cmp.rel_diff_max >= cmp.rel_diff_min
+    assert len(cmp.summary_row()) == len(nc_cmp.CompareFunc1d.table_header())
+
+
+@pytest.mark.parametrize(
+    "compare_func",
+    [nc_cmp.compare_halo_bias, nc_cmp.compare_halo_bias_sigma],
+    ids=["halo_bias", "halo_bias_sigma"],
+)
+def test_compare_halo_bias_rejects_redshift_outside_filter(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: Cosmology,
+    compare_func: Callable[..., nc_cmp.CompareFunc1d],
+) -> None:
+    """Check that both bias comparisons raise ValueError for z above the filter's zf."""
+    z = nc_cosmo_eh_linear.psf_tophat.props.zf + 1.0
+
+    with pytest.raises(ValueError, match="outside the filter's redshift range"):
+        compare_func(
+            ccl_cosmo_eh_linear,
+            nc_cosmo_eh_linear,
+            *hbp.sheth99_pair(),
+            np.geomspace(1.0e11, 1.0e15, 4),
+            z,
+        )
+
+
+@pytest.mark.parametrize(
+    "constructor, args",
+    BIAS_CONSTRUCTOR_CALLS,
+    ids=[constructor.__name__ for constructor, _ in BIAS_CONSTRUCTOR_CALLS],
+)
+def test_compare_halo_bias_sigma_ccl_inputs(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: Cosmology,
+    constructor: BiasPairConstructor,
+    args: tuple[Any, ...],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Check that CCL receives NumCosmo's sigma and the scale factor.
+
+    CCL's _get_bsigma is wrapped to record its arguments and result.
+    """
+    m = np.geomspace(1.0e11, 1.0e15, 64)
+
+    # CCL objects are immutable, so the method is wrapped on the model's class.
+    calls: list[tuple[Any, ...]] = []
+    ccl_model = type(constructor(*args).ccl_bias)
+    get_bsigma = ccl_model._get_bsigma
+
+    def recording_get_bsigma(
+        self: pyccl.halos.HaloBias,
+        cosmo_ccl: pyccl.Cosmology,
+        sigM: np.ndarray,
+        a: float,
+    ) -> np.ndarray:
+        bsigma = get_bsigma(self, cosmo_ccl, sigM, a)
+        calls.append((cosmo_ccl, np.copy(sigM), a, np.copy(bsigma)))
+        return bsigma
+
+    monkeypatch.setattr(ccl_model, "_get_bsigma", recording_get_bsigma)
+
+    for z in FSIGMA_Z:
+        calls.clear()
+        cmp = nc_cmp.compare_halo_bias_sigma(
+            ccl_cosmo_eh_linear, nc_cosmo_eh_linear, *constructor(*args), m, z
+        )
+
+        assert len(calls) == 1
+        cosmo_ccl, sigM, a, bsigma = calls[0]
+        assert cosmo_ccl is ccl_cosmo_eh_linear
+        assert_array_equal(sigM, cmp.x)
+        assert a == 1.0 / (1.0 + z)
+        assert_array_equal(cmp.y1, bsigma)
+
+
+@pytest.mark.parametrize("model, constructor, args", BIAS_CONFIGS)
+def test_compare_halo_bias_sigma_agreement(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: Cosmology,
+    model: str,
+    constructor: BiasPairConstructor,
+    args: tuple[Any, ...],
+) -> None:
+    """Compare the halo bias b(sigma) of CCL and NumCosmo for every pair.
+
+    Both codes evaluate b at the same sigma and z, so differences in sigma(M, z) do
+    not enter. The pairs set NumCosmo's parameters to CCL's. Each model's bound is
+    BSIGMA_RELTOL's.
+    """
+    for z in FSIGMA_Z:
+        cmp = nc_cmp.compare_halo_bias_sigma(
+            ccl_cosmo_eh_linear,
+            nc_cosmo_eh_linear,
+            *constructor(*args),
+            BSIGMA_MASSES,
+            z,
+        )
+
+        assert_allclose(cmp.y1, cmp.y2, rtol=BSIGMA_RELTOL[model], atol=0.0)
+
+
+@pytest.mark.parametrize("model, constructor, args", BIAS_CONFIGS)
+def test_compare_halo_bias_agreement(
+    ccl_cosmo_eh_linear: pyccl.Cosmology,
+    nc_cosmo_eh_linear: Cosmology,
+    model: str,
+    constructor: BiasPairConstructor,
+    args: tuple[Any, ...],
+) -> None:
+    """Compare the halo bias b(M, z) of CCL and NumCosmo for every pair.
+
+    Each code evaluates b at its own sigma(M, z), so differences in sigma(M, z) are
+    part of the comparison. The bound is BM_RELTOL's for the cosmology's CCL precision
+    setting.
+    """
+    reltol = BM_RELTOL[ccl_cosmo_eh_linear.high_precision]
+
+    for z in FSIGMA_Z:
+        cmp = nc_cmp.compare_halo_bias(
+            ccl_cosmo_eh_linear,
+            nc_cosmo_eh_linear,
+            *constructor(*args),
+            BM_MASSES,
+            z,
+            model=model,
+        )
+
+        assert_allclose(cmp.y1, cmp.y2, rtol=reltol, atol=0.0)

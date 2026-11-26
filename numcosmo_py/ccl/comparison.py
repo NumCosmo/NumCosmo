@@ -24,6 +24,7 @@
 """Compare CCL and NumCosmo results."""
 
 import timeit
+from collections.abc import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1368,6 +1369,140 @@ def compare_multiplicity_function(
         y_symbol=r"{\left[f(\sigma)\right]_{z=" + latex_float(z) + r"}}",
         xscale="log",
         yscale="log",
+    )
+
+
+# Halo bias
+
+
+def _nc_halo_bias_at_sigma(
+    cosmology: ncc.Cosmology,
+    nc_mulf: Nc.MultiplicityFunc,
+    nc_bias_new: Callable[[Nc.HaloMassFunction], Nc.HaloBias],
+    m: npt.NDArray[np.float64],
+    z: float,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Return NumCosmo's sigma(M, z) and halo bias at the masses m and redshift z."""
+    cosmo = cosmology.cosmo
+    nc_hmf = Nc.HaloMassFunction.new(cosmology.dist, cosmology.psf_tophat, nc_mulf)
+    nc_bias = nc_bias_new(nc_hmf)
+
+    lnM = np.log(m)
+    lnR = np.array([nc_hmf.lnM_to_lnR(cosmo, lnM_i) for lnM_i in lnM], dtype=np.float64)
+    sigma = np.array(
+        [nc_hmf.sigma_lnR(cosmo, lnR_i, z) for lnR_i in lnR], dtype=np.float64
+    )
+    nc_b = np.array(
+        [
+            nc_bias.eval(cosmo, sigma_i, lnM_i, z)
+            for sigma_i, lnM_i in zip(sigma, lnM, strict=True)
+        ],
+        dtype=np.float64,
+    )
+
+    return sigma, nc_b
+
+
+def compare_halo_bias(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    ccl_bias: pyccl.halos.HaloBias,
+    nc_mulf: Nc.MultiplicityFunc,
+    nc_bias_new: Callable[[Nc.HaloMassFunction], Nc.HaloBias],
+    m: npt.NDArray[np.float64],
+    z: float,
+    *,
+    model: str = "unnamed",
+) -> CompareFunc1d:
+    r"""Compare the halo bias b(M, z) from CCL and NumCosmo.
+
+    Returns a :class:`CompareFunc1d` with the halo bias :math:`b` for CCL (``y1``)
+    and NumCosmo (``y2``) at each mass in ``m``, in solar masses, and at redshift
+    ``z``. Each code evaluates :math:`b` at its own :math:`\sigma(M, z)`, so their
+    differences in :math:`\sigma(M, z)` are part of the comparison. ``model`` labels
+    the comparison.
+
+    The caller supplies ``ccl_bias``, ``nc_mulf`` and ``nc_bias_new`` for the same
+    model and mass definition, for example from
+    :mod:`numcosmo_py.ccl.halo_bias_pairing`, whose pairs unpack into these three
+    arguments; this function does not check that they match.
+
+    NumCosmo's mass function is built from ``cosmology.dist``, the power-spectrum
+    filter ``cosmology.psf_tophat`` and ``nc_mulf``; building it sets that filter on
+    ``nc_mulf``. ``nc_bias_new`` builds NumCosmo's bias object on that mass function.
+    For each mass, :meth:`Nc.HaloMassFunction.lnM_to_lnR` and
+    :meth:`Nc.HaloMassFunction.sigma_lnR` give :math:`\sigma`, and
+    :meth:`Nc.HaloBias.eval` gives :math:`b`. CCL's side is the bias object's
+    ``__call__`` at :math:`a = 1/(1 + z)`. The filter tabulates
+    :math:`\sigma(R, z)` for :math:`z` between its ``zi`` and ``zf`` properties and
+    extrapolates it outside that range. If ``z`` is outside that range,
+    :class:`ValueError` is raised before either code is evaluated.
+    """
+    _check_filter_redshift(cosmology.psf_tophat, z)
+    a = 1.0 / (1.0 + z)
+
+    _, nc_b = _nc_halo_bias_at_sigma(cosmology, nc_mulf, nc_bias_new, m, z)
+    ccl_b = np.asarray(ccl_bias(ccl_cosmo, m, a), dtype=np.float64)
+
+    return CompareFunc1d(
+        x=m,
+        y1=ccl_b,
+        y2=nc_b,
+        model=model,
+        x_symbol="M",
+        y_symbol=r"{\left[b(M)\right]_{z=" + latex_float(z) + r"}}",
+        x_unit=r"$M_\odot$",
+        xscale="log",
+        yscale="linear",
+    )
+
+
+def compare_halo_bias_sigma(
+    ccl_cosmo: pyccl.Cosmology,
+    cosmology: ncc.Cosmology,
+    ccl_bias: pyccl.halos.HaloBias,
+    nc_mulf: Nc.MultiplicityFunc,
+    nc_bias_new: Callable[[Nc.HaloMassFunction], Nc.HaloBias],
+    m: npt.NDArray[np.float64],
+    z: float,
+    *,
+    model: str = "unnamed",
+) -> CompareFunc1d:
+    r"""Compare the halo bias b(sigma) from CCL and NumCosmo.
+
+    Returns a :class:`CompareFunc1d` with the halo bias :math:`b` for CCL (``y1``)
+    and NumCosmo (``y2``) as a function of :math:`\sigma` (``x``), for the masses in
+    ``m``, in solar masses, at redshift ``z``. Both codes evaluate :math:`b` at the
+    same :math:`\sigma`, NumCosmo's :math:`\sigma(M, z)`, so differences in
+    :math:`\sigma(M, z)` do not enter. The caller supplies a matched pair, as for
+    :func:`compare_halo_bias`.
+
+    NumCosmo's :math:`\sigma` and :math:`b` are computed as in
+    :func:`compare_halo_bias`; ``z`` must lie in the redshift range of
+    ``cosmology.psf_tophat``, else :class:`ValueError` is raised before either code
+    is evaluated. CCL then receives :math:`\sigma` and :math:`a = 1/(1 + z)`. For
+    Tinker et al. (2010), each code computes its own :math:`\Omega_m(z)` and
+    :math:`\Delta_m`; their differences are part of the comparison.
+
+    CCL's side is the private method ``_get_bsigma`` of
+    :class:`pyccl.halos.HaloBias`;
+    ``tests/python/numcosmo_py/ccl/test_comparison.py`` checks its signature.
+    """
+    _check_filter_redshift(cosmology.psf_tophat, z)
+    a = 1.0 / (1.0 + z)
+
+    sigma, nc_b = _nc_halo_bias_at_sigma(cosmology, nc_mulf, nc_bias_new, m, z)
+    ccl_b = np.asarray(ccl_bias._get_bsigma(ccl_cosmo, sigma, a), dtype=np.float64)
+
+    return CompareFunc1d(
+        x=sigma,
+        y1=ccl_b,
+        y2=nc_b,
+        model=model,
+        x_symbol=r"\sigma",
+        y_symbol=r"{\left[b(\sigma)\right]_{z=" + latex_float(z) + r"}}",
+        xscale="log",
+        yscale="linear",
     )
 
 

@@ -38,7 +38,7 @@
  * density contrast. This bias has a significant impact on less massive halos, and  for
  * a spherical collapse is given by
  * \begin{align}
- * b(\nu)=1+\frac{a \nu^2-1}{\delta_c}+\frac{2 p}{\delta_c\left[1+\left(a_c \nu^2\right)^p\right]}
+ * b(\nu)=1+\frac{a \nu^2-1}{\delta_c}+\frac{2 p}{\delta_c\left[1+\left(a \nu^2\right)^p\right]}
  * \end{align}
  * where $b(\nu)$ is the bias, $\delta_c$ is the critical threshold,
  * $\nu = \frac{\delta_c}{\sigma}$, and $(a, p)$ are free parameters
@@ -155,7 +155,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
                                    g_param_spec_double ("critical-delta",
                                                         NULL,
                                                         "Critical delta",
-                                                        0.0, G_MAXDOUBLE, 1.686,
+                                                        0.0, G_MAXDOUBLE, NC_MULTIPLICITY_FUNC_DELTA_C0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -168,7 +168,7 @@ nc_halo_bias_st_spher_class_init (NcHaloBiasSTSpherClass *klass)
                                    g_param_spec_double ("a",
                                                         NULL,
                                                         "a",
-                                                        0.0, G_MAXDOUBLE, 0.75,
+                                                        0.0, G_MAXDOUBLE, 0.707,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -320,5 +320,5 @@ nc_halo_bias_st_spher_get_p (const NcHaloBiasSTSpher *biasf_st_spher)
   return biasf_st_spher->p;
 }
 
-/* _NC_BIAS_FUNCTION_ST_SPHER_DATASET_9901122 = {1.686, 0.75, 0.3}; */
+/* _NC_BIAS_FUNCTION_ST_SPHER_DATASET_9901122 = {1.68647, 0.707, 0.3}; */
 
