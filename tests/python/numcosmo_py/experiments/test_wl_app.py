@@ -1450,6 +1450,57 @@ def test_cluster_wl_load_app_spectral_interp(
     assert factor.props.interp_abstol == pytest.approx(1e-4)
 
 
+def test_cluster_wl_load_app_cheb_weights(experiment_file, real_wl_obs_file_with_meta):
+    """--integ-method cheb-weights, --cheb-tol, --cheb-level-min and the Spectral
+    restrict_range option reach the saved dataset."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--integ-method=cheb-weights",
+            "--cheb-tol=1e-9",
+            "--cheb-level-min=3",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial "
+            "restrict_range=true",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    factor = cast(Nc.GalaxyShapeFactorSpectral, cluster_data.props.shape_factor)
+
+    assert cluster_data.get_integ_method() == Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
+    assert cluster_data.get_cheb_tol() == pytest.approx(1e-9)
+    assert cluster_data.get_cheb_level_min() == 3
+    assert factor.get_restrict_range()
+
+
+def test_cluster_wl_load_app_bad_parameter_list(
+    experiment_file, real_wl_obs_file_with_meta
+):
+    """A parameter name that is not a full name is a CLI error, not a traceback."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            "--parameter-list=log10MDelta",
+        ],
+    )
+    assert result.exit_code == 2, result.output
+    assert isinstance(result.exception, SystemExit)
+    assert "give the full name" in result.output
+
+
 def test_cluster_wl_load_app_no_metadata_requires_explicit_values(
     experiment_file, real_wl_obs_file
 ):
