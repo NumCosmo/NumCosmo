@@ -121,7 +121,8 @@ converged value within $10^{-9}$. It evaluates the shape factor at 13 to 19 node
 on average for $\log_{10} M_{200c}$ from 13 to 16, instead of 45. With interpolants it is
 about 1.5 times faster than `FIXED_NODES`, and with one integral per node about 2.8 times
 faster. With the line table both methods take the same time within ten percent. The moments
-of the 10,706 galaxies take about 7 s on 10 threads, against 0.16 s for the fixed nodes, once
-per cluster redshift. The benchmark page
+of the 10,706 galaxies take about 0.85 s on 10 threads (7.2 s on one), against 0.16 s for the
+fixed nodes. Each galaxy's $p(z)$ keeps its moments, so a new cluster redshift computes again
+only those of the galaxies whose range contains it. The benchmark page
 [Shape marginal against certified values](../../../../benchmarks/wl_shape_marginal.qmd)
 lists the measured times.

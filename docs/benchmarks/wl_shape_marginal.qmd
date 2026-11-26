@@ -544,5 +544,5 @@ $-2\ln L$ at $\log_{10} M_{200c} = 14$, on 10 threads, with the default `cheb-to
 
 Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-25. The method `CHEB_WEIGHTS` gives
 $-2\ln L$ within $10^{-9}$ of its value at 33 nodes, and `FIXED_NODES` differs from it by
-$4.5\times10^{-4}$. The first evaluation at a cluster redshift computes the moments of every
-galaxy: 7 s, against 0.16 s for the fixed nodes.
+$4.5\times10^{-4}$. The first evaluation computes the moments of every galaxy: 0.85 s on 10
+threads, against 0.16 s for the fixed nodes.
