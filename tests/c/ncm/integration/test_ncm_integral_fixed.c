@@ -59,6 +59,10 @@ static void test_ncm_integral_fixed_vec_mult_constant (gconstpointer pdata);
 static void test_ncm_integral_fixed_calibrate (void);
 static void test_ncm_integral_fixed_calibrate_relerr_unconverged (void);
 static void test_ncm_integral_fixed_calibrate_warns (void);
+static void test_ncm_integral_fixed_gauss_legendre_rule (void);
+static void test_ncm_integral_fixed_gauss_legendre_rule_threads (void);
+static void test_ncm_integral_fixed_gauss_legendre_rule_zero (void);
+static void test_ncm_integral_fixed_gauss_legendre_rule_zero_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -98,6 +102,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/integral_fixed/calibrate", test_ncm_integral_fixed_calibrate);
   g_test_add_func ("/ncm/integral_fixed/calibrate_relerr_unconverged", test_ncm_integral_fixed_calibrate_relerr_unconverged);
   g_test_add_func ("/ncm/integral_fixed/calibrate_warns", test_ncm_integral_fixed_calibrate_warns);
+  g_test_add_func ("/ncm/integral_fixed/gauss_legendre_rule", test_ncm_integral_fixed_gauss_legendre_rule);
+  g_test_add_func ("/ncm/integral_fixed/gauss_legendre_rule/threads", test_ncm_integral_fixed_gauss_legendre_rule_threads);
+  g_test_add_func ("/ncm/integral_fixed/gauss_legendre_rule/zero", test_ncm_integral_fixed_gauss_legendre_rule_zero);
+  g_test_add_func ("/ncm/integral_fixed/gauss_legendre_rule/zero/subprocess", test_ncm_integral_fixed_gauss_legendre_rule_zero_subprocess);
 
   g_test_run ();
 
@@ -464,5 +472,95 @@ test_ncm_integral_fixed_vec_mult_constant (gconstpointer pdata)
 
   ncm_integral_fixed_free (intf);
   ncm_vector_free (g_at_nodes);
+}
+
+/*
+ * Every rule from 1 to 129 points: ascending nodes, and the integrals of x^k on [-1, 1]
+ * for k <= 2 n - 1, summed in long double, exact to rounding. Measured at most 1.1e-16
+ * for the sizes GSL tabulates and 6.1e-15 for the others (n up to 257); 1e-14 is asserted.
+ * A second call returns the same arrays.
+ */
+static void
+test_ncm_integral_fixed_gauss_legendre_rule (void)
+{
+  guint n;
+
+  for (n = 1; n <= 129; n++)
+  {
+    const gdouble *x, *w, *x2, *w2;
+    guint i, k;
+
+    ncm_integral_gauss_legendre_rule (n, &x, &w);
+
+    for (i = 1; i < n; i++)
+      g_assert_cmpfloat (x[i], >, x[i - 1]);
+
+    for (k = 0; k <= 2 * n - 1; k++)
+    {
+      long double integ   = 0.0L;
+      const gdouble exact = (k % 2 == 1) ? 0.0 : 2.0 / (k + 1.0);
+
+      for (i = 0; i < n; i++)
+        integ += (long double) w[i] * powl ((long double) x[i], k);
+
+      ncm_assert_cmpdouble_e ((gdouble) integ, ==, exact, 0.0, 1.0e-14);
+    }
+
+    ncm_integral_gauss_legendre_rule (n, &x2, &w2);
+    g_assert_true (x2 == x);
+    g_assert_true (w2 == w);
+  }
+}
+
+/* Asks for the rule of 300 + (index mod 4) points and keeps its node array */
+static gpointer
+_test_gl_rule_thread (gpointer data)
+{
+  const guint n = 300 + GPOINTER_TO_UINT (data) % 4;
+  const gdouble *x, *w;
+
+  ncm_integral_gauss_legendre_rule (n, &x, &w);
+
+  return (gpointer) x;
+}
+
+/* Eight threads ask at once for four rules not computed before: equal sizes get the same arrays */
+static void
+test_ncm_integral_fixed_gauss_legendre_rule_threads (void)
+{
+  GThread *threads[8];
+  gpointer xs[8];
+  guint t;
+
+  for (t = 0; t < 8; t++)
+    threads[t] = g_thread_new ("gl_rule", &_test_gl_rule_thread, GUINT_TO_POINTER (t));
+
+  for (t = 0; t < 8; t++)
+    xs[t] = g_thread_join (threads[t]);
+
+  for (t = 0; t < 4; t++)
+  {
+    const gdouble *x, *w;
+
+    ncm_integral_gauss_legendre_rule (300 + t, &x, &w);
+    g_assert_true (xs[t] == (gpointer) x);
+    g_assert_true (xs[t + 4] == (gpointer) x);
+  }
+}
+
+static void
+test_ncm_integral_fixed_gauss_legendre_rule_zero (void)
+{
+  g_test_trap_subprocess ("/ncm/integral_fixed/gauss_legendre_rule/zero/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*a rule needs at least one point*");
+}
+
+static void
+test_ncm_integral_fixed_gauss_legendre_rule_zero_subprocess (void)
+{
+  const gdouble *x, *w;
+
+  ncm_integral_gauss_legendre_rule (0, &x, &w);
 }
 

@@ -54,8 +54,9 @@ __all__ = [
     "var_dict_to_dict",
 ]
 
-Ncm.cfg_register_objects()
-Ncm.cfg_register_functions()
+# Loading the library registers its types and functions; this call loads it at import,
+# which PyGObject otherwise defers to the first call, and aborts if that did not happen.
+Ncm.cfg_check_register()
 
 
 def _matrix_to_numpy(

@@ -5,6 +5,10 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_cfg.c'],
     },
     {
+        'name': 'ncm_cfg_load',
+        'sources': ['ncm/core/test_ncm_cfg_load.c'],
+    },
+    {
         'name': 'ncm_generic',
         'sources': ['ncm/core/test_ncm_generic.c'],
     },
@@ -734,6 +738,10 @@ data_tests = [
         'suite': ['c', 'omp'],
     },
     {
+        'name': 'nc_data_cluster_wl_factor_cheb',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_cheb.c'],
+    },
+    {
         'name': 'nc_data_cluster_wl_factor_node_config',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_node_config.c'],
     },
@@ -835,8 +843,16 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
     },
     {
+        'name': 'nc_galaxy_wl_obs_shape_interp',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs_shape_interp.c'],
+    },
+    {
         'name': 'nc_galaxy_pz_bspline_sqrt',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_pz_bspline_sqrt.c'],
+    },
+    {
+        'name': 'nc_galaxy_redshift_factor_composed',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_redshift_factor_composed.c'],
     },
     {
         'name': 'nc_galaxy_redshift_factor_spline',

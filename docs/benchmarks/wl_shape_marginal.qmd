@@ -343,11 +343,11 @@ failure_summary("Spectral")
 ## Speed
 
 The approximate classes evaluate $\ln P$ in closed form or from tables. Spectral integrates,
-which costs orders of magnitude more per evaluation. When the population is fixed,
-Spectral can instead build, once per galaxy, an interpolant of $\ln P$ in $g$ on
-$|g| \le 0.3$ (`NcGalaxyShapeFactorSpectral:use-interp`), and every later evaluation reads
-the interpolant. When the population varies, as in a fit of its parameters, the interpolant
-of every galaxy changes at every step, so each evaluation integrates.
+which costs orders of magnitude more per evaluation. Spectral can instead build, once per
+galaxy in a pre-computation
+([[numcosmo|nc_galaxy_shape_factor_spectral_build_interp]]), an interpolant of $\ln P$
+in $g$ on $|g| \le 0.3$, and every later evaluation reads the interpolant. Each free
+parameter of the population is one more variable of the interpolant, over its bounds.
 
 The times below are those an MCMC fitting the mass and the center of a cluster sees, with the
 population fixed: each galaxy is prepared once and every step of the chain evaluates it at a
@@ -415,19 +415,19 @@ for sn, e1, e2 in speed_gal:
     for cname, cls in SPEED_CLASSES.items():
         gsf = cls.new(Nc.GalaxyWLObsEllipConv.TRACE)
         spectral = cls is Nc.GalaxyShapeFactorSpectral
-        if spectral:
-            gsf.set_use_interp(True)
         data = galaxy_data(gsf, mset, sn, e1, e2)
         t0 = time.perf_counter()
+        if spectral:
+            gsf.build_interp(mset, data, 3.0)
         gsf.data_prepare(mset, data, 3.0)
         gsf.eval_ln_marginal(pop, data, g1[0], g2[0], e1, e2)
         t_prep = time.perf_counter() - t0
         speed[cname].append(eval_array(gsf, pop, data, g1, g2, e1v, e2v)[1])
         if spectral:
-            gsf.set_use_interp(False)
             t_build.append(t_prep)
             n = N_DIRECT
-            t_direct.append(eval_array(gsf, pop, data, g1[:n], g2[:n], e1v[:n], e2v[:n])[1])
+            plain = galaxy_data(gsf, mset, sn, e1, e2)
+            t_direct.append(eval_array(gsf, pop, plain, g1[:n], g2[:n], e1v[:n], e2v[:n])[1])
 
 lines = ["| class | median time per evaluation |", "|---|---|"]
 for cname, sec in speed.items():
@@ -483,23 +483,66 @@ display(Markdown(f"Both tables were measured on one thread of an {cpu_model()}."
 ```
 
 An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
-$10^5$ times, far above the break-even count: with a fixed population the build pays even if
-it is repeated in every process of the run. The command `numcosmo wl-catalog shape-interp`
-does it once instead. It builds the interpolants of all the galaxies of a catalog in parallel
-and writes them with the catalog; `numcosmo generate cluster-wl-load --data-file` then builds
-an experiment that loads them. The table below gives the measurements on the HSC field
-HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE).
+$10^5$ times, far above the break-even count: with a fixed population the build of the
+interpolants costs a small fraction of the integrals they replace. The command
+`numcosmo wl-catalog shape-interp` builds them once. It builds the interpolants of all the
+galaxies of a catalog in parallel. It writes them to a second file in the directory of the
+catalog, named after the catalog with the suffix `.shape_interp.gvar`, and writes the catalog
+with the name of that file. `numcosmo generate cluster-wl-load --data-file` then builds an
+experiment that refers to the interpolants file. The experiment must be written in the
+directory of that file, and its dataset file holds the rows and the bare file name. The
+interpolants are read from that file at the first evaluation of $-2\ln L$. Without a prepared
+catalog, each galaxy integrates at every redshift node or, with a positive `line-abstol`, uses
+the interpolation along its shears, which needs no build and is computed again at every
+evaluation. The table compares the prepared catalog with the interpolation along the shears on
+the HSC field HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE).
 
-| HWL16a-094, 2,200 galaxies | time |
-|---|---|
-| `wl-catalog shape-interp`, 12 threads | 44 s |
-| the same build on 1 thread (`nc_data_cluster_wl_factor_data_prepare()`) | 450 s |
-| first $-2\ln L$ of an experiment from the prepared catalog | 0.02 s |
-| first $-2\ln L$ of the same experiment from the original catalog (builds every interpolant) | 447 s |
-| MCMC, 1,000 walkers and 150,000 points, 12 threads, each thread building its interpolants | 736 s |
-| the same MCMC from the prepared catalog | 221 s |
+| HWL16a-094, 2,200 galaxies | prepared catalog | `line-abstol` $10^{-7}$ |
+|---|---|---|
+| `wl-catalog shape-interp`, 12 threads | 25.8 s | |
+| the same build on 1 thread | 266 s | |
+| $-2\ln L$, 1 thread | 0.004 s | 1.08 s |
+| MCMC, 1,000 walkers and 150,000 points, 12 threads | 63 s | not run |
 
-Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-12 and 2026-11-13, with fixed-node
-redshift integration. The two experiments give the same $-2\ln L$ to the last digit, and the
-two MCMCs the same posterior within the Monte Carlo error ($\log_{10} M_{200c}$ =
-$15.4785 \pm 0.1211$ and $15.4785 \pm 0.1208$).
+Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-25, with fixed-node redshift
+integration. The two give $-2\ln L$ equal within $1.3 \times 10^{-7}$. The MCMC gives
+$\log_{10} M_{200c} = 15.4786 \pm 0.1205$ (burn-in of 50 iterations).
+
+With `--free-pop` the same command builds interpolants that have each free parameter of the
+population as one more variable, compressed after the build
+([Compressed Panels](../theory/ncm/algebra/spectral_tensor.qmd#compressed-panels)), and a
+fit may then vary the population. Without a prepared catalog, a fit with a free population
+evaluates the galaxies as with a fixed population. The table compares the two on HWL16a-094
+with $\alpha$ and $\beta$ of the Beta population free over their default bounds, at the
+default settings.
+
+| HWL16a-094, 2,200 galaxies, $\alpha$ and $\beta$ free | prepared catalog | `line-abstol` $10^{-7}$ |
+|---|---|---|
+| `wl-catalog shape-interp --free-pop`, 12 threads | 524 s | |
+| size of the catalog | 0.52 GB | |
+| $-2\ln L$ at a new population, 1 thread | 0.021 s | 1.11 s |
+| fit of the halo center, $\log_{10} M_{200c}$, $\alpha$ and $\beta$: 701 evaluations | 15.6 s | 1251 s |
+| MCMC, 1,000 walkers and 150,000 points, 12 threads | 313 s | not run |
+
+Measured on the same machine on 2026-11-24, with fixed-node redshift integration. The two
+fits take the same evaluations and end at the same parameter values, with $-2\ln L$ equal
+within $6 \times 10^{-7}$. The MCMC gives $\log_{10} M_{200c} = 15.478 \pm 0.121$, and for
+$|\chi_I|$ a mean of $0.491 \pm 0.006$ and a standard deviation of $0.222 \pm 0.005$
+(burn-in of 50 iterations).
+
+The tables above integrate each galaxy over redshift on fixed nodes. The table below compares
+the method `FIXED_NODES` with `CHEB_WEIGHTS`
+([The Redshift Integral of a Galaxy](../theory/nc/lss/galaxy/wl_redshift_integral.qmd)) on
+the HSC field HWL16a-007 (10,706 galaxies, TRACE). It gives the best time of one evaluation of
+$-2\ln L$ at $\log_{10} M_{200c} = 14$, on 10 threads, with the default `cheb-tol` $10^{-8}$.
+
+| HWL16a-007, $-2\ln L$, 10 threads | `FIXED_NODES` (45 nodes) | `CHEB_WEIGHTS`, `cheb-level-min` 2 | `cheb-level-min` 5 |
+|---|---|---|---|
+| prepared catalog (interpolants) | 25.4 ms | 16.4 ms | 21.8 ms |
+| one integral per node | 50.8 s | 18.1 s | 37.7 s |
+| `line-abstol` $10^{-7}$ | 5.68 s | 17.5 s | 6.0 s |
+
+Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-25. The method `CHEB_WEIGHTS` gives
+$-2\ln L$ within $10^{-9}$ of its value at 33 nodes, and `FIXED_NODES` differs from it by
+$4.5\times10^{-4}$. The first evaluation computes the moments of every galaxy: 0.85 s on 10
+threads, against 0.16 s for the fixed nodes.

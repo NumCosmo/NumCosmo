@@ -321,15 +321,20 @@ and $\lambda$ from it. A bracket that is not positive aborts as a non-finite $\l
 ## Interpolation in $g$
 
 In a likelihood one galaxy is evaluated at many shears with the same
-$\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$. With
-[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] the class tabulates
-$\ln P (\epsilon_\mathrm{obs} \mid g)$ as a function of $g$ for each galaxy in an
+$\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$. A galaxy may therefore hold a table of
+$\ln P (\epsilon_\mathrm{obs} \mid g)$ as a function of $g$, an
 [[numcosmo-math|NcmSpectralTensor]] built by an
 [[numcosmo-math|NcmSpectralTensorBuilder]], both described in
-[Tensor-Product Chebyshev Tables](../../../ncm/algebra/spectral_tensor.qmd),
-and evaluates that table for $|g| \le g_\mathrm{max}$
-([[numcosmo|NcGalaxyShapeFactorSpectral:interp-g-max]]). For $|g| > g_\mathrm{max}$ it
-computes the integral.
+[Tensor-Product Chebyshev Tables](../../../ncm/algebra/spectral_tensor.qmd). The class
+evaluates that table for $|g|$ in its range, at most $g_\mathrm{max}$
+([[numcosmo|NcGalaxyShapeFactorSpectral:interp-g-max]]), and computes the integral
+elsewhere. The tables are built only by a pre-computation,
+[[numcosmo|nc_galaxy_shape_factor_spectral_build_interp]], which
+[[numcosmo|nc_data_cluster_wl_factor_write_shape_interp]] calls for every galaxy of a
+catalog and stores in it, and [[numcosmo|nc_data_cluster_wl_factor_write_shape_interp_file]]
+writes to a file the catalog refers to; a likelihood never builds them. A galaxy that holds a
+table always uses it, and a table that does not hold for the fit aborts. A change of the rows
+of the catalog, as a resample, drops its tables.
 
 - Frame: rotated by the phase of $\epsilon_\mathrm{obs}$, so that
   $\epsilon_\mathrm{obs} = e > 0$. In this frame $\ln P$ does not change under
@@ -397,19 +402,55 @@ computes the integral.
   $\sigma$ of a few hundredths is such a case. The default bounds are chosen for this,
   $[1, 4]$ for $\alpha$ and $\beta$ of the Beta population and $[0.2, 1]$ for $\sigma$ of
   the truncated Gaussian, where the mean of $|\chi_I|$ goes from 0.25 to 0.63.
+- One integral per shear: with
+  [[numcosmo|NcGalaxyShapeFactorSpectral:interp-pop-one-integral]] (default on), the values
+  at the population points of one call of the builder come from one integral per shear. In
+  Eq. (5) the population enters through the exponents $a$ and $b$ and through
+  $\hat{P}_\zeta$; the noise factor of $G$ holds no population. The integral is computed for
+  the population at the center of the population points of the call, and on each of its
+  accepted panels the integral of the noise factor over $\theta$ is kept as a Chebyshev
+  series in $r$. The integral of another population of the call is the integral of its
+  $r^a (1 - r)^b \hat{P}_\zeta (r)$ against those series: by a Gauss-Legendre rule on a
+  panel that touches neither end of $[0, 1]$, and, on a panel that touches one end, by the
+  moments of the power law of that end against products of Chebyshev polynomials, which
+  hold no quadrature error for two series. This requires $\hat{P}_\zeta$ to be a constant
+  times one factor for each free parameter, as for the Beta population and the truncated
+  Gaussian ([[numcosmo|nc_galaxy_shape_pop_reduced_factor_params]]); otherwise, and with
+  the property off, each population point takes its own integral. The accepted panels are
+  those of the population at the center. They do not resolve the integrand of a population
+  whose density differs from it by many orders of magnitude, so the bounds must not contain
+  such populations.
+- Compression: a table with population variables is compressed after its build. Each of
+  its panels is replaced by a Tucker panel when one holds fewer numbers and changes
+  $\ln P$ by at most $f_\mathrm{c}$ times `interp-abstol`
+  ([Compressed Panels](../../../ncm/algebra/spectral_tensor.qmd#compressed-panels)),
+  where $f_\mathrm{c}$ is [[numcosmo|NcGalaxyShapeFactorSpectral:interp-compress-frac]]
+  (default $10^{-2}$). The bound is $10^{-7}$ at the default `interp-abstol`, and the
+  largest change measured is about 0.15 of the bound. The likelihood evaluates a galaxy at
+  one value of the population parameters per call, so the population variables are the
+  same at every shear of the galaxy, and each Tucker panel is summed over them once per
+  call
+  ([Evaluation at Fixed Last Variables](../../../ncm/algebra/spectral_tensor.qmd#evaluation-at-fixed-last-variables)).
+  With $\alpha$ and $\beta$ of the Beta population free over the default bounds, the
+  compressed tables of the HSC catalog HWL16a-094 hold 14 times fewer numbers than the
+  dense ones. With $f_\mathrm{c} = 0$ no panel is compressed, and a table without
+  population variables is never compressed.
 
-The table of a galaxy is built at its first evaluation with
-$|g| \le g_\mathrm{max}$ and kept with the galaxy. It is built again when
-$\epsilon_\mathrm{obs}$, $\sigma_\mathrm{noise}$, `reltol`, $g_\mathrm{max}$,
-`interp-abstol`, `interp-min-radial-panels`, `interp-trim-frac`, the values of the fixed
-parameters of the population, the set of its free parameters or their bounds differ from
-those it was built for, and, with population variables, when `interp-pop-level-min` or
-`interp-pop-level-cap` differ. A change of a free parameter inside its bounds uses the same
-table. A table without population variables computes of the order of $10^3$ integrals; one
-with population variables computes that number at each point of their grids, at least
-$5^d$ points for $d$ free parameters at the default `interp-pop-level-min`. A table
-replaces the integrals of the shears at which the galaxy is evaluated while it holds, so it
-reduces the cost when these outnumber the integrals of its build.
+A table holds for the $\epsilon_\mathrm{obs}$ and $\sigma_\mathrm{noise}$ of its galaxy and
+for the `reltol`, `interp-abstol`, `interp-min-radial-panels`, `interp-trim-frac`, the
+values of the fixed parameters of the population, the set of its free parameters and their
+bounds it was built with, and, with population variables, for `interp-pop-level-min`,
+`interp-pop-level-cap`, `interp-pop-one-integral` and `interp-compress-frac`. A change of a
+free parameter inside its bounds uses the same table; any other difference aborts the
+evaluation, and the table must be built again. Its range is the one it was built with, also
+when it was read from a catalog by a fit with other range settings. A table without
+population variables computes of the order of $10^3$ integrals. One with population
+variables needs that number of values at each point of the grids of the population, at least
+$5^d$ points for $d$ free parameters at the default `interp-pop-level-min`; with
+`interp-pop-one-integral` the population points of a call take one integral per shear, and
+without it one integral each. A table replaces the integrals of the shears at which the
+galaxy is evaluated while it holds, so it reduces the cost when these outnumber the
+integrals of its build.
 
 ## Interpolation Along the Shears of a Galaxy
 
@@ -421,8 +462,8 @@ $$
 where $c$ and $m$ are the additive and multiplicative shear biases of the galaxy, $g_t (z_j)$
 is the reduced tangential shear of the halo at the projected position of the galaxy for a
 source at the node $z_j$, and $u \equiv e^{2 i \phi}$, with $\phi$ the position angle of the
-galaxy around the halo center, in the frame of the ellipticities of the galaxy. Without
-[[numcosmo|NcGalaxyShapeFactorSpectral:use-interp]] and with a positive
+galaxy around the halo center, in the frame of the ellipticities of the galaxy. For a galaxy
+that holds no table, and with a positive
 [[numcosmo|NcGalaxyShapeFactorSpectral:line-abstol]] (default 0), the class expands
 $\ln P$ at $c + t u$ in a Chebyshev series in $t$ on $[\min_j t_j, \max_j t_j]$, from
 integrals on nested Chebyshev--Lobatto grids of levels 1 up to the largest level whose grid
@@ -508,7 +549,7 @@ to 21% more.
 
 The series along the shears of a galaxy was measured on the 10,706 galaxies of HWL16a-007
 (Beta population fitted to the catalog, fixed redshift nodes, halo center and
-$\log_{10} M_\Delta$ free), without `use-interp`, at the values of the experiment and at
+$\log_{10} M_\Delta$ free), without tables, at the values of the experiment and at
 five random points of its prior box. With `line-abstol` $10^{-6}$ every series was accepted,
 with 46 nodes per galaxy on average; one evaluation of $-2 \ln L$ took 5.7 seconds against
 51.5 seconds with every shear integrated (four threads), and the two differ by at most

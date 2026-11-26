@@ -201,6 +201,76 @@ its panel: $I_0$ is then many times $I$, and a panel whose change is above the f
 $\varepsilon_F$ can be accepted in step 2 by the larger $\varepsilon_F$ computed from
 $I_0$.
 
+## Integrals for Other Radial Weights
+
+An integrand $w (r) \, \tilde{G} (r, \theta)$ with the same $\tilde{G}$ and several radial
+weights $w$ can be integrated for every weight from the values of $\tilde{G}$ of one
+integral. In the shape marginalization the weights are the densities of several populations
+and $\tilde{G}$ is the noise factor. On an accepted panel the integral of $\tilde{G}$ over
+the angle is represented by a Chebyshev series in $r$,
+$$
+A (r) \equiv \int_{\theta_a}^{\theta_b} \tilde{G} (r, \theta) \, \mathrm{d}\theta
+\approx \sum_{k = 0}^{N_r} \alpha^k \, T_k (s_r) ,
+\tag{8}
+$$
+where the coefficients $\alpha^k$ are those of the values of $A$ at the radial nodes of the
+panel, and each value is $h_\theta$ times the Clenshaw--Curtis quadrature of $\tilde{G}$ at
+the angular nodes. The values of $\tilde{G}$ are kept a second time, without the weight and
+without $\rho$, and moved through the same doublings as the samples of $F$, so the panels,
+the integral and the number of evaluations are those of the integral without the series.
+The internal `_ncm_spectral_polar_integrate_radial_series()` implements this for one
+reference weight, the one of Eq. (1) with its $\rho$, and returns the series of each
+accepted panel.
+
+The weights form a grid,
+$$
+w_{jl} (r) \equiv r^{a_j} (R - r)^{b_l} \, u_j (r) \, v_l (r) ,
+\tag{9}
+$$
+where $a_j > -1$ and $b_l > -1$ are the exponents at the two ends, $u_j$ and $v_l$ are
+smooth factors, $j < K_a$ and $l < K_b$. The integral of $w_{jl} \tilde{G}$ over the domain
+is the sum over the accepted panels of the integral of $w_{jl} A$ over $[r_a, r_b]$, which
+depends on the ends that the panel touches:
+
+- A panel with $r_a > 0$ and $r_b < R$: a Gauss--Legendre rule of $N_r + 1$ nodes in $s_r$,
+  with $A$ evaluated at its nodes from Eq. (8). The rule is exact when $w_{jl}$ is a
+  polynomial of degree $N_r + 1$ on the panel.
+- A panel with $r_a = 0$: the power law $r^{a_j}$ is the weight. The products $A u_j$ and
+  the factors $(R - r)^{b_l} v_l$ are expanded in Chebyshev polynomials from their values
+  at the radial nodes, and the integral is the bilinear form of Eq. (10).
+- A panel with $r_b = R$: the same with the power law $(R - r)^{b_l}$ as the weight, the
+  products $A v_l$ and the factors $r^{a_j} u_j$.
+- A panel that is the whole range $[0, R]$: it is split at $R / 2$ and the series of
+  Eq. (8) is restricted to each half, which is exact for a polynomial.
+
+For a panel with $r_a = 0$, with the expansions $A u_j = \sum_k f_j^k T_k (s_r)$ and
+$(R - r)^{b_l} v_l = \sum_m g_l^m T_m (s_r)$, the integral of $w_{jl} A$ over the panel is
+$$
+h_r^{1 + a_j} \sum_{k = 0}^{N_r} \sum_{m = 0}^{N_r} f_j^k \, g_l^m \,
+\frac{M_{k + m} (a_j) + M_{|k - m|} (a_j)}{2} , \qquad
+M_p (a) \equiv \int_{-1}^{1} (1 + s)^{a} \, T_p (s) \, \mathrm{d}s ,
+\tag{10}
+$$
+where $r = h_r (1 + s_r)$ on this panel, so that $r^{a_j} = h_r^{a_j} (1 + s_r)^{a_j}$, and
+the product of two Chebyshev polynomials is $T_k T_m = (T_{k + m} + T_{|k - m|}) / 2$. The
+moments $M_p (a)$ are the $M^r_k$ of Eq. (7) with $c_a = a$ and $c_b = 0$, needed up to
+$p = 2 N_r$ and computed once for each exponent and level. Equation (10) has no quadrature
+error for the two series: its error is that of the two expansions. For a panel with
+$r_b = R$ the moments are those of $(1 - s)^{b_l}$. The exponent of a weight therefore
+selects the table of moments and nothing else. The internal
+`_ncm_spectral_polar_weight_grid_integrate()` implements the four cases.
+
+The factors $u_j$ and $v_l$ are computed for the $K_a + K_b$ values of the two indices, at
+the nodes of each panel, and the $K_a K_b$ integrals are sums of their products: no value
+of $\tilde{G}$ and no exponential is computed for a pair. The panels and their series are
+those of the reference weight. The series of Eq. (8) is accurate where the test of the
+reference integrand required it, and a panel where that integrand is small compared with
+its integral may have been accepted at a low level. A weight that differs from the
+reference by many orders of magnitude over the domain can have most of its integral on
+such panels, and nothing in the sums detects it. The reference should therefore be inside
+the set of weights, and the set should not contain weights that far from it; the shape
+marginalization takes the weight at the center of the grid.
+
 ## Edges for One Peak
 
 The function [[numcosmo-math|ncm_spectral_polar_peak_edges]] gives the edges for an
@@ -246,6 +316,11 @@ $K_r K_\theta$ multiplications.
 | $D_r$, $D_\theta$, $V$ | `Dr`, `Dt`, `vs` |
 | $\varepsilon_F$, $W$ | `abstol_F`, `A` of the call |
 | $M^r_k$, $M^\theta_l$ | the tables of `mom`, `mt` |
+| the values of $\tilde{G}$ without the weight | `in_G`, in the layout of `in` |
+| the Clenshaw--Curtis weights of the angular nodes | `cc` |
+| $\alpha^k$ of Eq. (8) | `series_coeffs`; one `NcmSpectralPolarRadialSeries` per accepted panel |
+| $a_j$, $b_l$; $M_p (a_j)$, $M_p (b_l)$ | `a`, `b`; `ma`, `mb` of the `NcmSpectralPolarWeightGrid` |
+| $f_j^k$, $g_l^m$ of Eq. (10) | `ac`, `bc` for $r_a = 0$; `bc`, `ac` for $r_b = R$ |
 
 The transform of a grid is two one-dimensional passes, each over all the lines of the
 other direction at once. A direction with up to 129 nodes is transformed by the functions

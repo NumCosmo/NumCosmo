@@ -85,9 +85,8 @@ struct _NcmIntegralFixed
   gdouble *int_nodes;
   gulong n_nodes;
   gulong rule_n;
-#ifndef NUMCOSMO_GIR_SCAN
-  gsl_integration_glfixed_table *glt;
-#endif
+  const gdouble *gl_x;
+  const gdouble *gl_w;
 };
 
 gint ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error);
@@ -100,6 +99,8 @@ gboolean ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gd
 gboolean ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
 
 gboolean ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
+
+void ncm_integral_gauss_legendre_rule (const guint n, const gdouble **x, const gdouble **w);
 
 NcmIntegralFixed *ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu);
 void ncm_integral_fixed_free (NcmIntegralFixed *intf);

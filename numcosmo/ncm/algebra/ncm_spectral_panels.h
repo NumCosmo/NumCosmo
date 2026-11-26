@@ -58,6 +58,7 @@ guint ncm_spectral_panels_find_panel (NcmSpectralPanels *sp, gdouble x);
 void ncm_spectral_panels_eval (NcmSpectralPanels *sp, gdouble x, NcmVector *fval);
 gdouble ncm_spectral_panels_eval_row (NcmSpectralPanels *sp, guint r, gdouble x);
 gdouble ncm_spectral_panels_eval_row_on (NcmSpectralPanels *sp, guint i, guint r, gdouble x);
+void ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble a, gdouble b, guint n, GArray **moments);
 gboolean ncm_spectral_panels_restrict (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, NcmMatrix **coeffs);
 gboolean ncm_spectral_panels_restrict_rows (NcmSpectralPanels *sp, NcmSpectral *spectral, gdouble a, gdouble b, guint r0, guint n, NcmMatrix **coeffs);
 NcmSpectralPanels *ncm_spectral_panels_new_sum_rows (NcmSpectral *spectral, guint n, NcmSpectralPanels * const *sps, const guint *rows, const gdouble *scales, const gdouble *x_min, const gdouble *x_max, gdouble abstol);

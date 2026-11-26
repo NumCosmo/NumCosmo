@@ -409,11 +409,14 @@ class GalaxyShapeFactorGenVarAdd(GalaxyShapeFactorGenBase):
 
 
 DEFAULT_SHAPE_SPECTRAL_RELTOL = 1.0e-5
-DEFAULT_SHAPE_SPECTRAL_USE_INTERP = False
 DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX = 0.3
 DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL = 1.0e-5
 DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS = 2
 DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC = 1.0e-4
+DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC = 1.0e-2
+DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_MIN = 2
+DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP = 5
+DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL = True
 DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = 0.0
 
 
@@ -421,7 +424,6 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     """Adaptive Chebyshev panels in polar coordinates (``NcGalaxyShapeFactorSpectral``)."""
 
     reltol: Annotated[float, Field(gt=0.0, le=1.0)] = DEFAULT_SHAPE_SPECTRAL_RELTOL
-    use_interp: Annotated[bool, Field()] = DEFAULT_SHAPE_SPECTRAL_USE_INTERP
     interp_g_max: Annotated[float, Field(ge=1.0e-3, le=0.33)] = (
         DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX
     )
@@ -434,6 +436,16 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     interp_trim_frac: Annotated[float, Field(ge=0.0, lt=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC
     )
+    interp_compress_frac: Annotated[float, Field(ge=0.0, le=1.0)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC
+    )
+    interp_pop_level_min: Annotated[int, Field(ge=1, le=10)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_MIN
+    )
+    interp_pop_level_cap: Annotated[int, Field(ge=1, le=10)] = (
+        DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP
+    )
+    interp_pop_one_integral: bool = DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL
     line_abstol: Annotated[float, Field(ge=0.0, le=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL
     )
@@ -446,12 +458,19 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
             (
                 f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
                 f"reltol={DEFAULT_SHAPE_SPECTRAL_RELTOL}, "
-                f"use_interp={DEFAULT_SHAPE_SPECTRAL_USE_INTERP}, "
                 f"interp_g_max={DEFAULT_SHAPE_SPECTRAL_INTERP_G_MAX}, "
                 f"interp_abstol={DEFAULT_SHAPE_SPECTRAL_INTERP_ABSTOL}, "
                 "interp_min_radial_panels="
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_MIN_RADIAL_PANELS}, "
                 f"interp_trim_frac={DEFAULT_SHAPE_SPECTRAL_INTERP_TRIM_FRAC}, "
+                "interp_compress_frac="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_COMPRESS_FRAC}, "
+                "interp_pop_level_min="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_MIN}, "
+                "interp_pop_level_cap="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP}, "
+                "interp_pop_one_integral="
+                f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL}, "
                 f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL}"
             ),
         ]
@@ -465,11 +484,14 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
         return Nc.GalaxyShapeFactorSpectral(
             ellip_conv=self.ellip_conv.genum,
             reltol=self.reltol,
-            use_interp=self.use_interp,
             interp_g_max=self.interp_g_max,
             interp_abstol=self.interp_abstol,
             interp_min_radial_panels=self.interp_min_radial_panels,
             interp_trim_frac=self.interp_trim_frac,
+            interp_compress_frac=self.interp_compress_frac,
+            interp_pop_level_min=self.interp_pop_level_min,
+            interp_pop_level_cap=self.interp_pop_level_cap,
+            interp_pop_one_integral=self.interp_pop_one_integral,
             line_abstol=self.line_abstol,
         )
 
@@ -770,8 +792,10 @@ class GalaxyPopGenBeta(BaseModel):
     def get_mfuncs(self) -> list[Ncm.MSetFuncList]:
         """Derived NcmMSetFuncList entries worth recording in an MC/MCMC catalog.
 
-        alpha/beta are the fitted parameters, but e_rms/mode of x =
-        |chi_I|^2 are the physically meaningful reported quantities --
+        alpha/beta are the fitted parameters, but the mean, the standard
+        deviation and the mode of r = |chi_I| and e_rms are the physically
+        meaningful reported quantities: alpha and beta are strongly correlated
+        in a fit, the mean and the standard deviation are not --
         recorded as catalog columns via NcmFitESMCMC.new_funcs_array()/an MC
         run's own equivalent, the same convention every other generate
         command in this CLI uses for its own derived quantities (see e.g.
@@ -794,6 +818,8 @@ class GalaxyPopGenBeta(BaseModel):
         return [
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:e_rms", None),
             Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mode", None),
+            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:mean", None),
+            Ncm.MSetFuncList.new("NcGalaxyShapePopBeta:std", None),
         ]
 
     def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:
@@ -834,11 +860,10 @@ def shape_interp_gens(
 
     A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
     interpolants of its galaxies and the record of what built them
-    (``NcGalaxyWLObs:shape-interp-source``): a copy of the
+    (``NcGalaxyWLObs:shape-interp``): a copy of the
     ``NcGalaxyShapeFactorSpectral`` and of the population. The generators
-    returned here build the same objects, with ``use_interp`` set and the
-    ellipticity frame of obs, so an experiment built from them loads the
-    interpolants instead of building them.
+    returned here build the same objects, with the ellipticity frame of obs, so
+    an experiment built from them uses the interpolants of the catalog.
 
     Returns:
         The shape-factor and population generators, or None when obs
@@ -859,11 +884,14 @@ def shape_interp_gens(
         ellip_conv=EllipConv(gsfs.get_ellip_conv().value_nick),
         ellip_coord=EllipCoord(obs.get_coord().value_nick),
         reltol=gsfs.get_reltol(),
-        use_interp=True,
         interp_g_max=gsfs.get_interp_g_max(),
         interp_abstol=gsfs.get_interp_abstol(),
         interp_min_radial_panels=gsfs.get_interp_min_radial_panels(),
         interp_trim_frac=gsfs.get_interp_trim_frac(),
+        interp_compress_frac=gsfs.get_interp_compress_frac(),
+        interp_pop_level_min=gsfs.get_interp_pop_level_min(),
+        interp_pop_level_cap=gsfs.get_interp_pop_level_cap(),
+        interp_pop_one_integral=gsfs.get_interp_pop_one_integral(),
     )
 
     pop_gen: GalaxyPopGenTypes
@@ -881,6 +909,57 @@ def shape_interp_gens(
         )
 
     return shape_gen, pop_gen
+
+
+def shape_interp_free_params(obs: Nc.GalaxyWLObs) -> list[str]:
+    """Return the population parameters that are variables of the interpolants of obs.
+
+    The interpolants of a catalog prepared by ``numcosmo wl-catalog shape-interp
+    --free-pop`` have the free parameters of the population of the record as
+    variables: a fit may free them or hold them fixed at any value in their
+    ranges.
+
+    Returns:
+        The full names (``NcGalaxyShapePop:<name>``) of the free parameters of
+        the population of the record; empty when obs carries no record.
+    """
+    source = obs.peek_shape_interp_source()
+    if source is None:
+        return []
+
+    pop = source.peek("shape-pop")
+    assert isinstance(pop, Nc.GalaxyShapePop)
+
+    return [
+        f"NcGalaxyShapePop:{pop.param_name(k)}"
+        for k in range(pop.len())
+        if pop.param_get_ftype(k) == Ncm.ParamType.FREE
+    ]
+
+
+def apply_shape_interp_bounds(obs: Nc.GalaxyWLObs, mset: Ncm.MSet) -> None:
+    """Give the population of mset the bounds of the population of the record of obs.
+
+    The free parameters of the population of the record are variables of the
+    interpolants of obs, over the bounds they had in the build: a fit that frees
+    one of them with other bounds aborts when it reads the catalog. The
+    generators of ``shape_interp_gens()`` carry the values of the parameters,
+    not their bounds, so the bounds of those parameters are copied here to the
+    population of mset. Nothing changes when obs carries no record.
+    """
+    source = obs.peek_shape_interp_source()
+    if source is None:
+        return
+
+    src_pop = source.peek("shape-pop")
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+    assert isinstance(src_pop, Nc.GalaxyShapePop)
+    assert isinstance(pop, Nc.GalaxyShapePop)
+
+    for k in range(src_pop.len()):
+        if src_pop.param_get_ftype(k) == Ncm.ParamType.FREE:
+            pop.param_set_lower_bound(k, src_pop.param_get_lower_bound(k))
+            pop.param_set_upper_bound(k, src_pop.param_get_upper_bound(k))
 
 
 class GalaxyPopGen(StrEnum):

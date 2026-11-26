@@ -36,7 +36,10 @@
  * #NcGalaxyPzBSplineSqrt:bspline. It is non-negative and $C^4$, and its logarithm is
  * $2\ln\vert s(z)\vert$. The range is that of $s$. The normalization is the exact
  * integral of $s^2$ (6-point Gauss-Legendre on each polynomial piece), computed at
- * construction, and sampling inverts the same integral.
+ * construction, and sampling inverts the same integral. The Chebyshev moments of
+ * nc_galaxy_pz_cheb_moments() come from the Chebyshev panels of $s$ with the knots as
+ * breakpoints, which reproduce its degree 5 on each knot interval
+ * (ncm_spectral_panels_square_cheb_moments()).
  *
  * nc_galaxy_pz_bspline_sqrt_new_from_table() builds the object from a table
  * $(z_j, p_j)$: $s$ is then the interpolating B-spline through $(z_j, \sqrt{p_j})$.
@@ -49,11 +52,15 @@
 
 #include "nc/lss/galaxy/nc_galaxy_pz_bspline_sqrt.h"
 #include "ncm/spline/ncm_spline_bspline.h"
+#include "ncm/algebra/ncm_spectral_panels.h"
+#include "ncm/algebra/ncm_spectral_panels_builder.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_machine.h>
+#include <gsl/gsl_math.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcGalaxyPzBSplineSqrt
@@ -77,8 +84,13 @@ enum
 /* Points of the Gauss-Legendre rule: 6 points are exact up to degree 11, s^2 has degree 10 */
 #define NC_GALAXY_PZ_BSPLINE_SQRT_GL_N (6)
 
-/* The Gauss-Legendre rule, allocated once in class_init */
-static gsl_integration_glfixed_table *_nc_galaxy_pz_bspline_sqrt_gl = NULL;
+/*
+ * The panels of s for the moments: level 3 (9 coefficients) represents the degree 5 of a
+ * knot interval, and the tolerance, relative and in units of the largest control point, is
+ * at the rounding of s.
+ */
+#define NC_GALAXY_PZ_BSPLINE_SQRT_PANEL_LEVEL (3)
+#define NC_GALAXY_PZ_BSPLINE_SQRT_PANEL_TOL (1.0e-13)
 
 static void
 nc_galaxy_pz_bspline_sqrt_init (NcGalaxyPzBSplineSqrt *gpzs)
@@ -195,6 +207,7 @@ static gdouble _nc_galaxy_pz_bspline_sqrt_eval_p (NcGalaxyPz *gpz, const gdouble
 static gdouble _nc_galaxy_pz_bspline_sqrt_eval_ln_p (NcGalaxyPz *gpz, const gdouble z);
 static gdouble _nc_galaxy_pz_bspline_sqrt_get_norm (NcGalaxyPz *gpz);
 static gdouble _nc_galaxy_pz_bspline_sqrt_gen (NcGalaxyPz *gpz, NcmRNG *rng);
+static void _nc_galaxy_pz_bspline_sqrt_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
 static void
 nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
@@ -221,13 +234,12 @@ nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
                                                         NCM_TYPE_BSPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  gpz_class->get_range = &_nc_galaxy_pz_bspline_sqrt_get_range;
-  gpz_class->eval_p    = &_nc_galaxy_pz_bspline_sqrt_eval_p;
-  gpz_class->eval_ln_p = &_nc_galaxy_pz_bspline_sqrt_eval_ln_p;
-  gpz_class->get_norm  = &_nc_galaxy_pz_bspline_sqrt_get_norm;
-  gpz_class->gen       = &_nc_galaxy_pz_bspline_sqrt_gen;
-
-  _nc_galaxy_pz_bspline_sqrt_gl = gsl_integration_glfixed_table_alloc (NC_GALAXY_PZ_BSPLINE_SQRT_GL_N);
+  gpz_class->get_range    = &_nc_galaxy_pz_bspline_sqrt_get_range;
+  gpz_class->eval_p       = &_nc_galaxy_pz_bspline_sqrt_eval_p;
+  gpz_class->eval_ln_p    = &_nc_galaxy_pz_bspline_sqrt_eval_ln_p;
+  gpz_class->get_norm     = &_nc_galaxy_pz_bspline_sqrt_get_norm;
+  gpz_class->gen          = &_nc_galaxy_pz_bspline_sqrt_gen;
+  gpz_class->cheb_moments = &_nc_galaxy_pz_bspline_sqrt_cheb_moments;
 }
 
 /*
@@ -237,18 +249,19 @@ nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
 static gdouble
 _nc_galaxy_pz_bspline_sqrt_s2_integ (NcGalaxyPzBSplineSqrt *gpzs, const gdouble a, const gdouble b)
 {
-  const gsl_integration_glfixed_table *gl = _nc_galaxy_pz_bspline_sqrt_gl;
-  const gdouble c                         = 0.5 * (a + b);
-  const gdouble h                         = 0.5 * (b - a);
-  gdouble res                             = 0.0;
+  const gdouble c = 0.5 * (a + b);
+  const gdouble h = 0.5 * (b - a);
+  gdouble res     = 0.0;
+  const gdouble *gl_x, *gl_w;
   guint j;
 
-  for (j = 0; j < NC_GALAXY_PZ_BSPLINE_SQRT_GL_N / 2; j++)
-  {
-    const gdouble s_m = ncm_bspline_eval (gpzs->s, c - h * gl->x[j]);
-    const gdouble s_p = ncm_bspline_eval (gpzs->s, c + h * gl->x[j]);
+  ncm_integral_gauss_legendre_rule (NC_GALAXY_PZ_BSPLINE_SQRT_GL_N, &gl_x, &gl_w);
 
-    res += gl->w[j] * (s_m * s_m + s_p * s_p);
+  for (j = 0; j < NC_GALAXY_PZ_BSPLINE_SQRT_GL_N; j++)
+  {
+    const gdouble s_z = ncm_bspline_eval (gpzs->s, c + h * gl_x[j]);
+
+    res += gl_w[j] * s_z * s_z;
   }
 
   return h * res;
@@ -352,6 +365,59 @@ _nc_galaxy_pz_bspline_sqrt_gen (NcGalaxyPz *gpz, NcmRNG *rng)
   }
 
   return z;
+}
+
+/* s at x, the function of the panel builder */
+static void
+_nc_galaxy_pz_bspline_sqrt_s_f (gpointer user_data, guint i, gdouble x, NcmVector *fval)
+{
+  NcGalaxyPzBSplineSqrt *gpzs = NC_GALAXY_PZ_BSPLINE_SQRT (user_data);
+
+  ncm_vector_set (fval, 0, ncm_bspline_eval (gpzs->s, x));
+}
+
+/*
+ * The moments of s^2 on [a, b] (nc_galaxy_pz_cheb_moments() checked the interval and sized
+ * moments to n + 1), from the Chebyshev panels of s on [a, b] with the knots inside as
+ * breakpoints: s has degree 5 on each knot interval, so the panels reproduce it to
+ * rounding, and ncm_spectral_panels_square_cheb_moments() integrates their square exactly.
+ * The tolerances are relative to the largest control point, the scale of s.
+ */
+static void
+_nc_galaxy_pz_bspline_sqrt_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments)
+{
+  NcGalaxyPzBSplineSqrt *gpzs       = NC_GALAXY_PZ_BSPLINE_SQRT (gpz);
+  NcmSpectralPanelsBuilder *builder = ncm_spectral_panels_builder_new ();
+  NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
+  NcmVector *cp                     = ncm_bspline_peek_control_points (gpzs->s);
+  GArray *brk                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *brk_v                  = NULL;
+  gdouble s_scale                   = 0.0;
+  guint j;
+
+  for (j = 0; j < ncm_vector_len (cp); j++)
+    s_scale = GSL_MAX (s_scale, fabs (ncm_vector_get (cp, j)));
+
+  for (j = 0; j < gpzs->n_brk; j++)
+  {
+    if ((gpzs->brk[j] > a) && (gpzs->brk[j] < b))
+      g_array_append_val (brk, gpzs->brk[j]);
+  }
+
+  if (brk->len > 0)
+    brk_v = ncm_vector_new_array (brk);
+
+  ncm_spectral_panels_builder_set_min_panels_per_efold (builder, 0.0);
+  ncm_spectral_panels_builder_set_level_min (builder, NC_GALAXY_PZ_BSPLINE_SQRT_PANEL_LEVEL);
+  ncm_spectral_panels_builder_build (builder, &_nc_galaxy_pz_bspline_sqrt_s_f, gpzs, a, b, brk_v, NULL, NULL,
+                                     NC_GALAXY_PZ_BSPLINE_SQRT_PANEL_TOL, NC_GALAXY_PZ_BSPLINE_SQRT_PANEL_TOL * s_scale, sp);
+
+  ncm_spectral_panels_square_cheb_moments (sp, 0, a, b, n, &moments);
+
+  ncm_vector_clear (&brk_v);
+  g_array_unref (brk);
+  ncm_spectral_panels_free (sp);
+  ncm_spectral_panels_builder_free (builder);
 }
 
 /**

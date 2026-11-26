@@ -81,6 +81,7 @@
 #include "ncm/algebra/ncm_spectral_polar_private.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/algebra/ncm_spectral_private.h"
+#include "ncm/algebra/ncm_matrix.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/core/ncm_memory_pool.h"
 #include "ncm/core/ncm_util.h"
@@ -145,6 +146,7 @@ typedef struct _NcmSpectralPolarEntry
   gboolean replaced; /* expanded again by the second pass: its panels are later entries */
   gdouble Dr;        /* the radial and the angular changes of an initial panel */
   gdouble Dt;
+  gsize series_off; /* its radial series in work->series_coeffs, when the call keeps G */
 } NcmSpectralPolarEntry;
 
 /*
@@ -170,6 +172,9 @@ typedef struct _NcmSpectralPolarWork
   gdouble *tmp;    /* its radial transform, same layout */
   gdouble *tmpT;   /* the transpose of tmp */
   gdouble *coeffs; /* the Chebyshev coefficients, (m + 1) x (n + 1): row l = angular index */
+  gdouble *in_G;   /* the values of G without the weight, in the layout of in, when the call keeps them */
+  gdouble *sv;     /* the angular integral of G at the radii of an accepted panel, np */
+  gdouble *sc;     /* its Chebyshev coefficients, np */
   gdouble vs;      /* the largest |F| of the samples in in */
   GArray *lines;   /* the np-long arrays below, one after the other */
   gdouble *br;     /* l1 mass of the coefficients per radial index */
@@ -188,11 +193,14 @@ typedef struct _NcmSpectralPolarWork
   gdouble *cw;                /* and their weights */
   gdouble *crho;              /* and the radial factor there (NcmSpectralPolarRadialF) */
   GArray *mt;                 /* angular moments, every level */
+  GArray *cc;                 /* quadrature weights of the Lobatto points, every level */
   NcmSpectral *spectral;      /* the transforms from node values to Chebyshev coefficients */
   NcmSpectralPolarMom mom[4]; /* 0: weight 1, 1: r^a, 2: (R - r)^b, 3: both */
   GArray *initial;            /* NcmSpectralPolarEntry, the initial panels on their starting grids */
   GArray *initial_grid;       /* their samples */
+  GArray *initial_grid_G;     /* their values of G, when the call keeps them */
   GArray *accepted;           /* NcmSpectralPolarEntry, the accepted panels */
+  GArray *series_coeffs;      /* the radial series of the panels accepted so far, one after the other */
 } NcmSpectralPolarWork;
 
 /* The arguments and the state of one call of ncm_spectral_polar_integrate() */
@@ -212,6 +220,7 @@ typedef struct _NcmSpectralPolarCall
   guint max_depth;
   guint64 n_eval;
   gboolean failed;
+  gboolean keep_G; /* the values of G are kept and each accepted panel gets its radial series */
   NcmSpectralPolarPanel failed_panel;
   NcmSpectralPolarWork *work;
 } NcmSpectralPolarCall;
@@ -403,12 +412,19 @@ _ncm_spectral_polar_work_new (gpointer userdata)
   work->tmp          = NULL;
   work->tmpT         = NULL;
   work->coeffs       = NULL;
+  work->in_G         = NULL;
+  work->sv           = NULL;
+  work->sc           = NULL;
   work->lines        = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->mt           = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->cc           = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->spectral     = ncm_spectral_new ();
   work->initial      = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarEntry));
   work->initial_grid = g_array_new (FALSE, FALSE, sizeof (gdouble));
   work->accepted     = g_array_new (FALSE, FALSE, sizeof (NcmSpectralPolarEntry));
+
+  work->initial_grid_G = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  work->series_coeffs  = g_array_new (FALSE, FALSE, sizeof (gdouble));
 
   for (i = 0; i < 4; i++)
   {
@@ -431,12 +447,18 @@ _ncm_spectral_polar_work_free (gpointer p)
   g_clear_pointer (&work->tmp, fftw_free);
   g_clear_pointer (&work->tmpT, fftw_free);
   g_clear_pointer (&work->coeffs, fftw_free);
+  g_clear_pointer (&work->in_G, fftw_free);
+  g_clear_pointer (&work->sv, fftw_free);
+  g_clear_pointer (&work->sc, fftw_free);
   g_array_unref (work->lines);
   g_array_unref (work->mt);
+  g_array_unref (work->cc);
   ncm_spectral_free (work->spectral);
   g_array_unref (work->initial);
   g_array_unref (work->initial_grid);
+  g_array_unref (work->initial_grid_G);
   g_array_unref (work->accepted);
+  g_array_unref (work->series_coeffs);
 
   for (i = 0; i < 4; i++)
     g_array_unref (work->mom[i].m);
@@ -627,7 +649,7 @@ ncm_spectral_polar_get_min_radial_panels (NcmSpectralPolar *sp)
 }
 
 static void _ncm_spectral_polar_check (NcmSpectralPolar *sp, const gchar *name, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol);
-static gdouble _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error);
+static gdouble _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges, gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GArray *series, GArray *coeffs, GError **error);
 static void _ncm_spectral_polar_check_edges (NcmSpectralPolar *sp, const gchar *func, GArray *r_edges, GArray *theta_edges);
 static void _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap);
 static void _ncm_spectral_polar_work_set_exponents (NcmSpectralPolarWork *work, gdouble a, gdouble b);
@@ -635,6 +657,7 @@ static gdouble _ncm_spectral_polar_first_pass (NcmSpectralPolarCall *call, GArra
 static void _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call);
 static gdouble _ncm_spectral_polar_retest (NcmSpectralPolarCall *call, gdouble abstol);
 static NcmMatrix *_ncm_spectral_polar_panels (NcmSpectralPolarWork *work);
+static void _ncm_spectral_polar_series (NcmSpectralPolarWork *work, GArray *series, GArray *coeffs);
 
 /**
  * ncm_spectral_polar_integrate:
@@ -679,7 +702,7 @@ ncm_spectral_polar_integrate (NcmSpectralPolar *sp, NcmSpectralPolarF G, gpointe
                               gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error)
 {
   return _ncm_spectral_polar_integrate (sp, "ncm_spectral_polar_integrate", G, NULL, user_data, R, a, b, r_edges, theta_edges,
-                                        reltol, abstol, n_eval, panels, error);
+                                        reltol, abstol, n_eval, panels, NULL, NULL, error);
 }
 
 /*
@@ -701,14 +724,50 @@ _ncm_spectral_polar_integrate_radial (NcmSpectralPolar *sp, NcmSpectralPolarF G,
                                       gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error)
 {
   return _ncm_spectral_polar_integrate (sp, "_ncm_spectral_polar_integrate_radial", G, radial, user_data, R, a, b, r_edges, theta_edges,
-                                        reltol, abstol, n_eval, panels, error);
+                                        reltol, abstol, n_eval, panels, NULL, NULL, error);
 }
 
-/* The integral of _ncm_spectral_polar_integrate_radial(), with name the function called, for its messages */
+/*
+ * _ncm_spectral_polar_integrate_radial_series:
+ *
+ * As _ncm_spectral_polar_integrate_radial(), and for each accepted panel the Chebyshev series
+ * in r of the angular integral of G over the panel, G without the weight and without rho. The
+ * integral, the panels and the number of values of G are those of
+ * _ncm_spectral_polar_integrate_radial(), bit for bit: the values of G are stored a second
+ * time as the callback returns them, and the series of a panel is computed from them when
+ * the panel is accepted, by the quadrature of the angular Lobatto points and one transform
+ * in r. series receives one NcmSpectralPolarRadialSeries per accepted panel and coeffs their
+ * coefficients; both are arrays of the caller, emptied first, of elements
+ * NcmSpectralPolarRadialSeries and gdouble. The integral of w (r) G over the domain, for a
+ * radial function w, is the sum over the panels of the integral of w times the series. When
+ * the integral fails both arrays are empty.
+ *
+ * Declared in ncm_spectral_polar_private.h, for the other classes of the library.
+ */
+gdouble
+_ncm_spectral_polar_integrate_radial_series (NcmSpectralPolar *sp, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial, gpointer user_data,
+                                             gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
+                                             gdouble reltol, gdouble abstol, guint64 *n_eval, GArray *series, GArray *coeffs, GError **error)
+{
+  g_assert_nonnull (series);
+  g_assert_nonnull (coeffs);
+  g_assert_cmpuint (g_array_get_element_size (series), ==, sizeof (NcmSpectralPolarRadialSeries));
+  g_assert_cmpuint (g_array_get_element_size (coeffs), ==, sizeof (gdouble));
+
+  return _ncm_spectral_polar_integrate (sp, "_ncm_spectral_polar_integrate_radial_series", G, radial, user_data, R, a, b, r_edges, theta_edges,
+                                        reltol, abstol, n_eval, NULL, series, coeffs, error);
+}
+
+/*
+ * The integral of _ncm_spectral_polar_integrate_radial(), with name the function called, for
+ * its messages. With series and coeffs not NULL, also the radial series of the accepted
+ * panels (_ncm_spectral_polar_integrate_radial_series()).
+ */
 static gdouble
 _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpectralPolarF G, NcmSpectralPolarRadialF radial,
                                gpointer user_data, gdouble R, gdouble a, gdouble b, GArray *r_edges, GArray *theta_edges,
-                               gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels, GError **error)
+                               gdouble reltol, gdouble abstol, guint64 *n_eval, NcmMatrix **panels,
+                               GArray *series, GArray *coeffs, GError **error)
 {
   NcmSpectralPolarWork **ptr = ncm_memory_pool_get (sp->work_pool);
   NcmSpectralPolarWork *work = *ptr;
@@ -727,6 +786,7 @@ _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpect
     .max_depth    = sp->max_depth,
     .n_eval       = 0,
     .failed       = FALSE,
+    .keep_G       = (series != NULL),
     .failed_panel = {0.0, 0.0, 0.0, 0.0, 0},
     .work         = work
   };
@@ -735,6 +795,7 @@ _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpect
   _ncm_spectral_polar_check (sp, name, R, a, b, r_edges, theta_edges, reltol, abstol);
   _ncm_spectral_polar_work_prepare (work, sp->level_cap);
   _ncm_spectral_polar_work_set_exponents (work, a, b);
+  g_array_set_size (work->series_coeffs, 0);
 
   I0            = _ncm_spectral_polar_first_pass (&call, r_edges, theta_edges);
   call.abstol_F = MAX (reltol * fabs (I0), abstol) / call.A;
@@ -743,6 +804,15 @@ _ncm_spectral_polar_integrate (NcmSpectralPolar *sp, const gchar *name, NcmSpect
 
   if (panels != NULL)
     *panels = call.failed ? NULL : _ncm_spectral_polar_panels (work);
+
+  if (series != NULL)
+  {
+    g_array_set_size (series, 0);
+    g_array_set_size (coeffs, 0);
+
+    if (!call.failed)
+      _ncm_spectral_polar_series (work, series, coeffs);
+  }
 
   ncm_memory_pool_return (ptr);
 
@@ -829,7 +899,7 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
   const guint np        = (1u << level_cap) + 1;
   const guint n_lines   = 15;
   const gsize table_len = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 1);
-  gdouble *lines, *mt;
+  gdouble *lines, *mt, *cc;
   guint l, k;
 
   if (work->level_cap == level_cap)
@@ -840,15 +910,22 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
 
   g_array_set_size (work->lines, (gsize) n_lines * np);
   g_array_set_size (work->mt, table_len);
+  g_array_set_size (work->cc, table_len);
 
   g_clear_pointer (&work->in, fftw_free);
   g_clear_pointer (&work->tmp, fftw_free);
   g_clear_pointer (&work->tmpT, fftw_free);
   g_clear_pointer (&work->coeffs, fftw_free);
+  g_clear_pointer (&work->in_G, fftw_free);
+  g_clear_pointer (&work->sv, fftw_free);
+  g_clear_pointer (&work->sc, fftw_free);
   work->in     = fftw_malloc (sizeof (gdouble) * np * np);
   work->tmp    = fftw_malloc (sizeof (gdouble) * np * np);
   work->tmpT   = fftw_malloc (sizeof (gdouble) * np * np);
   work->coeffs = fftw_malloc (sizeof (gdouble) * np * np);
+  work->in_G   = fftw_malloc (sizeof (gdouble) * np * np);
+  work->sv     = fftw_malloc (sizeof (gdouble) * np);
+  work->sc     = fftw_malloc (sizeof (gdouble) * np);
 
   lines      = &g_array_index (work->lines, gdouble, 0);
   work->br   = lines + 0 * np;
@@ -883,6 +960,30 @@ _ncm_spectral_polar_work_prepare (NcmSpectralPolarWork *work, guint level_cap)
       mt[NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l) + k] = (k % 2 == 0) ? 2.0 / (1.0 - (gdouble) k * k) : 0.0;
   }
 
+  /*
+   * The weights of the integral over [-1, 1] of the interpolant at the m + 1 Lobatto points
+   * cos (pi j / m) (Clenshaw-Curtis): w_j = (c_j / m) (1 - sum_{k = 1}^{m / 2} b_k
+   * cos (2 pi j k / m) / (4 k^2 - 1)), with c_j = 1 at the two ends and 2 otherwise, and
+   * b_k = 1 for k = m / 2 and 2 otherwise
+   */
+  cc = &g_array_index (work->cc, gdouble, 0);
+
+  for (l = 0; l <= level_cap; l++)
+  {
+    const guint m = 1u << l;
+    guint j;
+
+    for (j = 0; j <= m; j++)
+    {
+      gdouble s = 1.0;
+
+      for (k = 1; k <= m / 2; k++)
+        s -= ((2 * k == m) ? 1.0 : 2.0) * cos (2.0 * M_PI * j * k / m) / (4.0 * k * k - 1.0);
+
+      cc[NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l) + j] = (((j == 0) || (j == m)) ? 1.0 : 2.0) * s / m;
+    }
+  }
+
   for (k = 0; k < 4; k++)
   {
     g_array_set_size (work->mom[k].m, table_len);
@@ -914,6 +1015,7 @@ _ncm_spectral_polar_work_set_exponents (NcmSpectralPolarWork *work, gdouble a, g
 }
 
 static void _ncm_spectral_polar_sample_start (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel);
+static gsize _ncm_spectral_polar_series_append (NcmSpectralPolarWork *work, const NcmSpectralPolarPanel *panel, guint lx, guint ly);
 static gdouble _ncm_spectral_polar_coeffs (NcmSpectralPolarWork *work, guint lx, guint ly);
 static gdouble _ncm_spectral_polar_change (NcmSpectralPolarWork *work, guint lx, guint ly, gdouble *Dr, gdouble *Dt);
 static gdouble _ncm_spectral_polar_panel_value (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint lx, guint ly);
@@ -937,6 +1039,7 @@ _ncm_spectral_polar_first_pass (NcmSpectralPolarCall *call, GArray *r_edges, GAr
 
   g_array_set_size (work->initial, nb);
   g_array_set_size (work->initial_grid, nb * ns * ns);
+  g_array_set_size (work->initial_grid_G, call->keep_G ? nb * ns * ns : 0);
   g_array_set_size (work->accepted, 0);
 
   for (i = 0; i + 1 < r_edges->len; i++)
@@ -966,6 +1069,14 @@ _ncm_spectral_polar_first_pass (NcmSpectralPolarCall *call, GArray *r_edges, GAr
       entry->Dt  = Dt;
       entry->val = _ncm_spectral_polar_panel_value (call, &entry->panel, call->level_min, call->level_min);
       I0        += entry->val;
+
+      entry->series_off = 0;
+
+      if (call->keep_G)
+      {
+        memcpy (&g_array_index (work->initial_grid_G, gdouble, ib * ns * ns), work->in_G, sizeof (gdouble) * ns * ns);
+        entry->series_off = _ncm_spectral_polar_series_append (work, &entry->panel, call->level_min, call->level_min);
+      }
 
       /* The weight left out of F on this panel, integrated over it */
       kind = _ncm_spectral_polar_panel_kind (call, &entry->panel);
@@ -1148,8 +1259,9 @@ _ncm_spectral_polar_nodes_theta (NcmSpectralPolarCall *call, const NcmSpectralPo
  * work->vs, the largest |F| of the samples in the grid, with the values it stores. Four
  * running maxima per row: with one, each comparison waits for the one before.
  */
-static void
-_ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep)
+static inline __attribute__ ((always_inline)) void
+
+_ncm_spectral_polar_rows_body (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep, const gboolean keep_G)
 {
   NcmSpectralPolarWork *work = call->work;
   const guint n              = 1u << lx;
@@ -1174,6 +1286,14 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
     gdouble v3      = 0.0;
 
     call->G (call->user_data, work->rr[i], c, work->gth, work->gct, work->gst, work->gf);
+
+    if (keep_G)
+    {
+      gdouble *row_G = work->in_G + (gsize) i * (m + 1);
+
+      for (q = 0, j = j0; q < c; q++, j += jstep)
+        row_G[j] = work->gf[q];
+    }
 
     for (q = 0, j = j0; q + 4 <= c; q += 4, j += 4 * jstep)
     {
@@ -1205,6 +1325,49 @@ _ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint 
   }
 
   call->n_eval += (guint64) c * ((n - i0) / istep + 1);
+}
+
+/* _ncm_spectral_polar_rows_body() for a call that keeps the values of G and for one that does not, one copy for each */
+static void
+_ncm_spectral_polar_rows (NcmSpectralPolarCall *call, guint lx, guint ly, guint i0, guint istep, guint j0, guint jstep)
+{
+  if (call->keep_G)
+    _ncm_spectral_polar_rows_body (call, lx, ly, i0, istep, j0, jstep, TRUE);
+  else
+    _ncm_spectral_polar_rows_body (call, lx, ly, i0, istep, j0, jstep, FALSE);
+}
+
+/*
+ * Appends to work->series_coeffs the radial series of the panel at level (lx, ly), from the
+ * values of G in work->in_G: at each radius the angular integral over [ta, tb] by the
+ * quadrature of the Lobatto points, then its Chebyshev coefficients in r. Returns the index
+ * of its first coefficient.
+ */
+static gsize
+_ncm_spectral_polar_series_append (NcmSpectralPolarWork *work, const NcmSpectralPolarPanel *panel, guint lx, guint ly)
+{
+  const guint n        = 1u << lx;
+  const guint m        = 1u << ly;
+  const gdouble half_t = 0.5 * (panel->tb - panel->ta);
+  const gdouble *w     = &g_array_index (work->cc, gdouble, NCM_SPECTRAL_POLAR_LEVEL_OFFSET (ly));
+  const gsize off      = work->series_coeffs->len;
+  guint i, j;
+
+  for (i = 0; i <= n; i++)
+  {
+    const gdouble *row = work->in_G + (gsize) i * (m + 1);
+    gdouble s          = 0.0;
+
+    for (j = 0; j <= m; j++)
+      s += w[j] * row[j];
+
+    work->sv[i] = half_t * s;
+  }
+
+  _ncm_spectral_transform (work->spectral, n + 1, 1, work->sv, work->sc);
+  g_array_append_vals (work->series_coeffs, work->sc, n + 1);
+
+  return off;
 }
 
 /*
@@ -1407,6 +1570,10 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
       _ncm_spectral_polar_nodes_r (call, &entry->panel, call->level_min, 0, 1);
       _ncm_spectral_polar_nodes_theta (call, &entry->panel, call->level_min, 0, 1);
       memcpy (work->in, start, sizeof (gdouble) * ns * ns);
+
+      if (call->keep_G)
+        memcpy (work->in_G, &g_array_index (work->initial_grid_G, gdouble, ib * ns * ns), sizeof (gdouble) * ns * ns);
+
       work->vs = entry->vs;
 
       _ncm_spectral_polar_expand (call, entry->panel, entry);
@@ -1420,13 +1587,13 @@ _ncm_spectral_polar_expand_initial (NcmSpectralPolarCall *call)
  * overwritten before it is moved.
  */
 static void
-_ncm_spectral_polar_spread_r (NcmSpectralPolarWork *work, guint n, guint m)
+_ncm_spectral_polar_spread_r (gdouble *grid, guint n, guint m)
 {
   const gsize ld = m + 1;
   guint i;
 
   for (i = n; i > 0; i--)
-    memcpy (work->in + 2 * i * ld, work->in + i * ld, sizeof (gdouble) * ld);
+    memcpy (grid + 2 * i * ld, grid + i * ld, sizeof (gdouble) * ld);
 }
 
 /*
@@ -1435,21 +1602,24 @@ _ncm_spectral_polar_spread_r (NcmSpectralPolarWork *work, guint n, guint m)
  * since every point moves to a position at or after its own.
  */
 static void
-_ncm_spectral_polar_spread_theta (NcmSpectralPolarWork *work, guint n, guint m)
+_ncm_spectral_polar_spread_theta (gdouble *grid, guint n, guint m)
 {
   gint i, j;
 
   for (i = (gint) n; i >= 0; i--)
   {
-    const gdouble *src = work->in + (gsize) i * (m + 1);
-    gdouble *dst       = work->in + (gsize) i * (2 * m + 1);
+    const gdouble *src = grid + (gsize) i * (m + 1);
+    gdouble *dst       = grid + (gsize) i * (2 * m + 1);
 
     for (j = (gint) m; j >= 0; j--)
       dst[2 * j] = src[j];
   }
 }
 
-/* Doubles the level of the panel in r (in_r) or in theta, sampling F at the new nodes */
+/*
+ * Doubles the level of the panel in r (in_r) or in theta, sampling F at the new nodes. The
+ * grid of G of a call that keeps it is moved as the grid of F.
+ */
 static void
 _ncm_spectral_polar_double (NcmSpectralPolarCall *call, const NcmSpectralPolarPanel *panel, guint *lx, guint *ly, gboolean in_r)
 {
@@ -1457,14 +1627,22 @@ _ncm_spectral_polar_double (NcmSpectralPolarCall *call, const NcmSpectralPolarPa
 
   if (in_r)
   {
-    _ncm_spectral_polar_spread_r (work, 1u << *lx, 1u << *ly);
+    _ncm_spectral_polar_spread_r (work->in, 1u << *lx, 1u << *ly);
+
+    if (call->keep_G)
+      _ncm_spectral_polar_spread_r (work->in_G, 1u << *lx, 1u << *ly);
+
     (*lx)++;
     _ncm_spectral_polar_nodes_r (call, panel, *lx, 1, 2);
     _ncm_spectral_polar_rows (call, *lx, *ly, 1, 2, 0, 1);
   }
   else
   {
-    _ncm_spectral_polar_spread_theta (work, 1u << *lx, 1u << *ly);
+    _ncm_spectral_polar_spread_theta (work->in, 1u << *lx, 1u << *ly);
+
+    if (call->keep_G)
+      _ncm_spectral_polar_spread_theta (work->in_G, 1u << *lx, 1u << *ly);
+
     (*ly)++;
     _ncm_spectral_polar_nodes_theta (call, panel, *ly, 1, 2);
     _ncm_spectral_polar_rows (call, *lx, *ly, 0, 1, 1, 2);
@@ -1513,7 +1691,10 @@ _ncm_spectral_polar_expand (NcmSpectralPolarCall *call, NcmSpectralPolarPanel pa
 
     if (D <= tol)
     {
-      NcmSpectralPolarEntry entry = { panel, _ncm_spectral_polar_panel_value (call, &panel, lx, ly), D, vs, lx, ly, FALSE, Dr, Dt };
+      NcmSpectralPolarEntry entry = { panel, _ncm_spectral_polar_panel_value (call, &panel, lx, ly), D, vs, lx, ly, FALSE, Dr, Dt, 0 };
+
+      if (call->keep_G)
+        entry.series_off = _ncm_spectral_polar_series_append (work, &panel, lx, ly);
 
       g_array_append_val (work->accepted, entry);
 
@@ -1638,6 +1819,32 @@ _ncm_spectral_polar_retest (NcmSpectralPolarCall *call, gdouble abstol)
 
     if (!expanded)
       return sum;
+  }
+}
+
+/*
+ * The radial series of the accepted panels that the second pass did not replace, in the two
+ * arrays of _ncm_spectral_polar_integrate_radial_series().
+ */
+static void
+_ncm_spectral_polar_series (NcmSpectralPolarWork *work, GArray *series, GArray *coeffs)
+{
+  guint i;
+
+  for (i = 0; i < work->accepted->len; i++)
+  {
+    const NcmSpectralPolarEntry *entry = &g_array_index (work->accepted, NcmSpectralPolarEntry, i);
+
+    if (!entry->replaced)
+    {
+      const guint n_coeffs                 = (1u << entry->lx) + 1;
+      const NcmSpectralPolarRadialSeries s = {
+        entry->panel.ra, entry->panel.rb, entry->panel.ta, entry->panel.tb, n_coeffs, coeffs->len
+      };
+
+      g_array_append_val (series, s);
+      g_array_append_vals (coeffs, &g_array_index (work->series_coeffs, gdouble, entry->series_off), n_coeffs);
+    }
   }
 }
 
@@ -1807,5 +2014,533 @@ _ncm_spectral_polar_cmp_double (gconstpointer a, gconstpointer b)
   const gdouble y = *(const gdouble *) b;
 
   return (x > y) - (x < y);
+}
+
+/*
+ * The weight grid: the integrals of the radial weights
+ * w_jl (r) = r^a_j (R - r)^b_l u_j (r) v_l (r) against the radial series of the accepted
+ * panels of an integral. On a panel that touches no end of [0, R] the series is evaluated at
+ * the nodes of a Gauss-Legendre rule with as many nodes as the series has coefficients, and
+ * the integrals are the sums of the products of the Ka factors r^a_j u_j and the Kb factors
+ * (R - r)^b_l v_l there. On a panel that starts at 0 the power law r^a_j is the weight: with
+ * x the variable of the panel in [-1, 1], the products of the series and u_j, and the factors
+ * (R - r)^b_l v_l, are expanded in Chebyshev polynomials from their values at the Lobatto
+ * points, and the integrals are the bilinear forms of their coefficients with
+ * G_km = int (1 + x)^a_j T_k T_m dx = (M_{k + m} + M_{|k - m|}) / 2, M the moments of the
+ * weight, which hold no quadrature error for the two polynomials. A panel that ends at R is
+ * the mirror case with (1 - x)^b_l. A panel that is the whole range is split at R / 2, the
+ * series restricted to each half exactly.
+ */
+struct _NcmSpectralPolarWeightGrid
+{
+  gdouble R;
+  guint Ka;
+  guint Kb;
+  guint level_cap;       /* the largest level of a series: 2^level_cap + 1 coefficients */
+  guint np;              /* 2^level_cap + 1 */
+  GArray *a;             /* gdouble, the exponents a_j */
+  GArray *b;             /* gdouble, the exponents b_l */
+  GArray *ma;            /* NcmSpectralPolarMom, the moments of (1 + x)^a_j, levels up to level_cap + 1 */
+  GArray *mb;            /* NcmSpectralPolarMom, the moments of (1 - x)^b_l */
+  GArray *glx;           /* gdouble, the nodes of the Gauss-Legendre rule of 2^l + 1 nodes, every level */
+  GArray *glw;           /* and its weights */
+  guint gl_have;         /* bit l set when the rule of level l is computed */
+  NcmSpectral *spectral; /* the transforms and the scratch of the restriction */
+  GPtrArray *half;       /* NcmMatrix of 1 by 2^l + 1, the series of half a panel, or NULL, per level */
+  GArray *lines;         /* the np-long arrays below, one after the other */
+  gdouble *xc;           /* cos (pi q / 2^level_cap), the Lobatto points of every level */
+  gdouble *xq;           /* the points of a panel in [-1, 1] */
+  gdouble *rr;           /* their radii */
+  gdouble *lnr;          /* ln r there */
+  gdouble *lnq;          /* ln (R - r) there */
+  gdouble *sv;           /* the series there */
+  gdouble *gv;           /* the contraction of one factor with the table of an exponent */
+  gdouble *fv;           /* the values a factor callback returns */
+  gdouble *pw;           /* the power law of an end at the points */
+  GArray *U;             /* gdouble, Ka x np: the factors of index j at the points */
+  GArray *V;             /* gdouble, Kb x np: the factors of index l at the points */
+  gdouble *av;           /* np x Ka, the values whose coefficients are in ac */
+  gdouble *ac;
+  gdouble *bv; /* np x Kb, the values whose coefficients are in bc */
+  gdouble *bc;
+};
+
+/* Frees the series of half a panel of a level, NULL until a panel of that level is the whole range */
+static void
+_ncm_spectral_polar_weight_grid_half_free (gpointer p)
+{
+  if (p != NULL)
+    ncm_matrix_free (p);
+}
+
+/*
+ * _ncm_spectral_polar_weight_grid_new:
+ *
+ * The weight grid of the exponents a_j, j < Ka, and b_l, l < Kb, all above -1, on [0, R],
+ * for series of at most 2^level_cap + 1 coefficients, level_cap the one of sp.
+ *
+ * Declared in ncm_spectral_polar_private.h, for the other classes of the library.
+ */
+NcmSpectralPolarWeightGrid *
+_ncm_spectral_polar_weight_grid_new (NcmSpectralPolar *sp, gdouble R, guint Ka, const gdouble *a, guint Kb, const gdouble *b)
+{
+  NcmSpectralPolarWeightGrid *wg = g_new0 (NcmSpectralPolarWeightGrid, 1);
+  const guint level_cap          = sp->level_cap;
+  const guint np                 = (1u << level_cap) + 1;
+  const guint n_lines            = 9;
+  const gsize table_len          = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 1);
+  const gsize mom_len            = NCM_SPECTRAL_POLAR_LEVEL_OFFSET (level_cap + 2);
+  gdouble *lines;
+  guint k;
+
+  g_assert_cmpuint (Ka, >, 0);
+  g_assert_cmpuint (Kb, >, 0);
+
+  wg->R         = R;
+  wg->Ka        = Ka;
+  wg->Kb        = Kb;
+  wg->level_cap = level_cap;
+  wg->np        = np;
+  wg->a         = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), Ka);
+  wg->b         = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), Kb);
+  wg->ma        = g_array_sized_new (FALSE, TRUE, sizeof (NcmSpectralPolarMom), Ka);
+  wg->mb        = g_array_sized_new (FALSE, TRUE, sizeof (NcmSpectralPolarMom), Kb);
+  wg->glx       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  wg->glw       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  wg->gl_have   = 0;
+  wg->spectral  = ncm_spectral_new ();
+  wg->half      = g_ptr_array_new_with_free_func (&_ncm_spectral_polar_weight_grid_half_free);
+  wg->lines     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  wg->U         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  wg->V         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_append_vals (wg->a, a, Ka);
+  g_array_append_vals (wg->b, b, Kb);
+  g_array_set_size (wg->ma, Ka);
+  g_array_set_size (wg->mb, Kb);
+  g_array_set_size (wg->glx, table_len);
+  g_array_set_size (wg->glw, table_len);
+  g_array_set_size (wg->lines, (gsize) n_lines * np);
+  g_array_set_size (wg->U, (gsize) Ka * np);
+  g_array_set_size (wg->V, (gsize) Kb * np);
+  g_ptr_array_set_size (wg->half, level_cap + 1);
+
+  for (k = 0; k < Ka; k++)
+  {
+    NcmSpectralPolarMom *mom = &g_array_index (wg->ma, NcmSpectralPolarMom, k);
+
+    if (!(a[k] > -1.0))
+      g_error ("_ncm_spectral_polar_weight_grid_new: the exponent a[%u] = % 22.15g is not above -1.", k, a[k]);
+
+    mom->ca   = a[k];
+    mom->cb   = 0.0;
+    mom->m    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    mom->have = 0;
+    g_array_set_size (mom->m, mom_len);
+  }
+
+  for (k = 0; k < Kb; k++)
+  {
+    NcmSpectralPolarMom *mom = &g_array_index (wg->mb, NcmSpectralPolarMom, k);
+
+    if (!(b[k] > -1.0))
+      g_error ("_ncm_spectral_polar_weight_grid_new: the exponent b[%u] = % 22.15g is not above -1.", k, b[k]);
+
+    mom->ca   = 0.0;
+    mom->cb   = b[k];
+    mom->m    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+    mom->have = 0;
+    g_array_set_size (mom->m, mom_len);
+  }
+
+  lines   = &g_array_index (wg->lines, gdouble, 0);
+  wg->xc  = lines + 0 * np;
+  wg->xq  = lines + 1 * np;
+  wg->rr  = lines + 2 * np;
+  wg->lnr = lines + 3 * np;
+  wg->lnq = lines + 4 * np;
+  wg->sv  = lines + 5 * np;
+  wg->gv  = lines + 6 * np;
+  wg->fv  = lines + 7 * np;
+  wg->pw  = lines + 8 * np;
+
+  for (k = 0; k < np; k++)
+    wg->xc[k] = cos (M_PI * k / (np - 1.0));
+
+  wg->xc[(np - 1) / 2] = 0.0;
+
+  wg->av = fftw_malloc (sizeof (gdouble) * np * Ka);
+  wg->ac = fftw_malloc (sizeof (gdouble) * np * Ka);
+  wg->bv = fftw_malloc (sizeof (gdouble) * np * Kb);
+  wg->bc = fftw_malloc (sizeof (gdouble) * np * Kb);
+
+  return wg;
+}
+
+/*
+ * _ncm_spectral_polar_weight_grid_free:
+ *
+ * Frees the weight grid.
+ */
+void
+_ncm_spectral_polar_weight_grid_free (NcmSpectralPolarWeightGrid *wg)
+{
+  guint k;
+
+  for (k = 0; k < wg->Ka; k++)
+    g_array_unref (g_array_index (wg->ma, NcmSpectralPolarMom, k).m);
+
+  for (k = 0; k < wg->Kb; k++)
+    g_array_unref (g_array_index (wg->mb, NcmSpectralPolarMom, k).m);
+
+  g_array_unref (wg->a);
+  g_array_unref (wg->b);
+  g_array_unref (wg->ma);
+  g_array_unref (wg->mb);
+  g_array_unref (wg->glx);
+  g_array_unref (wg->glw);
+  ncm_spectral_free (wg->spectral);
+  g_ptr_array_unref (wg->half);
+  g_array_unref (wg->lines);
+  g_array_unref (wg->U);
+  g_array_unref (wg->V);
+  fftw_free (wg->av);
+  fftw_free (wg->ac);
+  fftw_free (wg->bv);
+  fftw_free (wg->bc);
+  g_free (wg);
+}
+
+static void _ncm_spectral_polar_weight_grid_panel (NcmSpectralPolarWeightGrid *wg, const gdouble *c, guint l, gdouble ra, gdouble rb, NcmSpectralPolarFactorF fa, NcmSpectralPolarFactorF fb, gpointer user_data, gdouble *res);
+
+/*
+ * _ncm_spectral_polar_weight_grid_integrate:
+ *
+ * The integrals of the weights of wg against the radial series of the two arrays of
+ * _ncm_spectral_polar_integrate_radial_series(): res[j Kb + l] is the sum over the panels of
+ * the integral of r^a_j (R - r)^b_l u_j (r) v_l (r) times the series of the panel, which is
+ * the integral of w_jl (r) G (r, theta) over the domain of the panels. fa gives u_j and fb
+ * gives v_l, without the power laws; NULL is the factor 1. Each series has 2^l + 1
+ * coefficients with l at most the level cap of wg; otherwise the call is an error.
+ *
+ * Declared in ncm_spectral_polar_private.h, for the other classes of the library.
+ */
+void
+_ncm_spectral_polar_weight_grid_integrate (NcmSpectralPolarWeightGrid *wg, GArray *series, GArray *coeffs,
+                                           NcmSpectralPolarFactorF fa, NcmSpectralPolarFactorF fb, gpointer user_data, gdouble *res)
+{
+  guint p;
+
+  memset (res, 0, sizeof (gdouble) * wg->Ka * wg->Kb);
+
+  for (p = 0; p < series->len; p++)
+  {
+    const NcmSpectralPolarRadialSeries *s = &g_array_index (series, NcmSpectralPolarRadialSeries, p);
+    const gdouble *c                      = &g_array_index (coeffs, gdouble, s->offset);
+    const guint n                         = s->n_coeffs - 1;
+    const guint l                         = (n > 0) ? g_bit_nth_msf (n, -1) : 0;
+
+    if ((n == 0) || (n != (1u << l)) || (l > wg->level_cap))
+      g_error ("_ncm_spectral_polar_weight_grid_integrate: a series of %u coefficients, not 2^l + 1 with l <= %u.",
+               s->n_coeffs, wg->level_cap);
+
+    if ((s->ra == 0.0) && (s->rb == wg->R))
+    {
+      /* The whole range: the two halves, each with the series restricted to it */
+      const gdouble mid = 0.5 * wg->R;
+      NcmMatrix *half   = g_ptr_array_index (wg->half, l);
+
+      if (half == NULL)
+      {
+        half                            = ncm_matrix_new (1, n + 1);
+        g_ptr_array_index (wg->half, l) = half;
+      }
+
+      ncm_spectral_chebyshev_rebase_rows_data (wg->spectral, c, 1, n + 1, n + 1, s->ra, s->rb, s->ra, mid, half);
+      _ncm_spectral_polar_weight_grid_panel (wg, ncm_matrix_data (half), l, s->ra, mid, fa, fb, user_data, res);
+      ncm_spectral_chebyshev_rebase_rows_data (wg->spectral, c, 1, n + 1, n + 1, s->ra, s->rb, mid, s->rb, half);
+      _ncm_spectral_polar_weight_grid_panel (wg, ncm_matrix_data (half), l, mid, s->rb, fa, fb, user_data, res);
+    }
+    else
+    {
+      _ncm_spectral_polar_weight_grid_panel (wg, c, l, s->ra, s->rb, fa, fb, user_data, res);
+    }
+  }
+}
+
+/* The series sum_k c[k] T_k, k <= n, at the nq points x, by the recurrence of Clenshaw */
+static void
+_ncm_spectral_polar_weight_grid_eval (const gdouble *c, guint n, guint nq, const gdouble *x, gdouble *f)
+{
+  guint q;
+
+  for (q = 0; q < nq; q++)
+  {
+    const gdouble two_x = 2.0 * x[q];
+    gdouble b1          = 0.0;
+    gdouble b2          = 0.0;
+    guint k;
+
+    for (k = n; k >= 1; k--)
+    {
+      const gdouble b0 = c[k] + two_x * b1 - b2;
+
+      b2 = b1;
+      b1 = b0;
+    }
+
+    f[q] = c[0] + x[q] * b1 - b2;
+  }
+}
+
+/* The Gauss-Legendre rule of 2^l + 1 nodes on [-1, 1], computed on first use */
+static void
+_ncm_spectral_polar_weight_grid_gl (NcmSpectralPolarWeightGrid *wg, guint l, const gdouble **x, const gdouble **w)
+{
+  const guint nq = (1u << l) + 1;
+  gdouble *glx   = &g_array_index (wg->glx, gdouble, NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l));
+  gdouble *glw   = &g_array_index (wg->glw, gdouble, NCM_SPECTRAL_POLAR_LEVEL_OFFSET (l));
+
+  if (!(wg->gl_have & (1u << l)))
+  {
+    gsl_integration_fixed_workspace *ws = gsl_integration_fixed_alloc (gsl_integration_fixed_legendre, nq, -1.0, 1.0, 0.0, 0.0);
+
+    memcpy (glx, gsl_integration_fixed_nodes (ws), sizeof (gdouble) * nq);
+    memcpy (glw, gsl_integration_fixed_weights (ws), sizeof (gdouble) * nq);
+    gsl_integration_fixed_free (ws);
+    wg->gl_have |= 1u << l;
+  }
+
+  *x = glx;
+  *w = glw;
+}
+
+/*
+ * Adds to res the integrals of the weights against the series c of level l on the panel
+ * [ra, rb], which is not the whole range: see NcmSpectralPolarWeightGrid.
+ */
+static void
+_ncm_spectral_polar_weight_grid_panel (NcmSpectralPolarWeightGrid *wg, const gdouble *c, guint l, gdouble ra, gdouble rb,
+                                       NcmSpectralPolarFactorF fa, NcmSpectralPolarFactorF fb, gpointer user_data, gdouble *res)
+{
+  const guint Ka      = wg->Ka;
+  const guint Kb      = wg->Kb;
+  const guint n       = 1u << l;
+  const guint np      = wg->np;
+  const gdouble R     = wg->R;
+  const gdouble mid   = 0.5 * (ra + rb);
+  const gdouble half  = 0.5 * (rb - ra);
+  const gboolean at_0 = (ra == 0.0);
+  const gboolean at_R = (rb == R);
+  const gdouble *a    = &g_array_index (wg->a, gdouble, 0);
+  const gdouble *b    = &g_array_index (wg->b, gdouble, 0);
+  gdouble *U          = &g_array_index (wg->U, gdouble, 0);
+  gdouble *V          = &g_array_index (wg->V, gdouble, 0);
+  guint i, j, k, q, m;
+
+  g_assert (!(at_0 && at_R));
+
+  if (!at_0 && !at_R)
+  {
+    const guint nq = n + 1;
+    const gdouble *x, *w;
+
+    _ncm_spectral_polar_weight_grid_gl (wg, l, &x, &w);
+    _ncm_spectral_polar_weight_grid_eval (c, n, nq, x, wg->sv);
+
+    #pragma omp simd
+
+    for (q = 0; q < nq; q++)
+    {
+      const gdouble r = mid + half * x[q];
+
+      wg->rr[q]  = r;
+      wg->lnr[q] = log (r);
+      wg->lnq[q] = log (R - r);
+      wg->sv[q] *= w[q] * half;
+    }
+
+    for (j = 0; j < Ka; j++)
+    {
+      gdouble *u = U + (gsize) j * np;
+
+      if (fa != NULL)
+        fa (j, nq, wg->rr, wg->fv, user_data);
+
+      #pragma omp simd
+
+      for (q = 0; q < nq; q++)
+        u[q] = exp (a[j] * wg->lnr[q]) * wg->sv[q] * ((fa != NULL) ? wg->fv[q] : 1.0);
+    }
+
+    for (k = 0; k < Kb; k++)
+    {
+      gdouble *v = V + (gsize) k * np;
+
+      if (fb != NULL)
+        fb (k, nq, wg->rr, wg->fv, user_data);
+
+      #pragma omp simd
+
+      for (q = 0; q < nq; q++)
+        v[q] = exp (b[k] * wg->lnq[q]) * ((fb != NULL) ? wg->fv[q] : 1.0);
+    }
+
+    for (j = 0; j < Ka; j++)
+    {
+      const gdouble *u = U + (gsize) j * np;
+
+      for (k = 0; k < Kb; k++)
+      {
+        const gdouble *v = V + (gsize) k * np;
+        gdouble acc      = 0.0;
+
+        #pragma omp simd reduction(+:acc)
+
+        for (q = 0; q < nq; q++)
+          acc += u[q] * v[q];
+
+        res[j * Kb + k] += acc;
+      }
+    }
+
+    return;
+  }
+
+  /* A panel that touches one end: the Lobatto points, with the end itself among them */
+  {
+    const guint sh = wg->level_cap - l;
+
+    for (i = 0; i <= n; i++)
+    {
+      const gdouble x = wg->xc[i << sh];
+
+      wg->xq[i] = x;
+      wg->rr[i] = at_0 ? half * (1.0 + x) : R - half * (1.0 - x);
+    }
+
+    _ncm_spectral_polar_weight_grid_eval (c, n, n + 1, wg->xq, wg->sv);
+  }
+
+  if (at_0)
+  {
+    /* (R - r)^b_l v_l and the series times u_j, then their coefficients */
+    #pragma omp simd
+
+    for (i = 0; i <= n; i++)
+      wg->lnq[i] = log (R - wg->rr[i]);
+
+    for (k = 0; k < Kb; k++)
+    {
+      if (fb != NULL)
+        fb (k, n + 1, wg->rr, wg->fv, user_data);
+
+      #pragma omp simd
+
+      for (i = 0; i <= n; i++)
+        wg->pw[i] = exp (b[k] * wg->lnq[i]);
+
+      for (i = 0; i <= n; i++)
+        wg->bv[(gsize) i * Kb + k] = wg->pw[i] * ((fb != NULL) ? wg->fv[i] : 1.0);
+    }
+
+    for (j = 0; j < Ka; j++)
+    {
+      if (fa != NULL)
+        fa (j, n + 1, wg->rr, wg->fv, user_data);
+
+      for (i = 0; i <= n; i++)
+        wg->av[(gsize) i * Ka + j] = wg->sv[i] * ((fa != NULL) ? wg->fv[i] : 1.0);
+    }
+
+    _ncm_spectral_transform (wg->spectral, n + 1, Kb, wg->bv, wg->bc);
+    _ncm_spectral_transform (wg->spectral, n + 1, Ka, wg->av, wg->ac);
+
+    for (j = 0; j < Ka; j++)
+    {
+      const gdouble *M    = _ncm_spectral_polar_moments (&g_array_index (wg->ma, NcmSpectralPolarMom, j), l + 1);
+      const gdouble scale = 0.5 * pow (half, 1.0 + a[j]);
+
+      for (m = 0; m <= n; m++)
+      {
+        gdouble acc = 0.0;
+
+        for (k = 0; k <= n; k++)
+          acc += wg->ac[(gsize) k * Ka + j] * (M[k + m] + M[(k > m) ? k - m : m - k]);
+
+        wg->gv[m] = scale * acc;
+      }
+
+      for (k = 0; k < Kb; k++)
+      {
+        gdouble acc = 0.0;
+
+        for (m = 0; m <= n; m++)
+          acc += wg->gv[m] * wg->bc[(gsize) m * Kb + k];
+
+        res[j * Kb + k] += acc;
+      }
+    }
+  }
+  else
+  {
+    /* r^a_j u_j and the series times v_l, then their coefficients */
+    #pragma omp simd
+
+    for (i = 0; i <= n; i++)
+      wg->lnr[i] = log (wg->rr[i]);
+
+    for (j = 0; j < Ka; j++)
+    {
+      if (fa != NULL)
+        fa (j, n + 1, wg->rr, wg->fv, user_data);
+
+      #pragma omp simd
+
+      for (i = 0; i <= n; i++)
+        wg->pw[i] = exp (a[j] * wg->lnr[i]);
+
+      for (i = 0; i <= n; i++)
+        wg->av[(gsize) i * Ka + j] = wg->pw[i] * ((fa != NULL) ? wg->fv[i] : 1.0);
+    }
+
+    for (k = 0; k < Kb; k++)
+    {
+      if (fb != NULL)
+        fb (k, n + 1, wg->rr, wg->fv, user_data);
+
+      for (i = 0; i <= n; i++)
+        wg->bv[(gsize) i * Kb + k] = wg->sv[i] * ((fb != NULL) ? wg->fv[i] : 1.0);
+    }
+
+    _ncm_spectral_transform (wg->spectral, n + 1, Ka, wg->av, wg->ac);
+    _ncm_spectral_transform (wg->spectral, n + 1, Kb, wg->bv, wg->bc);
+
+    for (k = 0; k < Kb; k++)
+    {
+      const gdouble *M    = _ncm_spectral_polar_moments (&g_array_index (wg->mb, NcmSpectralPolarMom, k), l + 1);
+      const gdouble scale = 0.5 * pow (half, 1.0 + b[k]);
+
+      for (m = 0; m <= n; m++)
+      {
+        gdouble acc = 0.0;
+
+        for (q = 0; q <= n; q++)
+          acc += wg->bc[(gsize) q * Kb + k] * (M[q + m] + M[(q > m) ? q - m : m - q]);
+
+        wg->gv[m] = scale * acc;
+      }
+
+      for (j = 0; j < Ka; j++)
+      {
+        gdouble acc = 0.0;
+
+        for (m = 0; m <= n; m++)
+          acc += wg->gv[m] * wg->ac[(gsize) m * Ka + j];
+
+        res[j * Kb + k] += acc;
+      }
+    }
+  }
 }
 

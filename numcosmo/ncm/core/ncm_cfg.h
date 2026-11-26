@@ -73,6 +73,7 @@ void ncm_cfg_init_full_ptr (gint *argc, gchar ***argv);
 gchar **ncm_cfg_init_full (gint argc, gchar **argv);
 
 void ncm_cfg_register_objects (void);
+void ncm_cfg_check_register (void);
 void ncm_cfg_register_functions (void);
 
 void ncm_cfg_enable_gsl_err_handler (void);

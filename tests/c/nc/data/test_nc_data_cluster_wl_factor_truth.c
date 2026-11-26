@@ -468,10 +468,24 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   NcmVector *vL            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vC            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
   NcmVector *vA            = _truth_eval_auto (test->dcwlf, test->mset, test->nrows);
+  NcmVector *vW2, *vW5;
+
+  nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 2);
+  vW2 = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  g_assert_cmpuint (nc_data_cluster_wl_factor_get_cheb_unconverged_count (test->dcwlf), ==, 0);
+  nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 5);
+  vW5 = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  g_assert_cmpuint (nc_data_cluster_wl_factor_get_cheb_unconverged_count (test->dcwlf), ==, 0);
+  nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 2);
 
   _truth_cmp ("FIXED vs reference", vF, test->ref, 1.0e-6, abstol);
   _truth_cmp ("LNINT vs reference", vL, test->ref, 1.0e-6, abstol);
   _truth_cmp ("CUBATURE vs reference", vC, test->ref, 1.0e-6, abstol);
+
+  /* CHEB_WEIGHTS integrates p exactly and stops at cheb-tol 1e-8 on F: measured at most
+   * 8.3e-13 from the reference at cheb-level-min 2 and 6.2e-15 at 5; 1e-10 is asserted. */
+  _truth_cmp ("CHEB_WEIGHTS level 2 vs reference", vW2, test->ref, 1.0e-10, 1.0e-10);
+  _truth_cmp ("CHEB_WEIGHTS level 5 vs reference", vW5, test->ref, 1.0e-10, 1.0e-10);
 
   /* Auto-nodes targets node-reltol per galaxy (1e-4 by default, and the
    * calibration may stop short of it), so it is held to a bar set by that
@@ -484,5 +498,7 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
   ncm_vector_free (vL);
   ncm_vector_free (vC);
   ncm_vector_free (vA);
+  ncm_vector_free (vW2);
+  ncm_vector_free (vW5);
 }
 

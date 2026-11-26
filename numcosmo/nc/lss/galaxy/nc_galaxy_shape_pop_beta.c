@@ -52,7 +52,12 @@
  * $P_\mathrm{pop}(r)$.
  * The shape parameters satisfy $\alpha,\beta \ge 1$. The class also exposes
  * $e_\mathrm{rms}=\sqrt{\langle r^2\rangle/2}$ and
- * $\mathrm{mode}(r)=(\alpha-1)/(\alpha+\beta-2)$ as derived quantities.
+ * $\mathrm{mode}(r)=(\alpha-1)/(\alpha+\beta-2)$ as derived quantities, and the mean
+ * $\langle r\rangle=\alpha/(\alpha+\beta)$ and the standard deviation
+ * $\sqrt{\alpha\beta/[(\alpha+\beta)^2(\alpha+\beta+1)]}$ of $r$
+ * (nc_galaxy_shape_pop_beta_get_mean(), nc_galaxy_shape_pop_beta_get_std()). In a fit
+ * $\alpha$ and $\beta$ are strongly correlated, while the mean and the standard
+ * deviation are constrained separately.
  *
  */
 
@@ -79,6 +84,7 @@ struct _NcGalaxyShapePopBeta
 typedef struct _NcGalaxyShapePopBetaLData
 {
   gdouble lnnorm_r; /* -ln B(alpha,beta): eval_p()/eval_p_array()'s own P_pop(r) normalization */
+  gdouble norm_r;   /* 1 / B(alpha,beta), the reduced density */
   gdouble alpha;    /* cached copy of the alpha model param */
   gdouble beta;     /* cached copy of the beta model param */
 } NcGalaxyShapePopBetaLData;
@@ -111,6 +117,8 @@ static gdouble _nc_galaxy_shape_pop_beta_e_rms (NcGalaxyShapePop *gsp, NcGalaxyS
 static gdouble _nc_galaxy_shape_pop_beta_exponent_at_origin (NcGalaxyShapePop *gsp);
 static gdouble _nc_galaxy_shape_pop_beta_exponent_at_one (NcGalaxyShapePop *gsp);
 static gdouble _nc_galaxy_shape_pop_beta_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r);
+static gboolean _nc_galaxy_shape_pop_beta_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1);
+static gdouble _nc_galaxy_shape_pop_beta_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1);
 static gdouble _nc_galaxy_shape_pop_beta_moment_2k (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const guint k);
 
 static void
@@ -169,6 +177,9 @@ nc_galaxy_shape_pop_beta_class_init (NcGalaxyShapePopBetaClass *klass)
   gsp_class->moment_2k          = &_nc_galaxy_shape_pop_beta_moment_2k;
   gsp_class->exponent_at_one    = &_nc_galaxy_shape_pop_beta_exponent_at_one;
   gsp_class->eval_p_reduced     = &_nc_galaxy_shape_pop_beta_eval_p_reduced;
+
+  gsp_class->reduced_factor_params  = &_nc_galaxy_shape_pop_beta_reduced_factor_params;
+  gsp_class->eval_p_reduced_factors = &_nc_galaxy_shape_pop_beta_eval_p_reduced_factors;
 }
 
 #define VECTOR (NCM_MODEL (gsp))
@@ -206,6 +217,7 @@ _nc_galaxy_shape_pop_beta_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *
 
   /* lnnorm_r: -ln B(alpha,beta), the normalization of P_pop(r) */
   ldata->lnnorm_r = -gsl_sf_lnbeta (alpha, beta);
+  ldata->norm_r   = exp (ldata->lnnorm_r);
   ldata->alpha    = alpha;
   ldata->beta     = beta;
 }
@@ -296,7 +308,29 @@ _nc_galaxy_shape_pop_beta_eval_p_reduced (NcGalaxyShapePop *gsp, NcGalaxyShapePo
 {
   NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
 
-  return exp (ldata->lnnorm_r);
+  return ldata->norm_r;
+}
+
+/* alpha sets the exponent at the origin and beta the one at 1; both factors are 1 */
+static gboolean
+_nc_galaxy_shape_pop_beta_reduced_factor_params (NcGalaxyShapePop *gsp, gint *param_o, gint *param_1)
+{
+  *param_o = NC_GALAXY_SHAPE_POP_BETA_ALPHA;
+  *param_1 = NC_GALAXY_SHAPE_POP_BETA_BETA;
+
+  return TRUE;
+}
+
+/* The reduced density is the constant N = 1 / B (alpha, beta) */
+static gdouble
+_nc_galaxy_shape_pop_beta_eval_p_reduced_factors (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const gdouble r, gdouble *f_o, gdouble *f_1)
+{
+  NcGalaxyShapePopBetaLData *ldata = (NcGalaxyShapePopBetaLData *) data->ldata;
+
+  *f_o = 1.0;
+  *f_1 = 1.0;
+
+  return ldata->norm_r;
 }
 
 /* M_2k = <r^2k> = B(alpha+2k,beta)/B(alpha,beta) = prod_{j=0}^{2k-1}
@@ -431,6 +465,48 @@ nc_galaxy_shape_pop_beta_get_mode (NcGalaxyShapePopBeta *gspb)
     return 0.0;
 }
 
+/**
+ * nc_galaxy_shape_pop_beta_get_mean:
+ * @gspb: a #NcGalaxyShapePopBeta
+ *
+ * The mean of the ellipticity modulus, $\langle r\rangle=\alpha/(\alpha+\beta)$ for
+ * $r=|\chi_I|\sim\mathrm{Beta}(\alpha,\beta)$: a reporting quantity, not a model
+ * parameter.
+ *
+ * Returns: $\langle r\rangle$.
+ */
+gdouble
+nc_galaxy_shape_pop_beta_get_mean (NcGalaxyShapePopBeta *gspb)
+{
+  NcGalaxyShapePop *gsp = NC_GALAXY_SHAPE_POP (gspb);
+  const gdouble alpha   = ALPHA;
+  const gdouble beta    = BETA;
+
+  return alpha / (alpha + beta);
+}
+
+/**
+ * nc_galaxy_shape_pop_beta_get_std:
+ * @gspb: a #NcGalaxyShapePopBeta
+ *
+ * The standard deviation of the ellipticity modulus,
+ * $\sqrt{\langle r^2\rangle-\langle r\rangle^2}=\sqrt{\alpha\beta/[(\alpha+\beta)^2(\alpha+\beta+1)]}$
+ * for $r=|\chi_I|\sim\mathrm{Beta}(\alpha,\beta)$: a reporting quantity, not a model
+ * parameter.
+ *
+ * Returns: the standard deviation of $r$.
+ */
+gdouble
+nc_galaxy_shape_pop_beta_get_std (NcGalaxyShapePopBeta *gspb)
+{
+  NcGalaxyShapePop *gsp = NC_GALAXY_SHAPE_POP (gspb);
+  const gdouble alpha   = ALPHA;
+  const gdouble beta    = BETA;
+  const gdouble sum     = alpha + beta;
+
+  return sqrt (alpha * beta / (sum * sum * (sum + 1.0)));
+}
+
 static void
 _nc_galaxy_shape_pop_beta_flist_e_rms (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
@@ -451,6 +527,26 @@ _nc_galaxy_shape_pop_beta_flist_mode (NcmMSetFuncList *flist, NcmMSet *mset, con
   res[0] = nc_galaxy_shape_pop_beta_get_mode (gspb);
 }
 
+static void
+_nc_galaxy_shape_pop_beta_flist_mean (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcGalaxyShapePopBeta *gspb = NC_GALAXY_SHAPE_POP_BETA (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+
+  g_assert (NC_IS_GALAXY_SHAPE_POP_BETA (gspb));
+
+  res[0] = nc_galaxy_shape_pop_beta_get_mean (gspb);
+}
+
+static void
+_nc_galaxy_shape_pop_beta_flist_std (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcGalaxyShapePopBeta *gspb = NC_GALAXY_SHAPE_POP_BETA (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+
+  g_assert (NC_IS_GALAXY_SHAPE_POP_BETA (gspb));
+
+  res[0] = nc_galaxy_shape_pop_beta_get_std (gspb);
+}
+
 /* Called once from ncm_cfg_register_functions(), same convention as other
  * models' derived NcmMSetFuncList entries. */
 void
@@ -462,5 +558,11 @@ _nc_galaxy_shape_pop_beta_register_functions (void)
   ncm_mset_func_list_register ("mode", "\\mathrm{mode}(r)", "NcGalaxyShapePopBeta",
                                "Mode of r = |chi_I|", G_TYPE_NONE,
                                _nc_galaxy_shape_pop_beta_flist_mode, 0, 1);
+  ncm_mset_func_list_register ("mean", "\\langle r \\rangle", "NcGalaxyShapePopBeta",
+                               "Mean of r = |chi_I|", G_TYPE_NONE,
+                               _nc_galaxy_shape_pop_beta_flist_mean, 0, 1);
+  ncm_mset_func_list_register ("std", "\\sigma_r", "NcGalaxyShapePopBeta",
+                               "Standard deviation of r = |chi_I|", G_TYPE_NONE,
+                               _nc_galaxy_shape_pop_beta_flist_std, 0, 1);
 }
 
