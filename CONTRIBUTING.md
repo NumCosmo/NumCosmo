@@ -344,9 +344,9 @@ Python traceback. Typer prints a traceback for any exception other than its own.
 
 A test runs the command through `typer.testing.CliRunner` and checks the exit code and
 the message. Rich wraps the message at the terminal width and may add ANSI color codes, so
-the test matches it after removing those codes, the box borders and the line breaks
-(`_plain_output` in `tests/python/numcosmo_py/app/test_numcosmo_app.py`), and never
-matches across a file path, which Rich may break at any character.
+every substring match on the output goes through `plain_output` of
+`numcosmo_py.app.testing`, which removes those codes, the box borders and the line breaks.
+A test never matches across a file path, which Rich may break at any character.
 
 ## Adding a dependency
 

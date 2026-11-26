@@ -32,6 +32,7 @@ pytest.importorskip("getdist")
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 from numcosmo_py.app import generate as gen
 from numcosmo_py import Nc
 
@@ -89,10 +90,10 @@ def test_inspect_summary_lists_dataset_terms(
     result = runner.invoke(app, ["inspect", "summary", exp_file.as_posix()])
 
     assert result.exit_code == 0, result.output
-    assert "Experiment summary" in result.output
-    assert "Dataset likelihood terms" in result.output
-    assert "DataGaussCovMVND" in result.output
-    assert "Models present" in result.output
+    assert "Experiment summary" in plain_output(result.output)
+    assert "Dataset likelihood terms" in plain_output(result.output)
+    assert "DataGaussCovMVND" in plain_output(result.output)
+    assert "Models present" in plain_output(result.output)
 
 
 def test_inspect_summary_show_model_params(
@@ -107,10 +108,10 @@ def test_inspect_summary_show_model_params(
     )
 
     assert result.exit_code == 0, result.output
-    assert "Parameters:" in result.output
-    assert "Fit type" in result.output
-    assert "FREE" in result.output
-    assert "ParamType." not in result.output
+    assert "Parameters:" in plain_output(result.output)
+    assert "Fit type" in plain_output(result.output)
+    assert "FREE" in plain_output(result.output)
+    assert "ParamType." not in plain_output(result.output)
 
 
 def test_inspect_cluster_ncounts_creates_plots(jpas_experiment: Path, tmp_path: Path):
@@ -148,7 +149,7 @@ def test_inspect_cluster_ncounts_no_sij_message(jpas_experiment: Path):
     )
 
     assert result.exit_code == 0, result.output
-    assert "No S_ij matrices available to plot." in result.output
+    assert "No S_ij matrices available to plot." in plain_output(result.output)
 
 
 def test_inspect_cluster_ncounts_log_data_and_plot_options(
@@ -209,7 +210,7 @@ def test_inspect_cluster_ncounts_reshape_fallback(
     assert result.exit_code == 0, result.output
     assert (
         "Could not infer (z, lnM) 2D grid from bins; plotting flattened vector."
-        in result.output
+        in plain_output(result.output)
     )
 
 

@@ -38,6 +38,7 @@ pytest.importorskip("getdist")
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 
 pytestmark = pytest.mark.app
 runner = CliRunner()
@@ -203,7 +204,7 @@ def test_galaxy_shape_integrand_spectral_overlays_panels(
 
     assert result.exit_code == 0, result.output
     assert (tmp_path / "spectral_shape_integrand.png").exists()
-    assert "Spectral panels:" in result.output
+    assert "Spectral panels:" in plain_output(result.output)
 
 
 def test_galaxy_shape_integrand_spectral_no_show_panels(spectral_experiment: Path):
@@ -222,7 +223,7 @@ def test_galaxy_shape_integrand_spectral_no_show_panels(spectral_experiment: Pat
     )
 
     assert result.exit_code == 0, result.output
-    assert "Spectral panels:" not in result.output
+    assert "Spectral panels:" not in plain_output(result.output)
 
 
 @pytest.mark.parametrize(
@@ -249,7 +250,7 @@ def test_galaxy_shape_integrand_spectral_large_shear(
     )
 
     assert result.exit_code == 0, result.output
-    assert expected in result.output
+    assert expected in plain_output(result.output)
 
 
 def test_galaxy_shape_integrand_trace_ellip_conv(tmp_path: Path):

@@ -41,6 +41,7 @@ import matplotlib.pyplot as plt
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 from numcosmo_py.app.xcor.cls import ComputeCls, EllSpacing, sample_ells
 from numcosmo_py.app.xcor.common import contiguous_runs
 from numcosmo_py.app.xcor.plotting import percent_tick, style_ratio_axis
@@ -72,8 +73,8 @@ def test_cls_runs_and_writes_the_figure(tmp_path: Path) -> None:
     result = _cls("--output", output.as_posix())
 
     assert result.exit_code == 0, result.output
-    assert "1 kernel(s), 1 spectra" in result.output
-    assert "Angular power spectra complete" in result.output
+    assert "1 kernel(s), 1 spectra" in plain_output(result.output)
+    assert "Angular power spectra complete" in plain_output(result.output)
     assert output.exists()
 
 
@@ -88,7 +89,9 @@ def test_cls_pairs_every_kernel_by_default(
     result = _cls(kernels=kernels)
 
     assert result.exit_code == 0, result.output
-    assert f"{len(kernels)} kernel(s), {n_spectra} spectra" in result.output
+    assert f"{len(kernels)} kernel(s), {n_spectra} spectra" in plain_output(
+        result.output
+    )
 
 
 @pytest.mark.parametrize(
@@ -99,7 +102,9 @@ def test_cls_no_cross_keeps_the_auto_spectra_only(kernels: tuple[str, ...]) -> N
     result = _cls("--no-cross", kernels=kernels)
 
     assert result.exit_code == 0, result.output
-    assert f"{len(kernels)} kernel(s), {len(kernels)} spectra" in result.output
+    assert f"{len(kernels)} kernel(s), {len(kernels)} spectra" in plain_output(
+        result.output
+    )
 
 
 def test_view_kernel_no_cross_reaches_the_cls_run() -> None:
@@ -125,7 +130,7 @@ def test_view_kernel_no_cross_reaches_the_cls_run() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "2 kernel(s), 2 spectra" in result.output
+    assert "2 kernel(s), 2 spectra" in plain_output(result.output)
 
 
 def test_cls_goes_past_the_kernel_block_cap() -> None:
@@ -154,7 +159,7 @@ def test_cls_goes_past_the_kernel_block_cap() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert f"for {n_ell} multipole(s)" in result.output
+    assert f"for {n_ell} multipole(s)" in plain_output(result.output)
 
 
 def test_view_kernel_still_caps_its_multipole_block() -> None:
@@ -176,7 +181,7 @@ def test_view_kernel_still_caps_its_multipole_block() -> None:
     )
 
     assert result.exit_code != 0
-    assert "Kernel evaluation complete" not in result.output
+    assert "Kernel evaluation complete" not in plain_output(result.output)
 
 
 def test_cls_rejects_an_empty_range() -> None:
@@ -215,7 +220,7 @@ def test_cls_every_spacing_runs(spacing: str) -> None:
     result = _cls("--ell-spacing", spacing)
 
     assert result.exit_code == 0, result.output
-    assert "Angular power spectra complete" in result.output
+    assert "Angular power spectra complete" in plain_output(result.output)
 
 
 @pytest.mark.parametrize(

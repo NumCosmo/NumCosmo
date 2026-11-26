@@ -32,6 +32,7 @@ from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 
 pytestmark = pytest.mark.app
 
@@ -108,7 +109,7 @@ def test_generate_cluster_richness_count_summary(experiment_file: Path):
     )
 
     assert result.exit_code == 0, result.output
-    assert "Cluster Mass-Richness Count Mock" in result.output
+    assert "Cluster Mass-Richness Count Mock" in plain_output(result.output)
 
 
 def test_generate_cluster_richness_count_bad_suffix(tmp_path: Path):
@@ -156,7 +157,7 @@ def test_run_test_cluster_richness_count(experiment_file: Path):
 
     result = runner.invoke(app, ["run", "test", experiment_file.as_posix()])
     assert result.exit_code == 0, result.output
-    assert "NcDataClusterMassRichCount" in result.output
+    assert "NcDataClusterMassRichCount" in plain_output(result.output)
 
 
 def test_run_fit_cluster_richness_count(experiment_file: Path):
@@ -203,8 +204,8 @@ def test_generate_cluster_richness_count_from_file(
 
     assert result.exit_code == 0, result.output
     assert experiment_file.exists()
-    assert "Cluster Mass-Richness Count Data" in result.output
-    assert "Clusters loaded" in result.output
+    assert "Cluster Mass-Richness Count Data" in plain_output(result.output)
+    assert "Clusters loaded" in plain_output(result.output)
 
 
 def test_generate_cluster_richness_count_from_file_bad_column(
@@ -252,4 +253,4 @@ def test_run_test_cluster_richness_count_from_file(
 
     result = runner.invoke(app, ["run", "test", experiment_file.as_posix()])
     assert result.exit_code == 0, result.output
-    assert "NcDataClusterMassRichCount" in result.output
+    assert "NcDataClusterMassRichCount" in plain_output(result.output)

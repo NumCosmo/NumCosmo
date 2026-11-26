@@ -24,7 +24,6 @@
 
 """Test NumCosmo app."""
 
-import re
 import subprocess
 import sys
 from typing import Tuple
@@ -45,6 +44,7 @@ from numcosmo_py.app.loading import load_catalog
 from numcosmo_py.app.catalog import _auto_thin
 from numcosmo_py.app.run_fit import RunCommonOptions
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 from numcosmo_py.app.esmcmc import IniSampler, Parallelization
 from numcosmo_py.interpolation.stats_dist import CrossValidationMethod
 from numcosmo_py.sampling import FitRunner, FitGradType, FitRunMessages, FisherType
@@ -55,14 +55,6 @@ from numcosmo_py.interpolation.stats_dist import (
 
 pytestmark = pytest.mark.app
 runner = CliRunner()
-
-
-def _plain_output(output: str) -> str:
-    """Return a command's output without ANSI codes, Rich box borders and line breaks,
-    so a message can be matched whatever the terminal width."""
-    output = re.sub(r"\x1b\[[0-9;]*m", "", output)
-    output = re.sub(r"[\u2500-\u257f]", " ", output)
-    return " ".join(output.split())
 
 
 Ncm.cfg_init()
@@ -191,9 +183,9 @@ def test_run_bench(simple_experiment, subcommand):
     result = runner.invoke(app, [*subcommand, filename.as_posix(), "--bench"])
     if result.exit_code != 0:
         raise result.exception
-    assert "# Benchmark:" in result.output
-    assert "wall time" in result.output
-    assert "peak RSS" in result.output
+    assert "# Benchmark:" in plain_output(result.output)
+    assert "wall time" in plain_output(result.output)
+    assert "peak RSS" in plain_output(result.output)
 
 
 def test_run_fit_runner(simple_experiment, fit_runner):
@@ -924,7 +916,7 @@ def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "raised from 0" in result.output
+    assert "raised from 0" in plain_output(result.output)
 
     # Fresh catalog with a three-iteration posterior-only exploration phase.
     output2 = filename.with_suffix(".expl.yaml")
@@ -954,7 +946,7 @@ def test_run_mcmc_apes_analyze_markovian_floor(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "raised from 1" in result.output
+    assert "raised from 1" in plain_output(result.output)
 
 
 def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
@@ -975,7 +967,7 @@ def test_run_mcmc_apes_analyze_burnin_beyond_catalog_size(simple_experiment):
         app, ["catalog", "analyze", catalog.as_posix(), "--burnin", "1000000"]
     )
     assert result.exit_code == 2
-    assert "--burnin 1000000 discards every iteration" in _plain_output(result.output)
+    assert "--burnin 1000000 discards every iteration" in plain_output(result.output)
 
 
 def test_run_mcmc_apes_analyze_thin(simple_experiment):
@@ -997,7 +989,7 @@ def test_run_mcmc_apes_analyze_thin(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "Thinning" in result.output
+    assert "Thinning" in plain_output(result.output)
 
     full = load_catalog(catalog, burnin=1)
     thinned = load_catalog(catalog, burnin=1, thin=2)
@@ -1046,7 +1038,7 @@ def test_run_mcmc_apes_analyze_tail_markovian_floor(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "raised from 0" in result.output
+    assert "raised from 0" in plain_output(result.output)
 
 
 def test_run_mcmc_apes_analyze_tail(simple_experiment):
@@ -1115,8 +1107,8 @@ def test_run_mcmc_apes_analyze_exclude_only(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "mu_0" in result.output
-    assert "mu_4" not in result.output
+    assert "mu_0" in plain_output(result.output)
+    assert "mu_4" not in plain_output(result.output)
 
 
 def test_run_mcmc_apes_analyze_include_only(simple_experiment):
@@ -1145,9 +1137,9 @@ def test_run_mcmc_apes_analyze_include_only(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "mu_0" in result.output
-    assert "mu_1" in result.output
-    assert "mu_2" not in result.output
+    assert "mu_0" in plain_output(result.output)
+    assert "mu_1" in plain_output(result.output)
+    assert "mu_2" not in plain_output(result.output)
 
 
 def test_run_mcmc_apes_analyze_include_and_exclude(simple_experiment):
@@ -1176,8 +1168,8 @@ def test_run_mcmc_apes_analyze_include_and_exclude(simple_experiment):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "mu_0" in result.output
-    assert "mu_4" not in result.output
+    assert "mu_0" in plain_output(result.output)
+    assert "mu_4" not in plain_output(result.output)
 
 
 def test_run_mcmc_apes_analyze_empty_catalog(simple_experiment):
@@ -1199,7 +1191,7 @@ def test_run_mcmc_apes_analyze_empty_catalog(simple_experiment):
         app, ["catalog", "analyze", catalog.as_posix(), "--burnin", str(n_iterations)]
     )
     assert result.exit_code == 2
-    assert f"--burnin {n_iterations} discards every iteration" in _plain_output(
+    assert f"--burnin {n_iterations} discards every iteration" in plain_output(
         result.output
     )
 
@@ -1234,7 +1226,7 @@ def test_run_mcmc_apes_plot_corner_too_many_plot_names(simple_experiment):
     # option-looking tokens and injects ANSI codes between their characters
     # when color is on (as it is in CI, unlike a plain local terminal), which
     # would otherwise break a naive substring match.
-    assert "values than catalog files" in result.output
+    assert "values than catalog files" in plain_output(result.output)
 
 
 def test_run_mcmc_apes_plot_corner_mark_bestfit(simple_experiment):
@@ -1407,7 +1399,7 @@ def test_catalog_dump_mset_round_trips_as_starting_point(simple_experiment, tmp_
     result = runner.invoke(app, ["catalog", "dump-mset", catalog.as_posix()])
     if result.exit_code != 0:
         raise result.exception
-    assert "model-set" in result.stdout
+    assert "model-set" in plain_output(result.stdout)
 
     dumped = tmp_path / "dumped_mset.yaml"
     result = runner.invoke(
@@ -1435,7 +1427,7 @@ def test_catalog_analyze_missing_file(tmp_path):
         app, ["catalog", "analyze", (tmp_path / "does_not_exist.fits").as_posix()]
     )
     assert result.exit_code != 0
-    assert "not found" in result.output
+    assert "not found" in plain_output(result.output)
 
 
 def test_load_catalog_negative_tail_rejected(simple_experiment):
@@ -1580,13 +1572,13 @@ def test_run_mcmc_apes_plot_corner_auto_thin(simple_experiment):
     result = runner.invoke(app, base)
     if result.exit_code != 0:
         raise result.exception
-    assert ": thin " in result.output
+    assert ": thin " in plain_output(result.output)
 
     for extra in (["--thin", "2"], ["--no-auto-thin"]):
         result = runner.invoke(app, base + extra)
         if result.exit_code != 0:
             raise result.exception
-        assert ": thin " not in result.output
+        assert ": thin " not in plain_output(result.output)
 
 
 def _write_ar1_catalog(
@@ -1708,7 +1700,7 @@ def test_run_mcmc_apes_analyze_markovian_start_leaves_no_row(simple_experiment):
     for command in (["analyze"], ["plot-corner", "--no-show"]):
         result = runner.invoke(app, ["catalog", *command, catalog.as_posix()])
         assert result.exit_code == 2
-        output = _plain_output(result.output)
+        output = plain_output(result.output)
         assert "Markovian chain" in output
         assert "no row is left to analyze" in output
 
@@ -1839,7 +1831,7 @@ def test_run_mcmc_apes_calibrate_no_interpolate(simple_experiment):
     if result.exit_code != 0:
         raise result.exception
 
-    assert "Use interpolation" in result.stdout
+    assert "Use interpolation" in plain_output(result.stdout)
 
 
 def test_run_mcmc_apes_get_best_fit(simple_experiment):
@@ -1893,7 +1885,7 @@ def test_run_mcmc_apes_get_best_fit_requires_output(simple_experiment):
 
     result = runner.invoke(app, ["catalog", "get-best-fit", catalog.as_posix()])
     assert result.exit_code != 0
-    assert "Output file not defined" in result.output
+    assert "Output file not defined" in plain_output(result.output)
 
 
 @pytest.mark.parametrize(
@@ -1979,4 +1971,4 @@ def test_run_mcmc_apes_analyze_ensemble_diagnostics(simple_experiment):
     if result.exit_code != 0:
         raise result.exception
 
-    assert "K_eff" in result.stdout
+    assert "K_eff" in plain_output(result.stdout)

@@ -34,6 +34,7 @@ from typer.testing import CliRunner
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 from numcosmo_py.analysis.cluster_richness import RichnessModelType
 
 pytestmark = pytest.mark.app
@@ -143,11 +144,11 @@ class TestBasicDataLoading:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "Data Summary" in result.output
-        assert "Total clusters:" in result.output
-        assert "Mass range:" in result.output
-        assert "Redshift range:" in result.output
-        assert "Richness range:" in result.output
+        assert "Data Summary" in plain_output(result.output)
+        assert "Total clusters:" in plain_output(result.output)
+        assert "Mass range:" in plain_output(result.output)
+        assert "Redshift range:" in plain_output(result.output)
+        assert "Richness range:" in plain_output(result.output)
 
     def test_load_custom_columns(self, mock_cluster_data_custom_columns: Path) -> None:
         """Test loading data with custom column names."""
@@ -170,8 +171,8 @@ class TestBasicDataLoading:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "Data Summary" in result.output
-        assert "Total clusters:" in result.output
+        assert "Data Summary" in plain_output(result.output)
+        assert "Total clusters:" in plain_output(result.output)
 
     def test_missing_column_error(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test error handling for missing column."""
@@ -188,7 +189,10 @@ class TestBasicDataLoading:
         )
 
         assert result.exit_code == 1, "Should fail with missing column"
-        assert "not found" in result.output.lower() or "error" in result.output.lower()
+        assert (
+            "not found" in plain_output(result.output).lower()
+            or "error" in plain_output(result.output).lower()
+        )
 
 
 class TestModelTypes:
@@ -213,7 +217,7 @@ class TestModelTypes:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "PHASE 1: Real Data Analysis" in result.output
+        assert "PHASE 1: Real Data Analysis" in plain_output(result.output)
 
     def test_ext_model(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with EXT model."""
@@ -234,7 +238,7 @@ class TestModelTypes:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "PHASE 1: Real Data Analysis" in result.output
+        assert "PHASE 1: Real Data Analysis" in plain_output(result.output)
 
     def test_all_model_types(
         self, mock_cluster_data: Tuple[Path, dict], model_type: str
@@ -281,7 +285,7 @@ class TestCutAnalysis:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "lambda >= 20.0" in result.output
+        assert "lambda >= 20.0" in plain_output(result.output)
 
     def test_multiple_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with multiple richness cuts."""
@@ -302,7 +306,7 @@ class TestCutAnalysis:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Check that all cuts appear in output
         for cut_val in [5.0, 10.0, 15.0, 20.0]:
-            assert f"lambda >= {cut_val}" in result.output
+            assert f"lambda >= {cut_val}" in plain_output(result.output)
 
     def test_default_cuts(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with default cuts."""
@@ -321,7 +325,7 @@ class TestCutAnalysis:
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Default cuts are 5,10,15,20,30
         for cut_val in [5.0, 10.0, 15.0, 20.0, 30.0]:
-            assert f"lambda >= {cut_val}" in result.output
+            assert f"lambda >= {cut_val}" in plain_output(result.output)
 
 
 class TestAnalysisOptions:
@@ -345,7 +349,7 @@ class TestAnalysisOptions:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "PHASE 1: Real Data Analysis" in result.output
+        assert "PHASE 1: Real Data Analysis" in plain_output(result.output)
 
     def test_custom_seed(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test analysis with custom random seed."""
@@ -480,8 +484,8 @@ class TestMockStudy:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "PHASE 2: Mock Study" in result.output
-        assert "PHASE 3: Goodness-of-Fit Analysis" in result.output
+        assert "PHASE 2: Mock Study" in plain_output(result.output)
+        assert "PHASE 3: Goodness-of-Fit Analysis" in plain_output(result.output)
 
     def test_mock_study_zero_mocks(
         self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
@@ -507,7 +511,7 @@ class TestMockStudy:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "Skipping mock study" in result.output
+        assert "Skipping mock study" in plain_output(result.output)
 
     def test_mock_study_requires_analysis(
         self, mock_cluster_data: Tuple[Path, dict], tmp_path: Path
@@ -534,8 +538,8 @@ class TestMockStudy:
 
         # Should run analysis and mocks
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "PHASE 1: Real Data Analysis" in result.output
-        assert "PHASE 2: Mock Study" in result.output
+        assert "PHASE 1: Real Data Analysis" in plain_output(result.output)
+        assert "PHASE 2: Mock Study" in plain_output(result.output)
 
 
 class TestDiagnostics:
@@ -559,7 +563,7 @@ class TestDiagnostics:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "Diagnostic Analysis" in result.output
+        assert "Diagnostic Analysis" in plain_output(result.output)
 
     def test_diagnostics_custom_bins(
         self, mock_cluster_data: Tuple[Path, dict]
@@ -583,7 +587,7 @@ class TestDiagnostics:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "Diagnostic Analysis" in result.output
+        assert "Diagnostic Analysis" in plain_output(result.output)
 
     def test_diagnostics_with_multiple_cuts(
         self, mock_cluster_data: Tuple[Path, dict]
@@ -606,7 +610,7 @@ class TestDiagnostics:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Check diagnostics ran for multiple cuts
-        assert "Diagnostic Analysis" in result.output
+        assert "Diagnostic Analysis" in plain_output(result.output)
 
 
 class TestIntegration:
@@ -637,10 +641,10 @@ class TestIntegration:
         )
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "PHASE 1: Real Data Analysis" in result.output
-        assert "PHASE 2: Mock Study" in result.output
-        assert "PHASE 3: Goodness-of-Fit Analysis" in result.output
-        assert "Diagnostic Analysis" in result.output
+        assert "PHASE 1: Real Data Analysis" in plain_output(result.output)
+        assert "PHASE 2: Mock Study" in plain_output(result.output)
+        assert "PHASE 3: Goodness-of-Fit Analysis" in plain_output(result.output)
+        assert "Diagnostic Analysis" in plain_output(result.output)
 
     def test_reproducibility(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test that same seed produces same results."""
@@ -693,7 +697,7 @@ class TestIntegration:
             )
 
             assert result.exit_code == 0, f"Failed for {model_type}: {result.output}"
-            assert "Best-fit" in result.output
+            assert "Best-fit" in plain_output(result.output)
 
 
 class TestEdgeCases:
@@ -735,7 +739,7 @@ class TestEdgeCases:
 
         # Should still work with small dataset
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "Total clusters: 10" in result.output
+        assert "Total clusters: 10" in plain_output(result.output)
 
     def test_high_richness_cut(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test with high richness cut that filters most data."""
@@ -825,9 +829,9 @@ class TestDataValidation:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Should show cluster counts for each cut
-        assert "Clusters per Richness Cut" in result.output
-        assert "N clusters" in result.output
-        assert "Fraction" in result.output
+        assert "Clusters per Richness Cut" in plain_output(result.output)
+        assert "N clusters" in plain_output(result.output)
+        assert "Fraction" in plain_output(result.output)
 
     def test_data_summary_ranges(self, mock_cluster_data: Tuple[Path, dict]) -> None:
         """Test that data summary includes all range information."""
@@ -845,7 +849,7 @@ class TestDataValidation:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Check all expected ranges are reported
-        assert "Mass range:" in result.output
-        assert "Redshift range:" in result.output
-        assert "Richness range:" in result.output
-        assert "sigma(ln R) range:" in result.output
+        assert "Mass range:" in plain_output(result.output)
+        assert "Redshift range:" in plain_output(result.output)
+        assert "Richness range:" in plain_output(result.output)
+        assert "sigma(ln R) range:" in plain_output(result.output)

@@ -37,6 +37,7 @@ from pydantic import BaseModel
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 from numcosmo_py.app.xcor.common import XcorKernelCommon
 from numcosmo_py.app.xcor.kernels import (
     KERNEL_CONFIG_REGISTRY,
@@ -59,8 +60,8 @@ def test_kernel_list_summarises_every_type() -> None:
 
     assert result.exit_code == 0, result.output
     for name in NAMES:
-        assert name in result.output
-    assert "numcosmo xcor kernel list <kernel_type>" in result.output
+        assert name in plain_output(result.output)
+    assert "numcosmo xcor kernel list <kernel_type>" in plain_output(result.output)
 
 
 @pytest.mark.parametrize("kernel_name", NAMES)
@@ -87,10 +88,10 @@ def test_kernel_list_documents_one_type(
     result = runner.invoke(app, ["xcor", "kernel", "list", kernel_name])
 
     assert result.exit_code == 0, result.output
-    assert kernel_name in result.output
-    assert config_class.nc_type.__name__ in result.output  # type: ignore[attr-defined]
+    assert kernel_name in plain_output(result.output)
+    assert config_class.nc_type.__name__ in plain_output(result.output)  # type: ignore[attr-defined]
     for field in config_class.model_fields:
-        assert field in result.output
+        assert field in plain_output(result.output)
 
 
 @pytest.mark.parametrize(("kernel_name", "config_class"), REGISTRY)
@@ -113,7 +114,7 @@ def test_kernel_list_rejects_an_unknown_type() -> None:
     result = runner.invoke(app, ["xcor", "kernel", "list", "radial-banana"])
 
     assert result.exit_code != 0
-    assert "radial-gauss" in result.output
+    assert "radial-gauss" in plain_output(result.output)
 
 
 def test_documented_library_object_is_the_one_built() -> None:
