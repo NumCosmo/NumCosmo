@@ -38,7 +38,7 @@ import os
 import numpy as np
 import pytest
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Ncm, Nc, NumCosmoWarning
 
 Ncm.cfg_init()
 
@@ -316,7 +316,10 @@ def test_node_config_mismatch_recalibrates():
 
     dup = _reload(dcwlf)
     dup.set_node_reltol(1.0e-5)
-    dup.data_prepare(mset)
+    with pytest.warns(
+        NumCosmoWarning, match="stored node configuration does not match"
+    ):
+        dup.data_prepare(mset)
     assert dup.get_calib_count() > 0
 
     fresh, mset2 = _build("var-add", "nfw", "composed")

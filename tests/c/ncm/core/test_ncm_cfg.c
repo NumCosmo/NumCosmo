@@ -74,6 +74,10 @@ void test_ncm_cfg_version (void);
 
 static void test_ncm_cfg_error_log_handler (void);
 static void test_ncm_cfg_error_log_handler_subprocess (void);
+static void test_ncm_cfg_warning_log_handler (void);
+static void test_ncm_cfg_warning_log_handler_subprocess (void);
+static void test_ncm_cfg_warning_log_handler_reset (void);
+static void test_ncm_cfg_warning_log_handler_reset_subprocess (void);
 static void test_ncm_cfg_enum_print_all_gaps (void);
 static void test_ncm_cfg_enum_print_all_gaps_subprocess (void);
 static void test_ncm_cfg_fftw_plan_begin_end (void);
@@ -152,6 +156,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/cfg/enum_print_all_gaps/subprocess", &test_ncm_cfg_enum_print_all_gaps_subprocess);
   g_test_add_func ("/ncm/cfg/error_log_handler", &test_ncm_cfg_error_log_handler);
   g_test_add_func ("/ncm/cfg/error_log_handler/subprocess", &test_ncm_cfg_error_log_handler_subprocess);
+  g_test_add_func ("/ncm/cfg/warning_log_handler", &test_ncm_cfg_warning_log_handler);
+  g_test_add_func ("/ncm/cfg/warning_log_handler/subprocess", &test_ncm_cfg_warning_log_handler_subprocess);
+  g_test_add_func ("/ncm/cfg/warning_log_handler/reset", &test_ncm_cfg_warning_log_handler_reset);
+  g_test_add_func ("/ncm/cfg/warning_log_handler/reset/subprocess", &test_ncm_cfg_warning_log_handler_reset_subprocess);
   g_test_add_func ("/ncm/cfg/keyfile", &test_ncm_cfg_keyfile);
   g_test_add_func ("/ncm/cfg/paths", &test_ncm_cfg_paths);
   g_test_add_func ("/ncm/cfg/data_filename", &test_ncm_cfg_data_filename);
@@ -410,6 +418,42 @@ test_ncm_cfg_error_log_handler_subprocess (void)
   ncm_cfg_set_error_log_handler (&_test_ncm_cfg_error_logger);
   ncm_cfg_logfile (FALSE);
   g_log ("NUMCOSMO", G_LOG_LEVEL_CRITICAL, "a critical with the log off");
+}
+
+/* The warning logger receives warnings also while ncm_cfg_logfile() is off; a fatal
+ * warning (g_test_init makes warnings fatal) still aborts after the logger returns */
+static void
+test_ncm_cfg_warning_log_handler (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/warning_log_handler/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stdout ("*CAUGHT: a warning with the log off*");
+}
+
+static void
+test_ncm_cfg_warning_log_handler_subprocess (void)
+{
+  ncm_cfg_set_warning_log_handler (&_test_ncm_cfg_error_logger);
+  ncm_cfg_logfile (FALSE);
+  g_log ("NUMCOSMO", G_LOG_LEVEL_WARNING, "a warning with the log off");
+}
+
+/* A NULL logger gives the warnings back to the GLib default handler */
+static void
+test_ncm_cfg_warning_log_handler_reset (void)
+{
+  g_test_trap_subprocess ("/ncm/cfg/warning_log_handler/reset/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stdout_unmatched ("*CAUGHT*");
+  g_test_trap_assert_stderr ("*WARNING*a warning after the reset*");
+}
+
+static void
+test_ncm_cfg_warning_log_handler_reset_subprocess (void)
+{
+  ncm_cfg_set_warning_log_handler (&_test_ncm_cfg_error_logger);
+  ncm_cfg_set_warning_log_handler (NULL);
+  g_log ("NUMCOSMO", G_LOG_LEVEL_WARNING, "a warning after the reset");
 }
 
 /* Every member is printed, also values that are negative or after a gap */
