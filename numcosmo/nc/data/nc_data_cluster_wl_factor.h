@@ -101,6 +101,8 @@ guint nc_data_cluster_wl_factor_get_cheb_unconverged_count (NcDataClusterWLFacto
 gdouble nc_data_cluster_wl_factor_get_cheb_worst_relerr (NcDataClusterWLFactor *dcwlf);
 
 NcGalaxyWLObs *nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf);
+void nc_data_cluster_wl_factor_set_mask (NcDataClusterWLFactor *dcwlf, GArray *keep);
+GArray *nc_data_cluster_wl_factor_get_mask (NcDataClusterWLFactor *dcwlf);
 
 void nc_data_cluster_wl_factor_set_resample_flag (NcDataClusterWLFactor *dcwlf, NcDataClusterWLResampleFlag resample_flag);
 NcDataClusterWLResampleFlag nc_data_cluster_wl_factor_get_resample_flag (NcDataClusterWLFactor *dcwlf);
