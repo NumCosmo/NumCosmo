@@ -974,6 +974,9 @@ test_nc_galaxy_wl_obs_cheb_grid (TestNcGalaxyWLObs *test, gconstpointer pdata)
   g_assert_nonnull (nc_galaxy_wl_obs_peek_cheb_grid (dup));
   g_assert_cmpuint (nc_galaxy_wl_obs_cheb_grid_len (nc_galaxy_wl_obs_peek_cheb_grid (dup)), ==, nc_galaxy_wl_obs_len (test->obs));
 
+  /* A row written back with its own value keeps the grid; another value drops it */
+  nc_galaxy_wl_obs_set (dup, "ra", 0, nc_galaxy_wl_obs_get (dup, "ra", 0, NULL), NULL);
+  g_assert_nonnull (nc_galaxy_wl_obs_peek_cheb_grid (dup));
   nc_galaxy_wl_obs_set (dup, "ra", 0, 1.0 + nc_galaxy_wl_obs_get (dup, "ra", 0, NULL), NULL);
   g_assert_null (nc_galaxy_wl_obs_peek_cheb_grid (dup));
 

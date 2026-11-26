@@ -300,7 +300,7 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
    * NcGalaxyWLObs:cheb-grid:
    *
    * The CHEB_WEIGHTS redshift grid of the galaxies and the record of what built it; %NULL
-   * when there is none, after the rows changed or after a p(z) was set.
+   * when there is none, after the values of the rows changed or after a p(z) was set.
    */
   g_object_class_install_property (object_class,
                                    PROP_CHEB_GRID,
@@ -341,8 +341,9 @@ _nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs)
 
 /*
  * Whether the grid describes the current rows. A grid set through the property is checked,
- * at the first call, against the data hash of the rows; a mismatch aborts. A grid that no
- * longer describes the rows is dropped.
+ * at the first call, against the data hash of the rows; a mismatch aborts. After a change
+ * of the rows the data hash is compared again: rows written back with the same values, as
+ * by nc_data_cluster_wl_factor_write_shape_interp(), keep the grid; other values drop it.
  */
 static gboolean
 _nc_galaxy_wl_obs_cheb_grid_current (NcGalaxyWLObs *obs)
@@ -366,9 +367,20 @@ _nc_galaxy_wl_obs_cheb_grid_current (NcGalaxyWLObs *obs)
 
   if (!ncm_catalog_key_is_current (NCM_CATALOG (obs), &self->cheb_grid_key))
   {
-    nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
+    const gchar *data_hash = nc_galaxy_wl_obs_cheb_grid_peek_data_hash (self->cheb_grid);
+    gchar *rows_hash       = ncm_catalog_get_data_hash (NCM_CATALOG (obs));
+    const gboolean same    = (g_strcmp0 (data_hash, rows_hash) == 0);
 
-    return FALSE;
+    g_free (rows_hash);
+
+    if (!same)
+    {
+      nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
+
+      return FALSE;
+    }
+
+    self->cheb_grid_key = ncm_catalog_get_key (NCM_CATALOG (obs));
   }
 
   return TRUE;
@@ -666,7 +678,7 @@ nc_galaxy_wl_obs_set_cheb_grid (NcGalaxyWLObs *obs, NcGalaxyWLObsChebGrid *grid)
  * @obs: a #NcGalaxyWLObs object
  *
  * Gets the CHEB_WEIGHTS redshift grid of the galaxies; %NULL when there is none, after
- * the rows changed or after a p(z) was set.
+ * the values of the rows changed or after a p(z) was set.
  *
  * Returns: (transfer none) (nullable): the #NcGalaxyWLObsChebGrid.
  */
