@@ -57,10 +57,26 @@ typedef struct _TestNcDataClusterWLFactorCheb
   NcGalaxyWLObs *obs;
 } TestNcDataClusterWLFactorCheb;
 
+/* Half-width of the position box [deg] and the projected radius cut [Mpc] of the catalog */
+typedef struct _TestNcDataClusterWLFactorChebCatalog
+{
+  gdouble box;
+  gdouble min_radius;
+  gdouble max_radius;
+} TestNcDataClusterWLFactorChebCatalog;
+
+/* Galaxies from 0.2 to 4 Mpc, where the shape factor is smooth in z */
+static const TestNcDataClusterWLFactorChebCatalog test_catalog_default = {0.2, 0.2, 4.0};
+
+/* Galaxies from 0.02 to 0.3 Mpc: at log10M 16 the convergence nears 1 and level 7 does not
+ * resolve the shape factor in z */
+static const TestNcDataClusterWLFactorChebCatalog test_catalog_center = {0.015, 0.02, 0.3};
+
 void test_nc_data_cluster_wl_factor_cheb_new (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_free (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 
 void test_nc_data_cluster_wl_factor_cheb_properties (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_cheb_converged (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_unconverged (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_switch (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
@@ -75,19 +91,23 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init_full_ptr (&argc, &argv);
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/nc/data_cluster_wl_factor/cheb/properties", TestNcDataClusterWLFactorCheb, NULL,
+  g_test_add ("/nc/data_cluster_wl_factor/cheb/properties", TestNcDataClusterWLFactorCheb, &test_catalog_default,
               &test_nc_data_cluster_wl_factor_cheb_new,
               &test_nc_data_cluster_wl_factor_cheb_properties,
               &test_nc_data_cluster_wl_factor_cheb_free);
-  g_test_add ("/nc/data_cluster_wl_factor/cheb/unconverged", TestNcDataClusterWLFactorCheb, NULL,
+  g_test_add ("/nc/data_cluster_wl_factor/cheb/converged", TestNcDataClusterWLFactorCheb, &test_catalog_default,
+              &test_nc_data_cluster_wl_factor_cheb_new,
+              &test_nc_data_cluster_wl_factor_cheb_converged,
+              &test_nc_data_cluster_wl_factor_cheb_free);
+  g_test_add ("/nc/data_cluster_wl_factor/cheb/unconverged", TestNcDataClusterWLFactorCheb, &test_catalog_center,
               &test_nc_data_cluster_wl_factor_cheb_new,
               &test_nc_data_cluster_wl_factor_cheb_unconverged,
               &test_nc_data_cluster_wl_factor_cheb_free);
-  g_test_add ("/nc/data_cluster_wl_factor/cheb/switch", TestNcDataClusterWLFactorCheb, NULL,
+  g_test_add ("/nc/data_cluster_wl_factor/cheb/switch", TestNcDataClusterWLFactorCheb, &test_catalog_default,
               &test_nc_data_cluster_wl_factor_cheb_new,
               &test_nc_data_cluster_wl_factor_cheb_switch,
               &test_nc_data_cluster_wl_factor_cheb_free);
-  g_test_add ("/nc/data_cluster_wl_factor/cheb/share", TestNcDataClusterWLFactorCheb, NULL,
+  g_test_add ("/nc/data_cluster_wl_factor/cheb/share", TestNcDataClusterWLFactorCheb, &test_catalog_default,
               &test_nc_data_cluster_wl_factor_cheb_new,
               &test_nc_data_cluster_wl_factor_cheb_share,
               &test_nc_data_cluster_wl_factor_cheb_free);
@@ -149,28 +169,30 @@ _test_assert_equal (NcmVector *a, NcmVector *b)
 
 /*
  * A catalog of TEST_NROWS galaxies around a lens at TEST_Z_CL, with p(z) means from 0.35 to
- * 1.2 (several straddle the lens), the VarAdd shape factor, and the dataset under
+ * 1.2 (several straddle the lens), positions and radius cut from @pdata (a
+ * TestNcDataClusterWLFactorChebCatalog), the VarAdd shape factor, and the dataset under
  * CHEB_WEIGHTS.
  */
 void
 test_nc_data_cluster_wl_factor_cheb_new (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
 {
-  NcmRNG *rng                             = ncm_rng_seeded_new (NULL, TEST_SEED);
-  NcHICosmo *cosmo                        = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-  NcDistance *dist                        = nc_distance_new (100.0);
-  NcHaloMassSummary *hms                  = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
-  NcHaloDensityProfile *dp                = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
-  NcHaloPosition *hp                      = nc_halo_position_new (dist);
-  NcWLSurfaceMassDensity *smd             = nc_wl_surface_mass_density_new (dist);
-  NcGalaxyShapePop *pop_shape             = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_gauss_new ());
-  const NcGalaxyWLObsEllipConv ec         = NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET;
-  const NcWLEllipticityFrame co           = NC_WL_ELLIPTICITY_FRAME_CELESTIAL;
-  const gdouble min_radius                = 0.2;
-  const gdouble max_radius                = 4.0;
-  NcGalaxyPositionFactor *position_factor = NC_GALAXY_POSITION_FACTOR (nc_galaxy_position_factor_flat_new (-0.2, 0.2, -0.2, 0.2));
-  NcGalaxyRedshiftFactor *redshift_factor = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
-  NcGalaxyShapeFactor *shape_factor       = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_var_add_new (ec));
-  GStrvBuilder *builder                   = g_strv_builder_new ();
+  const TestNcDataClusterWLFactorChebCatalog *cat = pdata;
+  NcmRNG *rng                                     = ncm_rng_seeded_new (NULL, TEST_SEED);
+  NcHICosmo *cosmo                                = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  NcDistance *dist                                = nc_distance_new (100.0);
+  NcHaloMassSummary *hms                          = NC_HALO_MASS_SUMMARY (nc_halo_cm_param_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp                        = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  NcHaloPosition *hp                              = nc_halo_position_new (dist);
+  NcWLSurfaceMassDensity *smd                     = nc_wl_surface_mass_density_new (dist);
+  NcGalaxyShapePop *pop_shape                     = NC_GALAXY_SHAPE_POP (nc_galaxy_shape_pop_gauss_new ());
+  const NcGalaxyWLObsEllipConv ec                 = NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET;
+  const NcWLEllipticityFrame co                   = NC_WL_ELLIPTICITY_FRAME_CELESTIAL;
+  const gdouble min_radius                        = cat->min_radius;
+  const gdouble max_radius                        = cat->max_radius;
+  NcGalaxyPositionFactor *position_factor         = NC_GALAXY_POSITION_FACTOR (nc_galaxy_position_factor_flat_new (-cat->box, cat->box, -cat->box, cat->box));
+  NcGalaxyRedshiftFactor *redshift_factor         = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
+  NcGalaxyShapeFactor *shape_factor               = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_var_add_new (ec));
+  GStrvBuilder *builder                           = g_strv_builder_new ();
   NcGalaxyPositionFactorData *p_data;
   NcGalaxyRedshiftFactorData *z_data;
   NcGalaxyShapeFactorData *s_data;
@@ -278,26 +300,34 @@ test_nc_data_cluster_wl_factor_cheb_properties (TestNcDataClusterWLFactorCheb *t
   g_assert_cmpuint (level, ==, 7);
 }
 
+/* At the default tolerance every galaxy of the default catalog converges and the statistic is zero */
+void
+test_nc_data_cluster_wl_factor_cheb_converged (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
+{
+  NcmVector *v = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
+
+  g_assert_cmpuint (nc_data_cluster_wl_factor_get_cheb_unconverged_count (test->dcwlf), ==, 0);
+  g_assert_cmpfloat (nc_data_cluster_wl_factor_get_cheb_worst_relerr (test->dcwlf), ==, 0.0);
+  ncm_vector_free (v);
+}
+
 /*
- * At the default tolerance every galaxy converges and the statistic is zero. At a tolerance of
- * GSL_DBL_EPSILON, below the rounding of the sums, a galaxy that reaches level 7 is counted
- * with a positive relative difference; the values stay finite.
+ * The central catalog evaluated at log10M 16, at the default tolerance: a galaxy reaches level 7
+ * unconverged and is counted; the values stay finite. Its relative difference measures 1.7e-2,
+ * far above the 1e-8 tolerance and the rounding of the sums; the bar is 1e-3.
  */
 void
 test_nc_data_cluster_wl_factor_cheb_unconverged (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
 {
+  NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
+  NcHaloMassSummary *hms   = nc_halo_density_profile_peek_mass_summary (dp);
   NcmVector *v;
   guint i;
 
-  v = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
-  g_assert_cmpuint (nc_data_cluster_wl_factor_get_cheb_unconverged_count (test->dcwlf), ==, 0);
-  g_assert_cmpfloat (nc_data_cluster_wl_factor_get_cheb_worst_relerr (test->dcwlf), ==, 0.0);
-  ncm_vector_free (v);
-
-  nc_data_cluster_wl_factor_set_cheb_tol (test->dcwlf, GSL_DBL_EPSILON);
+  ncm_model_param_set (NCM_MODEL (hms), NC_HALO_CM_PARAM_LOG10M_DELTA, 16.0);
   v = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
   g_assert_cmpuint (nc_data_cluster_wl_factor_get_cheb_unconverged_count (test->dcwlf), >, 0);
-  g_assert_cmpfloat (nc_data_cluster_wl_factor_get_cheb_worst_relerr (test->dcwlf), >, GSL_DBL_EPSILON);
+  g_assert_cmpfloat (nc_data_cluster_wl_factor_get_cheb_worst_relerr (test->dcwlf), >, 1.0e-3);
 
   for (i = 0; i < TEST_NROWS; i++)
     g_assert_true (gsl_finite (ncm_vector_get (v, i)));
