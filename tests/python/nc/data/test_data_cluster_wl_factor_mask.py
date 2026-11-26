@@ -326,3 +326,73 @@ def test_mask_write_shape_interp_file_aborts(tmp_path):
     assert run.returncode != 0
     assert "the dataset has a mask" in run.stderr + run.stdout
     assert not target.exists()
+
+
+CHEB = (Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS, False)
+
+
+def _stored_grid_copy(mset: Ncm.MSet) -> Nc.DataClusterWLFactor:
+    """A copy of the full dataset whose catalog stores the CHEB_WEIGHTS grid."""
+    full = _data(ALL, mset, CHEB, spline=True)
+    full.write_cheb_grid(mset, full.peek_obs())
+    assert full.peek_obs().peek_cheb_grid() is not None
+    return duplicate_via_serialization(full, Ncm.Serialize.new(Ncm.SerializeOpt.NONE))
+
+
+def test_mask_stored_cheb_grid():
+    """A masked dataset takes the rows of the catalog's stored grid that it keeps: its
+    likelihood equals that of the catalog of those rows alone, bit for bit, and a change of
+    the stored grid of a kept row changes the value of that galaxy."""
+    mset = _mset()
+    subset = _data(MASK, mset, CHEB, spline=True)
+    gal_subset = Ncm.Vector.new(len(MASK))
+    subset.eval_m2lnP_gal(mset, gal_subset)
+
+    masked = _stored_grid_copy(mset)
+    masked.set_mask(KEEP)
+    gal_masked = Ncm.Vector.new(len(MASK))
+    masked.eval_m2lnP_gal(mset, gal_masked)
+    assert gal_masked.dup_array() == gal_subset.dup_array()
+
+    altered = _stored_grid_copy(mset)
+    altered.set_mask(KEEP)
+    grid = altered.peek_obs().peek_cheb_grid()
+    row = next(r for r in MASK if grid.get_galaxy(r)[0] > 0)  # a kept galaxy with nodes
+    n_total, w, z_nodes, norm, bg_norm, fg_norm = grid.get_galaxy(row)
+    grid.set_galaxy(row, n_total, w, z_nodes, 2.0 * norm, bg_norm, fg_norm)
+    gal_altered = Ncm.Vector.new(len(MASK))
+    altered.eval_m2lnP_gal(mset, gal_altered)
+    k = MASK.index(row)
+    assert gal_altered.get(k) != gal_subset.get(k)
+
+
+_ABORT_CHEB_GRID = """
+import sys
+from numcosmo_py import Nc, Ncm
+sys.path.insert(0, sys.argv[1])
+import test_data_cluster_wl_factor_mask as t
+mset = t._mset()
+data = t._data(t.ALL, mset, t.CHEB, spline=True)
+data.set_mask(t.KEEP)
+data.write_cheb_grid(mset, data.peek_obs())
+"""
+
+
+def test_mask_write_cheb_grid_aborts():
+    """The stored grid covers every row of the catalog: writing it from a dataset with a
+    mask aborts."""
+    run = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            _ABORT_CHEB_GRID,
+            str(__import__("pathlib").Path(__file__).parent),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert run.returncode != 0
+    assert "nc_data_cluster_wl_factor_write_cheb_grid: the dataset has a mask" in (
+        run.stderr + run.stdout
+    )

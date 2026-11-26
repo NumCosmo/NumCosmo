@@ -1061,12 +1061,13 @@ _fixed_nodes_grid_publish (NcDataClusterWLFactorPrivate *self)
 }
 
 /*
- * Under CHEB_WEIGHTS, makes the grid stored with @obs (#NcGalaxyWLObs:cheb-grid) the grid
- * published on @obs, when no grid is published there yet, so that this dataset and every
- * clone holding @obs adopt it instead of building one. A stored grid of another redshift
- * factor type aborts, and with @check_z_cl one of another cluster redshift too: the tables
- * of the catalog must then be rebuilt. register_shared() runs before the first prepare,
- * when the cluster redshift is not known yet, so it does not check it.
+ * Under CHEB_WEIGHTS, makes the rows of the grid stored with @obs (#NcGalaxyWLObs:cheb-grid)
+ * that this dataset keeps (#NcDataClusterWLFactor:mask) the grid published on @obs, unless a
+ * grid of the same rows is published there already, so that this dataset and every clone
+ * holding @obs with the same mask adopt it instead of building one. A stored grid of another
+ * redshift factor type aborts, and with @check_z_cl one of another cluster redshift too: the
+ * tables of the catalog must then be rebuilt. register_shared() runs before the first
+ * prepare, when the cluster redshift is not known yet, so it does not check it.
  */
 static void
 _stored_grid_publish (NcDataClusterWLFactorPrivate *self, const gboolean check_z_cl)
@@ -1098,10 +1099,10 @@ _stored_grid_publish (NcDataClusterWLFactorPrivate *self, const gboolean check_z
 
   shared_grid = g_object_get_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark ());
 
-  if (shared_grid != NULL)
+  if ((shared_grid != NULL) && _nc_data_cluster_wl_factor_same_rows (shared_grid->mask, self->mask))
     return;
 
-  n_gal            = nc_galaxy_wl_obs_cheb_grid_len (grid);
+  n_gal            = (self->mask != NULL) ? self->mask->len : nc_galaxy_wl_obs_cheb_grid_len (grid);
   shared_grid      = g_new0 (NcDataClusterWLFactorSharedGrid, 1);
   shared_grid->ref = 1;
 
@@ -1123,6 +1124,7 @@ _stored_grid_publish (NcDataClusterWLFactorPrivate *self, const gboolean check_z
   shared_grid->n_total_per_galaxy = g_array_sized_new (FALSE, TRUE, sizeof (guint), n_gal);
   shared_grid->calib_n_nodes      = g_array_new (FALSE, TRUE, sizeof (gint));
   shared_grid->calib_rule_n       = g_array_new (FALSE, TRUE, sizeof (gint));
+  shared_grid->mask               = (self->mask != NULL) ? g_array_ref (self->mask) : NULL;
 
   g_ptr_array_set_size (shared_grid->fixed_bg_nodes, n_gal);
   g_ptr_array_set_size (shared_grid->cheb_weights, n_gal);
@@ -1138,7 +1140,7 @@ _stored_grid_publish (NcDataClusterWLFactorPrivate *self, const gboolean check_z
     NcmVector *z_nodes = NULL;
 
     g_array_index (shared_grid->n_total_per_galaxy, guint, i) =
-      nc_galaxy_wl_obs_cheb_grid_get_galaxy (grid, i, &w, &z_nodes,
+      nc_galaxy_wl_obs_cheb_grid_get_galaxy (grid, _nc_data_cluster_wl_factor_row (self, i), &w, &z_nodes,
                                              &g_array_index (shared_grid->fixed_norm, gdouble, i),
                                              &g_array_index (shared_grid->fixed_bg_norm, gdouble, i),
                                              &g_array_index (shared_grid->fixed_fg_norm, gdouble, i));
@@ -3910,8 +3912,9 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
  * removed first; @obs may be the catalog of @dcwlf (nc_data_cluster_wl_factor_peek_obs()).
  *
  * The integration method of @dcwlf must be %NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS, its
- * redshift factor must not depend on the model, and @obs must have as many rows as the
- * catalog of @dcwlf; otherwise the call aborts.
+ * redshift factor must not depend on the model, it must have no mask
+ * (#NcDataClusterWLFactor:mask), and @obs must have as many rows as the catalog of @dcwlf;
+ * otherwise the call aborts. A dataset with a mask takes the rows of the stored grid it keeps.
  */
 void
 nc_data_cluster_wl_factor_write_cheb_grid (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs)
@@ -3927,6 +3930,10 @@ nc_data_cluster_wl_factor_write_cheb_grid (NcDataClusterWLFactor *dcwlf, NcmMSet
   if (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) != 0)
     g_error ("nc_data_cluster_wl_factor_write_cheb_grid: the redshift factor %s depends on the model.",
              G_OBJECT_TYPE_NAME (self->redshift_factor));
+
+  if (self->keep != NULL)
+    g_error ("nc_data_cluster_wl_factor_write_cheb_grid: the dataset has a mask; the grid of a catalog "
+             "covers every row, so write it from a dataset without one.");
 
   nc_galaxy_wl_obs_set_cheb_grid (obs, NULL);
   nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
