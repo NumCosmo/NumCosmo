@@ -44,11 +44,15 @@
  * $z$-dependent factor. This follows #NcGalaxyRedshiftFactor's contract: the
  * calculator never integrates $z$ itself.
  *
- * Three methods are available: `LNINT`, the default, an adaptive log-domain 1D
+ * Four methods are available: `LNINT`, the default, an adaptive log-domain 1D
  * integral; `FIXED_NODES`, fixed Gauss-Legendre with an optional per-galaxy
- * calibration, see nc_data_cluster_wl_factor_set_auto_nodes(); and `CUBATURE`,
- * an adaptive #NcmIntegralND over the linear-domain product. All three are
- * exact and differ only in numerical strategy and cost, and all three support
+ * calibration, see nc_data_cluster_wl_factor_set_auto_nodes(); `CUBATURE`,
+ * an adaptive #NcmIntegralND over the linear-domain product; and `CHEB_WEIGHTS`,
+ * nested Chebyshev-Lobatto levels whose weights integrate $p(z)$ exactly
+ * (nc_galaxy_redshift_factor_cheb_moments()), with the level of each galaxy
+ * chosen at each evaluation, see #NcDataClusterWLFactor:cheb-tol and
+ * #NcDataClusterWLFactor:cheb-level-min. All four converge to the same integral
+ * and differ only in numerical strategy and cost, and all four support
  * bootstrap resampling.
  *
  * nc_data_cluster_wl_factor_data_prepare() precomputes the galaxies in
