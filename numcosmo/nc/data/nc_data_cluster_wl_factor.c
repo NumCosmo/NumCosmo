@@ -44,14 +44,13 @@
  * $z$-dependent factor. This follows #NcGalaxyRedshiftFactor's contract: the
  * calculator never integrates $z$ itself.
  *
- * Four methods are available: `LNINT`, the default, an adaptive log-domain 1D
- * integral; `FIXED_NODES`, fixed Gauss-Legendre with an optional per-galaxy
- * calibration, see nc_data_cluster_wl_factor_set_auto_nodes(); `CUBATURE`,
- * an adaptive #NcmIntegralND over the linear-domain product; and `CHEB_WEIGHTS`,
- * nested Chebyshev-Lobatto levels whose weights integrate $p(z)$ exactly
- * (nc_galaxy_redshift_factor_cheb_moments()), with the level of each galaxy
- * chosen at each evaluation, see #NcDataClusterWLFactor:cheb-tol and
- * #NcDataClusterWLFactor:cheb-level-min. All four converge to the same integral
+ * Four methods are available: `CHEB_WEIGHTS`, the default, nested Chebyshev-Lobatto
+ * levels whose weights integrate $p(z)$ exactly (nc_galaxy_redshift_factor_cheb_moments()),
+ * with the level of each galaxy chosen at each evaluation, see
+ * #NcDataClusterWLFactor:cheb-tol and #NcDataClusterWLFactor:cheb-level-min; `LNINT`,
+ * an adaptive log-domain 1D integral; `FIXED_NODES`, fixed Gauss-Legendre with an
+ * optional per-galaxy calibration, see nc_data_cluster_wl_factor_set_auto_nodes(); and
+ * `CUBATURE`, an adaptive #NcmIntegralND over the linear-domain product. All four converge to the same integral
  * and differ only in numerical strategy and cost, and all four support
  * bootstrap resampling.
  *
@@ -2988,8 +2987,8 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
   /**
    * NcDataClusterWLFactor:integ-method:
    *
-   * Integration method for the redshift integral: `LNINT`, `FIXED_NODES`, `CUBATURE` or
-   * `CHEB_WEIGHTS`.
+   * Integration method for the redshift integral: `CHEB_WEIGHTS` (the default), `LNINT`,
+   * `FIXED_NODES` or `CUBATURE`.
    */
   g_object_class_install_property (object_class,
                                    PROP_INTEG_METHOD,
@@ -2997,7 +2996,7 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                       NULL,
                                                       "Integration method for the redshift integral",
                                                       NC_TYPE_DATA_CLUSTER_WL_INTEG_METHOD,
-                                                      NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT,
+                                                      NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
