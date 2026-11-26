@@ -146,6 +146,9 @@ void test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpec
 void test_nc_galaxy_shape_factor_spectral_interp (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_eval_nodes_range (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside (void);
+void test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside_subprocess (void);
 void test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -201,6 +204,12 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_eval_nodes,
               &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/eval_nodes_range", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_eval_nodes_range,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add_func ("/nc/galaxy_shape_factor_spectral/eval_nodes_range/outside", &test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside);
+  g_test_add_func ("/nc/galaxy_shape_factor_spectral/eval_nodes_range/outside/subprocess", &test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside_subprocess);
   g_test_add ("/nc/galaxy_shape_factor_spectral/restrict_range", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_restrict_range,
@@ -2365,5 +2374,105 @@ test_nc_galaxy_shape_factor_spectral_crit_hash (TestNcGalaxyShapeFactorSpectral 
   g_assert_cmpuint (nc_galaxy_shape_factor_get_crit_hash (gsf), !=, h0);
 
   nc_galaxy_shape_factor_free (gsf);
+}
+
+/*
+ * A galaxy with 21 nodes from 0.05 to 1.5, some in front of the lens: four ranges that tile
+ * the nodes give the values of the full evaluation exactly, linear and logarithmic, with the
+ * line table off; one range call leaves the other entries unchanged. With line-abstol 1e-6
+ * each range builds its own line table, so the ranges agree with the full call within twice
+ * that tolerance.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_eval_nodes_range (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  const guint n                      = 21;
+  const guint cuts[5]                = {0, 1, 5, 13, 21};
+  NcGalaxyShapeFactorSpectral *gsfs  = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
+  NcGalaxyShapeFactor *gsf           = NC_GALAXY_SHAPE_FACTOR (gsfs);
+  NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+  NcGalaxyShapeFactorData *data;
+  NcmVector *z_nodes   = ncm_vector_new (n);
+  NcmVector *full      = ncm_vector_new (n);
+  NcmVector *part      = ncm_vector_new (n);
+  GPtrArray *data_arr  = g_ptr_array_new ();
+  GPtrArray *nodes_arr = g_ptr_array_new ();
+  guint i, k, l;
+
+  p_data->ra  = 0.3;
+  p_data->dec = 0.0;
+  data        = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+  nc_galaxy_shape_factor_data_set (gsf, data, 0.2, -0.1, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+
+  for (i = 0; i < n; i++)
+    ncm_vector_set (z_nodes, i, 0.05 + 1.45 * i / (n - 1.0));
+
+  g_ptr_array_add (data_arr, data);
+  g_ptr_array_add (nodes_arr, z_nodes);
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array_at_nodes (gsf, test->mset, data_arr, nodes_arr, TRUE, TRUE, TRUE));
+
+  for (l = 0; l < 2; l++)
+  {
+    if (l == 0)
+      nc_galaxy_shape_factor_eval_at_nodes (gsf, test->mset, data, z_nodes, full);
+    else
+      nc_galaxy_shape_factor_eval_ln_at_nodes (gsf, test->mset, data, z_nodes, full);
+
+    ncm_vector_set_all (part, GSL_NAN);
+
+    for (k = 0; k < 4; k++)
+    {
+      if (l == 0)
+        nc_galaxy_shape_factor_eval_at_nodes_range (gsf, test->mset, data, z_nodes, cuts[k], cuts[k + 1], part);
+      else
+        nc_galaxy_shape_factor_eval_ln_at_nodes_range (gsf, test->mset, data, z_nodes, cuts[k], cuts[k + 1], part);
+
+      for (i = 0; i < n; i++)
+      {
+        if (i < cuts[k + 1])
+          g_assert_cmpfloat (ncm_vector_get (part, i), ==, ncm_vector_get (full, i));
+        else
+          g_assert_true (gsl_isnan (ncm_vector_get (part, i)));
+      }
+    }
+  }
+
+  nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, 1.0e-6);
+  nc_galaxy_shape_factor_eval_ln_at_nodes (gsf, test->mset, data, z_nodes, full);
+
+  for (k = 0; k < 4; k++)
+    nc_galaxy_shape_factor_eval_ln_at_nodes_range (gsf, test->mset, data, z_nodes, cuts[k], cuts[k + 1], part);
+
+  for (i = 0; i < n; i++)
+    g_assert_cmpfloat (fabs (ncm_vector_get (part, i) - ncm_vector_get (full, i)), <=, 2.0e-6);
+
+  g_ptr_array_unref (data_arr);
+  g_ptr_array_unref (nodes_arr);
+  ncm_vector_free (z_nodes);
+  ncm_vector_free (full);
+  ncm_vector_free (part);
+  nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_shape_factor_free (gsf);
+}
+
+void
+test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside (void)
+{
+  g_test_trap_subprocess ("/nc/galaxy_shape_factor_spectral/eval_nodes_range/outside/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*the range [1, 5) is not inside the 3 nodes*");
+}
+
+void
+test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside_subprocess (void)
+{
+  NcGalaxyShapeFactor *gsf = NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE));
+  NcmVector *z_nodes       = ncm_vector_new (3);
+  NcmVector *out           = ncm_vector_new (3);
+
+  nc_galaxy_shape_factor_eval_at_nodes_range (gsf, NULL, NULL, z_nodes, 1, 5, out);
 }
 

@@ -220,8 +220,7 @@
  * ---- Gauss-Legendre node tables on [-1,1], built once ----
  *
  * Both node counts are compile-time constants, so the tables depend on
- * nothing per galaxy. gsl_integration_glfixed_table_alloc() allocates and
- * must not be called per evaluation.
+ * nothing per galaxy and are copied once from ncm_integral_gauss_legendre_rule().
  */
 static gdouble _moments_tilt_gl32_x[NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_SRC_NR];
 static gdouble _moments_tilt_gl32_w[NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_SRC_NR];

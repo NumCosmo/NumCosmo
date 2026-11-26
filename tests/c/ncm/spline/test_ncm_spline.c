@@ -1842,13 +1842,15 @@ _test_ncm_spline_cmp_double (gconstpointer a, gconstpointer b)
 static gdouble
 _test_ncm_spline_weighted_d2_lp (NcmSpline *s, NcmSpline *w, const guint p, const gdouble xi, const gdouble xf)
 {
-  gsl_integration_glfixed_table *t = gsl_integration_glfixed_table_alloc (20);
-  NcmVector *xv                    = ncm_spline_peek_xv (s);
-  NcmVector *wv                    = ncm_spline_peek_xv (w);
-  GArray *br                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  gdouble num                      = 0.0;
-  gdouble den                      = 0.0;
+  NcmVector *xv = ncm_spline_peek_xv (s);
+  NcmVector *wv = ncm_spline_peek_xv (w);
+  GArray *br    = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gdouble num   = 0.0;
+  gdouble den   = 0.0;
   guint i, q;
+  const gdouble *gl_x, *gl_w;
+
+  ncm_integral_gauss_legendre_rule (20, &gl_x, &gl_w);
 
   g_array_append_val (br, xi);
   g_array_append_val (br, xf);
@@ -1873,16 +1875,15 @@ _test_ncm_spline_weighted_d2_lp (NcmSpline *s, NcmSpline *w, const guint p, cons
 
     for (q = 0; q < 20; q++)
     {
-      gdouble x, wq;
+      const gdouble x  = 0.5 * (a + b) + 0.5 * (b - a) * gl_x[q];
+      const gdouble wq = 0.5 * (b - a) * gl_w[q];
 
-      gsl_integration_glfixed_point (a, b, q, &x, &wq, t);
       num += wq * ncm_spline_eval (w, x) * gsl_pow_int (ncm_spline_curvature_density (s, NCM_SPLINE_CURVATURE_D2, x), p);
       den += wq * ncm_spline_eval (w, x);
     }
   }
 
   g_array_unref (br);
-  gsl_integration_glfixed_table_free (t);
 
   return num / den;
 }

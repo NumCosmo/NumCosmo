@@ -55,9 +55,10 @@ typedef enum _NcDataClusterWLResampleFlag /*< flags,underscore_name=NC_DATA_CLUS
 
 typedef enum _NcDataClusterWLIntegMethod /*< enum,underscore_name=NC_DATA_CLUSTER_WL_INTEG_METHOD,prefix=NC_DATA_CLUSTER_WL_INTEG_METHOD >*/
 {
-  NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE    = 0,
-  NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT       = 1,
-  NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES = 2,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE     = 0,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT        = 1,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES  = 2,
+  NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS = 3,
 } NcDataClusterWLIntegMethod;
 
 NcDataClusterWLFactor *nc_data_cluster_wl_factor_new (NcGalaxyPositionFactor *position_factor, NcGalaxyRedshiftFactor *redshift_factor, NcGalaxyShapeFactor *shape_factor);
@@ -90,6 +91,13 @@ void nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf,
 void nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs, const gchar *filename);
 gboolean nc_data_cluster_wl_factor_is_data_prepared (NcDataClusterWLFactor *dcwlf);
 guint nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf);
+
+void nc_data_cluster_wl_factor_set_cheb_tol (NcDataClusterWLFactor *dcwlf, const gdouble cheb_tol);
+gdouble nc_data_cluster_wl_factor_get_cheb_tol (NcDataClusterWLFactor *dcwlf);
+void nc_data_cluster_wl_factor_set_cheb_level_min (NcDataClusterWLFactor *dcwlf, const guint cheb_level_min);
+guint nc_data_cluster_wl_factor_get_cheb_level_min (NcDataClusterWLFactor *dcwlf);
+guint nc_data_cluster_wl_factor_get_cheb_unconverged_count (NcDataClusterWLFactor *dcwlf);
+gdouble nc_data_cluster_wl_factor_get_cheb_worst_relerr (NcDataClusterWLFactor *dcwlf);
 
 NcGalaxyWLObs *nc_data_cluster_wl_factor_peek_obs (NcDataClusterWLFactor *dcwlf);
 

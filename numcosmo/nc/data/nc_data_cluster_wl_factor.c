@@ -44,11 +44,15 @@
  * $z$-dependent factor. This follows #NcGalaxyRedshiftFactor's contract: the
  * calculator never integrates $z$ itself.
  *
- * Three methods are available: `LNINT`, the default, an adaptive log-domain 1D
+ * Four methods are available: `LNINT`, the default, an adaptive log-domain 1D
  * integral; `FIXED_NODES`, fixed Gauss-Legendre with an optional per-galaxy
- * calibration, see nc_data_cluster_wl_factor_set_auto_nodes(); and `CUBATURE`,
- * an adaptive #NcmIntegralND over the linear-domain product. All three are
- * exact and differ only in numerical strategy and cost, and all three support
+ * calibration, see nc_data_cluster_wl_factor_set_auto_nodes(); `CUBATURE`,
+ * an adaptive #NcmIntegralND over the linear-domain product; and `CHEB_WEIGHTS`,
+ * nested Chebyshev-Lobatto levels whose weights integrate $p(z)$ exactly
+ * (nc_galaxy_redshift_factor_cheb_moments()), with the level of each galaxy
+ * chosen at each evaluation, see #NcDataClusterWLFactor:cheb-tol and
+ * #NcDataClusterWLFactor:cheb-level-min. All four converge to the same integral
+ * and differ only in numerical strategy and cost, and all four support
  * bootstrap resampling.
  *
  * nc_data_cluster_wl_factor_data_prepare() precomputes the galaxies in
@@ -126,8 +130,10 @@ typedef struct _NcDataClusterWLFactorSharedGrid
   gboolean auto_nodes;
   gdouble node_reltol;
   guint max_total_nodes;
+  NcDataClusterWLIntegMethod integ_method;
   GType z_type;
   GPtrArray *fixed_bg_nodes;
+  GPtrArray *cheb_weights;
   GPtrArray *z_nodes_per_galaxy;
   GArray *fixed_norm;
   GArray *fixed_bg_norm;
@@ -268,6 +274,13 @@ typedef struct _NcDataClusterWLFactorPrivate
   gdouble node_reltol;
   guint max_total_nodes;
 
+  /* CHEB_WEIGHTS: the tolerance of the nested levels, relative to the numerator of the
+   * marginal of a galaxy, see _nc_data_cluster_wl_factor_cheb_levels(). */
+  gdouble cheb_tol;
+
+  /* CHEB_WEIGHTS: the level whose nodes are evaluated in the first call, 2 to 7 */
+  guint cheb_level_min;
+
   /* Set by nc_data_cluster_wl_factor_data_prepare(): the next prepare() runs
    * the per-galaxy steps even when the staleness checks would skip them, in
    * parallel, and clears the flag. */
@@ -281,6 +294,11 @@ typedef struct _NcDataClusterWLFactorPrivate
 
   /* How many NC_GALAXY_LOW_PROB substitutions happened during the LAST eval_m2lnP. Zeroed at the top of every evaluation. */
   guint low_prob_count;
+
+  /* CHEB_WEIGHTS, for the LAST eval_m2lnP: the galaxies that reached the last level without
+   * meeting cheb_tol, and the worst |B_7 - B_6| / |numerator| among them. */
+  guint cheb_unconverged;
+  gdouble cheb_worst_relerr;
 
   /* Auto-node calibration outcome for the LAST grid rebuild: how many galaxies
    * failed to reach node_reltol, and the worst relative error among them. */
@@ -328,6 +346,11 @@ typedef struct _NcDataClusterWLFactorPrivate
    * fixed_norm's exact lifecycle (same reset points). */
   GArray *n_total_per_galaxy; /* element type: guint */
 
+  /* CHEB_WEIGHTS: the weights of the nested levels 2 to 7 of each galaxy, level after level,
+   * each aligned with the leading nodes of z_nodes_per_galaxy after the anchor; NULL for a
+   * fully-foreground galaxy. The masses are in fixed_bg_norm and fixed_fg_norm. */
+  GPtrArray *cheb_weights; /* element type: GArray* of gdouble */
+
   /* Grid sharing between clones, see NcDataClusterWLFactorSharedGrid.
    * share_grid: register_shared() ran, so every finished grid is published
    * on @obs. has_resampled: resample() wrote into @obs since set_obs(), so
@@ -361,6 +384,10 @@ typedef struct _NcDataClusterWLFactorPrivate
   gboolean fixed_nodes_auto_nodes_seen;
   gdouble fixed_nodes_node_reltol_seen;
   guint fixed_nodes_max_total_nodes_seen;
+
+  /* The integration method the grid was built for: FIXED_NODES and CHEB_WEIGHTS share the
+   * grid arrays but not their content. */
+  NcDataClusterWLIntegMethod fixed_nodes_integ_method_seen;
 
   /* Linear-domain twins of integ_pos/integ_z/integ_shape below, used by the
    * fixed-nodes path's control-variate combination (integ_pos_lin) and by
@@ -449,6 +476,8 @@ enum
   PROP_NODE_RELTOL,
   PROP_MAX_TOTAL_NODES,
   PROP_NODE_CONFIG,
+  PROP_CHEB_TOL,
+  PROP_CHEB_LEVEL_MIN,
 };
 
 struct _NcDataClusterWLFactor
@@ -641,6 +670,158 @@ _step_fixed_nodes_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGal
   g_array_index (self->n_total_per_galaxy, guint, gal_i) = n_total_i;
 }
 
+/*
+ * CHEB_WEIGHTS layout. The background [a, z_hi], a = max (z_lo, z_cl), of a galaxy has the
+ * nested Chebyshev-Lobatto nodes of levels 2 to 7: level L has the 2^L + 1 nodes
+ * x_j = cos (pi j / 2^L), and its nodes are those of level 7 at j 2^(7 - L). The nodes are
+ * stored by level, those of level 2 first and then the new ones of each level in ascending j,
+ * so the 2^L + 1 nodes of level L are the first ones. _cheb_j_of_pos maps a stored position to
+ * the index of the node at level 7, _cheb_pos_of_j the reverse, and _cheb_cos holds
+ * cos (pi q / 128), q < 256.
+ */
+#define NC_DATA_CLUSTER_WL_CHEB_LEVEL_MIN (2)
+#define NC_DATA_CLUSTER_WL_CHEB_LEVEL_MAX (7)
+#define NC_DATA_CLUSTER_WL_CHEB_N_MAX (1 << NC_DATA_CLUSTER_WL_CHEB_LEVEL_MAX)
+#define NC_DATA_CLUSTER_WL_CHEB_N_NODES (NC_DATA_CLUSTER_WL_CHEB_N_MAX + 1)
+
+/* The weights of levels 2 to 7, 5 + 9 + 17 + 33 + 65 + 129 values, and the offset of each level */
+#define NC_DATA_CLUSTER_WL_CHEB_N_WEIGHTS (258)
+static const guint _cheb_w_offset[NC_DATA_CLUSTER_WL_CHEB_LEVEL_MAX + 1] = {0, 0, 0, 5, 14, 31, 64, 129};
+
+static guint _cheb_j_of_pos[NC_DATA_CLUSTER_WL_CHEB_N_NODES];
+static guint _cheb_pos_of_j[NC_DATA_CLUSTER_WL_CHEB_N_NODES];
+static gdouble _cheb_cos[2 * NC_DATA_CLUSTER_WL_CHEB_N_MAX];
+
+static void
+_cheb_layout_init (void)
+{
+  static gsize init = 0;
+
+  if (g_once_init_enter (&init))
+  {
+    guint pos = 0;
+    guint L, j, q;
+
+    for (L = NC_DATA_CLUSTER_WL_CHEB_LEVEL_MIN; L <= NC_DATA_CLUSTER_WL_CHEB_LEVEL_MAX; L++)
+    {
+      const guint step = NC_DATA_CLUSTER_WL_CHEB_N_MAX >> L;
+
+      for (j = 0; j <= NC_DATA_CLUSTER_WL_CHEB_N_MAX; j += step)
+      {
+        /* A node of a lower level has j a multiple of 2 step */
+        if ((L == NC_DATA_CLUSTER_WL_CHEB_LEVEL_MIN) || ((j / step) % 2 == 1))
+        {
+          _cheb_j_of_pos[pos] = j;
+          _cheb_pos_of_j[j]   = pos;
+          pos++;
+        }
+      }
+    }
+
+    g_assert_cmpuint (pos, ==, NC_DATA_CLUSTER_WL_CHEB_N_NODES);
+
+    for (q = 0; q < 2 * NC_DATA_CLUSTER_WL_CHEB_N_MAX; q++)
+      _cheb_cos[q] = cos (M_PI * q / NC_DATA_CLUSTER_WL_CHEB_N_MAX);
+
+    g_once_init_leave (&init, 1);
+  }
+}
+
+/*
+ * Rebuilds galaxy gal_i's CHEB_WEIGHTS grid: the anchor z_lo at index 0 and the nodes of
+ * levels 2 to 7 after it (see _cheb_layout_init), the weights of every level, and the exact
+ * masses. With m_k = int_a^z_hi p T_k dz, k <= 128 (nc_galaxy_redshift_factor_cheb_moments()),
+ * the weight of node j of level L, N = 2^L, is
+ *   w_j = (2 / N) g_j sum_k c_k m_k cos (pi k j / N),  c_k, g_j = 1/2 at 0 and N, 1 otherwise,
+ * so sum_j w_j F (z_j) = int_a^z_hi p F_N dz for F_N the interpolant of F on those nodes. The
+ * background mass is m_0 and the foreground one the moment of order 0 on [z_lo, z_cl].
+ */
+static void
+_step_cheb_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShapeFactorData *s_data, guint gal_i)
+{
+  GArray *w       = NULL;
+  gdouble bg_norm = 0.0;
+  gdouble fg_norm = 0.0;
+  guint n_total   = 0;
+  gdouble z_lo, z_hi, norm;
+  NcmVector *z_nodes;
+
+  _cheb_layout_init ();
+
+  nc_galaxy_redshift_factor_get_integ_lim (self->redshift_factor, mset, s_data->z_data, &z_lo, &z_hi);
+  norm = nc_galaxy_redshift_factor_norm (self->redshift_factor, mset, s_data->z_data);
+
+  if (z_hi > self->z_cl)
+  {
+    const gdouble a = MAX (z_lo, self->z_cl);
+    const gdouble c = 0.5 * (a + z_hi);
+    const gdouble h = 0.5 * (z_hi - a);
+    GArray *m_arr   = NULL;
+    const gdouble *m;
+    gdouble *wd;
+    guint L, p;
+
+    nc_galaxy_redshift_factor_cheb_moments (self->redshift_factor, mset, s_data->z_data, a, z_hi, NC_DATA_CLUSTER_WL_CHEB_N_MAX, &m_arr);
+    m       = &g_array_index (m_arr, gdouble, 0);
+    bg_norm = m[0];
+
+    w = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), NC_DATA_CLUSTER_WL_CHEB_N_WEIGHTS);
+    g_array_set_size (w, NC_DATA_CLUSTER_WL_CHEB_N_WEIGHTS);
+    wd = &g_array_index (w, gdouble, 0);
+
+    for (L = NC_DATA_CLUSTER_WL_CHEB_LEVEL_MIN; L <= NC_DATA_CLUSTER_WL_CHEB_LEVEL_MAX; L++)
+    {
+      const guint N    = 1u << L;
+      const guint step = NC_DATA_CLUSTER_WL_CHEB_N_MAX / N;
+      guint jL, k;
+
+      for (jL = 0; jL <= N; jL++)
+      {
+        const gdouble g_j = ((jL == 0) || (jL == N)) ? 0.5 : 1.0;
+        gdouble acc       = 0.5 * m[0];
+
+        /* cos (pi k jL / N) = _cheb_cos[(k jL step) mod 256] */
+        for (k = 1; k < N; k++)
+          acc += m[k] * _cheb_cos[(k * jL * step) % (2 * NC_DATA_CLUSTER_WL_CHEB_N_MAX)];
+
+        acc += 0.5 * m[N] * _cheb_cos[(N * jL * step) % (2 * NC_DATA_CLUSTER_WL_CHEB_N_MAX)];
+
+        wd[_cheb_w_offset[L] + _cheb_pos_of_j[jL * step]] = (2.0 / N) * g_j * acc;
+      }
+    }
+
+    n_total = NC_DATA_CLUSTER_WL_CHEB_N_NODES;
+    z_nodes = ncm_vector_new (n_total + 1);
+
+    for (p = 0; p < n_total; p++)
+      ncm_vector_set (z_nodes, p + 1, c + h * _cheb_cos[_cheb_j_of_pos[p]]);
+
+    g_array_unref (m_arr);
+
+    if (z_lo < self->z_cl)
+    {
+      GArray *m_fg = NULL;
+
+      nc_galaxy_redshift_factor_cheb_moments (self->redshift_factor, mset, s_data->z_data, z_lo, self->z_cl, 0, &m_fg);
+      fg_norm = g_array_index (m_fg, gdouble, 0);
+      g_array_unref (m_fg);
+    }
+  }
+  else
+  {
+    z_nodes = ncm_vector_new (1);
+  }
+
+  ncm_vector_set (z_nodes, 0, z_lo);
+
+  g_ptr_array_index (self->cheb_weights, gal_i)          = w;
+  g_ptr_array_index (self->z_nodes_per_galaxy, gal_i)    = z_nodes;
+  g_array_index (self->fixed_norm, gdouble, gal_i)       = norm;
+  g_array_index (self->fixed_bg_norm, gdouble, gal_i)    = bg_norm;
+  g_array_index (self->fixed_fg_norm, gdouble, gal_i)    = fg_norm;
+  g_array_index (self->n_total_per_galaxy, guint, gal_i) = n_total;
+}
+
 static void
 _step_fixed_nodes_crit (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcGalaxyShapeFactorData *s_data, guint gal_i)
 {
@@ -683,6 +864,14 @@ _fixed_bg_nodes_free_entry (gpointer bg_intf)
     ncm_integral_fixed_free ((NcmIntegralFixed *) bg_intf);
 }
 
+/* cheb_weights entries are NULL for fully-foreground galaxies and under FIXED_NODES */
+static void
+_cheb_weights_free_entry (gpointer w)
+{
+  if (w != NULL)
+    g_array_unref ((GArray *) w);
+}
+
 /* z_nodes_per_galaxy entries are NULL between _fixed_nodes_grid_reset() and
  * the grid step, and stay NULL when the grid is adopted instead. */
 static void
@@ -720,6 +909,10 @@ _fixed_nodes_grid_reset (NcDataClusterWLFactorPrivate *self)
   self->z_nodes_per_galaxy = g_ptr_array_new_full (n_gal, &_z_nodes_free_entry);
   g_ptr_array_set_size (self->z_nodes_per_galaxy, n_gal);
 
+  g_ptr_array_unref (self->cheb_weights);
+  self->cheb_weights = g_ptr_array_new_full (n_gal, &_cheb_weights_free_entry);
+  g_ptr_array_set_size (self->cheb_weights, n_gal);
+
   g_array_unref (self->fixed_norm);
   g_array_unref (self->fixed_bg_norm);
   g_array_unref (self->fixed_fg_norm);
@@ -755,6 +948,7 @@ _shared_grid_unref (gpointer sg)
   if (g_atomic_int_dec_and_test (&shared_grid->ref))
   {
     g_ptr_array_unref (shared_grid->fixed_bg_nodes);
+    g_ptr_array_unref (shared_grid->cheb_weights);
     g_ptr_array_unref (shared_grid->z_nodes_per_galaxy);
     g_array_unref (shared_grid->fixed_norm);
     g_array_unref (shared_grid->fixed_bg_norm);
@@ -772,7 +966,8 @@ _shared_grid_unref (gpointer sg)
 static gboolean
 _fixed_nodes_grid_is_shareable (NcDataClusterWLFactorPrivate *self)
 {
-  return (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) &&
+  return ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) ||
+          (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS)) &&
          (self->obs != NULL) && !self->obs_changed && !self->has_resampled && !self->resampling &&
          gsl_finite (self->fixed_nodes_zcl) &&
          (self->shape_data->len > 0) && (self->n_total_per_galaxy->len == self->shape_data->len) &&
@@ -800,8 +995,10 @@ _fixed_nodes_grid_publish (NcDataClusterWLFactorPrivate *self)
   shared_grid->auto_nodes         = self->fixed_nodes_auto_nodes_seen;
   shared_grid->node_reltol        = self->fixed_nodes_node_reltol_seen;
   shared_grid->max_total_nodes    = self->fixed_nodes_max_total_nodes_seen;
+  shared_grid->integ_method       = self->fixed_nodes_integ_method_seen;
   shared_grid->z_type             = G_OBJECT_TYPE (self->redshift_factor);
   shared_grid->fixed_bg_nodes     = g_ptr_array_ref (self->fixed_bg_nodes);
+  shared_grid->cheb_weights       = g_ptr_array_ref (self->cheb_weights);
   shared_grid->z_nodes_per_galaxy = g_ptr_array_ref (self->z_nodes_per_galaxy);
   shared_grid->fixed_norm         = g_array_ref (self->fixed_norm);
   shared_grid->fixed_bg_norm      = g_array_ref (self->fixed_bg_norm);
@@ -858,11 +1055,13 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
           (shared_grid->auto_nodes == self->auto_nodes) &&
           (shared_grid->node_reltol == self->node_reltol) &&
           (shared_grid->max_total_nodes == self->max_total_nodes) &&
+          (shared_grid->integ_method == self->integ_method) &&
           (shared_grid->z_type == G_OBJECT_TYPE (self->redshift_factor));
 
   if (match)
   {
     g_ptr_array_unref (self->fixed_bg_nodes);
+    g_ptr_array_unref (self->cheb_weights);
     g_ptr_array_unref (self->z_nodes_per_galaxy);
     g_array_unref (self->fixed_norm);
     g_array_unref (self->fixed_bg_norm);
@@ -870,6 +1069,7 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
     g_array_unref (self->n_total_per_galaxy);
 
     self->fixed_bg_nodes     = g_ptr_array_ref (shared_grid->fixed_bg_nodes);
+    self->cheb_weights       = g_ptr_array_ref (shared_grid->cheb_weights);
     self->z_nodes_per_galaxy = g_ptr_array_ref (shared_grid->z_nodes_per_galaxy);
     self->fixed_norm         = g_array_ref (shared_grid->fixed_norm);
     self->fixed_bg_norm      = g_array_ref (shared_grid->fixed_bg_norm);
@@ -970,6 +1170,11 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->node_reltol     = 1.0e-4;
   self->max_total_nodes = 2000;
   self->low_prob_count  = 0;
+  self->cheb_tol        = 0.0;
+  self->cheb_level_min  = 0;
+
+  self->cheb_unconverged  = 0;
+  self->cheb_worst_relerr = 0.0;
 
   self->force_data_prepare = FALSE;
 
@@ -989,6 +1194,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   /* fixed_bg_nodes entries are nullable, see _fixed_bg_nodes_free_entry(). */
   self->fixed_bg_nodes                   = g_ptr_array_new_with_free_func (&_fixed_bg_nodes_free_entry);
   self->z_nodes_per_galaxy               = g_ptr_array_new_with_free_func (&_z_nodes_free_entry);
+  self->cheb_weights                     = g_ptr_array_new_with_free_func (&_cheb_weights_free_entry);
   self->fixed_norm                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->fixed_bg_norm                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
   self->fixed_fg_norm                    = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -999,6 +1205,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->fixed_nodes_auto_nodes_seen      = FALSE;
   self->fixed_nodes_node_reltol_seen     = 0.0;
   self->fixed_nodes_max_total_nodes_seen = 0;
+  self->fixed_nodes_integ_method_seen    = NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT;
 
   self->integ_pos_lin   = NULL;
   self->integ_z_lin     = NULL;
@@ -1151,6 +1358,12 @@ _nc_data_cluster_wl_factor_set_property (GObject *object, guint prop_id, const G
     case PROP_N_NODES:
       nc_data_cluster_wl_factor_set_n_nodes (dcwlf, g_value_get_uint (value));
       break;
+    case PROP_CHEB_TOL:
+      nc_data_cluster_wl_factor_set_cheb_tol (dcwlf, g_value_get_double (value));
+      break;
+    case PROP_CHEB_LEVEL_MIN:
+      nc_data_cluster_wl_factor_set_cheb_level_min (dcwlf, g_value_get_uint (value));
+      break;
     case PROP_RULE_N:
       nc_data_cluster_wl_factor_set_rule_n (dcwlf, g_value_get_uint (value));
       break;
@@ -1223,6 +1436,12 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
       break;
     case PROP_N_NODES:
       g_value_set_uint (value, self->n_nodes);
+      break;
+    case PROP_CHEB_TOL:
+      g_value_set_double (value, self->cheb_tol);
+      break;
+    case PROP_CHEB_LEVEL_MIN:
+      g_value_set_uint (value, self->cheb_level_min);
       break;
     case PROP_RULE_N:
       g_value_set_uint (value, self->rule_n);
@@ -1333,6 +1552,7 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
   g_clear_pointer (&self->cub_err, ncm_vector_free);
 
   g_clear_pointer (&self->fixed_bg_nodes, g_ptr_array_unref);
+  g_clear_pointer (&self->cheb_weights, g_ptr_array_unref);
   g_clear_pointer (&self->z_nodes_per_galaxy, g_ptr_array_unref);
   g_clear_pointer (&self->fixed_norm, g_array_unref);
   g_clear_pointer (&self->fixed_bg_norm, g_array_unref);
@@ -1547,7 +1767,8 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
                        (self->n_nodes != self->fixed_nodes_n_nodes_seen) || (self->rule_n != self->fixed_nodes_rule_n_seen) ||
                        (self->auto_nodes != self->fixed_nodes_auto_nodes_seen) ||
                        (self->node_reltol != self->fixed_nodes_node_reltol_seen) ||
-                       (self->max_total_nodes != self->fixed_nodes_max_total_nodes_seen);
+                       (self->max_total_nodes != self->fixed_nodes_max_total_nodes_seen) ||
+                       (self->integ_method != self->fixed_nodes_integ_method_seen);
 
   self->pos_hash          = nc_galaxy_position_factor_get_hash (self->position_factor);
   self->z_hash            = nc_galaxy_redshift_factor_get_hash (self->redshift_factor);
@@ -1560,13 +1781,15 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
       !self->force_data_prepare)
     return;  /* nothing to do this cycle */
 
-  if ((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) && fixed_grid_changed)
+  if (((self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) ||
+       (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS)) && fixed_grid_changed)
   {
     _fixed_nodes_grid_reset (self);
 
     /* Validates a stored configuration here, where z_cl and the galaxy
      * count are both known; _step_fixed_nodes_grid reads it. */
-    self->node_config_valid = (self->node_config != NULL) && _node_config_adopt (self);
+    self->node_config_valid = (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) &&
+                              (self->node_config != NULL) && _node_config_adopt (self);
 
     /* A clone of a dataset whose grid was published on the shared @obs
      * takes that grid, built under these settings, and skips
@@ -1579,6 +1802,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     self->fixed_nodes_auto_nodes_seen      = self->auto_nodes;
     self->fixed_nodes_node_reltol_seen     = self->node_reltol;
     self->fixed_nodes_max_total_nodes_seen = self->max_total_nodes;
+    self->fixed_nodes_integ_method_seen    = self->integ_method;
   }
 
   /* Specialize and choose once: no per-galaxy branch on any of these. The
@@ -1646,11 +1870,28 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
     if (fixed_grid_changed || radius_changed || optzs_changed)
       steps[n_steps++] = &_step_fixed_nodes_sigma;
   }
+  else if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS)
+  {
+    /* The same node caches as FIXED_NODES, on the nodes of _step_cheb_grid */
+    if (fixed_grid_changed && !grid_adopted)
+      steps[n_steps++] = &_step_cheb_grid;
+
+    if (fixed_grid_changed || crit_changed)
+      steps[n_steps++] = &_step_fixed_nodes_crit;
+
+    if (fixed_grid_changed || radius_changed || optzs_changed)
+      steps[n_steps++] = &_step_fixed_nodes_sigma;
+  }
 
 
   {
-    const guint n_gal       = self->shape_data->len;
-    const gboolean parallel = self->force_data_prepare;
+    const guint n_gal = self->shape_data->len;
+
+    /* A CHEB_WEIGHTS grid build computes the moments of every galaxy, once per z_cl: it runs
+     * in parallel in any prepare() */
+    const gboolean cheb_build = (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS) &&
+                                fixed_grid_changed && !grid_adopted;
+    const gboolean parallel = self->force_data_prepare || cheb_build;
     guint gal_i;
 
     self->calib_unconverged  = 0;
@@ -1675,7 +1916,8 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
         steps[j](self, mset, s_data, gal_i);
 
       if (parallel &&
-          ((self->integ_method != NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) ||
+          (((self->integ_method != NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES) &&
+            (self->integ_method != NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS)) ||
            (g_array_index (self->n_total_per_galaxy, guint, gal_i) > 0)))
       {
         gal_i++;
@@ -1683,15 +1925,16 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
       }
     }
 
-    /* Parallel loop over the remaining galaxies, only from
-     * nc_data_cluster_wl_factor_data_prepare(). Every position, redshift and
-     * shape factor supports this: their per-galaxy methods write only the
-     * galaxy's own data (see the thread safety note of #NcGalaxyShapeFactor,
-     * #NcGalaxyPositionFactor and #NcGalaxyRedshiftFactor). Each galaxy
-     * writes only its own slots of the per-galaxy arrays, sized before this
-     * loop, and the calibration statistics are written under calib_stats.
-     * The per-cycle prepare() of a fit is serial: it runs inside the
-     * sampler's own threads, where a nested region adds only overhead. */
+    /* Parallel loop over the remaining galaxies, from
+     * nc_data_cluster_wl_factor_data_prepare() or a CHEB_WEIGHTS grid build.
+     * Every position, redshift and shape factor supports this: their
+     * per-galaxy methods write only the galaxy's own data (see the thread
+     * safety note of #NcGalaxyShapeFactor, #NcGalaxyPositionFactor and
+     * #NcGalaxyRedshiftFactor). Each galaxy writes only its own slots of the
+     * per-galaxy arrays, sized before this loop, and the calibration
+     * statistics are written under calib_stats. Any other per-cycle prepare()
+     * of a fit is serial: it runs inside the sampler's own threads, where a
+     * nested region adds only overhead. */
     if (parallel && (gal_i < n_gal))
     {
       const gint first = (gint) gal_i;
@@ -2106,6 +2349,193 @@ _nc_data_cluster_wl_factor_eval_m2lnP_fixed (NcDataClusterWLFactor *dcwlf, NcmMS
   return result;
 }
 
+/*
+ * The numerator F_0 m_fg + B of galaxy gal_i's marginal under CHEB_WEIGHTS, where B is the
+ * background integral sum_j w_j F (z_j) of a level and F_0 the value at the anchor. The
+ * first call evaluates the nodes of level L_0 = cheb_level_min, and the levels from 3 to L_0
+ * are summed on those values; the result is B_{L_0} when |B_{L_0} - B_{L_0 - 1}| <=
+ * cheb_tol |F_0 m_fg + B_{L_0}|, and otherwise the levels above L_0 are evaluated one call
+ * each, through the range evaluation of the shape factor, until a level meets the same test
+ * or level 7 is reached. With @want_log the shape factor gives ln F, and the values are taken
+ * as exp (ln F - s), s the largest ln F of the first call, given in @s; the quadrature is
+ * linear in them. Writes in @converged whether a level met the tolerance and in @relerr the
+ * last relative difference.
+ */
+static gdouble
+_nc_data_cluster_wl_factor_cheb_levels (NcDataClusterWLFactorPrivate * const self, NcmMSet *mset, guint gal_i, NcGalaxyShapeFactorData *s_data,
+                                        NcmVector *z_nodes, NcmVector *vals, const gboolean want_log, gdouble *s, gboolean *converged, gdouble *relerr)
+{
+  const GArray *w_arr = g_ptr_array_index (self->cheb_weights, gal_i);
+  const gdouble *w    = &g_array_index (w_arr, gdouble, 0);
+  const gdouble fg    = g_array_index (self->fixed_fg_norm, gdouble, gal_i);
+  const guint L_0     = self->cheb_level_min;
+  gdouble *f          = ncm_vector_data (vals);
+  guint n_prev        = (1u << L_0) + 1;
+  gdouble B_prev      = 0.0;
+  gdouble num         = 0.0;
+  guint L, k;
+
+  if (want_log)
+    nc_galaxy_shape_factor_eval_ln_at_nodes_range (self->shape_factor, mset, s_data, z_nodes, 0, 1 + n_prev, vals);
+  else
+    nc_galaxy_shape_factor_eval_at_nodes_range (self->shape_factor, mset, s_data, z_nodes, 0, 1 + n_prev, vals);
+
+  *s         = 0.0;
+  *converged = FALSE;
+  *relerr    = 0.0;
+
+  if (want_log)
+  {
+    *s = GSL_NEGINF;
+
+    for (k = 0; k < 1 + n_prev; k++)
+      *s = MAX (*s, f[k]);
+
+    for (k = 0; k < 1 + n_prev; k++)
+      f[k] = exp (f[k] - *s);
+  }
+
+  for (L = NC_DATA_CLUSTER_WL_CHEB_LEVEL_MIN; L <= NC_DATA_CLUSTER_WL_CHEB_LEVEL_MAX; L++)
+  {
+    const guint n = (1u << L) + 1;
+    gdouble B     = 0.0;
+
+    /* Above L_0 the level's new nodes are evaluated now */
+    if (L > L_0)
+    {
+      if (want_log)
+      {
+        nc_galaxy_shape_factor_eval_ln_at_nodes_range (self->shape_factor, mset, s_data, z_nodes, 1 + n_prev, 1 + n, vals);
+
+        for (k = 1 + n_prev; k < 1 + n; k++)
+          f[k] = exp (f[k] - *s);
+      }
+      else
+      {
+        nc_galaxy_shape_factor_eval_at_nodes_range (self->shape_factor, mset, s_data, z_nodes, 1 + n_prev, 1 + n, vals);
+      }
+
+      n_prev = n;
+    }
+
+    for (k = 0; k < n; k++)
+      B += w[_cheb_w_offset[L] + k] * f[1 + k];
+
+    num = f[0] * fg + B;
+
+    /* Levels below L_0 only lead to the comparison at L_0 */
+    if ((L >= L_0) && (L > NC_DATA_CLUSTER_WL_CHEB_LEVEL_MIN))
+    {
+      const gdouble diff = fabs (B - B_prev);
+
+      *relerr = (num != 0.0) ? diff / fabs (num) : ((diff == 0.0) ? 0.0 : GSL_POSINF);
+
+      if (diff <= self->cheb_tol * fabs (num))
+      {
+        *converged = TRUE;
+
+        return num;
+      }
+    }
+
+    B_prev = B;
+  }
+
+  return num;
+}
+
+static gdouble
+_nc_data_cluster_wl_factor_eval_m2lnP_cheb (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  NcmData *data                             = NCM_DATA (dcwlf);
+  const gboolean use_bootstrap              = ncm_data_bootstrap_enabled (data);
+  NcmBootstrap *bstrap                      = use_bootstrap ? ncm_data_peek_bootstrap (data) : NULL;
+  const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->shape_data->len;
+  NcmVector *vals                           = ncm_vector_new (NC_DATA_CLUSTER_WL_CHEB_N_NODES + 1);
+  gdouble result                            = 0.0;
+  guint i;
+
+  self->low_prob_count    = 0;
+  self->cheb_unconverged  = 0;
+  self->cheb_worst_relerr = 0.0;
+
+  if (m2lnP_gal != NULL)
+    g_assert_cmpuint (ncm_vector_len (m2lnP_gal), ==, self->len);
+
+  for (i = 0; i < n_iter; i++)
+  {
+    const guint gal_i               = use_bootstrap ? ncm_bootstrap_get (bstrap, i) : i;
+    NcGalaxyShapeFactorData *s_data = g_ptr_array_index (self->shape_data, gal_i);
+    NcmVector *z_nodes              = (NcmVector *) g_ptr_array_index (self->z_nodes_per_galaxy, gal_i);
+    const gdouble int_pos           = nc_galaxy_position_factor_integrand_eval (self->integ_pos_lin, s_data->pos_data);
+    const gdouble norm              = g_array_index (self->fixed_norm, gdouble, gal_i);
+    const gdouble mass              = g_array_index (self->fixed_fg_norm, gdouble, gal_i) + g_array_index (self->fixed_bg_norm, gdouble, gal_i);
+    gdouble m2lnP_gal_i             = NC_GALAXY_LOW_PROB;
+
+    if (g_array_index (self->n_total_per_galaxy, guint, gal_i) == 0)
+    {
+      /* Fully in front of the lens: the shape likelihood is the constant at the anchor */
+      nc_galaxy_shape_factor_eval_at_nodes_range (self->shape_factor, mset, s_data, z_nodes, 0, 1, vals);
+
+      if (ncm_vector_get (vals, 0) * norm * int_pos > 0.0)
+      {
+        m2lnP_gal_i = -2.0 * log (ncm_vector_get (vals, 0) * norm * int_pos);
+      }
+      else
+      {
+        nc_galaxy_shape_factor_eval_ln_at_nodes_range (self->shape_factor, mset, s_data, z_nodes, 0, 1, vals);
+
+        if (gsl_finite (ncm_vector_get (vals, 0)) && (norm * int_pos > 0.0))
+          m2lnP_gal_i = -2.0 * (log (norm * int_pos) + ncm_vector_get (vals, 0));
+        else
+          self->low_prob_count++;
+      }
+    }
+    else
+    {
+      gboolean converged;
+      gdouble s, relerr, num;
+
+      num = _nc_data_cluster_wl_factor_cheb_levels (self, mset, gal_i, s_data, z_nodes, vals, FALSE, &s, &converged, &relerr);
+
+      /* The shape likelihood underflows at every node: the same levels on ln F, rescaled */
+      if (!((mass > 0.0) && (norm * num * int_pos / mass > 0.0)))
+        num = _nc_data_cluster_wl_factor_cheb_levels (self, mset, gal_i, s_data, z_nodes, vals, TRUE, &s, &converged, &relerr);
+
+      if (!converged)
+      {
+        self->cheb_unconverged++;
+        self->cheb_worst_relerr = MAX (self->cheb_worst_relerr, relerr);
+      }
+
+      if ((mass > 0.0) && gsl_finite (s) && (norm * num * int_pos / mass > 0.0))
+        m2lnP_gal_i = -2.0 * (log (norm * num * int_pos / mass) + s);
+      else
+        self->low_prob_count++;
+    }
+
+    if (!gsl_finite (m2lnP_gal_i))
+    {
+      g_warning ("_nc_data_cluster_wl_factor_eval_m2lnP_cheb: galaxy %u has undefined likelihood [%g]. Skipping it.", gal_i, m2lnP_gal_i);
+
+      if (m2lnP_gal != NULL)
+        ncm_vector_set (m2lnP_gal, gal_i, GSL_NAN);
+
+      continue;
+    }
+
+    if (m2lnP_gal != NULL)
+      ncm_vector_set (m2lnP_gal, gal_i, m2lnP_gal_i);
+
+    result += m2lnP_gal_i;
+  }
+
+  ncm_vector_free (vals);
+
+  return result;
+}
+
 /* One panel of the CUBATURE integral over [zmin, zmax], as -2lnP. */
 static gdouble
 _nc_data_cluster_wl_factor_cubature_integrate (NcDataClusterWLFactorPrivate * const self, gdouble zmin, gdouble zmax)
@@ -2204,6 +2634,9 @@ _nc_data_cluster_wl_factor_eval_m2lnP (NcDataClusterWLFactor *dcwlf, NcmMSet *ms
 
     case NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE:
       return _nc_data_cluster_wl_factor_eval_m2lnP_cubature (dcwlf, mset, m2lnP_gal);
+
+    case NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS:
+      return _nc_data_cluster_wl_factor_eval_m2lnP_cheb (dcwlf, mset, m2lnP_gal);
 
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
@@ -2462,8 +2895,8 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
   /**
    * NcDataClusterWLFactor:integ-method:
    *
-   * Integration method for the redshift integral: `LNINT`, `FIXED_NODES` or
-   * `CUBATURE`.
+   * Integration method for the redshift integral: `LNINT`, `FIXED_NODES`, `CUBATURE` or
+   * `CHEB_WEIGHTS`.
    */
   g_object_class_install_property (object_class,
                                    PROP_INTEG_METHOD,
@@ -2472,6 +2905,40 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                       "Integration method for the redshift integral",
                                                       NC_TYPE_DATA_CLUSTER_WL_INTEG_METHOD,
                                                       NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWLFactor:cheb-tol:
+   *
+   * The tolerance of the nested Chebyshev-Lobatto levels under `CHEB_WEIGHTS` (ignored
+   * otherwise): a galaxy stops at the first level whose background integral differs from the
+   * one of the level before by at most this value times the numerator of its marginal.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CHEB_TOL,
+                                   g_param_spec_double ("cheb-tol",
+                                                        NULL,
+                                                        "Tolerance of the nested Chebyshev levels (CHEB_WEIGHTS only)",
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-8,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcDataClusterWLFactor:cheb-level-min:
+   *
+   * The level whose 2^L + 1 nodes `CHEB_WEIGHTS` evaluates in its first call to the shape
+   * factor (ignored otherwise), from 2 to 7. The levels above it are evaluated one call each,
+   * adaptively. A shape factor whose nodes each cost the same, interpolants or one integral
+   * per node, runs fastest from 2, the default. With the line table of
+   * #NcGalaxyShapeFactorSpectral:line-abstol a call costs about the same whatever its number
+   * of nodes, as long as it has enough of them to build the table: 5 (33 nodes) is then about
+   * three times faster than 2, and 7 slightly slower than 5.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CHEB_LEVEL_MIN,
+                                   g_param_spec_uint ("cheb-level-min",
+                                                      NULL,
+                                                      "First level of the nested Chebyshev levels (CHEB_WEIGHTS only)",
+                                                      2, 7, 2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -2682,6 +3149,10 @@ _nc_data_cluster_wl_factor_build_desc (NcDataClusterWLFactor *dcwlf)
                               self->node_reltol, self->max_total_nodes);
 
     g_string_append (str, ")");
+  }
+  else if (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS)
+  {
+    g_string_append_printf (str, " (cheb_tol=%.2g, cheb_level_min=%u)", self->cheb_tol, self->cheb_level_min);
   }
 
   g_free (pos_desc);
@@ -3271,5 +3742,104 @@ nc_data_cluster_wl_factor_eval_m2lnP_gal (NcDataClusterWLFactor *dcwlf, NcmMSet 
   ncm_vector_set_all (m2lnP_gal, GSL_NAN);
 
   _nc_data_cluster_wl_factor_eval_m2lnP (dcwlf, mset, m2lnP_gal);
+}
+
+/**
+ * nc_data_cluster_wl_factor_set_cheb_tol:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @cheb_tol: the tolerance
+ *
+ * Sets #NcDataClusterWLFactor:cheb-tol.
+ */
+void
+nc_data_cluster_wl_factor_set_cheb_tol (NcDataClusterWLFactor *dcwlf, const gdouble cheb_tol)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  self->cheb_tol = cheb_tol;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_cheb_tol:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Returns: #NcDataClusterWLFactor:cheb-tol.
+ */
+gdouble
+nc_data_cluster_wl_factor_get_cheb_tol (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->cheb_tol;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_cheb_unconverged_count:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Under `CHEB_WEIGHTS`, the number of galaxies of the last evaluation that reached level 7
+ * (129 nodes) without meeting #NcDataClusterWLFactor:cheb-tol; their marginal is the one of
+ * level 7. Reset to zero at the start of every evaluation.
+ *
+ * Returns: the number of galaxies not converged in the last evaluation.
+ */
+guint
+nc_data_cluster_wl_factor_get_cheb_unconverged_count (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->cheb_unconverged;
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_cheb_worst_relerr:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Under `CHEB_WEIGHTS`, the largest relative difference between levels 6 and 7 among the
+ * galaxies of nc_data_cluster_wl_factor_get_cheb_unconverged_count(), relative to the
+ * numerator of their marginal; zero when every galaxy converged.
+ *
+ * Returns: the worst relative difference of the last evaluation.
+ */
+gdouble
+nc_data_cluster_wl_factor_get_cheb_worst_relerr (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->cheb_worst_relerr;
+}
+
+/**
+ * nc_data_cluster_wl_factor_set_cheb_level_min:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @cheb_level_min: the first level, 2 to 7
+ *
+ * Sets #NcDataClusterWLFactor:cheb-level-min. A level outside 2 to 7 aborts.
+ */
+void
+nc_data_cluster_wl_factor_set_cheb_level_min (NcDataClusterWLFactor *dcwlf, const guint cheb_level_min)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  if ((cheb_level_min < 2) || (cheb_level_min > 7))
+    g_error ("nc_data_cluster_wl_factor_set_cheb_level_min: the level %u is outside 2 to 7.", cheb_level_min);
+
+  self->cheb_level_min = cheb_level_min;
+  ncm_data_take_desc (NCM_DATA (dcwlf), _nc_data_cluster_wl_factor_build_desc (dcwlf));
+}
+
+/**
+ * nc_data_cluster_wl_factor_get_cheb_level_min:
+ * @dcwlf: a #NcDataClusterWLFactor
+ *
+ * Returns: #NcDataClusterWLFactor:cheb-level-min.
+ */
+guint
+nc_data_cluster_wl_factor_get_cheb_level_min (NcDataClusterWLFactor *dcwlf)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+
+  return self->cheb_level_min;
 }
 

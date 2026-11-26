@@ -1726,27 +1726,28 @@ test_nc_xcor_kernel_cluster_tophat_volume_normalized (void)
   NcDistance *dist      = nc_distance_new (TEST_ZMAX);
   NcmPowspec *ps        = NCM_POWSPEC (ncm_powspec_analytic_new (NCM_POWSPEC_ANALYTIC_SHAPE_BBKS,
                                                                  NCM_POWSPEC_ANALYTIC_GROWTH_LCDM));
-  NcXcorKernel *xclk                = NC_XCOR_KERNEL (nc_xcor_kernel_cluster_tophat_new (dist, ps, z_lower, z_upper));
-  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (32);
-  NcXcorKinetic xck                 = {0.0, 0.0, 0.0};
-  gdouble integral                  = 0.0;
+  NcXcorKernel *xclk = NC_XCOR_KERNEL (nc_xcor_kernel_cluster_tophat_new (dist, ps, z_lower, z_upper));
+  NcXcorKinetic xck  = {0.0, 0.0, 0.0};
+  gdouble integral   = 0.0;
   guint i;
+  const gdouble *gl_x, *gl_w;
+
+  ncm_integral_gauss_legendre_rule (32, &gl_x, &gl_w);
 
   nc_distance_prepare (dist, cosmo);
   ncm_powspec_prepare (ps, NCM_MODEL (cosmo));
   nc_xcor_kernel_prepare (xclk, cosmo);
 
-  for (i = 0; i < gl->n; i++)
+  for (i = 0; i < 32; i++)
   {
-    gdouble z, w;
+    const gdouble z = 0.5 * (z_lower + z_upper) + 0.5 * (z_upper - z_lower) * gl_x[i];
+    const gdouble w = 0.5 * (z_upper - z_lower) * gl_w[i];
 
-    gsl_integration_glfixed_point (z_lower, z_upper, i, &z, &w, gl);
     integral += w * nc_xcor_kernel_eval_limber_z (xclk, cosmo, z, &xck, 0) / nc_hicosmo_E (cosmo, z);
   }
 
   ncm_assert_cmpdouble_e (integral * nc_xcor_kernel_eval_limber_z_prefactor (xclk, cosmo, 0), ==, 1.0, 1.0e-10, 0.0);
 
-  gsl_integration_glfixed_table_free (gl);
   nc_xcor_kernel_free (xclk);
   ncm_powspec_free (ps);
   nc_distance_free (dist);

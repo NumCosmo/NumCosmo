@@ -61,6 +61,7 @@ void test_nc_galaxy_redshift_factor_spline_poly_norm (TestNcGalaxyRedshiftFactor
 void test_nc_galaxy_redshift_factor_spline_poly_gen (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 void test_nc_galaxy_redshift_factor_spline_zeros (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 void test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
+void test_nc_galaxy_redshift_factor_spline_poly_moments (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -86,6 +87,10 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_redshift_factor_spline_poly_gen,
               &test_nc_galaxy_redshift_factor_spline_free);
 
+  g_test_add ("/nc/galaxy_redshift_factor_spline/poly/moments", TestNcGalaxyRedshiftFactorSpline, NULL,
+              &test_nc_galaxy_redshift_factor_spline_new_poly,
+              &test_nc_galaxy_redshift_factor_spline_poly_moments,
+              &test_nc_galaxy_redshift_factor_spline_free);
   g_test_add ("/nc/galaxy_redshift_factor_spline/zeros", TestNcGalaxyRedshiftFactorSpline, NULL,
               &test_nc_galaxy_redshift_factor_spline_new_zeros,
               &test_nc_galaxy_redshift_factor_spline_zeros,
@@ -327,5 +332,35 @@ test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *tes
   nc_galaxy_redshift_factor_data_unref (data2);
   nc_galaxy_wl_obs_free (obs);
   g_strfreev (columns);
+}
+
+/* The moments are those of the NcGalaxyPz of the galaxy, on its range and on a part of it */
+void
+test_nc_galaxy_redshift_factor_spline_poly_moments (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
+{
+  const gdouble ab[2][2] = {
+    {
+      TEST_POLY_Z_MIN, TEST_POLY_Z_MAX
+    }, {
+      0.4371, 1.1093
+    }
+  };
+  GArray *m    = NULL;
+  GArray *m_pz = NULL;
+  guint r, k;
+
+  for (r = 0; r < 2; r++)
+  {
+    nc_galaxy_redshift_factor_cheb_moments (test->gsdr, test->mset, test->data, ab[r][0], ab[r][1], 16, &m);
+    nc_galaxy_pz_cheb_moments (test->pz, ab[r][0], ab[r][1], 16, &m_pz);
+
+    g_assert_cmpuint (m->len, ==, 17);
+
+    for (k = 0; k <= 16; k++)
+      g_assert_cmpfloat (g_array_index (m, gdouble, k), ==, g_array_index (m_pz, gdouble, k));
+  }
+
+  g_array_unref (m);
+  g_array_unref (m_pz);
 }
 

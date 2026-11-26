@@ -103,6 +103,7 @@ GALAXY_HOD_ZHENG07_DEFAULT_SIGMA_LOG_M: float = 0.26
 GALAXY_POSITION_FACTOR_COL_DEC: str = r"dec"
 GALAXY_POSITION_FACTOR_COL_RA: str = r"ra"
 GALAXY_PZ_BSPLINE_SQRT_ORDER: int = 6
+GALAXY_PZ_CHEB_CACHE_LEN: int = 4
 GALAXY_REDSHIFT_FACTOR_COL_Z: str = r"z"
 GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0: str = r"sigma0"
 GALAXY_REDSHIFT_OBS_GAUSS_COL_ZP: str = r"zp"
@@ -5948,6 +5949,10 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         Safety ceiling on the total background node count for auto-nodes selection
       node-config -> NcmVarDict: Prepared node configuration
         Per-galaxy calibrated redshift-quadrature configuration
+      cheb-tol -> gdouble: cheb-tol
+        Tolerance of the nested Chebyshev levels (CHEB_WEIGHTS only)
+      cheb-level-min -> guint: cheb-level-min
+        First level of the nested Chebyshev levels (CHEB_WEIGHTS only)
 
     Properties from NcmData:
       name -> gchararray: name
@@ -5967,6 +5972,8 @@ class DataClusterWLFactor(NumCosmoMath.Data):
 
     class Props:
         auto_nodes: bool
+        cheb_level_min: int
+        cheb_tol: float
         integ_method: DataClusterWLIntegMethod
         len: int
         max_total_nodes: int
@@ -5992,6 +5999,8 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def __init__(
         self,
         auto_nodes: bool = ...,
+        cheb_level_min: int = ...,
+        cheb_tol: float = ...,
         integ_method: DataClusterWLIntegMethod = ...,
         max_total_nodes: int = ...,
         n_nodes: int = ...,
@@ -6020,6 +6029,10 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def free(self) -> None: ...
     def get_auto_nodes(self) -> bool: ...
     def get_calib_count(self) -> int: ...
+    def get_cheb_level_min(self) -> int: ...
+    def get_cheb_tol(self) -> float: ...
+    def get_cheb_unconverged_count(self) -> int: ...
+    def get_cheb_worst_relerr(self) -> float: ...
     def get_integ_method(self) -> DataClusterWLIntegMethod: ...
     def get_low_prob_count(self) -> int: ...
     def get_max_total_nodes(self) -> int: ...
@@ -6039,6 +6052,8 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def peek_obs(self) -> GalaxyWLObs: ...
     def ref(self) -> DataClusterWLFactor: ...
     def set_auto_nodes(self, auto_nodes: bool) -> None: ...
+    def set_cheb_level_min(self, cheb_level_min: int) -> None: ...
+    def set_cheb_tol(self, cheb_tol: float) -> None: ...
     def set_cut(self, r_min: float, r_max: float) -> None: ...
     def set_integ_method(self, integ_method: DataClusterWLIntegMethod) -> None: ...
     def set_max_total_nodes(self, max_total_nodes: int) -> None: ...
@@ -8475,8 +8490,10 @@ class GalaxyPz(GObject.Object):
     """
 
     parent_instance: GObject.Object = ...
+    def cheb_moments(self, a: float, b: float, n: int) -> list[float]: ...
     @staticmethod
     def clear(gpz: GalaxyPz) -> None: ...
+    def do_cheb_moments(self, a: float, b: float, n: int) -> list[float]: ...
     def do_eval_ln_p(self, z: float) -> float: ...
     def do_eval_p(self, z: float) -> float: ...
     def do_gen(self, rng: NumCosmoMath.RNG) -> float: ...
@@ -8549,6 +8566,7 @@ class GalaxyPzClass(GObject.GPointer):
     eval_ln_p: typing.Callable[[GalaxyPz, float], float] = ...
     get_norm: typing.Callable[[GalaxyPz], float] = ...
     gen: typing.Callable[[GalaxyPz, NumCosmoMath.RNG], float] = ...
+    cheb_moments: typing.Callable[[GalaxyPz, float, float, int], list[float]] = ...
     padding: list[None] = ...
 
 class GalaxyRedshiftBinning(GObject.Object):
@@ -8636,13 +8654,38 @@ class GalaxyRedshiftFactor(GObject.Object):
 
     Object NcGalaxyRedshiftFactor
 
+    Properties from NcGalaxyRedshiftFactor:
+      cheb-reltol -> gdouble: cheb-reltol
+        Relative tolerance of the Chebyshev panels of sqrt(p)
+
     Signals from GObject:
       notify (GParam)
     """
 
+    class Props:
+        cheb_reltol: float
+
+    props: Props = ...
     parent_instance: GObject.Object = ...
+    def __init__(self, cheb_reltol: float = ...) -> None: ...
+    def cheb_moments(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyRedshiftFactorData,
+        a: float,
+        b: float,
+        n: int,
+    ) -> list[float]: ...
     @staticmethod
     def clear(gsdr: GalaxyRedshiftFactor) -> None: ...
+    def do_cheb_moments(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyRedshiftFactorData,
+        a: float,
+        b: float,
+        n: int,
+    ) -> list[float]: ...
     def do_data_init(
         self, mset: NumCosmoMath.MSet, data: GalaxyRedshiftFactorData
     ) -> None: ...
@@ -8684,6 +8727,7 @@ class GalaxyRedshiftFactor(GObject.Object):
         data: GalaxyRedshiftFactorData,
         rng: NumCosmoMath.RNG,
     ) -> bool: ...
+    def get_cheb_reltol(self) -> float: ...
     def get_desc(self) -> str: ...
     def get_hash(self) -> int: ...
     def get_integ_lim(
@@ -8697,6 +8741,7 @@ class GalaxyRedshiftFactor(GObject.Object):
     ) -> float: ...
     def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
     def ref(self) -> GalaxyRedshiftFactor: ...
+    def set_cheb_reltol(self, cheb_reltol: float) -> None: ...
     def update_data(self, data: GalaxyRedshiftFactorData) -> None: ...
 
 class GalaxyRedshiftFactorClass(GObject.GPointer):
@@ -8747,6 +8792,17 @@ class GalaxyRedshiftFactorClass(GObject.GPointer):
         [GalaxyRedshiftFactor, GalaxyRedshiftFactorData], None
     ] = ...
     get_desc: typing.Callable[[GalaxyRedshiftFactor], str] = ...
+    cheb_moments: typing.Callable[
+        [
+            GalaxyRedshiftFactor,
+            NumCosmoMath.MSet,
+            GalaxyRedshiftFactorData,
+            float,
+            float,
+            int,
+        ],
+        list[float],
+    ] = ...
     padding: list[None] = ...
 
 class GalaxyRedshiftFactorComposed(GalaxyRedshiftFactor):
@@ -8764,15 +8820,22 @@ class GalaxyRedshiftFactorComposed(GalaxyRedshiftFactor):
       zp-lim -> NcmDTuple2: zp-lim
         Photometric selection window
 
+    Properties from NcGalaxyRedshiftFactor:
+      cheb-reltol -> gdouble: cheb-reltol
+        Relative tolerance of the Chebyshev panels of sqrt(p)
+
     Signals from GObject:
       notify (GParam)
     """
 
     class Props:
         zp_lim: NumCosmoMath.DTuple2
+        cheb_reltol: float
 
     props: Props = ...
-    def __init__(self, zp_lim: NumCosmoMath.DTuple2 = ...) -> None: ...
+    def __init__(
+        self, zp_lim: NumCosmoMath.DTuple2 = ..., cheb_reltol: float = ...
+    ) -> None: ...
     @staticmethod
     def clear(gsdrc: GalaxyRedshiftFactorComposed) -> None: ...
     def free(self) -> None: ...
@@ -8854,10 +8917,19 @@ class GalaxyRedshiftFactorSpline(GalaxyRedshiftFactor):
 
     Object NcGalaxyRedshiftFactorSpline
 
+    Properties from NcGalaxyRedshiftFactor:
+      cheb-reltol -> gdouble: cheb-reltol
+        Relative tolerance of the Chebyshev panels of sqrt(p)
+
     Signals from GObject:
       notify (GParam)
     """
 
+    class Props:
+        cheb_reltol: float
+
+    props: Props = ...
+    def __init__(self, cheb_reltol: float = ...) -> None: ...
     @staticmethod
     def clear(gsdrs: GalaxyRedshiftFactorSpline) -> None: ...
     def data_peek(self, data: GalaxyRedshiftFactorData) -> GalaxyPz: ...
@@ -9642,11 +9714,29 @@ class GalaxyShapeFactor(GObject.Object):
         z_nodes: NumCosmoMath.Vector,
         out: NumCosmoMath.Vector,
     ) -> None: ...
+    def eval_at_nodes_range(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyShapeFactorData,
+        z_nodes: NumCosmoMath.Vector,
+        j0: int,
+        j1: int,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
     def eval_ln_at_nodes(
         self,
         mset: NumCosmoMath.MSet,
         data: GalaxyShapeFactorData,
         z_nodes: NumCosmoMath.Vector,
+        out: NumCosmoMath.Vector,
+    ) -> None: ...
+    def eval_ln_at_nodes_range(
+        self,
+        mset: NumCosmoMath.MSet,
+        data: GalaxyShapeFactorData,
+        z_nodes: NumCosmoMath.Vector,
+        j0: int,
+        j1: int,
         out: NumCosmoMath.Vector,
     ) -> None: ...
     def eval_ln_marginal(
@@ -27773,6 +27863,7 @@ class DataClusterPseudoCountsObs(GObject.GEnum):
     _value_repr_: wrapper_descriptor = ...
 
 class DataClusterWLIntegMethod(GObject.GEnum):
+    CHEB_WEIGHTS: DataClusterWLIntegMethod = ...
     CUBATURE: DataClusterWLIntegMethod = ...
     FIXED_NODES: DataClusterWLIntegMethod = ...
     LNINT: DataClusterWLIntegMethod = ...

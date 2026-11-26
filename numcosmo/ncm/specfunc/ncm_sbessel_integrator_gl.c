@@ -50,6 +50,7 @@
 #include "ncm/specfunc/ncm_sbessel_integrator_gl.h"
 #include "ncm/core/ncm_dtuple.h"
 #include "ncm/core/ncm_c.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_errno.h>
@@ -71,7 +72,6 @@ struct _NcmSBesselIntegratorGL
   /*< private >*/
   NcmSBesselIntegrator parent_instance;
   gsl_integration_workspace *ws;
-  gsl_integration_glfixed_table *gl_table;
   guint npts;
   gdouble margin;
   gdouble nosc;
@@ -91,11 +91,10 @@ G_DEFINE_TYPE (NcmSBesselIntegratorGL, ncm_sbessel_integrator_gl, NCM_TYPE_SBESS
 static void
 ncm_sbessel_integrator_gl_init (NcmSBesselIntegratorGL *sbigl)
 {
-  sbigl->ws       = gsl_integration_workspace_alloc (1000);
-  sbigl->npts     = 10;
-  sbigl->gl_table = gsl_integration_glfixed_table_alloc (sbigl->npts);
-  sbigl->margin   = 5.0;
-  sbigl->nosc     = 6.0;
+  sbigl->ws     = gsl_integration_workspace_alloc (1000);
+  sbigl->npts   = 10;
+  sbigl->margin = 5.0;
+  sbigl->nosc   = 6.0;
 
   sbigl->params.sbigl     = sbigl;
   sbigl->params.F         = NULL;
@@ -114,11 +113,6 @@ _ncm_sbessel_integrator_gl_dispose (GObject *object)
     sbigl->ws = NULL;
   }
 
-  if (sbigl->gl_table != NULL)
-  {
-    gsl_integration_glfixed_table_free (sbigl->gl_table);
-    sbigl->gl_table = NULL;
-  }
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_sbessel_integrator_gl_parent_class)->dispose (object);
@@ -326,6 +320,9 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
   const gdouble x_scale = 1000.0;
 
   gdouble x = a2;
+  const gdouble *gl_x, *gl_w;
+
+  ncm_integral_gauss_legendre_rule (sbigl->npts, &gl_x, &gl_w);
 
   while (x < b2)
   {
@@ -338,12 +335,17 @@ _ncm_sbessel_integrator_gl_integrate_ell (NcmSBesselIntegrator *sbi,
     if (x_hi > b2)
       x_hi = b2;
 
-    /* One GL fixed panel */
-    gdouble panel_result =
-      gsl_integration_glfixed (&G, x, x_hi, sbigl->gl_table);
+    /* One Gauss-Legendre panel */
+    {
+      const gdouble c = 0.5 * (x + x_hi);
+      const gdouble h = 0.5 * (x_hi - x);
+      guint i;
 
-    result += panel_result;
-    x       = x_hi;
+      for (i = 0; i < sbigl->npts; i++)
+        result += h * gl_w[i] * GSL_FN_EVAL (&G, c + h * gl_x[i]);
+    }
+
+    x = x_hi;
   }
 
   return result;
@@ -443,15 +445,7 @@ ncm_sbessel_integrator_gl_set_npts (NcmSBesselIntegratorGL *sbigl, guint npts)
   g_return_if_fail (npts > 0);
 
   if (npts != sbigl->npts)
-  {
     sbigl->npts = npts;
-
-    if (sbigl->gl_table != NULL)
-    {
-      gsl_integration_glfixed_table_free (sbigl->gl_table);
-      sbigl->gl_table = gsl_integration_glfixed_table_alloc (sbigl->npts);
-    }
-  }
 }
 
 /**

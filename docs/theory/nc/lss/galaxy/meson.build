@@ -2,6 +2,7 @@ src_site_theory_nc_lss_galaxy_files = files(
     'galaxy_wl_framework.qmd',
     'wl_ellipticity.qmd',
     'wl_shape_marginalization_spectral.qmd',
+    'wl_redshift_integral.qmd',
 )
 
 if get_option('documentation')

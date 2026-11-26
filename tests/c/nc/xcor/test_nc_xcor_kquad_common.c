@@ -136,10 +136,18 @@ static const guint test_ref_orders[] = {8, 16, 32, 64, 128, 264};
  * The reference's rules, fixed at construction, and its work space, kept and sized to
  * the block on each evaluation; xclki1 and xclki2 are the pair being evaluated.
  */
+/* A Gauss-Legendre rule on [-1, 1] of ncm_integral_gauss_legendre_rule() */
+typedef struct _TestRefRule
+{
+  guint n;
+  const gdouble *x;
+  const gdouble *w;
+} TestRefRule;
+
 struct _TestNcXcorKQuadRef
 {
-  gsl_integration_glfixed_table *scale_rule;
-  gsl_integration_glfixed_table *rules[TEST_REF_N_ORDERS];
+  TestRefRule scale_rule;
+  TestRefRule rules[TEST_REF_N_ORDERS];
   GArray *edges;
   GArray *cells;
   GArray *W1;
@@ -158,10 +166,14 @@ test_nc_xcor_kquad_ref_new (void)
   TestNcXcorKQuadRef *ref = g_new0 (TestNcXcorKQuadRef, 1);
   guint o;
 
-  ref->scale_rule = gsl_integration_glfixed_table_alloc (TEST_REF_SCALE_ORDER);
+  ref->scale_rule.n = TEST_REF_SCALE_ORDER;
+  ncm_integral_gauss_legendre_rule (ref->scale_rule.n, &ref->scale_rule.x, &ref->scale_rule.w);
 
   for (o = 0; o < TEST_REF_N_ORDERS; o++)
-    ref->rules[o] = gsl_integration_glfixed_table_alloc (test_ref_orders[o]);
+  {
+    ref->rules[o].n = test_ref_orders[o];
+    ncm_integral_gauss_legendre_rule (ref->rules[o].n, &ref->rules[o].x, &ref->rules[o].w);
+  }
 
   ref->edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
   ref->cells = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -178,12 +190,6 @@ test_nc_xcor_kquad_ref_new (void)
 void
 test_nc_xcor_kquad_ref_free (TestNcXcorKQuadRef *ref)
 {
-  guint o;
-
-  for (o = 0; o < TEST_REF_N_ORDERS; o++)
-    gsl_integration_glfixed_table_free (ref->rules[o]);
-
-  gsl_integration_glfixed_table_free (ref->scale_rule);
   g_array_unref (ref->edges);
   g_array_unref (ref->cells);
   g_array_unref (ref->W1);
@@ -353,7 +359,7 @@ _test_ref_cmp_double (gconstpointer a, gconstpointer b)
   return (x > y) - (x < y);
 }
 
-static void _test_ref_cell (TestNcXcorKQuadRef *ref, gsl_integration_glfixed_table *rule, gdouble a, gdouble b);
+static void _test_ref_cell (TestNcXcorKQuadRef *ref, const TestRefRule *rule, gdouble a, gdouble b);
 
 /* The block's peak, max over components of |sum over cells|, by the scale rule alone. */
 static gdouble
@@ -368,7 +374,7 @@ _test_ref_peak (TestNcXcorKQuadRef *ref)
 
   for (i = 0; i + 1 < ref->cells->len; i++)
   {
-    _test_ref_cell (ref, ref->scale_rule, TEST_REF_AT (ref->cells, i), TEST_REF_AT (ref->cells, i + 1));
+    _test_ref_cell (ref, &ref->scale_rule, TEST_REF_AT (ref->cells, i), TEST_REF_AT (ref->cells, i + 1));
 
     for (c = 0; c < len; c++)
       TEST_REF_AT (ref->sum, c) += TEST_REF_AT (ref->cur, c);
@@ -394,7 +400,7 @@ _test_ref_cell_converged (TestNcXcorKQuadRef *ref, gdouble a, gdouble b, gdouble
 
   for (o = 0; o < TEST_REF_N_ORDERS; o++)
   {
-    _test_ref_cell (ref, ref->rules[o], a, b);
+    _test_ref_cell (ref, &ref->rules[o], a, b);
 
     if (o > 0)
     {
@@ -415,7 +421,7 @@ _test_ref_cell_converged (TestNcXcorKQuadRef *ref, gdouble a, gdouble b, gdouble
 
 /* The sum over one cell of w k^2 W1 W2 by a fixed Gauss-Legendre rule, into ref->cur. */
 static void
-_test_ref_cell (TestNcXcorKQuadRef *ref, gsl_integration_glfixed_table *rule, gdouble a, gdouble b)
+_test_ref_cell (TestNcXcorKQuadRef *ref, const TestRefRule *rule, gdouble a, gdouble b)
 {
   const guint len = ref->cur->len;
   gdouble *W1     = (gdouble *) ref->W1->data;
@@ -427,9 +433,9 @@ _test_ref_cell (TestNcXcorKQuadRef *ref, gsl_integration_glfixed_table *rule, gd
 
   for (i = 0; i < rule->n; i++)
   {
-    gdouble k, w;
+    const gdouble k = 0.5 * (a + b) + 0.5 * (b - a) * rule->x[i];
+    const gdouble w = 0.5 * (b - a) * rule->w[i];
 
-    gsl_integration_glfixed_point (a, b, i, &k, &w, rule);
     nc_xcor_kernel_integrand_eval (ref->xclki1, k, W1);
 
     if (ref->xclki2 != NULL)

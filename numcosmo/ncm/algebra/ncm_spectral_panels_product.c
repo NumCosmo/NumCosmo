@@ -59,6 +59,7 @@
 #include "ncm/algebra/ncm_spectral_panels_product.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/core/ncm_memory_pool.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>
@@ -747,16 +748,20 @@ _ncm_spectral_panels_product_gl (NcmSpectralPanelsProductWork *work, const guint
 
   if (nw == NULL)
   {
-    gsl_integration_glfixed_table *t = gsl_integration_glfixed_table_alloc (M);
+    const gdouble *gl_x, *gl_w;
     guint i;
+
+    ncm_integral_gauss_legendre_rule (M, &gl_x, &gl_w);
 
     nw = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 2 * M);
     g_array_set_size (nw, 2 * M);
 
     for (i = 0; i < M; i++)
-      gsl_integration_glfixed_point (-1.0, 1.0, i, &g_array_index (nw, gdouble, 2 * i), &g_array_index (nw, gdouble, 2 * i + 1), t);
+    {
+      g_array_index (nw, gdouble, 2 * i)     = gl_x[i];
+      g_array_index (nw, gdouble, 2 * i + 1) = gl_w[i];
+    }
 
-    gsl_integration_glfixed_table_free (t);
     g_ptr_array_index (work->gl, M) = nw;
   }
 

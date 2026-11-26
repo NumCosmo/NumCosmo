@@ -529,3 +529,20 @@ fits take the same evaluations and end at the same parameter values, with $-2\ln
 within $6 \times 10^{-7}$. The MCMC gives $\log_{10} M_{200c} = 15.478 \pm 0.121$, and for
 $|\chi_I|$ a mean of $0.491 \pm 0.006$ and a standard deviation of $0.222 \pm 0.005$
 (burn-in of 50 iterations).
+
+The tables above integrate each galaxy over redshift on fixed nodes. The table below compares
+the method `FIXED_NODES` with `CHEB_WEIGHTS`
+([The Redshift Integral of a Galaxy](../theory/nc/lss/galaxy/wl_redshift_integral.qmd)) on
+the HSC field HWL16a-007 (10,706 galaxies, TRACE). It gives the best time of one evaluation of
+$-2\ln L$ at $\log_{10} M_{200c} = 14$, on 10 threads, with the default `cheb-tol` $10^{-8}$.
+
+| HWL16a-007, $-2\ln L$, 10 threads | `FIXED_NODES` (45 nodes) | `CHEB_WEIGHTS`, `cheb-level-min` 2 | `cheb-level-min` 5 |
+|---|---|---|---|
+| prepared catalog (interpolants) | 25.4 ms | 16.4 ms | 21.8 ms |
+| one integral per node | 50.8 s | 18.1 s | 37.7 s |
+| `line-abstol` $10^{-7}$ | 5.68 s | 17.5 s | 6.0 s |
+
+Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-25. The method `CHEB_WEIGHTS` gives
+$-2\ln L$ within $10^{-9}$ of its value at 33 nodes, and `FIXED_NODES` differs from it by
+$4.5\times10^{-4}$. The first evaluation computes the moments of every galaxy: 0.85 s on 10
+threads, against 0.16 s for the fixed nodes.

@@ -37,6 +37,7 @@
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "ncm/algebra/ncm_matrix.h"
+#include "ncm/integration/ncm_integrate.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -49,8 +50,7 @@
  * ---- Gauss-Legendre node table on [-1,1], built once ----
  *
  * The node count is a compile-time constant, so the table depends on nothing
- * per galaxy: gsl_integration_glfixed_table_alloc() must not be called per
- * evaluation (it allocates).
+ * per galaxy and is copied once from ncm_integral_gauss_legendre_rule().
  */
 static gdouble _nc_galaxy_shape_factor_moments_gl64_x[NC_GALAXY_SHAPE_FACTOR_MOMENTS_MOMENT_NNODES];
 static gdouble _nc_galaxy_shape_factor_moments_gl64_w[NC_GALAXY_SHAPE_FACTOR_MOMENTS_MOMENT_NNODES];
@@ -60,13 +60,11 @@ static void _nc_galaxy_shape_factor_moments_gl64_init (void);
 void
 _nc_galaxy_shape_factor_moments_gl_fill (gdouble *x, gdouble *w, const guint n)
 {
-  gsl_integration_glfixed_table *table = gsl_integration_glfixed_table_alloc (n);
-  guint i;
+  const gdouble *gl_x, *gl_w;
 
-  for (i = 0; i < n; i++)
-    gsl_integration_glfixed_point (-1.0, 1.0, i, &x[i], &w[i], table);
-
-  gsl_integration_glfixed_table_free (table);
+  ncm_integral_gauss_legendre_rule (n, &gl_x, &gl_w);
+  memcpy (x, gl_x, sizeof (gdouble) * n);
+  memcpy (w, gl_w, sizeof (gdouble) * n);
 }
 
 /*

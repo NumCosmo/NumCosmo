@@ -468,6 +468,102 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
   return ret;
 }
 
+/* The rules of ncm_integral_gauss_legendre_rule(): at index n, the n nodes then the n weights */
+static GPtrArray *_ncm_integral_gl_rules = NULL;
+
+G_LOCK_DEFINE_STATIC (_ncm_integral_gl_rules);
+
+static gint
+_ncm_integral_gl_cmp (gconstpointer a, gconstpointer b)
+{
+  const gdouble xa = ((const gdouble *) a)[0];
+  const gdouble xb = ((const gdouble *) b)[0];
+
+  return (xa > xb) - (xa < xb);
+}
+
+/**
+ * ncm_integral_gauss_legendre_rule: (skip)
+ * @n: the number of points, at least 1
+ * @x: (out) (transfer none): the nodes on $[-1, 1]$, in ascending order
+ * @w: (out) (transfer none): the weights
+ *
+ * Gets the @n-point Gauss-Legendre rule on $[-1, 1]$, exact for polynomials of degree
+ * $2n - 1$. The rule is the table of GSL when GSL has one for @n (gsl_integration_glfixed),
+ * and otherwise the one of gsl_integration_fixed_legendre, which computes it from the
+ * eigenvalues of the Jacobi matrix: the rules gsl_integration_glfixed_table_alloc()
+ * computes for the other sizes carry errors near $10^{-11}$ from about 48 points. GSL has
+ * tables for n = 2 to 20, 32, 64, 96, 100, 128, 256, 512 and 1024. Measured on the integrals
+ * of $x^k$, $k \leq 2n - 1$, for every n up to 257: at most $1.1 \times 10^{-16}$ with a
+ * table and $6.1 \times 10^{-15}$ without. Each rule is computed once and kept until the
+ * process ends; the call is thread safe.
+ */
+void
+ncm_integral_gauss_legendre_rule (const guint n, const gdouble **x, const gdouble **w)
+{
+  gdouble *rule;
+
+  if (n == 0)
+    g_error ("ncm_integral_gauss_legendre_rule: a rule needs at least one point.");
+
+  G_LOCK (_ncm_integral_gl_rules);
+
+  if (_ncm_integral_gl_rules == NULL)
+    _ncm_integral_gl_rules = g_ptr_array_new ();
+
+  if (_ncm_integral_gl_rules->len <= n)
+    g_ptr_array_set_size (_ncm_integral_gl_rules, n + 1);
+
+  rule = g_ptr_array_index (_ncm_integral_gl_rules, n);
+
+  if (rule == NULL)
+  {
+    gsl_integration_glfixed_table *t = gsl_integration_glfixed_table_alloc (n);
+    gdouble *pairs                   = g_new (gdouble, 2 * n);
+    guint i;
+
+    if (t->precomputed)
+    {
+      for (i = 0; i < n; i++)
+        gsl_integration_glfixed_point (-1.0, 1.0, i, &pairs[2 * i], &pairs[2 * i + 1], t);
+    }
+    else
+    {
+      gsl_integration_fixed_workspace *ws = gsl_integration_fixed_alloc (gsl_integration_fixed_legendre, n, -1.0, 1.0, 0.0, 0.0);
+      const gdouble *fx                   = gsl_integration_fixed_nodes (ws);
+      const gdouble *fw                   = gsl_integration_fixed_weights (ws);
+
+      for (i = 0; i < n; i++)
+      {
+        pairs[2 * i]     = fx[i];
+        pairs[2 * i + 1] = fw[i];
+      }
+
+      gsl_integration_fixed_free (ws);
+    }
+
+    gsl_integration_glfixed_table_free (t);
+
+    qsort (pairs, n, 2 * sizeof (gdouble), &_ncm_integral_gl_cmp);
+
+    rule = g_new (gdouble, 2 * n);
+
+    for (i = 0; i < n; i++)
+    {
+      rule[i]     = pairs[2 * i];
+      rule[n + i] = pairs[2 * i + 1];
+    }
+
+    g_free (pairs);
+    g_ptr_array_index (_ncm_integral_gl_rules, n) = rule;
+  }
+
+  G_UNLOCK (_ncm_integral_gl_rules);
+
+  *x = rule;
+  *w = rule + n;
+}
+
 /**
  * ncm_integral_fixed_new: (skip)
  * @n_nodes: the number of panel edges, at least 2
@@ -491,7 +587,7 @@ ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
   intf->xl        = xl;
   intf->xu        = xu;
 
-  intf->glt = gsl_integration_glfixed_table_alloc (rule_n);
+  ncm_integral_gauss_legendre_rule (rule_n, &intf->gl_x, &intf->gl_w);
 
   return intf;
 }
@@ -506,7 +602,6 @@ void
 ncm_integral_fixed_free (NcmIntegralFixed *intf)
 {
   g_slice_free1 (sizeof (gdouble) * intf->n_nodes * intf->rule_n, intf->int_nodes);
-  gsl_integration_glfixed_table_free (intf->glt);
   g_slice_free (NcmIntegralFixed, intf);
 }
 
@@ -521,44 +616,18 @@ ncm_integral_fixed_free (NcmIntegralFixed *intf)
 void
 ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
 {
-  const gulong r2         = intf->rule_n / 2;
-  const gboolean odd_rule = intf->rule_n & 1;
-  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
   gulong i, j, k = 0;
 
-  if (odd_rule)
+  for (i = 0; i < intf->n_nodes - 1; i++)
   {
-    for (i = 0; i < intf->n_nodes - 1; i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+    const gdouble x0      = intf->xl + delta_x * i;
+    const gdouble x1      = x0 + delta_x;
+    const gdouble x1px0_2 = (x1 + x0) / 2.0;
+    const gdouble x1mx0_2 = (x1 - x0) / 2.0;
 
-      for (j = 1; j < r2 + 1; j++)
-        intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
-
-      intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2) * intf->glt->w[0];
-
-      for (j = 1; j < r2 + 1; j++)
-        intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
-    }
-  }
-  else
-  {
-    for (i = 0; i < intf->n_nodes - 1; i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-
-      for (j = 0; j < r2; j++)
-        intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
-
-      for (j = 0; j < r2; j++)
-        intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
-    }
+    for (j = 0; j < intf->rule_n; j++)
+      intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->gl_x[j]) * intf->gl_w[j];
   }
 }
 
@@ -593,45 +662,19 @@ ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
 gdouble
 ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
 {
-  const gulong r2         = intf->rule_n / 2;
-  const gboolean odd_rule = intf->rule_n & 1;
-  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
-  gdouble res             = 0.0;
+  const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  gdouble res           = 0.0;
   gulong i, j, k = 0;
 
-  if (odd_rule)
+  for (i = 0; i < intf->n_nodes - 1; i++)
   {
-    for (i = 0; i < intf->n_nodes - 1; i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+    const gdouble x0      = intf->xl + delta_x * i;
+    const gdouble x1      = x0 + delta_x;
+    const gdouble x1px0_2 = (x1 + x0) / 2.0;
+    const gdouble x1mx0_2 = (x1 - x0) / 2.0;
 
-      for (j = 1; j < r2 + 1; j++)
-        res += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      res += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
-
-      for (j = 1; j < r2 + 1; j++)
-        res += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-    }
-  }
-  else
-  {
-    for (i = 0; i < intf->n_nodes - 1; i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-
-      for (j = 0; j < r2; j++)
-        res += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-
-      for (j = 0; j < r2; j++)
-        res += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-    }
+    for (j = 0; j < intf->rule_n; j++)
+      res += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->gl_x[j]) * intf->int_nodes[k++];
   }
 
   return res * delta_x * 0.5;
@@ -669,53 +712,27 @@ ncm_integral_fixed_integ_vec_mult (NcmIntegralFixed *intf, const NcmVector *f_at
  * @nodes: the output vector, of length $(n_\mathrm{nodes} - 1)\,r$
  *
  * Computes the nodes into @nodes, in the order of the weights stored by
- * ncm_integral_fixed_calc_nodes().
+ * ncm_integral_fixed_calc_nodes(): panel after panel, ascending in each.
  */
 void
 ncm_integral_fixed_get_nodes (NcmIntegralFixed *intf, NcmVector *nodes)
 {
-  const gulong r2         = intf->rule_n / 2;
-  const gboolean odd_rule = intf->rule_n & 1;
-  const gdouble delta_x   = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
-  const gulong total_n    = (intf->n_nodes - 1) * intf->rule_n;
+  const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
+  const gulong total_n  = (intf->n_nodes - 1) * intf->rule_n;
   gulong i, j, k = 0;
 
   g_assert_nonnull (nodes);
   g_assert_cmpuint (ncm_vector_len (nodes), ==, total_n);
 
-  if (odd_rule)
+  for (i = 0; i < intf->n_nodes - 1; i++)
   {
-    for (i = 0; i < intf->n_nodes - 1; i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
+    const gdouble x0      = intf->xl + delta_x * i;
+    const gdouble x1      = x0 + delta_x;
+    const gdouble x1px0_2 = (x1 + x0) / 2.0;
+    const gdouble x1mx0_2 = (x1 - x0) / 2.0;
 
-      for (j = 1; j < r2 + 1; j++)
-        ncm_vector_set (nodes, k++, x1px0_2 - x1mx0_2 * intf->glt->x[j]);
-
-      ncm_vector_set (nodes, k++, x1px0_2);
-
-      for (j = 1; j < r2 + 1; j++)
-        ncm_vector_set (nodes, k++, x1px0_2 + x1mx0_2 * intf->glt->x[j]);
-    }
-  }
-  else
-  {
-    for (i = 0; i < intf->n_nodes - 1; i++)
-    {
-      const gdouble x0      = intf->xl + delta_x * i;
-      const gdouble x1      = x0 + delta_x;
-      const gdouble x1px0_2 = (x1 + x0) / 2.0;
-      const gdouble x1mx0_2 = (x1 - x0) / 2.0;
-
-      for (j = 0; j < r2; j++)
-        ncm_vector_set (nodes, k++, x1px0_2 - x1mx0_2 * intf->glt->x[j]);
-
-      for (j = 0; j < r2; j++)
-        ncm_vector_set (nodes, k++, x1px0_2 + x1mx0_2 * intf->glt->x[j]);
-    }
+    for (j = 0; j < intf->rule_n; j++)
+      ncm_vector_set (nodes, k++, x1px0_2 + x1mx0_2 * intf->gl_x[j]);
   }
 }
 

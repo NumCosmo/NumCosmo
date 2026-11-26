@@ -1,0 +1,128 @@
+---
+title: The Redshift Integral of a Galaxy
+---
+
+The weak-lensing likelihood of a galaxy behind a cluster at redshift $z_{\rm cl}$
+marginalizes its shape likelihood over the redshift of the source. For a galaxy whose
+redshift density $p(z)$ is defined on $[z_{\rm lo}, z_{\rm hi}]$, the marginal is
+$$
+P = \int_{z_{\rm lo}}^{z_{\rm hi}} p(z)\, F(z)\, \mathrm{d}z,
+$$
+where $p$ is the integrand of the galaxy's [[numcosmo|NcGalaxyRedshiftFactor]] and
+$F(z) = P(\epsilon_{\rm obs} \mid g(z))$ is the shape likelihood at the reduced shear
+$g(z)$ of a source at $z$. A likelihood evaluation computes this integral for every galaxy
+of the catalog, so its cost and its error enter every fit.
+[[numcosmo|NcDataClusterWLFactor]] computes it in one of four ways
+([[numcosmo|NcDataClusterWLFactor:integ-method]]); this page describes `CHEB_WEIGHTS`, which
+integrates $p$ exactly and evaluates $F$ at as few nodes as each galaxy needs.
+
+## The Split at the Lens Redshift
+
+A source in front of the lens is not lensed: for $z \le z_{\rm cl}$ the shear is zero and
+$F(z) = F_0 \equiv P(\epsilon_{\rm obs} \mid 0)$. With $a \equiv \max(z_{\rm lo}, z_{\rm cl})$,
+the marginal is
+$$
+P = F_0\, m_{\rm fg} + B, \qquad m_{\rm fg} \equiv \int_{z_{\rm lo}}^{a} p(z)\,\mathrm{d}z,
+\qquad B \equiv \int_a^{z_{\rm hi}} p(z)\, F(z)\, \mathrm{d}z,
+$$
+where $m_{\rm fg}$ is the mass of $p$ in front of the lens, zero when
+$z_{\rm lo} \ge z_{\rm cl}$, and $B$ is the background integral. The foreground term needs
+$F$ at one redshift. Only $B$ needs a quadrature. On $[a, z_{\rm hi}]$, $F$ is smooth and
+changes fastest just above $z_{\rm cl}$, where $g(z)$ grows from zero.
+
+## Weights That Integrate $p$ Exactly
+
+The background integral is approximated at the $N + 1$ Chebyshev-Lobatto nodes of
+$[a, z_{\rm hi}]$,
+$$
+z_j = \frac{a + z_{\rm hi}}{2} + \frac{z_{\rm hi} - a}{2}\,\cos\frac{\pi j}{N},
+\qquad j = 0, \dots, N,
+$$
+by $B_N = \sum_{j=0}^{N} w_j\, F(z_j)$, with the weights
+$$
+w_j \equiv \int_a^{z_{\rm hi}} p(z)\, \ell_j(z)\, \mathrm{d}z,
+$$
+where $\ell_j$ is the Lagrange polynomial of node $j$. The sum $B_N$ is then the exact
+integral of $p$ times the polynomial $F_N$ of degree $N$ that interpolates $F$ at the nodes,
+and its error is the error of $F_N$ weighted by $p$. The density $p$ itself, with its tails
+and the structure of a tabulated photo-z, enters without quadrature error, and the nodes
+need only resolve $F$.
+
+The weights follow from the Chebyshev moments of $p$ on the background,
+$$
+m_k \equiv \int_a^{z_{\rm hi}} p(z)\, T_k\big(t(z)\big)\, \mathrm{d}z, \qquad
+t(z) \equiv \frac{2z - a - z_{\rm hi}}{z_{\rm hi} - a},
+$$
+where $T_k$ is the Chebyshev polynomial of degree $k$. On the Chebyshev-Lobatto nodes the
+$T_k$ are discretely orthogonal, so each Lagrange polynomial is a Chebyshev series, and its
+integral against $p$ gives
+$$
+w_j = \frac{2\gamma_j}{N} \sum_{k=0}^{N} \gamma_k\, m_k \cos\frac{\pi k j}{N},
+$$
+where $\gamma_0 = \gamma_N = 1/2$ and $\gamma_k = 1$ for $0 < k < N$. The moments up to order
+$N$ determine the $N + 1$ weights, and the weights sum to $m_0$, the background mass of $p$.
+[[numcosmo|nc_galaxy_redshift_factor_cheb_moments]] computes the moments of a galaxy's $p$
+on any interval.
+
+## The Moments of $p$
+
+The moments are computed from a representation of $s \equiv \sqrt{p}$ as Chebyshev panels:
+contiguous intervals on each of which $s$ is a Chebyshev series
+([[numcosmo-math|NcmSpectralPanels]]). On a panel with $N_s$ coefficients, $s^2\,T_k$ is a
+polynomial of degree $2N_s - 2 + k$, which a Gauss-Legendre rule with enough points
+integrates exactly ([[numcosmo-math|ncm_spectral_panels_square_cheb_moments]]). The moments
+are then exact for the panels, and their error is that of the representation of $s$.
+Representing $s$ rather than $p$ keeps $p = s^2$ non-negative, in the tails as well. It also
+needs fewer coefficients, because $s$ is smoother than $p$: the square root of a Gaussian is
+a Gaussian $\sqrt{2}$ times wider.
+
+The panels come from the redshift factor. A tabulated density,
+[[numcosmo|NcGalaxyPzBSplineSqrt]], is already the square of a B-spline $s$ of degree 5.
+With the knots as breakpoints, panels of 9 coefficients reproduce $s$ to rounding, so its
+moments are exact. Any other redshift factor, such as the population times a Gaussian
+photo-z of [[numcosmo|NcGalaxyRedshiftFactorComposed]], evaluates $p$ at any redshift. Its
+panels are built from $\sqrt{p}$ by [[numcosmo-math|NcmSpectralPanelsBuilder]], to the
+relative tolerance [[numcosmo|NcGalaxyRedshiftFactor:cheb-reltol]]. For a photo-z of that
+form, one to three panels gave the moments to rounding, with fewer evaluations of $p$ than an
+adaptive B-spline of $\sqrt{p}$ needs for the same accuracy.
+
+## Nested Levels
+
+The $2^L + 1$ nodes of level $L$ contain the $2^{L-1} + 1$ nodes of level $L - 1$, so a
+higher level reuses every value of $F$ already computed. For each galaxy, the weights of
+levels $L = 2, \dots, 7$ (5 to 129 nodes) are computed once for each $z_{\rm cl}$. At each
+evaluation the levels are taken in order, each evaluating $F$ only at the nodes it adds,
+until
+$$
+|B_L - B_{L-1}| \le \tau\, \big|F_0\, m_{\rm fg} + B_L\big|,
+$$
+where $B_L$ is the background integral of level $L$ and $\tau$ is
+[[numcosmo|NcDataClusterWLFactor:cheb-tol]] (default $10^{-8}$). Each galaxy thus uses the
+level its $F$ needs at the current parameters. On 108 galaxies of the HSC field HWL16a-007 at
+three halo masses, with $\tau = 10^{-8}$, most stopped at level 3 or 4 (9 or 17 nodes), and
+none needed more than level 6. A galaxy that reaches level 7 without meeting the tolerance
+takes $B_7$ and is counted
+([[numcosmo|nc_data_cluster_wl_factor_get_cheb_unconverged_count]]).
+
+The first call to the shape factor evaluates the nodes of level $L_0$,
+[[numcosmo|NcDataClusterWLFactor:cheb-level-min]] (default 2), and the levels from 3 to $L_0$
+are summed on those values. A low $L_0$ suits a shape factor whose nodes each cost the same:
+the interpolants of a prepared catalog, or one integral per node. With the line table of
+[[numcosmo|NcGalaxyShapeFactorSpectral:line-abstol]], a call costs about the same whatever
+its number of nodes, as long as it has enough nodes to build the table; $L_0 = 5$ is then
+about three times faster than 2.
+
+## Cost and Accuracy
+
+On the catalog HWL16a-007, the method `FIXED_NODES` integrates $p$ on 45 fixed nodes, and
+its $-2\ln L$ differs from the converged value by about $5\times10^{-4}$. The method
+`CHEB_WEIGHTS` with the default [[numcosmo|NcDataClusterWLFactor:cheb-tol]] agrees with the
+converged value within $10^{-9}$. It evaluates the shape factor at 13 to 19 nodes per galaxy
+on average for $\log_{10} M_{200c}$ from 13 to 16, instead of 45. With interpolants it is
+about 1.5 times faster than `FIXED_NODES`, and with one integral per node about 2.8 times
+faster. With the line table both methods take the same time within ten percent. The moments
+of the 10,706 galaxies take about 0.85 s on 10 threads (7.2 s on one), against 0.16 s for the
+fixed nodes. Each galaxy's $p(z)$ keeps its moments, so a new cluster redshift computes again
+only those of the galaxies whose range contains it. The benchmark page
+[Shape marginal against certified values](../../../../benchmarks/wl_shape_marginal.qmd)
+lists the measured times.
