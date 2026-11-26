@@ -49,6 +49,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 /*
  * Largest |ln P - ln P_Arb| accepted at the default reltol (1e-5). The largest difference
  * measured is 6.9e-9, on the 20,062 certified points of the certification grid with
@@ -1076,7 +1079,7 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_range (TestNcGalaxyShapeFactorSp
     for (l = columns; l != NULL; l = l->next)
       names[i++] = g_strdup (l->data);
 
-    obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 1, names);
+    obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 1, names, test_double_cols, g_strv_length (names));
     nc_galaxy_shape_factor_data_write_row (data_r, obs, 0);
     nc_galaxy_shape_factor_spectral_set_obs_source (gsfs_r, test->pop, obs);
     g_strfreev (names);
@@ -1383,7 +1386,7 @@ _test_obs_prepared_new (TestNcGalaxyShapeFactorSpectral *test, NcGalaxyShapeFact
   for (l = columns; l != NULL; l = l->next)
     col_names[i++] = g_strdup (l->data);
 
-  obs = nc_galaxy_wl_obs_new (nc_galaxy_shape_factor_get_ellip_conv (gsf), NC_WL_ELLIPTICITY_FRAME_CELESTIAL, data_array->len, col_names);
+  obs = nc_galaxy_wl_obs_new (nc_galaxy_shape_factor_get_ellip_conv (gsf), NC_WL_ELLIPTICITY_FRAME_CELESTIAL, data_array->len, col_names, test_double_cols, g_strv_length (col_names));
 
   for (i = 0; i < data_array->len; i++)
   {
@@ -1472,7 +1475,7 @@ test_nc_galaxy_shape_factor_spectral_interp_obs (TestNcGalaxyShapeFactorSpectral
   g_ptr_array_unref (data_array);
 
   /* A change of a row: no interpolant is loaded, and no galaxy builds one: each takes the integral */
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_M, 2, 0.0, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_M, 2, 0.0, NULL);
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs, 0));
   data_array = _test_obs_read (test, gsf_r, obs);
 

@@ -214,7 +214,11 @@ def test_ldata_read_row_native_e_rms():
     """A catalog with the current 'e_rms' column reads it directly -- no
     legacy fallback, no warning."""
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, ["e_rms"]
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["e_rms"],
+        [Ncm.CatalogColType.DOUBLE],
     )
     obs.set("e_rms", 0, 0.31)
 
@@ -238,7 +242,7 @@ def test_ldata_read_row_legacy_std_shape_fallback():
         "Ncm.cfg_init()\n"
         "obs = Nc.GalaxyWLObs.new(\n"
         "    Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1,\n"
-        "    ['std_shape'],\n"
+        "    ['std_shape'], [Ncm.CatalogColType.DOUBLE],\n"
         ")\n"
         "obs.set('std_shape', 0, 0.28)\n"
         "pop = Nc.GalaxyShapePopGaussLocal.new()\n"
@@ -269,7 +273,7 @@ def test_ldata_read_row_no_e_rms_or_legacy_column_errors():
         "Ncm.cfg_init()\n"
         "obs = Nc.GalaxyWLObs.new(\n"
         "    Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1,\n"
-        "    ['ra'],\n"
+        "    ['ra'], [Ncm.CatalogColType.DOUBLE],\n"
         ")\n"
         "obs.set('ra', 0, 0.0)\n"
         "pop = Nc.GalaxyShapePopGaussLocal.new()\n"

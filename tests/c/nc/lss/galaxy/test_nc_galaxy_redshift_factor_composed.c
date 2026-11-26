@@ -33,6 +33,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 /* The highest order of the moments, and the panels and points of the reference rule */
 #define TEST_MOM_N 32
 #define TEST_REF_PANELS 4000
@@ -197,10 +200,10 @@ _test_composed_setup (const TestComposedCase *tc, NcGalaxyRedshiftFactor **gsdr,
     g_strv_builder_add (builder, l->data);
 
   cols  = g_strv_builder_end (builder);
-  wlobs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 1, cols);
-  nc_galaxy_wl_obs_set (wlobs, "z", 0, 0.0, NULL);
-  nc_galaxy_wl_obs_set (wlobs, "zp", 0, tc->zp, NULL);
-  nc_galaxy_wl_obs_set (wlobs, "sigma0", 0, tc->sigma0, NULL);
+  wlobs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 1, cols, test_double_cols, g_strv_length (cols));
+  ncm_catalog_set (NCM_CATALOG (wlobs), "z", 0, 0.0, NULL);
+  ncm_catalog_set (NCM_CATALOG (wlobs), "zp", 0, tc->zp, NULL);
+  ncm_catalog_set (NCM_CATALOG (wlobs), "sigma0", 0, tc->sigma0, NULL);
   nc_galaxy_redshift_factor_data_read_row (*data, wlobs, 0);
   nc_galaxy_redshift_factor_prepare (*gsdr, *mset);
 

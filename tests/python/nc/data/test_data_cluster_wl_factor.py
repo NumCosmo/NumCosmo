@@ -71,7 +71,9 @@ def _build_factors_and_obs():
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, 1, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, 1, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     obs.set("ra", 0, 0.03)
     obs.set("dec", 0, 0.02)
     obs.set("z", 0, 0.0)
@@ -121,7 +123,9 @@ def _build_multi_galaxy_setup(n):
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, n, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
 
     # Distinct galaxies (varying ra/dec/zp/ellipticity), matching
     # test_data_cluster_wl_factor_parity.py's own known-good _GALAXIES
@@ -386,7 +390,9 @@ def _build_mc_fit(n_gal=60):
     s_data0 = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data0, z_data0)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data0)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n_gal, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, n_gal, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     for i in range(n_gal):
         for c in cols:
             obs.set(c, i, 0.0)
@@ -616,7 +622,9 @@ def _build_probe_setup(galaxies, *, z_cl=0.2, sigma_int=0.3, log10m=14.0):
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(galaxies), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(galaxies), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     for i, (ra, dec, zp, sigma0, e1, e2, std_noise) in enumerate(galaxies):
         for col in cols:
             obs.set(col, i, 0.0)

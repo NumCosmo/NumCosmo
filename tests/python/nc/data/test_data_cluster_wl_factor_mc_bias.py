@@ -137,7 +137,11 @@ def _build(integ_method=Nc.DataClusterWLIntegMethod.LNINT):
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data0)
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, N_GAL, cols
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        N_GAL,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     for i in range(N_GAL):
         for c in cols:

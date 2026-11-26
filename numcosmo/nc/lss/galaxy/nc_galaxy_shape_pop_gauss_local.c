@@ -141,18 +141,18 @@ _nc_galaxy_shape_pop_gauss_local_ldata_read_row (NcGalaxyShapePopData *data, NcG
       warned = TRUE;
     }
 
-    data->e_rms = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS_LEGACY, i, NULL);
+    data->e_rms = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS_LEGACY, i, NULL);
 
     return;
   }
 
-  data->e_rms = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i, NULL);
+  data->e_rms = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i, NULL);
 }
 
 static void
 _nc_galaxy_shape_pop_gauss_local_ldata_write_row (NcGalaxyShapePopData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i, data->e_rms, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS, i, data->e_rms, NULL);
 }
 
 static void

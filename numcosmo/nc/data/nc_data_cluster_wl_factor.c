@@ -556,7 +556,7 @@ _nc_data_cluster_wl_factor_n_rows (NcDataClusterWLFactorPrivate *self)
   if (self->mask != NULL)
     return self->mask->len;
 
-  return (self->obs != NULL) ? nc_galaxy_wl_obs_len (self->obs) : 0;
+  return (self->obs != NULL) ? ncm_catalog_len (NCM_CATALOG (self->obs)) : 0;
 }
 
 /* The row of obs of galaxy gal_i */
@@ -570,9 +570,9 @@ _nc_data_cluster_wl_factor_row (NcDataClusterWLFactorPrivate *self, const guint 
 static void
 _nc_data_cluster_wl_factor_check_mask (NcDataClusterWLFactorPrivate *self)
 {
-  if ((self->keep != NULL) && (self->obs != NULL) && (self->keep->len != nc_galaxy_wl_obs_len (self->obs)))
+  if ((self->keep != NULL) && (self->obs != NULL) && (self->keep->len != ncm_catalog_len (NCM_CATALOG (self->obs))))
     g_error ("nc_data_cluster_wl_factor: the mask has %u entries, but the catalog has %u rows.",
-             self->keep->len, nc_galaxy_wl_obs_len (self->obs));
+             self->keep->len, ncm_catalog_len (NCM_CATALOG (self->obs)));
 }
 
 /* The view of galaxy gal_i's nodes in its row of the grid: the anchor z_lo and its nodes */
@@ -916,23 +916,63 @@ _shared_obs_owner_clear (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *obs)
 
 /*
  * Replaces @obs by a copy of its columns that references its p(z) objects.
- * The columns are the rows resample() writes (about 100 bytes per galaxy);
- * the p(z) objects are most of the catalog and are only read, so they are
- * added with nc_galaxy_wl_obs_set_pz(), which references them.
+ * The columns, of the same names and types, are the rows resample() writes
+ * (about 100 bytes per galaxy); the p(z) objects are most of the catalog and
+ * are only read, so they are added with nc_galaxy_wl_obs_set_pz(), which
+ * references them. The NcmCatalog calls get a NULL error: the columns come
+ * from @obs itself, so a failure aborts.
  */
 static void
 _obs_make_private (NcDataClusterWLFactorPrivate *self)
 {
-  NcGalaxyWLObs *shared = self->obs;
-  const guint len       = nc_galaxy_wl_obs_len (shared);
-  NcGalaxyWLObs *copy   = nc_galaxy_wl_obs_new (nc_galaxy_wl_obs_get_ellip_conv (shared),
-                                                nc_galaxy_wl_obs_get_coord (shared),
-                                                len,
-                                                nc_galaxy_wl_obs_peek_columns (shared));
+  NcGalaxyWLObs *shared  = self->obs;
+  NcmCatalog *shared_cat = NCM_CATALOG (shared);
+  const guint len        = ncm_catalog_len (shared_cat);
+  GStrv columns          = ncm_catalog_peek_columns (shared_cat);
+  const guint ncols      = g_strv_length (columns);
+  GArray *types          = g_array_sized_new (FALSE, FALSE, sizeof (NcmCatalogColType), ncols);
+  NcGalaxyWLObs *copy;
+  NcmCatalog *copy_cat;
   guint i;
 
-  ncm_matrix_memcpy (nc_galaxy_wl_obs_peek_data (copy), nc_galaxy_wl_obs_peek_data (shared));
-  ncm_catalog_mark_outdated (NCM_CATALOG (copy));
+  for (i = 0; i < ncols; i++)
+  {
+    const NcmCatalogColType t = ncm_catalog_get_col_type (shared_cat, columns[i], NULL);
+
+    g_array_append_val (types, t);
+  }
+
+  copy = nc_galaxy_wl_obs_new (nc_galaxy_wl_obs_get_ellip_conv (shared),
+                               nc_galaxy_wl_obs_get_coord (shared),
+                               len, columns,
+                               (const NcmCatalogColType *) types->data, ncols);
+  copy_cat = NCM_CATALOG (copy);
+
+  ncm_matrix_memcpy (ncm_catalog_peek_data (copy_cat), ncm_catalog_peek_data (shared_cat));
+
+  for (i = 0; i < ncols; i++)
+  {
+    GArray *vals = NULL;
+
+    switch (g_array_index (types, NcmCatalogColType, i))
+    {
+      case NCM_CATALOG_COL_TYPE_INT:
+        ncm_catalog_get_int_column (shared_cat, columns[i], &vals, NULL);
+        ncm_catalog_set_int_column (copy_cat, columns[i], vals, NULL);
+        break;
+      case NCM_CATALOG_COL_TYPE_BOOL:
+        ncm_catalog_get_bool_column (shared_cat, columns[i], &vals, NULL);
+        ncm_catalog_set_bool_column (copy_cat, columns[i], vals, NULL);
+        break;
+      default:
+        break;
+    }
+
+    g_clear_pointer (&vals, g_array_unref);
+  }
+
+  ncm_catalog_mark_outdated (copy_cat);
+  g_array_unref (types);
 
   for (i = 0; i < len; i++)
   {
@@ -2406,9 +2446,9 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
   gsfs = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor);
   nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
 
-  if (nc_galaxy_wl_obs_len (obs) != nc_galaxy_wl_obs_len (self->obs))
+  if (ncm_catalog_len (NCM_CATALOG (obs)) != ncm_catalog_len (NCM_CATALOG (self->obs)))
     g_error ("nc_data_cluster_wl_factor_write_shape_interp: the catalog has %u rows, that of the dataset %u.",
-             nc_galaxy_wl_obs_len (obs), nc_galaxy_wl_obs_len (self->obs));
+             ncm_catalog_len (NCM_CATALOG (obs)), ncm_catalog_len (NCM_CATALOG (self->obs)));
 
   #pragma omp parallel for schedule(dynamic, 1) if (!omp_in_parallel ())
 
@@ -2519,9 +2559,9 @@ nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf,
   gsfs = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (self->shape_factor);
   nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
 
-  if (nc_galaxy_wl_obs_len (obs) != self->shape_data->len)
+  if (ncm_catalog_len (NCM_CATALOG (obs)) != self->shape_data->len)
     g_error ("nc_data_cluster_wl_factor_write_shape_interp_file: the catalog has %u rows, the dataset %u galaxies.",
-             nc_galaxy_wl_obs_len (obs), self->shape_data->len);
+             ncm_catalog_len (NCM_CATALOG (obs)), self->shape_data->len);
 
   si = nc_galaxy_wl_obs_shape_interp_create_empty (filename, NULL);
 

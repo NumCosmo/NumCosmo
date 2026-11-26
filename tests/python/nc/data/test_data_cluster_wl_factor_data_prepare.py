@@ -140,7 +140,9 @@ def _build(
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n_gal, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, n_gal, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     ra, dec, zp, sigma0, e1, e2, std_noise = _galaxies(n_gal)
     values = {
         "ra": ra,

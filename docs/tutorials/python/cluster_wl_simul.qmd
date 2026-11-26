@@ -224,6 +224,7 @@ obs = Nc.GalaxyWLObs.new(
     Nc.WLEllipticityFrame.CELESTIAL,
     n_galaxies,
     cols,
+    [Ncm.CatalogColType.DOUBLE] * len(cols),
 )
 
 for i in range(n_galaxies):
@@ -359,6 +360,7 @@ def gen_galaxies(halo_ra: float, halo_dec: float, halo_mass: float) -> pd.DataFr
         Nc.WLEllipticityFrame.CELESTIAL,
         n_galaxies,
         cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
 
     for i in range(n_galaxies):

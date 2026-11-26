@@ -123,7 +123,13 @@ def test_wl_likelihood() -> None:
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(ellip_conv, ellip_frame, n_galaxies, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ellip_conv,
+        ellip_frame,
+        n_galaxies,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
+    )
 
     for i in range(n_galaxies):
         for c in cols:

@@ -55,6 +55,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 #define TRUTH_NROWS (14)
 #define TRUTH_Z_CL (0.5)
 #define TRUTH_PREC (1.0e-6)
@@ -214,7 +217,7 @@ _truth_gen_redshift (const gchar *redshift, NcGalaxyRedshiftFactor *z_dist, NcmM
      * error) -- a real trap for any caller driving Composed generatively. */
     const gdouble sigma0 = ncm_rng_uniform_gen (rng, 0.02, 0.06);
 
-    nc_galaxy_wl_obs_set (obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0, NULL);
     nc_galaxy_redshift_factor_data_read_row (z_data, obs, i);
     nc_galaxy_redshift_factor_gen (z_dist, mset, z_data, rng);
   }
@@ -366,7 +369,7 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
     g_strv_builder_add (builder, l->data);
 
   columns_strv = g_strv_builder_end (builder);
-  obs          = nc_galaxy_wl_obs_new (ec, co, cfg->nrows, columns_strv);
+  obs          = nc_galaxy_wl_obs_new (ec, co, cfg->nrows, columns_strv, test_double_cols, g_strv_length (columns_strv));
 
   for (i = 0; i < cfg->nrows; i++)
   {

@@ -34,6 +34,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 void test_ncm_data_basic (void);
 void test_ncm_data_funnel_basic (void);
 void test_ncm_data_gaussmix2d_basic (void);
@@ -1243,7 +1246,7 @@ void
 test_nc_galaxy_wl_obs_basic (void)
 {
   GStrv names        = g_strsplit ("e1 e2 ra dec z sz", " ", -1);
-  NcGalaxyWLObs *gwl = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 100, names);
+  NcGalaxyWLObs *gwl = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 100, names, test_double_cols, g_strv_length (names));
   NcGalaxyWLObs *gwl2;
 
   g_assert_true (gwl != NULL);
