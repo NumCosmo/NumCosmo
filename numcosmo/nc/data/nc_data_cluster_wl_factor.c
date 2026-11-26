@@ -1885,8 +1885,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
 
   {
-    const guint n_gal       = self->shape_data->len;
-    const gboolean parallel = self->force_data_prepare;
+    const guint n_gal = self->shape_data->len;
+
+    /* A CHEB_WEIGHTS grid build computes the moments of every galaxy, once per z_cl: it runs
+     * in parallel in any prepare() */
+    const gboolean cheb_build = (self->integ_method == NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS) &&
+                                fixed_grid_changed && !grid_adopted;
+    const gboolean parallel = self->force_data_prepare || cheb_build;
     guint gal_i;
 
     self->calib_unconverged  = 0;
@@ -1920,15 +1925,16 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
       }
     }
 
-    /* Parallel loop over the remaining galaxies, only from
-     * nc_data_cluster_wl_factor_data_prepare(). Every position, redshift and
-     * shape factor supports this: their per-galaxy methods write only the
-     * galaxy's own data (see the thread safety note of #NcGalaxyShapeFactor,
-     * #NcGalaxyPositionFactor and #NcGalaxyRedshiftFactor). Each galaxy
-     * writes only its own slots of the per-galaxy arrays, sized before this
-     * loop, and the calibration statistics are written under calib_stats.
-     * The per-cycle prepare() of a fit is serial: it runs inside the
-     * sampler's own threads, where a nested region adds only overhead. */
+    /* Parallel loop over the remaining galaxies, from
+     * nc_data_cluster_wl_factor_data_prepare() or a CHEB_WEIGHTS grid build.
+     * Every position, redshift and shape factor supports this: their
+     * per-galaxy methods write only the galaxy's own data (see the thread
+     * safety note of #NcGalaxyShapeFactor, #NcGalaxyPositionFactor and
+     * #NcGalaxyRedshiftFactor). Each galaxy writes only its own slots of the
+     * per-galaxy arrays, sized before this loop, and the calibration
+     * statistics are written under calib_stats. Any other per-cycle prepare()
+     * of a fit is serial: it runs inside the sampler's own threads, where a
+     * nested region adds only overhead. */
     if (parallel && (gal_i < n_gal))
     {
       const gint first = (gint) gal_i;

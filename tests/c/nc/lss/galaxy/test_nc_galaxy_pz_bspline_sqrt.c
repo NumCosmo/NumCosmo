@@ -101,6 +101,51 @@ test_nc_galaxy_pz_no_moments_class_init (TestNcGalaxyPzNoMomentsClass *klass)
   NC_GALAXY_PZ_CLASS (klass)->get_range = &_test_nc_galaxy_pz_no_moments_get_range;
 }
 
+/* A subclass whose moments are m_k = a + 10 b + 100 k, counting the calls that compute them */
+#define TEST_TYPE_NC_GALAXY_PZ_COUNT (test_nc_galaxy_pz_count_get_type ())
+
+G_DECLARE_FINAL_TYPE (TestNcGalaxyPzCount, test_nc_galaxy_pz_count, TEST, NC_GALAXY_PZ_COUNT, NcGalaxyPz)
+
+struct _TestNcGalaxyPzCount
+{
+  NcGalaxyPz parent_instance;
+  gint n_calls;
+};
+
+G_DEFINE_TYPE (TestNcGalaxyPzCount, test_nc_galaxy_pz_count, NC_TYPE_GALAXY_PZ)
+
+/* Concurrent requests of one interval, and the moments each thread received */
+typedef struct _TestNcGalaxyPzCountThread
+{
+  NcGalaxyPz *gpz;
+  GArray *moments;
+} TestNcGalaxyPzCountThread;
+
+static void
+_test_nc_galaxy_pz_count_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments)
+{
+  guint k;
+
+  g_atomic_int_inc (&TEST_NC_GALAXY_PZ_COUNT (gpz)->n_calls);
+  g_usleep (1000);
+
+  for (k = 0; k <= n; k++)
+    g_array_index (moments, gdouble, k) = a + 10.0 * b + 100.0 * k;
+}
+
+static void
+test_nc_galaxy_pz_count_init (TestNcGalaxyPzCount *gpz)
+{
+  gpz->n_calls = 0;
+}
+
+static void
+test_nc_galaxy_pz_count_class_init (TestNcGalaxyPzCountClass *klass)
+{
+  NC_GALAXY_PZ_CLASS (klass)->get_range    = &_test_nc_galaxy_pz_no_moments_get_range;
+  NC_GALAXY_PZ_CLASS (klass)->cheb_moments = &_test_nc_galaxy_pz_count_cheb_moments;
+}
+
 void test_nc_galaxy_pz_bspline_sqrt_new (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
 void test_nc_galaxy_pz_bspline_sqrt_free (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
 
@@ -130,6 +175,8 @@ void test_nc_galaxy_pz_bspline_sqrt_moments_empty (void);
 void test_nc_galaxy_pz_bspline_sqrt_moments_empty_subprocess (void);
 void test_nc_galaxy_pz_bspline_sqrt_moments_missing (void);
 void test_nc_galaxy_pz_bspline_sqrt_moments_missing_subprocess (void);
+void test_nc_galaxy_pz_bspline_sqrt_moments_cache (void);
+void test_nc_galaxy_pz_bspline_sqrt_moments_cache_threads (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -190,8 +237,33 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy_pz_bspline_sqrt/moments/empty/subprocess", &test_nc_galaxy_pz_bspline_sqrt_moments_empty_subprocess);
   g_test_add_func ("/nc/galaxy_pz_bspline_sqrt/moments/missing", &test_nc_galaxy_pz_bspline_sqrt_moments_missing);
   g_test_add_func ("/nc/galaxy_pz_bspline_sqrt/moments/missing/subprocess", &test_nc_galaxy_pz_bspline_sqrt_moments_missing_subprocess);
+  g_test_add_func ("/nc/galaxy_pz_bspline_sqrt/moments/cache", &test_nc_galaxy_pz_bspline_sqrt_moments_cache);
+  g_test_add_func ("/nc/galaxy_pz_bspline_sqrt/moments/cache/threads", &test_nc_galaxy_pz_bspline_sqrt_moments_cache_threads);
 
   g_test_run ();
+}
+
+/* Asks for the moments of order 0..7 on [0.2, 0.6] */
+static gpointer
+_test_pz_count_thread (gpointer data)
+{
+  TestNcGalaxyPzCountThread *arg = data;
+
+  nc_galaxy_pz_cheb_moments (arg->gpz, 0.2, 0.6, 7, &arg->moments);
+
+  return NULL;
+}
+
+/* Asserts that @m holds the moments of the counting subclass of order 0..n on [a, b] */
+static void
+_test_pz_count_assert (GArray *m, const gdouble a, const gdouble b, const guint n)
+{
+  guint k;
+
+  g_assert_cmpuint (m->len, ==, n + 1);
+
+  for (k = 0; k <= n; k++)
+    g_assert_cmpfloat (g_array_index (m, gdouble, k), ==, a + 10.0 * b + 100.0 * k);
 }
 
 /* The Gaussian of the table at z */
@@ -686,5 +758,75 @@ test_nc_galaxy_pz_bspline_sqrt_moments_missing_subprocess (void)
   GArray *m = NULL;
 
   nc_galaxy_pz_cheb_moments (NC_GALAXY_PZ (g_object_new (TEST_TYPE_NC_GALAXY_PZ_NO_MOMENTS, NULL)), 0.2, 0.4, 2, &m);
+}
+
+/*
+ * The cache: a repeated interval and order is copied, not computed; another order is a new
+ * entry; beyond NC_GALAXY_PZ_CHEB_CACHE_LEN entries the oldest is dropped and computed again
+ * when asked, the newest is kept. A reused array of another length is resized.
+ */
+void
+test_nc_galaxy_pz_bspline_sqrt_moments_cache (void)
+{
+  TestNcGalaxyPzCount *count = g_object_new (TEST_TYPE_NC_GALAXY_PZ_COUNT, NULL);
+  NcGalaxyPz *gpz            = NC_GALAXY_PZ (count);
+  GArray *m                  = NULL;
+  gint n_calls;
+  guint i;
+
+  nc_galaxy_pz_cheb_moments (gpz, 0.1, 0.9, 3, &m);
+  nc_galaxy_pz_cheb_moments (gpz, 0.1, 0.9, 3, &m);
+  g_assert_cmpint (count->n_calls, ==, 1);
+  _test_pz_count_assert (m, 0.1, 0.9, 3);
+
+  nc_galaxy_pz_cheb_moments (gpz, 0.1, 0.9, 5, &m);
+  g_assert_cmpint (count->n_calls, ==, 2);
+  _test_pz_count_assert (m, 0.1, 0.9, 5);
+
+  nc_galaxy_pz_cheb_moments (gpz, 0.1, 0.9, 0, &m);
+  g_assert_cmpint (count->n_calls, ==, 3);
+  _test_pz_count_assert (m, 0.1, 0.9, 0);
+
+  /* NC_GALAXY_PZ_CHEB_CACHE_LEN new lower ends drop the three entries of [0.1, 0.9] */
+  for (i = 0; i < NC_GALAXY_PZ_CHEB_CACHE_LEN; i++)
+    nc_galaxy_pz_cheb_moments (gpz, 0.2 + 0.1 * i, 0.9, 3, &m);
+
+  n_calls = count->n_calls;
+  nc_galaxy_pz_cheb_moments (gpz, 0.2 + 0.1 * (NC_GALAXY_PZ_CHEB_CACHE_LEN - 1), 0.9, 3, &m);
+  g_assert_cmpint (count->n_calls, ==, n_calls);
+
+  nc_galaxy_pz_cheb_moments (gpz, 0.1, 0.9, 3, &m);
+  g_assert_cmpint (count->n_calls, ==, n_calls + 1);
+  _test_pz_count_assert (m, 0.1, 0.9, 3);
+
+  g_array_unref (m);
+  nc_galaxy_pz_free (gpz);
+}
+
+/* Eight threads ask at once for one interval: it is computed once and every thread receives it */
+void
+test_nc_galaxy_pz_bspline_sqrt_moments_cache_threads (void)
+{
+  TestNcGalaxyPzCount *count = g_object_new (TEST_TYPE_NC_GALAXY_PZ_COUNT, NULL);
+  TestNcGalaxyPzCountThread args[8];
+  GThread *threads[8];
+  guint i;
+
+  for (i = 0; i < 8; i++)
+  {
+    args[i].gpz     = NC_GALAXY_PZ (count);
+    args[i].moments = NULL;
+    threads[i]      = g_thread_new ("pz_cache", &_test_pz_count_thread, &args[i]);
+  }
+
+  for (i = 0; i < 8; i++)
+  {
+    g_thread_join (threads[i]);
+    _test_pz_count_assert (args[i].moments, 0.2, 0.6, 7);
+    g_array_unref (args[i].moments);
+  }
+
+  g_assert_cmpint (count->n_calls, ==, 1);
+  nc_galaxy_pz_free (NC_GALAXY_PZ (count));
 }
 

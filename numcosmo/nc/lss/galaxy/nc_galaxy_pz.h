@@ -53,6 +53,13 @@ struct _NcGalaxyPzClass
   gpointer padding[12];
 };
 
+/**
+ * NC_GALAXY_PZ_CHEB_CACHE_LEN:
+ *
+ * Number of sets of moments a #NcGalaxyPz keeps (nc_galaxy_pz_cheb_moments()).
+ */
+#define NC_GALAXY_PZ_CHEB_CACHE_LEN (4)
+
 NcGalaxyPz *nc_galaxy_pz_ref (NcGalaxyPz *gpz);
 void nc_galaxy_pz_free (NcGalaxyPz *gpz);
 void nc_galaxy_pz_clear (NcGalaxyPz **gpz);
