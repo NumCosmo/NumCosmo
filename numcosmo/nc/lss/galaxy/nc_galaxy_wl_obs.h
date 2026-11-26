@@ -41,6 +41,7 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_pz.h>
 #include <numcosmo/ncm/algebra/ncm_spectral_tensor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs_shape_interp.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs_cheb_grid.h>
 #include <numcosmo/ncm/model/ncm_mset.h>
 #include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
 
@@ -172,6 +173,8 @@ void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSp
 NcmSpectralTensor *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);
 void nc_galaxy_wl_obs_set_shape_interp_source (NcGalaxyWLObs *obs, NcmObjDictStr *source);
 NcmObjDictStr *nc_galaxy_wl_obs_peek_shape_interp_source (NcGalaxyWLObs *obs);
+void nc_galaxy_wl_obs_set_cheb_grid (NcGalaxyWLObs *obs, NcGalaxyWLObsChebGrid *grid);
+NcGalaxyWLObsChebGrid *nc_galaxy_wl_obs_peek_cheb_grid (NcGalaxyWLObs *obs);
 
 GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
 NcmMatrix *nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs);

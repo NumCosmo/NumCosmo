@@ -31,9 +31,10 @@ from rich.console import Console
 
 from numcosmo_py import Nc, Ncm
 from numcosmo_py.experiments.cluster_wl import (
-    DEFAULT_INTEG_OPTIONS,
     GalaxyPopGen,
     GalaxyShapeFactorGenSpectral,
+    IntegMethod,
+    IntegMethodOptions,
     ShapeFactorGen,
     WLCatalogID,
     check_shape_pop_compat,
@@ -55,48 +56,77 @@ def shape_interp_tables_path(output: Path) -> Path:
 
 
 @dataclasses.dataclass(kw_only=True)
-class ShapeInterpWLCatalog:
-    """Write a catalog with the interpolants of ln P(eps_obs | g) of its galaxies.
+class TablesWLCatalog:
+    """Write a catalog with tables of its galaxies.
 
-    Reads a NcGalaxyWLObs (--catalog or --data-file), builds the interpolant of
-    every galaxy for the population --pop-dist with the
-    NcGalaxyShapeFactorSpectral of --shape-factor, in parallel with
-    OMP_NUM_THREADS threads, writes the interpolants to the file OUTPUT with
-    the suffix ``.shape_interp.gvar`` in place of ``.gvar``, and writes to
-    OUTPUT the catalog with the record of what built them and the name of
-    that file. The rows are unchanged. The interpolants are built only here:
-    ``numcosmo generate cluster-wl-load --data-file OUTPUT`` builds an
-    experiment that uses them, with the shape factor and the population of
-    the record, and a fit never builds them. The catalog and the experiment
-    store the bare name of the interpolants file, so the experiment must be
-    written in its directory, and the two files move together.
-    Without --free-pop the population parameters are fixed and the interpolants
-    hold for their values only. With --free-pop every population parameter is
-    one more variable of the interpolants, over its bounds: an experiment built
-    from OUTPUT may fit it (--parameter-list) or hold it fixed at any value in
-    its range.
+    Reads a NcGalaxyWLObs (--catalog or --data-file), builds the tables chosen, at
+    least one, in parallel with OMP_NUM_THREADS threads, and writes the catalog with
+    them to OUTPUT. The rows are unchanged. The two tables are independent: a catalog
+    may hold either or both, and one call builds both from one reading of the catalog.
+
+    --cheb-grid builds the CHEB_WEIGHTS redshift grid of every galaxy for the cluster
+    redshift of the catalog metadata or --cluster-z (NcGalaxyWLObs:cheb-grid), stored
+    in OUTPUT. It depends only on the p(z) of the galaxies, their integration limits
+    and the cluster redshift. A dataset under ``--integ-method cheb-weights`` takes it
+    from the catalog instead of building it, and every copy made by a sampler shares
+    it; a dataset with another cluster redshift aborts.
+
+    --shape-interp builds the interpolant of ln P(eps_obs | g) of every galaxy for the
+    population --pop-dist with the NcGalaxyShapeFactorSpectral of --shape-factor,
+    writes the interpolants to the file OUTPUT with the suffix ``.shape_interp.gvar``
+    in place of ``.gvar``, and stores in OUTPUT the record of what built them and the
+    name of that file. ``numcosmo generate cluster-wl-load --data-file OUTPUT`` builds
+    an experiment that uses them, with the shape factor and the population of the
+    record, and a fit never builds them. The catalog and the experiment store the bare
+    name of the interpolants file, so the experiment must be written in its directory,
+    and the two files move together. Without --free-pop the population parameters are
+    fixed and the interpolants hold for their values only. With --free-pop every
+    population parameter is one more variable of the interpolants, over its bounds: an
+    experiment built from OUTPUT may fit it (--parameter-list) or hold it fixed at any
+    value in its range.
+
+    Without --shape-interp, a catalog that refers to an interpolants file keeps it, and
+    OUTPUT must be written in the directory of that file.
     """
 
     output: Annotated[
         Path, typer.Argument(help="Path of the catalog to write (.gvar).")
     ]
 
-    pop_dist: Annotated[
-        str,
+    cheb_grid: Annotated[
+        bool,
         typer.Option(
-            help=GalaxyPopGen.get_help_text(),
+            "--cheb-grid",
+            help="Build the CHEB_WEIGHTS redshift grid of the galaxies.",
+            rich_help_panel="Tables",
+        ),
+    ] = False
+
+    shape_interp: Annotated[
+        bool,
+        typer.Option(
+            "--shape-interp",
+            help=("Build the shape interpolants of the galaxies; needs --pop-dist."),
+            rich_help_panel="Tables",
+        ),
+    ] = False
+
+    pop_dist: Annotated[
+        str | None,
+        typer.Option(
+            help=GalaxyPopGen.get_help_text() + " Only with --shape-interp.",
             metavar=GalaxyPopGen.get_help_metavar(),
             rich_help_panel="Galaxy intrinsic-ellipticity population distribution",
         ),
-    ]
+    ] = None
 
     shape_factor: Annotated[
         str | None,
         typer.Option(
             help=(
                 ShapeFactorGen.get_help_text()
-                + " Must be spectral. Default: spectral with the catalog's "
-                "ellipticity convention and frame."
+                + " Must be spectral, only with --shape-interp. Default: spectral "
+                "with the catalog's ellipticity convention and frame."
             ),
             metavar=ShapeFactorGen.get_help_metavar(),
             rich_help_panel="Galaxy shape-marginalization factor",
@@ -144,45 +174,91 @@ class ShapeInterpWLCatalog:
         float | None,
         typer.Option(help="Cluster concentration. Falls back to catalog metadata."),
     ] = None
+
     free_pop: Annotated[
         bool,
         typer.Option(
             help=(
                 "Make every parameter of the population a variable of the "
-                "interpolants, over its bounds, so that a fit may vary it."
+                "interpolants, over its bounds, so that a fit may vary it. Only "
+                "with --shape-interp."
             ),
         ),
     ] = False
 
-    def __post_init__(self) -> None:
-        """Build the interpolants and write the catalog.
-
-        Raises:
-            typer.BadParameter: Invalid output suffix, or a shape factor other
-                than spectral.
-        """
-        Ncm.cfg_init()
-
+    def _check_options(self) -> None:
+        """Reject an invalid output, no table, or options of a table not chosen."""
         if self.output.suffix != ".gvar":
             raise typer.BadParameter(f"Invalid output suffix: {self.output.suffix}")
+        if not (self.cheb_grid or self.shape_interp):
+            raise typer.BadParameter(
+                "choose at least one table: --cheb-grid, --shape-interp"
+            )
+        if self.shape_interp and self.pop_dist is None:
+            raise typer.BadParameter("--shape-interp needs --pop-dist")
+        if not self.shape_interp and (
+            self.pop_dist is not None or self.shape_factor is not None or self.free_pop
+        ):
+            raise typer.BadParameter(
+                "--pop-dist, --shape-factor and --free-pop apply only to --shape-interp"
+            )
 
-        obs = load_wl_obs(self.catalog, self.data_file)
-        # A catalog prepared before carries interpolants; the new ones replace them.
-        obs.set_property("shape-interp", None)
+    def _generators(self, obs: Nc.GalaxyWLObs):
+        """The shape factor and population generators of the dataset."""
+        if not self.shape_interp:
+            # The grid does not depend on the shape factor or the population: the
+            # cheapest pair builds the dataset.
+            _shape_factor, shape_gen = parse_shape_factor(
+                f"var_add "
+                f"ellip_conv={obs.get_ellip_conv().value_nick} "
+                f"ellip_coord={obs.get_coord().value_nick}"
+            )
+            _pop_dist, pop_gen = parse_pop_dist("gauss")
+            return shape_gen, pop_gen
 
-        if self.shape_factor is None:
-            self.shape_factor = (
+        shape_factor = self.shape_factor
+        if shape_factor is None:
+            shape_factor = (
                 f"spectral "
                 f"ellip_conv={obs.get_ellip_conv().value_nick} "
                 f"ellip_coord={obs.get_coord().value_nick}"
             )
-        _shape_factor, shape_gen = parse_shape_factor(self.shape_factor)
+        _shape_factor, shape_gen = parse_shape_factor(shape_factor)
+        assert self.pop_dist is not None
         _pop_dist, pop_gen = parse_pop_dist(self.pop_dist)
 
         if not isinstance(shape_gen, GalaxyShapeFactorGenSpectral):
             raise typer.BadParameter("the shape factor must be spectral")
         check_shape_pop_compat(shape_gen, pop_gen)
+        return shape_gen, pop_gen
 
+    def __post_init__(self) -> None:
+        """Build the tables chosen and write the catalog.
+
+        Raises:
+            typer.BadParameter: Invalid output suffix, no table chosen, options of a
+                table not chosen, a shape factor other than spectral, or an output
+                outside the directory of the interpolants file the catalog keeps.
+        """
+        Ncm.cfg_init()
+        self._check_options()
+
+        obs = load_wl_obs(self.catalog, self.data_file)
+
+        if self.shape_interp:
+            # A catalog prepared before carries interpolants; the new ones replace them.
+            obs.set_property("shape-interp", None)
+        else:
+            shape_interp = obs.get_property("shape-interp")
+            if shape_interp is not None and shape_interp.peek_filename() is not None:
+                tables = Path(shape_interp.peek_filename())
+                if tables.parent != self.output.absolute().parent:
+                    raise typer.BadParameter(
+                        f"the catalog refers to the interpolants file {tables}; "
+                        f"write the output in {tables.parent}"
+                    )
+
+        shape_gen, pop_gen = self._generators(obs)
         exp = load_cluster_wl(
             obs=obs,
             cluster_ra=self.cluster_ra,
@@ -196,7 +272,7 @@ class ShapeInterpWLCatalog:
             r_max=ClusterWL.r_max,
             shape_gen=shape_gen,
             pop_gen=pop_gen,
-            integ_options=DEFAULT_INTEG_OPTIONS,
+            integ_options=IntegMethodOptions(integ_method=IntegMethod.CHEB_WEIGHTS),
             summary=False,
         )
         mset = exp.peek("model-set")
@@ -206,6 +282,32 @@ class ShapeInterpWLCatalog:
         data = likelihood.peek_dataset().get_data(0)
         assert isinstance(data, Nc.DataClusterWLFactor)
 
+        built: list[str] = []
+        if self.shape_interp:
+            built.append(self._write_shape_interp(mset, data, obs, pop_gen))
+        if self.cheb_grid:
+            t_start = time.perf_counter()
+            data.write_cheb_grid(mset, obs)
+            grid = obs.peek_cheb_grid()
+            assert grid is not None
+            built.append(
+                f"Chebyshev grid of {grid.len()} galaxies for z_cl = "
+                f"{grid.get_z_cl()}, built in {time.perf_counter() - t_start:.1f} s"
+            )
+
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        ser.to_binfile(obs, self.output.absolute().as_posix())
+
+        Console().print(f"Wrote {self.output}: " + "; ".join(built) + ".")
+
+    def _write_shape_interp(
+        self,
+        mset: Ncm.MSet,
+        data: Nc.DataClusterWLFactor,
+        obs: Nc.GalaxyWLObs,
+        pop_gen,
+    ) -> str:
+        """Build the interpolants into their file; return the summary of the build."""
         pop = mset.peek(Nc.GalaxyShapePop.id())
         assert isinstance(pop, Nc.GalaxyShapePop)
         free = ""
@@ -226,10 +328,7 @@ class ShapeInterpWLCatalog:
         data.write_shape_interp_file(mset, obs, tables.absolute().as_posix())
         t_build = time.perf_counter() - t_start
 
-        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
-        ser.to_binfile(obs, self.output.absolute().as_posix())
-
-        Console().print(
-            f"Wrote {self.output} and {tables}: interpolants of {obs.len()} "
-            f"galaxies for {pop_gen!r}{free}, built in {t_build:.1f} s."
+        return (
+            f"{tables}, interpolants of {obs.len()} galaxies for {pop_gen!r}{free}, "
+            f"built in {t_build:.1f} s"
         )

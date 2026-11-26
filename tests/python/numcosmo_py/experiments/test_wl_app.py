@@ -27,6 +27,7 @@
 Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 """
 
+import re
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
@@ -1450,6 +1451,57 @@ def test_cluster_wl_load_app_spectral_interp(
     assert factor.props.interp_abstol == pytest.approx(1e-4)
 
 
+def test_cluster_wl_load_app_cheb_weights(experiment_file, real_wl_obs_file_with_meta):
+    """--integ-method cheb-weights, --cheb-tol, --cheb-level-min and the Spectral
+    restrict_range option reach the saved dataset."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--integ-method=cheb-weights",
+            "--cheb-tol=1e-9",
+            "--cheb-level-min=3",
+            "--shape-factor=spectral ellip_conv=trace ellip_coord=celestial "
+            "restrict_range=true",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    factor = cast(Nc.GalaxyShapeFactorSpectral, cluster_data.props.shape_factor)
+
+    assert cluster_data.get_integ_method() == Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
+    assert cluster_data.get_cheb_tol() == pytest.approx(1e-9)
+    assert cluster_data.get_cheb_level_min() == 3
+    assert factor.get_restrict_range()
+
+
+def test_cluster_wl_load_app_bad_parameter_list(
+    experiment_file, real_wl_obs_file_with_meta
+):
+    """A parameter name that is not a full name is a CLI error, not a traceback."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            "--parameter-list=log10MDelta",
+        ],
+    )
+    assert result.exit_code == 2, result.output
+    assert isinstance(result.exception, SystemExit)
+    assert "give the full name" in result.output
+
+
 def test_cluster_wl_load_app_no_metadata_requires_explicit_values(
     experiment_file, real_wl_obs_file
 ):
@@ -1629,22 +1681,28 @@ def _experiment_m2lnL(experiment_file: Path) -> float:
 
 
 def _unwrapped(text: str) -> str:
-    """The text with every run of whitespace, line breaks of the console included, as one space."""
-    return " ".join(text.split())
+    """The text without ANSI color codes (CI forces colors) and with every run of
+    whitespace, line breaks of the console included, as one space."""
+    return " ".join(re.sub(r"\x1b\[[0-9;]*m", "", text).split())
 
 
-def _shape_interp(output: Path, data_file: Path, *args: str):
-    """Run numcosmo wl-catalog shape-interp."""
+def _tables(output: Path, data_file: Path, *args: str):
+    """Run numcosmo wl-catalog tables."""
     return runner.invoke(
         app,
         [
             "wl-catalog",
-            "shape-interp",
+            "tables",
             output.as_posix(),
             f"--data-file={data_file.as_posix()}",
             *args,
         ],
     )
+
+
+def _shape_interp(output: Path, data_file: Path, *args: str):
+    """Run numcosmo wl-catalog tables --shape-interp."""
+    return _tables(output, data_file, "--shape-interp", *args)
 
 
 def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
@@ -1717,6 +1775,122 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
     assert _experiment_m2lnL(exp_prepared) == pytest.approx(
         _experiment_m2lnL(exp_original), rel=0.0, abs=2.0 * 20 * 1.0e-5
     )
+
+
+def _cheb_grid(output: Path, data_file: Path, *args: str):
+    """Run numcosmo wl-catalog tables --cheb-grid."""
+    return _tables(output, data_file, "--cheb-grid", *args)
+
+
+def _cheb_experiment(experiment: Path, data_file: Path) -> float:
+    """Generate a CHEB_WEIGHTS experiment from data_file and return its -2 ln L."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment.as_posix(),
+            f"--data-file={data_file.as_posix()}",
+            "--integ-method=cheb-weights",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return _experiment_m2lnL(experiment)
+
+
+def test_wl_catalog_cheb_grid(tmp_path: Path, real_wl_obs_file_with_meta):
+    """The catalog written by cheb-grid holds the grid for the cluster redshift of its
+    metadata, and a CHEB_WEIGHTS experiment built from it gives the -2 ln L of one built
+    from the original catalog, which builds the grid itself."""
+    with_grid = tmp_path / "with_grid.gvar"
+    result = _cheb_grid(with_grid, real_wl_obs_file_with_meta)
+    assert result.exit_code == 0, result.output
+    assert "Chebyshev grid of 20 galaxies" in _unwrapped(result.output)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    obs = cast(Nc.GalaxyWLObs, ser.from_binfile(with_grid.as_posix()))
+    grid = obs.peek_cheb_grid()
+    assert grid is not None
+    assert grid.len() == obs.len()
+    meta = obs.peek_meta()
+    assert meta is not None
+    assert grid.get_z_cl() == meta.get_double("cluster_z")[1]
+
+    assert _cheb_experiment(tmp_path / "exp_grid.yaml", with_grid) == _cheb_experiment(
+        tmp_path / "exp_original.yaml", real_wl_obs_file_with_meta
+    )
+
+
+def test_wl_catalog_cheb_grid_and_shape_interp(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """The grid and the interpolants are independent: one call builds both, either may be
+    built first, and the catalog keeps both."""
+    pop = "--pop-dist=gauss sigma=0.3"
+
+    both = tmp_path / "both.gvar"
+    result = _tables(
+        both, real_wl_obs_file_with_meta, "--cheb-grid", "--shape-interp", pop
+    )
+    assert result.exit_code == 0, result.output
+    assert "interpolants of 20 galaxies" in _unwrapped(result.output)
+    assert "Chebyshev grid of 20 galaxies" in _unwrapped(result.output)
+
+    interp_first = tmp_path / "interp_first.gvar"
+    both_a = tmp_path / "both_a.gvar"
+    assert _shape_interp(interp_first, real_wl_obs_file_with_meta, pop).exit_code == 0
+    result = _cheb_grid(both_a, interp_first)
+    assert result.exit_code == 0, result.output
+
+    grid_first = tmp_path / "grid_first.gvar"
+    both_b = tmp_path / "both_b.gvar"
+    assert _cheb_grid(grid_first, real_wl_obs_file_with_meta).exit_code == 0
+    result = _shape_interp(both_b, grid_first, pop)
+    assert result.exit_code == 0, result.output
+
+    for path in (both, both_a, both_b):
+        ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+        obs = cast(Nc.GalaxyWLObs, ser.from_binfile(path.as_posix()))
+        assert obs.peek_cheb_grid() is not None, path
+        assert obs.peek_shape_interp_source() is not None, path
+
+
+@pytest.mark.parametrize(
+    "args, message",
+    [
+        ([], "choose at least one table"),
+        (["--cheb-grid", "--pop-dist=gauss sigma=0.3"], "--free-pop apply only to"),
+        (["--cheb-grid", "--free-pop"], "--free-pop apply only to"),
+        (["--shape-interp"], "--shape-interp needs --pop-dist"),
+    ],
+)
+def test_wl_catalog_tables_options(
+    tmp_path: Path, real_wl_obs_file_with_meta, args, message
+):
+    """No table, an option of the interpolants without them, or the interpolants without a
+    population are CLI errors."""
+    result = _tables(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
+    assert result.exit_code == 2, result.output
+    assert message in _unwrapped(result.output)
+
+
+def test_wl_catalog_cheb_grid_other_directory(
+    tmp_path: Path, real_wl_obs_file_with_meta
+):
+    """A catalog that refers to an interpolants file is written only in its directory."""
+    prepared = tmp_path / "prepared.gvar"
+    assert (
+        _shape_interp(
+            prepared, real_wl_obs_file_with_meta, "--pop-dist=gauss sigma=0.3"
+        ).exit_code
+        == 0
+    )
+    other = tmp_path / "other"
+    other.mkdir()
+    result = _cheb_grid(other / "with_grid.gvar", prepared)
+    assert result.exit_code != 0
+    assert "write the output in" in _unwrapped(result.output)
 
 
 _FREE_POP_N_GALAXIES = 4

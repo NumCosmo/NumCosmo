@@ -6063,6 +6063,7 @@ class DataClusterWLFactor(NumCosmoMath.Data):
     def set_prec(self, prec: float) -> None: ...
     def set_resample_flag(self, resample_flag: DataClusterWLResampleFlag) -> None: ...
     def set_rule_n(self, rule_n: int) -> None: ...
+    def write_cheb_grid(self, mset: NumCosmoMath.MSet, obs: GalaxyWLObs) -> None: ...
     def write_shape_interp(self, mset: NumCosmoMath.MSet, obs: GalaxyWLObs) -> None: ...
     def write_shape_interp_file(
         self, mset: NumCosmoMath.MSet, obs: GalaxyWLObs, filename: str
@@ -10752,6 +10753,8 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         Weak lensing observables ellipticity convention
       shape-interp -> NcGalaxyWLObsShapeInterp: Shape interpolants
         Interpolants of ln P in g of the galaxies
+      cheb-grid -> NcGalaxyWLObsChebGrid: Chebyshev grid
+        CHEB_WEIGHTS redshift grid of the galaxies
 
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
@@ -10774,6 +10777,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     """
 
     class Props:
+        cheb_grid: typing.Optional[GalaxyWLObsChebGrid]
         coord: WLEllipticityFrame
         ellip_conv: GalaxyWLObsEllipConv
         pz: NumCosmoMath.ObjDictInt
@@ -10789,6 +10793,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     props: Props = ...
     def __init__(
         self,
+        cheb_grid: typing.Optional[GalaxyWLObsChebGrid] = ...,
         coord: WLEllipticityFrame = ...,
         ellip_conv: GalaxyWLObsEllipConv = ...,
         pz: NumCosmoMath.ObjDictInt = ...,
@@ -10821,6 +10826,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def new_from_catalog_id(cls, id: GalaxyWLObsCatalogId) -> GalaxyWLObs: ...
     @classmethod
     def new_from_file(cls, filename: str) -> GalaxyWLObs: ...
+    def peek_cheb_grid(self) -> typing.Optional[GalaxyWLObsChebGrid]: ...
     def peek_columns(self) -> list[str]: ...
     def peek_data(self) -> NumCosmoMath.Matrix: ...
     def peek_pz(self, i: int) -> typing.Optional[GalaxyPz]: ...
@@ -10830,10 +10836,121 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def peek_shape_interp_source(self) -> typing.Optional[NumCosmoMath.ObjDictStr]: ...
     def ref(self) -> GalaxyWLObs: ...
     def set(self, col: str, i: int, val: float) -> None: ...
+    def set_cheb_grid(
+        self, grid: typing.Optional[GalaxyWLObsChebGrid] = None
+    ) -> None: ...
     def set_coord(self, coord: WLEllipticityFrame) -> None: ...
     def set_pz(self, i: int, pz: GalaxyPz) -> None: ...
     def set_shape_interp(self, i: int, st: NumCosmoMath.SpectralTensor) -> None: ...
     def set_shape_interp_source(self, source: NumCosmoMath.ObjDictStr) -> None: ...
+
+class GalaxyWLObsChebGrid(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLObsChebGrid(**properties)
+        new(len:int, n_weights:int, n_nodes:int, z_cl:float, z_type:str, data_hash:str) -> NumCosmo.GalaxyWLObsChebGrid
+
+    Object NcGalaxyWLObsChebGrid
+
+    Properties from NcGalaxyWLObsChebGrid:
+      len -> guint: Length
+        Number of galaxies
+      n-weights -> guint: Number of weights
+        Number of weights per galaxy
+      n-nodes -> guint: Number of nodes
+        Number of redshift values per galaxy
+      z-cl -> gdouble: Cluster redshift
+        Cluster redshift of the grid
+      z-type -> gchararray: Redshift factor type
+        Type name of the redshift factor of the grid
+      data-hash -> gchararray: Data hash
+        Data hash of the rows of the grid
+      weights -> NcmMatrix: Weights
+        Weights of the nested levels
+      z-nodes -> NcmMatrix: Redshift values
+        Lower end and Chebyshev nodes
+      norms -> NcmMatrix: Normalizations
+        Total, background and foreground normalizations
+      n-total -> GVariant: Node counts
+        Number of Chebyshev nodes per galaxy
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        data_hash: str
+        len: int
+        n_nodes: int
+        n_total: GLib.Variant
+        n_weights: int
+        norms: NumCosmoMath.Matrix
+        weights: NumCosmoMath.Matrix
+        z_cl: float
+        z_nodes: NumCosmoMath.Matrix
+        z_type: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        data_hash: str = ...,
+        len: int = ...,
+        n_nodes: int = ...,
+        n_total: GLib.Variant = ...,
+        n_weights: int = ...,
+        norms: NumCosmoMath.Matrix = ...,
+        weights: NumCosmoMath.Matrix = ...,
+        z_cl: float = ...,
+        z_nodes: NumCosmoMath.Matrix = ...,
+        z_type: str = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(grid: GalaxyWLObsChebGrid) -> None: ...
+    def free(self) -> None: ...
+    def get_galaxy(
+        self, i: int
+    ) -> typing.Tuple[int, list[float], NumCosmoMath.Vector, float, float, float]: ...
+    def get_n_nodes(self) -> int: ...
+    def get_n_weights(self) -> int: ...
+    def get_z_cl(self) -> float: ...
+    def len(self) -> int: ...
+    @classmethod
+    def new(
+        cls,
+        len: int,
+        n_weights: int,
+        n_nodes: int,
+        z_cl: float,
+        z_type: str,
+        data_hash: str,
+    ) -> GalaxyWLObsChebGrid: ...
+    def peek_data_hash(self) -> str: ...
+    def peek_z_type(self) -> str: ...
+    def ref(self) -> GalaxyWLObsChebGrid: ...
+    def set_galaxy(
+        self,
+        i: int,
+        n_total: int,
+        weights: typing.Optional[typing.Sequence[float] | npt.NDArray[np.float64]],
+        z_nodes: NumCosmoMath.Vector,
+        norm: float,
+        bg_norm: float,
+        fg_norm: float,
+    ) -> None: ...
+
+class GalaxyWLObsChebGridClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLObsChebGridClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class GalaxyWLObsClass(GObject.GPointer):
     r"""

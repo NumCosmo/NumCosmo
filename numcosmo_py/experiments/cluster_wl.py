@@ -419,6 +419,7 @@ DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_MIN = 2
 DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP = 5
 DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL = True
 DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL = 0.0
+DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE = False
 
 
 class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
@@ -450,6 +451,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
     line_abstol: Annotated[float, Field(ge=0.0, le=1.0)] = (
         DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL
     )
+    restrict_range: bool = DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE
 
     @staticmethod
     def help_text() -> list[str]:
@@ -472,7 +474,8 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_LEVEL_CAP}, "
                 "interp_pop_one_integral="
                 f"{DEFAULT_SHAPE_SPECTRAL_INTERP_POP_ONE_INTEGRAL}, "
-                f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL}"
+                f"line_abstol={DEFAULT_SHAPE_SPECTRAL_LINE_ABSTOL}, "
+                f"restrict_range={DEFAULT_SHAPE_SPECTRAL_RESTRICT_RANGE}"
             ),
         ]
 
@@ -494,6 +497,7 @@ class GalaxyShapeFactorGenSpectral(GalaxyShapeFactorGenBase):
             interp_pop_level_cap=self.interp_pop_level_cap,
             interp_pop_one_integral=self.interp_pop_one_integral,
             line_abstol=self.line_abstol,
+            restrict_range=self.restrict_range,
         )
 
 
@@ -859,7 +863,7 @@ def shape_interp_gens(
 ) -> tuple[GalaxyShapeFactorGenSpectral, GalaxyPopGenTypes] | None:
     """Return the generators of the shape factor and population that prepared obs.
 
-    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
+    A catalog prepared by ``numcosmo wl-catalog tables --shape-interp`` carries the
     interpolants of its galaxies and the record of what built them
     (``NcGalaxyWLObs:shape-interp``): a copy of the
     ``NcGalaxyShapeFactorSpectral`` and of the population. The generators
@@ -893,6 +897,7 @@ def shape_interp_gens(
         interp_pop_level_min=gsfs.get_interp_pop_level_min(),
         interp_pop_level_cap=gsfs.get_interp_pop_level_cap(),
         interp_pop_one_integral=gsfs.get_interp_pop_one_integral(),
+        restrict_range=gsfs.get_restrict_range(),
     )
 
     pop_gen: GalaxyPopGenTypes
@@ -915,7 +920,7 @@ def shape_interp_gens(
 def shape_interp_free_params(obs: Nc.GalaxyWLObs) -> list[str]:
     """Return the population parameters that are variables of the interpolants of obs.
 
-    The interpolants of a catalog prepared by ``numcosmo wl-catalog shape-interp
+    The interpolants of a catalog prepared by ``numcosmo wl-catalog tables --shape-interp
     --free-pop`` have the free parameters of the population of the record as
     variables: a fit may free them or hold them fixed at any value in their
     ranges.
@@ -1015,8 +1020,11 @@ class IntegMethod(GEnum):
     LNINT = Nc.DataClusterWLIntegMethod.LNINT
     FIXED_NODES = Nc.DataClusterWLIntegMethod.FIXED_NODES
     CUBATURE = Nc.DataClusterWLIntegMethod.CUBATURE
+    CHEB_WEIGHTS = Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
 
 
+DEFAULT_INTEG_CHEB_TOL = 1.0e-8
+DEFAULT_INTEG_CHEB_LEVEL_MIN = 2
 DEFAULT_INTEG_AUTO_NODES = False
 DEFAULT_INTEG_N_NODES = 10
 DEFAULT_INTEG_RULE_N = 5
@@ -1026,11 +1034,12 @@ DEFAULT_INTEG_MAX_TOTAL_NODES = 2000
 
 @dataclass(frozen=True, kw_only=True)
 class IntegMethodOptions:
-    """Redshift-integral method and its FIXED_NODES-only tuning knobs.
+    """Redshift-integral method and its tuning knobs.
 
-    ``n_nodes``/``rule_n``/``auto_nodes``/``node_reltol``/``max_total_nodes``
-    are plain ``NcDataClusterWLFactor`` properties that only affect
-    FIXED_NODES; setting them under LNINT/CUBATURE is harmless (ignored).
+    ``cheb_tol``/``cheb_level_min`` are ``NcDataClusterWLFactor`` properties read
+    only under CHEB_WEIGHTS, and ``n_nodes``/``rule_n``/``auto_nodes``/
+    ``node_reltol``/``max_total_nodes`` only under FIXED_NODES; the other
+    methods ignore them.
 
     ``apply()`` sets every knob unconditionally, so these defaults -- not the
     C-side property defaults -- are what an app-driven run gets. They are kept
@@ -1039,7 +1048,9 @@ class IntegMethodOptions:
     point.
     """
 
-    integ_method: IntegMethod = IntegMethod.LNINT
+    integ_method: IntegMethod = IntegMethod.CHEB_WEIGHTS
+    cheb_tol: float = DEFAULT_INTEG_CHEB_TOL
+    cheb_level_min: int = DEFAULT_INTEG_CHEB_LEVEL_MIN
     auto_nodes: bool = DEFAULT_INTEG_AUTO_NODES
     n_nodes: int = DEFAULT_INTEG_N_NODES
     rule_n: int = DEFAULT_INTEG_RULE_N
@@ -1049,6 +1060,8 @@ class IntegMethodOptions:
     def apply(self, cluster_data: Nc.DataClusterWLFactor) -> None:
         """Apply these settings to a NcDataClusterWLFactor instance."""
         cluster_data.set_integ_method(self.integ_method.genum)
+        cluster_data.set_cheb_tol(self.cheb_tol)
+        cluster_data.set_cheb_level_min(self.cheb_level_min)
         cluster_data.set_auto_nodes(self.auto_nodes)
         cluster_data.set_n_nodes(self.n_nodes)
         cluster_data.set_rule_n(self.rule_n)

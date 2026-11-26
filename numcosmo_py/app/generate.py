@@ -26,6 +26,7 @@
 import dataclasses
 import math
 import shlex
+import sys
 from abc import ABC, abstractmethod
 from enum import StrEnum, auto
 from pathlib import Path
@@ -55,6 +56,8 @@ from numcosmo_py.experiments.cluster_richness_count import (
 )
 from numcosmo_py.experiments.cluster_wl import (
     DEFAULT_INTEG_AUTO_NODES,
+    DEFAULT_INTEG_CHEB_LEVEL_MIN,
+    DEFAULT_INTEG_CHEB_TOL,
     DEFAULT_INTEG_MAX_TOTAL_NODES,
     DEFAULT_INTEG_N_NODES,
     DEFAULT_INTEG_NODE_RELTOL,
@@ -715,7 +718,35 @@ class ClusterWL(ABC):
             show_default=True,
             rich_help_panel="Redshift integration method",
         ),
-    ] = IntegMethod.LNINT
+    ] = IntegMethod.CHEB_WEIGHTS
+
+    cheb_tol: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "Relative tolerance of the nested Chebyshev levels "
+                "(integ-method=cheb_weights only)."
+            ),
+            show_default=True,
+            min=sys.float_info.epsilon,
+            max=1.0,
+            rich_help_panel="Redshift integration method",
+        ),
+    ] = DEFAULT_INTEG_CHEB_TOL
+
+    cheb_level_min: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "First level of the nested Chebyshev levels, 2 to 7 "
+                "(integ-method=cheb_weights only)."
+            ),
+            show_default=True,
+            min=2,
+            max=7,
+            rich_help_panel="Redshift integration method",
+        ),
+    ] = DEFAULT_INTEG_CHEB_LEVEL_MIN
 
     auto_nodes: Annotated[
         bool,
@@ -776,6 +807,8 @@ class ClusterWL(ABC):
         """Return the redshift-integral method options bundle."""
         return IntegMethodOptions(
             integ_method=self.integ_method,
+            cheb_tol=self.cheb_tol,
+            cheb_level_min=self.cheb_level_min,
             auto_nodes=self.auto_nodes,
             n_nodes=self.n_nodes,
             rule_n=self.rule_n,
@@ -812,9 +845,18 @@ class ClusterWL(ABC):
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
         for param in self.parameter_list:
-            pindex = mset.param_get_by_full_name(param)
+            try:
+                pindex = mset.param_get_by_full_name(param)
+            except GLib.Error as e:
+                raise typer.BadParameter(
+                    f"{e.message.rstrip('.')}; give the full name, as "
+                    f"NcHaloMassSummary:log10MDelta.",
+                    param_hint="--parameter-list",
+                ) from e
             if pindex is None:
-                raise ValueError(f"Invalid parameter: {param}")
+                raise typer.BadParameter(
+                    f"Invalid parameter: {param}", param_hint="--parameter-list"
+                )
             mset.param_set_ftype(pindex.mid, pindex.pid, Ncm.ParamType.FREE)
 
         mset.prepare_fparam_map()
@@ -1054,7 +1096,7 @@ class LoadClusterWL(ClusterWL):
     footprint is the bounding box of the catalog's RA/Dec. --shape-dist's
     ellip_conv/ellip_coord must match the catalog's own convention.
 
-    A catalog prepared by ``numcosmo wl-catalog shape-interp`` carries the
+    A catalog prepared by ``numcosmo wl-catalog tables --shape-interp`` carries the
     interpolants of its galaxies and the shape factor and population that
     built them; the experiment takes both from the catalog, and giving
     --shape-factor, --pop-dist or a population parameter in --parameter-list
@@ -1067,7 +1109,7 @@ class LoadClusterWL(ClusterWL):
             help=(
                 ShapeFactorGen.get_help_text()
                 + f" Default: {DEFAULT_CLUSTER_WL_SHAPE_FACTOR}; taken from a "
-                "catalog prepared by wl-catalog shape-interp."
+                "catalog prepared by wl-catalog tables --shape-interp."
             ),
             metavar=ShapeFactorGen.get_help_metavar(),
             rich_help_panel="Galaxy shape-marginalization factor",
@@ -1080,7 +1122,7 @@ class LoadClusterWL(ClusterWL):
             help=(
                 GalaxyPopGen.get_help_text()
                 + f" Default: {DEFAULT_CLUSTER_WL_POP_DIST}; taken from a "
-                "catalog prepared by wl-catalog shape-interp."
+                "catalog prepared by wl-catalog tables --shape-interp."
             ),
             metavar=GalaxyPopGen.get_help_metavar(),
             rich_help_panel="Galaxy intrinsic-ellipticity population distribution",
@@ -1107,7 +1149,7 @@ class LoadClusterWL(ClusterWL):
                 "Path to a local NcGalaxyWLObs (.gvar) file with real galaxy "
                 "shape/position/redshift data. Mutually exclusive with "
                 "--catalog; exactly one of the two is required. A catalog "
-                "prepared by numcosmo wl-catalog shape-interp refers to its "
+                "prepared by numcosmo wl-catalog tables --shape-interp refers to its "
                 "interpolants file; the experiment stores the bare name of that "
                 "file and must be written in its directory."
             ),
@@ -1210,7 +1252,7 @@ class LoadClusterWL(ClusterWL):
             raise typer.BadParameter(
                 "the catalog carries interpolants built for fixed values of these "
                 f"population parameters; they cannot be fitted: {', '.join(fixed)}. "
-                "Prepare the catalog with numcosmo wl-catalog shape-interp "
+                "Prepare the catalog with numcosmo wl-catalog tables --shape-interp "
                 "--free-pop to fit them."
             )
 
@@ -1431,9 +1473,18 @@ class GenerateClusterRichnessCount:
         assert isinstance(mset, Ncm.MSet)
 
         for param in self.parameter_list:
-            pindex = mset.param_get_by_full_name(param)
+            try:
+                pindex = mset.param_get_by_full_name(param)
+            except GLib.Error as e:
+                raise typer.BadParameter(
+                    f"{e.message.rstrip('.')}; give the full name, as "
+                    f"NcHaloMassSummary:log10MDelta.",
+                    param_hint="--parameter-list",
+                ) from e
             if pindex is None:
-                raise ValueError(f"Invalid parameter: {param}")
+                raise typer.BadParameter(
+                    f"Invalid parameter: {param}", param_hint="--parameter-list"
+                )
             mset.param_set_ftype(pindex.mid, pindex.pid, Ncm.ParamType.FREE)
 
         mset.prepare_fparam_map()

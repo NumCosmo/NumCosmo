@@ -847,6 +847,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs_shape_interp.c'],
     },
     {
+        'name': 'nc_galaxy_wl_obs_cheb_grid',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs_cheb_grid.c'],
+    },
+    {
         'name': 'nc_galaxy_pz_bspline_sqrt',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_pz_bspline_sqrt.c'],
     },

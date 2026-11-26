@@ -87,6 +87,8 @@ struct _NcGalaxyWLObsPrivate
   NcGalaxyWLObsEllipConv ellip_conv;
   NcGalaxyWLObsShapeInterp *shape_interp;
   guint64 shape_interp_key; /* catalog key of the rows the interpolants describe */
+  NcGalaxyWLObsChebGrid *cheb_grid;
+  guint64 cheb_grid_key; /* catalog key of the rows the grid describes */
 };
 
 enum
@@ -95,6 +97,7 @@ enum
   PROP_COORD,
   PROP_ELLIP_CONV,
   PROP_SHAPE_INTERP,
+  PROP_CHEB_GRID,
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcGalaxyWLObs, nc_galaxy_wl_obs, NCM_TYPE_CATALOG)
@@ -109,9 +112,12 @@ nc_galaxy_wl_obs_init (NcGalaxyWLObs *obs)
   self->ellip_conv       = 0;
   self->shape_interp     = NULL;
   self->shape_interp_key = NCM_CATALOG_KEY_PENDING;
+  self->cheb_grid        = NULL;
+  self->cheb_grid_key    = NCM_CATALOG_KEY_PENDING;
 }
 
 static gboolean _nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs);
+static gboolean _nc_galaxy_wl_obs_cheb_grid_current (NcGalaxyWLObs *obs);
 
 static void
 _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
@@ -134,6 +140,12 @@ _nc_galaxy_wl_obs_get_property (GObject *object, guint prop_id, GValue *value, G
 
       if (_nc_galaxy_wl_obs_shape_interp_current (obs))
         g_value_set_object (value, self->shape_interp);
+
+      break;
+    case PROP_CHEB_GRID:
+
+      if (_nc_galaxy_wl_obs_cheb_grid_current (obs))
+        g_value_set_object (value, self->cheb_grid);
 
       break;
     default:                                                      /* LCOV_EXCL_LINE */
@@ -167,6 +179,11 @@ _nc_galaxy_wl_obs_set_property (GObject *object, guint prop_id, const GValue *va
       self->shape_interp     = g_value_dup_object (value);
       self->shape_interp_key = NCM_CATALOG_KEY_PENDING;
       break;
+    case PROP_CHEB_GRID:
+      nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
+      self->cheb_grid     = g_value_dup_object (value);
+      self->cheb_grid_key = NCM_CATALOG_KEY_PENDING;
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -188,6 +205,7 @@ _nc_galaxy_wl_obs_dispose (GObject *object)
 
   ncm_obj_dict_int_clear (&self->pz);
   nc_galaxy_wl_obs_shape_interp_clear (&self->shape_interp);
+  nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->dispose (object);
@@ -277,6 +295,20 @@ nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
                                                         "Interpolants of ln P in g of the galaxies",
                                                         NC_TYPE_GALAXY_WL_OBS_SHAPE_INTERP,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * NcGalaxyWLObs:cheb-grid:
+   *
+   * The CHEB_WEIGHTS redshift grid of the galaxies and the record of what built it; %NULL
+   * when there is none, after the values of the rows changed or after a p(z) was set.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_CHEB_GRID,
+                                   g_param_spec_object ("cheb-grid",
+                                                        "Chebyshev grid",
+                                                        "CHEB_WEIGHTS redshift grid of the galaxies",
+                                                        NC_TYPE_GALAXY_WL_OBS_CHEB_GRID,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 /*
@@ -305,6 +337,53 @@ _nc_galaxy_wl_obs_shape_interp_current (NcGalaxyWLObs *obs)
   }
 
   return ncm_catalog_key_is_current (NCM_CATALOG (obs), &self->shape_interp_key);
+}
+
+/*
+ * Whether the grid describes the current rows. A grid set through the property is checked,
+ * at the first call, against the data hash of the rows; a mismatch aborts. After a change
+ * of the rows the data hash is compared again: rows written back with the same values, as
+ * by nc_data_cluster_wl_factor_write_shape_interp(), keep the grid; other values drop it.
+ */
+static gboolean
+_nc_galaxy_wl_obs_cheb_grid_current (NcGalaxyWLObs *obs)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  if (self->cheb_grid == NULL)
+    return FALSE;
+
+  if (self->cheb_grid_key == NCM_CATALOG_KEY_PENDING)
+  {
+    const gchar *data_hash = nc_galaxy_wl_obs_cheb_grid_peek_data_hash (self->cheb_grid);
+    gchar *rows_hash       = ncm_catalog_get_data_hash (NCM_CATALOG (obs));
+
+    if (g_strcmp0 (data_hash, rows_hash) != 0)
+      g_error ("nc_galaxy_wl_obs: the Chebyshev grid describes the rows of data hash %s, not these rows of data hash %s.",
+               data_hash, rows_hash);
+
+    g_free (rows_hash);
+  }
+
+  if (!ncm_catalog_key_is_current (NCM_CATALOG (obs), &self->cheb_grid_key))
+  {
+    const gchar *data_hash = nc_galaxy_wl_obs_cheb_grid_peek_data_hash (self->cheb_grid);
+    gchar *rows_hash       = ncm_catalog_get_data_hash (NCM_CATALOG (obs));
+    const gboolean same    = (g_strcmp0 (data_hash, rows_hash) == 0);
+
+    g_free (rows_hash);
+
+    if (!same)
+    {
+      nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
+
+      return FALSE;
+    }
+
+    self->cheb_grid_key = ncm_catalog_get_key (NCM_CATALOG (obs));
+  }
+
+  return TRUE;
 }
 
 void
@@ -563,6 +642,52 @@ nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyPz *pz)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   ncm_obj_dict_int_add (self->pz, i, G_OBJECT (pz));
+  nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
+}
+
+/**
+ * nc_galaxy_wl_obs_set_cheb_grid:
+ * @obs: a #NcGalaxyWLObs object
+ * @grid: (nullable): a #NcGalaxyWLObsChebGrid of the current rows
+ *
+ * Sets the CHEB_WEIGHTS redshift grid of the galaxies (#NcGalaxyWLObs:cheb-grid), or
+ * removes it when @grid is %NULL. A grid of another number of galaxies or of rows of
+ * another data hash aborts.
+ */
+void
+nc_galaxy_wl_obs_set_cheb_grid (NcGalaxyWLObs *obs, NcGalaxyWLObsChebGrid *grid)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
+  self->cheb_grid_key = NCM_CATALOG_KEY_PENDING;
+
+  if (grid == NULL)
+    return;
+
+  if (nc_galaxy_wl_obs_cheb_grid_len (grid) != ncm_catalog_len (NCM_CATALOG (obs)))
+    g_error ("nc_galaxy_wl_obs_set_cheb_grid: the grid has %u galaxies, the catalog %u.",
+             nc_galaxy_wl_obs_cheb_grid_len (grid), ncm_catalog_len (NCM_CATALOG (obs)));
+
+  self->cheb_grid = nc_galaxy_wl_obs_cheb_grid_ref (grid);
+  _nc_galaxy_wl_obs_cheb_grid_current (obs);
+}
+
+/**
+ * nc_galaxy_wl_obs_peek_cheb_grid:
+ * @obs: a #NcGalaxyWLObs object
+ *
+ * Gets the CHEB_WEIGHTS redshift grid of the galaxies; %NULL when there is none, after
+ * the values of the rows changed or after a p(z) was set.
+ *
+ * Returns: (transfer none) (nullable): the #NcGalaxyWLObsChebGrid.
+ */
+NcGalaxyWLObsChebGrid *
+nc_galaxy_wl_obs_peek_cheb_grid (NcGalaxyWLObs *obs)
+{
+  NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
+
+  return _nc_galaxy_wl_obs_cheb_grid_current (obs) ? self->cheb_grid : NULL;
 }
 
 /**
