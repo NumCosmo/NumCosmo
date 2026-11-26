@@ -5,6 +5,10 @@ math_tests = [
         'sources': ['ncm/core/test_ncm_cfg.c'],
     },
     {
+        'name': 'ncm_cfg_load',
+        'sources': ['ncm/core/test_ncm_cfg_load.c'],
+    },
+    {
         'name': 'ncm_generic',
         'sources': ['ncm/core/test_ncm_generic.c'],
     },
@@ -833,6 +837,10 @@ galaxy_tests = [
     {
         'name': 'nc_galaxy_wl_obs',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs.c'],
+    },
+    {
+        'name': 'nc_galaxy_wl_obs_shape_interp',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_wl_obs_shape_interp.c'],
     },
     {
         'name': 'nc_galaxy_pz_bspline_sqrt',

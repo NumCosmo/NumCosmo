@@ -41,13 +41,15 @@ its concrete subclasses. Vendored third-party code is quarantined under
 4. Register the type for serialization. Include the header in
    `numcosmo/ncm/core/ncm_cfg.c`, next to the other headers of its family, and
    register the object in `ncm_cfg_register_objects ()` with
-   `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`. (`ncm_cfg.h` includes only what its
-   own public API needs; do not add registration includes there.)
+   `ncm_cfg_register_obj (NCM_TYPE_MY_OBJECT);`, which runs when the library is loaded.
+   (`ncm_cfg.h` includes only what its own public API needs; do not add registration
+   includes there.)
 
 5. Keep `class_init` to the class description: the vtable, the properties with their
-   parameter descriptions, and class-level tables. It runs at the first
-   `g_type_class_ref` (deserialization, PyGObject, `ncm_cfg_init`), where no caller can
-   receive a failure, so it does not read files, data paths or environment variables.
+   parameter descriptions, and class-level tables. It runs when the library is loaded,
+   before `main` and before `ncm_cfg_init`, because the registration of step 4 takes a
+   class reference. No caller can receive a failure there, so it does not read files,
+   data paths or environment variables.
    A default that needs them (a data file path) is `NULL` in the pspec and is resolved
    in `set_property` or `constructed`.
 

@@ -866,9 +866,9 @@ class ClusterWL(ABC):
 def load_wl_obs(catalog: WLCatalogID | None, data_file: Path | None) -> Nc.GalaxyWLObs:
     """Load a NcGalaxyWLObs from a curated catalog id or from a .gvar file.
 
-    A catalog read from a file that holds interpolants refers to that file
-    (NcGalaxyWLObs:shape-interp-file): an experiment built from it stores the
-    name of the file, not the interpolants.
+    A prepared catalog refers to the file of its interpolants
+    (NcGalaxyWLObs:shape-interp); an experiment built from it stores the bare
+    name of that file, not the interpolants.
 
     Raises:
         typer.BadParameter: Neither or both of catalog and data_file.
@@ -1106,10 +1106,10 @@ class LoadClusterWL(ClusterWL):
             help=(
                 "Path to a local NcGalaxyWLObs (.gvar) file with real galaxy "
                 "shape/position/redshift data. Mutually exclusive with "
-                "--catalog; exactly one of the two is required. An experiment "
-                "built from a file with interpolants (numcosmo wl-catalog "
-                "shape-interp) stores the absolute path of the file, not the "
-                "interpolants, and needs the file at that path when it is loaded."
+                "--catalog; exactly one of the two is required. A catalog "
+                "prepared by numcosmo wl-catalog shape-interp refers to its "
+                "interpolants file; the experiment stores the bare name of that "
+                "file and must be written in its directory."
             ),
             exists=True,
             readable=True,
@@ -1189,6 +1189,17 @@ class LoadClusterWL(ClusterWL):
                 "factor and the population are those that built them, so "
                 "--shape-factor and --pop-dist must not be given"
             )
+
+        # The experiment stores the bare name of the interpolants file.
+        shape_interp = self._obs.props.shape_interp
+        tables = shape_interp.peek_filename() if shape_interp is not None else None
+        if tables is not None:
+            tables_dir = Path(tables).parent
+            if self.experiment.absolute().parent.resolve() != tables_dir.resolve():
+                raise typer.BadParameter(
+                    f"the experiment must be written in {tables_dir}, the directory "
+                    f"of the interpolants file {Path(tables).name} of the catalog"
+                )
 
         free = shape_interp_free_params(self._obs)
         pop_params = [

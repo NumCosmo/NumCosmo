@@ -484,36 +484,37 @@ display(Markdown(f"Both tables were measured on one thread of an {cpu_model()}."
 
 An MCMC of a cluster evaluates each galaxy at every step of every walker, of the order of
 $10^5$ times, far above the break-even count: with a fixed population the build of the
-interpolants costs a small fraction of the integrals they replace. The command `numcosmo wl-catalog shape-interp`
-does it once instead. It builds the interpolants of all the galaxies of a catalog in parallel
-and writes them with the catalog; `numcosmo generate cluster-wl-load --data-file` then builds
-an experiment that refers to the catalog file: the dataset file of the experiment holds the
-rows and the path of the catalog file, and the interpolants are read from the catalog file
-when the experiment is loaded. The table below gives the measurements on the HSC field
-HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE).
+interpolants costs a small fraction of the integrals they replace. The command
+`numcosmo wl-catalog shape-interp` builds them once. It builds the interpolants of all the
+galaxies of a catalog in parallel. It writes them to a second file in the directory of the
+catalog, named after the catalog with the suffix `.shape_interp.gvar`, and writes the catalog
+with the name of that file. `numcosmo generate cluster-wl-load --data-file` then builds an
+experiment that refers to the interpolants file. The experiment must be written in the
+directory of that file, and its dataset file holds the rows and the bare file name. The
+interpolants are read from that file at the first evaluation of $-2\ln L$. Without a prepared
+catalog, each galaxy integrates at every redshift node or, with a positive `line-abstol`, uses
+the interpolation along its shears, which needs no build and is computed again at every
+evaluation. The table compares the prepared catalog with the interpolation along the shears on
+the HSC field HWL16a-094 (2,200 galaxies, fitted Beta population, TRACE).
 
-| HWL16a-094, 2,200 galaxies | time |
-|---|---|
-| `wl-catalog shape-interp`, 12 threads | 44 s |
-| the same build on 1 thread (`nc_data_cluster_wl_factor_data_prepare()`) | 450 s |
-| first $-2\ln L$ of an experiment from the prepared catalog | 0.02 s |
-| first $-2\ln L$ of the same experiment from the original catalog (builds every interpolant) | 447 s |
-| MCMC, 1,000 walkers and 150,000 points, 12 threads, each thread building its interpolants | 736 s |
-| the same MCMC from the prepared catalog | 221 s |
+| HWL16a-094, 2,200 galaxies | prepared catalog | `line-abstol` $10^{-7}$ |
+|---|---|---|
+| `wl-catalog shape-interp`, 12 threads | 25.8 s | |
+| the same build on 1 thread | 266 s | |
+| $-2\ln L$, 1 thread | 0.004 s | 1.08 s |
+| MCMC, 1,000 walkers and 150,000 points, 12 threads | 63 s | not run |
 
-Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-12 and 2026-11-13, with fixed-node
-redshift integration. The two experiments give the same $-2\ln L$ to the last digit, and the
-two MCMCs the same posterior within the Monte Carlo error ($\log_{10} M_{200c}$ =
-$15.4785 \pm 0.1211$ and $15.4785 \pm 0.1208$).
+Measured on an AMD Ryzen 9 9900X (12 cores) on 2026-11-25, with fixed-node redshift
+integration. The two give $-2\ln L$ equal within $1.3 \times 10^{-7}$. The MCMC gives
+$\log_{10} M_{200c} = 15.4786 \pm 0.1205$ (burn-in of 50 iterations).
 
 With `--free-pop` the same command builds interpolants that have each free parameter of the
 population as one more variable, compressed after the build
 ([Compressed Panels](../theory/ncm/algebra/spectral_tensor.qmd#compressed-panels)), and a
 fit may then vary the population. Without a prepared catalog, a fit with a free population
-uses the interpolation along the shears of each galaxy (`line-abstol`), which needs no build
-and is computed again at every evaluation. The table compares the two on HWL16a-094 with
-$\alpha$ and $\beta$ of the Beta population free over their default bounds, at the default
-settings.
+evaluates the galaxies as with a fixed population. The table compares the two on HWL16a-094
+with $\alpha$ and $\beta$ of the Beta population free over their default bounds, at the
+default settings.
 
 | HWL16a-094, 2,200 galaxies, $\alpha$ and $\beta$ free | prepared catalog | `line-abstol` $10^{-7}$ |
 |---|---|---|

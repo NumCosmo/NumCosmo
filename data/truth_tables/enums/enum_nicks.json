@@ -1807,6 +1807,22 @@
     "nick": "wrong-type",
     "type": "Nc.GalaxyWLObsError"
   },
+  "NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_DATA_HASH": {
+    "nick": "data-hash",
+    "type": "Nc.GalaxyWLObsShapeInterpError"
+  },
+  "NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FILE": {
+    "nick": "file",
+    "type": "Nc.GalaxyWLObsShapeInterpError"
+  },
+  "NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_FORMAT": {
+    "nick": "format",
+    "type": "Nc.GalaxyWLObsShapeInterpError"
+  },
+  "NC_GALAXY_WL_OBS_SHAPE_INTERP_ERROR_STATE": {
+    "nick": "state",
+    "type": "Nc.GalaxyWLObsShapeInterpError"
+  },
   "NC_HALO_CATALOG_ERROR_NO_LINKAGE": {
     "nick": "no-linkage",
     "type": "Nc.HaloCatalogError"
