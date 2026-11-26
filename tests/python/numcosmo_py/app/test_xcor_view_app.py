@@ -37,6 +37,7 @@ import numpy as np
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 from numcosmo_py.app.xcor import view
 
 pytestmark = pytest.mark.app
@@ -73,7 +74,7 @@ def test_view_kernel_l_limber_tiers(l_limber: str) -> None:
     result = _view("--l-limber", l_limber)
 
     assert result.exit_code == 0, result.output
-    assert "Kernel evaluation complete" in result.output
+    assert "Kernel evaluation complete" in plain_output(result.output)
 
 
 def test_view_kernel_integrator_precision_options() -> None:
@@ -91,7 +92,7 @@ def test_view_kernel_integrator_precision_options() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "reltol=1.0e-02" in result.output
+    assert "reltol=1.0e-02" in plain_output(result.output)
 
 
 @pytest.mark.parametrize("value", ["0", "-1e-8", "2.0"])
@@ -100,7 +101,7 @@ def test_view_kernel_rejects_out_of_range_tolerance(value: str) -> None:
     result = _view("--l-limber", "-1", "--integrator-reltol", value)
 
     assert result.exit_code != 0
-    assert "Kernel evaluation complete" not in result.output
+    assert "Kernel evaluation complete" not in plain_output(result.output)
 
 
 def test_view_kernel_defaults_leave_library_precision_alone() -> None:
@@ -108,7 +109,7 @@ def test_view_kernel_defaults_leave_library_precision_alone() -> None:
     result = _view("--l-limber", "0")
 
     assert result.exit_code == 0, result.output
-    assert "reltol=1.0e-08" in result.output
+    assert "reltol=1.0e-08" in plain_output(result.output)
 
 
 def test_view_kernel_cls_single() -> None:
@@ -116,8 +117,8 @@ def test_view_kernel_cls_single() -> None:
     result = _view("--cls")
 
     assert result.exit_code == 0, result.output
-    assert "Computing C_ell (non-Limber)" in result.output
-    assert "1 kernel(s), 1 spectra" in result.output
+    assert "Computing C_ell (non-Limber)" in plain_output(result.output)
+    assert "1 kernel(s), 1 spectra" in plain_output(result.output)
 
 
 def test_view_kernel_cls_pairs() -> None:
@@ -142,7 +143,7 @@ def test_view_kernel_cls_pairs() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "2 kernel(s), 3 spectra" in result.output
+    assert "2 kernel(s), 3 spectra" in plain_output(result.output)
 
 
 def test_view_kernel_number_counts_rsd() -> None:
@@ -166,9 +167,9 @@ def test_view_kernel_number_counts_rsd() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "dorsd=True" in result.output
-    assert "Computing C_ell (non-Limber)" in result.output
-    assert "Computing C_ell (Limber)" in result.output
+    assert "dorsd=True" in plain_output(result.output)
+    assert "Computing C_ell (non-Limber)" in plain_output(result.output)
+    assert "Computing C_ell (Limber)" in plain_output(result.output)
 
 
 def test_view_kernel_cls_compare_limber() -> None:
@@ -181,8 +182,8 @@ def test_view_kernel_cls_compare_limber() -> None:
     result = _view("--cls", "--compare-limber")
 
     assert result.exit_code == 0, result.output
-    assert "Computing C_ell (non-Limber)" in result.output
-    assert "Computing C_ell (Limber)" in result.output
+    assert "Computing C_ell (non-Limber)" in plain_output(result.output)
+    assert "Computing C_ell (Limber)" in plain_output(result.output)
 
 
 def test_integrator_tolerance_setting() -> None:

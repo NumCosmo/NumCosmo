@@ -27,7 +27,6 @@
 Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 """
 
-import re
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
@@ -47,6 +46,7 @@ from numcosmo_py import (
     Nc,
 )
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 from numcosmo_py.experiments.cluster_wl import (
     GalaxyZGen,
     ShapeFactorGen,
@@ -432,8 +432,8 @@ def test_cluster_wl_app_summary(experiment_file):
     )
     assert result.exit_code == 0, result.output
 
-    assert "Cluster Parameters" in result.output
-    assert "Galaxy Sample Parameters" in result.output
+    assert "Cluster Parameters" in plain_output(result.output)
+    assert "Galaxy Sample Parameters" in plain_output(result.output)
 
 
 def test_cluster_wl_app_generate_redshift(experiment_file, redshift_dist):
@@ -453,7 +453,7 @@ def test_cluster_wl_app_generate_redshift(experiment_file, redshift_dist):
     )
     assert result.exit_code == 0, result.output
 
-    assert "GalaxyZGenComposed" in result.output
+    assert "GalaxyZGenComposed" in plain_output(result.output)
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -525,7 +525,7 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
     assert result.exit_code == 0, result.output
 
     scheme = shape_factor[0]
-    assert ShapeFactorGen(scheme).model_cls.__name__ in result.output
+    assert ShapeFactorGen(scheme).model_cls.__name__ in plain_output(result.output)
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -673,7 +673,7 @@ def test_cluster_wl_app_generate_shape_pop_incompatible(experiment_file):
         ],
     )
     assert result.exit_code != 0, result.output
-    assert "nc_galaxy_shape_pop_get_sigma" in result.output
+    assert "nc_galaxy_shape_pop_get_sigma" in plain_output(result.output)
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -1404,7 +1404,7 @@ def test_cluster_wl_load_app_data_file(experiment_file, real_wl_obs_file_with_me
         ],
     )
     assert result.exit_code == 0, result.output
-    assert "Number of galaxies" in result.output
+    assert "Number of galaxies" in plain_output(result.output)
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
 
@@ -1499,7 +1499,7 @@ def test_cluster_wl_load_app_bad_parameter_list(
     )
     assert result.exit_code == 2, result.output
     assert isinstance(result.exception, SystemExit)
-    assert "give the full name" in result.output
+    assert "give the full name" in plain_output(result.output)
 
 
 def test_cluster_wl_load_app_no_metadata_requires_explicit_values(
@@ -1590,7 +1590,7 @@ def test_cluster_wl_load_app_catalog(experiment_file):
         ],
     )
     assert result.exit_code == 0, result.output
-    assert "Number of galaxies" in result.output
+    assert "Number of galaxies" in plain_output(result.output)
 
     dataset_file = experiment_file.with_suffix(".dataset.gvar")
     assert dataset_file.exists(), f"Dataset file {dataset_file} does not exist."
@@ -1680,12 +1680,6 @@ def _experiment_m2lnL(experiment_file: Path) -> float:
     return likelihood.m2lnL_val(mset)
 
 
-def _unwrapped(text: str) -> str:
-    """The text without ANSI color codes (CI forces colors) and with every run of
-    whitespace, line breaks of the console included, as one space."""
-    return " ".join(re.sub(r"\x1b\[[0-9;]*m", "", text).split())
-
-
 def _tables(output: Path, data_file: Path, *args: str):
     """Run numcosmo wl-catalog tables."""
     return runner.invoke(
@@ -1715,7 +1709,7 @@ def test_wl_catalog_shape_interp(tmp_path: Path, real_wl_obs_file_with_meta):
         prepared, real_wl_obs_file_with_meta, "--pop-dist=beta alpha=1.8 beta=2.1"
     )
     assert result.exit_code == 0, result.output
-    assert "interpolants of 20 galaxies" in _unwrapped(result.output)
+    assert "interpolants of 20 galaxies" in plain_output(result.output)
     # The temporary records of the build are removed
     assert not list(tmp_path.glob("*.records"))
     tables = shape_interp_tables_path(prepared)
@@ -1806,7 +1800,7 @@ def test_wl_catalog_cheb_grid(tmp_path: Path, real_wl_obs_file_with_meta):
     with_grid = tmp_path / "with_grid.gvar"
     result = _cheb_grid(with_grid, real_wl_obs_file_with_meta)
     assert result.exit_code == 0, result.output
-    assert "Chebyshev grid of 20 galaxies" in _unwrapped(result.output)
+    assert "Chebyshev grid of 20 galaxies" in plain_output(result.output)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     obs = cast(Nc.GalaxyWLObs, ser.from_binfile(with_grid.as_posix()))
@@ -1834,8 +1828,8 @@ def test_wl_catalog_cheb_grid_and_shape_interp(
         both, real_wl_obs_file_with_meta, "--cheb-grid", "--shape-interp", pop
     )
     assert result.exit_code == 0, result.output
-    assert "interpolants of 20 galaxies" in _unwrapped(result.output)
-    assert "Chebyshev grid of 20 galaxies" in _unwrapped(result.output)
+    assert "interpolants of 20 galaxies" in plain_output(result.output)
+    assert "Chebyshev grid of 20 galaxies" in plain_output(result.output)
 
     interp_first = tmp_path / "interp_first.gvar"
     both_a = tmp_path / "both_a.gvar"
@@ -1872,7 +1866,7 @@ def test_wl_catalog_tables_options(
     population are CLI errors."""
     result = _tables(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
     assert result.exit_code == 2, result.output
-    assert message in _unwrapped(result.output)
+    assert message in plain_output(result.output)
 
 
 def test_wl_catalog_cheb_grid_other_directory(
@@ -1890,7 +1884,7 @@ def test_wl_catalog_cheb_grid_other_directory(
     other.mkdir()
     result = _cheb_grid(other / "with_grid.gvar", prepared)
     assert result.exit_code != 0
-    assert "write the output in" in _unwrapped(result.output)
+    assert "write the output in" in plain_output(result.output)
 
 
 _FREE_POP_N_GALAXIES = 4
@@ -1911,7 +1905,7 @@ def test_wl_catalog_shape_interp_free_pop(tmp_path: Path):
         prepared, small_obs_file, "--pop-dist=gauss sigma=0.3", "--free-pop"
     )
     assert result.exit_code == 0, result.output
-    assert "sigma free" in _unwrapped(result.output)
+    assert "sigma free" in plain_output(result.output)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     obs = cast(Nc.GalaxyWLObs, ser.from_binfile(prepared.as_posix()))
@@ -2099,7 +2093,7 @@ def test_wl_catalog_shape_interp_bad_shape_factor(
     """Only the spectral shape factor is accepted."""
     result = _shape_interp(tmp_path / "out.gvar", real_wl_obs_file_with_meta, *args)
     assert result.exit_code != 0
-    assert message in str(result.exception) or message in result.output
+    assert message in str(result.exception) or message in plain_output(result.output)
 
 
 @pytest.mark.parametrize(
@@ -2180,7 +2174,7 @@ def test_cluster_wl_load_app_prepared_catalog_other_dir(tmp_path: Path):
         ],
     )
     assert result.exit_code != 0
-    assert "the experiment must be written in" in _unwrapped(
+    assert "the experiment must be written in" in plain_output(
         result.output + str(result.exception)
     )
 

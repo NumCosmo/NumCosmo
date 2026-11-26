@@ -41,6 +41,7 @@ pytest.importorskip("getdist")
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 
 pytestmark = pytest.mark.app
 runner = CliRunner()
@@ -100,8 +101,8 @@ def test_derived_error_median(mcmc_catalog):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "Derived quantities" in result.stdout
-    assert "median" in result.stdout
+    assert "Derived quantities" in plain_output(result.stdout)
+    assert "median" in plain_output(result.stdout)
 
 
 def test_derived_error_bare_variable_shorthand(mcmc_catalog):
@@ -121,7 +122,7 @@ def test_derived_error_bare_variable_shorthand(mcmc_catalog):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "median" in result.stdout
+    assert "median" in plain_output(result.stdout)
 
 
 def test_derived_error_pow10_transform(mcmc_catalog):
@@ -143,7 +144,7 @@ def test_derived_error_pow10_transform(mcmc_catalog):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "10^{x}" in result.stdout
+    assert "10^{x}" in plain_output(result.stdout)
 
 
 def test_derived_error_all_stats(mcmc_catalog):
@@ -169,9 +170,9 @@ def test_derived_error_all_stats(mcmc_catalog):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "median" in result.stdout
-    assert "mode" in result.stdout
-    assert "bestfit" in result.stdout
+    assert "median" in plain_output(result.stdout)
+    assert "mode" in plain_output(result.stdout)
+    assert "bestfit" in plain_output(result.stdout)
 
 
 def test_derived_error_multiple_exprs_in_one_table(mcmc_catalog):
@@ -197,11 +198,11 @@ def test_derived_error_multiple_exprs_in_one_table(mcmc_catalog):
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "Derived quantities" in result.stdout
-    assert "raw_x" in result.stdout
-    assert "pow_x" in result.stdout
+    assert "Derived quantities" in plain_output(result.stdout)
+    assert "raw_x" in plain_output(result.stdout)
+    assert "pow_x" in plain_output(result.stdout)
     # One "median" row per --expr.
-    assert result.stdout.count("median") == 2
+    assert plain_output(result.stdout).count("median") == 2
 
 
 def test_derived_error_symbols_default_to_expr_when_fewer_than_exprs(mcmc_catalog):
@@ -225,8 +226,8 @@ def test_derived_error_symbols_default_to_expr_when_fewer_than_exprs(mcmc_catalo
     )
     if result.exit_code != 0:
         raise result.exception
-    assert "raw_x" in result.stdout
-    assert "10**x" in result.stdout
+    assert "raw_x" in plain_output(result.stdout)
+    assert "10**x" in plain_output(result.stdout)
 
 
 def test_derived_error_too_many_symbols_rejected(mcmc_catalog):
@@ -302,7 +303,7 @@ def test_derived_error_unknown_parameter_name_rejected(mcmc_catalog):
         ],
     )
     assert result.exit_code != 0
-    assert "not found" in result.output
+    assert "not found" in plain_output(result.output)
 
 
 def test_plot_corner_with_derived_dimension(mcmc_catalog, tmp_path):

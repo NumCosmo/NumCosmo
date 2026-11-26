@@ -37,6 +37,7 @@ pytest.importorskip("getdist")
 
 from numcosmo_py import Ncm
 from numcosmo_py.app import app
+from numcosmo_py.app.testing import plain_output
 
 pytestmark = pytest.mark.app
 runner = CliRunner()
@@ -89,9 +90,9 @@ def test_check_m2lnl_matches_when_same_experiment(mcmc_catalog):
     )
 
     assert result.exit_code == 0, result.output
-    assert "mismatched rows" in result.output
-    assert "0/" in result.output
-    assert "Worst mismatches" not in result.output
+    assert "mismatched rows" in plain_output(result.output)
+    assert "0/" in plain_output(result.output)
+    assert "Worst mismatches" not in plain_output(result.output)
 
 
 def test_check_m2lnl_stride_and_max_rows(mcmc_catalog):
@@ -113,7 +114,7 @@ def test_check_m2lnl_stride_and_max_rows(mcmc_catalog):
     )
 
     assert result.exit_code == 0, result.output
-    assert "Checked 3 row(s)" in result.output
+    assert "Checked 3 row(s)" in plain_output(result.output)
 
 
 def test_check_m2lnl_reports_mismatches(mcmc_catalog, monkeypatch: pytest.MonkeyPatch):
@@ -141,9 +142,9 @@ def test_check_m2lnl_reports_mismatches(mcmc_catalog, monkeypatch: pytest.Monkey
     )
 
     assert result.exit_code == 0, result.output
-    assert "mismatched rows" in result.output
-    assert "5/5" in result.output
-    assert "Worst mismatches" in result.output
+    assert "mismatched rows" in plain_output(result.output)
+    assert "5/5" in plain_output(result.output)
+    assert "Worst mismatches" in plain_output(result.output)
 
 
 def test_check_m2lnl_max_report_limits_table_rows(
@@ -175,7 +176,7 @@ def test_check_m2lnl_max_report_limits_table_rows(
     )
 
     assert result.exit_code == 0, result.output
-    assert "5/5" in result.output
+    assert "5/5" in plain_output(result.output)
     table_rows = [
         line
         for line in result.output.splitlines()
@@ -222,7 +223,7 @@ def test_check_m2lnl_worst_loop_stops_at_first_matching_row(
     )
 
     assert result.exit_code == 0, result.output
-    assert "2/5" in result.output
+    assert "2/5" in plain_output(result.output)
     table_rows = [
         line
         for line in result.output.splitlines()
@@ -257,7 +258,7 @@ def test_check_m2lnl_incompatible_fparams_raises(mcmc_catalog, tmp_path: Path):
     )
 
     assert result.exit_code != 0
-    assert "are not compatible" in result.output
+    assert "are not compatible" in plain_output(result.output)
 
 
 def test_check_m2lnl_missing_m2lnl_column_raises(
@@ -274,7 +275,7 @@ def test_check_m2lnl_missing_m2lnl_column_raises(
     )
 
     assert result.exit_code != 0
-    assert "has no" in result.output
+    assert "has no" in plain_output(result.output)
 
 
 if __name__ == "__main__":
