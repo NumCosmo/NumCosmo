@@ -66,6 +66,12 @@ add_project_arguments('-D_DEFAULT_SOURCE', language: 'c')
 
 cc_can_run = meson.can_run_host_binaries()
 
+# The library registers its types and functions in a function run at load
+# (_ncm_cfg_library_init in ncm_cfg.c); without it nothing is registered.
+if not cc.has_function_attribute('constructor')
+  error('The C compiler does not support __attribute__ ((constructor)), which NumCosmo needs to initialize itself when loaded.')
+endif
+
 if cc.get_id() == 'msvc'
   # Set the input and exec encoding to utf-8, like is the default with GCC
   add_project_arguments(cc.get_supported_arguments(['/utf-8']), language: 'c')
@@ -772,6 +778,7 @@ if have_lapack
     'dgeqlf_',
     'dgeqrf_',
     'dgerqf_',
+    'dgesdd_',
     'dgesv_',
     'dggglm_',
     'dposv_',

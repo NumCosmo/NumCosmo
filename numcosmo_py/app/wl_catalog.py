@@ -48,6 +48,12 @@ from .generate import (
 )
 
 
+def shape_interp_tables_path(output: Path) -> Path:
+    """The interpolants file of the prepared catalog OUTPUT: its .gvar suffix
+    replaced by .shape_interp.gvar."""
+    return output.with_name(f"{output.stem}.shape_interp.gvar")
+
+
 @dataclasses.dataclass(kw_only=True)
 class ShapeInterpWLCatalog:
     """Write a catalog with the interpolants of ln P(eps_obs | g) of its galaxies.
@@ -55,13 +61,20 @@ class ShapeInterpWLCatalog:
     Reads a NcGalaxyWLObs (--catalog or --data-file), builds the interpolant of
     every galaxy for the population --pop-dist with the
     NcGalaxyShapeFactorSpectral of --shape-factor, in parallel with
-    OMP_NUM_THREADS threads, and writes the catalog with the interpolants and
-    the record of what built them to OUTPUT. The rows are unchanged. The
-    interpolants are built only here: ``numcosmo generate cluster-wl-load
-    --data-file OUTPUT`` builds an experiment that uses them, with the shape
-    factor and the population of the record, and a fit never builds them. The
-    population parameters are fixed: the interpolants hold for their values
-    only.
+    OMP_NUM_THREADS threads, writes the interpolants to the file OUTPUT with
+    the suffix ``.shape_interp.gvar`` in place of ``.gvar``, and writes to
+    OUTPUT the catalog with the record of what built them and the name of
+    that file. The rows are unchanged. The interpolants are built only here:
+    ``numcosmo generate cluster-wl-load --data-file OUTPUT`` builds an
+    experiment that uses them, with the shape factor and the population of
+    the record, and a fit never builds them. The catalog and the experiment
+    store the bare name of the interpolants file, so the experiment must be
+    written in its directory, and the two files move together.
+    Without --free-pop the population parameters are fixed and the interpolants
+    hold for their values only. With --free-pop every population parameter is
+    one more variable of the interpolants, over its bounds: an experiment built
+    from OUTPUT may fit it (--parameter-list) or hold it fixed at any value in
+    its range.
     """
 
     output: Annotated[
@@ -131,6 +144,15 @@ class ShapeInterpWLCatalog:
         float | None,
         typer.Option(help="Cluster concentration. Falls back to catalog metadata."),
     ] = None
+    free_pop: Annotated[
+        bool,
+        typer.Option(
+            help=(
+                "Make every parameter of the population a variable of the "
+                "interpolants, over its bounds, so that a fit may vary it."
+            ),
+        ),
+    ] = False
 
     def __post_init__(self) -> None:
         """Build the interpolants and write the catalog.
@@ -145,8 +167,8 @@ class ShapeInterpWLCatalog:
             raise typer.BadParameter(f"Invalid output suffix: {self.output.suffix}")
 
         obs = load_wl_obs(self.catalog, self.data_file)
-        # A catalog prepared before carries a record; the new one replaces it.
-        obs.props.shape_interp_source = Ncm.ObjDictStr.new()
+        # A catalog prepared before carries interpolants; the new ones replace them.
+        obs.set_property("shape-interp", None)
 
         if self.shape_factor is None:
             self.shape_factor = (
@@ -184,14 +206,30 @@ class ShapeInterpWLCatalog:
         data = likelihood.peek_dataset().get_data(0)
         assert isinstance(data, Nc.DataClusterWLFactor)
 
+        pop = mset.peek(Nc.GalaxyShapePop.id())
+        assert isinstance(pop, Nc.GalaxyShapePop)
+        free = ""
+        if self.free_pop:
+            for k in range(pop.len()):
+                pop.param_set_ftype(k, Ncm.ParamType.FREE)
+            free = (
+                " with "
+                + ", ".join(pop.param_name(k) for k in range(pop.len()))
+                + " free"
+            )
+
+        # Each interpolant goes to a temporary records file as it is built, and the
+        # interpolants file is assembled from them: they are never all in memory.
+        # The catalog then refers to that file.
+        tables = shape_interp_tables_path(self.output)
         t_start = time.perf_counter()
-        data.write_shape_interp(mset, obs)
+        data.write_shape_interp_file(mset, obs, tables.absolute().as_posix())
         t_build = time.perf_counter() - t_start
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
         ser.to_binfile(obs, self.output.absolute().as_posix())
 
         Console().print(
-            f"Wrote {self.output}: interpolants of {obs.len()} galaxies for "
-            f"{pop_gen!r}, built in {t_build:.1f} s."
+            f"Wrote {self.output} and {tables}: interpolants of {obs.len()} "
+            f"galaxies for {pop_gen!r}{free}, built in {t_build:.1f} s."
         )

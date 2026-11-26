@@ -82,9 +82,10 @@ struct _NcGalaxyRedshiftFactorClass
   guint64 (*get_hash) (NcGalaxyRedshiftFactor *gsdr);
   void (*update_data) (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
   gchar *(*get_desc) (NcGalaxyRedshiftFactor *gsdr);
+  void (*cheb_moments) (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[7];
+  gpointer padding[6];
 };
 
 /*
@@ -127,6 +128,10 @@ NcmIntegralFixed *nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFa
 guint64 nc_galaxy_redshift_factor_get_hash (NcGalaxyRedshiftFactor *gsdr);
 void nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
 gchar *nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr);
+void nc_galaxy_redshift_factor_cheb_moments (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray **moments);
+
+void nc_galaxy_redshift_factor_set_cheb_reltol (NcGalaxyRedshiftFactor *gsdr, const gdouble cheb_reltol);
+gdouble nc_galaxy_redshift_factor_get_cheb_reltol (NcGalaxyRedshiftFactor *gsdr);
 
 #define NC_GALAXY_REDSHIFT_FACTOR_COL_Z "z"
 

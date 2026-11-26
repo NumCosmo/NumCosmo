@@ -1628,7 +1628,7 @@ nc_galaxy_shape_factor_prepare_data_array_at_nodes (NcGalaxyShapeFactor *gsf, Nc
   return TRUE;
 }
 
-static void _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out, const gboolean want_log);
+static void _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, const guint j0, const guint j1, NcmVector *out, const gboolean want_log);
 
 /**
  * nc_galaxy_shape_factor_eval_at_nodes:
@@ -1646,7 +1646,7 @@ static void _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, N
 void
 nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out)
 {
-  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, out, FALSE);
+  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, 0, ncm_vector_len (z_nodes), out, FALSE);
 }
 
 /**
@@ -1668,7 +1668,58 @@ nc_galaxy_shape_factor_eval_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
 void
 nc_galaxy_shape_factor_eval_ln_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out)
 {
-  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, out, TRUE);
+  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, 0, ncm_vector_len (z_nodes), out, TRUE);
+}
+
+/**
+ * nc_galaxy_shape_factor_eval_at_nodes_range:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxyShapeFactorData
+ * @z_nodes: the z values of the nodes of the per-node cache of @data
+ * @j0: the first node to evaluate
+ * @j1: one past the last node to evaluate
+ * @out: a #NcmVector at least as long as @z_nodes
+ *
+ * Evaluates the shape likelihood at the nodes $j_0 \leq j < j_1$ of @z_nodes, writing
+ * entry $j$ of @out and leaving the other entries unchanged. The per-node cache of @data is
+ * indexed by $j$, so @z_nodes is the vector of the last
+ * nc_galaxy_shape_factor_update_data_at_nodes_crit(). The values equal those of
+ * nc_galaxy_shape_factor_eval_at_nodes() at the same nodes, except for a class that
+ * evaluates the nodes behind the lens through a line table
+ * (#NcGalaxyShapeFactorSpectral:line-abstol): the table is built over the nodes of the
+ * range, so the values agree within its tolerance, and each call builds its own table. A
+ * range not inside @z_nodes aborts.
+ */
+void
+nc_galaxy_shape_factor_eval_at_nodes_range (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, const guint j0, const guint j1, NcmVector *out)
+{
+  if (!((j0 <= j1) && (j1 <= ncm_vector_len (z_nodes))))
+    g_error ("nc_galaxy_shape_factor_eval_at_nodes_range: the range [%u, %u) is not inside the %u nodes.", j0, j1, ncm_vector_len (z_nodes));
+
+  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, j0, j1, out, FALSE);
+}
+
+/**
+ * nc_galaxy_shape_factor_eval_ln_at_nodes_range:
+ * @gsf: a #NcGalaxyShapeFactor
+ * @mset: a #NcmMSet
+ * @data: a #NcGalaxyShapeFactorData
+ * @z_nodes: the z values of the nodes of the per-node cache of @data
+ * @j0: the first node to evaluate
+ * @j1: one past the last node to evaluate
+ * @out: a #NcmVector at least as long as @z_nodes
+ *
+ * The logarithmic counterpart of nc_galaxy_shape_factor_eval_at_nodes_range(), with the
+ * values of nc_galaxy_shape_factor_eval_ln_at_nodes(). A range not inside @z_nodes aborts.
+ */
+void
+nc_galaxy_shape_factor_eval_ln_at_nodes_range (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, const guint j0, const guint j1, NcmVector *out)
+{
+  if (!((j0 <= j1) && (j1 <= ncm_vector_len (z_nodes))))
+    g_error ("nc_galaxy_shape_factor_eval_ln_at_nodes_range: the range [%u, %u) is not inside the %u nodes.", j0, j1, ncm_vector_len (z_nodes));
+
+  _nc_galaxy_shape_factor_eval_nodes_impl (gsf, data, z_nodes, j0, j1, out, TRUE);
 }
 
 /* Number of shears per call of eval_nodes in _nc_galaxy_shape_factor_eval_nodes_impl() */
@@ -1676,7 +1727,8 @@ nc_galaxy_shape_factor_eval_ln_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset
 
 /*
  * The values of nc_galaxy_shape_factor_eval_at_nodes() (want_log FALSE) and
- * nc_galaxy_shape_factor_eval_ln_at_nodes() (want_log TRUE). Every node at or in front of the
+ * nc_galaxy_shape_factor_eval_ln_at_nodes() (want_log TRUE) at the nodes j0 <= j < j1, the
+ * per-node cache and out indexed by j. Every node at or in front of the
  * lens has the shear of the additive bias b alone, whose value is computed once. The nodes
  * behind the lens have the shears b + t_j u on one line, t_j = (1 + m) g_t (z_j) and u the
  * rotation. When they are consecutive and out is contiguous, the t_j are written to out and
@@ -1684,7 +1736,7 @@ nc_galaxy_shape_factor_eval_ln_at_nodes (NcGalaxyShapeFactor *gsf, NcmMSet *mset
  * eval_nodes in chunks of NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK.
  */
 static void
-_nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, NcmVector *out,
+_nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorData *data, const NcmVector *z_nodes, const guint j0, const guint j1, NcmVector *out,
                                          const gboolean want_log)
 {
   NcGalaxyShapeFactorPrivate * const self = nc_galaxy_shape_factor_get_instance_private (gsf);
@@ -1697,7 +1749,6 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
   const gdouble b_1                       = data->c1;
   const gdouble b_2                       = data->c2;
   const gdouble m                         = data->m;
-  const guint n_nodes                     = ncm_vector_len (z_nodes);
   gboolean have_gt0_val                   = FALSE;
   gdouble gt0_val                         = 0.0;
   guint n_behind                          = 0;
@@ -1712,7 +1763,7 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
   g_assert_nonnull (pop);
   g_assert_nonnull (cdata->crit_cache_arr);
 
-  for (j = 0; j < n_nodes; j++)
+  for (j = j0; j < j1; j++)
   {
     if (ncm_vector_get (z_nodes, j) > z_cl)
     {
@@ -1750,14 +1801,14 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
       return;
   }
 
-  j = 0;
+  j = j0;
 
-  while (j < n_nodes)
+  while (j < j1)
   {
     guint c = 0;
     guint q;
 
-    for ( ; (j < n_nodes) && (c < NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK); j++)
+    for ( ; (j < j1) && (c < NC_GALAXY_SHAPE_FACTOR_NODES_CHUNK); j++)
     {
       if (ncm_vector_get (z_nodes, j) > z_cl)
       {

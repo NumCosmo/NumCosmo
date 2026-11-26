@@ -168,6 +168,7 @@ def _build_multi_galaxy_setup(n):
         Nc.DataClusterWLIntegMethod.LNINT,
         Nc.DataClusterWLIntegMethod.FIXED_NODES,
         Nc.DataClusterWLIntegMethod.CUBATURE,
+        Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
     ],
 )
 def test_bootstrap_matches_manual_resum(integ_method):
@@ -598,6 +599,7 @@ def test_eval_m2lnP_gal_matches_m2lnL_val():
         Nc.DataClusterWLIntegMethod.LNINT,
         Nc.DataClusterWLIntegMethod.FIXED_NODES,
         Nc.DataClusterWLIntegMethod.CUBATURE,
+        Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
     ):
         dcwlf.set_integ_method(integ_method)
 
@@ -617,6 +619,7 @@ _ALL_METHODS = [
     Nc.DataClusterWLIntegMethod.LNINT,
     Nc.DataClusterWLIntegMethod.FIXED_NODES,
     Nc.DataClusterWLIntegMethod.CUBATURE,
+    Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
 ]
 
 # Well-separated galaxies with plausible ellipticities: no galaxy's marginal

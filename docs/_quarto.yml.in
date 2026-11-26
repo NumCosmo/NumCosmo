@@ -19,6 +19,7 @@ project:
     - theory/nc/lss/galaxy/wl_ellipticity.qmd
     - theory/nc/lss/galaxy/galaxy_wl_framework.qmd
     - theory/nc/lss/galaxy/wl_shape_marginalization_spectral.qmd
+    - theory/nc/lss/galaxy/wl_redshift_integral.qmd
     - theory/nc/lss/wl/wl_surface_mass_density.qmd
     - theory/nc/lss/halo/halo_density_profile.qmd
     - theory/ncm/fftlog/fftlog.qmd
@@ -166,6 +167,8 @@ website:
                 text: "Weak-Lensing Ellipticity"
               - href: theory/nc/lss/galaxy/wl_shape_marginalization_spectral.qmd
                 text: "Shape Marginalization by Spectral Panels"
+              - href: theory/nc/lss/galaxy/wl_redshift_integral.qmd
+                text: "The Redshift Integral of a Galaxy"
           - section: "Clusters & Weak Lensing"
             contents:
               - href: theory/nc/lss/halo/halo_density_profile.qmd

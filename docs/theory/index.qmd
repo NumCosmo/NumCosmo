@@ -28,6 +28,7 @@ classes and methods.
 - [Galaxy Population & WL Framework](nc/lss/galaxy/galaxy_wl_framework.qmd) --- the Pop/Obs/ObsSel/Factor vocabulary, the fixed Z$\Rightarrow$P$\Rightarrow$S pipeline, and the per-galaxy data/cache idiom shared by every calculator.
 - [Galaxy Shapes and Ellipticity Frames](nc/lss/galaxy/wl_ellipticity.qmd) --- the shape forward model, ellipticity conventions, and the celestial/Euclidean handedness frames.
 - [Shape Marginalization by Spectral Panels](nc/lss/galaxy/wl_shape_marginalization_spectral.qmd) --- the intrinsic-ellipticity marginal in polar coordinates with the population's end power laws as the weight, panels placed from a scan of one ray, and the accuracy measured against the Arb reference.
+- [The Redshift Integral of a Galaxy](nc/lss/galaxy/wl_redshift_integral.qmd) --- the marginal over the source redshift by nested Chebyshev-Lobatto levels whose weights integrate $p(z)$ exactly.
 
 ## Angular Power Spectra
 

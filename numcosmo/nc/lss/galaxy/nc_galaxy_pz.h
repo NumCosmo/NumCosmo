@@ -47,10 +47,18 @@ struct _NcGalaxyPzClass
   gdouble (*eval_ln_p) (NcGalaxyPz *gpz, const gdouble z);
   gdouble (*get_norm) (NcGalaxyPz *gpz);
   gdouble (*gen) (NcGalaxyPz *gpz, NcmRNG *rng);
+  void (*cheb_moments) (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
-  /* Padding to allow adding up to 13 more virtual functions without breaking ABI. */
-  gpointer padding[13];
+  /* Padding to allow adding up to 12 more virtual functions without breaking ABI. */
+  gpointer padding[12];
 };
+
+/**
+ * NC_GALAXY_PZ_CHEB_CACHE_LEN:
+ *
+ * Number of sets of moments a #NcGalaxyPz keeps (nc_galaxy_pz_cheb_moments()).
+ */
+#define NC_GALAXY_PZ_CHEB_CACHE_LEN (4)
 
 NcGalaxyPz *nc_galaxy_pz_ref (NcGalaxyPz *gpz);
 void nc_galaxy_pz_free (NcGalaxyPz *gpz);
@@ -61,6 +69,7 @@ gdouble nc_galaxy_pz_eval_p (NcGalaxyPz *gpz, const gdouble z);
 gdouble nc_galaxy_pz_eval_ln_p (NcGalaxyPz *gpz, const gdouble z);
 gdouble nc_galaxy_pz_get_norm (NcGalaxyPz *gpz);
 gdouble nc_galaxy_pz_gen (NcGalaxyPz *gpz, NcmRNG *rng);
+void nc_galaxy_pz_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray **moments);
 
 G_END_DECLS
 

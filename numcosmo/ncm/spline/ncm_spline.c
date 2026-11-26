@@ -1404,37 +1404,6 @@ _ncm_spline_next_break (NcmVector *xv, guint *i, NcmVector *wv, guint *j, const 
   return b;
 }
 
-/* Gauss-Legendre tables, one per number of nodes, allocated once. */
-static gsl_integration_glfixed_table *
-_ncm_spline_glfixed_table (const guint n)
-{
-  static GPtrArray *tables = NULL;
-
-  G_LOCK_DEFINE_STATIC (tables_lock);
-
-  gsl_integration_glfixed_table *t;
-
-  G_LOCK (tables_lock);
-
-  if (tables == NULL)
-    tables = g_ptr_array_new ();
-
-  if (tables->len <= n)
-    g_ptr_array_set_size (tables, n + 1);
-
-  t = g_ptr_array_index (tables, n);
-
-  if (t == NULL)
-  {
-    t                             = gsl_integration_glfixed_table_alloc (n);
-    g_ptr_array_index (tables, n) = t;
-  }
-
-  G_UNLOCK (tables_lock);
-
-  return t;
-}
-
 /* Nodes per piece: c = s'' is linear on each piece, so W c^p has degree p, or p + 3
  * with a cubic W, and n nodes integrate it exactly when 2 n - 1 >= that degree. */
 static guint
@@ -1511,16 +1480,18 @@ ncm_spline_curvature_d2_lp_residuals_len (NcmSpline *s, NcmSpline *weight, const
 void
 ncm_spline_curvature_d2_lp_residuals (NcmSpline *s, NcmSpline *weight, const guint p, const gdouble xi, const gdouble xf, gdouble *f)
 {
-  const guint nodes                = _ncm_spline_d2_lp_nodes (weight, p);
-  gsl_integration_glfixed_table *t = _ncm_spline_glfixed_table (nodes);
-  NcmVector *xv                    = ncm_spline_peek_xv (s);
-  NcmVector *wv                    = (weight != NULL) ? ncm_spline_peek_xv (weight) : NULL;
-  gdouble a                        = xi;
-  gdouble D                        = 0.0;
-  gdouble g2                       = 0.0;
+  const guint nodes = _ncm_spline_d2_lp_nodes (weight, p);
+  NcmVector *xv     = ncm_spline_peek_xv (s);
+  NcmVector *wv     = (weight != NULL) ? ncm_spline_peek_xv (weight) : NULL;
+  gdouble a         = xi;
+  gdouble D         = 0.0;
+  gdouble g2        = 0.0;
+  const gdouble *gl_x, *gl_w;
   guint i = 0, j = 0, k = 0, n;
 
   g_assert_cmpfloat (xf, >, xi);
+
+  ncm_integral_gauss_legendre_rule (nodes, &gl_x, &gl_w);
 
   while (a < xf)
   {
@@ -1529,9 +1500,8 @@ ncm_spline_curvature_d2_lp_residuals (NcmSpline *s, NcmSpline *weight, const gui
 
     for (q = 0; q < nodes; q++)
     {
-      gdouble x, wq;
-
-      gsl_integration_glfixed_point (a, b, q, &x, &wq, t);
+      const gdouble x  = 0.5 * (a + b) + 0.5 * (b - a) * gl_x[q];
+      const gdouble wq = 0.5 * (b - a) * gl_w[q];
 
       {
         const gdouble W  = (weight != NULL) ? ncm_spline_eval (weight, x) : 1.0;

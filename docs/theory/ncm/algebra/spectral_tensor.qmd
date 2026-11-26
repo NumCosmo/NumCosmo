@@ -397,6 +397,124 @@ proportional to the number of stored coefficients ([Evaluation](#evaluation)), s
 removal reduces it. The removal is greedy, and the block it stores need not be the
 smallest that satisfies Eq. (7).
 
+## Compressed Panels
+
+A panel stores $\prod_i K_i$ coefficients, the product of its numbers of coefficients in
+the $n$ variables: with 20 coefficients in each of four variables, 160,000 numbers. The
+series of a panel can be stored in fewer numbers when its coefficients, as functions of
+the index $k_i$ of one variable, are linear combinations of fewer than $K_i$ vectors. A
+panel therefore has one of two formats. A dense panel stores the coefficients
+$c^{k_0 \dots k_{n - 1}}$ of Eq. (3). A Tucker panel stores a Tucker decomposition of
+them [@Tucker1966]: one matrix per variable and a tensor with fewer entries than the
+coefficients, defined in Eq. (8). One table may hold panels of both formats, and every
+operation of [Evaluation](#evaluation) applies to both. A dense panel is converted into a
+Tucker panel by the compression described in this section, which changes the series of
+the panel by at most a given tolerance.
+
+A Tucker panel stores, for each variable $i$, a matrix $U_i$ with $K_i$ rows and $r_i$
+columns, and a tensor $g^{\nu_0 \dots \nu_{n - 1}}$ with $r_0 \times \dots \times r_{n - 1}$
+entries. Its coefficients are
+$$
+c^{k_0 \dots k_{n - 1}} = \sum_{\nu_0 = 0}^{r_0 - 1} \dots \sum_{\nu_{n - 1} = 0}^{r_{n - 1} - 1} g^{\nu_0 \dots \nu_{n - 1}} \prod_{i = 0}^{n - 1} U_i{}^{k_i}{}_{\nu_i} ,
+\tag{8}
+$$
+where $1 \le r_i \le K_i$ is the rank of the panel in variable $i$, $U_i{}^{k}{}_{\nu}$ is
+the entry of row $k$ and column $\nu$ of the factor $U_i$, and
+$g^{\nu_0 \dots \nu_{n - 1}}$ is the core. The ranks may differ between variables and
+between panels. A Tucker panel holds
+$$
+\sum_{i = 0}^{n - 1} K_i r_i + \prod_{i = 0}^{n - 1} r_i
+\tag{9}
+$$
+numbers, the entries of the factors and of the core, in place of the $\prod_i K_i$
+coefficients. With $K_i = 20$ and $r_i = 6$ in four variables, Eq. (9) gives 1,776 numbers
+in place of 160,000. The factors are stored first, in the order of the variables, with
+the entry $U_i{}^{k}{}_{\nu}$ of $U_i$ at position $k r_i + \nu$. The core follows, with
+the first index running fastest, as the coefficients of a dense panel.
+
+The compression of a dense panel computes the truncated higher-order singular value
+decomposition of its coefficients [@DeLathauwer2000]. For each variable $i$, the
+coefficients are arranged as a matrix with $K_i$ rows, one for each value of $k_i$, and
+$\prod_{j \ne i} K_j$ columns, one for each set of values of the other indices. The
+singular values of this matrix are $\sigma_{i, 0} \ge \sigma_{i, 1} \ge \dots \ge 0$. The
+factor $U_i$ has as columns the left singular vectors of the $r_i$ largest singular
+values, which are orthonormal. The core is the projection of the coefficients on the
+factors,
+$$
+g^{\nu_0 \dots \nu_{n - 1}} = \sum_{k_0 = 0}^{K_0 - 1} \dots \sum_{k_{n - 1} = 0}^{K_{n - 1} - 1} c^{k_0 \dots k_{n - 1}} \prod_{i = 0}^{n - 1} U_i{}^{k_i}{}_{\nu_i} .
+\tag{10}
+$$
+With every singular value kept in every variable, Eq. (8) with these factors and this
+core gives the coefficients of the dense panel. With smaller ranks it gives other
+coefficients $\tilde{c}^{k_0 \dots k_{n - 1}}$, those of the Tucker panel.
+
+The ranks follow from one threshold $\eta$: the rank $r_i$ is the number of singular
+values of variable $i$ with $\sigma_{i, \nu} > \eta \, \sigma_{i, 0}$, and at least 1. It
+is at most the number of singular values, the smaller of $K_i$ and
+$\prod_{j \ne i} K_j$. The error of a set of ranks is
+$$
+E \equiv \sum_{k_0 = 0}^{K_0 - 1} \dots \sum_{k_{n - 1} = 0}^{K_{n - 1} - 1} \left| c^{k_0 \dots k_{n - 1}} - \tilde{c}^{k_0 \dots k_{n - 1}} \right| ,
+\tag{11}
+$$
+where $c^{k_0 \dots k_{n - 1}}$ are the coefficients of the dense panel and
+$\tilde{c}^{k_0 \dots k_{n - 1}}$ those of the Tucker panel with these ranks. Since
+$|T_k| \le 1$, the series of the Tucker panel differs from the series of the dense panel
+by at most $E$ at every point of the panel, as for $S$ in
+[Stored Coefficients](#stored-coefficients). The compression has a tolerance
+$\varepsilon_\mathrm{c} \ge 0$ and keeps the largest threshold it tests with
+$E \le \varepsilon_\mathrm{c}$. It tests $\eta = 10^{-16}$ and $\eta = 1$, and then 16
+values by bisection of $\log_{10} \eta$ between them. For each tested threshold, $E$ is
+computed from Eqs. (10) and (8), so the bound holds for the stored panel whatever the
+singular values are. The panel becomes a Tucker panel when the ranks of that threshold
+give in Eq. (9) fewer numbers than $\prod_i K_i$. It stays dense otherwise, and when
+$E > \varepsilon_\mathrm{c}$ at $\eta = 10^{-16}$. A table of one variable is not
+compressed. The function [[numcosmo-math|ncm_spectral_tensor_compress]] implements the
+compression, with the singular value decompositions of LAPACK DGESDD.
+
+The series of a Tucker panel is summed without its coefficients. With Eq. (8) in
+Eq. (3),
+$$
+F (x_0, \dots, x_{n - 1}) \approx \sum_{\nu_0 = 0}^{r_0 - 1} \dots \sum_{\nu_{n - 1} = 0}^{r_{n - 1} - 1} g^{\nu_0 \dots \nu_{n - 1}} \prod_{i = 0}^{n - 1} w_i^{\nu_i} ,
+\qquad
+w_i^{\nu} \equiv \sum_{k = 0}^{K_i - 1} U_i{}^{k}{}_{\nu} \, T_k (s_i) ,
+\tag{12}
+$$
+where $w_i^{\nu}$, $\nu < r_i$, are $r_i$ numbers for each variable $i$, computed from
+the coordinate $x_i$ of the point alone. Each $w_i^{\nu}$ is a Chebyshev series in $s_i$
+whose coefficients are column $\nu$ of $U_i$, summed by a Clenshaw recurrence. The core
+is then summed with the products of the $w_i^{\nu_i}$, from the last variable, outermost,
+to the first. The sum takes the number of multiplications of Eq. (9), in place of
+$\prod_i K_i$ for a dense panel. The functions [[numcosmo-math|ncm_spectral_tensor_eval]]
+and [[numcosmo-math|ncm_spectral_tensor_eval_on]] sum a Tucker panel in this way. The
+function [[numcosmo-math|ncm_spectral_tensor_get_panel]] returns the coefficients of
+Eq. (8) of a Tucker panel, and [[numcosmo-math|ncm_spectral_tensor_get_panel_tucker]]
+returns its factors and its core.
+
+## Evaluation at Fixed Last Variables
+
+Several points with the same values of their last variables are evaluated together by one
+more operation. The points differ in the variables $0, \dots, n_\mathrm{f} - 1$ only,
+with $1 \le n_\mathrm{f} < n$, and share $x_{n_\mathrm{f}}, \dots, x_{n - 1}$. The panel
+of each point is found as in step 1 of [Evaluation](#evaluation). For each run of
+consecutive points on one panel, the series of the panel is first summed over its last
+$n - n_\mathrm{f}$ variables at the shared values, which gives the coefficients of a
+series in the first $n_\mathrm{f}$ variables,
+$$
+\bar{c}^{k_0 \dots k_{n_\mathrm{f} - 1}} \equiv \sum_{k_{n_\mathrm{f}} = 0}^{K_{n_\mathrm{f}} - 1} \dots \sum_{k_{n - 1} = 0}^{K_{n - 1} - 1} c^{k_0 \dots k_{n - 1}} \prod_{i = n_\mathrm{f}}^{n - 1} T_{k_i} (s_i) .
+\tag{13}
+$$
+For a Tucker panel the coefficients $c^{k_0 \dots k_{n - 1}}$ are not formed: the core is
+summed over its last $n - n_\mathrm{f}$ indices with the numbers $w_i^{\nu}$ of Eq. (12)
+of the fixed variables, and the result is multiplied by the factors
+$U_0, \dots, U_{n_\mathrm{f} - 1}$, which gives
+$\bar{c}^{k_0 \dots k_{n_\mathrm{f} - 1}}$ of Eq. (13) for the coefficients of Eq. (8).
+The points of the run are then summed on this series, 8 at a time, as in the evaluation
+of several points. The sum over the fixed variables is computed once for each run, and
+each point then takes $\prod_{i < n_\mathrm{f}} K_i$ multiplications in place of
+$\prod_i K_i$. The values agree with those of the evaluation of one point to rounding,
+not bit by bit. The function [[numcosmo-math|ncm_spectral_tensor_eval_slice_array]]
+implements this operation.
+
 ## Continuity between Panels
 
 Each panel is expanded on its own grid, and the series of two panels that share a
@@ -445,6 +563,16 @@ has no overlap and no weights.
 | $\varepsilon$ | `tol` in `_ncm_spectral_tensor_builder_expand` |
 | $f$ | `NcmSpectralTensorBuilder:trim-frac` |
 | $S$, $f \varepsilon$ | `S` and `budget` in `_ncm_spectral_tensor_builder_set_panel` |
+| format of a panel, dense or Tucker | `NcmSpectralTensorPanelFormat`; `format` of the panel |
+| $r_i$ | argument `ranks` of `ncm_spectral_tensor_set_panel_tucker`; `ranks` of the table |
+| $U_i{}^{k}{}_{\nu}$, $g^{\nu_0 \dots \nu_{n - 1}}$ | argument `data` of `ncm_spectral_tensor_set_panel_tucker`: the factors, then the core |
+| $\sigma_{i, \nu}$ | `sv[i]` in `NcmSpectralTensorHOSVD`, from `ncm_lapack_dgesdd` |
+| $\eta$ | `eps` in `_ncm_spectral_tensor_hosvd_ranks` |
+| $E$ | value returned by `_ncm_spectral_tensor_hosvd_error` |
+| $\varepsilon_\mathrm{c}$ | argument `tol` of `ncm_spectral_tensor_compress` |
+| $w_i^{\nu}$ | `u[i]` in `_ncm_spectral_tensor_eval_on_tucker` and `u` in `_ncm_spectral_tensor_slice_reduce` |
+| $n_\mathrm{f}$ | `nf` in `ncm_spectral_tensor_eval_slice_array` |
+| $\bar{c}^{k_0 \dots k_{n_\mathrm{f} - 1}}$ | `block` of `_ncm_spectral_tensor_slice_reduce` |
 
 ## API Reference
 
@@ -455,12 +583,17 @@ functions.
 
 - Filling the table: [[numcosmo-math|ncm_spectral_tensor_set_domain]],
   [[numcosmo-math|ncm_spectral_tensor_split]],
-  [[numcosmo-math|ncm_spectral_tensor_split_empty]] and
-  [[numcosmo-math|ncm_spectral_tensor_set_panel]].
+  [[numcosmo-math|ncm_spectral_tensor_split_empty]],
+  [[numcosmo-math|ncm_spectral_tensor_set_panel]] and
+  [[numcosmo-math|ncm_spectral_tensor_set_panel_tucker]].
 - Evaluating the table: [[numcosmo-math|ncm_spectral_tensor_find_panel]],
   [[numcosmo-math|ncm_spectral_tensor_eval]],
-  [[numcosmo-math|ncm_spectral_tensor_eval_on]] and
-  [[numcosmo-math|ncm_spectral_tensor_eval_array]].
+  [[numcosmo-math|ncm_spectral_tensor_eval_on]],
+  [[numcosmo-math|ncm_spectral_tensor_eval_array]] and
+  [[numcosmo-math|ncm_spectral_tensor_eval_slice_array]].
+- Compressing the panels: [[numcosmo-math|ncm_spectral_tensor_compress]],
+  [[numcosmo-math|ncm_spectral_tensor_get_panel_format]] and
+  [[numcosmo-math|ncm_spectral_tensor_get_panel_tucker]].
 - Reading the tree: [[numcosmo-math|ncm_spectral_tensor_get_node_kind]],
   [[numcosmo-math|ncm_spectral_tensor_get_node_bounds]],
   [[numcosmo-math|ncm_spectral_tensor_get_node_split]] and

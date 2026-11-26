@@ -606,12 +606,14 @@ _window_tophat (gdouble chi)
 static gdouble
 _cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*window) (gdouble), gint ell)
 {
-  NcXcorKernelIntegrand *closure    = nc_xcor_kernel_get_eval (xclk, cosmo, ell);
-  gsl_integration_glfixed_table *gl = gsl_integration_glfixed_table_alloc (TEST_CL_GL_ORDER);
-  const gdouble RH                  = nc_hicosmo_RH_Mpc (cosmo);
+  NcXcorKernelIntegrand *closure = nc_xcor_kernel_get_eval (xclk, cosmo, ell);
+  const gdouble RH               = nc_hicosmo_RH_Mpc (cosmo);
   gdouble chi_min, chi_max, k_min, k_max, lnk_lo, lnk_hi, dlnk;
   gdouble sum = 0.0;
   guint i;
+  const gdouble *gl_x, *gl_w;
+
+  ncm_integral_gauss_legendre_rule (TEST_CL_GL_ORDER, &gl_x, &gl_w);
 
   nc_xcor_kernel_radial_get_support (NC_XCOR_KERNEL_RADIAL (xclk), &chi_min, &chi_max);
   nc_xcor_kernel_integrand_get_range (closure, &k_min, &k_max);
@@ -636,9 +638,9 @@ _cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*
 
       for (q = 0; q < TEST_CL_GL_ORDER; q++)
       {
-        gdouble chi, w;
+        const gdouble chi = 0.5 * (lo + hi) + 0.5 * (hi - lo) * gl_x[q];
+        const gdouble w   = 0.5 * (hi - lo) * gl_w[q];
 
-        gsl_integration_glfixed_point (lo, hi, q, &chi, &w, gl);
         radial += w * window (chi) * gsl_sf_bessel_jl (ell, k * chi);
       }
     }
@@ -646,7 +648,6 @@ _cl_definition (NcXcorKernel *xclk, NcHICosmo *cosmo, NcmPowspec *ps, gdouble (*
     sum += trapeze * dlnk * gsl_pow_3 (k) * pk * gsl_pow_2 (radial);
   }
 
-  gsl_integration_glfixed_table_free (gl);
   nc_xcor_kernel_integrand_unref (closure);
 
   return 2.0 / M_PI * sum;

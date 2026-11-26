@@ -41,6 +41,7 @@ static void test_ncm_lapack_dsytrf_dsytrs (void);
 static void test_ncm_lapack_dptsv (void);
 static void test_ncm_lapack_dgeqrf (void);
 static void test_ncm_lapack_dgels (void);
+static void test_ncm_lapack_dgesdd (void);
 static void test_ncm_lapack_ws (void);
 
 /* A symmetric positive definite 3x3 matrix, row-major */
@@ -67,6 +68,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/lapack/dptsv", &test_ncm_lapack_dptsv);
   g_test_add_func ("/ncm/lapack/dgeqrf", &test_ncm_lapack_dgeqrf);
   g_test_add_func ("/ncm/lapack/dgels", &test_ncm_lapack_dgels);
+  g_test_add_func ("/ncm/lapack/dgesdd", &test_ncm_lapack_dgesdd);
 #endif /* HAVE_LAPACK */
 
   g_test_run ();
@@ -266,6 +268,71 @@ test_ncm_lapack_dgels (void)
     ncm_assert_cmpdouble_e (b[0], ==, c0, 1.0e-13, 0.0);
     ncm_assert_cmpdouble_e (b[1], ==, c1, 1.0e-13, 0.0);
   }
+}
+
+/*
+ * The 3 x 4 column-major matrix A = 3 e_0 f_1^T + 2 e_2 f_3^T + 0.5 e_1 (f_0 + f_2)^T / sqrt 2
+ * has the singular values 3, 2 and 0.5; DGESDD with 'S' returns them in decreasing order,
+ * orthonormal U and V, and U Sigma V^T equals A. The workspace is reused for a second call.
+ */
+static void
+test_ncm_lapack_dgesdd (void)
+{
+  const gint m    = 3;
+  const gint n    = 4;
+  const gdouble h = 0.5 / sqrt (2.0);
+  NcmLapackWS *ws = ncm_lapack_ws_new ();
+  gdouble a0[12]  = {0.0};
+  gdouble a[12], s[3], u[9], vt[12];
+  guint rep, i, j, k;
+
+  a0[0 + m * 1] = 3.0;
+  a0[2 + m * 3] = 2.0;
+  a0[1 + m * 0] = h;
+  a0[1 + m * 2] = h;
+
+  for (rep = 0; rep < 2; rep++)
+  {
+    memcpy (a, a0, sizeof (a));
+    g_assert_cmpint (ncm_lapack_dgesdd ('S', m, n, a, m, s, u, m, vt, m, ws), ==, 0);
+
+    ncm_assert_cmpdouble_e (s[0], ==, 3.0, 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (s[1], ==, 2.0, 1.0e-14, 0.0);
+    ncm_assert_cmpdouble_e (s[2], ==, 0.5, 1.0e-14, 0.0);
+
+    for (i = 0; i < 3; i++)
+    {
+      for (j = 0; j < 3; j++)
+      {
+        gdouble uu = 0.0;
+        gdouble vv = 0.0;
+
+        for (k = 0; k < 3; k++)
+          uu += u[k + m * i] * u[k + m * j];
+
+        for (k = 0; k < 4; k++)
+          vv += vt[i + m * k] * vt[j + m * k];
+
+        ncm_assert_cmpdouble_e (uu, ==, (i == j) ? 1.0 : 0.0, 1.0e-14, 1.0e-14);
+        ncm_assert_cmpdouble_e (vv, ==, (i == j) ? 1.0 : 0.0, 1.0e-14, 1.0e-14);
+      }
+    }
+
+    for (i = 0; i < 3; i++)
+    {
+      for (j = 0; j < 4; j++)
+      {
+        gdouble usv = 0.0;
+
+        for (k = 0; k < 3; k++)
+          usv += u[i + m * k] * s[k] * vt[k + m * j];
+
+        ncm_assert_cmpdouble_e (usv, ==, a0[i + m * j], 1.0e-14, 1.0e-14);
+      }
+    }
+  }
+
+  ncm_lapack_ws_free (ws);
 }
 
 static void
