@@ -194,6 +194,11 @@
 /* Armijo constant of the line search on phi = W - lambda.t. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_ARMIJO_C1 1.0e-4
 
+/* Rounding of phi relative to 1 + |W| + |lambda.t|. Z sums up to
+ * SRC_NR x NPHI_MAX = 131072 terms, whose rounding grows as the square root
+ * of the count (about 360), so phi is not resolved below about 1e3 epsilon. */
+#define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_PHI_ROUND (1.0e3 * GSL_DBL_EPSILON)
+
 /* ln P_0 panel: 64 nodes on a window localized around the mass. */
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_LNP0_NNODES 64
 #define NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_LNP0_DELTA 40.0
@@ -576,17 +581,28 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
        * decrease along the Newton ray while phi still can.
        *
        * F.step = F^T C^{-1} F > 0 for a positive-definite covariance, so
-       * -step is a descent direction. If F.step <= 0 numerically, the
-       * residual-norm test is used instead. */
+       * -step is a descent direction. The full step decreases phi by about
+       * F.step / 2; once that is below the rounding of phi the Armijo test
+       * cannot be resolved and the halving stalls the iteration (seen at
+       * sigma_nu = 1, where C is of order one and F.step ~ 1e-16 at a
+       * residual of 2e-8). There, and when F.step <= 0 numerically, the
+       * residual-norm test is used instead: F.step that small is reached
+       * only near the solution, where the full Newton step decreases the
+       * residual quadratically. */
       {
-        gdouble phi_cur = lnZ;
-        gdouble gTs     = 0.0;
+        gdouble phi_cur   = lnZ;
+        gdouble phi_scale = 1.0 + fabs (lnZ);
+        gdouble gTs       = 0.0;
+        gboolean armijo;
 
         for (a = 0; a < 3; a++)
         {
-          phi_cur -= lam[a] * target[a];
-          gTs     += F[a] * step[a];
+          phi_cur   -= lam[a] * target[a];
+          phi_scale += fabs (lam[a] * target[a]);
+          gTs       += F[a] * step[a];
         }
+
+        armijo = (0.5 * gTs > NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_PHI_ROUND * phi_scale);
 
         for (h = 0; h < NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT_NEWTON_MAXHALF; h++)
         {
@@ -595,7 +611,7 @@ _moments_tilt_newton (const gdouble *r, const gdouble *wr, const guint nr,
 
           if (_moments_tilt_moments (r, wr, nr, cphi, s2phi, nphi, sn2, trial, E2, NULL, &lnZ2))
           {
-            if (gTs > 0.0)
+            if (armijo)
             {
               gdouble phi_try = lnZ2;
 

@@ -42,6 +42,7 @@ check:
   are adopted without rebuilding and rejected when stale.
 """
 
+import contextlib
 import json
 import os
 import subprocess
@@ -51,7 +52,7 @@ import numpy as np
 import pytest
 from scipy import integrate, special
 
-from numcosmo_py import Nc, Ncm
+from numcosmo_py import Nc, Ncm, NumCosmoWarning
 
 Ncm.cfg_init()
 
@@ -217,7 +218,8 @@ def test_reachable_range_and_guard():
         assert a == b
 
     rest.reset_range_error_count()
-    assert rest.eval_marginal(pop, d_r, top + 0.05, 0.0, 0.4, 0.1) == 0.0
+    with pytest.warns(NumCosmoWarning, match="lies above"):
+        assert rest.eval_marginal(pop, d_r, top + 0.05, 0.0, 0.4, 0.1) == 0.0
     assert rest.get_range_error_count() == 1
 
 
@@ -268,7 +270,10 @@ def test_serialized_tables():
 
     mset2, pop2 = _build_mset(0.2)
     stale = Ncm.Serialize.new(Ncm.SerializeOpt.NONE).from_string(blob)
-    stale.prepare(mset2)
+    with pytest.warns(
+        NumCosmoWarning, match="stored tables were built for a different"
+    ):
+        stale.prepare(mset2)
     d3, _keep3 = _make_data(stale, mset2, 0.1)
     stale.eval_ln_marginal(pop2, d3, 0.4, 0.0, 0.3, -0.2)
     assert stale.get_table_build_count() == 1
@@ -536,7 +541,8 @@ def test_solve_failure_is_counted():
         ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE_DET, restrict_range=False
     )
     data, _keep = _make_data(gsf, mset, _STIFF[1])
-    v = gsf.eval_ln_marginal(pop, data, 0.99, 0.0, 0.3, 0.1)
+    with pytest.warns(NumCosmoWarning, match="Newton solve failed"):
+        v = gsf.eval_ln_marginal(pop, data, 0.99, 0.0, 0.3, 0.1)
     assert np.isfinite(v)
     n_failed = gsf.get_solve_error_count()
     assert n_failed > 0
@@ -609,6 +615,7 @@ def test_range_edges():
     )
     d2 = Nc.GalaxyShapeFactorData.new(fresh, mset, pos, zd)
     fresh.data_set(d2, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
+    pop.prepare(d2.pop_data)  # the population only: fresh.prepare() would set a bound
     fresh.data_prepare(mset, d2, 3.0)  # never prepared: no bound
     assert fresh.peek_layout(pop, d2)[1] == 1.0
 
@@ -835,5 +842,14 @@ def test_panel_count_rule(sn, n_panels, mset_pop):
         ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE, restrict_range=False
     )
     data, _keep = _make_data(gsf, mset, sn)
-    n, top, deg = gsf.peek_layout(pop, data)
+    capped = (
+        pytest.warns(NumCosmoWarning, match="needs more than the 8 panels")
+        if sn == 1.0e-4
+        else contextlib.nullcontext()
+    )
+    with capped:
+        n, top, deg = gsf.peek_layout(pop, data)
     assert (n, top, len(deg)) == (n_panels, 1.0, n_panels)
+    # At sigma_nu = 1 the Armijo decrease falls below the rounding of phi
+    # near the solution; the line search must still converge there.
+    assert gsf.get_solve_error_count() == 0
