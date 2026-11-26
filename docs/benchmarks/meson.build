@@ -1,7 +1,10 @@
 src_site_benchmark_files = files(
     'index.qmd',
+    '_mass_function_helpers.qmd',
     '_setup_models.qmd',
     'ccl_background.qmd',
+    'ccl_mass_function.qmd',
+    'ccl_mass_function_precision.qmd',
     'ccl_power_spectrum.qmd',
     'ccl_two_point.qmd',
     'xcor_certified_projection.qmd',

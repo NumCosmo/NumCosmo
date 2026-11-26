@@ -16,8 +16,8 @@ PARAMETERS_SET = [
     r"$\Lambda$CDM, flat",
     r"$\Lambda$CDM, flat, $1\nu$",
     r"XCDM, flat",
-    r"XCDM, spherical, $2\nu$",
-    r"XCDM, hyperbolic",
+    r"XCDM, hyperbolic, $2\nu$",
+    r"XCDM, spherical",
 ]
 COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"][:5]
 

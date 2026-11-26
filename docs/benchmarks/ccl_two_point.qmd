@@ -77,7 +77,7 @@ ell_kernel_test = 80
 ### Parameter Overview
 
 The table below lists the five parameter sets: flat $\Lambda$CDM without and with one
-massive neutrino, flat XCDM, spherical XCDM with two massive neutrinos, and hyperbolic
+massive neutrino, flat XCDM, hyperbolic XCDM with two massive neutrinos, and spherical
 XCDM. The XCDM sets have $w_0 = -0.9$ and $w_a = 0.1$.
 
 ```{python}
