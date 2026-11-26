@@ -25,6 +25,7 @@ from astropy.table import Table
 
 from numcosmo_py import Ncm
 from numcosmo_py.catalog import catalog_from_table, catalog_to_table
+from numcosmo_py.catalog.table import catalog_column, fill_catalog
 
 Ncm.cfg_init()
 
@@ -95,3 +96,43 @@ def test_table_roundtrip() -> None:
     assert dup.get_bool("flag", 0) is True
     assert dup.get_bool("flag", 1) is False
     assert dup.get_bool("flag", 2) is True
+
+
+def test_interleaved_types_exact_ids() -> None:
+    """Columns of mixed types keep their values; INT is exact above 2**53."""
+    table = Table()
+    table["ra"] = np.array([10.0, 20.0, 30.0])
+    table["object_id"] = np.array([38558648720430529, 2**62 + 1, -3], dtype=np.int64)
+    table["dec"] = np.array([-1.0, 0.0, 1.0])
+    table["flag"] = np.array([False, True, False])
+
+    catalog = catalog_from_table(table)
+
+    assert catalog.peek_data().ncols() == 2
+    assert catalog_column(catalog, "object_id").tolist() == table["object_id"].tolist()
+    assert catalog_column(catalog, "dec").tolist() == [-1.0, 0.0, 1.0]
+    assert catalog_column(catalog, "flag").tolist() == [False, True, False]
+
+    back = catalog_to_table(catalog)
+    for col in table.colnames:
+        assert back[col].tolist() == table[col].tolist()
+        assert back[col].dtype == table[col].dtype
+
+
+def test_fill_catalog_sets_each_type() -> None:
+    """fill_catalog writes each column through the storage of its type."""
+    types = [Ncm.CatalogColType.BOOL, Ncm.CatalogColType.DOUBLE, Ncm.CatalogColType.INT]
+    catalog = Ncm.Catalog.new_full(2, ["b", "x", "n"], types)
+
+    fill_catalog(
+        catalog,
+        {
+            "b": np.array([True, False]),
+            "x": np.array([0.5, -0.5]),
+            "n": np.array([2**60, 7]),
+        },
+    )
+
+    assert catalog.get_bool("b", 0) is True
+    assert catalog.get("x", 1) == -0.5
+    assert catalog.get_int("n", 0) == 2**60

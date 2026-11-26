@@ -49,6 +49,7 @@ from rich.table import Table
 from tabulate import tabulate
 
 from numcosmo_py import GEnum, Nc, Ncm, parse_options_strict
+from numcosmo_py.catalog.table import catalog_column
 
 DEFAULT_TABLE_FMT = "rounded_grid"
 
@@ -1563,10 +1564,8 @@ def load_cluster_wl(
         obs, CATALOG_META_CLUSTER_C, cluster_c, "cluster_c"
     )
 
-    columns = list(obs.peek_columns())
-    data = obs.peek_data().to_numpy()
-    ra_raw = data[:, columns.index("ra")]
-    dec = data[:, columns.index("dec")]
+    ra_raw = catalog_column(obs, "ra")
+    dec = catalog_column(obs, "dec")
     # NcHaloPosition's "ra" parameter (and HaloPositionData) are defined over
     # the signed [-180, 180] convention, not the standard [0, 360) RA used by
     # real survey catalogs -- wrap the cluster and a *separate* copy of the

@@ -7,6 +7,7 @@ import pytest
 from astropy.table import Table
 
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.catalog.table import catalog_column
 from numcosmo_py.datasets.dist_mu_obs import (
     SPEED_OF_LIGHT_KM_S,
     DistMuObsCatalogID,
@@ -47,6 +48,20 @@ def test_dist_mu_obs_from_table():
     meta = obs.peek_meta()
     assert meta is not None
     assert meta.get_string("source") == (True, "unit test")
+
+
+def test_dist_mu_obs_from_table_masked_int_raises():
+    """An empty cell of an integer column cannot be stored and raises."""
+    table = Table()
+    for col, val in (("ra", 10.0), ("dec", 0.0), ("z", 0.01), ("mu", 33.0)):
+        table[col] = np.array([val, val])
+    table["sigma_mu"] = np.array([0.1, 0.1])
+    table["pgc"] = np.ma.masked_array(
+        np.array([1, 2], dtype=np.int64), mask=[False, True]
+    )
+
+    with pytest.raises(ValueError, match="Column pgc has 1 empty cells"):
+        dist_mu_obs_from_table(table)
 
 
 def test_edd_cf4_snia_to_dist_mu_obs(edd_cf4_excerpt_file: Path):
@@ -92,10 +107,9 @@ def test_samples_by_rule(edd_cf4_excerpt_file: Path):
     samples, labels = samples_by_rule(obs, SampleRule.SMALLEST_ERROR)
     assert labels == names
     assert len(samples) == obs.len()
-    columns = list(obs.peek_columns())
-    data = obs.peek_data().to_numpy()
+    edm = {n: catalog_column(obs, f"eDM_{n}") for n in names}
     for i, s in enumerate(samples):
-        errors = {n: data[i, columns.index(f"eDM_{n}")] for n in names}
+        errors = {n: edm[n][i] for n in names}
         finite = {n: e for n, e in errors.items() if np.isfinite(e)}
         if finite:
             assert names[int(s)] == min(finite, key=finite.__getitem__)

@@ -109,17 +109,44 @@ def test_new_full_assigns_column_types() -> None:
 
 
 def test_typed_accessors_roundtrip() -> None:
-    """Integer and boolean values round-trip through the double backing store."""
+    """Integer and boolean values round-trip through their own storage."""
     types = [Ncm.CatalogColType.INT, Ncm.CatalogColType.BOOL]
     catalog = Ncm.Catalog.new_full(2, ["id", "flag"], types)
 
-    catalog.set_int("id", 0, 9007199254740991)  # 2**53 - 1, largest exact int.
+    catalog.set_int("id", 0, 38558648720430529)  # Above 2**53, exact.
     catalog.set_bool("flag", 0, True)
     catalog.set_bool("flag", 1, False)
 
-    assert catalog.get_int("id", 0) == 9007199254740991
+    assert catalog.get_int("id", 0) == 38558648720430529
     assert catalog.get_bool("flag", 0) is True
     assert catalog.get_bool("flag", 1) is False
+
+
+def test_column_functions_bindings() -> None:
+    """Whole INT and BOOL columns pass through Python lists, exact above 2**53."""
+    types = [Ncm.CatalogColType.DOUBLE, Ncm.CatalogColType.INT, Ncm.CatalogColType.BOOL]
+    catalog = Ncm.Catalog.new_full(3, ["x", "id", "flag"], types)
+    ids = [38558648720430529, -1, 2**63 - 1]
+
+    catalog.set_int_column("id", ids)
+    catalog.set_bool_column("flag", [True, False, True])
+
+    assert catalog.get_int_column("id") == ids
+    assert catalog.get_bool_column("flag") == [True, False, True]
+    assert catalog.peek_data().ncols() == 1
+    assert catalog.get_data_index("x") == (True, 0)
+    assert catalog.get_data_index("id")[0] is False
+
+
+def test_wrong_type_raises() -> None:
+    """An accessor on a column of another type raises the WRONG_TYPE error."""
+    types = [Ncm.CatalogColType.DOUBLE, Ncm.CatalogColType.INT]
+    catalog = Ncm.Catalog.new_full(1, ["x", "id"], types)
+
+    with pytest.raises(GLib.Error, match=re.escape("Column 'id' is INT, not DOUBLE.")):
+        catalog.get("id", 0)
+    with pytest.raises(GLib.Error, match=re.escape("Column 'x' is DOUBLE, not INT.")):
+        catalog.set_int_column("x", [1])
 
 
 def test_serialization_preserves_column_types() -> None:

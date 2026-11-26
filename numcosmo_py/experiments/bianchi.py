@@ -29,6 +29,7 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 
 from numcosmo_py import Nc, Ncm
+from numcosmo_py.catalog.table import catalog_column
 from numcosmo_py.datasets.dist_mu_obs import (
     SPEED_OF_LIGHT_KM_S,
     SampleRule,
@@ -159,11 +160,9 @@ def build_bianchi_experiment(
     sample_names: list[str] = []
     if sample_col is None and sample_rule != SampleRule.NONE:
         # The selection of set_obs, redone here to label the selected rows.
-        columns = list(obs.peek_columns())
-        table = obs.peek_data().to_numpy()
-        z_all = table[:, columns.index("z")]
-        mu_all = table[:, columns.index(mu_col or "mu")]
-        sigma_all = table[:, columns.index(sigma_col or "sigma_mu")]
+        z_all = catalog_column(obs, "z")
+        mu_all = catalog_column(obs, mu_col or "mu")
+        sigma_all = catalog_column(obs, sigma_col or "sigma_mu")
         selected = np.nonzero(
             (z_all >= z_min)
             & (z_all <= z_max)
