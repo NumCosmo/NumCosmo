@@ -72,6 +72,9 @@ static void test_nc_galaxy_wl_obs_shape_interp_type (void);
 static void test_nc_galaxy_wl_obs_shape_interp_type_subprocess (void);
 static void test_nc_galaxy_wl_obs_shape_interp_hash (void);
 static void test_nc_galaxy_wl_obs_shape_interp_hash_subprocess (void);
+static void test_nc_galaxy_wl_obs_cheb_grid (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_cheb_grid_errors (void);
+static void test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -155,6 +158,12 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/type/subprocess", &test_nc_galaxy_wl_obs_shape_interp_type_subprocess);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/hash", &test_nc_galaxy_wl_obs_shape_interp_hash);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/shape_interp/hash/subprocess", &test_nc_galaxy_wl_obs_shape_interp_hash_subprocess);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/cheb_grid", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new_pz,
+              &test_nc_galaxy_wl_obs_cheb_grid,
+              &test_nc_galaxy_wl_obs_free);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/cheb_grid/errors", &test_nc_galaxy_wl_obs_cheb_grid_errors);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/cheb_grid/errors/subprocess", &test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess);
 
   g_test_run ();
 
@@ -929,5 +938,112 @@ test_nc_galaxy_wl_obs_shape_interp_hash_subprocess (void)
 
   nc_galaxy_wl_obs_set (obs, "z", 1, 1.0, NULL);
   nc_galaxy_wl_obs_peek_shape_interp (obs, 0);
+}
+
+/* A grid of @obs as its rows are now: two weights and two redshift values per galaxy. */
+static NcGalaxyWLObsChebGrid *
+_test_nc_galaxy_wl_obs_cheb_grid_new (NcGalaxyWLObs *obs)
+{
+  gchar *hash                 = ncm_catalog_get_data_hash (NCM_CATALOG (obs));
+  NcGalaxyWLObsChebGrid *grid = nc_galaxy_wl_obs_cheb_grid_new (nc_galaxy_wl_obs_len (obs), 2, 2, 0.3, "NcGalaxyRedshiftFactorSpline", hash);
+
+  g_free (hash);
+
+  return grid;
+}
+
+/*
+ * The grid is kept while the rows and the p(z) are unchanged, travels with a serialized
+ * catalog, and is dropped by a change of a row or of a p(z).
+ */
+static void
+test_nc_galaxy_wl_obs_cheb_grid (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmSerialize *ser           = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcGalaxyWLObsChebGrid *grid = _test_nc_galaxy_wl_obs_cheb_grid_new (test->obs);
+  NcGalaxyWLObs *dup;
+  GVariant *var;
+
+  g_assert_null (nc_galaxy_wl_obs_peek_cheb_grid (test->obs));
+
+  nc_galaxy_wl_obs_set_cheb_grid (test->obs, grid);
+  g_assert_true (nc_galaxy_wl_obs_peek_cheb_grid (test->obs) == grid);
+
+  var = ncm_serialize_to_variant (ser, G_OBJECT (test->obs));
+  dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, var));
+  g_assert_nonnull (nc_galaxy_wl_obs_peek_cheb_grid (dup));
+  g_assert_cmpuint (nc_galaxy_wl_obs_cheb_grid_len (nc_galaxy_wl_obs_peek_cheb_grid (dup)), ==, nc_galaxy_wl_obs_len (test->obs));
+
+  nc_galaxy_wl_obs_set (dup, "ra", 0, 1.0 + nc_galaxy_wl_obs_get (dup, "ra", 0, NULL), NULL);
+  g_assert_null (nc_galaxy_wl_obs_peek_cheb_grid (dup));
+
+  {
+    NcmVector *zv = ncm_vector_new (8);
+    NcmVector *pv = ncm_vector_new (8);
+    NcGalaxyPzBSplineSqrt *pz;
+    guint k;
+
+    for (k = 0; k < 8; k++)
+    {
+      ncm_vector_set (zv, k, 0.1 * k);
+      ncm_vector_set (pv, k, 1.0 + k);
+    }
+
+    pz = nc_galaxy_pz_bspline_sqrt_new_from_table (zv, pv);
+    nc_galaxy_wl_obs_set_pz (test->obs, 0, NC_GALAXY_PZ (pz));
+    g_assert_null (nc_galaxy_wl_obs_peek_cheb_grid (test->obs));
+
+    nc_galaxy_pz_free (NC_GALAXY_PZ (pz));
+    ncm_vector_free (zv);
+    ncm_vector_free (pv);
+  }
+
+  nc_galaxy_wl_obs_set_cheb_grid (test->obs, grid);
+  g_assert_nonnull (nc_galaxy_wl_obs_peek_cheb_grid (test->obs));
+  nc_galaxy_wl_obs_set_cheb_grid (test->obs, NULL);
+  g_assert_null (nc_galaxy_wl_obs_peek_cheb_grid (test->obs));
+
+  g_variant_unref (var);
+  ncm_serialize_free (ser);
+  nc_galaxy_wl_obs_cheb_grid_free (grid);
+  NCM_TEST_FREE (nc_galaxy_wl_obs_free, dup);
+}
+
+static void
+test_nc_galaxy_wl_obs_cheb_grid_errors (void)
+{
+  const gchar *cases[][2] = {
+    {"len",  "*nc_galaxy_wl_obs_set_cheb_grid: the grid has 4 galaxies, the catalog 5*"},
+    {"hash", "*the Chebyshev grid describes the rows of data hash other, not these rows of data hash *"},
+  };
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (cases); i++)
+  {
+    g_setenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV, cases[i][0], TRUE);
+    g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/cheb_grid/errors/subprocess", 0, 0);
+    g_test_trap_assert_failed ();
+    g_test_trap_assert_stderr (cases[i][1]);
+  }
+
+  g_unsetenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV);
+}
+
+static void
+test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess (void)
+{
+  const gchar *which = g_getenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV);
+  GStrv col_names    = g_strsplit ("ra dec z", " ", -1);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 5, col_names);
+
+  if (g_strcmp0 (which, "len") == 0)
+  {
+    nc_galaxy_wl_obs_set_cheb_grid (obs, nc_galaxy_wl_obs_cheb_grid_new (4, 2, 2, 0.3, "NcGalaxyRedshiftFactorSpline", "other"));
+  }
+  else
+  {
+    g_object_set (obs, "cheb-grid", nc_galaxy_wl_obs_cheb_grid_new (5, 2, 2, 0.3, "NcGalaxyRedshiftFactorSpline", "other"), NULL);
+    nc_galaxy_wl_obs_peek_cheb_grid (obs);
+  }
 }
 

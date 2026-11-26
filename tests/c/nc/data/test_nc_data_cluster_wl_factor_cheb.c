@@ -80,6 +80,9 @@ void test_nc_data_cluster_wl_factor_cheb_converged (TestNcDataClusterWLFactorChe
 void test_nc_data_cluster_wl_factor_cheb_unconverged (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_switch (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_cheb_stored (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_cheb_stored_errors (void);
+void test_nc_data_cluster_wl_factor_cheb_stored_errors_subprocess (void);
 
 void test_nc_data_cluster_wl_factor_cheb_level_min (void);
 void test_nc_data_cluster_wl_factor_cheb_level_min_subprocess (void);
@@ -112,6 +115,12 @@ main (gint argc, gchar *argv[])
               &test_nc_data_cluster_wl_factor_cheb_share,
               &test_nc_data_cluster_wl_factor_cheb_free);
 
+  g_test_add ("/nc/data_cluster_wl_factor/cheb/stored", TestNcDataClusterWLFactorCheb, &test_catalog_default,
+              &test_nc_data_cluster_wl_factor_cheb_new,
+              &test_nc_data_cluster_wl_factor_cheb_stored,
+              &test_nc_data_cluster_wl_factor_cheb_free);
+  g_test_add_func ("/nc/data_cluster_wl_factor/cheb/stored/errors", &test_nc_data_cluster_wl_factor_cheb_stored_errors);
+  g_test_add_func ("/nc/data_cluster_wl_factor/cheb/stored/errors/subprocess", &test_nc_data_cluster_wl_factor_cheb_stored_errors_subprocess);
   g_test_add_func ("/nc/data_cluster_wl_factor/cheb/level_min", &test_nc_data_cluster_wl_factor_cheb_level_min);
   g_test_add_func ("/nc/data_cluster_wl_factor/cheb/level_min/subprocess", &test_nc_data_cluster_wl_factor_cheb_level_min_subprocess);
 
@@ -417,5 +426,110 @@ test_nc_data_cluster_wl_factor_cheb_level_min_subprocess (void)
                                          NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ()),
                                          NC_GALAXY_SHAPE_FACTOR (nc_galaxy_shape_factor_var_add_new (ec)));
   nc_data_cluster_wl_factor_set_cheb_level_min (dcwlf, 8);
+}
+
+/*
+ * A dataset on a catalog that stores the grid takes it instead of building one: with the
+ * grid intact its values equal those of the built grid, and with one normalization of the
+ * stored grid changed its value for that galaxy changes.
+ */
+void
+test_nc_data_cluster_wl_factor_cheb_stored (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
+{
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmVector *built  = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
+  NcDataClusterWLFactor *dup;
+  NcGalaxyWLObsChebGrid *grid;
+  NcmVector *stored, *altered, *z_nodes = NULL;
+  GArray *w = NULL;
+  gdouble norm, bg_norm, fg_norm;
+  guint n_total, i;
+
+  nc_data_cluster_wl_factor_write_cheb_grid (test->dcwlf, test->mset, test->obs);
+  grid = nc_galaxy_wl_obs_peek_cheb_grid (test->obs);
+  g_assert_nonnull (grid);
+  g_assert_cmpuint (nc_galaxy_wl_obs_cheb_grid_len (grid), ==, TEST_NROWS);
+  g_assert_cmpfloat (nc_galaxy_wl_obs_cheb_grid_get_z_cl (grid), ==, TEST_Z_CL);
+  g_assert_cmpstr (nc_galaxy_wl_obs_cheb_grid_peek_z_type (grid), ==, "NcGalaxyRedshiftFactorSpline");
+
+  dup    = NC_DATA_CLUSTER_WL_FACTOR (ncm_serialize_dup_obj (ser, G_OBJECT (test->dcwlf)));
+  stored = _test_eval (dup, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
+  _test_assert_equal (stored, built);
+  nc_data_cluster_wl_factor_free (dup);
+
+  /* A galaxy with nodes: its value is changed by a change of its stored normalization */
+  for (i = 0; i < TEST_NROWS; i++)
+  {
+    n_total = nc_galaxy_wl_obs_cheb_grid_get_galaxy (grid, i, &w, &z_nodes, &norm, &bg_norm, &fg_norm);
+
+    if (n_total > 0)
+      break;
+
+    ncm_vector_free (z_nodes);
+  }
+
+  g_assert_cmpuint (i, <, TEST_NROWS);
+  nc_galaxy_wl_obs_cheb_grid_set_galaxy (grid, i, n_total, w, z_nodes, 2.0 * norm, bg_norm, fg_norm);
+  ncm_serialize_reset (ser, TRUE);
+
+  dup     = NC_DATA_CLUSTER_WL_FACTOR (ncm_serialize_dup_obj (ser, G_OBJECT (test->dcwlf)));
+  altered = _test_eval (dup, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
+  g_assert_cmpfloat (ncm_vector_get (altered, i), !=, ncm_vector_get (built, i));
+
+  g_array_unref (w);
+  ncm_vector_free (z_nodes);
+  ncm_vector_free (built);
+  ncm_vector_free (stored);
+  ncm_vector_free (altered);
+  nc_data_cluster_wl_factor_free (dup);
+  ncm_serialize_free (ser);
+}
+
+void
+test_nc_data_cluster_wl_factor_cheb_stored_errors (void)
+{
+  const gchar *cases[][2] = {
+    {"z_cl",   "*the Chebyshev grid of the catalog was built for the cluster redshift 0.5, the dataset has 0.6*"},
+    {"method", "*nc_data_cluster_wl_factor_write_cheb_grid: the integration method is not CHEB_WEIGHTS*"},
+  };
+  guint i;
+
+  for (i = 0; i < G_N_ELEMENTS (cases); i++)
+  {
+    g_setenv ("TEST_NC_DATA_CLUSTER_WL_FACTOR_CHEB_ERROR", cases[i][0], TRUE);
+    g_test_trap_subprocess ("/nc/data_cluster_wl_factor/cheb/stored/errors/subprocess", 0, 0);
+    g_test_trap_assert_failed ();
+    g_test_trap_assert_stderr (cases[i][1]);
+  }
+
+  g_unsetenv ("TEST_NC_DATA_CLUSTER_WL_FACTOR_CHEB_ERROR");
+}
+
+void
+test_nc_data_cluster_wl_factor_cheb_stored_errors_subprocess (void)
+{
+  const gchar *which = g_getenv ("TEST_NC_DATA_CLUSTER_WL_FACTOR_CHEB_ERROR");
+  TestNcDataClusterWLFactorCheb test;
+
+  test_nc_data_cluster_wl_factor_cheb_new (&test, &test_catalog_default);
+
+  if (g_strcmp0 (which, "z_cl") == 0)
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    NcDataClusterWLFactor *dup;
+    NcmVector *v;
+
+    nc_data_cluster_wl_factor_set_integ_method (test.dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
+    nc_data_cluster_wl_factor_write_cheb_grid (test.dcwlf, test.mset, test.obs);
+    dup = NC_DATA_CLUSTER_WL_FACTOR (ncm_serialize_dup_obj (ser, G_OBJECT (test.dcwlf)));
+    ncm_model_param_set_by_name (ncm_mset_peek (test.mset, nc_halo_position_id ()), "z", 0.6, NULL);
+    v = _test_eval (dup, test.mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
+    ncm_vector_free (v);
+  }
+  else
+  {
+    nc_data_cluster_wl_factor_set_integ_method (test.dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+    nc_data_cluster_wl_factor_write_cheb_grid (test.dcwlf, test.mset, test.obs);
+  }
 }
 

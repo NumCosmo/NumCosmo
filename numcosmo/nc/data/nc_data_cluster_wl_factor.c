@@ -1014,6 +1014,96 @@ _fixed_nodes_grid_publish (NcDataClusterWLFactorPrivate *self)
                            shared_grid, &_shared_grid_unref);
 }
 
+/*
+ * Under CHEB_WEIGHTS, makes the grid stored with @obs (#NcGalaxyWLObs:cheb-grid) the grid
+ * published on @obs, when no grid is published there yet, so that this dataset and every
+ * clone holding @obs adopt it instead of building one. A stored grid of another redshift
+ * factor type aborts, and with @check_z_cl one of another cluster redshift too: the tables
+ * of the catalog must then be rebuilt. register_shared() runs before the first prepare,
+ * when the cluster redshift is not known yet, so it does not check it.
+ */
+static void
+_stored_grid_publish (NcDataClusterWLFactorPrivate *self, const gboolean check_z_cl)
+{
+  NcDataClusterWLFactorSharedGrid *shared_grid;
+  NcGalaxyWLObsChebGrid *grid;
+  const gchar *z_type_name;
+  guint n_gal, i;
+
+  if ((self->integ_method != NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS) || (self->obs == NULL) ||
+      self->resampling || self->has_resampled || (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) != 0))
+    return;
+
+  grid = nc_galaxy_wl_obs_peek_cheb_grid (self->obs);
+
+  if (grid == NULL)
+    return;
+
+  z_type_name = nc_galaxy_wl_obs_cheb_grid_peek_z_type (grid);
+
+  if (g_strcmp0 (z_type_name, G_OBJECT_TYPE_NAME (self->redshift_factor)) != 0)
+    g_error ("nc_data_cluster_wl_factor: the Chebyshev grid of the catalog was built by a %s, the dataset has a %s; "
+             "rebuild the tables of the catalog.", z_type_name, G_OBJECT_TYPE_NAME (self->redshift_factor));
+
+  if (check_z_cl && (nc_galaxy_wl_obs_cheb_grid_get_z_cl (grid) != self->z_cl))
+    g_error ("nc_data_cluster_wl_factor: the Chebyshev grid of the catalog was built for the cluster redshift %.15g, "
+             "the dataset has %.15g; rebuild the tables of the catalog for this redshift.",
+             nc_galaxy_wl_obs_cheb_grid_get_z_cl (grid), self->z_cl);
+
+  shared_grid = g_object_get_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark ());
+
+  if (shared_grid != NULL)
+    return;
+
+  n_gal            = nc_galaxy_wl_obs_cheb_grid_len (grid);
+  shared_grid      = g_new0 (NcDataClusterWLFactorSharedGrid, 1);
+  shared_grid->ref = 1;
+
+  shared_grid->n_gal              = n_gal;
+  shared_grid->z_cl               = nc_galaxy_wl_obs_cheb_grid_get_z_cl (grid);
+  shared_grid->n_nodes            = self->n_nodes;
+  shared_grid->rule_n             = self->rule_n;
+  shared_grid->auto_nodes         = self->auto_nodes;
+  shared_grid->node_reltol        = self->node_reltol;
+  shared_grid->max_total_nodes    = self->max_total_nodes;
+  shared_grid->integ_method       = NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS;
+  shared_grid->z_type             = G_OBJECT_TYPE (self->redshift_factor);
+  shared_grid->fixed_bg_nodes     = g_ptr_array_new_full (n_gal, &_fixed_bg_nodes_free_entry);
+  shared_grid->cheb_weights       = g_ptr_array_new_full (n_gal, &_cheb_weights_free_entry);
+  shared_grid->z_nodes_per_galaxy = g_ptr_array_new_full (n_gal, &_z_nodes_free_entry);
+  shared_grid->fixed_norm         = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), n_gal);
+  shared_grid->fixed_bg_norm      = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), n_gal);
+  shared_grid->fixed_fg_norm      = g_array_sized_new (FALSE, TRUE, sizeof (gdouble), n_gal);
+  shared_grid->n_total_per_galaxy = g_array_sized_new (FALSE, TRUE, sizeof (guint), n_gal);
+  shared_grid->calib_n_nodes      = g_array_new (FALSE, TRUE, sizeof (gint));
+  shared_grid->calib_rule_n       = g_array_new (FALSE, TRUE, sizeof (gint));
+
+  g_ptr_array_set_size (shared_grid->fixed_bg_nodes, n_gal);
+  g_ptr_array_set_size (shared_grid->cheb_weights, n_gal);
+  g_ptr_array_set_size (shared_grid->z_nodes_per_galaxy, n_gal);
+  g_array_set_size (shared_grid->fixed_norm, n_gal);
+  g_array_set_size (shared_grid->fixed_bg_norm, n_gal);
+  g_array_set_size (shared_grid->fixed_fg_norm, n_gal);
+  g_array_set_size (shared_grid->n_total_per_galaxy, n_gal);
+
+  for (i = 0; i < n_gal; i++)
+  {
+    GArray *w          = NULL;
+    NcmVector *z_nodes = NULL;
+
+    g_array_index (shared_grid->n_total_per_galaxy, guint, i) =
+      nc_galaxy_wl_obs_cheb_grid_get_galaxy (grid, i, &w, &z_nodes,
+                                             &g_array_index (shared_grid->fixed_norm, gdouble, i),
+                                             &g_array_index (shared_grid->fixed_bg_norm, gdouble, i),
+                                             &g_array_index (shared_grid->fixed_fg_norm, gdouble, i));
+    g_ptr_array_index (shared_grid->cheb_weights, i)       = w;
+    g_ptr_array_index (shared_grid->z_nodes_per_galaxy, i) = z_nodes;
+  }
+
+  g_object_set_qdata_full (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark (),
+                           shared_grid, &_shared_grid_unref);
+}
+
 /* Takes the grid published on @obs instead of building one, when that grid
  * was built under the current settings; returns whether it did. Never while
  * resampling or after a resample: the catalog then no longer matches the
@@ -1035,6 +1125,8 @@ _fixed_nodes_grid_adopt (NcDataClusterWLFactorPrivate *self)
   if ((self->obs == NULL) || self->resampling || self->has_resampled ||
       (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) != 0))
     return FALSE;
+
+  _stored_grid_publish (self, TRUE);
 
   shared_grid = g_object_dup_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_grid_quark (),
                                     &_shared_grid_dup, NULL);
@@ -2754,6 +2846,7 @@ _nc_data_cluster_wl_factor_register_shared (NcmData *data, NcmSerialize *ser)
    * grid published on it (see NcDataClusterWLFactorSharedGrid). */
   self->share_grid = TRUE;
   _fixed_nodes_grid_publish (self);
+  _stored_grid_publish (self, FALSE);
 }
 
 static void
@@ -3589,6 +3682,68 @@ nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf, NcmM
   }
 
   nc_galaxy_shape_factor_spectral_set_obs_source (gsfs, NC_GALAXY_SHAPE_POP (pop), obs);
+}
+
+/**
+ * nc_data_cluster_wl_factor_write_cheb_grid:
+ * @dcwlf: a #NcDataClusterWLFactor
+ * @mset: a #NcmMSet
+ * @obs: a #NcGalaxyWLObs with the rows of the catalog of @dcwlf
+ *
+ * Builds the CHEB_WEIGHTS redshift grid of every galaxy with
+ * nc_data_cluster_wl_factor_data_prepare(), in parallel, and stores it in @obs
+ * (#NcGalaxyWLObs:cheb-grid) with the cluster redshift of @mset, the type of the redshift
+ * factor and the data hash of the rows of @obs. A dataset on @obs under CHEB_WEIGHTS then
+ * takes the grid from the catalog instead of building it. A grid already stored in @obs is
+ * removed first; @obs may be the catalog of @dcwlf (nc_data_cluster_wl_factor_peek_obs()).
+ *
+ * The integration method of @dcwlf must be %NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS, its
+ * redshift factor must not depend on the model, and @obs must have as many rows as the
+ * catalog of @dcwlf; otherwise the call aborts.
+ */
+void
+nc_data_cluster_wl_factor_write_cheb_grid (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
+  NcGalaxyWLObsChebGrid *grid;
+  gchar *data_hash;
+  guint gal_i;
+
+  if (self->integ_method != NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS)
+    g_error ("nc_data_cluster_wl_factor_write_cheb_grid: the integration method is not CHEB_WEIGHTS.");
+
+  if (nc_galaxy_redshift_factor_get_hash (self->redshift_factor) != 0)
+    g_error ("nc_data_cluster_wl_factor_write_cheb_grid: the redshift factor %s depends on the model.",
+             G_OBJECT_TYPE_NAME (self->redshift_factor));
+
+  nc_galaxy_wl_obs_set_cheb_grid (obs, NULL);
+  nc_data_cluster_wl_factor_data_prepare (dcwlf, mset);
+
+  if (nc_galaxy_wl_obs_len (obs) != self->shape_data->len)
+    g_error ("nc_data_cluster_wl_factor_write_cheb_grid: the catalog has %u rows, the dataset %u galaxies.",
+             nc_galaxy_wl_obs_len (obs), self->shape_data->len);
+
+  data_hash = ncm_catalog_get_data_hash (NCM_CATALOG (obs));
+  grid      = nc_galaxy_wl_obs_cheb_grid_new (self->shape_data->len,
+                                              NC_DATA_CLUSTER_WL_CHEB_N_WEIGHTS,
+                                              NC_DATA_CLUSTER_WL_CHEB_N_NODES + 1,
+                                              self->fixed_nodes_zcl,
+                                              G_OBJECT_TYPE_NAME (self->redshift_factor),
+                                              data_hash);
+
+  for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
+    nc_galaxy_wl_obs_cheb_grid_set_galaxy (grid, gal_i,
+                                           g_array_index (self->n_total_per_galaxy, guint, gal_i),
+                                           g_ptr_array_index (self->cheb_weights, gal_i),
+                                           g_ptr_array_index (self->z_nodes_per_galaxy, gal_i),
+                                           g_array_index (self->fixed_norm, gdouble, gal_i),
+                                           g_array_index (self->fixed_bg_norm, gdouble, gal_i),
+                                           g_array_index (self->fixed_fg_norm, gdouble, gal_i));
+
+  nc_galaxy_wl_obs_set_cheb_grid (obs, grid);
+
+  nc_galaxy_wl_obs_cheb_grid_free (grid);
+  g_free (data_hash);
 }
 
 /**
