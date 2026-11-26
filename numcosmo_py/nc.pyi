@@ -7793,7 +7793,11 @@ class DistMuObs(NumCosmoMath.Catalog):
 
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
-        Catalog data matrix
+        Catalog double columns
+      int-data -> GVariant: Integer data
+        Catalog integer columns
+      bool-data -> GVariant: Boolean data
+        Catalog boolean columns
       columns -> GStrv: Columns
         Catalog column names
       col-types -> GVariant: Column types
@@ -7808,18 +7812,22 @@ class DistMuObs(NumCosmoMath.Catalog):
     """
 
     class Props:
+        bool_data: GLib.Variant
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
+        int_data: GLib.Variant
         len: int
         meta: typing.Optional[NumCosmoMath.VarDict]
 
     props: Props = ...
     def __init__(
         self,
+        bool_data: GLib.Variant = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
+        int_data: GLib.Variant = ...,
         len: int = ...,
         meta: typing.Optional[NumCosmoMath.VarDict] = ...,
     ) -> None: ...
@@ -10747,7 +10755,11 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
 
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
-        Catalog data matrix
+        Catalog double columns
+      int-data -> GVariant: Integer data
+        Catalog integer columns
+      bool-data -> GVariant: Boolean data
+        Catalog boolean columns
       columns -> GStrv: Columns
         Catalog column names
       col-types -> GVariant: Column types
@@ -10766,9 +10778,11 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         ellip_conv: GalaxyWLObsEllipConv
         pz: NumCosmoMath.ObjDictInt
         shape_interp: GalaxyWLObsShapeInterp
+        bool_data: GLib.Variant
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
+        int_data: GLib.Variant
         len: int
         meta: typing.Optional[NumCosmoMath.VarDict]
 
@@ -10779,9 +10793,11 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         ellip_conv: GalaxyWLObsEllipConv = ...,
         pz: NumCosmoMath.ObjDictInt = ...,
         shape_interp: GalaxyWLObsShapeInterp = ...,
+        bool_data: GLib.Variant = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
+        int_data: GLib.Variant = ...,
         len: int = ...,
         meta: typing.Optional[NumCosmoMath.VarDict] = ...,
     ) -> None: ...
@@ -18513,7 +18529,11 @@ class HaloCatalog(NumCosmoMath.Catalog):
 
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
-        Catalog data matrix
+        Catalog double columns
+      int-data -> GVariant: Integer data
+        Catalog integer columns
+      bool-data -> GVariant: Boolean data
+        Catalog boolean columns
       columns -> GStrv: Columns
         Catalog column names
       col-types -> GVariant: Column types
@@ -18531,9 +18551,11 @@ class HaloCatalog(NumCosmoMath.Catalog):
         id_col: str
         kind: HaloCatalogKind
         parent_id_col: str
+        bool_data: GLib.Variant
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
+        int_data: GLib.Variant
         len: int
         meta: typing.Optional[NumCosmoMath.VarDict]
 
@@ -18543,9 +18565,11 @@ class HaloCatalog(NumCosmoMath.Catalog):
         id_col: str = ...,
         kind: HaloCatalogKind = ...,
         parent_id_col: str = ...,
+        bool_data: GLib.Variant = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
+        int_data: GLib.Variant = ...,
         len: int = ...,
         meta: typing.Optional[NumCosmoMath.VarDict] = ...,
     ) -> None: ...

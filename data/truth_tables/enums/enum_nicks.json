@@ -23,6 +23,10 @@
     "nick": "row-out-of-range",
     "type": "Ncm.CatalogError"
   },
+  "NCM_CATALOG_ERROR_WRONG_TYPE": {
+    "nick": "wrong-type",
+    "type": "Ncm.CatalogError"
+  },
   "NCM_CFG_ERROR_INVALID_FFTW_FLAG": {
     "nick": "flag",
     "type": "Ncm.CfgError"

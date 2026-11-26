@@ -50,13 +50,11 @@ struct _NcmCatalogClass
 /**
  * NcmCatalogColType:
  * @NCM_CATALOG_COL_TYPE_INVALID: invalid column type.
- * @NCM_CATALOG_COL_TYPE_DOUBLE: a real-valued column.
- * @NCM_CATALOG_COL_TYPE_INT: an integer-valued column (stored losslessly in the double matrix).
- * @NCM_CATALOG_COL_TYPE_BOOL: a boolean-valued column (stored as 0.0/1.0 in the double matrix).
+ * @NCM_CATALOG_COL_TYPE_DOUBLE: a real-valued column, stored in the double matrix.
+ * @NCM_CATALOG_COL_TYPE_INT: an integer-valued column, stored as a 64-bit integer.
+ * @NCM_CATALOG_COL_TYPE_BOOL: a boolean-valued column, stored as a #gboolean.
  *
- * Logical type of a catalog column. All values are physically stored in the
- * double backing matrix; the type is schema metadata used to restore the
- * intended dtype when converting to/from external table formats.
+ * Type of a catalog column. Each type has its own storage and its own accessors.
  *
  */
 typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
@@ -75,6 +73,7 @@ typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
  * NcmCatalogError:
  * @NCM_CATALOG_ERROR_COLUMN_NOT_FOUND: The column was not found.
  * @NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE: The row index is not smaller than the number of rows.
+ * @NCM_CATALOG_ERROR_WRONG_TYPE: The column is not of the type of the accessor.
  *
  * Error codes returned by the #NcmCatalog class.
  *
@@ -91,6 +90,7 @@ typedef enum _NcmCatalogError /*< enum,prefix=NCM_CATALOG_ERROR >*/
 {
   NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
   NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE,
+  NCM_CATALOG_ERROR_WRONG_TYPE,
 } NcmCatalogError;
 
 GQuark ncm_catalog_error_quark (void);
@@ -106,6 +106,7 @@ void ncm_catalog_free (NcmCatalog *catalog);
 void ncm_catalog_clear (NcmCatalog **catalog);
 
 gboolean ncm_catalog_get_index (NcmCatalog *catalog, const gchar *col, guint *i);
+gboolean ncm_catalog_get_data_index (NcmCatalog *catalog, const gchar *col, guint *j);
 gboolean ncm_catalog_has_column (NcmCatalog *catalog, const gchar *col);
 
 NcmCatalogColType ncm_catalog_get_col_type (NcmCatalog *catalog, const gchar *col, GError **error);
@@ -118,6 +119,11 @@ gint64 ncm_catalog_get_int (NcmCatalog *catalog, const gchar *col, const guint i
 
 void ncm_catalog_set_bool (NcmCatalog *catalog, const gchar *col, const guint i, gboolean val, GError **error);
 gboolean ncm_catalog_get_bool (NcmCatalog *catalog, const gchar *col, const guint i, GError **error);
+
+void ncm_catalog_set_int_column (NcmCatalog *catalog, const gchar *col, GArray *vals, GError **error);
+void ncm_catalog_get_int_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error);
+void ncm_catalog_set_bool_column (NcmCatalog *catalog, const gchar *col, GArray *vals, GError **error);
+void ncm_catalog_get_bool_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error);
 
 GStrv ncm_catalog_peek_columns (NcmCatalog *catalog);
 NcmMatrix *ncm_catalog_peek_data (NcmCatalog *catalog);

@@ -373,7 +373,10 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
   const gdouble c_kms                              = ncm_c_c () / 1.0e3;
   const guint nhost                                = ncm_catalog_len (hostc);
 
-  GArray *rows = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *rows       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *galaxy_ids = g_array_new (FALSE, FALSE, sizeof (gint64));
+  GArray *parent_ids = g_array_new (FALSE, FALSE, sizeof (gint64));
+  GArray *centrals   = g_array_new (FALSE, FALSE, sizeof (gboolean));
   NcDistance *dist;
   gboolean local_dist = FALSE;
   gdouble zmax        = 0.0;
@@ -388,6 +391,9 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
   if (!_nc_halo_catalog_member_generator_check_columns (hostc, error))
   {
     g_array_unref (rows);
+    g_array_unref (galaxy_ids);
+    g_array_unref (parent_ids);
+    g_array_unref (centrals);
 
     return NULL;
   }
@@ -431,7 +437,7 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
       const gboolean is_central = j < (guint) n_cen;
       gdouble R, cos_theta, phi;
       gdouble z_gal, sep, ra_gal, dec_gal;
-      gdouble gid, pid, cen;
+      gint64 gid;
 
       gdouble sin_theta;
 
@@ -452,13 +458,11 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
 
       _nc_halo_catalog_member_generator_sky_offset (ra_c, dec_c, sep, phi, &ra_gal, &dec_gal);
 
-      gid = (gdouble) galaxy_id;
-      pid = (gdouble) parent;
-      cen = is_central ? 1.0 : 0.0;
+      gid = galaxy_id;
 
-      g_array_append_val (rows, gid);
-      g_array_append_val (rows, pid);
-      g_array_append_val (rows, cen);
+      g_array_append_val (galaxy_ids, gid);
+      g_array_append_val (parent_ids, parent);
+      g_array_append_val (centrals, is_central);
       g_array_append_val (rows, ra_gal);
       g_array_append_val (rows, dec_gal);
       g_array_append_val (rows, z_gal);
@@ -486,12 +490,19 @@ nc_halo_catalog_member_generator_generate (NcHaloCatalogMemberGenerator *memgen,
 
   if (galaxy_id > 0)
   {
+    /* The matrix holds the DOUBLE columns ra, dec and z; the others have their own storage. */
     ncm_matrix_set_from_array (ncm_catalog_peek_data (NCM_CATALOG (members)), rows);
     ncm_catalog_mark_outdated (NCM_CATALOG (members));
+    ncm_catalog_set_int_column (NCM_CATALOG (members), "galaxy_id", galaxy_ids, NULL);
+    ncm_catalog_set_int_column (NCM_CATALOG (members), "parent_id", parent_ids, NULL);
+    ncm_catalog_set_bool_column (NCM_CATALOG (members), "is_central", centrals, NULL);
   }
 
   g_strfreev (col_names);
   g_array_unref (rows);
+  g_array_unref (galaxy_ids);
+  g_array_unref (parent_ids);
+  g_array_unref (centrals);
 
   if (local_dist)
     nc_distance_free (dist);
