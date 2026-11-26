@@ -1,6 +1,6 @@
 """Helper functions for numcosmo_py."""
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TypeVar, cast
 
 import numpy as np
@@ -94,3 +94,64 @@ def register_model_class(mb: Ncm.ModelBuilder) -> type:
     GObject.type_register(NcmModelGeneric)
 
     return NcmModelGeneric
+
+
+def catalog_column(catalog: Ncm.Catalog, col: str) -> np.ndarray:
+    """Return the column ``col`` of ``catalog`` as an array of the dtype of its type.
+
+    :param catalog: the catalog.
+    :param col: the column name.
+    :return: ``float64`` for DOUBLE, ``int64`` for INT and ``bool`` for BOOL columns.
+    """
+    col_type = catalog.get_col_type(col)
+
+    if col_type == Ncm.CatalogColType.INT:
+        return np.array(catalog.get_int_column(col), dtype=np.int64)
+    if col_type == Ncm.CatalogColType.BOOL:
+        return np.array(catalog.get_bool_column(col), dtype=bool)
+
+    _, j = catalog.get_data_index(col)
+    return catalog.peek_data().to_numpy()[:, j].copy()
+
+
+def fill_catalog(catalog: Ncm.Catalog, columns: Mapping[str, np.ndarray]) -> None:
+    """Set every column of ``catalog`` from ``columns``, each through its type.
+
+    :param catalog: the catalog.
+    :param columns: one array per column of ``catalog``, keyed by column name, with
+        one value per row.
+    """
+    names = list(catalog.peek_columns())
+    nrows = catalog.len()
+    double_names = [
+        col for col in names if catalog.get_col_type(col) == Ncm.CatalogColType.DOUBLE
+    ]
+
+    if double_names and nrows > 0:
+        data = np.column_stack(
+            [np.asarray(columns[col], dtype=np.float64) for col in double_names]
+        )
+        catalog.peek_data().set_from_array(data.reshape(-1).tolist())
+        catalog.mark_outdated()
+
+    for col in names:
+        col_type = catalog.get_col_type(col)
+        if col_type == Ncm.CatalogColType.INT:
+            catalog.set_int_column(
+                col, np.asarray(columns[col], dtype=np.int64).tolist()
+            )
+        elif col_type == Ncm.CatalogColType.BOOL:
+            catalog.set_bool_column(col, np.asarray(columns[col], dtype=bool).tolist())
+
+
+def col_type_of(column: np.ndarray) -> Ncm.CatalogColType:
+    """Return the catalog column type of a numpy column dtype.
+
+    :param column: the column.
+    :return: BOOL for booleans, INT for integers and DOUBLE otherwise.
+    """
+    if np.issubdtype(column.dtype, np.bool_):
+        return Ncm.CatalogColType.BOOL
+    if np.issubdtype(column.dtype, np.integer):
+        return Ncm.CatalogColType.INT
+    return Ncm.CatalogColType.DOUBLE

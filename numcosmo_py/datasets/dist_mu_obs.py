@@ -35,6 +35,7 @@ from astropy.io import ascii
 from astropy.table import Table
 
 from numcosmo_py import GEnum, Nc, Ncm
+from numcosmo_py.helper import catalog_column, col_type_of, fill_catalog
 
 SPEED_OF_LIGHT_KM_S = 299792.458
 
@@ -58,38 +59,46 @@ def dist_mu_obs_from_table(
 
     The table must have the columns ``ra``, ``dec``, ``z``, ``mu`` and ``sigma_mu``;
     every other numeric column is kept, with its integer or boolean type, and string
-    columns are dropped. Empty cells of a float column become NaN.
+    columns are dropped. Empty cells of a float column become NaN; an integer or
+    boolean column cannot hold them.
 
     :param table: the table.
     :param meta: string metadata stored in the catalog, see
         :meth:`Ncm.Catalog.set_meta`.
     :return: the catalog.
+    :raises ValueError: an integer or boolean column has empty cells.
     """
     columns: list[str] = []
     col_types: list[Ncm.CatalogColType] = []
-    arrays: list[np.ndarray] = []
+    arrays: dict[str, np.ndarray] = {}
 
     for col in table.colnames:
         column = table[col]
-        if np.issubdtype(column.dtype, np.bool_):
-            col_types.append(Ncm.CatalogColType.BOOL)
-        elif np.issubdtype(column.dtype, np.integer):
-            col_types.append(Ncm.CatalogColType.INT)
-        elif np.issubdtype(column.dtype, np.floating):
-            col_types.append(Ncm.CatalogColType.DOUBLE)
-        else:
+        if not (
+            np.issubdtype(column.dtype, np.bool_)
+            or np.issubdtype(column.dtype, np.integer)
+            or np.issubdtype(column.dtype, np.floating)
+        ):
             continue
+        masked = np.asarray(column.mask) if hasattr(column, "mask") else None
+        col_type = col_type_of(np.asarray(column))
+        if col_type == Ncm.CatalogColType.DOUBLE:
+            values = np.asarray(column, dtype=np.float64)
+            if masked is not None:
+                values = np.where(masked, np.nan, values)
+        else:
+            if masked is not None and masked.any():
+                raise ValueError(
+                    f"Column {col} has {int(masked.sum())} empty cells, which an "
+                    f"integer or boolean column cannot hold."
+                )
+            values = np.asarray(column)
         columns.append(col)
-        values = np.asarray(column, dtype=np.float64)
-        if hasattr(column, "mask"):
-            values = np.where(np.asarray(column.mask), np.nan, values)
-        arrays.append(values)
+        col_types.append(col_type)
+        arrays[col] = values
 
-    nrows = len(table)
-    obs = Nc.DistMuObs.new_full(nrows, columns, col_types)
-    data = np.column_stack(arrays)
-    obs.peek_data().set_from_array(data.reshape(-1).tolist())
-    obs.mark_outdated()
+    obs = Nc.DistMuObs.new_full(len(table), columns, col_types)
+    fill_catalog(obs, arrays)
 
     if meta is not None:
         var_dict = Ncm.VarDict.new()
@@ -187,15 +196,13 @@ def samples_by_rule(
     :return: the sample index of each selected row and the sample names.
     """
     rows = np.arange(obs.len()) if selected is None else np.asarray(selected)
-    columns = list(obs.peek_columns())
-    data = obs.peek_data().to_numpy()
     if rule == SampleRule.NONE:
         return [-1.0] * len(rows), []
     if rule == SampleRule.HEMISPHERE:
-        dec = data[rows, columns.index("dec")]
+        dec = catalog_column(obs, "dec")[rows]
         return [0.0 if d >= 0.0 else 1.0 for d in dec], ["north", "south"]
     names = survey_names(obs)
-    errors = np.column_stack([data[rows, columns.index(f"eDM_{n}")] for n in names])
+    errors = np.column_stack([catalog_column(obs, f"eDM_{n}")[rows] for n in names])
     errors = np.where(np.isfinite(errors), errors, np.inf)
     best = np.argmin(errors, axis=1)
     none = ~np.isfinite(errors).any(axis=1)

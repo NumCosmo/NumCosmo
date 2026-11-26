@@ -1,10 +1,12 @@
-"""Conversions between :class:`~gi.repository.NumCosmoMath.Catalog` and astropy.
+"""Columns of :class:`~gi.repository.NumCosmoMath.Catalog` as numpy arrays.
 
-:class:`NcmCatalog` stores every column in a single double matrix and tags each
-column with a logical type (:class:`~gi.repository.NumCosmoMath.CatalogColType`).
-These helpers move data to and from :class:`astropy.table.Table`, using the type
-tags to restore the intended ``int``/``bool``/``float`` dtypes on the way out and
-to infer them from the table column dtypes on the way in.
+:class:`NcmCatalog` stores each column by its type
+(:class:`~gi.repository.NumCosmoMath.CatalogColType`): the DOUBLE columns in the matrix
+of ``peek_data()``, the INT columns as 64-bit integers and the BOOL columns as booleans.
+These functions convert catalogs to and from :class:`astropy.table.Table`, reading and
+writing each column through the storage of its type
+(:func:`numcosmo_py.helper.catalog_column`, :func:`numcosmo_py.helper.fill_catalog`)
+and inferring the types from the table column dtypes on the way in.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ import numpy as np
 from astropy.table import Table
 
 from numcosmo_py import Ncm
+from numcosmo_py.helper import catalog_column, col_type_of, fill_catalog
 
 
 def catalog_to_table(catalog: Ncm.Catalog) -> Table:
@@ -22,20 +25,10 @@ def catalog_to_table(catalog: Ncm.Catalog) -> Table:
     :return: a table whose columns carry the dtype implied by each column's
         :class:`~gi.repository.NumCosmoMath.CatalogColType`.
     """
-    columns = list(catalog.peek_columns())
-    data = catalog.peek_data().to_numpy()
     table = Table()
 
-    for j, col in enumerate(columns):
-        col_type = catalog.get_col_type(col)
-        column = data[:, j]
-
-        if col_type == Ncm.CatalogColType.INT:
-            table[col] = column.astype(np.int64)
-        elif col_type == Ncm.CatalogColType.BOOL:
-            table[col] = column.astype(bool)
-        else:
-            table[col] = column.astype(np.float64)
+    for col in catalog.peek_columns():
+        table[col] = catalog_column(catalog, col)
 
     return table
 
@@ -51,24 +44,10 @@ def catalog_from_table(table: Table) -> Ncm.Catalog:
     :return: a new catalog holding the table data.
     """
     columns = list(table.colnames)
-    nrows = len(table)
-    col_types = []
-    data = np.empty((nrows, len(columns)), dtype=np.float64)
+    arrays = {col: np.asarray(table[col]) for col in columns}
+    col_types = [col_type_of(arrays[col]) for col in columns]
 
-    for j, col in enumerate(columns):
-        column = np.asarray(table[col])
-
-        if np.issubdtype(column.dtype, np.bool_):
-            col_types.append(Ncm.CatalogColType.BOOL)
-        elif np.issubdtype(column.dtype, np.integer):
-            col_types.append(Ncm.CatalogColType.INT)
-        else:
-            col_types.append(Ncm.CatalogColType.DOUBLE)
-
-        data[:, j] = column.astype(np.float64)
-
-    catalog = Ncm.Catalog.new_full(nrows, columns, col_types)
-    catalog.peek_data().set_from_array(data.reshape(-1).tolist())
-    catalog.mark_outdated()
+    catalog = Ncm.Catalog.new_full(len(table), columns, col_types)
+    fill_catalog(catalog, arrays)
 
     return catalog

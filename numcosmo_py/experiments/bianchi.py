@@ -34,6 +34,7 @@ from numcosmo_py.datasets.dist_mu_obs import (
     SampleRule,
     samples_by_rule,
 )
+from numcosmo_py.helper import catalog_column
 
 
 def build_bianchi_experiment(
@@ -159,11 +160,9 @@ def build_bianchi_experiment(
     sample_names: list[str] = []
     if sample_col is None and sample_rule != SampleRule.NONE:
         # The selection of set_obs, redone here to label the selected rows.
-        columns = list(obs.peek_columns())
-        table = obs.peek_data().to_numpy()
-        z_all = table[:, columns.index("z")]
-        mu_all = table[:, columns.index(mu_col or "mu")]
-        sigma_all = table[:, columns.index(sigma_col or "sigma_mu")]
+        z_all = catalog_column(obs, "z")
+        mu_all = catalog_column(obs, mu_col or "mu")
+        sigma_all = catalog_column(obs, sigma_col or "sigma_mu")
         selected = np.nonzero(
             (z_all >= z_min)
             & (z_all <= z_max)
