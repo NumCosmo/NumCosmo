@@ -124,6 +124,8 @@ struct _NcGalaxyShapePopClass
  * NcGalaxyShapePopData:
  * @e_rms: per-galaxy intrinsic shape scatter input (used by per-galaxy models;
  *   ignored by global models).
+ * @prepared: %TRUE once nc_galaxy_shape_pop_prepare() has resolved @ldata;
+ *   nc_galaxy_shape_pop_eval_p_array() aborts while it is %FALSE.
  *
  * Per-galaxy data for the intrinsic ellipticity distribution. Mirrors the
  * #NcGalaxyShapeFactorData / #NcGalaxyPositionFactorData idiom: typed public
@@ -135,6 +137,7 @@ struct _NcGalaxyShapePopClass
 struct _NcGalaxyShapePopData
 {
   gdouble e_rms;
+  gboolean prepared;
   gpointer ldata;
   GDestroyNotify ldata_destroy;
   void (*ldata_read_row) (NcGalaxyShapePopData *data, NcGalaxyWLObs *obs, const guint i);
