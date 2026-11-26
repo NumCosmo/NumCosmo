@@ -28,7 +28,7 @@ import re
 import sys
 import pytest
 
-from numcosmo_py import Ncm
+from numcosmo_py import Ncm, NumCosmoWarning
 
 Ncm.cfg_init()
 
@@ -49,16 +49,13 @@ def fixture_fit() -> Ncm.Fit:
     )
 
 
-def test_fit_factory(capfd, fit: Ncm.Fit):
+def test_fit_factory(fit: Ncm.Fit):
     """Test NcmFit factory."""
     mset = fit.peek_mset()
     mset.param_set(Ncm.ModelMVND.id(), 0, 1.0e300)
 
-    fit.run(Ncm.FitRunMsgs.NONE)
-
-    _, err = capfd.readouterr()
-
-    assert re.search(r"initial point provides m2lnL", err)
+    with pytest.warns(NumCosmoWarning, match="initial point provides m2lnL"):
+        fit.run(Ncm.FitRunMsgs.NONE)
 
 
 def test_fit_log_state_non_computed(capfd, fit: Ncm.Fit):

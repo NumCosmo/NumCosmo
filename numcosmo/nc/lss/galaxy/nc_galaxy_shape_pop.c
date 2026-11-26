@@ -325,6 +325,7 @@ nc_galaxy_shape_pop_data_new (NcGalaxyShapePop *gsp)
   NcGalaxyShapePopData *data = g_new0 (NcGalaxyShapePopData, 1);
 
   data->e_rms                  = 0.0;
+  data->prepared               = FALSE;
   data->ldata                  = NULL;
   data->ldata_destroy          = NULL;
   data->ldata_read_row         = NULL;
@@ -430,13 +431,14 @@ nc_galaxy_shape_pop_data_required_columns (NcGalaxyShapePopData *data)
  *
  * Resolves the model parameters (and the per-galaxy @data->e_rms, for per-galaxy
  * models) into @data: the subclass-specific parameters stored in @data->ldata
- * that nc_galaxy_shape_pop_eval_p() reads.
+ * that nc_galaxy_shape_pop_eval_p() reads, and marks @data as prepared.
  *
  */
 void
 nc_galaxy_shape_pop_prepare (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data)
 {
   NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->prepare (gsp, data);
+  data->prepared = TRUE;
 }
 
 /**
@@ -486,10 +488,18 @@ nc_galaxy_shape_pop_eval_p (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, c
  * The generic default just loops calling eval_p(), so this is always safe
  * to call; a subclass may override it to batch the work (see
  * #NcGalaxyShapePopBeta).
+ *
+ * Aborts if @data was never prepared with nc_galaxy_shape_pop_prepare(): its
+ * zero-initialized parameters describe no population.
  */
 void
 nc_galaxy_shape_pop_eval_p_array (NcGalaxyShapePop *gsp, NcGalaxyShapePopData *data, const GArray *r, GArray **p)
 {
+  if (G_UNLIKELY (!data->prepared))
+    g_error ("nc_galaxy_shape_pop_eval_p_array: the %s data was never prepared; call "
+             "nc_galaxy_shape_pop_prepare() or nc_galaxy_shape_factor_prepare_data_array() first.",
+             G_OBJECT_TYPE_NAME (gsp));
+
   NC_GALAXY_SHAPE_POP_GET_CLASS (gsp)->eval_p_array (gsp, data, r, p);
 }
 

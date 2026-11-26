@@ -102,6 +102,7 @@ void ncm_cfg_set_logfile (gchar *filename);
 void ncm_cfg_set_logstream (FILE *stream);
 void ncm_cfg_set_log_handler (NcmCfgLoggerFunc logger);
 void ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger);
+void ncm_cfg_set_warning_log_handler (NcmCfgLoggerFunc logger);
 
 void ncm_cfg_set_openmp_nthreads (gint n);
 void ncm_cfg_set_openblas_nthreads (gint n);

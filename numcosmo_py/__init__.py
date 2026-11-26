@@ -24,6 +24,7 @@
 """Import NumCosmo Python bindings."""
 
 import re
+import warnings
 from collections.abc import Iterator, Sequence
 from enum import Enum, StrEnum, auto
 from typing import cast
@@ -50,6 +51,7 @@ __all__ = [
     "GObject",
     "Nc",
     "Ncm",
+    "NumCosmoWarning",
     "dict_to_var_dict",
     "var_dict_to_dict",
 ]
@@ -57,6 +59,22 @@ __all__ = [
 # Loading the library registers its types and functions; this call loads it at import,
 # which PyGObject otherwise defers to the first call, and aborts if that did not happen.
 Ncm.cfg_check_register()
+
+
+class NumCosmoWarning(UserWarning):
+    """Category of the warnings the NumCosmo library emits with g_warning()."""
+
+
+def _warn(message: str) -> None:
+    """Issue a library warning as a Python warning at the caller's line.
+
+    The frame above this function is the Python code that called the library, so
+    stacklevel=2 attributes the warning to that line.
+    """
+    warnings.warn(message.rstrip(), NumCosmoWarning, stacklevel=2)
+
+
+Ncm.cfg_set_warning_log_handler(_warn)
 
 
 def _matrix_to_numpy(

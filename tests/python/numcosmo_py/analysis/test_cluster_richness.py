@@ -137,10 +137,14 @@ def fixture_sample_data(ascaso_model: Nc.ClusterMassAscaso) -> ClusterData:
     mset.prepare_fparam_map()
     data.resample(mset, rng)
 
-    lnR = np.array([data.peek_lnR().get(i) for i in range(n_samples)])
-    sigma_lnR = np.array([sigma_lnR_v.get(i) for i in range(n_samples)])
-
-    return ClusterData(lnM=lnM, z=z, lnR=lnR, sigma_lnR=sigma_lnR)
+    # The model samples the full distribution, so resample() keeps only the clusters
+    # whose richness falls in the allowed range: read every column back from it.
+    return ClusterData(
+        lnM=data.peek_lnM().to_numpy(),
+        z=data.peek_z().to_numpy(),
+        lnR=data.peek_lnR().to_numpy(),
+        sigma_lnR=data.peek_sigma_lnR().to_numpy(),
+    )
 
 
 @pytest.fixture(name="temp_db_path")

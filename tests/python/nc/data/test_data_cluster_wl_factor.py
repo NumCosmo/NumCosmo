@@ -26,15 +26,12 @@ get/set round trip and the plain getter/setter/``ref`` wrappers.
 """
 
 import os
-import pathlib
-import subprocess
-import sys
 
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from numcosmo_py import Ncm, Nc
+from numcosmo_py import Ncm, Nc, NumCosmoWarning
 from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
@@ -858,42 +855,30 @@ def test_auto_node_calibration_warns_once_per_prepare():
 
     That aggregation is the whole point: ncm_integral_fixed_calibrate() is
     called per galaxy, and a realistic cluster produced thousands of
-    near-identical warnings, which is neither readable nor actionable. Run in a
-    subprocess because g_warning goes to stderr, not through the Python warnings
-    machinery.
+    near-identical warnings, which is neither readable nor actionable.
+    pytest.warns records every warning, so the count is the library's.
     """
-    script = (
-        "from numcosmo_py import Ncm, Nc\n"
-        "Ncm.cfg_init()\n"
-        "import sys; sys.path.insert(0, %r)\n"
-        "from test_data_cluster_wl_factor import _build_probe_setup, _HEALTHY_GALAXIES\n"
-        "dcwlf, mset, _, _ = _build_probe_setup(_HEALTHY_GALAXIES)\n"
-        "dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)\n"
-        "dcwlf.set_auto_nodes(True)\n"
-        "dcwlf.set_node_reltol(1.0e-14)\n"  # unreachable
-        "dcwlf.set_max_total_nodes(30)\n"  # within a tiny node budget
-        "dcwlf.m2lnL_val(mset)\n" % str(pathlib.Path(__file__).parent)
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", script],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    dcwlf, mset, _, _ = _build_probe_setup(_HEALTHY_GALAXIES)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_auto_nodes(True)
+    dcwlf.set_node_reltol(1.0e-14)  # unreachable
+    dcwlf.set_max_total_nodes(30)  # within a tiny node budget
 
-    assert result.returncode == 0, result.stderr
-    assert "auto-node calibration did not reach" in result.stderr
+    with pytest.warns(NumCosmoWarning) as record:
+        dcwlf.m2lnL_val(mset)
+    messages = [str(w.message) for w in record]
 
-    # Once per prepare(), not once per galaxy: exactly one aggregate line, and
+    # Once per prepare(), not once per galaxy: exactly one aggregate warning, and
     # it accounts for all three galaxies rather than reporting one of them.
-    assert result.stderr.count("auto-node calibration did not reach") == 1
+    calib = [m for m in messages if "auto-node calibration did not reach" in m]
+    assert len(calib) == 1
     assert f"for {len(_HEALTHY_GALAXIES)} of {len(_HEALTHY_GALAXIES)} galaxies" in (
-        result.stderr
+        calib[0]
     )
 
     # And the per-call warning inside ncm_integral_fixed_calibrate() stayed
     # suppressed -- that is what passing a non-NULL relerr_out buys.
-    assert "did not reach reltol" not in result.stderr
+    assert not any("did not reach reltol" in m for m in messages)
 
 
 # A galaxy whose photo-z support runs far past the lens, so nearly all of its

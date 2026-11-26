@@ -345,6 +345,7 @@ static FILE *_log_stream             = NULL;
 static FILE *_log_stream_err         = NULL;
 static guint _log_msg_id             = 0;
 static guint _log_err_id             = 0;
+static guint _log_warn_id            = 0;
 static gboolean _enable_msg          = TRUE;
 static gboolean _enable_msg_flush    = TRUE;
 static gsl_error_handler_t *gsl_err  = NULL;
@@ -1339,6 +1340,43 @@ ncm_cfg_set_error_log_handler (NcmCfgLoggerFunc logger)
   container.logger = logger;
 
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error_logger, &container);
+}
+
+static void
+_ncm_cfg_log_warning_logger (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  NcmCfgLoggerFuncContainer *container = (NcmCfgLoggerFuncContainer *) user_data;
+
+  container->logger (message);
+}
+
+/**
+ * ncm_cfg_set_warning_log_handler:
+ * @logger: (scope notified) (nullable): a logger function
+ *
+ * Sends the warning log messages of the NumCosmo domain to @logger, also while
+ * ncm_cfg_logfile() is off. A %NULL @logger restores the GLib default handler. A
+ * warning made fatal by `G_DEBUG=fatal-warnings` or g_log_set_always_fatal() still
+ * aborts after @logger returns.
+ *
+ * The numcosmo_py package installs a logger that issues each message as a Python
+ * warning of category `numcosmo_py.NumCosmoWarning`.
+ */
+void
+ncm_cfg_set_warning_log_handler (NcmCfgLoggerFunc logger)
+{
+  static NcmCfgLoggerFuncContainer container = {NULL};
+
+  if (_log_warn_id != 0)
+  {
+    g_log_remove_handler (G_LOG_DOMAIN, _log_warn_id);
+    _log_warn_id = 0;
+  }
+
+  container.logger = logger;
+
+  if (logger != NULL)
+    _log_warn_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING | G_LOG_FLAG_FATAL, _ncm_cfg_log_warning_logger, &container);
 }
 
 /**

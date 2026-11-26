@@ -75,6 +75,7 @@ void test_nc_galaxy_shape_pop_reduced_ends (TestNcGalaxyShapePop *test, gconstpo
 void test_nc_galaxy_shape_pop_reduced_norm (TestNcGalaxyShapePop *test, gconstpointer pdata);
 void test_nc_galaxy_shape_pop_reduced_factors (TestNcGalaxyShapePop *test, gconstpointer pdata);
 void test_nc_galaxy_shape_pop_beta_moments (TestNcGalaxyShapePop *test, gconstpointer pdata);
+void test_nc_galaxy_shape_pop_unprepared (TestNcGalaxyShapePop *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -108,6 +109,10 @@ main (gint argc, gchar *argv[])
 
     path = g_strdup_printf ("/nc/galaxy_shape_pop/%s/reduced/factors", tc->name);
     g_test_add (path, TestNcGalaxyShapePop, tc, &test_nc_galaxy_shape_pop_new, &test_nc_galaxy_shape_pop_reduced_factors, &test_nc_galaxy_shape_pop_free);
+    g_free (path);
+
+    path = g_strdup_printf ("/nc/galaxy_shape_pop/%s/unprepared", tc->name);
+    g_test_add (path, TestNcGalaxyShapePop, tc, &test_nc_galaxy_shape_pop_new, &test_nc_galaxy_shape_pop_unprepared, &test_nc_galaxy_shape_pop_free);
     g_free (path);
 
     if (tc->kind == TEST_POP_BETA)
@@ -382,5 +387,38 @@ test_nc_galaxy_shape_pop_beta_moments (TestNcGalaxyShapePop *test, gconstpointer
   ncm_mset_free (mset);
   gsl_integration_qaws_table_free (tab);
   gsl_integration_workspace_free (ws);
+}
+
+/* The prepared fixture data evaluates; a data object never prepared aborts */
+void
+test_nc_galaxy_shape_pop_unprepared (TestNcGalaxyShapePop *test, gconstpointer pdata)
+{
+  GArray *r  = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *p  = NULL;
+  gdouble r0 = 0.5;
+
+  g_array_append_val (r, r0);
+
+  if (g_test_subprocess ())
+  {
+    NcGalaxyShapePopData *data = nc_galaxy_shape_pop_data_new (test->pop);
+
+    g_assert_false (data->prepared);
+    nc_galaxy_shape_pop_eval_p_array (test->pop, data, r, &p);
+
+    return;
+  }
+
+  g_assert_true (test->data->prepared);
+  nc_galaxy_shape_pop_eval_p_array (test->pop, test->data, r, &p);
+  g_assert_true (gsl_finite (g_array_index (p, gdouble, 0)));
+  g_assert_cmpfloat (g_array_index (p, gdouble, 0), >, 0.0);
+
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*was never prepared*");
+
+  g_array_unref (r);
+  g_array_unref (p);
 }
 
