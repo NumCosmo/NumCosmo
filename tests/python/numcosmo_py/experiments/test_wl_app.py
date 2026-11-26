@@ -27,6 +27,7 @@
 Targets the ``NcGalaxy*Factor``/``NcDataClusterWLFactor`` pipeline.
 """
 
+import re
 from typing import cast
 from filecmp import cmp
 from pathlib import Path
@@ -1680,8 +1681,9 @@ def _experiment_m2lnL(experiment_file: Path) -> float:
 
 
 def _unwrapped(text: str) -> str:
-    """The text with every run of whitespace, line breaks of the console included, as one space."""
-    return " ".join(text.split())
+    """The text without ANSI color codes (CI forces colors) and with every run of
+    whitespace, line breaks of the console included, as one space."""
+    return " ".join(re.sub(r"\x1b\[[0-9;]*m", "", text).split())
 
 
 def _tables(output: Path, data_file: Path, *args: str):
