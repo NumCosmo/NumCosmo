@@ -151,6 +151,7 @@ void test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside (void);
 void test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside_subprocess (void);
 void test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_restrict_range_cdelta (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_data_prepare (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -218,6 +219,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_spectral/restrict_range/cdelta", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_restrict_range_cdelta,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/restrict_range/centre_box", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box,
               &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/eval_array", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
@@ -2341,6 +2346,65 @@ test_nc_galaxy_shape_factor_spectral_restrict_range_cdelta (TestNcGalaxyShapeFac
   nc_galaxy_shape_factor_data_unref (data);
   nc_galaxy_shape_factor_spectral_free (gsfs);
   ncm_model_param_set_ftype (hms, c_idx, NCM_PARAM_TYPE_FIXED);
+  ncm_mset_prepare_fparam_map (test->mset);
+}
+
+/* The |g| the interpolant of a galaxy at (ra, 0) covers, built with the halo center of the mset */
+static gdouble
+_restrict_range_covered_at (TestNcGalaxyShapeFactorSpectral *test, const gdouble ra)
+{
+  NcGalaxyShapeFactorData *data;
+  NcGalaxyShapeFactorSpectral *gsfs = _restrict_range_build (test, TRUE, ra, &data);
+  const gdouble covered             = _restrict_range_covered (test, gsfs, data);
+
+  nc_galaxy_shape_factor_data_unref (data);
+  nc_galaxy_shape_factor_spectral_free (gsfs);
+
+  return covered;
+}
+
+/*
+ * restrict-range with a free halo center over the box [-0.5, 0.5]^2 [deg], and a galaxy at
+ * (0.6, 0), 0.1 degrees from the box but closer to the center of the box than the largest
+ * displacement in it: the interpolant covers less than interp-g-max, and what it covers with
+ * the halo center fixed at the nearest point of the box, (0.5, 0). The galaxy at
+ * (359.4, 0), across the wrap of the right ascension, covers the same.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
+  NcmModel *hms            = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp));
+  NcmModel *hp             = ncm_mset_peek (test->mset, nc_halo_position_id ());
+  gdouble covered_nearest, covered_free, covered_wrap;
+  guint log10M_idx = 0;
+
+  g_assert_true (ncm_model_param_index_from_name (hms, "log10MDelta", &log10M_idx, NULL));
+  ncm_model_param_set_upper_bound (hms, log10M_idx, 14.5);
+
+  ncm_model_param_set (hp, NC_HALO_POSITION_RA, 0.5);
+  ncm_model_param_set (hp, NC_HALO_POSITION_DEC, 0.0);
+  covered_nearest = _restrict_range_covered_at (test, 0.6);
+
+  ncm_model_param_set_lower_bound (hp, NC_HALO_POSITION_RA, -0.5);
+  ncm_model_param_set_upper_bound (hp, NC_HALO_POSITION_RA, 0.5);
+  ncm_model_param_set_lower_bound (hp, NC_HALO_POSITION_DEC, -0.5);
+  ncm_model_param_set_upper_bound (hp, NC_HALO_POSITION_DEC, 0.5);
+  ncm_model_param_set (hp, NC_HALO_POSITION_RA, 0.0);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FREE);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+
+  covered_free = _restrict_range_covered_at (test, 0.6);
+  covered_wrap = _restrict_range_covered_at (test, 359.4);
+
+  g_assert_cmpfloat (covered_nearest, >, 1.0e-3);
+  g_assert_cmpfloat (covered_free, <, 0.299);
+  g_assert_cmpfloat (fabs (covered_free / covered_nearest - 1.0), <, 1.0e-3);
+  g_assert_cmpfloat (fabs (covered_wrap / covered_free - 1.0), <, 1.0e-3);
+
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
+  ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FIXED);
   ncm_mset_prepare_fparam_map (test->mset);
 }
 
