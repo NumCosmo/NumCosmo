@@ -174,6 +174,7 @@ void test_nc_galaxy_shape_factor_spectral_interp_compress_frac_subprocess (void)
 void test_nc_galaxy_shape_factor_spectral_interp_g_max_subprocess (void);
 void test_nc_galaxy_shape_factor_spectral_invalid_noise (void);
 void test_nc_galaxy_shape_factor_spectral_invalid_noise_subprocess (void);
+void test_nc_galaxy_shape_factor_spectral_direct_estimate (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -285,6 +286,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/interp/g_max/subprocess", &test_nc_galaxy_shape_factor_spectral_interp_g_max_subprocess);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/invalid_noise", &test_nc_galaxy_shape_factor_spectral_invalid_noise);
   g_test_add_func ("/nc/galaxy_shape_factor_spectral/invalid_noise/subprocess", &test_nc_galaxy_shape_factor_spectral_invalid_noise_subprocess);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/direct_estimate", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_direct_estimate,
+              &test_nc_galaxy_shape_factor_spectral_free);
 
   g_test_run ();
 
@@ -2477,5 +2482,74 @@ test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside_subprocess (void)
   NcmVector *out           = ncm_vector_new (3);
 
   nc_galaxy_shape_factor_eval_at_nodes_range (gsf, NULL, NULL, z_nodes, 1, 5, out);
+}
+
+/*
+ * Galaxies on a ring around the halo, each observed without intrinsic ellipticity under the
+ * shear (g_t, g_x) with the biases m and c (data frame): the mean ellipticity of the
+ * convention is A ((1 + m) g + c), A = 2 R (TRACE) or 1 (TRACE_DET). The direct estimate
+ * recovers (g_t, g_x), so the c it subtracts is rotated with each galaxy. Over the ring the
+ * rotated c averages to zero, so an estimate that subtracts c unrotated is off by c.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_direct_estimate (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  const NcGalaxyWLObsEllipConv convs[2] = {NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET};
+  NcHICosmo *cosmo                      = NC_HICOSMO (ncm_mset_peek (test->mset, nc_hicosmo_id ()));
+  NcHaloPosition *hp                    = NC_HALO_POSITION (ncm_mset_peek (test->mset, nc_halo_position_id ()));
+  const guint n                         = 8;
+  const gdouble g_t                     = 0.03;
+  const gdouble g_x                     = -0.01;
+  const gdouble m                       = -0.05;
+  const gdouble c1                      = 0.004;
+  const gdouble c2                      = -0.002;
+  guint l, k;
+
+  nc_halo_position_prepare_if_needed (hp, cosmo);
+
+  for (l = 0; l < 2; l++)
+  {
+    NcGalaxyShapeFactorSpectral *gsfs = nc_galaxy_shape_factor_spectral_new (convs[l]);
+    NcGalaxyShapeFactor *gsf          = NC_GALAXY_SHAPE_FACTOR (gsfs);
+    GPtrArray *data_array             = g_ptr_array_new_with_free_func ((GDestroyNotify) nc_galaxy_shape_factor_data_unref);
+    gdouble gt, gx, sigma_t, sigma_x, rho;
+
+    for (k = 0; k < n; k++)
+    {
+      NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
+      NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
+      const gdouble alpha                = 0.3 + 2.0 * M_PI * k / n;
+      NcGalaxyShapeFactorData *data;
+      gdouble theta, phi, e_rms, A, cos2phi, sin2phi;
+
+      p_data->ra  = 0.1 * cos (alpha);
+      p_data->dec = 0.1 * sin (alpha);
+      data        = nc_galaxy_shape_factor_data_new (gsf, test->mset, p_data, z_data);
+
+      nc_halo_position_polar_angles (hp, p_data->ra, p_data->dec, &theta, &phi);
+      nc_galaxy_shape_pop_prepare (test->pop, data->pop_data);
+      e_rms   = nc_galaxy_shape_pop_e_rms (test->pop, data->pop_data);
+      A       = (convs[l] == NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE) ? 2.0 * (1.0 - e_rms * e_rms) : 1.0;
+      cos2phi = cos (2.0 * phi);
+      sin2phi = sin (2.0 * phi);
+
+      nc_galaxy_shape_factor_data_set (gsf, data,
+                                       A * ((1.0 + m) * (g_t * cos2phi - g_x * sin2phi) + c1),
+                                       A * ((1.0 + m) * (g_t * sin2phi + g_x * cos2phi) + c2),
+                                       0.05, c1, c2, m, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
+      g_ptr_array_add (data_array, data);
+
+      nc_galaxy_position_factor_data_unref (p_data);
+      nc_galaxy_redshift_factor_data_unref (z_data);
+    }
+
+    nc_galaxy_shape_factor_direct_estimate (gsf, test->mset, data_array, &gt, &gx, &sigma_t, &sigma_x, &rho);
+
+    ncm_assert_cmpdouble_e (gt, ==, g_t, 1.0e-13, 0.0);
+    ncm_assert_cmpdouble_e (gx, ==, g_x, 1.0e-13, 0.0);
+
+    g_ptr_array_unref (data_array);
+    nc_galaxy_shape_factor_spectral_free (gsfs);
+  }
 }
 

@@ -283,17 +283,19 @@ def test_eval_at_nodes_gt0_memoized_correctly(ellip_conv):
     assert_allclose(vals[0], single_out.get(0), rtol=0.0, atol=0.0)
 
 
+# gt and gx were recomputed (2026-11-27) when direct_estimate began rotating c1, c2 into the
+# tangential/cross frame; sigma_t, sigma_x and rho are the legacy values.
 _DIRECT_ESTIMATE_FROZEN = {
     "TRACE": (
-        0.0026892385874255896,
-        -0.037018753682268174,
+        0.0024560963847448133,
+        -0.03980888102683978,
         0.18446442899466103,
         0.1677352221394491,
         0.20442287348760513,
     ),
     "TRACE_DET": (
-        -3.317093720609368e-05,
-        -0.06977125438926611,
+        -0.0002663131398755384,
+        -0.07256138173382227,
         0.3354157805889639,
         0.30585159452347266,
         0.20456109871796177,
