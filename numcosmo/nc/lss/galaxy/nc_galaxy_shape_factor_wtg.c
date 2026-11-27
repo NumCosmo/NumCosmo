@@ -133,7 +133,7 @@ static void
 _nc_galaxy_shape_factor_wtg_ldata_read_row (NcGalaxyShapeFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
   NcGalaxyShapeFactorWtGData *ldata = (NcGalaxyShapeFactorWtGData *) data->ldata;
-  const gdouble responsivity        = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_WTG_COL_RESPONSIVITY, i, NULL);
+  const gdouble responsivity        = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_WTG_COL_RESPONSIVITY, i, NULL);
 
   if (!(responsivity > 0.0))
     g_error ("NcGalaxyShapeFactorWtG: row %u has a non-positive responsivity (%g).", i, responsivity);
@@ -146,7 +146,7 @@ _nc_galaxy_shape_factor_wtg_ldata_write_row (NcGalaxyShapeFactorData *data, NcGa
 {
   NcGalaxyShapeFactorWtGData *ldata = (NcGalaxyShapeFactorWtGData *) data->ldata;
 
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_WTG_COL_RESPONSIVITY, i, ldata->responsivity, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_WTG_COL_RESPONSIVITY, i, ldata->responsivity, NULL);
 }
 
 static void

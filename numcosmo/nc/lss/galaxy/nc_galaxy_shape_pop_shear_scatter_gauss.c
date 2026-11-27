@@ -138,13 +138,13 @@ _nc_galaxy_shape_pop_shear_scatter_gauss_ldata_no_columns (NcGalaxyShapePopData 
 static void
 _nc_galaxy_shape_pop_shear_scatter_gauss_ldata_read_e_rms (NcGalaxyShapePopData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  data->e_rms = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS_COL_E_RMS, i, NULL);
+  data->e_rms = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS_COL_E_RMS, i, NULL);
 }
 
 static void
 _nc_galaxy_shape_pop_shear_scatter_gauss_ldata_write_e_rms (NcGalaxyShapePopData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS_COL_E_RMS, i, data->e_rms, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS_COL_E_RMS, i, data->e_rms, NULL);
 }
 
 static void

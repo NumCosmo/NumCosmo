@@ -244,7 +244,11 @@ def test_responsivity_column_roundtrip():
     assert "responsivity" in cols
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     gsf.data_set_responsivity(data, 0.77)
     data.write_row(obs, 0)
@@ -299,7 +303,13 @@ def _build_dataset(kind, ellip_conv, n_gal, seed, log10m):
     z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
-    obs = Nc.GalaxyWLObs.new(ellip_conv, Nc.WLEllipticityFrame.CELESTIAL, n_gal, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ellip_conv,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        n_gal,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
+    )
     for i in range(n_gal):
         for col, val in [
             ("std_noise", 0.05),
