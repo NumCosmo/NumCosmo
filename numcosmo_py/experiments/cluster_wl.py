@@ -557,11 +557,49 @@ class GalaxyShapeFactorGenMomentsTilt(GalaxyShapeFactorGenBase):
         )
 
 
+DEFAULT_SHAPE_WTG_RESPONSIVITY = 1.0
+
+
+class GalaxyShapeFactorGenWtG(GalaxyShapeFactorGenBase):
+    """Tangential shear-estimator likelihood of Applegate et al. (2014)
+    (``NcGalaxyShapeFactorWtG``).
+
+    Needs a shear-scatter population (``--pop-dist shear_gauss`` or
+    ``shear_voigt``). ``responsivity`` is the shear responsivity written to
+    every mock galaxy's ``responsivity`` column; a real catalog must carry
+    that column itself.
+    """
+
+    responsivity: Annotated[float, Field(gt=0.0)] = DEFAULT_SHAPE_WTG_RESPONSIVITY
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for this scheme."""
+        return [
+            "GalaxyShapeFactorGenWtG",
+            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+            f"responsivity={DEFAULT_SHAPE_WTG_RESPONSIVITY}",
+        ]
+
+    def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
+        return Nc.GalaxyShapeFactorWtG.new(self.ellip_conv.genum)
+
+    def requires_sigma(self) -> bool:
+        """The scatter kernel needs no Gaussian width of an intrinsic population."""
+        return False
+
+    def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:
+        """Write the shared calibration inputs plus the responsivity."""
+        super().write_calib(obs, i, rng)
+        obs.set(Nc.GALAXY_SHAPE_FACTOR_WTG_COL_RESPONSIVITY, i, self.responsivity)
+
+
 GalaxyShapeFactorGenTypes = (
     GalaxyShapeFactorGenVarAdd
     | GalaxyShapeFactorGenSpectral
     | GalaxyShapeFactorGenMomentsGauss
     | GalaxyShapeFactorGenMomentsTilt
+    | GalaxyShapeFactorGenWtG
 )
 
 
@@ -572,6 +610,7 @@ class ShapeFactorGen(StrEnum):
     SPECTRAL = (auto(), GalaxyShapeFactorGenSpectral)
     MOMENTS_GAUSS = (auto(), GalaxyShapeFactorGenMomentsGauss)
     MOMENTS_TILT = (auto(), GalaxyShapeFactorGenMomentsTilt)
+    WTG = (auto(), GalaxyShapeFactorGenWtG)
 
     def __new__(cls, value: str, _model_cls: type[GalaxyShapeFactorGenTypes]) -> Self:
         """Create a new instance of the enum.
@@ -836,7 +875,149 @@ class GalaxyPopGenBeta(BaseModel):
         return f"{self.__class__.__name__}({args})"
 
 
-GalaxyPopGenTypes = GalaxyPopGenGauss | GalaxyPopGenGaussLocal | GalaxyPopGenBeta
+DEFAULT_POP_SHEAR_SIGMA = Nc.GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS_DEFAULT_SIGMA
+DEFAULT_POP_SHEAR_GAMMA = Nc.GALAXY_SHAPE_POP_SHEAR_SCATTER_VOIGT_DEFAULT_GAMMA
+DEFAULT_POP_SHEAR_E_RMS = 0.36
+
+
+class GalaxyPopGenShearGauss(BaseModel):
+    """Gaussian scatter of the shear estimate
+    (``NcGalaxyShapePopShearScatterGauss``), for ``--shape-factor wtg``.
+
+    ``sigma`` is in reduced-shear units. With ``sigma_from_catalog`` the width
+    is instead the per-galaxy ``e_rms`` column over sR; mock ``e_rms`` values
+    are drawn like ``gauss_local``'s, around ``e_rms`` with spread
+    ``std_sigma``. ``include_noise`` adds std_noise/(sR) to the width.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_POP_SHEAR_SIGMA
+    sigma_from_catalog: bool = False
+    e_rms: Annotated[float, Field(gt=0.0)] = DEFAULT_POP_SHEAR_E_RMS
+    std_sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_POP_STD_SIGMA
+    include_noise: bool = True
+
+    _pop: Nc.GalaxyShapePopShearScatterGauss = PrivateAttr()
+    _k_e_rms: float = PrivateAttr()
+    _theta_e_rms: float = PrivateAttr()
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for the Gaussian shear scatter."""
+        return [
+            "GalaxyPopGenShearGauss",
+            f"sigma={DEFAULT_POP_SHEAR_SIGMA}, sigma_from_catalog=False, \n"
+            f"e_rms={DEFAULT_POP_SHEAR_E_RMS}, std_sigma={DEFAULT_POP_STD_SIGMA}, "
+            "include_noise=True",
+        ]
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "GalaxyPopGenShearGauss":
+        """Create a GalaxyPopGenShearGauss from command line arguments."""
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    def model_post_init(self, _: Any, /) -> None:
+        """Build the population model."""
+        self._pop = Nc.GalaxyShapePopShearScatterGauss.new(self.sigma_from_catalog)
+        self._pop["sigma"] = self.sigma
+        self._pop.set_include_noise(self.include_noise)
+        self._k_e_rms = ((self.e_rms**2) / self.std_sigma) ** 2
+        self._theta_e_rms = self.std_sigma**2 / self.e_rms**2
+
+    def register_models(self, mset: Ncm.MSet) -> None:
+        """Register this population model into mset."""
+        mset.set(self._pop)
+
+    def supports_sigma(self) -> bool:
+        """Whether this population supports nc_galaxy_shape_pop_get_sigma()."""
+        return False
+
+    def get_mfuncs(self) -> list[Ncm.MSetFuncList]:
+        """No derived quantities: sigma is the fitted parameter itself."""
+        return []
+
+    def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:
+        """Draw and write this galaxy's e_rms when the width comes from the catalog."""
+        if self.sigma_from_catalog:
+            e_rms = np.sqrt(rng.gamma_gen(self._k_e_rms, self._theta_e_rms))
+            obs.set(Nc.GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS_COL_E_RMS, i, e_rms)
+
+    def __repr__(self):
+        """Return a string representation of the model."""
+        args = ", ".join(f"{k}={v!r}" for k, v in self.model_dump().items())
+        return f"{self.__class__.__name__}({args})"
+
+
+class GalaxyPopGenShearVoigt(BaseModel):
+    """Voigt scatter of the shear estimate
+    (``NcGalaxyShapePopShearScatterVoigt``), for ``--shape-factor wtg``.
+
+    ``sigma`` (Gaussian core) and ``gamma`` (Lorentzian half width) are in
+    reduced-shear units. ``include_noise`` adds std_noise/(sR) to the core;
+    turn it off when sigma and gamma describe the whole scatter, as in
+    Applegate et al. (2014).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    sigma: Annotated[float, Field(gt=0.0)] = DEFAULT_POP_SHEAR_SIGMA
+    gamma: Annotated[float, Field(gt=0.0)] = DEFAULT_POP_SHEAR_GAMMA
+    include_noise: bool = True
+
+    _pop: Nc.GalaxyShapePopShearScatterVoigt = PrivateAttr()
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for the Voigt shear scatter."""
+        return [
+            "GalaxyPopGenShearVoigt",
+            f"sigma={DEFAULT_POP_SHEAR_SIGMA}, gamma={DEFAULT_POP_SHEAR_GAMMA}, "
+            "include_noise=True",
+        ]
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "GalaxyPopGenShearVoigt":
+        """Create a GalaxyPopGenShearVoigt from command line arguments."""
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    def model_post_init(self, _: Any, /) -> None:
+        """Build the population model."""
+        self._pop = Nc.GalaxyShapePopShearScatterVoigt.new()
+        self._pop["sigma"] = self.sigma
+        self._pop["gamma"] = self.gamma
+        self._pop.set_include_noise(self.include_noise)
+
+    def register_models(self, mset: Ncm.MSet) -> None:
+        """Register this population model into mset."""
+        mset.set(self._pop)
+
+    def supports_sigma(self) -> bool:
+        """Whether this population supports nc_galaxy_shape_pop_get_sigma()."""
+        return False
+
+    def get_mfuncs(self) -> list[Ncm.MSetFuncList]:
+        """No derived quantities: sigma and gamma are the fitted parameters."""
+        return []
+
+    def write_calib(self, obs: Nc.GalaxyWLObs, i: int, rng: Ncm.RNG) -> None:
+        """No per-galaxy input: sigma and gamma are global parameters."""
+
+    def __repr__(self):
+        """Return a string representation of the model."""
+        args = ", ".join(f"{k}={v!r}" for k, v in self.model_dump().items())
+        return f"{self.__class__.__name__}({args})"
+
+
+GalaxyPopGenTypes = (
+    GalaxyPopGenGauss
+    | GalaxyPopGenGaussLocal
+    | GalaxyPopGenBeta
+    | GalaxyPopGenShearGauss
+    | GalaxyPopGenShearVoigt
+)
 
 
 def check_shape_pop_compat(
@@ -850,6 +1031,14 @@ def check_shape_pop_compat(
             --pop-dist beta) -- letting this reach the C layer instead
             aborts the whole process, not just this check.
     """
+    factor = shape_gen.get_shape_factor()
+    if not factor.accepts_pop(pop_gen._pop):  # pylint: disable=protected-access
+        raise ValueError(
+            f"{type(shape_gen).__name__} cannot evaluate the population "
+            f"{type(pop_gen).__name__}: --shape-factor wtg takes only "
+            "pop_dist=shear_gauss or shear_voigt, and every other shape factor "
+            "takes only the intrinsic-ellipticity populations."
+        )
     if shape_gen.requires_sigma() and not pop_gen.supports_sigma():
         raise ValueError(
             f"{type(shape_gen).__name__} requires a population supporting "
@@ -974,6 +1163,8 @@ class GalaxyPopGen(StrEnum):
     GAUSS = (auto(), GalaxyPopGenGauss)
     GAUSS_LOCAL = (auto(), GalaxyPopGenGaussLocal)
     BETA = (auto(), GalaxyPopGenBeta)
+    SHEAR_GAUSS = (auto(), GalaxyPopGenShearGauss)
+    SHEAR_VOIGT = (auto(), GalaxyPopGenShearVoigt)
 
     def __new__(cls, value: str, _model_cls: type[GalaxyPopGenTypes]) -> Self:
         """Create a new instance of the enum.
