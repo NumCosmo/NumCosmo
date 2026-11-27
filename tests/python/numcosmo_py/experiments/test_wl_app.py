@@ -122,7 +122,11 @@ def _build_real_wl_obs(
         "z",
     ]
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, n, cols
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        n,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     ra = rng.uniform(-0.05, 0.05, n)
     dec = rng.uniform(-0.05, 0.05, n)
@@ -721,6 +725,8 @@ def test_cluster_wl_load_app_missing_ra_dec_columns(experiment_file, tmp_path: P
         Nc.WLEllipticityFrame.CELESTIAL,
         1,
         ["epsilon_obs_1", "epsilon_obs_2", "std_noise", "z"],
+        [Ncm.CatalogColType.DOUBLE]
+        * len(["epsilon_obs_1", "epsilon_obs_2", "std_noise", "z"]),
     )
     obs.set("epsilon_obs_1", 0, 0.0)
     obs.set("epsilon_obs_2", 0, 0.0)
@@ -1449,6 +1455,63 @@ def test_cluster_wl_load_app_spectral_interp(
 
     assert factor.props.interp_g_max == pytest.approx(0.2)
     assert factor.props.interp_abstol == pytest.approx(1e-4)
+
+
+@pytest.mark.parametrize("inline", [False, True], ids=["file", "inline"])
+def test_cluster_wl_load_app_mask(
+    experiment_file, real_wl_obs_file_with_meta, tmp_path: Path, inline: bool
+):
+    """--mask, a file or inline YAML, sets the mask of its selection on the likelihood."""
+    mask_file = tmp_path / "selection.yaml"
+    mask_file.write_text("kind: column\ncolumn: z\nmax: 1.0\n")
+    mask = "{kind: column, column: z, max: 1.0}" if inline else mask_file.as_posix()
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--mask={mask}",
+            "--summary",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Galaxies used (row selection)" in plain_output(result.output)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(
+        Ncm.Dataset,
+        ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix()),
+    )
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    obs = cluster_data.peek_obs()
+    expected = [obs.get("z", i) <= 1.0 for i in range(obs.len())]
+
+    assert cluster_data.get_mask() == expected
+    assert 0 < sum(expected) < obs.len()
+
+
+def test_cluster_wl_load_app_mask_invalid(
+    experiment_file, real_wl_obs_file_with_meta, tmp_path: Path
+):
+    """An invalid --mask is a bad parameter with the validation error."""
+    mask_file = tmp_path / "selection.yaml"
+    mask_file.write_text("kind: box\n")
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--mask={mask_file.as_posix()}",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Input tag 'box' found using 'kind'" in plain_output(result.output)
 
 
 def test_cluster_wl_load_app_cheb_weights(experiment_file, real_wl_obs_file_with_meta):
@@ -2186,6 +2249,7 @@ def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
         Nc.WLEllipticityFrame.CELESTIAL,
         1,
         ["ra", "dec"],
+        [Ncm.CatalogColType.DOUBLE] * len(["ra", "dec"]),
     )
     gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     gsfs.set_interp_abstol(2.0e-5)
@@ -2225,7 +2289,11 @@ def test_shape_interp_gens():
     assert isinstance(gens[1], GalaxyPopGenGaussLocal)
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, ["ra"]
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["ra"],
+        [Ncm.CatalogColType.DOUBLE] * len(["ra"]),
     )
     assert shape_interp_gens(obs) is None
 

@@ -151,7 +151,7 @@ typedef enum _NcGalaxyWLObsCatalogId /*< prefix=NC_GALAXY_WL_OBS_CATALOG >*/
   NC_GALAXY_WL_OBS_CATALOG_LEN, /*< skip >*/
 } NcGalaxyWLObsCatalogId;
 
-NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names);
+NcGalaxyWLObs *nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names, const NcmCatalogColType *col_types, guint n_types);
 NcGalaxyWLObs *nc_galaxy_wl_obs_ref (NcGalaxyWLObs *obs);
 
 gchar *nc_galaxy_wl_obs_catalog_id_get_filename (NcGalaxyWLObsCatalogId id);
@@ -161,13 +161,10 @@ NcGalaxyWLObs *nc_galaxy_wl_obs_new_from_file (const gchar *filename, GError **e
 void nc_galaxy_wl_obs_free (NcGalaxyWLObs *obs);
 void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
 
-gboolean nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i);
-
-void nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val, GError **error);
 void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyPz *pz);
 
-gdouble nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i, GError **error);
 NcGalaxyPz *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
+void nc_galaxy_wl_obs_pz_cdf_array (NcGalaxyWLObs *obs, const gdouble z, GArray **cdf);
 
 void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralTensor *st);
 NcmSpectralTensor *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);
@@ -176,15 +173,11 @@ NcmObjDictStr *nc_galaxy_wl_obs_peek_shape_interp_source (NcGalaxyWLObs *obs);
 void nc_galaxy_wl_obs_set_cheb_grid (NcGalaxyWLObs *obs, NcGalaxyWLObsChebGrid *grid);
 NcGalaxyWLObsChebGrid *nc_galaxy_wl_obs_peek_cheb_grid (NcGalaxyWLObs *obs);
 
-GStrv nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs);
-NcmMatrix *nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs);
-
 void nc_galaxy_wl_obs_set_coord (NcGalaxyWLObs *obs, NcWLEllipticityFrame coord);
 NcWLEllipticityFrame nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs);
 
 NcGalaxyWLObsEllipConv nc_galaxy_wl_obs_get_ellip_conv (NcGalaxyWLObs *obs);
 
-guint nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs);
 
 G_END_DECLS
 

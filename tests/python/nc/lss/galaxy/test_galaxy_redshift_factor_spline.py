@@ -62,7 +62,11 @@ def _build_composed(variant, zp, sigma0, zp_min, zp_max):
     data = Nc.GalaxyRedshiftFactorData.new(composed, mset)
     cols = Nc.GalaxyRedshiftFactorData.required_columns(data)
     wlobs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     wlobs.set("z", 0, 0.0)
     wlobs.set("zp", 0, zp)
@@ -261,7 +265,11 @@ def test_read_row_write_row_round_trip(variant, zp, sigma0, zp_min, zp_max):
     assert list(Nc.GalaxyRedshiftFactorData.required_columns(data)) == ["z"]
 
     wlobs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, ["z"]
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["z"],
+        [Ncm.CatalogColType.DOUBLE] * len(["z"]),
     )
     wlobs.set("z", 0, 0.0)
     wlobs.set_pz(0, _pz_from_spline(spline))
@@ -270,7 +278,11 @@ def test_read_row_write_row_round_trip(variant, zp, sigma0, zp_min, zp_max):
     assert gsdrs.data_peek(data) == wlobs.peek_pz(0)
 
     other_wlobs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, ["z"]
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["z"],
+        [Ncm.CatalogColType.DOUBLE] * len(["z"]),
     )
     other_wlobs.set("z", 0, 0.0)
     data.write_row(other_wlobs, 0)

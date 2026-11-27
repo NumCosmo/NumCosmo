@@ -7,6 +7,10 @@
     "nick": "double",
     "type": "Ncm.CatalogColType"
   },
+  "NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE": {
+    "nick": "double-separate",
+    "type": "Ncm.CatalogColType"
+  },
   "NCM_CATALOG_COL_TYPE_INT": {
     "nick": "int",
     "type": "Ncm.CatalogColType"
@@ -1321,10 +1325,6 @@
   },
   "NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE": {
     "nick": "cubature",
-    "type": "Nc.DataClusterWLIntegMethod"
-  },
-  "NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES": {
-    "nick": "fixed-nodes",
     "type": "Nc.DataClusterWLIntegMethod"
   },
   "NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT": {

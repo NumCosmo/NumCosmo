@@ -57,7 +57,6 @@ typedef enum _NcDataClusterWLIntegMethod /*< enum,underscore_name=NC_DATA_CLUSTE
 {
   NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE     = 0,
   NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT        = 1,
-  NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES  = 2,
   NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS = 3,
 } NcDataClusterWLIntegMethod;
 
@@ -73,16 +72,6 @@ void nc_data_cluster_wl_factor_set_cut (NcDataClusterWLFactor *dcwlf, const gdou
 
 void nc_data_cluster_wl_factor_set_integ_method (NcDataClusterWLFactor *dcwlf, NcDataClusterWLIntegMethod integ_method);
 NcDataClusterWLIntegMethod nc_data_cluster_wl_factor_get_integ_method (NcDataClusterWLFactor *dcwlf);
-void nc_data_cluster_wl_factor_set_n_nodes (NcDataClusterWLFactor *dcwlf, guint n_nodes);
-guint nc_data_cluster_wl_factor_get_n_nodes (NcDataClusterWLFactor *dcwlf);
-void nc_data_cluster_wl_factor_set_rule_n (NcDataClusterWLFactor *dcwlf, guint rule_n);
-guint nc_data_cluster_wl_factor_get_rule_n (NcDataClusterWLFactor *dcwlf);
-void nc_data_cluster_wl_factor_set_auto_nodes (NcDataClusterWLFactor *dcwlf, gboolean auto_nodes);
-gboolean nc_data_cluster_wl_factor_get_auto_nodes (NcDataClusterWLFactor *dcwlf);
-void nc_data_cluster_wl_factor_set_node_reltol (NcDataClusterWLFactor *dcwlf, gdouble node_reltol);
-gdouble nc_data_cluster_wl_factor_get_node_reltol (NcDataClusterWLFactor *dcwlf);
-void nc_data_cluster_wl_factor_set_max_total_nodes (NcDataClusterWLFactor *dcwlf, guint max_total_nodes);
-guint nc_data_cluster_wl_factor_get_max_total_nodes (NcDataClusterWLFactor *dcwlf);
 
 guint nc_data_cluster_wl_factor_get_low_prob_count (NcDataClusterWLFactor *dcwlf);
 
@@ -91,7 +80,6 @@ void nc_data_cluster_wl_factor_write_shape_interp (NcDataClusterWLFactor *dcwlf,
 void nc_data_cluster_wl_factor_write_shape_interp_file (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs, const gchar *filename);
 void nc_data_cluster_wl_factor_write_cheb_grid (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcGalaxyWLObs *obs);
 gboolean nc_data_cluster_wl_factor_is_data_prepared (NcDataClusterWLFactor *dcwlf);
-guint nc_data_cluster_wl_factor_get_calib_count (NcDataClusterWLFactor *dcwlf);
 
 void nc_data_cluster_wl_factor_set_cheb_tol (NcDataClusterWLFactor *dcwlf, const gdouble cheb_tol);
 gdouble nc_data_cluster_wl_factor_get_cheb_tol (NcDataClusterWLFactor *dcwlf);
@@ -107,7 +95,7 @@ GArray *nc_data_cluster_wl_factor_get_mask (NcDataClusterWLFactor *dcwlf);
 void nc_data_cluster_wl_factor_set_resample_flag (NcDataClusterWLFactor *dcwlf, NcDataClusterWLResampleFlag resample_flag);
 NcDataClusterWLResampleFlag nc_data_cluster_wl_factor_get_resample_flag (NcDataClusterWLFactor *dcwlf);
 
-GPtrArray *nc_data_cluster_wl_factor_peek_data_array (NcDataClusterWLFactor *dcwlf);
+GList *nc_data_cluster_wl_factor_required_columns (NcDataClusterWLFactor *dcwlf, NcmMSet *mset);
 
 void nc_data_cluster_wl_factor_eval_m2lnP_gal (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal);
 

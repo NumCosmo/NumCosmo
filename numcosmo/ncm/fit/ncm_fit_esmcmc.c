@@ -678,6 +678,7 @@ _ncm_fit_esmcmc_worker_dup (gpointer userdata)
     NcmFitESMCMCWorker *fw = g_new (NcmFitESMCMCWorker, 1);
 
     fw->fit = ncm_fit_dup (self->fit, self->ser);
+    ncm_dataset_notify_shared_duplicate (ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (fw->fit)));
 
     if (self->func_oa != NULL)
       fw->funcs_array = ncm_serialize_dup_array (self->ser, self->func_oa);

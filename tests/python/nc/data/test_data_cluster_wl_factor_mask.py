@@ -53,11 +53,9 @@ GALAXIES = [
 MASK = [0, 2, 3, 5, 7]
 
 METHODS = [
-    (Nc.DataClusterWLIntegMethod.LNINT, False),
-    (Nc.DataClusterWLIntegMethod.FIXED_NODES, False),
-    (Nc.DataClusterWLIntegMethod.FIXED_NODES, True),
-    (Nc.DataClusterWLIntegMethod.CUBATURE, False),
-    (Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS, False),
+    Nc.DataClusterWLIntegMethod.LNINT,
+    Nc.DataClusterWLIntegMethod.CUBATURE,
+    Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
 ]
 
 
@@ -104,12 +102,13 @@ def _data(
     else:
         redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 5.0)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(rows), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(rows), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     for i, row in enumerate(rows):
         ra, dec, zp, sigma0, e1, e2, std_noise = GALAXIES[row]
         for name, value in (
@@ -133,8 +132,7 @@ def _data(
             obs.set_pz(i, _gauss_pz(zp, sigma0 * (1.0 + zp)))
 
     data = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
-    data.set_integ_method(method[0])
-    data.set_auto_nodes(method[1])
+    data.set_integ_method(method)
     data.set_obs(obs)
     return data
 
@@ -213,28 +211,20 @@ def test_mask_resample_writes_its_rows_only():
 def test_mask_bootstrap():
     """A bootstrap resamples the galaxies of the mask, as it would those of the subset."""
     mset = _mset()
-    masked = _data(ALL, mset, METHODS[1])
+    masked = _data(ALL, mset, METHODS[2])
     masked.set_mask(KEEP)
-    subset = _data(MASK, mset, METHODS[1])
+    subset = _data(MASK, mset, METHODS[2])
     for data in (masked, subset):
         data.bootstrap_create()
         data.bootstrap_resample(Ncm.RNG.seeded_new(None, 11))
     assert masked.m2lnL_val(mset) == subset.m2lnL_val(mset)
 
 
-@pytest.mark.parametrize(
-    "integ_method",
-    [
-        Nc.DataClusterWLIntegMethod.FIXED_NODES,
-        Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
-    ],
-)
-def test_shared_clones_with_other_masks(integ_method):
-    """Clones sharing the catalog, with masks of the same length, never take each other's
-    node grid: each has the likelihood of its own rows. The p(z) are tabulated, so that
-    the grid is shared through the catalog."""
+def test_shared_clones_with_other_masks():
+    """Clones sharing the catalog, with masks of the same length, each have the likelihood
+    of their own rows under CHEB_WEIGHTS. The p(z) are tabulated."""
     mset = _mset()
-    method = (integ_method, False)
+    method = Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
     data = _data(ALL, mset, method, spline=True)
     data.set_mask(KEEP)
     dset = Ncm.Dataset.new()
@@ -328,7 +318,7 @@ def test_mask_write_shape_interp_file_aborts(tmp_path):
     assert not target.exists()
 
 
-CHEB = (Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS, False)
+CHEB = Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
 
 
 def _stored_grid_copy(mset: Ncm.MSet) -> Nc.DataClusterWLFactor:

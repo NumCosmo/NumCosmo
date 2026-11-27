@@ -186,17 +186,6 @@ _nc_galaxy_redshift_factor_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, Nc
   return 0.0;
 }
 
-static NcmIntegralFixed *
-_nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset,
-                                             NcGalaxyRedshiftFactorData *data,
-                                             gdouble z_lo, gdouble z_hi,
-                                             guint n_nodes, guint rule_n)
-{
-  g_error ("_nc_galaxy_redshift_factor_make_fixed_nodes: method not implemented");
-
-  return NULL;
-}
-
 /* LCOV_EXCL_STOP */
 
 static void
@@ -251,18 +240,17 @@ nc_galaxy_redshift_factor_class_init (NcGalaxyRedshiftFactorClass *klass)
                                                         GSL_DBL_EPSILON, 1.0, 1.0e-10,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->data_init        = &_nc_galaxy_redshift_factor_data_init;
-  klass->gen              = &_nc_galaxy_redshift_factor_gen;
-  klass->gen1             = &_nc_galaxy_redshift_factor_gen1;
-  klass->prepare          = &_nc_galaxy_redshift_factor_prepare;
-  klass->integ            = &_nc_galaxy_redshift_factor_integ;
-  klass->get_integ_lim    = &_nc_galaxy_redshift_factor_get_integ_lim;
-  klass->norm             = &_nc_galaxy_redshift_factor_norm;
-  klass->make_fixed_nodes = &_nc_galaxy_redshift_factor_make_fixed_nodes;
-  klass->get_hash         = &_nc_galaxy_redshift_factor_get_hash;
-  klass->update_data      = &_nc_galaxy_redshift_factor_update_data;
-  klass->get_desc         = &_nc_galaxy_redshift_factor_get_desc;
-  klass->cheb_moments     = &_nc_galaxy_redshift_factor_cheb_moments;
+  klass->data_init     = &_nc_galaxy_redshift_factor_data_init;
+  klass->gen           = &_nc_galaxy_redshift_factor_gen;
+  klass->gen1          = &_nc_galaxy_redshift_factor_gen1;
+  klass->prepare       = &_nc_galaxy_redshift_factor_prepare;
+  klass->integ         = &_nc_galaxy_redshift_factor_integ;
+  klass->get_integ_lim = &_nc_galaxy_redshift_factor_get_integ_lim;
+  klass->norm          = &_nc_galaxy_redshift_factor_norm;
+  klass->get_hash      = &_nc_galaxy_redshift_factor_get_hash;
+  klass->update_data   = &_nc_galaxy_redshift_factor_update_data;
+  klass->get_desc      = &_nc_galaxy_redshift_factor_get_desc;
+  klass->cheb_moments  = &_nc_galaxy_redshift_factor_cheb_moments;
 }
 
 /* The integrand and the galaxy of the panel builder, and the first negative p it met */
@@ -380,7 +368,7 @@ nc_galaxy_redshift_factor_data_unref (NcGalaxyRedshiftFactorData *data)
 void
 nc_galaxy_redshift_factor_data_read_row (NcGalaxyRedshiftFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  data->z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
+  data->z = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
   data->ldata_read_row (data, obs, i);
 }
 
@@ -396,7 +384,7 @@ nc_galaxy_redshift_factor_data_read_row (NcGalaxyRedshiftFactorData *data, NcGal
 void
 nc_galaxy_redshift_factor_data_write_row (NcGalaxyRedshiftFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, data->z, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, data->z, NULL);
   data->ldata_write_row (data, obs, i);
 }
 
@@ -653,27 +641,6 @@ gdouble
 nc_galaxy_redshift_factor_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data)
 {
   return NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->norm (gsdr, mset, data);
-}
-
-/**
- * nc_galaxy_redshift_factor_make_fixed_nodes: (skip)
- * @gsdr: a #NcGalaxyRedshiftFactor
- * @mset: a #NcmMSet
- * @data: a #NcGalaxyRedshiftFactorData
- * @z_lo: the lower integration bound
- * @z_hi: the upper integration bound
- * @n_nodes: the number of sub-intervals
- * @rule_n: the fixed rule order per sub-interval
- *
- * Builds the fixed integration nodes over [@z_lo, @z_hi] used to marginalize the true
- * redshift.
- *
- * Returns: (transfer full): a new #NcmIntegralFixed.
- */
-NcmIntegralFixed *
-nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n)
-{
-  return NC_GALAXY_REDSHIFT_FACTOR_GET_CLASS (gsdr)->make_fixed_nodes (gsdr, mset, data, z_lo, z_hi, n_nodes, rule_n);
 }
 
 /**

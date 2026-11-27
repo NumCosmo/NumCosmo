@@ -592,12 +592,11 @@ _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, N
 
   /* LCOV_EXCL_STOP */
 
-  ncm_model_param_set (m_copy, idx, ncm_model_param_get_upper_bound (m_src, idx));
+  if (ncm_model_len (NCM_MODEL (dp_src)) > 0)
+    ncm_model_params_copyto (NCM_MODEL (dp_src), NCM_MODEL (dp_copy));
 
-  if (ncm_model_param_index_from_name (m_src, "cDelta", &idx, &error))
-    ncm_model_param_set (m_copy, idx, ncm_model_param_get (m_src, idx));
-  else
-    g_clear_error (&error);
+  ncm_model_params_copyto (m_src, m_copy);
+  ncm_model_param_set (m_copy, idx, ncm_model_param_get_upper_bound (m_src, idx));
 
   return TRUE;
 }

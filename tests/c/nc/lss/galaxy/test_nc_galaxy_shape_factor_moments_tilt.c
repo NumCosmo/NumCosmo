@@ -98,6 +98,28 @@ main (gint argc, gchar *argv[])
   return 0;
 }
 
+/*
+ * Sets the bound fields of @s_data as #NcDataClusterWLFactor does, for the galaxy at
+ * @p_data with redshift support up to @z_max.
+ */
+static void
+_test_set_shape_bound (NcmMSet *mset, NcGalaxyPositionFactorData *p_data, NcGalaxyShapeFactorData *s_data, const gdouble z_max)
+{
+  NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
+  NcWLClusterLens *lens       = nc_wl_cluster_lens_new (smd->dist);
+  NcGalaxyHaloWL *hwl         = nc_galaxy_halo_wl_new (lens);
+  NcGalaxyHaloWLData *h_data  = nc_galaxy_halo_wl_data_new ();
+
+  nc_galaxy_halo_wl_prepare (hwl, mset);
+  nc_galaxy_halo_wl_update_data_radius (hwl, h_data, p_data);
+  nc_galaxy_halo_wl_prepare_bound (hwl, mset);
+  nc_galaxy_halo_wl_set_shape_bound (hwl, smd, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())), h_data, z_max, s_data);
+
+  nc_galaxy_halo_wl_data_unref (h_data);
+  nc_galaxy_halo_wl_free (hwl);
+  nc_wl_cluster_lens_free (lens);
+}
+
 /* Builds a MomentsTilt with @newton_maxit and @restrict_range, and the
  * per-galaxy data of one galaxy at right ascension @ra (degrees from the
  * halo center), prepared. */
@@ -111,22 +133,21 @@ _moments_tilt_build (TestNcGalaxyShapeFactorMomentsTilt *test, const guint newto
                                                         "newton-maxit", newton_maxit,
                                                         NULL);
   NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
-  NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
   GPtrArray *data_array              = g_ptr_array_new ();
 
   p_data->ra  = ra;
   p_data->dec = 0.0;
 
-  *data = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, p_data, z_data);
+  *data = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset);
   nc_galaxy_shape_factor_data_set (NC_GALAXY_SHAPE_FACTOR (gsfmt), *data, 0.0, 0.0, MOMENTS_TILT_STD_NOISE, 0.0, 0.0, 0.0,
                                    NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
 
   g_ptr_array_add (data_array, *data);
-  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, data_array, TRUE, TRUE));
+  g_assert_true (nc_galaxy_shape_factor_prepare_data_array (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, data_array));
+  _test_set_shape_bound (test->mset, p_data, *data, MOMENTS_TILT_RANGE_Z_MAX);
 
   g_ptr_array_unref (data_array);
   nc_galaxy_position_factor_data_unref (p_data);
-  nc_galaxy_redshift_factor_data_unref (z_data);
 
   return gsfmt;
 }
@@ -330,18 +351,11 @@ test_nc_galaxy_shape_factor_moments_tilt_tables_short_vector (TestNcGalaxyShapeF
 
   data_array = g_ptr_array_new ();
   {
-    NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
-    NcGalaxyRedshiftFactorData *z_data = nc_galaxy_redshift_factor_data_new (test->redshift_factor, test->mset);
-
-    p_data->ra  = 0.0;
-    p_data->dec = 0.0;
-    data        = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, p_data, z_data);
+    data = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset);
     nc_galaxy_shape_factor_data_set (NC_GALAXY_SHAPE_FACTOR (gsfmt), data, 0.0, 0.0, MOMENTS_TILT_STD_NOISE, 0.0, 0.0, 0.0,
                                      NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
     g_ptr_array_add (data_array, data);
-    g_assert_true (nc_galaxy_shape_factor_prepare_data_array (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, data_array, TRUE, TRUE));
-    nc_galaxy_position_factor_data_unref (p_data);
-    nc_galaxy_redshift_factor_data_unref (z_data);
+    g_assert_true (nc_galaxy_shape_factor_prepare_data_array (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->mset, data_array));
   }
 
   ln_val = nc_galaxy_shape_factor_eval_ln_marginal (NC_GALAXY_SHAPE_FACTOR (gsfmt), test->pop, data, 0.4, 0.0, 0.3, -0.2);

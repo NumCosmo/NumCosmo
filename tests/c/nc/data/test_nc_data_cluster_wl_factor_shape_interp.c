@@ -40,6 +40,9 @@
 #include <glib-object.h>
 #include <glib/gstdio.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 #define SHAPE_INTERP_NROWS (6)
 #define SHAPE_INTERP_Z_CL (0.5)
 #define SHAPE_INTERP_SEED (20261112)
@@ -181,21 +184,22 @@ test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeI
 
   p_data = nc_galaxy_position_factor_data_new (position_factor, test->mset);
   z_data = nc_galaxy_redshift_factor_data_new (redshift_factor, test->mset);
-  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset, p_data, z_data);
+  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset);
 
-  columns = nc_galaxy_shape_factor_data_required_columns (s_data);
+  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
+  columns     = nc_data_cluster_wl_factor_required_columns (test->dcwlf, test->mset);
 
   for (l = columns; l != NULL; l = g_list_next (l))
     g_strv_builder_add (builder, l->data);
 
   columns_strv = g_strv_builder_end (builder);
-  test->obs    = nc_galaxy_wl_obs_new (ec, co, SHAPE_INTERP_NROWS, columns_strv);
+  test->obs    = nc_galaxy_wl_obs_new (ec, co, SHAPE_INTERP_NROWS, columns_strv, test_double_cols, g_strv_length (columns_strv));
 
   for (i = 0; i < SHAPE_INTERP_NROWS; i++)
   {
     gdouble radius;
 
-    nc_galaxy_wl_obs_set (test->obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, ncm_rng_uniform_gen (rng, 0.02, 0.06), NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, ncm_rng_uniform_gen (rng, 0.02, 0.06), NULL);
     nc_galaxy_redshift_factor_data_read_row (z_data, test->obs, i);
     nc_galaxy_redshift_factor_gen (redshift_factor, test->mset, z_data, rng);
 
@@ -205,13 +209,15 @@ test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeI
     } while ((radius < min_radius) || (radius > max_radius));
 
     nc_galaxy_shape_factor_data_set (shape_factor, s_data, 0.0, 0.0, ncm_rng_uniform_gen (rng, 0.02, 0.1), 0.0, 0.0, 0.0, co);
-    nc_galaxy_shape_factor_gen (shape_factor, test->mset, s_data, rng);
+    nc_galaxy_position_factor_data_write_row (p_data, test->obs, i);
+    nc_galaxy_redshift_factor_data_write_row (z_data, test->obs, i);
     nc_galaxy_shape_factor_data_write_row (s_data, test->obs, i);
   }
 
-  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
   nc_data_cluster_wl_factor_set_cut (test->dcwlf, min_radius, max_radius);
   nc_data_cluster_wl_factor_set_obs (test->dcwlf, test->obs);
+  nc_data_cluster_wl_factor_set_resample_flag (test->dcwlf, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE);
+  ncm_data_resample (NCM_DATA (test->dcwlf), test->mset, rng);
 
   nc_hicosmo_free (cosmo);
   nc_distance_free (dist);
@@ -394,7 +400,7 @@ test_nc_data_cluster_wl_factor_shape_interp_file (TestNcDataClusterWLFactorShape
   ncm_serialize_reset (ser, TRUE);
   obs_file = NC_GALAXY_WL_OBS (ncm_serialize_from_binfile (ser, catalog));
   ncm_serialize_reset (ser, TRUE);
-  g_assert_cmpuint (nc_galaxy_wl_obs_len (obs_file), ==, SHAPE_INTERP_NROWS);
+  g_assert_cmpuint (ncm_catalog_len (NCM_CATALOG (obs_file)), ==, SHAPE_INTERP_NROWS);
   g_assert_nonnull (nc_galaxy_wl_obs_peek_shape_interp_source (obs_file));
   g_object_get (obs_file, "shape-interp", &si, NULL);
   g_assert_cmpstr (nc_galaxy_wl_obs_shape_interp_peek_filename (si), ==, tables);
@@ -480,7 +486,7 @@ test_nc_data_cluster_wl_factor_shape_interp_file_rows_subprocess (void)
 
   test_nc_data_cluster_wl_factor_shape_interp_new (&test, GINT_TO_POINTER (TRUE));
   obs = nc_galaxy_wl_obs_new (nc_galaxy_wl_obs_get_ellip_conv (test.obs), nc_galaxy_wl_obs_get_coord (test.obs), 3,
-                              nc_galaxy_wl_obs_peek_columns (test.obs));
+                              ncm_catalog_peek_columns (NCM_CATALOG (test.obs)), test_double_cols, g_strv_length (ncm_catalog_peek_columns (NCM_CATALOG (test.obs))));
   nc_data_cluster_wl_factor_write_shape_interp_file (test.dcwlf, test.mset, obs, "catalog.gvar");
 }
 

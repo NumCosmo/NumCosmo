@@ -72,7 +72,6 @@ struct _NcGalaxyRedshiftFactorClass
   NcGalaxyRedshiftFactorIntegrand *(*integ) (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp);
   void (*get_integ_lim) (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
   gdouble (*norm) (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
-  NcmIntegralFixed *(*make_fixed_nodes) (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 
   /* Factory-level change-detection, same rationale/contract as
    * #NcGalaxyPositionFactor's analogous pair (see there): get_hash()
@@ -85,7 +84,7 @@ struct _NcGalaxyRedshiftFactorClass
   void (*cheb_moments) (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[6];
+  gpointer padding[7];
 };
 
 /*
@@ -124,7 +123,6 @@ void nc_galaxy_redshift_factor_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMSet *m
 NcGalaxyRedshiftFactorIntegrand *nc_galaxy_redshift_factor_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp);
 void nc_galaxy_redshift_factor_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
 gdouble nc_galaxy_redshift_factor_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
-NcmIntegralFixed *nc_galaxy_redshift_factor_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 guint64 nc_galaxy_redshift_factor_get_hash (NcGalaxyRedshiftFactor *gsdr);
 void nc_galaxy_redshift_factor_update_data (NcGalaxyRedshiftFactor *gsdr, NcGalaxyRedshiftFactorData *data);
 gchar *nc_galaxy_redshift_factor_get_desc (NcGalaxyRedshiftFactor *gsdr);

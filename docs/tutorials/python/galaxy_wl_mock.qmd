@@ -19,9 +19,9 @@ shape factor calculators described in
 Read that page first for the vocabulary used here: `Factor`, `Pop`, `Obs`,
 and the per-galaxy `Data`.
 
-The orchestrator that wires the three factors together has not been built
-yet, so this tutorial threads the per-galaxy data between them by hand. That
-also shows exactly what each factor needs from its neighbours.
+[[numcosmo|NcDataClusterWLFactor]] wires the three factors together for the
+likelihood. This tutorial threads the per-galaxy data between them by hand, which shows
+what each factor needs from its neighbors.
 
 ## Setting Up the Lens and the Models {#sec-models}
 
@@ -87,19 +87,31 @@ redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)
 shape_factor = Nc.GalaxyShapeFactorVarAdd.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
 ```
 
-Each factor's `data_new` allocates the per-galaxy fragment for that factor.
-The shape factor's fragment is built *from* the position and redshift
-fragments, since the shape likelihood needs the projected radius (from
-`ra`/`dec`) and the source redshift `z` (see the framework page's
-[Z $\Rightarrow$ P $\Rightarrow$ S pipeline](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd#sec-fixed-pipeline)) ---
-this one call is the whole "orchestration" this tutorial needs to do by hand:
+Each factor's `data_new` allocates the per-galaxy fragment for that factor. The
+fragments of a galaxy are siblings: each reads and writes its own catalog columns (see
+the framework page's
+[Z $\Rightarrow$ P $\Rightarrow$ S pipeline](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd#sec-fixed-pipeline)):
 
 ```{python}
 pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
 z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-shape_data = Nc.GalaxyShapeFactorData.new(
-    shape_factor, mset, pos_data, z_data
-)
+shape_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset)
+```
+
+The reduced shear of a galaxy comes from the lens. [[numcosmo|NcWLClusterLens]] computes
+the tangential reduced shear $g_t$ at a source redshift, and [[numcosmo|NcGalaxyHaloWL]]
+keeps in a per-galaxy fragment the quantities of the galaxy that depend on its position
+relative to the halo: the projected radius $R$, the rotation factor $e^{2i\phi}$ of its
+azimuth $\phi$ around the halo center, and the surface densities $\Sigma(R)$ and
+$\bar\Sigma(<R)$:
+
+```{python}
+lens = Nc.WLClusterLens.new(dist)
+halo_wl = Nc.GalaxyHaloWL.new(lens)
+halo_data = Nc.GalaxyHaloWLData.new()
+
+halo_wl.prepare(mset)
+shape_factor.prepare(mset)
 ```
 
 ## Generating the Catalog {#sec-generate}
@@ -133,15 +145,17 @@ wl_obs = Nc.GalaxyWLObs.new(
     Nc.WLEllipticityFrame.CELESTIAL,
     n_galaxies,
     columns,
+    [Ncm.CatalogColType.DOUBLE] * len(columns),
 )
 ```
 
-For each galaxy we draw a position and a redshift, fix the noise/calibration
-inputs (`std_noise`, `c1`, `c2`, `m` --- these stay plain scalars on the shape
-factor's data, not a pluggable model, for now), draw the shape, and write the
-three fragments into their row. `gen` is the same code path `integ` uses
-below for the likelihood --- see
-[Generation and Likelihood Share One Engine](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd#generation-and-likelihood-share-one-engine).
+For each galaxy we draw a position and a redshift and fix the noise and calibration
+inputs (`std_noise`, `c1`, `c2`, `m`, plain scalars on the shape factor's data). The
+reduced shear of the galaxy is $g = g_t(z)\, e^{2i\phi}$, since $m$ and $c$ are zero.
+`gen_shear` draws the observed ellipticity with that shear for a galaxy behind the
+cluster and without shear otherwise. The three fragments are then written into their row.
+`gen_shear` takes the shear at which `eval_shear` evaluates the likelihood below; see
+[Generation and Likelihood Use the Same Shear](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd#sec-gen-like).
 
 ```{python}
 rng = Ncm.RNG.seeded_new(None, 123)
@@ -154,7 +168,17 @@ for i in range(n_galaxies):
         shape_data, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0,
         Nc.WLEllipticityFrame.CELESTIAL,
     )
-    shape_factor.gen(mset, shape_data, rng)
+
+    halo_wl.update_data_radius(halo_data, pos_data)
+    halo_wl.update_data_profile(density_profile, halo_data)
+    sigma, mean_sigma = halo_data.get_sigma()
+    rot_re, rot_im = halo_data.get_rotation()
+    g_t = lens.reduced_shear_at(cosmo, sigma, mean_sigma, z_data.z)
+    lensed = z_data.z > lens.get_z_cl()
+
+    shape_factor.gen_shear(
+        pop_shape, shape_data, lensed, g_t * rot_re, g_t * rot_im, rng
+    )
 
     pos_data.write_row(wl_obs, i)
     z_data.write_row(wl_obs, i)
@@ -189,34 +213,38 @@ print(f"row 0: ra={pos_data_readback.ra:.4f}, dec={pos_data_readback.dec:.4f}")
 
 ## Evaluating the Shape Likelihood Factor {#sec-likelihood}
 
-The same `shape_factor` that generated the mock also evaluates the
-per-galaxy likelihood factor $p(\epsilon_\mathrm{obs} \mid z)$ as a function
-of the source redshift. `prepare_data_array` resolves the per-galaxy geometry
-caches described on the framework page (projected radius, surface-density
-optimization structs) once, and `integ` returns the reusable integrand
-callback:
+The same `shape_factor` that generated the mock also evaluates the per-galaxy
+likelihood factor $p(\epsilon_\mathrm{obs} \mid g)$ at a reduced shear $g$.
+`prepare_data_array` takes the population model from the `mset` and prepares the
+population fragment of each galaxy. For the last galaxy generated, the factor as a
+function of the source redshift is evaluated at $g = g_t(z)\, e^{2i\phi}$, where only
+$g_t$ depends on $z$:
 
 ```{python}
-shape_factor.prepare_data_array(mset, [shape_data], True, True)
-integrand = shape_factor.integ(mset, False)
+shape_factor.prepare_data_array(mset, [shape_data])
+sigma, mean_sigma = halo_data.get_sigma()
+rot_re, rot_im = halo_data.get_rotation()
 
 z_grid = np.linspace(0.05, 1.5, 5)
 for z in z_grid:
-    print(f"z={z:.2f}  ->  p(eps_obs | z) = {integrand.eval(z, shape_data):.4e}")
+    g_t = lens.reduced_shear_at(cosmo, sigma, mean_sigma, z)
+    p = shape_factor.eval_shear(
+        pop_shape, shape_data, g_t * rot_re, g_t * rot_im, False
+    )
+    print(f"z={z:.2f}  ->  p(eps_obs | g(z)) = {p:.4e}")
 ```
 
-In a full likelihood this integrand would be combined with the redshift
-factor's own $p(z_p, z)$ and integrated over $z$ once per galaxy --- the single
-outer integral the orchestrator (once built) will perform automatically.
+In the likelihood, [[numcosmo|NcDataClusterWLFactor]] combines this factor with the
+redshift factor's $p(z_p, z)$ and integrates over $z$ once per galaxy.
 
 ## Summary {#sec-summary}
 
 We built a lens and three population models, wired one factor per
-observable (position, redshift, shape), generated a mock catalog by calling
-each factor's `gen` and writing the results into a shared
-[[numcosmo|NcGalaxyWLObs]], read a row back to confirm the round trip, and
-evaluated the shape factor's own likelihood integrand for the very galaxies
-it had just generated. See
+observable (position, redshift, shape), and generated a mock catalog: positions and
+redshifts with each factor's `gen`, shapes with `gen_shear` at the shear from
+[[numcosmo|NcGalaxyHaloWL]] and [[numcosmo|NcWLClusterLens]], all written into a shared
+[[numcosmo|NcGalaxyWLObs]]. We read a row back to confirm the round trip and evaluated
+the shape factor of a generated galaxy as a function of the source redshift. See
 [The Galaxy Population & Weak-Lensing Framework](../../theory/nc/lss/galaxy/galaxy_wl_framework.qmd)
 for why the pieces are shaped this way.
 
@@ -228,7 +256,8 @@ for why the pieces are shaped this way.
 - population/observable models: [[numcosmo|NcGalaxyRedshiftPopLSSTSRD]],
   [[numcosmo|NcGalaxyRedshiftObsGauss]], [[numcosmo|NcGalaxyShapePopGauss]]
 - lens: [[numcosmo|NcHaloPosition]], [[numcosmo|NcHaloDensityProfileNFW]],
-  [[numcosmo|NcWLSurfaceMassDensity]]
+  [[numcosmo|NcWLSurfaceMassDensity]], [[numcosmo|NcWLClusterLens]],
+  [[numcosmo|NcGalaxyHaloWL]]
 - storage: [[numcosmo|NcGalaxyWLObs]], [[math|NcmCatalog]], [[math|NcmMSet]]
 
 The `catalog_to_table` helper lives in the `numcosmo_py.catalog` subpackage.

@@ -74,7 +74,11 @@ def _build_new(variant, zp, sigma0, zp_min, zp_max):
     data = Nc.GalaxyRedshiftFactorData.new(composed, mset)
     cols = Nc.GalaxyRedshiftFactorData.required_columns(data)
     wlobs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     wlobs.set("z", 0, 0.0)
     wlobs.set("zp", 0, zp)

@@ -29,11 +29,9 @@
  * fixed seed, so no sample data is stored in the repository -- a curated set
  * of galaxies spanning the hard integrand cases (sources in front of /
  * straddling / behind the reduced-shear kink at the lens redshift z_cl),
- * recomputes a self-converged FIXED_NODES-320x7 reference (already
- * shown to have full parity with LNINT/CUBATURE for the same integrand
- * family -- see the nc-data-cluster-wl-factor-integ-parity work), and
- * validates the cheaper production configuration (FIXED_NODES-20x5, LNINT,
- * CUBATURE) against it.
+ * recomputes a reference with CHEB_WEIGHTS at every level up to the last one
+ * (cheb-level-min 7), and validates the production configurations (LNINT,
+ * CUBATURE and CHEB_WEIGHTS from levels 2 and 5) against it.
  *
  * The matrix below covers the shape factors VarAdd (closed-form approximation) and
  * Spectral (the marginal by adaptive Chebyshev panels) and the populations Gauss and
@@ -57,24 +55,21 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 #define TRUTH_NROWS (14)
 #define TRUTH_Z_CL (0.5)
-#define TRUTH_REF_NODES (320)
-#define TRUTH_REF_RULE (7)
-#define TRUTH_PROD_NODES (20)
-#define TRUTH_PROD_RULE (5)
 #define TRUTH_PREC (1.0e-6)
 
 /*
- * Rows and reference nodes of the Spectral configurations. One eval_marginal() of
+ * Rows of the Spectral configurations. One eval_marginal() of
  * NcGalaxyShapeFactorSpectral at its default reltol takes of the order of 0.5 ms, against
- * about 1 us for VarAdd, so these configurations use fewer rows and a smaller reference:
- * the smoothness of the z-integrand is set by the redshift scheme, which the VarAdd
- * configurations validate at full resolution.
+ * about 1 us for VarAdd, so these configurations use fewer rows: the smoothness of the
+ * z-integrand is set by the redshift scheme, which the VarAdd configurations validate with
+ * more rows.
  */
 #define TRUTH_SPECTRAL_NROWS (5)
-#define TRUTH_SPECTRAL_REF_NODES (60)
-#define TRUTH_SPECTRAL_REF_RULE (5)
 
 typedef struct _TruthCfg
 {
@@ -85,8 +80,6 @@ typedef struct _TruthCfg
   const gchar *coord;
   guint seed;
   guint nrows;
-  guint ref_nodes;
-  guint ref_rule;
 } TruthCfg;
 
 typedef struct _TestNcDataClusterWLFactorTruth
@@ -116,14 +109,14 @@ main (gint argc, gchar *argv[])
     /* Cheap baseline: mirrors legacy's own gauss_global+gauss combo, checks
      * the orchestrator wiring (prepare/cache cascade, obs plumbing) is
      * unchanged for the closed-form approximation. */
-    { "var_add",       "gauss", "composed", "trace_det", "celestial", 2001, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
-    { "var_add",       "gauss", "spline",   "trace",     "cartesian", 2002, TRUTH_NROWS, TRUTH_REF_NODES, TRUTH_REF_RULE },
+    { "var_add",       "gauss", "composed", "trace_det", "celestial", 2001, TRUTH_NROWS },
+    { "var_add",       "gauss", "spline",   "trace",     "cartesian", 2002, TRUTH_NROWS },
 
     /* Spectral: adaptive 2D Chebyshev panels, both populations and both redshift schemes,
-     * fewer rows and a smaller reference (see TRUTH_SPECTRAL_NROWS). */
-    { "spectral",      "beta",  "spline",   "trace_det", "cartesian", 2004, TRUTH_SPECTRAL_NROWS, TRUTH_SPECTRAL_REF_NODES, TRUTH_SPECTRAL_REF_RULE },
-    { "spectral",      "gauss", "spline",   "trace",     "celestial", 2005, TRUTH_SPECTRAL_NROWS, TRUTH_SPECTRAL_REF_NODES, TRUTH_SPECTRAL_REF_RULE },
-    { "spectral",      "beta",  "composed", "trace_det", "cartesian", 2006, TRUTH_SPECTRAL_NROWS, TRUTH_SPECTRAL_REF_NODES, TRUTH_SPECTRAL_REF_RULE },
+     * fewer rows (see TRUTH_SPECTRAL_NROWS). */
+    { "spectral",      "beta",  "spline",   "trace_det", "cartesian", 2004, TRUTH_SPECTRAL_NROWS },
+    { "spectral",      "gauss", "spline",   "trace",     "celestial", 2005, TRUTH_SPECTRAL_NROWS },
+    { "spectral",      "beta",  "composed", "trace_det", "cartesian", 2006, TRUTH_SPECTRAL_NROWS },
   };
   guint i;
 
@@ -150,30 +143,11 @@ main (gint argc, gchar *argv[])
 }
 
 static NcmVector *
-_truth_eval (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows, NcDataClusterWLIntegMethod method, guint n_nodes, guint rule_n)
+_truth_eval (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows, NcDataClusterWLIntegMethod method)
 {
   NcmVector *v = ncm_vector_new (nrows);
 
-  nc_data_cluster_wl_factor_set_auto_nodes (dcwlf, FALSE);
-  nc_data_cluster_wl_factor_set_n_nodes (dcwlf, n_nodes);
-  nc_data_cluster_wl_factor_set_rule_n (dcwlf, rule_n);
   nc_data_cluster_wl_factor_set_integ_method (dcwlf, method);
-  nc_data_cluster_wl_factor_eval_m2lnP_gal (dcwlf, mset, v);
-
-  return v;
-}
-
-/* The opt-in auto-nodes configuration: FIXED_NODES with each galaxy getting
- * its own calibrated (n_nodes, rule_n) at node-reltol. _truth_eval pins
- * auto-nodes off above, so without this arm the matrix -- the repo's strongest
- * cross-method check -- would never touch the calibrated grid. */
-static NcmVector *
-_truth_eval_auto (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, guint nrows)
-{
-  NcmVector *v = ncm_vector_new (nrows);
-
-  nc_data_cluster_wl_factor_set_auto_nodes (dcwlf, TRUE);
-  nc_data_cluster_wl_factor_set_integ_method (dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
   nc_data_cluster_wl_factor_eval_m2lnP_gal (dcwlf, mset, v);
 
   return v;
@@ -243,15 +217,15 @@ _truth_gen_redshift (const gchar *redshift, NcGalaxyRedshiftFactor *z_dist, NcmM
      * error) -- a real trap for any caller driving Composed generatively. */
     const gdouble sigma0 = ncm_rng_uniform_gen (rng, 0.02, 0.06);
 
-    nc_galaxy_wl_obs_set (obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, sigma0, NULL);
     nc_galaxy_redshift_factor_data_read_row (z_data, obs, i);
     nc_galaxy_redshift_factor_gen (z_dist, mset, z_data, rng);
   }
 }
 
+/* Draws the biases and the noise of a galaxy; the resample of the dataset draws its shape */
 static void
-_truth_gen_shape (NcGalaxyShapeFactor *s_dist, NcmMSet *mset, NcGalaxyShapeFactorData *s_data,
-                  NcWLEllipticityFrame coord, NcmRNG *rng)
+_truth_gen_calib (NcGalaxyShapeFactor *s_dist, NcGalaxyShapeFactorData *s_data, NcWLEllipticityFrame coord, NcmRNG *rng)
 {
   const gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
   const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
@@ -259,7 +233,6 @@ _truth_gen_shape (NcGalaxyShapeFactor *s_dist, NcmMSet *mset, NcGalaxyShapeFacto
   const gdouble std_noise = ncm_rng_uniform_gen (rng, 0.005, 0.02);
 
   nc_galaxy_shape_factor_data_set (s_dist, s_data, 0.0, 0.0, std_noise, c1, c2, m, coord);
-  nc_galaxy_shape_factor_gen (s_dist, mset, s_data, rng);
 }
 
 /* Per-galaxy comparison of @v against the reference -2lnP vector: fail (reporting
@@ -310,8 +283,7 @@ _truth_cmp (const gchar *label, NcmVector *v, NcmVector *ref, gdouble reltol, gd
 }
 
 /* Regenerate the curated sample for one configuration (deterministic in @seed)
- * and recompute the FIXED-320x7 reference. Leaves dcwlf at the
- * production fixed-node configuration. */
+ * and recompute the reference: CHEB_WEIGHTS evaluated at every level up to the last. */
 static void
 test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, gconstpointer pdata)
 {
@@ -388,15 +360,16 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
 
   p_data = nc_galaxy_position_factor_data_new (position_factor, test->mset);
   z_data = nc_galaxy_redshift_factor_data_new (redshift_factor, test->mset);
-  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset, p_data, z_data);
+  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset);
 
-  columns = nc_galaxy_shape_factor_data_required_columns (s_data);
+  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
+  columns     = nc_data_cluster_wl_factor_required_columns (test->dcwlf, test->mset);
 
   for (l = columns; l != NULL; l = g_list_next (l))
     g_strv_builder_add (builder, l->data);
 
   columns_strv = g_strv_builder_end (builder);
-  obs          = nc_galaxy_wl_obs_new (ec, co, cfg->nrows, columns_strv);
+  obs          = nc_galaxy_wl_obs_new (ec, co, cfg->nrows, columns_strv, test_double_cols, g_strv_length (columns_strv));
 
   for (i = 0; i < cfg->nrows; i++)
   {
@@ -410,16 +383,20 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
       radius = nc_halo_position_projected_radius_from_ra_dec (hp, cosmo, p_data->ra, p_data->dec);
     } while ((radius < min_radius) || (radius > max_radius));
 
-    _truth_gen_shape (shape_factor, test->mset, s_data, co, rng);
+    _truth_gen_calib (shape_factor, s_data, co, rng);
+    nc_galaxy_position_factor_data_write_row (p_data, obs, i);
+    nc_galaxy_redshift_factor_data_write_row (z_data, obs, i);
     nc_galaxy_shape_factor_data_write_row (s_data, obs, i);
   }
 
-  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
   nc_data_cluster_wl_factor_set_cut (test->dcwlf, min_radius, max_radius);
   nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs);
+  nc_data_cluster_wl_factor_set_resample_flag (test->dcwlf, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE);
+  ncm_data_resample (NCM_DATA (test->dcwlf), test->mset, rng);
   nc_data_cluster_wl_factor_set_prec (test->dcwlf, TRUTH_PREC);
 
-  test->ref = _truth_eval (test->dcwlf, test->mset, cfg->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, cfg->ref_nodes, cfg->ref_rule);
+  nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 7);
+  test->ref = _truth_eval (test->dcwlf, test->mset, cfg->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
 
   nc_hicosmo_free (cosmo);
   nc_distance_free (dist);
@@ -464,40 +441,27 @@ test_nc_data_cluster_wl_factor_truth_methods (TestNcDataClusterWLFactorTruth *te
    * regression, for ANY of the shape schemes exercised across the matrix. */
   const gboolean is_spline = (g_strcmp0 (test->redshift, "spline") == 0);
   const gdouble abstol     = is_spline ? 1.0e-5 : 1.0e-6;
-  NcmVector *vF            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-  NcmVector *vL            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-  NcmVector *vC            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
-  NcmVector *vA            = _truth_eval_auto (test->dcwlf, test->mset, test->nrows);
+  NcmVector *vL            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
+  NcmVector *vC            = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CUBATURE);
   NcmVector *vW2, *vW5;
 
   nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 2);
-  vW2 = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  vW2 = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
   g_assert_cmpuint (nc_data_cluster_wl_factor_get_cheb_unconverged_count (test->dcwlf), ==, 0);
   nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 5);
-  vW5 = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS, TRUTH_PROD_NODES, TRUTH_PROD_RULE);
+  vW5 = _truth_eval (test->dcwlf, test->mset, test->nrows, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
   g_assert_cmpuint (nc_data_cluster_wl_factor_get_cheb_unconverged_count (test->dcwlf), ==, 0);
-  nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 2);
 
-  _truth_cmp ("FIXED vs reference", vF, test->ref, 1.0e-6, abstol);
   _truth_cmp ("LNINT vs reference", vL, test->ref, 1.0e-6, abstol);
   _truth_cmp ("CUBATURE vs reference", vC, test->ref, 1.0e-6, abstol);
 
-  /* CHEB_WEIGHTS integrates p exactly and stops at cheb-tol 1e-8 on F: measured at most
-   * 8.3e-13 from the reference at cheb-level-min 2 and 6.2e-15 at 5; 1e-10 is asserted. */
+  /* CHEB_WEIGHTS integrates p exactly and stops at cheb-tol 1e-8 on F; 1e-10 is asserted
+   * against the last level. */
   _truth_cmp ("CHEB_WEIGHTS level 2 vs reference", vW2, test->ref, 1.0e-10, 1.0e-10);
   _truth_cmp ("CHEB_WEIGHTS level 5 vs reference", vW5, test->ref, 1.0e-10, 1.0e-10);
 
-  /* Auto-nodes targets node-reltol per galaxy (1e-4 by default, and the
-   * calibration may stop short of it), so it is held to a bar set by that
-   * tolerance, not by the 1e-6 the three pinned arms above meet. It is here
-   * to prove the calibrated configuration integrates the right thing at all,
-   * not to re-prove convergence. */
-  _truth_cmp ("AUTO_NODES vs reference", vA, test->ref, 5.0e-2, GSL_MAX (abstol, 1.0e-3));
-
-  ncm_vector_free (vF);
   ncm_vector_free (vL);
   ncm_vector_free (vC);
-  ncm_vector_free (vA);
   ncm_vector_free (vW2);
   ncm_vector_free (vW5);
 }

@@ -38,7 +38,7 @@ import os
 import numpy as np
 import pytest
 
-from numcosmo_py import Ncm, Nc, NumCosmoWarning
+from numcosmo_py import Ncm, Nc
 
 Ncm.cfg_init()
 
@@ -57,9 +57,8 @@ SHAPE_FACTORS = {
 
 
 def _spectral():
-    """Spectral computes a 2D integral per evaluation and the calibration needs
-    thousands of them per galaxy: a loose tolerance and a short catalog (see
-    N_GAL_OF) keep its run time that of a unit test. The test compares
+    """Spectral computes a 2D integral per evaluation: a loose tolerance and a short
+    catalog (see N_GAL_OF) keep its run time that of a unit test. The test compares
     parallel with serial, not accuracy."""
     gsf = Nc.GalaxyShapeFactorSpectral.new(ELLIP_CONV)
     gsf.set_reltol(1.0e-3)
@@ -101,7 +100,7 @@ def _gauss_pz(zp, sigma):
 def _build(
     shape_name, profile_name, redshift_name, n_gal=None, zf=100.0, separate_dist=False
 ):
-    """Builds a fresh FIXED_NODES + auto-nodes dataset; returns (dcwlf, mset). The
+    """Builds a fresh CHEB_WEIGHTS dataset; returns (dcwlf, mset). The
     surface mass density has a distance of final redshift zf; with separate_dist the
     halo position has its own distance (zf = 100), otherwise it shares that one."""
     if n_gal is None:
@@ -136,12 +135,13 @@ def _build(
     position_factor = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)
     shape_factor = SHAPE_FACTORS[shape_name]()
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n_gal, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, n_gal, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     ra, dec, zp, sigma0, e1, e2, std_noise = _galaxies(n_gal)
     values = {
         "ra": ra,
@@ -166,8 +166,7 @@ def _build(
             obs.set_pz(i, _gauss_pz(zp[i], sigma0[i] * (1.0 + zp[i])))
 
     dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-    dcwlf.set_auto_nodes(True)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
     dcwlf.set_obs(obs)
 
     return dcwlf, mset
@@ -179,16 +178,9 @@ def _m2lnP(dcwlf, mset):
     return np.array(m2lnP.dup_array())
 
 
-def _node_config(dcwlf):
-    node_config = dcwlf.props.node_config
-    n_nodes = node_config.get_variant("n-nodes")[1].unpack()
-    rule_n = node_config.get_variant("rule-n")[1].unpack()
-    return n_nodes, rule_n
-
-
 def _prepare(shape_name, profile_name, redshift_name, n_threads):
     """Builds a fresh dataset, runs data_prepare() on @n_threads threads and
-    returns (node-config n-nodes, node-config rule-n, per-galaxy -2lnP)."""
+    returns the per-galaxy -2lnP."""
     dcwlf, mset = _build(shape_name, profile_name, redshift_name)
 
     Ncm.cfg_set_openmp_nthreads(n_threads)
@@ -199,7 +191,7 @@ def _prepare(shape_name, profile_name, redshift_name, n_threads):
             int(os.environ.get("OMP_NUM_THREADS", os.cpu_count()))
         )
 
-    return (*_node_config(dcwlf), _m2lnP(dcwlf, mset))
+    return _m2lnP(dcwlf, mset)
 
 
 def _combinations():
@@ -218,10 +210,8 @@ def test_parallel_data_prepare_matches_serial(shape_name, profile_name, redshift
     serial = _prepare(shape_name, profile_name, redshift_name, 1)
     parallel = _prepare(shape_name, profile_name, redshift_name, PARALLEL_THREADS)
 
-    assert serial[0] == parallel[0]
-    assert serial[1] == parallel[1]
-    assert np.all(np.isfinite(serial[2]))
-    np.testing.assert_array_equal(serial[2], parallel[2])
+    assert np.all(np.isfinite(serial))
+    np.testing.assert_array_equal(serial, parallel)
 
 
 # Relative tolerance of the per-galaxy -2 ln P between distances of different zf; the
@@ -278,97 +268,16 @@ def test_distance_zf_required_after_model_swap():
     assert smd.props.distance.props.zf == _z_top(dcwlf)
 
 
-def _reload(dcwlf):
-    """A save and load: the node configuration travels as the node-config
-    property, the per-galaxy state does not."""
-    ser = Ncm.Serialize.new(Ncm.SerializeOpt.CLEAN_DUP)
-    return ser.from_string(ser.to_string(dcwlf, True))
-
-
-def test_node_config_replay_skips_calibration():
-    """A reloaded dataset replays the stored node grid instead of calibrating
-    again, and evaluates bitwise identically to the dataset that calibrated
-    it."""
-    dcwlf, mset = _build("var-add", "nfw", "composed")
-    assert not dcwlf.is_data_prepared()
-    dcwlf.data_prepare(mset)
-    assert dcwlf.is_data_prepared()
-    assert dcwlf.get_calib_count() > 0
-    ref = _m2lnP(dcwlf, mset)
-
-    # Saving again before any prepare keeps the loaded configuration.
-    dup = _reload(_reload(dcwlf))
-    assert dup.props.node_config is not None
-    dup.data_prepare(mset)
-
-    assert dup.get_calib_count() == 0
-    assert dup.is_data_prepared()
-    assert _node_config(dup) == _node_config(dcwlf)
-    np.testing.assert_array_equal(_m2lnP(dup, mset), ref)
-
-
-def test_node_config_mismatch_recalibrates():
-    """A stored configuration made under other settings is discarded, and
-    the recalibrated dataset is the one a fresh run with those settings
-    gives."""
-    dcwlf, mset = _build("var-add", "nfw", "composed")
-    dcwlf.data_prepare(mset)
-
-    dup = _reload(dcwlf)
-    dup.set_node_reltol(1.0e-5)
-    with pytest.warns(
-        NumCosmoWarning, match="stored node configuration does not match"
-    ):
-        dup.data_prepare(mset)
-    assert dup.get_calib_count() > 0
-
-    fresh, mset2 = _build("var-add", "nfw", "composed")
-    fresh.set_node_reltol(1.0e-5)
-    fresh.data_prepare(mset2)
-
-    assert _node_config(dup) == _node_config(fresh)
-    np.testing.assert_array_equal(_m2lnP(dup, mset), _m2lnP(fresh, mset2))
-    # A tighter tolerance never selects a coarser grid.
-    assert sum(_node_config(dup)[0]) >= sum(_node_config(dcwlf)[0])
-
-
-def test_node_config_cleared_and_prepared_state():
-    """Clearing node-config makes the next prepare calibrate; the prepared
-    flag follows the method: auto-nodes FIXED_NODES needs a configuration,
-    the other methods only the per-galaxy data."""
-    dcwlf, mset = _build("var-add", "nfw", "composed")
-    dcwlf.data_prepare(mset)
-
-    dup = _reload(dcwlf)
-    dup.props.node_config = None
-    assert dup.props.node_config is None
-    dup.data_prepare(mset)
-    assert dup.get_calib_count() > 0
-    np.testing.assert_array_equal(_m2lnP(dup, mset), _m2lnP(dcwlf, mset))
-
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
-    assert dcwlf.is_data_prepared()
-
-
 def test_resample_skips_eager_precomputation():
     """The prepare() that ncm_data_resample() runs only feeds gen(): no
-    MomentsTilt table is built and no auto-node calibration is run for it,
-    and the next prepare() rebuilds everything from the resampled catalog."""
+    MomentsTilt table is built for it, and the next prepare() rebuilds everything
+    from the resampled catalog."""
     dcwlf, mset = _build("moments-tilt", "nfw", "composed")
     gsf = dcwlf.props.shape_factor
     rng = Ncm.RNG.seeded_new(None, 20260923)
 
     dcwlf.resample(mset, rng)
     assert gsf.get_table_build_count() == 0
-    assert dcwlf.get_calib_count() == 0
-
-    # The uncalibrated grid that prepare used is not reported as a node
-    # configuration, so a save taken now does not replay it after a load.
-    assert not dcwlf.is_data_prepared()
-    assert dcwlf.props.node_config is None
-    dup = _reload(dcwlf)
-    dup.data_prepare(mset)
-    assert dup.get_calib_count() > 0
 
     dcwlf.data_prepare(mset)
     assert gsf.get_table_build_count() > 0
@@ -386,20 +295,19 @@ def test_resample_skips_eager_precomputation():
 def test_underflowing_shape_likelihood_is_not_the_wall():
     """|epsilon_obs| = 1.7 with a noise of 0.013 is ~1450 nats below the
     support: the linear shape likelihood is exactly 0 at every node, its log
-    is finite. FIXED_NODES must return that log, not NC_GALAXY_LOW_PROB."""
+    is finite. CHEB_WEIGHTS must return that log, not NC_GALAXY_LOW_PROB."""
     dcwlf, mset = _build("moments-tilt", "nfw", "composed", n_gal=5)
-    dcwlf.set_auto_nodes(False)
     obs = dcwlf.peek_obs()
     obs.set("epsilon_obs_1", 4, -0.025)
     obs.set("epsilon_obs_2", 4, -1.697)
     obs.set("std_noise", 4, 0.013)
     dcwlf.set_obs(obs)
 
-    fixed = _m2lnP(dcwlf, mset)
+    cheb = _m2lnP(dcwlf, mset)
     assert dcwlf.get_low_prob_count() == 0
-    assert np.all(np.isfinite(fixed))
-    assert 2000.0 < fixed[4] < 1.0e5
+    assert np.all(np.isfinite(cheb))
+    assert 2000.0 < cheb[4] < 1.0e5
 
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
     lnint = _m2lnP(dcwlf, mset)
-    assert fixed[4] == pytest.approx(lnint[4], rel=1.0e-4)
+    assert cheb[4] == pytest.approx(lnint[4], rel=1.0e-4)

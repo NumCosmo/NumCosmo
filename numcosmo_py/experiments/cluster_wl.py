@@ -49,6 +49,11 @@ from rich.table import Table
 from tabulate import tabulate
 
 from numcosmo_py import GEnum, Nc, Ncm, parse_options_strict
+from numcosmo_py.experiments.wl_row_selection import (
+    RowSelectionContext,
+    RowSelector,
+    row_selection_mask,
+)
 from numcosmo_py.helper import catalog_column
 
 DEFAULT_TABLE_FMT = "rounded_grid"
@@ -1018,18 +1023,12 @@ class IntegMethod(GEnum):
     """Cluster WL redshift-integral method (``NcDataClusterWLIntegMethod``)."""
 
     LNINT = Nc.DataClusterWLIntegMethod.LNINT
-    FIXED_NODES = Nc.DataClusterWLIntegMethod.FIXED_NODES
     CUBATURE = Nc.DataClusterWLIntegMethod.CUBATURE
     CHEB_WEIGHTS = Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
 
 
 DEFAULT_INTEG_CHEB_TOL = 1.0e-8
 DEFAULT_INTEG_CHEB_LEVEL_MIN = 2
-DEFAULT_INTEG_AUTO_NODES = False
-DEFAULT_INTEG_N_NODES = 10
-DEFAULT_INTEG_RULE_N = 5
-DEFAULT_INTEG_NODE_RELTOL = 1.0e-4
-DEFAULT_INTEG_MAX_TOTAL_NODES = 2000
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -1037,9 +1036,7 @@ class IntegMethodOptions:
     """Redshift-integral method and its tuning knobs.
 
     ``cheb_tol``/``cheb_level_min`` are ``NcDataClusterWLFactor`` properties read
-    only under CHEB_WEIGHTS, and ``n_nodes``/``rule_n``/``auto_nodes``/
-    ``node_reltol``/``max_total_nodes`` only under FIXED_NODES; the other
-    methods ignore them.
+    only under CHEB_WEIGHTS; the other methods ignore them.
 
     ``apply()`` sets every knob unconditionally, so these defaults -- not the
     C-side property defaults -- are what an app-driven run gets. They are kept
@@ -1051,22 +1048,12 @@ class IntegMethodOptions:
     integ_method: IntegMethod = IntegMethod.CHEB_WEIGHTS
     cheb_tol: float = DEFAULT_INTEG_CHEB_TOL
     cheb_level_min: int = DEFAULT_INTEG_CHEB_LEVEL_MIN
-    auto_nodes: bool = DEFAULT_INTEG_AUTO_NODES
-    n_nodes: int = DEFAULT_INTEG_N_NODES
-    rule_n: int = DEFAULT_INTEG_RULE_N
-    node_reltol: float = DEFAULT_INTEG_NODE_RELTOL
-    max_total_nodes: int = DEFAULT_INTEG_MAX_TOTAL_NODES
 
     def apply(self, cluster_data: Nc.DataClusterWLFactor) -> None:
         """Apply these settings to a NcDataClusterWLFactor instance."""
         cluster_data.set_integ_method(self.integ_method.genum)
         cluster_data.set_cheb_tol(self.cheb_tol)
         cluster_data.set_cheb_level_min(self.cheb_level_min)
-        cluster_data.set_auto_nodes(self.auto_nodes)
-        cluster_data.set_n_nodes(self.n_nodes)
-        cluster_data.set_rule_n(self.rule_n)
-        cluster_data.set_node_reltol(self.node_reltol)
-        cluster_data.set_max_total_nodes(self.max_total_nodes)
 
 
 class HaloPositionData(BaseModel):
@@ -1255,16 +1242,16 @@ class GalaxyDistributionModel:
 
         cluster.halo_position.prepare_if_needed(cosmo)
 
-        pos_data = Nc.GalaxyPositionFactorData.new(self.position_factor, mset)
-        z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-        s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-        cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+        cols = Nc.DataClusterWLFactor.new(
+            self.position_factor, redshift_factor, shape_factor
+        ).required_columns(mset)
 
         obs = Nc.GalaxyWLObs.new(
             self.shape_gen.ellip_conv.genum,
             self.shape_gen.ellip_coord.genum,
             self.n_galaxies,
             cols,
+            [Ncm.CatalogColType.DOUBLE] * len(cols),
         )
         for i in range(self.n_galaxies):
             for c in cols:
@@ -1529,6 +1516,7 @@ def load_cluster_wl(
     integ_options: IntegMethodOptions,
     summary: bool,
     resample_flag: Nc.DataClusterWLResampleFlag = Nc.DataClusterWLResampleFlag.ALL,
+    row_selector: RowSelector | None = None,
 ) -> Ncm.ObjDictStr:
     """Build a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.
 
@@ -1546,6 +1534,10 @@ def load_cluster_wl(
     ``resample_flag`` is written onto the resulting ``NcDataClusterWLFactor``
     as-is (default ``ALL``); see ``ResampleFlagChoice`` for what each flag
     redraws.
+
+    ``row_selector``, when given, is evaluated at the cluster and cosmology of the
+    experiment and sets the mask of the ``NcDataClusterWLFactor`` (see
+    ``numcosmo_py.experiments.wl_row_selection``).
     """
     if not (obs.has_column("ra") and obs.has_column("dec")):
         raise ValueError("obs must have 'ra' and 'dec' columns")
@@ -1668,6 +1660,13 @@ def load_cluster_wl(
     cluster_data.set_obs(obs)
     cluster_data.set_resample_flag(resample_flag)
 
+    # The selection is evaluated here, at the cluster and cosmology of the experiment.
+    if row_selector is not None:
+        ctx = RowSelectionContext(
+            obs=obs, cosmo=cosmo, halo_position=cluster.halo_position
+        )
+        cluster_data.set_mask(row_selection_mask(row_selector, ctx))
+
     dset = Ncm.Dataset.new_array([cluster_data])
     likelihood = Ncm.Likelihood.new(dset)
 
@@ -1697,6 +1696,9 @@ def load_cluster_wl(
         table.add_column("Parameter")
         table.add_column("Value")
         table.add_row("Number of galaxies", f"{obs.len()}")
+        mask = cluster_data.get_mask()
+        if mask:
+            table.add_row("Galaxies used (row selection)", f"{sum(mask)}")
         table.add_row("RA range", f"[{ra.min():.4f}, {ra.max():.4f}]")
         table.add_row("DEC range", f"[{dec.min():.4f}, {dec.max():.4f}]")
         table.add_row("Shape Generator", repr(shape_gen))

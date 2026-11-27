@@ -57,6 +57,7 @@
 #include "ncm/core/ncm_rng.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/model/ncm_model.h"
+#include "ncm/model/ncm_model_ctrl.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -68,10 +69,13 @@ typedef struct _NcGalaxyRedshiftFactorComposedPrivate
   gdouble zp_min;
   gdouble zp_max;
 
-  /* Cached by prepare(): a hash of the population/observable models' state, so callers
-   * can detect a change without knowing which models are involved -- see
-   * #NcGalaxyShapeFactor's analogous radius/optzs/pop hashes for the full rationale.
-   * */
+  /*
+   * The change counter returned by get_hash(): prepare() increments it when the population
+   * or the observable model is another object or its state changed (#NcmModelCtrl), so
+   * callers detect a change without knowing which models are involved.
+   */
+  NcmModelCtrl *ctrl_pop;
+  NcmModelCtrl *ctrl_obs;
   guint64 hash;
 } NcGalaxyRedshiftFactorComposedPrivate;
 
@@ -110,9 +114,11 @@ nc_galaxy_redshift_factor_composed_init (NcGalaxyRedshiftFactorComposed *gsdrc)
 {
   NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (gsdrc);
 
-  self->zp_min = 0.0;
-  self->zp_max = 0.0;
-  self->hash   = 0;
+  self->zp_min   = 0.0;
+  self->zp_max   = 0.0;
+  self->ctrl_pop = ncm_model_ctrl_new (NULL);
+  self->ctrl_obs = ncm_model_ctrl_new (NULL);
+  self->hash     = 0;
 }
 
 static void
@@ -160,6 +166,19 @@ _nc_galaxy_redshift_factor_composed_get_property (GObject *object, guint prop_id
 }
 
 static void
+_nc_galaxy_redshift_factor_composed_dispose (GObject *object)
+{
+  NcGalaxyRedshiftFactorComposed *gsdrc              = NC_GALAXY_REDSHIFT_FACTOR_COMPOSED (object);
+  NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (gsdrc);
+
+  ncm_model_ctrl_clear (&self->ctrl_pop);
+  ncm_model_ctrl_clear (&self->ctrl_obs);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_galaxy_redshift_factor_composed_parent_class)->dispose (object);
+}
+
+static void
 _nc_galaxy_redshift_factor_composed_finalize (GObject *object)
 {
   G_OBJECT_CLASS (nc_galaxy_redshift_factor_composed_parent_class)->finalize (object);
@@ -173,7 +192,6 @@ static guint64 _nc_galaxy_redshift_factor_composed_get_hash (NcGalaxyRedshiftFac
 static NcGalaxyRedshiftFactorIntegrand *_nc_galaxy_redshift_factor_composed_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp);
 static void _nc_galaxy_redshift_factor_composed_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
 static gdouble _nc_galaxy_redshift_factor_composed_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
-static NcmIntegralFixed *_nc_galaxy_redshift_factor_composed_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 
 static void
 nc_galaxy_redshift_factor_composed_class_init (NcGalaxyRedshiftFactorComposedClass *klass)
@@ -183,6 +201,7 @@ nc_galaxy_redshift_factor_composed_class_init (NcGalaxyRedshiftFactorComposedCla
 
   object_class->set_property = &_nc_galaxy_redshift_factor_composed_set_property;
   object_class->get_property = &_nc_galaxy_redshift_factor_composed_get_property;
+  object_class->dispose      = &_nc_galaxy_redshift_factor_composed_dispose;
   object_class->finalize     = &_nc_galaxy_redshift_factor_composed_finalize;
 
   /**
@@ -198,15 +217,14 @@ nc_galaxy_redshift_factor_composed_class_init (NcGalaxyRedshiftFactorComposedCla
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  gsdr_class->data_init        = &_nc_galaxy_redshift_factor_composed_data_init;
-  gsdr_class->gen              = &_nc_galaxy_redshift_factor_composed_gen;
-  gsdr_class->gen1             = &_nc_galaxy_redshift_factor_composed_gen1;
-  gsdr_class->prepare          = &_nc_galaxy_redshift_factor_composed_prepare;
-  gsdr_class->integ            = &_nc_galaxy_redshift_factor_composed_integ;
-  gsdr_class->get_integ_lim    = &_nc_galaxy_redshift_factor_composed_get_integ_lim;
-  gsdr_class->norm             = &_nc_galaxy_redshift_factor_composed_norm;
-  gsdr_class->make_fixed_nodes = &_nc_galaxy_redshift_factor_composed_make_fixed_nodes;
-  gsdr_class->get_hash         = &_nc_galaxy_redshift_factor_composed_get_hash;
+  gsdr_class->data_init     = &_nc_galaxy_redshift_factor_composed_data_init;
+  gsdr_class->gen           = &_nc_galaxy_redshift_factor_composed_gen;
+  gsdr_class->gen1          = &_nc_galaxy_redshift_factor_composed_gen1;
+  gsdr_class->prepare       = &_nc_galaxy_redshift_factor_composed_prepare;
+  gsdr_class->integ         = &_nc_galaxy_redshift_factor_composed_integ;
+  gsdr_class->get_integ_lim = &_nc_galaxy_redshift_factor_composed_get_integ_lim;
+  gsdr_class->norm          = &_nc_galaxy_redshift_factor_composed_norm;
+  gsdr_class->get_hash      = &_nc_galaxy_redshift_factor_composed_get_hash;
 }
 
 /* Fragment vtable ------------------------------------------------------- */
@@ -319,11 +337,17 @@ _nc_galaxy_redshift_factor_composed_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMS
   /* Validate the required models are present in the mset. */
   _composed_peek_models (mset, &population, &observable);
 
-  /* Neither model's state is otherwise cached (both are always resolved fresh from
-   * mset per-call, per the class doc), so there is nothing else to refresh here --
-   * just keep the hash current for get_hash(). */
-  self->hash = ncm_model_state_get_pkey (NCM_MODEL (population)) ^
-               (ncm_model_state_get_pkey (NCM_MODEL (observable)) * 31U);
+  /*
+   * Neither model's state is otherwise cached (both are resolved from the mset at each
+   * call), so prepare only counts the changes for get_hash()
+   */
+  {
+    const gboolean pop_changed = ncm_model_ctrl_update (self->ctrl_pop, NCM_MODEL (population));
+    const gboolean obs_changed = ncm_model_ctrl_update (self->ctrl_obs, NCM_MODEL (observable));
+
+    if (pop_changed || obs_changed)
+      self->hash++;
+  }
 }
 
 static guint64
@@ -456,36 +480,6 @@ _nc_galaxy_redshift_factor_composed_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet 
   ncm_integral1d_ptr_free (integrator);
 
   return result;
-}
-
-static gdouble
-_composed_fixed_nodes_gsl_f (gdouble z, gpointer user_data)
-{
-  ComposedGSLArg *arg = (ComposedGSLArg *) user_data;
-
-  return _composed_integ_f (&arg->int_data, z, arg->data);
-}
-
-static NcmIntegralFixed *
-_nc_galaxy_redshift_factor_composed_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n)
-{
-  NcGalaxyRedshiftFactorComposed *gsdrc = NC_GALAXY_REDSHIFT_FACTOR_COMPOSED (gsdr);
-  ComposedGSLArg arg;
-  NcmIntegralFixed *intf;
-  gsl_function F;
-
-  intf = ncm_integral_fixed_new (n_nodes, rule_n, z_lo, z_hi);
-
-  arg.int_data.gsdrc = gsdrc;
-  _composed_peek_models (mset, &arg.int_data.population, &arg.int_data.observable);
-  arg.data = data;
-
-  F.function = &_composed_fixed_nodes_gsl_f;
-  F.params   = &arg;
-
-  ncm_integral_fixed_calc_nodes (intf, &F);
-
-  return intf;
 }
 
 /* Public API ------------------------------------------------------------ */

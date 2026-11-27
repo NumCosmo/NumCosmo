@@ -34,6 +34,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 void test_ncm_data_basic (void);
 void test_ncm_data_funnel_basic (void);
 void test_ncm_data_gaussmix2d_basic (void);
@@ -87,6 +90,8 @@ void test_nc_galaxy_sd_z_proxy_dirac_basic (void);
 void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
 void test_nc_galaxy_wl_obs_basic (void);
 void test_nc_halo_position_basic (void);
+void test_nc_wl_cluster_lens_basic (void);
+void test_nc_galaxy_halo_wl_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hcosmo_bi_basic (void);
 void test_nc_hcosmo_bi_dist_basic (void);
@@ -197,6 +202,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/transfer_func/basic", test_nc_transfer_func_basic);
   g_test_add_func ("/nc/galaxy/wl_obs/basic", test_nc_galaxy_wl_obs_basic);
   g_test_add_func ("/nc/halo_position/basic", test_nc_halo_position_basic);
+  g_test_add_func ("/nc/wl_cluster_lens/basic", test_nc_wl_cluster_lens_basic);
+  g_test_add_func ("/nc/galaxy/halo_wl/basic", test_nc_galaxy_halo_wl_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
   g_test_add_func ("/nc/hcosmo_bi/basic", test_nc_hcosmo_bi_basic);
   g_test_add_func ("/nc/hcosmo_bi_dist/basic", test_nc_hcosmo_bi_dist_basic);
@@ -1014,6 +1021,60 @@ test_nc_halo_position_basic (void)
 }
 
 void
+test_nc_wl_cluster_lens_basic (void)
+{
+  NcDistance *dist = nc_distance_new (3.0);
+  NcWLClusterLens *lens;
+  NcWLClusterLens *lens2;
+
+  lens = nc_wl_cluster_lens_new (dist);
+
+  g_assert_true (lens != NULL);
+  g_assert_true (NC_IS_WL_CLUSTER_LENS (lens));
+  g_assert_true (nc_wl_cluster_lens_peek_distance (lens) == dist);
+
+  lens2 = nc_wl_cluster_lens_ref (lens);
+  nc_wl_cluster_lens_clear (&lens2);
+  g_assert_true (lens2 == NULL);
+
+  g_assert_true (NC_IS_WL_CLUSTER_LENS (lens));
+
+  nc_distance_clear (&dist);
+  NCM_TEST_FREE (nc_wl_cluster_lens_free, lens);
+}
+
+void
+test_nc_galaxy_halo_wl_basic (void)
+{
+  NcDistance *dist      = nc_distance_new (3.0);
+  NcWLClusterLens *lens = nc_wl_cluster_lens_new (dist);
+  NcGalaxyHaloWLData *data;
+  NcGalaxyHaloWL *hwl;
+  NcGalaxyHaloWL *hwl2;
+
+  hwl = nc_galaxy_halo_wl_new (lens);
+
+  g_assert_true (hwl != NULL);
+  g_assert_true (NC_IS_GALAXY_HALO_WL (hwl));
+  g_assert_true (nc_galaxy_halo_wl_peek_lens (hwl) == lens);
+
+  hwl2 = nc_galaxy_halo_wl_ref (hwl);
+  nc_galaxy_halo_wl_clear (&hwl2);
+  g_assert_true (hwl2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_HALO_WL (hwl));
+
+  data = nc_galaxy_halo_wl_data_new ();
+  g_assert_true (nc_galaxy_halo_wl_data_ref (data) == data);
+  nc_galaxy_halo_wl_data_unref (data);
+  nc_galaxy_halo_wl_data_unref (data);
+
+  nc_wl_cluster_lens_free (lens);
+  nc_distance_clear (&dist);
+  NCM_TEST_FREE (nc_galaxy_halo_wl_free, hwl);
+}
+
+void
 test_nc_hicosmo_qgw_basic (void)
 {
   NcHICosmoQGW *qgw = nc_hicosmo_qgw_new ();
@@ -1243,7 +1304,7 @@ void
 test_nc_galaxy_wl_obs_basic (void)
 {
   GStrv names        = g_strsplit ("e1 e2 ra dec z sz", " ", -1);
-  NcGalaxyWLObs *gwl = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 100, names);
+  NcGalaxyWLObs *gwl = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 100, names, test_double_cols, g_strv_length (names));
   NcGalaxyWLObs *gwl2;
 
   g_assert_true (gwl != NULL);

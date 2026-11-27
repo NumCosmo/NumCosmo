@@ -16,10 +16,6 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
-#
-# Minor contributions:
-# Caio Lima de Oliveira <caiolimadeoliveira@pm.me> (2026)
-# - test_data_radius_follows_halo_and_position and test_integrand_rotates_the_shear.
 
 """Unit tests for ``NcGalaxyShapeFactor``'s own (scheme-independent) API.
 
@@ -28,10 +24,9 @@ exercise ``eval_marginal``/``eval_ln_marginal`` end-to-end; this file covers
 what the base class itself owns and every scheme shares: the ``ellip-conv``
 property, ``check_obs``, the ellipticity-transform wrappers
 (``apply_shear``/``apply_shear_inv``/``lndet_jac``), and the plain
-``NcGalaxyShapeFactorData`` get/set/radius accessors.
+``NcGalaxyShapeFactorData`` get/set accessors.
 """
 
-import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from gi.repository import GLib
@@ -68,17 +63,9 @@ def _build_mset():
 
 
 def _build_data(mset, ellip_conv):
-    posf = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)
-    pos_data = Nc.GalaxyPositionFactorData.new(posf, mset)
-    pos_data.ra = 0.03
-    pos_data.dec = 0.02
-
-    zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)
-    z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)
-    z_data.z = 0.9
-
+    """A shape factor and the shape data of one galaxy."""
     gsf = Nc.GalaxyShapeFactorVarAdd.new(ellip_conv)
-    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset)
 
     return gsf, data
 
@@ -95,22 +82,6 @@ def test_serialize_deserialize():
     assert isinstance(gsf2, Nc.GalaxyShapeFactorVarAdd)
     assert gsf2 is not gsf
     assert gsf2.get_ellip_conv() == gsf.get_ellip_conv()
-
-
-def test_integrand_copy_matches_original():
-    """A copied integrand evaluates identically to the original."""
-    mset = _build_mset()
-    gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
-    gsf.data_set(
-        data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL
-    )
-    gsf.prepare(mset)
-    gsf.prepare_data_array(mset, [data], True, True)
-
-    integ = gsf.integ(mset, False)
-    integ_copy = integ.copy()
-
-    assert integ_copy.eval(0.5, data) == integ.eval(0.5, data)
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
@@ -131,7 +102,11 @@ def test_check_obs_mismatch_raises():
 
     cols = Nc.GalaxyShapeFactorData.required_columns(data)
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
 
     with pytest.raises(GLib.Error, match="ellip_conv_mismatch|convention"):
@@ -145,7 +120,11 @@ def test_check_obs_match():
 
     cols = Nc.GalaxyShapeFactorData.required_columns(data)
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
 
     assert gsf.check_obs(obs) is True
@@ -202,108 +181,3 @@ def test_data_get_matches_data_set():
 
     assert (e1, e2, std_noise, c1, c2, m) == (0.05, -0.02, 0.03, 0.005, -0.003, 0.05)
     assert data.coord == Nc.WLEllipticityFrame.CELESTIAL
-
-
-def test_data_get_radius():
-    """NcGalaxyShapeFactorData.get_radius() returns the projected radius
-    cached by prepare_data_array()."""
-    mset = _build_mset()
-    gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
-    gsf.data_set(
-        data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, Nc.WLEllipticityFrame.CELESTIAL
-    )
-
-    gsf.prepare(mset)
-    gsf.prepare_data_array(mset, [data], True, True)
-
-    radius = data.get_radius()
-
-    assert radius > 0.0
-
-
-_FRAMES = [Nc.WLEllipticityFrame.CELESTIAL, Nc.WLEllipticityFrame.CARTESIAN]
-
-
-@pytest.mark.parametrize("frame", _FRAMES)
-def test_data_radius_follows_halo_and_position(frame):
-    """The projected radius is that of the polar angle of
-    NcHaloPosition.polar_angles() after the halo center moves (the unit
-    vector of the galaxy is kept and rotated) and after the galaxy moves (the
-    vector is computed again), in both frames."""
-    mset = _build_mset()
-    gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
-    gsf.data_set(data, 0.05, -0.02, 0.03, 0.005, -0.003, 0.05, frame)
-    cosmo = mset.peek(Nc.HICosmo.id())
-    hp = mset.peek(Nc.HaloPosition.id())
-
-    for ra_h, dec_h, ra, dec in [
-        (0.0, 0.0, 0.03, 0.02),
-        (0.01, -0.02, 0.03, 0.02),
-        (0.01, -0.02, -0.1, 0.15),
-        (-0.05, 0.05, -0.1, 0.15),
-    ]:
-        hp.param_set_by_name("ra", ra_h)
-        hp.param_set_by_name("dec", dec_h)
-        data.pos_data.ra = ra
-        data.pos_data.dec = dec
-
-        gsf.prepare(mset)
-        gsf.prepare_data_array(mset, [data], True, True)
-
-        theta, _ = hp.polar_angles(ra, dec)
-        assert_allclose(
-            data.get_radius(), hp.projected_radius(cosmo, theta), rtol=1.0e-13
-        )
-
-
-@pytest.mark.parametrize("frame", _FRAMES)
-def test_integrand_rotates_the_shear(frame):
-    """The integrand at a source redshift is the marginal at the shear of the galaxy:
-    the tangential reduced shear times exp (2 i phi), phi the azimuth of
-    NcHaloPosition.polar_angles() taken to the frame of the galaxy by
-    nc_wl_ellipticity_celestial_to_frame_angle(), computed here from those functions.
-    It checks the rotation factors kept for each galaxy and the frame flip of
-    CARTESIAN, after the halo center and the galaxy move."""
-    mset = _build_mset()
-    gsf, data = _build_data(mset, Nc.GalaxyWLObsEllipConv.TRACE)
-    e1, e2, std_noise = 0.05, -0.02, 0.03
-    gsf.data_set(data, e1, e2, std_noise, 0.0, 0.0, 0.0, frame)
-    cosmo = mset.peek(Nc.HICosmo.id())
-    hp = mset.peek(Nc.HaloPosition.id())
-    smd = mset.peek(Nc.WLSurfaceMassDensity.id())
-    dp = mset.peek(Nc.HaloDensityProfile.id())
-    pop = mset.peek(Nc.GalaxyShapePop.id())
-    z = 0.9
-    other = (
-        Nc.WLEllipticityFrame.CARTESIAN
-        if frame == Nc.WLEllipticityFrame.CELESTIAL
-        else Nc.WLEllipticityFrame.CELESTIAL
-    )
-
-    for ra_h, dec_h, ra, dec in [
-        (0.0, 0.0, 0.03, 0.02),
-        (0.01, -0.02, -0.01, 0.03),
-        (-0.05, 0.05, -0.1, 0.15),
-    ]:
-        hp.param_set_by_name("ra", ra_h)
-        hp.param_set_by_name("dec", dec_h)
-        data.pos_data.ra = ra
-        data.pos_data.dec = dec
-
-        gsf.prepare(mset)
-        gsf.prepare_data_array(mset, [data], True, True)
-        integ = gsf.integ(mset, True)
-        integ.prepare(mset)
-
-        _, phi = hp.polar_angles(ra, dec)
-        z_cl = hp.param_get_by_name("z")
-        gt = smd.reduced_shear(dp, cosmo, data.get_radius(), z, z_cl, z_cl)
-
-        def ln_p(fr):
-            phi_f = Nc.wl_ellipticity_celestial_to_frame_angle(fr, phi)
-            g1, g2 = gt * np.cos(2.0 * phi_f), gt * np.sin(2.0 * phi_f)
-            return gsf.eval_ln_marginal(pop, data, g1, g2, e1, e2)
-
-        assert_allclose(integ.eval(z, data), ln_p(frame), rtol=1.0e-9)
-        # The other frame is far from it: the test sees the flip
-        assert abs(ln_p(other) - ln_p(frame)) > 1.0e-3

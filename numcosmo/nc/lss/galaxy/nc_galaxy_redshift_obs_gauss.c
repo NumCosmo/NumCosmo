@@ -109,8 +109,8 @@ _nc_galaxy_redshift_obs_gauss_ldata_read_row (NcGalaxyRedshiftObsData *data, NcG
 {
   NcGalaxyRedshiftObsGaussLData *ldata = (NcGalaxyRedshiftObsGaussLData *) data->ldata;
 
-  ldata->zp     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_ZP, i, NULL);
-  ldata->sigma0 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, NULL);
+  ldata->zp     = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_ZP, i, NULL);
+  ldata->sigma0 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, NULL);
 }
 
 static void
@@ -118,8 +118,8 @@ _nc_galaxy_redshift_obs_gauss_ldata_write_row (NcGalaxyRedshiftObsData *data, Nc
 {
   NcGalaxyRedshiftObsGaussLData *ldata = (NcGalaxyRedshiftObsGaussLData *) data->ldata;
 
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_ZP, i, ldata->zp, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, ldata->sigma0, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_ZP, i, ldata->zp, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_OBS_GAUSS_COL_SIGMA0, i, ldata->sigma0, NULL);
 }
 
 static void

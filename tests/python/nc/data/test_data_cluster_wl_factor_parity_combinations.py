@@ -169,12 +169,13 @@ def _build_new_obs(mset, shape_kind, z_kind):
     else:
         raise ValueError(z_kind)
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(_GALAXIES), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(_GALAXIES), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
 
     for i, galaxy in enumerate(_GALAXIES):
         _, _, zp, sigma0, e_rms, *_ = galaxy
@@ -289,41 +290,6 @@ def test_m2lnL_gal_parity(shape_kind, z_kind):
 
     assert_allclose(
         new_gal.dup_array(), _GAL_PARITY_FROZEN[(shape_kind, z_kind)], rtol=1.0e-5
-    )
-
-
-# Frozen legacy FIXED_NODES (default for both engines) -2lnL values at
-# log10MDelta=14.0, keyed by (shape_kind, z_kind).
-_FIXED_NODES_PARITY_FROZEN = {
-    ("global", "spline"): 1.308794969011216,
-    ("local", "spline"): -1.2863845241404908,
-    ("local", "composed"): -20.81312706848369,
-}
-
-
-@pytest.mark.parametrize("shape_kind,z_kind", _COMBOS, ids=_COMBO_IDS)
-def test_m2lnL_parity_fixed_nodes(shape_kind, z_kind):
-    """FIXED_NODES (both engines' default) agrees with legacy's own default
-    exactly, for each combination -- checks the orchestrator's fixed-node
-    wiring is correct for schemes other than Composed+GaussGlobal too. Now
-    checked against frozen legacy values (see module docstring)."""
-    mset, hms = _build_mset(shape_kind, z_kind)
-    hms.param_set_by_name("log10MDelta", 14.0)
-
-    position_factor, redshift_factor, shape_factor, new_obs = _build_new_obs(
-        mset, shape_kind, z_kind
-    )
-
-    dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
-    dcwlf.set_obs(new_obs)
-    dcwlf.set_prec(1.0e-8)
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-    dcwlf.set_auto_nodes(False)
-
-    new_m2lnL = dcwlf.m2lnL_val(mset)
-
-    assert_allclose(
-        new_m2lnL, _FIXED_NODES_PARITY_FROZEN[(shape_kind, z_kind)], rtol=1.0e-6
     )
 
 

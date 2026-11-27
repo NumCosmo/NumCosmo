@@ -349,6 +349,8 @@ nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdou
   ncm_trivec_get_spherical_coord (&v, &r, theta, phi);
 }
 
+static void _nc_halo_position_update_rotation (NcHaloPosition *hp);
+
 /**
  * nc_halo_position_rotate:
  * @hp: A #NcHaloPosition
@@ -364,6 +366,33 @@ void
 nc_halo_position_rotate (NcHaloPosition *hp, NcmTriVec *v)
 {
   NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  _nc_halo_position_update_rotation (hp);
+  ncm_quaternion_rotate (&self->q, v);
+}
+
+/**
+ * nc_halo_position_get_rotation:
+ * @hp: A #NcHaloPosition
+ * @q: (out caller-allocates): the rotation
+ *
+ * Copies to @q the rotation of nc_halo_position_rotate(), which takes the halo to the
+ * positive z axis, so that ncm_quaternion_rotate() with @q gives the same vectors.
+ */
+void
+nc_halo_position_get_rotation (NcHaloPosition *hp, NcmQuaternion *q)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  _nc_halo_position_update_rotation (hp);
+  ncm_quaternion_memcpy (q, &self->q);
+}
+
+/* Computes the rotation that takes the halo to the positive z axis after a parameter change */
+static void
+_nc_halo_position_update_rotation (NcHaloPosition *hp)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
   NcmModel *model             = NCM_MODEL (hp);
 
   if (!ncm_model_state_is_update (model))
@@ -377,8 +406,6 @@ nc_halo_position_rotate (NcHaloPosition *hp, NcmTriVec *v)
 
     ncm_model_state_set_update (model);
   }
-
-  ncm_quaternion_rotate (&self->q, v);
 }
 
 /**
@@ -455,5 +482,43 @@ nc_halo_position_projected_radius_from_ra_dec (NcHaloPosition *hp, NcHICosmo *co
   nc_halo_position_polar_angles (hp, ra, dec, &theta, &phi);
 
   return nc_halo_position_projected_radius (hp, cosmo, theta);
+}
+
+/**
+ * nc_halo_position_projected_radius_array:
+ * @hp: A #NcHaloPosition
+ * @cosmo: A #NcHICosmo
+ * @ra: (element-type gdouble): the right ascensions
+ * @dec: (element-type gdouble): the declinations
+ * @r: (out callee-allocates) (transfer full) (element-type gdouble): the projected radii
+ *
+ * Computes the projected radius of each sky position (@ra, @dec), as
+ * nc_halo_position_projected_radius_from_ra_dec(), with the prefactor computed once. A C
+ * caller may pass in @r an array to reuse, or a pointer to %NULL for a new one; it
+ * receives one value per position, in Mpc. Arrays @ra and @dec of different lengths
+ * abort.
+ */
+void
+nc_halo_position_projected_radius_array (NcHaloPosition *hp, NcHICosmo *cosmo, GArray *ra, GArray *dec, GArray **r)
+{
+  const gdouble prefactor = nc_halo_position_projected_radius_prefactor (hp, cosmo);
+  guint i;
+
+  if (ra->len != dec->len)
+    g_error ("nc_halo_position_projected_radius_array: %u right ascensions and %u declinations.",
+             ra->len, dec->len);
+
+  if (*r == NULL)
+    *r = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*r, ra->len);
+
+  for (i = 0; i < ra->len; i++)
+  {
+    gdouble theta, phi;
+
+    nc_halo_position_polar_angles (hp, g_array_index (ra, gdouble, i), g_array_index (dec, gdouble, i), &theta, &phi);
+    g_array_index (*r, gdouble, i) = ncm_util_projected_radius (theta, prefactor);
+  }
 }
 

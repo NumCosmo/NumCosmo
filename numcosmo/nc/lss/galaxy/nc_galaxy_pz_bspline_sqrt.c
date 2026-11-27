@@ -206,6 +206,7 @@ static void _nc_galaxy_pz_bspline_sqrt_get_range (NcGalaxyPz *gpz, gdouble *z_mi
 static gdouble _nc_galaxy_pz_bspline_sqrt_eval_p (NcGalaxyPz *gpz, const gdouble z);
 static gdouble _nc_galaxy_pz_bspline_sqrt_eval_ln_p (NcGalaxyPz *gpz, const gdouble z);
 static gdouble _nc_galaxy_pz_bspline_sqrt_get_norm (NcGalaxyPz *gpz);
+static gdouble _nc_galaxy_pz_bspline_sqrt_cdf (NcGalaxyPz *gpz, const gdouble z);
 static gdouble _nc_galaxy_pz_bspline_sqrt_gen (NcGalaxyPz *gpz, NcmRNG *rng);
 static void _nc_galaxy_pz_bspline_sqrt_cheb_moments (NcGalaxyPz *gpz, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
@@ -238,6 +239,7 @@ nc_galaxy_pz_bspline_sqrt_class_init (NcGalaxyPzBSplineSqrtClass *klass)
   gpz_class->eval_p       = &_nc_galaxy_pz_bspline_sqrt_eval_p;
   gpz_class->eval_ln_p    = &_nc_galaxy_pz_bspline_sqrt_eval_ln_p;
   gpz_class->get_norm     = &_nc_galaxy_pz_bspline_sqrt_get_norm;
+  gpz_class->cdf          = &_nc_galaxy_pz_bspline_sqrt_cdf;
   gpz_class->gen          = &_nc_galaxy_pz_bspline_sqrt_gen;
   gpz_class->cheb_moments = &_nc_galaxy_pz_bspline_sqrt_cheb_moments;
 }
@@ -298,6 +300,37 @@ _nc_galaxy_pz_bspline_sqrt_get_norm (NcGalaxyPz *gpz)
   NcGalaxyPzBSplineSqrt *gpzs = NC_GALAXY_PZ_BSPLINE_SQRT (gpz);
 
   return g_array_index (gpzs->cum, gdouble, gpzs->n_brk - 1);
+}
+
+/*
+ * The integral of s^2 up to z divided by the normalization: the cumulative integral at the
+ * breakpoint below z plus the integral over the part of its piece below z, both exact.
+ */
+static gdouble
+_nc_galaxy_pz_bspline_sqrt_cdf (NcGalaxyPz *gpz, const gdouble z)
+{
+  NcGalaxyPzBSplineSqrt *gpzs = NC_GALAXY_PZ_BSPLINE_SQRT (gpz);
+  const gdouble total         = g_array_index (gpzs->cum, gdouble, gpzs->n_brk - 1);
+  guint lo                    = 0;
+  guint hi                    = gpzs->n_brk - 1;
+
+  if (z <= gpzs->brk[0])
+    return 0.0;
+
+  if (z >= gpzs->brk[hi])
+    return 1.0;
+
+  while (hi - lo > 1)
+  {
+    const guint mid = (lo + hi) / 2;
+
+    if (z < gpzs->brk[mid])
+      hi = mid;
+    else
+      lo = mid;
+  }
+
+  return (g_array_index (gpzs->cum, gdouble, lo) + _nc_galaxy_pz_bspline_sqrt_s2_integ (gpzs, gpzs->brk[lo], z)) / total;
 }
 
 /*

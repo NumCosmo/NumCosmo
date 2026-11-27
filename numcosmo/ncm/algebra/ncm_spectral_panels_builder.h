@@ -68,6 +68,7 @@ gdouble ncm_spectral_panels_builder_get_min_panels_per_efold (NcmSpectralPanelsB
 gdouble ncm_spectral_panels_builder_get_min_panel_fraction (NcmSpectralPanelsBuilder *builder);
 
 void ncm_spectral_panels_builder_build (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsF F, gpointer user_data, gdouble a, gdouble b, NcmVector *breakpoints, NcmMatrix *f_minus, NcmMatrix *f_plus, gdouble reltol, gdouble abstol, NcmSpectralPanels *sp);
+void ncm_spectral_panels_builder_build_uniform (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsF F, gpointer user_data, gdouble a, gdouble b, guint N, gdouble reltol, gdouble abstol, NcmSpectralPanels *sp);
 
 G_END_DECLS
 

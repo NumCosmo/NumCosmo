@@ -101,7 +101,8 @@ def catalog_column(catalog: Ncm.Catalog, col: str) -> np.ndarray:
 
     :param catalog: the catalog.
     :param col: the column name.
-    :return: ``float64`` for DOUBLE, ``int64`` for INT and ``bool`` for BOOL columns.
+    :return: ``float64`` for DOUBLE and DOUBLE_SEPARATE, ``int64`` for INT and ``bool``
+        for BOOL columns.
     """
     col_type = catalog.get_col_type(col)
 
@@ -110,8 +111,7 @@ def catalog_column(catalog: Ncm.Catalog, col: str) -> np.ndarray:
     if col_type == Ncm.CatalogColType.BOOL:
         return np.array(catalog.get_bool_column(col), dtype=bool)
 
-    _, j = catalog.get_data_index(col)
-    return catalog.peek_data().to_numpy()[:, j].copy()
+    return np.array(catalog.get_double_column(col), dtype=np.float64)
 
 
 def fill_catalog(catalog: Ncm.Catalog, columns: Mapping[str, np.ndarray]) -> None:
@@ -142,6 +142,10 @@ def fill_catalog(catalog: Ncm.Catalog, columns: Mapping[str, np.ndarray]) -> Non
             )
         elif col_type == Ncm.CatalogColType.BOOL:
             catalog.set_bool_column(col, np.asarray(columns[col], dtype=bool).tolist())
+        elif col_type == Ncm.CatalogColType.DOUBLE_SEPARATE:
+            catalog.set_double_column(
+                col, np.asarray(columns[col], dtype=np.float64).tolist()
+            )
 
 
 def col_type_of(column: np.ndarray) -> Ncm.CatalogColType:
