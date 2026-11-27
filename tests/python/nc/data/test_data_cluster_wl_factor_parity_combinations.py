@@ -174,7 +174,9 @@ def _build_new_obs(mset, shape_kind, z_kind):
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(_GALAXIES), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(_GALAXIES), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
 
     for i, galaxy in enumerate(_GALAXIES):
         _, _, zp, sigma0, e_rms, *_ = galaxy

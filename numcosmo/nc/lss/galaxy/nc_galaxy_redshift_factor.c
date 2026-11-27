@@ -368,7 +368,7 @@ nc_galaxy_redshift_factor_data_unref (NcGalaxyRedshiftFactorData *data)
 void
 nc_galaxy_redshift_factor_data_read_row (NcGalaxyRedshiftFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  data->z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
+  data->z = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
   data->ldata_read_row (data, obs, i);
 }
 
@@ -384,7 +384,7 @@ nc_galaxy_redshift_factor_data_read_row (NcGalaxyRedshiftFactorData *data, NcGal
 void
 nc_galaxy_redshift_factor_data_write_row (NcGalaxyRedshiftFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, data->z, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, data->z, NULL);
   data->ldata_write_row (data, obs, i);
 }
 

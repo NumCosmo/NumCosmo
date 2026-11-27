@@ -43,18 +43,24 @@ struct _NcmCatalogClass
   /*< private >*/
   GObjectClass parent_class;
 
+  NcmCatalog *(*shallow_dup) (NcmCatalog *catalog);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[18];
+  gpointer padding[17];
 };
 
 /**
  * NcmCatalogColType:
  * @NCM_CATALOG_COL_TYPE_INVALID: invalid column type.
  * @NCM_CATALOG_COL_TYPE_DOUBLE: a real-valued column, stored in the double matrix.
- * @NCM_CATALOG_COL_TYPE_INT: an integer-valued column, stored as a 64-bit integer.
- * @NCM_CATALOG_COL_TYPE_BOOL: a boolean-valued column, stored as a #gboolean.
+ * @NCM_CATALOG_COL_TYPE_INT: an integer-valued column, stored in its own array of 64-bit
+ *   integers.
+ * @NCM_CATALOG_COL_TYPE_BOOL: a boolean-valued column, stored in its own array of #gboolean.
+ * @NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE: a real-valued column, stored in its own array,
+ *   outside the double matrix.
  *
- * Type of a catalog column. Each type has its own storage and its own accessors.
+ * Type of a catalog column. The DOUBLE columns form one matrix; every other column has an
+ * array of its own.
  *
  */
 typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
@@ -63,6 +69,7 @@ typedef enum _NcmCatalogColType /*< prefix=NCM_CATALOG_COL_TYPE >*/
   NCM_CATALOG_COL_TYPE_DOUBLE  = 0,
   NCM_CATALOG_COL_TYPE_INT,
   NCM_CATALOG_COL_TYPE_BOOL,
+  NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE,
   /* < private > */
   NCM_CATALOG_COL_TYPE_LEN, /*< skip >*/
 } NcmCatalogColType;
@@ -101,6 +108,9 @@ GQuark ncm_catalog_error_quark (void);
 NcmCatalog *ncm_catalog_new (guint nrows, GStrv col_names);
 NcmCatalog *ncm_catalog_new_full (guint nrows, GStrv col_names, const NcmCatalogColType *col_types, guint n_types);
 NcmCatalog *ncm_catalog_ref (NcmCatalog *catalog);
+NcmCatalog *ncm_catalog_shallow_dup (NcmCatalog *catalog);
+void ncm_catalog_replace_by_copy (NcmCatalog *catalog, const gchar *col, GError **error);
+void ncm_catalog_replace_data_by_copy (NcmCatalog *catalog);
 
 void ncm_catalog_free (NcmCatalog *catalog);
 void ncm_catalog_clear (NcmCatalog **catalog);
@@ -124,6 +134,8 @@ void ncm_catalog_set_int_column (NcmCatalog *catalog, const gchar *col, GArray *
 void ncm_catalog_get_int_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error);
 void ncm_catalog_set_bool_column (NcmCatalog *catalog, const gchar *col, GArray *vals, GError **error);
 void ncm_catalog_get_bool_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error);
+void ncm_catalog_set_double_column (NcmCatalog *catalog, const gchar *col, GArray *vals, GError **error);
+void ncm_catalog_get_double_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error);
 
 GStrv ncm_catalog_peek_columns (NcmCatalog *catalog);
 NcmMatrix *ncm_catalog_peek_data (NcmCatalog *catalog);

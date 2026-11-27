@@ -106,12 +106,21 @@ _nc_galaxy_pz_cheb_moments_not_implemented (NcGalaxyPz *gpz, const gdouble a, co
   g_error ("nc_galaxy_pz_cheb_moments: %s does not implement the Chebyshev moments.", G_OBJECT_TYPE_NAME (gpz));
 }
 
+static gdouble
+_nc_galaxy_pz_cdf_not_implemented (NcGalaxyPz *gpz, const gdouble z)
+{
+  g_error ("nc_galaxy_pz_cdf: %s does not implement the cumulative distribution.", G_OBJECT_TYPE_NAME (gpz));
+
+  return 0.0;
+}
+
 static void
 nc_galaxy_pz_class_init (NcGalaxyPzClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = &_nc_galaxy_pz_finalize;
+  klass->cdf             = &_nc_galaxy_pz_cdf_not_implemented;
   klass->cheb_moments    = &_nc_galaxy_pz_cheb_moments_not_implemented;
 }
 
@@ -212,6 +221,24 @@ gdouble
 nc_galaxy_pz_get_norm (NcGalaxyPz *gpz)
 {
   return NC_GALAXY_PZ_GET_CLASS (gpz)->get_norm (gpz);
+}
+
+/**
+ * nc_galaxy_pz_cdf: (virtual cdf)
+ * @gpz: a #NcGalaxyPz
+ * @z: the redshift
+ *
+ * Computes the cumulative distribution of the normalized density, the integral of
+ * $p$ from the lower end of the range to @z divided by the normalization
+ * (nc_galaxy_pz_get_norm()). It is 0 at and below the lower end of the range and 1
+ * at and above the upper end. A subclass that does not implement it aborts.
+ *
+ * Returns: $P(z' \leq z)$.
+ */
+gdouble
+nc_galaxy_pz_cdf (NcGalaxyPz *gpz, const gdouble z)
+{
+  return NC_GALAXY_PZ_GET_CLASS (gpz)->cdf (gpz, z);
 }
 
 /**

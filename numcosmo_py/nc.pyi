@@ -7773,10 +7773,8 @@ class DistMuObs(NumCosmoMath.Catalog):
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
         Catalog double columns
-      int-data -> GVariant: Integer data
-        Catalog integer columns
-      bool-data -> GVariant: Boolean data
-        Catalog boolean columns
+      col-data -> GVariant: Column data
+        Catalog columns outside the double matrix
       columns -> GStrv: Columns
         Catalog column names
       col-types -> GVariant: Column types
@@ -7791,22 +7789,20 @@ class DistMuObs(NumCosmoMath.Catalog):
     """
 
     class Props:
-        bool_data: GLib.Variant
+        col_data: GLib.Variant
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
-        int_data: GLib.Variant
         len: int
         meta: typing.Optional[NumCosmoMath.VarDict]
 
     props: Props = ...
     def __init__(
         self,
-        bool_data: GLib.Variant = ...,
+        col_data: GLib.Variant = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
-        int_data: GLib.Variant = ...,
         len: int = ...,
         meta: typing.Optional[NumCosmoMath.VarDict] = ...,
     ) -> None: ...
@@ -8477,9 +8473,11 @@ class GalaxyPz(GObject.Object):
     """
 
     parent_instance: GObject.Object = ...
+    def cdf(self, z: float) -> float: ...
     def cheb_moments(self, a: float, b: float, n: int) -> list[float]: ...
     @staticmethod
     def clear(gpz: GalaxyPz) -> None: ...
+    def do_cdf(self, z: float) -> float: ...
     def do_cheb_moments(self, a: float, b: float, n: int) -> list[float]: ...
     def do_eval_ln_p(self, z: float) -> float: ...
     def do_eval_p(self, z: float) -> float: ...
@@ -8552,6 +8550,7 @@ class GalaxyPzClass(GObject.GPointer):
     eval_p: typing.Callable[[GalaxyPz, float], float] = ...
     eval_ln_p: typing.Callable[[GalaxyPz, float], float] = ...
     get_norm: typing.Callable[[GalaxyPz], float] = ...
+    cdf: typing.Callable[[GalaxyPz, float], float] = ...
     gen: typing.Callable[[GalaxyPz, NumCosmoMath.RNG], float] = ...
     cheb_moments: typing.Callable[[GalaxyPz, float, float, int], list[float]] = ...
     padding: list[None] = ...
@@ -11105,7 +11104,7 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     ::
 
         GalaxyWLObs(**properties)
-        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, coord:NumCosmo.WLEllipticityFrame, nrows:int, col_names:list) -> NumCosmo.GalaxyWLObs
+        new(ellip_conv:NumCosmo.GalaxyWLObsEllipConv, coord:NumCosmo.WLEllipticityFrame, nrows:int, col_names:list, col_types:list) -> NumCosmo.GalaxyWLObs
         new_from_catalog_id(id:NumCosmo.GalaxyWLObsCatalogId) -> NumCosmo.GalaxyWLObs
         new_from_file(filename:str) -> NumCosmo.GalaxyWLObs
 
@@ -11126,10 +11125,8 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
         Catalog double columns
-      int-data -> GVariant: Integer data
-        Catalog integer columns
-      bool-data -> GVariant: Boolean data
-        Catalog boolean columns
+      col-data -> GVariant: Column data
+        Catalog columns outside the double matrix
       columns -> GStrv: Columns
         Catalog column names
       col-types -> GVariant: Column types
@@ -11149,11 +11146,10 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         ellip_conv: GalaxyWLObsEllipConv
         pz: NumCosmoMath.ObjDictInt
         shape_interp: GalaxyWLObsShapeInterp
-        bool_data: GLib.Variant
+        col_data: GLib.Variant
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
-        int_data: GLib.Variant
         len: int
         meta: typing.Optional[NumCosmoMath.VarDict]
 
@@ -11165,22 +11161,18 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         ellip_conv: GalaxyWLObsEllipConv = ...,
         pz: NumCosmoMath.ObjDictInt = ...,
         shape_interp: GalaxyWLObsShapeInterp = ...,
-        bool_data: GLib.Variant = ...,
+        col_data: GLib.Variant = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
-        int_data: GLib.Variant = ...,
         len: int = ...,
         meta: typing.Optional[NumCosmoMath.VarDict] = ...,
     ) -> None: ...
     @staticmethod
     def clear(obs: GalaxyWLObs) -> None: ...
     def free(self) -> None: ...
-    def get(self, col: str, i: int) -> float: ...
     def get_coord(self) -> WLEllipticityFrame: ...
     def get_ellip_conv(self) -> GalaxyWLObsEllipConv: ...
-    def get_index(self, col: str, i: int) -> bool: ...
-    def len(self) -> int: ...
     @classmethod
     def new(
         cls,
@@ -11188,21 +11180,20 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
         coord: WLEllipticityFrame,
         nrows: int,
         col_names: typing.Sequence[str],
+        col_types: typing.Sequence[NumCosmoMath.CatalogColType],
     ) -> GalaxyWLObs: ...
     @classmethod
     def new_from_catalog_id(cls, id: GalaxyWLObsCatalogId) -> GalaxyWLObs: ...
     @classmethod
     def new_from_file(cls, filename: str) -> GalaxyWLObs: ...
     def peek_cheb_grid(self) -> typing.Optional[GalaxyWLObsChebGrid]: ...
-    def peek_columns(self) -> list[str]: ...
-    def peek_data(self) -> NumCosmoMath.Matrix: ...
     def peek_pz(self, i: int) -> typing.Optional[GalaxyPz]: ...
     def peek_shape_interp(
         self, i: int
     ) -> typing.Optional[NumCosmoMath.SpectralTensor]: ...
     def peek_shape_interp_source(self) -> typing.Optional[NumCosmoMath.ObjDictStr]: ...
+    def pz_cdf_array(self, z: float) -> list[float]: ...
     def ref(self) -> GalaxyWLObs: ...
-    def set(self, col: str, i: int, val: float) -> None: ...
     def set_cheb_grid(
         self, grid: typing.Optional[GalaxyWLObsChebGrid] = None
     ) -> None: ...
@@ -19014,10 +19005,8 @@ class HaloCatalog(NumCosmoMath.Catalog):
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
         Catalog double columns
-      int-data -> GVariant: Integer data
-        Catalog integer columns
-      bool-data -> GVariant: Boolean data
-        Catalog boolean columns
+      col-data -> GVariant: Column data
+        Catalog columns outside the double matrix
       columns -> GStrv: Columns
         Catalog column names
       col-types -> GVariant: Column types
@@ -19035,11 +19024,10 @@ class HaloCatalog(NumCosmoMath.Catalog):
         id_col: str
         kind: HaloCatalogKind
         parent_id_col: str
-        bool_data: GLib.Variant
+        col_data: GLib.Variant
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
-        int_data: GLib.Variant
         len: int
         meta: typing.Optional[NumCosmoMath.VarDict]
 
@@ -19049,11 +19037,10 @@ class HaloCatalog(NumCosmoMath.Catalog):
         id_col: str = ...,
         kind: HaloCatalogKind = ...,
         parent_id_col: str = ...,
-        bool_data: GLib.Variant = ...,
+        col_data: GLib.Variant = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
-        int_data: GLib.Variant = ...,
         len: int = ...,
         meta: typing.Optional[NumCosmoMath.VarDict] = ...,
     ) -> None: ...
@@ -20048,6 +20035,12 @@ class HaloPosition(NumCosmoMath.Model):
     def prepare(self, cosmo: HICosmo) -> None: ...
     def prepare_if_needed(self, cosmo: HICosmo) -> None: ...
     def projected_radius(self, cosmo: HICosmo, theta: float) -> float: ...
+    def projected_radius_array(
+        self,
+        cosmo: HICosmo,
+        ra: typing.Sequence[float] | npt.NDArray[np.float64],
+        dec: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> list[float]: ...
     def projected_radius_from_ra_dec(
         self, cosmo: HICosmo, ra: float, dec: float
     ) -> float: ...

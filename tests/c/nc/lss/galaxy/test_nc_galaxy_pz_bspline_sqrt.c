@@ -33,6 +33,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gsl/gsl_sf_erf.h>
+#include <gsl/gsl_integration.h>
 
 /*
  * The table of the tests: a Gaussian of mean TEST_PZ_MU and standard deviation
@@ -153,6 +154,7 @@ void test_nc_galaxy_pz_bspline_sqrt_range (TestNcGalaxyPzBSplineSqrt *test, gcon
 void test_nc_galaxy_pz_bspline_sqrt_eval (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
 void test_nc_galaxy_pz_bspline_sqrt_table (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
 void test_nc_galaxy_pz_bspline_sqrt_norm (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
+void test_nc_galaxy_pz_bspline_sqrt_cdf (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
 void test_nc_galaxy_pz_bspline_sqrt_gen (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
 void test_nc_galaxy_pz_bspline_sqrt_new_bspline (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
 void test_nc_galaxy_pz_bspline_sqrt_serialize (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata);
@@ -202,6 +204,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_pz_bspline_sqrt/norm", TestNcGalaxyPzBSplineSqrt, NULL,
               &test_nc_galaxy_pz_bspline_sqrt_new,
               &test_nc_galaxy_pz_bspline_sqrt_norm,
+              &test_nc_galaxy_pz_bspline_sqrt_free);
+  g_test_add ("/nc/galaxy_pz_bspline_sqrt/cdf", TestNcGalaxyPzBSplineSqrt, NULL,
+              &test_nc_galaxy_pz_bspline_sqrt_new,
+              &test_nc_galaxy_pz_bspline_sqrt_cdf,
               &test_nc_galaxy_pz_bspline_sqrt_free);
   g_test_add ("/nc/galaxy_pz_bspline_sqrt/gen", TestNcGalaxyPzBSplineSqrt, NULL,
               &test_nc_galaxy_pz_bspline_sqrt_new,
@@ -426,6 +432,71 @@ test_nc_galaxy_pz_bspline_sqrt_norm (TestNcGalaxyPzBSplineSqrt *test, gconstpoin
   const gdouble exact = TEST_PZ_SIGMA * sqrt (0.5 * M_PI) * (gsl_sf_erf (b) - gsl_sf_erf (a));
 
   ncm_assert_cmpdouble_e (nc_galaxy_pz_get_norm (NC_GALAXY_PZ (test->gpzs)), ==, exact, 1.0e-10, 0.0);
+}
+
+/* The density at z, as a gsl_function of the #NcGalaxyPz */
+static gdouble
+_test_pz_eval_p (gdouble z, gpointer gpz)
+{
+  return nc_galaxy_pz_eval_p (NC_GALAXY_PZ (gpz), z);
+}
+
+/*
+ * The cumulative distribution equals the integral of s^2 divided by the normalization, the
+ * integral by adaptive quadrature over each polynomial piece (between consecutive knots),
+ * within 1e-14 absolute (the cumulative distribution is at most 1). It agrees with that of
+ * the truncated Gaussian of the table within 1e-10, the accuracy of the table (the norm
+ * test). It increases, and is 0 and 1 at and beyond the ends of the range.
+ */
+void
+test_nc_galaxy_pz_bspline_sqrt_cdf (TestNcGalaxyPzBSplineSqrt *test, gconstpointer pdata)
+{
+  NcGalaxyPz *gpz               = NC_GALAXY_PZ (test->gpzs);
+  NcmVector *knots              = ncm_bspline_peek_knots (nc_galaxy_pz_bspline_sqrt_peek_bspline (test->gpzs));
+  const gdouble a               = (TEST_PZ_Z0 - TEST_PZ_MU) / (M_SQRT2 * TEST_PZ_SIGMA);
+  const gdouble b               = (TEST_PZ_ZF - TEST_PZ_MU) / (M_SQRT2 * TEST_PZ_SIGMA);
+  const gdouble norm            = nc_galaxy_pz_get_norm (gpz);
+  gsl_integration_workspace *ws = gsl_integration_workspace_alloc (1000);
+  gsl_function F                = {&_test_pz_eval_p, gpz};
+  const guint n                 = 101;
+  gdouble last                  = 0.0;
+  guint i;
+
+  for (i = 1; i < n; i++)
+  {
+    const gdouble z     = TEST_PZ_Z0 + (TEST_PZ_ZF - TEST_PZ_Z0) * i / n;
+    const gdouble x     = (z - TEST_PZ_MU) / (M_SQRT2 * TEST_PZ_SIGMA);
+    const gdouble exact = (gsl_sf_erf (x) - gsl_sf_erf (a)) / (gsl_sf_erf (b) - gsl_sf_erf (a));
+    const gdouble cdf   = nc_galaxy_pz_cdf (gpz, z);
+    gdouble integ       = 0.0;
+    gdouble z_lo        = TEST_PZ_Z0;
+    guint k;
+
+    for (k = 0; k <= ncm_vector_len (knots); k++)
+    {
+      const gdouble z_hi = (k < ncm_vector_len (knots)) ? GSL_MIN (ncm_vector_get (knots, k), z) : z;
+      gdouble piece, err;
+
+      if (z_hi <= z_lo)
+        continue;
+
+      gsl_integration_qag (&F, z_lo, z_hi, 0.0, 2.0e-14, 1000, GSL_INTEG_GAUSS61, ws, &piece, &err);
+      integ += piece;
+      z_lo   = z_hi;
+    }
+
+    ncm_assert_cmpdouble_e (cdf, ==, integ / norm, 0.0, 1.0e-14);
+    ncm_assert_cmpdouble_e (cdf, ==, exact, 0.0, 1.0e-10);
+    g_assert_cmpfloat (cdf, >=, last);
+    last = cdf;
+  }
+
+  gsl_integration_workspace_free (ws);
+
+  g_assert_cmpfloat (nc_galaxy_pz_cdf (gpz, TEST_PZ_Z0), ==, 0.0);
+  g_assert_cmpfloat (nc_galaxy_pz_cdf (gpz, TEST_PZ_Z0 - 1.0), ==, 0.0);
+  g_assert_cmpfloat (nc_galaxy_pz_cdf (gpz, TEST_PZ_ZF), ==, 1.0);
+  g_assert_cmpfloat (nc_galaxy_pz_cdf (gpz, TEST_PZ_ZF + 1.0), ==, 1.0);
 }
 
 /*

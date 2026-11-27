@@ -616,7 +616,8 @@ ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
  * @dset: a #NcmDataset
  * @ser: a #NcmSerialize
  *
- * Calls ncm_data_register_shared() on every #NcmData in @dset.
+ * Calls ncm_data_register_shared() on every #NcmData in @dset. Whoever calls it must call
+ * ncm_dataset_notify_shared_duplicate() on every duplicate made through @ser.
  *
  */
 void
@@ -630,6 +631,22 @@ ncm_dataset_register_shared (NcmDataset *dset, NcmSerialize *ser)
 
     ncm_data_register_shared (data, ser);
   }
+}
+
+/**
+ * ncm_dataset_notify_shared_duplicate:
+ * @dset: a #NcmDataset
+ *
+ * Calls ncm_data_notify_shared_duplicate() on every #NcmData in @dset.
+ *
+ */
+void
+ncm_dataset_notify_shared_duplicate (NcmDataset *dset)
+{
+  guint i;
+
+  for (i = 0; i < dset->oa->len; i++)
+    ncm_data_notify_shared_duplicate (ncm_dataset_peek_data (dset, i));
 }
 
 /**

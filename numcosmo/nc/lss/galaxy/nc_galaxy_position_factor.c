@@ -194,8 +194,8 @@ nc_galaxy_position_factor_data_unref (NcGalaxyPositionFactorData *data)
 void
 nc_galaxy_position_factor_data_read_row (NcGalaxyPositionFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  data->ra  = nc_galaxy_wl_obs_get (obs, NC_GALAXY_POSITION_FACTOR_COL_RA, i, NULL);
-  data->dec = nc_galaxy_wl_obs_get (obs, NC_GALAXY_POSITION_FACTOR_COL_DEC, i, NULL);
+  data->ra  = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_POSITION_FACTOR_COL_RA, i, NULL);
+  data->dec = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_POSITION_FACTOR_COL_DEC, i, NULL);
   data->ldata_read_row (data, obs, i);
 }
 
@@ -211,8 +211,8 @@ nc_galaxy_position_factor_data_read_row (NcGalaxyPositionFactorData *data, NcGal
 void
 nc_galaxy_position_factor_data_write_row (NcGalaxyPositionFactorData *data, NcGalaxyWLObs *obs, const guint i)
 {
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_POSITION_FACTOR_COL_RA, i, data->ra, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_POSITION_FACTOR_COL_DEC, i, data->dec, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_POSITION_FACTOR_COL_RA, i, data->ra, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_POSITION_FACTOR_COL_DEC, i, data->dec, NULL);
   data->ldata_write_row (data, obs, i);
 }
 

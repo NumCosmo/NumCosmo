@@ -984,14 +984,14 @@ nc_galaxy_shape_factor_data_read_row (NcGalaxyShapeFactorData *data, NcGalaxyWLO
   nc_galaxy_redshift_factor_data_read_row (data->z_data, obs, i);
 
   data->coord         = nc_galaxy_wl_obs_get_coord (obs);
-  data->epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, NULL);
-  data->epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, NULL);
-  data->epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, NULL);
-  data->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, NULL);
-  data->std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, NULL);
-  data->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_C1, i, NULL);
-  data->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_C2, i, NULL);
-  data->m             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_M, i, NULL);
+  data->epsilon_int_1 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, NULL);
+  data->epsilon_int_2 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, NULL);
+  data->epsilon_obs_1 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, NULL);
+  data->epsilon_obs_2 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, NULL);
+  data->std_noise     = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, NULL);
+  data->c1            = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C1, i, NULL);
+  data->c2            = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C2, i, NULL);
+  data->m             = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_M, i, NULL);
 
   nc_galaxy_shape_pop_data_read_row (data->pop_data, obs, i);
   data->ldata_read_row (data, obs, i);
@@ -1013,14 +1013,14 @@ nc_galaxy_shape_factor_data_write_row (NcGalaxyShapeFactorData *data, NcGalaxyWL
   nc_galaxy_position_factor_data_write_row (data->pos_data, obs, i);
   nc_galaxy_redshift_factor_data_write_row (data->z_data, obs, i);
 
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, data->epsilon_int_1, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, data->epsilon_int_2, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, data->epsilon_obs_1, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, data->epsilon_obs_2, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, data->std_noise, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_C1, i, data->c1, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_C2, i, data->c2, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_M, i, data->m, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, data->epsilon_int_1, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, data->epsilon_int_2, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, data->epsilon_obs_1, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, data->epsilon_obs_2, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, data->std_noise, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C1, i, data->c1, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C2, i, data->c2, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_M, i, data->m, NULL);
 
   nc_galaxy_shape_pop_data_write_row (data->pop_data, obs, i);
   data->ldata_write_row (data, obs, i);
@@ -1922,7 +1922,9 @@ _nc_galaxy_shape_factor_eval_nodes_impl (NcGalaxyShapeFactor *gsf, NcGalaxyShape
  *
  * Computes the inverse-variance-weighted direct estimate of the reduced shear
  * from the observed ellipticities. The per-galaxy intrinsic scatter enters
- * through the population model's rms (see nc_galaxy_shape_pop_e_rms()).
+ * through the population model's rms (see nc_galaxy_shape_pop_e_rms()). The
+ * ellipticity and the additive bias c1, c2 of each galaxy are rotated to its
+ * tangential/cross frame before they are averaged.
  *
  */
 void
@@ -1952,8 +1954,9 @@ nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *mset,
     const gdouble c1                = data_i->c1;
     const gdouble c2                = data_i->c2;
     complex double e_o              = e1 + I * e2;
+    complex double c_o              = c1 + I * c2;
     gdouble std_shape;
-    complex double hat_g;
+    complex double hat_g, hat_c;
     gdouble var_tot, weight;
     gdouble theta, phi;
 
@@ -1964,18 +1967,18 @@ nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *mset,
 
     nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-    /* Rotate the data-frame observed ellipticity into the tangential/cross
-     * frame; c1/c2 stay in the data frame and are averaged unrotated. */
+    /* Rotate the data-frame ellipticity and additive bias into the tangential/cross frame */
     phi = nc_wl_ellipticity_celestial_to_frame_angle (data_i->coord, phi);
 
     hat_g = e_o * cexp (-2.0 * I * phi);
+    hat_c = c_o * cexp (-2.0 * I * phi);
 
     ncm_stats_vec_set (self->obs_stats, 0, creal (hat_g));
     ncm_stats_vec_set (self->obs_stats, 1, cimag (hat_g));
     ncm_stats_vec_set (self->obs_stats, 2, std_shape * std_shape);
     ncm_stats_vec_set (self->obs_stats, 3, m);
-    ncm_stats_vec_set (self->obs_stats, 4, c1);
-    ncm_stats_vec_set (self->obs_stats, 5, c2);
+    ncm_stats_vec_set (self->obs_stats, 4, creal (hat_c));
+    ncm_stats_vec_set (self->obs_stats, 5, cimag (hat_c));
 
     ncm_stats_vec_update_weight (self->obs_stats, weight);
   }
@@ -1985,24 +1988,24 @@ nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *mset,
     const gdouble mean_gx          = ncm_stats_vec_get_mean (self->obs_stats, 1);
     const gdouble mean_sigma_true2 = ncm_stats_vec_get_mean (self->obs_stats, 2);
     const gdouble mean_m           = ncm_stats_vec_get_mean (self->obs_stats, 3);
-    const gdouble mean_c1          = ncm_stats_vec_get_mean (self->obs_stats, 4);
-    const gdouble mean_c2          = ncm_stats_vec_get_mean (self->obs_stats, 5);
+    const gdouble mean_ct          = ncm_stats_vec_get_mean (self->obs_stats, 4);
+    const gdouble mean_cx          = ncm_stats_vec_get_mean (self->obs_stats, 5);
     const gdouble R                = 1.0 - mean_sigma_true2;
 
     switch (ellip_conv)
     {
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET:
         /* epsilon convention: <epsilon> = g, no responsivity factor R */
-        *gt      = (mean_gt - mean_c1) / (1.0 + mean_m);
-        *gx      = (mean_gx - mean_c2) / (1.0 + mean_m);
+        *gt      = (mean_gt - mean_ct) / (1.0 + mean_m);
+        *gx      = (mean_gx - mean_cx) / (1.0 + mean_m);
         *sigma_t = ncm_stats_vec_get_sd (self->obs_stats, 0) / (1.0 + mean_m);
         *sigma_x = ncm_stats_vec_get_sd (self->obs_stats, 1) / (1.0 + mean_m);
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);
         break;
       case NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE:
         /* distortion convention: <chi> = 2 R g, responsivity applies to both components */
-        *gt      = (0.5 * mean_gt / R - mean_c1) / (1.0 + mean_m);
-        *gx      = (0.5 * mean_gx / R - mean_c2) / (1.0 + mean_m);
+        *gt      = (0.5 * mean_gt / R - mean_ct) / (1.0 + mean_m);
+        *gx      = (0.5 * mean_gx / R - mean_cx) / (1.0 + mean_m);
         *sigma_t = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 0) / R / (1.0 + mean_m);
         *sigma_x = 0.5 * ncm_stats_vec_get_sd (self->obs_stats, 1) / R / (1.0 + mean_m);
         *rho     = ncm_stats_vec_get_cor (self->obs_stats, 0, 1);

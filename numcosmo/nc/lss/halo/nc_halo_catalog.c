@@ -146,14 +146,32 @@ _nc_halo_catalog_finalize (GObject *object)
   G_OBJECT_CLASS (nc_halo_catalog_parent_class)->finalize (object);
 }
 
+static NcmCatalog *
+_nc_halo_catalog_shallow_dup (NcmCatalog *catalog)
+{
+  NcHaloCatalogPrivate * const self  = nc_halo_catalog_get_instance_private (NC_HALO_CATALOG (catalog));
+  NcmCatalog *dup                    = NCM_CATALOG_CLASS (nc_halo_catalog_parent_class)->shallow_dup (catalog);
+  NcHaloCatalogPrivate * const dself = nc_halo_catalog_get_instance_private (NC_HALO_CATALOG (dup));
+
+  dself->kind = self->kind;
+  g_free (dself->id_col);
+  g_free (dself->parent_id_col);
+  dself->id_col        = g_strdup (self->id_col);
+  dself->parent_id_col = g_strdup (self->parent_id_col);
+
+  return dup;
+}
+
 static void
 nc_halo_catalog_class_init (NcHaloCatalogClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
+  NcmCatalogClass *catalog_class = NCM_CATALOG_CLASS (klass);
 
   object_class->set_property = &_nc_halo_catalog_set_property;
   object_class->get_property = &_nc_halo_catalog_get_property;
   object_class->finalize     = &_nc_halo_catalog_finalize;
+  catalog_class->shallow_dup = &_nc_halo_catalog_shallow_dup;
 
   /**
    * NcHaloCatalog:kind:

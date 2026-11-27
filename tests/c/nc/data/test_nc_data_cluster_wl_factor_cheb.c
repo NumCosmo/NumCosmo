@@ -41,6 +41,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 /* Rows, lens redshift and seed of the catalog; each p(z) is a Gaussian of width
  * TEST_PZ_SIGMA tabulated every 0.01 on [TEST_PZ_Z0, TEST_PZ_Z1] */
 #define TEST_NROWS (8)
@@ -80,6 +83,7 @@ void test_nc_data_cluster_wl_factor_cheb_converged (TestNcDataClusterWLFactorChe
 void test_nc_data_cluster_wl_factor_cheb_unconverged (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_switch (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_private_copy_types (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_stored (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_stored_errors (void);
 void test_nc_data_cluster_wl_factor_cheb_stored_errors_subprocess (void);
@@ -113,6 +117,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_cluster_wl_factor/cheb/share", TestNcDataClusterWLFactorCheb, &test_catalog_default,
               &test_nc_data_cluster_wl_factor_cheb_new,
               &test_nc_data_cluster_wl_factor_cheb_share,
+              &test_nc_data_cluster_wl_factor_cheb_free);
+  g_test_add ("/nc/data_cluster_wl_factor/private_copy/types", TestNcDataClusterWLFactorCheb, &test_catalog_default,
+              &test_nc_data_cluster_wl_factor_cheb_new,
+              &test_nc_data_cluster_wl_factor_private_copy_types,
               &test_nc_data_cluster_wl_factor_cheb_free);
 
   g_test_add ("/nc/data_cluster_wl_factor/cheb/stored", TestNcDataClusterWLFactorCheb, &test_catalog_default,
@@ -233,7 +241,7 @@ test_nc_data_cluster_wl_factor_cheb_new (TestNcDataClusterWLFactorCheb *test, gc
     g_strv_builder_add (builder, l->data);
 
   columns_strv = g_strv_builder_end (builder);
-  test->obs    = nc_galaxy_wl_obs_new (ec, co, TEST_NROWS, columns_strv);
+  test->obs    = nc_galaxy_wl_obs_new (ec, co, TEST_NROWS, columns_strv, test_double_cols, g_strv_length (columns_strv));
 
   for (i = 0; i < TEST_NROWS; i++)
   {
@@ -405,6 +413,120 @@ test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, 
   nc_data_cluster_wl_factor_free (dup);
   ncm_dataset_free (dset);
   ncm_serialize_free (ser);
+}
+
+/*
+ * A duplicate notified as shared that resamples a catalog with INT and BOOL columns writes
+ * its realization to a catalog of its own of the same column names and types, with the
+ * same INT and BOOL values, and leaves the shared catalog's rows as they were.
+ */
+void
+test_nc_data_cluster_wl_factor_private_copy_types (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
+{
+  NcmCatalog *fixture            = NCM_CATALOG (test->obs);
+  GStrv fixture_cols             = ncm_catalog_peek_columns (fixture);
+  const guint n_fixture          = g_strv_length (fixture_cols);
+  GStrvBuilder *builder          = g_strv_builder_new ();
+  GArray *types                  = g_array_new (FALSE, FALSE, sizeof (NcmCatalogColType));
+  GArray *ids                    = g_array_new (FALSE, FALSE, sizeof (gint64));
+  GArray *flags                  = g_array_new (FALSE, FALSE, sizeof (gboolean));
+  NcmSerialize *ser              = ncm_serialize_new (NCM_SERIALIZE_OPT_KEEP_SHARED);
+  NcmDataset *dset               = ncm_dataset_new ();
+  NcmRNG *rng                    = ncm_rng_seeded_new (NULL, TEST_SEED);
+  const NcmCatalogColType t_int  = NCM_CATALOG_COL_TYPE_INT;
+  const NcmCatalogColType t_bool = NCM_CATALOG_COL_TYPE_BOOL;
+  GArray *ids_copy               = NULL;
+  GArray *flags_copy             = NULL;
+  NcGalaxyWLObs *typed, *private_obs;
+  NcDataClusterWLFactor *dup;
+  NcmMatrix *before;
+  GStrv cols;
+  guint i;
+
+  /* The fixture's DOUBLE columns, then an INT and a BOOL column */
+  g_strv_builder_addv (builder, (const gchar **) fixture_cols);
+  g_strv_builder_add (builder, "object_id");
+  g_strv_builder_add (builder, "flag");
+  cols = g_strv_builder_end (builder);
+
+  for (i = 0; i < n_fixture; i++)
+    g_array_append_val (types, test_double_cols[i]);
+
+  g_array_append_val (types, t_int);
+  g_array_append_val (types, t_bool);
+
+  typed = nc_galaxy_wl_obs_new (nc_galaxy_wl_obs_get_ellip_conv (test->obs), nc_galaxy_wl_obs_get_coord (test->obs),
+                                TEST_NROWS, cols, (const NcmCatalogColType *) types->data, types->len);
+  ncm_matrix_memcpy (ncm_catalog_peek_data (NCM_CATALOG (typed)), ncm_catalog_peek_data (fixture));
+
+  for (i = 0; i < TEST_NROWS; i++)
+  {
+    const gint64 id     = (G_GINT64_CONSTANT (1) << 60) + i;
+    const gboolean flag = (i % 2 == 0);
+
+    g_array_append_val (ids, id);
+    g_array_append_val (flags, flag);
+    nc_galaxy_wl_obs_set_pz (typed, i, nc_galaxy_wl_obs_peek_pz (test->obs, i));
+  }
+
+  ncm_catalog_set_int_column (NCM_CATALOG (typed), "object_id", ids, NULL);
+  ncm_catalog_set_bool_column (NCM_CATALOG (typed), "flag", flags, NULL);
+  nc_data_cluster_wl_factor_set_obs (test->dcwlf, typed);
+  before = ncm_matrix_dup (ncm_catalog_peek_data (NCM_CATALOG (typed)));
+
+  ncm_dataset_append_data (dset, NCM_DATA (test->dcwlf));
+  ncm_dataset_register_shared (dset, ser);
+  dup = NC_DATA_CLUSTER_WL_FACTOR (ncm_serialize_dup_obj (ser, G_OBJECT (test->dcwlf)));
+  ncm_data_notify_shared_duplicate (NCM_DATA (dup));
+  g_assert_true (nc_data_cluster_wl_factor_peek_obs (dup) == typed);
+
+  ncm_data_resample (NCM_DATA (dup), test->mset, rng);
+  private_obs = nc_data_cluster_wl_factor_peek_obs (dup);
+  g_assert_true (private_obs != typed);
+
+  g_assert_cmpuint (ncm_catalog_get_col_type (NCM_CATALOG (private_obs), "object_id", NULL), ==, NCM_CATALOG_COL_TYPE_INT);
+  g_assert_cmpuint (ncm_catalog_get_col_type (NCM_CATALOG (private_obs), "flag", NULL), ==, NCM_CATALOG_COL_TYPE_BOOL);
+  ncm_catalog_get_int_column (NCM_CATALOG (private_obs), "object_id", &ids_copy, NULL);
+  ncm_catalog_get_bool_column (NCM_CATALOG (private_obs), "flag", &flags_copy, NULL);
+
+  for (i = 0; i < TEST_NROWS; i++)
+  {
+    g_assert_cmpint (g_array_index (ids_copy, gint64, i), ==, g_array_index (ids, gint64, i));
+    g_assert_cmpint (g_array_index (flags_copy, gboolean, i), ==, g_array_index (flags, gboolean, i));
+  }
+
+  /* The realization went to the private catalog; the shared rows are unchanged */
+  {
+    NcmMatrix *shared_data  = ncm_catalog_peek_data (NCM_CATALOG (typed));
+    NcmMatrix *private_data = ncm_catalog_peek_data (NCM_CATALOG (private_obs));
+    guint n_changed         = 0;
+    guint r, c;
+
+    for (r = 0; r < ncm_matrix_nrows (before); r++)
+    {
+      for (c = 0; c < ncm_matrix_ncols (before); c++)
+      {
+        g_assert_cmpfloat (ncm_matrix_get (shared_data, r, c), ==, ncm_matrix_get (before, r, c));
+        n_changed += (ncm_matrix_get (private_data, r, c) != ncm_matrix_get (before, r, c));
+      }
+    }
+
+    g_assert_cmpuint (n_changed, >, 0);
+  }
+
+  ncm_matrix_free (before);
+  g_array_unref (ids_copy);
+  g_array_unref (flags_copy);
+  g_array_unref (ids);
+  g_array_unref (flags);
+  g_array_unref (types);
+  g_strfreev (cols);
+  g_strv_builder_unref (builder);
+  nc_galaxy_wl_obs_free (typed);
+  nc_data_cluster_wl_factor_free (dup);
+  ncm_dataset_free (dset);
+  ncm_serialize_free (ser);
+  ncm_rng_free (rng);
 }
 
 void
