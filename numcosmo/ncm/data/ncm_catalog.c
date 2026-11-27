@@ -42,10 +42,10 @@
  * (%NCM_CATALOG_ERROR_WRONG_TYPE).
  *
  * ncm_catalog_shallow_dup() makes a catalog that references the storage of another, the
- * matrix and every column array, and ncm_catalog_replace_by_copy() gives one column of a
- * catalog storage of its own: a copy of its array, or of the whole matrix for a DOUBLE
- * column. A catalog that writes only some columns of a shared catalog thus copies only
- * those. String and other heterogeneous columns are
+ * matrix and every column array. ncm_catalog_replace_by_copy() gives one column outside the
+ * matrix storage of its own, a copy of its array, and ncm_catalog_replace_data_by_copy() does
+ * the same for the matrix, which holds every DOUBLE column. A catalog that writes only some
+ * columns of a shared catalog thus copies only those. String and other heterogeneous columns are
  * intentionally not handled here and are left to specialized subclasses or future
  * additive extensions.
  *
@@ -628,8 +628,8 @@ _ncm_catalog_shallow_dup (NcmCatalog *catalog)
  * Creates a catalog of the same type, columns and rows that references the storage of
  * @catalog: the matrix of the DOUBLE columns and the array of every other column. A
  * subclass also gives the copy the rest of its state. A value written into a column of
- * either catalog is seen by both until ncm_catalog_replace_by_copy() gives that column
- * storage of its own.
+ * either catalog is seen by both until ncm_catalog_replace_by_copy() or, for a DOUBLE
+ * column, ncm_catalog_replace_data_by_copy() gives that column storage of its own.
  *
  * Returns: (transfer full): the new #NcmCatalog.
  */
@@ -645,17 +645,17 @@ ncm_catalog_shallow_dup (NcmCatalog *catalog)
  * @col: a column name
  * @error: a #GError for error reporting
  *
- * Replaces the storage of the column @col by a copy with the same values: the array of the
- * column, or the whole matrix for a DOUBLE column, so a later write to @catalog no longer
- * reaches a catalog that shares the storage (ncm_catalog_shallow_dup()). An unknown column
- * sets @error.
+ * Replaces the array of the column @col, a column outside the matrix, by a copy with the same
+ * values, so a later write to @catalog no longer reaches a catalog that shares the array
+ * (ncm_catalog_shallow_dup()). An unknown column sets @error, and so does a DOUBLE column,
+ * whose storage is the matrix: ncm_catalog_replace_data_by_copy() copies it.
  */
 void
 ncm_catalog_replace_by_copy (NcmCatalog *catalog, const gchar *col, GError **error)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
   guint *jp                      = g_hash_table_lookup (self->columns_hash, col);
-  GArray *a;
+  GArray *a, *copy;
 
   if (jp == NULL)
   {
@@ -669,19 +669,35 @@ ncm_catalog_replace_by_copy (NcmCatalog *catalog, const gchar *col, GError **err
 
   if (a == NULL)
   {
-    NcmMatrix *data = ncm_matrix_dup (self->data);
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_WRONG_TYPE,
+                                "Column '%s' is a DOUBLE column, stored in the matrix: "
+                                "use ncm_catalog_replace_data_by_copy().", col);
 
-    ncm_matrix_free (self->data);
-    self->data = data;
+    return;
   }
-  else
-  {
-    GArray *copy = g_array_sized_new (FALSE, FALSE, g_array_get_element_size (a), a->len);
 
-    g_array_append_vals (copy, a->data, a->len);
-    g_array_unref (a);
-    g_ptr_array_index (self->col_data, *jp) = copy;
-  }
+  copy = g_array_sized_new (FALSE, FALSE, g_array_get_element_size (a), a->len);
+  g_array_append_vals (copy, a->data, a->len);
+  g_array_unref (a);
+  g_ptr_array_index (self->col_data, *jp) = copy;
+}
+
+/**
+ * ncm_catalog_replace_data_by_copy:
+ * @catalog: a #NcmCatalog
+ *
+ * Replaces the matrix of the DOUBLE columns (ncm_catalog_peek_data()) by a copy with the same
+ * values, so a later write to a DOUBLE column of @catalog no longer reaches a catalog that
+ * shares the matrix (ncm_catalog_shallow_dup()). Each call copies the matrix.
+ */
+void
+ncm_catalog_replace_data_by_copy (NcmCatalog *catalog)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  NcmMatrix *data                = ncm_matrix_dup (self->data);
+
+  ncm_matrix_free (self->data);
+  self->data = data;
 }
 
 /**

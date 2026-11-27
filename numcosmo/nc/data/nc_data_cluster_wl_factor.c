@@ -904,25 +904,27 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
  * Gives this dataset a catalog of its own before resample() writes its rows: a shallow copy
  * of @obs (ncm_catalog_shallow_dup()) with storage of its own for every column a resample
  * can write, the columns the galaxy data reads. The other columns, the p(z) objects and the
- * stored tables stay shared. The matrix of the DOUBLE columns is copied whole, once.
+ * stored tables stay shared. The matrix of the DOUBLE columns is copied whole, once, when
+ * one of these columns is a DOUBLE column.
  */
 static void
 _obs_make_private (NcDataClusterWLFactorPrivate *self)
 {
-  NcGalaxyWLObs *copy    = NC_GALAXY_WL_OBS (ncm_catalog_shallow_dup (NCM_CATALOG (self->obs)));
-  GList *columns         = nc_galaxy_shape_factor_data_required_columns (g_ptr_array_index (self->shape_data, 0));
-  gboolean matrix_copied = FALSE;
+  NcGalaxyWLObs *copy  = NC_GALAXY_WL_OBS (ncm_catalog_shallow_dup (NCM_CATALOG (self->obs)));
+  GList *columns       = nc_galaxy_shape_factor_data_required_columns (g_ptr_array_index (self->shape_data, 0));
+  gboolean copy_matrix = FALSE;
   GList *l;
 
   for (l = columns; l != NULL; l = l->next)
   {
-    const gboolean in_matrix = (ncm_catalog_get_col_type (NCM_CATALOG (copy), l->data, NULL) == NCM_CATALOG_COL_TYPE_DOUBLE);
-
-    if (!(in_matrix && matrix_copied))
+    if (ncm_catalog_get_col_type (NCM_CATALOG (copy), l->data, NULL) == NCM_CATALOG_COL_TYPE_DOUBLE)
+      copy_matrix = TRUE;
+    else
       ncm_catalog_replace_by_copy (NCM_CATALOG (copy), l->data, NULL);
-
-    matrix_copied = matrix_copied || in_matrix;
   }
+
+  if (copy_matrix)
+    ncm_catalog_replace_data_by_copy (NCM_CATALOG (copy));
 
   g_list_free_full (columns, g_free);
   nc_galaxy_wl_obs_free (self->obs);

@@ -295,9 +295,8 @@ test_nc_dist_mu_obs_shallow_dup (TestNcDistMuObs *test, gconstpointer pdata)
   ncm_assert_cmpdouble (m.c[1], ==, n.c[1]);
   ncm_assert_cmpdouble (m.c[2], ==, n.c[2]);
 
-  /* The copy of a DOUBLE column is a copy of the whole matrix */
-  ncm_catalog_replace_by_copy (dup, NC_DIST_MU_OBS_COL_MU, &error);
-  g_assert_no_error (error);
+  /* The DOUBLE columns are copied with the whole matrix */
+  ncm_catalog_replace_data_by_copy (dup);
   g_assert_true (ncm_catalog_peek_data (dup) != ncm_catalog_peek_data (src));
   ncm_catalog_set (dup, NC_DIST_MU_OBS_COL_MU, 1, 40.0, &error);
   g_assert_no_error (error);

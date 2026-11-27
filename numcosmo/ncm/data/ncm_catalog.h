@@ -110,6 +110,7 @@ NcmCatalog *ncm_catalog_new_full (guint nrows, GStrv col_names, const NcmCatalog
 NcmCatalog *ncm_catalog_ref (NcmCatalog *catalog);
 NcmCatalog *ncm_catalog_shallow_dup (NcmCatalog *catalog);
 void ncm_catalog_replace_by_copy (NcmCatalog *catalog, const gchar *col, GError **error);
+void ncm_catalog_replace_data_by_copy (NcmCatalog *catalog);
 
 void ncm_catalog_free (NcmCatalog *catalog);
 void ncm_catalog_clear (NcmCatalog **catalog);

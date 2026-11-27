@@ -1019,8 +1019,9 @@ test_ncm_catalog_double_separate (void)
 
 /*
  * A shallow copy shares every column with its source until ncm_catalog_replace_by_copy()
- * gives a column storage of its own: then a write to the copy no longer reaches the source,
- * while the columns not replaced stay shared. Replacing a DOUBLE column copies the matrix.
+ * gives a column outside the matrix storage of its own, or ncm_catalog_replace_data_by_copy()
+ * does so for the matrix: then a write to the copy no longer reaches the source, while the
+ * columns not replaced stay shared. ncm_catalog_replace_by_copy() rejects a DOUBLE column.
  */
 void
 test_ncm_catalog_shallow_dup (void)
@@ -1033,6 +1034,7 @@ test_ncm_catalog_shallow_dup (void)
   };
   NcmCatalog *src  = ncm_catalog_new_full (2, (GStrv) strv, types, 4);
   NcmCatalog *copy = ncm_catalog_shallow_dup (src);
+  GError *error    = NULL;
   gchar *hash_src, *hash_copy;
 
   g_assert_true (G_OBJECT_TYPE (copy) == G_OBJECT_TYPE (src));
@@ -1053,8 +1055,14 @@ test_ncm_catalog_shallow_dup (void)
   g_assert_cmpfloat (ncm_catalog_get (src, "w", 0, NULL), ==, 2.0);
 
   /* Replaced: the copy keeps the values and writes only to itself */
-  ncm_catalog_replace_by_copy (copy, names[0], NULL);
-  ncm_catalog_replace_by_copy (copy, names[2], NULL);
+  ncm_catalog_replace_by_copy (copy, names[0], &error);
+  g_assert_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_WRONG_TYPE);
+  g_clear_error (&error);
+  g_assert_true (ncm_catalog_peek_data (copy) == ncm_catalog_peek_data (src));
+
+  ncm_catalog_replace_data_by_copy (copy);
+  ncm_catalog_replace_by_copy (copy, names[2], &error);
+  g_assert_no_error (error);
   g_assert_true (ncm_catalog_peek_data (copy) != ncm_catalog_peek_data (src));
   g_assert_cmpfloat (ncm_catalog_get (copy, "ra", 0, NULL), ==, 1.0);
   g_assert_cmpint (ncm_catalog_get_int (copy, "id", 0, NULL), ==, 5);
