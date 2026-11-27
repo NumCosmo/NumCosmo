@@ -169,10 +169,9 @@ def _build_new_obs(mset, shape_kind, z_kind):
     else:
         raise ValueError(z_kind)
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
     obs = Nc.GalaxyWLObs.new(
         ELLIP_CONV, FRAME, len(_GALAXIES), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)

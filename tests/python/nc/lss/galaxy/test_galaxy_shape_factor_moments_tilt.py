@@ -89,12 +89,24 @@ def _make_data(gsf, mset, std_noise, ra=0.0, dec=0.0):
     pos_data.ra, pos_data.dec = ra, dec
     zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)
     z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)
-    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset)
     gsf.data_set(
         data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
     )
-    gsf.prepare_data_array(mset, [data], True, True)
+    gsf.prepare_data_array(mset, [data])
     return data, (pos_data, z_data)
+
+
+def _set_bound(mset, data, pos_data, z_max):
+    """Sets the bound fields of data as NcDataClusterWLFactor does."""
+    smd = mset.peek(Nc.WLSurfaceMassDensity.id())
+    lens = Nc.WLClusterLens.new(smd.props.distance)
+    hwl = Nc.GalaxyHaloWL.new(lens)
+    h_data = Nc.GalaxyHaloWLData.new()
+    hwl.prepare(mset)
+    hwl.update_data_radius(h_data, pos_data)
+    hwl.prepare_bound(mset)
+    hwl.set_shape_bound(smd, mset.peek(Nc.HICosmo.id()), h_data, z_max, data)
 
 
 @pytest.fixture(name="mset_pop")
@@ -203,9 +215,10 @@ def test_reachable_range_and_guard():
     full = Nc.GalaxyShapeFactorMomentsTilt(
         ellip_conv=Nc.GalaxyWLObsEllipConv.TRACE, restrict_range=False
     )
-    d_r, _a = _make_data(rest, mset, 0.1, ra=0.8)
+    d_r, (p_r, _z) = _make_data(rest, mset, 0.1, ra=0.8)
     d_f, _b = _make_data(full, mset, 0.1, ra=0.8)
     rest.prepare(mset)
+    _set_bound(mset, d_r, p_r, 3.0)
     rest.data_prepare(mset, d_r, 3.0)
 
     n_r, top, _deg = rest.peek_layout(pop, d_r)
@@ -237,9 +250,10 @@ def test_range_covers_shear_calibration():
 
     def layout(c1, c2, m):
         gsf = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
-        d, _keep = _make_data(gsf, mset, 0.1, ra=0.026)
+        d, (pos, _z) = _make_data(gsf, mset, 0.1, ra=0.026)
         gsf.data_set(d, 0.0, 0.0, 0.1, c1, c2, m, Nc.WLEllipticityFrame.CELESTIAL)
         gsf.prepare(mset)
+        _set_bound(mset, d, pos, 3.0)
         gsf.data_prepare(mset, d, 3.0)
         n, top, _deg = gsf.peek_layout(pop, d)
         return n, top
@@ -579,14 +593,15 @@ gsf.eval_ln_marginal(pop, data, 0.99, 0.0, 0.3, 0.1)
 def test_range_edges():
     """The reachable range at its edges: a foreground galaxy gets the
     smallest mesh, a halo center free enough to reach the galaxy the full
-    one, and without prepare() there is no bound at all."""
+    one, and without its bound set there is no bound at all."""
     mset, pop = _build_mset(0.3)
     hp = mset.peek(Nc.HaloPosition.id())
     conv = Nc.GalaxyWLObsEllipConv.TRACE
 
     gsf = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
-    d, _a = _make_data(gsf, mset, 0.1, ra=0.3)
+    d, (pos_a, _z) = _make_data(gsf, mset, 0.1, ra=0.3)
     gsf.prepare(mset)
+    _set_bound(mset, d, pos_a, 0.1)
     gsf.data_prepare(mset, d, 0.1)  # z_max below z_cl = 0.2
     n, top, _deg = gsf.peek_layout(pop, d)
     assert (n, top) == (1, 0.5)
@@ -600,8 +615,9 @@ def test_range_edges():
     # A redshift support with no upper end: the shear is not evaluated at
     # z = inf and the galaxy keeps the full mesh.
     unbounded = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
-    d_inf, _i = _make_data(unbounded, mset, 0.1, ra=0.3)
+    d_inf, (pos_i, _z) = _make_data(unbounded, mset, 0.1, ra=0.3)
     unbounded.prepare(mset)
+    _set_bound(mset, d_inf, pos_i, np.inf)
     unbounded.data_prepare(mset, d_inf, np.inf)
     assert unbounded.peek_layout(pop, d_inf)[1] == 1.0
 
@@ -613,17 +629,18 @@ def test_range_edges():
     zd = Nc.GalaxyRedshiftFactorData.new(
         Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0), mset
     )
-    d2 = Nc.GalaxyShapeFactorData.new(fresh, mset, pos, zd)
+    d2 = Nc.GalaxyShapeFactorData.new(fresh, mset)
     fresh.data_set(d2, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
-    pop.prepare(d2.pop_data)  # the population only: fresh.prepare() would set a bound
-    fresh.data_prepare(mset, d2, 3.0)  # never prepared: no bound
+    pop.prepare(d2.pop_data)
+    fresh.data_prepare(mset, d2, 3.0)  # no bound set
     assert fresh.peek_layout(pop, d2)[1] == 1.0
 
     for name in ("ra", "dec"):
         hp.param_set_desc(name, {"fit": True, "lower-bound": -0.5, "upper-bound": 0.5})
     free = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
-    d3, _c = _make_data(free, mset, 0.1, ra=0.3)
+    d3, (pos_c, _z) = _make_data(free, mset, 0.1, ra=0.3)
     free.prepare(mset)
+    _set_bound(mset, d3, pos_c, 3.0)
     free.data_prepare(mset, d3, 3.0)
     assert free.peek_layout(pop, d3)[1] == 1.0
 
@@ -649,9 +666,10 @@ def test_range_without_free_concentration():
     conv = Nc.GalaxyWLObsEllipConv.TRACE
     rest = Nc.GalaxyShapeFactorMomentsTilt.new(conv)
     full = Nc.GalaxyShapeFactorMomentsTilt(ellip_conv=conv, restrict_range=False)
-    d_r, _a = _make_data(rest, mset, 0.1, ra=0.8)
+    d_r, (p_r, _z) = _make_data(rest, mset, 0.1, ra=0.8)
     d_f, _b = _make_data(full, mset, 0.1, ra=0.8)
     rest.prepare(mset)
+    _set_bound(mset, d_r, p_r, 3.0)
     rest.data_prepare(mset, d_r, 3.0)
     _n, top, _deg = rest.peek_layout(pop, d_r)
     assert top < 1.0

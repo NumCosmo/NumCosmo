@@ -215,6 +215,7 @@
 #include "nc/lss/galaxy/nc_galaxy_wl_obs.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs_shape_interp.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_obs_cheb_grid.h"
+#include "nc/lss/galaxy/nc_galaxy_halo_wl.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor_flat.h"
 #include "nc/lss/galaxy/nc_galaxy_pz.h"
@@ -1061,6 +1062,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS_SHAPE_INTERP);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS_CHEB_GRID);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_HALO_WL);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_POSITION_FACTOR_FLAT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_PZ);

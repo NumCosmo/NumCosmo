@@ -184,9 +184,10 @@ test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeI
 
   p_data = nc_galaxy_position_factor_data_new (position_factor, test->mset);
   z_data = nc_galaxy_redshift_factor_data_new (redshift_factor, test->mset);
-  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset, p_data, z_data);
+  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset);
 
-  columns = nc_galaxy_shape_factor_data_required_columns (s_data);
+  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
+  columns     = nc_data_cluster_wl_factor_required_columns (test->dcwlf, test->mset);
 
   for (l = columns; l != NULL; l = g_list_next (l))
     g_strv_builder_add (builder, l->data);
@@ -208,13 +209,15 @@ test_nc_data_cluster_wl_factor_shape_interp_new (TestNcDataClusterWLFactorShapeI
     } while ((radius < min_radius) || (radius > max_radius));
 
     nc_galaxy_shape_factor_data_set (shape_factor, s_data, 0.0, 0.0, ncm_rng_uniform_gen (rng, 0.02, 0.1), 0.0, 0.0, 0.0, co);
-    nc_galaxy_shape_factor_gen (shape_factor, test->mset, s_data, rng);
+    nc_galaxy_position_factor_data_write_row (p_data, test->obs, i);
+    nc_galaxy_redshift_factor_data_write_row (z_data, test->obs, i);
     nc_galaxy_shape_factor_data_write_row (s_data, test->obs, i);
   }
 
-  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
   nc_data_cluster_wl_factor_set_cut (test->dcwlf, min_radius, max_radius);
   nc_data_cluster_wl_factor_set_obs (test->dcwlf, test->obs);
+  nc_data_cluster_wl_factor_set_resample_flag (test->dcwlf, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE);
+  ncm_data_resample (NCM_DATA (test->dcwlf), test->mset, rng);
 
   nc_hicosmo_free (cosmo);
   nc_distance_free (dist);

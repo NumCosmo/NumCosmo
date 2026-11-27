@@ -183,6 +183,7 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs_shape_interp.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs_cheb_grid.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_halo_wl.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_hod.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_hod_zheng07.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_pop.h>

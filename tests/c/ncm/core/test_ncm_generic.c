@@ -91,6 +91,7 @@ void test_nc_galaxy_sd_z_proxy_gauss_basic (void);
 void test_nc_galaxy_wl_obs_basic (void);
 void test_nc_halo_position_basic (void);
 void test_nc_wl_cluster_lens_basic (void);
+void test_nc_galaxy_halo_wl_basic (void);
 void test_nc_hicosmo_qgw_basic (void);
 void test_nc_hcosmo_bi_basic (void);
 void test_nc_hcosmo_bi_dist_basic (void);
@@ -202,6 +203,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/nc/galaxy/wl_obs/basic", test_nc_galaxy_wl_obs_basic);
   g_test_add_func ("/nc/halo_position/basic", test_nc_halo_position_basic);
   g_test_add_func ("/nc/wl_cluster_lens/basic", test_nc_wl_cluster_lens_basic);
+  g_test_add_func ("/nc/galaxy/halo_wl/basic", test_nc_galaxy_halo_wl_basic);
   g_test_add_func ("/nc/hicosmo/qgw/basic", test_nc_hicosmo_qgw_basic);
   g_test_add_func ("/nc/hcosmo_bi/basic", test_nc_hcosmo_bi_basic);
   g_test_add_func ("/nc/hcosmo_bi_dist/basic", test_nc_hcosmo_bi_dist_basic);
@@ -1039,6 +1041,37 @@ test_nc_wl_cluster_lens_basic (void)
 
   nc_distance_clear (&dist);
   NCM_TEST_FREE (nc_wl_cluster_lens_free, lens);
+}
+
+void
+test_nc_galaxy_halo_wl_basic (void)
+{
+  NcDistance *dist      = nc_distance_new (3.0);
+  NcWLClusterLens *lens = nc_wl_cluster_lens_new (dist);
+  NcGalaxyHaloWLData *data;
+  NcGalaxyHaloWL *hwl;
+  NcGalaxyHaloWL *hwl2;
+
+  hwl = nc_galaxy_halo_wl_new (lens);
+
+  g_assert_true (hwl != NULL);
+  g_assert_true (NC_IS_GALAXY_HALO_WL (hwl));
+  g_assert_true (nc_galaxy_halo_wl_peek_lens (hwl) == lens);
+
+  hwl2 = nc_galaxy_halo_wl_ref (hwl);
+  nc_galaxy_halo_wl_clear (&hwl2);
+  g_assert_true (hwl2 == NULL);
+
+  g_assert_true (NC_IS_GALAXY_HALO_WL (hwl));
+
+  data = nc_galaxy_halo_wl_data_new ();
+  g_assert_true (nc_galaxy_halo_wl_data_ref (data) == data);
+  nc_galaxy_halo_wl_data_unref (data);
+  nc_galaxy_halo_wl_data_unref (data);
+
+  nc_wl_cluster_lens_free (lens);
+  nc_distance_clear (&dist);
+  NCM_TEST_FREE (nc_galaxy_halo_wl_free, hwl);
 }
 
 void

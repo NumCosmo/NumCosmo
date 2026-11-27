@@ -223,9 +223,9 @@ _truth_gen_redshift (const gchar *redshift, NcGalaxyRedshiftFactor *z_dist, NcmM
   }
 }
 
+/* Draws the biases and the noise of a galaxy; the resample of the dataset draws its shape */
 static void
-_truth_gen_shape (NcGalaxyShapeFactor *s_dist, NcmMSet *mset, NcGalaxyShapeFactorData *s_data,
-                  NcWLEllipticityFrame coord, NcmRNG *rng)
+_truth_gen_calib (NcGalaxyShapeFactor *s_dist, NcGalaxyShapeFactorData *s_data, NcWLEllipticityFrame coord, NcmRNG *rng)
 {
   const gdouble c1        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
   const gdouble c2        = ncm_rng_uniform_gen (rng, -0.01, 0.01);
@@ -233,7 +233,6 @@ _truth_gen_shape (NcGalaxyShapeFactor *s_dist, NcmMSet *mset, NcGalaxyShapeFacto
   const gdouble std_noise = ncm_rng_uniform_gen (rng, 0.005, 0.02);
 
   nc_galaxy_shape_factor_data_set (s_dist, s_data, 0.0, 0.0, std_noise, c1, c2, m, coord);
-  nc_galaxy_shape_factor_gen (s_dist, mset, s_data, rng);
 }
 
 /* Per-galaxy comparison of @v against the reference -2lnP vector: fail (reporting
@@ -361,9 +360,10 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
 
   p_data = nc_galaxy_position_factor_data_new (position_factor, test->mset);
   z_data = nc_galaxy_redshift_factor_data_new (redshift_factor, test->mset);
-  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset, p_data, z_data);
+  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset);
 
-  columns = nc_galaxy_shape_factor_data_required_columns (s_data);
+  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
+  columns     = nc_data_cluster_wl_factor_required_columns (test->dcwlf, test->mset);
 
   for (l = columns; l != NULL; l = g_list_next (l))
     g_strv_builder_add (builder, l->data);
@@ -383,13 +383,16 @@ test_nc_data_cluster_wl_factor_truth_new (TestNcDataClusterWLFactorTruth *test, 
       radius = nc_halo_position_projected_radius_from_ra_dec (hp, cosmo, p_data->ra, p_data->dec);
     } while ((radius < min_radius) || (radius > max_radius));
 
-    _truth_gen_shape (shape_factor, test->mset, s_data, co, rng);
+    _truth_gen_calib (shape_factor, s_data, co, rng);
+    nc_galaxy_position_factor_data_write_row (p_data, obs, i);
+    nc_galaxy_redshift_factor_data_write_row (z_data, obs, i);
     nc_galaxy_shape_factor_data_write_row (s_data, obs, i);
   }
 
-  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
   nc_data_cluster_wl_factor_set_cut (test->dcwlf, min_radius, max_radius);
   nc_data_cluster_wl_factor_set_obs (test->dcwlf, obs);
+  nc_data_cluster_wl_factor_set_resample_flag (test->dcwlf, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE);
+  ncm_data_resample (NCM_DATA (test->dcwlf), test->mset, rng);
   nc_data_cluster_wl_factor_set_prec (test->dcwlf, TRUTH_PREC);
 
   nc_data_cluster_wl_factor_set_cheb_level_min (test->dcwlf, 7);

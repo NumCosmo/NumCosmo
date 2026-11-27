@@ -72,11 +72,11 @@ def _make_data(gsf, mset, std_noise, ra=0.0, dec=0.0):
     pos_data.ra, pos_data.dec = ra, dec
     zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)
     z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)
-    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset)
     gsf.data_set(
         data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
     )
-    gsf.prepare_data_array(mset, [data], True, True)
+    gsf.prepare_data_array(mset, [data])
     return data, (pos_data, z_data)
 
 
