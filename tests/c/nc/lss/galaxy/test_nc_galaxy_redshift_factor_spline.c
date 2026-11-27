@@ -232,19 +232,13 @@ test_nc_galaxy_redshift_factor_spline_poly_eval (TestNcGalaxyRedshiftFactorSplin
   nc_galaxy_redshift_factor_integrand_free (ln_integ);
 }
 
-/* The normalization and the fixed-node integral of the degree-10 polynomial q^2 are
- * exact. */
+/* The normalization of the degree-10 polynomial q^2 is exact. */
 void
 test_nc_galaxy_redshift_factor_spline_poly_norm (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
 {
   const gdouble exact = _test_q2_antideriv (TEST_POLY_Z_MAX) - _test_q2_antideriv (TEST_POLY_Z_MIN);
-  NcmIntegralFixed *intf;
 
   ncm_assert_cmpdouble_e (nc_galaxy_redshift_factor_norm (test->gsdr, test->mset, test->data), ==, exact, 1.0e-14, 0.0);
-
-  intf = nc_galaxy_redshift_factor_make_fixed_nodes (test->gsdr, test->mset, test->data, TEST_POLY_Z_MIN, TEST_POLY_Z_MAX, 3, 6);
-  ncm_assert_cmpdouble_e (ncm_integral_fixed_nodes_eval (intf), ==, exact, 1.0e-14, 0.0);
-  ncm_integral_fixed_free (intf);
 }
 
 /* The draws follow q^2: Kolmogorov-Smirnov distance to the exact CDF below the 0.1%

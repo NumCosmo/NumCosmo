@@ -31,7 +31,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from numcosmo_py import Ncm, Nc, NumCosmoWarning
+from numcosmo_py import Ncm, Nc
 from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
@@ -163,7 +163,6 @@ def _build_multi_galaxy_setup(n):
     "integ_method",
     [
         Nc.DataClusterWLIntegMethod.LNINT,
-        Nc.DataClusterWLIntegMethod.FIXED_NODES,
         Nc.DataClusterWLIntegMethod.CUBATURE,
         Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
     ],
@@ -206,11 +205,6 @@ def test_serialize_deserialize():
     dcwlf.set_obs(obs)
     dcwlf.set_cut(0.1, 3.0)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
-    dcwlf.set_n_nodes(5)
-    dcwlf.set_rule_n(3)
-    dcwlf.set_auto_nodes(True)
-    dcwlf.set_node_reltol(1.0e-4)
-    dcwlf.set_max_total_nodes(100)
 
     ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
     dcwlf2 = duplicate_via_serialization(dcwlf, ser)
@@ -221,11 +215,6 @@ def test_serialize_deserialize():
     assert dcwlf2.props.r_min == dcwlf.props.r_min
     assert dcwlf2.props.r_max == dcwlf.props.r_max
     assert dcwlf2.get_integ_method() == dcwlf.get_integ_method()
-    assert dcwlf2.get_n_nodes() == dcwlf.get_n_nodes()
-    assert dcwlf2.get_rule_n() == dcwlf.get_rule_n()
-    assert dcwlf2.get_auto_nodes() == dcwlf.get_auto_nodes()
-    assert dcwlf2.get_node_reltol() == dcwlf.get_node_reltol()
-    assert dcwlf2.get_max_total_nodes() == dcwlf.get_max_total_nodes()
 
 
 def test_register_shared_anchors_obs_across_dups():
@@ -280,8 +269,7 @@ def _shared_dup_setup(n=6):
     serializer, as NcmFitMC makes each worker's clone: the dup holds the
     same obs object as the original."""
     dcwlf, mset = _build_multi_galaxy_setup(n)
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-    dcwlf.set_auto_nodes(False)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
 
     dset = Ncm.Dataset.new()
     dset.append_data(dcwlf)
@@ -408,8 +396,7 @@ def _build_mc_fit(n_gal=60):
     dcwlf = Nc.DataClusterWLFactor.new(position_factor, redshift_factor, shape_factor)
     dcwlf.set_obs(obs)
     dcwlf.set_cut(0.3, 5.0)
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-    dcwlf.set_auto_nodes(False)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
 
     dset = Ncm.Dataset.new()
     dset.append_data(dcwlf)
@@ -528,41 +515,6 @@ def test_scalar_properties_round_trip():
     assert dcwlf.props.integ_method == Nc.DataClusterWLIntegMethod.LNINT
     assert dcwlf.get_integ_method() == Nc.DataClusterWLIntegMethod.LNINT
 
-    dcwlf.props.n_nodes = 5
-    assert dcwlf.props.n_nodes == 5
-    assert dcwlf.get_n_nodes() == 5
-    dcwlf.set_n_nodes(7)
-    assert dcwlf.props.n_nodes == 7
-    assert dcwlf.get_n_nodes() == 7
-
-    dcwlf.props.rule_n = 3
-    assert dcwlf.props.rule_n == 3
-    assert dcwlf.get_rule_n() == 3
-    dcwlf.set_rule_n(4)
-    assert dcwlf.props.rule_n == 4
-    assert dcwlf.get_rule_n() == 4
-
-    dcwlf.props.auto_nodes = True
-    assert dcwlf.props.auto_nodes is True
-    assert dcwlf.get_auto_nodes() is True
-    dcwlf.set_auto_nodes(False)
-    assert dcwlf.props.auto_nodes is False
-    assert dcwlf.get_auto_nodes() is False
-
-    dcwlf.props.node_reltol = 1.0e-3
-    assert dcwlf.props.node_reltol == 1.0e-3
-    assert dcwlf.get_node_reltol() == 1.0e-3
-    dcwlf.set_node_reltol(1.0e-4)
-    assert dcwlf.props.node_reltol == 1.0e-4
-    assert dcwlf.get_node_reltol() == 1.0e-4
-
-    dcwlf.props.max_total_nodes = 100
-    assert dcwlf.props.max_total_nodes == 100
-    assert dcwlf.get_max_total_nodes() == 100
-    dcwlf.set_max_total_nodes(200)
-    assert dcwlf.props.max_total_nodes == 200
-    assert dcwlf.get_max_total_nodes() == 200
-
 
 def test_eval_m2lnP_gal_matches_m2lnL_val():
     """eval_m2lnP_gal fills the per-galaxy vector consistently with the
@@ -594,7 +546,6 @@ def test_eval_m2lnP_gal_matches_m2lnL_val():
 
     for integ_method in (
         Nc.DataClusterWLIntegMethod.LNINT,
-        Nc.DataClusterWLIntegMethod.FIXED_NODES,
         Nc.DataClusterWLIntegMethod.CUBATURE,
         Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
     ):
@@ -608,13 +559,11 @@ def test_eval_m2lnP_gal_matches_m2lnL_val():
 
 
 # ---------------------------------------------------------------------------
-# NC_GALAXY_LOW_PROB accounting (get_low_prob_count) and the FIXED_NODES
-# background-mass split that keeps P_gal from going negative in the first place.
+# NC_GALAXY_LOW_PROB accounting (get_low_prob_count).
 # ---------------------------------------------------------------------------
 
 _ALL_METHODS = [
     Nc.DataClusterWLIntegMethod.LNINT,
-    Nc.DataClusterWLIntegMethod.FIXED_NODES,
     Nc.DataClusterWLIntegMethod.CUBATURE,
     Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
 ]
@@ -630,7 +579,7 @@ _HEALTHY_GALAXIES = [
 # One galaxy whose observed ellipticity is flatly incompatible with any model
 # prediction at this noise level, so its marginal underflows to exactly 0 in
 # double precision: CUBATURE substitutes the NC_GALAXY_LOW_PROB fallback,
-# FIXED_NODES re-evaluates it in log space.
+# CHEB_WEIGHTS re-evaluates it in log space.
 _UNDERFLOWING_GALAXY = (0.03, 0.02, 0.60, 0.030, 0.9, 0.0, 0.01)
 
 
@@ -705,8 +654,8 @@ def test_low_prob_count_counts_underflowing_galaxies():
     this noise level), CUBATURE, which integrates in linear space,
     substitutes the flat fallback AND counts it.
 
-    FIXED_NODES re-evaluates the same galaxy in log space instead (see
-    test_fixed_nodes_rescues_underflowing_galaxies). LNINT is excluded on
+    CHEB_WEIGHTS re-evaluates the same galaxy in log space instead (see
+    test_cheb_rescues_underflowing_galaxies). LNINT is excluded on
     purpose: it does not substitute, it skips the galaxy and stores NaN (see
     test_low_prob_count_resets_between_methods)."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
@@ -718,31 +667,31 @@ def test_low_prob_count_counts_underflowing_galaxies():
     assert m2lnL > 1.0e5  # the flat NC_GALAXY_LOW_PROB wall, ~1e6
 
 
-def test_fixed_nodes_rescues_underflowing_galaxies():
+def test_cheb_rescues_underflowing_galaxies():
     """The shape likelihood of that galaxy is exactly 0 at every node, but its
-    log is finite: FIXED_NODES re-evaluates the galaxy in log space and
+    log is finite: CHEB_WEIGHTS re-evaluates the galaxy in log space and
     returns the same -2 ln P as the log-domain LNINT, without counting a
     substitution."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-    fixed = dcwlf.m2lnL_val(mset)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
+    cheb = dcwlf.m2lnL_val(mset)
     assert dcwlf.get_low_prob_count() == 0
 
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.LNINT)
     lnint = dcwlf.m2lnL_val(mset)
 
-    assert fixed < 1.0e5
-    assert fixed == pytest.approx(lnint, rel=1.0e-6)
+    assert cheb < 1.0e5
+    assert cheb == pytest.approx(lnint, rel=1.0e-6)
 
 
-def test_fixed_nodes_counts_a_genuine_zero():
+def test_cheb_counts_a_genuine_zero():
     """A galaxy outside the position footprint has a marginal that is exactly
     zero, not an underflow: the log-space re-evaluation gives a finite shape
     likelihood, but the position factor is zero outside the footprint, so
-    FIXED_NODES still substitutes the fallback and counts it."""
+    CHEB_WEIGHTS still substitutes the fallback and counts it."""
     outside = (0.5, 0.02, 0.60, 0.030, 0.1, 0.0, 0.1)  # footprint is |ra| <= 0.2
     dcwlf, mset, _, _ = _build_probe_setup([outside])
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
 
     m2lnL = dcwlf.m2lnL_val(mset)
 
@@ -755,14 +704,14 @@ def test_low_prob_count_resets_between_methods():
 
     LNINT never substitutes NC_GALAXY_LOW_PROB, so its answer is legitimately
     zero -- but it must still clear the counter, or it would keep reporting a
-    stale count left behind by an earlier FIXED_NODES/CUBATURE evaluation on
-    the same object. FIXED_NODES, which re-evaluates this galaxy in log
+    stale count left behind by an earlier CHEB_WEIGHTS/CUBATURE evaluation on
+    the same object. CHEB_WEIGHTS, which re-evaluates this galaxy in log
     space, must clear it too."""
     dcwlf, mset, _, _ = _build_probe_setup([_UNDERFLOWING_GALAXY], sigma_int=1.0e-2)
 
     for method in (
         Nc.DataClusterWLIntegMethod.LNINT,
-        Nc.DataClusterWLIntegMethod.FIXED_NODES,
+        Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS,
     ):
         dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CUBATURE)
         dcwlf.m2lnL_val(mset)
@@ -780,8 +729,8 @@ def test_low_prob_count_resets_between_methods():
 
 def test_foreground_only_galaxy_has_no_background_quadrature():
     """A galaxy whose whole photo-z support lies in FRONT of the lens gets no
-    background quadrature at all (no NcmIntegralFixed, zero background P(z)
-    mass), and its marginal is the pure foreground term p_a * norm.
+    background nodes at all (zero background P(z) mass), and its marginal is
+    the pure foreground term p_a * norm.
 
     The support is what decides this, not the point estimate: at z_cl = 0.2 a
     galaxy with zp = 0.15, sigma0 = 0.02 still integrates over [0.0, 0.334] and
@@ -807,7 +756,7 @@ def test_foreground_only_galaxy_has_no_background_quadrature():
     # The foreground-only path must reach the same answer as the adaptive
     # schemes, which take no such shortcut.
     assert_allclose(
-        results[Nc.DataClusterWLIntegMethod.FIXED_NODES],
+        results[Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS],
         results[Nc.DataClusterWLIntegMethod.LNINT],
         rtol=1.0e-6,
     )
@@ -819,10 +768,9 @@ def test_foreground_only_galaxy_has_no_background_quadrature():
 
 
 def test_foreground_and_background_galaxies_mix():
-    """Both branches of the has_bg split in the same catalog and the same
-    prepare() -- the per-galaxy arrays (fixed_bg_nodes, fixed_bg_norm,
-    n_total_per_galaxy) must stay correctly aligned when entry 0 has no
-    background quadrature and entries 1..n do."""
+    """Both branches of the background split in the same catalog and the same
+    prepare(): the rows of the grid stay aligned with the galaxies when entry 0 has
+    no background nodes and entries 1..n do."""
     galaxies = [(0.03, 0.02, 0.10, 0.010, 0.05, -0.02, 0.03), *_HEALTHY_GALAXIES]
 
     dcwlf, mset, _, _ = _build_probe_setup(galaxies)
@@ -831,89 +779,8 @@ def test_foreground_and_background_galaxies_mix():
     lnint_gal = Ncm.Vector.new(len(galaxies))
     dcwlf.eval_m2lnP_gal(mset, lnint_gal)
 
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
+    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
+    cheb_gal = Ncm.Vector.new(len(galaxies))
+    dcwlf.eval_m2lnP_gal(mset, cheb_gal)
 
-    # Checked in both fixed-node configurations, since they lay the per-galaxy
-    # arrays out differently: with auto-nodes off every background galaxy shares
-    # the global grid, while with it on each gets its own size -- the case where
-    # a misalignment between fixed_bg_nodes/fixed_bg_norm/n_total_per_galaxy and
-    # the foreground entry would actually bite. The tolerances differ only
-    # because auto-nodes targets node-reltol rather than the fixed grid's
-    # resolution, not because the claim differs.
-    for auto_nodes, rtol in ((False, 1.0e-5), (True, 1.0e-2)):
-        dcwlf.set_auto_nodes(auto_nodes)
-        fixed_gal = Ncm.Vector.new(len(galaxies))
-        dcwlf.eval_m2lnP_gal(mset, fixed_gal)
-
-        assert_allclose(fixed_gal.dup_array(), lnint_gal.dup_array(), rtol=rtol)
-
-
-def test_auto_node_calibration_warns_once_per_prepare():
-    """auto-node calibration that cannot reach node-reltol must warn ONCE per
-    prepare(), naming how many galaxies missed and the worst error -- not once
-    per galaxy.
-
-    That aggregation is the whole point: ncm_integral_fixed_calibrate() is
-    called per galaxy, and a realistic cluster produced thousands of
-    near-identical warnings, which is neither readable nor actionable.
-    pytest.warns records every warning, so the count is the library's.
-    """
-    dcwlf, mset, _, _ = _build_probe_setup(_HEALTHY_GALAXIES)
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-    dcwlf.set_auto_nodes(True)
-    dcwlf.set_node_reltol(1.0e-14)  # unreachable
-    dcwlf.set_max_total_nodes(30)  # within a tiny node budget
-
-    with pytest.warns(NumCosmoWarning) as record:
-        dcwlf.m2lnL_val(mset)
-    messages = [str(w.message) for w in record]
-
-    # Once per prepare(), not once per galaxy: exactly one aggregate warning, and
-    # it accounts for all three galaxies rather than reporting one of them.
-    calib = [m for m in messages if "auto-node calibration did not reach" in m]
-    assert len(calib) == 1
-    assert f"for {len(_HEALTHY_GALAXIES)} of {len(_HEALTHY_GALAXIES)} galaxies" in (
-        calib[0]
-    )
-
-    # And the per-call warning inside ncm_integral_fixed_calibrate() stayed
-    # suppressed -- that is what passing a non-NULL relerr_out buys.
-    assert not any("did not reach reltol" in m for m in messages)
-
-
-# A galaxy whose photo-z support runs far past the lens, so nearly all of its
-# P(z) mass is background. This is the configuration that used to break
-# positivity: the quadrature of the background mass competes with the exact
-# full-support normalization, and on a coarse grid it OVERSHOOTS it (measured
-# here at (n_nodes, rule_n) = (2, 1): norm = 0.1077 against a quadrature
-# background mass of 0.2339, a 117% overshoot).
-_MOSTLY_BACKGROUND_GALAXY = (0.03, 0.02, 2.00, 0.300, 0.05, -0.02, 0.03)
-
-
-@pytest.mark.parametrize("n_nodes,rule_n", [(2, 1), (4, 2), (6, 3)])
-def test_positive_on_grids_too_coarse_to_resolve_the_integrand(n_nodes, rule_n):
-    """P_gal stays positive at any resolution, on the galaxy that used to break it.
-
-    Anchoring the foreground on the difference (exact norm) - (quadrature
-    background mass) mixes an exact quantity with an approximate one, and on a
-    coarse grid that difference goes NEGATIVE -- which drove P_gal negative and
-    tripped the flat NC_GALAXY_LOW_PROB wall.
-
-    The self-normalised combine never forms that difference: it is
-    norm * Q[P(z) P(e_o,z)] / Q[P(z)], a ratio of non-negative quadratures
-    scaled by a positive norm, so positivity is structural rather than clamped.
-    This test pins the guarantee on grids far too coarse to resolve the
-    integrand, which is the stronger claim -- not merely that a fine enough
-    grid avoids the problem.
-    """
-    dcwlf, mset, _, _ = _build_probe_setup([_MOSTLY_BACKGROUND_GALAXY])
-    dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.FIXED_NODES)
-    dcwlf.set_auto_nodes(False)
-    dcwlf.set_n_nodes(n_nodes)
-    dcwlf.set_rule_n(rule_n)
-
-    m2lnL = dcwlf.m2lnL_val(mset)
-
-    assert dcwlf.get_low_prob_count() == 0
-    assert np.isfinite(m2lnL)
-    assert m2lnL < 1.0e5  # not the flat 1e6 fallback
+    assert_allclose(cheb_gal.dup_array(), lnint_gal.dup_array(), rtol=1.0e-5)

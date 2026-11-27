@@ -670,3 +670,29 @@ nc_galaxy_wl_obs_cheb_grid_get_galaxy (NcGalaxyWLObsChebGrid *grid, const guint 
   return n_total;
 }
 
+/**
+ * nc_galaxy_wl_obs_cheb_grid_peek_galaxy: (skip)
+ * @grid: a #NcGalaxyWLObsChebGrid
+ * @i: the galaxy index
+ * @weights: (out): the #NcGalaxyWLObsChebGrid:n-weights weights of the galaxy
+ * @z_nodes: (out): the lower end of the p(z) support followed by the nodes of the galaxy
+ * @norms: (out): the normalization, background and foreground normalizations of the galaxy
+ *
+ * Gets pointers to the row of galaxy @i in the arrays of the grid, valid while @grid is.
+ * A galaxy index out of range aborts.
+ *
+ * Returns: the number of Chebyshev nodes of the galaxy.
+ */
+guint
+nc_galaxy_wl_obs_cheb_grid_peek_galaxy (NcGalaxyWLObsChebGrid *grid, const guint i, const gdouble **weights, const gdouble **z_nodes, const gdouble **norms)
+{
+  if (i >= grid->len)
+    g_error ("nc_galaxy_wl_obs_cheb_grid_peek_galaxy: galaxy %u of %u.", i, grid->len);
+
+  *weights = ncm_matrix_ptr (grid->weights, i, 0);
+  *z_nodes = ncm_matrix_ptr (grid->z_nodes, i, 0);
+  *norms   = ncm_matrix_ptr (grid->norms, i, 0);
+
+  return g_array_index (grid->n_total, guint, i);
+}
+

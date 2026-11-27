@@ -2042,7 +2042,7 @@ _nc_galaxy_shape_factor_moments_tilt_peek_table (NcGalaxyShapeFactorMomentsTiltP
   const gdouble sn                           = data->std_noise;
 
   /* R = |epsilon_obs| is read from the arguments, not from
-   * data->epsilon_obs_1/2: the two coincide on the fixed-nodes pipeline
+   * data->epsilon_obs_1/2: the two coincide on the redshift-node pipeline
    * path but not in general. */
   const gdouble R2 = gsl_pow_2 (epsilon_obs_1) + gsl_pow_2 (epsilon_obs_2);
 

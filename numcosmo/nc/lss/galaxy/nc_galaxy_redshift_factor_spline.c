@@ -88,7 +88,6 @@ static gboolean _nc_galaxy_redshift_factor_spline_gen1 (NcGalaxyRedshiftFactor *
 static NcGalaxyRedshiftFactorIntegrand *_nc_galaxy_redshift_factor_spline_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp);
 static void _nc_galaxy_redshift_factor_spline_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
 static gdouble _nc_galaxy_redshift_factor_spline_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
-static NcmIntegralFixed *_nc_galaxy_redshift_factor_spline_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 static void _nc_galaxy_redshift_factor_spline_cheb_moments (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, const gdouble a, const gdouble b, const guint n, GArray *moments);
 
 static void
@@ -99,14 +98,13 @@ nc_galaxy_redshift_factor_spline_class_init (NcGalaxyRedshiftFactorSplineClass *
 
   object_class->finalize = &_nc_galaxy_redshift_factor_spline_finalize;
 
-  gsdr_class->data_init        = &_nc_galaxy_redshift_factor_spline_data_init;
-  gsdr_class->gen              = &_nc_galaxy_redshift_factor_spline_gen;
-  gsdr_class->gen1             = &_nc_galaxy_redshift_factor_spline_gen1;
-  gsdr_class->integ            = &_nc_galaxy_redshift_factor_spline_integ;
-  gsdr_class->get_integ_lim    = &_nc_galaxy_redshift_factor_spline_get_integ_lim;
-  gsdr_class->norm             = &_nc_galaxy_redshift_factor_spline_norm;
-  gsdr_class->make_fixed_nodes = &_nc_galaxy_redshift_factor_spline_make_fixed_nodes;
-  gsdr_class->cheb_moments     = &_nc_galaxy_redshift_factor_spline_cheb_moments;
+  gsdr_class->data_init     = &_nc_galaxy_redshift_factor_spline_data_init;
+  gsdr_class->gen           = &_nc_galaxy_redshift_factor_spline_gen;
+  gsdr_class->gen1          = &_nc_galaxy_redshift_factor_spline_gen1;
+  gsdr_class->integ         = &_nc_galaxy_redshift_factor_spline_integ;
+  gsdr_class->get_integ_lim = &_nc_galaxy_redshift_factor_spline_get_integ_lim;
+  gsdr_class->norm          = &_nc_galaxy_redshift_factor_spline_norm;
+  gsdr_class->cheb_moments  = &_nc_galaxy_redshift_factor_spline_cheb_moments;
 
   /*
    * prepare, get_hash and update_data keep the base no-ops: the density depends on no
@@ -245,30 +243,6 @@ _nc_galaxy_redshift_factor_spline_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *m
   SplineLData *sldata = (SplineLData *) data->ldata;
 
   return nc_galaxy_pz_get_norm (sldata->pz);
-}
-
-static gdouble
-_spline_fixed_nodes_gsl_f (gdouble z, gpointer user_data)
-{
-  NcGalaxyRedshiftFactorData *data = (NcGalaxyRedshiftFactorData *) user_data;
-
-  return _spline_integ_f (NULL, z, data);
-}
-
-static NcmIntegralFixed *
-_nc_galaxy_redshift_factor_spline_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n)
-{
-  NcmIntegralFixed *intf;
-  gsl_function F;
-
-  intf = ncm_integral_fixed_new (n_nodes, rule_n, z_lo, z_hi);
-
-  F.function = &_spline_fixed_nodes_gsl_f;
-  F.params   = data;
-
-  ncm_integral_fixed_calc_nodes (intf, &F);
-
-  return intf;
 }
 
 /* The moments of the NcGalaxyPz of the galaxy, whose own representation gives them */

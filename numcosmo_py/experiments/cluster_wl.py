@@ -1018,18 +1018,12 @@ class IntegMethod(GEnum):
     """Cluster WL redshift-integral method (``NcDataClusterWLIntegMethod``)."""
 
     LNINT = Nc.DataClusterWLIntegMethod.LNINT
-    FIXED_NODES = Nc.DataClusterWLIntegMethod.FIXED_NODES
     CUBATURE = Nc.DataClusterWLIntegMethod.CUBATURE
     CHEB_WEIGHTS = Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
 
 
 DEFAULT_INTEG_CHEB_TOL = 1.0e-8
 DEFAULT_INTEG_CHEB_LEVEL_MIN = 2
-DEFAULT_INTEG_AUTO_NODES = False
-DEFAULT_INTEG_N_NODES = 10
-DEFAULT_INTEG_RULE_N = 5
-DEFAULT_INTEG_NODE_RELTOL = 1.0e-4
-DEFAULT_INTEG_MAX_TOTAL_NODES = 2000
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -1037,9 +1031,7 @@ class IntegMethodOptions:
     """Redshift-integral method and its tuning knobs.
 
     ``cheb_tol``/``cheb_level_min`` are ``NcDataClusterWLFactor`` properties read
-    only under CHEB_WEIGHTS, and ``n_nodes``/``rule_n``/``auto_nodes``/
-    ``node_reltol``/``max_total_nodes`` only under FIXED_NODES; the other
-    methods ignore them.
+    only under CHEB_WEIGHTS; the other methods ignore them.
 
     ``apply()`` sets every knob unconditionally, so these defaults -- not the
     C-side property defaults -- are what an app-driven run gets. They are kept
@@ -1051,22 +1043,12 @@ class IntegMethodOptions:
     integ_method: IntegMethod = IntegMethod.CHEB_WEIGHTS
     cheb_tol: float = DEFAULT_INTEG_CHEB_TOL
     cheb_level_min: int = DEFAULT_INTEG_CHEB_LEVEL_MIN
-    auto_nodes: bool = DEFAULT_INTEG_AUTO_NODES
-    n_nodes: int = DEFAULT_INTEG_N_NODES
-    rule_n: int = DEFAULT_INTEG_RULE_N
-    node_reltol: float = DEFAULT_INTEG_NODE_RELTOL
-    max_total_nodes: int = DEFAULT_INTEG_MAX_TOTAL_NODES
 
     def apply(self, cluster_data: Nc.DataClusterWLFactor) -> None:
         """Apply these settings to a NcDataClusterWLFactor instance."""
         cluster_data.set_integ_method(self.integ_method.genum)
         cluster_data.set_cheb_tol(self.cheb_tol)
         cluster_data.set_cheb_level_min(self.cheb_level_min)
-        cluster_data.set_auto_nodes(self.auto_nodes)
-        cluster_data.set_n_nodes(self.n_nodes)
-        cluster_data.set_rule_n(self.rule_n)
-        cluster_data.set_node_reltol(self.node_reltol)
-        cluster_data.set_max_total_nodes(self.max_total_nodes)
 
 
 class HaloPositionData(BaseModel):

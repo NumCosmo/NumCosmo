@@ -173,7 +173,6 @@ static guint64 _nc_galaxy_redshift_factor_composed_get_hash (NcGalaxyRedshiftFac
 static NcGalaxyRedshiftFactorIntegrand *_nc_galaxy_redshift_factor_composed_integ (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, gboolean use_lnp);
 static void _nc_galaxy_redshift_factor_composed_get_integ_lim (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble *z_min, gdouble *z_max);
 static gdouble _nc_galaxy_redshift_factor_composed_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data);
-static NcmIntegralFixed *_nc_galaxy_redshift_factor_composed_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n);
 
 static void
 nc_galaxy_redshift_factor_composed_class_init (NcGalaxyRedshiftFactorComposedClass *klass)
@@ -198,15 +197,14 @@ nc_galaxy_redshift_factor_composed_class_init (NcGalaxyRedshiftFactorComposedCla
                                                        NCM_TYPE_DTUPLE2,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  gsdr_class->data_init        = &_nc_galaxy_redshift_factor_composed_data_init;
-  gsdr_class->gen              = &_nc_galaxy_redshift_factor_composed_gen;
-  gsdr_class->gen1             = &_nc_galaxy_redshift_factor_composed_gen1;
-  gsdr_class->prepare          = &_nc_galaxy_redshift_factor_composed_prepare;
-  gsdr_class->integ            = &_nc_galaxy_redshift_factor_composed_integ;
-  gsdr_class->get_integ_lim    = &_nc_galaxy_redshift_factor_composed_get_integ_lim;
-  gsdr_class->norm             = &_nc_galaxy_redshift_factor_composed_norm;
-  gsdr_class->make_fixed_nodes = &_nc_galaxy_redshift_factor_composed_make_fixed_nodes;
-  gsdr_class->get_hash         = &_nc_galaxy_redshift_factor_composed_get_hash;
+  gsdr_class->data_init     = &_nc_galaxy_redshift_factor_composed_data_init;
+  gsdr_class->gen           = &_nc_galaxy_redshift_factor_composed_gen;
+  gsdr_class->gen1          = &_nc_galaxy_redshift_factor_composed_gen1;
+  gsdr_class->prepare       = &_nc_galaxy_redshift_factor_composed_prepare;
+  gsdr_class->integ         = &_nc_galaxy_redshift_factor_composed_integ;
+  gsdr_class->get_integ_lim = &_nc_galaxy_redshift_factor_composed_get_integ_lim;
+  gsdr_class->norm          = &_nc_galaxy_redshift_factor_composed_norm;
+  gsdr_class->get_hash      = &_nc_galaxy_redshift_factor_composed_get_hash;
 }
 
 /* Fragment vtable ------------------------------------------------------- */
@@ -456,36 +454,6 @@ _nc_galaxy_redshift_factor_composed_norm (NcGalaxyRedshiftFactor *gsdr, NcmMSet 
   ncm_integral1d_ptr_free (integrator);
 
   return result;
-}
-
-static gdouble
-_composed_fixed_nodes_gsl_f (gdouble z, gpointer user_data)
-{
-  ComposedGSLArg *arg = (ComposedGSLArg *) user_data;
-
-  return _composed_integ_f (&arg->int_data, z, arg->data);
-}
-
-static NcmIntegralFixed *
-_nc_galaxy_redshift_factor_composed_make_fixed_nodes (NcGalaxyRedshiftFactor *gsdr, NcmMSet *mset, NcGalaxyRedshiftFactorData *data, gdouble z_lo, gdouble z_hi, guint n_nodes, guint rule_n)
-{
-  NcGalaxyRedshiftFactorComposed *gsdrc = NC_GALAXY_REDSHIFT_FACTOR_COMPOSED (gsdr);
-  ComposedGSLArg arg;
-  NcmIntegralFixed *intf;
-  gsl_function F;
-
-  intf = ncm_integral_fixed_new (n_nodes, rule_n, z_lo, z_hi);
-
-  arg.int_data.gsdrc = gsdrc;
-  _composed_peek_models (mset, &arg.int_data.population, &arg.int_data.observable);
-  arg.data = data;
-
-  F.function = &_composed_fixed_nodes_gsl_f;
-  F.params   = &arg;
-
-  ncm_integral_fixed_calc_nodes (intf, &F);
-
-  return intf;
 }
 
 /* Public API ------------------------------------------------------------ */

@@ -345,16 +345,16 @@ test_nc_data_cluster_wl_factor_cheb_unconverged (TestNcDataClusterWLFactorCheb *
 }
 
 /*
- * FIXED_NODES, CHEB_WEIGHTS and FIXED_NODES again on one object: a change of method rebuilds
- * the grid, so each method gives the same values whenever it runs, and the two methods differ
- * by their quadrature error only (FIXED_NODES 10 x 5 against the exact p-weighted levels).
+ * LNINT, CHEB_WEIGHTS and LNINT again on one object: a change of method takes the grid again,
+ * so each method gives the same values whenever it runs, and the two methods differ by their
+ * integration error only.
  */
 void
 test_nc_data_cluster_wl_factor_cheb_switch (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
 {
-  NcmVector *f1 = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+  NcmVector *f1 = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
   NcmVector *c1 = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
-  NcmVector *f2 = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+  NcmVector *f2 = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
   NcmVector *c2 = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
   guint i;
 
@@ -371,10 +371,9 @@ test_nc_data_cluster_wl_factor_cheb_switch (TestNcDataClusterWLFactorCheb *test,
 }
 
 /*
- * A copy made through a serializer in which the dataset registered its catalog as shared adopts
- * the CHEB_WEIGHTS grid the dataset published and gives the same values. Switched to
- * FIXED_NODES, the copy does not take that grid: it builds its own and gives the values of the
- * dataset under FIXED_NODES.
+ * A copy made through a serializer in which the dataset registered its catalog as shared holds
+ * the same catalog and gives the same values under CHEB_WEIGHTS, from the grid stored with the
+ * catalog, and under LNINT.
  */
 void
 test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
@@ -384,7 +383,7 @@ test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, 
   NcDataClusterWLFactor *dup;
   NcmVector *c_orig, *c_dup, *f_dup, *f_orig;
 
-  /* Registered before its first build, the dataset publishes the grid it builds */
+  nc_data_cluster_wl_factor_write_cheb_grid (test->dcwlf, test->mset, test->obs);
   ncm_dataset_append_data (dset, NCM_DATA (test->dcwlf));
   ncm_dataset_register_shared (dset, ser);
   c_orig = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
@@ -395,8 +394,8 @@ test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, 
   c_dup = _test_eval (dup, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
   _test_assert_equal (c_dup, c_orig);
 
-  f_dup  = _test_eval (dup, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
-  f_orig = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+  f_dup  = _test_eval (dup, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
+  f_orig = _test_eval (test->dcwlf, test->mset, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
   _test_assert_equal (f_dup, f_orig);
 
   ncm_vector_free (c_orig);
@@ -528,7 +527,7 @@ test_nc_data_cluster_wl_factor_cheb_stored_errors_subprocess (void)
   }
   else
   {
-    nc_data_cluster_wl_factor_set_integ_method (test.dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES);
+    nc_data_cluster_wl_factor_set_integ_method (test.dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
     nc_data_cluster_wl_factor_write_cheb_grid (test.dcwlf, test.mset, test.obs);
   }
 }

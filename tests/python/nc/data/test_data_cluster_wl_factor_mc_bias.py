@@ -150,11 +150,6 @@ def _build(integ_method=Nc.DataClusterWLIntegMethod.LNINT):
     dcwlf.set_cut(R_MIN, R_MAX)
     dcwlf.set_prec(1.0e-6)
     dcwlf.set_integ_method(integ_method)
-    # Pinned off explicitly: these tests compare FIXED_NODES on the global
-    # (n-nodes, rule-n) grid against LNINT realization by realization, so they
-    # need that grid, not the per-galaxy calibrated one auto-nodes builds.
-    # Auto-nodes has its own coverage in parity.py.
-    dcwlf.set_auto_nodes(False)
 
     dset = Ncm.Dataset.new()
     dset.append_data(dcwlf)
@@ -213,38 +208,20 @@ def test_mass_recovery_bias_matches_known_pathology():
     )
 
 
-def test_fixed_nodes_fit_recovery_matches_lnint():
-    """Regression test for a real bug found via a mass-recovery timing
-    sweep: ``Ncm.Fit`` (NLOPT's derivative-free Nelder-Mead) under
-    FIXED_NODES converged to ``log10MDelta``'s upper/lower bound regardless
-    of the true mass, while the identical setup under LNINT converged
-    correctly. Root cause: ``ncm_data_resample()`` calls ``prepare()``
-    *before* the ``resample`` virtual, so on an instance whose integ-method
-    was already FIXED_NODES, the very first per-galaxy z-grid got built from
-    pre-resample (placeholder) data and, because that grid is gated only by
-    z_cl/n-nodes/rule-n (deliberately not by any per-galaxy data hash), was
-    never rebuilt again for the rest of a mass-only fit -- corrupting every
-    single likelihood evaluation the optimizer made. Fixed in
-    ``_nc_data_cluster_wl_factor_resample`` (marks ``obs_changed`` so the
-    next prepare() cycle redoes every cache from the fresh data). None of
-    the existing parity tests exercised ``Ncm.Fit`` itself (only direct
-    ``m2lnL_val`` calls), which is why this was not caught earlier -- a
-    fit's very first evaluations happen before any model parameter has
-    moved, which is exactly the condition that leaves the stale-grid bug
-    unmasked (a mass-only *scan*, by contrast, masks it after the first
-    step, since the shape-radius/optzs caches are keyed on the mass-
-    dependent hash and so recover on their own).
+def test_cheb_fit_recovery_matches_lnint():
+    """A fit after each resample() gives the same mass under CHEB_WEIGHTS as under LNINT,
+    realization by realization, on the same ``dcwlf``/``fit`` reused across cycles.
 
-    Reuses the same ``dcwlf``/``fit`` across several resample()+fit.run()
-    cycles -- exactly the pattern the timing sweep and Tier-2 MC test use --
-    for both LNINT and FIXED_NODES with identical seeds, and requires the
-    fitted mass to agree closely realization by realization, not just in
-    aggregate."""
+    ``ncm_data_resample()`` calls ``prepare()`` before the resample virtual, so a redshift
+    grid taken in that call would describe the rows before the realization. resample()
+    marks the catalog as changed, so the next prepare() takes the grid of the new rows; a
+    fit's first evaluations happen before any parameter moves, which is where a stale grid
+    would show."""
     mset_lnint, hms_lnint, dcwlf_lnint, fit_lnint = _build(
         Nc.DataClusterWLIntegMethod.LNINT
     )
-    mset_fixed, hms_fixed, dcwlf_fixed, fit_fixed = _build(
-        Nc.DataClusterWLIntegMethod.FIXED_NODES
+    mset_cheb, hms_cheb, dcwlf_cheb, fit_cheb = _build(
+        Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS
     )
 
     n_realizations = 8
@@ -255,14 +232,14 @@ def test_fixed_nodes_fit_recovery_matches_lnint():
         fit_lnint.run(Ncm.FitRunMsgs.NONE)
         log10m_lnint = hms_lnint.param_get(1)
 
-        hms_fixed.param_set_by_name("log10MDelta", TRUE_LOG10M)
-        rng_fixed = Ncm.RNG.seeded_new(None, SEED0 + i)
-        dcwlf_fixed.resample(mset_fixed, rng_fixed)
-        fit_fixed.run(Ncm.FitRunMsgs.NONE)
-        log10m_fixed = hms_fixed.param_get(1)
+        hms_cheb.param_set_by_name("log10MDelta", TRUE_LOG10M)
+        rng_cheb = Ncm.RNG.seeded_new(None, SEED0 + i)
+        dcwlf_cheb.resample(mset_cheb, rng_cheb)
+        fit_cheb.run(Ncm.FitRunMsgs.NONE)
+        log10m_cheb = hms_cheb.param_get(1)
 
-        assert abs(log10m_fixed - log10m_lnint) < 0.02, (
-            f"realization {i}: FIXED_NODES fit ({log10m_fixed:.4f}) diverges "
+        assert abs(log10m_cheb - log10m_lnint) < 0.02, (
+            f"realization {i}: CHEB_WEIGHTS fit ({log10m_cheb:.4f}) diverges "
             f"from LNINT fit ({log10m_lnint:.4f}) with identical data"
         )
 
