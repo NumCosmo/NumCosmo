@@ -46,6 +46,7 @@ def catalog_variant(entries: dict[int, GObject.Object]) -> GLib.Variant:
         Nc.WLEllipticityFrame.CELESTIAL,
         N_ROWS,
         ["ra", "dec", "z"],
+        [Ncm.CatalogColType.DOUBLE] * len(["ra", "dec", "z"]),
     )
     for i in range(N_ROWS):
         obs.set("ra", i, 0.1 * i)

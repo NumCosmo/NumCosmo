@@ -131,7 +131,11 @@ def test_check_obs_mismatch_raises():
 
     cols = Nc.GalaxyShapeFactorData.required_columns(data)
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
 
     with pytest.raises(GLib.Error, match="ellip_conv_mismatch|convention"):
@@ -145,7 +149,11 @@ def test_check_obs_match():
 
     cols = Nc.GalaxyShapeFactorData.required_columns(data)
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
 
     assert gsf.check_obs(obs) is True

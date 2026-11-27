@@ -133,6 +133,7 @@ wl_obs = Nc.GalaxyWLObs.new(
     Nc.WLEllipticityFrame.CELESTIAL,
     n_galaxies,
     columns,
+    [Ncm.CatalogColType.DOUBLE] * len(columns),
 )
 ```
 

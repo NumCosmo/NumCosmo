@@ -947,14 +947,14 @@ nc_galaxy_shape_factor_data_read_row (NcGalaxyShapeFactorData *data, NcGalaxyWLO
   nc_galaxy_redshift_factor_data_read_row (data->z_data, obs, i);
 
   data->coord         = nc_galaxy_wl_obs_get_coord (obs);
-  data->epsilon_int_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, NULL);
-  data->epsilon_int_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, NULL);
-  data->epsilon_obs_1 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, NULL);
-  data->epsilon_obs_2 = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, NULL);
-  data->std_noise     = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, NULL);
-  data->c1            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_C1, i, NULL);
-  data->c2            = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_C2, i, NULL);
-  data->m             = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_M, i, NULL);
+  data->epsilon_int_1 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, NULL);
+  data->epsilon_int_2 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, NULL);
+  data->epsilon_obs_1 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, NULL);
+  data->epsilon_obs_2 = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, NULL);
+  data->std_noise     = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, NULL);
+  data->c1            = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C1, i, NULL);
+  data->c2            = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C2, i, NULL);
+  data->m             = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_M, i, NULL);
 
   nc_galaxy_shape_pop_data_read_row (data->pop_data, obs, i);
   data->ldata_read_row (data, obs, i);
@@ -976,14 +976,14 @@ nc_galaxy_shape_factor_data_write_row (NcGalaxyShapeFactorData *data, NcGalaxyWL
   nc_galaxy_position_factor_data_write_row (data->pos_data, obs, i);
   nc_galaxy_redshift_factor_data_write_row (data->z_data, obs, i);
 
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, data->epsilon_int_1, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, data->epsilon_int_2, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, data->epsilon_obs_1, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, data->epsilon_obs_2, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, data->std_noise, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_C1, i, data->c1, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_C2, i, data->c2, NULL);
-  nc_galaxy_wl_obs_set (obs, NC_GALAXY_SHAPE_FACTOR_COL_M, i, data->m, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_1, i, data->epsilon_int_1, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_INT_2, i, data->epsilon_int_2, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, data->epsilon_obs_1, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, data->epsilon_obs_2, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, data->std_noise, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C1, i, data->c1, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_C2, i, data->c2, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_M, i, data->m, NULL);
 
   nc_galaxy_shape_pop_data_write_row (data->pop_data, obs, i);
   data->ldata_write_row (data, obs, i);

@@ -1247,6 +1247,7 @@ class GalaxyDistributionModel:
             self.shape_gen.ellip_coord.genum,
             self.n_galaxies,
             cols,
+            [Ncm.CatalogColType.DOUBLE] * len(cols),
         )
         for i in range(self.n_galaxies):
             for c in cols:

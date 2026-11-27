@@ -1119,8 +1119,9 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
 
     #pragma omp critical(dup_fit)
     {
-      fit    = ncm_fit_dup (mc->fit, mc->ser);
-      mset   = ncm_fit_peek_mset (fit);
+      fit  = ncm_fit_dup (mc->fit, mc->ser);
+      mset = ncm_fit_peek_mset (fit);
+      ncm_dataset_notify_shared_duplicate (ncm_likelihood_peek_dataset (ncm_fit_peek_likelihood (fit)));
       fstate = ncm_fit_peek_state (fit);
 
       if ((mc->func_oa != NULL) && (mc->func_oa->len > 0))

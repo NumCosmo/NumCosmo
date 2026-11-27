@@ -107,7 +107,9 @@ def _data(
     s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
     cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(rows), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(rows), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     for i, row in enumerate(rows):
         ra, dec, zp, sigma0, e1, e2, std_noise = GALAXIES[row]
         for name, value in (

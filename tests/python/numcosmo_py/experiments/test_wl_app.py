@@ -122,7 +122,11 @@ def _build_real_wl_obs(
         "z",
     ]
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, n, cols
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        n,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     ra = rng.uniform(-0.05, 0.05, n)
     dec = rng.uniform(-0.05, 0.05, n)
@@ -721,6 +725,8 @@ def test_cluster_wl_load_app_missing_ra_dec_columns(experiment_file, tmp_path: P
         Nc.WLEllipticityFrame.CELESTIAL,
         1,
         ["epsilon_obs_1", "epsilon_obs_2", "std_noise", "z"],
+        [Ncm.CatalogColType.DOUBLE]
+        * len(["epsilon_obs_1", "epsilon_obs_2", "std_noise", "z"]),
     )
     obs.set("epsilon_obs_1", 0, 0.0)
     obs.set("epsilon_obs_2", 0, 0.0)
@@ -2186,6 +2192,7 @@ def _obs_with_source(pop: object) -> Nc.GalaxyWLObs:
         Nc.WLEllipticityFrame.CELESTIAL,
         1,
         ["ra", "dec"],
+        [Ncm.CatalogColType.DOUBLE] * len(["ra", "dec"]),
     )
     gsfs = Nc.GalaxyShapeFactorSpectral.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
     gsfs.set_interp_abstol(2.0e-5)
@@ -2225,7 +2232,11 @@ def test_shape_interp_gens():
     assert isinstance(gens[1], GalaxyPopGenGaussLocal)
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, ["ra"]
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["ra"],
+        [Ncm.CatalogColType.DOUBLE] * len(["ra"]),
     )
     assert shape_interp_gens(obs) is None
 

@@ -37,6 +37,9 @@
 #include <glib/gstdio.h>
 #include <string.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 /* The environment variable that gives the abort test of the data hash its catalog file */
 #define TEST_NC_GALAXY_WL_OBS_FILE_ENV "NC_GALAXY_WL_OBS_TEST_FILE"
 
@@ -75,6 +78,8 @@ static void test_nc_galaxy_wl_obs_shape_interp_hash_subprocess (void);
 static void test_nc_galaxy_wl_obs_cheb_grid (TestNcGalaxyWLObs *test, gconstpointer pdata);
 static void test_nc_galaxy_wl_obs_cheb_grid_errors (void);
 static void test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess (void);
+static void test_nc_galaxy_wl_obs_typed_columns (void);
+static void test_nc_galaxy_wl_obs_shallow_dup (TestNcGalaxyWLObs *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -164,6 +169,11 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_wl_obs_free);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/cheb_grid/errors", &test_nc_galaxy_wl_obs_cheb_grid_errors);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/cheb_grid/errors/subprocess", &test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/typed_columns", &test_nc_galaxy_wl_obs_typed_columns);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/shallow_dup", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new_pz,
+              &test_nc_galaxy_wl_obs_shallow_dup,
+              &test_nc_galaxy_wl_obs_free);
 
   g_test_run ();
 
@@ -201,7 +211,7 @@ _test_nc_galaxy_wl_obs_prepare_file (NcGalaxyWLObs *obs, const gchar *dir)
   NcGalaxyWLObsShapeInterp *si, *file_si;
 
   ncm_obj_dict_str_add (source, "shape-pop", G_OBJECT (pop));
-  nc_galaxy_wl_obs_set (obs, "z", 0, 0.5, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), "z", 0, 0.5, NULL);
   nc_galaxy_wl_obs_set_shape_interp (obs, 0, spp_0);
   nc_galaxy_wl_obs_set_shape_interp (obs, 3, spp_3);
   nc_galaxy_wl_obs_set_shape_interp_source (obs, source);
@@ -231,7 +241,7 @@ test_nc_galaxy_wl_obs_new (TestNcGalaxyWLObs *test, gconstpointer pdata)
   GStrv col_names          = g_strsplit ("ra dec z", " ", -1);
   guint nrows              = 100;
 
-  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names);
+  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names, test_double_cols, g_strv_length (col_names));
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
   g_assert_true (NCM_IS_CATALOG (test->obs));
@@ -246,7 +256,7 @@ test_nc_galaxy_wl_obs_new_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
   GStrv col_names          = g_strsplit ("ra dec pz", " ", -1);
   guint nrows              = 100;
 
-  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names);
+  test->obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, coord, nrows, col_names, test_double_cols, g_strv_length (col_names));
   g_assert_nonnull (test->obs);
   g_assert_true (NC_IS_GALAXY_WL_OBS (test->obs));
   g_assert_true (NCM_IS_CATALOG (test->obs));
@@ -272,16 +282,16 @@ test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata)
   guint j;
   guint k;
 
-  for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
+  for (i = 0; i < ncm_catalog_len (NCM_CATALOG (test->obs)); i++)
   {
     val = ncm_rng_uniform_gen (rng, 0.0, 360.0);
-    nc_galaxy_wl_obs_set (test->obs, "ra", i, val, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "ra", i, val, NULL);
 
     val = ncm_rng_uniform_gen (rng, -90.0, 90.0);
-    nc_galaxy_wl_obs_set (test->obs, "dec", i, val, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "dec", i, val, NULL);
 
     val = ncm_rng_uniform_gen (rng, 0.0, 5.0);
-    nc_galaxy_wl_obs_set (test->obs, "z", i, val, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "z", i, val, NULL);
   }
 
   ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
@@ -291,23 +301,23 @@ test_nc_galaxy_wl_obs_serialize (TestNcGalaxyWLObs *test, gconstpointer pdata)
   g_assert_nonnull (obs_dup);
   g_assert_true (NC_IS_GALAXY_WL_OBS (obs_dup));
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &j));
-  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "ra", &k));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "ra", &j));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (obs_dup), "ra", &k));
   g_assert_cmpint (j, ==, k);
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &j));
-  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "dec", &k));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "dec", &j));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (obs_dup), "dec", &k));
   g_assert_cmpint (j, ==, k);
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "z", &j));
-  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "z", &k));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "z", &j));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (obs_dup), "z", &k));
   g_assert_cmpint (j, ==, k);
 
-  for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
+  for (i = 0; i < ncm_catalog_len (NCM_CATALOG (test->obs)); i++)
   {
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "ra", i, NULL), ==, nc_galaxy_wl_obs_get (obs_dup, "ra", i, NULL));
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "dec", i, NULL), ==, nc_galaxy_wl_obs_get (obs_dup, "dec", i, NULL));
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "z", i, NULL), ==, nc_galaxy_wl_obs_get (obs_dup, "z", i, NULL));
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "ra", i, NULL), ==, ncm_catalog_get (NCM_CATALOG (obs_dup), "ra", i, NULL));
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "dec", i, NULL), ==, ncm_catalog_get (NCM_CATALOG (obs_dup), "dec", i, NULL));
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "z", i, NULL), ==, ncm_catalog_get (NCM_CATALOG (obs_dup), "z", i, NULL));
   }
 
   g_assert_cmpint (nc_galaxy_wl_obs_get_coord (test->obs), ==, nc_galaxy_wl_obs_get_coord (obs_dup));
@@ -329,7 +339,7 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
   guint j;
   guint k;
 
-  for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
+  for (i = 0; i < ncm_catalog_len (NCM_CATALOG (test->obs)); i++)
   {
     NcmVector *xv = ncm_vector_new (100);
     NcmVector *yv = ncm_vector_new (100);
@@ -346,10 +356,10 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
     pz = NC_GALAXY_PZ (nc_galaxy_pz_bspline_sqrt_new_from_table (xv, yv));
 
     val = ncm_rng_uniform_gen (rng, 0.0, 360.0);
-    nc_galaxy_wl_obs_set (test->obs, "ra", i, val, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "ra", i, val, NULL);
 
     val = ncm_rng_uniform_gen (rng, -90.0, 90.0);
-    nc_galaxy_wl_obs_set (test->obs, "dec", i, val, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "dec", i, val, NULL);
 
     nc_galaxy_wl_obs_set_pz (test->obs, i, pz);
 
@@ -365,22 +375,22 @@ test_nc_galaxy_wl_obs_serialize_pz (TestNcGalaxyWLObs *test, gconstpointer pdata
   g_assert_nonnull (obs_dup);
   g_assert_true (NC_IS_GALAXY_WL_OBS (obs_dup));
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &j));
-  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "ra", &k));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "ra", &j));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (obs_dup), "ra", &k));
   g_assert_cmpint (j, ==, k);
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &j));
-  g_assert_true (nc_galaxy_wl_obs_get_index (obs_dup, "dec", &k));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "dec", &j));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (obs_dup), "dec", &k));
   g_assert_cmpint (j, ==, k);
 
   g_assert_cmpint (nc_galaxy_wl_obs_get_coord (test->obs), ==, nc_galaxy_wl_obs_get_coord (obs_dup));
 
-  for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
+  for (i = 0; i < ncm_catalog_len (NCM_CATALOG (test->obs)); i++)
   {
     guint l;
 
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "ra", i, NULL), ==, nc_galaxy_wl_obs_get (obs_dup, "ra", i, NULL));
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "dec", i, NULL), ==, nc_galaxy_wl_obs_get (obs_dup, "dec", i, NULL));
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "ra", i, NULL), ==, ncm_catalog_get (NCM_CATALOG (obs_dup), "ra", i, NULL));
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "dec", i, NULL), ==, ncm_catalog_get (NCM_CATALOG (obs_dup), "dec", i, NULL));
 
     for (l = 0; l < 100; l++)
     {
@@ -401,7 +411,7 @@ test_nc_galaxy_wl_obs_setget (TestNcGalaxyWLObs *test, gconstpointer pdata)
   guint ngals        = 200;
   GStrv header       = g_strsplit ("ra dec z e1 e2 e1_int e2_int e_rms e_sigma", " ", -1);
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, ngals, header, test_double_cols, g_strv_length (header));
   NcGalaxyWLObs *obs2;
   guint i;
 
@@ -415,36 +425,36 @@ test_nc_galaxy_wl_obs_setget (TestNcGalaxyWLObs *test, gconstpointer pdata)
     gdouble e_rms   = ncm_rng_uniform_gen (rng, 0.0, 0.3);
     gdouble e_sigma = ncm_rng_uniform_gen (rng, 0.0, 0.1);
 
-    nc_galaxy_wl_obs_set (obs, "ra", i, ra, NULL);
-    nc_galaxy_wl_obs_set (obs, "dec", i, dec, NULL);
-    nc_galaxy_wl_obs_set (obs, "z", i, z, NULL);
-    nc_galaxy_wl_obs_set (obs, "e1", i, e1, NULL);
-    nc_galaxy_wl_obs_set (obs, "e2", i, e2, NULL);
-    nc_galaxy_wl_obs_set (obs, "e1_int", i, e1, NULL);
-    nc_galaxy_wl_obs_set (obs, "e2_int", i, e2, NULL);
-    nc_galaxy_wl_obs_set (obs, "e_rms", i, e_rms, NULL);
-    nc_galaxy_wl_obs_set (obs, "e_sigma", i, e_sigma, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "ra", i, ra, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "dec", i, dec, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "z", i, z, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "e1", i, e1, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "e2", i, e2, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "e1_int", i, e1, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "e2_int", i, e2, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "e_rms", i, e_rms, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "e_sigma", i, e_sigma, NULL);
   }
 
   obs2 = NC_GALAXY_WL_OBS (ncm_serialize_dup_obj (ser, G_OBJECT (obs)));
 
   for (i = 0; i < ngals; i++)
   {
-    gdouble ra      = nc_galaxy_wl_obs_get (obs2, "ra", i, NULL);
-    gdouble dec     = nc_galaxy_wl_obs_get (obs2, "dec", i, NULL);
-    gdouble z       = nc_galaxy_wl_obs_get (obs2, "z", i, NULL);
-    gdouble e1      = nc_galaxy_wl_obs_get (obs2, "e1", i, NULL);
-    gdouble e2      = nc_galaxy_wl_obs_get (obs2, "e2", i, NULL);
-    gdouble e_rms   = nc_galaxy_wl_obs_get (obs2, "e_rms", i, NULL);
-    gdouble e_sigma = nc_galaxy_wl_obs_get (obs2, "e_sigma", i, NULL);
+    gdouble ra      = ncm_catalog_get (NCM_CATALOG (obs2), "ra", i, NULL);
+    gdouble dec     = ncm_catalog_get (NCM_CATALOG (obs2), "dec", i, NULL);
+    gdouble z       = ncm_catalog_get (NCM_CATALOG (obs2), "z", i, NULL);
+    gdouble e1      = ncm_catalog_get (NCM_CATALOG (obs2), "e1", i, NULL);
+    gdouble e2      = ncm_catalog_get (NCM_CATALOG (obs2), "e2", i, NULL);
+    gdouble e_rms   = ncm_catalog_get (NCM_CATALOG (obs2), "e_rms", i, NULL);
+    gdouble e_sigma = ncm_catalog_get (NCM_CATALOG (obs2), "e_sigma", i, NULL);
 
-    g_assert_cmpfloat (ra, ==, nc_galaxy_wl_obs_get (obs, "ra", i, NULL));
-    g_assert_cmpfloat (dec, ==, nc_galaxy_wl_obs_get (obs, "dec", i, NULL));
-    g_assert_cmpfloat (z, ==, nc_galaxy_wl_obs_get (obs, "z", i, NULL));
-    g_assert_cmpfloat (e1, ==, nc_galaxy_wl_obs_get (obs, "e1", i, NULL));
-    g_assert_cmpfloat (e2, ==, nc_galaxy_wl_obs_get (obs, "e2", i, NULL));
-    g_assert_cmpfloat (e_rms, ==, nc_galaxy_wl_obs_get (obs, "e_rms", i, NULL));
-    g_assert_cmpfloat (e_sigma, ==, nc_galaxy_wl_obs_get (obs, "e_sigma", i, NULL));
+    g_assert_cmpfloat (ra, ==, ncm_catalog_get (NCM_CATALOG (obs), "ra", i, NULL));
+    g_assert_cmpfloat (dec, ==, ncm_catalog_get (NCM_CATALOG (obs), "dec", i, NULL));
+    g_assert_cmpfloat (z, ==, ncm_catalog_get (NCM_CATALOG (obs), "z", i, NULL));
+    g_assert_cmpfloat (e1, ==, ncm_catalog_get (NCM_CATALOG (obs), "e1", i, NULL));
+    g_assert_cmpfloat (e2, ==, ncm_catalog_get (NCM_CATALOG (obs), "e2", i, NULL));
+    g_assert_cmpfloat (e_rms, ==, ncm_catalog_get (NCM_CATALOG (obs), "e_rms", i, NULL));
+    g_assert_cmpfloat (e_sigma, ==, ncm_catalog_get (NCM_CATALOG (obs), "e_sigma", i, NULL));
   }
 
   nc_galaxy_wl_obs_free (obs);
@@ -461,19 +471,19 @@ test_nc_galaxy_wl_obs_data (TestNcGalaxyWLObs *test, gconstpointer pdata)
   gdouble val;
   guint i;
 
-  for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
+  for (i = 0; i < ncm_catalog_len (NCM_CATALOG (test->obs)); i++)
   {
     val = ncm_rng_uniform_gen (rng, 0.0, 360.0);
-    nc_galaxy_wl_obs_set (test->obs, "ra", i, val, NULL);
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "ra", i, NULL), ==, val);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "ra", i, val, NULL);
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "ra", i, NULL), ==, val);
 
     val = ncm_rng_uniform_gen (rng, -90.0, 90.0);
-    nc_galaxy_wl_obs_set (test->obs, "dec", i, val, NULL);
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "dec", i, NULL), ==, val);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "dec", i, val, NULL);
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "dec", i, NULL), ==, val);
 
     val = ncm_rng_uniform_gen (rng, 0.0, 5.0);
-    nc_galaxy_wl_obs_set (test->obs, "z", i, val, NULL);
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "z", i, NULL), ==, val);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "z", i, val, NULL);
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "z", i, NULL), ==, val);
   }
 
   ncm_rng_free (rng);
@@ -485,7 +495,7 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
   NcmRNG *rng = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   guint i;
 
-  for (i = 0; i < nc_galaxy_wl_obs_len (test->obs); i++)
+  for (i = 0; i < ncm_catalog_len (NCM_CATALOG (test->obs)); i++)
   {
     NcmVector *xv = ncm_vector_new (100);
     NcmVector *yv = ncm_vector_new (100);
@@ -502,12 +512,12 @@ test_nc_galaxy_wl_obs_data_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
     pz = NC_GALAXY_PZ (nc_galaxy_pz_bspline_sqrt_new_from_table (xv, yv));
 
     val = ncm_rng_uniform_gen (rng, 0.0, 360.0);
-    nc_galaxy_wl_obs_set (test->obs, "ra", i, val, NULL);
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "ra", i, NULL), ==, val);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "ra", i, val, NULL);
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "ra", i, NULL), ==, val);
 
     val = ncm_rng_uniform_gen (rng, -90.0, 90.0);
-    nc_galaxy_wl_obs_set (test->obs, "dec", i, val, NULL);
-    g_assert_cmpfloat (nc_galaxy_wl_obs_get (test->obs, "dec", i, NULL), ==, val);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "dec", i, val, NULL);
+    g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (test->obs), "dec", i, NULL), ==, val);
 
     nc_galaxy_wl_obs_set_pz (test->obs, i, pz);
     g_assert_true (NC_IS_GALAXY_PZ (nc_galaxy_wl_obs_peek_pz (test->obs, i)));
@@ -530,16 +540,16 @@ test_nc_galaxy_wl_obs_header (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
   guint i;
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &i));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "ra", &i));
   g_assert_cmpint (i, ==, 0);
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &i));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "dec", &i));
   g_assert_cmpint (i, ==, 1);
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "z", &i));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "z", &i));
   g_assert_cmpint (i, ==, 2);
 
-  g_assert_false (nc_galaxy_wl_obs_get_index (test->obs, "pz", &i));
+  g_assert_false (ncm_catalog_get_index (NCM_CATALOG (test->obs), "pz", &i));
 }
 
 static void
@@ -547,10 +557,10 @@ test_nc_galaxy_wl_obs_header_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
 {
   guint i;
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "ra", &i));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "ra", &i));
   g_assert_cmpint (i, ==, 0);
 
-  g_assert_true (nc_galaxy_wl_obs_get_index (test->obs, "dec", &i));
+  g_assert_true (ncm_catalog_get_index (NCM_CATALOG (test->obs), "dec", &i));
   g_assert_cmpint (i, ==, 1);
 }
 
@@ -570,7 +580,7 @@ test_nc_galaxy_wl_obs_bad_set_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
   NcmRNG *rng   = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   GError *error = NULL;
 
-  nc_galaxy_wl_obs_set (test->obs, "pz", ncm_rng_uniform_gen (rng, 0, 99), 0, &error);
+  ncm_catalog_set (NCM_CATALOG (test->obs), "pz", ncm_rng_uniform_gen (rng, 0, 99), 0, &error);
   _test_nc_galaxy_wl_obs_assert_column_not_found_error (&error, "pz");
 
   ncm_rng_free (rng);
@@ -582,7 +592,7 @@ test_nc_galaxy_wl_obs_bad_set (TestNcGalaxyWLObs *test, gconstpointer pdata)
   NcmRNG *rng   = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   GError *error = NULL;
 
-  nc_galaxy_wl_obs_set (test->obs, "a", ncm_rng_uniform_gen (rng, 0, 99), 0, &error);
+  ncm_catalog_set (NCM_CATALOG (test->obs), "a", ncm_rng_uniform_gen (rng, 0, 99), 0, &error);
   _test_nc_galaxy_wl_obs_assert_column_not_found_error (&error, "a");
 
   ncm_rng_free (rng);
@@ -594,7 +604,7 @@ test_nc_galaxy_wl_obs_bad_get_pz (TestNcGalaxyWLObs *test, gconstpointer pdata)
   NcmRNG *rng   = ncm_rng_seeded_new (NULL, g_test_rand_int ());
   GError *error = NULL;
 
-  g_assert_true (isnan (nc_galaxy_wl_obs_get (test->obs, "pz", ncm_rng_uniform_gen (rng, 0, 99), &error)));
+  g_assert_true (isnan (ncm_catalog_get (NCM_CATALOG (test->obs), "pz", ncm_rng_uniform_gen (rng, 0, 99), &error)));
   _test_nc_galaxy_wl_obs_assert_column_not_found_error (&error, "pz");
 
   ncm_rng_free (rng);
@@ -617,7 +627,7 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   GVariant *obs_ser;
 
   ncm_obj_dict_str_add (source, "shape-pop", G_OBJECT (pop));
-  nc_galaxy_wl_obs_set (test->obs, "z", 0, 0.5, NULL);
+  ncm_catalog_set (NCM_CATALOG (test->obs), "z", 0, 0.5, NULL);
 
   nc_galaxy_wl_obs_set_shape_interp (test->obs, 0, spp_0);
   nc_galaxy_wl_obs_set_shape_interp (test->obs, 3, spp_3);
@@ -637,14 +647,14 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   g_variant_unref (obs_ser);
   ncm_serialize_reset (ser, FALSE);
 
-  g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs_dup, "z", 0, NULL), ==, 0.5);
+  g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (obs_dup), "z", 0, NULL), ==, 0.5);
   g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
   g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 3)));
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 1));
   g_assert_true (NC_IS_GALAXY_SHAPE_POP_GAUSS (ncm_obj_dict_str_peek (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup), "shape-pop")));
 
   /* A change of the rows makes them stale, in both catalogs independently */
-  nc_galaxy_wl_obs_set (obs_dup, "z", 1, 1.0, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs_dup), "z", 1, 1.0, NULL);
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup));
   g_assert_true (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0) == spp_0);
@@ -659,12 +669,12 @@ test_nc_galaxy_wl_obs_shape_interp (TestNcGalaxyWLObs *test, gconstpointer pdata
   obs_dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, obs_ser));
   g_variant_unref (obs_ser);
 
-  g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs_dup, "z", 1, NULL), ==, 1.0);
+  g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (obs_dup), "z", 1, NULL), ==, 1.0);
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup));
 
   /* A new record makes the current rows the described ones */
-  nc_galaxy_wl_obs_set (test->obs, "z", 2, 2.0, NULL);
+  ncm_catalog_set (NCM_CATALOG (test->obs), "z", 2, 2.0, NULL);
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0));
   nc_galaxy_wl_obs_set_shape_interp_source (test->obs, source);
   g_assert_true (nc_galaxy_wl_obs_peek_shape_interp (test->obs, 0) == spp_0);
@@ -739,7 +749,7 @@ test_nc_galaxy_wl_obs_shape_interp_file (TestNcGalaxyWLObs *test, gconstpointer 
   g_assert_true (NCM_IS_SPECTRAL_TENSOR (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0)));
 
   /* A change of the rows makes the interpolants stale */
-  nc_galaxy_wl_obs_set (obs_dup, "z", 1, 1.0, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs_dup), "z", 1, 1.0, NULL);
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs_dup, 0));
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp_source (obs_dup));
   g_object_get (obs_dup, "shape-interp", &si, NULL);
@@ -788,12 +798,12 @@ test_nc_galaxy_wl_obs_new_from_file (TestNcGalaxyWLObs *test, gconstpointer pdat
   g_assert_no_error (error);
   filename = g_build_filename (dir, "catalog.gvar", NULL);
 
-  nc_galaxy_wl_obs_set (test->obs, "z", 0, 0.5, NULL);
+  ncm_catalog_set (NCM_CATALOG (test->obs), "z", 0, 0.5, NULL);
   ncm_serialize_to_binfile (ser, G_OBJECT (test->obs), filename);
   ncm_serialize_reset (ser, FALSE);
 
   obs = nc_galaxy_wl_obs_new_from_file (filename, NULL);
-  g_assert_cmpfloat (nc_galaxy_wl_obs_get (obs, "z", 0, NULL), ==, 0.5);
+  g_assert_cmpfloat (ncm_catalog_get (NCM_CATALOG (obs), "z", 0, NULL), ==, 0.5);
   g_assert_null (nc_galaxy_wl_obs_peek_shape_interp (obs, 0));
   nc_galaxy_wl_obs_free (obs);
 
@@ -901,7 +911,7 @@ test_nc_galaxy_wl_obs_shape_interp_hash (void)
 {
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   GStrv col_names    = g_strsplit ("ra dec z", " ", -1);
-  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 10, col_names, test_double_cols, g_strv_length (col_names));
   GError *error      = NULL;
   gchar *dir         = g_dir_make_tmp ("nc_galaxy_wl_obs_XXXXXX", &error);
   gchar *tables, *catalog;
@@ -936,7 +946,7 @@ test_nc_galaxy_wl_obs_shape_interp_hash_subprocess (void)
   NcmSerialize *ser  = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   NcGalaxyWLObs *obs = NC_GALAXY_WL_OBS (ncm_serialize_from_binfile (ser, g_getenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV)));
 
-  nc_galaxy_wl_obs_set (obs, "z", 1, 1.0, NULL);
+  ncm_catalog_set (NCM_CATALOG (obs), "z", 1, 1.0, NULL);
   nc_galaxy_wl_obs_peek_shape_interp (obs, 0);
 }
 
@@ -945,7 +955,7 @@ static NcGalaxyWLObsChebGrid *
 _test_nc_galaxy_wl_obs_cheb_grid_new (NcGalaxyWLObs *obs)
 {
   gchar *hash                 = ncm_catalog_get_data_hash (NCM_CATALOG (obs));
-  NcGalaxyWLObsChebGrid *grid = nc_galaxy_wl_obs_cheb_grid_new (nc_galaxy_wl_obs_len (obs), 2, 2, 0.3, "NcGalaxyRedshiftFactorSpline", hash);
+  NcGalaxyWLObsChebGrid *grid = nc_galaxy_wl_obs_cheb_grid_new (ncm_catalog_len (NCM_CATALOG (obs)), 2, 2, 0.3, "NcGalaxyRedshiftFactorSpline", hash);
 
   g_free (hash);
 
@@ -972,12 +982,12 @@ test_nc_galaxy_wl_obs_cheb_grid (TestNcGalaxyWLObs *test, gconstpointer pdata)
   var = ncm_serialize_to_variant (ser, G_OBJECT (test->obs));
   dup = NC_GALAXY_WL_OBS (ncm_serialize_from_variant (ser, var));
   g_assert_nonnull (nc_galaxy_wl_obs_peek_cheb_grid (dup));
-  g_assert_cmpuint (nc_galaxy_wl_obs_cheb_grid_len (nc_galaxy_wl_obs_peek_cheb_grid (dup)), ==, nc_galaxy_wl_obs_len (test->obs));
+  g_assert_cmpuint (nc_galaxy_wl_obs_cheb_grid_len (nc_galaxy_wl_obs_peek_cheb_grid (dup)), ==, ncm_catalog_len (NCM_CATALOG (test->obs)));
 
   /* A row written back with its own value keeps the grid; another value drops it */
-  nc_galaxy_wl_obs_set (dup, "ra", 0, nc_galaxy_wl_obs_get (dup, "ra", 0, NULL), NULL);
+  ncm_catalog_set (NCM_CATALOG (dup), "ra", 0, ncm_catalog_get (NCM_CATALOG (dup), "ra", 0, NULL), NULL);
   g_assert_nonnull (nc_galaxy_wl_obs_peek_cheb_grid (dup));
-  nc_galaxy_wl_obs_set (dup, "ra", 0, 1.0 + nc_galaxy_wl_obs_get (dup, "ra", 0, NULL), NULL);
+  ncm_catalog_set (NCM_CATALOG (dup), "ra", 0, 1.0 + ncm_catalog_get (NCM_CATALOG (dup), "ra", 0, NULL), NULL);
   g_assert_null (nc_galaxy_wl_obs_peek_cheb_grid (dup));
 
   {
@@ -1037,7 +1047,7 @@ test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess (void)
 {
   const gchar *which = g_getenv (TEST_NC_GALAXY_WL_OBS_FILE_ENV);
   GStrv col_names    = g_strsplit ("ra dec z", " ", -1);
-  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 5, col_names);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_CELESTIAL, 5, col_names, test_double_cols, g_strv_length (col_names));
 
   if (g_strcmp0 (which, "len") == 0)
   {
@@ -1048,5 +1058,98 @@ test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess (void)
     g_object_set (obs, "cheb-grid", nc_galaxy_wl_obs_cheb_grid_new (5, 2, 2, 0.3, "NcGalaxyRedshiftFactorSpline", "other"), NULL);
     nc_galaxy_wl_obs_peek_cheb_grid (obs);
   }
+}
+
+/*
+ * The constructor gives each column its type: the DOUBLE columns form the matrix, and
+ * an INT column above 2^53 and a BOOL column keep their values through serialization.
+ */
+static void
+test_nc_galaxy_wl_obs_typed_columns (void)
+{
+  const gchar *names[]            = {"object_id", "ra", "flag", "dec", NULL};
+  const NcmCatalogColType types[] = {
+    NCM_CATALOG_COL_TYPE_INT, NCM_CATALOG_COL_TYPE_DOUBLE,
+    NCM_CATALOG_COL_TYPE_BOOL, NCM_CATALOG_COL_TYPE_DOUBLE
+  };
+  const gint64 id_base = (G_GINT64_CONSTANT (1) << 53) + 1;
+  NcGalaxyWLObs *obs   = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_WL_ELLIPTICITY_FRAME_CELESTIAL,
+                                               3, (GStrv) names, types, G_N_ELEMENTS (types));
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  NcmCatalog *dup;
+  guint i, j;
+
+  g_assert_cmpuint (ncm_matrix_ncols (ncm_catalog_peek_data (NCM_CATALOG (obs))), ==, 2);
+  g_assert_true (ncm_catalog_get_data_index (NCM_CATALOG (obs), "dec", &j));
+  g_assert_cmpuint (j, ==, 1);
+  g_assert_false (ncm_catalog_get_data_index (NCM_CATALOG (obs), "object_id", &j));
+
+  for (i = 0; i < 3; i++)
+  {
+    ncm_catalog_set_int (NCM_CATALOG (obs), "object_id", i, id_base + i, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "ra", i, 10.0 + i, NULL);
+    ncm_catalog_set_bool (NCM_CATALOG (obs), "flag", i, i == 1, NULL);
+    ncm_catalog_set (NCM_CATALOG (obs), "dec", i, -1.0 - i, NULL);
+  }
+
+  dup = NCM_CATALOG (ncm_serialize_dup_obj (ser, G_OBJECT (obs)));
+  g_assert_true (NC_IS_GALAXY_WL_OBS (dup));
+
+  for (i = 0; i < G_N_ELEMENTS (types); i++)
+    g_assert_cmpint (ncm_catalog_get_col_type (dup, names[i], NULL), ==, types[i]);
+
+  for (i = 0; i < 3; i++)
+  {
+    g_assert_cmpint (ncm_catalog_get_int (dup, "object_id", i, NULL), ==, id_base + i);
+    g_assert_cmpfloat (ncm_catalog_get (dup, "ra", i, NULL), ==, 10.0 + i);
+    g_assert_cmpint (ncm_catalog_get_bool (dup, "flag", i, NULL), ==, i == 1);
+    g_assert_cmpfloat (ncm_catalog_get (dup, "dec", i, NULL), ==, -1.0 - i);
+  }
+
+  ncm_catalog_free (dup);
+  ncm_serialize_free (ser);
+  nc_galaxy_wl_obs_free (obs);
+}
+
+/*
+ * A shallow duplicate keeps the frame, the ellipticity convention, the p(z) objects and the
+ * Chebyshev grid of the source.
+ */
+static void
+test_nc_galaxy_wl_obs_shallow_dup (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmVector *zv = ncm_vector_new (8);
+  NcmVector *pv = ncm_vector_new (8);
+  NcGalaxyWLObsChebGrid *grid;
+  NcGalaxyPzBSplineSqrt *pz;
+  NcGalaxyWLObs *dup;
+  guint k;
+
+  for (k = 0; k < 8; k++)
+  {
+    ncm_vector_set (zv, k, 0.1 * k);
+    ncm_vector_set (pv, k, 1.0 + k);
+  }
+
+  pz = nc_galaxy_pz_bspline_sqrt_new_from_table (zv, pv);
+  nc_galaxy_wl_obs_set_pz (test->obs, 0, NC_GALAXY_PZ (pz));
+
+  grid = _test_nc_galaxy_wl_obs_cheb_grid_new (test->obs);
+  nc_galaxy_wl_obs_set_cheb_grid (test->obs, grid);
+
+  dup = NC_GALAXY_WL_OBS (ncm_catalog_shallow_dup (NCM_CATALOG (test->obs)));
+
+  g_assert_true (NC_IS_GALAXY_WL_OBS (dup));
+  g_assert_cmpint (nc_galaxy_wl_obs_get_coord (dup), ==, nc_galaxy_wl_obs_get_coord (test->obs));
+  g_assert_cmpint (nc_galaxy_wl_obs_get_ellip_conv (dup), ==, nc_galaxy_wl_obs_get_ellip_conv (test->obs));
+  g_assert_true (nc_galaxy_wl_obs_peek_pz (dup, 0) == NC_GALAXY_PZ (pz));
+  g_assert_true (nc_galaxy_wl_obs_peek_cheb_grid (dup) == grid);
+  g_assert_true (ncm_catalog_peek_data (NCM_CATALOG (dup)) == ncm_catalog_peek_data (NCM_CATALOG (test->obs)));
+
+  NCM_TEST_FREE (nc_galaxy_wl_obs_free, dup);
+  nc_galaxy_wl_obs_cheb_grid_free (grid);
+  nc_galaxy_pz_free (NC_GALAXY_PZ (pz));
+  ncm_vector_free (zv);
+  ncm_vector_free (pv);
 }
 
