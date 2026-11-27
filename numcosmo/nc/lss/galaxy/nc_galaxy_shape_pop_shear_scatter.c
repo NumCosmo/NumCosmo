@@ -307,8 +307,8 @@ nc_galaxy_shape_pop_shear_scatter_set_include_noise (NcGalaxyShapePopShearScatte
   {
     self->include_noise = include_noise;
 
-    /* Moves the pkey, which the shape factor hashes, so cached values built
-     * with the previous setting are rebuilt. */
+    /* Moves the pkey, which the model control of the shape factor tracks, so
+     * the values built with the previous setting are rebuilt. */
     ncm_model_state_mark_outdated (NCM_MODEL (gspss));
   }
 }

@@ -214,10 +214,9 @@ sigma0 = 0.03
 
 rng = Ncm.RNG.seeded_new("mt19937", seed)
 
-pos_data = Nc.GalaxyPositionFactorData.new(p_dist, mset)
-z_data = Nc.GalaxyRedshiftFactorData.new(z_dist, mset)
-s_data = Nc.GalaxyShapeFactorData.new(s_dist, mset, pos_data, z_data)
-cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+cols = Nc.DataClusterWLFactor.new(
+    p_dist, z_dist, s_dist
+).required_columns(mset)
 
 obs = Nc.GalaxyWLObs.new(
     ellip_conv,

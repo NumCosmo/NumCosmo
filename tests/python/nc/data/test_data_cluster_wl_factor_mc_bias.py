@@ -131,10 +131,9 @@ def _build(integ_method=Nc.DataClusterWLIntegMethod.LNINT):
     redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 5.0)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(Nc.GalaxyWLObsEllipConv.TRACE_DET)
 
-    pos_data0 = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data0 = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data0 = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data0, z_data0)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data0)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
     obs = Nc.GalaxyWLObs.new(
         Nc.GalaxyWLObsEllipConv.TRACE_DET,

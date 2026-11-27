@@ -745,6 +745,10 @@ data_tests = [
         'name': 'nc_data_cluster_wl_factor_shape_interp',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_shape_interp.c'],
     },
+    {
+        'name': 'nc_data_cluster_wl_factor_cache',
+        'sources': ['nc/data/test_nc_data_cluster_wl_factor_cache.c'],
+    },
 ]
 
 # Large-scale structure tests (halos, clusters, bias, transfer, power spectrum, window)
@@ -826,6 +830,10 @@ lss_tests = [
         'name': 'nc_wl_ellipticity',
         'sources': ['nc/lss/wl/test_nc_wl_ellipticity.c'],
     },
+    {
+        'name': 'nc_wl_cluster_lens',
+        'sources': ['nc/lss/wl/test_nc_wl_cluster_lens.c'],
+    },
 ]
 
 # Galaxy and weak lensing tests
@@ -886,6 +894,10 @@ galaxy_tests = [
         'name': 'nc_galaxy_shape_factor_spectral_cert',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_spectral_cert.c'],
         'suite': ['c-acceptance'],
+    },
+    {
+        'name': 'nc_galaxy_halo_wl',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_halo_wl.c'],
     },
 ]
 

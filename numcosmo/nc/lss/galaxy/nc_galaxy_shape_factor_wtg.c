@@ -192,9 +192,8 @@ _nc_galaxy_shape_factor_wtg_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxy
   NcGalaxyShapeFactorWtG *gsfwtg = NC_GALAXY_SHAPE_FACTOR_WTG (gsf);
   const gdouble eps_to_g         = _nc_galaxy_shape_factor_wtg_eps_to_g (gsfwtg, data);
   const gdouble noise_g          = data->std_noise * eps_to_g;
-  gdouble rot_re, rot_im;
-
-  nc_galaxy_shape_factor_data_get_rotation (data, &rot_re, &rot_im);
+  const gdouble rot_re           = data->rot_re;
+  const gdouble rot_im           = data->rot_im;
 
   {
     /* Tangential components, Re (v e^{-2 i phi}) */
@@ -213,17 +212,19 @@ _nc_galaxy_shape_factor_wtg_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxySha
 
 /* The shear estimate is mu + delta in the tangential and cross components,
  * each delta drawn independently from the scatter kernel, and the ellipticity
- * is s R times it, rotated to data->coord. There is no intrinsic ellipticity:
- * epsilon_int is set to zero. */
+ * is s R times it, rotated to the frame of the galaxy. There is no intrinsic
+ * ellipticity: epsilon_int is set to zero. In front of the lens the shear is
+ * only the additive bias, (g_1, g_2) = c. */
 static void
-_nc_galaxy_shape_factor_wtg_gen_obs (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcmRNG *rng, const gboolean behind,
-                                     const gdouble g_1, const gdouble g_2, const gdouble rot_re, const gdouble rot_im)
+_nc_galaxy_shape_factor_wtg_gen_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gboolean lensed, const gdouble g_1, const gdouble g_2, NcmRNG *rng)
 {
   NcGalaxyShapeFactorWtG *gsfwtg      = NC_GALAXY_SHAPE_FACTOR_WTG (gsf);
   NcGalaxyShapePopShearScatter *gspss = NC_GALAXY_SHAPE_POP_SHEAR_SCATTER (pop);
   const gdouble eps_to_g              = _nc_galaxy_shape_factor_wtg_eps_to_g (gsfwtg, data);
   const gdouble noise_g               = data->std_noise * eps_to_g;
   const gdouble var_noise_g           = noise_g * noise_g;
+  const gdouble rot_re                = data->rot_re;
+  const gdouble rot_im                = data->rot_im;
   const gdouble mu_t                  = g_1 * rot_re + g_2 * rot_im;
   const gdouble mu_x                  = g_2 * rot_re - g_1 * rot_im;
   gdouble hat_g_t, hat_g_x;
@@ -253,7 +254,7 @@ nc_galaxy_shape_factor_wtg_class_init (NcGalaxyShapeFactorWtGClass *klass)
   gsf_class->accepts_pop      = &_nc_galaxy_shape_factor_wtg_accepts_pop;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_wtg_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_wtg_eval_ln_marginal;
-  gsf_class->gen_obs          = &_nc_galaxy_shape_factor_wtg_gen_obs;
+  gsf_class->gen_shear        = &_nc_galaxy_shape_factor_wtg_gen_shear;
 }
 
 /**
@@ -353,8 +354,7 @@ nc_galaxy_shape_factor_wtg_data_get_responsivity (NcGalaxyShapeFactorWtG *gsfwtg
  * @data: a #NcGalaxyShapeFactorData created by @gsfwtg
  *
  * Computes the tangential shear estimate $\hat g_t$ of the galaxy in @data,
- * using the rotation cached by the last radius update (see
- * nc_galaxy_shape_factor_update_data_radius()).
+ * using the rotation of the galaxy, @data->rot_re and @data->rot_im.
  *
  * Returns: $\hat g_t$.
  */
@@ -362,10 +362,7 @@ gdouble
 nc_galaxy_shape_factor_wtg_data_get_shear_estimate (NcGalaxyShapeFactorWtG *gsfwtg, NcGalaxyShapeFactorData *data)
 {
   const gdouble eps_to_g = _nc_galaxy_shape_factor_wtg_eps_to_g (gsfwtg, data);
-  gdouble rot_re, rot_im;
 
-  nc_galaxy_shape_factor_data_get_rotation (data, &rot_re, &rot_im);
-
-  return (data->epsilon_obs_1 * rot_re + data->epsilon_obs_2 * rot_im) * eps_to_g;
+  return (data->epsilon_obs_1 * data->rot_re + data->epsilon_obs_2 * data->rot_im) * eps_to_g;
 }
 

@@ -1439,10 +1439,9 @@ class GalaxyDistributionModel:
 
         cluster.halo_position.prepare_if_needed(cosmo)
 
-        pos_data = Nc.GalaxyPositionFactorData.new(self.position_factor, mset)
-        z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-        s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-        cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+        cols = Nc.DataClusterWLFactor.new(
+            self.position_factor, redshift_factor, shape_factor
+        ).required_columns(mset)
 
         obs = Nc.GalaxyWLObs.new(
             self.shape_gen.ellip_conv.genum,

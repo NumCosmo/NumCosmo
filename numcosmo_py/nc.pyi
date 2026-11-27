@@ -6030,9 +6030,9 @@ class DataClusterWLFactor(NumCosmoMath.Data):
         redshift_factor: GalaxyRedshiftFactor,
         shape_factor: GalaxyShapeFactor,
     ) -> DataClusterWLFactor: ...
-    def peek_data_array(self) -> list[GalaxyShapeFactorData]: ...
     def peek_obs(self) -> GalaxyWLObs: ...
     def ref(self) -> DataClusterWLFactor: ...
+    def required_columns(self, mset: NumCosmoMath.MSet) -> list[str]: ...
     def set_cheb_level_min(self, cheb_level_min: int) -> None: ...
     def set_cheb_tol(self, cheb_tol: float) -> None: ...
     def set_cut(self, r_min: float, r_max: float) -> None: ...
@@ -8272,6 +8272,90 @@ class GalaxyHODZheng07Class(GObject.GPointer):
 
     parent_class: GalaxyHODClass = ...
 
+class GalaxyHaloWL(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHaloWL(**properties)
+        new(lens:NumCosmo.WLClusterLens) -> NumCosmo.GalaxyHaloWL
+
+    Object NcGalaxyHaloWL
+
+    Properties from NcGalaxyHaloWL:
+      lens -> NcWLClusterLens: lens
+        Cluster lens
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        lens: WLClusterLens
+
+    props: Props = ...
+    def __init__(self, lens: WLClusterLens = ...) -> None: ...
+    def bound_holds(self) -> bool: ...
+    def bound_ready(self) -> bool: ...
+    @staticmethod
+    def clear(hwl: GalaxyHaloWL) -> None: ...
+    def eval_bound(
+        self, smd: WLSurfaceMassDensity, cosmo: HICosmo, R_min: float, z_s: float
+    ) -> typing.Tuple[float, float]: ...
+    def free(self) -> None: ...
+    def get_profile_hash(self) -> int: ...
+    def get_radius_hash(self) -> int: ...
+    def get_radius_min(self, data: GalaxyHaloWLData) -> float: ...
+    @classmethod
+    def new(cls, lens: WLClusterLens) -> GalaxyHaloWL: ...
+    def peek_lens(self) -> WLClusterLens: ...
+    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
+    def prepare_bound(self, mset: NumCosmoMath.MSet) -> None: ...
+    def ref(self) -> GalaxyHaloWL: ...
+    def set_shape_bound(
+        self,
+        smd: typing.Optional[WLSurfaceMassDensity],
+        cosmo: HICosmo,
+        data: GalaxyHaloWLData,
+        z_max: float,
+        s_data: GalaxyShapeFactorData,
+    ) -> None: ...
+    def update_data_profile(
+        self, dp: HaloDensityProfile, data: GalaxyHaloWLData
+    ) -> None: ...
+    def update_data_radius(
+        self, data: GalaxyHaloWLData, pos_data: GalaxyPositionFactorData
+    ) -> None: ...
+
+class GalaxyHaloWLClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyHaloWLClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
+class GalaxyHaloWLData(GObject.GBoxed):
+    r"""
+    :Constructors:
+
+    ::
+
+        new() -> NumCosmo.GalaxyHaloWLData
+    """
+
+    def get_radius(self) -> float: ...
+    def get_rotation(self) -> typing.Tuple[float, float]: ...
+    def get_sigma(self) -> typing.Tuple[float, float]: ...
+    @classmethod
+    def new(cls) -> GalaxyHaloWLData: ...
+    def ref(self) -> GalaxyHaloWLData: ...
+    def unref(self) -> None: ...
+
 class GalaxyPositionFactor(GObject.Object):
     r"""
     :Constructors:
@@ -9638,6 +9722,7 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         mset: NumCosmoMath.MSet,
         data_array: typing.Sequence[GalaxyShapeFactorData],
+        rotations: typing.Sequence[float] | npt.NDArray[np.float64],
     ) -> typing.Tuple[float, float, float, float, float]: ...
     def do_accepts_pop(self, pop: GalaxyShapePop) -> bool: ...
     def do_data_init(
@@ -9651,6 +9736,7 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
+        workspace: None,
         n: int,
         t: float,
         u_1: float,
@@ -9684,6 +9770,7 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
+        workspace: None,
         n: int,
         g_1: float,
         g_2: float,
@@ -9692,51 +9779,17 @@ class GalaxyShapeFactor(GObject.Object):
         want_log: bool,
         out: float,
     ) -> None: ...
-    def do_gen_obs(
+    def do_gen_shear(
         self,
         pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
-        rng: NumCosmoMath.RNG,
-        behind: bool,
+        lensed: bool,
         g_1: float,
         g_2: float,
-        rot_re: float,
-        rot_im: float,
+        rng: NumCosmoMath.RNG,
     ) -> None: ...
     def do_get_desc(self) -> str: ...
     def do_prepare(self, mset: NumCosmoMath.MSet) -> None: ...
-    def eval_at_nodes(
-        self,
-        mset: NumCosmoMath.MSet,
-        data: GalaxyShapeFactorData,
-        z_nodes: NumCosmoMath.Vector,
-        out: NumCosmoMath.Vector,
-    ) -> None: ...
-    def eval_at_nodes_range(
-        self,
-        mset: NumCosmoMath.MSet,
-        data: GalaxyShapeFactorData,
-        z_nodes: NumCosmoMath.Vector,
-        j0: int,
-        j1: int,
-        out: NumCosmoMath.Vector,
-    ) -> None: ...
-    def eval_ln_at_nodes(
-        self,
-        mset: NumCosmoMath.MSet,
-        data: GalaxyShapeFactorData,
-        z_nodes: NumCosmoMath.Vector,
-        out: NumCosmoMath.Vector,
-    ) -> None: ...
-    def eval_ln_at_nodes_range(
-        self,
-        mset: NumCosmoMath.MSet,
-        data: GalaxyShapeFactorData,
-        z_nodes: NumCosmoMath.Vector,
-        j0: int,
-        j1: int,
-        out: NumCosmoMath.Vector,
-    ) -> None: ...
     def eval_ln_marginal(
         self,
         pop: GalaxyShapePop,
@@ -9765,22 +9818,49 @@ class GalaxyShapeFactor(GObject.Object):
         epsilon_obs_1: float,
         epsilon_obs_2: float,
     ) -> float: ...
-    def free(self) -> None: ...
-    def gen(
+    def eval_shear(
         self,
-        mset: NumCosmoMath.MSet,
+        pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
+        g_1: float,
+        g_2: float,
+        want_log: bool,
+    ) -> float: ...
+    def eval_shear_line(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        workspace: None,
+        t: typing.Sequence[float] | npt.NDArray[np.float64],
+        u_1: float,
+        u_2: float,
+        b_1: float,
+        b_2: float,
+        want_log: bool,
+        out: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> bool: ...
+    def eval_shear_nodes(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        workspace: None,
+        g_1: typing.Sequence[float] | npt.NDArray[np.float64],
+        g_2: typing.Sequence[float] | npt.NDArray[np.float64],
+        want_log: bool,
+    ) -> list[float]: ...
+    def free(self) -> None: ...
+    def gen_shear(
+        self,
+        pop: GalaxyShapePop,
+        data: GalaxyShapeFactorData,
+        lensed: bool,
+        g_1: float,
+        g_2: float,
         rng: NumCosmoMath.RNG,
     ) -> None: ...
-    def get_crit_hash(self) -> int: ...
     def get_desc(self) -> str: ...
     def get_ellip_conv(self) -> GalaxyWLObsEllipConv: ...
-    def get_optzs_hash(self) -> int: ...
     def get_pop_hash(self) -> int: ...
-    def get_radius_hash(self) -> int: ...
-    def integ(
-        self, mset: NumCosmoMath.MSet, use_lnp: bool
-    ) -> GalaxyShapeFactorIntegrand: ...
     def lndet_jac(
         self, g: NumCosmoMath.Complex, E_obs: NumCosmoMath.Complex
     ) -> float: ...
@@ -9789,26 +9869,11 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         mset: NumCosmoMath.MSet,
         data_array: typing.Sequence[GalaxyShapeFactorData],
-        update_radius: bool,
-        update_optzs: bool,
-    ) -> bool: ...
-    def prepare_data_array_at_nodes(
-        self,
-        mset: NumCosmoMath.MSet,
-        data_array: typing.Sequence[GalaxyShapeFactorData],
-        z_nodes_per_galaxy: typing.Sequence[NumCosmoMath.Vector],
-        update_radius: bool,
-        update_crit: bool,
-        update_sigma: bool,
     ) -> bool: ...
     def ref(self) -> GalaxyShapeFactor: ...
-    def update_data_at_nodes_crit(
-        self, data: GalaxyShapeFactorData, z_nodes: NumCosmoMath.Vector
+    def update_data_pop(
+        self, pop: GalaxyShapePop, data: GalaxyShapeFactorData
     ) -> None: ...
-    def update_data_at_nodes_sigma(self, data: GalaxyShapeFactorData) -> None: ...
-    def update_data_optzs(self, data: GalaxyShapeFactorData) -> None: ...
-    def update_data_pop(self, data: GalaxyShapeFactorData) -> None: ...
-    def update_data_radius(self, data: GalaxyShapeFactorData) -> None: ...
 
 class GalaxyShapeFactorClass(GObject.GPointer):
     r"""
@@ -9860,6 +9925,7 @@ class GalaxyShapeFactorClass(GObject.GPointer):
             GalaxyShapeFactor,
             GalaxyShapePop,
             GalaxyShapeFactorData,
+            None,
             int,
             float,
             float,
@@ -9875,6 +9941,7 @@ class GalaxyShapeFactorClass(GObject.GPointer):
             GalaxyShapeFactor,
             GalaxyShapePop,
             GalaxyShapeFactorData,
+            None,
             int,
             float,
             float,
@@ -9888,18 +9955,18 @@ class GalaxyShapeFactorClass(GObject.GPointer):
         ],
         bool,
     ] = ...
+    workspace_get: typing.Callable[[GalaxyShapeFactor], None] = ...
+    workspace_return: typing.Callable[[GalaxyShapeFactor, None], None] = ...
     accepts_pop: typing.Callable[[GalaxyShapeFactor, GalaxyShapePop], bool] = ...
-    gen_obs: typing.Callable[
+    gen_shear: typing.Callable[
         [
             GalaxyShapeFactor,
             GalaxyShapePop,
             GalaxyShapeFactorData,
-            NumCosmoMath.RNG,
             bool,
             float,
             float,
-            float,
-            float,
+            NumCosmoMath.RNG,
         ],
         None,
     ] = ...
@@ -9912,11 +9979,9 @@ class GalaxyShapeFactorData(GObject.GBoxed):
     ::
 
         GalaxyShapeFactorData()
-        new(gsf:NumCosmo.GalaxyShapeFactor, mset:NumCosmoMath.MSet, pos_data:NumCosmo.GalaxyPositionFactorData, z_data:NumCosmo.GalaxyRedshiftFactorData) -> NumCosmo.GalaxyShapeFactorData
+        new(gsf:NumCosmo.GalaxyShapeFactor, mset:NumCosmoMath.MSet) -> NumCosmo.GalaxyShapeFactorData
     """
 
-    pos_data: GalaxyPositionFactorData = ...
-    z_data: GalaxyRedshiftFactorData = ...
     pop_data: GalaxyShapePopData = ...
     coord: WLEllipticityFrame = ...
     epsilon_int_1: float = ...
@@ -9927,7 +9992,14 @@ class GalaxyShapeFactorData(GObject.GBoxed):
     c1: float = ...
     c2: float = ...
     m: float = ...
-    cdata: None = ...
+    rot_re: float = ...
+    rot_im: float = ...
+    bound_ready: bool = ...
+    bound_holds: bool = ...
+    bound_z_cl: float = ...
+    bound_R_min: float = ...
+    bound_kappa: float = ...
+    bound_g_t: float = ...
     ldata: None = ...
     ldata_destroy: typing.Callable[[None], None] = ...
     ldata_read_row: typing.Callable[[GalaxyShapeFactorData, GalaxyWLObs, int], None] = (
@@ -9938,50 +10010,15 @@ class GalaxyShapeFactorData(GObject.GBoxed):
     ] = ...
     ldata_required_columns: None = ...
     ref_count: int = ...
-    def get_radius(self) -> float: ...
-    def get_rotation(self) -> typing.Tuple[float, float]: ...
     @classmethod
     def new(
-        cls,
-        gsf: GalaxyShapeFactor,
-        mset: NumCosmoMath.MSet,
-        pos_data: GalaxyPositionFactorData,
-        z_data: GalaxyRedshiftFactorData,
+        cls, gsf: GalaxyShapeFactor, mset: NumCosmoMath.MSet
     ) -> GalaxyShapeFactorData: ...
     def read_row(self, obs: GalaxyWLObs, i: int) -> None: ...
     def ref(self) -> GalaxyShapeFactorData: ...
     def required_columns(self) -> list[str]: ...
     def unref(self) -> None: ...
     def write_row(self, obs: GalaxyWLObs, i: int) -> None: ...
-
-class GalaxyShapeFactorIntegrand(GObject.GBoxed):
-    r"""
-    :Constructors:
-
-    ::
-
-        GalaxyShapeFactorIntegrand()
-        new(func:NumCosmo.GalaxyShapeFactorIntegrandFunc, callback_data_free:NumCosmo.GalaxyShapeFactorIntegrandFreeData, callback_data_copy:NumCosmo.GalaxyShapeFactorIntegrandCopyData, callback_data_prepare:NumCosmo.GalaxyShapeFactorIntegrandPrepareData, callback_data=None) -> NumCosmo.GalaxyShapeFactorIntegrand
-    """
-
-    func: typing.Callable[[None, float, GalaxyShapeFactorData], float] = ...
-    callback_data_free: typing.Callable[[None], None] = ...
-    callback_data_copy: typing.Callable[[None], None] = ...
-    callback_data_prepare: typing.Callable[[None, NumCosmoMath.MSet], None] = ...
-    callback_data: None = ...
-    def copy(self) -> GalaxyShapeFactorIntegrand: ...
-    def eval(self, z: float, data: GalaxyShapeFactorData) -> float: ...
-    def free(self) -> None: ...
-    @classmethod
-    def new(
-        cls,
-        func: typing.Callable[..., float],
-        callback_data_free: typing.Callable[..., None],
-        callback_data_copy: typing.Callable[..., None],
-        callback_data_prepare: typing.Callable[..., None],
-        *callback_data: typing.Any,
-    ) -> GalaxyShapeFactorIntegrand: ...
-    def prepare(self, mset: NumCosmoMath.MSet) -> None: ...
 
 class GalaxyShapeFactorMomentsGauss(GalaxyShapeFactor):
     r"""
@@ -20027,6 +20064,7 @@ class HaloPosition(NumCosmoMath.Model):
     def free(self) -> None: ...
     def get_ra_dec(self) -> typing.Tuple[float, float]: ...
     def get_redshift(self) -> float: ...
+    def get_rotation(self) -> NumCosmoMath.Quaternion: ...
     @staticmethod
     def id() -> int: ...
     @classmethod
@@ -23896,6 +23934,74 @@ class TransferFuncEHNoBaryonClass(GObject.GPointer):
     """
 
     parent_class: TransferFuncClass = ...
+
+class WLClusterLens(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLClusterLens(**properties)
+        new(dist:NumCosmo.Distance) -> NumCosmo.WLClusterLens
+
+    Object NcWLClusterLens
+
+    Properties from NcWLClusterLens:
+      distance -> NcDistance: distance
+        Distance object
+      sigma-crit-inv-reltol -> gdouble: sigma-crit-inv-reltol
+        Relative tolerance of the inverse critical density table
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        distance: Distance
+        sigma_crit_inv_reltol: float
+
+    props: Props = ...
+    def __init__(
+        self, distance: Distance = ..., sigma_crit_inv_reltol: float = ...
+    ) -> None: ...
+    @staticmethod
+    def clear(lens: WLClusterLens) -> None: ...
+    def free(self) -> None: ...
+    def get_geometry_hash(self) -> int: ...
+    def get_profile_hash(self) -> int: ...
+    def get_sigma_crit_inv_reltol(self) -> float: ...
+    def get_z_cl(self) -> float: ...
+    @classmethod
+    def new(cls, dist: Distance) -> WLClusterLens: ...
+    def peek_distance(self) -> Distance: ...
+    def peek_sigma_crit_inv(self) -> NumCosmoMath.SpectralPanels: ...
+    def prepare(
+        self, cosmo: HICosmo, hp: HaloPosition, dp: HaloDensityProfile
+    ) -> None: ...
+    def prepare_sigma_crit_inv(self, cosmo: HICosmo, z_max: float) -> None: ...
+    @staticmethod
+    def reduced_shear(
+        sigma: float, mean_sigma: float, sigma_crit_inv: float
+    ) -> float: ...
+    def reduced_shear_at(
+        self, cosmo: HICosmo, sigma: float, mean_sigma: float, z_s: float
+    ) -> float: ...
+    def ref(self) -> WLClusterLens: ...
+    def set_sigma_crit_inv_reltol(self, reltol: float) -> None: ...
+    def sigma(self, dp: HaloDensityProfile, R: float) -> typing.Tuple[float, float]: ...
+    def sigma_crit(self, cosmo: HICosmo, z_s: float) -> float: ...
+    def sigma_crit_inv(self, cosmo: HICosmo, z_s: float) -> float: ...
+
+class WLClusterLensClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLClusterLensClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
 
 class WLSurfaceMassDensity(NumCosmoMath.Model):
     r"""

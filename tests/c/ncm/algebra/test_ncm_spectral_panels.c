@@ -61,6 +61,12 @@ static void test_ncm_spectral_panels_square_cheb_moments_row (void);
 static void test_ncm_spectral_panels_square_cheb_moments_row_subprocess (void);
 static void test_ncm_spectral_panels_square_cheb_moments_range (void);
 static void test_ncm_spectral_panels_square_cheb_moments_range_subprocess (void);
+static void test_ncm_spectral_panels_uniform (void);
+static void test_ncm_spectral_panels_uniform_large_n (void);
+static void test_ncm_spectral_panels_uniform_serialize (void);
+static void test_ncm_spectral_panels_uniform_edges (void);
+static void test_ncm_spectral_panels_uniform_edges_subprocess (void);
+static NcmSpectralPanels *_uniform_panels_new (NcmSpectral *spectral, NcmSpectralF f, gdouble a, gdouble b, guint n_panels, const guint *N);
 static NcmSpectralPanels *_poly_panels_new (NcmSpectral *spectral, NcmSpectralF f, gpointer data, const gdouble *edges, guint n_panels, guint N);
 
 static const gdouble test_edges[TEST_N_PANELS + 1] = {0.0, 1.0, 2.5, 4.0};
@@ -99,6 +105,11 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels/square_cheb_moments/row/subprocess", &test_ncm_spectral_panels_square_cheb_moments_row_subprocess);
   g_test_add_func ("/ncm/spectral_panels/square_cheb_moments/range", &test_ncm_spectral_panels_square_cheb_moments_range);
   g_test_add_func ("/ncm/spectral_panels/square_cheb_moments/range/subprocess", &test_ncm_spectral_panels_square_cheb_moments_range_subprocess);
+  g_test_add_func ("/ncm/spectral_panels/uniform", &test_ncm_spectral_panels_uniform);
+  g_test_add_func ("/ncm/spectral_panels/uniform/large_n", &test_ncm_spectral_panels_uniform_large_n);
+  g_test_add_func ("/ncm/spectral_panels/uniform/serialize", &test_ncm_spectral_panels_uniform_serialize);
+  g_test_add_func ("/ncm/spectral_panels/uniform/edges", &test_ncm_spectral_panels_uniform_edges);
+  g_test_add_func ("/ncm/spectral_panels/uniform/edges/subprocess", &test_ncm_spectral_panels_uniform_edges_subprocess);
 
   g_test_run ();
 
@@ -883,5 +894,160 @@ test_ncm_spectral_panels_square_cheb_moments_range_subprocess (void)
   GArray *m = NULL;
 
   ncm_spectral_panels_square_cheb_moments (_panels_new (), 0, 0.5, 4.5, 3, &m);
+}
+
+/* Equal panels of f on [a, b], panel i with N[i] coefficients, edges as set_uniform () expects */
+static NcmSpectralPanels *
+_uniform_panels_new (NcmSpectral *spectral, NcmSpectralF f, gdouble a, gdouble b, guint n_panels, const guint *N)
+{
+  NcmSpectralPanels *sp = ncm_spectral_panels_new (1);
+  const gdouble h       = (b - a) / n_panels;
+  GArray *row           = NULL;
+  guint i;
+
+  for (i = 0; i < n_panels; i++)
+  {
+    const gdouble x_i  = a + i * h;
+    const gdouble x_i1 = (i + 1 < n_panels) ? a + (i + 1) * h : b;
+
+    ncm_spectral_compute_chebyshev_coeffs (spectral, f, x_i, x_i1, N[i], &row, NULL);
+    ncm_spectral_panels_append_data (sp, x_i, x_i1, (const gdouble *) row->data, N[i], N[i]);
+  }
+
+  g_array_unref (row);
+
+  return sp;
+}
+
+/*
+ * A uniform set of x^3 with panels of 4 to 6 coefficients: set_uniform pads every panel to
+ * 6, finds the panel of a point as the bisection does away from the edges, and evaluates
+ * the power-basis copy, which agrees with the Chebyshev series and with x^3 to rounding;
+ * eval and eval_row give the same values; append and reset remove the mark.
+ */
+static void
+test_ncm_spectral_panels_uniform (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  const guint N[4]      = {4, 6, 5, 4};
+  NcmSpectralPanels *sp = _uniform_panels_new (spectral, _cubic, -1.0, 3.0, 4, N);
+  NcmVector *fval       = ncm_vector_new (1);
+  guint i;
+
+  g_assert_false (ncm_spectral_panels_is_uniform (sp));
+  ncm_spectral_panels_set_uniform (sp);
+  g_assert_true (ncm_spectral_panels_is_uniform (sp));
+
+  for (i = 0; i < 4; i++)
+  {
+    gdouble a, b;
+    guint Ni;
+
+    ncm_spectral_panels_peek_panel (sp, i, &a, &b, &Ni);
+    g_assert_cmpuint (Ni, ==, 6);
+  }
+
+  for (i = 0; i < 400; i++)
+  {
+    const gdouble xi = -1.0 + 4.0 * (i + 0.5) / 400.0;
+    const guint p    = ncm_spectral_panels_find_panel (sp, xi);
+    const gdouble v  = ncm_spectral_panels_eval_row (sp, 0, xi);
+
+    g_assert_cmpuint (p, ==, (guint) floor (xi + 1.0));
+    ncm_assert_cmpdouble_e (v, ==, xi * xi * xi, 1.0e-13, 1.0e-13);
+    ncm_assert_cmpdouble_e (v, ==, ncm_spectral_panels_eval_row_on (sp, p, 0, xi), 1.0e-14, 1.0e-14);
+
+    ncm_spectral_panels_eval (sp, xi, fval);
+    g_assert_cmpfloat (ncm_vector_get (fval, 0), ==, v);
+  }
+
+  /* Outside the range the end panels are extrapolated */
+  ncm_assert_cmpdouble_e (ncm_spectral_panels_eval_row (sp, 0, -1.5), ==, -3.375, 1.0e-12, 0.0);
+  ncm_assert_cmpdouble_e (ncm_spectral_panels_eval_row (sp, 0, 3.5), ==, 42.875, 1.0e-12, 0.0);
+
+  ncm_spectral_panels_reset (sp);
+  g_assert_false (ncm_spectral_panels_is_uniform (sp));
+
+  {
+    NcmSpectralPanels *sp2 = _uniform_panels_new (spectral, _cubic, -1.0, 3.0, 4, N);
+
+    ncm_spectral_panels_set_uniform (sp2);
+    ncm_spectral_panels_append_data (sp2, 3.0, 4.0, (const gdouble[]) {1.0, 0.0, 0.0, 0.0}, 4, 4);
+    g_assert_false (ncm_spectral_panels_is_uniform (sp2));
+    ncm_spectral_panels_free (sp2);
+  }
+
+  ncm_vector_free (fval);
+  ncm_spectral_panels_free (sp);
+  ncm_spectral_free (spectral);
+}
+
+/* Above NCM_SPECTRAL_PANELS_POWER_N_MAX the Chebyshev series is evaluated directly */
+static void
+test_ncm_spectral_panels_uniform_large_n (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  const guint N[2]      = {12, 12};
+  NcmSpectralPanels *sp = _uniform_panels_new (spectral, _cubic, 0.0, 2.0, 2, N);
+  guint i;
+
+  ncm_spectral_panels_set_uniform (sp);
+
+  for (i = 0; i < 50; i++)
+  {
+    const gdouble xi = 2.0 * (i + 0.5) / 50.0;
+
+    ncm_assert_cmpdouble_e (ncm_spectral_panels_eval_row (sp, 0, xi), ==, xi * xi * xi, 1.0e-13, 1.0e-13);
+  }
+
+  ncm_spectral_panels_free (sp);
+  ncm_spectral_free (spectral);
+}
+
+/* A uniform set read back from its serialization is uniform and gives the same values */
+static void
+test_ncm_spectral_panels_uniform_serialize (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  const guint N[4]      = {5, 5, 5, 5};
+  NcmSpectralPanels *sp = _uniform_panels_new (spectral, _cubic, 0.0, 2.0, 4, N);
+  NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+  NcmSpectralPanels *dup;
+  guint i;
+
+  ncm_spectral_panels_set_uniform (sp);
+  dup = NCM_SPECTRAL_PANELS (ncm_serialize_dup_obj (ser, G_OBJECT (sp)));
+
+  g_assert_true (ncm_spectral_panels_is_uniform (dup));
+
+  for (i = 0; i < 20; i++)
+  {
+    const gdouble xi = 2.0 * (i + 0.25) / 20.0;
+
+    g_assert_cmpfloat (ncm_spectral_panels_eval_row (dup, 0, xi), ==, ncm_spectral_panels_eval_row (sp, 0, xi));
+  }
+
+  ncm_serialize_free (ser);
+  ncm_spectral_panels_free (dup);
+  ncm_spectral_panels_free (sp);
+  ncm_spectral_free (spectral);
+}
+
+/* Panels of different widths cannot be marked uniform */
+static void
+test_ncm_spectral_panels_uniform_edges (void)
+{
+  g_test_trap_subprocess ("/ncm/spectral_panels/uniform/edges/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*edge 1 is 1, not x_0 + 1 h*");
+}
+
+static void
+test_ncm_spectral_panels_uniform_edges_subprocess (void)
+{
+  NcmSpectral *spectral = ncm_spectral_new ();
+  NcmSpectralPanels *sp = _poly_panels_new (spectral, _cubic, NULL, test_edges, TEST_N_PANELS, 4);
+
+  ncm_spectral_panels_set_uniform (sp);
 }
 

@@ -495,25 +495,19 @@ class InspectGalaxyShapeIntegrand(InspectExperiment):
         shape_factor = dcwlf.props.shape_factor
         ellip_conv = shape_factor.get_property("ellip-conv")
 
-        # prepare() resolves the shape factor's cached pop/halo_position
-        # references from the current mset; update_data_pop() then syncs
-        # pop_data to that pop's current parameters. Skipping either leaves
-        # pop_data at its default-constructed values, not the experiment's
-        # actual population, silently giving a wrong eval_p().
         shape_factor.prepare(self.mset)
 
-        posf = dcwlf.props.position_factor
-        zf = dcwlf.props.redshift_factor
-        pos_data = Nc.GalaxyPositionFactorData.new(posf, self.mset)
-        z_data = Nc.GalaxyRedshiftFactorData.new(zf, self.mset)
-        data = Nc.GalaxyShapeFactorData.new(shape_factor, self.mset, pos_data, z_data)
+        data = Nc.GalaxyShapeFactorData.new(shape_factor, self.mset)
         obs = dcwlf.props.obs
         if not (0 <= self.galaxy_index < obs.len()):
             raise RuntimeError(
                 f"--galaxy-index {self.galaxy_index} out of range " f"[0,{obs.len()})."
             )
         data.read_row(obs, self.galaxy_index)
-        shape_factor.update_data_pop(data)
+        # update_data_pop() resolves the current parameters of the population
+        # into pop_data; without it pop_data keeps its default-constructed
+        # values, not the experiment's population, and eval_p() is wrong.
+        shape_factor.update_data_pop(pop, data)
 
         eps_obs = complex(data.epsilon_obs_1, data.epsilon_obs_2)
         sig2 = data.std_noise**2

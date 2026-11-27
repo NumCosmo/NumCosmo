@@ -201,7 +201,8 @@ test_nc_halo_position_polar_angles (TestNcHaloPosition *test, gconstpointer pdat
  * halo goes to z, the polar angle of a rotated position is the angular separation of
  * the spherical law of cosines, and lengths, the angle between two positions and their
  * handedness about the halo are kept. The angles of a rotated position are then those of
- * nc_halo_position_polar_angles().
+ * nc_halo_position_polar_angles(). The rotation copied by nc_halo_position_get_rotation(),
+ * taken first after the halo moves, gives the same vectors bit for bit.
  */
 static void
 test_nc_halo_position_rotate (TestNcHaloPosition *test, gconstpointer pdata)
@@ -220,10 +221,12 @@ test_nc_halo_position_rotate (TestNcHaloPosition *test, gconstpointer pdata)
     const gdouble d2r   = M_PI / 180.0;
     const gdouble cos_s = sin (dec_h * d2r) * sin (dec * d2r) + cos (dec_h * d2r) * cos (dec * d2r) * cos ((ra - ra_h) * d2r);
     gdouble theta, phi, r, theta_v, phi_v;
-    NcmTriVec h, v, w, v0, w0;
+    NcmTriVec h, v, w, v0, w0, u;
+    NcmQuaternion q;
 
     ncm_model_param_set_by_name (NCM_MODEL (hp), "ra", ra_h, NULL);
     ncm_model_param_set_by_name (NCM_MODEL (hp), "dec", dec_h, NULL);
+    nc_halo_position_get_rotation (hp, &q);
 
     /* The halo goes to the positive z axis */
     ncm_trivec_set_astro_ra_dec (&h, 1.0, ra_h, dec_h);
@@ -262,6 +265,13 @@ test_nc_halo_position_rotate (TestNcHaloPosition *test, gconstpointer pdata)
 
     g_assert_cmpfloat (theta_v, ==, theta);
     g_assert_cmpfloat (phi_v, ==, phi);
+
+    /* The copied rotation */
+    u = v0;
+    ncm_quaternion_rotate (&q, &u);
+    g_assert_cmpfloat (u.c[0], ==, v.c[0]);
+    g_assert_cmpfloat (u.c[1], ==, v.c[1]);
+    g_assert_cmpfloat (u.c[2], ==, v.c[2]);
   }
 }
 

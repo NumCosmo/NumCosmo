@@ -19,9 +19,10 @@
 
 """Tests for the shape factor calculator with the variance-add method.
 
-``NcGalaxyShapeFactor`` owns the whole HSM measurement engine (generation,
-geometry caches, frame bookkeeping); subclasses supply only the
-intrinsic-ellipticity marginalization. ``NcGalaxyShapeFactorVarAdd`` is the
+``NcGalaxyShapeFactor`` evaluates and draws the observed ellipticity of a galaxy at a
+given reduced shear; subclasses supply only the intrinsic-ellipticity
+marginalization. The shear of a galaxy comes from ``NcGalaxyHaloWL`` and
+``NcWLClusterLens`` (``_galaxy_shear`` below). ``NcGalaxyShapeFactorVarAdd`` is the
 legacy variance-add Gaussian approximation, validated for parity
 against the pristine ``NcGalaxySDShapeHSMGaussGlobal`` oracle (same math, the
 intrinsic width coming from the ``NcGalaxyShapePopGauss`` model in the mset
@@ -147,8 +148,69 @@ def _build_new(mset, ellip_conv):
     z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)
 
     gsf = Nc.GalaxyShapeFactorVarAdd.new(ellip_conv)
-    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset)
     return gsf, data, pos_data, z_data
+
+
+def _galaxy_shear(gsf, mset, pos_data, data):
+    """The reduced shear of a galaxy, at position pos_data and with shape data data,
+    as a function of its source redshift,
+    in the frame of data, as NcDataClusterWLFactor builds it from NcGalaxyHaloWL and
+    NcWLClusterLens: g = (1 + m) g_t(z) exp(2 i phi) + c. In front of the lens g_t is
+    that just behind it times exp((z - z_cl) / 0.001). Also prepares gsf."""
+    smd = mset.peek(Nc.WLSurfaceMassDensity.id())
+    cosmo = mset.peek(Nc.HICosmo.id())
+    hwl = Nc.GalaxyHaloWL.new(Nc.WLClusterLens.new(smd.props.distance))
+    h_data = Nc.GalaxyHaloWLData.new()
+    lens = hwl.peek_lens()
+
+    gsf.prepare_data_array(mset, [data])
+    hwl.prepare(mset)
+    hwl.update_data_radius(h_data, pos_data)
+    hwl.update_data_profile(mset.peek(Nc.HaloDensityProfile.id()), h_data)
+    sigma, mean_sigma = h_data.get_sigma()
+    rot_re, rot_im = h_data.get_rotation()
+    if data.coord == Nc.WLEllipticityFrame.CARTESIAN:
+        rot_im = -rot_im
+    z_cl = lens.get_z_cl()
+    _, _, _, c1, c2, m = gsf.data_get(data)
+
+    def shear(z):
+        if z > z_cl:
+            gt = lens.reduced_shear_at(cosmo, sigma, mean_sigma, z)
+        else:
+            gt0 = lens.reduced_shear_at(
+                cosmo, sigma, mean_sigma, z_cl * (1.0 + np.finfo(float).eps)
+            )
+            gt = math.exp((z - z_cl) / 0.001) * gt0
+        return (1.0 + m) * gt * rot_re + c1, (1.0 + m) * gt * rot_im + c2
+
+    return shear, z_cl
+
+
+def _shape_at_z(gsf, mset, pos_data, data, use_lnp):
+    """The shape factor of the galaxy of data as a function of the source redshift:
+    eval_shear at the shear of _galaxy_shear."""
+    shear, _ = _galaxy_shear(gsf, mset, pos_data, data)
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+
+    def f(z):
+        g_1, g_2 = shear(z)
+        return gsf.eval_shear(pop, data, g_1, g_2, use_lnp)
+
+    return f
+
+
+def _gen(gsf, mset, pos_data, z_data, data, rng):
+    """Draws the observed ellipticity of the galaxy at pos_data and z_data."""
+    shear, z_cl = _galaxy_shear(gsf, mset, pos_data, data)
+    z = z_data.z
+    lensed = z > z_cl
+    if lensed:
+        g_1, g_2 = shear(z)
+    else:
+        _, _, _, g_1, g_2, _ = gsf.data_get(data)
+    gsf.gen_shear(mset.peek(Nc.GalaxyShapePop.id()), data, lensed, g_1, g_2, rng)
 
 
 def _set_galaxy(new, galaxy):
@@ -175,19 +237,17 @@ def test_integ_parity_legacy(ellip_conv, galaxy, use_lnp):
     bit-exact across platforms -- see module docstring)."""
     mset = _build_mset()
     new = _build_new(mset, ellip_conv)
-    gsf, s_data, _, _ = new
+    gsf, s_data, pos_data, _ = new
 
     _set_galaxy(new, galaxy)
 
-    gsf.prepare_data_array(mset, [s_data], True, True)
-
-    new_integ = gsf.integ(mset, use_lnp)
+    new_integ = _shape_at_z(gsf, mset, pos_data, s_data, use_lnp)
 
     frozen = _INTEG_PARITY_FROZEN[
         _CONVS.index(ellip_conv), _GALAXIES.index(galaxy), int(use_lnp)
     ]
     for z, expected in zip(np.linspace(0.05, 1.5, 100), frozen):
-        assert_allclose(new_integ.eval(z, s_data), expected, rtol=1.0e-12, atol=1.0e-12)
+        assert_allclose(new_integ(z), expected, rtol=1.0e-12, atol=1.0e-12)
 
 
 _GEN_PARITY_FROZEN = _load_gen_parity_truth_table()
@@ -202,7 +262,7 @@ def test_gen_parity_legacy(ellip_conv, galaxy):
     platforms -- see module docstring)."""
     mset = _build_mset()
     new = _build_new(mset, ellip_conv)
-    gsf, s_data, _, _ = new
+    gsf, s_data, pos_data, z_data = new
 
     _set_galaxy(new, galaxy)
 
@@ -210,7 +270,7 @@ def test_gen_parity_legacy(ellip_conv, galaxy):
 
     frozen = _GEN_PARITY_FROZEN[_CONVS.index(ellip_conv), _GALAXIES.index(galaxy)]
     for eps_int_1, eps_int_2, eps_obs_1, eps_obs_2 in frozen:
-        gsf.gen(mset, s_data, rng_new)
+        _gen(gsf, mset, pos_data, z_data, s_data, rng_new)
         assert_allclose(
             [
                 s_data.epsilon_int_1,
@@ -222,65 +282,6 @@ def test_gen_parity_legacy(ellip_conv, galaxy):
             rtol=1.0e-12,
             atol=1.0e-12,
         )
-
-
-@pytest.mark.parametrize("ellip_conv", _CONVS)
-@pytest.mark.parametrize("galaxy", _GALAXIES)
-def test_eval_at_nodes_matches_integrand(ellip_conv, galaxy):
-    """The fixed-node likelihood path agrees with the integrand path.
-
-    Below the cluster redshift the integrand applies a smooth step
-    suppression while the node path uses gt = 0, hence the tolerance.
-    """
-    mset = _build_mset()
-    new = _build_new(mset, ellip_conv)
-    gsf, s_data, _, _ = new
-
-    _set_galaxy(new, galaxy)
-
-    z_nodes = Ncm.Vector.new_array(np.linspace(0.05, 1.5, 25).tolist())
-    out_new = Ncm.Vector.new(z_nodes.len())
-
-    gsf.prepare_data_array_at_nodes(mset, [s_data], [z_nodes], True, True, True)
-    gsf.eval_at_nodes(mset, s_data, z_nodes, out_new)
-
-    gsf.prepare_data_array(mset, [s_data], True, True)
-    integ = gsf.integ(mset, False)
-    expected = [integ.eval(z, s_data) for z in z_nodes.dup_array()]
-
-    assert_allclose(out_new.dup_array(), expected, rtol=1.0e-9)
-
-
-@pytest.mark.parametrize("ellip_conv", _CONVS)
-def test_eval_at_nodes_gt0_memoized_correctly(ellip_conv):
-    """eval_at_nodes() memoizes the z<=z_cl (gt=0) branch's eval_marginal()
-    call instead of repeating it per foreground node (a pure optimization,
-    see nc_galaxy_shape_factor.c's own eval_at_nodes() docs): every node
-    below the cluster's own z=0.2 must produce the exact same value (the
-    memoization property itself), and that value must match what a
-    single-node call gives (confirming the memoized value is the correct
-    one, not just internally consistent)."""
-    mset = _build_mset()
-    new = _build_new(mset, ellip_conv)
-    gsf, s_data, _, _ = new
-
-    _set_galaxy(new, _GALAXIES[2])  # z=0.15, below the cluster's z=0.2
-
-    z_nodes = Ncm.Vector.new_array([0.05, 0.10, 0.15, 0.19])
-    out = Ncm.Vector.new(z_nodes.len())
-
-    gsf.prepare_data_array_at_nodes(mset, [s_data], [z_nodes], True, True, True)
-    gsf.eval_at_nodes(mset, s_data, z_nodes, out)
-
-    vals = out.dup_array()
-    assert_allclose(vals, [vals[0]] * len(vals), rtol=0.0, atol=0.0)
-
-    single_node = Ncm.Vector.new_array([0.05])
-    single_out = Ncm.Vector.new(1)
-    gsf.prepare_data_array_at_nodes(mset, [s_data], [single_node], True, True, True)
-    gsf.eval_at_nodes(mset, s_data, single_node, single_out)
-
-    assert_allclose(vals[0], single_out.get(0), rtol=0.0, atol=0.0)
 
 
 # gt and gx were recomputed (2026-11-27) when direct_estimate began rotating c1, c2 into the
@@ -314,15 +315,24 @@ def test_direct_estimate_parity_legacy(ellip_conv):
 
     rng_new = Ncm.RNG.seeded_new(None, 7)
     new_array = []
+    rotations = []
+    hwl = Nc.GalaxyHaloWL.new(
+        Nc.WLClusterLens.new(mset.peek(Nc.WLSurfaceMassDensity.id()).props.distance)
+    )
+    hwl.prepare(mset)
 
     for galaxy in _GALAXIES * 10:
         new_i = _build_new(mset, ellip_conv)
         _set_galaxy(new_i, galaxy)
 
-        gsf.gen(mset, new_i[1], rng_new)
+        _gen(gsf, mset, new_i[2], new_i[3], new_i[1], rng_new)
         new_array.append(new_i[1])
 
-    new_est = gsf.direct_estimate(mset, new_array)
+        h_data = Nc.GalaxyHaloWLData.new()
+        hwl.update_data_radius(h_data, new_i[2])
+        rotations.extend(h_data.get_rotation())
+
+    new_est = gsf.direct_estimate(mset, new_array, rotations)
     frozen = _DIRECT_ESTIMATE_FROZEN[_CONV_NAMES[ellip_conv]]
     # gt/gx are near-zero cancellation sums over many intrinsic-noise draws,
     # so a sub-ULP cross-platform summation-order difference can amplify a
@@ -336,27 +346,9 @@ def test_direct_estimate_parity_legacy(ellip_conv):
     )
 
 
-@pytest.mark.parametrize("ellip_conv", _CONVS)
-@pytest.mark.parametrize("galaxy", _GALAXIES)
-def test_ln_marginal_consistency(ellip_conv, galaxy):
-    """The ln integrand is the log of the linear integrand."""
-    mset = _build_mset()
-    new = _build_new(mset, ellip_conv)
-    gsf, s_data, _, _ = new
-    _set_galaxy(new, galaxy)
-
-    gsf.prepare_data_array(mset, [s_data], True, True)
-    lin = gsf.integ(mset, False)
-    lnp = gsf.integ(mset, True)
-
-    for z in np.linspace(0.05, 1.5, 20):
-        p = lin.eval(z, s_data)
-        assert p > 0.0
-        assert_allclose(lnp.eval(z, s_data), math.log(p), rtol=1.0e-12)
-
-
 def test_required_columns():
-    """The factor requires its own columns plus the upstream fragments'."""
+    """The factor requires its own columns, then those of the population fragment; the
+    position and redshift columns belong to their own fragments."""
     mset = _build_mset()
     gsf, s_data, _, _ = _build_new(mset, Nc.GalaxyWLObsEllipConv.TRACE_DET)
 
@@ -372,9 +364,8 @@ def test_required_columns():
         "m",
     ]
     assert cols[: len(own)] == own
-    # Upstream position and redshift fragments append theirs.
     for col in ("ra", "dec", "zp"):
-        assert col in cols
+        assert col not in cols
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)

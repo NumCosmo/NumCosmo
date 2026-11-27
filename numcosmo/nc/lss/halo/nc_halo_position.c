@@ -349,6 +349,8 @@ nc_halo_position_polar_angles (NcHaloPosition *hp, gdouble ra, gdouble dec, gdou
   ncm_trivec_get_spherical_coord (&v, &r, theta, phi);
 }
 
+static void _nc_halo_position_update_rotation (NcHaloPosition *hp);
+
 /**
  * nc_halo_position_rotate:
  * @hp: A #NcHaloPosition
@@ -364,6 +366,33 @@ void
 nc_halo_position_rotate (NcHaloPosition *hp, NcmTriVec *v)
 {
   NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  _nc_halo_position_update_rotation (hp);
+  ncm_quaternion_rotate (&self->q, v);
+}
+
+/**
+ * nc_halo_position_get_rotation:
+ * @hp: A #NcHaloPosition
+ * @q: (out caller-allocates): the rotation
+ *
+ * Copies to @q the rotation of nc_halo_position_rotate(), which takes the halo to the
+ * positive z axis, so that ncm_quaternion_rotate() with @q gives the same vectors.
+ */
+void
+nc_halo_position_get_rotation (NcHaloPosition *hp, NcmQuaternion *q)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
+
+  _nc_halo_position_update_rotation (hp);
+  ncm_quaternion_memcpy (q, &self->q);
+}
+
+/* Computes the rotation that takes the halo to the positive z axis after a parameter change */
+static void
+_nc_halo_position_update_rotation (NcHaloPosition *hp)
+{
+  NcHaloPositionPrivate *self = nc_halo_position_get_instance_private (hp);
   NcmModel *model             = NCM_MODEL (hp);
 
   if (!ncm_model_state_is_update (model))
@@ -377,8 +406,6 @@ nc_halo_position_rotate (NcHaloPosition *hp, NcmTriVec *v)
 
     ncm_model_state_set_update (model);
   }
-
-  ncm_quaternion_rotate (&self->q, v);
 }
 
 /**
