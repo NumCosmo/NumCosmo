@@ -442,6 +442,8 @@ static void _ncm_spectral_panels_builder_work_prepare (NcmSpectralPanelsBuilderW
 static void _ncm_spectral_panels_builder_initial_edges (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsBuilderWork *work, gdouble a, gdouble b, NcmVector *breakpoints);
 static void _ncm_spectral_panels_builder_copy_row (NcmMatrix *m, guint row, NcmVector *v);
 static void _ncm_spectral_panels_builder_split (NcmSpectralPanelsBuilderCall *call, gdouble a, gdouble b, guint depth, NcmVector *f_a, NcmVector *f_b);
+static void _ncm_spectral_panels_builder_F (gpointer user_data, gdouble x, NcmVector *fval);
+static gboolean _ncm_spectral_panels_builder_uniform_panel (NcmSpectralPanelsBuilderCall *call, gdouble a, gdouble b, guint N, gdouble reltol, gdouble abstol);
 
 /**
  * ncm_spectral_panels_builder_build:
@@ -522,6 +524,135 @@ ncm_spectral_panels_builder_build (NcmSpectralPanelsBuilder *builder, NcmSpectra
   }
 
   ncm_memory_pool_return (ptr);
+}
+
+/**
+ * ncm_spectral_panels_builder_build_uniform:
+ * @builder: a #NcmSpectralPanelsBuilder
+ * @F: (scope call) (closure user_data): function to expand
+ * @user_data: user data for @F
+ * @a: left end of the range
+ * @b: right end of the range
+ * @N: number of coefficients of every panel, at least 2
+ * @reltol: relative tolerance of a panel
+ * @abstol: absolute tolerance of a panel, in units of $F$
+ * @sp: the panel set to fill
+ *
+ * Resets @sp and fills it with $n$ equal panels of $F$ on [@a, @b], each the interpolant
+ * of $F$ at its @N Chebyshev-Lobatto nodes (ncm_spectral_compute_chebyshev_coeffs_batch()),
+ * then marks it uniform with ncm_spectral_panels_set_uniform(). Starting from $n = 1$, $n$
+ * is doubled until, on every panel and for every entry of $F$, the interpolant differs from
+ * $F$ by at most the larger of @reltol times the largest $|F|$ on the panel's nodes and
+ * @abstol at the @N - 1 points midway in angle between consecutive nodes. Those points are
+ * where the interpolation error of a smooth $F$ peaks between the nodes; the check samples
+ * the error there, it does not bound it. $F$ must be continuous with its derivatives on
+ * [@a, @b]; breakpoints and the properties of @builder do not apply, except that a panel
+ * width below #NcmSpectralPanelsBuilder:min-panel-fraction of $\max(|a|, |b|)$ before
+ * every panel passes is an error.
+ */
+void
+ncm_spectral_panels_builder_build_uniform (NcmSpectralPanelsBuilder *builder, NcmSpectralPanelsF F, gpointer user_data,
+                                           gdouble a, gdouble b, guint N, gdouble reltol, gdouble abstol, NcmSpectralPanels *sp)
+{
+  const guint fdim                   = ncm_spectral_panels_get_fdim (sp);
+  NcmSpectralPanelsBuilderWork **ptr = ncm_memory_pool_get (builder->work_pool);
+  NcmSpectralPanelsBuilderWork *work = *ptr;
+  NcmSpectralPanelsBuilderCall call  = {
+    .F         = F,
+    .user_data = user_data,
+    .interval  = 0,
+    .work      = work,
+    .sp        = sp
+  };
+  guint n = 1;
+
+  if (N < 2)
+    g_error ("ncm_spectral_panels_builder_build_uniform: N = %u, at least 2 coefficients are needed.", N);
+
+  _ncm_spectral_panels_builder_check (builder, fdim, a, b, NULL, NULL, NULL);
+  _ncm_spectral_panels_builder_work_prepare (work, fdim, builder->level_cap);
+
+  while (TRUE)
+  {
+    const gdouble h = (b - a) / n;
+    guint i;
+
+    ncm_spectral_panels_reset (sp);
+
+    for (i = 0; i < n; i++)
+    {
+      /* The edges of ncm_spectral_panels_set_uniform(): x_0 + i h, and b last */
+      const gdouble x_i  = a + i * h;
+      const gdouble x_i1 = (i + 1 < n) ? a + (i + 1) * h : b;
+
+      if (!_ncm_spectral_panels_builder_uniform_panel (&call, x_i, x_i1, N, reltol, abstol))
+        break;
+    }
+
+    if (i == n)
+      break;
+
+    n *= 2;
+
+    if ((b - a) / n < builder->min_panel_fraction * MAX (fabs (a), fabs (b)))
+      g_error ("ncm_spectral_panels_builder_build_uniform: %u panels of N = %u on [%.17g, %.17g] do not reach reltol %.3e, "
+               "abstol %.3e, and more would be narrower than min-panel-fraction %.3e of the range scale.",
+               n / 2, N, a, b, reltol, abstol, builder->min_panel_fraction);
+  }
+
+  ncm_spectral_panels_set_uniform (sp);
+
+  ncm_memory_pool_return (ptr);
+}
+
+/*
+ * The interpolant of F at the N Chebyshev-Lobatto nodes of [a, b], appended to the panel
+ * set when it agrees with F within the tolerance at the N - 1 points midway in angle between
+ * consecutive nodes, cos ((j + 1/2) pi / (N - 1)); FALSE otherwise.
+ */
+static gboolean
+_ncm_spectral_panels_builder_uniform_panel (NcmSpectralPanelsBuilderCall *call, gdouble a, gdouble b, guint N,
+                                            gdouble reltol, gdouble abstol)
+{
+  NcmSpectralPanelsBuilderWork *work = call->work;
+  const guint fdim                   = work->fdim;
+  const gdouble mid                  = 0.5 * (a + b);
+  const gdouble half_h               = 0.5 * (b - a);
+  NcmVector *fval                    = work->f_a;
+  gdouble f_max                      = 0.0;
+  const gdouble *c;
+  guint tda, j, r;
+
+  ncm_spectral_compute_chebyshev_coeffs_batch (work->spectral, _ncm_spectral_panels_builder_F, fdim, a, b, N, NULL, call);
+  c = ncm_spectral_peek_batch_coeffs (work->spectral, &tda);
+
+  /* The largest |F| on the nodes, from the series at s = cos (j pi / (N - 1)) */
+  for (j = 0; j < N; j++)
+  {
+    const gdouble s = cos (j * M_PI / (N - 1.0));
+
+    for (r = 0; r < fdim; r++)
+      f_max = MAX (f_max, fabs (_ncm_spectral_panels_clenshaw_n (c + (gsize) r * tda, N, s)));
+  }
+
+  for (j = 0; j + 1 < N; j++)
+  {
+    const gdouble s = cos ((j + 0.5) * M_PI / (N - 1.0));
+
+    _ncm_spectral_panels_builder_F (call, mid + half_h * s, fval);
+
+    for (r = 0; r < fdim; r++)
+    {
+      const gdouble err = fabs (_ncm_spectral_panels_clenshaw_n (c + (gsize) r * tda, N, s) - ncm_vector_get (fval, r));
+
+      if (err > MAX (reltol * f_max, abstol))
+        return FALSE;
+    }
+  }
+
+  ncm_spectral_panels_append_data (call->sp, a, b, c, N, tda);
+
+  return TRUE;
 }
 
 /* The arguments of a build, checked before anything is evaluated */
@@ -661,8 +792,6 @@ _ncm_spectral_panels_builder_copy_row (NcmMatrix *m, guint row, NcmVector *v)
   for (r = 0; r < ncm_vector_len (v); r++)
     ncm_vector_set (v, r, ncm_matrix_get (m, row, r));
 }
-
-static void _ncm_spectral_panels_builder_F (gpointer user_data, gdouble x, NcmVector *fval);
 
 /*
  * Expands on [a, b] and appends the panel to the panel set, bisecting where the expansion

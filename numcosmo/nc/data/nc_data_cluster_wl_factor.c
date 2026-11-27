@@ -115,9 +115,7 @@
 /*
  * The parts of one galaxy: the fragments of the position, redshift and shape factors, each
  * created by its factor and reading and writing its own catalog columns; the
- * #NcGalaxyHaloWLData of the galaxy, which has no columns; and the critical surface density
- * at the CHEB_WEIGHTS nodes of the galaxy (NaN in front of the lens, NULL until
- * _step_nodes_crit() sets it).
+ * #NcGalaxyHaloWLData of the galaxy, which has no columns.
  */
 typedef struct _NcDataClusterWLFactorGalaxy
 {
@@ -125,7 +123,6 @@ typedef struct _NcDataClusterWLFactorGalaxy
   NcGalaxyRedshiftFactorData *z_data;
   NcGalaxyHaloWLData *h_data;
   NcGalaxyShapeFactorData *s_data;
-  GArray *crit;
 } NcDataClusterWLFactorGalaxy;
 
 typedef struct _NcDataClusterWLFactorIntArg
@@ -241,10 +238,11 @@ typedef struct _NcDataClusterWLFactorPrivate
    * (#NcGalaxyWLObs:cheb-grid) when it is current, otherwise one this dataset built;
    * NULL until prepare() needs one. z_nodes holds, for each galaxy, a view of its row of
    * the grid: the anchor z_lo followed by its nodes. grid_z_cl is the cluster redshift of
-   * the grid. */
+   * the grid and grid_z_max its largest node, the end of the lens' 1/Sigma_cr table. */
   NcGalaxyWLObsChebGrid *cheb_grid;
   GPtrArray *z_nodes; /* element type: NcmVector* */
   gdouble grid_z_cl;
+  gdouble grid_z_max;
 
   /*
    * The position and redshift integrands in the linear domain, counterparts of
@@ -359,6 +357,7 @@ static void _galaxy_write_row (NcDataClusterWLFactorGalaxy *gal, NcGalaxyWLObs *
 static GList *_galaxy_required_columns (NcDataClusterWLFactorGalaxy *gal);
 static void _galaxy_clear (gpointer data);
 static NcmVector *_cheb_grid_view (NcDataClusterWLFactorPrivate *self, const guint gal_i);
+static gdouble _cheb_grid_z_max (NcDataClusterWLFactorPrivate *self);
 
 static void
 _step_pos (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcDataClusterWLFactorGalaxy *gal, guint gal_i)
@@ -547,33 +546,6 @@ _step_cheb_grid (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcDataCluste
     g_array_unref (w);
 }
 
-/* The critical surface density at each node of the galaxy, NaN in front of the lens */
-static void
-_step_nodes_crit (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcDataClusterWLFactorGalaxy *gal, guint gal_i)
-{
-  NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcmVector *z_nodes    = g_ptr_array_index (self->z_nodes, gal_i);
-  NcWLClusterLens *lens = nc_galaxy_halo_wl_peek_lens (self->halo_wl);
-  const guint n_nodes   = ncm_vector_len (z_nodes);
-  GArray *crit          = gal->crit;
-  guint j;
-
-  if (crit == NULL)
-  {
-    crit      = g_array_new (FALSE, FALSE, sizeof (gdouble));
-    gal->crit = crit;
-  }
-
-  g_array_set_size (crit, n_nodes);
-
-  for (j = 0; j < n_nodes; j++)
-  {
-    const gdouble z_j = ncm_vector_get (z_nodes, j);
-
-    g_array_index (crit, gdouble, j) = (z_j < self->z_cl) ? GSL_NAN : nc_wl_cluster_lens_sigma_crit (lens, cosmo, z_j);
-  }
-}
-
 /*
  * Calls nc_galaxy_shape_factor_data_prepare() for one galaxy with the mset and the
  * galaxy's data, after setting the shear bound of the galaxy through #NcGalaxyHaloWL, so
@@ -602,7 +574,6 @@ _galaxy_init (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcDataClusterWL
   gal->z_data   = nc_galaxy_redshift_factor_data_new (self->redshift_factor, mset);
   gal->h_data   = nc_galaxy_halo_wl_data_new ();
   gal->s_data   = nc_galaxy_shape_factor_data_new (self->shape_factor, mset);
-  gal->crit     = NULL;
 }
 
 /* Reads row @row of @obs into the position, redshift and shape parts of a galaxy */
@@ -645,7 +616,6 @@ _galaxy_clear (gpointer data)
   g_clear_pointer (&gal->z_data, nc_galaxy_redshift_factor_data_unref);
   g_clear_pointer (&gal->h_data, nc_galaxy_halo_wl_data_unref);
   g_clear_pointer (&gal->s_data, nc_galaxy_shape_factor_data_unref);
-  g_clear_pointer (&gal->crit, g_array_unref);
 }
 
 /* z_nodes entries are NULL until the grid step sets them */
@@ -703,7 +673,8 @@ _cheb_grid_clear (NcDataClusterWLFactorPrivate *self)
 {
   g_ptr_array_set_size (self->z_nodes, 0);
   nc_galaxy_wl_obs_cheb_grid_clear (&self->cheb_grid);
-  self->grid_z_cl = GSL_NAN;
+  self->grid_z_cl  = GSL_NAN;
+  self->grid_z_max = GSL_NAN;
 }
 
 /*
@@ -852,9 +823,10 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->force_data_prepare = FALSE;
   self->shared_duplicate   = FALSE;
 
-  self->cheb_grid = NULL;
-  self->z_nodes   = g_ptr_array_new_with_free_func (&_z_nodes_free_entry);
-  self->grid_z_cl = GSL_NAN;
+  self->cheb_grid  = NULL;
+  self->z_nodes    = g_ptr_array_new_with_free_func (&_z_nodes_free_entry);
+  self->grid_z_cl  = GSL_NAN;
+  self->grid_z_max = GSL_NAN;
 
   self->integ_pos_lin = NULL;
   self->integ_z_lin   = NULL;
@@ -1267,6 +1239,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
       nc_galaxy_halo_wl_clear (&self->halo_wl);
       self->halo_wl = nc_galaxy_halo_wl_new (lens);
       nc_wl_cluster_lens_free (lens);
+
+      /* The hashes of the new objects count from zero, so equal values would not mean the
+       * same state: 0 is below any count after a prepare, and every halo step and the lens
+       * table run again */
+      self->halo_radius_hash   = 0;
+      self->halo_profile_hash  = 0;
+      self->lens_geometry_hash = 0;
     }
 
     nc_galaxy_halo_wl_prepare (self->halo_wl, mset);
@@ -1333,7 +1312,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
    * halo_radius_changed:   R and e^{2 i phi} of the galaxies (halo_position/cosmo).
    * halo_profile_changed:  Sigma and mean Sigma at R (the profile, its mass summary,
    *                        halo_position, cosmo).
-   * lens_geometry_changed: the critical surface density at the nodes (cosmo, z_cl).
+   * lens_geometry_changed: the lens' 1/Sigma_cr table (cosmo, z_cl).
    * grid_changed:          CHEB_WEIGHTS needs its redshift grid taken again. The grid
    *                        depends on the rows of obs, the redshift factor and z_cl only,
    *                        so it is dropped when one of those changes; the halo radius
@@ -1371,7 +1350,7 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
   /* Specialize and choose once: no per-galaxy branch on any of these. Ordering
    * matters: _step_halo_radius before _step_halo_profile (the profile is evaluated at the
-   * projected radius) and _step_cheb_grid before _step_nodes_crit (crit reads the nodes). */
+   * projected radius). */
   if (pos_changed)
     steps[n_steps++] = &_step_pos;
 
@@ -1408,8 +1387,6 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
   if (cheb_build)
     steps[n_steps++] = &_step_cheb_grid;
 
-  if ((self->cheb_grid != NULL) && (grid_changed || lens_geometry_changed))
-    steps[n_steps++] = &_step_nodes_crit;
 
   {
     const guint n_gal       = self->galaxies->len;
@@ -1470,6 +1447,37 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
 
     self->force_data_prepare = FALSE;
   }
+
+  /* The lens' 1/Sigma_cr table up to the largest node of the grid, read by the
+   * CHEB_WEIGHTS evaluation at the nodes behind the lens */
+  if ((self->cheb_grid != NULL) && (grid_changed || lens_geometry_changed))
+  {
+    if (grid_changed)
+      self->grid_z_max = _cheb_grid_z_max (self);
+
+    if (self->grid_z_max > self->z_cl)
+      nc_wl_cluster_lens_prepare_sigma_crit_inv (nc_galaxy_halo_wl_peek_lens (self->halo_wl),
+                                                 NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
+                                                 self->grid_z_max);
+  }
+}
+
+/* The largest redshift of the nodes of the grid */
+static gdouble
+_cheb_grid_z_max (NcDataClusterWLFactorPrivate *self)
+{
+  gdouble z_max = -GSL_POSINF;
+  guint i, j;
+
+  for (i = 0; i < self->z_nodes->len; i++)
+  {
+    NcmVector *z_nodes = g_ptr_array_index (self->z_nodes, i);
+
+    for (j = 0; j < ncm_vector_len (z_nodes); j++)
+      z_max = MAX (z_max, ncm_vector_get (z_nodes, j));
+  }
+
+  return z_max;
 }
 
 /* Combine two adaptive sub-integrals split at z_cl. Each panel returns
@@ -1673,9 +1681,9 @@ _nc_data_cluster_wl_factor_cheb_levels (NcDataClusterWLFactorPrivate * const sel
  * The shape factor (want_log FALSE) or its logarithm (want_log TRUE) of the galaxy gal_i at
  * its nodes j0 <= j < j1, written to out[j]. Every node at or in front of the lens has the
  * shear of the additive bias b alone, whose value is computed once. The nodes behind the
- * lens have the shears b + t_j u on one line, t_j = (1 + m) g_t (z_j) from the critical
- * surface density at the node and u the rotation. When they are consecutive and out is
- * contiguous, the t_j are written to out and passed to
+ * lens have the shears b + t_j u on one line, t_j = (1 + m) g_t (z_j) from the lens' table
+ * of 1/Sigma_cr (nc_wl_cluster_lens_peek_sigma_crit_inv()) and u the rotation. When they
+ * are consecutive and out is contiguous, the t_j are written to out and passed to
  * nc_galaxy_shape_factor_eval_shear_line(); when the nodes are not consecutive, out is
  * strided, or that function returns FALSE, the shears are passed to
  * nc_galaxy_shape_factor_eval_shear_nodes() in chunks of NC_DATA_CLUSTER_WL_NODES_CHUNK.
@@ -1687,7 +1695,7 @@ _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * cons
   NcDataClusterWLFactorGalaxy *gal = _galaxy_at (self, gal_i);
   NcGalaxyShapeFactorData *s_data  = gal->s_data;
   NcGalaxyHaloWLData *h_data       = _galaxy_at (self, gal_i)->h_data;
-  const gdouble *sigma_crit        = &g_array_index (gal->crit, gdouble, 0);
+  NcmSpectralPanels *sc_inv        = nc_wl_cluster_lens_peek_sigma_crit_inv (nc_galaxy_halo_wl_peek_lens (self->halo_wl));
   const gdouble b_1                = s_data->c1;
   const gdouble b_2                = s_data->c2;
   const gdouble m                  = s_data->m;
@@ -1736,7 +1744,7 @@ _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * cons
     gdouble *t = ncm_vector_data (out) + j_first;
 
     for (j = 0; j < n_behind; j++)
-      t[j] = (1.0 + m) * nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, sigma_crit[j_first + j]);
+      t[j] = (1.0 + m) * nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, ncm_spectral_panels_eval_row (sc_inv, 0, ncm_vector_get (z_nodes, j_first + j)));
 
     if (nc_galaxy_shape_factor_eval_shear_line (self->shape_factor, pop, s_data, workspace, n_behind, t, rot_re, rot_im, b_1, b_2, want_log, t))
       return;
@@ -1753,7 +1761,7 @@ _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * cons
     {
       if (ncm_vector_get (z_nodes, j) > self->z_cl)
       {
-        const gdouble t_j = (1.0 + m) * nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, sigma_crit[j]);
+        const gdouble t_j = (1.0 + m) * nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, ncm_spectral_panels_eval_row (sc_inv, 0, ncm_vector_get (z_nodes, j)));
 
         g_1[c] = b_1 + t_j * rot_re;
         g_2[c] = b_2 + t_j * rot_im;

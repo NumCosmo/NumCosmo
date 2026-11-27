@@ -71,6 +71,7 @@ void ncm_spectral_free_buffers (NcmSpectral *spectral);
 guint ncm_spectral_get_max_level (NcmSpectral *spectral);
 
 void ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint order, GArray **coeffs, gpointer user_data);
+void ncm_spectral_compute_chebyshev_coeffs_batch (NcmSpectral *spectral, NcmSpectralFBatch F, guint fdim, gdouble a, gdouble b, guint N, NcmMatrix **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint level_min, gdouble tol, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive_full (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint level_min, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data);
 guint ncm_spectral_compute_chebyshev_coeffs_adaptive_try (NcmSpectral *spectral, NcmSpectralF F, gdouble a, gdouble b, guint level_min, guint level_cap, gdouble reltol, gdouble abstol, GArray **coeffs, gpointer user_data, gboolean *converged);

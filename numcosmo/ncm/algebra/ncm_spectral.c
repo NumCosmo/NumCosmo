@@ -946,6 +946,73 @@ ncm_spectral_compute_chebyshev_coeffs (NcmSpectral *spectral, NcmSpectralF F, gd
   _ncm_spectral_coeffs_from_nodes (spectral, *coeffs, N);
 }
 
+/**
+ * ncm_spectral_compute_chebyshev_coeffs_batch:
+ * @spectral: a #NcmSpectral
+ * @F: (scope call): vector-valued function to expand
+ * @fdim: dimension of the values of @F
+ * @a: left endpoint of the interval
+ * @b: right endpoint of the interval
+ * @N: number of coefficients
+ * @coeffs: (out) (optional) (transfer full): an @fdim by @N #NcmMatrix of coefficients
+ * @user_data: user data for @F
+ *
+ * Computes the @N Chebyshev coefficients of each of the @fdim entries of $F$ on $[a, b]$
+ * from its values at the @N Chebyshev-Lobatto nodes, each node evaluated once for all
+ * entries, as ncm_spectral_compute_chebyshev_coeffs() does for one entry. The coefficients
+ * are also left in the scratch space of @spectral for ncm_spectral_peek_batch_coeffs().
+ * Aborts if @N < 2.
+ */
+void
+ncm_spectral_compute_chebyshev_coeffs_batch (NcmSpectral *spectral, NcmSpectralFBatch F, guint fdim, gdouble a, gdouble b,
+                                             guint N, NcmMatrix **coeffs, gpointer user_data)
+{
+  const gdouble mid    = 0.5 * (a + b);
+  const gdouble half_h = 0.5 * (b - a);
+  const gdouble *cos_vals;
+  NcmVector *fval;
+  guint j, r;
+
+  g_assert_cmpuint (N, >=, 2);
+  g_assert_cmpuint (fdim, >, 0);
+
+  _ncm_spectral_batch_prepare_buffers (spectral, fdim);
+  _ncm_spectral_batch_prepare_scratch (spectral, fdim, N);
+  _ncm_spectral_grow_buffers (&spectral->batch_f_vals, &spectral->batch_coeffs_work,
+                              &spectral->batch_len, (gsize) N * fdim, 0);
+
+  cos_vals = _ncm_spectral_get_cos_table (spectral, N);
+  fval     = spectral->batch_fval;
+
+  for (j = 0; j < N; j++)
+  {
+    F (user_data, mid + half_h * cos_vals[j], fval);
+
+    for (r = 0; r < fdim; r++)
+      spectral->batch_f_vals[j * fdim + r] = ncm_vector_get (fval, r);
+  }
+
+  _ncm_spectral_batch_coeffs_from_nodes (spectral, spectral->batch_c_curr, N);
+  spectral->batch_result = spectral->batch_c_curr;
+
+  if (coeffs != NULL)
+  {
+    guint i;
+
+    /* Copied out of the scratch; a result matrix of the right shape is reused */
+    if ((*coeffs != NULL) &&
+        ((ncm_matrix_nrows (*coeffs) != fdim) || (ncm_matrix_ncols (*coeffs) != N)))
+      ncm_matrix_clear (coeffs);
+
+    if (*coeffs == NULL)
+      *coeffs = ncm_matrix_new (fdim, N);
+
+    for (r = 0; r < fdim; r++)
+      for (i = 0; i < N; i++)
+        ncm_matrix_set (*coeffs, r, i, ncm_matrix_get (spectral->batch_c_curr, r, i));
+  }
+}
+
 /* The Chebyshev-Lobatto cosines cos (j pi / 2^level) of the level, created on first use */
 static void
 _ncm_spectral_prepare_level (NcmSpectral *spectral, guint level)
