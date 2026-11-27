@@ -215,8 +215,8 @@ _nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, N
 
 /* Default eval_nodes: eval_marginal or eval_ln_marginal at each shear */
 static void
-_nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
-                                    const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
+_nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace,
+                                    const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
                                     const gboolean want_log, gdouble *out)
 {
   NcGalaxyShapeFactorClass *klass = NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf);
@@ -233,11 +233,23 @@ _nc_galaxy_shape_factor_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *
 
 /* Default eval_line: no evaluation along the line */
 static gboolean
-_nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
-                                   const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2,
+_nc_galaxy_shape_factor_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace,
+                                   const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2,
                                    const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out)
 {
   return FALSE;
+}
+
+/* Default workspace: none, the evaluations need no scratch space */
+static gpointer
+_nc_galaxy_shape_factor_workspace_get (NcGalaxyShapeFactor *gsf)
+{
+  return NULL;
+}
+
+static void
+_nc_galaxy_shape_factor_workspace_return (NcGalaxyShapeFactor *gsf, gpointer workspace)
+{
 }
 
 static gchar *
@@ -283,6 +295,8 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
   klass->get_desc         = &_nc_galaxy_shape_factor_get_desc;
   klass->eval_nodes       = &_nc_galaxy_shape_factor_eval_nodes;
   klass->eval_line        = &_nc_galaxy_shape_factor_eval_line;
+  klass->workspace_get    = &_nc_galaxy_shape_factor_workspace_get;
+  klass->workspace_return = &_nc_galaxy_shape_factor_workspace_return;
 }
 
 static void
@@ -895,10 +909,42 @@ nc_galaxy_shape_factor_eval_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *p
 }
 
 /**
+ * nc_galaxy_shape_factor_workspace_get: (skip)
+ * @gsf: a #NcGalaxyShapeFactor
+ *
+ * Takes a workspace of @gsf: the scratch space of nc_galaxy_shape_factor_eval_shear_nodes()
+ * and nc_galaxy_shape_factor_eval_shear_line(). A caller that evaluates many galaxies takes
+ * it once and passes it to every call, instead of each call taking one. A workspace is used
+ * by one thread at a time. It is %NULL when @gsf needs none. Return it with
+ * nc_galaxy_shape_factor_workspace_return().
+ *
+ * Returns: (transfer none) (nullable): a workspace of @gsf.
+ */
+gpointer
+nc_galaxy_shape_factor_workspace_get (NcGalaxyShapeFactor *gsf)
+{
+  return NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->workspace_get (gsf);
+}
+
+/**
+ * nc_galaxy_shape_factor_workspace_return: (skip)
+ * @gsf: a #NcGalaxyShapeFactor
+ * @workspace: (nullable): a workspace of @gsf from nc_galaxy_shape_factor_workspace_get()
+ *
+ * Returns @workspace to @gsf.
+ */
+void
+nc_galaxy_shape_factor_workspace_return (NcGalaxyShapeFactor *gsf, gpointer workspace)
+{
+  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->workspace_return (gsf, workspace);
+}
+
+/**
  * nc_galaxy_shape_factor_eval_shear_nodes:
  * @gsf: a #NcGalaxyShapeFactor
  * @pop: the #NcGalaxyShapePop of the last nc_galaxy_shape_factor_prepare()
  * @data: a #NcGalaxyShapeFactorData
+ * @workspace: (nullable): a workspace of @gsf (nc_galaxy_shape_factor_workspace_get()), or %NULL
  * @n: the number of shears
  * @g_1: (array length=n): real parts of the reduced shears, bias applied
  * @g_2: (array length=n): imaginary parts of the reduced shears
@@ -906,12 +952,13 @@ nc_galaxy_shape_factor_eval_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *p
  * @out: (array length=n) (out caller-allocates): the values
  *
  * Evaluates nc_galaxy_shape_factor_eval_shear() of the galaxy of @data at the @n shears,
- * together when the subclass supports it.
+ * together when the subclass supports it. With %NULL for @workspace the subclass takes a
+ * workspace of its own for the call.
  */
 void
-nc_galaxy_shape_factor_eval_shear_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gboolean want_log, gdouble *out)
+nc_galaxy_shape_factor_eval_shear_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *g_1, const gdouble *g_2, const gboolean want_log, gdouble *out)
 {
-  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_nodes (gsf, pop, data, n, g_1, g_2, data->epsilon_obs_1, data->epsilon_obs_2, want_log, out);
+  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_nodes (gsf, pop, data, workspace, n, g_1, g_2, data->epsilon_obs_1, data->epsilon_obs_2, want_log, out);
 }
 
 /**
@@ -919,6 +966,7 @@ nc_galaxy_shape_factor_eval_shear_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShape
  * @gsf: a #NcGalaxyShapeFactor
  * @pop: the #NcGalaxyShapePop of the last nc_galaxy_shape_factor_prepare()
  * @data: a #NcGalaxyShapeFactorData
+ * @workspace: (nullable): a workspace of @gsf (nc_galaxy_shape_factor_workspace_get()), or %NULL
  * @n: the number of shears
  * @t: (array length=n): the positions $t_j$ along the line
  * @u_1: real part of the direction $u$
@@ -930,16 +978,16 @@ nc_galaxy_shape_factor_eval_shear_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShape
  *
  * Evaluates nc_galaxy_shape_factor_eval_shear() of the galaxy of @data at the @n shears
  * $b + t_j u$ of one line, when the subclass computes them along the line. @out may be
- * @t.
+ * @t. With %NULL for @workspace the subclass takes a workspace of its own for the call.
  *
  * Returns: whether the subclass computed them; when FALSE, @out is unchanged unless it is
  *   @t.
  */
 gboolean
-nc_galaxy_shape_factor_eval_shear_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2,
-                                        const gdouble b_1, const gdouble b_2, const gboolean want_log, gdouble *out)
+nc_galaxy_shape_factor_eval_shear_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *t,
+                                        const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gboolean want_log, gdouble *out)
 {
-  return NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_line (gsf, pop, data, n, t, u_1, u_2, b_1, b_2, data->epsilon_obs_1, data->epsilon_obs_2, want_log, out);
+  return NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->eval_line (gsf, pop, data, workspace, n, t, u_1, u_2, b_1, b_2, data->epsilon_obs_1, data->epsilon_obs_2, want_log, out);
 }
 
 /**

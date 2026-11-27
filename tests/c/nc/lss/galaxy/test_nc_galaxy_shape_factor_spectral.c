@@ -1055,7 +1055,7 @@ test_nc_galaxy_shape_factor_spectral_interp_obs_range (TestNcGalaxyShapeFactorSp
   ln_f      = nc_galaxy_shape_factor_eval_ln_marginal (NC_GALAXY_SHAPE_FACTOR (gsfs_f), test->pop, data_f, g_far[0], g_far[1], 0.3, 0.2);
   g_assert_cmpfloat (ln_f, ==, ln_direct);
 
-  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsfs_f)->eval_nodes (NC_GALAXY_SHAPE_FACTOR (gsfs_f), test->pop, data_f, 1, &g_far[0], &g_far[1], 0.3, 0.2, TRUE, &ln_n);
+  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsfs_f)->eval_nodes (NC_GALAXY_SHAPE_FACTOR (gsfs_f), test->pop, data_f, NULL, 1, &g_far[0], &g_far[1], 0.3, 0.2, TRUE, &ln_n);
   g_assert_cmpfloat (ln_n, ==, ln_direct);
 
   ln_direct = nc_galaxy_shape_factor_spectral_eval_ln_direct (gsfs_f, test->pop, data_f->pop_data, g_near[0], g_near[1], 0.3, 0.2, 0.1);
@@ -1183,7 +1183,7 @@ test_nc_galaxy_shape_factor_spectral_interp_pop_compress (TestNcGalaxyShapeFacto
         if ((a == 0) && (b == 0))
           nc_galaxy_shape_factor_spectral_build_interp (gsfs, test->mset, data, 3.0);
 
-        klass->eval_nodes (gsf, test->pop, data, G_N_ELEMENTS (shears), g_1, g_2, e1, e2, TRUE, out);
+        klass->eval_nodes (gsf, test->pop, data, NULL, G_N_ELEMENTS (shears), g_1, g_2, e1, e2, TRUE, out);
 
         for (l = 0; l < G_N_ELEMENTS (shears); l++)
         {
@@ -1621,7 +1621,7 @@ test_nc_galaxy_shape_factor_spectral_interp_pop (TestNcGalaxyShapeFactorSpectral
     if (b == 0)
       nc_galaxy_shape_factor_spectral_build_interp (gsfs, test->mset, data, 3.0);
 
-    klass->eval_nodes (gsf, test->pop, data, G_N_ELEMENTS (shears), g_1, g_2, e1, e2, TRUE, out);
+    klass->eval_nodes (gsf, test->pop, data, NULL, G_N_ELEMENTS (shears), g_1, g_2, e1, e2, TRUE, out);
 
     for (l = 0; l < G_N_ELEMENTS (shears); l++)
     {
@@ -1970,12 +1970,12 @@ test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral 
     /* Off by default */
     g_assert_cmpfloat (nc_galaxy_shape_factor_spectral_get_line_abstol (gsfs), ==, 0.0);
     ln_out[0] = 123.0;
-    g_assert_false (klass->eval_line (gsf, test->pop, data, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
+    g_assert_false (klass->eval_line (gsf, test->pop, data, NULL, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
     g_assert_cmpfloat (ln_out[0], ==, 123.0);
 
     nc_galaxy_shape_factor_spectral_set_line_abstol (gsfs, line_abstol);
-    g_assert_true (klass->eval_line (gsf, test->pop, data, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
-    g_assert_true (klass->eval_line (gsf, test->pop, data, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], FALSE, lin_out));
+    g_assert_true (klass->eval_line (gsf, test->pop, data, NULL, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
+    g_assert_true (klass->eval_line (gsf, test->pop, data, NULL, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], FALSE, lin_out));
 
     for (i = 0; i < n; i++)
     {
@@ -1991,12 +1991,12 @@ test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral 
     ln_out[0] = 123.0;
 
     if (c == 0)
-      g_assert_false (klass->eval_line (gsf, test->pop, data, n, t_long, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
+      g_assert_false (klass->eval_line (gsf, test->pop, data, NULL, n, t_long, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
 
-    g_assert_false (klass->eval_line (gsf, test->pop, data, 5, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
-    g_assert_false (klass->eval_line (gsf, test->pop, data, n, t_far, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
+    g_assert_false (klass->eval_line (gsf, test->pop, data, NULL, 5, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
+    g_assert_false (klass->eval_line (gsf, test->pop, data, NULL, n, t_far, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
     nc_galaxy_shape_factor_spectral_build_interp (gsfs, test->mset, data, 3.0);
-    g_assert_false (klass->eval_line (gsf, test->pop, data, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
+    g_assert_false (klass->eval_line (gsf, test->pop, data, NULL, n, t, u_1, u_2, b_1, b_2, e_obs[c][0], e_obs[c][1], TRUE, ln_out));
     g_assert_cmpfloat (ln_out[0], ==, 123.0);
 
     g_ptr_array_unref (data_array);
@@ -2043,8 +2043,8 @@ test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral
     if (j == 1)
       nc_galaxy_shape_factor_spectral_build_interp (gsfs, test->mset, data, 3.0);
 
-    klass->eval_nodes (gsf, test->pop, data, n, g_1, g_2, data->epsilon_obs_1, data->epsilon_obs_2, TRUE, ln_out);
-    klass->eval_nodes (gsf, test->pop, data, n, g_1, g_2, data->epsilon_obs_1, data->epsilon_obs_2, FALSE, lin_out);
+    klass->eval_nodes (gsf, test->pop, data, NULL, n, g_1, g_2, data->epsilon_obs_1, data->epsilon_obs_2, TRUE, ln_out);
+    klass->eval_nodes (gsf, test->pop, data, NULL, n, g_1, g_2, data->epsilon_obs_1, data->epsilon_obs_2, FALSE, lin_out);
 
     for (i = 0; i < n; i++)
     {
@@ -2162,7 +2162,7 @@ test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpec
   {
     gdouble ln_n;
 
-    NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsfs_r)->eval_nodes (NC_GALAXY_SHAPE_FACTOR (gsfs_r), test->pop, data_r, 1, &g_far[0], &g_far[1], 0.3, 0.2, TRUE, &ln_n);
+    NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsfs_r)->eval_nodes (NC_GALAXY_SHAPE_FACTOR (gsfs_r), test->pop, data_r, NULL, 1, &g_far[0], &g_far[1], 0.3, 0.2, TRUE, &ln_n);
     g_assert_cmpfloat (ln_n, ==, ln_direct);
   }
   g_assert_cmpfloat (fabs (ln_f - ln_direct), <=, 1.0e-5);
@@ -2267,7 +2267,8 @@ test_nc_galaxy_shape_factor_spectral_eval_array (TestNcGalaxyShapeFactorSpectral
  * The shape factor evaluates the marginal of a galaxy at given shears with the population
  * passed to it: nc_galaxy_shape_factor_eval_shear(), _eval_shear_nodes() and
  * _eval_shear_line() give exactly the eval_ln_marginal/eval_marginal, eval_nodes and
- * eval_line of the class at that population, for 50 shears b + t u on one line, with
+ * eval_line of the class at that population, the last two with a workspace of the shape
+ * factor (nc_galaxy_shape_factor_workspace_get()) against the class hooks taking their own, for 50 shears b + t u on one line, with
  * line-abstol 1e-6 (the line of the eval_line test, where the series converges).
  */
 void
@@ -2290,6 +2291,7 @@ test_nc_galaxy_shape_factor_spectral_eval_shear (TestNcGalaxyShapeFactorSpectral
   GArray *g_2                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *out                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *ref                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  gpointer workspace;
   guint j, l;
 
   g_array_set_size (t, n);
@@ -2302,6 +2304,8 @@ test_nc_galaxy_shape_factor_spectral_eval_shear (TestNcGalaxyShapeFactorSpectral
   nc_galaxy_shape_factor_data_set (gsf, data, e_1, e_2, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
   g_ptr_array_add (data_array, data);
   g_assert_true (nc_galaxy_shape_factor_prepare_data_array (gsf, test->mset, data_array));
+  workspace = nc_galaxy_shape_factor_workspace_get (gsf);
+  g_assert_nonnull (workspace);
 
   for (j = 0; j < n; j++)
   {
@@ -2325,19 +2329,20 @@ test_nc_galaxy_shape_factor_spectral_eval_shear (TestNcGalaxyShapeFactorSpectral
       g_assert_cmpfloat (nc_galaxy_shape_factor_eval_shear (gsf, test->pop, data, g1_j, g2_j, want_log), ==, v);
     }
 
-    klass->eval_nodes (gsf, test->pop, data, n, &g_array_index (g_1, gdouble, 0), &g_array_index (g_2, gdouble, 0), e_1, e_2, want_log, &g_array_index (ref, gdouble, 0));
-    nc_galaxy_shape_factor_eval_shear_nodes (gsf, test->pop, data, n, &g_array_index (g_1, gdouble, 0), &g_array_index (g_2, gdouble, 0), want_log, &g_array_index (out, gdouble, 0));
+    klass->eval_nodes (gsf, test->pop, data, NULL, n, &g_array_index (g_1, gdouble, 0), &g_array_index (g_2, gdouble, 0), e_1, e_2, want_log, &g_array_index (ref, gdouble, 0));
+    nc_galaxy_shape_factor_eval_shear_nodes (gsf, test->pop, data, workspace, n, &g_array_index (g_1, gdouble, 0), &g_array_index (g_2, gdouble, 0), want_log, &g_array_index (out, gdouble, 0));
 
     for (j = 0; j < n; j++)
       g_assert_cmpfloat (g_array_index (out, gdouble, j), ==, g_array_index (ref, gdouble, j));
 
-    g_assert_true (klass->eval_line (gsf, test->pop, data, n, &g_array_index (t, gdouble, 0), u_1, u_2, b_1, b_2, e_1, e_2, want_log, &g_array_index (ref, gdouble, 0)));
-    g_assert_true (nc_galaxy_shape_factor_eval_shear_line (gsf, test->pop, data, n, &g_array_index (t, gdouble, 0), u_1, u_2, b_1, b_2, want_log, &g_array_index (out, gdouble, 0)));
+    g_assert_true (klass->eval_line (gsf, test->pop, data, NULL, n, &g_array_index (t, gdouble, 0), u_1, u_2, b_1, b_2, e_1, e_2, want_log, &g_array_index (ref, gdouble, 0)));
+    g_assert_true (nc_galaxy_shape_factor_eval_shear_line (gsf, test->pop, data, workspace, n, &g_array_index (t, gdouble, 0), u_1, u_2, b_1, b_2, want_log, &g_array_index (out, gdouble, 0)));
 
     for (j = 0; j < n; j++)
       g_assert_cmpfloat (g_array_index (out, gdouble, j), ==, g_array_index (ref, gdouble, j));
   }
 
+  nc_galaxy_shape_factor_workspace_return (gsf, workspace);
   g_ptr_array_unref (data_array);
   g_array_unref (t);
   g_array_unref (g_1);

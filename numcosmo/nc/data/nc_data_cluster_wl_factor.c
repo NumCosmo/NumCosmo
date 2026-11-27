@@ -1568,7 +1568,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_lnint (NcDataClusterWLFactor *dcwlf, NcmMS
   return result;
 }
 
-static void _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * const self, NcGalaxyShapePop *pop, const guint gal_i, const NcmVector *z_nodes,
+static void _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * const self, NcGalaxyShapePop *pop, gpointer workspace, const guint gal_i, const NcmVector *z_nodes,
                                                          const guint j0, const guint j1, NcmVector *out, const gboolean want_log);
 
 /*
@@ -1585,7 +1585,7 @@ static void _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPr
  * last relative difference.
  */
 static gdouble
-_nc_data_cluster_wl_factor_cheb_levels (NcDataClusterWLFactorPrivate * const self, NcmMSet *mset, const guint gal_i, const gdouble *w,
+_nc_data_cluster_wl_factor_cheb_levels (NcDataClusterWLFactorPrivate * const self, NcmMSet *mset, gpointer workspace, const guint gal_i, const gdouble *w,
                                         const gdouble fg, NcmVector *z_nodes, NcmVector *vals, const gboolean want_log, gdouble *s, gboolean *converged,
                                         gdouble *relerr)
 {
@@ -1598,9 +1598,9 @@ _nc_data_cluster_wl_factor_cheb_levels (NcDataClusterWLFactorPrivate * const sel
   guint L, k;
 
   if (want_log)
-    _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, gal_i, z_nodes, 0, 1 + n_prev, vals, TRUE);
+    _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, workspace, gal_i, z_nodes, 0, 1 + n_prev, vals, TRUE);
   else
-    _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, gal_i, z_nodes, 0, 1 + n_prev, vals, FALSE);
+    _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, workspace, gal_i, z_nodes, 0, 1 + n_prev, vals, FALSE);
 
   *s         = 0.0;
   *converged = FALSE;
@@ -1627,14 +1627,14 @@ _nc_data_cluster_wl_factor_cheb_levels (NcDataClusterWLFactorPrivate * const sel
     {
       if (want_log)
       {
-        _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, gal_i, z_nodes, 1 + n_prev, 1 + n, vals, TRUE);
+        _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, workspace, gal_i, z_nodes, 1 + n_prev, 1 + n, vals, TRUE);
 
         for (k = 1 + n_prev; k < 1 + n; k++)
           f[k] = exp (f[k] - *s);
       }
       else
       {
-        _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, gal_i, z_nodes, 1 + n_prev, 1 + n, vals, FALSE);
+        _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, workspace, gal_i, z_nodes, 1 + n_prev, 1 + n, vals, FALSE);
       }
 
       n_prev = n;
@@ -1681,7 +1681,7 @@ _nc_data_cluster_wl_factor_cheb_levels (NcDataClusterWLFactorPrivate * const sel
  * nc_galaxy_shape_factor_eval_shear_nodes() in chunks of NC_DATA_CLUSTER_WL_NODES_CHUNK.
  */
 static void
-_nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * const self, NcGalaxyShapePop *pop, const guint gal_i, const NcmVector *z_nodes,
+_nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * const self, NcGalaxyShapePop *pop, gpointer workspace, const guint gal_i, const NcmVector *z_nodes,
                                              const guint j0, const guint j1, NcmVector *out, const gboolean want_log)
 {
   NcDataClusterWLFactorGalaxy *gal = _galaxy_at (self, gal_i);
@@ -1738,7 +1738,7 @@ _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * cons
     for (j = 0; j < n_behind; j++)
       t[j] = (1.0 + m) * nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, sigma_crit[j_first + j]);
 
-    if (nc_galaxy_shape_factor_eval_shear_line (self->shape_factor, pop, s_data, n_behind, t, rot_re, rot_im, b_1, b_2, want_log, t))
+    if (nc_galaxy_shape_factor_eval_shear_line (self->shape_factor, pop, s_data, workspace, n_behind, t, rot_re, rot_im, b_1, b_2, want_log, t))
       return;
   }
 
@@ -1764,7 +1764,7 @@ _nc_data_cluster_wl_factor_eval_nodes_range (NcDataClusterWLFactorPrivate * cons
 
     if (c > 0)
     {
-      nc_galaxy_shape_factor_eval_shear_nodes (self->shape_factor, pop, s_data, c, g_1, g_2, want_log, vals);
+      nc_galaxy_shape_factor_eval_shear_nodes (self->shape_factor, pop, s_data, workspace, c, g_1, g_2, want_log, vals);
 
       for (q = 0; q < c; q++)
         ncm_vector_set (out, idx[q], vals[q]);
@@ -1782,6 +1782,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_cheb (NcDataClusterWLFactor *dcwlf, NcmMSe
   const guint n_iter                        = use_bootstrap ? ncm_bootstrap_get_bsize (bstrap) : self->galaxies->len;
   NcmVector *vals                           = ncm_vector_new (NC_DATA_CLUSTER_WL_CHEB_N_NODES + 1);
   NcGalaxyShapePop *pop                     = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
+  gpointer workspace                        = nc_galaxy_shape_factor_workspace_get (self->shape_factor); /* one for the whole loop */
   gdouble result                            = 0.0;
   guint i;
 
@@ -1807,7 +1808,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_cheb (NcDataClusterWLFactor *dcwlf, NcmMSe
     if (n_total == 0)
     {
       /* Fully in front of the lens: the shape likelihood is the constant at the anchor */
-      _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, gal_i, z_nodes, 0, 1, vals, FALSE);
+      _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, workspace, gal_i, z_nodes, 0, 1, vals, FALSE);
 
       if (ncm_vector_get (vals, 0) * norm * int_pos > 0.0)
       {
@@ -1815,7 +1816,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_cheb (NcDataClusterWLFactor *dcwlf, NcmMSe
       }
       else
       {
-        _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, gal_i, z_nodes, 0, 1, vals, TRUE);
+        _nc_data_cluster_wl_factor_eval_nodes_range (self, pop, workspace, gal_i, z_nodes, 0, 1, vals, TRUE);
 
         if (gsl_finite (ncm_vector_get (vals, 0)) && (norm * int_pos > 0.0))
           m2lnP_gal_i = -2.0 * (log (norm * int_pos) + ncm_vector_get (vals, 0));
@@ -1828,11 +1829,11 @@ _nc_data_cluster_wl_factor_eval_m2lnP_cheb (NcDataClusterWLFactor *dcwlf, NcmMSe
       gboolean converged;
       gdouble s, relerr, num;
 
-      num = _nc_data_cluster_wl_factor_cheb_levels (self, mset, gal_i, w, norms[2], z_nodes, vals, FALSE, &s, &converged, &relerr);
+      num = _nc_data_cluster_wl_factor_cheb_levels (self, mset, workspace, gal_i, w, norms[2], z_nodes, vals, FALSE, &s, &converged, &relerr);
 
       /* The shape likelihood underflows at every node: the same levels on ln F, rescaled */
       if (!((mass > 0.0) && (norm * num * int_pos / mass > 0.0)))
-        num = _nc_data_cluster_wl_factor_cheb_levels (self, mset, gal_i, w, norms[2], z_nodes, vals, TRUE, &s, &converged, &relerr);
+        num = _nc_data_cluster_wl_factor_cheb_levels (self, mset, workspace, gal_i, w, norms[2], z_nodes, vals, TRUE, &s, &converged, &relerr);
 
       if (!converged)
       {
@@ -1862,6 +1863,7 @@ _nc_data_cluster_wl_factor_eval_m2lnP_cheb (NcDataClusterWLFactor *dcwlf, NcmMSe
     result += m2lnP_gal_i;
   }
 
+  nc_galaxy_shape_factor_workspace_return (self->shape_factor, workspace);
   ncm_vector_free (vals);
 
   return result;

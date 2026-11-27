@@ -118,17 +118,29 @@ struct _NcGalaxyShapeFactorClass
    * The values of eval_marginal (want_log FALSE) or eval_ln_marginal (want_log TRUE) of one
    * galaxy at the n shears (g_1[j], g_2[j]), written to out[j]. The default calls them at
    * each shear; a subclass overrides it to evaluate the shears together. Used by
-   * nc_galaxy_shape_factor_eval_shear_nodes().
+   * nc_galaxy_shape_factor_eval_shear_nodes(). @workspace comes from workspace_get, or is
+   * NULL, and then the subclass takes its own for the call.
    */
-  void (*eval_nodes) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+  void (*eval_nodes) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 
-  /* The values of eval_nodes at the n shears b + t[j] u of one line, written to out[j] (out
+  /*
+   * The values of eval_nodes at the n shears b + t[j] u of one line, written to out[j] (out
    * may be t), when the subclass computes them along the line; FALSE, with out unchanged
-   * when out is not t, when it does not. The default returns FALSE. */
-  gboolean (*eval_line) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+   * when out is not t, when it does not. The default returns FALSE. @workspace as in
+   * eval_nodes.
+   */
+  gboolean (*eval_line) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+
+  /*
+   * The scratch space of eval_nodes and eval_line, taken once by a caller that evaluates
+   * many galaxies and used by one thread at a time; workspace_return gives it back. The
+   * default returns NULL and does nothing.
+   */
+  gpointer (*workspace_get) (NcGalaxyShapeFactor *gsf);
+  void (*workspace_return) (NcGalaxyShapeFactor *gsf, gpointer workspace);
 
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[9];
+  gpointer padding[7];
 };
 
 /*
@@ -213,8 +225,10 @@ void nc_galaxy_shape_factor_data_get (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFac
 
 gboolean nc_galaxy_shape_factor_prepare_data_array (NcGalaxyShapeFactor *gsf, NcmMSet *mset, GPtrArray *data_array);
 gdouble nc_galaxy_shape_factor_eval_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gboolean want_log);
-void nc_galaxy_shape_factor_eval_shear_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gboolean want_log, gdouble *out);
-gboolean nc_galaxy_shape_factor_eval_shear_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gboolean want_log, gdouble *out);
+gpointer nc_galaxy_shape_factor_workspace_get (NcGalaxyShapeFactor *gsf);
+void nc_galaxy_shape_factor_workspace_return (NcGalaxyShapeFactor *gsf, gpointer workspace);
+void nc_galaxy_shape_factor_eval_shear_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *g_1, const gdouble *g_2, const gboolean want_log, gdouble *out);
+gboolean nc_galaxy_shape_factor_eval_shear_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gboolean want_log, gdouble *out);
 void nc_galaxy_shape_factor_gen_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gboolean lensed, const gdouble g_1, const gdouble g_2, NcmRNG *rng);
 void nc_galaxy_shape_factor_direct_estimate (NcGalaxyShapeFactor *gsf, NcmMSet *mset, GPtrArray *data_array, GArray *rotations, gdouble *gt, gdouble *gx, gdouble *sigma_t, gdouble *sigma_x, gdouble *rho);
 
