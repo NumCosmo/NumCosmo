@@ -228,13 +228,21 @@ def fixture_shape_factor(request) -> tuple[str, dict]:
 
 
 @pytest.fixture(name="pop_dist")
-def fixture_pop_dist() -> tuple[str, dict]:
-    """Fixture for the galaxy intrinsic-ellipticity population distribution.
+def fixture_pop_dist(shape_factor) -> tuple[str, dict]:
+    """Fixture for the galaxy population distribution matching ``shape_factor``.
 
-    Every ShapeFactorGen scheme in ``shape_factor`` above is compatible with
-    a Gaussian population (see check_shape_pop_compat()), so this fixture
-    doesn't need to vary with the scheme the way shape_factor does.
+    The WtG scheme evaluates only the shear-scatter populations and every other
+    scheme only the intrinsic-ellipticity ones (see check_shape_pop_compat()):
+    WtG gets a shear-scatter population, alternating between the Gaussian and
+    the Voigt kernel, and the others a Gaussian intrinsic population.
     """
+    if shape_factor[0] == ShapeFactorGen.WTG.value:
+        if choice([True, False]):
+            return GalaxyPopGen.SHEAR_GAUSS.value, {"sigma": uniform(0.2, 0.3)}
+        return GalaxyPopGen.SHEAR_VOIGT.value, {
+            "sigma": uniform(0.2, 0.3),
+            "gamma": uniform(0.005, 0.02),
+        }
     config = {"sigma": uniform(0.2, 0.4)}
     return GalaxyPopGen.GAUSS.value, config
 
@@ -540,10 +548,11 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
     mset = cast(Ncm.MSet, experiment.get("model-set"))
     cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
     obs = cluster_data.peek_obs()
-    s_dist_model = cast(Nc.GalaxyShapePopGauss, mset.peek_by_name("NcGalaxyShapePop"))
+    s_dist_model = cast(Nc.GalaxyShapePop, mset.peek_by_name("NcGalaxyShapePop"))
 
     assert s_dist_model["sigma"] == pop_dist[1]["sigma"]
 
+    is_wtg = scheme == ShapeFactorGen.WTG.value
     m_sigma = shape_factor[1]["m_sigma"]
     for i in range(obs.len()):
         std_noise = obs.get("std_noise", i)
@@ -556,11 +565,19 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
         # m = exp(N(0, m_sigma)), so 6 sigma is exp(-6 m_sigma)..exp(6 m_sigma).
         assert np.exp(-6.0 * m_sigma) <= obs.get("m", i) <= np.exp(6.0 * m_sigma)
 
-        # The sheared intrinsic ellipticity has modulus at most 1; c enters
-        # through the shear (background) or additively (foreground), and the
-        # noise is Gaussian with this galaxy's own std_noise.
-        assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + abs(c1) + 6.0 * std_noise
-        assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + abs(c2) + 6.0 * std_noise
+        if is_wtg:
+            # WtG draws the shear estimate about the calibrated shear with the
+            # scatter kernel (unbounded for the Voigt), times s R: no bound from
+            # the unit disc; the mock responsivity is the generator's default.
+            assert np.isfinite(obs.get("epsilon_obs_1", i))
+            assert np.isfinite(obs.get("epsilon_obs_2", i))
+            assert obs.get("responsivity", i) == 1.0
+        else:
+            # The sheared intrinsic ellipticity has modulus at most 1; c enters
+            # through the shear (background) or additively (foreground), and the
+            # noise is Gaussian with this galaxy's own std_noise.
+            assert abs(obs.get("epsilon_obs_1", i)) <= 1.0 + abs(c1) + 6.0 * std_noise
+            assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + abs(c2) + 6.0 * std_noise
 
 
 def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_factor_bad):
@@ -569,6 +586,12 @@ def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_factor_bad):
     Test the generation of the cluster WL app with bad shape factor
     configuration.
     """
+    # A population the scheme accepts, so only the bad option can fail the run.
+    pop_args = (
+        [f"--pop-dist={GalaxyPopGen.SHEAR_GAUSS.value}"]
+        if shape_factor_bad[0] == ShapeFactorGen.WTG.value
+        else []
+    )
     for bad_config in shape_factor_bad[1]:
         s_factor = shape_factor_bad[0]
         for key, value in bad_config.items():
@@ -580,6 +603,7 @@ def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_factor_bad):
                 "cluster-wl",
                 experiment_file.as_posix(),
                 f"--shape-factor={s_factor}",
+                *pop_args,
             ],
         )
         assert result.exit_code != 0, result.output

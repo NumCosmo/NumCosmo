@@ -577,8 +577,10 @@ class GalaxyShapeFactorGenWtG(GalaxyShapeFactorGenBase):
         """Return the help text for this scheme."""
         return [
             "GalaxyShapeFactorGenWtG",
-            f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
-            f"responsivity={DEFAULT_SHAPE_WTG_RESPONSIVITY}",
+            (
+                f"{_SHARED_SHAPE_FACTOR_HELP}, \n"
+                f"responsivity={DEFAULT_SHAPE_WTG_RESPONSIVITY}"
+            ),
         ]
 
     def _build_shape_factor(self) -> Nc.GalaxyShapeFactor:
@@ -907,9 +909,11 @@ class GalaxyPopGenShearGauss(BaseModel):
         """Return the help text for the Gaussian shear scatter."""
         return [
             "GalaxyPopGenShearGauss",
-            f"sigma={DEFAULT_POP_SHEAR_SIGMA}, sigma_from_catalog=False, \n"
-            f"e_rms={DEFAULT_POP_SHEAR_E_RMS}, std_sigma={DEFAULT_POP_STD_SIGMA}, "
-            "include_noise=True",
+            (
+                f"sigma={DEFAULT_POP_SHEAR_SIGMA}, sigma_from_catalog=False, \n"
+                f"e_rms={DEFAULT_POP_SHEAR_E_RMS}, std_sigma={DEFAULT_POP_STD_SIGMA}, "
+                "include_noise=True"
+            ),
         ]
 
     @classmethod
@@ -973,8 +977,10 @@ class GalaxyPopGenShearVoigt(BaseModel):
         """Return the help text for the Voigt shear scatter."""
         return [
             "GalaxyPopGenShearVoigt",
-            f"sigma={DEFAULT_POP_SHEAR_SIGMA}, gamma={DEFAULT_POP_SHEAR_GAMMA}, "
-            "include_noise=True",
+            (
+                f"sigma={DEFAULT_POP_SHEAR_SIGMA}, gamma={DEFAULT_POP_SHEAR_GAMMA}, "
+                "include_noise=True"
+            ),
         ]
 
     @classmethod
