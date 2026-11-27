@@ -248,7 +248,10 @@ GEN_JPAS_FORECAST_CMD: CMDArg = {
 GEN_CLUSTER_WL_CMD: CMDArg = {
     "name": "cluster-wl",
     "no_args_is_help": True,
-    "help": "Generate mock cluster weak lensing experiments.",
+    "help": (
+        "Generate mock cluster weak lensing experiments, with the per-galaxy "
+        "likelihood or, with --binned, a classic binned one."
+    ),
 }
 
 WL_CATALOG_TABLES_CMD: CMDArg = {
@@ -263,7 +266,10 @@ WL_CATALOG_TABLES_CMD: CMDArg = {
 LOAD_CLUSTER_WL_CMD: CMDArg = {
     "name": "cluster-wl-load",
     "no_args_is_help": True,
-    "help": "Load a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.",
+    "help": (
+        "Load a cluster weak lensing experiment from a real NcGalaxyWLObs catalog, "
+        "with the per-galaxy likelihood or, with --binned, a classic binned one."
+    ),
 }
 
 GEN_CLUSTER_RICHNESS_COUNT_CMD: CMDArg = {

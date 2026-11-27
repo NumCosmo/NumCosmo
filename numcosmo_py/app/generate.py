@@ -57,6 +57,7 @@ from numcosmo_py.experiments.cluster_richness_count import (
 from numcosmo_py.experiments.cluster_wl import (
     DEFAULT_INTEG_CHEB_LEVEL_MIN,
     DEFAULT_INTEG_CHEB_TOL,
+    BinnedGen,
     GalaxyPopGen,
     GalaxyZGen,
     HaloProfileType,
@@ -632,6 +633,12 @@ DEFAULT_CLUSTER_WL_SHAPE_FACTOR = (
     "std_noise=0.1 c1_sigma=0.05 c2_sigma=0.05 m_sigma=0.05"
 )
 DEFAULT_CLUSTER_WL_POP_DIST = "gauss sigma=0.3"
+DEFAULT_CLUSTER_WL_FREE_PARAMS = (
+    "NcHaloMassSummary:log10MDelta",
+    "NcHaloPosition:ra",
+    "NcHaloPosition:dec",
+)
+DEFAULT_CLUSTER_WL_BINNED_FREE_PARAMS = ("NcHaloMassSummary:log10MDelta",)
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -694,17 +701,31 @@ class ClusterWL(ABC):
     ] = DEFAULT_CLUSTER_WL_POP_DIST
 
     parameter_list: Annotated[
-        list[str],
+        list[str] | None,
         typer.Option(
-            help="Parameter to fit.",
-            show_default=True,
-            default_factory=lambda: [
-                "NcHaloMassSummary:log10MDelta",
-                "NcHaloPosition:ra",
-                "NcHaloPosition:dec",
-            ],
+            help=(
+                "Parameter to fit. Repeatable. Default: "
+                f"{', '.join(DEFAULT_CLUSTER_WL_FREE_PARAMS)}; with --binned: "
+                f"{', '.join(DEFAULT_CLUSTER_WL_BINNED_FREE_PARAMS)}."
+            ),
         ),
-    ]
+    ] = None
+
+    binned: Annotated[
+        str | None,
+        typer.Option(
+            help=(
+                BinnedGen.get_help_text()
+                + " Replaces the per-galaxy likelihood by a classic binned one, built "
+                "from the same galaxies with the same redshift densities; the "
+                "redshift-integration options and --resample-flag do not apply. The "
+                "bins and radii are fixed when the experiment is built, so the "
+                "cluster centre cannot be fitted."
+            ),
+            metavar=BinnedGen.get_help_metavar(),
+            rich_help_panel="Binned likelihood",
+        ),
+    ] = None
 
     integ_method: Annotated[
         IntegMethod,
@@ -769,6 +790,11 @@ class ClusterWL(ABC):
                 f"Invalid experiment file suffix: {self.experiment.suffix}"
             )
 
+        self._binned_gen = (
+            parse_binned(self.binned) if self.binned is not None else None
+        )
+        self._free_params = self._resolve_parameter_list()
+
         shape_gen, pop_gen = self._resolve_gens()
 
         exp = self._build_experiment(shape_gen, pop_gen)
@@ -784,7 +810,7 @@ class ClusterWL(ABC):
 
         ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
 
-        for param in self.parameter_list:
+        for param in self._free_params:
             try:
                 pindex = mset.param_get_by_full_name(param)
             except GLib.Error as e:
@@ -818,6 +844,32 @@ class ClusterWL(ABC):
             mfunc_oa,
             self.experiment.with_suffix(".functions.yaml").absolute().as_posix(),
         )
+
+    def _resolve_parameter_list(self) -> list[str]:
+        """Return the free parameters: --parameter-list or the default of the mode.
+
+        Raises:
+            typer.BadParameter: The cluster centre is freed with --binned.
+        """
+        if self.parameter_list is None:
+            if self._binned_gen is not None:
+                return list(DEFAULT_CLUSTER_WL_BINNED_FREE_PARAMS)
+            return list(DEFAULT_CLUSTER_WL_FREE_PARAMS)
+
+        if self._binned_gen is not None:
+            centre = [
+                p
+                for p in self.parameter_list
+                if p in ("NcHaloPosition:ra", "NcHaloPosition:dec")
+            ]
+            if centre:
+                raise typer.BadParameter(
+                    f"{', '.join(centre)} cannot be fitted with --binned: the bins and "
+                    "radii are fixed when the experiment is built, so the cluster "
+                    "centre does not enter the binned model.",
+                    param_hint="--parameter-list",
+                )
+        return list(self.parameter_list)
 
     def _resolve_gens(self):
         """Return the shape-factor and population generators of the options.
@@ -915,6 +967,29 @@ def parse_pop_dist(pop_dist_str: str):
     except ValueError as e:
         raise typer.BadParameter(str(e)) from e
     return pop_dist, pop_dist_args
+
+
+def parse_binned(binned_str: str):
+    """Parse a --binned string into its generator.
+
+    Raises:
+        typer.BadParameter: Empty string, unknown type or invalid arguments.
+    """
+    binned_list = shlex.split(binned_str)
+    if not binned_list:
+        raise typer.BadParameter("empty --binned")
+    binned_type = binned_list.pop(0)
+    try:
+        # Lookup by value; mypy checks it against the (value, model_cls)
+        # signature that builds the members.
+        binned = BinnedGen(binned_type)  # type: ignore[call-arg]
+    except ValueError as e:
+        raise typer.BadParameter(str(e), param_hint="--binned") from e
+
+    try:
+        return binned.model_cls.from_args(binned_list)
+    except ValueError as e:
+        raise typer.BadParameter(str(e), param_hint="--binned") from e
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -1023,6 +1098,7 @@ class GenerateClusterWL(ClusterWL):
             seed=self.seed,
             integ_options=self.integ_options,
             summary=self.summary,
+            binned_gen=self._binned_gen,
         )
 
 
@@ -1184,9 +1260,7 @@ class LoadClusterWL(ClusterWL):
                 )
 
         free = shape_interp_free_params(self._obs)
-        pop_params = [
-            p for p in self.parameter_list if p.startswith("NcGalaxyShapePop")
-        ]
+        pop_params = [p for p in self._free_params if p.startswith("NcGalaxyShapePop")]
         fixed = [p for p in pop_params if p not in free]
         if fixed:
             raise typer.BadParameter(
@@ -1221,6 +1295,7 @@ class LoadClusterWL(ClusterWL):
             integ_options=self.integ_options,
             summary=self.summary,
             resample_flag=resolve_resample_flag(self.resample_flag),
+            binned_gen=self._binned_gen,
         )
         mset = exp.peek("model-set")
         assert isinstance(mset, Ncm.MSet)
