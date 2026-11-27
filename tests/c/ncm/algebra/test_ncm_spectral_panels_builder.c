@@ -72,6 +72,11 @@ static void test_ncm_spectral_panels_builder_breakpoint_order (void);
 static void test_ncm_spectral_panels_builder_breakpoint_order_subprocess (void);
 static void test_ncm_spectral_panels_builder_known_values_pair (void);
 static void test_ncm_spectral_panels_builder_known_values_pair_subprocess (void);
+static void test_ncm_spectral_panels_builder_uniform (void);
+static void test_ncm_spectral_panels_builder_uniform_n (void);
+static void test_ncm_spectral_panels_builder_uniform_n_subprocess (void);
+static void test_ncm_spectral_panels_builder_uniform_floor (void);
+static void test_ncm_spectral_panels_builder_uniform_floor_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -102,6 +107,12 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/ncm/spectral_panels_builder/breakpoint_order/subprocess", &test_ncm_spectral_panels_builder_breakpoint_order_subprocess);
   g_test_add_func ("/ncm/spectral_panels_builder/known_values_pair", &test_ncm_spectral_panels_builder_known_values_pair);
   g_test_add_func ("/ncm/spectral_panels_builder/known_values_pair/subprocess", &test_ncm_spectral_panels_builder_known_values_pair_subprocess);
+
+  g_test_add_func ("/ncm/spectral_panels_builder/uniform", &test_ncm_spectral_panels_builder_uniform);
+  g_test_add_func ("/ncm/spectral_panels_builder/uniform/n", &test_ncm_spectral_panels_builder_uniform_n);
+  g_test_add_func ("/ncm/spectral_panels_builder/uniform/n/subprocess", &test_ncm_spectral_panels_builder_uniform_n_subprocess);
+  g_test_add_func ("/ncm/spectral_panels_builder/uniform/floor", &test_ncm_spectral_panels_builder_uniform_floor);
+  g_test_add_func ("/ncm/spectral_panels_builder/uniform/floor/subprocess", &test_ncm_spectral_panels_builder_uniform_floor_subprocess);
 
   g_test_run ();
 
@@ -765,5 +776,78 @@ test_ncm_spectral_panels_builder_known_values_pair_subprocess (void)
   NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
 
   ncm_spectral_panels_builder_build (builder, _linear, NULL, 0.0, 1.0, breakpoints, f_minus, NULL, 1.0e-10, 0.0, sp);
+}
+
+/*
+ * A uniform build of exp(x) and sin(5x) on [0, 3] with 8 coefficients: a power of two of
+ * equal panels, marked uniform, agreeing with F within ten times the tolerance at points the
+ * build did not check, with fewer panels for a looser tolerance.
+ */
+static void
+test_ncm_spectral_panels_builder_uniform (void)
+{
+  NcmSpectralPanelsBuilder *builder = _builder_new (0.0);
+  NcmSpectralPanels *sp             = ncm_spectral_panels_new (2);
+  Calls *calls                      = _calls_new (NULL);
+  NcmRNG *rng                       = ncm_rng_seeded_new (NULL, 20261127);
+  guint n_tight, i;
+
+  ncm_spectral_panels_builder_build_uniform (builder, _smooth, calls, 0.0, 3.0, 8, 1.0e-12, 0.0, sp);
+  n_tight = ncm_spectral_panels_get_n_panels (sp);
+
+  g_assert_true (ncm_spectral_panels_is_uniform (sp));
+  g_assert_cmpuint (n_tight & (n_tight - 1), ==, 0);
+
+  for (i = 0; i < 2000; i++)
+  {
+    const gdouble x = ncm_rng_uniform_gen (rng, 0.0, 3.0);
+
+    ncm_assert_cmpdouble_e (ncm_spectral_panels_eval_row (sp, 0, x), ==, exp (x), 1.0e-11, 0.0);
+    ncm_assert_cmpdouble_e (ncm_spectral_panels_eval_row (sp, 1, x), ==, sin (5.0 * x), 0.0, 1.0e-11);
+  }
+
+  ncm_spectral_panels_builder_build_uniform (builder, _smooth, calls, 0.0, 3.0, 8, 1.0e-6, 0.0, sp);
+  g_assert_cmpuint (ncm_spectral_panels_get_n_panels (sp), <, n_tight);
+
+  ncm_rng_free (rng);
+  _calls_free (calls);
+  ncm_spectral_panels_free (sp);
+  ncm_spectral_panels_builder_free (builder);
+}
+
+static void
+test_ncm_spectral_panels_builder_uniform_n (void)
+{
+  g_test_trap_subprocess ("/ncm/spectral_panels_builder/uniform/n/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*N = 1, at least 2*");
+}
+
+static void
+test_ncm_spectral_panels_builder_uniform_n_subprocess (void)
+{
+  NcmSpectralPanelsBuilder *builder = _builder_new (0.0);
+  NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
+
+  ncm_spectral_panels_builder_build_uniform (builder, _linear, NULL, 0.0, 1.0, 1, 1.0e-10, 0.0, sp);
+}
+
+/* A kink no panel edge lands on never passes the check; the panels stop at min-panel-fraction */
+static void
+test_ncm_spectral_panels_builder_uniform_floor (void)
+{
+  g_test_trap_subprocess ("/ncm/spectral_panels_builder/uniform/floor/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*more would be narrower than min-panel-fraction*");
+}
+
+static void
+test_ncm_spectral_panels_builder_uniform_floor_subprocess (void)
+{
+  NcmSpectralPanelsBuilder *builder = _builder_new (0.0);
+  NcmSpectralPanels *sp             = ncm_spectral_panels_new (1);
+
+  ncm_spectral_panels_builder_set_min_panel_fraction (builder, 1.0e-3);
+  ncm_spectral_panels_builder_build_uniform (builder, _undeclared_kink_c0, NULL, 0.0, 1.0, 6, 1.0e-14, 0.0, sp);
 }
 

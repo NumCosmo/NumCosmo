@@ -102,12 +102,13 @@ def _data(
     else:
         redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 5.0)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(rows), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(rows), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     for i, row in enumerate(rows):
         ra, dec, zp, sigma0, e1, e2, std_noise = GALAXIES[row]
         for name, value in (

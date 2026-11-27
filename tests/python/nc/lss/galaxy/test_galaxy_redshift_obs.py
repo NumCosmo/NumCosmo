@@ -103,7 +103,11 @@ def test_fragment_roundtrip(model):
     assert set(cols) == {"zp", "sigma0"}
 
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CELESTIAL, 1, cols
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     model.data_set(data, 0.723, 0.041)
     data.write_row(obs, 0)

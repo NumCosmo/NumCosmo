@@ -280,7 +280,8 @@ ncm_data_class_init (NcmDataClass *klass)
   data_class->fisher_matrix      = &_ncm_data_fisher_matrix;
   data_class->fisher_matrix_bias = &_ncm_data_fisher_matrix_bias;
 
-  data_class->register_shared = NULL;
+  data_class->register_shared         = NULL;
+  data_class->notify_shared_duplicate = NULL;
 }
 
 typedef struct _NcmDataDiffArg
@@ -718,12 +719,35 @@ ncm_data_is_resampling (NcmData *data)
  * Subclasses only need to override this when they hold such a payload; the
  * default implementation does nothing.
  *
+ * The registered objects are shared read-only. Whoever calls this function must call
+ * ncm_data_notify_shared_duplicate() on every duplicate made through @ser, before the
+ * duplicate is used, so that a duplicate that writes its data first takes storage of its
+ * own.
+ *
  */
 void
 ncm_data_register_shared (NcmData *data, NcmSerialize *ser)
 {
   if (NCM_DATA_GET_CLASS (data)->register_shared != NULL)
     NCM_DATA_GET_CLASS (data)->register_shared (data, ser);
+}
+
+/**
+ * ncm_data_notify_shared_duplicate: (virtual notify_shared_duplicate)
+ * @data: a #NcmData
+ *
+ * Tells @data that it is a duplicate made through a #NcmSerialize in which
+ * ncm_data_register_shared() registered objects, so those objects are shared with other
+ * duplicates. A subclass that writes such an object, as resample() writes the rows of a
+ * shared catalog, first gives itself a copy of what it writes. The default implementation
+ * does nothing.
+ *
+ */
+void
+ncm_data_notify_shared_duplicate (NcmData *data)
+{
+  if (NCM_DATA_GET_CLASS (data)->notify_shared_duplicate != NULL)
+    NCM_DATA_GET_CLASS (data)->notify_shared_duplicate (data);
 }
 
 /**

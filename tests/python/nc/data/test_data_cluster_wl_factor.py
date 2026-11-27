@@ -66,12 +66,13 @@ def _build_factors_and_obs():
         mset.set(model)
     mset.prepare_fparam_map()
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, 1, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, 1, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     obs.set("ra", 0, 0.03)
     obs.set("dec", 0, 0.02)
     obs.set("z", 0, 0.0)
@@ -116,12 +117,13 @@ def _build_multi_galaxy_setup(n):
         mset.set(model)
     mset.prepare_fparam_map()
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, n, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
 
     # Distinct galaxies (varying ra/dec/zp/ellipticity), matching
     # test_data_cluster_wl_factor_parity.py's own known-good _GALAXIES
@@ -266,8 +268,8 @@ def test_without_register_shared_obs_is_deep_copied_across_dups():
 
 def _shared_dup_setup(n=6):
     """A dataset registered as shared and one dup made through that
-    serializer, as NcmFitMC makes each worker's clone: the dup holds the
-    same obs object as the original."""
+    serializer and notified as a shared duplicate, as NcmFitMC makes each
+    worker's clone: the dup holds the same obs object as the original."""
     dcwlf, mset = _build_multi_galaxy_setup(n)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
 
@@ -277,6 +279,7 @@ def _shared_dup_setup(n=6):
     dset.register_shared(ser)
 
     dup = duplicate_via_serialization(dcwlf, ser)
+    dup.notify_shared_duplicate()
     assert dup.peek_obs() is dcwlf.peek_obs()
 
     return dcwlf, dup, mset
@@ -381,12 +384,13 @@ def _build_mc_fit(n_gal=60):
     redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(0.0, 5.0)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
 
-    pos_data0 = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data0 = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data0 = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data0, z_data0)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data0)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n_gal, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, n_gal, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     for i in range(n_gal):
         for c in cols:
             obs.set(c, i, 0.0)
@@ -468,7 +472,6 @@ def test_construct_only_properties_readable():
     assert dcwlf.props.obs == obs
     assert dcwlf.props.len == 1
     assert dcwlf.peek_obs() == obs
-    assert dcwlf.peek_data_array() is not None
 
 
 def test_obs_property_setter():
@@ -611,12 +614,13 @@ def _build_probe_setup(galaxies, *, z_cl=0.2, sigma_int=0.3, log10m=14.0):
     redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(ZP_MIN, ZP_MAX)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(galaxies), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(galaxies), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     for i, (ra, dec, zp, sigma0, e1, e2, std_noise) in enumerate(galaxies):
         for col in cols:
             obs.set(col, i, 0.0)

@@ -123,8 +123,6 @@
 
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_private.h"
-#include "nc/lss/halo/nc_halo_position.h"
-#include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "nc/lss/wl/nc_wl_ellipticity.h"
 #include "ncm/algebra/ncm_spectral.h"
 #include "ncm/algebra/ncm_spectral_polar.h"
@@ -178,7 +176,6 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   NcmSpectralPolar *polar;                  /* the integrals */
   NcmSpectralTensorBuilder *builder_interp; /* the build of the interpolant in g */
   NcmMemoryPool *work_pool;                 /* NcGalaxyShapeFactorSpectralWork, one per concurrent evaluation */
-  NcmMemoryPool *line_pool;                 /* NcGalaxyShapeFactorSpectralLineWork, one per concurrent eval_line */
   gdouble line_abstol;
   gdouble reltol;
   gdouble interp_g_max;
@@ -191,21 +188,10 @@ typedef struct _NcGalaxyShapeFactorSpectralPrivate
   gdouble interp_compress_frac;
 
   /*
-   * restrict-range: the models of the bound of the shear a galaxy reaches over the box of the
-   * fit, cached by prepare(), with a copy of the density profile at the upper bound of the
-   * mass (used under range_lock, since the galaxies may be prepared in parallel). range_ready:
-   * the models are in the fit; range_holds: only the mass, the halo center and the shape
-   * population are free (_nc_galaxy_shape_factor_moments_range_holds()).
+   * restrict-range: whether each interpolant covers |g| only up to the bound of its galaxy
+   * (the bound fields of #NcGalaxyShapeFactorData)
    */
   gboolean restrict_range;
-  NcHICosmo *cosmo;
-  NcWLSurfaceMassDensity *smd;
-  NcHaloDensityProfile *dp_box;
-  gdouble z_cl;
-  gdouble delta_R;
-  gboolean range_ready;
-  gboolean range_holds;
-  GMutex range_lock;
 } NcGalaxyShapeFactorSpectralPrivate;
 
 /* The scratch space of one evaluation */
@@ -224,8 +210,9 @@ typedef struct _NcGalaxyShapeFactorSpectralWork
   GArray *upper;
   GArray *level_min; /* guint, the levels of its build, one value per variable */
   GArray *level_cap;
-  GArray *series;        /* NcmSpectralPolarRadialSeries, the radial series of a reference integral */
-  GArray *series_coeffs; /* and their coefficients */
+  GArray *series;                                    /* NcmSpectralPolarRadialSeries, the radial series of a reference integral */
+  GArray *series_coeffs;                             /* and their coefficients */
+  struct _NcGalaxyShapeFactorSpectralLineWork *line; /* the scratch space of eval_line, made at its first call */
 } NcGalaxyShapeFactorSpectralWork;
 
 /* The scratch space of one eval_line: the 1D expansion and its coefficients */
@@ -375,17 +362,7 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->interp_pop_one_integral  = FALSE;
   self->interp_compress_frac     = 0.0;
   self->restrict_range           = FALSE;
-  self->cosmo                    = NULL;
-  self->smd                      = NULL;
-  self->dp_box                   = NULL;
-  self->z_cl                     = 0.0;
-  self->delta_R                  = 0.0;
-  self->range_ready              = FALSE;
-  self->range_holds              = FALSE;
-  g_mutex_init (&self->range_lock);
 
-  self->line_pool = ncm_memory_pool_new (_nc_galaxy_shape_factor_spectral_line_work_new, NULL,
-                                         _nc_galaxy_shape_factor_spectral_line_work_free);
   self->line_abstol = 0.0;
 }
 
@@ -523,9 +500,6 @@ _nc_galaxy_shape_factor_spectral_dispose (GObject *object)
 
   ncm_spectral_polar_clear (&self->polar);
   ncm_spectral_tensor_builder_clear (&self->builder_interp);
-  nc_hicosmo_clear (&self->cosmo);
-  nc_wl_surface_mass_density_clear (&self->smd);
-  nc_halo_density_profile_clear (&self->dp_box);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_spectral_parent_class)->dispose (object);
@@ -538,19 +512,18 @@ _nc_galaxy_shape_factor_spectral_finalize (GObject *object)
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
 
   ncm_memory_pool_free (self->work_pool, TRUE);
-  g_mutex_clear (&self->range_lock);
-  ncm_memory_pool_free (self->line_pool, TRUE);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_spectral_parent_class)->finalize (object);
 }
 
 static void _nc_galaxy_shape_factor_spectral_data_init (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data);
-static void _nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
 static void _nc_galaxy_shape_factor_spectral_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
-static gboolean _nc_galaxy_shape_factor_spectral_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
-static void _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+static gboolean _nc_galaxy_shape_factor_spectral_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
+static gpointer _nc_galaxy_shape_factor_spectral_workspace_get (NcGalaxyShapeFactor *gsf);
+static void _nc_galaxy_shape_factor_spectral_workspace_return (NcGalaxyShapeFactor *gsf, gpointer workspace);
+static void _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n, const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 static gdouble _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 
 static void
@@ -743,9 +716,8 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    *
    * The absolute tolerance on $\ln P$ of the table along the line of the shears of the
    * redshift nodes of a galaxy, used for a galaxy that holds no interpolant. With
-   * a positive value, nc_galaxy_shape_factor_eval_at_nodes() and
-   * nc_galaxy_shape_factor_eval_ln_at_nodes() take $\ln P$ at those shears from a Chebyshev
-   * series in the position on the line, expanded from integrals on nested
+   * a positive value, nc_galaxy_shape_factor_eval_shear_line() takes $\ln P$ at those shears
+   * from a Chebyshev series in the position on the line, expanded from integrals on nested
    * Chebyshev-Lobatto grids and accepted when its coefficients change by at most this value
    * in $\ell_1$ norm between two grids. The table is made only when it needs at most half as
    * many integrals as there are nodes and every shear of the line has $|g| \le 0.9$; when it
@@ -761,12 +733,13 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   gsf_class->data_init        = &_nc_galaxy_shape_factor_spectral_data_init;
-  gsf_class->prepare          = &_nc_galaxy_shape_factor_spectral_prepare;
   gsf_class->data_prepare     = &_nc_galaxy_shape_factor_spectral_data_prepare;
   gsf_class->eval_marginal    = &_nc_galaxy_shape_factor_spectral_eval_marginal;
   gsf_class->eval_ln_marginal = &_nc_galaxy_shape_factor_spectral_eval_ln_marginal;
   gsf_class->eval_nodes       = &_nc_galaxy_shape_factor_spectral_eval_nodes;
   gsf_class->eval_line        = &_nc_galaxy_shape_factor_spectral_eval_line;
+  gsf_class->workspace_get    = &_nc_galaxy_shape_factor_spectral_workspace_get;
+  gsf_class->workspace_return = &_nc_galaxy_shape_factor_spectral_workspace_return;
 }
 
 static gpointer
@@ -815,7 +788,25 @@ _nc_galaxy_shape_factor_spectral_work_free (gpointer p)
   g_array_unref (work->series);
   g_array_unref (work->series_coeffs);
 
+  if (work->line != NULL)
+    _nc_galaxy_shape_factor_spectral_line_work_free (work->line);
+
   g_free (work);
+}
+
+/* A workspace of the class: a slot of the work pool, taken once for many evaluations */
+static gpointer
+_nc_galaxy_shape_factor_spectral_workspace_get (NcGalaxyShapeFactor *gsf)
+{
+  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf));
+
+  return ncm_memory_pool_get (self->work_pool);
+}
+
+static void
+_nc_galaxy_shape_factor_spectral_workspace_return (NcGalaxyShapeFactor *gsf, gpointer workspace)
+{
+  ncm_memory_pool_return (workspace);
 }
 
 /*
@@ -922,75 +913,31 @@ _nc_galaxy_shape_factor_spectral_ldata_free (gpointer p)
   g_free (ldata);
 }
 
-static void
-_nc_galaxy_shape_factor_spectral_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
-{
-  NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf));
-
-  self->range_ready = FALSE;
-  self->range_holds = FALSE;
-
-  if (self->restrict_range)
-  {
-    NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-    NcHaloPosition *hp          = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
-    NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-    NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-
-    if ((cosmo != NULL) && (hp != NULL) && (smd != NULL) && (dp != NULL))
-    {
-      if (self->dp_box == NULL)
-      {
-        NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-
-        self->dp_box = NC_HALO_DENSITY_PROFILE (ncm_model_dup (NCM_MODEL (dp), ser));
-        ncm_serialize_free (ser);
-      }
-
-      nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
-      nc_halo_position_prepare_if_needed (hp, cosmo);
-
-      nc_hicosmo_clear (&self->cosmo);
-      nc_wl_surface_mass_density_clear (&self->smd);
-      self->cosmo = nc_hicosmo_ref (cosmo);
-      self->smd   = nc_wl_surface_mass_density_ref (smd);
-
-      self->z_cl        = nc_halo_position_get_redshift (hp);
-      self->delta_R     = _nc_galaxy_shape_factor_moments_centre_delta (hp, cosmo);
-      self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_box, dp);
-      self->range_holds = self->range_ready && _nc_galaxy_shape_factor_moments_range_holds (mset);
-    }
-  }
-}
-
 /*
- * The |g| range data_prepare() asks of the interpolant of a galaxy with restrict-range: the
- * bound of |g| = |(1 + m) g_t e^{2 i phi} + c| at the corner of the box, |1 + m| |g_t| + |c|,
- * with g_t at the smallest projected radius the box of the halo center allows, the source
- * redshift z_max and the mass at its upper bound, when it is below interp-g-max. At fixed
- * radius, source redshift and concentration, the convergence and the shear grow with the
- * mass and the source redshift, so with kappa < 1 at the corner |g_t| is largest there.
- * 0 (the whole interp-g-max) when the bound does not hold, when the radius can reach the halo
- * itself, without a finite source redshift behind the lens, when kappa >= 1 at the corner,
- * and when the bound is 0.
+ * The |g| range data_prepare() asks of the interpolant of a galaxy with restrict-range:
+ * the bound of |g| = |(1 + m) g_t e^{2 i phi} + c| at the corner of the prior box, |1 +
+ * m| |g_t| + |c|, with the convergence and g_t at the smallest projected radius the box
+ * of the halo center allows, the source redshift z_max and the mass at its upper bound
+ * (the bound fields of @data), when it is below interp-g-max. At fixed radius, source
+ * redshift and concentration, the convergence and the shear grow with the mass and the
+ * source redshift, so with kappa < 1 at the corner |g_t| is largest there. 0 (the whole
+ * interp-g-max) when the bound is not ready, when the bound does not hold, when the
+ * radius can reach the halo itself, without a finite source redshift behind the lens,
+ * when kappa >= 1 at the corner, and when the bound is 0.
  */
 static gdouble
 _nc_galaxy_shape_factor_spectral_reach (NcGalaxyShapeFactorSpectralPrivate *self, NcGalaxyShapeFactorData *data, const gdouble z_max)
 {
-  const gdouble R     = nc_galaxy_shape_factor_data_get_radius (data);
-  const gdouble R_min = R - self->delta_R;
-  gdouble kappa, g_t, g_cal;
+  const gdouble R_min = data->bound_R_min;
+  const gdouble kappa = data->bound_kappa;
+  const gdouble g_t   = data->bound_g_t;
+  gdouble g_cal;
 
-  if (!self->restrict_range || !self->range_ready || !self->range_holds)
+  if (!self->restrict_range || !data->bound_ready || !data->bound_holds)
     return 0.0;
 
-  if (!(R_min > 0.0) || !gsl_finite (z_max) || !(z_max > self->z_cl))
+  if (!(R_min > 0.0) || !gsl_finite (z_max) || !(z_max > data->bound_z_cl))
     return 0.0;
-
-  g_mutex_lock (&self->range_lock);
-  kappa = nc_wl_surface_mass_density_convergence (self->smd, self->dp_box, self->cosmo, R_min, z_max, self->z_cl, self->z_cl);
-  g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_box, self->cosmo, R_min, z_max, self->z_cl, self->z_cl));
-  g_mutex_unlock (&self->range_lock);
 
   if (!gsl_finite (kappa) || !gsl_finite (g_t) || !(kappa < 1.0))
     return 0.0;
@@ -1000,7 +947,7 @@ _nc_galaxy_shape_factor_spectral_reach (NcGalaxyShapeFactorSpectralPrivate *self
   return ((g_cal > 0.0) && (g_cal < self->interp_g_max)) ? g_cal : 0.0;
 }
 
-static gdouble _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble std_noise, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, NcmMatrix **panels);
+static gdouble _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data, const gdouble std_noise, const gdouble g_1, const gdouble g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, NcGalaxyShapeFactorSpectralWork *work_in, NcmMatrix **panels);
 static gboolean _nc_galaxy_shape_factor_spectral_interp_valid (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 static void _nc_galaxy_shape_factor_spectral_interp_build (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
 static void _nc_galaxy_shape_factor_spectral_interp_record (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2);
@@ -1092,12 +1039,12 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
   NcGalaxyShapeFactorSpectralData *ldata = data->ldata;
 
   if (!_nc_galaxy_shape_factor_spectral_has_interp (ldata))
-    return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
+    return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL, NULL);
 
   _nc_galaxy_shape_factor_spectral_interp_check (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
 
   if (g_1 * g_1 + g_2 * g_2 > gsl_pow_2 (ldata->g_max))
-    return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
+    return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL, NULL);
 
   {
     {
@@ -1125,16 +1072,16 @@ _nc_galaxy_shape_factor_spectral_eval_ln_marginal (NcGalaxyShapeFactor *gsf, NcG
  * the evaluation one shear at a time to rounding, not bit by bit.
  */
 static void
-_nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+_nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n,
                                              const gdouble *g_1, const gdouble *g_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
                                              const gboolean want_log, gdouble *out)
 {
   NcGalaxyShapeFactorSpectral *gsfs               = NC_GALAXY_SHAPE_FACTOR_SPECTRAL (gsf);
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
   NcGalaxyShapeFactorSpectralData *ldata          = data->ldata;
-  NcGalaxyShapeFactorSpectralWork **ptr;
-  NcGalaxyShapeFactorSpectralWork *work;
-  guint m_in = 0;
+  NcGalaxyShapeFactorSpectralWork **ptr           = (workspace != NULL) ? workspace : ncm_memory_pool_get (self->work_pool);
+  NcGalaxyShapeFactorSpectralWork *work           = *ptr;
+  guint m_in                                      = 0;
   gdouble *g_buf;
   guint *j_buf;
   gdouble g_max2;
@@ -1145,10 +1092,13 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
     for (j = 0; j < n; j++)
     {
       const gdouble lnP = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
-                                                                    epsilon_obs_1, epsilon_obs_2, NULL);
+                                                                    epsilon_obs_1, epsilon_obs_2, work, NULL);
 
       out[j] = want_log ? lnP : exp (lnP);
     }
+
+    if (workspace == NULL)
+      ncm_memory_pool_return (ptr);
 
     return;
   }
@@ -1156,8 +1106,6 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
   _nc_galaxy_shape_factor_spectral_interp_check (gsfs, pop, data, epsilon_obs_1, epsilon_obs_2);
   g_max2 = gsl_pow_2 (ldata->g_max);
 
-  ptr  = ncm_memory_pool_get (self->work_pool);
-  work = *ptr;
   g_array_set_size (work->g_arr, 2 * n);
   g_array_set_size (work->j_arr, n);
   g_buf = &g_array_index (work->g_arr, gdouble, 0);
@@ -1168,7 +1116,7 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
     if (g_1[j] * g_1[j] + g_2[j] * g_2[j] > g_max2)
     {
       out[j] = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, data->pop_data, data->std_noise, g_1[j], g_2[j],
-                                                         epsilon_obs_1, epsilon_obs_2, NULL);
+                                                         epsilon_obs_1, epsilon_obs_2, work, NULL);
       continue;
     }
 
@@ -1213,7 +1161,8 @@ _nc_galaxy_shape_factor_spectral_eval_nodes (NcGalaxyShapeFactor *gsf, NcGalaxyS
       out[j_buf[q]] = g_array_index (work->f_arr, gdouble, q);
   }
 
-  ncm_memory_pool_return (ptr);
+  if (workspace == NULL)
+    ncm_memory_pool_return (ptr);
 
   if (!want_log)
     for (j = 0; j < n; j++)
@@ -1232,6 +1181,7 @@ typedef struct _NcGalaxyShapeFactorSpectralLine
   gdouble b_2;
   gdouble epsilon_obs_1;
   gdouble epsilon_obs_2;
+  NcGalaxyShapeFactorSpectralWork *work;
 } NcGalaxyShapeFactorSpectralLine;
 
 /* ln P at the position t of the line, by the integral */
@@ -1242,7 +1192,7 @@ _nc_galaxy_shape_factor_spectral_line_ln_P (gpointer user_data, gdouble t)
 
   return _nc_galaxy_shape_factor_spectral_eval_ln (line->gsfs, line->pop, line->data->pop_data, line->data->std_noise,
                                                    line->b_1 + t * line->u_1, line->b_2 + t * line->u_2,
-                                                   line->epsilon_obs_1, line->epsilon_obs_2, NULL);
+                                                   line->epsilon_obs_1, line->epsilon_obs_2, line->work, NULL);
 }
 
 /*
@@ -1257,7 +1207,7 @@ _nc_galaxy_shape_factor_spectral_line_ln_P (gpointer user_data, gdouble t)
  * tolerance. Nothing is kept between calls.
  */
 static gboolean
-_nc_galaxy_shape_factor_spectral_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n,
+_nc_galaxy_shape_factor_spectral_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, gpointer workspace, const guint n,
                                             const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2,
                                             const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out)
 {
@@ -1292,10 +1242,16 @@ _nc_galaxy_shape_factor_spectral_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxySh
     return FALSE;
 
   {
-    NcGalaxyShapeFactorSpectralLine line      = {gsfs, pop, data, u_1, u_2, b_1, b_2, epsilon_obs_1, epsilon_obs_2};
-    NcGalaxyShapeFactorSpectralLineWork **ptr = ncm_memory_pool_get (self->line_pool);
-    NcGalaxyShapeFactorSpectralLineWork *lw   = *ptr;
-    gboolean converged                        = FALSE;
+    NcGalaxyShapeFactorSpectralWork **ptr = (workspace != NULL) ? workspace : ncm_memory_pool_get (self->work_pool);
+    NcGalaxyShapeFactorSpectralWork *work = *ptr;
+    NcGalaxyShapeFactorSpectralLine line  = {gsfs, pop, data, u_1, u_2, b_1, b_2, epsilon_obs_1, epsilon_obs_2, work};
+    gboolean converged                    = FALSE;
+    NcGalaxyShapeFactorSpectralLineWork *lw;
+
+    if (work->line == NULL)
+      work->line = _nc_galaxy_shape_factor_spectral_line_work_new (NULL);
+
+    lw = work->line;
 
     ncm_spectral_compute_chebyshev_coeffs_adaptive_try (lw->spectral, &_nc_galaxy_shape_factor_spectral_line_ln_P, t_min, t_max,
                                                         NC_GALAXY_SHAPE_FACTOR_SPECTRAL_LINE_LEVEL_MIN, level_cap,
@@ -1314,7 +1270,8 @@ _nc_galaxy_shape_factor_spectral_eval_line (NcGalaxyShapeFactor *gsf, NcGalaxySh
       }
     }
 
-    ncm_memory_pool_return (ptr);
+    if (workspace == NULL)
+      ncm_memory_pool_return (ptr);
 
     return converged;
   }
@@ -1939,7 +1896,7 @@ _nc_galaxy_shape_factor_spectral_interp_kernel (guint n_vars, const guint *n, co
     for (i = 0; i < n[0]; i++)
       fval[i * n[1] + j] = _nc_galaxy_shape_factor_spectral_eval_ln (interp->gsfs, interp->pop, interp->pop_data, interp->std_noise,
                                                                      interp->g_c + x[0][i] * cos_psi, x[0][i] * sin_psi,
-                                                                     interp->e, 0.0, NULL);
+                                                                     interp->e, 0.0, NULL, NULL);
   }
 }
 
@@ -2017,7 +1974,7 @@ _nc_galaxy_shape_factor_spectral_interp_pop_kernel (guint n_vars, const guint *n
       for (i = 0; i < n[0]; i++)
         fval[(i * n[1] + j) * n_p + p] = _nc_galaxy_shape_factor_spectral_eval_ln (interp->gsfs, interp->pop, interp->pop_data, interp->std_noise,
                                                                                    interp->g_c + x[0][i] * cos_psi, x[0][i] * sin_psi,
-                                                                                   interp->e, 0.0, NULL);
+                                                                                   interp->e, 0.0, NULL, NULL);
     }
   }
 }
@@ -2326,7 +2283,8 @@ static gdouble _nc_galaxy_shape_factor_spectral_near_unit_ln (NcGalaxyShapeFacto
 static gdouble
 _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcGalaxyShapePop *pop, NcGalaxyShapePopData *pop_data,
                                           const gdouble std_noise, const gdouble g_1, const gdouble g_2,
-                                          const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, NcmMatrix **panels)
+                                          const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, NcGalaxyShapeFactorSpectralWork *work_in,
+                                          NcmMatrix **panels)
 {
   NcGalaxyShapeFactorSpectralPrivate * const self = nc_galaxy_shape_factor_spectral_get_instance_private (gsfs);
   const gdouble noise_var                         = gsl_pow_2 (std_noise);
@@ -2352,8 +2310,8 @@ _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcG
     const gdouble a                       = nc_galaxy_shape_pop_exponent_at_origin (pop);
     const gdouble b_pop                   = nc_galaxy_shape_pop_exponent_at_one (pop);
     const gdouble b                       = self->axis_ratio_var ? 2.0 * b_pop + 1.0 : b_pop;
-    NcGalaxyShapeFactorSpectralWork **ptr = ncm_memory_pool_get (self->work_pool);
-    NcGalaxyShapeFactorSpectralWork *work = *ptr;
+    NcGalaxyShapeFactorSpectralWork **ptr = (work_in == NULL) ? ncm_memory_pool_get (self->work_pool) : NULL;
+    NcGalaxyShapeFactorSpectralWork *work = (work_in == NULL) ? *ptr : work_in;
     NcGalaxyShapeFactorSpectralKernel k   = {
       .pop       = pop,
       .pop_data  = pop_data,
@@ -2375,7 +2333,8 @@ _nc_galaxy_shape_factor_spectral_eval_ln (NcGalaxyShapeFactorSpectral *gsfs, NcG
     else
       ln_P = _nc_galaxy_shape_factor_spectral_integrate_ln (self, &k, std_noise, a, b, work, panels, &error);
 
-    ncm_memory_pool_return (ptr);
+    if (ptr != NULL)
+      ncm_memory_pool_return (ptr);
 
     if ((error != NULL) || !gsl_finite (ln_P))
       g_error ("nc_galaxy_shape_factor_spectral: %s for the population %s, std_noise = % 22.15g, "
@@ -3527,7 +3486,7 @@ nc_galaxy_shape_factor_spectral_eval_ln_direct (NcGalaxyShapeFactorSpectral *gsf
                                                 const gdouble epsilon_obs_1, const gdouble epsilon_obs_2,
                                                 const gdouble std_noise)
 {
-  return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, pop_data, std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL);
+  return _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, pop_data, std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL, NULL);
 }
 
 /**
@@ -3564,7 +3523,7 @@ nc_galaxy_shape_factor_spectral_eval_panels (NcGalaxyShapeFactorSpectral *gsfs, 
                                              const gdouble std_noise, gdouble *ln_marginal)
 {
   NcmMatrix *panels  = NULL;
-  const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, pop_data, std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, &panels);
+  const gdouble ln_P = _nc_galaxy_shape_factor_spectral_eval_ln (gsfs, pop, pop_data, std_noise, g_1, g_2, epsilon_obs_1, epsilon_obs_2, NULL, &panels);
 
   if (ln_marginal != NULL)
     *ln_marginal = ln_P;

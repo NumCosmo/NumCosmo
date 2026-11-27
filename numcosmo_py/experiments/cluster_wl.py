@@ -52,6 +52,11 @@ from rich.table import Table
 from tabulate import tabulate
 
 from numcosmo_py import GEnum, Nc, Ncm, parse_options_strict
+from numcosmo_py.experiments.wl_row_selection import (
+    RowSelectionContext,
+    RowSelector,
+    row_selection_mask,
+)
 from numcosmo_py.helper import catalog_column
 
 DEFAULT_TABLE_FMT = "rounded_grid"
@@ -1544,16 +1549,16 @@ class GalaxyDistributionModel:
 
         cluster.halo_position.prepare_if_needed(cosmo)
 
-        pos_data = Nc.GalaxyPositionFactorData.new(self.position_factor, mset)
-        z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-        s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-        cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+        cols = Nc.DataClusterWLFactor.new(
+            self.position_factor, redshift_factor, shape_factor
+        ).required_columns(mset)
 
         obs = Nc.GalaxyWLObs.new(
             self.shape_gen.ellip_conv.genum,
             self.shape_gen.ellip_coord.genum,
             self.n_galaxies,
             cols,
+            [Ncm.CatalogColType.DOUBLE] * len(cols),
         )
         for i in range(self.n_galaxies):
             for c in cols:
@@ -1836,6 +1841,7 @@ def load_cluster_wl(
     summary: bool,
     resample_flag: Nc.DataClusterWLResampleFlag = Nc.DataClusterWLResampleFlag.ALL,
     binned_gen: BinnedGenTypes | None = None,
+    row_selector: RowSelector | None = None,
 ) -> Ncm.ObjDictStr:
     """Build a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.
 
@@ -1857,6 +1863,10 @@ def load_cluster_wl(
     With ``binned_gen`` the likelihood is the binned one built from the catalog's
     galaxies (``BinnedGenBase.build_data``), from the p(z) of the catalog, instead of
     the per-galaxy one; ``resample_flag`` and ``integ_options`` then do not apply.
+
+    ``row_selector``, when given, is evaluated at the cluster and cosmology of the
+    experiment and sets the mask of the ``NcDataClusterWLFactor`` (see
+    ``numcosmo_py.experiments.wl_row_selection``).
     """
     if not (obs.has_column("ra") and obs.has_column("dec")):
         raise ValueError("obs must have 'ra' and 'dec' columns")
@@ -1982,6 +1992,13 @@ def load_cluster_wl(
     cluster_data.set_obs(obs)
     cluster_data.set_resample_flag(resample_flag)
 
+    # The selection is evaluated here, at the cluster and cosmology of the experiment.
+    if row_selector is not None:
+        ctx = RowSelectionContext(
+            obs=obs, cosmo=cosmo, halo_position=cluster.halo_position
+        )
+        cluster_data.set_mask(row_selection_mask(row_selector, ctx))
+
     binned_data = None
     if binned_gen is not None:
         binned_data = binned_gen.build_data(mset, obs, cluster.r_min, cluster.r_max)
@@ -2017,6 +2034,9 @@ def load_cluster_wl(
         table.add_column("Parameter")
         table.add_column("Value")
         table.add_row("Number of galaxies", f"{obs.len()}")
+        mask = cluster_data.get_mask()
+        if mask:
+            table.add_row("Galaxies used (row selection)", f"{sum(mask)}")
         table.add_row("RA range", f"[{ra.min():.4f}, {ra.max():.4f}]")
         table.add_row("DEC range", f"[{dec.min():.4f}, {dec.max():.4f}]")
         table.add_row("Shape Generator", repr(shape_gen))

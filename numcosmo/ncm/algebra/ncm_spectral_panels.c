@@ -61,17 +61,7 @@ enum
   PROP_0,
   PROP_FDIM,
   PROP_PANELS,
-};
-
-struct _NcmSpectralPanels
-{
-  /*< private >*/
-  GObject parent_instance;
-  guint fdim;
-  guint n_panels;
-  GArray *edges;         /* gdouble, n_panels + 1 entries once a panel is added */
-  GPtrArray *pool;       /* GArray of gdouble, the first n_panels hold the panels' fdim rows of N_i */
-  GVariant *init_panels; /* the construct-only property, consumed by constructed() */
+  PROP_UNIFORM,
 };
 
 G_DEFINE_TYPE (NcmSpectralPanels, ncm_spectral_panels, G_TYPE_OBJECT)
@@ -79,11 +69,19 @@ G_DEFINE_TYPE (NcmSpectralPanels, ncm_spectral_panels, G_TYPE_OBJECT)
 static void
 ncm_spectral_panels_init (NcmSpectralPanels *sp)
 {
-  sp->fdim        = 0;
-  sp->n_panels    = 0;
-  sp->edges       = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  sp->pool        = g_ptr_array_new_with_free_func ((GDestroyNotify) g_array_unref);
-  sp->init_panels = NULL;
+  sp->fdim          = 0;
+  sp->n_panels      = 0;
+  sp->edges         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  sp->pool          = g_ptr_array_new_with_free_func ((GDestroyNotify) g_array_unref);
+  sp->panel_data    = NULL;
+  sp->init_panels   = NULL;
+  sp->init_uniform  = FALSE;
+  sp->uniform       = FALSE;
+  sp->uniform_x0    = 0.0;
+  sp->uniform_inv_h = 0.0;
+  sp->uniform_last  = 0.0;
+  sp->uniform_N     = 0;
+  sp->uniform_power = NULL;
 }
 
 static void
@@ -100,6 +98,9 @@ _ncm_spectral_panels_set_property (GObject *object, guint prop_id, const GValue 
       break;
     case PROP_PANELS:
       sp->init_panels = g_value_dup_variant (value);
+      break;
+    case PROP_UNIFORM:
+      sp->init_uniform = g_value_get_boolean (value);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -123,6 +124,9 @@ _ncm_spectral_panels_get_property (GObject *object, guint prop_id, GValue *value
       break;
     case PROP_PANELS:
       g_value_take_variant (value, _ncm_spectral_panels_get_variant (sp));
+      break;
+    case PROP_UNIFORM:
+      g_value_set_boolean (value, sp->uniform);
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -192,6 +196,9 @@ _ncm_spectral_panels_constructed (GObject *object)
     g_variant_unref (panels_var);
     g_clear_pointer (&sp->init_panels, g_variant_unref);
   }
+
+  if (sp->init_uniform)
+    ncm_spectral_panels_set_uniform (sp);
 }
 
 static void
@@ -201,6 +208,8 @@ _ncm_spectral_panels_finalize (GObject *object)
 
   g_array_unref (sp->edges);
   g_ptr_array_unref (sp->pool);
+  g_free (sp->panel_data);
+  g_free (sp->uniform_power);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spectral_panels_parent_class)->finalize (object);
@@ -243,9 +252,22 @@ ncm_spectral_panels_class_init (NcmSpectralPanelsClass *klass)
                                                          "Panel edges and coefficients",
                                                          G_VARIANT_TYPE ("(adaad)"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
 
-static gdouble _ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s);
+  /**
+   * NcmSpectralPanels:uniform:
+   *
+   * Whether the panels are uniform, as set by ncm_spectral_panels_set_uniform(). Given at
+   * construction, ncm_spectral_panels_set_uniform() is applied to the panels of
+   * #NcmSpectralPanels:panels.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_UNIFORM,
+                                   g_param_spec_boolean ("uniform",
+                                                         NULL,
+                                                         "Whether the panels are uniform",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
 
 /**
  * ncm_spectral_panels_new:
@@ -342,6 +364,8 @@ ncm_spectral_panels_append_data (NcmSpectralPanels *sp, gdouble a, gdouble b, co
   if (N == 0)
     g_error ("ncm_spectral_panels_append: the panel [%.17g, %.17g] has no coefficients.", a, b);
 
+  sp->uniform = FALSE;
+
   if (!(a < b))
     g_error ("ncm_spectral_panels_append: the panel [%.17g, %.17g] is empty.", a, b);
 
@@ -361,7 +385,10 @@ ncm_spectral_panels_append_data (NcmSpectralPanels *sp, gdouble a, gdouble b, co
   g_array_append_val (sp->edges, b);
 
   if (sp->n_panels == sp->pool->len)
+  {
     g_ptr_array_add (sp->pool, g_array_new (FALSE, FALSE, sizeof (gdouble)));
+    sp->panel_data = g_renew (gdouble *, sp->panel_data, sp->pool->len);
+  }
 
   coeffs = g_ptr_array_index (sp->pool, sp->n_panels);
   g_array_set_size (coeffs, (gsize) sp->fdim * N);
@@ -369,6 +396,7 @@ ncm_spectral_panels_append_data (NcmSpectralPanels *sp, gdouble a, gdouble b, co
   for (r = 0; r < sp->fdim; r++)
     memcpy (&g_array_index (coeffs, gdouble, (gsize) r * N), c + (gsize) r * tda, sizeof (gdouble) * N);
 
+  sp->panel_data[sp->n_panels] = (gdouble *) coeffs->data;
   sp->n_panels++;
 }
 
@@ -385,6 +413,131 @@ ncm_spectral_panels_reset (NcmSpectralPanels *sp)
 {
   g_array_set_size (sp->edges, 0);
   sp->n_panels = 0;
+  sp->uniform  = FALSE;
+}
+
+/**
+ * ncm_spectral_panels_set_uniform:
+ * @sp: a #NcmSpectralPanels
+ *
+ * Marks the panels of @sp as uniform, so that ncm_spectral_panels_find_panel() computes the
+ * index of the panel holding a point from the point instead of searching the edges. With
+ * $n$ panels on $[x_0, x_n]$ and $h = (x_n - x_0) / n$, edge $i < n$ must be exactly
+ * $x_0 + i h$, as ncm_spectral_panels_builder_build_uniform() writes it; otherwise this
+ * is an error. Every row is padded with zero coefficients to the largest $N$ of the
+ * panels, which leaves the series unchanged. For $N \leq$ %NCM_SPECTRAL_PANELS_POWER_N_MAX
+ * the series of every panel is also stored in powers of $s$, and ncm_spectral_panels_eval_row()
+ * evaluates that copy by Horner's rule; the values
+ * agree with the Chebyshev series to rounding. The next ncm_spectral_panels_append() or
+ * ncm_spectral_panels_reset() removes the mark.
+ */
+void
+ncm_spectral_panels_set_uniform (NcmSpectralPanels *sp)
+{
+  const guint n = sp->n_panels;
+  guint N_max   = 0;
+  gdouble x0, xn, h;
+  guint i;
+
+  if (n == 0)
+    g_error ("ncm_spectral_panels_set_uniform: the panel set is empty.");
+
+  x0 = g_array_index (sp->edges, gdouble, 0);
+  xn = g_array_index (sp->edges, gdouble, n);
+  h  = (xn - x0) / n;
+
+  for (i = 1; i < n; i++)
+  {
+    const gdouble e_i = g_array_index (sp->edges, gdouble, i);
+
+    if (e_i != x0 + i * h)
+      g_error ("ncm_spectral_panels_set_uniform: edge %u is %.17g, not x_0 + %u h = %.17g.", i, e_i, i, x0 + i * h);
+  }
+
+  for (i = 0; i < n; i++)
+    N_max = MAX (N_max, ((GArray *) g_ptr_array_index (sp->pool, i))->len / sp->fdim);
+
+  for (i = 0; i < n; i++)
+  {
+    GArray *coeffs = g_ptr_array_index (sp->pool, i);
+    const guint N  = coeffs->len / sp->fdim;
+
+    if (N < N_max)
+    {
+      gint r;
+
+      g_array_set_size (coeffs, (gsize) sp->fdim * N_max);
+
+      /* Rows move from the last one down, each to the start of its padded row */
+      for (r = (gint) sp->fdim - 1; r >= 0; r--)
+      {
+        gdouble *row = &g_array_index (coeffs, gdouble, (gsize) r * N_max);
+
+        memmove (row, &g_array_index (coeffs, gdouble, (gsize) r * N), sizeof (gdouble) * N);
+        memset (row + N, 0, sizeof (gdouble) * (N_max - N));
+      }
+
+      sp->panel_data[i] = (gdouble *) coeffs->data;
+    }
+  }
+
+  /* The power-basis copy: T_k (s) = sum_p t[k][p] s^p, t[k] = 2 s t[k - 1] - t[k - 2] */
+  if (N_max <= NCM_SPECTRAL_PANELS_POWER_N_MAX)
+  {
+    gdouble t[NCM_SPECTRAL_PANELS_POWER_N_MAX][NCM_SPECTRAL_PANELS_POWER_N_MAX];
+    guint k, p, r;
+
+    memset (t, 0, sizeof (t));
+    t[0][0] = 1.0;
+
+    if (N_max > 1)
+      t[1][1] = 1.0;
+
+    for (k = 2; k < N_max; k++)
+      for (p = 0; p < N_max; p++)
+        t[k][p] = ((p > 0) ? 2.0 * t[k - 1][p - 1] : 0.0) - t[k - 2][p];
+
+    sp->uniform_power = g_renew (gdouble, sp->uniform_power, (gsize) n * sp->fdim * N_max);
+
+    for (i = 0; i < n; i++)
+    {
+      for (r = 0; r < sp->fdim; r++)
+      {
+        const gdouble *c = sp->panel_data[i] + (gsize) r * N_max;
+        gdouble *a       = sp->uniform_power + ((gsize) i * sp->fdim + r) * N_max;
+
+        for (p = 0; p < N_max; p++)
+        {
+          a[p] = 0.0;
+
+          for (k = p; k < N_max; k++)
+            a[p] += c[k] * t[k][p];
+        }
+      }
+    }
+  }
+  else
+  {
+    g_clear_pointer (&sp->uniform_power, g_free);
+  }
+
+  sp->uniform       = TRUE;
+  sp->uniform_x0    = x0;
+  sp->uniform_inv_h = n / (xn - x0);
+  sp->uniform_last  = n - 1;
+  sp->uniform_N     = N_max;
+}
+
+/**
+ * ncm_spectral_panels_is_uniform:
+ * @sp: a #NcmSpectralPanels
+ *
+ * Returns: whether @sp is marked uniform by ncm_spectral_panels_set_uniform().
+ */
+gboolean
+ncm_spectral_panels_is_uniform (NcmSpectralPanels *sp)
+{
+  return sp->uniform;
 }
 
 /**
@@ -455,7 +608,7 @@ ncm_spectral_panels_peek_panel (NcmSpectralPanels *sp, guint i, gdouble *a, gdou
   *b = g_array_index (sp->edges, gdouble, i + 1);
   *N = coeffs->len / sp->fdim;
 
-  return (const gdouble *) coeffs->data;
+  return sp->panel_data[i];
 }
 
 /**
@@ -491,7 +644,9 @@ ncm_spectral_panels_get_panel (NcmSpectralPanels *sp, guint i, gdouble *a, gdoub
  * Finds the panel holding @x by bisection over the edges; @sp must have at least one
  * panel. A point on an interior edge belongs to the panel that starts there, a point
  * below the first edge to the first panel, and a point on or above the last edge to the
- * last panel.
+ * last panel. When @sp is uniform (ncm_spectral_panels_set_uniform()) the index is
+ * $\lfloor (x - x_0) / h \rfloor$ in floating point, so a point within rounding of an
+ * interior edge may belong to the panel that ends there.
  *
  * Returns: the index of the panel.
  */
@@ -503,6 +658,15 @@ ncm_spectral_panels_find_panel (NcmSpectralPanels *sp, gdouble x)
   guint hi;
 
   g_assert_cmpuint (sp->edges->len, >, 1);
+
+  if (sp->uniform)
+  {
+    /* The same index as ncm_spectral_panels_eval_row() */
+    const gdouble u  = (x - sp->uniform_x0) * sp->uniform_inv_h;
+    const gdouble u0 = (u > 0.0) ? u : 0.0;
+
+    return (guint) ((u0 < sp->uniform_last) ? u0 : sp->uniform_last);
+  }
 
   hi = sp->edges->len - 2;
 
@@ -532,14 +696,24 @@ ncm_spectral_panels_find_panel (NcmSpectralPanels *sp, gdouble x)
 void
 ncm_spectral_panels_eval (NcmSpectralPanels *sp, gdouble x, NcmVector *fval)
 {
-  const guint i = ncm_spectral_panels_find_panel (sp, x);
-  gdouble a, b;
-  guint N, r;
-  const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
-  const gdouble s  = ncm_spectral_x_to_s (a, b, x);
+  guint r;
 
-  for (r = 0; r < sp->fdim; r++)
-    ncm_vector_set (fval, r, _ncm_spectral_panels_clenshaw (c + (gsize) r * N, N, s));
+  if (sp->uniform)
+  {
+    for (r = 0; r < sp->fdim; r++)
+      ncm_vector_set (fval, r, ncm_spectral_panels_eval_row (sp, r, x));
+  }
+  else
+  {
+    const guint i = ncm_spectral_panels_find_panel (sp, x);
+    gdouble a, b;
+    guint N;
+    const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
+    const gdouble s  = ncm_spectral_x_to_s (a, b, x);
+
+    for (r = 0; r < sp->fdim; r++)
+      ncm_vector_set (fval, r, _ncm_spectral_panels_clenshaw_n (c + (gsize) r * N, N, s));
+  }
 }
 
 /**
@@ -548,15 +722,13 @@ ncm_spectral_panels_eval (NcmSpectralPanels *sp, gdouble x, NcmVector *fval)
  * @r: row index
  * @x: a point
  *
- * Evaluates the entry $F_r$ at @x, as ncm_spectral_panels_eval() does.
+ * Evaluates the entry $F_r$ at @x, as ncm_spectral_panels_eval() does. On a uniform set
+ * (ncm_spectral_panels_set_uniform()) the panel index $i$ and the variable
+ * $s = 2 [(x - x_0) / h - i] - 1$ both come from $(x - x_0) / h$, so a point on an edge
+ * may fall on either side of it within rounding.
  *
  * Returns: $F_r(x)$.
  */
-gdouble
-ncm_spectral_panels_eval_row (NcmSpectralPanels *sp, guint r, gdouble x)
-{
-  return ncm_spectral_panels_eval_row_on (sp, ncm_spectral_panels_find_panel (sp, x), r, x);
-}
 
 /**
  * ncm_spectral_panels_eval_row_on:
@@ -578,27 +750,7 @@ ncm_spectral_panels_eval_row_on (NcmSpectralPanels *sp, guint i, guint r, gdoubl
   guint N;
   const gdouble *c = ncm_spectral_panels_peek_panel (sp, i, &a, &b, &N);
 
-  return _ncm_spectral_panels_clenshaw (c + (gsize) r * N, N, ncm_spectral_x_to_s (a, b, x));
-}
-
-/* The series of N coefficients c at s in [-1, 1] by the Clenshaw recurrence */
-static gdouble
-_ncm_spectral_panels_clenshaw (const gdouble *c, guint N, const gdouble s)
-{
-  const gdouble two_s = 2.0 * s;
-  gdouble b_1         = 0.0;
-  gdouble b_2         = 0.0;
-  gint n;
-
-  for (n = (gint) N - 1; n >= 1; n--)
-  {
-    const gdouble b_0 = two_s * b_1 - b_2 + c[n];
-
-    b_2 = b_1;
-    b_1 = b_0;
-  }
-
-  return s * b_1 - b_2 + c[0];
+  return _ncm_spectral_panels_clenshaw_n (c + (gsize) r * N, N, ncm_spectral_x_to_s (a, b, x));
 }
 
 /**
@@ -684,7 +836,7 @@ ncm_spectral_panels_square_cheb_moments (NcmSpectralPanels *sp, guint r, gdouble
       const gdouble wq = 0.5 * (z1 - z0) * glwt[j];
 
       {
-        const gdouble f  = _ncm_spectral_panels_clenshaw (c + (gsize) r * N, N, ncm_spectral_x_to_s (lo, hi, zq));
+        const gdouble f  = _ncm_spectral_panels_clenshaw_n (c + (gsize) r * N, N, ncm_spectral_x_to_s (lo, hi, zq));
         const gdouble t  = (2.0 * zq - (a + b)) / (b - a);
         const gdouble pw = wq * f * f;
         gdouble T0       = 1.0;

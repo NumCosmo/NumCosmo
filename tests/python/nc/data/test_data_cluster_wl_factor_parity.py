@@ -126,12 +126,13 @@ def _build_new_obs(mset, scale=1.0):
     redshift_factor = Nc.GalaxyRedshiftFactorComposed.new(ZP_MIN, ZP_MAX)
     shape_factor = Nc.GalaxyShapeFactorVarAdd.new(ELLIP_CONV)
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(_GALAXIES), cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, len(_GALAXIES), cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
 
     for i, (ra, dec, zp, sigma0, e1, e2, std_noise, c1, c2, m) in enumerate(_GALAXIES):
         obs.set("ra", i, ra * scale)
@@ -508,13 +509,18 @@ def test_cheb_correct_after_swapping_obs_to_different_sized_catalog():
 
     original_val = dcwlf.m2lnL_val(mset)
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
     small_galaxies = _GALAXIES[:3]
-    small_obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, len(small_galaxies), cols)
+    small_obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV,
+        FRAME,
+        len(small_galaxies),
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
+    )
 
     for i, (ra, dec, zp, sigma0, e1, e2, std_noise, c1, c2, m) in enumerate(
         small_galaxies

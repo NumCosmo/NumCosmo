@@ -225,16 +225,54 @@ _nc_galaxy_wl_obs_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->finalize (object);
 }
 
+/*
+ * A catalog that references the columns of @catalog (see ncm_catalog_shallow_dup()), with
+ * its ellipticity convention and frame, references to its p(z) objects and its interpolants
+ * and CHEB_WEIGHTS grid. The tables are checked against the rows of the copy at their first
+ * use, as after deserialization.
+ */
+static NcmCatalog *
+_nc_galaxy_wl_obs_shallow_dup (NcmCatalog *catalog)
+{
+  NcGalaxyWLObsPrivate * const self  = nc_galaxy_wl_obs_get_instance_private (NC_GALAXY_WL_OBS (catalog));
+  NcmCatalog *dup                    = NCM_CATALOG_CLASS (nc_galaxy_wl_obs_parent_class)->shallow_dup (catalog);
+  NcGalaxyWLObsPrivate * const dself = nc_galaxy_wl_obs_get_instance_private (NC_GALAXY_WL_OBS (dup));
+  GArray *keys                       = ncm_obj_dict_int_keys (self->pz);
+  guint i;
+
+  dself->coord      = self->coord;
+  dself->ellip_conv = self->ellip_conv;
+
+  for (i = 0; i < keys->len; i++)
+  {
+    const gint key = g_array_index (keys, gint, i);
+
+    ncm_obj_dict_int_add (dself->pz, key, ncm_obj_dict_int_peek (self->pz, key));
+  }
+
+  g_array_unref (keys);
+
+  if (self->shape_interp != NULL)
+    dself->shape_interp = g_object_ref (self->shape_interp);
+
+  if (self->cheb_grid != NULL)
+    dself->cheb_grid = nc_galaxy_wl_obs_cheb_grid_ref (self->cheb_grid);
+
+  return dup;
+}
+
 static void
 nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
+  NcmCatalogClass *catalog_class = NCM_CATALOG_CLASS (klass);
 
   object_class->get_property = &_nc_galaxy_wl_obs_get_property;
   object_class->set_property = &_nc_galaxy_wl_obs_set_property;
   object_class->constructed  = &_nc_galaxy_wl_obs_constructed;
   object_class->dispose      = &_nc_galaxy_wl_obs_dispose;
   object_class->finalize     = &_nc_galaxy_wl_obs_finalize;
+  catalog_class->shallow_dup = &_nc_galaxy_wl_obs_shallow_dup;
 
   /**
    * NcGalaxyWLObs:pz:
@@ -427,21 +465,45 @@ _nc_galaxy_wl_obs_take_pz (NcGalaxyWLObsPrivate *self, NcmObjDictInt *pz)
  * @ellip_conv: the ellipticity convention
  * @coord: the coordinate system used to store the data
  * @nrows: the number of data rows
- * @col_names: a #GStrv
+ * @col_names: the column names
+ * @col_types: (array length=n_types): the type of each column of @col_names
+ * @n_types: the number of entries of @col_types, the number of @col_names
  *
- * Creates a new #NcGalaxyWLObs object.
+ * Creates a new #NcGalaxyWLObs object with @nrows rows and the typed columns
+ * @col_names, as ncm_catalog_new_full(). The columns are read and written with the
+ * #NcmCatalog functions.
  *
  * Returns: (transfer full): a new #NcGalaxyWLObs object.
  */
 NcGalaxyWLObs *
-nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names)
+nc_galaxy_wl_obs_new (NcGalaxyWLObsEllipConv ellip_conv, NcWLEllipticityFrame coord, guint nrows, GStrv col_names,
+                      const NcmCatalogColType *col_types, guint n_types)
 {
-  return g_object_new (NC_TYPE_GALAXY_WL_OBS,
-                       "ellip-conv", ellip_conv,
-                       "columns", col_names,
-                       "coord", coord,
-                       "len", nrows,
-                       NULL);
+  GArray *types = g_array_sized_new (FALSE, TRUE, sizeof (guint32), n_types);
+  NcGalaxyWLObs *obs;
+  GVariant *var;
+  guint i;
+
+  for (i = 0; i < n_types; i++)
+  {
+    const guint32 t = col_types[i];
+
+    g_array_append_val (types, t);
+  }
+
+  var = ncm_cfg_array_to_variant (types, G_VARIANT_TYPE ("u"));
+  obs = g_object_new (NC_TYPE_GALAXY_WL_OBS,
+                      "ellip-conv", ellip_conv,
+                      "columns", col_names,
+                      "col-types", var,
+                      "coord", coord,
+                      "len", nrows,
+                      NULL);
+
+  g_variant_unref (var);
+  g_array_unref (types);
+
+  return obs;
 }
 
 /* Filenames of the curated Subaru HSC-SSP PDR1 catalogs in the NumCosmo
@@ -594,39 +656,6 @@ nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs)
 }
 
 /**
- * nc_galaxy_wl_obs_get_index:
- * @obs: a #NcGalaxyWLObs object
- * @col: column name
- * @i: a pointer to store the column index
- *
- * Gets the column index from the column name.
- *
- * Returns: %TRUE if the column was found, %FALSE otherwise.
- */
-gboolean
-nc_galaxy_wl_obs_get_index (NcGalaxyWLObs *obs, const gchar *col, guint *i)
-{
-  return ncm_catalog_get_index (NCM_CATALOG (obs), col, i);
-}
-
-/**
- * nc_galaxy_wl_obs_set:
- * @obs: a #NcGalaxyWLObs object
- * @col: column name
- * @i: row index
- * @val: value to be set
- * @error: a #GError for error reporting
- *
- * Sets a value in the observation data.
- *
- */
-void
-nc_galaxy_wl_obs_set (NcGalaxyWLObs *obs, const gchar *col, const guint i, gdouble val, GError **error)
-{
-  ncm_catalog_set (NCM_CATALOG (obs), col, i, val, error);
-}
-
-/**
  * nc_galaxy_wl_obs_set_pz:
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
@@ -691,37 +720,6 @@ nc_galaxy_wl_obs_peek_cheb_grid (NcGalaxyWLObs *obs)
 }
 
 /**
- * nc_galaxy_wl_obs_get:
- * @obs: a #NcGalaxyWLObs object.
- * @col: column name.
- * @i: row index.
- * @error: a #GError for error reporting
- *
- * Gets a value from the observation data.
- *
- * Returns: the requested value.
- */
-gdouble
-nc_galaxy_wl_obs_get (NcGalaxyWLObs *obs, const gchar *col, const guint i, GError **error)
-{
-  return ncm_catalog_get (NCM_CATALOG (obs), col, i, error);
-}
-
-/**
- * nc_galaxy_wl_obs_peek_data:
- * @obs: a #NcGalaxyWLObs object.
- *
- * Gets the observation data matrix.
- *
- * Returns: (transfer none): the observation data matrix.
- */
-NcmMatrix *
-nc_galaxy_wl_obs_peek_data (NcGalaxyWLObs *obs)
-{
-  return ncm_catalog_peek_data (NCM_CATALOG (obs));
-}
-
-/**
  * nc_galaxy_wl_obs_peek_pz:
  * @obs: a #NcGalaxyWLObs object.
  * @i: row index.
@@ -738,6 +736,39 @@ nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   return (NcGalaxyPz *) ncm_obj_dict_int_peek (self->pz, i);
+}
+
+/**
+ * nc_galaxy_wl_obs_pz_cdf_array:
+ * @obs: a #NcGalaxyWLObs
+ * @z: the redshift
+ * @cdf: (out callee-allocates) (transfer full) (element-type gdouble): the cumulative distributions
+ *
+ * Computes, for each row, the cumulative distribution of its redshift density at @z
+ * (nc_galaxy_pz_cdf()), so $P(z' > z) = 1 - $ @cdf. A C caller may pass in @cdf an array to
+ * reuse, or a pointer to %NULL for a new one; it receives one value per row. A row without
+ * a redshift density aborts.
+ */
+void
+nc_galaxy_wl_obs_pz_cdf_array (NcGalaxyWLObs *obs, const gdouble z, GArray **cdf)
+{
+  const guint n = ncm_catalog_len (NCM_CATALOG (obs));
+  guint i;
+
+  if (*cdf == NULL)
+    *cdf = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*cdf, n);
+
+  for (i = 0; i < n; i++)
+  {
+    NcGalaxyPz *gpz = nc_galaxy_wl_obs_peek_pz (obs, i);
+
+    if (gpz == NULL)
+      g_error ("nc_galaxy_wl_obs_pz_cdf_array: row %u has no redshift density.", i);
+
+    g_array_index (*cdf, gdouble, i) = nc_galaxy_pz_cdf (gpz, z);
+  }
 }
 
 /* The interpolants of obs, created empty in memory when there are none */
@@ -841,20 +872,6 @@ nc_galaxy_wl_obs_peek_shape_interp_source (NcGalaxyWLObs *obs)
 }
 
 /**
- * nc_galaxy_wl_obs_peek_columns:
- * @obs: a #NcGalaxyWLObs object.
- *
- * Gets the data columns names.
- *
- * Returns: (transfer none): the data columns names.
- */
-GStrv
-nc_galaxy_wl_obs_peek_columns (NcGalaxyWLObs *obs)
-{
-  return ncm_catalog_peek_columns (NCM_CATALOG (obs));
-}
-
-/**
  * nc_galaxy_wl_obs_set_coord:
  * @obs: a #NcGalaxyWLObs object.
  * @coord: the ellipticity handedness frame #NcWLEllipticityFrame.
@@ -912,18 +929,5 @@ nc_galaxy_wl_obs_get_coord (NcGalaxyWLObs *obs)
   NcGalaxyWLObsPrivate * const self = nc_galaxy_wl_obs_get_instance_private (obs);
 
   return self->coord;
-}
-
-/**
- * nc_galaxy_wl_obs_len:
- * @obs: a #NcGalaxyWLObs object.
- *
- * Gets the number of rows of the observation data.
- *
- */
-guint
-nc_galaxy_wl_obs_len (NcGalaxyWLObs *obs)
-{
-  return ncm_catalog_len (NCM_CATALOG (obs));
 }
 

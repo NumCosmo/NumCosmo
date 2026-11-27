@@ -57,6 +57,7 @@
 #include "ncm/core/ncm_rng.h"
 #include "ncm/integration/ncm_integral1d_ptr.h"
 #include "ncm/model/ncm_model.h"
+#include "ncm/model/ncm_model_ctrl.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -68,10 +69,13 @@ typedef struct _NcGalaxyRedshiftFactorComposedPrivate
   gdouble zp_min;
   gdouble zp_max;
 
-  /* Cached by prepare(): a hash of the population/observable models' state, so callers
-   * can detect a change without knowing which models are involved -- see
-   * #NcGalaxyShapeFactor's analogous radius/optzs/pop hashes for the full rationale.
-   * */
+  /*
+   * The change counter returned by get_hash(): prepare() increments it when the population
+   * or the observable model is another object or its state changed (#NcmModelCtrl), so
+   * callers detect a change without knowing which models are involved.
+   */
+  NcmModelCtrl *ctrl_pop;
+  NcmModelCtrl *ctrl_obs;
   guint64 hash;
 } NcGalaxyRedshiftFactorComposedPrivate;
 
@@ -110,9 +114,11 @@ nc_galaxy_redshift_factor_composed_init (NcGalaxyRedshiftFactorComposed *gsdrc)
 {
   NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (gsdrc);
 
-  self->zp_min = 0.0;
-  self->zp_max = 0.0;
-  self->hash   = 0;
+  self->zp_min   = 0.0;
+  self->zp_max   = 0.0;
+  self->ctrl_pop = ncm_model_ctrl_new (NULL);
+  self->ctrl_obs = ncm_model_ctrl_new (NULL);
+  self->hash     = 0;
 }
 
 static void
@@ -160,6 +166,19 @@ _nc_galaxy_redshift_factor_composed_get_property (GObject *object, guint prop_id
 }
 
 static void
+_nc_galaxy_redshift_factor_composed_dispose (GObject *object)
+{
+  NcGalaxyRedshiftFactorComposed *gsdrc              = NC_GALAXY_REDSHIFT_FACTOR_COMPOSED (object);
+  NcGalaxyRedshiftFactorComposedPrivate * const self = nc_galaxy_redshift_factor_composed_get_instance_private (gsdrc);
+
+  ncm_model_ctrl_clear (&self->ctrl_pop);
+  ncm_model_ctrl_clear (&self->ctrl_obs);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_galaxy_redshift_factor_composed_parent_class)->dispose (object);
+}
+
+static void
 _nc_galaxy_redshift_factor_composed_finalize (GObject *object)
 {
   G_OBJECT_CLASS (nc_galaxy_redshift_factor_composed_parent_class)->finalize (object);
@@ -182,6 +201,7 @@ nc_galaxy_redshift_factor_composed_class_init (NcGalaxyRedshiftFactorComposedCla
 
   object_class->set_property = &_nc_galaxy_redshift_factor_composed_set_property;
   object_class->get_property = &_nc_galaxy_redshift_factor_composed_get_property;
+  object_class->dispose      = &_nc_galaxy_redshift_factor_composed_dispose;
   object_class->finalize     = &_nc_galaxy_redshift_factor_composed_finalize;
 
   /**
@@ -317,11 +337,17 @@ _nc_galaxy_redshift_factor_composed_prepare (NcGalaxyRedshiftFactor *gsdr, NcmMS
   /* Validate the required models are present in the mset. */
   _composed_peek_models (mset, &population, &observable);
 
-  /* Neither model's state is otherwise cached (both are always resolved fresh from
-   * mset per-call, per the class doc), so there is nothing else to refresh here --
-   * just keep the hash current for get_hash(). */
-  self->hash = ncm_model_state_get_pkey (NCM_MODEL (population)) ^
-               (ncm_model_state_get_pkey (NCM_MODEL (observable)) * 31U);
+  /*
+   * Neither model's state is otherwise cached (both are resolved from the mset at each
+   * call), so prepare only counts the changes for get_hash()
+   */
+  {
+    const gboolean pop_changed = ncm_model_ctrl_update (self->ctrl_pop, NCM_MODEL (population));
+    const gboolean obs_changed = ncm_model_ctrl_update (self->ctrl_obs, NCM_MODEL (observable));
+
+    if (pop_changed || obs_changed)
+      self->hash++;
+  }
 }
 
 static guint64

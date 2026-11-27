@@ -142,10 +142,8 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_private.h"
 #include "nc/background/nc_hicosmo.h"
-#include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/halo/nc_halo_mass_summary.h"
-#include "nc/lss/wl/nc_wl_surface_mass_density.h"
 #include "ncm/core/ncm_obj_array.h"
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/core/ncm_memory_pool.h"
@@ -1217,10 +1215,9 @@ struct _NcGalaxyShapeFactorMomentsTilt
  * per-galaxy copies. Each galaxy holds a reference, not a copy, so the
  * whole-cache flush above is safe.
  *
- * Concurrency: tab_cache is protected by cache_lock and dp_box by
- * range_lock (see the private struct). NcmFitESMCMC's threaded modes
- * deep-copy the dataset per thread, so each thread owns a distinct factor
- * instance; the locks cover nc_data_cluster_wl_factor_data_prepare()
+ * Concurrency: tab_cache is protected by cache_lock (see the private struct).
+ * NcmFitESMCMC's threaded modes deep-copy the dataset per thread, so each thread owns a
+ * distinct factor instance; the lock covers nc_data_cluster_wl_factor_data_prepare()
  * building tables for several galaxies of one instance at once.
  */
 
@@ -1239,17 +1236,6 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
   gboolean strict_solve;
   gboolean restrict_range;
 
-  /* Cached by prepare() for the reachable-range bound: the models the bound
-   * needs, plus a private copy of the density profile held at the upper
-   * bound of the mass. The bound is evaluated on the copy so that the
-   * profile in the mset is not modified. */
-  NcHICosmo *cosmo;
-  NcWLSurfaceMassDensity *smd;
-  NcHaloDensityProfile *dp_box;
-  gdouble z_cl;
-  gdouble delta_R;
-  gboolean range_ready;
-
   /* Whether the per-galaxy bound holds for the current free parameters:
    * only the mass, the halo center and the shape population may be free
    * (see _nc_galaxy_shape_factor_moments_range_holds). @range_gen is incremented when it
@@ -1263,11 +1249,8 @@ typedef struct _NcGalaxyShapeFactorMomentsTiltPrivate
 
   /* tab_cache is shared by every galaxy of the instance, and
    * nc_data_cluster_wl_factor_data_prepare() may build tables for several
-   * at once. dp_box is shared too, and a density profile updates state
-   * lazily on use. Each has its own lock; neither lock is held while a
-   * table is built. */
+   * at once. The lock is not held while a table is built. */
   GMutex cache_lock;
-  GMutex range_lock;
 
   /* Serialized table set. @pending_tables holds what a load brought in,
    * not yet validated: the stamp can only be checked once the population is
@@ -1412,17 +1395,10 @@ nc_galaxy_shape_factor_moments_tilt_init (NcGalaxyShapeFactorMomentsTilt *gsfmt)
   self->tab_cache_hash = 0;
   self->strict_solve   = FALSE;
   self->restrict_range = TRUE;
-  self->cosmo          = NULL;
-  self->smd            = NULL;
-  self->dp_box         = NULL;
-  self->z_cl           = 0.0;
-  self->delta_R        = 0.0;
-  self->range_ready    = FALSE;
   self->range_holds    = FALSE;
   self->range_gen      = 0;
   self->spectral_pool  = ncm_memory_pool_new (&_moments_tilt_spectral_alloc, NULL, &_moments_tilt_spectral_free);
   g_mutex_init (&self->cache_lock);
-  g_mutex_init (&self->range_lock);
   self->pending_tables          = NULL;
   self->tables_stamp            = NULL;
   self->pop_ref                 = NULL;
@@ -1702,41 +1678,6 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
     g_free (stamp_now);
   }
 
-  self->range_ready = FALSE;
-
-  if (self->restrict_range)
-  {
-    NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-    NcHaloPosition *hp          = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
-    NcWLSurfaceMassDensity *smd = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
-    NcHaloDensityProfile *dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
-
-    if ((cosmo != NULL) && (hp != NULL) && (smd != NULL) && (dp != NULL))
-    {
-      if (self->dp_box == NULL)
-      {
-        NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
-
-        self->dp_box = NC_HALO_DENSITY_PROFILE (ncm_model_dup (NCM_MODEL (dp), ser));
-
-        ncm_serialize_free (ser);
-      }
-
-      nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
-      nc_halo_position_prepare_if_needed (hp, cosmo);
-
-      nc_hicosmo_clear (&self->cosmo);
-      nc_wl_surface_mass_density_clear (&self->smd);
-      self->cosmo = nc_hicosmo_ref (cosmo);
-      self->smd   = nc_wl_surface_mass_density_ref (smd);
-
-      self->z_cl    = nc_halo_position_get_redshift (hp);
-      self->delta_R = _nc_galaxy_shape_factor_moments_centre_delta (hp, cosmo);
-
-      self->range_ready = _nc_galaxy_shape_factor_moments_set_box_corner (self->dp_box, dp);
-    }
-  }
-
   {
     const gboolean holds = self->restrict_range && _nc_galaxy_shape_factor_moments_range_holds (mset);
 
@@ -1771,12 +1712,11 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
  * still evaluated at whatever radius the current center gives.
  *
  * The shear the table is read at is the calibrated one,
- * g = (1 + m) g_t e^{2i phi} + c (see nc_galaxy_shape_factor.c), not the
- * bare reduced shear the two calls return, so the bound includes the
- * galaxy's own m and c: |g| <= |1 + m| |g_t| + |c| by the triangle
- * inequality. Without them the bound is too small by up to m |g_t| for
- * every galaxy with m > 0, and the evaluation then returns zero
- * probability above a panel top.
+ * g = (1 + m) g_t e^{2i phi} + c (formed by #NcDataClusterWLFactor), not the bare reduced
+ * shear in data->bound_g_t (nc_galaxy_halo_wl_eval_bound()), so the bound includes the
+ * galaxy's own m and c: |g| <= |1 + m| |g_t| + |c| by the triangle inequality. Without
+ * them the bound is too small by up to m |g_t| for every galaxy with m > 0, and the
+ * evaluation then returns zero probability above a panel top.
  */
 static inline void _nc_galaxy_shape_factor_moments_tilt_peek_table (NcGalaxyShapeFactorMomentsTiltPrivate * const self,
                                                                     NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data,
@@ -1790,23 +1730,23 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
   NcGalaxyShapeFactorMomentsTiltPrivate * const self =
     nc_galaxy_shape_factor_moments_tilt_get_instance_private (NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (gsf));
   NcGalaxyShapeFactorMomentsTiltLData *ldata = (NcGalaxyShapeFactorMomentsTiltLData *) data->ldata;
-  const gdouble R                            = nc_galaxy_shape_factor_data_get_radius (data);
-  const gdouble R_min                        = MAX (0.0, R - self->delta_R);
+  const gdouble R_min                        = MAX (0.0, data->bound_R_min);
   const gdouble z_sup                        = z_max;
+  const gdouble z_cl                         = data->bound_z_cl;
   gdouble ghat_max                           = 1.0;
 
-  if (!self->range_ready)
+  if (!data->bound_ready)
   {
     ldata->range_valid = FALSE;
 
     return;
   }
 
-  if ((R_min <= 0.0) || (z_sup <= self->z_cl))
+  if ((R_min <= 0.0) || (z_sup <= z_cl))
   {
     /* No background source, or a radius the center's prior can take to the
      * halo itself: nothing to bound. */
-    ghat_max = (z_sup <= self->z_cl) ? 0.0 : 1.0;
+    ghat_max = (z_sup <= z_cl) ? 0.0 : 1.0;
   }
   else if (!gsl_finite (z_sup))
   {
@@ -1816,14 +1756,8 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
   }
   else
   {
-    gdouble kappa, g_t;
-
-    /* Two evaluations, under range_lock because the profile copy is shared
-     * across galaxies. */
-    g_mutex_lock (&self->range_lock);
-    kappa = nc_wl_surface_mass_density_convergence (self->smd, self->dp_box, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl);
-    g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (self->smd, self->dp_box, self->cosmo, R_min, z_sup, self->z_cl, self->z_cl));
-    g_mutex_unlock (&self->range_lock);
+    const gdouble kappa = data->bound_kappa;
+    const gdouble g_t   = data->bound_g_t;
 
     /* kappa >= 1 at the corner: |g| crossed 1 inside the box. A non-finite
      * value bounds nothing. */
@@ -1846,12 +1780,10 @@ _nc_galaxy_shape_factor_moments_tilt_data_prepare (NcGalaxyShapeFactor *gsf, Ncm
    * the cache is keyed on that. */
   ldata->tab_valid = FALSE;
 
-  /* Build the table now rather than at the first evaluation, so that a
+  /*
+   * Build the table now rather than at the first evaluation, so that a
    * prepared dataset evaluates without building anything.
-   * NcDataClusterWLFactor runs this step before the redshift grid: the
-   * auto-node calibration probes the shape integrand, and with the range
-   * already recorded the probe finds this table instead of building a
-   * full-mesh one that nothing reads afterwards. */
+   */
   {
     NcGalaxyShapePop *pop = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
 
@@ -2180,9 +2112,6 @@ _nc_galaxy_shape_factor_moments_tilt_dispose (GObject *object)
     nc_galaxy_shape_factor_moments_tilt_get_instance_private (NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (object));
 
   g_clear_pointer (&self->tab_cache, g_hash_table_unref);
-  nc_hicosmo_clear (&self->cosmo);
-  nc_wl_surface_mass_density_clear (&self->smd);
-  nc_halo_density_profile_clear (&self->dp_box);
   nc_galaxy_shape_pop_clear (&self->pop_ref);
   g_clear_pointer (&self->pending_tables, ncm_obj_array_unref);
   g_clear_pointer (&self->tables_stamp, g_free);
@@ -2205,7 +2134,6 @@ _nc_galaxy_shape_factor_moments_tilt_finalize (GObject *object)
     nc_galaxy_shape_factor_moments_tilt_get_instance_private (NC_GALAXY_SHAPE_FACTOR_MOMENTS_TILT (object));
 
   g_mutex_clear (&self->cache_lock);
-  g_mutex_clear (&self->range_lock);
 
   /* Chain up: end */
   G_OBJECT_CLASS (nc_galaxy_shape_factor_moments_tilt_parent_class)->finalize (object);

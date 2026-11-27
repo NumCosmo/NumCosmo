@@ -48,6 +48,7 @@ void test_nc_dist_mu_obs_serialize (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_cf4_snia (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_missing_column (TestNcDistMuObs *test, gconstpointer pdata);
 void test_nc_dist_mu_obs_pitfalls (TestNcDistMuObs *test, gconstpointer pdata);
+void test_nc_dist_mu_obs_shallow_dup (TestNcDistMuObs *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -74,6 +75,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/dist_mu_obs/cf4_snia", TestNcDistMuObs, NULL,
               &test_nc_dist_mu_obs_new,
               &test_nc_dist_mu_obs_cf4_snia,
+              &test_nc_dist_mu_obs_free);
+
+  g_test_add ("/nc/dist_mu_obs/shallow_dup", TestNcDistMuObs, NULL,
+              &test_nc_dist_mu_obs_new,
+              &test_nc_dist_mu_obs_shallow_dup,
               &test_nc_dist_mu_obs_free);
 
   g_test_add ("/nc/dist_mu_obs/pitfalls", TestNcDistMuObs, NULL,
@@ -268,5 +274,36 @@ test_nc_dist_mu_obs_missing_column (TestNcDistMuObs *test, gconstpointer pdata)
   NcDistMuObs *obs    = nc_dist_mu_obs_new (2, (GStrv) cols);
 
   nc_dist_mu_obs_free (obs);
+}
+
+void
+test_nc_dist_mu_obs_shallow_dup (TestNcDistMuObs *test, gconstpointer pdata)
+{
+  NcmCatalog *src = NCM_CATALOG (test->obs);
+  NcmCatalog *dup = ncm_catalog_shallow_dup (src);
+  GError *error   = NULL;
+  NcmTriVec n, m;
+
+  g_assert_true (NC_IS_DIST_MU_OBS (dup));
+  g_assert_cmpuint (ncm_catalog_len (dup), ==, 4);
+  g_assert_cmpuint (ncm_catalog_ncols (dup), ==, 7);
+  g_assert_true (ncm_catalog_peek_data (dup) == ncm_catalog_peek_data (src));
+
+  nc_dist_mu_obs_get_direction (test->obs, 2, &n);
+  nc_dist_mu_obs_get_direction (NC_DIST_MU_OBS (dup), 2, &m);
+  ncm_assert_cmpdouble (m.c[0], ==, n.c[0]);
+  ncm_assert_cmpdouble (m.c[1], ==, n.c[1]);
+  ncm_assert_cmpdouble (m.c[2], ==, n.c[2]);
+
+  /* The DOUBLE columns are copied with the whole matrix */
+  ncm_catalog_replace_data_by_copy (dup);
+  g_assert_true (ncm_catalog_peek_data (dup) != ncm_catalog_peek_data (src));
+  ncm_catalog_set (dup, NC_DIST_MU_OBS_COL_MU, 1, 40.0, &error);
+  g_assert_no_error (error);
+  ncm_assert_cmpdouble (ncm_catalog_get (src, NC_DIST_MU_OBS_COL_MU, 1, NULL), ==, 33.5);
+  ncm_assert_cmpdouble (ncm_catalog_get (dup, NC_DIST_MU_OBS_COL_MU, 1, NULL), ==, 40.0);
+  ncm_assert_cmpdouble (ncm_catalog_get (dup, "DM_av", 3, NULL), ==, 34.6);
+
+  NCM_TEST_FREE (nc_dist_mu_obs_free, NC_DIST_MU_OBS (dup));
 }
 

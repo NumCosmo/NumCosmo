@@ -44,6 +44,7 @@ formula. The captured sequence is stored as an ``Ncm.Matrix`` binfile
 (``data/truth_tables/wl/``) rather than inline literals; see ``_load_truth_table``.
 """
 
+import math
 import subprocess
 import sys
 
@@ -109,8 +110,57 @@ def _build_new(mset, ellip_conv):
     z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)
 
     gsf = Nc.GalaxyShapeFactorVarAdd.new(ellip_conv)
-    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
-    return gsf, data
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset)
+    return gsf, data, pos_data, z_data
+
+
+def _galaxy_shear(gsf, mset, pos_data, data):
+    """The reduced shear of a galaxy, at position pos_data and with shape data data,
+    as a function of its source redshift,
+    in the frame of data, as NcDataClusterWLFactor builds it from NcGalaxyHaloWL and
+    NcWLClusterLens: g = (1 + m) g_t(z) exp(2 i phi) + c. In front of the lens g_t is
+    that just behind it times exp((z - z_cl) / 0.001). Also prepares gsf."""
+    smd = mset.peek(Nc.WLSurfaceMassDensity.id())
+    cosmo = mset.peek(Nc.HICosmo.id())
+    hwl = Nc.GalaxyHaloWL.new(Nc.WLClusterLens.new(smd.props.distance))
+    h_data = Nc.GalaxyHaloWLData.new()
+    lens = hwl.peek_lens()
+
+    gsf.prepare_data_array(mset, [data])
+    hwl.prepare(mset)
+    hwl.update_data_radius(h_data, pos_data)
+    hwl.update_data_profile(mset.peek(Nc.HaloDensityProfile.id()), h_data)
+    sigma, mean_sigma = h_data.get_sigma()
+    rot_re, rot_im = h_data.get_rotation()
+    if data.coord == Nc.WLEllipticityFrame.CARTESIAN:
+        rot_im = -rot_im
+    z_cl = lens.get_z_cl()
+    _, _, _, c1, c2, m = gsf.data_get(data)
+
+    def shear(z):
+        if z > z_cl:
+            gt = lens.reduced_shear_at(cosmo, sigma, mean_sigma, z)
+        else:
+            gt0 = lens.reduced_shear_at(
+                cosmo, sigma, mean_sigma, z_cl * (1.0 + np.finfo(float).eps)
+            )
+            gt = math.exp((z - z_cl) / 0.001) * gt0
+        return (1.0 + m) * gt * rot_re + c1, (1.0 + m) * gt * rot_im + c2
+
+    return shear, z_cl
+
+
+def _shape_at_z(gsf, mset, pos_data, data, use_lnp):
+    """The shape factor of the galaxy of data as a function of the source redshift:
+    eval_shear at the shear of _galaxy_shear."""
+    shear, _ = _galaxy_shear(gsf, mset, pos_data, data)
+    pop = mset.peek(Nc.GalaxyShapePop.id())
+
+    def f(z):
+        g_1, g_2 = shear(z)
+        return gsf.eval_shear(pop, data, g_1, g_2, use_lnp)
+
+    return f
 
 
 @pytest.mark.parametrize("ellip_conv", _CONVS)
@@ -125,37 +175,26 @@ def test_local_matches_global_at_equal_e_rms(ellip_conv):
     mset_global = _build_mset(pop_global)
     mset_local = _build_mset(Nc.GalaxyShapePopGaussLocal.new())
 
-    gsf_g, data_g = _build_new(mset_global, ellip_conv)
-    gsf_l, data_l = _build_new(mset_local, ellip_conv)
+    gsf_g, data_g, _, _ = _build_new(mset_global, ellip_conv)
+    gsf_l, data_l, _, _ = _build_new(mset_local, ellip_conv)
 
-    for gsf, data, mset in ((gsf_g, data_g, mset_global), (gsf_l, data_l, mset_local)):
-        pos_data = data.pos_data
-        z_data = data.z_data
-        pos_data.ra, pos_data.dec = 0.03, 0.02
-        z_data.z = 0.9
+    for gsf, data in ((gsf_g, data_g), (gsf_l, data_l)):
         gsf.data_set(
-            data,
-            0.05,
-            -0.02,
-            0.03,
-            0.005,
-            -0.003,
-            0.05,
-            Nc.WLEllipticityFrame.CELESTIAL,
+            data, 0.05, -0.02, 0.03, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
         )
 
     pop_local = mset_local.peek(Nc.GalaxyShapePop.id())
-    pop_local_data = data_l.pop_data
-    Nc.GalaxyShapePopGaussLocal.data_set(pop_local, pop_local_data, target_e_rms)
+    Nc.GalaxyShapePopGaussLocal.data_set(pop_local, data_l.pop_data, target_e_rms)
+    gsf_g.prepare_data_array(mset_global, [data_g])
+    gsf_l.prepare_data_array(mset_local, [data_l])
+    pop_global_m = mset_global.peek(Nc.GalaxyShapePop.id())
 
-    gsf_g.prepare_data_array(mset_global, [data_g], True, True)
-    gsf_l.prepare_data_array(mset_local, [data_l], True, True)
-
-    integ_g = gsf_g.integ(mset_global, False)
-    integ_l = gsf_l.integ(mset_local, False)
-
-    for z in np.linspace(0.05, 1.5, 50):
-        assert_allclose(integ_l.eval(z, data_l), integ_g.eval(z, data_g), rtol=1.0e-8)
+    for g_1, g_2 in ((0.0, 0.0), (0.05, -0.02), (0.2, 0.1), (-0.3, 0.25), (0.6, -0.4)):
+        assert_allclose(
+            gsf_l.eval_shear(pop_local, data_l, g_1, g_2, False),
+            gsf_g.eval_shear(pop_global_m, data_g, g_1, g_2, False),
+            rtol=1.0e-8,
+        )
 
 
 _TRUTH_TABLE_FILE = "truth_tables/wl/nc_galaxy_shape_pop_gauss_local_integ_parity.bin"
@@ -188,25 +227,23 @@ def test_integ_parity_legacy_per_galaxy(ellip_conv, galaxy, use_lnp):
     ra, dec, z, e1, e2, std_shape, std_noise, c1, c2, m = galaxy
 
     mset = _build_mset(Nc.GalaxyShapePopGaussLocal.new())
-    gsf, data = _build_new(mset, ellip_conv)
+    gsf, data, pos_data, z_data = _build_new(mset, ellip_conv)
 
-    data.pos_data.ra, data.pos_data.dec = ra, dec
-    data.z_data.z = z
+    pos_data.ra, pos_data.dec = ra, dec
+    z_data.z = z
 
     gsf.data_set(data, e1, e2, std_noise, c1, c2, m, Nc.WLEllipticityFrame.CELESTIAL)
 
     pop = mset.peek(Nc.GalaxyShapePop.id())
     Nc.GalaxyShapePopGaussLocal.data_set(pop, data.pop_data, std_shape)
 
-    gsf.prepare_data_array(mset, [data], True, True)
-
-    new_integ = gsf.integ(mset, use_lnp)
+    new_integ = _shape_at_z(gsf, mset, pos_data, data, use_lnp)
 
     frozen = _INTEG_PARITY_PER_GALAXY_FROZEN[
         _CONVS.index(ellip_conv), _GALAXIES.index(galaxy), int(use_lnp)
     ]
     zs = np.linspace(0.05, 1.5, 50)
-    new_vals = [new_integ.eval(zz, data) for zz in zs]
+    new_vals = [new_integ(zz) for zz in zs]
     assert_allclose(new_vals, frozen, rtol=1.0e-8)
 
 
@@ -214,7 +251,11 @@ def test_ldata_read_row_native_e_rms():
     """A catalog with the current 'e_rms' column reads it directly -- no
     legacy fallback, no warning."""
     obs = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1, ["e_rms"]
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        1,
+        ["e_rms"],
+        [Ncm.CatalogColType.DOUBLE],
     )
     obs.set("e_rms", 0, 0.31)
 
@@ -238,7 +279,7 @@ def test_ldata_read_row_legacy_std_shape_fallback():
         "Ncm.cfg_init()\n"
         "obs = Nc.GalaxyWLObs.new(\n"
         "    Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1,\n"
-        "    ['std_shape'],\n"
+        "    ['std_shape'], [Ncm.CatalogColType.DOUBLE],\n"
         ")\n"
         "obs.set('std_shape', 0, 0.28)\n"
         "pop = Nc.GalaxyShapePopGaussLocal.new()\n"
@@ -269,7 +310,7 @@ def test_ldata_read_row_no_e_rms_or_legacy_column_errors():
         "Ncm.cfg_init()\n"
         "obs = Nc.GalaxyWLObs.new(\n"
         "    Nc.GalaxyWLObsEllipConv.TRACE, Nc.WLEllipticityFrame.CELESTIAL, 1,\n"
-        "    ['ra'],\n"
+        "    ['ra'], [Ncm.CatalogColType.DOUBLE],\n"
         ")\n"
         "obs.set('ra', 0, 0.0)\n"
         "pop = Nc.GalaxyShapePopGaussLocal.new()\n"

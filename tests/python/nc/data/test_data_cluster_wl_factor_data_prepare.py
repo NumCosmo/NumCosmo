@@ -135,12 +135,13 @@ def _build(
     position_factor = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)
     shape_factor = SHAPE_FACTORS[shape_name]()
 
-    pos_data = Nc.GalaxyPositionFactorData.new(position_factor, mset)
-    z_data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
-    s_data = Nc.GalaxyShapeFactorData.new(shape_factor, mset, pos_data, z_data)
-    cols = Nc.GalaxyShapeFactorData.required_columns(s_data)
+    cols = Nc.DataClusterWLFactor.new(
+        position_factor, redshift_factor, shape_factor
+    ).required_columns(mset)
 
-    obs = Nc.GalaxyWLObs.new(ELLIP_CONV, FRAME, n_gal, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ELLIP_CONV, FRAME, n_gal, cols, [Ncm.CatalogColType.DOUBLE] * len(cols)
+    )
     ra, dec, zp, sigma0, e1, e2, std_noise = _galaxies(n_gal)
     values = {
         "ra": ra,

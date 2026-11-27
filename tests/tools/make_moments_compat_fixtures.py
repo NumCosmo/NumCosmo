@@ -76,16 +76,16 @@ def build_mset(sigma_pop):
 
 
 def make_data(gsf, mset, std_noise):
-    """A single galaxy's data, returned with the fragments it references."""
+    """A single galaxy's shape data, returned with its position and redshift fragments."""
     posf = Nc.GalaxyPositionFactorFlat.new(-0.2, 0.2, -0.2, 0.2)
     pos_data = Nc.GalaxyPositionFactorData.new(posf, mset)
     zf = Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0)
     z_data = Nc.GalaxyRedshiftFactorData.new(zf, mset)
-    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset)
     gsf.data_set(
         data, 0.0, 0.0, std_noise, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
     )
-    gsf.prepare_data_array(mset, [data], True, True)
+    gsf.prepare_data_array(mset, [data])
     return data, (pos_data, z_data)
 
 

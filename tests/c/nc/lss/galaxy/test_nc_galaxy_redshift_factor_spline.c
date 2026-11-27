@@ -33,6 +33,9 @@
 #include <glib.h>
 #include <glib-object.h>
 
+/* Every column of these catalogs is DOUBLE (NCM_CATALOG_COL_TYPE_DOUBLE is zero) */
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 /* sqrt(p) is the polynomial Q_COEF[0] + Q_COEF[1] z + ... of degree 5, positive on the
  * table; the order-6 B-spline reproduces it exactly, so p = q^2 is known in closed form. */
 #define TEST_Q_DEGREE (5)
@@ -311,7 +314,7 @@ void
 test_nc_galaxy_redshift_factor_spline_obs (TestNcGalaxyRedshiftFactorSpline *test, gconstpointer pdata)
 {
   GStrv columns                     = g_strsplit ("z", " ", -1);
-  NcGalaxyWLObs *obs                = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, 2, columns);
+  NcGalaxyWLObs *obs                = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_GALAXY_WL_OBS_COORD_EUCLIDEAN, 2, columns, test_double_cols, g_strv_length (columns));
   NcGalaxyRedshiftFactorData *data2 = nc_galaxy_redshift_factor_data_new (test->gsdr, test->mset);
 
   nc_galaxy_wl_obs_set_pz (obs, 1, test->pz);
