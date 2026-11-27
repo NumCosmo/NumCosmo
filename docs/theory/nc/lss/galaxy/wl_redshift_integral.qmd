@@ -114,15 +114,11 @@ about three times faster than 2.
 
 ## Cost and Accuracy
 
-On the catalog HWL16a-007, the method `FIXED_NODES` integrates $p$ on 45 fixed nodes, and
-its $-2\ln L$ differs from the converged value by about $5\times10^{-4}$. The method
-`CHEB_WEIGHTS` with the default [[numcosmo|NcDataClusterWLFactor:cheb-tol]] agrees with the
-converged value within $10^{-9}$. It evaluates the shape factor at 13 to 19 nodes per galaxy
-on average for $\log_{10} M_{200c}$ from 13 to 16, instead of 45. With interpolants it is
-about 1.5 times faster than `FIXED_NODES`, and with one integral per node about 2.8 times
-faster. With the line table both methods take the same time within ten percent. The moments
-of the 10,706 galaxies take about 0.85 s on 10 threads (7.2 s on one), against 0.16 s for the
-fixed nodes. Each galaxy's $p(z)$ keeps its moments, so a new cluster redshift computes again
-only those of the galaxies whose range contains it. The benchmark page
+On the catalog HWL16a-007, the method `CHEB_WEIGHTS` with the default
+[[numcosmo|NcDataClusterWLFactor:cheb-tol]] agrees with the converged value of $-2\ln L$
+within $10^{-9}$. It evaluates the shape factor at 13 to 19 nodes per galaxy on average for
+$\log_{10} M_{200c}$ from 13 to 16. The moments of the 10,706 galaxies take about 0.85 s on
+10 threads (7.2 s on one). Each galaxy's $p(z)$ keeps its moments, so a new cluster redshift
+computes again only those of the galaxies whose range contains it. The benchmark page
 [Shape marginal against certified values](../../../../benchmarks/wl_shape_marginal.qmd)
 lists the measured times.

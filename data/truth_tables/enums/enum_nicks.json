@@ -1323,10 +1323,6 @@
     "nick": "cubature",
     "type": "Nc.DataClusterWLIntegMethod"
   },
-  "NC_DATA_CLUSTER_WL_INTEG_METHOD_FIXED_NODES": {
-    "nick": "fixed-nodes",
-    "type": "Nc.DataClusterWLIntegMethod"
-  },
   "NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT": {
     "nick": "lnint",
     "type": "Nc.DataClusterWLIntegMethod"

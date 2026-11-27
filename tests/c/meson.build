@@ -742,10 +742,6 @@ data_tests = [
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_cheb.c'],
     },
     {
-        'name': 'nc_data_cluster_wl_factor_node_config',
-        'sources': ['nc/data/test_nc_data_cluster_wl_factor_node_config.c'],
-    },
-    {
         'name': 'nc_data_cluster_wl_factor_shape_interp',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_shape_interp.c'],
     },

@@ -106,7 +106,7 @@ typedef struct _NcGalaxyShapeFactorPrivate
   guint64 crit_hash;
   guint64 pop_hash;
 
-  /* Used only by the fixed-nodes update functions
+  /* Used only by the node update functions
    * (update_data_at_nodes_crit/_sigma); prepare() already has these as
    * locals, so caching them here is free. */
   NcHICosmo *cosmo;
@@ -1551,7 +1551,7 @@ nc_galaxy_shape_factor_update_data_at_nodes_crit (NcGalaxyShapeFactor *gsf, NcGa
  * @data: a #NcGalaxyShapeFactorData
  *
  * Refreshes @data's cached surface mass density Sigma(R) used by the
- * fixed-nodes path, using @data's own cached projected radius as an input.
+ * evaluation at redshift nodes, using @data's own cached projected radius as an input.
  * Unconditional: call only when nc_galaxy_shape_factor_get_radius_hash() or
  * nc_galaxy_shape_factor_get_optzs_hash() changed, and only *after*
  * nc_galaxy_shape_factor_update_data_radius() in the same cycle if that one

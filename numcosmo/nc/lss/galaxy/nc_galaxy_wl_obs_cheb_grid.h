@@ -51,6 +51,7 @@ const gchar *nc_galaxy_wl_obs_cheb_grid_peek_data_hash (NcGalaxyWLObsChebGrid *g
 
 void nc_galaxy_wl_obs_cheb_grid_set_galaxy (NcGalaxyWLObsChebGrid *grid, const guint i, const guint n_total, GArray *weights, NcmVector *z_nodes, const gdouble norm, const gdouble bg_norm, const gdouble fg_norm);
 guint nc_galaxy_wl_obs_cheb_grid_get_galaxy (NcGalaxyWLObsChebGrid *grid, const guint i, GArray **weights, NcmVector **z_nodes, gdouble *norm, gdouble *bg_norm, gdouble *fg_norm);
+guint nc_galaxy_wl_obs_cheb_grid_peek_galaxy (NcGalaxyWLObsChebGrid *grid, const guint i, const gdouble **weights, const gdouble **z_nodes, const gdouble **norms);
 
 G_END_DECLS
 

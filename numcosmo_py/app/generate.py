@@ -55,13 +55,8 @@ from numcosmo_py.experiments.cluster_richness_count import (
     load_cluster_richness_count,
 )
 from numcosmo_py.experiments.cluster_wl import (
-    DEFAULT_INTEG_AUTO_NODES,
     DEFAULT_INTEG_CHEB_LEVEL_MIN,
     DEFAULT_INTEG_CHEB_TOL,
-    DEFAULT_INTEG_MAX_TOTAL_NODES,
-    DEFAULT_INTEG_N_NODES,
-    DEFAULT_INTEG_NODE_RELTOL,
-    DEFAULT_INTEG_RULE_N,
     GalaxyPopGen,
     GalaxyZGen,
     HaloProfileType,
@@ -748,56 +743,6 @@ class ClusterWL(ABC):
         ),
     ] = DEFAULT_INTEG_CHEB_LEVEL_MIN
 
-    auto_nodes: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Calibrate each galaxy's own fixed-node count/rule instead "
-                "of the global --n-nodes/--rule-n (integ-method=fixed_nodes only)."
-            ),
-            show_default=True,
-            rich_help_panel="Redshift integration method",
-        ),
-    ] = DEFAULT_INTEG_AUTO_NODES
-
-    n_nodes: Annotated[
-        int,
-        typer.Option(
-            help="Number of fixed-quadrature panels (integ-method=fixed_nodes only).",
-            show_default=True,
-            rich_help_panel="Redshift integration method",
-        ),
-    ] = DEFAULT_INTEG_N_NODES
-
-    rule_n: Annotated[
-        int,
-        typer.Option(
-            help=(
-                "Gauss-Legendre rule order per panel (integ-method=fixed_nodes only)."
-            ),
-            show_default=True,
-            rich_help_panel="Redshift integration method",
-        ),
-    ] = DEFAULT_INTEG_RULE_N
-
-    node_reltol: Annotated[
-        float,
-        typer.Option(
-            help="Target relative tolerance for --auto-nodes selection.",
-            show_default=True,
-            rich_help_panel="Redshift integration method",
-        ),
-    ] = DEFAULT_INTEG_NODE_RELTOL
-
-    max_total_nodes: Annotated[
-        int,
-        typer.Option(
-            help="Safety ceiling on the total node count for --auto-nodes.",
-            show_default=True,
-            rich_help_panel="Redshift integration method",
-        ),
-    ] = DEFAULT_INTEG_MAX_TOTAL_NODES
-
     summary: Annotated[
         bool, typer.Option(help="Print experiment summary.", show_default=True)
     ] = False
@@ -809,11 +754,6 @@ class ClusterWL(ABC):
             integ_method=self.integ_method,
             cheb_tol=self.cheb_tol,
             cheb_level_min=self.cheb_level_min,
-            auto_nodes=self.auto_nodes,
-            n_nodes=self.n_nodes,
-            rule_n=self.rule_n,
-            node_reltol=self.node_reltol,
-            max_total_nodes=self.max_total_nodes,
         )
 
     def __post_init__(self):
