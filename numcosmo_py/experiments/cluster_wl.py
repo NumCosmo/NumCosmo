@@ -1171,11 +1171,13 @@ class BinnedGenBase(BaseModel):
         r_min: float,
         r_max: float,
         redshift_factor: Nc.GalaxyRedshiftFactor | None = None,
+        mask: list[bool] | None = None,
     ) -> Nc.DataClusterWLBinned:
         """Build the binned likelihood of obs, adding a Gaussian scatter to mset.
 
         A mock has no p(z) per galaxy: given its redshift_factor, the densities are first
-        set in obs (``set_pz_from_redshift_factor``), to ``mock_pz_reltol``.
+        set in obs (``set_pz_from_redshift_factor``), to ``mock_pz_reltol``. With
+        ``mask``, only the rows of obs that are True enter the profile.
         """
         if redshift_factor is not None:
             set_pz_from_redshift_factor(mset, obs, redshift_factor, self.mock_pz_reltol)
@@ -1183,6 +1185,7 @@ class BinnedGenBase(BaseModel):
         est = self._build_estimator()
         est.set_e_rms(self._resolve_e_rms(mset, obs))
         est.set_pz_reltol(self.pz_reltol)
+        est.set_mask(mask)
         est.set_exact_intervals(self.exact_intervals)
 
         data = Nc.DataClusterWLBinned.new_from_obs(
@@ -1862,7 +1865,8 @@ def load_cluster_wl(
 
     With ``binned_gen`` the likelihood is the binned one built from the catalog's
     galaxies (``BinnedGenBase.build_data``), from the p(z) of the catalog, instead of
-    the per-galaxy one; ``resample_flag`` and ``integ_options`` then do not apply.
+    the per-galaxy one; ``resample_flag`` and ``integ_options`` then do not apply, and
+    ``row_selector`` restricts the galaxies of the profile.
 
     ``row_selector``, when given, is evaluated at the cluster and cosmology of the
     experiment and sets the mask of the ``NcDataClusterWLFactor`` (see
@@ -1993,15 +1997,19 @@ def load_cluster_wl(
     cluster_data.set_resample_flag(resample_flag)
 
     # The selection is evaluated here, at the cluster and cosmology of the experiment.
+    mask = None
     if row_selector is not None:
         ctx = RowSelectionContext(
             obs=obs, cosmo=cosmo, halo_position=cluster.halo_position
         )
-        cluster_data.set_mask(row_selection_mask(row_selector, ctx))
+        mask = row_selection_mask(row_selector, ctx)
+        cluster_data.set_mask(mask)
 
     binned_data = None
     if binned_gen is not None:
-        binned_data = binned_gen.build_data(mset, obs, cluster.r_min, cluster.r_max)
+        binned_data = binned_gen.build_data(
+            mset, obs, cluster.r_min, cluster.r_max, mask=mask
+        )
 
     dset = Ncm.Dataset.new_array(
         [binned_data if binned_data is not None else cluster_data]

@@ -73,6 +73,8 @@
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/halo/nc_halo_density_profile.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "nc/lss/wl/nc_wl_cluster_lens.h"
+#include "ncm/algebra/ncm_spectral_panels.h"
 #include "nc/lss/wl/nc_wl_ellipticity.h"
 #include "nc/background/nc_hicosmo.h"
 #include "ncm/integration/ncm_integrate.h"
@@ -99,6 +101,12 @@ typedef struct _NcGalaxyWLBinnedEstimatorPrivate
   gdouble e_rms;
   gdouble pz_reltol;
   guint exact_intervals;
+
+  /* The lens of the models of the last call, kept for its tables; not a property */
+  NcWLClusterLens *lens;
+
+  /* The rows of the catalog the build uses (gboolean each), or NULL for all of them */
+  GArray *mask;
 
   /* Cache of eval_model_exact(): the redshift nodes of every member */
   NcmCatalog *exact_members;
@@ -127,6 +135,8 @@ nc_galaxy_wl_binned_estimator_init (NcGalaxyWLBinnedEstimator *est)
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
 
   self->e_rms             = -1.0;
+  self->lens              = NULL;
+  self->mask              = NULL;
   self->pz_reltol         = NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_RELTOL;
   self->exact_intervals   = NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS;
   self->exact_members     = NULL;
@@ -189,6 +199,8 @@ _nc_galaxy_wl_binned_estimator_dispose (GObject *object)
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
 
   ncm_catalog_clear (&self->exact_members);
+  nc_wl_cluster_lens_clear (&self->lens);
+  g_clear_pointer (&self->mask, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_binned_estimator_parent_class)->dispose (object);
@@ -399,6 +411,31 @@ nc_galaxy_wl_binned_estimator_get_pz_reltol (NcGalaxyWLBinnedEstimator *est)
 }
 
 /**
+ * nc_galaxy_wl_binned_estimator_set_mask:
+ * @est: a #NcGalaxyWLBinnedEstimator
+ * @mask: (nullable) (element-type gboolean): whether each row of the catalog is used
+ *
+ * Restricts the next nc_galaxy_wl_binned_estimator_build() calls to the rows of @mask that
+ * are %TRUE; %NULL, the default, uses all of them. The estimator keeps a copy. A build of a
+ * catalog with another number of rows aborts.
+ */
+void
+nc_galaxy_wl_binned_estimator_set_mask (NcGalaxyWLBinnedEstimator *est, GArray *mask)
+{
+  NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
+
+  g_clear_pointer (&self->mask, g_array_unref);
+
+  if (mask != NULL)
+  {
+    g_assert_cmpuint (g_array_get_element_size (mask), ==, sizeof (gboolean));
+
+    self->mask = g_array_sized_new (FALSE, FALSE, sizeof (gboolean), mask->len);
+    g_array_append_vals (self->mask, mask->data, mask->len);
+  }
+}
+
+/**
  * nc_galaxy_wl_binned_estimator_set_exact_intervals:
  * @est: a #NcGalaxyWLBinnedEstimator
  * @exact_intervals: the number of intervals
@@ -457,36 +494,96 @@ typedef struct _NcWLBEModels
   NcHaloPosition *hp;
   NcWLSurfaceMassDensity *smd;
   NcHaloDensityProfile *dp;
+  NcWLClusterLens *lens;
+  NcmSpectralPanels *sc_inv; /* the table of Sigma_cr^-1 of the lens, or NULL */
   gdouble z_cl;
-  NcWLSurfaceMassDensityLensCtx lens_ctx; /* the lens side of Sigma_cr, for every source */
+  gdouble z_tab_max; /* the table is valid on [z_cl, z_tab_max] */
 } NcWLBEModels;
 
+/*
+ * The models of the mset, with the lens of the estimator prepared for them. The lens
+ * (NcWLClusterLens) holds the lens side of Sigma_cr and the profile scales, so the
+ * estimator never recomputes them for each source or galaxy.
+ */
 static void
-_nc_wlbe_models (NcmMSet *mset, NcWLBEModels *models)
+_nc_wlbe_models (NcGalaxyWLBinnedEstimator *est, NcmMSet *mset, NcWLBEModels *models)
 {
+  NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
+
   models->cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   models->hp    = NC_HALO_POSITION (ncm_mset_peek (mset, nc_halo_position_id ()));
   models->smd   = NC_WL_SURFACE_MASS_DENSITY (ncm_mset_peek (mset, nc_wl_surface_mass_density_id ()));
   models->dp    = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (mset, nc_halo_density_profile_id ()));
 
-  if ((models->cosmo == NULL) || (models->hp == NULL) || (models->smd == NULL))
-    g_error ("nc_galaxy_wl_binned_estimator: the mset must hold a NcHICosmo, a NcHaloPosition and a NcWLSurfaceMassDensity.");
+  if ((models->cosmo == NULL) || (models->hp == NULL) || (models->smd == NULL) || (models->dp == NULL))
+    g_error ("nc_galaxy_wl_binned_estimator: the mset must hold a NcHICosmo, a NcHaloPosition, "
+             "a NcHaloDensityProfile and a NcWLSurfaceMassDensity.");
 
-  nc_halo_position_prepare_if_needed (models->hp, models->cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (models->smd, models->cosmo);
 
-  models->z_cl = nc_halo_position_get_redshift (models->hp);
-  nc_wl_surface_mass_density_lens_ctx_prep (&models->lens_ctx, models->smd, models->cosmo, models->z_cl);
+  /* The distance of the lens is that of the surface mass density, as in NcDataClusterWLFactor */
+  if ((self->lens == NULL) || (nc_wl_cluster_lens_peek_distance (self->lens) != models->smd->dist))
+  {
+    nc_wl_cluster_lens_clear (&self->lens);
+    self->lens = nc_wl_cluster_lens_new (models->smd->dist);
+
+    /* The hashes of the new lens count from zero: the nodes of the exact model are stale */
+    self->exact_crit_hash = G_MAXUINT64;
+  }
+
+  nc_wl_cluster_lens_prepare (self->lens, models->cosmo, models->hp, models->dp);
+
+  models->lens      = self->lens;
+  models->sc_inv    = NULL;
+  models->z_tab_max = -GSL_POSINF;
+  models->z_cl      = nc_wl_cluster_lens_get_z_cl (self->lens);
 }
 
+/* The largest redshift where galaxy i has density: the end of its p(z) or its z column */
+static gdouble
+_nc_wlbe_row_z_max (NcGalaxyWLObs *obs, const guint i)
+{
+  NcGalaxyPz *pz = nc_galaxy_wl_obs_peek_pz (obs, i);
+
+  if (pz != NULL)
+  {
+    gdouble z_min, z_max;
+
+    nc_galaxy_pz_get_range (pz, &z_min, &z_max);
+
+    return z_max;
+  }
+
+  return ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
+}
+
+/*
+ * Tabulates Sigma_cr^-1 of the lens up to z_max (nc_wl_cluster_lens_prepare_sigma_crit_inv ()),
+ * the table that _nc_wlbe_inv_sigma_crit () reads for every source redshift instead of the
+ * distances. The table is built again only when the cosmology, z_cl or z_max changed.
+ */
+static void
+_nc_wlbe_models_table (NcWLBEModels *models, const gdouble z_max)
+{
+  if (z_max > models->z_cl)
+  {
+    nc_wl_cluster_lens_prepare_sigma_crit_inv (models->lens, models->cosmo, z_max);
+    models->sc_inv    = nc_wl_cluster_lens_peek_sigma_crit_inv (models->lens);
+    models->z_tab_max = z_max;
+  }
+}
+
+/* Sigma_cr^-1 of a source at z, zero in front of the cluster */
 static gdouble
 _nc_wlbe_inv_sigma_crit (NcWLBEModels *models, const gdouble z)
 {
-  NcWLSurfaceMassDensityCritCache crit_cache;
+  if (z <= models->z_cl)
+    return 0.0;
 
-  nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (models->smd, models->cosmo, &models->lens_ctx, z, &crit_cache);
+  if ((models->sc_inv != NULL) && (z <= models->z_tab_max))
+    return ncm_spectral_panels_eval_row (models->sc_inv, 0, z);
 
-  return crit_cache.is_source ? 1.0 / crit_cache.sigma_crit : 0.0;
+  return nc_wl_cluster_lens_sigma_crit_inv (models->lens, models->cosmo, z);
 }
 
 /*
@@ -537,7 +634,7 @@ _nc_wlbe_append_nodes (NcWLBEModels *models, NcGalaxyWLObs *obs, const guint i, 
   }
   else
   {
-    const gdouble z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
+    const gdouble z = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
 
     if (z > models->z_cl)
     {
@@ -621,7 +718,7 @@ _nc_wlbe_mean_inv_sigma_crit (NcWLBEModels *models, NcGalaxyWLObs *obs, const gu
   }
   else
   {
-    const gdouble z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
+    const gdouble z = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
 
     if (z > models->z_cl)
     {
@@ -704,7 +801,8 @@ nc_galaxy_wl_binned_estimator_mean_inv_sigma_crit (NcGalaxyWLBinnedEstimator *es
   NcWLBEModels models;
   gdouble mean1;
 
-  _nc_wlbe_models (mset, &models);
+  _nc_wlbe_models (est, mset, &models);
+  _nc_wlbe_models_table (&models, _nc_wlbe_row_z_max (obs, i));
   mean1 = _nc_wlbe_mean_inv_sigma_crit (&models, obs, i, integ, mean_inv_sigma_crit2);
 
   ncm_integral1d_free (integ);
@@ -716,7 +814,7 @@ static gdouble
 _nc_wlbe_get_opt (NcGalaxyWLObs *obs, const gchar *col, const guint i)
 {
   if (ncm_catalog_has_column (NCM_CATALOG (obs), col))
-    return nc_galaxy_wl_obs_get (obs, col, i, NULL);
+    return ncm_catalog_get (NCM_CATALOG (obs), col, i, NULL);
   else
     return 0.0;
 }
@@ -856,7 +954,7 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
   NcGalaxyWLBinnedEstimatorClass *klass         = NC_GALAXY_WL_BINNED_ESTIMATOR_GET_CLASS (est);
   const guint n_edges                           = edges->len;
-  const guint n_rows                            = nc_galaxy_wl_obs_len (obs);
+  const guint n_rows                            = ncm_catalog_len (NCM_CATALOG (obs));
   const NcWLEllipticityFrame coord              = nc_galaxy_wl_obs_get_coord (obs);
   const gboolean has_e_rms                      = ncm_catalog_has_column (NCM_CATALOG (obs), NC_GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS);
   NcGalaxyWLBinnedEstimatorSources *src         = _nc_wlbe_sources_new ();
@@ -875,11 +973,26 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
       g_error ("nc_galaxy_wl_binned_estimator_build: the bin edges must increase.");
   }
 
+  if ((self->mask != NULL) && (self->mask->len != n_rows))
+    g_error ("nc_galaxy_wl_binned_estimator_build: the mask has %u entries, the catalog %u rows.", self->mask->len, n_rows);
+
   if ((self->e_rms < 0.0) && !has_e_rms)
     g_error ("nc_galaxy_wl_binned_estimator_build: the catalog has no column `%s' and the property e-rms is not set.",
              NC_GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS);
 
-  _nc_wlbe_models (mset, &models);
+  _nc_wlbe_models (est, mset, &models);
+
+  {
+    gdouble z_max = -GSL_POSINF;
+
+    for (i = 0; i < n_rows; i++)
+    {
+      if ((self->mask == NULL) || g_array_index (self->mask, gboolean, i))
+        z_max = GSL_MAX (z_max, _nc_wlbe_row_z_max (obs, i));
+    }
+
+    _nc_wlbe_models_table (&models, z_max);
+  }
 
   switch (nc_galaxy_wl_obs_get_ellip_conv (obs))
   {
@@ -901,8 +1014,11 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
 
   for (i = 0; i < n_rows; i++)
   {
-    const gdouble ra  = nc_galaxy_wl_obs_get (obs, NC_GALAXY_POSITION_FACTOR_COL_RA, i, NULL);
-    const gdouble dec = nc_galaxy_wl_obs_get (obs, NC_GALAXY_POSITION_FACTOR_COL_DEC, i, NULL);
+    if ((self->mask != NULL) && !g_array_index (self->mask, gboolean, i))
+      continue;
+
+    const gdouble ra  = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_POSITION_FACTOR_COL_RA, i, NULL);
+    const gdouble dec = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_POSITION_FACTOR_COL_DEC, i, NULL);
     gdouble theta, phi, radius;
 
     nc_halo_position_polar_angles (models.hp, ra, dec, &theta, &phi);
@@ -918,13 +1034,13 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
     }
 
     {
-      const gdouble e1        = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, NULL);
-      const gdouble e2        = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, NULL);
-      const gdouble std_noise = nc_galaxy_wl_obs_get (obs, NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, NULL);
+      const gdouble e1        = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_1, i, NULL);
+      const gdouble e2        = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_EPSILON_OBS_2, i, NULL);
+      const gdouble std_noise = ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_SHAPE_FACTOR_COL_STD_NOISE, i, NULL);
       const gdouble m         = _nc_wlbe_get_opt (obs, NC_GALAXY_SHAPE_FACTOR_COL_M, i);
       const gdouble c1        = _nc_wlbe_get_opt (obs, NC_GALAXY_SHAPE_FACTOR_COL_C1, i);
       const gdouble c2        = _nc_wlbe_get_opt (obs, NC_GALAXY_SHAPE_FACTOR_COL_C2, i);
-      const gdouble e_rms     = (self->e_rms >= 0.0) ? self->e_rms : nc_galaxy_wl_obs_get (obs, NC_GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS, i, NULL);
+      const gdouble e_rms     = (self->e_rms >= 0.0) ? self->e_rms : ncm_catalog_get (NCM_CATALOG (obs), NC_GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS, i, NULL);
       const gdouble phi_f     = nc_wl_ellipticity_celestial_to_frame_angle (coord, phi);
       const gdouble rot_re    = cos (2.0 * phi_f);
       const gdouble rot_im    = sin (2.0 * phi_f);
@@ -1093,12 +1209,9 @@ _nc_wlbe_exact_prepare (NcGalaxyWLBinnedEstimator *est, NcWLBEModels *models, Nc
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
   NcmCatalog *members                           = nc_galaxy_wl_obs_binned_peek_members (binned);
   NcGalaxyWLObs *obs                            = nc_galaxy_wl_obs_binned_peek_source (binned);
-  guint64 crit_hash, z_cl_bits;
+  guint64 crit_hash;
 
-  memcpy (&z_cl_bits, &models->z_cl, sizeof (z_cl_bits));
-  crit_hash = ncm_model_state_get_pkey (NCM_MODEL (models->cosmo)) ^
-              (ncm_model_state_get_pkey (NCM_MODEL (models->smd)) * 37U) ^
-              (z_cl_bits * 43U);
+  crit_hash = nc_wl_cluster_lens_get_geometry_hash (models->lens);
 
   if ((members == self->exact_members) &&
       ncm_catalog_key_is_current (members, &self->exact_members_key) &&
@@ -1120,6 +1233,14 @@ _nc_wlbe_exact_prepare (NcGalaxyWLBinnedEstimator *est, NcWLBEModels *models, Nc
     g_array_set_size (self->exact_s, 0);
     g_array_set_size (self->exact_w, 0);
 
+    {
+      gdouble z_max = -GSL_POSINF;
+
+      for (j = 0; j < n_members; j++)
+        z_max = GSL_MAX (z_max, _nc_wlbe_row_z_max (obs, (guint) ncm_catalog_get_int (members, NC_GALAXY_WL_OBS_BINNED_MEMBER_COL_ROW, j, NULL)));
+
+      _nc_wlbe_models_table (models, z_max);
+    }
 
     for (j = 0; j < n_members; j++)
     {
@@ -1167,11 +1288,7 @@ nc_galaxy_wl_binned_estimator_eval_model_exact (NcGalaxyWLBinnedEstimator *est, 
     g_error ("nc_galaxy_wl_binned_estimator_eval_model_exact: the profile has no members "
              "(built from external arrays); only the classic model is available.");
 
-  _nc_wlbe_models (mset, &models);
-
-  if (models.dp == NULL)
-    g_error ("nc_galaxy_wl_binned_estimator_eval_model_exact: the mset must hold a NcHaloDensityProfile.");
-
+  _nc_wlbe_models (est, mset, &models);
   _nc_wlbe_exact_prepare (est, &models, binned);
   members = nc_galaxy_wl_obs_binned_peek_members (binned);
 
@@ -1192,15 +1309,16 @@ nc_galaxy_wl_binned_estimator_eval_model_exact (NcGalaxyWLBinnedEstimator *est, 
       continue;
 
     {
-      const gdouble sigma   = nc_wl_surface_mass_density_sigma (models.smd, models.dp, models.cosmo, radius, models.z_cl);
-      const gdouble d_sigma = nc_wl_surface_mass_density_sigma_excess (models.smd, models.dp, models.cosmo, radius, models.z_cl);
+      gdouble sigma, mean_sigma;
+
+      nc_wl_cluster_lens_sigma (models.lens, models.dp, radius, &sigma, &mean_sigma);
 
       for (k = k0; k < k1; k++)
       {
         const gdouble s_k = g_array_index (self->exact_s, gdouble, k);
         const gdouble w_k = g_array_index (self->exact_w, gdouble, k);
 
-        g_mean += w_k * s_k * d_sigma / (1.0 - s_k * sigma);
+        g_mean += w_k * nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, s_k);
       }
     }
 

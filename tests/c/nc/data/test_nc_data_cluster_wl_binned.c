@@ -37,6 +37,8 @@
 #define TEST_Z_CL (0.3)
 #define TEST_N_GAL (400)
 
+static const NcmCatalogColType test_double_cols[64] = {NCM_CATALOG_COL_TYPE_DOUBLE};
+
 typedef struct _TestNcDataClusterWLBinned
 {
   NcmMSet *mset;
@@ -65,7 +67,7 @@ test_nc_data_cluster_wl_binned_new (TestNcDataClusterWLBinned *test, gconstpoint
   nc_wl_surface_mass_density_prepare (smd, cosmo);
 
   test->mset = ncm_mset_new (NCM_MODEL (cosmo), NULL, NCM_MODEL (dp), NCM_MODEL (hp), NCM_MODEL (smd), NCM_MODEL (sg), NULL);
-  test->obs  = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, TEST_N_GAL, (GStrv) cols);
+  test->obs  = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, TEST_N_GAL, (GStrv) cols, test_double_cols, g_strv_length ((GStrv) cols));
 
   /* Noiseless galaxies: epsilon_obs is the reduced shear */
   for (i = 0; i < TEST_N_GAL; i++)
@@ -84,13 +86,13 @@ test_nc_data_cluster_wl_binned_new (TestNcDataClusterWLBinned *test, gconstpoint
 
     g = g_t * cexp (2.0 * I * phi);
 
-    nc_galaxy_wl_obs_set (test->obs, "ra", i, ra, NULL);
-    nc_galaxy_wl_obs_set (test->obs, "dec", i, dec, NULL);
-    nc_galaxy_wl_obs_set (test->obs, "z", i, z, NULL);
-    nc_galaxy_wl_obs_set (test->obs, "epsilon_obs_1", i, creal (g), NULL);
-    nc_galaxy_wl_obs_set (test->obs, "epsilon_obs_2", i, cimag (g), NULL);
-    nc_galaxy_wl_obs_set (test->obs, "std_noise", i, 0.1, NULL);
-    nc_galaxy_wl_obs_set (test->obs, "e_rms", i, 0.35, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "ra", i, ra, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "dec", i, dec, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "z", i, z, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "epsilon_obs_1", i, creal (g), NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "epsilon_obs_2", i, cimag (g), NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "std_noise", i, 0.1, NULL);
+    ncm_catalog_set (NCM_CATALOG (test->obs), "e_rms", i, 0.35, NULL);
   }
 
   test->edges = g_array_new (FALSE, FALSE, sizeof (gdouble));
@@ -402,7 +404,7 @@ static void
 test_nc_data_cluster_wl_binned_no_e_rms_subprocess (TestNcDataClusterWLBinned *test, gconstpointer pdata)
 {
   const gchar *cols[]            = {"ra", "dec", "z", "epsilon_obs_1", "epsilon_obs_2", "std_noise", NULL};
-  NcGalaxyWLObs *obs             = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 2, (GStrv) cols);
+  NcGalaxyWLObs *obs             = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE_DET, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 2, (GStrv) cols, test_double_cols, g_strv_length ((GStrv) cols));
   NcGalaxyWLBinnedEstimator *est = NC_GALAXY_WL_BINNED_ESTIMATOR (nc_galaxy_wl_binned_estimator_delta_sigma_new ());
 
   nc_galaxy_wl_binned_estimator_build (est, test->mset, obs, test->edges);

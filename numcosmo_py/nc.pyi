@@ -10925,6 +10925,7 @@ class GalaxyWLBinnedEstimator(GObject.Object):
     def required_columns(self) -> list[str]: ...
     def set_e_rms(self, e_rms: float) -> None: ...
     def set_exact_intervals(self, exact_intervals: int) -> None: ...
+    def set_mask(self, mask: typing.Optional[typing.Sequence[bool]] = None) -> None: ...
     def set_pz_reltol(self, pz_reltol: float) -> None: ...
 
 class GalaxyWLBinnedEstimatorClass(GObject.GPointer):
@@ -11402,10 +11403,8 @@ class GalaxyWLObsBinned(NumCosmoMath.Catalog):
     Properties from NcmCatalog:
       data -> NcmMatrix: Data
         Catalog double columns
-      int-data -> GVariant: Integer data
-        Catalog integer columns
-      bool-data -> GVariant: Boolean data
-        Catalog boolean columns
+      col-data -> GVariant: Column data
+        Catalog columns outside the double matrix
       columns -> GStrv: Columns
         Catalog column names
       col-types -> GVariant: Column types
@@ -11425,11 +11424,10 @@ class GalaxyWLObsBinned(NumCosmoMath.Catalog):
         members: typing.Optional[NumCosmoMath.Catalog]
         source: GalaxyWLObs
         z_cluster: float
-        bool_data: GLib.Variant
+        col_data: GLib.Variant
         col_types: GLib.Variant
         columns: list[str]
         data: NumCosmoMath.Matrix
-        int_data: GLib.Variant
         len: int
         meta: typing.Optional[NumCosmoMath.VarDict]
 
@@ -11441,11 +11439,10 @@ class GalaxyWLObsBinned(NumCosmoMath.Catalog):
         members: typing.Optional[NumCosmoMath.Catalog] = ...,
         source: GalaxyWLObs = ...,
         z_cluster: float = ...,
-        bool_data: GLib.Variant = ...,
+        col_data: GLib.Variant = ...,
         col_types: GLib.Variant = ...,
         columns: typing.Sequence[str] = ...,
         data: NumCosmoMath.Matrix = ...,
-        int_data: GLib.Variant = ...,
         len: int = ...,
         meta: typing.Optional[NumCosmoMath.VarDict] = ...,
     ) -> None: ...

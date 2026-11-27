@@ -71,6 +71,7 @@ const gchar *nc_galaxy_wl_binned_estimator_get_name (NcGalaxyWLBinnedEstimator *
 
 void nc_galaxy_wl_binned_estimator_set_e_rms (NcGalaxyWLBinnedEstimator *est, const gdouble e_rms);
 gdouble nc_galaxy_wl_binned_estimator_get_e_rms (NcGalaxyWLBinnedEstimator *est);
+void nc_galaxy_wl_binned_estimator_set_mask (NcGalaxyWLBinnedEstimator *est, GArray *mask);
 void nc_galaxy_wl_binned_estimator_set_pz_reltol (NcGalaxyWLBinnedEstimator *est, const gdouble pz_reltol);
 gdouble nc_galaxy_wl_binned_estimator_get_pz_reltol (NcGalaxyWLBinnedEstimator *est);
 void nc_galaxy_wl_binned_estimator_set_exact_intervals (NcGalaxyWLBinnedEstimator *est, const guint exact_intervals);

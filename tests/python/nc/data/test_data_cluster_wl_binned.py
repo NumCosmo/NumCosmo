@@ -133,7 +133,13 @@ def _build_catalog(
         "c1",
         "c2",
     ]
-    obs = Nc.GalaxyWLObs.new(ellip_conv, Nc.WLEllipticityFrame.CELESTIAL, n, cols)
+    obs = Nc.GalaxyWLObs.new(
+        ellip_conv,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        n,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
+    )
     for i in range(n):
         obs.set("ra", i, ra[i])
         obs.set("dec", i, dec[i])
@@ -506,6 +512,38 @@ def test_empty_and_foreground_bins_are_dropped():
     assert all(z[r] > Z_CL and not (1.0 <= gal["radius"][r] < 2.0) for r in rows)
 
 
+def test_mask_selects_rows():
+    """With a mask, the profile is that of the catalog of the rows that are True."""
+    mset = _build_mset()
+    obs, _ = _build_catalog(mset, n=300, noise=0.2)
+    rng = np.random.default_rng(5)
+    mask = (rng.uniform(size=obs.len()) < 0.6).tolist()
+    cols = list(obs.peek_columns())
+    kept = [i for i in range(obs.len()) if mask[i]]
+    sub = Nc.GalaxyWLObs.new(
+        obs.get_ellip_conv(),
+        obs.get_coord(),
+        len(kept),
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
+    )
+    for j, i in enumerate(kept):
+        for col in cols:
+            sub.set(col, j, obs.get(col, i))
+
+    est = Nc.GalaxyWLBinnedEstimatorDeltaSigma.new()
+    full = est.build(mset, obs, EDGES.tolist())
+    est.set_mask(mask)
+    masked = est.build(mset, obs, EDGES.tolist())
+    est.set_mask(None)
+    ref = est.build(mset, sub, EDGES.tolist())
+
+    for col in ("value", "radius", "n_gal", "inv_sigma_crit"):
+        assert_allclose(_col(masked, col), _col(ref, col), rtol=1e-13)
+    assert masked.peek_members().len() == ref.peek_members().len()
+    assert masked.peek_members().len() < full.peek_members().len()
+
+
 def test_external_profile():
     mset = _build_mset()
     radius = [0.5, 1.0, 2.0]
@@ -621,7 +659,11 @@ def test_cartesian_frame_matches_celestial(est_type):
     n = obs_cel.len()
     cols = list(obs_cel.peek_columns())
     obs_car = Nc.GalaxyWLObs.new(
-        Nc.GalaxyWLObsEllipConv.TRACE_DET, Nc.WLEllipticityFrame.CARTESIAN, n, cols
+        Nc.GalaxyWLObsEllipConv.TRACE_DET,
+        Nc.WLEllipticityFrame.CARTESIAN,
+        n,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
     )
     sign = {"epsilon_obs_2": -1.0, "c2": -1.0}
     for col in cols:
@@ -729,7 +771,13 @@ def test_pz_from_redshift_factor_matches_direct_integral():
 
     obs, _ = _build_catalog(mset, n=4)
     cols = list(obs.peek_columns()) + ["zp", "sigma0"]
-    obs_c = Nc.GalaxyWLObs.new(obs.get_ellip_conv(), obs.get_coord(), obs.len(), cols)
+    obs_c = Nc.GalaxyWLObs.new(
+        obs.get_ellip_conv(),
+        obs.get_coord(),
+        obs.len(),
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
+    )
     for i in range(obs.len()):
         for col in obs.peek_columns():
             obs_c.set(col, i, obs.get(col, i))

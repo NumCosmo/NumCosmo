@@ -2389,6 +2389,28 @@ def test_cluster_wl_app_generate_binned_edges_exact(experiment_file):
     assert np.isfinite(data.m2lnL_val(mset))
 
 
+def test_cluster_wl_app_load_binned_mask(experiment_file, real_wl_obs_file_with_meta):
+    """--mask restricts the galaxies of the binned profile."""
+    args = [
+        "generate",
+        "cluster-wl-load",
+        experiment_file.as_posix(),
+        f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+        "--binned=gt n_bins=2",
+        "--r-min=0.05",
+        "--r-max=2.0",
+    ]
+    counts = []
+    for extra in ([], ["--mask={kind: column, column: z, max: 1.0}"]):
+        result = runner.invoke(app, args + extra)
+        assert result.exit_code == 0, result.output
+        dataset, _ = _load_dataset_and_mset(experiment_file)
+        binned = dataset.get_data(0).peek_binned()
+        counts.append(binned.peek_members().len())
+
+    assert 0 < counts[1] < counts[0]
+
+
 def test_cluster_wl_app_load_binned(experiment_file, real_wl_obs_file_with_meta):
     """--binned on a catalog: the redshifts are the p(z) of the catalog,
     and the shape factor need not follow the convention of the catalog."""
