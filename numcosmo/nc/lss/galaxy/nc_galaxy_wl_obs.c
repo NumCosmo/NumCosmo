@@ -738,6 +738,39 @@ nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i)
   return (NcGalaxyPz *) ncm_obj_dict_int_peek (self->pz, i);
 }
 
+/**
+ * nc_galaxy_wl_obs_pz_cdf_array:
+ * @obs: a #NcGalaxyWLObs
+ * @z: the redshift
+ * @cdf: (out callee-allocates) (transfer full) (element-type gdouble): the cumulative distributions
+ *
+ * Computes, for each row, the cumulative distribution of its redshift density at @z
+ * (nc_galaxy_pz_cdf()), so $P(z' > z) = 1 - $ @cdf. A C caller may pass in @cdf an array to
+ * reuse, or a pointer to %NULL for a new one; it receives one value per row. A row without
+ * a redshift density aborts.
+ */
+void
+nc_galaxy_wl_obs_pz_cdf_array (NcGalaxyWLObs *obs, const gdouble z, GArray **cdf)
+{
+  const guint n = ncm_catalog_len (NCM_CATALOG (obs));
+  guint i;
+
+  if (*cdf == NULL)
+    *cdf = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*cdf, n);
+
+  for (i = 0; i < n; i++)
+  {
+    NcGalaxyPz *gpz = nc_galaxy_wl_obs_peek_pz (obs, i);
+
+    if (gpz == NULL)
+      g_error ("nc_galaxy_wl_obs_pz_cdf_array: row %u has no redshift density.", i);
+
+    g_array_index (*cdf, gdouble, i) = nc_galaxy_pz_cdf (gpz, z);
+  }
+}
+
 /* The interpolants of obs, created empty in memory when there are none */
 static NcGalaxyWLObsShapeInterp *
 _nc_galaxy_wl_obs_peek_or_new_shape_interp (NcGalaxyWLObsPrivate *self)

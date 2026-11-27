@@ -53,6 +53,7 @@ dependencies:
   - pytest-timeout
   - pytest-xdist
   - python >= 3.11
+  - pyyaml
   - quarto
   - requests
   - rich

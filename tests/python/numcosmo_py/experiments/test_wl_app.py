@@ -1457,6 +1457,63 @@ def test_cluster_wl_load_app_spectral_interp(
     assert factor.props.interp_abstol == pytest.approx(1e-4)
 
 
+@pytest.mark.parametrize("inline", [False, True], ids=["file", "inline"])
+def test_cluster_wl_load_app_mask(
+    experiment_file, real_wl_obs_file_with_meta, tmp_path: Path, inline: bool
+):
+    """--mask, a file or inline YAML, sets the mask of its selection on the likelihood."""
+    mask_file = tmp_path / "selection.yaml"
+    mask_file.write_text("kind: column\ncolumn: z\nmax: 1.0\n")
+    mask = "{kind: column, column: z, max: 1.0}" if inline else mask_file.as_posix()
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--mask={mask}",
+            "--summary",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Galaxies used (row selection)" in plain_output(result.output)
+
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(
+        Ncm.Dataset,
+        ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix()),
+    )
+    cluster_data = cast(Nc.DataClusterWLFactor, dataset.get_data(0))
+    obs = cluster_data.peek_obs()
+    expected = [obs.get("z", i) <= 1.0 for i in range(obs.len())]
+
+    assert cluster_data.get_mask() == expected
+    assert 0 < sum(expected) < obs.len()
+
+
+def test_cluster_wl_load_app_mask_invalid(
+    experiment_file, real_wl_obs_file_with_meta, tmp_path: Path
+):
+    """An invalid --mask is a bad parameter with the validation error."""
+    mask_file = tmp_path / "selection.yaml"
+    mask_file.write_text("kind: box\n")
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--shape-factor=var_add ellip_conv=trace ellip_coord=celestial",
+            f"--mask={mask_file.as_posix()}",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Input tag 'box' found using 'kind'" in plain_output(result.output)
+
+
 def test_cluster_wl_load_app_cheb_weights(experiment_file, real_wl_obs_file_with_meta):
     """--integ-method cheb-weights, --cheb-tol, --cheb-level-min and the Spectral
     restrict_range option reach the saved dataset."""

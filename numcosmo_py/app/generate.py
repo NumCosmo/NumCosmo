@@ -34,6 +34,7 @@ from typing import Annotated
 
 import numpy as np
 import typer
+import yaml
 
 from numcosmo_py import GLib, Nc, Ncm
 from numcosmo_py.datasets.dist_mu_obs import (
@@ -97,6 +98,7 @@ from numcosmo_py.experiments.planck18 import (
     generate_planck18_ttteee,
     mset_set_parameters,
 )
+from numcosmo_py.experiments.wl_row_selection import RowSelector, load_row_selector
 
 
 class KnotPlacement(StrEnum):
@@ -1152,6 +1154,19 @@ class LoadClusterWL(ClusterWL):
         ),
     ]
 
+    mask: Annotated[
+        str | None,
+        typer.Option(
+            help=(
+                "Row selection of the catalog, a YAML file or inline YAML such as "
+                "'{kind: radius, r_max: 4.46}': the likelihood uses only the rows it "
+                "keeps (radius, column, z-support and object-id selectors, combined "
+                "with and, or and not; see numcosmo_py.experiments.wl_row_selection). "
+                "It is evaluated at the cluster and cosmology of the experiment."
+            ),
+        ),
+    ] = None
+
     def _resolve_gens(self):
         """Return the generators of the catalog's record, or of the options.
 
@@ -1202,6 +1217,19 @@ class LoadClusterWL(ClusterWL):
         """Load the real NcGalaxyWLObs catalog from --catalog or --data-file."""
         return load_wl_obs(self.catalog, self.data_file)
 
+    def _load_row_selector(self) -> RowSelector | None:
+        """Read the row selection of --mask.
+
+        Raises:
+            typer.BadParameter: The value is not a valid row selection.
+        """
+        if self.mask is None:
+            return None
+        try:
+            return load_row_selector(self.mask)
+        except (ValueError, yaml.YAMLError) as e:
+            raise typer.BadParameter(f"--mask {self.mask}: {e}") from e
+
     def _build_experiment(self, shape_gen, pop_gen) -> Ncm.ObjDictStr:
         """Load the real-data cluster weak lensing experiment."""
         exp = load_cluster_wl(
@@ -1221,6 +1249,7 @@ class LoadClusterWL(ClusterWL):
             integ_options=self.integ_options,
             summary=self.summary,
             resample_flag=resolve_resample_flag(self.resample_flag),
+            row_selector=self._load_row_selector(),
         )
         mset = exp.peek("model-set")
         assert isinstance(mset, Ncm.MSet)

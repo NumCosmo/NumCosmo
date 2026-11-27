@@ -80,6 +80,9 @@ static void test_nc_galaxy_wl_obs_cheb_grid_errors (void);
 static void test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess (void);
 static void test_nc_galaxy_wl_obs_typed_columns (void);
 static void test_nc_galaxy_wl_obs_shallow_dup (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_pz_cdf_array (TestNcGalaxyWLObs *test, gconstpointer pdata);
+static void test_nc_galaxy_wl_obs_pz_cdf_array_missing (void);
+static void test_nc_galaxy_wl_obs_pz_cdf_array_missing_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -174,6 +177,12 @@ main (gint argc, gchar *argv[])
               &test_nc_galaxy_wl_obs_new_pz,
               &test_nc_galaxy_wl_obs_shallow_dup,
               &test_nc_galaxy_wl_obs_free);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/pz_cdf_array", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new_pz,
+              &test_nc_galaxy_wl_obs_pz_cdf_array,
+              &test_nc_galaxy_wl_obs_free);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_cdf_array/missing", &test_nc_galaxy_wl_obs_pz_cdf_array_missing);
+  g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/pz_cdf_array/missing/subprocess", &test_nc_galaxy_wl_obs_pz_cdf_array_missing_subprocess);
 
   g_test_run ();
 
@@ -1151,5 +1160,76 @@ test_nc_galaxy_wl_obs_shallow_dup (TestNcGalaxyWLObs *test, gconstpointer pdata)
   nc_galaxy_pz_free (NC_GALAXY_PZ (pz));
   ncm_vector_free (zv);
   ncm_vector_free (pv);
+}
+
+/* A redshift density of a Gaussian table of mean mu: z from 0 to 2 in 41 points */
+static NcGalaxyPz *
+_test_nc_galaxy_wl_obs_gauss_pz (const gdouble mu)
+{
+  NcmVector *zv = ncm_vector_new (41);
+  NcmVector *pv = ncm_vector_new (41);
+  NcGalaxyPz *gpz;
+  guint k;
+
+  for (k = 0; k < 41; k++)
+  {
+    const gdouble z = 0.05 * k;
+
+    ncm_vector_set (zv, k, z);
+    ncm_vector_set (pv, k, exp (-0.5 * gsl_pow_2 ((z - mu) / 0.2)));
+  }
+
+  gpz = NC_GALAXY_PZ (nc_galaxy_pz_bspline_sqrt_new_from_table (zv, pv));
+
+  ncm_vector_free (zv);
+  ncm_vector_free (pv);
+
+  return gpz;
+}
+
+/* The array of cumulative distributions holds that of the density of each row */
+static void
+test_nc_galaxy_wl_obs_pz_cdf_array (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  const guint n = ncm_catalog_len (NCM_CATALOG (test->obs));
+  GArray *cdf   = NULL;
+  guint i;
+
+  for (i = 0; i < n; i++)
+  {
+    NcGalaxyPz *gpz = _test_nc_galaxy_wl_obs_gauss_pz (0.3 + 1.2 * i / n);
+
+    nc_galaxy_wl_obs_set_pz (test->obs, i, gpz);
+    nc_galaxy_pz_free (gpz);
+  }
+
+  nc_galaxy_wl_obs_pz_cdf_array (test->obs, 0.7, &cdf);
+  g_assert_cmpuint (cdf->len, ==, n);
+
+  for (i = 0; i < n; i++)
+    g_assert_cmpfloat (g_array_index (cdf, gdouble, i), ==, nc_galaxy_pz_cdf (nc_galaxy_wl_obs_peek_pz (test->obs, i), 0.7));
+
+  g_array_unref (cdf);
+}
+
+/* A row without a redshift density aborts */
+static void
+test_nc_galaxy_wl_obs_pz_cdf_array_missing (void)
+{
+  g_test_trap_subprocess ("/numcosmo/nc_galaxy_wl_obs/pz_cdf_array/missing/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*row 1 has no redshift density*");
+}
+
+static void
+test_nc_galaxy_wl_obs_pz_cdf_array_missing_subprocess (void)
+{
+  GStrv col_names    = g_strsplit ("ra dec z", " ", -1);
+  NcGalaxyWLObs *obs = nc_galaxy_wl_obs_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE, NC_WL_ELLIPTICITY_FRAME_CELESTIAL, 2, col_names, test_double_cols, 3);
+  NcGalaxyPz *gpz    = _test_nc_galaxy_wl_obs_gauss_pz (0.5);
+  GArray *cdf        = NULL;
+
+  nc_galaxy_wl_obs_set_pz (obs, 0, gpz);
+  nc_galaxy_wl_obs_pz_cdf_array (obs, 0.7, &cdf);
 }
 

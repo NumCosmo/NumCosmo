@@ -164,6 +164,7 @@ void nc_galaxy_wl_obs_clear (NcGalaxyWLObs **obs);
 void nc_galaxy_wl_obs_set_pz (NcGalaxyWLObs *obs, const guint i, NcGalaxyPz *pz);
 
 NcGalaxyPz *nc_galaxy_wl_obs_peek_pz (NcGalaxyWLObs *obs, const guint i);
+void nc_galaxy_wl_obs_pz_cdf_array (NcGalaxyWLObs *obs, const gdouble z, GArray **cdf);
 
 void nc_galaxy_wl_obs_set_shape_interp (NcGalaxyWLObs *obs, const guint i, NcmSpectralTensor *st);
 NcmSpectralTensor *nc_galaxy_wl_obs_peek_shape_interp (NcGalaxyWLObs *obs, const guint i);

@@ -90,6 +90,7 @@ gdouble nc_halo_position_projected_radius (NcHaloPosition *hp, NcHICosmo *cosmo,
 gdouble nc_halo_position_projected_radius_prefactor (NcHaloPosition *hp, NcHICosmo *cosmo);
 gdouble nc_halo_position_projected_radius_from_prefactor (gdouble theta, gdouble prefactor);
 gdouble nc_halo_position_projected_radius_from_ra_dec (NcHaloPosition *hp, NcHICosmo *cosmo, gdouble ra, gdouble dec);
+void nc_halo_position_projected_radius_array (NcHaloPosition *hp, NcHICosmo *cosmo, GArray *ra, GArray *dec, GArray **r);
 
 #define NC_HALO_POSITION_DEFAULT_RA (0.0)
 #define NC_HALO_POSITION_DEFAULT_DEC (0.0)
