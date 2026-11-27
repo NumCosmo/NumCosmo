@@ -557,13 +557,16 @@ _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cos
   return delta;
 }
 
-/* Sets @dp_copy's mass to the top of its prior box and its concentration,
- * when the mass summary has one, to the value in @dp_src, leaving the
- * profile in the mset untouched. The shear is not monotonic in the
- * concentration, so the bound is taken at a fixed concentration only; a
- * free cDelta is excluded by _nc_galaxy_shape_factor_moments_range_holds(). Returns FALSE when
- * the mass cannot be resolved by name, which is not an error: the caller
- * then skips the restriction and builds the full mesh. */
+/*
+ * Sets @dp_copy, a copy of @dp_src of the same classes, to @dp_src at the corner of the
+ * prior box: every parameter of the profile and of its mass summary as in @dp_src, then
+ * the mass at the upper bound of its prior. The profile in the mset is untouched. The
+ * shear is not monotonic in the concentration, so the bound is taken at a fixed
+ * concentration only; a free cDelta is excluded by
+ * _nc_galaxy_shape_factor_moments_range_holds(). Returns FALSE when the mass cannot be
+ * resolved by name, which is not an error: the caller then skips the restriction and
+ * builds the full mesh.
+ */
 gboolean
 _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src)
 {
@@ -586,12 +589,11 @@ _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, N
 
   /* LCOV_EXCL_STOP */
 
-  ncm_model_param_set (m_copy, idx, ncm_model_param_get_upper_bound (m_src, idx));
+  if (ncm_model_len (NCM_MODEL (dp_src)) > 0)
+    ncm_model_params_copyto (NCM_MODEL (dp_src), NCM_MODEL (dp_copy));
 
-  if (ncm_model_param_index_from_name (m_src, "cDelta", &idx, &error))
-    ncm_model_param_set (m_copy, idx, ncm_model_param_get (m_src, idx));
-  else
-    g_clear_error (&error);
+  ncm_model_params_copyto (m_src, m_copy);
+  ncm_model_param_set (m_copy, idx, ncm_model_param_get_upper_bound (m_src, idx));
 
   return TRUE;
 }

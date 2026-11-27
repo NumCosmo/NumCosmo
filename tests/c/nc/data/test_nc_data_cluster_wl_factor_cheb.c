@@ -84,6 +84,7 @@ void test_nc_data_cluster_wl_factor_cheb_unconverged (TestNcDataClusterWLFactorC
 void test_nc_data_cluster_wl_factor_cheb_switch (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_private_copy_types (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
+void test_nc_data_cluster_wl_factor_required_columns (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_stored (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata);
 void test_nc_data_cluster_wl_factor_cheb_stored_errors (void);
 void test_nc_data_cluster_wl_factor_cheb_stored_errors_subprocess (void);
@@ -121,6 +122,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/data_cluster_wl_factor/private_copy/types", TestNcDataClusterWLFactorCheb, &test_catalog_default,
               &test_nc_data_cluster_wl_factor_cheb_new,
               &test_nc_data_cluster_wl_factor_private_copy_types,
+              &test_nc_data_cluster_wl_factor_cheb_free);
+  g_test_add ("/nc/data_cluster_wl_factor/required_columns", TestNcDataClusterWLFactorCheb, &test_catalog_default,
+              &test_nc_data_cluster_wl_factor_cheb_new,
+              &test_nc_data_cluster_wl_factor_required_columns,
               &test_nc_data_cluster_wl_factor_cheb_free);
 
   g_test_add ("/nc/data_cluster_wl_factor/cheb/stored", TestNcDataClusterWLFactorCheb, &test_catalog_default,
@@ -233,9 +238,10 @@ test_nc_data_cluster_wl_factor_cheb_new (TestNcDataClusterWLFactorCheb *test, gc
 
   p_data = nc_galaxy_position_factor_data_new (position_factor, test->mset);
   z_data = nc_galaxy_redshift_factor_data_new (redshift_factor, test->mset);
-  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset, p_data, z_data);
+  s_data = nc_galaxy_shape_factor_data_new (shape_factor, test->mset);
 
-  columns = nc_galaxy_shape_factor_data_required_columns (s_data);
+  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
+  columns     = nc_data_cluster_wl_factor_required_columns (test->dcwlf, test->mset);
 
   for (l = columns; l != NULL; l = g_list_next (l))
     g_strv_builder_add (builder, l->data);
@@ -258,14 +264,16 @@ test_nc_data_cluster_wl_factor_cheb_new (TestNcDataClusterWLFactorCheb *test, gc
     } while ((radius < min_radius) || (radius > max_radius));
 
     nc_galaxy_shape_factor_data_set (shape_factor, s_data, 0.0, 0.0, ncm_rng_uniform_gen (rng, 0.005, 0.02), 0.0, 0.0, 0.0, co);
-    nc_galaxy_shape_factor_gen (shape_factor, test->mset, s_data, rng);
+    nc_galaxy_position_factor_data_write_row (p_data, test->obs, i);
+    nc_galaxy_redshift_factor_data_write_row (z_data, test->obs, i);
     nc_galaxy_shape_factor_data_write_row (s_data, test->obs, i);
     nc_galaxy_pz_free (pz);
   }
 
-  test->dcwlf = nc_data_cluster_wl_factor_new (position_factor, redshift_factor, shape_factor);
   nc_data_cluster_wl_factor_set_cut (test->dcwlf, min_radius, max_radius);
   nc_data_cluster_wl_factor_set_obs (test->dcwlf, test->obs);
+  nc_data_cluster_wl_factor_set_resample_flag (test->dcwlf, NC_DATA_CLUSTER_WL_RESAMPLE_FLAG_SHAPE);
+  ncm_data_resample (NCM_DATA (test->dcwlf), test->mset, rng);
   nc_data_cluster_wl_factor_set_integ_method (test->dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_CHEB_WEIGHTS);
 
   nc_hicosmo_free (cosmo);
@@ -652,5 +660,52 @@ test_nc_data_cluster_wl_factor_cheb_stored_errors_subprocess (void)
     nc_data_cluster_wl_factor_set_integ_method (test.dcwlf, NC_DATA_CLUSTER_WL_INTEG_METHOD_LNINT);
     nc_data_cluster_wl_factor_write_cheb_grid (test.dcwlf, test.mset, test.obs);
   }
+}
+
+/*
+ * The columns of a galaxy are those of the shape, position and redshift fragments, in this
+ * order, and the catalog of the dataset has each of them.
+ */
+void
+test_nc_data_cluster_wl_factor_required_columns (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
+{
+  NcGalaxyPositionFactor *position_factor;
+  NcGalaxyRedshiftFactor *redshift_factor;
+  NcGalaxyShapeFactor *shape_factor;
+  NcGalaxyPositionFactorData *p_data;
+  NcGalaxyRedshiftFactorData *z_data;
+  NcGalaxyShapeFactorData *s_data;
+  GList *columns, *expected, *l, *e;
+
+  g_object_get (test->dcwlf,
+                "position-factor", &position_factor,
+                "redshift-factor", &redshift_factor,
+                "shape-factor", &shape_factor,
+                NULL);
+
+  p_data   = nc_galaxy_position_factor_data_new (position_factor, test->mset);
+  z_data   = nc_galaxy_redshift_factor_data_new (redshift_factor, test->mset);
+  s_data   = nc_galaxy_shape_factor_data_new (shape_factor, test->mset);
+  expected = nc_galaxy_shape_factor_data_required_columns (s_data);
+  expected = g_list_concat (expected, nc_galaxy_position_factor_data_required_columns (p_data));
+  expected = g_list_concat (expected, nc_galaxy_redshift_factor_data_required_columns (z_data));
+  columns  = nc_data_cluster_wl_factor_required_columns (test->dcwlf, test->mset);
+
+  g_assert_cmpuint (g_list_length (columns), ==, g_list_length (expected));
+
+  for (l = columns, e = expected; l != NULL; l = l->next, e = e->next)
+  {
+    g_assert_cmpstr (l->data, ==, e->data);
+    g_assert_true (ncm_catalog_has_column (NCM_CATALOG (test->obs), l->data));
+  }
+
+  g_list_free_full (columns, g_free);
+  g_list_free_full (expected, g_free);
+  nc_galaxy_shape_factor_data_unref (s_data);
+  nc_galaxy_redshift_factor_data_unref (z_data);
+  nc_galaxy_position_factor_data_unref (p_data);
+  nc_galaxy_shape_factor_free (shape_factor);
+  nc_galaxy_redshift_factor_free (redshift_factor);
+  nc_galaxy_position_factor_free (position_factor);
 }
 

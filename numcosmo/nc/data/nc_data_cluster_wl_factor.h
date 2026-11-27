@@ -95,7 +95,7 @@ GArray *nc_data_cluster_wl_factor_get_mask (NcDataClusterWLFactor *dcwlf);
 void nc_data_cluster_wl_factor_set_resample_flag (NcDataClusterWLFactor *dcwlf, NcDataClusterWLResampleFlag resample_flag);
 NcDataClusterWLResampleFlag nc_data_cluster_wl_factor_get_resample_flag (NcDataClusterWLFactor *dcwlf);
 
-GPtrArray *nc_data_cluster_wl_factor_peek_data_array (NcDataClusterWLFactor *dcwlf);
+GList *nc_data_cluster_wl_factor_required_columns (NcDataClusterWLFactor *dcwlf, NcmMSet *mset);
 
 void nc_data_cluster_wl_factor_eval_m2lnP_gal (NcDataClusterWLFactor *dcwlf, NcmMSet *mset, NcmVector *m2lnP_gal);
 
