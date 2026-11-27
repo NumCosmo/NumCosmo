@@ -360,3 +360,25 @@ def test_dataset_recovers_mass(kind):
 
     best = grid[np.argmin(m2lnL)]
     assert abs(best - log10m) < 3.0 / math.sqrt(curvature)
+
+
+def test_constructors_and_properties():
+    """The classes build and reference like every other NumCosmo object, and the
+    options of the populations read back."""
+    for obj in (
+        Nc.GalaxyShapeFactorWtG.new(Nc.GalaxyWLObsEllipConv.TRACE_DET),
+        Nc.GalaxyShapePopShearScatterGauss.new(False),
+        Nc.GalaxyShapePopShearScatterVoigt.new(),
+    ):
+        assert obj.ref() == obj
+
+    gauss = Nc.GalaxyShapePopShearScatterGauss.new(True)
+    assert gauss.get_sigma_from_catalog()
+    assert gauss.get_property("sigma-from-catalog")
+    assert not Nc.GalaxyShapePopShearScatterGauss.new(False).get_sigma_from_catalog()
+
+    for pop in (gauss, Nc.GalaxyShapePopShearScatterVoigt.new()):
+        assert pop.get_include_noise()
+        pop.set_include_noise(False)
+        assert not pop.get_include_noise()
+        assert not pop.get_property("include-noise")

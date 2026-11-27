@@ -56,6 +56,9 @@ from numcosmo_py.experiments.cluster_wl import (
     HaloPositionData,
     GalaxyPopGenBeta,
     GalaxyPopGenGaussLocal,
+    GalaxyPopGenShearGauss,
+    GalaxyPopGenShearVoigt,
+    GalaxyShapeFactorGenWtG,
     GalaxyShapeFactorGenSpectral,
     DEFAULT_INTEG_OPTIONS,
     load_cluster_wl,
@@ -237,16 +240,12 @@ def fixture_pop_dist(shape_factor) -> tuple[str, dict]:
 
     The WtG scheme evaluates only the shear-scatter populations and every other
     scheme only the intrinsic-ellipticity ones (see check_shape_pop_compat()):
-    WtG gets a shear-scatter population, alternating between the Gaussian and
-    the Voigt kernel, and the others a Gaussian intrinsic population.
+    WtG gets the Gaussian shear scatter (the Voigt one and the options are in
+    ``test_cluster_wl_app_generate_wtg``) and the others a Gaussian intrinsic
+    population.
     """
     if shape_factor[0] == ShapeFactorGen.WTG.value:
-        if choice([True, False]):
-            return GalaxyPopGen.SHEAR_GAUSS.value, {"sigma": uniform(0.2, 0.3)}
-        return GalaxyPopGen.SHEAR_VOIGT.value, {
-            "sigma": uniform(0.2, 0.3),
-            "gamma": uniform(0.005, 0.02),
-        }
+        return GalaxyPopGen.SHEAR_GAUSS.value, {"sigma": uniform(0.2, 0.3)}
     config = {"sigma": uniform(0.2, 0.4)}
     return GalaxyPopGen.GAUSS.value, config
 
@@ -584,6 +583,119 @@ def test_cluster_wl_app_generate_shape(experiment_file, shape_factor, pop_dist):
             assert abs(obs.get("epsilon_obs_2", i)) <= 1.0 + abs(c2) + 6.0 * std_noise
 
 
+_WTG_POPS = [
+    ("shear_gauss sigma=0.25", Nc.GalaxyShapePopShearScatterGauss, {"sigma": 0.25}),
+    (
+        "shear_gauss sigma_from_catalog=true e_rms=0.35 std_sigma=0.02"
+        " include_noise=false",
+        Nc.GalaxyShapePopShearScatterGauss,
+        {},
+    ),
+    (
+        "shear_voigt sigma=0.22 gamma=0.015 include_noise=false",
+        Nc.GalaxyShapePopShearScatterVoigt,
+        {"sigma": 0.22, "gamma": 0.015},
+    ),
+]
+
+
+@pytest.mark.parametrize("pop_str,pop_cls,params", _WTG_POPS)
+def test_cluster_wl_app_generate_wtg(experiment_file, pop_str, pop_cls, params):
+    """Generate WtG mocks with every shear-scatter population and its options.
+
+    The responsivity is written to every galaxy, a catalog-width Gaussian also
+    writes an e_rms column, and the population is the one asked for with its
+    parameters and options.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=wtg ellip_conv=trace responsivity=0.82",
+            f"--pop-dist={pop_str}",
+            "--seed=7",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset_file = experiment_file.with_suffix(".dataset.gvar")
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(Ncm.Dataset, ser.from_binfile(dataset_file.as_posix()))
+    experiment = ser.dict_str_from_yaml_file(experiment_file.as_posix())
+    mset = cast(Ncm.MSet, experiment.get("model-set"))
+    obs = cast(Nc.DataClusterWLFactor, dataset.get_data(0)).peek_obs()
+    pop = mset.peek_by_name("NcGalaxyShapePop")
+
+    assert isinstance(pop, pop_cls)
+    for name, value in params.items():
+        assert pop[name] == value
+    assert pop.get_include_noise() == ("include_noise=false" not in pop_str)
+
+    from_catalog = "sigma_from_catalog" in pop_str
+    assert obs.has_column("e_rms") == from_catalog
+    for i in range(obs.len()):
+        assert obs.get("responsivity", i) == 0.82
+        if from_catalog:
+            assert 0.0 < obs.get("e_rms", i) < 0.5
+        assert np.isfinite(obs.get("epsilon_obs_1", i))
+        assert np.isfinite(obs.get("epsilon_obs_2", i))
+
+
+_BAD_WTG_PAIRS = [
+    ("wtg", "gauss sigma=0.3"),
+    ("wtg", "beta"),
+    ("var_add", "shear_gauss sigma=0.25"),
+    ("moments_tilt", "shear_voigt sigma=0.22 gamma=0.02"),
+]
+
+
+@pytest.mark.parametrize("shape_str,pop_str", _BAD_WTG_PAIRS)
+def test_cluster_wl_app_generate_wtg_incompatible(experiment_file, shape_str, pop_str):
+    """A shape factor and a population that do not go together are refused up front."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            f"--shape-factor={shape_str}",
+            f"--pop-dist={pop_str}",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert not experiment_file.exists()
+    assert "cannot evaluate the population" in plain_output(result.output)
+
+
+@pytest.mark.parametrize(
+    "pop_str",
+    [
+        "shear_gauss sigma=-0.1",
+        "shear_gauss e_rms=0",
+        "shear_gauss bogus=1",
+        "shear_voigt gamma=-0.01",
+        "shear_voigt sigma=abc",
+        "shear_voigt bogus=1",
+    ],
+)
+def test_cluster_wl_app_generate_wtg_pop_bad(experiment_file, pop_str):
+    """Bad options of the shear-scatter populations fail the command."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--shape-factor=wtg",
+            f"--pop-dist={pop_str}",
+        ],
+    )
+    assert result.exit_code != 0, result.output
+    assert not experiment_file.exists()
+
+
 def test_cluster_wl_app_generate_shape_bad(experiment_file, shape_factor_bad):
     """Test the generation of the cluster WL.
 
@@ -725,6 +837,49 @@ def test_cluster_model_position_data():
     assert reported.ra == pytest.approx(position.ra)
     assert reported.dec == pytest.approx(position.dec)
     assert reported.z == pytest.approx(position.z)
+
+
+def test_shear_scatter_generators():
+    """The WtG generators: the factor and the populations they build, the
+    options they carry, and what they write to a catalog."""
+    wtg = GalaxyShapeFactorGenWtG(responsivity=0.9)
+    assert isinstance(wtg.get_shape_factor(), Nc.GalaxyShapeFactorWtG)
+    assert not wtg.requires_sigma()
+    assert "responsivity=1.0" in GalaxyShapeFactorGenWtG.help_text()[1]
+
+    rng = Ncm.RNG.seeded_new(None, 3)
+    cols = ["std_noise", "c1", "c2", "m", "responsivity", "e_rms"]
+    obs = Nc.GalaxyWLObs.new(
+        Nc.GalaxyWLObsEllipConv.TRACE,
+        Nc.WLEllipticityFrame.CELESTIAL,
+        2,
+        cols,
+        [Ncm.CatalogColType.DOUBLE] * len(cols),
+    )
+    gauss = GalaxyPopGenShearGauss.from_args(
+        ["sigma_from_catalog=true", "e_rms=0.4", "include_noise=false"]
+    )
+    voigt = GalaxyPopGenShearVoigt.from_args(["sigma=0.2", "gamma=0.01"])
+    for i in range(2):
+        wtg.write_calib(obs, i, rng)
+        gauss.write_calib(obs, i, rng)
+        voigt.write_calib(obs, i, rng)
+        assert obs.get("responsivity", i) == 0.9
+        assert obs.get("e_rms", i) > 0.0
+
+    for pop_gen, cls in (
+        (gauss, Nc.GalaxyShapePopShearScatterGauss),
+        (voigt, Nc.GalaxyShapePopShearScatterVoigt),
+    ):
+        mset = Ncm.MSet.empty_new()
+        pop_gen.register_models(mset)
+        assert isinstance(mset.peek_by_name("NcGalaxyShapePop"), cls)
+        assert not pop_gen.supports_sigma()
+        assert pop_gen.get_mfuncs() == []
+        assert pop_gen.__class__.__name__ in repr(pop_gen)
+
+    assert "sigma_from_catalog=True" in repr(gauss)
+    assert "include_noise=False" in repr(gauss)
 
 
 def test_galaxy_pop_gen_beta_get_shape_pop():
