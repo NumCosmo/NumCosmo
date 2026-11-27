@@ -457,3 +457,41 @@ nc_halo_position_projected_radius_from_ra_dec (NcHaloPosition *hp, NcHICosmo *co
   return nc_halo_position_projected_radius (hp, cosmo, theta);
 }
 
+/**
+ * nc_halo_position_projected_radius_array:
+ * @hp: A #NcHaloPosition
+ * @cosmo: A #NcHICosmo
+ * @ra: (element-type gdouble): the right ascensions
+ * @dec: (element-type gdouble): the declinations
+ * @r: (out callee-allocates) (transfer full) (element-type gdouble): the projected radii
+ *
+ * Computes the projected radius of each sky position (@ra, @dec), as
+ * nc_halo_position_projected_radius_from_ra_dec(), with the prefactor computed once. A C
+ * caller may pass in @r an array to reuse, or a pointer to %NULL for a new one; it
+ * receives one value per position, in Mpc. Arrays @ra and @dec of different lengths
+ * abort.
+ */
+void
+nc_halo_position_projected_radius_array (NcHaloPosition *hp, NcHICosmo *cosmo, GArray *ra, GArray *dec, GArray **r)
+{
+  const gdouble prefactor = nc_halo_position_projected_radius_prefactor (hp, cosmo);
+  guint i;
+
+  if (ra->len != dec->len)
+    g_error ("nc_halo_position_projected_radius_array: %u right ascensions and %u declinations.",
+             ra->len, dec->len);
+
+  if (*r == NULL)
+    *r = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+  g_array_set_size (*r, ra->len);
+
+  for (i = 0; i < ra->len; i++)
+  {
+    gdouble theta, phi;
+
+    nc_halo_position_polar_angles (hp, g_array_index (ra, gdouble, i), g_array_index (dec, gdouble, i), &theta, &phi);
+    g_array_index (*r, gdouble, i) = ncm_util_projected_radius (theta, prefactor);
+  }
+}
+

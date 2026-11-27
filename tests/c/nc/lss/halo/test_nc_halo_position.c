@@ -50,6 +50,9 @@ static void test_nc_halo_position_polar_angles (TestNcHaloPosition *test, gconst
 static void test_nc_halo_position_rotate (TestNcHaloPosition *test, gconstpointer pdata);
 static void test_nc_halo_position_projected_radius (TestNcHaloPosition *test, gconstpointer pdata);
 static void test_nc_halo_position_shared_distance (TestNcHaloPosition *test, gconstpointer pdata);
+static void test_nc_halo_position_projected_radius_array (TestNcHaloPosition *test, gconstpointer pdata);
+static void test_nc_halo_position_projected_radius_array_len (void);
+static void test_nc_halo_position_projected_radius_array_len_subprocess (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -87,6 +90,14 @@ main (gint argc, gchar *argv[])
               &test_nc_halo_position_new,
               &test_nc_halo_position_shared_distance,
               &test_nc_halo_position_free);
+
+  g_test_add ("/nc/halo_position/projected_radius_array", TestNcHaloPosition, NULL,
+              &test_nc_halo_position_new,
+              &test_nc_halo_position_projected_radius_array,
+              &test_nc_halo_position_free);
+
+  g_test_add_func ("/nc/halo_position/projected_radius_array/len", &test_nc_halo_position_projected_radius_array_len);
+  g_test_add_func ("/nc/halo_position/projected_radius_array/len/subprocess", &test_nc_halo_position_projected_radius_array_len_subprocess);
 
   g_test_run ();
 
@@ -307,5 +318,76 @@ test_nc_halo_position_shared_distance (TestNcHaloPosition *test, gconstpointer p
   nc_distance_free (dist);
   nc_hicosmo_free (cosmo_a);
   nc_hicosmo_free (cosmo_b);
+}
+
+/* The array of projected radii equals the radius of each position, and a reused array is resized */
+static void
+test_nc_halo_position_projected_radius_array (TestNcHaloPosition *test, gconstpointer pdata)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  GArray *ra       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *dec      = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *r        = NULL;
+  const guint n    = 20;
+  guint i;
+
+  ncm_model_param_set (NCM_MODEL (test->hp), NC_HALO_POSITION_RA, 30.0);
+  ncm_model_param_set (NCM_MODEL (test->hp), NC_HALO_POSITION_DEC, -5.0);
+  ncm_model_param_set (NCM_MODEL (test->hp), NC_HALO_POSITION_Z, 0.3);
+  nc_halo_position_prepare (test->hp, cosmo);
+
+  for (i = 0; i < n; i++)
+  {
+    const gdouble ra_i  = 30.0 + g_test_rand_double_range (-0.5, 0.5);
+    const gdouble dec_i = -5.0 + g_test_rand_double_range (-0.5, 0.5);
+
+    g_array_append_val (ra, ra_i);
+    g_array_append_val (dec, dec_i);
+  }
+
+  nc_halo_position_projected_radius_array (test->hp, cosmo, ra, dec, &r);
+  g_assert_cmpuint (r->len, ==, n);
+
+  for (i = 0; i < n; i++)
+    g_assert_cmpfloat (g_array_index (r, gdouble, i), ==,
+                       nc_halo_position_projected_radius_from_ra_dec (test->hp, cosmo, g_array_index (ra, gdouble, i), g_array_index (dec, gdouble, i)));
+
+  g_array_set_size (ra, 3);
+  g_array_set_size (dec, 3);
+  nc_halo_position_projected_radius_array (test->hp, cosmo, ra, dec, &r);
+  g_assert_cmpuint (r->len, ==, 3);
+
+  g_array_unref (ra);
+  g_array_unref (dec);
+  g_array_unref (r);
+  nc_hicosmo_clear (&cosmo);
+}
+
+/* Arrays of right ascensions and declinations of different lengths abort */
+static void
+test_nc_halo_position_projected_radius_array_len (void)
+{
+  g_test_trap_subprocess ("/nc/halo_position/projected_radius_array/len/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*2 right ascensions and 1 declinations*");
+}
+
+static void
+test_nc_halo_position_projected_radius_array_len_subprocess (void)
+{
+  NcDistance *dist   = nc_distance_new (1100.0);
+  NcHaloPosition *hp = nc_halo_position_new (dist);
+  NcHICosmo *cosmo   = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  GArray *ra         = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *dec        = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *r          = NULL;
+  const gdouble x    = 0.1;
+
+  nc_halo_position_prepare (hp, cosmo);
+  g_array_append_val (ra, x);
+  g_array_append_val (ra, x);
+  g_array_append_val (dec, x);
+
+  nc_halo_position_projected_radius_array (hp, cosmo, ra, dec, &r);
 }
 
