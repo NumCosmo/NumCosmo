@@ -46,6 +46,11 @@
  * It holds no models: nc_wl_cluster_lens_prepare() receives the cosmology, the halo
  * position and the density profile, and keeps what the evaluations need until the next
  * prepare.
+ *
+ * A caller that evaluates $\Sigma_\mathrm{cr}^{-1}(z_s)$ at many source redshifts builds a
+ * table of it on $[z_\mathrm{cl}, z_\mathrm{max}]$ with
+ * nc_wl_cluster_lens_prepare_sigma_crit_inv(), where it gives $z_\mathrm{max}$, and
+ * evaluates the #NcmSpectralPanels of nc_wl_cluster_lens_peek_sigma_crit_inv().
  */
 
 #ifdef HAVE_CONFIG_H
@@ -57,6 +62,7 @@
 #include "ncm/core/ncm_c.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/model/ncm_model_ctrl.h"
+#include "ncm/algebra/ncm_spectral_panels_builder.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -80,32 +86,52 @@ struct _NcWLClusterLens
   NcmModelCtrl *ctrl_dp;
   guint64 geometry_hash; /* counts the prepares that changed the geometry */
   guint64 profile_hash;  /* counts the prepares that changed the profile */
+  gdouble sc_inv_reltol;
+  NcmSpectralPanels *sc_inv; /* 1/Sigma_cr (z_s) on [z_cl, sc_inv_z_max] */
+  NcmSpectralPanelsBuilder *builder;
+  gdouble sc_inv_z_max;         /* NaN when sc_inv was never built */
+  guint64 sc_inv_geometry_hash; /* geometry_hash when sc_inv was built */
 };
+
+/*
+ * Coefficients of every panel of the 1/Sigma_cr table. N = 8 was the fastest of 5 to 9 in the
+ * cluster WL likelihood (NumCosmoDevNotes benches/wl_lens_redesign); the panel count follows
+ * from the tolerance.
+ */
+#define NC_WL_CLUSTER_LENS_SIGMA_CRIT_INV_N (8)
 
 enum
 {
   PROP_0,
   PROP_DISTANCE,
+  PROP_SIGMA_CRIT_INV_RELTOL,
 };
 
 G_DEFINE_TYPE (NcWLClusterLens, nc_wl_cluster_lens, G_TYPE_OBJECT)
 
+static void _nc_wl_cluster_lens_source_distances (NcWLClusterLens *lens, NcHICosmo *cosmo, const gdouble z_s, gdouble *Ds, gdouble *Dls);
+
 static void
 nc_wl_cluster_lens_init (NcWLClusterLens *lens)
 {
-  lens->dist          = NULL;
-  lens->z_cl          = GSL_NAN;
-  lens->k             = 0;
-  lens->sqrt_Omega_k0 = GSL_NAN;
-  lens->dl            = GSL_NAN;
-  lens->sc_over_Dl    = GSL_NAN;
-  lens->r_s           = GSL_NAN;
-  lens->rho_s         = GSL_NAN;
-  lens->ctrl_cosmo    = ncm_model_ctrl_new (NULL);
-  lens->ctrl_hp       = ncm_model_ctrl_new (NULL);
-  lens->ctrl_dp       = ncm_model_ctrl_new (NULL);
-  lens->geometry_hash = 0;
-  lens->profile_hash  = 0;
+  lens->dist                 = NULL;
+  lens->z_cl                 = GSL_NAN;
+  lens->k                    = 0;
+  lens->sqrt_Omega_k0        = GSL_NAN;
+  lens->dl                   = GSL_NAN;
+  lens->sc_over_Dl           = GSL_NAN;
+  lens->r_s                  = GSL_NAN;
+  lens->rho_s                = GSL_NAN;
+  lens->ctrl_cosmo           = ncm_model_ctrl_new (NULL);
+  lens->ctrl_hp              = ncm_model_ctrl_new (NULL);
+  lens->ctrl_dp              = ncm_model_ctrl_new (NULL);
+  lens->geometry_hash        = 0;
+  lens->profile_hash         = 0;
+  lens->sc_inv_reltol        = 0.0;
+  lens->sc_inv               = ncm_spectral_panels_new (1);
+  lens->builder              = ncm_spectral_panels_builder_new ();
+  lens->sc_inv_z_max         = GSL_NAN;
+  lens->sc_inv_geometry_hash = 0;
 }
 
 static void
@@ -118,6 +144,9 @@ _nc_wl_cluster_lens_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_DISTANCE:
       nc_distance_clear (&lens->dist);
       lens->dist = g_value_dup_object (value);
+      break;
+    case PROP_SIGMA_CRIT_INV_RELTOL:
+      nc_wl_cluster_lens_set_sigma_crit_inv_reltol (lens, g_value_get_double (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -135,6 +164,9 @@ _nc_wl_cluster_lens_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_DISTANCE:
       g_value_set_object (value, lens->dist);
       break;
+    case PROP_SIGMA_CRIT_INV_RELTOL:
+      g_value_set_double (value, lens->sc_inv_reltol);
+      break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
       break;                                                      /* LCOV_EXCL_LINE */
@@ -150,6 +182,8 @@ _nc_wl_cluster_lens_dispose (GObject *object)
   ncm_model_ctrl_clear (&lens->ctrl_cosmo);
   ncm_model_ctrl_clear (&lens->ctrl_hp);
   ncm_model_ctrl_clear (&lens->ctrl_dp);
+  ncm_spectral_panels_clear (&lens->sc_inv);
+  ncm_spectral_panels_builder_clear (&lens->builder);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_wl_cluster_lens_parent_class)->dispose (object);
@@ -176,6 +210,23 @@ nc_wl_cluster_lens_class_init (NcWLClusterLensClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcWLClusterLens:sigma-crit-inv-reltol:
+   *
+   * The relative tolerance of the $\Sigma_\mathrm{cr}^{-1}(z_s)$ table of
+   * nc_wl_cluster_lens_prepare_sigma_crit_inv(): on every panel the table differs from
+   * $\Sigma_\mathrm{cr}^{-1}$ by at most this value times the larger of its largest value on
+   * the panel and $\Sigma_\mathrm{cr}^{-1}(z_\mathrm{max})$, at the points checked by
+   * ncm_spectral_panels_builder_build_uniform().
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGMA_CRIT_INV_RELTOL,
+                                   g_param_spec_double ("sigma-crit-inv-reltol",
+                                                        NULL,
+                                                        "Relative tolerance of the inverse critical density table",
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -357,6 +408,97 @@ nc_wl_cluster_lens_get_profile_hash (NcWLClusterLens *lens)
 }
 
 /**
+ * nc_wl_cluster_lens_set_sigma_crit_inv_reltol:
+ * @lens: a #NcWLClusterLens
+ * @reltol: the relative tolerance
+ *
+ * Sets #NcWLClusterLens:sigma-crit-inv-reltol; the next
+ * nc_wl_cluster_lens_prepare_sigma_crit_inv() builds the table again.
+ */
+void
+nc_wl_cluster_lens_set_sigma_crit_inv_reltol (NcWLClusterLens *lens, const gdouble reltol)
+{
+  lens->sc_inv_reltol = reltol;
+  lens->sc_inv_z_max  = GSL_NAN;
+}
+
+/**
+ * nc_wl_cluster_lens_get_sigma_crit_inv_reltol:
+ * @lens: a #NcWLClusterLens
+ *
+ * Returns: #NcWLClusterLens:sigma-crit-inv-reltol.
+ */
+gdouble
+nc_wl_cluster_lens_get_sigma_crit_inv_reltol (NcWLClusterLens *lens)
+{
+  return lens->sc_inv_reltol;
+}
+
+/* The function of the table, 1/Sigma_cr (z_s), and 0 at or in front of the lens */
+static void
+_nc_wl_cluster_lens_sigma_crit_inv_F (gpointer user_data, guint i, gdouble z_s, NcmVector *fval)
+{
+  gpointer *args = user_data;
+
+  ncm_vector_set (fval, 0, nc_wl_cluster_lens_sigma_crit_inv (args[0], args[1], z_s));
+}
+
+/**
+ * nc_wl_cluster_lens_prepare_sigma_crit_inv:
+ * @lens: a #NcWLClusterLens
+ * @cosmo: the #NcHICosmo of the last nc_wl_cluster_lens_prepare()
+ * @z_max: the largest source redshift of the table, above $z_\mathrm{cl}$
+ *
+ * Builds the table of $\Sigma_\mathrm{cr}^{-1}(z_s)$ (nc_wl_cluster_lens_sigma_crit_inv())
+ * on $[z_\mathrm{cl}, z_\mathrm{max}]$ that nc_wl_cluster_lens_peek_sigma_crit_inv()
+ * returns: uniform Chebyshev panels (ncm_spectral_panels_builder_build_uniform()) with the
+ * relative tolerance #NcWLClusterLens:sigma-crit-inv-reltol and the absolute tolerance
+ * that tolerance times $\Sigma_\mathrm{cr}^{-1}(z_\mathrm{max})$. The table is built again
+ * only when the geometry (nc_wl_cluster_lens_get_geometry_hash()), @z_max or the tolerance
+ * changed since the last build. The caller gives @z_max, the largest source redshift it
+ * evaluates, and evaluates the table only on $[z_\mathrm{cl}, z_\mathrm{max}]$. An @z_max
+ * not above $z_\mathrm{cl}$ is an error.
+ */
+void
+nc_wl_cluster_lens_prepare_sigma_crit_inv (NcWLClusterLens *lens, NcHICosmo *cosmo, const gdouble z_max)
+{
+  if ((lens->sc_inv_geometry_hash == lens->geometry_hash) && (z_max == lens->sc_inv_z_max))
+    return;
+
+  if (!(z_max > lens->z_cl))
+    g_error ("nc_wl_cluster_lens_prepare_sigma_crit_inv: z_max = %.17g is not above z_cl = %.17g.", z_max, lens->z_cl);
+
+  {
+    gpointer args[2]    = {lens, cosmo};
+    const gdouble scale = nc_wl_cluster_lens_sigma_crit_inv (lens, cosmo, z_max);
+
+    ncm_spectral_panels_builder_build_uniform (lens->builder, _nc_wl_cluster_lens_sigma_crit_inv_F, args,
+                                               lens->z_cl, z_max, NC_WL_CLUSTER_LENS_SIGMA_CRIT_INV_N,
+                                               lens->sc_inv_reltol, lens->sc_inv_reltol * scale, lens->sc_inv);
+  }
+
+  lens->sc_inv_z_max         = z_max;
+  lens->sc_inv_geometry_hash = lens->geometry_hash;
+}
+
+/**
+ * nc_wl_cluster_lens_peek_sigma_crit_inv:
+ * @lens: a #NcWLClusterLens
+ *
+ * Gets the table of $\Sigma_\mathrm{cr}^{-1}(z_s)$ of the last
+ * nc_wl_cluster_lens_prepare_sigma_crit_inv(), row 0 of a uniform #NcmSpectralPanels
+ * evaluated by ncm_spectral_panels_eval_row(). It is valid on $[z_\mathrm{cl},
+ * z_\mathrm{max}]$ until the next prepare.
+ *
+ * Returns: (transfer none): the table.
+ */
+NcmSpectralPanels *
+nc_wl_cluster_lens_peek_sigma_crit_inv (NcWLClusterLens *lens)
+{
+  return lens->sc_inv;
+}
+
+/**
  * nc_wl_cluster_lens_sigma_crit:
  * @lens: a #NcWLClusterLens
  * @cosmo: the #NcHICosmo of the last prepare
@@ -370,30 +512,59 @@ nc_wl_cluster_lens_get_profile_hash (NcWLClusterLens *lens)
 gdouble
 nc_wl_cluster_lens_sigma_crit (NcWLClusterLens *lens, NcHICosmo *cosmo, const gdouble z_s)
 {
+  gdouble Ds, Dls;
+
+  _nc_wl_cluster_lens_source_distances (lens, cosmo, z_s, &Ds, &Dls);
+
+  return lens->sc_over_Dl * Ds / Dls;
+}
+
+/**
+ * nc_wl_cluster_lens_sigma_crit_inv:
+ * @lens: a #NcWLClusterLens
+ * @cosmo: the #NcHICosmo of the last prepare
+ * @z_s: the source redshift, at least $z_\mathrm{cl}$
+ *
+ * Computes the inverse critical surface density $\Sigma_\mathrm{cr}^{-1}(z_s)$ of the last
+ * prepare, in $\mathrm{Mpc}^2/M_\odot$; it is 0 at $z_s = z_\mathrm{cl}$.
+ *
+ * Returns: $\Sigma_\mathrm{cr}^{-1}(z_s)$.
+ */
+gdouble
+nc_wl_cluster_lens_sigma_crit_inv (NcWLClusterLens *lens, NcHICosmo *cosmo, const gdouble z_s)
+{
+  gdouble Ds, Dls;
+
+  _nc_wl_cluster_lens_source_distances (lens, cosmo, z_s, &Ds, &Dls);
+
+  return Dls / (lens->sc_over_Dl * Ds);
+}
+
+/* The angular diameter distances of the source, D_s, and between lens and source, D_ls */
+static void
+_nc_wl_cluster_lens_source_distances (NcWLClusterLens *lens, NcHICosmo *cosmo, const gdouble z_s, gdouble *Ds, gdouble *Dls)
+{
   const gdouble x_i = 1.0 + z_s;
   const gdouble ds  = nc_distance_comoving (lens->dist, cosmo, z_s);
-  gdouble Ds, Dls;
 
   switch (lens->k)
   {
     case -1:
-      Ds  = sinh (lens->sqrt_Omega_k0 * ds) / (x_i * lens->sqrt_Omega_k0);
-      Dls = sinh (lens->sqrt_Omega_k0 * (ds - lens->dl)) / (x_i * lens->sqrt_Omega_k0);
+      *Ds  = sinh (lens->sqrt_Omega_k0 * ds) / (x_i * lens->sqrt_Omega_k0);
+      *Dls = sinh (lens->sqrt_Omega_k0 * (ds - lens->dl)) / (x_i * lens->sqrt_Omega_k0);
       break;
     case 0:
-      Ds  = ds / x_i;
-      Dls = (ds - lens->dl) / x_i;
+      *Ds  = ds / x_i;
+      *Dls = (ds - lens->dl) / x_i;
       break;
     case 1:
-      Ds  = sin (lens->sqrt_Omega_k0 * ds) / (x_i * lens->sqrt_Omega_k0);
-      Dls = sin (lens->sqrt_Omega_k0 * (ds - lens->dl)) / (x_i * lens->sqrt_Omega_k0);
+      *Ds  = sin (lens->sqrt_Omega_k0 * ds) / (x_i * lens->sqrt_Omega_k0);
+      *Dls = sin (lens->sqrt_Omega_k0 * (ds - lens->dl)) / (x_i * lens->sqrt_Omega_k0);
       break;
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
       break;                   /* LCOV_EXCL_LINE */
   }
-
-  return lens->sc_over_Dl * Ds / Dls;
 }
 
 /**
@@ -422,21 +593,13 @@ nc_wl_cluster_lens_sigma (NcWLClusterLens *lens, NcHaloDensityProfile *dp, const
  * nc_wl_cluster_lens_reduced_shear:
  * @sigma: the surface density $\Sigma(R)$
  * @mean_sigma: the mean surface density $\overline{\Sigma}(<R)$
- * @sigma_crit: the critical surface density $\Sigma_\mathrm{cr}(z_s)$
+ * @sigma_crit_inv: the inverse critical surface density $\Sigma_\mathrm{cr}^{-1}(z_s)$
  *
  * Computes the tangential reduced shear
- * $g = [(\overline{\Sigma} - \Sigma)/\Sigma_\mathrm{cr}]/(1 - \Sigma/\Sigma_\mathrm{cr})$.
+ * $g = (\overline{\Sigma} - \Sigma)\Sigma_\mathrm{cr}^{-1}/(1 - \Sigma\Sigma_\mathrm{cr}^{-1})$.
  *
  * Returns: $g$.
  */
-gdouble
-nc_wl_cluster_lens_reduced_shear (const gdouble sigma, const gdouble mean_sigma, const gdouble sigma_crit)
-{
-  const gdouble mu    = sigma / sigma_crit;
-  const gdouble shear = (mean_sigma - sigma) / sigma_crit;
-
-  return shear / (1.0 - mu);
-}
 
 /**
  * nc_wl_cluster_lens_reduced_shear_at:
@@ -457,6 +620,11 @@ nc_wl_cluster_lens_reduced_shear_at (NcWLClusterLens *lens, NcHICosmo *cosmo, co
   if (z_s < lens->z_cl)
     return 0.0;
 
-  return nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, nc_wl_cluster_lens_sigma_crit (lens, cosmo, z_s));
+  {
+    /* The division form of NcWLSurfaceMassDensity, whose values this equals bit for bit */
+    const gdouble sigma_crit = nc_wl_cluster_lens_sigma_crit (lens, cosmo, z_s);
+
+    return ((mean_sigma - sigma) / sigma_crit) / (1.0 - sigma / sigma_crit);
+  }
 }
 

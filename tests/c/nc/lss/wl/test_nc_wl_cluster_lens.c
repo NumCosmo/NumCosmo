@@ -54,6 +54,10 @@ void test_nc_wl_cluster_lens_free (TestNcWLClusterLens *test, gconstpointer pdat
 void test_nc_wl_cluster_lens_exact (TestNcWLClusterLens *test, gconstpointer pdata);
 void test_nc_wl_cluster_lens_hash (TestNcWLClusterLens *test, gconstpointer pdata);
 void test_nc_wl_cluster_lens_serialize (TestNcWLClusterLens *test, gconstpointer pdata);
+void test_nc_wl_cluster_lens_sigma_crit_inv_table (TestNcWLClusterLens *test, gconstpointer pdata);
+void test_nc_wl_cluster_lens_sigma_crit_inv_rebuild (TestNcWLClusterLens *test, gconstpointer pdata);
+void test_nc_wl_cluster_lens_sigma_crit_inv_z_max (TestNcWLClusterLens *test, gconstpointer pdata);
+void test_nc_wl_cluster_lens_sigma_crit_inv_z_max_subprocess (TestNcWLClusterLens *test, gconstpointer pdata);
 
 /* The curvatures of the fixtures: flat, open and closed */
 static const gdouble test_omega_k[3] = {0.0, 0.05, -0.05};
@@ -90,6 +94,36 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/wl_cluster_lens/serialize", TestNcWLClusterLens, &test_omega_k[0],
               &test_nc_wl_cluster_lens_new,
               &test_nc_wl_cluster_lens_serialize,
+              &test_nc_wl_cluster_lens_free);
+
+  g_test_add ("/nc/wl_cluster_lens/flat/sigma_crit_inv/table", TestNcWLClusterLens, &test_omega_k[0],
+              &test_nc_wl_cluster_lens_new,
+              &test_nc_wl_cluster_lens_sigma_crit_inv_table,
+              &test_nc_wl_cluster_lens_free);
+
+  g_test_add ("/nc/wl_cluster_lens/Okp/sigma_crit_inv/table", TestNcWLClusterLens, &test_omega_k[1],
+              &test_nc_wl_cluster_lens_new,
+              &test_nc_wl_cluster_lens_sigma_crit_inv_table,
+              &test_nc_wl_cluster_lens_free);
+
+  g_test_add ("/nc/wl_cluster_lens/Okn/sigma_crit_inv/table", TestNcWLClusterLens, &test_omega_k[2],
+              &test_nc_wl_cluster_lens_new,
+              &test_nc_wl_cluster_lens_sigma_crit_inv_table,
+              &test_nc_wl_cluster_lens_free);
+
+  g_test_add ("/nc/wl_cluster_lens/sigma_crit_inv/rebuild", TestNcWLClusterLens, &test_omega_k[0],
+              &test_nc_wl_cluster_lens_new,
+              &test_nc_wl_cluster_lens_sigma_crit_inv_rebuild,
+              &test_nc_wl_cluster_lens_free);
+
+  g_test_add ("/nc/wl_cluster_lens/sigma_crit_inv/z_max", TestNcWLClusterLens, &test_omega_k[0],
+              &test_nc_wl_cluster_lens_new,
+              &test_nc_wl_cluster_lens_sigma_crit_inv_z_max,
+              &test_nc_wl_cluster_lens_free);
+
+  g_test_add ("/nc/wl_cluster_lens/sigma_crit_inv/z_max/subprocess", TestNcWLClusterLens, &test_omega_k[0],
+              &test_nc_wl_cluster_lens_new,
+              &test_nc_wl_cluster_lens_sigma_crit_inv_z_max_subprocess,
               &test_nc_wl_cluster_lens_free);
 
   g_test_run ();
@@ -187,7 +221,8 @@ test_nc_wl_cluster_lens_exact (TestNcWLClusterLens *test, gconstpointer pdata)
         const gdouble sigma_crit = nc_wl_cluster_lens_sigma_crit (test->lens, test->cosmo, z_s);
 
         g_assert_cmpfloat (sigma_crit, ==, crit_cache.sigma_crit);
-        g_assert_cmpfloat (nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, sigma_crit), ==, g_lens);
+        ncm_assert_cmpdouble_e (nc_wl_cluster_lens_sigma_crit_inv (test->lens, test->cosmo, z_s), ==, 1.0 / sigma_crit, 1.0e-15, 0.0);
+        ncm_assert_cmpdouble_e (nc_wl_cluster_lens_reduced_shear (sigma, mean_sigma, 1.0 / sigma_crit), ==, g_lens, 1.0e-14, 0.0);
       }
     }
   }
@@ -281,5 +316,94 @@ test_nc_wl_cluster_lens_serialize (TestNcWLClusterLens *test, gconstpointer pdat
 
   ncm_serialize_free (ser);
   NCM_TEST_FREE (nc_wl_cluster_lens_free, dup);
+}
+
+/*
+ * The table of 1/Sigma_cr on [z_cl, z_max] agrees with the direct value at points off the
+ * check points of the build within the default tolerance, scaled by its value at z_max, and
+ * is uniform and 0 at z_cl.
+ */
+void
+test_nc_wl_cluster_lens_sigma_crit_inv_table (TestNcWLClusterLens *test, gconstpointer pdata)
+{
+  const gdouble z_max = 4.0;
+  NcmRNG *rng         = ncm_rng_seeded_new (NULL, 20261127);
+  NcmSpectralPanels *sp;
+  gdouble scale;
+  guint i;
+
+  g_assert_cmpfloat (nc_wl_cluster_lens_get_sigma_crit_inv_reltol (test->lens), ==, 1.0e-14);
+  nc_wl_cluster_lens_prepare_sigma_crit_inv (test->lens, test->cosmo, z_max);
+  sp    = nc_wl_cluster_lens_peek_sigma_crit_inv (test->lens);
+  scale = nc_wl_cluster_lens_sigma_crit_inv (test->lens, test->cosmo, z_max);
+
+  g_assert_true (ncm_spectral_panels_is_uniform (sp));
+  g_assert_cmpfloat (nc_wl_cluster_lens_sigma_crit_inv (test->lens, test->cosmo, TEST_Z_CL), ==, 0.0);
+  g_assert_cmpfloat (fabs (ncm_spectral_panels_eval_row (sp, 0, TEST_Z_CL)), <, 1.0e-14 * scale);
+
+  for (i = 0; i < 1000; i++)
+  {
+    const gdouble z_s = ncm_rng_uniform_gen (rng, TEST_Z_CL, z_max);
+
+    ncm_assert_cmpdouble_e (ncm_spectral_panels_eval_row (sp, 0, z_s), ==,
+                            nc_wl_cluster_lens_sigma_crit_inv (test->lens, test->cosmo, z_s), 0.0, 1.0e-13 * scale);
+  }
+
+  ncm_rng_free (rng);
+}
+
+/*
+ * The table is built again when the geometry or z_max changes, and only then: a change of
+ * the profile keeps it, a new cosmology replaces its values.
+ */
+void
+test_nc_wl_cluster_lens_sigma_crit_inv_rebuild (TestNcWLClusterLens *test, gconstpointer pdata)
+{
+  NcmSpectralPanels *sp = nc_wl_cluster_lens_peek_sigma_crit_inv (test->lens);
+  gdouble v0, v1;
+
+  nc_wl_cluster_lens_prepare_sigma_crit_inv (test->lens, test->cosmo, 3.0);
+  v0 = ncm_spectral_panels_eval_row (sp, 0, 1.5);
+
+  ncm_model_param_set_by_name (NCM_MODEL (test->hms), "log10MDelta", 14.9, NULL);
+  nc_wl_cluster_lens_prepare (test->lens, test->cosmo, test->hp, test->dp);
+  nc_wl_cluster_lens_prepare_sigma_crit_inv (test->lens, test->cosmo, 3.0);
+  g_assert_cmpfloat (ncm_spectral_panels_eval_row (sp, 0, 1.5), ==, v0);
+
+  ncm_model_param_set_by_name (NCM_MODEL (test->cosmo), "Omegac", 0.3, NULL);
+  nc_wl_cluster_lens_prepare (test->lens, test->cosmo, test->hp, test->dp);
+  nc_wl_cluster_lens_prepare_sigma_crit_inv (test->lens, test->cosmo, 3.0);
+  v1 = ncm_spectral_panels_eval_row (sp, 0, 1.5);
+  g_assert_cmpfloat (v1, !=, v0);
+  ncm_assert_cmpdouble_e (v1, ==, nc_wl_cluster_lens_sigma_crit_inv (test->lens, test->cosmo, 1.5), 1.0e-13, 0.0);
+
+  nc_wl_cluster_lens_prepare_sigma_crit_inv (test->lens, test->cosmo, 2.0);
+  {
+    gdouble a, b;
+
+    ncm_spectral_panels_get_range (sp, &a, &b);
+    g_assert_cmpfloat (a, ==, TEST_Z_CL);
+    g_assert_cmpfloat (b, ==, 2.0);
+  }
+
+  nc_wl_cluster_lens_set_sigma_crit_inv_reltol (test->lens, 1.0e-8);
+  nc_wl_cluster_lens_prepare_sigma_crit_inv (test->lens, test->cosmo, 2.0);
+  g_assert_cmpfloat (nc_wl_cluster_lens_get_sigma_crit_inv_reltol (test->lens), ==, 1.0e-8);
+  ncm_assert_cmpdouble_e (ncm_spectral_panels_eval_row (sp, 0, 1.5), ==, nc_wl_cluster_lens_sigma_crit_inv (test->lens, test->cosmo, 1.5), 1.0e-7, 0.0);
+}
+
+/* A table that does not extend above z_cl is an error */
+void
+test_nc_wl_cluster_lens_sigma_crit_inv_z_max (TestNcWLClusterLens *test, gconstpointer pdata)
+{
+  g_test_trap_subprocess ("/nc/wl_cluster_lens/sigma_crit_inv/z_max/subprocess", 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_assert_failed ();
+  g_test_trap_assert_stderr ("*z_max = 0.40000000000000002 is not above z_cl*");
+}
+
+void
+test_nc_wl_cluster_lens_sigma_crit_inv_z_max_subprocess (TestNcWLClusterLens *test, gconstpointer pdata)
+{
+  nc_wl_cluster_lens_prepare_sigma_crit_inv (test->lens, test->cosmo, TEST_Z_CL);
 }
 
