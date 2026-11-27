@@ -236,6 +236,12 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_beta.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_obs_binned.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_binned_estimator.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_binned_estimator_delta_sigma.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_binned_estimator_gt.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_binned_scatter.h"
+#include "nc/lss/galaxy/nc_galaxy_wl_binned_scatter_gauss.h"
 #include "nc/background/nc_distance.h"
 #include "nc/recomb/nc_recomb.h"
 #include "nc/recomb/nc_recomb_cbe.h"
@@ -272,6 +278,7 @@
 #include "nc/data/nc_data_cluster_ncount.h"
 #include "nc/data/nc_data_cluster_ncounts_gauss.h"
 #include "nc/data/nc_data_cluster_wl_factor.h"
+#include "nc/data/nc_data_cluster_wl_binned.h"
 #include "nc/data/nc_data_cluster_mass_rich.h"
 #include "nc/data/nc_data_cluster_mass_rich_count.h"
 #include "nc/data/nc_data_cmb_shift_param.h"
@@ -1081,6 +1088,12 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS_LOCAL);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_BETA);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_OBS_BINNED);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_BINNED_ESTIMATOR);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_BINNED_ESTIMATOR_DELTA_SIGMA);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_BINNED_ESTIMATOR_GT);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_BINNED_SCATTER);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_WL_BINNED_SCATTER_GAUSS);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
@@ -1137,6 +1150,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_NCOUNTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL_FACTOR);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_WL_BINNED);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_MASS_RICH_COUNT);
 

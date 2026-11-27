@@ -138,6 +138,27 @@ GALAXY_SHAPE_POP_BETA_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SHAPE_POP_GAUSS_DEFAULT_PARAMS_ABSTOL: float = 0.0
 GALAXY_SHAPE_POP_GAUSS_DEFAULT_SIGMA: float = 0.3
 GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS: str = r"e_rms"
+GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS: str = r"e_rms"
+GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS: int = 20
+GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_INTERVALS: int = 200
+GALAXY_WL_BINNED_ESTIMATOR_DELTA_SIGMA_COL_INV_SIGMA_CRIT: str = r"inv_sigma_crit"
+GALAXY_WL_BINNED_ESTIMATOR_DELTA_SIGMA_COL_MULT_BIAS: str = r"mult_bias"
+GALAXY_WL_BINNED_ESTIMATOR_DELTA_SIGMA_COL_RESPONSIVITY: str = r"responsivity"
+GALAXY_WL_BINNED_ESTIMATOR_GT_COL_BETA_S2_MEAN: str = r"beta_s2_mean"
+GALAXY_WL_BINNED_ESTIMATOR_GT_COL_BETA_S_MEAN: str = r"beta_s_mean"
+GALAXY_WL_BINNED_ESTIMATOR_GT_COL_M_MEAN: str = r"m_mean"
+GALAXY_WL_BINNED_ESTIMATOR_GT_COL_RESPONSIVITY: str = r"responsivity"
+GALAXY_WL_BINNED_ESTIMATOR_GT_DEFAULT_SIGMA_POP: float = 0.26
+GALAXY_WL_OBS_BINNED_COL_N_GAL: str = r"n_gal"
+GALAXY_WL_OBS_BINNED_COL_OFFSET: str = r"offset"
+GALAXY_WL_OBS_BINNED_COL_RADIUS: str = r"radius"
+GALAXY_WL_OBS_BINNED_COL_R_HI: str = r"r_hi"
+GALAXY_WL_OBS_BINNED_COL_R_LO: str = r"r_lo"
+GALAXY_WL_OBS_BINNED_COL_VALUE: str = r"value"
+GALAXY_WL_OBS_BINNED_MEMBER_COL_BIN: str = r"bin"
+GALAXY_WL_OBS_BINNED_MEMBER_COL_FACTOR: str = r"factor"
+GALAXY_WL_OBS_BINNED_MEMBER_COL_RADIUS: str = r"radius"
+GALAXY_WL_OBS_BINNED_MEMBER_COL_ROW: str = r"row"
 HALO_CM_BHATTACHARYA13_DEFAULT_PARAMS_ABSTOL: float = 0.0
 HALO_CM_BHATTACHARYA13_LOCAL_SPARAM_LEN: int = 1
 HALO_CM_DIEMER15_DEFAULT_PARAMS_ABSTOL: float = 0.0
@@ -5905,6 +5926,99 @@ class DataClusterPseudoCountsClass(GObject.GPointer):
 
     parent_class: NumCosmoMath.DataClass = ...
 
+class DataClusterWLBinned(NumCosmoMath.Data):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterWLBinned(**properties)
+        new(est:NumCosmo.GalaxyWLBinnedEstimator, binned:NumCosmo.GalaxyWLObsBinned) -> NumCosmo.DataClusterWLBinned
+        new_from_obs(est:NumCosmo.GalaxyWLBinnedEstimator, mset:NumCosmoMath.MSet, obs:NumCosmo.GalaxyWLObs, edges:list) -> NumCosmo.DataClusterWLBinned
+
+    Object NcDataClusterWLBinned
+
+    Properties from NcDataClusterWLBinned:
+      estimator -> NcGalaxyWLBinnedEstimator: estimator
+        Estimator of the binned profile
+      binned -> NcGalaxyWLObsBinned: binned
+        Binned profile
+      exact -> gboolean: exact
+        Whether to use the exact expected value
+
+    Properties from NcmData:
+      name -> gchararray: name
+        Data type name
+      desc -> gchararray: desc
+        Data description
+      long-desc -> gchararray: long-desc
+        Data detailed description
+      init -> gboolean: init
+        Data initialized state
+      bootstrap -> NcmBootstrap: bootstrap
+        Data bootstrap object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        binned: GalaxyWLObsBinned
+        estimator: GalaxyWLBinnedEstimator
+        exact: bool
+        bootstrap: NumCosmoMath.Bootstrap
+        desc: str
+        init: bool
+        long_desc: str
+        name: str
+
+    props: Props = ...
+    def __init__(
+        self,
+        binned: GalaxyWLObsBinned = ...,
+        estimator: GalaxyWLBinnedEstimator = ...,
+        exact: bool = ...,
+        bootstrap: NumCosmoMath.Bootstrap = ...,
+        desc: str = ...,
+        init: bool = ...,
+        long_desc: str = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(dcwlb: DataClusterWLBinned) -> None: ...
+    def eval_model(
+        self, mset: NumCosmoMath.MSet, model: NumCosmoMath.Vector
+    ) -> None: ...
+    def free(self) -> None: ...
+    def get_exact(self) -> bool: ...
+    @classmethod
+    def new(
+        cls, est: GalaxyWLBinnedEstimator, binned: GalaxyWLObsBinned
+    ) -> DataClusterWLBinned: ...
+    @classmethod
+    def new_from_obs(
+        cls,
+        est: GalaxyWLBinnedEstimator,
+        mset: NumCosmoMath.MSet,
+        obs: GalaxyWLObs,
+        edges: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> DataClusterWLBinned: ...
+    def peek_binned(self) -> GalaxyWLObsBinned: ...
+    def peek_estimator(self) -> GalaxyWLBinnedEstimator: ...
+    def ref(self) -> DataClusterWLBinned: ...
+    def set_binned(self, binned: GalaxyWLObsBinned) -> None: ...
+    def set_exact(self, exact: bool) -> None: ...
+
+class DataClusterWLBinnedClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        DataClusterWLBinnedClass()
+    """
+
+    parent_class: NumCosmoMath.DataClass = ...
+
 class DataClusterWLFactor(NumCosmoMath.Data):
     r"""
     :Constructors:
@@ -10702,6 +10816,439 @@ class GalaxyShapePopGaussLocalClass(GObject.GPointer):
 
     parent_class: GalaxyShapePopClass = ...
 
+class GalaxyWLBinnedEstimator(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedEstimator(**properties)
+
+    Object NcGalaxyWLBinnedEstimator
+
+    Properties from NcGalaxyWLBinnedEstimator:
+      e-rms -> gdouble: e-rms
+        Intrinsic ellipticity rms
+      pz-intervals -> guint: pz-intervals
+        Intervals of the p(z) averages of the build
+      exact-intervals -> guint: exact-intervals
+        Intervals of the p(z) averages of the exact model
+      redshift-factor -> NcGalaxyRedshiftFactor: redshift-factor
+        Redshift factor of the averages over redshift
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        e_rms: float
+        exact_intervals: int
+        pz_intervals: int
+        redshift_factor: typing.Optional[GalaxyRedshiftFactor]
+
+    props: Props = ...
+    parent_instance: GObject.Object = ...
+    def __init__(
+        self,
+        e_rms: float = ...,
+        exact_intervals: int = ...,
+        pz_intervals: int = ...,
+        redshift_factor: typing.Optional[GalaxyRedshiftFactor] = ...,
+    ) -> None: ...
+    def build(
+        self,
+        mset: NumCosmoMath.MSet,
+        obs: GalaxyWLObs,
+        edges: typing.Sequence[float] | npt.NDArray[np.float64],
+    ) -> GalaxyWLObsBinned: ...
+    @staticmethod
+    def clear(est: GalaxyWLBinnedEstimator) -> None: ...
+    def do_eval_model(
+        self,
+        mset: NumCosmoMath.MSet,
+        binned: GalaxyWLObsBinned,
+        model: NumCosmoMath.Vector,
+    ) -> None: ...
+    def eval_model(
+        self,
+        mset: NumCosmoMath.MSet,
+        binned: GalaxyWLObsBinned,
+        model: NumCosmoMath.Vector,
+    ) -> None: ...
+    def eval_model_exact(
+        self,
+        mset: NumCosmoMath.MSet,
+        binned: GalaxyWLObsBinned,
+        model: NumCosmoMath.Vector,
+    ) -> None: ...
+    def free(self) -> None: ...
+    def get_e_rms(self) -> float: ...
+    def get_exact_intervals(self) -> int: ...
+    def get_name(self) -> str: ...
+    def get_pz_intervals(self) -> int: ...
+    def mean_inv_sigma_crit(
+        self, mset: NumCosmoMath.MSet, obs: GalaxyWLObs, i: int
+    ) -> typing.Tuple[float, float]: ...
+    def peek_redshift_factor(self) -> typing.Optional[GalaxyRedshiftFactor]: ...
+    def ref(self) -> GalaxyWLBinnedEstimator: ...
+    def required_columns(self) -> list[str]: ...
+    def set_e_rms(self, e_rms: float) -> None: ...
+    def set_exact_intervals(self, exact_intervals: int) -> None: ...
+    def set_pz_intervals(self, pz_intervals: int) -> None: ...
+    def set_redshift_factor(
+        self, redshift_factor: typing.Optional[GalaxyRedshiftFactor] = None
+    ) -> None: ...
+
+class GalaxyWLBinnedEstimatorClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedEstimatorClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+    name: str = ...
+    extra_columns: None = ...
+    build_bins: None = ...
+    eval_model: typing.Callable[
+        [
+            GalaxyWLBinnedEstimator,
+            NumCosmoMath.MSet,
+            GalaxyWLObsBinned,
+            NumCosmoMath.Vector,
+        ],
+        None,
+    ] = ...
+    padding: list[None] = ...
+
+class GalaxyWLBinnedEstimatorDeltaSigma(GalaxyWLBinnedEstimator):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedEstimatorDeltaSigma(**properties)
+        new() -> NumCosmo.GalaxyWLBinnedEstimatorDeltaSigma
+
+    Object NcGalaxyWLBinnedEstimatorDeltaSigma
+
+    Properties from NcGalaxyWLBinnedEstimatorDeltaSigma:
+      subtract-additive-bias -> gboolean: subtract-additive-bias
+        Whether to subtract the additive bias
+
+    Properties from NcGalaxyWLBinnedEstimator:
+      e-rms -> gdouble: e-rms
+        Intrinsic ellipticity rms
+      pz-intervals -> guint: pz-intervals
+        Intervals of the p(z) averages of the build
+      exact-intervals -> guint: exact-intervals
+        Intervals of the p(z) averages of the exact model
+      redshift-factor -> NcGalaxyRedshiftFactor: redshift-factor
+        Redshift factor of the averages over redshift
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        subtract_additive_bias: bool
+        e_rms: float
+        exact_intervals: int
+        pz_intervals: int
+        redshift_factor: typing.Optional[GalaxyRedshiftFactor]
+
+    props: Props = ...
+    def __init__(
+        self,
+        subtract_additive_bias: bool = ...,
+        e_rms: float = ...,
+        exact_intervals: int = ...,
+        pz_intervals: int = ...,
+        redshift_factor: typing.Optional[GalaxyRedshiftFactor] = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(est_ds: GalaxyWLBinnedEstimatorDeltaSigma) -> None: ...
+    def free(self) -> None: ...
+    def get_subtract_additive_bias(self) -> bool: ...
+    @classmethod
+    def new(cls) -> GalaxyWLBinnedEstimatorDeltaSigma: ...
+    def ref(self) -> GalaxyWLBinnedEstimatorDeltaSigma: ...
+    def set_subtract_additive_bias(self, subtract: bool) -> None: ...
+
+class GalaxyWLBinnedEstimatorDeltaSigmaClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedEstimatorDeltaSigmaClass()
+    """
+
+    parent_class: GalaxyWLBinnedEstimatorClass = ...
+
+class GalaxyWLBinnedEstimatorGt(GalaxyWLBinnedEstimator):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedEstimatorGt(**properties)
+        new() -> NumCosmo.GalaxyWLBinnedEstimatorGt
+
+    Object NcGalaxyWLBinnedEstimatorGt
+
+    Properties from NcGalaxyWLBinnedEstimatorGt:
+      sigma-pop -> gdouble: sigma-pop
+        Intrinsic ellipticity dispersion of the weights
+      error-type -> NcGalaxyWLBinnedEstimatorGtError: error-type
+        Error of each bin
+      beta-weighted -> gboolean: beta-weighted
+        Whether the lensing efficiency moments are weighted
+
+    Properties from NcGalaxyWLBinnedEstimator:
+      e-rms -> gdouble: e-rms
+        Intrinsic ellipticity rms
+      pz-intervals -> guint: pz-intervals
+        Intervals of the p(z) averages of the build
+      exact-intervals -> guint: exact-intervals
+        Intervals of the p(z) averages of the exact model
+      redshift-factor -> NcGalaxyRedshiftFactor: redshift-factor
+        Redshift factor of the averages over redshift
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        beta_weighted: bool
+        error_type: GalaxyWLBinnedEstimatorGtError
+        sigma_pop: float
+        e_rms: float
+        exact_intervals: int
+        pz_intervals: int
+        redshift_factor: typing.Optional[GalaxyRedshiftFactor]
+
+    props: Props = ...
+    def __init__(
+        self,
+        beta_weighted: bool = ...,
+        error_type: GalaxyWLBinnedEstimatorGtError = ...,
+        sigma_pop: float = ...,
+        e_rms: float = ...,
+        exact_intervals: int = ...,
+        pz_intervals: int = ...,
+        redshift_factor: typing.Optional[GalaxyRedshiftFactor] = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(est_gt: GalaxyWLBinnedEstimatorGt) -> None: ...
+    def free(self) -> None: ...
+    def get_beta_weighted(self) -> bool: ...
+    def get_error_type(self) -> GalaxyWLBinnedEstimatorGtError: ...
+    def get_sigma_pop(self) -> float: ...
+    @classmethod
+    def new(cls) -> GalaxyWLBinnedEstimatorGt: ...
+    def ref(self) -> GalaxyWLBinnedEstimatorGt: ...
+    def set_beta_weighted(self, beta_weighted: bool) -> None: ...
+    def set_error_type(self, error_type: GalaxyWLBinnedEstimatorGtError) -> None: ...
+    def set_sigma_pop(self, sigma_pop: float) -> None: ...
+
+class GalaxyWLBinnedEstimatorGtClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedEstimatorGtClass()
+    """
+
+    parent_class: GalaxyWLBinnedEstimatorClass = ...
+
+class GalaxyWLBinnedEstimatorSources(GObject.GPointer): ...
+
+class GalaxyWLBinnedScatter(NumCosmoMath.Model):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedScatter(**properties)
+
+    Object NcGalaxyWLBinnedScatter
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    parent_instance: NumCosmoMath.Model = ...
+    def __init__(
+        self,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(scatter: GalaxyWLBinnedScatter) -> None: ...
+    def do_gen(
+        self,
+        binned: GalaxyWLObsBinned,
+        model: NumCosmoMath.Vector,
+        rng: NumCosmoMath.RNG,
+        data: NumCosmoMath.Vector,
+    ) -> None: ...
+    def do_m2lnL(
+        self, binned: GalaxyWLObsBinned, model: NumCosmoMath.Vector
+    ) -> float: ...
+    def free(self) -> None: ...
+    def gen(
+        self,
+        binned: GalaxyWLObsBinned,
+        model: NumCosmoMath.Vector,
+        rng: NumCosmoMath.RNG,
+        data: NumCosmoMath.Vector,
+    ) -> None: ...
+    @staticmethod
+    def id() -> int: ...
+    def m2lnL(self, binned: GalaxyWLObsBinned, model: NumCosmoMath.Vector) -> float: ...
+    def ref(self) -> GalaxyWLBinnedScatter: ...
+
+class GalaxyWLBinnedScatterClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedScatterClass()
+    """
+
+    parent_class: NumCosmoMath.ModelClass = ...
+    m2lnL: typing.Callable[
+        [GalaxyWLBinnedScatter, GalaxyWLObsBinned, NumCosmoMath.Vector], float
+    ] = ...
+    gen: typing.Callable[
+        [
+            GalaxyWLBinnedScatter,
+            GalaxyWLObsBinned,
+            NumCosmoMath.Vector,
+            NumCosmoMath.RNG,
+            NumCosmoMath.Vector,
+        ],
+        None,
+    ] = ...
+    padding: list[None] = ...
+
+class GalaxyWLBinnedScatterGauss(GalaxyWLBinnedScatter):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedScatterGauss(**properties)
+        new() -> NumCosmo.GalaxyWLBinnedScatterGauss
+
+    Object NcGalaxyWLBinnedScatterGauss
+
+    Properties from NcGalaxyWLBinnedScatterGauss:
+      include-lnnorm -> gboolean: include-lnnorm
+        Whether to include the normalization
+
+    Properties from NcmModel:
+      name -> gchararray: name
+        Model's name
+      nick -> gchararray: nick
+        Model's nick
+      scalar-params-len -> guint: scalar-params-len
+        Number of scalar parameters
+      vector-params-len -> guint: vector-params-len
+        Number of vector parameters
+      implementation -> guint64: implementation
+        Bitwise specification of functions implementation
+      sparam-array -> NcmObjDictInt: sparam-array
+        NcmModel array of NcmSParam
+      params-types -> GArray: params-types
+        Parameters' types
+      reparam -> NcmReparam: reparam
+        Model reparametrization
+      submodel-array -> NcmObjArray: submodel-array
+        NcmModel array of submodels
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        include_lnnorm: bool
+        implementation: int
+        name: str
+        nick: str
+        params_types: list[None]
+        reparam: typing.Optional[NumCosmoMath.Reparam]
+        scalar_params_len: int
+        sparam_array: NumCosmoMath.ObjDictInt
+        submodel_array: NumCosmoMath.ObjArray
+        vector_params_len: int
+
+    props: Props = ...
+    def __init__(
+        self,
+        include_lnnorm: bool = ...,
+        reparam: typing.Optional[NumCosmoMath.Reparam] = ...,
+        sparam_array: NumCosmoMath.ObjDictInt = ...,
+        submodel_array: NumCosmoMath.ObjArray = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(sg: GalaxyWLBinnedScatterGauss) -> None: ...
+    def free(self) -> None: ...
+    def get_include_lnnorm(self) -> bool: ...
+    @classmethod
+    def new(cls) -> GalaxyWLBinnedScatterGauss: ...
+    def ref(self) -> GalaxyWLBinnedScatterGauss: ...
+    def set_include_lnnorm(self, include_lnnorm: bool) -> None: ...
+
+class GalaxyWLBinnedScatterGaussClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLBinnedScatterGaussClass()
+    """
+
+    parent_class: GalaxyWLBinnedScatterClass = ...
+
 class GalaxyWLObs(NumCosmoMath.Catalog):
     r"""
     :Constructors:
@@ -10814,6 +11361,130 @@ class GalaxyWLObs(NumCosmoMath.Catalog):
     def set_pz(self, i: int, pz: GalaxyPz) -> None: ...
     def set_shape_interp(self, i: int, st: NumCosmoMath.SpectralTensor) -> None: ...
     def set_shape_interp_source(self, source: NumCosmoMath.ObjDictStr) -> None: ...
+
+class GalaxyWLObsBinned(NumCosmoMath.Catalog):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLObsBinned(**properties)
+        new(n_bins:int, extra_cols:list=None) -> NumCosmo.GalaxyWLObsBinned
+        new_from_arrays(radius:list, value:list, cov:NumCosmoMath.Matrix, extra_cols:list=None) -> NumCosmo.GalaxyWLObsBinned
+
+    Object NcGalaxyWLObsBinned
+
+    Properties from NcGalaxyWLObsBinned:
+      cov -> NcmMatrix: cov
+        Covariance of the binned values
+      z-cluster -> gdouble: z-cluster
+        Cluster redshift
+      estimator -> gchararray: estimator
+        Name of the estimator
+      source -> NcGalaxyWLObs: source
+        Source per-galaxy catalog
+      members -> NcmCatalog: members
+        Galaxies of each bin
+
+    Properties from NcmCatalog:
+      data -> NcmMatrix: Data
+        Catalog double columns
+      int-data -> GVariant: Integer data
+        Catalog integer columns
+      bool-data -> GVariant: Boolean data
+        Catalog boolean columns
+      columns -> GStrv: Columns
+        Catalog column names
+      col-types -> GVariant: Column types
+        Per-column logical types
+      len -> guint: Length
+        Number of catalog rows
+      meta -> NcmVarDict: Metadata
+        Catalog-wide free-form metadata
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        cov: NumCosmoMath.Matrix
+        estimator: typing.Optional[str]
+        members: typing.Optional[NumCosmoMath.Catalog]
+        source: GalaxyWLObs
+        z_cluster: float
+        bool_data: GLib.Variant
+        col_types: GLib.Variant
+        columns: list[str]
+        data: NumCosmoMath.Matrix
+        int_data: GLib.Variant
+        len: int
+        meta: typing.Optional[NumCosmoMath.VarDict]
+
+    props: Props = ...
+    def __init__(
+        self,
+        cov: NumCosmoMath.Matrix = ...,
+        estimator: typing.Optional[str] = ...,
+        members: typing.Optional[NumCosmoMath.Catalog] = ...,
+        source: GalaxyWLObs = ...,
+        z_cluster: float = ...,
+        bool_data: GLib.Variant = ...,
+        col_types: GLib.Variant = ...,
+        columns: typing.Sequence[str] = ...,
+        data: NumCosmoMath.Matrix = ...,
+        int_data: GLib.Variant = ...,
+        len: int = ...,
+        meta: typing.Optional[NumCosmoMath.VarDict] = ...,
+    ) -> None: ...
+    @staticmethod
+    def clear(binned: GalaxyWLObsBinned) -> None: ...
+    def free(self) -> None: ...
+    def get(self, col: str, i: int) -> float: ...
+    def get_column(self, col: str) -> NumCosmoMath.Vector: ...
+    def get_z_cluster(self) -> float: ...
+    def has_column(self, col: str) -> bool: ...
+    def has_members(self) -> bool: ...
+    def len(self) -> int: ...
+    @classmethod
+    def new(
+        cls, n_bins: int, extra_cols: typing.Optional[typing.Sequence[str]] = None
+    ) -> GalaxyWLObsBinned: ...
+    @classmethod
+    def new_from_arrays(
+        cls,
+        radius: typing.Sequence[float] | npt.NDArray[np.float64],
+        value: typing.Sequence[float] | npt.NDArray[np.float64],
+        cov: NumCosmoMath.Matrix,
+        extra_cols: typing.Optional[typing.Sequence[str]] = None,
+    ) -> GalaxyWLObsBinned: ...
+    def peek_cov(self) -> NumCosmoMath.Matrix: ...
+    def peek_estimator(self) -> typing.Optional[str]: ...
+    def peek_members(self) -> typing.Optional[NumCosmoMath.Catalog]: ...
+    def peek_source(self) -> typing.Optional[GalaxyWLObs]: ...
+    def ref(self) -> GalaxyWLObsBinned: ...
+    def set(self, col: str, i: int, val: float) -> None: ...
+    def set_column(
+        self, col: str, v: typing.Sequence[float] | npt.NDArray[np.float64]
+    ) -> None: ...
+    def set_cov(self, cov: NumCosmoMath.Matrix) -> None: ...
+    def set_estimator(self, estimator: typing.Optional[str] = None) -> None: ...
+    def set_members(
+        self,
+        source: typing.Optional[GalaxyWLObs] = None,
+        members: typing.Optional[NumCosmoMath.Catalog] = None,
+    ) -> None: ...
+    def set_z_cluster(self, z_cluster: float) -> None: ...
+
+class GalaxyWLObsBinnedClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        GalaxyWLObsBinnedClass()
+    """
+
+    parent_class: NumCosmoMath.CatalogClass = ...
 
 class GalaxyWLObsChebGrid(GObject.Object):
     r"""
@@ -28339,6 +29010,21 @@ class GalaxyShapePopBetaParams(GObject.GEnum):
 
 class GalaxyShapePopGaussParams(GObject.GEnum):
     SIGMA: GalaxyShapePopGaussParams = ...
+    _generate_next_value_: function = ...
+    _hashable_values_: list = ...
+    _member_map_: dict = ...
+    _member_names_: list = ...
+    _member_type_: type = ...
+    _new_member_: builtin_function_or_method = ...
+    _unhashable_values_: list = ...
+    _unhashable_values_map_: dict = ...
+    _use_args_: bool = ...
+    _value2member_map_: dict = ...
+    _value_repr_: wrapper_descriptor = ...
+
+class GalaxyWLBinnedEstimatorGtError(GObject.GEnum):
+    SHAPE_NOISE: GalaxyWLBinnedEstimatorGtError = ...
+    STD_ERR: GalaxyWLBinnedEstimatorGtError = ...
     _generate_next_value_: function = ...
     _hashable_values_: list = ...
     _member_map_: dict = ...
