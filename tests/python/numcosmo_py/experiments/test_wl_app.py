@@ -2277,9 +2277,7 @@ def test_cluster_wl_app_generate_binned(experiment_file, binned, est_type):
     data = dataset.get_data(0)
     assert isinstance(data, Nc.DataClusterWLBinned)
     assert isinstance(data.peek_estimator(), est_type)
-    assert isinstance(
-        data.peek_estimator().peek_redshift_factor(), Nc.GalaxyRedshiftFactorComposed
-    )
+    assert isinstance(data.peek_binned().peek_source().peek_pz(0), Nc.GalaxyPz)
     assert not data.get_exact()
     assert 1 <= data.get_length() <= 8
     assert data.peek_binned().has_members()
@@ -2324,7 +2322,7 @@ def test_cluster_wl_app_generate_binned_edges_exact(experiment_file):
 
 
 def test_cluster_wl_app_load_binned(experiment_file, real_wl_obs_file_with_meta):
-    """--binned on a catalog: the redshift factor is the p(z) spline of the catalog,
+    """--binned on a catalog: the redshifts are the p(z) of the catalog,
     and the shape factor need not follow the convention of the catalog."""
     result = runner.invoke(
         app,
@@ -2343,9 +2341,7 @@ def test_cluster_wl_app_load_binned(experiment_file, real_wl_obs_file_with_meta)
     dataset, mset = _load_dataset_and_mset(experiment_file)
     data = dataset.get_data(0)
     assert isinstance(data, Nc.DataClusterWLBinned)
-    assert isinstance(
-        data.peek_estimator().peek_redshift_factor(), Nc.GalaxyRedshiftFactorSpline
-    )
+    assert isinstance(data.peek_binned().peek_source().peek_pz(0), Nc.GalaxyPz)
     assert data.get_length() <= 2
     assert np.isfinite(data.m2lnL_val(mset))
 

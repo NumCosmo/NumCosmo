@@ -33,7 +33,6 @@
 #include <numcosmo/ncm/algebra/ncm_vector.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs_binned.h>
-#include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_factor.h>
 
 G_BEGIN_DECLS
 
@@ -49,18 +48,19 @@ struct _NcGalaxyWLBinnedEstimatorClass
   GObjectClass parent_class;
 
   const gchar *name;
+  gboolean needs_inv_sigma_crit2; /* whether build_bins reads <Sigma_cr^-2> */
   GStrv (*extra_columns) (NcGalaxyWLBinnedEstimator *est);
   void (*build_bins) (NcGalaxyWLBinnedEstimator *est, const NcGalaxyWLBinnedEstimatorSources *src, NcGalaxyWLObsBinned *binned, GArray *factor);
   void (*eval_model) (NcGalaxyWLBinnedEstimator *est, NcmMSet *mset, NcGalaxyWLObsBinned *binned, NcmVector *model);
 
   /* Padding to allow adding up to 8 more virtual functions without breaking ABI. */
-  gpointer padding[8];
+  gpointer padding[7];
 };
 
 /* Optional columns of the per-galaxy catalog; absent ones are taken as zero */
 #define NC_GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS "e_rms"
 
-#define NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_INTERVALS (200)
+#define NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_RELTOL (1.0e-6)
 #define NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS (20)
 
 NcGalaxyWLBinnedEstimator *nc_galaxy_wl_binned_estimator_ref (NcGalaxyWLBinnedEstimator *est);
@@ -71,12 +71,10 @@ const gchar *nc_galaxy_wl_binned_estimator_get_name (NcGalaxyWLBinnedEstimator *
 
 void nc_galaxy_wl_binned_estimator_set_e_rms (NcGalaxyWLBinnedEstimator *est, const gdouble e_rms);
 gdouble nc_galaxy_wl_binned_estimator_get_e_rms (NcGalaxyWLBinnedEstimator *est);
-void nc_galaxy_wl_binned_estimator_set_pz_intervals (NcGalaxyWLBinnedEstimator *est, const guint pz_intervals);
-guint nc_galaxy_wl_binned_estimator_get_pz_intervals (NcGalaxyWLBinnedEstimator *est);
+void nc_galaxy_wl_binned_estimator_set_pz_reltol (NcGalaxyWLBinnedEstimator *est, const gdouble pz_reltol);
+gdouble nc_galaxy_wl_binned_estimator_get_pz_reltol (NcGalaxyWLBinnedEstimator *est);
 void nc_galaxy_wl_binned_estimator_set_exact_intervals (NcGalaxyWLBinnedEstimator *est, const guint exact_intervals);
 guint nc_galaxy_wl_binned_estimator_get_exact_intervals (NcGalaxyWLBinnedEstimator *est);
-void nc_galaxy_wl_binned_estimator_set_redshift_factor (NcGalaxyWLBinnedEstimator *est, NcGalaxyRedshiftFactor *redshift_factor);
-NcGalaxyRedshiftFactor *nc_galaxy_wl_binned_estimator_peek_redshift_factor (NcGalaxyWLBinnedEstimator *est);
 
 GList *nc_galaxy_wl_binned_estimator_required_columns (NcGalaxyWLBinnedEstimator *est);
 

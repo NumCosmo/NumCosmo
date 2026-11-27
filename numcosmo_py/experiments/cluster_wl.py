@@ -1010,9 +1010,55 @@ class GalaxyPopGen(StrEnum):
 
 
 DEFAULT_BINNED_N_BINS = 8
-DEFAULT_BINNED_PZ_INTERVALS = Nc.GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_INTERVALS
+# GI reads small C float constants as 0.0, so the default comes from the property
+DEFAULT_BINNED_PZ_RELTOL = float(
+    Nc.GalaxyWLBinnedEstimatorDeltaSigma.new().props.pz_reltol
+)
+DEFAULT_BINNED_MOCK_PZ_RELTOL = 1.0e-6
 DEFAULT_BINNED_EXACT_INTERVALS = Nc.GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS
 DEFAULT_BINNED_GT_SIGMA_POP = Nc.GALAXY_WL_BINNED_ESTIMATOR_GT_DEFAULT_SIGMA_POP
+
+
+def set_pz_from_redshift_factor(
+    mset: Ncm.MSet,
+    obs: Nc.GalaxyWLObs,
+    redshift_factor: Nc.GalaxyRedshiftFactor,
+    reltol: float,
+) -> None:
+    """Give every galaxy of obs the NcGalaxyPz of its redshift factor density.
+
+    The density p(z_phot, z | I) is tabulated over its integration range, doubling the
+    number of points until the spline of the table reproduces the density at the
+    midpoints to reltol of its maximum.
+    """
+    redshift_factor.prepare(mset)
+    data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
+    integ = redshift_factor.integ(mset, False)
+    integ.prepare(mset)
+
+    for i in range(obs.len()):
+        data.read_row(obs, i)
+        redshift_factor.update_data(data)
+        z_min, z_max = redshift_factor.get_integ_lim(mset, data)
+
+        z = np.linspace(z_min, z_max, 65)
+        p = np.array([integ.eval(zj, data) for zj in z])
+
+        while True:
+            pz = Nc.GalaxyPzBSplineSqrt.new_from_table(
+                Ncm.Vector.new_array(z.tolist()), Ncm.Vector.new_array(p.tolist())
+            )
+            z_mid = 0.5 * (z[1:] + z[:-1])
+            p_mid = np.array([integ.eval(zj, data) for zj in z_mid])
+            err = max(abs(pz.eval_p(zj) - pj) for zj, pj in zip(z_mid, p_mid))
+
+            if err <= reltol * p.max() or len(z) > 4096:
+                break
+
+            z = np.insert(z, np.arange(1, len(z)), z_mid)
+            p = np.insert(p, np.arange(1, len(p)), p_mid)
+
+        obs.set_pz(i, pz)
 
 
 class BinnedGtError(GEnum):
@@ -1040,7 +1086,7 @@ class BinnedGenBase(BaseModel):
     """Classic binned likelihood (``NcDataClusterWLBinned``) of a cluster WL catalog.
 
     The profile is built from the galaxies of the catalog, after it is generated or
-    loaded, with the redshift factor of the unbinned likelihood: each galaxy's redshift
+    loaded, with the redshift densities of the unbinned likelihood: each galaxy's redshift
     density is the one ``NcDataClusterWLFactor`` integrates. The bins are ``n_bins``
     edges log-spaced in [r_min, r_max] unless ``edges`` lists them (proper Mpc), and they
     stay fixed during a fit. ``exact`` replaces the classic model of the estimator by its
@@ -1055,7 +1101,10 @@ class BinnedGenBase(BaseModel):
     edges: Annotated[list[float] | None, Field()] = None
     exact: Annotated[bool, Field()] = False
     e_rms: Annotated[float | None, Field(ge=0.0, lt=1.0)] = None
-    pz_intervals: Annotated[int, Field(ge=1)] = DEFAULT_BINNED_PZ_INTERVALS
+    pz_reltol: Annotated[float, Field(ge=1.0e-8, lt=1.0)] = DEFAULT_BINNED_PZ_RELTOL
+    mock_pz_reltol: Annotated[float, Field(gt=0.0, lt=1.0)] = (
+        DEFAULT_BINNED_MOCK_PZ_RELTOL
+    )
     exact_intervals: Annotated[int, Field(ge=1)] = DEFAULT_BINNED_EXACT_INTERVALS
 
     @field_validator("edges", mode="before")
@@ -1114,16 +1163,22 @@ class BinnedGenBase(BaseModel):
         self,
         mset: Ncm.MSet,
         obs: Nc.GalaxyWLObs,
-        redshift_factor: Nc.GalaxyRedshiftFactor,
         r_min: float,
         r_max: float,
+        redshift_factor: Nc.GalaxyRedshiftFactor | None = None,
     ) -> Nc.DataClusterWLBinned:
-        """Build the binned likelihood of obs, adding a Gaussian scatter to mset."""
+        """Build the binned likelihood of obs, adding a Gaussian scatter to mset.
+
+        A mock has no p(z) per galaxy: given its redshift_factor, the densities are first
+        set in obs (``set_pz_from_redshift_factor``), to ``mock_pz_reltol``.
+        """
+        if redshift_factor is not None:
+            set_pz_from_redshift_factor(mset, obs, redshift_factor, self.mock_pz_reltol)
+
         est = self._build_estimator()
         est.set_e_rms(self._resolve_e_rms(mset, obs))
-        est.set_pz_intervals(self.pz_intervals)
+        est.set_pz_reltol(self.pz_reltol)
         est.set_exact_intervals(self.exact_intervals)
-        est.set_redshift_factor(redshift_factor)
 
         data = Nc.DataClusterWLBinned.new_from_obs(
             est, mset, obs, self.resolve_edges(r_min, r_max)
@@ -1144,7 +1199,8 @@ class BinnedGenBase(BaseModel):
 
 _SHARED_BINNED_HELP = (
     f"n_bins={DEFAULT_BINNED_N_BINS}, edges=None (r1,r2,...), exact=False, "
-    f"e_rms=None, \npz_intervals={DEFAULT_BINNED_PZ_INTERVALS}, "
+    f"e_rms=None, \npz_reltol={DEFAULT_BINNED_PZ_RELTOL}, "
+    f"mock_pz_reltol={DEFAULT_BINNED_MOCK_PZ_RELTOL}, "
     f"exact_intervals={DEFAULT_BINNED_EXACT_INTERVALS}"
 )
 
@@ -1637,9 +1693,9 @@ def generate_lsst_cluster_wl(
         binned_data = binned_gen.build_data(
             mset,
             cluster_data.peek_obs(),
-            z_gen.get_redshift_factor(),
             cluster.r_min,
             cluster.r_max,
+            redshift_factor=z_gen.get_redshift_factor(),
         )
 
     dset = Ncm.Dataset.new_array(
@@ -1799,7 +1855,7 @@ def load_cluster_wl(
     redraws.
 
     With ``binned_gen`` the likelihood is the binned one built from the catalog's
-    galaxies (``BinnedGenBase.build_data``), with the same redshift factor, instead of
+    galaxies (``BinnedGenBase.build_data``), from the p(z) of the catalog, instead of
     the per-galaxy one; ``resample_flag`` and ``integ_options`` then do not apply.
     """
     if not (obs.has_column("ra") and obs.has_column("dec")):
@@ -1928,9 +1984,7 @@ def load_cluster_wl(
 
     binned_data = None
     if binned_gen is not None:
-        binned_data = binned_gen.build_data(
-            mset, obs, redshift_factor, cluster.r_min, cluster.r_max
-        )
+        binned_data = binned_gen.build_data(mset, obs, cluster.r_min, cluster.r_max)
 
     dset = Ncm.Dataset.new_array(
         [binned_data if binned_data is not None else cluster_data]

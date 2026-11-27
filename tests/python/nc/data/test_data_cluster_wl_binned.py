@@ -31,6 +31,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 from numcosmo_py import Ncm, Nc
+from numcosmo_py.experiments.cluster_wl import set_pz_from_redshift_factor
 from numcosmo_py.helper import duplicate_via_serialization
 
 Ncm.cfg_init()
@@ -434,6 +435,28 @@ def test_redshift_density_average():
     assert_allclose(mean2, ref2, rtol=1e-6)
 
 
+def test_redshift_density_average_two_narrow_peaks():
+    """The adaptive integrals find narrow, separated peaks of a p(z)."""
+    mset = _build_mset()
+    cosmo, _, smd, _ = _models(mset)
+    obs, _ = _build_catalog(mset, n=4)
+    z = np.linspace(0.0, 6.0, 1201)
+    p = np.exp(-0.5 * ((z - 0.6) / 0.02) ** 2)
+    p += 0.2 * np.exp(-0.5 * ((z - 4.3) / 0.02) ** 2)
+    pz = Nc.GalaxyPzBSplineSqrt.new_from_table(
+        Ncm.Vector.new_array(z), Ncm.Vector.new_array(p)
+    )
+    obs.set_pz(1, pz)
+    est = Nc.GalaxyWLBinnedEstimatorDeltaSigma.new()
+
+    zz = np.linspace(Z_CL, 6.0, 200001)[1:]
+    pp = np.array([pz.eval_p(z) for z in zz])
+    ss = np.array([1.0 / smd.sigma_critical(cosmo, z, Z_CL, Z_CL) for z in zz])
+    mean1, mean2 = est.mean_inv_sigma_crit(mset, obs, 1)
+    assert_allclose(mean1, np.trapezoid(pp * ss, zz) / pz.get_norm(), rtol=1e-5)
+    assert_allclose(mean2, np.trapezoid(pp * ss**2, zz) / pz.get_norm(), rtol=1e-5)
+
+
 def test_exact_model_with_redshift_densities():
     """With p(z) for every galaxy, the exact model converges in exact-intervals and the
     classic model stays close to it."""
@@ -692,40 +715,9 @@ def test_gt_matches_clmm():
     assert_allclose(model.dup_array(), gt_clmm, rtol=1e-12)
 
 
-def test_redshift_factor_spline_matches_pz():
-    """With NcGalaxyRedshiftFactorSpline the averages over redshift use the same NcGalaxyPz
-    as the default path."""
-    mset = _build_mset()
-    obs, _ = _build_catalog(mset, n=150, noise=0.2)
-    rng = np.random.default_rng(3)
-    for i in range(obs.len()):
-        obs.set_pz(i, _pz_table(rng.uniform(0.4, 1.2), 0.15))
-
-    est_pz = Nc.GalaxyWLBinnedEstimatorDeltaSigma.new()
-    est_zf = Nc.GalaxyWLBinnedEstimatorDeltaSigma.new()
-    est_zf.set_redshift_factor(Nc.GalaxyRedshiftFactorSpline.new())
-    assert isinstance(est_zf.peek_redshift_factor(), Nc.GalaxyRedshiftFactorSpline)
-
-    b_pz = est_pz.build(mset, obs, EDGES.tolist())
-    b_zf = est_zf.build(mset, obs, EDGES.tolist())
-    for col in ("value", "inv_sigma_crit", "radius"):
-        assert_allclose(_col(b_zf, col), _col(b_pz, col), rtol=1e-6)
-
-    d_pz = Nc.DataClusterWLBinned.new(est_pz, b_pz)
-    d_zf = Nc.DataClusterWLBinned.new(est_zf, b_zf)
-    d_pz.set_exact(True)
-    d_zf.set_exact(True)
-    m_pz = Ncm.Vector.new(b_pz.len())
-    m_zf = Ncm.Vector.new(b_zf.len())
-    d_pz.eval_model(mset, m_pz)
-    d_zf.eval_model(mset, m_zf)
-    assert_allclose(m_zf.dup_array(), m_pz.dup_array(), rtol=1e-6)
-
-
-def test_redshift_factor_composed_matches_direct_integral():
-    """With NcGalaxyRedshiftFactorComposed, as the mocks of the CLI, <Sigma_cr^-1> of a
-    galaxy is the average over p(z) = P_pop(z) P_obs(zp | z) / W(z), the density the
-    unbinned likelihood integrates."""
+def test_pz_from_redshift_factor_matches_direct_integral():
+    """The mocks of the CLI get a NcGalaxyPz tabulated from their redshift factor: its
+    <Sigma_cr^-1> is the average over p(z) = P_pop(z) P_obs(zp | z) / W(z)."""
     zp_min, zp_max = 0.0, 5.0
     mset = _build_mset()
     cosmo, _, smd, _ = _models(mset)
@@ -745,7 +737,9 @@ def test_redshift_factor_composed_matches_direct_integral():
         obs_c.set("sigma0", i, 0.05)
 
     est = Nc.GalaxyWLBinnedEstimatorDeltaSigma.new()
-    est.set_redshift_factor(Nc.GalaxyRedshiftFactorComposed.new(zp_min, zp_max))
+    set_pz_from_redshift_factor(
+        mset, obs_c, Nc.GalaxyRedshiftFactorComposed.new(zp_min, zp_max), 1.0e-6
+    )
 
     zz = np.linspace(1.0e-4, 6.0, 60001)
     ss = np.array(

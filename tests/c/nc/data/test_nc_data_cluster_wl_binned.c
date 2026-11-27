@@ -210,35 +210,20 @@ test_nc_data_cluster_wl_binned_properties (TestNcDataClusterWLBinned *test, gcon
   NcGalaxyWLBinnedScatterGauss *sg            = nc_galaxy_wl_binned_scatter_gauss_new ();
   gboolean subtract, include_lnnorm, beta_weighted;
   gdouble e_rms, sigma_pop;
-  guint pz_intervals, exact_intervals;
+  gdouble pz_reltol;
+  guint exact_intervals;
   gint error_type;
 
-  g_object_set (est_ds, "subtract-additive-bias", FALSE, "e-rms", 0.3, "pz-intervals", 50, "exact-intervals", 10, NULL);
-  g_object_get (est_ds, "subtract-additive-bias", &subtract, "e-rms", &e_rms, "pz-intervals", &pz_intervals, "exact-intervals", &exact_intervals, NULL);
+  g_object_set (est_ds, "subtract-additive-bias", FALSE, "e-rms", 0.3, "pz-reltol", 1.0e-4, "exact-intervals", 10, NULL);
+  g_object_get (est_ds, "subtract-additive-bias", &subtract, "e-rms", &e_rms, "pz-reltol", &pz_reltol, "exact-intervals", &exact_intervals, NULL);
   g_assert_false (subtract);
   g_assert_cmpfloat (e_rms, ==, 0.3);
-  g_assert_cmpuint (pz_intervals, ==, 50);
+  g_assert_cmpfloat (pz_reltol, ==, 1.0e-4);
   g_assert_cmpuint (exact_intervals, ==, 10);
   g_assert_false (nc_galaxy_wl_binned_estimator_delta_sigma_get_subtract_additive_bias (est_ds));
   g_assert_cmpfloat (nc_galaxy_wl_binned_estimator_get_e_rms (est), ==, 0.3);
-  g_assert_cmpuint (nc_galaxy_wl_binned_estimator_get_pz_intervals (est), ==, 50);
+  g_assert_cmpfloat (nc_galaxy_wl_binned_estimator_get_pz_reltol (est), ==, 1.0e-4);
   g_assert_cmpuint (nc_galaxy_wl_binned_estimator_get_exact_intervals (est), ==, 10);
-
-  {
-    NcGalaxyRedshiftFactor *zf = NC_GALAXY_REDSHIFT_FACTOR (nc_galaxy_redshift_factor_spline_new ());
-    NcGalaxyRedshiftFactor *zf_get;
-
-    g_assert_null (nc_galaxy_wl_binned_estimator_peek_redshift_factor (est));
-    g_object_set (est, "redshift-factor", zf, NULL);
-    g_object_get (est, "redshift-factor", &zf_get, NULL);
-    g_assert_true (zf_get == zf);
-    g_assert_true (nc_galaxy_wl_binned_estimator_peek_redshift_factor (est) == zf);
-    nc_galaxy_wl_binned_estimator_set_redshift_factor (est, NULL);
-    g_assert_null (nc_galaxy_wl_binned_estimator_peek_redshift_factor (est));
-
-    nc_galaxy_redshift_factor_free (zf_get);
-    nc_galaxy_redshift_factor_free (zf);
-  }
 
   g_object_set (est_gt, "sigma-pop", 0.2, "error-type", NC_GALAXY_WL_BINNED_ESTIMATOR_GT_ERROR_SHAPE_NOISE, "beta-weighted", TRUE, NULL);
   g_object_get (est_gt, "sigma-pop", &sigma_pop, "error-type", &error_type, "beta-weighted", &beta_weighted, NULL);

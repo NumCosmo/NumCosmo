@@ -384,10 +384,11 @@ nc_galaxy_wl_binned_estimator_gt_class_init (NcGalaxyWLBinnedEstimatorGtClass *k
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  est_class->name          = "gt";
-  est_class->extra_columns = &_nc_galaxy_wl_binned_estimator_gt_extra_columns;
-  est_class->build_bins    = &_nc_galaxy_wl_binned_estimator_gt_build_bins;
-  est_class->eval_model    = &_nc_galaxy_wl_binned_estimator_gt_eval_model;
+  est_class->name                  = "gt";
+  est_class->needs_inv_sigma_crit2 = TRUE;
+  est_class->extra_columns         = &_nc_galaxy_wl_binned_estimator_gt_extra_columns;
+  est_class->build_bins            = &_nc_galaxy_wl_binned_estimator_gt_build_bins;
+  est_class->eval_model            = &_nc_galaxy_wl_binned_estimator_gt_eval_model;
 }
 
 /**

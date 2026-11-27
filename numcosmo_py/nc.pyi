@@ -140,7 +140,7 @@ GALAXY_SHAPE_POP_GAUSS_DEFAULT_SIGMA: float = 0.3
 GALAXY_SHAPE_POP_GAUSS_LOCAL_COL_E_RMS: str = r"e_rms"
 GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS: str = r"e_rms"
 GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS: int = 20
-GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_INTERVALS: int = 200
+GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_RELTOL: float = 1e-06
 GALAXY_WL_BINNED_ESTIMATOR_DELTA_SIGMA_COL_INV_SIGMA_CRIT: str = r"inv_sigma_crit"
 GALAXY_WL_BINNED_ESTIMATOR_DELTA_SIGMA_COL_MULT_BIAS: str = r"mult_bias"
 GALAXY_WL_BINNED_ESTIMATOR_DELTA_SIGMA_COL_RESPONSIVITY: str = r"responsivity"
@@ -10829,12 +10829,10 @@ class GalaxyWLBinnedEstimator(GObject.Object):
     Properties from NcGalaxyWLBinnedEstimator:
       e-rms -> gdouble: e-rms
         Intrinsic ellipticity rms
-      pz-intervals -> guint: pz-intervals
-        Intervals of the p(z) averages of the build
+      pz-reltol -> gdouble: pz-reltol
+        Relative tolerance of the p(z) integrals of the build
       exact-intervals -> guint: exact-intervals
         Intervals of the p(z) averages of the exact model
-      redshift-factor -> NcGalaxyRedshiftFactor: redshift-factor
-        Redshift factor of the averages over redshift
 
     Signals from GObject:
       notify (GParam)
@@ -10843,17 +10841,12 @@ class GalaxyWLBinnedEstimator(GObject.Object):
     class Props:
         e_rms: float
         exact_intervals: int
-        pz_intervals: int
-        redshift_factor: typing.Optional[GalaxyRedshiftFactor]
+        pz_reltol: float
 
     props: Props = ...
     parent_instance: GObject.Object = ...
     def __init__(
-        self,
-        e_rms: float = ...,
-        exact_intervals: int = ...,
-        pz_intervals: int = ...,
-        redshift_factor: typing.Optional[GalaxyRedshiftFactor] = ...,
+        self, e_rms: float = ..., exact_intervals: int = ..., pz_reltol: float = ...
     ) -> None: ...
     def build(
         self,
@@ -10885,19 +10878,15 @@ class GalaxyWLBinnedEstimator(GObject.Object):
     def get_e_rms(self) -> float: ...
     def get_exact_intervals(self) -> int: ...
     def get_name(self) -> str: ...
-    def get_pz_intervals(self) -> int: ...
+    def get_pz_reltol(self) -> float: ...
     def mean_inv_sigma_crit(
         self, mset: NumCosmoMath.MSet, obs: GalaxyWLObs, i: int
     ) -> typing.Tuple[float, float]: ...
-    def peek_redshift_factor(self) -> typing.Optional[GalaxyRedshiftFactor]: ...
     def ref(self) -> GalaxyWLBinnedEstimator: ...
     def required_columns(self) -> list[str]: ...
     def set_e_rms(self, e_rms: float) -> None: ...
     def set_exact_intervals(self, exact_intervals: int) -> None: ...
-    def set_pz_intervals(self, pz_intervals: int) -> None: ...
-    def set_redshift_factor(
-        self, redshift_factor: typing.Optional[GalaxyRedshiftFactor] = None
-    ) -> None: ...
+    def set_pz_reltol(self, pz_reltol: float) -> None: ...
 
 class GalaxyWLBinnedEstimatorClass(GObject.GPointer):
     r"""
@@ -10910,6 +10899,7 @@ class GalaxyWLBinnedEstimatorClass(GObject.GPointer):
 
     parent_class: GObject.ObjectClass = ...
     name: str = ...
+    needs_inv_sigma_crit2: bool = ...
     extra_columns: None = ...
     build_bins: None = ...
     eval_model: typing.Callable[
@@ -10941,12 +10931,10 @@ class GalaxyWLBinnedEstimatorDeltaSigma(GalaxyWLBinnedEstimator):
     Properties from NcGalaxyWLBinnedEstimator:
       e-rms -> gdouble: e-rms
         Intrinsic ellipticity rms
-      pz-intervals -> guint: pz-intervals
-        Intervals of the p(z) averages of the build
+      pz-reltol -> gdouble: pz-reltol
+        Relative tolerance of the p(z) integrals of the build
       exact-intervals -> guint: exact-intervals
         Intervals of the p(z) averages of the exact model
-      redshift-factor -> NcGalaxyRedshiftFactor: redshift-factor
-        Redshift factor of the averages over redshift
 
     Signals from GObject:
       notify (GParam)
@@ -10956,8 +10944,7 @@ class GalaxyWLBinnedEstimatorDeltaSigma(GalaxyWLBinnedEstimator):
         subtract_additive_bias: bool
         e_rms: float
         exact_intervals: int
-        pz_intervals: int
-        redshift_factor: typing.Optional[GalaxyRedshiftFactor]
+        pz_reltol: float
 
     props: Props = ...
     def __init__(
@@ -10965,8 +10952,7 @@ class GalaxyWLBinnedEstimatorDeltaSigma(GalaxyWLBinnedEstimator):
         subtract_additive_bias: bool = ...,
         e_rms: float = ...,
         exact_intervals: int = ...,
-        pz_intervals: int = ...,
-        redshift_factor: typing.Optional[GalaxyRedshiftFactor] = ...,
+        pz_reltol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(est_ds: GalaxyWLBinnedEstimatorDeltaSigma) -> None: ...
@@ -11010,12 +10996,10 @@ class GalaxyWLBinnedEstimatorGt(GalaxyWLBinnedEstimator):
     Properties from NcGalaxyWLBinnedEstimator:
       e-rms -> gdouble: e-rms
         Intrinsic ellipticity rms
-      pz-intervals -> guint: pz-intervals
-        Intervals of the p(z) averages of the build
+      pz-reltol -> gdouble: pz-reltol
+        Relative tolerance of the p(z) integrals of the build
       exact-intervals -> guint: exact-intervals
         Intervals of the p(z) averages of the exact model
-      redshift-factor -> NcGalaxyRedshiftFactor: redshift-factor
-        Redshift factor of the averages over redshift
 
     Signals from GObject:
       notify (GParam)
@@ -11027,8 +11011,7 @@ class GalaxyWLBinnedEstimatorGt(GalaxyWLBinnedEstimator):
         sigma_pop: float
         e_rms: float
         exact_intervals: int
-        pz_intervals: int
-        redshift_factor: typing.Optional[GalaxyRedshiftFactor]
+        pz_reltol: float
 
     props: Props = ...
     def __init__(
@@ -11038,8 +11021,7 @@ class GalaxyWLBinnedEstimatorGt(GalaxyWLBinnedEstimator):
         sigma_pop: float = ...,
         e_rms: float = ...,
         exact_intervals: int = ...,
-        pz_intervals: int = ...,
-        redshift_factor: typing.Optional[GalaxyRedshiftFactor] = ...,
+        pz_reltol: float = ...,
     ) -> None: ...
     @staticmethod
     def clear(est_gt: GalaxyWLBinnedEstimatorGt) -> None: ...

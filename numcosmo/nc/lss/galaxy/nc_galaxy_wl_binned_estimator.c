@@ -42,10 +42,10 @@
  *
  * The build uses the models of the #NcmMSet only for the geometry: the projected radius and
  * the tangential rotation of each galaxy (#NcHaloPosition) and its critical densities
- * (#NcWLSurfaceMassDensity), averaged over its redshift density. That density is the one
- * of #NcGalaxyWLBinnedEstimator:redshift-factor when it is set, the same density
- * #NcDataClusterWLFactor integrates; otherwise the #NcGalaxyPz the catalog holds for the
- * row (nc_galaxy_wl_obs_peek_pz()), or its column "z" when it has none. The catalog must have the columns "ra", "dec",
+ * (#NcWLSurfaceMassDensity), averaged over its redshift density. That density is the
+ * #NcGalaxyPz the catalog holds for the row (nc_galaxy_wl_obs_peek_pz()), or the column "z",
+ * a point redshift, when the row has none; the averages that build the profile integrate it
+ * to the relative tolerance #NcGalaxyWLBinnedEstimator:pz-reltol. The catalog must have the columns
  * "epsilon_obs_1", "epsilon_obs_2" and "std_noise"; the columns "m", "c1", "c2" are taken as
  * zero when absent, and the column "e_rms" is replaced by #NcGalaxyWLBinnedEstimator:e-rms
  * when that property is non-negative. Radii are proper Mpc (NumCosmo's convention; Umetsu
@@ -67,6 +67,7 @@
 #include "nc/lss/galaxy/nc_galaxy_wl_binned_estimator.h"
 #include "nc/lss/galaxy/nc_galaxy_wl_binned_estimator_private.h"
 #include "nc/lss/galaxy/nc_galaxy_position_factor.h"
+#include "nc/lss/galaxy/nc_galaxy_pz.h"
 #include "nc/lss/galaxy/nc_galaxy_redshift_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "nc/lss/halo/nc_halo_position.h"
@@ -75,28 +76,34 @@
 #include "nc/lss/wl/nc_wl_ellipticity.h"
 #include "nc/background/nc_hicosmo.h"
 #include "ncm/integration/ncm_integrate.h"
+#include "ncm/integration/ncm_integral1d_ptr.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
 #include <string.h>
 #include <gsl/gsl_math.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif /* _OPENMP */
 #endif /* NUMCOSMO_GIR_SCAN */
 
+/* Nodes of each interval of the composite rule of eval_model_exact() */
 #define _NC_WLBE_GL_ORDER (5)
+
+/* Subintervals and GSL rule (61 points) of the adaptive integrals of the build */
+#define _NC_WLBE_INTEG_PARTITION (10000)
+#define _NC_WLBE_INTEG_RULE (6)
 
 typedef struct _NcGalaxyWLBinnedEstimatorPrivate
 {
   gdouble e_rms;
-  NcGalaxyRedshiftFactor *redshift_factor;
-  guint pz_intervals;
+  gdouble pz_reltol;
   guint exact_intervals;
 
   /* Cache of eval_model_exact(): the redshift nodes of every member */
   NcmCatalog *exact_members;
   guint64 exact_members_key;
   guint64 exact_crit_hash;
-  guint64 exact_z_hash;
-  NcGalaxyRedshiftFactor *exact_zf; /* compared by address only, never dereferenced */
   guint exact_n_int;
   GArray *exact_offset; /* guint, members + 1 */
   GArray *exact_s;      /* Sigma_cr^-1 at the nodes */
@@ -107,9 +114,8 @@ enum
 {
   PROP_0,
   PROP_E_RMS,
-  PROP_PZ_INTERVALS,
+  PROP_PZ_RELTOL,
   PROP_EXACT_INTERVALS,
-  PROP_REDSHIFT_FACTOR,
   PROP_LEN,
 };
 
@@ -121,10 +127,7 @@ nc_galaxy_wl_binned_estimator_init (NcGalaxyWLBinnedEstimator *est)
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
 
   self->e_rms             = -1.0;
-  self->redshift_factor   = NULL;
-  self->exact_z_hash      = 0;
-  self->exact_zf          = NULL;
-  self->pz_intervals      = NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_INTERVALS;
+  self->pz_reltol         = NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_RELTOL;
   self->exact_intervals   = NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS;
   self->exact_members     = NULL;
   self->exact_members_key = NCM_CATALOG_KEY_PENDING;
@@ -145,14 +148,11 @@ _nc_galaxy_wl_binned_estimator_set_property (GObject *object, guint prop_id, con
     case PROP_E_RMS:
       nc_galaxy_wl_binned_estimator_set_e_rms (est, g_value_get_double (value));
       break;
-    case PROP_PZ_INTERVALS:
-      nc_galaxy_wl_binned_estimator_set_pz_intervals (est, g_value_get_uint (value));
+    case PROP_PZ_RELTOL:
+      nc_galaxy_wl_binned_estimator_set_pz_reltol (est, g_value_get_double (value));
       break;
     case PROP_EXACT_INTERVALS:
       nc_galaxy_wl_binned_estimator_set_exact_intervals (est, g_value_get_uint (value));
-      break;
-    case PROP_REDSHIFT_FACTOR:
-      nc_galaxy_wl_binned_estimator_set_redshift_factor (est, g_value_get_object (value));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -170,14 +170,11 @@ _nc_galaxy_wl_binned_estimator_get_property (GObject *object, guint prop_id, GVa
     case PROP_E_RMS:
       g_value_set_double (value, nc_galaxy_wl_binned_estimator_get_e_rms (est));
       break;
-    case PROP_PZ_INTERVALS:
-      g_value_set_uint (value, nc_galaxy_wl_binned_estimator_get_pz_intervals (est));
+    case PROP_PZ_RELTOL:
+      g_value_set_double (value, nc_galaxy_wl_binned_estimator_get_pz_reltol (est));
       break;
     case PROP_EXACT_INTERVALS:
       g_value_set_uint (value, nc_galaxy_wl_binned_estimator_get_exact_intervals (est));
-      break;
-    case PROP_REDSHIFT_FACTOR:
-      g_value_set_object (value, nc_galaxy_wl_binned_estimator_peek_redshift_factor (est));
       break;
     default:                                                      /* LCOV_EXCL_LINE */
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec); /* LCOV_EXCL_LINE */
@@ -192,7 +189,6 @@ _nc_galaxy_wl_binned_estimator_dispose (GObject *object)
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
 
   ncm_catalog_clear (&self->exact_members);
-  nc_galaxy_redshift_factor_clear (&self->redshift_factor);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_galaxy_wl_binned_estimator_parent_class)->dispose (object);
@@ -258,19 +254,19 @@ nc_galaxy_wl_binned_estimator_class_init (NcGalaxyWLBinnedEstimatorClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcGalaxyWLBinnedEstimator:pz-intervals:
+   * NcGalaxyWLBinnedEstimator:pz-reltol:
    *
-   * The number of intervals of the Gauss-Legendre rule (5 nodes each) of the averages over
-   * the redshift density of a galaxy, from the cluster redshift to the end of its support,
-   * used to build the profile.
+   * The relative tolerance of the integrals over the redshift density of a galaxy, from the
+   * cluster redshift to the end of its range, that build the profile. Tighter than the minimum,
+   * the adaptive rule may stop on a roundoff error.
    */
   g_object_class_install_property (object_class,
-                                   PROP_PZ_INTERVALS,
-                                   g_param_spec_uint ("pz-intervals",
-                                                      NULL,
-                                                      "Intervals of the p(z) averages of the build",
-                                                      1, G_MAXUINT, NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_INTERVALS,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_PZ_RELTOL,
+                                   g_param_spec_double ("pz-reltol",
+                                                        NULL,
+                                                        "Relative tolerance of the p(z) integrals of the build",
+                                                        1.0e-8, 1.0, NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_PZ_RELTOL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
    * NcGalaxyWLBinnedEstimator:exact-intervals:
@@ -286,23 +282,6 @@ nc_galaxy_wl_binned_estimator_class_init (NcGalaxyWLBinnedEstimatorClass *klass)
                                                       "Intervals of the p(z) averages of the exact model",
                                                       1, G_MAXUINT, NC_GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
-  /**
-   * NcGalaxyWLBinnedEstimator:redshift-factor:
-   *
-   * The redshift factor whose per-galaxy density $p(z_\mathrm{phot}, z \mid I)$, normalized
-   * by nc_galaxy_redshift_factor_norm(), the averages over redshift use: the same density
-   * #NcDataClusterWLFactor integrates. When %NULL, the default, the averages use the
-   * #NcGalaxyPz of each row (nc_galaxy_wl_obs_peek_pz()) or its column "z".
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_REDSHIFT_FACTOR,
-                                   g_param_spec_object ("redshift-factor",
-                                                        NULL,
-                                                        "Redshift factor of the averages over redshift",
-                                                        NC_TYPE_GALAXY_REDSHIFT_FACTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->name          = "abstract";
   klass->extra_columns = &_nc_galaxy_wl_binned_estimator_extra_columns;
@@ -390,33 +369,33 @@ nc_galaxy_wl_binned_estimator_get_e_rms (NcGalaxyWLBinnedEstimator *est)
 }
 
 /**
- * nc_galaxy_wl_binned_estimator_set_pz_intervals:
+ * nc_galaxy_wl_binned_estimator_set_pz_reltol:
  * @est: a #NcGalaxyWLBinnedEstimator
- * @pz_intervals: the number of intervals
+ * @pz_reltol: the relative tolerance
  *
- * Sets #NcGalaxyWLBinnedEstimator:pz-intervals.
+ * Sets #NcGalaxyWLBinnedEstimator:pz-reltol.
  */
 void
-nc_galaxy_wl_binned_estimator_set_pz_intervals (NcGalaxyWLBinnedEstimator *est, const guint pz_intervals)
+nc_galaxy_wl_binned_estimator_set_pz_reltol (NcGalaxyWLBinnedEstimator *est, const gdouble pz_reltol)
 {
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
 
-  g_assert_cmpuint (pz_intervals, >, 0);
-  self->pz_intervals = pz_intervals;
+  g_assert_cmpfloat (pz_reltol, >=, 1.0e-8);
+  self->pz_reltol = pz_reltol;
 }
 
 /**
- * nc_galaxy_wl_binned_estimator_get_pz_intervals:
+ * nc_galaxy_wl_binned_estimator_get_pz_reltol:
  * @est: a #NcGalaxyWLBinnedEstimator
  *
- * Returns: #NcGalaxyWLBinnedEstimator:pz-intervals.
+ * Returns: #NcGalaxyWLBinnedEstimator:pz-reltol.
  */
-guint
-nc_galaxy_wl_binned_estimator_get_pz_intervals (NcGalaxyWLBinnedEstimator *est)
+gdouble
+nc_galaxy_wl_binned_estimator_get_pz_reltol (NcGalaxyWLBinnedEstimator *est)
 {
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
 
-  return self->pz_intervals;
+  return self->pz_reltol;
 }
 
 /**
@@ -450,38 +429,6 @@ nc_galaxy_wl_binned_estimator_get_exact_intervals (NcGalaxyWLBinnedEstimator *es
 }
 
 /**
- * nc_galaxy_wl_binned_estimator_set_redshift_factor:
- * @est: a #NcGalaxyWLBinnedEstimator
- * @redshift_factor: (nullable): a #NcGalaxyRedshiftFactor
- *
- * Sets #NcGalaxyWLBinnedEstimator:redshift-factor, referencing @redshift_factor.
- */
-void
-nc_galaxy_wl_binned_estimator_set_redshift_factor (NcGalaxyWLBinnedEstimator *est, NcGalaxyRedshiftFactor *redshift_factor)
-{
-  NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
-
-  nc_galaxy_redshift_factor_clear (&self->redshift_factor);
-
-  if (redshift_factor != NULL)
-    self->redshift_factor = nc_galaxy_redshift_factor_ref (redshift_factor);
-}
-
-/**
- * nc_galaxy_wl_binned_estimator_peek_redshift_factor:
- * @est: a #NcGalaxyWLBinnedEstimator
- *
- * Returns: (transfer none) (nullable): #NcGalaxyWLBinnedEstimator:redshift-factor.
- */
-NcGalaxyRedshiftFactor *
-nc_galaxy_wl_binned_estimator_peek_redshift_factor (NcGalaxyWLBinnedEstimator *est)
-{
-  NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
-
-  return self->redshift_factor;
-}
-
-/**
  * nc_galaxy_wl_binned_estimator_required_columns:
  * @est: a #NcGalaxyWLBinnedEstimator
  *
@@ -511,12 +458,7 @@ typedef struct _NcWLBEModels
   NcWLSurfaceMassDensity *smd;
   NcHaloDensityProfile *dp;
   gdouble z_cl;
-
-  /* Set only when the estimator has a redshift factor */
-  NcmMSet *mset;
-  NcGalaxyRedshiftFactor *zf;
-  NcGalaxyRedshiftFactorData *z_data;
-  NcGalaxyRedshiftFactorIntegrand *z_integ;
+  NcWLSurfaceMassDensityLensCtx lens_ctx; /* the lens side of Sigma_cr, for every source */
 } NcWLBEModels;
 
 static void
@@ -534,51 +476,44 @@ _nc_wlbe_models (NcmMSet *mset, NcWLBEModels *models)
   nc_wl_surface_mass_density_prepare_if_needed (models->smd, models->cosmo);
 
   models->z_cl = nc_halo_position_get_redshift (models->hp);
-
-  models->mset    = mset;
-  models->zf      = NULL;
-  models->z_data  = NULL;
-  models->z_integ = NULL;
+  nc_wl_surface_mass_density_lens_ctx_prep (&models->lens_ctx, models->smd, models->cosmo, models->z_cl);
 }
 
-/* Prepares the redshift factor of the estimator, if any, for _nc_wlbe_append_nodes() */
-static void
-_nc_wlbe_models_zf_begin (NcGalaxyWLBinnedEstimator *est, NcWLBEModels *models)
+static gdouble
+_nc_wlbe_inv_sigma_crit (NcWLBEModels *models, const gdouble z)
 {
-  NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
+  NcWLSurfaceMassDensityCritCache crit_cache;
 
-  if (self->redshift_factor == NULL)
-    return;
+  nc_wl_surface_mass_density_reduced_shear_crit_cache_prep_with_lens_ctx (models->smd, models->cosmo, &models->lens_ctx, z, &crit_cache);
 
-  models->zf = self->redshift_factor;
-  nc_galaxy_redshift_factor_prepare (models->zf, models->mset);
-  models->z_data  = nc_galaxy_redshift_factor_data_new (models->zf, models->mset);
-  models->z_integ = nc_galaxy_redshift_factor_integ (models->zf, models->mset, FALSE);
-  nc_galaxy_redshift_factor_integrand_prepare (models->z_integ, models->mset);
+  return crit_cache.is_source ? 1.0 / crit_cache.sigma_crit : 0.0;
 }
 
+/*
+ * Appends to s and w the nodes of the average over the redshift density of galaxy i above
+ * the cluster, of eval_model_exact(): s = Sigma_cr^-1 (z) and w = p (z) dz / norm, by n_int
+ * intervals of a Gauss-Legendre rule, or one node with w = 1 for a galaxy with a point
+ * redshift behind the cluster.
+ */
 static void
-_nc_wlbe_models_zf_end (NcWLBEModels *models)
+_nc_wlbe_append_nodes (NcWLBEModels *models, NcGalaxyWLObs *obs, const guint i, const guint n_int, GArray *s, GArray *w)
 {
-  g_clear_pointer (&models->z_data, nc_galaxy_redshift_factor_data_unref);
-  g_clear_pointer (&models->z_integ, nc_galaxy_redshift_factor_integrand_free);
-  models->zf = NULL;
-}
+  NcGalaxyPz *pz = nc_galaxy_wl_obs_peek_pz (obs, i);
 
-/* Appends the Gauss-Legendre nodes of [z_min, z_max] with weight p (z) dz / norm */
-static void
-_nc_wlbe_append_gl (NcWLBEModels *models, gdouble z_min, const gdouble z_max, const guint n_int,
-                    gdouble (*p_eval) (gpointer arg, const gdouble z), gpointer arg, const gdouble norm,
-                    GArray *s, GArray *w)
-{
-  z_min = GSL_MAX (z_min, models->z_cl);
-
-  if ((z_max > z_min) && (norm > 0.0))
+  if (pz != NULL)
   {
-    const gdouble dz = (z_max - z_min) / n_int;
+    const gdouble norm = nc_galaxy_pz_get_norm (pz);
+    gdouble z_min, z_max, dz;
     const gdouble *gl_x, *gl_w;
     guint k, l;
 
+    nc_galaxy_pz_get_range (pz, &z_min, &z_max);
+    z_min = GSL_MAX (z_min, models->z_cl);
+
+    if (!((z_max > z_min) && (norm > 0.0)))
+      return;
+
+    dz = (z_max - z_min) / n_int;
     ncm_integral_gauss_legendre_rule (_NC_WLBE_GL_ORDER, &gl_x, &gl_w);
 
     for (k = 0; k < n_int; k++)
@@ -588,13 +523,11 @@ _nc_wlbe_append_gl (NcWLBEModels *models, gdouble z_min, const gdouble z_max, co
       for (l = 0; l < _NC_WLBE_GL_ORDER; l++)
       {
         const gdouble z  = za + 0.5 * dz * (1.0 + gl_x[l]);
-        const gdouble wz = 0.5 * dz * gl_w[l] * p_eval (arg, z) / norm;
+        const gdouble wz = 0.5 * dz * gl_w[l] * nc_galaxy_pz_eval_p (pz, z) / norm;
 
-        if (wz == 0.0)
-          continue;
-
+        if (wz != 0.0)
         {
-          const gdouble inv_sigma = 1.0 / nc_wl_surface_mass_density_sigma_critical (models->smd, models->cosmo, z, models->z_cl, models->z_cl);
+          const gdouble inv_sigma = _nc_wlbe_inv_sigma_crit (models, z);
 
           g_array_append_val (w, wz);
           g_array_append_val (s, inv_sigma);
@@ -602,92 +535,149 @@ _nc_wlbe_append_gl (NcWLBEModels *models, gdouble z_min, const gdouble z_max, co
       }
     }
   }
-}
-
-static gdouble
-_nc_wlbe_pz_eval (gpointer arg, const gdouble z)
-{
-  return nc_galaxy_pz_eval_p (NC_GALAXY_PZ (arg), z);
-}
-
-static gdouble
-_nc_wlbe_zf_eval (gpointer arg, const gdouble z)
-{
-  NcWLBEModels *models = (NcWLBEModels *) arg;
-
-  return nc_galaxy_redshift_factor_integrand_eval (models->z_integ, z, models->z_data);
-}
-
-/*
- * Appends to s and w the nodes of the average over the redshift density of galaxy i above
- * the cluster: s = Sigma_cr^-1 (z) and w = P (z) dz / norm, or one node with w = 1 for a
- * galaxy with a point redshift behind the cluster. The density is the integrand of the
- * redshift factor of the estimator when it has one (models->zf, prepared by
- * _nc_wlbe_models_zf_begin()), otherwise the NcGalaxyPz of the row or its "z" column.
- */
-static void
-_nc_wlbe_append_nodes (NcWLBEModels *models, NcGalaxyWLObs *obs, const guint i, const guint n_int, GArray *s, GArray *w)
-{
-  if (models->zf != NULL)
-  {
-    gdouble z_min, z_max, norm;
-
-    nc_galaxy_redshift_factor_data_read_row (models->z_data, obs, i);
-    nc_galaxy_redshift_factor_update_data (models->zf, models->z_data);
-    nc_galaxy_redshift_factor_get_integ_lim (models->zf, models->mset, models->z_data, &z_min, &z_max);
-    norm = nc_galaxy_redshift_factor_norm (models->zf, models->mset, models->z_data);
-
-    _nc_wlbe_append_gl (models, z_min, z_max, n_int, &_nc_wlbe_zf_eval, models, norm, s, w);
-  }
   else
   {
-    NcGalaxyPz *pz = nc_galaxy_wl_obs_peek_pz (obs, i);
+    const gdouble z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
 
-    if (pz != NULL)
+    if (z > models->z_cl)
     {
-      gdouble z_min, z_max;
+      const gdouble inv_sigma = _nc_wlbe_inv_sigma_crit (models, z);
+      const gdouble one       = 1.0;
 
-      nc_galaxy_pz_get_range (pz, &z_min, &z_max);
-      _nc_wlbe_append_gl (models, z_min, z_max, n_int, &_nc_wlbe_pz_eval, pz, nc_galaxy_pz_get_norm (pz), s, w);
+      g_array_append_val (s, inv_sigma);
+      g_array_append_val (w, one);
     }
-    else
+  }
+}
+
+/* The integrand p (z) Sigma_cr^-power (z) of the build */
+typedef struct _NcWLBEIntegArg
+{
+  NcWLBEModels *models;
+  NcGalaxyPz *pz;
+  guint power;
+} NcWLBEIntegArg;
+
+static gdouble
+_nc_wlbe_integ (gpointer userdata, const gdouble z, const gdouble w)
+{
+  NcWLBEIntegArg *arg = (NcWLBEIntegArg *) userdata;
+  const gdouble s     = _nc_wlbe_inv_sigma_crit (arg->models, z);
+
+  return nc_galaxy_pz_eval_p (arg->pz, z) * ((arg->power == 1) ? s : s * s);
+}
+
+static NcmIntegral1d *
+_nc_wlbe_integ_new (const gdouble reltol)
+{
+  return NCM_INTEGRAL1D (ncm_integral1d_ptr_new_full (&_nc_wlbe_integ, NULL, reltol, 0.0,
+                                                      _NC_WLBE_INTEG_PARTITION, _NC_WLBE_INTEG_RULE));
+}
+
+/* The averages of Sigma_cr^-1 (returned) and, unless mean2 is NULL, Sigma_cr^-2 (mean2) of
+ * galaxy i over its redshift density, zero in front of the cluster */
+static gdouble
+_nc_wlbe_mean_inv_sigma_crit (NcWLBEModels *models, NcGalaxyWLObs *obs, const guint i, NcmIntegral1d *integ, gdouble *mean2)
+{
+  NcGalaxyPz *pz = nc_galaxy_wl_obs_peek_pz (obs, i);
+  gdouble mean1  = 0.0;
+
+  if (mean2 != NULL)
+    *mean2 = 0.0;
+
+  if (pz != NULL)
+  {
+    NcWLBEIntegArg arg = {models, pz, 1};
+    const gdouble norm = nc_galaxy_pz_get_norm (pz);
+    gdouble z_min, z_max, err;
+
+    nc_galaxy_pz_get_range (pz, &z_min, &z_max);
+    z_min = GSL_MAX (z_min, models->z_cl);
+
+    if (!((z_max > z_min) && (norm > 0.0)))
+      return 0.0;
+
+    ncm_integral1d_ptr_set_userdata (NCM_INTEGRAL1D_PTR (integ), &arg);
+
     {
-      const gdouble z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
+      /*
+       * Sigma_cr^-1 increases with z, so s_max bounds it. The absolute tolerance, relative
+       * to the largest value the average can take, stops the refinement of galaxies with
+       * almost no density behind the cluster, whose integral cannot reach a relative one.
+       */
+      const gdouble s_max  = _nc_wlbe_inv_sigma_crit (models, z_max);
+      const gdouble reltol = ncm_integral1d_get_reltol (integ);
 
-      if (z > models->z_cl)
+      ncm_integral1d_set_abstol (integ, reltol * norm * s_max);
+      mean1 = ncm_integral1d_eval (integ, z_min, z_max, &err) / norm;
+
+      if (mean2 != NULL)
       {
-        const gdouble inv_sigma = 1.0 / nc_wl_surface_mass_density_sigma_critical (models->smd, models->cosmo, z, models->z_cl, models->z_cl);
-        const gdouble one       = 1.0;
-
-        g_array_append_val (s, inv_sigma);
-        g_array_append_val (w, one);
+        arg.power = 2;
+        ncm_integral1d_set_abstol (integ, reltol * norm * s_max * s_max);
+        *mean2 = ncm_integral1d_eval (integ, z_min, z_max, &err) / norm;
       }
     }
   }
-}
-
-static gdouble
-_nc_wlbe_mean_inv_sigma_crit (NcWLBEModels *models, NcGalaxyWLObs *obs, const guint i, const guint n_int, GArray *s, GArray *w, gdouble *mean2)
-{
-  gdouble mean1 = 0.0;
-  guint k;
-
-  g_array_set_size (s, 0);
-  g_array_set_size (w, 0);
-  _nc_wlbe_append_nodes (models, obs, i, n_int, s, w);
-
-  *mean2 = 0.0;
-
-  for (k = 0; k < s->len; k++)
+  else
   {
-    const gdouble s_k = g_array_index (s, gdouble, k);
-    const gdouble w_k = g_array_index (w, gdouble, k);
+    const gdouble z = nc_galaxy_wl_obs_get (obs, NC_GALAXY_REDSHIFT_FACTOR_COL_Z, i, NULL);
 
-    mean1  += w_k * s_k;
-    *mean2 += w_k * s_k * s_k;
+    if (z > models->z_cl)
+    {
+      mean1 = _nc_wlbe_inv_sigma_crit (models, z);
+
+      if (mean2 != NULL)
+        *mean2 = mean1 * mean1;
+    }
   }
 
   return mean1;
+}
+
+/*
+ * Fills the averages of the selected galaxies, in parallel: each thread has its own
+ * integrator and writes only the entries of its galaxies. The first galaxy runs alone, so
+ * that whatever the models compute lazily is ready before the others read it. The
+ * averages of Sigma_cr^-2 are computed only when need2 is TRUE, and stay NaN otherwise.
+ */
+static void
+_nc_wlbe_sources_average (NcWLBEModels *models, NcGalaxyWLObs *obs, NcGalaxyWLBinnedEstimatorSources *src, const gdouble reltol, const gboolean need2)
+{
+  const gint n = (gint) src->row->len;
+
+  if (n == 0)
+    return;
+
+  {
+    NcmIntegral1d *integ = _nc_wlbe_integ_new (reltol);
+
+    g_array_index (src->inv_sigma_crit, gdouble, 0) =
+      _nc_wlbe_mean_inv_sigma_crit (models, obs, g_array_index (src->row, guint, 0), integ,
+                                    need2 ? &g_array_index (src->inv_sigma_crit2, gdouble, 0) : NULL);
+    ncm_integral1d_free (integ);
+  }
+
+#ifdef _OPENMP
+  #pragma omp parallel if (!omp_in_parallel ())
+#endif /* _OPENMP */
+  {
+    NcmIntegral1d *integ = _nc_wlbe_integ_new (reltol);
+    gint k;
+
+#ifdef _OPENMP
+    #pragma omp for schedule(dynamic, 8)
+#endif /* _OPENMP */
+
+    for (k = 1; k < n; k++)
+    {
+      g_array_index (src->inv_sigma_crit, gdouble, k) =
+        _nc_wlbe_mean_inv_sigma_crit (models, obs, g_array_index (src->row, guint, k), integ,
+                                      need2 ? &g_array_index (src->inv_sigma_crit2, gdouble, k) : NULL);
+    }
+
+    ncm_integral1d_free (integ);
+  }
 }
 
 /**
@@ -701,8 +691,8 @@ _nc_wlbe_mean_inv_sigma_crit (NcWLBEModels *models, NcGalaxyWLObs *obs, const gu
  * Computes the mean of the inverse critical density of galaxy @i over its redshift density
  * (Umetsu et al. 2020, Eq. 6), $\langle\Sigma_\mathrm{cr}^{-1}\rangle = \int P(z)
  * \Sigma_\mathrm{cr}^{-1}(z)\,\mathrm{d}z / \int P(z)\,\mathrm{d}z$, with
- * $\Sigma_\mathrm{cr}^{-1} = 0$ in front of the cluster, by the rule of
- * #NcGalaxyWLBinnedEstimator:pz-intervals.
+ * $\Sigma_\mathrm{cr}^{-1} = 0$ in front of the cluster, to the relative
+ * tolerance #NcGalaxyWLBinnedEstimator:pz-reltol.
  *
  * Returns: $\langle\Sigma_\mathrm{cr}^{-1}\rangle$ in $\mathrm{Mpc}^2 / M_\odot$.
  */
@@ -710,18 +700,14 @@ gdouble
 nc_galaxy_wl_binned_estimator_mean_inv_sigma_crit (NcGalaxyWLBinnedEstimator *est, NcmMSet *mset, NcGalaxyWLObs *obs, const guint i, gdouble *mean_inv_sigma_crit2)
 {
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
-  GArray *s                                     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *w                                     = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmIntegral1d *integ                          = _nc_wlbe_integ_new (self->pz_reltol);
   NcWLBEModels models;
   gdouble mean1;
 
   _nc_wlbe_models (mset, &models);
-  _nc_wlbe_models_zf_begin (est, &models);
-  mean1 = _nc_wlbe_mean_inv_sigma_crit (&models, obs, i, self->pz_intervals, s, w, mean_inv_sigma_crit2);
-  _nc_wlbe_models_zf_end (&models);
+  mean1 = _nc_wlbe_mean_inv_sigma_crit (&models, obs, i, integ, mean_inv_sigma_crit2);
 
-  g_array_unref (s);
-  g_array_unref (w);
+  ncm_integral1d_free (integ);
 
   return mean1;
 }
@@ -874,8 +860,6 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
   const NcWLEllipticityFrame coord              = nc_galaxy_wl_obs_get_coord (obs);
   const gboolean has_e_rms                      = ncm_catalog_has_column (NCM_CATALOG (obs), NC_GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS);
   NcGalaxyWLBinnedEstimatorSources *src         = _nc_wlbe_sources_new ();
-  GArray *s                                     = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  GArray *w                                     = g_array_new (FALSE, FALSE, sizeof (gdouble));
   GArray *count                                 = g_array_new (FALSE, TRUE, sizeof (guint));
   GArray *compact                               = g_array_new (FALSE, TRUE, sizeof (guint));
   NcGalaxyWLObsBinned *binned;
@@ -896,7 +880,6 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
              NC_GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS);
 
   _nc_wlbe_models (mset, &models);
-  _nc_wlbe_models_zf_begin (est, &models);
 
   switch (nc_galaxy_wl_obs_get_ellip_conv (obs))
   {
@@ -946,12 +929,11 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
       const gdouble rot_re    = cos (2.0 * phi_f);
       const gdouble rot_im    = sin (2.0 * phi_f);
       /* (e1 + i e2) exp (-2 i phi) */
-      const gdouble e_t = e1 * rot_re + e2 * rot_im;
-      const gdouble e_x = e2 * rot_re - e1 * rot_im;
-      const gdouble c_t = c1 * rot_re + c2 * rot_im;
-      const gdouble c_x = c2 * rot_re - c1 * rot_im;
-      gdouble mean2;
-      const gdouble mean1 = _nc_wlbe_mean_inv_sigma_crit (&models, obs, i, self->pz_intervals, s, w, &mean2);
+      const gdouble e_t     = e1 * rot_re + e2 * rot_im;
+      const gdouble e_x     = e2 * rot_re - e1 * rot_im;
+      const gdouble c_t     = c1 * rot_re + c2 * rot_im;
+      const gdouble c_x     = c2 * rot_re - c1 * rot_im;
+      const gdouble pending = GSL_NAN; /* set by _nc_wlbe_sources_average () */
 
       g_array_append_val (src->row, i);
       g_array_append_val (src->bin, b);
@@ -967,12 +949,15 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
       g_array_append_val (src->m, m);
       g_array_append_val (src->std_noise, std_noise);
       g_array_append_val (src->e_rms, e_rms);
-      g_array_append_val (src->inv_sigma_crit, mean1);
-      g_array_append_val (src->inv_sigma_crit2, mean2);
+      g_array_append_val (src->inv_sigma_crit, pending);
+      g_array_append_val (src->inv_sigma_crit2, pending);
 
       g_array_index (count, guint, b)++;
     }
   }
+
+  _nc_wlbe_sources_average (&models, obs, src, self->pz_reltol,
+                            NC_GALAXY_WL_BINNED_ESTIMATOR_GET_CLASS (est)->needs_inv_sigma_crit2);
 
   src->len = src->row->len;
 
@@ -1077,10 +1062,7 @@ nc_galaxy_wl_binned_estimator_build (NcGalaxyWLBinnedEstimator *est, NcmMSet *ms
     g_array_unref (factor);
   }
 
-  _nc_wlbe_models_zf_end (&models);
   _nc_wlbe_sources_free (src);
-  g_array_unref (s);
-  g_array_unref (w);
   g_array_unref (count);
   g_array_unref (compact);
 
@@ -1111,25 +1093,16 @@ _nc_wlbe_exact_prepare (NcGalaxyWLBinnedEstimator *est, NcWLBEModels *models, Nc
   NcGalaxyWLBinnedEstimatorPrivate * const self = nc_galaxy_wl_binned_estimator_get_instance_private (est);
   NcmCatalog *members                           = nc_galaxy_wl_obs_binned_peek_members (binned);
   NcGalaxyWLObs *obs                            = nc_galaxy_wl_obs_binned_peek_source (binned);
-  guint64 crit_hash, z_cl_bits, z_hash = 0;
+  guint64 crit_hash, z_cl_bits;
 
   memcpy (&z_cl_bits, &models->z_cl, sizeof (z_cl_bits));
   crit_hash = ncm_model_state_get_pkey (NCM_MODEL (models->cosmo)) ^
               (ncm_model_state_get_pkey (NCM_MODEL (models->smd)) * 37U) ^
               (z_cl_bits * 43U);
 
-  /* The density of a redshift factor changes with the parameters of its models */
-  if (self->redshift_factor != NULL)
-  {
-    nc_galaxy_redshift_factor_prepare (self->redshift_factor, models->mset);
-    z_hash = nc_galaxy_redshift_factor_get_hash (self->redshift_factor);
-  }
-
   if ((members == self->exact_members) &&
       ncm_catalog_key_is_current (members, &self->exact_members_key) &&
       (crit_hash == self->exact_crit_hash) &&
-      (self->redshift_factor == self->exact_zf) &&
-      (z_hash == self->exact_z_hash) &&
       (self->exact_n_int == self->exact_intervals))
     return;
 
@@ -1141,15 +1114,12 @@ _nc_wlbe_exact_prepare (NcGalaxyWLBinnedEstimator *est, NcWLBEModels *models, Nc
     self->exact_members     = ncm_catalog_ref (members);
     self->exact_members_key = ncm_catalog_get_key (members);
     self->exact_crit_hash   = crit_hash;
-    self->exact_z_hash      = z_hash;
-    self->exact_zf          = self->redshift_factor;
     self->exact_n_int       = self->exact_intervals;
 
     g_array_set_size (self->exact_offset, 0);
     g_array_set_size (self->exact_s, 0);
     g_array_set_size (self->exact_w, 0);
 
-    _nc_wlbe_models_zf_begin (est, models);
 
     for (j = 0; j < n_members; j++)
     {
@@ -1165,8 +1135,6 @@ _nc_wlbe_exact_prepare (NcGalaxyWLBinnedEstimator *est, NcWLBEModels *models, Nc
 
       g_array_append_val (self->exact_offset, off);
     }
-
-    _nc_wlbe_models_zf_end (models);
   }
 }
 
