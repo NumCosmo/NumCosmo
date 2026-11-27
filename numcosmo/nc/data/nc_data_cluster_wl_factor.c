@@ -1239,6 +1239,13 @@ _nc_data_cluster_wl_factor_prepare (NcmData *data, NcmMSet *mset)
       nc_galaxy_halo_wl_clear (&self->halo_wl);
       self->halo_wl = nc_galaxy_halo_wl_new (lens);
       nc_wl_cluster_lens_free (lens);
+
+      /* The hashes of the new objects count from zero, so equal values would not mean the
+       * same state: 0 is below any count after a prepare, and every halo step and the lens
+       * table run again */
+      self->halo_radius_hash   = 0;
+      self->halo_profile_hash  = 0;
+      self->lens_geometry_hash = 0;
     }
 
     nc_galaxy_halo_wl_prepare (self->halo_wl, mset);
