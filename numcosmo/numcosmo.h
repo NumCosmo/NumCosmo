@@ -172,6 +172,7 @@
 #include <numcosmo/nc/lss/cluster/nc_cluster_pseudo_counts.h>
 #include <numcosmo/nc/lss/cluster/nc_cor_cluster_cmb_lens_limber.h>
 #include <numcosmo/nc/lss/wl/nc_wl_surface_mass_density.h>
+#include <numcosmo/nc/lss/wl/nc_wl_cluster_lens.h>
 #include <numcosmo/nc/lss/wl/nc_wl_ellipticity.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_cluster_mass.h>
 #include <numcosmo/nc/lss/wl/nc_reduced_shear_calib.h>

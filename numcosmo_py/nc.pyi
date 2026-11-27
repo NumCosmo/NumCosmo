@@ -23502,6 +23502,62 @@ class TransferFuncEHNoBaryonClass(GObject.GPointer):
 
     parent_class: TransferFuncClass = ...
 
+class WLClusterLens(GObject.Object):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLClusterLens(**properties)
+        new(dist:NumCosmo.Distance) -> NumCosmo.WLClusterLens
+
+    Object NcWLClusterLens
+
+    Properties from NcWLClusterLens:
+      distance -> NcDistance: distance
+        Distance object
+
+    Signals from GObject:
+      notify (GParam)
+    """
+
+    class Props:
+        distance: Distance
+
+    props: Props = ...
+    def __init__(self, distance: Distance = ...) -> None: ...
+    @staticmethod
+    def clear(lens: WLClusterLens) -> None: ...
+    def free(self) -> None: ...
+    def get_geometry_hash(self) -> int: ...
+    def get_profile_hash(self) -> int: ...
+    def get_z_cl(self) -> float: ...
+    @classmethod
+    def new(cls, dist: Distance) -> WLClusterLens: ...
+    def peek_distance(self) -> Distance: ...
+    def prepare(
+        self, cosmo: HICosmo, hp: HaloPosition, dp: HaloDensityProfile
+    ) -> None: ...
+    @staticmethod
+    def reduced_shear(sigma: float, mean_sigma: float, sigma_crit: float) -> float: ...
+    def reduced_shear_at(
+        self, cosmo: HICosmo, sigma: float, mean_sigma: float, z_s: float
+    ) -> float: ...
+    def ref(self) -> WLClusterLens: ...
+    def sigma(self, dp: HaloDensityProfile, R: float) -> typing.Tuple[float, float]: ...
+    def sigma_crit(self, cosmo: HICosmo, z_s: float) -> float: ...
+
+class WLClusterLensClass(GObject.GPointer):
+    r"""
+    :Constructors:
+
+    ::
+
+        WLClusterLensClass()
+    """
+
+    parent_class: GObject.ObjectClass = ...
+
 class WLSurfaceMassDensity(NumCosmoMath.Model):
     r"""
     :Constructors:

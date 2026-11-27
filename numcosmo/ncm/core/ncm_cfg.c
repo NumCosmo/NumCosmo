@@ -208,6 +208,7 @@
 #include "nc/lss/cluster/nc_cluster_pseudo_counts.h"
 #include "nc/lss/cluster/nc_cor_cluster_cmb_lens_limber.h"
 #include "nc/lss/wl/nc_wl_surface_mass_density.h"
+#include "nc/lss/wl/nc_wl_cluster_lens.h"
 #include "nc/lss/wl/nc_reduced_shear_cluster_mass.h"
 #include "nc/lss/wl/nc_reduced_shear_calib.h"
 #include "nc/lss/wl/nc_reduced_shear_calib_wtg.h"
@@ -1050,6 +1051,7 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
 
   ncm_cfg_register_obj (NC_TYPE_WL_SURFACE_MASS_DENSITY);
+  ncm_cfg_register_obj (NC_TYPE_WL_CLUSTER_LENS);
 
   ncm_cfg_register_obj (NC_TYPE_REDUCED_SHEAR_CLUSTER_MASS);
 

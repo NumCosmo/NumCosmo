@@ -826,6 +826,10 @@ lss_tests = [
         'name': 'nc_wl_ellipticity',
         'sources': ['nc/lss/wl/test_nc_wl_ellipticity.c'],
     },
+    {
+        'name': 'nc_wl_cluster_lens',
+        'sources': ['nc/lss/wl/test_nc_wl_cluster_lens.c'],
+    },
 ]
 
 # Galaxy and weak lensing tests
