@@ -104,16 +104,6 @@
 #endif /* _OPENMP */
 #endif /* NUMCOSMO_GIR_SCAN */
 
-/* The dataset that registered an #NcGalaxyWLObs as shared, stored as qdata
- * on that @obs by register_shared(). It is compared by address only and
- * never dereferenced. A clone holding the same @obs is not its owner: before
- * its first resample() writes rows it switches to a private copy of the
- * columns (see _obs_make_private()), so the realization one #NcmFitMC
- * worker draws does not reach the @obs the other workers read. */
-/* *INDENT-OFF* */
-G_DEFINE_QUARK (nc-data-cluster-wl-factor-shared-obs, _nc_data_cluster_wl_factor_shared_obs)
-/* *INDENT-ON* */
-
 /* Fallback -2lnP for a galaxy whose marginal is not positive. */
 #define NC_GALAXY_LOW_PROB 1.0e6
 
@@ -204,6 +194,10 @@ typedef struct _NcDataClusterWLFactorPrivate
    * only feeds gen(), which never evaluates the marginal, so the shape
    * factor's data_prepare() and the redshift grid are skipped. */
   gboolean resampling;
+
+  /* TRUE after ncm_data_notify_shared_duplicate(): @obs is shared with other duplicates,
+   * so the first resample() writes to a catalog of its own (_obs_make_private()). */
+  gboolean shared_duplicate;
 
   /* How many NC_GALAXY_LOW_PROB substitutions happened during the LAST eval_m2lnP. Zeroed at the top of every evaluation. */
   guint low_prob_count;
@@ -734,6 +728,7 @@ nc_data_cluster_wl_factor_init (NcDataClusterWLFactor *dcwlf)
   self->cheb_worst_relerr = 0.0;
 
   self->force_data_prepare = FALSE;
+  self->shared_duplicate   = FALSE;
 
   self->cheb_grid = NULL;
   self->z_nodes   = g_ptr_array_new_with_free_func (&_z_nodes_free_entry);
@@ -905,84 +900,32 @@ _nc_data_cluster_wl_factor_get_property (GObject *object, guint prop_id, GValue 
   }
 }
 
-/* Removes the owner mark register_shared() set on @obs, if this dataset set
- * it, so that a dataset later holding @obs alone resamples it in place. */
-static void
-_shared_obs_owner_clear (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *obs)
-{
-  if ((obs != NULL) && (g_object_get_qdata (G_OBJECT (obs), _nc_data_cluster_wl_factor_shared_obs_quark ()) == dcwlf))
-    g_object_set_qdata (G_OBJECT (obs), _nc_data_cluster_wl_factor_shared_obs_quark (), NULL);
-}
-
 /*
- * Replaces @obs by a copy of its columns that references its p(z) objects.
- * The columns, of the same names and types, are the rows resample() writes
- * (about 100 bytes per galaxy); the p(z) objects are most of the catalog and
- * are only read, so they are added with nc_galaxy_wl_obs_set_pz(), which
- * references them. The NcmCatalog calls get a NULL error: the columns come
- * from @obs itself, so a failure aborts.
+ * Gives this dataset a catalog of its own before resample() writes its rows: a shallow copy
+ * of @obs (ncm_catalog_shallow_dup()) with storage of its own for every column a resample
+ * can write, the columns the galaxy data reads. The other columns, the p(z) objects and the
+ * stored tables stay shared. The matrix of the DOUBLE columns is copied whole, once.
  */
 static void
 _obs_make_private (NcDataClusterWLFactorPrivate *self)
 {
-  NcGalaxyWLObs *shared  = self->obs;
-  NcmCatalog *shared_cat = NCM_CATALOG (shared);
-  const guint len        = ncm_catalog_len (shared_cat);
-  GStrv columns          = ncm_catalog_peek_columns (shared_cat);
-  const guint ncols      = g_strv_length (columns);
-  GArray *types          = g_array_sized_new (FALSE, FALSE, sizeof (NcmCatalogColType), ncols);
-  NcGalaxyWLObs *copy;
-  NcmCatalog *copy_cat;
-  guint i;
+  NcGalaxyWLObs *copy    = NC_GALAXY_WL_OBS (ncm_catalog_shallow_dup (NCM_CATALOG (self->obs)));
+  GList *columns         = nc_galaxy_shape_factor_data_required_columns (g_ptr_array_index (self->shape_data, 0));
+  gboolean matrix_copied = FALSE;
+  GList *l;
 
-  for (i = 0; i < ncols; i++)
+  for (l = columns; l != NULL; l = l->next)
   {
-    const NcmCatalogColType t = ncm_catalog_get_col_type (shared_cat, columns[i], NULL);
+    const gboolean in_matrix = (ncm_catalog_get_col_type (NCM_CATALOG (copy), l->data, NULL) == NCM_CATALOG_COL_TYPE_DOUBLE);
 
-    g_array_append_val (types, t);
+    if (!(in_matrix && matrix_copied))
+      ncm_catalog_replace_by_copy (NCM_CATALOG (copy), l->data, NULL);
+
+    matrix_copied = matrix_copied || in_matrix;
   }
 
-  copy = nc_galaxy_wl_obs_new (nc_galaxy_wl_obs_get_ellip_conv (shared),
-                               nc_galaxy_wl_obs_get_coord (shared),
-                               len, columns,
-                               (const NcmCatalogColType *) types->data, ncols);
-  copy_cat = NCM_CATALOG (copy);
-
-  ncm_matrix_memcpy (ncm_catalog_peek_data (copy_cat), ncm_catalog_peek_data (shared_cat));
-
-  for (i = 0; i < ncols; i++)
-  {
-    GArray *vals = NULL;
-
-    switch (g_array_index (types, NcmCatalogColType, i))
-    {
-      case NCM_CATALOG_COL_TYPE_INT:
-        ncm_catalog_get_int_column (shared_cat, columns[i], &vals, NULL);
-        ncm_catalog_set_int_column (copy_cat, columns[i], vals, NULL);
-        break;
-      case NCM_CATALOG_COL_TYPE_BOOL:
-        ncm_catalog_get_bool_column (shared_cat, columns[i], &vals, NULL);
-        ncm_catalog_set_bool_column (copy_cat, columns[i], vals, NULL);
-        break;
-      default:
-        break;
-    }
-
-    g_clear_pointer (&vals, g_array_unref);
-  }
-
-  ncm_catalog_mark_outdated (copy_cat);
-  g_array_unref (types);
-
-  for (i = 0; i < len; i++)
-  {
-    NcGalaxyPz *pz = nc_galaxy_wl_obs_peek_pz (shared, i);
-
-    if (pz != NULL)
-      nc_galaxy_wl_obs_set_pz (copy, i, pz);
-  }
-
-  nc_galaxy_wl_obs_free (shared);
+  g_list_free_full (columns, g_free);
+  nc_galaxy_wl_obs_free (self->obs);
   self->obs = copy;
 }
 
@@ -992,7 +935,6 @@ _nc_data_cluster_wl_factor_dispose (GObject *object)
   NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (object);
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
-  _shared_obs_owner_clear (dcwlf, self->obs);
   nc_galaxy_wl_obs_clear (&self->obs);
   nc_galaxy_position_factor_clear (&self->position_factor);
   nc_galaxy_redshift_factor_clear (&self->redshift_factor);
@@ -1740,12 +1682,13 @@ _nc_data_cluster_wl_factor_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (data);
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
   guint gal_i;
-  gpointer owner = g_object_get_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_obs_quark ());
 
-  /* @obs registered as shared by another dataset is read by every clone of
-   * it: this realization goes to a private copy of the columns instead. */
-  if ((owner != NULL) && (owner != dcwlf))
+  /* @obs is shared with the other duplicates: this realization goes to a catalog of its own */
+  if (self->shared_duplicate && (self->shape_data->len > 0))
+  {
     _obs_make_private (self);
+    self->shared_duplicate = FALSE;
+  }
 
   for (gal_i = 0; gal_i < self->shape_data->len; gal_i++)
   {
@@ -1789,21 +1732,27 @@ _nc_data_cluster_wl_factor_get_len (NcmData *data)
 }
 
 static void
+_nc_data_cluster_wl_factor_notify_shared_duplicate (NcmData *data)
+{
+  NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (NC_DATA_CLUSTER_WL_FACTOR (data));
+
+  self->shared_duplicate = TRUE;
+}
+
+static void
 _nc_data_cluster_wl_factor_register_shared (NcmData *data, NcmSerialize *ser)
 {
   NcDataClusterWLFactor *dcwlf              = NC_DATA_CLUSTER_WL_FACTOR (data);
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
 
-  /* Registers @obs so that clones share it read-only, and marks this dataset
-   * as its owner: a clone's resample() then writes to a private copy of the
-   * columns (see _obs_make_private()), while this dataset resamples @obs in
-   * place. */
+  /* Registers @obs so that the duplicates share it read-only; a duplicate notified by
+   * ncm_data_notify_shared_duplicate() writes its realization to a catalog of its own
+   * (see _obs_make_private()), while this dataset resamples @obs in place. */
   if (self->obs != NULL)
   {
     gchar *name = g_strdup_printf ("dcwlfObs%p", (void *) dcwlf);
 
     ncm_serialize_set (ser, self->obs, name, FALSE);
-    g_object_set_qdata (G_OBJECT (self->obs), _nc_data_cluster_wl_factor_shared_obs_quark (), dcwlf);
     g_free (name);
   }
 
@@ -2020,12 +1969,13 @@ nc_data_cluster_wl_factor_class_init (NcDataClusterWLFactorClass *klass)
                                                          G_VARIANT_TYPE ("ab"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  data_class->bootstrap       = TRUE;
-  data_class->resample        = &_nc_data_cluster_wl_factor_resample;
-  data_class->m2lnL_val       = &_nc_data_cluster_wl_factor_m2lnL_val;
-  data_class->get_length      = &_nc_data_cluster_wl_factor_get_len;
-  data_class->prepare         = &_nc_data_cluster_wl_factor_prepare;
-  data_class->register_shared = &_nc_data_cluster_wl_factor_register_shared;
+  data_class->bootstrap               = TRUE;
+  data_class->resample                = &_nc_data_cluster_wl_factor_resample;
+  data_class->m2lnL_val               = &_nc_data_cluster_wl_factor_m2lnL_val;
+  data_class->get_length              = &_nc_data_cluster_wl_factor_get_len;
+  data_class->prepare                 = &_nc_data_cluster_wl_factor_prepare;
+  data_class->register_shared         = &_nc_data_cluster_wl_factor_register_shared;
+  data_class->notify_shared_duplicate = &_nc_data_cluster_wl_factor_notify_shared_duplicate;
 }
 
 /**
@@ -2141,19 +2091,16 @@ nc_data_cluster_wl_factor_set_prec (NcDataClusterWLFactor *dcwlf, gdouble prec)
  * Sets the observables catalog @obs, triggering a structural rebuild of the
  * per-galaxy data cache on the next prepare() call.
  *
- * ncm_data_resample() writes the realization into @obs, except when @obs was
- * registered as shared (ncm_dataset_register_shared()) by another dataset,
- * as for the clones #NcmFitMC makes of a dataset: then this dataset first
- * switches to a copy of the columns of @obs that references its P(z)
- * splines, and nc_data_cluster_wl_factor_peek_obs() returns that copy.
+ * ncm_data_resample() writes the realization into @obs, except in a duplicate notified by
+ * ncm_data_notify_shared_duplicate(), as the clones #NcmFitMC makes of a dataset: then this
+ * dataset first switches to a shallow copy of @obs with its own storage for the columns a
+ * resample writes (ncm_catalog_shallow_dup()), and nc_data_cluster_wl_factor_peek_obs()
+ * returns that copy.
  */
 void
 nc_data_cluster_wl_factor_set_obs (NcDataClusterWLFactor *dcwlf, NcGalaxyWLObs *obs)
 {
   NcDataClusterWLFactorPrivate * const self = nc_data_cluster_wl_factor_get_instance_private (dcwlf);
-
-  if (obs != self->obs)
-    _shared_obs_owner_clear (dcwlf, self->obs);
 
   nc_galaxy_wl_obs_clear (&self->obs);
   self->obs         = nc_galaxy_wl_obs_ref (obs);

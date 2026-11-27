@@ -416,9 +416,9 @@ test_nc_data_cluster_wl_factor_cheb_share (TestNcDataClusterWLFactorCheb *test, 
 }
 
 /*
- * A copy that resamples a shared catalog with INT and BOOL columns writes its realization
- * to a private catalog of the same column names and types, with the same INT and BOOL
- * values, and leaves the shared catalog's rows as they were.
+ * A duplicate notified as shared that resamples a catalog with INT and BOOL columns writes
+ * its realization to a catalog of its own of the same column names and types, with the
+ * same INT and BOOL values, and leaves the shared catalog's rows as they were.
  */
 void
 test_nc_data_cluster_wl_factor_private_copy_types (TestNcDataClusterWLFactorCheb *test, gconstpointer pdata)
@@ -477,6 +477,7 @@ test_nc_data_cluster_wl_factor_private_copy_types (TestNcDataClusterWLFactorCheb
   ncm_dataset_append_data (dset, NCM_DATA (test->dcwlf));
   ncm_dataset_register_shared (dset, ser);
   dup = NC_DATA_CLUSTER_WL_FACTOR (ncm_serialize_dup_obj (ser, G_OBJECT (test->dcwlf)));
+  ncm_data_notify_shared_duplicate (NCM_DATA (dup));
   g_assert_true (nc_data_cluster_wl_factor_peek_obs (dup) == typed);
 
   ncm_data_resample (NCM_DATA (dup), test->mset, rng);

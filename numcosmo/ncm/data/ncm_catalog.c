@@ -34,12 +34,18 @@
  * and halo catalogs), as well as on its own as a simple table that converts cheaply
  * to/from external table formats.
  *
- * Each type has its own storage: the DOUBLE columns form the #NcmMatrix of
- * ncm_catalog_peek_data(), the INT columns a table of 64-bit integers and the BOOL
- * columns a table of #gboolean. The accessors of a type act only on columns of that
- * type (ncm_catalog_set() and ncm_catalog_get() on DOUBLE, the `_int` functions on
- * INT, the `_bool` functions on BOOL); a column of another type is an error
- * (%NCM_CATALOG_ERROR_WRONG_TYPE). String and other heterogeneous columns are
+ * The DOUBLE columns form the #NcmMatrix of ncm_catalog_peek_data(); every INT, BOOL and
+ * DOUBLE_SEPARATE column has an array of its own, of 64-bit integers, #gboolean and
+ * doubles. The accessors of a type act only on columns of that type
+ * (ncm_catalog_set() and ncm_catalog_get() on DOUBLE and DOUBLE_SEPARATE, the `_int`
+ * functions on INT, the `_bool` functions on BOOL); a column of another type is an error
+ * (%NCM_CATALOG_ERROR_WRONG_TYPE).
+ *
+ * ncm_catalog_shallow_dup() makes a catalog that references the storage of another, the
+ * matrix and every column array, and ncm_catalog_replace_by_copy() gives one column of a
+ * catalog storage of its own: a copy of its array, or of the whole matrix for a DOUBLE
+ * column. A catalog that writes only some columns of a shared catalog thus copies only
+ * those. String and other heterogeneous columns are
  * intentionally not handled here and are left to specialized subclasses or future
  * additive extensions.
  *
@@ -83,17 +89,15 @@ G_DEFINE_QUARK (ncm-catalog-error, ncm_catalog_error)
 
 typedef struct _NcmCatalogPrivate
 {
-  NcmMatrix *data;   /* the DOUBLE columns, nrows x n_double */
-  GArray *int_data;  /* the INT columns, gint64, row-major nrows x n_int */
-  GArray *bool_data; /* the BOOL columns, gboolean, row-major nrows x n_bool */
+  NcmMatrix *data;      /* the DOUBLE columns, nrows x n_double */
+  GPtrArray *col_data;  /* per column: NULL for DOUBLE, else its own array of len values */
+  GVariant *col_data_v; /* #NcmCatalog:col-data set before construction */
   GStrv columns;
   GHashTable *columns_hash;
   GArray *col_types;
-  GArray *col_pos; /* position of each column within the storage of its type */
+  GArray *col_pos; /* column of each DOUBLE column in the matrix */
   guint ncols;
   guint n_double;
-  guint n_int;
-  guint n_bool;
   guint len;
   NcmVarDict *meta;
   guint64 key;
@@ -104,8 +108,7 @@ enum
 {
   PROP_0,
   PROP_DATA,
-  PROP_INT_DATA,
-  PROP_BOOL_DATA,
+  PROP_COL_DATA,
   PROP_COLUMNS,
   PROP_COL_TYPES,
   PROP_LEN,
@@ -114,22 +117,28 @@ enum
 
 G_DEFINE_TYPE_WITH_PRIVATE (NcmCatalog, ncm_catalog, G_TYPE_OBJECT)
 
+/* col_data holds NULL for the DOUBLE columns */
+static void
+_ncm_catalog_col_free (gpointer a)
+{
+  if (a != NULL)
+    g_array_unref (a);
+}
+
 static void
 ncm_catalog_init (NcmCatalog *catalog)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
 
   self->data         = NULL;
-  self->int_data     = NULL;
-  self->bool_data    = NULL;
+  self->col_data     = g_ptr_array_new_with_free_func (&_ncm_catalog_col_free);
+  self->col_data_v   = NULL;
   self->columns      = NULL;
   self->columns_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
   self->col_types    = NULL;
   self->col_pos      = g_array_new (FALSE, TRUE, sizeof (guint));
   self->ncols        = 0;
   self->n_double     = 0;
-  self->n_int        = 0;
-  self->n_bool       = 0;
   self->len          = 0;
   self->key          = 1;
   self->meta         = NULL;
@@ -137,9 +146,9 @@ ncm_catalog_init (NcmCatalog *catalog)
 }
 
 static void _ncm_catalog_set_data (NcmCatalog *catalog, NcmMatrix *data);
-static void _ncm_catalog_set_int_data (NcmCatalog *catalog, GVariant *var);
-static void _ncm_catalog_set_bool_data (NcmCatalog *catalog, GVariant *var);
-static GVariant *_ncm_catalog_bool_data_to_variant (NcmCatalog *catalog);
+static void _ncm_catalog_set_col_data (NcmCatalog *catalog, GVariant *var);
+static GVariant *_ncm_catalog_col_data_to_variant (NcmCatalog *catalog);
+static NcmCatalog *_ncm_catalog_shallow_dup (NcmCatalog *catalog);
 
 static void
 _ncm_catalog_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -152,11 +161,8 @@ _ncm_catalog_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_DATA:
       _ncm_catalog_set_data (catalog, g_value_get_object (value));
       break;
-    case PROP_INT_DATA:
-      _ncm_catalog_set_int_data (catalog, g_value_get_variant (value));
-      break;
-    case PROP_BOOL_DATA:
-      _ncm_catalog_set_bool_data (catalog, g_value_get_variant (value));
+    case PROP_COL_DATA:
+      _ncm_catalog_set_col_data (catalog, g_value_get_variant (value));
       break;
     case PROP_COLUMNS:
       g_assert_null (self->columns);
@@ -199,11 +205,8 @@ _ncm_catalog_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_DATA:
       g_value_set_object (value, self->data);
       break;
-    case PROP_INT_DATA:
-      g_value_take_variant (value, ncm_cfg_array_to_variant (self->int_data, G_VARIANT_TYPE_INT64));
-      break;
-    case PROP_BOOL_DATA:
-      g_value_take_variant (value, _ncm_catalog_bool_data_to_variant (catalog));
+    case PROP_COL_DATA:
+      g_value_take_variant (value, _ncm_catalog_col_data_to_variant (catalog));
       break;
     case PROP_COLUMNS:
       g_value_set_boxed (value, self->columns);
@@ -272,25 +275,24 @@ _ncm_catalog_constructed (GObject *object)
     }
 
     g_array_set_size (self->col_pos, self->ncols);
+    g_ptr_array_set_size (self->col_data, self->ncols);
 
     for (i = 0; i < self->ncols; i++)
     {
-      guint *pos = &g_array_index (self->col_pos, guint, i);
+      const guint32 type = g_array_index (self->col_types, guint32, i);
 
-      switch (g_array_index (self->col_types, guint32, i))
+      if (type == NCM_CATALOG_COL_TYPE_DOUBLE)
       {
-        case NCM_CATALOG_COL_TYPE_DOUBLE:
-          *pos = self->n_double++;
-          break;
-        case NCM_CATALOG_COL_TYPE_INT:
-          *pos = self->n_int++;
-          break;
-        case NCM_CATALOG_COL_TYPE_BOOL:
-          *pos = self->n_bool++;
-          break;
-        default:                   /* LCOV_EXCL_LINE */
-          g_assert_not_reached (); /* LCOV_EXCL_LINE */
-          break;                   /* LCOV_EXCL_LINE */
+        g_array_index (self->col_pos, guint, i) = self->n_double++;
+      }
+      else
+      {
+        const guint size = (type == NCM_CATALOG_COL_TYPE_INT) ? sizeof (gint64) :
+                           (type == NCM_CATALOG_COL_TYPE_BOOL) ? sizeof (gboolean) : sizeof (gdouble);
+        GArray *a = g_array_sized_new (FALSE, TRUE, size, self->len);
+
+        g_array_set_size (a, self->len);
+        g_ptr_array_index (self->col_data, i) = a;
       }
     }
 
@@ -301,38 +303,20 @@ _ncm_catalog_constructed (GObject *object)
     }
     else if (ncm_matrix_ncols (self->data) != self->n_double)
     {
-      if ((ncm_matrix_ncols (self->data) == self->ncols) && (self->n_double < self->ncols))
-        g_error ("_ncm_catalog_constructed: the data matrix has all %u columns of the catalog, "
-                 "INT and BOOL columns included; a catalog written before they were stored "
-                 "apart from the double columns must be regenerated.", self->ncols);
-      else
-        g_error ("_ncm_catalog_constructed: the catalog has %u double columns, but the matrix has %u.",
-                 self->n_double, ncm_matrix_ncols (self->data));
-    }
-
-    if (self->int_data == NULL)
-    {
-      self->int_data = g_array_new (FALSE, TRUE, sizeof (gint64));
-      g_array_set_size (self->int_data, self->len * self->n_int);
-    }
-    else if (self->int_data->len != self->len * self->n_int)
-    {
-      g_error ("_ncm_catalog_constructed: the integer data has %u values for %u rows and %u INT columns.",
-               self->int_data->len, self->len, self->n_int);
-    }
-
-    if (self->bool_data == NULL)
-    {
-      self->bool_data = g_array_new (FALSE, TRUE, sizeof (gboolean));
-      g_array_set_size (self->bool_data, self->len * self->n_bool);
-    }
-    else if (self->bool_data->len != self->len * self->n_bool)
-    {
-      g_error ("_ncm_catalog_constructed: the boolean data has %u values for %u rows and %u BOOL columns.",
-               self->bool_data->len, self->len, self->n_bool);
+      g_error ("_ncm_catalog_constructed: the catalog has %u double columns, but the matrix has %u.",
+               self->n_double, ncm_matrix_ncols (self->data));
     }
 
     self->constructed = TRUE;
+
+    if (self->col_data_v != NULL)
+    {
+      GVariant *var = self->col_data_v;
+
+      self->col_data_v = NULL;
+      _ncm_catalog_set_col_data (catalog, var);
+      g_variant_unref (var);
+    }
   }
 }
 
@@ -343,8 +327,8 @@ _ncm_catalog_dispose (GObject *object)
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
 
   ncm_matrix_clear (&self->data);
-  g_clear_pointer (&self->int_data, g_array_unref);
-  g_clear_pointer (&self->bool_data, g_array_unref);
+  g_clear_pointer (&self->col_data, g_ptr_array_unref);
+  g_clear_pointer (&self->col_data_v, g_variant_unref);
   g_clear_pointer (&self->columns_hash, g_hash_table_unref);
   g_clear_pointer (&self->columns, g_strfreev);
   g_clear_pointer (&self->col_types, g_array_unref);
@@ -364,14 +348,15 @@ ncm_catalog_class_init (NcmCatalogClass *klass)
   object_class->get_property = &_ncm_catalog_get_property;
   object_class->constructed  = &_ncm_catalog_constructed;
   object_class->dispose      = &_ncm_catalog_dispose;
+  klass->shallow_dup         = &_ncm_catalog_shallow_dup;
 
   /**
    * NcmCatalog:data:
    *
    * The matrix of the %NCM_CATALOG_COL_TYPE_DOUBLE columns, in catalog order (rows are
    * entries). Setting it replaces those columns; it must have one column per DOUBLE
-   * column. In a catalog with INT or BOOL columns it must keep the number of rows; in
-   * one without, it replaces the number of rows.
+   * column. In a catalog with columns outside the matrix it must keep the number of rows;
+   * in one without, it replaces the number of rows.
    *
    */
   g_object_class_install_property (object_class,
@@ -383,33 +368,19 @@ ncm_catalog_class_init (NcmCatalogClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   /**
-   * NcmCatalog:int-data:
+   * NcmCatalog:col-data:
    *
-   * The %NCM_CATALOG_COL_TYPE_INT columns, in catalog order, as a row-major array of
-   * 64-bit integers with one value per row and INT column.
-   *
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_INT_DATA,
-                                   g_param_spec_variant ("int-data",
-                                                         "Integer data",
-                                                         "Catalog integer columns",
-                                                         G_VARIANT_TYPE ("ax"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-  /**
-   * NcmCatalog:bool-data:
-   *
-   * The %NCM_CATALOG_COL_TYPE_BOOL columns, in catalog order, as a row-major array of
-   * booleans with one value per row and BOOL column.
+   * The columns that are not DOUBLE, in catalog order, one variant each: an array of
+   * 64-bit integers for an INT column, of booleans for a BOOL column and of doubles for a
+   * DOUBLE_SEPARATE column, with one value per row.
    *
    */
   g_object_class_install_property (object_class,
-                                   PROP_BOOL_DATA,
-                                   g_param_spec_variant ("bool-data",
-                                                         "Boolean data",
-                                                         "Catalog boolean columns",
-                                                         G_VARIANT_TYPE ("ab"), NULL,
+                                   PROP_COL_DATA,
+                                   g_param_spec_variant ("col-data",
+                                                         "Column data",
+                                                         "Catalog columns outside the double matrix",
+                                                         G_VARIANT_TYPE ("av"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   /**
@@ -487,27 +458,15 @@ _ncm_catalog_set_data (NcmCatalog *catalog, NcmMatrix *data)
     return;
   }
 
-  /*
-   * Before construction the column types are not known yet, so constructed checks the
-   * size; afterwards it is checked here. Deserialization sets this property after
-   * construction, so a file of the old layout, with the INT and BOOL columns in the
-   * matrix, is refused here.
-   */
+  /* Before construction the column types are not known yet, so constructed checks the size */
   if (self->constructed)
   {
     if (ncm_matrix_ncols (data) != self->n_double)
-    {
-      if ((ncm_matrix_ncols (data) == self->ncols) && (self->n_double < self->ncols))
-        g_error ("_ncm_catalog_set_data: the data matrix has all %u columns of the catalog, "
-                 "INT and BOOL columns included; a catalog written before they were stored "
-                 "apart from the double columns must be regenerated.", self->ncols);
-      else
-        g_error ("_ncm_catalog_set_data: the catalog has %u double columns, but the matrix has %u.",
-                 self->n_double, ncm_matrix_ncols (data));
-    }
+      g_error ("_ncm_catalog_set_data: the catalog has %u double columns, but the matrix has %u.",
+               self->n_double, ncm_matrix_ncols (data));
 
-    if ((self->n_int + self->n_bool > 0) && (ncm_matrix_nrows (data) != self->len))
-      g_error ("_ncm_catalog_set_data: the catalog has %u rows and INT or BOOL columns, "
+    if ((self->n_double < self->ncols) && (ncm_matrix_nrows (data) != self->len))
+      g_error ("_ncm_catalog_set_data: the catalog has %u rows and columns outside the matrix, "
                "but the matrix has %u rows.", self->len, ncm_matrix_nrows (data));
   }
 
@@ -518,72 +477,211 @@ _ncm_catalog_set_data (NcmCatalog *catalog, NcmMatrix *data)
   self->key++;
 }
 
+/*
+ * Sets the columns outside the matrix from @var, an array with one variant per such column
+ * in catalog order. Before construction the column types are not known yet, so @var is
+ * kept and constructed sets it.
+ */
 static void
-_ncm_catalog_set_int_data (NcmCatalog *catalog, GVariant *var)
+_ncm_catalog_set_col_data (NcmCatalog *catalog, GVariant *var)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  GArray *int_data;
+  guint i, k = 0;
 
   if (var == NULL)
     return;
 
-  int_data = g_array_new (FALSE, TRUE, sizeof (gint64));
-  ncm_cfg_array_set_variant (int_data, var);
+  if (!self->constructed)
+  {
+    g_clear_pointer (&self->col_data_v, g_variant_unref);
+    self->col_data_v = g_variant_ref (var);
 
-  if (self->constructed && (int_data->len != self->len * self->n_int))
-    g_error ("_ncm_catalog_set_int_data: the catalog has %u rows and %u INT columns, "
-             "but the integer data has %u values.", self->len, self->n_int, int_data->len);
-
-  g_clear_pointer (&self->int_data, g_array_unref);
-  self->int_data = int_data;
-  self->key++;
-}
-
-static void
-_ncm_catalog_set_bool_data (NcmCatalog *catalog, GVariant *var)
-{
-  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  gsize n                        = 0;
-  const guchar *bytes;
-  GArray *bool_data;
-  gsize k;
-
-  if (var == NULL)
     return;
+  }
 
-  bytes     = g_variant_get_fixed_array (var, &n, sizeof (guchar));
-  bool_data = g_array_new (FALSE, TRUE, sizeof (gboolean));
-  g_array_set_size (bool_data, n);
+  for (i = 0; i < self->ncols; i++)
+  {
+    const guint32 type = g_array_index (self->col_types, guint32, i);
+    GArray *a          = g_ptr_array_index (self->col_data, i);
+    GVariant *cvar;
 
-  /* GVariant stores a boolean in one byte; in memory each value is a gboolean. */
-  for (k = 0; k < n; k++)
-    g_array_index (bool_data, gboolean, k) = (bytes[k] != 0);
+    if (a == NULL)
+      continue;
 
-  if (self->constructed && (bool_data->len != self->len * self->n_bool))
-    g_error ("_ncm_catalog_set_bool_data: the catalog has %u rows and %u BOOL columns, "
-             "but the boolean data has %u values.", self->len, self->n_bool, bool_data->len);
+    if (k >= g_variant_n_children (var))
+      g_error ("_ncm_catalog_set_col_data: %zu arrays for the columns outside the matrix, but column `%s' is one.",
+               g_variant_n_children (var), self->columns[i]);
 
-  g_clear_pointer (&self->bool_data, g_array_unref);
-  self->bool_data = bool_data;
+    cvar = g_variant_get_child_value (var, k++);
+    {
+      GVariant *col = g_variant_get_variant (cvar);
+
+      if (type == NCM_CATALOG_COL_TYPE_BOOL)
+      {
+        gsize n             = 0;
+        const guchar *bytes = g_variant_get_fixed_array (col, &n, sizeof (guchar));
+        gsize r;
+
+        /* GVariant stores a boolean in one byte; in memory each value is a gboolean */
+        g_array_set_size (a, n);
+
+        for (r = 0; r < n; r++)
+          g_array_index (a, gboolean, r) = (bytes[r] != 0);
+      }
+      else
+      {
+        ncm_cfg_array_set_variant (a, col);
+      }
+
+      if (a->len != self->len)
+        g_error ("_ncm_catalog_set_col_data: column `%s' has %u values for %u rows.", self->columns[i], a->len, self->len);
+
+      g_variant_unref (col);
+    }
+    g_variant_unref (cvar);
+  }
+
+  if (k != g_variant_n_children (var))
+    g_error ("_ncm_catalog_set_col_data: %zu arrays for %u columns outside the matrix.", g_variant_n_children (var), k);
+
   self->key++;
 }
 
 static GVariant *
-_ncm_catalog_bool_data_to_variant (NcmCatalog *catalog)
+_ncm_catalog_col_data_to_variant (NcmCatalog *catalog)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  const guint n                  = self->bool_data->len;
-  guchar *bytes                  = g_new (guchar, MAX (n, 1));
-  GVariant *var;
-  guint k;
+  GVariantBuilder builder;
+  guint i;
 
-  for (k = 0; k < n; k++)
-    bytes[k] = g_array_index (self->bool_data, gboolean, k) ? 1 : 0;
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("av"));
 
-  var = g_variant_new_fixed_array (G_VARIANT_TYPE_BOOLEAN, bytes, n, sizeof (guchar));
-  g_free (bytes);
+  for (i = 0; i < self->ncols; i++)
+  {
+    const guint32 type = g_array_index (self->col_types, guint32, i);
+    GArray *a          = g_ptr_array_index (self->col_data, i);
+    GVariant *col;
 
-  return g_variant_ref_sink (var);
+    if (a == NULL)
+      continue;
+
+    if (type == NCM_CATALOG_COL_TYPE_BOOL)
+    {
+      guchar *bytes = g_new (guchar, MAX (a->len, 1));
+      guint r;
+
+      for (r = 0; r < a->len; r++)
+        bytes[r] = g_array_index (a, gboolean, r) ? 1 : 0;
+
+      col = g_variant_ref_sink (g_variant_new_fixed_array (G_VARIANT_TYPE_BOOLEAN, bytes, a->len, sizeof (guchar)));
+      g_free (bytes);
+    }
+    else
+    {
+      col = ncm_cfg_array_to_variant (a, (type == NCM_CATALOG_COL_TYPE_INT) ? G_VARIANT_TYPE_INT64 : G_VARIANT_TYPE_DOUBLE);
+    }
+
+    g_variant_builder_add (&builder, "v", col);
+    g_variant_unref (col);
+  }
+
+  return g_variant_ref_sink (g_variant_builder_end (&builder));
+}
+
+/* A catalog of the same type, columns and rows that references the matrix and the column
+ * arrays of @catalog */
+static NcmCatalog *
+_ncm_catalog_shallow_dup (NcmCatalog *catalog)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  GVariant *types                = ncm_cfg_array_to_variant (self->col_types, G_VARIANT_TYPE ("u"));
+  NcmCatalog *dup                = g_object_new (G_OBJECT_TYPE (catalog),
+                                                 "columns", self->columns,
+                                                 "col-types", types,
+                                                 "len", self->len,
+                                                 "data", self->data,
+                                                 "meta", self->meta,
+                                                 NULL);
+  NcmCatalogPrivate * const dself = ncm_catalog_get_instance_private (dup);
+  guint i;
+
+  for (i = 0; i < self->ncols; i++)
+  {
+    GArray *a = g_ptr_array_index (self->col_data, i);
+
+    if (a != NULL)
+    {
+      g_array_unref (g_ptr_array_index (dself->col_data, i));
+      g_ptr_array_index (dself->col_data, i) = g_array_ref (a);
+    }
+  }
+
+  g_variant_unref (types);
+
+  return dup;
+}
+
+/**
+ * ncm_catalog_shallow_dup: (virtual shallow_dup)
+ * @catalog: a #NcmCatalog
+ *
+ * Creates a catalog of the same type, columns and rows that references the storage of
+ * @catalog: the matrix of the DOUBLE columns and the array of every other column. A
+ * subclass also gives the copy the rest of its state. A value written into a column of
+ * either catalog is seen by both until ncm_catalog_replace_by_copy() gives that column
+ * storage of its own.
+ *
+ * Returns: (transfer full): the new #NcmCatalog.
+ */
+NcmCatalog *
+ncm_catalog_shallow_dup (NcmCatalog *catalog)
+{
+  return NCM_CATALOG_GET_CLASS (catalog)->shallow_dup (catalog);
+}
+
+/**
+ * ncm_catalog_replace_by_copy:
+ * @catalog: a #NcmCatalog
+ * @col: a column name
+ * @error: a #GError for error reporting
+ *
+ * Replaces the storage of the column @col by a copy with the same values: the array of the
+ * column, or the whole matrix for a DOUBLE column, so a later write to @catalog no longer
+ * reaches a catalog that shares the storage (ncm_catalog_shallow_dup()). An unknown column
+ * sets @error.
+ */
+void
+ncm_catalog_replace_by_copy (NcmCatalog *catalog, const gchar *col, GError **error)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  guint *jp                      = g_hash_table_lookup (self->columns_hash, col);
+  GArray *a;
+
+  if (jp == NULL)
+  {
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_COLUMN_NOT_FOUND,
+                                "Column '%s' not found.", col);
+
+    return;
+  }
+
+  a = g_ptr_array_index (self->col_data, *jp);
+
+  if (a == NULL)
+  {
+    NcmMatrix *data = ncm_matrix_dup (self->data);
+
+    ncm_matrix_free (self->data);
+    self->data = data;
+  }
+  else
+  {
+    GArray *copy = g_array_sized_new (FALSE, FALSE, g_array_get_element_size (a), a->len);
+
+    g_array_append_vals (copy, a->data, a->len);
+    g_array_unref (a);
+    g_ptr_array_index (self->col_data, *jp) = copy;
+  }
 }
 
 /**
@@ -775,6 +873,9 @@ _ncm_catalog_col_type_name (const NcmCatalogColType type)
     case NCM_CATALOG_COL_TYPE_BOOL:
       return "BOOL";
 
+    case NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE:
+      return "DOUBLE_SEPARATE";
+
     default:                   /* LCOV_EXCL_LINE */
       g_assert_not_reached (); /* LCOV_EXCL_LINE */
 
@@ -783,9 +884,9 @@ _ncm_catalog_col_type_name (const NcmCatalogColType type)
 }
 
 /*
- * Finds the column @col and checks that its type is @type; sets @pos to the position of
- * the column within the storage of its type. On failure sets @error (or aborts when
- * @error is %NULL) and returns %FALSE.
+ * Finds the column @col and checks that its type is @type, DOUBLE standing for both DOUBLE
+ * and DOUBLE_SEPARATE; sets @pos to the index of the column. On failure sets @error (or
+ * aborts when @error is %NULL) and returns %FALSE.
  */
 static gboolean
 _ncm_catalog_locate_column (NcmCatalog *catalog, const gchar *col, const NcmCatalogColType type, guint *pos, GError **error)
@@ -804,7 +905,8 @@ _ncm_catalog_locate_column (NcmCatalog *catalog, const gchar *col, const NcmCata
 
   col_type = g_array_index (self->col_types, guint32, *jp);
 
-  if (col_type != type)
+  if ((col_type != type) &&
+      !((type == NCM_CATALOG_COL_TYPE_DOUBLE) && (col_type == NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE)))
   {
     ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_WRONG_TYPE,
                                 "Column '%s' is %s, not %s.", col,
@@ -813,7 +915,7 @@ _ncm_catalog_locate_column (NcmCatalog *catalog, const gchar *col, const NcmCata
     return FALSE;
   }
 
-  *pos = g_array_index (self->col_pos, guint, *jp);
+  *pos = *jp;
 
   return TRUE;
 }
@@ -869,12 +971,12 @@ ncm_catalog_get_data_index (NcmCatalog *catalog, const gchar *col, guint *j)
 /**
  * ncm_catalog_set:
  * @catalog: a #NcmCatalog
- * @col: a %NCM_CATALOG_COL_TYPE_DOUBLE column name
+ * @col: a %NCM_CATALOG_COL_TYPE_DOUBLE or %NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE column name
  * @i: a row index
  * @val: the value to set
  * @error: a #GError for error reporting
  *
- * Sets the value at row @i of the DOUBLE column @col. An unknown column, a column of
+ * Sets the value at row @i of the real-valued column @col. An unknown column, a column of
  * another type or a row index not smaller than ncm_catalog_len() sets @error.
  *
  */
@@ -886,7 +988,13 @@ ncm_catalog_set (NcmCatalog *catalog, const gchar *col, const guint i, gdouble v
 
   if (_ncm_catalog_locate (catalog, col, i, NCM_CATALOG_COL_TYPE_DOUBLE, &j, error))
   {
-    ncm_matrix_set (self->data, i, j, val);
+    GArray *a = g_ptr_array_index (self->col_data, j);
+
+    if (a == NULL)
+      ncm_matrix_set (self->data, i, g_array_index (self->col_pos, guint, j), val);
+    else
+      g_array_index (a, gdouble, i) = val;
+
     self->key++;
   }
 }
@@ -894,11 +1002,11 @@ ncm_catalog_set (NcmCatalog *catalog, const gchar *col, const guint i, gdouble v
 /**
  * ncm_catalog_get:
  * @catalog: a #NcmCatalog
- * @col: a %NCM_CATALOG_COL_TYPE_DOUBLE column name
+ * @col: a %NCM_CATALOG_COL_TYPE_DOUBLE or %NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE column name
  * @i: a row index
  * @error: a #GError for error reporting
  *
- * Gets the value at row @i of the DOUBLE column @col. An unknown column, a column of
+ * Gets the value at row @i of the real-valued column @col. An unknown column, a column of
  * another type or a row index not smaller than ncm_catalog_len() sets @error and
  * returns NaN.
  *
@@ -913,7 +1021,10 @@ ncm_catalog_get (NcmCatalog *catalog, const gchar *col, const guint i, GError **
   if (!_ncm_catalog_locate (catalog, col, i, NCM_CATALOG_COL_TYPE_DOUBLE, &j, error))
     return GSL_NAN;
 
-  return ncm_matrix_get (self->data, i, j);
+  if (g_ptr_array_index (self->col_data, j) == NULL)
+    return ncm_matrix_get (self->data, i, g_array_index (self->col_pos, guint, j));
+
+  return g_array_index ((GArray *) g_ptr_array_index (self->col_data, j), gdouble, i);
 }
 
 /**
@@ -937,7 +1048,7 @@ ncm_catalog_set_int (NcmCatalog *catalog, const gchar *col, const guint i, gint6
 
   if (_ncm_catalog_locate (catalog, col, i, NCM_CATALOG_COL_TYPE_INT, &j, error))
   {
-    g_array_index (self->int_data, gint64, i * self->n_int + j) = val;
+    g_array_index ((GArray *) g_ptr_array_index (self->col_data, j), gint64, i) = val;
     self->key++;
   }
 }
@@ -964,7 +1075,7 @@ ncm_catalog_get_int (NcmCatalog *catalog, const gchar *col, const guint i, GErro
   if (!_ncm_catalog_locate (catalog, col, i, NCM_CATALOG_COL_TYPE_INT, &j, error))
     return 0;
 
-  return g_array_index (self->int_data, gint64, i * self->n_int + j);
+  return g_array_index ((GArray *) g_ptr_array_index (self->col_data, j), gint64, i);
 }
 
 /**
@@ -987,7 +1098,7 @@ ncm_catalog_set_bool (NcmCatalog *catalog, const gchar *col, const guint i, gboo
 
   if (_ncm_catalog_locate (catalog, col, i, NCM_CATALOG_COL_TYPE_BOOL, &j, error))
   {
-    g_array_index (self->bool_data, gboolean, i * self->n_bool + j) = (val != FALSE);
+    g_array_index ((GArray *) g_ptr_array_index (self->col_data, j), gboolean, i) = (val != FALSE);
     self->key++;
   }
 }
@@ -1014,7 +1125,7 @@ ncm_catalog_get_bool (NcmCatalog *catalog, const gchar *col, const guint i, GErr
   if (!_ncm_catalog_locate (catalog, col, i, NCM_CATALOG_COL_TYPE_BOOL, &j, error))
     return FALSE;
 
-  return g_array_index (self->bool_data, gboolean, i * self->n_bool + j);
+  return g_array_index ((GArray *) g_ptr_array_index (self->col_data, j), gboolean, i);
 }
 
 /**
@@ -1032,7 +1143,7 @@ void
 ncm_catalog_set_int_column (NcmCatalog *catalog, const gchar *col, GArray *vals, GError **error)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  guint j, i;
+  guint j;
 
   if (!_ncm_catalog_locate_column (catalog, col, NCM_CATALOG_COL_TYPE_INT, &j, error))
     return;
@@ -1046,8 +1157,7 @@ ncm_catalog_set_int_column (NcmCatalog *catalog, const gchar *col, GArray *vals,
     return;
   }
 
-  for (i = 0; i < self->len; i++)
-    g_array_index (self->int_data, gint64, i * self->n_int + j) = g_array_index (vals, gint64, i);
+  memcpy (((GArray *) g_ptr_array_index (self->col_data, j))->data, vals->data, sizeof (gint64) * self->len);
 
   self->key++;
 }
@@ -1067,7 +1177,7 @@ void
 ncm_catalog_get_int_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  guint j, i;
+  guint j;
 
   if (!_ncm_catalog_locate_column (catalog, col, NCM_CATALOG_COL_TYPE_INT, &j, error))
     return;
@@ -1077,8 +1187,7 @@ ncm_catalog_get_int_column (NcmCatalog *catalog, const gchar *col, GArray **vals
 
   g_array_set_size (*vals, self->len);
 
-  for (i = 0; i < self->len; i++)
-    g_array_index (*vals, gint64, i) = g_array_index (self->int_data, gint64, i * self->n_int + j);
+  memcpy ((*vals)->data, ((GArray *) g_ptr_array_index (self->col_data, j))->data, sizeof (gint64) * self->len);
 }
 
 /**
@@ -1111,7 +1220,7 @@ ncm_catalog_set_bool_column (NcmCatalog *catalog, const gchar *col, GArray *vals
   }
 
   for (i = 0; i < self->len; i++)
-    g_array_index (self->bool_data, gboolean, i * self->n_bool + j) = (g_array_index (vals, gboolean, i) != FALSE);
+    g_array_index ((GArray *) g_ptr_array_index (self->col_data, j), gboolean, i) = (g_array_index (vals, gboolean, i) != FALSE);
 
   self->key++;
 }
@@ -1131,7 +1240,7 @@ void
 ncm_catalog_get_bool_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error)
 {
   NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
-  guint j, i;
+  guint j;
 
   if (!_ncm_catalog_locate_column (catalog, col, NCM_CATALOG_COL_TYPE_BOOL, &j, error))
     return;
@@ -1141,8 +1250,79 @@ ncm_catalog_get_bool_column (NcmCatalog *catalog, const gchar *col, GArray **val
 
   g_array_set_size (*vals, self->len);
 
-  for (i = 0; i < self->len; i++)
-    g_array_index (*vals, gboolean, i) = g_array_index (self->bool_data, gboolean, i * self->n_bool + j);
+  memcpy ((*vals)->data, ((GArray *) g_ptr_array_index (self->col_data, j))->data, sizeof (gboolean) * self->len);
+}
+
+/**
+ * ncm_catalog_set_double_column:
+ * @catalog: a #NcmCatalog
+ * @col: a %NCM_CATALOG_COL_TYPE_DOUBLE or %NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE column name
+ * @vals: (element-type gdouble): the values, one per row
+ * @error: a #GError for error reporting
+ *
+ * Sets every row of the real-valued column @col from @vals. An unknown column, a column of
+ * another type or a length of @vals other than ncm_catalog_len() sets @error.
+ *
+ */
+void
+ncm_catalog_set_double_column (NcmCatalog *catalog, const gchar *col, GArray *vals, GError **error)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  guint j, i;
+
+  if (!_ncm_catalog_locate_column (catalog, col, NCM_CATALOG_COL_TYPE_DOUBLE, &j, error))
+    return;
+
+  if (vals->len != self->len)
+  {
+    ncm_util_set_or_call_error (error, NCM_CATALOG_ERROR, NCM_CATALOG_ERROR_ROW_OUT_OF_RANGE,
+                                "ncm_catalog_set_double_column: %u values for the %u rows of column '%s'.",
+                                vals->len, self->len, col);
+
+    return;
+  }
+
+  if (g_ptr_array_index (self->col_data, j) == NULL)
+    for (i = 0; i < self->len; i++)
+      ncm_matrix_set (self->data, i, g_array_index (self->col_pos, guint, j), g_array_index (vals, gdouble, i));
+
+  else
+    memcpy (((GArray *) g_ptr_array_index (self->col_data, j))->data, vals->data, sizeof (gdouble) * self->len);
+
+  self->key++;
+}
+
+/**
+ * ncm_catalog_get_double_column:
+ * @catalog: a #NcmCatalog
+ * @col: a %NCM_CATALOG_COL_TYPE_DOUBLE or %NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE column name
+ * @vals: (out callee-allocates) (transfer full) (element-type gdouble): the values
+ * @error: a #GError for error reporting
+ *
+ * Gets every row of the real-valued column @col. A %NULL *@vals is created; otherwise it
+ * is resized. An unknown column or a column of another type sets @error.
+ *
+ */
+void
+ncm_catalog_get_double_column (NcmCatalog *catalog, const gchar *col, GArray **vals, GError **error)
+{
+  NcmCatalogPrivate * const self = ncm_catalog_get_instance_private (catalog);
+  guint j, i;
+
+  if (!_ncm_catalog_locate_column (catalog, col, NCM_CATALOG_COL_TYPE_DOUBLE, &j, error))
+    return;
+
+  if (*vals == NULL)
+    *vals = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), self->len);
+
+  g_array_set_size (*vals, self->len);
+
+  if (g_ptr_array_index (self->col_data, j) == NULL)
+    for (i = 0; i < self->len; i++)
+      g_array_index (*vals, gdouble, i) = ncm_matrix_get (self->data, i, g_array_index (self->col_pos, guint, j));
+
+  else
+    memcpy ((*vals)->data, ((GArray *) g_ptr_array_index (self->col_data, j))->data, sizeof (gdouble) * self->len);
 }
 
 /**
@@ -1239,8 +1419,9 @@ ncm_catalog_key_is_current (NcmCatalog *catalog, guint64 *saved_key)
  *
  * Computes the SHA-256 of the column names, the column types and the values of @catalog,
  * in this order: each name followed by a zero byte, the types as 32-bit integers, the
- * DOUBLE columns of each row as doubles, the INT columns as 64-bit integers, then the
- * BOOL columns as #gboolean, row by row, in the byte order of the machine. Two catalogs
+ * DOUBLE columns of each row as doubles, row by row, then every other column in catalog
+ * order (INT as 64-bit integers, BOOL as #gboolean, DOUBLE_SEPARATE as doubles), in the
+ * byte order of the machine. Two catalogs
  * with the same columns and the same values give the same hash on machines of the same
  * byte order; #NcmCatalog:meta does not enter it.
  *
@@ -1264,8 +1445,13 @@ ncm_catalog_get_data_hash (NcmCatalog *catalog)
       g_checksum_update (sum, (const guchar *) ncm_matrix_ptr (self->data, i, 0), sizeof (gdouble) * self->n_double);
 
 
-  g_checksum_update (sum, (const guchar *) self->int_data->data, sizeof (gint64) * self->int_data->len);
-  g_checksum_update (sum, (const guchar *) self->bool_data->data, sizeof (gboolean) * self->bool_data->len);
+  for (i = 0; i < self->ncols; i++)
+  {
+    GArray *a = g_ptr_array_index (self->col_data, i);
+
+    if (a != NULL)
+      g_checksum_update (sum, (const guchar *) a->data, g_array_get_element_size (a) * a->len);
+  }
 
   hash = g_strdup (g_checksum_get_string (sum));
   g_checksum_free (sum);

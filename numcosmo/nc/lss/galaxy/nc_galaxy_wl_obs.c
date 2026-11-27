@@ -225,16 +225,54 @@ _nc_galaxy_wl_obs_finalize (GObject *object)
   G_OBJECT_CLASS (nc_galaxy_wl_obs_parent_class)->finalize (object);
 }
 
+/*
+ * A catalog that references the columns of @catalog (see ncm_catalog_shallow_dup()), with
+ * its ellipticity convention and frame, references to its p(z) objects and its interpolants
+ * and CHEB_WEIGHTS grid. The tables are checked against the rows of the copy at their first
+ * use, as after deserialization.
+ */
+static NcmCatalog *
+_nc_galaxy_wl_obs_shallow_dup (NcmCatalog *catalog)
+{
+  NcGalaxyWLObsPrivate * const self  = nc_galaxy_wl_obs_get_instance_private (NC_GALAXY_WL_OBS (catalog));
+  NcmCatalog *dup                    = NCM_CATALOG_CLASS (nc_galaxy_wl_obs_parent_class)->shallow_dup (catalog);
+  NcGalaxyWLObsPrivate * const dself = nc_galaxy_wl_obs_get_instance_private (NC_GALAXY_WL_OBS (dup));
+  GArray *keys                       = ncm_obj_dict_int_keys (self->pz);
+  guint i;
+
+  dself->coord      = self->coord;
+  dself->ellip_conv = self->ellip_conv;
+
+  for (i = 0; i < keys->len; i++)
+  {
+    const gint key = g_array_index (keys, gint, i);
+
+    ncm_obj_dict_int_add (dself->pz, key, ncm_obj_dict_int_peek (self->pz, key));
+  }
+
+  g_array_unref (keys);
+
+  if (self->shape_interp != NULL)
+    dself->shape_interp = g_object_ref (self->shape_interp);
+
+  if (self->cheb_grid != NULL)
+    dself->cheb_grid = nc_galaxy_wl_obs_cheb_grid_ref (self->cheb_grid);
+
+  return dup;
+}
+
 static void
 nc_galaxy_wl_obs_class_init (NcGalaxyWLObsClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GObjectClass *object_class     = G_OBJECT_CLASS (klass);
+  NcmCatalogClass *catalog_class = NCM_CATALOG_CLASS (klass);
 
   object_class->get_property = &_nc_galaxy_wl_obs_get_property;
   object_class->set_property = &_nc_galaxy_wl_obs_set_property;
   object_class->constructed  = &_nc_galaxy_wl_obs_constructed;
   object_class->dispose      = &_nc_galaxy_wl_obs_dispose;
   object_class->finalize     = &_nc_galaxy_wl_obs_finalize;
+  catalog_class->shallow_dup = &_nc_galaxy_wl_obs_shallow_dup;
 
   /**
    * NcGalaxyWLObs:pz:

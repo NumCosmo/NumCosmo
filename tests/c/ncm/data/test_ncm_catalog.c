@@ -67,6 +67,8 @@ void test_ncm_catalog_data_hash_bytes (TestNcmCatalog *test, gconstpointer pdata
 void test_ncm_catalog_key (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_key_saved (TestNcmCatalog *test, gconstpointer pdata);
 void test_ncm_catalog_errors (void);
+void test_ncm_catalog_double_separate (void);
+void test_ncm_catalog_shallow_dup (void);
 void test_ncm_catalog_errors_subprocess (void);
 
 gint
@@ -156,6 +158,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_catalog_new,
               &test_ncm_catalog_invalid_col_type,
               &test_ncm_catalog_free);
+  g_test_add_func ("/ncm/catalog/double_separate", &test_ncm_catalog_double_separate);
+  g_test_add_func ("/ncm/catalog/shallow_dup", &test_ncm_catalog_shallow_dup);
 
   g_test_run ();
 
@@ -714,10 +718,10 @@ test_ncm_catalog_errors (void)
   const gchar *cases[][2] = {
     {"data_cols",  "*the catalog has 3 double columns, but the matrix has 2*"},
     {"data_null",  "*the data matrix of a catalog cannot be unset*"},
-    {"old_layout", "*the data matrix has all 3 columns of the catalog*must be regenerated*"},
-    {"rows",       "*the catalog has 4 rows and INT or BOOL columns, but the matrix has 5 rows*"},
-    {"int_len",    "*the catalog has 4 rows and 1 INT columns, but the integer data has 3 values*"},
-    {"bool_len",   "*the catalog has 4 rows and 1 BOOL columns, but the boolean data has 3 values*"},
+    {"rows",       "*the catalog has 4 rows and columns outside the matrix, but the matrix has 5 rows*"},
+    {"int_len",    "*column `dec' has 3 values for 4 rows*"},
+    {"bool_len",   "*column `dec' has 3 values for 4 rows*"},
+    {"col_count",  "*2 arrays for 1 columns outside the matrix*"},
     {"duplicate",  "*column `ra' appears more than once*"},
     {"types_len",  "*2 column types for 3 columns*"},
     {"types_val",  "*column `dec' has the invalid type 7*"},
@@ -742,30 +746,44 @@ test_ncm_catalog_errors_subprocess (void)
   const gchar *which       = g_getenv ("TEST_NCM_CATALOG_ERROR");
   const gchar *col_names[] = {"ra", "dec", "z", NULL};
 
-  if ((g_strcmp0 (which, "old_layout") == 0) || (g_strcmp0 (which, "rows") == 0) ||
-      (g_strcmp0 (which, "int_len") == 0) || (g_strcmp0 (which, "bool_len") == 0))
+  if ((g_strcmp0 (which, "rows") == 0) || (g_strcmp0 (which, "int_len") == 0) ||
+      (g_strcmp0 (which, "bool_len") == 0) || (g_strcmp0 (which, "col_count") == 0))
   {
     const NcmCatalogColType int_types[]  = {NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_INT, NCM_CATALOG_COL_TYPE_DOUBLE};
     const NcmCatalogColType bool_types[] = {NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_BOOL, NCM_CATALOG_COL_TYPE_DOUBLE};
-    const gint64 ints[]                  = {1, 2, 3};
+    const gint64 ints[]                  = {1, 2, 3, 4};
     const guchar bools[]                 = {1, 0, 1};
+    GVariant *int3                       = g_variant_new_fixed_array (G_VARIANT_TYPE_INT64, ints, 3, sizeof (gint64));
+    GVariant *int4                       = g_variant_new_fixed_array (G_VARIANT_TYPE_INT64, ints, 4, sizeof (gint64));
+    GVariant *bool3                      = g_variant_new_fixed_array (G_VARIANT_TYPE_BOOLEAN, bools, 3, sizeof (guchar));
 
     if (g_strcmp0 (which, "bool_len") == 0)
     {
       NcmCatalog *catalog = ncm_catalog_new_full (4, (GStrv) col_names, bool_types, 3);
+      GVariant *cols[]    = {g_variant_new_variant (bool3)};
 
-      g_object_set (catalog, "bool-data", g_variant_new_fixed_array (G_VARIANT_TYPE_BOOLEAN, bools, 3, sizeof (guchar)), NULL);
+      g_object_set (catalog, "col-data", g_variant_new_array (G_VARIANT_TYPE_VARIANT, cols, 1), NULL);
     }
     else
     {
       NcmCatalog *catalog = ncm_catalog_new_full (4, (GStrv) col_names, int_types, 3);
 
-      if (g_strcmp0 (which, "old_layout") == 0)
-        g_object_set (catalog, "data", ncm_matrix_new (4, 3), NULL);
-      else if (g_strcmp0 (which, "rows") == 0)
+      if (g_strcmp0 (which, "rows") == 0)
+      {
         g_object_set (catalog, "data", ncm_matrix_new (5, 2), NULL);
+      }
+      else if (g_strcmp0 (which, "int_len") == 0)
+      {
+        GVariant *cols[] = {g_variant_new_variant (int3)};
+
+        g_object_set (catalog, "col-data", g_variant_new_array (G_VARIANT_TYPE_VARIANT, cols, 1), NULL);
+      }
       else
-        g_object_set (catalog, "int-data", g_variant_new_fixed_array (G_VARIANT_TYPE_INT64, ints, 3, sizeof (gint64)), NULL);
+      {
+        GVariant *cols[] = {g_variant_new_variant (int4), g_variant_new_variant (int4)};
+
+        g_object_set (catalog, "col-data", g_variant_new_array (G_VARIANT_TYPE_VARIANT, cols, 2), NULL);
+      }
     }
   }
   else if (g_str_has_prefix (which, "data"))
@@ -950,5 +968,105 @@ test_ncm_catalog_data_hash_bytes (TestNcmCatalog *test, gconstpointer pdata)
     g_checksum_free (sum);
     g_free (hash);
   }
+}
+
+/*
+ * A DOUBLE_SEPARATE column is outside the matrix and is read and written by the double
+ * accessors, one value or a whole column, and keeps its values through serialization.
+ */
+void
+test_ncm_catalog_double_separate (void)
+{
+  const gchar *names[]            = {"ra", "w", "id", NULL};
+  const NcmCatalogColType types[] = {NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE, NCM_CATALOG_COL_TYPE_INT};
+  NcmCatalog *catalog             = ncm_catalog_new_full (3, (GStrv) names, types, 3);
+  NcmSerialize *ser               = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  GArray *w                       = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  GArray *out                     = NULL;
+  NcmCatalog *dup;
+  guint i, j;
+
+  g_assert_cmpuint (ncm_matrix_ncols (ncm_catalog_peek_data (catalog)), ==, 1);
+  g_assert_false (ncm_catalog_get_data_index (catalog, "w", &j));
+
+  for (i = 0; i < 3; i++)
+  {
+    const gdouble wi = 0.5 + i;
+
+    g_array_append_val (w, wi);
+    ncm_catalog_set (catalog, "ra", i, 10.0 + i, NULL);
+    ncm_catalog_set_int (catalog, "id", i, TEST_NCM_CATALOG_BIG_ID + i, NULL);
+  }
+
+  ncm_catalog_set_double_column (catalog, "w", w, NULL);
+  ncm_catalog_set (catalog, "w", 2, 7.25, NULL);
+  ncm_catalog_get_double_column (catalog, "ra", &out, NULL);
+  g_assert_cmpfloat (g_array_index (out, gdouble, 1), ==, 11.0);
+
+  dup = NCM_CATALOG (ncm_serialize_dup_obj (ser, G_OBJECT (catalog)));
+  g_assert_cmpint (ncm_catalog_get_col_type (dup, "w", NULL), ==, NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE);
+  g_assert_cmpfloat (ncm_catalog_get (dup, "w", 0, NULL), ==, 0.5);
+  g_assert_cmpfloat (ncm_catalog_get (dup, "w", 2, NULL), ==, 7.25);
+  g_assert_cmpint (ncm_catalog_get_int (dup, "id", 2, NULL), ==, TEST_NCM_CATALOG_BIG_ID + 2);
+  g_assert_cmpfloat (ncm_catalog_get (dup, "ra", 2, NULL), ==, 12.0);
+
+  g_array_unref (w);
+  g_array_unref (out);
+  ncm_catalog_free (dup);
+  ncm_serialize_free (ser);
+  ncm_catalog_free (catalog);
+}
+
+/*
+ * A shallow copy shares every column with its source until ncm_catalog_replace_by_copy()
+ * gives a column storage of its own: then a write to the copy no longer reaches the source,
+ * while the columns not replaced stay shared. Replacing a DOUBLE column copies the matrix.
+ */
+void
+test_ncm_catalog_shallow_dup (void)
+{
+  const gchar *names[]            = {"ra", "dec", "id", "w"};
+  const gchar *strv[]             = {"ra", "dec", "id", "w", NULL};
+  const NcmCatalogColType types[] = {
+    NCM_CATALOG_COL_TYPE_DOUBLE, NCM_CATALOG_COL_TYPE_DOUBLE,
+    NCM_CATALOG_COL_TYPE_INT, NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE
+  };
+  NcmCatalog *src  = ncm_catalog_new_full (2, (GStrv) strv, types, 4);
+  NcmCatalog *copy = ncm_catalog_shallow_dup (src);
+  gchar *hash_src, *hash_copy;
+
+  g_assert_true (G_OBJECT_TYPE (copy) == G_OBJECT_TYPE (src));
+  g_assert_true (ncm_catalog_peek_data (copy) == ncm_catalog_peek_data (src));
+
+  hash_src  = ncm_catalog_get_data_hash (src);
+  hash_copy = ncm_catalog_get_data_hash (copy);
+  g_assert_cmpstr (hash_src, ==, hash_copy);
+  g_free (hash_src);
+  g_free (hash_copy);
+
+  /* Shared: a write to the copy is seen by the source */
+  ncm_catalog_set (copy, "ra", 0, 1.0, NULL);
+  ncm_catalog_set_int (copy, "id", 0, 5, NULL);
+  ncm_catalog_set (copy, "w", 0, 2.0, NULL);
+  g_assert_cmpfloat (ncm_catalog_get (src, "ra", 0, NULL), ==, 1.0);
+  g_assert_cmpint (ncm_catalog_get_int (src, "id", 0, NULL), ==, 5);
+  g_assert_cmpfloat (ncm_catalog_get (src, "w", 0, NULL), ==, 2.0);
+
+  /* Replaced: the copy keeps the values and writes only to itself */
+  ncm_catalog_replace_by_copy (copy, names[0], NULL);
+  ncm_catalog_replace_by_copy (copy, names[2], NULL);
+  g_assert_true (ncm_catalog_peek_data (copy) != ncm_catalog_peek_data (src));
+  g_assert_cmpfloat (ncm_catalog_get (copy, "ra", 0, NULL), ==, 1.0);
+  g_assert_cmpint (ncm_catalog_get_int (copy, "id", 0, NULL), ==, 5);
+
+  ncm_catalog_set (copy, "dec", 1, 3.0, NULL);
+  ncm_catalog_set_int (copy, "id", 1, 6, NULL);
+  ncm_catalog_set (copy, "w", 1, 4.0, NULL);
+  g_assert_cmpfloat (ncm_catalog_get (src, "dec", 1, NULL), ==, 0.0);
+  g_assert_cmpint (ncm_catalog_get_int (src, "id", 1, NULL), ==, 0);
+  g_assert_cmpfloat (ncm_catalog_get (src, "w", 1, NULL), ==, 4.0);
+
+  ncm_catalog_free (copy);
+  ncm_catalog_free (src);
 }
 

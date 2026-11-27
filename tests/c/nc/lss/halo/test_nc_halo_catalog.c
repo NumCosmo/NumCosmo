@@ -47,6 +47,7 @@ void test_nc_halo_catalog_linkage (TestNcHaloCatalog *test, gconstpointer pdata)
 void test_nc_halo_catalog_find_children (TestNcHaloCatalog *test, gconstpointer pdata);
 void test_nc_halo_catalog_no_linkage (TestNcHaloCatalog *test, gconstpointer pdata);
 void test_nc_halo_catalog_bad_column (TestNcHaloCatalog *test, gconstpointer pdata);
+void test_nc_halo_catalog_shallow_dup (TestNcHaloCatalog *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -83,6 +84,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/halo_catalog/bad_column", TestNcHaloCatalog, NULL,
               &test_nc_halo_catalog_new,
               &test_nc_halo_catalog_bad_column,
+              &test_nc_halo_catalog_free);
+
+  g_test_add ("/nc/halo_catalog/shallow_dup", TestNcHaloCatalog, NULL,
+              &test_nc_halo_catalog_new,
+              &test_nc_halo_catalog_shallow_dup,
               &test_nc_halo_catalog_free);
 
   g_test_run ();
@@ -222,5 +228,38 @@ test_nc_halo_catalog_bad_column (TestNcHaloCatalog *test, gconstpointer pdata)
   g_clear_error (&error);
 
   NCM_TEST_FREE (nc_halo_catalog_free, hcat);
+}
+
+void
+test_nc_halo_catalog_shallow_dup (TestNcHaloCatalog *test, gconstpointer pdata)
+{
+  NcmCatalog *src     = NCM_CATALOG (test->hcat);
+  NcmCatalog *dup     = ncm_catalog_shallow_dup (src);
+  NcHaloCatalog *hdup = NC_HALO_CATALOG (dup);
+  GError *error       = NULL;
+
+  g_assert_true (NC_IS_HALO_CATALOG (dup));
+  g_assert_cmpuint (nc_halo_catalog_get_kind (hdup), ==, NC_HALO_CATALOG_KIND_CLUSTER);
+  g_assert_cmpstr (nc_halo_catalog_peek_id_col (hdup), ==, "cluster_id");
+  g_assert_cmpstr (nc_halo_catalog_peek_parent_id_col (hdup), ==, "parent_id");
+  g_assert_cmpint (nc_halo_catalog_get_parent_id (hdup, 2, &error), ==, 20);
+  g_assert_no_error (error);
+
+  /* The column arrays are shared until replaced by a copy */
+  ncm_catalog_set_int (src, "cluster_id", 1, 201, &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (nc_halo_catalog_get_id (hdup, 1, &error), ==, 201);
+  g_assert_no_error (error);
+
+  ncm_catalog_replace_by_copy (dup, "cluster_id", &error);
+  g_assert_no_error (error);
+  ncm_catalog_set_int (dup, "cluster_id", 1, 301, &error);
+  g_assert_no_error (error);
+  g_assert_cmpint (nc_halo_catalog_get_id (test->hcat, 1, &error), ==, 201);
+  g_assert_no_error (error);
+  g_assert_cmpint (nc_halo_catalog_get_id (hdup, 1, &error), ==, 301);
+  g_assert_no_error (error);
+
+  NCM_TEST_FREE (nc_halo_catalog_free, hdup);
 }
 

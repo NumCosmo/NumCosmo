@@ -270,8 +270,8 @@ def test_without_register_shared_obs_is_deep_copied_across_dups():
 
 def _shared_dup_setup(n=6):
     """A dataset registered as shared and one dup made through that
-    serializer, as NcmFitMC makes each worker's clone: the dup holds the
-    same obs object as the original."""
+    serializer and notified as a shared duplicate, as NcmFitMC makes each
+    worker's clone: the dup holds the same obs object as the original."""
     dcwlf, mset = _build_multi_galaxy_setup(n)
     dcwlf.set_integ_method(Nc.DataClusterWLIntegMethod.CHEB_WEIGHTS)
 
@@ -281,6 +281,7 @@ def _shared_dup_setup(n=6):
     dset.register_shared(ser)
 
     dup = duplicate_via_serialization(dcwlf, ser)
+    dup.notify_shared_duplicate()
     assert dup.peek_obs() is dcwlf.peek_obs()
 
     return dcwlf, dup, mset

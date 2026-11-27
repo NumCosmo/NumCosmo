@@ -79,6 +79,7 @@ static void test_nc_galaxy_wl_obs_cheb_grid (TestNcGalaxyWLObs *test, gconstpoin
 static void test_nc_galaxy_wl_obs_cheb_grid_errors (void);
 static void test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess (void);
 static void test_nc_galaxy_wl_obs_typed_columns (void);
+static void test_nc_galaxy_wl_obs_shallow_dup (TestNcGalaxyWLObs *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -169,6 +170,10 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/cheb_grid/errors", &test_nc_galaxy_wl_obs_cheb_grid_errors);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/cheb_grid/errors/subprocess", &test_nc_galaxy_wl_obs_cheb_grid_errors_subprocess);
   g_test_add_func ("/numcosmo/nc_galaxy_wl_obs/typed_columns", &test_nc_galaxy_wl_obs_typed_columns);
+  g_test_add ("/numcosmo/nc_galaxy_wl_obs/shallow_dup", TestNcGalaxyWLObs, NULL,
+              &test_nc_galaxy_wl_obs_new_pz,
+              &test_nc_galaxy_wl_obs_shallow_dup,
+              &test_nc_galaxy_wl_obs_free);
 
   g_test_run ();
 
@@ -1104,5 +1109,47 @@ test_nc_galaxy_wl_obs_typed_columns (void)
   ncm_catalog_free (dup);
   ncm_serialize_free (ser);
   nc_galaxy_wl_obs_free (obs);
+}
+
+/*
+ * A shallow duplicate keeps the frame, the ellipticity convention, the p(z) objects and the
+ * Chebyshev grid of the source.
+ */
+static void
+test_nc_galaxy_wl_obs_shallow_dup (TestNcGalaxyWLObs *test, gconstpointer pdata)
+{
+  NcmVector *zv = ncm_vector_new (8);
+  NcmVector *pv = ncm_vector_new (8);
+  NcGalaxyWLObsChebGrid *grid;
+  NcGalaxyPzBSplineSqrt *pz;
+  NcGalaxyWLObs *dup;
+  guint k;
+
+  for (k = 0; k < 8; k++)
+  {
+    ncm_vector_set (zv, k, 0.1 * k);
+    ncm_vector_set (pv, k, 1.0 + k);
+  }
+
+  pz = nc_galaxy_pz_bspline_sqrt_new_from_table (zv, pv);
+  nc_galaxy_wl_obs_set_pz (test->obs, 0, NC_GALAXY_PZ (pz));
+
+  grid = _test_nc_galaxy_wl_obs_cheb_grid_new (test->obs);
+  nc_galaxy_wl_obs_set_cheb_grid (test->obs, grid);
+
+  dup = NC_GALAXY_WL_OBS (ncm_catalog_shallow_dup (NCM_CATALOG (test->obs)));
+
+  g_assert_true (NC_IS_GALAXY_WL_OBS (dup));
+  g_assert_cmpint (nc_galaxy_wl_obs_get_coord (dup), ==, nc_galaxy_wl_obs_get_coord (test->obs));
+  g_assert_cmpint (nc_galaxy_wl_obs_get_ellip_conv (dup), ==, nc_galaxy_wl_obs_get_ellip_conv (test->obs));
+  g_assert_true (nc_galaxy_wl_obs_peek_pz (dup, 0) == NC_GALAXY_PZ (pz));
+  g_assert_true (nc_galaxy_wl_obs_peek_cheb_grid (dup) == grid);
+  g_assert_true (ncm_catalog_peek_data (NCM_CATALOG (dup)) == ncm_catalog_peek_data (NCM_CATALOG (test->obs)));
+
+  NCM_TEST_FREE (nc_galaxy_wl_obs_free, dup);
+  nc_galaxy_wl_obs_cheb_grid_free (grid);
+  nc_galaxy_pz_free (NC_GALAXY_PZ (pz));
+  ncm_vector_free (zv);
+  ncm_vector_free (pv);
 }
 

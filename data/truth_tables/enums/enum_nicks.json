@@ -7,6 +7,10 @@
     "nick": "double",
     "type": "Ncm.CatalogColType"
   },
+  "NCM_CATALOG_COL_TYPE_DOUBLE_SEPARATE": {
+    "nick": "double-separate",
+    "type": "Ncm.CatalogColType"
+  },
   "NCM_CATALOG_COL_TYPE_INT": {
     "nick": "int",
     "type": "Ncm.CatalogColType"
