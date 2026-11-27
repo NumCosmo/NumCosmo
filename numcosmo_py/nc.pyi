@@ -9727,6 +9727,7 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
+        workspace: None,
         n: int,
         t: float,
         u_1: float,
@@ -9760,6 +9761,7 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
+        workspace: None,
         n: int,
         g_1: float,
         g_2: float,
@@ -9810,6 +9812,7 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
+        workspace: None,
         t: typing.Sequence[float] | npt.NDArray[np.float64],
         u_1: float,
         u_2: float,
@@ -9822,6 +9825,7 @@ class GalaxyShapeFactor(GObject.Object):
         self,
         pop: GalaxyShapePop,
         data: GalaxyShapeFactorData,
+        workspace: None,
         g_1: typing.Sequence[float] | npt.NDArray[np.float64],
         g_2: typing.Sequence[float] | npt.NDArray[np.float64],
         want_log: bool,
@@ -9903,6 +9907,7 @@ class GalaxyShapeFactorClass(GObject.GPointer):
             GalaxyShapeFactor,
             GalaxyShapePop,
             GalaxyShapeFactorData,
+            None,
             int,
             float,
             float,
@@ -9918,6 +9923,7 @@ class GalaxyShapeFactorClass(GObject.GPointer):
             GalaxyShapeFactor,
             GalaxyShapePop,
             GalaxyShapeFactorData,
+            None,
             int,
             float,
             float,
@@ -9931,6 +9937,8 @@ class GalaxyShapeFactorClass(GObject.GPointer):
         ],
         bool,
     ] = ...
+    workspace_get: typing.Callable[[GalaxyShapeFactor], None] = ...
+    workspace_return: typing.Callable[[GalaxyShapeFactor, None], None] = ...
     padding: list[None] = ...
 
 class GalaxyShapeFactorData(GObject.GBoxed):
