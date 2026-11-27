@@ -152,6 +152,7 @@ void test_nc_galaxy_shape_factor_spectral_eval_nodes_range_outside_subprocess (v
 void test_nc_galaxy_shape_factor_spectral_restrict_range (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_restrict_range_cdelta (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
+void test_nc_galaxy_shape_factor_spectral_restrict_range_cm_relation (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_eval_line (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_rebuild (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
 void test_nc_galaxy_shape_factor_spectral_interp_data_prepare (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata);
@@ -223,6 +224,10 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/galaxy_shape_factor_spectral/restrict_range/centre_box", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
               &test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box,
+              &test_nc_galaxy_shape_factor_spectral_free);
+  g_test_add ("/nc/galaxy_shape_factor_spectral/restrict_range/cm_relation", TestNcGalaxyShapeFactorSpectral, NULL,
+              &test_nc_galaxy_shape_factor_spectral_new,
+              &test_nc_galaxy_shape_factor_spectral_restrict_range_cm_relation,
               &test_nc_galaxy_shape_factor_spectral_free);
   g_test_add ("/nc/galaxy_shape_factor_spectral/eval_array", TestNcGalaxyShapeFactorSpectral, NULL,
               &test_nc_galaxy_shape_factor_spectral_new,
@@ -2179,10 +2184,10 @@ test_nc_galaxy_shape_factor_spectral_eval_nodes (TestNcGalaxyShapeFactorSpectral
   nc_galaxy_redshift_factor_data_unref (z_data);
 }
 
-/* A shape factor with restrict-range, and the prepared data of one galaxy at right ascension
- * ra (degrees from the halo center) with its interpolant built */
+/* A shape factor with restrict-range, and the prepared data of one galaxy at (ra, dec)
+ * [deg] with its interpolant built */
 static NcGalaxyShapeFactorSpectral *
-_restrict_range_build (TestNcGalaxyShapeFactorSpectral *test, const gboolean restrict_range, const gdouble ra, NcGalaxyShapeFactorData **data)
+_restrict_range_build_at (TestNcGalaxyShapeFactorSpectral *test, const gboolean restrict_range, const gdouble ra, const gdouble dec, NcGalaxyShapeFactorData **data)
 {
   NcGalaxyShapeFactorSpectral *gsfs  = nc_galaxy_shape_factor_spectral_new (NC_GALAXY_WL_OBS_ELLIP_CONV_TRACE);
   NcGalaxyPositionFactorData *p_data = nc_galaxy_position_factor_data_new (test->position_factor, test->mset);
@@ -2191,7 +2196,7 @@ _restrict_range_build (TestNcGalaxyShapeFactorSpectral *test, const gboolean res
 
   nc_galaxy_shape_factor_spectral_set_restrict_range (gsfs, restrict_range);
   p_data->ra  = ra;
-  p_data->dec = 0.0;
+  p_data->dec = dec;
 
   *data = nc_galaxy_shape_factor_data_new (NC_GALAXY_SHAPE_FACTOR (gsfs), test->mset, p_data, z_data);
   nc_galaxy_shape_factor_data_set (NC_GALAXY_SHAPE_FACTOR (gsfs), *data, 0.3, 0.2, 0.1, 0.0, 0.0, 0.0, NC_WL_ELLIPTICITY_FRAME_CELESTIAL);
@@ -2204,6 +2209,14 @@ _restrict_range_build (TestNcGalaxyShapeFactorSpectral *test, const gboolean res
   nc_galaxy_redshift_factor_data_unref (z_data);
 
   return gsfs;
+}
+
+/* _restrict_range_build_at() for a galaxy at right ascension ra (degrees from the halo
+ * center) on the equator */
+static NcGalaxyShapeFactorSpectral *
+_restrict_range_build (TestNcGalaxyShapeFactorSpectral *test, const gboolean restrict_range, const gdouble ra, NcGalaxyShapeFactorData **data)
+{
+  return _restrict_range_build_at (test, restrict_range, ra, 0.0, data);
 }
 
 /*
@@ -2300,22 +2313,25 @@ _restrict_range_covered (TestNcGalaxyShapeFactorSpectral *test, NcGalaxyShapeFac
   return lo;
 }
 
+static gdouble _restrict_range_covered_at (TestNcGalaxyShapeFactorSpectral *test, const gdouble ra, const gdouble dec);
+
 /*
  * restrict-range with a free concentration: the shear is not monotonic in cDelta, so the
  * range of a galaxy is the largest over the box of the concentration. With cDelta free over
  * [1, 10] the interpolant covers at least what it covers at every fixed concentration of the
  * box (a grid of them), and not much more: a restriction given up would cover interp-g-max.
+ * The galaxy at 0.8 degrees has its largest shear at the smallest concentration, the one at
+ * 0.05 degrees at a larger one. A galaxy at 0.002 degrees with log10MDelta up to 16 reaches
+ * kappa >= 1 at the corner for some concentration of the box, and covers interp-g-max.
  */
 void
 test_nc_galaxy_shape_factor_spectral_restrict_range_cdelta (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
 {
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
   NcmModel *hms            = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp));
-  NcGalaxyShapeFactorData *data;
-  NcGalaxyShapeFactorSpectral *gsfs;
-  gdouble covered_max = 0.0, covered_free;
-  guint log10M_idx = 0, c_idx = 0;
-  guint k;
+  const gdouble ra[2]      = {0.8, 0.05};
+  guint log10M_idx         = 0, c_idx = 0;
+  guint j, k;
 
   g_assert_true (ncm_model_param_index_from_name (hms, "log10MDelta", &log10M_idx, NULL));
   g_assert_true (ncm_model_param_index_from_name (hms, "cDelta", &c_idx, NULL));
@@ -2323,38 +2339,44 @@ test_nc_galaxy_shape_factor_spectral_restrict_range_cdelta (TestNcGalaxyShapeFac
   ncm_model_param_set_lower_bound (hms, c_idx, 1.0);
   ncm_model_param_set_upper_bound (hms, c_idx, 10.0);
 
-  for (k = 0; k < 10; k++)
+  for (j = 0; j < 2; j++)
   {
-    ncm_model_param_set (hms, c_idx, 1.0 + k);
-    gsfs        = _restrict_range_build (test, TRUE, 0.8, &data);
-    covered_max = MAX (covered_max, _restrict_range_covered (test, gsfs, data));
-    nc_galaxy_shape_factor_data_unref (data);
-    nc_galaxy_shape_factor_spectral_free (gsfs);
+    gdouble covered_max = 0.0, covered_free;
+
+    for (k = 0; k < 10; k++)
+    {
+      ncm_model_param_set (hms, c_idx, 1.0 + k);
+      covered_max = MAX (covered_max, _restrict_range_covered_at (test, ra[j], 0.0));
+    }
+
+    ncm_model_param_set (hms, c_idx, 4.0);
+    ncm_model_param_set_ftype (hms, c_idx, NCM_PARAM_TYPE_FREE);
+    ncm_mset_prepare_fparam_map (test->mset);
+    covered_free = _restrict_range_covered_at (test, ra[j], 0.0);
+    ncm_model_param_set_ftype (hms, c_idx, NCM_PARAM_TYPE_FIXED);
+    ncm_mset_prepare_fparam_map (test->mset);
+
+    g_assert_cmpfloat (covered_max, >, 1.0e-3);
+    g_assert_cmpfloat (covered_free, >=, covered_max * (1.0 - 1.0e-3));
+    g_assert_cmpfloat (covered_free, <, 0.299);
+    g_assert_cmpfloat (covered_free, <=, covered_max * 1.1);
   }
 
-  ncm_model_param_set (hms, c_idx, 4.0);
+  ncm_model_param_set_upper_bound (hms, log10M_idx, 16.0);
   ncm_model_param_set_ftype (hms, c_idx, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (test->mset);
-  gsfs         = _restrict_range_build (test, TRUE, 0.8, &data);
-  covered_free = _restrict_range_covered (test, gsfs, data);
+  g_assert_cmpfloat (_restrict_range_covered_at (test, 0.002, 0.0), >, 0.298);
 
-  g_assert_cmpfloat (covered_max, >, 1.0e-3);
-  g_assert_cmpfloat (covered_free, >=, covered_max * (1.0 - 1.0e-3));
-  g_assert_cmpfloat (covered_free, <, 0.299);
-  g_assert_cmpfloat (covered_free, <=, covered_max * 1.1);
-
-  nc_galaxy_shape_factor_data_unref (data);
-  nc_galaxy_shape_factor_spectral_free (gsfs);
   ncm_model_param_set_ftype (hms, c_idx, NCM_PARAM_TYPE_FIXED);
   ncm_mset_prepare_fparam_map (test->mset);
 }
 
-/* The |g| the interpolant of a galaxy at (ra, 0) covers, built with the halo center of the mset */
+/* The |g| the interpolant of a galaxy at (ra, dec) covers, built with the models of the mset */
 static gdouble
-_restrict_range_covered_at (TestNcGalaxyShapeFactorSpectral *test, const gdouble ra)
+_restrict_range_covered_at (TestNcGalaxyShapeFactorSpectral *test, const gdouble ra, const gdouble dec)
 {
   NcGalaxyShapeFactorData *data;
-  NcGalaxyShapeFactorSpectral *gsfs = _restrict_range_build (test, TRUE, ra, &data);
+  NcGalaxyShapeFactorSpectral *gsfs = _restrict_range_build_at (test, TRUE, ra, dec, &data);
   const gdouble covered             = _restrict_range_covered (test, gsfs, data);
 
   nc_galaxy_shape_factor_data_unref (data);
@@ -2368,7 +2390,8 @@ _restrict_range_covered_at (TestNcGalaxyShapeFactorSpectral *test, const gdouble
  * (0.6, 0), 0.1 degrees from the box but closer to the center of the box than the largest
  * displacement in it: the interpolant covers less than interp-g-max, and what it covers with
  * the halo center fixed at the nearest point of the box, (0.5, 0). The galaxy at
- * (359.4, 0), across the wrap of the right ascension, covers the same.
+ * (359.4, 0), across the wrap of the right ascension, and the one at (0, 0.6), inside the
+ * right ascensions of the box and 0.1 degrees above it, cover the same.
  */
 void
 test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
@@ -2376,7 +2399,7 @@ test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box (TestNcGalaxyShap
   NcHaloDensityProfile *dp = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
   NcmModel *hms            = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp));
   NcmModel *hp             = ncm_mset_peek (test->mset, nc_halo_position_id ());
-  gdouble covered_nearest, covered_free, covered_wrap;
+  gdouble covered_nearest, covered_free, covered_wrap, covered_dec;
   guint log10M_idx = 0;
 
   g_assert_true (ncm_model_param_index_from_name (hms, "log10MDelta", &log10M_idx, NULL));
@@ -2384,7 +2407,7 @@ test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box (TestNcGalaxyShap
 
   ncm_model_param_set (hp, NC_HALO_POSITION_RA, 0.5);
   ncm_model_param_set (hp, NC_HALO_POSITION_DEC, 0.0);
-  covered_nearest = _restrict_range_covered_at (test, 0.6);
+  covered_nearest = _restrict_range_covered_at (test, 0.6, 0.0);
 
   ncm_model_param_set_lower_bound (hp, NC_HALO_POSITION_RA, -0.5);
   ncm_model_param_set_upper_bound (hp, NC_HALO_POSITION_RA, 0.5);
@@ -2395,17 +2418,64 @@ test_nc_galaxy_shape_factor_spectral_restrict_range_centre_box (TestNcGalaxyShap
   ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FREE);
   ncm_mset_prepare_fparam_map (test->mset);
 
-  covered_free = _restrict_range_covered_at (test, 0.6);
-  covered_wrap = _restrict_range_covered_at (test, 359.4);
+  covered_free = _restrict_range_covered_at (test, 0.6, 0.0);
+  covered_wrap = _restrict_range_covered_at (test, 359.4, 0.0);
+  covered_dec  = _restrict_range_covered_at (test, 0.0, 0.6);
 
   g_assert_cmpfloat (covered_nearest, >, 1.0e-3);
   g_assert_cmpfloat (covered_free, <, 0.299);
   g_assert_cmpfloat (fabs (covered_free / covered_nearest - 1.0), <, 1.0e-3);
   g_assert_cmpfloat (fabs (covered_wrap / covered_free - 1.0), <, 1.0e-3);
+  g_assert_cmpfloat (fabs (covered_dec / covered_free - 1.0), <, 1.0e-3);
 
   ncm_model_param_set_ftype (hp, NC_HALO_POSITION_RA, NCM_PARAM_TYPE_FIXED);
   ncm_model_param_set_ftype (hp, NC_HALO_POSITION_DEC, NCM_PARAM_TYPE_FIXED);
   ncm_mset_prepare_fparam_map (test->mset);
+}
+
+/*
+ * restrict-range with a concentration-mass relation (Duffy08, no cDelta): the bound is
+ * taken at the concentration of the relation at the top of the mass box, so the interpolant
+ * of the galaxy at 0.8 degrees covers what it covers with the parametric profile at that
+ * concentration, less than interp-g-max.
+ */
+void
+test_nc_galaxy_shape_factor_spectral_restrict_range_cm_relation (TestNcGalaxyShapeFactorSpectral *test, gconstpointer pdata)
+{
+  NcHaloDensityProfile *dp_param = NC_HALO_DENSITY_PROFILE (ncm_mset_peek (test->mset, nc_halo_density_profile_id ()));
+  NcmModel *hms_param            = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp_param));
+  NcHICosmo *cosmo               = NC_HICOSMO (ncm_mset_peek (test->mset, nc_hicosmo_id ()));
+  NcHaloPosition *hp             = NC_HALO_POSITION (ncm_mset_peek (test->mset, nc_halo_position_id ()));
+  NcHaloMassSummary *hms         = NC_HALO_MASS_SUMMARY (nc_halo_cm_duffy08_new (NC_HALO_MASS_SUMMARY_MASS_DEF_MEAN, 200.0));
+  NcHaloDensityProfile *dp       = NC_HALO_DENSITY_PROFILE (nc_halo_density_profile_nfw_new (hms));
+  guint idx                      = 0;
+  gdouble covered_param, covered, c_top;
+
+  nc_halo_density_profile_ref (dp_param);
+  g_assert_false (ncm_model_param_index_from_name (NCM_MODEL (hms), "cDelta", &idx, NULL));
+  g_assert_true (ncm_model_param_index_from_name (NCM_MODEL (hms), "log10MDelta", &idx, NULL));
+  ncm_model_param_set (NCM_MODEL (hms), idx, 14.5);
+  c_top = nc_halo_mass_summary_concentration (hms, cosmo, nc_halo_position_get_redshift (hp));
+  ncm_model_param_set (NCM_MODEL (hms), idx, 14.0);
+  ncm_model_param_set_upper_bound (NCM_MODEL (hms), idx, 14.5);
+
+  g_assert_true (ncm_model_param_index_from_name (hms_param, "log10MDelta", &idx, NULL));
+  ncm_model_param_set_upper_bound (hms_param, idx, 14.5);
+  g_assert_true (ncm_model_param_index_from_name (hms_param, "cDelta", &idx, NULL));
+  ncm_model_param_set (hms_param, idx, c_top);
+  covered_param = _restrict_range_covered_at (test, 0.8, 0.0);
+
+  ncm_mset_set (test->mset, NCM_MODEL (dp), NULL);
+  covered = _restrict_range_covered_at (test, 0.8, 0.0);
+
+  g_assert_cmpfloat (covered_param, >, 2.0e-4);
+  g_assert_cmpfloat (covered, <, 0.299);
+  g_assert_cmpfloat (fabs (covered / covered_param - 1.0), <, 1.0e-3);
+
+  ncm_mset_set (test->mset, NCM_MODEL (dp_param), NULL);
+  nc_halo_density_profile_free (dp_param);
+  nc_halo_mass_summary_free (hms);
+  nc_halo_density_profile_free (dp);
 }
 
 /* nc_galaxy_shape_factor_eval_ln_marginal_array() gives, point by point, what

@@ -1045,8 +1045,21 @@ _nc_galaxy_shape_factor_spectral_corner_eval (NcGalaxyShapeFactorSpectralPrivate
   return TRUE;
 }
 
+/* |g_t| at the corner at concentration c, clearing ok when kappa >= 1 there */
+static gdouble
+_nc_galaxy_shape_factor_spectral_corner_eval_ok (NcGalaxyShapeFactorSpectralPrivate *self, const gdouble R, const gdouble z, const gdouble c, gboolean *ok)
+{
+  gdouble g = 0.0;
+
+  if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, c, &g))
+    ok[0] = FALSE;
+
+  return g;
+}
+
 /* The largest |g_t| at the corner over the concentrations of the fit; FALSE when kappa >= 1 at
- * any of the concentrations evaluated */
+ * any of the concentrations evaluated. The golden-section search stays between two nodes of
+ * the grid where kappa < 1, so it fails only if kappa is not monotonic in c there. */
 static gboolean
 _nc_galaxy_shape_factor_spectral_corner_g_t (NcGalaxyShapeFactorSpectralPrivate *self, const gdouble R, const gdouble z, gdouble *g_t)
 {
@@ -1054,6 +1067,7 @@ _nc_galaxy_shape_factor_spectral_corner_g_t (NcGalaxyShapeFactorSpectralPrivate 
   const gdouble lc_lo   = log (self->c_lo);
   const gdouble dlc     = (log (self->c_hi) - lc_lo) / (n - 1.0);
   const gdouble inv_phi = 0.5 * (sqrt (5.0) - 1.0);
+  gboolean ok           = TRUE;
   gdouble best          = 0.0, a, b, x1, x2, g1, g2;
   guint k, k_best       = 0, i;
 
@@ -1062,10 +1076,7 @@ _nc_galaxy_shape_factor_spectral_corner_g_t (NcGalaxyShapeFactorSpectralPrivate 
 
   for (k = 0; k < n; k++)
   {
-    gdouble g;
-
-    if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (lc_lo + dlc * k), &g))
-      return FALSE;
+    const gdouble g = _nc_galaxy_shape_factor_spectral_corner_eval_ok (self, R, z, exp (lc_lo + dlc * k), &ok);
 
     if (g > best)
     {
@@ -1074,14 +1085,15 @@ _nc_galaxy_shape_factor_spectral_corner_g_t (NcGalaxyShapeFactorSpectralPrivate 
     }
   }
 
+  if (!ok)
+    return FALSE;
+
   a  = lc_lo + dlc * ((k_best > 0) ? k_best - 1.0 : 0.0);
   b  = lc_lo + dlc * ((k_best + 1 < n) ? k_best + 1.0 : n - 1.0);
   x1 = b - inv_phi * (b - a);
   x2 = a + inv_phi * (b - a);
-
-  if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x1), &g1) ||
-      !_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x2), &g2))
-    return FALSE;
+  g1 = _nc_galaxy_shape_factor_spectral_corner_eval_ok (self, R, z, exp (x1), &ok);
+  g2 = _nc_galaxy_shape_factor_spectral_corner_eval_ok (self, R, z, exp (x2), &ok);
 
   for (i = 0; i < NC_GALAXY_SHAPE_FACTOR_SPECTRAL_C_GOLDEN; i++)
   {
@@ -1093,9 +1105,7 @@ _nc_galaxy_shape_factor_spectral_corner_g_t (NcGalaxyShapeFactorSpectralPrivate 
       x2 = x1;
       g2 = g1;
       x1 = b - inv_phi * (b - a);
-
-      if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x1), &g1))
-        return FALSE;
+      g1 = _nc_galaxy_shape_factor_spectral_corner_eval_ok (self, R, z, exp (x1), &ok);
     }
     else
     {
@@ -1103,15 +1113,13 @@ _nc_galaxy_shape_factor_spectral_corner_g_t (NcGalaxyShapeFactorSpectralPrivate 
       x1 = x2;
       g1 = g2;
       x2 = a + inv_phi * (b - a);
-
-      if (!_nc_galaxy_shape_factor_spectral_corner_eval (self, R, z, exp (x2), &g2))
-        return FALSE;
+      g2 = _nc_galaxy_shape_factor_spectral_corner_eval_ok (self, R, z, exp (x2), &ok);
     }
   }
 
   g_t[0] = GSL_MAX (best, GSL_MAX (g1, g2));
 
-  return TRUE;
+  return ok;
 }
 
 /*
