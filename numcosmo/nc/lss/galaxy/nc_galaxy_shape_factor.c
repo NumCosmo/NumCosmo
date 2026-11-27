@@ -72,6 +72,7 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop_shear_scatter.h"
 #include "nc/background/nc_hicosmo.h"
 #include "nc/lss/halo/nc_halo_position.h"
 #include "nc/lss/halo/nc_halo_density_profile.h"
@@ -309,6 +310,17 @@ _nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
   return g_strdup_printf ("%s (ellip_conv=%s)", G_OBJECT_TYPE_NAME (gsf), ellip_val->value_nick);
 }
 
+static gboolean
+_nc_galaxy_shape_factor_accepts_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop)
+{
+  /* A shear-scatter population is a distribution of the shear estimate, which
+   * only a scheme built on it can use. */
+  return !NC_IS_GALAXY_SHAPE_POP_SHEAR_SCATTER (pop);
+}
+
+static void _nc_galaxy_shape_factor_gen_obs (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcmRNG *rng, const gboolean behind,
+                                             const gdouble g_1, const gdouble g_2, const gdouble rot_re, const gdouble rot_im);
+
 static void
 nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
 {
@@ -342,6 +354,8 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
   klass->get_desc         = &_nc_galaxy_shape_factor_get_desc;
   klass->eval_nodes       = &_nc_galaxy_shape_factor_eval_nodes;
   klass->eval_line        = &_nc_galaxy_shape_factor_eval_line;
+  klass->accepts_pop      = &_nc_galaxy_shape_factor_accepts_pop;
+  klass->gen_obs          = &_nc_galaxy_shape_factor_gen_obs;
 }
 
 static void
@@ -423,6 +437,25 @@ nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
 }
 
 /**
+ * nc_galaxy_shape_factor_accepts_pop: (virtual accepts_pop)
+ * @gsf: a #NcGalaxyShapeFactor
+ * @pop: a #NcGalaxyShapePop
+ *
+ * Whether @gsf can evaluate the population @pop. Every scheme accepts the
+ * intrinsic-ellipticity populations except where it documents otherwise,
+ * and refuses a #NcGalaxyShapePopShearScatter, which only
+ * #NcGalaxyShapeFactorWtG evaluates. nc_galaxy_shape_factor_prepare() aborts
+ * on a population this returns %FALSE for.
+ *
+ * Returns: whether @gsf accepts @pop.
+ */
+gboolean
+nc_galaxy_shape_factor_accepts_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop)
+{
+  return NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->accepts_pop (gsf, pop);
+}
+
+/**
  * nc_galaxy_shape_factor_prepare:
  * @gsf: a #NcGalaxyShapeFactor
  * @mset: a #NcmMSet
@@ -456,6 +489,10 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
   g_assert_nonnull (density_profile);
   g_assert_nonnull (mass_summary);
   g_assert_nonnull (pop);
+
+  if (!klass->accepts_pop (gsf, pop))
+    g_error ("nc_galaxy_shape_factor_prepare: %s cannot evaluate the population %s.",
+             G_OBJECT_TYPE_NAME (gsf), G_OBJECT_TYPE_NAME (pop));
 
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
@@ -1033,6 +1070,28 @@ nc_galaxy_shape_factor_data_get_radius (NcGalaxyShapeFactorData *data)
 }
 
 /**
+ * nc_galaxy_shape_factor_data_get_rotation:
+ * @data: a #NcGalaxyShapeFactorData
+ * @rot_re: (out): the real part of the rotation
+ * @rot_im: (out): the imaginary part of the rotation
+ *
+ * Gets the spin-2 rotation $e^{2i\phi}$ cached for this galaxy, which takes a
+ * tangential/cross pair to @data->coord: the calibrated reduced shear
+ * evaluated by the shape factor is $(1+m)\,g_t\,e^{2i\phi} + c$, and the
+ * tangential component of a spin-2 value $v$ in @data->coord is
+ * $\mathrm{Re}(v\,e^{-2i\phi})$.
+ *
+ */
+void
+nc_galaxy_shape_factor_data_get_rotation (NcGalaxyShapeFactorData *data, gdouble *rot_re, gdouble *rot_im)
+{
+  NcGalaxyShapeFactorCData *cdata = (NcGalaxyShapeFactorCData *) data->cdata;
+
+  *rot_re = cdata->rot_re;
+  *rot_im = cdata->rot_im;
+}
+
+/**
  * nc_galaxy_shape_factor_ref:
  * @gsf: a #NcGalaxyShapeFactor
  *
@@ -1188,7 +1247,9 @@ nc_galaxy_shape_factor_data_get (NcGalaxyShapeFactor *gsf, NcGalaxyShapeFactorDa
  * frame and mapped to @data->coord (see #NcWLEllipticityFrame); since the
  * intrinsic shape and noise are isotropic the generation is frame-symmetric,
  * while the additive bias (c1, c2) is taken to be already expressed in
- * @data->coord.
+ * @data->coord. The observed ellipticity is drawn by the scheme's gen_obs
+ * virtual function, given the calibrated shear; the default is the
+ * description above.
  *
  */
 void
@@ -1204,17 +1265,11 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
   const gdouble ra                             = data->pos_data->ra;
   const gdouble dec                            = data->pos_data->dec;
   const gdouble z                              = data->z_data->z;
-  const gdouble noise1                         = ncm_rng_gaussian_gen (rng, 0.0, data->std_noise);
-  const gdouble noise2                         = ncm_rng_gaussian_gen (rng, 0.0, data->std_noise);
-  const gdouble c1                             = data->c1;
-  const gdouble c2                             = data->c2;
-  const gdouble m                              = data->m;
-  complex double noise                         = noise1 + I * noise2;
-  complex double c                             = c1 + I * c2;
+  const complex double c                       = data->c1 + I * data->c2;
+  const gboolean behind                        = (z > z_cl);
   gdouble theta                                = 0.0;
   gdouble phi                                  = 0.0;
-  gdouble e_int_1, e_int_2;
-  complex double e_s, e_o;
+  complex double g                             = c;
   gdouble radius;
 
   g_assert_nonnull (pop);
@@ -1222,43 +1277,69 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
   nc_halo_position_prepare_if_needed (halo_position, cosmo);
   nc_wl_surface_mass_density_prepare_if_needed (surface_mass_density, cosmo);
 
-  nc_galaxy_shape_pop_prepare (pop, data->pop_data);
-  nc_galaxy_shape_pop_gen (pop, data->pop_data, rng, &e_int_1, &e_int_2);
-  e_s = e_int_1 + I * e_int_2;
-
   nc_halo_position_polar_angles (halo_position, ra, dec, &theta, &phi);
 
-  /* e_s and noise are isotropic, so mapping them celestial -> data->coord
-   * changes nothing statistically; it just keeps phi and e_o consistent
-   * with data->coord. c is already expressed in data->coord, so it is added
-   * below unmapped. See #NcWLEllipticityFrame. */
-  phi   = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
-  e_s   = nc_wl_ellipticity_celestial_to_frame (data->coord, e_s);
-  noise = nc_wl_ellipticity_celestial_to_frame (data->coord, noise);
-
+  /* c is already expressed in data->coord, so it is added unmapped. See
+   * #NcWLEllipticityFrame. */
+  phi    = nc_wl_ellipticity_celestial_to_frame_angle (data->coord, phi);
   radius = nc_halo_position_projected_radius (halo_position, cosmo, theta);
 
-  if (z > z_cl)
+  if (behind)
   {
     const gdouble gt = nc_wl_surface_mass_density_reduced_shear (surface_mass_density,
                                                                  density_profile,
                                                                  cosmo,
                                                                  radius, z, z_cl, z_cl);
 
-    complex double g    = gt * cexp (2.0 * I * phi);
+    /* Kept in two steps, the historical rounding order. */
+    g = gt * cexp (2.0 * I * phi);
+    g = (1.0 + data->m) * g + c;
+  }
+
+  cdata->radius = radius;
+  cdata->rot_re = cos (2.0 * phi);
+  cdata->rot_im = sin (2.0 * phi);
+
+  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->gen_obs (gsf, pop, data, rng, behind, creal (g), cimag (g), cdata->rot_re, cdata->rot_im);
+}
+
+/* Default gen_obs: intrinsic ellipticity from @pop, sheared, plus Gaussian
+ * noise. The draws keep their historical order (the two noise components
+ * first, then the intrinsic shape), so realizations are unchanged. */
+static void
+_nc_galaxy_shape_factor_gen_obs (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcmRNG *rng, const gboolean behind,
+                                 const gdouble g_1, const gdouble g_2, const gdouble rot_re, const gdouble rot_im)
+{
+  const gdouble noise1 = ncm_rng_gaussian_gen (rng, 0.0, data->std_noise);
+  const gdouble noise2 = ncm_rng_gaussian_gen (rng, 0.0, data->std_noise);
+  complex double noise = noise1 + I * noise2;
+  gdouble e_int_1, e_int_2;
+  complex double e_s, e_o;
+
+  nc_galaxy_shape_pop_prepare (pop, data->pop_data);
+  nc_galaxy_shape_pop_gen (pop, data->pop_data, rng, &e_int_1, &e_int_2);
+  e_s = e_int_1 + I * e_int_2;
+
+  /* e_s and noise are isotropic, so mapping them celestial -> data->coord
+   * changes nothing statistically; it just keeps them consistent with
+   * data->coord. See #NcWLEllipticityFrame. */
+  e_s   = nc_wl_ellipticity_celestial_to_frame (data->coord, e_s);
+  noise = nc_wl_ellipticity_celestial_to_frame (data->coord, noise);
+
+  if (behind)
+  {
     NcmComplex cplx_E_s = NCM_COMPLEX_INIT (e_s);
     NcmComplex cplx_E_o, cplx_g;
 
-    g = (1.0 + m) * g + c;
-
-    ncm_complex_set_c (&cplx_g, g);
+    ncm_complex_set_c (&cplx_g, g_1 + I * g_2);
     nc_galaxy_shape_factor_apply_shear (gsf, &cplx_g, &cplx_E_s, &cplx_E_o);
 
     e_o = ncm_complex_c (&cplx_E_o);
   }
   else
   {
-    e_o = e_s + c;
+    /* In front of the lens the shear is only the additive bias c = (g_1, g_2). */
+    e_o = e_s + (g_1 + I * g_2);
   }
 
   e_o += noise;
@@ -1267,9 +1348,6 @@ nc_galaxy_shape_factor_gen (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxySha
   data->epsilon_int_2 = cimag (e_s);
   data->epsilon_obs_1 = creal (e_o);
   data->epsilon_obs_2 = cimag (e_o);
-  cdata->radius       = radius;
-  cdata->rot_re       = cos (2.0 * phi);
-  cdata->rot_im       = sin (2.0 * phi);
 }
 
 struct _IntegData

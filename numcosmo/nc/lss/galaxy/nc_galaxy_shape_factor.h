@@ -145,8 +145,23 @@ struct _NcGalaxyShapeFactorClass
    * when out is not t, when it does not. The default returns FALSE. */
   gboolean (*eval_line) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const guint n, const gdouble *t, const gdouble u_1, const gdouble u_2, const gdouble b_1, const gdouble b_2, const gdouble epsilon_obs_1, const gdouble epsilon_obs_2, const gboolean want_log, gdouble *out);
 
+  /* Whether this scheme can evaluate the population @pop. Called by
+   * nc_galaxy_shape_factor_prepare(), which aborts when it returns FALSE. The
+   * default accepts every population except a #NcGalaxyShapePopShearScatter,
+   * which describes the shear estimate rather than the intrinsic ellipticity. */
+  gboolean (*accepts_pop) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop);
+
+  /* Draws the observed ellipticity of one galaxy, called by
+   * nc_galaxy_shape_factor_gen() once the shear is known. @behind tells whether the galaxy is
+   * behind the lens; (g_1, g_2) is the calibrated reduced shear (1 + m) g + c in @data->coord
+   * when it is, and c when it is not; (rot_re, rot_im) is the spin-2 rotation from the
+   * tangential frame to @data->coord. It sets @data->epsilon_int_* and @data->epsilon_obs_*.
+   * The default draws the intrinsic ellipticity from @pop, applies the shear map and adds
+   * the Gaussian measurement noise. */
+  void (*gen_obs) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, NcmRNG *rng, const gboolean behind, const gdouble g_1, const gdouble g_2, const gdouble rot_re, const gdouble rot_im);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[9];
+  gpointer padding[7];
 };
 
 /*
@@ -192,6 +207,7 @@ void nc_galaxy_shape_factor_data_read_row (NcGalaxyShapeFactorData *data, NcGala
 void nc_galaxy_shape_factor_data_write_row (NcGalaxyShapeFactorData *data, NcGalaxyWLObs *obs, const guint i);
 GList *nc_galaxy_shape_factor_data_required_columns (NcGalaxyShapeFactorData *data);
 gdouble nc_galaxy_shape_factor_data_get_radius (NcGalaxyShapeFactorData *data);
+void nc_galaxy_shape_factor_data_get_rotation (NcGalaxyShapeFactorData *data, gdouble *rot_re, gdouble *rot_im);
 
 NcGalaxyShapeFactor *nc_galaxy_shape_factor_ref (NcGalaxyShapeFactor *gsf);
 void nc_galaxy_shape_factor_free (NcGalaxyShapeFactor *gsf);
@@ -202,6 +218,7 @@ NcGalaxyWLObsEllipConv nc_galaxy_shape_factor_get_ellip_conv (NcGalaxyShapeFacto
 gboolean nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLObs *obs, GError **error);
 
 gchar *nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf);
+gboolean nc_galaxy_shape_factor_accepts_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop);
 
 void nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
 void nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);
