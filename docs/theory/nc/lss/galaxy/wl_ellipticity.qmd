@@ -268,6 +268,64 @@ reduced shear real ($g \to g_t$) and the calibration bias is pre-rotated
 consistently. The full observed likelihood marginalizes this expression over the
 source redshift distribution, handled by [[numcosmo|NcDataClusterWLFactor]].
 
+### The Shear-Estimator Likelihood (Weighing the Giants)
+
+The schemes above model the intrinsic ellipticity and marginalize over it. The
+"P(z) method" of Weighing the Giants III [@Applegate2014] instead models the
+scatter of a linear shear estimator directly. Each galaxy's observed
+ellipticity is turned into an estimate of its tangential reduced shear,
+$$
+\hat g_t = \frac{\mathrm{Re}\!\left(\epsilon^{(o)} e^{-2i\phi}\right)}{s\,R},
+\qquad s = \begin{cases} 2 & \chi \text{ convention},\\ 1 & \epsilon \text{ convention},\end{cases}
+$$
+and its likelihood is a one-dimensional kernel $K$ in $\hat g_t$ about the
+tangential component of the calibrated model shear,
+$$
+P(\hat g_t \mid z) = K\!\left(\hat g_t - \mu_t(z)\right),
+\qquad
+\mu_t = \mathrm{Re}\!\left\{\left[(1+m)\,g_t(z)\,e^{2i\phi} + c\right] e^{-2i\phi}\right\}.
+$$
+This is the calibration applied forward to the model, as in Eq. (10) of
+@Applegate2014. The cross component is not used, and the redshift
+marginalization is that of every other scheme. The defining approximation is
+the linear response $\langle \epsilon^{(o)}_t \rangle = s R\, g_t$: the
+intrinsic shape enters only through the width of $K$.
+
+[[numcosmo|NcGalaxyShapeFactorWtG]] implements this. The kernel is a
+[[numcosmo|NcGalaxyShapePopShearScatter]], with parameters in reduced-shear
+units. There are two:
+
+- [[numcosmo|NcGalaxyShapePopShearScatterGauss]] is a Gaussian of width
+  $\sigma_g$. Optionally the width is taken per galaxy from the catalog's
+  $e_{\rm rms}$, as $\sigma_g = e_{\rm rms}/(sR)$. That reproduces the common
+  Gaussian variant of the method, with variance
+  $(e_{\rm rms}^2 + \sigma_{\rm noise}^2)/(sR)^2$.
+- [[numcosmo|NcGalaxyShapePopShearScatterVoigt]] is the Voigt profile that
+  @Applegate2014 adopt for the wings of the distribution,
+  $$
+  K(\delta) = \frac{\mathrm{Re}\,w(z)}{\sigma_t\sqrt{2\pi}},\qquad
+  z = \frac{\delta + i\Gamma}{\sigma_t\sqrt 2},
+  $$
+  where $w$ is the Faddeeva function.
+
+The measurement noise, $\sigma_{\rm noise}/(sR)$ in shear units, is added in
+quadrature to the Gaussian core. It can be turned off when the kernel
+parameters already describe the whole scatter of the estimates.
+
+The responsivity $R$ is read from the catalog column `responsivity`. It
+calibrates the shape estimator and the selected sample; it is not a model
+quantity and is never refitted with the population:
+
+- for re-Gaussianization shapes (HSC), $R = 1 - \langle e_{\rm rms}^2\rangle$,
+  a weighted mean over the analyzed sample [@Mandelbaum2018];
+- for metacalibration, the mean response of the ensemble, including the
+  selection response [@Huff2017; @Sheldon2017; @Gatti2021];
+- for the analytic responses of AnaCal, again the ensemble mean
+  [@Li2023].
+
+A per-galaxy column lets subsamples carry their own ensemble value. A
+different source selection (radial cut or mask) generally changes the value.
+
 ## API Reference
 
 The forward model and the frame machinery are spread over a few classes:
