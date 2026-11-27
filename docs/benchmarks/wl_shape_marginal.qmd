@@ -164,17 +164,11 @@ def evaluate(cls):
         pop = new_pop(ip, p1, p2)
         mset = build_mset(pop)
         gsf = CLASSES[cls][0].new(CONV[int(conv)])
-        pos_data = Nc.GalaxyPositionFactorData.new(
-            Nc.GalaxyPositionFactorFlat.new(-1.0, 1.0, -1.0, 1.0), mset
-        )
-        z_data = Nc.GalaxyRedshiftFactorData.new(
-            Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0), mset
-        )
-        data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+        data = Nc.GalaxyShapeFactorData.new(gsf, mset)
         gsf.data_set(
             data, 0.0, 0.0, sn, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL
         )
-        gsf.prepare_data_array(mset, [data], True, True)
+        gsf.prepare_data_array(mset, [data])
         g1, g2, e1, e2 = (points[idx, C[k]] for k in ("g1", "g2", "e1", "e2"))
         lnp[idx], _ = eval_array(gsf, pop, data, g1, g2, e1, e2)
     return lnp
@@ -377,15 +371,9 @@ def chain_shears(n):
 
 def galaxy_data(gsf, mset, sn, e1, e2):
     """The data object of one galaxy for gsf, prepared."""
-    pos_data = Nc.GalaxyPositionFactorData.new(
-        Nc.GalaxyPositionFactorFlat.new(-1.0, 1.0, -1.0, 1.0), mset
-    )
-    z_data = Nc.GalaxyRedshiftFactorData.new(
-        Nc.GalaxyRedshiftFactorComposed.new(0.0, 20.0), mset
-    )
-    data = Nc.GalaxyShapeFactorData.new(gsf, mset, pos_data, z_data)
+    data = Nc.GalaxyShapeFactorData.new(gsf, mset)
     gsf.data_set(data, e1, e2, sn, 0.0, 0.0, 0.0, Nc.WLEllipticityFrame.CELESTIAL)
-    gsf.prepare_data_array(mset, [data], True, True)
+    gsf.prepare_data_array(mset, [data])
     return data
 
 
