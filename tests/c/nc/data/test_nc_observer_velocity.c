@@ -43,6 +43,7 @@ void test_nc_observer_velocity_free (TestNcObserverVelocity *test, gconstpointer
 
 void test_nc_observer_velocity_params (TestNcObserverVelocity *test, gconstpointer pdata);
 void test_nc_observer_velocity_doppler (TestNcObserverVelocity *test, gconstpointer pdata);
+void test_nc_observer_velocity_n_rest (TestNcObserverVelocity *test, gconstpointer pdata);
 void test_nc_observer_velocity_serialize (TestNcObserverVelocity *test, gconstpointer pdata);
 
 gint
@@ -60,6 +61,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/nc/observer_velocity/doppler", TestNcObserverVelocity, NULL,
               &test_nc_observer_velocity_new,
               &test_nc_observer_velocity_doppler,
+              &test_nc_observer_velocity_free);
+
+  g_test_add ("/nc/observer_velocity/n_rest", TestNcObserverVelocity, NULL,
+              &test_nc_observer_velocity_new,
+              &test_nc_observer_velocity_n_rest,
               &test_nc_observer_velocity_free);
 
   g_test_add ("/nc/observer_velocity/serialize", TestNcObserverVelocity, NULL,
@@ -145,6 +151,73 @@ test_nc_observer_velocity_doppler (TestNcObserverVelocity *test, gconstpointer p
 
     ncm_assert_cmpdouble_e (nc_observer_velocity_beta_n (test->ov, n[0], n[1], n[2]), ==, bn, 1.0e-15, 0.0);
     ncm_assert_cmpdouble_e (nc_observer_velocity_doppler (test->ov, n[0], n[1], n[2]), ==, gamma1 / (1.0 - bn), 1.0e-15, 0.0);
+  }
+}
+
+void
+test_nc_observer_velocity_n_rest (TestNcObserverVelocity *test, gconstpointer pdata)
+{
+  NcmModel *model    = NCM_MODEL (test->ov);
+  const gdouble v[3] = {-700.0, 400.0, 1100.0};
+  const gdouble n[3] = {0.48, 0.6, 0.64};
+  gdouble nr[3], nb[3];
+  guint i;
+
+  /* At rest: the observed direction */
+  nc_observer_velocity_n_rest (test->ov, n[0], n[1], n[2], &nr[0], &nr[1], &nr[2]);
+
+  for (i = 0; i < 3; i++)
+    ncm_assert_cmpdouble (nr[i], ==, n[i]);
+
+  for (i = 0; i < 3; i++)
+    ncm_model_orig_param_set (model, NC_OBSERVER_VELOCITY_VX + i, v[i]);
+
+  nc_observer_velocity_n_rest (test->ov, n[0], n[1], n[2], &nr[0], &nr[1], &nr[2]);
+
+  /* A unit vector, moved away from the direction of motion */
+  ncm_assert_cmpdouble_e (nr[0] * nr[0] + nr[1] * nr[1] + nr[2] * nr[2], ==, 1.0, 1.0e-15, 0.0);
+  g_assert_cmpfloat (nc_observer_velocity_beta_n (test->ov, nr[0], nr[1], nr[2]), <, nc_observer_velocity_beta_n (test->ov, n[0], n[1], n[2]));
+
+  /*
+   * The photon of rest-frame frequency nu has frequency gamma nu (1 + beta . n_rest) for the
+   * observer, which is D nu.
+   */
+  {
+    const gdouble beta     = nc_observer_velocity_speed (test->ov) / (1.0e-3 * ncm_c_c ());
+    const gdouble gamma    = 1.0 / sqrt (1.0 - beta * beta);
+    const gdouble beta_n_r = nc_observer_velocity_beta_n (test->ov, nr[0], nr[1], nr[2]);
+
+    ncm_assert_cmpdouble_e (gamma * (1.0 + beta_n_r), ==, nc_observer_velocity_doppler (test->ov, n[0], n[1], n[2]), 1.0e-15, 0.0);
+  }
+
+  /* The rest frame moves with -v relative to the observer: the opposite velocity inverts the map */
+  for (i = 0; i < 3; i++)
+    ncm_model_orig_param_set (model, NC_OBSERVER_VELOCITY_VX + i, -v[i]);
+
+  nc_observer_velocity_n_rest (test->ov, nr[0], nr[1], nr[2], &nb[0], &nb[1], &nb[2]);
+
+  for (i = 0; i < 3; i++)
+    ncm_assert_cmpdouble_e (nb[i], ==, n[i], 1.0e-15, 0.0);
+
+  /* Along y: a direction parallel to the motion is unchanged, a perpendicular one is n / gamma - beta */
+  {
+    const gdouble vy    = 600.0;
+    const gdouble beta  = vy / (1.0e-3 * ncm_c_c ());
+    const gdouble gamma = 1.0 / sqrt (1.0 - beta * beta);
+
+    ncm_model_orig_param_set (model, NC_OBSERVER_VELOCITY_VX, 0.0);
+    ncm_model_orig_param_set (model, NC_OBSERVER_VELOCITY_VY, vy);
+    ncm_model_orig_param_set (model, NC_OBSERVER_VELOCITY_VZ, 0.0);
+
+    nc_observer_velocity_n_rest (test->ov, 0.0, 1.0, 0.0, &nr[0], &nr[1], &nr[2]);
+    ncm_assert_cmpdouble (nr[0], ==, 0.0);
+    ncm_assert_cmpdouble_e (nr[1], ==, 1.0, 1.0e-15, 0.0);
+    ncm_assert_cmpdouble (nr[2], ==, 0.0);
+
+    nc_observer_velocity_n_rest (test->ov, 1.0, 0.0, 0.0, &nr[0], &nr[1], &nr[2]);
+    ncm_assert_cmpdouble_e (nr[0], ==, 1.0 / gamma, 1.0e-15, 0.0);
+    ncm_assert_cmpdouble_e (nr[1], ==, -beta, 1.0e-15, 0.0);
+    ncm_assert_cmpdouble (nr[2], ==, 0.0);
   }
 }
 

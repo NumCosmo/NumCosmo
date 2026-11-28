@@ -42,9 +42,15 @@
  * that of the rest frame at $z_\mathrm{rest}$ minus $5\log_{10}\mathcal{D}$. To first order
  * in $\beta$ this is the dipole $\delta\mu \simeq -\frac{5}{\ln 10}\,\vec\beta\cdot\hat n\,
  * \frac{1 + z}{z\,(1 + z/2)}$ of a bulk flow of the sources with velocity $-\vec v$, which
- * the data cannot tell from the observer's motion. The aberration of $\hat n$ itself is of
- * order $\beta$ in the direction and changes the modulus only at second order, so the
- * observed direction is used in the rest frame.
+ * the data cannot tell from the observer's motion. The rest-frame quantities are evaluated
+ * in the rest-frame direction of the source, given by the aberration
+ * $$
+ * \hat n_\mathrm{rest} = \mathcal{D}\left[\hat n - \gamma\vec\beta
+ * + \frac{\gamma^2}{\gamma + 1}(\vec\beta\cdot\hat n)\,\vec\beta\right],
+ * $$
+ * returned by nc_observer_velocity_n_rest(). In an isotropic model the distance does not
+ * depend on the direction and $\hat n_\mathrm{rest}$ does not change the modulus; in an
+ * anisotropic one the difference is of order $\beta$ times the anisotropy of the distance.
  *
  * The redshifts of a catalog in the CMB frame already carry the Sun's velocity relative to
  * the CMB, and the model velocity is then that of the CMB frame relative to the rest frame
@@ -246,5 +252,37 @@ gdouble
 nc_observer_velocity_z_rest (NcObserverVelocity *ov, const gdouble z_obs, const gdouble nx, const gdouble ny, const gdouble nz)
 {
   return (1.0 + z_obs) * nc_observer_velocity_doppler (ov, nx, ny, nz) - 1.0;
+}
+
+/**
+ * nc_observer_velocity_n_rest:
+ * @ov: a #NcObserverVelocity
+ * @nx: x component of the observed unit vector $\hat n$ towards the source
+ * @ny: y component of $\hat n$
+ * @nz: z component of $\hat n$
+ * @n_rest_x: (out): x component of $\hat n_\mathrm{rest}$
+ * @n_rest_y: (out): y component of $\hat n_\mathrm{rest}$
+ * @n_rest_z: (out): z component of $\hat n_\mathrm{rest}$
+ *
+ * Computes the unit vector towards the source in the rest frame of the model, the
+ * aberration of $\hat n$ given in #NcObserverVelocity. The result is exact in $\beta$.
+ *
+ */
+void
+nc_observer_velocity_n_rest (NcObserverVelocity *ov, const gdouble nx, const gdouble ny, const gdouble nz, gdouble *n_rest_x, gdouble *n_rest_y, gdouble *n_rest_z)
+{
+  const gdouble c_kms  = 1.0e-3 * ncm_c_c ();
+  const gdouble bx     = VX / c_kms;
+  const gdouble by     = VY / c_kms;
+  const gdouble bz     = VZ / c_kms;
+  const gdouble beta2  = bx * bx + by * by + bz * bz;
+  const gdouble beta_n = bx * nx + by * ny + bz * nz;
+  const gdouble gamma  = 1.0 / sqrt (1.0 - beta2);
+  const gdouble D      = 1.0 / (gamma * (1.0 - beta_n));
+  const gdouble f_beta = gamma * (gamma * beta_n / (gamma + 1.0) - 1.0);
+
+  n_rest_x[0] = D * (nx + f_beta * bx);
+  n_rest_y[0] = D * (ny + f_beta * by);
+  n_rest_z[0] = D * (nz + f_beta * bz);
 }
 

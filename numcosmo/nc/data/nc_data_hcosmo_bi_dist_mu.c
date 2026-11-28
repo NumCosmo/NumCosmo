@@ -42,9 +42,9 @@
  * nc_dist_mu_nuisance_sigma_mu_v_sample(). Without it the standard deviation is $\sigma_\mu$.
  *
  * When the model set holds a #NcObserverVelocity, the model value of an object is that of
- * the rest frame at nc_observer_velocity_z_rest() minus $5\log_{10}$ of
- * nc_observer_velocity_doppler(), the observer's motion relative to the rest frame of the
- * model; the velocity term of the standard deviation keeps the observed redshift. The
+ * the rest frame at nc_observer_velocity_z_rest() and in the direction
+ * nc_observer_velocity_n_rest(), minus $5\log_{10}$ of nc_observer_velocity_doppler(), the
+ * observer's motion relative to the rest frame of the model; the velocity term of the standard deviation keeps the observed redshift. The
  * rest-frame redshift of every object must stay positive and within
  * #NcHCosmoBIDist:zmax, which bounds the velocity by the smallest redshift of the data.
  *
@@ -304,17 +304,19 @@ _nc_data_hcosmo_bi_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, Ncm
 
   for (i = 0; i < np; i++)
   {
-    const gdouble px  = ncm_matrix_get (dmu->p, i, 0);
-    const gdouble py  = ncm_matrix_get (dmu->p, i, 1);
-    const gdouble pz  = ncm_matrix_get (dmu->p, i, 2);
     const gint s      = (gint) ncm_vector_get (dmu->sample, i);
     const gdouble off = ((s >= 0) && (s < nsamples)) ? nc_dist_mu_nuisance_get_dmu (nuisance, s) : 0.0;
+    gdouble px        = ncm_matrix_get (dmu->p, i, 0);
+    gdouble py        = ncm_matrix_get (dmu->p, i, 1);
+    gdouble pz        = ncm_matrix_get (dmu->p, i, 2);
     gdouble z         = ncm_vector_get (dmu->z, i);
     gdouble f_lnD     = 0.0;
 
     if (ov != NULL)
     {
       const gdouble D = nc_observer_velocity_doppler (ov, px, py, pz);
+
+      nc_observer_velocity_n_rest (ov, px, py, pz, &px, &py, &pz);
 
       z     = (1.0 + z) * D - 1.0;
       f_lnD = 5.0 * log10 (D);
