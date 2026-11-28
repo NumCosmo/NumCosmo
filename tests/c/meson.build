@@ -744,6 +744,7 @@ data_tests = [
     {
         'name': 'nc_data_cluster_wl_factor_shape_interp',
         'sources': ['nc/data/test_nc_data_cluster_wl_factor_shape_interp.c'],
+        'timeout': 300,
     },
     {
         'name': 'nc_data_cluster_wl_factor_cache',

@@ -569,8 +569,8 @@ nc_galaxy_halo_wl_prepare_bound (NcGalaxyHaloWL *hwl, NcmMSet *mset)
 
   hwl->bound_ready = _nc_galaxy_shape_factor_moments_set_box_corner (hwl->dp_box, dp);
   hwl->bound_holds = _nc_galaxy_shape_factor_moments_range_holds (mset, TRUE);
-  hwl->c_box = _nc_galaxy_shape_factor_moments_cdelta_box (dp, &hwl->c_idx, &hwl->c_lo, &hwl->c_hi) &&
-               (hwl->c_hi > hwl->c_lo);
+  hwl->c_box       = _nc_galaxy_shape_factor_moments_cdelta_box (dp, &hwl->c_idx, &hwl->c_lo, &hwl->c_hi) &&
+                     (hwl->c_hi > hwl->c_lo);
 }
 
 /**
@@ -618,7 +618,7 @@ _nc_galaxy_halo_wl_corner_eval (NcGalaxyHaloWL *hwl, NcWLSurfaceMassDensity *smd
     return FALSE;
 
   *max_kappa = MAX (*max_kappa, kappa);
-  g_t[0] = g;
+  g_t[0]     = g;
 
   return TRUE;
 }
@@ -768,20 +768,23 @@ nc_galaxy_halo_wl_eval_bound (NcGalaxyHaloWL *hwl, NcWLSurfaceMassDensity *smd, 
   const gdouble z_cl = nc_wl_cluster_lens_get_z_cl (hwl->lens);
 
   g_mutex_lock (&hwl->bound_lock);
+
   if (!hwl->c_box)
   {
     *kappa = nc_wl_surface_mass_density_convergence (smd, hwl->dp_box, cosmo, R_min, z_s, z_cl, z_cl);
-    *g_t = fabs (nc_wl_surface_mass_density_reduced_shear (smd, hwl->dp_box, cosmo, R_min, z_s, z_cl, z_cl));
+    *g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (smd, hwl->dp_box, cosmo, R_min, z_s, z_cl, z_cl));
   }
   else
   {
     *kappa = -GSL_POSINF;
+
     if (!_nc_galaxy_halo_wl_corner_g_t (hwl, smd, cosmo, z_cl, R_min, z_s, g_t, kappa))
     {
       *kappa = GSL_NAN;
       *g_t   = GSL_NAN;
     }
   }
+
   g_mutex_unlock (&hwl->bound_lock);
 }
 
