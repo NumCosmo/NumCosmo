@@ -42,6 +42,7 @@ the same galaxies, with ``binned_gen`` (``BinnedGenDeltaSigma``, ``BinnedGenGt``
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum, auto
+from itertools import pairwise
 from typing import Annotated, Any, Self, cast
 
 import numpy as np
@@ -1128,7 +1129,7 @@ class BinnedGenBase(BaseModel):
             return v
         if len(v) < 2:
             raise ValueError("edges needs at least two values")
-        if v[0] <= 0.0 or any(b <= a for a, b in zip(v, v[1:])):
+        if v[0] <= 0.0 or any(b <= a for a, b in pairwise(v)):
             raise ValueError(f"edges must be positive and strictly increasing: {v}")
         return v
 

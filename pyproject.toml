@@ -48,6 +48,8 @@ all = ["numcosmo_py[catalog,app,plot]"]
 # Optional cosmology integrations; pulled in only when needed (not in the
 # default test run, as they are heavy to build from PyPI).
 firecrown = ["firecrown", "pyccl", "sacc"]
+# Cross-check of the binned weak-lensing profiles; its test is skipped without it.
+clmm = ["clmm"]
 test = [
     "numcosmo_py[all]",
     "pytest",
