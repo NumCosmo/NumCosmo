@@ -2302,3 +2302,156 @@ def test_shape_interp_gens_unknown_population():
     """A record whose population has no generator is an error."""
     with pytest.raises(ValueError, match="has no generator"):
         shape_interp_gens(_obs_with_source(Ncm.Vector.new(2)))
+
+
+def _load_dataset_and_mset(experiment_file: Path) -> tuple[Ncm.Dataset, Ncm.MSet]:
+    """The dataset and the model set written by a generate command."""
+    ser = Ncm.Serialize.new(Ncm.SerializeOpt.KEEP_SHARED)
+    dataset = cast(
+        Ncm.Dataset,
+        ser.from_binfile(experiment_file.with_suffix(".dataset.gvar").as_posix()),
+    )
+    exp = cast(Ncm.ObjDictStr, ser.dict_str_from_yaml_file(experiment_file.as_posix()))
+    mset = cast(Ncm.MSet, exp.peek("model-set"))
+    return dataset, mset
+
+
+@pytest.mark.parametrize(
+    "binned, est_type",
+    [
+        ("delta_sigma", Nc.GalaxyWLBinnedEstimatorDeltaSigma),
+        ("gt", Nc.GalaxyWLBinnedEstimatorGt),
+        ("gt error_type=shape_noise beta_weighted=true", Nc.GalaxyWLBinnedEstimatorGt),
+    ],
+)
+def test_cluster_wl_app_generate_binned(experiment_file, binned, est_type):
+    """--binned replaces the per-galaxy likelihood by NcDataClusterWLBinned, with the
+    Gaussian scatter in the model set and only the mass free by default."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            f"--binned={binned}",
+            "--summary",
+            "--seed=7",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Binned profile" in plain_output(result.output)
+
+    dataset, mset = _load_dataset_and_mset(experiment_file)
+    data = dataset.get_data(0)
+    assert isinstance(data, Nc.DataClusterWLBinned)
+    assert isinstance(data.peek_estimator(), est_type)
+    assert isinstance(data.peek_binned().peek_source().peek_pz(0), Nc.GalaxyPz)
+    assert not data.get_exact()
+    assert 1 <= data.get_length() <= 8
+    assert data.peek_binned().has_members()
+
+    assert isinstance(
+        mset.peek(Nc.GalaxyWLBinnedScatter.id()), Nc.GalaxyWLBinnedScatterGauss
+    )
+    mset.prepare_fparam_map()
+    assert mset.fparams_len() == 1
+    assert mset.fparam_full_name(0) == "NcHaloMassSummary:log10MDelta"
+
+    result = runner.invoke(app, ["run", "fit", experiment_file.as_posix()])
+    assert result.exit_code == 0, result.output
+
+
+def test_cluster_wl_app_generate_binned_edges_exact(experiment_file):
+    """Explicit edges and the exact model."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl",
+            experiment_file.as_posix(),
+            "--binned=delta_sigma edges=0.5,1.0,2.0 exact=true",
+            "--seed=7",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset, mset = _load_dataset_and_mset(experiment_file)
+    data = dataset.get_data(0)
+    assert isinstance(data, Nc.DataClusterWLBinned)
+    assert data.get_exact()
+    binned = data.peek_binned()
+    np.testing.assert_allclose(
+        binned.get_column("r_lo").dup_array(), [0.5, 1.0], rtol=1e-12
+    )
+    np.testing.assert_allclose(
+        binned.get_column("r_hi").dup_array(), [1.0, 2.0], rtol=1e-12
+    )
+    assert np.isfinite(data.m2lnL_val(mset))
+
+
+def test_cluster_wl_app_load_binned_mask(experiment_file, real_wl_obs_file_with_meta):
+    """--mask restricts the galaxies of the binned profile."""
+    args = [
+        "generate",
+        "cluster-wl-load",
+        experiment_file.as_posix(),
+        f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+        "--binned=gt n_bins=2",
+        "--r-min=0.05",
+        "--r-max=2.0",
+    ]
+    counts = []
+    for extra in ([], ["--mask={kind: column, column: z, max: 1.0}"]):
+        result = runner.invoke(app, args + extra)
+        assert result.exit_code == 0, result.output
+        dataset, _ = _load_dataset_and_mset(experiment_file)
+        binned = dataset.get_data(0).peek_binned()
+        counts.append(binned.peek_members().len())
+
+    assert 0 < counts[1] < counts[0]
+
+
+def test_cluster_wl_app_load_binned(experiment_file, real_wl_obs_file_with_meta):
+    """--binned on a catalog: the redshifts are the p(z) of the catalog,
+    and the shape factor need not follow the convention of the catalog."""
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "cluster-wl-load",
+            experiment_file.as_posix(),
+            f"--data-file={real_wl_obs_file_with_meta.as_posix()}",
+            "--binned=gt n_bins=2 error_type=shape_noise",
+            "--r-min=0.05",
+            "--r-max=2.0",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    dataset, mset = _load_dataset_and_mset(experiment_file)
+    data = dataset.get_data(0)
+    assert isinstance(data, Nc.DataClusterWLBinned)
+    assert isinstance(data.peek_binned().peek_source().peek_pz(0), Nc.GalaxyPz)
+    assert data.get_length() <= 2
+    assert np.isfinite(data.m2lnL_val(mset))
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--binned=bogus"],
+        ["--binned="],
+        ["--binned=delta_sigma bogus_key=1"],
+        ["--binned=delta_sigma edges=1.0,0.5"],
+        ["--binned=delta_sigma edges=1.0"],
+        ["--binned=gt error_type=bogus"],
+        ["--binned=delta_sigma", "--parameter-list=NcHaloPosition:ra"],
+    ],
+)
+def test_cluster_wl_app_generate_binned_bad(experiment_file, args):
+    """Malformed --binned options and freeing the centre with --binned are rejected."""
+    result = runner.invoke(
+        app, ["generate", "cluster-wl", experiment_file.as_posix(), *args]
+    )
+    assert result.exit_code != 0, result.output
+    assert not experiment_file.exists()

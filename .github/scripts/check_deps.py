@@ -55,7 +55,7 @@ ENTRY_POINTS = {
 }
 
 # Extras installed only on request; the environment.yml check skips them.
-OPTIONAL_EXTRAS = {"firecrown"}
+OPTIONAL_EXTRAS = {"firecrown", "clmm"}
 
 # Top-level directories whose Python sources are not checked.
 SKIPPED_DIRS = {"notebooks"}

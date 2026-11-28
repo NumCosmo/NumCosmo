@@ -34,15 +34,19 @@ This module builds ``NcDataClusterWLFactor`` experiments, on the
   release, see ``NcGalaxyWLObsCatalogId``), pairing the observed galaxies
   (including their per-galaxy photometric redshift ``NcmSpline``) with a
   ``NcGalaxyRedshiftFactorSpline`` and the chosen ``shape_dist`` scheme.
+
+Both can instead build a classic binned likelihood (``NcDataClusterWLBinned``) from
+the same galaxies, with ``binned_gen`` (``BinnedGenDeltaSigma``, ``BinnedGenGt``).
 """
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum, auto
-from typing import Annotated, Any, Self
+from itertools import pairwise
+from typing import Annotated, Any, Self, cast
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 from pydantic_core import core_schema
 from rich.console import Console
 from rich.table import Table
@@ -1011,6 +1015,313 @@ class GalaxyPopGen(StrEnum):
         return metavar
 
 
+DEFAULT_BINNED_N_BINS = 8
+# GI reads small C float constants as 0.0, so the default comes from the property
+DEFAULT_BINNED_PZ_RELTOL = float(
+    Nc.GalaxyWLBinnedEstimatorDeltaSigma.new().props.pz_reltol
+)
+DEFAULT_BINNED_MOCK_PZ_RELTOL = 1.0e-6
+DEFAULT_BINNED_EXACT_INTERVALS = Nc.GALAXY_WL_BINNED_ESTIMATOR_DEFAULT_EXACT_INTERVALS
+DEFAULT_BINNED_GT_SIGMA_POP = Nc.GALAXY_WL_BINNED_ESTIMATOR_GT_DEFAULT_SIGMA_POP
+
+
+def set_pz_from_redshift_factor(
+    mset: Ncm.MSet,
+    obs: Nc.GalaxyWLObs,
+    redshift_factor: Nc.GalaxyRedshiftFactor,
+    reltol: float,
+) -> None:
+    """Give every galaxy of obs the NcGalaxyPz of its redshift factor density.
+
+    The density p(z_phot, z | I) is tabulated over its integration range, doubling the
+    number of points until the spline of the table reproduces the density at the
+    midpoints to reltol of its maximum.
+    """
+    redshift_factor.prepare(mset)
+    data = Nc.GalaxyRedshiftFactorData.new(redshift_factor, mset)
+    integ = redshift_factor.integ(mset, False)
+    integ.prepare(mset)
+
+    for i in range(obs.len()):
+        data.read_row(obs, i)
+        redshift_factor.update_data(data)
+        z_min, z_max = redshift_factor.get_integ_lim(mset, data)
+
+        z = np.linspace(z_min, z_max, 65)
+        p = np.array([integ.eval(zj, data) for zj in z])
+
+        while True:
+            pz = Nc.GalaxyPzBSplineSqrt.new_from_table(
+                Ncm.Vector.new_array(z.tolist()), Ncm.Vector.new_array(p.tolist())
+            )
+            z_mid = 0.5 * (z[1:] + z[:-1])
+            p_mid = np.array([integ.eval(zj, data) for zj in z_mid])
+            err = max(abs(pz.eval_p(zj) - pj) for zj, pj in zip(z_mid, p_mid))
+
+            if err <= reltol * p.max() or len(z) > 4096:
+                break
+
+            z = np.insert(z, np.arange(1, len(z)), z_mid)
+            p = np.insert(p, np.arange(1, len(p)), p_mid)
+
+        obs.set_pz(i, pz)
+
+
+class BinnedGtError(GEnum):
+    """Error of each bin of the binned g_t profile."""
+
+    STD_ERR = Nc.GalaxyWLBinnedEstimatorGtError.STD_ERR
+    SHAPE_NOISE = Nc.GalaxyWLBinnedEstimatorGtError.SHAPE_NOISE
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: Any
+    ) -> core_schema.CoreSchema:
+        """Get the Pydantic core schema for the TypeSource class."""
+        return core_schema.no_info_before_validator_function(
+            # The nicks use dashes; accept underscores too (std_err, shape_noise).
+            lambda v: cls(v.replace("_", "-")) if isinstance(v, str) else v,
+            core_schema.enum_schema(cls, list(cls), sub_type="str"),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: str(v.value)
+            ),
+        )
+
+
+class BinnedGenBase(BaseModel):
+    """Classic binned likelihood (``NcDataClusterWLBinned``) of a cluster WL catalog.
+
+    The profile is built from the galaxies of the catalog, after it is generated or
+    loaded, with the redshift densities of the unbinned likelihood: each galaxy's redshift
+    density is the one ``NcDataClusterWLFactor`` integrates. The bins are ``n_bins``
+    edges log-spaced in [r_min, r_max] unless ``edges`` lists them (proper Mpc), and they
+    stay fixed during a fit. ``exact`` replaces the classic model of the estimator by its
+    expected value computed galaxy by galaxy. ``e_rms`` replaces the column ``e_rms`` of
+    the catalog; when neither is given, the intrinsic rms of the shape population of the
+    model set is used.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    n_bins: Annotated[int, Field(ge=1)] = DEFAULT_BINNED_N_BINS
+    edges: Annotated[list[float] | None, Field()] = None
+    exact: Annotated[bool, Field()] = False
+    e_rms: Annotated[float | None, Field(ge=0.0, lt=1.0)] = None
+    pz_reltol: Annotated[float, Field(ge=1.0e-8, lt=1.0)] = DEFAULT_BINNED_PZ_RELTOL
+    mock_pz_reltol: Annotated[float, Field(gt=0.0, lt=1.0)] = (
+        DEFAULT_BINNED_MOCK_PZ_RELTOL
+    )
+    exact_intervals: Annotated[int, Field(ge=1)] = DEFAULT_BINNED_EXACT_INTERVALS
+
+    @field_validator("edges", mode="before")
+    @classmethod
+    def _parse_edges(cls, v: Any) -> Any:
+        """Accept the edges as a comma-separated string."""
+        if isinstance(v, str):
+            return [float(x) for x in v.split(",") if x.strip()]
+        return v
+
+    @field_validator("edges")
+    @classmethod
+    def _check_edges(cls, v: list[float] | None) -> list[float] | None:
+        """At least two edges, positive and strictly increasing."""
+        if v is None:
+            return v
+        if len(v) < 2:
+            raise ValueError("edges needs at least two values")
+        if v[0] <= 0.0 or any(b <= a for a, b in pairwise(v)):
+            raise ValueError(f"edges must be positive and strictly increasing: {v}")
+        return v
+
+    @classmethod
+    def from_args(cls, args: list[str]) -> "BinnedGenBase":
+        """Create this binned likelihood from command line arguments."""
+        opts = parse_options_strict(args)
+        return cls.model_validate(opts)
+
+    def resolve_edges(self, r_min: float, r_max: float) -> list[float]:
+        """Return the bin edges: ``edges``, or ``n_bins`` log-spaced in [r_min, r_max]."""
+        if self.edges is not None:
+            return list(self.edges)
+        return np.geomspace(r_min, r_max, self.n_bins + 1).tolist()
+
+    def _build_estimator(self) -> Nc.GalaxyWLBinnedEstimator:
+        """Build the concrete estimator. Overridden by each estimator."""
+        raise NotImplementedError  # pragma: no cover
+
+    def _resolve_e_rms(self, mset: Ncm.MSet, obs: Nc.GalaxyWLObs) -> float:
+        """The e-rms property of the estimator: -1 reads the column of the catalog."""
+        if self.e_rms is not None:
+            return self.e_rms
+        if obs.has_column(Nc.GALAXY_WL_BINNED_ESTIMATOR_COL_E_RMS):
+            return -1.0
+        pop = cast(Nc.GalaxyShapePop | None, mset.peek(Nc.GalaxyShapePop.id()))
+        if pop is None:
+            raise ValueError(
+                "the catalog has no e_rms column and the model set no shape "
+                "population; give e_rms to the binned likelihood"
+            )
+        pop_data = Nc.GalaxyShapePopData.new(pop)
+        pop.prepare(pop_data)
+        return pop.e_rms(pop_data)
+
+    def build_data(
+        self,
+        mset: Ncm.MSet,
+        obs: Nc.GalaxyWLObs,
+        r_min: float,
+        r_max: float,
+        redshift_factor: Nc.GalaxyRedshiftFactor | None = None,
+        mask: list[bool] | None = None,
+    ) -> Nc.DataClusterWLBinned:
+        """Build the binned likelihood of obs, adding a Gaussian scatter to mset.
+
+        A mock has no p(z) per galaxy: given its redshift_factor, the densities are first
+        set in obs (``set_pz_from_redshift_factor``), to ``mock_pz_reltol``. With
+        ``mask``, only the rows of obs that are True enter the profile.
+        """
+        if redshift_factor is not None:
+            set_pz_from_redshift_factor(mset, obs, redshift_factor, self.mock_pz_reltol)
+
+        est = self._build_estimator()
+        est.set_e_rms(self._resolve_e_rms(mset, obs))
+        est.set_pz_reltol(self.pz_reltol)
+        est.set_mask(mask)
+        est.set_exact_intervals(self.exact_intervals)
+
+        data = Nc.DataClusterWLBinned.new_from_obs(
+            est, mset, obs, self.resolve_edges(r_min, r_max)
+        )
+        data.set_exact(self.exact)
+
+        if mset.peek(Nc.GalaxyWLBinnedScatter.id()) is None:
+            mset.set(Nc.GalaxyWLBinnedScatterGauss.new())
+            mset.prepare_fparam_map()
+
+        return data
+
+    def __repr__(self):
+        """Return a string representation of the model."""
+        args = ", ".join(f"{k}={v!r}" for k, v in self.model_dump().items())
+        return f"{self.__class__.__name__}({args})"
+
+
+_SHARED_BINNED_HELP = (
+    f"n_bins={DEFAULT_BINNED_N_BINS}, edges=None (r1,r2,...), exact=False, "
+    f"e_rms=None, \npz_reltol={DEFAULT_BINNED_PZ_RELTOL}, "
+    f"mock_pz_reltol={DEFAULT_BINNED_MOCK_PZ_RELTOL}, "
+    f"exact_intervals={DEFAULT_BINNED_EXACT_INTERVALS}"
+)
+
+
+class BinnedGenDeltaSigma(BinnedGenBase):
+    """Excess surface mass density of Umetsu et al. 2020."""
+
+    subtract_additive_bias: Annotated[bool, Field()] = True
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for this estimator."""
+        return [
+            "BinnedGenDeltaSigma (excess surface mass density)",
+            _SHARED_BINNED_HELP + ", \nsubtract_additive_bias=True",
+        ]
+
+    def _build_estimator(self) -> Nc.GalaxyWLBinnedEstimator:
+        est = Nc.GalaxyWLBinnedEstimatorDeltaSigma.new()
+        est.set_subtract_additive_bias(self.subtract_additive_bias)
+        return est
+
+
+class BinnedGenGt(BinnedGenBase):
+    """Binned reduced tangential shear (Schrabback et al. 2018 model)."""
+
+    sigma_pop: Annotated[float, Field(ge=0.0, le=1.0)] = DEFAULT_BINNED_GT_SIGMA_POP
+    error_type: Annotated[BinnedGtError, Field()] = BinnedGtError.STD_ERR
+    beta_weighted: Annotated[bool, Field()] = False
+
+    @staticmethod
+    def help_text() -> list[str]:
+        """Return the help text for this estimator."""
+        return [
+            "BinnedGenGt (reduced tangential shear)",
+            _SHARED_BINNED_HELP + f", \nsigma_pop={DEFAULT_BINNED_GT_SIGMA_POP}, "
+            f"error_type={BinnedGtError.STD_ERR.value}, beta_weighted=False",
+        ]
+
+    def _build_estimator(self) -> Nc.GalaxyWLBinnedEstimator:
+        est = Nc.GalaxyWLBinnedEstimatorGt.new()
+        est.set_sigma_pop(self.sigma_pop)
+        est.set_error_type(self.error_type.genum)
+        est.set_beta_weighted(self.beta_weighted)
+        return est
+
+
+BinnedGenTypes = BinnedGenDeltaSigma | BinnedGenGt
+
+
+class BinnedGen(StrEnum):
+    """Classic binned cluster WL likelihoods (``NcGalaxyWLBinnedEstimator*``)."""
+
+    DELTA_SIGMA = (auto(), BinnedGenDeltaSigma)
+    GT = (auto(), BinnedGenGt)
+
+    def __new__(cls, value: str, _model_cls: type[BinnedGenTypes]) -> Self:
+        """Create a new instance of the enum.
+
+        Initialize the enum including help text and model class.
+        """
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+    def __init__(self, _value: str, model_cls: type[BinnedGenTypes]) -> None:
+        """Initialize the enum."""
+        self.model_cls = model_cls
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Return the help text for the binned likelihood."""
+        headers = ["Enum", "Model", "Params"]
+        rows = []
+
+        for value in cls:
+            rows.append([value] + value.model_cls.help_text())
+
+        return "\b" + tabulate(rows, headers=headers, tablefmt=DEFAULT_TABLE_FMT)
+
+    @classmethod
+    def get_help_metavar(cls) -> str:
+        """Return the help metavar for the binned likelihood."""
+        return "[" + "|".join([value.value for value in cls]) + "]"
+
+
+def binned_summary_table(data: Nc.DataClusterWLBinned) -> Table:
+    """Return a rich table with the bins of a binned likelihood."""
+    binned = data.peek_binned()
+    est = data.peek_estimator()
+    cov = binned.peek_cov()
+
+    table = Table(
+        title=(
+            f"Binned profile ({est.get_name()}, "
+            f"{'exact' if data.get_exact() else 'classic'} model)"
+        )
+    )
+    for col in ("Bin", "R range [Mpc]", "R [Mpc]", "N gal", "Value", "Sigma"):
+        table.add_column(col)
+    for b in range(binned.len()):
+        table.add_row(
+            f"{b}",
+            f"[{binned.get('r_lo', b):.3f}, {binned.get('r_hi', b):.3f})",
+            f"{binned.get('radius', b):.3f}",
+            f"{binned.get('n_gal', b):.0f}",
+            f"{binned.get('value', b):.4e}",
+            f"{np.sqrt(cov.get(b, b)):.4e}",
+        )
+    return table
+
+
 class HaloProfileType(StrEnum):
     """Halo density profile types."""
 
@@ -1324,11 +1635,13 @@ def generate_lsst_cluster_wl(
     seed: None | int,
     integ_options: IntegMethodOptions,
     summary: bool,
+    binned_gen: BinnedGenTypes | None = None,
 ) -> Ncm.ObjDictStr:
     """Generate a cluster weak lensing experiment.
 
     This function generates a cluster with galaxies following the LSST SRD redshift
-    distribution.
+    distribution. With ``binned_gen`` the likelihood is the binned one built from the
+    generated galaxies (``BinnedGenBase.build_data``) instead of the per-galaxy one.
     """
     if (
         (cluster_ra < ra_min)
@@ -1384,7 +1697,19 @@ def generate_lsst_cluster_wl(
         create_cosmo(), cluster, rng, integ_options=integ_options
     )
 
-    dset = Ncm.Dataset.new_array([cluster_data])
+    binned_data = None
+    if binned_gen is not None:
+        binned_data = binned_gen.build_data(
+            mset,
+            cluster_data.peek_obs(),
+            cluster.r_min,
+            cluster.r_max,
+            redshift_factor=z_gen.get_redshift_factor(),
+        )
+
+    dset = Ncm.Dataset.new_array(
+        [binned_data if binned_data is not None else cluster_data]
+    )
     likelihood = Ncm.Likelihood.new(dset)
 
     # Save experiment
@@ -1429,6 +1754,9 @@ def generate_lsst_cluster_wl(
         console.print(table)
 
         console.print(f"Number of galaxies: {galaxy_model.n_galaxies}")
+
+        if binned_data is not None:
+            console.print(binned_summary_table(binned_data))
 
     return experiment
 
@@ -1516,6 +1844,7 @@ def load_cluster_wl(
     integ_options: IntegMethodOptions,
     summary: bool,
     resample_flag: Nc.DataClusterWLResampleFlag = Nc.DataClusterWLResampleFlag.ALL,
+    binned_gen: BinnedGenTypes | None = None,
     row_selector: RowSelector | None = None,
 ) -> Ncm.ObjDictStr:
     """Build a cluster weak lensing experiment from a real NcGalaxyWLObs catalog.
@@ -1535,6 +1864,11 @@ def load_cluster_wl(
     as-is (default ``ALL``); see ``ResampleFlagChoice`` for what each flag
     redraws.
 
+    With ``binned_gen`` the likelihood is the binned one built from the catalog's
+    galaxies (``BinnedGenBase.build_data``), from the p(z) of the catalog, instead of
+    the per-galaxy one; ``resample_flag`` and ``integ_options`` then do not apply, and
+    ``row_selector`` restricts the galaxies of the profile.
+
     ``row_selector``, when given, is evaluated at the cluster and cosmology of the
     experiment and sets the mask of the ``NcDataClusterWLFactor`` (see
     ``numcosmo_py.experiments.wl_row_selection``).
@@ -1545,8 +1879,11 @@ def load_cluster_wl(
     obs_ellip_conv = obs.get_ellip_conv()
     obs_coord = obs.get_coord()
 
-    if (shape_gen.ellip_conv.genum != obs_ellip_conv) or (
-        shape_gen.ellip_coord.genum != obs_coord
+    # The binned likelihood reads the convention of the catalog itself and never
+    # evaluates the shape factor, so only the per-galaxy likelihood needs them to agree.
+    if (binned_gen is None) and (
+        (shape_gen.ellip_conv.genum != obs_ellip_conv)
+        or (shape_gen.ellip_coord.genum != obs_coord)
     ):
         raise ValueError(
             "shape_dist ellip_conv/ellip_coord must match the catalog's own "
@@ -1661,13 +1998,23 @@ def load_cluster_wl(
     cluster_data.set_resample_flag(resample_flag)
 
     # The selection is evaluated here, at the cluster and cosmology of the experiment.
+    mask = None
     if row_selector is not None:
         ctx = RowSelectionContext(
             obs=obs, cosmo=cosmo, halo_position=cluster.halo_position
         )
-        cluster_data.set_mask(row_selection_mask(row_selector, ctx))
+        mask = row_selection_mask(row_selector, ctx)
+        cluster_data.set_mask(mask)
 
-    dset = Ncm.Dataset.new_array([cluster_data])
+    binned_data = None
+    if binned_gen is not None:
+        binned_data = binned_gen.build_data(
+            mset, obs, cluster.r_min, cluster.r_max, mask=mask
+        )
+
+    dset = Ncm.Dataset.new_array(
+        [binned_data if binned_data is not None else cluster_data]
+    )
     likelihood = Ncm.Likelihood.new(dset)
 
     experiment = Ncm.ObjDictStr()
@@ -1703,5 +2050,8 @@ def load_cluster_wl(
         table.add_row("DEC range", f"[{dec.min():.4f}, {dec.max():.4f}]")
         table.add_row("Shape Generator", repr(shape_gen))
         console.print(table)
+
+        if binned_data is not None:
+            console.print(binned_summary_table(binned_data))
 
     return experiment

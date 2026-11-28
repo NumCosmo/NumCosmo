@@ -1783,6 +1783,14 @@
     "nick": "sigma",
     "type": "Nc.GalaxyShapePopGaussParams"
   },
+  "NC_GALAXY_WL_BINNED_ESTIMATOR_GT_ERROR_SHAPE_NOISE": {
+    "nick": "shape-noise",
+    "type": "Nc.GalaxyWLBinnedEstimatorGtError"
+  },
+  "NC_GALAXY_WL_BINNED_ESTIMATOR_GT_ERROR_STD_ERR": {
+    "nick": "std-err",
+    "type": "Nc.GalaxyWLBinnedEstimatorGtError"
+  },
   "NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002": {
     "nick": "hsc-pdr1-hwl16a-002",
     "type": "Nc.GalaxyWLObsCatalogId"

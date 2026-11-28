@@ -871,6 +871,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop.c'],
     },
     {
+        'name': 'nc_data_cluster_wl_binned',
+        'sources': ['nc/data/test_nc_data_cluster_wl_binned.c'],
+    },
+    {
         'name': 'nc_galaxy_position_factor',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
     },

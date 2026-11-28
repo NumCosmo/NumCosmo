@@ -206,6 +206,12 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_obs_binned.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_binned_estimator.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_binned_estimator_delta_sigma.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_binned_estimator_gt.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_binned_scatter.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_wl_binned_scatter_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_beta.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>
@@ -240,6 +246,7 @@
 #include <numcosmo/nc/data/nc_data_cluster_ncounts_gauss.h>
 #include <numcosmo/nc/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/nc/data/nc_data_cluster_wl_factor.h>
+#include <numcosmo/nc/data/nc_data_cluster_wl_binned.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich.h>
 #include <numcosmo/nc/data/nc_data_cluster_mass_rich_count.h>
 #include <numcosmo/nc/data/nc_data_planck_lkl.h>
