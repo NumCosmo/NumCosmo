@@ -371,10 +371,20 @@ _step_z (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcDataClusterWLFacto
   nc_galaxy_redshift_factor_update_data (self->redshift_factor, gal->z_data);
 }
 
+static inline void _nc_data_cluster_wl_factor_rotation (NcGalaxyShapeFactorData *s_data, NcGalaxyHaloWLData *h_data, gdouble *rot_re, gdouble *rot_im);
+
+/* The rotation of the galaxy in the frame of its ellipticity, for the shape factors that work in the tangential frame */
+static inline void
+_nc_data_cluster_wl_factor_sync_rotation (NcGalaxyShapeFactorData *s_data, NcGalaxyHaloWLData *h_data)
+{
+  _nc_data_cluster_wl_factor_rotation (s_data, h_data, &s_data->rot_re, &s_data->rot_im);
+}
+
 static void
 _step_halo_radius (NcDataClusterWLFactorPrivate *self, NcmMSet *mset, NcDataClusterWLFactorGalaxy *gal, guint gal_i)
 {
   nc_galaxy_halo_wl_update_data_radius (self->halo_wl, gal->h_data, gal->pos_data);
+  _nc_data_cluster_wl_factor_sync_rotation (gal->s_data, gal->h_data);
 }
 
 static void
@@ -2041,6 +2051,7 @@ _nc_data_cluster_wl_factor_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       gdouble g_2                = s_data->c2;
 
       nc_galaxy_halo_wl_update_data_radius (self->halo_wl, h_data, pos_data);
+      _nc_data_cluster_wl_factor_sync_rotation (s_data, h_data);
 
       if (lensed)
       {

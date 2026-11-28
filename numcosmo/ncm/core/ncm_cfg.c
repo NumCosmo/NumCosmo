@@ -231,12 +231,15 @@
 #include "nc/lss/galaxy/nc_galaxy_redshift_pop_lsst_srd.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_factor_wtg.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop_shear_scatter_gauss.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop_shear_scatter_voigt.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop_beta.h"
 #include "nc/background/nc_distance.h"
 #include "nc/recomb/nc_recomb.h"
@@ -1078,12 +1081,15 @@ ncm_cfg_register_objects (void)
   ncm_cfg_register_obj (NC_TYPE_GALAXY_REDSHIFT_POP_LSST_SRD);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_VAR_ADD);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_WTG);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_SPECTRAL);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_TILT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_FACTOR_MOMENTS_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_GAUSS_LOCAL);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_SHEAR_SCATTER_VOIGT);
   ncm_cfg_register_obj (NC_TYPE_GALAXY_SHAPE_POP_BETA);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);

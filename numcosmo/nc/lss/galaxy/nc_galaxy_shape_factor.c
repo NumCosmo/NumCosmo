@@ -74,6 +74,7 @@
 #include "nc/lss/galaxy/nc_galaxy_shape_factor.h"
 #include "ncm/core/ncm_prefetch_private.h"
 #include "nc/lss/galaxy/nc_galaxy_shape_pop.h"
+#include "nc/lss/galaxy/nc_galaxy_shape_pop_shear_scatter.h"
 #include "ncm/core/ncm_cfg.h"
 #include "ncm/stats/ncm_stats_vec.h"
 #include "ncm/model/ncm_model.h"
@@ -262,6 +263,16 @@ _nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
   return g_strdup_printf ("%s (ellip_conv=%s)", G_OBJECT_TYPE_NAME (gsf), ellip_val->value_nick);
 }
 
+static gboolean
+_nc_galaxy_shape_factor_accepts_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop)
+{
+  /* A shear-scatter population is a distribution of the shear estimate, which
+   * only a scheme built on it can use. */
+  return !NC_IS_GALAXY_SHAPE_POP_SHEAR_SCATTER (pop);
+}
+
+static void _nc_galaxy_shape_factor_gen_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gboolean lensed, const gdouble g_1, const gdouble g_2, NcmRNG *rng);
+
 static void
 nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
 {
@@ -297,6 +308,8 @@ nc_galaxy_shape_factor_class_init (NcGalaxyShapeFactorClass *klass)
   klass->eval_line        = &_nc_galaxy_shape_factor_eval_line;
   klass->workspace_get    = &_nc_galaxy_shape_factor_workspace_get;
   klass->workspace_return = &_nc_galaxy_shape_factor_workspace_return;
+  klass->accepts_pop      = &_nc_galaxy_shape_factor_accepts_pop;
+  klass->gen_shear        = &_nc_galaxy_shape_factor_gen_shear;
 }
 
 static void
@@ -378,6 +391,24 @@ nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf)
 }
 
 /**
+ * nc_galaxy_shape_factor_accepts_pop: (virtual accepts_pop)
+ * @gsf: a #NcGalaxyShapeFactor
+ * @pop: a #NcGalaxyShapePop
+ *
+ * Whether @gsf can evaluate the population @pop. Every scheme accepts the
+ * intrinsic-ellipticity populations except where it documents otherwise, and refuses a
+ * #NcGalaxyShapePopShearScatter, which only #NcGalaxyShapeFactorWtG evaluates.
+ * nc_galaxy_shape_factor_prepare() aborts on a population this returns %FALSE for.
+ *
+ * Returns: whether @gsf accepts @pop.
+ */
+gboolean
+nc_galaxy_shape_factor_accepts_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop)
+{
+  return NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->accepts_pop (gsf, pop);
+}
+
+/**
  * nc_galaxy_shape_factor_prepare:
  * @gsf: a #NcGalaxyShapeFactor
  * @mset: a #NcmMSet with a #NcGalaxyShapePop
@@ -396,6 +427,10 @@ nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
   NcGalaxyShapePop *pop                   = NC_GALAXY_SHAPE_POP (ncm_mset_peek (mset, nc_galaxy_shape_pop_id ()));
 
   g_assert_nonnull (pop);
+
+  if (!klass->accepts_pop (gsf, pop))
+    g_error ("nc_galaxy_shape_factor_prepare: %s cannot evaluate the population %s.",
+             G_OBJECT_TYPE_NAME (gsf), G_OBJECT_TYPE_NAME (pop));
 
   if (ncm_model_ctrl_update (self->ctrl_pop, NCM_MODEL (pop)))
     self->pop_hash++;
@@ -782,6 +817,8 @@ nc_galaxy_shape_factor_data_new (NcGalaxyShapeFactor *gsf, NcmMSet *mset)
 
   data->pop_data = nc_galaxy_shape_pop_data_new (pop);
   data->coord    = NC_WL_ELLIPTICITY_FRAME_CELESTIAL;
+  data->rot_re   = 1.0;
+  data->rot_im   = 0.0;
 
   data->bound_ready = FALSE;
   data->bound_holds = FALSE;
@@ -1007,6 +1044,13 @@ nc_galaxy_shape_factor_eval_shear_line (NcGalaxyShapeFactor *gsf, NcGalaxyShapeP
  */
 void
 nc_galaxy_shape_factor_gen_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gboolean lensed, const gdouble g_1, const gdouble g_2, NcmRNG *rng)
+{
+  NC_GALAXY_SHAPE_FACTOR_GET_CLASS (gsf)->gen_shear (gsf, pop, data, lensed, g_1, g_2, rng);
+}
+
+/* Default gen_shear: intrinsic ellipticity from @pop, sheared, plus Gaussian noise. */
+static void
+_nc_galaxy_shape_factor_gen_shear (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gboolean lensed, const gdouble g_1, const gdouble g_2, NcmRNG *rng)
 {
   const gdouble noise1   = ncm_rng_gaussian_gen (rng, 0.0, data->std_noise);
   const gdouble noise2   = ncm_rng_gaussian_gen (rng, 0.0, data->std_noise);

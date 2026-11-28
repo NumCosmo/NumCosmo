@@ -139,8 +139,25 @@ struct _NcGalaxyShapeFactorClass
   gpointer (*workspace_get) (NcGalaxyShapeFactor *gsf);
   void (*workspace_return) (NcGalaxyShapeFactor *gsf, gpointer workspace);
 
+  /*
+   * Whether this scheme can evaluate the population @pop. Called by
+   * nc_galaxy_shape_factor_prepare(), which aborts when it returns FALSE. The default
+   * accepts every population except a #NcGalaxyShapePopShearScatter, which describes the
+   * shear estimate rather than the intrinsic ellipticity.
+   */
+  gboolean (*accepts_pop) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop);
+
+  /*
+   * Draws the observed ellipticity of one galaxy at the reduced shear (@g_1, @g_2), which is
+   * (1 + m) g + c in the frame of the galaxy when @lensed, and c otherwise; sets
+   * @data->epsilon_int_* and @data->epsilon_obs_*. The default draws the intrinsic
+   * ellipticity from @pop, applies the shear map and adds the Gaussian measurement noise.
+   * Used by nc_galaxy_shape_factor_gen_shear().
+   */
+  void (*gen_shear) (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop, NcGalaxyShapeFactorData *data, const gboolean lensed, const gdouble g_1, const gdouble g_2, NcmRNG *rng);
+
   /* Padding to allow 18 virtual functions without breaking ABI. */
-  gpointer padding[7];
+  gpointer padding[5];
 };
 
 /*
@@ -166,6 +183,15 @@ struct _NcGalaxyShapeFactorData
   gdouble c1;
   gdouble c2;
   gdouble m;
+
+  /*
+   * The spin-2 rotation e^{2 i phi} of the galaxy around the halo center, in the frame of its
+   * ellipticity: it takes a tangential/cross pair to @coord. Set by #NcDataClusterWLFactor
+   * before every evaluation and draw, for the schemes that work in the tangential frame
+   * (#NcGalaxyShapeFactorWtG); (1, 0) until then.
+   */
+  gdouble rot_re;
+  gdouble rot_im;
 
   /*
    * The bound of the reduced shear of the galaxy over the prior box, set by
@@ -208,6 +234,7 @@ NcGalaxyWLObsEllipConv nc_galaxy_shape_factor_get_ellip_conv (NcGalaxyShapeFacto
 gboolean nc_galaxy_shape_factor_check_obs (NcGalaxyShapeFactor *gsf, NcGalaxyWLObs *obs, GError **error);
 
 gchar *nc_galaxy_shape_factor_get_desc (NcGalaxyShapeFactor *gsf);
+gboolean nc_galaxy_shape_factor_accepts_pop (NcGalaxyShapeFactor *gsf, NcGalaxyShapePop *pop);
 
 void nc_galaxy_shape_factor_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset);
 void nc_galaxy_shape_factor_data_prepare (NcGalaxyShapeFactor *gsf, NcmMSet *mset, NcGalaxyShapeFactorData *data, const gdouble z_max);

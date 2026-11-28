@@ -1783,6 +1783,18 @@
     "nick": "sigma",
     "type": "Nc.GalaxyShapePopGaussParams"
   },
+  "NC_GALAXY_SHAPE_POP_SHEAR_SCATTER_GAUSS_SIGMA": {
+    "nick": "sigma",
+    "type": "Nc.GalaxyShapePopShearScatterGaussParams"
+  },
+  "NC_GALAXY_SHAPE_POP_SHEAR_SCATTER_VOIGT_GAMMA": {
+    "nick": "gamma",
+    "type": "Nc.GalaxyShapePopShearScatterVoigtParams"
+  },
+  "NC_GALAXY_SHAPE_POP_SHEAR_SCATTER_VOIGT_SIGMA": {
+    "nick": "sigma",
+    "type": "Nc.GalaxyShapePopShearScatterVoigtParams"
+  },
   "NC_GALAXY_WL_OBS_CATALOG_HSC_PDR1_HWL16A_002": {
     "nick": "hsc-pdr1-hwl16a-002",
     "type": "Nc.GalaxyWLObsCatalogId"

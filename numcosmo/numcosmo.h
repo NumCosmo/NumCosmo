@@ -201,11 +201,15 @@
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_spectral.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_var_add.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_wtg.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_tilt.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_factor_moments_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_gauss_local.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_shear_scatter.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_shear_scatter_gauss.h>
+#include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_shear_scatter_voigt.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_shape_pop_beta.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs.h>
 #include <numcosmo/nc/lss/galaxy/nc_galaxy_redshift_obs_gauss.h>

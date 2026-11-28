@@ -871,6 +871,10 @@ galaxy_tests = [
         'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_pop.c'],
     },
     {
+        'name': 'nc_galaxy_shape_factor_wtg',
+        'sources': ['nc/lss/galaxy/test_nc_galaxy_shape_factor_wtg.c'],
+    },
+    {
         'name': 'nc_galaxy_position_factor',
         'sources': ['nc/lss/galaxy/test_nc_galaxy_position_factor.c'],
     },
