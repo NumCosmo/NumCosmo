@@ -491,12 +491,15 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
       nc_dist_mu_nuisance_free (nuisance);
     }
 
-    /* An observer velocity: the mean is the rest-frame modulus at z_rest minus 5 log10 D */
+    /*
+     * An observer velocity: the mean is the rest-frame modulus at z_rest and n_rest minus
+     * 5 log10 D; the modulus in the observed direction differs in this anisotropic model.
+     */
     {
       NcObserverVelocity *ov = nc_observer_velocity_new ();
       NcmMSet *mset_v        = ncm_mset_new (NCM_MODEL (test->cosmo), NULL, ov, NULL);
       const gdouble f_lnRH   = 5.0 * log10 (nc_hcosmo_bi_RH_Mpc (test->cosmo));
-      gdouble m2lnL_v, m2lnL_ref_v = 0.0;
+      gdouble m2lnL_v, m2lnL_ref_v = 0.0, m2lnL_obs_v = 0.0;
 
       ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VX, 200.0);
       ncm_model_orig_param_set (NCM_MODEL (ov), NC_OBSERVER_VELOCITY_VY, -300.0);
@@ -509,17 +512,51 @@ test_nc_hcosmo_bi_dist_data (TestNcHCosmoBIDist *test, gconstpointer pdata)
         const gdouble pz     = ncm_matrix_get (nc_data_hcosmo_bi_dist_mu_peek_p (dmu), i, 2);
         const gdouble D      = nc_observer_velocity_doppler (ov, px, py, pz);
         const gdouble z_rest = nc_observer_velocity_z_rest (ov, ncm_vector_get (z, i), px, py, pz);
-        const gdouble mu_v   = nc_hcosmo_bi_dist_dmodulus_sky (test->dist, z_rest, px, py, pz) - 5.0 * log10 (D) + f_lnRH;
         const gdouble s_i    = ncm_vector_get (sigma, i);
+        gdouble nrx, nry, nrz, mu_v, mu_obs;
+
+        nc_observer_velocity_n_rest (ov, px, py, pz, &nrx, &nry, &nrz);
+        mu_v   = nc_hcosmo_bi_dist_dmodulus_sky (test->dist, z_rest, nrx, nry, nrz) - 5.0 * log10 (D) + f_lnRH;
+        mu_obs = nc_hcosmo_bi_dist_dmodulus_sky (test->dist, z_rest, px, py, pz) - 5.0 * log10 (D) + f_lnRH;
 
         g_assert_cmpfloat (fabs (D - 1.0), >, 1.0e-5);
         m2lnL_ref_v += gsl_pow_2 ((ncm_vector_get (mu, i) - mu_v) / s_i) + 2.0 * log (s_i) + ncm_c_ln2pi ();
+        m2lnL_obs_v += gsl_pow_2 ((ncm_vector_get (mu, i) - mu_obs) / s_i) + 2.0 * log (s_i) + ncm_c_ln2pi ();
       }
 
       ncm_data_prepare (NCM_DATA (dmu), mset_v);
       ncm_data_m2lnL_val (NCM_DATA (dmu), mset_v, &m2lnL_v);
       ncm_assert_cmpdouble_e (m2lnL_v, ==, m2lnL_ref_v, 1.0e-13, 0.0);
+      /* The aberration changes -2lnL by 1.877e-3 here */
+      g_assert_cmpfloat (fabs (m2lnL_v - m2lnL_obs_v), >, 1.0e-4);
       g_assert_cmpfloat (fabs (m2lnL_v - m2lnL), >, 1.0e-3);
+
+      /*
+       * The velocity components are in the sky frame of the data, not in the Bianchi I axes:
+       * in the isotropic model, rotating the axes with v != 0 leaves -2lnL unchanged.
+       */
+      {
+        gdouble m2lnL_rot[2];
+        gdouble n_rot[2][3];
+        guint k;
+
+        _test_nc_hcosmo_bi_dist_set (test->cosmo, 0.3, 72.0, 72.0, 72.0);
+
+        for (k = 0; k < 2; k++)
+        {
+          ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U1, (k == 0) ? 0.3 : 0.8);
+          ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U2, (k == 0) ? 0.2 : 0.55);
+          ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HCOSMO_BI_U3, (k == 0) ? 0.7 : 0.1);
+
+          ncm_data_prepare (NCM_DATA (dmu), mset_v);
+          ncm_data_m2lnL_val (NCM_DATA (dmu), mset_v, &m2lnL_rot[k]);
+          nc_hcosmo_bi_dist_sky_to_axes (test->dist, dirs[0][0], dirs[0][1], dirs[0][2], &n_rot[k][0], &n_rot[k][1], &n_rot[k][2]);
+        }
+
+        g_assert_cmpfloat (fabs (n_rot[0][0] - n_rot[1][0]) + fabs (n_rot[0][1] - n_rot[1][1]) + fabs (n_rot[0][2] - n_rot[1][2]), >, 0.1);
+        /* Measured relative difference 2.0e-13 */
+        ncm_assert_cmpdouble_e (m2lnL_rot[0], ==, m2lnL_rot[1], 1.0e-12, 0.0);
+      }
 
       ncm_mset_free (mset_v);
       nc_observer_velocity_free (ov);

@@ -69,6 +69,7 @@ gdouble nc_observer_velocity_speed (NcObserverVelocity *ov);
 gdouble nc_observer_velocity_beta_n (NcObserverVelocity *ov, const gdouble nx, const gdouble ny, const gdouble nz);
 gdouble nc_observer_velocity_doppler (NcObserverVelocity *ov, const gdouble nx, const gdouble ny, const gdouble nz);
 gdouble nc_observer_velocity_z_rest (NcObserverVelocity *ov, const gdouble z_obs, const gdouble nx, const gdouble ny, const gdouble nz);
+void nc_observer_velocity_n_rest (NcObserverVelocity *ov, const gdouble nx, const gdouble ny, const gdouble nz, gdouble *n_rest_x, gdouble *n_rest_y, gdouble *n_rest_z);
 
 #define NC_OBSERVER_VELOCITY_DEFAULT_V (0.0)
 #define NC_OBSERVER_VELOCITY_MAX_V (2000.0)
