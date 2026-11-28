@@ -229,6 +229,15 @@ class TablesWLCatalog:
 
         if not isinstance(shape_gen, GalaxyShapeFactorGenSpectral):
             raise typer.BadParameter("the shape factor must be spectral")
+        # The build does not know the priors of the fits that will use the catalog: a
+        # table restricted to the shears reachable at the build's centre and mass would
+        # leave the shears a fit with a wider prior reaches to the integrals. The tables
+        # cover interp-g-max unless restrict_range is given explicitly.
+        # (A generator builds its shape factor once, so the option is parsed again.)
+        if "restrict_range" not in shape_gen.model_fields_set:
+            _shape_factor, shape_gen = parse_shape_factor(
+                f"{shape_factor} restrict_range=false"
+            )
         check_shape_pop_compat(shape_gen, pop_gen)
         return shape_gen, pop_gen
 

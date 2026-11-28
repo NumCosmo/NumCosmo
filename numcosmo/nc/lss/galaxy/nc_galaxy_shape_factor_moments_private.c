@@ -470,15 +470,17 @@ _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFa
 /*
  * Whether the reachable-range bound of a shape factor holds for the free
  * parameters of @mset: TRUE when only log10MDelta, the halo center (ra,
- * dec) and shape-population parameters are free. The bound covers
+ * dec) and shape-population parameters are free, and also cDelta when
+ * @cdelta_box (a bound taken over the box of the concentration, see
+ * _nc_galaxy_shape_factor_moments_cdelta_box()). The bound covers
  * log10MDelta up to its upper bound and the halo center over its box; the
  * shape population changes only the tables, which are keyed on it. Every
- * other free parameter (cosmology, z_cl, cDelta and the other profile and
+ * other free parameter (cosmology, z_cl, the other profile and
  * mass-summary parameters, the surface mass density, the redshift models)
  * moves the shear or the redshift support outside what the bound covers.
  */
 gboolean
-_nc_galaxy_shape_factor_moments_range_holds (NcmMSet *mset)
+_nc_galaxy_shape_factor_moments_range_holds (NcmMSet *mset, const gboolean cdelta_box)
 {
   const guint n_models = ncm_mset_nmodels (mset);
   guint i, pid;
@@ -506,6 +508,9 @@ _nc_galaxy_shape_factor_moments_range_holds (NcmMSet *mset)
         const gchar *name = ncm_model_param_name (model, pid);
 
         if (g_strcmp0 (name, "log10MDelta") == 0)
+          continue;
+
+        if (cdelta_box && (g_strcmp0 (name, "cDelta") == 0))
           continue;
       }
 
@@ -557,16 +562,14 @@ _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cos
   return delta;
 }
 
-/*
- * Sets @dp_copy, a copy of @dp_src of the same classes, to @dp_src at the corner of the
- * prior box: every parameter of the profile and of its mass summary as in @dp_src, then
- * the mass at the upper bound of its prior. The profile in the mset is untouched. The
- * shear is not monotonic in the concentration, so the bound is taken at a fixed
- * concentration only; a free cDelta is excluded by
- * _nc_galaxy_shape_factor_moments_range_holds(). Returns FALSE when the mass cannot be
- * resolved by name, which is not an error: the caller then skips the restriction and
- * builds the full mesh.
- */
+/* Sets @dp_copy's mass to the top of its prior box and its concentration,
+ * when the mass summary has one, to the value in @dp_src, leaving the
+ * profile in the mset untouched. The shear is not monotonic in the
+ * concentration, so a bound at this corner holds at a fixed concentration only; a
+ * caller that admits a free cDelta (_nc_galaxy_shape_factor_moments_range_holds() with
+ * cdelta_box) takes its bound over the concentration box itself. Returns FALSE when
+ * the mass cannot be resolved by name, which is not an error: the caller
+ * then skips the restriction and builds the full mesh. */
 gboolean
 _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src)
 {
@@ -594,6 +597,36 @@ _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, N
 
   ncm_model_params_copyto (m_src, m_copy);
   ncm_model_param_set (m_copy, idx, ncm_model_param_get_upper_bound (m_src, idx));
+
+  return TRUE;
+}
+
+/* The box of the concentration of @dp_src for a bound taken over it: its index in the mass
+ * summary and [@c_lo, @c_hi], its prior bounds when it is free and its value twice when it
+ * is fixed. FALSE when the mass summary has no cDelta. */
+gboolean
+_nc_galaxy_shape_factor_moments_cdelta_box (NcHaloDensityProfile *dp_src, guint *idx, gdouble *c_lo, gdouble *c_hi)
+{
+  NcmModel *m_src = NCM_MODEL (nc_halo_density_profile_peek_mass_summary (dp_src));
+  GError *error   = NULL;
+
+  if (!ncm_model_param_index_from_name (m_src, "cDelta", idx, &error))
+  {
+    g_clear_error (&error);
+
+    return FALSE;
+  }
+
+  if (ncm_model_param_get_ftype (m_src, *idx) == NCM_PARAM_TYPE_FREE)
+  {
+    c_lo[0] = ncm_model_param_get_lower_bound (m_src, *idx);
+    c_hi[0] = ncm_model_param_get_upper_bound (m_src, *idx);
+  }
+  else
+  {
+    c_lo[0] = ncm_model_param_get (m_src, *idx);
+    c_hi[0] = c_lo[0];
+  }
 
   return TRUE;
 }

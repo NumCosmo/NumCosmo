@@ -1679,7 +1679,7 @@ _nc_galaxy_shape_factor_moments_tilt_prepare (NcGalaxyShapeFactor *gsf, NcmMSet 
   }
 
   {
-    const gboolean holds = self->restrict_range && _nc_galaxy_shape_factor_moments_range_holds (mset);
+    const gboolean holds = self->restrict_range && _nc_galaxy_shape_factor_moments_range_holds (mset, FALSE);
 
     if (holds != self->range_holds)
     {

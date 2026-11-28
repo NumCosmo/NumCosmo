@@ -450,7 +450,8 @@ test_nc_galaxy_halo_wl_bound (TestNcGalaxyHaloWL *test, gconstpointer pdata)
 
   ncm_model_param_set_ftype (NCM_MODEL (test->hms), NC_HALO_CM_PARAM_C_DELTA, NCM_PARAM_TYPE_FREE);
   nc_galaxy_halo_wl_prepare_bound (test->hwl, test->mset);
-  g_assert_false (nc_galaxy_halo_wl_bound_holds (test->hwl));
+  g_assert_true (nc_galaxy_halo_wl_bound_holds (test->hwl));
+  ncm_model_param_set_ftype (NCM_MODEL (test->hms), NC_HALO_CM_PARAM_C_DELTA, NCM_PARAM_TYPE_FIXED);
 
   /* A profile of another class in the mset: the corner is a copy of it */
   {

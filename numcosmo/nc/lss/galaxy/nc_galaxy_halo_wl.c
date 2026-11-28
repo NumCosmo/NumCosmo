@@ -57,6 +57,7 @@
 #include "ncm/core/ncm_serialize.h"
 #include "ncm/model/ncm_model_ctrl.h"
 #include "ncm/algebra/ncm_quaternion.h"
+#include "ncm/core/ncm_util.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
@@ -88,7 +89,14 @@ struct _NcGalaxyHaloWL
   guint64 radius_hash;   /* the prepares that changed the halo position or the cosmology */
   NcmModelCtrl *ctrl_dp; /* the profile object dp_box was copied from */
   NcHaloDensityProfile *dp_box;
-  gdouble delta_R;
+  gdouble box_ra_c;
+  gdouble box_ra_hw;
+  gdouble box_dec_lo;
+  gdouble box_dec_hi;
+  gboolean c_box;
+  guint c_idx;
+  gdouble c_lo;
+  gdouble c_hi;
   gboolean bound_ready;
   gboolean bound_holds;
   GMutex bound_lock;
@@ -114,7 +122,6 @@ nc_galaxy_halo_wl_init (NcGalaxyHaloWL *hwl)
   hwl->ctrl_dp      = ncm_model_ctrl_new (NULL);
   hwl->dp_box       = NULL;
   ncm_quaternion_set_I (&hwl->q);
-  hwl->delta_R     = 0.0;
   hwl->bound_ready = FALSE;
   hwl->bound_holds = FALSE;
   g_mutex_init (&hwl->bound_lock);
@@ -513,10 +520,9 @@ nc_galaxy_halo_wl_update_data_profile (NcGalaxyHaloWL *hwl, NcHaloDensityProfile
  * @mset: the #NcmMSet of the last prepare
  *
  * Prepares the reachable-range bound. It sets a copy of the profile of @mset at the corner
- * of the prior box, the mass at its upper bound; the copy is made again when the profile
- * is another object. It computes the largest displacement the prior of the halo center
- * allows. It records whether the bound holds, which requires that no parameter besides
- * the halo center (ra, dec), log10MDelta and the shape-population parameters is free. The
+ * of the prior box, with mass at its upper bound. It records the centre and concentration
+ * boxes. The free parameters may include the centre, mass, concentration and shape
+ * population. The
  * bound is not ready when @mset has no #NcWLSurfaceMassDensity.
  */
 void
@@ -544,9 +550,27 @@ nc_galaxy_halo_wl_prepare_bound (NcGalaxyHaloWL *hwl, NcmMSet *mset)
 
   nc_wl_surface_mass_density_prepare_if_needed (smd, cosmo);
 
-  hwl->delta_R     = _nc_galaxy_shape_factor_moments_centre_delta (hp, cosmo);
+  {
+    NcmModel *hp_model      = NCM_MODEL (hp);
+    const gboolean ra_free  = ncm_model_param_get_ftype (hp_model, NC_HALO_POSITION_RA) == NCM_PARAM_TYPE_FREE;
+    const gboolean dec_free = ncm_model_param_get_ftype (hp_model, NC_HALO_POSITION_DEC) == NCM_PARAM_TYPE_FREE;
+    const gdouble ra        = ncm_model_param_get (hp_model, NC_HALO_POSITION_RA);
+    const gdouble dec       = ncm_model_param_get (hp_model, NC_HALO_POSITION_DEC);
+    const gdouble ra_lo     = ra_free ? ncm_model_param_get_lower_bound (hp_model, NC_HALO_POSITION_RA) : ra;
+    const gdouble ra_hi     = ra_free ? ncm_model_param_get_upper_bound (hp_model, NC_HALO_POSITION_RA) : ra;
+    const gdouble dec_lo    = dec_free ? ncm_model_param_get_lower_bound (hp_model, NC_HALO_POSITION_DEC) : dec;
+    const gdouble dec_hi    = dec_free ? ncm_model_param_get_upper_bound (hp_model, NC_HALO_POSITION_DEC) : dec;
+
+    hwl->box_ra_c   = 0.5 * (ra_lo + ra_hi);
+    hwl->box_ra_hw  = 0.5 * fabs (ra_hi - ra_lo);
+    hwl->box_dec_lo = MIN (dec_lo, dec_hi);
+    hwl->box_dec_hi = MAX (dec_lo, dec_hi);
+  }
+
   hwl->bound_ready = _nc_galaxy_shape_factor_moments_set_box_corner (hwl->dp_box, dp);
-  hwl->bound_holds = _nc_galaxy_shape_factor_moments_range_holds (mset);
+  hwl->bound_holds = _nc_galaxy_shape_factor_moments_range_holds (mset, TRUE);
+  hwl->c_box       = _nc_galaxy_shape_factor_moments_cdelta_box (dp, &hwl->c_idx, &hwl->c_lo, &hwl->c_hi) &&
+                     (hwl->c_hi > hwl->c_lo);
 }
 
 /**
@@ -567,13 +591,144 @@ nc_galaxy_halo_wl_bound_ready (NcGalaxyHaloWL *hwl)
  * @hwl: a #NcGalaxyHaloWL
  *
  * Returns: whether the free parameters of the last nc_galaxy_halo_wl_prepare_bound()
- *   are only the halo center, log10MDelta and shape-population parameters, the case the
- *   corner bounds.
+ *   are within the supported centre, mass, concentration and shape population parameters.
  */
 gboolean
 nc_galaxy_halo_wl_bound_holds (NcGalaxyHaloWL *hwl)
 {
   return hwl->bound_holds;
+}
+
+#define NC_GALAXY_HALO_WL_C_GRID 17
+#define NC_GALAXY_HALO_WL_C_GOLDEN 24
+
+/* |g_t| at the corner at concentration c (when c_box) under bound_lock; FALSE when kappa >= 1 */
+static gboolean
+_nc_galaxy_halo_wl_corner_eval (NcGalaxyHaloWL *hwl, NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble z_cl, const gdouble R, const gdouble z, const gdouble c, gdouble *g_t, gdouble *max_kappa)
+{
+  gdouble kappa, g;
+
+  if (hwl->c_box)
+    ncm_model_param_set (NCM_MODEL (nc_halo_density_profile_peek_mass_summary (hwl->dp_box)), hwl->c_idx, c);
+
+  kappa = nc_wl_surface_mass_density_convergence (smd, hwl->dp_box, cosmo, R, z, z_cl, z_cl);
+  g     = fabs (nc_wl_surface_mass_density_reduced_shear (smd, hwl->dp_box, cosmo, R, z, z_cl, z_cl));
+
+  if (!gsl_finite (kappa) || !gsl_finite (g) || !(kappa < 1.0))
+    return FALSE;
+
+  *max_kappa = MAX (*max_kappa, kappa);
+  g_t[0]     = g;
+
+  return TRUE;
+}
+
+/* |g_t| at the corner at concentration c, clearing ok when kappa >= 1 there */
+static gdouble
+_nc_galaxy_halo_wl_corner_eval_ok (NcGalaxyHaloWL *hwl, NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble z_cl, const gdouble R, const gdouble z, const gdouble c, gboolean *ok, gdouble *max_kappa)
+{
+  gdouble g = 0.0;
+
+  if (!_nc_galaxy_halo_wl_corner_eval (hwl, smd, cosmo, z_cl, R, z, c, &g, max_kappa))
+    ok[0] = FALSE;
+
+  return g;
+}
+
+/* The largest |g_t| at the corner over the concentrations of the fit; FALSE when kappa >= 1 at
+ * any of the concentrations evaluated. The golden-section search stays between two nodes of
+ * the grid where kappa < 1, so it fails only if kappa is not monotonic in c there. */
+static gboolean
+_nc_galaxy_halo_wl_corner_g_t (NcGalaxyHaloWL *hwl, NcWLSurfaceMassDensity *smd, NcHICosmo *cosmo, const gdouble z_cl, const gdouble R, const gdouble z, gdouble *g_t, gdouble *max_kappa)
+{
+  const guint n         = NC_GALAXY_HALO_WL_C_GRID;
+  const gdouble lc_lo   = log (hwl->c_lo);
+  const gdouble dlc     = (log (hwl->c_hi) - lc_lo) / (n - 1.0);
+  const gdouble inv_phi = 0.5 * (sqrt (5.0) - 1.0);
+  gboolean ok           = TRUE;
+  gdouble best          = 0.0, a, b, x1, x2, g1, g2;
+  guint k, k_best       = 0, i;
+
+  if (!hwl->c_box)
+    return _nc_galaxy_halo_wl_corner_eval (hwl, smd, cosmo, z_cl, R, z, 0.0, g_t, max_kappa);
+
+  for (k = 0; k < n; k++)
+  {
+    const gdouble g = _nc_galaxy_halo_wl_corner_eval_ok (hwl, smd, cosmo, z_cl, R, z, exp (lc_lo + dlc * k), &ok, max_kappa);
+
+    if (g > best)
+    {
+      best   = g;
+      k_best = k;
+    }
+  }
+
+  if (!ok)
+    return FALSE;
+
+  a  = lc_lo + dlc * ((k_best > 0) ? k_best - 1.0 : 0.0);
+  b  = lc_lo + dlc * ((k_best + 1 < n) ? k_best + 1.0 : n - 1.0);
+  x1 = b - inv_phi * (b - a);
+  x2 = a + inv_phi * (b - a);
+  g1 = _nc_galaxy_halo_wl_corner_eval_ok (hwl, smd, cosmo, z_cl, R, z, exp (x1), &ok, max_kappa);
+  g2 = _nc_galaxy_halo_wl_corner_eval_ok (hwl, smd, cosmo, z_cl, R, z, exp (x2), &ok, max_kappa);
+
+  for (i = 0; i < NC_GALAXY_HALO_WL_C_GOLDEN; i++)
+  {
+    best = GSL_MAX (best, GSL_MAX (g1, g2));
+
+    if (g1 > g2)
+    {
+      b  = x2;
+      x2 = x1;
+      g2 = g1;
+      x1 = b - inv_phi * (b - a);
+      g1 = _nc_galaxy_halo_wl_corner_eval_ok (hwl, smd, cosmo, z_cl, R, z, exp (x1), &ok, max_kappa);
+    }
+    else
+    {
+      a  = x1;
+      x1 = x2;
+      g1 = g2;
+      x2 = a + inv_phi * (b - a);
+      g2 = _nc_galaxy_halo_wl_corner_eval_ok (hwl, smd, cosmo, z_cl, R, z, exp (x2), &ok, max_kappa);
+    }
+  }
+
+  g_t[0] = GSL_MAX (best, GSL_MAX (g1, g2));
+
+  return ok;
+}
+
+/*
+ * The smallest angle [rad] between the direction (ra, dec) [deg] and the box of the halo
+ * center. With ra inside the right ascensions of the box (modulo 360) the nearest point is
+ * on the meridian of the galaxy, at its declination clamped to the box. Otherwise it is on
+ * the nearer edge meridian, a great circle, at the declination that maximizes
+ * sin(dec) sin(d) + cos(dec) cos(d) cos(Delta), Delta the difference of right ascension:
+ * d = atan2 (sin dec, cos dec cos Delta), clamped to the box.
+ */
+static gdouble
+_nc_galaxy_halo_wl_box_min_angle (NcGalaxyHaloWL *hwl, const gdouble ra, const gdouble dec)
+{
+  const gdouble d_ra = fabs (remainder (ra - hwl->box_ra_c, 360.0));
+  const gdouble dr   = dec * M_PI / 180.0;
+
+  if (d_ra <= hwl->box_ra_hw)
+  {
+    const gdouble d = GSL_MAX (hwl->box_dec_lo, GSL_MIN (hwl->box_dec_hi, dec));
+
+    return fabs (dec - d) * M_PI / 180.0;
+  }
+  else
+  {
+    const gdouble Delta = (d_ra - hwl->box_ra_hw) * M_PI / 180.0;
+    const gdouble d_opt = atan2 (sin (dr), cos (dr) * cos (Delta)) * 180.0 / M_PI;
+    const gdouble d     = GSL_MAX (hwl->box_dec_lo, GSL_MIN (hwl->box_dec_hi, d_opt)) * M_PI / 180.0;
+    const gdouble h     = gsl_pow_2 (sin (0.5 * (dr - d))) + cos (dr) * cos (d) * gsl_pow_2 (sin (0.5 * Delta));
+
+    return 2.0 * asin (GSL_MIN (1.0, sqrt (h)));
+  }
 }
 
 /**
@@ -582,12 +737,15 @@ nc_galaxy_halo_wl_bound_holds (NcGalaxyHaloWL *hwl)
  * @data: a #NcGalaxyHaloWLData, with its radius set
  *
  * Returns: the smallest projected radius of the galaxy over the prior of the halo
- *   center, $R - \delta R$; it may be negative.
+ *   center, using the nearest sky direction in its box.
  */
 gdouble
 nc_galaxy_halo_wl_get_radius_min (NcGalaxyHaloWL *hwl, NcGalaxyHaloWLData *data)
 {
-  return data->radius - hwl->delta_R;
+  if ((hwl->box_ra_hw == 0.0) && (hwl->box_dec_lo == hwl->box_dec_hi))
+    return data->radius;
+
+  return ncm_util_projected_radius (_nc_galaxy_halo_wl_box_min_angle (hwl, data->ra_v, data->dec_v), hwl->pr_prefactor);
 }
 
 /**
@@ -610,8 +768,23 @@ nc_galaxy_halo_wl_eval_bound (NcGalaxyHaloWL *hwl, NcWLSurfaceMassDensity *smd, 
   const gdouble z_cl = nc_wl_cluster_lens_get_z_cl (hwl->lens);
 
   g_mutex_lock (&hwl->bound_lock);
-  *kappa = nc_wl_surface_mass_density_convergence (smd, hwl->dp_box, cosmo, R_min, z_s, z_cl, z_cl);
-  *g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (smd, hwl->dp_box, cosmo, R_min, z_s, z_cl, z_cl));
+
+  if (!hwl->c_box)
+  {
+    *kappa = nc_wl_surface_mass_density_convergence (smd, hwl->dp_box, cosmo, R_min, z_s, z_cl, z_cl);
+    *g_t   = fabs (nc_wl_surface_mass_density_reduced_shear (smd, hwl->dp_box, cosmo, R_min, z_s, z_cl, z_cl));
+  }
+  else
+  {
+    *kappa = -GSL_POSINF;
+
+    if (!_nc_galaxy_halo_wl_corner_g_t (hwl, smd, cosmo, z_cl, R_min, z_s, g_t, kappa))
+    {
+      *kappa = GSL_NAN;
+      *g_t   = GSL_NAN;
+    }
+  }
+
   g_mutex_unlock (&hwl->bound_lock);
 }
 

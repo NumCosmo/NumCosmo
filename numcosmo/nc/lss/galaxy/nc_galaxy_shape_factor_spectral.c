@@ -361,7 +361,7 @@ nc_galaxy_shape_factor_spectral_init (NcGalaxyShapeFactorSpectral *gsfs)
   self->interp_pop_level_cap     = 0;
   self->interp_pop_one_integral  = FALSE;
   self->interp_compress_frac     = 0.0;
-  self->restrict_range           = FALSE;
+  self->restrict_range           = TRUE;
 
   self->line_abstol = 0.0;
 }
@@ -695,20 +695,22 @@ nc_galaxy_shape_factor_spectral_class_init (NcGalaxyShapeFactorSpectralClass *kl
    * Whether the interpolant of a galaxy covers only the shears it can reach over the box of
    * the fit. nc_galaxy_shape_factor_spectral_build_interp() bounds $|g|$ at the corner of the
    * box (the smallest projected radius the box of the halo
-   * center allows, the upper bound of log10MDelta, the largest source redshift of the galaxy),
+   * center allows, the upper bound of log10MDelta, the largest source redshift of the galaxy,
+   * and the concentration of the largest shear over the box of cDelta when it is free),
    * $|1 + m| |g_t| + |c|$, and the interpolant covers $|g|$ up to the smaller of that bound and
-   * #NcGalaxyShapeFactorSpectral:interp-g-max. The bound holds when only log10MDelta, the halo
-   * center and the parameters of the shape population are free; otherwise, and when the models
+   * #NcGalaxyShapeFactorSpectral:interp-g-max. The bound holds when only log10MDelta, cDelta,
+   * the halo center and the parameters of the shape population are free; otherwise, and when the models
    * of the bound are not in the fit, the interpolant covers interp-g-max. A shear above the
    * range of the interpolant takes the integral. An interpolant loaded from a catalog keeps the
-   * range it was built with.
+   * range it was built with. It is on by default: the integrals beyond the range keep the
+   * values right, so turning it off only matters to compare with the whole disk.
    */
   g_object_class_install_property (object_class,
                                    PROP_RESTRICT_RANGE,
                                    g_param_spec_boolean ("restrict-range",
                                                          NULL,
                                                          "Whether the interpolant covers only the shears a galaxy reaches",
-                                                         FALSE,
+                                                         TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -925,6 +927,7 @@ _nc_galaxy_shape_factor_spectral_ldata_free (gpointer p)
  * radius can reach the halo itself, without a finite source redshift behind the lens,
  * when kappa >= 1 at the corner, and when the bound is 0.
  */
+
 static gdouble
 _nc_galaxy_shape_factor_spectral_reach (NcGalaxyShapeFactorSpectralPrivate *self, NcGalaxyShapeFactorData *data, const gdouble z_max)
 {

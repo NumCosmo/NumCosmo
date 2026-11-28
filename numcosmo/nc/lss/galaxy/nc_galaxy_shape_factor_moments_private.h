@@ -129,7 +129,8 @@ guint _nc_galaxy_shape_factor_moments_key_hash (gconstpointer p);
 gboolean _nc_galaxy_shape_factor_moments_key_equal (gconstpointer a, gconstpointer b);
 NcmVector *_nc_galaxy_shape_factor_moments_table_to_vector (const NcGalaxyShapeFactorMomentsKey *key, const NcGalaxyShapeFactorMomentsTable *table);
 gboolean _nc_galaxy_shape_factor_moments_table_from_vector (NcmVector *v, NcGalaxyShapeFactorMomentsKey *key, NcGalaxyShapeFactorMomentsTable **table_out);
-gboolean _nc_galaxy_shape_factor_moments_range_holds (NcmMSet *mset);
+gboolean _nc_galaxy_shape_factor_moments_range_holds (NcmMSet *mset, const gboolean cdelta_box);
+gboolean _nc_galaxy_shape_factor_moments_cdelta_box (NcHaloDensityProfile *dp_src, guint *idx, gdouble *c_lo, gdouble *c_hi);
 gdouble _nc_galaxy_shape_factor_moments_centre_delta (NcHaloPosition *hp, NcHICosmo *cosmo);
 gboolean _nc_galaxy_shape_factor_moments_set_box_corner (NcHaloDensityProfile *dp_copy, NcHaloDensityProfile *dp_src);
 
